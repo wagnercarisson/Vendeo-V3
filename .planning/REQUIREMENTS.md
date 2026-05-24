@@ -89,32 +89,33 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INPT-01 | | Pending |
-| INPT-02 | | Pending |
-| INPT-03 | | Pending |
-| INPT-04 | | Pending |
-| AI-01 | | Pending |
-| AI-02 | | Pending |
-| AI-03 | | Pending |
-| AI-04 | | Pending |
-| AI-05 | | Pending |
-| REND-01 | | Pending |
-| REND-02 | | Pending |
-| REND-03 | | Pending |
-| REND-04 | | Pending |
-| REND-05 | | Pending |
-| REVW-01 | | Pending |
-| REVW-02 | | Pending |
-| REVW-03 | | Pending |
-| REVW-04 | | Pending |
-| DSGN-01 | | Pending |
-| DSGN-02 | | Pending |
-| DSGN-03 | | Pending |
+| INPT-01 | Phase 2 — Campaign Input | Pending |
+| INPT-02 | Phase 2 — Campaign Input | Pending |
+| INPT-03 | Phase 1 — Foundation & Store Identity | Pending |
+| INPT-04 | Phase 1 — Foundation & Store Identity | Pending |
+| AI-01 | Phase 3 — AI Campaign Intelligence | Pending |
+| AI-02 | Phase 3 — AI Campaign Intelligence | Pending |
+| AI-03 | Phase 3 — AI Campaign Intelligence | Pending |
+| AI-04 | Phase 3 — AI Campaign Intelligence | Pending |
+| AI-05 | Phase 3 — AI Campaign Intelligence | Pending |
+| REND-01 | Phase 4 — Visual Rendering & Preview | Pending |
+| REND-02 | Phase 4 — Visual Rendering & Preview | Pending |
+| REND-03 | Phase 4 — Visual Rendering & Preview | Pending |
+| REND-04 | Phase 4 — Visual Rendering & Preview | Pending |
+| REND-05 | Phase 4 — Visual Rendering & Preview | Pending |
+| REVW-01 | Phase 4 — Visual Rendering & Preview | Pending |
+| REVW-02 | Phase 5 — Review, Adjust & Export | Pending |
+| REVW-03 | Phase 5 — Review, Adjust & Export | Pending |
+| REVW-04 | Phase 5 — Review, Adjust & Export | Pending |
+| DSGN-01 | Phase 2 — Campaign Input | Pending |
+| DSGN-02 | Phase 1 — Foundation & Store Identity | Pending |
+| DSGN-03 | Phase 1 — Foundation & Store Identity | Pending |
+| DSGN-04 | Phase 1 — Foundation & Store Identity | Pending |
 
 **Coverage:**
 - v1 requirements: 22 total
-- Mapped to phases: 0
-- Unmapped: 22 ⚠️
+- Mapped to phases: 22
+- Unmapped: 0 ✅
 
 ---
 *Requirements defined: 2026-05-24*

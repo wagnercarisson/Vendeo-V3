@@ -1,0 +1,97 @@
+# Roadmap: Vendeo V3
+
+## Overview
+
+Vendeo V3 transforms simple store and product information into professional social media campaign visuals. The user journey flows through five phases: configure store identity, input campaign details, generate AI-structured specs, render the campaign image, and refine/export the final asset. Each phase builds on the previous, delivering a complete end-to-end capability by Phase 5.
+
+## Phases
+
+- [ ] **Phase 1: Foundation & Store Identity** - Configure store profile and establish the visual identity system
+- [ ] **Phase 2: Campaign Input** - Enter product/offer details and upload campaign imagery
+- [ ] **Phase 3: AI Campaign Intelligence** - Generate structured campaign specs via AI interpretation
+- [ ] **Phase 4: Visual Rendering & Preview** - Render campaign image programmatically and preview the result
+- [ ] **Phase 5: Review, Adjust & Export** - Refine parameters, regenerate, and export final campaign as PNG/JPG
+
+## Phase Details
+
+### Phase 1: Foundation & Store Identity
+**Goal**: Capture minimum store identity required to generate the first campaign
+**Mode**: mvp
+**Depends on**: Nothing (first phase)
+**Requirements**: INPT-03, INPT-04, DSGN-02, DSGN-03, DSGN-04
+**Success Criteria** (what must be TRUE):
+  1. User can enter store name and select segment/subsegment from predefined options
+  2. User can set brand colors via a color picker and optionally upload store logo
+  3. Logo storage is handled simply (temporary/local preview or minimal persistence) — no full auth or SaaS profile required
+  4. Design tokens and Vendeo-owned composition rules are defined, optionally with UI/UX Pro Max support, and documented as the foundation for campaign templates
+  5. Project scope is documented with clear guardrails excluding auth, dashboard, and full SaaS structure from v1
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 2: Campaign Input
+**Goal**: User can input all campaign details (product, offer, image) for generation
+**Mode**: mvp
+**Depends on**: Phase 1
+**Requirements**: INPT-01, INPT-02, DSGN-01
+**Success Criteria** (what must be TRUE):
+  1. User can enter product name, offer/price, and a short description in a structured form
+  2. User can upload a product image with preview and format validation
+  3. Store identity from Phase 1 is pre-filled and visible during campaign input
+  4. All input is guided via form controls and presets — no free-form canvas or drag-and-drop editor is available
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 3: AI Campaign Intelligence
+**Goal**: AI interprets commercial context and generates a validated campaign specification
+**Mode**: mvp
+**Depends on**: Phase 2
+**Requirements**: AI-01, AI-02, AI-03, AI-04, AI-05
+**Success Criteria** (what must be TRUE):
+  1. AI generates a structured campaign specification from the product/offer/store input, including title, subtitle, CTA, price display, and badge style
+  2. AI output includes all visual parameters: palette, hierarchy direction, layout direction, badge style/position
+  3. AI provider abstraction layer exists — at least one provider (OpenAI or Anthropic) works; architecture allows future swap without rewriting campaign intelligence code
+  4. AI output is validated structured data before being passed to the renderer; invalid output triggers a retry or clear error
+  5. User can see a readable summary of the AI-generated campaign specification before rendering (technical JSON remains internal)
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 4: Visual Rendering & Preview
+**Goal**: Programmatic renderer composes a professional campaign image from the AI spec and user can preview it
+**Mode**: mvp
+**Depends on**: Phase 3
+**Requirements**: REND-01, REND-02, REND-03, REND-04, REND-05, REVW-01
+**Success Criteria** (what must be TRUE):
+  1. User can see a rendered campaign preview composed from the structured AI specification
+  2. Campaign uses one of the professional layout templates designed for Produto + Oferta format
+  3. Store identity (name, logo, brand colors, fonts) is applied consistently to the rendered campaign
+  4. Rendered campaign meets minimum quality: readable text hierarchy, sufficient contrast, balanced composition
+  5. If no custom logo or colors were provided, the campaign renders with a name-based visual identity and safe default styling
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 5: Review, Adjust & Export
+**Goal**: User can refine campaign parameters and export the final image for publishing
+**Mode**: mvp
+**Depends on**: Phase 4
+**Requirements**: REVW-02, REVW-03, REVW-04
+**Success Criteria** (what must be TRUE):
+  1. User can adjust palette, font style, badge style/position, and layout variation via predefined guided controls
+  2. Visual-only adjustments (palette, font, layout) re-render from existing AI parameters — no new AI call needed
+  3. Full regeneration triggers new AI inference when copy, CTA, hierarchy or campaign strategy changes
+  4. User can export the final campaign as PNG and JPG formats for social media posting
+  5. All adjustments are limited to predefined controls and presets — no free-form editing is available
+**Plans**: TBD
+**UI hint**: yes
+
+## Progress
+
+**Execution Order:**
+Phases execute sequentially: 1 → 2 → 3 → 4 → 5
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 1. Foundation & Store Identity | - | Not started | - |
+| 2. Campaign Input | - | Not started | - |
+| 3. AI Campaign Intelligence | - | Not started | - |
+| 4. Visual Rendering & Preview | - | Not started | - |
+| 5. Review, Adjust & Export | - | Not started | - |
