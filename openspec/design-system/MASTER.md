@@ -1,6 +1,7 @@
-# Design System — Vendeo V3 (Ad Automation SaaS)
+# Design System — Vendeo V3 (Motor de Geração de Campanhas)
 
-> **SOURCE OF TRUTH.** This file defines immutable design rules for all agents building UI for Vendeo V3.
+> **CONTROLLED DESIGN SOURCE OF TRUTH.** This file defines design rules for all agents building UI for Vendeo V3.
+> Rules evolve only via registered design decisions — no ad-hoc deviations.
 > When building a page, first check `openspec/design-system/pages/[page-name].md`.
 > If that file exists, its rules override this Master for that page only.
 
@@ -8,26 +9,27 @@
 
 ## 1. Visual Identity
 
-**Product:** SaaS de automação de campanhas de anúncios para lojistas de lojas físicas
-**Core Value:** Gerar campanhas profissionais que o lojista tenha confiança de publicar
+**Product:** Ferramenta SaaS / motor de geração de campanhas profissionais para pequenos e médios lojistas físicos
+**Core Value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais
+**Tone:** Simples, profissional, comercial, acessível, confiável
 
 ### Style
-- **Primary:** Dark Mode (OLED)
-- **Secondary:** Data-Dense Dashboard (for analytics/metrics views)
-- **Keywords:** dark, high-contrast, professional, data-driven, clean, technical
-- **Best For:** SaaS dashboards, analytics, ad management, campaign builder
+- **Primary:** Dark Mode (OLED) — profissional, foco no conteúdo visual
+- **Keywords:** dark, high-contrast, professional, clean, commercial, trustworthy, accessible
+- **Best For:** Geração de campanhas, ferramentas comerciais, pequenos negócios, plataformas de conteúdo visual
 - **Performance:** ⚡ Excellent
 - **Accessibility:** ✓ WCAG AAA
 
 ### Anti-patterns (DO NOT USE)
-- ❌ Light mode as default — dark mode is THE identity
+- ❌ Aparência técnica ou data-dense — o Vendeo é para lojistas, não para analistas de tráfego
 - ❌ Emojis as icons — use SVG (Lucide/Heroicons)
 - ❌ Layout-shifting hover states (avoid scale transforms)
 - ❌ Low contrast text — maintain 7:1 minimum on dark bg
 - ❌ Instant transitions — always use 150-300ms
 - ❌ Missing cursor:pointer on interactive elements
 - ❌ White (#FFFFFF) backgrounds — use `#020617` or `#0F172A`
-- ❌ Excessive glow/neon — minimal glow only for active states
+- ❌ Jargão de marketing digital — prefira termos do dia a dia do lojista
+- ❌ Poluição visual — cada tela deve ter UMA ação principal clara
 
 ---
 
@@ -54,23 +56,10 @@
 ### Accent Colors
 | Token | Hex | Usage |
 |-------|-----|-------|
-| `--accent-green` | `#22C55E` | CTA buttons, success, active metrics |
-| `--accent-blue` | `#3B82F6` | Links, info, primary actions |
-| `--accent-purple` | `#8B5CF6` | Premium features, campaign types |
-| `--accent-amber` | `#F59E0B` | Warnings, pending states, highlights |
-| `--accent-red` | `#EF4444` | Errors, negative metrics, alerts |
-
-### Chart Data Colors
-| Token | Hex |
-|-------|-----|
-| `--chart-1` | `#22C55E` |
-| `--chart-2` | `#3B82F6` |
-| `--chart-3` | `#8B5CF6` |
-| `--chart-4` | `#F59E0B` |
-| `--chart-5` | `#EC4899` |
-| `--chart-6` | `#06B6D4` |
-| `--chart-grid` | `#1E293B` |
-| `--chart-text` | `#64748B` |
+| `--accent-green` | `#22C55E` | CTA buttons, success, confirmação |
+| `--accent-blue` | `#3B82F6` | Links, info, ações secundárias |
+| `--accent-amber` | `#F59E0B` | Warnings, highlights, atenção |
+| `--accent-red` | `#EF4444` | Errors, validação negativa |
 
 ### CSS Variables (tailwind.config)
 ```js
@@ -94,19 +83,8 @@ colors: {
   accent: {
     green: '#22C55E',
     blue: '#3B82F6',
-    purple: '#8B5CF6',
     amber: '#F59E0B',
     red: '#EF4444',
-  },
-  chart: {
-    1: '#22C55E',
-    2: '#3B82F6',
-    3: '#8B5CF6',
-    4: '#F59E0B',
-    5: '#EC4899',
-    6: '#06B6D4',
-    grid: '#1E293B',
-    text: '#64748B',
   },
 }
 ```
@@ -117,24 +95,27 @@ colors: {
 
 | Role | Font | Weight | Size Scale |
 |------|------|--------|------------|
-| Headings | `Fira Sans` | 600, 700 | `text-2xl` (1.5rem) to `text-4xl` (2.25rem) |
-| Body | `Fira Sans` | 400, 500 | `text-sm` (0.875rem) to `text-base` (1rem) |
-| Data/Monospace | `Fira Code` | 400, 500, 600 | `text-xs` (0.75rem) to `text-base` (1rem) |
-| Labels/Captions | `Fira Sans` | 500 | `text-xs` (0.75rem) |
+| Headings | `Poppins` | 600, 700 | `text-xl` (1.25rem) to `text-3xl` (1.875rem) |
+| Body | `Open Sans` | 400, 500 | `text-sm` (0.875rem) to `text-base` (1rem) |
+| Labels/Captions | `Poppins` | 500 | `text-xs` (0.75rem) |
+| Monospace (dados) | `JetBrains Mono` | 400, 500 | `text-xs` (0.75rem) to `text-sm` (0.875rem) |
 
 **CSS Import:**
 ```css
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 ```
 
 **Font Weights by Context:**
-- Page title: Fira Sans 700
-- Section heading: Fira Sans 600
-- Card title: Fira Sans 500
-- Body text: Fira Sans 400
-- Metric value: Fira Code 600
-- Table data: Fira Code 400
-- Label/caption: Fira Sans 500, uppercase tracking-wider
+- Page title: Poppins 700
+- Section heading: Poppins 600
+- Card title: Poppins 500
+- Body text: Open Sans 400
+- Small print / helper: Open Sans 400
+- Data/monospace: JetBrains Mono 500
+- Label/caption: Poppins 500, uppercase tracking-wider
+
+**Why this pairing:** Poppins é geométrica e amigável — passa modernidade sem ser "tech".
+Open Sans é altamente legível em corpo de texto. Juntas, transmitem profissionalismo comercial, não técnico.
 
 ---
 
@@ -162,37 +143,33 @@ colors: {
 | lg | `0 10px 15px -3px rgb(0 0 0 / 0.5)` | Modals, side panels |
 | xl | `0 20px 25px -5px rgb(0 0 0 / 0.6)` | Dialogs, overlays |
 
-On dark surfaces, shadows are naturally harder to see — use higher opacity.
-
 ---
 
-## 6. Component Specifications
+## 6. Component Specifications (V1)
 
 ### 6.1 Buttons
 
 **Primary (CTA):**
 - bg: `accent-green` (#22C55E), text: white
 - Padding: px-6 py-2.5, rounded-lg
-- Font: Fira Sans 600, text-sm
+- Font: Poppins 600, text-sm
 - Hover: brightness(110%)
 - Transition: 200ms ease
 - Cursor: pointer
+- Uso: ação principal da tela (Gerar Campanha, Exportar, Salvar)
 
 **Secondary Outline:**
 - bg: transparent, border: border-light (#334155), text: text-primary
 - Padding: px-6 py-2.5, rounded-lg
 - Hover: bg `#1E293B`
 - Transition: 200ms ease
+- Uso: ações secundárias, cancelar
 
-**Ghost (icon/toolbar):**
+**Ghost:**
 - bg: transparent, text: text-secondary
 - Hover: bg `#1E293B`, text: text-primary
-- W-9 h-9, rounded-lg
-- Only icon inside
-
-**Danger:**
-- bg: `#EF4444`/10, border: `#EF4444`/30, text: `#EF4444`
-- Hover: bg `#EF4444`/20
+- w-9 h-9, rounded-lg
+- Uso: botões de ação em toolbar, voltar
 
 ### 6.2 Cards
 
@@ -220,6 +197,7 @@ On dark surfaces, shadows are naturally harder to see — use higher opacity.
   padding: 0.625rem 0.875rem;
   color: #F8FAFC;
   font-size: 0.875rem;
+  font-family: 'Open Sans', sans-serif;
   transition: border-color 200ms ease;
 }
 .input:focus {
@@ -237,123 +215,116 @@ On dark surfaces, shadows are naturally harder to see — use higher opacity.
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 0.5rem;
+  font-family: 'Poppins', sans-serif;
 }
 ```
 
-### 6.4 Modals / Dialogs
+**Form validation:**
+- Inline validation on blur
+- Error: text-accent-red text-xs, with alert-circle icon
+- Success: text-accent-green text-xs, with check-circle icon
+- Never validate only on submit
 
-- Overlay: `rgba(2, 6, 23, 0.8)` + backdrop-blur-sm
-- Content: bg `#1E293B`, border `#334155`, rounded-xl (16px)
-- Padding: 1.5rem-2rem
-- Max-width: 480px for dialogs, 640px for panels
-- Close button: ghost icon top-right
-
-### 6.5 Badges / Tags
+### 6.4 Badges / Tags
 
 ```css
-.badge-green {
-  background: rgba(34, 197, 94, 0.1);
-  color: #22C55E;
-  border: 1px solid rgba(34, 197, 94, 0.2);
+.badge {
   padding: 0.125rem 0.5rem;
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 500;
+  font-family: 'Poppins', sans-serif;
+}
+.badge-green {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22C55E;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+.badge-blue {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3B82F6;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+.badge-amber {
+  background: rgba(245, 158, 11, 0.1);
+  color: #F59E0B;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+.badge-gray {
+  background: rgba(100, 116, 139, 0.1);
+  color: #94A3B8;
+  border: 1px solid rgba(100, 116, 139, 0.2);
 }
 ```
 
-Same pattern for blue, amber, red, purple, gray badges.
+### 6.5 Modals / Dialogs
 
-### 6.6 Tables
-
-- Header: bg `#0F172A`, text text-muted (uppercase, tracking-wider, text-xs)
-- Row: bg transparent, hover bg `#1E293B`
-- Border: `#1E293B` between rows
-- Padding: px-4 py-3
-- Font: Fira Code 400 for data columns, Fira Sans for text columns
-
-### 6.7 Tabs
-
-- Tab: text text-secondary, hover text text-primary, border-bottom transparent
-- Active tab: text accent-blue, border-bottom 2px solid accent-blue
-- Transition: 200ms ease
-
-### 6.8 Progress / Status Indicators
-
-- Active: accent-green pulse glow
-- Paused/draft: accent-amber
-- Error: accent-red
-- Completed: accent-green solid
+- Overlay: `rgba(2, 6, 23, 0.8)` + backdrop-blur-sm
+- Content: bg `#1E293B`, border `#334155`, rounded-xl (16px)
+- Padding: 1.5rem-2rem
+- Max-width: 480px for dialogs
+- Close button: ghost icon top-right
 
 ---
 
-## 7. Dashboard Base Layout
+## 7. V1 Flow Pages
+
+The V1 consists of a linear flow with these pages:
 
 ```
-┌─────────────────────────────────────────────┐
-│  Header (h-16)                              │
-│  Logo | Search | Notifications | Profile    │
-├──────────┬──────────────────────────────────┤
-│ Sidebar  │  Main Content Area               │
-│ (w-64)   │  • Page Title + Actions          │
-│          │  • KPI Cards Row (4)             │
-│ Top-level │  • Chart Section                │
-│ campaigns │  • Campaigns Table              │
-│ analytics │  • Recent Activity              │
-│ settings  │                                 │
-│           │                                 │
-└──────────┴──────────────────────────────────┘
+[Identidade da Loja] → [Dados da Campanha] → [Pré-visualização] → [Revisão & Exportação]
 ```
 
-### Layout Rules
+Each page maps to a corresponding override file in `openspec/design-system/pages/`.
 
-**Sidebar (w-64):**
-- Fixed, full height below header
-- bg `#0F172A`, right border `#1E293B`
-- Nav items: py-2.5 px-4, rounded-lg, hover bg `#1E293B`
-- Active item: bg `#1E293B`, left border 3px accent-blue, text accent-blue
-- Icon + label per item (icons: lucide-react, 20px)
-- Spacing between groups: pt-6 with group label text-muted uppercase text-xs
+### Page Roles
+| Page | Purpose | File |
+|------|---------|------|
+| Store Identity | Logo, nome, segmento, cor da marca | `pages/store-identity.md` |
+| Campaign Input | Produto, oferta, preço, descrição | `pages/campaign-input.md` |
+| Preview | Visualização da arte gerada | `pages/campaign-preview.md` |
+| Review & Export | Aprovação e download da campanha | `pages/review-export.md` |
 
-**Header (h-16):**
-- Fixed top, bg `#0F172A` with bottom border `#1E293B`
-- Left: logo/brand
-- Center: search input (max-w-md)
-- Right: notification bell + avatar/profile dropdown
-- z-index: 40 (stacks above sidebar)
-
-**Main Content:**
-- ml-64 (sidebar width), pt-16 (header height)
-- Inner padding: p-6 lg:p-8
-- Max content width: 1440px
+These are documented individually in their respective override files.
+The output visual (campaign image) follows `CAMPAIGN_VISUAL_SYSTEM.md`.
 
 ---
 
-## 8. Responsive Breakpoints
+## 8. Navigation & Layout (V1)
 
-| Breakpoint | Width | Layout Change |
-|------------|-------|---------------|
-| Mobile | < 768px | Sidebar becomes drawer (overlay), header compact |
-| Tablet | 768-1023px | Sidebar collapsible icons, 2-column cards |
-| Desktop | 1024-1439px | Full sidebar, 3-4 column grid |
-| Wide | 1440px+ | Max content width centered |
+### Layout Structure
+```
+┌──────────────────────────────────────────────┐
+│  Top Bar (h-14)                              │
+│  ← Voltar  |  Logo  |  [step indicator]     │
+├──────────────────────────────────────────────┤
+│                                              │
+│        Main Content Area (centered)          │
+│        max-w-3xl for forms                   │
+│        max-w-5xl for preview                 │
+│                                              │
+└──────────────────────────────────────────────┘
+```
 
-**Mobile sidebar:** use a slide-over drawer triggered by hamburger icon. Same nav structure, overlay behind.
+### Step Indicator
+- Horizontal steps above content
+- Active step: text-accent-green, filled circle
+- Completed step: text-accent-green, check icon
+- Future step: text-muted, outlined circle
+- Step labels: Poppins 500 text-xs
+
+### Responsive Behavior
+- Mobile (< 768px): single column, full-width inputs, preview stacks vertically
+- Desktop (768px+): preview side-by-side with form where applicable, max-width constrained
 
 ---
 
 ## 9. Interaction Patterns
 
-### Hover States
-- Cards: border-color lightens, subtle shadow lift (no transform)
-- Buttons: brightness/opacity shift (no scale)
-- Table rows: bg-hover (#334155)
-- Sidebar items: bg-surface (#1E293B)
-
-### Loading
-- Skeleton shimmer: bg `#1E293B` with moving gradient `#334155` at 45deg
-- Pulse animation for status dots
-- Spinner: accent-blue, 1s linear infinite
+### Loading States
+- Button loading: spinner icon + "Gerando..." text, button disabled
+- Image generation: skeleton placeholder with shimmer, aspect-ratio preserved
+- Page transitions: subtle fade (opacity 0→1, 150ms)
 
 ### Empty States
 - Icon (lucide, 48px) + title + description + optional CTA
@@ -361,14 +332,14 @@ Same pattern for blue, amber, red, purple, gray badges.
 - Color: text-muted for text, text-disabled for icon
 
 ### Error States
-- Inline error: text accent-red, text-sm, with alert-circle icon
-- Toast: fixed top-right, bg elevated (#1E293B), border border-light, slide-in from right
+- Inline form error: text-accent-red text-xs, with alert-circle icon below input
+- Generation error: inline banner within preview area, with retry CTA
+- Toast: fixed top-right, bg elevated (#1E293B), border border-light
 
 ### Transitions
+- Step navigation: slide (horizontal) 250ms ease
+- Preview image fade-in: 300ms ease
 - All interactive elements: `transition-colors duration-200` or `transition-all duration-200`
-- Sidebar collapse: 300ms ease
-- Modal open: 200ms ease, overlay fade 150ms
-- Page content: 150ms ease
 
 ---
 
@@ -376,10 +347,8 @@ Same pattern for blue, amber, red, purple, gray badges.
 
 - Keep animations under 300ms
 - Use `motion-safe:` prefix for Tailwind — respect `prefers-reduced-motion`
-- Chart animations: 800ms ease-out for initial render
-- Page transitions: subtle fade (opacity 0→1, 150ms)
 - No parallax, no auto-play, no infinite animations (except spinner/pulse)
-- Entrance animations: fade-in-up for cards, staggered by 50ms per card (max 300ms total)
+- Step transitions: slide direction indicates forward/backward navigation
 
 ---
 
@@ -388,11 +357,10 @@ Same pattern for blue, amber, red, purple, gray badges.
 - All interactive elements focusable and have visible focus ring (`ring-2 ring-accent-blue`)
 - Color not the only indicator — add icons, patterns, or labels
 - Form inputs associated with labels via `htmlFor`
-- Data tables use `<th>` with scope
 - Images have meaningful alt text
 - `prefers-reduced-motion` respected via Tailwind `motion-safe:` / `motion-reduce:`
 - Minimum touch target: 44x44px on mobile
-- Semantic HTML: `<nav>`, `<main>`, `<aside>`, `<header>`, `<section>`
+- Semantic HTML: `<nav>`, `<main>`, `<header>`, `<form>`, `<section>`
 
 ---
 
@@ -400,45 +368,48 @@ Same pattern for blue, amber, red, purple, gray badges.
 
 - **Library:** lucide-react (consistent with React/Next.js stack)
 - **Size:** w-5 h-5 for inline, w-6 h-6 for standalone, w-4 h-4 for dense areas
-- **Sidebar:** w-5 h-5, strokeWidth 1.5
-- **Buttons:** w-4 h-4 inline with text
+- **Buttons:** w-4 h-4 inline with text (left of label for actions, right for external links)
 - **Empty states:** w-12 h-12
+- **Step indicators:** custom circles with check/numbers (not lucide icons)
 - **No emojis as icons. EVER.**
 
 ---
 
-## 13. File Organization (Next.js App Router)
+## 13. File Organization (Next.js App Router — V1)
 
 ```
 src/
   app/
-    (dashboard)/
-      layout.tsx        ← sidebar + header layout
-      campaigns/
-      analytics/
-      settings/
-    page.tsx             ← landing/marketing (light mode, not dark)
+    (flow)/
+      layout.tsx           ← step indicator + top bar (shared across V1 flow)
+      store-identity/
+      campaign-input/
+      preview/
+      review-export/
+    page.tsx                ← landing page (futuro)
   components/
-    ui/                  ← design system primitives (button, card, input, etc.)
-    dashboard/           ← page-specific components
-    campaigns/           ← campaign domain components
+    ui/                     ← design system primitives (button, card, input, etc.)
+    flow/                   ← V1 flow-specific components
+    campaign/               ← campaign domain components (preview card, etc.)
   lib/
-    utils.ts            ← cn() helper
+    utils.ts                ← cn() helper
   styles/
-    globals.css         ← Tailwind + CSS variables
+    globals.css             ← Tailwind + CSS variables
 ```
 
 ---
 
 ## 14. Conventions Checklist
 
-- [ ] All colors from palette — no ad-hoc hex values
-- [ ] Fira Sans for UI, Fira Code for data
-- [ ] Dark mode default — no exceptions
-- [ ] SVG icons via lucide-react
-- [ ] cursor-pointer on every clickable element
-- [ ] 200ms transitions on interactive states
-- [ ] Focus ring visible on interactive elements
-- [ ] Responsive: mobile sidebar drawer, full sidebar desktop
-- [ ] prefers-reduced-motion respected
-- [ ] Semantic HTML structure
+- [x] Produto reposicionado: ferramenta de geração de campanhas, NÃO plataforma de anúncios
+- [x] Tom comercial e acessível, não técnico/data-dense
+- [x] Tipografia amigável (Poppins + Open Sans), não monospace-heavy
+- [x] Dark mode como identidade visual
+- [x] SVG icons via lucide-react — proibido emoji
+- [x] cursor-pointer on every clickable element
+- [x] 200ms transitions on interactive states
+- [x] Focus ring visible on interactive elements
+- [x] prefers-reduced-motion respected
+- [x] Semantic HTML structure
+- [x] V1 flow linear de 4 etapas (sem dashboard)
+- [x] Dashboard marcado como fase futura em pages/dashboard.md

@@ -3,13 +3,20 @@ schema: spec-driven
 # Project context (shown to AI when creating artifacts)
 context: |
   Tech stack: Next.js (App Router) + TypeScript + Supabase + Vercel
-  Domain: SaaS de automação de campanhas de anúncios para lojistas físicos
-  Design System: openspec/design-system/MASTER.md (immutable source of truth)
-  Dashboard Layout: openspec/design-system/pages/dashboard.md (overrides Master)
+  Domain: Ferramenta SaaS / motor de geração de campanhas profissionais para pequenos e médios lojistas físicos
+  Design System: openspec/design-system/MASTER.md (controlled design source of truth)
+  Campaign Visual System: openspec/design-system/CAMPAIGN_VISUAL_SYSTEM.md (rendering spec)
+  V1 Pages (flow):
+    - store-identity: openspec/design-system/pages/store-identity.md
+    - campaign-input: openspec/design-system/pages/campaign-input.md
+    - campaign-preview: openspec/design-system/pages/campaign-preview.md
+    - review-export: openspec/design-system/pages/review-export.md
+  Dashboard (future): openspec/design-system/pages/dashboard.md (NOT part of V1)
   Icon Library: lucide-react (NO emojis as icons)
-  Typography: Fira Sans (UI) + Fira Code (data/monospace)
+  Typography: Poppins (headings) + Open Sans (body) — friendly, commercial, not technical
   Theme: Dark Mode (OLED) — #020617 background, #F8FAFC text, #22C55E accent
   Styling: Tailwind CSS with CSS custom properties
+  Output: Campaign images rendered at 1080x1080px, sRGB, following CAMPAIGN_VISUAL_SYSTEM.md
 
 # Per-artifact rules
 rules:

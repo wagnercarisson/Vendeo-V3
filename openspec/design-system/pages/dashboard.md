@@ -1,6 +1,10 @@
 # Page Override — Dashboard
 
-> **Override rules for the Dashboard page layout.**
+> **FUTURE SAAS PHASE — NOT PART OF V1 IMPLEMENTATION.**
+> These rules are preserved for the SaaS dashboard phase (post-V1).
+> Currently stored for reference only. Do not implement during V1.
+>
+> Override rules for the Dashboard page layout.
 > These rules take precedence over `openspec/design-system/MASTER.md` when building the Dashboard.
 > All non-overridden rules from MASTER.md still apply.
 
