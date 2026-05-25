@@ -1,9 +1,9 @@
-import { StoreIdentityForm } from "@/components/flow/store-identity-form";
+import { CampaignPageClient } from "@/components/flow/campaign-page-client";
 
 export default function Home() {
   return (
     <main>
-      <StoreIdentityForm />
+      <CampaignPageClient />
     </main>
   );
 }

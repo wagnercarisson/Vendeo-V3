@@ -55,3 +55,13 @@ export const BRAZILIAN_STATES = [
   { value: "SE", label: "Sergipe" },
   { value: "TO", label: "Tocantins" },
 ] as const;
+
+export const BADGE_OPTIONS = [
+  "Oferta",
+  "Promoção",
+  "Queima de Estoque",
+  "Novidade",
+  "Últimas Unidades",
+] as const;
+
+export type BadgeOption = (typeof BADGE_OPTIONS)[number];
