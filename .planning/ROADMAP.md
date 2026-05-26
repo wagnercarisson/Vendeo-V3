@@ -25,6 +25,8 @@
   - [x] Phase 3.2: Real AI Provider Integration (OpenAI/Anthropic) (1/1 plans) (completed 2026-05-26)
     - [x] 03.2-01-PLAN.md — OpenAI provider with Structured Outputs, env-aware factory, dev/prod fallback
 - [ ] Phase 4: Visual Rendering & Preview
+  - [ ] Phase 4.1: Campaign Visual Renderer & Preview (1/1 plans)
+    - [x] 04.1-PLAN.md — CampaignRenderer + preview page + adjustments + form wiring
 - [ ] Phase 5: Review, Adjust & Export
 
 ## Progress
@@ -35,5 +37,6 @@
 | 2. Campaign Input | v1.0 | 3/3 | Complete | 2026-05-25 |
 | 3.1. Campaign Intelligence Foundation | v1.1 | 3/3 | Complete   | 2026-05-25 |
 | 3.2. Real AI Provider Integration | v1.1 | 1/1 | Complete | 2026-05-26 |
-| 4. Visual Rendering & Preview | v1.1 | 0 | Not started | - |
+| 4.1. Campaign Visual Renderer & Preview | v1.1 | 0/1 | Not started | - |
+| 4. Visual Rendering & Preview (remaining) | v1.1 | 0 | Not started | - |
 | 5. Review, Adjust & Export | v1.1 | 0 | Not started | - |
