@@ -4,7 +4,6 @@ import {
   CampaignSpecSchema,
 } from "./schema";
 import type { CampaignGenerationInput, CampaignSpec } from "./schema";
-import { MockProvider } from "./providers/mock";
 
 // ─── Error Codes ──────────────────────────────────────────────────────────
 
@@ -140,11 +139,27 @@ export class CampaignIntelligenceService {
 /**
  * Create the default AI provider for the current environment.
  *
- * Per locked decision D-05: MockProvider is always used when
- * OPENAI_API_KEY is not set. OpenAI provider will be added in
- * Phase 3.2 using dynamic import to avoid build failures when
- * the openai package is absent.
+ * Selection logic:
+ * - If OPENAI_API_KEY is set → use OpenAIProvider (dynamically imported)
+ * - If OPENAI_API_KEY is not set AND NODE_ENV === "production"
+ *   → throw explicit configuration error (fail-fast, no silent fallback)
+ * - Otherwise → use MockProvider (development/test without real API key)
+ *
+ * All provider imports are dynamic — the openai package is only loaded
+ * when actually needed, avoiding startup failures when not configured.
  */
-export function createDefaultProvider(): AIProvider {
+export async function createDefaultProvider(): Promise<AIProvider> {
+  if (process.env.OPENAI_API_KEY) {
+    const { OpenAIProvider } = await import("./providers/openai");
+    return new OpenAIProvider();
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "OPENAI_API_KEY is not configured. This is required in production."
+    );
+  }
+
+  const { MockProvider } = await import("./providers/mock");
   return new MockProvider();
 }

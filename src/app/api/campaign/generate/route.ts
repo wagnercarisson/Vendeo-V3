@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
   }
 
   // ── Step 3: Select provider ─────────────────────────────────────────
-  const provider = createDefaultProvider();
+  const provider = await createDefaultProvider();
 
   // ── Step 4: Instantiate service ─────────────────────────────────────
   const service = new CampaignIntelligenceService(provider);
