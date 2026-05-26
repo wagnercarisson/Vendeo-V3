@@ -2,14 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI + Rendering
-status: executing
-last_updated: "2026-05-26T00:00:00.000Z"
+status: verifying
+stopped_at: Completed 03.2-01-PLAN.md
+last_updated: "2026-05-26T20:28:17.690Z"
 progress:
-  total_phases: 2
-  completed_phases: 1
+  total_phases: 3
+  completed_phases: 3
   total_plans: 7
-  completed_plans: 3
-  percent: 43
+  completed_plans: 7
+  percent: 100
 ---
 
 # Project State
@@ -28,9 +29,9 @@ Plan: 01 of 01
 Milestone: v1.0 MVP — SHIPPED 2026-05-25
 Phases complete: 2 of 5 (Foundation, Campaign Input)
 Next phase: Phase 4 — Visual Rendering & Preview
-Status: Executing Phase 3.2
+Status: Phase complete — ready for verification
 
-Progress: [████████████████████░░░░] 43%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -47,6 +48,7 @@ Progress: [████████████████████░░░
 |-------|-------|-------|----------|
 | 1. Foundation & Store Identity | — | — | — |
 | 2. Campaign Input | 3 | 3 | — |
+| Phase 03.2 P01 | 6 min | - tasks | - files |
 
 ## Accumulated Context
 
@@ -60,6 +62,9 @@ Recent decisions affecting current work:
 - Image upload local-only via object URL (storage deferred)
 - Component decomposition: hook + form + preview pattern
 - Badge as predefined dropdown in constants
+- [Phase 03.2]: createDefaultProvider() made async to support dynamic imports — Dynamic imports for both MockProvider and OpenAIProvider require async. Route was already in async POST handler.
+- [Phase 03.2]: Structured Outputs primary, json_object fallback — zodResponseFormat converts CampaignSpecSchema to OpenAI json_schema. Falls back to json_object only for model capability errors.
+- [Phase 03.2]: Second-layer Zod validation after every response — Even with Structured Outputs, CampaignSpecSchema.safeParse runs as defense-in-depth against schema drift.
 
 ### Pending Todos
 
@@ -77,6 +82,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-05-25
-Stopped at: v1.0 milestone archived
+Last session: 2026-05-26T20:28:12.658Z
+Stopped at: Completed 03.2-01-PLAN.md
 Resume file: None

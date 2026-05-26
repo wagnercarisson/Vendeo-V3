@@ -16,10 +16,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### AI Intelligence
 
-- [ ] **AI-01**: AI interprets product/offer/store context and generates structured campaign specification
+- [x] **AI-01**: AI interprets product/offer/store context and generates structured campaign specification
 - [ ] **AI-02**: AI generates commercial copy (title, subtitle, CTA) tailored to product and offer
 - [ ] **AI-03**: AI output includes visual parameters: palette, hierarchy, layout direction, badge style
-- [ ] **AI-04**: AI provider abstraction layer allows swapping between OpenAI/Anthropic
+- [x] **AI-04**: AI provider abstraction layer allows swapping between OpenAI/Anthropic
 - [ ] **AI-05**: AI output is structured JSON, validated before rendering
 
 ### Visual Rendering
@@ -93,10 +93,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INPT-02 | Phase 2 — Campaign Input | Pending |
 | INPT-03 | Phase 1 — Foundation & Store Identity | Pending |
 | INPT-04 | Phase 1 — Foundation & Store Identity | Pending |
-| AI-01 | Phase 3 — AI Campaign Intelligence | Pending |
+| AI-01 | Phase 3 — AI Campaign Intelligence | Complete |
 | AI-02 | Phase 3 — AI Campaign Intelligence | Pending |
 | AI-03 | Phase 3 — AI Campaign Intelligence | Pending |
-| AI-04 | Phase 3 — AI Campaign Intelligence | Pending |
+| AI-04 | Phase 3 — AI Campaign Intelligence | Complete |
 | AI-05 | Phase 3 — AI Campaign Intelligence | Pending |
 | REND-01 | Phase 4 — Visual Rendering & Preview | Pending |
 | REND-02 | Phase 4 — Visual Rendering & Preview | Pending |
@@ -113,6 +113,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DSGN-04 | Phase 1 — Foundation & Store Identity | Pending |
 
 **Coverage:**
+
 - v1 requirements: 22 total
 - Mapped to phases: 22
 - Unmapped: 0 ✅
