@@ -51,7 +51,7 @@ REGRAS IMPORTANTES:
 - O badge_text deve refletir o tipo de oferta (ex: "Oferta", "30% OFF", "Lançamento")
 - A cor de destaque (palette_accent) deve usar a cor da marca fornecida
 - O layout deve priorizar a imagem do produto
-- O generation_metadata deve incluir o provider como "openai", o modelo usado, e o timestamp atual`;
+- Campos sem valor aplicável (ex: original_price_display quando não há preço original) devem retornar null, nunca undefined ou string vazia`;
 
     const userPrompt = `Gere uma campanha para o seguinte produto:
 
@@ -127,29 +127,33 @@ Gere a campanha seguindo exatamente o esquema especificado.`;
       throw new Error("OpenAI returned empty response content");
     }
 
-    // ── Step 7: Second-layer Zod validation ─────────────────────────
-    // Even with Structured Outputs, we run safeParse as defense-in-depth.
+    // ── Step 7: Parse, overwrite metadata, re-stringify ─────────────
+    // Never trust the model for metadata — overwrite with real backend values.
 
     let parsed: unknown;
     try {
       parsed = JSON.parse(content);
     } catch {
-      // If json_object mode produced unparseable output, let the service
-      // layer handle it via the invalid_output code path.
       return { raw: content };
     }
 
+    if (parsed && typeof parsed === "object") {
+      (parsed as Record<string, unknown>).generation_metadata = {
+        provider: "openai",
+        model: this.model,
+        generated_at: new Date().toISOString(),
+      };
+    }
+
+    // Defense-in-depth validation even with Structured Outputs.
     const validation = CampaignSpecSchema.safeParse(parsed);
     if (!validation.success) {
-      // Log the validation error server-side, but return the raw string
-      // for the service layer to handle as invalid_output.
       console.error(
         "[OpenAIProvider] Zod validation failed after Structured Outputs:",
         validation.error
       );
     }
 
-    // ── Step 8: Return as raw string for service-layer validation ───
-    return { raw: content };
+    return { raw: JSON.stringify(parsed) };
   }
 }

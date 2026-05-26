@@ -32,27 +32,26 @@ export class MockProvider implements AIProvider {
       input.discountedPriceCents / 100
     ).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
 
+    const originalFormatted = input.originalPriceCents > 0
+      ? (input.originalPriceCents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })
+      : null;
+
     const offer: {
       product_name: string;
-      original_price_display?: string;
+      original_price_display: string | null;
       discounted_price_display: string;
       badge_text: string;
     } = {
       product_name: input.productName,
+      original_price_display: originalFormatted
+        ? `De R$ ${originalFormatted}`
+        : null,
       discounted_price_display: `R$ ${discountedFormatted}`,
       badge_text:
         input.badge && input.badge.trim().length > 0
           ? input.badge
           : "Oferta",
     };
-
-    // Only include original price when > 0 — otherwise omit key entirely
-    if (input.originalPriceCents > 0) {
-      const originalFormatted = (
-        input.originalPriceCents / 100
-      ).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
-      offer.original_price_display = `De R$ ${originalFormatted}`;
-    }
 
     // ── Visual parameters (fixed for this phase) ─────────────────────────
 

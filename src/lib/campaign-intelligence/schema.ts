@@ -42,7 +42,7 @@ export const CampaignSpecSchema = z.object({
   }),
   offer: z.object({
     product_name: z.string().min(1, "Nome do produto é obrigatório"),
-    original_price_display: z.string().optional(),
+    original_price_display: z.string().nullable(),
     discounted_price_display: z.string().min(1, "Preço com desconto é obrigatório"),
     badge_text: z.string().min(1, "Texto do badge é obrigatório"),
   }),
