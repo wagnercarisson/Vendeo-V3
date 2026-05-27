@@ -204,7 +204,10 @@ Execução é automática baseada nos planos gerados no step anterior.
 1. Rodar validações:
    npm run typecheck && npm run lint && npm run build
 
-2. Se tudo passar → invocar:
+2. Rodar UAT da fase (validação conversacional):
+   /gsd-verify-work <PHASE_NUM>
+
+3. Quando UAT passar → verificar contra artefatos OpenSpec:
    /openspec-verify-change
 ```
 
@@ -234,6 +237,12 @@ Isso atualiza openspec/specs/ com os delta specs desta fase.
 **Output:**
 ```
 🚀 STEP 6 — Fechar fase e limpar branch.
+
+── Atualizar ROADMAP.md ───────────────────────────────────────────
+Marcar a fase <PHASE_NUM> como [x] em .planning/ROADMAP.md:
+  - Alterar "[ ] Phase <PHASE_NUM>" → "[x] Phase <PHASE_NUM>"
+  - Adicionar "(completed YYYY-MM-DD)" ao lado
+  - Atualizar tabela Progress: Status → Complete, Completed → data
 
 ── Commitar implementação ─────────────────────────────────────────
 git add .
