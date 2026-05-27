@@ -4,15 +4,17 @@ import { useCampaignForm } from "./use-campaign-form";
 import type { CampaignFormFields } from "./use-campaign-form";
 import { CampaignImageUpload } from "./campaign-image-upload";
 import { BADGE_OPTIONS } from "@/lib/constants";
+import type { StoreIdentitySnapshot } from "@/components/campaign/types";
 import {
   AlertCircle,
-  CheckCircle2,
   Loader2,
 } from "lucide-react";
 
-interface CampaignInputFormProps {}
+interface CampaignInputFormProps {
+  storeIdentity?: StoreIdentitySnapshot | null;
+}
 
-export function CampaignInputForm({}: CampaignInputFormProps) {
+export function CampaignInputForm({ storeIdentity }: CampaignInputFormProps) {
   const {
     fields,
     fieldErrors,
@@ -25,28 +27,27 @@ export function CampaignInputForm({}: CampaignInputFormProps) {
     handlePriceDiscountedChange,
     imagePreviewUrl,
     isSubmitting,
-    submitSuccess,
+    submitError,
+    setSubmitError,
     handleSubmit,
-    resetSubmit,
-  } = useCampaignForm();
+  } = useCampaignForm(storeIdentity ?? undefined);
 
-  if (submitSuccess) {
+  if (submitError) {
     return (
       <div>
-        <div className="mb-6 flex items-start gap-3 bg-green-900/20 border border-green-700/30 rounded-lg px-4 py-3">
-          <CheckCircle2 className="w-5 h-5 text-accent-green shrink-0 mt-0.5" />
-          <p className="text-accent-green text-sm font-body flex-1">
-            Dados da campanha registrados!
-          </p>
+        <div className="mb-4 flex items-start gap-3 bg-red-900/20 border border-red-700/30 rounded-lg px-4 py-3">
+          <AlertCircle className="w-5 h-5 text-accent-red shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-accent-red text-sm font-body">{submitError}</p>
+          </div>
           <button
             type="button"
-            onClick={resetSubmit}
+            onClick={() => setSubmitError(null)}
             className="text-text-muted hover:text-text-primary text-xs underline transition-colors duration-200 shrink-0"
           >
-            Editar dados
+            Descartar
           </button>
         </div>
-
         <FormContent
           fields={fields}
           fieldErrors={fieldErrors}
@@ -136,6 +137,7 @@ function FormContent({
           onBlur={() => handleBlur("productName")}
           placeholder="Ex: Tênis Runner Pro"
           maxLength={60}
+          disabled={isSubmitting}
           className={`w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
             touched.productName && fieldErrors.productName
               ? "border-accent-red"
@@ -174,6 +176,7 @@ function FormContent({
           onChange={(e) => handlePriceOriginalChange(e.target.value)}
           onBlur={() => handleBlur("originalPriceCents")}
           placeholder="R$ 0,00"
+          disabled={isSubmitting}
           className={`w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
             touched.originalPriceCents && fieldErrors.originalPriceCents
               ? "border-accent-red"
@@ -202,6 +205,7 @@ function FormContent({
           onChange={(e) => handlePriceDiscountedChange(e.target.value)}
           onBlur={() => handleBlur("discountedPriceCents")}
           placeholder="R$ 0,00"
+          disabled={isSubmitting}
           className={`w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
             touched.discountedPriceCents && fieldErrors.discountedPriceCents
               ? "border-accent-red"
@@ -235,6 +239,7 @@ function FormContent({
             placeholder="Ex: 20% OFF em todo o estoque"
             maxLength={120}
             rows={3}
+            disabled={isSubmitting}
             className={`w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 resize-none ${
               touched.description && fieldErrors.description
                 ? "border-accent-red"
@@ -265,6 +270,7 @@ function FormContent({
           value={fields.badge}
           onChange={(e) => setField("badge", e.target.value)}
           onBlur={() => handleBlur("badge")}
+          disabled={isSubmitting}
           className={`w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
             touched.badge && fieldErrors.badge
               ? "border-accent-red"

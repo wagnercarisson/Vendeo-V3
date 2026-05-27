@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { BADGE_OPTIONS } from "@/lib/constants";
 import { formatCurrencyBRL } from "@/lib/formatters";
+import type { StoreIdentitySnapshot, PreviewPayload } from "@/components/campaign/types";
+import type { CampaignSpec } from "@/lib/campaign-intelligence/schema";
 
 export interface CampaignFormFields {
   productName: string;
@@ -37,7 +40,8 @@ export interface UseCampaignFormReturn {
   handlePriceDiscountedChange: (raw: string) => void;
   imagePreviewUrl: string | null;
   isSubmitting: boolean;
-  submitSuccess: boolean;
+  submitError: string | null;
+  setSubmitError: (error: string | null) => void;
   handleSubmit: () => void;
   resetSubmit: () => void;
   isValid: boolean;
@@ -110,7 +114,7 @@ function validateField(
   }
 }
 
-export function useCampaignForm(): UseCampaignFormReturn {
+export function useCampaignForm(storeIdentity?: StoreIdentitySnapshot): UseCampaignFormReturn {
   const [fields, setFields] = useState<CampaignFormFields>(EMPTY_FIELDS);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<keyof CampaignFormFields, boolean>>({
@@ -125,8 +129,10 @@ export function useCampaignForm(): UseCampaignFormReturn {
   const [rawDiscountedPrice, setRawDiscountedPrice] = useState("");
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const prevImageFileRef = useRef<File | null>(null);
+  const objectUrlRef = useRef<string | null>(null);
+  const router = useRouter();
 
   const displayPriceOriginal =
     rawOriginalPrice === "" ? "" : formatCurrencyBRL(fields.originalPriceCents);
@@ -139,24 +145,20 @@ export function useCampaignForm(): UseCampaignFormReturn {
 
     if (currentFile === prevFile) return;
 
-    if (prevFile && prevFile !== currentFile) {
-      URL.revokeObjectURL(imagePreviewUrl ?? "");
+    if (prevFile && prevFile !== currentFile && imagePreviewUrl) {
+      URL.revokeObjectURL(imagePreviewUrl);
     }
 
     if (currentFile) {
       const url = URL.createObjectURL(currentFile);
       setImagePreviewUrl(url);
+      objectUrlRef.current = url;
     } else {
       setImagePreviewUrl(null);
+      objectUrlRef.current = null;
     }
 
     prevImageFileRef.current = currentFile;
-
-    return () => {
-      if (imagePreviewUrl) {
-        URL.revokeObjectURL(imagePreviewUrl);
-      }
-    };
   }, [fields.imageFile]);
 
   const setField = useCallback(
@@ -205,8 +207,9 @@ export function useCampaignForm(): UseCampaignFormReturn {
     []
   );
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     setIsSubmitting(true);
+    setSubmitError(null);
     setFieldErrors({});
 
     const errors: FieldErrors = {};
@@ -239,14 +242,66 @@ export function useCampaignForm(): UseCampaignFormReturn {
       return;
     }
 
-    setSubmitSuccess(true);
-    setIsSubmitting(false);
-  }, [fields]);
+    const frozenFields = { ...fields };
+    const frozenImagePreviewUrl = imagePreviewUrl;
+
+    try {
+      const body: Record<string, unknown> = {
+        productName: frozenFields.productName,
+        originalPriceCents: frozenFields.originalPriceCents,
+        discountedPriceCents: frozenFields.discountedPriceCents,
+        description: frozenFields.description || undefined,
+        badge: frozenFields.badge,
+        storeName: storeIdentity?.storeName ?? "",
+        storeSegment: storeIdentity?.storeSegment ?? "",
+        brandColor: storeIdentity?.brandColor ?? "#22C55E",
+      };
+
+      const response = await fetch("/api/campaign/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error?.message || "Erro ao gerar campanha");
+      }
+
+      const campaignSpec: CampaignSpec = await response.json();
+
+      if (!storeIdentity) {
+        throw new Error("Dados da loja não disponíveis");
+      }
+
+      const previewPayload: PreviewPayload = {
+        campaignSpec,
+        storeIdentity,
+        productImageUrl: frozenImagePreviewUrl,
+        generatedAt: new Date().toISOString(),
+      };
+
+      sessionStorage.setItem("campaign_preview", JSON.stringify(previewPayload));
+      router.push("/campaign/preview");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro inesperado ao gerar campanha";
+      setSubmitError(message);
+      setIsSubmitting(false);
+    }
+  }, [fields, imagePreviewUrl, storeIdentity, router]);
 
   const resetSubmit = useCallback(() => {
-    setSubmitSuccess(false);
+    setSubmitError(null);
     setFieldErrors({});
-  }, []);
+    setFields(EMPTY_FIELDS);
+    setRawOriginalPrice("");
+    setRawDiscountedPrice("");
+    if (imagePreviewUrl) {
+      URL.revokeObjectURL(imagePreviewUrl);
+      objectUrlRef.current = null;
+    }
+    sessionStorage.removeItem("campaign_preview");
+  }, [imagePreviewUrl]);
 
   const trimmed = fields.productName.trim();
   const isValid =
@@ -268,7 +323,8 @@ export function useCampaignForm(): UseCampaignFormReturn {
     handlePriceDiscountedChange,
     imagePreviewUrl,
     isSubmitting,
-    submitSuccess,
+    submitError,
+    setSubmitError,
     handleSubmit,
     resetSubmit,
     isValid,

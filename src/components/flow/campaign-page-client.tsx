@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import type { Store } from "@/lib/store";
+import { resolveStoreIdentity } from "@/lib/store";
 import { StoreIdentityBlock } from "./store-identity-block";
 import { CampaignInputForm } from "./campaign-input-form";
+import type { StoreIdentitySnapshot } from "@/components/campaign/types";
 import { Loader2, Store as StoreIcon, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
@@ -50,6 +52,17 @@ export function CampaignPageClient() {
   useEffect(() => {
     loadStore();
   }, [loadStore]);
+
+  const storeIdentity: StoreIdentitySnapshot | null = useMemo(() => {
+    if (!store) return null;
+    const resolved = resolveStoreIdentity(store);
+    return {
+      storeName: store.name,
+      storeSegment: store.segment,
+      brandColor: resolved.color,
+      logoUrl: store.logo_url,
+    };
+  }, [store]);
 
   if (pageState === "loading") {
     return (
@@ -124,7 +137,7 @@ export function CampaignPageClient() {
         Informe os dados do produto e da oferta
       </p>
 
-      <CampaignInputForm />
+      <CampaignInputForm storeIdentity={storeIdentity} />
     </div>
   );
 }

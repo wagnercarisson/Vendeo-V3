@@ -48,6 +48,17 @@ The card SHALL be non-interactive — no form fields, no edit button, no save ac
 - **WHEN** `brand_color` is null
 - **THEN** the color swatch SHALL use the segment-based fallback from `resolveStoreIdentity`
 
+### Requirement: Store identity passed through form props
+
+`CampaignPageClient` SHALL resolve the store identity once and pass a `storeIdentity` prop into `CampaignInputForm`. `CampaignInputForm` SHALL forward it to `useCampaignForm`. The hook SHALL use the snapshot only to compose the preview payload after successful generation.
+
+#### Scenario: Store identity flows through component hierarchy
+
+- **WHEN** `CampaignPageClient` renders `CampaignInputForm`
+- **THEN** a `StoreIdentitySnapshot` SHALL be passed as a prop
+- **AND** `CampaignInputForm` SHALL forward it to `useCampaignForm`
+- **AND** no additional fetch SHALL be made
+
 ### Requirement: Blocking state for missing or invalid store_id
 
 When no `store_id` exists in localStorage, the system SHALL render a centered blocking state with:
@@ -112,7 +123,7 @@ The system SHALL provide a file upload dropzone for product images using `<input
 3. If valid, create an object URL via `URL.createObjectURL()` and display a preview
 4. If invalid, show inline error, clear the file input, and show no preview
 
-Object URLs SHALL be revoked via `URL.revokeObjectURL()` when the component unmounts or a new file is selected. No upload to Supabase Storage or any server SHALL occur.
+Object URLs SHALL be revoked via `URL.revokeObjectURL()` when a new file is selected or when starting a new campaign. Object URLs SHALL NOT be revoked on navigation from campaign input to preview — they SHALL remain valid for the preview route. No upload to Supabase Storage or any server SHALL occur.
 
 #### Scenario: Valid image shows preview
 
@@ -132,10 +143,11 @@ Object URLs SHALL be revoked via `URL.revokeObjectURL()` when the component unmo
 - **THEN** an inline error SHALL appear: "Arquivo muito grande. Máximo 5MB"
 - **AND** no preview SHALL be displayed
 
-#### Scenario: Object URL is revoked on unmount
+#### Scenario: Object URL is revoked on new file or new campaign
 
-- **WHEN** the component unmounts or a new file is selected
+- **WHEN** a new file is selected or the user starts a new campaign
 - **THEN** `URL.revokeObjectURL()` SHALL be called for the previous object URL
+- **AND** the object URL SHALL NOT be revoked on navigation from campaign input to preview
 
 ### Requirement: Store identity loading and error state
 
@@ -222,22 +234,47 @@ Validation SHALL trigger on blur for each field. Blocking state SHALL prevent su
 - **THEN** an inline error SHALL appear: "Imagem do produto é obrigatória"
 - **AND** no success banner SHALL appear
 
-### Requirement: Submit with local success state
+### Requirement: Submit triggers API generation
 
-The submit button SHALL validate all fields. If valid, the system SHALL set a success/ready state and display a success banner above or below the form.
+The submit behavior SHALL be modified. Instead of displaying a local success banner without an API call, the system SHALL:
 
-No API request, no database write, no localStorage mutation SHALL occur on submit. All filled data SHALL remain visible and editable on screen.
+1. Validate all required fields
+2. Create or reuse the product image object URL from the selected image file
+3. Call `POST /api/campaign/generate` with form data including `storeName`, `storeSegment`, and `brandColor` from the resolved store identity
+4. On success: compose a `PreviewPayload` and store in sessionStorage
+5. Navigate to `/campaign/preview`
+6. On error: display error state with retry option
 
-#### Scenario: Valid submit shows success banner
+#### Scenario: Valid submit calls API and navigates to preview
 
 - **WHEN** all required fields are valid and the user clicks "Criar Campanha"
-- **THEN** a success banner SHALL appear with "Dados da campanha registrados!"
-- **AND** all filled form fields SHALL remain visible
-- **AND** no API request SHALL be made
+- **THEN** the system SHALL call `POST /api/campaign/generate`
+- **AND** on success, store the preview payload in sessionStorage
+- **AND** navigate to `/campaign/preview`
 
-#### Scenario: Invalid submit shows validation errors
+#### Scenario: API error shows error state
 
-- **WHEN** required fields are missing and the user clicks "Criar Campanha"
-- **THEN** all validation errors SHALL be shown inline
-- **AND** no success banner SHALL appear
-- **AND** the form SHALL remain editable
+- **WHEN** the API returns an error response
+- **THEN** the form SHALL display an error message
+- **AND** the user SHALL be able to retry
+
+### Requirement: Submit loading state during API call
+
+While the API call is in progress, the submit button SHALL show a loading state with a spinner. The submit button and all form fields SHALL be disabled during generation.
+
+#### Scenario: Loading state during generation
+
+- **WHEN** the user clicks "Criar Campanha"
+- **AND** the API call is in progress
+- **THEN** the submit button SHALL show a spinner
+- **AND** the button and all form fields SHALL be disabled
+- **AND** the submitted payload SHALL be frozen from the form state at submit time — edits during in-flight generation SHALL NOT affect the preview payload
+
+### Requirement: Preview payload cleared when navigating back
+
+When the user navigates back to the campaign input route from the preview, the preview payload SHALL be cleared from sessionStorage.
+
+#### Scenario: Back navigation clears payload
+
+- **WHEN** the user navigates from `/campaign/preview` back to the campaign input route
+- **THEN** the preview payload SHALL be removed from sessionStorage
