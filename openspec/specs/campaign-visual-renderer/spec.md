@@ -1,19 +1,21 @@
-> **Purpose**: This spec defines the CampaignRenderer component that visually composes a CampaignSpec into a fixed 1080×1080 reference layout for browser preview.
+> **Purpose**: This spec defines the CampaignRenderer component that visually composes a CampaignSpec into a fixed 1080×1080 reference layout for browser preview. Phase 4.2 rewrote the renderer to implement the `produto-oferta-comercial` template per the 4.2.0 Commercial Art Direction contract.
 
 ## Requirements
 
 ### Requirement: CampaignRenderer renders a fixed 1080×1080 reference composition
 
-The system SHALL provide a `CampaignRenderer` React component that renders a fixed 1080×1080 reference composition from a `CampaignSpec` + `StoreIdentitySnapshot` + `productImageUrl`. The composition SHALL follow the zone layout, typography scale, color palette, and safe area rules defined in `CAMPAIGN_VISUAL_SYSTEM.md`.
+The system SHALL provide a `CampaignRenderer` React component that renders a fixed 1080×1080 reference composition from a `CampaignSpec` + `StoreIdentitySnapshot` + `productImageUrl`. The composition SHALL follow the zone layout, hierarchy, image treatment, price block, CTA styling, and store identity rules defined in the 4.2.0 Commercial Art Direction contract, which takes precedence over general `CAMPAIGN_VISUAL_SYSTEM.md` rules where specified.
 
-The component SHALL be pure (no side effects, no state, no API calls). It SHALL receive all data via props and render solely based on those props.
+The component SHALL be pure (no side effects, no state beyond logo onError, no API calls). It SHALL receive all data via props and render solely based on those props.
 
 The component SHALL scale responsively in the browser while preserving the square aspect ratio, zone hierarchy, and visual balance.
 
-#### Scenario: Renders complete composition from valid props
+#### Scenario: Renders commercial composition from valid props
 
 - **WHEN** `CampaignRenderer` receives a valid `CampaignSpec`, `StoreIdentitySnapshot`, and `productImageUrl`
-- **THEN** the component SHALL render a square composition with: product image zone, badge, product name, original price (strikethrough if present), discounted price, description, CTA pill button, and store identity
+- **THEN** the component SHALL render the `produto-oferta-comercial` template composition
+- **AND** the composition SHALL include: product image zone with professional treatment, hook text, badge, product name, original price (strikethrough if present), discounted price as visual hero, CTA as campaign element, and store identity
+- **AND** the composition SHALL NOT use the Phase 4.1 stacked layout
 
 #### Scenario: Responsive scaling preserves aspect ratio
 
@@ -24,34 +26,36 @@ The component SHALL scale responsively in the browser while preserving the squar
 
 #### Scenario: Missing product image shows explicit error
 
-- **WHEN** `productImageUrl` is null or the image fails to load
-- **THEN** the component SHALL render an error state indicating the product image is unavailable
-- **AND** no placeholder or empty image zone SHALL be rendered
+- **WHEN** `productImageUrl` is null or the image fails to load (PreviewPage detects failure upstream)
+- **THEN** the component SHALL render an explicit error state indicating the product image is unavailable
+- **AND** no placeholder or fallback image SHALL be rendered
+- **AND** the campaign SHALL NOT be considered publishable
 
 ### Requirement: Product image zone
 
-The product image SHALL occupy approximately 55% of the composition height (594px at 1080×1080). The image SHALL use `object-fit: cover` centered on the image content. A subtle gradient overlay SHALL transition from the image zone to the text zone below.
+The product image SHALL be integrated into the composition with professional visual treatment as defined in the 4.2.0 contract. The image SHALL use `object-fit: contain` by default, with `cover` reserved for lifestyle/contextual images. No gradient overlay at the image→text transition — replaced by a subtle shadow divider.
 
-#### Scenario: Product image fills the image zone
+#### Scenario: Product image with professional treatment
 
 - **WHEN** a valid product image URL is provided
-- **THEN** the image SHALL fill the top ~55% of the composition
-- **AND** the image SHALL be centered and cropped to fill the area without distortion
+- **THEN** the image SHALL render with `object-fit: contain` (default)
+- **AND** the image SHALL be centered and not distorted
 
-#### Scenario: Gradient overlay separates image from text
+#### Scenario: Missing product image shows explicit error
 
-- **WHEN** the composition is rendered
-- **THEN** a linear gradient overlay SHALL transition from transparent at the top to semi-transparent dark at the bottom of the image zone
+- **WHEN** `productImageUrl` is null
+- **THEN** the component SHALL render an error state indicating the product image is unavailable
+- **AND** no placeholder or fallback image SHALL be rendered
 
 ### Requirement: Badge zone
 
-A promotional badge SHALL render in the top-right corner of the composition, following `CAMPAIGN_VISUAL_SYSTEM.md` §3.3. The badge SHALL use the accent color from the visual parameters or segment palette. If no badge text is provided, the badge zone SHALL be omitted (no empty space).
+A promotional badge SHALL render in the top-right corner of the composition. Styling follows the 4.2.0 contract. If no badge text is provided, the badge zone SHALL be omitted (no empty space).
 
 #### Scenario: Badge renders in top-right corner
 
 - **WHEN** `offer.badge_text` is provided
 - **THEN** a pill-shaped badge SHALL appear in the top-right corner
-- **AND** the badge SHALL display the badge text in Poppins 700, white, on the accent color background
+- **AND** the badge SHALL display the badge text in white on the accent color background
 
 #### Scenario: No badge text omits badge
 
@@ -61,7 +65,7 @@ A promotional badge SHALL render in the top-right corner of the composition, fol
 
 ### Requirement: Product name zone
 
-The product name SHALL render centered below the image zone, following `CAMPAIGN_VISUAL_SYSTEM.md` §3.4 typography rules. The name SHALL use Poppins 700, slate-800 color, center-aligned, max 2 lines. If the name exceeds 40 characters, font size SHALL reduce.
+The product name SHALL render centered in the composition, following `CAMPAIGN_VISUAL_SYSTEM.md` §3.4 typography rules: Poppins 700, slate-800 color, center-aligned, max 2 lines. If the name exceeds 40 characters, font size SHALL reduce from 42px to 36px.
 
 #### Scenario: Short product name renders at base size
 
@@ -75,68 +79,79 @@ The product name SHALL render centered below the image zone, following `CAMPAIGN
 
 ### Requirement: Price zone
 
-The discounted price SHALL render as the most visually prominent text element, using Poppins 700 at 52px. The price color SHALL use the resolved accent color from `visual_parameters`, segment palette, or store brand color. Fallback: `#22C55E`. If an original price is provided, it SHALL appear above the discounted price as strikethrough text in slate-400 at 28px.
+The discounted price SHALL render as the most visually prominent text element, using Poppins 800 (extra-bold) at 56px. The price color SHALL use the resolved accent color. Font size supersedes the Phase 4.1 rules (52px with original, 44px without) — the 4.2.0 contract defines a single hero size.
+
+If an original price is provided, it SHALL appear above the discounted price as strikethrough text in slate-400 at 24px italic.
 
 #### Scenario: Both prices render with strikethrough
 
 - **WHEN** `offer.original_price_display` is provided
 - **THEN** the original price SHALL render above the discounted price with line-through decoration
 
-#### Scenario: Only discounted price renders larger
+#### Scenario: Only discounted price renders
 
 - **WHEN** `offer.original_price_display` is null
-- **THEN** only the discounted price SHALL render
-- **AND** it SHALL render at 44px
+- **THEN** only the discounted price SHALL render at 56px (hero size)
+
+### Requirement: Hook zone (NEW)
+
+The hook/benefício text from `commercial_copy.hook` SHALL render as a secondary highlight in the composition. Its position, size, and styling SHALL follow the 4.2.0 contract — italic 24px Open Sans, less prominent than the price.
+
+#### Scenario: Hook renders as secondary highlight
+
+- **WHEN** `commercial_copy.hook` is provided
+- **THEN** the hook SHALL render in a position and style defined by the 4.2.0 contract
+- **AND** the hook SHALL be less prominent than the price but visible as a distinct element
+
+#### Scenario: Empty hook hides zone
+
+- **WHEN** `commercial_copy.hook` is empty or null
+- **THEN** no hook zone SHALL be rendered
+- **AND** remaining elements SHALL adjust without empty space
 
 ### Requirement: Description zone
 
-The description text SHALL render below the price zone, centered, in Open Sans 400 at 24px, slate-600, max 2 lines. If no description is provided, this zone SHALL be hidden and the CTA zone SHALL shift up by approximately 50px.
+Description/subtitle is NOT rendered in the `produto-oferta-comercial` template. The hook/benefício serves as the primary persuasive text below the price. Reserved for future templates.
 
-#### Scenario: Description renders below price
+### Requirement: CTA zone
 
-- **WHEN** `commercial_copy.subtitle` is provided
-- **THEN** the description SHALL render centered below the price, in Open Sans 400, max 2 lines
-
-#### Scenario: Empty description hides zone
-
-- **WHEN** `commercial_copy.subtitle` is empty or null
-- **THEN** the description zone SHALL be hidden
-- **AND** the CTA zone SHALL shift up by approximately 50px
-
-### Requirement: CTA button zone
-
-A CTA pill button SHALL render centered below the description or price zone. The button SHALL follow `CAMPAIGN_VISUAL_SYSTEM.md` §3.7: pill shape, white text, Poppins 700 at 22px, subtle drop shadow. The CTA background color SHALL use the resolved accent color from `visual_parameters`, segment palette, or store brand color. Fallback: `#22C55E`.
+A CTA element SHALL render as an integrated campaign element — not as a generic UI button. It SHALL be a visual `<div>` pill with `rounded-full`, white text, Poppins 700 at 22px, background using the resolved accent color. The CTA SHALL NOT be interactive: no `cursor-pointer`, no hover effects, no focus ring, no `disabled` attribute.
 
 The CTA text SHALL come from `commercial_copy.cta`. Default fallback if missing: "Aproveite Agora!".
 
-#### Scenario: CTA renders as pill button
+#### Scenario: CTA renders as campaign element
 
 - **WHEN** `commercial_copy.cta` is provided
-- **THEN** a pill-shaped button SHALL render centered with the CTA text in white on the accent color background
-- **AND** the button SHALL have a subtle drop shadow
+- **THEN** the CTA SHALL render as a campaign element (pill shape, integrated into composition)
+- **AND** the CTA SHALL NOT render as a browser-native interactive button
+- **AND** the styling SHALL follow the 4.2.0 contract
 
 #### Scenario: Missing CTA uses fallback
 
 - **WHEN** `commercial_copy.cta` is empty or null
-- **THEN** the CTA button SHALL render with "Aproveite Agora!"
+- **THEN** the CTA SHALL render with "Aproveite Agora!"
 
 ### Requirement: Store identity zone
 
-The store identity SHALL render at the bottom center of the composition, following `CAMPAIGN_VISUAL_SYSTEM.md` §3.8. If a `logoUrl` is provided, a circular 40×40px logo SHALL appear above the store name. If no logo URL is provided, a circular fallback with the first 2 characters of the store name SHALL render using the brand color.
+The store identity SHALL render at the bottom center of the composition. Positioning and styling follow the 4.2.0 contract: store name at 16px Open Sans 500 (reduced from 18px for subtlety).
 
 #### Scenario: Store identity renders with logo
 
-- **WHEN** `storeIdentity.logoUrl` is provided
+- **WHEN** `storeIdentity.logoUrl` is provided and loads successfully
 - **THEN** a circular 40×40px logo SHALL render above the store name
-- **AND** the store name SHALL render in Open Sans 500, 18px, slate-500
+- **AND** the store name SHALL render in Open Sans 500, 16px, slate-500
 
 #### Scenario: Store identity renders with initials fallback
 
 - **WHEN** `storeIdentity.logoUrl` is null
-- **THEN** a circular fallback SHALL render with the first 2 characters of the store name
-- **AND** the fallback SHALL use the brand color as background with white text
+- **THEN** a circular fallback SHALL render with the store initials via `getStoreInitials()`
+- **AND** the fallback SHALL use the brand or accent color as background with white text
 
 #### Scenario: Logo image fails to load
 
 - **WHEN** `storeIdentity.logoUrl` is provided but the image fails to load
 - **THEN** the initials fallback SHALL render using the brand color
+
+### Requirement: Unsupported layout_preset fallback
+
+Unchanged from Phase 4.1 — unsupported presets fall back to the default template. The `produto-oferta-comercial` layout_preset is the only supported value in Phase 4.2.

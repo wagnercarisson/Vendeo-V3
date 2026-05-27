@@ -53,10 +53,12 @@ The adjustments panel SHALL provide constrained fields for local editing:
 - **Title**: text input, overrides `commercial_copy.title`
 - **Discounted price**: BRL currency input, overrides `offer.discounted_price_display` only — SHALL NOT recalculate numeric price fields
 - **Badge text**: text input, max 20 characters, overrides `offer.badge_text`
+- **Hook**: text input, max 120 characters, label "Texto do Benefício", overrides `commercial_copy.hook`
+- **CTA**: text input, max 60 characters, label "Chamada para Ação", overrides `commercial_copy.cta`
 
 All adjustments SHALL update the rendered art locally without API calls. No free-form editing of layout, fonts, colors, or element positions SHALL be allowed.
 
-Each adjusted field SHALL have an undo button that resets the field to the original spec value.
+Each adjusted field SHALL have an undo button that resets the field to the original spec value. Hook and CTA fields SHALL display a character counter showing the current length.
 
 #### Scenario: Title adjustment re-renders locally
 
@@ -76,8 +78,32 @@ Each adjusted field SHALL have an undo button that resets the field to the origi
 - **THEN** the CampaignRenderer SHALL re-render with the new badge text
 - **AND** no API call SHALL be made
 
+#### Scenario: Hook adjustment re-renders locally
+
+- **WHEN** the user edits the hook field
+- **THEN** the CampaignRenderer SHALL re-render with the new hook text
+- **AND** no API call SHALL be made
+- **AND** the character counter SHALL update to reflect the current length
+
+#### Scenario: CTA adjustment re-renders locally
+
+- **WHEN** the user edits the CTA field
+- **THEN** the CampaignRenderer SHALL re-render with the new CTA text
+- **AND** no API call SHALL be made
+- **AND** the character counter SHALL update to reflect the current length
+
 #### Scenario: Undo resets adjusted field
 
 - **WHEN** the user clicks undo on any adjusted field
 - **THEN** that field SHALL revert to the original value from the spec
 - **AND** the CampaignRenderer SHALL re-render with the original value
+
+### Requirement: CampaignAdjustments type expanded
+
+The `CampaignAdjustments` interface SHALL include `hook` and `cta` optional string fields, following the same pattern as `title`, `discountedPriceDisplay`, and `badgeText`.
+
+#### Scenario: CampaignAdjustments includes hook and cta
+
+- **WHEN** inspecting `CampaignAdjustments`
+- **THEN** the type SHALL include `hook?: string` and `cta?: string`
+- **AND** existing fields SHALL remain unchanged

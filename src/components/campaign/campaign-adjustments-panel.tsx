@@ -118,6 +118,60 @@ export function CampaignAdjustmentsPanel({
           Original: &quot;{originalSpec.offer.badge_text}&quot;
         </p>
       </div>
+
+      {/* Hook Field */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-gray-500 text-xs font-heading font-medium uppercase tracking-wider">
+            Texto do Benefício
+          </label>
+          <span className="text-xs text-gray-400">
+            {(adjustments.hook ?? originalSpec.commercial_copy.hook).length}/120
+          </span>
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={adjustments.hook ?? originalSpec.commercial_copy.hook}
+            onChange={(e) => onAdjustmentChange("hook", e.target.value)}
+            maxLength={120}
+            className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 focus:border-accent-blue"
+          />
+          {adjustments.hook !== undefined && (
+            <UndoButton onClick={() => onUndo("hook")} />
+          )}
+        </div>
+        <p className="text-xs text-gray-400 mt-1">
+          Original: &quot;{originalSpec.commercial_copy.hook}&quot;
+        </p>
+      </div>
+
+      {/* CTA Field */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-gray-500 text-xs font-heading font-medium uppercase tracking-wider">
+            Chamada para Ação
+          </label>
+          <span className="text-xs text-gray-400">
+            {(adjustments.cta ?? originalSpec.commercial_copy.cta).length}/60
+          </span>
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={adjustments.cta ?? originalSpec.commercial_copy.cta}
+            onChange={(e) => onAdjustmentChange("cta", e.target.value)}
+            maxLength={60}
+            className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 focus:border-accent-blue"
+          />
+          {adjustments.cta !== undefined && (
+            <UndoButton onClick={() => onUndo("cta")} />
+          )}
+        </div>
+        <p className="text-xs text-gray-400 mt-1">
+          Original: &quot;{originalSpec.commercial_copy.cta}&quot;
+        </p>
+      </div>
     </div>
   );
 }

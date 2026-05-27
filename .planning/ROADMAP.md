@@ -27,7 +27,14 @@
 - [ ] Phase 4: Visual Rendering & Preview
   - [x] Phase 4.1: Campaign Visual Renderer & Preview (1/1 plans) (completed 2026-05-26)
     - [x] 04.1-PLAN.md — CampaignRenderer + preview page + adjustments + form wiring
-- [ ] Phase 5: Review, Adjust & Export
+  - [x] Phase 4.2: Commercial Visual Quality (4 plans) — baseline complete, agency-grade composition deferred
+    - [x] 4.2-01-PLAN.md — Content, types & adjustments (hook + CTA panel, mock update)
+    - [x] 4.2-02-PLAN.md — Commercial art direction (UI/UX Pro Max contract)
+    - [x] 4.2-03-PLAN.md — Commercial renderer rewrite per art direction contract
+    - [x] 4.2-04-PLAN.md — Visual validation gate & publishability checklist
+    - [!] Visual note: functional baseline passed; agency-grade publishability not achieved and deferred to future phase
+- [ ] Phase 4.3: Agency-grade Campaign Composition — proposed (blocking Phase 5)
+- [ ] Phase 5: Review, Adjust & Export (blocked by Phase 4.3)
 
 ## Progress
 
@@ -38,5 +45,7 @@
 | 3.1. Campaign Intelligence Foundation | v1.1 | 3/3 | Complete   | 2026-05-25 |
 | 3.2. Real AI Provider Integration | v1.1 | 1/1 | Complete | 2026-05-26 |
 | 4.1. Campaign Visual Renderer & Preview | v1.1 | 1/1 | Complete | 2026-05-26 |
-| 4. Visual Rendering & Preview (remaining) | v1.1 | 0 | Not started | - |
-| 5. Review, Adjust & Export | v1.1 | 0 | Not started | - |
+| 4.2. Commercial Visual Quality | v1.1 | 4/4 | Baseline Complete — visual debt deferred | 2026-05-27 |
+| 4.3. Agency-grade Campaign Composition | v1.1 | 0 | Proposed | - |
+| 4. Visual Rendering & Preview (remaining) | v1.1 | 0 | Blocked by 4.3 | - |
+| 5. Review, Adjust & Export | v1.1 | 0 | Blocked by 4.3 | - |

@@ -2,7 +2,7 @@
 
 - [ ] 1.1 Run UI/UX Pro Max skill to produce the visual contract for `produto-oferta-comercial`
 - [ ] 1.2 Define zone composition, hierarchy, and proportions for the single template
-- [ ] 1.3 Define product image treatment (contain/crop, shadow, vignette, overlay)
+- [ ] 1.3 Define product image treatment (contain vs cover strategy, shadow, no overlay)
 - [ ] 1.4 Define price block styling (hero treatment, positioning, background accent)
 - [ ] 1.5 Define CTA styling as campaign element (pill, integrated, non-interactive)
 - [ ] 1.6 Define store identity positioning and professional presentation
@@ -26,7 +26,7 @@
 
 - [ ] 3.1 Rewrite `CampaignRenderer` internal layout to implement the `produto-oferta-comercial` template per the 4.2.0 contract
 - [ ] 3.2 Implement professional product image treatment (contain/crop, shadow, vignette) per 4.2.0 contract
-- [ ] 3.3 Implement background with visual treatment (gradient, overlay) per segment per 4.2.0 contract
+- [ ] 3.3 Implement background treatment per segment per 4.2.0 contract
 - [ ] 3.4 Implement hook/benefício as visible element in the composition
 - [ ] 3.5 Implement price block as visual hero element with accent color
 - [ ] 3.6 Implement CTA as campaign element (non-interactive, integrated styling)

@@ -18,6 +18,8 @@ export interface CampaignAdjustments {
   title?: string;
   discountedPriceDisplay?: string;
   badgeText?: string;
+  hook?: string;
+  cta?: string;
 }
 
 export const SEGMENT_PALETTES: Record<string, { background: string; accent: string }> = {

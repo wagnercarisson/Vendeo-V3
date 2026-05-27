@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI + Rendering
-status: complete
-stopped_at: Completed Phase 3.2 — AI Provider Integration
-last_updated: "2026-05-26T00:00:00.000Z"
+status: in_progress
+stopped_at: Baseline Complete Phase 4.2 — visual debt deferred
+last_updated: "2026-05-27T16:30:00.000Z"
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
-  percent: 100
+  total_phases: 8
+  completed_phases: 6
+  total_plans: 11
+  completed_plans: 11
+  percent: 75
 ---
 
 # Project State
@@ -20,18 +20,18 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-25 after v1.0 milestone)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
-**Current focus:** Phase 3.2 — Real AI Provider Integration
+**Current focus:** Phase 4.2 — Commercial Visual Quality (baseline complete)
 
 ## Current Position
 
-Phase: 3.2 (real-ai-provider-integration-openai-anthropic) — COMPLETE
-Plan: 01 of 01
+Phase: 4.2 (commercial-visual-quality) — BASELINE COMPLETE (visual debt deferred)
+Plan: 4 of 4
 Milestone: v1.1 AI + Rendering — IN PROGRESS
-Phases complete: 3 of 5 (Foundation, Campaign Input, AI Intelligence)
-Next phase: Phase 4 — Visual Rendering & Preview
-Status: Phase 3.2 complete — ready for verification
+Phases complete: 6 of 8 (Foundation, Campaign Input, AI Intelligence, AI Provider, Visual Renderer, Commercial Visual Quality baseline)
+Next phase: Phase 4.3 — Agency-grade Campaign Composition (proposed)
+Status: Phase 4.2 baseline functional — agency-grade publishability deferred
 
-Progress: [████████████████████░░░░] 60%
+Progress: [█████████████████████████░] 90%
 
 ## Performance Metrics
 
@@ -78,10 +78,17 @@ Recent decisions affecting current work:
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| *(none)* | | | |
+| Visual Quality | Agency-grade composition — stacked/catalog layout still not publishable as professional campaign art. Requires Phase 4.3: new composition system with layers, overlapping elements, price banner, background shapes | Deferred to Phase 4.3 | 2026-05-27 |
 
 ## Session Continuity
 
-Last session: 2026-05-26T20:28:12.658Z
-Stopped at: Completed 03.2-01-PLAN.md
-Resume file: None
+Last session: 2026-05-27T16:30:00.000Z
+Stopped at: Phase 4.2 baseline complete — visual debt deferred
+Resume file: .planning/phases/4.2-commercial-visual-quality/4.2-PUBLISHABILITY.md
+
+## Next Phase
+
+Phase 4.3 — Agency-grade Campaign Composition (proposed)
+- Objective: Resolver a dívida visual da Phase 4.2 com composição não-catalogada
+- Key changes needed: price banner overlap, background shapes, layered composition, agency-grade visual hierarchy
+- Blocks Phase 5 (Review, Adjust & Export)

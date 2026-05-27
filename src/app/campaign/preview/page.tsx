@@ -52,6 +52,8 @@ export default function PreviewPage() {
       commercial_copy: {
         ...spec.commercial_copy,
         title: adjustments.title ?? spec.commercial_copy.title,
+        hook: adjustments.hook ?? spec.commercial_copy.hook,
+        cta: adjustments.cta ?? spec.commercial_copy.cta,
       },
       offer: {
         ...spec.offer,

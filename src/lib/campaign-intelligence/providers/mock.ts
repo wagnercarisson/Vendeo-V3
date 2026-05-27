@@ -11,6 +11,43 @@ import type { CampaignGenerationInput } from "../schema";
  * visual parameters) are purely derived from input — same input always
  * produces the same content. Only `generated_at` varies per call.
  */
+const SEGMENT_HOOKS: Record<string, string> = {
+  "moda-vestuario": "O estilo que você merece!",
+  "alimentacao-bebidas": "Sabor inesquecível toda hora!",
+  "beleza-estetica": "Realce sua beleza natural!",
+  "saude-farmacia": "Sua saúde em primeiro lugar!",
+  "eletronicos-tecnologia": "Tecnologia que faz a diferença!",
+  "casa-decoracao": "Transforme seu lar!",
+  "servicos": "Soluções que funcionam pra você!",
+  "petshop": "Seu pet merece o melhor!",
+  "variedades": "O melhor pra você!",
+  "outros": "Não perca esta oportunidade!",
+};
+
+const SEGMENT_CTAS: Record<string, string> = {
+  "moda-vestuario": "Garanta seu Estilo!",
+  "alimentacao-bebidas": "Peça Já o Seu!",
+  "beleza-estetica": "Agende Seu Horário!",
+  "saude-farmacia": "Cuide-se Agora!",
+  "eletronicos-tecnologia": "Compre Agora!",
+  "casa-decoracao": "Decore Já!",
+  "servicos": "Solicite Agora!",
+  "petshop": "Mime Seu Pet!",
+  "variedades": "Aproveite Agora!",
+  "outros": "Garanta o Seu!",
+};
+
+function getHooksBySegment(segment: string, description?: string): string {
+  if (description && description.trim().length > 0) {
+    return description;
+  }
+  return SEGMENT_HOOKS[segment] ?? SEGMENT_HOOKS["outros"];
+}
+
+function getCTAsBySegment(segment: string): string {
+  return SEGMENT_CTAS[segment] ?? SEGMENT_CTAS["outros"];
+}
+
 export class MockProvider implements AIProvider {
   readonly name = "mock";
 
@@ -19,11 +56,8 @@ export class MockProvider implements AIProvider {
 
     const title = `${input.productName} — Oferta Imperdível na ${input.storeName}`;
     const subtitle = `Aproveite o melhor preço em ${input.productName} na ${input.storeName}`;
-    const hook =
-      input.description && input.description.trim().length > 0
-        ? input.description
-        : "Corra! Últimas unidades com desconto especial.";
-    const cta = "Garanta o Seu!";
+    const hook = getHooksBySegment(input.storeSegment, input.description);
+    const cta = getCTAsBySegment(input.storeSegment);
 
     // ── Offer ────────────────────────────────────────────────────────────
     // Brazilian price formatting (decimal comma, thousands dot)
@@ -56,7 +90,7 @@ export class MockProvider implements AIProvider {
     // ── Visual parameters (fixed for this phase) ─────────────────────────
 
     const visualParameters = {
-      layout_preset: "produto-oferta",
+      layout_preset: "produto-oferta-comercial",
       composition_type: "standard",
       hierarchy_focus: "product-image",
       palette_accent: input.brandColor,
