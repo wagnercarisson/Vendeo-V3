@@ -17,6 +17,9 @@ export default function PreviewPage() {
   const [spec, setSpec] = useState<CampaignSpec | null>(null);
   const [adjustments, setAdjustments] = useState<CampaignAdjustments>({});
   const [productImageError, setProductImageError] = useState(false);
+  const [showGeneratedImage, setShowGeneratedImage] = useState(false);
+  const [generatedImageError, setGeneratedImageError] = useState(false);
+  const [showLegacyView, setShowLegacyView] = useState(false);
 
   useEffect(() => {
     try {
@@ -39,6 +42,14 @@ export default function PreviewPage() {
         img.onload = () => setProductImageError(false);
         img.onerror = () => setProductImageError(true);
         img.src = parsed.productImageUrl;
+      }
+
+      if (parsed.generatedImageDataUrl) {
+        setShowGeneratedImage(true);
+        const img = new Image();
+        img.onload = () => setGeneratedImageError(false);
+        img.onerror = () => setGeneratedImageError(true);
+        img.src = parsed.generatedImageDataUrl;
       }
     } catch {
       setPageState("error");
@@ -111,6 +122,10 @@ export default function PreviewPage() {
     } catch {
       setPageState("error");
     }
+  }, []);
+
+  const handleToggleLegacy = useCallback(() => {
+    setShowLegacyView((prev) => !prev);
   }, []);
 
   if (pageState === "loading") {
