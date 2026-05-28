@@ -37,7 +37,7 @@ export class OpenAIImageProvider implements ImageProvider {
   /**
    * @param responsesModel - Model for responses.create() (mainline model, not gpt-image-2).
    *                         Defaults to IMAGE_GENERATION_RESPONSES_MODEL from config.
-   * @param editFallbackModel - Model for Image API edit fallback (must be DALL-E).
+   * @param editFallbackModel - Model for Image API edit fallback, typically a GPT Image model such as gpt-image-2.
    *                            Defaults to IMAGE_EDIT_FALLBACK_MODEL from config.
    */
   constructor(responsesModel?: string, editFallbackModel?: string) {
@@ -114,9 +114,10 @@ export class OpenAIImageProvider implements ImageProvider {
           ? (err as { type: string }).type
           : typeof err;
       const errorMessage = err instanceof Error ? err.message : String(err);
+
       // Log without stack trace — safe metadata only
       console.error(
-        `[OpenAIImageProvider] provider error — type=${errorType} code=${errorCode} status=${errorStatus}`
+        `[OpenAIImageProvider] provider error — type=${errorType} code=${errorCode} status=${errorStatus} message=${errorMessage}`
       );
 
       // ── Step 3: Fallback — Image API edit when product image reference
@@ -162,38 +163,62 @@ export class OpenAIImageProvider implements ImageProvider {
       message.includes("tool")
     );
   }
-
   /**
-   * Fallback: Use the Image API edit endpoint.
-   * Uses IMAGE_EDIT_FALLBACK_MODEL (dall-e-3 by default) since gpt-image-2
-   * is not a valid model for the Images API — only dall-e-2 and dall-e-3
-   * are supported.
+   * Uses IMAGE_EDIT_FALLBACK_MODEL for the Image API edit fallback.
+   * The default should be a GPT Image model such as gpt-image-2.
    *
    * The product image is sent as the base image with the prompt as instruction.
    */
+
   private async fallbackToImageApi(
     openai: any,
     input: ImageProviderInput,
     size: string
   ): Promise<ImageProviderOutput> {
-    const base64Data = input.productImageDataUrl!.replace(
-      /^data:image\/\w+;base64,/,
-      ""
+    const { toFile } = await import("openai");
+
+    const dataUrlMatch = input.productImageDataUrl!.match(
+      /^data:(image\/(?:png|jpeg|webp));base64,(.+)$/i
     );
 
-    // Images API only supports specific sizes for dall-e-3
-    const imageApiSize = size === "2048x2048" ? "1024x1024" : "1024x1024";
+    if (!dataUrlMatch) {
+      throw new Error(
+        "Invalid productImageDataUrl. Expected data:image/png|jpeg|webp;base64,..."
+      );
+    }
+
+    const mimeType = dataUrlMatch[1].toLowerCase() as
+      | "image/png"
+      | "image/jpeg"
+      | "image/webp";
+
+    const base64Data = dataUrlMatch[2];
+    const imageBuffer = Buffer.from(base64Data, "base64");
+
+    const extension =
+      mimeType === "image/png"
+        ? "png"
+        : mimeType === "image/webp"
+          ? "webp"
+          : "jpg";
+
+    const imageFile = await toFile(imageBuffer, `product.${extension}`, {
+      type: mimeType,
+    });
+
+    // Use a conservative square size for the Image API edit fallback.
+    const imageApiSize = "1024x1024";
 
     const response = await openai.images.edit({
       model: this.editFallbackModel,
-      image: Buffer.from(base64Data, "base64"),
+      image: imageFile,
       prompt: input.prompt,
-      size: imageApiSize as "1024x1024" | "256x256" | "512x512",
+      size: imageApiSize,
       n: 1,
-      response_format: "b64_json",
     });
 
-    const imageBase64 = response.data[0]?.b64_json;
+    const imageBase64 = response.data?.[0]?.b64_json;
+
     if (!imageBase64) {
       throw new Error("Image API returned no image data");
     }
