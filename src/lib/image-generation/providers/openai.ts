@@ -10,13 +10,15 @@ import {
  * OpenAIImageProvider — real AI provider that calls OpenAI's Responses API
  * with the image_generation tool as the primary path.
  *
- * The model passed to responses.create() MUST be a mainline model (e.g. gpt-4o,
- * gpt-4.1, gpt-5) that supports the image_generation tool — NOT gpt-image-2,
- * which is the internal model used by the tool itself.
+ * The model passed to responses.create() MUST be a mainline model that supports
+ * the image_generation tool — NOT a GPT Image model such as gpt-image-2.
  *
- * Fallback: Image API edits when the Responses API is unavailable for the
- * specific use case (e.g., tool not supported). The fallback uses a DALL-E
- * model, since the Images API only supports dall-e-2 and dall-e-3.
+ * Fallback: use Image API edits when the Responses API is unavailable,
+ * insufficient, or fails for the specific prompt + image reference flow.
+ *
+ * The fallback uses the Image API directly with a GPT Image model such as
+ * gpt-image-2. Do not use the GPT Image model as the `model` parameter for
+ * responses.create(); use it only in the Image API fallback.
  *
  * Requires OPENAI_API_KEY in environment.
  *
@@ -26,6 +28,7 @@ import {
  * NOTE: This provider does NOT handle input validation — it assumes validated
  * input has already passed through InputValidationService.
  */
+
 export class OpenAIImageProvider implements ImageProvider {
   readonly name = "openai";
   private readonly responsesModel: string;
