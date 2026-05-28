@@ -209,23 +209,75 @@ export default function PreviewPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="flex flex-col md:flex-row gap-6 items-start">
-          <div className="w-full md:w-[55%] lg:w-[60%] flex-shrink-0 sticky top-20">
-            <CampaignRenderer
-              spec={mergedSpec!}
-              storeIdentity={payload!.storeIdentity}
-              productImageUrl={productImageError ? null : payload!.productImageUrl}
-            />
+        {showGeneratedImage && !showLegacyView ? (
+          <div className="flex flex-col md:flex-row gap-6 items-start">
+            <div className="w-full md:w-[55%] lg:w-[60%] flex-shrink-0 sticky top-20">
+              {generatedImageError ? (
+                <div className="aspect-square bg-gray-100 rounded-xl flex items-center justify-center">
+                  <div className="text-center">
+                    <AlertCircle className="w-8 h-8 text-accent-red mx-auto mb-2" />
+                    <p className="text-sm text-text-secondary font-body">
+                      Erro ao carregar imagem gerada
+                    </p>
+                  </div>
+                </div>
+              ) : payload?.generatedImageDataUrl ? (
+                <img
+                  src={payload.generatedImageDataUrl}
+                  alt="Campanha gerada por IA"
+                  className="w-full rounded-xl shadow-lg"
+                />
+              ) : null}
+            </div>
+            <div className="w-full md:w-[45%] lg:w-[40%] space-y-4">
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <h3 className="text-sm font-heading font-semibold text-gray-900 mb-3">
+                  Imagem gerada por IA
+                </h3>
+                <p className="text-xs text-text-secondary font-body mb-4">
+                  Esta imagem foi gerada automaticamente por inteligência artificial.
+                  A imagem é plana e não permite edição de texto diretamente.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleToggleLegacy}
+                  className="w-full px-4 py-2 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200"
+                >
+                  Ver visualização CSS (legado)
+                </button>
+              </div>
+            </div>
           </div>
-          <div className="w-full md:w-[45%] lg:w-[40%]">
-            <CampaignAdjustmentsPanel
-              originalSpec={payload!.campaignSpec}
-              adjustments={adjustments}
-              onAdjustmentChange={handleAdjustmentChange}
-              onUndo={handleUndo}
-            />
+        ) : (
+          <div className="flex flex-col md:flex-row gap-6 items-start">
+            <div className="w-full md:w-[55%] lg:w-[60%] flex-shrink-0 sticky top-20">
+              {showGeneratedImage && showLegacyView && (
+                <div className="mb-3">
+                  <button
+                    type="button"
+                    onClick={handleToggleLegacy}
+                    className="text-xs text-accent-green font-heading font-semibold hover:underline"
+                  >
+                    Voltar para imagem gerada por IA
+                  </button>
+                </div>
+              )}
+              <CampaignRenderer
+                spec={mergedSpec!}
+                storeIdentity={payload!.storeIdentity}
+                productImageUrl={productImageError ? null : payload!.productImageUrl}
+              />
+            </div>
+            <div className="w-full md:w-[45%] lg:w-[40%]">
+              <CampaignAdjustmentsPanel
+                originalSpec={payload!.campaignSpec}
+                adjustments={adjustments}
+                onAdjustmentChange={handleAdjustmentChange}
+                onUndo={handleUndo}
+              />
+            </div>
           </div>
-        </div>
+        )}
       </main>
     </div>
   );
