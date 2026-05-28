@@ -92,6 +92,12 @@ export type FieldErrors = Partial<
   >
 >;
 
+export interface PendingConflict {
+  type: "conflict" | "low-confidence";
+  suggestedProductName?: string;
+  body: Record<string, unknown>;
+}
+
 export interface UseCampaignFormReturn {
   fields: CampaignFormFields;
   fieldErrors: FieldErrors;
@@ -109,6 +115,10 @@ export interface UseCampaignFormReturn {
   handleSubmit: () => void;
   resetSubmit: () => void;
   isValid: boolean;
+  pendingConflict: PendingConflict | null;
+  handleConflictContinue: () => void;
+  handleConflictCorrect: () => void;
+  handleConflictCancel: () => void;
 }
 
 const EMPTY_FIELDS: CampaignFormFields = {
@@ -194,6 +204,7 @@ export function useCampaignForm(storeIdentity?: StoreIdentitySnapshot): UseCampa
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [pendingConflict, setPendingConflict] = useState<PendingConflict | null>(null);
   const prevImageFileRef = useRef<File | null>(null);
   const objectUrlRef = useRef<string | null>(null);
   const router = useRouter();
@@ -275,6 +286,7 @@ export function useCampaignForm(storeIdentity?: StoreIdentitySnapshot): UseCampa
     setIsSubmitting(true);
     setSubmitError(null);
     setFieldErrors({});
+    setPendingConflict(null);
 
     const errors: FieldErrors = {};
     const allFields: (keyof CampaignFormFields)[] = [
@@ -310,45 +322,91 @@ export function useCampaignForm(storeIdentity?: StoreIdentitySnapshot): UseCampa
     const frozenImagePreviewUrl = imagePreviewUrl;
 
     try {
+      // ── Compress image ───────────────────────────────────
+      let imageDataUrl: string;
+      if (frozenFields.imageFile) {
+        const compressed = await compressImage(frozenFields.imageFile);
+        imageDataUrl = compressed.dataUrl;
+      } else {
+        throw new Error("Imagem do produto é obrigatória");
+      }
+
+      // ── Build request body ───────────────────────────────
       const body: Record<string, unknown> = {
         productName: frozenFields.productName,
         originalPriceCents: frozenFields.originalPriceCents,
         discountedPriceCents: frozenFields.discountedPriceCents,
         description: frozenFields.description || undefined,
-        badge: frozenFields.badge,
+        badgeText: frozenFields.badge,
         storeName: storeIdentity?.storeName ?? "",
         storeSegment: storeIdentity?.storeSegment ?? "",
         brandColor: storeIdentity?.brandColor ?? "#22C55E",
+        storeLogoUrl: storeIdentity?.logoUrl ?? undefined,
+        productImageDataUrl: imageDataUrl,
       };
 
-      const response = await fetch("/api/campaign/generate", {
+      // ── Call AI image generation endpoint ────────────────
+      const response = await fetch("/api/campaign/generate-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
 
-      if (!response.ok) {
+      // ── Handle 409 conflicts ─────────────────────────────
+      if (response.status === 409) {
         const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.error?.message || "Erro ao gerar campanha");
+        if (errorData?.reason === "product_image_conflict") {
+          setPendingConflict({
+            type: "conflict",
+            suggestedProductName: errorData.suggestedProductName,
+            body,
+          });
+          setSubmitError(errorData.message || "O nome do produto não corresponde à imagem.");
+          setIsSubmitting(false);
+          return;
+        }
+        if (errorData?.reason === "product_image_low_confidence") {
+          setPendingConflict({
+            type: "low-confidence",
+            body,
+          });
+          setSubmitError(errorData.message || "Não foi possível confirmar a correspondência.");
+          setIsSubmitting(false);
+          return;
+        }
+        throw new Error(errorData?.message || "Erro ao gerar imagem");
       }
 
-      const campaignSpec: CampaignSpec = await response.json();
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error?.message || "Erro ao gerar imagem");
+      }
 
+      const result = await response.json();
+
+      // ── Apply auto-fix corrections ───────────────────────
+      if (result.inputCorrections?.productName) {
+        const correction = result.inputCorrections.productName;
+        setFields((prev) => ({ ...prev, productName: correction.to }));
+      }
+
+      // ── Build preview payload ────────────────────────────
       if (!storeIdentity) {
         throw new Error("Dados da loja não disponíveis");
       }
 
       const previewPayload: PreviewPayload = {
-        campaignSpec,
+        campaignSpec: {} as CampaignSpec,
         storeIdentity,
         productImageUrl: frozenImagePreviewUrl,
+        generatedImageDataUrl: result.imageDataUrl,
         generatedAt: new Date().toISOString(),
       };
 
       sessionStorage.setItem("campaign_preview", JSON.stringify(previewPayload));
       router.push("/campaign/preview");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro inesperado ao gerar campanha";
+      const message = err instanceof Error ? err.message : "Erro inesperado ao gerar imagem";
       setSubmitError(message);
       setIsSubmitting(false);
     }
@@ -366,6 +424,56 @@ export function useCampaignForm(storeIdentity?: StoreIdentitySnapshot): UseCampa
     }
     sessionStorage.removeItem("campaign_preview");
   }, [imagePreviewUrl]);
+
+  const handleConflictContinue = useCallback(() => {
+    if (!pendingConflict) return;
+    setPendingConflict(null);
+    setSubmitError(null);
+    const overriddenBody = {
+      ...pendingConflict.body,
+      inputValidationOverride: { productImageCheck: "user_confirmed_continue" },
+    };
+    setIsSubmitting(true);
+    fetch("/api/campaign/generate-image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(overriddenBody),
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => null);
+          throw new Error(errorData?.error?.message || "Erro ao gerar imagem");
+        }
+        const result = await response.json();
+        if (!storeIdentity) throw new Error("Dados da loja não disponíveis");
+        const previewPayload: PreviewPayload = {
+          campaignSpec: {} as CampaignSpec,
+          storeIdentity,
+          productImageUrl: imagePreviewUrl,
+          generatedImageDataUrl: result.imageDataUrl,
+          generatedAt: new Date().toISOString(),
+        };
+        sessionStorage.setItem("campaign_preview", JSON.stringify(previewPayload));
+        router.push("/campaign/preview");
+      })
+      .catch((err) => {
+        setSubmitError(err instanceof Error ? err.message : "Erro ao gerar imagem");
+        setIsSubmitting(false);
+      });
+  }, [pendingConflict, storeIdentity, imagePreviewUrl, router]);
+
+  const handleConflictCorrect = useCallback(() => {
+    if (!pendingConflict?.suggestedProductName) return;
+    setFields((prev) => ({ ...prev, productName: pendingConflict.suggestedProductName! }));
+    setPendingConflict(null);
+    setSubmitError(null);
+  }, [pendingConflict]);
+
+  const handleConflictCancel = useCallback(() => {
+    setPendingConflict(null);
+    setSubmitError(null);
+    setIsSubmitting(false);
+  }, []);
 
   const trimmed = fields.productName.trim();
   const isValid =
@@ -392,5 +500,9 @@ export function useCampaignForm(storeIdentity?: StoreIdentitySnapshot): UseCampa
     handleSubmit,
     resetSubmit,
     isValid,
+    pendingConflict,
+    handleConflictContinue,
+    handleConflictCorrect,
+    handleConflictCancel,
   };
 }
