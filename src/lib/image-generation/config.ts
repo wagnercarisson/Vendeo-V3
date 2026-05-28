@@ -1,10 +1,18 @@
-// ─── Image Generation Model ────────────────────────────────────────────────
-// Used by OpenAIImageProvider for image generation via Responses API.
-export const IMAGE_GENERATION_MODEL =
-  process.env.IMAGE_GENERATION_MODEL || "gpt-image-2";
+// ─── Image Generation Models ───────────────────────────────────────────────
+// Mainline model for responses.create() — must support the image_generation tool.
+export const IMAGE_GENERATION_RESPONSES_MODEL =
+  process.env.IMAGE_GENERATION_RESPONSES_MODEL || "gpt-5.5";
+
+// GPT Image model used by Image API generation/edit fallback.
+// Do NOT pass this as the responses.create() model.
+export const GPT_IMAGE_MODEL =
+  process.env.GPT_IMAGE_MODEL || "gpt-image-2";
+
+// Model used for the Image API edit fallback.
+export const IMAGE_EDIT_FALLBACK_MODEL =
+  process.env.IMAGE_EDIT_FALLBACK_MODEL || GPT_IMAGE_MODEL;
 
 // ─── Vision Review Model ───────────────────────────────────────────────────
-// Used by InputValidationService (pre-generation) and ImageReviewService (post-generation).
 export const VISION_REVIEW_MODEL =
   process.env.VISION_REVIEW_MODEL || "gpt-4o";
 
@@ -16,8 +24,5 @@ export const IMAGE_GENERATION_QUALITY =
 export const IMAGE_GENERATION_SIZE = "1024x1024";
 
 // ─── Payload Size Limits ──────────────────────────────────────────────────
-// Maximum base64-encoded product image payload size (~4MB).
 export const MAX_PRODUCT_IMAGE_BASE64_SIZE = 4 * 1024 * 1024;
-
-// Maximum file size before base64 encoding (~1MB).
 export const MAX_PRODUCT_IMAGE_FILE_SIZE = 1 * 1024 * 1024;

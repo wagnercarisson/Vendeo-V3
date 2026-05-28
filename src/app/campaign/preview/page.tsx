@@ -29,12 +29,14 @@ export default function PreviewPage() {
         return;
       }
       const parsed = JSON.parse(raw) as PreviewPayload;
-      if (!parsed.campaignSpec || !parsed.storeIdentity) {
+      if (!parsed.storeIdentity) {
         setPageState("error");
         return;
       }
       setPayload(parsed);
-      setSpec(parsed.campaignSpec);
+      if (parsed.campaignSpec) {
+        setSpec(parsed.campaignSpec);
+      }
       setPageState("ready");
 
       if (parsed.productImageUrl) {
@@ -57,7 +59,7 @@ export default function PreviewPage() {
   }, []);
 
   const mergedSpec: CampaignSpec | null = useMemo(() => {
-    if (!spec) return null;
+    if (!spec?.commercial_copy) return null;
     return {
       ...spec,
       commercial_copy: {
@@ -98,6 +100,9 @@ export default function PreviewPage() {
   const handleRetry = useCallback(() => {
     setPageState("loading");
     setProductImageError(false);
+    setGeneratedImageError(false);
+    setShowGeneratedImage(false);
+    setShowLegacyView(false);
     try {
       const raw = sessionStorage.getItem("campaign_preview");
       if (!raw) {
@@ -105,12 +110,14 @@ export default function PreviewPage() {
         return;
       }
       const parsed = JSON.parse(raw) as PreviewPayload;
-      if (!parsed.campaignSpec || !parsed.storeIdentity) {
+      if (!parsed.storeIdentity) {
         setPageState("error");
         return;
       }
       setPayload(parsed);
-      setSpec(parsed.campaignSpec);
+      if (parsed.campaignSpec) {
+        setSpec(parsed.campaignSpec);
+      }
       setPageState("ready");
 
       if (parsed.productImageUrl) {
@@ -238,17 +245,19 @@ export default function PreviewPage() {
                   Esta imagem foi gerada automaticamente por inteligência artificial.
                   A imagem é plana e não permite edição de texto diretamente.
                 </p>
-                <button
-                  type="button"
-                  onClick={handleToggleLegacy}
-                  className="w-full px-4 py-2 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200"
-                >
-                  Ver visualização CSS (legado)
-                </button>
+                {payload?.campaignSpec?.commercial_copy && (
+                  <button
+                    type="button"
+                    onClick={handleToggleLegacy}
+                    className="w-full px-4 py-2 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200"
+                  >
+                    Ver visualização CSS (legado)
+                  </button>
+                )}
               </div>
             </div>
           </div>
-        ) : (
+        ) : mergedSpec ? (
           <div className="flex flex-col md:flex-row gap-6 items-start">
             <div className="w-full md:w-[55%] lg:w-[60%] flex-shrink-0 sticky top-20">
               {showGeneratedImage && showLegacyView && (
@@ -263,7 +272,7 @@ export default function PreviewPage() {
                 </div>
               )}
               <CampaignRenderer
-                spec={mergedSpec!}
+                spec={mergedSpec}
                 storeIdentity={payload!.storeIdentity}
                 productImageUrl={productImageError ? null : payload!.productImageUrl}
               />
@@ -275,6 +284,25 @@ export default function PreviewPage() {
                 onAdjustmentChange={handleAdjustmentChange}
                 onUndo={handleUndo}
               />
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-center max-w-md mx-auto">
+              <AlertCircle className="w-12 h-12 text-accent-red mx-auto mb-4" />
+              <h2 className="text-text-primary font-heading font-bold text-xl mb-2">
+                Dados da campanha indisponíveis
+              </h2>
+              <p className="text-text-secondary text-sm font-body mb-6">
+                Não foi possível carregar os dados completos da campanha.
+              </p>
+              <button
+                type="button"
+                onClick={handleBack}
+                className="px-6 py-2.5 bg-accent-green text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200"
+              >
+                Voltar ao início
+              </button>
             </div>
           </div>
         )}

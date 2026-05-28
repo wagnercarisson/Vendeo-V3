@@ -1,6 +1,7 @@
 import type { ImageProvider, ImageProviderInput, ImageProviderOutput } from "./types";
 import {
-  IMAGE_GENERATION_MODEL,
+  IMAGE_GENERATION_RESPONSES_MODEL,
+  IMAGE_EDIT_FALLBACK_MODEL,
   IMAGE_GENERATION_QUALITY,
   IMAGE_GENERATION_SIZE,
 } from "@/lib/image-generation/config";
@@ -9,8 +10,13 @@ import {
  * OpenAIImageProvider — real AI provider that calls OpenAI's Responses API
  * with the image_generation tool as the primary path.
  *
+ * The model passed to responses.create() MUST be a mainline model (e.g. gpt-4o,
+ * gpt-4.1, gpt-5) that supports the image_generation tool — NOT gpt-image-2,
+ * which is the internal model used by the tool itself.
+ *
  * Fallback: Image API edits when the Responses API is unavailable for the
- * specific use case (e.g., model not found, tool not supported).
+ * specific use case (e.g., tool not supported). The fallback uses a DALL-E
+ * model, since the Images API only supports dall-e-2 and dall-e-3.
  *
  * Requires OPENAI_API_KEY in environment.
  *
@@ -22,14 +28,18 @@ import {
  */
 export class OpenAIImageProvider implements ImageProvider {
   readonly name = "openai";
-  private readonly model: string;
+  private readonly responsesModel: string;
+  private readonly editFallbackModel: string;
 
   /**
-   * @param model - OpenAI model identifier. Defaults to IMAGE_GENERATION_MODEL
-   *                from config.ts ("gpt-image-2" or IMAGE_GENERATION_MODEL env var).
+   * @param responsesModel - Model for responses.create() (mainline model, not gpt-image-2).
+   *                         Defaults to IMAGE_GENERATION_RESPONSES_MODEL from config.
+   * @param editFallbackModel - Model for Image API edit fallback (must be DALL-E).
+   *                            Defaults to IMAGE_EDIT_FALLBACK_MODEL from config.
    */
-  constructor(model?: string) {
-    this.model = model ?? IMAGE_GENERATION_MODEL;
+  constructor(responsesModel?: string, editFallbackModel?: string) {
+    this.responsesModel = responsesModel ?? IMAGE_GENERATION_RESPONSES_MODEL;
+    this.editFallbackModel = editFallbackModel ?? IMAGE_EDIT_FALLBACK_MODEL;
   }
 
   async generateImage(input: ImageProviderInput): Promise<ImageProviderOutput> {
@@ -44,8 +54,10 @@ export class OpenAIImageProvider implements ImageProvider {
 
     try {
       // ── Step 2: Primary path — Responses API with image_generation tool ──
+      // NOTE: model MUST be a mainline model (gpt-4o, gpt-5, etc.), NOT gpt-image-2.
+      // gpt-image-2 is the internal model used BY the image_generation tool.
       const response = await openai.responses.create({
-        model: this.model,
+        model: this.responsesModel,
         input: [
           {
             role: "user",
@@ -82,24 +94,63 @@ export class OpenAIImageProvider implements ImageProvider {
       return {
         imageBase64,
         mimeType: "image/png" as const,
-        model: this.model,
+        model: this.responsesModel,
       };
     } catch (err) {
+      // ── Safe logging — no API key or sensitive data exposed ─────────
+      const errorCode =
+        err && typeof err === "object" && "code" in err
+          ? (err as { code: string }).code
+          : "unknown";
+      const errorStatus =
+        err && typeof err === "object" && "status" in err
+          ? (err as { status: number }).status
+          : 0;
+      const errorType =
+        err && typeof err === "object" && "type" in err
+          ? (err as { type: string }).type
+          : typeof err;
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      // Log without stack trace — safe metadata only
+      console.error(
+        `[OpenAIImageProvider] provider error — type=${errorType} code=${errorCode} status=${errorStatus}`
+      );
+
       // ── Step 3: Fallback — Image API edit when product image reference
       //            is needed and Responses API path failed ──────────────
       if (input.productImageDataUrl && this.isResponsesApiError(err)) {
+        console.error(
+          `[OpenAIImageProvider] falling back to Image API edit (model=${this.editFallbackModel})`
+        );
         return this.fallbackToImageApi(openai, input, size);
       }
-      throw err;
+
+      // Re-throw with safe message — strip raw API details from user-facing path
+      throw new Error(
+        `image provider error (${errorCode || "unknown"})`
+      );
     }
   }
 
   /**
-   * Detect whether the error indicates Responses API unavailability
-   * (as opposed to auth, rate limit, or network errors).
+   * Detect whether the error indicates Responses API unavailability for the
+   * image_generation tool specifically (as opposed to auth, rate limit, quota,
+   * or network errors). Only match model/tool capability errors so auth errors
+   * propagate up instead of silently falling back to another failing path.
    */
   private isResponsesApiError(err: unknown): boolean {
     const message = err instanceof Error ? err.message : String(err);
+    // Exclude auth, quota, rate-limit, and network errors — those are not
+    // "Responses API doesn't support this" scenarios.
+    if (
+      message.includes("Incorrect API key") ||
+      message.includes("insufficient_quota") ||
+      message.includes("rate_limit") ||
+      message.includes("429") ||
+      message.includes("401")
+    ) {
+      return false;
+    }
     return (
       message.includes("not supported") ||
       message.includes("image_generation") ||
@@ -111,8 +162,11 @@ export class OpenAIImageProvider implements ImageProvider {
 
   /**
    * Fallback: Use the Image API edit endpoint.
-   * Requires a PNG with alpha channel as mask — sends the product image
-   * as the base image and the prompt as instruction.
+   * Uses IMAGE_EDIT_FALLBACK_MODEL (dall-e-3 by default) since gpt-image-2
+   * is not a valid model for the Images API — only dall-e-2 and dall-e-3
+   * are supported.
+   *
+   * The product image is sent as the base image with the prompt as instruction.
    */
   private async fallbackToImageApi(
     openai: any,
@@ -124,11 +178,14 @@ export class OpenAIImageProvider implements ImageProvider {
       ""
     );
 
+    // Images API only supports specific sizes for dall-e-3
+    const imageApiSize = size === "2048x2048" ? "1024x1024" : "1024x1024";
+
     const response = await openai.images.edit({
-      model: this.model,
+      model: this.editFallbackModel,
       image: Buffer.from(base64Data, "base64"),
       prompt: input.prompt,
-      size: size as "1024x1024" | "256x256" | "512x512",
+      size: imageApiSize as "1024x1024" | "256x256" | "512x512",
       n: 1,
       response_format: "b64_json",
     });
@@ -141,7 +198,7 @@ export class OpenAIImageProvider implements ImageProvider {
     return {
       imageBase64,
       mimeType: "image/png",
-      model: this.model,
+      model: this.editFallbackModel,
     };
   }
 }

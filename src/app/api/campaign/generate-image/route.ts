@@ -57,6 +57,14 @@ export async function POST(request: NextRequest) {
   // ── Step 6: Generate image ──────────────────────────────────────
   const result = await service.generateImage(parsed.data);
 
+  // ── Step 6.5: Safe logging for provider errors ─────────────────
+  if (!result.success && result.code === "provider_failure") {
+    // Log only error code and message — no API key, no request body
+    console.error(
+      `[generate-image] provider_failure — ${result.message}${result.details ? ` (${result.details})` : ""}`
+    );
+  }
+
   // ── Step 7: Map result to HTTP response ─────────────────────────
   if (!result.success) {
     switch (result.code) {
