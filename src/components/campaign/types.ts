@@ -11,6 +11,7 @@ export interface PreviewPayload {
   campaignSpec: CampaignSpec;
   storeIdentity: StoreIdentitySnapshot;
   productImageUrl: string | null;
+  generatedImageDataUrl?: string;
   generatedAt: string;
 }
 
