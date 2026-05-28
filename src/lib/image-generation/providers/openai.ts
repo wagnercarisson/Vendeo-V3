@@ -52,7 +52,7 @@ export class OpenAIImageProvider implements ImageProvider {
             content: [
               { type: "input_text", text: input.prompt },
               ...(input.productImageDataUrl
-                ? [{ type: "input_image" as const, image_url: input.productImageDataUrl }]
+                ? [{ type: "input_image" as const, image_url: input.productImageDataUrl, detail: "auto" as const }]
                 : []),
             ],
           },
@@ -61,29 +61,27 @@ export class OpenAIImageProvider implements ImageProvider {
           {
             type: "image_generation" as const,
             size,
-            quality,
+            quality: quality as "auto" | "low" | "medium" | "high",
           },
         ],
       });
 
       // Extract the generated image from the response
       const imageOutput = response.output?.find(
-        (item: any) => item.type === "image"
+        (item): item is typeof item & { type: "image_generation_call"; result: string } =>
+          item.type === "image_generation_call"
       );
 
-      if (!imageOutput?.image_data?.url) {
+      if (!imageOutput?.result) {
         throw new Error("No image generated in Responses API response");
       }
 
-      // Fetch the image and convert to base64
-      const imageResponse = await fetch(imageOutput.image_data.url);
-      const imageBuffer = await imageResponse.arrayBuffer();
-      const imageBase64 = Buffer.from(imageBuffer).toString("base64");
-      const contentType = imageResponse.headers.get("content-type") || "image/png";
+      // The result is already a base64-encoded image string from gpt-image-2
+      const imageBase64 = imageOutput.result;
 
       return {
         imageBase64,
-        mimeType: contentType as "image/png" | "image/jpeg" | "image/webp",
+        mimeType: "image/png" as const,
         model: this.model,
       };
     } catch (err) {
