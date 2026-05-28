@@ -7,6 +7,70 @@ import { formatCurrencyBRL } from "@/lib/formatters";
 import type { StoreIdentitySnapshot, PreviewPayload } from "@/components/campaign/types";
 import type { CampaignSpec } from "@/lib/campaign-intelligence/schema";
 
+function compressImage(file: File, maxSizeBytes: number = 1024 * 1024): Promise<{ file: File; dataUrl: string }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let quality = 0.85;
+      let attempt = 0;
+      const maxAttempts = 5;
+
+      const tryCompress = () => {
+        const canvas = document.createElement("canvas");
+        let { width, height } = img;
+
+        // Downscale if larger than 1200px on longest side
+        const maxDim = 1200;
+        if (width > maxDim || height > maxDim) {
+          const ratio = Math.min(maxDim / width, maxDim / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Falha ao comprimir imagem"));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error("Falha ao comprimir imagem"));
+              return;
+            }
+            if (blob.size <= maxSizeBytes || attempt >= maxAttempts) {
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                const dataUrl = reader.result as string;
+                const compressedFile = new File([blob], file.name, {
+                  type: "image/jpeg",
+                });
+                resolve({ file: compressedFile, dataUrl });
+              };
+              reader.onerror = () => reject(new Error("Falha ao ler imagem comprimida"));
+              reader.readAsDataURL(blob);
+            } else {
+              quality -= 0.15;
+              attempt++;
+              tryCompress();
+            }
+          },
+          "image/jpeg",
+          quality
+        );
+      };
+
+      tryCompress();
+    };
+    img.onerror = () => reject(new Error("Falha ao carregar imagem para compressão"));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
 export interface CampaignFormFields {
   productName: string;
   description: string;
