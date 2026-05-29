@@ -1,151 +1,89 @@
-> **Purpose**: This spec defines the preview page at `/campaign/preview` that displays the rendered campaign art and quick adjustments panel. Phase 4.3 adapted the preview to display AI-generated flat campaign images as primary output, with the CSS renderer available as a legacy fallback option.
+# Campaign Preview Page
+
+## Purpose
+
+Defines the UI integration between the campaign input form and the generation pipeline: progress display during generation, input preservation via sessionStorage, and error/conflict handling flows.
 
 ## Requirements
 
-### Requirement: Preview page at /campaign/preview (MODIFIED Phase 4.3)
+### Requirement: GenerationProgress shown during image generation
 
-The system SHALL provide a route at `/campaign/preview` that displays the rendered campaign art. When `generatedImageDataUrl` is present, the primary rendering mode SHALL be the AI-generated flat image. When absent, the existing `CampaignRenderer` SHALL be used as fallback. The page SHALL read the preview payload from sessionStorage on mount.
+The campaign input form SHALL display a `GenerationProgress` component when `isSubmitting` is `true` and the generation API call is in progress. The component SHALL replace the current simple spinner.
 
-The page SHALL follow the visual and UX rules in `openspec/design-system/pages/campaign-preview.md`.
+The component SHALL display:
+- Four phase indicators: validação, prompt, geração, revisão
+- Each indicator SHALL show state: pending (gray), running (animated accent), complete (green check), failed (red X)
+- A dynamic message below the indicators sourced from the stream phase events
+- A collapsible "Detalhes técnicos" section with sanitized diagnostic logs
 
-#### Scenario: Preview route reads payload from sessionStorage (MODIFIED Phase 4.3)
+#### Scenario: Progress component shows during API call
 
-- **WHEN** a user navigates to `/campaign/preview`
-- **THEN** the page SHALL read the `PreviewPayload` from sessionStorage
-- **AND** if `generatedImageDataUrl` is present, render the AI-generated image as primary
-- **AND** otherwise render the `CampaignRenderer` with the stored `campaignSpec`, `storeIdentity`, and `productImageUrl`
+- **WHEN** the user submits the campaign form
+- **AND** the generation API call begins
+- **THEN** the `GenerationProgress` component SHALL be displayed
+- **AND** the submit button SHALL be disabled
+- **AND** all phase indicators SHALL show pending state initially
 
-#### Scenario: No payload redirects to empty state
+#### Scenario: Phase indicator updates on stream event
 
-- **WHEN** a user navigates to `/campaign/preview`
-- **AND** no valid `PreviewPayload` exists in sessionStorage
-- **THEN** the page SHALL display an empty state with message "Nenhuma campanha encontrada"
-- **AND** a button SHALL navigate the user to the campaign input route
+- **WHEN** a phase event with `status: "running"` is received for `image_generation`
+- **THEN** the "geração" indicator SHALL show the animated running state
+- **AND** the message text SHALL update to match the event's `message`
 
-#### Scenario: Invalid payload shows error state
+#### Scenario: Error shows failure state with retry
 
-- **WHEN** a user navigates to `/campaign/preview`
-- **AND** the sessionStorage payload is malformed or fails to parse
-- **THEN** the page SHALL display an error state with a retry/back button
+- **WHEN** a `type: "error"` event is received from the stream
+- **THEN** the failed phase indicator SHALL show the error state
+- **AND** the error `message` SHALL be displayed below the indicators
+- **AND** a "Tentar novamente" button SHALL be shown
+- **AND** the retry button SHALL re-submit the form with the same data
 
-### Requirement: Desktop layout with art and adjustments panel
+### Requirement: Input form auto-saves to sessionStorage
 
-On desktop viewports, the preview page SHALL display a two-column layout:
-- Left column: the rendered campaign art at maximum visible size
-- Right column: a quick adjustments panel with constrained edit fields
+The campaign input form SHALL auto-save to sessionStorage under the key `campaign_draft` on every field change (debounced 500ms). On mount, if a draft exists, the form SHALL be pre-filled. On successful generation, the draft SHALL be cleared.
 
-The art preview SHALL be rendered at the largest size that fits the viewport while preserving the 1:1 aspect ratio.
+#### Scenario: Form auto-saves on edit
 
-#### Scenario: Desktop shows art and panel side by side
+- **WHEN** the user types in any form field
+- **AND** 500ms pass without further input
+- **THEN** the complete form state SHALL be saved to `sessionStorage.campaign_draft` as JSON
 
-- **WHEN** the viewport is 768px or wider
-- **THEN** the campaign art SHALL render on the left and the adjustments panel on the right
-- **AND** the art SHALL scale to fill available space while maintaining 1:1 aspect ratio
+#### Scenario: Draft restored on remount
 
-#### Scenario: Mobile stacks art above adjustments
+- **WHEN** the campaign input page mounts
+- **AND** `sessionStorage.campaign_draft` exists and is valid JSON
+- **THEN** the form fields SHALL be pre-populated with the saved values
+- **AND** the user SHALL NOT lose their data on page refresh
 
-- **WHEN** the viewport is narrower than 768px
-- **THEN** the campaign art SHALL render at full width
-- **AND** the adjustments panel SHALL collapse below the art
+#### Scenario: Draft cleared after successful generation
 
-### Requirement: Preview payload supports generated image (ADDED Phase 4.3)
+- **WHEN** the generation API returns success (result event received)
+- **THEN** `sessionStorage.campaign_draft` SHALL be removed
+- **AND** the form SHALL return to empty state on next visit
 
-The `PreviewPayload` interface SHALL include an optional `generatedImageDataUrl?: string` field that carries the AI-generated campaign image as a base64 data URL. When `generatedImageDataUrl` is present, the preview page SHALL display it as the primary campaign art and SHALL NOT use the CSS renderer as default.
+### Requirement: Error event from stream stops generation and shows message
 
-The data URL is temporary and exists only within the session — no definitive persistence.
+When the stream delivers a `type: "error"` event, the generation flow SHALL stop immediately. The error message SHALL be displayed to the user. The form data SHALL be preserved (from auto-save) so the user can adjust and retry.
 
-#### Scenario: Preview displays generated image when available
+#### Scenario: Error preserves form data
 
-- **WHEN** a `PreviewPayload` contains `generatedImageDataUrl`
-- **THEN** the preview page SHALL display the AI-generated image as the primary campaign art
-- **AND** the image SHALL render as a full-width flat image in the left panel
-- **AND** no CSS-based rendering SHALL be used by default
+- **WHEN** a stream error event is received
+- **THEN** the form SHALL remain filled with the user's data
+- **AND** the error message SHALL be displayed above the form
+- **AND** the user SHALL be able to edit fields and retry
 
-#### Scenario: Preview falls back to CSS renderer
+#### Scenario: Pre-validation HTTP 409 shows conflict dialog (before stream)
 
-- **WHEN** a `PreviewPayload` does NOT contain `generatedImageDataUrl`
-- **THEN** the preview page SHALL fall back to the `CampaignRenderer` (CSS-based) as before
-- **AND** the page SHALL behave identically to Phase 4.2
+- **WHEN** POST returns HTTP 409 with `reason: "product_image_conflict"` or `reason: "product_image_low_confidence"`
+- **THEN** the UI SHALL display a conflict dialog with the error message and suggested product name (if available)
+- **AND** the user SHALL have options: accept the suggested name, type a different name, or "Continuar mesmo assim"
+- **AND** confirming "Continuar mesmo assim" SHALL set `inputValidationOverride.productImageCheck: "user_confirmed_continue"` on the next submit
+- **AND** no stream SHALL have been opened
 
-#### Scenario: Large base64 images are acceptable for spike
+#### Scenario: In-stream generated_product_mismatch requires correction (not override)
 
-- **WHEN** `generatedImageDataUrl` is a large base64 string in sessionStorage
-- **THEN** the page SHALL attempt to display it
-- **AND** if sessionStorage quota is exceeded, the page SHALL handle gracefully (degrade to fallback or show error)
-
-### Requirement: Preview layout adapts for generated images (ADDED Phase 4.3)
-
-When displaying an AI-generated image, the preview page MAY simplify the right panel. The CSS adjustments panel MAY be hidden or reduced since the generated image is flat and non-editable. A legacy toggle to switch back to the CSS renderer SHALL be available (only when `campaignSpec` with valid `commercial_copy` exists).
-
-#### Scenario: Generated image view hides adjustments
-
-- **WHEN** `generatedImageDataUrl` is present
-- **THEN** the adjustments panel MAY be hidden or reduced
-- **AND** a toggle/button SHALL allow switching to the legacy CSS renderer view
-
-#### Scenario: Legacy toggle shows CSS renderer
-
-- **WHEN** the user clicks the legacy toggle
-- **THEN** the CSS `CampaignRenderer` SHALL render with the spec data from the payload
-- **AND** the adjustments panel SHALL reappear
-
-### Requirement: Quick adjustments panel
-
-The adjustments panel SHALL provide constrained fields for local editing:
-- **Title**: text input, overrides `commercial_copy.title`
-- **Discounted price**: BRL currency input, overrides `offer.discounted_price_display` only — SHALL NOT recalculate numeric price fields
-- **Badge text**: text input, max 20 characters, overrides `offer.badge_text`
-- **Hook**: text input, max 120 characters, label "Texto do Benefício", overrides `commercial_copy.hook`
-- **CTA**: text input, max 60 characters, label "Chamada para Ação", overrides `commercial_copy.cta`
-
-All adjustments SHALL update the rendered art locally without API calls. No free-form editing of layout, fonts, colors, or element positions SHALL be allowed.
-
-Each adjusted field SHALL have an undo button that resets the field to the original spec value. Hook and CTA fields SHALL display a character counter showing the current length.
-
-#### Scenario: Title adjustment re-renders locally
-
-- **WHEN** the user edits the title field
-- **THEN** the CampaignRenderer SHALL re-render with the new title
-- **AND** no API call SHALL be made
-
-#### Scenario: Price adjustment re-renders locally
-
-- **WHEN** the user edits the discounted price field
-- **THEN** the CampaignRenderer SHALL re-render with the new price display
-- **AND** no API call SHALL be made
-
-#### Scenario: Badge adjustment re-renders locally
-
-- **WHEN** the user edits the badge text field
-- **THEN** the CampaignRenderer SHALL re-render with the new badge text
-- **AND** no API call SHALL be made
-
-#### Scenario: Hook adjustment re-renders locally
-
-- **WHEN** the user edits the hook field
-- **THEN** the CampaignRenderer SHALL re-render with the new hook text
-- **AND** no API call SHALL be made
-- **AND** the character counter SHALL update to reflect the current length
-
-#### Scenario: CTA adjustment re-renders locally
-
-- **WHEN** the user edits the CTA field
-- **THEN** the CampaignRenderer SHALL re-render with the new CTA text
-- **AND** no API call SHALL be made
-- **AND** the character counter SHALL update to reflect the current length
-
-#### Scenario: Undo resets adjusted field
-
-- **WHEN** the user clicks undo on any adjusted field
-- **THEN** that field SHALL revert to the original value from the spec
-- **AND** the CampaignRenderer SHALL re-render with the original value
-
-### Requirement: CampaignAdjustments type expanded
-
-The `CampaignAdjustments` interface SHALL include `hook` and `cta` optional string fields, following the same pattern as `title`, `discountedPriceDisplay`, and `badgeText`.
-
-#### Scenario: CampaignAdjustments includes hook and cta
-
-- **WHEN** inspecting `CampaignAdjustments`
-- **THEN** the type SHALL include `hook?: string` and `cta?: string`
-- **AND** existing fields SHALL remain unchanged
+- **WHEN** a stream error event has `code: "generated_product_mismatch"`
+- **THEN** the UI SHALL display an error dialog stating the generated image has the wrong product name
+- **AND** the user SHALL be asked to correct the product name or replace the product image
+- **AND** no "Continuar mesmo assim" option SHALL be offered (this error cannot be overridden)
+- **AND** the form data SHALL be preserved so the user can edit and retry

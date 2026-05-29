@@ -1,0 +1,119 @@
+# Generation Progress
+
+## Purpose
+
+Defines the phase lifecycle reporting mechanism from the service to the client, the UI component that displays generation progress, and diagnostic log sanitization rules.
+
+## Requirements
+
+### Requirement: ImageGenerationService reports progress through named phases
+
+The system SHALL expose generation progress through named phases rather than a single loading state. Each phase SHALL be reported via a callback before and after execution.
+
+The named phases SHALL be:
+- `input_validation` — pre-generation product name vs image check
+- `prompt_assembly` — marketing-directed prompt construction
+- `image_generation` — AI model image generation (may include retries)
+- `quality_review` — post-generation vision-based quality check
+- `done` — terminal phase (success or exhaustive failure)
+
+The system SHALL NOT expose internal state machine states (INITIAL, REVIEW, CORRECT, REGENERATE) directly as user-facing phases.
+
+#### Scenario: Service emits phase events during generation
+
+- **WHEN** `ImageGenerationService.generateImage()` begins execution
+- **THEN** it SHALL emit a phase event with `status: "running"` for the current phase
+- **AND** when a phase completes successfully, SHALL emit `status: "complete"`
+- **AND** when a phase fails terminally, SHALL emit `status: "failed"`
+
+#### Scenario: Phase event includes human-readable message
+
+- **WHEN** a phase event is emitted with `status: "running"`
+- **THEN** the event SHALL include a `message` field in PT-BR suitable for display to a non-technical user
+
+#### Scenario: Phase events are emitted in order
+
+- **WHEN** `ImageGenerationService.generateImage()` processes all phases
+- **THEN** events SHALL be emitted in this order: `input_validation`, `prompt_assembly`, `image_generation`, `quality_review`, `done`
+- **AND** no phase SHALL emit `status: "running"` before the previous phase has emitted `status: "complete"`
+
+### Requirement: onPhaseChange callback only carries phase events
+
+The `ImageGenerationService.generateImage()` method SHALL accept an optional `onPhaseChange` callback of type `(event: GenerationPhaseEvent) => void`. The callback SHALL only carry phase lifecycle events (`phase`, `status`, `message`, `detail`). Terminal errors SHALL NOT be passed through this callback.
+
+When the callback is not provided, the service SHALL operate identically with no phase reporting.
+
+Terminal errors SHALL be communicated by the service's return value (`GenerateImageServiceResult` with `success: false`). The API route SHALL read the result and convert errors into NDJSON `type: "error"` events on the stream.
+
+#### Scenario: Callback receives phase events only
+
+- **WHEN** `onPhaseChange` is provided to `generateImage()`
+- **THEN** the service SHALL call `onPhaseChange` for each phase transition
+- **AND** the event SHALL include `phase`, `status`, `message`, and optionally `detail`
+- **AND** SHALL NOT include error codes or `retryable` fields
+
+#### Scenario: Service returns error separately from callback
+
+- **WHEN** a terminal error occurs
+- **THEN** `onPhaseChange` SHALL receive `{ status: "failed" }` for the failing phase
+- **AND** the error SHALL be returned as `{ success: false, code, message }` from `generateImage()`
+
+#### Scenario: Service works without callback
+
+- **WHEN** `onPhaseChange` is NOT provided to `generateImage()`
+- **THEN** the service SHALL generate and return the image identically
+- **AND** no phase events SHALL be emitted
+
+### Requirement: GenerationProgress UI component shows live phase indicators
+
+The system SHALL provide a `GenerationProgress` component displayed during image generation. The component SHALL show:
+
+- Four phase indicators in order: validação, prompt, geração, revisão
+- Each indicator SHALL display state: pending (inactive), running (animated), complete (check), or failed (error)
+- A dynamic message below the indicators describing what is happening
+- An optional collapsible diagnostic log panel
+
+The component SHALL update in real-time as NDJSON phase events arrive from the stream.
+
+#### Scenario: Component shows running state during generation
+
+- **WHEN** a phase event with `status: "running"` is received
+- **THEN** the corresponding indicator SHALL display an animated running state
+- **AND** the message text SHALL update to the event's `message` field
+
+#### Scenario: Component shows completion on success
+
+- **WHEN** all phases emit `status: "complete"` followed by a result event
+- **THEN** all indicators SHALL display the complete (check) state
+- **AND** the component SHALL be replaced by the preview UI
+
+#### Scenario: Component shows failure state
+
+- **WHEN** any phase emits `status: "failed"`
+- **THEN** the failed phase indicator SHALL display the error state
+- **AND** the error message from the event SHALL be displayed below the indicators
+- **AND** a retry button SHALL be available
+
+### Requirement: Diagnostic logs are sanitized before display
+
+The system SHALL generate structured diagnostic logs per phase in a format suitable for developer debugging but SHALL NOT expose raw provider errors, API keys, data URLs, or internal stack traces to the user.
+
+Each log entry SHALL contain:
+- `phase` — which phase generated the log
+- `timestamp` — ISO 8601
+- `level` — `"info" | "warn" | "error"`
+- `message` — sanitized, non-technical description of what happened
+
+The diagnostic panel SHALL be hidden by default and expandable via a toggle labeled "Detalhes técnicos".
+
+#### Scenario: Diagnostic log is produced per phase
+
+- **WHEN** a phase completes
+- **THEN** a diagnostic log entry SHALL be produced with `phase`, `timestamp`, `level`, and `message`
+- **AND** the `message` SHALL NOT contain API keys, raw provider output, stack traces, or full data URLs
+
+#### Scenario: Diagnostic panel is collapsed by default
+
+- **WHEN** the `GenerationProgress` component renders
+- **THEN** the diagnostic logs panel SHALL be collapsed/hidden
+- **AND** a toggle link "Detalhes técnicos" SHALL expand it

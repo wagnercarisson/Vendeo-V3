@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, X, Loader2, AlertCircle } from "lucide-react";
+import { useState } from "react";
+import { Check, X, Loader2, AlertCircle, ChevronDown, ChevronRight } from "lucide-react";
 import type { GenerationPhaseEvent } from "@/lib/image-generation/schema";
 
 interface GenerationProgressProps {
@@ -18,11 +19,77 @@ const PHASE_LABELS: Record<string, { label: string; running: string }> = {
   done: { label: "Concluído", running: "Campanha gerada!" },
 };
 
+const ERROR_LABELS: Record<string, string> = {
+  no_image_in_response: "O provedor não retornou uma imagem.",
+  empty_review: "A revisão de qualidade não retornou resultado.",
+  insufficient_image: "A imagem gerada não atende aos requisitos mínimos.",
+  input_low_confidence: "Não foi possível confirmar a correspondência com a imagem enviada.",
+  review_low_confidence: "A revisão de qualidade não conseguiu avaliar a imagem com confiança.",
+  product_image_conflict: "O nome do produto não corresponde à imagem enviada.",
+  product_image_strong_conflict: "A imagem enviada parece ser de outro produto.",
+  generated_product_mismatch: "A imagem gerada exibiu informações divergentes do produto informado.",
+  provider_error: "Falha ao gerar imagem. Tente novamente.",
+  provider_auth_error: "Erro de autenticação com o serviço de geração.",
+  provider_timeout: "O provedor demorou muito para responder.",
+  invalid_data: "Dados inválidos para geração.",
+  global_timeout: "O tempo limite de geração foi excedido. Tente novamente.",
+};
+
+const PHASE_FRIENDLY_LABELS: Record<string, string> = {
+  input_validation: "Validação dos dados da campanha",
+  prompt_assembly: "Montagem do briefing criativo",
+  image_generation: "Geração da imagem com IA",
+  quality_review: "Revisão de qualidade da imagem",
+  done: "Concluído",
+};
+
+function sanitizeDetail(text: string): string {
+  return text
+    .replace(/(sk-[A-Za-z0-9]{20,})/g, "sk-...")
+    .replace(/([A-Za-z0-9+/=]{100,})/g, (m) => m.substring(0, 40) + "...")
+    .replace(/(data:image\/[a-z]+;base64,)[A-Za-z0-9+/=]+/g, "$1[base64 truncado]")
+    .replace(/at\s+\S+\s+\(.*?\)/g, "")
+    .replace(/Error:\s*/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function buildDiagnostics(phases: GenerationPhaseEvent[], error?: string | null): string[] {
+  const lines: string[] = [];
+
+  for (const event of phases) {
+    const phaseLabel = PHASE_FRIENDLY_LABELS[event.phase] || event.phase;
+    const statusLabel =
+      event.status === "complete" ? "OK"
+      : event.status === "running" ? "executando"
+      : event.status === "failed" ? "falha"
+      : event.status === "skipped" ? "pulado"
+      : "pendente";
+
+    let msg = `${phaseLabel}: ${statusLabel}`;
+    if (event.detail) {
+      msg += ` — ${sanitizeDetail(event.detail)}`;
+    } else if (event.message && event.status !== "running") {
+      msg += ` — ${event.message}`;
+    }
+    lines.push(msg);
+  }
+
+  if (error) {
+    lines.push(`Erro: ${sanitizeDetail(error)}`);
+  }
+
+  return lines;
+}
+
 export function GenerationProgress({ phases, error, onRetry }: GenerationProgressProps) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const latestPhase = phases.length > 0 ? phases[phases.length - 1] : null;
   const currentMessage = latestPhase?.message || "Preparando...";
 
   const phaseOrder = ["input_validation", "prompt_assembly", "image_generation", "quality_review"];
+
+  const diagnostics = buildDiagnostics(phases, error);
 
   return (
     <div className="flex flex-col items-center py-8 px-4">
@@ -107,6 +174,33 @@ export function GenerationProgress({ phases, error, onRetry }: GenerationProgres
                 )}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Collapsible technical details */}
+        {diagnostics.length > 0 && (
+          <div className="border border-border-light rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setDetailsOpen((prev) => !prev)}
+              className="w-full flex items-center justify-between px-3 py-2 text-xs text-text-muted hover:text-text-primary transition-colors"
+            >
+              <span>Detalhes técnicos</span>
+              {detailsOpen ? (
+                <ChevronDown className="w-3.5 h-3.5" />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5" />
+              )}
+            </button>
+            {detailsOpen && (
+              <div className="px-3 pb-2 space-y-0.5">
+                {diagnostics.map((line, i) => (
+                  <p key={i} className="text-[11px] text-text-muted font-mono leading-relaxed">
+                    {line}
+                  </p>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
