@@ -1,10 +1,24 @@
 import { PromptLoader } from "@/lib/image-generation/prompt-loader";
-import { IMAGE_GENERATION_SIZE, IMAGE_GENERATION_GLOBAL_TIMEOUT_MS } from "@/lib/image-generation/config";
+import { IMAGE_GENERATION_SIZE, IMAGE_GENERATION_GLOBAL_TIMEOUT_MS, IMAGE_GENERATION_RESPONSES_MODEL } from "@/lib/image-generation/config";
 import type { ImageProvider } from "@/lib/image-generation/providers/types";
-import type { GenerateImageRequest, GenerateImageSuccessResponse, GenerationPhase, GenerationPhaseEvent } from "@/lib/image-generation/schema";
+import type { GenerateImageRequest, GenerateImageSuccessResponse, GenerationPhase, GenerationPhaseEvent, ValidationContext, InputValidationResult, ImageReviewResult } from "@/lib/image-generation/schema";
 import { InputValidationService } from "@/lib/image-generation/services/input-validation-service";
 import { ImageReviewService } from "@/lib/image-generation/services/image-review-service";
 import type { ImageReviewInput } from "@/lib/image-generation/services/image-review-service";
+import { SEGMENT_LABELS } from "@/lib/constants";
+
+const CATEGORY_TO_SEGMENT_GROUP: Record<string, string[]> = {
+  "alimentacao-bebidas": ["bebidas", "alimentos", "bebida", "energetico", "cafe", "cerveja", "refrigerante", "suco", "agua", "comida", "snack", "doce", "salgado"],
+  "moda-vestuario": ["roupa", "calcado", "tenis", "vestuario", "moda", "acessorio", "bolsa", "camiseta", "jeans"],
+  "beleza-estetica": ["beleza", "cosmetico", "maquiagem", "perfume", "hidratante", "shampoo", "protetor"],
+  "saude-farmacia": ["remedio", "farmacia", "vitamina", "suplemento", "medicamento"],
+  "casa-decoracao": ["casa", "decoracao", "moveis", "tapete", "toalha", "almofada"],
+  "eletronicos-tecnologia": ["eletronico", "tecnologia", "celular", "computador", "fone", "carregador"],
+  "petshop": ["pet", "racao", "cachorro", "gato", "brinquedo pet"],
+  "servicos": ["servico", "consulta", "curso", "assinatura"],
+  "variedades": ["presente", "variedade", "geral"],
+  "outros": [],
+};
 
 export type GenerateImageServiceResult =
   | { success: true; imageDataUrl: string; inputCorrections?: { productName: { from: string; to: string; reason: string } } }
@@ -89,6 +103,11 @@ export class ImageGenerationService {
     let effectiveProductName = body.productName;
     let inputCorrections: { productName: { from: string; to: string; reason: string } } | undefined;
 
+    // Extract inferredCategory from validation result
+    const inferredCategory = "inferredCategory" in validationResult
+      ? (validationResult as any).inferredCategory
+      : undefined;
+
     switch (validationResult.classification) {
       case "conflict":
         emitFailed("input_validation", "O nome do produto digitado não corresponde à imagem enviada.");
@@ -131,7 +150,35 @@ export class ImageGenerationService {
       case "match":
         break;
     }
-    emitComplete("input_validation");
+
+    // Construct validationContext for review alignment
+    let validationContext: ValidationContext | undefined;
+
+    if (body.inputValidationOverride?.productImageCheck === "user_confirmed_continue") {
+      validationContext = {
+        overrides: { productImageCheck: "user_confirmed_continue" },
+      };
+    }
+
+    if (inputCorrections) {
+      validationContext = {
+        ...validationContext,
+        inputCorrection: {
+          field: "productName" as const,
+          from: inputCorrections.productName.from,
+          to: inputCorrections.productName.to,
+          reason: inputCorrections.productName.reason,
+        },
+      };
+    }
+
+    // Emit detail: input_validation
+    const validationDetail = this.buildValidationDetail(validationResult, body.productName, effectiveProductName);
+    if (validationDetail) {
+      emit("input_validation", "complete", undefined, validationDetail);
+    } else {
+      emitComplete("input_validation");
+    }
 
     // ── Phase 2: Prompt assembly ────────────────────────────────────
     emitRunning("prompt_assembly", "Montando briefing criativo...");
@@ -139,8 +186,11 @@ export class ImageGenerationService {
     const aborted2 = checkAborted();
     if (aborted2) { emitFailed("prompt_assembly", aborted2.message); return abortResult(aborted2); }
 
-    const promptVariables = this.buildPromptVariables(body, effectiveProductName);
-    emitComplete("prompt_assembly");
+    const promptVariables = this.buildPromptVariables(body, effectiveProductName, inferredCategory);
+
+    const segmentPersona = SEGMENT_LABELS[body.storeSegment as keyof typeof SEGMENT_LABELS] ?? body.storeSegment;
+    const promptDetail = `briefing com persona de ${segmentPersona}, categoria inferida: ${inferredCategory ?? body.storeSegment}`;
+    emit("prompt_assembly", "complete", undefined, promptDetail);
 
     // ── Phase 3-4: State machine — generation + review lifecycle ────
     let state = GenerationState.INITIAL;
@@ -167,6 +217,9 @@ export class ImageGenerationService {
       if (attempts > 0) {
         emitRunning("image_generation", "Tentando novamente...");
       }
+
+      const attemptDetail = `tentativa ${attempts + 1}/${maxAttempts}, modelo: ${IMAGE_GENERATION_RESPONSES_MODEL || "gpt-5.5"}, tempo decorrido: ${Math.floor((Date.now() - startTime) / 1000)}s`;
+      emit("image_generation", "running", undefined, attemptDetail);
 
       // ── Phase 3: Image generation with provider retry ──────────
       if (attempts === 0) {
@@ -200,6 +253,7 @@ export class ImageGenerationService {
         originalPrice: (body.originalPriceCents ?? 0) > 0
           ? this.formatPriceBRL(body.originalPriceCents ?? 0)
           : undefined,
+        validationContext,
       };
 
       let reviewResult;
@@ -216,8 +270,15 @@ export class ImageGenerationService {
         };
       }
 
+      // Apply validation context filtering before evaluation
+      reviewResult = this.applyValidationContextToReviewResult(reviewResult, validationContext);
+
       if (reviewResult.passed) {
-        emitComplete("quality_review");
+        const totalIssues = reviewResult.issues.length;
+        const criticalCount = reviewResult.issues.filter(i => i.severity === "critical").length;
+        const minorCount = reviewResult.issues.filter(i => i.severity === "minor").length;
+        emit("quality_review", "complete", undefined,
+          `issues: ${totalIssues} (${criticalCount} críticas, ${minorCount} menores), failureType: ${reviewResult.failureType ?? "null"}`);
         state = GenerationState.COMPLETE;
       } else {
         lastReviewIssues = reviewResult.issues.map((i) => i.description);
@@ -235,6 +296,12 @@ export class ImageGenerationService {
         const criticalIssuesCount = reviewResult.issues.filter((i) => i.severity === "critical").length;
 
         if (criticalIssuesCount > 0) {
+          const totalIssues = reviewResult.issues.length;
+          const criticalCount = reviewResult.issues.filter(i => i.severity === "critical").length;
+          const minorCount = reviewResult.issues.filter(i => i.severity === "minor").length;
+          emit("quality_review", "running", undefined,
+            `issues: ${totalIssues} (${criticalCount} críticas, ${minorCount} menores), failureType: ${reviewResult.failureType ?? "null"}`);
+
           if (state === GenerationState.INITIAL) {
             state = GenerationState.CORRECT;
           } else if (state === GenerationState.CORRECT) {
@@ -243,7 +310,11 @@ export class ImageGenerationService {
             state = GenerationState.ERROR;
           }
         } else {
-          emitComplete("quality_review");
+          const totalIssues = reviewResult.issues.length;
+          const criticalCount = reviewResult.issues.filter(i => i.severity === "critical").length;
+          const minorCount = reviewResult.issues.filter(i => i.severity === "minor").length;
+          emit("quality_review", "complete", undefined,
+            `issues: ${totalIssues} (${criticalCount} críticas, ${minorCount} menores), failureType: ${reviewResult.failureType ?? "null"}`);
           state = GenerationState.COMPLETE;
         }
       }
@@ -263,14 +334,101 @@ export class ImageGenerationService {
       response.inputCorrections = inputCorrections;
     }
 
-    emitComplete("done");
+    const correctionsCount = body.productName !== effectiveProductName ? 1 : 0;
+    emit("done", "complete", undefined,
+      `geração concluída em ${Math.floor((Date.now() - startTime) / 1000)}s, ${attempts} tentativas, ${correctionsCount} correções`);
     return response;
+  }
+
+  private isSameCategory(inferredCategory: string, storeSegment: string): boolean {
+    const normalizedInferred = inferredCategory.toLowerCase();
+    const normalizedSegment = storeSegment.toLowerCase();
+
+    for (const [group, keywords] of Object.entries(CATEGORY_TO_SEGMENT_GROUP)) {
+      for (const keyword of keywords) {
+        if (normalizedInferred.includes(keyword)) {
+          return group !== normalizedSegment;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  private buildCommercialRepertoire(body: GenerateImageRequest): string {
+    const parts: string[] = [];
+
+    if (body.availabilityNotes) {
+      const notes = body.availabilityNotes.toLowerCase();
+      const scarcityKeywords = ["poucas unidades", "últimas", "limitado", "estoque"];
+      const varietyKeywords = ["vários sabores", "cores variadas", "diversos", "várias"];
+
+      if (scarcityKeywords.some(kw => notes.includes(kw))) {
+        parts.push(`- Disponível: ${body.availabilityNotes}`);
+      } else if (varietyKeywords.some(kw => notes.includes(kw))) {
+        parts.push(`- Variedade disponível: ${body.availabilityNotes}`);
+      }
+    }
+
+    if (body.validity && (
+      body.validity.toLowerCase().includes("/") ||
+      body.validity.toLowerCase().includes("até") ||
+      body.validity.toLowerCase().includes("válida")
+    )) {
+      parts.push(`- Oferta válida: ${body.validity}`);
+    }
+
+    if (body.campaignDetails) {
+      const actionable = body.campaignDetails.replace(/[\[\]]/g, "").trim();
+      if (actionable.length > 0) {
+        parts.push(`- ${actionable}`);
+      }
+    }
+
+    if (body.additionalDetails) {
+      const actionable = body.additionalDetails.replace(/[\[\]]/g, "").trim();
+      if (actionable.length > 0) {
+        parts.push(`- ${actionable}`);
+      }
+    }
+
+    return parts.join("\n");
+  }
+
+  private buildValidationSummary(body: GenerateImageRequest, effectiveProductName: string): string {
+    const parts: string[] = [];
+
+    if (body.productName !== effectiveProductName) {
+      parts.push(`• Nome corrigido automaticamente de '${body.productName}' para '${effectiveProductName}'`);
+    }
+
+    if (body.inputValidationOverride?.productImageCheck === "user_confirmed_continue") {
+      parts.push("• O usuário confirmou que a imagem do produto está correta, mesmo com divergência na pré-validação");
+    }
+
+    return parts.join("\n");
   }
 
   private buildPromptVariables(
     body: GenerateImageRequest,
-    effectiveProductName: string
+    effectiveProductName: string,
+    inferredCategory?: string
   ): Record<string, string> {
+    const storeSegment = body.storeSegment;
+    const effectiveInferredCategory = inferredCategory ?? storeSegment;
+    const hasConflict = inferredCategory
+      ? this.isSameCategory(inferredCategory, storeSegment)
+      : false;
+
+    const creativePersona = `Você é um diretor de marketing especializado em ${SEGMENT_LABELS[storeSegment as keyof typeof SEGMENT_LABELS] ?? storeSegment}.`;
+
+    const categoryConflictDirective = hasConflict
+      ? `ATENÇÃO: O produto anunciado é da categoria "${inferredCategory}", que é diferente do segmento principal da loja "${storeSegment}". A direção visual deve refletir o universo de ${inferredCategory}. A identidade da loja (nome, paleta, logo) deve aparecer como assinatura, não como tema visual.`
+      : "";
+
+    const commercialRepertoire = this.buildCommercialRepertoire(body);
+    const inputValidationSummary = this.buildValidationSummary(body, effectiveProductName);
+
     return {
       productName: effectiveProductName,
       storeName: body.storeName,
@@ -293,6 +451,14 @@ export class ImageGenerationService {
       availabilityNotes: body.availabilityNotes ?? "",
       sensitiveConstraints: body.sensitiveConstraints ?? "",
       storeLogoUrl: body.storeLogoUrl ?? "",
+
+      // New creative direction variables
+      creativePersona,
+      inferredCategory: effectiveInferredCategory,
+      hasCategoryConflict: hasConflict ? "sim" : "nao",
+      categoryConflictDirective,
+      commercialRepertoire,
+      inputValidationSummary,
     };
   }
 
@@ -436,20 +602,55 @@ export class ImageGenerationService {
       message: "Falha ao gerar imagem.",
     };
   }
+
+  private applyValidationContextToReviewResult(result: ImageReviewResult, context?: ValidationContext): ImageReviewResult {
+    if (!context || result.passed) {
+      return result;
+    }
+
+    if (context.overrides?.productImageCheck === "user_confirmed_continue") {
+      const OVERRIDE_FILTERABLE_TYPES = new Set(["product_image_conflict", "product_image_low_confidence"]);
+      result.issues = result.issues.filter(issue => !OVERRIDE_FILTERABLE_TYPES.has(issue.type));
+    }
+
+    const BLOCKING_TYPES = new Set([
+      "wrong_price", "wrong_store_name", "wrong_product_name",
+      "generated_product_mismatch", "illegible_text", "insufficient_image",
+      "wrong_cta", "bad_composition", "invented_badge", "distorted_product",
+      "empty_review", "review_low_confidence",
+    ]);
+
+    const hasBlockingIssue = result.issues.some(
+      issue => BLOCKING_TYPES.has(issue.type) || issue.severity === "critical"
+    );
+
+    if (!hasBlockingIssue) {
+      result.passed = true;
+      result.failureType = undefined;
+    }
+
+    return result;
+  }
+
+  private buildValidationDetail(
+    result: InputValidationResult,
+    originalName: string,
+    effectiveName: string
+  ): string | undefined {
+    if (result.classification === "auto-fix") {
+      return `classificação: auto-fix, nome corrigido: '${originalName}' → '${effectiveName}'`;
+    }
+    if (result.classification === "match") {
+      const cat = "inferredCategory" in result ? (result as any).inferredCategory : undefined;
+      return cat
+        ? `classificação: match, categoria inferida: ${cat}`
+        : `classificação: match`;
+    }
+    return undefined;
+  }
 }
 
-// TODO(4.3.2): Implement contextual override where ImageReviewService ignores
-// only the specific product-image conflict the user approved (e.g., wrong_product_name)
-// while still reviewing price, legibility, text, store name, and visual quality.
-// Currently, strong_conflict blocks generation entirely; light conflict (conflict + low-confidence)
-// allows override but the reviewer may still flag the approved mismatch.
-// The fix requires passing inputValidationOverride through ImageReviewInput and
-// filtering only user-approved issue types in ImageReviewService.parseResult().
-// Phase 4.3.1 introduced override-aware cost messaging, but there is no
-// concrete credits/billing system yet. When plans/quota are implemented:
-//   - Track generation attempts (including retries and correction loops)
-//     as separate consumption events when billing by attempt.
-//   - Expose remaining quota in the UI so the override dialog can display
-//     "Gerar consome 1 de N gerações restantes" instead of generic wording.
-//   - Block generation when quota is exhausted, with upgrade prompt.
-// Tracked by: phase 4.3.1 adjustments — runbook entry.
+// TODO(4.3.3): Audit review alignment for edge cases
+// - generated_product_mismatch still blocks even with override (verified)
+// - wrong_product_name using effectiveProductName (verified)
+// - Commercial repertoire should be validated for hallucination risk

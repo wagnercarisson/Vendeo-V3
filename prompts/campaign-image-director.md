@@ -72,3 +72,22 @@ Considerar o segmento {{storeSegment}} ao definir o estilo visual. A peça deve 
 **Validade da oferta:** {{validity}}
 **Disponibilidade:** {{availabilityNotes}}
 **Canal:** {{targetChannel}} — formato {{format}}
+
+## Direção Criativa Contextual
+
+{{creativePersona}}
+
+### Categoria do Produto
+
+O produto anunciado é da categoria: **{{inferredCategory}}**
+
+{{categoryConflictDirective}}
+
+### Repertório Comercial
+
+Considere os seguintes detalhes como argumentos visuais opcionais — use apenas se fizerem sentido para a composição:
+{{commercialRepertoire}}
+
+### Instruções de Validação
+
+{{inputValidationSummary}}
