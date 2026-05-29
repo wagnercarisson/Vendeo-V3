@@ -33,9 +33,11 @@
     - [x] 4.2-03-PLAN.md — Commercial renderer rewrite per art direction contract
     - [x] 4.2-04-PLAN.md — Visual validation gate & publishability checklist
     - [!] Visual note: functional baseline passed; agency-grade publishability not achieved and deferred to future phase
-- [x] Phase 4.3: Agency-grade Campaign Composition — proposed (blocking Phase 5) (completed 2026-05-28)
-- [ ] Phase 5: Review, Adjust & Export (blocked by Phase 4.3)
-
+- [ ] Phase 4.3: Agency-grade Campaign Composition
+  - [ ] Phase 4.3.1: Generation Reliability & Progress UX — planned (openspec change ready)
+  - [ ] Phase 4.3.2: Creative Direction & Context Awareness (blocked by 4.3.1)
+  - [ ] Phase 4.3.3: Publishability & Store Identity Polish (blocked by 4.3.2)
+- [ ] Phase 5: Review, Adjust & Export (blocked by 4.3.3)
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -46,6 +48,8 @@
 | 3.2. Real AI Provider Integration | v1.1 | 1/1 | Complete | 2026-05-26 |
 | 4.1. Campaign Visual Renderer & Preview | v1.1 | 1/1 | Complete | 2026-05-26 |
 | 4.2. Commercial Visual Quality | v1.1 | 4/4 | Baseline Complete — visual debt deferred | 2026-05-27 |
-| 4.3. Agency-grade Campaign Composition | v1.1 | 4/4 | Complete   | 2026-05-28 |
-| 4. Visual Rendering & Preview (remaining) | v1.1 | 0 | Blocked by 4.3 | - |
-| 5. Review, Adjust & Export | v1.1 | 0 | Blocked by 4.3 | - |
+| 4.3. Agency-grade Campaign Composition | v1.1 | — | In Progress | — |
+| 4.3.1. Generation Reliability & Progress UX | v1.1 | 0 | Planned | — |
+| 4.3.2. Creative Direction & Context Awareness | v1.1 | 0 | Blocked by 4.3.1 | — |
+| 4.3.3. Publishability & Store Identity Polish | v1.1 | 0 | Blocked by 4.3.2 | — |
+| 5. Review, Adjust & Export | v1.1 | 0 | Blocked by 4.3.3 | — |
