@@ -1,6 +1,8 @@
 import { PromptLoader } from "@/lib/image-generation/prompt-loader";
 import { VISION_REVIEW_MODEL } from "@/lib/image-generation/config";
-import type { ImageReviewResult } from "@/lib/image-generation/schema";
+import type { ImageReviewResult, ValidationContext } from "@/lib/image-generation/schema";
+
+export type { ValidationContext };
 
 /**
  * Input data for the image review process.
@@ -11,6 +13,7 @@ export interface ImageReviewInput {
   storeName: string;
   originalPrice?: string;
   discountedPrice: string;
+  validationContext?: ValidationContext;
 }
 
 /**
@@ -53,12 +56,36 @@ export class ImageReviewService {
     generatedImageDataUrl: string,
     input: ImageReviewInput
   ): Promise<ImageReviewResult> {
+    // Compute validation context section for the review prompt
+    let validationContextSection = "";
+    if (input.validationContext) {
+      const parts: string[] = [];
+
+      if (input.validationContext.inputCorrection) {
+        const c = input.validationContext.inputCorrection;
+        parts.push(
+          `O nome do produto foi corrigido automaticamente de "${c.from}" para "${c.to}" (motivo: ${c.reason}). A revisão deve usar "${c.to}" como referência.`
+        );
+      }
+
+      if (input.validationContext.overrides?.productImageCheck === "user_confirmed_continue") {
+        parts.push(
+          "O usuário confirmou que a imagem do produto está correta, mesmo com divergência na pré-validação. A revisão não deve reportar conflito produto × imagem."
+        );
+      }
+
+      if (parts.length > 0) {
+        validationContextSection = `\n## Contexto de Validação\n${parts.map(p => `- ${p}`).join("\n")}\n`;
+      }
+    }
+
     // Load the review prompt with campaign data for comparison
     const prompt = this.promptLoader.load("campaign-image-reviewer", {
       productName: input.productName,
       storeName: input.storeName,
       discountedPrice: input.discountedPrice,
       originalPrice: input.originalPrice ?? "",
+      validationContextSection,
     });
 
     // Call the vision model with the generated image

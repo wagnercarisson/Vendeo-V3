@@ -39,6 +39,7 @@ Use o seguinte schema:
   "confidence": 0.92,
   "correctedProductName": "Nescau",
   "suggestedProductName": "Coca-Cola",
+  "inferredCategory": "bebidas-energeticos",
   "reason": "O texto 'neskau' na imagem corresponde a 'Nescau'."
 }
 ```
@@ -50,3 +51,4 @@ Use o seguinte schema:
 - **correctedProductName**: string — opcional. Preenchido APENAS quando `classification` é `"auto-fix"`. Contém o nome corrigido do produto
 - **suggestedProductName**: string — opcional. Preenchido APENAS quando `classification` é `"conflict"` ou `"strong_conflict"` (ou opcionalmente `"low-confidence"`). Contém o nome do produto identificado na imagem, se aplicável
 - **reason**: string — obrigatório. Explicação em português brasileiro justificando a classificação
+- **inferredCategory**: string — opcional. Categoria inferida do produto com base na análise visual da imagem. Exemplos: `"bebidas-energeticos"`, `"calcados-esportivos"`, `"cosmeticos"`, `"eletronicos"`, `"alimentos"`. Preenchido em TODAS as classificações quando aplicável.

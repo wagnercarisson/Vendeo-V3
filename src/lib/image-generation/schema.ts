@@ -77,29 +77,33 @@ export type GenerateImageNeedsUserActionResponse = z.infer<
 // Pre-generation classification results from InputValidationService.
 
 export type InputValidationResult =
-  | { classification: "match"; confidence: number }
+  | { classification: "match"; confidence: number; inferredCategory?: string }
   | {
       classification: "auto-fix";
       confidence: number;
       correctedProductName: string;
       reason: string;
+      inferredCategory?: string;
     }
   | {
       classification: "conflict";
       confidence: number;
       suggestedProductName?: string;
       reason: string;
+      inferredCategory?: string;
     }
   | {
       classification: "strong_conflict";
       confidence: number;
       suggestedProductName?: string;
       reason: string;
+      inferredCategory?: string;
     }
   | {
       classification: "low-confidence";
       confidence: number;
       reason: string;
+      inferredCategory?: string;
     };
 
 // ─── Generation Progress Types ────────────────────────────────────────────
@@ -122,6 +126,22 @@ export interface ReviewIssue {
   type: string;
   severity: "critical" | "minor";
   description: string;
+}
+
+export interface ValidationContext {
+  inputCorrection?: {
+    field: "productName";
+    from: string;
+    to: string;
+    reason: string;
+  };
+  allowedConflicts?: Array<{
+    type: "product_image_conflict" | "product_image_low_confidence";
+    userAction: "user_confirmed_continue" | "accepted_suggestion";
+  }>;
+  overrides?: {
+    productImageCheck?: "user_confirmed_continue";
+  };
 }
 
 export interface ImageReviewResult {

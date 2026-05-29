@@ -110,6 +110,7 @@ export class InputValidationService {
         return {
           classification: "match",
           confidence: parsed.confidence ?? 1.0,
+          inferredCategory: parsed.inferredCategory,
         };
       case "auto-fix":
         return {
@@ -117,6 +118,7 @@ export class InputValidationService {
           confidence: parsed.confidence ?? 0.9,
           correctedProductName: parsed.correctedProductName,
           reason: parsed.reason ?? "auto_fix",
+          inferredCategory: parsed.inferredCategory,
         };
       case "conflict":
         return {
@@ -124,6 +126,7 @@ export class InputValidationService {
           confidence: parsed.confidence ?? 1.0,
           suggestedProductName: parsed.suggestedProductName,
           reason: parsed.reason ?? "Conflito entre nome digitado e imagem do produto",
+          inferredCategory: parsed.inferredCategory,
         };
       case "strong_conflict":
         return {
@@ -131,12 +134,14 @@ export class InputValidationService {
           confidence: parsed.confidence ?? 1.0,
           suggestedProductName: parsed.suggestedProductName,
           reason: parsed.reason ?? "Categoria do produto não corresponde à imagem",
+          inferredCategory: parsed.inferredCategory,
         };
       case "low-confidence":
         return {
           classification: "low-confidence",
           confidence: parsed.confidence ?? 0.5,
           reason: parsed.reason ?? "Não foi possível confirmar a correspondência",
+          inferredCategory: parsed.inferredCategory,
         };
       default:
         throw new Error(`Unknown classification: ${classification}`);

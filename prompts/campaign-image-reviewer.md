@@ -14,6 +14,8 @@ Você é um revisor de qualidade de campanhas visuais. Sua função é inspecion
 | **Preço com desconto** | {{discountedPrice}} |
 | **Texto do badge** | {{badgeText}} |
 
+{{validationContextSection}}
+
 ## Critérios de Inspeção
 
 Analise a imagem gerada contra cada critério abaixo. Para cada problema encontrado, registre o tipo, a gravidade e uma descrição.
