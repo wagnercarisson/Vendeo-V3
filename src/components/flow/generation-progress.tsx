@@ -25,6 +25,7 @@ const ERROR_LABELS: Record<string, string> = {
   insufficient_image: "A imagem gerada não atende aos requisitos mínimos.",
   input_low_confidence: "Não foi possível confirmar a correspondência com a imagem enviada.",
   review_low_confidence: "A revisão de qualidade não conseguiu avaliar a imagem com confiança.",
+  review_error: "Erro ao executar a revisão de qualidade da imagem. Tente novamente.",
   product_image_conflict: "O nome do produto não corresponde à imagem enviada.",
   product_image_strong_conflict: "A imagem enviada parece ser de outro produto.",
   generated_product_mismatch: "A imagem gerada exibiu informações divergentes do produto informado.",

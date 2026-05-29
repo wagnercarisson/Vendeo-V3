@@ -261,12 +261,13 @@ export class ImageGenerationService {
         reviewResult = await this.imageReview.review(imageDataUrl, reviewInput);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
+        console.error(`[ImageGenerationService] review error — ${message}`);
         emitFailed("quality_review", "Erro na revisão de qualidade.");
         return {
           success: false,
-          code: "provider_error",
-          message: "Erro ao revisar a imagem gerada. Tente novamente.",
-          details: process.env.NODE_ENV === "development" ? message : undefined,
+          code: "review_error",
+          message: "Erro ao executar a revisão de qualidade da imagem. Tente novamente.",
+          details: message,
         };
       }
 
@@ -303,10 +304,13 @@ export class ImageGenerationService {
             `issues: ${totalIssues} (${criticalCount} críticas, ${minorCount} menores), failureType: ${reviewResult.failureType ?? "null"}`);
 
           if (state === GenerationState.INITIAL) {
+            console.warn(`[ImageGenerationService] review failed → CORRECT (issues=${criticalIssuesCount} critical), attempt ${attempts + 1}/${maxAttempts}`);
             state = GenerationState.CORRECT;
           } else if (state === GenerationState.CORRECT) {
+            console.warn(`[ImageGenerationService] correction failed → REGENERATE, attempt ${attempts + 1}/${maxAttempts}`);
             state = GenerationState.REGENERATE;
           } else {
+            console.warn(`[ImageGenerationService] regeneration failed → ERROR, attempt ${attempts + 1}/${maxAttempts}`);
             state = GenerationState.ERROR;
           }
         } else {

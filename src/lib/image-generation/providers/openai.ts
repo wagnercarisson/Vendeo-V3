@@ -154,10 +154,9 @@ export class OpenAIImageProvider implements ImageProvider {
     }
     return (
       message.includes("not supported") ||
-      message.includes("image_generation") ||
-      message.includes("responses") ||
+      message.includes("image_generation is not") ||
       message.includes("model_not_found") ||
-      message.includes("tool")
+      message.includes("tool not found")
     );
   }
   /**

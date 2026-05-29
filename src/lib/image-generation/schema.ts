@@ -159,6 +159,7 @@ export type GenerationErrorCode =
   | "insufficient_image"
   | "input_low_confidence"
   | "review_low_confidence"
+  | "review_error"
   | "product_image_conflict"
   | "product_image_strong_conflict"
   | "generated_product_mismatch"
