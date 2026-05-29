@@ -4,8 +4,10 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { BADGE_OPTIONS } from "@/lib/constants";
 import { formatCurrencyBRL } from "@/lib/formatters";
+import { useInputPreservation } from "@/hooks/use-input-preservation";
 import type { StoreIdentitySnapshot, PreviewPayload } from "@/components/campaign/types";
 import type { CampaignSpec } from "@/lib/campaign-intelligence/schema";
+import type { GenerationPhaseEvent } from "@/lib/image-generation/schema";
 
 function compressImage(file: File, maxSizeBytes: number = 1024 * 1024): Promise<{ file: File; dataUrl: string }> {
   return new Promise((resolve, reject) => {
@@ -93,7 +95,7 @@ export type FieldErrors = Partial<
 >;
 
 export interface PendingConflict {
-  type: "conflict" | "low-confidence";
+  type: "conflict" | "low-confidence" | "strong_conflict";
   suggestedProductName?: string;
   body: Record<string, unknown>;
 }
@@ -119,6 +121,8 @@ export interface UseCampaignFormReturn {
   handleConflictContinue: () => void;
   handleConflictCorrect: () => void;
   handleConflictCancel: () => void;
+  phases: GenerationPhaseEvent[];
+  onPhaseChange: (event: GenerationPhaseEvent) => void;
 }
 
 const EMPTY_FIELDS: CampaignFormFields = {
@@ -205,9 +209,59 @@ export function useCampaignForm(storeIdentity?: StoreIdentitySnapshot): UseCampa
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [pendingConflict, setPendingConflict] = useState<PendingConflict | null>(null);
+  const [phases, setPhases] = useState<GenerationPhaseEvent[]>([]);
   const prevImageFileRef = useRef<File | null>(null);
+  const lastRestoredUrlRef = useRef<string | null>(null);
   const objectUrlRef = useRef<string | null>(null);
   const router = useRouter();
+  const { saveFormState, restoreFormState, clearFormState } = useInputPreservation<CampaignFormFields>();
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const IMAGE_DRAFT_KEY = "campaign_draft_image";
+  const [restoredImageDataUrl, setRestoredImageDataUrl] = useState<string | null>(null);
+
+  // Restore form state from sessionStorage on mount
+  useEffect(() => {
+    const saved = restoreFormState();
+    if (saved) {
+      // imageFile can't be serialized — restore as null
+      const { imageFile: _, ...rest } = saved;
+      setFields((prev) => ({ ...prev, ...rest, imageFile: null }));
+      if (saved.originalPriceCents > 0) {
+        setRawOriginalPrice(String(saved.originalPriceCents));
+      }
+      if (saved.discountedPriceCents > 0) {
+        setRawDiscountedPrice(String(saved.discountedPriceCents));
+      }
+      // Restore image data URL from separate key
+      try {
+        const savedImageDataUrl = sessionStorage.getItem(IMAGE_DRAFT_KEY);
+        if (savedImageDataUrl) {
+          setRestoredImageDataUrl(savedImageDataUrl);
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-save form state on field change (debounced 500ms)
+  useEffect(() => {
+    if (autoSaveTimer.current) {
+      clearTimeout(autoSaveTimer.current);
+    }
+    autoSaveTimer.current = setTimeout(() => {
+      const hasData = fields.productName || fields.discountedPriceCents > 0 || fields.badge || fields.imageFile;
+      if (hasData) {
+        saveFormState(fields);
+      }
+    }, 500);
+
+    return () => {
+      if (autoSaveTimer.current) {
+        clearTimeout(autoSaveTimer.current);
+      }
+    };
+  }, [fields, saveFormState]);
 
   const displayPriceOriginal =
     rawOriginalPrice === "" ? "" : formatCurrencyBRL(fields.originalPriceCents);
@@ -218,27 +272,45 @@ export function useCampaignForm(storeIdentity?: StoreIdentitySnapshot): UseCampa
     const currentFile = fields.imageFile;
     const prevFile = prevImageFileRef.current;
 
-    if (currentFile === prevFile) return;
+    if (currentFile === prevFile && lastRestoredUrlRef.current === restoredImageDataUrl) return;
 
     if (prevFile && prevFile !== currentFile && imagePreviewUrl) {
       URL.revokeObjectURL(imagePreviewUrl);
     }
 
-    if (currentFile) {
+    if (currentFile instanceof File) {
       const url = URL.createObjectURL(currentFile);
       setImagePreviewUrl(url);
       objectUrlRef.current = url;
+      // Read as data URL for draft persistence
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        try {
+          sessionStorage.setItem(IMAGE_DRAFT_KEY, reader.result as string);
+        } catch {
+          // storage full or unavailable
+        }
+      };
+      reader.readAsDataURL(currentFile);
+      setRestoredImageDataUrl(null);
+    } else if (restoredImageDataUrl) {
+      setImagePreviewUrl(restoredImageDataUrl);
+      objectUrlRef.current = null;
     } else {
       setImagePreviewUrl(null);
       objectUrlRef.current = null;
     }
 
     prevImageFileRef.current = currentFile;
-  }, [fields.imageFile]);
+    lastRestoredUrlRef.current = restoredImageDataUrl;
+  }, [fields.imageFile, restoredImageDataUrl]);
 
   const setField = useCallback(
     (field: keyof CampaignFormFields, value: string | number | File | null) => {
       setFields((prev) => ({ ...prev, [field]: value }));
+      if (field === "imageFile") {
+        setRestoredImageDataUrl(null);
+      }
     },
     []
   );
@@ -282,11 +354,147 @@ export function useCampaignForm(storeIdentity?: StoreIdentitySnapshot): UseCampa
     []
   );
 
+  const onPhaseChange = useCallback((event: GenerationPhaseEvent) => {
+    setPhases((prev) => [...prev, event]);
+  }, []);
+
+  async function consumeStream(
+    body: Record<string, unknown>,
+    storeIdentityLocal: StoreIdentitySnapshot,
+    frozenImagePreviewUrlLocal: string | null,
+    abortController: AbortController
+  ): Promise<void> {
+    const response = await fetch("/api/campaign/generate-image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: abortController.signal,
+    });
+
+    // Pre-stream errors (400, 409, 413)
+    if (response.status === 409) {
+      const errorData = await response.json().catch(() => null);
+      if (errorData?.reason === "product_image_strong_conflict") {
+        setPendingConflict({
+          type: "strong_conflict",
+          suggestedProductName: errorData.suggestedProductName,
+          body,
+        });
+        setSubmitError(errorData.message || "A imagem enviada parece ser de outro produto.");
+        setIsSubmitting(false);
+        return;
+      }
+      if (errorData?.reason === "product_image_conflict") {
+        setPendingConflict({
+          type: "conflict",
+          suggestedProductName: errorData.suggestedProductName,
+          body,
+        });
+        setSubmitError(errorData.message || "O nome do produto não corresponde à imagem.");
+        setIsSubmitting(false);
+        return;
+      }
+      if (errorData?.reason === "product_image_low_confidence") {
+        setPendingConflict({
+          type: "low-confidence",
+          body,
+        });
+        setSubmitError(errorData.message || "Não foi possível confirmar a correspondência.");
+        setIsSubmitting(false);
+        return;
+      }
+      setSubmitError(errorData?.message || "Erro ao gerar imagem");
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      setSubmitError(errorData?.error?.message || "Erro ao gerar imagem");
+      setIsSubmitting(false);
+      return;
+    }
+
+    // In-stream NDJSON consumption
+    const reader = response.body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          let event: Record<string, unknown>;
+          try {
+            event = JSON.parse(line);
+          } catch {
+            continue;
+          }
+
+          if (event.type === "phase") {
+            const phaseEvent: GenerationPhaseEvent = {
+              phase: event.phase as GenerationPhaseEvent["phase"],
+              status: event.status as GenerationPhaseEvent["status"],
+              message: event.message as string | undefined,
+              detail: event.detail as string | undefined,
+            };
+            onPhaseChange(phaseEvent);
+          } else if (event.type === "result" && event.success) {
+            const result = event as { imageDataUrl: string; inputCorrections?: { productName: { from: string; to: string; reason: string } } };
+
+            if (result.inputCorrections?.productName) {
+              const correction = result.inputCorrections.productName;
+              setFields((prev) => ({ ...prev, productName: correction.to }));
+            }
+
+            const previewPayload: PreviewPayload = {
+              campaignSpec: {} as CampaignSpec,
+              storeIdentity: storeIdentityLocal,
+              productImageUrl: frozenImagePreviewUrlLocal,
+              generatedImageDataUrl: result.imageDataUrl,
+              generatedAt: new Date().toISOString(),
+            };
+
+            sessionStorage.setItem("campaign_preview", JSON.stringify(previewPayload));
+            try { sessionStorage.removeItem(IMAGE_DRAFT_KEY); } catch { /* ignore */ }
+            clearFormState();
+            router.push("/campaign/preview");
+            return;
+          } else if (event.type === "error") {
+            const errorEvent = event as { code: string; message: string; requiresUserAction?: boolean };
+            if (errorEvent.code === "generated_product_mismatch") {
+              setSubmitError(errorEvent.message || "A imagem gerada não corresponde ao produto.");
+            } else {
+              setSubmitError(errorEvent.message || "Erro ao gerar imagem.");
+            }
+            setIsSubmitting(false);
+            return;
+          }
+        }
+      }
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setSubmitError("A geração foi cancelada. Tente novamente.");
+      } else {
+        setSubmitError("Erro ao processar a resposta de geração.");
+      }
+      setIsSubmitting(false);
+    }
+  }
+
   const handleSubmit = useCallback(async () => {
     setIsSubmitting(true);
     setSubmitError(null);
     setFieldErrors({});
     setPendingConflict(null);
+    setPhases([]);
 
     const errors: FieldErrors = {};
     const allFields: (keyof CampaignFormFields)[] = [
@@ -298,6 +506,8 @@ export function useCampaignForm(storeIdentity?: StoreIdentitySnapshot): UseCampa
     ];
 
     for (const field of allFields) {
+      // imageFile is null after draft restore — skip validation if we have a restored data URL
+      if (field === "imageFile" && !!restoredImageDataUrl) continue;
       const error = validateField(field, fields);
       if (error) {
         errors[field] = error;
@@ -318,149 +528,78 @@ export function useCampaignForm(storeIdentity?: StoreIdentitySnapshot): UseCampa
       return;
     }
 
+    if (!storeIdentity) {
+      setSubmitError("Dados da loja não disponíveis.");
+      setIsSubmitting(false);
+      return;
+    }
+
     const frozenFields = { ...fields };
     const frozenImagePreviewUrl = imagePreviewUrl;
+    const frozenRestoredImageDataUrl = restoredImageDataUrl;
+    const abortController = new AbortController();
 
     try {
-      // ── Compress image ───────────────────────────────────
       let imageDataUrl: string;
-      if (frozenFields.imageFile) {
+      if (frozenFields.imageFile instanceof File) {
         const compressed = await compressImage(frozenFields.imageFile);
         imageDataUrl = compressed.dataUrl;
+      } else if (frozenRestoredImageDataUrl) {
+        imageDataUrl = frozenRestoredImageDataUrl;
       } else {
         throw new Error("Imagem do produto é obrigatória");
       }
 
-      // ── Build request body ───────────────────────────────
       const body: Record<string, unknown> = {
         productName: frozenFields.productName,
         originalPriceCents: frozenFields.originalPriceCents,
         discountedPriceCents: frozenFields.discountedPriceCents,
         description: frozenFields.description || undefined,
         badgeText: frozenFields.badge,
-        storeName: storeIdentity?.storeName ?? "",
-        storeSegment: storeIdentity?.storeSegment ?? "",
-        brandColor: storeIdentity?.brandColor ?? "#22C55E",
-        storeLogoUrl: storeIdentity?.logoUrl ?? undefined,
+        storeName: storeIdentity.storeName,
+        storeSegment: storeIdentity.storeSegment,
+        brandColor: storeIdentity.brandColor ?? "#22C55E",
+        storeLogoUrl: storeIdentity.logoUrl ?? undefined,
         productImageDataUrl: imageDataUrl,
       };
 
-      // ── Call AI image generation endpoint ────────────────
-      const response = await fetch("/api/campaign/generate-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      // ── Handle 409 conflicts ─────────────────────────────
-      if (response.status === 409) {
-        const errorData = await response.json().catch(() => null);
-        if (errorData?.reason === "product_image_conflict") {
-          setPendingConflict({
-            type: "conflict",
-            suggestedProductName: errorData.suggestedProductName,
-            body,
-          });
-          setSubmitError(errorData.message || "O nome do produto não corresponde à imagem.");
-          setIsSubmitting(false);
-          return;
-        }
-        if (errorData?.reason === "product_image_low_confidence") {
-          setPendingConflict({
-            type: "low-confidence",
-            body,
-          });
-          setSubmitError(errorData.message || "Não foi possível confirmar a correspondência.");
-          setIsSubmitting(false);
-          return;
-        }
-        throw new Error(errorData?.message || "Erro ao gerar imagem");
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.error?.message || "Erro ao gerar imagem");
-      }
-
-      const result = await response.json();
-
-      // ── Apply auto-fix corrections ───────────────────────
-      if (result.inputCorrections?.productName) {
-        const correction = result.inputCorrections.productName;
-        setFields((prev) => ({ ...prev, productName: correction.to }));
-      }
-
-      // ── Build preview payload ────────────────────────────
-      if (!storeIdentity) {
-        throw new Error("Dados da loja não disponíveis");
-      }
-
-      const previewPayload: PreviewPayload = {
-        campaignSpec: {} as CampaignSpec,
-        storeIdentity,
-        productImageUrl: frozenImagePreviewUrl,
-        generatedImageDataUrl: result.imageDataUrl,
-        generatedAt: new Date().toISOString(),
-      };
-
-      sessionStorage.setItem("campaign_preview", JSON.stringify(previewPayload));
-      router.push("/campaign/preview");
+      await consumeStream(body, storeIdentity, frozenImagePreviewUrl, abortController);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro inesperado ao gerar imagem";
       setSubmitError(message);
       setIsSubmitting(false);
     }
-  }, [fields, imagePreviewUrl, storeIdentity, router]);
+  }, [fields, imagePreviewUrl, restoredImageDataUrl, storeIdentity, router, onPhaseChange]);
 
   const resetSubmit = useCallback(() => {
     setSubmitError(null);
     setFieldErrors({});
+    setPhases([]);
     setFields(EMPTY_FIELDS);
     setRawOriginalPrice("");
     setRawDiscountedPrice("");
+    setRestoredImageDataUrl(null);
+    clearFormState();
+    try { sessionStorage.removeItem(IMAGE_DRAFT_KEY); } catch { /* ignore */ }
     if (imagePreviewUrl) {
       URL.revokeObjectURL(imagePreviewUrl);
       objectUrlRef.current = null;
     }
     sessionStorage.removeItem("campaign_preview");
-  }, [imagePreviewUrl]);
+  }, [imagePreviewUrl, clearFormState]);
 
-  const handleConflictContinue = useCallback(() => {
-    if (!pendingConflict) return;
+  const handleConflictContinue = useCallback(async () => {
+    if (!pendingConflict || !storeIdentity) return;
     setPendingConflict(null);
     setSubmitError(null);
+    setPhases([]);
     const overriddenBody = {
       ...pendingConflict.body,
       inputValidationOverride: { productImageCheck: "user_confirmed_continue" },
     };
     setIsSubmitting(true);
-    fetch("/api/campaign/generate-image", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(overriddenBody),
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => null);
-          throw new Error(errorData?.error?.message || "Erro ao gerar imagem");
-        }
-        const result = await response.json();
-        if (!storeIdentity) throw new Error("Dados da loja não disponíveis");
-        const previewPayload: PreviewPayload = {
-          campaignSpec: {} as CampaignSpec,
-          storeIdentity,
-          productImageUrl: imagePreviewUrl,
-          generatedImageDataUrl: result.imageDataUrl,
-          generatedAt: new Date().toISOString(),
-        };
-        sessionStorage.setItem("campaign_preview", JSON.stringify(previewPayload));
-        router.push("/campaign/preview");
-      })
-      .catch((err) => {
-        setSubmitError(err instanceof Error ? err.message : "Erro ao gerar imagem");
-        setIsSubmitting(false);
-      });
-  }, [pendingConflict, storeIdentity, imagePreviewUrl, router]);
+    await consumeStream(overriddenBody, storeIdentity, imagePreviewUrl, new AbortController());
+  }, [pendingConflict, storeIdentity, imagePreviewUrl]);
 
   const handleConflictCorrect = useCallback(() => {
     if (!pendingConflict?.suggestedProductName) return;
@@ -481,7 +620,7 @@ export function useCampaignForm(storeIdentity?: StoreIdentitySnapshot): UseCampa
     fields.discountedPriceCents > 0 &&
     fields.badge !== "" &&
     BADGE_OPTIONS.includes(fields.badge as (typeof BADGE_OPTIONS)[number]) &&
-    fields.imageFile !== null;
+    (fields.imageFile instanceof File || !!restoredImageDataUrl);
 
   return {
     fields,
@@ -504,5 +643,7 @@ export function useCampaignForm(storeIdentity?: StoreIdentitySnapshot): UseCampa
     handleConflictContinue,
     handleConflictCorrect,
     handleConflictCancel,
+    phases,
+    onPhaseChange,
   };
 }

@@ -3,10 +3,12 @@
 import { useCampaignForm } from "./use-campaign-form";
 import type { CampaignFormFields } from "./use-campaign-form";
 import { CampaignImageUpload } from "./campaign-image-upload";
+import { GenerationProgress } from "./generation-progress";
 import { BADGE_OPTIONS } from "@/lib/constants";
 import type { StoreIdentitySnapshot } from "@/components/campaign/types";
 import {
   AlertCircle,
+  AlertTriangle,
   Loader2,
 } from "lucide-react";
 
@@ -30,12 +32,27 @@ export function CampaignInputForm({ storeIdentity }: CampaignInputFormProps) {
     submitError,
     setSubmitError,
     handleSubmit,
+    pendingConflict,
+    handleConflictContinue,
+    handleConflictCorrect,
+    handleConflictCancel,
+    phases,
   } = useCampaignForm(storeIdentity ?? undefined);
 
-  if (submitError) {
+  if (isSubmitting) {
     return (
-      <div>
-        <div className="mb-4 flex items-start gap-3 bg-red-900/20 border border-red-700/30 rounded-lg px-4 py-3">
+      <GenerationProgress
+        phases={phases}
+        error={submitError}
+        onRetry={submitError ? handleSubmit : undefined}
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {submitError && !pendingConflict && (
+        <div className="flex items-start gap-3 bg-red-900/20 border border-red-700/30 rounded-lg px-4 py-3">
           <AlertCircle className="w-5 h-5 text-accent-red shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-accent-red text-sm font-body">{submitError}</p>
@@ -48,39 +65,109 @@ export function CampaignInputForm({ storeIdentity }: CampaignInputFormProps) {
             Descartar
           </button>
         </div>
-        <FormContent
-          fields={fields}
-          fieldErrors={fieldErrors}
-          touched={touched}
-          setField={setField}
-          handleBlur={handleBlur}
-          displayPriceOriginal={displayPriceOriginal}
-          displayPriceDiscounted={displayPriceDiscounted}
-          handlePriceOriginalChange={handlePriceOriginalChange}
-          handlePriceDiscountedChange={handlePriceDiscountedChange}
-          imagePreviewUrl={imagePreviewUrl}
-          isSubmitting={isSubmitting}
-          handleSubmit={handleSubmit}
-        />
-      </div>
-    );
-  }
+      )}
 
-  return (
-    <FormContent
-      fields={fields}
-      fieldErrors={fieldErrors}
-      touched={touched}
-      setField={setField}
-      handleBlur={handleBlur}
-      displayPriceOriginal={displayPriceOriginal}
-      displayPriceDiscounted={displayPriceDiscounted}
-      handlePriceOriginalChange={handlePriceOriginalChange}
-      handlePriceDiscountedChange={handlePriceDiscountedChange}
-      imagePreviewUrl={imagePreviewUrl}
-      isSubmitting={isSubmitting}
-      handleSubmit={handleSubmit}
-    />
+      {pendingConflict?.type === "strong_conflict" && (
+        <div className="bg-red-900/20 border border-red-700/30 rounded-lg px-4 py-4 space-y-3">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-accent-red shrink-0 mt-0.5" />
+            <div className="flex-1 space-y-1">
+              <p className="text-accent-red text-sm font-body font-semibold">
+                Categoria do produto não corresponde à imagem
+              </p>
+              <p className="text-red-300/80 text-xs font-body">
+                A imagem enviada parece ser de outro tipo de produto. Para evitar uma campanha incorreta e consumo desnecessário de geração, corrija o nome do produto ou troque a imagem antes de continuar.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {pendingConflict.suggestedProductName && (
+              <button
+                type="button"
+                onClick={handleConflictCorrect}
+                className="px-3 py-1.5 bg-red-700/30 text-red-200 text-xs rounded-lg hover:bg-red-700/50 transition-colors"
+              >
+                Usar &quot;{pendingConflict.suggestedProductName}&quot;
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleConflictCancel}
+              className="px-3 py-1.5 bg-bg-surface text-text-muted text-xs rounded-lg hover:text-text-primary transition-colors"
+            >
+              Corrigir nome
+            </button>
+            <button
+              type="button"
+              onClick={handleConflictCancel}
+              className="px-3 py-1.5 bg-bg-surface text-text-muted text-xs rounded-lg hover:text-text-primary transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {pendingConflict && pendingConflict.type !== "strong_conflict" && (
+        <div className="bg-yellow-900/20 border border-yellow-700/30 rounded-lg px-4 py-4 space-y-3">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
+            <div className="flex-1 space-y-1">
+              <p className="text-yellow-300 text-sm font-body font-semibold">
+                {pendingConflict.type === "conflict"
+                  ? "Produto digitado não corresponde à imagem"
+                  : "Correspondência produto × imagem não confirmada"}
+              </p>
+              <p className="text-yellow-300/80 text-xs font-body">
+                {pendingConflict.type === "conflict"
+                  ? "O nome do produto informado parece não corresponder à imagem enviada. Gerar mesmo assim pode consumir 1 geração e resultar em uma arte com informações incorretas."
+                  : "Não foi possível confirmar se o nome do produto corresponde à imagem. A arte gerada pode conter dados ou nomes divergentes. Gerar consome 1 geração."}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {pendingConflict.suggestedProductName && (
+              <button
+                type="button"
+                onClick={handleConflictCorrect}
+                className="px-3 py-1.5 bg-yellow-700/30 text-yellow-200 text-xs rounded-lg hover:bg-yellow-700/50 transition-colors"
+              >
+                Usar &quot;{pendingConflict.suggestedProductName}&quot;
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleConflictContinue}
+              className="px-3 py-1.5 bg-orange-600/80 text-white text-xs rounded-lg hover:bg-orange-600 transition-colors"
+            >
+              Continuar mesmo assim — pode gerar arte incorreta
+            </button>
+            <button
+              type="button"
+              onClick={handleConflictCancel}
+              className="px-3 py-1.5 bg-bg-surface text-text-muted text-xs rounded-lg hover:text-text-primary transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      <FormContent
+        fields={fields}
+        fieldErrors={fieldErrors}
+        touched={touched}
+        setField={setField}
+        handleBlur={handleBlur}
+        displayPriceOriginal={displayPriceOriginal}
+        displayPriceDiscounted={displayPriceDiscounted}
+        handlePriceOriginalChange={handlePriceOriginalChange}
+        handlePriceDiscountedChange={handlePriceDiscountedChange}
+        imagePreviewUrl={imagePreviewUrl}
+        isSubmitting={isSubmitting}
+        handleSubmit={handleSubmit}
+      />
+    </div>
   );
 }
 

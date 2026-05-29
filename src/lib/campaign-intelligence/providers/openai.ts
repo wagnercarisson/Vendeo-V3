@@ -60,7 +60,7 @@ REGRAS IMPORTANTES:
 **Cidade/Estado:** ${[input.city, input.state].filter(Boolean).join("/") || "Não informado"}
 **Produto:** ${input.productName}
 **Descrição:** ${input.description || "Nenhuma descrição fornecida"}
-**Preço original:** R$ ${(input.originalPriceCents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+**Preço original:** ${input.originalPriceCents ? `R$ ${(input.originalPriceCents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "N/A"}
 **Preço com desconto:** R$ ${(input.discountedPriceCents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
 **Badge:** ${input.badge || "Automático (baseado no desconto)"}
 **Cor da marca:** ${input.brandColor}

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, AlertCircle, Loader2, ImageIcon } from "lucide-react";
 import { CampaignRenderer } from "@/components/campaign/campaign-renderer";
 import { CampaignAdjustmentsPanel } from "@/components/campaign/campaign-adjustments-panel";
+import { useInputPreservation } from "@/hooks/use-input-preservation";
 import type { PreviewPayload, CampaignAdjustments } from "@/components/campaign/types";
 import type { CampaignSpec } from "@/lib/campaign-intelligence/schema";
 
@@ -12,6 +13,7 @@ type PageState = "loading" | "empty" | "error" | "ready";
 
 export default function PreviewPage() {
   const router = useRouter();
+  const { clearFormState } = useInputPreservation();
   const [pageState, setPageState] = useState<PageState>("loading");
   const [payload, setPayload] = useState<PreviewPayload | null>(null);
   const [spec, setSpec] = useState<CampaignSpec | null>(null);
@@ -38,6 +40,7 @@ export default function PreviewPage() {
         setSpec(parsed.campaignSpec);
       }
       setPageState("ready");
+      clearFormState();
 
       if (parsed.productImageUrl) {
         const img = new Image();

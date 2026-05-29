@@ -26,3 +26,7 @@ export const IMAGE_GENERATION_SIZE = "1024x1024";
 // ─── Payload Size Limits ──────────────────────────────────────────────────
 export const MAX_PRODUCT_IMAGE_BASE64_SIZE = 4 * 1024 * 1024;
 export const MAX_PRODUCT_IMAGE_FILE_SIZE = 1 * 1024 * 1024;
+
+// ─── Global Timeout ───────────────────────────────────────────────────────
+export const IMAGE_GENERATION_GLOBAL_TIMEOUT_MS =
+  Number(process.env.IMAGE_GENERATION_GLOBAL_TIMEOUT_MS) || 300000;

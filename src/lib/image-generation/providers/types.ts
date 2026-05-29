@@ -6,6 +6,8 @@ export interface ImageProviderInput {
   productImageDataUrl?: string;
   size?: "1024x1024" | "2048x2048";
   quality?: "low" | "medium" | "high" | "auto";
+  signal?: AbortSignal;
+  attempt?: number;
 }
 
 /**

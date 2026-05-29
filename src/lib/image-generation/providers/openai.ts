@@ -46,7 +46,6 @@ export class OpenAIImageProvider implements ImageProvider {
   }
 
   async generateImage(input: ImageProviderInput): Promise<ImageProviderOutput> {
-    // ── Step 1: Dynamic import (same pattern as OpenAIProvider in campaign-intelligence) ──
     const { default: OpenAI } = await import("openai");
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
@@ -54,11 +53,14 @@ export class OpenAIImageProvider implements ImageProvider {
 
     const size = input.size ?? IMAGE_GENERATION_SIZE;
     const quality = input.quality ?? IMAGE_GENERATION_QUALITY;
+    const attempt = input.attempt ?? 0;
+
+    // attempt 1+ → skip to Image API edit fallback
+    if (attempt >= 1 && input.productImageDataUrl) {
+      return this.fallbackToImageApi(openai, input, size);
+    }
 
     try {
-      // ── Step 2: Primary path — Responses API with image_generation tool ──
-      // NOTE: model MUST be a mainline model (gpt-4o, gpt-5, etc.), NOT gpt-image-2.
-      // gpt-image-2 is the internal model used BY the image_generation tool.
       const response = await openai.responses.create({
         model: this.responsesModel,
         input: [
@@ -79,9 +81,8 @@ export class OpenAIImageProvider implements ImageProvider {
             quality: quality as "auto" | "low" | "medium" | "high",
           },
         ],
-      });
+      }, { signal: input.signal });
 
-      // Extract the generated image from the response
       const imageOutput = response.output?.find(
         (item): item is typeof item & { type: "image_generation_call"; result: string } =>
           item.type === "image_generation_call"
@@ -91,7 +92,6 @@ export class OpenAIImageProvider implements ImageProvider {
         throw new Error("No image generated in Responses API response");
       }
 
-      // The result is already a base64-encoded image string from gpt-image-2
       const imageBase64 = imageOutput.result;
 
       return {
@@ -100,7 +100,6 @@ export class OpenAIImageProvider implements ImageProvider {
         model: this.responsesModel,
       };
     } catch (err) {
-      // ── Safe logging — no API key or sensitive data exposed ─────────
       const errorCode =
         err && typeof err === "object" && "code" in err
           ? (err as { code: string }).code
@@ -115,13 +114,12 @@ export class OpenAIImageProvider implements ImageProvider {
           : typeof err;
       const errorMessage = err instanceof Error ? err.message : String(err);
 
-      // Log without stack trace — safe metadata only
       console.error(
         `[OpenAIImageProvider] provider error — type=${errorType} code=${errorCode} status=${errorStatus} message=${errorMessage}`
       );
 
-      // ── Step 3: Fallback — Image API edit when product image reference
-      //            is needed and Responses API path failed ──────────────
+      // Fallback to Image API edit when product image is available
+      // and error is not auth/quota/rate-limit
       if (input.productImageDataUrl && this.isResponsesApiError(err)) {
         console.error(
           `[OpenAIImageProvider] falling back to Image API edit (model=${this.editFallbackModel})`
@@ -129,7 +127,6 @@ export class OpenAIImageProvider implements ImageProvider {
         return this.fallbackToImageApi(openai, input, size);
       }
 
-      // Re-throw with safe message — strip raw API details from user-facing path
       throw new Error(
         `image provider error (${errorCode || "unknown"})`
       );
@@ -215,7 +212,7 @@ export class OpenAIImageProvider implements ImageProvider {
       prompt: input.prompt,
       size: imageApiSize,
       n: 1,
-    });
+    }, { signal: input.signal });
 
     const imageBase64 = response.data?.[0]?.b64_json;
 

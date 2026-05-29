@@ -9,7 +9,8 @@ export const CampaignGenerationInputSchema = z.object({
   originalPriceCents: z
     .number()
     .int("Preço original deve ser um número inteiro")
-    .positive("Preço original deve ser positivo"),
+    .nonnegative()
+    .optional(),
   discountedPriceCents: z
     .number()
     .int("Preço com desconto deve ser um número inteiro")

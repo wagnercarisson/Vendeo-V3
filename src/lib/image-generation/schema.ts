@@ -10,7 +10,7 @@ export const GenerateImageRequestSchema = z.object({
   storeSegment: z.string().min(1),
   storeTone: z.string().optional(),
   brandColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-  originalPriceCents: z.number().int().positive(),
+  originalPriceCents: z.number().int().nonnegative().optional(),
   discountedPriceCents: z.number().int().positive(),
   badgeText: z.string().optional(),
   hook: z.string().optional(),
@@ -63,6 +63,7 @@ export const GenerateImageNeedsUserActionResponseSchema = z.object({
   reason: z.union([
     z.literal("product_image_conflict"),
     z.literal("product_image_low_confidence"),
+    z.literal("product_image_strong_conflict"),
   ]),
   message: z.string(),
   suggestedProductName: z.string().optional(),
@@ -90,10 +91,29 @@ export type InputValidationResult =
       reason: string;
     }
   | {
+      classification: "strong_conflict";
+      confidence: number;
+      suggestedProductName?: string;
+      reason: string;
+    }
+  | {
       classification: "low-confidence";
       confidence: number;
       reason: string;
     };
+
+// ─── Generation Progress Types ────────────────────────────────────────────
+
+export type GenerationPhase = "input_validation" | "prompt_assembly" | "image_generation" | "quality_review" | "done";
+
+export type GenerationPhaseStatus = "pending" | "running" | "complete" | "skipped" | "failed";
+
+export interface GenerationPhaseEvent {
+  phase: GenerationPhase;
+  status: GenerationPhaseStatus;
+  message?: string;
+  detail?: string;
+}
 
 // ─── Image Review Types ───────────────────────────────────────────────────
 // Post-generation quality review results from ImageReviewService.
@@ -107,19 +127,33 @@ export interface ReviewIssue {
 export interface ImageReviewResult {
   passed: boolean;
   issues: ReviewIssue[];
+  failureType?: "empty_review" | "insufficient_image" | "review_low_confidence" | "generated_product_mismatch";
 }
 
 // ─── Error Response Types ─────────────────────────────────────────────────
 // Structured error codes for controlled failures.
 
-export type ImageGenerationErrorCode =
-  | "payload_too_large"
-  | "provider_failure"
-  | "invalid_output"
-  | "review_failed";
+export type GenerationErrorCode =
+  | "no_image_in_response"
+  | "empty_review"
+  | "insufficient_image"
+  | "input_low_confidence"
+  | "review_low_confidence"
+  | "product_image_conflict"
+  | "product_image_strong_conflict"
+  | "generated_product_mismatch"
+  | "provider_error"
+  | "provider_auth_error"
+  | "provider_timeout"
+  | "invalid_data"
+  | "global_timeout";
 
-export interface ImageGenerationError {
-  code: ImageGenerationErrorCode;
+export interface GenerationError {
+  phase: string;
+  code: GenerationErrorCode;
   message: string;
-  details?: string;
+  detail?: string;
+  httpStatus: number;
+  retryable: boolean;
+  requiresUserAction?: boolean;
 }

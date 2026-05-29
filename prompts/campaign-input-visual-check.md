@@ -19,9 +19,12 @@ O nome digitado corresponde claramente ao produto na imagem. Exemplo: digitou "C
 O nome digitado tem um erro menor de digitação, grafia ou formatação, mas é possível identificar o nome correto a partir da imagem. Exemplo: digitou "neskau" e a imagem mostra Nescau — o nome correto é "Nescau".
 
 ### 3. conflict
-O nome digitado e o produto na imagem referem-se a produtos diferentes. Exemplo: digitou "Pepsi" mas a imagem mostra uma Coca-Cola.
+O nome digitado e o produto na imagem referem-se a produtos diferentes, mas ainda dentro da mesma categoria ou tipo (ex.: sabores diferentes, volumes diferentes, marcas concorrentes). Exemplo: digitou "Pepsi" mas a imagem mostra uma Coca-Cola; digitou "Bebida 51 Ice 250ml" mas a imagem mostra "51 Ice Limão 275ml".
 
-### 4. low-confidence
+### 4. strong_conflict
+O nome digitado e o produto na imagem são de categorias claramente diferentes e incompatíveis (ex.: bebida vs calçado, eletrônico vs alimento). A imagem enviada parece ser de um tipo de produto completamente diferente do que foi digitado. Exemplo: digitou "Pantufa Bichinhos" mas a imagem mostra uma garrafa de bebida.
+
+### 5. low-confidence
 Não é possível determinar com confiança se o nome digitado corresponde ao produto na imagem. Exemplo: imagem genérica, ângulo que não permite identificar o produto, ou múltiplos produtos na imagem.
 
 ## Formato de Resposta
@@ -42,8 +45,8 @@ Use o seguinte schema:
 
 ### Regras para cada campo
 
-- **classification**: string — obrigatório. Um dos valores: `"match"`, `"auto-fix"`, `"conflict"`, `"low-confidence"`
+- **classification**: string — obrigatório. Um dos valores: `"match"`, `"auto-fix"`, `"conflict"`, `"strong_conflict"`, `"low-confidence"`
 - **confidence**: number — obrigatório. Valor entre 0 e 1 indicando o nível de confiança na classificação
 - **correctedProductName**: string — opcional. Preenchido APENAS quando `classification` é `"auto-fix"`. Contém o nome corrigido do produto
-- **suggestedProductName**: string — opcional. Preenchido APENAS quando `classification` é `"conflict"` (ou opcionalmente `"low-confidence"`). Contém o nome do produto identificado na imagem, se aplicável
+- **suggestedProductName**: string — opcional. Preenchido APENAS quando `classification` é `"conflict"` ou `"strong_conflict"` (ou opcionalmente `"low-confidence"`). Contém o nome do produto identificado na imagem, se aplicável
 - **reason**: string — obrigatório. Explicação em português brasileiro justificando a classificação

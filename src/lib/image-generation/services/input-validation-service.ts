@@ -125,6 +125,13 @@ export class InputValidationService {
           suggestedProductName: parsed.suggestedProductName,
           reason: parsed.reason ?? "Conflito entre nome digitado e imagem do produto",
         };
+      case "strong_conflict":
+        return {
+          classification: "strong_conflict",
+          confidence: parsed.confidence ?? 1.0,
+          suggestedProductName: parsed.suggestedProductName,
+          reason: parsed.reason ?? "Categoria do produto não corresponde à imagem",
+        };
       case "low-confidence":
         return {
           classification: "low-confidence",

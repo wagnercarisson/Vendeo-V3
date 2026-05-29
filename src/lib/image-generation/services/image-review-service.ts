@@ -120,9 +120,28 @@ export class ImageReviewService {
       description: issue.description,
     }));
 
+    const failureType = this.determineFailureType(issues, Boolean(parsed.passed));
+
     return {
       passed: Boolean(parsed.passed),
       issues,
+      failureType,
     };
+  }
+
+  private determineFailureType(
+    issues: { type: string; severity: string; description: string }[],
+    passed: boolean
+  ): ImageReviewResult["failureType"] {
+    if (passed) return undefined;
+
+    const criticalTypes = new Set(issues.filter(i => i.severity === "critical").map(i => i.type));
+
+    if (criticalTypes.has("empty_review")) return "empty_review";
+    if (criticalTypes.has("generated_product_mismatch")) return "generated_product_mismatch";
+    if (criticalTypes.has("insufficient_image")) return "insufficient_image";
+    if (criticalTypes.has("review_low_confidence")) return "review_low_confidence";
+
+    return undefined;
   }
 }

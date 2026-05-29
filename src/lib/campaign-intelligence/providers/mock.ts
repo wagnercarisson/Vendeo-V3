@@ -66,8 +66,8 @@ export class MockProvider implements AIProvider {
       input.discountedPriceCents / 100
     ).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
 
-    const originalFormatted = input.originalPriceCents > 0
-      ? (input.originalPriceCents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })
+    const originalFormatted = (input.originalPriceCents ?? 0) > 0
+      ? ((input.originalPriceCents ?? 0) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })
       : null;
 
     const offer: {
