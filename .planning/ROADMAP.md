@@ -35,10 +35,10 @@
     - [!] Visual note: functional baseline passed; agency-grade publishability not achieved and deferred to future phase
 - [ ] Phase 4.3: Agency-grade Campaign Composition
   - [ ] Phase 4.3.1: Generation Reliability & Progress UX — planned (openspec change ready)
-  - [ ] Phase 4.3.2: Creative Direction & Context Awareness (3 plans) — PLANNED
-  - [ ] 4.3.2-01-PLAN.md — Types, prompts & input validation (types + prompts foundation)
-  - [ ] 4.3.2-02-PLAN.md — Creative direction context + review alignment + technical events (runtime)
-  - [ ] 4.3.2-03-PLAN.md — Verification: gates, scenarios & task finalization
+  - [x] Phase 4.3.2: Creative Direction & Context Awareness (3 plans) — PLANNED (completed 2026-05-29)
+  - [x] 4.3.2-01-PLAN.md — Types, prompts & input validation (types + prompts foundation)
+  - [x] 4.3.2-02-PLAN.md — Creative direction context + review alignment + technical events (runtime)
+  - [x] 4.3.2-03-PLAN.md — Verification: gates, scenarios & task finalization
   - [ ] Phase 4.3.3: Publishability & Store Identity Polish (blocked by 4.3.2)
 - [ ] Phase 5: Review, Adjust & Export (blocked by 4.3.3)
 ## Progress
@@ -53,6 +53,6 @@
 | 4.2. Commercial Visual Quality | v1.1 | 4/4 | Baseline Complete — visual debt deferred | 2026-05-27 |
 | 4.3. Agency-grade Campaign Composition | v1.1 | — | In Progress | — |
 | 4.3.1. Generation Reliability & Progress UX | v1.1 | 0 | Planned | — |
-| 4.3.2. Creative Direction & Context Awareness | v1.1 | 3 (planned) | Planned | — |
+| 4.3.2. Creative Direction & Context Awareness | v1.1 | 3/3 | Complete   | 2026-05-29 |
 | 4.3.3. Publishability & Store Identity Polish | v1.1 | 0 | Blocked by 4.3.2 | — |
 | 5. Review, Adjust & Export | v1.1 | 0 | Blocked by 4.3.3 | — |
