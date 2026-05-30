@@ -12,3 +12,9 @@ next-env.d.ts
 
 # Generation metrics (Phase 4.3.3)
 metrics/*.jsonl
+
+# Benchmark fixture images (Phase 4.3.3)
+scripts/benchmark-fixtures/
+
+# Scenarios are deterministic; only placeholder images go in this dir
+# Images require rights verification before committing

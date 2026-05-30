@@ -1,0 +1,23 @@
+Benchmark Fixture Images
+========================
+
+Place product/test images here for the benchmark scenarios. These images are
+referenced by scripts/benchmark-scenarios.ts — each scenario's `imagePath`
+points to a file in this directory.
+
+Image source requirements:
+  - Do NOT commit third-party images without rights verification.
+  - Use only images you have permission to use (original photos, stock images
+    with appropriate license, AI-generated test images).
+  - Preferred format: JPEG or PNG, 1MB max per file.
+  - Recommended filenames match the pattern used in benchmark-scenarios.ts:
+    - produto-eletronico.jpg
+    - produto-bebida.jpg
+    - produto-moda.jpg
+    - produto-variedade.jpg
+    - produto-saude.jpg
+    - produto-alimento.jpg
+
+If no fixture images are present, the benchmark script falls back to a
+placeholder transparent PNG (no generation will succeed, but the pipeline
+will be exercised and errors will be captured in metrics).
