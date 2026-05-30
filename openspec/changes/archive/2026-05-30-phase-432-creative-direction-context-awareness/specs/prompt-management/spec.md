@@ -2,7 +2,15 @@
 
 ### Requirement: campaign-image-director.md prompt content
 
-The `campaign-image-director.md` prompt SHALL retain all existing sections (briefing, technical specs, composition guidelines, mandatory instructions, segment observations, additional notes). Three new sections SHALL be appended:
+The `campaign-image-director.md` prompt SHALL retain all existing sections (briefing, technical specs, composition guidelines, mandatory instructions, segment observations, additional notes). Three new sections SHALL be appended at the end, after the "**Canal:** {{targetChannel}} — formato {{format}}" line.
+
+#### Scenario: New sections are appended to existing prompt
+
+- **WHEN** inspecting the `campaign-image-director.md` prompt file
+- **THEN** the content SHALL include the three new sections after all existing content
+- **AND** all existing sections SHALL remain unchanged in content and order
+
+The appended sections are:
 
 ```markdown
 ## Direção Criativa Contextual
@@ -24,12 +32,6 @@ Considere os seguintes detalhes como argumentos visuais opcionais — use apenas
 
 {{inputValidationSummary}}
 ```
-
-#### Scenario: New sections are appended to existing prompt
-
-- **WHEN** inspecting the `campaign-image-director.md` prompt file
-- **THEN** the content SHALL include the three new sections
-- **AND** all existing sections SHALL remain unchanged
 
 ### Requirement: Prompt template variables extended
 

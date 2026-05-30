@@ -43,6 +43,12 @@ Prompt files SHALL support `{{variable}}` placeholders for interpolation at runt
 - `{{validity}}` — promotion validity period if specified
 - `{{availabilityNotes}}` — availability information (e.g., "poucas unidades", "cores variadas")
 - `{{sensitiveConstraints}}` — sensitive constraints provided by the lojista (e.g., "não inventar condições comerciais", "não informar parcelamento sem aprovação")
+- `{{creativePersona}}` — persona string: `"Você é um diretor de marketing especializado em {segment label}."`
+- `{{inferredCategory}}` — product category inferred from image (fallback to store segment)
+- `{{hasCategoryConflict}}` — `"sim"` or `"nao"` indicating whether product category differs from store segment
+- `{{categoryConflictDirective}}` — conditional directive string (empty when no conflict)
+- `{{commercialRepertoire}}` — commercially actionable arguments extracted from additional details, or empty
+- `{{inputValidationSummary}}` — sanitized summary of what occurred during pre-validation
 
 Interpolation SHALL be a simple string replace with no template engine dependency.
 
@@ -55,6 +61,11 @@ Interpolation SHALL be a simple string replace with no template engine dependenc
 
 - **WHEN** a placeholder does not match any known variable
 - **THEN** the placeholder SHALL remain in the prompt text as-is (no error, no substitution)
+
+#### Scenario: New creative direction variables are interpolated at runtime
+
+- **WHEN** `PromptLoader.load('campaign-image-director', variables)` is called with creative direction variables (`creativePersona`, `inferredCategory`, `hasCategoryConflict`, `categoryConflictDirective`, `commercialRepertoire`, `inputValidationSummary`)
+- **THEN** the returned string SHALL have each `{{variable}}` placeholder replaced with the corresponding value
 
 ### Requirement: Prompt loader
 
@@ -90,10 +101,18 @@ The `campaign-image-director.md` prompt SHALL instruct the image model to act as
 - NOT invent prices, discounts, or availability information
 - Use the product image as a visual reference for the featured product
 
+The prompt SHALL retain all existing sections (briefing, technical specs, composition guidelines, mandatory instructions, segment observations, additional notes). Three new sections SHALL be appended at the end, after the "**Canal:** {{targetChannel}} — formato {{format}}" line: "Direção Criativa Contextual" (with creative persona, inferred category, and category conflict directive), "Repertório Comercial" (commercial repertoire extracted from additional details), and "Instruções de Validação" (sanitized validation summary).
+
 #### Scenario: Prompt guides professional campaign output
 
 - **WHEN** `campaign-image-director.md` is loaded and sent to the image model
 - **THEN** the generated image SHALL follow the direction specified in the prompt
+
+#### Scenario: New creative direction sections are appended to existing prompt
+
+- **WHEN** inspecting the `campaign-image-director.md` prompt file
+- **THEN** the content SHALL include the three new sections after all existing content
+- **AND** all existing sections SHALL remain unchanged in content and order
 
 ### Requirement: campaign-image-reviewer.md prompt content
 
@@ -138,7 +157,7 @@ The `campaign-input-visual-check.md` prompt SHALL instruct the vision model to c
 - `conflict` — the typed name and image refer to different products
 - `low-confidence` — unable to determine match with confidence
 
-The prompt SHALL require the model to respond **only** with valid JSON, no markdown, no explanations outside the JSON. Expected response format:
+The prompt SHALL require the model to respond **only** with valid JSON, no markdown, no explanations outside the JSON. Additionally, the model SHALL analyze the product image to determine the product's broad category (e.g., "bebidas-energeticos", "calcados-esportivos", "cosmeticos", "eletronicos") and return it as an `inferredCategory` field. Expected response format:
 
 ```json
 {
@@ -146,7 +165,8 @@ The prompt SHALL require the model to respond **only** with valid JSON, no markd
   "confidence": 0.92,
   "correctedProductName": "Nescau",
   "suggestedProductName": "Coca-Cola",
-  "reason": "O texto 'neskau' na imagem corresponde a 'Nescau'."
+  "reason": "O texto 'neskau' na imagem corresponde a 'Nescau'.",
+  "inferredCategory": "bebidas-energeticos"
 }
 ```
 
@@ -155,3 +175,9 @@ The prompt SHALL require the model to respond **only** with valid JSON, no markd
 - **WHEN** `campaign-input-visual-check.md` is loaded and sent with a product name and product image
 - **THEN** the model SHALL return one of the four classification values
 - **AND** the response SHALL be valid JSON matching the expected schema
+
+#### Scenario: Input check returns inferredCategory
+
+- **WHEN** the vision model analyzes the product image
+- **THEN** the response SHALL include `inferredCategory` alongside the existing classification fields
+- **AND** the value SHALL be a string representing the product's category

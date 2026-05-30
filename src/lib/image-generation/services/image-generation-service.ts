@@ -1,5 +1,5 @@
 import { PromptLoader } from "@/lib/image-generation/prompt-loader";
-import { IMAGE_GENERATION_SIZE, IMAGE_GENERATION_GLOBAL_TIMEOUT_MS, IMAGE_GENERATION_RESPONSES_MODEL } from "@/lib/image-generation/config";
+import { IMAGE_GENERATION_DEBUG, IMAGE_GENERATION_SIZE, IMAGE_GENERATION_GLOBAL_TIMEOUT_MS, IMAGE_GENERATION_RESPONSES_MODEL } from "@/lib/image-generation/config";
 import type { ImageProvider } from "@/lib/image-generation/providers/types";
 import type { GenerateImageRequest, GenerateImageSuccessResponse, GenerationPhase, GenerationPhaseEvent, ValidationContext, InputValidationResult, ImageReviewResult } from "@/lib/image-generation/schema";
 import { InputValidationService } from "@/lib/image-generation/services/input-validation-service";
@@ -362,6 +362,11 @@ export class ImageGenerationService {
   private buildCommercialRepertoire(body: GenerateImageRequest): string {
     const parts: string[] = [];
 
+    const hasAvailabilityNotes = !!body.availabilityNotes;
+    const hasValidity = !!body.validity;
+    const hasCampaignDetails = !!body.campaignDetails;
+    const hasAdditionalDetails = !!body.additionalDetails;
+
     if (body.availabilityNotes) {
       const notes = body.availabilityNotes.toLowerCase();
       const scarcityKeywords = ["poucas unidades", "últimas", "limitado", "estoque"];
@@ -396,7 +401,19 @@ export class ImageGenerationService {
       }
     }
 
-    return parts.join("\n");
+    const result = parts.join("\n");
+    if (IMAGE_GENERATION_DEBUG) {
+      console.log(
+        "[buildCommercialRepertoire]",
+        JSON.stringify({
+          empty: result === "",
+          argsCount: parts.length,
+          fieldsPresent: { hasAvailabilityNotes, hasValidity, hasCampaignDetails, hasAdditionalDetails },
+          preview: result ? result.slice(0, 120) : "(empty)",
+        })
+      );
+    }
+    return result;
   }
 
   private buildValidationSummary(body: GenerateImageRequest, effectiveProductName: string): string {

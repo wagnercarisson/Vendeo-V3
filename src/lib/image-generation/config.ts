@@ -30,3 +30,7 @@ export const MAX_PRODUCT_IMAGE_FILE_SIZE = 1 * 1024 * 1024;
 // ─── Global Timeout ───────────────────────────────────────────────────────
 export const IMAGE_GENERATION_GLOBAL_TIMEOUT_MS =
   Number(process.env.IMAGE_GENERATION_GLOBAL_TIMEOUT_MS) || 300000;
+
+// ─── Debug / Telemetry ────────────────────────────────────────────────────
+export const IMAGE_GENERATION_DEBUG =
+  process.env.IMAGE_GENERATION_DEBUG === "true";

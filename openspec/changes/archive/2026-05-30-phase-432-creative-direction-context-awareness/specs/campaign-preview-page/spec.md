@@ -23,3 +23,10 @@ The component SHALL continue to render without the technical details panel when 
 The responsibility for generating technical log content SHALL belong to the generation pipeline (`ImageGenerationService`), not to the UI component. The `GenerationProgress` component SHALL be a passive consumer — it renders whatever `detail` data it receives via phase events.
 
 No changes to the `GenerationProgress` component logic are required by this phase beyond what is already implemented.
+
+#### Scenario: Pipeline emits detail, UI only consumes
+
+- **WHEN** the generation pipeline runs through `ImageGenerationService.generateImage()`
+- **THEN** phase events SHALL contain `detail` fields with real metadata (classification, attempt number, model, issue counts, elapsed time)
+- **AND** the `GenerationProgress` component SHALL display these `detail` values inside a collapsible "Detalhes técnicos" panel
+- **AND** the component SHALL NOT fabricate, simulate, or generate log entries on its own
