@@ -5,6 +5,8 @@ import type { GenerateImageRequest, GenerateImageSuccessResponse, GenerationPhas
 import { InputValidationService } from "@/lib/image-generation/services/input-validation-service";
 import { ImageReviewService } from "@/lib/image-generation/services/image-review-service";
 import type { ImageReviewInput } from "@/lib/image-generation/services/image-review-service";
+import type { GenerationMetricsEvent, GenerationMetrics } from "@/lib/image-generation/metrics/types";
+import { MetricsWriter } from "@/lib/image-generation/metrics/writer";
 import { SEGMENT_LABELS } from "@/lib/constants";
 
 const CATEGORY_TO_SEGMENT_GROUP: Record<string, string[]> = {
@@ -38,26 +40,44 @@ export class ImageGenerationService {
   private readonly imageProvider: ImageProvider;
   private readonly inputValidation: InputValidationService;
   private readonly imageReview: ImageReviewService;
+  private readonly metricsWriter: MetricsWriter;
 
   constructor(
     imageProvider: ImageProvider,
     promptLoader?: PromptLoader,
     inputValidation?: InputValidationService,
-    imageReview?: ImageReviewService
+    imageReview?: ImageReviewService,
+    metricsWriter?: MetricsWriter
   ) {
     this.imageProvider = imageProvider;
     this.promptLoader = promptLoader ?? new PromptLoader();
     this.inputValidation = inputValidation ?? new InputValidationService();
     this.imageReview = imageReview ?? new ImageReviewService();
+    this.metricsWriter = metricsWriter ?? new MetricsWriter();
   }
 
   async generateImage(
     body: GenerateImageRequest,
     onPhaseChange?: (event: GenerationPhaseEvent) => void,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    onMetricsEvent?: (event: GenerationMetricsEvent) => void
   ): Promise<GenerateImageServiceResult> {
     const startTime = Date.now();
     const remaining = () => IMAGE_GENERATION_GLOBAL_TIMEOUT_MS - (Date.now() - startTime);
+    const runId = crypto.randomUUID();
+
+    const emitMetricsEvent = (phase: string, attempt: number = 0) => {
+      if (onMetricsEvent) {
+        onMetricsEvent({
+          runId,
+          phase,
+          provider: this.imageProvider.name,
+          model: IMAGE_GENERATION_RESPONSES_MODEL,
+          elapsedMs: Date.now() - startTime,
+          attempt,
+        });
+      }
+    };
 
     const emit = (phase: GenerationPhase, status: GenerationPhaseEvent["status"], message?: string, detail?: string) => {
       if (onPhaseChange) {
@@ -90,6 +110,7 @@ export class ImageGenerationService {
 
     // ── Phase 1: Pre-generation input validation ────────────────────
     emitRunning("input_validation", "Validando informações da campanha...");
+    emitMetricsEvent("input_validation");
 
     const aborted1 = checkAborted();
     if (aborted1) { emitFailed("input_validation", aborted1.message); return abortResult(aborted1); }
@@ -102,6 +123,12 @@ export class ImageGenerationService {
 
     let effectiveProductName = body.productName;
     let inputCorrections: { productName: { from: string; to: string; reason: string } } | undefined;
+    let metricsConflictsDetected: string[] = [];
+    let metricsHadOverride = false;
+
+    if (validationResult.classification === "conflict" || validationResult.classification === "strong_conflict") {
+      metricsConflictsDetected.push(validationResult.classification);
+    }
 
     // Extract inferredCategory from validation result
     const inferredCategory = "inferredCategory" in validationResult
@@ -155,6 +182,7 @@ export class ImageGenerationService {
     let validationContext: ValidationContext | undefined;
 
     if (body.inputValidationOverride?.productImageCheck === "user_confirmed_continue") {
+      metricsHadOverride = true;
       validationContext = {
         overrides: { productImageCheck: "user_confirmed_continue" },
       };
@@ -179,9 +207,11 @@ export class ImageGenerationService {
     } else {
       emitComplete("input_validation");
     }
+    emitMetricsEvent("input_validation");
 
     // ── Phase 2: Prompt assembly ────────────────────────────────────
     emitRunning("prompt_assembly", "Montando briefing criativo...");
+    emitMetricsEvent("prompt_assembly");
 
     const aborted2 = checkAborted();
     if (aborted2) { emitFailed("prompt_assembly", aborted2.message); return abortResult(aborted2); }
@@ -191,6 +221,7 @@ export class ImageGenerationService {
     const segmentPersona = SEGMENT_LABELS[body.storeSegment as keyof typeof SEGMENT_LABELS] ?? body.storeSegment;
     const promptDetail = `briefing com persona de ${segmentPersona}, categoria inferida: ${inferredCategory ?? body.storeSegment}`;
     emit("prompt_assembly", "complete", undefined, promptDetail);
+    emitMetricsEvent("prompt_assembly");
 
     // ── Phase 3-4: State machine — generation + review lifecycle ────
     let state = GenerationState.INITIAL;
@@ -204,6 +235,21 @@ export class ImageGenerationService {
     while (state !== GenerationState.COMPLETE && state !== GenerationState.ERROR) {
       if (attempts >= maxAttempts) {
         emitFailed("quality_review", "Não foi possível gerar uma imagem que passasse na revisão de qualidade.");
+        await this.metricsWriter.write(this.buildGenerationMetrics({
+          runId,
+          startTime,
+          providerName: this.imageProvider.name,
+          model: IMAGE_GENERATION_RESPONSES_MODEL,
+          attempts,
+          effectiveProductName,
+          storeName: body.storeName,
+          storeSegment: body.storeSegment,
+          reviewPassed: false,
+          reviewFailureType: "review_failed",
+          technicalError: lastReviewIssues.length > 0 ? lastReviewIssues.join("; ") : undefined,
+          conflictsDetected: metricsConflictsDetected,
+          hadOverride: metricsHadOverride,
+        }));
         return {
           success: false,
           code: "review_failed",
@@ -225,6 +271,7 @@ export class ImageGenerationService {
       if (attempts === 0) {
         emitRunning("image_generation", "Gerando imagem... isso pode levar até 2 minutos.");
       }
+      emitMetricsEvent("image_generation", attempts);
 
       const aborted3 = checkAborted();
       if (aborted3) { emitFailed("image_generation", aborted3.message); return abortResult(aborted3); }
@@ -234,15 +281,32 @@ export class ImageGenerationService {
       const providerResult = await this.generateWithRetry(promptText, body, signal, remaining);
       if (!providerResult.success) {
         emitFailed("image_generation", providerResult.message);
+        await this.metricsWriter.write(this.buildGenerationMetrics({
+          runId,
+          startTime,
+          providerName: this.imageProvider.name,
+          model: IMAGE_GENERATION_RESPONSES_MODEL,
+          attempts,
+          effectiveProductName,
+          storeName: body.storeName,
+          storeSegment: body.storeSegment,
+          reviewPassed: false,
+          reviewFailureType: "provider_error",
+          technicalError: providerResult.details ?? providerResult.message,
+          conflictsDetected: metricsConflictsDetected,
+          hadOverride: metricsHadOverride,
+        }));
         return providerResult;
       }
 
       currentImageBase64 = providerResult.imageBase64;
       currentMimeType = providerResult.mimeType;
       emitComplete("image_generation");
+      emitMetricsEvent("image_generation", attempts);
 
       // ── Phase 4: Quality review ─────────────────────────────────
       emitRunning("quality_review", "Revisando qualidade da imagem...");
+      emitMetricsEvent("quality_review", attempts);
 
       const imageDataUrl = `data:${currentMimeType};base64,${currentImageBase64}`;
 
@@ -263,6 +327,21 @@ export class ImageGenerationService {
         const message = err instanceof Error ? err.message : String(err);
         console.error(`[ImageGenerationService] review error — ${message}`);
         emitFailed("quality_review", "Erro na revisão de qualidade.");
+        await this.metricsWriter.write(this.buildGenerationMetrics({
+          runId,
+          startTime,
+          providerName: this.imageProvider.name,
+          model: IMAGE_GENERATION_RESPONSES_MODEL,
+          attempts,
+          effectiveProductName,
+          storeName: body.storeName,
+          storeSegment: body.storeSegment,
+          reviewPassed: false,
+          reviewFailureType: "review_error",
+          technicalError: message,
+          conflictsDetected: metricsConflictsDetected,
+          hadOverride: metricsHadOverride,
+        }));
         return {
           success: false,
           code: "review_error",
@@ -280,12 +359,29 @@ export class ImageGenerationService {
         const minorCount = reviewResult.issues.filter(i => i.severity === "minor").length;
         emit("quality_review", "complete", undefined,
           `issues: ${totalIssues} (${criticalCount} críticas, ${minorCount} menores), failureType: ${reviewResult.failureType ?? "null"}`);
+        emitMetricsEvent("quality_review", attempts);
         state = GenerationState.COMPLETE;
       } else {
         lastReviewIssues = reviewResult.issues.map((i) => i.description);
 
         if (reviewResult.failureType === "generated_product_mismatch") {
           emitFailed("quality_review", "A imagem gerada exibiu um nome de produto diferente do informado.");
+          emitMetricsEvent("quality_review", attempts);
+          await this.metricsWriter.write(this.buildGenerationMetrics({
+            runId,
+            startTime,
+            providerName: this.imageProvider.name,
+            model: IMAGE_GENERATION_RESPONSES_MODEL,
+            attempts,
+            effectiveProductName,
+            storeName: body.storeName,
+            storeSegment: body.storeSegment,
+            reviewPassed: false,
+            reviewFailureType: "generated_product_mismatch",
+            technicalError: lastReviewIssues.join("; "),
+            conflictsDetected: metricsConflictsDetected,
+            hadOverride: metricsHadOverride,
+          }));
           return {
             success: false,
             code: "generated_product_mismatch",
@@ -319,6 +415,7 @@ export class ImageGenerationService {
           const minorCount = reviewResult.issues.filter(i => i.severity === "minor").length;
           emit("quality_review", "complete", undefined,
             `issues: ${totalIssues} (${criticalCount} críticas, ${minorCount} menores), failureType: ${reviewResult.failureType ?? "null"}`);
+          emitMetricsEvent("quality_review", attempts);
           state = GenerationState.COMPLETE;
         }
       }
@@ -341,7 +438,58 @@ export class ImageGenerationService {
     const correctionsCount = body.productName !== effectiveProductName ? 1 : 0;
     emit("done", "complete", undefined,
       `geração concluída em ${Math.floor((Date.now() - startTime) / 1000)}s, ${attempts} tentativas, ${correctionsCount} correções`);
+    emitMetricsEvent("done", attempts);
+
+    await this.metricsWriter.write(this.buildGenerationMetrics({
+      runId,
+      startTime,
+      providerName: this.imageProvider.name,
+      model: IMAGE_GENERATION_RESPONSES_MODEL,
+      attempts,
+      effectiveProductName,
+      storeName: body.storeName,
+      storeSegment: body.storeSegment,
+      reviewPassed: true,
+      conflictsDetected: metricsConflictsDetected,
+      hadOverride: metricsHadOverride,
+    }));
     return response;
+  }
+
+  private buildGenerationMetrics(params: {
+    runId: string;
+    startTime: number;
+    providerName: string;
+    model: string;
+    attempts: number;
+    effectiveProductName: string;
+    storeName: string;
+    storeSegment: string;
+    reviewPassed?: boolean;
+    reviewFailureType?: string | null;
+    technicalError?: string;
+    conflictsDetected: string[];
+    hadOverride: boolean;
+  }): GenerationMetrics {
+    return {
+      runId: params.runId,
+      timestamp: new Date().toISOString(),
+      environment: (process.env.NODE_ENV as GenerationMetrics["environment"]) ?? "development",
+      provider: params.providerName,
+      model: params.model,
+      totalDurationMs: Date.now() - params.startTime,
+      retryCount: params.attempts,
+      conflictsDetected: params.conflictsDetected,
+      hadOverride: params.hadOverride,
+      reviewPassed: params.reviewPassed,
+      reviewFailureType: params.reviewFailureType ?? null,
+      technicalError: params.technicalError,
+      sanitizedInputs: {
+        productName: params.effectiveProductName,
+        storeName: params.storeName,
+        storeSegment: params.storeSegment,
+      },
+    };
   }
 
   private isSameCategory(inferredCategory: string, storeSegment: string): boolean {
