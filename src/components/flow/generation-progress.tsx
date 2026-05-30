@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X, Loader2, AlertCircle, ChevronDown, ChevronRight } from "lucide-react";
+import { Check, X, Loader2, AlertCircle, ChevronDown, ChevronRight, Minus } from "lucide-react";
 import type { GenerationPhaseEvent } from "@/lib/image-generation/schema";
 
 interface GenerationProgressProps {
@@ -44,43 +44,18 @@ const PHASE_FRIENDLY_LABELS: Record<string, string> = {
   done: "Concluído",
 };
 
-function sanitizeDetail(text: string): string {
-  return text
-    .replace(/(sk-[A-Za-z0-9]{20,})/g, "sk-...")
-    .replace(/([A-Za-z0-9+/=]{100,})/g, (m) => m.substring(0, 40) + "...")
-    .replace(/(data:image\/[a-z]+;base64,)[A-Za-z0-9+/=]+/g, "$1[base64 truncado]")
-    .replace(/at\s+\S+\s+\(.*?\)/g, "")
-    .replace(/Error:\s*/g, "")
-    .replace(/\s{2,}/g, " ")
-    .trim();
-}
-
-function buildDiagnostics(phases: GenerationPhaseEvent[], error?: string | null): string[] {
-  const lines: string[] = [];
-
-  for (const event of phases) {
-    const phaseLabel = PHASE_FRIENDLY_LABELS[event.phase] || event.phase;
-    const statusLabel =
-      event.status === "complete" ? "OK"
-      : event.status === "running" ? "executando"
-      : event.status === "failed" ? "falha"
-      : event.status === "skipped" ? "pulado"
-      : "pendente";
-
-    let msg = `${phaseLabel}: ${statusLabel}`;
-    if (event.detail) {
-      msg += ` — ${sanitizeDetail(event.detail)}`;
-    } else if (event.message && event.status !== "running") {
-      msg += ` — ${event.message}`;
-    }
-    lines.push(msg);
-  }
-
-  if (error) {
-    lines.push(`Erro: ${sanitizeDetail(error)}`);
-  }
-
-  return lines;
+function buildPhaseStatus(phases: GenerationPhaseEvent[]): { phase: string; status: string }[] {
+  const seen = new Set<string>();
+  return phases
+    .filter((event) => {
+      if (seen.has(event.phase)) return false;
+      seen.add(event.phase);
+      return true;
+    })
+    .map((event) => ({
+      phase: PHASE_FRIENDLY_LABELS[event.phase] || event.phase,
+      status: event.status,
+    }));
 }
 
 export function GenerationProgress({ phases, error, onRetry }: GenerationProgressProps) {
@@ -90,7 +65,7 @@ export function GenerationProgress({ phases, error, onRetry }: GenerationProgres
 
   const phaseOrder = ["input_validation", "prompt_assembly", "image_generation", "quality_review"];
 
-  const diagnostics = buildDiagnostics(phases, error);
+  const phaseStatus = buildPhaseStatus(phases);
 
   return (
     <div className="flex flex-col items-center py-8 px-4">
@@ -178,15 +153,15 @@ export function GenerationProgress({ phases, error, onRetry }: GenerationProgres
           </div>
         )}
 
-        {/* Collapsible technical details */}
-        {diagnostics.length > 0 && (
+        {/* Collapsible phase steps panel — shows only phase name + status */}
+        {phaseStatus.length > 0 && (
           <div className="border border-border-light rounded-lg overflow-hidden">
             <button
               type="button"
               onClick={() => setDetailsOpen((prev) => !prev)}
               className="w-full flex items-center justify-between px-3 py-2 text-xs text-text-muted hover:text-text-primary transition-colors"
             >
-              <span>Detalhes técnicos</span>
+              <span>Ver etapas da geração</span>
               {detailsOpen ? (
                 <ChevronDown className="w-3.5 h-3.5" />
               ) : (
@@ -194,11 +169,16 @@ export function GenerationProgress({ phases, error, onRetry }: GenerationProgres
               )}
             </button>
             {detailsOpen && (
-              <div className="px-3 pb-2 space-y-0.5">
-                {diagnostics.map((line, i) => (
-                  <p key={i} className="text-[11px] text-text-muted font-mono leading-relaxed">
-                    {line}
-                  </p>
+              <div className="px-3 pb-2 space-y-1">
+                {phaseStatus.map((item, i) => (
+                  <div key={i} className="flex items-center gap-2 text-xs text-text-muted">
+                    {item.status === "complete" && <Check className="w-3.5 h-3.5 text-accent-green shrink-0" />}
+                    {item.status === "running" && <Loader2 className="w-3.5 h-3.5 text-accent-green shrink-0 animate-spin" />}
+                    {item.status === "failed" && <X className="w-3.5 h-3.5 text-accent-red shrink-0" />}
+                    {item.status === "skipped" && <Minus className="w-3.5 h-3.5 text-text-muted shrink-0" />}
+                    {item.status === "pending" && <div className="w-3.5 h-3.5 shrink-0 flex items-center justify-center"><div className="w-1.5 h-1.5 rounded-full bg-text-muted" /></div>}
+                    <span>{item.phase}</span>
+                  </div>
                 ))}
               </div>
             )}
