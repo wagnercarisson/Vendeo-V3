@@ -39,7 +39,7 @@
   - [x] 4.3.2-01-PLAN.md — Types, prompts & input validation (types + prompts foundation)
   - [x] 4.3.2-02-PLAN.md — Creative direction context + review alignment + technical events (runtime)
   - [x] 4.3.2-03-PLAN.md — Verification: gates, scenarios & task finalization
-  - [ ] Phase 4.3.3: Generation Metrics, Provider Switch & Model Benchmark (blocked by 4.3.2)
+  - [x] Phase 4.3.3: Generation Metrics, Provider Switch & Model Benchmark (blocked by 4.3.2) (completed 2026-05-30)
 - [ ] Phase 5: Review, Adjust & Export (blocked by 4.3.3)
 ## Progress
 
@@ -54,5 +54,5 @@
 | 4.3. Agency-grade Campaign Composition | v1.1 | — | In Progress | — |
 | 4.3.1. Generation Reliability & Progress UX | v1.1 | 0 | Planned | — |
 | 4.3.2. Creative Direction & Context Awareness | v1.1 | 3/3 | Complete   | 2026-05-29 |
-| 4.3.3. Generation Metrics, Provider Switch & Model Benchmark | v1.1 | 0 | Blocked by 4.3.2 | — |
+| 4.3.3. Generation Metrics, Provider Switch & Model Benchmark | v1.1 | 3/3 | Complete   | 2026-05-30 |
 | 5. Review, Adjust & Export | v1.1 | 0 | Blocked by 4.3.3 | — |

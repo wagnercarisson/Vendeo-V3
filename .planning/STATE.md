@@ -2,14 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI + Rendering
-status: executing
-last_updated: "2026-05-29T22:41:15.821Z"
+status: completed
+stopped_at: Phase 4.2 baseline complete — visual debt deferred
+last_updated: "2026-05-30T20:38:40.703Z"
 progress:
-  total_phases: 8
-  completed_phases: 6
-  total_plans: 24
-  completed_plans: 16
-  percent: 67
+  total_phases: 9
+  completed_phases: 8
+  total_plans: 27
+  completed_plans: 22
+  percent: 81
 ---
 
 # Project State
@@ -19,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-25 after v1.0 milestone)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
-**Current focus:** Phase 4.3.2 — creative-direction-context-awareness
+**Current focus:** Phase 4.3.3 — generation-metrics-benchmark
 
 ## Current Position
 
-Phase: 4.3.2 (creative-direction-context-awareness) — EXECUTING
+Phase: 4.3.3 — COMPLETE
 Plan: 1 of 3
 Milestone: v1.1 AI + Rendering — IN PROGRESS
 Phases complete: 6 of 8 (Foundation, Campaign Input, AI Intelligence, AI Provider, Visual Renderer, Commercial Visual Quality baseline)
 Next phase: Phase 4.3 — Agency-grade Campaign Composition (proposed)
-Status: Executing Phase 4.3.2
+Status: Phase 4.3.3 complete
 
 Progress: [█████████████████████████░] 90%
 

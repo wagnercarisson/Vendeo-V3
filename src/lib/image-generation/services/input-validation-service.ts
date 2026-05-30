@@ -97,54 +97,109 @@ export class InputValidationService {
   /**
    * Parse the model's JSON response into a typed InputValidationResult.
    * Handles markdown code fence cleanup before JSON parsing.
+   * Falls back to low-confidence when the response is not valid JSON
+   * (e.g. model apologies, free-form text, or refusal messages).
    */
   private parseResult(raw: string): InputValidationResult {
-    // Clean potential markdown code fences
-    const cleaned = raw.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
-    const parsed = JSON.parse(cleaned);
+    let parsed: Record<string, unknown>;
 
-    const classification = parsed.classification;
+    try {
+      const cleaned = this.cleanJsonResponse(raw);
+      parsed = JSON.parse(cleaned);
+    } catch {
+      console.error(
+        `[InputValidationService] validation_non_json_response — modelo retornou texto não-JSON. ` +
+        `Primeiros 200 caracteres: ${raw.slice(0, 200).replace(/\n/g, " ")}`
+      );
+      return {
+        classification: "low-confidence",
+        confidence: 0.3,
+        reason: "Não foi possível validar a imagem do produto. Tente novamente.",
+      };
+    }
+
+    if (!parsed || typeof parsed !== "object" || !parsed.classification) {
+      console.error(
+        `[InputValidationService] validation_invalid_structure — resposta sem campo classification. ` +
+        `Primeiros 200 caracteres: ${JSON.stringify(parsed).slice(0, 200)}`
+      );
+      return {
+        classification: "low-confidence",
+        confidence: 0.3,
+        reason: "Não foi possível validar a imagem do produto. Tente novamente.",
+      };
+    }
+
+    const classification = parsed.classification as string;
 
     switch (classification) {
       case "match":
         return {
           classification: "match",
-          confidence: parsed.confidence ?? 1.0,
-          inferredCategory: parsed.inferredCategory,
+          confidence: (parsed.confidence as number) ?? 1.0,
+          inferredCategory: parsed.inferredCategory as string | undefined,
         };
       case "auto-fix":
         return {
           classification: "auto-fix",
-          confidence: parsed.confidence ?? 0.9,
-          correctedProductName: parsed.correctedProductName,
-          reason: parsed.reason ?? "auto_fix",
-          inferredCategory: parsed.inferredCategory,
+          confidence: (parsed.confidence as number) ?? 0.9,
+          correctedProductName: parsed.correctedProductName as string,
+          reason: (parsed.reason as string) ?? "auto_fix",
+          inferredCategory: parsed.inferredCategory as string | undefined,
         };
       case "conflict":
         return {
           classification: "conflict",
-          confidence: parsed.confidence ?? 1.0,
-          suggestedProductName: parsed.suggestedProductName,
-          reason: parsed.reason ?? "Conflito entre nome digitado e imagem do produto",
-          inferredCategory: parsed.inferredCategory,
+          confidence: (parsed.confidence as number) ?? 1.0,
+          suggestedProductName: parsed.suggestedProductName as string | undefined,
+          reason: (parsed.reason as string) ?? "Conflito entre nome digitado e imagem do produto",
+          inferredCategory: parsed.inferredCategory as string | undefined,
         };
       case "strong_conflict":
         return {
           classification: "strong_conflict",
-          confidence: parsed.confidence ?? 1.0,
-          suggestedProductName: parsed.suggestedProductName,
-          reason: parsed.reason ?? "Categoria do produto não corresponde à imagem",
-          inferredCategory: parsed.inferredCategory,
+          confidence: (parsed.confidence as number) ?? 1.0,
+          suggestedProductName: parsed.suggestedProductName as string | undefined,
+          reason: (parsed.reason as string) ?? "Categoria do produto não corresponde à imagem",
+          inferredCategory: parsed.inferredCategory as string | undefined,
         };
       case "low-confidence":
         return {
           classification: "low-confidence",
-          confidence: parsed.confidence ?? 0.5,
-          reason: parsed.reason ?? "Não foi possível confirmar a correspondência",
-          inferredCategory: parsed.inferredCategory,
+          confidence: (parsed.confidence as number) ?? 0.5,
+          reason: (parsed.reason as string) ?? "Não foi possível confirmar a correspondência",
+          inferredCategory: parsed.inferredCategory as string | undefined,
         };
       default:
-        throw new Error(`Unknown classification: ${classification}`);
+        console.error(
+          `[InputValidationService] validation_unknown_classification — "${classification}"`
+        );
+        return {
+          classification: "low-confidence",
+          confidence: 0.3,
+          reason: "Não foi possível validar a imagem do produto. Tente novamente.",
+        };
     }
+  }
+
+  /**
+   * Clean a model response string to extract valid JSON.
+   * - Strips markdown code fences
+   * - Strips leading/trailing non-JSON text
+   * - Attempts to extract the first JSON object if surrounded by text
+   */
+  private cleanJsonResponse(raw: string): string {
+    let cleaned = raw
+      .replace(/```json\s*/gi, "")
+      .replace(/```\s*/g, "")
+      .trim();
+
+    const firstBrace = cleaned.indexOf("{");
+    const lastBrace = cleaned.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+    }
+
+    return cleaned;
   }
 }

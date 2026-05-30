@@ -54,11 +54,24 @@ export async function POST(request: NextRequest) {
   // ── Pre-stream: Input validation for conflict/confidence ─────────
   if (!parsed.data.inputValidationOverride?.productImageCheck) {
     const inputValidation = new InputValidationService();
-    const validationResult = await inputValidation.validate(
-      parsed.data.productName,
-      parsed.data.productImageDataUrl,
-      undefined
-    );
+    let validationResult: Awaited<ReturnType<typeof inputValidation.validate>>;
+    try {
+      validationResult = await inputValidation.validate(
+        parsed.data.productName,
+        parsed.data.productImageDataUrl,
+        undefined
+      );
+    } catch {
+      console.error("[generate-image] validation_parse_error — validação quebrou com exceção não tratada");
+      return Response.json(
+        {
+          status: "needs_user_action",
+          reason: "product_image_low_confidence",
+          message: "Não foi possível confirmar se o nome do produto corresponde à imagem.",
+        },
+        { status: 409 }
+      );
+    }
 
     if (validationResult.classification === "conflict") {
       return Response.json(
