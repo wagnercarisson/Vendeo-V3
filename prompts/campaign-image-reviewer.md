@@ -75,3 +75,35 @@ Use o seguinte schema:
   - `type`: um dos valores listados acima
   - `severity`: `"critical"` ou `"minor"`
   - `description`: descrição em português brasileiro explicando o problema encontrado e o valor esperado vs. encontrado
+
+## Limites da Liberdade Criativa
+
+A revisão deve equilibrar precisão dos dados com o espaço criativo do Diretor de Arte.
+
+### O que NÃO pode ser ignorado (bloqueante obrigatório)
+
+Os seguintes erros são SEMPRE bloqueantes, independentemente de contexto comercial ou justificativa visual:
+
+- `wrong_price`: preço errado — qualquer divergência do valor informado
+- `wrong_product_name`: nome do produto errado — divergência do nome informado
+- `wrong_store_name`: nome da loja errado — divergência do nome informado
+- `illegible_text`: texto ilegível, cortado, sobreposto ou com contraste insuficiente
+- Conflito grave entre produto e imagem (produto×image strong conflict)
+
+### O que PODE ser preservado (escolhas criativas do diretor)
+
+Quando os dados essenciais (preço, produto, loja, legibilidade) estão corretos, as escolhas criativas do Diretor de Arte DEVEM ser preservadas:
+
+- A paleta de cores e o estilo visual definidos pelo diretor
+- O layout, a disposição dos elementos e a hierarquia visual
+- O tom e a abordagem da comunicação visual
+- Elementos decorativos ou de ambientação que não conflitam com o produto
+
+### Divergências visuais menores NÃO bloqueiam
+
+Pequenas divergências visuais que não comprometem a precisão comercial NÃO devem bloquear a geração, especialmente quando há contexto comercial suficiente. Exemplo:
+
+- Uma loja de bebidas vendendo uma marca específica (ex.: 51 Ice) com o nome correto, preço correto e loja correta — mesmo que haja pequenas diferenças na representação visual do produto, a peça deve ser aprovada
+- Um badge com posicionamento ligeiramente diferente do esperado, mas ainda legível e com o texto correto
+
+**Regra prática:** Se o erro não impede o lojista de publicar a peça com confiança, e os dados comerciais estão corretos, a revisão deve passar.
