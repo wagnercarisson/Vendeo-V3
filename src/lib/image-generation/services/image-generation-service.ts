@@ -111,6 +111,15 @@ export class ImageGenerationService {
     };
 
     const emitRunning = (phase: GenerationPhase, message: string) => emit(phase, "running", message);
+    const emitHuman = (phase: GenerationPhase) => {
+      const messages = PHASE_MESSAGES[phase];
+      if (messages && messages.length > 0) {
+        const message = messages[Math.floor(Math.random() * messages.length)];
+        emit(phase, "running", message);
+      } else {
+        emit(phase, "running", "Processando...");
+      }
+    };
     const emitComplete = (phase: GenerationPhase) => emit(phase, "complete");
     const emitSkipped = (phase: GenerationPhase) => emit(phase, "skipped");
     const emitFailed = (phase: GenerationPhase, message?: string) => emit(phase, "failed", message);
@@ -134,7 +143,7 @@ export class ImageGenerationService {
     });
 
     // ── Phase 1: Pre-generation input validation ────────────────────
-    emitRunning("input_validation", "Validando informações da campanha...");
+    emitHuman("input_validation");
     emitMetricsEvent("input_validation");
 
     const aborted1 = checkAborted();
@@ -235,7 +244,7 @@ export class ImageGenerationService {
     emitMetricsEvent("input_validation");
 
     // ── Phase 2: Prompt assembly ────────────────────────────────────
-    emitRunning("prompt_assembly", "Montando briefing criativo...");
+    emitHuman("prompt_assembly");
     emitMetricsEvent("prompt_assembly");
 
     const aborted2 = checkAborted();
@@ -286,15 +295,17 @@ export class ImageGenerationService {
       }
 
       if (attempts > 0) {
-        emitRunning("image_generation", "Tentando novamente...");
+        emitHuman("image_generation");
       }
 
       const attemptDetail = `tentativa ${attempts + 1}/${maxAttempts}, modelo: ${IMAGE_GENERATION_RESPONSES_MODEL || "gpt-5.5"}, tempo decorrido: ${Math.floor((Date.now() - startTime) / 1000)}s`;
-      emit("image_generation", "running", undefined, attemptDetail);
+      if (IMAGE_GENERATION_DEBUG) {
+        emit("image_generation", "running", undefined, attemptDetail);
+      }
 
       // ── Phase 3: Image generation with provider retry ──────────
       if (attempts === 0) {
-        emitRunning("image_generation", "Gerando imagem... isso pode levar até 2 minutos.");
+        emitHuman("image_generation");
       }
       emitMetricsEvent("image_generation", attempts);
 
@@ -330,7 +341,7 @@ export class ImageGenerationService {
       emitMetricsEvent("image_generation", attempts);
 
       // ── Phase 4: Quality review ─────────────────────────────────
-      emitRunning("quality_review", "Revisando qualidade da imagem...");
+      emitHuman("quality_review");
       emitMetricsEvent("quality_review", attempts);
 
       const imageDataUrl = `data:${currentMimeType};base64,${currentImageBase64}`;
