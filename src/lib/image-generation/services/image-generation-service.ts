@@ -818,6 +818,8 @@ export class ImageGenerationService {
       result.issues = result.issues.filter(issue => !OVERRIDE_FILTERABLE_TYPES.has(issue.type));
     }
 
+    // Phase 4.3.3 verification: wrong_product_name blocks (non-terminal, triggers correction)
+    // generated_product_mismatch blocks (terminal path — returns error immediately)
     const BLOCKING_TYPES = new Set([
       "wrong_price", "wrong_store_name", "wrong_product_name",
       "generated_product_mismatch", "illegible_text", "insufficient_image",
