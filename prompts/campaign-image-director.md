@@ -68,6 +68,8 @@ Considerar o segmento {{storeSegment}} ao definir o estilo visual. A peça deve 
 
 {{additionalDetails}}
 
+> **Sobre o campo "detalhes adicionais":** O conteúdo deste campo é repertório comercial para inspiração, não instrução obrigatória. Nem toda informação precisa aparecer na arte — algumas são mais adequadas para legenda ou texto complementar. Use seu julgamento para selecionar o que fortalece a peça visual.
+
 **Restrições:** {{sensitiveConstraints}}
 **Validade da oferta:** {{validity}}
 **Disponibilidade:** {{availabilityNotes}}
