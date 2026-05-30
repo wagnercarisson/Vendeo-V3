@@ -18,6 +18,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { loadEnvConfig } from "@next/env";
 import type { BenchmarkScenario } from "./benchmark-scenarios";
 
 // NOTE: src/ imports are dynamic (inside runBenchmark) so we can set env vars
@@ -229,8 +230,26 @@ async function writeBenchmarkMetricsLine(line: string): Promise<void> {
 
 // ─── Main benchmark function ───────────────────────────────────────────────
 
+function sanitizeError(message?: string): string | undefined {
+  if (!message) return undefined;
+  const lower = message.toLowerCase();
+  if (lower.includes("incorrect api key") || lower.includes("insufficient_quota") || lower.includes("401") || lower.includes("403")) {
+    return "missing_credentials";
+  }
+  if (lower.includes("rate limit") || lower.includes("429") || lower.includes("rate_limit")) {
+    return "rate_limited";
+  }
+  if (lower.includes("timeout") || lower.includes("timed out") || lower.includes("504")) {
+    return "timeout";
+  }
+  return message.slice(0, 120);
+}
+
 async function runBenchmark(): Promise<void> {
   const { provider, model, delay, maxRuns } = parseArgs();
+
+  // Load .env.local before any src/ imports so config module picks them up.
+  loadEnvConfig(process.cwd());
 
   // Set env vars before any src/ imports so config module picks them up.
   const effectiveModel = model || process.env.IMAGE_GENERATION_RESPONSES_MODEL || "gpt-5.5";
@@ -404,7 +423,7 @@ async function runBenchmark(): Promise<void> {
       hadOverride: false,
       reviewPassed: r.reviewPassed,
       reviewFailureType: r.reviewFailureType ?? null,
-      technicalError: r.errorMessage,
+      technicalError: sanitizeError(r.errorMessage),
       sanitizedInputs: {
         productName: scenario.campaign.productName,
         storeName: scenario.store.name,
