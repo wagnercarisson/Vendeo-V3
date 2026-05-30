@@ -614,6 +614,71 @@ export class ImageGenerationService {
     return parts.join("\n");
   }
 
+  /**
+   * Build creative context guidance based on segment, inferred category, and conflict status.
+   * Provides the director with a short contextual suggestion for visual positioning.
+   * Defaults to empty string when no specific guidance applies.
+   */
+  private buildCreativeContextGuidance(segment: string, category: string, hasConflict: boolean): string {
+    const s = segment.toLowerCase();
+    const c = category.toLowerCase();
+
+    if (hasConflict) {
+      // Category conflict — balance the two universes
+      if (c.includes("eletronico") || c.includes("tecnologia") || c.includes("celular") || c.includes("computador")) {
+        return "Equilibre o apelo popular do segmento com o desejo por tecnologia.";
+      }
+      if (c.includes("bebida") || c.includes("alimento") || c.includes("cerveja") || c.includes("energetico")) {
+        return "Valorize o produto com apelo aspiracional. Preço é oportunidade.";
+      }
+      if (c.includes("moda") || c.includes("roupa") || c.includes("calcado") || c.includes("tenis")) {
+        return "Destaque estilo e desejo dentro de um contexto acessível.";
+      }
+      if (c.includes("beleza") || c.includes("cosmetico") || c.includes("perfume")) {
+        return "Eleve o produto como item de desejo — preço é bônus, não motivo principal.";
+      }
+      if (c.includes("pet") || c.includes("racao")) {
+        return "Conecte carinho pelo pet com a conveniência da oferta.";
+      }
+      if (c.includes("casa") || c.includes("decoracao") || c.includes("movel")) {
+        return "Transforme o produto em aspiração para o lar. Preço é o empurrão final.";
+      }
+      return "Equilibre o universo do produto com a identidade da loja.";
+    }
+
+    // Aligned — reinforce segment-specific values
+    if (s.includes("alimentacao") || s.includes("bebida")) {
+      if (c.includes("energetico")) return "Valorize energia e disposição. Preço é oportunidade.";
+      if (c.includes("cerveja")) return "Valorize confraternização e qualidade. Preço é vantagem.";
+      if (c.includes("cafe")) return "Valorize aconchego e ritual. Preço é convite.";
+      return "Valorize sabor e qualidade. Preço é vantagem.";
+    }
+    if (s.includes("moda") || s.includes("vestuario")) {
+      if (c.includes("calcado") || c.includes("tenis")) return "Valorize estilo e performance. Preço é investimento.";
+      return "Valorize estilo e personalidade. Preço é oportunidade.";
+    }
+    if (s.includes("beleza") || s.includes("estetica")) {
+      return "Valorize autoestima e cuidado pessoal. Preço é mimo.";
+    }
+    if (s.includes("saude") || s.includes("farmacia")) {
+      return "Valorize bem-estar e confiança. Preço é cuidado.";
+    }
+    if (s.includes("eletronico") || s.includes("tecnologia")) {
+      return "Valorize inovação e performance. Preço é investimento inteligente.";
+    }
+    if (s.includes("casa") || s.includes("decoracao")) {
+      return "Valorize conforto e estilo. Preço é transformação.";
+    }
+    if (s.includes("pet")) {
+      return "Valorize carinho e bem-estar do pet. Preço é cuidado.";
+    }
+    if (s.includes("variedade")) {
+      return "Valorize variedade e praticidade. Preço é vantagem.";
+    }
+
+    return "";
+  }
+
   private buildPromptVariables(
     body: GenerateImageRequest,
     effectiveProductName: string,
@@ -633,6 +698,7 @@ export class ImageGenerationService {
 
     const commercialRepertoire = this.buildCommercialRepertoire(body);
     const inputValidationSummary = this.buildValidationSummary(body, effectiveProductName);
+    const creativeContextGuidance = this.buildCreativeContextGuidance(storeSegment, effectiveInferredCategory, hasConflict);
 
     return {
       productName: effectiveProductName,
@@ -664,6 +730,7 @@ export class ImageGenerationService {
       categoryConflictDirective,
       commercialRepertoire,
       inputValidationSummary,
+      creativeContextGuidance,
     };
   }
 

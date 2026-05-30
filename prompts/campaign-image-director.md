@@ -85,6 +85,10 @@ O produto anunciado é da categoria: **{{inferredCategory}}**
 
 {{categoryConflictDirective}}
 
+### Orientação de Contexto Criativo
+
+{{creativeContextGuidance}}
+
 ### Repertório Comercial
 
 Considere os seguintes detalhes como argumentos visuais opcionais — use apenas se fizerem sentido para a composição:
