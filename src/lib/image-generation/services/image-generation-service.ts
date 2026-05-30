@@ -9,6 +9,31 @@ import type { GenerationMetricsEvent, GenerationMetrics } from "@/lib/image-gene
 import { MetricsWriter } from "@/lib/image-generation/metrics/writer";
 import { SEGMENT_LABELS } from "@/lib/constants";
 
+/**
+ * Rotating per-phase human-friendly messages in PT-BR for UI display.
+ * Messages are selected randomly on each emit — cycles between variants
+ * within a phase to avoid repetitive text.
+ */
+const PHASE_MESSAGES: Record<string, string[]> = {
+  input_validation: [
+    "Estamos validando as informações do produto.",
+    "Checando se a imagem está adequada para publicação.",
+  ],
+  prompt_assembly: [
+    "Criando o ambiente visual da campanha.",
+    "Aplicando a assinatura visual da loja.",
+    "Pensando em frases de impacto para valorizar a oferta.",
+  ],
+  image_generation: [
+    "Compondo os elementos visuais da arte.",
+    "Destacando o preço e a intenção da campanha.",
+  ],
+  quality_review: [
+    "Revisando a campanha antes de entregar.",
+    "Preparando sua campanha para entrega.",
+  ],
+};
+
 const CATEGORY_TO_SEGMENT_GROUP: Record<string, string[]> = {
   "alimentacao-bebidas": ["bebidas", "alimentos", "bebida", "energetico", "cafe", "cerveja", "refrigerante", "suco", "agua", "comida", "snack", "doce", "salgado"],
   "moda-vestuario": ["roupa", "calcado", "tenis", "vestuario", "moda", "acessorio", "bolsa", "camiseta", "jeans"],
