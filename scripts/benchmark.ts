@@ -423,7 +423,8 @@ async function runBenchmark(): Promise<void> {
       hadOverride: false,
       reviewPassed: r.reviewPassed,
       reviewFailureType: r.reviewFailureType ?? null,
-      technicalError: sanitizeError(r.errorMessage),
+      technicalError: r.reviewFailureType ?? sanitizeError(r.errorMessage),
+      rejectionReason: r.reviewFailureType ? r.errorMessage : undefined,
       sanitizedInputs: {
         productName: scenario.campaign.productName,
         storeName: scenario.store.name,
