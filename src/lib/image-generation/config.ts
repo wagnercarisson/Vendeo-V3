@@ -31,6 +31,11 @@ export const MAX_PRODUCT_IMAGE_FILE_SIZE = 1 * 1024 * 1024;
 export const IMAGE_GENERATION_GLOBAL_TIMEOUT_MS =
   Number(process.env.IMAGE_GENERATION_GLOBAL_TIMEOUT_MS) || 300000;
 
+// ─── Provider Switch (Phase 4.3.3) ─────────────────────────────────────────
+// Supported values: "openai" (default), "gemini" (future)
+export const IMAGE_PROVIDER =
+  process.env.IMAGE_PROVIDER || "openai";
+
 // ─── Debug / Telemetry ────────────────────────────────────────────────────
 export const IMAGE_GENERATION_DEBUG =
   process.env.IMAGE_GENERATION_DEBUG === "true";
