@@ -3,7 +3,7 @@ import { GenerateImageRequestSchema } from "@/lib/image-generation/schema";
 import { IMAGE_GENERATION_GLOBAL_TIMEOUT_MS, MAX_PRODUCT_IMAGE_BASE64_SIZE } from "@/lib/image-generation/config";
 import { ImageGenerationService } from "@/lib/image-generation/services/image-generation-service";
 import { InputValidationService } from "@/lib/image-generation/services/input-validation-service";
-import { OpenAIImageProvider } from "@/lib/image-generation/providers/openai";
+import { createImageProvider } from "@/lib/image-generation/providers/factory";
 
 export async function POST(request: NextRequest) {
   // ── Pre-stream: Parse JSON body ──────────────────────────────────
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
 
   const stream = new ReadableStream({
     async start(controller) {
-      const provider = new OpenAIImageProvider();
+      const provider = createImageProvider();
       const service = new ImageGenerationService(provider);
 
       const emit = (event: Record<string, unknown>) => {
