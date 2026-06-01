@@ -1,5 +1,5 @@
 -- Create the visual-signatures bucket for storing generated visual signature assets
--- Path structure: {store_id}/{uuid}.png
+-- Path structure: {store_id}/{uuid}.png or {store_id}/{uuid}.svg
 -- Public read, service_role write
 
 -- Insert the bucket (idempotent — skip if exists)
