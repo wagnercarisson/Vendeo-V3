@@ -10,7 +10,7 @@ export interface Store {
   updated_at: string;
 }
 
-const SEGMENT_COLOR_FALLBACK: Record<string, string> = {
+export const SEGMENT_COLOR_FALLBACK: Record<string, string> = {
   "moda-vestuario": "#F43F5E",
   "alimentacao-bebidas": "#DC2626",
   "beleza-estetica": "#D946EF",
@@ -23,8 +23,14 @@ const SEGMENT_COLOR_FALLBACK: Record<string, string> = {
   "outros": "#22C55E",
 };
 
-export function resolveStoreIdentity(store: Pick<Store, "name" | "logo_url" | "segment" | "brand_color">) {
-  const logo = store.logo_url ?? store.name;
-  const color = store.brand_color ?? SEGMENT_COLOR_FALLBACK[store.segment] ?? SEGMENT_COLOR_FALLBACK["outros"];
-  return { logo, color };
+export function getDefaultBrandColor(segment: string): string {
+  return SEGMENT_COLOR_FALLBACK[segment] ?? SEGMENT_COLOR_FALLBACK["outros"];
+}
+
+export function getStoreInitials(storeName: string): string {
+  const words = storeName.trim().split(/\s+/);
+  if (words.length >= 2) {
+    return (words[0][0] + words[1][0]).toUpperCase();
+  }
+  return storeName.trim().slice(0, 2).toUpperCase();
 }

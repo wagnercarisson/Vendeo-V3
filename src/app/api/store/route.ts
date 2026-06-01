@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin as supabase } from "@/lib/supabase";
+import { supabaseAdmin as supabase } from "@/lib/supabase/server";
 import { VALID_SEGMENTS } from "@/lib/constants";
 
 export async function POST(request: NextRequest) {

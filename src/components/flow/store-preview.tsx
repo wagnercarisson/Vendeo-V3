@@ -1,8 +1,9 @@
 "use client";
 
-import { Store } from "@/lib/store";
-import { resolveStoreIdentity } from "@/lib/store";
+import { SEGMENT_COLOR_FALLBACK } from "@/lib/store";
 import { SEGMENT_LABELS } from "@/lib/constants";
+
+const PREVIEW_DEFAULT_COLOR = "#22C55E";
 
 interface StorePreviewProps {
   name: string;
@@ -23,14 +24,7 @@ export function StorePreview({ name, segment, brandColor }: StorePreviewProps) {
     );
   }
 
-  const store: Pick<Store, "name" | "logo_url" | "segment" | "brand_color"> = {
-    name,
-    logo_url: null,
-    segment,
-    brand_color: brandColor || null,
-  };
-
-  const identity = resolveStoreIdentity(store);
+  const resolvedColor = brandColor || SEGMENT_COLOR_FALLBACK[segment] || PREVIEW_DEFAULT_COLOR;
 
   return (
     <div className="bg-bg-surface border border-border rounded-xl p-6">
@@ -41,7 +35,7 @@ export function StorePreview({ name, segment, brandColor }: StorePreviewProps) {
       <div className="flex items-center gap-4">
         <div
           className="w-14 h-14 rounded-full flex items-center justify-center text-white font-heading font-bold text-lg shrink-0"
-          style={{ backgroundColor: identity.color }}
+          style={{ backgroundColor: resolvedColor }}
         >
           {name.charAt(0).toUpperCase()}
         </div>
@@ -55,9 +49,9 @@ export function StorePreview({ name, segment, brandColor }: StorePreviewProps) {
             <span
               className="inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-heading font-medium"
               style={{
-                backgroundColor: `${identity.color}1A`,
-                color: identity.color,
-                border: `1px solid ${identity.color}33`,
+                backgroundColor: `${resolvedColor}1A`,
+                color: resolvedColor,
+                border: `1px solid ${resolvedColor}33`,
               }}
             >
               {SEGMENT_LABELS[segment as keyof typeof SEGMENT_LABELS]}
@@ -74,10 +68,10 @@ export function StorePreview({ name, segment, brandColor }: StorePreviewProps) {
           <div className="flex items-center gap-2">
             <div
               className="w-6 h-6 rounded-md border border-border-light"
-              style={{ backgroundColor: identity.color }}
+              style={{ backgroundColor: resolvedColor }}
             />
             <span className="text-text-secondary text-xs font-mono">
-              {identity.color}
+              {resolvedColor}
             </span>
           </div>
         </div>

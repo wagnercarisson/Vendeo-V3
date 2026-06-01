@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { StoreIdentityForm } from "@/components/flow/store-identity-form";
+import { StorePageClient } from "@/components/flow/store-page-client";
 
 export default function StorePage() {
   return (
@@ -14,7 +14,7 @@ export default function StorePage() {
           Voltar
         </Link>
       </div>
-      <StoreIdentityForm />
+      <StorePageClient />
     </main>
   );
 }

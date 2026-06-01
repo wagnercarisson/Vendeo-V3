@@ -3,10 +3,13 @@
 import { useStoreForm } from "./use-store-form";
 import { StorePreview } from "./store-preview";
 import { VALID_SEGMENTS, SEGMENT_LABELS, BRAZILIAN_STATES } from "@/lib/constants";
-import { AlertCircle, CheckCircle2, Loader2, X } from "lucide-react";
-import { useState, useCallback } from "react";
+import { AlertCircle, CheckCircle2, Loader2, X, Upload } from "lucide-react";
+import { VisualSignatureModal } from "./visual-signature-modal";
+import { useState, useCallback, useRef } from "react";
 
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
+const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
+const MAX_LOGO_SIZE = 2 * 1024 * 1024;
 
 type FieldErrors = Partial<Record<"name" | "segment" | "brand_color" | "city" | "state", string>>;
 
@@ -46,10 +49,18 @@ export function StoreIdentityForm() {
     successMessage,
     mode,
     clearStore,
+    storeId,
   } = useStoreForm();
 
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Partial<Record<keyof FieldErrors, boolean>>>({});
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const [logoSuccess, setLogoSuccess] = useState<string | null>(null);
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleBlur = useCallback(
     (field: keyof FieldErrors) => {
@@ -81,6 +92,35 @@ export function StoreIdentityForm() {
     [formData]
   );
 
+  const handleLogoFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setLogoError(null);
+    setLogoSuccess(null);
+
+    if (!file) {
+      setLogoFile(null);
+      setLogoPreview(null);
+      return;
+    }
+
+    if (!ALLOWED_LOGO_TYPES.includes(file.type)) {
+      setLogoError("Formato inválido. Use PNG, JPEG ou WebP.");
+      setLogoFile(null);
+      setLogoPreview(null);
+      return;
+    }
+
+    if (file.size > MAX_LOGO_SIZE) {
+      setLogoError("Arquivo muito grande. Máximo 2MB.");
+      setLogoFile(null);
+      setLogoPreview(null);
+      return;
+    }
+
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -98,7 +138,42 @@ export function StoreIdentityForm() {
 
     if (Object.keys(errors).length > 0) return;
 
-    await save();
+    const saved = await save();
+    const currentStoreId = storeId ?? (saved ? saved.storeId : null);
+
+    if (logoFile && currentStoreId) {
+      setIsUploadingLogo(true);
+      setLogoError(null);
+      setLogoSuccess(null);
+
+      try {
+        const uploadFormData = new FormData();
+        uploadFormData.append("logo", logoFile);
+
+        const res = await fetch(`/api/stores/${currentStoreId}/logo`, {
+          method: "POST",
+          body: uploadFormData,
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({ error: "Erro ao enviar logotipo" }));
+          throw new Error(errData.error || "Erro ao enviar logotipo");
+        }
+
+        setLogoSuccess("Logotipo atualizado com sucesso");
+        setLogoFile(null);
+        setLogoPreview(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      } catch (err) {
+        setLogoError(err instanceof Error ? err.message : "Erro ao enviar logotipo");
+      } finally {
+        setIsUploadingLogo(false);
+      }
+    } else if (currentStoreId && !logoFile && saved) {
+      setShowSignatureModal(true);
+    }
   };
 
   const segmentOptions = VALID_SEGMENTS.map((seg) => ({
@@ -267,6 +342,52 @@ export function StoreIdentityForm() {
                 )}
               </div>
 
+              <div>
+                <label
+                  htmlFor="logo"
+                  className="block text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2"
+                >
+                  Logotipo da Loja <span className="font-normal normal-case tracking-normal text-text-disabled">(opcional)</span>
+                </label>
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 px-4 py-2.5 bg-bg-surface border border-border-light rounded-lg cursor-pointer hover:border-text-muted transition-colors duration-200 text-text-primary text-sm font-body">
+                    <Upload className="w-4 h-4" />
+                    {logoFile ? logoFile.name : "Selecionar arquivo"}
+                    <input
+                      ref={fileInputRef}
+                      id="logo"
+                      type="file"
+                      accept="image/png, image/jpeg, image/webp"
+                      onChange={handleLogoFileChange}
+                      className="hidden"
+                    />
+                  </label>
+                  {logoPreview && (
+                    <div className="w-10 h-10 rounded-lg border border-border-light overflow-hidden shrink-0 bg-bg-elevated">
+                      <img src={logoPreview} alt="Logo preview" className="w-full h-full object-contain" />
+                    </div>
+                  )}
+                </div>
+                {logoError && (
+                  <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    {logoError}
+                  </p>
+                )}
+                {logoSuccess && (
+                  <p className="mt-1.5 flex items-center gap-1.5 text-accent-green text-xs">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    {logoSuccess}
+                  </p>
+                )}
+                {isUploadingLogo && (
+                  <p className="mt-1.5 flex items-center gap-1.5 text-text-secondary text-xs">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Enviando logotipo...
+                  </p>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label
@@ -338,6 +459,20 @@ export function StoreIdentityForm() {
           </div>
         </div>
       </div>
+
+      {showSignatureModal && storeId && (
+        <VisualSignatureModal
+          storeId={storeId}
+          storeName={formData.name}
+          segment={formData.segment}
+          brandColor={formData.brand_color}
+          onClose={() => setShowSignatureModal(false)}
+          onLogoUpload={() => {
+            setShowSignatureModal(false);
+            fileInputRef.current?.click();
+          }}
+        />
+      )}
     </div>
   );
 }

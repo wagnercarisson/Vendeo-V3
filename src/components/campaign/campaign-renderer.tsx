@@ -10,6 +10,9 @@ import {
   getStoreInitials,
 } from "./types";
 
+const VISUAL_SIGNATURE_ENABLED =
+  process.env.NEXT_PUBLIC_VISUAL_SIGNATURE_ENABLED === "true";
+
 interface CampaignRendererProps {
   spec: CampaignSpec;
   storeIdentity: StoreIdentitySnapshot;
@@ -129,6 +132,12 @@ export function CampaignRenderer({
                 className="w-[40px] h-[40px] rounded-full object-cover"
                 onError={() => setShowInitialsFallback(true)}
               />
+            ) : VISUAL_SIGNATURE_ENABLED && storeIdentity.visualSignatureUrl ? (
+              <img
+                src={storeIdentity.visualSignatureUrl}
+                alt={storeIdentity.storeName}
+                className="max-w-[200px] h-auto"
+              />
             ) : (
               <div
                 className="w-[40px] h-[40px] rounded-full flex items-center justify-center text-white font-heading font-semibold text-[18px]"
@@ -139,9 +148,11 @@ export function CampaignRenderer({
                 {getStoreInitials(storeIdentity.storeName)}
               </div>
             )}
-            <p className="text-center font-body text-[16px] text-slate-500 max-w-[600px] truncate">
-              {storeIdentity.storeName}
-            </p>
+            {!storeIdentity.visualSignatureUrl && (
+              <p className="text-center font-body text-[16px] text-slate-500 max-w-[600px] truncate">
+                {storeIdentity.storeName}
+              </p>
+            )}
           </div>
         </div>
       </div>

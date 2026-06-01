@@ -16,7 +16,7 @@ export type FormMode = "create" | "edit";
 export interface UseStoreFormReturn {
   formData: FormData;
   setField: (field: keyof FormData, value: string) => void;
-  save: () => Promise<void>;
+  save: () => Promise<{ storeId: string } | void>;
   isLoading: boolean;
   isSaving: boolean;
   error: string | null;
@@ -26,6 +26,7 @@ export interface UseStoreFormReturn {
   clearStore: () => void;
   successMessage: string | null;
   colorTouched: boolean;
+  storeId: string | null;
 }
 
 const STORAGE_KEY = "store_id";
@@ -157,6 +158,7 @@ export function useStoreForm(): UseStoreFormReturn {
       }
 
       setSuccessMessage("Dados salvos com sucesso!");
+      return { storeId: saved.id };
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao salvar");
     } finally {
@@ -177,5 +179,6 @@ export function useStoreForm(): UseStoreFormReturn {
     clearStore,
     successMessage,
     colorTouched,
+    storeId,
   };
 }

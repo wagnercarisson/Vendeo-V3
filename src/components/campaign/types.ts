@@ -1,10 +1,14 @@
 import type { CampaignSpec } from "@/lib/campaign-intelligence/schema";
+import type { VisualSignatureType } from "@/lib/visual-signature/types";
 
 export interface StoreIdentitySnapshot {
   storeName: string;
   storeSegment: string;
   brandColor: string;
   logoUrl: string | null;
+  visualSignatureUrl: string | null;
+  visualSignatureType: VisualSignatureType | null;
+  storeInitials: string;
 }
 
 export interface PreviewPayload {

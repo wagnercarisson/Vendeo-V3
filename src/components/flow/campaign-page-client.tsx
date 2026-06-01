@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { Store } from "@/lib/store";
-import { resolveStoreIdentity } from "@/lib/store";
+import { resolveStoreIdentity } from "@/lib/actions/store";
 import { StoreIdentityBlock } from "./store-identity-block";
 import { CampaignInputForm } from "./campaign-input-form";
 import type { StoreIdentitySnapshot } from "@/components/campaign/types";
@@ -53,15 +53,19 @@ export function CampaignPageClient() {
     loadStore();
   }, [loadStore]);
 
-  const storeIdentity: StoreIdentitySnapshot | null = useMemo(() => {
-    if (!store) return null;
-    const resolved = resolveStoreIdentity(store);
-    return {
-      storeName: store.name,
-      storeSegment: store.segment,
-      brandColor: resolved.color,
-      logoUrl: store.logo_url,
-    };
+  const [storeIdentity, setStoreIdentity] = useState<StoreIdentitySnapshot | null>(null);
+  const [resolvingIdentity, setResolvingIdentity] = useState(false);
+
+  useEffect(() => {
+    if (!store) {
+      setStoreIdentity(null);
+      return;
+    }
+    setResolvingIdentity(true);
+    resolveStoreIdentity(store)
+      .then(setStoreIdentity)
+      .catch(() => setStoreIdentity(null))
+      .finally(() => setResolvingIdentity(false));
   }, [store]);
 
   if (pageState === "loading") {
