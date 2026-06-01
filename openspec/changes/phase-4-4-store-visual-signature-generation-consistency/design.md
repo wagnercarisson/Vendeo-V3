@@ -41,50 +41,62 @@ Para assinaturas tipográficas de fallback (geradas localmente sem IA), o asset 
 
 Alternativa rejeitada: base64 ou data URL no banco — não escalável, não indexável, não serve para renderização em campanha.
 
-### Decision 3: Abordagem de geração da assinatura visual
+### Decision 3: Abordagem de geração da assinatura visual (revised 2026-06-01, v2)
 
-**Decisão: V1 implementa Abordagem A (IA descreve, renderizador monta). Abordagem B (IA gera direto) fica como alternativa futura.**
+**V1 final: IA gera imagem diretamente com retry simplificado + fallback tipográfico.**
 
-A qualidade final da assinatura visual é crítica. A Abordagem A foi escolhida para V1 por ser mais barata, mais rápida e deterministicamente controlável. Duas abordagens foram consideradas:
+A qualidade final da assinatura visual é crítica. O quality gate demonstrou que renderizadores intermediários (SVG a partir de descrição JSON) achatam a expressão visual da IA. Removidos da V1.
 
-**Abordagem A — IA descreve, renderizador monta:**
-1. Prompt `visual-signature-generator.md` envia dados da loja (nome, segmento, cor principal, tom de voz) e pede uma descrição JSON de assinatura visual simples.
-2. A IA retorna JSON com parâmetros renderizáveis (símbolo, tipografia, layout, cores).
-3. Um renderizador programático (SVG) executa a arte final, gerando PNG.
-4. Prós: mais barato, mais rápido, deterministicamente controlável, sem risco de jailbreak visual.
-5. Contras: a qualidade visual depende do renderizador — pode ficar genérica ou "técnica demais", perdendo o aspecto de marca pronta.
+**Geração principal — IA gera imagem diretamente:**
+1. Prompt `visual-signature-generator.md` envia dados da loja (nome, segmento, cor principal, tom de voz) e pede imagem de assinatura visual (~1024×1024, fundo simples, sem produto, sem preço).
+2. O modelo de imagem (Responses API `image_generation` tool) gera o PNG diretamente.
+3. A imagem gerada passa por validação antes de persistir.
+4. Prós: qualidade visual real de marca, sem gargalo de renderizador intermediário.
+5. Contras: mais caro (~$0.04-0.08 por geração), maior latência, risco de jailbreak.
 
-**Abordagem B — IA gera a imagem diretamente (futuro):**
-1. Prompt envia dados da loja e pede uma imagem simples (fundo transparente, ~400×200px) contendo símbolo + nome.
-2. O modelo de imagem gera o PNG diretamente.
-3. Prós: maior potencial de qualidade visual com cara de marca real.
-4. Contras: mais caro, menos controle, risco de inconsistência, maior latência.
+**Retry simplificado (segunda tentativa):**
+1. Se a primeira tentativa falhar (timeout, erro, validação rejeitar), o sistema tenta novamente com prompt simplificado e dados mínimos.
+2. Único retry — não em loop.
+3. Se falhar de novo, cai para fallback tipográfico.
 
-**Critério de qualidade obrigatório para Abordagem A:**
-A assinatura gerada precisa parecer uma marca visual simples e publicável — não apenas iniciais decoradas. Se o resultado for genérico demais ("feito por sistema"), a implementação deve parar e reavaliar antes de integrar ao pipeline de campanha. O fallback tipográfico é consistente, mas não é o padrão de qualidade esperado.
+**Cascata de geração (2 níveis de fallback):**
+1. `AiImageGenerator.generate()` — IA gera imagem final diretamente
+2. `AiImageGenerator.generate()` com prompt simplificado — retry único
+3. `TypographicFallbackGenerator.generate()` — zero IA, iniciais + nome em círculo
 
-**Arquitetura:** o serviço de geração deve abstrair a abordagem (interface `VisualSignatureGenerator`) para permitir troca futura para Abordagem B sem reescrever o fluxo.
+**Critério de qualidade:**
+A assinatura gerada precisa parecer uma marca visual simples e publicável. Se falhar, o sistema tenta o retry. Se o retry falhar, usa fallback tipográfico.
 
-**Fallback:** renderizador local gera assinatura tipográfica com iniciais + nome da loja em círculo com fundo na cor principal. O fallback NUNCA depende de IA.
+**Rastreamento do tier via metadata:** O campo `metadata` (jsonb) incluirá `generation_tier: "image_direct" | "image_retry" | "typographic"` registrando qual método realmente produziu o asset. O campo `type` da tabela continua representando o contexto geral (`ai_generated`, `automatic_generated`, `fallback_typographic`).
 
-### Decision 4: Fallback tipográfico — persistido e reutilizável
+### Decision 4: Fallback tipográfico — persistido em SVG, conversão PNG opcional
 
-**Escolhido: Renderização via SVG, convertido para PNG Server-side, sem dependências nativas.**
+**Escolhido: Fallback salvo como SVG puro no Storage. Conversão para PNG apenas se ferramenta validada já estiver instalada.**
 
 O fallback precisa ser um asset persistido (Storage), não um preview temporário. A campanha reutiliza a assinatura em todas as renderizações, então não basta gerar no frontend a cada exibição.
 
 Abordagem:
 1. Lógica de `getStoreInitials()` extrai iniciais da loja.
 2. Um template SVG monta o círculo com iniciais + nome da loja abaixo.
-3. O SVG é convertido para PNG via ferramenta que não dependa de binários nativos (ex: `sharp` via `sharp` ou `resvg-js` — validar compatibilidade com Vercel Serverless/Edge).
-4. O PNG é upado para Supabase Storage como asset da assinatura.
-5. A URL do Storage é salva na tabela `store_visual_signatures` como `asset_url`.
+3. O SVG é upado **diretamente** para Supabase Storage como asset da assinatura.
+4. A URL do Storage é salva na tabela `store_visual_signatures` como `asset_url`.
+5. Conversão para PNG só é feita se houver uma ferramenta já instalada e testada (ex: `sharp` validado em build). Caso contrário, o SVG puro é o formato final do fallback.
 
-**Ressalva:** node-canvas é proibido sem validação prévia — dependências nativas (C++) são notoriously problemáticas em Vercel Serverless. Priorizar SVG → PNG via bibliotecas WASM/puramente JS. Se a conversão para PNG se mostrar problemática, o SVG pode ser servido diretamente como asset (browsers renderizam SVG nativamente).
+**Por que SVG direto é a escolha correta:**
+- O bucket `visual-signatures` já permite `image/svg+xml` como MIME type
+- Navegadores renderizam SVG nativamente — funciona em toda renderização programática
+- Zero dependências externas = fallback verdadeiramente confiável
+- O fallback tipográfico é o último recurso — priorizar confiabilidade sobre consistência de formato
+- Se no futuro houver necessidade de PNG, a conversão pode ser adicionada sem quebrar o existente
 
-Isso garante que a campanha nunca trava por falha na geração da assinatura visual, e o fallback fica disponível para reúso imediato.
+**Resumo de formatos por tier:**
+- `image_direct` / `image_retry`: PNG (gerado pela IA)
+- `typographic`: SVG (template inline, sem conversão)
 
-### Decision 5: Injeção no pipeline de campanha
+### Decision 5: Injeção no pipeline de campanha (TECHNICALLY IMPLEMENTED — BLOCKED BY QUALITY GATE)
+
+> ⚠️ A integração com o pipeline de campanha está implementada no código, mas **NÃO é aceita** até o quality gate visual passar (ver Decision 3 — critério de qualidade).
+> Enquanto o quality gate não for aprovado, o CampaignRenderer renderiza apenas o fallback padrão (iniciais + nome), ignorando a assinatura visual.
 
 **Escolhido: `CampaignRenderParams` estendido com `visualSignatureUrl` e `visualSignatureType`.**
 
@@ -107,21 +119,25 @@ A assinatura visual gerada NUNCA substitui um logotipo enviado pelo lojista. Ela
 
 ### Decision 6: UI flow pós-salvamento
 
-**Escolhido: Modal de escolha após salvar a loja, não etapa fixa no fluxo.**
+**Escolhido: Modal de 4 opções sem botão de fechar, cada opção sendo um card selecionável.**
 
 Após salvar a loja com sucesso:
 1. Se `logo_url` existe → nenhuma ação (logotipo é a identidade principal)
 2. Se não há logo nem assinatura visual ativa:
-   - Sistema abre um modal (não uma nova página/etapa) com:
-     - "Sua loja ainda não tem uma identidade visual. Quer criar uma?"
-     - Botão "Criar Agora" (gera 3 variações) | "Deixar o Vendeo Criar" (gera 1 automaticamente)
-   - Se escolhe "Criar Agora": gera 3, exibe para escolha, persiste a escolhida
-   - Se escolhe "Deixar Criar": o sistema tenta gerar a assinatura via IA com timeout curto. Se a IA responder a tempo, a assinatura gerada é persistida como ativa. Se falhar ou exceder o timeout, o fallback tipográfico é gerado imediatamente e persistido como ativo. Nada de background processing real (filas/jobs) nesta fase — a resposta é síncrona com fallback imediato.
+   - Sistema abre um modal (não uma nova página/etapa) **sem botão de fechar**, forçando escolha entre 4 cards:
+     1. **Gerar 3 opções para eu escolher** — gera 3 variações via IA para o lojista selecionar
+     2. **Deixar o Vendeo escolher por mim** — gera 1 assinatura automaticamente com cascade
+     3. **Tenho logotipo, mas vou enviar depois** — comportamento idêntico à opção 2 (geração automática)
+     4. **Tenho logotipo e quero enviar agora** — redireciona para fluxo de upload de logotipo
+   - Se escolhe opção 1: gera 3 variações, exibe picker, persiste a escolhida como `active`
+   - Se escolhe opção 2 ou 3: o sistema tenta gerar a assinatura via IA com timeout curto (30s). Se responder a tempo, persiste como ativa. Se falhar ou exceder timeout, fallback tipográfico é gerado e persistido como ativo. Síncrono — sem background processing.
+   - Se escolhe opção 4: redireciona para o upload de logotipo
 
-Modal (não etapa fixa) porque:
-- É um momento de delight, não de obrigação
-- O lojista pode pular e deixar o fallback tipográfico agir
-- O modal pode ser reaberto depois do cadastro via botão "Criar Assinatura Visual" na página da loja
+Modal sem close button porque:
+- É um momento de decisão, não de adiamento
+- Todas as opções produzem um resultado (assinatura ou upload)
+- O lojista nunca fica preso — cada card é uma ação válida
+- O modal pode ser reaberto depois via "Criar / Alterar Assinatura Visual" na página da loja
 
 ### Decision 7: Ciclo de vida dos status da assinatura visual
 
@@ -147,15 +163,38 @@ Na página de cadastro da loja (após loja existir):
 3. Ao escolher uma variação diferente da atual, modal de confirmação: "Tem certeza que deseja alterar a assinatura visual? As campanhas futuras usarão a nova assinatura."
 4. Só após confirmação, a assinatura é salva como ativa e a anterior vai para `archived`.
 
+### Decision 9: Upload mínimo de logotipo na fase 4.4
+
+**Escolhido: Upload via formulário da loja, armazenamento em Supabase Storage, salvando `logo_url` em `stores`.**
+
+O upload de logotipo estava implícito como existente, mas a fase 4.4 precisa garantir que o lojista possa enviar seu próprio logo antes de depender de assinatura visual gerada.
+
+**Fluxo:**
+1. Modal pós-salvamento oferece opção "Tenho logotipo e quero enviar agora" → direciona para upload.
+2. O formulário de identidade da loja ganha um campo de upload de arquivo (imagem).
+3. O upload envia o arquivo para uma API route que:
+   - Valida tipo (PNG, JPEG, WebP) e tamanho (máx 2MB)
+   - Faz upload para Supabase Storage (bucket `store-logos`, pasta `{store_id}/{uuid}.ext`)
+   - Salva a URL pública em `stores.logo_url`
+   - Se já existia assinatura visual ativa, ela permanece como `active` (logo tem prioridade no renderer)
+4. O campo `logo_url` existente em `stores` é reutilizado — sem migration.
+
+**Prioridade (inalterada):** `logo_url` > assinatura visual > fallback tipográfico
+
+**Bucket:** `store-logos` (novo bucket, separado de `visual-signatures`)
+
+**Escopo:** Upload via formulário apenas. Nada de drag-and-drop, crop, preview avançado ou galeria.
+
 ## Risks / Trade-offs
 
-- [Custo de IA] Gerar assinatura visual via prompt de texto (não imagem) é barato. Mesmo assim, chamadas desnecessárias (lojista que nunca vai escolher) devem ser evitadas. → Gerar sob demanda, apenas quando o lojista opta por criar.
-- [Travamento de fluxo] Geração de assinatura não deve bloquear campanha. → Fallback tipográfico persistido é sempre uma opção. Se a IA falha ou excede timeout, o sistema gera o fallback e continua.
+- [Custo de IA image] Gerar assinatura visual via imagem (Responses API) custa ~$0.04-0.08 por geração, vs ~$0.001 do texto. Para 3 variações, ~$0.12-0.24 por loja. → Gerar sob demanda, apenas quando o lojista opta por criar. Reutilizar a assinatura em todas as campanhas seguintes sem recriar.
+- [Travamento de fluxo] Geração de assinatura não deve bloquear campanha. → Fallback tipográfico garante que sempre há um resultado persistido. Se até o retry falhar, o sistema persiste o fallback e continua.
+- [Qualidade visual da imagem gerada] IA pode gerar arte de campanha em vez de assinatura visual — incluindo preços, produtos, CTAs. → Prompt com regras explícitas de "não fazer". Validação visual antes de persistir. Quality gate manual antes de integrar com campanha.
+- [Inconsistência entre variações] Imagens geradas podem ter estilos muito diferentes. → Três prompts com tonalidades diferentes (profissional, moderno, elegante) para variedade controlada.
 - [Substituição acidental] Trocar assinatura ativa sem querer. → Confirmação explícita em modal antes de alterar. Status `draft` para novas variações até escolha explícita.
-- [Custo de storage] Assinaturas são leves (~5-10KB cada PNG). Mesmo com muitas lojas, o custo é desprezível.
-- [Qualidade visual] A assinatura gerada por IA pode ser genérica. → O prompt deve ser específico sobre segmento, tom de voz e identidade. Fallback tipográfico é sempre uma alternativa consistente.
+- [Custo de storage] Assinaturas via imagem (~50-200KB cada PNG). Com 1000 lojas e 3 variações cada, ~150-600MB. Custo de Storage desprezível.
 
 ## Open Questions
 
-- **Server-side SVG→PNG:** `sharp` (via `@img/sharp`) funciona em Vercel Serverless? `resvg-js` é uma alternativa WASM viável? Testar antes de cravar a implementação. Se a conversão for problemática, assets SVG podem ser servidos diretamente.
-- **Qualidade visual da Abordagem A:** a assinatura gerada parece uma marca visual publicável? Se o resultado for genérico demais, a fase precisa parar e reavaliar antes de integrar ao pipeline de campanha.
+- **Tamanho ideal para geração:** 1024×1024 é o tamanho mínimo suportado pelo Responses API `image_generation`. O asset final da assinatura visual será menor (recortado/redimensionado para ~400×200). Testar qualidade após redimensionamento.
+- **Validação visual automatizada:** como validar que a imagem gerada contém o nome correto da loja e não virou arte de campanha? Usar visão computacional (GPT-4o) ou validação manual no quality gate? Para V1, validação manual no quality gate + heurísticas básicas.

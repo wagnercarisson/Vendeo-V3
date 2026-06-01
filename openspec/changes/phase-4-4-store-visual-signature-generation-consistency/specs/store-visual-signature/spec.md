@@ -16,7 +16,7 @@ The `store_visual_signatures` table SHALL contain the following columns:
 | `status` | `text` | Yes | `draft`, `active`, `archived` |
 | `generation_mode` | `text` | No | `user_choice`, `automatic`, `fallback` |
 | `prompt` | `text` | No | Prompt used for AI generation, if applicable |
-| `metadata` | `jsonb` | No | Additional metadata (e.g., generation params, model used) |
+| `metadata` | `jsonb` | No | Additional metadata — SHALL include `generation_tier: "image_direct" | "image_retry" | "typographic"` to record the actual method used. Also includes model, provider, generation params, elapsedMs, fallbackReason. |
 | `created_at` | `timestamptz` | Yes | `now()`, auto-set on create |
 | `updated_at` | `timestamptz` | Yes | `now()`, auto-updated on change |
 
@@ -81,40 +81,83 @@ This detection SHALL NOT block the save operation. The save completes normally.
 - **WHEN** a store is saved with a non-null `logo_url`
 - **THEN** the system SHALL NOT offer visual signature creation
 
-### Requirement: Generate visual signature variations via AI
+### Requirement: Generate visual signature via AI image generation (Abordagem B — main approach)
 
-The system SHALL generate visual signature variations using Abordagem A (IA describes, renderer builds):
-1. A prompt sends store data (name, segment, brand_color, tone of voice) requesting a JSON description of a simple visual signature.
-2. The AI returns structured JSON with renderable parameters (symbol, typography, layout, colors).
-3. A programmatic renderer (SVG) executes the design and outputs a PNG.
+The system SHALL generate visual signature images using Abordagem B (AI generates image directly):
+1. A prompt sends store data (name, segment, brand_color, tone of voice) requesting a simple brand mark image.
+2. The AI image model (Responses API `image_generation` tool) generates a PNG image directly.
+3. The resulting image SHALL be validated before persisting.
 
-The generated visual signature SHALL: be simple, lightweight, transparent or simple background, include store name, and optionally include a symbol/initial/simple seal.
+The generated visual signature image SHALL:
+- Look like a real brand mark (professional, publishable)
+- Contain the store name as the main element
+- Use the brand color as an accent
+- Have a transparent or simple/solid background
+- Optionally include a symbol, icon, or monogram
+- NOT contain pricing, products, offers, CTAs, or promotional copy
+- NOT be generic "initials in circle" (that is fallback behavior)
+- NOT be campaign art (no scene, no product images)
 
-#### Scenario: Generate 3 variations for user choice
+#### Scenario: Generate 3 variations for user choice (Criar Agora) — MUST produce 3 cards
 
-- **WHEN** the lojista clicks "Criar Agora" in the modal
-- **THEN** the system SHALL generate 3 distinct visual signature variations
-- **AND** display them for the lojista to choose from
+- **WHEN** the lojista clicks "Gerar 3 opções para eu escolher" in the modal
+- **THEN** the system SHALL attempt to produce exactly 3 visual signature variations
+- **AND** the system SHALL attempt AI image generation for all 3, trying different tonalities
+- **AND** for each position that fails on first attempt, the system SHALL retry with a simplified prompt
+- **AND** for each position that still fails after retry, the system SHALL use typographic fallback to fill the gap
+- **AND** the system SHALL return exactly 3 variations if possible, filling downward through the cascade
+- **AND** if fewer than 3 variations succeed across all tiers, the system SHALL return an error state: "Não foi possível gerar 3 opções. Tente novamente."
+- **AND** cards produced by typographic fallback SHALL show a subtle "Simples" badge to manage expectations
+- **AND** the picker SHALL allow selecting and activating any variation regardless of which tier produced it
 
-#### Scenario: Generate 1 variation for automatic mode
+#### Scenario: Generate 1 variation for automatic mode (Deixar o Vendeo Criar)
 
-- **WHEN** the lojista selects "Deixar o Vendeo Criar"
-- **THEN** the system SHALL generate 1 visual signature with best-effort and short timeout
-- **AND** if generation succeeds, persist it as `active`
-- **AND** if generation fails or times out, generate and persist typographic fallback as `active`
+- **WHEN** the lojista selects "Deixar o Vendeo Escolher"
+- **THEN** the system SHALL attempt to generate 1 visual signature via AI image with 30s timeout
+- **AND** if that succeeds, persist it as `active` with type `automatic_generated`
+- **AND** if it fails, SHALL retry once with simplified prompt
+- **AND** if retry also fails, SHALL generate and persist typographic fallback as `active`
 
-#### Scenario: Fallback typographic generation
+#### Scenario: Generation cascade (2-tier fallback)
 
-- **WHEN** AI generation fails or exceeds timeout
-- **THEN** the system SHALL generate a typographic signature locally (initials circle + store name)
-- **AND** persist it to Storage as `fallback_typographic`
-- **AND** set status to `active`
+- **WHEN** AI image generation fails or exceeds timeout
+- **THEN** the system SHALL log the failure with error details
+- **AND** SHALL retry once with a simplified prompt
+- **AND** if retry also fails, SHALL generate typographic fallback
+- **AND** typographic fallback SHALL always succeed (zero external dependencies)
 
 ### Requirement: Visual signature quality criteria
 
-The visual signature generated by Abordagem A SHALL look like a simple, publishable brand mark — not merely decorative initials. If the result is visually generic ("looks like it was made by a system"), the implementation SHALL stop and reassess before integrating into the campaign pipeline.
+The visual signature generated by AI image SHALL look like a simple, publishable brand mark — not merely decorative initials and not campaign art. If the result fails visual validation, the system SHALL NOT persist it and SHALL try retry or typographic fallback.
 
-The VisualSignatureGenerator service SHALL abstract the generation approach behind an interface to allow future replacement (e.g., Abordagem B - direct image generation).
+The system SHALL include a visual validation step before persisting any generated signature:
+- Verify the image is a valid PNG with content
+- Verify the store name appears in the image (basic heuristic — exact matching not required in V1)
+- Reject images that appear to be generic circle+initials (fallback-like)
+
+If validation fails, the system SHALL log the rejection and proceed to the next fallback level.
+
+### Requirement: Metadata includes generation_tier
+
+Every persisted `store_visual_signatures` record SHALL include a `generation_tier` field inside its `metadata` JSONB column to track which method actually produced the asset.
+
+The `metadata` object SHALL include:
+
+| Field | Type | Required | Values |
+|-------|------|----------|--------|
+| `generation_tier` | `string` | Yes | `"image_direct"` (AI image), `"image_retry"` (AI retry with simplified prompt), `"typographic"` (zero-AI) |
+| `provider` | `string` | Yes | e.g., `"openai"` |
+| `model` | `string` | No | e.g., `"gpt-4o-mini"`, `"gpt-5.5"` |
+| `elapsedMs` | `number` | No | Generation time in milliseconds |
+| `fallbackReason` | `string` | No | If this record was produced by a fallback tier, the reason (e.g., `"image_generation_failed"`, `"timeout"`, `"retry_failed"`) |
+| `generationParams` | `object` | No | AI-generated or default design parameters |
+
+The `type` column continues to represent the general context:
+- `ai_generated` — any AI-assisted generation (image_direct or image_retry)
+- `automatic_generated` — generated without user choice
+- `fallback_typographic` — typographic only
+
+The `generation_tier` inside metadata disambiguates which specific method was used.
 
 #### Scenario: Quality assessment before integration
 
@@ -126,15 +169,25 @@ The VisualSignatureGenerator service SHALL abstract the generation approach behi
 
 Each generated visual signature SHALL be uploaded to Supabase Storage in bucket `visual-signatures`, folder `{store_id}/`.
 
-The asset SHALL be stored as PNG with transparent or simple background, maximum dimensions ~400×200px.
+The asset format SHALL follow:
+- AI-generated signatures (`image_direct`, `image_retry`): PNG
+- Typographic fallback (`typographic`): SVG (no conversion required)
 
-#### Scenario: Asset uploaded to correct path
+#### Scenario: AI-generated asset uploaded as PNG
 
-- **WHEN** a visual signature is generated
+- **WHEN** a visual signature is generated by AI (image_direct or image_retry)
 - **THEN** the asset SHALL be uploaded to bucket `visual-signatures` with path `{store_id}/{uuid}.png`
 - **AND** `storage_path` SHALL be `{store_id}/{uuid}.png`
 - **AND** `asset_url` SHALL be the resolved public URL
 - **AND** both SHALL be saved in the database record
+
+#### Scenario: Typographic fallback uploaded as SVG
+
+- **WHEN** a typographic fallback is generated (zero-AI)
+- **THEN** the asset SHALL be uploaded to bucket `visual-signatures` with path `{store_id}/{uuid}.svg`
+- **AND** `storage_path` SHALL be `{store_id}/{uuid}.svg`
+- **AND** `asset_url` SHALL be the resolved public URL
+- **AND** the MIME type SHALL be `image/svg+xml`
 
 ### Requirement: Active signature lifecycle
 
