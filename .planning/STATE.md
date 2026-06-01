@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI + Rendering
-status: completed
-stopped_at: Phase 4.2 baseline complete — visual debt deferred
-last_updated: "2026-05-30T20:38:40.703Z"
+status: in_progress
+stopped_at: Phase 4.4 planned — ready to execute
+last_updated: "2026-06-01T17:20:00.000Z"
 progress:
-  total_phases: 9
+  total_phases: 10
   completed_phases: 8
-  total_plans: 27
+  total_plans: 36
   completed_plans: 22
-  percent: 81
+  percent: 61
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-25 after v1.0 milestone)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
-**Current focus:** Phase 4.3.3 — generation-metrics-benchmark
+**Current focus:** Phase 4.4 — Store Visual Signature Generation & Consistency
 
 ## Current Position
 
-Phase: 4.3.3 — COMPLETE
-Plan: 1 of 3
+Phase: 4.4 — PLANNED
+Plans: 9/9 (6 waves)
 Milestone: v1.1 AI + Rendering — IN PROGRESS
-Phases complete: 6 of 8 (Foundation, Campaign Input, AI Intelligence, AI Provider, Visual Renderer, Commercial Visual Quality baseline)
+Phases complete: 8 of 9 (Foundation, Campaign Input, AI Intelligence, AI Provider, Visual Renderer, Commercial Visual Quality baseline, Creative Direction, Generation Metrics — Phase 4.4 is planned)
 Next phase: Phase 4.3 — Agency-grade Campaign Composition (proposed)
 Status: Phase 4.3.3 complete
 
@@ -49,22 +49,24 @@ Progress: [███████████████████████
 | 1. Foundation & Store Identity | — | — | — |
 | 2. Campaign Input | 3 | 3 | — |
 | 3.2. AI Provider Integration | 1 | 1 | 8 tasks |
+| 4.4. Store Visual Signature (planned) | 9 | 0 | — |
 
 ## Accumulated Context
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
+Decisions from Phase 4.4 are captured in:
+- `.planning/phases/4.4-store-visual-signature-generation-consistency/4.4-CONTEXT.md`
+- `openspec/changes/phase-4-4-store-visual-signature-generation-consistency/design.md`
 
-- Route split: `/` for campaign, `/store` for store identity
-- BRL currency via cents-internal state + Intl.NumberFormat
-- Image upload local-only via object URL (storage deferred)
-- Component decomposition: hook + form + preview pattern
-- Badge as predefined dropdown in constants
-- [Phase 03.2]: createDefaultProvider() made async to support dynamic imports — Dynamic imports for both MockProvider and OpenAIProvider require async. Route was already in async POST handler.
-- [Phase 03.2]: Structured Outputs primary, json_object fallback — zodResponseFormat converts CampaignSpecSchema to OpenAI json_schema. Falls back to json_object only for model capability errors.
-- [Phase 03.2]: Second-layer Zod validation after every response — Even with Structured Outputs, CampaignSpecSchema.safeParse runs as defense-in-depth against schema drift.
+Key decisions:
+- IA gera imagem diretamente (Abordagem B) como fluxo principal
+- Cascade: AI image → AI image retry → typographic fallback (SVG puro)
+- Fallback tipográfico salvo como SVG no Storage (sem PNG conversion)
+- generation_tier em metadata: image_direct | image_retry | typographic
+- Logo upload mínimo: bucket store-logos, API route, validação
+- Quality gate BLOQUEIA integração com campanha
+- Modal pós-save: 4 opções, sem close button
 
 ### Pending Todos
 
@@ -88,8 +90,11 @@ Resume file: .planning/phases/4.2-commercial-visual-quality/4.2-PUBLISHABILITY.m
 
 ## Next Phase
 
-Phase 4.3 — Agency-grade Campaign Composition (proposed)
+Phase 4.4 — Store Visual Signature Generation & Consistency (PLANNED — 9 plans, 6 waves)
 
-- Objective: Resolver a dívida visual da Phase 4.2 com composição não-catalogada
-- Key changes needed: price banner overlap, background shapes, layered composition, agency-grade visual hierarchy
-- Blocks Phase 5 (Review, Adjust & Export)
+- **Objective:** persistir e gerenciar assinaturas visuais para lojas sem logotipo, com geração por IA imagem, fallback tipográfico SVG, upload mínimo de logotipo
+- **9 plans in 6 waves:** Foundation → Typographic/AI/Storage → Server Actions → UI → Campaign Pipeline (BLOCKED) → Quality Gate
+- **Blocks Phase 5** (Review, Adjust & Export)
+- **Key files:** `.planning/phases/4.4-store-visual-signature-generation-consistency/*-PLAN.md`
+
+Next action: `/gsd-execute-phase 4.4`
