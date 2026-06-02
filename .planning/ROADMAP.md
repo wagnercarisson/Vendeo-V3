@@ -47,13 +47,17 @@
     - [x] 4.4-07-PLAN.md — UI: modal, picker, store page section
     - [x] 4.4-08-PLAN.md — Campaign pipeline integration
     - [x] 4.4-09-PLAN.md — Quality gate & validation (PASS)
-  - [ ] Phase 4.4.1: Existing Logo & Store Brand Direction Foundation (6 plans planned)
-    - [ ] 4.4.1-01-PLAN.md — DB & Storage Foundation (store_brand_assets, profiles, stores columns, bucket)
-    - [ ] 4.4.1-02-PLAN.md — Types, Image Processing (sharp), Brand Director Prompt
-    - [ ] 4.4.1-03-PLAN.md — Brand Director AI, Store API Extension, Brand Profile API
-    - [ ] 4.4.1-04-PLAN.md — Logo Upload & Query API (POST/GET/DELETE)
-    - [ ] 4.4.1-05-PLAN.md — Campaign Integration & StoreIdentity Resolution
-    - [ ] 4.4.1-06-PLAN.md — Store Identity UI (upload, colors, direction fields)
+  - [ ] Phase 4.4.1: Existing Logo & Store Brand Direction Foundation (6 plans, 4 waves)
+    - **Wave 1 — DB, Storage & Foundation** *(parallel: 01 + 02)*
+      - [ ] 4.4.1-01-PLAN.md — DB & Storage Foundation (store_brand_assets, profiles, stores columns, bucket)
+      - [ ] 4.4.1-02-PLAN.md — Types, Image Processing (sharp), Brand Director Prompt
+    - **Wave 2 — AI Analysis & Brand Profile** *(depends on Wave 1)*
+      - [ ] 4.4.1-03-PLAN.md — Brand Director AI, Store API Extension, Brand Profile API
+    - **Wave 3 — Logo API & Campaign Integration** *(parallel: 04 + 05, both depend on Waves 1+2)*
+      - [ ] 4.4.1-04-PLAN.md — Logo Upload & Query API (POST/GET/DELETE)
+      - [ ] 4.4.1-05-PLAN.md — Campaign Integration & StoreIdentity Resolution
+    - **Wave 4 — UI** *(depends on Wave 3)*
+      - [ ] 4.4.1-06-PLAN.md — Store Identity UI (upload, colors, direction fields)
 - [ ] Phase 5: Review, Adjust & Export (not yet planned)
 ## Progress
 
