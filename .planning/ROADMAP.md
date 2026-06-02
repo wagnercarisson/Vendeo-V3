@@ -47,6 +47,13 @@
     - [x] 4.4-07-PLAN.md — UI: modal, picker, store page section
     - [x] 4.4-08-PLAN.md — Campaign pipeline integration
     - [x] 4.4-09-PLAN.md — Quality gate & validation (PASS)
+  - [ ] Phase 4.4.1: Existing Logo & Store Brand Direction Foundation (6 plans planned)
+    - [ ] 4.4.1-01-PLAN.md — DB & Storage Foundation (store_brand_assets, profiles, stores columns, bucket)
+    - [ ] 4.4.1-02-PLAN.md — Types, Image Processing (sharp), Brand Director Prompt
+    - [ ] 4.4.1-03-PLAN.md — Brand Director AI, Store API Extension, Brand Profile API
+    - [ ] 4.4.1-04-PLAN.md — Logo Upload & Query API (POST/GET/DELETE)
+    - [ ] 4.4.1-05-PLAN.md — Campaign Integration & StoreIdentity Resolution
+    - [ ] 4.4.1-06-PLAN.md — Store Identity UI (upload, colors, direction fields)
 - [ ] Phase 5: Review, Adjust & Export (not yet planned)
 ## Progress
 
@@ -63,4 +70,5 @@
 | 4.3.2. Creative Direction & Context Awareness | v1.1 | 3/3 | Complete   | 2026-05-29 |
 | 4.3.3. Generation Metrics, Provider Switch & Model Benchmark | v1.1 | 3/3 | Complete   | 2026-05-30 |
 | 4.4. Store Visual Signature Generation & Consistency | v1.1 | 9/9 | Verified | 2026-06-01 |
+| 4.4.1. Existing Logo & Store Brand Direction Foundation | v1.1 | 0/6 | Planned | — |
 | 5. Review, Adjust & Export | v1.1 | 0 | Not yet planned | — |
