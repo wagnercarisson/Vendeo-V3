@@ -9,9 +9,10 @@ interface StorePreviewProps {
   name: string;
   segment: string;
   brandColor: string;
+  logoUrl?: string | null;
 }
 
-export function StorePreview({ name, segment, brandColor }: StorePreviewProps) {
+export function StorePreview({ name, segment, brandColor, logoUrl }: StorePreviewProps) {
   const hasData = name || segment;
 
   if (!hasData) {
@@ -33,12 +34,18 @@ export function StorePreview({ name, segment, brandColor }: StorePreviewProps) {
       </h3>
 
       <div className="flex items-center gap-4">
-        <div
-          className="w-14 h-14 rounded-full flex items-center justify-center text-white font-heading font-bold text-lg shrink-0"
-          style={{ backgroundColor: resolvedColor }}
-        >
-          {name.charAt(0).toUpperCase()}
-        </div>
+        {logoUrl ? (
+          <div className="w-14 h-14 rounded-full overflow-hidden shrink-0 bg-bg-elevated border-2 border-border-light">
+            <img src={logoUrl} alt={`Logo ${name}`} className="w-full h-full object-contain" />
+          </div>
+        ) : (
+          <div
+            className="w-14 h-14 rounded-full flex items-center justify-center text-white font-heading font-bold text-lg shrink-0"
+            style={{ backgroundColor: resolvedColor }}
+          >
+            {name.charAt(0).toUpperCase()}
+          </div>
+        )}
 
         <div className="min-w-0">
           <p className="text-text-primary font-heading font-semibold text-lg truncate">

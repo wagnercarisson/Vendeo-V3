@@ -9,9 +9,20 @@ import { useState, useCallback, useRef } from "react";
 
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
 const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
-const MAX_LOGO_SIZE = 2 * 1024 * 1024;
+const MAX_LOGO_SIZE = 5 * 1024 * 1024;
 
-type FieldErrors = Partial<Record<"name" | "segment" | "brand_color" | "city" | "state", string>>;
+const TONE_OF_VOICE_OPTIONS = [
+  { value: 'profissional', label: 'Profissional' },
+  { value: 'moderno', label: 'Moderno' },
+  { value: 'elegante', label: 'Elegante' },
+  { value: 'divertido', label: 'Divertido' },
+  { value: 'acolhedor', label: 'Acolhedor' },
+  { value: 'jovem', label: 'Jovem' },
+  { value: 'tradicional', label: 'Tradicional' },
+  { value: 'luxuoso', label: 'Luxuoso' },
+] as const;
+
+type FieldErrors = Partial<Record<string, string>>;
 
 function validateName(value: string): string | null {
   const trimmed = value.trim();
@@ -53,17 +64,19 @@ export function StoreIdentityForm() {
   } = useStoreForm();
 
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [touched, setTouched] = useState<Partial<Record<keyof FieldErrors, boolean>>>({});
+  const [touched, setTouched] = useState<Partial<Record<string, boolean>>>({});
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [logoResultUrl, setLogoResultUrl] = useState<string | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'processing' | 'ready'>('idle');
   const [logoError, setLogoError] = useState<string | null>(null);
-  const [logoSuccess, setLogoSuccess] = useState<string | null>(null);
+  const [detectedColors, setDetectedColors] = useState<string[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleBlur = useCallback(
-    (field: keyof FieldErrors) => {
+    (field: string) => {
       setTouched((prev) => ({ ...prev, [field]: true }));
 
       let errorMsg: string | null = null;
@@ -92,10 +105,8 @@ export function StoreIdentityForm() {
     [formData]
   );
 
-  const handleLogoFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null;
+  const processFile = useCallback((file: File | null) => {
     setLogoError(null);
-    setLogoSuccess(null);
 
     if (!file) {
       setLogoFile(null);
@@ -104,14 +115,14 @@ export function StoreIdentityForm() {
     }
 
     if (!ALLOWED_LOGO_TYPES.includes(file.type)) {
-      setLogoError("Formato inválido. Use PNG, JPEG ou WebP.");
+      setLogoError("Formatos aceitos: PNG, JPG ou WEBP.");
       setLogoFile(null);
       setLogoPreview(null);
       return;
     }
 
     if (file.size > MAX_LOGO_SIZE) {
-      setLogoError("Arquivo muito grande. Máximo 2MB.");
+      setLogoError("Arquivo muito grande. Máximo 5MB.");
       setLogoFile(null);
       setLogoPreview(null);
       return;
@@ -120,6 +131,25 @@ export function StoreIdentityForm() {
     setLogoFile(file);
     setLogoPreview(URL.createObjectURL(file));
   }, []);
+
+  const handleLogoFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    processFile(e.target.files?.[0] ?? null);
+  }, [processFile]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    processFile(e.dataTransfer.files?.[0] ?? null);
+  }, [processFile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,15 +172,14 @@ export function StoreIdentityForm() {
     const currentStoreId = storeId ?? (saved ? saved.storeId : null);
 
     if (logoFile && currentStoreId) {
-      setIsUploadingLogo(true);
+      setUploadStatus('uploading');
       setLogoError(null);
-      setLogoSuccess(null);
 
       try {
         const uploadFormData = new FormData();
         uploadFormData.append("logo", logoFile);
 
-        const res = await fetch(`/api/stores/${currentStoreId}/logo`, {
+        const res = await fetch(`/api/store/${currentStoreId}/logo`, {
           method: "POST",
           body: uploadFormData,
         });
@@ -160,7 +189,18 @@ export function StoreIdentityForm() {
           throw new Error(errData.error || "Erro ao enviar logotipo");
         }
 
-        setLogoSuccess("Logotipo atualizado com sucesso");
+        const result = await res.json();
+        setUploadStatus('processing');
+
+        const profileRes = await fetch(`/api/store/${currentStoreId}/brand-profile`);
+        if (profileRes.ok) {
+          const profile = await profileRes.json();
+          if (profile?.logo_colors_detected?.length > 0) {
+            setDetectedColors(profile.logo_colors_detected);
+          }
+        }
+
+        setUploadStatus('ready');
         setLogoFile(null);
         setLogoPreview(null);
         if (fileInputRef.current) {
@@ -168,8 +208,7 @@ export function StoreIdentityForm() {
         }
       } catch (err) {
         setLogoError(err instanceof Error ? err.message : "Erro ao enviar logotipo");
-      } finally {
-        setIsUploadingLogo(false);
+        setUploadStatus('idle');
       }
     } else if (currentStoreId && !logoFile && saved) {
       setShowSignatureModal(true);
@@ -340,6 +379,26 @@ export function StoreIdentityForm() {
                     {fieldErrors.brand_color}
                   </p>
                 )}
+                {detectedColors.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2">
+                      Cores sugeridas do logotipo
+                    </p>
+                    <div className="flex gap-2">
+                      {detectedColors.map((color, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setField("brand_color", color)}
+                          className="w-8 h-8 rounded-full border-2 border-border-light hover:scale-110 transition-transform"
+                          style={{ backgroundColor: color }}
+                          title={color}
+                          aria-label={`Selecionar cor ${color}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -349,41 +408,63 @@ export function StoreIdentityForm() {
                 >
                   Logotipo da Loja <span className="font-normal normal-case tracking-normal text-text-disabled">(opcional)</span>
                 </label>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center gap-2 px-4 py-2.5 bg-bg-surface border border-border-light rounded-lg cursor-pointer hover:border-text-muted transition-colors duration-200 text-text-primary text-sm font-body">
-                    <Upload className="w-4 h-4" />
-                    {logoFile ? logoFile.name : "Selecionar arquivo"}
-                    <input
-                      ref={fileInputRef}
-                      id="logo"
-                      type="file"
-                      accept="image/png, image/jpeg, image/webp"
-                      onChange={handleLogoFileChange}
-                      className="hidden"
-                    />
-                  </label>
-                  {logoPreview && (
-                    <div className="w-10 h-10 rounded-lg border border-border-light overflow-hidden shrink-0 bg-bg-elevated">
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors duration-200 cursor-pointer ${
+                    isDragging
+                      ? "border-accent-blue bg-accent-blue/5"
+                      : "border-border-light hover:border-text-muted bg-bg-surface"
+                  }`}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="w-8 h-8 mx-auto mb-2 text-text-muted" />
+                  <p className="text-text-secondary text-sm font-body">
+                    {logoPreview ? logoFile?.name : "Arraste o logotipo ou clique para selecionar"}
+                  </p>
+                  <p className="text-text-muted text-xs font-body mt-1">
+                    Formatos aceitos: PNG, JPG ou WEBP. Máximo 5MB.
+                  </p>
+                  <input
+                    ref={fileInputRef}
+                    id="logo"
+                    type="file"
+                    accept="image/png, image/jpeg, image/webp"
+                    onChange={handleLogoFileChange}
+                    className="hidden"
+                  />
+                </div>
+                {logoPreview && (
+                  <div className="mt-3 flex items-center gap-3">
+                    <div className="w-16 h-16 rounded-full border-2 border-border-light overflow-hidden shrink-0 bg-bg-elevated">
                       <img src={logoPreview} alt="Logo preview" className="w-full h-full object-contain" />
                     </div>
-                  )}
-                </div>
+                    <span className="text-text-secondary text-sm font-body">{logoFile?.name}</span>
+                  </div>
+                )}
                 {logoError && (
                   <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs">
                     <AlertCircle className="w-3.5 h-3.5" />
                     {logoError}
                   </p>
                 )}
-                {logoSuccess && (
-                  <p className="mt-1.5 flex items-center gap-1.5 text-accent-green text-xs">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    {logoSuccess}
-                  </p>
-                )}
-                {isUploadingLogo && (
+                {uploadStatus === 'uploading' && (
                   <p className="mt-1.5 flex items-center gap-1.5 text-text-secondary text-xs">
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    Enviando logotipo...
+                    Enviando...
+                  </p>
+                )}
+                {uploadStatus === 'processing' && (
+                  <p className="mt-1.5 flex items-center gap-1.5 text-text-secondary text-xs">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Processando...
+                  </p>
+                )}
+                {uploadStatus === 'ready' && (
+                  <p className="mt-1.5 flex items-center gap-1.5 text-accent-green text-xs">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Pronto
                   </p>
                 )}
               </div>
@@ -429,6 +510,89 @@ export function StoreIdentityForm() {
                 </div>
               </div>
 
+              <div className="pt-4 border-t border-border">
+                <h3 className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-4">
+                  Direção de Marketing <span className="font-normal normal-case tracking-normal text-text-disabled">(opcional)</span>
+                </h3>
+
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="subsegment" className="block text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2">
+                      Subsegmento
+                    </label>
+                    <input
+                      id="subsegment"
+                      type="text"
+                      value={formData.subsegment}
+                      onChange={(e) => setField("subsegment", e.target.value)}
+                      placeholder="Ex: Roupas femininas"
+                      className="w-full bg-bg-surface border border-border-light rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="tone_of_voice" className="block text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2">
+                      Tom de Voz
+                    </label>
+                    <select
+                      id="tone_of_voice"
+                      value={formData.tone_of_voice}
+                      onChange={(e) => setField("tone_of_voice", e.target.value)}
+                      className="w-full bg-bg-surface border border-border-light rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
+                    >
+                      <option value="">Selecione</option>
+                      {TONE_OF_VOICE_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="positioning" className="block text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2">
+                      Posicionamento
+                    </label>
+                    <input
+                      id="positioning"
+                      type="text"
+                      value={formData.positioning}
+                      onChange={(e) => setField("positioning", e.target.value)}
+                      placeholder="Ex: A melhor loja de..."
+                      className="w-full bg-bg-surface border border-border-light rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="short_description" className="block text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2">
+                      Descrição Curta
+                    </label>
+                    <textarea
+                      id="short_description"
+                      value={formData.short_description}
+                      onChange={(e) => setField("short_description", e.target.value)}
+                      placeholder="Descreva sua loja em poucas palavras..."
+                      rows={3}
+                      className="w-full bg-bg-surface border border-border-light rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20 resize-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="slogan" className="block text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2">
+                      Slogan
+                    </label>
+                    <input
+                      id="slogan"
+                      type="text"
+                      value={formData.slogan}
+                      onChange={(e) => setField("slogan", e.target.value)}
+                      placeholder="Ex: Sua loja de confiança"
+                      className="w-full bg-bg-surface border border-border-light rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="pt-2">
                 <button
                   type="submit"
@@ -455,6 +619,7 @@ export function StoreIdentityForm() {
               name={formData.name}
               segment={formData.segment}
               brandColor={formData.brand_color}
+              logoUrl={logoResultUrl}
             />
           </div>
         </div>

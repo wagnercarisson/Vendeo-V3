@@ -9,6 +9,11 @@ export interface FormData {
   brand_color: string;
   city: string;
   state: string;
+  subsegment: string;
+  tone_of_voice: string;
+  positioning: string;
+  short_description: string;
+  slogan: string;
 }
 
 export type FormMode = "create" | "edit";
@@ -37,6 +42,11 @@ const EMPTY_FORM: FormData = {
   brand_color: "",
   city: "",
   state: "",
+  subsegment: "",
+  tone_of_voice: "",
+  positioning: "",
+  short_description: "",
+  slogan: "",
 };
 
 function toNull(value: string): string | null {
@@ -81,6 +91,11 @@ export function useStoreForm(): UseStoreFormReturn {
           brand_color: store.brand_color ?? "",
           city: store.city ?? "",
           state: store.state ?? "",
+          subsegment: (store as any).subsegment ?? "",
+          tone_of_voice: (store as any).tone_of_voice ?? "",
+          positioning: (store as any).positioning ?? "",
+          short_description: (store as any).short_description ?? "",
+          slogan: (store as any).slogan ?? "",
         });
         setMode("edit");
       })
@@ -126,6 +141,11 @@ export function useStoreForm(): UseStoreFormReturn {
         city: toNull(formData.city),
         state: toNull(formData.state),
         brand_color: colorTouched ? toNull(formData.brand_color) : null,
+        subsegment: toNull(formData.subsegment),
+        tone_of_voice: toNull(formData.tone_of_voice),
+        positioning: toNull(formData.positioning),
+        short_description: toNull(formData.short_description),
+        slogan: toNull(formData.slogan),
       };
 
       let res: Response;

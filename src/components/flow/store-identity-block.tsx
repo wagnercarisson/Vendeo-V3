@@ -40,14 +40,24 @@ export function StoreIdentityBlock({ store }: StoreIdentityBlockProps) {
       ? SEGMENT_LABELS[store.segment as keyof typeof SEGMENT_LABELS]
       : "";
 
+  const logoUrl = identity.brandProfile?.logoVariantUrl ?? identity.logoUrl;
+
   return (
     <div className="flex items-center gap-4 bg-bg-surface border border-border rounded-xl p-4">
-      <div
-        className="w-8 h-8 rounded-full flex items-center justify-center text-white font-heading font-bold text-sm shrink-0"
-        style={{ backgroundColor: identity.brandColor }}
-      >
-        {store.name.charAt(0).toUpperCase()}
-      </div>
+      {logoUrl ? (
+        <img
+          src={logoUrl}
+          alt={`Logo ${store.name}`}
+          className="w-8 h-8 rounded-full object-contain shrink-0 bg-bg-elevated"
+        />
+      ) : (
+        <div
+          className="w-8 h-8 rounded-full flex items-center justify-center text-white font-heading font-bold text-sm shrink-0"
+          style={{ backgroundColor: identity.brandColor }}
+        >
+          {store.name.charAt(0).toUpperCase()}
+        </div>
+      )}
       <div className="flex flex-col min-w-0">
         <p className="text-text-primary font-heading font-semibold text-base truncate">
           {store.name}
