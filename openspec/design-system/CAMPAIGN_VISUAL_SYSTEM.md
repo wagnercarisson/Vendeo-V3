@@ -379,6 +379,11 @@ Cada variação é um layout completo — o lojista NÃO pode mixar elementos en
 
 ## 9. Store Identity Rules
 
+### Priority (resolution order)
+1. **Logo** (`logo_url`) — highest priority. If the lojista uploaded a logo, it is always used.
+2. **Visual signature** (`visualSignatureUrl`) — used only when no logo exists. Render the visual signature asset as the sole identity element.
+3. **Initials fallback** — used when neither logo nor visual signature exists. Show initials circle + store name text.
+
 ### Logo rendering
 - Logo file stored as uploaded (original format)
 - Rendered in bottom-center of campaign image
@@ -386,7 +391,15 @@ Cada variação é um layout completo — o lojista NÃO pode mixar elementos en
 - If logo aspect ratio ≠ 1:1 → crop to square center
 - No background behind logo (transparent PNG supported)
 
-### Fallback (no logo)
+### Visual signature rendering
+- Visual signature is a **render-time asset** — it is NOT injected into the AI image generation prompt
+- The visual signature is generated once (via AI image) and reused across all campaigns for the store
+- When `visualSignatureUrl` is provided and `logo_url` is null, the visual signature replaces the logo+initials zone entirely
+- The store name text below the visual signature is **omitted** because the visual signature already contains the store name
+- Max display width: 200px, height auto (maintains aspect ratio)
+- Supported formats: PNG (AI-generated), SVG (typographic fallback)
+
+### Fallback (no logo, no visual signature)
 - Generate circular badge with store initials
 - Take first 2 characters of store name
 - If store name is single word: first 2 letters
@@ -395,7 +408,8 @@ Cada variação é um layout completo — o lojista NÃO pode mixar elementos en
 - Example: "Ana" → "AN"
 
 ### Store name text
-- Rendered below logo/initials
+- Rendered below logo or initials only
+- **NOT rendered** when a visual signature is displayed (signature already contains the name)
 - Open Sans 500, 18px, slate-500
 - Max 1 line — truncate with ellipsis at 30 characters
 

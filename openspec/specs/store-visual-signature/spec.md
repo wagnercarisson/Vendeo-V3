@@ -1,4 +1,10 @@
-## ADDED Requirements
+# Store Visual Signature
+
+## Purpose
+
+Defines the visual signature generation system: a brand mark / logo-like asset created when the lojista has no logo, used as a render-time asset in the campaign store identity zone.
+
+## Requirements
 
 ### Requirement: Store visual signatures table
 
@@ -16,7 +22,7 @@ The `store_visual_signatures` table SHALL contain the following columns:
 | `status` | `text` | Yes | `draft`, `active`, `archived` |
 | `generation_mode` | `text` | No | `user_choice`, `automatic`, `fallback` |
 | `prompt` | `text` | No | Prompt used for AI generation, if applicable |
-| `metadata` | `jsonb` | No | Additional metadata — SHALL include `generation_tier: "image_direct" | "image_retry" | "typographic"` to record the actual method used. Also includes model, provider, generation params, elapsedMs, fallbackReason. |
+| `metadata` | `jsonb` | No | Additional metadata — SHALL include `generation_tier: "image_direct" \| "image_retry" \| "typographic"` to record the actual method used. Also includes model, provider, generation params, elapsedMs, fallbackReason. |
 | `created_at` | `timestamptz` | Yes | `now()`, auto-set on create |
 | `updated_at` | `timestamptz` | Yes | `now()`, auto-updated on change |
 
@@ -102,29 +108,32 @@ The generated visual signature image SHALL:
 
 - **WHEN** the lojista clicks "Gerar 3 opções para eu escolher" in the modal
 - **THEN** the system SHALL attempt to produce exactly 3 visual signature variations
-- **AND** the system SHALL attempt AI image generation for all 3, trying different tonalities
-- **AND** for each position that fails on first attempt, the system SHALL retry with a simplified prompt
-- **AND** for each position that still fails after retry, the system SHALL use typographic fallback to fill the gap
-- **AND** the system SHALL return exactly 3 variations if possible, filling downward through the cascade
-- **AND** if fewer than 3 variations succeed across all tiers, the system SHALL return an error state: "Não foi possível gerar 3 opções. Tente novamente."
-- **AND** cards produced by typographic fallback SHALL show a subtle "Simples" badge to manage expectations
-- **AND** the picker SHALL allow selecting and activating any variation regardless of which tier produced it
+- **AND** the system SHALL attempt AI image generation for all 3, trying different tonalities (profissional, moderno, elegante)
+- **AND** for each position that fails on first attempt (non-timeout), the system SHALL retry with a simplified prompt
+- **AND** if a position times out, the system SHALL NOT retry that position
+- **AND** if fewer than 3 variations succeed after AI image + retry, the system SHALL return an error: "Não foi possível gerar 3 opções. Tente novamente."
+- **AND** typographic fallback SHALL NOT be used to fill gaps in the 3-card result — it is technical contingency only
+- **AND** the picker SHALL allow selecting and activating any variation
 
 #### Scenario: Generate 1 variation for automatic mode (Deixar o Vendeo Criar)
 
 - **WHEN** the lojista selects "Deixar o Vendeo Escolher"
-- **THEN** the system SHALL attempt to generate 1 visual signature via AI image with 30s timeout
+- **THEN** the system SHALL attempt to generate 1 visual signature via AI image with 120s timeout
 - **AND** if that succeeds, persist it as `active` with type `automatic_generated`
-- **AND** if it fails, SHALL retry once with simplified prompt
-- **AND** if retry also fails, SHALL generate and persist typographic fallback as `active`
+- **AND** if it fails with validation error (image generated but failed visual check), SHALL retry once with simplified prompt
+- **AND** if it fails with timeout, SHALL NOT retry — return controlled error
+- **AND** if retry also fails, SHALL return controlled error instead of typographic fallback
+- **AND** the error message SHALL be: "Não conseguimos criar sua assinatura visual agora. Tente novamente ou envie seu logotipo."
+- **AND** full attempt metadata SHALL be logged (tier, provider, model, elapsedMs, error details)
 
 #### Scenario: Generation cascade (2-tier fallback)
 
 - **WHEN** AI image generation fails or exceeds timeout
 - **THEN** the system SHALL log the failure with error details
-- **AND** SHALL retry once with a simplified prompt
-- **AND** if retry also fails, SHALL generate typographic fallback
-- **AND** typographic fallback SHALL always succeed (zero external dependencies)
+- **AND** if timeout, SHALL return controlled error immediately (no retry, no fallback)
+- **AND** if validation failure, SHALL retry once with a simplified prompt
+- **AND** if retry also fails, SHALL return controlled error
+- **AND** typographic fallback SHALL exist only as technical contingency (not surfaced as final product delivery)
 
 ### Requirement: Visual signature quality criteria
 

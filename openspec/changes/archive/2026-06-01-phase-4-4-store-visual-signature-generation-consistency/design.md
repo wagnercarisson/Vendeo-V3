@@ -130,7 +130,7 @@ Após salvar a loja com sucesso:
      3. **Tenho logotipo, mas vou enviar depois** — comportamento idêntico à opção 2 (geração automática)
      4. **Tenho logotipo e quero enviar agora** — redireciona para fluxo de upload de logotipo
    - Se escolhe opção 1: gera 3 variações, exibe picker, persiste a escolhida como `active`
-   - Se escolhe opção 2 ou 3: o sistema tenta gerar a assinatura via IA com timeout curto (30s). Se responder a tempo, persiste como ativa. Se falhar ou exceder timeout, fallback tipográfico é gerado e persistido como ativo. Síncrono — sem background processing.
+   - Se escolhe opção 2 ou 3: o sistema tenta gerar a assinatura via IA com timeout de 120s. Se responder a tempo, persiste como ativa. Se falhar ou exceder timeout, retorna erro controlado — fallback tipográfico não é persistido como assinatura ativa. Síncrono — sem background processing.
    - Se escolhe opção 4: redireciona para o upload de logotipo
 
 Modal sem close button porque:
@@ -149,7 +149,7 @@ Modal sem close button porque:
 | `active` | A assinatura escolhida pelo lojista OU o fallback automático gerado sem escolha. No máximo uma por loja (garantido pelo partial unique index). | `archived` (se substituída) |
 | `archived` | Assinatura que foi desativada por substituição explícita. Nunca reativada — se o lojista quiser voltar para uma anterior, uma nova draft é gerada. | — |
 
-O fallback automático (lojista escolheu "Deixar o Vendeo Criar" ou a geração falhou) nasce como `active` direto — não passa por `draft` porque não houve escolha.
+A geração automática (lojista escolheu "Deixar o Vendeo Criar") nasce como `active` direto — não passa por `draft` porque não houve escolha. Se a geração falhar, nenhuma assinatura é persistida — o sistema retorna erro controlado.
 
 Nunca pode existir mais de uma `active` por loja. O partial unique index `(store_id) WHERE status = 'active'` garante isso no banco.
 
