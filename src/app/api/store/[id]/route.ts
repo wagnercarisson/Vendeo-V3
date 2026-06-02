@@ -76,6 +76,27 @@ export async function PATCH(
     updates.logo_url = typeof body.logo_url === "string" ? body.logo_url : null;
   }
 
+  // Store direction fields (Phase 4.4.1)
+  if (body.subsegment !== undefined) {
+    updates.subsegment = typeof body.subsegment === 'string' ? body.subsegment.trim() || null : null;
+  }
+
+  if (body.tone_of_voice !== undefined) {
+    updates.tone_of_voice = typeof body.tone_of_voice === 'string' ? body.tone_of_voice : null;
+  }
+
+  if (body.positioning !== undefined) {
+    updates.positioning = typeof body.positioning === 'string' ? body.positioning.trim() || null : null;
+  }
+
+  if (body.short_description !== undefined) {
+    updates.short_description = typeof body.short_description === 'string' ? body.short_description.trim() || null : null;
+  }
+
+  if (body.slogan !== undefined) {
+    updates.slogan = typeof body.slogan === 'string' ? body.slogan.trim() || null : null;
+  }
+
   updates.updated_at = new Date().toISOString();
 
   const { data, error } = await supabase
