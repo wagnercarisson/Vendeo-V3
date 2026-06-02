@@ -1,6 +1,17 @@
 import type { CampaignSpec } from "@/lib/campaign-intelligence/schema";
 import type { VisualSignatureType } from "@/lib/visual-signature/types";
 
+export interface BrandProfileSnapshot {
+  brand_colors_chosen: string[];
+  safe_color_tokens: Record<string, string>;
+  visual_style: string | null;
+  visual_tone: string | null;
+  brand_personality: string | null;
+  campaign_guidelines: string | null;
+  campaign_brief: string | null;
+  logoVariantUrl: string | null;
+}
+
 export interface StoreIdentitySnapshot {
   storeName: string;
   storeSegment: string;
@@ -9,6 +20,7 @@ export interface StoreIdentitySnapshot {
   visualSignatureUrl: string | null;
   visualSignatureType: VisualSignatureType | null;
   storeInitials: string;
+  brandProfile: BrandProfileSnapshot | null;
 }
 
 export interface PreviewPayload {

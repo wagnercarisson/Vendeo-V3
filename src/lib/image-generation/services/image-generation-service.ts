@@ -723,6 +723,16 @@ export class ImageGenerationService {
       sensitiveConstraints: body.sensitiveConstraints ?? "",
       storeLogoUrl: body.storeLogoUrl ?? "",
 
+      // Brand profile context (Phase 4.4.1)
+      brandProfileSection: this.buildBrandProfileSection(body.brandProfile),
+      brandColorsChosen: body.brandProfile?.brand_colors_chosen?.join(', ') ?? '',
+      visualStyle: body.brandProfile?.visual_style ?? '',
+      visualTone: body.brandProfile?.visual_tone ?? '',
+      brandPersonality: body.brandProfile?.brand_personality ?? '',
+      campaignGuidelines: body.brandProfile?.campaign_guidelines ?? '',
+      campaignBrief: body.brandProfile?.campaign_brief ?? '',
+      logoVariantUrl: body.brandProfile?.logoVariantUrl ?? '',
+
       // New creative direction variables
       creativePersona,
       inferredCategory: effectiveInferredCategory,
@@ -904,6 +914,48 @@ export class ImageGenerationService {
     }
 
     return result;
+  }
+
+  private buildBrandProfileSection(brandProfile?: {
+    brand_colors_chosen?: string[];
+    safe_color_tokens?: Record<string, string>;
+    visual_style?: string;
+    visual_tone?: string;
+    brand_personality?: string;
+    campaign_guidelines?: string;
+    campaign_brief?: string;
+    logoVariantUrl?: string;
+  }): string {
+    if (!brandProfile) return '';
+
+    const rows: string[] = [
+      '| Campo | Valor |',
+      '|-------|-------|',
+    ];
+
+    if (brandProfile.campaign_guidelines) {
+      rows.push(`| **Diretrizes de campanha** | ${brandProfile.campaign_guidelines} |`);
+    }
+    if (brandProfile.campaign_brief) {
+      rows.push(`| **Brief do Diretor de Marca** | ${brandProfile.campaign_brief} |`);
+    }
+    if (brandProfile.brand_personality) {
+      rows.push(`| **Personalidade da marca** | ${brandProfile.brand_personality} |`);
+    }
+    if (brandProfile.visual_style) {
+      rows.push(`| **Estilo visual** | ${brandProfile.visual_style} |`);
+    }
+    if (brandProfile.visual_tone) {
+      rows.push(`| **Tom visual** | ${brandProfile.visual_tone} |`);
+    }
+    if (brandProfile.brand_colors_chosen?.length) {
+      rows.push(`| **Cores da marca** | ${brandProfile.brand_colors_chosen.join(', ')} |`);
+    }
+    if (brandProfile.logoVariantUrl) {
+      rows.push(`| **Logo variante** | ${brandProfile.logoVariantUrl} |`);
+    }
+
+    return rows.length > 2 ? rows.join('\n') : '';
   }
 
   private buildValidationDetail(
