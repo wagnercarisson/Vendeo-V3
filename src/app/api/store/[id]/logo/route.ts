@@ -314,18 +314,6 @@ async function handleGetActiveLogo(_request: NextRequest, storeId: string) {
   return NextResponse.json({ assets: grouped, profile: profile ?? null }, { status: 200 });
 }
 
-async function handleGetVersions(_request: NextRequest, storeId: string) {
-  const { data: versions } = await supabase
-    .from('store_brand_assets')
-    .select('version, created_at, status')
-    .eq('store_id', storeId)
-    .eq('variant_type', 'original')
-    .order('version', { ascending: false })
-    .limit(50);
-
-  return NextResponse.json({ versions: versions ?? [] }, { status: 200 });
-}
-
 async function handleDeleteLogo(_request: NextRequest, storeId: string) {
   await supabase
     .from('store_brand_assets')
@@ -360,13 +348,6 @@ export async function GET(
   const { id } = await params;
   if (!validateUUID(id)) {
     return NextResponse.json({ error: 'ID da loja inválido' }, { status: 400 });
-  }
-
-  const url = new URL(request.url);
-  const path = url.pathname;
-
-  if (path.endsWith('/versions')) {
-    return handleGetVersions(request, id);
   }
 
   return handleGetActiveLogo(request, id);
