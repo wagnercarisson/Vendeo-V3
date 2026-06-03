@@ -977,6 +977,8 @@ export class ImageGenerationService {
   }): string {
     if (!brandProfile) return '';
 
+    const note = '> **Nota:** Este perfil de marca é contexto criativo direcional para repertório da campanha, não regra obrigatória. Use como referência visual e comercial, preservando seu julgamento criativo na composição.\n';
+
     const rows: string[] = [
       '| Campo | Valor |',
       '|-------|-------|',
@@ -1004,7 +1006,7 @@ export class ImageGenerationService {
       rows.push(`| **Logo variante** | ${brandProfile.logoVariantUrl} |`);
     }
 
-    return rows.length > 2 ? rows.join('\n') : '';
+    return rows.length > 2 ? note + rows.join('\n') : '';
   }
 
   private buildValidationDetail(
