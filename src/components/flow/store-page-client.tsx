@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import type { Store } from "@/lib/store";
 import { StoreIdentityForm } from "./store-identity-form";
-import { StoreVisualSignatureSection } from "./store-visual-signature-section";
 import { Loader2, Store as StoreIcon, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
@@ -61,9 +60,6 @@ export function StorePageClient() {
   return (
     <div className="space-y-8">
       <StoreIdentityForm />
-      {store && (
-        <StoreVisualSignatureSection store={store} />
-      )}
     </div>
   );
 }

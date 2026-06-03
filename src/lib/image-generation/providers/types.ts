@@ -4,6 +4,7 @@
 export interface ImageProviderInput {
   prompt: string;
   productImageDataUrl?: string;
+  logoImageUrl?: string;
   size?: "1024x1024" | "2048x2048";
   quality?: "low" | "medium" | "high" | "auto";
   signal?: AbortSignal;

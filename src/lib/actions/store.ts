@@ -9,13 +9,13 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import type { BrandProfileRecord, BrandAssetRecord } from '@/lib/brand-assets/types';
 
 export async function resolveStoreIdentity(
-  store: Pick<Store, "id" | "name" | "logo_url" | "segment" | "brand_color">
+  store: Pick<Store, "id" | "name" | "logo_url" | "segment" | "brand_color" | "subsegment" | "tone_of_voice" | "positioning" | "short_description" | "slogan">
 ): Promise<StoreIdentitySnapshot> {
   let brandColor = store.brand_color ?? getDefaultBrandColor(store.segment);
   const storeInitials = getStoreInitials(store.name);
 
   let brandProfile: BrandProfileSnapshot | null = null;
-  let resolvedLogoUrl: string | null = store.logo_url;
+  let resolvedLogoUrl: string | null = null;
 
   try {
     const [profileResult, assetsResult] = await Promise.all([
@@ -27,10 +27,11 @@ export async function resolveStoreIdentity(
     const assets = (assetsResult.data ?? []) as BrandAssetRecord[];
 
     if (profile && assets.length > 0) {
+      const normalizedAsset = assets.find(a => a.variant_type === 'normalized');
       const originalAsset = assets.find(a => a.variant_type === 'original');
       const onDarkAsset = assets.find(a => a.variant_type === 'on_dark');
 
-      const logoAsset = onDarkAsset ?? originalAsset;
+      const logoAsset = normalizedAsset ?? originalAsset ?? onDarkAsset;
       let logoVariantUrl: string | null = null;
       if (logoAsset?.storage_path) {
         const { data: { publicUrl } } = supabaseAdmin.storage.from('store-brand-assets').getPublicUrl(logoAsset.storage_path);
@@ -66,6 +67,14 @@ export async function resolveStoreIdentity(
     console.error('[resolveStoreIdentity] Brand profile resolution error:', err);
   }
 
+  const directionFields = {
+    toneOfVoice: store.tone_of_voice ?? null,
+    subsegment: store.subsegment ?? null,
+    positioning: store.positioning ?? null,
+    shortDescription: store.short_description ?? null,
+    slogan: store.slogan ?? null,
+  };
+
   if (resolvedLogoUrl) {
     return {
       storeName: store.name,
@@ -76,6 +85,7 @@ export async function resolveStoreIdentity(
       visualSignatureType: null,
       storeInitials,
       brandProfile,
+      ...directionFields,
     };
   }
 
@@ -90,6 +100,7 @@ export async function resolveStoreIdentity(
       visualSignatureType: activeSignature.type as VisualSignatureType,
       storeInitials,
       brandProfile,
+      ...directionFields,
     };
   }
 
@@ -102,5 +113,6 @@ export async function resolveStoreIdentity(
     visualSignatureType: null,
     storeInitials,
     brandProfile,
+    ...directionFields,
   };
 }

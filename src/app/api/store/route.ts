@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { name, segment, city, state, brand_color, logo_url } = body;
+  const { name, segment, city, state, brand_color, logo_url, subsegment, tone_of_voice, positioning, short_description, slogan } = body;
 
   if (!name || typeof name !== "string" || name.trim().length < 2 || name.trim().length > 60) {
     return NextResponse.json(
@@ -35,6 +35,11 @@ export async function POST(request: NextRequest) {
       state: typeof state === "string" ? state : null,
       brand_color: typeof brand_color === "string" ? brand_color : null,
       logo_url: typeof logo_url === "string" ? logo_url : null,
+      subsegment: typeof subsegment === "string" ? subsegment.trim() || null : null,
+      tone_of_voice: typeof tone_of_voice === "string" ? tone_of_voice : null,
+      positioning: typeof positioning === "string" ? positioning.trim() || null : null,
+      short_description: typeof short_description === "string" ? short_description.trim() || null : null,
+      slogan: typeof slogan === "string" ? slogan.trim() || null : null,
     })
     .select()
     .single();

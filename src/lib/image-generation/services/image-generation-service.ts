@@ -7,6 +7,9 @@ import { ImageReviewService } from "@/lib/image-generation/services/image-review
 import type { ImageReviewInput } from "@/lib/image-generation/services/image-review-service";
 import type { GenerationMetricsEvent, GenerationMetrics } from "@/lib/image-generation/metrics/types";
 import { MetricsWriter } from "@/lib/image-generation/metrics/writer";
+import { logReviewDiagnostic } from "@/lib/image-generation/metrics/review-diagnostics";
+import type { ReviewDiagnosticEntry } from "@/lib/image-generation/metrics/review-diagnostics";
+import { validatePrompt } from "@/lib/image-generation/services/prompt-validator";
 import { SEGMENT_LABELS } from "@/lib/constants";
 
 /**
@@ -362,6 +365,23 @@ export class ImageGenerationService {
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         console.error(`[ImageGenerationService] review error — ${message}`);
+        logReviewDiagnostic({
+          timestamp: new Date().toISOString(),
+          runId,
+          attempt: attempts,
+          reviewPassed: false,
+          reviewAction: 'error',
+          severity: 'critical',
+          failureType: 'review_error',
+          issues: [{ type: 'review_error', severity: 'critical', description: message }],
+          correctionInstructions: null,
+          elapsedMs: Date.now() - startTime,
+          provider: this.imageProvider.name,
+          model: IMAGE_GENERATION_RESPONSES_MODEL,
+          hadLogoAsset: !!body.storeLogoUrl,
+          hadBrandProfile: !!body.brandProfile,
+          hadProductImage: !!body.productImageDataUrl,
+        });
         emitFailed("quality_review", "Erro na revisão de qualidade.");
         await this.metricsWriter.write(this.buildGenerationMetrics({
           runId,
@@ -389,70 +409,87 @@ export class ImageGenerationService {
       // Apply validation context filtering before evaluation
       reviewResult = this.applyValidationContextToReviewResult(reviewResult, validationContext);
 
-      if (reviewResult.passed) {
+      {
         const totalIssues = reviewResult.issues.length;
         const criticalCount = reviewResult.issues.filter(i => i.severity === "critical").length;
         const minorCount = reviewResult.issues.filter(i => i.severity === "minor").length;
-        emit("quality_review", "complete", undefined,
-          `issues: ${totalIssues} (${criticalCount} críticas, ${minorCount} menores), failureType: ${reviewResult.failureType ?? "null"}`);
-        emitMetricsEvent("quality_review", attempts);
-        state = GenerationState.COMPLETE;
-      } else {
-        lastReviewIssues = reviewResult.issues.map((i) => i.description);
 
-        if (reviewResult.failureType === "generated_product_mismatch") {
-          emitFailed("quality_review", "A imagem gerada exibiu um nome de produto diferente do informado.");
-          emitMetricsEvent("quality_review", attempts);
-          await this.metricsWriter.write(this.buildGenerationMetrics({
-            runId,
-            startTime,
-            providerName: this.imageProvider.name,
-            model: IMAGE_GENERATION_RESPONSES_MODEL,
-            attempts,
-            effectiveProductName,
-            storeName: body.storeName,
-            storeSegment: body.storeSegment,
-            reviewPassed: false,
-            reviewFailureType: "generated_product_mismatch",
-            technicalError: lastReviewIssues.join("; "),
-            conflictsDetected: metricsConflictsDetected,
-            hadOverride: metricsHadOverride,
-          }));
-          return {
-            success: false,
-            code: "generated_product_mismatch",
-            message: "A imagem gerada exibiu um nome de produto diferente do informado.",
-            details: JSON.stringify({ issues: lastReviewIssues }),
-          };
-        }
+        const diagBase: Omit<ReviewDiagnosticEntry, 'reviewAction'> = {
+          timestamp: new Date().toISOString(),
+          runId,
+          attempt: attempts,
+          reviewPassed: reviewResult.passed,
+          severity: criticalCount > 0 ? 'critical' : minorCount > 0 ? 'minor' : 'none',
+          failureType: reviewResult.failureType ?? null,
+          issues: reviewResult.issues,
+          correctionInstructions: null,
+          elapsedMs: Date.now() - startTime,
+          provider: this.imageProvider.name,
+          model: IMAGE_GENERATION_RESPONSES_MODEL,
+          hadLogoAsset: !!body.storeLogoUrl,
+          hadBrandProfile: !!body.brandProfile,
+          hadProductImage: !!body.productImageDataUrl,
+        };
 
-        const criticalIssuesCount = reviewResult.issues.filter((i) => i.severity === "critical").length;
-
-        if (criticalIssuesCount > 0) {
-          const totalIssues = reviewResult.issues.length;
-          const criticalCount = reviewResult.issues.filter(i => i.severity === "critical").length;
-          const minorCount = reviewResult.issues.filter(i => i.severity === "minor").length;
-          emit("quality_review", "running", undefined,
-            `issues: ${totalIssues} (${criticalCount} críticas, ${minorCount} menores), failureType: ${reviewResult.failureType ?? "null"}`);
-
-          if (state === GenerationState.INITIAL) {
-            console.warn(`[ImageGenerationService] review failed → CORRECT (issues=${criticalIssuesCount} critical), attempt ${attempts + 1}/${maxAttempts}`);
-            state = GenerationState.CORRECT;
-          } else if (state === GenerationState.CORRECT) {
-            console.warn(`[ImageGenerationService] correction failed → REGENERATE, attempt ${attempts + 1}/${maxAttempts}`);
-            state = GenerationState.REGENERATE;
-          } else {
-            console.warn(`[ImageGenerationService] regeneration failed → ERROR, attempt ${attempts + 1}/${maxAttempts}`);
-            state = GenerationState.ERROR;
-          }
-        } else {
-          const totalIssues = reviewResult.issues.length;
-          const criticalCount = reviewResult.issues.filter(i => i.severity === "critical").length;
-          const minorCount = reviewResult.issues.filter(i => i.severity === "minor").length;
+        if (reviewResult.passed) {
           emit("quality_review", "complete", undefined,
             `issues: ${totalIssues} (${criticalCount} críticas, ${minorCount} menores), failureType: ${reviewResult.failureType ?? "null"}`);
           emitMetricsEvent("quality_review", attempts);
           state = GenerationState.COMPLETE;
+          logReviewDiagnostic({ ...diagBase, reviewAction: 'complete' });
+        } else {
+          lastReviewIssues = reviewResult.issues.map((i) => i.description);
+
+          if (reviewResult.failureType === "generated_product_mismatch") {
+            emitFailed("quality_review", "A imagem gerada exibiu um nome de produto diferente do informado.");
+            emitMetricsEvent("quality_review", attempts);
+            await this.metricsWriter.write(this.buildGenerationMetrics({
+              runId,
+              startTime,
+              providerName: this.imageProvider.name,
+              model: IMAGE_GENERATION_RESPONSES_MODEL,
+              attempts,
+              effectiveProductName,
+              storeName: body.storeName,
+              storeSegment: body.storeSegment,
+              reviewPassed: false,
+              reviewFailureType: "generated_product_mismatch",
+              technicalError: lastReviewIssues.join("; "),
+              conflictsDetected: metricsConflictsDetected,
+              hadOverride: metricsHadOverride,
+            }));
+            logReviewDiagnostic({ ...diagBase, reviewAction: 'error' });
+            return {
+              success: false,
+              code: "generated_product_mismatch",
+              message: "A imagem gerada exibiu um nome de produto diferente do informado.",
+              details: JSON.stringify({ issues: lastReviewIssues }),
+            };
+          }
+
+          const criticalIssuesCount = criticalCount;
+
+          if (criticalIssuesCount > 0) {
+            emit("quality_review", "running", undefined,
+              `issues: ${totalIssues} (${criticalCount} críticas, ${minorCount} menores), failureType: ${reviewResult.failureType ?? "null"}`);
+
+            if (state === GenerationState.INITIAL) {
+              logReviewDiagnostic({ ...diagBase, reviewAction: 'correct' });
+              state = GenerationState.CORRECT;
+            } else if (state === GenerationState.CORRECT) {
+              logReviewDiagnostic({ ...diagBase, reviewAction: 'regenerate' });
+              state = GenerationState.REGENERATE;
+            } else {
+              logReviewDiagnostic({ ...diagBase, reviewAction: 'error' });
+              state = GenerationState.ERROR;
+            }
+          } else {
+            emit("quality_review", "complete", undefined,
+              `issues: ${totalIssues} (${criticalCount} críticas, ${minorCount} menores), failureType: ${reviewResult.failureType ?? "null"}`);
+            emitMetricsEvent("quality_review", attempts);
+            state = GenerationState.COMPLETE;
+            logReviewDiagnostic({ ...diagBase, reviewAction: 'skip_minor' });
+          }
         }
       }
 
@@ -809,11 +846,23 @@ export class ImageGenerationService {
       return "provider_error";
     };
 
+    const promptCheck = validatePrompt(promptText);
+    if (!promptCheck.valid) {
+      console.error(`[ImageGenerationService] prompt_placeholder_error — variáveis não interpoladas: ${promptCheck.unresolvedVariables.join(', ')}`);
+      return {
+        success: false,
+        code: "invalid_prompt",
+        message: "O prompt de geração contém placeholders não resolvidos. A campanha não pode ser gerada.",
+        details: JSON.stringify({ unresolvedVariables: promptCheck.unresolvedVariables }),
+      };
+    }
+
     for (let attempt = 0; attempt <= 3; attempt++) {
       try {
         const output = await this.imageProvider.generateImage({
           prompt: promptText,
           productImageDataUrl: body.productImageDataUrl,
+          logoImageUrl: body.storeLogoUrl,
           size: IMAGE_GENERATION_SIZE,
           signal,
           attempt,

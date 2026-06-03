@@ -558,8 +558,10 @@ export function useCampaignForm(storeIdentity?: StoreIdentitySnapshot): UseCampa
         badgeText: frozenFields.badge,
         storeName: storeIdentity.storeName,
         storeSegment: storeIdentity.storeSegment,
+        storeTone: storeIdentity.toneOfVoice ?? undefined,
         brandColor: storeIdentity.brandColor ?? "#22C55E",
         storeLogoUrl: storeIdentity.logoUrl ?? undefined,
+        brandProfile: storeIdentity.brandProfile ?? undefined,
         productImageDataUrl: imageDataUrl,
       };
 

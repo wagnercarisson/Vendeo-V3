@@ -9,10 +9,12 @@ interface StorePreviewProps {
   name: string;
   segment: string;
   brandColor: string;
+  accentColor?: string;
+  brandColorsChosen?: string[];
   logoUrl?: string | null;
 }
 
-export function StorePreview({ name, segment, brandColor, logoUrl }: StorePreviewProps) {
+export function StorePreview({ name, segment, brandColor, accentColor, brandColorsChosen, logoUrl }: StorePreviewProps) {
   const hasData = name || segment;
 
   if (!hasData) {
@@ -25,7 +27,8 @@ export function StorePreview({ name, segment, brandColor, logoUrl }: StorePrevie
     );
   }
 
-  const resolvedColor = brandColor || SEGMENT_COLOR_FALLBACK[segment] || PREVIEW_DEFAULT_COLOR;
+  const resolvedColor = brandColorsChosen?.[0] || brandColor || SEGMENT_COLOR_FALLBACK[segment] || PREVIEW_DEFAULT_COLOR;
+  const resolvedAccent = brandColorsChosen?.[1] || accentColor || resolvedColor;
 
   return (
     <div className="bg-bg-surface border border-border rounded-xl p-6">
@@ -67,10 +70,10 @@ export function StorePreview({ name, segment, brandColor, logoUrl }: StorePrevie
         </div>
       </div>
 
-      <div className="mt-4 pt-4 border-t border-border">
+      <div className="mt-4 pt-4 border-t border-border space-y-3">
         <div className="flex items-center gap-3">
           <span className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider">
-            Cor da Marca
+            Cor Principal
           </span>
           <div className="flex items-center gap-2">
             <div
@@ -82,6 +85,22 @@ export function StorePreview({ name, segment, brandColor, logoUrl }: StorePrevie
             </span>
           </div>
         </div>
+        {resolvedAccent !== resolvedColor && (
+          <div className="flex items-center gap-3">
+            <span className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider">
+              Destaque
+            </span>
+            <div className="flex items-center gap-2">
+              <div
+                className="w-6 h-6 rounded-md border border-border-light"
+                style={{ backgroundColor: resolvedAccent }}
+              />
+              <span className="text-text-secondary text-xs font-mono">
+                {resolvedAccent}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

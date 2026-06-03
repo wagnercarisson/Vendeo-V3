@@ -9,18 +9,25 @@ import { resolveStoreIdentity } from "@/lib/actions/store";
 import type { Store } from "@/lib/store";
 
 interface StoreVisualSignatureSectionProps {
-  store: Pick<Store, "id" | "name" | "segment" | "brand_color" | "logo_url">;
+  store: Pick<Store, "id" | "name" | "segment" | "brand_color" | "logo_url" | "subsegment" | "tone_of_voice" | "positioning" | "short_description" | "slogan">;
 }
 
 export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSectionProps) {
   const [activeSignature, setActiveSignature] = useState<VisualSignatureRecord | null>(null);
+  const [hasLogo, setHasLogo] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
 
-  const loadActiveSignature = useCallback(async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const identity = await resolveStoreIdentity(store);
+      if (identity.logoUrl) {
+        setHasLogo(true);
+        setActiveSignature(null);
+        return;
+      }
+      setHasLogo(false);
       if (identity.visualSignatureUrl) {
         const signatures = await listSignatures(store.id);
         const active = signatures.find((s) => s.status === "active");
@@ -29,6 +36,7 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
         setActiveSignature(null);
       }
     } catch {
+      setHasLogo(false);
       setActiveSignature(null);
     } finally {
       setLoading(false);
@@ -36,13 +44,15 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
   }, [store]);
 
   useEffect(() => {
-    loadActiveSignature();
-  }, [loadActiveSignature]);
+    load();
+  }, [load]);
 
   const handleModalClose = useCallback(() => {
     setShowModal(false);
-    loadActiveSignature();
-  }, [loadActiveSignature]);
+    load();
+  }, [load]);
+
+  if (hasLogo) return null;
 
   return (
     <div className="bg-bg-surface border border-border rounded-xl p-6">

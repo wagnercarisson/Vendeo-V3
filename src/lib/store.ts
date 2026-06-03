@@ -6,6 +6,11 @@ export interface Store {
   state: string | null;
   brand_color: string | null;
   logo_url: string | null;
+  subsegment: string | null;
+  tone_of_voice: string | null;
+  positioning: string | null;
+  short_description: string | null;
+  slogan: string | null;
   created_at: string;
   updated_at: string;
 }

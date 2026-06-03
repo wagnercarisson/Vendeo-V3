@@ -61,19 +61,24 @@ export class OpenAIImageProvider implements ImageProvider {
     }
 
     try {
+      const content: (
+        | { type: "input_text"; text: string }
+        | { type: "input_image"; image_url: string; detail: "auto" | "low" | "high" | "original" }
+      )[] = [
+        { type: "input_text", text: input.prompt },
+      ];
+
+      if (input.productImageDataUrl) {
+        content.push({ type: "input_image" as const, image_url: input.productImageDataUrl, detail: "auto" as const });
+      }
+
+      if (input.logoImageUrl) {
+        content.push({ type: "input_image" as const, image_url: input.logoImageUrl, detail: "low" as const });
+      }
+
       const response = await openai.responses.create({
         model: this.responsesModel,
-        input: [
-          {
-            role: "user",
-            content: [
-              { type: "input_text", text: input.prompt },
-              ...(input.productImageDataUrl
-                ? [{ type: "input_image" as const, image_url: input.productImageDataUrl, detail: "auto" as const }]
-                : []),
-            ],
-          },
-        ],
+        input: [{ role: "user", content }],
         tools: [
           {
             type: "image_generation" as const,

@@ -21,6 +21,11 @@ export interface StoreIdentitySnapshot {
   visualSignatureType: VisualSignatureType | null;
   storeInitials: string;
   brandProfile: BrandProfileSnapshot | null;
+  toneOfVoice: string | null;
+  subsegment: string | null;
+  positioning: string | null;
+  shortDescription: string | null;
+  slogan: string | null;
 }
 
 export interface PreviewPayload {
