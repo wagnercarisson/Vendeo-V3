@@ -1,4 +1,6 @@
-## ADDED Requirements
+> **Purpose**: Defines how the system generates technical variants of uploaded logos (normalized, on_light, on_dark, square_safe, horizontal_safe) for safe usage across different campaign rendering contexts. Variants are generated via sharp at upload time and persisted as independent records in store_brand_assets.
+
+## Requirements
 
 ### Requirement: Technical variant generation on upload
 
@@ -40,28 +42,27 @@ If a variant generation fails, the system SHALL record its status as `failed` wi
 
 ### Requirement: Technical variant presets for campaign usage
 
-The system SHALL select the appropriate technical variant based on the campaign rendering context:
+The system SHALL select the appropriate technical variant based on availability, preferring the most faithful representation of the original logo:
 
-- Normal campaign render (dark theme): use `on_dark` variant as the safe logo for the store identity zone
-- Light-background contexts: use `on_light` variant
-- Store identity preview in UI: use `normalized` variant
-- Square/cropped contexts (badges, thumbnails): use `square_safe` variant
-- Horizontal/wide layout contexts: use `horizontal_safe` variant
+1. `normalized` — preferred variant: preserves logo with transparency, resized to fit 500x500 canvas
+2. `original` — fallback when normalized is unavailable
+3. `on_dark` — secondary fallback, only when original also unavailable
 
-When the preferred variant is not available (status `failed` or missing), the system SHALL fall back in this order: `original` → `normalized` → fail gracefully (hide logo, use store name only).
+When none of the logo variants are available, the system SHALL fall through to visual signature or store name text.
 
-#### Scenario: Campaign render uses on_dark variant
+The variant resolution SHALL be performed at the `StoreIdentitySnapshot` level (`resolveStoreIdentity`), not per-renderer, because the campaign renderer receives the logo as an overlay element and `normalized` (transparent background) is the most versatile variant for any canvas composition.
 
-- **WHEN** a campaign preview is rendered on dark theme background
-- **THEN** the system SHALL select the `on_dark` variant for the store identity zone
-- **AND** if `on_dark` is available and active, it SHALL be used
+#### Scenario: Variant resolved in normalized > original > on_dark order
 
-#### Scenario: Fallback when variant unavailable
+- **WHEN** a campaign preview is rendered and a logo exists
+- **THEN** the system SHALL select the `normalized` variant as the primary logo
+- **AND** if `normalized` is unavailable, SHALL use `original`
+- **AND** if `original` is also unavailable, SHALL use `on_dark`
 
-- **WHEN** the preferred variant for a context has status `failed`
-- **THEN** the system SHALL attempt to use `original`
-- **AND** if `original` is also unavailable, SHALL attempt `normalized`
-- **AND** if none are available, SHALL render the store name as text fallback
+#### Scenario: Fallback when no logo variant available
+
+- **WHEN** no logo variants are active or available
+- **THEN** the system SHALL render the visual signature or store name as text fallback
 
 ### Requirement: Variants archived with original on replacement
 

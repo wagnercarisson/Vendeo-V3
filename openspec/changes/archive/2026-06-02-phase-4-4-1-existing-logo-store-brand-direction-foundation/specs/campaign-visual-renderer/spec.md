@@ -26,23 +26,30 @@ The brand profile colors SHALL affect the same visual elements as `brand_color` 
 
 ### Requirement: Logo variant selection for render
 
-The `CampaignRenderer` SHALL resolve the logo variant appropriate for the rendering context. For dark theme rendering (default Vendeo theme), the renderer SHALL:
+The system SHALL resolve the logo variant at the `StoreIdentitySnapshot` level via `resolveStoreIdentity`, preferring the most faithful representation of the original logo. The resolution order SHALL be:
 
-1. Look for active `on_dark` variant in store_brand_assets
-2. If unavailable, fall back to `original` variant
-3. If unavailable, fall back to `normalized` variant
+1. `normalized` — transparent canvas, most faithful to original, preferred for all render contexts
+2. `original` — fallback when normalized unavailable
+3. `on_dark` — secondary fallback when original unavailable
 4. If no logo asset exists, fall back to visual signature or store name text
 
-The resolved logo URL SHALL be passed to the renderer component as the `storeLogoUrl` prop.
+The resolved logo URL SHALL be passed to the renderer as the `logoVariantUrl` within the brand profile snapshot.
 
-#### Scenario: on_dark variant used for dark theme
+The `normalized` variant is preferred over `on_dark` because:
+- It preserves the logo with transparency, suitable for any canvas background
+- `on_dark` adds a dark background box that conflicts with the renderer's own dark theme background
+- The Campaign Director receives the real logo as an image reference and can position it intelligently
 
-- **WHEN** the campaign is rendered on dark theme
-- **AND** an active on_dark variant exists in store_brand_assets
-- **THEN** the renderer SHALL use the on_dark variant URL as storeLogoUrl
+#### Scenario: normalized variant used as primary
 
-#### Scenario: Fallback to original when variant unavailable
+- **WHEN** the campaign identity is resolved for a store with active brand assets
+- **AND** an active normalized variant exists
+- **THEN** the system SHALL use the normalized variant URL as the primary logo
 
-- **WHEN** the campaign is rendered on dark theme
-- **AND** on_dark variant is not available but original is
-- **THEN** the renderer SHALL use the original variant URL as storeLogoUrl
+#### Scenario: Fallback chain works correctly
+
+- **WHEN** the campaign identity is resolved
+- **AND** normalized variant is not available
+- **THEN** the system SHALL fall back to original
+- **AND** if original is also unavailable, SHALL use on_dark
+- **AND** if no logo exists, SHALL fall through to visual signature or store name text

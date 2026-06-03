@@ -72,20 +72,23 @@ CREATE UNIQUE INDEX ON store_visual_signatures (store_id) WHERE status = 'active
 
 ### Requirement: Detect absence of logo on store save
 
-After a store is saved (created or updated), if the system detects `logo_url IS NULL` and there is no active visual signature for that store, the system SHALL offer the lojista the option to create a visual signature.
+After a store is saved (created or updated), the system SHALL check for active store_brand_assets before offering visual signature creation. If `store_brand_assets` has at least one active record with asset_type `logo`, the system SHALL NOT offer visual signature creation.
+
+If there are no active store_brand_assets and no active visual signature, the system SHALL offer the option to create a visual signature.
 
 This detection SHALL NOT block the save operation. The save completes normally.
 
-#### Scenario: Logo absent triggers offer
+#### Scenario: Logo in brand assets skips offer
 
-- **WHEN** a store is saved with `logo_url = NULL`
-- **AND** no active visual signature exists for that store
-- **THEN** the system SHALL present an option to create a visual signature (e.g., modal)
-
-#### Scenario: Logo present skips offer
-
-- **WHEN** a store is saved with a non-null `logo_url`
+- **WHEN** a store is saved with active store_brand_assets records
 - **THEN** the system SHALL NOT offer visual signature creation
+- **AND** no modal SHALL appear
+
+#### Scenario: No brand assets and no signature triggers offer
+
+- **WHEN** a store is saved without active store_brand_assets
+- **AND** no active visual signature exists
+- **THEN** the system SHALL present an option to create a visual signature
 
 ### Requirement: Generate visual signature via AI image generation (Abordagem B — main approach)
 
@@ -243,3 +246,20 @@ The visual signature SHALL be passed as a fixed asset — it SHALL NOT be regene
 - **WHEN** a store has both `logo_url` and an active visual signature
 - **THEN** the renderer SHALL use `logo_url` for the store identity zone
 - **AND** the visual signature SHALL be ignored
+
+### Requirement: Resolution priority with store_brand_assets
+
+The visual signature resolution logic SHALL be updated to consider store_brand_assets as the primary source. When a store has active store_brand_assets with variant_type `original`, the system SHALL use that asset and SHALL NOT generate, suggest, or reference visual signature creation in this phase.
+
+This phase does NOT generate visual signatures — it only adjusts the priority chain to recognize logo assets as the highest priority.
+
+#### Scenario: Logo assets suppress visual signature
+
+- **WHEN** a store has active store_brand_assets
+- **THEN** the resolution chain SHALL return the logo asset
+- **AND** no visual signature operation SHALL be triggered
+
+#### Scenario: No logo assets fall through to existing logic
+
+- **WHEN** a store has no active store_brand_assets
+- **THEN** the existing resolution chain (visual signature → name text) SHALL apply unchanged

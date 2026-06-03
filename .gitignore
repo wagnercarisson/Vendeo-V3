@@ -9,6 +9,8 @@ venv/
 out/
 *.tsbuildinfo
 next-env.d.ts
+logs/
+
 
 # Generation metrics (Phase 4.3.3)
 metrics/*.jsonl
