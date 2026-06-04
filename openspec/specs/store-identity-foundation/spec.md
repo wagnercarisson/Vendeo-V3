@@ -22,6 +22,8 @@ The `stores` table SHALL contain the following columns (new columns marked with 
 | → `positioning` | `text` | No | `null` | Optional, market positioning description |
 | → `short_description` | `text` | No | `null` | Optional, brief store description |
 | → `slogan` | `text` | No | `null` | Optional, store slogan |
+| → `logo_status` | `text` | No | `null` | `uploaded`, `generated`, `explicit_none`, `failed`, `exhausted`, or null |
+| → `visual_signature_attempts` | `integer` | Yes | `0` | Counts visual signature versions generated (1-3). Reset to 0 on approval. |
 | `created_at` | `timestamptz` | Yes | `now()` | Auto-set on create |
 | `updated_at` | `timestamptz` | Yes | `now()` | Auto-updated on change |
 
@@ -70,11 +72,14 @@ The segment value SHALL be stored as-is (kebab-case slug). A constraint or enum 
 
 ### Requirement: Fallback for missing logo
 
-When `logo_url` is `null` or empty, the store identity resolver SHALL check for an active visual signature before falling back to the store name text. The resolution order SHALL be:
+When `logo_url` is `null` or empty, the store identity resolver SHALL check for store_brand_assets first, then active visual signature, then fall back to the store name text. The `logo_status` field SHALL inform UI behavior but SHALL NOT block the resolution chain.
 
-1. `logo_url` (if provided)
-2. Active visual signature `asset_url` (if exists)
-3. Store `name` as textual fallback
+The resolution order SHALL be:
+
+1. `store_brand_assets` active (logo) → logoUrl, brandProfile (source=logo_analysis)
+2. Active visual signature `asset_url` + brandProfile (source=without_logo) → visualSignatureUrl, brandProfile
+3. `store_brand_profiles` active (source=without_logo) without active signature → store name text, brandProfile
+4. Store `name` as textual fallback
 
 #### Scenario: No logo URL checks visual signature first
 
@@ -89,6 +94,15 @@ When `logo_url` is `null` or empty, the store identity resolver SHALL check for 
 - **AND** no active visual signature exists
 - **THEN** the resolver SHALL return the store `name` as the fallback value
 - **AND** no error SHALL be raised
+
+#### Scenario: No logo with without-logo profile returns name
+
+- **WHEN** the store identity is resolved for a store with `logo_url = null`
+- **AND** no active store_brand_assets
+- **AND** no active visual signature
+- **AND** a brand profile exists with `source = 'without_logo'`
+- **THEN** the resolver SHALL return the store `name` as the fallback value
+- **AND** the brand profile SHALL still be included in the result
 
 ### Requirement: Logo takes priority over visual signature
 
@@ -225,6 +239,13 @@ The migration file SHALL follow the naming convention `YYYYMMDDHHmmss_descriptio
 - **WHEN** the migration is inspected
 - **THEN** the `stores` table SHALL have columns `subsegment`, `tone_of_voice`, `positioning`, `short_description`, and `slogan` added via `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`
 
+#### Scenario: Logo status columns exist after migration
+
+- **WHEN** the migration is inspected
+- **THEN** the `stores` table SHALL have columns `logo_status` and `visual_signature_attempts`
+- **AND** `logo_status` SHALL be nullable TEXT
+- **AND** `visual_signature_attempts` SHALL be INTEGER NOT NULL DEFAULT 0
+
 #### Scenario: Existing data preserved
 
 - **WHEN** the migration runs on a database with existing stores
@@ -251,9 +272,12 @@ The migration SHALL be a single `.sql` file in `supabase/migrations/` with the c
 The system SHALL have a `store_brand_profiles` table in the public Supabase schema created via a versioned migration file. See `store-brand-profile` spec for full column details.
 
 The migration SHALL be a single `.sql` file in `supabase/migrations/` with the complete table definition including:
-- CHECK constraints for `status`
+- CHECK constraint for `status`
+- CHECK constraint for `source IN ('logo_analysis', 'without_logo')`
 - Partial unique index: `(store_id)` WHERE status = 'synced'
 - Trigger for auto-updating `updated_at`
+
+Additionally, a subsequent migration SHALL alter the CHECK constraint to include `'without_logo'` as a valid source value, and SHALL add the columns `visual_signature_id`, `inferred_primary_color`, `inferred_accent_color`, and `identity_art_director_output`. See `store-brand-profile` spec for full column details.
 
 #### Scenario: Migration exists with correct schema
 
@@ -270,8 +294,9 @@ Active store_brand_assets SHALL be pre-resolved at the `StoreIdentitySnapshot`/c
 The resolution order SHALL be:
 
 1. Pre-resolved `logo_variant_url` from store_brand_assets (if exists) — highest priority
-2. Active visual signature asset_url (if exists and no logo)
-3. Store name as textual fallback
+2. Active visual signature asset_url + brandProfile (source=without_logo) — visual signature + brand profile
+3. `store_brand_profiles` active (source=without_logo) without active signature — store name text, brandProfile
+4. Store name as textual fallback
 
 The `logo_url` column in stores table is deprecated in favor of store_brand_assets but maintained for backward compatibility during the migration period.
 
@@ -291,8 +316,15 @@ The `logo_url` column in stores table is deprecated in favor of store_brand_asse
 
 The `PATCH /api/store/[id]` endpoint SHALL accept the new fields: `subsegment`, `tone_of_voice`, `positioning`, `short_description`, `slogan`. All new fields are optional.
 
+The endpoint SHALL also accept `logo_status` and `visual_signature_attempts` for internal updates (typically set by the visual signature approval flow, not by the lojista directly).
+
 #### Scenario: New fields accepted in PATCH
 
 - **WHEN** a PATCH request is sent to /api/store/{store_id} with `{ "subsegment": "moda feminina", "tone_of_voice": "sofisticado" }`
 - **THEN** the store record SHALL be updated with the new values
 - **AND** omitted new fields SHALL retain their current values
+
+#### Scenario: Logo status accepted in PATCH
+
+- **WHEN** a PATCH request is sent to /api/store/{store_id} with `{ "logo_status": "generated", "visual_signature_attempts": 0 }`
+- **THEN** the store record SHALL be updated with the new logo status and attempts

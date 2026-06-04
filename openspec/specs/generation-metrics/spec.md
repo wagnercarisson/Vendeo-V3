@@ -55,6 +55,8 @@ Each metrics record SHALL contain the following fields when available:
 | `rejectionReason` | `string` | when available | user-facing error message on failure |
 | `technicalError` | `string` | when available | sanitized error code on technical failure |
 | `imageIdentifier` | `string` | when available | hash or reference to generated image; absent on failure |
+| `promptVersion` | `string` | when available | SHA256 hex 12-char prefix of prompt/configuration file used for generation; absent when not applicable |
+| `generationMode` | `string` | when available | `"image_direct" \| "image_retry"` — indicates which cascade attempt produced the image; absent on failure |
 | `sanitizedInputs` | `object` | always | `{ productName, storeName, storeSegment }` |
 
 #### Scenario: Metrics recorded on successful generation
@@ -98,3 +100,34 @@ Manual evaluation metrics SHALL NOT be collected during normal generation. They 
 
 - **WHEN** a generation runs outside benchmark mode
 - **THEN** the metrics record SHALL NOT include manual evaluation fields
+
+### Requirement: Prompt version tracked in metrics
+
+Every metrics record for a generation that uses a prompt/configuration file SHALL record which version of that file was used at the time of generation, so that prompt changes can be correlated with generation outcomes.
+
+#### Scenario: Prompt version recorded on generation
+
+- **WHEN** a image generation uses a prompt/configuration file (e.g., art director prompt)
+- **THEN** the metrics record SHALL include a `promptVersion` field
+- **AND** the value SHALL be the first 12 characters of the SHA256 hex digest of that file's content at module init
+
+#### Scenario: Prompt version absent when no prompt file
+
+- **WHEN** a generation does not use a prompt/configuration file
+- **THEN** `promptVersion` SHALL be absent from the metrics record
+
+### Requirement: Cascade attempt mode tracked in metrics
+
+Every metrics record SHALL indicate which cascade attempt produced the image, enabling analysis of retry effectiveness.
+
+#### Scenario: Generation mode recorded on success
+
+- **WHEN** a generation completes with `success: true` on the first attempt
+- **THEN** the metrics record SHALL include `generationMode: "image_direct"`
+- **WHEN** a generation completes with `success: true` on the second (simplified) attempt
+- **THEN** the metrics record SHALL include `generationMode: "image_retry"`
+
+#### Scenario: Generation mode absent on failure
+
+- **WHEN** a generation completes with `success: false`
+- **THEN** the metrics record SHALL NOT include `generationMode`
