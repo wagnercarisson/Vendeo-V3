@@ -26,7 +26,85 @@ export class VisualSignatureValidator {
       return { valid: false, reason: "Image too small (less than 1KB)" };
     }
 
+    const semantic = await this.validateSemantic(params.imageBase64, params.storeName);
+    if (!semantic.valid) {
+      return semantic;
+    }
+
     return { valid: true };
+  }
+
+  private async validateSemantic(
+    imageBase64: string,
+    storeName: string
+  ): Promise<{ valid: boolean; reason?: string }> {
+    try {
+      const { default: OpenAI } = await import("openai");
+      const openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+      });
+
+      const model = process.env.IMAGE_VALIDATION_MODEL || "gpt-4o-mini";
+      const dataUrl = `data:image/png;base64,${imageBase64}`;
+
+      const response = await openai.responses.create({
+        model,
+        input: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: `Você é um validador de assinaturas visuais profissionais para lojas.
+
+Analise a imagem enviada e responda APENAS com um JSON válido no formato:
+{"valid": true/false, "reason": "motivo se invalido"}
+
+Critérios de rejeição (qualquer um torna inválido):
+1. A imagem é apenas um círculo com iniciais/monograma (design genérico)
+2. A imagem NÃO contém o nome da loja "${storeName}" de forma legível
+3. A imagem parece ser um gradiente vazio, cor sólida, ou sem conteúdo relevante
+4. A imagem é um placeholder genérico sem personalização
+5. A imagem contém apenas texto promocional, preço, oferta ou CTA
+
+A imagem é VÁLIDA se:
+- É uma assinatura visual profissional com o nome "${storeName}" em destaque
+- Tem design personalizado (não genérico)
+- Pode incluir ícone, símbolo ou elemento gráfico junto com o nome
+- Está pronta para ser usada como identidade visual da loja`,
+              },
+              {
+                type: "input_image",
+                image_url: dataUrl,
+                detail: "low",
+              },
+            ],
+          },
+        ],
+        temperature: 0.1,
+        max_output_tokens: 150,
+      });
+
+      const outputText = response.output_text?.trim() || "";
+      const jsonMatch = outputText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        console.warn("[validator] LLM response did not contain valid JSON, falling back to pass", { outputText });
+        return { valid: true };
+      }
+
+      const result = JSON.parse(jsonMatch[0]);
+      if (result.valid === false) {
+        const reason = result.reason || "Semantic validation failed (LLM)";
+        console.warn("[validator] LLM validation rejected", { reason, storeName });
+        return { valid: false, reason: `Semantic rejection: ${reason}` };
+      }
+
+      console.log("[validator] LLM semantic validation passed", { storeName });
+      return { valid: true };
+    } catch (err) {
+      console.warn("[validator] LLM validation error, falling back to pass", { error: err instanceof Error ? err.message : String(err) });
+      return { valid: true };
+    }
   }
 }
 
