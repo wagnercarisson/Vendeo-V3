@@ -18,5 +18,9 @@ metrics/*.jsonl
 # Benchmark fixture images (Phase 4.3.3)
 scripts/benchmark-fixtures/
 
+#supabase temporary files
+supabase/supabase/.temp/
+supabase/.temp/
+
 # Scenarios are deterministic; only placeholder images go in this dir
 # Images require rights verification before committing

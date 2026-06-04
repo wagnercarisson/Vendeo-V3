@@ -26,22 +26,46 @@ export async function uploadToStorage(
   const fileName = params.fileName ?? (await generateUUID());
   const storagePath = `${params.storeId}/${fileName}.${ext}`;
 
-  const { error: uploadError } = await supabase.storage
-    .from("visual-signatures")
-    .upload(storagePath, params.buffer, {
-      contentType: params.mimeType,
-      upsert: true,
-    });
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY_MS = 1500;
+  let lastError: any = null;
 
-  if (uploadError) {
-    throw new Error(`Failed to upload to Storage: ${uploadError.message}`);
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      console.log(`[persistence] uploadToStorage attempt ${attempt}/${MAX_RETRIES} for ${storagePath}...`);
+      const { error: uploadError } = await supabase.storage
+        .from("visual-signatures")
+        .upload(storagePath, params.buffer, {
+          contentType: params.mimeType,
+          upsert: true,
+        });
+
+      if (uploadError) {
+        lastError = uploadError;
+        console.warn(`[persistence] uploadToStorage attempt ${attempt} failed:`, uploadError.message);
+        if (attempt < MAX_RETRIES) {
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * attempt));
+          continue;
+        }
+      } else {
+        console.log(`[persistence] uploadToStorage success on attempt ${attempt}`);
+        const { data: publicUrlData } = supabase.storage
+          .from("visual-signatures")
+          .getPublicUrl(storagePath);
+
+        return { storagePath, assetUrl: publicUrlData.publicUrl };
+      }
+    } catch (err) {
+      lastError = err;
+      console.warn(`[persistence] uploadToStorage attempt ${attempt} unexpected error:`, err);
+      if (attempt < MAX_RETRIES) {
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * attempt));
+        continue;
+      }
+    }
   }
 
-  const { data: publicUrlData } = supabase.storage
-    .from("visual-signatures")
-    .getPublicUrl(storagePath);
-
-  return { storagePath, assetUrl: publicUrlData.publicUrl };
+  throw new Error(`Failed to upload to Storage after ${MAX_RETRIES} retries: ${lastError?.message || String(lastError)}`);
 }
 
 export async function persistSignature(

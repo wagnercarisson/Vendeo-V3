@@ -219,6 +219,12 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
 
   let createdProfile = null;
   if (store) {
+    // Update logo_status to 'uploaded'
+    await supabase
+      .from('stores')
+      .update({ logo_status: 'uploaded', updated_at: new Date().toISOString() })
+      .eq('id', storeId);
+
     try {
       const director = new BrandDirectorService();
       const analysis = await director.analyze({
@@ -326,6 +332,11 @@ async function handleDeleteLogo(_request: NextRequest, storeId: string) {
     .update({ status: 'archived', updated_at: new Date().toISOString() })
     .eq('store_id', storeId)
     .eq('status', 'synced');
+
+  await supabase
+    .from('stores')
+    .update({ logo_status: null, updated_at: new Date().toISOString() })
+    .eq('id', storeId);
 
   return NextResponse.json({ message: 'Logo removido com sucesso' }, { status: 200 });
 }

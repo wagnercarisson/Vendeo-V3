@@ -89,8 +89,51 @@ export async function resolveStoreIdentity(
     };
   }
 
+  let withoutLogoProfile: BrandProfileRecord | null = null;
+
+  try {
+    const { data } = await supabaseAdmin
+      .from('store_brand_profiles')
+      .select('*')
+      .eq('store_id', store.id)
+      .eq('source', 'without_logo')
+      .eq('status', 'synced')
+      .maybeSingle();
+    withoutLogoProfile = data;
+  } catch {
+    withoutLogoProfile = null;
+  }
+
+  if (withoutLogoProfile) {
+    if (withoutLogoProfile.visual_style || withoutLogoProfile.visual_tone || withoutLogoProfile.brand_personality) {
+      brandProfile = {
+        brand_colors_chosen: withoutLogoProfile.brand_colors_chosen ?? [],
+        safe_color_tokens: withoutLogoProfile.safe_color_tokens ?? {},
+        visual_style: withoutLogoProfile.visual_style,
+        visual_tone: withoutLogoProfile.visual_tone,
+        brand_personality: withoutLogoProfile.brand_personality,
+        campaign_guidelines: withoutLogoProfile.campaign_guidelines,
+        campaign_brief: withoutLogoProfile.campaign_brief,
+        logoVariantUrl: null,
+      };
+
+      if (withoutLogoProfile.brand_colors_chosen?.length > 0) {
+        const primaryColor = withoutLogoProfile.brand_colors_chosen[0];
+        if (/^#[0-9A-Fa-f]{6}$/.test(primaryColor)) {
+          brandColor = primaryColor;
+        }
+      }
+    }
+  }
+
   const activeSignature = await getActiveVisualSignature(store.id);
   if (activeSignature) {
+    // Rule: logo_status = generated → usar assinatura visual ativa
+    // Prefill logoVariantUrl so the campaign generate-image endpoint
+    // receives the correct asset URL for rendering.
+    if (brandProfile && activeSignature.asset_url) {
+      brandProfile = { ...brandProfile, logoVariantUrl: activeSignature.asset_url };
+    }
     return {
       storeName: store.name,
       storeSegment: store.segment,
@@ -98,6 +141,20 @@ export async function resolveStoreIdentity(
       logoUrl: null,
       visualSignatureUrl: activeSignature.asset_url,
       visualSignatureType: activeSignature.type as VisualSignatureType,
+      storeInitials,
+      brandProfile,
+      ...directionFields,
+    };
+  }
+
+  if (brandProfile) {
+    return {
+      storeName: store.name,
+      storeSegment: store.segment,
+      brandColor,
+      logoUrl: null,
+      visualSignatureUrl: null,
+      visualSignatureType: null,
       storeInitials,
       brandProfile,
       ...directionFields,

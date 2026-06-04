@@ -28,12 +28,12 @@ export const GenerateImageRequestSchema = z.object({
   brandProfile: z.object({
     brand_colors_chosen: z.array(z.string()).optional(),
     safe_color_tokens: z.record(z.string()).optional(),
-    visual_style: z.string().optional(),
-    visual_tone: z.string().optional(),
-    brand_personality: z.string().optional(),
-    campaign_guidelines: z.string().optional(),
-    campaign_brief: z.string().optional(),
-    logoVariantUrl: z.string().optional(),
+    visual_style: z.string().nullable().optional(),
+    visual_tone: z.string().nullable().optional(),
+    brand_personality: z.string().nullable().optional(),
+    campaign_guidelines: z.string().nullable().optional(),
+    campaign_brief: z.string().nullable().optional(),
+    logoVariantUrl: z.string().nullable().optional(),
   }).optional(),
   productImageDataUrl: z.string().min(1, "Imagem do produto é obrigatória"),
   inputValidationOverride: z

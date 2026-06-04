@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin as supabase } from "@/lib/supabase/server";
+import { resolveStoreIdentity } from "@/lib/actions/store";
 
 export async function GET(
   _request: NextRequest,
@@ -7,7 +8,7 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  const { data, error } = await supabase
+  const { data: store, error } = await supabase
     .from("stores")
     .select()
     .eq("id", id)
@@ -21,7 +22,14 @@ export async function GET(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data, { status: 200 });
+  // Resolve visual signature and brand profile data for frontend hydration
+  const identity = await resolveStoreIdentity(store);
+
+  return NextResponse.json({
+    ...store,
+    visual_signature_url: identity.visualSignatureUrl,
+    logo_url: identity.logoUrl ?? store.logo_url,
+  }, { status: 200 });
 }
 
 export async function PATCH(
@@ -95,6 +103,27 @@ export async function PATCH(
 
   if (body.slogan !== undefined) {
     updates.slogan = typeof body.slogan === 'string' ? body.slogan.trim() || null : null;
+  }
+
+  if (body.logo_status !== undefined) {
+    const VALID_STATUSES = ['uploaded', 'generated', 'explicit_none', 'failed', 'exhausted'];
+    if (body.logo_status !== null && !VALID_STATUSES.includes(body.logo_status as string)) {
+      return NextResponse.json(
+        { error: `logo_status deve ser um de: ${VALID_STATUSES.join(', ')}, ou null` },
+        { status: 400 }
+      );
+    }
+    updates.logo_status = body.logo_status;
+  }
+
+  if (body.visual_signature_attempts !== undefined) {
+    if (typeof body.visual_signature_attempts !== 'number' || !Number.isInteger(body.visual_signature_attempts) || body.visual_signature_attempts < 0) {
+      return NextResponse.json(
+        { error: 'visual_signature_attempts deve ser um inteiro não negativo' },
+        { status: 400 }
+      );
+    }
+    updates.visual_signature_attempts = body.visual_signature_attempts;
   }
 
   updates.updated_at = new Date().toISOString();

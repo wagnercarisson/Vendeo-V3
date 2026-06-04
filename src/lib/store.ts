@@ -1,3 +1,5 @@
+import type { LogoStatus } from '@/lib/visual-signature/types';
+
 export interface Store {
   id: string;
   name: string;
@@ -11,6 +13,8 @@ export interface Store {
   positioning: string | null;
   short_description: string | null;
   slogan: string | null;
+  logo_status: LogoStatus | null;
+  visual_signature_attempts: number;
   created_at: string;
   updated_at: string;
 }

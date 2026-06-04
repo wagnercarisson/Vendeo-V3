@@ -46,6 +46,10 @@ export interface BrandProfileRecord {
   metadata: Record<string, unknown>; version: number;
   status: BrandProfileStatus;
   created_at: string; updated_at: string;
+  visual_signature_id?: string | null;
+  inferred_primary_color?: string | null;
+  inferred_accent_color?: string | null;
+  identity_art_director_output?: Record<string, unknown> | null;
 }
 
 export interface CreateBrandProfileInput {
@@ -61,6 +65,10 @@ export interface CreateBrandProfileInput {
   confidence_score?: number | null;
   metadata?: Record<string, unknown>; version?: number;
   status: BrandProfileStatus;
+  visual_signature_id?: string | null;
+  inferred_primary_color?: string | null;
+  inferred_accent_color?: string | null;
+  identity_art_director_output?: Record<string, unknown> | null;
 }
 
 export interface StoreDirectionFields {

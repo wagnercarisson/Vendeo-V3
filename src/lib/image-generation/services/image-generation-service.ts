@@ -968,12 +968,12 @@ export class ImageGenerationService {
   private buildBrandProfileSection(brandProfile?: {
     brand_colors_chosen?: string[];
     safe_color_tokens?: Record<string, string>;
-    visual_style?: string;
-    visual_tone?: string;
-    brand_personality?: string;
-    campaign_guidelines?: string;
-    campaign_brief?: string;
-    logoVariantUrl?: string;
+    visual_style?: string | null;
+    visual_tone?: string | null;
+    brand_personality?: string | null;
+    campaign_guidelines?: string | null;
+    campaign_brief?: string | null;
+    logoVariantUrl?: string | null;
   }): string {
     if (!brandProfile) return '';
 

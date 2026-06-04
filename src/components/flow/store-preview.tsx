@@ -12,9 +12,10 @@ interface StorePreviewProps {
   accentColor?: string;
   brandColorsChosen?: string[];
   logoUrl?: string | null;
+  logoStatus?: string | null;
 }
 
-export function StorePreview({ name, segment, brandColor, accentColor, brandColorsChosen, logoUrl }: StorePreviewProps) {
+export function StorePreview({ name, segment, brandColor, accentColor, brandColorsChosen, logoUrl, logoStatus }: StorePreviewProps) {
   const hasData = name || segment;
 
   if (!hasData) {
@@ -30,6 +31,8 @@ export function StorePreview({ name, segment, brandColor, accentColor, brandColo
   const resolvedColor = brandColorsChosen?.[0] || brandColor || SEGMENT_COLOR_FALLBACK[segment] || PREVIEW_DEFAULT_COLOR;
   const resolvedAccent = brandColorsChosen?.[1] || accentColor || resolvedColor;
 
+  const showVisualSignature = logoStatus === 'generated' && logoUrl;
+
   return (
     <div className="bg-bg-surface border border-border rounded-xl p-6">
       <h3 className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-4">
@@ -37,7 +40,11 @@ export function StorePreview({ name, segment, brandColor, accentColor, brandColo
       </h3>
 
       <div className="flex items-center gap-4">
-        {logoUrl ? (
+        {showVisualSignature ? (
+          <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0 bg-bg-elevated border border-border-light shadow-sm">
+            <img src={logoUrl!} alt={`Assinatura visual ${name}`} className="w-full h-full object-contain" />
+          </div>
+        ) : logoUrl ? (
           <div className="w-14 h-14 rounded-full overflow-hidden shrink-0 bg-bg-elevated border-2 border-border-light">
             <img src={logoUrl} alt={`Logo ${name}`} className="w-full h-full object-contain" />
           </div>

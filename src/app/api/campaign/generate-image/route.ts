@@ -17,8 +17,36 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // ── Pre-stream: Log received fields (safe, no base64 data) ───────
+  const safeLog = {
+    keys: Object.keys(body),
+    storeId: (body as any).storeId ?? (body as any).store_id ?? null,
+    hasProductName: typeof body.productName === 'string' && body.productName.length > 0,
+    hasProductImage: typeof body.productImageDataUrl === 'string' && body.productImageDataUrl.length > 0,
+    productImageLength: typeof body.productImageDataUrl === 'string' ? body.productImageDataUrl.length : 0,
+    hasPrice: typeof body.discountedPriceCents === 'number',
+    hasOriginalPrice: 'originalPriceCents' in body ? typeof body.originalPriceCents : 'absent',
+    hasStoreIdentity: typeof (body as any).storeIdentity !== 'undefined',
+    hasLogoStatus: typeof (body as any).logoStatus !== 'undefined',
+    hasVisualSignatureUrl: typeof (body as any).visualSignatureUrl !== 'undefined',
+    hasBrandProfile: typeof body.brandProfile === 'object' && body.brandProfile !== null,
+    brandProfileFields: typeof body.brandProfile === 'object' && body.brandProfile !== null
+      ? Object.keys(body.brandProfile as Record<string, unknown>)
+      : null,
+    brandProfileNullFields: typeof body.brandProfile === 'object' && body.brandProfile !== null
+      ? Object.entries(body.brandProfile as Record<string, unknown>)
+          .filter(([_, v]) => v === null)
+          .map(([k]) => k)
+      : null,
+  };
+  console.log(`[generate-image] payload_received`, JSON.stringify(safeLog));
+
   // ── Pre-stream: Validate productImageDataUrl presence ───────────
   if (!body.productImageDataUrl || typeof body.productImageDataUrl !== "string") {
+    console.log(`[generate-image] validation_fail — productImageDataUrl ausente ou inválido`, {
+      type: typeof body.productImageDataUrl,
+      present: 'productImageDataUrl' in body,
+    });
     return Response.json(
       { error: { message: "Imagem do produto é obrigatória para gerar a campanha visual." } },
       { status: 400 }
@@ -27,6 +55,10 @@ export async function POST(request: NextRequest) {
 
   // ── Pre-stream: Check payload size limit ────────────────────────
   if (body.productImageDataUrl.length > MAX_PRODUCT_IMAGE_BASE64_SIZE) {
+    console.log(`[generate-image] validation_fail — productImageDataUrl excede limite`, {
+      length: body.productImageDataUrl.length,
+      maxLength: MAX_PRODUCT_IMAGE_BASE64_SIZE,
+    });
     return Response.json(
       {
         error: {
@@ -37,9 +69,30 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // ── Pre-stream: Normalize null → undefined in brandProfile ──────
+  // Zod .nullable().optional() accepts null, but downstream services
+  // (prompt assembly, image generation) may use brandProfile fields
+  // in template strings where "null" would render as text. Normalize
+  // to undefined so optional chaining / ?? fallbacks work correctly.
+  if (body.brandProfile && typeof body.brandProfile === 'object') {
+    const bp = body.brandProfile as Record<string, unknown>;
+    for (const key of ['visual_style', 'visual_tone', 'brand_personality', 'campaign_guidelines', 'campaign_brief', 'logoVariantUrl']) {
+      if (bp[key] === null) bp[key] = undefined;
+    }
+  }
+
   // ── Pre-stream: Validate full request schema ─────────────────────
   const parsed = GenerateImageRequestSchema.safeParse(body);
   if (!parsed.success) {
+    const issues = parsed.error.issues.map(i => ({
+      path: i.path.join('.'),
+      code: i.code,
+      message: i.message,
+    }));
+    console.log(`[generate-image] validation_fail — Zod safeParse rejeitou`, {
+      issues,
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    });
     return Response.json(
       {
         error: {

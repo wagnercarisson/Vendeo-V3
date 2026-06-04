@@ -2,8 +2,9 @@
 
 import { useStoreForm } from "./use-store-form";
 import { StorePreview } from "./store-preview";
+import { VisualSignatureApprovalModal } from "./visual-signature-approval-modal";
 import { VALID_SEGMENTS, SEGMENT_LABELS, BRAZILIAN_STATES } from "@/lib/constants";
-import { AlertCircle, CheckCircle2, Loader2, X, Upload, ArrowLeft } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, X, Upload, ArrowLeft, Sparkles } from "lucide-react";
 import { useState, useCallback, useRef, useEffect } from "react";
 
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
@@ -59,6 +60,9 @@ export function StoreIdentityForm() {
   const [hasActiveLogo, setHasActiveLogo] = useState(false);
   const [step2Success, setStep2Success] = useState<string | null>(null);
   const [analysisWarning, setAnalysisWarning] = useState<string | null>(null);
+  const [logoStatus, setLogoStatus] = useState<string | null>(null);
+  const [visualSignatureUrl, setVisualSignatureUrl] = useState<string | null>(null);
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const saveBrandColors = useCallback(async (primary: string, secondary: string) => {
@@ -90,6 +94,8 @@ export function StoreIdentityForm() {
     setAccentColor("");
     setBrandColorsChosen([]);
     setHasActiveLogo(false);
+    setLogoStatus(null);
+    setVisualSignatureUrl(null);
     setAnalysisWarning(null);
     setStep2Success(null);
 
@@ -100,10 +106,16 @@ export function StoreIdentityForm() {
 
     const load = async () => {
       try {
-        const [logoRes, profileRes] = await Promise.all([
+        const [storeRes, logoRes, profileRes] = await Promise.all([
+          fetch(`/api/store/${storeId}`),
           fetch(`/api/store/${storeId}/logo`),
           fetch(`/api/store/${storeId}/brand-profile`),
         ]);
+
+        if (storeRes.ok) {
+          const storeData = await storeRes.json();
+          setLogoStatus(storeData.logo_status ?? null);
+        }
 
         if (logoRes.ok) {
           const logoData = await logoRes.json();
@@ -159,6 +171,66 @@ export function StoreIdentityForm() {
       return next;
     });
   }, [formData]);
+
+  const handleApprovalComplete = useCallback((result: { 
+    logoStatus: string; 
+    signatureUrl?: string;
+    inferredPrimaryColor?: string;
+    inferredAccentColor?: string;
+    logoColorsDetected?: string[];
+  }) => {
+    setLogoStatus(result.logoStatus);
+    if (result.signatureUrl) {
+      setVisualSignatureUrl(result.signatureUrl);
+      setLogoResultUrl(result.signatureUrl);
+    }
+    if (result.inferredPrimaryColor) {
+      setField('brand_color', result.inferredPrimaryColor);
+      setBrandColorsChosen(prev => [result.inferredPrimaryColor!, prev[1] || result.inferredPrimaryColor!]);
+    }
+    if (result.inferredAccentColor) {
+      setAccentColor(result.inferredAccentColor);
+      setBrandColorsChosen(prev => [prev[0] || result.inferredPrimaryColor || formData.brand_color, result.inferredAccentColor!]);
+    }
+    if (result.logoColorsDetected) {
+      setDetectedColors(result.logoColorsDetected);
+    }
+    setShowApprovalModal(false);
+  }, [setField, formData.brand_color]);
+
+  useEffect(() => {
+    if (isLoading || !storeId) return;
+
+    fetch(`/api/store/${storeId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.logo_status) setLogoStatus(data.logo_status);
+        if (data.visual_signature_url) {
+          setVisualSignatureUrl(data.visual_signature_url);
+          setLogoResultUrl(data.visual_signature_url);
+        } else if (data.logo_url) {
+          setLogoResultUrl(data.logo_url);
+        }
+      })
+      .catch(() => {});
+  }, [isLoading, storeId]);
+
+  const handleContinueWithoutLogo = useCallback(async () => {
+    if (!storeId) return;
+    try {
+      await fetch(`/api/store/${storeId}/logo-status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ logo_status: "explicit_none" }),
+      });
+      setLogoStatus("explicit_none");
+    } catch {}
+  }, [storeId]);
+
+  const handleNoLogo = useCallback(() => {
+    console.log(`[StoreIdentityForm] handleNoLogo clicked storeId=${storeId}`);
+    setShowApprovalModal(true);
+  }, [storeId]);
 
   const handleFileSelected = useCallback(async (file: File | null) => {
     setLogoError(null);
@@ -464,7 +536,10 @@ export function StoreIdentityForm() {
 
             <form onSubmit={handleStep2Submit} className="space-y-6" noValidate>
               <div>
-                <label htmlFor="logo" className={labelClass}>Logotipo da Loja <span className="font-normal normal-case tracking-normal text-text-disabled">(opcional)</span></label>
+                <label htmlFor="logo" className={labelClass}>
+                  {logoStatus === 'generated' ? 'Assinatura Visual' : 'Logotipo da Loja'}
+                  <span className="font-normal normal-case tracking-normal text-text-disabled ml-1">(opcional)</span>
+                </label>
                 <div onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
                   className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors duration-200 cursor-pointer ${
                     isDragging ? "border-accent-blue bg-accent-blue/5" : "border-border-light hover:border-text-muted bg-bg-surface"
@@ -493,6 +568,102 @@ export function StoreIdentityForm() {
                     <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                     <span>{analysisWarning}</span>
                   </p>
+                )}
+
+                {logoStatus === null && (
+                  <div className="mt-4 space-y-3">
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex-1 px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 flex items-center justify-center gap-2"
+                      >
+                        <Upload className="w-4 h-4" />
+                        Enviar logotipo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleNoLogo}
+                        className="flex-1 px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 flex items-center justify-center gap-2 relative group"
+                      >
+                        <Sparkles className="w-4 h-4 text-accent-green" />
+                        Não tenho logo
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-bg-elevated border border-border rounded-lg text-xs text-text-secondary font-body whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg z-10">
+                          O Vendeo vai criar uma assinatura visual profissional para sua loja e montar uma identidade visual completa alinhada ao perfil da loja.
+                        </div>
+                      </button>
+                    </div>
+                    <div className="text-center">
+                      <button
+                        type="button"
+                        onClick={handleContinueWithoutLogo}
+                        className="text-text-muted hover:text-text-primary text-xs font-body underline transition-colors duration-200"
+                      >
+                        Continuar sem logo
+                        <span className="ml-1 text-text-disabled">(O Vendeo usará apenas o nome da loja com as cores escolhidas)</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {logoStatus === 'generated' && visualSignatureUrl && (
+                  <div className="mt-4">
+                    <div className="flex items-center gap-4 p-4 bg-bg-elevated border border-border rounded-xl">
+                      <div className="w-14 h-14 rounded-xl overflow-hidden bg-bg-surface border border-border-light shrink-0">
+                        <img src={visualSignatureUrl} alt="Assinatura visual" className="w-full h-full object-contain" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-text-primary font-heading font-semibold text-sm">Assinatura visual ativa</p>
+                        <p className="text-text-muted text-xs font-body mt-0.5">Gerada por IA e aprovada</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleNoLogo}
+                        className="shrink-0 px-3 py-1.5 border border-border-light text-text-primary font-heading font-semibold text-xs rounded-lg hover:bg-bg-elevated transition-all duration-200"
+                      >
+                        Alterar
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {logoStatus === 'explicit_none' && (
+                  <div className="mt-4">
+                    <p className="text-text-muted text-xs font-body">Nenhuma assinatura visual definida.</p>
+                    <button
+                      type="button"
+                      onClick={handleNoLogo}
+                      className="mt-2 text-accent-blue hover:text-accent-blue/80 text-xs font-body underline transition-colors duration-200"
+                    >
+                      Criar assinatura visual agora
+                    </button>
+                  </div>
+                )}
+
+                {logoStatus === 'failed' && (
+                  <div className="mt-4">
+                    <p className="text-accent-red text-xs font-body">Não foi possível criar sua assinatura visual.</p>
+                    <button
+                      type="button"
+                      onClick={handleNoLogo}
+                      className="mt-2 text-accent-blue hover:text-accent-blue/80 text-xs font-body underline transition-colors duration-200"
+                    >
+                      Tentar novamente
+                    </button>
+                  </div>
+                )}
+
+                {logoStatus === 'exhausted' && (
+                  <div className="mt-4">
+                    <p className="text-accent-amber text-xs font-body">Limite de 3 versões atingido.</p>
+                    <button
+                      type="button"
+                      onClick={handleNoLogo}
+                      className="mt-2 text-accent-blue hover:text-accent-blue/80 text-xs font-body underline transition-colors duration-200"
+                    >
+                      Reavaliar assinaturas
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -546,7 +717,9 @@ export function StoreIdentityForm() {
 
                 {detectedColors.length > 0 && (
                   <div>
-                    <p className={labelClass}>Cores extraídas do logotipo</p>
+                    <p className={labelClass}>
+                      {logoStatus === 'generated' ? 'Cores identificadas na marca' : 'Cores extraídas do logotipo'}
+                    </p>
                     <div className="flex gap-3 flex-wrap">
                       {detectedColors.map((color, i) => (
                         <div key={i} className="flex flex-col items-center gap-1">
@@ -589,10 +762,30 @@ export function StoreIdentityForm() {
                 accentColor={accentColor}
                 brandColorsChosen={brandColorsChosen}
                 logoUrl={logoResultUrl}
+                logoStatus={logoStatus}
               />
             </div>
           </div>
         </div>
+      )}
+
+      {showApprovalModal && storeId && (
+        <VisualSignatureApprovalModal
+          isOpen={showApprovalModal}
+          onClose={() => setShowApprovalModal(false)}
+          storeId={storeId}
+          storeName={formData.name}
+          segment={formData.segment}
+          brandColor={formData.brand_color}
+          tone_of_voice={formData.tone_of_voice}
+          subsegment={formData.subsegment}
+          positioning={formData.positioning}
+          short_description={formData.short_description}
+          slogan={formData.slogan}
+          city={formData.city}
+          uf={formData.state}
+          onComplete={handleApprovalComplete}
+        />
       )}
     </div>
   );

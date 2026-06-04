@@ -41,6 +41,7 @@ export function StoreIdentityBlock({ store }: StoreIdentityBlockProps) {
       : "";
 
   const logoUrl = identity.brandProfile?.logoVariantUrl ?? identity.logoUrl;
+  const visualSignatureUrl = identity.visualSignatureUrl;
   const secondaryColor = identity.brandProfile?.brand_colors_chosen?.[1] ?? null;
   const hasBrandProfile = !!identity.brandProfile;
 
@@ -52,6 +53,14 @@ export function StoreIdentityBlock({ store }: StoreIdentityBlockProps) {
           alt={`Logo ${store.name}`}
           className="w-10 h-10 rounded-full object-contain shrink-0 bg-bg-elevated border border-border-light"
         />
+      ) : visualSignatureUrl ? (
+        <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-bg-elevated border border-border-light">
+          <img
+            src={visualSignatureUrl}
+            alt={`Assinatura visual ${store.name}`}
+            className="w-full h-full object-contain"
+          />
+        </div>
       ) : (
         <div
           className="w-10 h-10 rounded-full flex items-center justify-center text-white font-heading font-bold text-sm shrink-0"
