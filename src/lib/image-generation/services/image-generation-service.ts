@@ -38,15 +38,15 @@ const PHASE_MESSAGES: Record<string, string[]> = {
 };
 
 const CATEGORY_TO_SEGMENT_GROUP: Record<string, string[]> = {
-  "alimentacao-bebidas": ["bebidas", "alimentos", "bebida", "energetico", "cafe", "cerveja", "refrigerante", "suco", "agua", "comida", "snack", "doce", "salgado"],
-  "moda-vestuario": ["roupa", "calcado", "tenis", "vestuario", "moda", "acessorio", "bolsa", "camiseta", "jeans"],
+  "bebidas-adegas-conveniencia": ["bebidas", "alimentos", "bebida", "energetico", "cafe", "cerveja", "refrigerante", "suco", "agua", "comida", "snack", "doce", "salgado"],
+  "moda-calcados-acessorios": ["roupa", "calcado", "tenis", "vestuario", "moda", "acessorio", "bolsa", "camiseta", "jeans"],
   "beleza-estetica": ["beleza", "cosmetico", "maquiagem", "perfume", "hidratante", "shampoo", "protetor"],
-  "saude-farmacia": ["remedio", "farmacia", "vitamina", "suplemento", "medicamento"],
+  "farmacia-saude": ["remedio", "farmacia", "vitamina", "suplemento", "medicamento"],
   "casa-decoracao": ["casa", "decoracao", "moveis", "tapete", "toalha", "almofada"],
   "eletronicos-tecnologia": ["eletronico", "tecnologia", "celular", "computador", "fone", "carregador"],
   "petshop": ["pet", "racao", "cachorro", "gato", "brinquedo pet"],
-  "servicos": ["servico", "consulta", "curso", "assinatura"],
-  "variedades": ["presente", "variedade", "geral"],
+  "servicos-locais": ["servico", "consulta", "curso", "assinatura"],
+  "variedades-utilidades": ["presente", "variedade", "geral"],
   "outros": [],
 };
 
@@ -685,20 +685,20 @@ export class ImageGenerationService {
     }
 
     // Aligned — reinforce segment-specific values
-    if (s.includes("alimentacao") || s.includes("bebida")) {
+    if (s.includes("bebidas-adegas-conveniencia") || s.includes("bebida")) {
       if (c.includes("energetico")) return "Valorize energia e disposição. Preço é oportunidade.";
       if (c.includes("cerveja")) return "Valorize confraternização e qualidade. Preço é vantagem.";
       if (c.includes("cafe")) return "Valorize aconchego e ritual. Preço é convite.";
       return "Valorize sabor e qualidade. Preço é vantagem.";
     }
-    if (s.includes("moda") || s.includes("vestuario")) {
+    if (s.includes("moda") || s.includes("calcados")) {
       if (c.includes("calcado") || c.includes("tenis")) return "Valorize estilo e performance. Preço é investimento.";
       return "Valorize estilo e personalidade. Preço é oportunidade.";
     }
     if (s.includes("beleza") || s.includes("estetica")) {
       return "Valorize autoestima e cuidado pessoal. Preço é mimo.";
     }
-    if (s.includes("saude") || s.includes("farmacia")) {
+    if (s.includes("farmacia-saude") || s.includes("farmacia")) {
       return "Valorize bem-estar e confiança. Preço é cuidado.";
     }
     if (s.includes("eletronico") || s.includes("tecnologia")) {
@@ -710,7 +710,7 @@ export class ImageGenerationService {
     if (s.includes("pet")) {
       return "Valorize carinho e bem-estar do pet. Preço é cuidado.";
     }
-    if (s.includes("variedade")) {
+    if (s.includes("variedades")) {
       return "Valorize variedade e praticidade. Preço é vantagem.";
     }
 

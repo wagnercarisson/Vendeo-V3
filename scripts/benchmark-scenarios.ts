@@ -75,7 +75,7 @@ export const BENCHMARK_SCENARIOS: BenchmarkScenario[] = [
     name: "Heineken Long Neck — Bebidas com cor verde",
     store: {
       name: "Adega do Zé",
-      segment: "alimentacao-bebidas",
+      segment: "bebidas-adegas-conveniencia",
       tone: "descontraído",
       brandColor: "#1B5E20",
     },
@@ -99,7 +99,7 @@ export const BENCHMARK_SCENARIOS: BenchmarkScenario[] = [
     name: "51 Ice — Nome curto com potencial divergência",
     store: {
       name: "Mercado Popular",
-      segment: "alimentacao-bebidas",
+      segment: "bebidas-adegas-conveniencia",
       tone: "promocional",
       brandColor: "#1565C0",
     },
@@ -122,7 +122,7 @@ export const BENCHMARK_SCENARIOS: BenchmarkScenario[] = [
     name: "Pantufa Conforto — Variedades, preço único",
     store: {
       name: "Lar & Conforto",
-      segment: "variedades",
+      segment: "variedades-utilidades",
       tone: "acolhedor",
       brandColor: "#8D6E63",
     },
@@ -145,7 +145,7 @@ export const BENCHMARK_SCENARIOS: BenchmarkScenario[] = [
     name: "Tênis Runner 3000 — Moda, sem badge",
     store: {
       name: "Esportes & Cia",
-      segment: "moda-vestuario",
+      segment: "moda-calcados-acessorios",
       tone: "moderno",
       brandColor: "#424242",
     },
@@ -195,7 +195,7 @@ export const BENCHMARK_SCENARIOS: BenchmarkScenario[] = [
     name: "Loja Pink — Cor extrema #FF1493",
     store: {
       name: "Pink House",
-      segment: "moda-vestuario",
+      segment: "moda-calcados-acessorios",
       tone: "moderno",
       brandColor: "#FF1493",
     },
@@ -246,7 +246,7 @@ export const BENCHMARK_SCENARIOS: BenchmarkScenario[] = [
     name: "Preço único — Sem originalPriceCents",
     store: {
       name: "Farmácia Popular",
-      segment: "saude-farmacia",
+      segment: "farmacia-saude",
       tone: "profissional",
       brandColor: "#00ACC1",
     },
@@ -270,7 +270,7 @@ export const BENCHMARK_SCENARIOS: BenchmarkScenario[] = [
     name: "Detalhes variados — Urgência + variedade de cores + sabores",
     store: {
       name: "SuperMix",
-      segment: "alimentacao-bebidas",
+      segment: "bebidas-adegas-conveniencia",
       tone: "promocional",
       brandColor: "#FF6F00",
     },
