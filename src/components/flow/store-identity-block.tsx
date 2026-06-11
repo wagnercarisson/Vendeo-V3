@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import type { Store } from "@/lib/store";
 import { resolveStoreIdentity } from "@/lib/actions/store";
-import { SEGMENT_LABELS } from "@/lib/constants";
+import { STORE_SEGMENTS } from "@/lib/constants";
 import type { StoreIdentitySnapshot } from "@/components/campaign/types";
 import { Loader2 } from "lucide-react";
 
@@ -35,10 +35,8 @@ export function StoreIdentityBlock({ store }: StoreIdentityBlockProps) {
 
   if (!identity) return null;
 
-  const segmentLabel =
-    store.segment && SEGMENT_LABELS[store.segment as keyof typeof SEGMENT_LABELS]
-      ? SEGMENT_LABELS[store.segment as keyof typeof SEGMENT_LABELS]
-      : "";
+  const segmentEntry = STORE_SEGMENTS.find(s => s.value === store.segment);
+  const segmentLabel = segmentEntry?.label ?? "";
 
   const logoUrl = identity.brandProfile?.logoVariantUrl ?? identity.logoUrl;
   const visualSignatureUrl = identity.visualSignatureUrl;

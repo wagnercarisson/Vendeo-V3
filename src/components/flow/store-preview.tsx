@@ -1,7 +1,7 @@
 "use client";
 
 import { SEGMENT_COLOR_FALLBACK } from "@/lib/store";
-import { SEGMENT_LABELS } from "@/lib/constants";
+import { STORE_SEGMENTS } from "@/lib/constants";
 
 const PREVIEW_DEFAULT_COLOR = "#22C55E";
 
@@ -62,18 +62,21 @@ export function StorePreview({ name, segment, brandColor, accentColor, brandColo
             {name}
           </p>
 
-          {segment && SEGMENT_LABELS[segment as keyof typeof SEGMENT_LABELS] && (
-            <span
-              className="inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-heading font-medium"
-              style={{
-                backgroundColor: `${resolvedColor}1A`,
-                color: resolvedColor,
-                border: `1px solid ${resolvedColor}33`,
-              }}
-            >
-              {SEGMENT_LABELS[segment as keyof typeof SEGMENT_LABELS]}
-            </span>
-          )}
+          {(() => {
+            const segEntry = STORE_SEGMENTS.find(s => s.value === segment);
+            return segEntry ? (
+              <span
+                className="inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-heading font-medium"
+                style={{
+                  backgroundColor: `${resolvedColor}1A`,
+                  color: resolvedColor,
+                  border: `1px solid ${resolvedColor}33`,
+                }}
+              >
+                {segEntry.label}
+              </span>
+            ) : null;
+          })()}
         </div>
       </div>
 

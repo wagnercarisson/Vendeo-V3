@@ -10,7 +10,7 @@ import { MetricsWriter } from "@/lib/image-generation/metrics/writer";
 import { logReviewDiagnostic } from "@/lib/image-generation/metrics/review-diagnostics";
 import type { ReviewDiagnosticEntry } from "@/lib/image-generation/metrics/review-diagnostics";
 import { validatePrompt } from "@/lib/image-generation/services/prompt-validator";
-import { SEGMENT_LABELS } from "@/lib/constants";
+import { STORE_SEGMENTS } from "@/lib/constants";
 
 /**
  * Rotating per-phase human-friendly messages in PT-BR for UI display.
@@ -255,7 +255,8 @@ export class ImageGenerationService {
 
     const promptVariables = this.buildPromptVariables(body, effectiveProductName, inferredCategory);
 
-    const segmentPersona = SEGMENT_LABELS[body.storeSegment as keyof typeof SEGMENT_LABELS] ?? body.storeSegment;
+    const segmentEntry = STORE_SEGMENTS.find(s => s.value === body.storeSegment);
+    const segmentPersona = segmentEntry?.label ?? body.storeSegment;
     const promptDetail = `briefing com persona de ${segmentPersona}, categoria inferida: ${inferredCategory ?? body.storeSegment}`;
     emit("prompt_assembly", "complete", undefined, promptDetail);
     emitMetricsEvent("prompt_assembly");
@@ -727,7 +728,8 @@ export class ImageGenerationService {
       ? this.isSameCategory(inferredCategory, storeSegment)
       : false;
 
-    const creativePersona = `Você é um diretor de marketing especializado em ${SEGMENT_LABELS[storeSegment as keyof typeof SEGMENT_LABELS] ?? storeSegment}.`;
+    const segEntry = STORE_SEGMENTS.find(s => s.value === storeSegment);
+    const creativePersona = `Você é um diretor de marketing especializado em ${segEntry?.label ?? storeSegment}.`;
 
     const categoryConflictDirective = hasConflict
       ? `ATENÇÃO: O produto anunciado é da categoria "${inferredCategory}", que é diferente do segmento principal da loja "${storeSegment}". A direção visual deve refletir o universo de ${inferredCategory}. A identidade da loja (nome, paleta, logo) deve aparecer como assinatura, não como tema visual.`

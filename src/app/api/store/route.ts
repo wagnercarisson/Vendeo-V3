@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin as supabase } from "@/lib/supabase/server";
-import { VALID_SEGMENTS } from "@/lib/constants";
+import { STORE_SEGMENTS } from "@/lib/constants";
 
 export async function POST(request: NextRequest) {
   let body: Record<string, unknown>;
@@ -19,9 +19,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!segment || typeof segment !== "string" || !VALID_SEGMENTS.includes(segment as typeof VALID_SEGMENTS[number])) {
+  const validSegments = STORE_SEGMENTS.map(s => s.value);
+  if (!segment || typeof segment !== "string" || !validSegments.includes(segment)) {
     return NextResponse.json(
-      { error: `segment is required and must be one of: ${VALID_SEGMENTS.join(", ")}` },
+      { error: `segment is required and must be one of: ${validSegments.join(", ")}` },
       { status: 400 }
     );
   }

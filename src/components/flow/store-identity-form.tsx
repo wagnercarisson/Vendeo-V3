@@ -3,7 +3,7 @@
 import { useStoreForm } from "./use-store-form";
 import { StorePreview } from "./store-preview";
 import { VisualSignatureApprovalModal } from "./visual-signature-approval-modal";
-import { VALID_SEGMENTS, SEGMENT_LABELS, BRAZILIAN_STATES } from "@/lib/constants";
+import { STORE_SEGMENTS, BRAZILIAN_STATES } from "@/lib/constants";
 import { AlertCircle, CheckCircle2, Loader2, X, Upload, ArrowLeft, Sparkles } from "lucide-react";
 import { useState, useCallback, useRef, useEffect } from "react";
 
@@ -31,7 +31,7 @@ function validateName(value: string): string | null {
 }
 
 function validateSegment(value: string): string | null {
-  if (!VALID_SEGMENTS.includes(value as typeof VALID_SEGMENTS[number])) return "Selecione um segmento válido";
+  if (!STORE_SEGMENTS.some(s => s.value === value)) return "Selecione um segmento válido";
   return null;
 }
 
@@ -350,9 +350,9 @@ export function StoreIdentityForm() {
     setStep2Success("Cores salvas com sucesso!");
   };
 
-  const segmentOptions = VALID_SEGMENTS.map((seg) => ({
-    value: seg,
-    label: SEGMENT_LABELS[seg],
+  const segmentOptions = STORE_SEGMENTS.map((seg) => ({
+    value: seg.value,
+    label: seg.label,
   }));
 
   const inputClass = (field: string) =>

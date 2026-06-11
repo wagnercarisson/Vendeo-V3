@@ -58,10 +58,11 @@ export async function PATCH(
   }
 
   if (body.segment !== undefined) {
-    const { VALID_SEGMENTS } = await import("@/lib/constants");
-    if (typeof body.segment !== "string" || !VALID_SEGMENTS.includes(body.segment as typeof VALID_SEGMENTS[number])) {
+    const { STORE_SEGMENTS } = await import("@/lib/constants");
+    const validSegments = STORE_SEGMENTS.map(s => s.value);
+    if (typeof body.segment !== "string" || !validSegments.includes(body.segment)) {
       return NextResponse.json(
-        { error: `segment must be one of: ${VALID_SEGMENTS.join(", ")}` },
+        { error: `segment must be one of: ${validSegments.join(", ")}` },
         { status: 400 }
       );
     }
