@@ -293,4 +293,77 @@ export const BENCHMARK_SCENARIOS: BenchmarkScenario[] = [
     },
     imagePath: "scripts/benchmark-fixtures/produto-alimento.jpg",
   },
+  // ── 11. Padaria — new segment: padaria-confeitaria-doces ──────────────
+  {
+    id: "padaria",
+    name: "Pão Francês — Padaria, Confeitaria e Doces",
+    store: {
+      name: "Padaria do Bairro",
+      segment: "padaria-confeitaria-doces",
+      tone: "acolhedor",
+      brandColor: "#F59E0B",
+    },
+    campaign: {
+      productName: "Pão Francês",
+      description: "Pão francês fresquinho, assado na hora.",
+      discountedPriceCents: 99,
+      badgeText: "Promoção",
+      hook: "O frescor de cada dia",
+      cta: "Experimente Já",
+      objective: "Vender pão francês com apelo de frescor e tradição.",
+      targetChannel: "instagram",
+      format: "quadrado 1:1",
+    },
+    imagePath: "scripts/benchmark-fixtures/produto-alimento.jpg",
+  },
+
+  // ── 12. Mercado — new segment: mercados-mercearias ────────────────────
+  {
+    id: "mercado",
+    name: "Cesta Básica — Mercados e Mercearias",
+    store: {
+      name: "SuperMercado Popular",
+      segment: "mercados-mercearias",
+      tone: "promocional",
+      brandColor: "#22C55E",
+    },
+    campaign: {
+      productName: "Cesta Básica Completa",
+      description: "Cesta básica com 20 itens essenciais.",
+      originalPriceCents: 19990,
+      discountedPriceCents: 14990,
+      badgeText: "Oferta",
+      hook: "O melhor da sua mesa",
+      cta: "Faça Suas Compras",
+      objective: "Vender cesta básica com destaque para economia.",
+      targetChannel: "instagram",
+      format: "quadrado 1:1",
+    },
+    imagePath: "scripts/benchmark-fixtures/produto-alimento.jpg",
+  },
+
+  // ── 13. Restaurante — new segment: restaurantes-lanchonetes ────────────
+  {
+    id: "restaurante",
+    name: "Hambúrguer Artesanal — Restaurantes e Lanchonetes",
+    store: {
+      name: "Point do Lanche",
+      segment: "restaurantes-lanchonetes",
+      tone: "moderno",
+      brandColor: "#EF4444",
+    },
+    campaign: {
+      productName: "Hambúrguer Artesanal",
+      description: "Hambúrguer artesanal 200g com queijo cheddar e bacon.",
+      originalPriceCents: 3490,
+      discountedPriceCents: 2490,
+      badgeText: "Promoção",
+      hook: "Sabor inesquecível toda hora",
+      cta: "Peça Já o Seu",
+      objective: "Vender hambúrguer artesanal com apelo de sabor e preço promocional.",
+      targetChannel: "instagram",
+      format: "quadrado 1:1",
+    },
+    imagePath: "scripts/benchmark-fixtures/produto-alimento.jpg",
+  },
 ] as const;
