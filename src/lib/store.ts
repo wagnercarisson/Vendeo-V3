@@ -20,15 +20,18 @@ export interface Store {
 }
 
 export const SEGMENT_COLOR_FALLBACK: Record<string, string> = {
-  "moda-vestuario": "#F43F5E",
-  "alimentacao-bebidas": "#DC2626",
+  "moda-calcados-acessorios": "#EC4899",
+  "bebidas-adegas-conveniencia": "#DC2626",
+  "padaria-confeitaria-doces": "#F59E0B",
   "beleza-estetica": "#D946EF",
-  "saude-farmacia": "#10B981",
+  "petshop": "#F97316",
+  "variedades-utilidades": "#A855F7",
+  "mercados-mercearias": "#22C55E",
+  "restaurantes-lanchonetes": "#EF4444",
+  "farmacia-saude": "#10B981",
   "casa-decoracao": "#84CC16",
   "eletronicos-tecnologia": "#3B82F6",
-  "petshop": "#F97316",
-  "servicos": "#0EA5E9",
-  "variedades": "#A855F7",
+  "servicos-locais": "#0EA5E9",
   "outros": "#22C55E",
 };
 

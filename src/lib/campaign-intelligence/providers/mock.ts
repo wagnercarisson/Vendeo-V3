@@ -12,28 +12,34 @@ import type { CampaignGenerationInput } from "../schema";
  * produces the same content. Only `generated_at` varies per call.
  */
 const SEGMENT_HOOKS: Record<string, string> = {
-  "moda-vestuario": "O estilo que você merece!",
-  "alimentacao-bebidas": "Sabor inesquecível toda hora!",
+  "moda-calcados-acessorios": "O estilo que você merece!",
+  "bebidas-adegas-conveniencia": "O sabor que refresca!",
+  "padaria-confeitaria-doces": "O frescor de cada dia!",
   "beleza-estetica": "Realce sua beleza natural!",
-  "saude-farmacia": "Sua saúde em primeiro lugar!",
-  "eletronicos-tecnologia": "Tecnologia que faz a diferença!",
-  "casa-decoracao": "Transforme seu lar!",
-  "servicos": "Soluções que funcionam pra você!",
   "petshop": "Seu pet merece o melhor!",
-  "variedades": "O melhor pra você!",
+  "variedades-utilidades": "Tudo que você precisa!",
+  "mercados-mercearias": "O melhor da sua mesa!",
+  "restaurantes-lanchonetes": "Sabor inesquecível toda hora!",
+  "farmacia-saude": "Sua saúde em primeiro lugar!",
+  "casa-decoracao": "Transforme seu lar!",
+  "eletronicos-tecnologia": "Tecnologia que faz a diferença!",
+  "servicos-locais": "Soluções que funcionam pra você!",
   "outros": "Não perca esta oportunidade!",
 };
 
 const SEGMENT_CTAS: Record<string, string> = {
-  "moda-vestuario": "Garanta seu Estilo!",
-  "alimentacao-bebidas": "Peça Já o Seu!",
+  "moda-calcados-acessorios": "Garanta seu Estilo!",
+  "bebidas-adegas-conveniencia": "Compre Agora!",
+  "padaria-confeitaria-doces": "Experimente Já!",
   "beleza-estetica": "Agende Seu Horário!",
-  "saude-farmacia": "Cuide-se Agora!",
-  "eletronicos-tecnologia": "Compre Agora!",
-  "casa-decoracao": "Decore Já!",
-  "servicos": "Solicite Agora!",
   "petshop": "Mime Seu Pet!",
-  "variedades": "Aproveite Agora!",
+  "variedades-utilidades": "Aproveite Agora!",
+  "mercados-mercearias": "Faça Suas Compras!",
+  "restaurantes-lanchonetes": "Peça Já o Seu!",
+  "farmacia-saude": "Cuide-se Agora!",
+  "casa-decoracao": "Decore Já!",
+  "eletronicos-tecnologia": "Compre Agora!",
+  "servicos-locais": "Solicite Agora!",
   "outros": "Garanta o Seu!",
 };
 

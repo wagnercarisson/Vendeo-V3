@@ -45,15 +45,18 @@ export interface CampaignAdjustments {
 }
 
 export const SEGMENT_PALETTES: Record<string, { background: string; accent: string }> = {
-  "moda-vestuario": { background: "#FAFAFA", accent: "#EC4899" },
-  "alimentacao-bebidas": { background: "#FFF7ED", accent: "#EA580C" },
-  "beleza-estetica": { background: "#FAF5FF", accent: "#8B5CF6" },
-  "saude-farmacia": { background: "#F0FDF4", accent: "#16A34A" },
+  "moda-calcados-acessorios": { background: "#FAFAFA", accent: "#EC4899" },
+  "bebidas-adegas-conveniencia": { background: "#FFF7ED", accent: "#EA580C" },
+  "padaria-confeitaria-doces": { background: "#FFFBEB", accent: "#D97706" },
+  "beleza-estetica": { background: "#FAF5FF", accent: "#D946EF" },
+  "petshop": { background: "#FFFFFF", accent: "#F97316" },
+  "variedades-utilidades": { background: "#FFFFFF", accent: "#A855F7" },
+  "mercados-mercearias": { background: "#F0FDF4", accent: "#16A34A" },
+  "restaurantes-lanchonetes": { background: "#FFF7ED", accent: "#EA580C" },
+  "farmacia-saude": { background: "#F0FDF4", accent: "#16A34A" },
+  "casa-decoracao": { background: "#FFFDF5", accent: "#D97706" },
   "eletronicos-tecnologia": { background: "#F8FAFC", accent: "#2563EB" },
-  "casa-decoracao": { background: "#FAFAF9", accent: "#D97706" },
-  "servicos": { background: "#EFF6FF", accent: "#2563EB" },
-  "petshop": { background: "#FFFFFF", accent: "#22C55E" },
-  "variedades": { background: "#FFFFFF", accent: "#A855F7" },
+  "servicos-locais": { background: "#EFF6FF", accent: "#0EA5E9" },
   "outros": { background: "#FFFFFF", accent: "#22C55E" },
 };
 
