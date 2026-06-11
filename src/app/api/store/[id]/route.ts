@@ -2,6 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin as supabase } from "@/lib/supabase/server";
 import { resolveStoreIdentity } from "@/lib/actions/store";
 
+const GENERIC_SUBSEGMENT_VALUES = ["outro", "loja", "comercio", "comércio", "varejo"];
+
+function validateSubsegment(value: string): string | null {
+  const trimmed = value.trim();
+  if (trimmed.length < 3) return "Digite ao menos 3 caracteres";
+  if (trimmed.length > 30) return "Máximo de 30 caracteres";
+  if (!/^[A-Za-zÀ-ü\s]+$/.test(trimmed)) return "Use apenas letras e espaços";
+  if (GENERIC_SUBSEGMENT_VALUES.includes(trimmed.toLowerCase())) return "Valor genérico não permitido";
+  return null;
+}
+
+function sanitizeSubsegment(value: string): string {
+  return value
+    .trim()
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -87,7 +107,24 @@ export async function PATCH(
 
   // Store direction fields (Phase 4.4.1)
   if (body.subsegment !== undefined) {
-    updates.subsegment = typeof body.subsegment === 'string' ? body.subsegment.trim() || null : null;
+    if (body.subsegment === null || body.subsegment === "") {
+      updates.subsegment = null;
+    } else {
+      if (typeof body.subsegment !== "string") {
+        return NextResponse.json({ error: "subsegment inválido" }, { status: 400 });
+      }
+
+      if (body.subsegment.trim().toLowerCase() === "outro") {
+        return NextResponse.json({ error: "Valor inválido para subsegmento" }, { status: 400 });
+      }
+
+      const subError = validateSubsegment(body.subsegment);
+      if (subError) {
+        return NextResponse.json({ error: subError }, { status: 400 });
+      }
+
+      updates.subsegment = sanitizeSubsegment(body.subsegment);
+    }
   }
 
   if (body.tone_of_voice !== undefined) {
