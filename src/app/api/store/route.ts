@@ -19,10 +19,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const validSegments = STORE_SEGMENTS.map(s => s.value);
-  if (!segment || typeof segment !== "string" || !validSegments.includes(segment)) {
+  const validSegmentValues = STORE_SEGMENTS.map(s => s.value) as string[];
+  if (!segment || typeof segment !== "string" || !validSegmentValues.includes(segment)) {
     return NextResponse.json(
-      { error: `segment is required and must be one of: ${validSegments.join(", ")}` },
+      { error: `segment is required and must be one of: ${validSegmentValues.join(", ")}` },
       { status: 400 }
     );
   }
