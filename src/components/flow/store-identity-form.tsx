@@ -116,6 +116,22 @@ export function StoreIdentityForm() {
     } catch {}
   }, [storeId]);
 
+  const handleClearStore = useCallback(() => {
+    clearStore();
+    setAccentColor("");
+    setBrandColorsChosen([]);
+    setLogoStatus(null);
+    setInferredProfile(null);
+    setIdentityState(null);
+    setInferenceError(null);
+    setStep2Success(null);
+    setDetectedColors([]);
+    setLogoResultUrl(null);
+    setVisualSignatureUrl(null);
+    setHasActiveLogo(false);
+    setAnalysisWarning(null);
+  }, [clearStore]);
+
   useEffect(() => {
     setLogoResultUrl(null);
     setLogoFile(null);
@@ -178,9 +194,27 @@ export function StoreIdentityForm() {
               }
               if (profile.brand_colors_chosen[1]) {
                 setAccentColor(profile.brand_colors_chosen[1]);
+              } else if (profile.inferred_accent_color) {
+                setAccentColor(profile.inferred_accent_color);
               }
             } else if (profile.safe_color_tokens?.primary) {
               setField("brand_color", profile.safe_color_tokens.primary);
+              if (profile.inferred_accent_color) {
+                setAccentColor(profile.inferred_accent_color);
+              } else if (profile.safe_color_tokens?.accent) {
+                setAccentColor(profile.safe_color_tokens.accent);
+              }
+            }
+            if (profile.source === 'text_only' && profile.status === 'synced') {
+              setInferredProfile({
+                safe_color_tokens: profile.safe_color_tokens,
+                visual_style: profile.visual_style,
+                visual_tone: profile.visual_tone,
+                brand_personality: profile.brand_personality,
+                brand_colors_chosen: profile.brand_colors_chosen,
+                inferred_primary_color: profile.inferred_primary_color,
+                inferred_accent_color: profile.inferred_accent_color,
+              });
             }
           }
         }
@@ -465,7 +499,7 @@ export function StoreIdentityForm() {
     const noActiveIdentity = !logoStatus || logoStatus === 'explicit_none';
     const noVisualSignature = !visualSignatureUrl;
 
-    if (noActiveIdentity && noVisualSignature && !identityState) {
+    if (noActiveIdentity && noVisualSignature && logoStatus === null) {
       setInferenceLoading(true);
       setInferenceError(null);
       try {
@@ -486,6 +520,7 @@ export function StoreIdentityForm() {
         if (data.success) {
           setInferredProfile(data.profile);
           setIdentityState('text_only');
+          setLogoStatus('explicit_none');
           if (data.profile?.safe_color_tokens?.primary) {
             setField("brand_color", data.profile.safe_color_tokens.primary);
           }
@@ -709,7 +744,7 @@ export function StoreIdentityForm() {
 
           <div className="flex items-center justify-between pt-2">
             {mode === "edit" && (
-              <button type="button" onClick={clearStore} className="text-text-muted hover:text-text-primary text-xs font-body underline transition-colors duration-200">
+              <button type="button" onClick={handleClearStore} className="text-text-muted hover:text-text-primary text-xs font-body underline transition-colors duration-200">
                 Cadastrar nova loja
               </button>
             )}
@@ -848,8 +883,7 @@ export function StoreIdentityForm() {
                         </div>
                       </button>
                     </div>
-                    {identityState !== 'text_only' && (
-                      <div className="text-center">
+                    <div className="text-center">
                         <button
                           type="button"
                           onClick={handleContinueWithoutLogo}
@@ -859,7 +893,6 @@ export function StoreIdentityForm() {
                           <span className="ml-1 text-text-disabled">(O Vendeo usará apenas o nome da loja com as cores escolhidas)</span>
                         </button>
                       </div>
-                    )}
                   </div>
                 )}
 
@@ -884,16 +917,37 @@ export function StoreIdentityForm() {
                   </div>
                 )}
 
-                {logoStatus === 'explicit_none' && (
-                  <div className="mt-4">
-                    <p className="text-text-muted text-xs font-body">Nenhuma assinatura visual definida.</p>
-                    <button
-                      type="button"
-                      onClick={handleNoLogo}
-                      className="mt-2 text-accent-blue hover:text-accent-blue/80 text-xs font-body underline transition-colors duration-200"
-                    >
-                      Criar assinatura visual agora
-                    </button>
+                {logoStatus === 'explicit_none' && !inferenceError && !inferenceLoading && (
+                  <div className="mt-4 space-y-3">
+                    {inferredProfile ? (
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="flex-1 px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 flex items-center justify-center gap-2"
+                        >
+                          Enviar logotipo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleNoLogo}
+                          className="flex-1 px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 flex items-center justify-center gap-2"
+                        >
+                          Criar assinatura visual
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-text-muted text-xs font-body">Nenhuma assinatura visual definida.</p>
+                        <button
+                          type="button"
+                          onClick={handleNoLogo}
+                          className="text-accent-blue hover:text-accent-blue/80 text-xs font-body underline transition-colors duration-200"
+                        >
+                          Criar assinatura visual agora
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
 
