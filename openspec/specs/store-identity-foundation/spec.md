@@ -46,23 +46,32 @@ The migration SHALL be a single `.sql` file in `supabase/migrations/` named with
 
 The system SHALL accept only the following predefined segment values:
 
-- `moda-vestuario`
-- `alimentacao-bebidas`
+- `moda-calcados-acessorios`
+- `bebidas-adegas-conveniencia`
+- `padaria-confeitaria-doces`
 - `beleza-estetica`
-- `saude-farmacia`
+- `petshop`
+- `variedades-utilidades`
+- `mercados-mercearias`
+- `restaurantes-lanchonetes`
+- `farmacia-saude`
 - `casa-decoracao`
 - `eletronicos-tecnologia`
-- `petshop`
-- `servicos`
-- `variedades`
+- `servicos-locais`
 - `outros`
 
 The segment value SHALL be stored as-is (kebab-case slug). A constraint or enum SHALL prevent invalid values at the database level.
 
-#### Scenario: Valid segment is stored
+#### Scenario: New valid segment is stored
 
-- **WHEN** a store is created with segment `moda-vestuario`
-- **THEN** the value SHALL be stored exactly as `moda-vestuario`
+- **WHEN** a store is created with segment `moda-calcados-acessorios`
+- **THEN** the value SHALL be stored exactly as `moda-calcados-acessorios`
+
+#### Scenario: Old segment value is rejected
+
+- **WHEN** a store is created with segment `moda-vestuario` (old value)
+- **THEN** the system SHALL return a validation error
+- **AND** the store SHALL NOT be created
 
 #### Scenario: Invalid segment is rejected
 
@@ -115,28 +124,45 @@ The system SHALL resolve a simple default hex color based on the store's segment
 
 The fallback color map SHALL be:
 
-- `moda-vestuario` → `#F43F5E` (rose)
-- `alimentacao-bebidas` → `#DC2626` (red)
-- `beleza-estetica` → `#D946EF` (fuchsia)
-- `saude-farmacia` → `#10B981` (emerald)
-- `casa-decoracao` → `#84CC16` (lime)
-- `eletronicos-tecnologia` → `#3B82F6` (blue)
-- `petshop` → `#F97316` (orange)
-- `servicos` → `#0EA5E9` (sky)
-- `variedades` → `#A855F7` (purple)
-- `outros` → `#22C55E` (green — default)
+- `moda-calcados-acessorios` → `#EC4899` (rosa — moda)
+- `bebidas-adegas-conveniencia` → `#DC2626` (vermelho — bebidas)
+- `padaria-confeitaria-doces` → `#F59E0B` (âmbar — padaria)
+- `beleza-estetica` → `#D946EF` (fúcsia — beleza)
+- `petshop` → `#F97316` (laranja — pet)
+- `variedades-utilidades` → `#A855F7` (roxo — variedades)
+- `mercados-mercearias` → `#22C55E` (verde — mercado)
+- `restaurantes-lanchonetes` → `#EF4444` (vermelho — restaurante)
+- `farmacia-saude` → `#10B981` (verde — saúde)
+- `casa-decoracao` → `#84CC16` (verde lima — lar)
+- `eletronicos-tecnologia` → `#3B82F6` (azul — tecnologia)
+- `servicos-locais` → `#0EA5E9` (azul claro — serviço)
+- `outros` → `#22C55E` (verde — padrão)
 
 The fallback color SHALL NOT block store creation, update, or campaign generation.
 
-#### Scenario: Segment-based color fallback
+#### Scenario: Segment-based color fallback for new segment
 
-- **WHEN** the brand color is resolved for a store with `brand_color = null` and `segment = alimentacao-bebidas`
+- **WHEN** the brand color is resolved for a store with `brand_color = null` and `segment = bebidas-adegas-conveniencia`
 - **THEN** the resolver SHALL return `#DC2626`
 
 #### Scenario: Fallback color for outros segment
 
 - **WHEN** the brand color is resolved for a store with `brand_color = null` and `segment = outros`
 - **THEN** the resolver SHALL return `#22C55E`
+
+### Requirement: Migration updates CHECK constraint
+
+The system SHALL provide a migration that drops the existing CHECK constraint on `stores.segment` and creates a new one with the 13 updated values.
+
+#### Scenario: Old CHECK constraint is dropped
+
+- **WHEN** the migration is applied
+- **THEN** the old `stores_segment_check` constraint SHALL be removed
+
+#### Scenario: New CHECK constraint is created
+
+- **WHEN** the migration is applied
+- **THEN** a new CHECK constraint SHALL enforce the 13 updated segment values
 
 ### Requirement: City and state are optional
 

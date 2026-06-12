@@ -9,7 +9,7 @@ Values:
 | value | label |
 |-------|-------|
 | `moda-calcados-acessorios` | Moda, Calçados e Acessórios |
-| `bebidas-adegas-conveniencia` | Bebidas, Adega e Conveniência |
+| `bebidas-adegas-conveniencia` | Bebidas, Adegas e Conveniência |
 | `padaria-confeitaria-doces` | Padaria, Confeitaria e Doces |
 | `beleza-estetica` | Beleza e Estética |
 | `petshop` | Pet Shop |

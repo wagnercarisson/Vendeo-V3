@@ -62,12 +62,12 @@ The `/store` page SHALL include a link/button to return to `/` (campaign input p
 The system SHALL render the following form fields in the store identity form:
 
 - **Nome da Loja**: required text input, 2–60 characters
-- **Segmento**: required dropdown select using the `VALID_SEGMENTS` constant from `src/lib/constants.ts`
+- **Segmento**: required dropdown select using the `STORE_SEGMENTS` constant from `src/lib/constants.ts` (13 options)
 - **Logo da Loja**: optional upload area with drag-and-drop or click-to-upload. Preview circular after upload. Shows simple processing status ("Enviando...", "Processando...", "Pronto"). Technical variants are NOT exposed.
 - **Cor da Marca**: optional color picker (`<input type="color">`) with companion hex text input. When a brand profile exists with detected colors, show suggested swatches below the picker. No conflict modal if chosen color differs from detected color.
 - **Cidade**: optional text input
 - **Estado**: optional dropdown select using `BRAZILIAN_STATES` from `src/lib/constants.ts`
-- → **Subsegmento**: optional text input
+- → **Subsegmento**: conditional dropdown with 3 modes (dropdown rico, dropdown travado, campo aberto)
 - → **Tom de Voz**: optional dropdown/select
 - → **Posicionamento**: optional text input
 - → **Descrição Curta**: optional textarea
@@ -113,13 +113,34 @@ The segment dropdown options SHALL display human-readable labels (not kebab-case
 
 - **WHEN** the form is displayed
 - **THEN** the Nome da Loja input SHALL be present
-- **AND** the Segmento dropdown SHALL be present with all 10 segment options from `VALID_SEGMENTS`
+- **AND** the Segmento dropdown SHALL be present with all 13 segment options from `STORE_SEGMENTS`
 
 #### Scenario: Optional fields are rendered
 
 - **WHEN** the form is displayed
 - **THEN** Cor da Marca, Cidade, and Estado SHALL be present
 - **AND** they SHALL NOT be marked as required
+
+#### Scenario: Segment dropdown shows 13 options
+
+- **WHEN** the segment dropdown is opened
+- **THEN** 13 options SHALL be displayed
+- **AND** the options SHALL match `STORE_SEGMENTS` values
+
+#### Scenario: Subsegment renders dropdown for rich segment
+
+- **WHEN** a rich segment (e.g. `moda-calcados-acessorios`) is selected
+- **THEN** the subsegment field SHALL render a dropdown with subsegments from `STORE_SUBSEGMENTS[segment]`
+
+#### Scenario: Subsegment renders disabled dropdown for travado segment
+
+- **WHEN** a travado segment (e.g. `mercados-mercearias`) is selected
+- **THEN** the subsegment field SHALL render a disabled dropdown with the single auto-selected option
+
+#### Scenario: Subsegment renders free-text for outros
+
+- **WHEN** the segment `outros` is selected
+- **THEN** the subsegment field SHALL render a free-text input
 
 #### Scenario: Segment options display readable labels
 
@@ -151,6 +172,30 @@ The segment dropdown options SHALL display human-readable labels (not kebab-case
 - **THEN** a discreet "Continuar sem logo" link SHALL be displayed
 - **AND** it SHALL have minimal visual prominence (text-text-muted, no border)
 - **AND** it SHALL have a tooltip explaining the store will use only the name with chosen colors
+
+### Requirement: Subsegment reset on segment change
+
+When the user changes the segment, the subsegment value SHALL be cleared and the "Outro" field SHALL be closed.
+
+#### Scenario: Subsegment cleared on segment change
+
+- **WHEN** the user changes the segment dropdown
+- **THEN** the subsegment value SHALL be reset to empty
+- **AND** any open "Outro" free-text field SHALL be closed
+
+### Requirement: Segment validation uses STORE_SEGMENTS
+
+The client-side validation SHALL check that the selected segment is one of the `STORE_SEGMENTS` values instead of `VALID_SEGMENTS`.
+
+#### Scenario: Valid segment passes validation
+
+- **WHEN** the user selects `moda-calcados-acessorios`
+- **THEN** no segment validation error SHALL appear
+
+#### Scenario: Invalid segment is rejected
+
+- **WHEN** the user submits with segment set to an old value like `moda-vestuario`
+- **THEN** the form SHALL reject the submission with a validation error
 
 ### Requirement: Create store (first save)
 
@@ -321,7 +366,7 @@ The system SHALL display the following states:
 The system SHALL validate the following rules before submitting:
 
 - **Nome da Loja**: required, must be 2–60 characters, trimmed
-- **Segmento**: required, must be one of the `VALID_SEGMENTS` values
+- **Segmento**: required, must be one of the `STORE_SEGMENTS` values
 - **Cor da Marca**: if provided, must be a valid 6-character hex color (`#RRGGBB`)
 
 Validation SHALL trigger on blur (focus loss) for each field.
