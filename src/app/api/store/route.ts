@@ -8,7 +8,7 @@ function validateSubsegment(value: string): string | null {
   const trimmed = value.trim();
   if (trimmed.length < 3) return "Digite ao menos 3 caracteres";
   if (trimmed.length > 30) return "Máximo de 30 caracteres";
-  if (!/^[A-Za-zÀ-ü\s-]+$/.test(trimmed)) return "Use apenas letras e espaços";
+  if (!/^[A-Za-zÀ-ü\s]+$/.test(trimmed)) return "Use apenas letras e espaços";
   if (GENERIC_SUBSEGMENT_VALUES.includes(trimmed.toLowerCase())) return "Valor genérico não permitido";
   return null;
 }
