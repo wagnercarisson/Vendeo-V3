@@ -44,6 +44,7 @@ function validateColor(value: string): string | null {
 function validateOtherSubsegment(value: string): string | null {
   const trimmed = value.trim();
   if (trimmed.length < 3 || trimmed.length > 30) return "Subsegmento deve ter entre 3 e 30 caracteres";
+  if (!/^[A-Za-zÀ-ü\s]+$/.test(trimmed)) return "Use apenas letras e espaços";
   const GENERIC_VALUES = ["outro", "loja", "comercio", "comércio", "varejo"];
   const normalized = trimmed.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   if (GENERIC_VALUES.includes(normalized)) return "Informe um subsegmento mais específico";
