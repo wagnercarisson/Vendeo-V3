@@ -74,7 +74,12 @@
     - [x] 4.5-06-PLAN.md — Store Identity Form: 3-mode subsegment dropdown, Outro behavior, reset
     - [x] 4.5-07-PLAN.md — UI components: store-identity-block.tsx, store-preview.tsx updates
 - [ ] Phase 4.6: Text Only Brand Coverage
-  - [ ] Phase 4.6.1: Text Only State & Visual Direction Inference (0 plans)
+  - [x] Phase 4.6.1: Text Only State & Visual Direction Inference (5/5 plans)
+    - [x] 04.6.1-01-PLAN.md — Database Migration & Types
+    - [x] 04.6.1-02-PLAN.md — Brand Inference Prompt & Service
+    - [x] 04.6.1-03-PLAN.md — API Routes (Infer + PATCH colors)
+    - [x] 04.6.1-04-PLAN.md — Creative Direction Context Update
+    - [x] 04.6.1-05-PLAN.md — Store Identity UI (Step 2 + Preview)
 - [ ] Phase 5: Review, Adjust & Export (not yet planned)
 ## Progress
 
@@ -94,4 +99,6 @@
 | 4.4.1. Existing Logo & Store Brand Direction Foundation | v1.1 | 0/6 | Planned | — |
 | 4.4.2. Generated Visual Signature & Brand Profile | v1.1 | 6/6 | Complete | 2026-06-04 |
 | 4.5. Segment & Subsegment Alignment | v1.1 | 7/7 | Complete | 2026-06-11 |
+| 4.6. Text Only Brand Coverage | v1.1 | 0/5 | Planned | — |
+| 4.6.1. Text Only State & Visual Direction Inference | v1.1 | 5/5 | Planned | — |
 | 5. Review, Adjust & Export | v1.1 | 0 | Not yet planned | — |
