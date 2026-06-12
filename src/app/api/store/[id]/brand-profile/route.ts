@@ -12,12 +12,9 @@ export async function GET(
     .from('store_brand_profiles')
     .select()
     .eq('store_id', id)
-    .eq('status', 'synced')
-    .single();
-
-  if (error && error.code === 'PGRST116') {
-    return NextResponse.json(null, { status: 200 });
-  }
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

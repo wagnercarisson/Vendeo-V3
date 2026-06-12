@@ -215,6 +215,9 @@ export function StoreIdentityForm() {
                 inferred_primary_color: profile.inferred_primary_color,
                 inferred_accent_color: profile.inferred_accent_color,
               });
+            } else if (profile.source === 'text_only' && profile.status === 'failed') {
+              console.error('[StoreIdentityForm] Text-only inference failed:', profile.metadata?.error);
+              setInferenceError('Falha de conexão. Tente novamente mais tarde.');
             }
           }
         }
@@ -499,7 +502,7 @@ export function StoreIdentityForm() {
     const noActiveIdentity = !logoStatus || logoStatus === 'explicit_none';
     const noVisualSignature = !visualSignatureUrl;
 
-    if (noActiveIdentity && noVisualSignature && logoStatus === null) {
+    if (noActiveIdentity && noVisualSignature && (logoStatus === null || inferenceError)) {
       setInferenceLoading(true);
       setInferenceError(null);
       try {
@@ -917,7 +920,7 @@ export function StoreIdentityForm() {
                   </div>
                 )}
 
-                {logoStatus === 'explicit_none' && !inferenceError && !inferenceLoading && (
+                {logoStatus === 'explicit_none' && !inferenceLoading && (
                   <div className="mt-4 space-y-3">
                     {inferredProfile ? (
                       <div className="flex gap-3">
@@ -937,16 +940,26 @@ export function StoreIdentityForm() {
                         </button>
                       </div>
                     ) : (
-                      <>
-                        <p className="text-text-muted text-xs font-body">Nenhuma assinatura visual definida.</p>
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="flex-1 px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 flex items-center justify-center gap-2"
+                        >
+                          Enviar logotipo
+                        </button>
                         <button
                           type="button"
                           onClick={handleNoLogo}
-                          className="text-accent-blue hover:text-accent-blue/80 text-xs font-body underline transition-colors duration-200"
+                          className="flex-1 px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 flex items-center justify-center gap-2 relative group"
                         >
-                          Criar assinatura visual agora
+                          <Sparkles className="w-4 h-4 text-accent-green" />
+                          Não tenho logo
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-bg-elevated border border-border rounded-lg text-xs text-text-secondary font-body whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg z-10">
+                            O Vendeo vai criar uma assinatura visual profissional para sua loja e montar uma identidade visual completa alinhada ao perfil da loja.
+                          </div>
                         </button>
-                      </>
+                      </div>
                     )}
                   </div>
                 )}
