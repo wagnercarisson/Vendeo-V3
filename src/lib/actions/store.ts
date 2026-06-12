@@ -9,7 +9,7 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import type { BrandProfileRecord, BrandAssetRecord } from '@/lib/brand-assets/types';
 
 export async function resolveStoreIdentity(
-  store: Pick<Store, "id" | "name" | "logo_url" | "segment" | "brand_color" | "subsegment" | "tone_of_voice" | "positioning" | "short_description" | "slogan">
+  store: Pick<Store, "id" | "name" | "logo_url" | "segment" | "brand_color" | "subsegment" | "tone_of_voice" | "positioning" | "short_description" | "slogan" | "identity_state">
 ): Promise<StoreIdentitySnapshot> {
   let brandColor = store.brand_color ?? getDefaultBrandColor(store.segment);
   const storeInitials = getStoreInitials(store.name);
@@ -62,6 +62,25 @@ export async function resolveStoreIdentity(
           brandColor = tokenColor;
         }
       }
+    }
+
+    // 4.6.1: source = 'text_only'
+    if (profile?.source === 'text_only' && profile?.status === 'synced') {
+      if (profile.safe_color_tokens?.primary && /^#[0-9A-Fa-f]{6}$/.test(profile.safe_color_tokens.primary)) {
+        brandColor = profile.safe_color_tokens.primary;
+      } else if (profile.inferred_primary_color && /^#[0-9A-Fa-f]{6}$/.test(profile.inferred_primary_color)) {
+        brandColor = profile.inferred_primary_color;
+      }
+      brandProfile = {
+        brand_colors_chosen: profile.brand_colors_chosen ?? [],
+        safe_color_tokens: profile.safe_color_tokens ?? {},
+        visual_style: profile.visual_style,
+        visual_tone: profile.visual_tone,
+        brand_personality: profile.brand_personality,
+        campaign_guidelines: profile.campaign_guidelines,
+        campaign_brief: profile.campaign_brief,
+        logoVariantUrl: null,
+      };
     }
   } catch (err) {
     console.error('[resolveStoreIdentity] Brand profile resolution error:', err);

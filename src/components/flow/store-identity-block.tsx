@@ -8,7 +8,7 @@ import type { StoreIdentitySnapshot } from "@/components/campaign/types";
 import { Loader2 } from "lucide-react";
 
 interface StoreIdentityBlockProps {
-  store: Pick<Store, "id" | "name" | "logo_url" | "segment" | "brand_color" | "subsegment" | "tone_of_voice" | "positioning" | "short_description" | "slogan">;
+  store: Pick<Store, "id" | "name" | "logo_url" | "segment" | "brand_color" | "subsegment" | "tone_of_voice" | "positioning" | "short_description" | "slogan" | "identity_state">;
 }
 
 export function StoreIdentityBlock({ store }: StoreIdentityBlockProps) {

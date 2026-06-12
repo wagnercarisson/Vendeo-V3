@@ -10,7 +10,7 @@ import { resolveStoreIdentity } from "@/lib/actions/store";
 import type { Store } from "@/lib/store";
 
 interface StoreVisualSignatureSectionProps {
-  store: Pick<Store, "id" | "name" | "segment" | "brand_color" | "logo_url" | "subsegment" | "tone_of_voice" | "positioning" | "short_description" | "slogan">;
+  store: Pick<Store, "id" | "name" | "segment" | "brand_color" | "logo_url" | "subsegment" | "tone_of_voice" | "positioning" | "short_description" | "slogan" | "identity_state">;
 }
 
 export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSectionProps) {
