@@ -83,6 +83,18 @@ export function StoreIdentityForm() {
   const [visualSignatureUrl, setVisualSignatureUrl] = useState<string | null>(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [subsegmentIsOther, setSubsegmentIsOther] = useState(false);
+  const [identityState, setIdentityState] = useState<string | null>(null);
+  const [inferenceLoading, setInferenceLoading] = useState(false);
+  const [inferenceError, setInferenceError] = useState<string | null>(null);
+  const [inferredProfile, setInferredProfile] = useState<{
+    safe_color_tokens?: Record<string, string>;
+    visual_style?: string;
+    visual_tone?: string;
+    brand_personality?: string;
+    brand_colors_chosen?: string[];
+    inferred_primary_color?: string;
+    inferred_accent_color?: string;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const saveBrandColors = useCallback(async (primary: string, secondary: string) => {
@@ -135,6 +147,7 @@ export function StoreIdentityForm() {
         if (storeRes.ok) {
           const storeData = await storeRes.json();
           setLogoStatus(storeData.logo_status ?? null);
+          setIdentityState(storeData.identity_state ?? null);
         }
 
         if (logoRes.ok) {
@@ -279,6 +292,7 @@ export function StoreIdentityForm() {
       .then(res => res.json())
       .then(data => {
         if (data.logo_status) setLogoStatus(data.logo_status);
+        setIdentityState(data.identity_state ?? null);
         if (data.visual_signature_url) {
           setVisualSignatureUrl(data.visual_signature_url);
           setLogoResultUrl(data.visual_signature_url);
@@ -291,15 +305,37 @@ export function StoreIdentityForm() {
 
   const handleContinueWithoutLogo = useCallback(async () => {
     if (!storeId) return;
+    setIdentityState('text_only');
+    setLogoStatus('explicit_none');
+    setInferenceLoading(true);
+    setInferenceError(null);
     try {
-      await fetch(`/api/store/${storeId}/logo-status`, {
-        method: "PATCH",
+      const res = await fetch(`/api/store/${storeId}/brand-profile/infer`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ logo_status: "explicit_none" }),
+        body: JSON.stringify({ textOnlyOrigin: 'explicit' }),
       });
-      setLogoStatus("explicit_none");
-    } catch {}
-  }, [storeId]);
+      const data = await res.json();
+      if (data.success) {
+        setInferredProfile(data.profile);
+        if (data.profile?.safe_color_tokens?.primary) {
+          setField("brand_color", data.profile.safe_color_tokens.primary);
+        }
+        if (data.profile?.inferred_accent_color) {
+          setAccentColor(data.profile.inferred_accent_color);
+        }
+        if (data.profile?.brand_colors_chosen?.length > 0) {
+          setBrandColorsChosen(data.profile.brand_colors_chosen);
+        }
+      } else {
+        setInferenceError(data.message || 'Não foi possível gerar a direção visual.');
+      }
+    } catch {
+      setInferenceError('Erro ao gerar direção visual. Tente novamente.');
+    } finally {
+      setInferenceLoading(false);
+    }
+  }, [storeId, setField]);
 
   const handleNoLogo = useCallback(() => {
     console.log(`[StoreIdentityForm] handleNoLogo clicked storeId=${storeId}`);
@@ -426,7 +462,53 @@ export function StoreIdentityForm() {
       await saveBrandColors(formData.brand_color, accentColor);
     }
 
-    setStep2Success("Cores salvas com sucesso!");
+    const noActiveIdentity = !logoStatus || logoStatus === 'explicit_none';
+    const noVisualSignature = !visualSignatureUrl;
+
+    if (noActiveIdentity && noVisualSignature && !identityState) {
+      setInferenceLoading(true);
+      setInferenceError(null);
+      try {
+        const userColors = [];
+        if (/^#[0-9A-Fa-f]{6}$/.test(formData.brand_color)) userColors.push(formData.brand_color);
+        if (/^#[0-9A-Fa-f]{6}$/.test(accentColor)) userColors.push(accentColor);
+
+        const res = await fetch(`/api/store/${storeId}/brand-profile/infer`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            textOnlyOrigin: 'implicit',
+            userChosenColors: userColors.length > 0 ? userColors : undefined,
+            manualColorOverride: userColors.length > 0,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setInferredProfile(data.profile);
+          setIdentityState('text_only');
+          if (data.profile?.safe_color_tokens?.primary) {
+            setField("brand_color", data.profile.safe_color_tokens.primary);
+          }
+          if (data.profile?.inferred_accent_color) {
+            setAccentColor(data.profile.inferred_accent_color);
+          }
+          if (data.profile?.brand_colors_chosen?.length > 0) {
+            setBrandColorsChosen(data.profile.brand_colors_chosen);
+          }
+          setStep2Success("Direção visual gerada com sucesso!");
+        } else {
+          setInferenceError(data.message || 'Não foi possível gerar a direção visual.');
+          setStep2Success("Cores salvas com sucesso!");
+        }
+      } catch {
+        setInferenceError('Erro ao gerar direção visual. Tente novamente.');
+        setStep2Success("Cores salvas com sucesso!");
+      } finally {
+        setInferenceLoading(false);
+      }
+    } else {
+      setStep2Success("Cores salvas com sucesso!");
+    }
   };
 
   const segmentOptions = STORE_SEGMENTS.map((seg) => ({
@@ -688,6 +770,61 @@ export function StoreIdentityForm() {
                   </p>
                 )}
 
+                {inferenceLoading && (
+                  <div className="mt-4 flex items-center gap-3 p-4 bg-bg-elevated border border-border rounded-xl">
+                    <Loader2 className="w-5 h-5 animate-spin text-accent-blue shrink-0" />
+                    <div>
+                      <p className="text-text-primary text-sm font-heading font-semibold">Gerando direção visual...</p>
+                      <p className="text-text-muted text-xs font-body mt-0.5">Aguarde enquanto o Vendeo gera uma direção visual para sua loja</p>
+                    </div>
+                  </div>
+                )}
+
+                {identityState === 'text_only' && inferredProfile && !inferenceLoading && (
+                  <div className="mt-4">
+                    <div className="flex items-center gap-3 p-4 bg-bg-elevated border border-border rounded-xl">
+                      <CheckCircle2 className="w-5 h-5 text-accent-green shrink-0" />
+                      <p className="text-accent-green text-sm font-heading font-semibold">Direção visual definida pelo Vendeo</p>
+                    </div>
+                    {inferredProfile.safe_color_tokens && (() => {
+                      const tokens = inferredProfile.safe_color_tokens!;
+                      const colorKeys = Object.entries(tokens).filter(([, v]) => /^#[0-9A-Fa-f]{6}$/.test(v));
+                      if (colorKeys.length > 0) {
+                        return (
+                          <div className="mt-3 flex gap-2 flex-wrap">
+                            {colorKeys.map(([key, val]) => (
+                              <div key={key} className="flex flex-col items-center gap-1">
+                                <div className="w-8 h-8 rounded-full border-2 border-border-light" style={{ backgroundColor: val }} title={key} />
+                                <span className="text-[10px] text-text-muted font-mono">{key}</span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
+                )}
+
+                {identityState === 'text_only' && inferenceError && !inferenceLoading && (
+                  <div className="mt-4 space-y-3">
+                    <div className="flex items-start gap-3 bg-amber-900/20 border border-amber-700/30 rounded-lg px-4 py-3">
+                      <AlertCircle className="w-5 h-5 text-accent-amber shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-accent-amber text-sm font-heading font-semibold">Direção visual pendente</p>
+                        <p className="text-text-muted text-xs font-body mt-0.5">{inferenceError}</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleContinueWithoutLogo}
+                      className="text-accent-blue hover:text-accent-blue/80 text-xs font-body underline transition-colors duration-200"
+                    >
+                      Gerar direção visual agora
+                    </button>
+                  </div>
+                )}
+
                 {logoStatus === null && (
                   <div className="mt-4 space-y-3">
                     <div className="flex gap-3">
@@ -711,16 +848,18 @@ export function StoreIdentityForm() {
                         </div>
                       </button>
                     </div>
-                    <div className="text-center">
-                      <button
-                        type="button"
-                        onClick={handleContinueWithoutLogo}
-                        className="text-text-muted hover:text-text-primary text-xs font-body underline transition-colors duration-200"
-                      >
-                        Continuar sem logo
-                        <span className="ml-1 text-text-disabled">(O Vendeo usará apenas o nome da loja com as cores escolhidas)</span>
-                      </button>
-                    </div>
+                    {identityState !== 'text_only' && (
+                      <div className="text-center">
+                        <button
+                          type="button"
+                          onClick={handleContinueWithoutLogo}
+                          className="text-text-muted hover:text-text-primary text-xs font-body underline transition-colors duration-200"
+                        >
+                          Continuar sem logo
+                          <span className="ml-1 text-text-disabled">(O Vendeo usará apenas o nome da loja com as cores escolhidas)</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -881,6 +1020,8 @@ export function StoreIdentityForm() {
                 brandColorsChosen={brandColorsChosen}
                 logoUrl={logoResultUrl}
                 logoStatus={logoStatus}
+                identityState={identityState}
+                textOnlyProfile={inferredProfile}
               />
             </div>
           </div>

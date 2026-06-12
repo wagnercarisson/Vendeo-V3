@@ -2,6 +2,7 @@
 
 import { SEGMENT_COLOR_FALLBACK } from "@/lib/store";
 import { STORE_SEGMENTS } from "@/lib/constants";
+import { CheckCircle2 } from "lucide-react";
 
 const PREVIEW_DEFAULT_COLOR = "#22C55E";
 
@@ -13,9 +14,19 @@ interface StorePreviewProps {
   brandColorsChosen?: string[];
   logoUrl?: string | null;
   logoStatus?: string | null;
+  identityState?: string | null;
+  textOnlyProfile?: {
+    safe_color_tokens?: Record<string, string>;
+    visual_style?: string;
+    visual_tone?: string;
+    brand_personality?: string;
+    brand_colors_chosen?: string[];
+    inferred_primary_color?: string;
+    inferred_accent_color?: string;
+  } | null;
 }
 
-export function StorePreview({ name, segment, brandColor, accentColor, brandColorsChosen, logoUrl, logoStatus }: StorePreviewProps) {
+export function StorePreview({ name, segment, brandColor, accentColor, brandColorsChosen, logoUrl, logoStatus, identityState, textOnlyProfile }: StorePreviewProps) {
   const hasData = name || segment;
 
   if (!hasData) {
@@ -28,8 +39,23 @@ export function StorePreview({ name, segment, brandColor, accentColor, brandColo
     );
   }
 
-  const resolvedColor = brandColorsChosen?.[0] || brandColor || SEGMENT_COLOR_FALLBACK[segment] || PREVIEW_DEFAULT_COLOR;
-  const resolvedAccent = brandColorsChosen?.[1] || accentColor || resolvedColor;
+  const isTextOnly = identityState === 'text_only' && textOnlyProfile;
+
+  const resolvedColor = isTextOnly
+    ? (textOnlyProfile!.safe_color_tokens?.primary && /^#[0-9A-Fa-f]{6}$/.test(textOnlyProfile!.safe_color_tokens!.primary)
+        ? textOnlyProfile!.safe_color_tokens!.primary
+        : textOnlyProfile!.inferred_primary_color && /^#[0-9A-Fa-f]{6}$/.test(textOnlyProfile!.inferred_primary_color)
+          ? textOnlyProfile!.inferred_primary_color
+          : brandColor || SEGMENT_COLOR_FALLBACK[segment] || PREVIEW_DEFAULT_COLOR)
+    : brandColorsChosen?.[0] || brandColor || SEGMENT_COLOR_FALLBACK[segment] || PREVIEW_DEFAULT_COLOR;
+
+  const resolvedAccent = isTextOnly
+    ? (textOnlyProfile!.safe_color_tokens?.accent && /^#[0-9A-Fa-f]{6}$/.test(textOnlyProfile!.safe_color_tokens!.accent)
+        ? textOnlyProfile!.safe_color_tokens!.accent
+        : textOnlyProfile!.inferred_accent_color && /^#[0-9A-Fa-f]{6}$/.test(textOnlyProfile!.inferred_accent_color)
+          ? textOnlyProfile!.inferred_accent_color
+          : resolvedColor)
+    : brandColorsChosen?.[1] || accentColor || resolvedColor;
 
   const showVisualSignature = logoStatus === 'generated' && logoUrl;
 
@@ -112,6 +138,57 @@ export function StorePreview({ name, segment, brandColor, accentColor, brandColo
           </div>
         )}
       </div>
+
+      {isTextOnly && (
+        <div className="mt-4 pt-4 border-t border-border space-y-3">
+          <div className="flex items-center gap-2 mb-2">
+            <CheckCircle2 className="w-4 h-4 text-accent-green" />
+            <span className="text-accent-green text-xs font-heading font-semibold">Direção visual definida pelo Vendeo</span>
+          </div>
+
+          {textOnlyProfile!.safe_color_tokens && (() => {
+            const tokens = textOnlyProfile!.safe_color_tokens!;
+            const colorChips = Object.entries(tokens).filter(([, v]) => /^#[0-9A-Fa-f]{6}$/.test(v));
+            if (colorChips.length > 0) {
+              return (
+                <div>
+                  <span className="text-text-muted text-[10px] font-heading font-medium uppercase tracking-wider">Paleta</span>
+                  <div className="flex gap-2 mt-2 flex-wrap">
+                    {colorChips.map(([key, val]) => (
+                      <div key={key} className="flex flex-col items-center gap-0.5">
+                        <div className="w-6 h-6 rounded-full border border-border-light" style={{ backgroundColor: val }} />
+                        <span className="text-[9px] text-text-muted font-mono">{val}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          })()}
+
+          {textOnlyProfile!.visual_style && (
+            <div>
+              <span className="text-text-muted text-[10px] font-heading font-medium uppercase tracking-wider">Estilo</span>
+              <p className="text-text-secondary text-xs font-body mt-1">{textOnlyProfile!.visual_style}</p>
+            </div>
+          )}
+
+          {textOnlyProfile!.visual_tone && (
+            <div>
+              <span className="text-text-muted text-[10px] font-heading font-medium uppercase tracking-wider">Tom</span>
+              <p className="text-text-secondary text-xs font-body mt-1">{textOnlyProfile!.visual_tone}</p>
+            </div>
+          )}
+
+          {textOnlyProfile!.brand_personality && (
+            <div>
+              <span className="text-text-muted text-[10px] font-heading font-medium uppercase tracking-wider">Personalidade</span>
+              <p className="text-text-secondary text-xs font-body mt-1">{textOnlyProfile!.brand_personality}</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
