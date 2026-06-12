@@ -73,6 +73,8 @@
     - [x] 4.5-05-PLAN.md — AI/Generation compatibility: image-generation-service.ts + benchmarks
     - [x] 4.5-06-PLAN.md — Store Identity Form: 3-mode subsegment dropdown, Outro behavior, reset
     - [x] 4.5-07-PLAN.md — UI components: store-identity-block.tsx, store-preview.tsx updates
+- [ ] Phase 4.6: Text Only Brand Coverage
+  - [ ] Phase 4.6.1: Text Only State & Visual Direction Inference (0 plans)
 - [ ] Phase 5: Review, Adjust & Export (not yet planned)
 ## Progress
 
