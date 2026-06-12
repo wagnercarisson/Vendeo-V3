@@ -54,7 +54,11 @@ export async function PATCH(
 
   const { data, error } = await supabase
     .from('store_brand_profiles')
-    .update({ brand_colors_chosen: colors, updated_at: new Date().toISOString() })
+    .update({
+      brand_colors_chosen: colors,
+      manual_color_override: { enabled: true },
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', existing.id)
     .select()
     .single();
@@ -62,6 +66,11 @@ export async function PATCH(
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  await supabase
+    .from('stores')
+    .update({ manual_color_override: true })
+    .eq('id', id);
 
   return NextResponse.json(data, { status: 200 });
 }
