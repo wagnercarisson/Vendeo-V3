@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin as supabase } from "@/lib/supabase/server";
-import { STORE_SEGMENTS } from "@/lib/constants";
+import { STORE_SEGMENTS, STORE_SUBSEGMENTS } from "@/lib/constants";
 
 const GENERIC_SUBSEGMENT_VALUES = ["outro", "loja", "comercio", "comércio", "varejo"];
 
@@ -8,7 +8,7 @@ function validateSubsegment(value: string): string | null {
   const trimmed = value.trim();
   if (trimmed.length < 3) return "Digite ao menos 3 caracteres";
   if (trimmed.length > 30) return "Máximo de 30 caracteres";
-  if (!/^[A-Za-zÀ-ü\s]+$/.test(trimmed)) return "Use apenas letras e espaços";
+  if (!/^[A-Za-zÀ-ü\s-]+$/.test(trimmed)) return "Use apenas letras e espaços";
   if (GENERIC_SUBSEGMENT_VALUES.includes(trimmed.toLowerCase())) return "Valor genérico não permitido";
   return null;
 }
@@ -18,7 +18,7 @@ function sanitizeSubsegment(value: string): string {
     .trim()
     .replace(/\s+/g, " ")
     .split(" ")
-    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .map(w => w.split("-").map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join("-"))
     .join(" ");
 }
 
@@ -54,16 +54,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "subsegment inválido" }, { status: 400 });
     }
 
-    if (subsegment.trim().toLowerCase() === "outro") {
-      return NextResponse.json({ error: "Valor inválido para subsegmento" }, { status: 400 });
-    }
+    const segmentKey = segment as keyof typeof STORE_SUBSEGMENTS;
+    const segmentSubs = STORE_SUBSEGMENTS[segmentKey] ?? [];
+    const trimmed = subsegment.trim();
+    const isPredefined = segmentSubs.some(s => s.value === trimmed.toLowerCase());
 
-    const subError = validateSubsegment(subsegment);
-    if (subError) {
-      return NextResponse.json({ error: subError }, { status: 400 });
-    }
+    if (isPredefined) {
+      effectiveSubsegment = trimmed.toLowerCase();
+    } else {
+      if (trimmed.toLowerCase() === "outro") {
+        return NextResponse.json({ error: "Valor inválido para subsegmento" }, { status: 400 });
+      }
 
-    effectiveSubsegment = sanitizeSubsegment(subsegment);
+      const subError = validateSubsegment(subsegment);
+      if (subError) {
+        return NextResponse.json({ error: subError }, { status: 400 });
+      }
+
+      effectiveSubsegment = sanitizeSubsegment(subsegment);
+    }
   } else if (segment === "outros") {
     return NextResponse.json({ error: "Subsegmento obrigatório para segmento outros" }, { status: 400 });
   }

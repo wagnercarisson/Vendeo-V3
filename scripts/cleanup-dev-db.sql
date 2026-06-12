@@ -8,5 +8,6 @@ TRUNCATE TABLE public.store_brand_assets CASCADE;
 TRUNCATE TABLE public.store_visual_signatures CASCADE;
 TRUNCATE TABLE public.stores CASCADE;
 
--- Clean storage buckets
-DELETE FROM storage.objects WHERE bucket_id IN ('visual-signatures', 'store-logos', 'store-brand-assets');
+-- ⚠ Storage cleanup: use Supabase Dashboard → Storage → buckets to empty:
+-- visual-signatures, store-logos, store-brand-assets
+-- (Direct DELETE from storage.objects is blocked by Supabase RLS)

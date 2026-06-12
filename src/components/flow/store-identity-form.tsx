@@ -3,7 +3,7 @@
 import { useStoreForm } from "./use-store-form";
 import { StorePreview } from "./store-preview";
 import { VisualSignatureApprovalModal } from "./visual-signature-approval-modal";
-import { STORE_SEGMENTS, BRAZILIAN_STATES } from "@/lib/constants";
+import { STORE_SEGMENTS, STORE_SUBSEGMENTS, BRAZILIAN_STATES } from "@/lib/constants";
 import { AlertCircle, CheckCircle2, Loader2, X, Upload, ArrowLeft, Sparkles } from "lucide-react";
 import { useState, useCallback, useRef, useEffect } from "react";
 
@@ -41,6 +41,24 @@ function validateColor(value: string): string | null {
   return null;
 }
 
+function validateOtherSubsegment(value: string): string | null {
+  const trimmed = value.trim();
+  if (trimmed.length < 3 || trimmed.length > 30) return "Subsegmento deve ter entre 3 e 30 caracteres";
+  const GENERIC_VALUES = ["outro", "loja", "comercio", "comércio", "varejo"];
+  const normalized = trimmed.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (GENERIC_VALUES.includes(normalized)) return "Informe um subsegmento mais específico";
+  return null;
+}
+
+function getSubsegmentMode(segment: string): 'rich' | 'travado' | 'other' | 'locked' {
+  if (!segment) return 'locked';
+  if (segment === 'outros') return 'other';
+  const subs = STORE_SUBSEGMENTS[segment as keyof typeof STORE_SUBSEGMENTS];
+  if (!subs || subs.length === 0) return 'locked';
+  if (subs.length === 1) return 'travado';
+  return 'rich';
+}
+
 export function StoreIdentityForm() {
   const { formData, setField, save, isLoading, isSaving, error, warningMessage, dismissWarning, successMessage, mode, clearStore, storeId } = useStoreForm();
 
@@ -63,6 +81,7 @@ export function StoreIdentityForm() {
   const [logoStatus, setLogoStatus] = useState<string | null>(null);
   const [visualSignatureUrl, setVisualSignatureUrl] = useState<string | null>(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [subsegmentIsOther, setSubsegmentIsOther] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const saveBrandColors = useCallback(async (primary: string, secondary: string) => {
@@ -156,12 +175,36 @@ export function StoreIdentityForm() {
     load();
   }, [storeId, setField]);
 
+  // Hydrate subsegment mode on load: detect if stored subsegment is custom (not predefined)
+  useEffect(() => {
+    if (!formData.segment || !formData.subsegment) return;
+    const mode = getSubsegmentMode(formData.segment);
+    if (mode === 'other') {
+      setSubsegmentIsOther(true);
+      return;
+    }
+    if (mode === 'travado') {
+      setSubsegmentIsOther(false);
+      return;
+    }
+    if (mode === 'rich') {
+      const subs = STORE_SUBSEGMENTS[formData.segment as keyof typeof STORE_SUBSEGMENTS] ?? [];
+      const isPredefined = subs.some(s => s.value === formData.subsegment);
+      setSubsegmentIsOther(!isPredefined);
+    }
+  }, [formData.segment, formData.subsegment]);
+
   const handleBlur = useCallback((field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
     let errorMsg: string | null = null;
     switch (field) {
       case "name": errorMsg = validateName(formData.name); break;
       case "segment": errorMsg = validateSegment(formData.segment); break;
+      case "subsegment":
+        if (getSubsegmentMode(formData.segment) === 'other') {
+          errorMsg = validateOtherSubsegment(formData.subsegment);
+        }
+        break;
       case "brand_color": errorMsg = validateColor(formData.brand_color); break;
     }
     setFieldErrors((prev) => {
@@ -171,6 +214,36 @@ export function StoreIdentityForm() {
       return next;
     });
   }, [formData]);
+
+  const handleSegmentChange = useCallback((value: string) => {
+    setField("segment", value);
+    const mode = getSubsegmentMode(value);
+    if (mode === 'travado') {
+      const subs = STORE_SUBSEGMENTS[value as keyof typeof STORE_SUBSEGMENTS] ?? [];
+      setField("subsegment", subs[0]?.value ?? "");
+    } else {
+      setField("subsegment", "");
+    }
+    setSubsegmentIsOther(false);
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      delete next.segment;
+      return next;
+    });
+  }, [setField]);
+
+  const handleSubsegmentBlur = useCallback(() => {
+    setTouched((prev) => ({ ...prev, subsegment: true }));
+    const mode = getSubsegmentMode(formData.segment);
+    if (mode !== 'other') return;
+    const errorMsg = validateOtherSubsegment(formData.subsegment);
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      if (errorMsg) next.subsegment = errorMsg;
+      else delete next.subsegment;
+      return next;
+    });
+  }, [formData.segment, formData.subsegment]);
 
   const handleApprovalComplete = useCallback((result: { 
     logoStatus: string; 
@@ -327,8 +400,13 @@ export function StoreIdentityForm() {
     const errors: FieldErrors = {};
     if (nameErr) errors.name = nameErr;
     if (segmentErr) errors.segment = segmentErr;
+    const subsegmentMode = getSubsegmentMode(formData.segment);
+    if ((subsegmentMode === 'other' || subsegmentIsOther) && formData.subsegment.trim()) {
+      const subsegmentErr = validateOtherSubsegment(formData.subsegment);
+      if (subsegmentErr) errors.subsegment = subsegmentErr;
+    }
     setFieldErrors(errors);
-    setTouched({ name: true, segment: true });
+    setTouched({ name: true, segment: true, subsegment: !!errors.subsegment });
     if (Object.keys(errors).length > 0) return;
 
     const saved = await save();
@@ -448,7 +526,7 @@ export function StoreIdentityForm() {
 
           <div>
             <label htmlFor="segment" className={labelClass}>Segmento *</label>
-            <select id="segment" value={formData.segment} onChange={(e) => setField("segment", e.target.value)} onBlur={() => handleBlur("segment")} className={selectClass("segment")}>
+            <select id="segment" value={formData.segment} onChange={(e) => handleSegmentChange(e.target.value)} onBlur={() => handleBlur("segment")} className={selectClass("segment")}>
               <option value="" disabled>Selecione o segmento</option>
               {segmentOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -461,7 +539,46 @@ export function StoreIdentityForm() {
 
           <div>
             <label htmlFor="subsegment" className={labelClass}>Subsegmento <span className="font-normal normal-case tracking-normal text-text-disabled">(opcional)</span></label>
-            <input id="subsegment" type="text" value={formData.subsegment} onChange={(e) => setField("subsegment", e.target.value)} placeholder="Ex: Roupas femininas" className="w-full bg-bg-surface border border-border-light rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20" />
+            {(() => {
+              const mode = getSubsegmentMode(formData.segment);
+              if (mode === 'other' || (mode === 'rich' && subsegmentIsOther)) {
+                return (
+                  <>
+                    <input id="subsegment" type="text" value={formData.subsegment} onChange={(e) => setField("subsegment", e.target.value)} onBlur={handleSubsegmentBlur} placeholder="Digite o seu subsegmento" maxLength={30} className={inputClass("subsegment")} />
+                    {touched.subsegment && fieldErrors.subsegment && (
+                      <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs"><AlertCircle className="w-3.5 h-3.5" />{fieldErrors.subsegment}</p>
+                    )}
+                  </>
+                );
+              }
+              if (mode === 'rich' && formData.segment) {
+                const subs = STORE_SUBSEGMENTS[formData.segment as keyof typeof STORE_SUBSEGMENTS] ?? [];
+                return (
+                  <select id="subsegment" value={formData.subsegment} onChange={(e) => {
+                    const val = e.target.value;
+                    setField("subsegment", val === 'outro' ? "" : val);
+                    setSubsegmentIsOther(val === 'outro');
+                  }} onBlur={() => setTouched((prev) => ({ ...prev, subsegment: true }))} className={selectClass("subsegment")}>
+                    <option value="">Selecione o subsegmento</option>
+                    {subs.map((sub) => (
+                      <option key={sub.value} value={sub.value}>{sub.label}</option>
+                    ))}
+                  </select>
+                );
+              }
+              if (mode === 'travado' && formData.segment) {
+                const subs = STORE_SUBSEGMENTS[formData.segment as keyof typeof STORE_SUBSEGMENTS] ?? [];
+                const sub = subs[0];
+                return (
+                  <select id="subsegment" value={sub?.value ?? ""} disabled className="w-full bg-bg-surface border border-border-light rounded-lg px-3.5 py-2.5 text-text-secondary text-sm font-body cursor-not-allowed">
+                    {sub && <option value={sub.value}>{sub.label}</option>}
+                  </select>
+                );
+              }
+              return (
+                <input id="subsegment" type="text" value={formData.subsegment} disabled placeholder="Selecione um segmento primeiro" className="w-full bg-bg-surface border border-border-light rounded-lg px-3.5 py-2.5 text-text-disabled text-sm font-body placeholder:text-text-muted cursor-not-allowed" />
+              );
+            })()}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

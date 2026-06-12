@@ -56,31 +56,31 @@ Subsegment lists SHALL be exactly as follows (each entry is `{ value, label }`):
 
 | Segmento | Subsegmentos (value → label) |
 |----------|------------------------------|
-| `moda-calcados-acessorios` | `moda-feminina` → Moda Feminina, `moda-masculina` → Moda Masculina, `moda-infantil` → Moda Infantil, `calcados-femininos` → Calçados Femininos, `calcados-masculinos` → Calçados Masculinos, `calcados-infantis` → Calçados Infantis, `acessorios` → Acessórios, `bolsas-mochilas` → Bolsas e Mochilas, `joias-bijuterias` → Joias e Bijuterias, `roupas-intimas` → Roupas Íntimas, `moda-praia` → Moda Praia |
-| `bebidas-adegas-conveniencia` | `cervejas-especiais` → Cervejas Especiais, `vinhos` → Vinhos, `destilados` → Destilados, `refrigerantes` → Refrigerantes, `sucos` → Sucos, `aguas` → Águas, `energeticos` → Energéticos, `conveniencia-alimentacao` → Conveniência e Alimentação, `gelo-e-gelados` → Gelo e Gelados |
-| `padaria-confeitaria-doces` | `paes-artesanais` → Pães Artesanais, `bolos-tortas` → Bolos e Tortas, `doces-caseiros` → Doces Caseiros, `salgados-assados` → Salgados Assados, `confeitaria-fina` → Confeitaria Fina, `salgados-fritos` → Salgados Fritos, `cafeteria` → Cafeteria, `sucos-naturais` → Sucos Naturais, `sorvetes-acai` → Sorvetes e Açaí |
-| `beleza-estetica` | `cabeleireiro` → Cabeleireiro, `barbearia` → Barbearia, `manicure-pedicure` → Manicure e Pedicure, `estetica-facial` → Estética Facial, `estetica-corporal` → Estética Corporal, `maquiagem` → Maquiagem, `cosmeticos-naturais` → Cosméticos Naturais, `perfumaria` → Perfumaria, `depilacao` → Depilação, `massoterapia` → Massoterapia, `designer-sobrancelhas` → Designer de Sobrancelhas |
-| `petshop` | `alimentacao-caes` → Alimentação para Cães, `alimentacao-gatos` → Alimentação para Gatos, `acessorios-caes` → Acessórios para Cães, `acessorios-gatos` → Acessórios para Gatos, `higiene-beleza` → Higiene e Beleza, `brinquedos` → Brinquedos, `medicamentos-veterinarios` → Medicamentos Veterinários, `servicos-veterinarios` → Serviços Veterinários, `pet-exotico` → Pet Exótico |
-| `variedades-utilidades` | `presentes-souvenirs` → Presentes e Souvenirs, `artigos-decoracao` → Artigos de Decoração, `utilidades-domesticas` → Utilidades Domésticas, `artigos-festa` → Artigos para Festa, `papelaria` → Papelaria, `brinquedos-gerais` → Brinquedos Gerais, `artigos-religiosos` → Artigos Religiosos, `artesanato-local` → Artesanato Local, `cama-mesa-banho` → Cama, Mesa e Banho |
+| `moda-calcados-acessorios` | `moda-feminina` → Moda Feminina, `moda-masculina` → Moda Masculina, `moda-infantil` → Moda Infantil, `moda-intima` → Moda Íntima, `moda-fitness` → Moda Fitness, `moda-praia` → Moda Praia, `calcados` → Calçados, `bolsas-acessorios` → Bolsas e Acessórios, `bijuterias-semijoias` → Bijuterias e Semijoias, `brecho` → Brechó, `boutique` → Boutique |
+| `bebidas-adegas-conveniencia` | `adega` → Adega, `loja-de-bebidas` → Loja de Bebidas, `distribuidora-de-bebidas` → Distribuidora de Bebidas, `emporio-de-bebidas` → Empório de Bebidas, `conveniencia` → Conveniência, `cervejas-artesanais` → Cervejas Artesanais, `vinhos` → Vinhos, `destilados` → Destilados, `bebidas-geladas` → Bebidas Geladas |
+| `padaria-confeitaria-doces` | `padaria` → Padaria, `panificadora` → Panificadora, `confeitaria` → Confeitaria, `doceria` → Doceria, `bolos-caseiros` → Bolos Caseiros, `salgados` → Salgados, `cafeteria` → Cafeteria, `sorveteria-acaiteria` → Sorveteria / Açaíteria, `chocolateria` → Chocolateria |
+| `beleza-estetica` | `salao-de-beleza` → Salão de Beleza, `barbearia` → Barbearia, `esmalteria` → Esmalteria, `manicure-pedicure` → Manicure e Pedicure, `sobrancelhas-cilios` → Sobrancelhas e Cílios, `estetica-facial` → Estética Facial, `estetica-corporal` → Estética Corporal, `depilacao` → Depilação, `maquiagem` → Maquiagem, `cosmeticos-perfumaria` → Cosméticos e Perfumaria, `spa-massagem` → Spa e Massagem |
+| `petshop` | `pet-shop` → Pet Shop, `banho-e-tosa` → Banho e Tosa, `racoes` → Rações, `acessorios-pet` → Acessórios Pet, `produtos-veterinarios` → Produtos Veterinários, `aquarismo` → Aquarismo, `aves-peixes` → Aves e Peixes, `pet-premium` → Pet Premium, `servicos-pet` → Serviços Pet |
+| `variedades-utilidades` | `loja-de-variedades` → Loja de Variedades, `bazar` → Bazar, `loja-popular` → Loja Popular, `utilidades-domesticas` → Utilidades Domésticas, `papelaria` → Papelaria, `brinquedos` → Brinquedos, `presentes` → Presentes, `armarinhos` → Armarinhos, `embalagens` → Embalagens, `artigos-de-festa` → Artigos de Festa |
 
 **Travado segments** (6) — SHALL contain exactly one subsegment entry (no `outro` option):
 
 | Segmento | Subsegmento único (value → label) |
 |----------|----------------------------------|
-| `mercados-mercearias` | `mercado-mercearia` → Mercado / Mercearia |
-| `restaurantes-lanchonetes` | `restaurante-lanchonete` → Restaurante / Lanchonete |
-| `farmacia-saude` | `farmacia` → Farmácia / Drogaria |
+| `mercados-mercearias` | `mercados-mercearias` → Mercados e Mercearias |
+| `restaurantes-lanchonetes` | `restaurantes-lanchonetes` → Restaurantes e Lanchonetes |
+| `farmacia-saude` | `farmacia-saude` → Farmácia e Saúde |
 | `casa-decoracao` | `casa-decoracao` → Casa e Decoração |
-| `eletronicos-tecnologia` | `eletronico-tecnologia` → Eletrônicos / Tecnologia |
-| `servicos-locais` | `servico-local` → Serviço Local |
+| `eletronicos-tecnologia` | `eletronicos-tecnologia` → Eletrônicos e Tecnologia |
+| `servicos-locais` | `servicos-locais` → Serviços Locais |
 
-The `outros` segment SHALL have an empty subsegment list.
+The `outros` segment SHALL contain one subsegment entry: `{ value: "outros", label: "Outros" }`.
 
 #### Scenario: Travado segment has single subsegment
 
 - **WHEN** inspecting subsegments for `mercados-mercearias`
 - **THEN** the list SHALL contain exactly one entry
-- **AND** the entry value SHALL be `mercado-mercearia`
+- **AND** the entry value SHALL be `mercados-mercearias`
 - **AND** no `outro` option SHALL be present
 
 #### Scenario: Rich segment includes all subsegments
@@ -88,10 +88,10 @@ The `outros` segment SHALL have an empty subsegment list.
 - **WHEN** inspecting subsegments for `moda-calcados-acessorios`
 - **THEN** the list SHALL contain 12 entries (11 subsegments + `outro`)
 
-#### Scenario: Outros segment has empty subsegments
+#### Scenario: Outros segment has one subsegment
 
 - **WHEN** inspecting `STORE_SUBSEGMENTS["outros"]`
-- **THEN** it SHALL be an empty array `[]`
+- **THEN** it SHALL contain one entry with value `outros` and label `Outros`
 
 ### Requirement: Human-readable labels in dropdown
 
