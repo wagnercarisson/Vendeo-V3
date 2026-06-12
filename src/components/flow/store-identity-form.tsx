@@ -202,7 +202,7 @@ export function StoreIdentityForm() {
       case "name": errorMsg = validateName(formData.name); break;
       case "segment": errorMsg = validateSegment(formData.segment); break;
       case "subsegment":
-        if (getSubsegmentMode(formData.segment) === 'other') {
+        if (getSubsegmentMode(formData.segment) === 'other' || subsegmentIsOther) {
           errorMsg = validateOtherSubsegment(formData.subsegment);
         }
         break;
@@ -236,7 +236,7 @@ export function StoreIdentityForm() {
   const handleSubsegmentBlur = useCallback(() => {
     setTouched((prev) => ({ ...prev, subsegment: true }));
     const mode = getSubsegmentMode(formData.segment);
-    if (mode !== 'other') return;
+    if (mode !== 'other' && !subsegmentIsOther) return;
     const errorMsg = validateOtherSubsegment(formData.subsegment);
     setFieldErrors((prev) => {
       const next = { ...prev };
@@ -244,7 +244,7 @@ export function StoreIdentityForm() {
       else delete next.subsegment;
       return next;
     });
-  }, [formData.segment, formData.subsegment]);
+  }, [formData.segment, formData.subsegment, subsegmentIsOther]);
 
   const handleApprovalComplete = useCallback((result: { 
     logoStatus: string; 
