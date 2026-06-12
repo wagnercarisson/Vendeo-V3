@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI + Rendering
 status: active
-stopped_at: Phase 4.5 — Segment & Subsegment Alignment completed (7/7 plans, spec correction).
-last_updated: "2026-06-11T20:50:00.000Z"
+stopped_at: Phase 4.6.1 — Text Only State & Visual Direction Inference completed (5/5 plans executed).
+last_updated: "2026-06-12T17:30:00.000Z"
 progress:
   total_phases: 13
-  completed_phases: 12
+  completed_phases: 13
   total_plans: 56
-  completed_plans: 49
-  percent: 87.5
+  completed_plans: 54
+  percent: 96.4
 ---
 
 # Project State
@@ -20,16 +20,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-25 after v1.0 milestone)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
-**Current focus:** Phase 4.5 complete — next: Phase 4.4.1 or Phase 5
+**Current focus:** Phase 4.6.1 complete — next: Phase 4.4.1 or Phase 5
 
 ## Current Position
 
-Phase: 4.5 — Segment & Subsegment Alignment (COMPLETED — 7/7 plans executed and verified)
-Milestone: v1.1 AI + Rendering — EXTENDED (Phase 4.4.1 deferred, Phase 4.5 complete)
-Phases complete: 12 of 13 phases
+Phase: 4.6.1 — Text Only State & Visual Direction Inference (COMPLETED — 5/5 plans executed)
+Milestone: v1.1 AI + Rendering — EXTENDED (Phase 4.4.1 deferred, Phase 4.6.1 complete)
+Phases complete: 13 of 13 phases
 Next phase: Phase 4.4.1 (6 plans deferred) or Phase 5 (Review, Adjust & Export)
 
-Progress: [███████████████░] 87.5% (49/56 plans completed, 7 planned)
+Progress: [████████████████] 96.4% (54/56 plans completed, 2 planned)
 
 ## Performance Metrics
 
@@ -64,6 +64,23 @@ Subsegment values in `STORE_SUBSEGMENTS` were corrected from auto-generated spec
 - `openspec/.../specs/segment-subsegment-hierarchy/spec.md` — corrected
 - `.planning/phases/4.5-CONTEXT.md` — corrected
 
+### Decisions from Phase 4.6.1
+
+Registered in `.planning/phases/04.6.1-text-only-state-visual-direction-inference/04.6.1-CONTEXT.md`.
+
+Key decisions:
+- D-01: Dedicated inference route POST /api/store/[id]/brand-profile/infer
+- D-02: Dual-population strategy (identity_state + logo_status both set)
+- D-03: New dedicated prompt (store-brand-inference.md) without image analysis
+- D-04: BrandTextOnlyInferenceService follows BrandDirectorService pattern
+- D-05: User colors as signal, not constraint
+- D-06: Color resolution: safe_color_tokens.primary > inferred_primary_color > store.brand_color > SEGMENT_COLOR_FALLBACK[segment]
+- D-07: Non-blocking error handling (profile persisted as failed, store state still set)
+- D-08: Concurrency lock per store_id (429 on duplicate)
+- D-09: 30s inference timeout
+- D-10: previous_identity_snapshot column created but not populated (deferred)
+- D-11: PATCH color changes update brand_colors_chosen + manual_color_override only
+
 ### Pending Todos
 
 - Execute Phase 4.4.1 — run all 6 plans (4 waves) (deferred)
@@ -81,8 +98,8 @@ Nenhum.
 
 ## Session Continuity
 
-Last session: 2026-06-11T20:50:00.000Z
-Stopped at: Phase 4.5 — Segment & Subsegment Alignment completed (7/7 plans).
+Last session: 2026-06-12T17:30:00.000Z
+Stopped at: Phase 4.6.1 — Text Only State & Visual Direction Inference completed (5/5 plans).
 
 ## Next Phase
 
