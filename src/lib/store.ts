@@ -14,6 +14,10 @@ export interface Store {
   short_description: string | null;
   slogan: string | null;
   logo_status: LogoStatus | null;
+  identity_state: string | null;
+  text_only_origin: string | null;
+  manual_color_override: boolean;
+  previous_identity_snapshot: Record<string, unknown> | null;
   visual_signature_attempts: number;
   created_at: string;
   updated_at: string;

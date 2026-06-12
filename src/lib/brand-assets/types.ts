@@ -44,6 +44,7 @@ export interface BrandProfileRecord {
   campaign_guidelines: string | null; campaign_brief: string | null;
   confidence_score: number | null;
   metadata: Record<string, unknown>; version: number;
+  manual_color_override: Record<string, unknown>;
   status: BrandProfileStatus;
   created_at: string; updated_at: string;
   visual_signature_id?: string | null;
@@ -63,6 +64,7 @@ export interface CreateBrandProfileInput {
   brand_personality?: string | null;
   campaign_guidelines?: string | null; campaign_brief?: string | null;
   confidence_score?: number | null;
+  manual_color_override?: Record<string, unknown>;
   metadata?: Record<string, unknown>; version?: number;
   status: BrandProfileStatus;
   visual_signature_id?: string | null;
@@ -77,6 +79,33 @@ export interface StoreDirectionFields {
   positioning: string | null;
   short_description: string | null;
   slogan: string | null;
+}
+
+export interface TextOnlyInferenceInput {
+  storeName: string;
+  segment: string;
+  subsegment: string | null;
+  toneOfVoice: string | null;
+  positioning: string | null;
+  shortDescription: string | null;
+  slogan: string | null;
+  city: string | null;
+  state: string | null;
+  userPrimaryColor?: string;
+  userAccentColor?: string;
+}
+
+export interface TextOnlyInferenceResult {
+  safe_color_tokens: Record<string, string>;
+  visual_style: string;
+  visual_tone: string;
+  typography_direction: string;
+  brand_personality: string;
+  campaign_guidelines: string;
+  campaign_brief: string;
+  inferred_primary_color: string;
+  inferred_accent_color: string;
+  confidence_score: number;
 }
 
 export interface BrandDirectorResult {
