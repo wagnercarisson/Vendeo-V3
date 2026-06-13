@@ -918,7 +918,7 @@ export function StoreIdentityForm() {
             </div>
 
 
-            {driftStatus === 'dismissed' && !driftSaveIntercept && (
+            {driftStatus !== 'none' && !driftSaveIntercept && !driftNavIntercept && (
               <div className="mb-4">
                 <DriftDiscreetButton
                   onClick={async () => {
