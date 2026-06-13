@@ -8,6 +8,7 @@ import { AlertCircle, CheckCircle2, Loader2, X, Upload, ArrowLeft, Sparkles } fr
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useDriftDetection } from "./use-drift-detection";
 import { DriftDiscreetButton } from "./drift-discreet-button";
+import { DriftDecisionModal } from "./drift-decision-modal";
 
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
 const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -853,58 +854,7 @@ export function StoreIdentityForm() {
               </div>
             </div>
 
-            {driftSaveIntercept && (
-              <div className="mb-4 bg-bg-surface border border-border rounded-lg p-4">
-                <p className="text-text-primary text-sm font-body mb-3">
-                  A direção visual da sua loja pode estar desatualizada. Você alterou dados importantes depois da última análise.
-                </p>
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      setDriftSaveIntercept(false);
-                      try {
-                        await realinhar();
-                        await executeStep2Save();
-                      } catch (err) {
-                        setDriftError(err instanceof Error ? err.message : 'Erro ao realinhar');
-                      }
-                    }}
-                    disabled={isRealinhando}
-                    className="px-4 py-2 bg-accent-amber text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {isRealinhando ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                    Realinhar direção visual
-                  </button>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      setDriftSaveIntercept(false);
-                      try {
-                        await ignorar();
-                        await executeStep2Save();
-                      } catch (err) {
-                        setDriftError(err instanceof Error ? err.message : 'Erro ao ignorar');
-                      }
-                    }}
-                    disabled={isRealinhando}
-                    className="px-4 py-2 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Manter direção visual atual
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setDriftSaveIntercept(false); setDriftError(null); }}
-                    className="text-text-muted hover:text-text-primary text-xs font-body underline transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-                {driftError && (
-                  <p className="flex items-center gap-1.5 text-accent-red text-xs mt-2"><AlertCircle className="w-3.5 h-3.5" />{driftError}</p>
-                )}
-              </div>
-            )}
+
             {driftStatus === 'dismissed' && !driftSaveIntercept && (
               <div className="mb-4">
                 <DriftDiscreetButton
@@ -1238,6 +1188,31 @@ export function StoreIdentityForm() {
         </div>
       )}
 
+      {driftSaveIntercept && (
+        <DriftDecisionModal
+          onRealinhar={async () => {
+            setDriftSaveIntercept(false);
+            try {
+              await realinhar();
+              await executeStep2Save();
+            } catch (err) {
+              setDriftError(err instanceof Error ? err.message : 'Erro ao realinhar');
+            }
+          }}
+          onIgnorar={async () => {
+            setDriftSaveIntercept(false);
+            try {
+              await ignorar();
+              await executeStep2Save();
+            } catch (err) {
+              setDriftError(err instanceof Error ? err.message : 'Erro ao ignorar');
+            }
+          }}
+          onCancel={() => { setDriftSaveIntercept(false); setDriftError(null); }}
+          isLoading={isRealinhando}
+          error={driftError}
+        />
+      )}
       {showApprovalModal && storeId && (
         <VisualSignatureApprovalModal
           isOpen={showApprovalModal}
