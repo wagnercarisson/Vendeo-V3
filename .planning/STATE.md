@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI + Rendering
 status: active
-stopped_at: Phase 4.6.1 — Text Only State & Visual Direction Inference completed (5/5 plans executed).
-last_updated: "2026-06-12T17:30:00.000Z"
+stopped_at: Phase 4.6.2 — Visual Direction Drift Detection completed (4/4 plans executed, UAT verified).
+last_updated: "2026-06-13T23:00:00.000Z"
 progress:
-  total_phases: 13
-  completed_phases: 13
-  total_plans: 56
-  completed_plans: 54
-  percent: 96.4
+  total_phases: 14
+  completed_phases: 14
+  total_plans: 58
+  completed_plans: 58
+  percent: 100
 ---
 
 # Project State
@@ -20,23 +20,23 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-25 after v1.0 milestone)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
-**Current focus:** Phase 4.6.1 complete — next: Phase 4.4.1 or Phase 5
+**Current focus:** Phase 4.6.2 complete — next: Phase 4.4.1 or Phase 5
 
 ## Current Position
 
-Phase: 4.6.1 — Text Only State & Visual Direction Inference (COMPLETED — 5/5 plans executed)
-Milestone: v1.1 AI + Rendering — EXTENDED (Phase 4.4.1 deferred, Phase 4.6.1 complete)
-Phases complete: 13 of 13 phases
+Phase: 4.6.2 — Visual Direction Drift Detection (COMPLETED — 4/4 plans executed, UAT verified)
+Milestone: v1.1 AI + Rendering — EXTENDED (Phase 4.4.1 deferred, Phase 4.6 completed)
+Phases complete: 14 of 14 phases
 Next phase: Phase 4.4.1 (6 plans deferred) or Phase 5 (Review, Adjust & Export)
 
-Progress: [████████████████] 96.4% (54/56 plans completed, 2 planned)
+Progress: [████████████████] 100% (58/58 plans completed)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Phases completed: 12
-- Plans completed: 49
+- Phases completed: 14
+- Plans completed: 58
 - Tasks completed: (tracked per plan)
 - Timeline: 2026-05-24 → 2026-06-11
 
@@ -81,6 +81,17 @@ Key decisions:
 - D-10: previous_identity_snapshot column created but not populated (deferred)
 - D-11: PATCH color changes update brand_colors_chosen + manual_color_override only
 
+### Decisions from Phase 4.6.2
+
+Registered in `.planning/phases/4.6.2-visual-direction-drift-detection/4.6.2-CONTEXT.md`.
+
+Key decisions:
+- D01-D09: From OpenSpec design (snapshot structure, sensitive fields, detection algorithm, color resolution, metadata API)
+- D10: Drift delivery changed from mount-time banner to save-time blocking modal (no escape, no outside click)
+- D11: Navigation guard intercepts `<a>` clicks (capture phase), `popstate`, and `beforeunload` when drift active on Step 2
+- D12: Discreet button visible for any drift `!== 'none'` (not only `'dismissed'`)
+- D13: Color hydration after realinhar — accentColor, brand_color, brandColorsChosen synced from POST /infer response
+
 ### Pending Todos
 
 - Execute Phase 4.4.1 — run all 6 plans (4 waves) (deferred)
@@ -98,8 +109,8 @@ Nenhum.
 
 ## Session Continuity
 
-Last session: 2026-06-12T17:30:00.000Z
-Stopped at: Phase 4.6.1 — Text Only State & Visual Direction Inference completed (5/5 plans).
+Last session: 2026-06-13T23:00:00.000Z
+Stopped at: Phase 4.6.2 — Visual Direction Drift Detection completed (4/4 plans, UAT verified).
 
 ## Next Phase
 
