@@ -10,8 +10,8 @@ The system SHALL have a `store_brand_profiles` table in the public Supabase sche
 |--------|------|----------|---------|-------|
 | `id` | `uuid` | Yes | `gen_random_uuid()` | Primary key |
 | `store_id` | `uuid` | Yes | — | FK → stores(id) |
-| `source` | `text` | Yes | — | `logo_analysis`, `without_logo` |
-| `active_logo_asset_id` | `uuid` | No | `null` | FK → store_brand_assets(id), points to the active original asset. Null when source = without_logo |
+| `source` | `text` | Yes | — | `logo_analysis`, `without_logo`, `text_only` |
+| `active_logo_asset_id` | `uuid` | No | `null` | FK → store_brand_assets(id), points to the active original asset. Null when source = without_logo or text_only |
 | `logo_colors_detected` | `jsonb` | No | `null` | Array of hex color strings detected from logo analysis |
 | `brand_colors_chosen` | `jsonb` | No | `null` | Array of hex color strings chosen by the lojista |
 | `safe_color_tokens` | `jsonb` | No | `null` | `{ primary, secondary, accent, ... }` — safe usage tokens |
@@ -26,6 +26,7 @@ The system SHALL have a `store_brand_profiles` table in the public Supabase sche
 | → `inferred_primary_color` | `text` | No | `null` | Primary color inferred by AI (may differ from brand_colors_chosen[0]) |
 | → `inferred_accent_color` | `text` | No | `null` | Accent color inferred by AI |
 | → `identity_art_director_output` | `jsonb` | No | `null` | Creative metadata from identity art director: creative_description, suggested_colors, visual_direction, elements_used |
+| → `manual_color_override` | `jsonb` | No | `{"enabled": false}` | Tracks whether the user manually overrode colors at the profile level |
 | `metadata` | `jsonb` | No | `null` | Model, provider, elapsedMs, error details, etc |
 | `version` | `int` | Yes | `1` | Incremented on regeneration |
 | `status` | `text` | Yes | `processing` | `processing`, `synced`, `outdated`, `failed`, `archived` |
@@ -34,7 +35,7 @@ The system SHALL have a `store_brand_profiles` table in the public Supabase sche
 
 The migration SHALL include:
 - CHECK constraint: `status IN ('processing', 'synced', 'outdated', 'failed', 'archived')`
-- CHECK constraint: `source IN ('logo_analysis', 'without_logo')`
+- CHECK constraint: `source IN ('logo_analysis', 'without_logo', 'text_only')`
 - Partial unique index: `(store_id)` WHERE `status = 'synced'` — enforces at most one active profile per store
 - Trigger for auto-updating `updated_at`
 
@@ -65,6 +66,11 @@ Profiles SHALL follow this lifecycle:
 4. Profile becomes `archived` when logo is soft-deleted
 
 If a new logo is uploaded for a store that previously had a brand profile with source `without_logo`, and the new profile is created with status `synced`, the without_logo profile SHALL be marked `outdated`.
+
+For `source = 'text_only'` profiles, the lifecycle rules apply equally:
+- A new text_only inference marks the previous synced text_only profile as `outdated`
+- Text_only profiles created as `failed` do NOT mark previous synced profiles as outdated
+- Profile reactivation (when user transitions back to text_only from logo or visual_signature) is NOT implemented in this phase — profiles are only created and marked outdated, never reactivated
 
 **Nota**: O status `processing` existe no modelo e no banco como reservado para uso futuro com fila/job durável. Na V1, o profile é sempre criado como `synced` ou `failed` diretamente — não passa por `processing`.
 
@@ -127,23 +133,71 @@ The `processing` status exists in the model as a reserved status for future use 
 - **AND** error details SHALL be recorded in metadata
 - **AND** the upload endpoint SHALL still return success (logo persists, profile indicates failure)
 
+### Requirement: Brand profile generation — text_only inference
+
+**ADDED**: A new generation mode is introduced for `source = 'text_only'`. The profile SHALL be generated via `POST /api/store/[id]/brand-profile/infer`. This is separate from the logo upload and visual signature approval flows.
+
+The inference SHALL:
+1. Load store data (name, segment, subsegment, tone_of_voice, positioning, short_description, slogan, city, state)
+2. Accept optional user color preferences
+3. Call the BrandTextOnlyInferenceService
+4. Persist with `source = 'text_only'` and `status = 'synced'` on success, `'failed'` on failure
+5. Respond only after the operation completes
+
+#### Scenario: Text-only inference creates synced profile
+
+- **WHEN** the BrandTextOnlyInferenceService completes successfully
+- **THEN** the profile SHALL be created with `source = 'text_only'` and `status = 'synced'`
+
+#### Scenario: Text-only inference creates failed profile on error
+
+- **WHEN** the BrandTextOnlyInferenceService fails
+- **THEN** the profile SHALL be created with `source = 'text_only'` and `status = 'failed'`
+
 ### Requirement: Read brand profile — GET /api/store/[id]/brand-profile
 
-The system SHALL expose a `GET /api/store/[id]/brand-profile` endpoint that returns the active brand profile (status = `synced`) for the store.
+The system SHALL expose a `GET /api/store/[id]/brand-profile` endpoint that returns the latest brand profile for the store (the most recently created, regardless of status). This enables the frontend to detect failed profiles on page load.
 
-If no synced profile exists, the endpoint SHALL return HTTP 200 with `null` data.
+If no profile exists at all, the endpoint SHALL return HTTP 200 with `null` data.
 
-#### Scenario: Active profile returned
-
-- **WHEN** a GET request is sent to /api/store/{store_id}/brand-profile
-- **AND** a synced profile exists
-- **THEN** the response SHALL contain the full brand profile record
-
-#### Scenario: No active profile returns null
+#### Scenario: Latest profile returned regardless of status
 
 - **WHEN** a GET request is sent to /api/store/{store_id}/brand-profile
-- **AND** no synced profile exists
+- **AND** a profile exists (synced, failed, or outdated)
+- **THEN** the response SHALL contain the most recent brand profile record
+
+#### Scenario: No profile returns null
+
+- **WHEN** a GET request is sent to /api/store/{store_id}/brand-profile
+- **AND** no profile exists for this store
 - **THEN** the response status SHALL be 200 with data set to `null`
+
+### Requirement: brand_colors_chosen semantic clarification
+
+The system SHALL treat `brand_colors_chosen` exclusively as the user's chosen colors. The field name means "brand colors chosen by the user." This spec explicitly overrides any previous behavior that wrote AI-inferred or extracted colors into this field.
+
+**Correct usage:**
+- User chose colors → `brand_colors_chosen = ["#userPrimary", "#userAccent"]`
+- User did not choose colors → `brand_colors_chosen = []`
+
+**Incorrect usage (to be corrected in future subphases):**
+- Writing extracted logo colors to `brand_colors_chosen` (4.6.2)
+- Writing inferred palette to `brand_colors_chosen` (4.6.3)
+
+For campaign rendering, the color resolution priority SHALL be:
+`safe_color_tokens.primary > inferred_primary_color > store.brand_color > SEGMENT_COLOR_FALLBACK[segment]`
+
+`brand_colors_chosen` is used only for UI pre-fill in the color pickers and as input signal to the inference service.
+
+#### Scenario: brand_colors_chosen populated only when user chose colors
+
+- **WHEN** a text_only brand profile is created after user chose colors `["#FF6600"]`
+- **THEN** `brand_colors_chosen` SHALL be `["#FF6600"]`
+
+#### Scenario: brand_colors_chosen empty when user didn't choose colors
+
+- **WHEN** a text_only brand profile is created and user did not interact with color pickers
+- **THEN** `brand_colors_chosen` SHALL be `[]`
 
 ### Requirement: Regenerate brand profile — POST /api/store/[id]/brand-profile/generate
 
@@ -158,17 +212,31 @@ The endpoint SHALL process inline: call the LLM with the stored logo and current
 - **THEN** a new profile SHALL be created
 - **AND** the previous profile SHALL have status changed to `outdated`
 
-### Requirement: Update brand colors — PATCH /api/store/[id]/brand-profile/colors
+### Requirement: Update brand colors — PATCH /api/store/[id]/brand-profile
 
-The system SHALL expose a `PATCH /api/store/[id]/brand-profile/colors` endpoint that updates the `brand_colors_chosen` field of the active brand profile. This allows the lojista to change colors without regenerating the entire profile.
+The system SHALL expose a `PATCH /api/store/[id]/brand-profile` endpoint that updates the `brand_colors_chosen` field of the active brand profile. This allows the lojista to change colors without regenerating the entire profile.
 
 The endpoint SHALL accept a JSON body with `colors: string[]` (hex values). On success, the profile SHALL be updated in-place (same profile, same version).
 
+When updating colors for a `source = 'text_only'` profile:
+1. `brand_colors_chosen` SHALL be updated with the new colors
+2. `manual_color_override.enabled` in the profile SHALL be set to `true`
+3. `stores.manual_color_override` SHALL be set to `true`
+4. `safe_color_tokens` SHALL NOT change — the user's color choice does not override the campaign palette
+5. `stores.brand_color` sync is NOT part of this endpoint — sync from `safe_color_tokens.primary` happens only in the inference service
+
 #### Scenario: Colors updated in-place
 
-- **WHEN** a PATCH request is sent to /api/store/{store_id}/brand-profile/colors with `{ "colors": ["#FF0000", "#00FF00"] }`
+- **WHEN** a PATCH request is sent to /api/store/{store_id}/brand-profile with `{ "colors": ["#FF0000", "#00FF00"] }`
 - **THEN** the active profile's `brand_colors_chosen` SHALL be updated to `["#FF0000", "#00FF00"]`
 - **AND** the `updated_at` SHALL reflect the current timestamp
+
+#### Scenario: PATCH updates brand_colors_chosen for text_only
+
+- **WHEN** a PATCH request is sent for a store with `source = 'text_only'` profile
+- **AND** body contains `{ "colors": ["#FF6600", "#E8A040"] }`
+- **THEN** `brand_colors_chosen` SHALL be updated to `["#FF6600", "#E8A040"]`
+- **AND** `safe_color_tokens` SHALL remain unchanged
 
 ### Requirement: Archive brand profile — POST /api/store/[id]/brand-profile/archive
 

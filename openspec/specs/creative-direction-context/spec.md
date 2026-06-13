@@ -161,7 +161,7 @@ The `CreativeBrief` SHALL be extended to consume the active store brand profile 
 - `brandPersonality`: from `brand_personality` field
 - `brandVisualStyle`: from `visual_style` field
 - `brandVisualTone`: from `visual_tone` field
-- `brandColors`: from `brand_colors_chosen` (or `safe_color_tokens` if chosen not set)
+- `brandColors`: resolved via `safe_color_tokens.primary > inferred_primary_color > store.brand_color > SEGMENT_COLOR_FALLBACK[segment]`. `brand_colors_chosen` SHALL NOT be used in the rendering hierarchy — it is used only for UI pre-fill in the color pickers and as input signal to the inference service
 
 These fields SHALL be interpolated as prompt variables — they provide context and creative fuel for the Campaign Director, not mandatory rules. The Campaign Director retains creative judgment on how to use this context.
 
@@ -178,6 +178,25 @@ When no synced brand profile exists, these variables SHALL be empty strings and 
 - **WHEN** a campaign is generated for a store without a synced brand profile
 - **THEN** the brand profile fields SHALL be empty strings
 - **AND** the existing segment-based fallback logic SHALL be used unchanged
+
+#### Scenario: Campaign uses safe_color_tokens color
+
+- **WHEN** a campaign is generated for a store with a synced brand profile
+- **AND** the profile has `safe_color_tokens.primary = "#4A6FA5"`
+- **THEN** the `brandColors` in the prompt SHALL use `#4A6FA5`
+- **AND** `brand_colors_chosen` SHALL NOT override this value
+
+#### Scenario: Campaign falls back through chain
+
+- **WHEN** a campaign is generated for a store with a profile that has no `safe_color_tokens.primary`
+- **AND** the profile has `inferred_primary_color = "#22C55E"`
+- **THEN** the `brandColors` in the prompt SHALL use `#22C55E`
+
+#### Scenario: No brand profile uses store.brand_color or segment fallback
+
+- **WHEN** a campaign is generated for a store with no synced brand profile
+- **AND** `store.brand_color` is set to `#3B82F6`
+- **THEN** the `brandColors` in the prompt SHALL use `#3B82F6`
 
 ### Requirement: Brief context is directional, not prescriptive
 

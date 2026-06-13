@@ -294,6 +294,24 @@ If the user explicitly selects or types a color, the chosen hex value SHALL be s
 - **AND** the user selected a color via the picker or typed a hex value
 - **THEN** `brand_color` SHALL be the chosen hex value in the API request
 
+#### Scenario: Text only profile with user colors pre-fills picker
+
+- **WHEN** `identity_state = 'text_only'`
+- **AND** a synced profile exists with `brand_colors_chosen = ["#FF6600"]`
+- **THEN** the primary color picker SHALL display `#FF6600`
+
+#### Scenario: Text only profile without user colors infers
+
+- **WHEN** `identity_state = 'text_only'`
+- **AND** a synced profile exists with `brand_colors_chosen = []`
+- **THEN** the primary color picker SHALL display `safe_color_tokens.primary`
+
+#### Scenario: Palette chips shown below pickers
+
+- **WHEN** `identity_state = 'text_only'`
+- **AND** a synced profile exists
+- **THEN** color chips for `safe_color_tokens` (primary, secondary, accent, background) SHALL be displayed below the pickers
+
 ### Requirement: Simple visual preview
 
 The system SHALL display a preview card showing the store identity: store name, segment badge, and brand color swatch (or logo preview if uploaded).
@@ -327,6 +345,20 @@ The preview SHALL use `resolveStoreIdentity(store)` to determine the display col
 
 - **WHEN** `brand_color` is set to a hex value
 - **THEN** the preview SHALL display a color swatch with that exact hex value
+
+#### Scenario: Preview shows intelligence for text_only
+
+- **WHEN** `identity_state = 'text_only'`
+- **AND** a synced profile exists
+- **THEN** the preview SHALL display `visual_style`, `visual_tone`, and `brand_personality`
+- **AND** the preview SHALL display color chips from `safe_color_tokens`
+- **AND** the preview SHALL display "✓ Direção visual definida pelo Vendeo"
+
+#### Scenario: Preview color follows safe_color_tokens
+
+- **WHEN** `identity_state = 'text_only'`
+- **AND** a synced profile exists with `safe_color_tokens.primary = "#4A6FA5"`
+- **THEN** the preview's brand color swatch SHALL be `#4A6FA5`
 
 ### Requirement: Loading, saving, success, and error states
 
@@ -400,6 +432,25 @@ The system SHALL use `localStorage` with key `store_id` to persist the current s
 - **WHEN** GET /api/store/{store_id} returns 404
 - **THEN** `localStorage.removeItem("store_id")` SHALL be called
 
+### Requirement: Save button triggers inference for text_only
+
+When the user clicks "Salvar" in Step 2 and no logo is active and no visual signature is active, the system SHALL:
+1. Set `identity_state = 'text_only'` and `text_only_origin = 'implicit'`
+2. If `manual_color_override` is `true`, save `brand_colors_chosen` via PATCH
+3. Trigger the brand inference pipeline
+4. Display the inference spinner
+
+The inference trigger condition SHALL be `logoStatus === null || inferenceError` — this ensures inference runs for new stores (logoStatus null) and re-runs on error.
+
+#### Scenario: Save triggers implicit inference
+
+- **WHEN** the user clicks "Salvar" in Step 2
+- **AND** no logo is active and no visual signature is active
+- **THEN** the system SHALL set `identity_state = 'text_only'` and `text_only_origin = 'implicit'`
+- **AND** if `manual_color_override` is `true`, save `brand_colors_chosen` via PATCH
+- **AND** trigger the brand inference pipeline
+- **AND** display the inference spinner
+
 ### Requirement: Visual signature modal after store save
 
 When a store is saved with no logo and no active visual signature, the system SHALL present a modal offering the lojista the option to create one. The modal SHALL NOT have a close button — the lojista must choose one of 4 options.
@@ -449,28 +500,70 @@ The store identity page SHALL include a section to manage the store's visual sig
 
 ### Requirement: "Continuar sem logo" behavior
 
-When the lojista clicks the "Continuar sem logo" link:
+The system SHALL replace the previous "Continuar sem logo" behavior (no profile generation, only set `logo_status`). When the lojista clicks the "Continuar sem logo" link:
 
-1. `stores.logo_status` SHALL be set to `explicit_none`
-2. No visual signature SHALL be created
-3. No brand profile SHALL be automatically generated
-4. The store preview SHALL use only the store name with the chosen colors (no signature, no logo)
-5. The "Criar Assinatura Visual" option SHALL still be available on the visual signature section for the lojista to create one later if they change their mind
+1. `stores.logo_status` SHALL be set to `explicit_none` (dual-population)
+2. `stores.identity_state` SHALL be set to `text_only`
+3. `stores.text_only_origin` SHALL be set to `explicit`
+4. The system SHALL trigger the brand inference pipeline (`POST /api/store/[id]/brand-profile/infer`)
+5. A spinner SHALL be displayed with the message: "Aguarde enquanto o Vendeo gera uma direção visual para sua loja..."
+6. On success: color pickers SHALL be pre-filled with inferred colors, preview SHALL update
+7. On failure: a warning message SHALL appear but the state remains `text_only`
 
-#### Scenario: Clicking "Continuar sem logo" sets explicit_none
+#### Scenario: Clicking "Continuar sem logo" triggers inference
 
 - **WHEN** the lojista clicks "Continuar sem logo"
-- **THEN** `logo_status` SHALL be set to `explicit_none`
-- **AND** `visual_signature_attempts` SHALL remain 0
-- **AND** no visual signature asset SHALL be created
-- **AND** no brand profile SHALL be generated
-- **AND** the preview SHALL display the store name with chosen colors
+- **THEN** `identity_state` SHALL be set to `text_only`
+- **AND** `logo_status` SHALL be set to `explicit_none`
+- **AND** `text_only_origin` SHALL be set to `explicit`
+- **AND** the brand inference pipeline SHALL be triggered
+- **AND** a spinner with descriptive message SHALL be displayed during inference
 
-#### Scenario: Lojista can still create signature later after explicit_none
+#### Scenario: Successful inference updates UI
 
-- **WHEN** `logo_status` is `explicit_none`
-- **THEN** the visual signature section SHALL still show an option to create a signature
-- **AND** clicking it SHALL start the normal generation flow
+- **WHEN** the brand inference completes successfully
+- **THEN** the color pickers SHALL be pre-filled with inferred colors
+- **AND** the preview SHALL reflect the inferred visual direction
+- **AND** a chip "✓ Direção visual definida pelo Vendeo" SHALL be displayed
+
+#### Scenario: Failed inference shows warning
+
+- **WHEN** the brand inference fails
+- **THEN** the UI SHALL display a warning: "Não foi possível gerar a direção visual agora. Tente novamente."
+- **AND** a "Gerar direção visual agora" button SHALL be available for retry
+- **AND** the store SHALL remain in `text_only` state
+
+### Requirement: Form fields — Logo area behavior in text_only
+
+The system SHALL render the Logo area differently based on `identity_state` and profile status:
+
+- **`identity_state = 'text_only'` with synced profile**: Drop zone present, "Enviar logotipo" button present, "Não tenho logo" button present. Link "Continuar sem logo" REMOVED. Chip "✓ Direção visual definida pelo Vendeo" displayed below buttons.
+- **`identity_state = 'text_only'` with failed profile**: Drop zone present, buttons present. Link "Continuar sem logo" REMOVED. Message "Não foi possível gerar a direção visual" with "Gerar direção visual agora" button.
+- **`identity_state = null` / not yet set**: Existing behavior unchanged — all buttons and "Continuar sem logo" link present.
+
+The "Continuar sem logo" link visibility SHALL be controlled by `logoStatus === null` (resilient to database DEFAULT 'text_only'), NOT by `identityState !== 'text_only'`.
+
+#### Scenario: Text only with synced profile hides "Continuar sem logo"
+
+- **WHEN** `identity_state` is `'text_only'`
+- **AND** a synced brand profile exists
+- **THEN** the "Continuar sem logo" link SHALL NOT be displayed
+- **AND** the chip "✓ Direção visual definida pelo Vendeo" SHALL be displayed
+- **AND** the "Enviar logotipo" button SHALL be displayed
+- **AND** the "Não tenho logo" button SHALL be displayed
+
+#### Scenario: Text only with failed profile shows retry
+
+- **WHEN** `identity_state` is `'text_only'`
+- **AND** the brand profile status is `'failed'`
+- **THEN** the "Continuar sem logo" link SHALL NOT be displayed
+- **AND** a "Gerar direção visual agora" button SHALL be displayed
+
+#### Scenario: Initial state shows all options
+
+- **WHEN** `identity_state` is null (store not yet saved or identity not decided)
+- **THEN** the "Continuar sem logo" link SHALL be displayed
+- **AND** the "Enviar logotipo" and "Não tenho logo" buttons SHALL be displayed
 
 ### Requirement: Preview shows visual signature after approval
 
@@ -509,6 +602,19 @@ The store visual signature section (`StoreVisualSignatureSection`) SHALL reflect
 - `explicit_none`: Show "Nenhuma assinatura visual" with option to create one later
 - `failed`: Show error with option to retry
 - `exhausted`: Show "Limite de 3 versões atingido" with option to re-evaluate generated signatures or continue without logo
+
+The visual signature section SHALL also consider `identity_state` alongside `logo_status`. When `identity_state = 'text_only'`:
+
+- The section SHALL show "Direção visual definida pelo Vendeo" with the chip
+- The option to create a visual signature SHALL remain available
+- The "Continuar sem logo" link SHALL NOT be shown here either
+
+#### Scenario: Section shows text_only state
+
+- **WHEN** `identity_state` is `'text_only'`
+- **AND** `logo_status` is `'explicit_none'`
+- **THEN** the visual signature section SHALL NOT show "Continuar sem logo"
+- **AND** the option to "Criar assinatura visual agora" SHALL remain available
 
 #### Scenario: Section shows different states per logo_status
 
