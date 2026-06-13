@@ -7,7 +7,6 @@ import { STORE_SEGMENTS, STORE_SUBSEGMENTS, BRAZILIAN_STATES } from "@/lib/const
 import { AlertCircle, CheckCircle2, Loader2, X, Upload, ArrowLeft, Sparkles } from "lucide-react";
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useDriftDetection } from "./use-drift-detection";
-import { DriftBanner } from "./drift-banner";
 import { DriftDiscreetButton } from "./drift-discreet-button";
 
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
@@ -90,6 +89,7 @@ export function StoreIdentityForm() {
   const [inferenceLoading, setInferenceLoading] = useState(false);
   const [inferenceError, setInferenceError] = useState<string | null>(null);
   const [driftError, setDriftError] = useState<string | null>(null);
+  const [driftSaveIntercept, setDriftSaveIntercept] = useState(false);
   const [inferredProfile, setInferredProfile] = useState<{
     safe_color_tokens?: Record<string, string>;
     visual_style?: string;
@@ -549,9 +549,9 @@ export function StoreIdentityForm() {
     }
   };
 
-  const handleStep2Submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const executeStep2Save = useCallback(async () => {
     if (!storeId) return;
+
     setStep2Success(null);
 
     if (formData.brand_color || accentColor) {
@@ -615,6 +615,19 @@ export function StoreIdentityForm() {
     } else {
       setStep2Success("Cores salvas com sucesso!");
     }
+  }, [storeId, formData, accentColor, logoStatus, visualSignatureUrl, inferenceError, setField, saveBrandColors]);
+
+  const handleStep2Submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!storeId) return;
+
+    if (!driftSaveIntercept && driftStatus === 'new') {
+      setDriftSaveIntercept(true);
+      return;
+    }
+
+    setDriftSaveIntercept(false);
+    await executeStep2Save();
   };
 
   const segmentOptions = STORE_SEGMENTS.map((seg) => ({
@@ -840,25 +853,59 @@ export function StoreIdentityForm() {
               </div>
             </div>
 
-            {driftStatus === 'new' && (
-              <div className="mb-4">
-                <DriftBanner
-                  onRealinhar={async () => {
-                    setDriftError(null);
-                    try { await realinhar(); } catch (e) { setDriftError(e instanceof Error ? e.message : 'Erro ao realinhar'); }
-                  }}
-                  onIgnorar={async () => {
-                    setDriftError(null);
-                    try { await ignorar(); } catch (e) { setDriftError(e instanceof Error ? e.message : 'Erro ao ignorar'); }
-                  }}
-                  isLoading={isRealinhando}
-                />
+            {driftSaveIntercept && (
+              <div className="mb-4 bg-bg-surface border border-border rounded-lg p-4">
+                <p className="text-text-primary text-sm font-body mb-3">
+                  A direção visual da sua loja pode estar desatualizada. Você alterou dados importantes depois da última análise.
+                </p>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setDriftSaveIntercept(false);
+                      try {
+                        await realinhar();
+                        await executeStep2Save();
+                      } catch (err) {
+                        setDriftError(err instanceof Error ? err.message : 'Erro ao realinhar');
+                      }
+                    }}
+                    disabled={isRealinhando}
+                    className="px-4 py-2 bg-accent-amber text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isRealinhando ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                    Realinhar direção visual
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setDriftSaveIntercept(false);
+                      try {
+                        await ignorar();
+                        await executeStep2Save();
+                      } catch (err) {
+                        setDriftError(err instanceof Error ? err.message : 'Erro ao ignorar');
+                      }
+                    }}
+                    disabled={isRealinhando}
+                    className="px-4 py-2 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Manter direção visual atual
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setDriftSaveIntercept(false); setDriftError(null); }}
+                    className="text-text-muted hover:text-text-primary text-xs font-body underline transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
                 {driftError && (
-                  <p className="flex items-center gap-1.5 text-accent-red text-xs mt-1"><AlertCircle className="w-3.5 h-3.5" />{driftError}</p>
+                  <p className="flex items-center gap-1.5 text-accent-red text-xs mt-2"><AlertCircle className="w-3.5 h-3.5" />{driftError}</p>
                 )}
               </div>
             )}
-            {driftStatus === 'dismissed' && (
+            {driftStatus === 'dismissed' && !driftSaveIntercept && (
               <div className="mb-4">
                 <DriftDiscreetButton
                   onClick={async () => {
