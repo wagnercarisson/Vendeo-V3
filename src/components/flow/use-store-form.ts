@@ -3,6 +3,13 @@
 import { useState, useEffect, useCallback } from "react";
 import type { Store } from "@/lib/store";
 
+export interface ColorDirtyState {
+  primaryInitial: string | null
+  accentInitial: string | null
+  primaryDirty: boolean
+  accentDirty: boolean
+}
+
 export interface FormData {
   name: string;
   segment: string;
@@ -32,6 +39,10 @@ export interface UseStoreFormReturn {
   successMessage: string | null;
   colorTouched: boolean;
   storeId: string | null;
+  colorDirtyState: ColorDirtyState;
+  initColorDirtyState: (primaryInitial: string | null, accentInitial: string | null) => void;
+  onPrimaryColorChange: (hex: string) => void;
+  onAccentColorChange: (hex: string) => void;
 }
 
 const STORAGE_KEY = "store_id";
@@ -63,6 +74,12 @@ export function useStoreForm(): UseStoreFormReturn {
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const [colorTouched, setColorTouched] = useState(false);
   const [storeId, setStoreId] = useState<string | null>(null);
+  const [colorDirtyState, setColorDirtyState] = useState<ColorDirtyState>({
+    primaryInitial: null,
+    accentInitial: null,
+    primaryDirty: false,
+    accentDirty: false,
+  });
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -118,12 +135,25 @@ export function useStoreForm(): UseStoreFormReturn {
     setWarningMessage(null);
   }, []);
 
+  const initColorDirtyState = useCallback((primaryInitial: string | null, accentInitial: string | null) => {
+    setColorDirtyState({ primaryInitial, accentInitial, primaryDirty: false, accentDirty: false });
+  }, []);
+
+  const onPrimaryColorChange = useCallback((hex: string) => {
+    setColorDirtyState(prev => ({ ...prev, primaryDirty: hex !== prev.primaryInitial }));
+  }, []);
+
+  const onAccentColorChange = useCallback((hex: string) => {
+    setColorDirtyState(prev => ({ ...prev, accentDirty: hex !== prev.accentInitial }));
+  }, []);
+
   const clearStore = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
     setStoreId(null);
     setFormData(EMPTY_FORM);
     setMode("create");
     setColorTouched(false);
+    setColorDirtyState({ primaryInitial: null, accentInitial: null, primaryDirty: false, accentDirty: false });
     setError(null);
     setSuccessMessage(null);
     setWarningMessage(null);
@@ -200,5 +230,9 @@ export function useStoreForm(): UseStoreFormReturn {
     successMessage,
     colorTouched,
     storeId,
+    colorDirtyState,
+    initColorDirtyState,
+    onPrimaryColorChange,
+    onAccentColorChange,
   };
 }
