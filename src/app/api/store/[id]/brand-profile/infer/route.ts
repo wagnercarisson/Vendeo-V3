@@ -76,6 +76,20 @@ export async function POST(
       .eq('store_id', id)
       .eq('status', 'synced');
 
+    const accentColor = body.userChosenColors?.[1]
+      ?? result.safe_color_tokens?.accent
+      ?? result.inferred_accent_color
+      ?? null;
+
+    const inputSnapshot: Record<string, string | null> = {
+      segment: store.segment,
+      subsegment: store.subsegment ?? null,
+      tone_of_voice: store.tone_of_voice ?? null,
+      name: store.name,
+      brand_color: store.brand_color,
+      accent_color: accentColor,
+    };
+
     const { data: profile, error: insertError } = await supabase
       .from('store_brand_profiles')
       .insert({
@@ -93,6 +107,7 @@ export async function POST(
         inferred_accent_color: result.inferred_accent_color,
         confidence_score: result.confidence_score,
         manual_color_override: { enabled: !!body.manualColorOverride },
+        metadata: { input_snapshot: inputSnapshot },
         status: 'synced',
       })
       .select()
