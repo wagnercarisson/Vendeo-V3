@@ -8,7 +8,7 @@
 
 ### Requirement: input_snapshot in metadata on inference
 
-When the BrandTextOnlyInferenceService completes successfully (status = `synced`), the system SHALL populate `metadata.input_snapshot` with the current store values for all 6 sensitive fields:
+When the BrandTextOnlyInferenceService completes successfully (status = `synced`), the system SHALL populate `metadata.input_snapshot` with the current visual state for all 6 sensitive fields:
 
 ```json
 {
@@ -39,7 +39,7 @@ This SHALL happen as part of the same inference flow, after the brand profile is
 
 ### Requirement: input_snapshot update on re-inference
 
-When re-inference is triggered via "Realinhar" (from banner, discreet button, or modal), the system SHALL update `metadata.input_snapshot` with the current visual state (dados atuais da loja + cores vigentes normalizadas) after successful inference.
+When re-inference is triggered via "Realinhar" (from banner or discreet button), the system SHALL update `metadata.input_snapshot` with the current visual state (dados atuais da loja + cores vigentes normalizadas) after successful inference.
 
 #### Scenario: input_snapshot updated on re-inference
 
@@ -127,7 +127,7 @@ The inference service SHALL also populate `metadata.input_snapshot` after succes
 #### Scenario: Inference populates input_snapshot
 
 - **WHEN** the BrandTextOnlyInferenceService completes successfully
-- **THEN** `metadata.input_snapshot` SHALL be populated with current store values
+- **THEN** `metadata.input_snapshot` SHALL be populated with current visual state
 - **AND** the profile SHALL be created with `source = 'text_only'` and `status = 'synced'`
 
 ### Requirement: Regenerate brand profile — POST /api/store/[id]/brand-profile/generate (modified)

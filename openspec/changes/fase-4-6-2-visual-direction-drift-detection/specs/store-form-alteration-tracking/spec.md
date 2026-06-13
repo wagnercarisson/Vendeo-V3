@@ -36,7 +36,7 @@ type ColorDirtyState = {
 
 ### Requirement: Color dirty state as drift augmentation
 
-The color dirty state SHALL be used to inform the alert message in the drift UI (banner, discreet button, modal), NOT to trigger or suppress drift detection itself. Drift detection always uses the normalized current visual state vs `input_snapshot` — dirty tracking only augments the message copy.
+The color dirty state SHALL be used to inform the alert message in the drift UI (banner, discreet button), NOT to trigger or suppress drift detection itself. Drift detection always uses the normalized current visual state vs `input_snapshot` — dirty tracking only augments the message copy.
 
 Examples:
 - Drift detected from field change + dirty colors → message may mention "Você alterou campos da loja e as cores"
