@@ -6,6 +6,7 @@ import { VisualSignatureApprovalModal } from "./visual-signature-approval-modal"
 import { STORE_SEGMENTS, STORE_SUBSEGMENTS, BRAZILIAN_STATES } from "@/lib/constants";
 import { AlertCircle, CheckCircle2, Loader2, X, Upload, ArrowLeft, Sparkles } from "lucide-react";
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useDriftDetection } from "./use-drift-detection";
 import { currentVisualState, computeDriftStatus } from "@/lib/drift";
 import type { DriftSnapshot } from "@/lib/drift";
@@ -93,6 +94,8 @@ export function StoreIdentityForm() {
   const [inferenceError, setInferenceError] = useState<string | null>(null);
   const [driftError, setDriftError] = useState<string | null>(null);
   const [driftSaveIntercept, setDriftSaveIntercept] = useState(false);
+  const [driftNavIntercept, setDriftNavIntercept] = useState(false);
+  const [pendingNavUrl, setPendingNavUrl] = useState('');
   const [inferredProfile, setInferredProfile] = useState<{
     safe_color_tokens?: Record<string, string>;
     visual_style?: string;
@@ -110,7 +113,7 @@ export function StoreIdentityForm() {
     safe_color_tokens: inferredProfile.safe_color_tokens ?? {},
     inferred_accent_color: inferredProfile.inferred_accent_color ?? null,
     metadata: inferredProfile.metadata ?? {},
-  } : null, [inferredProfile]);
+  }   : null, [inferredProfile]);
 
   const driftStore = useMemo(() => storeId ? {
     id: storeId,
@@ -158,6 +161,49 @@ export function StoreIdentityForm() {
         .catch(() => {});
     },
   });
+
+  const router = useRouter();
+  const currentUrlRef = useRef('');
+
+  useEffect(() => {
+    if (step === 2 && driftStatus === 'new') {
+      currentUrlRef.current = window.location.href;
+
+      const handleClick = (e: MouseEvent) => {
+        const anchor = (e.target as HTMLElement).closest('a');
+        if (!anchor || !anchor.href) return;
+        if (anchor.target === '_blank') return;
+
+        const href = anchor.getAttribute('href');
+        if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        setPendingNavUrl(href);
+        setDriftNavIntercept(true);
+      };
+
+      const handlePopState = () => {
+        history.pushState(null, '', currentUrlRef.current);
+        setDriftNavIntercept(true);
+      };
+
+      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        e.preventDefault();
+        e.returnValue = '';
+      };
+
+      document.addEventListener('click', handleClick, true);
+      window.addEventListener('popstate', handlePopState);
+      window.addEventListener('beforeunload', handleBeforeUnload);
+
+      return () => {
+        document.removeEventListener('click', handleClick, true);
+        window.removeEventListener('popstate', handlePopState);
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+      };
+    }
+  }, [step, driftStatus, setPendingNavUrl, setDriftNavIntercept]);
 
   const saveBrandColors = useCallback(async (primary: string, secondary: string) => {
     if (!storeId) return;
@@ -1256,6 +1302,42 @@ export function StoreIdentityForm() {
             }
           }}
           onCancel={() => { setDriftSaveIntercept(false); setDriftError(null); }}
+          isLoading={isRealinhando}
+          error={driftError}
+        />
+      )}
+      {driftNavIntercept && (
+        <DriftDecisionModal
+          onRealinhar={async () => {
+            try {
+              const data = await realinhar();
+              const profile = (data as Record<string, unknown>)?.profile as Record<string, unknown> | undefined;
+              if (profile) {
+                const tokens = profile.safe_color_tokens as Record<string, string> | undefined;
+                if (tokens?.primary) setField("brand_color", tokens.primary);
+                setAccentColor(
+                  (profile.brand_colors_chosen as string[])?.[1]
+                  ?? (tokens?.accent ?? '')
+                  ?? (profile.inferred_accent_color as string ?? '')
+                );
+                setBrandColorsChosen((profile.brand_colors_chosen as string[]) ?? []);
+              }
+              setDriftNavIntercept(false);
+              if (pendingNavUrl) router.push(pendingNavUrl);
+            } catch {
+              setDriftError('Não foi possível realinhar. Tente novamente mais tarde.');
+            }
+          }}
+          onIgnorar={async () => {
+            setDriftNavIntercept(false);
+            try {
+              await ignorar();
+              if (pendingNavUrl) router.push(pendingNavUrl);
+            } catch {
+              // modal já fechou; drift permanece ativo
+            }
+          }}
+          onCancel={() => { setDriftNavIntercept(false); setDriftError(null); }}
           isLoading={isRealinhando}
           error={driftError}
         />
