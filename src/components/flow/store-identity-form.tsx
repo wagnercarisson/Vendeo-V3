@@ -6,6 +6,9 @@ import { VisualSignatureApprovalModal } from "./visual-signature-approval-modal"
 import { STORE_SEGMENTS, STORE_SUBSEGMENTS, BRAZILIAN_STATES } from "@/lib/constants";
 import { AlertCircle, CheckCircle2, Loader2, X, Upload, ArrowLeft, Sparkles } from "lucide-react";
 import { useState, useCallback, useRef, useEffect } from "react";
+import { useDriftDetection } from "./use-drift-detection";
+import { DriftBanner } from "./drift-banner";
+import { DriftDiscreetButton } from "./drift-discreet-button";
 
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
 const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -86,6 +89,7 @@ export function StoreIdentityForm() {
   const [identityState, setIdentityState] = useState<string | null>(null);
   const [inferenceLoading, setInferenceLoading] = useState(false);
   const [inferenceError, setInferenceError] = useState<string | null>(null);
+  const [driftError, setDriftError] = useState<string | null>(null);
   const [inferredProfile, setInferredProfile] = useState<{
     safe_color_tokens?: Record<string, string>;
     visual_style?: string;
@@ -94,8 +98,53 @@ export function StoreIdentityForm() {
     brand_colors_chosen?: string[];
     inferred_primary_color?: string;
     inferred_accent_color?: string;
+    metadata?: Record<string, unknown>;
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const driftProfile = inferredProfile ? {
+    brand_colors_chosen: inferredProfile.brand_colors_chosen ?? [],
+    safe_color_tokens: inferredProfile.safe_color_tokens ?? {},
+    inferred_accent_color: inferredProfile.inferred_accent_color ?? null,
+    metadata: inferredProfile.metadata ?? {},
+  } : null;
+
+  const driftStore = storeId ? {
+    id: storeId,
+    segment: formData.segment,
+    subsegment: formData.subsegment,
+    tone_of_voice: formData.tone_of_voice,
+    name: formData.name,
+    brand_color: formData.brand_color,
+  } : null;
+
+  const {
+    driftStatus,
+    realinhar,
+    ignorar,
+    isRealinhando,
+  } = useDriftDetection(driftStore, driftProfile, {
+    onRealinhado: () => {
+      if (!storeId) return;
+      fetch(`/api/store/${storeId}/brand-profile`)
+        .then(res => res.json())
+        .then(profile => {
+          if (profile?.source === 'text_only' && profile?.status === 'synced') {
+            setInferredProfile({
+              safe_color_tokens: profile.safe_color_tokens,
+              visual_style: profile.visual_style,
+              visual_tone: profile.visual_tone,
+              brand_personality: profile.brand_personality,
+              brand_colors_chosen: profile.brand_colors_chosen,
+              inferred_primary_color: profile.inferred_primary_color,
+              inferred_accent_color: profile.inferred_accent_color,
+              metadata: profile.metadata,
+            });
+          }
+        })
+        .catch(() => {});
+    },
+  });
 
   const saveBrandColors = useCallback(async (primary: string, secondary: string) => {
     if (!storeId) return;
@@ -214,6 +263,7 @@ export function StoreIdentityForm() {
                 brand_colors_chosen: profile.brand_colors_chosen,
                 inferred_primary_color: profile.inferred_primary_color,
                 inferred_accent_color: profile.inferred_accent_color,
+                metadata: profile.metadata,
               });
             } else if (profile.source === 'text_only' && profile.status === 'failed') {
               console.error('[StoreIdentityForm] Text-only inference failed:', profile.metadata?.error);
@@ -354,7 +404,16 @@ export function StoreIdentityForm() {
       });
       const data = await res.json();
       if (data.success) {
-        setInferredProfile(data.profile);
+        setInferredProfile({
+          safe_color_tokens: data.profile.safe_color_tokens,
+          visual_style: data.profile.visual_style,
+          visual_tone: data.profile.visual_tone,
+          brand_personality: data.profile.brand_personality,
+          brand_colors_chosen: data.profile.brand_colors_chosen,
+          inferred_primary_color: data.profile.inferred_primary_color,
+          inferred_accent_color: data.profile.inferred_accent_color,
+          metadata: data.profile.metadata,
+        });
         if (data.profile?.safe_color_tokens?.primary) {
           setField("brand_color", data.profile.safe_color_tokens.primary);
         }
@@ -521,7 +580,16 @@ export function StoreIdentityForm() {
         });
         const data = await res.json();
         if (data.success) {
-          setInferredProfile(data.profile);
+          setInferredProfile({
+            safe_color_tokens: data.profile.safe_color_tokens,
+            visual_style: data.profile.visual_style,
+            visual_tone: data.profile.visual_tone,
+            brand_personality: data.profile.brand_personality,
+            brand_colors_chosen: data.profile.brand_colors_chosen,
+            inferred_primary_color: data.profile.inferred_primary_color,
+            inferred_accent_color: data.profile.inferred_accent_color,
+            metadata: data.profile.metadata,
+          });
           setIdentityState('text_only');
           setLogoStatus('explicit_none');
           if (data.profile?.safe_color_tokens?.primary) {
@@ -772,6 +840,35 @@ export function StoreIdentityForm() {
               </div>
             </div>
 
+            {driftStatus === 'new' && (
+              <div className="mb-4">
+                <DriftBanner
+                  onRealinhar={async () => {
+                    setDriftError(null);
+                    try { await realinhar(); } catch (e) { setDriftError(e instanceof Error ? e.message : 'Erro ao realinhar'); }
+                  }}
+                  onIgnorar={async () => {
+                    setDriftError(null);
+                    try { await ignorar(); } catch (e) { setDriftError(e instanceof Error ? e.message : 'Erro ao ignorar'); }
+                  }}
+                  isLoading={isRealinhando}
+                />
+                {driftError && (
+                  <p className="flex items-center gap-1.5 text-accent-red text-xs mt-1"><AlertCircle className="w-3.5 h-3.5" />{driftError}</p>
+                )}
+              </div>
+            )}
+            {driftStatus === 'dismissed' && (
+              <div className="mb-4">
+                <DriftDiscreetButton
+                  onClick={async () => {
+                    setDriftError(null);
+                    try { await realinhar(); } catch (e) { setDriftError(e instanceof Error ? e.message : 'Erro ao realinhar'); }
+                  }}
+                  isLoading={isRealinhando}
+                />
+              </div>
+            )}
             <form onSubmit={handleStep2Submit} className="space-y-6" noValidate>
               <div>
                 <label htmlFor="logo" className={labelClass}>

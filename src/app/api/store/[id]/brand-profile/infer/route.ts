@@ -148,6 +148,7 @@ export async function POST(
         visual_tone: result.visual_tone,
         brand_personality: result.brand_personality,
         brand_colors_chosen: body.userChosenColors ?? [],
+        metadata: profile.metadata,
       },
     });
   } catch (err) {
