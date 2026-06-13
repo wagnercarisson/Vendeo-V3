@@ -16,7 +16,7 @@ export function DriftDiscreetButton({ onClick, isLoading }: DriftDiscreetButtonP
       className="text-text-muted text-xs underline cursor-pointer hover:text-text-primary transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1"
     >
       {isLoading ? <Loader2 className="w-3 h-3 animate-spin inline" /> : null}
-      Direção visual pode estar desatualizada
+      {isLoading ? 'Realinhando...' : 'Direção visual pode estar desatualizada - realinhar agora'}
     </button>
   );
 }

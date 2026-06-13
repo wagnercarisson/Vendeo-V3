@@ -1213,12 +1213,12 @@ export function StoreIdentityForm() {
             }
           }}
           onIgnorar={async () => {
+            setDriftSaveIntercept(false);
             try {
               await ignorar();
-              setDriftSaveIntercept(false);
               await executeStep2Save();
-            } catch (err) {
-              setDriftError('Não foi possível realinhar. Tente novamente mais tarde.');
+            } catch {
+              // modal já fechou; drift permanece ativo
             }
           }}
           onCancel={() => { setDriftSaveIntercept(false); setDriftError(null); }}
