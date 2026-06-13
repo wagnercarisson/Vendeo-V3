@@ -19,7 +19,7 @@ export class BrandTextOnlyInferenceService {
     this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   }
 
-  async infer(input: TextOnlyInferenceInput): Promise<TextOnlyInferenceResult> {
+  async infer(input: TextOnlyInferenceInput, timeoutMs: number = 30000): Promise<TextOnlyInferenceResult> {
     const startTime = Date.now();
 
     if (!process.env.OPENAI_API_KEY) {
@@ -72,15 +72,26 @@ export class BrandTextOnlyInferenceService {
         userColorsSection,
       });
 
-      const response = await this.openai.chat.completions.create({
-        model: process.env.OPENAI_TEXT_ONLY_INFERENCE_MODEL ?? 'gpt-4o',
-        messages: [
-          { role: 'system', content: prompt },
-          { role: 'user', content: 'Gere a identidade visual para esta loja com base nos dados cadastrais fornecidos.' },
-        ],
-        response_format: { type: 'json_object' },
-        max_tokens: 2000,
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+      let response;
+      try {
+        response = await this.openai.chat.completions.create(
+          {
+            model: process.env.OPENAI_TEXT_ONLY_INFERENCE_MODEL ?? 'gpt-4o',
+            messages: [
+              { role: 'system', content: prompt },
+              { role: 'user', content: 'Gere a identidade visual para esta loja com base nos dados cadastrais fornecidos.' },
+            ],
+            response_format: { type: 'json_object' },
+            max_tokens: 2000,
+          },
+          { signal: controller.signal },
+        );
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       const raw = JSON.parse(response.choices[0]?.message?.content ?? '{}');
       const elapsedMs = Date.now() - startTime;
@@ -103,6 +114,16 @@ export class BrandTextOnlyInferenceService {
       return result;
     } catch (err) {
       const elapsedMs = Date.now() - startTime;
+
+      if (err instanceof Error && err.name === 'AbortError') {
+        throw new BrandTextOnlyInferenceError('Inferência excedeu o tempo limite', {
+          provider: 'openai',
+          model: process.env.OPENAI_TEXT_ONLY_INFERENCE_MODEL ?? 'gpt-4o',
+          elapsedMs,
+          errorType: 'timeout',
+        });
+      }
+
       const errorMessage = err instanceof Error ? err.message : String(err);
       const errorType = err instanceof BrandTextOnlyInferenceError ? err.metadata.errorType : 'api_error';
 

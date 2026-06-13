@@ -818,32 +818,6 @@ export function StoreIdentityForm() {
                   </div>
                 )}
 
-                {identityState === 'text_only' && inferredProfile && !inferenceLoading && (
-                  <div className="mt-4">
-                    <div className="flex items-center gap-3 p-4 bg-bg-elevated border border-border rounded-xl">
-                      <CheckCircle2 className="w-5 h-5 text-accent-green shrink-0" />
-                      <p className="text-accent-green text-sm font-heading font-semibold">Direção visual definida pelo Vendeo</p>
-                    </div>
-                    {inferredProfile.safe_color_tokens && (() => {
-                      const tokens = inferredProfile.safe_color_tokens!;
-                      const colorKeys = Object.entries(tokens).filter(([, v]) => /^#[0-9A-Fa-f]{6}$/.test(v));
-                      if (colorKeys.length > 0) {
-                        return (
-                          <div className="mt-3 flex gap-2 flex-wrap">
-                            {colorKeys.map(([key, val]) => (
-                              <div key={key} className="flex flex-col items-center gap-1">
-                                <div className="w-8 h-8 rounded-full border-2 border-border-light" style={{ backgroundColor: val }} title={key} />
-                                <span className="text-[10px] text-text-muted font-mono">{key}</span>
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
-                  </div>
-                )}
-
                 {identityState === 'text_only' && inferenceError && !inferenceLoading && (
                   <div className="mt-4 space-y-3">
                     <div className="flex items-start gap-3 bg-amber-900/20 border border-amber-700/30 rounded-lg px-4 py-3">
@@ -1063,7 +1037,32 @@ export function StoreIdentityForm() {
                     </div>
                   </div>
                 )}
-              </div>
+                {identityState === 'text_only' && inferredProfile && !inferenceLoading && (
+                  <div className="mt-4">
+                    <div className="flex items-center gap-3 p-4 bg-bg-elevated border border-border rounded-xl">
+                      <CheckCircle2 className="w-5 h-5 text-accent-green shrink-0" />
+                      <p className="text-accent-green text-sm font-heading font-semibold">Direção visual definida pelo Vendeo</p>
+                    </div>
+                    {inferredProfile.safe_color_tokens && (() => {
+                      const tokens = inferredProfile.safe_color_tokens!;
+                      const colorKeys = Object.entries(tokens).filter(([, v]) => /^#[0-9A-Fa-f]{6}$/.test(v));
+                      if (colorKeys.length > 0) {
+                        return (
+                          <div className="mt-3 flex gap-2 flex-wrap">
+                            {colorKeys.map(([key, val]) => (
+                              <div key={key} className="flex flex-col items-center gap-1">
+                                <div className="w-8 h-8 rounded-full border-2 border-border-light" style={{ backgroundColor: val }} title={key} />
+                                <span className="text-[10px] text-text-muted font-mono">{key}</span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
+                )}
+                </div>
 
               <div className="pt-2">
                 <button type="submit" disabled={!storeId}

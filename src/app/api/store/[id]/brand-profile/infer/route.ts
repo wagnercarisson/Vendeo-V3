@@ -55,6 +55,7 @@ export async function POST(
     }
 
     const service = new BrandTextOnlyInferenceService();
+    const timeoutMs = parseInt(process.env.IMAGE_GENERATION_GLOBAL_TIMEOUT_MS ?? '30000', 10);
     const result = await service.infer({
       storeName: store.name,
       segment: store.segment,
@@ -67,7 +68,7 @@ export async function POST(
       state: store.state ?? null,
       userPrimaryColor: body.userChosenColors?.[0],
       userAccentColor: body.userChosenColors?.[1],
-    });
+    }, timeoutMs);
 
     await supabase
       .from('store_brand_profiles')
