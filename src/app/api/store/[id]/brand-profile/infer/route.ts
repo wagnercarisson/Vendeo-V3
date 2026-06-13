@@ -76,6 +76,10 @@ export async function POST(
       .eq('store_id', id)
       .eq('status', 'synced');
 
+    const resolvedBrandColor = body.userChosenColors?.[0]
+      ?? result.safe_color_tokens?.primary
+      ?? store.brand_color;
+
     const accentColor = body.userChosenColors?.[1]
       ?? result.safe_color_tokens?.accent
       ?? result.inferred_accent_color
@@ -86,7 +90,7 @@ export async function POST(
       subsegment: store.subsegment ?? null,
       tone_of_voice: store.tone_of_voice ?? null,
       name: store.name,
-      brand_color: store.brand_color,
+      brand_color: resolvedBrandColor,
       accent_color: accentColor,
     };
 
