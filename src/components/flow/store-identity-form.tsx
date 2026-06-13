@@ -5,7 +5,7 @@ import { StorePreview } from "./store-preview";
 import { VisualSignatureApprovalModal } from "./visual-signature-approval-modal";
 import { STORE_SEGMENTS, STORE_SUBSEGMENTS, BRAZILIAN_STATES } from "@/lib/constants";
 import { AlertCircle, CheckCircle2, Loader2, X, Upload, ArrowLeft, Sparkles } from "lucide-react";
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useDriftDetection } from "./use-drift-detection";
 import { DriftBanner } from "./drift-banner";
 import { DriftDiscreetButton } from "./drift-discreet-button";
@@ -102,21 +102,21 @@ export function StoreIdentityForm() {
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const driftProfile = inferredProfile ? {
+  const driftProfile = useMemo(() => inferredProfile ? {
     brand_colors_chosen: inferredProfile.brand_colors_chosen ?? [],
     safe_color_tokens: inferredProfile.safe_color_tokens ?? {},
     inferred_accent_color: inferredProfile.inferred_accent_color ?? null,
     metadata: inferredProfile.metadata ?? {},
-  } : null;
+  } : null, [inferredProfile]);
 
-  const driftStore = storeId ? {
+  const driftStore = useMemo(() => storeId ? {
     id: storeId,
     segment: formData.segment,
     subsegment: formData.subsegment,
     tone_of_voice: formData.tone_of_voice,
     name: formData.name,
     brand_color: formData.brand_color,
-  } : null;
+  } : null, [storeId, formData.segment, formData.subsegment, formData.tone_of_voice, formData.name, formData.brand_color]);
 
   const {
     driftStatus,

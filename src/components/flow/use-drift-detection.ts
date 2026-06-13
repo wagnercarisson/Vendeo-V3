@@ -1,10 +1,17 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { DriftSnapshot, DriftStatus } from "@/lib/drift";
-import { currentVisualState, computeDriftStatus } from "@/lib/drift";
+import { currentVisualState, computeDriftStatus, normalizeSnapshotValue } from "@/lib/drift";
 import type { Store } from "@/lib/store";
 import type { BrandProfileRecord } from "@/lib/brand-assets/types";
+
+function snapshotsEqual(a: DriftSnapshot | null, b: DriftSnapshot | null): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  const fields: (keyof DriftSnapshot)[] = ['segment', 'subsegment', 'tone_of_voice', 'name', 'brand_color', 'accent_color'];
+  return fields.every(f => normalizeSnapshotValue(a[f]) === normalizeSnapshotValue(b[f]));
+}
 
 export function useDriftDetection(
   store: Pick<Store, 'id' | 'segment' | 'subsegment' | 'tone_of_voice' | 'name' | 'brand_color'> | null,
@@ -21,27 +28,36 @@ export function useDriftDetection(
   const [currentSnapshot, setCurrentSnapshot] = useState<DriftSnapshot | null>(null);
   const [isRealinhando, setIsRealinhando] = useState(false);
 
+  const prevSnapshotRef = useRef<DriftSnapshot | null>(null);
+  const prevStatusRef = useRef<DriftStatus>('none');
+
   useEffect(() => {
     if (!store || !store.id) {
-      setDriftStatus('none');
-      setCurrentSnapshot(null);
+      if (prevStatusRef.current !== 'none') { setDriftStatus('none'); prevStatusRef.current = 'none'; }
+      if (prevSnapshotRef.current !== null) { setCurrentSnapshot(null); prevSnapshotRef.current = null; }
       return;
     }
 
     if (!profile) {
-      setDriftStatus('none');
-      setCurrentSnapshot(null);
+      if (prevStatusRef.current !== 'none') { setDriftStatus('none'); prevStatusRef.current = 'none'; }
+      if (prevSnapshotRef.current !== null) { setCurrentSnapshot(null); prevSnapshotRef.current = null; }
       return;
     }
 
     const snapshot = currentVisualState(store, profile);
-    setCurrentSnapshot(snapshot);
+    if (!snapshotsEqual(snapshot, prevSnapshotRef.current)) {
+      setCurrentSnapshot(snapshot);
+      prevSnapshotRef.current = snapshot;
+    }
 
     const inputSnapshot = profile.metadata?.input_snapshot as DriftSnapshot | null | undefined;
     const dismissedSnapshot = profile.metadata?.drift_dismissed_snapshot as DriftSnapshot | null | undefined;
 
     const status = computeDriftStatus(snapshot, inputSnapshot, dismissedSnapshot);
-    setDriftStatus(status);
+    if (status !== prevStatusRef.current) {
+      setDriftStatus(status);
+      prevStatusRef.current = status;
+    }
   }, [store, profile]);
 
   const realinhar = useCallback(async () => {
