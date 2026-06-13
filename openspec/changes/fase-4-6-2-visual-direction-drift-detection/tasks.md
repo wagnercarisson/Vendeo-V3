@@ -56,10 +56,10 @@
 **Description**: Populate `metadata.input_snapshot` after successful inference. Clear `drift_dismissed_snapshot` on re-inference.
 
 ### Steps
-- [ ] Update `BrandTextOnlyInferenceService` (or the caller that persists the profile) to:
+- [ ] Update infer route to:
   - After successful inference, set `metadata.input_snapshot` from current visual state (dados da loja + cores normalizadas)
   - If metadata already exists, deep-merge (preserve existing fields)
-- [ ] Update re-inference path (banner "Realinhar", modal "Realinhar") to also clear `drift_dismissed_snapshot`
+- [ ] Update re-inference path (banner "Realinhar") to also clear `drift_dismissed_snapshot`
 - [ ] Ensure `metadata.input_snapshot` is NOT populated when inference fails
 
 ### Tests
@@ -146,36 +146,7 @@
 
 ---
 
-## Task 7: Frontend — Gerar Campanha drift modal
-
-**Spec**: `store-identity-ui` (ADDED)
-**Description**: Implement drift modal that blocks campaign generation when drift exists.
-
-### Steps
-- [ ] Create `src/components/flow/drift-campaign-modal.tsx`:
-  - Full-screen overlay with semi-transparent dark backdrop
-  - Title: "A direção visual da sua loja foi alterada desde a última campanha. Deseja atualizar antes de gerar?"
-  - Two buttons: "Realinhar direção visual" (amber primary) and "Gerar campanha mesmo assim" (outline)
-  - No close button, no backdrop dismiss
-  - Loading state on realinhar
-- [ ] Integrate into `campaign-page-client.tsx`:
-  - Before triggering campaign generation, check `driftStatus`
-  - If `new` or `dismissed`, show modal
-  - If `none`, proceed directly
-  - On "Gerar campanha mesmo assim", proceed
-  - On "Realinhar" + success, proceed
-  - On "Realinhar" + failure, stay in modal with error toast
-
-### Tests
-- [ ] Verify modal appears when drift exists
-- [ ] Verify modal not shown when no drift
-- [ ] Verify "Gerar campanha mesmo assim" proceeds
-- [ ] Verify "Realinhar" + success proceeds
-- [ ] Verify "Realinhar" + failure stays in modal
-
----
-
-## Task 8: E2E verification
+## Task 7: E2E verification
 
 **Description**: Run full TypeScript check, lint, and manual verification of all flows.
 
@@ -184,6 +155,5 @@
 - [ ] `npm run lint` — no errors
 - [ ] Manual flow: create store → save → change segment → Step 2 shows banner → dismiss → refresh → discreet button → realign → banner gone
 - [ ] Manual flow: change segment → banner → realign → change name → banner reappears
-- [ ] Manual flow: Gerar Campanha with drift → modal shows → "Gerar campanha mesmo assim" proceeds
-- [ ] Manual flow: Gerar Campanha with drift → modal shows → "Realinhar" proceeds after success
+- [ ] Manual flow: Gerar Campanha with drift → proceeds without modal (campaign flow unchanged)
 - [ ] Manual flow: new store (create mode) → no drift detection

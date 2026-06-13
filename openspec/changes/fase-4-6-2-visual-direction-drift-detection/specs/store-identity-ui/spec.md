@@ -69,48 +69,6 @@ When `driftStatus` is `dismissed`, the system SHALL render a discreet button rep
 - **THEN** the same re-inference flow SHALL trigger as the banner's "Realinhar direção visual"
 - **AND** the button SHALL disappear after successful re-inference
 
-### Requirement: Gerar Campanha drift modal
-
-When the user clicks "Gerar Campanha" on the campaign page (`campaign-page-client.tsx`) and `driftStatus` is `new` or `dismissed`, the system SHALL show a full-screen modal before proceeding to campaign generation.
-
-The modal SHALL:
-- Overlay the page with a semi-transparent dark backdrop
-- Display: "A direção visual da sua loja foi alterada desde a última campanha. Deseja atualizar antes de gerar?"
-- Have two buttons:
-  - **Realinhar direção visual** (primary, `accent-amber`): triggers re-inference, then navigates to campaign generation on success
-  - **Gerar campanha mesmo assim** (secondary/outline): closes modal, proceeds to campaign generation
-- NOT have a close (X) button — user must choose one of the two options
-- NOT use any emojis
-- NOT use any icons
-
-#### Scenario: Modal appears on Gerar Campanha with drift
-
-- **WHEN** the user clicks "Gerar Campanha"
-- **AND** `driftStatus` is `new` or `dismissed`
-- **THEN** a modal SHALL appear before proceeding to campaign generation
-- **AND** the modal SHALL NOT be dismissible (no close button, no backdrop click dismiss)
-
-#### Scenario: Modal does not appear without drift
-
-- **WHEN** the user clicks "Gerar Campanha"
-- **AND** `driftStatus` is `none`
-- **THEN** no modal SHALL appear
-- **AND** campaign generation SHALL proceed normally
-
-#### Scenario: "Realinhar" in modal triggers re-inference then proceeds
-
-- **WHEN** the user clicks "Realinhar direção visual" in the modal
-- **AND** re-inference succeeds
-- **THEN** the modal SHALL close
-- **AND** campaign generation SHALL proceed
-- **AND** a success toast SHALL be shown
-
-#### Scenario: "Gerar campanha mesmo assim" skips realinhamento
-
-- **WHEN** the user clicks "Gerar campanha mesmo assim"
-- **THEN** the modal SHALL close
-- **AND** campaign generation SHALL proceed without re-inference
-
 ---
 
 ## MODIFIED Requirements
@@ -149,3 +107,16 @@ The system SHALL run drift detection logic on every mount of Step 2 (both create
 - **WHEN** the user is in create mode (no store_id)
 - **THEN** drift detection SHALL NOT execute
 - **AND** `driftStatus` SHALL be `none`
+
+### Requirement: Campaign generation not affected (modified)
+
+> Clarifies that campaign generation is intentionally not modified by this phase.
+
+The drift detection system SHALL NOT modify the campaign generation flow. Campaign generation uses the active brand profile visual direction regardless of drift state. A dismissed drift is a persisted user choice.
+
+#### Scenario: Campaign generation unaffected by drift
+
+- **WHEN** the user clicks "Gerar Campanha"
+- **AND** `driftStatus` is `new` or `dismissed`
+- **THEN** campaign generation SHALL proceed normally
+- **AND** no drift modal, warning, or delay SHALL be shown

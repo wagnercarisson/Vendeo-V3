@@ -1,4 +1,4 @@
-> **Propósito**: Define a lógica de detecção de desalinhamento (drift) entre o estado atual da loja e o brand profile ativo. A detecção ocorre no frontend após o PATCH ser confirmado, comparando os valores normalizados da loja contra o snapshot armazenado no perfil.
+> **Propósito**: Define a lógica de detecção de desalinhamento (drift) entre o estado atual da loja e o brand profile ativo. A detecção ocorre no frontend ao carregar superfícies de identidade da loja, comparando os valores normalizados da loja contra o snapshot armazenado no perfil.
 
 ## Requirements
 
@@ -117,7 +117,7 @@ No new persistence mechanism is needed for accent_color in this phase. The flow 
 
 ### Requirement: Drift detection logic
 
-The detection SHALL follow this algorithm on every Step 2 mount and Gerar Campanha modal open:
+The detection SHALL follow this algorithm on every Step 2 mount:
 
 ```
 1. No brand profile with synced status exists?
@@ -202,4 +202,8 @@ The system SHALL define a `DriftStatus` type with exactly three values:
 type DriftStatus = 'none' | 'new' | 'dismissed'
 ```
 
-This type SHALL be used by all consumers (banner, discreet button, modal) to determine which UI element to render.
+This type SHALL be used by all consumers (banner, discreet button) to determine which UI element to render.
+
+### Requirement: Campaign generation not affected
+
+The drift detection system SHALL NOT block, delay, or modify campaign generation in any way. The campaign flow uses the active visual direction regardless of drift state. A dismissed drift is a persisted user choice that does not affect campaign output.
