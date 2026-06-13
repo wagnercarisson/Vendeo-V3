@@ -1198,18 +1198,18 @@ export function StoreIdentityForm() {
       {driftSaveIntercept && (
         <DriftDecisionModal
           onRealinhar={async () => {
-            setDriftSaveIntercept(false);
             try {
               await realinhar();
+              setDriftSaveIntercept(false);
               await executeStep2Save();
             } catch (err) {
               setDriftError(err instanceof Error ? err.message : 'Erro ao realinhar');
             }
           }}
           onIgnorar={async () => {
-            setDriftSaveIntercept(false);
             try {
               await ignorar();
+              setDriftSaveIntercept(false);
               await executeStep2Save();
             } catch (err) {
               setDriftError(err instanceof Error ? err.message : 'Erro ao ignorar');

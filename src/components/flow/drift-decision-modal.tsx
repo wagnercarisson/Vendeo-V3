@@ -24,36 +24,42 @@ export function DriftDecisionModal({ onRealinhar, onIgnorar, onCancel, isLoading
           Direção visual desatualizada
         </h2>
         <p className="text-text-secondary text-sm font-body mb-6">
-          Você alterou dados importantes da loja. Deseja realinhar a direção visual ou manter a atual?
+          {isLoading
+            ? "Aguarde enquanto o Vendeo realinha a direção visual da sua loja..."
+            : "Você alterou dados importantes da loja. Deseja realinhar a direção visual ou manter a atual?"
+          }
         </p>
 
-        <div className="space-y-3">
-          <button
-            type="button"
-            onClick={onRealinhar}
-            disabled={isLoading}
-            className="w-full px-4 py-2.5 bg-accent-amber text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-            Realinhar direção visual
-          </button>
-          <button
-            type="button"
-            onClick={onIgnorar}
-            disabled={isLoading}
-            className="w-full px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Manter direção visual atual
-          </button>
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={isLoading}
-            className="w-full text-text-muted hover:text-text-primary text-xs font-body underline transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Cancelar
-          </button>
-        </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center gap-3 py-4">
+            <Loader2 className="w-6 h-6 animate-spin text-accent-amber" />
+            <span className="text-text-secondary text-sm font-body">Realinhando direção visual...</span>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={onRealinhar}
+              className="w-full px-4 py-2.5 bg-accent-amber text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 flex items-center justify-center gap-2"
+            >
+              Realinhar direção visual
+            </button>
+            <button
+              type="button"
+              onClick={onIgnorar}
+              className="w-full px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200"
+            >
+              Manter direção visual atual
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="w-full text-text-muted hover:text-text-primary text-xs font-body underline transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        )}
 
         {error && (
           <p className="flex items-center gap-1.5 text-accent-red text-xs mt-3">
