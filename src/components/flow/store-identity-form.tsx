@@ -7,6 +7,8 @@ import { STORE_SEGMENTS, STORE_SUBSEGMENTS, BRAZILIAN_STATES } from "@/lib/const
 import { AlertCircle, CheckCircle2, Loader2, X, Upload, ArrowLeft, Sparkles } from "lucide-react";
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useDriftDetection } from "./use-drift-detection";
+import { currentVisualState, computeDriftStatus } from "@/lib/drift";
+import type { DriftSnapshot } from "@/lib/drift";
 import { DriftDiscreetButton } from "./drift-discreet-button";
 import { DriftDecisionModal } from "./drift-decision-modal";
 
@@ -622,7 +624,12 @@ export function StoreIdentityForm() {
     e.preventDefault();
     if (!storeId) return;
 
-    if (!driftSaveIntercept && driftStatus === 'new') {
+    const driftSnapshot = currentVisualState(driftStore ?? { id: storeId, segment: '', subsegment: '', tone_of_voice: '', name: '', brand_color: '' }, driftProfile);
+    const driftInputSnapshot = driftProfile?.metadata?.input_snapshot as DriftSnapshot | null | undefined;
+    const driftDismissedSnapshot = driftProfile?.metadata?.drift_dismissed_snapshot as DriftSnapshot | null | undefined;
+    const computedDrift = computeDriftStatus(driftSnapshot, driftInputSnapshot, driftDismissedSnapshot);
+
+    if (!driftSaveIntercept && computedDrift === 'new') {
       setDriftSaveIntercept(true);
       return;
     }
