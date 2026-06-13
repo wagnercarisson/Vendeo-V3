@@ -867,10 +867,16 @@ export function StoreIdentityForm() {
                 <DriftDiscreetButton
                   onClick={async () => {
                     setDriftError(null);
-                    try { await realinhar(); } catch (e) { setDriftError(e instanceof Error ? e.message : 'Erro ao realinhar'); }
+                    try { await realinhar(); } catch (e) { setDriftError('Não foi possível realinhar. Tente novamente mais tarde.'); }
                   }}
                   isLoading={isRealinhando}
                 />
+                {driftError && (
+                  <p className="flex items-center gap-1.5 text-accent-red text-xs mt-2">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    {driftError}
+                  </p>
+                )}
               </div>
             )}
             <form onSubmit={handleStep2Submit} className="space-y-6" noValidate>
@@ -1203,7 +1209,7 @@ export function StoreIdentityForm() {
               setDriftSaveIntercept(false);
               await executeStep2Save();
             } catch (err) {
-              setDriftError(err instanceof Error ? err.message : 'Erro ao realinhar');
+              setDriftError('Não foi possível realinhar. Tente novamente mais tarde.');
             }
           }}
           onIgnorar={async () => {
@@ -1212,7 +1218,7 @@ export function StoreIdentityForm() {
               setDriftSaveIntercept(false);
               await executeStep2Save();
             } catch (err) {
-              setDriftError(err instanceof Error ? err.message : 'Erro ao ignorar');
+              setDriftError('Não foi possível realinhar. Tente novamente mais tarde.');
             }
           }}
           onCancel={() => { setDriftSaveIntercept(false); setDriftError(null); }}
