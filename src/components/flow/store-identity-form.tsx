@@ -143,6 +143,16 @@ export function StoreIdentityForm() {
               inferred_accent_color: profile.inferred_accent_color,
               metadata: profile.metadata,
             });
+            if (profile.safe_color_tokens?.primary) {
+              setField("brand_color", profile.safe_color_tokens.primary);
+            }
+            setAccentColor(
+              profile.brand_colors_chosen?.[1]
+              ?? profile.safe_color_tokens?.accent
+              ?? profile.inferred_accent_color
+              ?? ''
+            );
+            setBrandColorsChosen(profile.brand_colors_chosen ?? []);
           }
         })
         .catch(() => {});
@@ -867,7 +877,20 @@ export function StoreIdentityForm() {
                 <DriftDiscreetButton
                   onClick={async () => {
                     setDriftError(null);
-                    try { await realinhar(); } catch (e) { setDriftError('Não foi possível realinhar. Tente novamente mais tarde.'); }
+                    try {
+                      const data = await realinhar();
+                      const profile = (data as Record<string, unknown>)?.profile as Record<string, unknown> | undefined;
+                      if (profile) {
+                        const tokens = profile.safe_color_tokens as Record<string, string> | undefined;
+                        if (tokens?.primary) setField("brand_color", tokens.primary);
+                        setAccentColor(
+                          (profile.brand_colors_chosen as string[])?.[1]
+                          ?? (tokens?.accent ?? '')
+                          ?? (profile.inferred_accent_color as string ?? '')
+                        );
+                        setBrandColorsChosen((profile.brand_colors_chosen as string[]) ?? []);
+                      }
+                    } catch (e) { setDriftError('Não foi possível realinhar. Tente novamente mais tarde.'); }
                   }}
                   isLoading={isRealinhando}
                 />
@@ -1205,7 +1228,18 @@ export function StoreIdentityForm() {
         <DriftDecisionModal
           onRealinhar={async () => {
             try {
-              await realinhar();
+              const data = await realinhar();
+              const profile = (data as Record<string, unknown>)?.profile as Record<string, unknown> | undefined;
+              if (profile) {
+                const tokens = profile.safe_color_tokens as Record<string, string> | undefined;
+                if (tokens?.primary) setField("brand_color", tokens.primary);
+                setAccentColor(
+                  (profile.brand_colors_chosen as string[])?.[1]
+                  ?? (tokens?.accent ?? '')
+                  ?? (profile.inferred_accent_color as string ?? '')
+                );
+                setBrandColorsChosen((profile.brand_colors_chosen as string[]) ?? []);
+              }
               setDriftSaveIntercept(false);
               await executeStep2Save();
             } catch (err) {

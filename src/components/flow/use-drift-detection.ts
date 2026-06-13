@@ -20,7 +20,7 @@ export function useDriftDetection(
 ): {
   driftStatus: DriftStatus
   currentSnapshot: DriftSnapshot | null
-  realinhar: () => Promise<void>
+  realinhar: () => Promise<Record<string, unknown> | void>
   ignorar: () => Promise<void>
   isRealinhando: boolean
 } {
@@ -73,6 +73,7 @@ export function useDriftDetection(
       if (data.success) {
         setDriftStatus('none');
         options?.onRealinhado?.();
+        return data;
       } else {
         throw new Error(data.message || 'Erro ao realinhar direção visual');
       }
