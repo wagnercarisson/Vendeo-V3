@@ -141,18 +141,100 @@ The inference SHALL:
 1. Load store data (name, segment, subsegment, tone_of_voice, positioning, short_description, slogan, city, state)
 2. Accept optional user color preferences
 3. Call the BrandTextOnlyInferenceService
-4. Persist with `source = 'text_only'` and `status = 'synced'` on success, `'failed'` on failure
-5. Respond only after the operation completes
+4. Populate `metadata.input_snapshot` with the current visual state for all 6 sensitive fields (segment, subsegment, tone_of_voice, name, brand_color, accent_color)
+5. Persist with `source = 'text_only'` and `status = 'synced'` on success, `'failed'` on failure
+6. Respond only after the operation completes
 
-#### Scenario: Text-only inference creates synced profile
+The inference response SHALL include `profile.metadata` (containing `input_snapshot`) so the frontend can use it for color hydration after re-inference.
+
+#### Scenario: Text-only inference creates synced profile with input_snapshot
 
 - **WHEN** the BrandTextOnlyInferenceService completes successfully
 - **THEN** the profile SHALL be created with `source = 'text_only'` and `status = 'synced'`
+- **AND** `metadata.input_snapshot` SHALL be populated with current store values for all 6 sensitive fields
 
 #### Scenario: Text-only inference creates failed profile on error
 
 - **WHEN** the BrandTextOnlyInferenceService fails
 - **THEN** the profile SHALL be created with `source = 'text_only'` and `status = 'failed'`
+- **AND** `metadata.input_snapshot` SHALL NOT be set
+
+### Requirement: input_snapshot update on re-inference
+
+When re-inference is triggered via "Realinhar" (from drift modal or discreet button), the system SHALL update `metadata.input_snapshot` with the current visual state (dados atuais da loja + cores vigentes normalizadas) after successful inference.
+
+#### Scenario: input_snapshot updated on re-inference
+
+- **WHEN** re-inference is triggered via "Realinhar direção visual"
+- **AND** the inference completes successfully
+- **THEN** `metadata.input_snapshot` SHALL be updated with the current visual state
+- **AND** `metadata.drift_dismissed_snapshot` SHALL be removed (if present)
+
+### Requirement: input_snapshot values on first inference
+
+When an inference runs for the first time after a new store is saved (mode=create → PATCH /api/store → POST /api/store/[id]/brand-profile/infer), the `input_snapshot` SHALL capture the values that were just saved plus the store name. This establishes the baseline for future drift detection.
+
+#### Scenario: First inference sets baseline snapshot
+
+- **WHEN** the first text-only inference runs for a new store
+- **AND** it completes successfully with status `synced`
+- **THEN** `metadata.input_snapshot` SHALL contain the store's name, segment, subsegment, tone_of_voice, brand_color, and normalized accent_color at that moment
+- **AND** this becomes the baseline for drift detection
+
+### Requirement: PATCH /api/store/[id]/brand-profile/metadata endpoint
+
+The system SHALL expose a `PATCH /api/store/[id]/brand-profile/metadata` endpoint that receives metadata updates for the active brand profile. This endpoint SHALL:
+
+- Accept `PATCH` method only at `/api/store/[id]/brand-profile/metadata`
+- Accept a JSON body with metadata fields to merge (e.g., `{ "drift_dismissed_snapshot": {...} }`)
+- Update the `metadata` JSONB column of the active synced brand profile for the store
+- Perform a deep merge: provided fields SHALL replace or add, omitted fields SHALL retain current values
+- Return HTTP 200 on success
+- Return HTTP 404 if no synced brand profile exists
+- Return HTTP 400 on invalid request body
+
+#### Scenario: Metadata updated successfully
+
+- **WHEN** a PATCH request is sent to `/api/store/{store_id}/brand-profile/metadata`
+- **AND** body contains `{ "drift_dismissed_snapshot": {"segment": "moda", "name": "Loja"} }`
+- **THEN** the active profile's `metadata.drift_dismissed_snapshot` SHALL be set to the provided value
+- **AND** other metadata fields SHALL remain unchanged
+- **AND** HTTP 200 SHALL be returned
+
+#### Scenario: Deep merge preserves existing metadata
+
+- **WHEN** the active profile has `metadata = { "existing_field": "value", "input_snapshot": {...} }`
+- **AND** a PATCH request sends `{ "drift_dismissed_snapshot": {...} }`
+- **THEN** `metadata.existing_field` SHALL be preserved
+- **AND** `metadata.input_snapshot` SHALL be preserved
+- **AND** `metadata.drift_dismissed_snapshot` SHALL be added
+
+#### Scenario: 404 returned when no active profile
+
+- **WHEN** a PATCH request is sent
+- **AND** no synced brand profile exists for this store
+- **THEN** HTTP 404 SHALL be returned
+
+### Requirement: drift_dismissed_snapshot on dismiss
+
+When the user clicks "Manter direção visual atual" on the drift modal, the system SHALL call `PATCH /api/store/[id]/brand-profile/metadata` with `drift_dismissed_snapshot` set to the current normalized visual state. This persists the user's choice across sessions.
+
+#### Scenario: Dismiss persists across sessions
+
+- **WHEN** the user dismisses the drift (clicks "Manter direção visual atual")
+- **AND** the PATCH succeeds
+- **THEN** on the next page load with the same store state, `driftStatus` SHALL be `dismissed`
+- **AND** the discreet button SHALL be shown instead of a modal
+
+### Requirement: drift_dismissed_snapshot removed on re-inference
+
+When the user triggers re-inference (clicks "Realinhar direção visual" from any entry point), the system SHALL remove `metadata.drift_dismissed_snapshot` after successful inference. This ensures a clean slate for future drift detection.
+
+#### Scenario: drift_dismissed_snapshot removed after re-inference
+
+- **WHEN** re-inference completes successfully
+- **THEN** `metadata.drift_dismissed_snapshot` SHALL be removed
+- **AND** `metadata.input_snapshot` SHALL be updated with the new values from inference
 
 ### Requirement: Read brand profile — GET /api/store/[id]/brand-profile
 
@@ -199,8 +281,13 @@ For campaign rendering, the color resolution priority SHALL be:
 - **WHEN** a text_only brand profile is created and user did not interact with color pickers
 - **THEN** `brand_colors_chosen` SHALL be `[]`
 
-### Requirement: Regenerate brand profile — POST /api/store/[id]/brand-profile/generate
+### Requirement: Regenerate brand profile — POST /api/store/[id]/brand-profile/generate [DEFERRED to 4.6.3+]
 
+> **Nota:** O endpoint de regenerate (`POST /api/store/[id]/brand-profile/generate`) está postergado para fases futuras (4.6.3/4.6.4). Na fase 4.6.2, a re-inferência de `text_only` usa `POST /api/store/[id]/brand-profile/infer`, que insere um novo profile com `input_snapshot` atualizado e sem `drift_dismissed_snapshot`.
+
+Quando implementado, o regenerate endpoint SHALL também atualizar `metadata.input_snapshot` após regeneração bem-sucedida e limpar `metadata.drift_dismissed_snapshot`.
+
+<!-- Original spec preserved below for future implementation:
 The system SHALL expose a `POST /api/store/[id]/brand-profile/generate` endpoint that regenerates the brand profile by re-running the Store Brand Director analysis. This allows the lojista to retry after a failed analysis or request a fresh profile.
 
 The endpoint SHALL process inline: call the LLM with the stored logo and current store data, persist the new profile, archive the previous one.
@@ -211,6 +298,7 @@ The endpoint SHALL process inline: call the LLM with the stored logo and current
 - **AND** a previous profile exists
 - **THEN** a new profile SHALL be created
 - **AND** the previous profile SHALL have status changed to `outdated`
+-->
 
 ### Requirement: Update brand colors — PATCH /api/store/[id]/brand-profile
 

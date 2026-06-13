@@ -121,25 +121,28 @@ Cores têm duas camadas de detecção:
 
 `brand_colors_chosen`, `safe_color_tokens` e `inferred_*` não são comparados diretamente entre si — só entram como fallback para normalizar o valor atual de `accent_color` no current visual state. Isso evita falso positivo quando `brand_colors_chosen` está vazio (text_only) mas a tela exibe cores inferidas.
 
-### D6 — UX: banner → botão discreto, sem modais
+### D6 — UX: modal bloqueante no save → botão discreto, sem banner
+
+> **Nota de divergência:** O design original especificava banner. Durante implementação via GSD, a entrega foi refinada para modal bloqueante no save (D10), adicionou navigation guard (D11), e ajustou visibilidade do botão discreto para qualquer drift (D12). Os parágrafos abaixo refletem o estado final implementado.
 
 ```
-Gatilho 1 (Step 2 montou):
-  banner [Realinhar] [Ignorar]
-    → Realinhar: re-inferência in-place + toast
-    → Ignorar: PATCH metadata.drift_dismissed_snapshot,
-               banner → botão discreto
+Gatilho 1 (Salvou Step 2 com drift novo):
+  Modal bloqueante [Realinhar] [Manter] [Cancelar]
+    → Realinhar: re-inferência in-place → salva
+    → Manter: persiste dismiss → salva (modal fecha imediatamente)
+    → Cancelar: fecha modal, não salva
 
-Gatilho 2 (Salvou Step 2):
-  sem interrupção — banner/botão persiste
+Gatilho 2 (Navegou Step 2 com drift novo):
+  Click em <a> ou browser back → modal [Realinhar] [Manter] [Cancelar]
+    → Realinhar: re-inferência → navega
+    → Manter: persiste dismiss → navega
+    → Cancelar: fecha modal, fica no Step 2
 
-Gatilho 3 (Saiu do Step 2):
-  beforeunload nativo só para dados não salvos
-  Drift nunca dispara beforeunload
+Gatilho 3 (Saiu do Step 2 com drift novo):
+  beforeunload acionado (navegação guard) + modal ao recarregar
 
 Gatilho 4 (Retorno futuro):
-  mesmo padrão do Gatilho 1
-  detecta → banner ou botão (se já dispensado)
+  detecta → modal (save/nav) ou botão discreto (se já dispensado)
 
 Gatilho 5 (Gerar Campanha):
   NÃO BLOQUEIA — a geração de campanha não é alterada nesta fase.
@@ -147,7 +150,7 @@ Gatilho 5 (Gerar Campanha):
   da identidade da loja, não do fluxo de campanha.
 ```
 
-**Regra central:** O drift de direção visual é tratado como estado de manutenção da identidade da loja. A fase 4.6.2 detecta o desalinhamento e oferece realinhamento silencioso em superfícies de identidade (Step 2), sem bloquear o fluxo de geração de campanha. Superfícies globais/dashboard/configurações ficam para fase futura.
+**Regra central:** O drift de direção visual é tratado como estado de manutenção da identidade da loja. A fase 4.6.2 detecta o desalinhamento e oferece realinhamento no momento do salvamento ou navegação, sem bloquear o fluxo de geração de campanha. Superfícies globais/dashboard/configurações ficam para fase futura.
 
 ### D7 — Realinhamento usa dados mais recentes
 
@@ -191,6 +194,55 @@ supabase
 ```
 
 **Rationale:** Rota dedicada, semântica clara, sem acoplamento com store ou inferência. Futuramente pode ser estendida para outros metadados do profile.
+
+### D10 — Save-time blocking modal (UX refinement)
+
+**Problema:** O banner no mount é fácil de ignorar — o usuário clica em "Ignorar" sem refletir. O salvamento prossegue sem alinhamento, e drift persiste silenciosamente.
+
+**Solução:** Em vez de banner, um modal bloqueante aparece quando o usuário tenta salvar o Step 2 com drift `'new'`. O modal oferece 3 opções:
+
+| Opção | Ação |
+|---|---|
+| **Realinhar** | Re-inferência in-place → atualiza cores (ver D13) → salva |
+| **Manter** | Persiste `drift_dismissed_snapshot` via PATCH → fecha modal imediatamente (sem spinner) → salva |
+| **Cancelar** | Fecha modal, não salva |
+
+**Regras:**
+- Sem escape (sem outside click, sem `X`)
+- Loading state: spinner + mensagem "Realinhando direção visual...", botões desabilitados
+- Erro: exibido inline no modal ("Não foi possível realinhar. Tente novamente mais tarde.")
+- Duas instâncias do modal coexistem: `driftSaveIntercept` (save) e `driftNavIntercept` (navegação)
+
+### D11 — Navigation guard
+
+**Problema:** Usuário com drift ativo no Step 2 pode navegar para fora sem resolver o desalinhamento (via `<a>`, browser back, refresh).
+
+**Solução:** Três mecanismos de interceptação:
+
+1. **Click capture (capture phase):** `document.addEventListener('click', handler, true)` intercepta cliques em `<a>` (incluindo Next.js `<Link>`) — previne navegação padrão, armazena URL pendente, mostra modal
+2. **Popstate:** `window.addEventListener('popstate')` re-push current URL + mostra modal
+3. **Beforeunload:** `window.addEventListener('beforeunload')` com `preventDefault()` para browser close/refresh
+
+Ativado apenas quando `step === 2 && driftStatus === 'new'`.
+
+### D12 — Discreet button visibility
+
+**Original:** Botão discreto visível apenas quando `driftStatus === 'dismissed'`.
+
+**Refinamento:** Botão discreto visível quando `driftStatus !== 'none'` (tanto `'new'` quanto `'dismissed'`).
+
+**Motivação:** Quando o usuário retorna ao Step 2 após navegar para fora sem resolver drift (`'new'` persistido), não havia indicador visual de que o drift existe. O botão discreto serve como lembrete persistente em qualquer estado de drift não-nulo.
+
+### D13 — Color hydration after realinhar
+
+**Problema:** Após `realinhar()` (re-inferência), `accentColor`, `brand_color` e `brandColorsChosen` nos states do Step 2 não eram atualizados — o save subsequente sobrescrevia o brand profile com cores antigas.
+
+**Solução:** `realinhar()` retorna o response de `POST /infer` (que contém `profile.metadata`). Callers no Step 2 destruturam `profile` para:
+- `setAccentColor(profile.brand_colors_chosen[1] ?? profile.safe_color_tokens?.accent ?? profile.inferred_accent_color)`
+- `setField('brand_color', profile.safe_color_tokens.primary)`
+- `setBrandColorsChosen(profile.brand_colors_chosen)`
+
+Isso garante que as cores inferidas na re-inferência sejam refletidas imediatamente nos states antes do save.
 
 ## Risks / Trade-offs
 

@@ -25,6 +25,8 @@ When the BrandTextOnlyInferenceService completes successfully (status = `synced`
 
 This SHALL happen as part of the same inference flow, after the brand profile is persisted. The snapshot SHALL be merged into the existing `metadata` JSONB, preserving any existing metadata fields.
 
+The inference response SHALL include `profile.metadata` (containing `input_snapshot`) so the frontend can use it for color hydration after re-inference (see `store-identity-ui/spec.md` — Color hydration after realinhar).
+
 #### Scenario: input_snapshot populated after successful inference
 
 - **WHEN** the BrandTextOnlyInferenceService completes with status `synced`
@@ -130,7 +132,12 @@ The inference service SHALL also populate `metadata.input_snapshot` after succes
 - **THEN** `metadata.input_snapshot` SHALL be populated with current visual state
 - **AND** the profile SHALL be created with `source = 'text_only'` and `status = 'synced'`
 
-### Requirement: Regenerate brand profile — POST /api/store/[id]/brand-profile/generate (modified)
+### Requirement: Regenerate brand profile — POST /api/store/[id]/brand-profile/generate (not implemented in 4.6.2)
+
+> **Nota de divergência:** O endpoint de regenerate (`POST /api/store/[id]/brand-profile/generate`) não foi implementado nesta fase. A fase 4.6.2 cobre apenas o modo `text_only`, onde a re-inferência usa `POST /api/store/[id]/brand-profile/infer` (que insere um novo profile com `input_snapshot` atualizado e remove implicitamente `drift_dismissed_snapshot` via novo insert). O regenerate será implementado em fases futuras (4.6.3/4.6.4) quando os demais identity states forem contemplados.
+
+<!--
+### Requirement: Regenerate brand profile — POST /api/store/[id]/brand-profile/generate (modified) [DEFERRED]
 
 > Modifies the existing "Regenerate brand profile" requirement.
 
@@ -142,3 +149,4 @@ The regenerate endpoint SHALL also update `metadata.input_snapshot` after succes
 - **AND** regeneration succeeds
 - **THEN** `metadata.input_snapshot` SHALL be updated with current store values
 - **AND** `metadata.drift_dismissed_snapshot` SHALL be removed
+-->
