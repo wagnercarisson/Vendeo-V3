@@ -73,7 +73,7 @@
     - [x] 4.5-05-PLAN.md — AI/Generation compatibility: image-generation-service.ts + benchmarks
     - [x] 4.5-06-PLAN.md — Store Identity Form: 3-mode subsegment dropdown, Outro behavior, reset
     - [x] 4.5-07-PLAN.md — UI components: store-identity-block.tsx, store-preview.tsx updates
-- [x] Phase 4.6: Text Only Brand Coverage
+- [x] Phase 4.6: Store Form Adjusts
   - [x] Phase 4.6.1: Text Only State & Visual Direction Inference (5/5 plans) (completed 2026-06-12)
     - [x] 04.6.1-01-PLAN.md — Database Migration & Types
     - [x] 04.6.1-02-PLAN.md — Brand Inference Prompt & Service
@@ -81,6 +81,9 @@
     - [x] 04.6.1-04-PLAN.md — Creative Direction Context Update
     - [x] 04.6.1-05-PLAN.md — Store Identity UI (Step 2 + Preview)
   - [x] Phase 4.6.2: Visual Direction Drift Detection (4/4 plans) (completed 2026-06-13)
+  - [ ] Phase 4.6.3: Logo State Lifecycle — Upload/Remove/Restore com transição transacional, proveniência e histórico (pending)
+  - [ ] Phase 4.6.4: Visual Signature Fluxo — Approve/reject/remove visual signature (pending)
+  - [ ] Phase 4.6.x: Transições entre estados — text_only ↔ logo ↔ visual_signature (pending)
 - [ ] Phase 5: Review, Adjust & Export (not yet planned)
 ## Progress
 
@@ -100,7 +103,10 @@
 | 4.4.1. Existing Logo & Store Brand Direction Foundation | v1.1 | 0/6 | Planned | — |
 | 4.4.2. Generated Visual Signature & Brand Profile | v1.1 | 6/6 | Complete | 2026-06-04 |
 | 4.5. Segment & Subsegment Alignment | v1.1 | 7/7 | Complete | 2026-06-11 |
-| 4.6. Text Only Brand Coverage | v1.1 | 5/5 | Complete | 2026-06-12 |
+| 4.6. Store Form Adjusts | v1.1 | 5/5 | Active | 2026-06-12 |
 | 4.6.1. Text Only State & Visual Direction Inference | v1.1 | 5/5 | Complete | 2026-06-12 |
 | 4.6.2. Visual Direction Drift Detection | v1.1 | 4/4 | Complete | 2026-06-13 |
+| 4.6.3. Logo State Lifecycle | v1.1 | 0 | Pending | — |
+| 4.6.4. Visual Signature Fluxo | v1.1 | 0 | Pending | — |
+| 4.6.x. State Transitions | v1.1 | 0 | Pending | — |
 | 5. Review, Adjust & Export | v1.1 | 0 | Not yet planned | — |
