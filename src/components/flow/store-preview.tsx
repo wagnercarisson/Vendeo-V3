@@ -40,6 +40,7 @@ export function StorePreview({ name, segment, brandColor, accentColor, brandColo
   }
 
   const isTextOnly = identityState === 'text_only' && textOnlyProfile;
+  const showDirectionSection = textOnlyProfile && (textOnlyProfile.visual_style || textOnlyProfile.visual_tone || textOnlyProfile.brand_personality);
 
   const resolvedColor = isTextOnly
     ? (textOnlyProfile!.safe_color_tokens?.primary && /^#[0-9A-Fa-f]{6}$/.test(textOnlyProfile!.safe_color_tokens!.primary)
@@ -139,7 +140,7 @@ export function StorePreview({ name, segment, brandColor, accentColor, brandColo
         )}
       </div>
 
-      {isTextOnly && (
+      {showDirectionSection && (
         <div className="mt-4 pt-4 border-t border-border space-y-3">
           <div className="flex items-center gap-2 mb-2">
             <CheckCircle2 className="w-4 h-4 text-accent-green" />

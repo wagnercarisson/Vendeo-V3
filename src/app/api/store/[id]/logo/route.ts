@@ -8,7 +8,7 @@ import {
   computeChecksum,
   generateAllVariants,
 } from '@/lib/brand-assets/image-processing';
-import { BrandDirectorService } from '@/lib/brand-assets/brand-director';
+import { BrandDirectorService, BrandDirectorAnalysisError } from '@/lib/brand-assets/brand-director';
 import type { BrandAssetRecord, BrandAssetVariantGroup } from '@/lib/brand-assets/types';
 import { IDENTITY_TO_LOGO_STATUS } from '@/lib/constants';
 
@@ -255,10 +255,11 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
           positioning: store.positioning,
           short_description: store.short_description,
           slogan: store.slogan,
+          userPrimaryColor: store.brand_color,
+          userAccentColor: accentColor,
         },
       });
 
-      // Phase 3 — Success path: compensated transition
       const previousSyncedId = syncedProfile?.id ?? null;
 
       // Mark previous synced as outdated
@@ -286,8 +287,18 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
           campaign_guidelines: analysis.campaign_guidelines,
           campaign_brief: analysis.campaign_brief,
           confidence_score: analysis.confidence_score,
+          inferred_primary_color: analysis.inferred_primary_color,
+          inferred_accent_color: analysis.inferred_accent_color,
           status: 'synced',
-          metadata: { input_snapshot: inputSnapshot },
+          metadata: {
+            input_snapshot: inputSnapshot
+              ? {
+                  ...inputSnapshot,
+                  brand_color: analysis.inferred_primary_color ?? analysis.safe_color_tokens?.primary ?? inputSnapshot.brand_color,
+                  accent_color: analysis.safe_color_tokens?.accent ?? analysis.inferred_accent_color ?? inputSnapshot.accent_color,
+                }
+              : null,
+          },
         })
         .select()
         .single();
@@ -311,18 +322,28 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
           updated_at: new Date().toISOString(),
         })
         .eq('id', storeId);
-    } catch {
+    } catch (err) {
       // Phase 3 — Failure path: previous synced stays synced (fallback preserved)
-      // Insert failed profile with attempt_snapshot
+      // Extract deterministic colors from error if available (BrandDirectorAnalysisError)
+      const dc = err instanceof BrandDirectorAnalysisError ? err.deterministicResult : null;
+
+      console.error(`[POST /logo] BrandDirector failed: ${err instanceof Error ? err.message : String(err)}`);
+
+      // Insert failed profile with deterministic colors preserved
       const { data: failedProfile } = await supabase
         .from('store_brand_profiles')
         .insert({
           store_id: storeId,
           source: 'logo_analysis',
           active_logo_asset_id: originalAsset.id,
+          logo_colors_detected: dc?.logo_colors_detected ?? [],
+          brand_colors_chosen: [],
+          safe_color_tokens: dc?.safe_color_tokens ?? null,
+          inferred_primary_color: dc?.inferred_primary_color ?? null,
+          inferred_accent_color: dc?.inferred_accent_color ?? null,
           status: 'failed',
           metadata: {
-            error: 'Brand Director analysis failed during upload',
+            error: err instanceof Error ? err.message : 'Brand Director analysis failed',
             attempt_snapshot: inputSnapshot,
           },
         })

@@ -12,6 +12,7 @@ import { currentVisualState, computeDriftStatus } from "@/lib/drift";
 import type { DriftSnapshot } from "@/lib/drift";
 import { DriftDiscreetButton } from "./drift-discreet-button";
 import { DriftDecisionModal } from "./drift-decision-modal";
+import { LogoRestoreModal } from "./logo-restore-modal";
 
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
 const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -88,6 +89,9 @@ export function StoreIdentityForm() {
   const [logoStatus, setLogoStatus] = useState<string | null>(null);
   const [visualSignatureUrl, setVisualSignatureUrl] = useState<string | null>(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [archivedCount, setArchivedCount] = useState(0);
+  const [archivedCountLoading, setArchivedCountLoading] = useState(false);
   const [subsegmentIsOther, setSubsegmentIsOther] = useState(false);
   const [identityState, setIdentityState] = useState<string | null>(null);
   const [inferenceLoading, setInferenceLoading] = useState(false);
@@ -313,7 +317,7 @@ export function StoreIdentityForm() {
                 setAccentColor(profile.safe_color_tokens.accent);
               }
             }
-            if (profile.source === 'text_only' && profile.status === 'synced') {
+            if (profile.status === 'synced') {
               setInferredProfile({
                 safe_color_tokens: profile.safe_color_tokens,
                 visual_style: profile.visual_style,
@@ -324,8 +328,8 @@ export function StoreIdentityForm() {
                 inferred_accent_color: profile.inferred_accent_color,
                 metadata: profile.metadata,
               });
-            } else if (profile.source === 'text_only' && profile.status === 'failed') {
-              console.error('[StoreIdentityForm] Text-only inference failed:', profile.metadata?.error);
+            } else if (profile.status === 'failed') {
+              console.error('[StoreIdentityForm] Inference failed:', profile.metadata?.error);
               setInferenceError('Falha de conexão. Tente novamente mais tarde.');
             }
           }
@@ -497,6 +501,45 @@ export function StoreIdentityForm() {
     setShowApprovalModal(true);
   }, [storeId]);
 
+  const handleRemoveLogo = useCallback(async () => {
+    if (!storeId) return;
+    try {
+      const res = await fetch(`/api/store/${storeId}/logo`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Erro ao remover logotipo");
+      setLogoResultUrl(null);
+      setLogoStatus('explicit_none');
+      setIdentityState('text_only');
+      setHasActiveLogo(false);
+      setDetectedColors([]);
+      setAnalysisWarning(null);
+      setLogoError(null);
+      setBrandColorsChosen([]);
+    } catch (err) {
+      setLogoError(err instanceof Error ? err.message : "Erro ao remover logotipo");
+    }
+  }, [storeId]);
+
+  const fetchArchivedCount = useCallback(async () => {
+    if (!storeId) return;
+    setArchivedCountLoading(true);
+    try {
+      const res = await fetch(`/api/store/${storeId}/logo/history`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const count = Array.isArray(data?.history) ? data.history.length : 0;
+      setArchivedCount(count);
+    } catch {
+      // silent
+    } finally {
+      setArchivedCountLoading(false);
+    }
+  }, [storeId]);
+
+  const handleOpenRestore = useCallback(() => {
+    fetchArchivedCount();
+    setShowRestoreModal(true);
+  }, [fetchArchivedCount]);
+
   const handleFileSelected = useCallback(async (file: File | null) => {
     setLogoError(null);
     setAnalysisWarning(null);
@@ -541,6 +584,9 @@ export function StoreIdentityForm() {
           setLogoResultUrl(`${supabaseUrl}/storage/v1/object/public/store-brand-assets/${storagePath}`);
         }
       }
+      setLogoStatus('uploaded');
+      setIdentityState('logo');
+      setHasActiveLogo(true);
 
       const profile = result?.profile;
       if (profile?.status === 'synced') {
@@ -565,6 +611,19 @@ export function StoreIdentityForm() {
         }
       } else if (profile?.status === 'failed') {
         setAnalysisWarning("Não conseguimos extrair cores confiáveis deste logotipo. Tente outra imagem ou escolha as cores manualmente.");
+      }
+
+      if (profile) {
+        setInferredProfile({
+          safe_color_tokens: profile.safe_color_tokens ?? {},
+          visual_style: profile.visual_style,
+          visual_tone: profile.visual_tone,
+          brand_personality: profile.brand_personality,
+          brand_colors_chosen: profile.brand_colors_chosen ?? [],
+          inferred_primary_color: profile.inferred_primary_color,
+          inferred_accent_color: profile.inferred_accent_color,
+          metadata: profile.metadata ?? {},
+        });
       }
 
       setUploadStatus('ready');
@@ -954,6 +1013,36 @@ export function StoreIdentityForm() {
                   {logoStatus === 'generated' ? 'Assinatura Visual' : 'Logotipo da Loja'}
                   <span className="font-normal normal-case tracking-normal text-text-disabled ml-1">(opcional)</span>
                 </label>
+                {logoStatus === 'uploaded' && logoResultUrl ? (
+                  <div className="p-4 bg-bg-elevated border border-border rounded-xl">
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 rounded-xl overflow-hidden bg-bg-surface border border-border-light shrink-0">
+                        <img src={logoResultUrl} alt="Logotipo" className="w-full h-full object-contain" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-text-primary font-heading font-semibold text-sm">{formData.name}</p>
+                        <p className="text-text-muted text-xs font-body mt-0.5">Logotipo ativo</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleRemoveLogo}
+                        className="shrink-0 px-3 py-1.5 border border-accent-red/30 text-accent-red font-heading font-semibold text-xs rounded-lg hover:bg-accent-red/10 transition-all duration-200"
+                      >
+                        Remover logotipo
+                      </button>
+                    </div>
+                    {!archivedCountLoading && archivedCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleOpenRestore}
+                        className="mt-3 text-accent-blue hover:text-accent-blue/80 text-xs font-body underline transition-colors duration-200"
+                      >
+                        Logotipos anteriores ({archivedCount})
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <>
                 <div onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
                   className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors duration-200 cursor-pointer ${
                     isDragging ? "border-accent-blue bg-accent-blue/5" : "border-border-light hover:border-text-muted bg-bg-surface"
@@ -1111,6 +1200,17 @@ export function StoreIdentityForm() {
                         </button>
                       </div>
                     )}
+                    {!archivedCountLoading && archivedCount > 0 && (
+                      <div className="text-center">
+                        <button
+                          type="button"
+                          onClick={handleOpenRestore}
+                          className="text-accent-blue hover:text-accent-blue/80 text-xs font-body underline transition-colors duration-200"
+                        >
+                          Logotipos anteriores ({archivedCount})
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1139,6 +1239,7 @@ export function StoreIdentityForm() {
                     </button>
                   </div>
                 )}
+                </>)}
               </div>
 
               <div className="space-y-4">
@@ -1213,7 +1314,7 @@ export function StoreIdentityForm() {
                     </div>
                   </div>
                 )}
-                {identityState === 'text_only' && inferredProfile && !inferenceLoading && (
+                {inferredProfile && !inferenceLoading && (
                   <div className="mt-4">
                     <div className="flex items-center gap-3 p-4 bg-bg-elevated border border-border rounded-xl">
                       <CheckCircle2 className="w-5 h-5 text-accent-green shrink-0" />
@@ -1358,6 +1459,30 @@ export function StoreIdentityForm() {
           city={formData.city}
           uf={formData.state}
           onComplete={handleApprovalComplete}
+        />
+      )}
+      {showRestoreModal && storeId && (
+        <LogoRestoreModal
+          isOpen={showRestoreModal}
+          onClose={() => setShowRestoreModal(false)}
+          storeId={storeId}
+          onRestoreComplete={async () => {
+            setShowRestoreModal(false);
+            try {
+              const res = await fetch(`/api/store/${storeId}`);
+              if (!res.ok) return;
+              const data = await res.json();
+              if (data?.logo_url) {
+                setLogoResultUrl(data.logo_url);
+              }
+              setLogoStatus('uploaded');
+              setIdentityState('logo');
+              setHasActiveLogo(true);
+              setArchivedCount(0);
+            } catch {
+              // silent — page reload recovers
+            }
+          }}
         />
       )}
     </div>

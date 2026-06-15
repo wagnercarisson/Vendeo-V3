@@ -119,6 +119,8 @@ export interface BrandDirectorResult {
   brand_personality: string;
   campaign_guidelines: string;
   campaign_brief: string;
+  inferred_primary_color: string;
+  inferred_accent_color: string;
   confidence_score: number;
 }
 

@@ -5,13 +5,20 @@ import type { Store } from "@/lib/store";
 import { resolveStoreIdentity } from "@/lib/actions/store";
 import { STORE_SEGMENTS } from "@/lib/constants";
 import type { StoreIdentitySnapshot } from "@/components/campaign/types";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 
 interface StoreIdentityBlockProps {
   store: Pick<Store, "id" | "name" | "logo_url" | "segment" | "brand_color" | "subsegment" | "tone_of_voice" | "positioning" | "short_description" | "slogan" | "identity_state">;
+  hasFailedProfile?: boolean;
 }
 
-export function StoreIdentityBlock({ store }: StoreIdentityBlockProps) {
+const IDENTITY_STATE_LABELS: Record<string, string> = {
+  'text_only': 'Texto Only',
+  'logo': 'Logo Ativo',
+  'visual_signature': 'Assinatura Visual',
+};
+
+export function StoreIdentityBlock({ store, hasFailedProfile }: StoreIdentityBlockProps) {
   const [identity, setIdentity] = useState<StoreIdentitySnapshot | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -42,15 +49,21 @@ export function StoreIdentityBlock({ store }: StoreIdentityBlockProps) {
   const visualSignatureUrl = identity.visualSignatureUrl;
   const secondaryColor = identity.brandProfile?.brand_colors_chosen?.[1] ?? null;
   const hasBrandProfile = !!identity.brandProfile;
+  const identityState = store.identity_state;
 
   return (
     <div className="flex items-start gap-4 bg-bg-surface border border-border rounded-xl p-4">
       {logoUrl ? (
-        <img
-          src={logoUrl}
-          alt={`Logo ${store.name}`}
-          className="w-10 h-10 rounded-full object-contain shrink-0 bg-bg-elevated border border-border-light"
-        />
+        <div className="relative shrink-0">
+          <img
+            src={logoUrl}
+            alt={`Logo ${store.name}`}
+            className="w-10 h-10 rounded-full object-contain bg-bg-elevated border border-border-light"
+          />
+          {hasFailedProfile && (
+            <AlertTriangle className="w-4 h-4 text-accent-amber absolute -top-1 -right-1" />
+          )}
+        </div>
       ) : visualSignatureUrl ? (
         <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-bg-elevated border border-border-light">
           <img
@@ -72,7 +85,16 @@ export function StoreIdentityBlock({ store }: StoreIdentityBlockProps) {
           <p className="text-text-primary font-heading font-semibold text-base truncate">
             {store.name}
           </p>
-          {hasBrandProfile && (
+          {identityState && identityState !== 'text_only' && (
+            <span className={`text-[10px] font-heading font-medium px-1.5 py-0.5 rounded-full shrink-0 ${
+              hasFailedProfile
+                ? 'text-accent-amber bg-accent-amber/10'
+                : 'text-accent-green bg-accent-green/10'
+            }`}>
+              {IDENTITY_STATE_LABELS[identityState] ?? identityState}
+            </span>
+          )}
+          {hasBrandProfile && !identityState && (
             <span className="text-[10px] font-heading font-medium text-accent-green bg-accent-green/10 px-1.5 py-0.5 rounded-full shrink-0">
               Ativo
             </span>
