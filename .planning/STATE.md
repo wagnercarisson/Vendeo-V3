@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI + Rendering
 status: active
-stopped_at: Phase 4.6.2 — Visual Direction Drift Detection completed (4/4 plans executed, UAT verified).
-last_updated: "2026-06-13T23:00:00.000Z"
+stopped_at: Phase 4.6.2 — Visual Direction Drift Detection completed (4/4 plans executed, UAT verified). Next: Phase 4.6.3 — Logo State Lifecycle.
+last_updated: "2026-06-15T12:00:00.000Z"
 progress:
-  total_phases: 14
+  total_phases: 17
   completed_phases: 14
   total_plans: 58
   completed_plans: 58
-  percent: 100
+  percent: 88
 ---
 
 # Project State
@@ -20,16 +20,24 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-25 after v1.0 milestone)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
-**Current focus:** Phase 4.6.2 complete — next: Phase 4.4.1 or Phase 5
+**Current focus:** Phase 4.6.3 — Logo State Lifecycle (Upload/Remove/Restore)
 
 ## Current Position
 
-Phase: 4.6.2 — Visual Direction Drift Detection (COMPLETED — 4/4 plans executed, UAT verified)
-Milestone: v1.1 AI + Rendering — EXTENDED (Phase 4.4.1 deferred, Phase 4.6 completed)
-Phases complete: 14 of 14 phases
-Next phase: Phase 4.4.1 (6 plans deferred) or Phase 5 (Review, Adjust & Export)
+Phase: 4.6.3 — Logo State Lifecycle (PLANNING)
+Milestone: v1.1 AI + Rendering — EXTENDED (Phase 4.6 sub-phases 4.6.3–4.6.x in progress)
+Phases complete: 14 of 17 phases (3 pending: 4.6.3, 4.6.4, 4.6.x)
+Next phase: 4.6.3 — Logo State Lifecycle
 
-Progress: [████████████████] 100% (58/58 plans completed)
+| Phase | Status |
+|-------|--------|
+| 4.6.1 — Text Only Coverage | Complete |
+| 4.6.2 — Visual Direction Drift Detection | Complete |
+| **4.6.3 — Logo State Lifecycle** | **Planning** ← agora |
+| 4.6.4 — Visual Signature Fluxo | Pending |
+| 4.6.x — State Transitions | Pending |
+
+Progress: [████████████░░] 88% (58/66 plans — 8 pending)
 
 ## Performance Metrics
 
@@ -92,10 +100,28 @@ Key decisions:
 - D12: Discreet button visible for any drift `!== 'none'` (not only `'dismissed'`)
 - D13: Color hydration after realinhar — accentColor, brand_color, brandColorsChosen synced from POST /infer response
 
+### Decisions from Phase 4.6.3 (OpenSpec)
+
+Registered in `openspec/changes/fase-4-6-3-logo-state-lifecycle/` and `docs/alinhamento-fase-4.6.3.md`.
+
+Key decisions (full: 10 decisions D1-D10 in OpenSpec design.md):
+- D01: `active_logo_asset_id` como proveniência — nunca nullado
+- D02: Compensação controlada (não RPC, não BEGIN/COMMIT)
+- D03: `identity_state` como canônico, `logo_status` como derivado via IDENTITY_TO_LOGO_STATUS
+- D04: `input_snapshot` (profiles synced) vs `attempt_snapshot` (profiles failed)
+- D05: Upload flow reordenado — BrandDirector antes da mutação do profile
+- D06: Remove flow — assets archived, profile synced, active_logo_asset_id preservado
+- D07: GET /logo/history — LEFT JOIN asset + profile via FK active_logo_asset_id
+- D08: POST /logo/restore — dois caminhos (sem drift / com drift)
+- D09: `brand_colors_chosen` isolado — não populado por upload
+- D10: Matriz UX — 4 cenários no Step 2
+
 ### Pending Todos
 
-- Execute Phase 4.4.1 — run all 6 plans (4 waves) (deferred)
-- Plan Phase 5 — Review, Adjust & Export (after 4.4.x)
+- Plan and execute Phase 4.6.3 — Logo State Lifecycle
+- Plan Phase 4.6.4 — Visual Signature Fluxo (after 4.6.3)
+- Plan Phase 4.6.x — State Transitions (after 4.6.4)
+- Execute Phase 4.4.1 — run all 6 plans (4 waves) (deferred — historical record)
 
 ### Blockers/Concerns
 
@@ -112,7 +138,14 @@ Nenhum.
 Last session: 2026-06-13T23:00:00.000Z
 Stopped at: Phase 4.6.2 — Visual Direction Drift Detection completed (4/4 plans, UAT verified).
 
-## Next Phase
+## Next Phases
 
-Phase 4.4.1 — Existing Logo & Store Brand Direction Foundation (DEFERRED — 6 plans, 4 waves)
-Phase 5 — Review, Adjust & Export (not yet planned)
+| Phase | Status | Plans |
+|-------|--------|-------|
+| **4.6.3 — Logo State Lifecycle** | **Planning** ← agora | 0/8 planned |
+| 4.6.4 — Visual Signature Fluxo | Pending | 0 |
+| 4.6.x — State Transitions | Pending | 0 |
+| Phase 4.4.1 — Existing Logo & Store Brand Direction Foundation | Deferred (historical record) | 6 |
+| Phase 5 — Review, Adjust & Export | Not yet planned | 0 |
+
+**Phase 4.6.3 scope (from OpenSpec):** Upload com transição transacional e input_snapshot, Remove preservando proveniência, History/Restore com validação de drift, UI Step 2 com 4 cenários. Ver `docs/alinhamento-fase-4.6.3.md` para alinhamento completo.
