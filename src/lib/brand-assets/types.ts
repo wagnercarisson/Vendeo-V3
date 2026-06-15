@@ -34,6 +34,8 @@ export type BrandProfileStatus = 'processing' | 'synced' | 'outdated' | 'failed'
 
 export interface BrandProfileRecord {
   id: string; store_id: string; source: string;
+  /** Provenance field — points to the original store_brand_assets.id that this profile was derived from.
+   *  NEVER nulled after being set. Use identity_state + asset status to determine visual state. */
   active_logo_asset_id: string | null;
   logo_colors_detected: string[];
   brand_colors_chosen: string[];
@@ -124,6 +126,30 @@ export interface LogoUploadResult {
   originalAsset: BrandAssetRecord;
   variants: BrandAssetRecord[];
   profile: BrandProfileRecord | null;
+}
+
+export type DriftStatus = 'none' | 'drift' | null
+
+export interface LogoHistoryItem {
+  version: number
+  asset: BrandAssetRecord
+  profile: BrandProfileRecord | null
+  created_at: string
+  visual_style: string | null
+  safe_color_tokens: Record<string, string> | null
+  drift_status: DriftStatus
+  input_snapshot: Record<string, string | null> | null
+}
+
+export interface LogoRestoreRequest {
+  asset_id: string
+}
+
+export interface LogoRestoreResponse {
+  success: boolean
+  profile_id: string | null
+  drift_detected: boolean
+  realigned: boolean
 }
 
 export interface VariantGenerationResult {

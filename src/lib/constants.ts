@@ -147,6 +147,12 @@ export const BRAZILIAN_STATES = [
   { value: "TO", label: "Tocantins" },
 ] as const;
 
+export const IDENTITY_TO_LOGO_STATUS: Record<string, string | null> = {
+  'text_only': 'explicit_none',
+  'logo': 'uploaded',
+  'visual_signature': 'generated',
+};
+
 export const BADGE_OPTIONS = [
   "Oferta",
   "Promoção",
