@@ -388,18 +388,18 @@ async function handleDeleteLogo(_request: NextRequest, storeId: string) {
     .eq('store_id', storeId)
     .eq('status', 'active');
 
-  await supabase
-    .from('store_brand_profiles')
-    .update({ status: 'archived', updated_at: new Date().toISOString() })
-    .eq('store_id', storeId)
-    .eq('status', 'synced');
-
+  // Profile stays synced — direction visual is preserved
+  // active_logo_asset_id is preserved — provenance link maintained
   await supabase
     .from('stores')
-    .update({ logo_status: null, updated_at: new Date().toISOString() })
+    .update({
+      identity_state: 'text_only',
+      logo_status: IDENTITY_TO_LOGO_STATUS['text_only'],
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', storeId);
 
-  return NextResponse.json({ message: 'Logo removido com sucesso' }, { status: 200 });
+  return NextResponse.json({ success: true, identity_state: 'text_only' }, { status: 200 });
 }
 
 export async function POST(
