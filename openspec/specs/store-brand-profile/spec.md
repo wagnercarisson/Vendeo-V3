@@ -11,7 +11,7 @@ The system SHALL have a `store_brand_profiles` table in the public Supabase sche
 | `id` | `uuid` | Yes | `gen_random_uuid()` | Primary key |
 | `store_id` | `uuid` | Yes | — | FK → stores(id) |
 | `source` | `text` | Yes | — | `logo_analysis`, `without_logo`, `text_only` |
-| `active_logo_asset_id` | `uuid` | No | `null` | FK → store_brand_assets(id), points to the active original asset. Null when source = without_logo or text_only |
+| `active_logo_asset_id` | `uuid` | No | `null` | FK → store_brand_assets(id), points to the original asset that generated this profile. Serves as provenance link — never nulled after being set. Null when source = without_logo or text_only. When source = logo_analysis, SHALL always be set, even after logo removal |
 | `logo_colors_detected` | `jsonb` | No | `null` | Array of hex color strings detected from logo analysis |
 | `brand_colors_chosen` | `jsonb` | No | `null` | Array of hex color strings chosen by the lojista |
 | `safe_color_tokens` | `jsonb` | No | `null` | `{ primary, secondary, accent, ... }` — safe usage tokens |
@@ -63,7 +63,7 @@ Profiles SHALL follow this lifecycle:
 1. Created directly with status `synced` when analysis completes successfully (V1)
 2. Created directly with status `failed` when analysis fails (V1)
 3. Previous `synced` profile becomes `outdated` ONLY when a NEW profile is created with status `synced` — if the new profile fails, the previous synced profile SHALL remain unchanged
-4. Profile becomes `archived` when logo is soft-deleted
+4. Profile remains `synced` when logo is soft-deleted — only the assets are archived. The `active_logo_asset_id` FK is preserved for provenance. The store's `identity_state` is synced to `'text_only'`
 
 If a new logo is uploaded for a store that previously had a brand profile with source `without_logo`, and the new profile is created with status `synced`, the without_logo profile SHALL be marked `outdated`.
 

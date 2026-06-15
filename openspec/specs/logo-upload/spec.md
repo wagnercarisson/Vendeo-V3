@@ -160,13 +160,18 @@ Assets SHALL NEVER be physically deleted. The `archived` status SHALL be used fo
 
 ### Requirement: Logo removal — soft delete
 
-The system SHALL expose a `DELETE /api/store/[id]/logo` endpoint that performs a soft delete. The active store_brand_assets records SHALL have status changed to `archived`. The associated brand profile SHALL have status changed to `archived`. The assets in storage SHALL NOT be deleted.
+The system SHALL expose a `DELETE /api/store/[id]/logo` endpoint that performs a soft delete. The active store_brand_assets records SHALL have status changed to `archived`. The associated brand profile SHALL remain `synced` (direction visual is preserved, not archived). The `active_logo_asset_id` FK on the profile SHALL be preserved (provenance link to the original asset is maintained). The assets in storage SHALL NOT be deleted.
 
-#### Scenario: Soft delete archives assets and profile
+The endpoint SHALL also update the store's `identity_state` to `'text_only'` and synchronize `logo_status` to `'explicit_none'`.
+
+#### Scenario: Soft delete archives assets, preserves profile synced
 
 - **WHEN** a DELETE request is sent to /api/store/{store_id}/logo
 - **THEN** the active store_brand_assets for that store SHALL have status changed to `archived`
-- **AND** the active brand profile SHALL have status changed to `archived`
+- **AND** the active brand profile SHALL remain `synced` (NOT archived)
+- **AND** the profile's `active_logo_asset_id` SHALL be preserved
+- **AND** the store's `identity_state` SHALL be set to `'text_only'`
+- **AND** the store's `logo_status` SHALL be set to `'explicit_none'`
 - **AND** the storage files SHALL NOT be deleted
 
 ### Requirement: Logo retrieval — GET /api/store/[id]/logo
