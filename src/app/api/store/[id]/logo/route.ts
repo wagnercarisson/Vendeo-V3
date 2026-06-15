@@ -10,6 +10,7 @@ import {
 } from '@/lib/brand-assets/image-processing';
 import { BrandDirectorService } from '@/lib/brand-assets/brand-director';
 import type { BrandAssetRecord, BrandAssetVariantGroup } from '@/lib/brand-assets/types';
+import { IDENTITY_TO_LOGO_STATUS } from '@/lib/constants';
 
 const ALLOWED_EXTENSION_MAP: Record<string, string> = {
   '.png': 'image/png',
@@ -82,17 +83,12 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
 
   const nextVersion = (maxVersion?.version ?? 0) + 1;
 
+  // Phase 1 — Pre-analysis: archive assets, upload, insert asset, generate variants
   await supabase
     .from('store_brand_assets')
     .update({ status: 'archived', updated_at: new Date().toISOString() })
     .eq('store_id', storeId)
     .eq('status', 'active');
-
-  await supabase
-    .from('store_brand_profiles')
-    .update({ status: 'outdated', updated_at: new Date().toISOString() })
-    .eq('store_id', storeId)
-    .eq('status', 'synced');
 
   const { error: uploadError } = await supabase
     .storage
@@ -211,20 +207,39 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
     }
   }
 
+  // Fetch store data for input_snapshot and BrandDirector
   const { data: store } = await supabase
     .from('stores')
     .select()
     .eq('id', storeId)
     .single();
 
-  let createdProfile = null;
-  if (store) {
-    // Update logo_status to 'uploaded'
-    await supabase
-      .from('stores')
-      .update({ logo_status: 'uploaded', updated_at: new Date().toISOString() })
-      .eq('id', storeId);
+  // Fetch current synced profile for accent_color resolution
+  const { data: syncedProfile } = await supabase
+    .from('store_brand_profiles')
+    .select()
+    .eq('store_id', storeId)
+    .eq('status', 'synced')
+    .maybeSingle();
 
+  const accentColor = syncedProfile?.brand_colors_chosen?.[1]
+    ?? syncedProfile?.safe_color_tokens?.accent
+    ?? syncedProfile?.inferred_accent_color
+    ?? null;
+
+  const inputSnapshot = store ? {
+    segment: store.segment,
+    subsegment: store.subsegment,
+    tone_of_voice: store.tone_of_voice,
+    name: store.name,
+    brand_color: store.brand_color,
+    accent_color: accentColor,
+  } : null;
+
+  let createdProfile = null;
+
+  if (store) {
+    // Phase 2 — BrandDirector (BEFORE profile mutation)
     try {
       const director = new BrandDirectorService();
       const analysis = await director.analyze({
@@ -243,14 +258,26 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
         },
       });
 
-      const { data: profile } = await supabase
+      // Phase 3 — Success path: compensated transition
+      const previousSyncedId = syncedProfile?.id ?? null;
+
+      // Mark previous synced as outdated
+      if (previousSyncedId) {
+        await supabase
+          .from('store_brand_profiles')
+          .update({ status: 'outdated', updated_at: new Date().toISOString() })
+          .eq('id', previousSyncedId);
+      }
+
+      // Insert new synced profile
+      const { data: profile, error: profileInsertError } = await supabase
         .from('store_brand_profiles')
         .insert({
           store_id: storeId,
           source: 'logo_analysis',
           active_logo_asset_id: originalAsset.id,
           logo_colors_detected: analysis.logo_colors_detected,
-          brand_colors_chosen: analysis.logo_colors_detected,
+          brand_colors_chosen: [],
           safe_color_tokens: analysis.safe_color_tokens,
           visual_style: analysis.visual_style,
           visual_tone: analysis.visual_tone,
@@ -260,12 +287,33 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
           campaign_brief: analysis.campaign_brief,
           confidence_score: analysis.confidence_score,
           status: 'synced',
+          metadata: { input_snapshot: inputSnapshot },
         })
         .select()
         .single();
 
-      createdProfile = profile;
+      // If insert fails, restore previous synced (compensation)
+      if (profileInsertError && previousSyncedId) {
+        await supabase
+          .from('store_brand_profiles')
+          .update({ status: 'synced', updated_at: new Date().toISOString() })
+          .eq('id', previousSyncedId);
+      }
+
+      createdProfile = profile ?? null;
+
+      // Update stores: identity_state='logo', logo_status sync
+      await supabase
+        .from('stores')
+        .update({
+          identity_state: 'logo',
+          logo_status: IDENTITY_TO_LOGO_STATUS['logo'],
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', storeId);
     } catch {
+      // Phase 3 — Failure path: previous synced stays synced (fallback preserved)
+      // Insert failed profile with attempt_snapshot
       const { data: failedProfile } = await supabase
         .from('store_brand_profiles')
         .insert({
@@ -273,12 +321,25 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
           source: 'logo_analysis',
           active_logo_asset_id: originalAsset.id,
           status: 'failed',
-          metadata: { error: 'Brand Director analysis failed during upload' },
+          metadata: {
+            error: 'Brand Director analysis failed during upload',
+            attempt_snapshot: inputSnapshot,
+          },
         })
         .select()
         .single();
 
       createdProfile = failedProfile;
+
+      // Update stores: identity_state='logo' (upload succeeded even without analysis)
+      await supabase
+        .from('stores')
+        .update({
+          identity_state: 'logo',
+          logo_status: IDENTITY_TO_LOGO_STATUS['logo'],
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', storeId);
     }
   }
 
