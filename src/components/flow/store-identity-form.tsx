@@ -1036,7 +1036,7 @@ export function StoreIdentityForm() {
                         Remover logotipo
                       </button>
                     </div>
-                    {!archivedCountLoading && archivedCount > 0 && (
+                    {!archivedCountLoading && archivedCount > 0 && !hasActiveLogo && (
                       <button
                         type="button"
                         onClick={handleOpenRestore}
@@ -1205,7 +1205,7 @@ export function StoreIdentityForm() {
                         </button>
                       </div>
                     )}
-                    {!archivedCountLoading && archivedCount > 0 && (
+                    {!archivedCountLoading && archivedCount > 0 && !hasActiveLogo && (
                       <div className="text-center">
                         <button
                           type="button"
@@ -1379,6 +1379,12 @@ export function StoreIdentityForm() {
       {driftSaveIntercept && (
         <DriftDecisionModal
           onRealinhar={async () => {
+            if (hasActiveLogo) {
+              setDriftSaveIntercept(false);
+              await ignorar();
+              await executeStep2Save();
+              return;
+            }
             try {
               const data = await realinhar();
               const profile = (data as Record<string, unknown>)?.profile as Record<string, unknown> | undefined;
@@ -1408,13 +1414,19 @@ export function StoreIdentityForm() {
             }
           }}
           onCancel={() => { setDriftSaveIntercept(false); setDriftError(null); }}
-          isLoading={isRealinhando}
+          isLoading={hasActiveLogo ? false : isRealinhando}
           error={driftError}
         />
       )}
       {driftNavIntercept && (
         <DriftDecisionModal
           onRealinhar={async () => {
+            if (hasActiveLogo) {
+              setDriftNavIntercept(false);
+              await ignorar();
+              if (pendingNavUrl) router.push(pendingNavUrl);
+              return;
+            }
             try {
               const data = await realinhar();
               const profile = (data as Record<string, unknown>)?.profile as Record<string, unknown> | undefined;
@@ -1444,7 +1456,7 @@ export function StoreIdentityForm() {
             }
           }}
           onCancel={() => { setDriftNavIntercept(false); setDriftError(null); }}
-          isLoading={isRealinhando}
+          isLoading={hasActiveLogo ? false : isRealinhando}
           error={driftError}
         />
       )}
@@ -1484,6 +1496,23 @@ export function StoreIdentityForm() {
               setIdentityState('logo');
               setHasActiveLogo(true);
               setArchivedCount(0);
+
+              const profileRes = await fetch(`/api/store/${storeId}/brand-profile`);
+              if (profileRes.ok) {
+                const profile = await profileRes.json();
+                if (profile?.status === 'synced') {
+                  setInferredProfile({
+                    safe_color_tokens: profile.safe_color_tokens,
+                    visual_style: profile.visual_style,
+                    visual_tone: profile.visual_tone,
+                    brand_personality: profile.brand_personality,
+                    brand_colors_chosen: profile.brand_colors_chosen,
+                    inferred_primary_color: profile.inferred_primary_color,
+                    inferred_accent_color: profile.inferred_accent_color,
+                    metadata: profile.metadata,
+                  });
+                }
+              }
             } catch {
               // silent — page reload recovers
             }
