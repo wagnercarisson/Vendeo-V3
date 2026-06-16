@@ -227,7 +227,7 @@ export class BrandDirectorService {
       const base64Image = params.logoBuffer.toString('base64');
       const imageDataUrl = `data:${params.logoMimeType};base64,${base64Image}`;
 
-      console.log(`[BrandDirector] calling OpenAI vision: model=${model}, detail=high, maxTokens=3000, dataUrlLength=${imageDataUrl.length}`);
+      console.log(`[BrandDirector] calling OpenAI vision: model=${model}, detail=low, maxTokens=3000, dataUrlLength=${imageDataUrl.length}`);
 
       const response = await this.openai.chat.completions.create({
         model,
@@ -237,7 +237,7 @@ export class BrandDirectorService {
             role: 'user',
             content: [
               { type: 'text', text: 'Analise o logotipo desta loja e gere o perfil de marca completo em JSON.' },
-              { type: 'image_url', image_url: { url: imageDataUrl, detail: 'high' } },
+              { type: 'image_url', image_url: { url: imageDataUrl, detail: 'low' } },
             ],
           },
         ],

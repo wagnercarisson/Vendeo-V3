@@ -501,6 +501,22 @@ export function StoreIdentityForm() {
     setShowApprovalModal(true);
   }, [storeId]);
 
+  const fetchArchivedCount = useCallback(async () => {
+    if (!storeId) return;
+    setArchivedCountLoading(true);
+    try {
+      const res = await fetch(`/api/store/${storeId}/logo/history`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const count = Array.isArray(data?.logos) ? data.logos.length : 0;
+      setArchivedCount(count);
+    } catch {
+      // silent
+    } finally {
+      setArchivedCountLoading(false);
+    }
+  }, [storeId]);
+
   const handleRemoveLogo = useCallback(async () => {
     if (!storeId) return;
     try {
@@ -514,26 +530,15 @@ export function StoreIdentityForm() {
       setAnalysisWarning(null);
       setLogoError(null);
       setBrandColorsChosen([]);
+      fetchArchivedCount();
     } catch (err) {
       setLogoError(err instanceof Error ? err.message : "Erro ao remover logotipo");
     }
-  }, [storeId]);
+  }, [storeId, fetchArchivedCount]);
 
-  const fetchArchivedCount = useCallback(async () => {
-    if (!storeId) return;
-    setArchivedCountLoading(true);
-    try {
-      const res = await fetch(`/api/store/${storeId}/logo/history`);
-      if (!res.ok) return;
-      const data = await res.json();
-      const count = Array.isArray(data?.history) ? data.history.length : 0;
-      setArchivedCount(count);
-    } catch {
-      // silent
-    } finally {
-      setArchivedCountLoading(false);
-    }
-  }, [storeId]);
+  useEffect(() => {
+    fetchArchivedCount();
+  }, [fetchArchivedCount]);
 
   const handleOpenRestore = useCallback(() => {
     fetchArchivedCount();

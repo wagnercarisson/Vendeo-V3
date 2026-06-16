@@ -58,7 +58,7 @@ export function LogoRestoreModal({ isOpen, onClose, storeId, onRestoreComplete }
         return res.json();
       })
       .then(data => {
-        const items = Array.isArray(data?.history) ? data.history as LogoHistoryItem[] : [];
+        const items = Array.isArray(data?.logos) ? data.logos as LogoHistoryItem[] : [];
         setHistory(items);
       })
       .catch(err => setError(err instanceof Error ? err.message : "Erro ao carregar histórico"))
