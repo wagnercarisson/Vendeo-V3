@@ -229,7 +229,13 @@ export async function POST(
         campaign_brief: analysis.campaign_brief,
         confidence_score: analysis.confidence_score,
         status: 'synced',
-        metadata: { input_snapshot: currentSnapshot },
+        metadata: {
+          input_snapshot: {
+            ...currentSnapshot,
+            brand_color: analysis.safe_color_tokens?.primary ?? store.brand_color,
+            accent_color: analysis.safe_color_tokens?.accent ?? accentColor,
+          },
+        },
       })
       .select()
       .single();
