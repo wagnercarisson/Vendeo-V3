@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI + Rendering
 status: active
-stopped_at: Phase 4.6.2 — Visual Direction Drift Detection completed (4/4 plans executed, UAT verified). Next: Phase 4.6.3 — Logo State Lifecycle.
-last_updated: "2026-06-15T12:00:00.000Z"
+stopped_at: Phase 4.6.3 — Logo State Lifecycle (restore+drift+realinhar corrigido). Pendente: tratamento de erro BrandDirector com notificacao ao user e opcao de realinhar sem re-upload.
+last_updated: "2026-06-15T18:00:00.000Z"
 progress:
   total_phases: 17
   completed_phases: 14
@@ -126,6 +126,12 @@ Key decisions (full: 10 decisions D1-D10 in OpenSpec design.md):
 ### Blockers/Concerns
 
 Nenhum.
+
+## Pending Items
+
+| Category | Item | Status | Opened At |
+|----------|------|--------|-----------|
+| Error Handling | BrandDirector failure durante restore — sem notificacao ao user, sem opcao de realinhar com logo sem re-enviar. Falha silenciosa. | Pending | 2026-06-15 |
 
 ## Deferred Items
 
