@@ -96,16 +96,18 @@ export class BrandDirectorService {
     try {
       const { data, info } = await sharp(buffer)
         .resize(150, 150, { fit: 'cover' })
+        .flatten({ background: '#FFFFFF' })
         .raw()
         .toBuffer({ resolveWithObject: true });
 
-      const pixelCount = data.length / 3;
+      const channels = info.channels ?? 3;
+      const pixelCount = data.length / channels;
       const colorMap = new Map<string, number>();
 
       for (let i = 0; i < pixelCount; i++) {
-        const r = data[i * 3];
-        const g = data[i * 3 + 1];
-        const b = data[i * 3 + 2];
+        const r = data[i * channels];
+        const g = data[i * channels + 1];
+        const b = data[i * channels + 2];
 
         if (isNeutral(r, g, b)) continue;
 
@@ -249,13 +251,14 @@ export class BrandDirectorService {
       const rawContent = response.choices[0]?.message?.content ?? '{}';
       const raw = JSON.parse(rawContent);
 
-      const hasVisualStyle = !!(raw.visual_style && String(raw.visual_style).trim());
+      const CRITICAL_FIELDS = ['visual_style', 'visual_tone', 'brand_personality', 'campaign_guidelines'] as const;
+      const emptyFields = CRITICAL_FIELDS.filter(f => !raw[f] || !String(raw[f]).trim());
       const hasConfidence = typeof raw.confidence_score === 'number';
 
-      console.log(`[BrandDirector] OpenAI vision response: success=true, elapsed=${elapsedMs}ms, hasVisualStyle=${hasVisualStyle}, hasConfidence=${hasConfidence}, rawKeys=${Object.keys(raw).join(',')}`);
+      console.log(`[BrandDirector] OpenAI vision response: success=true, elapsed=${elapsedMs}ms, emptyFields=${emptyFields.length > 0 ? `[${emptyFields.join(', ')}]` : 'none'}, hasConfidence=${hasConfidence}, rawKeys=${Object.keys(raw).join(',')}`);
 
-      if (!hasVisualStyle) {
-        const errorMsg = `GPT returned incomplete JSON: visual_style is empty. Raw keys: ${Object.keys(raw).join(',')}`;
+      if (emptyFields.length > 0) {
+        const errorMsg = `GPT returned incomplete JSON: empty fields [${emptyFields.join(', ')}]. Raw keys: ${Object.keys(raw).join(',')}`;
         console.error(`[BrandDirector] ${errorMsg}. Full raw: ${JSON.stringify(raw).slice(0, 500)}`);
         throw new BrandDirectorAnalysisError(
           errorMsg,
@@ -264,14 +267,14 @@ export class BrandDirectorService {
         );
       }
 
-      // Step 5: Colors come from deterministic extraction; GPT provides semantic analysis
+      // Step 5: Colors from GPT as primary source, deterministic sharp as fallback
       const result: BrandDirectorResult = {
         logo_colors_detected: deterministicResult.logo_colors_detected,
         safe_color_tokens: {
-          primary: deterministicResult.inferred_primary_color,
-          secondary: raw.safe_color_tokens?.secondary ?? '#666666',
-          accent: deterministicResult.inferred_accent_color,
-          background: raw.safe_color_tokens?.background ?? '#FFFFFF',
+          primary: raw.safe_color_tokens?.primary || deterministicResult.inferred_primary_color || '#000000',
+          secondary: raw.safe_color_tokens?.secondary || deterministicResult.safe_color_tokens.secondary || '#666666',
+          accent: raw.safe_color_tokens?.accent || deterministicResult.inferred_accent_color || '#CC0000',
+          background: raw.safe_color_tokens?.background || '#FFFFFF',
         },
         visual_style: String(raw.visual_style ?? ''),
         visual_tone: String(raw.visual_tone ?? ''),
@@ -279,8 +282,8 @@ export class BrandDirectorService {
         brand_personality: String(raw.brand_personality ?? ''),
         campaign_guidelines: String(raw.campaign_guidelines ?? ''),
         campaign_brief: String(raw.campaign_brief ?? ''),
-        inferred_primary_color: deterministicResult.inferred_primary_color,
-        inferred_accent_color: deterministicResult.inferred_accent_color,
+        inferred_primary_color: raw.inferred_primary_color || raw.safe_color_tokens?.primary || deterministicResult.inferred_primary_color || '#000000',
+        inferred_accent_color: raw.inferred_accent_color || raw.safe_color_tokens?.accent || deterministicResult.inferred_accent_color || '#CC0000',
         confidence_score: hasConfidence ? Math.max(0, Math.min(1, raw.confidence_score)) : 0.5,
       };
 

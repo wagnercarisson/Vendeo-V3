@@ -9,7 +9,6 @@ import { Loader2, AlertTriangle } from "lucide-react";
 
 interface StoreIdentityBlockProps {
   store: Pick<Store, "id" | "name" | "logo_url" | "segment" | "brand_color" | "subsegment" | "tone_of_voice" | "positioning" | "short_description" | "slogan" | "identity_state">;
-  hasFailedProfile?: boolean;
 }
 
 const IDENTITY_STATE_LABELS: Record<string, string> = {
@@ -18,9 +17,10 @@ const IDENTITY_STATE_LABELS: Record<string, string> = {
   'visual_signature': 'Assinatura Visual',
 };
 
-export function StoreIdentityBlock({ store, hasFailedProfile }: StoreIdentityBlockProps) {
+export function StoreIdentityBlock({ store }: StoreIdentityBlockProps) {
   const [identity, setIdentity] = useState<StoreIdentitySnapshot | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasFailedProfile, setHasFailedProfile] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -28,6 +28,15 @@ export function StoreIdentityBlock({ store, hasFailedProfile }: StoreIdentityBlo
       .then(setIdentity)
       .catch(() => setIdentity(null))
       .finally(() => setLoading(false));
+
+    fetch(`/api/store/${store.id}/brand-profile`)
+      .then(res => res.json())
+      .then(profile => {
+        if (profile?.status === 'failed') {
+          setHasFailedProfile(true);
+        }
+      })
+      .catch(() => {});
   }, [store]);
 
   if (!store.name) return null;

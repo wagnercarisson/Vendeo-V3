@@ -96,6 +96,9 @@ export function StoreIdentityForm() {
   const [identityState, setIdentityState] = useState<string | null>(null);
   const [inferenceLoading, setInferenceLoading] = useState(false);
   const [inferenceError, setInferenceError] = useState<string | null>(null);
+  const [brandDirectorWarning, setBrandDirectorWarning] = useState<string | null>(null);
+  const [failedLogoAssetId, setFailedLogoAssetId] = useState<string | null>(null);
+  const [brandDirectorRetrying, setBrandDirectorRetrying] = useState(false);
   const [driftError, setDriftError] = useState<string | null>(null);
   const [driftSaveIntercept, setDriftSaveIntercept] = useState(false);
   const [driftNavIntercept, setDriftNavIntercept] = useState(false);
@@ -329,8 +332,13 @@ export function StoreIdentityForm() {
                 metadata: profile.metadata,
               });
             } else if (profile.status === 'failed') {
-              console.error('[StoreIdentityForm] Inference failed:', profile.metadata?.error);
-              setInferenceError('Falha de conexão. Tente novamente mais tarde.');
+              console.error('[StoreIdentityForm] Profile failed:', profile.source, profile.metadata?.error);
+              if (profile.source === 'logo_analysis') {
+                setBrandDirectorWarning('A direção visual não foi gerada para este logotipo. Tente novamente.');
+                setFailedLogoAssetId(profile.active_logo_asset_id);
+              } else {
+                setInferenceError('Falha de conexão. Tente novamente mais tarde.');
+              }
             }
           }
         }
@@ -528,6 +536,8 @@ export function StoreIdentityForm() {
       setHasActiveLogo(false);
       setDetectedColors([]);
       setAnalysisWarning(null);
+      setBrandDirectorWarning(null);
+      setFailedLogoAssetId(null);
       setLogoError(null);
       setBrandColorsChosen([]);
       fetchArchivedCount();
@@ -545,9 +555,54 @@ export function StoreIdentityForm() {
     setShowRestoreModal(true);
   }, [fetchArchivedCount]);
 
+  const handleRetryBrandDirector = useCallback(async () => {
+    if (!storeId || !failedLogoAssetId) return;
+    setBrandDirectorRetrying(true);
+    try {
+      const res = await fetch(`/api/store/${storeId}/logo/restore`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ asset_id: failedLogoAssetId }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Erro ao tentar novamente");
+      }
+      const data = await res.json();
+      if (data.success === false) {
+        setBrandDirectorWarning(data.error || "Não foi possível atualizar a direção visual. Tente novamente.");
+        return;
+      }
+      setBrandDirectorWarning(null);
+      setFailedLogoAssetId(null);
+      const profileRes = await fetch(`/api/store/${storeId}/brand-profile`);
+      if (profileRes.ok) {
+        const profile = await profileRes.json();
+        if (profile?.status === 'synced') {
+          setInferredProfile({
+            safe_color_tokens: profile.safe_color_tokens,
+            visual_style: profile.visual_style,
+            visual_tone: profile.visual_tone,
+            brand_personality: profile.brand_personality,
+            brand_colors_chosen: profile.brand_colors_chosen,
+            inferred_primary_color: profile.inferred_primary_color,
+            inferred_accent_color: profile.inferred_accent_color,
+            metadata: profile.metadata,
+          });
+        }
+      }
+    } catch (err) {
+      setBrandDirectorWarning(err instanceof Error ? err.message : "Erro ao tentar novamente");
+    } finally {
+      setBrandDirectorRetrying(false);
+    }
+  }, [storeId, failedLogoAssetId]);
+
   const handleFileSelected = useCallback(async (file: File | null) => {
     setLogoError(null);
     setAnalysisWarning(null);
+    setBrandDirectorWarning(null);
+    setFailedLogoAssetId(null);
     if (!file) {
       setLogoFile(null); setLogoPreview(null);
       return;
@@ -595,6 +650,8 @@ export function StoreIdentityForm() {
 
       const profile = result?.profile;
       if (profile?.status === 'synced') {
+        setBrandDirectorWarning(null);
+        setFailedLogoAssetId(null);
         const detected = profile.logo_colors_detected ?? [];
         const chosen = profile.brand_colors_chosen ?? [];
         const tokens = profile.safe_color_tokens ?? {};
@@ -615,7 +672,8 @@ export function StoreIdentityForm() {
           setAnalysisWarning("Não conseguimos extrair cores confiáveis deste logotipo. Tente outra imagem ou escolha as cores manualmente.");
         }
       } else if (profile?.status === 'failed') {
-        setAnalysisWarning("Não conseguimos extrair cores confiáveis deste logotipo. Tente outra imagem ou escolha as cores manualmente.");
+        setBrandDirectorWarning('A direção visual não foi gerada para este logotipo. Tente novamente.');
+        setFailedLogoAssetId(profile.active_logo_asset_id);
       }
 
       if (profile) {
@@ -1044,6 +1102,29 @@ export function StoreIdentityForm() {
                       >
                         Logotipos anteriores ({archivedCount})
                       </button>
+                    )}
+                    {brandDirectorWarning && (
+                      <div className="mt-3 space-y-3">
+                        <div className="flex items-start gap-3 bg-amber-900/20 border border-amber-700/30 rounded-lg px-4 py-3">
+                          <AlertCircle className="w-5 h-5 text-accent-amber shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-accent-amber text-sm font-heading font-semibold">Direção visual pendente</p>
+                            <p className="text-text-muted text-xs font-body mt-0.5">{brandDirectorWarning}</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleRetryBrandDirector}
+                          disabled={brandDirectorRetrying}
+                          className="text-accent-blue hover:text-accent-blue/80 text-xs font-body underline transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                        >
+                          {brandDirectorRetrying ? (
+                            <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Tentando novamente...</>
+                          ) : (
+                            'Tentar novamente'
+                          )}
+                        </button>
+                      </div>
                     )}
                   </div>
                 ) : (
@@ -1481,7 +1562,24 @@ export function StoreIdentityForm() {
       {showRestoreModal && storeId && (
         <LogoRestoreModal
           isOpen={showRestoreModal}
-          onClose={() => setShowRestoreModal(false)}
+          onClose={async () => {
+            setShowRestoreModal(false);
+            try {
+              const res = await fetch(`/api/store/${storeId}`);
+              if (res.ok) {
+                const data = await res.json();
+                if (data?.logo_url) setLogoResultUrl(data.logo_url);
+              }
+              const profileRes = await fetch(`/api/store/${storeId}/brand-profile`);
+              if (profileRes.ok) {
+                const profile = await profileRes.json();
+                if (profile?.status === 'failed' && profile?.source === 'logo_analysis') {
+                  setBrandDirectorWarning('A direção visual não foi gerada para este logotipo. Tente novamente.');
+                  setFailedLogoAssetId(profile.active_logo_asset_id);
+                }
+              }
+            } catch { /* silent */ }
+          }}
           storeId={storeId}
           onRestoreComplete={async () => {
             setShowRestoreModal(false);
@@ -1496,6 +1594,8 @@ export function StoreIdentityForm() {
               setIdentityState('logo');
               setHasActiveLogo(true);
               setArchivedCount(0);
+              setBrandDirectorWarning(null);
+              setFailedLogoAssetId(null);
 
               const profileRes = await fetch(`/api/store/${storeId}/brand-profile`);
               if (profileRes.ok) {

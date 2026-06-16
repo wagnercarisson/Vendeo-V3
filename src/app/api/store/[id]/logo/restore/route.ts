@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase/server';
-import { BrandDirectorService } from '@/lib/brand-assets/brand-director';
+import { BrandDirectorService, BrandDirectorAnalysisError } from '@/lib/brand-assets/brand-director';
 import { IDENTITY_TO_LOGO_STATUS } from '@/lib/constants';
 import { normalizeSnapshotValue } from '@/lib/drift';
 import type { LogoRestoreRequest, LogoRestoreResponse, BrandProfileRecord } from '@/lib/brand-assets/types';
@@ -42,17 +42,17 @@ export async function POST(
     return NextResponse.json({ error: 'asset_id inválido ou ausente' }, { status: 400 });
   }
 
-  // Validate asset belongs to this store and is archived
+  // Validate asset belongs to this store (accepts archived for normal restore, active for retry)
   const { data: asset, error: assetError } = await supabase
     .from('store_brand_assets')
     .select()
     .eq('id', body.asset_id)
     .eq('store_id', storeId)
-    .eq('status', 'archived')
+    .in('status', ['active', 'archived'])
     .single();
 
   if (assetError || !asset) {
-    return NextResponse.json({ error: 'Asset arquivado não encontrado para esta loja' }, { status: 404 });
+    return NextResponse.json({ error: 'Asset não encontrado para esta loja' }, { status: 404 });
   }
 
   // Fetch store and current synced profile
@@ -73,12 +73,14 @@ export async function POST(
     .eq('status', 'synced')
     .maybeSingle();
 
-  // Archive current active assets (prevents unique index violation)
-  await supabase
-    .from('store_brand_assets')
-    .update({ status: 'archived', updated_at: new Date().toISOString() })
-    .eq('store_id', storeId)
-    .eq('status', 'active');
+  // Archive current active assets (skip if target asset is already active — retry path)
+  if (asset.status !== 'active') {
+    await supabase
+      .from('store_brand_assets')
+      .update({ status: 'archived', updated_at: new Date().toISOString() })
+      .eq('store_id', storeId)
+      .eq('status', 'active');
+  }
 
   // Load profile associated with this asset via FK
   const { data: chosenProfile } = await supabase
@@ -242,8 +244,11 @@ export async function POST(
 
     restoredProfile = newProfile as BrandProfileRecord | null;
     realigned = true;
-  } catch {
+  } catch (err) {
     // BrandDirector failure on drift path: fallback preserved
+    // Capture deterministic colors from error if available
+    const dc = err instanceof BrandDirectorAnalysisError ? err.deterministicResult : null;
+
     // Insert failed profile
     const { data: failedProfile } = await supabase
       .from('store_brand_profiles')
@@ -251,9 +256,13 @@ export async function POST(
         store_id: storeId,
         source: 'logo_analysis',
         active_logo_asset_id: body.asset_id,
+        logo_colors_detected: dc?.logo_colors_detected ?? [],
+        safe_color_tokens: dc?.safe_color_tokens ?? null,
+        inferred_primary_color: dc?.inferred_primary_color ?? null,
+        inferred_accent_color: dc?.inferred_accent_color ?? null,
         status: 'failed',
         metadata: {
-          error: 'Brand Director analysis failed during drift restore',
+          error: err instanceof Error ? err.message : 'Brand Director analysis failed',
           attempt_snapshot: currentSnapshot,
         },
       })
@@ -287,10 +296,11 @@ export async function POST(
     .eq('id', storeId);
 
   const response: LogoRestoreResponse = {
-    success: true,
+    success: realigned,
     profile_id: restoredProfile?.id ?? null,
     drift_detected: true,
     realigned,
+    error: realigned ? undefined : 'Não foi possível atualizar a direção visual. Tente novamente.',
   };
 
   return NextResponse.json(response, { status: 200 });

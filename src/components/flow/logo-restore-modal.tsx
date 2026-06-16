@@ -78,6 +78,11 @@ export function LogoRestoreModal({ isOpen, onClose, storeId, onRestoreComplete }
         const errData = await res.json().catch(() => ({ error: "Erro ao restaurar logotipo" }));
         throw new Error(errData.error || "Erro ao restaurar logotipo");
       }
+      const data = await res.json();
+      if (data.success === false) {
+        setRestoreError(data.error || "Não foi possível atualizar a direção visual. Tente novamente.");
+        return;
+      }
       onRestoreComplete();
     } catch (err) {
       setRestoreError(err instanceof Error ? err.message : "Erro ao restaurar logotipo");

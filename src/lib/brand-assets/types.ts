@@ -152,6 +152,7 @@ export interface LogoRestoreResponse {
   profile_id: string | null
   drift_detected: boolean
   realigned: boolean
+  error?: string
 }
 
 export interface VariantGenerationResult {
