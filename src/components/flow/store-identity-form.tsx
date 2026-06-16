@@ -1460,12 +1460,6 @@ export function StoreIdentityForm() {
       {driftSaveIntercept && (
         <DriftDecisionModal
           onRealinhar={async () => {
-            if (hasActiveLogo) {
-              setDriftSaveIntercept(false);
-              await ignorar();
-              await executeStep2Save();
-              return;
-            }
             try {
               const data = await realinhar();
               const profile = (data as Record<string, unknown>)?.profile as Record<string, unknown> | undefined;
@@ -1495,19 +1489,13 @@ export function StoreIdentityForm() {
             }
           }}
           onCancel={() => { setDriftSaveIntercept(false); setDriftError(null); }}
-          isLoading={hasActiveLogo ? false : isRealinhando}
+          isLoading={isRealinhando}
           error={driftError}
         />
       )}
       {driftNavIntercept && (
         <DriftDecisionModal
           onRealinhar={async () => {
-            if (hasActiveLogo) {
-              setDriftNavIntercept(false);
-              await ignorar();
-              if (pendingNavUrl) router.push(pendingNavUrl);
-              return;
-            }
             try {
               const data = await realinhar();
               const profile = (data as Record<string, unknown>)?.profile as Record<string, unknown> | undefined;
@@ -1537,7 +1525,7 @@ export function StoreIdentityForm() {
             }
           }}
           onCancel={() => { setDriftNavIntercept(false); setDriftError(null); }}
-          isLoading={hasActiveLogo ? false : isRealinhando}
+          isLoading={isRealinhando}
           error={driftError}
         />
       )}

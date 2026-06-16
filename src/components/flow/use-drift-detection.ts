@@ -64,10 +64,9 @@ export function useDriftDetection(
     if (!store?.id) return;
     setIsRealinhando(true);
     try {
-      const res = await fetch(`/api/store/${store.id}/brand-profile/infer`, {
+      const res = await fetch(`/api/store/${store.id}/brand-profile/realign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ textOnlyOrigin: 'explicit' }),
       });
       const data = await res.json();
       if (data.success) {
