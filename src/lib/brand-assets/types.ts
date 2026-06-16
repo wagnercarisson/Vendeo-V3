@@ -110,6 +110,25 @@ export interface TextOnlyInferenceResult {
   confidence_score: number;
 }
 
+export interface ColorCluster {
+  hex: string;
+  rgb: [number, number, number];
+  lab: [number, number, number];
+  frequency: number;
+  luminance: number;
+  saturation: number;
+  classification: 'dominant' | 'dark_ink' | 'neutral' | 'background' | 'structural' | 'transition';
+}
+
+export interface ColorProbeResult {
+  dominant_pixels: ColorCluster[];
+  dark_ink_candidates: ColorCluster[];
+  neutral_candidates: ColorCluster[];
+  background_candidates: ColorCluster[];
+  small_but_structural: ColorCluster[];
+  suspected_transitions: ColorCluster[];
+}
+
 export interface BrandDirectorResult {
   logo_colors_detected: string[];
   safe_color_tokens: Record<string, string>;
@@ -122,6 +141,7 @@ export interface BrandDirectorResult {
   inferred_primary_color: string;
   inferred_accent_color: string;
   confidence_score: number;
+  campaign_accent_suggestion?: string;
 }
 
 export interface LogoUploadResult {
