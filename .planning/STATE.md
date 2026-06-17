@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI + Rendering
 status: active
-stopped_at: Phase 4.6.3 — Logo State Lifecycle (5/5 plans — COMPLETE). Próximo: Phase 4.6.4 — Visual Signature Fluxo.
-last_updated: "2026-06-17T14:30:00.000Z"
+stopped_at: Phase 4.6.3 — Logo State Lifecycle (5/5 plans — COMPLETE, UAT 8/8 PASSED). Próximo: Phase 4.6.4 — Visual Signature Fluxo.
+last_updated: "2026-06-17T15:30:00.000Z"
 progress:
   total_phases: 17
   completed_phases: 15
@@ -24,7 +24,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-25 after v1.0 milestone)
 
 ## Current Position
 
-Phase: 4.6.3 — Logo State Lifecycle (IMPLEMENTATION COMPLETE — PENDING VERIFICATION)
+Phase: 4.6.3 — Logo State Lifecycle (IMPLEMENTATION COMPLETE — UAT 8/8 PASSED)
 Milestone: v1.1 AI + Rendering — EXTENDED (Phase 4.6 sub-phases 4.6.3–4.6.x in progress)
 Phases complete: 15 of 17 phases (2 pending: 4.6.4, 4.6.x)
 Next phase: 4.6.4 — Visual Signature Fluxo
@@ -124,6 +124,7 @@ Key decisions (full: 10 decisions D1-D10 in OpenSpec design.md):
 | Error Handling | BrandDirector failure durante restore — implementado: notificação ao user + link "Tentar novamente" (realinhar sem re-upload) via commits de refinamento | Resolved | 2026-06-16 |
 | UI Alignment | realinhar: picker sobrescrito com cor inferida ao invés da escolhida pelo user (3 handlers) — corrigido priorizando brand_colors_chosen[0] | Resolved | 2026-06-17 |
 | UI Alignment | restore com drift: picker, preview e chips não hidratavam após restore — corrigido com hidratação de cores no onRestoreComplete e handleRetryBrandDirector | Resolved | 2026-06-17 |
+| Bug | history badge "Desatualizado" não aparecia para stores com campos alterados — causa: múltiplos profiles com mesmo active_logo_asset_id, .maybeSingle() sem .order() retornava profile errado | Resolved | 2026-06-17 |
 
 ### Pending Todos
 
@@ -149,14 +150,14 @@ Nenhum.
 
 ## Session Continuity
 
-Last session: 2026-06-16T22:22:00.000Z
-Stopped at: Phase 4.6.3 — refinamentos + UI alignment fixes concluídos (hydratação de cores no realinhar e restore). Pendente Plano 05 — Verification.
+Last session: 2026-06-17T15:30:00.000Z
+Stopped at: Phase 4.6.3 — UAT 8/8 passed. Bug fix: history badge drift masking (profiles sem .order()). Phase complete.
 
 ## Next Phases
 
 | Phase | Status | Plans |
 |-------|--------|-------|
-| **4.6.3 — Logo State Lifecycle** | **Implementation Complete → Pending Verification** | **4/5** |
+| **4.6.3 — Logo State Lifecycle** | **UAT Complete — 8/8 Passed** | **5/5** |
 | 4.6.4 — Visual Signature Fluxo | Pending | 0 |
 | 4.6.x — State Transitions | Pending | 0 |
 | Phase 4.4.1 — Existing Logo & Store Brand Direction Foundation | Deferred (historical record) | 6 |

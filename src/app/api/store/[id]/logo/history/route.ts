@@ -61,6 +61,7 @@ export async function GET(
       .from('store_brand_profiles')
       .select()
       .eq('active_logo_asset_id', asset.id)
+      .order('created_at', { ascending: true })
       .maybeSingle();
 
     const profileRecord = profile as BrandProfileRecord | null;
