@@ -81,7 +81,12 @@
     - [x] 04.6.1-04-PLAN.md — Creative Direction Context Update
     - [x] 04.6.1-05-PLAN.md — Store Identity UI (Step 2 + Preview)
   - [x] Phase 4.6.2: Visual Direction Drift Detection (4/4 plans) (completed 2026-06-13)
-  - [ ] Phase 4.6.3: Logo State Lifecycle — Upload/Remove/Restore com transição transacional, proveniência e histórico (pending)
+  - [ ] Phase 4.6.3: Logo State Lifecycle — Upload/Remove/Restore com transição transacional, proveniência e histórico (4/5 plans — pending verification)
+    - [x] 04.6.3-01-PLAN.md — Types & Constants: IDENTITY_TO_LOGO_STATUS, DriftStatus, LogoHistoryItem
+    - [x] 04.6.3-02-PLAN.md — POST /logo refactor: BrandDirector before mutation, compensated transition
+    - [x] 04.6.3-03-PLAN.md — DELETE /logo, GET /logo/history, POST /logo/restore
+    - [x] 04.6.3-04-PLAN.md — UI Step 2: logo card, remove state, restore modal
+    - [ ] 04.6.3-05-PLAN.md — Verification & Quality Gate (E2E testing)
   - [ ] Phase 4.6.4: Visual Signature Fluxo — Approve/reject/remove visual signature (pending)
   - [ ] Phase 4.6.x: Transições entre estados — text_only ↔ logo ↔ visual_signature (pending)
 - [ ] Phase 5: Review, Adjust & Export (not yet planned)
@@ -106,7 +111,7 @@
 | 4.6. Store Form Adjusts | v1.1 | 5/5 | Active | 2026-06-12 |
 | 4.6.1. Text Only State & Visual Direction Inference | v1.1 | 5/5 | Complete | 2026-06-12 |
 | 4.6.2. Visual Direction Drift Detection | v1.1 | 4/4 | Complete | 2026-06-13 |
-| 4.6.3. Logo State Lifecycle | v1.1 | 0 | Pending | — |
+| 4.6.3. Logo State Lifecycle | v1.1 | 4/5 | Implementation Complete — Pending Verification | — |
 | 4.6.4. Visual Signature Fluxo | v1.1 | 0 | Pending | — |
 | 4.6.x. State Transitions | v1.1 | 0 | Pending | — |
 | 5. Review, Adjust & Export | v1.1 | 0 | Not yet planned | — |

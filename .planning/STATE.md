@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI + Rendering
 status: active
-stopped_at: Phase 4.6.3 — Logo State Lifecycle (restore+drift+realinhar corrigido). Pendente: tratamento de erro BrandDirector com notificacao ao user e opcao de realinhar sem re-upload.
-last_updated: "2026-06-15T18:00:00.000Z"
+stopped_at: Phase 4.6.3 — Logo State Lifecycle (4/5 plans + refinements + UI alignment fixes). Pendente: Plano 05 (verificação E2E).
+last_updated: "2026-06-17T10:00:00.000Z"
 progress:
   total_phases: 17
   completed_phases: 14
-  total_plans: 58
-  completed_plans: 58
-  percent: 88
+  total_plans: 66
+  completed_plans: 62
+  percent: 94
 ---
 
 # Project State
@@ -24,29 +24,29 @@ See: `.planning/PROJECT.md` (updated 2026-05-25 after v1.0 milestone)
 
 ## Current Position
 
-Phase: 4.6.3 — Logo State Lifecycle (PLANNING)
+Phase: 4.6.3 — Logo State Lifecycle (IMPLEMENTATION COMPLETE — PENDING VERIFICATION)
 Milestone: v1.1 AI + Rendering — EXTENDED (Phase 4.6 sub-phases 4.6.3–4.6.x in progress)
 Phases complete: 14 of 17 phases (3 pending: 4.6.3, 4.6.4, 4.6.x)
-Next phase: 4.6.3 — Logo State Lifecycle
+Next phase: 4.6.3 — Logo State Lifecycle (Plan 05 — Verification)
 
 | Phase | Status |
 |-------|--------|
 | 4.6.1 — Text Only Coverage | Complete |
 | 4.6.2 — Visual Direction Drift Detection | Complete |
-| **4.6.3 — Logo State Lifecycle** | **Planning** ← agora |
+| **4.6.3 — Logo State Lifecycle** | **Implementation Complete — Pending Verification** |
 | 4.6.4 — Visual Signature Fluxo | Pending |
 | 4.6.x — State Transitions | Pending |
 
-Progress: [████████████░░] 88% (58/66 plans — 8 pending)
+Progress: [██████████████] 94% (62/66 plans — 4 pending)
 
 ## Performance Metrics
 
 **Velocity:**
 
 - Phases completed: 14
-- Plans completed: 58
+- Plans completed: 62
 - Tasks completed: (tracked per plan)
-- Timeline: 2026-05-24 → 2026-06-11
+- Timeline: 2026-05-24 → 2026-06-16
 
 ## Accumulated Context
 
@@ -115,13 +115,22 @@ Key decisions (full: 10 decisions D1-D10 in OpenSpec design.md):
 - D08: POST /logo/restore — dois caminhos (sem drift / com drift)
 - D09: `brand_colors_chosen` isolado — não populado por upload
 - D10: Matriz UX — 4 cenários no Step 2
+- D11: BrandDirector error notification — notificação visual + link "Tentar novamente" (realinhar sem re-upload)
+
+### Resolved Items
+
+| Category | Item | Status | Resolved At |
+|----------|------|--------|-------------|
+| Error Handling | BrandDirector failure durante restore — implementado: notificação ao user + link "Tentar novamente" (realinhar sem re-upload) via commits de refinamento | Resolved | 2026-06-16 |
+| UI Alignment | realinhar: picker sobrescrito com cor inferida ao invés da escolhida pelo user (3 handlers) — corrigido priorizando brand_colors_chosen[0] | Resolved | 2026-06-17 |
+| UI Alignment | restore com drift: picker, preview e chips não hidratavam após restore — corrigido com hidratação de cores no onRestoreComplete e handleRetryBrandDirector | Resolved | 2026-06-17 |
 
 ### Pending Todos
 
-- Plan and execute Phase 4.6.3 — Logo State Lifecycle
-- Plan Phase 4.6.4 — Visual Signature Fluxo (after 4.6.3)
-- Plan Phase 4.6.x — State Transitions (after 4.6.4)
-- Execute Phase 4.4.1 — run all 6 plans (4 waves) (deferred — historical record)
+- [ ] Execute Plan 05 — Verification (E2E testing, lint/typecheck/build) for Phase 4.6.3
+- [ ] Plan Phase 4.6.4 — Visual Signature Fluxo (after 4.6.3)
+- [ ] Plan Phase 4.6.x — State Transitions (after 4.6.4)
+- [ ] Execute Phase 4.4.1 — run all 6 plans (4 waves) (deferred — historical record)
 
 ### Blockers/Concerns
 
@@ -131,7 +140,7 @@ Nenhum.
 
 | Category | Item | Status | Opened At |
 |----------|------|--------|-----------|
-| Error Handling | BrandDirector failure durante restore — sem notificacao ao user, sem opcao de realinhar com logo sem re-enviar. Falha silenciosa. | Pending | 2026-06-15 |
+| UI Alignment | Ajustes finos de tela/UI pós-refinamentos (alinhamento visual, pequenos ajustes de layout) | Resolved | 2026-06-17 |
 
 ## Deferred Items
 
@@ -141,17 +150,17 @@ Nenhum.
 
 ## Session Continuity
 
-Last session: 2026-06-13T23:00:00.000Z
-Stopped at: Phase 4.6.2 — Visual Direction Drift Detection completed (4/4 plans, UAT verified).
+Last session: 2026-06-16T22:22:00.000Z
+Stopped at: Phase 4.6.3 — refinamentos + UI alignment fixes concluídos (hydratação de cores no realinhar e restore). Pendente Plano 05 — Verification.
 
 ## Next Phases
 
 | Phase | Status | Plans |
 |-------|--------|-------|
-| **4.6.3 — Logo State Lifecycle** | **Planning** ← agora | 0/8 planned |
+| **4.6.3 — Logo State Lifecycle** | **Implementation Complete → Pending Verification** | **4/5** |
 | 4.6.4 — Visual Signature Fluxo | Pending | 0 |
 | 4.6.x — State Transitions | Pending | 0 |
 | Phase 4.4.1 — Existing Logo & Store Brand Direction Foundation | Deferred (historical record) | 6 |
 | Phase 5 — Review, Adjust & Export | Not yet planned | 0 |
 
-**Phase 4.6.3 scope (from OpenSpec):** Upload com transição transacional e input_snapshot, Remove preservando proveniência, History/Restore com validação de drift, UI Step 2 com 4 cenários. Ver `docs/alinhamento-fase-4.6.3.md` para alinhamento completo.
+**Phase 4.6.3 scope (from OpenSpec):** Upload com transição transacional e input_snapshot, Remove preservando proveniência, History/Restore com validação de drift, UI Step 2 com 4 cenários. BrandDirector error notification + retry implementado nos refinamentos pós-implementação. Ver `docs/alinhamento-fase-4.6.3.md` para alinhamento completo.

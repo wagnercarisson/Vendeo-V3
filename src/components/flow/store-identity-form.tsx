@@ -579,22 +579,43 @@ export function StoreIdentityForm() {
       if (profileRes.ok) {
         const profile = await profileRes.json();
         if (profile?.status === 'synced') {
-          setInferredProfile({
-            safe_color_tokens: profile.safe_color_tokens,
-            visual_style: profile.visual_style,
-            visual_tone: profile.visual_tone,
-            brand_personality: profile.brand_personality,
-            brand_colors_chosen: profile.brand_colors_chosen,
-            inferred_primary_color: profile.inferred_primary_color,
-            inferred_accent_color: profile.inferred_accent_color,
-            metadata: profile.metadata,
-          });
+            setInferredProfile({
+              safe_color_tokens: profile.safe_color_tokens,
+              visual_style: profile.visual_style,
+              visual_tone: profile.visual_tone,
+              brand_personality: profile.brand_personality,
+              brand_colors_chosen: profile.brand_colors_chosen,
+              inferred_primary_color: profile.inferred_primary_color,
+              inferred_accent_color: profile.inferred_accent_color,
+              metadata: profile.metadata,
+            });
+            if (profile.brand_colors_chosen?.length > 0) {
+              setBrandColorsChosen(profile.brand_colors_chosen);
+              if (profile.brand_colors_chosen[0]) {
+                setField("brand_color", profile.brand_colors_chosen[0]);
+              }
+              if (profile.brand_colors_chosen[1]) {
+                setAccentColor(profile.brand_colors_chosen[1]);
+              } else if (profile.inferred_accent_color) {
+                setAccentColor(profile.inferred_accent_color);
+              }
+            } else if (profile.safe_color_tokens?.primary) {
+              setField("brand_color", profile.safe_color_tokens.primary);
+              if (profile.inferred_accent_color) {
+                setAccentColor(profile.inferred_accent_color);
+              } else if (profile.safe_color_tokens?.accent) {
+                setAccentColor(profile.safe_color_tokens.accent);
+              }
+            }
+            if (profile.logo_colors_detected?.length > 0) {
+              setDetectedColors(profile.logo_colors_detected);
+            }
+          }
         }
-      }
-    } catch (err) {
-      setBrandDirectorWarning(err instanceof Error ? err.message : "Erro ao tentar novamente");
-    } finally {
-      setBrandDirectorRetrying(false);
+      } catch (err) {
+        setBrandDirectorWarning(err instanceof Error ? err.message : "Erro ao tentar novamente");
+      } finally {
+        setBrandDirectorRetrying(false);
     }
   }, [storeId, failedLogoAssetId]);
 
@@ -1050,7 +1071,12 @@ export function StoreIdentityForm() {
                       const profile = (data as Record<string, unknown>)?.profile as Record<string, unknown> | undefined;
                       if (profile) {
                         const tokens = profile.safe_color_tokens as Record<string, string> | undefined;
-                        if (tokens?.primary) setField("brand_color", tokens.primary);
+                        const chosenPrimary = (profile.brand_colors_chosen as string[])?.[0];
+                        if (chosenPrimary) {
+                          setField("brand_color", chosenPrimary);
+                        } else if (tokens?.primary) {
+                          setField("brand_color", tokens.primary);
+                        }
                         setAccentColor(
                           (profile.brand_colors_chosen as string[])?.[1]
                           ?? (tokens?.accent ?? '')
@@ -1465,7 +1491,12 @@ export function StoreIdentityForm() {
               const profile = (data as Record<string, unknown>)?.profile as Record<string, unknown> | undefined;
               if (profile) {
                 const tokens = profile.safe_color_tokens as Record<string, string> | undefined;
-                if (tokens?.primary) setField("brand_color", tokens.primary);
+                const chosenPrimary = (profile.brand_colors_chosen as string[])?.[0];
+                if (chosenPrimary) {
+                  setField("brand_color", chosenPrimary);
+                } else if (tokens?.primary) {
+                  setField("brand_color", tokens.primary);
+                }
                 setAccentColor(
                   (profile.brand_colors_chosen as string[])?.[1]
                   ?? (tokens?.accent ?? '')
@@ -1501,7 +1532,12 @@ export function StoreIdentityForm() {
               const profile = (data as Record<string, unknown>)?.profile as Record<string, unknown> | undefined;
               if (profile) {
                 const tokens = profile.safe_color_tokens as Record<string, string> | undefined;
-                if (tokens?.primary) setField("brand_color", tokens.primary);
+                const chosenPrimary = (profile.brand_colors_chosen as string[])?.[0];
+                if (chosenPrimary) {
+                  setField("brand_color", chosenPrimary);
+                } else if (tokens?.primary) {
+                  setField("brand_color", tokens.primary);
+                }
                 setAccentColor(
                   (profile.brand_colors_chosen as string[])?.[1]
                   ?? (tokens?.accent ?? '')
@@ -1599,6 +1635,27 @@ export function StoreIdentityForm() {
                     inferred_accent_color: profile.inferred_accent_color,
                     metadata: profile.metadata,
                   });
+                  if (profile.brand_colors_chosen?.length > 0) {
+                    setBrandColorsChosen(profile.brand_colors_chosen);
+                    if (profile.brand_colors_chosen[0]) {
+                      setField("brand_color", profile.brand_colors_chosen[0]);
+                    }
+                    if (profile.brand_colors_chosen[1]) {
+                      setAccentColor(profile.brand_colors_chosen[1]);
+                    } else if (profile.inferred_accent_color) {
+                      setAccentColor(profile.inferred_accent_color);
+                    }
+                  } else if (profile.safe_color_tokens?.primary) {
+                    setField("brand_color", profile.safe_color_tokens.primary);
+                    if (profile.inferred_accent_color) {
+                      setAccentColor(profile.inferred_accent_color);
+                    } else if (profile.safe_color_tokens?.accent) {
+                      setAccentColor(profile.safe_color_tokens.accent);
+                    }
+                  }
+                  if (profile.logo_colors_detected?.length > 0) {
+                    setDetectedColors(profile.logo_colors_detected);
+                  }
                 }
               }
             } catch {
