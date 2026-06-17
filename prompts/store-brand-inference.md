@@ -25,7 +25,11 @@ Você NÃO recebe imagens. Você NÃO analisa logotipos. Você APENAS usa os dad
 
 1. **Estilo Visual:** Inferir um estilo visual baseado no segmento e posicionamento da loja. Exemplos: "moderno e minimalista" para eletrônicos, "acolhedor e artesanal" para padarias, "vibrante e jovem" para moda.
 
-2. **Tom Visual:** Inferir o tom visual com base no tom de voz e posicionamento. Exemplos: "sóbrio e profissional", "alegre e vibrante", "elegante e sofisticado".
+2. **Tom Visual:** Inferir o tom visual com base no tom de voz e posicionamento, mas sem interpretar esses campos como estilo visual literal. Exemplos: "sóbrio e profissional", "alegre e vibrante", "elegante e sofisticado". Mas considere que:
+- Padaria + tom moderno não deve virar estética tecnológica/minimalista fria; deve virar padaria artesanal com execução mais limpa, atual e organizada.
+- Padaria + tom luxuoso não deve virar marca de luxo genérica; deve virar padaria/confeitaria premium, cuidadosa e refinada, ainda ligada a pão, afeto e produto fresco.
+- Padaria + tom jovem não deve virar visual vibrante genérico; deve virar linguagem mais leve e acessível dentro do universo de panificação.
+Use essa abordagem para alinhar outras combinações possíveis. Campos tom de voz e posicionamento desalinhados com segmento, subsegmento ou outros, não devem ser impeditivo para inferir uma direção visual confiante. 
 
 3. **Direção Tipográfica:** Sugerir uma direção tipográfica coerente com o estilo visual. Exemplos: "sans-serif moderna e geométrica", "serifada clássica e elegante", "display arrojada e criativa".
 
@@ -40,6 +44,14 @@ Você NÃO recebe imagens. Você NÃO analisa logotipos. Você APENAS usa os dad
    - Gere `safe_color_tokens` com primary, secondary, accent, background
    - Gere `inferred_primary_color` e `inferred_accent_color` como suas melhores estimativas das cores principais
    - Todas as cores devem ser hex válidos (#RRGGBB)
+
+---
+
+## Hierarquia de decisão:
+1. Segmento e subsegmento definem o arquétipo visual principal.
+2. Nome, posicionamento, descrição e slogan refinam esse arquétipo.
+3. Tom de voz ajusta a forma da comunicação, mas não deve substituir o arquétipo visual do segmento.
+4. Cores escolhidas pelo usuário são preferência, não prova de identidade visual.
 
 ---
 
@@ -73,7 +85,7 @@ Você NÃO recebe imagens. Você NÃO analisa logotipos. Você APENAS usa os dad
 - **safe_color_tokens.background:** Cor de fundo neutra para campanhas (branco ou off-white normalmente)
 - **inferred_primary_color:** Sua melhor estimativa da cor primária ideal (pode repetir safe_color_tokens.primary)
 - **inferred_accent_color:** Sua melhor estimativa da cor de destaque ideal (pode repetir safe_color_tokens.accent)
-- **confidence_score:** Entre 0 e 1 — sua confiança na inferência (dados textuais sem imagem reduzem a confiança)
+- **confidence_score:** Entre 0 e 1 — sua confiança na inferência (dados textuais sem imagem reduzem a confiança) - Em inferência sem logo, use confidence_score entre 0.65 e 0.82, salvo quando houver posicionamento/descrição/slogan muito claros.
 
 ---
 

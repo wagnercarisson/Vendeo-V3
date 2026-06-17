@@ -212,6 +212,15 @@ export async function POST(
 
     // ── TEXT-ONLY PATH ──
     try {
+      const currentPrimary = store.brand_color
+        ?? currentProfile?.safe_color_tokens?.primary
+        ?? undefined;
+
+      const currentAccent = currentProfile?.brand_colors_chosen?.[1]
+        ?? currentProfile?.safe_color_tokens?.accent
+        ?? currentProfile?.inferred_accent_color
+        ?? undefined;
+
       const service = new BrandTextOnlyInferenceService();
       const timeoutMs = parseInt(process.env.IMAGE_GENERATION_GLOBAL_TIMEOUT_MS ?? '30000', 10);
       const result = await service.infer({
@@ -224,6 +233,8 @@ export async function POST(
         slogan: store.slogan ?? null,
         city: store.city ?? null,
         state: store.state ?? null,
+        userPrimaryColor: currentPrimary,
+        userAccentColor: currentAccent,
       });
 
       if (currentProfile) {
