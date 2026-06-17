@@ -58,13 +58,13 @@
 
 ## 8. Verification
 
-- [ ] 8.1 Manual test: POST /logo — verify BrandDirector runs before profile mutation, identity_state='logo'
-- [ ] 8.2 Manual test: POST /logo with BrandDirector failure — verify profile remains synced as fallback, failed profile with attempt_snapshot
-- [ ] 8.3 Manual test: DELETE /logo — verify profile stays synced, active_logo_asset_id preserved, identity_state='text_only'
-- [ ] 8.4 Manual test: GET /logo/history — verify drift_status computed per item
-- [ ] 8.5 Manual test: POST /logo/restore without drift — verify assets re-activated, profile re-activated
-- [ ] 8.6 Manual test: POST /logo/restore with drift — verify BrandDirector executed, new profile created
-- [ ] 8.7 Manual test: POST /logo/restore when profile already synced (post-remove) — verify not marked outdated
-- [ ] 8.8 Manual test: UI flow — logo active → remove → re-upload → history → restore → verify visual states per UX matrix
-- [ ] 8.9 Run `npm run lint` and `npm run typecheck` — zero errors
-- [ ] 8.10 Run `npm run build` — zero errors
+- [x] 8.1 Manual test: POST /logo — verified via UAT test 1 (upload + preview + identity_state='logo')
+- [x] 8.2 Manual test: POST /logo with BrandDirector failure — verified via UAT test 7 (simulated BD failure, fallback preserved, notification + retry)
+- [x] 8.3 Manual test: DELETE /logo — verified via UAT test 2 (assets archived, profile synced, active_logo_asset_id preserved, identity_state='text_only')
+- [x] 8.4 Manual test: GET /logo/history — verified via UAT test 3 (history modal with drift badges per version)
+- [x] 8.5 Manual test: POST /logo/restore without drift — verified via UAT test 4 (immediate reactivation without realinhamento)
+- [x] 8.6 Manual test: POST /logo/restore with drift — verified via UAT test 5 (BrandDirector executed, new profile created, realinhamento + colors correct)
+- [x] 8.7 Manual test: POST /logo/restore when profile already synced (post-remove) — verified during UAT (no redundant outdated marking)
+- [x] 8.8 Manual test: UI flow — verified via UAT test 8 (full cycle: text_only → upload → preview → remove → history → restore → logo active)
+- [x] 8.9 Run `npm run lint` and `npm run typecheck` — zero errors (verified 2026-06-17)
+- [x] 8.10 Run `npm run build` — zero errors (verified 2026-06-17)
