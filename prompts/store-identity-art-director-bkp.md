@@ -38,7 +38,7 @@ Considere o tom de voz {{tone_of_voice}} para guiar o estilo visual:
 - **moderno:** Estilo contemporâneo, trendy — cores vibrantes, tipografia moderna, layout dinâmico. Adequado para lojas jovens e inovadoras.
 - **elegante:** Estilo sofisticado, premium — paleta refinada, tipografia elegante, acabamento sutil. Adequado para lojas de luxo e alto padrão.
 
-Se {{tone_of_voice}} estiver vazio ou não estiver alinhado ao perfil do segmento/subsegmento, use a sua criatividade e profissionalismo para fazer esse alinhamento, entregando uma assinatura visual de qualidade profissional, que seja visualmente impactante e clara ao mesmo tempo.
+Se {{tone_of_voice}} estiver vazio ou não corresponder a nenhuma das opções acima, use o estilo **profissional** como padrão.
 
 ---
 
@@ -56,13 +56,28 @@ Quando este campo estiver presente:
 
 ## Formato de Saída
 
+Gere DUAS imagens:
+
 ### 1. Assinatura Visual (PNG)
 - Formato: Quadrado, 1024×1024 pixels
 - Fundo: Simples, sólido ou gradiente sutil — sem fotos ou texturas complexas
 - Tipografia: Limpa, legível, profissional
 - A assinatura visual deve funcionar sozinha como marca da loja
-- Deve incluir o nome da loja como item mais importante
-- Pode incluir cidade ou slogan apenas se isso fortalecer a assinatura sem prejudicar legibilidade.
+
+### 2. Cartão de Referência (PNG)
+- A assinatura visual sobre um fundo neutro mostrando a identidade em contexto
+- Ajuda o Campaign Director a interpretar a identidade visual
+- Pode incluir o nome da loja e slogan aplicados em um layout simples de cartão
+
+### 3. Metadados JSON
+```json
+{
+  "creative_description": "descrição criativa da assinatura visual gerada",
+  "suggested_colors": ["#HEX1", "#HEX2", "#HEX3"],
+  "visual_direction": "ex: Moderna e minimalista",
+  "elements_used": ["ex: monograma", "ex: linhas geométricas"]
+}
+```
 
 ---
 
@@ -70,9 +85,9 @@ Quando este campo estiver presente:
 
 - A assinatura deve ser profissional e publicável
 - Tipografia limpa e legível
-- Se {{brandColor}} estiver definida, use-a como cor de destaque. Se não estiver definida, escolha uma paleta coerente com segmento, subsegmento e tom da loja.
+- Use {{brandColor}} como cor de destaque
 - A assinatura deve representar a personalidade da loja com base nos dados fornecidos
-- Crie uma versão principal expressiva, com bom contraste e legibilidade. Não precisa funcionar perfeitamente em todos os fundos; ela apenas deve ser simples o suficiente para permitir futuras variações claro/escuro.
+- O design deve ser versátil — funciona em fundo claro e escuro
 
 ## Restrições Obrigatórias
 
