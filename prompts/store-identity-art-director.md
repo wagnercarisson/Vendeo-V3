@@ -64,6 +64,42 @@ Quando este campo estiver presente:
 - Deve incluir o nome da loja como item mais importante
 - Pode incluir cidade ou slogan apenas se isso fortalecer a assinatura sem prejudicar legibilidade.
 
+### 2. Metadata de Intenção Criativa
+
+Além da imagem PNG, retorne um JSON curto com a intenção criativa usada na assinatura.
+
+No JSON, separe claramente:
+- `content_used`: quais textos da loja foram usados na imagem
+- `visual_elements`: quais elementos gráficos foram usados
+
+Use este formato:
+
+```json
+{
+  "visual_direction": "direção visual em poucas palavras",
+  "content_used": {
+    "store_name": true,
+    "city": false,
+    "state": false,
+    "slogan": false
+  },
+  "visual_elements": ["elementos gráficos principais"],
+  "intended_palette": {
+    "primary": "#HEX",
+    "accent": "#HEX",
+    "support": ["#HEX", "#HEX"],
+    "background": "#HEX"
+  },
+  "color_usage": {
+    "primary": "uso principal",
+    "accent": "uso de destaque",
+    "support": "uso de apoio",
+    "background": "uso do fundo"
+  }
+}
+
+Obs. Mantenha o JSON conciso, fiel à imagem gerada e com no máximo 80 palavras no total.
+
 ---
 
 ## Critérios de Qualidade
