@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase/server';
+import { validateDrift } from '@/lib/visual-signature/drift-validator';
 import { BrandProfilerWithoutLogoService } from '@/lib/visual-signature/brand-profiler';
 import { updateGenerationEventDecision } from '@/lib/visual-signature/generation-events';
 import { reconcileProfiles } from '@/lib/brand-assets/profile-reconciliation';
 import { IDENTITY_TO_LOGO_STATUS } from '@/lib/constants';
+import type { VisualSignatureMetadataInputSnapshot, VisualSignatureMetadataArtDirectorOutput } from '@/lib/visual-signature/types';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -62,6 +64,37 @@ export async function POST(
     return NextResponse.json({ error: 'Assinatura visual não encontrada' }, { status: 404 });
   }
   console.log(`[approve][req-${reqId}] signature carregada status=${signature.status}`);
+
+  if (signature.status === 'archived') {
+    const metadata = (signature.metadata ?? {}) as Record<string, unknown>;
+    const inputSnapshot = metadata.input_snapshot as VisualSignatureMetadataInputSnapshot | null ?? null;
+    const artDirectorOutput = metadata.artDirectorOutput as VisualSignatureMetadataArtDirectorOutput | null ?? null;
+
+    const driftResult = validateDrift({
+      input_snapshot: inputSnapshot,
+      content_used: artDirectorOutput?.content_used ?? null,
+      currentStoreData: {
+        name: store.name,
+        segment: store.segment,
+        city: store.city,
+        state: store.state,
+        slogan: store.slogan,
+      },
+    });
+
+    if (driftResult.has_drift) {
+      console.log(`[approve][req-${reqId}] drift detectado — bloqueando restore de signature arquivada`, { fields: driftResult.fields, reason: driftResult.reason });
+      return NextResponse.json({
+        success: false,
+        error: 'Os dados da loja mudaram desde que esta assinatura foi gerada. Crie uma nova versão.',
+        drift: {
+          fields: driftResult.fields,
+          reason: driftResult.reason,
+          requires_regeneration: driftResult.requires_regeneration,
+        },
+      }, { status: 409 });
+    }
+  }
 
   console.log(`[approve][req-${reqId}] 4/12 arquivando assinaturas anteriores...`);
   await supabase

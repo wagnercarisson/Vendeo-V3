@@ -249,7 +249,15 @@ export async function POST(
       result = {
         signature,
         artDirectorOutput,
-        metadataArtDirectorOutput: null,
+        metadataArtDirectorOutput: {
+          visual_direction: 'Personalizada (retry)',
+          content_used: {
+            store_name: true,
+            city: !!store.city,
+            state: !!store.state,
+            slogan: !!store.slogan,
+          },
+        },
         assetUrl: retryResult.assetUrl,
       };
       console.log(`[generate-without-logo][req-${reqId}] 7/12 ATTEMPT 2 — sucesso`, { assetUrl: result.assetUrl, signatureId: result.signature.id });
