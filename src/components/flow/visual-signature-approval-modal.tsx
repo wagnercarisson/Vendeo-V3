@@ -81,6 +81,7 @@ export function VisualSignatureApprovalModal({
   const [showReviewFeedback, setShowReviewFeedback] = useState(false);
   const isGeneratingRef = useRef(false);
   const requestSeqRef = useRef(0);
+  const initCheckRef = useRef(false);
 
   const generate = useCallback(async (rejectionContext?: { reason: string; attempt: number }) => {
     if (isGeneratingRef.current) {
@@ -156,7 +157,8 @@ export function VisualSignatureApprovalModal({
   useEffect(() => {
     if (!isOpen) return;
 
-    if (state.phase === "checking") {
+    if (state.phase === "checking" && !initCheckRef.current) {
+      initCheckRef.current = true;
       console.log(`[VisualSignatureApprovalModal] checking existing signatures for store ${storeId}`);
       fetch(`/api/store/${storeId}/visual-signature`)
         .then(res => res.json())
@@ -219,37 +221,19 @@ export function VisualSignatureApprovalModal({
     });
   }, [state, storeId, generate]);
 
-  const handleConfirmReject = useCallback(async () => {
+  const handleConfirmReject = useCallback(() => {
     if (state.phase !== "feedback") return;
     const attempt = state.attempt;
     const reason = feedbackText || "sem feedback específico";
 
-    try {
-      await fetch(`/api/store/${storeId}/visual-signature/reject`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason: feedbackText }),
-      });
-    } catch {}
+    fetch(`/api/store/${storeId}/visual-signature/reject`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: feedbackText }),
+    }).catch(() => {});
 
     setStoredRejectionContext({ reason, attempt });
-
-    fetch(`/api/store/${storeId}/visual-signature`)
-      .then(res => res.json())
-      .then(data => {
-        const sigs = data?.signatures ?? [];
-        const existingSigs: ReviewSignature[] = (sigs ?? []).map((s: { id: string; asset_url?: string; assetUrl?: string; status?: string; restore_eligibility?: RestoreEligibilityInfo }, i: number) => ({
-          id: s.id,
-          assetUrl: s.assetUrl || s.asset_url || "",
-          attempt: i + 1,
-          status: s.status,
-          restore_eligibility: s.restore_eligibility,
-        }));
-        setState({ phase: "review", signatures: existingSigs, canGenerate: true });
-      })
-      .catch(() => {
-        generate({ reason, attempt });
-      });
+    generate({ reason, attempt });
   }, [state, storeId, feedbackText, generate]);
 
   const handleApprove = useCallback(async () => {
