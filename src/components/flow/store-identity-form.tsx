@@ -1172,6 +1172,7 @@ export function StoreIdentityForm() {
                   </div>
                 ) : (
                   <>
+                {identityState !== 'visual_signature' && (
                 <div onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
                   className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors duration-200 cursor-pointer ${
                     isDragging ? "border-accent-blue bg-accent-blue/5" : "border-border-light hover:border-text-muted bg-bg-surface"
@@ -1183,6 +1184,7 @@ export function StoreIdentityForm() {
                   <p className="text-text-muted text-xs font-body mt-1">Formatos aceitos: PNG, JPG ou WEBP. Máximo 5MB.</p>
                   <input ref={fileInputRef} id="logo" type="file" accept="image/png, image/jpeg, image/webp" onChange={handleLogoFileChange} className="hidden" />
                 </div>
+                )}
                 {logoPreview && (
                   <div className="mt-3 flex items-center gap-3">
                     <div className="w-16 h-16 rounded-full border-2 border-border-light overflow-hidden shrink-0 bg-bg-elevated">
@@ -1231,7 +1233,7 @@ export function StoreIdentityForm() {
                   </div>
                 )}
 
-                {logoStatus === null && (
+                {identityState !== 'visual_signature' && logoStatus === null && (
                   <div className="mt-4 space-y-3">
                     <div className="flex gap-3">
                       <button
