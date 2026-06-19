@@ -147,6 +147,13 @@ export async function POST(
     elements_used: ['nome da loja'],
   };
 
+  const contentUsed = (artDirectorOutput as VisualSignatureMetadataArtDirectorOutput).content_used ?? {
+    store_name: true,
+    city: false,
+    state: false,
+    slogan: false,
+  };
+
   // 8/12 Check if a brand profile already exists for this visual_signature_id
   // Switching to an existing signature should reuse its cached profile, not call GPT again.
   // Only reuse profiles with complete data (synced or outdated), never failed ones.
@@ -188,6 +195,7 @@ export async function POST(
             ...inputSnapshot,
             accent_color: accentColor,
           },
+          content_used: contentUsed,
         },
       })
       .eq('id', existingProfile.id);
@@ -263,6 +271,7 @@ export async function POST(
             ...inputSnapshot,
             accent_color: accentColor,
           },
+          content_used: contentUsed,
         },
       })
       .eq('id', result.profile.id);

@@ -5,6 +5,7 @@ import type { DriftSnapshot, DriftStatus } from "@/lib/drift";
 import { currentVisualState, computeDriftStatus, normalizeSnapshotValue } from "@/lib/drift";
 import type { Store } from "@/lib/store";
 import type { BrandProfileRecord } from "@/lib/brand-assets/types";
+import type { VisualSignatureMetadataArtDirectorOutput } from "@/lib/visual-signature/types";
 
 function snapshotsEqual(a: DriftSnapshot | null, b: DriftSnapshot | null): boolean {
   if (a === b) return true;
@@ -20,6 +21,7 @@ export function useDriftDetection(
 ): {
   driftStatus: DriftStatus
   currentSnapshot: DriftSnapshot | null
+  hasCriticalDrift: boolean
   realinhar: () => Promise<Record<string, unknown> | void>
   ignorar: () => Promise<void>
   isRealinhando: boolean
@@ -27,9 +29,11 @@ export function useDriftDetection(
   const [driftStatus, setDriftStatus] = useState<DriftStatus>('none');
   const [currentSnapshot, setCurrentSnapshot] = useState<DriftSnapshot | null>(null);
   const [isRealinhando, setIsRealinhando] = useState(false);
+  const [hasCriticalDrift, setHasCriticalDrift] = useState(false);
 
   const prevSnapshotRef = useRef<DriftSnapshot | null>(null);
   const prevStatusRef = useRef<DriftStatus>('none');
+  const prevCriticalRef = useRef(false);
 
   useEffect(() => {
     if (!store || !store.id) {
@@ -57,6 +61,28 @@ export function useDriftDetection(
     if (status !== prevStatusRef.current) {
       setDriftStatus(status);
       prevStatusRef.current = status;
+    }
+
+    const driftedFields: (keyof DriftSnapshot)[] = [];
+    if (inputSnapshot) {
+      const allFields: (keyof DriftSnapshot)[] = ['segment', 'subsegment', 'tone_of_voice', 'name', 'brand_color', 'accent_color'];
+      for (const f of allFields) {
+        if (normalizeSnapshotValue(snapshot[f]) !== normalizeSnapshotValue(inputSnapshot[f])) {
+          driftedFields.push(f);
+        }
+      }
+    }
+
+    const contentUsed = profile.metadata?.content_used as VisualSignatureMetadataArtDirectorOutput['content_used'] | null | undefined;
+    const criticalFields: string[] = ['name', 'segment'];
+    if (contentUsed?.city) criticalFields.push('city');
+    if (contentUsed?.state) criticalFields.push('state');
+    if (contentUsed?.slogan) criticalFields.push('slogan');
+
+    const isCritical = driftedFields.some(f => criticalFields.includes(f));
+    if (isCritical !== prevCriticalRef.current) {
+      setHasCriticalDrift(isCritical);
+      prevCriticalRef.current = isCritical;
     }
   }, [store, profile]);
 
@@ -105,5 +131,5 @@ export function useDriftDetection(
     }
   }, [store?.id, currentSnapshot]);
 
-  return { driftStatus, currentSnapshot, realinhar, ignorar, isRealinhando };
+  return { driftStatus, currentSnapshot, hasCriticalDrift, realinhar, ignorar, isRealinhando };
 }

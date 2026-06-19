@@ -133,6 +133,7 @@ export function StoreIdentityForm() {
 
   const {
     driftStatus,
+    hasCriticalDrift,
     realinhar,
     ignorar,
     isRealinhando,
@@ -425,6 +426,7 @@ export function StoreIdentityForm() {
     logoColorsDetected?: string[];
   }) => {
     setLogoStatus(result.logoStatus);
+    setIdentityState('visual_signature');
     if (result.signatureUrl) {
       setVisualSignatureUrl(result.signatureUrl);
       setLogoResultUrl(result.signatureUrl);
@@ -440,8 +442,27 @@ export function StoreIdentityForm() {
     if (result.logoColorsDetected) {
       setDetectedColors(result.logoColorsDetected);
     }
+    if (storeId) {
+      fetch(`/api/store/${storeId}/brand-profile`)
+        .then(res => res.json())
+        .then(profile => {
+          if (profile?.status === 'synced') {
+            setInferredProfile({
+              safe_color_tokens: profile.safe_color_tokens,
+              visual_style: profile.visual_style,
+              visual_tone: profile.visual_tone,
+              brand_personality: profile.brand_personality,
+              brand_colors_chosen: profile.brand_colors_chosen,
+              inferred_primary_color: profile.inferred_primary_color,
+              inferred_accent_color: profile.inferred_accent_color,
+              metadata: profile.metadata,
+            });
+          }
+        })
+        .catch(() => {});
+    }
     setShowApprovalModal(false);
-  }, [setField, formData.brand_color]);
+  }, [setField, formData.brand_color, storeId, setIdentityState, setInferredProfile]);
 
   useEffect(() => {
     if (isLoading || !storeId) return;
@@ -1082,6 +1103,10 @@ export function StoreIdentityForm() {
               <div className="mb-4">
                 <DriftDiscreetButton
                   onClick={async () => {
+                    if (hasCriticalDrift) {
+                      setShowApprovalModal(true);
+                      return;
+                    }
                     setDriftError(null);
                     try {
                       const data = await realinhar();
@@ -1103,7 +1128,7 @@ export function StoreIdentityForm() {
                       }
                     } catch (e) { setDriftError('Não foi possível realinhar. Tente novamente mais tarde.'); }
                   }}
-                  isLoading={isRealinhando}
+                  isLoading={hasCriticalDrift ? false : isRealinhando}
                 />
                 {driftError && (
                   <p className="flex items-center gap-1.5 text-accent-red text-xs mt-2">
@@ -1599,6 +1624,7 @@ export function StoreIdentityForm() {
           slogan={formData.slogan}
           city={formData.city}
           uf={formData.state}
+          hasActiveSignatureDrift={driftStatus === 'new' && !!hasCriticalDrift}
           onComplete={handleApprovalComplete}
           onRemove={handleRemoveVS}
         />

@@ -46,6 +46,7 @@ interface VisualSignatureApprovalModalProps {
   city?: string;
   uf?: string;
   initialAttempt?: number;
+  hasActiveSignatureDrift?: boolean;
   onComplete: (result: { 
     logoStatus: string; 
     signatureUrl?: string;
@@ -71,6 +72,7 @@ export function VisualSignatureApprovalModal({
   city: _city,
   uf: _uf,
   initialAttempt: _initialAttempt,
+  hasActiveSignatureDrift,
   onComplete,
   onRemove,
 }: VisualSignatureApprovalModalProps) {
@@ -82,6 +84,7 @@ export function VisualSignatureApprovalModal({
   const isGeneratingRef = useRef(false);
   const requestSeqRef = useRef(0);
   const initCheckRef = useRef(false);
+  const driftDismissedRef = useRef(false);
 
   const generate = useCallback(async (rejectionContext?: { reason: string; attempt: number }) => {
     if (isGeneratingRef.current) {
@@ -160,6 +163,17 @@ export function VisualSignatureApprovalModal({
     if (state.phase === "checking" && !initCheckRef.current) {
       initCheckRef.current = true;
       console.log(`[VisualSignatureApprovalModal] checking existing signatures for store ${storeId}`);
+
+      if (hasActiveSignatureDrift && !driftDismissedRef.current) {
+        console.log(`[VisualSignatureApprovalModal] active signature has drift, showing drift error`);
+        setState({
+          phase: "error",
+          message: "Os dados da loja mudaram desde que esta assinatura foi gerada. Deseja ajustar a assinatura ou continuar sem assinatura?",
+          drift: { fields: [], reason: "critical_drift", requires_regeneration: true },
+        });
+        return;
+      }
+
       fetch(`/api/store/${storeId}/visual-signature`)
         .then(res => res.json())
         .then(data => {
@@ -183,7 +197,7 @@ export function VisualSignatureApprovalModal({
           generate();
         });
     }
-  }, [isOpen, state.phase, storeId, generate]);
+  }, [isOpen, state.phase, storeId, generate, hasActiveSignatureDrift]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -320,6 +334,14 @@ export function VisualSignatureApprovalModal({
       setState({ phase: "error", message: "Erro de conexão. Tente novamente." });
     }
   }, [storeId, onComplete]);
+
+  const handleRealignActive = useCallback(() => {
+    setState({
+      phase: "error",
+      message: "Os dados da loja mudaram desde que esta assinatura foi gerada. Deseja ajustar a assinatura ou continuar sem assinatura?",
+      drift: { fields: [], reason: "critical_drift", requires_regeneration: true },
+    });
+  }, []);
 
   const handleContinueWithoutLogo = useCallback(async () => {
     try {
@@ -472,15 +494,25 @@ export function VisualSignatureApprovalModal({
                 const isActive = sig.status === "active";
                 const syncOk = !isActive && sig.restore_eligibility?.reason === "ok";
                 const needsRealign = !isActive && (sig.restore_eligibility?.reason === "critical_drift" || sig.restore_eligibility?.reason === "missing_metadata");
+                const isActiveDrift = isActive && hasActiveSignatureDrift;
                 let badgeLabel = "";
                 let badgeClass = "";
-                if (isActive) { badgeLabel = "Ativa"; badgeClass = "bg-accent-green text-white"; }
+                if (isActive && !isActiveDrift) { badgeLabel = "Ativa"; badgeClass = "bg-accent-green text-white"; }
                 else if (syncOk) { badgeLabel = "Sincronizada"; badgeClass = "bg-bg-hover text-text-secondary"; }
                 else if (needsRealign) { badgeLabel = "Precisa realinhar"; badgeClass = "bg-accent-amber text-white"; }
                 return (
                   <div key={sig.id} className="space-y-2">
                     <div className="aspect-square rounded-lg overflow-hidden bg-bg-elevated border border-border-light relative">
-                      {badgeLabel && (
+                      {isActiveDrift ? (
+                        <div className="absolute top-1.5 left-1.5 flex flex-col gap-1">
+                          <span className="px-1.5 py-0.5 text-[10px] font-heading font-semibold rounded bg-accent-green text-white leading-tight">
+                            Ativa
+                          </span>
+                          <span className="px-1.5 py-0.5 text-[10px] font-heading font-semibold rounded bg-accent-amber text-white leading-tight">
+                            Precisa realinhar
+                          </span>
+                        </div>
+                      ) : badgeLabel && (
                         <span className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[10px] font-heading font-semibold rounded ${badgeClass} leading-tight`}>
                           {badgeLabel}
                         </span>
@@ -490,10 +522,10 @@ export function VisualSignatureApprovalModal({
                     <span className="block text-center text-xs text-text-muted font-body">Versão {i + 1}</span>
                     <button
                       type="button"
-                      onClick={() => handleApproveExhausted(sig.id)}
+                      onClick={isActiveDrift ? handleRealignActive : () => handleApproveExhausted(sig.id)}
                       className="w-full px-2 py-1.5 bg-accent-green text-white font-heading font-semibold text-xs rounded-lg hover:brightness-110 transition-all duration-200"
                     >
-                      {isActive ? "Manter" : "Aprovar"}
+                      {isActiveDrift ? "Realinhar" : (isActive ? "Manter" : "Aprovar")}
                     </button>
                   </div>
                 );
@@ -589,15 +621,25 @@ export function VisualSignatureApprovalModal({
                 const isActive = sig.status === "active";
                 const syncOk = !isActive && sig.restore_eligibility?.reason === "ok";
                 const needsRealign = !isActive && (sig.restore_eligibility?.reason === "critical_drift" || sig.restore_eligibility?.reason === "missing_metadata");
+                const isActiveDrift = isActive && hasActiveSignatureDrift;
                 let badgeLabel = "";
                 let badgeClass = "";
-                if (isActive) { badgeLabel = "Ativa"; badgeClass = "bg-accent-green text-white"; }
+                if (isActive && !isActiveDrift) { badgeLabel = "Ativa"; badgeClass = "bg-accent-green text-white"; }
                 else if (syncOk) { badgeLabel = "Sincronizada"; badgeClass = "bg-bg-hover text-text-secondary"; }
                 else if (needsRealign) { badgeLabel = "Precisa realinhar"; badgeClass = "bg-accent-amber text-white"; }
                 return (
                   <div key={sig.id} className="space-y-2">
                     <div className="aspect-square rounded-lg overflow-hidden bg-bg-elevated border border-border-light relative">
-                      {badgeLabel && (
+                      {isActiveDrift ? (
+                        <div className="absolute top-1.5 left-1.5 flex flex-col gap-1">
+                          <span className="px-1.5 py-0.5 text-[10px] font-heading font-semibold rounded bg-accent-green text-white leading-tight">
+                            Ativa
+                          </span>
+                          <span className="px-1.5 py-0.5 text-[10px] font-heading font-semibold rounded bg-accent-amber text-white leading-tight">
+                            Precisa realinhar
+                          </span>
+                        </div>
+                      ) : badgeLabel && (
                         <span className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[10px] font-heading font-semibold rounded ${badgeClass} leading-tight`}>
                           {badgeLabel}
                         </span>
@@ -605,20 +647,20 @@ export function VisualSignatureApprovalModal({
                       <img src={sig.assetUrl} alt={`Versão ${i + 1}`} className="w-full h-full object-contain" />
                     </div>
                     <span className="block text-center text-xs text-text-muted font-body">Versão {i + 1}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleApproveExhausted(sig.id)}
-                      className="w-full px-2 py-1.5 bg-accent-green text-white font-heading font-semibold text-xs rounded-lg hover:brightness-110 transition-all duration-200"
-                    >
-                      {isActive ? "Manter" : "Aprovar"}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+                      <button
+                        type="button"
+                        onClick={isActiveDrift ? handleRealignActive : () => handleApproveExhausted(sig.id)}
+                        className="w-full px-2 py-1.5 bg-accent-green text-white font-heading font-semibold text-xs rounded-lg hover:brightness-110 transition-all duration-200"
+                      >
+                        {isActiveDrift ? "Realinhar" : (isActive ? "Manter" : "Aprovar")}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
 
-            <div className="text-center">
-              {hasActive && onRemove ? (
+              <div className="text-center">
+                {hasActive && onRemove ? (
                 <button
                   type="button"
                   onClick={() => { onRemove(); onClose(); }}
@@ -661,6 +703,19 @@ export function VisualSignatureApprovalModal({
                 {state.drift ? "Continuar sem assinatura" : "Continuar sem logo"}
               </button>
             </div>
+            {state.drift && (
+              <button
+                type="button"
+                onClick={() => {
+                  driftDismissedRef.current = true;
+                  initCheckRef.current = false;
+                  setState({ phase: "checking" });
+                }}
+                className="text-text-muted hover:text-text-primary text-xs font-body underline transition-colors duration-200"
+              >
+                Voltar
+              </button>
+            )}
           </div>
         );
 
