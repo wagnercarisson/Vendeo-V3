@@ -4,10 +4,11 @@ import { useState, useEffect, useCallback } from "react";
 import { listSignatures } from "@/lib/visual-signature/server-actions";
 import { VisualSignatureModal } from "./visual-signature-modal";
 import { VisualSignatureApprovalModal } from "./visual-signature-approval-modal";
-import { ImageIcon, Loader2, CheckCircle2, Sparkles, AlertCircle } from "lucide-react";
+import { ImageIcon, Loader2, CheckCircle2, Sparkles, AlertCircle, Trash2, History } from "lucide-react";
 import type { VisualSignatureRecord } from "@/lib/visual-signature/types";
 import { resolveStoreIdentity } from "@/lib/actions/store";
 import type { Store } from "@/lib/store";
+import { VisualSignatureHistoryModal } from "./visual-signature-history-modal";
 
 interface StoreVisualSignatureSectionProps {
   store: Pick<Store, "id" | "name" | "segment" | "brand_color" | "logo_url" | "subsegment" | "tone_of_voice" | "positioning" | "short_description" | "slogan" | "identity_state">;
@@ -19,8 +20,13 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [localLogoStatus, setLocalLogoStatus] = useState<string | null>(null);
   const [localAttempts, setLocalAttempts] = useState(0);
+  const [removing, setRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
+  const [identityState, setIdentityState] = useState<string | null>(store.identity_state ?? null);
+  const [hasArchivedSignatures, setHasArchivedSignatures] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -36,6 +42,7 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
         const signatures = await listSignatures(store.id);
         const active = signatures.find((s) => s.status === "active");
         setActiveSignature(active ?? null);
+        setHasArchivedSignatures(signatures.some(s => s.status === "archived"));
       } else {
         setActiveSignature(null);
       }
@@ -45,6 +52,7 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
         const storeData = await storeRes.json();
         setLocalLogoStatus(storeData.logo_status ?? null);
         setLocalAttempts(storeData.visual_signature_attempts ?? 0);
+        setIdentityState(storeData.identity_state ?? null);
       }
     } catch {
       setHasLogo(false);
@@ -72,9 +80,86 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
     setShowApprovalModal(true);
   }, []);
 
+  const handleRemove = useCallback(async () => {
+    setRemoving(true);
+    setRemoveError(null);
+    try {
+      const res = await fetch(`/api/store/${store.id}/visual-signature`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setRemoveError(data.error || "Erro ao remover assinatura visual");
+        return;
+      }
+      setIdentityState("text_only");
+      setLocalLogoStatus("explicit_none");
+      setActiveSignature(null);
+    } catch {
+      setRemoveError("Erro de conexão. Tente novamente.");
+    } finally {
+      setRemoving(false);
+    }
+  }, [store.id]);
+
+  const handleAlterar = useCallback(async () => {
+    setShowApprovalModal(true);
+  }, []);
+
+  const handleHistoryRestore = useCallback(() => {
+    load();
+  }, [load]);
+
   if (hasLogo) return null;
 
   const renderState = () => {
+    if (identityState === "visual_signature" && activeSignature) {
+      return (
+        <div className="space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-xl bg-bg-elevated overflow-hidden border border-border-light">
+              <img src={activeSignature.asset_url} alt="Assinatura visual ativa" className="w-full h-full object-contain" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-accent-green" />
+                <p className="text-text-primary font-heading font-semibold text-sm">Assinatura ativa</p>
+              </div>
+              <p className="text-text-muted text-xs font-body mt-0.5">Gerado por IA e aprovado</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button type="button" onClick={handleAlterar}
+              className="flex-1 px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 flex items-center justify-center gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              Alterar
+            </button>
+            <button type="button" onClick={handleRemove} disabled={removing}
+              className="flex-1 px-4 py-2.5 border border-accent-red/30 text-accent-red font-heading font-semibold text-sm rounded-lg hover:bg-accent-red/5 transition-all duration-200 flex items-center justify-center gap-2"
+            >
+              {removing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              Remover
+            </button>
+          </div>
+          {removeError && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-accent-red/10 rounded-lg">
+              <AlertCircle className="w-4 h-4 text-accent-red shrink-0" />
+              <p className="text-accent-red text-xs font-body">{removeError}</p>
+            </div>
+          )}
+          {identityState === "visual_signature" && (
+            <button type="button" onClick={() => setShowHistoryModal(true)}
+              className="w-full px-4 py-2 text-text-muted hover:text-text-primary text-xs font-body underline transition-colors duration-200 flex items-center justify-center gap-1"
+            >
+              <History className="w-3 h-3" />
+              Assinaturas anteriores
+            </button>
+          )}
+        </div>
+      );
+    }
+
     switch (localLogoStatus) {
       case "generated":
         return activeSignature ? (
@@ -120,6 +205,13 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
                   : "Nenhuma assinatura visual"}
               </p>
             </div>
+            {hasArchivedSignatures && (
+              <button type="button" onClick={() => setShowHistoryModal(true)}
+                className="w-full px-4 py-2 text-text-muted hover:text-text-primary text-xs font-body underline transition-colors duration-200"
+              >
+                Assinaturas anteriores
+              </button>
+            )}
             <button type="button" onClick={handleShowApproval}
               className="w-full px-4 py-2.5 bg-accent-green text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 flex items-center justify-center gap-2"
             >
@@ -152,6 +244,13 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
               <AlertCircle className="w-5 h-5 text-accent-amber shrink-0" />
               <p className="text-accent-amber text-sm font-body">Limite de 3 versões atingido. Reavalie as assinaturas geradas.</p>
             </div>
+            {hasArchivedSignatures && (
+              <button type="button" onClick={() => setShowHistoryModal(true)}
+                className="w-full px-4 py-2 text-text-muted hover:text-text-primary text-xs font-body underline transition-colors duration-200"
+              >
+                Assinaturas anteriores
+              </button>
+            )}
             <button type="button" onClick={handleShowApproval}
               className="w-full px-4 py-2.5 bg-accent-green text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 flex items-center justify-center gap-2"
             >
@@ -193,6 +292,13 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
               <ImageIcon className="w-8 h-8 text-text-muted" />
               <p className="text-text-muted text-sm font-body">Nenhuma assinatura visual</p>
             </div>
+            {hasArchivedSignatures && (
+              <button type="button" onClick={() => setShowHistoryModal(true)}
+                className="w-full px-4 py-2 text-text-muted hover:text-text-primary text-xs font-body underline transition-colors duration-200"
+              >
+                Assinaturas anteriores
+              </button>
+            )}
             <button type="button" onClick={handleShowApproval}
               className="w-full px-4 py-2.5 bg-accent-green text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 flex items-center justify-center gap-2"
             >
@@ -241,6 +347,15 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
           short_description={store.short_description ?? ""}
           slogan={store.slogan ?? ""}
           onComplete={handleApprovalComplete}
+        />
+      )}
+
+      {showHistoryModal && (
+        <VisualSignatureHistoryModal
+          isOpen={showHistoryModal}
+          onClose={() => setShowHistoryModal(false)}
+          storeId={store.id}
+          onRestore={handleHistoryRestore}
         />
       )}
     </div>

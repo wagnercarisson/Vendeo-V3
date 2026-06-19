@@ -64,6 +64,7 @@ export function VisualSignatureApprovalModal({
 }: VisualSignatureApprovalModalProps) {
   const [state, setState] = useState<ApprovalState>({ phase: "checking" });
   const [feedbackText, setFeedbackText] = useState("");
+  const [storedRejectionContext, setStoredRejectionContext] = useState<{ reason: string; attempt: number } | null>(null);
   const isGeneratingRef = useRef(false);
   const requestSeqRef = useRef(0);
 
@@ -170,6 +171,7 @@ export function VisualSignatureApprovalModal({
     if (!isOpen) {
       setState({ phase: "checking" });
       setFeedbackText("");
+      setStoredRejectionContext(null);
     }
   }, [isOpen]);
 
@@ -204,6 +206,7 @@ export function VisualSignatureApprovalModal({
   const handleConfirmReject = useCallback(async () => {
     if (state.phase !== "feedback") return;
     const attempt = state.attempt;
+    const reason = feedbackText || "sem feedback específico";
 
     try {
       await fetch(`/api/store/${storeId}/visual-signature/reject`, {
@@ -213,8 +216,22 @@ export function VisualSignatureApprovalModal({
       });
     } catch {}
 
-    setFeedbackText("");
-    generate({ reason: feedbackText, attempt });
+    setStoredRejectionContext({ reason, attempt });
+
+    fetch(`/api/store/${storeId}/visual-signature`)
+      .then(res => res.json())
+      .then(data => {
+        const sigs = data?.signatures ?? [];
+        const existingSigs: ReviewSignature[] = (sigs ?? []).map((s: { id: string; asset_url?: string; assetUrl?: string }, i: number) => ({
+          id: s.id,
+          assetUrl: s.assetUrl || s.asset_url || "",
+          attempt: i + 1,
+        }));
+        setState({ phase: "review", signatures: existingSigs, canGenerate: true });
+      })
+      .catch(() => {
+        generate({ reason, attempt });
+      });
   }, [state, storeId, feedbackText, generate]);
 
   const handleApprove = useCallback(async () => {
@@ -461,7 +478,10 @@ export function VisualSignatureApprovalModal({
               {canGenerate && (
                 <button
                   type="button"
-                  onClick={() => generate()}
+                  onClick={() => {
+                    generate(storedRejectionContext ?? undefined);
+                    setStoredRejectionContext(null);
+                  }}
                   className="w-full px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 flex items-center justify-center gap-2"
                 >
                   <ThumbsDown className="w-4 h-4" />
