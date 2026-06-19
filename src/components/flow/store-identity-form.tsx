@@ -509,6 +509,23 @@ export function StoreIdentityForm() {
     setShowApprovalModal(true);
   }, [storeId]);
 
+  const handleRemoveVS = useCallback(async () => {
+    if (!storeId) return;
+    try {
+      const res = await fetch(`/api/store/${storeId}/visual-signature`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json();
+        setLogoError(data.error || "Erro ao remover assinatura visual");
+        return;
+      }
+      setVisualSignatureUrl(null);
+      setLogoStatus("explicit_none");
+      setIdentityState("text_only");
+    } catch {
+      setLogoError("Erro de conexão ao remover assinatura. Tente novamente.");
+    }
+  }, [storeId]);
+
   const fetchArchivedCount = useCallback(async () => {
     if (!storeId) return;
     setArchivedCountLoading(true);
@@ -1265,7 +1282,7 @@ export function StoreIdentityForm() {
                         onClick={handleNoLogo}
                         className="shrink-0 px-3 py-1.5 border border-border-light text-text-primary font-heading font-semibold text-xs rounded-lg hover:bg-bg-elevated transition-all duration-200"
                       >
-                        Alterar
+                        Alterar / Remover
                       </button>
                     </div>
                   </div>
@@ -1581,6 +1598,7 @@ export function StoreIdentityForm() {
           city={formData.city}
           uf={formData.state}
           onComplete={handleApprovalComplete}
+          onRemove={handleRemoveVS}
         />
       )}
       {showRestoreModal && storeId && (

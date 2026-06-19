@@ -43,6 +43,7 @@ interface VisualSignatureApprovalModalProps {
     inferredAccentColor?: string;
     logoColorsDetected?: string[];
   }) => void;
+  onRemove?: () => void;
 }
 
 export function VisualSignatureApprovalModal({
@@ -61,6 +62,7 @@ export function VisualSignatureApprovalModal({
   uf: _uf,
   initialAttempt: _initialAttempt,
   onComplete,
+  onRemove,
 }: VisualSignatureApprovalModalProps) {
   const [state, setState] = useState<ApprovalState>({ phase: "checking" });
   const [feedbackText, setFeedbackText] = useState("");
@@ -488,7 +490,7 @@ export function VisualSignatureApprovalModal({
                   Nenhuma agradou, gerar nova versão
                 </button>
               )}
-              <div className="text-center">
+              <div className="text-center space-y-2">
                 <button
                   type="button"
                   onClick={handleContinueWithoutLogo}
@@ -496,6 +498,17 @@ export function VisualSignatureApprovalModal({
                 >
                   Continuar sem logo
                 </button>
+                {onRemove && (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => { onRemove(); onClose(); }}
+                      className="text-accent-red hover:text-accent-red/80 text-xs font-body underline transition-colors duration-200"
+                    >
+                      Remover assinatura
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
