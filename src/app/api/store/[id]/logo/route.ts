@@ -11,6 +11,7 @@ import {
 import { BrandDirectorService, BrandDirectorAnalysisError } from '@/lib/brand-assets/brand-director';
 import type { BrandAssetRecord, BrandAssetVariantGroup } from '@/lib/brand-assets/types';
 import { IDENTITY_TO_LOGO_STATUS } from '@/lib/constants';
+import { reconcileProfiles } from '@/lib/brand-assets/profile-reconciliation';
 
 const ALLOWED_EXTENSION_MAP: Record<string, string> = {
   '.png': 'image/png',
@@ -32,6 +33,20 @@ function validateUUID(id: string): boolean {
 }
 
 async function handlePostUpload(request: NextRequest, storeId: string) {
+  const { data: storeCheck } = await supabase
+    .from('stores')
+    .select('identity_state')
+    .eq('id', storeId)
+    .single();
+
+  if (storeCheck?.identity_state === 'visual_signature') {
+    return NextResponse.json({
+      error: 'Remova a assinatura visual ativa antes de enviar um logotipo.',
+      requires_identity_removal: true,
+      current_identity_state: 'visual_signature',
+    }, { status: 409 });
+  }
+
   let formData: FormData;
   try {
     formData = await request.formData();
@@ -260,16 +275,6 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
         },
       });
 
-      const previousSyncedId = syncedProfile?.id ?? null;
-
-      // Mark previous synced as outdated
-      if (previousSyncedId) {
-        await supabase
-          .from('store_brand_profiles')
-          .update({ status: 'outdated', updated_at: new Date().toISOString() })
-          .eq('id', previousSyncedId);
-      }
-
       // Insert new synced profile
       const { data: profile, error: profileInsertError } = await supabase
         .from('store_brand_profiles')
@@ -303,12 +308,12 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
         .select()
         .single();
 
-      // If insert fails, restore previous synced (compensation)
-      if (profileInsertError && previousSyncedId) {
-        await supabase
-          .from('store_brand_profiles')
-          .update({ status: 'synced', updated_at: new Date().toISOString() })
-          .eq('id', previousSyncedId);
+      if (profile && !profileInsertError) {
+        await reconcileProfiles(storeId, {
+          activateProfileIds: [profile.id],
+          markIncompatibleAsOutdated: true,
+          outdatedSources: ['without_logo'],
+        });
       }
 
       createdProfile = profile ?? null;

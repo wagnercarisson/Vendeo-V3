@@ -3,6 +3,7 @@ import { supabaseAdmin as supabase } from '@/lib/supabase/server';
 import { BrandDirectorService, BrandDirectorAnalysisError } from '@/lib/brand-assets/brand-director';
 import { IDENTITY_TO_LOGO_STATUS } from '@/lib/constants';
 import { normalizeSnapshotValue } from '@/lib/drift';
+import { reconcileProfiles } from '@/lib/brand-assets/profile-reconciliation';
 import type { LogoRestoreRequest, LogoRestoreResponse, BrandProfileRecord } from '@/lib/brand-assets/types';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -66,6 +67,22 @@ export async function POST(
     return NextResponse.json({ error: 'Loja não encontrada' }, { status: 404 });
   }
 
+  if (store.identity_state === 'visual_signature') {
+    return NextResponse.json({
+      error: 'Remova a assinatura visual ativa antes de restaurar um logotipo.',
+      requires_identity_removal: true,
+      current_identity_state: 'visual_signature',
+    }, { status: 409 });
+  }
+
+  if (store.identity_state === 'logo') {
+    return NextResponse.json({
+      error: 'Remova o logotipo ativo antes de restaurar outro logotipo.',
+      requires_logo_removal: true,
+      current_identity_state: 'logo',
+    }, { status: 409 });
+  }
+
   const { data: currentProfile } = await supabase
     .from('store_brand_profiles')
     .select()
@@ -118,18 +135,11 @@ export async function POST(
   if (!hasDrift) {
     // No-drift path
     if (profileRecord && profileRecord.status !== 'synced') {
-      // Mark current synced as outdated, reactivate chosen profile
-      if (currentProfile && currentProfile.id !== profileRecord.id) {
-        await supabase
-          .from('store_brand_profiles')
-          .update({ status: 'outdated', updated_at: new Date().toISOString() })
-          .eq('id', currentProfile.id);
-      }
-
-      await supabase
-        .from('store_brand_profiles')
-        .update({ status: 'synced', updated_at: new Date().toISOString() })
-        .eq('id', profileRecord.id);
+      await reconcileProfiles(storeId, {
+        activateProfileIds: [profileRecord.id],
+        markIncompatibleAsOutdated: true,
+        outdatedSources: ['logo_analysis'],
+      });
     }
 
     // Reactivate assets
@@ -205,14 +215,6 @@ export async function POST(
       },
     });
 
-    // Mark current synced as outdated
-    if (currentProfile) {
-      await supabase
-        .from('store_brand_profiles')
-        .update({ status: 'outdated', updated_at: new Date().toISOString() })
-        .eq('id', currentProfile.id);
-    }
-
     // Create new synced profile
     const { data: newProfile } = await supabase
       .from('store_brand_profiles')
@@ -241,6 +243,14 @@ export async function POST(
       })
       .select()
       .single();
+
+    if (newProfile) {
+      await reconcileProfiles(storeId, {
+        activateProfileIds: [newProfile.id],
+        markIncompatibleAsOutdated: true,
+        outdatedSources: ['without_logo'],
+      });
+    }
 
     restoredProfile = newProfile as BrandProfileRecord | null;
     realigned = true;
