@@ -30,7 +30,8 @@ export interface VisualSignatureMetadata {
   previousAttempts?: CascadeAttempt[];
   totalElapsedMs?: number;
   generationParams?: Record<string, unknown>;
-  artDirectorOutput?: VisualSignatureArtDirectorOutput;
+  artDirectorOutput?: VisualSignatureArtDirectorOutput | VisualSignatureMetadataArtDirectorOutput;
+  input_snapshot?: VisualSignatureMetadataInputSnapshot;
 }
 
 export interface VisualSignatureRecord {
@@ -142,6 +143,41 @@ export interface VisualSignatureArtDirectorOutput {
   suggested_colors: string[];
   visual_direction: string;
   elements_used: string[];
+}
+
+export interface VisualSignatureMetadataInputSnapshot {
+  name: string;
+  segment: string;
+  subsegment: string | null;
+  tone_of_voice: string | null;
+  positioning: string | null;
+  short_description: string | null;
+  slogan: string | null;
+  city: string | null;
+  state: string | null;
+  brand_color: string | null;
+}
+
+export interface VisualSignatureMetadataArtDirectorOutput {
+  visual_direction: string;
+  content_used: {
+    store_name: boolean;
+    city: boolean;
+    state: boolean;
+    slogan: boolean;
+  };
+  visual_elements?: string[];
+  intended_palette?: Record<string, unknown>;
+  color_usage?: Record<string, unknown>;
+}
+
+export type RestoreEligibilityReason = 'ok' | 'critical_drift' | 'missing_metadata';
+
+export interface RestoreEligibility {
+  can_restore: boolean;
+  drift_fields: string[];
+  requires_regeneration: boolean;
+  reason: RestoreEligibilityReason;
 }
 
 export interface VisualSignatureWithoutLogoInput {
