@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI + Rendering
 status: active
-stopped_at: Phase 4.6.3 — Logo State Lifecycle (5/5 plans — COMPLETE, UAT 8/8 PASSED). Próximo: Phase 4.6.4 — Visual Signature Lifecycle (Planned — 0/5 plans).
-last_updated: "2026-06-19T12:30:00.000Z"
+stopped_at: Phase 4.6.4 — Visual Signature Lifecycle (5/5 plans — COMPLETE, verified at 2026-06-19). Próximo: Phase 4.6.x — State Transitions (Pending — 0 plans).
+last_updated: "2026-06-19T19:00:00.000Z"
 progress:
   total_phases: 17
-  completed_phases: 15
-  total_plans: 71
-  completed_plans: 63
+  completed_phases: 16
+  total_plans: 76
+  completed_plans: 68
   percent: 89
 ---
 
@@ -20,24 +20,24 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-25 after v1.0 milestone)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
-**Current focus:** Phase 4.6.4 — Visual Signature Lifecycle (Plan — 0/5 plans ready)
+**Current focus:** Phase 4.6.x — State Transitions (Pending)
 
 ## Current Position
 
-Phase: 4.6.4 — Visual Signature Lifecycle (PLANNED — 0/5 plans)
+Phase: 4.6.4 — Visual Signature Lifecycle (COMPLETE — 5/5 plans)
 Milestone: v1.1 AI + Rendering — EXTENDED (Phase 4.6 sub-phases 4.6.3–4.6.x in progress)
-Phases complete: 15 of 17 phases (2 pending: 4.6.4, 4.6.x)
-Next phase: 4.6.4 — Visual Signature Lifecycle (planned)
+Phases complete: 16 of 17 phases (1 pending: 4.6.x)
+Next phase: 4.6.x — State Transitions (pending)
 
 | Phase | Status |
 |-------|--------|
 | 4.6.1 — Text Only Coverage | Complete |
 | 4.6.2 — Visual Direction Drift Detection | Complete |
 | **4.6.3 — Logo State Lifecycle** | **Complete** |
-| 4.6.4 — Visual Signature Lifecycle | Planned (0/5) |
+| **4.6.4 — Visual Signature Lifecycle** | **Complete (5/5)** |
 | 4.6.x — State Transitions | Pending |
 
-Progress: [██████████████] 89% (63/71 plans — 8 pending)
+Progress: [██████████████] 89% (68/76 plans — 8 pending)
 
 ## Performance Metrics
 
@@ -128,9 +128,9 @@ Key decisions (full: 10 decisions D1-D10 in OpenSpec design.md):
 
 ### Pending Todos
 
-- [ ] Review Phase 4.6.4 plans — CONTEXT.md + 5 PLANS.md awaiting user review before execution
-- [ ] Execute Phase 4.6.4 — Visual Signature Lifecycle (next)
-- [ ] Plan Phase 4.6.x — State Transitions (after 4.6.4)
+- [x] Review Phase 4.6.4 plans — CONTEXT.md + 5 PLANS.md reviewed and executed
+- [x] Execute Phase 4.6.4 — Visual Signature Lifecycle (COMPLETE — 5/5 plans)
+- [ ] Plan Phase 4.6.x — State Transitions (next)
 - [ ] Execute Phase 4.4.1 — run all 6 plans (4 waves) (deferred — historical record)
 
 ### Blockers/Concerns
@@ -151,17 +151,19 @@ Nenhum.
 
 ## Session Continuity
 
-Last session: 2026-06-19T12:30:00.000Z
-Stopped at: Phase 4.6.4 planning — CONTEXT.md and 5 PLANS.md created from openspec artifacts. Awaiting review before implementation.
+Last session: 2026-06-19T19:00:00.000Z
+Stopped at: Phase 4.6.4 implementation complete — 5/5 plans executed, verified, and committed.
 
 ## Next Phases
 
 | Phase | Status | Plans |
 |-------|--------|-------|
 | **4.6.3 — Logo State Lifecycle** | **UAT Complete — 8/8 Passed** | **5/5** |
-| **4.6.4 — Visual Signature Lifecycle** | **Planned** | **0/5** |
+| **4.6.4 — Visual Signature Lifecycle** | **Complete** | **5/5** |
 | 4.6.x — State Transitions | Pending | 0 |
 | Phase 4.4.1 — Existing Logo & Store Brand Direction Foundation | Deferred (historical record) | 6 |
 | Phase 5 — Review, Adjust & Export | Not yet planned | 0 |
 
 **Phase 4.6.3 scope (from OpenSpec):** Upload com transição transacional e input_snapshot, Remove preservando proveniência, History/Restore com validação de drift, UI Step 2 com 4 cenários. BrandDirector error notification + retry implementado nos refinamentos pós-implementação. Ver `docs/alinhamento-fase-4.6.3.md` para alinhamento completo.
+
+**Phase 4.6.4 scope (from OpenSpec):** Ciclo de vida completo da assinatura visual — geração com metadados (content_used, input_snapshot), aprovação com identity_state sync, DELETE com fallback text_only, GET history com approved_at/art_direction/restore_eligibility, POST restore com drift validation, identity_state gates no POST /logo e POST /logo/restore, profile reconciliation padronizada via reconcileProfiles(), UI Step 2 com Remover/Alterar e modal de histórico. Ver `openspec/changes/fase-4-6-4-visual-signature-lifecycle/` para especificação completa.
