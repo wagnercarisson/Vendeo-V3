@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI + Rendering
 status: active
-stopped_at: Phase 4.6.3 — Logo State Lifecycle (5/5 plans — COMPLETE, UAT 8/8 PASSED). Próximo: Phase 4.6.4 — Visual Signature Fluxo.
-last_updated: "2026-06-17T15:30:00.000Z"
+stopped_at: Phase 4.6.3 — Logo State Lifecycle (5/5 plans — COMPLETE, UAT 8/8 PASSED). Próximo: Phase 4.6.4 — Visual Signature Lifecycle (Planned — 0/5 plans).
+last_updated: "2026-06-19T12:30:00.000Z"
 progress:
   total_phases: 17
   completed_phases: 15
-  total_plans: 66
+  total_plans: 71
   completed_plans: 63
-  percent: 95
+  percent: 89
 ---
 
 # Project State
@@ -20,24 +20,24 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-25 after v1.0 milestone)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
-**Current focus:** Phase 4.6.3 — Logo State Lifecycle (Upload/Remove/Restore)
+**Current focus:** Phase 4.6.4 — Visual Signature Lifecycle (Plan — 0/5 plans ready)
 
 ## Current Position
 
-Phase: 4.6.3 — Logo State Lifecycle (IMPLEMENTATION COMPLETE — UAT 8/8 PASSED)
+Phase: 4.6.4 — Visual Signature Lifecycle (PLANNED — 0/5 plans)
 Milestone: v1.1 AI + Rendering — EXTENDED (Phase 4.6 sub-phases 4.6.3–4.6.x in progress)
 Phases complete: 15 of 17 phases (2 pending: 4.6.4, 4.6.x)
-Next phase: 4.6.4 — Visual Signature Fluxo
+Next phase: 4.6.4 — Visual Signature Lifecycle (planned)
 
 | Phase | Status |
 |-------|--------|
 | 4.6.1 — Text Only Coverage | Complete |
 | 4.6.2 — Visual Direction Drift Detection | Complete |
 | **4.6.3 — Logo State Lifecycle** | **Complete** |
-| 4.6.4 — Visual Signature Fluxo | Pending |
+| 4.6.4 — Visual Signature Lifecycle | Planned (0/5) |
 | 4.6.x — State Transitions | Pending |
 
-Progress: [██████████████] 95% (63/66 plans — 3 pending)
+Progress: [██████████████] 89% (63/71 plans — 8 pending)
 
 ## Performance Metrics
 
@@ -128,7 +128,8 @@ Key decisions (full: 10 decisions D1-D10 in OpenSpec design.md):
 
 ### Pending Todos
 
-- [ ] Plan Phase 4.6.4 — Visual Signature Fluxo (next)
+- [ ] Review Phase 4.6.4 plans — CONTEXT.md + 5 PLANS.md awaiting user review before execution
+- [ ] Execute Phase 4.6.4 — Visual Signature Lifecycle (next)
 - [ ] Plan Phase 4.6.x — State Transitions (after 4.6.4)
 - [ ] Execute Phase 4.4.1 — run all 6 plans (4 waves) (deferred — historical record)
 
@@ -150,15 +151,15 @@ Nenhum.
 
 ## Session Continuity
 
-Last session: 2026-06-17T15:30:00.000Z
-Stopped at: Phase 4.6.3 — UAT 8/8 passed. Bug fix: history badge drift masking (profiles sem .order()). Phase complete.
+Last session: 2026-06-19T12:30:00.000Z
+Stopped at: Phase 4.6.4 planning — CONTEXT.md and 5 PLANS.md created from openspec artifacts. Awaiting review before implementation.
 
 ## Next Phases
 
 | Phase | Status | Plans |
 |-------|--------|-------|
 | **4.6.3 — Logo State Lifecycle** | **UAT Complete — 8/8 Passed** | **5/5** |
-| 4.6.4 — Visual Signature Fluxo | Pending | 0 |
+| **4.6.4 — Visual Signature Lifecycle** | **Planned** | **0/5** |
 | 4.6.x — State Transitions | Pending | 0 |
 | Phase 4.4.1 — Existing Logo & Store Brand Direction Foundation | Deferred (historical record) | 6 |
 | Phase 5 — Review, Adjust & Export | Not yet planned | 0 |

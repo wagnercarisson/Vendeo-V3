@@ -87,7 +87,16 @@
     - [x] 04.6.3-03-PLAN.md — DELETE /logo, GET /logo/history, POST /logo/restore
     - [x] 04.6.3-04-PLAN.md — UI Step 2: logo card, remove state, restore modal
     - [x] 04.6.3-05-PLAN.md — Verification & Quality Gate (E2E testing)
-  - [ ] Phase 4.6.4: Visual Signature Fluxo — Approve/reject/remove visual signature (pending)
+  - [ ] Phase 4.6.4: Visual Signature Lifecycle (5 plans, 5 waves) — Planned
+    - **Wave 1 — Foundation** *(no deps)*
+      - [ ] 04.6.4-01-PLAN.md — Types, Constants & Profile Reconciliation
+    - **Wave 2 — Core Backend** *(parallel: 02 + 03, both depend on 01)*
+      - [ ] 04.6.4-02-PLAN.md — Generate Metadata, Approve Sync, GET History
+      - [ ] 04.6.4-03-PLAN.md — DELETE, RESTORE, Logo Gates
+    - **Wave 3 — UI** *(depends on 02 + 03)*
+      - [ ] 04.6.4-04-PLAN.md — Rejection Propagation, Step 2 identity_state, Remover, History Modal
+    - **Wave 4 — Quality Gate** *(depends on 04)*
+      - [ ] 04.6.4-05-PLAN.md — Verification & Quality Gate
   - [ ] Phase 4.6.x: Transições entre estados — text_only ↔ logo ↔ visual_signature (pending)
 - [ ] Phase 5: Review, Adjust & Export (not yet planned)
 ## Progress
@@ -112,6 +121,6 @@
 | 4.6.1. Text Only State & Visual Direction Inference | v1.1 | 5/5 | Complete | 2026-06-12 |
 | 4.6.2. Visual Direction Drift Detection | v1.1 | 4/4 | Complete | 2026-06-13 |
 | 4.6.3. Logo State Lifecycle | v1.1 | 5/5 | Complete | 2026-06-17 |
-| 4.6.4. Visual Signature Fluxo | v1.1 | 0 | Pending | — |
+| 4.6.4. Visual Signature Lifecycle | v1.1 | 0/5 | Planned | — |
 | 4.6.x. State Transitions | v1.1 | 0 | Pending | — |
 | 5. Review, Adjust & Export | v1.1 | 0 | Not yet planned | — |
