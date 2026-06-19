@@ -202,11 +202,24 @@ Sem textos promocionais. Apenas a imagem PNG.`;
         } => item.type === "image_generation_call"
       );
 
+      const messageOutput = response.output?.find(
+        (item): item is typeof item & { type: "message"; content: Array<{ type: string; text?: string }> } =>
+          item.type === "message"
+      );
+
+      const aiResponseMessage = messageOutput?.content
+        ?.filter(c => c.type === "output_text")
+        .map(c => c.text ?? "")
+        .join("\n");
+
       if (!imageOutput?.result) {
         console.log('[ai-image-generator] resposta sem image_generation output', { outputTypes: response.output?.map(o => o.type) });
         throw new Error("No image generated in Responses API response");
       }
       console.log('[ai-image-generator] image_generation output encontrado');
+      if (aiResponseMessage) {
+        console.log('[ai-image-generator] message output encontrado', { messageLength: aiResponseMessage.length });
+      }
 
       const imageBase64 = imageOutput.result;
       console.log('[ai-image-generator] validando imagem...', { base64Length: imageBase64.length });
@@ -256,7 +269,8 @@ Sem textos promocionais. Apenas a imagem PNG.`;
         storagePath,
         mimeType: "image/png",
         metadata,
-        prompt: promptUsed
+        prompt: promptUsed,
+        aiResponseMessage,
       };
     } catch (error) {
       const elapsedMs = Date.now() - startTime;

@@ -4,7 +4,7 @@ import { StoreIdentityArtDirectorService } from '@/lib/visual-signature/identity
 import { AiImageGenerator } from '@/lib/visual-signature/ai-image-generator';
 import { persistSignature } from '@/lib/visual-signature/persistence';
 import { insertGenerationEvent } from '@/lib/visual-signature/generation-events';
-import type { VisualSignatureArtDirectorOutput } from '@/lib/visual-signature/types';
+import type { VisualSignatureArtDirectorOutput, VisualSignatureMetadataInputSnapshot } from '@/lib/visual-signature/types';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -213,12 +213,46 @@ export async function POST(
           },
         });
 
-        result = {
-          signature,
-          artDirectorOutput,
-          assetUrl: retryResult.assetUrl,
-        };
-        console.log(`[generate-without-logo][req-${reqId}] 7/12 ATTEMPT 2 — sucesso`, { assetUrl: result.assetUrl, signatureId: result.signature.id });
+      const retryInputSnapshot: VisualSignatureMetadataInputSnapshot = {
+        name: store.name,
+        segment: store.segment,
+        subsegment: store.subsegment,
+        tone_of_voice: store.tone_of_voice,
+        positioning: store.positioning,
+        short_description: store.short_description,
+        slogan: store.slogan,
+        city: store.city,
+        state: store.state,
+        brand_color: store.brand_color,
+      };
+
+      await supabase
+        .from('store_visual_signatures')
+        .update({
+          metadata: {
+            ...(signature.metadata ?? {}),
+            input_snapshot: retryInputSnapshot,
+            artDirectorOutput: {
+              visual_direction: 'Personalizada (retry)',
+              content_used: {
+                store_name: true,
+                city: !!store.city,
+                state: !!store.state,
+                slogan: !!store.slogan,
+              },
+            },
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', signature.id);
+
+      result = {
+        signature,
+        artDirectorOutput,
+        metadataArtDirectorOutput: null,
+        assetUrl: retryResult.assetUrl,
+      };
+      console.log(`[generate-without-logo][req-${reqId}] 7/12 ATTEMPT 2 — sucesso`, { assetUrl: result.assetUrl, signatureId: result.signature.id });
       } catch (retryErr) {
         console.log(`[generate-without-logo][req-${reqId}] 7/12 ATTEMPT 2 — falhou`, { message: retryErr instanceof Error ? retryErr.message : 'erro' });
       }
@@ -230,6 +264,32 @@ export async function POST(
   // ----- SUCCESS PATH: increment attempts and insert event -----
   if (result) {
     const attemptNumber = newAttempt;
+
+    const inputSnapshot: VisualSignatureMetadataInputSnapshot = {
+      name: store.name,
+      segment: store.segment,
+      subsegment: store.subsegment,
+      tone_of_voice: store.tone_of_voice,
+      positioning: store.positioning,
+      short_description: store.short_description,
+      slogan: store.slogan,
+      city: store.city,
+      state: store.state,
+      brand_color: store.brand_color,
+    };
+
+    await supabase
+      .from('store_visual_signatures')
+      .update({
+        metadata: {
+          ...(result.signature.metadata ?? {}),
+          input_snapshot: inputSnapshot,
+          ...(result.metadataArtDirectorOutput ? { artDirectorOutput: result.metadataArtDirectorOutput } : {}),
+        },
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', result.signature.id);
+
     console.log(`[generate-without-logo][req-${reqId}] 8/12 incrementando attempts no DB...`);
     await supabase
       .from('stores')

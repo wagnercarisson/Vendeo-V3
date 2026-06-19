@@ -4,12 +4,14 @@ import { persistSignature } from '@/lib/visual-signature/persistence';
 import type {
   VisualSignatureWithoutLogoInput,
   VisualSignatureArtDirectorOutput,
+  VisualSignatureMetadataArtDirectorOutput,
   VisualSignatureRecord,
 } from '@/lib/visual-signature/types';
 
 export interface VisualSignatureGenerationResult {
   signature: VisualSignatureRecord;
   artDirectorOutput: VisualSignatureArtDirectorOutput;
+  metadataArtDirectorOutput: VisualSignatureMetadataArtDirectorOutput | null;
   assetUrl: string;
 }
 
@@ -76,17 +78,55 @@ INSTRUÇÕES OBRIGATÓRIAS PARA ESTA NOVA GERAÇÃO:
       });
       console.log('[identity-art-director] AiImageGenerator retornou', { tier: result.tier, assetUrl: result.assetUrl });
 
-      const artDirectorOutput: VisualSignatureArtDirectorOutput = {
-        creative_description: `Assinatura visual para ${input.storeName} (${input.segment})`,
-        suggested_colors: input.brandColor ? [input.brandColor] : [],
-        visual_direction: 'Personalizada',
-        elements_used: ['nome da loja'],
-      };
-
       if (result.tier === 'typographic') {
         console.log('[identity-art-director] typographic fallback detectado — lançando erro');
         throw new Error('identity_art_director_failed: Typographic fallback não é permitido para geração sem logo');
       }
+
+      let metadataArtDirectorOutput: VisualSignatureMetadataArtDirectorOutput | null = null;
+      if (result.aiResponseMessage) {
+        try {
+          const jsonMatch = result.aiResponseMessage.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.visual_direction && parsed.content_used) {
+              metadataArtDirectorOutput = {
+                visual_direction: parsed.visual_direction,
+                content_used: {
+                  store_name: parsed.content_used?.store_name ?? true,
+                  city: parsed.content_used?.city ?? false,
+                  state: parsed.content_used?.state ?? false,
+                  slogan: parsed.content_used?.slogan ?? false,
+                },
+                visual_elements: parsed.visual_elements,
+                intended_palette: parsed.intended_palette,
+                color_usage: parsed.color_usage,
+              };
+            }
+          }
+        } catch {
+          console.log('[identity-art-director] falha ao parsear JSON do response.message — usando fallback');
+        }
+      }
+
+      if (!metadataArtDirectorOutput) {
+        metadataArtDirectorOutput = {
+          visual_direction: 'Personalizada',
+          content_used: {
+            store_name: true,
+            city: false,
+            state: false,
+            slogan: false,
+          },
+        };
+      }
+
+      const artDirectorOutput: VisualSignatureArtDirectorOutput = {
+        creative_description: `Assinatura visual para ${input.storeName} (${input.segment})`,
+        suggested_colors: input.brandColor ? [input.brandColor] : [],
+        visual_direction: metadataArtDirectorOutput.visual_direction,
+        elements_used: ['nome da loja'],
+      };
 
       const tier = result.tier ?? 'image_direct';
       const signatureType = tier === 'image_direct' ? 'ai_generated' : 'automatic_generated';
@@ -110,6 +150,7 @@ INSTRUÇÕES OBRIGATÓRIAS PARA ESTA NOVA GERAÇÃO:
       return {
         signature,
         artDirectorOutput,
+        metadataArtDirectorOutput,
         assetUrl: result.assetUrl,
       };
     } catch (error) {

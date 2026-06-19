@@ -72,6 +72,7 @@ export type CascadeResult =
       mimeType: "image/png";
       prompt: string;
       metadata: VisualSignatureMetadata;
+      aiResponseMessage?: string;
     }
   | {
       tier: "typographic";
@@ -80,6 +81,7 @@ export type CascadeResult =
       mimeType: "image/svg+xml";
       prompt?: string;
       metadata?: VisualSignatureMetadata;
+      aiResponseMessage?: string;
     };
 
 export type GenerateVariationsResult =

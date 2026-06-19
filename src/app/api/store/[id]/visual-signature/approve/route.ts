@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase/server';
 import { BrandProfilerWithoutLogoService } from '@/lib/visual-signature/brand-profiler';
 import { updateGenerationEventDecision } from '@/lib/visual-signature/generation-events';
+import { reconcileProfiles } from '@/lib/brand-assets/profile-reconciliation';
+import { IDENTITY_TO_LOGO_STATUS } from '@/lib/constants';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -75,11 +77,12 @@ export async function POST(
     .eq('id', body.signatureId);
 
   const attempts = store.visual_signature_attempts ?? 0;
-  console.log(`[approve][req-${reqId}] 6/12 atualizando store (logo_status=generated, attempts=0)...`);
+  console.log(`[approve][req-${reqId}] 6/12 atualizando store (identity_state=visual_signature, logo_status=generated)...`);
   await supabase
     .from('stores')
     .update({
-      logo_status: 'generated',
+      identity_state: 'visual_signature',
+      logo_status: IDENTITY_TO_LOGO_STATUS['visual_signature'],
       visual_signature_attempts: 0,
       updated_at: new Date().toISOString(),
     })
@@ -117,25 +120,11 @@ export async function POST(
   if (existingProfile) {
     console.log(`[approve][req-${reqId}] 8b/12 found existing profile (${existingProfile.status}), reactivating`);
 
-    // CRITICAL: mark other synced profiles as outdated FIRST,
-    // before reactivating the target. The DB has a UNIQUE INDEX on
-    // (store_id) WHERE status = 'synced' — only one synced profile
-    // per store is allowed. Reactivating first would violate the index
-    // if another profile is already synced.
-    await supabase
-      .from('store_brand_profiles')
-      .update({ status: 'outdated', updated_at: new Date().toISOString() })
-      .eq('store_id', id)
-      .neq('id', existingProfile.id)
-      .eq('source', 'without_logo')
-      .eq('status', 'synced');
-
-    if (existingProfile.status !== 'synced') {
-      await supabase
-        .from('store_brand_profiles')
-        .update({ status: 'synced', updated_at: new Date().toISOString() })
-        .eq('id', existingProfile.id);
-    }
+    await reconcileProfiles(id, {
+      activateProfileIds: [existingProfile.id],
+      markIncompatibleAsOutdated: true,
+      outdatedSources: ['without_logo'],
+    });
 
     const sanitize = (v: string | null | undefined, fb: string): string =>
       v && /^#[0-9A-Fa-f]{6}$/.test(v) ? v.toUpperCase() : fb;
