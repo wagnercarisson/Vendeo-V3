@@ -51,6 +51,20 @@ export async function POST(
   }
   console.log(`[approve][req-${reqId}] store carregada:`, { name: store.name });
 
+  const inputSnapshot: VisualSignatureMetadataInputSnapshot = {
+    name: store.name,
+    segment: store.segment,
+    subsegment: store.subsegment,
+    tone_of_voice: store.tone_of_voice,
+    positioning: store.positioning,
+    short_description: store.short_description,
+    slogan: store.slogan,
+    city: store.city,
+    state: store.state,
+    brand_color: store.brand_color,
+    accent_color: null,
+  };
+
   console.log(`[approve][req-${reqId}] 3/12 carregando signature...`);
   const { data: signature, error: sigError } = await supabase
     .from('store_visual_signatures')
@@ -159,6 +173,25 @@ export async function POST(
       outdatedSources: ['without_logo'],
     });
 
+    const accentColor: string | null = existingProfile.brand_colors_chosen?.[1]
+      ?? existingProfile.safe_color_tokens?.accent
+      ?? existingProfile.inferred_accent_color
+      ?? null;
+
+    const existingMetadata = (existingProfile.metadata ?? {}) as Record<string, unknown>;
+    await supabase
+      .from('store_brand_profiles')
+      .update({
+        metadata: {
+          ...existingMetadata,
+          input_snapshot: {
+            ...inputSnapshot,
+            accent_color: accentColor,
+          },
+        },
+      })
+      .eq('id', existingProfile.id);
+
     const sanitize = (v: string | null | undefined, fb: string): string =>
       v && /^#[0-9A-Fa-f]{6}$/.test(v) ? v.toUpperCase() : fb;
 
@@ -214,6 +247,25 @@ export async function POST(
       id: result.profile.id,
       status: result.profile.status,
     };
+
+    const accentColor: string | null = result.profile.brand_colors_chosen?.[1]
+      ?? result.profile.safe_color_tokens?.accent
+      ?? result.profile.inferred_accent_color
+      ?? null;
+
+    const newMetadata = (result.profile.metadata ?? {}) as Record<string, unknown>;
+    await supabase
+      .from('store_brand_profiles')
+      .update({
+        metadata: {
+          ...newMetadata,
+          input_snapshot: {
+            ...inputSnapshot,
+            accent_color: accentColor,
+          },
+        },
+      })
+      .eq('id', result.profile.id);
 
     const sanitizeHex = (v: string | null | undefined, fb: string): string =>
       v && /^#[0-9A-Fa-f]{6}$/.test(v) ? v.toUpperCase() : fb;

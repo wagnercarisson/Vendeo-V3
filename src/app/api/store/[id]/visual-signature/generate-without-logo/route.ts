@@ -224,6 +224,7 @@ export async function POST(
         city: store.city,
         state: store.state,
         brand_color: store.brand_color,
+        accent_color: null,
       };
 
       await supabase
@@ -284,6 +285,7 @@ export async function POST(
       city: store.city,
       state: store.state,
       brand_color: store.brand_color,
+      accent_color: null,
     };
 
     await supabase

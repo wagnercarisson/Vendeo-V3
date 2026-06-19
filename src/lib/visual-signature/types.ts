@@ -158,6 +158,7 @@ export interface VisualSignatureMetadataInputSnapshot {
   city: string | null;
   state: string | null;
   brand_color: string | null;
+  accent_color: string | null;
 }
 
 export interface VisualSignatureMetadataArtDirectorOutput {

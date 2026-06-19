@@ -28,7 +28,7 @@ type ApprovalState =
   | { phase: "approving" }
   | { phase: "review"; signatures: ReviewSignature[]; canGenerate: boolean }
   | { phase: "exhausted"; signatures: ReviewSignature[] }
-  | { phase: "error"; message: string }
+  | { phase: "error"; message: string; drift?: { fields: string[]; reason: string; requires_regeneration: boolean } }
   | { phase: "done"; logoStatus: string; signatureUrl?: string; brandProfile?: unknown; inferredPrimaryColor?: string; inferredAccentColor?: string; logoColorsDetected?: string[] };
 
 interface VisualSignatureApprovalModalProps {
@@ -250,7 +250,11 @@ export function VisualSignatureApprovalModal({
       const data = await res.json();
 
       if (!res.ok) {
-        setState({ phase: "error", message: data.error || "Falha ao aprovar assinatura" });
+        setState({
+          phase: "error",
+          message: data.error || "Falha ao aprovar assinatura",
+          ...(data.drift ? { drift: data.drift } : {}),
+        });
         return;
       }
 
@@ -288,7 +292,11 @@ export function VisualSignatureApprovalModal({
       const data = await res.json();
 
       if (!res.ok) {
-        setState({ phase: "error", message: data.error || "Falha ao aprovar assinatura" });
+        setState({
+          phase: "error",
+          message: data.error || "Falha ao aprovar assinatura",
+          ...(data.drift ? { drift: data.drift } : {}),
+        });
         return;
       }
 
@@ -643,14 +651,14 @@ export function VisualSignatureApprovalModal({
                 onClick={handleRetry}
                 className="px-6 py-2.5 bg-accent-green text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200"
               >
-                Tentar novamente
+                {state.drift ? "Ajustar assinatura" : "Tentar novamente"}
               </button>
               <button
                 type="button"
                 onClick={handleContinueWithoutLogo}
                 className="px-6 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200"
               >
-                Continuar sem logo
+                {state.drift ? "Continuar sem assinatura" : "Continuar sem logo"}
               </button>
             </div>
           </div>
