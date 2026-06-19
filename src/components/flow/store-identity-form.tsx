@@ -157,9 +157,9 @@ export function StoreIdentityForm() {
               setField("brand_color", profile.safe_color_tokens.primary);
             }
             setAccentColor(
-              profile.brand_colors_chosen?.[1]
+              profile.inferred_accent_color
+              ?? profile.brand_colors_chosen?.[1]
               ?? profile.safe_color_tokens?.accent
-              ?? profile.inferred_accent_color
               ?? ''
             );
             setBrandColorsChosen(profile.brand_colors_chosen ?? []);
@@ -307,10 +307,10 @@ export function StoreIdentityForm() {
               if (profile.brand_colors_chosen[0]) {
                 setField("brand_color", profile.brand_colors_chosen[0]);
               }
-              if (profile.brand_colors_chosen[1]) {
-                setAccentColor(profile.brand_colors_chosen[1]);
-              } else if (profile.inferred_accent_color) {
+              if (profile.inferred_accent_color) {
                 setAccentColor(profile.inferred_accent_color);
+              } else if (profile.brand_colors_chosen[1]) {
+                setAccentColor(profile.brand_colors_chosen[1]);
               }
             } else if (profile.safe_color_tokens?.primary) {
               setField("brand_color", profile.safe_color_tokens.primary);
@@ -611,10 +611,10 @@ export function StoreIdentityForm() {
               if (profile.brand_colors_chosen[0]) {
                 setField("brand_color", profile.brand_colors_chosen[0]);
               }
-              if (profile.brand_colors_chosen[1]) {
-                setAccentColor(profile.brand_colors_chosen[1]);
-              } else if (profile.inferred_accent_color) {
+              if (profile.inferred_accent_color) {
                 setAccentColor(profile.inferred_accent_color);
+              } else if (profile.brand_colors_chosen[1]) {
+                setAccentColor(profile.brand_colors_chosen[1]);
               }
             } else if (profile.safe_color_tokens?.primary) {
               setField("brand_color", profile.safe_color_tokens.primary);
@@ -1306,7 +1306,7 @@ export function StoreIdentityForm() {
                           onClick={handleNoLogo}
                           className="flex-1 px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 flex items-center justify-center gap-2"
                         >
-                          Criar assinatura visual
+                          Gerenciar assinatura visual
                         </button>
                       </div>
                     ) : (
@@ -1660,10 +1660,10 @@ export function StoreIdentityForm() {
                     if (profile.brand_colors_chosen[0]) {
                       setField("brand_color", profile.brand_colors_chosen[0]);
                     }
-                    if (profile.brand_colors_chosen[1]) {
-                      setAccentColor(profile.brand_colors_chosen[1]);
-                    } else if (profile.inferred_accent_color) {
+                    if (profile.inferred_accent_color) {
                       setAccentColor(profile.inferred_accent_color);
+                    } else if (profile.brand_colors_chosen[1]) {
+                      setAccentColor(profile.brand_colors_chosen[1]);
                     }
                   } else if (profile.safe_color_tokens?.primary) {
                     setField("brand_color", profile.safe_color_tokens.primary);

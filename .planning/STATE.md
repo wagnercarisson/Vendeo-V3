@@ -4,7 +4,7 @@ milestone: v1.1
 milestone_name: AI + Rendering
 status: active
 stopped_at: Phase 4.6.4 — Visual Signature Lifecycle (5/5 plans — COMPLETE, verified at 2026-06-19). Próximo: Phase 4.6.x — State Transitions (Pending — 0 plans).
-last_updated: "2026-06-19T19:00:00.000Z"
+last_updated: "2026-06-19T22:00:00.000Z"
 progress:
   total_phases: 17
   completed_phases: 16
@@ -125,6 +125,11 @@ Key decisions (full: 10 decisions D1-D10 in OpenSpec design.md):
 | UI Alignment | realinhar: picker sobrescrito com cor inferida ao invés da escolhida pelo user (3 handlers) — corrigido priorizando brand_colors_chosen[0] | Resolved | 2026-06-17 |
 | UI Alignment | restore com drift: picker, preview e chips não hidratavam após restore — corrigido com hidratação de cores no onRestoreComplete e handleRetryBrandDirector | Resolved | 2026-06-17 |
 | Bug | history badge "Desatualizado" não aparecia para stores com campos alterados — causa: múltiplos profiles com mesmo active_logo_asset_id, .maybeSingle() sem .order() retornava profile errado | Resolved | 2026-06-17 |
+| UI Bug | VS approval modal — "Nenhuma agradou" ia direto para geração sem campo de feedback. Corrigido: abre textarea e passa rejectionContext | Resolved | 2026-06-19 |
+| UI Enhancement | Review/exhausted phases — adicionado badges (Ativa/Sincronizada/Precisa realinhar) com botão "Manter" para VS ativa | Resolved | 2026-06-19 |
+| Color Bug | accent color divergia após F5 — `brand_colors_chosen[1]` posicional vs `inferred_accent_color` semântico. Corrigido na persistência (brand-profiler.ts) e loading (store-identity-form.tsx) | Resolved | 2026-06-19 |
+| UX Cleanup | "Continuar sem logo" removido das fases review/exhausted. "Remover assinatura" condicional à existência de VS ativa. "Voltar" quando não há VS ativa | Resolved | 2026-06-19 |
+| UX | Botão "Criar assinatura visual" → "Gerenciar assinatura visual" — entrada única para criar/gerenciar VS, elimina necessidade de trigger separado de histórico | Resolved | 2026-06-19 |
 
 ### Pending Todos
 
@@ -151,8 +156,8 @@ Nenhum.
 
 ## Session Continuity
 
-Last session: 2026-06-19T19:00:00.000Z
-Stopped at: Phase 4.6.4 implementation complete — 5/5 plans executed, verified, and committed.
+Last session: 2026-06-19T22:00:00.000Z
+Stopped at: Phase 4.6.4 implementation complete — 5/5 plans executed, verified, and committed. Refinamentos pós-verificação: badges na modal, feedback antes de gerar nova versão, correção de cor de destaque, limpeza de links, rename botão para "Gerenciar assinatura visual".
 
 ## Next Phases
 

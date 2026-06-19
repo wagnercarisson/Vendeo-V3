@@ -29,9 +29,37 @@ Validate all changes across the Visual Signature Lifecycle phase through automat
 - Remover calls DELETE and transitions UI to text_only
 - All components conditionally render based on identity_state
 
+### Task 4: Refinements (2026-06-19 Post-Verification)
+- **Review phase feedback:** "Nenhuma agradou, gerar nova versão" now opens feedback textarea before generating (was going directly to generation). Feedback is passed as rejectionContext to the director.
+- **Badge system:** Review and exhausted phases now show badges: "Ativa" (green) on active signature, "Sincronizada" (gray) on archived with ok restore eligibility, "Precisa realinhar" (amber) on archived with critical drift. Botão "Manter" for active, "Aprovar" for archived.
+- **Color consistency fix (brand-profiler.ts):** `brand_colors_chosen` now prioritizes `inferred_primary_color` and `inferred_accent_color` over positional palette slice. Loading logic in store-identity-form.tsx also prefers `inferred_accent_color` over `brand_colors_chosen[1]` for backward compatibility with existing profiles.
+- **Link cleanup:** "Continuar sem logo" removed from review/exhausted phases. "Remover assinatura" replaces it when active signature exists; "Voltar" when no active signature.
+- **Button rename:** "Criar assinatura visual" → "Gerenciar assinatura visual" — single entry point for both creation and management, eliminating need for separate history modal trigger.
+
+### Task 5: Manual GUI Verification (9/11 scenarios)
+| # | Scenario | Status |
+|---|----------|--------|
+| 1 | identity_state='visual_signature': preview, Alterar/Remover, drop zone hidden | ✅ |
+| 2 | identity_state='text_only': drop zone visible, color pickers, "Assinaturas anteriores" | ✅ |
+| 3 | identity_state='logo': logo preview, Remover, drop zone hidden | ✅ |
+| 4 | Color changes with VS active — no drift warning | ✅ |
+| 5 | Remover → DELETE → UI transitions to text_only | ✅ |
+| 6 | Alterar → generate → approve → swap signatures | ✅ |
+| 7 | Alterar → close without approve → original remains active | ✅ |
+| 8 | Badges in review/exhausted — Ativa/Sincronizada/Precisa realinhar | ✅ |
+| 9 | Remover/Voltar context-sensitive link in exhausted phase | ✅ |
+| 10 | RejectionContext → feedback → generate passes to director | ✅ |
+| 11 | Reject without feedback → default "sem feedback específico" | ✅ |
+
+### Task 6: Automated API Tests
+- `.scripts/test-4.6.4-api.mjs` — **45/45 passed, 0 failures**
+- Covers: approve, delete, get history, restore (no drift, drift, missing_metadata), logo gates, logo restore gates
+
 ## Quality Gate
 - All automated checks pass (typecheck, lint, build)
 - All types match design.md specifications
 - All API contracts follow CONTEXT.md decisions D01-D10
 - Centralized drift-validator.ts used by both GET history and POST restore
 - Centralized reconcileProfiles() used by all profile transitions
+- All 11 UI scenarios verified manually
+- 45/45 API assertions pass

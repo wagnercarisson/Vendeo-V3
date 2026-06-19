@@ -4,10 +4,20 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { AlertCircle, CheckCircle2, Loader2, X, ThumbsUp, ThumbsDown } from "lucide-react";
 import type { VisualSignatureArtDirectorOutput } from "@/lib/visual-signature/types";
 
+interface RestoreEligibilityInfo {
+  can_restore: boolean;
+  drift_fields: string[];
+  requires_regeneration: boolean;
+  reason: 'ok' | 'critical_drift' | 'missing_metadata';
+}
+
 interface ReviewSignature {
   id: string;
   assetUrl: string;
   attempt: number;
+  status?: string;
+  restore_eligibility?: RestoreEligibilityInfo;
+  approved_at?: string | null;
 }
 
 type ApprovalState =
@@ -67,6 +77,8 @@ export function VisualSignatureApprovalModal({
   const [state, setState] = useState<ApprovalState>({ phase: "checking" });
   const [feedbackText, setFeedbackText] = useState("");
   const [storedRejectionContext, setStoredRejectionContext] = useState<{ reason: string; attempt: number } | null>(null);
+  const [reviewFeedbackText, setReviewFeedbackText] = useState("");
+  const [showReviewFeedback, setShowReviewFeedback] = useState(false);
   const isGeneratingRef = useRef(false);
   const requestSeqRef = useRef(0);
 
@@ -105,13 +117,15 @@ export function VisualSignatureApprovalModal({
       console.log(`[VisualSignatureApprovalModal][req-${reqId}] response body parsed`, data);
 
       if (!res.ok) {
-        if (data.exhausted) {
-          const signatures = (data.signatures ?? []).map((s: { id: string; asset_url?: string; assetUrl?: string }, i: number) => ({
-            id: s.id,
-            assetUrl: s.assetUrl || s.asset_url || "",
-            attempt: i + 1,
-          }));
-          setState({ phase: "exhausted", signatures });
+          if (data.exhausted) {
+            const signatures = (data.signatures ?? []).map((s: { id: string; asset_url?: string; assetUrl?: string; status?: string; restore_eligibility?: RestoreEligibilityInfo }, i: number) => ({
+              id: s.id,
+              assetUrl: s.assetUrl || s.asset_url || "",
+              attempt: i + 1,
+              status: s.status,
+              restore_eligibility: s.restore_eligibility,
+            }));
+            setState({ phase: "exhausted", signatures });
           return;
         }
         setState({ phase: "error", message: data.error || "Falha ao gerar assinatura" });
@@ -224,10 +238,12 @@ export function VisualSignatureApprovalModal({
       .then(res => res.json())
       .then(data => {
         const sigs = data?.signatures ?? [];
-        const existingSigs: ReviewSignature[] = (sigs ?? []).map((s: { id: string; asset_url?: string; assetUrl?: string }, i: number) => ({
+        const existingSigs: ReviewSignature[] = (sigs ?? []).map((s: { id: string; asset_url?: string; assetUrl?: string; status?: string; restore_eligibility?: RestoreEligibilityInfo }, i: number) => ({
           id: s.id,
           assetUrl: s.assetUrl || s.asset_url || "",
           attempt: i + 1,
+          status: s.status,
+          restore_eligibility: s.restore_eligibility,
         }));
         setState({ phase: "review", signatures: existingSigs, canGenerate: true });
       })
@@ -450,6 +466,7 @@ export function VisualSignatureApprovalModal({
 
       case "review": {
         const { signatures, canGenerate } = state;
+        const hasActive = signatures.some(s => s.status === "active");
         return (
           <div className="space-y-6">
             <div className="flex items-center gap-2">
@@ -459,55 +476,104 @@ export function VisualSignatureApprovalModal({
             </div>
 
             <div className="grid grid-cols-3 gap-3">
-              {signatures.map((sig, i) => (
-                <div key={sig.id} className="space-y-2">
-                  <div className="aspect-square rounded-lg overflow-hidden bg-bg-elevated border border-border-light">
-                    <img src={sig.assetUrl} alt={`Versão ${i + 1}`} className="w-full h-full object-contain" />
+              {signatures.map((sig, i) => {
+                const isActive = sig.status === "active";
+                const syncOk = !isActive && sig.restore_eligibility?.reason === "ok";
+                const needsRealign = !isActive && (sig.restore_eligibility?.reason === "critical_drift" || sig.restore_eligibility?.reason === "missing_metadata");
+                let badgeLabel = "";
+                let badgeClass = "";
+                if (isActive) { badgeLabel = "Ativa"; badgeClass = "bg-accent-green text-white"; }
+                else if (syncOk) { badgeLabel = "Sincronizada"; badgeClass = "bg-bg-hover text-text-secondary"; }
+                else if (needsRealign) { badgeLabel = "Precisa realinhar"; badgeClass = "bg-accent-amber text-white"; }
+                return (
+                  <div key={sig.id} className="space-y-2">
+                    <div className="aspect-square rounded-lg overflow-hidden bg-bg-elevated border border-border-light relative">
+                      {badgeLabel && (
+                        <span className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[10px] font-heading font-semibold rounded ${badgeClass} leading-tight`}>
+                          {badgeLabel}
+                        </span>
+                      )}
+                      <img src={sig.assetUrl} alt={`Versão ${i + 1}`} className="w-full h-full object-contain" />
+                    </div>
+                    <span className="block text-center text-xs text-text-muted font-body">Versão {i + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleApproveExhausted(sig.id)}
+                      className="w-full px-2 py-1.5 bg-accent-green text-white font-heading font-semibold text-xs rounded-lg hover:brightness-110 transition-all duration-200"
+                    >
+                      {isActive ? "Manter" : "Aprovar"}
+                    </button>
                   </div>
-                  <span className="block text-center text-xs text-text-muted font-body">Versão {i + 1}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleApproveExhausted(sig.id)}
-                    className="w-full px-2 py-1.5 bg-accent-green text-white font-heading font-semibold text-xs rounded-lg hover:brightness-110 transition-all duration-200"
-                  >
-                    Aprovar
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="flex flex-col gap-3">
-              {canGenerate && (
+              {canGenerate && !showReviewFeedback && (
                 <button
                   type="button"
-                  onClick={() => {
-                    generate(storedRejectionContext ?? undefined);
-                    setStoredRejectionContext(null);
-                  }}
+                  onClick={() => setShowReviewFeedback(true)}
                   className="w-full px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 flex items-center justify-center gap-2"
                 >
                   <ThumbsDown className="w-4 h-4" />
                   Nenhuma agradou, gerar nova versão
                 </button>
               )}
-              <div className="text-center space-y-2">
-                <button
-                  type="button"
-                  onClick={handleContinueWithoutLogo}
-                  className="text-text-muted hover:text-text-primary text-xs font-body underline transition-colors duration-200"
-                >
-                  Continuar sem logo
-                </button>
-                {onRemove && (
+              {canGenerate && showReviewFeedback && (
+                <div className="space-y-3">
                   <div>
+                    <p className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2">
+                      O que você quer diferente? <span className="font-normal normal-case tracking-normal text-text-disabled">(opcional)</span>
+                    </p>
+                    <textarea
+                      value={reviewFeedbackText}
+                      onChange={(e) => setReviewFeedbackText(e.target.value)}
+                      placeholder="Ex: A cor não combina, a tipografia poderia ser mais moderna..."
+                      rows={3}
+                      className="w-full bg-bg-surface border border-border-light rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 resize-none"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const reason = reviewFeedbackText || "sem feedback específico";
+                      setStoredRejectionContext({ reason, attempt: signatures.length });
+                      generate({ reason, attempt: signatures.length });
+                      setShowReviewFeedback(false);
+                      setReviewFeedbackText("");
+                    }}
+                    className="w-full px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200"
+                  >
+                    Gerar nova versão
+                  </button>
+                  <div className="text-center">
                     <button
                       type="button"
-                      onClick={() => { onRemove(); onClose(); }}
-                      className="text-accent-red hover:text-accent-red/80 text-xs font-body underline transition-colors duration-200"
+                      onClick={() => { setShowReviewFeedback(false); setReviewFeedbackText(""); }}
+                      className="text-text-muted hover:text-text-primary text-xs font-body underline transition-colors duration-200"
                     >
-                      Remover assinatura
+                      Voltar
                     </button>
                   </div>
+                </div>
+              )}
+              <div className="text-center">
+                {hasActive && onRemove ? (
+                  <button
+                    type="button"
+                    onClick={() => { onRemove(); onClose(); }}
+                    className="text-accent-red hover:text-accent-red/80 text-xs font-body underline transition-colors duration-200"
+                  >
+                    Remover assinatura
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="text-text-muted hover:text-text-primary text-xs font-body underline transition-colors duration-200"
+                  >
+                    Voltar
+                  </button>
                 )}
               </div>
             </div>
@@ -516,6 +582,7 @@ export function VisualSignatureApprovalModal({
       }
 
       case "exhausted": {
+        const hasActive = state.signatures.some(s => s.status === "active");
         return (
           <div className="space-y-6">
             <div className="flex items-center gap-2">
@@ -526,31 +593,56 @@ export function VisualSignatureApprovalModal({
             </div>
 
             <div className="grid grid-cols-3 gap-3">
-              {state.signatures.map((sig, i) => (
-                <div key={sig.id} className="space-y-2">
-                  <div className="aspect-square rounded-lg overflow-hidden bg-bg-elevated border border-border-light">
-                    <img src={sig.assetUrl} alt={`Versão ${i + 1}`} className="w-full h-full object-contain" />
+              {state.signatures.map((sig, i) => {
+                const isActive = sig.status === "active";
+                const syncOk = !isActive && sig.restore_eligibility?.reason === "ok";
+                const needsRealign = !isActive && (sig.restore_eligibility?.reason === "critical_drift" || sig.restore_eligibility?.reason === "missing_metadata");
+                let badgeLabel = "";
+                let badgeClass = "";
+                if (isActive) { badgeLabel = "Ativa"; badgeClass = "bg-accent-green text-white"; }
+                else if (syncOk) { badgeLabel = "Sincronizada"; badgeClass = "bg-bg-hover text-text-secondary"; }
+                else if (needsRealign) { badgeLabel = "Precisa realinhar"; badgeClass = "bg-accent-amber text-white"; }
+                return (
+                  <div key={sig.id} className="space-y-2">
+                    <div className="aspect-square rounded-lg overflow-hidden bg-bg-elevated border border-border-light relative">
+                      {badgeLabel && (
+                        <span className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[10px] font-heading font-semibold rounded ${badgeClass} leading-tight`}>
+                          {badgeLabel}
+                        </span>
+                      )}
+                      <img src={sig.assetUrl} alt={`Versão ${i + 1}`} className="w-full h-full object-contain" />
+                    </div>
+                    <span className="block text-center text-xs text-text-muted font-body">Versão {i + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleApproveExhausted(sig.id)}
+                      className="w-full px-2 py-1.5 bg-accent-green text-white font-heading font-semibold text-xs rounded-lg hover:brightness-110 transition-all duration-200"
+                    >
+                      {isActive ? "Manter" : "Aprovar"}
+                    </button>
                   </div>
-                  <span className="block text-center text-xs text-text-muted font-body">Versão {i + 1}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleApproveExhausted(sig.id)}
-                    className="w-full px-2 py-1.5 bg-accent-green text-white font-heading font-semibold text-xs rounded-lg hover:brightness-110 transition-all duration-200"
-                  >
-                    Aprovar
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="text-center">
-              <button
-                type="button"
-                onClick={handleContinueWithoutLogo}
-                className="text-text-muted hover:text-text-primary text-xs font-body underline transition-colors duration-200"
-              >
-                Continuar sem logo
-              </button>
+              {hasActive && onRemove ? (
+                <button
+                  type="button"
+                  onClick={() => { onRemove(); onClose(); }}
+                  className="text-accent-red hover:text-accent-red/80 text-xs font-body underline transition-colors duration-200"
+                >
+                  Remover assinatura
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="text-text-muted hover:text-text-primary text-xs font-body underline transition-colors duration-200"
+                >
+                  Voltar
+                </button>
+              )}
             </div>
           </div>
         );

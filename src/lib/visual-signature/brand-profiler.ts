@@ -377,7 +377,7 @@ export class BrandProfilerWithoutLogoService {
       active_logo_asset_id: null,
       visual_signature_id: input.visualSignatureId,
       logo_colors_detected: palette,
-      brand_colors_chosen: palette.slice(0, 3),
+      brand_colors_chosen: [safePrimary, safeAccent, ...palette.filter(c => c !== safePrimary && c !== safeAccent)].slice(0, 3),
       safe_color_tokens: safeTokens,
       visual_style: result.visual_style,
       visual_tone: result.visual_tone,
@@ -457,7 +457,7 @@ export class BrandProfilerWithoutLogoService {
       active_logo_asset_id: null,
       visual_signature_id: input.visualSignatureId,
       logo_colors_detected: finalPalette,
-      brand_colors_chosen: finalPalette.slice(0, 3),
+      brand_colors_chosen: [primary, accent, ...finalPalette.filter(c => c !== primary && c !== accent)].slice(0, 3),
       safe_color_tokens: {
         primary,
         secondary: '#999999',
