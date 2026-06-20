@@ -180,10 +180,14 @@ export async function POST(
       outdatedSources: ['without_logo'],
     });
 
-    const accentColor: string | null = existingProfile.brand_colors_chosen?.[1]
-      ?? existingProfile.safe_color_tokens?.accent
-      ?? existingProfile.inferred_accent_color
-      ?? null;
+    const sanitize = (v: string | null | undefined, fb: string): string =>
+      v && /^#[0-9A-Fa-f]{6}$/.test(v) ? v.toUpperCase() : fb;
+
+    const pColor = sanitize(existingProfile.inferred_primary_color, '#666666');
+    const aColor = sanitize(existingProfile.inferred_accent_color, '#999999');
+    const detected = (existingProfile.logo_colors_detected ?? [])
+      .filter((c: string) => /^#[0-9A-Fa-f]{6}$/.test(c))
+      .map((c: string) => c.toUpperCase());
 
     const existingMetadata = (existingProfile.metadata ?? {}) as Record<string, unknown>;
     await supabase
@@ -193,21 +197,13 @@ export async function POST(
           ...existingMetadata,
           input_snapshot: {
             ...inputSnapshot,
-            accent_color: accentColor,
+            brand_color: pColor,
+            accent_color: aColor,
           },
           content_used: contentUsed,
         },
       })
       .eq('id', existingProfile.id);
-
-    const sanitize = (v: string | null | undefined, fb: string): string =>
-      v && /^#[0-9A-Fa-f]{6}$/.test(v) ? v.toUpperCase() : fb;
-
-    const pColor = sanitize(existingProfile.inferred_primary_color, '#666666');
-    const aColor = sanitize(existingProfile.inferred_accent_color, '#999999');
-    const detected = (existingProfile.logo_colors_detected ?? [])
-      .filter((c: string) => /^#[0-9A-Fa-f]{6}$/.test(c))
-      .map((c: string) => c.toUpperCase());
 
     console.log(`[approve][req-${reqId}] 9/12 returning reused profile`);
     return NextResponse.json({
@@ -222,6 +218,16 @@ export async function POST(
       inferredAccentColor: aColor,
       logoColorsDetected: detected.length > 0 ? detected : [pColor],
       logoStatus: 'generated',
+      brandProfileData: {
+        safe_color_tokens: existingProfile.safe_color_tokens,
+        visual_style: existingProfile.visual_style,
+        visual_tone: existingProfile.visual_tone,
+        brand_personality: existingProfile.brand_personality,
+        brand_colors_chosen: existingProfile.brand_colors_chosen,
+        inferred_primary_color: existingProfile.inferred_primary_color,
+        inferred_accent_color: existingProfile.inferred_accent_color,
+        metadata: existingProfile.metadata,
+      },
     });
   }
 
@@ -256,6 +262,12 @@ export async function POST(
       status: result.profile.status,
     };
 
+    const sanitizeHex = (v: string | null | undefined, fb: string): string =>
+      v && /^#[0-9A-Fa-f]{6}$/.test(v) ? v.toUpperCase() : fb;
+
+    inferredPrimaryColor = sanitizeHex(result.profile.inferred_primary_color, '#666666');
+    inferredAccentColor = sanitizeHex(result.profile.inferred_accent_color, '#999999');
+
     const accentColor: string | null = result.profile.brand_colors_chosen?.[1]
       ?? result.profile.safe_color_tokens?.accent
       ?? result.profile.inferred_accent_color
@@ -269,18 +281,13 @@ export async function POST(
           ...newMetadata,
           input_snapshot: {
             ...inputSnapshot,
+            brand_color: inferredPrimaryColor,
             accent_color: accentColor,
           },
           content_used: contentUsed,
         },
       })
       .eq('id', result.profile.id);
-
-    const sanitizeHex = (v: string | null | undefined, fb: string): string =>
-      v && /^#[0-9A-Fa-f]{6}$/.test(v) ? v.toUpperCase() : fb;
-
-    inferredPrimaryColor = sanitizeHex(result.profile.inferred_primary_color, '#666666');
-    inferredAccentColor = sanitizeHex(result.profile.inferred_accent_color, '#999999');
     const logoColorsDetected = (result.profile.logo_colors_detected ?? [])
       .filter((c: string) => /^#[0-9A-Fa-f]{6}$/.test(c))
       .map((c: string) => c.toUpperCase());
@@ -298,6 +305,16 @@ export async function POST(
       inferredAccentColor,
       logoColorsDetected,
       logoStatus: 'generated',
+      brandProfileData: {
+        safe_color_tokens: result.profile.safe_color_tokens,
+        visual_style: result.profile.visual_style,
+        visual_tone: result.profile.visual_tone,
+        brand_personality: result.profile.brand_personality,
+        brand_colors_chosen: result.profile.brand_colors_chosen,
+        inferred_primary_color: result.profile.inferred_primary_color,
+        inferred_accent_color: result.profile.inferred_accent_color,
+        metadata: result.profile.metadata,
+      },
     });
   } catch (err) {
     console.error(`[approve][req-${reqId}] 12/12 BrandProfiler FAILED`, err);
@@ -324,6 +341,7 @@ export async function POST(
       inferredAccentColor,
       logoColorsDetected,
       logoStatus: 'generated',
+      brandProfileData: null,
     });
   }
 }

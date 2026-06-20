@@ -424,6 +424,16 @@ export function StoreIdentityForm() {
     inferredPrimaryColor?: string;
     inferredAccentColor?: string;
     logoColorsDetected?: string[];
+    brandProfileData?: {
+      safe_color_tokens?: Record<string, string>;
+      visual_style?: string;
+      visual_tone?: string;
+      brand_personality?: string;
+      brand_colors_chosen?: string[];
+      inferred_primary_color?: string;
+      inferred_accent_color?: string;
+      metadata?: Record<string, unknown>;
+    } | null;
   }) => {
     setLogoStatus(result.logoStatus);
     setIdentityState('visual_signature');
@@ -442,27 +452,20 @@ export function StoreIdentityForm() {
     if (result.logoColorsDetected) {
       setDetectedColors(result.logoColorsDetected);
     }
-    if (storeId) {
-      fetch(`/api/store/${storeId}/brand-profile`)
-        .then(res => res.json())
-        .then(profile => {
-          if (profile?.status === 'synced') {
-            setInferredProfile({
-              safe_color_tokens: profile.safe_color_tokens,
-              visual_style: profile.visual_style,
-              visual_tone: profile.visual_tone,
-              brand_personality: profile.brand_personality,
-              brand_colors_chosen: profile.brand_colors_chosen,
-              inferred_primary_color: profile.inferred_primary_color,
-              inferred_accent_color: profile.inferred_accent_color,
-              metadata: profile.metadata,
-            });
-          }
-        })
-        .catch(() => {});
+    if (result.brandProfileData) {
+      setInferredProfile({
+        safe_color_tokens: result.brandProfileData.safe_color_tokens,
+        visual_style: result.brandProfileData.visual_style,
+        visual_tone: result.brandProfileData.visual_tone,
+        brand_personality: result.brandProfileData.brand_personality,
+        brand_colors_chosen: result.brandProfileData.brand_colors_chosen,
+        inferred_primary_color: result.brandProfileData.inferred_primary_color,
+        inferred_accent_color: result.brandProfileData.inferred_accent_color,
+        metadata: result.brandProfileData.metadata,
+      });
     }
     setShowApprovalModal(false);
-  }, [setField, formData.brand_color, storeId, setIdentityState, setInferredProfile]);
+  }, [setField, formData.brand_color, setIdentityState, setInferredProfile]);
 
   useEffect(() => {
     if (isLoading || !storeId) return;

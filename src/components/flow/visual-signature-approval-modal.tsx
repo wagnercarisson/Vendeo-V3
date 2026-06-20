@@ -53,6 +53,16 @@ interface VisualSignatureApprovalModalProps {
     inferredPrimaryColor?: string;
     inferredAccentColor?: string;
     logoColorsDetected?: string[];
+    brandProfileData?: {
+      safe_color_tokens?: Record<string, string>;
+      visual_style?: string;
+      visual_tone?: string;
+      brand_personality?: string;
+      brand_colors_chosen?: string[];
+      inferred_primary_color?: string;
+      inferred_accent_color?: string;
+      metadata?: Record<string, unknown>;
+    } | null;
   }) => void;
   onRemove?: () => void;
 }
@@ -286,7 +296,8 @@ export function VisualSignatureApprovalModal({
         signatureUrl: data.signature.assetUrl,
         inferredPrimaryColor: data.inferredPrimaryColor,
         inferredAccentColor: data.inferredAccentColor,
-        logoColorsDetected: data.logoColorsDetected
+        logoColorsDetected: data.logoColorsDetected,
+        brandProfileData: data.brandProfileData,
       });
     } catch {
       setState({ phase: "error", message: "Erro de conexão. Tente novamente." });
@@ -328,7 +339,8 @@ export function VisualSignatureApprovalModal({
         signatureUrl: data.signature.assetUrl,
         inferredPrimaryColor: data.inferredPrimaryColor,
         inferredAccentColor: data.inferredAccentColor,
-        logoColorsDetected: data.logoColorsDetected
+        logoColorsDetected: data.logoColorsDetected,
+        brandProfileData: data.brandProfileData,
       });
     } catch {
       setState({ phase: "error", message: "Erro de conexão. Tente novamente." });
