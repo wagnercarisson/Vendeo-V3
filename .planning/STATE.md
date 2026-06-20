@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI + Rendering
 status: active
-stopped_at: Phase 4.6.4 — Visual Signature Lifecycle (5/5 plans — COMPLETE, verified at 2026-06-19). Próximo: Phase 4.6.x — State Transitions (Pending — 0 plans).
-last_updated: "2026-06-19T22:00:00.000Z"
+stopped_at: Phase 4.6.4 — Visual Signature Lifecycle (5/5 plans — UAT COMPLETE, 12/12 passed, 0 issues). Próximo: Phase 4.6.x — State Transitions (Pending — 0 plans).
+last_updated: "2026-06-19T23:45:00.000Z"
 progress:
   total_phases: 17
   completed_phases: 16
@@ -43,10 +43,10 @@ Progress: [██████████████] 89% (68/76 plans — 8 pe
 
 **Velocity:**
 
-- Phases completed: 14
-- Plans completed: 62
+- Phases completed: 16
+- Plans completed: 68
 - Tasks completed: (tracked per plan)
-- Timeline: 2026-05-24 → 2026-06-16
+- Timeline: 2026-05-24 → 2026-06-19
 
 ## Accumulated Context
 
@@ -130,6 +130,9 @@ Key decisions (full: 10 decisions D1-D10 in OpenSpec design.md):
 | Color Bug | accent color divergia após F5 — `brand_colors_chosen[1]` posicional vs `inferred_accent_color` semântico. Corrigido na persistência (brand-profiler.ts) e loading (store-identity-form.tsx) | Resolved | 2026-06-19 |
 | UX Cleanup | "Continuar sem logo" removido das fases review/exhausted. "Remover assinatura" condicional à existência de VS ativa. "Voltar" quando não há VS ativa | Resolved | 2026-06-19 |
 | UX | Botão "Criar assinatura visual" → "Gerenciar assinatura visual" — entrada única para criar/gerenciar VS, elimina necessidade de trigger separado de histórico | Resolved | 2026-06-19 |
+| Bug | VS restore sem drift detection — approve endpoint não validava drift para archived signatures. Retry path perdia content_used | Resolved | 2026-06-19 |
+| Bug | Falso drift após primeira aprovação de VS — input_snapshot.brand_color usava store.brand_color pré-sincronização em vez do inferredPrimaryColor | Resolved | 2026-06-19 |
+| Bug | Race condition — handleApprovalComplete fazia fetch assíncrono do brand profile, criando janela de falso drift entre driftStore (atualizado) e driftProfile (stale) | Resolved | 2026-06-19 |
 
 ### Pending Todos
 
@@ -156,8 +159,8 @@ Nenhum.
 
 ## Session Continuity
 
-Last session: 2026-06-19T22:00:00.000Z
-Stopped at: Phase 4.6.4 implementation complete — 5/5 plans executed, verified, and committed. Refinamentos pós-verificação: badges na modal, feedback antes de gerar nova versão, correção de cor de destaque, limpeza de links, rename botão para "Gerenciar assinatura visual".
+Last session: 2026-06-19T23:45:00.000Z
+Stopped at: Phase 4.6.4 UAT complete — 12/12 passed, 0 issues. Fixes aplicados durante UAT: (1) VS restore drift detection — validateDrift adicionado no approve endpoint, content_used preservado no retry path. (2) Falso drift após primeira aprovação — brand_color no input_snapshot agora usa inferredPrimaryColor. (3) Race condition no handleApprovalComplete eliminada — brandProfileData síncrono via approve response, sem fetch extra. Próximo: Phase 4.6.x — State Transitions.
 
 ## Next Phases
 
