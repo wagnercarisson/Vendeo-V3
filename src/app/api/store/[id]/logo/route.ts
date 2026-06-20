@@ -312,7 +312,7 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
         await reconcileProfiles(storeId, {
           activateProfileIds: [profile.id],
           markIncompatibleAsOutdated: true,
-          outdatedSources: ['without_logo'],
+          outdatedSources: ['without_logo', 'text_only'],
         });
       }
 

@@ -138,7 +138,7 @@ export async function POST(
       await reconcileProfiles(storeId, {
         activateProfileIds: [profileRecord.id],
         markIncompatibleAsOutdated: true,
-        outdatedSources: ['logo_analysis'],
+        outdatedSources: ['without_logo', 'text_only'],
       });
     }
 
@@ -248,7 +248,7 @@ export async function POST(
       await reconcileProfiles(storeId, {
         activateProfileIds: [newProfile.id],
         markIncompatibleAsOutdated: true,
-        outdatedSources: ['without_logo'],
+        outdatedSources: ['without_logo', 'text_only'],
       });
     }
 

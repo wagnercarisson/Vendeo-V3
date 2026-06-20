@@ -177,7 +177,6 @@ export async function POST(
     await reconcileProfiles(id, {
       activateProfileIds: [existingProfile.id],
       markIncompatibleAsOutdated: true,
-      outdatedSources: ['without_logo'],
     });
 
     const sanitize = (v: string | null | undefined, fb: string): string =>
