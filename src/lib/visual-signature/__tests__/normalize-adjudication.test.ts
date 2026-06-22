@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { normalizeAdjudication, normalizeIntendedPalette, VisionAdjudicationError } from '../types';
 import type { ColorCluster } from '@/lib/brand-assets/types';
+import { hexToLab } from '@/lib/brand-assets/color-probe';
 
 function makeCluster(hex: string, classification: ColorCluster['classification'] = 'dominant'): ColorCluster {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -9,7 +10,7 @@ function makeCluster(hex: string, classification: ColorCluster['classification']
   return {
     hex,
     rgb: [r, g, b],
-    lab: [50, 0, 0],
+    lab: hexToLab(hex),
     frequency: 0.1,
     luminance: 0.3,
     saturation: 0.5,
@@ -76,12 +77,15 @@ describe('normalizeAdjudication', () => {
         reason: 'Test',
       },
       fallback,
-      ['accent'], // only accent is contested, primary is not
+      [], // no contested roles — all are confirmed
       [],
       nonArtifactClusters
     );
-    // Primary should remain from fallback since it's not contested
+    // Primary should remain from fallback since it's not contested,
+    // regardless of what vision says
     expect(result.palette.primary).toBe('#22C55E');
+    expect(result.palette.accent).toBe('#1E40AF');
+    expect(result.palette.background).toBe('#0F172A');
   });
 
   it('invalid support index filtered — ignored, not failed', () => {
@@ -96,6 +100,22 @@ describe('normalizeAdjudication', () => {
       nonArtifactClusters
     );
     expect(result.palette.support).toEqual(['#3B82F6', '#FF6600']);
+  });
+
+  it('10.4 support cobertura total — every contested index has matching correction', () => {
+    const result = normalizeAdjudication(
+      {
+        corrections: { primary: null, accent: null, background: null, support: [{ index: 1, color: '#CC5500' }] },
+        reason: 'Corrigido',
+      },
+      fallback,
+      [],
+      [1],
+      [...nonArtifactClusters, makeCluster('#CC5500')]
+    );
+    expect(result.palette.support[0]).toBe('#3B82F6');
+    expect(result.palette.support[1]).toBe('#CC5500');
+    expect(result.reason).toBe('Corrigido');
   });
 
   it('missing correction for contested support index throws no_choice', () => {
