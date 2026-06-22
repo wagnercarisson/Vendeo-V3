@@ -264,7 +264,53 @@ describe('POST /api/store/[id]/visual-signature/approve', () => {
     expect(body.brandProfileData).toBeNull();
   });
 
-  it('12.11 — drift error message is descriptive', async () => {
+  it('12.11 — intendedPalette null → profiler called with null', async () => {
+    const sigNoPalette = {
+      ...mockSignature,
+      metadata: {
+        artDirectorOutput: {
+          creative_description: 'Test',
+          suggested_colors: ['#22C55E'],
+          visual_direction: 'Modern',
+          elements_used: ['store_name'],
+          content_used: { store_name: true, city: false, state: false, slogan: false },
+        },
+      },
+    };
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: sigNoPalette, error: null });
+      if (table === 'store_brand_profiles') return makeChain({ data: [], error: null });
+      return makeChain({ data: null, error: null });
+    });
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(200);
+    expect(mockBrandProfilerGenerate).toHaveBeenCalledWith(
+      expect.objectContaining({ intendedPalette: null })
+    );
+  });
+
+  it('12.12 — profile reuses when existing synced profile found', async () => {
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: mockSignature, error: null });
+      if (table === 'store_brand_profiles') return makeChain({ data: [mockProfile], error: null });
+      return makeChain({ data: null, error: null });
+    });
+    mockReconcileProfiles.mockResolvedValue({
+      activatedProfiles: ['profile-001'], outdatedProfiles: [], preservedFallback: false,
+    });
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.brandProfile.id).toBe('profile-001');
+    expect(mockBrandProfilerGenerate).not.toHaveBeenCalled();
+    expect(mockReconcileProfiles).toHaveBeenCalledWith(STORE_ID, expect.objectContaining({ activateProfileIds: ['profile-001'] }));
+  });
+
+  it('12.13 — drift error message is descriptive', async () => {
     const archivedSig = {
       ...mockSignature,
       status: 'archived',

@@ -536,22 +536,132 @@ function colorValidation(profile: BrandProfileRecord): ColorValidationResolved {
     });
   });
 
-  describe('11.18 — observed_colors selection', () => {
-    it('observed_colors selection works within limits', async () => {
-      const intended = makeIntended();
-      // Only background (#0F172A) is NOT in clusters → contested
+  describe('11.11 — background by edgeRatio', () => {
+    it('cluster com maior edgeRatio vira background na fallback', async () => {
+      // No intendedPalette, valid probe clusters with no background classification
       const clusters = [
-        makeCluster('#22C55E', 'dominant', 0.3),
-        makeCluster('#1E40AF', 'dominant', 0.2),
-        makeCluster('#3B82F6', 'dominant', 0.1),
+        makeCluster('#22C55E', 'dominant', 0.3, 0.02),
+        makeCluster('#1E40AF', 'dominant', 0.2, 0.01),
+        makeCluster('#0F172A', 'dominant', 0.1, 0.15),
       ];
 
       mockProbeColors.mockResolvedValue(makeProbeResult(clusters));
       smartProbeMock(clusters);
       mockOpenAICreate.mockResolvedValue({
         choices: [{ message: { content: JSON.stringify({
-          corrections: { primary: null, accent: null, background: '#22C55E', support: [] },
-          reason: 'Used observed',
+          visual_style: 'Modern', visual_tone: 'Elegante',
+          typography_direction: 'Sans-serif', brand_personality: 'Sofisticado',
+          campaign_guidelines: 'Test', campaign_brief: 'Test', confidence_score: 0.9,
+        }) } }],
+      });
+
+      const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
+      const profiler = new BrandProfilerWithoutLogoService();
+      const result = await profiler.generate(makeInput({ intendedPalette: null, brandColor: '#CC0000' }));
+
+      expect(result.success).toBe(true);
+      // #0F172A has the highest edgeRatio (0.15) → should be background
+      expect(result.profile.safe_color_tokens.background).toBe('#0F172A');
+    });
+  });
+
+  describe('11.12 — chromatic background preserved', () => {
+    it('cluster cromático de fundo não é descartado como artefato', async () => {
+      // Background-classified cluster should be eligible for presence validation
+      const intended = makeIntended();
+      // support[0] (#3B82F6) also needs to be in clusters to avoid divergence
+      const clusters = [
+        makeCluster('#22C55E', 'dominant', 0.3),
+        makeCluster('#1E40AF', 'dominant', 0.2),
+        makeCluster('#0F172A', 'background', 0.15),
+        makeCluster('#3B82F6', 'structural', 0.1),
+      ];
+
+      mockProbeColors.mockResolvedValue(makeProbeResult(clusters));
+      smartProbeMock(clusters);
+      mockOpenAICreate.mockResolvedValue({
+        choices: [{ message: { content: JSON.stringify({
+          visual_style: 'Modern', visual_tone: 'Elegante',
+          typography_direction: 'Sans-serif', brand_personality: 'Sofisticado',
+          campaign_guidelines: 'Test', campaign_brief: 'Test', confidence_score: 0.9,
+        }) } }],
+      });
+
+      const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
+      const profiler = new BrandProfilerWithoutLogoService();
+      const result = await profiler.generate(makeInput({ intendedPalette: intended }));
+
+      expect(result.success).toBe(true);
+      expect(colorValidation(result.profile).global_status).toBe('all_confirmed');
+      expect(colorValidation(result.profile).background.presence).toBe('confirmed');
+    });
+  });
+
+  describe('11.13 — HEX livre revalidation in profiler', () => {
+    it('visão retorna HEX válido nos clusters → aceito', async () => {
+      const intended = makeIntended();
+      // Only primary is NOT in clusters → contested
+      const clusters = [
+        makeCluster('#1E40AF'), makeCluster('#0F172A'), makeCluster('#3B82F6'),
+      ];
+
+      mockProbeColors.mockResolvedValue(makeProbeResult(clusters));
+      smartProbeMock(clusters);
+      mockOpenAICreate.mockResolvedValue({
+        choices: [{ message: { content: JSON.stringify({
+          corrections: { primary: '#1E40AF', accent: null, background: null, support: [] },
+          reason: 'Corrected',
+          visual_style: 'Modern', visual_tone: 'Elegante',
+          typography_direction: 'Sans-serif', brand_personality: 'Sofisticado',
+          campaign_guidelines: 'Test', campaign_brief: 'Test', confidence_score: 0.8,
+        }) } }],
+      });
+
+      const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
+      const profiler = new BrandProfilerWithoutLogoService();
+      const result = await profiler.generate(makeInput({ intendedPalette: intended }));
+
+      expect(result.success).toBe(true);
+      expect(colorValidation(result.profile).global_status).toBe('vision_adjudicated');
+    });
+  });
+
+  describe('11.15 — fallback_heuristic calls vision', () => {
+    it('fallback chama visão para análise semântica', async () => {
+      mockOpenAICreate.mockResolvedValue({
+        choices: [{ message: { content: JSON.stringify({
+          visual_style: 'Modern', visual_tone: 'Elegante',
+          typography_direction: 'Sans-serif', brand_personality: 'Sofisticado',
+          campaign_guidelines: 'Test', campaign_brief: 'Test', confidence_score: 0.9,
+        }) } }],
+      });
+
+      const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
+      const profiler = new BrandProfilerWithoutLogoService();
+      const result = await profiler.generate(makeInput({ intendedPalette: null }));
+
+      expect(result.success).toBe(true);
+      expect(mockOpenAICreate).toHaveBeenCalled();
+    });
+  });
+
+  describe('11.19 — observed_colors dedup ∆E ≤ 6', () => {
+    it('clusters próximos são dedupados mantendo obrigatórios', async () => {
+      const intended = makeIntended();
+      // primary (#22C55E) NOT in clusters → contested (colors very different → RGB distance > 25)
+      const clusters = [
+        makeCluster('#FF6600', 'dominant', 0.3),
+        makeCluster('#1E40AF', 'dominant', 0.2),
+        makeCluster('#0F172A', 'dominant', 0.1),
+        makeCluster('#3B82F6', 'structural', 0.08),
+      ];
+
+      mockProbeColors.mockResolvedValue(makeProbeResult(clusters));
+      smartProbeMock(clusters);
+      mockOpenAICreate.mockResolvedValue({
+        choices: [{ message: { content: JSON.stringify({
+          corrections: { primary: '#FF6600', accent: null, background: null, support: [] },
+          reason: 'Used closest',
           visual_style: 'Modern', visual_tone: 'Elegante',
           typography_direction: 'Sans-serif', brand_personality: 'Sofisticado',
           campaign_guidelines: 'Test', campaign_brief: 'Test', confidence_score: 0.8,

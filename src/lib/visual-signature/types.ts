@@ -389,13 +389,7 @@ function revalidateVisionHex(hex: string, clusters: ColorCluster[], label: strin
   }
 }
 
-export function normalizeAdjudication(
-  raw: unknown,
-  fallback: IntendedPalette,
-  contestedRoles: string[],
-  contestedSupportIndices: number[],
-  nonArtifactClusters: ColorCluster[]
-): NormalizedVisionAdjudication {
+export function validateRawVisionAdjudication(raw: unknown): { corrections: Record<string, unknown>; reason: string } & { supportCorrections: SupportCorrection[] } {
   if (!raw || typeof raw !== 'object') {
     throw new VisionAdjudicationError('Raw is not an object', 'invalid_json');
   }
@@ -431,6 +425,18 @@ export function normalizeAdjudication(
     }
     seenIndices.add(sc.index);
   }
+
+  return { corrections, reason, supportCorrections };
+}
+
+export function normalizeAdjudication(
+  raw: unknown,
+  fallback: IntendedPalette,
+  contestedRoles: string[],
+  contestedSupportIndices: number[],
+  nonArtifactClusters: ColorCluster[]
+): NormalizedVisionAdjudication {
+  const { corrections, reason, supportCorrections } = validateRawVisionAdjudication(raw);
 
   const primaryVision = typeof corrections.primary === 'string' ? corrections.primary.toUpperCase() : null;
   const accentVision = typeof corrections.accent === 'string' ? corrections.accent.toUpperCase() : null;

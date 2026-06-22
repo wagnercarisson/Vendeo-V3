@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeAdjudication, normalizeIntendedPalette, VisionAdjudicationError } from '../types';
+import { normalizeAdjudication, normalizeIntendedPalette, validateRawVisionAdjudication, VisionAdjudicationError } from '../types';
 import type { ColorCluster } from '@/lib/brand-assets/types';
 import { hexToLab } from '@/lib/brand-assets/color-probe';
 
@@ -161,5 +161,57 @@ describe('normalizeAdjudication', () => {
       nonArtifactClusters
     );
     expect(result.palette.primary).toBe('#22C55E');
+  });
+
+  it('validateRawVisionAdjudication rejects non-object', () => {
+    expect(() => validateRawVisionAdjudication(null)).toThrow(VisionAdjudicationError);
+    expect(() => validateRawVisionAdjudication('string')).toThrow(VisionAdjudicationError);
+    expect(() => validateRawVisionAdjudication(undefined)).toThrow(VisionAdjudicationError);
+  });
+
+  it('validateRawVisionAdjudication rejects missing corrections', () => {
+    expect(() => validateRawVisionAdjudication({})).toThrow(VisionAdjudicationError);
+    expect(() => validateRawVisionAdjudication({ corrections: null })).toThrow(VisionAdjudicationError);
+  });
+
+  it('validateRawVisionAdjudication rejects invalid hex in corrections', () => {
+    expect(() => validateRawVisionAdjudication({
+      corrections: { primary: 'not-a-hex', accent: null, background: null, support: [] },
+    })).toThrow(VisionAdjudicationError);
+  });
+
+  it('validateRawVisionAdjudication rejects duplicate support indices', () => {
+    expect(() => validateRawVisionAdjudication({
+      corrections: {
+        primary: null, accent: null, background: null,
+        support: [{ index: 0, color: '#FF0000' }, { index: 0, color: '#00FF00' }],
+      },
+    })).toThrow(VisionAdjudicationError);
+  });
+
+  it('validateRawVisionAdjudication valid input returns parsed data', () => {
+    const result = validateRawVisionAdjudication({
+      corrections: { primary: '#22C55E', accent: null, background: null, support: [{ index: 1, color: '#CC5500' }] },
+      reason: 'Test',
+    });
+    expect(result.reason).toBe('Test');
+    expect(result.supportCorrections).toHaveLength(1);
+    expect(result.supportCorrections[0].color).toBe('#CC5500');
+  });
+
+  it('HEX livre ∆E > 18 rejected — hex_outside_observed_colors', () => {
+    // #FF0000 is NOT in clusters → ∆E should be > 18 → rejected
+    expect(() =>
+      normalizeAdjudication(
+        {
+          corrections: { primary: '#FF0000', accent: null, background: null, support: [] },
+          reason: 'Try red',
+        },
+        fallback,
+        ['primary'],
+        [],
+        nonArtifactClusters
+      )
+    ).toThrow(VisionAdjudicationError);
   });
 });
