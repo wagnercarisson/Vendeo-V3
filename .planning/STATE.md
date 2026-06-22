@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI + Rendering
 status: active
-stopped_at: Phase 4.6.4 — Visual Signature Lifecycle (5/5 plans — UAT COMPLETE, 12/12 passed, 0 issues). Próximo: Phase 4.6.x — State Transitions (Pending — 0 plans).
-last_updated: "2026-06-19T23:45:00.000Z"
+stopped_at: Phase 4.6.4 — Visual Signature Lifecycle (5/5 plans — UAT COMPLETE, 12/12 passed, 0 issues). Próximo: Phase 4.6.5 — VS Color Drift & Brand Profile Alignment (Planned — 5 plans).
+last_updated: "2026-06-22T12:40:00.000Z"
 progress:
-  total_phases: 17
+  total_phases: 18
   completed_phases: 16
-  total_plans: 76
+  total_plans: 81
   completed_plans: 68
-  percent: 89
+  percent: 84
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-25 after v1.0 milestone)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
-**Current focus:** Phase 4.6.x — State Transitions (Pending)
+**Current focus:** Phase 4.6.5 — VS Color Drift & Brand Profile Alignment (Planned)
 
 ## Current Position
 
 Phase: 4.6.4 — Visual Signature Lifecycle (COMPLETE — 5/5 plans)
-Milestone: v1.1 AI + Rendering — EXTENDED (Phase 4.6 sub-phases 4.6.3–4.6.x in progress)
-Phases complete: 16 of 17 phases (1 pending: 4.6.x)
-Next phase: 4.6.x — State Transitions (pending)
+Milestone: v1.1 AI + Rendering — EXTENDED (Phase 4.6 sub-phases 4.6.3–4.6.5 in progress)
+Phases complete: 16 of 18 phases (2 pending: 4.6.5, 5)
+Next phase: 4.6.5 — VS Color Drift & Brand Profile Alignment (Planned — 5 plans)
 
 | Phase | Status |
 |-------|--------|
@@ -35,9 +35,9 @@ Next phase: 4.6.x — State Transitions (pending)
 | 4.6.2 — Visual Direction Drift Detection | Complete |
 | **4.6.3 — Logo State Lifecycle** | **Complete** |
 | **4.6.4 — Visual Signature Lifecycle** | **Complete (5/5)** |
-| 4.6.x — State Transitions | Pending |
+| **4.6.5 — VS Color Drift & Brand Profile** | **Planned (5 plans)** |
 
-Progress: [██████████████] 89% (68/76 plans — 8 pending)
+Progress: [████████████░░] 84% (68/81 plans — 13 pending)
 
 ## Performance Metrics
 
@@ -138,7 +138,8 @@ Key decisions (full: 10 decisions D1-D10 in OpenSpec design.md):
 
 - [x] Review Phase 4.6.4 plans — CONTEXT.md + 5 PLANS.md reviewed and executed
 - [x] Execute Phase 4.6.4 — Visual Signature Lifecycle (COMPLETE — 5/5 plans)
-- [ ] Plan Phase 4.6.x — State Transitions (next)
+- [x] Plan Phase 4.6.5 — VS Color Drift & Brand Profile Alignment (Planned — 5 plans)
+- [ ] Execute Phase 4.6.5 — VS Color Drift & Brand Profile Alignment (next)
 - [ ] Execute Phase 4.4.1 — run all 6 plans (4 waves) (deferred — historical record)
 
 ### Blockers/Concerns
@@ -159,8 +160,8 @@ Nenhum.
 
 ## Session Continuity
 
-Last session: 2026-06-19T23:45:00.000Z
-Stopped at: Phase 4.6.4 UAT complete — 12/12 passed, 0 issues. Fixes aplicados durante UAT: (1) VS restore drift detection — validateDrift adicionado no approve endpoint, content_used preservado no retry path. (2) Falso drift após primeira aprovação — brand_color no input_snapshot agora usa inferredPrimaryColor. (3) Race condition no handleApprovalComplete eliminada — brandProfileData síncrono via approve response, sem fetch extra. Próximo: Phase 4.6.x — State Transitions.
+Last session: 2026-06-22T12:40:00.000Z
+Stopped at: Phase 4.6.5 planned — 5 plans via OpenSpec alignment (openspec/changes/fase-4-6-5-vs-color-drift-brand-profile/). Próximo: Execute Phase 4.6.5 — VS Color Drift & Brand Profile Alignment.
 
 ## Next Phases
 
@@ -168,7 +169,7 @@ Stopped at: Phase 4.6.4 UAT complete — 12/12 passed, 0 issues. Fixes aplicados
 |-------|--------|-------|
 | **4.6.3 — Logo State Lifecycle** | **UAT Complete — 8/8 Passed** | **5/5** |
 | **4.6.4 — Visual Signature Lifecycle** | **Complete** | **5/5** |
-| 4.6.x — State Transitions | Pending | 0 |
+| **4.6.5 — VS Color Drift & Brand Profile** | **Planned** | **5/5** |
 | Phase 4.4.1 — Existing Logo & Store Brand Direction Foundation | Deferred (historical record) | 6 |
 | Phase 5 — Review, Adjust & Export | Not yet planned | 0 |
 
