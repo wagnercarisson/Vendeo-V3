@@ -122,7 +122,11 @@ export class BrandProfilerWithoutLogoService {
 
   constructor() {
     this.promptLoader = new PromptLoader();
-    this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    try {
+      this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    } catch {
+      this.openai = null as unknown as OpenAI;
+    }
   }
 
   private async downloadAssetBuffer(assetUrl: string): Promise<Buffer | null> {
@@ -690,6 +694,9 @@ export class BrandProfilerWithoutLogoService {
   }
 
   private async callVision(input: BrandProfilerInput, prompt: string): Promise<string> {
+    if (!this.openai) {
+      throw new Error('OPENAI_API_KEY não configurada');
+    }
     const model = process.env.OPENAI_BRAND_DIRECTOR_MODEL ?? 'gpt-4o';
     const response = await this.openai.chat.completions.create({
       model,

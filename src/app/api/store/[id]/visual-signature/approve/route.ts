@@ -354,11 +354,17 @@ export async function POST(
     const sanitizeHex = (v: string | null | undefined, fb: string): string =>
       v && /^#[0-9A-Fa-f]{6}$/.test(v) ? v.toUpperCase() : fb;
 
-    inferredPrimaryColor = sanitizeHex(artDirectorOutput.suggested_colors[0], '#666666');
-    inferredAccentColor = sanitizeHex(artDirectorOutput.suggested_colors[1], '#999999');
-    const logoColorsDetected = (artDirectorOutput.suggested_colors ?? [])
-      .filter((c: string) => /^#[0-9A-Fa-f]{6}$/.test(c))
-      .map((c: string) => c.toUpperCase());
+    const fallbackPrimary = (artDirectorOutput as VisualSignatureMetadataArtDirectorOutput)?.intended_palette?.primary
+      ?? (artDirectorOutput as any)?.suggested_colors?.[0]
+      ?? store.brand_color
+      ?? null;
+    const fallbackAccent = (artDirectorOutput as VisualSignatureMetadataArtDirectorOutput)?.intended_palette?.accent
+      ?? (artDirectorOutput as any)?.suggested_colors?.[1]
+      ?? null;
+    inferredPrimaryColor = sanitizeHex(fallbackPrimary, '#666666');
+    inferredAccentColor = sanitizeHex(fallbackAccent, '#999999');
+    const logoColorsDetected = [inferredPrimaryColor, inferredAccentColor]
+      .filter((c): c is string => /^#[0-9A-Fa-f]{6}$/.test(c));
 
     return NextResponse.json({
       success: true,
