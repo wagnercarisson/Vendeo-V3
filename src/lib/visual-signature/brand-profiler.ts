@@ -1,14 +1,24 @@
 import { PromptLoader } from '@/lib/image-generation/prompt-loader';
 import { supabaseAdmin as supabase } from '@/lib/supabase/server';
 import OpenAI from 'openai';
-import sharp from 'sharp';
 import type {
   BrandProfilerInput,
   BrandProfilerWithoutLogoResult,
+  IntendedPalette,
+  ResolvedPalette,
+  ColorValidation,
+  ColorValidationEntry,
+  ColorValidationResolved,
+  ColorValidationFailed,
+  VisionAdjudicationAudit,
+  ColorCluster as VSColorCluster,
 } from '@/lib/visual-signature/types';
+import { normalizeIntendedPalette, intendedToResolved, normalizeAdjudication, VisionAdjudicationError } from '@/lib/visual-signature/types';
 import type {
   BrandProfileRecord,
+  ColorCluster,
 } from '@/lib/brand-assets/types';
+import { probeColors, findClosestProbeCluster } from '@/lib/brand-assets/color-probe';
 
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
 
@@ -36,13 +46,6 @@ function sanitizeHexArray(colors: string[]): string[] {
  * Converts RGB to Hex string. Each channel is clamped 0-255, rounded,
  * and padded to exactly 2 hex digits. Output is always #RRGGBB (7 chars).
  */
-function rgbToHex(r: number, g: number, b: number): string {
-  return '#' + [r, g, b].map(x => {
-    const clamped = Math.max(0, Math.min(255, Math.round(x)));
-    return clamped.toString(16).padStart(2, '0').toUpperCase();
-  }).join('');
-}
-
 /**
  * Checks if a color is neutral (white/gray/black/off-white)
  */
@@ -122,53 +125,108 @@ export class BrandProfilerWithoutLogoService {
     this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   }
 
-  /**
-   * Extracts dominant colors from the image buffer using sharp
-   */
-  private async extractColorsFromBuffer(buffer: Buffer): Promise<string[]> {
+  private async downloadAssetBuffer(assetUrl: string): Promise<Buffer | null> {
     try {
-      const { data, info } = await sharp(buffer)
-        .resize(150, 150, { fit: 'cover' })
-        .raw()
-        .toBuffer({ resolveWithObject: true });
-
-      const pixelCount = data.length / 3;
-      const colorMap = new Map<string, number>();
-
-      for (let i = 0; i < pixelCount; i++) {
-        const r = data[i * 3];
-        const g = data[i * 3 + 1];
-        const b = data[i * 3 + 2];
-
-        if (isNeutral(r, g, b)) continue;
-
-        const quantized = `${Math.min(255, Math.round(r / 32) * 32)},${Math.min(255, Math.round(g / 32) * 32)},${Math.min(255, Math.round(b / 32) * 32)}`;
-        colorMap.set(quantized, (colorMap.get(quantized) ?? 0) + 1);
+      const response = await fetch(assetUrl);
+      if (response.ok) {
+        return Buffer.from(await response.arrayBuffer());
       }
-
-      const sorted = [...colorMap.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 10)
-        .map(([key]) => {
-          const [r, g, b] = key.split(',').map(Number);
-          return rgbToHex(r, g, b);
-        });
-
-      return sorted.length > 0 ? sorted.slice(0, 5) : ['#666666'];
     } catch (err) {
-      console.error('[BrandProfiler] sharp extraction failed:', err);
-      return [];
+      console.error(`[BrandProfiler] Failed to download asset:`, err);
     }
+    return null;
+  }
+
+  private getAllNonArtifactClusters(probe: import('@/lib/brand-assets/types').ColorProbeResult): ColorCluster[] {
+    return [
+      ...probe.dominant_pixels,
+      ...probe.dark_ink_candidates,
+      ...probe.neutral_candidates,
+      ...probe.background_candidates,
+      ...probe.small_but_structural,
+    ];
+  }
+
+  private classifyPresence(deltaE: number): 'confirmed' | 'ambiguous' | 'not_confirmed' {
+    if (deltaE <= 18) return 'confirmed';
+    if (deltaE <= 25) return 'ambiguous';
+    return 'not_confirmed';
+  }
+
+  private selectObservedColors(
+    clusters: ColorCluster[],
+    contestedHexes: string[]
+  ): ColorCluster[] {
+    const mandatory = new Set<ColorCluster>();
+    for (const hex of contestedHexes) {
+      const closest = findClosestProbeCluster(hex, clusters);
+      if (closest.cluster) mandatory.add(closest.cluster);
+    }
+
+    const classifications: ColorCluster['classification'][] = ['dominant', 'dark_ink', 'neutral', 'background', 'structural'];
+    for (const cls of classifications) {
+      const candidates = clusters.filter(c => c.classification === cls);
+      if (candidates.length > 0) {
+        const best = candidates.reduce((a, b) => a.frequency > b.frequency ? a : b);
+        mandatory.add(best);
+      }
+    }
+
+    const remaining = clusters.filter(c => !mandatory.has(c))
+      .sort((a, b) => b.frequency - a.frequency);
+
+    const selected = [...mandatory, ...remaining].slice(0, 12);
+
+    const deduped: ColorCluster[] = [];
+    for (const c of selected) {
+      const tooClose = deduped.find(e => {
+        const d = Math.sqrt(
+          Math.pow(e.rgb[0] - c.rgb[0], 2) +
+          Math.pow(e.rgb[1] - c.rgb[1], 2) +
+          Math.pow(e.rgb[2] - c.rgb[2], 2)
+        );
+        return d <= 6;
+      });
+      if (!tooClose || mandatory.has(c)) deduped.push(c);
+    }
+
+    return deduped;
+  }
+
+  private buildPromptContext(
+    variant: 'happy_path' | 'divergence' | 'legacy',
+    input: BrandProfilerInput,
+    extra: Record<string, string> = {}
+  ): string {
+    const base: Record<string, string> = {
+      storeName: input.storeName,
+      segment: input.segment,
+      subsegment: input.subsegment ?? '',
+      tone_of_voice: input.tone_of_voice ?? '',
+      positioning: input.positioning ?? '',
+      short_description: input.short_description ?? '',
+      slogan: input.slogan ?? '',
+      city: input.city ?? '',
+      state: input.state ?? '',
+      creativeDescription: input.artDirectorOutput.creative_description,
+      suggestedColors: JSON.stringify(input.artDirectorOutput.suggested_colors),
+      visualDirection: input.artDirectorOutput.visual_direction,
+      elementsUsed: JSON.stringify(input.artDirectorOutput.elements_used),
+      ...extra,
+    };
+
+    if (variant === 'happy_path') {
+      base.happyPath = 'true';
+    } else if (variant === 'divergence') {
+      base.divergencePath = 'true';
+    }
+
+    return this.promptLoader.load('store-brand-profiler', base);
   }
 
   async generate(input: BrandProfilerInput): Promise<BrandProfileGenerationResult> {
     const startTime = Date.now();
 
-    // 1. Check if we already have a profile for THIS visual signature (any status)
-    // Reuse even if outdated — switching back to a previously-approved signature
-    // should NOT trigger a new GPT call.
-    // Use order().limit(1) instead of maybeSingle() because existing
-    // duplicate profiles cause maybeSingle() to return null silently.
     const { data: existingProfiles } = await supabase
       .from('store_brand_profiles')
       .select('*')
@@ -182,7 +240,6 @@ export class BrandProfilerWithoutLogoService {
 
     if (existingProfile) {
       console.log(`[BrandProfiler] Found existing profile (${existingProfile.status}) for signature ${input.visualSignatureId}, reusing.`);
-      // Re-activate if outdated
       if (existingProfile.status === 'outdated') {
         await supabase
           .from('store_brand_profiles')
@@ -192,154 +249,349 @@ export class BrandProfilerWithoutLogoService {
       return { profile: existingProfile as BrandProfileRecord, success: true };
     }
 
-    // 2. Extract deterministic colors from image
-    // Requirement 2: Deterministic extraction first
-    let extractedColors: string[] = [];
-    try {
-      console.log(`[BrandProfiler] Downloading asset from ${input.assetUrl} for color extraction...`);
-      const response = await fetch(input.assetUrl);
-      if (response.ok) {
-        const buffer = Buffer.from(await response.arrayBuffer());
-        extractedColors = await this.extractColorsFromBuffer(buffer);
-        console.log(`[BrandProfiler] Extracted colors:`, extractedColors);
-      }
-    } catch (err) {
-      console.error(`[BrandProfiler] Error extracting colors from image:`, err);
-      extractedColors = input.artDirectorOutput.suggested_colors;
+    const buffer = await this.downloadAssetBuffer(input.assetUrl);
+    let probeResult: import('@/lib/brand-assets/types').ColorProbeResult | null = null;
+    if (buffer) {
+      probeResult = await probeColors(buffer);
     }
 
-    if (!process.env.OPENAI_API_KEY) {
-      if (process.env.NODE_ENV === 'production') {
-        throw new BrandProfilerWithoutLogoError(
-          'OPENAI_API_KEY não configurada',
-          {
+    const nonArtifactClusters = probeResult
+      ? this.getAllNonArtifactClusters(probeResult)
+      : [];
+
+    // --- PATH 1: intendedPalette provided → presence validation + optional vision arbitration ---
+    if (input.intendedPalette) {
+      if (!process.env.OPENAI_API_KEY) {
+        if (process.env.NODE_ENV === 'production') {
+          throw new BrandProfilerWithoutLogoError('OPENAI_API_KEY não configurada', {
             provider: 'openai',
             model: process.env.OPENAI_BRAND_DIRECTOR_MODEL ?? 'gpt-4o',
-            elapsedMs: 0,
-            errorType: 'missing_api_key',
-          }
-        );
+            elapsedMs: 0, errorType: 'missing_api_key',
+          });
+        }
+        return this.mockGenerate(input, probeResult);
       }
 
-      const safeExtracted = sanitizeHexArray(extractedColors);
-      const mockPrimary = pickPrimaryFromPalette(safeExtracted);
-      const mockAccent = pickAccentFromPalette(safeExtracted, mockPrimary);
-      const mockProfile = await this.persistProfile(input, {
-        logo_colors_detected: safeExtracted,
-        safe_color_tokens: {
-          primary: mockPrimary ?? '#666666',
-          secondary: '#999999',
-          accent: mockAccent ?? mockPrimary ?? '#666666',
-          background: '#FFFFFF',
-        },
-        visual_style: 'mock — desenvolvimento',
-        visual_tone: 'mock — desenvolvimento',
-        typography_direction: 'mock — desenvolvimento',
-        brand_personality: 'mock — desenvolvimento',
-        campaign_guidelines: 'mock — desenvolvimento',
-        campaign_brief: 'mock — desenvolvimento',
-        inferred_primary_color: mockPrimary ?? '#666666',
-        inferred_accent_color: mockAccent ?? mockPrimary ?? '#666666',
-        confidence_score: 0.1,
-      });
-
-      return { profile: mockProfile, success: true };
+      return this.generateWithIntendedPalette(input, buffer, probeResult, nonArtifactClusters, startTime);
     }
 
+    // --- PATH 2: No intendedPalette (retry/legacy) → fallback heuristic ---
+    if (!process.env.OPENAI_API_KEY) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new BrandProfilerWithoutLogoError('OPENAI_API_KEY não configurada', {
+          provider: 'openai',
+          model: process.env.OPENAI_BRAND_DIRECTOR_MODEL ?? 'gpt-4o',
+          elapsedMs: 0, errorType: 'missing_api_key',
+        });
+      }
+      return this.mockGenerate(input, probeResult);
+    }
+
+    return this.generateWithFallback(input, probeResult, nonArtifactClusters, startTime);
+  }
+
+  private async mockGenerate(
+    input: BrandProfilerInput,
+    probeResult: import('@/lib/brand-assets/types').ColorProbeResult | null
+  ): Promise<BrandProfileGenerationResult> {
+    const colors = this.extractProbeColors(probeResult) ?? ['#666666'];
+    const safeExtracted = sanitizeHexArray(colors);
+    const mockPrimary = pickPrimaryFromPalette(safeExtracted);
+    const mockAccent = pickAccentFromPalette(safeExtracted, mockPrimary);
+    const mockProfile = await this.persistProfile(input, {
+      logo_colors_detected: safeExtracted,
+      safe_color_tokens: {
+        primary: mockPrimary ?? '#666666',
+        secondary: '#999999',
+        accent: mockAccent ?? mockPrimary ?? '#666666',
+        background: '#FFFFFF',
+      },
+      visual_style: 'mock — desenvolvimento',
+      visual_tone: 'mock — desenvolvimento',
+      typography_direction: 'mock — desenvolvimento',
+      brand_personality: 'mock — desenvolvimento',
+      campaign_guidelines: 'mock — desenvolvimento',
+      campaign_brief: 'mock — desenvolvimento',
+      inferred_primary_color: mockPrimary ?? '#666666',
+      inferred_accent_color: mockAccent ?? mockPrimary ?? '#666666',
+      confidence_score: 0.1,
+    });
+    return { profile: mockProfile, success: true };
+  }
+
+  private extractProbeColors(probeResult: import('@/lib/brand-assets/types').ColorProbeResult | null): string[] {
+    if (!probeResult) return [];
+    const brandClusters = [
+      ...probeResult.dominant_pixels,
+      ...probeResult.small_but_structural,
+      ...probeResult.dark_ink_candidates,
+    ];
+    const seen = new Set<string>();
+    return brandClusters
+      .filter(c => { if (seen.has(c.hex)) return false; seen.add(c.hex); return true; })
+      .slice(0, 5)
+      .map(c => c.hex);
+  }
+
+  private async generateWithIntendedPalette(
+    input: BrandProfilerInput,
+    buffer: Buffer | null,
+    probeResult: import('@/lib/brand-assets/types').ColorProbeResult | null,
+    nonArtifactClusters: ColorCluster[],
+    startTime: number
+  ): Promise<BrandProfileGenerationResult> {
+    const intended = input.intendedPalette!;
+    const roles: { role: string; hex: string }[] = [
+      { role: 'primary', hex: intended.primary },
+      { role: 'accent', hex: intended.accent },
+      { role: 'background', hex: intended.background },
+      ...intended.support.map((hex, i) => ({ role: `support[${i}]`, hex })),
+    ];
+
+    let allConfirmed = true;
+    let probeUnavailable = false;
+    const contestedRoles: string[] = [];
+    const contestedSupportIndices: number[] = [];
+    const rolePresence: Map<string, { presence: string; deltaE: number | null; cluster: ColorCluster | null }> = new Map();
+
+    if (nonArtifactClusters.length === 0) {
+      probeUnavailable = true;
+    } else {
+      for (const { role, hex } of roles) {
+        const match = findClosestProbeCluster(hex, nonArtifactClusters);
+        const presence = this.classifyPresence(match.deltaE);
+        rolePresence.set(role, { presence, deltaE: match.deltaE, cluster: match.cluster });
+        if (presence === 'ambiguous' || presence === 'not_confirmed') {
+          allConfirmed = false;
+          if (role.startsWith('support[')) {
+            const idx = parseInt(role.slice(8, -1), 10);
+            contestedSupportIndices.push(idx);
+          } else {
+            contestedRoles.push(role);
+          }
+        }
+      }
+    }
+
+    if (probeUnavailable) {
+      return this.handleProbeUnavailable(input, intended, startTime);
+    }
+
+    if (allConfirmed) {
+      return this.handleAllConfirmed(input, intended, nonArtifactClusters, rolePresence, startTime);
+    }
+
+    return this.handleDivergence(input, intended, buffer, nonArtifactClusters, rolePresence, contestedRoles, contestedSupportIndices, startTime);
+  }
+
+  private async handleProbeUnavailable(
+    input: BrandProfilerInput,
+    intended: IntendedPalette,
+    startTime: number
+  ): Promise<BrandProfileGenerationResult> {
+    const resolved = intendedToResolved(intended, intended.support);
+    const safeColors = sanitizeResolvedPalette(resolved);
+
+    const result: BrandProfilerWithoutLogoResult = {
+      logo_colors_detected: input.artDirectorOutput.suggested_colors,
+      safe_color_tokens: safeColors,
+      visual_style: '', visual_tone: '', typography_direction: '',
+      brand_personality: '', campaign_guidelines: '', campaign_brief: '',
+      inferred_primary_color: safeColors.primary,
+      inferred_accent_color: safeColors.accent,
+      confidence_score: 0.5,
+    };
+
+    const colorValidation: ColorValidationResolved = {
+      global_status: 'probe_unavailable',
+      primary: makeValidationEntry(intended.primary, safeColors.primary, 'unchecked', null, 'art_director', 'accepted_unverified'),
+      accent: makeValidationEntry(intended.accent, safeColors.accent, 'unchecked', null, 'art_director', 'accepted_unverified'),
+      secondary: makeValidationEntry(null, safeColors.secondary, 'unchecked', null, 'art_director', 'accepted_unverified'),
+      background: makeValidationEntry(intended.background, safeColors.background, 'unchecked', null, 'art_director', 'accepted_unverified'),
+      support_colors: intended.support,
+    };
+
+    const prompt = this.buildPromptContext('happy_path', input);
+    const visionResult = await this.callVision(input, prompt);
+    const enriched = this.mergeSemanticFields(result, visionResult);
+
+    const profile = await this.persistProfile(input, enriched, colorValidation);
+    await this.syncStores(input.storeId, safeColors);
+    return { profile, success: true };
+  }
+
+  private async handleAllConfirmed(
+    input: BrandProfilerInput,
+    intended: IntendedPalette,
+    nonArtifactClusters: ColorCluster[],
+    rolePresence: Map<string, { presence: string; deltaE: number | null; cluster: ColorCluster | null }>,
+    startTime: number
+  ): Promise<BrandProfileGenerationResult> {
+    const resolved = intendedToResolved(intended, intended.support);
+    const safeColors = sanitizeResolvedPalette(resolved);
+
+    const result: BrandProfilerWithoutLogoResult = {
+      logo_colors_detected: this.extractProbeColorsFromClusters(nonArtifactClusters),
+      safe_color_tokens: safeColors,
+      visual_style: '', visual_tone: '', typography_direction: '',
+      brand_personality: '', campaign_guidelines: '', campaign_brief: '',
+      inferred_primary_color: safeColors.primary,
+      inferred_accent_color: safeColors.accent,
+      confidence_score: 0.9,
+    };
+
+    const supportDetails = intended.support.map((hex, i) => {
+      const presence = rolePresence.get(`support[${i}]`);
+      return makeValidationEntry(hex, hex, presence?.presence ?? 'unchecked', presence?.deltaE ?? null, 'art_director', 'accepted');
+    });
+
+    const colorValidation: ColorValidationResolved = {
+      global_status: 'all_confirmed',
+      primary: makeValidationEntry(intended.primary, safeColors.primary, rolePresence.get('primary')?.presence ?? 'confirmed', rolePresence.get('primary')?.deltaE ?? null, 'art_director', 'accepted'),
+      accent: makeValidationEntry(intended.accent, safeColors.accent, rolePresence.get('accent')?.presence ?? 'confirmed', rolePresence.get('accent')?.deltaE ?? null, 'art_director', 'accepted'),
+      secondary: makeValidationEntry(null, safeColors.secondary, 'unchecked', null, 'art_director', 'accepted'),
+      background: makeValidationEntry(intended.background, safeColors.background, rolePresence.get('background')?.presence ?? 'confirmed', rolePresence.get('background')?.deltaE ?? null, 'art_director', 'accepted'),
+      support_colors: intended.support,
+      support_details: supportDetails,
+    };
+
+    const prompt = this.buildPromptContext('happy_path', input);
+    const visionResult = await this.callVision(input, prompt);
+    const enriched = this.mergeSemanticFields(result, visionResult);
+
+    const profile = await this.persistProfile(input, enriched, colorValidation);
+    await this.syncStores(input.storeId, safeColors);
+    return { profile, success: true };
+  }
+
+  private async handleDivergence(
+    input: BrandProfilerInput,
+    intended: IntendedPalette,
+    buffer: Buffer | null,
+    nonArtifactClusters: ColorCluster[],
+    rolePresence: Map<string, { presence: string; deltaE: number | null; cluster: ColorCluster | null }>,
+    contestedRoles: string[],
+    contestedSupportIndices: number[],
+    startTime: number
+  ): Promise<BrandProfileGenerationResult> {
+    const contestedHexes: string[] = [];
+    for (const role of contestedRoles) {
+      const hex = intended[role as keyof IntendedPalette];
+      if (typeof hex === 'string') contestedHexes.push(hex);
+    }
+    for (const idx of contestedSupportIndices) {
+      if (idx < intended.support.length) contestedHexes.push(intended.support[idx]);
+    }
+
+    const observedClusters = this.selectObservedColors(nonArtifactClusters, contestedHexes);
+    const observedColorsStr = observedClusters.map(c => `- ${c.hex} (${c.classification}, ${(c.frequency * 100).toFixed(1)}%)`).join('\n');
+    const contestedRolesStr = [...contestedRoles, ...contestedSupportIndices.map(i => `support[${i}]`)].map(r => {
+      const hex = r.startsWith('support[')
+        ? intended.support[parseInt(r.slice(8, -1), 10)]
+        : intended[r as keyof IntendedPalette] as string;
+      const pres = rolePresence.get(r);
+      return `- **${r}**: ${hex} (∆E ${pres?.deltaE?.toFixed(1) ?? 'N/A'}, ${pres?.presence})`;
+    }).join('\n');
+
+    const prompt = this.buildPromptContext('divergence', input, {
+      contestedRoles: contestedRolesStr,
+      observedColors: observedColorsStr,
+    });
+
     try {
-      const prompt = this.promptLoader.load('store-brand-profiler', {
-        storeName: input.storeName,
-        segment: input.segment,
-        subsegment: input.subsegment ?? '',
-        tone_of_voice: input.tone_of_voice ?? '',
-        positioning: input.positioning ?? '',
-        short_description: input.short_description ?? '',
-        slogan: input.slogan ?? '',
-        city: input.city ?? '',
-        state: input.state ?? '',
-        creativeDescription: input.artDirectorOutput.creative_description,
-        suggestedColors: JSON.stringify(extractedColors),
-        visualDirection: input.artDirectorOutput.visual_direction,
-        elementsUsed: JSON.stringify(input.artDirectorOutput.elements_used),
-      });
+      const visionResult = await this.callVisionFull(input, prompt);
+      const raw = JSON.parse(visionResult);
+      const correctionsObj = {
+        corrections: raw.corrections,
+        reason: raw.reason ?? '',
+      };
 
-      const model = process.env.OPENAI_BRAND_DIRECTOR_MODEL ?? 'gpt-4o'; // Prefer gpt-4o for vision
-      const response = await this.openai.chat.completions.create({
-        model,
-        messages: [
-          { role: 'system', content: prompt },
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: 'Analise visualmente a assinatura visual aprovada e gere o perfil de marca. Extraia as cores REAIS presentes na imagem.' },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: input.assetUrl,
-                  detail: 'low',
-                },
-              },
-            ],
-          },
-        ],
-        response_format: { type: 'json_object' },
-        max_tokens: 2000,
-      });
+      const normalized = normalizeAdjudication(
+        correctionsObj,
+        intended,
+        contestedRoles,
+        contestedSupportIndices,
+        nonArtifactClusters
+      );
 
-      const raw = JSON.parse(response.choices[0]?.message?.content ?? '{}');
-      const elapsedMs = Date.now() - startTime;
-
-      // Colors MUST come from deterministic extraction only.
-      // GPT may suggest colors in its response, but they are often hallucinated
-      // (e.g. #00FF00, #800080) and can desvirtuar campanhas.
-      // We use GPT ONLY for semantic brand analysis (style, tone, personality, etc.).
-      const safePalette = sanitizeHexArray(extractedColors);
-      const primaryColor = pickPrimaryFromPalette(safePalette);
-      const accentColor = pickAccentFromPalette(safePalette, primaryColor);
+      const resolved = intendedToResolved(normalized.palette, normalized.palette.support);
+      const safeColors = sanitizeResolvedPalette(resolved);
+      const supportResolved = normalized.palette.support;
 
       const result: BrandProfilerWithoutLogoResult = {
-        logo_colors_detected: safePalette.length > 0 ? safePalette : ['#666666'],
-        safe_color_tokens: {
-          primary: primaryColor ?? '#666666',
-          secondary: '#999999',
-          accent: accentColor ?? primaryColor ?? '#666666',
-          background: '#FFFFFF',
-        },
+        logo_colors_detected: this.extractProbeColorsFromClusters(nonArtifactClusters),
+        safe_color_tokens: safeColors,
         visual_style: String(raw.visual_style ?? ''),
         visual_tone: String(raw.visual_tone ?? ''),
         typography_direction: String(raw.typography_direction ?? ''),
         brand_personality: String(raw.brand_personality ?? ''),
         campaign_guidelines: String(raw.campaign_guidelines ?? ''),
         campaign_brief: String(raw.campaign_brief ?? ''),
-        inferred_primary_color: primaryColor ?? '#666666',
-        inferred_accent_color: accentColor ?? primaryColor ?? '#666666',
-        confidence_score:
-          typeof raw.confidence_score === 'number'
-            ? Math.max(0, Math.min(1, raw.confidence_score))
-            : 0.5,
+        inferred_primary_color: safeColors.primary,
+        inferred_accent_color: safeColors.accent,
+        confidence_score: typeof raw.confidence_score === 'number' ? Math.max(0, Math.min(1, raw.confidence_score)) : 0.7,
       };
 
-    const profile = await this.persistProfile(input, result);
+      const promptSuffix = contestedRoles.length > 0 || contestedSupportIndices.length > 0
+        ? `analyze_and_correct_${[...contestedRoles, ...contestedSupportIndices.map(i => `support${i}`)].join('_')}`
+        : 'analyze_only';
 
-    // Sync inferred color back to stores table for consistency
-    if (result.inferred_primary_color) {
-      console.log(`[BrandProfiler] Syncing primary color ${result.inferred_primary_color} to store ${input.storeId}`);
-      await supabase
-        .from('stores')
-        .update({ brand_color: result.inferred_primary_color })
-        .eq('id', input.storeId);
-    }
+      const visionAudit: VisionAdjudicationAudit = {
+        status: 'success',
+        reason: raw.reason ?? '',
+        prompt_suffix: promptSuffix,
+      };
 
-    return { profile, success: true };
+      const supportDetails = intended.support.map((hex, i) => {
+        const presence = rolePresence.get(`support[${i}]`);
+        const correctedHex = supportResolved[i] ?? hex;
+        return makeValidationEntry(
+          hex,
+          correctedHex,
+          presence?.presence ?? 'unchecked',
+          presence?.deltaE ?? null,
+          contestedSupportIndices.includes(i) ? 'vision_adjudication' : 'art_director',
+          contestedSupportIndices.includes(i) ? 'corrected_by_vision' : 'accepted'
+        );
+      });
+
+      const colorValidation: ColorValidationResolved = {
+        global_status: 'vision_adjudicated',
+        primary: makeValidationEntry(intended.primary, safeColors.primary, rolePresence.get('primary')?.presence ?? 'confirmed', rolePresence.get('primary')?.deltaE ?? null, contestedRoles.includes('primary') ? 'vision_adjudication' : 'art_director', contestedRoles.includes('primary') ? 'corrected_by_vision' : 'accepted'),
+        accent: makeValidationEntry(intended.accent, safeColors.accent, rolePresence.get('accent')?.presence ?? 'confirmed', rolePresence.get('accent')?.deltaE ?? null, contestedRoles.includes('accent') ? 'vision_adjudication' : 'art_director', contestedRoles.includes('accent') ? 'corrected_by_vision' : 'accepted'),
+        secondary: makeValidationEntry(null, safeColors.secondary, 'unchecked', null, 'art_director', 'accepted'),
+        background: makeValidationEntry(intended.background, safeColors.background, rolePresence.get('background')?.presence ?? 'confirmed', rolePresence.get('background')?.deltaE ?? null, contestedRoles.includes('background') ? 'vision_adjudication' : 'art_director', contestedRoles.includes('background') ? 'corrected_by_vision' : 'accepted'),
+        support_colors: supportResolved,
+        support_details: supportDetails,
+        vision_adjudication: visionAudit,
+      };
+
+      const profile = await this.persistProfile(input, result, colorValidation);
+      await this.syncStores(input.storeId, safeColors);
+      return { profile, success: true };
     } catch (err) {
       const elapsedMs = Date.now() - startTime;
       const errorMessage = err instanceof Error ? err.message : String(err);
-      const errorType =
-        err instanceof BrandProfilerWithoutLogoError
-          ? err.metadata.errorType
+      const errorType = err instanceof VisionAdjudicationError ? err.code : 'api_error';
+
+      const failureReason: import('@/lib/visual-signature/types').VisionFailureReason =
+        errorType === 'no_choice' || errorType === 'invalid_json' || errorType === 'hex_outside_observed_colors' || errorType === 'api_error'
+          ? errorType
           : 'api_error';
 
-      await this.persistFailedProfile(input, errorMessage, extractedColors);
+      const visionFailedAudit: VisionAdjudicationAudit = {
+        status: 'failed',
+        reason: failureReason,
+        details: errorMessage,
+        attemptedAt: new Date().toISOString(),
+      };
+
+      const failedValidation: ColorValidationFailed = {
+        global_status: 'vision_failed',
+        vision_adjudication: visionFailedAudit,
+      };
+
+      await this.persistFailedProfile(input, errorMessage, [], failedValidation);
 
       throw new BrandProfilerWithoutLogoError(errorMessage, {
         provider: 'openai',
@@ -350,9 +602,175 @@ export class BrandProfilerWithoutLogoService {
     }
   }
 
+  private async generateWithFallback(
+    input: BrandProfilerInput,
+    probeResult: import('@/lib/brand-assets/types').ColorProbeResult | null,
+    nonArtifactClusters: ColorCluster[],
+    startTime: number
+  ): Promise<BrandProfileGenerationResult> {
+    const brandColor = input.brandColor;
+
+    let safeColors: ResolvedPalette;
+    let logoColors: string[];
+    let globalStatus: ColorValidationResolved['global_status'];
+
+    if (nonArtifactClusters.length > 0) {
+      const dominant = nonArtifactClusters
+        .filter(c => c.classification === 'dominant' && c.saturation >= 0.1 && c.luminance >= 0.25)
+        .sort((a, b) => b.frequency - a.frequency);
+
+      const structural = nonArtifactClusters
+        .filter(c => c.classification === 'structural')
+        .sort((a, b) => b.frequency - a.frequency);
+
+      const bgCandidates = nonArtifactClusters
+        .filter(c => c.classification === 'background')
+        .sort((a, b) => b.edgeRatio - a.edgeRatio);
+
+      const primaryHex = dominant[0]?.hex ?? brandColor ?? '#666666';
+      const secondHex = dominant.length > 1 ? dominant[1].hex : (structural[0]?.hex ?? primaryHex);
+      const accentHex = secondHex;
+      const bgHex = bgCandidates[0]?.hex ?? nonArtifactClusters.sort((a, b) => b.edgeRatio - a.edgeRatio)[0]?.hex ?? '#FFFFFF';
+
+      safeColors = { primary: primaryHex, secondary: secondHex, accent: accentHex, background: bgHex };
+      logoColors = this.extractProbeColorsFromClusters(nonArtifactClusters);
+      globalStatus = 'fallback_heuristic';
+    } else {
+      const primary = brandColor ?? '#666666';
+      safeColors = {
+        primary,
+        secondary: primary,
+        accent: primary,
+        background: '#FFFFFF',
+      };
+      logoColors = [primary];
+      globalStatus = 'fallback_heuristic';
+    }
+
+    const result: BrandProfilerWithoutLogoResult = {
+      logo_colors_detected: logoColors,
+      safe_color_tokens: safeColors,
+      visual_style: '', visual_tone: '', typography_direction: '',
+      brand_personality: '', campaign_guidelines: '', campaign_brief: '',
+      inferred_primary_color: safeColors.primary,
+      inferred_accent_color: safeColors.accent,
+      confidence_score: 0.5,
+    };
+
+    const roleSource: ColorValidationEntry['role_source'] = 'heuristic';
+    const resolution: ColorValidationEntry['resolution'] = 'selected_by_heuristic';
+
+    const colorValidation: ColorValidationResolved = {
+      global_status,
+      primary: makeValidationEntry(null, safeColors.primary, 'unchecked', null, roleSource, resolution),
+      accent: makeValidationEntry(null, safeColors.accent, 'unchecked', null, roleSource, resolution),
+      secondary: makeValidationEntry(null, safeColors.secondary, 'unchecked', null, roleSource, resolution),
+      background: makeValidationEntry(null, safeColors.background, 'unchecked', null, roleSource, resolution),
+      support_colors: [],
+    };
+
+    const prompt = this.buildPromptContext('legacy', input);
+    const visionResult = await this.callVision(input, prompt);
+    const enriched = this.mergeSemanticFields(result, visionResult);
+
+    const profile = await this.persistProfile(input, enriched, colorValidation);
+    await this.syncStores(input.storeId, safeColors);
+    return { profile, success: true };
+  }
+
+  private extractProbeColorsFromClusters(clusters: ColorCluster[]): string[] {
+    const brandClusters = clusters.filter(c =>
+      c.classification === 'dominant' || c.classification === 'structural' || c.classification === 'dark_ink'
+    );
+    const seen = new Set<string>();
+    return brandClusters
+      .filter(c => { if (seen.has(c.hex)) return false; seen.add(c.hex); return true; })
+      .slice(0, 5)
+      .map(c => c.hex);
+  }
+
+  private async callVision(input: BrandProfilerInput, prompt: string): Promise<string> {
+    const model = process.env.OPENAI_BRAND_DIRECTOR_MODEL ?? 'gpt-4o';
+    const response = await this.openai.chat.completions.create({
+      model,
+      messages: [
+        { role: 'system', content: prompt },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Analise visualmente a assinatura visual aprovada e gere o perfil de marca.' },
+            { type: 'image_url', image_url: { url: input.assetUrl, detail: 'low' } },
+          ],
+        },
+      ],
+      response_format: { type: 'json_object' },
+      max_tokens: 2000,
+    });
+    return response.choices[0]?.message?.content ?? '{}';
+  }
+
+  private async callVisionFull(input: BrandProfilerInput, prompt: string): Promise<string> {
+    const model = process.env.OPENAI_BRAND_DIRECTOR_MODEL ?? 'gpt-4o';
+    const response = await this.openai.chat.completions.create({
+      model,
+      messages: [
+        { role: 'system', content: prompt },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Analise visualmente a assinatura visual aprovada, corrija as cores contestadas e gere o perfil de marca completo.' },
+            { type: 'image_url', image_url: { url: input.assetUrl, detail: 'low' } },
+          ],
+        },
+      ],
+      response_format: { type: 'json_object' },
+      max_tokens: 3000,
+    });
+    return response.choices[0]?.message?.content ?? '{}';
+  }
+
+  private mergeSemanticFields(result: BrandProfilerWithoutLogoResult, visionJson: string): BrandProfilerWithoutLogoResult {
+    try {
+      const raw = JSON.parse(visionJson);
+      return {
+        ...result,
+        visual_style: String(raw.visual_style ?? result.visual_style),
+        visual_tone: String(raw.visual_tone ?? result.visual_tone),
+        typography_direction: String(raw.typography_direction ?? result.typography_direction),
+        brand_personality: String(raw.brand_personality ?? result.brand_personality),
+        campaign_guidelines: String(raw.campaign_guidelines ?? result.campaign_guidelines),
+        campaign_brief: String(raw.campaign_brief ?? result.campaign_brief),
+        confidence_score: typeof raw.confidence_score === 'number'
+          ? Math.max(0, Math.min(1, raw.confidence_score))
+          : result.confidence_score,
+      };
+    } catch {
+      return result;
+    }
+  }
+
+  private async syncStores(storeId: string, safeColors: ResolvedPalette): Promise<void> {
+    console.log(`[BrandProfiler] Syncing colors to store ${storeId}: primary=${safeColors.primary}, accent=${safeColors.accent}`);
+    await supabase
+      .from('stores')
+      .update({
+        brand_color: safeColors.primary,
+        accent_color: safeColors.accent,
+      })
+      .eq('id', storeId);
+  }
+
+  private getBrandColorsChosen(input: BrandProfilerInput, safeColors: ResolvedPalette): string[] {
+    if (input.previousBrandColors && input.previousBrandColors.length > 0) {
+      return input.previousBrandColors;
+    }
+    return [];
+  }
+
   private async persistProfile(
     input: BrandProfilerInput,
-    result: BrandProfilerWithoutLogoResult
+    result: BrandProfilerWithoutLogoResult,
+    colorValidation?: ColorValidation
   ): Promise<BrandProfileRecord> {
     const safeLogoColors = sanitizeHexArray(result.logo_colors_detected);
     const palette = safeLogoColors.length > 0 ? safeLogoColors : ['#666666'];
@@ -371,13 +789,23 @@ export class BrandProfilerWithoutLogoService {
       background: sanitizeHex(st.background) ?? '#FFFFFF',
     };
 
+    const brandColorsChosen = this.getBrandColorsChosen(input, safeTokens);
+
+    const metadata: Record<string, unknown> = {
+      art_director_output: input.artDirectorOutput,
+      asset_url: input.assetUrl,
+    };
+    if (colorValidation) {
+      metadata.color_validation = colorValidation;
+    }
+
     const profileData = {
       store_id: input.storeId,
       source: 'without_logo',
       active_logo_asset_id: null,
       visual_signature_id: input.visualSignatureId,
       logo_colors_detected: palette,
-      brand_colors_chosen: [safePrimary, safeAccent, ...palette.filter(c => c !== safePrimary && c !== safeAccent)].slice(0, 3),
+      brand_colors_chosen: brandColorsChosen,
       safe_color_tokens: safeTokens,
       visual_style: result.visual_style,
       visual_tone: result.visual_tone,
@@ -388,10 +816,7 @@ export class BrandProfilerWithoutLogoService {
       inferred_primary_color: safePrimary,
       inferred_accent_color: safeAccent,
       confidence_score: result.confidence_score,
-      metadata: {
-        art_director_output: input.artDirectorOutput,
-        asset_url: input.assetUrl,
-      },
+      metadata,
       version: 1,
       status: 'synced' as const,
     };
@@ -443,13 +868,25 @@ export class BrandProfilerWithoutLogoService {
   private async persistFailedProfile(
     input: BrandProfilerInput,
     errorMessage: string,
-    extractedColors: string[] = []
+    _extractedColors: string[] = [],
+    colorValidation?: ColorValidation
   ): Promise<void> {
-    const rawColors = extractedColors.length > 0 ? extractedColors : input.artDirectorOutput.suggested_colors;
+    const rawColors = _extractedColors.length > 0 ? _extractedColors : input.artDirectorOutput.suggested_colors;
     const palette = sanitizeHexArray(rawColors);
     const finalPalette = palette.length > 0 ? palette : ['#666666'];
     const primary = pickPrimaryFromPalette(finalPalette) ?? '#666666';
     const accent = pickAccentFromPalette(finalPalette, primary) ?? primary;
+
+    const brandColorsChosen = this.getBrandColorsChosen(input, { primary, secondary: '#999999', accent, background: '#FFFFFF' });
+
+    const metadata: Record<string, unknown> = {
+      error: errorMessage,
+      art_director_output: input.artDirectorOutput,
+      extracted_colors: _extractedColors,
+    };
+    if (colorValidation) {
+      metadata.color_validation = colorValidation;
+    }
 
     const failedData = {
       store_id: input.storeId,
@@ -457,13 +894,8 @@ export class BrandProfilerWithoutLogoService {
       active_logo_asset_id: null,
       visual_signature_id: input.visualSignatureId,
       logo_colors_detected: finalPalette,
-      brand_colors_chosen: [primary, accent, ...finalPalette.filter(c => c !== primary && c !== accent)].slice(0, 3),
-      safe_color_tokens: {
-        primary,
-        secondary: '#999999',
-        accent,
-        background: '#FFFFFF',
-      },
+      brand_colors_chosen: brandColorsChosen,
+      safe_color_tokens: {},
       visual_style: null,
       visual_tone: null,
       typography_direction: null,
@@ -471,11 +903,7 @@ export class BrandProfilerWithoutLogoService {
       campaign_guidelines: null,
       campaign_brief: null,
       confidence_score: null,
-      metadata: {
-        error: errorMessage,
-        art_director_output: input.artDirectorOutput,
-        extracted_colors: extractedColors,
-      },
+      metadata,
       version: 1,
       status: 'failed' as const,
     };
@@ -520,4 +948,31 @@ export class BrandProfilerWithoutLogoService {
       console.error('[BrandProfiler] Failed to mark previous profile outdated:', error.message);
     }
   }
+}
+
+function sanitizeResolvedPalette(palette: ResolvedPalette): ResolvedPalette {
+  return {
+    primary: sanitizeHex(palette.primary) ?? '#666666',
+    secondary: sanitizeHex(palette.secondary) ?? '#999999',
+    accent: sanitizeHex(palette.accent) ?? '#666666',
+    background: sanitizeHex(palette.background) ?? '#FFFFFF',
+  };
+}
+
+function makeValidationEntry(
+  intended: string | null,
+  resolved: string,
+  presence: ColorValidationEntry['presence'],
+  deltaE: number | null,
+  roleSource: ColorValidationEntry['role_source'],
+  resolution: ColorValidationEntry['resolution']
+): ColorValidationEntry {
+  return {
+    intended,
+    resolved,
+    presence,
+    delta_e: deltaE,
+    role_source: roleSource,
+    resolution,
+  };
 }
