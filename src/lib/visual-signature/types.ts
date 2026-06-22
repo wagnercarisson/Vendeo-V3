@@ -161,6 +161,84 @@ export interface VisualSignatureMetadataInputSnapshot {
   accent_color: string | null;
 }
 
+export interface IntendedPalette {
+  primary: string;
+  accent: string;
+  background: string;
+  support: string[];
+}
+
+export interface ResolvedPalette {
+  primary: string;
+  secondary: string;
+  accent: string;
+  background: string;
+}
+
+export interface ColorUsage {
+  primary: string;
+  accent: string;
+  support: string;
+  background: string;
+}
+
+export type VisionFailureReason = 'api_error' | 'invalid_json' | 'no_choice' | 'hex_outside_observed_colors';
+
+export type VisionAdjudicationAudit =
+  | { status: 'success'; reason: string; prompt_suffix: string }
+  | { status: 'failed'; reason: VisionFailureReason; details?: string; attemptedAt: string };
+
+export interface ColorValidationEntry {
+  intended: string | null;
+  resolved: string;
+  presence: 'confirmed' | 'ambiguous' | 'not_confirmed' | 'unchecked';
+  delta_e: number | null;
+  role_source: 'art_director' | 'vision_adjudication' | 'heuristic';
+  resolution: 'accepted' | 'accepted_unverified' | 'corrected_by_vision' | 'selected_by_heuristic';
+  resolved_from_cluster?: { hex: string; classification: string; frequency: number; delta_e: number } | null;
+  note?: string;
+}
+
+export interface ColorValidationResolved {
+  global_status: 'all_confirmed' | 'vision_adjudicated' | 'probe_unavailable' | 'fallback_heuristic';
+  primary: ColorValidationEntry;
+  accent: ColorValidationEntry;
+  secondary: ColorValidationEntry;
+  background: ColorValidationEntry;
+  support_colors: string[];
+  support_details?: ColorValidationEntry[];
+  vision_adjudication?: VisionAdjudicationAudit;
+}
+
+export interface ColorValidationFailed {
+  global_status: 'vision_failed';
+  vision_adjudication: VisionAdjudicationAudit;
+}
+
+export type ColorValidation = ColorValidationResolved | ColorValidationFailed;
+
+export interface SupportCorrection {
+  index: number;
+  color: string;
+}
+
+export interface RawVisionCorrections {
+  primary: string | null;
+  accent: string | null;
+  background: string | null;
+  support: SupportCorrection[];
+}
+
+export interface RawVisionAdjudication {
+  corrections: RawVisionCorrections;
+  reason: string;
+}
+
+export interface NormalizedVisionAdjudication {
+  palette: IntendedPalette;
+  reason: string;
+}
+
 export interface VisualSignatureMetadataArtDirectorOutput {
   visual_direction: string;
   content_used: {
@@ -170,8 +248,8 @@ export interface VisualSignatureMetadataArtDirectorOutput {
     slogan: boolean;
   };
   visual_elements?: string[];
-  intended_palette?: Record<string, unknown>;
-  color_usage?: Record<string, unknown>;
+  intended_palette?: IntendedPalette;
+  color_usage?: ColorUsage;
 }
 
 export type RestoreEligibilityReason = 'ok' | 'critical_drift' | 'missing_metadata';
@@ -217,11 +295,13 @@ export interface BrandProfilerInput {
   visualSignatureId: string;
   assetUrl: string;
   referenceCardUrl?: string | null;
+  intendedPalette?: IntendedPalette | null;
+  previousBrandColors?: string[];
 }
 
 export interface BrandProfilerWithoutLogoResult {
   logo_colors_detected: string[];
-  safe_color_tokens: Record<string, string>;
+  safe_color_tokens: ResolvedPalette;
   visual_style: string;
   visual_tone: string;
   typography_direction: string;

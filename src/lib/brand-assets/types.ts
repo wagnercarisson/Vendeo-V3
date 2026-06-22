@@ -118,6 +118,7 @@ export interface ColorCluster {
   frequency: number;
   luminance: number;
   saturation: number;
+  edgeRatio: number;
   classification: 'dominant' | 'dark_ink' | 'neutral' | 'background' | 'structural' | 'transition';
 }
 
