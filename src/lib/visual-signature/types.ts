@@ -1,4 +1,5 @@
 import type { ColorCluster } from '@/lib/brand-assets/types';
+export type { ColorCluster };
 import { findClosestProbeCluster } from '@/lib/brand-assets/color-probe';
 
 export type VisualSignatureType =

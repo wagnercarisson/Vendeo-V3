@@ -352,7 +352,7 @@ export class BrandProfilerWithoutLogoService {
     let probeUnavailable = false;
     const contestedRoles: string[] = [];
     const contestedSupportIndices: number[] = [];
-    const rolePresence: Map<string, { presence: string; deltaE: number | null; cluster: ColorCluster | null }> = new Map();
+    const rolePresence: Map<string, { presence: ColorValidationEntry['presence']; deltaE: number | null; cluster: ColorCluster | null }> = new Map();
 
     if (nonArtifactClusters.length === 0) {
       probeUnavailable = true;
@@ -424,7 +424,7 @@ export class BrandProfilerWithoutLogoService {
     input: BrandProfilerInput,
     intended: IntendedPalette,
     nonArtifactClusters: ColorCluster[],
-    rolePresence: Map<string, { presence: string; deltaE: number | null; cluster: ColorCluster | null }>,
+    rolePresence: Map<string, { presence: ColorValidationEntry['presence']; deltaE: number | null; cluster: ColorCluster | null }>,
     startTime: number
   ): Promise<BrandProfileGenerationResult> {
     const resolved = intendedToResolved(intended, intended.support);
@@ -469,7 +469,7 @@ export class BrandProfilerWithoutLogoService {
     intended: IntendedPalette,
     buffer: Buffer | null,
     nonArtifactClusters: ColorCluster[],
-    rolePresence: Map<string, { presence: string; deltaE: number | null; cluster: ColorCluster | null }>,
+    rolePresence: Map<string, { presence: ColorValidationEntry['presence']; deltaE: number | null; cluster: ColorCluster | null }>,
     contestedRoles: string[],
     contestedSupportIndices: number[],
     startTime: number
@@ -661,7 +661,7 @@ export class BrandProfilerWithoutLogoService {
     const resolution: ColorValidationEntry['resolution'] = 'selected_by_heuristic';
 
     const colorValidation: ColorValidationResolved = {
-      global_status,
+      global_status: globalStatus,
       primary: makeValidationEntry(null, safeColors.primary, 'unchecked', null, roleSource, resolution),
       accent: makeValidationEntry(null, safeColors.accent, 'unchecked', null, roleSource, resolution),
       secondary: makeValidationEntry(null, safeColors.secondary, 'unchecked', null, roleSource, resolution),
