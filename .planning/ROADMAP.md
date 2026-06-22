@@ -97,17 +97,17 @@
       - [x] 04.6.4-04-PLAN.md — Rejection Propagation, Step 2 identity_state, Remover, History Modal
     - **Wave 4 — Quality Gate** *(depends on 04)*
       - [x] 04.6.4-05-PLAN.md — Verification & Quality Gate
-  - [ ] Phase 4.6.5: VS Color Drift & Brand Profile Alignment (5 plans, 5 waves)
-    - **Wave 1 — Foundation** *(parallel)*
-      - [ ] 04.6.5-01-PLAN.md — Types (IntendedPalette, ResolvedPalette, ColorValidation) + ColorProbe extraction
-    - **Wave 2 — Normalizers** *(depends on Wave 1)*
-      - [ ] 04.6.5-02-PLAN.md — normalizeIntendedPalette, intendedToResolved, normalizeAdjudication, Art Director integration
-    - **Wave 3 — Brand Profiler** *(depends on Wave 2)*
-      - [ ] 04.6.5-03-PLAN.md — Presence validation, observed_colors, vision arbitration, fallback matrix, sync
-    - **Wave 4 — Approval Route** *(depends on Wave 3)*
-      - [ ] 04.6.5-04-PLAN.md — intendedPalette extraction, previousBrandColors wiring, profiler failure isolation
-    - **Wave 5 — Tests & Verification** *(depends on all)*
-      - [ ] 04.6.5-05-PLAN.md — Tests, manual verification, typecheck, lint, build
+   - [x] Phase 4.6.5: VS Color Drift & Brand Profile Alignment (5/5 plans) (completed 2026-06-22)
+    - **Wave 1 — Foundation**
+      - [x] 04.6.5-01-PLAN.md — Types (IntendedPalette, ResolvedPalette, ColorValidation) + ColorProbe extraction
+    - **Wave 2 — Normalizers**
+      - [x] 04.6.5-02-PLAN.md — normalizeIntendedPalette, intendedToResolved, normalizeAdjudication, Art Director integration
+    - **Wave 3 — Brand Profiler**
+      - [x] 04.6.5-03-PLAN.md — Presence validation, observed_colors, vision arbitration, fallback matrix, sync
+    - **Wave 4 — Approval Route**
+      - [x] 04.6.5-04-PLAN.md — intendedPalette extraction, previousBrandColors wiring, profiler failure isolation
+    - **Wave 5 — Tests & Verification**
+      - [x] 04.6.5-05-PLAN.md — Tests, manual verification, typecheck, lint, build
 - [ ] Phase 5: Review, Adjust & Export (not yet planned)
 ## Progress
 
@@ -132,5 +132,5 @@
 | 4.6.2. Visual Direction Drift Detection | v1.1 | 4/4 | Complete | 2026-06-13 |
 | 4.6.3. Logo State Lifecycle | v1.1 | 5/5 | Complete | 2026-06-17 |
 | 4.6.4. Visual Signature Lifecycle | v1.1 | 5/5 | Complete | 2026-06-19 |
-| 4.6.5. VS Color Drift & Brand Profile | v1.1 | 0/5 | Planned | — |
+| 4.6.5. VS Color Drift & Brand Profile | v1.1 | 5/5 | Complete | 2026-06-22 |
 | 5. Review, Adjust & Export | v1.1 | 0 | Not yet planned | — |
