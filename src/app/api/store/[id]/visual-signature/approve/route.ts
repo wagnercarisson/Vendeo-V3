@@ -5,7 +5,8 @@ import { BrandProfilerWithoutLogoService } from '@/lib/visual-signature/brand-pr
 import { updateGenerationEventDecision } from '@/lib/visual-signature/generation-events';
 import { reconcileProfiles } from '@/lib/brand-assets/profile-reconciliation';
 import { IDENTITY_TO_LOGO_STATUS } from '@/lib/constants';
-import type { VisualSignatureMetadataInputSnapshot, VisualSignatureMetadataArtDirectorOutput } from '@/lib/visual-signature/types';
+import { normalizeIntendedPalette } from '@/lib/visual-signature/types';
+import type { VisualSignatureMetadataInputSnapshot, VisualSignatureMetadataArtDirectorOutput, IntendedPalette } from '@/lib/visual-signature/types';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -235,6 +236,35 @@ export async function POST(
   let inferredAccentColor: string | null = null;
 
   console.log(`[approve][req-${reqId}] 9/12 no existing profile, starting BrandProfilerWithoutLogoService...`);
+
+  // Extract intendedPalette from signature metadata
+  const signatureMetadata = (signature.metadata ?? {}) as Record<string, unknown>;
+  const artDirectorMetadata = signatureMetadata.artDirectorOutput as VisualSignatureMetadataArtDirectorOutput | null ?? null;
+  const rawIntendedPalette = artDirectorMetadata?.intended_palette;
+  const intendedPalette: IntendedPalette | null = rawIntendedPalette
+    ? normalizeIntendedPalette(rawIntendedPalette)
+    : null;
+
+  // Load previousBrandColors from last synced profile (only if manual_color_override.enabled === true)
+  let previousBrandColors: string[] = [];
+  try {
+    const { data: lastSynced } = await supabase
+      .from('store_brand_profiles')
+      .select('brand_colors_chosen, manual_color_override')
+      .eq('store_id', id)
+      .eq('status', 'synced')
+      .order('updated_at', { ascending: false })
+      .limit(1);
+    if (lastSynced?.[0]) {
+      const override = lastSynced[0].manual_color_override as Record<string, unknown> | null;
+      if (override?.enabled === true) {
+        previousBrandColors = (lastSynced[0].brand_colors_chosen as string[]) ?? [];
+      }
+    }
+  } catch (err) {
+    console.error(`[approve][req-${reqId}] Error loading previousBrandColors:`, err);
+  }
+
   try {
     const profiler = new BrandProfilerWithoutLogoService();
     const result = await profiler.generate({
@@ -253,6 +283,8 @@ export async function POST(
       visualSignatureId: body.signatureId,
       assetUrl: signature.asset_url,
       referenceCardUrl: null,
+      intendedPalette,
+      previousBrandColors,
     });
 
     console.log(`[approve][req-${reqId}] 10/12 BrandProfiler OK`, { profileId: result.profile.id });
