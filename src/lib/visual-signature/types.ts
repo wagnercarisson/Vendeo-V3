@@ -1,3 +1,6 @@
+import type { ColorCluster } from '@/lib/brand-assets/types';
+import { findClosestProbeCluster } from '@/lib/brand-assets/color-probe';
+
 export type VisualSignatureType =
   | "ai_generated"
   | "automatic_generated"
@@ -311,4 +314,172 @@ export interface BrandProfilerWithoutLogoResult {
   inferred_primary_color: string;
   inferred_accent_color: string;
   confidence_score: number;
+}
+
+const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
+
+export class VisionAdjudicationError extends Error {
+  public readonly code: string;
+  constructor(message: string, code: string) {
+    super(message);
+    this.name = 'VisionAdjudicationError';
+    this.code = code;
+  }
+}
+
+export function normalizeIntendedPalette(raw: unknown): IntendedPalette | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const obj = raw as Record<string, unknown>;
+  const primary = typeof obj.primary === 'string' && HEX_REGEX.test(obj.primary) ? obj.primary.toUpperCase() : null;
+  const accent = typeof obj.accent === 'string' && HEX_REGEX.test(obj.accent) ? obj.accent.toUpperCase() : null;
+  const background = typeof obj.background === 'string' && HEX_REGEX.test(obj.background) ? obj.background.toUpperCase() : null;
+  if (!primary || !accent || !background) return null;
+  const support = Array.isArray(obj.support)
+    ? obj.support.filter((s): s is string => typeof s === 'string' && HEX_REGEX.test(s)).map(s => s.toUpperCase())
+    : [];
+  return { primary, accent, background, support };
+}
+
+export function intendedToResolved(intended: IntendedPalette, supportResolved: string[]): ResolvedPalette {
+  return {
+    primary: intended.primary,
+    secondary: supportResolved[0] ?? intended.primary,
+    accent: intended.accent,
+    background: intended.background,
+  };
+}
+
+export function composeSupport(original: string[], contestedIndices: number[], corrections: SupportCorrection[]): string[] {
+  const correctionMap = new Map<number, string>();
+  for (const c of corrections) {
+    correctionMap.set(c.index, c.color);
+  }
+  return original.map((color, index) => {
+    if (contestedIndices.includes(index) && correctionMap.has(index)) {
+      return correctionMap.get(index)!;
+    }
+    return color;
+  });
+}
+
+export function resolveRole(
+  roleValue: string,
+  visionValue: string | null,
+  isContested: boolean
+): string {
+  if (!isContested) return roleValue;
+  if (visionValue === null) {
+    throw new VisionAdjudicationError(`Contested role resolved as null`, 'no_choice');
+  }
+  return visionValue;
+}
+
+function validateHex(hex: unknown): hex is string {
+  return typeof hex === 'string' && HEX_REGEX.test(hex);
+}
+
+function revalidateVisionHex(hex: string, clusters: ColorCluster[], label: string): void {
+  const match = findClosestProbeCluster(hex, clusters);
+  if (!match.cluster || match.deltaE > 18) {
+    throw new VisionAdjudicationError(
+      `${label} HEX ${hex} rejected — ∆E ${match.deltaE.toFixed(1)} > 18`,
+      'hex_outside_observed_colors'
+    );
+  }
+}
+
+export function normalizeAdjudication(
+  raw: unknown,
+  fallback: IntendedPalette,
+  contestedRoles: string[],
+  contestedSupportIndices: number[],
+  nonArtifactClusters: ColorCluster[]
+): NormalizedVisionAdjudication {
+  if (!raw || typeof raw !== 'object') {
+    throw new VisionAdjudicationError('Raw is not an object', 'invalid_json');
+  }
+  const obj = raw as Record<string, unknown>;
+  const correctionsRaw = obj.corrections;
+  if (!correctionsRaw || typeof correctionsRaw !== 'object') {
+    throw new VisionAdjudicationError('Missing corrections in raw', 'invalid_json');
+  }
+  const corrections = correctionsRaw as Record<string, unknown>;
+  const reason = typeof obj.reason === 'string' ? obj.reason : '';
+
+  if (corrections.primary !== undefined && corrections.primary !== null && !validateHex(corrections.primary)) {
+    throw new VisionAdjudicationError('corrections.primary must be null or valid hex', 'invalid_json');
+  }
+  if (corrections.accent !== undefined && corrections.accent !== null && !validateHex(corrections.accent)) {
+    throw new VisionAdjudicationError('corrections.accent must be null or valid hex', 'invalid_json');
+  }
+  if (corrections.background !== undefined && corrections.background !== null && !validateHex(corrections.background)) {
+    throw new VisionAdjudicationError('corrections.background must be null or valid hex', 'invalid_json');
+  }
+  if (!Array.isArray(corrections.support)) {
+    throw new VisionAdjudicationError('corrections.support must be an array', 'invalid_json');
+  }
+
+  const supportCorrections = corrections.support as SupportCorrection[];
+  const seenIndices = new Set<number>();
+  for (const sc of supportCorrections) {
+    if (typeof sc.index !== 'number' || typeof sc.color !== 'string' || !HEX_REGEX.test(sc.color)) {
+      throw new VisionAdjudicationError('Invalid support correction entry', 'invalid_json');
+    }
+    if (seenIndices.has(sc.index)) {
+      throw new VisionAdjudicationError(`Duplicate support index ${sc.index}`, 'invalid_json');
+    }
+    seenIndices.add(sc.index);
+  }
+
+  const primaryVision = typeof corrections.primary === 'string' ? corrections.primary.toUpperCase() : null;
+  const accentVision = typeof corrections.accent === 'string' ? corrections.accent.toUpperCase() : null;
+  const backgroundVision = typeof corrections.background === 'string' ? corrections.background.toUpperCase() : null;
+
+  const isPrimaryContested = contestedRoles.includes('primary');
+  const isAccentContested = contestedRoles.includes('accent');
+  const isBackgroundContested = contestedRoles.includes('background');
+
+  if (isPrimaryContested && primaryVision !== null) {
+    revalidateVisionHex(primaryVision, nonArtifactClusters, 'primary');
+  }
+  if (isAccentContested && accentVision !== null) {
+    revalidateVisionHex(accentVision, nonArtifactClusters, 'accent');
+  }
+  if (isBackgroundContested && backgroundVision !== null) {
+    revalidateVisionHex(backgroundVision, nonArtifactClusters, 'background');
+  }
+
+  const primary = resolveRole(fallback.primary, primaryVision, isPrimaryContested);
+  const accent = resolveRole(fallback.accent, accentVision, isAccentContested);
+  const background = resolveRole(fallback.background, backgroundVision, isBackgroundContested);
+
+  const filteredSupportCorrections = supportCorrections.filter(sc =>
+    sc.index >= 0 && sc.index < fallback.support.length
+  );
+  const filteredContested = contestedSupportIndices.filter(idx =>
+    idx >= 0 && idx < fallback.support.length
+  );
+  const correctedIndices = new Set(filteredSupportCorrections.map(sc => sc.index));
+  for (const idx of filteredContested) {
+    if (!correctedIndices.has(idx)) {
+      throw new VisionAdjudicationError(`Missing correction for contested support index ${idx}`, 'no_choice');
+    }
+  }
+
+  for (const sc of filteredSupportCorrections) {
+    if (filteredContested.includes(sc.index)) {
+      revalidateVisionHex(sc.color.toUpperCase(), nonArtifactClusters, `support[${sc.index}]`);
+    }
+  }
+
+  const support = composeSupport(fallback.support, filteredContested, filteredSupportCorrections);
+
+  const palette: IntendedPalette = {
+    primary,
+    accent,
+    background,
+    support,
+  };
+
+  return { palette, reason };
 }

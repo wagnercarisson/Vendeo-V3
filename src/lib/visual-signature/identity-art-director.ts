@@ -6,7 +6,9 @@ import type {
   VisualSignatureArtDirectorOutput,
   VisualSignatureMetadataArtDirectorOutput,
   VisualSignatureRecord,
+  ColorUsage,
 } from '@/lib/visual-signature/types';
+import { normalizeIntendedPalette } from '@/lib/visual-signature/types';
 
 export interface VisualSignatureGenerationResult {
   signature: VisualSignatureRecord;
@@ -90,6 +92,14 @@ INSTRUÇÕES OBRIGATÓRIAS PARA ESTA NOVA GERAÇÃO:
           if (jsonMatch) {
             const parsed = JSON.parse(jsonMatch[0]);
             if (parsed.visual_direction && parsed.content_used) {
+              const normalizedIntended = normalizeIntendedPalette(parsed.intended_palette);
+              let validatedColorUsage: ColorUsage | undefined;
+              const cu = parsed.color_usage;
+              if (cu && typeof cu === 'object' &&
+                  typeof cu.primary === 'string' && typeof cu.accent === 'string' &&
+                  typeof cu.support === 'string' && typeof cu.background === 'string') {
+                validatedColorUsage = cu as ColorUsage;
+              }
               metadataArtDirectorOutput = {
                 visual_direction: parsed.visual_direction,
                 content_used: {
@@ -99,8 +109,8 @@ INSTRUÇÕES OBRIGATÓRIAS PARA ESTA NOVA GERAÇÃO:
                   slogan: parsed.content_used?.slogan ?? false,
                 },
                 visual_elements: parsed.visual_elements,
-                intended_palette: parsed.intended_palette,
-                color_usage: parsed.color_usage,
+                intended_palette: normalizedIntended ?? undefined,
+                color_usage: validatedColorUsage,
               };
             }
           }
