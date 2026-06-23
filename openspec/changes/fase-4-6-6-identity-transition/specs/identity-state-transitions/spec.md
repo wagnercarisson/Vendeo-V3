@@ -144,7 +144,7 @@ When transitioning `logo` → `text_only` or `visual_signature` → `text_only`,
 
 ### Requirement: Visual signature restore — identity_state validation
 
-The `POST /api/store/[id]/visual-signature/restore` endpoint SHALL validate `stores.identity_state` before proceeding. Restore SHALL be permitted only when `identity_state = 'text_only'`. If `identity_state = 'logo'`, the endpoint SHALL reject with HTTP 409.
+The `POST /api/store/[id]/visual-signature/restore` endpoint SHALL validate `stores.identity_state` before proceeding. Restore SHALL be permitted ONLY when `identity_state = 'text_only'`. Restore SHALL be blocked when `identity_state = 'logo'` or `'visual_signature'` — the user must remove the active identity before restoring a VS.
 
 No drift, revalidation, or realignment logic SHALL be added in this phase — restore is scoped to transition validation only.
 
@@ -161,6 +161,15 @@ No drift, revalidation, or realignment logic SHALL be added in this phase — re
 - **THEN** HTTP 409 SHALL be returned
 - **AND** `requires_logo_removal` SHALL be `true`
 - **AND** `current_identity_state` SHALL be `'logo'`
+
+#### Scenario: Restore rejected from visual_signature (no direct swap)
+
+- **WHEN** a restore request is sent to `/api/store/{store_id}/visual-signature/restore`
+- **AND** `stores.identity_state` is `'visual_signature'`
+- **THEN** HTTP 409 SHALL be returned
+- **AND** `requires_identity_removal` SHALL be `true`
+- **AND** `current_identity_state` SHALL be `'visual_signature'`
+- **AND** the error SHALL instruct the user to remove the active VS first
 
 ### Requirement: Logo upload — identity_state validation
 
