@@ -147,7 +147,11 @@ export const BRAZILIAN_STATES = [
   { value: "TO", label: "Tocantins" },
 ] as const;
 
-export const IDENTITY_TO_LOGO_STATUS: Record<string, string | null> = {
+export type IdentityState = 'text_only' | 'logo' | 'visual_signature';
+
+export type IdentityTransition = 'text_only_to_logo' | 'logo_to_text_only' | 'text_only_to_visual_signature' | 'visual_signature_to_text_only';
+
+export const IDENTITY_TO_LOGO_STATUS: Record<IdentityState, string | null> = {
   'text_only': 'explicit_none',
   'logo': 'uploaded',
   'visual_signature': 'generated',
