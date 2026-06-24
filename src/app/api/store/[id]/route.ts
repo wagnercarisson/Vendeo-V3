@@ -46,10 +46,17 @@ export async function GET(
   // Resolve visual signature and brand profile data for frontend hydration
   const identity = await resolveStoreIdentity(store);
 
+  const { count: archivedCount } = await supabase
+    .from("store_visual_signatures")
+    .select("*", { count: "exact", head: true })
+    .eq("store_id", id)
+    .eq("status", "archived");
+
   return NextResponse.json({
     ...store,
     visual_signature_url: identity.visualSignatureUrl,
     logo_url: identity.logoUrl ?? store.logo_url,
+    has_archived_signatures: (archivedCount ?? 0) > 0,
   }, { status: 200 });
 }
 

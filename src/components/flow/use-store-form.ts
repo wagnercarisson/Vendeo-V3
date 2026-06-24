@@ -75,7 +75,8 @@ export type IdentityActions = {
 
 export function useIdentityActions(
   identityState: string | null,
-  hasExistingVS: boolean
+  hasExistingVS: boolean,
+  hasArchivedSignatures: boolean
 ): IdentityActions {
   return useMemo(() => {
     const state = identityState ?? 'text_only';
@@ -84,8 +85,8 @@ export function useIdentityActions(
       'text_only': {
         canUploadLogo: true,
         canRemoveLogo: false,
-        canCreateVS: !hasExistingVS,
-        canManageVS: hasExistingVS,
+        canCreateVS: !hasArchivedSignatures,
+        canManageVS: hasArchivedSignatures,
         canRemoveVS: false,
         showGuidanceCard: true,
       },
@@ -108,7 +109,7 @@ export function useIdentityActions(
     };
 
     return matrix[state] ?? matrix['text_only'];
-  }, [identityState, hasExistingVS]);
+  }, [identityState, hasExistingVS, hasArchivedSignatures]);
 }
 
 export function useStoreForm(): UseStoreFormReturn {

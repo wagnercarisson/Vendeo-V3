@@ -92,7 +92,8 @@ export function StoreIdentityForm() {
   const [archivedCountLoading, setArchivedCountLoading] = useState(false);
   const [subsegmentIsOther, setSubsegmentIsOther] = useState(false);
   const [identityState, setIdentityState] = useState<string | null>(null);
-  const identityActions = useIdentityActions(identityState, visualSignatureUrl !== null);
+  const [hasArchivedSignatures, setHasArchivedSignatures] = useState(false);
+  const identityActions = useIdentityActions(identityState, visualSignatureUrl !== null, hasArchivedSignatures);
   const [inferenceLoading, setInferenceLoading] = useState(false);
   const [inferenceError, setInferenceError] = useState<string | null>(null);
   const [brandDirectorWarning, setBrandDirectorWarning] = useState<string | null>(null);
@@ -481,6 +482,7 @@ export function StoreIdentityForm() {
         } else if (data.logo_url) {
           setLogoResultUrl(data.logo_url);
         }
+        setHasArchivedSignatures(data.has_archived_signatures ?? false);
       })
       .catch(() => {});
   }, [isLoading, storeId]);
