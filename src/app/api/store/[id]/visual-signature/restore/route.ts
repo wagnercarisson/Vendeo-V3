@@ -5,6 +5,7 @@ import { reconcileProfiles } from '@/lib/brand-assets/profile-reconciliation';
 import { BrandProfilerWithoutLogoService } from '@/lib/visual-signature/brand-profiler';
 import { IDENTITY_TO_LOGO_STATUS } from '@/lib/constants';
 import type { VisualSignatureMetadataInputSnapshot, VisualSignatureMetadataArtDirectorOutput } from '@/lib/visual-signature/types';
+import { assertCanTransition } from '@/lib/identity-transitions';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -45,6 +46,19 @@ export async function POST(
       requires_logo_removal: true,
       current_identity_state: 'logo',
     }, { status: 409 });
+  }
+
+  if (store.identity_state === 'visual_signature') {
+    return NextResponse.json({
+      error: 'Remova a assinatura visual ativa antes de restaurar outra.',
+      requires_identity_removal: true,
+      current_identity_state: 'visual_signature',
+    }, { status: 409 });
+  }
+
+  const preCheck = await assertCanTransition(storeId, 'text_only_to_visual_signature');
+  if (!preCheck.ok) {
+    return NextResponse.json({ error: preCheck.error }, { status: preCheck.status });
   }
 
   const { data: signature, error: sigError } = await supabase

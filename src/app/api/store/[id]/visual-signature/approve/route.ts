@@ -7,6 +7,7 @@ import { reconcileProfiles } from '@/lib/brand-assets/profile-reconciliation';
 import { IDENTITY_TO_LOGO_STATUS } from '@/lib/constants';
 import { normalizeIntendedPalette } from '@/lib/visual-signature/types';
 import type { VisualSignatureMetadataInputSnapshot, VisualSignatureMetadataArtDirectorOutput, IntendedPalette } from '@/lib/visual-signature/types';
+import { assertCanTransition, transition } from '@/lib/identity-transitions';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -37,6 +38,15 @@ export async function POST(
   if (!body.signatureId || !UUID_REGEX.test(body.signatureId)) {
     console.log(`[approve][req-${reqId}] signatureId inválido`);
     return NextResponse.json({ error: 'signatureId inválido' }, { status: 400 });
+  }
+
+  const preCheck = await assertCanTransition(id, 'text_only_to_visual_signature');
+  if (!preCheck.ok) {
+    console.log(`[approve][req-${reqId}] state validation failed: ${preCheck.error}`);
+    return NextResponse.json({
+      error: preCheck.error,
+      current_identity_state: id,
+    }, { status: preCheck.status });
   }
 
   console.log(`[approve][req-${reqId}] 2/12 carregando store...`);
@@ -125,15 +135,25 @@ export async function POST(
     .eq('id', body.signatureId);
 
   const attempts = store.visual_signature_attempts ?? 0;
-  console.log(`[approve][req-${reqId}] 6/12 atualizando store (identity_state=visual_signature, logo_status=generated)...`);
+  console.log(`[approve][req-${reqId}] 6/12 atualizando store via transition...`);
+  const transitionResult = await transition(id, 'text_only_to_visual_signature', {
+    onCriticalPersistence: async () => {},
+    onCompensate: async () => {
+      await supabase
+        .from('store_visual_signatures')
+        .update({ status: 'archived', updated_at: new Date().toISOString() })
+        .eq('id', body.signatureId);
+    },
+  });
+
+  if (!transitionResult.success) {
+    console.log(`[approve][req-${reqId}] transition failed: ${transitionResult.error}`);
+    return NextResponse.json({ error: transitionResult.error }, { status: 500 });
+  }
+
   await supabase
     .from('stores')
-    .update({
-      identity_state: 'visual_signature',
-      logo_status: IDENTITY_TO_LOGO_STATUS['visual_signature'],
-      visual_signature_attempts: 0,
-      updated_at: new Date().toISOString(),
-    })
+    .update({ visual_signature_attempts: 0, updated_at: new Date().toISOString() })
     .eq('id', id);
 
   console.log(`[approve][req-${reqId}] 7/12 atualizando generation_event decision...`);

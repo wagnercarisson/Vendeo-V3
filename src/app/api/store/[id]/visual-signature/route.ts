@@ -3,6 +3,7 @@ import { supabaseAdmin as supabase } from '@/lib/supabase/server';
 import { validateDrift } from '@/lib/visual-signature/drift-validator';
 import { reconcileProfiles } from '@/lib/brand-assets/profile-reconciliation';
 import { IDENTITY_TO_LOGO_STATUS } from '@/lib/constants';
+import { transition } from '@/lib/identity-transitions';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -147,19 +148,24 @@ export async function DELETE(
 
   const activeSignatureId = activeSignatures[0].id;
 
-  await supabase
-    .from('store_visual_signatures')
-    .update({ status: 'archived', updated_at: new Date().toISOString() })
-    .eq('id', activeSignatureId);
+  const result = await transition(id, 'visual_signature_to_text_only', {
+    onCriticalPersistence: async () => {
+      await supabase
+        .from('store_visual_signatures')
+        .update({ status: 'archived', updated_at: new Date().toISOString() })
+        .eq('id', activeSignatureId);
+    },
+    onCompensate: async () => {
+      await supabase
+        .from('store_visual_signatures')
+        .update({ status: 'active', updated_at: new Date().toISOString() })
+        .eq('id', activeSignatureId);
+    },
+  });
 
-  await supabase
-    .from('stores')
-    .update({
-      identity_state: 'text_only',
-      logo_status: IDENTITY_TO_LOGO_STATUS['text_only'],
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', id);
+  if (!result.success) {
+    return NextResponse.json({ error: result.error }, { status: 500 });
+  }
 
   await reconcileProfiles(id, {
     preserveCurrentAsFallback: true,

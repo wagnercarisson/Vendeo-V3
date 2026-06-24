@@ -12,6 +12,7 @@ import { BrandDirectorService, BrandDirectorAnalysisError } from '@/lib/brand-as
 import type { BrandAssetRecord, BrandAssetVariantGroup } from '@/lib/brand-assets/types';
 import { IDENTITY_TO_LOGO_STATUS } from '@/lib/constants';
 import { reconcileProfiles } from '@/lib/brand-assets/profile-reconciliation';
+import { assertCanTransition, transition } from '@/lib/identity-transitions';
 
 const ALLOWED_EXTENSION_MAP: Record<string, string> = {
   '.png': 'image/png',
@@ -33,18 +34,12 @@ function validateUUID(id: string): boolean {
 }
 
 async function handlePostUpload(request: NextRequest, storeId: string) {
-  const { data: storeCheck } = await supabase
-    .from('stores')
-    .select('identity_state')
-    .eq('id', storeId)
-    .single();
-
-  if (storeCheck?.identity_state === 'visual_signature') {
+  const preCheck = await assertCanTransition(storeId, 'text_only_to_logo');
+  if (!preCheck.ok) {
     return NextResponse.json({
-      error: 'Remova a assinatura visual ativa antes de enviar um logotipo.',
-      requires_identity_removal: true,
-      current_identity_state: 'visual_signature',
-    }, { status: 409 });
+      error: preCheck.error,
+      current_identity_state: preCheck.status === 409 ? undefined : undefined,
+    }, { status: preCheck.status });
   }
 
   let formData: FormData;
@@ -318,15 +313,15 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
 
       createdProfile = profile ?? null;
 
-      // Update stores: identity_state='logo', logo_status sync
-      await supabase
-        .from('stores')
-        .update({
-          identity_state: 'logo',
-          logo_status: IDENTITY_TO_LOGO_STATUS['logo'],
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', storeId);
+      await transition(storeId, 'text_only_to_logo', {
+        onCriticalPersistence: async () => {},
+        onCompensate: async () => {
+          await supabase
+            .from('store_brand_assets')
+            .update({ status: 'archived', updated_at: new Date().toISOString() })
+            .eq('id', originalAsset.id);
+        },
+      });
     } catch (err) {
       // Phase 3 — Failure path: previous synced stays synced (fallback preserved)
       // Extract deterministic colors from error if available (BrandDirectorAnalysisError)
@@ -357,15 +352,15 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
 
       createdProfile = failedProfile;
 
-      // Update stores: identity_state='logo' (upload succeeded even without analysis)
-      await supabase
-        .from('stores')
-        .update({
-          identity_state: 'logo',
-          logo_status: IDENTITY_TO_LOGO_STATUS['logo'],
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', storeId);
+      await transition(storeId, 'text_only_to_logo', {
+        onCriticalPersistence: async () => {},
+        onCompensate: async () => {
+          await supabase
+            .from('store_brand_assets')
+            .update({ status: 'archived', updated_at: new Date().toISOString() })
+            .eq('id', originalAsset.id);
+        },
+      });
     }
   }
 
@@ -408,23 +403,46 @@ async function handleGetActiveLogo(_request: NextRequest, storeId: string) {
 }
 
 async function handleDeleteLogo(_request: NextRequest, storeId: string) {
-  await supabase
-    .from('store_brand_assets')
-    .update({ status: 'archived', updated_at: new Date().toISOString() })
-    .eq('store_id', storeId)
-    .eq('status', 'active');
+  const { data: store } = await supabase
+    .from('stores')
+    .select('identity_state')
+    .eq('id', storeId)
+    .single();
+
+  if (!store) {
+    return NextResponse.json({ error: 'Loja não encontrada' }, { status: 404 });
+  }
+
+  if (store.identity_state !== 'logo') {
+    return NextResponse.json({
+      error: 'Não há logotipo ativo para remover.',
+      current_identity_state: store.identity_state,
+    }, { status: 409 });
+  }
+
+  const result = await transition(storeId, 'logo_to_text_only', {
+    onCriticalPersistence: async () => {
+      await supabase
+        .from('store_brand_assets')
+        .update({ status: 'archived', updated_at: new Date().toISOString() })
+        .eq('store_id', storeId)
+        .eq('status', 'active');
+    },
+    onCompensate: async () => {
+      await supabase
+        .from('store_brand_assets')
+        .update({ status: 'active', updated_at: new Date().toISOString() })
+        .eq('store_id', storeId)
+        .eq('status', 'archived');
+    },
+  });
+
+  if (!result.success) {
+    return NextResponse.json({ error: result.error }, { status: 500 });
+  }
 
   // Profile stays synced — direction visual is preserved
   // active_logo_asset_id is preserved — provenance link maintained
-  await supabase
-    .from('stores')
-    .update({
-      identity_state: 'text_only',
-      logo_status: IDENTITY_TO_LOGO_STATUS['text_only'],
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', storeId);
-
   return NextResponse.json({ success: true, identity_state: 'text_only' }, { status: 200 });
 }
 
