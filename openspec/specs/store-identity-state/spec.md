@@ -201,3 +201,98 @@ When restoring a visual signature or logo, the reconciliation SHALL follow the s
 - **AND** the target profile is already the current `synced` profile (from post-remove fallback)
 - **THEN** the profile SHALL NOT be marked `outdated`
 - **AND** only the assets SHALL be re-activated
+
+### Requirement: I1 — text_only has no active visual asset
+
+When `identity_state` is `'text_only'`, the system SHALL have no active visual brand asset. This means:
+
+- `logo_status` SHALL be `'explicit_none'` or `'not_provided'`
+- `vs_status` SHALL be `'explicit_none'` or `'not_provided'`
+- There SHALL be NO `store_brand_profile` with `status = 'synced'` for this store
+
+#### Scenario: State includes status indicators
+
+- **WHEN** `identity_state` is `'text_only'`
+- **THEN** `logo_status` SHALL NOT be `'uploaded'`
+- **AND** `vs_status` SHALL NOT be `'synced'` or `'generated'`
+
+### Requirement: I2 — logo requires active logo asset
+
+When `identity_state` is `'logo'`, the system SHALL have an active logo visual asset:
+
+- `logo_status` SHALL be `'uploaded'`
+- `vs_status` SHALL be `'explicit_none'` or `'not_provided'`
+- There SHALL be exactly ONE `store_brand_profile` with `status = 'synced'` for this store
+- The synced profile SHALL have a non-null `logo_asset_id`
+
+#### Scenario: Logo state has uploaded status
+
+- **WHEN** `identity_state` is `'logo'`
+- **THEN** `logo_status` SHALL be `'uploaded'`
+- **AND** `vs_status` SHALL NOT be `'synced'` or `'generated'`
+
+### Requirement: I3 — visual_signature requires active VS
+
+When `identity_state` is `'visual_signature'`, the system SHALL have an active visual signature asset:
+
+- `vs_status` SHALL be `'synced'` or `'generated'`
+- `logo_status` SHALL be `'explicit_none'` or `'not_provided'`
+- There SHALL be exactly ONE `store_brand_profile` with `status = 'synced'` for this store
+- The synced profile SHALL have a non-null `visual_signature_asset_id`
+
+#### Scenario: Visual signature state has synced vs_status
+
+- **WHEN** `identity_state` is `'visual_signature'`
+- **THEN** `vs_status` SHALL be `'synced'` or `'generated'`
+- **AND** `logo_status` SHALL NOT be `'uploaded'`
+
+### Requirement: I4 — no direct logo ↔ visual_signature transition
+
+The system SHALL NOT permit a direct transition between `logo` and `visual_signature`. Any change between these two states MUST pass through `text_only`:
+
+- `logo → text_only → visual_signature`
+- `visual_signature → text_only → logo`
+
+#### Scenario: Logo to visual_signature requires text_only step
+
+- **WHEN** `identity_state` is `'logo'`
+- **AND** the user wants to switch to `visual_signature`
+- **THEN** the system SHALL first require removing the logo (transition to `text_only`)
+- **AND** only after that SHALL VS creation/approval be available
+
+### Requirement: I5 — failure preserves previous state
+
+If any persistence operation within a transition fails (database write failure, storage upload failure, constraint violation), the system SHALL:
+
+- NOT change `identity_state`
+- NOT change any `_status` field
+- Restore any pre-existing synced profile to its original `status` if it was changed to `outdated` as part of the transition
+
+#### Scenario: Logo upload failure preserves text_only
+
+- **WHEN** user uploads a logo to a store with `identity_state` = `'text_only'`
+- **AND** the profile insert fails after the old profile was marked as `outdated`
+- **THEN** `identity_state` SHALL remain `'text_only'`
+- **AND** the old profile SHALL be restored to `status = 'synced'`
+
+### Requirement: I6 — state only changes after critical persistence
+
+The system SHALL only update `identity_state` after ALL critical persistence operations in the transition have completed successfully. If the transition requires:
+- File storage upload (S3/R2)
+- Database insert/update
+- Profile status change
+
+Then `identity_state` SHALL only be updated after ALL of the above succeed. If any step fails, the state SHALL remain unchanged.
+
+#### Scenario: Identity state updates after all persistence succeeds
+
+- **WHEN** a transition involves file upload + DB insert + profile update
+- **AND** all 3 steps succeed
+- **THEN** `identity_state` SHALL be updated to the target state
+- **AND** the response SHALL reflect the new state
+
+#### Scenario: Partial failure keeps original state
+
+- **WHEN** file upload succeeds but DB insert fails
+- **THEN** `identity_state` SHALL remain unchanged
+- **AND** any uploaded file SHALL be cleaned up
