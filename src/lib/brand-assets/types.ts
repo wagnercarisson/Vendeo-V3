@@ -30,7 +30,7 @@ export interface BrandAssetVariantGroup {
   horizontal_safe: BrandAssetRecord | null;
 }
 
-export type BrandProfileSource = 'logo_analysis' | 'without_logo' | 'text_only';
+export type BrandProfileSource = 'logo_analysis' | 'without_logo' | 'text_only' | 'visual_signature';
 export type BrandProfileStatus = 'processing' | 'synced' | 'outdated' | 'failed' | 'archived';
 
 export interface BrandProfileRecord {

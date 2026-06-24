@@ -270,6 +270,26 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
         },
       });
 
+      // Capture current synced profile for rollback + pre-mark as outdated
+      // (prevents partial unique index violation on INSERT)
+      const { data: previousSynced } = await supabase
+        .from('store_brand_profiles')
+        .select('id')
+        .eq('store_id', storeId)
+        .eq('status', 'synced')
+        .maybeSingle();
+
+      if (previousSynced) {
+        const { error: markError } = await supabase
+          .from('store_brand_profiles')
+          .update({ status: 'outdated', updated_at: new Date().toISOString() })
+          .eq('id', previousSynced.id);
+
+        if (markError) {
+          console.error('[POST /logo] Falha ao marcar perfil anterior como outdated:', markError.message);
+        }
+      }
+
       // Insert new synced profile
       const { data: profile, error: profileInsertError } = await supabase
         .from('store_brand_profiles')
@@ -303,25 +323,64 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
         .select()
         .single();
 
-      if (profile && !profileInsertError) {
+      if (profileInsertError || !profile) {
+        console.error('[POST /logo] Falha ao criar perfil logo_analysis:', profileInsertError?.message);
+
+        // Rollback: restaura perfil anterior para synced
+        if (previousSynced) {
+          const { error: restoreError } = await supabase
+            .from('store_brand_profiles')
+            .update({ status: 'synced', updated_at: new Date().toISOString() })
+            .eq('id', previousSynced.id);
+
+          if (restoreError) {
+            console.error('[POST /logo] Falha ao restaurar perfil anterior no rollback:', restoreError.message);
+          }
+        }
+
+        return NextResponse.json({
+          error: 'Não foi possível processar o logotipo. O perfil de marca atual foi mantido. Tente novamente.',
+          retry: true,
+        }, { status: 500 });
+      }
+
+      createdProfile = profile;
+
+      try {
         await reconcileProfiles(storeId, {
           activateProfileIds: [profile.id],
           markIncompatibleAsOutdated: true,
-          outdatedSources: ['without_logo', 'text_only'],
+          outdatedSources: ['without_logo', 'text_only', 'visual_signature', 'logo_analysis'],
         });
+      } catch (reconcileErr) {
+        console.error('[POST /logo] reconcileProfiles lançou exceção:', reconcileErr instanceof Error ? reconcileErr.message : String(reconcileErr));
       }
 
-      createdProfile = profile ?? null;
-
-      await transition(storeId, 'text_only_to_logo', {
+      const tResult = await transition(storeId, 'text_only_to_logo', {
         onCriticalPersistence: async () => {},
         onCompensate: async () => {
           await supabase
             .from('store_brand_assets')
             .update({ status: 'archived', updated_at: new Date().toISOString() })
             .eq('id', originalAsset.id);
+
+          // Rollback do perfil: restaura o anterior, marca o novo como outdated
+          if (previousSynced) {
+            await supabase
+              .from('store_brand_profiles')
+              .update({ status: 'synced', updated_at: new Date().toISOString() })
+              .eq('id', previousSynced.id);
+          }
+          await supabase
+            .from('store_brand_profiles')
+            .update({ status: 'outdated', updated_at: new Date().toISOString() })
+            .eq('id', profile.id);
         },
       });
+
+      if (!tResult.success) {
+        return NextResponse.json({ error: tResult.error }, { status: 500 });
+      }
     } catch (err) {
       // Phase 3 — Failure path: previous synced stays synced (fallback preserved)
       // Extract deterministic colors from error if available (BrandDirectorAnalysisError)
@@ -352,7 +411,7 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
 
       createdProfile = failedProfile;
 
-      await transition(storeId, 'text_only_to_logo', {
+      const tResult = await transition(storeId, 'text_only_to_logo', {
         onCriticalPersistence: async () => {},
         onCompensate: async () => {
           await supabase
@@ -361,6 +420,10 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
             .eq('id', originalAsset.id);
         },
       });
+
+      if (!tResult.success) {
+        return NextResponse.json({ error: tResult.error }, { status: 500 });
+      }
     }
   }
 
