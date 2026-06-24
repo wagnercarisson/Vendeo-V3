@@ -102,10 +102,6 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
     }
   }, [store.id]);
 
-  const handleAlterar = useCallback(async () => {
-    setShowApprovalModal(true);
-  }, []);
-
   const handleHistoryRestore = useCallback(() => {
     load();
   }, [load]);
@@ -129,12 +125,6 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
             </div>
           </div>
           <div className="flex gap-2">
-            <button type="button" onClick={handleAlterar}
-              className="flex-1 px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 flex items-center justify-center gap-2"
-            >
-              <Sparkles className="w-4 h-4" />
-              Alterar
-            </button>
             <button type="button" onClick={handleRemove} disabled={removing}
               className="flex-1 px-4 py-2.5 border border-accent-red/30 text-accent-red font-heading font-semibold text-sm rounded-lg hover:bg-accent-red/5 transition-all duration-200 flex items-center justify-center gap-2"
             >

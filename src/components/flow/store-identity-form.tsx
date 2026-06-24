@@ -1,6 +1,6 @@
 "use client";
 
-import { useStoreForm } from "./use-store-form";
+import { useStoreForm, useIdentityActions } from "./use-store-form";
 import { StorePreview } from "./store-preview";
 import { VisualSignatureApprovalModal } from "./visual-signature-approval-modal";
 import { STORE_SEGMENTS, STORE_SUBSEGMENTS, BRAZILIAN_STATES } from "@/lib/constants";
@@ -94,6 +94,7 @@ export function StoreIdentityForm() {
   const [archivedCountLoading, setArchivedCountLoading] = useState(false);
   const [subsegmentIsOther, setSubsegmentIsOther] = useState(false);
   const [identityState, setIdentityState] = useState<string | null>(null);
+  const identityActions = useIdentityActions(identityState, visualSignatureUrl !== null);
   const [inferenceLoading, setInferenceLoading] = useState(false);
   const [inferenceError, setInferenceError] = useState<string | null>(null);
   const [brandDirectorWarning, setBrandDirectorWarning] = useState<string | null>(null);
@@ -103,6 +104,7 @@ export function StoreIdentityForm() {
   const [driftSaveIntercept, setDriftSaveIntercept] = useState(false);
   const [driftNavIntercept, setDriftNavIntercept] = useState(false);
   const [pendingNavUrl, setPendingNavUrl] = useState('');
+  const [showRemoveLogoDialog, setShowRemoveLogoDialog] = useState(false);
   const [inferredProfile, setInferredProfile] = useState<{
     safe_color_tokens?: Record<string, string>;
     visual_style?: string;
@@ -1159,7 +1161,7 @@ export function StoreIdentityForm() {
                       </div>
                       <button
                         type="button"
-                        onClick={handleRemoveLogo}
+                        onClick={() => setShowRemoveLogoDialog(true)}
                         className="shrink-0 px-3 py-1.5 border border-accent-red/30 text-accent-red font-heading font-semibold text-xs rounded-lg hover:bg-accent-red/10 transition-all duration-200"
                       >
                         Remover logotipo
@@ -1200,7 +1202,7 @@ export function StoreIdentityForm() {
                   </div>
                 ) : (
                   <>
-                {identityState !== 'visual_signature' && (
+                {identityActions.canUploadLogo && (
                 <div onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
                   className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors duration-200 cursor-pointer ${
                     isDragging ? "border-accent-blue bg-accent-blue/5" : "border-border-light hover:border-text-muted bg-bg-surface"
@@ -1264,36 +1266,30 @@ export function StoreIdentityForm() {
                 {identityState !== 'visual_signature' && logoStatus === null && (
                   <div className="mt-4 space-y-3">
                     <div className="flex gap-3">
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="flex-1 px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 flex items-center justify-center gap-2"
-                      >
-                        <Upload className="w-4 h-4" />
-                        Enviar logotipo
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleNoLogo}
-                        className="flex-1 px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 flex items-center justify-center gap-2 relative group"
-                      >
-                        <Sparkles className="w-4 h-4 text-accent-green" />
-                        Não tenho logo
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-bg-elevated border border-border rounded-lg text-xs text-text-secondary font-body whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg z-10">
-                          O Vendeo vai criar uma assinatura visual profissional para sua loja e montar uma identidade visual completa alinhada ao perfil da loja.
-                        </div>
-                      </button>
-                    </div>
-                    <div className="text-center">
+                      {identityActions.canUploadLogo && (
                         <button
                           type="button"
-                          onClick={handleContinueWithoutLogo}
-                          className="text-text-muted hover:text-text-primary text-xs font-body underline transition-colors duration-200"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="flex-1 px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 flex items-center justify-center gap-2"
                         >
-                          Continuar sem logo
-                          <span className="ml-1 text-text-disabled">(O Vendeo usará apenas o nome da loja com as cores escolhidas)</span>
+                          <Upload className="w-4 h-4" />
+                          Enviar logotipo
                         </button>
-                      </div>
+                      )}
+                      {(identityActions.canCreateVS || identityActions.canManageVS) && (
+                        <button
+                          type="button"
+                          onClick={handleNoLogo}
+                          className="flex-1 px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 flex items-center justify-center gap-2 relative group"
+                        >
+                          <Sparkles className="w-4 h-4 text-accent-green" />
+                          {identityActions.canManageVS ? 'Gerenciar assinatura visual' : 'Gerar assinatura visual'}
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-bg-elevated border border-border rounded-lg text-xs text-text-secondary font-body whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg z-10">
+                            O Vendeo vai criar uma assinatura visual profissional para sua loja e montar uma identidade visual completa alinhada ao perfil da loja.
+                          </div>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -1307,21 +1303,23 @@ export function StoreIdentityForm() {
                         <p className="text-text-primary font-heading font-semibold text-sm">Assinatura visual ativa</p>
                         <p className="text-text-muted text-xs font-body mt-0.5">Gerada por IA e aprovada</p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={handleNoLogo}
-                        className="shrink-0 px-3 py-1.5 border border-border-light text-text-primary font-heading font-semibold text-xs rounded-lg hover:bg-bg-elevated transition-all duration-200"
-                      >
-                        Alterar / Remover
-                      </button>
+                      {identityActions.canRemoveVS && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveVS}
+                          className="shrink-0 px-3 py-1.5 border border-accent-red/30 text-accent-red font-heading font-semibold text-xs rounded-lg hover:bg-accent-red/10 transition-all duration-200"
+                        >
+                          Remover assinatura visual
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}
 
                 {logoStatus === 'explicit_none' && !inferenceLoading && (
                   <div className="mt-4 space-y-3">
-                    {inferredProfile ? (
-                      <div className="flex gap-3">
+                    <div className="flex gap-3">
+                      {identityActions.canUploadLogo && (
                         <button
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
@@ -1329,36 +1327,17 @@ export function StoreIdentityForm() {
                         >
                           Enviar logotipo
                         </button>
+                      )}
+                      {(identityActions.canCreateVS || identityActions.canManageVS) && (
                         <button
                           type="button"
                           onClick={handleNoLogo}
                           className="flex-1 px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 flex items-center justify-center gap-2"
                         >
-                          Gerenciar assinatura visual
+                          {identityActions.canManageVS ? 'Gerenciar assinatura visual' : 'Gerar assinatura visual'}
                         </button>
-                      </div>
-                    ) : (
-                      <div className="flex gap-3">
-                        <button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="flex-1 px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 flex items-center justify-center gap-2"
-                        >
-                          Enviar logotipo
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleNoLogo}
-                          className="flex-1 px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 flex items-center justify-center gap-2 relative group"
-                        >
-                          <Sparkles className="w-4 h-4 text-accent-green" />
-                          Não tenho logo
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-bg-elevated border border-border rounded-lg text-xs text-text-secondary font-body whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg z-10">
-                            O Vendeo vai criar uma assinatura visual profissional para sua loja e montar uma identidade visual completa alinhada ao perfil da loja.
-                          </div>
-                        </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                     {!archivedCountLoading && archivedCount > 0 && !hasActiveLogo && (
                       <div className="text-center">
                         <button
@@ -1399,6 +1378,16 @@ export function StoreIdentityForm() {
                   </div>
                 )}
                 </>)}
+
+                {identityActions.showGuidanceCard && (
+                  <div className="bg-bg-surface border border-border rounded-lg p-4">
+                    <p className="font-semibold text-text-primary">Sem logo por enquanto?</p>
+                    <p className="text-text-secondary text-sm mt-1">
+                      Voc&ecirc; pode escolher as cores da loja, se quiser, e clicar em Salvar.
+                      O Vendeo vai gerar uma dire&ccedil;&atilde;o visual usando os dados b&aacute;sicos da loja.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-4">
@@ -1530,6 +1519,36 @@ export function StoreIdentityForm() {
         </div>
       )}
 
+      {showRemoveLogoDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-bg-surface border border-border rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <h3 className="text-lg font-heading font-bold text-text-primary mb-2">Remover logotipo</h3>
+            <p className="text-text-secondary text-sm font-body mb-6">
+              Ao remover o logo, ele n&atilde;o ficar&aacute; dispon&iacute;vel para reaplica&ccedil;&atilde;o pela interface.
+              Voc&ecirc; poder&aacute; enviar o arquivo novamente quando quiser.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => setShowRemoveLogoDialog(false)}
+                className="px-4 py-2 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setShowRemoveLogoDialog(false);
+                  await handleRemoveLogo();
+                }}
+                className="px-4 py-2 bg-accent-red text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200"
+              >
+                Remover
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {driftSaveIntercept && (
         <DriftDecisionModal
           onRealinhar={async () => {

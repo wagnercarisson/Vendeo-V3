@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import type { Store } from "@/lib/store";
 
 export interface ColorDirtyState {
@@ -62,6 +62,53 @@ const EMPTY_FORM: FormData = {
 
 function toNull(value: string): string | null {
   return value.trim() === "" ? null : value;
+}
+
+export type IdentityActions = {
+  canUploadLogo: boolean;
+  canRemoveLogo: boolean;
+  canCreateVS: boolean;
+  canManageVS: boolean;
+  canRemoveVS: boolean;
+  showGuidanceCard: boolean;
+};
+
+export function useIdentityActions(
+  identityState: string | null,
+  hasExistingVS: boolean
+): IdentityActions {
+  return useMemo(() => {
+    const state = identityState ?? 'text_only';
+
+    const matrix: Record<string, IdentityActions> = {
+      'text_only': {
+        canUploadLogo: true,
+        canRemoveLogo: false,
+        canCreateVS: !hasExistingVS,
+        canManageVS: hasExistingVS,
+        canRemoveVS: false,
+        showGuidanceCard: true,
+      },
+      'logo': {
+        canUploadLogo: false,
+        canRemoveLogo: true,
+        canCreateVS: false,
+        canManageVS: false,
+        canRemoveVS: false,
+        showGuidanceCard: false,
+      },
+      'visual_signature': {
+        canUploadLogo: false,
+        canRemoveLogo: false,
+        canCreateVS: false,
+        canManageVS: false,
+        canRemoveVS: true,
+        showGuidanceCard: false,
+      },
+    };
+
+    return matrix[state] ?? matrix['text_only'];
+  }, [identityState, hasExistingVS]);
 }
 
 export function useStoreForm(): UseStoreFormReturn {
