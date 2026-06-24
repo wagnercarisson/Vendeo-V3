@@ -108,15 +108,15 @@
       - [x] 04.6.5-04-PLAN.md — intendedPalette extraction, previousBrandColors wiring, profiler failure isolation
     - **Wave 5 — Tests & Verification**
       - [x] 04.6.5-05-PLAN.md — Tests, manual verification, typecheck, lint, build
-- [ ] Phase 4.6.6: Identity Transition (0/4 plans, 4 waves)
+- [x] Phase 4.6.6: Identity Transition (4/4 plans, 4 waves) (completed 2026-06-24)
    - **Wave 1 — Foundation** *(no deps)*
-     - [ ] 4.6.6-01-PLAN.md — Types & Orchestrator Central (identity-transitions.ts)
+     - [x] 4.6.6-01-PLAN.md — Types & Orchestrator Central (identity-transitions.ts)
    - **Wave 2 — Core Backend** *(depends on Wave 1)*
-     - [ ] 4.6.6-02-PLAN.md — API Routes (logo upload, logo remove, VS approve, VS remove, VS restore)
+     - [x] 4.6.6-02-PLAN.md — API Routes (logo upload, logo remove, VS approve, VS remove, VS restore)
    - **Wave 3 — UI** *(depends on Wave 2)*
-     - [ ] 4.6.6-03-PLAN.md — State-Action Matrix, Guidance Card, Remoção "Continuar sem logo", Aviso Pré-Remoção
+     - [x] 4.6.6-03-PLAN.md — State-Action Matrix, Guidance Card, Remoção "Continuar sem logo", Aviso Pré-Remoção
    - **Wave 4 — Quality Gate** *(depends on Wave 3)*
-     - [ ] 4.6.6-04-PLAN.md — Tests, Verificação Manual, typecheck, lint, build
+     - [x] 4.6.6-04-PLAN.md — Tests, Verificação Manual, typecheck, lint, build
 - [ ] Phase 5: Review, Adjust & Export (not yet planned)
 ## Progress
 
@@ -142,4 +142,5 @@
 | 4.6.3. Logo State Lifecycle | v1.1 | 5/5 | Complete | 2026-06-17 |
 | 4.6.4. Visual Signature Lifecycle | v1.1 | 5/5 | Complete | 2026-06-19 |
 | 4.6.5. VS Color Drift & Brand Profile | v1.1 | 5/5 | Complete | 2026-06-22 |
+| 4.6.6. Identity Transition | v1.1 | 4/4 | Complete | 2026-06-24 |
 | 5. Review, Adjust & Export | v1.1 | 0 | Not yet planned | — |
