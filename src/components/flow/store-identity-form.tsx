@@ -12,7 +12,6 @@ import { currentVisualState, computeDriftStatus } from "@/lib/drift";
 import type { DriftSnapshot } from "@/lib/drift";
 import { DriftDiscreetButton } from "./drift-discreet-button";
 import { DriftDecisionModal } from "./drift-decision-modal";
-import { LogoRestoreModal } from "./logo-restore-modal";
 
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
 const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -89,7 +88,6 @@ export function StoreIdentityForm() {
   const [logoStatus, setLogoStatus] = useState<string | null>(null);
   const [visualSignatureUrl, setVisualSignatureUrl] = useState<string | null>(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
-  const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [archivedCount, setArchivedCount] = useState(0);
   const [archivedCountLoading, setArchivedCountLoading] = useState(false);
   const [subsegmentIsOther, setSubsegmentIsOther] = useState(false);
@@ -593,11 +591,6 @@ export function StoreIdentityForm() {
     fetchArchivedCount();
   }, [fetchArchivedCount]);
 
-  const handleOpenRestore = useCallback(() => {
-    fetchArchivedCount();
-    setShowRestoreModal(true);
-  }, [fetchArchivedCount]);
-
   const handleRetryBrandDirector = useCallback(async () => {
     if (!storeId || !failedLogoAssetId) return;
     setBrandDirectorRetrying(true);
@@ -849,16 +842,16 @@ export function StoreIdentityForm() {
           setStep2Success("Direção visual gerada com sucesso!");
         } else {
           setInferenceError(data.message || 'Não foi possível gerar a direção visual.');
-          setStep2Success("Cores salvas com sucesso!");
+          setStep2Success("Dados salvos com sucesso!");
         }
       } catch {
         setInferenceError('Erro ao gerar direção visual. Tente novamente.');
-        setStep2Success("Cores salvas com sucesso!");
+        setStep2Success("Dados salvos com sucesso!");
       } finally {
         setInferenceLoading(false);
       }
     } else {
-      setStep2Success("Cores salvas com sucesso!");
+      setStep2Success("Dados salvos com sucesso!");
     }
   }, [storeId, formData, accentColor, logoStatus, visualSignatureUrl, inferenceError, setField, saveBrandColors]);
 
@@ -1167,15 +1160,6 @@ export function StoreIdentityForm() {
                         Remover logotipo
                       </button>
                     </div>
-                    {!archivedCountLoading && archivedCount > 0 && !hasActiveLogo && (
-                      <button
-                        type="button"
-                        onClick={handleOpenRestore}
-                        className="mt-3 text-accent-blue hover:text-accent-blue/80 text-xs font-body underline transition-colors duration-200"
-                      >
-                        Logotipos anteriores ({archivedCount})
-                      </button>
-                    )}
                     {brandDirectorWarning && (
                       <div className="mt-3 space-y-3">
                         <div className="flex items-start gap-3 bg-amber-900/20 border border-amber-700/30 rounded-lg px-4 py-3">
@@ -1338,17 +1322,6 @@ export function StoreIdentityForm() {
                         </button>
                       )}
                     </div>
-                    {!archivedCountLoading && archivedCount > 0 && !hasActiveLogo && (
-                      <div className="text-center">
-                        <button
-                          type="button"
-                          onClick={handleOpenRestore}
-                          className="text-accent-blue hover:text-accent-blue/80 text-xs font-body underline transition-colors duration-200"
-                        >
-                          Logotipos anteriores ({archivedCount})
-                        </button>
-                      </div>
-                    )}
                   </div>
                 )}
 
@@ -1380,7 +1353,7 @@ export function StoreIdentityForm() {
                 </>)}
 
                 {identityActions.showGuidanceCard && (
-                  <div className="bg-bg-surface border border-border rounded-lg p-4">
+                  <div className="bg-bg-surface border border-border rounded-lg p-4 mt-6">
                     <p className="font-semibold text-text-primary">Sem logo por enquanto?</p>
                     <p className="text-text-secondary text-sm mt-1">
                       Voc&ecirc; pode escolher as cores da loja, se quiser, e clicar em Salvar.
@@ -1649,87 +1622,6 @@ export function StoreIdentityForm() {
           hasActiveSignatureDrift={driftStatus === 'new' && !!hasCriticalDrift}
           onComplete={handleApprovalComplete}
           onRemove={handleRemoveVS}
-        />
-      )}
-      {showRestoreModal && storeId && (
-        <LogoRestoreModal
-          isOpen={showRestoreModal}
-          onClose={async () => {
-            setShowRestoreModal(false);
-            try {
-              const res = await fetch(`/api/store/${storeId}`);
-              if (res.ok) {
-                const data = await res.json();
-                if (data?.logo_url) setLogoResultUrl(data.logo_url);
-              }
-              const profileRes = await fetch(`/api/store/${storeId}/brand-profile`);
-              if (profileRes.ok) {
-                const profile = await profileRes.json();
-                if (profile?.status === 'failed' && profile?.source === 'logo_analysis') {
-                  setBrandDirectorWarning('A direção visual não foi gerada para este logotipo. Tente novamente.');
-                  setFailedLogoAssetId(profile.active_logo_asset_id);
-                }
-              }
-            } catch { /* silent */ }
-          }}
-          storeId={storeId}
-          onRestoreComplete={async () => {
-            setShowRestoreModal(false);
-            try {
-              const res = await fetch(`/api/store/${storeId}`);
-              if (!res.ok) return;
-              const data = await res.json();
-              if (data?.logo_url) {
-                setLogoResultUrl(data.logo_url);
-              }
-              setLogoStatus('uploaded');
-              setIdentityState('logo');
-              setHasActiveLogo(true);
-              setArchivedCount(0);
-              setBrandDirectorWarning(null);
-              setFailedLogoAssetId(null);
-
-              const profileRes = await fetch(`/api/store/${storeId}/brand-profile`);
-              if (profileRes.ok) {
-                const profile = await profileRes.json();
-                if (profile?.status === 'synced') {
-                  setInferredProfile({
-                    safe_color_tokens: profile.safe_color_tokens,
-                    visual_style: profile.visual_style,
-                    visual_tone: profile.visual_tone,
-                    brand_personality: profile.brand_personality,
-                    brand_colors_chosen: profile.brand_colors_chosen,
-                    inferred_primary_color: profile.inferred_primary_color,
-                    inferred_accent_color: profile.inferred_accent_color,
-                    metadata: profile.metadata,
-                  });
-                  if (profile.brand_colors_chosen?.length > 0) {
-                    setBrandColorsChosen(profile.brand_colors_chosen);
-                    if (profile.brand_colors_chosen[0]) {
-                      setField("brand_color", profile.brand_colors_chosen[0]);
-                    }
-                    if (profile.inferred_accent_color) {
-                      setAccentColor(profile.inferred_accent_color);
-                    } else if (profile.brand_colors_chosen[1]) {
-                      setAccentColor(profile.brand_colors_chosen[1]);
-                    }
-                  } else if (profile.safe_color_tokens?.primary) {
-                    setField("brand_color", profile.safe_color_tokens.primary);
-                    if (profile.inferred_accent_color) {
-                      setAccentColor(profile.inferred_accent_color);
-                    } else if (profile.safe_color_tokens?.accent) {
-                      setAccentColor(profile.safe_color_tokens.accent);
-                    }
-                  }
-                  if (profile.logo_colors_detected?.length > 0) {
-                    setDetectedColors(profile.logo_colors_detected);
-                  }
-                }
-              }
-            } catch {
-              // silent — page reload recovers
-            }
-          }}
         />
       )}
     </div>
