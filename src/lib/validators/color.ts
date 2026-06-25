@@ -15,7 +15,7 @@ function hasUserChosenColors(colors: Array<string | null>): boolean {
 
 function validateBrandColorsChosen(colors: unknown): colors is Array<string | null> {
   if (!Array.isArray(colors)) return false;
-  if (colors.length === 1) return false;
+  if (colors.length !== 0 && colors.length !== 2) return false;
   return colors.every(
     (c) => c === null || (typeof c === 'string' && isValidHex(c))
   );
