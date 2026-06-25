@@ -42,21 +42,26 @@ export function StorePreview({ name, segment, brandColor, accentColor, brandColo
   const isTextOnly = identityState === 'text_only' && textOnlyProfile;
   const showDirectionSection = textOnlyProfile && (textOnlyProfile.visual_style || textOnlyProfile.visual_tone || textOnlyProfile.brand_personality);
 
-  const resolvedColor = isTextOnly
-    ? (textOnlyProfile!.safe_color_tokens?.primary && /^#[0-9A-Fa-f]{6}$/.test(textOnlyProfile!.safe_color_tokens!.primary)
-        ? textOnlyProfile!.safe_color_tokens!.primary
-        : textOnlyProfile!.inferred_primary_color && /^#[0-9A-Fa-f]{6}$/.test(textOnlyProfile!.inferred_primary_color)
-          ? textOnlyProfile!.inferred_primary_color
-          : brandColor || SEGMENT_COLOR_FALLBACK[segment] || PREVIEW_DEFAULT_COLOR)
-    : brandColorsChosen?.[0] || brandColor || SEGMENT_COLOR_FALLBACK[segment] || PREVIEW_DEFAULT_COLOR;
+  const userPrimary = brandColorsChosen?.[0] && /^#[0-9A-Fa-f]{6}$/.test(brandColorsChosen[0]) ? brandColorsChosen[0] : null;
+  const userAccent = brandColorsChosen?.[1] && /^#[0-9A-Fa-f]{6}$/.test(brandColorsChosen[1]) ? brandColorsChosen[1] : null;
 
-  const resolvedAccent = isTextOnly
-    ? (textOnlyProfile!.safe_color_tokens?.accent && /^#[0-9A-Fa-f]{6}$/.test(textOnlyProfile!.safe_color_tokens!.accent)
-        ? textOnlyProfile!.safe_color_tokens!.accent
-        : textOnlyProfile!.inferred_accent_color && /^#[0-9A-Fa-f]{6}$/.test(textOnlyProfile!.inferred_accent_color)
-          ? textOnlyProfile!.inferred_accent_color
-          : resolvedColor)
-    : brandColorsChosen?.[1] || accentColor || resolvedColor;
+  const resolvedColor = userPrimary
+    ?? (isTextOnly
+      ? (textOnlyProfile!.safe_color_tokens?.primary && /^#[0-9A-Fa-f]{6}$/.test(textOnlyProfile!.safe_color_tokens!.primary)
+          ? textOnlyProfile!.safe_color_tokens!.primary
+          : textOnlyProfile!.inferred_primary_color && /^#[0-9A-Fa-f]{6}$/.test(textOnlyProfile!.inferred_primary_color)
+            ? textOnlyProfile!.inferred_primary_color
+            : brandColor || SEGMENT_COLOR_FALLBACK[segment] || PREVIEW_DEFAULT_COLOR)
+      : brandColor || SEGMENT_COLOR_FALLBACK[segment] || PREVIEW_DEFAULT_COLOR);
+
+  const resolvedAccent = userAccent
+    ?? (isTextOnly
+      ? (textOnlyProfile!.safe_color_tokens?.accent && /^#[0-9A-Fa-f]{6}$/.test(textOnlyProfile!.safe_color_tokens!.accent)
+          ? textOnlyProfile!.safe_color_tokens!.accent
+          : textOnlyProfile!.inferred_accent_color && /^#[0-9A-Fa-f]{6}$/.test(textOnlyProfile!.inferred_accent_color)
+            ? textOnlyProfile!.inferred_accent_color
+            : resolvedColor)
+      : accentColor || resolvedColor);
 
   const showVisualSignature = logoStatus === 'generated' && logoUrl;
 

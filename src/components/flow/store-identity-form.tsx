@@ -841,7 +841,7 @@ export function StoreIdentityForm() {
 
     setStep2Success(null);
 
-    if (formData.brand_color || brandColorsChosen[1]) {
+    if (hasUserChosenColors(brandColorsChosen)) {
       await saveBrandColors(formData.brand_color, brandColorsChosen[1] ?? "");
     }
 
