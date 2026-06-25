@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase/server';
 import { BrandDirectorService, BrandDirectorAnalysisError } from '@/lib/brand-assets/brand-director';
+import { validateBrandColorsChosen, normalizeBrandColorsChosen } from '@/lib/validators/color';
+
+const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
+
+const PLACEHOLDER_HEX = '#RRGGBB';
 
 export async function GET(
   _request: NextRequest,
@@ -23,6 +28,10 @@ export async function GET(
   return NextResponse.json(data, { status: 200 });
 }
 
+function cleanPlaceholderColors(colors: Array<string | null>): Array<string | null> {
+  return colors.map(c => c === PLACEHOLDER_HEX ? null : c);
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -31,12 +40,14 @@ export async function PATCH(
   const body = await request.json();
   const { colors } = body;
 
-  if (!Array.isArray(colors) || colors.some((c: unknown) => typeof c !== 'string' || !/^#[0-9A-Fa-f]{6}$/.test(c as string))) {
+  if (!validateBrandColorsChosen(colors)) {
     return NextResponse.json(
-      { error: 'colors deve ser um array de hex colors (#RRGGBB)' },
+      { error: 'colors deve ser um array com 0 ou 2 elementos, cada um sendo hex (#RRGGBB) ou null' },
       { status: 400 }
     );
   }
+
+  const cleaned = cleanPlaceholderColors(colors);
 
   const { data: existing } = await supabase
     .from('store_brand_profiles')
@@ -49,11 +60,12 @@ export async function PATCH(
     return NextResponse.json({ error: 'Nenhum perfil ativo encontrado' }, { status: 404 });
   }
 
+  const normalizedColors = normalizeBrandColorsChosen(cleaned);
+
   const { data, error } = await supabase
     .from('store_brand_profiles')
     .update({
-      brand_colors_chosen: colors,
-      manual_color_override: { enabled: true },
+      brand_colors_chosen: normalizedColors,
       updated_at: new Date().toISOString(),
     })
     .eq('id', existing.id)
@@ -63,11 +75,6 @@ export async function PATCH(
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-
-  await supabase
-    .from('stores')
-    .update({ manual_color_override: true })
-    .eq('id', id);
 
   return NextResponse.json(data, { status: 200 });
 }

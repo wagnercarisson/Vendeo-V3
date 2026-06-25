@@ -27,7 +27,7 @@ export async function POST(
 
   let body: {
     textOnlyOrigin: 'explicit' | 'implicit';
-    userChosenColors?: string[];
+    userChosenColors?: Array<string | null>;
     manualColorOverride?: boolean;
   };
   try {
@@ -70,17 +70,41 @@ export async function POST(
       userAccentColor: body.userChosenColors?.[1],
     }, timeoutMs);
 
+    // Preserve brand_colors_chosen from previous synced profile
+    const { data: previousProfiles } = await supabase
+      .from('store_brand_profiles')
+      .select('brand_colors_chosen')
+      .eq('store_id', id)
+      .eq('status', 'synced')
+      .order('updated_at', { ascending: false })
+      .limit(1);
+    const previousSyncedProfile = previousProfiles?.[0] ?? null;
+
+    const hasUserColors = body.userChosenColors?.some(
+      c => c !== null && /^#[0-9A-Fa-f]{6}$/.test(c)
+    );
+
+    let brandColorsChosen: Array<string | null> = [];
+
+    if (hasUserColors) {
+      brandColorsChosen = body.userChosenColors ?? [];
+    } else if (previousSyncedProfile?.brand_colors_chosen?.some(
+      c => c !== null && /^#[0-9A-Fa-f]{6}$/.test(c)
+    )) {
+      brandColorsChosen = previousSyncedProfile.brand_colors_chosen;
+    }
+
     await supabase
       .from('store_brand_profiles')
       .update({ status: 'outdated', updated_at: new Date().toISOString() })
       .eq('store_id', id)
       .eq('status', 'synced');
 
-    const resolvedBrandColor = body.userChosenColors?.[0]
+    const resolvedBrandColor = brandColorsChosen[0]
       ?? result.safe_color_tokens?.primary
       ?? store.brand_color;
 
-    const accentColor = body.userChosenColors?.[1]
+    const accentColor = brandColorsChosen[1]
       ?? result.safe_color_tokens?.accent
       ?? result.inferred_accent_color
       ?? null;
@@ -99,7 +123,7 @@ export async function POST(
       .insert({
         store_id: id,
         source: 'text_only',
-        brand_colors_chosen: body.userChosenColors ?? [],
+        brand_colors_chosen: brandColorsChosen,
         safe_color_tokens: result.safe_color_tokens,
         visual_style: result.visual_style,
         visual_tone: result.visual_tone,
@@ -110,7 +134,6 @@ export async function POST(
         inferred_primary_color: result.inferred_primary_color,
         inferred_accent_color: result.inferred_accent_color,
         confidence_score: result.confidence_score,
-        manual_color_override: { enabled: !!body.manualColorOverride },
         metadata: { input_snapshot: inputSnapshot },
         status: 'synced',
       })
@@ -128,7 +151,6 @@ export async function POST(
         identity_state: 'text_only',
         text_only_origin: body.textOnlyOrigin,
         logo_status: 'explicit_none',
-        manual_color_override: !!body.manualColorOverride,
         brand_color: result.safe_color_tokens.primary ?? store.brand_color,
       })
       .eq('id', id);
@@ -151,7 +173,7 @@ export async function POST(
         visual_style: result.visual_style,
         visual_tone: result.visual_tone,
         brand_personality: result.brand_personality,
-        brand_colors_chosen: body.userChosenColors ?? [],
+        brand_colors_chosen: brandColorsChosen,
         metadata: profile.metadata,
       },
     });

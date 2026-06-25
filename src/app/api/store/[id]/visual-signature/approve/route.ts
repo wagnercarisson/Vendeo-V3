@@ -265,20 +265,20 @@ export async function POST(
     ? normalizeIntendedPalette(rawIntendedPalette)
     : null;
 
-  // Load previousBrandColors from last synced profile (only if manual_color_override.enabled === true)
-  let previousBrandColors: string[] = [];
+  // Load previousBrandColors from last synced profile's brand_colors_chosen directly
+  let previousBrandColors: Array<string | null> = [];
   try {
     const { data: lastSynced } = await supabase
       .from('store_brand_profiles')
-      .select('brand_colors_chosen, manual_color_override')
+      .select('brand_colors_chosen')
       .eq('store_id', id)
       .eq('status', 'synced')
       .order('updated_at', { ascending: false })
       .limit(1);
     if (lastSynced?.[0]) {
-      const override = lastSynced[0].manual_color_override as Record<string, unknown> | null;
-      if (override?.enabled === true) {
-        previousBrandColors = (lastSynced[0].brand_colors_chosen as string[]) ?? [];
+      const chosen = lastSynced[0].brand_colors_chosen as Array<string | null> | null;
+      if (chosen?.some(c => c !== null && /^#[0-9A-Fa-f]{6}$/.test(c))) {
+        previousBrandColors = chosen;
       }
     }
   } catch (err) {

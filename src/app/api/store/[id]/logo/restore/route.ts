@@ -216,14 +216,20 @@ export async function POST(
     });
 
     // Create new synced profile
-    const { data: newProfile } = await supabase
+      const previousBrandColors = currentProfile?.brand_colors_chosen?.some(
+        c => c !== null && /^#[0-9A-Fa-f]{6}$/.test(c)
+      )
+        ? currentProfile.brand_colors_chosen
+        : [];
+
+      const { data: newProfile } = await supabase
       .from('store_brand_profiles')
       .insert({
         store_id: storeId,
         source: 'logo_analysis',
         active_logo_asset_id: body.asset_id,
         logo_colors_detected: analysis.logo_colors_detected,
-        brand_colors_chosen: [],
+        brand_colors_chosen: previousBrandColors,
         safe_color_tokens: analysis.safe_color_tokens,
         visual_style: analysis.visual_style,
         visual_tone: analysis.visual_tone,

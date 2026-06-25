@@ -290,6 +290,13 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
         }
       }
 
+      // Preserve brand_colors_chosen from previous synced profile
+      const previousBrandColors = syncedProfile?.brand_colors_chosen?.some(
+        c => c !== null && /^#[0-9A-Fa-f]{6}$/.test(c)
+      )
+        ? syncedProfile.brand_colors_chosen
+        : [];
+
       // Insert new synced profile
       const { data: profile, error: profileInsertError } = await supabase
         .from('store_brand_profiles')
@@ -298,7 +305,7 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
           source: 'logo_analysis',
           active_logo_asset_id: originalAsset.id,
           logo_colors_detected: analysis.logo_colors_detected,
-          brand_colors_chosen: [],
+          brand_colors_chosen: previousBrandColors,
           safe_color_tokens: analysis.safe_color_tokens,
           visual_style: analysis.visual_style,
           visual_tone: analysis.visual_tone,
@@ -396,7 +403,7 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
           source: 'logo_analysis',
           active_logo_asset_id: originalAsset.id,
           logo_colors_detected: dc?.logo_colors_detected ?? [],
-          brand_colors_chosen: [],
+          brand_colors_chosen: previousBrandColors ?? [],
           safe_color_tokens: dc?.safe_color_tokens ?? null,
           inferred_primary_color: dc?.inferred_primary_color ?? null,
           inferred_accent_color: dc?.inferred_accent_color ?? null,

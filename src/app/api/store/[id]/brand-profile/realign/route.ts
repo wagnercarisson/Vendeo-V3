@@ -253,12 +253,18 @@ export async function POST(
         accent_color: result.safe_color_tokens?.accent ?? result.inferred_accent_color ?? null,
       };
 
+      const previousBrandColors = currentProfile?.brand_colors_chosen?.some(
+        c => c !== null && /^#[0-9A-Fa-f]{6}$/.test(c)
+      )
+        ? currentProfile.brand_colors_chosen
+        : [];
+
       const { data: profile, error: insertError } = await supabase
         .from('store_brand_profiles')
         .insert({
           store_id: id,
           source: 'text_only',
-          brand_colors_chosen: [],
+          brand_colors_chosen: previousBrandColors,
           safe_color_tokens: result.safe_color_tokens,
           visual_style: result.visual_style,
           visual_tone: result.visual_tone,
@@ -304,7 +310,7 @@ export async function POST(
           visual_style: result.visual_style,
           visual_tone: result.visual_tone,
           brand_personality: result.brand_personality,
-          brand_colors_chosen: [],
+          brand_colors_chosen: previousBrandColors,
           metadata: profile.metadata,
         },
       });
