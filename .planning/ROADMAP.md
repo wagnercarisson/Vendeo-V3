@@ -116,7 +116,8 @@
    - **Wave 3 — UI** *(depends on Wave 2)*
      - [x] 4.6.6-03-PLAN.md — State-Action Matrix, Guidance Card, Remoção "Continuar sem logo", Aviso Pré-Remoção
    - **Wave 4 — Quality Gate** *(depends on Wave 3)*
-     - [x] 4.6.6-04-PLAN.md — Tests, Verificação Manual, typecheck, lint, build
+      - [x] 4.6.6-04-PLAN.md — Tests, Verificação Manual, typecheck, lint, build
+- [ ] Phase 4.6.7: User Color Preferences Persistence (not yet planned)
 - [ ] Phase 5: Review, Adjust & Export (not yet planned)
 ## Progress
 
@@ -143,4 +144,5 @@
 | 4.6.4. Visual Signature Lifecycle | v1.1 | 5/5 | Complete | 2026-06-19 |
 | 4.6.5. VS Color Drift & Brand Profile | v1.1 | 5/5 | Complete | 2026-06-22 |
 | 4.6.6. Identity Transition | v1.1 | 4/4 | Complete | 2026-06-24 |
+| 4.6.7. User Color Preferences Persistence | v1.1 | 0 | Not yet planned | — |
 | 5. Review, Adjust & Export | v1.1 | 0 | Not yet planned | — |
