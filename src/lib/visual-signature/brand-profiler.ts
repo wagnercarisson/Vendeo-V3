@@ -18,6 +18,7 @@ import type {
   BrandProfileRecord,
   ColorCluster,
 } from '@/lib/brand-assets/types';
+import { hasUserChosenColors } from '@/lib/validators/color';
 import { probeColors, findClosestProbeCluster } from '@/lib/brand-assets/color-probe';
 
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
@@ -767,8 +768,8 @@ export class BrandProfilerWithoutLogoService {
       .eq('id', storeId);
   }
 
-  private getBrandColorsChosen(input: BrandProfilerInput, safeColors: ResolvedPalette): string[] {
-    if (input.previousBrandColors && input.previousBrandColors.length > 0) {
+  private getBrandColorsChosen(input: BrandProfilerInput, safeColors: ResolvedPalette): Array<string | null> {
+    if (input.previousBrandColors && hasUserChosenColors(input.previousBrandColors)) {
       return input.previousBrandColors;
     }
     return [];

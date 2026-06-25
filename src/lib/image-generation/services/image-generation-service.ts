@@ -968,7 +968,7 @@ export class ImageGenerationService {
   }
 
   private buildBrandProfileSection(brandProfile?: {
-    brand_colors_chosen?: string[];
+    brand_colors_chosen?: Array<string | null>;
     safe_color_tokens?: Record<string, string>;
     visual_style?: string | null;
     visual_tone?: string | null;

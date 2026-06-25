@@ -26,7 +26,7 @@ export const GenerateImageRequestSchema = z.object({
   sensitiveConstraints: z.string().optional(),
   storeLogoUrl: z.string().optional(),
   brandProfile: z.object({
-    brand_colors_chosen: z.array(z.string()).optional(),
+    brand_colors_chosen: z.array(z.string().nullable()).optional(),
     safe_color_tokens: z.record(z.string()).optional(),
     visual_style: z.string().nullable().optional(),
     visual_tone: z.string().nullable().optional(),

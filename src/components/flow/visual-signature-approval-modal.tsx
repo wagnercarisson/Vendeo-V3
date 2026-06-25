@@ -58,7 +58,7 @@ interface VisualSignatureApprovalModalProps {
       visual_style?: string;
       visual_tone?: string;
       brand_personality?: string;
-      brand_colors_chosen?: string[];
+      brand_colors_chosen?: Array<string | null>;
       inferred_primary_color?: string;
       inferred_accent_color?: string;
       metadata?: Record<string, unknown>;

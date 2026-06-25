@@ -39,7 +39,7 @@ export interface BrandProfileRecord {
    *  NEVER nulled after being set. Use identity_state + asset status to determine visual state. */
   active_logo_asset_id: string | null;
   logo_colors_detected: string[];
-  brand_colors_chosen: string[];
+  brand_colors_chosen: Array<string | null>;
   safe_color_tokens: Record<string, string>;
   visual_style: string | null; visual_tone: string | null;
   typography_direction: string | null;
@@ -47,6 +47,7 @@ export interface BrandProfileRecord {
   campaign_guidelines: string | null; campaign_brief: string | null;
   confidence_score: number | null;
   metadata: Record<string, unknown>; version: number;
+  /** @deprecated Use brand_colors_chosen instead. Will be removed in a future migration. */
   manual_color_override: Record<string, unknown>;
   status: BrandProfileStatus;
   created_at: string; updated_at: string;
@@ -60,13 +61,14 @@ export interface CreateBrandProfileInput {
   store_id: string; source?: string;
   active_logo_asset_id?: string | null;
   logo_colors_detected?: string[];
-  brand_colors_chosen?: string[];
+  brand_colors_chosen?: Array<string | null>;
   safe_color_tokens?: Record<string, string>;
   visual_style?: string | null; visual_tone?: string | null;
   typography_direction?: string | null;
   brand_personality?: string | null;
   campaign_guidelines?: string | null; campaign_brief?: string | null;
   confidence_score?: number | null;
+  /** @deprecated Use brand_colors_chosen instead. Will be removed in a future migration. */
   manual_color_override?: Record<string, unknown>;
   metadata?: Record<string, unknown>; version?: number;
   status: BrandProfileStatus;
