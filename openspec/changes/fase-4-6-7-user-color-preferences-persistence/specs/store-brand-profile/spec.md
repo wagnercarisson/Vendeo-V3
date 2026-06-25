@@ -116,7 +116,7 @@ When a text-only inference is triggered via `POST /api/store/[id]/brand-profile/
 
 When `userChosenColors` is provided and contains at least one valid HEX, the inference SHALL:
 1. Persist the received colors in the new profile's `brand_colors_chosen`
-2. Use them as context for the BrandTextOnlyInferenceService (indicating user preference)
+2. NOT pass them as context to BrandTextOnlyInferenceService in this phase. The received colors SHALL only be persisted in `brand_colors_chosen` — do NOT use them to alter prompt, visual direction, creative decisions, or asset generation.
 
 When `userChosenColors` is not provided or is `[]`, the inference SHALL:
 1. Check the previous synced profile for existing `brand_colors_chosen`
