@@ -12,6 +12,7 @@ import { currentVisualState, computeDriftStatus } from "@/lib/drift";
 import type { DriftSnapshot } from "@/lib/drift";
 import { DriftDiscreetButton } from "./drift-discreet-button";
 import { DriftDecisionModal } from "./drift-decision-modal";
+import { isValidHex, normalizeBrandColorsChosen, hasUserChosenColors } from "@/lib/validators/color";
 
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
 const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -81,7 +82,7 @@ export function StoreIdentityForm() {
   const [detectedColors, setDetectedColors] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [accentColor, setAccentColor] = useState<string>("");
-  const [brandColorsChosen, setBrandColorsChosen] = useState<string[]>([]);
+  const [brandColorsChosen, setBrandColorsChosen] = useState<Array<string | null>>([]);
   const [hasActiveLogo, setHasActiveLogo] = useState(false);
   const [step2Success, setStep2Success] = useState<string | null>(null);
   const [analysisWarning, setAnalysisWarning] = useState<string | null>(null);
@@ -109,7 +110,7 @@ export function StoreIdentityForm() {
     visual_style?: string;
     visual_tone?: string;
     brand_personality?: string;
-    brand_colors_chosen?: string[];
+    brand_colors_chosen?: Array<string | null>;
     inferred_primary_color?: string;
     inferred_accent_color?: string;
     metadata?: Record<string, unknown>;
@@ -117,7 +118,7 @@ export function StoreIdentityForm() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const driftProfile = useMemo(() => inferredProfile ? {
-    brand_colors_chosen: inferredProfile.brand_colors_chosen ?? [],
+    brand_colors_chosen: inferredProfile.brand_colors_chosen ?? [] as Array<string | null>,
     safe_color_tokens: inferredProfile.safe_color_tokens ?? {},
     inferred_accent_color: inferredProfile.inferred_accent_color ?? null,
     metadata: inferredProfile.metadata ?? {},
@@ -155,16 +156,20 @@ export function StoreIdentityForm() {
               inferred_accent_color: profile.inferred_accent_color,
               metadata: profile.metadata,
             });
-            if (profile.safe_color_tokens?.primary) {
+            if (hasUserChosenColors(profile.brand_colors_chosen ?? [])) {
+              setBrandColorsChosen(profile.brand_colors_chosen);
+              const primary = profile.brand_colors_chosen[0] !== null ? profile.brand_colors_chosen[0] : '';
+              const accent = profile.brand_colors_chosen[1] !== null ? profile.brand_colors_chosen[1] : '';
+              setField("brand_color", primary);
+              setAccentColor(accent || (profile.inferred_accent_color ?? ''));
+            } else if (profile.safe_color_tokens?.primary) {
               setField("brand_color", profile.safe_color_tokens.primary);
+              setAccentColor(
+                profile.inferred_accent_color
+                ?? profile.safe_color_tokens?.accent
+                ?? ''
+              );
             }
-            setAccentColor(
-              profile.inferred_accent_color
-              ?? profile.brand_colors_chosen?.[1]
-              ?? profile.safe_color_tokens?.accent
-              ?? ''
-            );
-            setBrandColorsChosen(profile.brand_colors_chosen ?? []);
           }
         })
         .catch(() => {});
@@ -216,10 +221,9 @@ export function StoreIdentityForm() {
 
   const saveBrandColors = useCallback(async (primary: string, secondary: string) => {
     if (!storeId) return;
-    const colors: string[] = [];
-    if (/^#[0-9A-Fa-f]{6}$/.test(primary)) colors.push(primary);
-    if (/^#[0-9A-Fa-f]{6}$/.test(secondary)) colors.push(secondary);
-    if (colors.length === 0) return;
+    const primaryOuNull = primary === '' || primary === '#RRGGBB' || !isValidHex(primary) ? null : primary;
+    const accentOuNull = secondary === '' || secondary === '#RRGGBB' || !isValidHex(secondary) ? null : secondary;
+    const colors: Array<string | null> = primaryOuNull || accentOuNull ? [primaryOuNull, accentOuNull] : [];
     try {
       const res = await fetch(`/api/store/${storeId}/brand-profile`, {
         method: "PATCH",
@@ -232,6 +236,50 @@ export function StoreIdentityForm() {
       }
     } catch {}
   }, [storeId]);
+
+  const hasSyncedProfileRef = useRef(false);
+  hasSyncedProfileRef.current = inferredProfile !== null;
+
+  const handlePatchOrLocalColors = useCallback(async (colors: Array<string | null>) => {
+    if (!storeId) return;
+    const normalizedColors = normalizeBrandColorsChosen(colors);
+    if (hasSyncedProfileRef.current) {
+      try {
+        const res = await fetch(`/api/store/${storeId}/brand-profile`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ colors: normalizedColors }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setBrandColorsChosen(data.brand_colors_chosen ?? []);
+        }
+      } catch {}
+    } else {
+      setBrandColorsChosen(normalizedColors);
+    }
+  }, [storeId]);
+
+  const handleResetToSuggestedColors = useCallback(async () => {
+    if (!storeId) return;
+    if (hasSyncedProfileRef.current) {
+      try {
+        await fetch(`/api/store/${storeId}/brand-profile`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ colors: [] }),
+        });
+      } catch {}
+    }
+    setBrandColorsChosen([]);
+    if (inferredProfile?.safe_color_tokens) {
+      setField('brand_color', inferredProfile.safe_color_tokens.primary || '');
+      setAccentColor(inferredProfile.safe_color_tokens.accent || '');
+    } else {
+      setField('brand_color', '');
+      setAccentColor('');
+    }
+  }, [storeId, inferredProfile, setField]);
 
   const handleClearStore = useCallback(() => {
     clearStore();
@@ -304,23 +352,19 @@ export function StoreIdentityForm() {
             if (profile.logo_colors_detected?.length > 0) {
               setDetectedColors(profile.logo_colors_detected);
             }
-            if (profile.brand_colors_chosen?.length > 0) {
+            if (hasUserChosenColors(profile.brand_colors_chosen ?? [])) {
               setBrandColorsChosen(profile.brand_colors_chosen);
-              if (profile.brand_colors_chosen[0]) {
-                setField("brand_color", profile.brand_colors_chosen[0]);
-              }
-              if (profile.inferred_accent_color) {
-                setAccentColor(profile.inferred_accent_color);
-              } else if (profile.brand_colors_chosen[1]) {
-                setAccentColor(profile.brand_colors_chosen[1]);
-              }
+              const primary = profile.brand_colors_chosen[0] !== null ? profile.brand_colors_chosen[0] : '';
+              const accent = profile.brand_colors_chosen[1] !== null ? profile.brand_colors_chosen[1] : '';
+              setField("brand_color", primary);
+              setAccentColor(accent || (profile.inferred_accent_color ?? ''));
             } else if (profile.safe_color_tokens?.primary) {
               setField("brand_color", profile.safe_color_tokens.primary);
-              if (profile.inferred_accent_color) {
-                setAccentColor(profile.inferred_accent_color);
-              } else if (profile.safe_color_tokens?.accent) {
-                setAccentColor(profile.safe_color_tokens.accent);
-              }
+              setAccentColor(
+                profile.inferred_accent_color
+                ?? profile.safe_color_tokens?.accent
+                ?? ''
+              );
             }
             if (profile.status === 'synced') {
               setInferredProfile({
@@ -430,7 +474,7 @@ export function StoreIdentityForm() {
       visual_style?: string;
       visual_tone?: string;
       brand_personality?: string;
-      brand_colors_chosen?: string[];
+      brand_colors_chosen?: Array<string | null>;
       inferred_primary_color?: string;
       inferred_accent_color?: string;
       metadata?: Record<string, unknown>;
@@ -444,26 +488,28 @@ export function StoreIdentityForm() {
     }
     if (result.inferredPrimaryColor) {
       setField('brand_color', result.inferredPrimaryColor);
-      setBrandColorsChosen(prev => [result.inferredPrimaryColor!, prev[1] || result.inferredPrimaryColor!]);
     }
     if (result.inferredAccentColor) {
       setAccentColor(result.inferredAccentColor);
-      setBrandColorsChosen(prev => [prev[0] || result.inferredPrimaryColor || formData.brand_color, result.inferredAccentColor!]);
     }
     if (result.logoColorsDetected) {
       setDetectedColors(result.logoColorsDetected);
     }
     if (result.brandProfileData) {
+      const brandProfileData = result.brandProfileData;
       setInferredProfile({
-        safe_color_tokens: result.brandProfileData.safe_color_tokens,
-        visual_style: result.brandProfileData.visual_style,
-        visual_tone: result.brandProfileData.visual_tone,
-        brand_personality: result.brandProfileData.brand_personality,
-        brand_colors_chosen: result.brandProfileData.brand_colors_chosen,
-        inferred_primary_color: result.brandProfileData.inferred_primary_color,
-        inferred_accent_color: result.brandProfileData.inferred_accent_color,
-        metadata: result.brandProfileData.metadata,
+        safe_color_tokens: brandProfileData.safe_color_tokens,
+        visual_style: brandProfileData.visual_style,
+        visual_tone: brandProfileData.visual_tone,
+        brand_personality: brandProfileData.brand_personality,
+        brand_colors_chosen: brandProfileData.brand_colors_chosen,
+        inferred_primary_color: brandProfileData.inferred_primary_color,
+        inferred_accent_color: brandProfileData.inferred_accent_color,
+        metadata: brandProfileData.metadata,
       });
+      if (hasUserChosenColors(brandProfileData.brand_colors_chosen ?? [])) {
+        setBrandColorsChosen(brandProfileData.brand_colors_chosen ?? []);
+      }
     }
     setShowApprovalModal(false);
   }, [setField, formData.brand_color, setIdentityState, setInferredProfile]);
@@ -494,10 +540,16 @@ export function StoreIdentityForm() {
     setInferenceLoading(true);
     setInferenceError(null);
     try {
+      const userChosenColors = hasUserChosenColors(brandColorsChosen)
+        ? brandColorsChosen
+        : [];
       const res = await fetch(`/api/store/${storeId}/brand-profile/infer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ textOnlyOrigin: 'explicit' }),
+        body: JSON.stringify({
+          textOnlyOrigin: 'explicit',
+          userChosenColors,
+        }),
       });
       const data = await res.json();
       if (data.success) {
@@ -511,14 +563,14 @@ export function StoreIdentityForm() {
           inferred_accent_color: data.profile.inferred_accent_color,
           metadata: data.profile.metadata,
         });
+        if (hasUserChosenColors(data.profile?.brand_colors_chosen ?? [])) {
+          setBrandColorsChosen(data.profile.brand_colors_chosen);
+        }
         if (data.profile?.safe_color_tokens?.primary) {
           setField("brand_color", data.profile.safe_color_tokens.primary);
         }
         if (data.profile?.inferred_accent_color) {
           setAccentColor(data.profile.inferred_accent_color);
-        }
-        if (data.profile?.brand_colors_chosen?.length > 0) {
-          setBrandColorsChosen(data.profile.brand_colors_chosen);
         }
       } else {
         setInferenceError(data.message || 'Não foi possível gerar a direção visual.');
@@ -528,7 +580,7 @@ export function StoreIdentityForm() {
     } finally {
       setInferenceLoading(false);
     }
-  }, [storeId, setField]);
+  }, [storeId, setField, brandColorsChosen]);
 
   const handleNoLogo = useCallback(() => {
     console.log(`[StoreIdentityForm] handleNoLogo clicked storeId=${storeId}`);
@@ -582,7 +634,6 @@ export function StoreIdentityForm() {
       setBrandDirectorWarning(null);
       setFailedLogoAssetId(null);
       setLogoError(null);
-      setBrandColorsChosen([]);
       fetchArchivedCount();
     } catch (err) {
       setLogoError(err instanceof Error ? err.message : "Erro ao remover logotipo");
@@ -616,7 +667,7 @@ export function StoreIdentityForm() {
       const profileRes = await fetch(`/api/store/${storeId}/brand-profile`);
       if (profileRes.ok) {
         const profile = await profileRes.json();
-        if (profile?.status === 'synced') {
+            if (profile?.status === 'synced') {
             setInferredProfile({
               safe_color_tokens: profile.safe_color_tokens,
               visual_style: profile.visual_style,
@@ -627,23 +678,19 @@ export function StoreIdentityForm() {
               inferred_accent_color: profile.inferred_accent_color,
               metadata: profile.metadata,
             });
-            if (profile.brand_colors_chosen?.length > 0) {
+            if (hasUserChosenColors(profile.brand_colors_chosen ?? [])) {
               setBrandColorsChosen(profile.brand_colors_chosen);
-              if (profile.brand_colors_chosen[0]) {
-                setField("brand_color", profile.brand_colors_chosen[0]);
-              }
-              if (profile.inferred_accent_color) {
-                setAccentColor(profile.inferred_accent_color);
-              } else if (profile.brand_colors_chosen[1]) {
-                setAccentColor(profile.brand_colors_chosen[1]);
-              }
+              const primary = profile.brand_colors_chosen[0] !== null ? profile.brand_colors_chosen[0] : '';
+              const accent = profile.brand_colors_chosen[1] !== null ? profile.brand_colors_chosen[1] : '';
+              setField("brand_color", primary);
+              setAccentColor(accent || (profile.inferred_accent_color ?? ''));
             } else if (profile.safe_color_tokens?.primary) {
               setField("brand_color", profile.safe_color_tokens.primary);
-              if (profile.inferred_accent_color) {
-                setAccentColor(profile.inferred_accent_color);
-              } else if (profile.safe_color_tokens?.accent) {
-                setAccentColor(profile.safe_color_tokens.accent);
-              }
+              setAccentColor(
+                profile.inferred_accent_color
+                ?? profile.safe_color_tokens?.accent
+                ?? ''
+              );
             }
             if (profile.logo_colors_detected?.length > 0) {
               setDetectedColors(profile.logo_colors_detected);
@@ -712,15 +759,15 @@ export function StoreIdentityForm() {
         setBrandDirectorWarning(null);
         setFailedLogoAssetId(null);
         const detected = profile.logo_colors_detected ?? [];
-        const chosen = profile.brand_colors_chosen ?? [];
+        const chosen: Array<string | null> = profile.brand_colors_chosen ?? [];
         const tokens = profile.safe_color_tokens ?? {};
         setDetectedColors(detected);
 
-        const hasReliableColors = (chosen.length > 0) || tokens.primary || (detected.length > 0);
+        const hasReliableColors = hasUserChosenColors(chosen) || tokens.primary || (detected.length > 0);
 
         if (hasReliableColors) {
           setAnalysisWarning(null);
-          if (chosen.length > 0) setBrandColorsChosen(chosen);
+          if (hasUserChosenColors(chosen)) setBrandColorsChosen(chosen);
 
           const primaryColor = chosen[0] || tokens.primary || detected[0] || "";
           const accentColorValue = chosen[1] || tokens.accent || tokens.secondary || detected[1] || "";
@@ -805,17 +852,16 @@ export function StoreIdentityForm() {
       setInferenceLoading(true);
       setInferenceError(null);
       try {
-        const userColors = [];
-        if (/^#[0-9A-Fa-f]{6}$/.test(formData.brand_color)) userColors.push(formData.brand_color);
-        if (/^#[0-9A-Fa-f]{6}$/.test(accentColor)) userColors.push(accentColor);
+        const userChosenColors = hasUserChosenColors(brandColorsChosen)
+          ? brandColorsChosen
+          : [];
 
         const res = await fetch(`/api/store/${storeId}/brand-profile/infer`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             textOnlyOrigin: 'implicit',
-            userChosenColors: userColors.length > 0 ? userColors : undefined,
-            manualColorOverride: userColors.length > 0,
+            userChosenColors,
           }),
         });
         const data = await res.json();
@@ -838,7 +884,7 @@ export function StoreIdentityForm() {
           if (data.profile?.inferred_accent_color) {
             setAccentColor(data.profile.inferred_accent_color);
           }
-          if (data.profile?.brand_colors_chosen?.length > 0) {
+          if (hasUserChosenColors(data.profile?.brand_colors_chosen ?? [])) {
             setBrandColorsChosen(data.profile.brand_colors_chosen);
           }
           setStep2Success("Direção visual gerada com sucesso!");
@@ -1113,18 +1159,23 @@ export function StoreIdentityForm() {
                       const profile = (data as Record<string, unknown>)?.profile as Record<string, unknown> | undefined;
                       if (profile) {
                         const tokens = profile.safe_color_tokens as Record<string, string> | undefined;
-                        const chosenPrimary = (profile.brand_colors_chosen as string[])?.[0];
-                        if (chosenPrimary) {
-                          setField("brand_color", chosenPrimary);
+                        const chosenColors = (profile.brand_colors_chosen as Array<string | null>) ?? [];
+                        if (hasUserChosenColors(chosenColors)) {
+                          setBrandColorsChosen(chosenColors);
+                          const primary = chosenColors[0] !== null ? chosenColors[0] : '';
+                          setField("brand_color", primary);
+                          setAccentColor(
+                            chosenColors[1]
+                            ?? (tokens?.accent ?? '')
+                            ?? (profile.inferred_accent_color as string ?? '')
+                          );
                         } else if (tokens?.primary) {
                           setField("brand_color", tokens.primary);
+                          setAccentColor(
+                            (tokens?.accent ?? '')
+                            ?? (profile.inferred_accent_color as string ?? '')
+                          );
                         }
-                        setAccentColor(
-                          (profile.brand_colors_chosen as string[])?.[1]
-                          ?? (tokens?.accent ?? '')
-                          ?? (profile.inferred_accent_color as string ?? '')
-                        );
-                        setBrandColorsChosen((profile.brand_colors_chosen as string[]) ?? []);
                       }
                     } catch (e) { setDriftError('Não foi possível realinhar. Tente novamente mais tarde.'); }
                   }}
@@ -1372,7 +1423,12 @@ export function StoreIdentityForm() {
                     <input type="color" value={formData.brand_color || "#000000"}
                       onChange={(e) => {
                         setField("brand_color", e.target.value);
-                        if (storeId) saveBrandColors(e.target.value, accentColor);
+                        if (storeId) {
+                          const primaryOuNull = isValidHex(e.target.value) ? e.target.value : null;
+                          const accentOuNull = accentColor === '' || accentColor === '#RRGGBB' || !isValidHex(accentColor) ? null : accentColor;
+                          const colors: Array<string | null> = primaryOuNull || accentOuNull ? [primaryOuNull, accentOuNull] : [];
+                          handlePatchOrLocalColors(colors);
+                        }
                       }}
                       onBlur={() => handleBlur("brand_color")}
                       className="w-10 h-10 rounded-lg border border-border-light bg-transparent cursor-pointer p-0.5"
@@ -1381,7 +1437,12 @@ export function StoreIdentityForm() {
                       onChange={(e) => setField("brand_color", e.target.value)}
                       onBlur={() => {
                         handleBlur("brand_color");
-                        if (storeId && formData.brand_color) saveBrandColors(formData.brand_color, accentColor);
+                        if (storeId && formData.brand_color) {
+                          const primaryOuNull = isValidHex(formData.brand_color) ? formData.brand_color : null;
+                          const accentOuNull = accentColor === '' || accentColor === '#RRGGBB' || !isValidHex(accentColor) ? null : accentColor;
+                          const colors: Array<string | null> = primaryOuNull || accentOuNull ? [primaryOuNull, accentOuNull] : [];
+                          handlePatchOrLocalColors(colors);
+                        }
                       }}
                       placeholder="#RRGGBB" maxLength={7}
                       className={`flex-1 bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-mono placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
@@ -1400,18 +1461,42 @@ export function StoreIdentityForm() {
                     <input type="color" value={accentColor || "#000000"}
                       onChange={(e) => {
                         setAccentColor(e.target.value);
-                        if (storeId) saveBrandColors(formData.brand_color, e.target.value);
+                        if (storeId) {
+                          const primaryOuNull = formData.brand_color === '' || formData.brand_color === '#RRGGBB' || !isValidHex(formData.brand_color) ? null : formData.brand_color;
+                          const accentOuNull = isValidHex(e.target.value) ? e.target.value : null;
+                          const colors: Array<string | null> = primaryOuNull || accentOuNull ? [primaryOuNull, accentOuNull] : [];
+                          handlePatchOrLocalColors(colors);
+                        }
                       }}
                       className="w-10 h-10 rounded-lg border border-border-light bg-transparent cursor-pointer p-0.5"
                     />
                     <input type="text" value={accentColor}
                       onChange={(e) => setAccentColor(e.target.value)}
-                      onBlur={() => { if (storeId && accentColor) saveBrandColors(formData.brand_color, accentColor); }}
+                      onBlur={() => {
+                        if (storeId && accentColor) {
+                          const primaryOuNull = formData.brand_color === '' || formData.brand_color === '#RRGGBB' || !isValidHex(formData.brand_color) ? null : formData.brand_color;
+                          const accentOuNull = isValidHex(accentColor) ? accentColor : null;
+                          const colors: Array<string | null> = primaryOuNull || accentOuNull ? [primaryOuNull, accentOuNull] : [];
+                          handlePatchOrLocalColors(colors);
+                        }
+                      }}
                       placeholder="#RRGGBB" maxLength={7}
                       className="flex-1 bg-bg-surface border border-border-light rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-mono placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
                     />
                   </div>
                 </div>
+
+                {hasUserChosenColors(brandColorsChosen) && (
+                  <div className="flex justify-start">
+                    <button
+                      type="button"
+                      onClick={handleResetToSuggestedColors}
+                      className="text-text-muted hover:text-accent-blue text-xs font-body underline transition-colors duration-200"
+                    >
+                      Voltar para cores sugeridas
+                    </button>
+                  </div>
+                )}
 
                 {detectedColors.length > 0 && (
                   <div>
@@ -1532,18 +1617,23 @@ export function StoreIdentityForm() {
               const profile = (data as Record<string, unknown>)?.profile as Record<string, unknown> | undefined;
               if (profile) {
                 const tokens = profile.safe_color_tokens as Record<string, string> | undefined;
-                const chosenPrimary = (profile.brand_colors_chosen as string[])?.[0];
-                if (chosenPrimary) {
-                  setField("brand_color", chosenPrimary);
+                const chosenColors = (profile.brand_colors_chosen as Array<string | null>) ?? [];
+                if (hasUserChosenColors(chosenColors)) {
+                  setBrandColorsChosen(chosenColors);
+                  const primary = chosenColors[0] !== null ? chosenColors[0] : '';
+                  setField("brand_color", primary);
+                  setAccentColor(
+                    chosenColors[1]
+                    ?? (tokens?.accent ?? '')
+                    ?? (profile.inferred_accent_color as string ?? '')
+                  );
                 } else if (tokens?.primary) {
                   setField("brand_color", tokens.primary);
+                  setAccentColor(
+                    (tokens?.accent ?? '')
+                    ?? (profile.inferred_accent_color as string ?? '')
+                  );
                 }
-                setAccentColor(
-                  (profile.brand_colors_chosen as string[])?.[1]
-                  ?? (tokens?.accent ?? '')
-                  ?? (profile.inferred_accent_color as string ?? '')
-                );
-                setBrandColorsChosen((profile.brand_colors_chosen as string[]) ?? []);
               }
               setDriftSaveIntercept(false);
               await executeStep2Save();
@@ -1573,18 +1663,23 @@ export function StoreIdentityForm() {
               const profile = (data as Record<string, unknown>)?.profile as Record<string, unknown> | undefined;
               if (profile) {
                 const tokens = profile.safe_color_tokens as Record<string, string> | undefined;
-                const chosenPrimary = (profile.brand_colors_chosen as string[])?.[0];
-                if (chosenPrimary) {
-                  setField("brand_color", chosenPrimary);
+                const chosenColors = (profile.brand_colors_chosen as Array<string | null>) ?? [];
+                if (hasUserChosenColors(chosenColors)) {
+                  setBrandColorsChosen(chosenColors);
+                  const primary = chosenColors[0] !== null ? chosenColors[0] : '';
+                  setField("brand_color", primary);
+                  setAccentColor(
+                    chosenColors[1]
+                    ?? (tokens?.accent ?? '')
+                    ?? (profile.inferred_accent_color as string ?? '')
+                  );
                 } else if (tokens?.primary) {
                   setField("brand_color", tokens.primary);
+                  setAccentColor(
+                    (tokens?.accent ?? '')
+                    ?? (profile.inferred_accent_color as string ?? '')
+                  );
                 }
-                setAccentColor(
-                  (profile.brand_colors_chosen as string[])?.[1]
-                  ?? (tokens?.accent ?? '')
-                  ?? (profile.inferred_accent_color as string ?? '')
-                );
-                setBrandColorsChosen((profile.brand_colors_chosen as string[]) ?? []);
               }
               setDriftNavIntercept(false);
               if (pendingNavUrl) router.push(pendingNavUrl);
