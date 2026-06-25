@@ -841,8 +841,8 @@ export function StoreIdentityForm() {
 
     setStep2Success(null);
 
-    if (formData.brand_color || accentColor) {
-      await saveBrandColors(formData.brand_color, accentColor);
+    if (formData.brand_color || brandColorsChosen[1]) {
+      await saveBrandColors(formData.brand_color, brandColorsChosen[1] ?? "");
     }
 
     const noActiveIdentity = !logoStatus || logoStatus === 'explicit_none';
@@ -901,7 +901,7 @@ export function StoreIdentityForm() {
     } else {
       setStep2Success("Dados salvos com sucesso!");
     }
-  }, [storeId, formData, accentColor, logoStatus, visualSignatureUrl, inferenceError, setField, saveBrandColors]);
+  }, [storeId, formData, brandColorsChosen, logoStatus, visualSignatureUrl, inferenceError, setField, saveBrandColors]);
 
   const handleStep2Submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1425,7 +1425,7 @@ export function StoreIdentityForm() {
                         setField("brand_color", e.target.value);
                         if (storeId) {
                           const primaryOuNull = isValidHex(e.target.value) ? e.target.value : null;
-                          const accentOuNull = accentColor === '' || accentColor === '#RRGGBB' || !isValidHex(accentColor) ? null : accentColor;
+                          const currentAccent = brandColorsChosen[1]; const accentOuNull = currentAccent && isValidHex(currentAccent) ? currentAccent : null;
                           const colors: Array<string | null> = primaryOuNull || accentOuNull ? [primaryOuNull, accentOuNull] : [];
                           handlePatchOrLocalColors(colors);
                         }
@@ -1439,7 +1439,7 @@ export function StoreIdentityForm() {
                         handleBlur("brand_color");
                         if (storeId && formData.brand_color) {
                           const primaryOuNull = isValidHex(formData.brand_color) ? formData.brand_color : null;
-                          const accentOuNull = accentColor === '' || accentColor === '#RRGGBB' || !isValidHex(accentColor) ? null : accentColor;
+                          const currentAccent = brandColorsChosen[1]; const accentOuNull = currentAccent && isValidHex(currentAccent) ? currentAccent : null;
                           const colors: Array<string | null> = primaryOuNull || accentOuNull ? [primaryOuNull, accentOuNull] : [];
                           handlePatchOrLocalColors(colors);
                         }
@@ -1508,7 +1508,7 @@ export function StoreIdentityForm() {
                         <div key={i} className="flex flex-col items-center gap-1">
                           <div className="w-10 h-10 rounded-full border-2 border-border-light" style={{ backgroundColor: color }} />
                           <div className="flex gap-1">
-                            <button type="button" onClick={() => { setField("brand_color", color); if (storeId) saveBrandColors(color, accentColor); }}
+                            <button type="button" onClick={() => { setField("brand_color", color); if (storeId) saveBrandColors(color, brandColorsChosen[1] ?? ""); }}
                               className={`text-[10px] font-heading font-medium px-1.5 py-0.5 rounded transition-colors ${
                                 formData.brand_color === color ? "bg-accent-green/20 text-accent-green" : "bg-bg-elevated text-text-muted hover:text-text-primary"
                               }`} title="Usar como cor principal">P</button>
