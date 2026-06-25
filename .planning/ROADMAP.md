@@ -117,15 +117,15 @@
      - [x] 4.6.6-03-PLAN.md — State-Action Matrix, Guidance Card, Remoção "Continuar sem logo", Aviso Pré-Remoção
    - **Wave 4 — Quality Gate** *(depends on Wave 3)*
       - [x] 4.6.6-04-PLAN.md — Tests, Verificação Manual, typecheck, lint, build
-- [ ] Phase 4.6.7: User Color Preferences Persistence (4 plans, 4 waves)
+- [x] Phase 4.6.7: User Color Preferences Persistence (4 plans, 4 waves) — COMPLETE 2026-06-25
     - **Wave 1 — Foundation** *(no deps)*
-      - [ ] 04.6.7-01-PLAN.md — Types, Schemas, Validators & Normalizers
+      - [x] 04.6.7-01-PLAN.md — Types, Schemas, Validators & Normalizers
     - **Wave 2 — Core Backend** *(depends on Wave 1)*
-      - [ ] 04.6.7-02-PLAN.md — PATCH, Inference, Realinhamento, Logo Upload & VS Approval
+      - [x] 04.6.7-02-PLAN.md — PATCH, Inference, Realinhamento, Logo Upload & VS Approval
     - **Wave 3 — UI** *(depends on Wave 2)*
-      - [ ] 04.6.7-03-PLAN.md — Form State, Hydration, Color Pickers & Voltar
+      - [x] 04.6.7-03-PLAN.md — Form State, Hydration, Color Pickers & Voltar
     - **Wave 4 — Quality Gate** *(depends on Wave 3)*
-      - [ ] 04.6.7-04-PLAN.md — Tests & Verification
+      - [x] 04.6.7-04-PLAN.md — Tests & Verification
 - [ ] Phase 5: Review, Adjust & Export (not yet planned)
 ## Progress
 
@@ -152,5 +152,5 @@
 | 4.6.4. Visual Signature Lifecycle | v1.1 | 5/5 | Complete | 2026-06-19 |
 | 4.6.5. VS Color Drift & Brand Profile | v1.1 | 5/5 | Complete | 2026-06-22 |
 | 4.6.6. Identity Transition | v1.1 | 4/4 | Complete | 2026-06-24 |
-| 4.6.7. User Color Preferences Persistence | v1.1 | 0/4 | Planned | — |
+| 4.6.7. User Color Preferences Persistence | v1.1 | 4/4 | Complete | 2026-06-25 |
 | 5. Review, Adjust & Export | v1.1 | 0 | Not yet planned | — |
