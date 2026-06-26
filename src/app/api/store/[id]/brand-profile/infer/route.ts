@@ -91,7 +91,7 @@ export async function POST(
     } else if ((previousSyncedProfile?.brand_colors_chosen as Array<string | null> | undefined)?.some(
       (c: string | null) => c !== null && /^#[0-9A-Fa-f]{6}$/.test(c)
     )) {
-      brandColorsChosen = previousSyncedProfile.brand_colors_chosen;
+      brandColorsChosen = previousSyncedProfile?.brand_colors_chosen ?? [];
     }
 
     await supabase
