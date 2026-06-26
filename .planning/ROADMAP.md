@@ -117,7 +117,7 @@
      - [x] 4.6.6-03-PLAN.md — State-Action Matrix, Guidance Card, Remoção "Continuar sem logo", Aviso Pré-Remoção
    - **Wave 4 — Quality Gate** *(depends on Wave 3)*
       - [x] 4.6.6-04-PLAN.md — Tests, Verificação Manual, typecheck, lint, build
-- [x] Phase 4.6.7: User Color Preferences Persistence (5 plans, 4 waves) — COMPLETE 2026-06-25
+- [x] Phase 4.6.7: User Color Preferences Persistence (5 plans, 4 waves + UAT gap closure) — COMPLETE 2026-06-25
     - **Wave 1 — Foundation** *(no deps)*
       - [x] 04.6.7-01-PLAN.md — Types, Schemas, Validators & Normalizers
     - **Wave 2 — Core Backend** *(depends on Wave 1)*
@@ -126,8 +126,8 @@
       - [x] 04.6.7-03-PLAN.md — Form State, Hydration, Color Pickers & Voltar
     - **Wave 4 — Quality Gate** *(depends on Wave 3)*
       - [x] 04.6.7-04-PLAN.md — Tests & Verification
-    - **Gap Closure** — (wave 1, no deps)
-      - [ ] 04.6.7-05-PLAN.md — Fix accentColor dual-use anti-pattern in 4 save sites
+    - **UAT Gap Closure** — (wave 1, no deps)
+      - [x] 04.6.7-05-PLAN.md — Fix accentColor dual-use anti-pattern (inferred accent not persisted as user choice) + Voltar guard fix + preview hydration
 - [ ] Phase 5: Review, Adjust & Export (not yet planned)
 ## Progress
 
