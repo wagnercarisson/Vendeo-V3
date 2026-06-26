@@ -53,7 +53,7 @@ export async function resolveStoreIdentity(
 
       if (profile.brand_colors_chosen?.length > 0) {
         const primaryColor = profile.brand_colors_chosen[0];
-        if (/^#[0-9A-Fa-f]{6}$/.test(primaryColor)) {
+        if (primaryColor && /^#[0-9A-Fa-f]{6}$/.test(primaryColor)) {
           brandColor = primaryColor;
         }
       } else if (profile.safe_color_tokens?.primary) {
@@ -138,7 +138,7 @@ export async function resolveStoreIdentity(
 
       if (withoutLogoProfile.brand_colors_chosen?.length > 0) {
         const primaryColor = withoutLogoProfile.brand_colors_chosen[0];
-        if (/^#[0-9A-Fa-f]{6}$/.test(primaryColor)) {
+        if (primaryColor && /^#[0-9A-Fa-f]{6}$/.test(primaryColor)) {
           brandColor = primaryColor;
         }
       }

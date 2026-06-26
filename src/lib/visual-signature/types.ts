@@ -300,7 +300,7 @@ export interface BrandProfilerInput {
   assetUrl: string;
   referenceCardUrl?: string | null;
   intendedPalette?: IntendedPalette | null;
-  previousBrandColors?: string[];
+  previousBrandColors?: Array<string | null>;
 }
 
 export interface BrandProfilerWithoutLogoResult {

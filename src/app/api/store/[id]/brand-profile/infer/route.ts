@@ -66,8 +66,8 @@ export async function POST(
       slogan: store.slogan ?? null,
       city: store.city ?? null,
       state: store.state ?? null,
-      userPrimaryColor: body.userChosenColors?.[0],
-      userAccentColor: body.userChosenColors?.[1],
+      userPrimaryColor: body.userChosenColors?.[0] ?? undefined,
+      userAccentColor: body.userChosenColors?.[1] ?? undefined,
     }, timeoutMs);
 
     // Preserve brand_colors_chosen from previous synced profile
@@ -81,15 +81,15 @@ export async function POST(
     const previousSyncedProfile = previousProfiles?.[0] ?? null;
 
     const hasUserColors = body.userChosenColors?.some(
-      c => c !== null && /^#[0-9A-Fa-f]{6}$/.test(c)
+      (c: string | null) => c !== null && /^#[0-9A-Fa-f]{6}$/.test(c)
     );
 
     let brandColorsChosen: Array<string | null> = [];
 
     if (hasUserColors) {
       brandColorsChosen = body.userChosenColors ?? [];
-    } else if (previousSyncedProfile?.brand_colors_chosen?.some(
-      c => c !== null && /^#[0-9A-Fa-f]{6}$/.test(c)
+    } else if ((previousSyncedProfile?.brand_colors_chosen as Array<string | null> | undefined)?.some(
+      (c: string | null) => c !== null && /^#[0-9A-Fa-f]{6}$/.test(c)
     )) {
       brandColorsChosen = previousSyncedProfile.brand_colors_chosen;
     }

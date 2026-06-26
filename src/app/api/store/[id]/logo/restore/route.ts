@@ -216,8 +216,8 @@ export async function POST(
     });
 
     // Create new synced profile
-      const previousBrandColors = currentProfile?.brand_colors_chosen?.some(
-        c => c !== null && /^#[0-9A-Fa-f]{6}$/.test(c)
+      const previousBrandColors = (currentProfile?.brand_colors_chosen as Array<string | null> | undefined)?.some(
+        (c: string | null) => c !== null && /^#[0-9A-Fa-f]{6}$/.test(c)
       )
         ? currentProfile.brand_colors_chosen
         : [];

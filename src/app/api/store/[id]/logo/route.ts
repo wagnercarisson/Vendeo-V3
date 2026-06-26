@@ -249,6 +249,8 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
   let createdProfile = null;
 
   if (store) {
+    let previousBrandColors: Array<string | null> = [];
+
     // Phase 2 — BrandDirector (BEFORE profile mutation)
     try {
       const director = new BrandDirectorService();
@@ -291,10 +293,10 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
       }
 
       // Preserve brand_colors_chosen from previous synced profile
-      const previousBrandColors = syncedProfile?.brand_colors_chosen?.some(
-        c => c !== null && /^#[0-9A-Fa-f]{6}$/.test(c)
+      previousBrandColors = (syncedProfile?.brand_colors_chosen as Array<string | null> | undefined)?.some(
+        (c: string | null) => c !== null && /^#[0-9A-Fa-f]{6}$/.test(c)
       )
-        ? syncedProfile.brand_colors_chosen
+        ? syncedProfile.brand_colors_chosen as Array<string | null>
         : [];
 
       // Insert new synced profile

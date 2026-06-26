@@ -11,7 +11,7 @@ interface StorePreviewProps {
   segment: string;
   brandColor: string;
   accentColor?: string;
-  brandColorsChosen?: string[];
+  brandColorsChosen?: Array<string | null>;
   logoUrl?: string | null;
   logoStatus?: string | null;
   identityState?: string | null;

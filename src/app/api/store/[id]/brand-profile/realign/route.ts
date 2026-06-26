@@ -253,8 +253,8 @@ export async function POST(
         accent_color: result.safe_color_tokens?.accent ?? result.inferred_accent_color ?? null,
       };
 
-      const previousBrandColors = currentProfile?.brand_colors_chosen?.some(
-        c => c !== null && /^#[0-9A-Fa-f]{6}$/.test(c)
+      const previousBrandColors = (currentProfile?.brand_colors_chosen as Array<string | null> | undefined)?.some(
+        (c: string | null) => c !== null && /^#[0-9A-Fa-f]{6}$/.test(c)
       )
         ? currentProfile.brand_colors_chosen
         : [];
