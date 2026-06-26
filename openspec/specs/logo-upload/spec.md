@@ -128,7 +128,7 @@ The system SHALL expose a `POST /api/store/[id]/logo` endpoint that accepts a mu
 On BrandDirector SUCCESS:
 8. Apply compensated transition:
    a. Mark previous synced profile as `outdated`
-   b. Insert new profile with `status = 'synced'`, `source = 'logo_analysis'`, `active_logo_asset_id = originalAsset.id`, `metadata.input_snapshot` populated, `brand_colors_chosen = []`
+    b. Insert new profile with `status = 'synced'`, `source = 'logo_analysis'`, `active_logo_asset_id = originalAsset.id`, `metadata.input_snapshot` populated, `brand_colors_chosen = preserved from previous synced profile (or [] if none)`
    c. If insert fails: restore previous profile to `synced` (compensation)
 9. Set `identity_state = 'logo'` and synchronize `logo_status = 'uploaded'` via IDENTITY_TO_LOGO_STATUS mapping
 10. Return HTTP 201 with the created assets and profile
@@ -152,7 +152,7 @@ The endpoint SHALL respond only after all processing is complete. It SHALL NOT u
 - **AND** the previous profile SHALL be marked `outdated`
 - **AND** `identity_state` SHALL be `'logo'`
 - **AND** `logo_status` SHALL be `'uploaded'`
-- **AND** `brand_colors_chosen` SHALL NOT contain `logo_colors_detected`
+- **AND** `brand_colors_chosen` SHALL preserve previous user choice or be `[]`
 - **AND** `metadata.input_snapshot` SHALL contain the 6 store fields at upload time
 
 #### Scenario: Upload with BrandDirector failure preserves previous profile
@@ -281,11 +281,25 @@ The validation SHALL use `stores.identity_state` as the source of truth — NOT 
 
 The system SHALL NOT populate `brand_colors_chosen` with `logo_colors_detected` during logo upload. The `brand_colors_chosen` field is reserved exclusively for colors explicitly chosen by the user via the color picker. The detected colors SHALL remain in `logo_colors_detected`, and the final campaign palette SHALL be consumed from `safe_color_tokens`.
 
-#### Scenario: brand_colors_chosen empty after upload
+When a synced brand profile is created from logo upload:
+- If the previous synced profile had `brand_colors_chosen` with at least one valid HEX, the new profile SHALL preserve the same value
+- If the previous synced profile had `brand_colors_chosen = []`, the new profile SHALL have `brand_colors_chosen = []`
+- `manual_color_override` SHALL NOT be consulted for this decision
+
+The logo upload endpoint code SHALL read the previous synced profile's `brand_colors_chosen` before creating the new profile and copy it to the new profile.
+
+#### Scenario: brand_colors_chosen preserved on logo upload
 
 - **WHEN** a synced brand profile is created from logo upload
-- **AND** the user did not manually choose colors
-- **THEN** `brand_colors_chosen` SHALL be `[]`
+- **AND** the previous synced profile has `brand_colors_chosen = ["#FF6600", null]`
+- **THEN** the new profile SHALL have `brand_colors_chosen = ["#FF6600", null]`
+- **AND** `manual_color_override` SHALL NOT be consulted
+
+#### Scenario: brand_colors_chosen empty after upload when no prior choice
+
+- **WHEN** a synced brand profile is created from logo upload
+- **AND** the previous synced profile has `brand_colors_chosen = []`
+- **THEN** the new profile SHALL have `brand_colors_chosen = []`
 - **AND** `logo_colors_detected` SHALL contain the extracted colors
 - **AND** `safe_color_tokens` SHALL contain the final palette
 

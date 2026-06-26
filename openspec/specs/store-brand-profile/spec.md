@@ -13,7 +13,7 @@ The system SHALL have a `store_brand_profiles` table in the public Supabase sche
 | `source` | `text` | Yes | — | `logo_analysis`, `without_logo`, `text_only` |
 | `active_logo_asset_id` | `uuid` | No | `null` | FK → store_brand_assets(id), points to the original asset that generated this profile. Serves as provenance link — never nulled after being set. Null when source = without_logo or text_only. When source = logo_analysis, SHALL always be set, even after logo removal |
 | `logo_colors_detected` | `jsonb` | No | `null` | Array of hex color strings detected from logo analysis |
-| `brand_colors_chosen` | `jsonb` | No | `null` | Array of hex color strings chosen by the lojista |
+| `brand_colors_chosen` | `jsonb` | No | `null` | Array of hex color strings chosen by the lojista, or null in any position for partial choice. Empty array [] means no user choice |
 | `safe_color_tokens` | `jsonb` | No | `null` | `{ primary, secondary, accent, ... }` — safe usage tokens |
 | `visual_style` | `text` | No | `null` | Inferred visual style description |
 | `visual_tone` | `text` | No | `null` | Inferred visual tone (e.g., "moderno e clean") |
@@ -26,7 +26,7 @@ The system SHALL have a `store_brand_profiles` table in the public Supabase sche
 | → `inferred_primary_color` | `text` | No | `null` | Primary color inferred by AI (may differ from brand_colors_chosen[0]) |
 | → `inferred_accent_color` | `text` | No | `null` | Accent color inferred by AI |
 | → `identity_art_director_output` | `jsonb` | No | `null` | Creative metadata from identity art director: creative_description, suggested_colors, visual_direction, elements_used |
-| → `manual_color_override` | `jsonb` | No | `{"enabled": false}` | Tracks whether the user manually overrode colors at the profile level |
+| → `manual_color_override` | `jsonb` | No | `{"enabled": false}` | **DEPRECATED for phase 4.6.7+** — no new flows write or consult this field. Schema retained for backward compatibility |
 | `metadata` | `jsonb` | No | `null` | Model, provider, elapsedMs, error details, etc |
 | `version` | `int` | Yes | `1` | Incremented on regeneration |
 | `status` | `text` | Yes | `processing` | `processing`, `synced`, `outdated`, `failed`, `archived` |
@@ -55,6 +55,27 @@ The migration SHALL include:
 
 - **WHEN** a profile is inserted with status `invalid_status`
 - **THEN** the insert SHALL fail with a CHECK constraint violation
+
+### Requirement: Store brand profiles table — column semantic (updated)
+
+The `brand_colors_chosen` column type SHALL be `jsonb` (unchanged), but its semantic is updated:
+- Accepts `null` in any position: `Array<string | null>`
+- Empty array `[]` means "no user choice"
+- Array with 2 positions where at least one is a valid hex means "user has made a choice"
+
+The `manual_color_override` column remains in the schema for backward compatibility but SHALL NOT be written by any flow in this phase. It SHALL be considered **deprecated** and may be removed in a future migration.
+
+#### Scenario: brand_colors_chosen accepts null
+
+- **WHEN** a profile is created or updated with `brand_colors_chosen = ["#FF0000", null]`
+- **THEN** the JSONB column SHALL store the array as-is
+- **AND** `null` SHALL be preserved in the stored value
+
+#### Scenario: manual_color_override not written
+
+- **WHEN** any flow updates `brand_colors_chosen`
+- **THEN** `manual_color_override` SHALL NOT be set or modified in `store_brand_profiles`
+- **AND** `stores.manual_color_override` SHALL NOT be set or modified
 
 ### Requirement: Brand profile lifecycle
 
@@ -179,19 +200,55 @@ The `processing` status exists in the model as a reserved status for future use 
 - **AND** `metadata.input_snapshot` SHALL NOT be set on the failed profile
 - **AND** the upload endpoint SHALL return HTTP 201 (logo persists)
 
-### Requirement: Brand profile generation — text_only inference
+### Requirement: Brand profile generation — text_only inference (userChosenColors)
 
-**ADDED**: A new generation mode is introduced for `source = 'text_only'`. The profile SHALL be generated via `POST /api/store/[id]/brand-profile/infer`. This is separate from the logo upload and visual signature approval flows.
+When a text-only inference is triggered via `POST /api/store/[id]/brand-profile/infer`, the endpoint SHALL accept an optional `userChosenColors: Array<string | null>` field in the request body.
 
-The inference SHALL:
+When `userChosenColors` is provided and contains at least one valid HEX, the inference SHALL:
+1. Persist the received colors in the new profile's `brand_colors_chosen`
+2. NOT pass them as context to BrandTextOnlyInferenceService in this phase. The received colors SHALL only be persisted in `brand_colors_chosen` — do NOT use them to alter prompt, visual direction, creative decisions, or asset generation.
+
+When `userChosenColors` is not provided or is `[]`, the inference SHALL:
+1. Check the previous synced profile for existing `brand_colors_chosen`
+2. If previous profile has `brand_colors_chosen` with at least one valid HEX, preserve it
+3. If no previous profile or previous is `[]`, set `brand_colors_chosen = []`
+
+`manualColorOverride` SHALL NOT be accepted or used by this endpoint.
+
+The inference SHALL also:
 1. Load store data (name, segment, subsegment, tone_of_voice, positioning, short_description, slogan, city, state)
-2. Accept optional user color preferences
-3. Call the BrandTextOnlyInferenceService
-4. Populate `metadata.input_snapshot` with the current visual state for all 6 sensitive fields (segment, subsegment, tone_of_voice, name, brand_color, accent_color)
-5. Persist with `source = 'text_only'` and `status = 'synced'` on success, `'failed'` on failure
-6. Respond only after the operation completes
+2. Call the BrandTextOnlyInferenceService
+3. Populate `metadata.input_snapshot` with the current visual state for all 6 sensitive fields
+4. Persist with `source = 'text_only'` and `status = 'synced'` on success, `'failed'` on failure
+5. Respond only after the operation completes
 
 The inference response SHALL include `profile.metadata` (containing `input_snapshot`) so the frontend can use it for color hydration after re-inference.
+
+#### Scenario: userChosenColors persisted on first inference
+
+- **WHEN** text-only inference is triggered for a new store (no previous profile)
+- **AND** body contains `userChosenColors: ["#FF0000", null]`
+- **THEN** the new profile SHALL have `brand_colors_chosen = ["#FF0000", null]`
+
+#### Scenario: Existing brand_colors_chosen preserved on re-inference
+
+- **WHEN** text-only inference is triggered for a store with an existing synced profile
+- **AND** the previous profile has `brand_colors_chosen = ["#FF6600", null]`
+- **AND** body does NOT contain `userChosenColors`
+- **THEN** the new profile SHALL have `brand_colors_chosen = ["#FF6600", null]`
+- **AND** `manual_color_override` SHALL NOT be consulted
+
+#### Scenario: Empty userChosenColors with no previous profile
+
+- **WHEN** text-only inference is triggered for a new store
+- **AND** body contains `userChosenColors: []`
+- **THEN** the new profile SHALL have `brand_colors_chosen = []`
+
+#### Scenario: manualColorOverride ignored
+
+- **WHEN** body contains `manualColorOverride: true`
+- **THEN** the field SHALL be ignored
+- **AND** `brand_colors_chosen` SHALL be determined solely by `userChosenColors` or previous profile
 
 #### Scenario: Text-only inference creates synced profile with input_snapshot
 
@@ -302,50 +359,61 @@ If no profile exists at all, the endpoint SHALL return HTTP 200 with `null` data
 
 ### Requirement: brand_colors_chosen semantic clarification
 
-The system SHALL treat `brand_colors_chosen` exclusively as the user's chosen colors. This spec explicitly overrides any previous behavior that wrote AI-inferred or extracted colors into this field.
+The system SHALL treat `brand_colors_chosen` exclusively as the user's chosen colors.
 
 **Correct usage:**
-- User chose colors via color picker → `brand_colors_chosen = ["#userPrimary", "#userAccent"]`
+- User chose colors via color picker → `brand_colors_chosen = ["#userPrimary", "#userAccent"]` (par completo)
+- User chose only primary → `brand_colors_chosen = ["#userPrimary", null]`
+- User chose only accent → `brand_colors_chosen = [null, "#userAccent"]`
 - User did not choose colors → `brand_colors_chosen = []`
 
-**Incorrect usage (corrected in this phase 4.6.3):**
-- Writing extracted logo colors to `brand_colors_chosen` in POST /logo (removed in 4.6.3)
-- Writing inferred palette to `brand_colors_chosen` in text_only inference (corrected in 4.6.2)
+**Incorrect usage (eliminated in this phase):**
+- Writing extracted logo colors to `brand_colors_chosen` — handled by `logo_colors_detected`
+- Writing inferred palette to `brand_colors_chosen` — handled by `safe_color_tokens`
+- Using `manual_color_override` as source of truth — deprecated
 
-**Preservation on visual signature approval (fase 4.6.5):**
+**Preservation on visual signature approval:**
 When a new brand profile is generated from visual signature approval:
-- `brand_colors_chosen` SHALL be preserved from the **previous synced profile** ONLY IF `manual_color_override.enabled === true` on that profile
-- If `manual_color_override.enabled === false` or no previous synced profile exists → `brand_colors_chosen = []`
-- Legacy profiles (created before this phase) without `manual_color_override` field SHALL be treated as `manual_color_override.enabled === false` → `brand_colors_chosen = []`
+- `brand_colors_chosen` SHALL be preserved from the **previous synced profile** ONLY IF `brand_colors_chosen` contains at least one valid HEX color
+- If `brand_colors_chosen` is `[]` or no previous synced profile exists → `brand_colors_chosen = []`
+- `manual_color_override` SHALL NOT be consulted for this decision
 
-For campaign rendering, the color resolution priority SHALL be:
-`safe_color_tokens.primary > inferred_primary_color > store.brand_color > SEGMENT_COLOR_FALLBACK[segment]`
+**Preservation on logo upload and realignment:**
+- Logo upload SHALL preserve `brand_colors_chosen` from the previous synced profile when it contains at least one valid HEX
+- Realinhamento SHALL preserve `brand_colors_chosen` from the previous synced profile when it contains at least one valid HEX
+- Logo upload SHALL NOT set `brand_colors_chosen = []` unconditionally
 
-`brand_colors_chosen` is used only for UI pre-fill in the color pickers and as input signal to the inference service.
-
-#### Scenario: brand_colors_chosen NOT populated by logo upload
+#### Scenario: brand_colors_chosen NOT populated by logo upload (preserves existing)
 
 - **WHEN** a logo upload creates a synced brand profile
-- **THEN** `brand_colors_chosen` SHALL be `[]` (unless the user had previously chosen colors)
+- **AND** the previous synced profile has `brand_colors_chosen = []`
+- **THEN** the new profile SHALL have `brand_colors_chosen = []`
 - **AND** `logo_colors_detected` SHALL contain the extracted colors
-- **AND** the final palette SHALL be in `safe_color_tokens`
+- **AND** `safe_color_tokens` SHALL contain the final palette
+
+#### Scenario: brand_colors_chosen preserved on logo upload when exists
+
+- **WHEN** a logo upload creates a synced brand profile
+- **AND** the previous synced profile has `brand_colors_chosen = ["#FF6600", null]`
+- **THEN** the new profile SHALL have `brand_colors_chosen = ["#FF6600", null]`
+- **AND** `manual_color_override` SHALL NOT be consulted
+
+#### Scenario: brand_colors_chosen preserved with null on VS approval
+
+- **WHEN** a new brand profile is generated from visual signature approval
+- **AND** the previous synced profile has `brand_colors_chosen = ["#FF6600", null]`
+- **THEN** the new profile SHALL have `brand_colors_chosen = ["#FF6600", null]`
+
+#### Scenario: brand_colors_chosen empty without previous choice
+
+- **WHEN** a new brand profile is generated from any automatic flow
+- **AND** the previous synced profile has `brand_colors_chosen = []`
+- **THEN** the new profile SHALL have `brand_colors_chosen = []`
 
 #### Scenario: brand_colors_chosen populated only by manual picker
 
-- **WHEN** the user changes colors via PATCH brand-profile with `{ "colors": ["#FF6600"] }`
-- **THEN** `brand_colors_chosen` SHALL be updated to `["#FF6600"]`
-
-#### Scenario: brand_colors_chosen preserved with manual override on VS approval
-
-- **WHEN** a new brand profile is generated from visual signature approval
-- **AND** the previous synced profile has `manual_color_override.enabled === true` with `brand_colors_chosen = ["#FF6600"]`
-- **THEN** the new profile SHALL have `brand_colors_chosen = ["#FF6600"]`
-
-#### Scenario: brand_colors_chosen empty without manual override
-
-- **WHEN** a new brand profile is generated from visual signature approval
-- **AND** the previous synced profile has `manual_color_override` either `false` or absent
-- **THEN** the new profile SHALL have `brand_colors_chosen = []`
+- **WHEN** the user changes colors via PATCH brand-profile with `{ "colors": ["#FF6600", null] }`
+- **THEN** `brand_colors_chosen` SHALL be updated to `["#FF6600", null]`
 
 ### Requirement: Regenerate brand profile — POST /api/store/[id]/brand-profile/generate [DEFERRED to 4.6.3+]
 
@@ -370,27 +438,52 @@ The endpoint SHALL process inline: call the LLM with the stored logo and current
 
 The system SHALL expose a `PATCH /api/store/[id]/brand-profile` endpoint that updates the `brand_colors_chosen` field of the active brand profile. This allows the lojista to change colors without regenerating the entire profile.
 
-The endpoint SHALL accept a JSON body with `colors: string[]` (hex values). On success, the profile SHALL be updated in-place (same profile, same version).
+The endpoint SHALL accept a JSON body with `colors: Array<string | null>` where each value is either a valid hex string (`#RRGGBB`) or `null`. On success, the profile SHALL be updated in-place (same profile, same version).
 
-When updating colors for a `source = 'text_only'` profile:
-1. `brand_colors_chosen` SHALL be updated with the new colors
-2. `manual_color_override.enabled` in the profile SHALL be set to `true`
-3. `stores.manual_color_override` SHALL be set to `true`
-4. `safe_color_tokens` SHALL NOT change — the user's color choice does not override the campaign palette
-5. `stores.brand_color` sync is NOT part of this endpoint — sync from `safe_color_tokens.primary` happens only in the inference service
+Validation rules:
+- Each element SHALL be either a valid 7-character hex string (`#RRGGBB`) or `null`
+- Arrays with a single element SHALL be rejected (positions would be ambiguous)
+- Valid arrays: `[]`, `[hex, null]`, `[null, hex]`, `[hex, hex]`
 
-#### Scenario: Colors updated in-place
+When updating colors:
+1. `brand_colors_chosen` SHALL be updated with the new array
+2. `manual_color_override` in the profile SHALL NOT be set or modified
+3. `stores.manual_color_override` SHALL NOT be set or modified
+4. `safe_color_tokens` SHALL NOT change
+5. `stores.brand_color` SHALL NOT be updated by this endpoint
+6. The endpoint SHALL require an existing synced profile (returns 404 if none exists)
 
-- **WHEN** a PATCH request is sent to /api/store/{store_id}/brand-profile with `{ "colors": ["#FF0000", "#00FF00"] }`
-- **THEN** the active profile's `brand_colors_chosen` SHALL be updated to `["#FF0000", "#00FF00"]`
-- **AND** the `updated_at` SHALL reflect the current timestamp
+#### Scenario: Colors updated with null support
 
-#### Scenario: PATCH updates brand_colors_chosen for text_only
+- **WHEN** a PATCH request is sent with `{ "colors": ["#FF0000", null] }`
+- **THEN** the active profile's `brand_colors_chosen` SHALL be updated to `["#FF0000", null]`
+- **AND** `manual_color_override` SHALL NOT be modified
 
-- **WHEN** a PATCH request is sent for a store with `source = 'text_only'` profile
-- **AND** body contains `{ "colors": ["#FF6600", "#E8A040"] }`
-- **THEN** `brand_colors_chosen` SHALL be updated to `["#FF6600", "#E8A040"]`
-- **AND** `safe_color_tokens` SHALL remain unchanged
+#### Scenario: Colors cleared on reset
+
+- **WHEN** a PATCH request is sent with `{ "colors": [] }`
+- **THEN** the active profile's `brand_colors_chosen` SHALL be `[]`
+
+#### Scenario: Rejects single-element array
+
+- **WHEN** a PATCH request is sent with `{ "colors": ["#FF0000"] }`
+- **THEN** HTTP 400 SHALL be returned
+- **AND** `brand_colors_chosen` SHALL NOT be modified
+
+#### Scenario: Rejects invalid hex
+
+- **WHEN** a PATCH request is sent with `{ "colors": ["#GGGGGG", null] }`
+- **THEN** HTTP 400 SHALL be returned
+
+#### Scenario: 404 when no synced profile
+
+- **WHEN** a PATCH request is sent for a store without a synced profile
+- **THEN** HTTP 404 SHALL be returned
+
+#### Scenario: PATCH does not update stores.brand_color
+
+- **WHEN** a PATCH updates `brand_colors_chosen`
+- **THEN** `stores.brand_color` SHALL NOT be modified
 
 ### Requirement: Archive brand profile — POST /api/store/[id]/brand-profile/archive
 

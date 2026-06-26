@@ -46,7 +46,7 @@ When the lojista clicks "Aprovar", the system SHALL:
 4. Reset `stores.visual_signature_attempts` to 0
 5. Set `stores.identity_state` to `'visual_signature'`
 6. Update the `generation_events` record matching `asset_id` and `attempt_number` with `approved = true`
-7. **Invoke the Store Brand Profiler with `intendedPalette` from `signature.metadata.artDirectorOutput.intended_palette` and `previousBrandColors` from the last synced profile (if `manual_color_override.enabled`)** — replaces unconditional profiler invocation
+7. **Invoke the Store Brand Profiler with `intendedPalette` from `signature.metadata.artDirectorOutput.intended_palette` and `previousBrandColors` from the last synced profile (if `brand_colors_chosen` has at least one valid HEX)** — `manual_color_override` SHALL NOT be consulted
 8. Close the modal
 9. Return to the Logo e Cores screen
 10. Display the approved visual signature in the store preview
@@ -224,28 +224,33 @@ The attempt number SHALL be incremented at the moment of generation, not at the 
 - **WHEN** a visual signature is rejected
 - **THEN** `visual_signature_attempts` SHALL remain unchanged
 
-### Requirement: intendedPalette extraction in approval route
+### Requirement: Approval route — brand profiler invocation (updated)
 
-Before invoking the brand profiler, the approval route SHALL:
+When invoking the Store Brand Profiler during visual signature approval, the system SHALL:
+
 1. Load `signature.metadata.artDirectorOutput.intended_palette` from the approved visual signature
 2. Re-apply `normalizeIntendedPalette()` (idempotent)
 3. If `intended_palette` is missing or normalization returns `null`, set `intendedPalette = null`
-4. Load `previousBrandColors` from the last synced brand profile — only if that profile has `manual_color_override.enabled === true`, otherwise `previousBrandColors = []`
+4. Load `previousBrandColors` from the last synced brand profile — only if that profile has `brand_colors_chosen` with at least one valid HEX, otherwise `previousBrandColors = []`
 5. Pass both as `BrandProfilerInput.intendedPalette` and `BrandProfilerInput.previousBrandColors`
 
-#### Scenario: intendedPalette extracted and reapplied
+`manual_color_override.enabled` SHALL NOT be consulted for this decision.
 
-- **WHEN** the approval route processes a visual signature with `intended_palette` in metadata
-- **THEN** `normalizeIntendedPalette()` SHALL be reapplied (idempotent)
-- **AND** the normalized value SHALL be passed to the profiler
+#### Scenario: previousBrandColors loaded from brand_colors_chosen
 
-#### Scenario: previousBrandColors loaded conditionally
+- **WHEN** the last synced profile has `brand_colors_chosen = ["#FF6600", null]`
+- **THEN** `previousBrandColors = ["#FF6600", null]` SHALL be passed to the profiler
 
-- **WHEN** the last synced profile has `manual_color_override.enabled = true` and `brand_colors_chosen = ["#FF6600"]`
-- **THEN** `previousBrandColors = ["#FF6600"]` SHALL be passed to the profiler
+#### Scenario: previousBrandColors empty when no user choice
 
-- **WHEN** the last synced profile has `manual_color_override.enabled = false`
+- **WHEN** the last synced profile has `brand_colors_chosen = []`
 - **THEN** `previousBrandColors = []` SHALL be passed to the profiler
+
+#### Scenario: manual_color_override not consulted
+
+- **WHEN** the last synced profile has `manual_color_override.enabled = false` but `brand_colors_chosen = ["#FF6600", null]`
+- **THEN** `previousBrandColors = ["#FF6600", null]` SHALL be passed to the profiler
+- **AND** `manual_color_override` SHALL NOT be checked
 
 ### Requirement: Visual signature remains active on profiler failure
 
