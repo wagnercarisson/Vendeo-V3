@@ -81,7 +81,10 @@
     - [x] 04.6.1-04-PLAN.md — Creative Direction Context Update
     - [x] 04.6.1-05-PLAN.md — Store Identity UI (Step 2 + Preview)
   - [x] Phase 4.6.2: Visual Direction Drift Detection (4/4 plans) (completed 2026-06-13)
-    - [ ] Phase 4.6.2.1: Snapshot Fields Realignment (3 plans, 3 waves) — planned 2026-06-27
+    - [x] Phase 4.6.2.1: Snapshot Fields Realignment (3 plans, 3 waves) — completed 2026-06-27
+      - [x] 04.6.2.1-01-PLAN.md — Foundation: snapshot.ts + drift.ts refactor
+      - [x] 04.6.2.1-02-PLAN.md — Writers & Consumers: all endpoints use snapshot helper
+      - [x] 04.6.2.1-03-PLAN.md — Tests and verification gates
   - [x] Phase 4.6.3: Logo State Lifecycle — Upload/Remove/Restore com transição transacional, proveniência e histórico (5/5 plans — completed 2026-06-17)
     - [x] 04.6.3-01-PLAN.md — Types & Constants: IDENTITY_TO_LOGO_STATUS, DriftStatus, LogoHistoryItem
     - [x] 04.6.3-02-PLAN.md — POST /logo refactor: BrandDirector before mutation, compensated transition
@@ -151,7 +154,7 @@
 | 4.6. Store Form Adjusts | v1.1 | — | Complete | 2026-06-19 |
 | 4.6.1. Text Only State & Visual Direction Inference | v1.1 | 5/5 | Complete | 2026-06-12 |
 | 4.6.2. Visual Direction Drift Detection | v1.1 | 4/4 | Complete | 2026-06-13 |
-| 4.6.2.1. Snapshot Fields Realignment | v1.1 | 0/3 | Planned | — |
+| 4.6.2.1. Snapshot Fields Realignment | v1.1 | 3/3 | Complete | 2026-06-27 |
 | 4.6.3. Logo State Lifecycle | v1.1 | 5/5 | Complete | 2026-06-17 |
 | 4.6.4. Visual Signature Lifecycle | v1.1 | 5/5 | Complete | 2026-06-19 |
 | 4.6.5. VS Color Drift & Brand Profile | v1.1 | 5/5 | Complete | 2026-06-22 |
