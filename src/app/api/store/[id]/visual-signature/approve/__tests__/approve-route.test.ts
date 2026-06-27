@@ -29,6 +29,8 @@ vi.mock('@/lib/brand-assets/profile-reconciliation', () => ({
   reconcileProfiles: mockReconcileProfiles,
 }));
 
+const storeBrandProfileUpdates: any[] = [];
+
 function makeChain(result: any) {
   const resolvable = Promise.resolve(result);
   const chain: any = Object.assign(() => resolvable, {
@@ -40,6 +42,24 @@ function makeChain(result: any) {
     limit: vi.fn(() => chain),
     single: vi.fn(() => Promise.resolve(result)),
     update: vi.fn(() => chain),
+  });
+  return chain;
+}
+
+function makeBrandProfileChain(result: any) {
+  const resolvable = Promise.resolve(result);
+  const chain: any = Object.assign(() => resolvable, {
+    then: resolvable.then.bind(resolvable),
+    select: vi.fn(() => chain),
+    eq: vi.fn(() => chain),
+    in: vi.fn(() => chain),
+    order: vi.fn(() => chain),
+    limit: vi.fn(() => chain),
+    single: vi.fn(() => Promise.resolve(result)),
+    update: vi.fn((data: any) => {
+      storeBrandProfileUpdates.push(data);
+      return chain;
+    }),
   });
   return chain;
 }
@@ -105,7 +125,7 @@ function setupStoreQuery(result: any) {
   mockSupabaseFrom.mockImplementation((table: string) => {
     if (table === 'stores') return makeChain(result);
     if (table === 'store_visual_signatures') return makeChain({ data: mockSignature, error: null });
-    if (table === 'store_brand_profiles') return makeChain({ data: [], error: null });
+    if (table === 'store_brand_profiles') return makeBrandProfileChain({ data: [], error: null });
     return makeChain({ data: null, error: { message: 'unknown table' } });
   });
 }
@@ -113,6 +133,7 @@ function setupStoreQuery(result: any) {
 describe('POST /api/store/[id]/visual-signature/approve', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    storeBrandProfileUpdates.length = 0;
     mockBrandProfilerGenerate.mockResolvedValue({
       profile: { ...mockProfile, id: 'new-profile-001' },
       success: true,
@@ -176,7 +197,7 @@ describe('POST /api/store/[id]/visual-signature/approve', () => {
     mockSupabaseFrom.mockImplementation((table: string) => {
       if (table === 'stores') return makeChain({ data: mockStore, error: null });
       if (table === 'store_visual_signatures') return makeChain({ data: null, error: { message: 'not found' } });
-      if (table === 'store_brand_profiles') return makeChain({ data: [], error: null });
+      if (table === 'store_brand_profiles') return makeBrandProfileChain({ data: [], error: null });
       return makeChain({ data: null, error: null });
     });
     const { POST } = await import('../route');
@@ -200,7 +221,7 @@ describe('POST /api/store/[id]/visual-signature/approve', () => {
     mockSupabaseFrom.mockImplementation((table: string) => {
       if (table === 'stores') return makeChain({ data: mockStore, error: null });
       if (table === 'store_visual_signatures') return makeChain({ data: archivedSig, error: null });
-      if (table === 'store_brand_profiles') return makeChain({ data: [], error: null });
+      if (table === 'store_brand_profiles') return makeBrandProfileChain({ data: [], error: null });
       return makeChain({ data: null, error: null });
     });
     mockValidateDrift.mockReturnValue({
@@ -216,7 +237,7 @@ describe('POST /api/store/[id]/visual-signature/approve', () => {
     mockSupabaseFrom.mockImplementation((table: string) => {
       if (table === 'stores') return makeChain({ data: mockStore, error: null });
       if (table === 'store_visual_signatures') return makeChain({ data: archivedSig, error: null });
-      if (table === 'store_brand_profiles') return makeChain({ data: [], error: null });
+      if (table === 'store_brand_profiles') return makeBrandProfileChain({ data: [], error: null });
       return makeChain({ data: null, error: null });
     });
     const { POST } = await import('../route');
@@ -225,10 +246,11 @@ describe('POST /api/store/[id]/visual-signature/approve', () => {
   });
 
   it('12.8 — reuses existing brand profile', async () => {
+    storeBrandProfileUpdates.length = 0;
     mockSupabaseFrom.mockImplementation((table: string) => {
       if (table === 'stores') return makeChain({ data: mockStore, error: null });
       if (table === 'store_visual_signatures') return makeChain({ data: mockSignature, error: null });
-      if (table === 'store_brand_profiles') return makeChain({ data: [mockProfile], error: null });
+      if (table === 'store_brand_profiles') return makeBrandProfileChain({ data: [mockProfile], error: null });
       return makeChain({ data: null, error: null });
     });
     mockReconcileProfiles.mockResolvedValue({
@@ -241,9 +263,20 @@ describe('POST /api/store/[id]/visual-signature/approve', () => {
     expect(body.brandProfile.id).toBe('profile-001');
     expect(body.brandProfile.status).toBe('synced');
     expect(mockBrandProfilerGenerate).not.toHaveBeenCalled();
+
+    // Verify brand profile input_snapshot has 7 text fields (no brand_color/accent_color)
+    const metadataUpdate = storeBrandProfileUpdates.find(
+      (u: any) => u.metadata?.input_snapshot
+    );
+    expect(metadataUpdate).toBeDefined();
+    const snapshotKeys = Object.keys(metadataUpdate.metadata.input_snapshot);
+    expect(snapshotKeys.length).toBe(7);
+    expect(snapshotKeys).not.toContain('brand_color');
+    expect(snapshotKeys).not.toContain('accent_color');
   });
 
   it('12.9 — creates new brand profile via profiler', async () => {
+    storeBrandProfileUpdates.length = 0;
     setupStoreQuery({ data: mockStore, error: null });
     const { POST } = await import('../route');
     const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
@@ -251,6 +284,19 @@ describe('POST /api/store/[id]/visual-signature/approve', () => {
     const body = await res.json();
     expect(body.brandProfile.id).toBe('new-profile-001');
     expect(mockBrandProfilerGenerate).toHaveBeenCalledTimes(1);
+
+    // Verify brand profile metadata.input_snapshot has 7 text fields (no brand_color/accent_color)
+    const metadataUpdate = storeBrandProfileUpdates.find(
+      (u: any) => u.metadata?.input_snapshot
+    );
+    expect(metadataUpdate).toBeDefined();
+    const snapshotKeys = Object.keys(metadataUpdate.metadata.input_snapshot);
+    expect(snapshotKeys.length).toBe(7);
+    expect(snapshotKeys).not.toContain('brand_color');
+    expect(snapshotKeys).not.toContain('accent_color');
+    expect(snapshotKeys).toEqual(
+      expect.arrayContaining(['segment', 'subsegment', 'tone_of_voice', 'name', 'positioning', 'short_description', 'slogan'])
+    );
   });
 
   it('12.10 — brand profiler failure returns fallback', async () => {
@@ -280,7 +326,7 @@ describe('POST /api/store/[id]/visual-signature/approve', () => {
     mockSupabaseFrom.mockImplementation((table: string) => {
       if (table === 'stores') return makeChain({ data: mockStore, error: null });
       if (table === 'store_visual_signatures') return makeChain({ data: sigNoPalette, error: null });
-      if (table === 'store_brand_profiles') return makeChain({ data: [], error: null });
+      if (table === 'store_brand_profiles') return makeBrandProfileChain({ data: [], error: null });
       return makeChain({ data: null, error: null });
     });
     const { POST } = await import('../route');
@@ -295,7 +341,7 @@ describe('POST /api/store/[id]/visual-signature/approve', () => {
     mockSupabaseFrom.mockImplementation((table: string) => {
       if (table === 'stores') return makeChain({ data: mockStore, error: null });
       if (table === 'store_visual_signatures') return makeChain({ data: mockSignature, error: null });
-      if (table === 'store_brand_profiles') return makeChain({ data: [mockProfile], error: null });
+      if (table === 'store_brand_profiles') return makeBrandProfileChain({ data: [mockProfile], error: null });
       return makeChain({ data: null, error: null });
     });
     mockReconcileProfiles.mockResolvedValue({
