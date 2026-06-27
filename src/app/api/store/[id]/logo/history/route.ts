@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase/server';
 import type { BrandAssetRecord, BrandProfileRecord, LogoHistoryItem, DriftStatus } from '@/lib/brand-assets/types';
-import { normalizeSnapshotValue } from '@/lib/drift';
+import { normalizeSnapshotValue, DRIFT_FIELDS } from '@/lib/drift';
+import { buildStoreProfileInputSnapshot } from '@/lib/snapshot';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -11,13 +12,13 @@ function validateUUID(id: string): boolean {
 
 function computeDriftStatusForHistory(
   inputSnapshot: Record<string, string | null> | null | undefined,
-  currentStore: { segment: string | null; subsegment: string | null; tone_of_voice: string | null; name: string | null; brand_color: string | null; accent_color: string | null },
+  currentStore: Record<string, string | null>,
 ): DriftStatus {
   if (!inputSnapshot) return 'drift';
 
-  const fields = ['segment', 'subsegment', 'tone_of_voice', 'name', 'brand_color', 'accent_color'] as const;
+  const fields: readonly string[] = DRIFT_FIELDS;
   const hasDrift = fields.some(f =>
-    normalizeSnapshotValue(currentStore[f]) !== normalizeSnapshotValue(inputSnapshot[f] ?? null)
+    normalizeSnapshotValue(currentStore[f] ?? null) !== normalizeSnapshotValue(inputSnapshot[f] ?? null)
   );
 
   return hasDrift ? 'drift' : 'none';
@@ -69,19 +70,7 @@ export async function GET(
 
     let driftStatus: DriftStatus = null;
     if (profileRecord) {
-      const accentColor = profileRecord.brand_colors_chosen?.[1]
-        ?? profileRecord.safe_color_tokens?.accent
-        ?? profileRecord.inferred_accent_color
-        ?? null;
-
-      driftStatus = computeDriftStatusForHistory(inputSnapshot, {
-        segment: store.segment,
-        subsegment: store.subsegment,
-        tone_of_voice: store.tone_of_voice,
-        name: store.name,
-        brand_color: store.brand_color,
-        accent_color: accentColor,
-      });
+      driftStatus = computeDriftStatusForHistory(inputSnapshot, buildStoreProfileInputSnapshot(store) as unknown as Record<string, string | null>);
     }
 
     const visualStyle = profileRecord?.visual_style ?? null;

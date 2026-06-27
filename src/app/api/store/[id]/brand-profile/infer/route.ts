@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase/server';
 import { BrandTextOnlyInferenceService } from '@/lib/brand-assets/text-only-inference-service';
+import { buildStoreProfileInputSnapshot } from '@/lib/snapshot';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -100,23 +101,7 @@ export async function POST(
       .eq('store_id', id)
       .eq('status', 'synced');
 
-    const resolvedBrandColor = brandColorsChosen[0]
-      ?? result.safe_color_tokens?.primary
-      ?? store.brand_color;
-
-    const accentColor = brandColorsChosen[1]
-      ?? result.safe_color_tokens?.accent
-      ?? result.inferred_accent_color
-      ?? null;
-
-    const inputSnapshot: Record<string, string | null> = {
-      segment: store.segment,
-      subsegment: store.subsegment ?? null,
-      tone_of_voice: store.tone_of_voice ?? null,
-      name: store.name,
-      brand_color: resolvedBrandColor,
-      accent_color: accentColor,
-    };
+    const inputSnapshot = buildStoreProfileInputSnapshot(store);
 
     const { data: profile, error: insertError } = await supabase
       .from('store_brand_profiles')

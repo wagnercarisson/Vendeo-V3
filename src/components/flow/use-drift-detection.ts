@@ -1,37 +1,39 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import type { DriftSnapshot, DriftStatus } from "@/lib/drift";
-import { currentVisualState, computeDriftStatus, normalizeSnapshotValue } from "@/lib/drift";
+import type { DriftStatus } from "@/lib/drift";
+import { currentVisualState, computeDriftStatus, normalizeSnapshotValue, DRIFT_FIELDS } from "@/lib/drift";
+import type { StoreProfileInputSnapshot } from "@/lib/snapshot";
+import { SNAPSHOT_FIELDS } from "@/lib/snapshot";
 import type { Store } from "@/lib/store";
 import type { BrandProfileRecord } from "@/lib/brand-assets/types";
 import type { VisualSignatureMetadataArtDirectorOutput } from "@/lib/visual-signature/types";
 
-function snapshotsEqual(a: DriftSnapshot | null, b: DriftSnapshot | null): boolean {
+function snapshotsEqual(a: StoreProfileInputSnapshot | null, b: StoreProfileInputSnapshot | null): boolean {
   if (a === b) return true;
   if (!a || !b) return false;
-  const fields: (keyof DriftSnapshot)[] = ['segment', 'subsegment', 'tone_of_voice', 'name', 'brand_color', 'accent_color'];
-  return fields.every(f => normalizeSnapshotValue(a[f]) === normalizeSnapshotValue(b[f]));
+  const fields: readonly string[] = SNAPSHOT_FIELDS;
+  return fields.every(f => normalizeSnapshotValue(a[f as keyof StoreProfileInputSnapshot]) === normalizeSnapshotValue(b[f as keyof StoreProfileInputSnapshot]));
 }
 
 export function useDriftDetection(
-  store: Pick<Store, 'id' | 'segment' | 'subsegment' | 'tone_of_voice' | 'name' | 'brand_color'> | null,
-  profile: Pick<BrandProfileRecord, 'brand_colors_chosen' | 'safe_color_tokens' | 'inferred_accent_color' | 'metadata'> | null,
+  store: Pick<Store, 'id' | 'segment' | 'subsegment' | 'tone_of_voice' | 'name' | 'positioning' | 'short_description' | 'slogan'> | null,
+  profile: Pick<BrandProfileRecord, 'metadata'> | null,
   options?: { onRealinhado?: () => void },
 ): {
   driftStatus: DriftStatus
-  currentSnapshot: DriftSnapshot | null
+  currentSnapshot: StoreProfileInputSnapshot | null
   hasCriticalDrift: boolean
   realinhar: () => Promise<Record<string, unknown> | void>
   ignorar: () => Promise<void>
   isRealinhando: boolean
 } {
   const [driftStatus, setDriftStatus] = useState<DriftStatus>('none');
-  const [currentSnapshot, setCurrentSnapshot] = useState<DriftSnapshot | null>(null);
+  const [currentSnapshot, setCurrentSnapshot] = useState<StoreProfileInputSnapshot | null>(null);
   const [isRealinhando, setIsRealinhando] = useState(false);
   const [hasCriticalDrift, setHasCriticalDrift] = useState(false);
 
-  const prevSnapshotRef = useRef<DriftSnapshot | null>(null);
+  const prevSnapshotRef = useRef<StoreProfileInputSnapshot | null>(null);
   const prevStatusRef = useRef<DriftStatus>('none');
   const prevCriticalRef = useRef(false);
 
@@ -48,14 +50,14 @@ export function useDriftDetection(
       return;
     }
 
-    const snapshot = currentVisualState(store, profile);
+    const snapshot = currentVisualState(store);
     if (!snapshotsEqual(snapshot, prevSnapshotRef.current)) {
       setCurrentSnapshot(snapshot);
       prevSnapshotRef.current = snapshot;
     }
 
-    const inputSnapshot = profile.metadata?.input_snapshot as DriftSnapshot | null | undefined;
-    const dismissedSnapshot = profile.metadata?.drift_dismissed_snapshot as DriftSnapshot | null | undefined;
+    const inputSnapshot = profile.metadata?.input_snapshot as StoreProfileInputSnapshot | null | undefined;
+    const dismissedSnapshot = profile.metadata?.drift_dismissed_snapshot as StoreProfileInputSnapshot | null | undefined;
 
     const status = computeDriftStatus(snapshot, inputSnapshot, dismissedSnapshot);
     if (status !== prevStatusRef.current) {
@@ -63,11 +65,11 @@ export function useDriftDetection(
       prevStatusRef.current = status;
     }
 
-    const driftedFields: (keyof DriftSnapshot)[] = [];
+    const driftedFields: string[] = [];
     if (inputSnapshot) {
-      const allFields: (keyof DriftSnapshot)[] = ['segment', 'subsegment', 'tone_of_voice', 'name', 'brand_color', 'accent_color'];
+      const allFields: readonly string[] = DRIFT_FIELDS;
       for (const f of allFields) {
-        if (normalizeSnapshotValue(snapshot[f]) !== normalizeSnapshotValue(inputSnapshot[f])) {
+        if (normalizeSnapshotValue(snapshot[f as keyof StoreProfileInputSnapshot]) !== normalizeSnapshotValue(inputSnapshot[f as keyof StoreProfileInputSnapshot] ?? null)) {
           driftedFields.push(f);
         }
       }
@@ -111,18 +113,10 @@ export function useDriftDetection(
     if (!store?.id || !currentSnapshot) return;
     setIsRealinhando(true);
     try {
-      const dismissSnapshot: DriftSnapshot = {
-        segment: currentSnapshot.segment,
-        subsegment: currentSnapshot.subsegment,
-        tone_of_voice: currentSnapshot.tone_of_voice,
-        name: currentSnapshot.name,
-        brand_color: currentSnapshot.brand_color,
-        accent_color: currentSnapshot.accent_color,
-      };
       const res = await fetch(`/api/store/${store.id}/brand-profile/metadata`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ drift_dismissed_snapshot: dismissSnapshot }),
+        body: JSON.stringify({ drift_dismissed_snapshot: currentSnapshot }),
       });
       if (!res.ok) throw new Error('Erro ao ignorar desalinhamento');
       setDriftStatus('dismissed');

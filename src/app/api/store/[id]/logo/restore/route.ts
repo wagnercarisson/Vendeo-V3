@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase/server';
 import { BrandDirectorService, BrandDirectorAnalysisError } from '@/lib/brand-assets/brand-director';
 import { IDENTITY_TO_LOGO_STATUS } from '@/lib/constants';
-import { normalizeSnapshotValue } from '@/lib/drift';
+import { normalizeSnapshotValue, DRIFT_FIELDS } from '@/lib/drift';
+import { buildStoreProfileInputSnapshot } from '@/lib/snapshot';
 import { reconcileProfiles } from '@/lib/brand-assets/profile-reconciliation';
 import type { LogoRestoreRequest, LogoRestoreResponse, BrandProfileRecord } from '@/lib/brand-assets/types';
 
@@ -14,12 +15,12 @@ function validateUUID(id: string): boolean {
 
 function detectDrift(
   inputSnapshot: Record<string, string | null> | null | undefined,
-  current: { segment: string | null; subsegment: string | null; tone_of_voice: string | null; name: string | null; brand_color: string | null; accent_color: string | null },
+  current: Record<string, string | null>,
 ): boolean {
   if (!inputSnapshot) return true;
-  const fields = ['segment', 'subsegment', 'tone_of_voice', 'name', 'brand_color', 'accent_color'] as const;
+  const fields: readonly string[] = DRIFT_FIELDS;
   return fields.some(f =>
-    normalizeSnapshotValue(current[f]) !== normalizeSnapshotValue(inputSnapshot[f] ?? null)
+    normalizeSnapshotValue(current[f] ?? null) !== normalizeSnapshotValue(inputSnapshot[f] ?? null)
   );
 }
 
@@ -114,16 +115,9 @@ export async function POST(
     ?? currentProfile?.inferred_accent_color
     ?? null;
 
-  const currentSnapshot = {
-    segment: store.segment,
-    subsegment: store.subsegment,
-    tone_of_voice: store.tone_of_voice,
-    name: store.name,
-    brand_color: store.brand_color,
-    accent_color: accentColor,
-  };
+  const currentSnapshot = buildStoreProfileInputSnapshot(store);
 
-  const hasDrift = detectDrift(inputSnapshot, currentSnapshot);
+  const hasDrift = detectDrift(inputSnapshot, currentSnapshot as unknown as Record<string, string | null>);
 
   // Resolve brand_color and accent_color for storeData
   const resolvedBrandColor = store.brand_color
@@ -240,11 +234,7 @@ export async function POST(
         confidence_score: analysis.confidence_score,
         status: 'synced',
         metadata: {
-          input_snapshot: {
-            ...currentSnapshot,
-            brand_color: analysis.safe_color_tokens?.primary ?? store.brand_color,
-            accent_color: analysis.safe_color_tokens?.accent ?? accentColor,
-          },
+          input_snapshot: currentSnapshot,
         },
       })
       .select()

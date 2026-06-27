@@ -130,8 +130,10 @@ export function StoreIdentityForm() {
     subsegment: formData.subsegment,
     tone_of_voice: formData.tone_of_voice,
     name: formData.name,
-    brand_color: formData.brand_color,
-  } : null, [storeId, formData.segment, formData.subsegment, formData.tone_of_voice, formData.name, formData.brand_color]);
+    positioning: formData.positioning,
+    short_description: formData.short_description,
+    slogan: formData.slogan,
+  } : null, [storeId, formData.segment, formData.subsegment, formData.tone_of_voice, formData.name, formData.positioning, formData.short_description, formData.slogan]);
 
   const {
     driftStatus,
@@ -907,7 +909,7 @@ export function StoreIdentityForm() {
     e.preventDefault();
     if (!storeId) return;
 
-    const driftSnapshot = currentVisualState(driftStore ?? { id: storeId, segment: '', subsegment: '', tone_of_voice: '', name: '', brand_color: '' }, driftProfile);
+    const driftSnapshot = currentVisualState(driftStore ?? { segment: '', subsegment: '', tone_of_voice: '', name: '', positioning: null, short_description: null, slogan: null });
     const driftInputSnapshot = driftProfile?.metadata?.input_snapshot as DriftSnapshot | null | undefined;
     const driftDismissedSnapshot = driftProfile?.metadata?.drift_dismissed_snapshot as DriftSnapshot | null | undefined;
     const computedDrift = computeDriftStatus(driftSnapshot, driftInputSnapshot, driftDismissedSnapshot);

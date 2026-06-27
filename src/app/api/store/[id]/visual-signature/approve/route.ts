@@ -8,6 +8,7 @@ import { IDENTITY_TO_LOGO_STATUS } from '@/lib/constants';
 import { normalizeIntendedPalette } from '@/lib/visual-signature/types';
 import type { VisualSignatureMetadataInputSnapshot, VisualSignatureMetadataArtDirectorOutput, IntendedPalette } from '@/lib/visual-signature/types';
 import { assertCanTransition, transition } from '@/lib/identity-transitions';
+import { buildStoreProfileInputSnapshot } from '@/lib/snapshot';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -215,11 +216,7 @@ export async function POST(
       .update({
         metadata: {
           ...existingMetadata,
-          input_snapshot: {
-            ...inputSnapshot,
-            brand_color: pColor,
-            accent_color: aColor,
-          },
+          input_snapshot: buildStoreProfileInputSnapshot(store),
           content_used: contentUsed,
         },
       })
@@ -319,22 +316,13 @@ export async function POST(
     inferredPrimaryColor = sanitizeHex(result.profile.inferred_primary_color, '#666666');
     inferredAccentColor = sanitizeHex(result.profile.inferred_accent_color, '#999999');
 
-    const accentColor: string | null = result.profile.brand_colors_chosen?.[1]
-      ?? result.profile.safe_color_tokens?.accent
-      ?? result.profile.inferred_accent_color
-      ?? null;
-
     const newMetadata = (result.profile.metadata ?? {}) as Record<string, unknown>;
     await supabase
       .from('store_brand_profiles')
       .update({
         metadata: {
           ...newMetadata,
-          input_snapshot: {
-            ...inputSnapshot,
-            brand_color: inferredPrimaryColor,
-            accent_color: accentColor,
-          },
+          input_snapshot: buildStoreProfileInputSnapshot(store),
           content_used: contentUsed,
         },
       })

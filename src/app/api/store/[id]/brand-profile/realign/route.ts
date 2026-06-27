@@ -3,6 +3,7 @@ import { supabaseAdmin as supabase } from '@/lib/supabase/server';
 import { BrandDirectorService, BrandDirectorAnalysisError } from '@/lib/brand-assets/brand-director';
 import { BrandTextOnlyInferenceService } from '@/lib/brand-assets/text-only-inference-service';
 import { IDENTITY_TO_LOGO_STATUS } from '@/lib/constants';
+import { buildStoreProfileInputSnapshot } from '@/lib/snapshot';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const realignLocks = new Map<string, boolean>();
@@ -121,14 +122,7 @@ export async function POST(
             inferred_accent_color: analysis.inferred_accent_color,
             confidence_score: analysis.confidence_score,
             metadata: {
-              input_snapshot: {
-                segment: store.segment,
-                subsegment: store.subsegment,
-                tone_of_voice: store.tone_of_voice,
-                name: store.name,
-                brand_color: analysis.safe_color_tokens?.primary ?? store.brand_color,
-                accent_color: analysis.safe_color_tokens?.accent ?? accentColor,
-              },
+              input_snapshot: buildStoreProfileInputSnapshot(store),
             },
             status: 'synced',
           })
@@ -244,14 +238,7 @@ export async function POST(
           .eq('id', currentProfile.id);
       }
 
-      const inputSnapshot = {
-        segment: store.segment,
-        subsegment: store.subsegment ?? null,
-        tone_of_voice: store.tone_of_voice ?? null,
-        name: store.name,
-        brand_color: result.safe_color_tokens?.primary ?? store.brand_color,
-        accent_color: result.safe_color_tokens?.accent ?? result.inferred_accent_color ?? null,
-      };
+      const inputSnapshot = buildStoreProfileInputSnapshot(store);
 
       const previousBrandColors = (currentProfile?.brand_colors_chosen as Array<string | null> | undefined)?.some(
         (c: string | null) => c !== null && /^#[0-9A-Fa-f]{6}$/.test(c)

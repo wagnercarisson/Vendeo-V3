@@ -13,6 +13,7 @@ import type { BrandAssetRecord, BrandAssetVariantGroup } from '@/lib/brand-asset
 import { IDENTITY_TO_LOGO_STATUS } from '@/lib/constants';
 import { reconcileProfiles } from '@/lib/brand-assets/profile-reconciliation';
 import { assertCanTransition, transition } from '@/lib/identity-transitions';
+import { buildStoreProfileInputSnapshot } from '@/lib/snapshot';
 
 const ALLOWED_EXTENSION_MAP: Record<string, string> = {
   '.png': 'image/png',
@@ -237,14 +238,7 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
     ?? syncedProfile?.inferred_accent_color
     ?? null;
 
-  const inputSnapshot = store ? {
-    segment: store.segment,
-    subsegment: store.subsegment,
-    tone_of_voice: store.tone_of_voice,
-    name: store.name,
-    brand_color: store.brand_color,
-    accent_color: accentColor,
-  } : null;
+  const inputSnapshot = store ? buildStoreProfileInputSnapshot(store) : null;
 
   let createdProfile = null;
 
@@ -320,13 +314,7 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
           inferred_accent_color: analysis.inferred_accent_color,
           status: 'synced',
           metadata: {
-            input_snapshot: inputSnapshot
-              ? {
-                  ...inputSnapshot,
-                  brand_color: analysis.inferred_primary_color ?? analysis.safe_color_tokens?.primary ?? inputSnapshot.brand_color,
-                  accent_color: analysis.safe_color_tokens?.accent ?? analysis.inferred_accent_color ?? inputSnapshot.accent_color,
-                }
-              : null,
+            input_snapshot: inputSnapshot,
           },
         })
         .select()
@@ -412,7 +400,7 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
           status: 'failed',
           metadata: {
             error: err instanceof Error ? err.message : 'Brand Director analysis failed',
-            attempt_snapshot: inputSnapshot,
+            attempt_snapshot: inputSnapshot ? buildStoreProfileInputSnapshot(store) : null,
           },
         })
         .select()
