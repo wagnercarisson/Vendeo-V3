@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI + Rendering
 status: active
-stopped_at: Phase 4.6.7 — User Color Preferences Persistence (5/5 plans — UAT COMPLETE, 8/8 passed). Próximo: Phase 5 — Review, Adjust & Export.
+stopped_at: Phase 4.6.7 — User Color Preferences Persistence (5/5 plans — UAT COMPLETE, 8/8 passed). Próximo: Phase 4.6.2.1 — Snapshot Fields Realignment.
 last_updated: "2026-06-25T19:50:00.000Z"
 progress:
   total_phases: 20
@@ -20,14 +20,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-25 after v1.0 milestone)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
-**Current focus:** Phase 4.6.7 — User Color Preferences Persistence (UAT Complete — 8/8 passed, 5/5 plans)
+**Current focus:** Phase 4.6.2.1 — Snapshot Fields Realignment (Planned — 0/3 plans)
 
 ## Current Position
 
-Phase: 4.6.7 — User Color Preferences Persistence (UAT Complete — 8/8 passed, 5/5 plans)
-Milestone: v1.1 AI + Rendering — EXTENDED (Phase 4.6.7 complete. Phase 5 next.)
-Phases complete: 19 of 20 phases (1 pending: 5)
-Next phase: 5 — Review, Adjust & Export (Not yet planned)
+Phase: 4.6.2.1 — Snapshot Fields Realignment (Planned — 0/3 plans)
+Milestone: v1.1 AI + Rendering — EXTENDED (Phase 4.6.7 complete. Phase 4.6.2.1 next.)
+Phases complete: 19 of 21 phases (2 pending: 4.6.2.1, 5)
+Next phase: 4.6.2.1 — Snapshot Fields Realignment (3 plans, 3 waves)
 
 | Phase | Status |
 |-------|--------|
@@ -39,7 +39,7 @@ Next phase: 5 — Review, Adjust & Export (Not yet planned)
 | **4.6.6 — Identity Transition** | **Complete (4/4)** |
 | **4.6.7 — User Color Preferences Persistence** | **UAT Complete (8/8 passed)** |
 
-Progress: [████████████░░] 82% (82/100 plans — 18 pending)
+Progress: [████████████░░] 82% (82/103 plans — 21 pending)
 
 ## Performance Metrics
 
@@ -144,39 +144,20 @@ Key decisions (full: 10 decisions D1-D10 in OpenSpec design.md):
 
 - [x] Execute Phase 4.6.6 — Identity Transition (COMPLETE — 4/4 plans)
 - [x] Execute Phase 4.6.7 — User Color Preferences Persistence (UAT COMPLETE — 8/8 passed, 5/5 plans)
+- [ ] Execute Phase 4.6.2.1 — Snapshot Fields Realignment (PLANNED — 3 plans)
 - [ ] Plan Phase 5 — Review, Adjust & Export (deferred)
 - [ ] Execute Phase 4.4.1 — run all 6 plans (4 waves) (deferred — historical record)
 
-### Blockers/Concerns
-
-Nenhum.
-
-## Pending Items
-
-| Category | Item | Status | Opened At |
-|----------|------|--------|-----------|
-| UI Alignment | Ajustes finos de tela/UI pós-refinamentos (alinhamento visual, pequenos ajustes de layout) | Resolved | 2026-06-17 |
-
-## Deferred Items
-
-| Category | Item | Status | Deferred At |
-|----------|------|--------|-------------|
-| Visual Quality | Agency-grade composition — stacked/catalog layout still not publishable as professional campaign art | Deferred | 2026-05-27 |
-
 ## Session Continuity
 
-Last session: 2026-06-25T19:50:00.000Z
-Stopped at: Phase 4.6.7 complete. Próximo: Phase 5 — Review, Adjust & Export.
+Last session: 2026-06-27T14:00:00.000Z
+Stopped at: Phase 4.6.2.1 planned. Próximo: Execute Phase 4.6.2.1 — Snapshot Fields Realignment.
 
 ## Next Phases
 
 | Phase | Status | Plans |
 |-------|--------|-------|
-| **4.6.3 — Logo State Lifecycle** | **UAT Complete — 8/8 Passed** | **5/5** |
-| **4.6.4 — Visual Signature Lifecycle** | **Complete** | **5/5** |
-| **4.6.5 — VS Color Drift & Brand Profile** | **Complete** | **5/5** |
-| **4.6.6 — Identity Transition** | **Complete** | **4/4** |
-| **4.6.7 — User Color Preferences Persistence** | **UAT Complete — 8/8 Passed** | **5/5** |
+| **4.6.2.1 — Snapshot Fields Realignment** | **Planned** | **0/3** |
 | Phase 4.4.1 — Existing Logo & Store Brand Direction Foundation | Deferred (historical record) | 6 |
 | Phase 5 — Review, Adjust & Export | Not yet planned | 0 |
 
