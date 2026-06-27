@@ -70,7 +70,7 @@
 
 - [ ] 11.1 Novo: `src/lib/__tests__/snapshot.test.ts` — helper retorna exatamente 7 chaves; null tratado como null; estrutura consistente; `SNAPSHOT_FIELDS` listado
 - [ ] 11.2 Novo: `src/lib/__tests__/drift.test.ts` — backward compat: snapshot antigo sem positioning + loja com positioning ≠ falso drift; mudança só de cor não gera drift; `computeDriftStatus` só compara `DRIFT_FIELDS`
-- [ ] 11.3 Extrair função pura `buildDismissPayload(store)` em `src/lib/snapshot.ts` que monta o body do PATCH metadata com as 7 chaves de `SNAPSHOT_FIELDS`; testá-la em `src/lib/__tests__/snapshot.test.ts` como função pura (sem React, sem fetch). Reutilizar `buildStoreProfileInputSnapshot` internamente.
+- [ ] 11.3 O dismiss usa diretamente o objeto `currentSnapshot` (que já contém os 7 campos de `SNAPSHOT_FIELDS` via `buildStoreProfileInputSnapshot`). Não é necessário helper separado — `const dismissSnapshot = currentSnapshot` cobre o caso. Esta task foi simplificada durante o planejamento para evitar duplicação de contrato.
 - [ ] 11.4 Atualizar: `visual-signature/approve/__tests__/approve-route.test.ts` — snapshots mockados no brand profile metadata refletem 7 campos
 - [ ] 11.5 Adicionar em `src/lib/__tests__/drift.test.ts`: testes unitários para `computeDriftStatusForHistory` e `detectDrift` (logo->logo/restore) verificando que comparam apenas `DRIFT_FIELDS` (4), não o conjunto antigo de 6
 
