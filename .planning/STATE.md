@@ -38,7 +38,7 @@ Next phase: 5 — Review, Adjust & Export (Not yet planned)
 | **4.6.5 — VS Color Drift & Brand Profile** | **Complete (5/5)** |
 | **4.6.6 — Identity Transition** | **Complete (4/4)** |
 | **4.6.7 — User Color Preferences Persistence** | **UAT Complete (8/8 passed)** |
-| **4.6.2.1 — Snapshot Fields Realignment** | **Complete (3/3)** |
+| **4.6.2.1 — Snapshot Fields Realignment** | **UAT Complete (6/6 passed)** |
 
 Progress: [████████████░░] 83% (85/103 plans — 18 pending)
 
@@ -145,7 +145,7 @@ Key decisions (full: 10 decisions D1-D10 in OpenSpec design.md):
 
 - [x] Execute Phase 4.6.6 — Identity Transition (COMPLETE — 4/4 plans)
 - [x] Execute Phase 4.6.7 — User Color Preferences Persistence (UAT COMPLETE — 8/8 passed, 5/5 plans)
-- [x] Execute Phase 4.6.2.1 — Snapshot Fields Realignment (COMPLETE — 3/3 plans)
+- [x] Execute Phase 4.6.2.1 — Snapshot Fields Realignment (UAT COMPLETE — 6/6 passed, 3/3 plans)
 - [ ] Plan Phase 5 — Review, Adjust & Export (deferred)
 - [ ] Execute Phase 4.4.1 — run all 6 plans (4 waves) (deferred — historical record)
 
