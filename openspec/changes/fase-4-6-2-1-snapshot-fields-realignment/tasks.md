@@ -8,8 +8,8 @@
 
 ## 2. Core — src/lib/drift.ts
 
-- [ ] 2.1 Importar `StoreProfileInputSnapshot`, `buildStoreProfileInputSnapshot` e `SNAPSHOT_FIELDS` de `./snapshot`
-- [ ] 2.2 Remover `SENSITIVE_FIELDS` — substituído por `SNAPSHOT_FIELDS` (importado) + `DRIFT_FIELDS` (definido aqui)
+- [ ] 2.1 Importar `StoreProfileInputSnapshot` (type-only) e `buildStoreProfileInputSnapshot` de `./snapshot`. `SNAPSHOT_FIELDS` não é importado em `drift.ts` — é consumido diretamente pelo hook em `use-drift-detection.ts`.
+- [ ] 2.2 Remover `SENSITIVE_FIELDS` — substituído por `SNAPSHOT_FIELDS` (em `snapshot.ts`) + `DRIFT_FIELDS` (definido aqui)
 - [ ] 2.3 Adicionar `DRIFT_FIELDS` (4 campos: segment, subsegment, tone_of_voice, name)
 - [ ] 2.4 Alterar `DriftSnapshot` para ser alias de `StoreProfileInputSnapshot` (importado de `./snapshot`)
 - [ ] 2.5 Simplificar `currentVisualState`: remover parâmetro `profile`, delegar para `buildStoreProfileInputSnapshot(store)`, retornar `StoreProfileInputSnapshot`
@@ -71,8 +71,8 @@
 - [ ] 11.1 Novo: `src/lib/__tests__/snapshot.test.ts` — helper retorna exatamente 7 chaves; null tratado como null; estrutura consistente; `SNAPSHOT_FIELDS` listado
 - [ ] 11.2 Novo: `src/lib/__tests__/drift.test.ts` — backward compat: snapshot antigo sem positioning + loja com positioning ≠ falso drift; mudança só de cor não gera drift; `computeDriftStatus` só compara `DRIFT_FIELDS`
 - [ ] 11.3 O dismiss usa diretamente o objeto `currentSnapshot` (que já contém os 7 campos de `SNAPSHOT_FIELDS` via `buildStoreProfileInputSnapshot`). Não é necessário helper separado — `const dismissSnapshot = currentSnapshot` cobre o caso. Esta task foi simplificada durante o planejamento para evitar duplicação de contrato.
-- [ ] 11.4 Atualizar: `visual-signature/approve/__tests__/approve-route.test.ts` — snapshots mockados no brand profile metadata refletem 7 campos
-- [ ] 11.5 Adicionar em `src/lib/__tests__/drift.test.ts`: testes unitários para `computeDriftStatusForHistory` e `detectDrift` (logo->logo/restore) verificando que comparam apenas `DRIFT_FIELDS` (4), não o conjunto antigo de 6
+- [ ] 11.4 Adicionar assertion no teste `approve-route.test.ts`: capturar o payload de `.update()` em `store_brand_profiles` e verificar que `metadata.input_snapshot` contém exatamente os 7 campos de `SNAPSHOT_FIELDS`. Os mocks de VS (11 campos) permanecem intactos.
+- [ ] 11.5 Esta task foi simplificada durante o planejamento: como `detectDrift` e `computeDriftStatusForHistory` tornam-se funções locais mínimas que usam `DRIFT_FIELDS`, sua cobertura é indireta pelos testes de `computeDriftStatus` em `drift.test.ts`. Testar diretamente funções privadas inline não agrega valor nesta fase.
 
 ## 12. Verificação
 
