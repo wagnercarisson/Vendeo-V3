@@ -1,15 +1,9 @@
-export const SENSITIVE_FIELDS = [
-  'segment', 'subsegment', 'tone_of_voice', 'name', 'brand_color', 'accent_color',
-] as const;
+import type { StoreProfileInputSnapshot } from './snapshot';
+import { buildStoreProfileInputSnapshot } from './snapshot';
 
-export interface DriftSnapshot {
-  segment: string | null
-  subsegment: string | null
-  tone_of_voice: string | null
-  name: string | null
-  brand_color: string | null
-  accent_color: string | null
-}
+export type DriftSnapshot = StoreProfileInputSnapshot;
+
+export const DRIFT_FIELDS = ['segment', 'subsegment', 'tone_of_voice', 'name'] as const;
 
 export type DriftStatus = 'none' | 'new' | 'dismissed'
 
@@ -20,34 +14,21 @@ export function normalizeSnapshotValue(v: string | null | undefined): string {
 }
 
 export function currentVisualState(
-  store: Pick<import('@/lib/store').Store, 'segment' | 'subsegment' | 'tone_of_voice' | 'name' | 'brand_color'>,
-  profile: Pick<import('@/lib/brand-assets/types').BrandProfileRecord, 'brand_colors_chosen' | 'safe_color_tokens' | 'inferred_accent_color'> | null,
-): DriftSnapshot {
-  const accentColor = profile?.brand_colors_chosen?.[1]
-    ?? profile?.safe_color_tokens?.accent
-    ?? profile?.inferred_accent_color
-    ?? null
-
-  return {
-    segment: store.segment,
-    subsegment: store.subsegment,
-    tone_of_voice: store.tone_of_voice,
-    name: store.name,
-    brand_color: store.brand_color,
-    accent_color: accentColor,
-  }
+  store: Pick<import('@/lib/store').Store, 'segment' | 'subsegment' | 'tone_of_voice' | 'name' | 'positioning' | 'short_description' | 'slogan'>,
+): StoreProfileInputSnapshot {
+  return buildStoreProfileInputSnapshot(store);
 }
 
 export function computeDriftStatus(
   current: DriftSnapshot,
-  inputSnapshot: DriftSnapshot | null | undefined,
-  dismissedSnapshot: DriftSnapshot | null | undefined,
+  inputSnapshot: Partial<StoreProfileInputSnapshot> | null | undefined,
+  dismissedSnapshot: Partial<StoreProfileInputSnapshot> | null | undefined,
 ): DriftStatus {
   if (inputSnapshot == null) return 'none'
 
-  const fields: (keyof DriftSnapshot)[] = ['segment', 'subsegment', 'tone_of_voice', 'name', 'brand_color', 'accent_color']
+  const fields: readonly ('segment' | 'subsegment' | 'tone_of_voice' | 'name')[] = DRIFT_FIELDS;
   const hasDrift = fields.some(f =>
-    normalizeSnapshotValue(current[f]) !== normalizeSnapshotValue(inputSnapshot[f])
+    normalizeSnapshotValue(current[f]) !== normalizeSnapshotValue(inputSnapshot[f] ?? null)
   )
 
   if (!hasDrift) return 'none'
