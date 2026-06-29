@@ -154,31 +154,6 @@ export interface LogoUploadResult {
   profile: BrandProfileRecord | null;
 }
 
-export type DriftStatus = 'none' | 'drift' | null
-
-export interface LogoHistoryItem {
-  version: number
-  asset: BrandAssetRecord
-  profile: BrandProfileRecord | null
-  created_at: string
-  visual_style: string | null
-  safe_color_tokens: Record<string, string> | null
-  drift_status: DriftStatus
-  input_snapshot: Record<string, string | null> | null
-}
-
-export interface LogoRestoreRequest {
-  asset_id: string
-}
-
-export interface LogoRestoreResponse {
-  success: boolean
-  profile_id: string | null
-  drift_detected: boolean
-  realigned: boolean
-  error?: string
-}
-
 export interface VariantGenerationResult {
   variant_type: BrandAssetVariantType;
   buffer: Buffer;
