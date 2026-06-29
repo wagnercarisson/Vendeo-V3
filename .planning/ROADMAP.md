@@ -91,6 +91,14 @@
     - [x] 04.6.3-03-PLAN.md — DELETE /logo, GET /logo/history, POST /logo/restore
     - [x] 04.6.3-04-PLAN.md — UI Step 2: logo card, remove state, restore modal
     - [x] 04.6.3-05-PLAN.md — Verification & Quality Gate (E2E testing)
+    - [ ] Phase 4.6.3.1: Logo Restore Scope Cleanup (4 plans, 3 waves) — Planned
+      - **Wave 1 — Retry Endpoint** *(no deps)*
+      - [ ] 04.6.3.1-01-PLAN.md — Retry endpoint + Frontend retry refactor
+      - **Wave 2 — Cleanup & Tests** *(depends on Wave 1)*
+      - [ ] 04.6.3.1-02-PLAN.md — Remove dead endpoints, component, types, state
+      - [ ] 04.6.3.1-03-PLAN.md — Remove handleGenerate + Automated tests
+      - **Wave 3 — Specs & Quality Gate** *(depends on Wave 2)*
+      - [ ] 04.6.3.1-04-PLAN.md — Spec updates + Verification
   - [x] Phase 4.6.4: Visual Signature Lifecycle (5 plans, 5 waves) — Complete
     - **Wave 1 — Foundation** *(no deps)*
       - [x] 04.6.4-01-PLAN.md — Types, Constants & Profile Reconciliation
@@ -156,6 +164,7 @@
 | 4.6.2. Visual Direction Drift Detection | v1.1 | 4/4 | Complete | 2026-06-13 |
 | 4.6.2.1. Snapshot Fields Realignment | v1.1 | 3/3 | Complete | 2026-06-27 |
 | 4.6.3. Logo State Lifecycle | v1.1 | 5/5 | Complete | 2026-06-17 |
+| 4.6.3.1. Logo Restore Scope Cleanup | v1.1 | 0/4 | Planned | — |
 | 4.6.4. Visual Signature Lifecycle | v1.1 | 5/5 | Complete | 2026-06-19 |
 | 4.6.5. VS Color Drift & Brand Profile | v1.1 | 5/5 | Complete | 2026-06-22 |
 | 4.6.6. Identity Transition | v1.1 | 4/4 | Complete | 2026-06-24 |

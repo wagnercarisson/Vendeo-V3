@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI + Rendering
 status: active
-stopped_at: Phase 4.6.2.1 — Snapshot Fields Realignment (3/3 plans COMPLETE). Próximo: Phase 5 — Review, Adjust & Export.
+stopped_at: Phase 4.6.2.1 — Snapshot Fields Realignment (3/3 plans COMPLETE). Próximo: Phase 4.6.3.1 — Logo Restore Scope Cleanup.
 last_updated: "2026-06-27T14:25:00.000Z"
 progress:
-  total_phases: 21
+  total_phases: 22
   completed_phases: 20
-  total_plans: 103
+  total_plans: 107
   completed_plans: 85
-  percent: 83
+  percent: 79
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-25 after v1.0 milestone)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
-**Current focus:** Phase 5 — Review, Adjust & Export (Not yet planned)
+**Current focus:** Phase 4.6.3.1 — Logo Restore Scope Cleanup (4 plans, 3 waves — Planned)
 
 ## Current Position
 
 Phase: 4.6.2.1 — Snapshot Fields Realignment (Complete — 3/3 plans)
-Milestone: v1.1 AI + Rendering — EXTENDED (Phase 4.6.2.1 complete. Phase 5 next.)
-Phases complete: 20 of 21 phases (1 pending: 5)
-Next phase: 5 — Review, Adjust & Export (Not yet planned)
+Milestone: v1.1 AI + Rendering — EXTENDED (Phase 4.6.2.1 complete. Phase 4.6.3.1 next.)
+Phases complete: 20 of 22 phases (2 pending: 4.6.3.1, 5)
+Next phase: 4.6.3.1 — Logo Restore Scope Cleanup (4 plans, 3 waves — Planned)
 
 | Phase | Status |
 |-------|--------|
@@ -40,7 +40,7 @@ Next phase: 5 — Review, Adjust & Export (Not yet planned)
 | **4.6.7 — User Color Preferences Persistence** | **UAT Complete (8/8 passed)** |
 | **4.6.2.1 — Snapshot Fields Realignment** | **UAT Complete (6/6 passed)** |
 
-Progress: [████████████░░] 83% (85/103 plans — 18 pending)
+Progress: [████████████░░] 79% (85/107 plans — 22 pending)
 
 ## Performance Metrics
 
@@ -146,19 +146,21 @@ Key decisions (full: 10 decisions D1-D10 in OpenSpec design.md):
 - [x] Execute Phase 4.6.6 — Identity Transition (COMPLETE — 4/4 plans)
 - [x] Execute Phase 4.6.7 — User Color Preferences Persistence (UAT COMPLETE — 8/8 passed, 5/5 plans)
 - [x] Execute Phase 4.6.2.1 — Snapshot Fields Realignment (UAT COMPLETE — 6/6 passed, 3/3 plans)
+- [ ] Plan & Execute Phase 4.6.3.1 — Logo Restore Scope Cleanup (4 plans, 3 waves — current)
 - [ ] Plan Phase 5 — Review, Adjust & Export (deferred)
 - [ ] Execute Phase 4.4.1 — run all 6 plans (4 waves) (deferred — historical record)
 
 ## Session Continuity
 
 Last session: 2026-06-27T14:25:00.000Z
-Phase 4.6.2.1 — Snapshot Fields Realignment complete (3/3 plans). Próximo: Phase 5 — Review, Adjust & Export.
+Phase 4.6.2.1 — Snapshot Fields Realignment complete (3/3 plans). Próximo: Phase 4.6.3.1 — Logo Restore Scope Cleanup.
 
 ## Next Phases
 
 | Phase | Status | Plans |
 |-------|--------|-------|
 | **4.6.2.1 — Snapshot Fields Realignment** | **Complete** | **3/3** |
+| **4.6.3.1 — Logo Restore Scope Cleanup** | **Planned** | **0/4** |
 | Phase 4.4.1 — Existing Logo & Store Brand Direction Foundation | Deferred (historical record) | 6 |
 | Phase 5 — Review, Adjust & Export | Not yet planned | 0 |
 
