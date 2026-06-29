@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI + Rendering
 status: active
-stopped_at: Phase 4.6.2.1 — Snapshot Fields Realignment (3/3 plans COMPLETE). Próximo: Phase 4.6.3.1 — Logo Restore Scope Cleanup.
+stopped_at: Phase 4.6.3.1 — Logo Restore Scope Cleanup (4/4 plans COMPLETE). Próximo: Phase 5 — Review, Adjust & Export.
 last_updated: "2026-06-27T14:25:00.000Z"
 progress:
   total_phases: 22
-  completed_phases: 20
+  completed_phases: 21
   total_plans: 107
-  completed_plans: 85
-  percent: 79
+  completed_plans: 89
+  percent: 83
 ---
 
 # Project State
@@ -20,27 +20,28 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-25 after v1.0 milestone)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
-**Current focus:** Phase 4.6.3.1 — Logo Restore Scope Cleanup (4 plans, 3 waves — Planned)
+**Current focus:** Phase 5 — Review, Adjust & Export (Not yet planned)
 
 ## Current Position
 
-Phase: 4.6.2.1 — Snapshot Fields Realignment (Complete — 3/3 plans)
-Milestone: v1.1 AI + Rendering — EXTENDED (Phase 4.6.2.1 complete. Phase 4.6.3.1 next.)
-Phases complete: 20 of 22 phases (2 pending: 4.6.3.1, 5)
-Next phase: 4.6.3.1 — Logo Restore Scope Cleanup (4 plans, 3 waves — Planned)
+Phase: 4.6.3.1 — Logo Restore Scope Cleanup (Complete — 4/4 plans)
+Milestone: v1.1 AI + Rendering — EXTENDED (Phase 4.6.3.1 complete. Phase 5 next.)
+Phases complete: 21 of 22 phases (1 pending: 5)
+Next phase: 5 — Review, Adjust & Export (Not yet planned)
 
 | Phase | Status |
 |-------|--------|
 | 4.6.1 — Text Only Coverage | Complete |
 | 4.6.2 — Visual Direction Drift Detection | Complete |
 | **4.6.3 — Logo State Lifecycle** | **Complete** |
+| **4.6.3.1 — Logo Restore Scope Cleanup** | **Complete (4/4)** |
 | **4.6.4 — Visual Signature Lifecycle** | **Complete (5/5)** |
 | **4.6.5 — VS Color Drift & Brand Profile** | **Complete (5/5)** |
 | **4.6.6 — Identity Transition** | **Complete (4/4)** |
 | **4.6.7 — User Color Preferences Persistence** | **UAT Complete (8/8 passed)** |
 | **4.6.2.1 — Snapshot Fields Realignment** | **UAT Complete (6/6 passed)** |
 
-Progress: [████████████░░] 79% (85/107 plans — 22 pending)
+Progress: [████████████░░] 83% (89/107 plans — 18 pending)
 
 ## Performance Metrics
 
@@ -114,11 +115,25 @@ Key decisions (full: 10 decisions D1-D10 in OpenSpec design.md):
 - D04: `input_snapshot` (profiles synced) vs `attempt_snapshot` (profiles failed)
 - D05: Upload flow reordenado — BrandDirector antes da mutação do profile
 - D06: Remove flow — assets archived, profile synced, active_logo_asset_id preservado
-- D07: GET /logo/history — LEFT JOIN asset + profile via FK active_logo_asset_id
-- D08: POST /logo/restore — dois caminhos (sem drift / com drift)
+- D07: GET /logo/history — LEFT JOIN asset + profile via FK active_logo_asset_id (removed in 4.6.3.1)
+- D08: POST /logo/restore — dois caminhos (sem drift / com drift) (removed in 4.6.3.1)
 - D09: `brand_colors_chosen` isolado — não populado por upload
-- D10: Matriz UX — 4 cenários no Step 2
+- D10: Matriz UX — 4 cenários no Step 2 (updated to 6 rows in 4.6.3.1)
 - D11: BrandDirector error notification — notificação visual + link "Tentar novamente" (realinhar sem re-upload)
+
+### Decisions from Phase 4.6.3.1 (Logo Restore Scope Cleanup)
+
+Registered in `openspec/changes/fase-4-6-3-1-logo-restore-scope-cleanup/`.
+
+Key decisions (full: 8 decisions in design.md):
+- D01: Endpoint de retry sem `asset_id` no body — servidor resolve o asset original ativo
+- D02: Pré-condição de perfil `failed` — valida status, source e active_logo_asset_id
+- D03: Sequência compensável — fallback outdated → insert new synced; restaura se insert falhar
+- D04: Profile `failed` permanece `failed` — registro de auditoria, não vira outdated
+- D05: `handleGenerate` removido — duplicava retry com comportamento inferior
+- D06: Restore de logo removido, VS restore preservado
+- D07: "Logotipos anteriores" removido da UI
+- D08: Matriz UX pós-cleanup — 6 estados, sem "Logotipos anteriores"
 
 ### Resolved Items
 
@@ -146,21 +161,21 @@ Key decisions (full: 10 decisions D1-D10 in OpenSpec design.md):
 - [x] Execute Phase 4.6.6 — Identity Transition (COMPLETE — 4/4 plans)
 - [x] Execute Phase 4.6.7 — User Color Preferences Persistence (UAT COMPLETE — 8/8 passed, 5/5 plans)
 - [x] Execute Phase 4.6.2.1 — Snapshot Fields Realignment (UAT COMPLETE — 6/6 passed, 3/3 plans)
-- [ ] Plan & Execute Phase 4.6.3.1 — Logo Restore Scope Cleanup (4 plans, 3 waves — current)
+- [x] Execute Phase 4.6.3.1 — Logo Restore Scope Cleanup (4/4 plans COMPLETE)
 - [ ] Plan Phase 5 — Review, Adjust & Export (deferred)
 - [ ] Execute Phase 4.4.1 — run all 6 plans (4 waves) (deferred — historical record)
 
 ## Session Continuity
 
-Last session: 2026-06-27T14:25:00.000Z
-Phase 4.6.2.1 — Snapshot Fields Realignment complete (3/3 plans). Próximo: Phase 4.6.3.1 — Logo Restore Scope Cleanup.
+Last session: 2026-06-29T14:30:00.000Z
+Phase 4.6.3.1 — Logo Restore Scope Cleanup complete (4/4 plans). Próximo: Phase 5 — Review, Adjust & Export.
 
 ## Next Phases
 
 | Phase | Status | Plans |
 |-------|--------|-------|
 | **4.6.2.1 — Snapshot Fields Realignment** | **Complete** | **3/3** |
-| **4.6.3.1 — Logo Restore Scope Cleanup** | **Planned** | **0/4** |
+| **4.6.3.1 — Logo Restore Scope Cleanup** | **Complete** | **4/4** |
 | Phase 4.4.1 — Existing Logo & Store Brand Direction Foundation | Deferred (historical record) | 6 |
 | Phase 5 — Review, Adjust & Export | Not yet planned | 0 |
 
