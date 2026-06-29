@@ -89,8 +89,6 @@ export function StoreIdentityForm() {
   const [logoStatus, setLogoStatus] = useState<string | null>(null);
   const [visualSignatureUrl, setVisualSignatureUrl] = useState<string | null>(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
-  const [archivedCount, setArchivedCount] = useState(0);
-  const [archivedCountLoading, setArchivedCountLoading] = useState(false);
   const [subsegmentIsOther, setSubsegmentIsOther] = useState(false);
   const [identityState, setIdentityState] = useState<string | null>(null);
   const [hasArchivedSignatures, setHasArchivedSignatures] = useState(false);
@@ -98,7 +96,6 @@ export function StoreIdentityForm() {
   const [inferenceLoading, setInferenceLoading] = useState(false);
   const [inferenceError, setInferenceError] = useState<string | null>(null);
   const [brandDirectorWarning, setBrandDirectorWarning] = useState<string | null>(null);
-  const [failedLogoAssetId, setFailedLogoAssetId] = useState<string | null>(null);
   const [brandDirectorRetrying, setBrandDirectorRetrying] = useState(false);
   const [driftError, setDriftError] = useState<string | null>(null);
   const [driftSaveIntercept, setDriftSaveIntercept] = useState(false);
@@ -383,7 +380,6 @@ export function StoreIdentityForm() {
               console.error('[StoreIdentityForm] Profile failed:', profile.source, profile.metadata?.error);
               if (profile.source === 'logo_analysis') {
                 setBrandDirectorWarning('A direção visual não foi gerada para este logotipo. Tente novamente.');
-                setFailedLogoAssetId(profile.active_logo_asset_id);
               } else {
                 setInferenceError('Falha de conexão. Tente novamente mais tarde.');
               }
@@ -606,22 +602,6 @@ export function StoreIdentityForm() {
     }
   }, [storeId]);
 
-  const fetchArchivedCount = useCallback(async () => {
-    if (!storeId) return;
-    setArchivedCountLoading(true);
-    try {
-      const res = await fetch(`/api/store/${storeId}/logo/history`);
-      if (!res.ok) return;
-      const data = await res.json();
-      const count = Array.isArray(data?.logos) ? data.logos.length : 0;
-      setArchivedCount(count);
-    } catch {
-      // silent
-    } finally {
-      setArchivedCountLoading(false);
-    }
-  }, [storeId]);
-
   const handleRemoveLogo = useCallback(async () => {
     if (!storeId) return;
     try {
@@ -634,83 +614,71 @@ export function StoreIdentityForm() {
       setDetectedColors([]);
       setAnalysisWarning(null);
       setBrandDirectorWarning(null);
-      setFailedLogoAssetId(null);
       setLogoError(null);
-      fetchArchivedCount();
     } catch (err) {
       setLogoError(err instanceof Error ? err.message : "Erro ao remover logotipo");
     }
-  }, [storeId, fetchArchivedCount]);
-
-  useEffect(() => {
-    fetchArchivedCount();
-  }, [fetchArchivedCount]);
+  }, [storeId]);
 
   const handleRetryBrandDirector = useCallback(async () => {
-    if (!storeId || !failedLogoAssetId) return;
+    if (!storeId) return;
     setBrandDirectorRetrying(true);
     try {
-      const res = await fetch(`/api/store/${storeId}/logo/restore`, {
+      const res = await fetch(`/api/store/${storeId}/logo/retry-brand-director`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ asset_id: failedLogoAssetId }),
+        body: JSON.stringify({}),
       });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || "Erro ao tentar novamente");
-      }
       const data = await res.json();
-      if (data.success === false) {
+      if (!res.ok || data.success === false) {
         setBrandDirectorWarning(data.error || "Não foi possível atualizar a direção visual. Tente novamente.");
         return;
       }
       setBrandDirectorWarning(null);
-      setFailedLogoAssetId(null);
       const profileRes = await fetch(`/api/store/${storeId}/brand-profile`);
       if (profileRes.ok) {
         const profile = await profileRes.json();
-            if (profile?.status === 'synced') {
-            setInferredProfile({
-              safe_color_tokens: profile.safe_color_tokens,
-              visual_style: profile.visual_style,
-              visual_tone: profile.visual_tone,
-              brand_personality: profile.brand_personality,
-              brand_colors_chosen: profile.brand_colors_chosen,
-              inferred_primary_color: profile.inferred_primary_color,
-              inferred_accent_color: profile.inferred_accent_color,
-              metadata: profile.metadata,
-            });
-            if (hasUserChosenColors(profile.brand_colors_chosen ?? [])) {
-              setBrandColorsChosen(profile.brand_colors_chosen);
-              const primary = profile.brand_colors_chosen[0] !== null ? profile.brand_colors_chosen[0] : '';
-              const accent = profile.brand_colors_chosen[1] !== null ? profile.brand_colors_chosen[1] : '';
-              setField("brand_color", primary);
-              setAccentColor(accent || (profile.inferred_accent_color ?? ''));
-            } else if (profile.safe_color_tokens?.primary) {
-              setField("brand_color", profile.safe_color_tokens.primary);
-              setAccentColor(
-                profile.inferred_accent_color
-                ?? profile.safe_color_tokens?.accent
-                ?? ''
-              );
-            }
-            if (profile.logo_colors_detected?.length > 0) {
-              setDetectedColors(profile.logo_colors_detected);
-            }
+        if (profile?.status === 'synced') {
+          setInferredProfile({
+            safe_color_tokens: profile.safe_color_tokens,
+            visual_style: profile.visual_style,
+            visual_tone: profile.visual_tone,
+            brand_personality: profile.brand_personality,
+            brand_colors_chosen: profile.brand_colors_chosen,
+            inferred_primary_color: profile.inferred_primary_color,
+            inferred_accent_color: profile.inferred_accent_color,
+            metadata: profile.metadata,
+          });
+          if (hasUserChosenColors(profile.brand_colors_chosen ?? [])) {
+            setBrandColorsChosen(profile.brand_colors_chosen);
+            const primary = profile.brand_colors_chosen[0] !== null ? profile.brand_colors_chosen[0] : '';
+            const accent = profile.brand_colors_chosen[1] !== null ? profile.brand_colors_chosen[1] : '';
+            setField("brand_color", primary);
+            setAccentColor(accent || (profile.inferred_accent_color ?? ''));
+          } else if (profile.safe_color_tokens?.primary) {
+            setField("brand_color", profile.safe_color_tokens.primary);
+            setAccentColor(
+              profile.inferred_accent_color
+              ?? profile.safe_color_tokens?.accent
+              ?? ''
+            );
+          }
+          if (profile.logo_colors_detected?.length > 0) {
+            setDetectedColors(profile.logo_colors_detected);
           }
         }
-      } catch (err) {
-        setBrandDirectorWarning(err instanceof Error ? err.message : "Erro ao tentar novamente");
-      } finally {
-        setBrandDirectorRetrying(false);
+      }
+    } catch (err) {
+      setBrandDirectorWarning(err instanceof Error ? err.message : "Erro ao tentar novamente");
+    } finally {
+      setBrandDirectorRetrying(false);
     }
-  }, [storeId, failedLogoAssetId]);
+  }, [storeId]);
 
   const handleFileSelected = useCallback(async (file: File | null) => {
     setLogoError(null);
     setAnalysisWarning(null);
     setBrandDirectorWarning(null);
-    setFailedLogoAssetId(null);
     if (!file) {
       setLogoFile(null); setLogoPreview(null);
       return;
@@ -759,7 +727,6 @@ export function StoreIdentityForm() {
       const profile = result?.profile;
       if (profile?.status === 'synced') {
         setBrandDirectorWarning(null);
-        setFailedLogoAssetId(null);
         const detected = profile.logo_colors_detected ?? [];
         const chosen: Array<string | null> = profile.brand_colors_chosen ?? [];
         const tokens = profile.safe_color_tokens ?? {};
@@ -781,7 +748,6 @@ export function StoreIdentityForm() {
         }
       } else if (profile?.status === 'failed') {
         setBrandDirectorWarning('A direção visual não foi gerada para este logotipo. Tente novamente.');
-        setFailedLogoAssetId(profile.active_logo_asset_id);
       }
 
       if (profile) {
