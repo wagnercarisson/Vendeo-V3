@@ -925,7 +925,7 @@ When the user clicks "Remover" in the `visual_signature` state, the system SHALL
 - **AND** "Enviar logotipo" and "Criar assinatura visual" buttons SHALL appear
 - **AND** color pickers SHALL retain their values (direction preserved)
 
-### Requirement: Visual signature history modal (separate from logo restore)
+### Requirement: Visual signature history modal
 
 The system SHALL provide a modal component for browsing and restoring archived visual signatures. This modal SHALL be separate from the `logo-restore-modal.tsx` (which handles store_brand_assets).
 
@@ -1288,7 +1288,6 @@ When `identity_state = 'logo'` and a synced brand profile exists (analysis succe
 - The "Enviar logotipo" button SHALL NOT be displayed
 - The "Não tenho logo" button SHALL NOT be displayed
 - The "Continuar sem logo" link SHALL NOT be displayed
-- The "Logotipos anteriores" link SHALL NOT be displayed
 - Color pickers (Cor Principal, Cor de Destaque) SHALL be displayed normally
 - Extracted colors from logo (`logo_colors_detected`) SHALL be displayed as color swatches below the pickers, with "P" (primary) and "S" (secondary) quick-set buttons
 - The drop zone (drag-and-drop area) SHALL NOT be displayed
@@ -1299,7 +1298,7 @@ When `identity_state = 'logo'` and a synced brand profile exists (analysis succe
 - **AND** a synced brand profile exists
 - **THEN** a logo preview SHALL be displayed
 - **AND** only the "Remover logotipo" button SHALL be visible
-- **AND** the drop zone, upload button, "Não tenho logo", "Continuar sem logo", and "Logotipos anteriores" SHALL be hidden
+- **AND** the drop zone, upload button, "Não tenho logo", and "Continuar sem logo" SHALL be hidden
 
 #### Scenario: Logo active shows extracted colors
 
@@ -1314,17 +1313,17 @@ When `identity_state = 'logo'` and the latest brand profile has `status = 'faile
 
 - A circular preview of the active logo (loaded from the active original asset)
 - A warning message below the preview: "Análise de direção visual falhou. A direção anterior está sendo usada."
-- Only one button: "Remover logotipo"
+- Two buttons: "Remover logotipo" (destructive style) and "Tentar novamente" (primary style)
 - All other buttons and links SHALL be hidden (same as analysis OK state)
 - Color pickers SHALL display the previous profile's direction (fallback)
 
-#### Scenario: Logo active with failed analysis shows warning
+#### Scenario: Logo active with failed analysis shows warning and retry
 
 - **WHEN** `identity_state` is `'logo'`
 - **AND** the latest profile has `status = 'failed'`
 - **THEN** a logo preview SHALL be displayed
 - **AND** a warning message SHALL be displayed below the preview
-- **AND** only the "Remover logotipo" button SHALL be visible
+- **AND** the "Remover logotipo" and "Tentar novamente" buttons SHALL be visible
 
 #### Scenario: Logo active with failed analysis uses fallback colors
 
@@ -1332,6 +1331,13 @@ When `identity_state = 'logo'` and the latest brand profile has `status = 'faile
 - **AND** the latest profile has `status = 'failed'`
 - **AND** a previous synced profile exists
 - **THEN** color pickers SHALL be pre-filled with the previous synced profile's colors
+
+#### Scenario: "Tentar novamente" re-runs BrandDirector
+
+- **WHEN** the user clicks "Tentar novamente" in the logo state with failed analysis
+- **THEN** the system SHALL call `POST /api/store/[id]/logo/retry-brand-director`
+- **AND** on success, the profile SHALL become `synced` and the warning SHALL be removed
+- **AND** on failure, the profile SHALL remain `failed` and the warning SHALL persist
 
 ### Requirement: Logo area — after remove (text_only with profile)
 
@@ -1341,7 +1347,6 @@ When `identity_state = 'text_only'` and a `synced` brand profile exists (post-re
 - "Enviar logotipo" button — SHALL be displayed
 - "Criar assinatura visual" button — SHALL be displayed
 - "Continuar sem logo" link — SHALL NOT be displayed
-- "Logotipos anteriores" link — SHALL be displayed IF there are archived logo versions
 - Chip "✓ Direção visual definida pelo Vendeo" — SHALL be displayed (showing the preserved direction)
 - Color pickers SHALL show the current profile's colors (preserved from before remove)
 - Color palette chips (primary, secondary, accent, background) SHALL be displayed below the pickers
@@ -1354,14 +1359,14 @@ When `identity_state = 'text_only'` and a `synced` brand profile exists (post-re
 - **THEN** the drop zone SHALL be displayed
 - **AND** "Enviar logotipo" and "Criar assinatura visual" buttons SHALL be displayed
 - **AND** "Continuar sem logo" SHALL NOT be displayed
-- **AND** "Logotipos anteriores (N)" link SHALL be displayed
 
 #### Scenario: After remove without history
 
 - **WHEN** `identity_state` is `'text_only'`
 - **AND** a synced profile exists
 - **AND** the store has NO archived logo versions
-- **THEN** the "Logotipos anteriores" link SHALL NOT be displayed
+- **THEN** only "Enviar logotipo" and "Criar assinatura visual" buttons SHALL be displayed
+- **AND** "Continuar sem logo" SHALL NOT be displayed
 
 #### Scenario: After remove preserves visual direction
 
@@ -1369,78 +1374,21 @@ When `identity_state = 'text_only'` and a `synced` brand profile exists (post-re
 - **AND** a synced profile exists (from previous logo)
 - **THEN** the chip "✓ Direção visual definida pelo Vendeo" SHALL be displayed
 - **AND** color pickers SHALL show the profile's colors
-- **AND** "Logotipos anteriores" SHALL be displayed if archived assets exist
 
-### Requirement: Restore modal
 
-The system SHALL provide a modal component for browsing and restoring historical logo versions. The modal SHALL:
-
-- Open when the user clicks "Logotipos anteriores" (or equivalent link)
-- Title: "Logotipos anteriores"
-- Close button (X) in the top right
-- Display each archived version as a card containing:
-  - Logo thumbnail (loaded from archived asset's storage path)
-  - Date: formatted `created_at`
-  - Version label: "v{N}"
-  - Visual style (from associated profile)
-  - Color palette summary (from safe_color_tokens)
-  - Drift badge:
-    - "✓ Dados inalterados" (no drift — green/accent-green) with "Restaurar" button
-    - "⚠ Requer realinhamento" (drift detected — amber/accent-amber) with "Restaurar c/ realinh" button
-- "Cancelar" button at the bottom
-- Loading state: spinner while fetching history
-- Empty state: "Nenhum logotipo anterior encontrado"
-- Error state: dismissible error banner "Não foi possível carregar o histórico"
-
-#### Scenario: Modal shows archived versions with drift badges
-
-- **WHEN** the user opens the restore modal
-- **AND** the store has 2 archived logo versions
-- **THEN** 2 version cards SHALL be displayed, ordered by version descending
-- **AND** each card SHALL show the logo thumbnail, date, version, style, and palette
-- **AND** each card SHALL have a drift badge indicating whether realignment is needed
-
-#### Scenario: No drift version shows "Restaurar" button
-
-- **WHEN** a version card has no drift (input_snapshot matches current store)
-- **THEN** the badge SHALL read "✓ Dados inalterados"
-- **AND** a "Restaurar" button SHALL be displayed
-
-#### Scenario: Drift version shows "Restaurar c/ realinh" button
-
-- **WHEN** a version card has drift (input_snapshot differs from current store)
-- **THEN** the badge SHALL read "⚠ Requer realinhamento"
-- **AND** a "Restaurar c/ realinh" button SHALL be displayed
-
-#### Scenario: Empty state
-
-- **WHEN** the user opens the restore modal
-- **AND** no archived versions exist
-- **THEN** the modal SHALL display "Nenhum logotipo anterior encontrado"
-
-#### Scenario: Loading state
-
-- **WHEN** the user opens the restore modal
-- **AND** the history API request is in flight
-- **THEN** a spinner or skeleton SHALL be displayed
-- **AND** the version list SHALL NOT be rendered until the API responds
-
-#### Scenario: Error state
-
-- **WHEN** the history API request fails
-- **THEN** a dismissible error banner SHALL be displayed: "Não foi possível carregar o histórico"
 
 ### Requirement: UX decision matrix for logo area
 
 The logo area visibility in Step 2 SHALL follow this decision matrix:
 
-| Estado | Drop zone / Preview | Botões | "Continuar sem logo" | "Logotipos anteriores" |
-|--------|-------------------|--------|---------------------|----------------------|
-| Novo (sem store) | Upload vazio | Upload + Assinatura | ✅ | ❌ |
-| `text_only` sem profile | Upload vazio | Upload + Assinatura | ❌ | ❌ |
-| `text_only` com profile | Upload vazio | Upload + Assinatura | ❌ | ✅ Se houver archived |
-| `logo` (qualquer) | Preview ativo | Remover (único) | ❌ | ❌ |
-| `visual_signature` | **Assinatura ativa** | **Alterar / Remover** | **❌** | **Assinaturas anteriores** |
+| Estado | Drop zone / Preview | Botões | "Continuar sem logo" |
+|--------|-------------------|--------|---------------------|
+| Novo (sem store) | Upload vazio | Upload + Assinatura | ✅ |
+| `text_only` sem profile | Upload vazio | Upload + Assinatura | ❌ |
+| `text_only` com profile | Upload vazio | Upload + Assinatura | ❌ |
+| `logo` com perfil `synced` | Preview ativo | Remover | ❌ |
+| `logo` com perfil `failed` | Preview ativo | Remover + Tentar novamente | ❌ |
+| `visual_signature` | Assinatura ativa | Alterar / Remover | ❌ |
 
 #### Scenario: Matrix drives logo area rendering
 
@@ -1456,8 +1404,7 @@ When the user clicks "Remover logotipo" in the `logo` state, the system SHALL:
    - Set `identity_state` to `'text_only'`
    - Set `logo_status` to `'explicit_none'`
    - Clear `logoPreview` (remove preview from UI)
-   - Show drop zone, upload/assinatura buttons
-   - Show "Logotipos anteriores" link if archived versions exist
+    - Show drop zone, upload/assinatura buttons
 3. On error: show a dismissible error banner
 
 #### Scenario: Remove logo updates UI
@@ -1466,25 +1413,6 @@ When the user clicks "Remover logotipo" in the `logo` state, the system SHALL:
 - **THEN** the logo preview SHALL be removed
 - **AND** the drop zone SHALL appear
 - **AND** "Enviar logotipo" and "Criar assinatura visual" buttons SHALL appear
-- **AND** "Logotipos anteriores" SHALL appear if archived versions exist
 - **AND** color pickers SHALL retain their values (direction preserved)
 
-### Requirement: Restore button triggers POST /logo/restore
 
-When the user clicks "Restaurar" or "Restaurar c/ realinh" in the restore modal, the system SHALL:
-
-1. Call `POST /api/store/[id]/logo/restore` with `{ "asset_id": "..." }`
-2. Show a loading spinner on the button during the request
-3. On success:
-   - Close the modal
-   - Update UI to reflect the `logo` state (preview + Remover button)
-   - Update `identity_state` to `'logo'`
-   - Update `logo_status` to `'uploaded'`
-4. On error: show an inline error message within the modal
-
-#### Scenario: Successful restore updates UI
-
-- **WHEN** the user clicks "Restaurar" in the modal and the POST succeeds
-- **THEN** the modal SHALL close
-- **AND** the logo preview SHALL show the restored logo
-- **AND** the state SHALL change to `logo` (preview + Remover only)

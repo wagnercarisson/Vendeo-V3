@@ -92,12 +92,12 @@ The orchestrator SHALL return both the updated `store_identity` record and the a
 
 ### Requirement: Profile preservation on text_only
 
-When transitioning TO `text_only` (via logo removal or VS removal), the system SHALL NOT delete the existing `store_brand_profile`. Instead, it SHALL mark the synced profile's status as `outdated` (preserving it for future restore).
+When transitioning TO `text_only` (via logo removal or VS removal), the system SHALL NOT delete the existing `store_brand_profile`. The synced profile SHALL remain `synced` as a fallback visual direction.
 
-#### Scenario: Logo removal marks profile as outdated
+#### Scenario: Logo removal preserves profile as synced fallback
 
 - **WHEN** logo is removed (transition to text_only)
-- **THEN** the previously synced profile SHALL have status changed to `outdated`
+- **THEN** the previously synced profile SHALL remain `synced` (not marked outdated)
 - **AND** the profile record SHALL NOT be deleted
 
 ### Requirement: Logo upload validation

@@ -454,24 +454,7 @@ When a new brand profile is generated from visual signature approval:
 - **WHEN** the user changes colors via PATCH brand-profile with `{ "colors": ["#FF6600", null] }`
 - **THEN** `brand_colors_chosen` SHALL be updated to `["#FF6600", null]`
 
-### Requirement: Regenerate brand profile — POST /api/store/[id]/brand-profile/generate [DEFERRED to 4.6.3+]
-
-> **Nota:** O endpoint de regenerate (`POST /api/store/[id]/brand-profile/generate`) está postergado para fases futuras (4.6.3/4.6.4). Na fase 4.6.2, a re-inferência de `text_only` usa `POST /api/store/[id]/brand-profile/infer`, que insere um novo profile com `input_snapshot` atualizado e sem `drift_dismissed_snapshot`.
-
-Quando implementado, o regenerate endpoint SHALL também atualizar `metadata.input_snapshot` após regeneração bem-sucedida e limpar `metadata.drift_dismissed_snapshot`.
-
-<!-- Original spec preserved below for future implementation:
-The system SHALL expose a `POST /api/store/[id]/brand-profile/generate` endpoint that regenerates the brand profile by re-running the Store Brand Director analysis. This allows the lojista to retry after a failed analysis or request a fresh profile.
-
-The endpoint SHALL process inline: call the LLM with the stored logo and current store data, persist the new profile, archive the previous one.
-
-#### Scenario: Regenerate creates new profile
-
-- **WHEN** a POST request is sent to /api/store/{store_id}/brand-profile/generate
-- **AND** a previous profile exists
-- **THEN** a new profile SHALL be created
-- **AND** the previous profile SHALL have status changed to `outdated`
--->
+The retry behavior for BrandDirector analysis is now provided by `POST /api/store/[id]/logo/retry-brand-director` (defined in the `logo-retry` spec).
 
 ### Requirement: Update brand colors — PATCH /api/store/[id]/brand-profile
 

@@ -140,7 +140,7 @@ Compatibility matrix:
 | Target identity | Target profile | Incompatible (marked outdated) |
 |----------------|----------------|-------------------------------|
 | `visual_signature` (approve/restore) | `without_logo` linked to the target `visual_signature_id` | Any other `synced` profile — including `without_logo` linked to a different `visual_signature_id`, `logo_analysis`, and `text_only` |
-| `logo` (upload/restore) | `logo_analysis` (newly created or restored) | Any other `synced` profile — including `without_logo` and `text_only` |
+| `logo` (upload) | `logo_analysis` (newly created) | Any other `synced` profile — including `without_logo` and `text_only` |
 
 #### Scenario: Approving VS marks logo profile as outdated
 
@@ -174,9 +174,9 @@ The profile SHALL only be marked `outdated` when a new identity is activated (ap
 - **THEN** `identity_state` SHALL become `'text_only'`
 - **AND** the associated `logo_analysis` profile SHALL remain `synced`
 
-### Requirement: Profile reconciliation on restore
+### Requirement: Profile reconciliation on restore (visual signature only)
 
-When restoring a visual signature or logo, the reconciliation SHALL follow the same rules as activation:
+When restoring a visual signature, the reconciliation SHALL follow the same rules as activation:
 
 1. Before activating the target profile, mark all other `synced` profiles with incompatible `source` as `outdated`
 2. If the target profile is already the current `synced` profile (edge case: post-remove), it SHALL NOT be marked `outdated`
@@ -195,12 +195,7 @@ When restoring a visual signature or logo, the reconciliation SHALL follow the s
 - **THEN** the previous `without_logo` profile SHALL be marked `outdated`
 - **AND** only the restored signature's `without_logo` profile SHALL remain `synced`
 
-#### Scenario: Restore logo with profile already synced (post-remove)
 
-- **WHEN** a logo is restored
-- **AND** the target profile is already the current `synced` profile (from post-remove fallback)
-- **THEN** the profile SHALL NOT be marked `outdated`
-- **AND** only the assets SHALL be re-activated
 
 ### Requirement: I1 — text_only has no active visual asset
 

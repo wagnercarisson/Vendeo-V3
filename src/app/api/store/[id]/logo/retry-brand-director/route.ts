@@ -98,7 +98,7 @@ export async function POST(
   const accentColor = fallbackRecord?.brand_colors_chosen?.[1]
     ?? fallbackRecord?.safe_color_tokens?.accent
     ?? fallbackRecord?.inferred_accent_color
-    ?? null;
+    ?? undefined;
 
   const director = new BrandDirectorService();
 

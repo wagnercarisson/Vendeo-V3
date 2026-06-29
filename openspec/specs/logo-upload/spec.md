@@ -372,15 +372,14 @@ The system SHALL expose a `GET /api/store/[id]/logo` endpoint that returns the a
 - **AND** the store has no active logo
 - **THEN** the response SHALL be HTTP 200 with empty data or null
 
-### Requirement: Logo versions history — GET /api/store/[id]/logo/versions
+### Requirement: BrandDirector retry — POST /api/store/[id]/logo/retry-brand-director
 
-The system SHALL expose a `GET /api/store/[id]/logo/versions` endpoint that returns the version history of all logo uploads, including archived versions, ordered by version descending.
+The logo SHALL provide a retry mechanism for BrandDirector analysis failures via `POST /api/store/[id]/logo/retry-brand-director`. When the initial analysis fails during upload, this endpoint re-runs the BrandDirector on the active asset without re-uploading. See `openspec/specs/logo-retry/spec.md` for the full specification (in openspec/changes/fase-4-6-3-1-logo-restore-scope-cleanup/specs/logo-retry/spec.md).
 
-Each entry SHALL include version number, original asset URL, creation date, and status (active, archived, failed).
+#### Scenario: Retry available after failed analysis
 
-#### Scenario: Version history returned
-
-- **WHEN** a GET request is sent to /api/store/{store_id}/logo/versions
-- **AND** the store has at least one logo upload
-- **THEN** the response SHALL contain an array of version entries ordered by version descending
-- **AND** each entry SHALL include version, status, and original asset URL
+- **WHEN** a logo upload succeeds (file stored, variants generated)
+- **AND** the BrandDirector analysis fails
+- **THEN** the store SHALL be in `identity_state = 'logo'` with the asset `active`
+- **AND** a failed profile SHALL exist linked to the asset
+- **AND** the retry endpoint SHALL be available to re-run the analysis
