@@ -1,13 +1,24 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import type { DriftStatus } from "@/lib/drift";
+import type { DriftStatus, DriftCategory } from "@/lib/drift";
 import { currentVisualState, computeDriftStatus, normalizeSnapshotValue, getDriftPolicy } from "@/lib/drift";
 import type { StoreProfileInputSnapshot } from "@/lib/snapshot";
 import { SNAPSHOT_FIELDS } from "@/lib/snapshot";
 import type { Store } from "@/lib/store";
 import type { BrandProfileRecord } from "@/lib/brand-assets/types";
-import type { VisualSignatureMetadataArtDirectorOutput } from "@/lib/visual-signature/types";
+
+type CriticalDriftInfo = {
+  status: 'none' | 'new' | 'dismissed';
+  fields: string[];
+  reason: 'ok' | 'critical_drift' | 'missing_metadata';
+};
+
+type ActiveVsSummary = {
+  id: string;
+  status: string;
+  critical_drift: CriticalDriftInfo | null;
+};
 
 function snapshotsEqual(a: StoreProfileInputSnapshot | null, b: StoreProfileInputSnapshot | null): boolean {
   if (a === b) return true;
@@ -20,11 +31,14 @@ export function useDriftDetection(
   store: Pick<Store, 'id' | 'segment' | 'subsegment' | 'tone_of_voice' | 'name' | 'positioning' | 'short_description' | 'slogan'> | null,
   profile: Pick<BrandProfileRecord, 'metadata'> | null,
   identityState: string | null,
-  options?: { onRealinhado?: () => void },
+  options?: { onRealinhado?: () => void; onDriftDismissed?: () => void },
 ): {
   driftStatus: DriftStatus
   currentSnapshot: StoreProfileInputSnapshot | null
-  hasCriticalDrift: boolean
+  driftCategory: DriftCategory
+  criticalDrift: CriticalDriftInfo | null
+  activeVsSummary: ActiveVsSummary | null
+  dismissCriticalDrift: () => Promise<void>
   realinhar: () => Promise<Record<string, unknown> | void>
   ignorar: () => Promise<void>
   isRealinhando: boolean
@@ -32,11 +46,48 @@ export function useDriftDetection(
   const [driftStatus, setDriftStatus] = useState<DriftStatus>('none');
   const [currentSnapshot, setCurrentSnapshot] = useState<StoreProfileInputSnapshot | null>(null);
   const [isRealinhando, setIsRealinhando] = useState(false);
-  const [hasCriticalDrift, setHasCriticalDrift] = useState(false);
+  const [driftCategory, setDriftCategory] = useState<DriftCategory>('none');
+  const [criticalDrift, setCriticalDrift] = useState<CriticalDriftInfo | null>(null);
+  const [activeVsSummary, setActiveVsSummary] = useState<ActiveVsSummary | null>(null);
 
   const prevSnapshotRef = useRef<StoreProfileInputSnapshot | null>(null);
   const prevStatusRef = useRef<DriftStatus>('none');
-  const prevCriticalRef = useRef(false);
+  const prevCategoryRef = useRef<DriftCategory>('none');
+
+  // Fetch activeVsSummary when store_id exists and identity_state is 'visual_signature'
+  useEffect(() => {
+    if (!store?.id || identityState !== 'visual_signature') {
+      if (activeVsSummary !== null) setActiveVsSummary(null);
+      if (criticalDrift !== null) setCriticalDrift(null);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    fetch(`/api/store/${store.id}/visual-signature`, { signal: controller.signal })
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch visual signatures');
+        return res.json();
+      })
+      .then(data => {
+        const active = (data.signatures ?? []).find((s: Record<string, unknown>) => s.status === 'active') ?? null;
+        const summary: ActiveVsSummary | null = active
+          ? {
+              id: active.id as string,
+              status: active.status as string,
+              critical_drift: (active.critical_drift as CriticalDriftInfo | null) ?? null,
+            }
+          : null;
+        setActiveVsSummary(summary);
+        setCriticalDrift(summary?.critical_drift ?? null);
+      })
+      .catch(() => {
+        // Swallow abort errors from component unmount
+      });
+
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store?.id, identityState]);
 
   useEffect(() => {
     if (!store || !store.id) {
@@ -66,28 +117,21 @@ export function useDriftDetection(
       setDriftStatus(status);
       prevStatusRef.current = status;
     }
+  }, [store, profile, identityState]);
 
-    const driftedFields: string[] = [];
-    if (inputSnapshot) {
-      for (const f of sensitiveFields) {
-        if (normalizeSnapshotValue(snapshot[f as keyof StoreProfileInputSnapshot]) !== normalizeSnapshotValue(inputSnapshot[f as keyof StoreProfileInputSnapshot] ?? null)) {
-          driftedFields.push(f);
-        }
-      }
+  // Compute driftCategory from critical + sensitive state
+  useEffect(() => {
+    let category: DriftCategory = 'none';
+    if (activeVsSummary?.critical_drift?.status === 'new') {
+      category = 'critical';
+    } else if (driftStatus === 'new') {
+      category = 'sensitive';
     }
-
-    const contentUsed = profile.metadata?.content_used as VisualSignatureMetadataArtDirectorOutput['content_used'] | null | undefined;
-    const criticalFields: string[] = ['name', 'segment'];
-    if (contentUsed?.city) criticalFields.push('city');
-    if (contentUsed?.state) criticalFields.push('state');
-    if (contentUsed?.slogan) criticalFields.push('slogan');
-
-    const isCritical = driftedFields.some(f => criticalFields.includes(f));
-    if (isCritical !== prevCriticalRef.current) {
-      setHasCriticalDrift(isCritical);
-      prevCriticalRef.current = isCritical;
+    if (category !== prevCategoryRef.current) {
+      setDriftCategory(category);
+      prevCategoryRef.current = category;
     }
-  }, [store, profile]);
+  }, [activeVsSummary, driftStatus]);
 
   const realinhar = useCallback(async () => {
     if (!store?.id) return;
@@ -126,5 +170,25 @@ export function useDriftDetection(
     }
   }, [store?.id, currentSnapshot]);
 
-  return { driftStatus, currentSnapshot, hasCriticalDrift, realinhar, ignorar, isRealinhando };
+  const dismissCriticalDrift = useCallback(async () => {
+    if (!store?.id) return;
+    const res = await fetch(`/api/store/${store.id}/visual-signature/dismiss-critical-drift`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!res.ok) throw new Error('Erro ao ignorar desalinhamento crítico');
+    options?.onDriftDismissed?.();
+  }, [store?.id, options]);
+
+  return {
+    driftStatus,
+    currentSnapshot,
+    driftCategory,
+    criticalDrift,
+    activeVsSummary,
+    dismissCriticalDrift,
+    realinhar,
+    ignorar,
+    isRealinhando,
+  };
 }

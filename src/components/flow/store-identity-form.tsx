@@ -134,7 +134,7 @@ export function StoreIdentityForm() {
 
   const {
     driftStatus,
-    hasCriticalDrift,
+    driftCategory,
     realinhar,
     ignorar,
     isRealinhando,
@@ -1118,7 +1118,7 @@ export function StoreIdentityForm() {
               <div className="mb-4">
                 <DriftDiscreetButton
                   onClick={async () => {
-                    if (hasCriticalDrift) {
+                    if (driftCategory === 'critical') {
                       setShowApprovalModal(true);
                       return;
                     }
@@ -1148,7 +1148,7 @@ export function StoreIdentityForm() {
                       }
                     } catch (e) { setDriftError('Não foi possível realinhar. Tente novamente mais tarde.'); }
                   }}
-                  isLoading={hasCriticalDrift ? false : isRealinhando}
+                  isLoading={driftCategory === 'critical' ? false : isRealinhando}
                 />
                 {driftError && (
                   <p className="flex items-center gap-1.5 text-accent-red text-xs mt-2">
@@ -1685,7 +1685,7 @@ export function StoreIdentityForm() {
           slogan={formData.slogan}
           city={formData.city}
           uf={formData.state}
-          hasActiveSignatureDrift={driftStatus === 'new' && !!hasCriticalDrift}
+          hasActiveSignatureDrift={driftCategory === 'critical'}
           onComplete={handleApprovalComplete}
           onRemove={handleRemoveVS}
         />
