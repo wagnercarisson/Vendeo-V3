@@ -196,8 +196,9 @@ describe('BrandProfilerWithoutLogoService.generate', () => {
   it('without existing profile — attempts download and continues to generation', async () => {
     // Mock env to have OPENAI_API_KEY so it doesn't throw
     const originalApiKey = process.env.OPENAI_API_KEY;
+    const originalNodeEnv = (process.env as Record<string, string>).NODE_ENV;
     process.env.OPENAI_API_KEY = 'test-key';
-    process.env.NODE_ENV = 'test';
+    (process.env as Record<string, string>).NODE_ENV = 'test';
 
     mockSupabaseFrom.mockImplementation((table: string) => {
       if (table === 'store_brand_profiles') {
@@ -231,6 +232,7 @@ describe('BrandProfilerWithoutLogoService.generate', () => {
       expect(mockFetch).toHaveBeenCalledWith(mockBrandProfilerInput.assetUrl);
     } finally {
       process.env.OPENAI_API_KEY = originalApiKey;
+      (process.env as Record<string, string>).NODE_ENV = originalNodeEnv ?? '';
     }
   });
 });
