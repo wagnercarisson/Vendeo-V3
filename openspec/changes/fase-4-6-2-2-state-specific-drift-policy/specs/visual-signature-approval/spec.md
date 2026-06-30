@@ -149,16 +149,17 @@ When mode:'substitution', the endpoint SHALL execute in this order:
 - AND BP SHALL NOT be executed
 - AND an error response SHALL be returned
 
-#### Scenario: Approve substitution -- BP insert failure compensation (Tier 2 fail)
+#### Scenario: Approve substitution -- BP generation failure compensation (Tier 2 fail)
 
 - WHEN POST /approve is called with mode:'substitution'
 - AND the previous active VS is archived
 - AND the new VS is successfully activated
-- AND BrandProfilerWithoutLogo (normal flow) succeeds
-- BUT the new profile insert fails
-- THEN the previous profile SHALL be restored to 'synced'
-- AND HTTP 200 SHALL be returned with a warning about BP being outdated
+- AND BrandProfilerWithoutLogo (normal flow) fails or insert fails
+- THEN the previous profile SHALL remain 'synced' as fallback
+- AND HTTP 200 SHALL be returned with `bp_status: 'failed'` and the new `visual_signature_id`
 - AND the new VS SHALL remain active
+- AND the response SHALL include a warning that BP can be retried
+- AND the retry SHALL be performed via POST /brand-profile/realign (which triggers mode:'regenerate' Branch C since no BP exists for the new VS)
 
 ### Requirement: Guardas do approve mode substitution
 

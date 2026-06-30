@@ -55,11 +55,15 @@ The brand profiler SHALL execute inline after the lojista approves the visual si
 The profiler SHALL accept a mode parameter: 'reuse' | 'regenerate'.
 
 - reuse (current, default): searches existing profile by visual_signature_id and returns if found. Current behavior unchanged.
-- regenerate: ignores existing profile cache, re-infers all brand fields, and UPDATES the existing BP (same visual_signature_id) — no INSERT, no new record. Preserves content_used, visual_signature_id, and existing VS metadata in the BP.
+- regenerate: ignores existing profile cache, re-infers all brand fields. Persistence follows 3 branches based on BP state:
+  - Branch A (BP synced): UPDATE existing BP — no INSERT, no duplicate
+  - Branch B (BP failed/outdated + fallback synced): mark fallback outdated → UPDATE target to synced → restore fallback if fail
+  - Branch C (BP does not exist / Tier 2 never generated): mark fallback outdated (if exists) → INSERT new BP → restore fallback if fail
+  Preserves content_used, visual_signature_id, and existing VS metadata in the BP.
 
 The 'regenerate' mode SHALL be used exclusively by VS-sensitive realinhamento (POST /realign when identity_state === 'visual_signature').
 
-NOTE: regenerate uses UPDATE because the unique index (store_id, visual_signature_id, source) for without_logo prevents INSERT of a duplicate record. The existing code already uses UPSERT (brand-profiler.ts:833) — regenerate follows the same pattern.
+NOTE: The unique index (store_id, visual_signature_id, source) for without_logo prevents INSERT duplicates when a BP already exists for the same VS. Branch A and B use UPDATE for this reason; only Branch C (no existing BP) performs INSERT.
 
 Processing SHALL be inline (same request) -- no queue, no polling. Status 'processing' is reserved for future queue-based processing.
 

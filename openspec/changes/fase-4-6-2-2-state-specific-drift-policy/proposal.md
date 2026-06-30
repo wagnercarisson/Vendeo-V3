@@ -24,7 +24,10 @@ A fase 4.6.2 implementou detecção de drift com política única de 4 campos (`
   - **Sem crédito** (>= 3 assinaturas geradas com sucesso): alerta "Você já utilizou as 3 gerações disponíveis. Se remover esta assinatura, não será possível gerar uma nova até que a compra de créditos esteja disponível." Botões: [Manter direção atual] primário (persiste dismiss), [Remover mesmo assim] destrutivo, [Comprar créditos — Em breve] desabilitado (informativo). Compra de créditos e billing estão **fora do escopo** desta fase.
 - Compensação no backend do realinhamento (POST /brand-profile/realign): inferência executada ANTES de qualquer mutação no banco. A regra de persistência varia por identity_state:
   - **text_only/logo:** perfil anterior marcado como `outdated` APÓS inferência bem-sucedida; novo perfil inserido com `status = 'synced'`; se o insert falhar, perfil anterior restaurado para `synced`
-  - **VS sensível:** perfil do BP existente (mesmo visual_signature_id) é ATUALIZADO (UPDATE) — não há INSERT porque o índice único (store_id, visual_signature_id, source) impede duplicatas. Se o update falhar, o registro anterior permanece synced e intacto.
+  - **VS sensível:** 3 ramos conforme estado do BP:
+    - Ramo A (BP synced): UPDATE direto; falha mantém anterior intacto
+    - Ramo B (BP failed/outdated + fallback synced): fallback outdated → UPDATE target para synced; falha restaura fallback
+    - Ramo C (BP não existe / Tier 2 nunca gerou BP): fallback outdated → INSERT novo; falha restaura fallback
   - **Substituição crítica (nova VS):** INSERT normal de novo BP com novo visual_signature_id (índice único não conflita)
   - **Nunca podem existir dois registros `synced` simultâneos.** Inferência falha: perfil anterior NÃO marcado como outdated (permanece `synced`)
 - **Alteração incompatível de contrato interno:** `computeDriftStatus` atualizado para aceitar `readonly string[]` de campos a comparar (em vez de fixo em 4)

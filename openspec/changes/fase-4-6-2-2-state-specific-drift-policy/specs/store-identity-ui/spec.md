@@ -137,6 +137,29 @@ The realinhar() hook function SHALL return the full fetch response data for this
 
 ## ADDED Requirements
 
+### Requirement: Tier 2 BP retry após aprovação substitution
+
+When POST /approve returns with `bp_status: 'failed'` (Tier 2 BP generation failure), the approval modal SHALL display a warning:
+- Message: "O perfil de marca não pôde ser gerado. Você pode tentar novamente."
+- Button "Tentar novamente" — SHALL call POST /brand-profile/realign (no body, server decides strategy by identity_state)
+- Button "Continuar" — closes modal without retrying. Previous BP remains as fallback.
+- The POST /realign retry SHALL use profiler mode:'regenerate' with Branch C persistence (INSERT new BP, mark fallback outdated if exists)
+
+#### Scenario: Post-approval BP failure shows retry option
+
+- WHEN POST /approve returns bp_status:'failed'
+- THEN the approval modal SHALL show a warning with "Tentar novamente"
+- AND "Tentar novamente" SHALL call POST /brand-profile/realign
+- AND on success, the new BP replaces the fallback
+
+#### Scenario: Post-approval BP failure "Continuar" skips retry
+
+- WHEN POST /approve returns bp_status:'failed'
+- AND user clicks "Continuar"
+- THEN the modal SHALL close
+- AND no retry SHALL be made
+- AND the previous BP SHALL remain as fallback
+
 ### Requirement: hasCriticalDrift removed
 
 The boolean property hasCriticalDrift SHALL be replaced by driftCategory. The frontend MUST use driftCategory === 'critical' for critical drift decisions.

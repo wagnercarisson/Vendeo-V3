@@ -57,11 +57,24 @@ The endpoint SHALL apply compensation, with rules that vary by identity_state:
 3. New profile inserted with status 'synced'
 4. If the insert fails: previous profile restored to 'synced'
 
-**visual_signature (same VS, sensitive drift):**
+**visual_signature (same VS, sensitive drift) — 3 branches per BP state:**
+
+**Branch A (BP synced):**
 1. Inference executed BEFORE any database mutation (mode:'regenerate')
-2. UPDATE the existing BP (same visual_signature_id) — no INSERT, no status change
+2. UPDATE the existing BP (same visual_signature_id)
 3. If the update fails: previous profile remains synced and intact
-4. No restore needed — no status was changed
+
+**Branch B (BP failed/outdated + fallback synced):**
+1. Inference executed BEFORE any database mutation (mode:'regenerate')
+2. Mark fallback synced BP as outdated
+3. UPDATE the target BP (failed/outdated) to synced with new values
+4. If the update fails: restore fallback BP to synced
+
+**Branch C (BP does not exist / Tier 2 never generated):**
+1. Inference executed BEFORE any database mutation (mode:'regenerate')
+2. If another synced BP exists as fallback: mark as outdated
+3. INSERT new BP with status synced
+4. If the insert fails: restore fallback to synced
 
 The system SHALL never have two records with status 'synced' for the same store.
 
@@ -124,13 +137,27 @@ In the visual_signature path the endpoint SHALL:
 - AND the new profile insert fails
 - THEN the previous profile SHALL be restored to synced
 
-#### Scenario: Compensation in VS path -- update fails
+#### Scenario: Compensation in VS path Branch A -- update fails
 
-- WHEN BrandProfilerWithoutLogo mode:'regenerate' succeeds
-- AND the existing BP (same visual_signature_id) is updated
+- WHEN BrandProfilerWithoutLogo mode:'regenerate' succeeds (Branch A)
+- AND the existing synced BP (same visual_signature_id) is updated
 - AND the update fails
 - THEN the previous profile SHALL remain synced and intact
 - AND no second BP record SHALL be created
+
+#### Scenario: Compensation in VS path Branch B -- update fails, fallback restored
+
+- WHEN BrandProfilerWithoutLogo mode:'regenerate' succeeds (Branch B)
+- AND the fallback synced BP is marked outdated
+- AND the UPDATE of the target BP (failed/outdated) fails
+- THEN the fallback BP SHALL be restored to synced
+
+#### Scenario: Compensation in VS path Branch C -- insert fails, fallback restored
+
+- WHEN BrandProfilerWithoutLogo mode:'regenerate' succeeds (Branch C)
+- AND the fallback synced BP is marked outdated (if exists)
+- AND the INSERT of the new BP fails
+- THEN the fallback BP (if existed) SHALL be restored to synced
 
 #### Scenario: Failed inference -- previous profile NOT marked outdated
 

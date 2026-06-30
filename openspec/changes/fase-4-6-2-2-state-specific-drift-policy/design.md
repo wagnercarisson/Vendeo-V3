@@ -119,10 +119,24 @@ A regra de persistência varia por caminho. O princípio comum é: inferir ANTES
 5. Inferência falha: anterior NÃO marcado como outdated
 
 **VS sensível (realinhamento com mesmo visual_signature_id):**
+3 ramos conforme estado do BP:
+
+**Ramo A (BP synced):**
 1. Executar inferência (mode:'regenerate') primeiro
-2. UPDATE do BP existente (mesmo visual_signature_id) — sem mudar status, sem INSERT
-3. Se o update falhar: registro anterior permanece synced e intacto
-4. Não há restauração porque não houve mudança de status
+2. UPDATE do BP existente (mesmo visual_signature_id)
+3. Se update falhar: registro anterior permanece synced e intacto
+
+**Ramo B (BP failed/outdated + fallback synced):**
+1. Executar inferência (mode:'regenerate') primeiro
+2. Marcar BP fallback synced como outdated
+3. UPDATE do BP alvo (failed/outdated) para synced com novos valores
+4. Se update falhar: restaurar BP fallback para synced
+
+**Ramo C (BP não existe / Tier 2 nunca gerou):**
+1. Executar inferência (mode:'regenerate') primeiro
+2. Se existir outro BP synced como fallback: marcar como outdated
+3. INSERT novo BP com status synced
+4. Se insert falhar: restaurar fallback para synced
 
 **Substituição crítica (nova visual_signature_id):**
 1. Gerar nova VS

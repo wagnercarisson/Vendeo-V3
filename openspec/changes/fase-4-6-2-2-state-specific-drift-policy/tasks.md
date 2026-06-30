@@ -40,7 +40,10 @@
 - [ ] 4.1 `src/app/api/store/[id]/brand-profile/realign/route.ts`: implementar estratégia por identity_state (text_only → BrandTextOnlyInferenceService; logo → BrandDirectorService; visual_signature → BrandProfilerWithoutLogoService)
 - [ ] 4.2 `src/app/api/store/[id]/brand-profile/realign/route.ts`: implementar compensação heterogênea:
   - text_only/logo: inferir ANTES de mutar; marcar outdated APÓS inferência; INSERT novo; restaurar synced se insert falhar
-  - VS sensível: inferir (mode:'regenerate') ANTES de mutar; UPDATE do BP existente (mesmo visual_signature_id); se update falhar, anterior permanece synced e intacto
+  - VS sensível: inferir (mode:'regenerate') ANTES de mutar; 3 ramos de persistência:
+    - Ramo A (BP synced): UPDATE direto; falha mantém anterior intacto
+    - Ramo B (BP failed/outdated + fallback synced): fallback outdated → UPDATE target para synced; falha restaura fallback
+    - Ramo C (BP não existe / Tier 2 nunca gerou): fallback outdated → INSERT novo; falha restaura fallback
 - [ ] 4.3 `src/app/api/store/[id]/brand-profile/realign/route.ts`: no caminho visual_signature, ler content_used da VS metadata (não do perfil anterior)
 - [ ] 4.4 `src/lib/visual-signature/brand-profiler.ts`: adicionar `mode: 'reuse' | 'regenerate'`; 'regenerate' ignora cache, re-infere todos os campos, atualiza (UPDATE) o BP existente preservando content_used + visual_signature_id
 - [ ] 4.5 TypeScript check + testes: compensação nos 3 caminhos (text_only: INSERT; logo: INSERT; VS: UPDATE); mode regenerate re-infere sem cache; falha não marca outdated; UPDATE de VS não cria segundo registro
@@ -62,7 +65,7 @@
 ### Onda 6 — UI e integração completa
 
 - [ ] 6.1 `src/components/flow/drift-critical-modal.tsx`: NOVO modal com textos alinhados ("Assinatura visual desatualizada"); bifurcação com/sem crédito; dismiss + save via POST /dismiss-critical-drift
-- [ ] 6.2 `src/components/flow/visual-signature-approval-modal.tsx`: adicionar prop `mode: 'standard' | 'substitution'`; em substitution, começa em checking e chama /generate-without-logo uma vez
+- [ ] 6.2 `src/components/flow/visual-signature-approval-modal.tsx`: adicionar prop `mode: 'standard' | 'substitution'`; em substitution, começa em checking e chama /generate-without-logo uma vez; após aprovação, se Tier 2 falhar (bp_status:'failed'), exibir warning + botão "Tentar novamente" que chama POST /brand-profile/realign
 - [ ] 6.3 `src/components/flow/store-identity-form.tsx`: handleStep2Submit com precedência — se criticalStatus === 'new' → DriftCriticalModal; senão se sensitiveStatus === 'new' → DriftDecisionModal (expandido); senão → salvar. Incluir critical dismissed + sensitive new → DriftDecisionModal
 - [ ] 6.4 `src/components/flow/store-identity-form.tsx`: dispatcher de realinhamento muda de POST /infer para POST /realign
 - [ ] 6.5 `src/components/flow/store-preview.tsx`: adicionar badge "Desalinhado" quando effectiveStatus === 'new' (nenhum badge quando dismissed)
