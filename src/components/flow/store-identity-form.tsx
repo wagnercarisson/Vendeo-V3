@@ -1630,6 +1630,15 @@ export function StoreIdentityForm() {
               // modal já fechou; drift permanece ativo
             }
           }}
+          onContinueWithoutDismiss={async () => {
+            setShowDriftDecisionModal(false);
+            try {
+              await executeStep2Save();
+              // Não chama ignorar() — badge permanece
+            } catch {
+              // save executed independently; error handled by executeStep2Save
+            }
+          }}
           onCancel={() => { setShowDriftDecisionModal(false); setDriftError(null); }}
           isLoading={isRealinhando}
           error={driftError}
