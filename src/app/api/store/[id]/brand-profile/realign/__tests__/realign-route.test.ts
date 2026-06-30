@@ -39,6 +39,20 @@ vi.mock('@/lib/brand-assets/text-only-inference-service', () => ({
   },
 }));
 
+const mockProfilerGenerate = vi.fn();
+
+vi.mock('@/lib/visual-signature/brand-profiler', () => ({
+  BrandProfilerWithoutLogoService: class {
+    generate = mockProfilerGenerate;
+  },
+  BrandProfilerWithoutLogoError: class extends Error {
+    constructor(msg: string) {
+      super(msg);
+      this.name = 'BrandProfilerWithoutLogoError';
+    }
+  },
+}));
+
 vi.mock('@/lib/constants', () => ({
   IDENTITY_TO_LOGO_STATUS: {
     logo: 'synced',
@@ -81,6 +95,33 @@ const mockStore = {
 const mockLogoStore = {
   ...mockStore,
   identity_state: 'logo',
+};
+
+const mockVSStore = {
+  ...mockStore,
+  identity_state: 'visual_signature',
+};
+
+const mockActiveVS = {
+  id: 'vs-001',
+  store_id: STORE_ID,
+  asset_url: 'https://example.com/vs.png',
+  status: 'active',
+  metadata: {
+    artDirectorOutput: {
+      creative_description: 'Visual criativo',
+      suggested_colors: ['#22C55E', '#1E40AF'],
+      visual_direction: 'Moderna',
+      elements_used: ['nome da loja'],
+      content_used: { store_name: true, city: false, state: false, slogan: true },
+      intended_palette: {
+        primary: '#22C55E',
+        accent: '#1E40AF',
+        background: '#0F172A',
+        support: [],
+      },
+    },
+  },
 };
 
 const mockLogoAsset = {
@@ -131,6 +172,7 @@ function makeChain(result: any) {
     then: resolvable.then.bind(resolvable),
     select: vi.fn(() => chain),
     eq: vi.fn(() => chain),
+    neq: vi.fn(() => chain),
     in: vi.fn(() => chain),
     order: vi.fn(() => chain),
     limit: vi.fn(() => chain),
@@ -176,6 +218,7 @@ function makeProfileChain(listResult: any) {
     then: listResolvable.then.bind(listResolvable),
     select: vi.fn(() => chain),
     eq: vi.fn(() => chain),
+    neq: vi.fn(() => chain),
     in: vi.fn(() => chain),
     order: vi.fn(() => chain),
     limit: vi.fn(() => chain),
@@ -199,6 +242,7 @@ describe('POST /api/store/[id]/brand-profile/realign', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockBrandDirectorAnalyze.mockResolvedValue(mockDirectorResult);
+    mockProfilerGenerate.mockClear();
     mockTextOnlyInfer.mockResolvedValue({
       safe_color_tokens: { primary: '#22C55E', secondary: '#3B82F6', accent: '#1E40AF', background: '#0F172A' },
       visual_style: 'Moderno',
@@ -313,6 +357,108 @@ describe('POST /api/store/[id]/brand-profile/realign', () => {
     const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
     expect(res.status).toBe(200);
     expect(mockBrandDirectorAnalyze).toHaveBeenCalled();
+  });
+
+  it('VS path — returns 200 with profile', async () => {
+    const mockProfilerResult = {
+      success: true,
+      profile: {
+        id: 'vs-profile-001',
+        status: 'synced',
+        source: 'without_logo',
+        safe_color_tokens: { primary: '#22C55E', secondary: '#3B82F6', accent: '#1E40AF', background: '#0F172A' },
+        inferred_primary_color: '#22C55E',
+        inferred_accent_color: '#1E40AF',
+        visual_style: 'Moderno',
+        visual_tone: 'Elegante',
+        brand_personality: 'Sofisticado',
+        brand_colors_chosen: ['#22C55E', '#1E40AF'],
+        metadata: {},
+      },
+    };
+    mockProfilerGenerate.mockResolvedValue(mockProfilerResult);
+
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockVSStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: mockActiveVS, error: null });
+      if (table === 'store_brand_profiles') return makeChain({ data: null, error: null });
+      return makeChain({ data: null, error: null });
+    });
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.profile.source).toBe('without_logo');
+  });
+
+  it('VS path — calls profiler with mode:regenerate', async () => {
+    const mockProfilerResult = {
+      success: true,
+      profile: {
+        id: 'vs-profile-001',
+        status: 'synced',
+        source: 'without_logo',
+        safe_color_tokens: { primary: '#22C55E', secondary: '#3B82F6', accent: '#1E40AF', background: '#0F172A' },
+        inferred_primary_color: '#22C55E',
+        inferred_accent_color: '#1E40AF',
+        visual_style: 'Moderno',
+        visual_tone: 'Elegante',
+        brand_personality: 'Sofisticado',
+        brand_colors_chosen: ['#22C55E', '#1E40AF'],
+        metadata: {},
+      },
+    };
+    mockProfilerGenerate.mockResolvedValue(mockProfilerResult);
+
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockVSStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: mockActiveVS, error: null });
+      if (table === 'store_brand_profiles') return makeChain({ data: null, error: null });
+      return makeChain({ data: null, error: null });
+    });
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(200);
+    expect(mockProfilerGenerate).toHaveBeenCalled();
+    // Verify mode:regenerate was passed
+    const callArg = mockProfilerGenerate.mock.calls[0][0];
+    expect(callArg.mode).toBe('regenerate');
+    expect(callArg.visualSignatureId).toBe('vs-001');
+    expect(callArg.contentUsed).toEqual({ store_name: true, city: false, state: false, slogan: true });
+  });
+
+  it('VS path — no active VS returns 400', async () => {
+    mockProfilerGenerate.mockResolvedValue({ success: true, profile: {} });
+
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockVSStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: null, error: null });
+      if (table === 'store_brand_profiles') return makeChain({ data: null, error: null });
+      return makeChain({ data: null, error: null });
+    });
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe('Nenhuma assinatura visual ativa encontrada para realinhamento.');
+  });
+
+  it('VS path — profiler failure returns error, previous profile not outdated', async () => {
+    mockProfilerGenerate.mockRejectedValue(new Error('Inference failed'));
+
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockVSStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: mockActiveVS, error: null });
+      if (table === 'store_brand_profiles') return makeChain({ data: null, error: null });
+      return makeChain({ data: null, error: null });
+    });
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(200); // Returns 200 with success: false
+    const body = await res.json();
+    expect(body.success).toBe(false);
+    expect(body.error).toBe('Inference failed');
   });
 
   it('logo path inserts profile with selected fields in response', async () => {

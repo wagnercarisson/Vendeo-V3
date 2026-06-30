@@ -44,10 +44,12 @@ function makeChain(result: any) {
     then: resolvable.then.bind(resolvable),
     select: vi.fn(() => chain),
     eq: vi.fn(() => chain),
+    neq: vi.fn(() => chain),
     in: vi.fn(() => chain),
     order: vi.fn(() => chain),
     limit: vi.fn(() => chain),
     single: vi.fn(() => Promise.resolve(result)),
+    maybeSingle: vi.fn(() => Promise.resolve(result)),
     update: vi.fn(() => chain),
     insert: vi.fn(() => chain),
   });
@@ -190,6 +192,72 @@ describe('BrandProfilerWithoutLogoService.generate', () => {
     // Should update the outdated profile to synced
     expect(updateCalledWith).not.toBeNull();
     expect(updateCalledWith.status).toBe('synced');
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('mode:regenerate with existing synced profile — skips cache, continues to generation', async () => {
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'store_brand_profiles') {
+        return makeChain({ data: [mockSyncedProfile], error: null });
+      }
+      if (table === 'stores') {
+        return makeChain({ data: null, error: null });
+      }
+      return makeChain({ data: null, error: null });
+    });
+
+    const { BrandProfilerWithoutLogoService } = await import('@/lib/visual-signature/brand-profiler');
+    const service = new BrandProfilerWithoutLogoService();
+    const result = await service.generate({
+      ...mockBrandProfilerInput,
+      mode: 'regenerate',
+    });
+
+    // Since no API key and NODE_ENV=test, it goes through mockGenerate
+    // which calls persistProfile → delegates to persistWithRegenerate (Ramo C since no target BP found)
+    expect(result.success).toBe(true);
+    // Should have attempted download (mockGenerate calls persistWithRegenerate)
+    expect(mockFetch).toHaveBeenCalledWith(mockBrandProfilerInput.assetUrl);
+  });
+
+  it('mode:regenerate with contentUsed — preserves in profile metadata', async () => {
+    const contentUsed = {
+      store_name: true,
+      city: true,
+      state: false,
+      slogan: true,
+    };
+
+    const { BrandProfilerWithoutLogoService } = await import('@/lib/visual-signature/brand-profiler');
+    const service = new BrandProfilerWithoutLogoService();
+    const result = await service.generate({
+      ...mockBrandProfilerInput,
+      mode: 'regenerate',
+      contentUsed,
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('mode defaults to reuse when omitted', async () => {
+    // Same test as 'with existing synced profile' — mode defaults to 'reuse'
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'store_brand_profiles') {
+        return makeChain({ data: [mockSyncedProfile], error: null });
+      }
+      if (table === 'stores') {
+        return makeChain({ data: null, error: null });
+      }
+      return makeChain({ data: null, error: null });
+    });
+
+    const { BrandProfilerWithoutLogoService } = await import('@/lib/visual-signature/brand-profiler');
+    const service = new BrandProfilerWithoutLogoService();
+    const result = await service.generate(mockBrandProfilerInput);
+
+    expect(result.success).toBe(true);
+    expect(result.profile.id).toBe('profile-synced-001');
+    // Should NOT attempt to download — cache hit
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
