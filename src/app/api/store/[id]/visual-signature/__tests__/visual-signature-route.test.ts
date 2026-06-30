@@ -201,4 +201,208 @@ describe('GET /api/store/[id]/visual-signature', () => {
     expect(activeSig.art_direction).toHaveProperty('visual_direction');
     expect(activeSig.art_direction).toHaveProperty('content_used');
   });
+
+  describe('critical_drift', () => {
+    beforeEach(() => {
+      mockValidateDrift.mockReturnValue({
+        has_drift: false,
+        fields: [],
+        reason: 'ok',
+        requires_regeneration: false,
+      });
+    });
+
+    it('active signature returns non-null critical_drift', async () => {
+      mockSupabaseFrom.mockImplementation((table: string) => {
+        if (table === 'stores') return makeChain({ data: mockStore, error: null });
+        if (table === 'store_visual_signatures') return makeChain({ data: mockVisualSignatures, error: null });
+        return makeChain({ data: null, error: null });
+      });
+      const { GET } = await import('../route');
+      const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/visual-signature`));
+      const res = await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
+      const body = await res.json();
+      const activeSig = body.signatures.find((s: any) => s.status === 'active');
+      expect(activeSig.critical_drift).not.toBeNull();
+      expect(activeSig.critical_drift).toHaveProperty('status');
+      expect(activeSig.critical_drift).toHaveProperty('fields');
+      expect(activeSig.critical_drift).toHaveProperty('reason');
+    });
+
+    it('archived signature returns critical_drift: null', async () => {
+      mockSupabaseFrom.mockImplementation((table: string) => {
+        if (table === 'stores') return makeChain({ data: mockStore, error: null });
+        if (table === 'store_visual_signatures') return makeChain({ data: mockVisualSignatures, error: null });
+        return makeChain({ data: null, error: null });
+      });
+      const { GET } = await import('../route');
+      const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/visual-signature`));
+      const res = await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
+      const body = await res.json();
+      const archivedSig = body.signatures.find((s: any) => s.status === 'archived');
+      expect(archivedSig.critical_drift).toBeNull();
+    });
+
+    it('critical_drift.status is none when no drift', async () => {
+      mockSupabaseFrom.mockImplementation((table: string) => {
+        if (table === 'stores') return makeChain({ data: mockStore, error: null });
+        if (table === 'store_visual_signatures') return makeChain({ data: mockVisualSignatures, error: null });
+        return makeChain({ data: null, error: null });
+      });
+      mockValidateDrift.mockReturnValue({
+        has_drift: false,
+        fields: [],
+        reason: 'ok',
+        requires_regeneration: false,
+      });
+      const { GET } = await import('../route');
+      const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/visual-signature`));
+      const res = await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
+      const body = await res.json();
+      const activeSig = body.signatures.find((s: any) => s.status === 'active');
+      expect(activeSig.critical_drift.status).toBe('none');
+      expect(activeSig.critical_drift.reason).toBe('ok');
+    });
+
+    it('critical_drift.status is new when drift exists and no dismissed_snapshot', async () => {
+      mockValidateDrift.mockReturnValue({
+        has_drift: true,
+        fields: ['name'],
+        reason: 'critical_drift',
+        requires_regeneration: true,
+      });
+      const driftedMockSig = [{
+        id: 'sig-001',
+        asset_url: 'https://example.com/vs1.png',
+        type: 'ai_generated',
+        status: 'active',
+        created_at: '2026-06-01T00:00:00Z',
+        updated_at: '2026-06-15T00:00:00Z',
+        metadata: {
+          artDirectorOutput: {
+            visual_direction: 'Moderna',
+            content_used: { store_name: true, city: false, state: false, slogan: false },
+          },
+          input_snapshot: {
+            name: 'Minha Loja',
+            segment: 'alimentacao',
+            city: null,
+            state: null,
+            slogan: null,
+          },
+          // No visual_signature_drift_dismissed_snapshot
+        },
+      }];
+      mockSupabaseFrom.mockImplementation((table: string) => {
+        if (table === 'stores') return makeChain({ data: mockStore, error: null });
+        if (table === 'store_visual_signatures') return makeChain({ data: driftedMockSig, error: null });
+        return makeChain({ data: null, error: null });
+      });
+      const { GET } = await import('../route');
+      const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/visual-signature`));
+      const res = await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
+      const body = await res.json();
+      const activeSig = body.signatures.find((s: any) => s.status === 'active');
+      expect(activeSig.critical_drift.status).toBe('new');
+      expect(activeSig.critical_drift.fields).toContain('name');
+      expect(activeSig.critical_drift.reason).toBe('critical_drift');
+    });
+
+    it('critical_drift.status is dismissed when dismissed_snapshot matches store', async () => {
+      mockValidateDrift.mockReturnValue({
+        has_drift: true,
+        fields: ['name'],
+        reason: 'critical_drift',
+        requires_regeneration: true,
+      });
+      const dismissedMockSig = [{
+        id: 'sig-001',
+        asset_url: 'https://example.com/vs1.png',
+        type: 'ai_generated',
+        status: 'active',
+        created_at: '2026-06-01T00:00:00Z',
+        updated_at: '2026-06-15T00:00:00Z',
+        metadata: {
+          artDirectorOutput: {
+            visual_direction: 'Moderna',
+            content_used: { store_name: true, city: false, state: false, slogan: false },
+          },
+          input_snapshot: {
+            name: 'Minha Loja',
+            segment: 'alimentacao',
+            city: null,
+            state: null,
+            slogan: null,
+          },
+          visual_signature_drift_dismissed_snapshot: {
+            name: 'Minha Loja',
+            segment: 'alimentacao',
+            slogan: null,
+            city: null,
+            state: null,
+          },
+        },
+      }];
+      mockSupabaseFrom.mockImplementation((table: string) => {
+        if (table === 'stores') return makeChain({ data: mockStore, error: null });
+        if (table === 'store_visual_signatures') return makeChain({ data: dismissedMockSig, error: null });
+        return makeChain({ data: null, error: null });
+      });
+      const { GET } = await import('../route');
+      const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/visual-signature`));
+      const res = await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
+      const body = await res.json();
+      const activeSig = body.signatures.find((s: any) => s.status === 'active');
+      expect(activeSig.critical_drift.status).toBe('dismissed');
+      expect(activeSig.critical_drift.reason).toBe('critical_drift');
+    });
+
+    it('critical_drift.status is new when dismissed_snapshot does NOT match store', async () => {
+      mockValidateDrift.mockReturnValue({
+        has_drift: true,
+        fields: ['name'],
+        reason: 'critical_drift',
+        requires_regeneration: true,
+      });
+      const mismatchedDismissMockSig = [{
+        id: 'sig-001',
+        asset_url: 'https://example.com/vs1.png',
+        type: 'ai_generated',
+        status: 'active',
+        created_at: '2026-06-01T00:00:00Z',
+        updated_at: '2026-06-15T00:00:00Z',
+        metadata: {
+          artDirectorOutput: {
+            visual_direction: 'Moderna',
+            content_used: { store_name: true, city: false, state: false, slogan: false },
+          },
+          input_snapshot: {
+            name: 'Minha Loja',
+            segment: 'alimentacao',
+            city: null,
+            state: null,
+            slogan: null,
+          },
+          visual_signature_drift_dismissed_snapshot: {
+            name: 'Outro Nome',  // doesn't match store.name
+            segment: 'alimentacao',
+            slogan: null,
+            city: null,
+            state: null,
+          },
+        },
+      }];
+      mockSupabaseFrom.mockImplementation((table: string) => {
+        if (table === 'stores') return makeChain({ data: mockStore, error: null });
+        if (table === 'store_visual_signatures') return makeChain({ data: mismatchedDismissMockSig, error: null });
+        return makeChain({ data: null, error: null });
+      });
+      const { GET } = await import('../route');
+      const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/visual-signature`));
+      const res = await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
+      const body = await res.json();
+      const activeSig = body.signatures.find((s: any) => s.status === 'active');
+      expect(activeSig.critical_drift.status).toBe('new');
+    });
+  });
 });
