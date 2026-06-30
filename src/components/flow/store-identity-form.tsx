@@ -1551,6 +1551,8 @@ export function StoreIdentityForm() {
                 logoStatus={logoStatus}
                 identityState={identityState}
                 textOnlyProfile={inferredProfile}
+                driftStatus={driftStatus}
+                criticalDrift={criticalDrift}
               />
             </div>
           </div>

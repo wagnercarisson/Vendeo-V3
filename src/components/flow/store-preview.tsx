@@ -2,9 +2,16 @@
 
 import { SEGMENT_COLOR_FALLBACK } from "@/lib/store";
 import { STORE_SEGMENTS } from "@/lib/constants";
-import { CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
+import type { DriftStatus } from "@/lib/drift";
 
 const PREVIEW_DEFAULT_COLOR = "#22C55E";
+
+interface CriticalDriftInfo {
+  status: 'none' | 'new' | 'dismissed';
+  fields: string[];
+  reason: 'ok' | 'critical_drift' | 'missing_metadata';
+}
 
 interface StorePreviewProps {
   name: string;
@@ -24,9 +31,11 @@ interface StorePreviewProps {
     inferred_primary_color?: string;
     inferred_accent_color?: string;
   } | null;
+  driftStatus?: DriftStatus;
+  criticalDrift?: CriticalDriftInfo | null;
 }
 
-export function StorePreview({ name, segment, brandColor, accentColor, brandColorsChosen, logoUrl, logoStatus, identityState, textOnlyProfile }: StorePreviewProps) {
+export function StorePreview({ name, segment, brandColor, accentColor, brandColorsChosen, logoUrl, logoStatus, identityState, textOnlyProfile, driftStatus, criticalDrift }: StorePreviewProps) {
   const hasData = name || segment;
 
   if (!hasData) {
@@ -108,6 +117,29 @@ export function StorePreview({ name, segment, brandColor, accentColor, brandColo
                 {segEntry.label}
               </span>
             ) : null;
+          })()}
+
+          {(() => {
+            const effectiveStatus: DriftStatus = criticalDrift?.status === 'new'
+              ? 'new'
+              : (driftStatus === 'new' && criticalDrift?.status !== 'new' ? 'new' : 'none');
+
+            if (effectiveStatus !== 'new') return null;
+
+            const isCritical = criticalDrift?.status === 'new';
+            const tooltipText = isCritical
+              ? `Dados críticos alterados: ${criticalDrift?.fields?.join(', ') || 'nome, segmento'}`
+              : 'Direção visual desatualizada';
+
+            return (
+              <span className="relative group inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-amber-900/20 text-accent-amber text-xs font-heading font-medium border border-amber-700/30 cursor-help">
+                <AlertCircle className="w-3 h-3" />
+                Desalinhado
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-bg-elevated border border-border rounded-lg text-xs text-text-secondary font-body whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg z-10">
+                  {tooltipText}
+                </div>
+              </span>
+            );
           })()}
         </div>
       </div>
