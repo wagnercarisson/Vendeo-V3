@@ -155,7 +155,7 @@ async function handleSubstitution(
     elements_used: ['nome da loja'],
   }) as VisualSignatureArtDirectorOutput;
 
-  const contentUsed = (artDirectorOutput as VisualSignatureMetadataArtDirectorOutput).content_used ?? {
+  const contentUsed = (artDirectorOutput as unknown as VisualSignatureMetadataArtDirectorOutput).content_used ?? {
     store_name: true,
     city: false,
     state: false,
@@ -163,7 +163,7 @@ async function handleSubstitution(
   };
 
   // Extract intendedPalette from signature metadata
-  const artDirectorMetadata = pendingMetadata.artDirectorOutput as VisualSignatureMetadataArtDirectorOutput | null ?? null;
+  const artDirectorMetadata = pendingMetadata.artDirectorOutput as unknown as VisualSignatureMetadataArtDirectorOutput | null ?? null;
   const rawIntendedPalette = artDirectorMetadata?.intended_palette;
   const intendedPalette: IntendedPalette | null = rawIntendedPalette
     ? normalizeIntendedPalette(rawIntendedPalette)
@@ -279,11 +279,11 @@ async function handleSubstitution(
     const sanitizeHex = (v: string | null | undefined, fb: string): string =>
       v && /^#[0-9A-Fa-f]{6}$/.test(v) ? v.toUpperCase() : fb;
 
-    const fallbackPrimary = (artDirectorOutput as VisualSignatureMetadataArtDirectorOutput)?.intended_palette?.primary
+    const fallbackPrimary = (artDirectorOutput as unknown as VisualSignatureMetadataArtDirectorOutput)?.intended_palette?.primary
       ?? (artDirectorOutput as any)?.suggested_colors?.[0]
       ?? store.brand_color
       ?? null;
-    const fallbackAccent = (artDirectorOutput as VisualSignatureMetadataArtDirectorOutput)?.intended_palette?.accent
+    const fallbackAccent = (artDirectorOutput as unknown as VisualSignatureMetadataArtDirectorOutput)?.intended_palette?.accent
       ?? (artDirectorOutput as any)?.suggested_colors?.[1]
       ?? null;
     const inferredPrimaryColor = sanitizeHex(fallbackPrimary, '#666666');
@@ -401,7 +401,7 @@ export async function POST(
   if (signature.status === 'archived') {
     const metadata = (signature.metadata ?? {}) as Record<string, unknown>;
     const inputSnapshot = metadata.input_snapshot as VisualSignatureMetadataInputSnapshot | null ?? null;
-    const artDirectorOutput = metadata.artDirectorOutput as VisualSignatureMetadataArtDirectorOutput | null ?? null;
+    const artDirectorOutput = metadata.artDirectorOutput as unknown as VisualSignatureMetadataArtDirectorOutput | null ?? null;
 
     const driftResult = validateDrift({
       input_snapshot: inputSnapshot,
@@ -476,7 +476,7 @@ export async function POST(
     elements_used: ['nome da loja'],
   }) as VisualSignatureArtDirectorOutput;
 
-  const contentUsed = (artDirectorOutput as VisualSignatureMetadataArtDirectorOutput).content_used ?? {
+  const contentUsed = (artDirectorOutput as unknown as VisualSignatureMetadataArtDirectorOutput).content_used ?? {
     store_name: true,
     city: false,
     state: false,
@@ -558,7 +558,7 @@ export async function POST(
 
   // Extract intendedPalette from signature metadata
   const signatureMetadata = (signature.metadata ?? {}) as Record<string, unknown>;
-  const artDirectorMetadata = signatureMetadata.artDirectorOutput as VisualSignatureMetadataArtDirectorOutput | null ?? null;
+  const artDirectorMetadata = signatureMetadata.artDirectorOutput as unknown as VisualSignatureMetadataArtDirectorOutput | null ?? null;
   const rawIntendedPalette = artDirectorMetadata?.intended_palette;
   const intendedPaletteLocal: IntendedPalette | null = rawIntendedPalette
     ? normalizeIntendedPalette(rawIntendedPalette)
@@ -664,11 +664,11 @@ export async function POST(
     const sanitizeHex = (v: string | null | undefined, fb: string): string =>
       v && /^#[0-9A-Fa-f]{6}$/.test(v) ? v.toUpperCase() : fb;
 
-    const fallbackPrimary = (artDirectorOutput as VisualSignatureMetadataArtDirectorOutput)?.intended_palette?.primary
+    const fallbackPrimary = (artDirectorOutput as unknown as VisualSignatureMetadataArtDirectorOutput)?.intended_palette?.primary
       ?? (artDirectorOutput as any)?.suggested_colors?.[0]
       ?? store.brand_color
       ?? null;
-    const fallbackAccent = (artDirectorOutput as VisualSignatureMetadataArtDirectorOutput)?.intended_palette?.accent
+    const fallbackAccent = (artDirectorOutput as unknown as VisualSignatureMetadataArtDirectorOutput)?.intended_palette?.accent
       ?? (artDirectorOutput as any)?.suggested_colors?.[1]
       ?? null;
     inferredPrimaryColor = sanitizeHex(fallbackPrimary, '#666666');
