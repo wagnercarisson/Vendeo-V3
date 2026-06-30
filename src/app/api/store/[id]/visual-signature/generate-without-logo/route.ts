@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase/server';
 import { StoreIdentityArtDirectorService } from '@/lib/visual-signature/identity-art-director';
 import { AiImageGenerator } from '@/lib/visual-signature/ai-image-generator';
-import { persistSignature } from '@/lib/visual-signature/persistence';
+import { persistSignature, getActiveVisualSignature } from '@/lib/visual-signature/persistence';
 import { insertGenerationEvent } from '@/lib/visual-signature/generation-events';
+import { revalidateCriticalDrift } from '@/lib/visual-signature/drift-revalidator';
 import type { VisualSignatureArtDirectorOutput, VisualSignatureMetadataInputSnapshot } from '@/lib/visual-signature/types';
 import fs from 'fs';
 import path from 'path';
@@ -55,14 +56,17 @@ export async function POST(
   generationLocks.set(id, true);
   console.log(`[generate-without-logo][req-${reqId}] lock adquirido`);
 
-  let body: { rejectionContext?: { reason: string; attempt: number } };
+  let body: { rejectionContext?: { reason: string; attempt: number }; mode?: 'standard' | 'substitution' };
   try {
     body = await request.json();
-    console.log(`[generate-without-logo][req-${reqId}] body parsed`, { rejectionContext: body.rejectionContext });
+    console.log(`[generate-without-logo][req-${reqId}] body parsed`, { rejectionContext: body.rejectionContext, mode: body.mode });
   } catch {
     body = {};
     console.log(`[generate-without-logo][req-${reqId}] body vazio (JSON parse falhou)`);
   }
+
+  const mode = body.mode ?? 'standard';
+  console.log(`[generate-without-logo][req-${reqId}] mode: ${mode}`);
 
   console.log(`[generate-without-logo][req-${reqId}] 2/12 carregando store...`);
   const { data: store, error: storeError } = await supabase
@@ -76,7 +80,57 @@ export async function POST(
     generationLocks.delete(id);
     return NextResponse.json({ error: 'Loja não encontrada' }, { status: 404 });
   }
-  console.log(`[generate-without-logo][req-${reqId}] store carregada`, { name: store.name, segment: store.segment });
+  console.log(`[generate-without-logo][req-${reqId}] store carregada`, { name: store.name, segment: store.segment, identity_state: store.identity_state });
+
+  // ----- Substitution mode guards -----
+  if (mode === 'substitution') {
+    // Guard 3: identity_state deve ser 'visual_signature'
+    if (store.identity_state !== 'visual_signature') {
+      console.log(`[generate-without-logo][req-${reqId}] SUBSTITUIÇÃO BLOQUEADA — identity_state inválido: ${store.identity_state}`);
+      generationLocks.delete(id);
+      return NextResponse.json({
+        success: false,
+        code: 'INVALID_IDENTITY_STATE',
+        error: 'Estado de identidade deve ser visual_signature',
+      }, { status: 400 });
+    }
+
+    // Guard 3b: VS ativa existe
+    const activeVS = await getActiveVisualSignature(id).catch(() => null);
+    if (!activeVS) {
+      console.log(`[generate-without-logo][req-${reqId}] SUBSTITUIÇÃO BLOQUEADA — nenhuma VS ativa encontrada`);
+      generationLocks.delete(id);
+      return NextResponse.json({
+        success: false,
+        code: 'NO_ACTIVE_VS',
+        error: 'Nenhuma assinatura visual ativa encontrada',
+      }, { status: 404 });
+    }
+
+    // Guard 4: drift crítico revalidado
+    const activeVSMetadata = (activeVS.metadata ?? {}) as Record<string, unknown>;
+    const activeVSArtDir = activeVSMetadata.artDirectorOutput as { content_used?: { slogan?: boolean; city?: boolean; state?: boolean } } | null ?? null;
+    const vsContentUsed = activeVSArtDir?.content_used ?? null;
+    const vsInputSnapshot = activeVSMetadata.input_snapshot as Record<string, unknown> | null ?? null;
+
+    const revalidation = revalidateCriticalDrift({
+      vsSnapshot: vsInputSnapshot as any,
+      contentUsed: vsContentUsed ?? undefined,
+      store: { name: store.name, segment: store.segment, slogan: store.slogan ?? null, city: store.city ?? null, state: store.state ?? null },
+    });
+
+    if (!revalidation.hasDrift) {
+      console.log(`[generate-without-logo][req-${reqId}] SUBSTITUIÇÃO BLOQUEADA — drift crítico não confirmado`, { reason: revalidation.reason });
+      generationLocks.delete(id);
+      return NextResponse.json({
+        success: false,
+        code: 'DRIFT_NOT_CONFIRMED',
+        error: 'Drift crítico não confirmado. Recalcule o diagnóstico.',
+      }, { status: 400 });
+    }
+
+    console.log(`[generate-without-logo][req-${reqId}] SUBSTITUIÇÃO — guardas OK`);
+  }
 
   const currentAttempts = store.visual_signature_attempts ?? 0;
   console.log(`[generate-without-logo][req-${reqId}] currentAttempts (session)`, currentAttempts);
