@@ -1,0 +1,204 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { NextRequest } from 'next/server';
+
+const mockSupabaseFrom = vi.fn();
+const mockValidateDrift = vi.fn();
+const mockReconcileProfiles = vi.fn();
+
+vi.mock('@/lib/supabase/server', () => ({
+  supabaseAdmin: { from: mockSupabaseFrom },
+}));
+
+vi.mock('@/lib/visual-signature/drift-validator', () => ({
+  validateDrift: mockValidateDrift,
+}));
+
+vi.mock('@/lib/brand-assets/profile-reconciliation', () => ({
+  reconcileProfiles: mockReconcileProfiles,
+}));
+
+vi.mock('@/lib/identity-transitions', () => ({
+  transition: vi.fn(() => Promise.resolve({ success: true })),
+}));
+
+vi.mock('@/lib/constants', () => ({
+  IDENTITY_TO_LOGO_STATUS: {
+    text_only: 'explicit_none',
+    logo: 'synced',
+    visual_signature: 'generated',
+  },
+}));
+
+function makeChain(result: any) {
+  const resolvable = Promise.resolve(result);
+  const chain: any = Object.assign(() => resolvable, {
+    then: resolvable.then.bind(resolvable),
+    select: vi.fn(() => chain),
+    eq: vi.fn(() => chain),
+    in: vi.fn(() => chain),
+    order: vi.fn(() => chain),
+    limit: vi.fn(() => chain),
+    single: vi.fn(() => Promise.resolve(result)),
+    maybeSingle: vi.fn(() => Promise.resolve(result)),
+    update: vi.fn(() => chain),
+    insert: vi.fn(() => chain),
+  });
+  return chain;
+}
+
+const STORE_ID = '550e8400-e29b-41d4-a716-446655440000';
+
+const mockStore = {
+  id: STORE_ID,
+  name: 'Minha Loja',
+  segment: 'alimentacao',
+  city: null,
+  state: null,
+  slogan: null,
+};
+
+const mockVisualSignatures = [
+  {
+    id: 'sig-001',
+    asset_url: 'https://example.com/vs1.png',
+    type: 'ai_generated',
+    status: 'active',
+    created_at: '2026-06-01T00:00:00Z',
+    updated_at: '2026-06-15T00:00:00Z',
+    metadata: {
+      artDirectorOutput: {
+        visual_direction: 'Moderna',
+        content_used: { store_name: true, city: false, state: false, slogan: false },
+      },
+      input_snapshot: {
+        name: 'Minha Loja',
+        segment: 'alimentacao',
+        city: null,
+        state: null,
+        slogan: null,
+      },
+    },
+  },
+  {
+    id: 'sig-002',
+    asset_url: 'https://example.com/vs2.png',
+    type: 'ai_generated',
+    status: 'archived',
+    created_at: '2026-06-01T00:00:00Z',
+    updated_at: '2026-06-01T00:00:00Z',
+    metadata: null,
+  },
+];
+
+describe('GET /api/store/[id]/visual-signature', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockValidateDrift.mockReturnValue({
+      has_drift: false,
+      fields: [],
+      reason: 'ok',
+      requires_regeneration: false,
+    });
+  });
+
+  it('invalid store ID returns 400', async () => {
+    const { GET } = await import('../route');
+    const req = new NextRequest(new Request('http://localhost/api/store/invalid/visual-signature'));
+    const res = await GET(req, { params: Promise.resolve({ id: 'invalid' }) });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe('ID da loja inválido');
+  });
+
+  it('store not found returns 404', async () => {
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: null, error: { message: 'not found' } });
+      return makeChain({ data: null, error: null });
+    });
+    const { GET } = await import('../route');
+    const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/visual-signature`));
+    const res = await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error).toBe('Loja não encontrada');
+  });
+
+  it('returns array of signatures with restore_eligibility', async () => {
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: mockVisualSignatures, error: null });
+      return makeChain({ data: null, error: null });
+    });
+    const { GET } = await import('../route');
+    const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/visual-signature`));
+    const res = await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body.signatures)).toBe(true);
+    expect(body.total).toBe(2);
+  });
+
+  it('each signature has restore_eligibility fields', async () => {
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: mockVisualSignatures, error: null });
+      return makeChain({ data: null, error: null });
+    });
+    const { GET } = await import('../route');
+    const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/visual-signature`));
+    const res = await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
+    const body = await res.json();
+    for (const sig of body.signatures) {
+      expect(sig).toHaveProperty('restore_eligibility');
+      expect(sig.restore_eligibility).toHaveProperty('can_restore');
+      expect(sig.restore_eligibility).toHaveProperty('drift_fields');
+      expect(sig.restore_eligibility).toHaveProperty('requires_regeneration');
+      expect(sig.restore_eligibility).toHaveProperty('reason');
+    }
+  });
+
+  it('signature metadata null uses missing_metadata reason', async () => {
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: mockVisualSignatures, error: null });
+      return makeChain({ data: null, error: null });
+    });
+    const { GET } = await import('../route');
+    const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/visual-signature`));
+    const res = await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
+    const body = await res.json();
+    // Second signature has null metadata
+    const archivedSig = body.signatures.find((s: any) => s.status === 'archived');
+    expect(archivedSig.restore_eligibility.reason).toBe('missing_metadata');
+    expect(archivedSig.restore_eligibility.can_restore).toBe(false);
+  });
+
+  it('validates drift for signatures with complete metadata', async () => {
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: mockVisualSignatures, error: null });
+      return makeChain({ data: null, error: null });
+    });
+    const { GET } = await import('../route');
+    const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/visual-signature`));
+    await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
+    // Should call validateDrift at least for signatures with both input_snapshot and artDirectorOutput
+    expect(mockValidateDrift).toHaveBeenCalled();
+  });
+
+  it('returns art_direction field with visual_direction and content_used', async () => {
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: mockVisualSignatures, error: null });
+      return makeChain({ data: null, error: null });
+    });
+    const { GET } = await import('../route');
+    const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/visual-signature`));
+    const res = await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
+    const body = await res.json();
+    const activeSig = body.signatures.find((s: any) => s.status === 'active');
+    expect(activeSig).toHaveProperty('art_direction');
+    expect(activeSig.art_direction).toHaveProperty('visual_direction');
+    expect(activeSig.art_direction).toHaveProperty('content_used');
+  });
+});
