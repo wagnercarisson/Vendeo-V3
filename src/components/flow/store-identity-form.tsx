@@ -8,10 +8,10 @@ import { AlertCircle, CheckCircle2, Loader2, X, Upload, ArrowLeft, Sparkles } fr
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useDriftDetection } from "./use-drift-detection";
-import { currentVisualState, computeDriftStatus, getDriftPolicy } from "@/lib/drift";
-import type { DriftSnapshot } from "@/lib/drift";
+
 import { DriftDiscreetButton } from "./drift-discreet-button";
 import { DriftDecisionModal } from "./drift-decision-modal";
+import { DriftCriticalModal } from "./drift-critical-modal";
 import { isValidHex, normalizeBrandColorsChosen, hasUserChosenColors } from "@/lib/validators/color";
 
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
@@ -89,6 +89,7 @@ export function StoreIdentityForm() {
   const [logoStatus, setLogoStatus] = useState<string | null>(null);
   const [visualSignatureUrl, setVisualSignatureUrl] = useState<string | null>(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [approvalMode, setApprovalMode] = useState<'standard' | 'substitution'>('standard');
   const [subsegmentIsOther, setSubsegmentIsOther] = useState(false);
   const [identityState, setIdentityState] = useState<string | null>(null);
   const [hasArchivedSignatures, setHasArchivedSignatures] = useState(false);
@@ -98,6 +99,8 @@ export function StoreIdentityForm() {
   const [brandDirectorWarning, setBrandDirectorWarning] = useState<string | null>(null);
   const [brandDirectorRetrying, setBrandDirectorRetrying] = useState(false);
   const [driftError, setDriftError] = useState<string | null>(null);
+  const [showDriftCriticalModal, setShowDriftCriticalModal] = useState(false);
+  const [showDriftDecisionModal, setShowDriftDecisionModal] = useState(false);
   const [driftSaveIntercept, setDriftSaveIntercept] = useState(false);
   const [driftNavIntercept, setDriftNavIntercept] = useState(false);
   const [pendingNavUrl, setPendingNavUrl] = useState('');
@@ -135,6 +138,8 @@ export function StoreIdentityForm() {
   const {
     driftStatus,
     driftCategory,
+    criticalDrift,
+    dismissCriticalDrift,
     realinhar,
     ignorar,
     isRealinhando,
@@ -582,8 +587,14 @@ export function StoreIdentityForm() {
 
   const handleNoLogo = useCallback(() => {
     console.log(`[StoreIdentityForm] handleNoLogo clicked storeId=${storeId}`);
+    setApprovalMode('standard');
     setShowApprovalModal(true);
   }, [storeId]);
+
+  const handleOpenSubstitutionApproval = useCallback(() => {
+    setApprovalMode('substitution');
+    setShowApprovalModal(true);
+  }, []);
 
   const handleRemoveVS = useCallback(async () => {
     if (!storeId) return;
@@ -875,18 +886,16 @@ export function StoreIdentityForm() {
     e.preventDefault();
     if (!storeId) return;
 
-    const driftSnapshot = currentVisualState(driftStore ?? { segment: '', subsegment: '', tone_of_voice: '', name: '', positioning: null, short_description: null, slogan: null });
-    const driftInputSnapshot = driftProfile?.metadata?.input_snapshot as DriftSnapshot | null | undefined;
-    const driftDismissedSnapshot = driftProfile?.metadata?.drift_dismissed_snapshot as DriftSnapshot | null | undefined;
-    const driftFields = getDriftPolicy(identityState ?? 'text_only').sensitive;
-    const computedDrift = computeDriftStatus(driftSnapshot, driftInputSnapshot, driftDismissedSnapshot, driftFields);
-
-    if (!driftSaveIntercept && computedDrift === 'new') {
-      setDriftSaveIntercept(true);
+    if (driftCategory === 'critical' && criticalDrift?.status === 'new') {
+      setShowDriftCriticalModal(true);
       return;
     }
 
-    setDriftSaveIntercept(false);
+    if (driftCategory === 'sensitive') {
+      setShowDriftDecisionModal(true);
+      return;
+    }
+
     await executeStep2Save();
   };
 
@@ -1578,7 +1587,7 @@ export function StoreIdentityForm() {
           </div>
         </div>
       )}
-      {driftSaveIntercept && (
+      {showDriftDecisionModal && (
         <DriftDecisionModal
           onRealinhar={async () => {
             try {
@@ -1604,14 +1613,14 @@ export function StoreIdentityForm() {
                   );
                 }
               }
-              setDriftSaveIntercept(false);
+              setShowDriftDecisionModal(false);
               await executeStep2Save();
-            } catch (err) {
+            } catch {
               setDriftError('Não foi possível realinhar. Tente novamente mais tarde.');
             }
           }}
           onIgnorar={async () => {
-            setDriftSaveIntercept(false);
+            setShowDriftDecisionModal(false);
             try {
               await ignorar();
               await executeStep2Save();
@@ -1619,9 +1628,40 @@ export function StoreIdentityForm() {
               // modal já fechou; drift permanece ativo
             }
           }}
-          onCancel={() => { setDriftSaveIntercept(false); setDriftError(null); }}
+          onCancel={() => { setShowDriftDecisionModal(false); setDriftError(null); }}
           isLoading={isRealinhando}
           error={driftError}
+        />
+      )}
+      {showDriftCriticalModal && storeId && (
+        <DriftCriticalModal
+          open={showDriftCriticalModal}
+          onOpenChange={setShowDriftCriticalModal}
+          storeId={storeId}
+          identityState={identityState ?? 'text_only'}
+          canGenerateNewSignature={identityActions.canCreateVS}
+          onDismissAndSave={async () => {
+            try {
+              await dismissCriticalDrift();
+              setShowDriftCriticalModal(false);
+              await executeStep2Save();
+            } catch {
+              setDriftError('Não foi possível salvar. Tente novamente.');
+            }
+          }}
+          onRemoveVs={async () => {
+            try {
+              await handleRemoveVS();
+              setShowDriftCriticalModal(false);
+            } catch {
+              setDriftError('Não foi possível remover a assinatura visual.');
+            }
+          }}
+          onOpenApproval={() => {
+            setShowDriftCriticalModal(false);
+            handleOpenSubstitutionApproval();
+          }}
+          onCancel={() => setShowDriftCriticalModal(false)}
         />
       )}
       {driftNavIntercept && (
@@ -1686,6 +1726,7 @@ export function StoreIdentityForm() {
           city={formData.city}
           uf={formData.state}
           hasActiveSignatureDrift={driftCategory === 'critical'}
+          mode={approvalMode}
           onComplete={handleApprovalComplete}
           onRemove={handleRemoveVS}
         />
