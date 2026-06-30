@@ -7,6 +7,46 @@ import { transition } from '@/lib/identity-transitions';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+type CriticalDriftStatus = 'none' | 'new' | 'dismissed';
+type DriftReason = 'ok' | 'critical_drift' | 'missing_metadata';
+
+function computeCriticalDrift(
+  restoreEligibility: { reason: DriftReason; drift_fields: string[] },
+  metadata: Record<string, unknown>,
+  store: { name: string; segment: string; slogan: string | null; city: string | null; state: string | null }
+): { status: CriticalDriftStatus; fields: string[]; reason: DriftReason } {
+  if (restoreEligibility.reason === 'ok') {
+    return { status: 'none', fields: [], reason: 'ok' };
+  }
+
+  // reason is 'critical_drift' or 'missing_metadata'
+  const dismissedSnapshot = metadata?.visual_signature_drift_dismissed_snapshot as Record<string, unknown> | null | undefined;
+  if (dismissedSnapshot) {
+    // Compare ALL 5 fields (name, segment, slogan, city, state)
+    // The dismissed snapshot is ALWAYS complete — persisted with all 5 fields by POST /dismiss-critical-drift
+    const allMatch =
+      dismissedSnapshot.name === store.name &&
+      dismissedSnapshot.segment === store.segment &&
+      dismissedSnapshot.slogan === store.slogan &&
+      dismissedSnapshot.city === store.city &&
+      dismissedSnapshot.state === store.state;
+
+    if (allMatch) {
+      return {
+        status: 'dismissed',
+        fields: restoreEligibility.drift_fields,
+        reason: restoreEligibility.reason,
+      };
+    }
+  }
+
+  return {
+    status: 'new',
+    fields: restoreEligibility.drift_fields,
+    reason: restoreEligibility.reason,
+  };
+}
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -101,6 +141,9 @@ export async function GET(
           }
         : null,
       restore_eligibility: restoreEligibility,
+      critical_drift: s.status === 'active'
+        ? computeCriticalDrift(restoreEligibility, metadata, store)
+        : null,
     };
   });
 
