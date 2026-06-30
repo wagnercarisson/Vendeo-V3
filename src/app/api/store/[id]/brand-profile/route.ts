@@ -7,10 +7,29 @@ const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
 const PLACEHOLDER_HEX = '#RRGGBB';
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const url = new URL(request.url);
+  const statusParam = url.searchParams.get('status');
+
+  if (statusParam === 'synced') {
+    const { data, error } = await supabase
+      .from('store_brand_profiles')
+      .select()
+      .eq('store_id', id)
+      .eq('status', 'synced')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json(data, { status: 200 });
+  }
 
   const { data, error } = await supabase
     .from('store_brand_profiles')
