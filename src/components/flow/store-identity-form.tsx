@@ -9,7 +9,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useDriftDetection } from "./use-drift-detection";
 
-import { DriftDiscreetButton } from "./drift-discreet-button";
+// DriftDiscreetButton import removed — replaced by inline post-dismiss links
 import { DriftDecisionModal } from "./drift-decision-modal";
 import { DriftCriticalModal } from "./drift-critical-modal";
 import { isValidHex, normalizeBrandColorsChosen, hasUserChosenColors } from "@/lib/validators/color";
@@ -1123,42 +1123,55 @@ export function StoreIdentityForm() {
             </div>
 
 
-            {driftStatus !== 'none' && !driftSaveIntercept && !driftNavIntercept && (
+            {/* Post-dismiss recovery links — only for dismissed drift, never for 'new' (handled by save modal) */}
+            {driftStatus === 'dismissed' && !driftSaveIntercept && !driftNavIntercept && (
               <div className="mb-4">
-                <DriftDiscreetButton
-                  onClick={async () => {
-                    if (driftCategory === 'critical') {
-                      setShowApprovalModal(true);
-                      return;
-                    }
-                    setDriftError(null);
-                    try {
-                      const data = await realinhar();
-                      const profile = (data as Record<string, unknown>)?.profile as Record<string, unknown> | undefined;
-                      if (profile) {
-                        const tokens = profile.safe_color_tokens as Record<string, string> | undefined;
-                        const chosenColors = (profile.brand_colors_chosen as Array<string | null>) ?? [];
-                        if (hasUserChosenColors(chosenColors)) {
-                          setBrandColorsChosen(chosenColors);
-                          const primary = chosenColors[0] !== null ? chosenColors[0] : '';
-                          setField("brand_color", primary);
-                          setAccentColor(
-                            chosenColors[1]
-                            ?? (tokens?.accent ?? '')
-                            ?? (profile.inferred_accent_color as string ?? '')
-                          );
-                        } else if (tokens?.primary) {
-                          setField("brand_color", tokens.primary);
-                          setAccentColor(
-                            (tokens?.accent ?? '')
-                            ?? (profile.inferred_accent_color as string ?? '')
-                          );
+                {driftCategory === 'sensitive' && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setDriftError(null);
+                      try {
+                        const data = await realinhar();
+                        const profile = (data as Record<string, unknown>)?.profile as Record<string, unknown> | undefined;
+                        if (profile) {
+                          const tokens = profile.safe_color_tokens as Record<string, string> | undefined;
+                          const chosenColors = (profile.brand_colors_chosen as Array<string | null>) ?? [];
+                          if (hasUserChosenColors(chosenColors)) {
+                            setBrandColorsChosen(chosenColors);
+                            const primary = chosenColors[0] !== null ? chosenColors[0] : '';
+                            setField("brand_color", primary);
+                            setAccentColor(
+                              chosenColors[1]
+                              ?? (tokens?.accent ?? '')
+                              ?? (profile.inferred_accent_color as string ?? '')
+                            );
+                          } else if (tokens?.primary) {
+                            setField("brand_color", tokens.primary);
+                            setAccentColor(
+                              (tokens?.accent ?? '')
+                              ?? (profile.inferred_accent_color as string ?? '')
+                            );
+                          }
                         }
-                      }
-                    } catch (e) { setDriftError('Não foi possível realinhar. Tente novamente mais tarde.'); }
-                  }}
-                  isLoading={driftCategory === 'critical' ? false : isRealinhando}
-                />
+                      } catch (e) { setDriftError('Não foi possível realinhar. Tente novamente mais tarde.'); }
+                    }}
+                    disabled={isRealinhando}
+                    className="text-text-muted text-xs underline cursor-pointer hover:text-text-primary transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1"
+                  >
+                    {isRealinhando ? <Loader2 className="w-3 h-3 animate-spin inline" /> : null}
+                    {isRealinhando ? 'Realinhando...' : 'Realinhar direção visual'}
+                  </button>
+                )}
+                {driftCategory === 'critical' && (
+                  <button
+                    type="button"
+                    onClick={() => setShowDriftCriticalModal(true)}
+                    className="text-text-muted text-xs underline cursor-pointer hover:text-text-primary transition-colors duration-200 inline-flex items-center gap-1"
+                  >
+                    Atualizar assinatura visual
+                  </button>
+                )}
                 {driftError && (
                   <p className="flex items-center gap-1.5 text-accent-red text-xs mt-2">
                     <AlertCircle className="w-3.5 h-3.5" />
