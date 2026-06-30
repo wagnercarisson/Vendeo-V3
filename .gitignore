@@ -10,6 +10,7 @@ out/
 *.tsbuildinfo
 next-env.d.ts
 logs/
+graphify-out/
 
 
 # Generation metrics (Phase 4.3.3)

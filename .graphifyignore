@@ -1,0 +1,11 @@
+# Ambientes e integrações da IDE
+.opencode/
+.agents/
+.github/
+
+# Saída do próprio Graphify
+graphify-out/
+
+# Histórico de execução; manter apenas os documentos canônicos
+.planning/phases/
+openspec/changes/archive/
