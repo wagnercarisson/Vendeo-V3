@@ -45,9 +45,9 @@
     - Ramo B (BP failed/outdated + fallback synced): fallback outdated → UPDATE target para synced; falha restaura fallback
     - Ramo C (BP não existe / Tier 2 nunca gerou): fallback outdated → INSERT novo; falha restaura fallback
 - [ ] 4.3 `src/app/api/store/[id]/brand-profile/realign/route.ts`: no caminho visual_signature, ler content_used da VS metadata (não do perfil anterior)
-- [ ] 4.4 `src/lib/visual-signature/brand-profiler.ts`: adicionar `mode: 'reuse' | 'regenerate'`; 'regenerate' ignora cache, re-infere todos os campos, atualiza (UPDATE) o BP existente preservando content_used + visual_signature_id
-- [ ] 4.5 TypeScript check + testes: compensação nos 3 caminhos (text_only: INSERT; logo: INSERT; VS: UPDATE); mode regenerate re-infere sem cache; falha não marca outdated; UPDATE de VS não cria segundo registro
-- [ ] 4.6 Smoke test: VS + drift sensível → realinhar → VS preservada + BP atualizado (UPDATE, não INSERT); falha de update → BP anterior synced intacto
+- [ ] 4.4 `src/lib/visual-signature/brand-profiler.ts`: adicionar `mode: 'reuse' | 'regenerate'`; 'regenerate' ignora cache, re-infere todos os campos, persiste em 3 ramos: Ramo A (UPDATE do BP synced); Ramo B (UPDATE de failed/outdated com compensação do fallback); Ramo C (INSERT quando BP não existe). Preserva content_used + visual_signature_id
+- [ ] 4.5 TypeScript check + testes: compensação nos 3 caminhos (text_only: INSERT; logo: INSERT; VS: 3 ramos A/B/C); mode regenerate re-infere sem cache; falha não marca outdated; Ramo A: UPDATE sem duplicata; Ramo B: update falha restaura fallback; Ramo C: insert falha restaura fallback
+- [ ] 4.6 Smoke test: VS + drift sensível → realinhar → 3 ramos: A (BP synced: UPDATE), B (BP failed + fallback: fallback outdated → UPDATE target), C (BP inexistente: INSERT); falha em cada ramo → anterior/fallback restaurado
 - [ ] **Gate:** TypeScript, lint, build, testes automatizados, smoke test manual — todos verdes. Bloquear avanço se algum falhar.
 
 ### Onda 5 — Backend substituição crítica
@@ -91,3 +91,6 @@
 - [ ] 7.10 Verificar que identity-transitions NÃO é chamado na substituição
 - [ ] 7.11 Verificar que o save nunca é bloqueado (apenas orientado)
 - [ ] 7.12 Verificar backward compatibility: snapshots antigos sem campos não disparam falso drift
+- [ ] 7.13 Retry BP pós-Tier 2 via POST /realign → Ramo C: INSERT novo BP, fallback outdated
+- [ ] 7.14 Retry BP com BP failed existente → Ramo B: fallback outdated, UPDATE target para synced
+- [ ] 7.15 Retry BP: falha no Ramo B ou C → fallback restaurado para synced
