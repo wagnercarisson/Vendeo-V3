@@ -148,12 +148,12 @@ async function handleSubstitution(
 
   // Build artDirectorOutput from the pending signature's metadata
   const pendingMetadata = (pendingSig.metadata ?? {}) as Record<string, unknown>;
-  const artDirectorOutput = pendingMetadata.artDirectorOutput ?? {
+  const artDirectorOutput = (pendingMetadata.artDirectorOutput ?? {
     creative_description: `Assinatura visual para ${store.name} (${store.segment})`,
     suggested_colors: store.brand_color ? [store.brand_color] : [],
     visual_direction: 'Personalizada',
     elements_used: ['nome da loja'],
-  };
+  }) as VisualSignatureArtDirectorOutput;
 
   const contentUsed = (artDirectorOutput as VisualSignatureMetadataArtDirectorOutput).content_used ?? {
     store_name: true,
@@ -225,7 +225,7 @@ async function handleSubstitution(
       .update({
         metadata: {
           ...newMetadata,
-          input_snapshot: buildStoreProfileInputSnapshot(store),
+          input_snapshot: buildStoreProfileInputSnapshot(store as Parameters<typeof buildStoreProfileInputSnapshot>[0]),
           content_used: contentUsed,
         },
       })
@@ -469,12 +469,12 @@ export async function POST(
     approved: true,
   });
 
-  const artDirectorOutput = signature.metadata?.artDirectorOutput ?? {
+  const artDirectorOutput = (signature.metadata?.artDirectorOutput ?? {
     creative_description: `Assinatura visual para ${store.name} (${store.segment})`,
     suggested_colors: store.brand_color ? [store.brand_color] : [],
     visual_direction: 'Personalizada',
     elements_used: ['nome da loja'],
-  };
+  }) as VisualSignatureArtDirectorOutput;
 
   const contentUsed = (artDirectorOutput as VisualSignatureMetadataArtDirectorOutput).content_used ?? {
     store_name: true,
@@ -518,7 +518,7 @@ export async function POST(
       .update({
         metadata: {
           ...existingMetadata,
-          input_snapshot: buildStoreProfileInputSnapshot(store),
+          input_snapshot: buildStoreProfileInputSnapshot(store as Parameters<typeof buildStoreProfileInputSnapshot>[0]),
           content_used: contentUsed,
         },
       })
@@ -624,7 +624,7 @@ export async function POST(
       .update({
         metadata: {
           ...newMetadata,
-          input_snapshot: buildStoreProfileInputSnapshot(store),
+          input_snapshot: buildStoreProfileInputSnapshot(store as Parameters<typeof buildStoreProfileInputSnapshot>[0]),
           content_used: contentUsed,
         },
       })

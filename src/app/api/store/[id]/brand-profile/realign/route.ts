@@ -486,16 +486,15 @@ async function handleVSRealign(
       city: store.city ?? null,
       state: store.state ?? null,
       brandColor: store.brand_color ?? null,
-      artDirectorOutput: {
-        creative_description: String(vsRecord.metadata?.artDirectorOutput?.creative_description ?? ''),
-        suggested_colors: Array.isArray(vsRecord.metadata?.artDirectorOutput?.suggested_colors)
-          ? vsRecord.metadata.artDirectorOutput.suggested_colors
-          : [],
-        visual_direction: String(vsRecord.metadata?.artDirectorOutput?.visual_direction ?? ''),
-        elements_used: Array.isArray(vsRecord.metadata?.artDirectorOutput?.elements_used)
-          ? vsRecord.metadata.artDirectorOutput.elements_used
-          : [],
-      },
+      artDirectorOutput: (() => {
+        const artOut = vsRecord.metadata?.artDirectorOutput as Record<string, unknown> | null ?? {};
+        return {
+          creative_description: String(artOut.creative_description ?? ''),
+          suggested_colors: Array.isArray(artOut.suggested_colors) ? artOut.suggested_colors : [],
+          visual_direction: String(artOut.visual_direction ?? ''),
+          elements_used: Array.isArray(artOut.elements_used) ? artOut.elements_used : [],
+        };
+      })(),
       visualSignatureId: vsRecord.id,
       assetUrl: vsRecord.asset_url,
       referenceCardUrl: null,

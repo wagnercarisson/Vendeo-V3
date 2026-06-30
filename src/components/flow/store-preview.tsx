@@ -120,9 +120,11 @@ export function StorePreview({ name, segment, brandColor, accentColor, brandColo
           })()}
 
           {(() => {
-            const effectiveStatus: DriftStatus = criticalDrift?.status === 'new'
+            const isCriticalNew = criticalDrift?.status === 'new';
+            const isSensitiveNew = driftStatus === 'new';
+            const effectiveStatus: DriftStatus = isCriticalNew
               ? 'new'
-              : (driftStatus === 'new' && criticalDrift?.status !== 'new' ? 'new' : 'none');
+              : (isSensitiveNew ? 'new' : 'none');
 
             if (effectiveStatus !== 'new') return null;
 
