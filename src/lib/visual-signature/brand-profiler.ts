@@ -232,26 +232,31 @@ export class BrandProfilerWithoutLogoService {
   async generate(input: BrandProfilerInput): Promise<BrandProfileGenerationResult> {
     const startTime = Date.now();
 
-    const { data: existingProfiles } = await supabase
-      .from('store_brand_profiles')
-      .select('*')
-      .eq('store_id', input.storeId)
-      .eq('visual_signature_id', input.visualSignatureId)
-      .in('status', ['synced', 'outdated'])
-      .eq('source', 'without_logo')
-      .order('updated_at', { ascending: false })
-      .limit(1);
-    const existingProfile = existingProfiles?.[0] ?? null;
+    // Mode 'regenerate': skip cache, go directly to inference
+    if (input.mode !== 'regenerate') {
+      const { data: existingProfiles } = await supabase
+        .from('store_brand_profiles')
+        .select('*')
+        .eq('store_id', input.storeId)
+        .eq('visual_signature_id', input.visualSignatureId)
+        .in('status', ['synced', 'outdated'])
+        .eq('source', 'without_logo')
+        .order('updated_at', { ascending: false })
+        .limit(1);
+      const existingProfile = existingProfiles?.[0] ?? null;
 
-    if (existingProfile) {
-      console.log(`[BrandProfiler] Found existing profile (${existingProfile.status}) for signature ${input.visualSignatureId}, reusing.`);
-      if (existingProfile.status === 'outdated') {
-        await supabase
-          .from('store_brand_profiles')
-          .update({ status: 'synced', updated_at: new Date().toISOString() })
-          .eq('id', existingProfile.id);
+      if (existingProfile) {
+        console.log(`[BrandProfiler] Found existing profile (${existingProfile.status}) for signature ${input.visualSignatureId}, reusing.`);
+        if (existingProfile.status === 'outdated') {
+          await supabase
+            .from('store_brand_profiles')
+            .update({ status: 'synced', updated_at: new Date().toISOString() })
+            .eq('id', existingProfile.id);
+        }
+        return { profile: existingProfile as BrandProfileRecord, success: true };
       }
-      return { profile: existingProfile as BrandProfileRecord, success: true };
+    } else {
+      console.log(`[BrandProfiler] Mode 'regenerate' for signature ${input.visualSignatureId} — skipping cache.`);
     }
 
     const buffer = await this.downloadAssetBuffer(input.assetUrl);
@@ -780,6 +785,11 @@ export class BrandProfilerWithoutLogoService {
     result: BrandProfilerWithoutLogoResult,
     colorValidation?: ColorValidation
   ): Promise<BrandProfileRecord> {
+    // Mode 'regenerate': delegate to 3-branch persistence
+    if (input.mode === 'regenerate') {
+      return this.persistWithRegenerate(input, result, colorValidation);
+    }
+
     const safeLogoColors = sanitizeHexArray(result.logo_colors_detected);
     const palette = safeLogoColors.length > 0 ? safeLogoColors : ['#666666'];
     const safePrimary = sanitizeHex(result.inferred_primary_color)
@@ -871,6 +881,225 @@ export class BrandProfilerWithoutLogoService {
     }
 
     return data;
+  }
+
+  /**
+   * Persistence for mode 'regenerate': implements 3 branches with compensation.
+   *
+   * Ramo A — BP synced exists: Infer → UPDATE existing BP directly.
+   *   If update fails, previous remains synced and intact.
+   *
+   * Ramo B — BP failed/outdated + fallback synced exists:
+   *   Infer → mark fallback BP as outdated → UPDATE target BP to synced.
+   *   If update fails, restore fallback to synced.
+   *
+   * Ramo C — BP does not exist / Tier 2 never generated:
+   *   Infer → if fallback synced exists, mark as outdated → INSERT new BP as synced.
+   *   If insert fails, restore fallback to synced.
+   */
+  private async persistWithRegenerate(
+    input: BrandProfilerInput,
+    result: BrandProfilerWithoutLogoResult,
+    colorValidation?: ColorValidation
+  ): Promise<BrandProfileRecord> {
+    const safeLogoColors = sanitizeHexArray(result.logo_colors_detected);
+    const palette = safeLogoColors.length > 0 ? safeLogoColors : ['#666666'];
+    const safePrimary = sanitizeHex(result.inferred_primary_color)
+      ?? pickPrimaryFromPalette(palette)
+      ?? '#666666';
+    const safeAccent = sanitizeHex(result.inferred_accent_color)
+      ?? pickAccentFromPalette(palette, safePrimary)
+      ?? safePrimary;
+
+    const st = result.safe_color_tokens;
+    const safeTokens = {
+      primary: sanitizeHex(st.primary) ?? safePrimary,
+      secondary: sanitizeHex(st.secondary) ?? '#999999',
+      accent: sanitizeHex(st.accent) ?? safeAccent,
+      background: sanitizeHex(st.background) ?? '#FFFFFF',
+    };
+
+    const brandColorsChosen = this.getBrandColorsChosen(input, safeTokens);
+
+    // Build metadata, preserving content_used from VS metadata in regenerate mode
+    const metadata: Record<string, unknown> = {
+      art_director_output: input.artDirectorOutput,
+      asset_url: input.assetUrl,
+    };
+    if (colorValidation) {
+      metadata.color_validation = colorValidation;
+    }
+    if (input.contentUsed) {
+      metadata.content_used = input.contentUsed;
+    }
+
+    const profileData = {
+      store_id: input.storeId,
+      source: 'without_logo',
+      active_logo_asset_id: null,
+      visual_signature_id: input.visualSignatureId,
+      logo_colors_detected: palette,
+      brand_colors_chosen: brandColorsChosen,
+      safe_color_tokens: safeTokens,
+      visual_style: result.visual_style,
+      visual_tone: result.visual_tone,
+      typography_direction: result.typography_direction,
+      brand_personality: result.brand_personality,
+      campaign_guidelines: result.campaign_guidelines,
+      campaign_brief: result.campaign_brief,
+      inferred_primary_color: safePrimary,
+      inferred_accent_color: safeAccent,
+      confidence_score: result.confidence_score,
+      metadata,
+      version: 1,
+      status: 'synced' as const,
+    };
+
+    // Determine BP state for this VS to pick the correct branch
+    const { data: targetBPs } = await supabase
+      .from('store_brand_profiles')
+      .select('*')
+      .eq('store_id', input.storeId)
+      .eq('visual_signature_id', input.visualSignatureId)
+      .eq('source', 'without_logo')
+      .order('updated_at', { ascending: false })
+      .limit(1);
+    const targetBP = targetBPs?.[0] ?? null;
+
+    // Find fallback: any other synced BP for this store (different VS)
+    const { data: fallbackBPs } = await supabase
+      .from('store_brand_profiles')
+      .select('*')
+      .eq('store_id', input.storeId)
+      .eq('source', 'without_logo')
+      .eq('status', 'synced')
+      .neq('visual_signature_id', input.visualSignatureId)
+      .order('updated_at', { ascending: false })
+      .limit(1);
+    const fallbackBP = fallbackBPs?.[0] ?? null;
+
+    // —— RAMO A: BP for this VS already exists as synced ——
+    if (targetBP && targetBP.status === 'synced') {
+      console.log(`[BrandProfiler] Ramo A: updating synced profile ${targetBP.id} for signature ${input.visualSignatureId}`);
+      const { data: updated, error: updateError } = await supabase
+        .from('store_brand_profiles')
+        .update(profileData)
+        .eq('id', targetBP.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error(`[BrandProfiler] Ramo A: update failed for profile ${targetBP.id}: ${updateError.message}. Previous remains synced.`);
+        throw new Error(`Failed to update brand profile: ${updateError.message}`);
+      }
+
+      console.log(`[BrandProfiler] Ramo A: update successful for profile ${updated?.id}`);
+      return updated as BrandProfileRecord;
+    }
+
+    // —— RAMO B: BP for this VS exists as failed/outdated ——
+    if (targetBP && (targetBP.status === 'failed' || targetBP.status === 'outdated')) {
+      console.log(`[BrandProfiler] Ramo B: target profile ${targetBP.id} is ${targetBP.status}, has fallback=${!!fallbackBP}`);
+
+      if (fallbackBP) {
+        // Mark fallback as outdated
+        const { error: markError } = await supabase
+          .from('store_brand_profiles')
+          .update({ status: 'outdated', updated_at: new Date().toISOString() })
+          .eq('id', fallbackBP.id);
+
+        if (markError) {
+          console.error(`[BrandProfiler] Ramo B: failed to mark fallback ${fallbackBP.id} as outdated: ${markError.message}`);
+          throw new Error(`Failed to mark fallback as outdated: ${markError.message}`);
+        }
+
+        // Update target BP to synced
+        const { data: updated, error: updateError } = await supabase
+          .from('store_brand_profiles')
+          .update({ ...profileData, status: 'synced' })
+          .eq('id', targetBP.id)
+          .select()
+          .single();
+
+        if (updateError) {
+          console.error(`[BrandProfiler] Ramo B: update failed for target ${targetBP.id}. Restoring fallback ${fallbackBP.id} to synced.`);
+          await supabase
+            .from('store_brand_profiles')
+            .update({ status: 'synced', updated_at: new Date().toISOString() })
+            .eq('id', fallbackBP.id);
+          throw new Error(`Failed to update brand profile: ${updateError.message}`);
+        }
+
+        console.log(`[BrandProfiler] Ramo B: update successful for profile ${updated?.id}`);
+        return updated as BrandProfileRecord;
+      }
+
+      // No fallback — just update target
+      const { data: updated, error: updateError } = await supabase
+        .from('store_brand_profiles')
+        .update(profileData)
+        .eq('id', targetBP.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error(`[BrandProfiler] Ramo B: update failed for profile ${targetBP.id} (no fallback).`);
+        throw new Error(`Failed to update brand profile: ${updateError.message}`);
+      }
+
+      console.log(`[BrandProfiler] Ramo B: update successful (no fallback) for profile ${updated?.id}`);
+      return updated as BrandProfileRecord;
+    }
+
+    // —— RAMO C: BP for this VS does not exist ——
+    console.log(`[BrandProfiler] Ramo C: no existing profile for signature ${input.visualSignatureId}, has fallback=${!!fallbackBP}`);
+
+    if (fallbackBP) {
+      // Mark fallback as outdated
+      const { error: markError } = await supabase
+        .from('store_brand_profiles')
+        .update({ status: 'outdated', updated_at: new Date().toISOString() })
+        .eq('id', fallbackBP.id);
+
+      if (markError) {
+        console.error(`[BrandProfiler] Ramo C: failed to mark fallback ${fallbackBP.id} as outdated: ${markError.message}`);
+        throw new Error(`Failed to mark fallback as outdated: ${markError.message}`);
+      }
+
+      // Insert new BP
+      const { data: newProfile, error: insertError } = await supabase
+        .from('store_brand_profiles')
+        .insert(profileData)
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error(`[BrandProfiler] Ramo C: insert failed. Restoring fallback ${fallbackBP.id} to synced.`);
+        await supabase
+          .from('store_brand_profiles')
+          .update({ status: 'synced', updated_at: new Date().toISOString() })
+          .eq('id', fallbackBP.id);
+        throw new Error(`Failed to insert brand profile: ${insertError.message}`);
+      }
+
+      console.log(`[BrandProfiler] Ramo C: insert successful for profile ${newProfile?.id}`);
+      return newProfile as BrandProfileRecord;
+    }
+
+    // No fallback — just insert
+    const { data: newProfile, error: insertError } = await supabase
+      .from('store_brand_profiles')
+      .insert(profileData)
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error(`[BrandProfiler] Ramo C: insert failed (no fallback): ${insertError.message}`);
+      throw new Error(`Failed to insert brand profile: ${insertError.message}`);
+    }
+
+    console.log(`[BrandProfiler] Ramo C: insert successful (no fallback) for profile ${newProfile?.id}`);
+    return newProfile as BrandProfileRecord;
   }
 
   private async persistFailedProfile(

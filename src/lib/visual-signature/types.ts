@@ -301,6 +301,13 @@ export interface BrandProfilerInput {
   referenceCardUrl?: string | null;
   intendedPalette?: IntendedPalette | null;
   previousBrandColors?: Array<string | null>;
+  mode?: 'reuse' | 'regenerate';
+  contentUsed?: {
+    store_name: boolean;
+    city: boolean;
+    state: boolean;
+    slogan: boolean;
+  } | null;
 }
 
 export interface BrandProfilerWithoutLogoResult {
