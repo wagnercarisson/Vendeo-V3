@@ -6,6 +6,7 @@ const mockValidateDrift = vi.fn();
 const mockBrandProfilerGenerate = vi.fn();
 const mockUpdateEventDecision = vi.fn();
 const mockReconcileProfiles = vi.fn();
+const mockRevalidateCriticalDrift = vi.fn();
 
 vi.mock('@/lib/supabase/server', () => ({
   supabaseAdmin: { from: mockSupabaseFrom },
@@ -27,6 +28,10 @@ vi.mock('@/lib/visual-signature/generation-events', () => ({
 
 vi.mock('@/lib/brand-assets/profile-reconciliation', () => ({
   reconcileProfiles: mockReconcileProfiles,
+}));
+
+vi.mock('@/lib/visual-signature/drift-revalidator', () => ({
+  revalidateCriticalDrift: mockRevalidateCriticalDrift,
 }));
 
 const storeBrandProfileUpdates: any[] = [];
@@ -380,5 +385,216 @@ describe('POST /api/store/[id]/visual-signature/approve', () => {
     const body = await res.json();
     expect(body.drift.fields).toEqual(['name']);
     expect(body.drift.requires_regeneration).toBe(true);
+  });
+});
+
+describe('POST /api/store/[id]/visual-signature/approve — Substitution mode', () => {
+  const mockVSStore = {
+    id: STORE_ID,
+    name: 'Test Store',
+    segment: 'food',
+    subsegment: null,
+    tone_of_voice: null,
+    positioning: null,
+    short_description: null,
+    slogan: null,
+    city: null,
+    state: null,
+    brand_color: '#CC0000',
+    visual_signature_attempts: 2,
+    identity_state: 'visual_signature',
+  };
+
+  const mockActiveVS = {
+    id: 'active-vs-001',
+    store_id: STORE_ID,
+    status: 'active',
+    asset_url: 'https://example.com/active-vs.png',
+    metadata: {
+      artDirectorOutput: {
+        visual_direction: 'Moderna',
+        content_used: { store_name: true, city: false, state: false, slogan: false },
+      },
+      input_snapshot: {
+        name: 'Test Store',
+        segment: 'food',
+        slogan: null,
+        city: null,
+        state: null,
+      },
+    },
+  };
+
+  const mockPendingVS = {
+    id: SIG_ID,
+    store_id: STORE_ID,
+    status: 'draft',
+    asset_url: 'https://example.com/pending-vs.png',
+    metadata: {
+      artDirectorOutput: mockSignature.metadata!.artDirectorOutput,
+    },
+  };
+
+  function makeSubstitutionRequest(overrides: Record<string, unknown> = {}) {
+    return new NextRequest(new Request('http://localhost/api/store/' + STORE_ID + '/visual-signature/approve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ signatureId: SIG_ID, mode: 'substitution', ...overrides }),
+    }));
+  }
+
+  function setupVSQuery() {
+    // Track number of store_visual_signatures calls to return different results
+    let vsCallCount = 0;
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockVSStore, error: null });
+      if (table === 'store_visual_signatures') {
+        vsCallCount++;
+        if (vsCallCount <= 2) {
+          // First call: active VS (Guard), second call: pending VS (Guard)
+          return makeChain({ data: vsCallCount === 1 ? [mockActiveVS] : mockPendingVS, error: null });
+        }
+        // Third+ calls: archive/activate updates
+        return makeChain({ data: [mockActiveVS], error: null });
+      }
+      if (table === 'store_brand_profiles') return makeBrandProfileChain({ data: [], error: null });
+      return makeChain({ data: null, error: null });
+    });
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    storeBrandProfileUpdates.length = 0;
+    mockBrandProfilerGenerate.mockResolvedValue({
+      profile: { ...mockProfile, id: 'new-sub-profile-001' },
+      success: true,
+    });
+    mockRevalidateCriticalDrift.mockReturnValue({
+      hasDrift: true,
+      fields: ['name'],
+      reason: 'critical_drift',
+    });
+  });
+
+  it('SUB-1 — should reject substitution when identity_state !== visual_signature', async () => {
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: { ...mockVSStore, identity_state: 'text_only' }, error: null });
+      return makeChain({ data: null, error: null });
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeSubstitutionRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.code).toBe('INVALID_IDENTITY_STATE');
+  });
+
+  it('SUB-2 — should reject substitution when no active VS exists', async () => {
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockVSStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: null, error: null });
+      return makeChain({ data: null, error: null });
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeSubstitutionRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.code).toBe('NO_ACTIVE_VS');
+  });
+
+  it('SUB-3 — should reject substitution when drift not confirmed against active VS', async () => {
+    mockRevalidateCriticalDrift.mockReturnValue({
+      hasDrift: false,
+      fields: [],
+      reason: 'ok',
+    });
+
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockVSStore, error: null });
+      if (table === 'store_visual_signatures') {
+        return makeChain({ data: [mockActiveVS], error: null });
+      }
+      return makeChain({ data: null, error: null });
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeSubstitutionRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.code).toBe('DRIFT_NOT_CONFIRMED');
+  });
+
+  it('SUB-4 — should restore previous VS on activation failure (Tier 1 compensate)', async () => {
+    let vsCallCount = 0;
+    let archivedId: string | null = null;
+    let activatedId: string | null = null;
+    let restoredId: string | null = null;
+
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockVSStore, error: null });
+      if (table === 'store_visual_signatures') {
+        vsCallCount++;
+        if (vsCallCount <= 3) {
+          // Call 1: active VS, Call 2: pending VS, Call 3: archive active
+          if (vsCallCount === 1) return makeChain({ data: [mockActiveVS], error: null });
+          if (vsCallCount === 2) return makeChain({ data: mockPendingVS, error: null });
+          // Archive
+          const archiveChain = makeChain({ data: null, error: null });
+          archiveChain.update = vi.fn((data: any) => {
+            if (data.status === 'archived') archivedId = mockActiveVS.id;
+            return archiveChain;
+          });
+          return archiveChain;
+        }
+        // Activation FAILS → restore
+        const actChain = makeChain({ data: null, error: { message: 'activation failed' } });
+        actChain.update = vi.fn((data: any) => {
+          if (data.status === 'active') {
+            activatedId = SIG_ID;
+            // Return error to simulate activation failure
+            return makeChain({ data: null, error: { message: 'activation failed' } });
+          }
+          if (data.status === 'archived') archivedId = mockActiveVS.id;
+          return actChain;
+        });
+        return actChain;
+      }
+      if (table === 'store_brand_profiles') return makeBrandProfileChain({ data: [], error: null });
+      return makeChain({ data: null, error: null });
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeSubstitutionRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    // Should return 500 due to activation failure + restore
+    expect(res.status).toBe(500);
+  });
+
+  it('SUB-5 — should return 200 with bp_status:failed when BP fails (Tier 2 fallback)', async () => {
+    mockBrandProfilerGenerate.mockRejectedValue(new Error('BP generation failed'));
+
+    setupVSQuery();
+
+    const { POST } = await import('../route');
+    const res = await POST(makeSubstitutionRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.bp_status).toBe('failed');
+    expect(body.visual_signature_id).toBe(SIG_ID);
+    expect(body.signature.status).toBe('active');
+    expect(body.warning).toBeDefined();
+  });
+
+  it('SUB-6 — should succeed with bp_status:success on full substitution', async () => {
+    setupVSQuery();
+
+    const { POST } = await import('../route');
+    const res = await POST(makeSubstitutionRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.bp_status).toBe('success');
+    expect(body.visual_signature_id).toBe(SIG_ID);
+    expect(body.signature.status).toBe('active');
+    expect(body.signature.id).toBe(SIG_ID);
   });
 });
