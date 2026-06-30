@@ -105,9 +105,13 @@ export function computeDriftStatus(
 ): DriftStatus {
   if (inputSnapshot == null) return 'none'
 
-  const hasDrift = fields.some(f =>
-    normalizeSnapshotValue(current[f as keyof StoreProfileInputSnapshot]) !== normalizeSnapshotValue(inputSnapshot[f as keyof StoreProfileInputSnapshot] ?? null)
-  )
+  // Skip fields that are absent (undefined) in the snapshot to avoid false drift
+  // from old snapshots that didn't have certain fields
+  const hasDrift = fields.some(f => {
+    const snapshotVal = inputSnapshot[f as keyof StoreProfileInputSnapshot];
+    if (snapshotVal === undefined) return false;
+    return normalizeSnapshotValue(current[f as keyof StoreProfileInputSnapshot]) !== normalizeSnapshotValue(snapshotVal ?? null);
+  });
 
   if (!hasDrift) return 'none'
 

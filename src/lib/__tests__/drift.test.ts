@@ -181,7 +181,7 @@ describe('evaluateSensitiveDrift', () => {
   });
 
   it('only fields in the provided list are compared', () => {
-    const result = evaluateSensitiveDrift(bpSnapshot, { ...store, segment: 'moda', subsegment: 'novo' }, ['subsegment']);
+    const result = evaluateSensitiveDrift(bpSnapshot, { ...store, segment: 'moda' }, ['subsegment']);
     // segment differs but only subsegment is in fields → no drift
     expect(result.hasDrift).toBe(false);
   });
