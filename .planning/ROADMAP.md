@@ -85,7 +85,14 @@
       - [x] 04.6.2.1-01-PLAN.md — Foundation: snapshot.ts + drift.ts refactor
       - [x] 04.6.2.1-02-PLAN.md — Writers & Consumers: all endpoints use snapshot helper
       - [x] 04.6.2.1-03-PLAN.md — Tests and verification gates
-    - [ ] Phase 4.6.2.2: State-Specific Drift Policy (7 waves, 7 plans) — planning
+    - [x] Phase 4.6.2.2: State-Specific Drift Policy (7 waves, 7 plans) — completed 2026-06-30
+      - [x] 4.6.2.2-01-PLAN.md — Congelamento e regressão: tests baseline + gates
+      - [x] 4.6.2.2-02-PLAN.md — Fundação: getDriftPolicy, DriftCategory, evaluateCriticalDrift/SensitiveDrift
+      - [x] 4.6.2.2-03-PLAN.md — Diagnóstico frontend: use-drift-detection, GET endpoints
+      - [x] 4.6.2.2-04-PLAN.md — Realinhamento sensível: strategy por state + compensação 3 ramos
+      - [x] 4.6.2.2-05-PLAN.md — Backend substituição: guards, 2 tiers, dismiss
+      - [x] 4.6.2.2-06-PLAN.md — UI: DriftCriticalModal, ApprovalModal mode, badge, bifurcação
+      - [x] 4.6.2.2-07-PLAN.md — UAT: 30 cenários
   - [x] Phase 4.6.3: Logo State Lifecycle — Upload/Remove/Restore com transição transacional, proveniência e histórico (5/5 plans — completed 2026-06-17)
     - [x] 04.6.3-01-PLAN.md — Types & Constants: IDENTITY_TO_LOGO_STATUS, DriftStatus, LogoHistoryItem
     - [x] 04.6.3-02-PLAN.md — POST /logo refactor: BrandDirector before mutation, compensated transition
@@ -164,7 +171,7 @@
 | 4.6.1. Text Only State & Visual Direction Inference | v1.1 | 5/5 | Complete | 2026-06-12 |
 | 4.6.2. Visual Direction Drift Detection | v1.1 | 4/4 | Complete | 2026-06-13 |
 | 4.6.2.1. Snapshot Fields Realignment | v1.1 | 3/3 | Complete | 2026-06-27 |
-| 4.6.2.2. State-Specific Drift Policy | v1.1 | 0/7 | Planning | — |
+| 4.6.2.2. State-Specific Drift Policy | v1.1 | 7/7 | Complete | 2026-06-30 |
 | 4.6.3. Logo State Lifecycle | v1.1 | 5/5 | Complete | 2026-06-17 |
 | 4.6.3.1. Logo Restore Scope Cleanup | v1.1 | 4/4 | Complete | 2026-06-29 |
 | 4.6.4. Visual Signature Lifecycle | v1.1 | 5/5 | Complete | 2026-06-19 |
