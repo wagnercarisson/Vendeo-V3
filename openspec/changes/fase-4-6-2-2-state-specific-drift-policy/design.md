@@ -109,14 +109,28 @@ Propriedades ausentes em snapshots antigos são tratadas como "não comparar" (s
 
 ### Decisão: Compensação — inferir antes de mutar
 
-Em todos os caminhos (realinhamento BP, substituição VS, mode regenerate do brand profiler), a regra é:
+A regra de persistência varia por caminho. O princípio comum é: inferir ANTES de mutar. O que muda é o tipo de operação no banco:
 
-1. Executar inferência/geração primeiro
-2. SOMENTE após sucesso: marcar registro anterior como outdated/archived
-3. Inserir/ativar novo registro com status synced/active
-4. Se o insert falhar: restaurar registro anterior para synced/active
+**text_only/logo (realinhamento):**
+1. Executar inferência primeiro
+2. SOMENTE após sucesso: marcar perfil anterior como outdated
+3. INSERIR novo perfil com status synced
+4. Se o insert falhar: restaurar anterior para synced
+5. Inferência falha: anterior NÃO marcado como outdated
 
-Isto resolve o bug atual do `realign/route.ts` (marca outdated antes do insert, sem rollback) e do `brand-profiler.ts` (`markPreviousSyncedOutdated` antes do insert).
+**VS sensível (realinhamento com mesmo visual_signature_id):**
+1. Executar inferência (mode:'regenerate') primeiro
+2. UPDATE do BP existente (mesmo visual_signature_id) — sem mudar status, sem INSERT
+3. Se o update falhar: registro anterior permanece synced e intacto
+4. Não há restauração porque não houve mudança de status
+
+**Substituição crítica (nova visual_signature_id):**
+1. Gerar nova VS
+2. Archive/activate conforme fluxo de aprovação (Tier 1)
+3. INSERIR novo BP com status synced (novo visual_signature_id, índice único não conflita)
+4. Se BP falhar: nova VS permanece ativa, BP anterior como fallback
+
+Isto resolve o bug atual do `realign/route.ts` (marca outdated antes do insert, sem rollback) e respeita o índice único `idx_store_brand_profiles_unique_per_signature` em (store_id, visual_signature_id, source).
 
 ### Decisão: DriftCriticalModal com bifurcação crédito/sem crédito
 

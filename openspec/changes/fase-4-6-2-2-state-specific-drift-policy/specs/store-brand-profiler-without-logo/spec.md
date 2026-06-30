@@ -55,9 +55,11 @@ The brand profiler SHALL execute inline after the lojista approves the visual si
 The profiler SHALL accept a mode parameter: 'reuse' | 'regenerate'.
 
 - reuse (current, default): searches existing profile by visual_signature_id and returns if found. Current behavior unchanged.
-- regenerate: ignores existing profile cache, re-infers all brand fields. Preserves content_used, visual_signature_id, and existing VS metadata in the BP.
+- regenerate: ignores existing profile cache, re-infers all brand fields, and UPDATES the existing BP (same visual_signature_id) — no INSERT, no new record. Preserves content_used, visual_signature_id, and existing VS metadata in the BP.
 
 The 'regenerate' mode SHALL be used exclusively by VS-sensitive realinhamento (POST /realign when identity_state === 'visual_signature').
+
+NOTE: regenerate uses UPDATE because the unique index (store_id, visual_signature_id, source) for without_logo prevents INSERT of a duplicate record. The existing code already uses UPSERT (brand-profiler.ts:833) — regenerate follows the same pattern.
 
 Processing SHALL be inline (same request) -- no queue, no polling. Status 'processing' is reserved for future queue-based processing.
 
@@ -68,12 +70,12 @@ Processing SHALL be inline (same request) -- no queue, no polling. Status 'proce
 - THEN the existing profile SHALL be returned
 - AND no new inference SHALL be made
 
-#### Scenario: Regenerate mode re-infers without cache
+#### Scenario: Regenerate mode re-infers without cache, updates existing
 
 - WHEN the profiler is invoked with mode:'regenerate'
 - AND an existing profile exists for the visual_signature_id
 - THEN a new inference SHALL be made
-- AND the new profile SHALL replace the existing one
+- AND the existing profile SHALL be updated (UPDATE) — no second record created
 
 #### Scenario: Regenerate mode preserves VS metadata
 

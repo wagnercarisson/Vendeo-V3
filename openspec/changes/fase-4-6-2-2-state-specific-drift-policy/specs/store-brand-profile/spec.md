@@ -49,11 +49,19 @@ The system SHALL expose a POST /api/store/[id]/brand-profile/realign endpoint th
 | logo | Brand Director | BrandDirectorService |
 | visual_signature | Profiler VS mode 'regenerate' | BrandProfilerWithoutLogoService with mode: 'regenerate' |
 
-The endpoint SHALL apply compensation in all three paths:
+The endpoint SHALL apply compensation, with rules that vary by identity_state:
+
+**text_only and logo:**
 1. Inference executed BEFORE any database mutation
 2. Previous profile marked outdated ONLY after successful inference
 3. New profile inserted with status 'synced'
 4. If the insert fails: previous profile restored to 'synced'
+
+**visual_signature (same VS, sensitive drift):**
+1. Inference executed BEFORE any database mutation (mode:'regenerate')
+2. UPDATE the existing BP (same visual_signature_id) — no INSERT, no status change
+3. If the update fails: previous profile remains synced and intact
+4. No restore needed — no status was changed
 
 The system SHALL never have two records with status 'synced' for the same store.
 
@@ -116,12 +124,13 @@ In the visual_signature path the endpoint SHALL:
 - AND the new profile insert fails
 - THEN the previous profile SHALL be restored to synced
 
-#### Scenario: Compensation in VS path -- insert fails
+#### Scenario: Compensation in VS path -- update fails
 
 - WHEN BrandProfilerWithoutLogo mode:'regenerate' succeeds
-- AND the previous synced profile is marked outdated
-- AND the new profile insert fails
-- THEN the previous profile SHALL be restored to synced
+- AND the existing BP (same visual_signature_id) is updated
+- AND the update fails
+- THEN the previous profile SHALL remain synced and intact
+- AND no second BP record SHALL be created
 
 #### Scenario: Failed inference -- previous profile NOT marked outdated
 

@@ -38,11 +38,13 @@
 ### Onda 4 — Realinhamento sensível por identity_state com compensação
 
 - [ ] 4.1 `src/app/api/store/[id]/brand-profile/realign/route.ts`: implementar estratégia por identity_state (text_only → BrandTextOnlyInferenceService; logo → BrandDirectorService; visual_signature → BrandProfilerWithoutLogoService)
-- [ ] 4.2 `src/app/api/store/[id]/brand-profile/realign/route.ts`: implementar compensação — inferir ANTES de mutar; marcar outdated APÓS inferência; restaurar synced se insert falhar
+- [ ] 4.2 `src/app/api/store/[id]/brand-profile/realign/route.ts`: implementar compensação heterogênea:
+  - text_only/logo: inferir ANTES de mutar; marcar outdated APÓS inferência; INSERT novo; restaurar synced se insert falhar
+  - VS sensível: inferir (mode:'regenerate') ANTES de mutar; UPDATE do BP existente (mesmo visual_signature_id); se update falhar, anterior permanece synced e intacto
 - [ ] 4.3 `src/app/api/store/[id]/brand-profile/realign/route.ts`: no caminho visual_signature, ler content_used da VS metadata (não do perfil anterior)
-- [ ] 4.4 `src/lib/visual-signature/brand-profiler.ts`: adicionar `mode: 'reuse' | 'regenerate'`; 'regenerate' ignora cache, re-infere todos os campos, preserva content_used + visual_signature_id
-- [ ] 4.5 TypeScript check + testes: compensação nos 3 caminhos (text_only, logo, VS); mode regenerate re-infere sem cache; falha não marca outdated
-- [ ] 4.6 Smoke test: VS + drift sensível → realinhar → VS preservada + BP atualizado; falha de insert → BP anterior restaurado
+- [ ] 4.4 `src/lib/visual-signature/brand-profiler.ts`: adicionar `mode: 'reuse' | 'regenerate'`; 'regenerate' ignora cache, re-infere todos os campos, atualiza (UPDATE) o BP existente preservando content_used + visual_signature_id
+- [ ] 4.5 TypeScript check + testes: compensação nos 3 caminhos (text_only: INSERT; logo: INSERT; VS: UPDATE); mode regenerate re-infere sem cache; falha não marca outdated; UPDATE de VS não cria segundo registro
+- [ ] 4.6 Smoke test: VS + drift sensível → realinhar → VS preservada + BP atualizado (UPDATE, não INSERT); falha de update → BP anterior synced intacto
 - [ ] **Gate:** TypeScript, lint, build, testes automatizados, smoke test manual — todos verdes. Bloquear avanço se algum falhar.
 
 ### Onda 5 — Backend substituição crítica
