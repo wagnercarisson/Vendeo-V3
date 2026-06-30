@@ -29,7 +29,8 @@ type ApprovalState =
   | { phase: "review"; signatures: ReviewSignature[]; canGenerate: boolean }
   | { phase: "exhausted"; signatures: ReviewSignature[] }
   | { phase: "error"; message: string; drift?: { fields: string[]; reason: string; requires_regeneration: boolean } }
-  | { phase: "done"; logoStatus: string; signatureUrl?: string; brandProfile?: unknown; inferredPrimaryColor?: string; inferredAccentColor?: string; logoColorsDetected?: string[] };
+  | { phase: "done"; logoStatus: string; signatureUrl?: string; brandProfile?: unknown; inferredPrimaryColor?: string; inferredAccentColor?: string; logoColorsDetected?: string[] }
+  | { phase: "bp_failed"; message: string; signatureUrl?: string; brandProfileData?: Record<string, unknown> | null; logoStatus?: string };
 
 interface VisualSignatureApprovalModalProps {
   isOpen: boolean;
@@ -47,6 +48,7 @@ interface VisualSignatureApprovalModalProps {
   uf?: string;
   initialAttempt?: number;
   hasActiveSignatureDrift?: boolean;
+  mode?: 'standard' | 'substitution';
   onComplete: (result: { 
     logoStatus: string; 
     signatureUrl?: string;
@@ -65,6 +67,7 @@ interface VisualSignatureApprovalModalProps {
     } | null;
   }) => void;
   onRemove?: () => void;
+  onTier2Retry?: () => Promise<void>;
 }
 
 export function VisualSignatureApprovalModal({
@@ -83,8 +86,10 @@ export function VisualSignatureApprovalModal({
   uf: _uf,
   initialAttempt: _initialAttempt,
   hasActiveSignatureDrift,
+  mode = 'standard',
   onComplete,
   onRemove,
+  onTier2Retry,
 }: VisualSignatureApprovalModalProps) {
   const [state, setState] = useState<ApprovalState>({ phase: "checking" });
   const [feedbackText, setFeedbackText] = useState("");
@@ -118,10 +123,18 @@ export function VisualSignatureApprovalModal({
       const url = `/api/store/${storeId}/visual-signature/generate-without-logo`;
       console.log(`[VisualSignatureApprovalModal][req-${reqId}] fetch POST ${url}`);
 
+      const body: Record<string, unknown> = {};
+      if (mode === 'substitution') {
+        body.mode = 'substitution';
+      }
+      if (rejectionContext) {
+        body.rejectionContext = rejectionContext;
+      }
+
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(rejectionContext ? { rejectionContext } : {}),
+        body: JSON.stringify(body),
         signal: controller.signal,
       });
 
@@ -172,6 +185,13 @@ export function VisualSignatureApprovalModal({
 
     if (state.phase === "checking" && !initCheckRef.current) {
       initCheckRef.current = true;
+
+      if (mode === 'substitution') {
+        console.log(`[VisualSignatureApprovalModal] substitution mode — starting generation directly`);
+        generate();
+        return;
+      }
+
       console.log(`[VisualSignatureApprovalModal] checking existing signatures for store ${storeId}`);
 
       if (hasActiveSignatureDrift && !driftDismissedRef.current) {
@@ -207,7 +227,7 @@ export function VisualSignatureApprovalModal({
           generate();
         });
     }
-  }, [isOpen, state.phase, storeId, generate, hasActiveSignatureDrift]);
+  }, [isOpen, state.phase, storeId, generate, hasActiveSignatureDrift, mode]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -265,10 +285,15 @@ export function VisualSignatureApprovalModal({
     setState({ phase: "approving" });
 
     try {
+      const approveBody: Record<string, unknown> = { signatureId: state.signatureId };
+      if (mode === 'substitution') {
+        approveBody.mode = 'substitution';
+      }
+
       const res = await fetch(`/api/store/${storeId}/visual-signature/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ signatureId: state.signatureId }),
+        body: JSON.stringify(approveBody),
       });
 
       const data = await res.json();
@@ -278,6 +303,18 @@ export function VisualSignatureApprovalModal({
           phase: "error",
           message: data.error || "Falha ao aprovar assinatura",
           ...(data.drift ? { drift: data.drift } : {}),
+        });
+        return;
+      }
+
+      // In substitution mode, check for Tier 2 brand-profile failure
+      if (mode === 'substitution' && data.bp_status === 'failed') {
+        setState({
+          phase: "bp_failed",
+          message: "O perfil de marca não pôde ser gerado. Você pode tentar novamente.",
+          signatureUrl: data.signature?.assetUrl,
+          brandProfileData: data.brandProfileData ?? null,
+          logoStatus: "generated",
         });
         return;
       }
@@ -302,16 +339,21 @@ export function VisualSignatureApprovalModal({
     } catch {
       setState({ phase: "error", message: "Erro de conexão. Tente novamente." });
     }
-  }, [state, storeId, onComplete]);
+  }, [state, storeId, mode, onComplete]);
 
   const handleApproveExhausted = useCallback(async (signatureId: string) => {
     setState({ phase: "approving" });
 
     try {
+      const approveBody: Record<string, unknown> = { signatureId };
+      if (mode === 'substitution') {
+        approveBody.mode = 'substitution';
+      }
+
       const res = await fetch(`/api/store/${storeId}/visual-signature/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ signatureId }),
+        body: JSON.stringify(approveBody),
       });
 
       const data = await res.json();
@@ -321,6 +363,17 @@ export function VisualSignatureApprovalModal({
           phase: "error",
           message: data.error || "Falha ao aprovar assinatura",
           ...(data.drift ? { drift: data.drift } : {}),
+        });
+        return;
+      }
+
+      if (mode === 'substitution' && data.bp_status === 'failed') {
+        setState({
+          phase: "bp_failed",
+          message: "O perfil de marca não pôde ser gerado. Você pode tentar novamente.",
+          signatureUrl: data.signature?.assetUrl,
+          brandProfileData: data.brandProfileData ?? null,
+          logoStatus: "generated",
         });
         return;
       }
@@ -345,7 +398,7 @@ export function VisualSignatureApprovalModal({
     } catch {
       setState({ phase: "error", message: "Erro de conexão. Tente novamente." });
     }
-  }, [storeId, onComplete]);
+  }, [storeId, mode, onComplete]);
 
   const handleRealignActive = useCallback(() => {
     setState({
@@ -373,6 +426,22 @@ export function VisualSignatureApprovalModal({
     generate();
   }, [generate]);
 
+  const handleRetryBP = useCallback(async () => {
+    if (onTier2Retry) {
+      await onTier2Retry();
+    } else {
+      try {
+        await fetch(`/api/store/${storeId}/brand-profile/realign`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+      } catch {
+        // Silent fallback — retry best-effort
+      }
+    }
+    onClose();
+  }, [onTier2Retry, storeId, onClose]);
+
   const handleClose = useCallback(() => {
     if (state.phase === "done") {
       onClose();
@@ -386,6 +455,20 @@ export function VisualSignatureApprovalModal({
   const renderContent = () => {
     switch (state.phase) {
       case "checking":
+        return (
+          <div className="flex flex-col items-center justify-center py-16 gap-4">
+            <Loader2 className="w-10 h-10 animate-spin text-accent-green" />
+            <p className="text-text-primary font-body text-sm">
+              {mode === 'substitution' ? 'Revalidando dados da loja...' : 'Criando assinatura visual...'}
+            </p>
+            <p className="text-text-muted text-xs font-body">
+              {mode === 'substitution'
+                ? 'Verificando dados atualizados para gerar nova assinatura'
+                : 'Estamos gerando uma identidade visual profissional para sua loja'}
+            </p>
+          </div>
+        );
+
       case "generating":
         return (
           <div className="flex flex-col items-center justify-center py-16 gap-4">
@@ -728,6 +811,41 @@ export function VisualSignatureApprovalModal({
                 Voltar
               </button>
             )}
+          </div>
+        );
+
+      case "bp_failed":
+        return (
+          <div className="flex flex-col items-center justify-center py-8 gap-4">
+            <CheckCircle2 className="w-12 h-12 text-accent-green" />
+            <p className="text-text-primary font-heading font-semibold text-lg">
+              Assinatura visual aprovada!
+            </p>
+            <div className="flex items-start gap-3 bg-amber-900/20 border border-amber-700/30 rounded-lg px-4 py-3 w-full">
+              <AlertCircle className="w-5 h-5 text-accent-amber shrink-0 mt-0.5" />
+              <div>
+                <p className="text-accent-amber text-sm font-heading font-semibold">Perfil de marca pendente</p>
+                <p className="text-text-muted text-xs font-body mt-0.5">
+                  {state.message}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-3 w-full">
+              <button
+                type="button"
+                onClick={handleRetryBP}
+                className="w-full px-4 py-2.5 bg-accent-amber text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200"
+              >
+                Tentar novamente
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200"
+              >
+                Continuar
+              </button>
+            </div>
           </div>
         );
 
