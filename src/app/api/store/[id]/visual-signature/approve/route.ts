@@ -6,7 +6,7 @@ import { updateGenerationEventDecision } from '@/lib/visual-signature/generation
 import { reconcileProfiles } from '@/lib/brand-assets/profile-reconciliation';
 import { IDENTITY_TO_LOGO_STATUS } from '@/lib/constants';
 import { normalizeIntendedPalette } from '@/lib/visual-signature/types';
-import type { VisualSignatureMetadataInputSnapshot, VisualSignatureMetadataArtDirectorOutput, IntendedPalette } from '@/lib/visual-signature/types';
+import type { VisualSignatureMetadataInputSnapshot, VisualSignatureMetadataArtDirectorOutput, VisualSignatureArtDirectorOutput, IntendedPalette } from '@/lib/visual-signature/types';
 import { assertCanTransition, transition } from '@/lib/identity-transitions';
 import { buildStoreProfileInputSnapshot } from '@/lib/snapshot';
 import { revalidateCriticalDrift } from '@/lib/visual-signature/drift-revalidator';

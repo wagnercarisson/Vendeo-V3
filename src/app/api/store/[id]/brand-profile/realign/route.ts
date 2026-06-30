@@ -487,7 +487,7 @@ async function handleVSRealign(
       state: store.state ?? null,
       brandColor: store.brand_color ?? null,
       artDirectorOutput: (() => {
-        const artOut = vsRecord.metadata?.artDirectorOutput as Record<string, unknown> | null ?? {};
+        const artOut = (vsRecord.metadata?.artDirectorOutput as unknown as Record<string, unknown>) ?? {};
         return {
           creative_description: String(artOut.creative_description ?? ''),
           suggested_colors: Array.isArray(artOut.suggested_colors) ? artOut.suggested_colors : [],
