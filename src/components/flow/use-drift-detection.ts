@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { DriftStatus } from "@/lib/drift";
-import { currentVisualState, computeDriftStatus, normalizeSnapshotValue, DRIFT_FIELDS } from "@/lib/drift";
+import { currentVisualState, computeDriftStatus, normalizeSnapshotValue, getDriftPolicy } from "@/lib/drift";
 import type { StoreProfileInputSnapshot } from "@/lib/snapshot";
 import { SNAPSHOT_FIELDS } from "@/lib/snapshot";
 import type { Store } from "@/lib/store";
@@ -19,6 +19,7 @@ function snapshotsEqual(a: StoreProfileInputSnapshot | null, b: StoreProfileInpu
 export function useDriftDetection(
   store: Pick<Store, 'id' | 'segment' | 'subsegment' | 'tone_of_voice' | 'name' | 'positioning' | 'short_description' | 'slogan'> | null,
   profile: Pick<BrandProfileRecord, 'metadata'> | null,
+  identityState: string | null,
   options?: { onRealinhado?: () => void },
 ): {
   driftStatus: DriftStatus
@@ -59,7 +60,8 @@ export function useDriftDetection(
     const inputSnapshot = profile.metadata?.input_snapshot as StoreProfileInputSnapshot | null | undefined;
     const dismissedSnapshot = profile.metadata?.drift_dismissed_snapshot as StoreProfileInputSnapshot | null | undefined;
 
-    const status = computeDriftStatus(snapshot, inputSnapshot, dismissedSnapshot);
+    const sensitiveFields = getDriftPolicy(identityState ?? 'text_only').sensitive;
+    const status = computeDriftStatus(snapshot, inputSnapshot, dismissedSnapshot, sensitiveFields);
     if (status !== prevStatusRef.current) {
       setDriftStatus(status);
       prevStatusRef.current = status;
@@ -67,8 +69,7 @@ export function useDriftDetection(
 
     const driftedFields: string[] = [];
     if (inputSnapshot) {
-      const allFields: readonly string[] = DRIFT_FIELDS;
-      for (const f of allFields) {
+      for (const f of sensitiveFields) {
         if (normalizeSnapshotValue(snapshot[f as keyof StoreProfileInputSnapshot]) !== normalizeSnapshotValue(inputSnapshot[f as keyof StoreProfileInputSnapshot] ?? null)) {
           driftedFields.push(f);
         }

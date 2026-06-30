@@ -8,7 +8,7 @@ import { AlertCircle, CheckCircle2, Loader2, X, Upload, ArrowLeft, Sparkles } fr
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useDriftDetection } from "./use-drift-detection";
-import { currentVisualState, computeDriftStatus } from "@/lib/drift";
+import { currentVisualState, computeDriftStatus, getDriftPolicy } from "@/lib/drift";
 import type { DriftSnapshot } from "@/lib/drift";
 import { DriftDiscreetButton } from "./drift-discreet-button";
 import { DriftDecisionModal } from "./drift-decision-modal";
@@ -138,7 +138,7 @@ export function StoreIdentityForm() {
     realinhar,
     ignorar,
     isRealinhando,
-  } = useDriftDetection(driftStore, driftProfile, {
+  } = useDriftDetection(driftStore, driftProfile, identityState, {
     onRealinhado: () => {
       if (!storeId) return;
       fetch(`/api/store/${storeId}/brand-profile`)
@@ -878,7 +878,8 @@ export function StoreIdentityForm() {
     const driftSnapshot = currentVisualState(driftStore ?? { segment: '', subsegment: '', tone_of_voice: '', name: '', positioning: null, short_description: null, slogan: null });
     const driftInputSnapshot = driftProfile?.metadata?.input_snapshot as DriftSnapshot | null | undefined;
     const driftDismissedSnapshot = driftProfile?.metadata?.drift_dismissed_snapshot as DriftSnapshot | null | undefined;
-    const computedDrift = computeDriftStatus(driftSnapshot, driftInputSnapshot, driftDismissedSnapshot);
+    const driftFields = getDriftPolicy(identityState ?? 'text_only').sensitive;
+    const computedDrift = computeDriftStatus(driftSnapshot, driftInputSnapshot, driftDismissedSnapshot, driftFields);
 
     if (!driftSaveIntercept && computedDrift === 'new') {
       setDriftSaveIntercept(true);
