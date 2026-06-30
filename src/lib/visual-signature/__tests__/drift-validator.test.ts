@@ -156,6 +156,41 @@ describe('validateDrift', () => {
     });
   });
 
+  describe('absent properties in old snapshots', () => {
+    it('city absent from snapshot — skipped, no drift for city', () => {
+      const result = validateDrift(makeInput({
+        input_snapshot: { name: 'Minha Loja', segment: 'alimentacao' },
+        currentStoreData: { ...validStoreData, city: 'Rio de Janeiro' },
+      }));
+      expect(result.has_drift).toBe(false);
+      expect(result.reason).toBe('ok');
+    });
+
+    it('state absent from snapshot — skipped, no drift for state', () => {
+      const result = validateDrift(makeInput({
+        input_snapshot: { name: 'Minha Loja', segment: 'alimentacao' },
+        currentStoreData: { ...validStoreData, state: 'RJ' },
+      }));
+      expect(result.has_drift).toBe(false);
+    });
+
+    it('slogan absent from snapshot — skipped, no drift for slogan', () => {
+      const result = validateDrift(makeInput({
+        input_snapshot: { name: 'Minha Loja', segment: 'alimentacao' },
+        currentStoreData: { ...validStoreData, slogan: 'Slogan novo' },
+      }));
+      expect(result.has_drift).toBe(false);
+    });
+
+    it('all relevant props absent — has_drift: false, reason: ok', () => {
+      const result = validateDrift(makeInput({
+        input_snapshot: { name: 'Minha Loja', segment: 'alimentacao' },
+      }));
+      expect(result.has_drift).toBe(false);
+      expect(result.reason).toBe('ok');
+    });
+  });
+
   describe('snapshot with null values', () => {
     it('city is null in snapshot but not in store — drift only if content_used.city=true', () => {
       const result = validateDrift(makeInput({

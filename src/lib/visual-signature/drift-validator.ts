@@ -4,9 +4,9 @@ export interface DriftValidationInput {
   input_snapshot: {
     name: string;
     segment: string;
-    city: string | null;
-    state: string | null;
-    slogan: string | null;
+    city?: string | null;
+    state?: string | null;
+    slogan?: string | null;
   } | null | undefined;
   content_used: {
     store_name: boolean;
@@ -45,24 +45,53 @@ export function validateDrift(input: DriftValidationInput): DriftValidationResul
   const current = input.currentStoreData;
   const contentUsed = input.content_used;
 
-  if (snapshot.name !== current.name) {
-    driftFields.push('name');
+  // Check each field; skip if property is absent from snapshot (undefined)
+  // to avoid false drift from old snapshots that didn't have certain fields
+
+  let anyCompared = false;
+
+  if (snapshot.name !== undefined) {
+    anyCompared = true;
+    if (snapshot.name !== current.name) {
+      driftFields.push('name');
+    }
   }
 
-  if (snapshot.segment !== current.segment) {
-    driftFields.push('segment');
+  if (snapshot.segment !== undefined) {
+    anyCompared = true;
+    if (snapshot.segment !== current.segment) {
+      driftFields.push('segment');
+    }
   }
 
-  if (contentUsed.city && snapshot.city !== current.city) {
-    driftFields.push('city');
+  if (contentUsed.city && snapshot.city !== undefined) {
+    anyCompared = true;
+    if (snapshot.city !== current.city) {
+      driftFields.push('city');
+    }
   }
 
-  if (contentUsed.state && snapshot.state !== current.state) {
-    driftFields.push('state');
+  if (contentUsed.state && snapshot.state !== undefined) {
+    anyCompared = true;
+    if (snapshot.state !== current.state) {
+      driftFields.push('state');
+    }
   }
 
-  if (contentUsed.slogan && snapshot.slogan !== current.slogan) {
-    driftFields.push('slogan');
+  if (contentUsed.slogan && snapshot.slogan !== undefined) {
+    anyCompared = true;
+    if (snapshot.slogan !== current.slogan) {
+      driftFields.push('slogan');
+    }
+  }
+
+  if (!anyCompared) {
+    return {
+      has_drift: false,
+      fields: [],
+      reason: 'ok',
+      requires_regeneration: false,
+    };
   }
 
   if (driftFields.length > 0) {
