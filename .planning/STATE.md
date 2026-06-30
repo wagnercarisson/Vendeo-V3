@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI + Rendering
 status: active
-stopped_at: Phase 4.6.3.1 — Logo Restore Scope Cleanup (4/4 plans COMPLETE). Próximo: Phase 5 — Review, Adjust & Export.
-last_updated: "2026-06-27T14:25:00.000Z"
+stopped_at: Phase 4.6.3.1 — Logo Restore Scope Cleanup (4/4 plans COMPLETE). Current: Phase 4.6.2.2 — State-Specific Drift Policy (0/7 plans, planning).
+last_updated: "2026-06-30T10:00:00.000Z"
 progress:
-  total_phases: 22
+  total_phases: 23
   completed_phases: 21
-  total_plans: 107
+  total_plans: 114
   completed_plans: 89
-  percent: 83
+  percent: 78
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-25 after v1.0 milestone)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
-**Current focus:** Phase 5 — Review, Adjust & Export (Not yet planned)
+**Current focus:** Phase 4.6.2.2 — State-Specific Drift Policy (Planning — 0/7 plans)
 
 ## Current Position
 
-Phase: 4.6.3.1 — Logo Restore Scope Cleanup (Complete — 4/4 plans)
-Milestone: v1.1 AI + Rendering — EXTENDED (Phase 4.6.3.1 complete. Phase 5 next.)
-Phases complete: 21 of 22 phases (1 pending: 5)
-Next phase: 5 — Review, Adjust & Export (Not yet planned)
+Phase: 4.6.2.2 — State-Specific Drift Policy (Planning — 0/7 plans)
+Milestone: v1.1 AI + Rendering — EXTENDED (Phase 4.6.2.2 inserted between 4.6.2.1 and 4.6.3)
+Phases complete: 21 of 23 phases (2 pending: 4.6.2.2 planning, 5 not yet planned)
+Next phase: 4.6.2.2 — State-Specific Drift Policy (Planning)
 
 | Phase | Status |
 |-------|--------|
@@ -40,8 +40,9 @@ Next phase: 5 — Review, Adjust & Export (Not yet planned)
 | **4.6.6 — Identity Transition** | **Complete (4/4)** |
 | **4.6.7 — User Color Preferences Persistence** | **UAT Complete (8/8 passed)** |
 | **4.6.2.1 — Snapshot Fields Realignment** | **UAT Complete (6/6 passed)** |
+| **4.6.2.2 — State-Specific Drift Policy** | **Planning (0/7)** |
 
-Progress: [████████████░░] 83% (89/107 plans — 18 pending)
+Progress: [████████████░░] 78% (89/114 plans — 25 pending)
 
 ## Performance Metrics
 
@@ -162,19 +163,22 @@ Key decisions (full: 8 decisions in design.md):
 - [x] Execute Phase 4.6.7 — User Color Preferences Persistence (UAT COMPLETE — 8/8 passed, 5/5 plans)
 - [x] Execute Phase 4.6.2.1 — Snapshot Fields Realignment (UAT COMPLETE — 6/6 passed, 3/3 plans)
 - [x] Execute Phase 4.6.3.1 — Logo Restore Scope Cleanup (4/4 plans COMPLETE)
+- [ ] Plan Phase 4.6.2.2 — State-Specific Drift Policy (7 waves, 7 plans) (current)
+- [ ] Execute Phase 4.6.2.2 — State-Specific Drift Policy (after planning)
 - [ ] Plan Phase 5 — Review, Adjust & Export (deferred)
 - [ ] Execute Phase 4.4.1 — run all 6 plans (4 waves) (deferred — historical record)
 
 ## Session Continuity
 
 Last session: 2026-06-29T14:30:00.000Z
-Phase 4.6.3.1 — Logo Restore Scope Cleanup complete (4/4 plans). Próximo: Phase 5 — Review, Adjust & Export.
+Phase 4.6.3.1 — Logo Restore Scope Cleanup complete (4/4 plans). Nova fase 4.6.2.2 inserida entre 4.6.2.1 e 4.6.3.
 
 ## Next Phases
 
 | Phase | Status | Plans |
 |-------|--------|-------|
 | **4.6.2.1 — Snapshot Fields Realignment** | **Complete** | **3/3** |
+| **4.6.2.2 — State-Specific Drift Policy** | **Planning** | **0/7** |
 | **4.6.3.1 — Logo Restore Scope Cleanup** | **Complete** | **4/4** |
 | Phase 4.4.1 — Existing Logo & Store Brand Direction Foundation | Deferred (historical record) | 6 |
 | Phase 5 — Review, Adjust & Export | Not yet planned | 0 |
