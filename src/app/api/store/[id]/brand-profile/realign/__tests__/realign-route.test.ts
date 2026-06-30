@@ -75,6 +75,12 @@ const mockStore = {
   city: null,
   state: null,
   brand_color: '#CC0000',
+  identity_state: 'text_only',
+};
+
+const mockLogoStore = {
+  ...mockStore,
+  identity_state: 'logo',
 };
 
 const mockLogoAsset = {
@@ -283,7 +289,7 @@ describe('POST /api/store/[id]/brand-profile/realign', () => {
 
   it('logo path — returns 200 with profile source=logo_analysis', async () => {
     mockSupabaseFrom.mockImplementation((table: string) => {
-      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'stores') return makeChain({ data: mockLogoStore, error: null });
       if (table === 'store_brand_assets') return makeChain({ data: mockLogoAsset, error: null });
       if (table === 'store_brand_profiles') return makeProfileChain({ data: null, error: null });
       return makeChain({ data: null, error: null });
@@ -298,7 +304,7 @@ describe('POST /api/store/[id]/brand-profile/realign', () => {
 
   it('logo path with storage download — calls BrandDirectorService', async () => {
     mockSupabaseFrom.mockImplementation((table: string) => {
-      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'stores') return makeChain({ data: mockLogoStore, error: null });
       if (table === 'store_brand_assets') return makeChain({ data: mockLogoAsset, error: null });
       if (table === 'store_brand_profiles') return makeProfileChain({ data: null, error: null });
       return makeChain({ data: null, error: null });
@@ -311,7 +317,7 @@ describe('POST /api/store/[id]/brand-profile/realign', () => {
 
   it('logo path inserts profile with selected fields in response', async () => {
     mockSupabaseFrom.mockImplementation((table: string) => {
-      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'stores') return makeChain({ data: mockLogoStore, error: null });
       if (table === 'store_brand_assets') return makeChain({ data: mockLogoAsset, error: null });
       if (table === 'store_brand_profiles') return makeProfileChain({ data: null, error: null });
       return makeChain({ data: null, error: null });
