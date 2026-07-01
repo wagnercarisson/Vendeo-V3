@@ -97,69 +97,67 @@ No new persistence mechanism is needed for accent_color in this phase. The flow 
 
 The detection SHALL follow this algorithm on every Step 2 mount:
 
-```
+`
 1. No brand profile with synced status exists?
    OR input_snapshot is absent?
-   → No drift (silent)
+   -> No drift (silent)
 
-2. currentVisualState deviates from input_snapshot on DRIFT_FIELDS?
-   ├── No → No drift
-   └── Yes → Drift exists
+2. Determine identity_state from activeVsSummary or store:
+   +-- text_only: sensitive fields = getDriftPolicy('text_only').sensitive (7 campos)
+   +-- logo: sensitive fields = getDriftPolicy('logo').sensitive (6 campos, name excluido)
+   +-- visual_signature: sensitive fields = getDriftPolicy('visual_signature').sensitive (4 campos)
+       + critical_drift.status consumed from GET /visual-signature
 
-3. Drift exists + drift_dismissed_snapshot exists
-   + currentVisualState == drift_dismissed_snapshot on DRIFT_FIELDS?
-   → Same drift already dismissed → 'dismissed'
-   (user already chose to ignore this exact drift)
+3. currentVisualState deviates from input_snapshot on sensitive fields?
+   +-- No -> No sensitive drift
+   +-- Yes -> Sensitive drift exists
 
-4. Otherwise:
-   → 'new' (handled by UX layer — see store-identity-ui spec)
-```
+4. Drift exists + drift_dismissed_snapshot exists
+   + currentVisualState == drift_dismissed_snapshot on sensitive fields?
+   -> Same drift already dismissed -> sensitiveStatus = 'dismissed'
 
-String comparison SHALL normalize `null` and `undefined` to empty string for all fields. Comparison SHALL only consider fields in `DRIFT_FIELDS` (4 fields).
+5. Otherwise:
+   -> sensitiveStatus = 'new' (handled by UX layer)
+`
 
-#### Scenario: No drift when snapshot matches store on DRIFT_FIELDS
+String comparison SHALL normalize null and undefined to empty string for all fields. Comparison SHALL only consider the sensitive fields returned by getDriftPolicy(state).sensitive.
 
-- **WHEN** all 4 `DRIFT_FIELDS` in `input_snapshot` match `currentVisualState`
-- **THEN** `driftStatus` SHALL be `none`
+#### Scenario: No drift when snapshot matches store on sensitive fields
 
-#### Scenario: No drift when only positioning differs
+- WHEN all sensitive fields from getDriftPolicy(state).sensitive in input_snapshot match currentVisualState
+- THEN driftStatus SHALL be none
 
-- **WHEN** `currentVisualState.segment` matches `input_snapshot.segment`
-- **AND** `currentVisualState.subsegment` matches `input_snapshot.subsegment`
-- **AND** `currentVisualState.tone_of_voice` matches `input_snapshot.tone_of_voice`
-- **AND** `currentVisualState.name` matches `input_snapshot.name`
-- **AND** `currentVisualState.positioning` differs from `input_snapshot.positioning`
-- **THEN** `driftStatus` SHALL be `none` (positioning is not in DRIFT_FIELDS)
+#### Scenario: Drift detected in logo state only for 6 fields
 
-#### Scenario: Drift detected when segment differs
+- WHEN identity_state is 'logo'
+- AND currentVisualState.name differs from input_snapshot.name
+- THEN driftStatus SHALL be none (name is not in getDriftPolicy('logo').sensitive)
+- AND logo.status change does NOT trigger drift for name
 
-- **WHEN** `currentVisualState.segment` is `"mercados-mercearias"`
-- **AND** `input_snapshot.segment` is `"moda-feminina"`
-- **THEN** `driftStatus` SHALL be `new`
+#### Scenario: Sensitive drift detected when subsegment differs in VS state
 
-#### Scenario: Drift NOT detected when only brand_color differs
-
-- **WHEN** all 4 `DRIFT_FIELDS` match between `currentVisualState` and `input_snapshot`
-- **AND** only `stores.brand_color` would have differed under the old system
-- **THEN** `driftStatus` SHALL be `none` (brand_color is not in DRIFT_FIELDS)
+- WHEN identity_state is 'visual_signature'
+- AND currentVisualState.subsegment differs from input_snapshot.subsegment
+- THEN sensitive drift SHALL be detected (subsegment is in getDriftPolicy('visual_signature').sensitive)
+- AND critical_drift.status SHALL come from GET /visual-signature (segment is critical, not sensitive, in VS state)
 
 #### Scenario: Dismissed drift shows discreet status
 
-- **WHEN** `driftStatus` would be `new` (store differs from snapshot on DRIFT_FIELDS)
-- **AND** `drift_dismissed_snapshot` equals `currentVisualState` on all 4 `DRIFT_FIELDS`
-- **THEN** `driftStatus` SHALL be `dismissed`
+- WHEN driftStatus would be new (store differs from snapshot on sensitive fields)
+- AND drift_dismissed_snapshot equals currentVisualState on all sensitive fields
+- THEN driftStatus SHALL be dismissed
 
 #### Scenario: Dismissed drift re-triggers on new change
 
-- **WHEN** `driftStatus` was `dismissed`
-- **AND** user changes `tone_of_voice` in the form and saves
-- **THEN** on next mount, `driftStatus` SHALL be `new` again (store ≠ drift_dismissed_snapshot on DRIFT_FIELDS)
+- WHEN driftStatus was dismissed
+- AND user changes a sensitive field in the form and saves
+- THEN on next mount, driftStatus SHALL be new again (store != drift_dismissed_snapshot on sensitive fields)
 
 #### Scenario: Drift resolves automatically on revert
 
-- **WHEN** `driftStatus` was `new` or `dismissed`
-- **AND** user reverts store fields to match `input_snapshot` on all `DRIFT_FIELDS`
-- **THEN** on next mount, `driftStatus` SHALL be `none`
+- WHEN driftStatus was new or dismissed
+- AND user reverts store fields to match input_snapshot on all sensitive fields
+- THEN on next mount, driftStatus SHALL be none
 
 ### Requirement: No drift for new stores
 

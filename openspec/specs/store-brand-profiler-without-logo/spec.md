@@ -37,7 +37,8 @@ The Store Brand Profiler SHALL consume the following inputs:
    - `asset_url` (approved visual signature URL)
    - `reference_card_url` (if generated)
 3. **`intendedPalette: IntendedPalette | null`** — the declared color palette from `signature.metadata.artDirectorOutput.intended_palette`. Null for retry or pre-fase-4.6.5 signatures.
-4. **`previousBrandColors: string[]`** — `brand_colors_chosen` from the previous synced profile, only when `manual_color_override.enabled === true`. Empty array otherwise.
+4. **`previousBrandColors: string[]`** — `brand_colors_chosen` from the previous synced profile, only when `brand_colors_chosen` has at least one valid HEX. Empty array otherwise.
+5. **`mode: 'reuse' | 'regenerate'`** — controls profile cache behavior
 
 The profiler SHALL use creative metadata as the primary source for brand inference.
 
@@ -45,7 +46,7 @@ The profiler SHALL use creative metadata as the primary source for brand inferen
 
 - **WHEN** the brand profiler is invoked
 - **THEN** it SHALL receive store cadastral data AND the Store Identity Art Director's approved outputs
-- **AND** SHALL receive `intendedPalette` and `previousBrandColors` when available
+- **AND** SHALL receive `intendedPalette`, `previousBrandColors`, and `mode` when available
 - **AND** SHALL use creative metadata as primary input
 
 #### Scenario: Without reference card
@@ -59,6 +60,11 @@ The profiler SHALL use creative metadata as the primary source for brand inferen
 - **WHEN** the brand profiler is invoked for a retry (prompt simplificado) or pre-fase-4.6.5 signature
 - **THEN** `intendedPalette` SHALL be `null`
 - **AND** the profiler SHALL fall back to heuristic classification — vision called for semantic analysis only (no color arbitration)
+
+#### Scenario: Mode defaults to reuse
+
+- **WHEN** the brand profiler is invoked without explicit mode
+- **THEN** mode SHALL default to 'reuse'
 
 ### Requirement: Brand profiler output
 
@@ -142,7 +148,40 @@ The brand profiler SHALL execute inline after the lojista approves the visual si
 5. Brand profile persisted with source `without_logo`, status `synced` (or `failed` on error)
 6. Previous brand profile, if any, SHALL be marked as `outdated` only when the new profile is successfully created with status = `synced`. If the new profile fails, the previous `synced` profile SHALL remain unchanged.
 
+The profiler SHALL accept a mode parameter: `'reuse' | 'regenerate'`.
+
+- `reuse` (current, default): searches existing profile by `visual_signature_id` and returns if found. Current behavior unchanged.
+- `regenerate`: ignores existing profile cache, re-infers all brand fields. Persistence follows 3 branches based on BP state:
+  - **Branch A (BP synced)**: UPDATE existing BP — no INSERT, no duplicate
+  - **Branch B (BP failed/outdated + fallback synced)**: mark fallback outdated → UPDATE target to synced → restore fallback if fail
+  - **Branch C (BP does not exist / Tier 2 never generated)**: mark fallback outdated (if exists) → INSERT new BP → restore fallback if fail
+  Preserves `content_used`, `visual_signature_id`, and existing VS metadata in the BP.
+
+The `'regenerate'` mode SHALL be used exclusively by VS-sensitive realinhamento (`POST /realign` when `identity_state === 'visual_signature'`).
+
+NOTE: The unique index `(store_id, visual_signature_id, source)` for `without_logo` prevents INSERT duplicates when a BP already exists for the same VS. Branch A and B use UPDATE for this reason; only Branch C (no existing BP) performs INSERT.
+
 Processing SHALL be inline (same request) — no queue, no polling. Status `processing` is reserved for future queue-based processing.
+
+#### Scenario: Reuse mode returns existing profile (unchanged)
+
+- **WHEN** the profiler is invoked with mode:'reuse'
+- **AND** an existing profile exists for the visual_signature_id
+- **THEN** the existing profile SHALL be returned
+- **AND** no new inference SHALL be made
+
+#### Scenario: Regenerate mode re-infers without cache, updates existing
+
+- **WHEN** the profiler is invoked with mode:'regenerate'
+- **AND** an existing profile exists for the visual_signature_id
+- **THEN** a new inference SHALL be made
+- **AND** the existing profile SHALL be updated (UPDATE) — no second record created
+
+#### Scenario: Regenerate mode preserves VS metadata
+
+- **WHEN** the profiler is invoked with mode:'regenerate'
+- **THEN** `content_used` from the existing VS metadata SHALL be preserved
+- **AND** `visual_signature_id` SHALL be preserved in the new profile
 
 #### Scenario: Profile created as synced on success
 
