@@ -129,8 +129,9 @@ export function StorePreview({ name, segment, brandColor, accentColor, brandColo
             if (effectiveStatus !== 'new') return null;
 
             const isCritical = criticalDrift?.status === 'new';
+            const fieldLabels: Record<string, string> = { name: 'nome', segment: 'segmento', slogan: 'slogan', city: 'cidade', state: 'estado' };
             const tooltipText = isCritical
-              ? `Dados críticos alterados: ${criticalDrift?.fields?.join(', ') || 'nome, segmento'}`
+              ? `Dados críticos alterados: ${criticalDrift?.fields?.map(f => fieldLabels[f] ?? f).join(', ') || 'nome, segmento'}`
               : 'Direção visual desatualizada';
 
             return (

@@ -87,7 +87,7 @@ export function useDriftDetection(
 
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [store?.id, identityState]);
+  }, [store?.id, identityState, store?.name, store?.segment, store?.slogan, store?.city, store?.state]);
 
   useEffect(() => {
     if (!store || !store.id) {
