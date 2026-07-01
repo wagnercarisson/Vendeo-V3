@@ -31,13 +31,14 @@ export function useDriftDetection(
   store: Pick<Store, 'id' | 'segment' | 'subsegment' | 'tone_of_voice' | 'name' | 'positioning' | 'short_description' | 'slogan'> | null,
   profile: Pick<BrandProfileRecord, 'metadata'> | null,
   identityState: string | null,
-  options?: { onRealinhado?: () => void; onDriftDismissed?: () => void },
+  options?: { onRealinhado?: () => void; onDriftDismissed?: () => void; refreshKey?: number },
 ): {
   driftStatus: DriftStatus
   currentSnapshot: StoreProfileInputSnapshot | null
   driftCategory: DriftCategory
   criticalDrift: CriticalDriftInfo | null
   activeVsSummary: ActiveVsSummary | null
+  totalGeneratedSignatures: number
   dismissCriticalDrift: () => Promise<void>
   realinhar: () => Promise<Record<string, unknown> | void>
   ignorar: () => Promise<void>
@@ -49,6 +50,7 @@ export function useDriftDetection(
   const [driftCategory, setDriftCategory] = useState<DriftCategory>('none');
   const [criticalDrift, setCriticalDrift] = useState<CriticalDriftInfo | null>(null);
   const [activeVsSummary, setActiveVsSummary] = useState<ActiveVsSummary | null>(null);
+  const [totalGeneratedSignatures, setTotalGeneratedSignatures] = useState(0);
 
   const prevSnapshotRef = useRef<StoreProfileInputSnapshot | null>(null);
   const prevStatusRef = useRef<DriftStatus>('none');
@@ -70,7 +72,8 @@ export function useDriftDetection(
         return res.json();
       })
       .then(data => {
-        const active = (data.signatures ?? []).find((s: Record<string, unknown>) => s.status === 'active') ?? null;
+        const sigs: Record<string, unknown>[] = data.signatures ?? [];
+        const active = sigs.find(s => s.status === 'active') ?? null;
         const summary: ActiveVsSummary | null = active
           ? {
               id: active.id as string,
@@ -80,6 +83,10 @@ export function useDriftDetection(
           : null;
         setActiveVsSummary(summary);
         setCriticalDrift(summary?.critical_drift ?? null);
+        // Count valid generated signatures: ai_generated + automatic_generated, excluding failed
+        const validTypes = new Set(['ai_generated', 'automatic_generated']);
+        const count = sigs.filter(s => validTypes.has(s.type as string) && s.status !== 'failed').length;
+        setTotalGeneratedSignatures(count);
       })
       .catch(() => {
         // Swallow abort errors from component unmount
@@ -87,7 +94,7 @@ export function useDriftDetection(
 
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [store?.id, identityState, store?.name, store?.segment, store?.slogan, store?.city, store?.state]);
+  }, [store?.id, identityState, store?.name, store?.segment, store?.slogan, store?.city, store?.state, options?.refreshKey]);
 
   useEffect(() => {
     if (!store || !store.id) {
@@ -186,6 +193,7 @@ export function useDriftDetection(
     driftCategory,
     criticalDrift,
     activeVsSummary,
+    totalGeneratedSignatures,
     dismissCriticalDrift,
     realinhar,
     ignorar,

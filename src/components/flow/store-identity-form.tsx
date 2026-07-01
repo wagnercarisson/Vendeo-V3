@@ -105,6 +105,7 @@ export function StoreIdentityForm() {
   const [driftNavIntercept, setDriftNavIntercept] = useState(false);
   const [pendingNavUrl, setPendingNavUrl] = useState('');
   const [showRemoveLogoDialog, setShowRemoveLogoDialog] = useState(false);
+  const [driftRefreshKey, setDriftRefreshKey] = useState(0);
   const [inferredProfile, setInferredProfile] = useState<{
     safe_color_tokens?: Record<string, string>;
     visual_style?: string;
@@ -139,11 +140,13 @@ export function StoreIdentityForm() {
     driftStatus,
     driftCategory,
     criticalDrift,
+    totalGeneratedSignatures,
     dismissCriticalDrift,
     realinhar,
     ignorar,
     isRealinhando,
   } = useDriftDetection(driftStore, driftProfile, identityState, {
+    refreshKey: driftRefreshKey,
     onRealinhado: () => {
       if (!storeId) return;
       fetch(`/api/store/${storeId}/brand-profile`)
@@ -810,6 +813,7 @@ export function StoreIdentityForm() {
 
     const saved = await save();
     if (saved || storeId) {
+      setDriftRefreshKey(k => k + 1);
       setStep(2);
       setStep2Success(null);
     }
@@ -1663,7 +1667,7 @@ export function StoreIdentityForm() {
           onOpenChange={setShowDriftCriticalModal}
           storeId={storeId}
           identityState={identityState ?? 'text_only'}
-          canGenerateNewSignature={identityActions.canCreateVS}
+          canGenerateNewSignature={totalGeneratedSignatures < 3}
           onDismissAndSave={async () => {
             try {
               await dismissCriticalDrift();
