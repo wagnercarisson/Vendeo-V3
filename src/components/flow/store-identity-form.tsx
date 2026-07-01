@@ -517,8 +517,9 @@ export function StoreIdentityForm() {
         setBrandColorsChosen(brandProfileData.brand_colors_chosen ?? []);
       }
     }
+    setDriftRefreshKey(k => k + 1);
     setShowApprovalModal(false);
-  }, [setField, formData.brand_color, setIdentityState, setInferredProfile]);
+  }, [setField, formData.brand_color, setIdentityState, setInferredProfile, setDriftRefreshKey]);
 
   useEffect(() => {
     if (isLoading || !storeId) return;
