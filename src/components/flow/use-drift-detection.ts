@@ -28,7 +28,7 @@ function snapshotsEqual(a: StoreProfileInputSnapshot | null, b: StoreProfileInpu
 }
 
 export function useDriftDetection(
-  store: Pick<Store, 'id' | 'segment' | 'subsegment' | 'tone_of_voice' | 'name' | 'positioning' | 'short_description' | 'slogan'> | null,
+  store: Pick<Store, 'id' | 'segment' | 'subsegment' | 'tone_of_voice' | 'name' | 'positioning' | 'short_description' | 'slogan' | 'city' | 'state'> | null,
   profile: Pick<BrandProfileRecord, 'metadata'> | null,
   identityState: string | null,
   options?: { onRealinhado?: () => void; onDriftDismissed?: () => void; refreshKey?: number },

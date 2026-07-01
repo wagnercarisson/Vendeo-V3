@@ -134,7 +134,9 @@ export function StoreIdentityForm() {
     positioning: formData.positioning,
     short_description: formData.short_description,
     slogan: formData.slogan,
-  } : null, [storeId, formData.segment, formData.subsegment, formData.tone_of_voice, formData.name, formData.positioning, formData.short_description, formData.slogan]);
+    city: formData.city ?? null,
+    state: formData.state ?? null,
+  } : null, [storeId, formData.segment, formData.subsegment, formData.tone_of_voice, formData.name, formData.positioning, formData.short_description, formData.slogan, formData.city, formData.state]);
 
   const {
     driftStatus,
