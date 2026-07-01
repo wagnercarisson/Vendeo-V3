@@ -148,38 +148,7 @@ export function StoreIdentityForm() {
   } = useDriftDetection(driftStore, driftProfile, identityState, {
     refreshKey: driftRefreshKey,
     onRealinhado: () => {
-      if (!storeId) return;
-      fetch(`/api/store/${storeId}/brand-profile`)
-        .then(res => res.json())
-        .then(profile => {
-          if (profile?.source === 'text_only' && profile?.status === 'synced') {
-            setInferredProfile({
-              safe_color_tokens: profile.safe_color_tokens,
-              visual_style: profile.visual_style,
-              visual_tone: profile.visual_tone,
-              brand_personality: profile.brand_personality,
-              brand_colors_chosen: profile.brand_colors_chosen,
-              inferred_primary_color: profile.inferred_primary_color,
-              inferred_accent_color: profile.inferred_accent_color,
-              metadata: profile.metadata,
-            });
-            if (hasUserChosenColors(profile.brand_colors_chosen ?? [])) {
-              setBrandColorsChosen(profile.brand_colors_chosen);
-              const primary = profile.brand_colors_chosen[0] !== null ? profile.brand_colors_chosen[0] : '';
-              const accent = profile.brand_colors_chosen[1] !== null ? profile.brand_colors_chosen[1] : '';
-              setField("brand_color", primary);
-              setAccentColor(accent || (profile.inferred_accent_color ?? ''));
-            } else if (profile.safe_color_tokens?.primary) {
-              setField("brand_color", profile.safe_color_tokens.primary);
-              setAccentColor(
-                profile.inferred_accent_color
-                ?? profile.safe_color_tokens?.accent
-                ?? ''
-              );
-            }
-          }
-        })
-        .catch(() => {});
+      // Handled inline in DriftDecisionModal.onRealinhar
     },
   });
 
@@ -1632,6 +1601,16 @@ export function StoreIdentityForm() {
                     ?? (profile.inferred_accent_color as string ?? '')
                   );
                 }
+                setInferredProfile({
+                  safe_color_tokens: profile.safe_color_tokens as Record<string, string>,
+                  visual_style: profile.visual_style as string,
+                  visual_tone: profile.visual_tone as string,
+                  brand_personality: profile.brand_personality as string,
+                  brand_colors_chosen: profile.brand_colors_chosen as Array<string | null>,
+                  inferred_primary_color: profile.inferred_primary_color as string,
+                  inferred_accent_color: profile.inferred_accent_color as string,
+                  metadata: profile.metadata as Record<string, unknown>,
+                });
               }
               setShowDriftDecisionModal(false);
               await executeStep2Save();

@@ -812,6 +812,15 @@ export class BrandProfilerWithoutLogoService {
     const metadata: Record<string, unknown> = {
       art_director_output: input.artDirectorOutput,
       asset_url: input.assetUrl,
+      input_snapshot: {
+        segment: input.segment,
+        subsegment: input.subsegment,
+        tone_of_voice: input.tone_of_voice,
+        name: input.storeName,
+        positioning: input.positioning,
+        short_description: input.short_description,
+        slogan: input.slogan,
+      },
     };
     if (colorValidation) {
       metadata.color_validation = colorValidation;
@@ -925,6 +934,15 @@ export class BrandProfilerWithoutLogoService {
     const metadata: Record<string, unknown> = {
       art_director_output: input.artDirectorOutput,
       asset_url: input.assetUrl,
+      input_snapshot: {
+        segment: input.segment,
+        subsegment: input.subsegment,
+        tone_of_voice: input.tone_of_voice,
+        name: input.storeName,
+        positioning: input.positioning,
+        short_description: input.short_description,
+        slogan: input.slogan,
+      },
     };
     if (colorValidation) {
       metadata.color_validation = colorValidation;

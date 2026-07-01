@@ -676,6 +676,7 @@ export function VisualSignatureApprovalModal({
                   </div>
                 </div>
               )}
+              {!showReviewFeedback && (
               <div className="text-center">
                 {hasActive && onRemove ? (
                   <button
@@ -695,6 +696,7 @@ export function VisualSignatureApprovalModal({
                   </button>
                 )}
               </div>
+              )}
             </div>
           </div>
         );
