@@ -88,8 +88,9 @@ export function useDriftDetection(
         const count = sigs.filter(s => validTypes.has(s.type as string) && s.status !== 'failed').length;
         setTotalGeneratedSignatures(count);
       })
-      .catch(() => {
-        // Swallow abort errors from component unmount
+      .catch((err) => {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        console.error('[useDriftDetection] Failed to fetch visual signatures:', err);
       });
 
     return () => controller.abort();
@@ -184,6 +185,9 @@ export function useDriftDetection(
       headers: { "Content-Type": "application/json" },
     });
     if (!res.ok) throw new Error('Erro ao ignorar desalinhamento crítico');
+    const dismissed: CriticalDriftInfo = { status: 'dismissed', fields: [], reason: 'ok' };
+    setCriticalDrift(dismissed);
+    setActiveVsSummary(prev => prev ? { ...prev, critical_drift: dismissed } : null);
     options?.onDriftDismissed?.();
   }, [store?.id, options]);
 

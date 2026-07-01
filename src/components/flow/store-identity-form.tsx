@@ -1671,6 +1671,7 @@ export function StoreIdentityForm() {
           onDismissAndSave={async () => {
             try {
               await dismissCriticalDrift();
+              setDriftRefreshKey(k => k + 1);
               setShowDriftCriticalModal(false);
               await executeStep2Save();
             } catch {
