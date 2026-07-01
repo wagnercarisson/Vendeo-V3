@@ -7,6 +7,7 @@ O botão "Continuar sem logo" / "Continuar sem assinatura" na fase `"error"` do 
 - Substitui `handleContinueWithoutLogo` por `handleCancel` que chama apenas `onClose()` — sem PATCH, sem `onComplete`, sem nova requisição iniciada pelo clique
 - Texto do botão secundário na fase `"error"` muda de "Continuar sem logo/assinatura" para "Cancelar"
 - Em falha de geração com `mode='substitution'`, não altera `logo_status` (VS ativa permanece ativa com status inalterado)
+- Remove rota `PATCH /api/store/[id]/logo-status` — **BREAKING** (quebra de contrato de API interna); endpoint exclusivamente interno, sem consumidores externos conhecidos
 
 ## Capabilities
 
@@ -23,4 +24,4 @@ _Nenhuma._
 
 - **Código modificado**: ~15 linhas no modal + ~5 linhas em `generate-without-logo/route.ts`
 - **Nenhuma migration**, alteração de storage, prompts de IA, ou design system tokens
-- **Nenhum endpoint removido ou criado**
+- **Endpoint removido**: `PATCH /api/store/[id]/logo-status` — **BREAKING** (quebra de contrato interno; qualquer caller não identificado quebra após deploy)

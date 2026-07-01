@@ -9,11 +9,12 @@ O bug em cascata: o PATCH altera `logo_status` no DB sem `identity_state` corres
 **Goals:**
 - Substituir `handleContinueWithoutLogo` por `handleCancel` (apenas `onClose()`) no `VisualSignatureApprovalModal`
 - Atualizar label do botão secundário na fase `"error"` para "Cancelar"
+- Remover rota `PATCH /api/store/[id]/logo-status` após confirmar zero consumidores via grep
+- Proteger `logo_status` contra sobrescrita em falhas de substitution mode
 - Testar que o clique em "Cancelar" não chama `onComplete` nem inicia requisição
 
 **Non-Goals:**
 - Alterar comportamento de exhausted state ou approval standard
-- Remover endpoints ou rotas de API
 - Modificar specs não relacionadas ao botão da fase error ou substitution mode
 
 ## Decisions
@@ -26,6 +27,10 @@ O bug em cascata: o PATCH altera `logo_status` no DB sem `identity_state` corres
 
 O modal usa `state.drift` internamente (não a prop `hasActiveSignatureDrift`) para decidir o label primário. Quando `state.drift` está presente: "Ajustar assinatura". Caso contrário: "Tentar novamente". O botão secundário mantém "Cancelar" em todos os cenários de erro.
 
+### Decisão: Remoção da rota /logo-status com verificação prévia
+
+O endpoint `PATCH /api/store/[id]/logo-status` é interno e seu único caller conhecido é o `handleContinueWithoutLogo` dentro do `VisualSignatureApprovalModal`, que está sendo substituído por `handleCancel`. Antes de remover, confirmar via grep que não há outros consumidores. A remoção é **BREAKING** para qualquer caller não identificado.
+
 ### Decisão: Falha em substitution mode não altera logo_status
 
 Em substitution mode, o erro de geração não deve tocar `logo_status` porque a VS ativa continua existindo. A exceção já existente para storage errors também se aplica: se o erro é de storage, `logo_status` também é preservado. Em standard mode, `logo_status = 'failed'` (exceto storage error) continua correto — a tentativa de criação de VS falhou.
@@ -36,3 +41,4 @@ Em substitution mode, o erro de geração não deve tocar `logo_status` porque a
 |---|---|---|
 | Timeout: cliente (190s) < backend (300s). Cancelar não cancela processamento anterior | Geração prévia pode completar depois, persistindo estado divergente | Documentado. O clique em Cancelar não inicia requisição; não há garantia sobre processamento já em andamento. |
 | Testes do modal são unitários isolados — sem renderização | Cobertura de regressão insuficiente | Incluir infraestrutura de teste comportamental (Testing Library + jsdom) como parte das tasks. |
+| Caller não identificado de `/logo-status` quebra após deploy | Rota removida, caller recebe 404 | Verificação por grep antes da remoção. Se encontrado, caller é incluído no escopo ou remoção é adiada. |

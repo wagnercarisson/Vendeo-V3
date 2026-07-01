@@ -164,7 +164,7 @@ O botão `handleContinueWithoutLogo` viola três princípios:
 2. **Remover `handleContinueWithoutLogo`** — A função é removida do componente. O PATCH para `/logo-status` deixa de existir.
 3. **Remover rota `/logo-status`** — Após confirmar que não há consumidor externo, remover `src/app/api/store/[id]/logo-status/route.ts`. **Premissa:** endpoint exclusivamente interno, sem consumidores externos conhecidos. Sua remoção é uma quebra de contrato da API; qualquer caller não identificado quebrará após o deploy.
 4. **Corrigir `logo_status='failed'` em substitution mode** — No `generate-without-logo/route.ts`, o bloco de falha (linhas 402-408) não deve setar `logo_status='failed'` quando `mode === 'substitution'`, pois a VS ativa continua existindo e `identity_state` permanece `'visual_signature'`.
-5. **Alinhar spec de exhausted state** — Atualizar `openspec/specs/visual-signature-approval/spec.md:199` para refletir o comportamento atual ("Voltar" / "Remover assinatura") em vez de "Continuar sem logo". Isso evita falso positivo em verificação OpenSpec futura.
+<!-- Item removido intencionalmente — exhausted state não pertence ao escopo desta fase; qualquer alinhamento de spec de exhausted state é escopo de fase posterior -->
 
 ### Fora de escopo
 
@@ -173,7 +173,7 @@ O botão `handleContinueWithoutLogo` viola três princípios:
 - Remoção de `text_only_origin` (dormant, sem impacto)
 - `identity-transitions.ts` — inalterado (o problema não está nas transições)
 - `DriftCriticalModal` / `DriftDecisionModal` — inalterados
-- Fluxo de substitution mode — é exceção consciente validada
+- Redesenho do protocolo de substitution mode — fora de escopo; somente a preservação de `logo_status` em falha pertence a esta fase
 
 ### Dívidas técnicas registradas
 
