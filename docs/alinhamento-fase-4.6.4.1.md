@@ -8,7 +8,7 @@
  ├── 4.6.2 — Visual Direction Drift Detection         (concluída)
  ├── 4.6.3 — Logo State Lifecycle                     (concluída)
  ├── 4.6.4 — Visual Signature Lifecycle               (concluída)
- │    └── 4.6.4.1 — Botão "Cancelar" no Modal de VS   ← esta fase
+ │    └── 4.6.4.1 — Botão "Cancelar" no Modal de VS   (concluída)
  ├── 4.6.5 — VS Color Drift & Profile Alignment       (concluída)
  ├── 4.6.6 — Identity Transition                      (concluída)
  └── 4.6.7 — Color Preferences Persistence            (pendente)
@@ -185,14 +185,14 @@ O botão `handleContinueWithoutLogo` viola três princípios:
 
 ### Automáticos
 
-- [ ] TypeScript — sem erros de tipo
-- [ ] Lint — sem violações
-- [ ] Build — `npm run build` passa
-- [ ] Testes existentes — continuam passando
-- [ ] **Cancelar chama `onClose`, não chama `onComplete`, não executa PATCH** — teste unitário/comportamental do modal
-- [ ] **Falha em substitution mode não altera `logo_status`** — teste na rota `generate-without-logo` com `mode=substitution`
-- [ ] **Falha em standard mode continua gravando `failed`** — mesmo teste com `mode=standard`
-- [ ] **Rota `/logo-status` não existe mais** — confirmação após remoção (teste de integração ou verificação manual)
+- [x] TypeScript — sem erros de tipo
+- [x] Lint — sem violações
+- [x] Build — `npm run build` passa
+- [x] Testes existentes — continuam passando (275/275)
+- [x] **Cancelar chama `onClose`, não chama `onComplete`, não executa PATCH** — teste comportamental do modal implementado
+- [x] **Falha em substitution mode não altera `logo_status`** — teste parametrizado na rota `generate-without-logo` com `mode=substitution`
+- [x] **Falha em standard mode continua gravando `failed`** — teste parametrizado com `mode=standard`
+- [x] **Rota `/logo-status` não existe mais** — confirmado via `Test-Path`
 
 ### Manuais (2 cenários)
 
