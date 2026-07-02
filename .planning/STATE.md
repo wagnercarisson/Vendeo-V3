@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI + Rendering
 status: active
-stopped_at: Phase 4.6.4.1 — Cancel Button vs Approval Modal (0/3 plans). Current: Phase 4.6.4.1 — refinement of Visual Signature Lifecycle. Next: Phase 4.6.5 — VS Color Drift & Brand Profile Alignment.
+stopped_at: Phase 4.6.4.1 — Cancel Button vs Approval Modal (3/3 plans). Current: Phase 4.6.4.1 — refinement of Visual Signature Lifecycle (Complete). Next: Phase 5 — Identity-Aware Campaign Briefing (planned).
 last_updated: "2026-07-02T16:50:00.000Z"
 progress:
   total_phases: 24
@@ -20,14 +20,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-25 after v1.0 milestone)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
-**Current focus:** Phase 4.6.4.1 — Cancel Button vs Approval Modal (Complete)
+**Current focus:** Phase 5 — Identity-Aware Campaign Briefing (planned — 3 waves)
 
 ## Current Position
 
 Phase: 4.6.4.1 — Cancel Button vs Approval Modal (Complete — 3/3 plans)
 Milestone: v1.1 AI + Rendering — EXTENDED
-Phases complete: 24 of 27 phases (2 pending: 4.4.1 deferred, Phase 5 not yet planned)
-Next phase: 4.6.5 — VS Color Drift & Brand Profile Alignment
+Phases complete: 24 of 28 phases (2 pending: 4.4.1 deferred, Phase 5 Identity-Aware Campaign Briefing planned, Phase 6 Review/Export deferred)
+Next phase: 5 — Identity-Aware Campaign Briefing
 
 | Phase | Status |
 |-------|--------|
@@ -42,6 +42,7 @@ Next phase: 4.6.5 — VS Color Drift & Brand Profile Alignment
 | 4.6.5 — VS Color Drift & Brand Profile | Complete |
 | 4.6.6 — Identity Transition | Complete |
 | 4.6.7 — User Color Preferences Persistence | Complete |
+| 5. Identity-Aware Campaign Briefing | Planned (3 waves) |
 
 Progress: [████████████████████████] 98% (117/120 plans — 3 pending)
 
@@ -174,13 +175,15 @@ Key decisions:
 
 - [x] Plan Phase 4.6.4.1 — Cancel Button vs Approval Modal (3 plans)
 - [x] Execute Phase 4.6.4.1 — Cancel Button vs Approval Modal (3 plans, UAT 5/5 passed)
+- [x] Plan Phase 5 — Identity-Aware Campaign Briefing (3 plans, 3 waves)
+- [ ] Execute Phase 5 — Identity-Aware Campaign Briefing (pending)
 - [ ] Execute Phase 4.4.1 — Existing Logo & Store Brand Direction Foundation (deferred — historical record)
-- [ ] Plan Phase 5 — Review, Adjust & Export (deferred)
+- [ ] Phase 6 — Review, Adjust & Export (deferred)
 
 ## Session Continuity
 
-Last session: 2026-07-02T16:50:00.000Z
-Phase 4.6.4.1 — Cancel Button vs Approval Modal: OpenSpec alignment → planning → execution → UAT 5/5 passed | 1 issue (drift dismiss persistence) diagnosed and fixed | documentation updated. Next: Phase 4.6.5 — VS Color Drift & Brand Profile Alignment.
+Last session: 2026-07-02T19:13:00.000Z
+Phase 4.6.4.1 — Cancel Button vs Approval Modal: Complete. Phase 5 — Identity-Aware Campaign Briefing: planned with 3 waves based on OpenSpec alignment. Correção de roadmap: Phase 5 redefinida de "Review, Adjust & Export" para "Identity-Aware Campaign Briefing"; "Review, Adjust & Export" movido para Phase 6 (deferred). Next: Execute Phase 5 — Identity-Aware Campaign Briefing.
 
 ## Next Phases
 
@@ -188,7 +191,8 @@ Phase 4.6.4.1 — Cancel Button vs Approval Modal: OpenSpec alignment → planni
 |-------|--------|-------|
 | **4.6.4.1 — Cancel Button vs Approval Modal** | **Complete** | **3/3** |
 | Phase 4.4.1 — Existing Logo & Store Brand Direction Foundation | Deferred (historical record) | 6 |
-| Phase 5 — Review, Adjust & Export | Not yet planned | 0 |
+| **Phase 5 — Identity-Aware Campaign Briefing** | **Planned** | **3 (3 waves)** |
+| Phase 6 — Review, Adjust & Export | Deferred | 0 |
 
 **Phase 4.6.3 scope (from OpenSpec):** Upload com transição transacional e input_snapshot, Remove preservando proveniência, History/Restore com validação de drift, UI Step 2 com 4 cenários. BrandDirector error notification + retry implementado nos refinamentos pós-implementação. Ver `docs/alinhamento-fase-4.6.3.md` para alinhamento completo.
 
