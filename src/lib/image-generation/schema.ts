@@ -5,11 +5,8 @@ import { z } from "zod";
 // productImageDataUrl is required — Phase 4.3 product+offer flow requires it.
 
 export const GenerateImageRequestSchema = z.object({
+  storeId: z.string().uuid(),
   productName: z.string().min(1),
-  storeName: z.string().min(1),
-  storeSegment: z.string().min(1),
-  storeTone: z.string().optional(),
-  brandColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   originalPriceCents: z.number().int().nonnegative().optional(),
   discountedPriceCents: z.number().int().positive(),
   badgeText: z.string().optional(),
@@ -24,24 +21,13 @@ export const GenerateImageRequestSchema = z.object({
   validity: z.string().optional(),
   availabilityNotes: z.string().optional(),
   sensitiveConstraints: z.string().optional(),
-  storeLogoUrl: z.string().optional(),
-  brandProfile: z.object({
-    brand_colors_chosen: z.array(z.string().nullable()).optional(),
-    safe_color_tokens: z.record(z.string()).optional(),
-    visual_style: z.string().nullable().optional(),
-    visual_tone: z.string().nullable().optional(),
-    brand_personality: z.string().nullable().optional(),
-    campaign_guidelines: z.string().nullable().optional(),
-    campaign_brief: z.string().nullable().optional(),
-    logoVariantUrl: z.string().nullable().optional(),
-  }).optional(),
   productImageDataUrl: z.string().min(1, "Imagem do produto é obrigatória"),
   inputValidationOverride: z
     .object({
       productImageCheck: z.literal("user_confirmed_continue").optional(),
     })
     .optional(),
-});
+}).strict();
 
 export type GenerateImageRequest = z.infer<typeof GenerateImageRequestSchema>;
 

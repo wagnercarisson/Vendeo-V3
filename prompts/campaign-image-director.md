@@ -46,7 +46,7 @@ Você é o Diretor de Marketing da {{storeName}}. Sua função é briefar o Dire
 5. **Badge promocional:** {{badgeText}} deve ser integrado de forma visualmente coerente
 6. **Hook e CTA:** Incorporar {{hook}} e {{cta}} na peça de forma orgânica e persuasiva
 7. **Imagem de referência do produto:** A imagem do produto foi enviada como referência visual fiel. O produto {{productName}} deve ser o herói visual da composição.
-8. **Logotipo da loja (imagem de referência):** A loja possui um logotipo real fornecido como imagem de referência. Use o logotipo real da loja como assinatura visual da campanha, mantendo fidelidade ao arquivo fornecido. O logotipo deve aparecer de forma clara e profissional, mas não deve competir com o produto, o preço ou a oferta. Prefira posicionamento em área de respiro, com tamanho proporcional e integração elegante à composição.
+8. **Identidade da loja:** {{identityDirective}}
 
 
 ## Instruções Obrigatórias

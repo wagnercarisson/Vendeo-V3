@@ -1,5 +1,8 @@
 import type { CampaignSpec } from "@/lib/campaign-intelligence/schema";
 import type { VisualSignatureType } from "@/lib/visual-signature/types";
+import type { GenerateImageRequest } from "@/lib/image-generation/schema";
+
+export type IdentityState = 'text_only' | 'logo' | 'visual_signature';
 
 export interface BrandProfileSnapshot {
   brand_colors_chosen: Array<string | null>;
@@ -9,16 +12,17 @@ export interface BrandProfileSnapshot {
   brand_personality: string | null;
   campaign_guidelines: string | null;
   campaign_brief: string | null;
-  logoVariantUrl: string | null;
 }
 
 export interface StoreIdentitySnapshot {
   storeName: string;
   storeSegment: string;
   brandColor: string;
-  logoUrl: string | null;
-  visualSignatureUrl: string | null;
-  visualSignatureType: VisualSignatureType | null;
+  identityState: IdentityState;
+  signature: {
+    url: string | null;
+    type: 'logo' | 'visual_signature' | null;
+  };
   storeInitials: string;
   brandProfile: BrandProfileSnapshot | null;
   toneOfVoice: string | null;
@@ -26,6 +30,28 @@ export interface StoreIdentitySnapshot {
   positioning: string | null;
   shortDescription: string | null;
   slogan: string | null;
+}
+
+export type CampaignInput = Omit<GenerateImageRequest, 'storeId'>;
+
+export interface CampaignBrief {
+  campaignInput: CampaignInput;
+  store: {
+    name: string;
+    segment: string;
+    subsegment: string | null;
+    toneOfVoice: string | null;
+    positioning: string | null;
+    shortDescription: string | null;
+    slogan: string | null;
+    brandColor: string;
+  };
+  brandProfile: BrandProfileSnapshot | null;
+  identity: {
+    state: IdentityState;
+    imageUrl: string | null;
+    directive: string;
+  };
 }
 
 export interface PreviewPayload {

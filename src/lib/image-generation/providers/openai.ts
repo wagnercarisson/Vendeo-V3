@@ -72,8 +72,8 @@ export class OpenAIImageProvider implements ImageProvider {
         content.push({ type: "input_image" as const, image_url: input.productImageDataUrl, detail: "auto" as const });
       }
 
-      if (input.logoImageUrl) {
-        content.push({ type: "input_image" as const, image_url: input.logoImageUrl, detail: "low" as const });
+      if (input.identityImageUrl) {
+        content.push({ type: "input_image" as const, image_url: input.identityImageUrl, detail: "low" as const });
       }
 
       const response = await openai.responses.create({
@@ -206,6 +206,24 @@ export class OpenAIImageProvider implements ImageProvider {
     const imageFile = await toFile(imageBuffer, `product.${extension}`, {
       type: mimeType,
     });
+
+    // Fetch identity image for fallback — already validated by validateIdentityReference
+    let identityFile: File | undefined;
+    if (input.identityImageUrl) {
+      try {
+        const identityResponse = await fetch(input.identityImageUrl);
+        if (identityResponse.ok) {
+          const identityBuffer = Buffer.from(await identityResponse.arrayBuffer());
+          identityFile = await toFile(identityBuffer, 'identity.png', { type: 'image/png' });
+        } else {
+          throw new Error(`HTTP ${identityResponse.status}`);
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(`[fallbackToImageApi] Identity fetch failed — ${message}`);
+        throw new Error("Falha ao carregar imagem de identidade para a geração de fallback. Tente novamente.");
+      }
+    }
 
     // Use a conservative square size for the Image API edit fallback.
     const imageApiSize = "1024x1024";

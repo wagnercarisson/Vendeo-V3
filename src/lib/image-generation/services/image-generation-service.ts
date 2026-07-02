@@ -2,6 +2,7 @@ import { PromptLoader } from "@/lib/image-generation/prompt-loader";
 import { IMAGE_GENERATION_DEBUG, IMAGE_GENERATION_SIZE, IMAGE_GENERATION_GLOBAL_TIMEOUT_MS, IMAGE_GENERATION_RESPONSES_MODEL } from "@/lib/image-generation/config";
 import type { ImageProvider } from "@/lib/image-generation/providers/types";
 import type { GenerateImageRequest, GenerateImageSuccessResponse, GenerationPhase, GenerationPhaseEvent, ValidationContext, InputValidationResult, ImageReviewResult } from "@/lib/image-generation/schema";
+import type { CampaignBrief } from "@/components/campaign/types";
 import { InputValidationService } from "@/lib/image-generation/services/input-validation-service";
 import { ImageReviewService } from "@/lib/image-generation/services/image-review-service";
 import type { ImageReviewInput } from "@/lib/image-generation/services/image-review-service";
@@ -85,11 +86,12 @@ export class ImageGenerationService {
   }
 
   async generateImage(
-    body: GenerateImageRequest,
+    brief: CampaignBrief,
     onPhaseChange?: (event: GenerationPhaseEvent) => void,
     signal?: AbortSignal,
     onMetricsEvent?: (event: GenerationMetricsEvent) => void
   ): Promise<GenerateImageServiceResult> {
+    const body = brief.campaignInput as GenerateImageRequest;
     const startTime = Date.now();
     const remaining = () => IMAGE_GENERATION_GLOBAL_TIMEOUT_MS - (Date.now() - startTime);
     const runId = crypto.randomUUID();
@@ -253,11 +255,11 @@ export class ImageGenerationService {
     const aborted2 = checkAborted();
     if (aborted2) { emitFailed("prompt_assembly", aborted2.message); return abortResult(aborted2); }
 
-    const promptVariables = this.buildPromptVariables(body, effectiveProductName, inferredCategory);
+    const promptVariables = this.buildPromptVariables(body, effectiveProductName, inferredCategory, brief);
 
-    const segmentEntry = STORE_SEGMENTS.find(s => s.value === body.storeSegment);
-    const segmentPersona = segmentEntry?.label ?? body.storeSegment;
-    const promptDetail = `briefing com persona de ${segmentPersona}, categoria inferida: ${inferredCategory ?? body.storeSegment}`;
+    const segmentEntry = STORE_SEGMENTS.find(s => s.value === brief.store.segment);
+    const segmentPersona = segmentEntry?.label ?? brief.store.segment;
+    const promptDetail = `briefing com persona de ${segmentPersona}, categoria inferida: ${inferredCategory ?? brief.store.segment}`;
     emit("prompt_assembly", "complete", undefined, promptDetail);
     emitMetricsEvent("prompt_assembly");
 
@@ -280,8 +282,8 @@ export class ImageGenerationService {
           model: IMAGE_GENERATION_RESPONSES_MODEL,
           attempts,
           effectiveProductName,
-          storeName: body.storeName,
-          storeSegment: body.storeSegment,
+          storeName: brief.store.name,
+          storeSegment: brief.store.segment,
           reviewPassed: false,
           reviewFailureType: "review_failed",
           technicalError: lastReviewIssues.length > 0 ? lastReviewIssues.join("; ") : undefined,
@@ -328,8 +330,8 @@ export class ImageGenerationService {
           model: IMAGE_GENERATION_RESPONSES_MODEL,
           attempts,
           effectiveProductName,
-          storeName: body.storeName,
-          storeSegment: body.storeSegment,
+          storeName: brief.store.name,
+          storeSegment: brief.store.segment,
           reviewPassed: false,
           reviewFailureType: "provider_error",
           technicalError: providerResult.details ?? providerResult.message,
@@ -352,7 +354,7 @@ export class ImageGenerationService {
 
       const reviewInput: ImageReviewInput = {
         productName: effectiveProductName,
-        storeName: body.storeName,
+        storeName: brief.store.name,
         discountedPrice: this.formatPriceBRL(body.discountedPriceCents),
         originalPrice: (body.originalPriceCents ?? 0) > 0
           ? this.formatPriceBRL(body.originalPriceCents ?? 0)
@@ -379,8 +381,8 @@ export class ImageGenerationService {
           elapsedMs: Date.now() - startTime,
           provider: this.imageProvider.name,
           model: IMAGE_GENERATION_RESPONSES_MODEL,
-          hadLogoAsset: !!body.storeLogoUrl,
-          hadBrandProfile: !!body.brandProfile,
+          hadLogoAsset: !!brief.identity.imageUrl,
+          hadBrandProfile: !!brief.brandProfile,
           hadProductImage: !!body.productImageDataUrl,
         });
         emitFailed("quality_review", "Erro na revisão de qualidade.");
@@ -391,8 +393,8 @@ export class ImageGenerationService {
           model: IMAGE_GENERATION_RESPONSES_MODEL,
           attempts,
           effectiveProductName,
-          storeName: body.storeName,
-          storeSegment: body.storeSegment,
+          storeName: brief.store.name,
+          storeSegment: brief.store.segment,
           reviewPassed: false,
           reviewFailureType: "review_error",
           technicalError: message,
@@ -427,8 +429,8 @@ export class ImageGenerationService {
           elapsedMs: Date.now() - startTime,
           provider: this.imageProvider.name,
           model: IMAGE_GENERATION_RESPONSES_MODEL,
-          hadLogoAsset: !!body.storeLogoUrl,
-          hadBrandProfile: !!body.brandProfile,
+          hadLogoAsset: !!brief.identity.imageUrl,
+          hadBrandProfile: !!brief.brandProfile,
           hadProductImage: !!body.productImageDataUrl,
         };
 
@@ -451,8 +453,8 @@ export class ImageGenerationService {
               model: IMAGE_GENERATION_RESPONSES_MODEL,
               attempts,
               effectiveProductName,
-              storeName: body.storeName,
-              storeSegment: body.storeSegment,
+          storeName: brief.store.name,
+          storeSegment: brief.store.segment,
               reviewPassed: false,
               reviewFailureType: "generated_product_mismatch",
               technicalError: lastReviewIssues.join("; "),
@@ -521,8 +523,8 @@ export class ImageGenerationService {
       model: IMAGE_GENERATION_RESPONSES_MODEL,
       attempts,
       effectiveProductName,
-      storeName: body.storeName,
-      storeSegment: body.storeSegment,
+      storeName: brief.store.name,
+      storeSegment: brief.store.segment,
       reviewPassed: true,
       conflictsDetected: metricsConflictsDetected,
       hadOverride: metricsHadOverride,
@@ -720,9 +722,10 @@ export class ImageGenerationService {
   private buildPromptVariables(
     body: GenerateImageRequest,
     effectiveProductName: string,
-    inferredCategory?: string
+    inferredCategory?: string,
+    brief?: CampaignBrief
   ): Record<string, string> {
-    const storeSegment = body.storeSegment;
+    const storeSegment = brief?.store.segment ?? '';
     const effectiveInferredCategory = inferredCategory ?? storeSegment;
     const hasConflict = inferredCategory
       ? this.isSameCategory(inferredCategory, storeSegment)
@@ -741,10 +744,10 @@ export class ImageGenerationService {
 
     return {
       productName: effectiveProductName,
-      storeName: body.storeName,
-      storeSegment: body.storeSegment,
-      storeTone: body.storeTone ?? "profissional",
-      brandColor: body.brandColor,
+      storeName: brief?.store.name ?? '',
+      storeSegment,
+      storeTone: brief?.store.toneOfVoice ?? "profissional",
+      brandColor: brief?.store.brandColor ?? "#22C55E",
       originalPrice: (body.originalPriceCents ?? 0) > 0
         ? this.formatPriceBRL(body.originalPriceCents ?? 0)
         : "",
@@ -760,17 +763,17 @@ export class ImageGenerationService {
       validity: body.validity ?? "",
       availabilityNotes: body.availabilityNotes ?? "",
       sensitiveConstraints: body.sensitiveConstraints ?? "",
-      storeLogoUrl: body.storeLogoUrl ?? "",
+      identityImageUrl: brief?.identity.imageUrl ?? "",
+      identityDirective: brief?.identity.directive ?? "",
 
       // Brand profile context (Phase 4.4.1)
-      brandProfileSection: this.buildBrandProfileSection(body.brandProfile),
-      brandColorsChosen: body.brandProfile?.brand_colors_chosen?.join(', ') ?? '',
-      visualStyle: body.brandProfile?.visual_style ?? '',
-      visualTone: body.brandProfile?.visual_tone ?? '',
-      brandPersonality: body.brandProfile?.brand_personality ?? '',
-      campaignGuidelines: body.brandProfile?.campaign_guidelines ?? '',
-      campaignBrief: body.brandProfile?.campaign_brief ?? '',
-      logoVariantUrl: body.brandProfile?.logoVariantUrl ?? '',
+      brandProfileSection: this.buildBrandProfileSection(brief?.brandProfile ?? null),
+      brandColorsChosen: brief?.brandProfile?.brand_colors_chosen?.join(', ') ?? '',
+      visualStyle: brief?.brandProfile?.visual_style ?? '',
+      visualTone: brief?.brandProfile?.visual_tone ?? '',
+      brandPersonality: brief?.brandProfile?.brand_personality ?? '',
+      campaignGuidelines: brief?.brandProfile?.campaign_guidelines ?? '',
+      campaignBrief: brief?.brandProfile?.campaign_brief ?? '',
 
       // New creative direction variables
       creativePersona,
@@ -864,7 +867,7 @@ export class ImageGenerationService {
         const output = await this.imageProvider.generateImage({
           prompt: promptText,
           productImageDataUrl: body.productImageDataUrl,
-          logoImageUrl: body.storeLogoUrl,
+          identityImageUrl: brief?.identity.imageUrl ?? undefined,
           size: IMAGE_GENERATION_SIZE,
           signal,
           attempt,
@@ -975,8 +978,7 @@ export class ImageGenerationService {
     brand_personality?: string | null;
     campaign_guidelines?: string | null;
     campaign_brief?: string | null;
-    logoVariantUrl?: string | null;
-  }): string {
+  } | null): string {
     if (!brandProfile) return '';
 
     const note = '> **Nota:** Este perfil de marca é contexto criativo direcional para repertório da campanha, não regra obrigatória. Use como referência visual e comercial, preservando seu julgamento criativo na composição.\n';
@@ -1004,10 +1006,6 @@ export class ImageGenerationService {
     if (brandProfile.brand_colors_chosen?.length) {
       rows.push(`| **Cores da marca** | ${brandProfile.brand_colors_chosen.join(', ')} |`);
     }
-    if (brandProfile.logoVariantUrl) {
-      rows.push(`| **Logo variante** | ${brandProfile.logoVariantUrl} |`);
-    }
-
     return rows.length > 2 ? note + rows.join('\n') : '';
   }
 
