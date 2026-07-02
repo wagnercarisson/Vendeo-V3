@@ -298,3 +298,67 @@ describe('POST /api/store/[id]/visual-signature/generate-without-logo — Substi
     expect(body.success).toBe(true);
   });
 });
+
+describe('POST /api/store/[id]/visual-signature/generate-without-logo — Failure path logo_status', () => {
+  function countLogoStatusFailedUpdate(): number {
+    // Collect ALL chain objects returned by mockSupabaseFrom for 'stores' calls
+    const storesChains = mockSupabaseFrom.mock.results
+      .filter((r, i) => mockSupabaseFrom.mock.calls[i]?.[0] === 'stores')
+      .map(r => r.value)
+      .filter(Boolean);
+    let count = 0;
+    for (const chain of storesChains) {
+      if (chain.update?.mock?.calls) {
+        for (const call of chain.update.mock.calls) {
+          if (call[0]?.logo_status === 'failed') count++;
+        }
+      }
+    }
+    return count;
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockInsertGenerationEvent.mockResolvedValue(undefined);
+    mockGetActiveVisualSignature.mockResolvedValue(null);
+  });
+
+  it('substitution failure — logo_status NOT modified', async () => {
+    setupStoreQuery({ data: mockStoreVisualSignature, error: null });
+    mockIdentityDirectorGenerate.mockRejectedValue(new Error('AI generation failed'));
+    mockGetActiveVisualSignature.mockResolvedValue(mockActiveVS);
+    mockRevalidateCriticalDrift.mockReturnValue({
+      hasDrift: true,
+      fields: ['name'],
+      reason: 'critical_drift',
+    });
+
+    const { POST } = await import('../generate-without-logo/route');
+    const res = await POST(makeRequest({ mode: 'substitution' }), { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(res.status).toBe(500);
+    expect(countLogoStatusFailedUpdate()).toBe(0);
+  });
+
+  it('standard + common error — logo_status = failed', async () => {
+    setupStoreQuery({ data: mockStoreTextOnly, error: null });
+    mockIdentityDirectorGenerate.mockRejectedValue(new Error('AI generation failed'));
+
+    const { POST } = await import('../generate-without-logo/route');
+    const res = await POST(makeRequest({ mode: 'standard' }), { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(res.status).toBe(500);
+    expect(countLogoStatusFailedUpdate()).toBeGreaterThanOrEqual(1);
+  });
+
+  it('standard + storage error — logo_status NOT modified, returns 503', async () => {
+    setupStoreQuery({ data: mockStoreTextOnly, error: null });
+    mockIdentityDirectorGenerate.mockRejectedValue(new Error('Failed to upload to Storage: timeout'));
+
+    const { POST } = await import('../generate-without-logo/route');
+    const res = await POST(makeRequest({ mode: 'standard' }), { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(res.status).toBe(503);
+    expect(countLogoStatusFailedUpdate()).toBe(0);
+  });
+});
