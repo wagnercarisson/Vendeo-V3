@@ -1,7 +1,7 @@
 # Phase 5: Identity-Aware Campaign Briefing — Context
 
 **Gathered:** 2026-07-02
-**Status:** Ready for planning
+**Status:** Ready for execution
 **Source:** OpenSpec — `openspec/changes/fase-5-0-identity-aware-campaign-briefing/`
 **Alignment:** `docs/alinhamento-fase-5.0-identity-aware-briefing.md`
 **Decisions:** 11 (D01–D11)
@@ -19,7 +19,7 @@
 4. **buildCampaignBrief()** — Deriva directive de (state, asset presence) — 5 cenários
 5. **GET /api/store/:id enriquecido** — Retorna Store + StoreIdentitySnapshot em uma passada
 6. **POST /api/campaign/generate-image reformulado** — Cliente envia `storeId` + dados do produto (sem identity fields), backend resolve identidade
-7. **CampaignBrief (tipo interno, sem Zod)** — Contrato padronizado: product, store, brandProfile, identity
+7. **CampaignBrief (tipo interno, sem Zod)** — Contrato padronizado: campaignInput, store, brandProfile, identity
 8. **GenerateImageRequestSchema 2.0** — `storeId` + product fields apenas
 9. **Prompt com directive injetada** — Instrução fixa de logotipo → `{{identityDirective}}`
 10. **Provider identityImageUrl** — `logoImageUrl` → `identityImageUrl`, fallback `images.edit` com `[productFile, identityFile]`
@@ -116,7 +116,7 @@ ImageGenerationService.generateImage(CampaignBrief)
 ### OpenSpec Change Artifacts
 - `openspec/changes/fase-5-0-identity-aware-campaign-briefing/proposal.md` — Visão geral, what changes, capabilities, impacto
 - `openspec/changes/fase-5-0-identity-aware-campaign-briefing/design.md` — 11 decisões de design (D01-D11), riscos, critério de regressão
-- `openspec/changes/fase-5-0-identity-aware-campaign-briefing/tasks.md` — 9 grupos (1.1–9.5), 68 tarefas
+- `openspec/changes/fase-5-0-identity-aware-campaign-briefing/tasks.md` — 9 grupos (1.1–9.5), 42 tasks
 
 ### Specs
 - `openspec/changes/fase-5-0-identity-aware-campaign-briefing/specs/store-identity-foundation/spec.md` — StoreIdentitySnapshot, resolveStoreIdentity, GET /api/store/:id
