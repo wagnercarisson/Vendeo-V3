@@ -117,13 +117,13 @@
       - [x] 04.6.4-04-PLAN.md — Rejection Propagation, Step 2 identity_state, Remover, History Modal
     - **Wave 4 — Quality Gate** *(depends on 04)*
       - [x] 04.6.4-05-PLAN.md — Verification & Quality Gate
-   - [ ] Phase 4.6.4.1: Cancel Button vs Approval Modal (refinement) — Pending
-     - **Wave 1 — Cancelar + Substitution Fix** *(no deps)*
-       - [ ] 4.6.4.1-01-PLAN.md — Cancelar button & substitution mode protection
-     - **Wave 2 — Cleanup & Tests** *(depends on Wave 1)*
-       - [ ] 4.6.4.1-02-PLAN.md — Route removal & automated tests
-     - **Wave 3 — Quality Gate** *(depends on Wave 2)*
-       - [ ] 4.6.4.1-03-PLAN.md — Typecheck, lint, build & manual validation
+    - [x] Phase 4.6.4.1: Cancel Button vs Approval Modal (refinement) (3/3 plans, 3 waves) — Completed 2026-07-02
+      - **Wave 1 — Cancelar + Substitution Fix** *(no deps)*
+        - [x] 4.6.4.1-01-PLAN.md — Cancelar button & substitution mode protection
+      - **Wave 2 — Cleanup & Tests** *(depends on Wave 1)*
+        - [x] 4.6.4.1-02-PLAN.md — Route removal & automated tests
+      - **Wave 3 — Quality Gate** *(depends on Wave 2)*
+        - [x] 4.6.4.1-03-PLAN.md — Typecheck, lint, build & manual validation
    - [x] Phase 4.6.5: VS Color Drift & Brand Profile Alignment (5/5 plans) (completed 2026-06-22)
     - **Wave 1 — Foundation**
       - [x] 04.6.5-01-PLAN.md — Types (IntendedPalette, ResolvedPalette, ColorValidation) + ColorProbe extraction
@@ -182,7 +182,7 @@
 | 4.6.3. Logo State Lifecycle | v1.1 | 5/5 | Complete | 2026-06-17 |
 | 4.6.3.1. Logo Restore Scope Cleanup | v1.1 | 4/4 | Complete | 2026-06-29 |
 | 4.6.4. Visual Signature Lifecycle | v1.1 | 5/5 | Complete | 2026-06-19 |
-| 4.6.4.1. Cancel Button vs Approval Modal | v1.1 | 0/3 | Planned | — |
+| 4.6.4.1. Cancel Button vs Approval Modal | v1.1 | 3/3 | Complete | 2026-07-02 |
 | 4.6.5. VS Color Drift & Brand Profile | v1.1 | 5/5 | Complete | 2026-06-22 |
 | 4.6.6. Identity Transition | v1.1 | 4/4 | Complete | 2026-06-24 |
 | 4.6.7. User Color Preferences Persistence | v1.1 | 4/4 | Complete | 2026-06-25 |

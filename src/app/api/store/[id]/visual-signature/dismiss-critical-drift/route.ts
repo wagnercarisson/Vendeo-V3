@@ -70,3 +70,47 @@ export async function POST(
   console.log(`[dismiss-critical-drift] snapshot persistido com sucesso para VS ${activeVS.id}`);
   return new NextResponse(null, { status: 204 });
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  console.log(`[dismiss-critical-drift] DELETE request recebido`, { storeId: id });
+
+  if (!UUID_REGEX.test(id)) {
+    console.log(`[dismiss-critical-drift] UUID inválido`);
+    return NextResponse.json({ error: 'ID da loja inválido' }, { status: 400 });
+  }
+
+  const { data: activeVS, error: activeVSError } = await supabase
+    .from('store_visual_signatures')
+    .select('id, metadata')
+    .eq('store_id', id)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (activeVSError || !activeVS) {
+    console.log(`[dismiss-critical-drift] nenhuma VS ativa encontrada`);
+    return NextResponse.json({ error: 'Nenhuma assinatura visual ativa encontrada' }, { status: 404 });
+  }
+
+  const existingMetadata = (activeVS.metadata ?? {}) as Record<string, unknown>;
+  const { visual_signature_drift_dismissed_snapshot: _, ...rest } = existingMetadata;
+
+  const { error: updateError } = await supabase
+    .from('store_visual_signatures')
+    .update({
+      metadata: rest,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', activeVS.id);
+
+  if (updateError) {
+    console.error(`[dismiss-critical-drift] falha ao limpar snapshot de dismiss`, updateError.message);
+    return NextResponse.json({ error: 'Falha ao limpar snapshot de dismiss' }, { status: 500 });
+  }
+
+  console.log(`[dismiss-critical-drift] snapshot removido com sucesso da VS ${activeVS.id}`);
+  return new NextResponse(null, { status: 204 });
+}

@@ -8,6 +8,7 @@ import { AlertCircle, CheckCircle2, Loader2, X, Upload, ArrowLeft, Sparkles } fr
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useDriftDetection } from "./use-drift-detection";
+import { getDriftPolicy } from "@/lib/drift";
 
 // DriftDiscreetButton import removed — replaced by inline post-dismiss links
 import { DriftDecisionModal } from "./drift-decision-modal";
@@ -856,7 +857,29 @@ export function StoreIdentityForm() {
     } else {
       setStep2Success("Dados salvos com sucesso!");
     }
-  }, [storeId, formData, brandColorsChosen, logoStatus, visualSignatureUrl, inferenceError, setField, saveBrandColors]);
+
+    const inputSnap = inferredProfile?.metadata?.input_snapshot as Record<string, string | null | undefined> | undefined;
+    if (inputSnap && formData) {
+      const criticalMatch = inputSnap.name === formData.name && inputSnap.segment === formData.segment;
+      if (criticalMatch) {
+        fetch(`/api/store/${storeId}/visual-signature/dismiss-critical-drift`, {
+          method: "DELETE",
+        }).catch(() => {});
+      }
+
+      const sensitiveFields = getDriftPolicy(identityState ?? 'text_only').sensitive;
+      const sensitiveMatch = sensitiveFields.every(f =>
+        inputSnap[f] === (formData as unknown as Record<string, string | null | undefined>)[f]
+      );
+      if (sensitiveMatch) {
+        fetch(`/api/store/${storeId}/brand-profile/metadata`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ drift_dismissed_snapshot: null }),
+        }).catch(() => {});
+      }
+    }
+  }, [storeId, formData, brandColorsChosen, logoStatus, visualSignatureUrl, inferenceError, setField, saveBrandColors, identityState, inferredProfile]);
 
   const handleStep2Submit = async (e: React.FormEvent) => {
     e.preventDefault();
