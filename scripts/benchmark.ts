@@ -327,35 +327,49 @@ async function runBenchmark(): Promise<void> {
     const imageDataUrl = await loadFixtureDataUrl(scenario.imagePath);
     console.log(`  Imagem: ${imageDataUrl === getPlaceholderBase64() ? "placeholder (sem fixture)" : scenario.imagePath ?? "N/A"}`);
 
-    // ── Build request ───────────────────────────────────────────────
-    const request = {
-      productName: scenario.campaign.productName,
-      storeName: scenario.store.name,
-      storeSegment: scenario.store.segment,
-      storeTone: scenario.store.tone,
-      brandColor: scenario.store.brandColor,
-      originalPriceCents: scenario.campaign.originalPriceCents,
-      discountedPriceCents: scenario.campaign.discountedPriceCents,
-      badgeText: scenario.campaign.badgeText,
-      hook: scenario.campaign.hook,
-      cta: scenario.campaign.cta,
-      description: scenario.campaign.description,
-      objective: scenario.campaign.objective,
-      campaignDetails: scenario.campaign.campaignDetails,
-      additionalDetails: scenario.campaign.additionalDetails,
-      availabilityNotes: scenario.campaign.availabilityNotes,
-      validity: scenario.campaign.validity,
-      targetChannel: scenario.campaign.targetChannel,
-      format: scenario.campaign.format,
-      storeLogoUrl: scenario.store.logoUrl,
-      productImageDataUrl: imageDataUrl,
+    // ── Build request (wrapped as CampaignBrief) ────────────────────
+    const brief = {
+      campaignInput: {
+        productName: scenario.campaign.productName,
+        storeId: 'benchmark',
+        originalPriceCents: scenario.campaign.originalPriceCents,
+        discountedPriceCents: scenario.campaign.discountedPriceCents,
+        badgeText: scenario.campaign.badgeText,
+        hook: scenario.campaign.hook,
+        cta: scenario.campaign.cta,
+        description: scenario.campaign.description,
+        objective: scenario.campaign.objective,
+        campaignDetails: scenario.campaign.campaignDetails,
+        additionalDetails: scenario.campaign.additionalDetails,
+        availabilityNotes: scenario.campaign.availabilityNotes,
+        validity: scenario.campaign.validity,
+        targetChannel: scenario.campaign.targetChannel,
+        format: scenario.campaign.format,
+        productImageDataUrl: imageDataUrl,
+      },
+      store: {
+        name: scenario.store.name,
+        segment: scenario.store.segment,
+        subsegment: null,
+        toneOfVoice: scenario.store.tone,
+        positioning: null,
+        shortDescription: null,
+        slogan: null,
+        brandColor: scenario.store.brandColor,
+      },
+      brandProfile: null,
+      identity: {
+        state: 'logo' as const,
+        imageUrl: scenario.store.logoUrl ?? null,
+        directive: "Assinar a campanha com o logotipo da loja. Considerar a direção visual do perfil de marca como contexto direcional, não obrigatório.",
+      },
     };
 
     // ── Execute generation ──────────────────────────────────────────
     let result: BenchmarkResult;
 
     try {
-      const generationResult = await service.generateImage(request);
+      const generationResult = await service.generateImage(brief);
       const duration = Date.now() - scenarioStart;
 
       if (generationResult.success) {

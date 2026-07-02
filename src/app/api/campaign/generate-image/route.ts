@@ -4,6 +4,8 @@ import { IMAGE_GENERATION_GLOBAL_TIMEOUT_MS, MAX_PRODUCT_IMAGE_BASE64_SIZE } fro
 import { ImageGenerationService } from "@/lib/image-generation/services/image-generation-service";
 import { InputValidationService } from "@/lib/image-generation/services/input-validation-service";
 import { createImageProvider } from "@/lib/image-generation/providers/factory";
+import { resolveStoreIdentity, validateIdentityReference, buildCampaignBrief } from "@/lib/actions/store";
+import type { CampaignInput } from "@/components/campaign/types";
 
 export async function POST(request: NextRequest) {
   // ── Pre-stream: Parse JSON body ──────────────────────────────────
@@ -17,36 +19,29 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // ── Pre-stream: Check for legacy identity fields (BREAKING) ─────
+  const LEGACY_FIELDS = ['storeName', 'storeLogoUrl', 'brandProfile', 'storeSegment', 'storeTone', 'brandColor'];
+  const hasLegacyFields = LEGACY_FIELDS.some(f => f in body);
+  if (hasLegacyFields) {
+    return Response.json(
+      { error: { message: "Campos de identidade da loja não são mais aceitos como entrada do cliente. Use storeId para resolução no backend." } },
+      { status: 400 }
+    );
+  }
+
   // ── Pre-stream: Log received fields (safe, no base64 data) ───────
   const safeLog = {
     keys: Object.keys(body),
-    storeId: (body as any).storeId ?? (body as any).store_id ?? null,
+    storeId: (body as any).storeId ?? null,
     hasProductName: typeof body.productName === 'string' && body.productName.length > 0,
     hasProductImage: typeof body.productImageDataUrl === 'string' && body.productImageDataUrl.length > 0,
     productImageLength: typeof body.productImageDataUrl === 'string' ? body.productImageDataUrl.length : 0,
     hasPrice: typeof body.discountedPriceCents === 'number',
-    hasOriginalPrice: 'originalPriceCents' in body ? typeof body.originalPriceCents : 'absent',
-    hasStoreIdentity: typeof (body as any).storeIdentity !== 'undefined',
-    hasLogoStatus: typeof (body as any).logoStatus !== 'undefined',
-    hasVisualSignatureUrl: typeof (body as any).visualSignatureUrl !== 'undefined',
-    hasBrandProfile: typeof body.brandProfile === 'object' && body.brandProfile !== null,
-    brandProfileFields: typeof body.brandProfile === 'object' && body.brandProfile !== null
-      ? Object.keys(body.brandProfile as Record<string, unknown>)
-      : null,
-    brandProfileNullFields: typeof body.brandProfile === 'object' && body.brandProfile !== null
-      ? Object.entries(body.brandProfile as Record<string, unknown>)
-          .filter(([_, v]) => v === null)
-          .map(([k]) => k)
-      : null,
   };
   console.log(`[generate-image] payload_received`, JSON.stringify(safeLog));
 
   // ── Pre-stream: Validate productImageDataUrl presence ───────────
   if (!body.productImageDataUrl || typeof body.productImageDataUrl !== "string") {
-    console.log(`[generate-image] validation_fail — productImageDataUrl ausente ou inválido`, {
-      type: typeof body.productImageDataUrl,
-      present: 'productImageDataUrl' in body,
-    });
     return Response.json(
       { error: { message: "Imagem do produto é obrigatória para gerar a campanha visual." } },
       { status: 400 }
@@ -55,10 +50,6 @@ export async function POST(request: NextRequest) {
 
   // ── Pre-stream: Check payload size limit ────────────────────────
   if (body.productImageDataUrl.length > MAX_PRODUCT_IMAGE_BASE64_SIZE) {
-    console.log(`[generate-image] validation_fail — productImageDataUrl excede limite`, {
-      length: body.productImageDataUrl.length,
-      maxLength: MAX_PRODUCT_IMAGE_BASE64_SIZE,
-    });
     return Response.json(
       {
         error: {
@@ -69,18 +60,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // ── Pre-stream: Normalize null → undefined in brandProfile ──────
-  // Zod .nullable().optional() accepts null, but downstream services
-  // (prompt assembly, image generation) may use brandProfile fields
-  // in template strings where "null" would render as text. Normalize
-  // to undefined so optional chaining / ?? fallbacks work correctly.
-  if (body.brandProfile && typeof body.brandProfile === 'object') {
-    const bp = body.brandProfile as Record<string, unknown>;
-    for (const key of ['visual_style', 'visual_tone', 'brand_personality', 'campaign_guidelines', 'campaign_brief', 'logoVariantUrl']) {
-      if (bp[key] === null) bp[key] = undefined;
-    }
-  }
-
   // ── Pre-stream: Validate full request schema ─────────────────────
   const parsed = GenerateImageRequestSchema.safeParse(body);
   if (!parsed.success) {
@@ -89,10 +68,7 @@ export async function POST(request: NextRequest) {
       code: i.code,
       message: i.message,
     }));
-    console.log(`[generate-image] validation_fail — Zod safeParse rejeitou`, {
-      issues,
-      fieldErrors: parsed.error.flatten().fieldErrors,
-    });
+    console.log(`[generate-image] validation_fail — Zod safeParse rejeitou`, { issues });
     return Response.json(
       {
         error: {
@@ -103,6 +79,26 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
+
+  // ── Pre-stream: Resolve store identity (backend-side) ────────────
+  const { storeId, ...campaignInput } = parsed.data;
+
+  let storeSnapshot;
+  try {
+    storeSnapshot = await resolveStoreIdentity({ id: storeId } as any);
+  } catch (err) {
+    console.error(`[generate-image] resolveStoreIdentity error — ${err instanceof Error ? err.message : String(err)}`);
+    return Response.json(
+      { error: { message: "Erro ao resolver identidade da loja." } },
+      { status: 500 }
+    );
+  }
+
+  // Validate identity reference before building brief
+  const validatedSnapshot = await validateIdentityReference(storeSnapshot);
+
+  // Build campaign brief
+  const brief = await buildCampaignBrief(validatedSnapshot, campaignInput as CampaignInput);
 
   // ── Pre-stream: Input validation for conflict/confidence ─────────
   if (!parsed.data.inputValidationOverride?.productImageCheck) {
@@ -182,7 +178,7 @@ export async function POST(request: NextRequest) {
       };
 
       try {
-        const result = await service.generateImage(parsed.data, (phaseEvent) => {
+        const result = await service.generateImage(brief, (phaseEvent) => {
           emit({ type: "phase", ...phaseEvent });
         }, abortController.signal);
 
@@ -202,6 +198,7 @@ export async function POST(request: NextRequest) {
             type: "result",
             success: true,
             imageDataUrl: result.imageDataUrl,
+            storeIdentity: validatedSnapshot,
           };
           if (result.inputCorrections) {
             resultEvent.inputCorrections = result.inputCorrections;

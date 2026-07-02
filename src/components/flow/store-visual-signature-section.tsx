@@ -32,13 +32,13 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
     setLoading(true);
     try {
       const identity = await resolveStoreIdentity(store);
-      if (identity.logoUrl) {
+      if (identity.signature.type === 'logo' && identity.signature.url) {
         setHasLogo(true);
         setActiveSignature(null);
         return;
       }
       setHasLogo(false);
-      if (identity.visualSignatureUrl) {
+      if (identity.signature.type === 'visual_signature' && identity.signature.url) {
         const signatures = await listSignatures(store.id);
         const active = signatures.find((s) => s.status === "active");
         setActiveSignature(active ?? null);

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type { Store } from "@/lib/store";
-import { resolveStoreIdentity } from "@/lib/actions/store";
 import { StoreIdentityBlock } from "./store-identity-block";
 import { CampaignInputForm } from "./campaign-input-form";
 import type { StoreIdentitySnapshot } from "@/components/campaign/types";
@@ -15,7 +14,7 @@ const STORAGE_KEY = "store_id";
 
 export function CampaignPageClient() {
   const [pageState, setPageState] = useState<PageState>("loading");
-  const [store, setStore] = useState<Store | null>(null);
+  const [store, setStore] = useState<(Store & { identity?: StoreIdentitySnapshot }) | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
 
   const loadStore = useCallback(() => {
@@ -36,7 +35,7 @@ export function CampaignPageClient() {
           return null;
         }
         if (!res.ok) throw new Error("Erro ao carregar loja");
-        return res.json() as Promise<Store>;
+        return res.json() as Promise<Store & { identity?: StoreIdentitySnapshot }>;
       })
       .then((data) => {
         if (!data) return;
@@ -52,21 +51,6 @@ export function CampaignPageClient() {
   useEffect(() => {
     loadStore();
   }, [loadStore]);
-
-  const [storeIdentity, setStoreIdentity] = useState<StoreIdentitySnapshot | null>(null);
-  const [resolvingIdentity, setResolvingIdentity] = useState(false);
-
-  useEffect(() => {
-    if (!store) {
-      setStoreIdentity(null);
-      return;
-    }
-    setResolvingIdentity(true);
-    resolveStoreIdentity(store)
-      .then(setStoreIdentity)
-      .catch(() => setStoreIdentity(null))
-      .finally(() => setResolvingIdentity(false));
-  }, [store]);
 
   if (pageState === "loading") {
     return (
@@ -126,11 +110,13 @@ export function CampaignPageClient() {
     );
   }
 
+  const storeId = localStorage.getItem(STORAGE_KEY);
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
       {store && (
         <div className="mb-6">
-          <StoreIdentityBlock store={store} />
+          <StoreIdentityBlock store={store as { name: string; segment: string; brand_color: string; id: string }} identity={store.identity ?? null} />
         </div>
       )}
 
@@ -141,7 +127,7 @@ export function CampaignPageClient() {
         Informe os dados do produto e da oferta
       </p>
 
-      <CampaignInputForm storeIdentity={storeIdentity} />
+      <CampaignInputForm storeId={storeId ?? undefined} />
     </div>
   );
 }

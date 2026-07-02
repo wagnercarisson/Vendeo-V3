@@ -5,7 +5,6 @@ import type { CampaignFormFields } from "./use-campaign-form";
 import { CampaignImageUpload } from "./campaign-image-upload";
 import { GenerationProgress } from "./generation-progress";
 import { BADGE_OPTIONS } from "@/lib/constants";
-import type { StoreIdentitySnapshot } from "@/components/campaign/types";
 import {
   AlertCircle,
   AlertTriangle,
@@ -13,10 +12,10 @@ import {
 } from "lucide-react";
 
 interface CampaignInputFormProps {
-  storeIdentity?: StoreIdentitySnapshot | null;
+  storeId?: string;
 }
 
-export function CampaignInputForm({ storeIdentity }: CampaignInputFormProps) {
+export function CampaignInputForm({ storeId }: CampaignInputFormProps) {
   const {
     fields,
     fieldErrors,
@@ -37,7 +36,7 @@ export function CampaignInputForm({ storeIdentity }: CampaignInputFormProps) {
     handleConflictCorrect,
     handleConflictCancel,
     phases,
-  } = useCampaignForm(storeIdentity ?? undefined);
+  } = useCampaignForm(storeId);
 
   if (isSubmitting) {
     return (

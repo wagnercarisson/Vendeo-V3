@@ -12,7 +12,7 @@ export async function resolveStoreIdentity(
 ): Promise<StoreIdentitySnapshot> {
   let brandColor = store.brand_color ?? getDefaultBrandColor(store.segment);
   const storeInitials = getStoreInitials(store.name);
-  const identityState: IdentityState = store.identity_state ?? 'text_only';
+  const identityState: IdentityState = (store.identity_state as IdentityState) ?? 'text_only';
 
   let brandProfile: BrandProfileSnapshot | null = null;
   let signatureUrl: string | null = null;

@@ -1,14 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import type { Store } from "@/lib/store";
-import { resolveStoreIdentity } from "@/lib/actions/store";
 import { STORE_SEGMENTS } from "@/lib/constants";
 import type { StoreIdentitySnapshot } from "@/components/campaign/types";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 
 interface StoreIdentityBlockProps {
-  store: Pick<Store, "id" | "name" | "logo_url" | "segment" | "brand_color" | "subsegment" | "tone_of_voice" | "positioning" | "short_description" | "slogan" | "identity_state">;
+  store: { name: string; segment: string; brand_color: string; id: string };
+  identity: StoreIdentitySnapshot | null;
 }
 
 const IDENTITY_STATE_LABELS: Record<string, string> = {
@@ -17,66 +15,30 @@ const IDENTITY_STATE_LABELS: Record<string, string> = {
   'visual_signature': 'Assinatura Visual',
 };
 
-export function StoreIdentityBlock({ store }: StoreIdentityBlockProps) {
-  const [identity, setIdentity] = useState<StoreIdentitySnapshot | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [hasFailedProfile, setHasFailedProfile] = useState(false);
-
-  useEffect(() => {
-    setLoading(true);
-    resolveStoreIdentity(store)
-      .then(setIdentity)
-      .catch(() => setIdentity(null))
-      .finally(() => setLoading(false));
-
-    fetch(`/api/store/${store.id}/brand-profile`)
-      .then(res => res.json())
-      .then(profile => {
-        if (profile?.status === 'failed') {
-          setHasFailedProfile(true);
-        }
-      })
-      .catch(() => {});
-  }, [store]);
-
-  if (!store.name) return null;
-
-  if (loading) {
-    return (
-      <div className="flex items-center gap-4 bg-bg-surface border border-border rounded-xl p-4">
-        <Loader2 className="w-5 h-5 animate-spin text-text-muted" />
-      </div>
-    );
-  }
-
-  if (!identity) return null;
+export function StoreIdentityBlock({ store, identity }: StoreIdentityBlockProps) {
+  if (!store.name || !identity) return null;
 
   const segmentEntry = STORE_SEGMENTS.find(s => s.value === store.segment);
   const segmentLabel = segmentEntry?.label ?? "";
 
-  const logoUrl = identity.brandProfile?.logoVariantUrl ?? identity.logoUrl;
-  const visualSignatureUrl = identity.visualSignatureUrl;
   const secondaryColor = identity.brandProfile?.brand_colors_chosen?.[1] ?? null;
   const hasBrandProfile = !!identity.brandProfile;
-  const identityState = store.identity_state;
+  const { signature } = identity;
 
   return (
     <div className="flex items-start gap-4 bg-bg-surface border border-border rounded-xl p-4">
-      {logoUrl ? (
+      {signature.type === 'logo' && signature.url ? (
         <div className="relative shrink-0">
           <img
-            src={logoUrl}
+            src={signature.url}
             alt={`Logo ${store.name}`}
             className="w-10 h-10 rounded-full object-contain bg-bg-elevated border border-border-light"
           />
-          {hasFailedProfile && (
-            <AlertTriangle className="w-4 h-4 text-accent-amber absolute -top-1 -right-1" />
-          )}
         </div>
-      ) : visualSignatureUrl ? (
+      ) : signature.type === 'visual_signature' && signature.url ? (
         <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-bg-elevated border border-border-light">
           <img
-            src={visualSignatureUrl}
+            src={signature.url}
             alt={`Assinatura visual ${store.name}`}
             className="w-full h-full object-contain"
           />
@@ -94,16 +56,12 @@ export function StoreIdentityBlock({ store }: StoreIdentityBlockProps) {
           <p className="text-text-primary font-heading font-semibold text-base truncate">
             {store.name}
           </p>
-          {identityState && identityState !== 'text_only' && (
-            <span className={`text-[10px] font-heading font-medium px-1.5 py-0.5 rounded-full shrink-0 ${
-              hasFailedProfile
-                ? 'text-accent-amber bg-accent-amber/10'
-                : 'text-accent-green bg-accent-green/10'
-            }`}>
-              {IDENTITY_STATE_LABELS[identityState] ?? identityState}
+          {identity.identityState && identity.identityState !== 'text_only' && (
+            <span className={`text-[10px] font-heading font-medium px-1.5 py-0.5 rounded-full shrink-0 text-accent-green bg-accent-green/10`}>
+              {IDENTITY_STATE_LABELS[identity.identityState] ?? identity.identityState}
             </span>
           )}
-          {hasBrandProfile && !identityState && (
+          {hasBrandProfile && !identity.identityState && (
             <span className="text-[10px] font-heading font-medium text-accent-green bg-accent-green/10 px-1.5 py-0.5 rounded-full shrink-0">
               Ativo
             </span>

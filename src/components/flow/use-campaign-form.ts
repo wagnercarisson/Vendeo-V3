@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { BADGE_OPTIONS } from "@/lib/constants";
 import { formatCurrencyBRL } from "@/lib/formatters";
 import { useInputPreservation } from "@/hooks/use-input-preservation";
-import type { StoreIdentitySnapshot, PreviewPayload } from "@/components/campaign/types";
+import type { PreviewPayload, StoreIdentitySnapshot } from "@/components/campaign/types";
 import type { CampaignSpec } from "@/lib/campaign-intelligence/schema";
 import type { GenerationPhaseEvent } from "@/lib/image-generation/schema";
 
@@ -192,7 +192,7 @@ function validateField(
   }
 }
 
-export function useCampaignForm(storeIdentity?: StoreIdentitySnapshot): UseCampaignFormReturn {
+export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
   const [fields, setFields] = useState<CampaignFormFields>(EMPTY_FIELDS);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<keyof CampaignFormFields, boolean>>({
@@ -447,16 +447,21 @@ export function useCampaignForm(storeIdentity?: StoreIdentitySnapshot): UseCampa
             };
             onPhaseChange(phaseEvent);
           } else if (event.type === "result" && event.success) {
-            const result = event as { imageDataUrl: string; inputCorrections?: { productName: { from: string; to: string; reason: string } } };
+            const result = event as { imageDataUrl: string; storeIdentity?: Record<string, unknown>; inputCorrections?: { productName: { from: string; to: string; reason: string } } };
 
             if (result.inputCorrections?.productName) {
               const correction = result.inputCorrections.productName;
               setFields((prev) => ({ ...prev, productName: correction.to }));
             }
 
+            // Use storeIdentity from the result event (authoritative snapshot from backend)
+            const resultStoreIdentity = result.storeIdentity
+              ? (result.storeIdentity as any)
+              : storeIdentityLocal;
+
             const previewPayload: PreviewPayload = {
               campaignSpec: {} as CampaignSpec,
-              storeIdentity: storeIdentityLocal,
+              storeIdentity: resultStoreIdentity,
               productImageUrl: frozenImagePreviewUrlLocal,
               generatedImageDataUrl: result.imageDataUrl,
               generatedAt: new Date().toISOString(),
@@ -528,7 +533,7 @@ export function useCampaignForm(storeIdentity?: StoreIdentitySnapshot): UseCampa
       return;
     }
 
-    if (!storeIdentity) {
+    if (!storeId) {
       setSubmitError("Dados da loja não disponíveis.");
       setIsSubmitting(false);
       return;
@@ -551,27 +556,38 @@ export function useCampaignForm(storeIdentity?: StoreIdentitySnapshot): UseCampa
       }
 
       const body: Record<string, unknown> = {
+        storeId,
         productName: frozenFields.productName,
         originalPriceCents: frozenFields.originalPriceCents,
         discountedPriceCents: frozenFields.discountedPriceCents,
         description: frozenFields.description || undefined,
         badgeText: frozenFields.badge,
-        storeName: storeIdentity.storeName,
-        storeSegment: storeIdentity.storeSegment,
-        storeTone: storeIdentity.toneOfVoice ?? undefined,
-        brandColor: storeIdentity.brandColor ?? "#22C55E",
-        storeLogoUrl: storeIdentity.logoUrl ?? undefined,
-        brandProfile: storeIdentity.brandProfile ?? undefined,
         productImageDataUrl: imageDataUrl,
       };
 
-      await consumeStream(body, storeIdentity, frozenImagePreviewUrl, abortController);
+      // Use a placeholder identity for the stream consumer — real identity comes from result event
+      const placeholderIdentity = {
+        storeName: '',
+        storeSegment: '',
+        brandColor: '#22C55E',
+        identityState: 'text_only' as const,
+        signature: { url: null as string | null, type: null as 'logo' | 'visual_signature' | null },
+        storeInitials: '',
+        brandProfile: null,
+        toneOfVoice: null,
+        subsegment: null,
+        positioning: null,
+        shortDescription: null,
+        slogan: null,
+      };
+
+      await consumeStream(body, placeholderIdentity, frozenImagePreviewUrl, abortController);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro inesperado ao gerar imagem";
       setSubmitError(message);
       setIsSubmitting(false);
     }
-  }, [fields, imagePreviewUrl, restoredImageDataUrl, storeIdentity, router, onPhaseChange]);
+  }, [fields, imagePreviewUrl, restoredImageDataUrl, storeId, router, onPhaseChange]);
 
   const resetSubmit = useCallback(() => {
     setSubmitError(null);
@@ -591,7 +607,7 @@ export function useCampaignForm(storeIdentity?: StoreIdentitySnapshot): UseCampa
   }, [imagePreviewUrl, clearFormState]);
 
   const handleConflictContinue = useCallback(async () => {
-    if (!pendingConflict || !storeIdentity) return;
+    if (!pendingConflict || !storeId) return;
     setPendingConflict(null);
     setSubmitError(null);
     setPhases([]);
@@ -600,8 +616,15 @@ export function useCampaignForm(storeIdentity?: StoreIdentitySnapshot): UseCampa
       inputValidationOverride: { productImageCheck: "user_confirmed_continue" },
     };
     setIsSubmitting(true);
-    await consumeStream(overriddenBody, storeIdentity, imagePreviewUrl, new AbortController());
-  }, [pendingConflict, storeIdentity, imagePreviewUrl]);
+    const placeholderIdentity = {
+      storeName: '', storeSegment: '', brandColor: '#22C55E',
+      identityState: 'text_only' as const,
+      signature: { url: null as string | null, type: null as 'logo' | 'visual_signature' | null },
+      storeInitials: '', brandProfile: null, toneOfVoice: null,
+      subsegment: null, positioning: null, shortDescription: null, slogan: null,
+    };
+    await consumeStream(overriddenBody, placeholderIdentity, imagePreviewUrl, new AbortController());
+  }, [pendingConflict, storeId, imagePreviewUrl]);
 
   const handleConflictCorrect = useCallback(() => {
     if (!pendingConflict?.suggestedProductName) return;

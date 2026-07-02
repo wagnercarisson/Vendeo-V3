@@ -43,7 +43,7 @@ export async function GET(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Resolve visual signature and brand profile data for frontend hydration
+  // Resolve identity snapshot for frontend hydration
   const identity = await resolveStoreIdentity(store);
 
   const { count: archivedCount } = await supabase
@@ -54,8 +54,9 @@ export async function GET(
 
   return NextResponse.json({
     ...store,
-    visual_signature_url: identity.visualSignatureUrl,
-    logo_url: identity.logoUrl ?? store.logo_url,
+    identity,
+    visual_signature_url: identity.signature.type === 'visual_signature' ? identity.signature.url : null,
+    logo_url: identity.signature.type === 'logo' ? identity.signature.url : store.logo_url,
     has_archived_signatures: (archivedCount ?? 0) > 0,
   }, { status: 200 });
 }

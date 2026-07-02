@@ -35,9 +35,28 @@ export default function PreviewPage() {
         setPageState("error");
         return;
       }
+
+      // Normalize legacy payload (pre-phase-5 format without identityState)
+      const si = parsed.storeIdentity as unknown as Record<string, unknown>;
+      if (!('identityState' in si)) {
+        const hasLogoUrl = typeof si.logoUrl === 'string' && (si.logoUrl as string).length > 0;
+        const hasVsUrl = typeof si.visualSignatureUrl === 'string' && (si.visualSignatureUrl as string).length > 0;
+
+        if (hasLogoUrl) {
+          si.identityState = 'logo';
+          si.signature = { url: si.logoUrl, type: 'logo' };
+        } else if (hasVsUrl) {
+          si.identityState = 'visual_signature';
+          si.signature = { url: si.visualSignatureUrl, type: 'visual_signature' };
+        } else {
+          si.identityState = 'text_only';
+          si.signature = { url: null, type: null };
+        }
+      }
+
       setPayload(parsed);
       if (parsed.campaignSpec) {
-        setSpec(parsed.campaignSpec);
+        setSpec(parsed.campaignSpec as CampaignSpec);
       }
       setPageState("ready");
       clearFormState();

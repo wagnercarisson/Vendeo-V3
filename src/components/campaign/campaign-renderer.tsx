@@ -125,16 +125,16 @@ export function CampaignRenderer({
 
           {/* Store Identity */}
           <div className="flex flex-col items-center gap-1">
-            {storeIdentity.logoUrl && !showInitialsFallback ? (
+            {storeIdentity.signature.type === 'logo' && storeIdentity.signature.url && !showInitialsFallback ? (
               <img
-                src={storeIdentity.logoUrl}
+                src={storeIdentity.signature.url}
                 alt={storeIdentity.storeName}
                 className="w-[40px] h-[40px] rounded-full object-cover"
                 onError={() => setShowInitialsFallback(true)}
               />
-            ) : VISUAL_SIGNATURE_ENABLED && storeIdentity.visualSignatureUrl ? (
+            ) : storeIdentity.signature.type === 'visual_signature' && storeIdentity.signature.url ? (
               <img
-                src={storeIdentity.visualSignatureUrl}
+                src={storeIdentity.signature.url}
                 alt={storeIdentity.storeName}
                 className="max-w-[200px] h-auto"
               />
@@ -148,7 +148,7 @@ export function CampaignRenderer({
                 {getStoreInitials(storeIdentity.storeName)}
               </div>
             )}
-            {!storeIdentity.visualSignatureUrl && (
+            {storeIdentity.signature.type !== 'visual_signature' && (
               <p className="text-center font-body text-[16px] text-slate-500 max-w-[600px] truncate">
                 {storeIdentity.storeName}
               </p>

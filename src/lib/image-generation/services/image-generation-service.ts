@@ -320,7 +320,7 @@ export class ImageGenerationService {
 
       const promptText = this.assemblePrompt(state, promptVariables, lastReviewIssues);
 
-      const providerResult = await this.generateWithRetry(promptText, body, signal, remaining);
+      const providerResult = await this.generateWithRetry(promptText, body, signal, remaining, brief.identity.imageUrl ?? undefined);
       if (!providerResult.success) {
         emitFailed("image_generation", providerResult.message);
         await this.metricsWriter.write(this.buildGenerationMetrics({
@@ -815,7 +815,8 @@ export class ImageGenerationService {
     promptText: string,
     body: GenerateImageRequest,
     signal: AbortSignal | undefined,
-    remaining: () => number
+    remaining: () => number,
+    identityImageUrl?: string
   ): Promise<
     | { success: true; imageBase64: string; mimeType: string }
     | { success: false; code: string; message: string; details?: string }
@@ -867,7 +868,7 @@ export class ImageGenerationService {
         const output = await this.imageProvider.generateImage({
           prompt: promptText,
           productImageDataUrl: body.productImageDataUrl,
-          identityImageUrl: brief?.identity.imageUrl ?? undefined,
+          identityImageUrl,
           size: IMAGE_GENERATION_SIZE,
           signal,
           attempt,
