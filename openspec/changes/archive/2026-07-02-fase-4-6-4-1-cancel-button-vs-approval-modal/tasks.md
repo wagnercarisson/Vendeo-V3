@@ -37,6 +37,6 @@
 
 ## 6. Validação Manual
 
-- [ ] 6.1 Fluxo standard: abrir modal, induzir erro de geração → "Cancelar" fecha sem nova requisição; Step 2 exibe estado anterior (requer ambiente dev + backend real)
-- [ ] 6.2 Fluxo substitution: VS ativa com drift → DriftCriticalModal → "Atualizar" → erro de geração → "Cancelar" fecha; VS ativa intacta; `logo_status` continua `'generated'` (requer ambiente dev + backend real)
-- [ ] 6.3 Confirmar que `PATCH /api/store/[id]/logo-status` retorna 404 após remoção da rota (requer ambiente dev + backend real)
+- [x] 6.1 Fluxo standard: abrir modal, induzir erro de geração → "Cancelar" fecha sem nova requisição; Step 2 exibe estado anterior (requer ambiente dev + backend real)
+- [x] 6.2 Fluxo substitution: VS ativa com drift → DriftCriticalModal → "Atualizar" → erro de geração → "Cancelar" fecha; VS ativa intacta; `logo_status` continua `'generated'` (requer ambiente dev + backend real)
+- [x] 6.3 Confirmar que `PATCH /api/store/[id]/logo-status` retorna 404 após remoção da rota (requer ambiente dev + backend real)
