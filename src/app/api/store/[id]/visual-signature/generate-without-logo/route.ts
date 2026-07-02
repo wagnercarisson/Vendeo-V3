@@ -399,7 +399,7 @@ export async function POST(
 
   console.log(`[generate-without-logo][req-${reqId}] 11/12 falha total — não consumiu quota`, { message: finalMessage, timeout: isTimeout });
 
-  if (!isStorageError) {
+  if (mode !== 'substitution' && !isStorageError) {
     console.log(`[generate-without-logo][req-${reqId}] setando logo_status=failed...`);
     await supabase
       .from('stores')

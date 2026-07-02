@@ -408,18 +408,9 @@ export function VisualSignatureApprovalModal({
     });
   }, []);
 
-  const handleContinueWithoutLogo = useCallback(async () => {
-    try {
-      await fetch(`/api/store/${storeId}/logo-status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ logo_status: "explicit_none" }),
-      });
-    } catch {}
-
-    setState({ phase: "done", logoStatus: "explicit_none" });
-    onComplete({ logoStatus: "explicit_none" });
-  }, [storeId, onComplete]);
+  const handleCancel = useCallback(() => {
+    onClose();
+  }, [onClose]);
 
   const handleRetry = useCallback(() => {
     setFeedbackText("");
@@ -794,10 +785,10 @@ export function VisualSignatureApprovalModal({
               </button>
               <button
                 type="button"
-                onClick={handleContinueWithoutLogo}
+                onClick={handleCancel}
                 className="px-6 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200"
               >
-                {state.drift ? "Continuar sem assinatura" : "Continuar sem logo"}
+                Cancelar
               </button>
             </div>
             {state.drift && (
