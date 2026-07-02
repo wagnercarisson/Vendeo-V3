@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI + Rendering
 status: active
-stopped_at: Phase 4.6.2.2 — State-Specific Drift Policy (7/7 plans COMPLETE). Current: Phase 4.6.2.2 — State-Specific Drift Policy complete. Next: Phase 5 — Review, Adjust & Export.
-last_updated: "2026-06-30T18:00:00.000Z"
+stopped_at: Phase 4.6.4.1 — Cancel Button vs Approval Modal (0/3 plans). Current: Phase 4.6.4.1 — refinement of Visual Signature Lifecycle. Next: Phase 4.6.5 — VS Color Drift & Brand Profile Alignment.
+last_updated: "2026-07-01T21:00:00.000Z"
 progress:
-  total_phases: 23
+  total_phases: 24
   completed_phases: 22
-  total_plans: 114
-  completed_plans: 96
-  percent: 84
+  total_plans: 117
+  completed_plans: 114
+  percent: 97
 ---
 
 # Project State
@@ -20,38 +20,39 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-25 after v1.0 milestone)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
-**Current focus:** Phase 4.6.2.2 — State-Specific Drift Policy (Complete — 7/7 plans)
+**Current focus:** Phase 4.6.4.1 — Cancel Button vs Approval Modal (Planned — 0/3 plans)
 
 ## Current Position
 
-Phase: 4.6.2.2 — State-Specific Drift Policy (Complete — 7/7 plans)
-Milestone: v1.1 AI + Rendering — EXTENDED (Phase 4.6.2.2 complete)
-Phases complete: 22 of 23 phases (1 pending: 5 not yet planned)
-Next phase: 5 — Review, Adjust & Export (Not yet planned)
+Phase: 4.6.4.1 — Cancel Button vs Approval Modal (Planned — 0/3 plans)
+Milestone: v1.1 AI + Rendering — EXTENDED
+Phases complete: 24 of 27 phases (3 pending: 4.4.1 deferred, 4.6.4.1 planned, Phase 5 not yet planned)
+Next phase: 4.6.4.1 — Cancel Button vs Approval Modal (Planned — 0/3 plans)
 
 | Phase | Status |
 |-------|--------|
 | 4.6.1 — Text Only Coverage | Complete |
 | 4.6.2 — Visual Direction Drift Detection | Complete |
-| **4.6.2.2 — State-Specific Drift Policy** | **Complete (7/7)** |
-| **4.6.3 — Logo State Lifecycle** | **Complete** |
-| **4.6.3.1 — Logo Restore Scope Cleanup** | **Complete (4/4)** |
-| **4.6.4 — Visual Signature Lifecycle** | **Complete (5/5)** |
-| **4.6.5 — VS Color Drift & Brand Profile** | **Complete (5/5)** |
-| **4.6.6 — Identity Transition** | **Complete (4/4)** |
-| **4.6.7 — User Color Preferences Persistence** | **UAT Complete (8/8 passed)** |
-| **4.6.2.1 — Snapshot Fields Realignment** | **UAT Complete (6/6 passed)** |
+| 4.6.2.1 — Snapshot Fields Realignment | Complete |
+| 4.6.2.2 — State-Specific Drift Policy | Complete |
+| 4.6.3 — Logo State Lifecycle | Complete |
+| 4.6.3.1 — Logo Restore Scope Cleanup | Complete |
+| 4.6.4 — Visual Signature Lifecycle | Complete |
+| **4.6.4.1 — Cancel Button vs Approval Modal** | **Planned (0/3)** |
+| 4.6.5 — VS Color Drift & Brand Profile | Complete |
+| 4.6.6 — Identity Transition | Complete |
+| 4.6.7 — User Color Preferences Persistence | Complete |
 
-Progress: [██████████████] 84% (96/114 plans — 18 pending)
+Progress: [████████████████████████] 97% (114/117 plans — 3 pending)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Phases completed: 16
-- Plans completed: 68
+- Phases completed: 24
+- Plans completed: 114
 - Tasks completed: (tracked per plan)
-- Timeline: 2026-05-24 → 2026-06-19
+- Timeline: 2026-05-24 → 2026-07-01
 
 ## Accumulated Context
 
@@ -136,6 +137,18 @@ Key decisions (full: 8 decisions in design.md):
 - D07: "Logotipos anteriores" removido da UI
 - D08: Matriz UX pós-cleanup — 6 estados, sem "Logotipos anteriores"
 
+### Decisions from Phase 4.6.4.1 (Cancel Button vs Approval Modal)
+
+Registered in `openspec/changes/fase-4-6-4-1-cancel-button-vs-approval-modal/` and `docs/alinhamento-fase-4.6.4.1.md`.
+
+Key decisions:
+- D01: `handleCancel` chama apenas `onClose()` — sem PATCH, sem `onComplete()`, sem nova requisição
+- D02: Label primário na fase error usa `state.drift` para decidir entre "Ajustar assinatura" / "Tentar novamente"
+- D03: Remoção da rota `/logo-status` com verificação prévia de consumidores (grep)
+- D04: Falha de geração em substitution mode (`mode='substitution'`) não altera `logo_status`
+- D05: Testes comportamentais com renderização real (Testing Library + jsdom) para validar "Cancelar"
+- D06: Timeout do cliente (190s) < backend (300s) — cancelar não cancela processamento anterior, documentado como caveat
+
 ### Resolved Items
 
 | Category | Item | Status | Resolved At |
@@ -159,30 +172,26 @@ Key decisions (full: 8 decisions in design.md):
 
 ### Pending Todos
 
-- [x] Execute Phase 4.6.6 — Identity Transition (COMPLETE — 4/4 plans)
-- [x] Execute Phase 4.6.7 — User Color Preferences Persistence (UAT COMPLETE — 8/8 passed, 5/5 plans)
-- [x] Execute Phase 4.6.2.1 — Snapshot Fields Realignment (UAT COMPLETE — 6/6 passed, 3/3 plans)
-- [x] Execute Phase 4.6.3.1 — Logo Restore Scope Cleanup (4/4 plans COMPLETE)
-- [x] Plan Phase 4.6.2.2 — State-Specific Drift Policy (7 waves, 7 plans) (COMPLETE)
-- [x] Execute Phase 4.6.2.2 — State-Specific Drift Policy (COMPLETE — 7/7 plans)
+- [x] Plan Phase 4.6.4.1 — Cancel Button vs Approval Modal (3 plans) (IN PROGRESS)
+- [ ] Execute Phase 4.6.4.1 — Cancel Button vs Approval Modal (pending)
+- [ ] Execute Phase 4.4.1 — Existing Logo & Store Brand Direction Foundation (deferred — historical record)
 - [ ] Plan Phase 5 — Review, Adjust & Export (deferred)
-- [ ] Execute Phase 4.4.1 — run all 6 plans (4 waves) (deferred — historical record)
 
 ## Session Continuity
 
-Last session: 2026-06-30T18:00:00.000Z
-Phase 4.6.2.2 — State-Specific Drift Policy complete (7/7 plans). Próximo: Phase 5 — Review, Adjust & Export.
+Last session: 2026-07-01T21:00:00.000Z
+Phase 4.6.4.1 — Cancel Button vs Approval Modal: OpenSpec alignment complete, planning in progress (3 plans). Next: Execute Phase 4.6.4.1.
 
 ## Next Phases
 
 | Phase | Status | Plans |
 |-------|--------|-------|
-| **4.6.2.1 — Snapshot Fields Realignment** | **Complete** | **3/3** |
-| **4.6.2.2 — State-Specific Drift Policy** | **Complete** | **7/7** |
-| **4.6.3.1 — Logo Restore Scope Cleanup** | **Complete** | **4/4** |
+| **4.6.4.1 — Cancel Button vs Approval Modal** | **Planned** | **0/3** |
 | Phase 4.4.1 — Existing Logo & Store Brand Direction Foundation | Deferred (historical record) | 6 |
 | Phase 5 — Review, Adjust & Export | Not yet planned | 0 |
 
 **Phase 4.6.3 scope (from OpenSpec):** Upload com transição transacional e input_snapshot, Remove preservando proveniência, History/Restore com validação de drift, UI Step 2 com 4 cenários. BrandDirector error notification + retry implementado nos refinamentos pós-implementação. Ver `docs/alinhamento-fase-4.6.3.md` para alinhamento completo.
 
 **Phase 4.6.4 scope (from OpenSpec):** Ciclo de vida completo da assinatura visual — geração com metadados (content_used, input_snapshot), aprovação com identity_state sync, DELETE com fallback text_only, GET history com approved_at/art_direction/restore_eligibility, POST restore com drift validation, identity_state gates no POST /logo e POST /logo/restore, profile reconciliation padronizada via reconcileProfiles(), UI Step 2 com Remover/Alterar e modal de histórico. Ver `openspec/changes/fase-4-6-4-visual-signature-lifecycle/` para especificação completa.
+
+**Phase 4.6.4.1 scope (refinement):** Substituir `handleContinueWithoutLogo` por `handleCancel` (apenas `onClose()`) na fase error do `VisualSignatureApprovalModal`. Remover rota `/logo-status`. Proteger `logo_status` em falhas de substitution mode. Testes comportamentais com renderização real. Ver `openspec/changes/fase-4-6-4-1-cancel-button-vs-approval-modal/` para especificação completa.
