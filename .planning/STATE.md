@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI + Rendering
 status: active
-stopped_at: Phase 4.6.4.1 — Cancel Button vs Approval Modal (3/3 plans). Current: Phase 4.6.4.1 — refinement of Visual Signature Lifecycle (Complete). Next: Phase 5 — Identity-Aware Campaign Briefing (planned).
-last_updated: "2026-07-02T16:50:00.000Z"
+stopped_at: Phase 5 — Identity-Aware Campaign Briefing (2/2 plans, 2 waves). Current: Phase 5 — Identity-Aware Campaign Briefing (Complete). Next: Phase 6 — Review, Adjust & Export (deferred).
+last_updated: "2026-07-02T19:45:00.000Z"
 progress:
-  total_phases: 24
-  completed_phases: 23
-  total_plans: 120
-  completed_plans: 117
-  percent: 98
+  total_phases: 25
+  completed_phases: 25
+  total_plans: 122
+  completed_plans: 121
+  percent: 99
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-25 after v1.0 milestone)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
-**Current focus:** Phase 5 — Identity-Aware Campaign Briefing (planned — 3 waves)
+**Current focus:** Phase 5 — Identity-Aware Campaign Briefing (Complete)
 
 ## Current Position
 
-Phase: 4.6.4.1 — Cancel Button vs Approval Modal (Complete — 3/3 plans)
+Phase: 5 — Identity-Aware Campaign Briefing (Complete — 2/2 plans, 2 waves)
 Milestone: v1.1 AI + Rendering — EXTENDED
-Phases complete: 24 of 28 phases (2 pending: 4.4.1 deferred, Phase 5 Identity-Aware Campaign Briefing planned, Phase 6 Review/Export deferred)
-Next phase: 5 — Identity-Aware Campaign Briefing
+Phases complete: 25 of 28 phases (2 pending: 4.4.1 deferred, Phase 6 Review/Export deferred)
+Next phase: 6 — Review, Adjust & Export (deferred)
 
 | Phase | Status |
 |-------|--------|
@@ -42,9 +42,9 @@ Next phase: 5 — Identity-Aware Campaign Briefing
 | 4.6.5 — VS Color Drift & Brand Profile | Complete |
 | 4.6.6 — Identity Transition | Complete |
 | 4.6.7 — User Color Preferences Persistence | Complete |
-| 5. Identity-Aware Campaign Briefing | Planned (3 waves) |
+| 5. Identity-Aware Campaign Briefing | Complete (2 waves) |
 
-Progress: [████████████████████████] 98% (117/120 plans — 3 pending)
+Progress: [████████████████████████] 99% (119/120 plans — 1 pending)
 
 ## Performance Metrics
 
@@ -176,14 +176,14 @@ Key decisions:
 - [x] Plan Phase 4.6.4.1 — Cancel Button vs Approval Modal (3 plans)
 - [x] Execute Phase 4.6.4.1 — Cancel Button vs Approval Modal (3 plans, UAT 5/5 passed)
 - [x] Plan Phase 5 — Identity-Aware Campaign Briefing (3 plans, 3 waves)
-- [ ] Execute Phase 5 — Identity-Aware Campaign Briefing (pending)
+- [x] Execute Phase 5 — Identity-Aware Campaign Briefing (2/2 plans, 2 waves)
 - [ ] Execute Phase 4.4.1 — Existing Logo & Store Brand Direction Foundation (deferred — historical record)
 - [ ] Phase 6 — Review, Adjust & Export (deferred)
 
 ## Session Continuity
 
-Last session: 2026-07-02T19:13:00.000Z
-Phase 4.6.4.1 — Cancel Button vs Approval Modal: Complete. Phase 5 — Identity-Aware Campaign Briefing: planned with 3 waves based on OpenSpec alignment. Correção de roadmap: Phase 5 redefinida de "Review, Adjust & Export" para "Identity-Aware Campaign Briefing"; "Review, Adjust & Export" movido para Phase 6 (deferred). Next: Execute Phase 5 — Identity-Aware Campaign Briefing.
+Last session: 2026-07-02T19:45:00.000Z
+Phase 5 — Identity-Aware Campaign Briefing: implemented and verified (2/2 plans, 2 waves). Centralização da resolução de identidade no backend: StoreIdentitySnapshot 2.0, pipeline declarativo, validateIdentityReference, buildCampaignBrief com 5 directives. Schema reformulado (storeId + campaign fields, strict). Provider com identityImageUrl e fallback corrigido. Prompt com identityDirective injetada. Componentes migrados para signature unificado. Preview normaliza legado. 15 testes passando. Next: Review roadmapping for Phase 6 (Review, Adjust & Export).
 
 ## Next Phases
 
@@ -191,7 +191,7 @@ Phase 4.6.4.1 — Cancel Button vs Approval Modal: Complete. Phase 5 — Identit
 |-------|--------|-------|
 | **4.6.4.1 — Cancel Button vs Approval Modal** | **Complete** | **3/3** |
 | Phase 4.4.1 — Existing Logo & Store Brand Direction Foundation | Deferred (historical record) | 6 |
-| **Phase 5 — Identity-Aware Campaign Briefing** | **Planned** | **3 (3 waves)** |
+| **Phase 5 — Identity-Aware Campaign Briefing** | **Complete** | **2/2 (2 waves)** |
 | Phase 6 — Review, Adjust & Export | Deferred | 0 |
 
 **Phase 4.6.3 scope (from OpenSpec):** Upload com transição transacional e input_snapshot, Remove preservando proveniência, History/Restore com validação de drift, UI Step 2 com 4 cenários. BrandDirector error notification + retry implementado nos refinamentos pós-implementação. Ver `docs/alinhamento-fase-4.6.3.md` para alinhamento completo.
@@ -199,3 +199,5 @@ Phase 4.6.4.1 — Cancel Button vs Approval Modal: Complete. Phase 5 — Identit
 **Phase 4.6.4 scope (from OpenSpec):** Ciclo de vida completo da assinatura visual — geração com metadados (content_used, input_snapshot), aprovação com identity_state sync, DELETE com fallback text_only, GET history com approved_at/art_direction/restore_eligibility, POST restore com drift validation, identity_state gates no POST /logo e POST /logo/restore, profile reconciliation padronizada via reconcileProfiles(), UI Step 2 com Remover/Alterar e modal de histórico. Ver `openspec/changes/fase-4-6-4-visual-signature-lifecycle/` para especificação completa.
 
 **Phase 4.6.4.1 scope (refinement):** Substituir `handleContinueWithoutLogo` por `handleCancel` (apenas `onClose()`) na fase error do `VisualSignatureApprovalModal`. Remover rota `/logo-status`. Proteger `logo_status` em falhas de substitution mode. Testes comportamentais com renderização real. Ver `openspec/changes/fase-4-6-4-1-cancel-button-vs-approval-modal/` para especificação completa.
+
+**Phase 5 scope (Identity-Aware Campaign Briefing):** Camada de briefing entre cadastro da loja e geração de campanhas. Centraliza resolução de identidade no backend: `StoreIdentitySnapshot 2.0` com `identityState` + `signature` unificado, pipeline declarativo `resolveStoreIdentity`, `validateIdentityReference` (fetch com timeout), `buildCampaignBrief` com 5 directives. Schema `GenerateImageRequestSchema 2.0` (`storeId` + campaign fields, strict). Provider `identityImageUrl` + fallback com `[productFile, identityFile]`. Prompt com `{{identityDirective}}`. Componentes consomem `signature` unificado. Preview normaliza payload legado. Ver `openspec/changes/fase-5-0-identity-aware-campaign-briefing/` para especificação completa.

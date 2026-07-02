@@ -155,7 +155,7 @@
       - [x] 04.6.7-04-PLAN.md — Tests & Verification
     - **UAT Gap Closure** — (wave 1, no deps)
       - [x] 04.6.7-05-PLAN.md — Fix accentColor dual-use anti-pattern (inferred accent not persisted as user choice) + Voltar guard fix + preview hydration
-- [ ] Phase 5: Identity-Aware Campaign Briefing (planned — 3 waves)
+- [x] Phase 5: Identity-Aware Campaign Briefing (2/2 plans, 2 waves) — completed 2026-07-02
 - [ ] Phase 6: Review, Adjust & Export (deferred)
 
 ## Progress
@@ -188,5 +188,5 @@
 | 4.6.5. VS Color Drift & Brand Profile | v1.1 | 5/5 | Complete | 2026-06-22 |
 | 4.6.6. Identity Transition | v1.1 | 4/4 | Complete | 2026-06-24 |
 | 4.6.7. User Color Preferences Persistence | v1.1 | 4/4 | Complete | 2026-06-25 |
-| 5. Identity-Aware Campaign Briefing | v1.1 | 0 | Being planned | — |
+| 5. Identity-Aware Campaign Briefing | v1.1 | 2/2 | Complete | 2026-07-02 |
 | 6. Review, Adjust & Export | v1.1 | 0 | Deferred | — |
