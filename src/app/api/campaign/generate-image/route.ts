@@ -5,6 +5,7 @@ import { ImageGenerationService } from "@/lib/image-generation/services/image-ge
 import { InputValidationService } from "@/lib/image-generation/services/input-validation-service";
 import { createImageProvider } from "@/lib/image-generation/providers/factory";
 import { resolveStoreIdentity, validateIdentityReference, buildCampaignBrief } from "@/lib/actions/store";
+import { supabaseAdmin } from '@/lib/supabase/server';
 import type { CampaignInput } from "@/components/campaign/types";
 
 export async function POST(request: NextRequest) {
@@ -85,7 +86,21 @@ export async function POST(request: NextRequest) {
 
   let storeSnapshot;
   try {
-    storeSnapshot = await resolveStoreIdentity({ id: storeId } as any);
+    const { data: store, error: storeError } = await supabaseAdmin
+      .from("stores")
+      .select("id, name, logo_url, segment, brand_color, subsegment, tone_of_voice, positioning, short_description, slogan, identity_state")
+      .eq("id", storeId)
+      .single();
+
+    if (storeError || !store) {
+      console.error(`[generate-image] store not found — ${storeId}`);
+      return Response.json(
+        { error: { message: "Loja não encontrada." } },
+        { status: 404 }
+      );
+    }
+
+    storeSnapshot = await resolveStoreIdentity(store);
   } catch (err) {
     console.error(`[generate-image] resolveStoreIdentity error — ${err instanceof Error ? err.message : String(err)}`);
     return Response.json(
