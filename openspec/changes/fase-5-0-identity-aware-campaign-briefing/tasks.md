@@ -56,7 +56,7 @@
 - [x] 8.8 Testar que `storeIdentity` retornado no `type: "result"` event contém o snapshot autoritativo usado na geração (verificado via validatedSnapshot na route.ts:216 e testes UAT)
 - [x] 8.9 Testar `resolveStoreIdentity` com múltiplos logo variants: prioridade normalized → original → on_dark (4 testes em logo-variant-priority.test.ts)
 - [x] 8.10 Testar normalização dos 3 formatos legados de preview (logoUrl, visualSignatureUrl, nenhum ativo) (4 testes em normalize-legacy.test.ts)
-- [ ] 8.11 Testar erro da API no formulário: mensagem de erro exibida e opção de retry preservada — cobertura indireta via testes existentes do modal (visual-signature-approval-modal.test.tsx)
+- [x] 8.11 Testar erro da API no formulário: mensagem de erro exibida e opção de retry preservada (5 testes em use-campaign-form-submit-error.test.ts: 500, fallback, 409 conflict, 409 unknown, stream)
 - [x] 8.12 TypeScript, lint, build passando (verificado: typecheck ✅, lint ✅, vitest 307/307 ✅)
 
 ## 9. Validação manual
