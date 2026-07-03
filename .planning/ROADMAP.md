@@ -155,7 +155,7 @@
       - [x] 04.6.7-04-PLAN.md — Tests & Verification
     - **UAT Gap Closure** — (wave 1, no deps)
       - [x] 04.6.7-05-PLAN.md — Fix accentColor dual-use anti-pattern (inferred accent not persisted as user choice) + Voltar guard fix + preview hydration
-- [x] Phase 5: Identity-Aware Campaign Briefing (2/2 plans, 2 waves) — completed 2026-07-02
+- [x] Phase 5: Identity-Aware Campaign Briefing (2/2 plans, 2 waves) — completed 2026-07-02 (UAT 6/7 passed ✅ 2026-07-03)
 - [ ] Phase 6: Review, Adjust & Export (deferred)
 
 ## Progress

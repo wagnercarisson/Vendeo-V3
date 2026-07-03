@@ -4,13 +4,13 @@ milestone: v1.1
 milestone_name: AI + Rendering
 status: active
 stopped_at: Phase 5 — Identity-Aware Campaign Briefing (2/2 plans, 2 waves). Current: Phase 5 — Identity-Aware Campaign Briefing (Complete). Next: Phase 6 — Review, Adjust & Export (deferred).
-last_updated: "2026-07-02T19:45:00.000Z"
+last_updated: "2026-07-03T14:57:00.000Z"
 progress:
   total_phases: 25
   completed_phases: 25
   total_plans: 122
-  completed_plans: 121
-  percent: 99
+  completed_plans: 122
+  percent: 100
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-25 after v1.0 milestone)
 
 ## Current Position
 
-Phase: 5 — Identity-Aware Campaign Briefing (Complete — 2/2 plans, 2 waves)
+Phase: 5 — Identity-Aware Campaign Briefing (Complete — 2/2 plans, 2 waves, UAT 6/7 ✅)
 Milestone: v1.1 AI + Rendering — EXTENDED
 Phases complete: 25 of 28 phases (2 pending: 4.4.1 deferred, Phase 6 Review/Export deferred)
 Next phase: 6 — Review, Adjust & Export (deferred)
@@ -44,7 +44,7 @@ Next phase: 6 — Review, Adjust & Export (deferred)
 | 4.6.7 — User Color Preferences Persistence | Complete |
 | 5. Identity-Aware Campaign Briefing | Complete (2 waves) |
 
-Progress: [████████████████████████] 99% (119/120 plans — 1 pending)
+Progress: [████████████████████████████████] 100% (122/122 plans)
 
 ## Performance Metrics
 
@@ -182,8 +182,8 @@ Key decisions:
 
 ## Session Continuity
 
-Last session: 2026-07-02T19:45:00.000Z
-Phase 5 — Identity-Aware Campaign Briefing: implemented and verified (2/2 plans, 2 waves). Centralização da resolução de identidade no backend: StoreIdentitySnapshot 2.0, pipeline declarativo, validateIdentityReference, buildCampaignBrief com 5 directives. Schema reformulado (storeId + campaign fields, strict). Provider com identityImageUrl e fallback corrigido. Prompt com identityDirective injetada. Componentes migrados para signature unificado. Preview normaliza legado. 15 testes passando. Next: Review roadmapping for Phase 6 (Review, Adjust & Export).
+Last session: 2026-07-03T14:57:00.000Z
+Phase 5 — Identity-Aware Campaign Briefing: UAT complete (6/7 passed, 1 skipped). All 5 user-flow tests (logo, VS, text_only, remoção de logo) passed — identidade resolvida no backend, directives injetadas corretamente, assets de identidade aparecendo nas campanhas. Preview legado pulado (sem campanhas antigas para testar). Testes automatizados: 297/297 passando (27 suites). 122/122 plans completed. Next: Phase 6 — Review, Adjust & Export (deferred).
 
 ## Next Phases
 
