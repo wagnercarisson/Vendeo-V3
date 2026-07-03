@@ -66,3 +66,15 @@
 - [x] 9.3 Fluxo VS: cadastrar loja sem logo, gerar VS e aprovar, gerar campanha — VS como assinatura, sem logo, brand profile entregue como contexto direcional não obrigatório (UAT teste 3 ✅)
 - [x] 9.4 Remoção de logo: remover logo, gerar campanha — sem logotipo, brand profile (original) preservado, directive "não inventar" (UAT teste 5 ✅)
 - [ ] 9.5 Asset quebrado: corromper URL do logo no banco, gerar campanha — sem logotipo, `identity_state` permanece `'logo'`, diagnóstico registrado (não testado em UAT — usuário não conseguiu simular asset quebrado)
+
+## 10. Delta specs sincronizadas para main specs
+
+- [x] 10.1 `identity-aware-campaign-briefing`: novo main spec criado em `openspec/specs/identity-aware-campaign-briefing/spec.md`
+- [x] 10.2 `store-identity-foundation`: Read store API enriquecida, Brand assets pre-resolved com `identityState`+`signature`, Fallback usa `identity_state`, Logo priority removido
+- [x] 10.3 `store-brand-profile`: logoVariantUrl removido do BrandProfileSnapshot, brand profile synced sempre incluso
+- [x] 10.4 `ai-image-generation`: CampaignBrief no service, identityImageUrl no provider, storeId no endpoint, identityDirective no prompt, preservação comportamental
+- [x] 10.5 `campaign-preview-page`: legacy payload normalization adicionado
+- [x] 10.6 `creative-direction-context`: identity block adicionado ao CreativeBrief
+- [x] 10.7 `generation-retry-fallback`: identityImageUrl nas fallback paths, identidade preservada entre retentativas
+- [x] 10.8 `campaign-visual-renderer`: signature fields substituem logoUrl/visualSignatureUrl, variant selection no resolve
+- [x] 10.9 `campaign-input-ui`: storeId passado em vez de snapshot, submit usa generate-image com storeId

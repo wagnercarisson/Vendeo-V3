@@ -135,45 +135,45 @@ The CTA text SHALL come from `commercial_copy.cta`. Default fallback if missing:
 
 The store identity SHALL render at the bottom center of the composition. Positioning and styling follow the 4.2.0 contract: store name at 16px Open Sans 500.
 
-The priority for the store identity zone SHALL be:
-1. **Logo** (`storeIdentity.logoUrl`) — if provided, renders as circular 40×40px above store name
-2. **Visual signature** (`storeIdentity.visualSignatureUrl`) — if no logo but visual signature exists, renders the visual signature asset as the sole identity element; the store name text below is OMITTED because the visual signature already contains the store name
-3. **Initials fallback** — if neither logo nor visual signature available, show initials circle + store name text
+The priority for the store identity zone SHALL be (updated):
+1. **Signature logo** (`signature.type = 'logo'` and `signature.url` present) — renders as circular 40×40px above store name
+2. **Visual signature** (`signature.type = 'visual_signature'` and `signature.url` present) — renders the VS asset as the sole identity element; store name text below is OMITTED
+3. **Initials fallback** — if `signature.url` is null, show initials circle + store name text
 
-#### Scenario: Store identity renders with logo (unchanged)
+The renderer SHALL read from `storeIdentity.signature.url` and `storeIdentity.signature.type` instead of separate `logoUrl` and `visualSignatureUrl`.
 
-- **WHEN** `storeIdentity.logoUrl` is provided and loads successfully
+#### Scenario: Store identity renders with logo via signature
+
+- **WHEN** `storeIdentity.signature.type = 'logo'` and `storeIdentity.signature.url` is provided
 - **THEN** a circular 40×40px logo SHALL render above the store name
 - **AND** the store name SHALL render in Open Sans 500, 16px, slate-500
 
-#### Scenario: Store identity renders with visual signature
+#### Scenario: Store identity renders with visual signature via signature
 
-- **WHEN** `storeIdentity.logoUrl` is null
-- **AND** `storeIdentity.visualSignatureUrl` is provided
+- **WHEN** `storeIdentity.signature.type = 'visual_signature'` and `storeIdentity.signature.url` is provided
 - **THEN** the visual signature asset SHALL render as the sole identity element
-- **AND** the store name text SHALL NOT render below it (avoids duplication)
+- **AND** the store name text SHALL NOT render below it
 
-#### Scenario: Store identity renders with initials fallback (unchanged)
+#### Scenario: Store identity renders with initials fallback
 
-- **WHEN** `storeIdentity.logoUrl` is null
-- **AND** `storeIdentity.visualSignatureUrl` is null
+- **WHEN** `storeIdentity.signature.url` is null
 - **THEN** a circular fallback SHALL render with the store initials via `getStoreInitials()`
 - **AND** the fallback SHALL use the brand or accent color as background with white text
 
-#### Scenario: Logo image fails to load (unchanged)
+#### Scenario: Logo image fails to load
 
-- **WHEN** `storeIdentity.logoUrl` is provided but the image fails to load
+- **WHEN** `storeIdentity.signature.type = 'logo'` and `storeIdentity.signature.url` is provided but the image fails to load
 - **THEN** the initials fallback SHALL render using the brand color
 
 ### Requirement: CampaignRenderer accepts visual signature parameters
 
-The `CampaignRenderer` SHALL accept `visualSignatureUrl` and `visualSignatureType` as optional fields in its input props.
+The `CampaignRenderer` SHALL use `storeIdentity.signature.url` and `storeIdentity.signature.type` as the unified identity asset fields. The separate `logoUrl`, `visualSignatureUrl`, and `visualSignatureType` props SHALL be replaced.
 
-#### Scenario: Visual signature passed to renderer
+#### Scenario: Renderer uses signature fields
 
-- **WHEN** `CampaignRenderer` receives `visualSignatureUrl` in its props
-- **AND** `storeIdentity.logoUrl` is null
-- **THEN** the renderer SHALL display the visual signature in the store identity zone
+- **WHEN** `CampaignRenderer` receives a `StoreIdentitySnapshot` with `signature.url` and `signature.type`
+- **THEN** the renderer SHALL display the identity asset according to `signature.type`
+- **AND** SHALL NOT reference `logoUrl` or `visualSignatureUrl`
 
 ### Requirement: Unsupported layout_preset fallback
 
@@ -220,30 +220,11 @@ The brand profile colors SHALL affect the same visual elements as `brand_color` 
 
 ### Requirement: Logo variant selection for render
 
-The system SHALL resolve the logo variant at the `StoreIdentitySnapshot` level via `resolveStoreIdentity`, preferring the most faithful representation of the original logo. The resolution order SHALL be:
+The store identity resolution SHALL select the logo variant via `resolveStoreIdentity` (signature resolution), not at render time. The selection order SHALL be: `normalized` → `original` → `on_dark` (first available active variant wins). The renderer SHALL receive the final asset URL through `StoreIdentitySnapshot.signature.url`. No separate variant selection logic SHALL exist in the renderer.
 
-1. `normalized` — transparent canvas, most faithful to original, preferred for all render contexts
-2. `original` — fallback when normalized unavailable
-3. `on_dark` — secondary fallback when original unavailable
-4. If no logo asset exists, fall back to visual signature or store name text
+#### Scenario: Logo variant resolved before render with priority order
 
-The resolved logo URL SHALL be passed to the renderer as the `logoVariantUrl` within the brand profile snapshot.
-
-The `normalized` variant is preferred over `on_dark` because:
-- It preserves the logo with transparency, suitable for any canvas background
-- `on_dark` adds a dark background box that conflicts with the renderer's own dark theme background
-- The Campaign Director receives the real logo as an image reference and can position it intelligently
-
-#### Scenario: normalized variant used as primary
-
-- **WHEN** the campaign identity is resolved for a store with active brand assets
-- **AND** an active normalized variant exists
-- **THEN** the system SHALL use the normalized variant URL as the primary logo
-
-#### Scenario: Fallback chain works correctly
-
-- **WHEN** the campaign identity is resolved
-- **AND** normalized variant is not available
-- **THEN** the system SHALL fall back to original
-- **AND** if original is also unavailable, SHALL use on_dark
-- **AND** if no logo exists, SHALL fall through to visual signature or store name text
+- **WHEN** a store has multiple logo variants
+- **THEN** `resolveStoreIdentity` SHALL select in order: normalized, original, on_dark
+- **AND** the renderer SHALL receive the selected URL via `signature.url`
+- **AND** SHALL NOT perform variant selection at render time

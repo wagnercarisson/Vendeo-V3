@@ -50,7 +50,7 @@ const mockIdentitySnapshot = {
   storeName: 'Minha Loja',
   storeSegment: 'outros',
   brandColor: '#22C55E',
-  identityState: 'text_only',
+  identityState: 'text_only' as const,
   signature: { url: null, type: null },
   storeInitials: 'ML',
   brandProfile: null,
