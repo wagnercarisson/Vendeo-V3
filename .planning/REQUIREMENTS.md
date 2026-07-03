@@ -43,7 +43,7 @@ O escopo desta milestone cobre:
 
 Indicadores observáveis:
 - Usuário não autenticado vê apenas páginas de entrada (login/signup)
-- Usuário pode criar conta com email e senha
+- Usuário pode criar conta (método de autenticação em aberto)
 - Após criar conta, o usuário tem uma loja vinculada a ele
 - Usuário autenticado acessa apenas seus próprios dados
 - Logout retorna o usuário ao estado não autenticado
@@ -65,7 +65,7 @@ Indicadores observáveis:
 |-------|---------|-------|
 | Quebrar fluxo existente de criação de loja | Alto | Loja atual é criada sem user_id; migração ou reset precisa ser decidido |
 | Dados legado (stores sem dono) | Médio | Decisão tomada: resetar dados. Mas confirmar se há dados importantes a preservar. |
-| Curva de aprendizado de Supabase Auth SSR | Baixo | Padrão bem documentado, mas nova dependência (@supabase/ssr) |
+| Integração SSR com auth | Médio | @supabase/ssr pode ser necessário para cookie-based sessions, mas a abordagem (SSR vs client-side) ainda não foi definida |
 | Acoplamento prematuro a provider de auth | Médio | Supabase Auth é opinado; trocar depois pode ser caro |
 | Testes existentes assumem ausência de auth | Alto | 297 testes precisam ser revisados para ambiente autenticado |
 | Rotas que usam service role ignoram RLS | Alto | Se operações admin (ex: upload de logo) usam `supabaseAdmin` (service role), o RLS não se aplica — acesso não é filtrado por `auth.uid()`. Essas rotas precisam de validação explícita de ownership. |
@@ -121,4 +121,4 @@ Estas perguntas precisam ser respondidas antes ou durante o planejamento da impl
 
 *Documento criado: 2026-07-03*
 *Última atualização: 2026-07-03 após correção do escopo documental*
-*Próximo passo: Aguardar autorização — `/gsd-explore` (OpenSpec Explore) para discutir questões em aberto antes do planejamento*
+*Próximo passo: Aguardar autorização — `/opsx:explore` para discutir questões em aberto antes do planejamento*

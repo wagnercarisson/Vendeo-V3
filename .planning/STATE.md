@@ -211,6 +211,6 @@ Milestone v1.2 "Contas e Propriedade" iniciada em modo exclusivamente documental
 ## Operator Next Steps
 
 - Milestone v1.2 está em modo exclusivamente documental — nenhuma decisão de implementação foi tomada
-- Próximo passo: `/gsd-explore` (OpenSpec Explore) para discutir questões em aberto
+- Próximo passo: `/opsx:explore` para discutir questões em aberto
 - Export PNG/JPG: adiado novamente após estreitamento da v1.2 — MC-03 permanece como decisão, mas o destino (milestone de infraestrutura) ainda não foi definido
 - Após discussão: `/gsd-plan-phase [N]` para iniciar planejamento das fases

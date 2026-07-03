@@ -15,11 +15,11 @@ Na v1.1 (Motor de Campanhas, shipped 2026-07-03), o sistema completo de geraçã
 **Goal:** Um usuário entra no Vendeo e acessa exclusivamente sua própria loja e identidade.
 
 **Confirmed scope:**
-- Autenticação (signup/login/sessão/logout) com email e senha
-- Store criada no fluxo de signup (1 usuário = 1 loja)
+- Criação de conta (signup/login/sessão/logout) — método de autenticação em aberto
+- Vínculo 1:1 entre usuário e loja — momento da criação da loja em aberto
 - Row Level Security no Supabase para isolar dados por usuário
 - Rotas protegidas (redirect para login se não autenticado)
-- Fluxo mínimo: signup → login → acesso exclusivo à própria loja
+- Fluxo mínimo: entrada → acesso exclusivo à própria loja
 
 ## Core Value
 
