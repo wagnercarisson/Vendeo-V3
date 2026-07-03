@@ -1,15 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Motor de Campanhas
-status: shipped
-last_updated: "2026-07-03T16:00:00.000Z"
+milestone: v1.2
+milestone_name: Contas e Propriedade
+status: planning
+last_updated: "2026-07-03T20:44:47.029Z"
+last_activity: 2026-07-03
 progress:
-  total_phases: 26
-  completed_phases: 26
-  total_plans: 128
-  completed_plans: 128
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -23,10 +24,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-25 after v1.0 milestone)
 
 ## Current Position
 
-Phase: Todas as 26 fases concluídas (128/128 plans)
-Milestone: v1.1 Motor de Campanhas — SHIPPED 2026-07-03
-Phases complete: 26 of 26 fases planejadas para v1.1 (Phase 6 re-scoped durante close-out)
-Next milestone: A definir — estrutura SaaS (dashboard, auth, configurações, segurança)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-07-03 — Milestone v1.2 started
 
 ## Performance Metrics
 

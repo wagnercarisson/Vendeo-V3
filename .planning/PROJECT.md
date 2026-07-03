@@ -8,6 +8,17 @@ Na v1.0, o lojista cadastra a identidade da loja e insere dados do produto + ofe
 
 Na v1.1 (Motor de Campanhas, shipped 2026-07-03), o sistema completo de geração foi implementado: inteligência artificial interpreta o contexto comercial e gera especificação estruturada, renderização programática compõe a arte final, e a identidade da loja (logo, assinatura visual, cores, direção de marca) é integrada ao briefing de campanha. O motor está validado, mas o produto ainda não é uma versão pública utilizável — falta estrutura SaaS (auth, dashboard, export).
 
+## Current Milestone: v1.2 — Contas e Propriedade
+
+**Goal:** Um usuário entra no Vendeo e acessa exclusivamente sua própria loja e identidade.
+
+**Target features:**
+- Autenticação (signup/login/sessão/logout) com email e senha
+- Store criada no fluxo de signup (1 usuário = 1 loja)
+- Row Level Security no Supabase para isolar dados por usuário
+- Rotas protegidas (redirect para login se não autenticado)
+- Fluxo mínimo: signup → login → acesso exclusivo à própria loja
+
 ## Core Value
 
 Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais. Se tudo mais falhar, o Vendeo precisa ser capaz de transformar uma oferta simples em uma peça visual comercial, clara e publicável.
@@ -36,32 +47,42 @@ Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confian�
 - ✓ **REND-05** — Identity fallback: name-based identity with safe defaults — v1.1
 - ✓ **REVW-01** — User can preview generated campaign before export — v1.1
 
-### Active (v1.1 close-out decisions — re-scoped)
+### Active — v1.2 Contas e Propriedade
 
-- [~] **REVW-02** — Guided adjustments (palette, font, layout) → ❌ **Removido** — não é requisito do motor. Decisão MC-01.
-- [~] **REVW-03** — Regenerate with adjusted parameters → 🔄 **Redefinido** como "novo artefato a partir de briefing revisado". Decisão MC-02.
-- [~] **REVW-04** — Export PNG/JPG → ➡️ **Movido** para próxima milestone (infraestrutura SaaS). Decisão MC-03.
+- [ ] **AUTH-01**: User can sign up with email and password
+- [ ] **AUTH-02**: User receives email verification after signup
+- [ ] **AUTH-03**: User can log in with email and password
+- [ ] **AUTH-04**: User session persists across browser refresh
+- [ ] **AUTH-05**: User can log out
+- [ ] **OWNR-01**: Store created during signup flow (1 user = 1 store)
+- [ ] **OWNR-02**: User can only access their own store data
+- [ ] **SEC-01**: RLS policies protect store data by user_id
+- [ ] **SEC-02**: Routes redirect unauthenticated users to login
+- [ ] **SEC-03**: Guest users see only login/signup pages
 
-### Next Milestone — Infraestrutura SaaS (a definir)
+### Future
 
-- [ ] Auth (login/cadastro/sessão)
 - [ ] Dashboard com histórico de campanhas
 - [ ] Navegação e menus
 - [ ] Configurações da loja e do usuário
-- [ ] Segurança (RLS, proteção de rotas)
 - [ ] Export PNG/JPG
+- [ ] Planos e cobrança
+- [ ] Campanhas persistidas
+- [ ] Regeneração de campanhas
 
 ### Out of Scope
 
-- Login e autenticação — core precisa ser validado antes da estrutura SaaS
 - Dashboard — não implementar antes do core de geração
-- Menus definitivos e navegação completa — fluxo único de campanha é suficiente na fase 1
-- Plano semanal e calendário inteligente — fase futura, não entra na validação do core
-- Cobrança e planos — uso livre durante validação
-- Editor visual livre tipo Canva — geração deve ser guiada, não arrastar-e-soltar
+- Campanhas persistidas — escopo v1.2 é auth + ownership, não inclui salvar campanhas no banco
+- Export PNG/JPG — movido para milestone futura (decisão MC-03)
+- Regeneração de campanhas — redefinida como "novo briefing" (decisão MC-02), não implementada nesta milestone
+- Planos e cobrança — uso livre durante validação do core
+- Múltiplas lojas — relação 1:1 (usuário:loja) nesta milestone
+- Menus definitivos e navegação completa — fluxo mínimo de entrada é suficiente
+- Plano semanal e calendário inteligente — fase futura
+- Editor visual livre tipo Canva — geração deve ser guiada
 - Geração por IA de imagem (DALL-E, etc) — reduz previsibilidade e controle sobre texto
-- Múltiplos tipos de campanha — foco em Produto + Oferta inicialmente
-- Múltiplas lojas, equipe, automações avançadas
+- Múltiplos tipos de campanha, equipe, automações avançadas
 
 ## Context
 
@@ -137,4 +158,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-03 after v1.1 milestone close-out*
+*Last updated: 2026-07-03 after starting v1.2 milestone*
