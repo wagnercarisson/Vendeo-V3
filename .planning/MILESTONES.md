@@ -15,6 +15,7 @@
 **Known deferred items at close:** 0
 
 **Known gaps:**
+
 - INPT-04 (logo upload): Intentionally deferred per Phase 1 specs. Name-based visual identity fallback works via `resolveStoreIdentity`.
 
 ---
@@ -46,7 +47,10 @@
 | MC-04 | CSS Renderer marcado como legado | IA gera a imagem final; CSS é fallback de preview |
 | MC-05 | v1.1 validou o motor, não versão pública | Próxima milestone constrói estrutura SaaS |
 
+**Known deferred items at close:** 7 (see STATE.md Deferred Items — all metadata tracking, no functional gaps)
+
 **Gaps conhecidos:**
+
 - Export PNG/JPG: movido para próxima milestone
 - Ajustes visuais (paleta, fonte, layout): removidos como requisito
 - Regeneração: redefinida, aguardando implementação futura

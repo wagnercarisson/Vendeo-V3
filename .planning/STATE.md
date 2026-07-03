@@ -3,7 +3,6 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Motor de Campanhas
 status: shipped
-stopped_at: Milestone v1.1 shipped 2026-07-03. All 26 phases completed (128 plans). Phase 6 re-scoped during close-out.
 last_updated: "2026-07-03T16:00:00.000Z"
 progress:
   total_phases: 26
@@ -29,39 +28,6 @@ Milestone: v1.1 Motor de Campanhas — SHIPPED 2026-07-03
 Phases complete: 26 of 26 fases planejadas para v1.1 (Phase 6 re-scoped durante close-out)
 Next milestone: A definir — estrutura SaaS (dashboard, auth, configurações, segurança)
 
-| Phase | Plans | Status |
-|-------|-------|--------|
-| 1. Foundation & Store Identity | — | Complete |
-| 2. Campaign Input | 3/3 | Complete |
-| 3.1. Campaign Intelligence Foundation | 3/3 | Complete |
-| 3.2. Real AI Provider Integration | 1/1 | Complete |
-| 4.1. Campaign Visual Renderer & Preview | 1/1 | Complete |
-| 4.2. Commercial Visual Quality | 4/4 | Baseline Complete |
-| 4.3. Agency-grade Campaign Composition | — | Complete |
-| 4.3.1. Generation Reliability & Progress UX | 5 | Complete |
-| 4.3.2. Creative Direction & Context Awareness | 3/3 | Complete |
-| 4.3.3. Generation Metrics & Benchmark | 3/3 | Complete |
-| 4.4. Store Visual Signature Generation | 9/9 | Verified |
-| 4.4.1. Existing Logo & Brand Direction | 6/6 | Complete |
-| 4.4.2. Generated VS & Brand Profile | 6/6 | Complete |
-| 4.5. Segment & Subsegment Alignment | 7/7 | Complete |
-| 4.6.1. Text Only Coverage | 5/5 | Complete |
-| 4.6.2. Visual Direction Drift Detection | 4/4 | Complete |
-| 4.6.2.1. Snapshot Fields Realignment | 3/3 | Complete |
-| 4.6.2.2. State-Specific Drift Policy | 7/7 | Complete |
-| 4.6.3. Logo State Lifecycle | 5/5 | Complete |
-| 4.6.3.1. Logo Restore Scope Cleanup | 4/4 | Complete |
-| 4.6.4. Visual Signature Lifecycle | 5/5 | Complete |
-| 4.6.4.1. Cancel Button vs Approval Modal | 3/3 | Complete |
-| 4.6.5. VS Color Drift & Brand Profile | 5/5 | Complete |
-| 4.6.6. Identity Transition | 4/4 | Complete |
-| 4.6.7. User Color Preferences Persistence | 5/5 | Complete |
-| 5. Identity-Aware Campaign Briefing | 2/2 | Complete |
-
-**Total: 26 phases, 128/128 plans** ✅
-
-Progress: [████████████████████████████████] 100% (128/128 plans)
-
 ## Performance Metrics
 
 **Velocity:**
@@ -78,6 +44,7 @@ Progress: [███████████████████████
 Registered in `.planning/phases/4.5-segment-subsegment-alignment/4.5-CONTEXT.md` and `openspec/changes/phase-4-5-segment-subsegment-alignment/`.
 
 Key decisions:
+
 - D-01: Unified STORE_SEGMENTS + STORE_SUBSEGMENTS structure
 - D-02: Three UI modes for subsegment (dropdown rico, dropdown travado, campo aberto)
 - D-03: Reset subsegment on segment change
@@ -90,6 +57,7 @@ Key decisions:
 ### Spec Correction
 
 Subsegment values in `STORE_SUBSEGMENTS` were corrected from auto-generated spec values to user-defined taxonomy aligned with Brazilian retail. Affected files:
+
 - `src/lib/constants.ts` — corrected subsegment values across all 13 segments
 - `src/components/flow/store-identity-form.tsx` — added travado mode (disabled select with label), fixed getSubsegmentMode
 - `openspec/.../specs/segment-subsegment-hierarchy/spec.md` — corrected
@@ -100,6 +68,7 @@ Subsegment values in `STORE_SUBSEGMENTS` were corrected from auto-generated spec
 Registered in `.planning/phases/04.6.1-text-only-state-visual-direction-inference/04.6.1-CONTEXT.md`.
 
 Key decisions:
+
 - D-01: Dedicated inference route POST /api/store/[id]/brand-profile/infer
 - D-02: Dual-population strategy (identity_state + logo_status both set)
 - D-03: New dedicated prompt (store-brand-inference.md) without image analysis
@@ -117,6 +86,7 @@ Key decisions:
 Registered in `.planning/phases/4.6.2-visual-direction-drift-detection/4.6.2-CONTEXT.md`.
 
 Key decisions:
+
 - D01-D09: From OpenSpec design (snapshot structure, sensitive fields, detection algorithm, color resolution, metadata API)
 - D10: Drift delivery changed from mount-time banner to save-time blocking modal (no escape, no outside click)
 - D11: Navigation guard intercepts `<a>` clicks (capture phase), `popstate`, and `beforeunload` when drift active on Step 2
@@ -128,6 +98,7 @@ Key decisions:
 Registered in `openspec/changes/fase-4-6-3-logo-state-lifecycle/` and `docs/alinhamento-fase-4.6.3.md`.
 
 Key decisions (full: 10 decisions D1-D10 in OpenSpec design.md):
+
 - D01: `active_logo_asset_id` como proveniência — nunca nullado
 - D02: Compensação controlada (não RPC, não BEGIN/COMMIT)
 - D03: `identity_state` como canônico, `logo_status` como derivado via IDENTITY_TO_LOGO_STATUS
@@ -145,6 +116,7 @@ Key decisions (full: 10 decisions D1-D10 in OpenSpec design.md):
 Registered in `openspec/changes/fase-4-6-3-1-logo-restore-scope-cleanup/`.
 
 Key decisions (full: 8 decisions in design.md):
+
 - D01: Endpoint de retry sem `asset_id` no body — servidor resolve o asset original ativo
 - D02: Pré-condição de perfil `failed` — valida status, source e active_logo_asset_id
 - D03: Sequência compensável — fallback outdated → insert new synced; restaura se insert falhar
@@ -159,6 +131,7 @@ Key decisions (full: 8 decisions in design.md):
 Registered in `openspec/changes/fase-4-6-4-1-cancel-button-vs-approval-modal/` and `docs/alinhamento-fase-4.6.4.1.md`.
 
 Key decisions:
+
 - D01: `handleCancel` chama apenas `onClose()` — sem PATCH, sem `onComplete()`, sem nova requisição
 - D02: Label primário na fase error usa `state.drift` para decidir entre "Ajustar assinatura" / "Tentar novamente"
 - D03: Remoção da rota `/logo-status` com verificação prévia de consumidores (grep)
@@ -199,6 +172,22 @@ As seguintes decisões foram tomadas durante o fechamento da milestone v1.1 "Mot
 | MC-04 | **CSS Renderer marcado como legado** — a geração por IA produz a imagem final. O CampaignRenderer CSS permanece como fallback visual para preview, mas não é o formato de saída. | REND-01 redefinido |
 | MC-05 | **v1.1 validou o motor, não uma versão pública utilizável** — o sistema gera, identifica e pré-visualiza campanhas com qualidade, mas não possui auth, export, ou fluxo completo de publicação. A milestone seguinte constrói a estrutura SaaS para tornar o produto utilizável. | Escopo da próxima milestone |
 
+## Deferred Items
+
+Items acknowledged and deferred at milestone close on 2026-07-03:
+
+| Category | Item | Status |
+|----------|------|--------|
+| debug | brand-colors-chosen-inferred-accent | Bugs already resolved per STATE.md Resolved Items; debug session not formally closed |
+| debug | visual-signature-modal-review-bug | UI fix applied 2026-06-19; debug session metadata not updated |
+| debug | vs-restore-drift-detection | Drift detection fix applied 2026-06-19; debug session metadata not updated |
+| uat_gap | Phase 04.6.3 | UAT completed with 0 pending scenarios; status metadata not updated |
+| uat_gap | Phase 04.6.6 | UAT completed with 0 pending scenarios; status metadata not updated |
+| uat_gap | Phase 4.3.1 | UAT completed with 0 pending scenarios; status metadata not updated |
+| uat_gap | Phase 4.6.4.1 | UAT completed with 0 pending scenarios; status metadata not updated |
+
+**Total: 7 items deferred at close** — all are metadata tracking issues, not functional gaps.
+
 ## Session Continuity
 
 Last session: 2026-07-03
@@ -211,3 +200,7 @@ Milestone v1.1 "Motor de Campanhas" shipped com 26 fases, 128/128 plans, 297 tes
 **Phase 4.6.4.1 scope (refinement):** Substituir `handleContinueWithoutLogo` por `handleCancel` (apenas `onClose()`) na fase error do `VisualSignatureApprovalModal`. Remover rota `/logo-status`. Proteger `logo_status` em falhas de substitution mode. Testes comportamentais com renderização real. Ver `openspec/changes/fase-4-6-4-1-cancel-button-vs-approval-modal/` para especificação completa.
 
 **Phase 5 scope (Identity-Aware Campaign Briefing):** Camada de briefing entre cadastro da loja e geração de campanhas. Centraliza resolução de identidade no backend: `StoreIdentitySnapshot 2.0` com `identityState` + `signature` unificado, pipeline declarativo `resolveStoreIdentity`, `validateIdentityReference` (fetch com timeout), `buildCampaignBrief` com 5 directives. Schema `GenerateImageRequestSchema 2.0` (`storeId` + campaign fields, strict). Provider `identityImageUrl` + fallback com `[productFile, identityFile]`. Prompt com `{{identityDirective}}`. Componentes consomem `signature` unificado. Preview normaliza payload legado. Ver `openspec/changes/fase-5-0-identity-aware-campaign-briefing/` para especificação completa.
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
