@@ -6,6 +6,8 @@ O Vendeo é um motor SaaS de geração de campanhas para lojistas de lojas físi
 
 Na v1.0, o lojista cadastra a identidade da loja e insere dados do produto + oferta em um formulário guiado, com máscara de preço BRL, upload de imagem com preview, e validação inline.
 
+Na v1.1 (Motor de Campanhas, shipped 2026-07-03), o sistema completo de geração foi implementado: inteligência artificial interpreta o contexto comercial e gera especificação estruturada, renderização programática compõe a arte final, e a identidade da loja (logo, assinatura visual, cores, direção de marca) é integrada ao briefing de campanha. O motor está validado, mas o produto ainda não é uma versão pública utilizável — falta estrutura SaaS (auth, dashboard, export).
+
 ## Core Value
 
 Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais. Se tudo mais falhar, o Vendeo precisa ser capaz de transformar uma oferta simples em uma peça visual comercial, clara e publicável.
@@ -17,18 +19,37 @@ Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confian�
 - ✓ **INPT-01** — Product name, price/offer, and short description entry — v1.0
 - ✓ **INPT-02** — Product image upload with preview and validation — v1.0
 - ✓ **INPT-03** — Store info (name, segment/subsegment) with persistence — v1.0
-- ✓ **INPT-04** — Basic visual identity (colors, name style) — v1.0 (logo deferred)
+- ✓ **INPT-04** — Basic visual identity (colors, logo, name style) — v1.0 + v1.1 (logo upload implemented)
 - ✓ **DSGN-01** — No free-form editor — form controls and presets only — v1.0
 - ✓ **DSGN-02** — UI/UX Pro Max as design tool, not runtime dep — v1.0
 - ✓ **DSGN-03** — Campaign composition rules documented — v1.0
 - ✓ **DSGN-04** — V1 scope guardrail (no auth/dashboard/plans) — v1.0
+- ✓ **AI-01** — AI interprets product/offer/store context and generates structured spec — v1.1
+- ✓ **AI-02** — AI generates commercial copy (title, subtitle, CTA) tailored to product/offer — v1.1
+- ✓ **AI-03** — AI output includes visual parameters: palette, hierarchy, layout, badge — v1.1
+- ✓ **AI-04** — AI provider abstraction layer (OpenAI/Anthropic) — v1.1
+- ✓ **AI-05** — AI output is structured JSON, validated before rendering — v1.1
+- ✓ **REND-01** — Programmatic renderer composes final image (IA gera, CSS como fallback legacy) — v1.1
+- ✓ **REND-02** — Template system with layout variations for Produto + Oferta — v1.1
+- ✓ **REND-03** — Store identity tokens (name, logo, colors, fonts) applied to campaign — v1.1
+- ✓ **REND-04** — Campaign maintains minimum visual quality — v1.1
+- ✓ **REND-05** — Identity fallback: name-based identity with safe defaults — v1.1
+- ✓ **REVW-01** — User can preview generated campaign before export — v1.1
 
-### Active
+### Active (v1.1 close-out decisions — re-scoped)
 
-- [ ] IA interpreta contexto comercial e gera especificação estruturada (título, subtítulo, CTA, preço, badge, hierarquia visual, paleta, layout)
-- [ ] Renderização programática compõe e exporta imagem final (PNG/JPG)
-- [ ] Fluxo de revisão com ajustes guiados (paleta, estilo de fonte, variações de layout)
-- [ ] Arquitetura com camada de abstração para provedores de IA (OpenAI/Anthropic)
+- [~] **REVW-02** — Guided adjustments (palette, font, layout) → ❌ **Removido** — não é requisito do motor. Decisão MC-01.
+- [~] **REVW-03** — Regenerate with adjusted parameters → 🔄 **Redefinido** como "novo artefato a partir de briefing revisado". Decisão MC-02.
+- [~] **REVW-04** — Export PNG/JPG → ➡️ **Movido** para próxima milestone (infraestrutura SaaS). Decisão MC-03.
+
+### Next Milestone — Infraestrutura SaaS (a definir)
+
+- [ ] Auth (login/cadastro/sessão)
+- [ ] Dashboard com histórico de campanhas
+- [ ] Navegação e menus
+- [ ] Configurações da loja e do usuário
+- [ ] Segurança (RLS, proteção de rotas)
+- [ ] Export PNG/JPG
 
 ### Out of Scope
 
@@ -41,7 +62,6 @@ Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confian�
 - Geração por IA de imagem (DALL-E, etc) — reduz previsibilidade e controle sobre texto
 - Múltiplos tipos de campanha — foco em Produto + Oferta inicialmente
 - Múltiplas lojas, equipe, automações avançadas
-- Upload de logo — nome da loja como identidade visual inicial (fallback via `resolveStoreIdentity`)
 
 ## Context
 
@@ -52,6 +72,18 @@ Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confian�
 - Campaign input: form with BRL mask, image upload, validation, local success state
 - Route split: `/` = campaign, `/store` = store identity
 - Design system: MASTER.md + CAMPAIGN_VISUAL_SYSTEM.md defining composition rules
+
+**v1.1 shipped with:**
+- ~8.800+ lines of TypeScript/TSX across 100+ source files
+- 26 phases, 128 plans, 297 automated tests (27 suites)
+- AI Campaign Intelligence: OpenAI/Anthropic providers with structured output, abstraction layer
+- Visual Rendering: programmatic renderer + IA-generated images + CSS legacy fallback
+- Store Identity: logo upload with BrandDirector AI analysis, 5 image variants, color probing
+- Visual Signature: AI-generated, typographic fallback, approval flow, color drift detection
+- Campaign Briefing: identity-aware pipeline with StoreIdentitySnapshot 2.0, 5 directives
+- Drift Detection: snapshot-based, state-specific policy, critical/sensitive tiers
+- Identity Transitions: state machine for logo/VS/text_only with provenance preservation
+- Full UAT cycle across all phases, quality gates, and manual verification
 
 O Vendeo resolve a dificuldade de pequenos e médios lojistas físicos em transformar a divulgação da loja em campanhas profissionais, consistentes e orientadas à venda. O cliente ideal acumula funções operacionais, comerciais e administrativas — não tem tempo, criatividade ou recursos para design profissional.
 
@@ -82,6 +114,10 @@ O ambiente de desenvolvimento usa VS Code, OpenCode como agente de IA, OpenSpec 
 | Route split: `/` = campaign, `/store` = store identity | Limpeza, navegação nativa App Router | ✓ Good — clean separation |
 | BRL via cents-internal state + Intl.NumberFormat | Precisão numérica, formatação consistente | ✓ Good — raw-digit extraction after fix |
 | Component decomposition (hook + form + preview) | Single responsibility, reusável | ✓ Good — same pattern as Phase 1 |
+| Geração por IA (imagem final) + CSS como fallback legado | IA garante qualidade visual; CSS legado preservado para preview | ✓ Good — MC-04 validated in v1.1 close-out |
+| Ajustes de arte removidos do escopo v1 | Motor valida geração, não edição pós-geração | ✓ Decisão MC-01 |
+| Regeneração redefinida como "novo briefing" | Evita complexidade de re-renderização com parâmetros | ✓ Decisão MC-02 |
+| Export movido para milestone de infraestrutura | Export depende de dashboard e histórico para fazer sentido | ✓ Decisão MC-03 |
 
 ## Evolution
 
@@ -101,4 +137,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-25 after v1.0 milestone*
+*Last updated: 2026-07-03 after v1.1 milestone close-out*

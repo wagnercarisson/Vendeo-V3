@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 MVP** — Phases 1-2 (shipped 2026-05-25)
-- 📋 **v1.1 AI + Rendering** — Phases 3-5 (planned)
+- ✅ **v1.1 Motor de Campanhas** — Phases 3-5 (shipped 2026-07-03)
 
 ## Phases
 
@@ -15,7 +15,7 @@
 
 </details>
 
-### 📋 v1.1 AI + Rendering (Complete)
+### ✅ v1.1 Motor de Campanhas — SHIPPED 2026-07-03
 
 - [x] Phase 3: AI Campaign Intelligence
   - [x] Phase 3.1: Campaign Intelligence Foundation (3/3 plans) (completed 2026-05-25)
@@ -156,7 +156,11 @@
     - **UAT Gap Closure** — (wave 1, no deps)
       - [x] 04.6.7-05-PLAN.md — Fix accentColor dual-use anti-pattern (inferred accent not persisted as user choice) + Voltar guard fix + preview hydration
 - [x] Phase 5: Identity-Aware Campaign Briefing (2/2 plans, 2 waves) — completed 2026-07-02 (UAT 6/7 passed ✅ 2026-07-03)
-- [ ] Phase 6: Review, Adjust & Export (deferred)
+- [~] Phase 6: Review, Adjust & Export (re-scoped durante close-out da v1.1 — itens redistribuídos)
+  - Ajustes de arte (paleta, fonte, layout) → ❌ **Removido** — não é requisito do motor de campanhas
+  - Regeneração → 🔄 **Redefinido** — "novo artefato a partir de briefing revisado" (pós-milestone)
+  - Export PNG/JPG → ➡️ **Movido** para próxima milestone (infraestrutura SaaS)
+  - CSS Renderer → 🏚️ **Legado** — substituído pela imagem gerada por IA
 
 ## Progress
 
@@ -189,4 +193,4 @@
 | 4.6.6. Identity Transition | v1.1 | 4/4 | Complete | 2026-06-24 |
 | 4.6.7. User Color Preferences Persistence | v1.1 | 4/4 | Complete | 2026-06-25 |
 | 5. Identity-Aware Campaign Briefing | v1.1 | 2/2 | Complete | 2026-07-02 |
-| 6. Review, Adjust & Export | v1.1 | 0 | Deferred | — |
+| 6. Review, Adjust & Export | v1.1 | — | Re-scoped (itens redistribuídos) | 2026-07-03 |

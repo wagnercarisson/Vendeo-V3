@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.1
-milestone_name: AI + Rendering
-status: active
-stopped_at: Phase 5 — Identity-Aware Campaign Briefing (2/2 plans, 2 waves). Current: Phase 5 — Identity-Aware Campaign Briefing (Complete). Next: Phase 6 — Review, Adjust & Export (deferred). Phases 4.4.1 concluded and archived.
-last_updated: "2026-07-03T15:30:00.000Z"
+milestone_name: Motor de Campanhas
+status: shipped
+stopped_at: Milestone v1.1 shipped 2026-07-03. All 26 phases completed (128 plans). Phase 6 re-scoped during close-out.
+last_updated: "2026-07-03T16:00:00.000Z"
 progress:
   total_phases: 26
   completed_phases: 26
@@ -20,32 +20,47 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-25 after v1.0 milestone)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
-**Current focus:** Phase 5 — Identity-Aware Campaign Briefing (Complete)
+**Current focus:** Milestone v1.1 shipped — aguardando início da próxima milestone
 
 ## Current Position
 
-Phase: 5 — Identity-Aware Campaign Briefing (Complete — 2/2 plans, 2 waves, UAT 6/7 ✅)
-Milestone: v1.1 AI + Rendering — EXTENDED
-Phases complete: 26 of 28 phases (1 pending: Phase 6 Review/Export deferred)
-Next phase: 6 — Review, Adjust & Export (deferred)
+Phase: Todas as 26 fases concluídas (128/128 plans)
+Milestone: v1.1 Motor de Campanhas — SHIPPED 2026-07-03
+Phases complete: 26 of 26 fases planejadas para v1.1 (Phase 6 re-scoped durante close-out)
+Next milestone: A definir — estrutura SaaS (dashboard, auth, configurações, segurança)
 
-| Phase | Status |
-|-------|--------|
-| 4.4.1 — Existing Logo & Store Brand Direction Foundation | **Complete (6/6)** |
-| 4.6.1 — Text Only Coverage | Complete |
-| 4.6.2 — Visual Direction Drift Detection | Complete |
-| 4.6.2.1 — Snapshot Fields Realignment | Complete |
-| 4.6.2.2 — State-Specific Drift Policy | Complete |
-| 4.6.3 — Logo State Lifecycle | Complete |
-| 4.6.3.1 — Logo Restore Scope Cleanup | Complete |
-| 4.6.4 — Visual Signature Lifecycle | Complete |
-| **4.6.4.1 — Cancel Button vs Approval Modal** | **Complete (3/3)** |
-| 4.6.5 — VS Color Drift & Brand Profile | Complete |
-| 4.6.6 — Identity Transition | Complete |
-| 4.6.7 — User Color Preferences Persistence | Complete |
-| 5. Identity-Aware Campaign Briefing | Complete (2 waves) |
+| Phase | Plans | Status |
+|-------|-------|--------|
+| 1. Foundation & Store Identity | — | Complete |
+| 2. Campaign Input | 3/3 | Complete |
+| 3.1. Campaign Intelligence Foundation | 3/3 | Complete |
+| 3.2. Real AI Provider Integration | 1/1 | Complete |
+| 4.1. Campaign Visual Renderer & Preview | 1/1 | Complete |
+| 4.2. Commercial Visual Quality | 4/4 | Baseline Complete |
+| 4.3. Agency-grade Campaign Composition | — | Complete |
+| 4.3.1. Generation Reliability & Progress UX | 5 | Complete |
+| 4.3.2. Creative Direction & Context Awareness | 3/3 | Complete |
+| 4.3.3. Generation Metrics & Benchmark | 3/3 | Complete |
+| 4.4. Store Visual Signature Generation | 9/9 | Verified |
+| 4.4.1. Existing Logo & Brand Direction | 6/6 | Complete |
+| 4.4.2. Generated VS & Brand Profile | 6/6 | Complete |
+| 4.5. Segment & Subsegment Alignment | 7/7 | Complete |
+| 4.6.1. Text Only Coverage | 5/5 | Complete |
+| 4.6.2. Visual Direction Drift Detection | 4/4 | Complete |
+| 4.6.2.1. Snapshot Fields Realignment | 3/3 | Complete |
+| 4.6.2.2. State-Specific Drift Policy | 7/7 | Complete |
+| 4.6.3. Logo State Lifecycle | 5/5 | Complete |
+| 4.6.3.1. Logo Restore Scope Cleanup | 4/4 | Complete |
+| 4.6.4. Visual Signature Lifecycle | 5/5 | Complete |
+| 4.6.4.1. Cancel Button vs Approval Modal | 3/3 | Complete |
+| 4.6.5. VS Color Drift & Brand Profile | 5/5 | Complete |
+| 4.6.6. Identity Transition | 4/4 | Complete |
+| 4.6.7. User Color Preferences Persistence | 5/5 | Complete |
+| 5. Identity-Aware Campaign Briefing | 2/2 | Complete |
 
-Progress: [████████████████████████████████] 100% (122/122 plans)
+**Total: 26 phases, 128/128 plans** ✅
+
+Progress: [████████████████████████████████] 100% (128/128 plans)
 
 ## Performance Metrics
 
@@ -172,28 +187,22 @@ Key decisions:
 | Persistence | Voltar para cores sugeridas: executeStep2Save re-persistia safe_color_tokens como user choice — guard alterado para hasUserChosenColors(brandColorsChosen) | Resolved | 2026-06-25 |
 | UI | Preview ignorava brandColorsChosen no branch isTextOnly — corrigido para priorizar cores do usuário | Resolved | 2026-06-25 |
 
-### Pending Todos
+## Milestone Close-Out Decisions (v1.1 → SHIPPED 2026-07-03)
 
-- [x] Plan Phase 4.6.4.1 — Cancel Button vs Approval Modal (3 plans)
-- [x] Execute Phase 4.6.4.1 — Cancel Button vs Approval Modal (3 plans, UAT 5/5 passed)
-- [x] Plan Phase 5 — Identity-Aware Campaign Briefing (3 plans, 3 waves)
-- [x] Execute Phase 5 — Identity-Aware Campaign Briefing (2/2 plans, 2 waves)
-- [x] Execute Phase 4.4.1 — Existing Logo & Store Brand Direction Foundation (6/6 plans, archived)
-- [ ] Phase 6 — Review, Adjust & Export (deferred)
+As seguintes decisões foram tomadas durante o fechamento da milestone v1.1 "Motor de Campanhas":
+
+| Decisão | Descrição | Impacto |
+|---------|-----------|---------|
+| MC-01 | **Ajustes de arte (paleta, fonte, layout) removidos como requisito** — o motor de campanhas valida geração, não edição pós-geração. Ajustes de copy (título, hook, CTA) permanecem no painel de preview. | Remove REVW-02 do escopo v1 |
+| MC-02 | **Regeneração redefinida** — "novo artefato a partir de briefing revisado", não re-renderização com parâmetros. A implementação fica para pós-milestone. | Redefine REVW-03 |
+| MC-03 | **Export PNG/JPG movido para próxima milestone** — a próxima milestone (infraestrutura SaaS) incluirá export como funcionalidade do dashboard. | Move REVW-04 para milestone 2 |
+| MC-04 | **CSS Renderer marcado como legado** — a geração por IA produz a imagem final. O CampaignRenderer CSS permanece como fallback visual para preview, mas não é o formato de saída. | REND-01 redefinido |
+| MC-05 | **v1.1 validou o motor, não uma versão pública utilizável** — o sistema gera, identifica e pré-visualiza campanhas com qualidade, mas não possui auth, export, ou fluxo completo de publicação. A milestone seguinte constrói a estrutura SaaS para tornar o produto utilizável. | Escopo da próxima milestone |
 
 ## Session Continuity
 
-Last session: 2026-07-03T14:57:00.000Z
-Phase 5 — Identity-Aware Campaign Briefing: UAT complete (6/7 passed, 1 skipped). All 5 user-flow tests (logo, VS, text_only, remoção de logo) passed — identidade resolvida no backend, directives injetadas corretamente, assets de identidade aparecendo nas campanhas. Preview legado pulado (sem campanhas antigas para testar). Testes automatizados: 297/297 passando (27 suites). 128/128 plans completed (Phase 4.4.1 verified and archived). Next: Phase 6 — Review, Adjust & Export (deferred).
-
-## Next Phases
-
-| Phase | Status | Plans |
-|-------|--------|-------|
-| **4.6.4.1 — Cancel Button vs Approval Modal** | **Complete** | **3/3** |
-| Phase 4.4.1 — Existing Logo & Store Brand Direction Foundation | **Complete** | **6/6 (archived)** |
-| **Phase 5 — Identity-Aware Campaign Briefing** | **Complete** | **2/2 (2 waves)** |
-| Phase 6 — Review, Adjust & Export | Deferred | 0 |
+Last session: 2026-07-03
+Milestone v1.1 "Motor de Campanhas" shipped com 26 fases, 128/128 plans, 297 testes automatizados (27 suites). O motor de campanhas está validado: entrada → IA → renderização → preview com identidade da loja. Próximo passo: definir milestone de infraestrutura SaaS (auth, dashboard, configurações, segurança).
 
 **Phase 4.6.3 scope (from OpenSpec):** Upload com transição transacional e input_snapshot, Remove preservando proveniência, History/Restore com validação de drift, UI Step 2 com 4 cenários. BrandDirector error notification + retry implementado nos refinamentos pós-implementação. Ver `docs/alinhamento-fase-4.6.3.md` para alinhamento completo.
 
