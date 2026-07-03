@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI + Rendering
 status: active
-stopped_at: Phase 5 — Identity-Aware Campaign Briefing (2/2 plans, 2 waves). Current: Phase 5 — Identity-Aware Campaign Briefing (Complete). Next: Phase 6 — Review, Adjust & Export (deferred).
-last_updated: "2026-07-03T14:57:00.000Z"
+stopped_at: Phase 5 — Identity-Aware Campaign Briefing (2/2 plans, 2 waves). Current: Phase 5 — Identity-Aware Campaign Briefing (Complete). Next: Phase 6 — Review, Adjust & Export (deferred). Phases 4.4.1 concluded and archived.
+last_updated: "2026-07-03T15:30:00.000Z"
 progress:
-  total_phases: 25
-  completed_phases: 25
-  total_plans: 122
-  completed_plans: 122
+  total_phases: 26
+  completed_phases: 26
+  total_plans: 128
+  completed_plans: 128
   percent: 100
 ---
 
@@ -26,11 +26,12 @@ See: `.planning/PROJECT.md` (updated 2026-05-25 after v1.0 milestone)
 
 Phase: 5 — Identity-Aware Campaign Briefing (Complete — 2/2 plans, 2 waves, UAT 6/7 ✅)
 Milestone: v1.1 AI + Rendering — EXTENDED
-Phases complete: 25 of 28 phases (2 pending: 4.4.1 deferred, Phase 6 Review/Export deferred)
+Phases complete: 26 of 28 phases (1 pending: Phase 6 Review/Export deferred)
 Next phase: 6 — Review, Adjust & Export (deferred)
 
 | Phase | Status |
 |-------|--------|
+| 4.4.1 — Existing Logo & Store Brand Direction Foundation | **Complete (6/6)** |
 | 4.6.1 — Text Only Coverage | Complete |
 | 4.6.2 — Visual Direction Drift Detection | Complete |
 | 4.6.2.1 — Snapshot Fields Realignment | Complete |
@@ -50,8 +51,8 @@ Progress: [███████████████████████
 
 **Velocity:**
 
-- Phases completed: 24
-- Plans completed: 114
+- Phases completed: 26
+- Plans completed: 128
 - Tasks completed: (tracked per plan)
 - Timeline: 2026-05-24 → 2026-07-01
 
@@ -177,20 +178,20 @@ Key decisions:
 - [x] Execute Phase 4.6.4.1 — Cancel Button vs Approval Modal (3 plans, UAT 5/5 passed)
 - [x] Plan Phase 5 — Identity-Aware Campaign Briefing (3 plans, 3 waves)
 - [x] Execute Phase 5 — Identity-Aware Campaign Briefing (2/2 plans, 2 waves)
-- [ ] Execute Phase 4.4.1 — Existing Logo & Store Brand Direction Foundation (deferred — historical record)
+- [x] Execute Phase 4.4.1 — Existing Logo & Store Brand Direction Foundation (6/6 plans, archived)
 - [ ] Phase 6 — Review, Adjust & Export (deferred)
 
 ## Session Continuity
 
 Last session: 2026-07-03T14:57:00.000Z
-Phase 5 — Identity-Aware Campaign Briefing: UAT complete (6/7 passed, 1 skipped). All 5 user-flow tests (logo, VS, text_only, remoção de logo) passed — identidade resolvida no backend, directives injetadas corretamente, assets de identidade aparecendo nas campanhas. Preview legado pulado (sem campanhas antigas para testar). Testes automatizados: 297/297 passando (27 suites). 122/122 plans completed. Next: Phase 6 — Review, Adjust & Export (deferred).
+Phase 5 — Identity-Aware Campaign Briefing: UAT complete (6/7 passed, 1 skipped). All 5 user-flow tests (logo, VS, text_only, remoção de logo) passed — identidade resolvida no backend, directives injetadas corretamente, assets de identidade aparecendo nas campanhas. Preview legado pulado (sem campanhas antigas para testar). Testes automatizados: 297/297 passando (27 suites). 128/128 plans completed (Phase 4.4.1 verified and archived). Next: Phase 6 — Review, Adjust & Export (deferred).
 
 ## Next Phases
 
 | Phase | Status | Plans |
 |-------|--------|-------|
 | **4.6.4.1 — Cancel Button vs Approval Modal** | **Complete** | **3/3** |
-| Phase 4.4.1 — Existing Logo & Store Brand Direction Foundation | Deferred (historical record) | 6 |
+| Phase 4.4.1 — Existing Logo & Store Brand Direction Foundation | **Complete** | **6/6 (archived)** |
 | **Phase 5 — Identity-Aware Campaign Briefing** | **Complete** | **2/2 (2 waves)** |
 | Phase 6 — Review, Adjust & Export | Deferred | 0 |
 

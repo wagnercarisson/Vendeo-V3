@@ -47,17 +47,17 @@
     - [x] 4.4-07-PLAN.md — UI: modal, picker, store page section
     - [x] 4.4-08-PLAN.md — Campaign pipeline integration
     - [x] 4.4-09-PLAN.md — Quality gate & validation (PASS)
-  - [ ] Phase 4.4.1: Existing Logo & Store Brand Direction Foundation (6 plans, 4 waves)
+  - [x] Phase 4.4.1: Existing Logo & Store Brand Direction Foundation (6 plans, 4 waves) — completed 2026-06-02
     - **Wave 1 — DB, Storage & Foundation** *(parallel: 01 + 02)*
-      - [ ] 4.4.1-01-PLAN.md — DB & Storage Foundation (store_brand_assets, profiles, stores columns, bucket)
-      - [ ] 4.4.1-02-PLAN.md — Types, Image Processing (sharp), Brand Director Prompt
+      - [x] 4.4.1-01-PLAN.md — DB & Storage Foundation (store_brand_assets, profiles, stores columns, bucket)
+      - [x] 4.4.1-02-PLAN.md — Types, Image Processing (sharp), Brand Director Prompt
     - **Wave 2 — AI Analysis & Brand Profile** *(depends on Wave 1)*
-      - [ ] 4.4.1-03-PLAN.md — Brand Director AI, Store API Extension, Brand Profile API
+      - [x] 4.4.1-03-PLAN.md — Brand Director AI, Store API Extension, Brand Profile API
     - **Wave 3 — Logo API & Campaign Integration** *(parallel: 04 + 05, both depend on Waves 1+2)*
-      - [ ] 4.4.1-04-PLAN.md — Logo Upload & Query API (POST/GET/DELETE)
-      - [ ] 4.4.1-05-PLAN.md — Campaign Integration & StoreIdentity Resolution
+      - [x] 4.4.1-04-PLAN.md — Logo Upload & Query API (POST/GET/DELETE)
+      - [x] 4.4.1-05-PLAN.md — Campaign Integration & StoreIdentity Resolution
     - **Wave 4 — UI** *(depends on Wave 3)*
-      - [ ] 4.4.1-06-PLAN.md — Store Identity UI (upload, colors, direction fields)
+      - [x] 4.4.1-06-PLAN.md — Store Identity UI (upload, colors, direction fields)
   - [x] Phase 4.4.2: Generated Visual Signature & Brand Profile (6/6 plans) (completed 2026-06-04)
     - [x] 4.4.2-01-PLAN.md — Visual Signature Generation & Approval Flow (server actions)
     - [x] 4.4.2-02-PLAN.md — Store Identity Art Director AI prompt
@@ -173,7 +173,7 @@
 | 4.3.2. Creative Direction & Context Awareness | v1.1 | 3/3 | Complete   | 2026-05-29 |
 | 4.3.3. Generation Metrics, Provider Switch & Model Benchmark | v1.1 | 3/3 | Complete   | 2026-05-30 |
 | 4.4. Store Visual Signature Generation & Consistency | v1.1 | 9/9 | Verified | 2026-06-01 |
-| 4.4.1. Existing Logo & Store Brand Direction Foundation | v1.1 | 0/6 | Planned | — |
+| 4.4.1. Existing Logo & Store Brand Direction Foundation | v1.1 | 6/6 | Complete | 2026-06-02 |
 | 4.4.2. Generated Visual Signature & Brand Profile | v1.1 | 6/6 | Complete | 2026-06-04 |
 | 4.5. Segment & Subsegment Alignment | v1.1 | 7/7 | Complete | 2026-06-11 |
 | 4.6. Store Form Adjusts | v1.1 | — | Complete | 2026-06-19 |
