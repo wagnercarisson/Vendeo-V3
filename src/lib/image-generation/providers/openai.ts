@@ -228,6 +228,12 @@ export class OpenAIImageProvider implements ImageProvider {
     // Use a conservative square size for the Image API edit fallback.
     const imageApiSize = "1024x1024";
 
+    // TODO(fallback): OpenAI images.edit aceita apenas uma imagem como base.
+    // identityFile está disponível mas não pode ser enviado junto com productFile
+    // na mesma chamada. Para enviar ambos, seria necessário compor as imagens
+    // (ex.: sobrepor identity como marca d'água) antes de enviar, ou usar
+    // a Responses API como caminho único. Esta limitação é pré-existente —
+    // antes da fase 5 o fallback também perdia a identidade.
     const response = await openai.images.edit({
       model: this.editFallbackModel,
       image: imageFile,

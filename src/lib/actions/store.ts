@@ -208,13 +208,13 @@ function deriveDirective(state: IdentityState, hasAsset: boolean): string {
   }
   if (state === 'logo') {
     if (hasAsset) {
-      return "Assinar a campanha com o logotipo da loja. Considerar a direção visual do perfil de marca como contexto direcional, não obrigatório.";
+      return "Assinar a campanha com o logotipo da loja fornecido como imagem de referência. Manter fidelidade ao arquivo fornecido. Considerar a direção visual do perfil de marca como contexto direcional, não obrigatório.";
     }
     return "Não inventar logotipo. Usar apenas a direção visual do perfil de marca como contexto direcional, não obrigatório.";
   }
   if (state === 'visual_signature') {
     if (hasAsset) {
-      return "Assinar a campanha com a assinatura visual da loja. Não adicionar logotipo. Considerar a direção visual do perfil de marca como contexto direcional, não obrigatório.";
+      return "Assinar a campanha com a assinatura visual da loja fornecida como imagem de referência. Manter fidelidade ao arquivo fornecido. Não adicionar logotipo. Considerar a direção visual do perfil de marca como contexto direcional, não obrigatório.";
     }
     return "Não inventar assinatura visual nem logotipo. Considerar apenas a direção visual do perfil de marca como contexto direcional, não obrigatório.";
   }
