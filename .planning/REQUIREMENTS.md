@@ -19,6 +19,7 @@ O escopo desta milestone cobre:
 - **Autenticação**: mecanismo para o usuário criar conta e acessar o sistema
 - **Sessão**: persistência da identidade do usuário entre requisições
 - **Vínculo user → store**: associar um usuário a uma loja (relação 1:1)
+- **RLS (Row Level Security)**: políticas no Supabase para isolar dados por usuário
 - **Ownership**: garantir que o usuário acesse apenas seus próprios dados
 - **Proteção de rotas**: redirecionar usuários não autenticados para o fluxo de entrada
 - **Fluxo de entrada/cadastro**: páginas mínimas de signup e login
@@ -28,7 +29,7 @@ O escopo desta milestone cobre:
 | Item | Motivo |
 |------|--------|
 | Campanhas persistidas | Escopo é auth + ownership, não inclui salvar campanhas |
-| Export PNG/JPG | Decisão MC-03 da v1.1 — movido para milestone futura |
+| Export PNG/JPG | Decisão MC-03 da v1.1, agora novamente adiado — a v1.2 estreitou escopo para auth/ownership e export não cabe nesta milestone |
 | Dashboard completo | Foco em auth; dashboard exige mais definição de produto |
 | Planos e cobrança | Uso livre durante validação do core |
 | Histórico de campanhas | Depende de campanhas persistidas |
@@ -67,10 +68,10 @@ Indicadores observáveis:
 | Curva de aprendizado de Supabase Auth SSR | Baixo | Padrão bem documentado, mas nova dependência (@supabase/ssr) |
 | Acoplamento prematuro a provider de auth | Médio | Supabase Auth é opinado; trocar depois pode ser caro |
 | Testes existentes assumem ausência de auth | Alto | 297 testes precisam ser revisados para ambiente autenticado |
+| Rotas que usam service role ignoram RLS | Alto | Se operações admin (ex: upload de logo) usam `supabaseAdmin` (service role), o RLS não se aplica — acesso não é filtrado por `auth.uid()`. Essas rotas precisam de validação explícita de ownership. |
 
 ## Dependências
 
-- `@supabase/ssr` — necessário para integração auth com App Router (não presente hoje)
 - Supabase project — precisa ter Auth habilidado (verificar configuração atual)
 - Variáveis de ambiente — `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` já existem; verificar se `SUPABASE_SERVICE_ROLE_KEY` é suficiente para operações admin
 
@@ -79,20 +80,21 @@ Indicadores observáveis:
 - **Stack fixa**: Next.js (App Router) + TypeScript + Supabase + Vercel — sem introdução de novos providers de auth
 - **Reset de dados**: Dados existentes (pré-auth) serão resetados — decisão confirmada
 - **Relação 1:1**: Um usuário = uma loja — decisão confirmada para esta milestone
-- **Fluxo único**: Signup cria loja no mesmo fluxo — decisão confirmada
+- **Fluxo único**: ⚠ Hipótese — o momento exato da criação da loja (signup vs pós-signup) é uma questão em aberto
 
 ## Perguntas em Aberto
 
 Estas perguntas precisam ser respondidas antes ou durante o planejamento da implementação:
 
 ### Autenticação
-- Qual método de auth usar? (Supabase Auth built-in email/password? Magic link? OAuth social?)
+- Qual método de auth usar? (Supabase Auth built-in email/password? Magic link? OAuth social?) — **Hipótese**: email/password é o suficiente para v1.2, mas não há decisão tomada.
+- O `@supabase/ssr` é necessário para integração auth com App Router? Ou o client atual (`@supabase/supabase-js`) é suficiente para um fluxo básico? — **Hipótese**: `@supabase/ssr` pode ser necessário para cookie-based sessions com Server Components, mas não está decidido.
 - Fluxo de email verification é obrigatório para v1.2 ou pode ser simplificado?
-- Onde o usuário é redirecionado após signup? (Para a loja recém-criada?)
+- Onde o usuário é redirecionado após signup?
 - O que acontece se o email já está em uso? UI de erro ou "já tem conta? faça login"?
 
 ### Vínculo User → Store
-- A loja é criada na mesma transação do signup? Ou em etapa separada?
+- **Quando a loja é criada?** Na mesma transação do signup? Em etapa separada (pós-signup)? Ou em momento posterior (ex: onboarding)? — **Hipótese desafiada**: o fluxo único (signup cria loja) foi levantado como restrição, mas não houve decisão consciente do usuário. Precisa ser discutido.
 - Qual o schema da tabela `stores`? Adicionar `user_id` (FK → auth.users)?
 - A loja recém-criada precisa de dados iniciais (segmento, cor)? Ou começa vazia?
 - O formulário de store identity existente precisa ser adaptado para o contexto autenticado?
@@ -118,4 +120,5 @@ Estas perguntas precisam ser respondidas antes ou durante o planejamento da impl
 ---
 
 *Documento criado: 2026-07-03*
-*Próximo passo: Aguardar autorização para planejamento — `/gsd-plan-phase [N]` ou `/gsd-discuss-phase [N]`*
+*Última atualização: 2026-07-03 após correção do escopo documental*
+*Próximo passo: Aguardar autorização — `/gsd-explore` (OpenSpec Explore) para discutir questões em aberto antes do planejamento*

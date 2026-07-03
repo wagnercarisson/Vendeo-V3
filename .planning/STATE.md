@@ -17,26 +17,30 @@ progress:
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-05-25 after v1.0 milestone)
+See: `.planning/PROJECT.md` (updated 2026-07-03 after v1.2 milestone start)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
-**Current focus:** Milestone v1.1 shipped — aguardando início da próxima milestone
+**Current focus:** Milestone v1.2 "Contas e Propriedade" — modo exclusivamente documental, aguardando discussão
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Document-only (no phases created)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-07-03 — Milestone v1.2 started
+Status: Scope documentado, abordagem em aberto
+Last activity: 2026-07-03 — Milestone v1.2 em modo documental, aguardando OpenSpec Explore
 
 ## Performance Metrics
 
-**Velocity:**
+**Previous milestone (v1.1):**
 
 - Phases completed: 26
 - Plans completed: 128
-- Tasks completed: (tracked per plan)
 - Timeline: 2026-05-24 → 2026-07-01
+
+**Current milestone (v1.2):**
+
+- Fases: 0 (modo documental — nenhuma fase criada)
+- Plans: 0
 
 ## Accumulated Context
 
@@ -161,9 +165,11 @@ Key decisions:
 | Persistence | Voltar para cores sugeridas: executeStep2Save re-persistia safe_color_tokens como user choice — guard alterado para hasUserChosenColors(brandColorsChosen) | Resolved | 2026-06-25 |
 | UI | Preview ignorava brandColorsChosen no branch isTextOnly — corrigido para priorizar cores do usuário | Resolved | 2026-06-25 |
 
-## Milestone Close-Out Decisions (v1.1 → SHIPPED 2026-07-03)
+## Export Status — v1.2 Impact
 
-As seguintes decisões foram tomadas durante o fechamento da milestone v1.1 "Motor de Campanhas":
+Com o estreitamento da v1.2 para auth/ownership exclusivamente, o export PNG/JPG (decisão MC-03) foi adiado novamente. A milestone de "infraestrutura SaaS" que receberia o export foi substituída pela v1.2 (apenas contas e propriedade). O export permanece como requisito futuro sem milestone atribuída.
+
+## Milestone Close-Out Decisions (v1.1 → SHIPPED 2026-07-03)
 
 | Decisão | Descrição | Impacto |
 |---------|-----------|---------|
@@ -192,7 +198,7 @@ Items acknowledged and deferred at milestone close on 2026-07-03:
 ## Session Continuity
 
 Last session: 2026-07-03
-Milestone v1.1 "Motor de Campanhas" shipped com 26 fases, 128/128 plans, 297 testes automatizados (27 suites). O motor de campanhas está validado: entrada → IA → renderização → preview com identidade da loja. Próximo passo: definir milestone de infraestrutura SaaS (auth, dashboard, configurações, segurança).
+Milestone v1.2 "Contas e Propriedade" iniciada em modo exclusivamente documental. Nenhuma decisão de implementação tomada — apenas escopo confirmado, exclusões, riscos e perguntas em aberto registrados em `.planning/REQUIREMENTS.md`. Próximo passo: OpenSpec Explore para discutir questões em aberto antes do planejamento.
 
 **Phase 4.6.3 scope (from OpenSpec):** Upload com transição transacional e input_snapshot, Remove preservando proveniência, History/Restore com validação de drift, UI Step 2 com 4 cenários. BrandDirector error notification + retry implementado nos refinamentos pós-implementação. Ver `docs/alinhamento-fase-4.6.3.md` para alinhamento completo.
 
@@ -204,4 +210,7 @@ Milestone v1.1 "Motor de Campanhas" shipped com 26 fases, 128/128 plans, 297 tes
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Milestone v1.2 está em modo exclusivamente documental — nenhuma decisão de implementação foi tomada
+- Próximo passo: `/gsd-explore` (OpenSpec Explore) para discutir questões em aberto
+- Export PNG/JPG: adiado novamente após estreitamento da v1.2 — MC-03 permanece como decisão, mas o destino (milestone de infraestrutura) ainda não foi definido
+- Após discussão: `/gsd-plan-phase [N]` para iniciar planejamento das fases
