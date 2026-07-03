@@ -1,20 +1,29 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { StoreIdentitySnapshot, CampaignBrief, IdentityState, CampaignInput } from '@/components/campaign/types';
+import type { StoreIdentitySnapshot, CampaignBrief, CampaignInput } from '@/components/campaign/types';
 
-// Mock supabase
+function makeChain(resolveValue: any) {
+  const chain: any = () => Promise.resolve(resolveValue);
+  chain.select = () => chain;
+  chain.eq = () => chain;
+  chain.in = () => chain;
+  chain.order = () => chain;
+  chain.limit = () => chain;
+  chain.single = () => Promise.resolve(resolveValue);
+  chain.maybeSingle = () => Promise.resolve(resolveValue);
+  chain.then = Promise.resolve(resolveValue).then.bind(Promise.resolve(resolveValue));
+  chain.catch = Promise.resolve(resolveValue).catch.bind(Promise.resolve(resolveValue));
+  return chain;
+}
+
+const defaultData = { data: null, error: null };
+
 vi.mock('@/lib/supabase/server', () => ({
   supabaseAdmin: {
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          maybeSingle: vi.fn(),
-        })),
-      })),
-    })),
+    from: () => makeChain(defaultData),
     storage: {
-      from: vi.fn(() => ({
-        getPublicUrl: vi.fn(() => ({ data: { publicUrl: 'https://example.com/asset.png' } })),
-      })),
+      from: () => ({
+        getPublicUrl: (storage_path: string) => ({ data: { publicUrl: `https://example.com/${storage_path}` } }),
+      }),
     },
   },
 }));
