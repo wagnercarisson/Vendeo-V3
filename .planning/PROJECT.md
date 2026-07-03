@@ -10,9 +10,11 @@ Na v1.1 (Motor de Campanhas, shipped 2026-07-03), o sistema completo de geraçã
 
 ## Current Milestone: v1.2 — Contas e Propriedade
 
+**Status:** Modo exclusivamente documental — escopo confirmado, abordagem em aberto.
+
 **Goal:** Um usuário entra no Vendeo e acessa exclusivamente sua própria loja e identidade.
 
-**Target features:**
+**Confirmed scope:**
 - Autenticação (signup/login/sessão/logout) com email e senha
 - Store criada no fluxo de signup (1 usuário = 1 loja)
 - Row Level Security no Supabase para isolar dados por usuário
@@ -47,28 +49,28 @@ Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confian�
 - ✓ **REND-05** — Identity fallback: name-based identity with safe defaults — v1.1
 - ✓ **REVW-01** — User can preview generated campaign before export — v1.1
 
-### Active — v1.2 Contas e Propriedade
+### Active — v1.2 Contas e Propriedade (modo documental)
 
-- [ ] **AUTH-01**: User can sign up with email and password
-- [ ] **AUTH-02**: User receives email verification after signup
-- [ ] **AUTH-03**: User can log in with email and password
-- [ ] **AUTH-04**: User session persists across browser refresh
-- [ ] **AUTH-05**: User can log out
-- [ ] **OWNR-01**: Store created during signup flow (1 user = 1 store)
-- [ ] **OWNR-02**: User can only access their own store data
-- [ ] **SEC-01**: RLS policies protect store data by user_id
-- [ ] **SEC-02**: Routes redirect unauthenticated users to login
-- [ ] **SEC-03**: Guest users see only login/signup pages
+Escopo confirmado (detalhes em `.planning/REQUIREMENTS.md`):
+
+- [ ] Autenticação (signup/login/sessão) com email e senha
+- [ ] Criação de loja no fluxo de signup (1 usuário = 1 loja)
+- [ ] Vínculo user → store com ownership
+- [ ] RLS no Supabase para isolar dados por usuário
+- [ ] Rotas protegidas para usuários autenticados
+- [ ] Fluxo mínimo de entrada: signup → login → acesso à loja
+
+> Nota: Implementação e abordagem ainda não definidas. Milestone em modo exclusivamente documental — aguardando planejamento.
 
 ### Future
 
-- [ ] Dashboard com histórico de campanhas
-- [ ] Navegação e menus
-- [ ] Configurações da loja e do usuário
-- [ ] Export PNG/JPG
-- [ ] Planos e cobrança
-- [ ] Campanhas persistidas
-- [ ] Regeneração de campanhas
+- Dashboard com histórico de campanhas
+- Navegação e menus
+- Configurações da loja e do usuário
+- Export PNG/JPG
+- Planos e cobrança
+- Campanhas persistidas
+- Regeneração de campanhas
 
 ### Out of Scope
 
