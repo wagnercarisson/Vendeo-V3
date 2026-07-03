@@ -63,7 +63,7 @@ Indicadores observáveis:
 
 | Risco | Impacto | Notas |
 |-------|---------|-------|
-| Quebrar fluxo existente de criação de loja | Alto | Loja atual é criada sem user_id; migração ou reset precisa ser decidido |
+| Reset de dados existentes | Alto | Reset autorizado, mas requer execução segura (dump de segurança, verificação de dependências, rollback plan) |
 | Dados legado (stores sem dono) | Médio | Decisão tomada: resetar dados. Mas confirmar se há dados importantes a preservar. |
 | Integração SSR com auth | Médio | @supabase/ssr pode ser necessário para cookie-based sessions, mas a abordagem (SSR vs client-side) ainda não foi definida |
 | Acoplamento prematuro a provider de auth | Médio | Supabase Auth é opinado; trocar depois pode ser caro |

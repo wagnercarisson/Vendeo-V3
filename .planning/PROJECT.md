@@ -53,14 +53,13 @@ Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confian�
 
 Escopo confirmado (detalhes em `.planning/REQUIREMENTS.md`):
 
-- [ ] Autenticação (signup/login/sessão) com email e senha
-- [ ] Criação de loja no fluxo de signup (1 usuário = 1 loja)
-- [ ] Vínculo user → store com ownership
+- [ ] Criação de conta (signup/login/sessão) — método de autenticação em aberto
+- [ ] Vínculo 1:1 entre usuário e loja — momento da criação da loja em aberto
 - [ ] RLS no Supabase para isolar dados por usuário
 - [ ] Rotas protegidas para usuários autenticados
-- [ ] Fluxo mínimo de entrada: signup → login → acesso à loja
+- [ ] Fluxo mínimo de entrada → acesso à própria loja
 
-> Nota: Implementação e abordagem ainda não definidas. Milestone em modo exclusivamente documental — aguardando planejamento.
+> Nota: Implementação e abordagem ainda não definidas. Milestone em modo exclusivamente documental — aguardando OpenSpec Explore antes do planejamento.
 
 ### Future
 
@@ -74,7 +73,7 @@ Escopo confirmado (detalhes em `.planning/REQUIREMENTS.md`):
 
 ### Out of Scope
 
-- Dashboard — não implementar antes do core de geração
+- Dashboard — core de geração já concluído (v1.1), mas fica fora do escopo restrito da v1.2 (auth/ownership)
 - Campanhas persistidas — escopo v1.2 é auth + ownership, não inclui salvar campanhas no banco
 - Export PNG/JPG — movido para milestone futura (decisão MC-03)
 - Regeneração de campanhas — redefinida como "novo briefing" (decisão MC-02), não implementada nesta milestone
