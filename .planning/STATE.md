@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Contas e Propriedade
-status: planning
-last_updated: "2026-07-04T14:32:00.000Z"
+status: active
+last_updated: "2026-07-04T15:46:00.000Z"
 last_activity: 2026-07-04
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   current_phase: 7
   total_plans: 5
-  completed_plans: 0
-  percent: 0
+  completed_plans: 5
+  percent: 20
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: `.planning/PROJECT.md` (updated 2026-07-03 after v1.2 milestone start)
 
 ## Current Position
 
-Phase: 7 — Sessão e Login Vertical (5 plans, 5 waves — Planned)
-Plan: 07-01-PLAN.md (Wave 1 — Foundation) → 07-02-PLAN.md (Wave 2 — Auth Core) → 07-03-PLAN.md (Wave 3 — Middleware) → 07-04-PLAN.md (Wave 4 — Auth UI) → 07-05-PLAN.md (Wave 5 — Quality Gate)
-Status: 5 plans criados a partir de `openspec/changes/fase-7-sessao-login-vertical/`. Aguardando execução.
-Last activity: 2026-07-04 — Phase 7 planejada (5 plans, 5 waves). Próximo passo: executar Wave 1 (07-01-PLAN.md).
+Phase: 7 — Sessão e Login Vertical (5 plans, 5 waves — ✅ Complete)
+Plan: 07-01 (Wave 1 — Foundation ✅) → 07-02 (Wave 2 — Auth Core ✅) → 07-03 (Wave 3 — Middleware ✅) → 07-04 (Wave 4 — Auth UI ✅) → 07-05 (Wave 5 — Tests ✅)
+Status: 5 plans executados com sucesso. Fase concluída em 2026-07-04.
+Last activity: 2026-07-04 — Phase 7 implementada (5/5 plans, 5/5 waves). Próximo passo: planejar Fase 8.
 
 ## Performance Metrics
 
@@ -40,8 +40,8 @@ Last activity: 2026-07-04 — Phase 7 planejada (5 plans, 5 waves). Próximo pas
 
 **Current milestone (v1.2):**
 
-- Fases: 5 definidas (7–11), 0 concluídas, 1 planejada
-- Plans: 5 (Phase 7), 0 concluídos
+- Fases: 5 definidas (7–11), 1 concluída (Phase 7 ✅), 0 planejadas
+- Plans: 5 (Phase 7), 5 concluídos
 
 ## Accumulated Context
 
@@ -199,15 +199,21 @@ Items acknowledged and deferred at milestone close on 2026-07-03:
 ## Session Continuity
 
 Last session: 2026-07-04
-Milestone v1.2 "Contas e Propriedade" — Phase 7 planejada com 5 plans em 4 waves a partir da base técnica do OpenSpec (`openspec/changes/fase-7-sessao-login-vertical/`). CONTEXT.md consolidado com decisões D1–D9 do design.md.
+Milestone v1.2 "Contas e Propriedade" — Phase 7 implementada com 5 plans em 5 waves.
 
-**Phase 7 execution plan:**
-- Wave 1: 07-01-PLAN.md — Supabase SSR Foundation (install @supabase/ssr, refactor 3 client modules, remove barrel)
-- Wave 2: 07-02-PLAN.md + 07-03-PLAN.md — Auth helpers (requireUser + sanitizeRedirectPath) + Middleware
-- Wave 3: 07-04-PLAN.md — Login page (route group, form, logout)
-- Wave 4: 07-05-PLAN.md — Tests (unit tests for 5 modules) + Final verification
+**Phase 7 execution completed (2026-07-04):**
+- ✅ Wave 1: 07-01-PLAN.md — Supabase SSR Foundation (install @supabase/ssr, refactor 3 client modules, remove barrel)
+- ✅ Wave 2: 07-02-PLAN.md — Auth helpers (requireUser + sanitizeRedirectPath)
+- ✅ Wave 3: 07-03-PLAN.md — Auth Middleware (src/middleware.ts)
+- ✅ Wave 4: 07-04-PLAN.md — Login page (route group, form, logout, auth header)
+- ✅ Wave 5: 07-05-PLAN.md — Tests (32 new tests, 344 total) + Final verification
 
-Próximo passo: executar Wave 1.
+**Results:**
+- 32 new auth tests, 344 total — all green
+- TypeScript, lint, build — all clean
+- No regression on any existing test
+
+Próximo passo: planejar Fase 8 (Ciclo de Conta).
 
 **Phase 4.6.3 scope (from OpenSpec):** Upload com transição transacional e input_snapshot, Remove preservando proveniência, History/Restore com validação de drift, UI Step 2 com 4 cenários. BrandDirector error notification + retry implementado nos refinamentos pós-implementação. Ver `docs/alinhamento-fase-4.6.3.md` para alinhamento completo.
 
@@ -219,6 +225,7 @@ Próximo passo: executar Wave 1.
 
 ## Operator Next Steps
 
-- Phase 7 planejada (5 plans, 4 waves). Próximo passo: executar Wave 1 (`/gsd-execute-phase 7 --wave 1`).
-- Fases 8–11: dependem da Phase 7. Planejar após execução da Phase 7.
+- Phase 7 completa (5/5 plans, 5/5 waves). ✅
+- **Próximo passo:** planejar Fase 8 (Ciclo de Conta) — signup, confirmação de email, recuperação de senha.
+- Fases 9–11: dependem da Phase 7 e 8.
 - Export PNG/JPG: adiado novamente — MC-03 permanece, milestone de destino ainda não definida.

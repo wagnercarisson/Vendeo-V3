@@ -4,7 +4,7 @@
 
 - ✅ **v1.0 MVP** — Phases 1-2 (shipped 2026-05-25)
 - ✅ **v1.1 Motor de Campanhas** — Phases 3-5 (shipped 2026-07-03)
-- 🚧 **v1.2 Contas e Propriedade** — Alinhamento D1–D11 consolidado. 5 fases (7–11) definidas. Phase 7 planejada (5 plans, 5 waves).
+- 🚧 **v1.2 Contas e Propriedade** — Alinhamento D1–D11 consolidado. 5 fases (7–11) definidas. Phase 7 completa (5/5 plans, 5/5 waves).
 
 ## Phases
 
@@ -195,7 +195,7 @@
 | 4.6.7. User Color Preferences Persistence | v1.1 | 4/4 | Complete | 2026-06-25 |
 | 5. Identity-Aware Campaign Briefing | v1.1 | 2/2 | Complete | 2026-07-02 |
 | 6. Review, Adjust & Export | v1.1 | — | Re-scoped (itens redistribuídos) | 2026-07-03 |
-| 7. Sessão e Login Vertical | v1.2 | 5/5 | Planned — 5 plans, 5 waves | — |
+| 7. Sessão e Login Vertical | v1.2 | 5/5 | ✅ Complete — 5 plans, 5 waves | 2026-07-04 |
 | 8. Ciclo de Conta | v1.2 | — | Depende da Phase 7 | — |
 | 9. Cutover de Ownership e Onboarding | v1.2 | — | Depende das Phases 7 e 8 | — |
 | 10. Perímetro Multi-tenant | v1.2 | — | Depende da Phase 9 | — |
@@ -203,17 +203,17 @@
 
 ### 🚧 v1.2 Contas e Propriedade
 
-- [ ] Phase 7: Sessão e Login Vertical (5/5 plans, 5 waves) — Planejada
+- [x] Phase 7: Sessão e Login Vertical (5/5 plans, 5 waves) — ✅ Complete (2026-07-04)
   - **Wave 1 — Foundation** *(no deps)*
-    - [ ] 07-01-PLAN.md — Supabase SSR Foundation (client, server, middleware factories, barrel removal)
+    - [x] 07-01-PLAN.md — Supabase SSR Foundation (client, server, middleware factories, barrel removal)
   - **Wave 2 — Auth Core** *(depends on Wave 1)*
-    - [ ] 07-02-PLAN.md — Auth Helpers: requireUser & sanitizeRedirectPath
+    - [x] 07-02-PLAN.md — Auth Helpers: requireUser & sanitizeRedirectPath
   - **Wave 3 — Middleware** *(depends on Wave 2 — needs sanitizeRedirectPath)*
-    - [ ] 07-03-PLAN.md — Auth Middleware (src/middleware.ts)
+    - [x] 07-03-PLAN.md — Auth Middleware (src/middleware.ts)
   - **Wave 4 — Auth UI** *(depends on Wave 3)*
-    - [ ] 07-04-PLAN.md — Login Page & Logout
+    - [x] 07-04-PLAN.md — Login Page & Logout
   - **Wave 5 — Quality Gate** *(depends on Wave 4)*
-    - [ ] 07-05-PLAN.md — Tests & Verification
+    - [x] 07-05-PLAN.md — Tests & Verification (32 new tests, 344 total ✅)
 - [ ] Phase 8: Ciclo de Conta — depende da Phase 7
 - [ ] Phase 9: Cutover de Ownership e Onboarding — depende das Phases 7 e 8
 - [ ] Phase 10: Perímetro Multi-tenant — depende da Phase 9
