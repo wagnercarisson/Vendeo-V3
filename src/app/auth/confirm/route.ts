@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     : "/";
 
   if (!tokenHash || (type !== "signup" && type !== "recovery")) {
-    return NextResponse.redirect(new URL("/login?error=confirmation_failed", request.url));
+    return NextResponse.redirect(new URL("/login?error=confirmation_failed", request.url), { status: 302 });
   }
 
   const supabase = await createServerClient();
@@ -24,9 +24,9 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     const errorParam = type === "recovery" ? "recovery_failed" : "confirmation_failed";
-    return NextResponse.redirect(new URL(`/login?error=${errorParam}`, request.url));
+    return NextResponse.redirect(new URL(`/login?error=${errorParam}`, request.url), { status: 302 });
   }
 
   const redirectTo = type === "recovery" ? safeNext : "/";
-  return NextResponse.redirect(new URL(redirectTo, request.url));
+  return NextResponse.redirect(new URL(redirectTo, request.url), { status: 302 });
 }

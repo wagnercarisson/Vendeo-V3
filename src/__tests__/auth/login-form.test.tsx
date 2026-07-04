@@ -27,6 +27,19 @@ beforeEach(() => {
 });
 
 describe("LoginForm", () => {
+  it("includes link to /signup", () => {
+    render(<LoginForm redirect="/" />);
+    const link = screen.getByRole("link", { name: "Criar conta" });
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute("href", "/signup");
+  });
+
+  it("includes link to /forgot-password", () => {
+    render(<LoginForm redirect="/" />);
+    const link = screen.getByRole("link", { name: "Esqueci minha senha" });
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute("href", "/forgot-password");
+  });
   it("renders email input, password input and submit button", () => {
     render(<LoginForm redirect="/" />);
 

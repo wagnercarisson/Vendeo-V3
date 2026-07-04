@@ -13,6 +13,9 @@ vi.mock("@/lib/auth/redirect", () => ({
   },
 }));
 
+const PUBLIC_ROUTES = new Set(["/login", "/signup", "/check-email", "/forgot-password"]);
+const ALWAYS_PASSTHROUGH = new Set(["/auth/confirm"]);
+
 function createLoginUrl(url: string, redirectPath: string, safeRedirect: string): string {
   const loginUrl = new URL("/login", url);
   loginUrl.searchParams.set("redirect", safeRedirect);
@@ -27,12 +30,16 @@ async function middleware(url: string): Promise<Response> {
   const { response, claims } = await (updateSession as any)(request);
 
   const parsedUrl = new URL(url);
-  const redirectPath = parsedUrl.pathname + parsedUrl.search;
+  const pathname = parsedUrl.pathname;
+  const redirectPath = pathname + parsedUrl.search;
   const safeRedirect = sanitizeRedirectPath(redirectPath);
   const loginUrlStr = createLoginUrl(url, redirectPath, safeRedirect);
 
-  const isApiRoute = parsedUrl.pathname.startsWith("/api/");
-  const isLoginPage = parsedUrl.pathname === "/login";
+  const isApiRoute = pathname.startsWith("/api/");
+  const isPublicRoute = PUBLIC_ROUTES.has(pathname);
+  const isAlwaysPassthrough = ALWAYS_PASSTHROUGH.has(pathname);
+
+  if (isAlwaysPassthrough) return response;
 
   if (!claims?.sub) {
     if (isApiRoute) {
@@ -42,9 +49,7 @@ async function middleware(url: string): Promise<Response> {
       });
     }
 
-    if (isLoginPage) {
-      return response;
-    }
+    if (isPublicRoute) return response;
 
     const redirectResponse = new Response(null, {
       status: 302,
@@ -60,7 +65,7 @@ async function middleware(url: string): Promise<Response> {
     return redirectResponse;
   }
 
-  if (isLoginPage) {
+  if (isPublicRoute || pathname === "/login") {
     return new Response(null, {
       status: 302,
       headers: { location: new URL("/", url).toString() },
@@ -174,5 +179,100 @@ describe("middleware auth", () => {
     expect(res.status).toBe(302);
     const setCookie = res.headers.get("set-cookie");
     expect(setCookie).toContain("sb-token");
+  });
+
+  // Fase 8 — new route classification tests
+
+  it("unauthenticated /signup -> pass-through (public)", async () => {
+    mockUpdateSession.mockResolvedValue({
+      response: mockResponse(),
+      claims: null,
+    });
+
+    const res = await middleware("http://localhost/signup");
+    expect(res.status).toBe(200);
+  });
+
+  it("unauthenticated /check-email -> pass-through (public)", async () => {
+    mockUpdateSession.mockResolvedValue({
+      response: mockResponse(),
+      claims: null,
+    });
+
+    const res = await middleware("http://localhost/check-email");
+    expect(res.status).toBe(200);
+  });
+
+  it("unauthenticated /forgot-password -> pass-through (public)", async () => {
+    mockUpdateSession.mockResolvedValue({
+      response: mockResponse(),
+      claims: null,
+    });
+
+    const res = await middleware("http://localhost/forgot-password");
+    expect(res.status).toBe(200);
+  });
+
+  it("unauthenticated /update-password -> redirect /login (protected)", async () => {
+    mockUpdateSession.mockResolvedValue({
+      response: mockResponse(),
+      claims: null,
+    });
+
+    const res = await middleware("http://localhost/update-password");
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toContain("/login");
+  });
+
+  it("unauthenticated /auth/confirm -> pass-through (always)", async () => {
+    mockUpdateSession.mockResolvedValue({
+      response: mockResponse(),
+      claims: null,
+    });
+
+    const res = await middleware("http://localhost/auth/confirm");
+    expect(res.status).toBe(200);
+  });
+
+  it("authenticated /signup -> redirect / (public route)", async () => {
+    mockUpdateSession.mockResolvedValue({
+      response: mockResponse(),
+      claims: { sub: "user-123" },
+    });
+
+    const res = await middleware("http://localhost/signup");
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe("http://localhost/");
+  });
+
+  it("authenticated /forgot-password -> redirect / (public route)", async () => {
+    mockUpdateSession.mockResolvedValue({
+      response: mockResponse(),
+      claims: { sub: "user-123" },
+    });
+
+    const res = await middleware("http://localhost/forgot-password");
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe("http://localhost/");
+  });
+
+  it("authenticated /auth/confirm -> pass-through (always)", async () => {
+    mockUpdateSession.mockResolvedValue({
+      response: mockResponse(),
+      claims: { sub: "user-123" },
+    });
+
+    const res = await middleware("http://localhost/auth/confirm");
+    expect(res.status).toBe(200);
+  });
+
+  it("authenticated /update-password -> pass-through", async () => {
+    mockUpdateSession.mockResolvedValue({
+      response: mockResponse(),
+      claims: { sub: "user-123" },
+    });
+
+    const res = await middleware("http://localhost/update-password");
+    expect(res.status).toBe(200);
   });
 });
