@@ -25,10 +25,10 @@ See: `.planning/PROJECT.md` (updated 2026-07-03 after v1.2 milestone start)
 
 ## Current Position
 
-Phase: 7 — Sessão e Login Vertical (5 plans, 4 waves — Planned)
-Plan: 07-01-PLAN.md (Wave 1 — Foundation) → 07-02-PLAN.md + 07-03-PLAN.md (Wave 2 — Auth Core) → 07-04-PLAN.md (Wave 3 — Auth UI) → 07-05-PLAN.md (Wave 4 — Quality Gate)
+Phase: 7 — Sessão e Login Vertical (5 plans, 5 waves — Planned)
+Plan: 07-01-PLAN.md (Wave 1 — Foundation) → 07-02-PLAN.md (Wave 2 — Auth Core) → 07-03-PLAN.md (Wave 3 — Middleware) → 07-04-PLAN.md (Wave 4 — Auth UI) → 07-05-PLAN.md (Wave 5 — Quality Gate)
 Status: 5 plans criados a partir de `openspec/changes/fase-7-sessao-login-vertical/`. Aguardando execução.
-Last activity: 2026-07-04 — Phase 7 planejada (5 plans, 4 waves). Próximo passo: executar Wave 1 (07-01-PLAN.md).
+Last activity: 2026-07-04 — Phase 7 planejada (5 plans, 5 waves). Próximo passo: executar Wave 1 (07-01-PLAN.md).
 
 ## Performance Metrics
 

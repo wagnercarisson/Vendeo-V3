@@ -203,16 +203,16 @@
 
 ### 🚧 v1.2 Contas e Propriedade
 
-- [ ] Phase 7: Sessão e Login Vertical (5/5 plans, 4 waves) — Planejada
+- [ ] Phase 7: Sessão e Login Vertical (5/5 plans, 5 waves) — Planejada
   - **Wave 1 — Foundation** *(no deps)*
     - [ ] 07-01-PLAN.md — Supabase SSR Foundation (client, server, middleware factories, barrel removal)
   - **Wave 2 — Auth Core** *(depends on Wave 1)*
     - [ ] 07-02-PLAN.md — Auth Helpers: requireUser & sanitizeRedirectPath
-  - **Wave 2b — Middleware** *(depends on Waves 1+2 — needs sanitizeRedirectPath)*
+  - **Wave 3 — Middleware** *(depends on Wave 2 — needs sanitizeRedirectPath)*
     - [ ] 07-03-PLAN.md — Auth Middleware (src/middleware.ts)
-  - **Wave 3 — Auth UI** *(depends on Wave 2)*
+  - **Wave 4 — Auth UI** *(depends on Wave 3)*
     - [ ] 07-04-PLAN.md — Login Page & Logout
-  - **Wave 4 — Quality Gate** *(depends on Wave 3)*
+  - **Wave 5 — Quality Gate** *(depends on Wave 4)*
     - [ ] 07-05-PLAN.md — Tests & Verification
 - [ ] Phase 8: Ciclo de Conta — depende da Phase 7
 - [ ] Phase 9: Cutover de Ownership e Onboarding — depende das Phases 7 e 8
