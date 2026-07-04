@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AuthHeader } from "@/components/auth/auth-header";
 
 export const metadata: Metadata = {
   title: "Vendeo",
@@ -21,7 +22,12 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <header className="flex items-center justify-end border-b border-slate-800 bg-slate-950 px-6 py-3">
+          <AuthHeader />
+        </header>
+        {children}
+      </body>
     </html>
   );
 }
