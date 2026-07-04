@@ -67,9 +67,28 @@ Use these entry points:
 
 - `/gsd-quick` for small fixes, doc updates, and ad-hoc tasks
 - `/gsd-debug` for investigation and bug fixing
-- `/gsd-execute-phase` for planned phase work
+- `/gsd-execute-phase <plan-id>` for planned phase work (e.g., `/gsd-execute-phase 08-01`)
+- `/gsd-plan-phase <N>` for planning a phase
+- `/gsd-verify-phase <N>` for verification
+- `/gsd-code-review` for code review
 
 Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
+
+## Phase 8 — Ciclo de Conta
+
+**Status:** Planned — 4 plans ready for execution
+
+| Plan | Wave | Description | Command |
+|------|------|-------------|---------|
+| 08-01 | 1 | Setup & Middleware Expansion | `/gsd-execute-phase 08-01` |
+| 08-02 | 2 | Pages & Route Handler | `/gsd-execute-phase 08-02` |
+| 08-03 | 3 | Tests | `/gsd-execute-phase 08-03` |
+| 08-04 | 4 | UAT — Local & Online | `/gsd-execute-phase 08-04` |
+
+**Change artifacts (source of truth):** `openspec/changes/fase-8-ciclo-de-conta/`
+**Context:** `.planning/phase-08-ciclo-de-conta/CONTEXT.md`
+**State:** `.planning/STATE.md`
+**Roadmap:** `ROADMAP.md`
 <!-- GSD:workflow-end -->
 
 <!-- GSD:profile-start -->
