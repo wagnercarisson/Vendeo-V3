@@ -2,16 +2,26 @@ import { updateSession } from "@/lib/supabase/middleware";
 import { sanitizeRedirectPath } from "@/lib/auth/redirect";
 import { NextResponse, type NextRequest } from "next/server";
 
+const PUBLIC_ROUTES = new Set([
+  "/login", "/signup", "/check-email", "/forgot-password",
+]);
+
+const ALWAYS_PASSTHROUGH = new Set(["/auth/confirm"]);
+
 export async function middleware(request: NextRequest) {
   const { response, claims } = await updateSession(request);
 
-  const redirectPath = request.nextUrl.pathname + request.nextUrl.search;
+  const pathname = request.nextUrl.pathname;
+  const redirectPath = pathname + request.nextUrl.search;
   const safeRedirect = sanitizeRedirectPath(redirectPath);
   const loginUrl = new URL("/login", request.url);
   loginUrl.searchParams.set("redirect", safeRedirect);
 
-  const isApiRoute = request.nextUrl.pathname.startsWith("/api/");
-  const isLoginPage = request.nextUrl.pathname === "/login";
+  const isApiRoute = pathname.startsWith("/api/");
+  const isPublicRoute = PUBLIC_ROUTES.has(pathname);
+  const isAlwaysPassthrough = ALWAYS_PASSTHROUGH.has(pathname);
+
+  if (isAlwaysPassthrough) return response;
 
   if (!claims?.sub) {
     if (isApiRoute) {
@@ -23,16 +33,14 @@ export async function middleware(request: NextRequest) {
       return unauthorizedResponse;
     }
 
-    if (isLoginPage) {
-      return response;
-    }
+    if (isPublicRoute) return response;
 
     const redirectResponse = NextResponse.redirect(loginUrl, { status: 302 });
     copySessionData(redirectResponse, response);
     return redirectResponse;
   }
 
-  if (isLoginPage) {
+  if (isPublicRoute || pathname === "/login") {
     const redirectResponse = NextResponse.redirect(
       new URL("/", request.url),
       { status: 302 },
@@ -63,6 +71,11 @@ export const config = {
   matcher: [
     "/",
     "/login",
+    "/signup",
+    "/check-email",
+    "/forgot-password",
+    "/update-password",
+    "/auth/confirm",
     "/store/:path*",
     "/campaign/:path*",
     "/api/:path*",
