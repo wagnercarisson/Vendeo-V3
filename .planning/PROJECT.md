@@ -10,16 +10,19 @@ Na v1.1 (Motor de Campanhas, shipped 2026-07-03), o sistema completo de geraçã
 
 ## Current Milestone: v1.2 — Contas e Propriedade
 
-**Status:** Modo exclusivamente documental — escopo confirmado, abordagem em aberto.
+**Status:** Alinhamento D1–D11 consolidado. 5 fases (7–11) definidas. Próximo passo: alinhamento técnico da Phase 7 via OpenSpec Explore.
 
 **Goal:** Um usuário entra no Vendeo e acessa exclusivamente sua própria loja e identidade.
 
-**Confirmed scope:**
-- Criação de conta (signup/login/sessão/logout) — método de autenticação em aberto
-- Vínculo 1:1 entre usuário e loja — momento da criação da loja em aberto
-- Row Level Security no Supabase para isolar dados por usuário
-- Rotas protegidas (redirect para login se não autenticado)
-- Fluxo mínimo: entrada → acesso exclusivo à própria loja
+**Confirmed scope (decisões em `docs/alinhamento-milestone-v1.2.md`):**
+- Autenticação: Supabase Auth, email + senha, sessão SSR via `@supabase/ssr`
+- Vínculo 1:1: `stores.user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id)`
+- Loja criada durante onboarding pós-auth (não no signup)
+- RLS em 5 tabelas (SELECT only para o owner; `generation_events` default-deny)
+- Cliente de sessão + RLS como padrão; service role excepcional com ownership verificado
+- Middleware + server component + route handler + serviço (4 camadas de proteção)
+- Remoção completa de `localStorage("store_id")` — identidade via claims
+- Cenários de segurança binários como critério de aceite
 
 ## Core Value
 
@@ -49,17 +52,23 @@ Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confian�
 - ✓ **REND-05** — Identity fallback: name-based identity with safe defaults — v1.1
 - ✓ **REVW-01** — User can preview generated campaign before export — v1.1
 
-### Active — v1.2 Contas e Propriedade (modo documental)
+### Active — v1.2 Contas e Propriedade
 
-Escopo confirmado (detalhes em `.planning/REQUIREMENTS.md`):
+Alinhamento D1–D11 consolidado em `docs/alinhamento-milestone-v1.2.md`. Decisões registradas em `docs/alinhamento-milestone-v1.2.md`.
 
-- [ ] Criação de conta (signup/login/sessão) — método de autenticação em aberto
-- [ ] Vínculo 1:1 entre usuário e loja — momento da criação da loja em aberto
-- [ ] RLS no Supabase para isolar dados por usuário
-- [ ] Rotas protegidas para usuários autenticados
-- [ ] Fluxo mínimo de entrada → acesso à própria loja
+- Confirmado: Autenticação (Supabase Auth, email + senha, sessão SSR via `@supabase/ssr`)
+- Confirmado: Vínculo 1:1 (`stores.user_id` FK + UNIQUE)
+- Confirmado: Loja criada durante onboarding (não no signup)
+- Confirmado: RLS em 5 tabelas (SELECT only; generation_events default-deny)
+- Confirmado: Cliente de sessão padrão; service role excepcional
+- Confirmado: 4 camadas de proteção (middleware → server component → handler → serviço)
+- Confirmado: Remoção de `localStorage("store_id")`
+- Confirmado: Cenários de segurança como critério de aceite
+- Confirmado: CSRF same-origin para mutações em Route Handlers
+- Confirmado: Fluxo mínimo de recuperação de senha incluso na v1.2
+- Confirmado: Classificação das 7 Server Actions (3 internas, 4 entrypoints autenticados)
 
-> Nota: Implementação e abordagem ainda não definidas. Milestone em modo exclusivamente documental — aguardando OpenSpec Explore antes do planejamento.
+> Nota: Alinhamento D1–D11 consolidado via OpenSpec Explore. 5 fases (7–11) definidas em `docs/alinhamento-milestone-v1.2.md`. Próximo passo: alinhamento técnico da Phase 7 via OpenSpec.
 
 ### Future
 
@@ -75,7 +84,7 @@ Escopo confirmado (detalhes em `.planning/REQUIREMENTS.md`):
 
 - Dashboard — core de geração já concluído (v1.1), mas fica fora do escopo restrito da v1.2 (auth/ownership)
 - Campanhas persistidas — escopo v1.2 é auth + ownership, não inclui salvar campanhas no banco
-- Export PNG/JPG — movido para milestone futura (decisão MC-03)
+- Export PNG/JPG — movido para milestone futura (decisão MC-03, posteriormente superada pelo estreitamento da v1.2 — sem milestone atribuída atualmente)
 - Regeneração de campanhas — redefinida como "novo briefing" (decisão MC-02), não implementada nesta milestone
 - Planos e cobrança — uso livre durante validação do core
 - Múltiplas lojas — relação 1:1 (usuário:loja) nesta milestone
@@ -115,14 +124,15 @@ O ambiente de desenvolvimento usa VS Code, OpenCode como agente de IA, OpenSpec 
 
 ## Constraints
 
-- **Stack**: Next.js (App Router) + TypeScript + Supabase (banco, storage, auth futura) + Vercel (deploy)
+- **Stack**: Next.js (App Router) + TypeScript + Supabase (banco, storage, auth — escopo ativo da v1.2) + Vercel (deploy)
 - **IA**: APIs externas via backend (OpenAI/Anthropic) com camada de abstração para troca de provedor
 - **Geração visual**: Híbrida — IA decide parâmetros e copy, renderização programática executa a arte final
-- **Fase inicial**: Campanha avulsa Produto + Oferta, sem auth, dashboard, planos ou estrutura SaaS completa
 - **Fluxo**: Web app (browser), formulário → geração → revisão → exportação
 - **Deploy**: Vercel, sem necessidade de infraestrutura adicional na fase 1
 - **Validação**: Toda fase exige validação automática (TypeScript, lint, build) e manual (visual, fluxo, copy, legibilidade)
 - **Ordem**: Visão primeiro → direção visual → core de campanha → estrutura SaaS depois
+
+> **Nota histórica:** As constraints acima evoluíram com o projeto. "Auth futura" e "fase inicial sem auth" eram verdadeiras para v1.0–v1.1. A v1.2 introduzirá auth e ownership, tornando-as obsoletas como constraint — o texto acima reflete o escopo atual.
 
 ## Key Decisions
 
@@ -139,7 +149,7 @@ O ambiente de desenvolvimento usa VS Code, OpenCode como agente de IA, OpenSpec 
 | Geração por IA (imagem final) + CSS como fallback legado | IA garante qualidade visual; CSS legado preservado para preview | ✓ Good — MC-04 validated in v1.1 close-out |
 | Ajustes de arte removidos do escopo v1 | Motor valida geração, não edição pós-geração | ✓ Decisão MC-01 |
 | Regeneração redefinida como "novo briefing" | Evita complexidade de re-renderização com parâmetros | ✓ Decisão MC-02 |
-| Export movido para milestone de infraestrutura | Export depende de dashboard e histórico para fazer sentido | ✓ Decisão MC-03 |
+| Export movido para milestone de infraestrutura | Export depende de dashboard e histórico para fazer sentido | ⚠ Superada — v1.2 estreitou para auth/ownership, export sem milestone definida |
 
 ## Evolution
 

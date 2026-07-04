@@ -1,124 +1,80 @@
 # Milestone v1.2 — Contas e Propriedade
 
-**Versão:** Documento exploratório — nenhuma decisão de implementação está tomada.
-**Status:** Escopo confirmado, abordagem em aberto.
+**Versão:** Requisitos normativos — decisões D1–D11 consolidadas em `docs/alinhamento-milestone-v1.2.md`
+**Status:** Alinhamento concluído. 5 fases (7–11) definidas.
 **Data:** 2026-07-03
 
 ---
 
 ## Objetivo da Milestone
 
-Preparar o terreno para a estrutura SaaS do Vendeo. O core de geração de campanhas está validado (v1.1), mas o produto ainda não é uma versão pública utilizável — falta qualquer mecanismo de identificar quem é o usuário, proteger os dados e garantir que cada lojista acesse apenas sua própria loja.
+Preparar o terreno para a estrutura SaaS do Vendeo. O core de geração de campanhas está validado (v1.1), mas o produto ainda não é uma versão pública utilizável — falta identificar o usuário, proteger os dados e garantir que cada lojista acesse apenas sua própria loja.
 
-Esta milestone não busca entregar um produto completo ou lançável. Ela busca estabelecer a camada fundacional de contas e propriedade para que as milestones seguintes possam construir sobre ela.
+Esta milestone estabelece a camada fundacional de contas e propriedade para que as milestones seguintes construam sobre ela.
 
-## Escopo Confirmado
+## Escopo (Requisitos Normativos)
 
-O escopo desta milestone cobre:
+> Requisitos normativos. Decisões de implementação detalhadas em `docs/alinhamento-milestone-v1.2.md`.
 
-- **Autenticação**: mecanismo para o usuário criar conta e acessar o sistema
-- **Sessão**: persistência da identidade do usuário entre requisições
-- **Vínculo user → store**: associar um usuário a uma loja (relação 1:1)
-- **RLS (Row Level Security)**: políticas no Supabase para isolar dados por usuário
-- **Ownership**: garantir que o usuário acesse apenas seus próprios dados
-- **Proteção de rotas**: redirecionar usuários não autenticados para o fluxo de entrada
-- **Fluxo de entrada/cadastro**: páginas mínimas de signup e login
+1. **Autenticação**: Supabase Auth, email + senha. Sessão SSR via `@supabase/ssr`.
+2. **Vínculo user → store**: `stores.user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id)`. Relação 1:1.
+3. **Isolamento de propriedade**: RLS habilitado em 5 tabelas (`stores`, `store_brand_assets`, `store_brand_profiles`, `store_visual_signatures`, `generation_events`). Owner SELECT em 4; `generation_events` default-deny.
+4. **Proteção de rotas**: Middleware (auth) + server component (store) + handler (ownership) + serviço (contexto autorizado).
+5. **Fluxo de entrada**: `/login`, `/signup`, `/check-email` (se confirm), `/auth/confirm`.
+6. **Onboarding**: Usuário autenticado sem loja é estado válido. `/store` em modo create. Loja criada após preenchimento do formulário.
+7. **Ownership**: `claims.sub` resolve `stores.user_id`. `localStorage("store_id")` removido. Cliente de sessão + RLS é padrão; service role é excepcional com ownership verificado antes.
+8. **Critério de aceite**: Cenários binários de segurança, testados na pirâmide unit→HTTP→RLS real→E2E→UAT. Milestone fecha com todos VERDES.
 
 ## Exclusões Explícitas
 
 | Item | Motivo |
 |------|--------|
-| Campanhas persistidas | Escopo é auth + ownership, não inclui salvar campanhas |
-| Export PNG/JPG | Decisão MC-03 da v1.1, agora novamente adiado — a v1.2 estreitou escopo para auth/ownership e export não cabe nesta milestone |
-| Dashboard completo | Foco em auth; dashboard exige mais definição de produto |
-| Planos e cobrança | Uso livre durante validação do core |
-| Histórico de campanhas | Depende de campanhas persistidas |
-| Regeneração | Redefinida como "novo briefing" (decisão MC-02) |
-| Múltiplas lojas | Relação 1:1 nesta milestone — expandir é decisão futura |
-| Ajustes de arte | Motor valida geração, não edição (decisão MC-01) |
+| Campanhas persistidas | Escopo é auth + ownership |
+| Export PNG/JPG | Decisão MC-03 da v1.1, adiado |
+| Dashboard completo | Exige mais definição de produto |
+| Planos e cobrança | Uso livre durante validação |
+| Histórico de campanhas | Depende de persistência |
+| Regeneração | Redefinida como "novo briefing" (MC-02) |
+| Múltiplas lojas | Relação 1:1 nesta milestone |
+| Ajustes de arte | Motor valida geração, não edição (MC-01) |
+| OAuth social / Magic link | Exclusão deliberada para v1.2 |
 
-## Critério de Conclusão
+## Alinhamento Consolidado
 
-> Um usuário entra no Vendeo e acessa exclusivamente sua própria loja e identidade.
+Todas as decisões D1–D11 estão registradas em:
 
-Indicadores observáveis:
-- Usuário não autenticado vê apenas páginas de entrada (login/signup)
-- Usuário pode criar conta (método de autenticação em aberto)
-- Após criar conta, o usuário tem uma loja vinculada a ele
-- Usuário autenticado acessa apenas seus próprios dados
-- Logout retorna o usuário ao estado não autenticado
-- Sessão persiste entre recarregamentos de página
+> **[`docs/alinhamento-milestone-v1.2.md`](../docs/alinhamento-milestone-v1.2.md)**
 
-## Estado Atual Relevante do Sistema
+Esse documento contém:
+- Ledger completo D1–D11 com justificativas e confirmações
+- Invariantes de segurança (11 regras absolutas)
+- Máquina de estados do usuário com mapa de rotas
+- Arquitetura-alvo com fronteiras session client / service role
+- Matriz de RLS por tabela e Storage
+- Categorias de cenários de aceite
+- Pendências classificadas (design, release gates, legado, futuro)
+- 5 fases da milestone (7–11) com entregas e dependências
 
-- **v1.0-v1.1**: ~8.800+ linhas TypeScript/TSX, 100+ source files, 297 testes
-- **Sem auth**: Nenhum mecanismo de autenticação existe. O sistema opera sem identidade de usuário.
-- **Stores existem**: Loja é criada e persistida via API, sem vínculo com user_id
-- **Supabase client atual**: `@supabase/supabase-js` v2.49.4 via `createClient` (sem SSR/auth helpers)
-- **Banco atual**: Tabela `stores` com dados de identidade da loja (segmento, cores, logo, etc.) — sem coluna `user_id`
-- **Rotas atuais**: `/` (campaign), `/store` (store identity) — ambas públicas, sem proteção
-- **Ambiente**: Next.js 15.3.1 (App Router), Supabase, Vercel deploy
-
-## Riscos
+## Riscos (Atualizado)
 
 | Risco | Impacto | Notas |
 |-------|---------|-------|
-| Reset de dados existentes | Alto | Reset autorizado, mas requer execução segura (dump de segurança, verificação de dependências, rollback plan) |
-| Dados legado (stores sem dono) | Médio | Decisão tomada: resetar dados. Mas confirmar se há dados importantes a preservar. |
-| Integração SSR com auth | Médio | @supabase/ssr pode ser necessário para cookie-based sessions, mas a abordagem (SSR vs client-side) ainda não foi definida |
-| Acoplamento prematuro a provider de auth | Médio | Supabase Auth é opinado; trocar depois pode ser caro |
-| Testes existentes assumem ausência de auth | Alto | 297 testes precisam ser revisados para ambiente autenticado |
-| Rotas que usam service role ignoram RLS | Alto | Se operações admin (ex: upload de logo) usam `supabaseAdmin` (service role), o RLS não se aplica — acesso não é filtrado por `auth.uid()`. Essas rotas precisam de validação explícita de ownership. |
+| Reset de dados existentes | Alto | Reset autorizado. Requer dump de segurança, verificação de dependências, rollback plan |
+| Dados legado (stores sem dono) | Médio | Reset confirmado |
+| Testes existentes assumem ausência de auth | Alto | 297 testes precisam ser revisados para autenticação |
+| Service role pode escapar sem ownership check | Alto | D5 e D7 estabelecem que ownership é verificado antes de qualquer operação admin |
+| Bucket `store-logos` legado não inventariado | Baixo | Inventário entra na v1.2; remoção/migração condicionada ao resultado |
 
-## Dependências
+## Decisões Complementares (D9–D11)
 
-- Supabase project — precisa ter Auth habilidado (verificar configuração atual)
-- Variáveis de ambiente — `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` já existem; verificar se `SUPABASE_SERVICE_ROLE_KEY` é suficiente para operações admin
+As pendências "antes do roadmap" foram resolvidas durante a exploração. Decisões registradas em `docs/alinhamento-milestone-v1.2.md`:
 
-## Restrições
-
-- **Stack fixa**: Next.js (App Router) + TypeScript + Supabase + Vercel — sem introdução de novos providers de auth
-- **Reset de dados**: Dados existentes (pré-auth) serão resetados — decisão confirmada
-- **Relação 1:1**: Um usuário = uma loja — decisão confirmada para esta milestone
-- **Fluxo único**: ⚠ Hipótese — o momento exato da criação da loja (signup vs pós-signup) é uma questão em aberto
-
-## Perguntas em Aberto
-
-Estas perguntas precisam ser respondidas antes ou durante o planejamento da implementação:
-
-### Autenticação
-- Qual método de auth usar? (Supabase Auth built-in email/password? Magic link? OAuth social?) — **Hipótese**: email/password é o suficiente para v1.2, mas não há decisão tomada.
-- O `@supabase/ssr` é necessário para integração auth com App Router? Ou o client atual (`@supabase/supabase-js`) é suficiente para um fluxo básico? — **Hipótese**: `@supabase/ssr` pode ser necessário para cookie-based sessions com Server Components, mas não está decidido.
-- Fluxo de email verification é obrigatório para v1.2 ou pode ser simplificado?
-- Onde o usuário é redirecionado após signup?
-- O que acontece se o email já está em uso? UI de erro ou "já tem conta? faça login"?
-
-### Vínculo User → Store
-- **Quando a loja é criada?** Na mesma transação do signup? Em etapa separada (pós-signup)? Ou em momento posterior (ex: onboarding)? — **Hipótese desafiada**: o fluxo único (signup cria loja) foi levantado como restrição, mas não houve decisão consciente do usuário. Precisa ser discutido.
-- Qual o schema da tabela `stores`? Adicionar `user_id` (FK → auth.users)?
-- A loja recém-criada precisa de dados iniciais (segmento, cor)? Ou começa vazia?
-- O formulário de store identity existente precisa ser adaptado para o contexto autenticado?
-
-### RLS e Segurança
-- Quais tabelas precisam de RLS? Apenas `stores`? Ou também tabelas de assets, profiles?
-- A política RLS é simples (`user_id = auth.uid()`) ou precisa considerar outros cenários?
-- Como lidar com operações admin (ex: upload de logo que usa service role)?
-
-### Rotas e Layout
-- Qual a estrutura de rotas? `/login`, `/signup`, `/store` protegida?
-- Existe um layout raiz que detecta sessão e redireciona?
-- O middleware do Next.js é a abordagem correta para proteção de rotas?
-
-### Migração de Dados
-- Reset total foi confirmado — mas existe dump ou backup dos dados atuais?
-- As migrações SQL existentes precisam ser revertidas ou substituídas?
-
-### Testes
-- Como adaptar os 297 testes existentes para um ambiente autenticado?
-- Estratégia: mock de sessão? Provider de teste? Setup global de auth?
+- **D9 — CSRF/Origin:** POST/PATCH/PUT/DELETE em Route Handlers exigem mesma origem. Server Actions usam proteção nativa do Next.js.
+- **D10 — Recuperação de senha:** Fluxo mínimo incluso na v1.2 (`/forgot-password`, `/update-password`). Gate para beta externo.
+- **D11 — Server Actions:** 3 serviços internos (`resolveStoreIdentity`, `validateIdentityReference`, `buildCampaignBrief`). 4 entrypoints autenticados (demais).
 
 ---
 
-*Documento criado: 2026-07-03*
-*Última atualização: 2026-07-03 após correção do escopo documental*
-*Próximo passo: Aguardar autorização — `/opsx:explore` para discutir questões em aberto antes do planejamento*
+*Documento atualizado: 2026-07-03*
+*Alinhamento consolidado em: `docs/alinhamento-milestone-v1.2.md`*
+*Próximo passo: iniciar alinhamento técnico da Phase 7 (Sessão e Login Vertical) via OpenSpec Explore.*

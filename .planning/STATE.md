@@ -6,8 +6,9 @@ status: planning
 last_updated: "2026-07-03T20:44:47.029Z"
 last_activity: 2026-07-03
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
+  current_phase: 7
   total_plans: 0
   completed_plans: 0
   percent: 0
@@ -20,14 +21,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-07-03 after v1.2 milestone start)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
-**Current focus:** Milestone v1.2 "Contas e Propriedade" — modo exclusivamente documental, aguardando discussão
+**Current focus:** Milestone v1.2 "Contas e Propriedade" — 5 fases (7–11) definidas, 0 concluídas
 
 ## Current Position
 
-Phase: Document-only (no phases created)
+Phase: 7 — Sessão e Login Vertical (not started)
 Plan: —
-Status: Scope documentado, abordagem em aberto
-Last activity: 2026-07-03 — Milestone v1.2 em modo documental, aguardando OpenSpec Explore
+Status: Alinhamento D1–D11 consolidado em `docs/alinhamento-milestone-v1.2.md`. 5 fases definidas, 0 concluídas.
+Last activity: 2026-07-03 — Fases 7–11 definidas. Próximo passo: iniciar alinhamento técnico da Phase 7.
 
 ## Performance Metrics
 
@@ -39,7 +40,7 @@ Last activity: 2026-07-03 — Milestone v1.2 em modo documental, aguardando Open
 
 **Current milestone (v1.2):**
 
-- Fases: 0 (modo documental — nenhuma fase criada)
+- Fases: 5 definidas (7–11), 0 concluídas
 - Plans: 0
 
 ## Accumulated Context
@@ -198,7 +199,7 @@ Items acknowledged and deferred at milestone close on 2026-07-03:
 ## Session Continuity
 
 Last session: 2026-07-03
-Milestone v1.2 "Contas e Propriedade" iniciada em modo exclusivamente documental. Nenhuma decisão de implementação tomada — apenas escopo confirmado, exclusões, riscos e perguntas em aberto registrados em `.planning/REQUIREMENTS.md`. Próximo passo: OpenSpec Explore para discutir questões em aberto antes do planejamento.
+Milestone v1.2 "Contas e Propriedade" — alinhamento D1–D11 consolidado, 5 fases (7–11) definidas em `docs/alinhamento-milestone-v1.2.md`. Próximo passo: iniciar alinhamento técnico da Phase 7 (Sessão e Login Vertical) via OpenSpec Explore. Após aprovação dos artefatos OpenSpec, planejar execução.
 
 **Phase 4.6.3 scope (from OpenSpec):** Upload com transição transacional e input_snapshot, Remove preservando proveniência, History/Restore com validação de drift, UI Step 2 com 4 cenários. BrandDirector error notification + retry implementado nos refinamentos pós-implementação. Ver `docs/alinhamento-fase-4.6.3.md` para alinhamento completo.
 
@@ -210,7 +211,7 @@ Milestone v1.2 "Contas e Propriedade" iniciada em modo exclusivamente documental
 
 ## Operator Next Steps
 
-- Milestone v1.2 está em modo exclusivamente documental — nenhuma decisão de implementação foi tomada
-- Próximo passo: `/opsx:explore` para discutir questões em aberto
-- Export PNG/JPG: adiado novamente após estreitamento da v1.2 — MC-03 permanece como decisão, mas o destino (milestone de infraestrutura) ainda não foi definido
-- Após discussão: `/gsd-plan-phase [N]` para iniciar planejamento das fases
+- Alinhamento D1–D11 consolidado em `docs/alinhamento-milestone-v1.2.md`
+- 5 fases (7–11): Sessão e Login → Ciclo de Conta → Cutover Ownership → Perímetro → Verificação
+- Próximo passo: iniciar alinhamento técnico da Phase 7 via OpenSpec Explore
+- Export PNG/JPG: adiado novamente — MC-03 permanece, milestone de destino ainda não definida

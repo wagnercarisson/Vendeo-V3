@@ -10,10 +10,9 @@ O Vendeo é um motor SaaS de geração de campanhas para lojistas de lojas físi
 
 ### Constraints
 
-- **Stack**: Next.js (App Router) + TypeScript + Supabase (banco, storage, auth futura) + Vercel (deploy)
+- **Stack**: Next.js (App Router) + TypeScript + Supabase (banco, storage, auth — escopo ativo da v1.2) + Vercel (deploy)
 - **IA**: APIs externas via backend (OpenAI/Anthropic) com camada de abstração para troca de provedor
 - **Geração visual**: Híbrida — IA decide parâmetros e copy, renderização programática executa a arte final
-- **Fase inicial**: Campanha avulsa Produto + Oferta, sem auth, dashboard, planos ou estrutura SaaS completa
 - **Fluxo**: Web app (browser), formulário → geração → revisão → exportação
 - **Deploy**: Vercel, sem necessidade de infraestrutura adicional na fase 1
 - **Validação**: Toda fase exige validação automática (TypeScript, lint, build) e manual (visual, fluxo, copy, legibilidade)
