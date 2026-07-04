@@ -4,7 +4,7 @@
 
 - ✅ **v1.0 MVP** — Phases 1-2 (shipped 2026-05-25)
 - ✅ **v1.1 Motor de Campanhas** — Phases 3-5 (shipped 2026-07-03)
-- 🚧 **v1.2 Contas e Propriedade** — Alinhamento D1–D11 consolidado. 5 fases (7–11) definidas. Phase 7 aguardando alinhamento técnico via OpenSpec.
+- 🚧 **v1.2 Contas e Propriedade** — Alinhamento D1–D11 consolidado. 5 fases (7–11) definidas. Phase 7 planejada (5 plans, 4 waves).
 
 ## Phases
 
@@ -195,7 +195,7 @@
 | 4.6.7. User Color Preferences Persistence | v1.1 | 4/4 | Complete | 2026-06-25 |
 | 5. Identity-Aware Campaign Briefing | v1.1 | 2/2 | Complete | 2026-07-02 |
 | 6. Review, Adjust & Export | v1.1 | — | Re-scoped (itens redistribuídos) | 2026-07-03 |
-| 7. Sessão e Login Vertical | v1.2 | — | Alinhada em nível de milestone; aguardando exploração e proposal técnica | — |
+| 7. Sessão e Login Vertical | v1.2 | 5/5 | Planned — 5 plans, 4 waves | — |
 | 8. Ciclo de Conta | v1.2 | — | Depende da Phase 7 | — |
 | 9. Cutover de Ownership e Onboarding | v1.2 | — | Depende das Phases 7 e 8 | — |
 | 10. Perímetro Multi-tenant | v1.2 | — | Depende da Phase 9 | — |
@@ -203,7 +203,16 @@
 
 ### 🚧 v1.2 Contas e Propriedade
 
-- [ ] Phase 7: Sessão e Login Vertical — alinhada em nível de milestone; aguardando exploração e proposal técnica
+- [ ] Phase 7: Sessão e Login Vertical (5/5 plans, 4 waves) — Planejada
+  - **Wave 1 — Foundation** *(no deps)*
+    - [ ] 07-01-PLAN.md — Supabase SSR Foundation (client, server, middleware factories, barrel removal)
+  - **Wave 2 — Auth Core** *(depends on Wave 1)*
+    - [ ] 07-02-PLAN.md — Auth Helpers: requireUser & sanitizeRedirectPath
+    - [ ] 07-03-PLAN.md — Auth Middleware (src/middleware.ts)
+  - **Wave 3 — Auth UI** *(depends on Wave 2)*
+    - [ ] 07-04-PLAN.md — Login Page & Logout
+  - **Wave 4 — Quality Gate** *(depends on Wave 3)*
+    - [ ] 07-05-PLAN.md — Tests & Verification
 - [ ] Phase 8: Ciclo de Conta — depende da Phase 7
 - [ ] Phase 9: Cutover de Ownership e Onboarding — depende das Phases 7 e 8
 - [ ] Phase 10: Perímetro Multi-tenant — depende da Phase 9

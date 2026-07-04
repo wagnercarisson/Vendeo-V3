@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Contas e Propriedade
 status: planning
-last_updated: "2026-07-03T20:44:47.029Z"
-last_activity: 2026-07-03
+last_updated: "2026-07-04T14:32:00.000Z"
+last_activity: 2026-07-04
 progress:
   total_phases: 5
   completed_phases: 0
   current_phase: 7
-  total_plans: 0
+  total_plans: 5
   completed_plans: 0
   percent: 0
 ---
@@ -25,10 +25,10 @@ See: `.planning/PROJECT.md` (updated 2026-07-03 after v1.2 milestone start)
 
 ## Current Position
 
-Phase: 7 — Sessão e Login Vertical (not started)
-Plan: —
-Status: Alinhamento D1–D11 consolidado em `docs/alinhamento-milestone-v1.2.md`. 5 fases definidas, 0 concluídas.
-Last activity: 2026-07-03 — Fases 7–11 definidas. Próximo passo: iniciar alinhamento técnico da Phase 7.
+Phase: 7 — Sessão e Login Vertical (5 plans, 4 waves — Planned)
+Plan: 07-01-PLAN.md (Wave 1 — Foundation) → 07-02-PLAN.md + 07-03-PLAN.md (Wave 2 — Auth Core) → 07-04-PLAN.md (Wave 3 — Auth UI) → 07-05-PLAN.md (Wave 4 — Quality Gate)
+Status: 5 plans criados a partir de `openspec/changes/fase-7-sessao-login-vertical/`. Aguardando execução.
+Last activity: 2026-07-04 — Phase 7 planejada (5 plans, 4 waves). Próximo passo: executar Wave 1 (07-01-PLAN.md).
 
 ## Performance Metrics
 
@@ -40,8 +40,8 @@ Last activity: 2026-07-03 — Fases 7–11 definidas. Próximo passo: iniciar al
 
 **Current milestone (v1.2):**
 
-- Fases: 5 definidas (7–11), 0 concluídas
-- Plans: 0
+- Fases: 5 definidas (7–11), 0 concluídas, 1 planejada
+- Plans: 5 (Phase 7), 0 concluídos
 
 ## Accumulated Context
 
@@ -198,8 +198,16 @@ Items acknowledged and deferred at milestone close on 2026-07-03:
 
 ## Session Continuity
 
-Last session: 2026-07-03
-Milestone v1.2 "Contas e Propriedade" — alinhamento D1–D11 consolidado, 5 fases (7–11) definidas em `docs/alinhamento-milestone-v1.2.md`. Próximo passo: iniciar alinhamento técnico da Phase 7 (Sessão e Login Vertical) via OpenSpec Explore. Após aprovação dos artefatos OpenSpec, planejar execução.
+Last session: 2026-07-04
+Milestone v1.2 "Contas e Propriedade" — Phase 7 planejada com 5 plans em 4 waves a partir da base técnica do OpenSpec (`openspec/changes/fase-7-sessao-login-vertical/`). CONTEXT.md consolidado com decisões D1–D9 do design.md.
+
+**Phase 7 execution plan:**
+- Wave 1: 07-01-PLAN.md — Supabase SSR Foundation (install @supabase/ssr, refactor 3 client modules, remove barrel)
+- Wave 2: 07-02-PLAN.md + 07-03-PLAN.md — Auth helpers (requireUser + sanitizeRedirectPath) + Middleware
+- Wave 3: 07-04-PLAN.md — Login page (route group, form, logout)
+- Wave 4: 07-05-PLAN.md — Tests (unit tests for 5 modules) + Final verification
+
+Próximo passo: executar Wave 1.
 
 **Phase 4.6.3 scope (from OpenSpec):** Upload com transição transacional e input_snapshot, Remove preservando proveniência, History/Restore com validação de drift, UI Step 2 com 4 cenários. BrandDirector error notification + retry implementado nos refinamentos pós-implementação. Ver `docs/alinhamento-fase-4.6.3.md` para alinhamento completo.
 
@@ -211,7 +219,6 @@ Milestone v1.2 "Contas e Propriedade" — alinhamento D1–D11 consolidado, 5 fa
 
 ## Operator Next Steps
 
-- Alinhamento D1–D11 consolidado em `docs/alinhamento-milestone-v1.2.md`
-- 5 fases (7–11): Sessão e Login → Ciclo de Conta → Cutover Ownership → Perímetro → Verificação
-- Próximo passo: iniciar alinhamento técnico da Phase 7 via OpenSpec Explore
-- Export PNG/JPG: adiado novamente — MC-03 permanece, milestone de destino ainda não definida
+- Phase 7 planejada (5 plans, 4 waves). Próximo passo: executar Wave 1 (`/gsd-execute-phase 7 --wave 1`).
+- Fases 8–11: dependem da Phase 7. Planejar após execução da Phase 7.
+- Export PNG/JPG: adiado novamente — MC-03 permanece, milestone de destino ainda não definida.
