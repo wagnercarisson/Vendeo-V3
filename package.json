@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@supabase/ssr": "0.12.0",
     "@supabase/supabase-js": "^2.49.4",
     "get-pixels": "^3.3.3",
     "get-rgba-palette": "^2.0.1",
