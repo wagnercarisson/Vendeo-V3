@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Contas e Propriedade
 status: active
-last_updated: "2026-07-04T15:46:00.000Z"
+last_updated: "2026-07-04T16:52:00.000Z"
 last_activity: 2026-07-04
 progress:
   total_phases: 5
@@ -28,7 +28,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-03 after v1.2 milestone start)
 Phase: 7 — Sessão e Login Vertical (5 plans, 5 waves — ✅ Complete)
 Plan: 07-01 (Wave 1 — Foundation ✅) → 07-02 (Wave 2 — Auth Core ✅) → 07-03 (Wave 3 — Middleware ✅) → 07-04 (Wave 4 — Auth UI ✅) → 07-05 (Wave 5 — Tests ✅)
 Status: 5 plans executados com sucesso. Fase concluída em 2026-07-04.
-Last activity: 2026-07-04 — Phase 7 implementada (5/5 plans, 5/5 waves). Próximo passo: planejar Fase 8.
+Last activity: 2026-07-04 — Phase 7 implementada (5/5 plans, 5/5 waves) + UAT verificado (344 testes, tsc, build). Próximo passo: planejar Fase 8.
 
 ## Performance Metrics
 
@@ -212,6 +212,7 @@ Milestone v1.2 "Contas e Propriedade" — Phase 7 implementada com 5 plans em 5 
 - 32 new auth tests, 344 total — all green
 - TypeScript, lint, build — all clean
 - No regression on any existing test
+- **UAT:** verificado via suíte automatizada em 2026-07-04 ✅
 
 Próximo passo: planejar Fase 8 (Ciclo de Conta).
 
