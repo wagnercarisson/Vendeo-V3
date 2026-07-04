@@ -76,14 +76,14 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 
 ## Phase 8 — Ciclo de Conta
 
-**Status:** Planned — 4 plans ready for execution
+**Status:** 3/4 plans executed — UAT (08-04) pending manual intervention
 
-| Plan | Wave | Description | Command |
-|------|------|-------------|---------|
-| 08-01 | 1 | Setup & Middleware Expansion | `/gsd-execute-phase 08-01` |
-| 08-02 | 2 | Pages & Route Handler | `/gsd-execute-phase 08-02` |
-| 08-03 | 3 | Tests | `/gsd-execute-phase 08-03` |
-| 08-04 | 4 | UAT — Local & Online | `/gsd-execute-phase 08-04` |
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 08-01 | 1 | ✓ | Setup & Middleware Expansion |
+| 08-02 | 2 | ✓ | Pages & Route Handler |
+| 08-03 | 3 | ✓ | Tests (383 passing) |
+| 08-04 | 4 | ○ | UAT — Local & Online (manual) |
 
 **Change artifacts (source of truth):** `openspec/changes/fase-8-ciclo-de-conta/`
 **Context:** `.planning/phases/08-ciclo-de-conta/CONTEXT.md`

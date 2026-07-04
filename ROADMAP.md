@@ -19,7 +19,7 @@ Infraestrutura de sessão: `@supabase/ssr`, middleware, login, logout, `requireU
 
 ## Phase 8 — Ciclo de Conta ← (atual)
 
-**Status:** `Planned`
+**Status:** `In Progress`
 **Slug:** `fase-8-ciclo-de-conta`
 **Change:** `openspec/changes/fase-8-ciclo-de-conta/`
 **Plans:** `.planning/phases/08-ciclo-de-conta/08-01-PLAN.md` — `08-04-PLAN.md`
@@ -32,12 +32,14 @@ Ciclo completo de credenciais: signup, confirmação de email, recuperação de 
 **Dependências:** Phase 7
 
 **Planos:**
-| Plan | Wave | Descrição |
-|------|------|-----------|
-| 08-01 | 1 | Setup & Middleware Expansion |
-| 08-02 | 2 | Pages & Route Handler |
-| 08-03 | 3 | Tests |
-| 08-04 | 4 | UAT — Local & Online |
+| Plan | Wave | Status | Descrição |
+|------|------|--------|-----------|
+| 08-01 | 1 | ✓ | Setup & Middleware Expansion |
+| 08-02 | 2 | ✓ | Pages & Route Handler |
+| 08-03 | 3 | ✓ | Tests |
+| 08-04 | 4 | ○ | UAT — Local & Online (manual) |
+
+**Tests:** 383 passing (344 prior + 39 novos)
 
 ---
 
