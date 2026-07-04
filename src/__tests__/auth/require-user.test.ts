@@ -1,32 +1,35 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { UnauthorizedError } from "@/lib/auth/require-user";
+import type { JwtPayload } from "@/types/auth";
 
-const mockGetUser = vi.fn();
+const mockGetClaims = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createServerClient: vi.fn(async () => ({
     auth: {
-      getUser: mockGetUser,
+      getClaims: mockGetClaims,
     },
   })),
 }));
 
-async function requireUser(): Promise<{ userId: string; claims: Record<string, unknown> }> {
+async function requireUser(): Promise<{ userId: string; claims: JwtPayload }> {
   const { createServerClient } = await import("@/lib/supabase/server");
   const supabase = await createServerClient();
-  const { data, error } = await supabase.auth.getUser();
+  const { data, error } = await supabase.auth.getClaims();
 
-  if (error || !data?.user?.id) {
+  const claims = data?.claims as JwtPayload | undefined;
+
+  if (error || !claims?.sub) {
     throw new UnauthorizedError();
   }
 
   return {
-    userId: data.user.id,
-    claims: data.user.app_metadata ?? {},
+    userId: claims.sub,
+    claims,
   };
 }
 
-async function requirePageUser(): Promise<{ userId: string; claims: Record<string, unknown> }> {
+async function requirePageUser(): Promise<{ userId: string; claims: JwtPayload }> {
   try {
     return await requireUser();
   } catch (error) {
@@ -42,38 +45,39 @@ beforeEach(() => {
 });
 
 describe("requireUser", () => {
-  it("returns AuthenticatedUser when getUser returns valid user", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "user-123", app_metadata: { role: "authenticated" } } },
+  it("returns AuthenticatedUser when getClaims returns valid claims", async () => {
+    mockGetClaims.mockResolvedValue({
+      data: { claims: { sub: "user-123", email: "test@test.com", role: "authenticated" } },
       error: null,
     });
 
     const result = await requireUser();
     expect(result.userId).toBe("user-123");
-    expect(result.claims).toEqual({ role: "authenticated" });
+    expect(result.claims.sub).toBe("user-123");
+    expect(result.claims.email).toBe("test@test.com");
   });
 
-  it("throws UnauthorizedError when getUser returns error", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: null },
+  it("throws UnauthorizedError when getClaims returns error", async () => {
+    mockGetClaims.mockResolvedValue({
+      data: { claims: null },
       error: new Error("Auth error"),
     });
 
     await expect(requireUser()).rejects.toThrow(UnauthorizedError);
   });
 
-  it("throws UnauthorizedError when getUser returns null user", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: null },
+  it("throws UnauthorizedError when getClaims returns null claims", async () => {
+    mockGetClaims.mockResolvedValue({
+      data: { claims: null },
       error: null,
     });
 
     await expect(requireUser()).rejects.toThrow(UnauthorizedError);
   });
 
-  it("throws UnauthorizedError when user has no id", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: undefined, app_metadata: {} } },
+  it("throws UnauthorizedError when claims has no sub", async () => {
+    mockGetClaims.mockResolvedValue({
+      data: { claims: { email: "test@test.com" } },
       error: null,
     });
 
@@ -83,8 +87,8 @@ describe("requireUser", () => {
 
 describe("requirePageUser", () => {
   it("returns AuthenticatedUser when authenticated", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "user-456", app_metadata: {} } },
+    mockGetClaims.mockResolvedValue({
+      data: { claims: { sub: "user-456" } },
       error: null,
     });
 
@@ -93,8 +97,8 @@ describe("requirePageUser", () => {
   });
 
   it("redirects to /login when not authenticated", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: null },
+    mockGetClaims.mockResolvedValue({
+      data: { claims: null },
       error: new Error("Not authenticated"),
     });
 

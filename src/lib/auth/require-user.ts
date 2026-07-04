@@ -1,9 +1,10 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import type { JwtPayload } from "@/types/auth";
 
 export interface AuthenticatedUser {
   userId: string;
-  claims: Record<string, unknown>;
+  claims: JwtPayload;
 }
 
 export class UnauthorizedError extends Error {
@@ -15,15 +16,17 @@ export class UnauthorizedError extends Error {
 
 export async function requireUser(): Promise<AuthenticatedUser> {
   const supabase = await createServerClient();
-  const { data, error } = await supabase.auth.getUser();
+  const { data, error } = await supabase.auth.getClaims();
 
-  if (error || !data?.user?.id) {
+  const claims = data?.claims as JwtPayload | undefined;
+
+  if (error || !claims?.sub) {
     throw new UnauthorizedError();
   }
 
   return {
-    userId: data.user.id,
-    claims: data.user.app_metadata ?? {},
+    userId: claims.sub,
+    claims,
   };
 }
 
