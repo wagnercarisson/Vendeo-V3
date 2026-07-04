@@ -208,6 +208,7 @@
     - [ ] 07-01-PLAN.md — Supabase SSR Foundation (client, server, middleware factories, barrel removal)
   - **Wave 2 — Auth Core** *(depends on Wave 1)*
     - [ ] 07-02-PLAN.md — Auth Helpers: requireUser & sanitizeRedirectPath
+  - **Wave 2b — Middleware** *(depends on Waves 1+2 — needs sanitizeRedirectPath)*
     - [ ] 07-03-PLAN.md — Auth Middleware (src/middleware.ts)
   - **Wave 3 — Auth UI** *(depends on Wave 2)*
     - [ ] 07-04-PLAN.md — Login Page & Logout
