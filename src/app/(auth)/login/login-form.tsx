@@ -1,6 +1,7 @@
 "use client";
 
 import { createBrowserClient } from "@/lib/supabase/client";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, FormEvent } from "react";
 import { Mail, Lock, Loader2 } from "lucide-react";
@@ -81,6 +82,11 @@ export function LoginForm({ redirect }: LoginFormProps) {
             style={{ minHeight: "44px" }}
           />
         </div>
+        <div className="flex justify-end">
+          <Link href="/forgot-password" className="text-sm text-blue-400 hover:text-blue-300 hover:underline">
+            Esqueci minha senha
+          </Link>
+        </div>
       </div>
 
       {error && (
@@ -99,6 +105,12 @@ export function LoginForm({ redirect }: LoginFormProps) {
           "Entrar"
         )}
       </button>
+      <p className="mt-4 text-center text-sm text-slate-400">
+        Não tem uma conta?{" "}
+        <Link href="/signup" className="text-blue-400 hover:text-blue-300 hover:underline">
+          Criar conta
+        </Link>
+      </p>
     </form>
   );
 }
