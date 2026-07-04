@@ -22,8 +22,8 @@ Infraestrutura de sessão: `@supabase/ssr`, middleware, login, logout, `requireU
 **Status:** `Planned`
 **Slug:** `fase-8-ciclo-de-conta`
 **Change:** `openspec/changes/fase-8-ciclo-de-conta/`
-**Plans:** `.planning/phase-08-ciclo-de-conta/08-01-PLAN.md`, `08-02-PLAN.md`, `08-03-PLAN.md`, `08-04-PLAN.md`
-**Context:** `.planning/phase-08-ciclo-de-conta/CONTEXT.md`
+**Plans:** `.planning/phases/08-ciclo-de-conta/08-01-PLAN.md` — `08-04-PLAN.md`
+**Context:** `.planning/phases/08-ciclo-de-conta/CONTEXT.md`
 
 Ciclo completo de credenciais: signup, confirmação de email, recuperação de senha.
 

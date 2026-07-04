@@ -86,7 +86,7 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 | 08-04 | 4 | UAT — Local & Online | `/gsd-execute-phase 08-04` |
 
 **Change artifacts (source of truth):** `openspec/changes/fase-8-ciclo-de-conta/`
-**Context:** `.planning/phase-08-ciclo-de-conta/CONTEXT.md`
+**Context:** `.planning/phases/08-ciclo-de-conta/CONTEXT.md`
 **State:** `.planning/STATE.md`
 **Roadmap:** `ROADMAP.md`
 <!-- GSD:workflow-end -->

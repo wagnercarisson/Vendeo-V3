@@ -30,7 +30,7 @@
 **Change artifacts approved:** `openspec/changes/fase-8-ciclo-de-conta/`
 **Plans ready:** `.planning/phase-08-ciclo-de-conta/` (4 plans)
 - Proposal, design, 8 specs, tasks approved
-- Context, roadmap, state, and plans generated
+- Context, roadmap, state, and plans generated at `.planning/phases/08-ciclo-de-conta/`
 - Ready for execution: 08-01 (Setup & Middleware), 08-02 (Pages), 08-03 (Tests), 08-04 (UAT)
 
 ## Pending
