@@ -23,15 +23,32 @@
 
 **Tests:** 344 tests passing. Covers requireUser, sanitizeRedirectPath, middleware, login form, logout.
 
-## Planned
+## Phase 8 — Ciclo de Conta (3/4 plans executed)
 
-### Phase 8 — Ciclo de Conta
+**Status:** 08-01 ✓ | 08-02 ✓ | 08-03 ✓ | 08-04 ○ (pending manual UAT)
 
-**Change artifacts approved:** `openspec/changes/fase-8-ciclo-de-conta/`
-**Plans ready:** `.planning/phase-08-ciclo-de-conta/` (4 plans)
-- Proposal, design, 8 specs, tasks approved
-- Context, roadmap, state, and plans generated at `.planning/phases/08-ciclo-de-conta/`
-- Ready for execution: 08-01 (Setup & Middleware), 08-02 (Pages), 08-03 (Tests), 08-04 (UAT)
+### 08-01 — Setup & Middleware Expansion ✓
+- `NEXT_PUBLIC_SITE_URL` added to `.env.example`, `.env.local`
+- `src/lib/supabase/site-url.ts` created (module-level validation)
+- `supabase/config.toml` generated (site_url, redirects, templates, enable_confirmations)
+- `supabase/templates/confirmation.html` + `recovery.html` with TokenHash
+- Middleware expanded: 10 routes, PUBLIC_ROUTES, ALWAYS_PASSTHROUGH
+
+### 08-02 — Pages & Route Handler ✓
+- Login form: "Criar conta" + "Esqueci minha senha" links
+- Signup page: form with validation, anti-enumeration redirect
+- Check-email page: contextual copy by type
+- Auth/confirm route handler: verifyOtp, strict type validation, next allowlist
+- Forgot-password page: form with anti-enumeration redirect
+- Update-password page: form with validation, session-preserving redirect
+
+### 08-03 — Tests ✓
+- 39 new tests across 6 new files + 2 extended files
+- 383 total tests, all passing (344 prior + 39 new)
+- Zero TypeScript errors, zero lint errors
+
+### 08-04 — UAT (pending — manual)
+Plan 08-04 requires manual steps: local UAT (Mailpit), build verification, online UAT (Vercel Preview + SMTP Hostinger), and deliverability testing.
 
 ## Pending
 
