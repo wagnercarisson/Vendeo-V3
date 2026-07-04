@@ -17,7 +17,7 @@ export async function updateSession(
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value, options }) =>
+        cookiesToSet.forEach(({ name, value }) =>
           request.cookies.set(name, value),
         );
         supabaseResponse = NextResponse.next({ request });
@@ -28,18 +28,10 @@ export async function updateSession(
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data } = await supabase.auth.getClaims();
 
-  const claims: JwtPayload | null = user
-    ? {
-        sub: user.id,
-        email: user.email ?? undefined,
-        aud: user.aud ?? undefined,
-        role: user.role ?? undefined,
-      }
-    : null;
-
-  return { response: supabaseResponse, claims };
+  return {
+    response: supabaseResponse,
+    claims: (data?.claims as JwtPayload | undefined) ?? null,
+  };
 }
