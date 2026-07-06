@@ -46,14 +46,27 @@ Ciclo completo de credenciais: signup, confirmação de email, recuperação de 
 
 ## Phase 9 — Cutover de Ownership e Onboarding ← (next)
 
-**Status:** `Pending`
+**Status:** `Planned`
 **Slug:** `fase-9-cutover-ownership`
+**Change:** `openspec/changes/fase-9-cutover-ownership/`
+**Plans:** `.planning/phases/09-cutover-ownership/09-01-PLAN.md` — `09-04-PLAN.md`
+**Context:** `.planning/phases/09-cutover-ownership/09-CONTEXT.md`
 
 Vinculação user→store, `getCurrentStore()`, `requireOwnership()`, onboarding, RLS em `stores`.
 
 **Entrega:** Usuário autenticado cria loja, retorna e acessa exclusivamente sua própria loja.
 
 **Dependências:** Phase 7, Phase 8
+
+**Planos:**
+| Plan | Wave | Status | Descrição |
+|------|------|--------|-----------|
+| 09-01 | 1 | ○ | Database & Auth Helpers Core |
+| 09-02 | 1 | ○ | API Routes — Ownership |
+| 09-03 | 2 | ○ | Server Components & Client Refactoring |
+| 09-04 | 3 | ○ | Tests, Verificação e Regressão |
+
+**Nota sobre RLS:** Migration precisa incluir `GRANT SELECT ON TABLE public.stores TO authenticated` — as migrations existentes revogaram `authenticated`, e a policy RLS não será alcançável sem essa permissão.
 
 ---
 

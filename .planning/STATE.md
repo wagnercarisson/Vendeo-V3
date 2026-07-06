@@ -38,8 +38,18 @@
 
 **Entrega:** Ciclo de credenciais completo — signup, confirmação de email, recuperação de senha. Anti-enumeration, templates PT-BR, SMTP via Resend.com, DNS configurado (DKIM/DMARC/SPF). UAT validado com Gmail, 383 testes passando.
 
-## Pending
+## Planned
 
 ### Phase 9 — Cutover de Ownership e Onboarding
+
+| Plan | Wave | Status | Descrição |
+|------|------|--------|-----------|
+| 09-01 | 1 | ○ | Database & Auth Helpers Core |
+| 09-02 | 1 | ○ | API Routes — Ownership |
+| 09-03 | 2 | ○ | Server Components & Client Refactoring |
+| 09-04 | 3 | ○ | Tests, Verificação e Regressão |
+
+## Pending
+
 ### Phase 10 — Perímetro Multi-tenant
 ### Phase 11 — Verificação e Hardening
