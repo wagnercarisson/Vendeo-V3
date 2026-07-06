@@ -17,9 +17,9 @@ Infraestrutura de sessão: `@supabase/ssr`, middleware, login, logout, `requireU
 
 ---
 
-## Phase 8 — Ciclo de Conta ← (atual)
+## Phase 8 — Ciclo de Conta ✓
 
-**Status:** `In Progress`
+**Status:** `Complete` ✓
 **Slug:** `fase-8-ciclo-de-conta`
 **Change:** `openspec/changes/fase-8-ciclo-de-conta/`
 **Plans:** `.planning/phases/08-ciclo-de-conta/08-01-PLAN.md` — `08-04-PLAN.md`
@@ -37,13 +37,14 @@ Ciclo completo de credenciais: signup, confirmação de email, recuperação de 
 | 08-01 | 1 | ✓ | Setup & Middleware Expansion |
 | 08-02 | 2 | ✓ | Pages & Route Handler |
 | 08-03 | 3 | ✓ | Tests |
-| 08-04 | 4 | ○ | UAT — Local & Online (manual) |
+| 08-04 | 4 | ✓ | UAT — Local & Online |
 
 **Tests:** 383 passing (344 prior + 39 novos)
+**UAT:** 14/14 passed, 0 issues. SMTP Hostinger funcional, templates PT-BR no Dashboard.
 
 ---
 
-## Phase 9 — Cutover de Ownership e Onboarding
+## Phase 9 — Cutover de Ownership e Onboarding ← (next)
 
 **Status:** `Pending`
 **Slug:** `fase-9-cutover-ownership`

@@ -23,9 +23,9 @@
 
 **Tests:** 344 tests passing. Covers requireUser, sanitizeRedirectPath, middleware, login form, logout.
 
-## Phase 8 — Ciclo de Conta (3/4 plans executed)
+## Phase 8 — Ciclo de Conta (4/4 plans executed) ✓
 
-**Status:** 08-01 ✓ | 08-02 ✓ | 08-03 ✓ | 08-04 ○ (pending manual UAT)
+**Status:** 08-01 ✓ | 08-02 ✓ | 08-03 ✓ | 08-04 ✓
 
 ### 08-01 — Setup & Middleware Expansion ✓
 - `NEXT_PUBLIC_SITE_URL` added to `.env.example`, `.env.local`
@@ -47,8 +47,13 @@
 - 383 total tests, all passing (344 prior + 39 new)
 - Zero TypeScript errors, zero lint errors
 
-### 08-04 — UAT (pending — manual)
-Plan 08-04 requires manual steps: local UAT (Mailpit), build verification, online UAT (Vercel Preview + SMTP Hostinger), and deliverability testing.
+### 08-04 — UAT ✓
+- 14/14 tests passed
+- SMTP Hostinger (Impromx) configurado e funcional via Supabase Dashboard
+- Templates de email PT-BR customizados no Dashboard remoto
+- Fluxo signup (cria conta → email → confirma → login) validado
+- Fluxo recovery (forgot → email → recovery → update-password → login) validado
+- Middleware (public routes, protected routes, passthrough) validado
 
 ## Pending
 

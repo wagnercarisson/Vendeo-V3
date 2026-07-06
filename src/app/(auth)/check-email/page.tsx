@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 interface CheckEmailPageProps {
   searchParams: Promise<{ type?: string }>;
 }
@@ -21,6 +23,15 @@ export default async function CheckEmailPage({ searchParams }: CheckEmailPagePro
     <div className="text-center">
       <h2 className="mb-4 text-2xl font-bold text-slate-50">{title}</h2>
       <p className="text-slate-300">{message}</p>
+      <p className="mt-6 text-sm text-slate-400">
+        Já possui uma conta?{" "}
+        <Link href="/login" className="text-blue-400 hover:text-blue-300 hover:underline">
+          Faça login
+        </Link>
+      </p>
+      <p className="mt-2 text-xs text-slate-500">
+        Não recebeu o email? Verifique sua caixa de spam ou tente novamente.
+      </p>
     </div>
   );
 }
