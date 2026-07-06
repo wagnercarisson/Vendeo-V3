@@ -41,6 +41,8 @@ const mockStore = {
   name: 'Minha Loja',
   segment: 'outros',
   brand_color: '#22C55E',
+  city: null,
+  state: null,
   identity_state: 'text_only',
   subsegment: null,
   tone_of_voice: null,
