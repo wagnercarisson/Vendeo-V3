@@ -2,6 +2,7 @@ import type { LogoStatus } from '@/lib/visual-signature/types';
 
 export interface Store {
   id: string;
+  user_id: string;
   name: string;
   segment: string;
   city: string | null;
