@@ -23,7 +23,7 @@ Phase 9 implementa ownership de loja: vincula `stores.user_id` ao `auth.users.id
 3. useStoreForm inicializa de `initialStore`, não de localStorage
 4. `save()` usa `storeId` local (inicializado de `initialStore?.id`, atualizado após POST)
 
-**5. buildStoreResponse()** deve ser adicionado em `src/lib/store.ts` e incluir: todos os campos de store, `identity` via `resolveStoreIdentity(store)`, `visual_signature_url`, `logo_url`, `has_archived_signatures`.
+**5. buildStoreResponse()** deve ser adicionado em `src/lib/store-response.ts` (arquivo separado) para evitar ciclo de import com `@/lib/actions/store`. Incluir: todos os campos de store, `identity` via `resolveStoreIdentity(store)`, `visual_signature_url`, `logo_url`, `has_archived_signatures`.
 
 **6. CampaignPreviewClient extraction:** `src/app/campaign/preview/page.tsx` vira server wrapper. Todo o client logic existente extraído para `preview-client.tsx`.
 

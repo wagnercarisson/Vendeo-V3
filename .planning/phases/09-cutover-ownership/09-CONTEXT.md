@@ -117,8 +117,11 @@ DELETE de tabelas filhas (generation_events, store_visual_signatures, store_bran
 
 ### Migration SQL
 Arquivo: `supabase/migrations/<timestamp>_add_user_id_to_stores.sql`
-1. DELETE FROM generation_events, store_visual_signatures, store_brand_assets, store_brand_profiles
-2. DELETE FROM stores
+1. DELETE FROM generation_events
+2. DELETE FROM store_brand_profiles
+3. DELETE FROM store_brand_assets
+4. DELETE FROM store_visual_signatures
+5. DELETE FROM stores
 3. ALTER TABLE stores ADD COLUMN user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id)
 4. ALTER TABLE stores ENABLE ROW LEVEL SECURITY
 5. CREATE POLICY "users_select_own_store" FOR SELECT TO authenticated USING (user_id = (SELECT auth.uid()))
