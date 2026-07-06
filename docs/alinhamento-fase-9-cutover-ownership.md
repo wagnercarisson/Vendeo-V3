@@ -426,7 +426,7 @@ GET /api/store
 
 **Motivo:** Evitar duas verdades sobre o formato de resposta de "store". Clientes que consomem `/api/store/:id` podem consumir `/api/store` sem adaptação. A identidade visual é parte do estado da loja — faz sentido vir sempre junto.
 
-**Nota técnica:** Para garantir que os dois endpoints nunca divirjam, extrair uma função compartilhada `buildStoreResponse(store)` em `src/lib/store.ts` que monta o shape hidratado. Ambos os route handlers chamam o mesmo builder.
+**Nota técnica:** Para garantir que os dois endpoints nunca divirjam, extrair uma função compartilhada `buildStoreResponse(store)` em `src/lib/store-response.ts` que monta o shape hidratado. (Arquivo separado para evitar ciclo de import com `@/lib/actions/store`.) Ambos os route handlers chamam o mesmo builder.
 
 ---
 
@@ -539,7 +539,7 @@ GET /api/store
 ## Checklist de Revisão
 
 - [ ] Migration: `ALTER TABLE stores ADD COLUMN user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id)` + reset de dados
-- [ ] Migration: DELETE filhas antes de stores (generation_events, store_visual_signatures, store_brand_assets, store_brand_profiles)
+- [ ] Migration: DELETE filhas antes de stores (generation_events, store_brand_profiles, store_brand_assets, store_visual_signatures)
 - [ ] RLS: `CREATE POLICY "users_select_own_store" ON stores FOR SELECT TO authenticated USING (user_id = (SELECT auth.uid()))`
 - [ ] `src/lib/auth/store-ownership.ts` — `requireOwnership(storeId)`, `getCurrentStore()`
 - [ ] `requireOwnership()` usa `createServerClient()` + RLS antes de `supabaseAdmin`
