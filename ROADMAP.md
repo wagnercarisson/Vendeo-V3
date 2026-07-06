@@ -44,33 +44,39 @@ Ciclo completo de credenciais: signup, confirmação de email, recuperação de 
 
 ---
 
-## Phase 9 — Cutover de Ownership e Onboarding ← (next)
+## Phase 9 — Cutover de Ownership e Onboarding ✓
 
-**Status:** `Planned`
+**Status:** `Complete` ✓
 **Slug:** `fase-9-cutover-ownership`
 **Change:** `openspec/changes/fase-9-cutover-ownership/`
 **Plans:** `.planning/phases/09-cutover-ownership/09-01-PLAN.md` — `09-04-PLAN.md`
 **Context:** `.planning/phases/09-cutover-ownership/09-CONTEXT.md`
 
-Vinculação user→store, `getCurrentStore()`, `requireOwnership()`, onboarding, RLS em `stores`.
+Vinculação user→store, `getCurrentStore()`, `requireOwnership()`, RLS em `stores`, routes ownership, server components, remoção de localStorage.
 
-**Entrega:** Usuário autenticado cria loja, retorna e acessa exclusivamente sua própria loja.
+**Entrega:** Migration `user_id` + RLS em `stores`. Ownership nas rotas CRUD. Páginas transformadas em server component. `localStorage("store_id")` removido de todos os componentes. 26 novos testes (410 total). TypeScript, lint e build limpos.
 
 **Dependências:** Phase 7, Phase 8
 
 **Planos:**
 | Plan | Wave | Status | Descrição |
 |------|------|--------|-----------|
-| 09-01 | 1 | ○ | Database & Auth Helpers Core |
-| 09-02 | 1 | ○ | API Routes — Ownership |
-| 09-03 | 2 | ○ | Server Components & Client Refactoring |
-| 09-04 | 3 | ○ | Tests, Verificação e Regressão |
+| 09-01 | 1 | ✓ | Database & Auth Helpers Core |
+| 09-02 | 1 | ✓ | API Routes — Ownership |
+| 09-03 | 2 | ✓ | Server Components & Client Refactoring |
+| 09-04 | 3 | ✓ | Tests, Verificação e Regressão |
 
-**Nota sobre RLS:** Migration precisa incluir `GRANT SELECT ON TABLE public.stores TO authenticated` — as migrations existentes revogaram `authenticated`, e a policy RLS não será alcançável sem essa permissão.
+**Migration:** `20260706000001_add_user_id_to_stores.sql` aplica coluna `user_id`, RLS policy e `GRANT SELECT TO authenticated`. ⚠️ Destrutiva — deleta dados filhos antes de adicionar coluna. Não rodar em produção sem backfill.
+
+**Procedimentos manuais pendentes:**
+1. Rodar migração no Supabase DB (após verificar se `auth.uid()` function existe)
+2. Remover `store_id` das variáveis de ambiente se existirem
+3. Fazer backfill de user_id para stores existentes antes de ativar RLS em produção
+4. Validar fluxo E2E: signup → redirect /store → criar loja → recarregar → dashboard → criar campanha
 
 ---
 
-## Phase 10 — Perímetro Multi-tenant
+## Phase 10 — Perímetro Multi-tenant ← (next)
 
 **Status:** `Pending`
 **Slug:** `fase-10-perimetro-multitenant`

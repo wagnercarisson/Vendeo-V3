@@ -40,14 +40,19 @@
 
 ## Planned
 
-### Phase 9 — Cutover de Ownership e Onboarding
+### Phase 9 — Cutover de Ownership e Onboarding ✓
 
-| Plan | Wave | Status | Descrição |
-|------|------|--------|-----------|
-| 09-01 | 1 | ○ | Database & Auth Helpers Core |
-| 09-02 | 1 | ○ | API Routes — Ownership |
-| 09-03 | 2 | ○ | Server Components & Client Refactoring |
-| 09-04 | 3 | ○ | Tests, Verificação e Regressão |
+**Slug:** `09-cutover-ownership`
+**Plans:** `.planning/phases/09-cutover-ownership/09-01-PLAN.md` — `09-04-PLAN.md`
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 09-01 | 1 | ✓ | Database & Auth Helpers Core |
+| 09-02 | 1 | ✓ | API Routes — Ownership |
+| 09-03 | 2 | ✓ | Server Components & Client Refactoring |
+| 09-04 | 3 | ✓ | Tests, Verificação e Regressão |
+
+**Entrega:** Migration `user_id` + RLS em `stores`. `StoreNotFoundError`, `getCurrentStore()`, `requireOwnership()` em `store-ownership.ts`. `buildStoreResponse()` em `store-response.ts`. Ownership nas 4 rotas CRUD (POST/GET /api/store, GET/PATCH /api/store/:id). 3 páginas viram server components (`/`, `/store`, `/campaign/preview`). `localStorage("store_id")` removido de todos os componentes. 26 novos testes (410 total).
 
 ## Pending
 
