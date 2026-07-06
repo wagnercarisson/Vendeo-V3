@@ -1,6 +1,7 @@
 "use client";
 
 import { useStoreForm, useIdentityActions } from "./use-store-form";
+import type { Store } from "@/lib/store";
 import { StorePreview } from "./store-preview";
 import { VisualSignatureApprovalModal } from "./visual-signature-approval-modal";
 import { STORE_SEGMENTS, STORE_SUBSEGMENTS, BRAZILIAN_STATES } from "@/lib/constants";
@@ -68,8 +69,8 @@ function getSubsegmentMode(segment: string): 'rich' | 'travado' | 'other' | 'loc
   return 'rich';
 }
 
-export function StoreIdentityForm() {
-  const { formData, setField, save, isLoading, isSaving, error, warningMessage, dismissWarning, successMessage, mode, clearStore, storeId } = useStoreForm();
+export function StoreIdentityForm({ initialStore }: { initialStore?: Store | null }) {
+  const { formData, setField, save, isLoading, isSaving, error, warningMessage, dismissWarning, successMessage, mode, clearStore, storeId } = useStoreForm({ initialStore: initialStore ?? null });
 
   const [step, setStep] = useState<1 | 2>(1);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});

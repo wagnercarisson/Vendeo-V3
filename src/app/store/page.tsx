@@ -1,8 +1,13 @@
+import { requirePageUser } from "@/lib/auth/require-user";
+import { getCurrentStore } from "@/lib/auth/store-ownership";
+import { StorePageClient } from "@/components/flow/store-page-client";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { StorePageClient } from "@/components/flow/store-page-client";
 
-export default function StorePage() {
+export default async function StorePage() {
+  const user = await requirePageUser();
+  const store = await getCurrentStore(user.userId);
+
   return (
     <main className="max-w-5xl mx-auto px-4 py-8">
       <div className="mb-6">
@@ -14,7 +19,7 @@ export default function StorePage() {
           Voltar
         </Link>
       </div>
-      <StorePageClient />
+      <StorePageClient initialStore={store} />
     </main>
   );
 }

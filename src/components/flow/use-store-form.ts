@@ -45,8 +45,6 @@ export interface UseStoreFormReturn {
   onAccentColorChange: (hex: string) => void;
 }
 
-const STORAGE_KEY = "store_id";
-
 const EMPTY_FORM: FormData = {
   name: "",
   segment: "",
@@ -112,65 +110,38 @@ export function useIdentityActions(
   }, [identityState, hasExistingVS, hasArchivedSignatures]);
 }
 
-export function useStoreForm(): UseStoreFormReturn {
-  const [formData, setFormData] = useState<FormData>(EMPTY_FORM);
-  const [mode, setMode] = useState<FormMode>("create");
+export function useStoreForm({ initialStore }: { initialStore?: Store | null } = {}): UseStoreFormReturn {
+  const [formData, setFormData] = useState<FormData>(() => {
+    if (initialStore) {
+      return {
+        name: initialStore.name,
+        segment: initialStore.segment,
+        brand_color: initialStore.brand_color ?? "",
+        city: initialStore.city ?? "",
+        state: initialStore.state ?? "",
+        subsegment: (initialStore as any).subsegment ?? "",
+        tone_of_voice: (initialStore as any).tone_of_voice ?? "",
+        positioning: (initialStore as any).positioning ?? "",
+        short_description: (initialStore as any).short_description ?? "",
+        slogan: (initialStore as any).slogan ?? "",
+      };
+    }
+    return EMPTY_FORM;
+  });
+  const [mode, setMode] = useState<FormMode>(initialStore ? "edit" : "create");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const [colorTouched, setColorTouched] = useState(false);
-  const [storeId, setStoreId] = useState<string | null>(null);
+  const [storeId, setStoreId] = useState<string | null>(initialStore?.id ?? null);
   const [colorDirtyState, setColorDirtyState] = useState<ColorDirtyState>({
     primaryInitial: null,
     accentInitial: null,
     primaryDirty: false,
     accentDirty: false,
   });
-
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return;
-
-    setStoreId(stored);
-    setIsLoading(true);
-
-    fetch(`/api/store/${stored}`)
-      .then((res) => {
-        if (res.status === 404) {
-          localStorage.removeItem(STORAGE_KEY);
-          setStoreId(null);
-          setMode("create");
-          setWarningMessage("Loja não encontrada. Cadastre novamente.");
-          return null;
-        }
-        if (!res.ok) throw new Error("Erro ao carregar loja");
-        return res.json() as Promise<Store>;
-      })
-      .then((store) => {
-        if (!store) return;
-        setFormData({
-          name: store.name,
-          segment: store.segment,
-          brand_color: store.brand_color ?? "",
-          city: store.city ?? "",
-          state: store.state ?? "",
-          subsegment: (store as any).subsegment ?? "",
-          tone_of_voice: (store as any).tone_of_voice ?? "",
-          positioning: (store as any).positioning ?? "",
-          short_description: (store as any).short_description ?? "",
-          slogan: (store as any).slogan ?? "",
-        });
-        setMode("edit");
-      })
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : "Erro ao carregar loja");
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  }, []);
 
   const setField = useCallback((field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -196,7 +167,6 @@ export function useStoreForm(): UseStoreFormReturn {
   }, []);
 
   const clearStore = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
     setStoreId(null);
     setFormData(EMPTY_FORM);
     setMode("create");
@@ -250,7 +220,6 @@ export function useStoreForm(): UseStoreFormReturn {
       const saved: Store = await res.json();
 
       if (!storeId) {
-        localStorage.setItem(STORAGE_KEY, saved.id);
         setStoreId(saved.id);
         setMode("edit");
       }

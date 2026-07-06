@@ -11,7 +11,6 @@ export function LogoutButton() {
       sessionStorage.removeItem("campaign_draft");
       sessionStorage.removeItem("campaign_draft_image");
       sessionStorage.removeItem("campaign_preview");
-      localStorage.removeItem("store_id");
     } catch {
       // Storage cleanup is best-effort; form submission still proceeds.
     }
