@@ -16,7 +16,7 @@
 
 - [ ] 3.1 Atualizar `POST /api/store`: adicionar `requireUser()`, usar `claims.sub` como user_id (ignorar body), tratar erro 23505 → 409 Conflict
 - [ ] 3.2 Adicionar `GET /api/store` (atalho): `requireApiUser()` + `getCurrentStore(user.userId)`, 404 se null, usar `buildStoreResponse()`
-- [ ] 3.3 Atualizar `src/lib/store.ts` com `buildStoreResponse(store)` para shape consistente (store fields + identity + visual_signature_url + logo_url + has_archived_signatures)
+- [ ] 3.3 Criar `src/lib/store-response.ts` com `buildStoreResponse(store)` para shape consistente (store fields + identity + visual_signature_url + logo_url + has_archived_signatures). Arquivo separado de `src/lib/store.ts` para evitar ciclo de import com `@/lib/actions/store`.
 - [ ] 3.4 Atualizar `GET /api/store/[id]`: adicionar `requireUser()` + `requireOwnership(id, user.userId)`, usar `buildStoreResponse()`, capturar UnauthorizedError/StoreNotFoundError → JSON
 - [ ] 3.5 Atualizar `PATCH /api/store/[id]`: adicionar `requireUser()` + `requireOwnership(id, user.userId)`, capturar UnauthorizedError/StoreNotFoundError → JSON
 - [ ] 3.6 Adicionar testes para ownership nas 4 rotas — autenticado com store, autenticado sem store, não autenticado, store alheia, UNIQUE violation

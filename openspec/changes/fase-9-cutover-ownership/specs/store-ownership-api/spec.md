@@ -130,7 +130,7 @@ The system SHALL update `PATCH /api/store/:id` to validate ownership before upda
 
 ### Requirement: buildStoreResponse for consistent shape
 
-The system SHALL provide a shared `buildStoreResponse(store)` function in `src/lib/store.ts` that assembles the enriched store response.
+The system SHALL provide a shared `buildStoreResponse(store)` function in `src/lib/store-response.ts` that assembles the enriched store response. (Arquivo separado de `src/lib/store.ts` para evitar ciclo de import — `src/lib/actions/store.ts` já importa de `@/lib/store`.)
 
 - MUST include all store fields at the top level
 - MUST include `identity: StoreIdentitySnapshot` resolved via `resolveStoreIdentity(store)`

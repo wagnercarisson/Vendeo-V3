@@ -60,7 +60,7 @@ page.tsx vira server wrapper. Client component extraído para preview-client.tsx
 Server component: requirePageUser() → getCurrentStore(user.userId). Route handler: requireApiUser() → requireOwnership(id, user.userId).
 
 ### D12 — Shape consistente: GET /api/store = GET /api/store/:id
-buildStoreResponse(store) extraído para src/lib/store.ts. Ambos endpoints retornam { ...store, identity, visual_signature_url, logo_url, has_archived_signatures }.
+buildStoreResponse(store) extraído para src/lib/store-response.ts (arquivo separado para evitar ciclo de import com @/lib/actions/store). Ambos endpoints retornam { ...store, identity, visual_signature_url, logo_url, has_archived_signatures }.
 
 ### D13 — Migration destrói dados existentes
 DELETE de tabelas filhas (generation_events, store_visual_signatures, store_brand_assets, store_brand_profiles) + DELETE stores + ADD COLUMN user_id. Dev environment apenas — release gate documentado.

@@ -92,7 +92,7 @@ Evita leitura duplicada de claims. Server component: `requirePageUser()` → `ge
 
 ### D12 — Shape consistente: GET /api/store = GET /api/store/:id
 
-`buildStoreResponse(store)` extraído para `src/lib/store.ts`. Ambos endpoints retornam `{ ...store, identity, visual_signature_url, logo_url, has_archived_signatures }`.
+`buildStoreResponse(store)` extraído para `src/lib/store-response.ts` (arquivo separado para evitar ciclo de import com `src/lib/actions/store.ts`). Ambos endpoints retornam `{ ...store, identity, visual_signature_url, logo_url, has_archived_signatures }`.
 
 ## Risks / Trade-offs
 
