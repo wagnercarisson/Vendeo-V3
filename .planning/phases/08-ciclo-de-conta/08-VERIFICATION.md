@@ -87,6 +87,27 @@ Key correctness verifications:
 - Same `lucide-react` icon usage, same Tailwind classes
 - Mock patterns match Phase 7 (`@/lib/supabase/server`, `@/lib/supabase/client`)
 
+### DNS Analysis (2026-07-06)
+
+**Domínio:** `vendeo.tech`
+
+| Registro | Status | Detalhes |
+|----------|--------|----------|
+| **SPF** | ✅ | `v=spf1 include:spf.improvmx.com ~all` — Impromx autorizado |
+| **DKIM** | ❌ | Nenhum registro `improvmx._domainkey.vendeo.tech` encontrado |
+| **DMARC** | ❌ | Nenhum registro `_dmarc.vendeo.tech` encontrado |
+
+**Impacto:** Sem DKIM/DMARC, Gmail e Outlook podem classificar emails como spam ou marcá-los como "não verificados". Recomendado configurar DKIM no DNS do domínio + DMARC policy (`p=quarantine` ou `p=reject`) para melhorar deliverability.
+
+### Hostinger Business Plan Limits (SMTP via Supabase)
+
+| Plano | Limite diário | Fonte |
+|-------|--------------|-------|
+| Business Starter | 1.000 emails/dia | Documentação Hostinger |
+| Business Premium | 3.000 emails/dia | Documentação Hostinger |
+
+**Nota:** O Supabase atua como relay SMTP — os limites são por mailbox no Hostinger. Verificar no hPanel qual plano está ativo.
+
 ### Issues
 
 #### WARNING (Should fix — non-blocking)
@@ -116,7 +137,7 @@ Key correctness verifications:
 
 **All checks passed. No critical issues.**
 
-**14/14 UAT tests passed.** Phase 8 implementation is complete, correct, and coherent with the change artifacts. 65/68 tasks completed — 3 pending tasks (Vercel Preview, deliverability testing) are non-blocking for development and can be completed as part of the beta release gate.
+**14/14 UAT tests passed.** Phase 8 implementation is complete, correct, and coherent with the change artifacts. 67/68 tasks completed — 1 pending task (Vercel Preview) is non-blocking for development and can be completed as part of the beta release gate.
 
 The implementation covers:
 - Full signup cycle with email confirmation

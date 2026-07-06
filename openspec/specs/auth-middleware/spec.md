@@ -23,8 +23,9 @@ The system SHALL have a `src/middleware.ts` file that configures a matcher and p
 
 The middleware SHALL use a positive matcher that explicitly lists protected routes.
 
-- Matcher MUST include: `"/"`, `"/login"`, `"/store/:path*"`, `"/campaign/:path*"`, `"/api/:path*"`
-- Routes NOT in the matcher (e.g., `/_next/*`, `/_vercel/*`, assets, `/_error`) SHALL bypass middleware entirely
+- Matcher MUST include: `"/"`, `"/login"`, `"/signup"`, `"/check-email"`, `"/forgot-password"`, `"/update-password"`, `"/auth/confirm"`, `"/store/:path*"`, `"/campaign/:path*"`, `"/api/:path*"`
+- Routes NOT in the matcher SHALL bypass middleware entirely
+- `/auth/:path*` MUST NOT be used as a prefix — each `/auth/*` route is listed individually
 
 #### Scenario: Protected route matches
 
@@ -36,6 +37,11 @@ The middleware SHALL use a positive matcher that explicitly lists protected rout
 - **WHEN** a request arrives for `/_next/static/chunk.js`
 - **THEN** the middleware SHALL not process the request
 
+#### Scenario: New auth routes match
+
+- **WHEN** a request arrives for `/signup` or `/check-email` or `/forgot-password` or `/update-password` or `/auth/confirm`
+- **THEN** the middleware SHALL process the request
+
 ### Requirement: Unauthenticated page requests redirect to login
 
 The middleware SHALL redirect unauthenticated requests to protected pages to `/login` preserving the original path as `?redirect=` parameter.
@@ -44,7 +50,7 @@ The middleware SHALL redirect unauthenticated requests to protected pages to `/l
 - If claims are absent or invalid and path is a protected page (not `/api/*`, not `/login`):
   - Compute redirect path from `request.nextUrl.pathname + request.nextUrl.search`
   - Redirect to `/login?redirect=<sanitized-path>`
-- `/login` SHALL remain publicly accessible without authentication
+- `/login`, `/signup`, `/check-email`, `/forgot-password` SHALL remain publicly accessible without authentication
 
 #### Scenario: Anonymous user hits root
 
@@ -61,13 +67,36 @@ The middleware SHALL redirect unauthenticated requests to protected pages to `/l
 - **WHEN** an unauthenticated user requests `/login`
 - **THEN** middleware SHALL allow pass-through (no redirect)
 
-### Requirement: Authenticated request to /login redirects to /
+#### Scenario: Anonymous user hits /update-password
 
-The middleware SHALL redirect authenticated users requesting `/login` to `/`.
+- **WHEN** an unauthenticated user requests `/update-password`
+- **THEN** middleware SHALL redirect to `/login`
+
+### Requirement: Public routes redirect to / when authenticated
+
+The middleware SHALL redirect authenticated users accessing public routes (`/login`, `/signup`, `/check-email`, `/forgot-password`) to `/`.
+
+- MUST treat these routes the same when authenticated
+- MUST redirect to `/` using `NextResponse.redirect(new URL("/", request.url))`
 
 #### Scenario: Authenticated user hits /login
 
 - **WHEN** an authenticated user requests `/login`
+- **THEN** middleware redirects to `/`
+
+#### Scenario: Authenticated user hits /signup
+
+- **WHEN** an authenticated user requests `/signup`
+- **THEN** middleware redirects to `/`
+
+#### Scenario: Authenticated user hits /check-email
+
+- **WHEN** an authenticated user requests `/check-email`
+- **THEN** middleware redirects to `/`
+
+#### Scenario: Authenticated user hits /forgot-password
+
+- **WHEN** an authenticated user requests `/forgot-password`
 - **THEN** middleware redirects to `/`
 
 ### Requirement: Unauthenticated API requests return 401 JSON
@@ -106,3 +135,39 @@ The middleware SHALL NOT query the database for store existence or ownership.
 
 - **WHEN** middleware processes any request
 - **THEN** it SHALL NOT make any database queries
+
+### Requirement: /auth/confirm is always passthrough
+
+The middleware SHALL allow `/auth/confirm` to pass through regardless of authentication state.
+
+- `/auth/confirm` MUST NOT redirect, even if user is not authenticated
+- `/auth/confirm` MUST NOT redirect to `/` even if user IS authenticated
+- This is necessary for recovery links clicked in an already-logged-in browser
+
+#### Scenario: Anonymous user hits /auth/confirm
+
+- **WHEN** an unauthenticated user requests `/auth/confirm`
+- **THEN** middleware SHALL pass through (no redirect)
+
+#### Scenario: Authenticated user hits /auth/confirm
+
+- **WHEN** an authenticated user requests `/auth/confirm`
+- **THEN** middleware SHALL pass through (no redirect to `/`)
+
+### Requirement: Middleware classifies routes by authentication state
+
+The middleware SHALL implement a route classification system:
+
+- `PUBLIC_ROUTES`: `Set(["/login", "/signup", "/check-email", "/forgot-password"])` — anonymous passes, authenticated redirects to `/`
+- `ALWAYS_PASSTHROUGH`: `Set(["/auth/confirm"])` — always passes regardless of auth state
+- Other matched routes: require authentication
+
+#### Scenario: Route classification logic is correct
+
+- **WHEN** middleware processes any request
+- **THEN** the following rules apply:
+  - If pathname is in `ALWAYS_PASSTHROUGH`: return response immediately
+  - If not authenticated and is `PUBLIC_ROUTES`: pass through
+  - If not authenticated and not public: redirect to login
+  - If authenticated and is `PUBLIC_ROUTES`: redirect to `/`
+  - If authenticated and not public: pass through

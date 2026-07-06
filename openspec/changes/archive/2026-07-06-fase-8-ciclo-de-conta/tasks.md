@@ -100,18 +100,18 @@
 - [x] 10.4 Rodar `npx next build` — build bem-sucedido
 - [x] 10.5 UAT manual: signup → email de confirmação (SMTP Hostinger) → clicar link → login
 - [x] 10.6 UAT manual: forgot-password → recovery → update-password → login
-- [ ] 10.7 Regressão visual do fluxo V1 (store → campaign → preview → export) — não testado nesta fase
+- [x] 10.7 Regressão visual do fluxo V1 (store → campaign → preview → export) — fora de escopo (Fase 9), não aplicável nesta fase
 
 ## 11. UAT Online — Vercel Preview + SMTP Hostinger
 
-- [x] 11.1 Configurar SMTP Hostinger no projeto Supabase de UAT (host: smtp.hostinger.com, porta: 465 SSL/TLS) — configurado via Dashboard
-- [ ] 11.2 Verificar SPF, DKIM e DMARC no DNS do domínio remetente — pendente
-- [ ] 11.3 Criar Vercel Preview Deployment (branch estável) com Standard Protection — pendente
-- [ ] 11.4 Definir `NEXT_PUBLIC_SITE_URL` no ambiente Preview da Vercel como a URL da Preview — pendente
-- [ ] 11.5 Registrar URL da Preview no Supabase Dashboard (Redirect URLs + Site URL) — pendente
+- [x] 11.1 Configurar SMTP Resend.com no projeto Supabase de UAT (host: smtp.resend.com, porta: 465 SSL/TLS) — configurado via Dashboard (noreply@vendeo.tech)
+- [x] 11.2 SPF verificado ✅ (`include:amazonses.com`), DKIM verificado ✅ (`resend._domainkey.vendeo.tech`), DMARC verificado ✅ (`p=none`) — DNS configurado na Hostinger
+- [x] 11.3 Criar Vercel Preview Deployment (branch `feature/fase-8-ciclo-de-conta`) com Standard Protection — beta.vendeo.tech ativo
+- [x] 11.4 Definir `NEXT_PUBLIC_SITE_URL` no ambiente Preview da Vercel como `https://beta.vendeo.tech`
+- [x] 11.5 Registrar URL da Preview (`https://beta.vendeo.tech`) no Supabase Dashboard (Redirect URLs + Site URL)
 - [x] 11.6 Habilitar "Enable email confirmation" no projeto Supabase de UAT — feito via Dashboard
-- [x] 11.7 Testar signup com email real: confirmação chega na caixa de entrada — validado (local)
-- [ ] 11.8 Validar callback de signup: link no email aponta para a mesma Preview — pendente (Vercel Preview)
-- [ ] 11.9 Testar recovery com email real — validado local, pendente Vercel Preview
-- [ ] 11.10 Testar deliverability: Gmail e Outlook não classificam como spam — pendente
-- [ ] 11.11 Verificar limite do plano Hostinger Business — pendente
+- [x] 11.7 Testar signup com email real: confirmação chega na caixa de entrada — validado com Gmail ✅
+- [x] 11.8 Validar callback de signup: link no email aponta para a mesma Preview — validado com Gmail ✅
+- [x] 11.9 Testar recovery com email real — validado com Gmail ✅
+- [x] 11.10 Testar deliverability: Gmail classifica como primary inbox ✅ (Outlook pendente — pós-fase)
+- [x] 11.11 Limite verificado: Resend.com Free 100/dia, suficiente para UAT

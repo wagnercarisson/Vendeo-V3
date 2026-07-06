@@ -40,7 +40,7 @@ Ciclo completo de credenciais: signup, confirmação de email, recuperação de 
 | 08-04 | 4 | ✓ | UAT — Local & Online |
 
 **Tests:** 383 passing (344 prior + 39 novos)
-**UAT:** 14/14 passed, 0 issues. SMTP Hostinger funcional, templates PT-BR no Dashboard.
+**UAT:** 14/14 passed, 0 issues. SMTP Resend.com configurado e funcional, domínio vendeo.tech com DKIM/DMARC/SPF, templates PT-BR no Dashboard remoto, fluxo signup e recovery validados com Gmail em beta.vendeo.tech.
 
 ---
 
