@@ -122,10 +122,10 @@ Arquivo: `supabase/migrations/<timestamp>_add_user_id_to_stores.sql`
 3. DELETE FROM store_brand_assets
 4. DELETE FROM store_visual_signatures
 5. DELETE FROM stores
-3. ALTER TABLE stores ADD COLUMN user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id)
-4. ALTER TABLE stores ENABLE ROW LEVEL SECURITY
-5. CREATE POLICY "users_select_own_store" FOR SELECT TO authenticated USING (user_id = (SELECT auth.uid()))
-6. GRANT SELECT ON TABLE public.stores TO authenticated (necessário para RLS funcionar)
+6. ALTER TABLE stores ADD COLUMN user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id)
+7. ALTER TABLE stores ENABLE ROW LEVEL SECURITY
+8. CREATE POLICY "users_select_own_store" FOR SELECT TO authenticated USING (user_id = (SELECT auth.uid()))
+9. GRANT SELECT ON TABLE public.stores TO authenticated (necessário para RLS funcionar)
 
 ### Auth helpers (src/lib/auth/store-ownership.ts)
 ```typescript

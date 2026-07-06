@@ -1,6 +1,6 @@
 ## 1. Migration e Database
 
-- [ ] 1.1 Criar migration `supabase/migrations/<timestamp>_add_user_id_to_stores.sql`: DELETE filhas (generation_events, store_visual_signatures, store_brand_assets, store_brand_profiles), DELETE stores, ALTER TABLE ADD COLUMN user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id), ENABLE ROW LEVEL SECURITY, CREATE POLICY "users_select_own_store" FOR SELECT TO authenticated USING (user_id = (SELECT auth.uid()))
+- [ ] 1.1 Criar migration `supabase/migrations/<timestamp>_add_user_id_to_stores.sql`: DELETE filhas (generation_events, store_brand_profiles, store_brand_assets, store_visual_signatures), DELETE stores, ALTER TABLE ADD COLUMN user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id), ENABLE ROW LEVEL SECURITY, CREATE POLICY "users_select_own_store" FOR SELECT TO authenticated USING (user_id = (SELECT auth.uid()))
 - [ ] 1.2 Rodar migration localmente e verificar esquema (coluna user_id, RLS, policy SELECT)
 - [ ] 1.3 Atualizar definições de tipo TypeScript em `src/lib/types.ts` ou similar para incluir `user_id` no tipo Store
 
