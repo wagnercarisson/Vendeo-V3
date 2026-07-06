@@ -11,11 +11,10 @@ beforeEach(() => {
 });
 
 describe("LogoutButton", () => {
-  it("removes known keys on submit", () => {
+  it("removes known sessionStorage keys on submit", () => {
     sessionStorage.setItem("campaign_draft", "test");
     sessionStorage.setItem("campaign_draft_image", "test");
     sessionStorage.setItem("campaign_preview", "test");
-    localStorage.setItem("store_id", "test-store");
 
     render(<LogoutButton />);
 
@@ -27,7 +26,22 @@ describe("LogoutButton", () => {
     expect(sessionStorage.getItem("campaign_draft")).toBeNull();
     expect(sessionStorage.getItem("campaign_draft_image")).toBeNull();
     expect(sessionStorage.getItem("campaign_preview")).toBeNull();
-    expect(localStorage.getItem("store_id")).toBeNull();
+  });
+
+  it("does not call localStorage.removeItem for store_id", () => {
+    const removeItemSpy = vi.spyOn(Storage.prototype, "removeItem");
+
+    render(<LogoutButton />);
+
+    const form = screen.getByRole("button").closest("form");
+    fireEvent.submit(form!);
+
+    const storeIdCalls = removeItemSpy.mock.calls.filter(
+      ([key]) => key === "store_id"
+    );
+    expect(storeIdCalls.length).toBe(0);
+
+    removeItemSpy.mockRestore();
   });
 
   it("preserves unknown keys during cleanup", () => {
