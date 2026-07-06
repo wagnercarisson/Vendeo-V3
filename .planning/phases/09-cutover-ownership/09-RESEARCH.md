@@ -37,7 +37,7 @@ Phase 9 implementa ownership de loja: vincula `stores.user_id` ao `auth.users.id
 - `supabase/migrations/<timestamp>_add_user_id_to_stores.sql` (new)
 - `src/lib/types.ts` (opcional, ou Store type em `src/lib/store.ts`)
 - `src/lib/auth/store-ownership.ts` (new)
-- `src/lib/store.ts` (add buildStoreResponse)
+- `src/lib/store-response.ts` (new — buildStoreResponse, evita ciclo de import com @/lib/actions/store)
 - `src/app/api/store/route.ts` (POST modify + GET new)
 - `src/app/api/store/[id]/route.ts` (GET/PATCH ownership)
 - `src/app/store/page.tsx` (server component)

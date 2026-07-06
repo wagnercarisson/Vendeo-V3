@@ -92,7 +92,8 @@ DELETE de tabelas filhas (generation_events, store_visual_signatures, store_bran
 - `src/lib/auth/require-user.ts` — UnauthorizedError pattern a seguir
 - `src/lib/auth/redirect.ts` — Redirect sanitizer (reutilizado)
 - `src/lib/supabase/server.ts` — createServerClient() + supabaseAdmin
-- `src/lib/store.ts` — Store type + helpers (buildStoreResponse será adicionado)
+- `src/lib/store.ts` — Store type + helpers
+- `src/lib/store-response.ts` — buildStoreResponse (arquivo separado para evitar ciclo de import com @/lib/actions/store)
 - `src/app/api/store/route.ts` — POST (será modificado)
 - `src/app/api/store/[id]/route.ts` — GET/PATCH (serão modificados)
 - `src/middleware.ts` — Middleware (não modificado nesta fase)
