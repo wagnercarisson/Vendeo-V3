@@ -8,9 +8,9 @@ The system SHALL have a `stores` table in the public Supabase schema created via
 
 1. DELETEs data from dependent tables first (no CASCADE):
    - `DELETE FROM generation_events`
-   - `DELETE FROM store_visual_signatures`
+   - `DELETE FROM store_brand_profiles` (antes de brand_assets e visual_signatures — FK references ambos)
    - `DELETE FROM store_brand_assets`
-   - `DELETE FROM store_brand_profiles`
+   - `DELETE FROM store_visual_signatures`
 2. DELETEs all rows from `stores`
 3. Adds `user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id)`
 4. Enables RLS on `stores`
@@ -132,7 +132,7 @@ The system SHALL expose a `GET /api/store` endpoint (without `:id`) that returns
 
 ### Requirement: buildStoreResponse for consistent shape
 
-The system SHALL provide `buildStoreResponse(store)` in `src/lib/store.ts`.
+The system SHALL provide `buildStoreResponse(store)` in `src/lib/store-response.ts` (arquivo separado de `src/lib/store.ts` para evitar ciclo de import com `@/lib/actions/store`).
 
 - Returns `{ ...store, identity, visual_signature_url, logo_url, has_archived_signatures }`
 - Used by both `GET /api/store` and `GET /api/store/:id`
