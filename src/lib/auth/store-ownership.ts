@@ -1,13 +1,15 @@
 import { createServerClient } from "@/lib/supabase/server";
-import { requireUser } from "@/lib/auth/require-user";
+import { requireUser, requireApiUser } from "@/lib/auth/require-user";
 import type { Store } from "@/lib/store";
+import { StoreNotFoundError, UnauthorizedError } from "./errors";
 
-export class StoreNotFoundError extends Error {
-  constructor(message = "Store not found or access denied") {
-    super(message);
-    this.name = "StoreNotFoundError";
-  }
-}
+export { StoreNotFoundError };
+
+export type AuthorizedStoreContext = {
+  userId: string;
+  storeId: string;
+  store: Store;
+};
 
 export async function getCurrentStore(userId?: string): Promise<Store | null> {
   let effectiveUserId = userId;
@@ -50,4 +52,10 @@ export async function requireOwnership(storeId: string, userId?: string): Promis
   }
 
   return data as Store;
+}
+
+export async function requireAuthorizedStore(storeId: string): Promise<AuthorizedStoreContext> {
+  const user = await requireApiUser();
+  const store = await requireOwnership(storeId, user.userId);
+  return { userId: user.userId, storeId: store.id, store };
 }

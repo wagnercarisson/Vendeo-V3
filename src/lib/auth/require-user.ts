@@ -1,17 +1,13 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import type { JwtPayload } from "@/types/auth";
+import { UnauthorizedError } from "./errors";
+
+export { UnauthorizedError };
 
 export interface AuthenticatedUser {
   userId: string;
   claims: JwtPayload;
-}
-
-export class UnauthorizedError extends Error {
-  constructor(message = "Usuário não autenticado") {
-    super(message);
-    this.name = "UnauthorizedError";
-  }
 }
 
 export async function requireUser(): Promise<AuthenticatedUser> {
