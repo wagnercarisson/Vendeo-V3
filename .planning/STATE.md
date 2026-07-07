@@ -54,7 +54,26 @@
 
 **Entrega:** Migration `user_id` + RLS em `stores`. `StoreNotFoundError`, `getCurrentStore()`, `requireOwnership()` em `store-ownership.ts`. `buildStoreResponse()` em `store-response.ts`. Ownership nas 4 rotas CRUD (POST/GET /api/store, GET/PATCH /api/store/:id). 3 páginas viram server components (`/`, `/store`, `/campaign/preview`). `localStorage("store_id")` removido de todos os componentes. 26 novos testes (410 total).
 
+## Planned
+
+### Phase 10 — Perímetro Multi-tenant ✓
+
+**Slug:** `fase-10-perimetro-multitenant`
+**Change:** `openspec/changes/fase-10-perimetro-multitenant/`
+**Context:** `.planning/phases/10-perimetro-multitenant/10-CONTEXT.md`
+**Plans:** `.planning/phases/10-perimetro-multitenant/10-01-PLAN.md` — `10-06-PLAN.md`
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 10-01 | 1 | ○ | Auth Guards & Error Contracts |
+| 10-02 | 2 | ○ | Route Handlers — requireAuthorizedStore + CSRF |
+| 10-03 | 2 | ○ | Server Actions — Extração de Serviço + Guards |
+| 10-04 | 1 | ○ | RLS + Storage Policies |
+| 10-05 | 3 | ○ | Matriz de Testes Parametrizados |
+| 10-06 | 4 | ○ | Validação e Regressão |
+
+**Entrega:** Erros centralizados em `errors.ts`, CSRF/same-origin, `requireAuthorizedStore()` em ~20 handlers, `getCurrentStore()` em `/api/campaign/generate`, 3 Server Actions extraídas para `store-identity-service.ts`, 4 Server Actions com guards, RLS em 4 tabelas filhas, Storage policies, matriz parametrizada (~100 testes). Build limpo.
+
 ## Pending
 
-### Phase 10 — Perímetro Multi-tenant
 ### Phase 11 — Verificação e Hardening

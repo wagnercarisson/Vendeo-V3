@@ -76,16 +76,35 @@ Vinculação user→store, `getCurrentStore()`, `requireOwnership()`, RLS em `st
 
 ---
 
-## Phase 10 — Perímetro Multi-tenant ← (next)
+## Phase 10 — Perímetro Multi-tenant ✓
 
-**Status:** `Pending`
+**Status:** `Planned`
 **Slug:** `fase-10-perimetro-multitenant`
+**Change:** `openspec/changes/fase-10-perimetro-multitenant/`
+**Plans:** `.planning/phases/10-perimetro-multitenant/10-01-PLAN.md` — `10-06-PLAN.md`
+**Context:** `.planning/phases/10-perimetro-multitenant/10-CONTEXT.md`
 
-RLS nas 4 tabelas restantes, Storage, `requireOwnership()` em todos os handlers, CSRF, Server Actions com auth.
+Fechar o perímetro multi-tenant: erros centralizados, CSRF, `requireAuthorizedStore()` em ~20 handlers, Server Actions com auth, RLS em 4 tabelas filhas, Storage policies, matriz de testes parametrizados.
 
-**Entrega:** Toda superfície existente respeita o tenant.
+**Entrega:** Toda superfície existente respeita o tenant. ~100 novos testes. TypeScript, lint e build limpos.
 
 **Dependências:** Phase 9
+
+**Planos:**
+| Plan | Wave | Status | Descrição |
+|------|------|--------|-----------|
+| 10-01 | 1 | ○ | Auth Guards & Error Contracts |
+| 10-02 | 2 | ○ | Route Handlers — requireAuthorizedStore + CSRF |
+| 10-03 | 2 | ○ | Server Actions — Extração de Serviço + Guards |
+| 10-04 | 1 | ○ | RLS + Storage Policies |
+| 10-05 | 3 | ○ | Matriz de Testes Parametrizados |
+| 10-06 | 4 | ○ | Validação e Regressão |
+
+**Tests previstos:** ~100 novos casos parametrizados (matriz base + CSRF)
+**Procedimentos manuais pendentes:**
+1. Rodar migration `enable_rls_child_tables` no Supabase DB
+2. Rodar Storage policies migration
+3. Validar fluxo E2E: acessar rota alheia → 404, mutação cross-origin → 403
 
 ---
 
