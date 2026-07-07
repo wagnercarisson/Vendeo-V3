@@ -38,6 +38,10 @@ vi.mock('@/lib/image-generation/providers/factory', () => ({
   createImageProvider: vi.fn(),
 }));
 
+vi.mock('@/lib/auth/csrf', () => ({
+  requireSameOrigin: vi.fn(() => {}),
+}));
+
 describe('POST /api/campaign/generate-image — validation', () => {
   beforeEach(() => {
     vi.clearAllMocks();

@@ -7,6 +7,18 @@ vi.mock('@/lib/supabase/server', () => ({
   supabaseAdmin: { from: mockSupabaseFrom },
 }));
 
+vi.mock('@/lib/auth/store-ownership', () => ({
+  requireAuthorizedStore: vi.fn(() => Promise.resolve({
+    userId: 'test-user',
+    storeId: 'test-store',
+    store: { id: 'test-store' },
+  })),
+}));
+
+vi.mock('@/lib/auth/csrf', () => ({
+  requireSameOrigin: vi.fn(() => {}),
+}));
+
 function makeChain(result: any) {
   const resolvable = Promise.resolve(result);
   const chain: any = Object.assign(() => resolvable, {

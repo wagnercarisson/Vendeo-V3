@@ -78,7 +78,7 @@ Vinculação user→store, `getCurrentStore()`, `requireOwnership()`, RLS em `st
 
 ## Phase 10 — Perímetro Multi-tenant ✓
 
-**Status:** `Planned`
+**Status:** `Complete` ✓
 **Slug:** `fase-10-perimetro-multitenant`
 **Change:** `openspec/changes/fase-10-perimetro-multitenant/`
 **Plans:** `.planning/phases/10-perimetro-multitenant/10-01-PLAN.md` — `10-06-PLAN.md`
@@ -93,18 +93,20 @@ Fechar o perímetro multi-tenant: erros centralizados, CSRF, `requireAuthorizedS
 **Planos:**
 | Plan | Wave | Status | Descrição |
 |------|------|--------|-----------|
-| 10-01 | 1 | ○ | Auth Guards & Error Contracts |
-| 10-02 | 2 | ○ | Route Handlers — requireAuthorizedStore + CSRF |
-| 10-03 | 2 | ○ | Server Actions — Extração de Serviço + Guards |
-| 10-04 | 1 | ○ | RLS + Storage Policies |
-| 10-05 | 3 | ○ | Matriz de Testes Parametrizados |
-| 10-06 | 4 | ○ | Validação e Regressão |
+| 10-01 | 1 | ✓ | Auth Guards & Error Contracts |
+| 10-02 | 2 | ✓ | Route Handlers — requireAuthorizedStore + CSRF |
+| 10-03 | 2 | ✓ | Server Actions — Extração de Serviço + Guards |
+| 10-04 | 1 | ✓ | RLS + Storage Policies |
+| 10-05 | 3 | ✓ | Matriz de Testes Parametrizados |
+| 10-06 | 4 | ✓ | Validação e Regressão |
 
-**Tests previstos:** ~100 novos casos parametrizados (matriz base + CSRF)
+**Tests:** 51 files, 457 tests passing (47 novos em relação à Phase 9)
+**TypeScript, lint, build:** Todos verdes
 **Procedimentos manuais pendentes:**
-1. Rodar migration `enable_rls_child_tables` no Supabase DB
-2. Rodar Storage policies migration
+1. Rodar migration `enable_rls_child_tables` no Supabase DB (`supabase/migrations/20260707000001_enable_rls_child_tables.sql`)
+2. Rodar Storage policies migration (mesmo arquivo)
 3. Validar fluxo E2E: acessar rota alheia → 404, mutação cross-origin → 403
+4. Bucket `store-logos` mantido como exceção temporária — inventário e migração na Fase 11
 
 ---
 

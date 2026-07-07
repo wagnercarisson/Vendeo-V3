@@ -7,6 +7,18 @@ vi.mock('@/lib/supabase/server', () => ({
   supabaseAdmin: { from: mockSupabaseFrom },
 }));
 
+vi.mock('@/lib/auth/store-ownership', () => ({
+  requireAuthorizedStore: vi.fn(() => Promise.resolve({
+    userId: 'test-user',
+    storeId: 'test-store',
+    store: { id: 'test-store' },
+  })),
+}));
+
+vi.mock('@/lib/auth/csrf', () => ({
+  requireSameOrigin: vi.fn(() => {}),
+}));
+
 vi.mock('@/lib/validators/color', () => ({
   validateBrandColorsChosen: vi.fn(() => true),
   normalizeBrandColorsChosen: vi.fn((c: any) => c),

@@ -65,14 +65,14 @@
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
-| 10-01 | 1 | ○ | Auth Guards & Error Contracts |
-| 10-02 | 2 | ○ | Route Handlers — requireAuthorizedStore + CSRF |
-| 10-03 | 2 | ○ | Server Actions — Extração de Serviço + Guards |
-| 10-04 | 1 | ○ | RLS + Storage Policies |
-| 10-05 | 3 | ○ | Matriz de Testes Parametrizados |
-| 10-06 | 4 | ○ | Validação e Regressão |
+| 10-01 | 1 | ✓ | Auth Guards & Error Contracts |
+| 10-02 | 2 | ✓ | Route Handlers — requireAuthorizedStore + CSRF |
+| 10-03 | 2 | ✓ | Server Actions — Extração de Serviço + Guards |
+| 10-04 | 1 | ✓ | RLS + Storage Policies |
+| 10-05 | 3 | ✓ | Matriz de Testes Parametrizados |
+| 10-06 | 4 | ✓ | Validação e Regressão |
 
-**Entrega:** Erros centralizados em `errors.ts`, CSRF/same-origin, `requireAuthorizedStore()` em ~20 handlers, `getCurrentStore()` em `/api/campaign/generate`, 3 Server Actions extraídas para `store-identity-service.ts`, 4 Server Actions com guards, RLS em 4 tabelas filhas, Storage policies, matriz parametrizada (~100 testes). Build limpo.
+**Entrega:** Erros centralizados em `errors.ts`, CSRF/same-origin, `requireAuthorizedStore()` em ~20 handlers, `getCurrentStore()` em `/api/campaign/generate`, 3 Server Actions extraídas para `store-identity-service.ts`, 4 Server Actions com guards, RLS em 4 tabelas filhas, Storage policies, matriz parametrizada (457 testes, 51 files). Build limpo. TypeScript, lint, build — todos verdes.
 
 ## Pending
 
