@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'node:crypto';
 import { supabaseAdmin as supabase } from '@/lib/supabase/server';
+import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
+import { requireSameOrigin } from '@/lib/auth/csrf';
 import {
   validateImage,
   getImageDimensions,
@@ -510,7 +512,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  requireSameOrigin(request);
   const { id } = await params;
+  await requireAuthorizedStore(id);
   if (!validateUUID(id)) {
     return NextResponse.json({ error: 'ID da loja inválido' }, { status: 400 });
   }
@@ -525,7 +529,7 @@ export async function GET(
   if (!validateUUID(id)) {
     return NextResponse.json({ error: 'ID da loja inválido' }, { status: 400 });
   }
-
+  await requireAuthorizedStore(id);
   return handleGetActiveLogo(request, id);
 }
 
@@ -533,7 +537,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  requireSameOrigin(request);
   const { id } = await params;
+  await requireAuthorizedStore(id);
   if (!validateUUID(id)) {
     return NextResponse.json({ error: 'ID da loja inválido' }, { status: 400 });
   }

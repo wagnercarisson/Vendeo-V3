@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase/server';
 import { BrandTextOnlyInferenceService } from '@/lib/brand-assets/text-only-inference-service';
 import { buildStoreProfileInputSnapshot } from '@/lib/snapshot';
+import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
+import { requireSameOrigin } from '@/lib/auth/csrf';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -11,7 +13,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  requireSameOrigin(request);
   const { id } = await params;
+  await requireAuthorizedStore(id);
 
   if (!UUID_REGEX.test(id)) {
     return NextResponse.json({ error: 'ID da loja inválido' }, { status: 400 });

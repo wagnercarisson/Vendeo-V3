@@ -1,8 +1,10 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
+import { requireSameOrigin } from "@/lib/auth/csrf";
 
 export async function POST(request: NextRequest) {
+  requireSameOrigin(request);
   const supabase = await createServerClient();
   await supabase.auth.signOut();
 

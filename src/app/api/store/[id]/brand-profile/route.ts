@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase/server';
 import { validateBrandColorsChosen, normalizeBrandColorsChosen } from '@/lib/validators/color';
+import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
+import { requireSameOrigin } from '@/lib/auth/csrf';
 
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
 
@@ -11,6 +13,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  await requireAuthorizedStore(id);
   const url = new URL(request.url);
   const statusParam = url.searchParams.get('status');
 
@@ -54,7 +57,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  requireSameOrigin(request);
   const { id } = await params;
+  await requireAuthorizedStore(id);
   const body = await request.json();
   const { colors } = body;
 
@@ -101,7 +106,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  requireSameOrigin(request);
   const { id } = await params;
+  await requireAuthorizedStore(id);
   const url = new URL(request.url);
   const path = url.pathname;
 

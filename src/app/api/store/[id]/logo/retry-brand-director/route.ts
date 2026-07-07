@@ -3,6 +3,8 @@ import { supabaseAdmin as supabase } from '@/lib/supabase/server';
 import { BrandDirectorService, BrandDirectorAnalysisError } from '@/lib/brand-assets/brand-director';
 import type { BrandProfileRecord } from '@/lib/brand-assets/types';
 import { buildStoreProfileInputSnapshot } from '@/lib/snapshot';
+import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
+import { requireSameOrigin } from '@/lib/auth/csrf';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -11,10 +13,12 @@ function validateUUID(id: string): boolean {
 }
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  requireSameOrigin(request);
   const { id: storeId } = await params;
+  await requireAuthorizedStore(storeId);
   if (!validateUUID(storeId)) {
     return NextResponse.json({ error: 'ID da loja inválido' }, { status: 400 });
   }

@@ -9,6 +9,8 @@ import type { VisualSignatureArtDirectorOutput, VisualSignatureMetadataInputSnap
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
+import { requireSameOrigin } from '@/lib/auth/csrf';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -40,8 +42,10 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const reqId = ++requestCounter;
+  requireSameOrigin(request);
   const { id } = await params;
+  await requireAuthorizedStore(id);
+  const reqId = ++requestCounter;
   console.log(`[generate-without-logo][req-${reqId}] 1/12 request recebido`, { storeId: id });
 
   if (!UUID_REGEX.test(id)) {

@@ -8,6 +8,8 @@ import type { BrandProfileRecord } from '@/lib/brand-assets/types';
 import type { VisualSignatureRecord, VisualSignatureMetadataArtDirectorOutput } from '@/lib/visual-signature/types';
 import { IDENTITY_TO_LOGO_STATUS } from '@/lib/constants';
 import { buildStoreProfileInputSnapshot } from '@/lib/snapshot';
+import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
+import { requireSameOrigin } from '@/lib/auth/csrf';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const realignLocks = new Map<string, boolean>();
@@ -26,7 +28,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  requireSameOrigin(request);
   const id = (await params).id;
+  await requireAuthorizedStore(id);
 
   if (!UUID_REGEX.test(id)) {
     return NextResponse.json({ error: 'ID da loja inválido' }, { status: 400 });

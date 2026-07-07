@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin as supabase } from "@/lib/supabase/server";
 import { requireUser, UnauthorizedError } from "@/lib/auth/require-user";
 import { requireOwnership, StoreNotFoundError } from "@/lib/auth/store-ownership";
+import { requireSameOrigin } from "@/lib/auth/csrf";
 import { buildStoreResponse } from "@/lib/store-response";
 import { STORE_SUBSEGMENTS } from "@/lib/constants";
 
@@ -50,6 +51,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  requireSameOrigin(request);
   try {
     const { id } = await params;
     const user = await requireUser();

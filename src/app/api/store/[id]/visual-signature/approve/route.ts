@@ -10,6 +10,8 @@ import type { VisualSignatureMetadataInputSnapshot, VisualSignatureMetadataArtDi
 import { assertCanTransition, transition } from '@/lib/identity-transitions';
 import { buildStoreProfileInputSnapshot } from '@/lib/snapshot';
 import { revalidateCriticalDrift } from '@/lib/visual-signature/drift-revalidator';
+import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
+import { requireSameOrigin } from '@/lib/auth/csrf';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -315,8 +317,10 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const reqId = ++approveRequestCounter;
+  requireSameOrigin(request);
   const { id } = await params;
+  await requireAuthorizedStore(id);
+  const reqId = ++approveRequestCounter;
   console.log(`[approve][req-${reqId}] 1/12 request recebido`, { storeId: id });
 
   if (!UUID_REGEX.test(id)) {

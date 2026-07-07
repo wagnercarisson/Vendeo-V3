@@ -4,6 +4,8 @@ import { validateDrift } from '@/lib/visual-signature/drift-validator';
 import { reconcileProfiles } from '@/lib/brand-assets/profile-reconciliation';
 import { IDENTITY_TO_LOGO_STATUS } from '@/lib/constants';
 import { transition } from '@/lib/identity-transitions';
+import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
+import { requireSameOrigin } from '@/lib/auth/csrf';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -52,6 +54,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  await requireAuthorizedStore(id);
 
   if (!UUID_REGEX.test(id)) {
     return NextResponse.json({ error: 'ID da loja inválido' }, { status: 400 });
@@ -154,10 +157,12 @@ export async function GET(
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  requireSameOrigin(request);
   const { id } = await params;
+  await requireAuthorizedStore(id);
 
   if (!UUID_REGEX.test(id)) {
     return NextResponse.json({ error: 'ID da loja inválido' }, { status: 400 });

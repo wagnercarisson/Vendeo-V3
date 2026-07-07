@@ -4,11 +4,15 @@ import { IMAGE_GENERATION_GLOBAL_TIMEOUT_MS, MAX_PRODUCT_IMAGE_BASE64_SIZE } fro
 import { ImageGenerationService } from "@/lib/image-generation/services/image-generation-service";
 import { InputValidationService } from "@/lib/image-generation/services/input-validation-service";
 import { createImageProvider } from "@/lib/image-generation/providers/factory";
-import { resolveStoreIdentity, validateIdentityReference, buildCampaignBrief } from "@/lib/actions/store";
+import { resolveStoreIdentity, validateIdentityReference, buildCampaignBrief } from "@/lib/store-identity-service";
+import { requireSameOrigin } from "@/lib/auth/csrf";
+import { requireApiUser } from "@/lib/auth/require-user";
+import { requireOwnership } from "@/lib/auth/store-ownership";
 import { supabaseAdmin } from '@/lib/supabase/server';
 import type { CampaignInput } from "@/components/campaign/types";
 
 export async function POST(request: NextRequest) {
+  requireSameOrigin(request);
   // ── Pre-stream: Parse JSON body ──────────────────────────────────
   let body: Record<string, unknown>;
   try {
@@ -80,6 +84,10 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
+
+  // ── Auth & Ownership: requireSameOrigin já executou acima ─────────
+  const user = await requireApiUser();
+  await requireOwnership(parsed.data.storeId, user.userId);
 
   // ── Pre-stream: Resolve store identity (backend-side) ────────────
   const { storeId, ...campaignInput } = parsed.data;

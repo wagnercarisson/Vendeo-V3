@@ -1,5 +1,7 @@
 "use server";
 
+import { requireUser } from "@/lib/auth/require-user";
+import { requireOwnership } from "@/lib/auth/store-ownership";
 import { supabaseAdmin as supabase } from "@/lib/supabase/server";
 import type { Store } from "@/lib/store";
 import { AiImageGenerator } from "./ai-image-generator";
@@ -100,6 +102,8 @@ async function archiveExistingActive(storeId: string): Promise<void> {
 export async function generateVariations(
   storeId: string
 ): Promise<GenerateVariationsResult> {
+  const user = await requireUser();
+  await requireOwnership(storeId, user.userId);
   if (!UUID_REGEX.test(storeId)) {
     return {
       success: false,
@@ -192,6 +196,8 @@ export async function generateAutomatic(storeId: string): Promise<
   | { success: true; signature: VisualSignatureRecord; isFallback: boolean }
   | { success: false; error: string }
 > {
+  const user = await requireUser();
+  await requireOwnership(storeId, user.userId);
   if (!UUID_REGEX.test(storeId)) {
     return { success: false, error: "ID da loja inválido" };
   }
@@ -334,6 +340,8 @@ export async function activateSignature(
   | { success: true; signature: VisualSignatureRecord }
   | { success: false; error: string }
 > {
+  const user = await requireUser();
+  await requireOwnership(storeId, user.userId);
   if (!UUID_REGEX.test(storeId) || !UUID_REGEX.test(signatureId)) {
     return { success: false, error: "ID inválido" };
   }
@@ -388,6 +396,8 @@ export async function activateSignature(
 export async function listSignatures(
   storeId: string
 ): Promise<VisualSignatureRecord[]> {
+  const user = await requireUser();
+  await requireOwnership(storeId, user.userId);
   const { data, error } = await supabase
     .from("store_visual_signatures")
     .select("*")

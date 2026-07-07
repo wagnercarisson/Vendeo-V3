@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin as supabase } from "@/lib/supabase/server";
 import { requireUser, requireApiUser, UnauthorizedError } from "@/lib/auth/require-user";
 import { getCurrentStore } from "@/lib/auth/store-ownership";
+import { requireSameOrigin } from "@/lib/auth/csrf";
 import { buildStoreResponse } from "@/lib/store-response";
 import { STORE_SEGMENTS, STORE_SUBSEGMENTS } from "@/lib/constants";
 
@@ -26,6 +27,7 @@ function sanitizeSubsegment(value: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  requireSameOrigin(request);
   try {
     const user = await requireUser();
     const body = await request.json().catch(() => null);

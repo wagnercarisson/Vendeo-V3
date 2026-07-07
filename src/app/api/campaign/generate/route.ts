@@ -4,8 +4,19 @@ import {
   CampaignIntelligenceService,
   createDefaultProvider,
 } from "@/lib/campaign-intelligence/service";
+import { requireSameOrigin } from "@/lib/auth/csrf";
+import { requireApiUser } from "@/lib/auth/require-user";
+import { getCurrentStore } from "@/lib/auth/store-ownership";
+import { notFound } from "@/lib/api-error-response";
 
 export async function POST(request: NextRequest) {
+  requireSameOrigin(request);
+  const user = await requireApiUser();
+  const store = await getCurrentStore(user.userId);
+  if (!store) {
+    return notFound("Store not found");
+  }
+
   // ── Step 1: Parse JSON body ─────────────────────────────────────────
   let body: Record<string, unknown>;
   try {
@@ -45,7 +56,6 @@ export async function POST(request: NextRequest) {
     if (result.code === "provider_failure") {
       return NextResponse.json({ error: result.error }, { status: 502 });
     }
-    // invalid_output (and any unexpected error codes)
     return NextResponse.json({ error: result.error }, { status: 500 });
   }
 

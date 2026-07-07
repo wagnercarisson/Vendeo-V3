@@ -6,6 +6,8 @@ import { BrandProfilerWithoutLogoService } from '@/lib/visual-signature/brand-pr
 import { IDENTITY_TO_LOGO_STATUS } from '@/lib/constants';
 import type { VisualSignatureMetadataInputSnapshot, VisualSignatureMetadataArtDirectorOutput } from '@/lib/visual-signature/types';
 import { assertCanTransition } from '@/lib/identity-transitions';
+import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
+import { requireSameOrigin } from '@/lib/auth/csrf';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -13,7 +15,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  requireSameOrigin(request);
   const storeId = (await params).id;
+  await requireAuthorizedStore(storeId);
 
   if (!UUID_REGEX.test(storeId)) {
     return NextResponse.json({ error: 'ID da loja inválido' }, { status: 400 });

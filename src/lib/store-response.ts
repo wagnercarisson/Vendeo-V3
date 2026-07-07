@@ -1,5 +1,5 @@
 import type { Store } from "@/lib/store";
-import { resolveStoreIdentity } from "@/lib/actions/store";
+import { resolveStoreIdentity } from "@/lib/store-identity-service";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import type { StoreIdentitySnapshot } from "@/components/campaign/types";
 
