@@ -23,7 +23,7 @@ Fechar o perímetro multi-tenant em toda a superfície restante: ~20 route handl
 - RLS habilitado em 4 tabelas filhas (SELECT do owner; `generation_events` default-deny)
 - Storage policies restritas por path prefix `{store_id}/` em 2 buckets
 - `store-logos` documentado como exceção temporária
-- Matriz de testes parametrizados: base (~24 endpoints x 4 cenários) + CSRF (mutações x 3)
+- Matriz de testes parametrizados: três bases (storeId-scoped, current-store, POST /api/store) + matriz CSRF (mutações x 3)
 - `npx tsc --noEmit`, `npx vitest run`, `npm run lint`, `npx next build` — todos verdes
 </domain>
 
