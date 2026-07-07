@@ -2,7 +2,7 @@
 
 Logout via `POST /auth/signout` com limpeza de Web Storage no cliente antes da chamada server-side. Limpeza seletiva (4 chaves conhecidas), não `clear()`. Route Handler server-side com `signOut()` + `revalidatePath()` + redirect.
 
-> Synced from `fase-7-sessao-login-vertical` (ADDED).
+> Synced from `fase-7-sessao-login-vertical` (ADDED), then `fase-9-cutover-ownership` (MODIFIED). localStorage("store_id") removed from cleanup — store is no longer stored in localStorage.
 
 ## Requirements
 
@@ -11,15 +11,18 @@ Logout via `POST /auth/signout` com limpeza de Web Storage no cliente antes da c
 The system SHALL clean up known Web Storage keys on the client BEFORE calling the logout endpoint.
 
 - MUST remove `sessionStorage` keys: `campaign_draft`, `campaign_draft_image`, `campaign_preview`
-- MUST remove `localStorage` key: `store_id`
+- SHALL NOT remove `localStorage("store_id")` — store is no longer stored in localStorage
 - MUST perform cleanup before native form submission to `/auth/signout`
 - SHALL NOT use `clear()` — removal is scoped to known keys only
 - SHALL proceed with form submission even if cleanup encounters errors (best-effort)
 
-#### Scenario: Logout cleans specific keys
+#### Scenario: Logout cleans sessionStorage keys only
 
 - **WHEN** user clicks "Sair"
-- **THEN** the four known storage keys are removed before the HTTP request
+- **THEN** `sessionStorage.removeItem("campaign_draft")` is called
+- **AND** `sessionStorage.removeItem("campaign_draft_image")` is called
+- **AND** `sessionStorage.removeItem("campaign_preview")` is called
+- **AND** `localStorage.removeItem("store_id")` is NOT called
 
 #### Scenario: Logout does not clear unknown keys
 

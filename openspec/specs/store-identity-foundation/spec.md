@@ -1,4 +1,6 @@
 > **Nota de escopo**: Esta spec define apenas a fundação técnica de dados, API e fallbacks para identidade da loja. Não cria página, formulário, step navigation, preview visual, seletor de cor, upload de logo ou fluxo de interface.
+>
+> > Synced from `fase-9-cutover-ownership` (MODIFIED). Added `user_id` column, RLS, auth requirements for CRUD APIs, GET /api/store atalho, buildStoreResponse, and ownership validation.
 
 ## Requirements
 
@@ -11,6 +13,7 @@ The `stores` table SHALL contain the following columns (new columns marked with 
 | Column | Type | Required | Default | Notes |
 |--------|------|----------|---------|-------|
 | `id` | `uuid` | Yes | `gen_random_uuid()` | Primary key |
+| → `user_id` | `uuid` | Yes | — | NOT NULL UNIQUE REFERENCES auth.users(id). Added by `_add_user_id_to_stores` migration. |
 | `name` | `text` | Yes | — | Min 2 chars, max 60 chars |
 | `segment` | `text` | Yes | — | Must match one of the defined segment values |
 | `city` | `text` | No | `null` | Optional, does not block flow |
@@ -27,18 +30,45 @@ The `stores` table SHALL contain the following columns (new columns marked with 
 | `created_at` | `timestamptz` | Yes | `now()` | Auto-set on create |
 | `updated_at` | `timestamptz` | Yes | `now()` | Auto-updated on change |
 
-The migration SHALL be a single `.sql` file in `supabase/migrations/` named with a timestamp prefix (e.g., `20260524000001_create_stores.sql`).
+The original `stores` table SHALL be created via a migration `supabase/migrations/20260524000001_create_stores.sql`. A subsequent migration `supabase/migrations/<timestamp>_add_user_id_to_stores.sql` SHALL add the `user_id` column and enable RLS.
+
+The second migration SHALL:
+1. DELETE data from dependent tables first (no CASCADE): generation_events, store_brand_profiles, store_brand_assets, store_visual_signatures
+2. DELETE all rows from stores
+3. ADD COLUMN `user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id)`
+4. ENABLE ROW LEVEL SECURITY on `stores`
+5. CREATE POLICY `"users_select_own_store"` FOR SELECT TO authenticated USING (user_id = (SELECT auth.uid()))
+6. GRANT SELECT ON TABLE public.stores TO authenticated (required for RLS + createServerClient)
 
 #### Scenario: Migration file exists with correct schema
 
 - **WHEN** migrations are listed
-- **THEN** there SHALL be a file matching `supabase/migrations/*_create_stores.sql`
-- **AND** the file SHALL contain a `CREATE TABLE public.stores (...)` statement with all required columns
+- **THEN** there SHALL be files matching `supabase/migrations/*_create_stores.sql` and `supabase/migrations/*_add_user_id_to_stores.sql`
+- **AND** each file SHALL contain the appropriate DDL statements
+
+#### Scenario: user_id column exists
+
+- **WHEN** the `_add_user_id_to_stores` migration is inspected
+- **THEN** the `stores` table SHALL have a `user_id` column of type `UUID`
+- **AND** it SHALL be `NOT NULL` and `UNIQUE`
+- **AND** it SHALL have a foreign key to `auth.users(id)`
+
+#### Scenario: RLS is enabled
+
+- **WHEN** the `_add_user_id_to_stores` migration is inspected
+- **THEN** `stores` SHALL have RLS enabled
+- **AND** a SELECT policy SHALL exist for `authenticated` role filtering by `user_id = auth.uid()`
+
+#### Scenario: Data is reset by migration
+
+- **WHEN** the `_add_user_id_to_stores` migration runs
+- **THEN** all existing rows in dependent tables and stores are deleted
+- **AND** the migration succeeds with the new schema
 
 #### Scenario: Migration is idempotent
 
-- **WHEN** the migration is applied to a fresh database
-- **THEN** it SHALL succeed and create the `stores` table
+- **WHEN** either migration is applied to a fresh database
+- **THEN** it SHALL succeed
 - **WHEN** the migration is applied again to the same database
 - **THEN** it SHALL NOT error (use `IF NOT EXISTS` or Supabase migration tracking)
 
@@ -173,20 +203,44 @@ The endpoint SHALL accept a JSON body with the following optional and required f
 - `state` (optional, text)
 - `brand_color` (optional, text, hex color)
 - `logo_url` (optional, text)
+- `subsegment`, `tone_of_voice`, `positioning`, `short_description`, `slogan` (optional)
 
 On success, the endpoint SHALL return HTTP 201 with the created store record as JSON.
 
 On validation failure, the endpoint SHALL return HTTP 400 with an error object describing the invalid fields.
 
-#### Scenario: Successful store creation
+The endpoint SHALL:
+- Call `requireUser()` before any database operation
+- Use `claims.sub` as `user_id` — any `user_id` in the request body SHALL be ignored
+- Use `supabaseAdmin` for INSERT (service_role privilege)
+- On UNIQUE violation (error code `23505`): return 409 `{ error: "Usuário já possui uma loja" }`
 
-- **WHEN** a POST request is sent to `/api/store` with `{ "name": "Minha Loja", "segment": "moda-vestuario" }`
-- **THEN** the response status SHALL be 201
-- **AND** the response body SHALL contain the created store with an `id`, `name`, `segment`, and auto-set `created_at`
+#### Scenario: Store created with authenticated user
+
+- **WHEN** a POST request is sent to `/api/store` with `{ "name": "Minha Loja", "segment": "padaria-confeitaria-doces" }`
+- **AND** the user is authenticated
+- **THEN** the store is created with `user_id = claims.sub`
+- **AND** the response status SHALL be 201
+
+#### Scenario: user_id in body is ignored
+
+- **WHEN** a POST request includes `user_id` in the body
+- **THEN** the `user_id` from `claims.sub` prevails
+- **AND** the body field is ignored
+
+#### Scenario: Duplicate store returns 409
+
+- **WHEN** a POST request is sent for a user who already has a store
+- **THEN** response is 409 `{ error: "Usuário já possui uma loja" }`
+
+#### Scenario: Unauthenticated POST returns 401
+
+- **WHEN** a POST request is sent without authentication
+- **THEN** the response is 401 `{ error: "Unauthorized" }`
 
 #### Scenario: Missing required field
 
-- **WHEN** a POST request is sent to `/api/store` with `{ "segment": "moda-vestuario" }`
+- **WHEN** a POST request is sent to `/api/store` with `{ "segment": "padaria-confeitaria-doces" }`
 - **THEN** the response status SHALL be 400
 - **AND** the error body SHALL indicate that `name` is required
 
@@ -202,15 +256,25 @@ The system SHALL expose a `GET /api/store/[id]` endpoint that returns a single s
 
 The response format SHALL be `{ ...store, identity: StoreIdentitySnapshot }` — all existing store fields SHALL remain at the top level. The `identity` field SHALL contain the full resolved snapshot. Existing consumers of the endpoint SHALL NOT break.
 
-If the store is not found, the endpoint SHALL return HTTP 404.
+The endpoint SHALL validate ownership:
+- Call `requireUser()` to authenticate
+- Call `requireOwnership(id, user.userId)` to validate store belongs to user
+- Use `buildStoreResponse(store)` for response shape (includes `identity`, `visual_signature_url`, `logo_url`, `has_archived_signatures`)
+- If store not found or not owner: return 404 (same signal)
+- On `UnauthorizedError`: return 401 JSON
 
-#### Scenario: Existing store returns enriched response
+#### Scenario: Owner reads own store
 
-- **WHEN** a GET request is sent to `/api/store/{existing-uuid}`
+- **WHEN** a GET request is sent to `/api/store/{own-id}`
 - **THEN** the response status SHALL be 200
 - **AND** the response body SHALL contain all existing store fields at the top level
-- **AND** the response body SHALL include an `identity` field with the resolved `StoreIdentitySnapshot`
-- **AND** `identity.identityState` SHALL be present
+- **AND** the response body SHALL include `identity`, `visual_signature_url`, `logo_url`, `has_archived_signatures`
+
+#### Scenario: Another user's store returns 404
+
+- **WHEN** a GET request is sent to `/api/store/{other-id}`
+- **AND** the store belongs to a different user
+- **THEN** the response status SHALL be 404 (not 403)
 
 #### Scenario: Non-existing store returns 404
 
@@ -225,17 +289,63 @@ Only the fields provided in the request body SHALL be updated. Omitted fields SH
 
 On success, the endpoint SHALL return HTTP 200 with the updated store record.
 
-#### Scenario: Partial update succeeds
+The endpoint SHALL validate ownership:
+- Call `requireUser()` to authenticate
+- Call `requireOwnership(id, user.userId)` to validate ownership
+- If store not found or not owner: return 404
+- On `UnauthorizedError`: return 401 JSON
 
-- **WHEN** a PATCH request is sent to `/api/store/{existing-uuid}` with `{ "name": "Novo Nome" }`
+#### Scenario: Owner patches own store
+
+- **WHEN** a PATCH request is sent to `/api/store/{own-id}` with `{ "name": "Novo Nome" }`
 - **THEN** the response status SHALL be 200
 - **AND** only the `name` field SHALL be updated
 - **AND** `updated_at` SHALL reflect the current timestamp
 
-#### Scenario: Update non-existing store
+#### Scenario: Another user's store returns 404 on PATCH
+
+- **WHEN** a PATCH request is sent to `/api/store/{other-id}`
+- **AND** the store belongs to a different user
+- **THEN** the response status SHALL be 404
+
+#### Scenario: Non-existing store returns 404 on PATCH
 
 - **WHEN** a PATCH request is sent to `/api/store/{non-existing-uuid}`
 - **THEN** the response status SHALL be 404
+
+### Requirement: GET /api/store (atalho)
+
+The system SHALL provide a `GET /api/store` endpoint (without `:id`) that returns the current user's store.
+
+- MUST call `requireApiUser()` for authentication
+- MUST call `getCurrentStore(user.userId)` to resolve the store
+- MUST use `buildStoreResponse(store)` for response shape
+- If store found: return 200 with enriched store data
+- If store null: return 404 `{ error: "Store not found" }`
+
+#### Scenario: GET /api/store returns current store
+
+- **WHEN** a GET request is sent to `/api/store`
+- **AND** the user has a store
+- **THEN** response is 200 with store + identity payload
+
+#### Scenario: GET /api/store returns 404 for no store
+
+- **WHEN** a GET request is sent to `/api/store`
+- **AND** the user has no store
+- **THEN** response is 404
+
+### Requirement: buildStoreResponse for consistent shape
+
+The system SHALL provide `buildStoreResponse(store)` in `src/lib/store-response.ts` (arquivo separado de `src/lib/store.ts` para evitar ciclo de import com `@/lib/actions/store`).
+
+- Returns `{ ...store, identity, visual_signature_url, logo_url, has_archived_signatures }`
+- Used by both `GET /api/store` and `GET /api/store/:id`
+
+#### Scenario: Shape is consistent across endpoints
+
+- **WHEN** both `GET /api/store` and `GET /api/store/:id` are called
+- **THEN** both responses have the same top-level shape
 
 ### Requirement: Migration is versioned
 

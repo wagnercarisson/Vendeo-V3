@@ -1,4 +1,6 @@
 > **Propósito**: Esta spec define a interface visual para cadastro e edição da identidade básica da loja (Store Identity UI), consumindo as APIs da foundation e utilizando Tailwind CSS + design system MASTER.md.
+>
+> > Synced from `fase-9-cutover-ownership` (MODIFIED). Store identity resolved server-side via `initialStore` prop instead of localStorage. POST/PATCH mode determined by local `storeId` state. localStorage("store_id") removed.
 
 ## Requirements
 
@@ -25,9 +27,19 @@ The system SHALL have Tailwind CSS configured as the styling framework. The setu
 
 ### Requirement: Store identity form UI
 
-The system SHALL render a store identity form at `src/app/store/page.tsx` (`/store`). The form SHALL be the primary content of the page. A secondary navigation link/button to return to `/` MAY be displayed.
+The system SHALL render a store identity form at `src/app/store/page.tsx` (`/store`). The page SHALL be a **server component** that resolves the store via `requirePageUser()` + `getCurrentStore(user.userId)`. The resolved store (or null) is passed as `initialStore` prop to `<StorePageClient />`.
 
-The page SHALL be a composition of a form component (`src/components/flow/store-identity-form.tsx`), a preview component (`src/components/flow/store-preview.tsx`), and a custom hook (`src/components/flow/use-store-form.ts`) that manages state and API calls.
+The server component SHALL:
+- Call `await requirePageUser()` — redirects to `/login` if not authenticated
+- Call `const store = await getCurrentStore(user.userId)`
+- If store is found: pass `initialStore={store}` to `<StorePageClient />` (edit mode)
+- If store is null: pass `initialStore={null}` to `<StorePageClient />` (create mode)
+
+The page SHALL be a composition of:
+- `src/components/flow/store-page-client.tsx` — client wrapper receiving `initialStore` prop
+- `src/components/flow/store-identity-form.tsx` — form component
+- `src/components/flow/store-preview.tsx` — preview component
+- `src/components/flow/use-store-form.ts` — custom hook managing state and API calls
 
 The page SHALL follow the visual and UX rules defined in `openspec/design-system/MASTER.md` and `openspec/design-system/pages/store-identity.md`.
 
@@ -37,6 +49,18 @@ The page SHALL follow the visual and UX rules defined in `openspec/design-system
 - **THEN** the page SHALL render the store identity form
 - **AND** no unrelated content SHALL appear on the page
 
+#### Scenario: Server drives create vs edit mode
+
+- **WHEN** `StorePageClient` renders with `initialStore={null}`
+- **THEN** the form is in create mode
+- **WHEN** `StorePageClient` renders with `initialStore` containing store data
+- **THEN** the form is in edit mode
+
+#### Scenario: Unauthenticated user redirected to /login
+
+- **WHEN** an unauthenticated user visits `/store`
+- **THEN** `requirePageUser()` redirects to `/login`
+
 #### Scenario: Form follows design system
 
 - **WHEN** inspecting the page
@@ -45,17 +69,42 @@ The page SHALL follow the visual and UX rules defined in `openspec/design-system
 
 ### Requirement: Navigation between `/` and `/store`
 
-The `/store` page SHALL include a link/button to return to `/` (campaign input page). The `/` page blocking state SHALL include a link/button to navigate to `/store`.
+The `/store` page SHALL include a link/button to return to `/` (campaign input page). The `/` page SHALL be a **server component** that resolves the store and redirects to `/store` if none exists.
+
+The `/` page SHALL:
+- Call `await requirePageUser()` — redirects to `/login` if not authenticated
+- Call `const store = await getCurrentStore(user.userId)`
+- If store is null: `redirect("/store")` — user must create a store first
+- If store exists: pass `store={store}` to `<CampaignPageClient />`
+- SHALL NOT use localStorage for store resolution
+- SHALL NOT have a blocking/loading state for store resolution
 
 #### Scenario: Store page has link to campaign page
 
 - **WHEN** a user is on `/store`
 - **THEN** a link or button SHALL be present to navigate to `/`
 
-#### Scenario: Blocking state has link to store page
+#### Scenario: Authenticated user without store is redirected
 
-- **WHEN** a user is on `/` without a valid `store_id`
-- **THEN** a link or button SHALL be present to navigate to `/store`
+- **WHEN** an authenticated user visits `/`
+- **AND** the user has no store
+- **THEN** the server redirects to `/store`
+
+#### Scenario: Authenticated user with store sees campaign page
+
+- **WHEN** an authenticated user visits `/`
+- **AND** the user has a store
+- **THEN** `CampaignPageClient` receives `store` as a prop
+- **AND** the campaign page renders normally
+
+#### Scenario: No loading state for store resolution
+
+- **WHEN** an authenticated user visits `/`
+- **AND** the user has a store
+- **THEN** the campaign page renders immediately (no loading state)
+- **WHEN** an authenticated user visits `/`
+- **AND** the user has no store
+- **THEN** the server redirects to `/store` before any client rendering
 
 ### Requirement: Form fields
 
@@ -199,31 +248,43 @@ The client-side validation SHALL check that the selected segment is one of the `
 
 ### Requirement: Create store (first save)
 
-When no `store_id` exists in localStorage, the system SHALL send a `POST /api/store` request with the form data on save.
+When `initialStore` is null (no pre-existing store from server component), the system SHALL send a `POST /api/store` request with the form data on save.
 
-After a successful creation, the system SHALL persist the returned `store.id` in localStorage under the key `store_id`.
+After a successful creation, the returned `store.id` SHALL be kept in local state (not localStorage), and the form SHALL switch to edit mode.
 
 #### Scenario: POST request on first save
 
 - **WHEN** the user fills the form and clicks "Salvar"
-- **AND** no `store_id` exists in localStorage
+- **AND** `initialStore` was null
 - **THEN** the system SHALL send a POST request to `/api/store` with the form data
 
-#### Scenario: store_id persisted after creation
+#### Scenario: No localStorage after creation
 
 - **WHEN** the POST request succeeds with HTTP 201
-- **THEN** the returned `store.id` SHALL be saved to localStorage as `store_id`
-- **AND** the form SHALL switch to edit mode
+- **THEN** the returned `store.id` SHALL update local state
+- **AND** `localStorage.setItem("store_id", ...)` SHALL NOT be called
 
 ### Requirement: Edit store (subsequent saves)
 
-When a `store_id` exists in localStorage, the system SHALL send a `PATCH /api/store/[id]` request on save.
+When local `storeId` state is set (from `initialStore?.id` or from a previous POST response), the system SHALL send a `PATCH /api/store/[id]` request on save.
+
+The `save()` function SHALL determine mode based on local `storeId` state:
+- If `storeId` is null → `POST /api/store` (create)
+- If `storeId` exists → `PATCH /api/store/${storeId}` (edit)
+
+After successful POST create, local `storeId` state is updated with returned `id` (no localStorage).
 
 #### Scenario: PATCH request on subsequent saves
 
 - **WHEN** the user modifies the form and clicks "Salvar"
-- **AND** a `store_id` exists in localStorage
-- **THEN** the system SHALL send a PATCH request to `/api/store/{store_id}` with only the changed fields
+- **AND** local `storeId` is set (from initialStore or previous POST)
+- **THEN** the system SHALL send a PATCH request to `/api/store/{storeId}` with only the changed fields
+
+#### Scenario: Second save after POST uses PATCH
+
+- **WHEN** `save()` is called a second time after a successful POST
+- **THEN** `storeId` is now set from the POST response
+- **AND** a PATCH request is sent (not POST)
 
 #### Scenario: Only provided fields are updated
 
@@ -233,26 +294,25 @@ When a `store_id` exists in localStorage, the system SHALL send a `PATCH /api/st
 
 ### Requirement: Auto-load existing store
 
-On page load, if a `store_id` exists in localStorage, the system SHALL fetch the store data via `GET /api/store/[id]` and pre-fill the form.
+The store data SHALL come from the server component via `initialStore` prop, not from localStorage.
 
-If the GET request returns HTTP 404 (store not found or deleted), the system SHALL remove `store_id` from localStorage, set the form to create mode, and display a dismissible warning banner: "Loja não encontrada. Cadastre novamente."
+- `StorePageClient` SHALL receive `initialStore: Store | null` from the server component
+- `useStoreForm({ initialStore })` SHALL initialize state from the `initialStore` parameter
+- If `initialStore` is null: form starts in create mode (empty)
+- If `initialStore` is provided: form starts in edit mode with pre-filled data
+- SHALL NOT read `localStorage("store_id")`
 
-#### Scenario: Existing store loads on page load
+#### Scenario: Form pre-filled from server prop
 
-- **WHEN** the page loads
-- **AND** `store_id` exists in localStorage
-- **THEN** the system SHALL fetch `GET /api/store/{store_id}`
-- **AND** on success, pre-fill all form fields with the returned data
-- **AND** switch to edit mode
+- **WHEN** `StorePageClient` mounts with `initialStore`
+- **THEN** the form fields are pre-filled from `initialStore`
+- **AND** no localStorage call is made
 
-#### Scenario: Invalid store_id triggers reset
+#### Scenario: Form starts empty for new store
 
-- **WHEN** the page loads
-- **AND** `store_id` exists in localStorage
-- **AND** GET /api/store/{store_id} returns 404
-- **THEN** the system SHALL remove `store_id` from localStorage
-- **AND** set the form to create mode
-- **AND** display a dismissible warning banner: "Loja não encontrada. Cadastre novamente."
+- **WHEN** `StorePageClient` mounts with `initialStore={null}`
+- **THEN** the form fields are empty
+- **AND** the form is in create mode
 
 ### Requirement: Optional field normalization
 
@@ -435,17 +495,11 @@ Validation SHALL trigger on blur (focus loss) for each field.
 
 ### Requirement: localStorage as temporary persistence
 
-The system SHALL use `localStorage` with key `store_id` to persist the current store identifier across page reloads. This is a temporary MVP mechanism — no auth, encryption, or multi-device sync.
+**REMOVED**: `localStorage` is no longer used for store identity persistence.
 
-#### Scenario: store_id persists in localStorage
+**Reason**: Store identity is now resolved by the server via `claims.sub` → `stores.user_id`. The server component handles persistence by resolving the store on every request.
 
-- **WHEN** a store is created successfully
-- **THEN** `localStorage.getItem("store_id")` SHALL return the new store's UUID
-
-#### Scenario: store_id cleared on 404
-
-- **WHEN** GET /api/store/{store_id} returns 404
-- **THEN** `localStorage.removeItem("store_id")` SHALL be called
+**Migration**: All code that reads `localStorage("store_id")` has been replaced with server-side store resolution. Client components receive store data via props.
 
 ### Requirement: Save button triggers inference for text_only
 

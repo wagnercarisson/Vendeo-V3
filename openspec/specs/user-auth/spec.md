@@ -2,7 +2,7 @@
 
 Helper `requireUser()` com adaptação por superfície: `requirePageUser()` para Server Components (redirect) e `requireApiUser()` para Route Handlers (401 JSON). Valida identidade via JWT claims (`getClaims()`), nunca `getSession()`.
 
-> Synced from `fase-7-sessao-login-vertical` (ADDED).
+> Synced from `fase-7-sessao-login-vertical` (ADDED), then `fase-9-cutover-ownership` (ADDED). StoreNotFoundError exported alongside UnauthorizedError.
 
 ## Requirements
 
@@ -84,3 +84,18 @@ The system SHALL define an `UnauthorizedError` class extending `Error`.
 
 - **WHEN** code catches `UnauthorizedError`
 - **THEN** it SHALL be distinguishable from generic `Error`
+
+### Requirement: StoreNotFoundError exported alongside UnauthorizedError
+
+The system SHALL define a `StoreNotFoundError` class in `src/lib/auth/store-ownership.ts`.
+
+- SHALL extend `Error`
+- SHALL have a descriptive default message: "Store not found or access denied"
+- SHALL be exportable and catchable by type-checked handlers
+- SHALL be distinguishable from `UnauthorizedError` in catch blocks
+
+#### Scenario: StoreNotFoundError is catchable
+
+- **WHEN** code catches `StoreNotFoundError`
+- **THEN** it SHALL be distinguishable from `UnauthorizedError`
+- **AND** the message SHALL be "Store not found or access denied"
