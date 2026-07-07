@@ -47,6 +47,10 @@ vi.mock("@/lib/store-response", () => ({
   buildStoreResponse: vi.fn(async (store: Store) => mockBuildStoreResponseImpl(store)),
 }));
 
+vi.mock("@/lib/auth/csrf", () => ({
+  requireSameOrigin: vi.fn(() => {}),
+}));
+
 vi.mock("@/lib/constants", () => ({
   STORE_SEGMENTS: [{ value: "variedades", label: "Variedades" }],
   STORE_SUBSEGMENTS: {},
