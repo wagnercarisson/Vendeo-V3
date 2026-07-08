@@ -2,7 +2,7 @@
 
 Helper `requireUser()` com adaptação por superfície: `requirePageUser()` para Server Components (redirect) e `requireApiUser()` para Route Handlers (401 JSON). Valida identidade via JWT claims (`getClaims()`), nunca `getSession()`.
 
-> Synced from `fase-7-sessao-login-vertical` (ADDED), then `fase-9-cutover-ownership` (ADDED). StoreNotFoundError exported alongside UnauthorizedError.
+> Synced from `fase-7-sessao-login-vertical` (ADDED), then `fase-9-cutover-ownership` (ADDED), then `fase-10-perimetro-multitenant` (MODIFIED + ADDED).
 
 ## Requirements
 
@@ -13,7 +13,7 @@ The system SHALL provide a `requireUser()` function in `src/lib/auth/require-use
 - MUST create a server Supabase client and call `supabase.auth.getClaims()`
 - MUST validate that `data?.claims?.sub` is present and non-empty
 - MUST return `{ userId: string; claims: JwtPayload }` on success
-- MUST throw `UnauthorizedError` (custom error class) on failure
+- MUST throw `UnauthorizedError` (custom error class, imported from `errors.ts`) on failure
 - SHALL NOT return `getSession()` data — only claims-validated identity
 - SHALL NOT accept `userId` from client input
 
@@ -72,26 +72,30 @@ The system SHALL provide a pattern for route handlers to use `requireUser()` and
 - **WHEN** `requireUser()` throws in a route handler
 - **THEN** the handler returns `401 { error: "Unauthorized" }`
 
-### Requirement: UnauthorizedError class
+### Requirement: UnauthorizedError class (MODIFIED)
 
-The system SHALL define an `UnauthorizedError` class extending `Error`.
+The system SHALL define an `UnauthorizedError` class in `src/lib/auth/errors.ts`.
 
-- SHALL be exported from `src/lib/auth/require-user.ts`
-- SHALL be catchable by type-checked handlers
-- SHALL have a descriptive default message
+- SHALL extend `Error`
+- SHALL have name "UnauthorizedError"
+- SHALL have a descriptive default message: "Unauthorized"
+- SHALL be reexported from `src/lib/auth/require-user.ts` (class definition moved from that file to `errors.ts`)
+- SHALL be catchable by `instanceof` across module boundaries
 
 #### Scenario: Error is catchable
 
 - **WHEN** code catches `UnauthorizedError`
 - **THEN** it SHALL be distinguishable from generic `Error`
 
-### Requirement: StoreNotFoundError exported alongside UnauthorizedError
+### Requirement: StoreNotFoundError exported alongside UnauthorizedError (MODIFIED)
 
-The system SHALL define a `StoreNotFoundError` class in `src/lib/auth/store-ownership.ts`.
+The system SHALL define a `StoreNotFoundError` class in `src/lib/auth/errors.ts`.
 
 - SHALL extend `Error`
+- SHALL have name "StoreNotFoundError"
 - SHALL have a descriptive default message: "Store not found or access denied"
-- SHALL be exportable and catchable by type-checked handlers
+- SHALL be reexported from `src/lib/auth/store-ownership.ts` (class definition moved from that file)
+- SHALL be catchable by `instanceof` across module boundaries
 - SHALL be distinguishable from `UnauthorizedError` in catch blocks
 
 #### Scenario: StoreNotFoundError is catchable
@@ -99,3 +103,70 @@ The system SHALL define a `StoreNotFoundError` class in `src/lib/auth/store-owne
 - **WHEN** code catches `StoreNotFoundError`
 - **THEN** it SHALL be distinguishable from `UnauthorizedError`
 - **AND** the message SHALL be "Store not found or access denied"
+
+### Requirement: ForbiddenError class (ADDED)
+
+The system SHALL define a `ForbiddenError` class in `src/lib/auth/errors.ts`.
+
+- SHALL extend `Error`
+- SHALL have name "ForbiddenError"
+- SHALL have a default message: "Forbidden"
+- SHALL be catchable by `instanceof`
+
+#### Scenario: ForbiddenError is catchable
+
+- **WHEN** code catches `ForbiddenError`
+- **THEN** it SHALL be distinguishable from `UnauthorizedError` and generic `Error`
+
+### Requirement: requireSameOrigin guard (ADDED)
+
+The system SHALL provide a `requireSameOrigin(request)` function in `src/lib/auth/csrf.ts`.
+
+- MUST read `origin`, `host`, and `x-forwarded-host` headers
+- MUST throw `ForbiddenError` if origin is missing
+- MUST throw `ForbiddenError` if origin does not match host/x-forwarded-host
+- SHALL be used in all POST/PATCH/DELETE route handler mutations before auth guards
+
+#### Scenario: Same origin passes
+
+- **WHEN** `requireSameOrigin(request)` is called
+- **AND** Origin matches Host
+- **THEN** it passes without error
+
+#### Scenario: Different origin throws
+
+- **WHEN** `requireSameOrigin(request)` is called
+- **AND** Origin differs from Host
+- **THEN** it throws `ForbiddenError`
+
+### Requirement: JsonErrorResponse helpers (ADDED)
+
+The system SHALL provide three helper functions in `src/lib/api-error-response.ts`.
+
+- `unauthorized(message?)`: 401 JSON response
+- `notFound(message?)`: 404 JSON response
+- `forbidden(message?)`: 403 JSON response
+
+#### Scenario: Helpers return correct status
+
+- **WHEN** calling `unauthorized()`, `notFound()`, or `forbidden()`
+- **THEN** each returns the corresponding HTTP status code with JSON body
+
+### Requirement: CSRF has precedence over auth (ADDED)
+
+The system SHALL enforce that in mutation route handlers, `requireSameOrigin()` runs before `requireAuthorizedStore()`.
+
+- Cross-origin requests even without session SHALL return 403 (CSRF), never 401 (auth)
+- Same-origin requests without session SHALL return 401 (auth fails, origin does not block)
+
+#### Scenario: Cross-origin without session returns 403
+
+- **WHEN** a POST mutation is made cross-origin
+- **AND** there is no valid session
+- **THEN** status is 403 (CSRF has precedence over auth)
+
+#### Scenario: Same origin without session returns 401
+
+- **WHEN** a POST mutation is made same-origin
+- **AND** there is no valid session
+- **THEN** status is 401 (auth fails, valid origin does not block)

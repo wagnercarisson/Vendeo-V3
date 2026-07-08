@@ -1,6 +1,6 @@
 # Store Ownership Core
 
-> Synced from `fase-9-cutover-ownership` (ADDED).
+> Synced from `fase-9-cutover-ownership` (ADDED), then `fase-10-perimetro-multitenant` (MODIFIED + ADDED).
 
 ## Purpose
 
@@ -76,15 +76,40 @@ The system SHALL provide a `requireOwnership(storeId, userId?)` function in `src
 - **WHEN** `requireOwnership(storeId, userId)` is called with a valid userId
 - **THEN** it queries directly without calling `requireUser()`
 
-### Requirement: StoreNotFoundError class
+### Requirement: StoreNotFoundError class (MODIFIED)
 
-The system SHALL define a `StoreNotFoundError` class extending `Error`.
+The system SHALL define a `StoreNotFoundError` class in `src/lib/auth/errors.ts`.
 
-- SHALL be exported from `src/lib/auth/store-ownership.ts`
-- SHALL be catchable by type-checked handlers
+- SHALL extend `Error`
+- SHALL have name "StoreNotFoundError"
 - SHALL have a descriptive default message: "Store not found or access denied"
+- SHALL be reexported from `src/lib/auth/store-ownership.ts` (class definition removed from that file)
+- SHALL be catchable by `instanceof` across module boundaries
 
 #### Scenario: Error is catchable
 
 - **WHEN** code catches `StoreNotFoundError`
 - **THEN** it SHALL be distinguishable from generic `Error` and from `UnauthorizedError`
+
+### Requirement: requireAuthorizedStore returns AuthorizedStoreContext (ADDED)
+
+The system SHALL provide a `requireAuthorizedStore(storeId)` function in `src/lib/auth/store-ownership.ts`.
+
+- MUST call `requireApiUser()` to get the authenticated user
+- MUST call `requireOwnership(storeId, user.userId)` to validate ownership
+- MUST return `AuthorizedStoreContext` with `{ userId, storeId, store }`
+- SHALL NOT expose `user` directly — only the three-field context
+- If user is not authenticated: MUST throw `UnauthorizedError`
+- If store is not found or not owned: MUST throw `StoreNotFoundError`
+
+#### Scenario: Store owner gets context
+
+- **WHEN** `requireAuthorizedStore(storeId)` is called
+- **AND** the user owns the store
+- **THEN** it returns `{ userId, storeId, store }`
+
+#### Scenario: Alien store throws StoreNotFoundError
+
+- **WHEN** `requireAuthorizedStore(storeId)` is called
+- **AND** the store belongs to another user
+- **THEN** it throws `StoreNotFoundError`
