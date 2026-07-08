@@ -41,6 +41,10 @@ vi.mock("@/lib/auth/csrf", () => ({
   requireSameOrigin: vi.fn(() => {}),
 }));
 
+vi.mock("@/lib/auth/api-handler", () => ({
+  apiHandler: (fn: any) => fn,
+}));
+
 vi.mock("@/lib/store-response", () => ({
   buildStoreResponse: vi.fn(async (s: any) => s),
 }));
@@ -91,29 +95,56 @@ const authCases: TestCase[] = [
   { name: "alien store", status: 404, mockAuth: "alien" },
 ];
 
+const errorCases: Omit<TestCase, "status">[] = [
+  { name: "no session", mockAuth: "unauth" },
+  { name: "alien store", mockAuth: "alien" },
+];
+
 beforeEach(() => {
   vi.restoreAllMocks();
 });
 
+async function setupMock(mockAuth: "valid" | "unauth" | "alien") {
+  if (mockAuth === "unauth") {
+    const { UnauthorizedError } = await import("@/lib/auth/require-user");
+    mockRequireUser.mockRejectedValue(new UnauthorizedError());
+    mockRequireApiUser.mockRejectedValue(new UnauthorizedError());
+  } else if (mockAuth === "alien") {
+    mockRequireUser.mockResolvedValue({ userId: "user-999", claims: {} });
+    mockRequireApiUser.mockResolvedValue({ userId: "user-999", claims: {} });
+    const { StoreNotFoundError } = await import("@/lib/auth/store-ownership");
+    mockRequireOwnership.mockRejectedValue(new StoreNotFoundError());
+  } else {
+    mockRequireUser.mockResolvedValue({ userId: "user-123", claims: {} });
+    mockRequireApiUser.mockResolvedValue({ userId: "user-123", claims: {} });
+    mockRequireOwnership.mockResolvedValue({ id: "store-1", name: "Loja" });
+    mockSupabaseSelect({ id: "store-1", name: "Loja" });
+  }
+}
+
 describe("GET /api/store/:id", () => {
   it.each(authCases)("returns $status for $name", async ({ status, mockAuth }) => {
-    if (mockAuth === "unauth") {
-      const { UnauthorizedError } = await import("@/lib/auth/require-user");
-      mockRequireUser.mockRejectedValue(new UnauthorizedError());
-    } else if (mockAuth === "alien") {
-      mockRequireUser.mockResolvedValue({ userId: "user-999", claims: {} });
-      const { StoreNotFoundError } = await import("@/lib/auth/store-ownership");
-      mockRequireOwnership.mockRejectedValue(new StoreNotFoundError());
-    } else {
-      mockRequireUser.mockResolvedValue({ userId: "user-123", claims: {} });
-      mockRequireOwnership.mockResolvedValue({ id: "store-1", name: "Loja" });
-      mockSupabaseSelect({ id: "store-1", name: "Loja" });
-    }
+    await setupMock(mockAuth);
+    if (mockAuth === "valid") mockSupabaseSelect({ id: "store-1", name: "Loja" });
 
     const { GET } = await import("@/app/api/store/[id]/route");
     const res = await GET(createReq("GET", "http://localhost/api/store/store-1"), {
       params: Promise.resolve({ id: "store-1" }),
     });
     expect(res.status).toBe(status);
+  });
+});
+
+describe("PATCH /api/store/:id (error cases only)", () => {
+  it.each(errorCases)("returns $status for $name", async ({ mockAuth }) => {
+    await setupMock(mockAuth);
+
+    const { PATCH } = await import("@/app/api/store/[id]/route");
+    const res = await PATCH(
+      createReq("PATCH", "http://localhost/api/store/store-1"),
+      { params: Promise.resolve({ id: "store-1" }) },
+    );
+    if (mockAuth === "unauth") expect(res.status).toBe(401);
+    else expect(res.status).toBe(404);
   });
 });

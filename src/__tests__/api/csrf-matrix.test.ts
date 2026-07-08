@@ -10,7 +10,10 @@ const mockSupabaseFrom = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createServerClient: vi.fn(async () => ({
-    auth: { getClaims: vi.fn() },
+    auth: {
+      getClaims: vi.fn(),
+      signOut: vi.fn(async () => ({ error: null })),
+    },
     from: mockSupabaseFrom,
   })),
   supabaseAdmin: { from: mockSupabaseFrom },
@@ -114,5 +117,73 @@ describe("CSRF Precedence: cross-origin returns 403 before auth/ownership", () =
       { params: Promise.resolve({ id: "store-1" }) }
     );
     expect(res.status).toBe(401);
+  });
+});
+
+describe("POST /api/store/:id/logo (CSRF only)", () => {
+  it("cross-origin no session → 403", async () => {
+    const { POST } = await import("@/app/api/store/[id]/logo/route");
+    const res = await POST(
+      createReq("POST", "http://localhost/api/store/store-1/logo", "http://evil.com"),
+      { params: Promise.resolve({ id: "store-1" }) },
+    );
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toContain("Cross-origin");
+  });
+
+  it("cross-origin with session → 403", async () => {
+    mockRequireUser.mockResolvedValue({ userId: "user-123", claims: {} });
+    const { POST } = await import("@/app/api/store/[id]/logo/route");
+    const res = await POST(
+      createReq("POST", "http://localhost/api/store/store-1/logo", "http://evil.com"),
+      { params: Promise.resolve({ id: "store-1" }) },
+    );
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toContain("Cross-origin");
+  });
+});
+
+describe("DELETE /api/store/:id/visual-signature (CSRF only)", () => {
+  it("cross-origin no session → 403", async () => {
+    const { DELETE } = await import("@/app/api/store/[id]/visual-signature/route");
+    const res = await DELETE(
+      createReq("DELETE", "http://localhost/api/store/store-1/visual-signature", "http://evil.com"),
+      { params: Promise.resolve({ id: "store-1" }) },
+    );
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toContain("Cross-origin");
+  });
+
+  it("cross-origin with session → 403", async () => {
+    mockRequireUser.mockResolvedValue({ userId: "user-123", claims: {} });
+    const { DELETE } = await import("@/app/api/store/[id]/visual-signature/route");
+    const res = await DELETE(
+      createReq("DELETE", "http://localhost/api/store/store-1/visual-signature", "http://evil.com"),
+      { params: Promise.resolve({ id: "store-1" }) },
+    );
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toContain("Cross-origin");
+  });
+});
+
+describe("POST /auth/signout", () => {
+  it("cross-origin no session → 403", async () => {
+    const { POST } = await import("@/app/auth/signout/route");
+    const res = await POST(createReq("POST", "http://localhost/auth/signout", "http://evil.com"));
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toContain("Cross-origin");
+  });
+
+  it("cross-origin with session → 403", async () => {
+    const { POST } = await import("@/app/auth/signout/route");
+    const res = await POST(createReq("POST", "http://localhost/auth/signout", "http://evil.com"));
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toContain("Cross-origin");
   });
 });
