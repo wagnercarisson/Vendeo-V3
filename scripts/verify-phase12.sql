@@ -5,10 +5,7 @@
 --
 -- Usage:
 --   psql "$SUPABASE_DB_URL" -f scripts/verify-phase12.sql
---   or paste into Supabase Studio SQL editor
---
--- Each block uses RAISE EXCEPTION for failure (fast-fail) and
--- RAISE NOTICE 'PASS: ...' for success.
+--   or paste into Supabase Studio SQL editor (results appear as table rows)
 --
 -- UAT Technical Checklist (10 manual verifications):
 --   1. Owner sees own campaigns via RLS (SELECT)
@@ -23,6 +20,10 @@
 --  10. Public URL does not work (returns 404/403)
 -- ============================================================================
 
+-- Create temp table to collect results
+CREATE TEMP TABLE IF NOT EXISTS _verify12_results (check_id text, status text, detail text);
+TRUNCATE _verify12_results;
+
 -- Block 1: Check campaigns table exists
 DO $$
 DECLARE
@@ -30,9 +31,10 @@ DECLARE
 BEGIN
   SELECT to_regclass('public.campaigns') INTO tbl;
   IF tbl IS NULL THEN
-    RAISE EXCEPTION 'FAIL: campaigns table does not exist';
+    INSERT INTO _verify12_results VALUES ('1', 'FAIL', 'campaigns table does not exist');
+  ELSE
+    INSERT INTO _verify12_results VALUES ('1', 'PASS', 'campaigns table exists');
   END IF;
-  RAISE NOTICE 'PASS: campaigns table exists';
 END;
 $$;
 
@@ -46,9 +48,10 @@ BEGIN
   WHERE oid = 'public.campaigns'::regclass;
 
   IF rls_enabled IS DISTINCT FROM true THEN
-    RAISE EXCEPTION 'FAIL: RLS not enabled on campaigns';
+    INSERT INTO _verify12_results VALUES ('2', 'FAIL', 'RLS not enabled on campaigns');
+  ELSE
+    INSERT INTO _verify12_results VALUES ('2', 'PASS', 'RLS is enabled on campaigns');
   END IF;
-  RAISE NOTICE 'PASS: RLS is enabled on campaigns';
 END;
 $$;
 
@@ -63,9 +66,10 @@ BEGIN
     AND conrelid = 'public.campaigns'::regclass;
 
   IF found IS DISTINCT FROM 1 THEN
-    RAISE EXCEPTION 'FAIL: chk_campaigns_error_message constraint not found';
+    INSERT INTO _verify12_results VALUES ('3', 'FAIL', 'chk_campaigns_error_message constraint not found');
+  ELSE
+    INSERT INTO _verify12_results VALUES ('3', 'PASS', 'chk_campaigns_error_message constraint exists');
   END IF;
-  RAISE NOTICE 'PASS: chk_campaigns_error_message constraint exists';
 END;
 $$;
 
@@ -80,30 +84,30 @@ BEGIN
     AND tgrelid = 'public.campaigns'::regclass;
 
   IF found IS DISTINCT FROM 1 THEN
-    RAISE EXCEPTION 'FAIL: trg_campaigns_updated_at trigger not found';
+    INSERT INTO _verify12_results VALUES ('4', 'FAIL', 'trg_campaigns_updated_at trigger not found');
+  ELSE
+    INSERT INTO _verify12_results VALUES ('4', 'PASS', 'trg_campaigns_updated_at trigger exists');
   END IF;
-  RAISE NOTICE 'PASS: trg_campaigns_updated_at trigger exists';
 END;
 $$;
 
 -- Block 5: Check campaign-images bucket exists and is private
 DO $$
 DECLARE
-  bucket_record record;
+  b_id text;
+  b_public boolean;
 BEGIN
-  SELECT id, public INTO bucket_record
+  SELECT id::text, public INTO b_id, b_public
   FROM storage.buckets
   WHERE id = 'campaign-images';
 
-  IF bucket_record.id IS NULL THEN
-    RAISE EXCEPTION 'FAIL: campaign-images bucket not found';
+  IF b_id IS NULL THEN
+    INSERT INTO _verify12_results VALUES ('5', 'FAIL', 'campaign-images bucket not found');
+  ELSIF b_public IS DISTINCT FROM false THEN
+    INSERT INTO _verify12_results VALUES ('5', 'FAIL', 'campaign-images bucket is public (expected private)');
+  ELSE
+    INSERT INTO _verify12_results VALUES ('5', 'PASS', 'campaign-images bucket exists and is private');
   END IF;
-
-  IF bucket_record.public IS DISTINCT FROM false THEN
-    RAISE EXCEPTION 'FAIL: campaign-images bucket is public (expected private)';
-  END IF;
-
-  RAISE NOTICE 'PASS: campaign-images bucket exists and is private';
 END;
 $$;
 
@@ -119,9 +123,10 @@ BEGIN
     AND schemaname = 'storage';
 
   IF found IS DISTINCT FROM 1 THEN
-    RAISE EXCEPTION 'FAIL: owner_select_campaign_images policy not found';
+    INSERT INTO _verify12_results VALUES ('6', 'FAIL', 'owner_select_campaign_images policy not found');
+  ELSE
+    INSERT INTO _verify12_results VALUES ('6', 'PASS', 'owner_select_campaign_images policy exists');
   END IF;
-  RAISE NOTICE 'PASS: owner_select_campaign_images policy exists';
 END;
 $$;
 
@@ -137,9 +142,10 @@ BEGIN
     AND schemaname = 'storage';
 
   IF found IS DISTINCT FROM 1 THEN
-    RAISE EXCEPTION 'FAIL: service_insert_campaign_images policy not found';
+    INSERT INTO _verify12_results VALUES ('7', 'FAIL', 'service_insert_campaign_images policy not found');
+  ELSE
+    INSERT INTO _verify12_results VALUES ('7', 'PASS', 'service_insert_campaign_images policy exists');
   END IF;
-  RAISE NOTICE 'PASS: service_insert_campaign_images policy exists';
 END;
 $$;
 
@@ -155,9 +161,10 @@ BEGIN
     AND schemaname = 'storage';
 
   IF found IS DISTINCT FROM 1 THEN
-    RAISE EXCEPTION 'FAIL: service_delete_campaign_images policy not found';
+    INSERT INTO _verify12_results VALUES ('8', 'FAIL', 'service_delete_campaign_images policy not found');
+  ELSE
+    INSERT INTO _verify12_results VALUES ('8', 'PASS', 'service_delete_campaign_images policy exists');
   END IF;
-  RAISE NOTICE 'PASS: service_delete_campaign_images policy exists';
 END;
 $$;
 
@@ -173,8 +180,15 @@ BEGIN
     AND schemaname = 'storage';
 
   IF policy_count > 0 THEN
-    RAISE EXCEPTION 'FAIL: UPDATE policy found (violates immutability) — % policy(ies) exist', policy_count;
+    INSERT INTO _verify12_results VALUES ('9', 'FAIL', format('UPDATE policy found (violates immutability) — %s policy(ies) exist', policy_count));
+  ELSE
+    INSERT INTO _verify12_results VALUES ('9', 'PASS', 'No UPDATE policy exists on campaign-images (immutability preserved)');
   END IF;
-  RAISE NOTICE 'PASS: No UPDATE policy exists on campaign-images (immutability preserved)';
 END;
 $$;
+
+-- Show all results
+SELECT * FROM _verify12_results ORDER BY check_id;
+
+-- Drop temp table
+DROP TABLE IF EXISTS _verify12_results;
