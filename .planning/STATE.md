@@ -1,7 +1,7 @@
 # Project State
 
 **Last updated:** 2026-07-08
-**Milestone:** v1.2 — Contas e Propriedade ✅ SHIPPED
+**Milestone:** v1.3 — Persistência e Entrega da Campanha 🔷 PLANNING
 
 ## Completed
 
@@ -18,9 +18,22 @@
 **Tests:** 465 passing (51 files)
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 
-## Pending
+## Current Position
 
-Nenhuma. Milestone v1.2 concluída.
+**Status:** Escopo documentado — aguardando alinhamento detalhado via opsx-explore.
+
+**Critério de conclusão da milestone:** O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la.
+
+**Escopo inicial documentado:**
+- Campanha como artefato imutável (briefing + resultado final)
+- Registro da campanha no banco
+- Imagem final no Storage
+- Estados mínimos do processo de geração (gerando, pronto, erro)
+- Página de campanha persistida (rota protegida)
+- Download do original
+- Lista simples em rota autenticada `/minhas-campanhas`
+
+**Próximo passo:** `/opsx-explore` para alinhamento detalhado da milestone.
 
 ## Project Reference
 
@@ -28,4 +41,4 @@ See: `.planning/PROJECT.md` (updated 2026-07-08)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** Próxima milestone a definir.
+**Current focus:** v1.3 — Persistência e Entrega da Campanha

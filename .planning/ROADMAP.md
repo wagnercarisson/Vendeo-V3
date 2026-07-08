@@ -5,6 +5,7 @@
 - ✅ **v1.0 Core de Geração** — Phases 1-6 (shipped 2026-07-03)
 - ✅ **v1.1 Motor de Campanhas** — Phases 2-6 (shipped 2026-07-03)
 - ✅ **v1.2 Contas e Propriedade** — Phases 7-11 (shipped 2026-07-08)
+- 🔷 **v1.3 Persistência e Entrega da Campanha** — Escopo documentado, fases a definir via alinhamento
 
 ## Phases
 
@@ -42,6 +43,24 @@
 
 </details>
 
+<details>
+<summary>🔷 v1.3 Persistência e Entrega da Campanha — Escopo documentado, aguardando alinhamento</summary>
+
+**Critério de conclusão:** O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la.
+
+**Escopo inicial (intenções):**
+- Campanha como artefato imutável (briefing + resultado final)
+- Registro da campanha no banco
+- Imagem final no Storage
+- Estados mínimos do processo de geração (gerando, pronto, erro)
+- Página de campanha persistida (rota protegida)
+- Download do original
+- Lista simples em rota autenticada `/minhas-campanhas`
+
+> Fases serão definidas após alinhamento detalhado via opsx-explore.
+
+</details>
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -60,4 +79,8 @@
 
 ---
 
-*Last updated: 2026-07-08 — v1.2 milestone shipped*
+| 12. v1.3 — Pendente | v1.3 | — | ○ Escopo documentado | — |
+
+---
+
+*Last updated: 2026-07-08 — v1.3 milestone scope documented*

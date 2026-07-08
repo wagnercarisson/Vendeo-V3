@@ -10,6 +10,29 @@ O Vendeo é hoje uma aplicação multi-tenant com autenticação completa, isola
 
 Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais. Se tudo mais falhar, o Vendeo precisa ser capaz de transformar uma oferta simples em uma peça visual comercial, clara e publicável.
 
+## Current Milestone: v1.3 — Persistência e Entrega da Campanha
+
+**Status:** Escopo documentado, aguardando alinhamento detalhado via opsx-explore.
+
+**Critério de conclusão:** O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la.
+
+**Escopo inicial (intenções — hipóteses a validar):**
+- Campanha como artefato imutável (briefing de entrada + resultado final)
+- Registro da campanha no banco (parâmetros, copy, metadados)
+- Imagem final no Storage
+- Estados mínimos do processo de geração (gerando, pronto, erro)
+- Página de campanha persistida (rota protegida exibindo campanha salva)
+- Download do original
+- Lista simples das campanhas geradas em rota autenticada `/minhas-campanhas`
+
+**Perguntas em aberto:**
+- Estrutura exata do registro no banco (tabela, colunas, índices)
+- Formato de download (PNG, JPG, ambos)
+- Experiência de transição entre geração → campanha persistida (auto-redirecionamento?)
+- Ordem e granularidade das fases de implementação
+
+---
+
 ## Current State
 
 **Shipped: v1.2 — Contas e Propriedade (2026-07-08)**
@@ -80,15 +103,19 @@ A milestone v1.2 estabeleceu a camada fundacional de contas e propriedade sobre 
 - ✓ **AUTH-10** — Classificação das 7 Server Actions (3 internas, 4 entrypoints) — v1.2
 - ✓ **AUTH-11** — Catálogo D8: 21 cenários de segurança validados — v1.2
 
-### Active (próxima milestone)
+### Active (hipóteses — v1.3)
 
-A definir na próxima milestone. Sugestões iniciais:
+Escopo documentado como intenções. Alinhamento detalhado pendente (opsx-explore).
 
-- Persistência de campanhas no banco
-- Dashboard com histórico de campanhas
-- Export PNG/JPG
-- Navegação e menus definitivos
-- Configurações da loja e do usuário
+- [ ] **PERSIST-01** — Campanha é persistida como artefato imutável (briefing + resultado final)
+- [ ] **PERSIST-02** — Registro da campanha no banco com parâmetros, copy e metadados
+- [ ] **PERSIST-03** — Imagem final da campanha salva no Storage
+- [ ] **PERSIST-04** — Estados mínimos do processo de geração (gerando, pronto, erro)
+- [ ] **PERSIST-05** — Rota protegida `/campanha/[id]` exibe campanha persistida
+- [ ] **PERSIST-06** — Download do original (PNG/JPG — formato a definir)
+- [ ] **PERSIST-07** — Rota autenticada `/minhas-campanhas` lista campanhas da loja do usuário logado
+
+> **Nota:** Itens acima são hipóteses de escopo, não requisitos decididos. O alinhamento detalhado via opsx-explore poderá confirmar, modificar ou descartar cada item.
 
 ### Out of Scope
 
@@ -166,4 +193,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-08 after v1.2 milestone*
+*Last updated: 2026-07-08 after v1.3 milestone scope documented*
