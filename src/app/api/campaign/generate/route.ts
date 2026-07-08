@@ -8,8 +8,9 @@ import { requireSameOrigin } from "@/lib/auth/csrf";
 import { requireApiUser } from "@/lib/auth/require-user";
 import { getCurrentStore } from "@/lib/auth/store-ownership";
 import { notFound } from "@/lib/api-error-response";
+import { apiHandler } from "@/lib/auth/api-handler";
 
-export async function POST(request: NextRequest) {
+export const POST = apiHandler(async (request: NextRequest) => {
   requireSameOrigin(request);
   const user = await requireApiUser();
   const store = await getCurrentStore(user.userId);
@@ -60,4 +61,4 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json(result.data, { status: 200 });
-}
+});

@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase/server';
 import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
 import { requireSameOrigin } from '@/lib/auth/csrf';
+import { apiHandler } from '@/lib/auth/api-handler';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export async function POST(
+export const POST = apiHandler(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   requireSameOrigin(request);
   const { id } = await params;
   await requireAuthorizedStore(id);
@@ -73,12 +74,12 @@ export async function POST(
 
   console.log(`[dismiss-critical-drift] snapshot persistido com sucesso para VS ${activeVS.id}`);
   return new NextResponse(null, { status: 204 });
-}
+});
 
-export async function DELETE(
+export const DELETE = apiHandler(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   requireSameOrigin(request);
   const { id } = await params;
   await requireAuthorizedStore(id);
@@ -119,4 +120,4 @@ export async function DELETE(
 
   console.log(`[dismiss-critical-drift] snapshot removido com sucesso da VS ${activeVS.id}`);
   return new NextResponse(null, { status: 204 });
-}
+});

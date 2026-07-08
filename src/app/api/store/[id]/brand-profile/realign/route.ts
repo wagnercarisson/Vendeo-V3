@@ -10,6 +10,7 @@ import { IDENTITY_TO_LOGO_STATUS } from '@/lib/constants';
 import { buildStoreProfileInputSnapshot } from '@/lib/snapshot';
 import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
 import { requireSameOrigin } from '@/lib/auth/csrf';
+import { apiHandler } from '@/lib/auth/api-handler';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const realignLocks = new Map<string, boolean>();
@@ -24,10 +25,10 @@ const realignLocks = new Map<string, boolean>();
  * logo     → BrandDirectorService (endpoint owns persistence)
  * visual_signature → BrandProfilerWithoutLogoService mode:'regenerate' (profiler owns persistence)
  */
-export async function POST(
+export const POST = apiHandler(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   requireSameOrigin(request);
   const id = (await params).id;
   await requireAuthorizedStore(id);
@@ -80,7 +81,7 @@ export async function POST(
       error: err instanceof Error ? err.message : 'Erro interno',
     });
   }
-}
+});
 
 // ──────────────────────────────────────────────
 // TEXT-ONLY PATH

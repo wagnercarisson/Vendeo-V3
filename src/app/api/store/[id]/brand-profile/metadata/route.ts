@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase/server';
 import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
 import { requireSameOrigin } from '@/lib/auth/csrf';
+import { apiHandler } from '@/lib/auth/api-handler';
 
-export async function PATCH(
+export const PATCH = apiHandler(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   requireSameOrigin(request);
   const { id } = await params;
   await requireAuthorizedStore(id);
@@ -46,4 +47,4 @@ export async function PATCH(
   }
 
   return NextResponse.json({ success: true, metadata: merged }, { status: 200 });
-}
+});

@@ -2,8 +2,9 @@ import { createServerClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 import { requireSameOrigin } from "@/lib/auth/csrf";
+import { apiHandler } from "@/lib/auth/api-handler";
 
-export async function POST(request: NextRequest) {
+export const POST = apiHandler(async (request: NextRequest) => {
   requireSameOrigin(request);
   const supabase = await createServerClient();
   await supabase.auth.signOut();
@@ -11,7 +12,7 @@ export async function POST(request: NextRequest) {
   revalidatePath("/", "layout");
 
   return NextResponse.redirect(new URL("/login", request.url), { status: 302 });
-}
+});
 
 export async function GET() {
   return NextResponse.json(

@@ -8,10 +8,11 @@ import { resolveStoreIdentity, validateIdentityReference, buildCampaignBrief } f
 import { requireSameOrigin } from "@/lib/auth/csrf";
 import { requireApiUser } from "@/lib/auth/require-user";
 import { requireOwnership } from "@/lib/auth/store-ownership";
+import { apiHandler } from "@/lib/auth/api-handler";
 import { supabaseAdmin } from '@/lib/supabase/server';
 import type { CampaignInput } from "@/components/campaign/types";
 
-export async function POST(request: NextRequest) {
+export const POST = apiHandler(async (request: NextRequest) => {
   requireSameOrigin(request);
   // ── Pre-stream: Parse JSON body ──────────────────────────────────
   let body: Record<string, unknown>;
@@ -261,4 +262,4 @@ export async function POST(request: NextRequest) {
     status: 200,
     headers: { "Content-Type": "application/x-ndjson" },
   });
-}
+});

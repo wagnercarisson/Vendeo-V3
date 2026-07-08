@@ -59,19 +59,19 @@ beforeEach(() => {
 describe("CSRF Precedence: cross-origin returns 403 before auth/ownership", () => {
   it("POST /api/store cross-origin no session → 403", async () => {
     const { POST } = await import("@/app/api/store/route");
-    // requireSameOrigin throws ForbiddenError since origin !== host
-    // Route handler does not catch it yet — error propagates
-    await expect(
-      POST(createReq("POST", "http://localhost/api/store", "http://evil.com"))
-    ).rejects.toThrow("Cross-origin request denied");
+    const res = await POST(createReq("POST", "http://localhost/api/store", "http://evil.com"));
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toContain("Cross-origin");
   });
 
   it("POST /api/store cross-origin with session → 403", async () => {
     mockRequireUser.mockResolvedValue({ userId: "user-123", claims: {} });
     const { POST } = await import("@/app/api/store/route");
-    await expect(
-      POST(createReq("POST", "http://localhost/api/store", "http://evil.com"))
-    ).rejects.toThrow("Cross-origin request denied");
+    const res = await POST(createReq("POST", "http://localhost/api/store", "http://evil.com"));
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toContain("Cross-origin");
   });
 
   it("POST /api/store same-origin no session → 401", async () => {
@@ -84,23 +84,25 @@ describe("CSRF Precedence: cross-origin returns 403 before auth/ownership", () =
 
   it("PATCH /api/store/:id cross-origin no session → 403", async () => {
     const { PATCH } = await import("@/app/api/store/[id]/route");
-    await expect(
-      PATCH(
-        createReq("PATCH", "http://localhost/api/store/store-1", "http://evil.com"),
-        { params: Promise.resolve({ id: "store-1" }) }
-      )
-    ).rejects.toThrow("Cross-origin request denied");
+    const res = await PATCH(
+      createReq("PATCH", "http://localhost/api/store/store-1", "http://evil.com"),
+      { params: Promise.resolve({ id: "store-1" }) }
+    );
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toContain("Cross-origin");
   });
 
   it("PATCH /api/store/:id cross-origin with session → 403", async () => {
     mockRequireUser.mockResolvedValue({ userId: "user-123", claims: {} });
     const { PATCH } = await import("@/app/api/store/[id]/route");
-    await expect(
-      PATCH(
-        createReq("PATCH", "http://localhost/api/store/store-1", "http://evil.com"),
-        { params: Promise.resolve({ id: "store-1" }) }
-      )
-    ).rejects.toThrow("Cross-origin request denied");
+    const res = await PATCH(
+      createReq("PATCH", "http://localhost/api/store/store-1", "http://evil.com"),
+      { params: Promise.resolve({ id: "store-1" }) }
+    );
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toContain("Cross-origin");
   });
 
   it("PATCH /api/store/:id same-origin no session → 401", async () => {

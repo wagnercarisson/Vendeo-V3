@@ -1,6 +1,6 @@
 # Project State
 
-**Last updated:** 2026-07-06
+**Last updated:** 2026-07-08
 **Milestone:** v1.2 — Contas e Propriedade
 
 ## Completed
@@ -73,6 +73,16 @@
 | 10-06 | 4 | ✓ | Validação e Regressão |
 
 **Entrega:** Erros centralizados em `errors.ts`, CSRF/same-origin, `requireAuthorizedStore()` em ~20 handlers, `getCurrentStore()` em `/api/campaign/generate`, 3 Server Actions extraídas para `store-identity-service.ts`, 4 Server Actions com guards, RLS em 4 tabelas filhas, Storage policies, matriz parametrizada (457 testes, 51 files). Build limpo. TypeScript, lint, build — todos verdes.
+
+**Verificação (2026-07-08):**
+- ✅ UAT completo: 7/7 testes passando
+- ✅ Qualidade: 457 testes, tsc, lint, build — zero erros
+- ✅ Fix aplicado: `apiHandler` wrapper criado (`src/lib/auth/api-handler.ts`) e aplicado em 18 route handlers
+- ✅ Fix middleware: mutações API sem sessão passam para route handler (CSRF > Auth)
+- ✅ Testes CSRF atualizados para nova assinatura (resposta 403 em vez de erro lançado)
+- ✅ Security audit: 14/14 ameaças fechadas (`.planning/phases/10-perimetro-multitenant/SECURITY.md`)
+- ✅ Migration RLS aplicada via `supabase db push`
+- ✅ Fase 10 completa — pronta para transição para Fase 11
 
 ## Pending
 

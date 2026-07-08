@@ -6,6 +6,7 @@ import { IDENTITY_TO_LOGO_STATUS } from '@/lib/constants';
 import { transition } from '@/lib/identity-transitions';
 import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
 import { requireSameOrigin } from '@/lib/auth/csrf';
+import { apiHandler } from '@/lib/auth/api-handler';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -49,10 +50,10 @@ function computeCriticalDrift(
   };
 }
 
-export async function GET(
+export const GET = apiHandler(async (
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const { id } = await params;
   await requireAuthorizedStore(id);
 
@@ -154,12 +155,12 @@ export async function GET(
     signatures,
     total: data?.length ?? 0,
   });
-}
+});
 
-export async function DELETE(
+export const DELETE = apiHandler(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   requireSameOrigin(request);
   const { id } = await params;
   await requireAuthorizedStore(id);
@@ -223,4 +224,4 @@ export async function DELETE(
     success: true,
     previous_identity_state: 'visual_signature',
   });
-}
+});

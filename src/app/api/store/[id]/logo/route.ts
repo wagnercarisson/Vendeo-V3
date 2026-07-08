@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import { supabaseAdmin as supabase } from '@/lib/supabase/server';
 import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
 import { requireSameOrigin } from '@/lib/auth/csrf';
+import { apiHandler } from '@/lib/auth/api-handler';
 import {
   validateImage,
   getImageDimensions,
@@ -508,10 +509,10 @@ async function handleDeleteLogo(_request: NextRequest, storeId: string) {
   return NextResponse.json({ success: true, identity_state: 'text_only' }, { status: 200 });
 }
 
-export async function POST(
+export const POST = apiHandler(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   requireSameOrigin(request);
   const { id } = await params;
   await requireAuthorizedStore(id);
@@ -519,24 +520,24 @@ export async function POST(
     return NextResponse.json({ error: 'ID da loja inválido' }, { status: 400 });
   }
   return handlePostUpload(request, id);
-}
+});
 
-export async function GET(
+export const GET = apiHandler(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const { id } = await params;
   if (!validateUUID(id)) {
     return NextResponse.json({ error: 'ID da loja inválido' }, { status: 400 });
   }
   await requireAuthorizedStore(id);
   return handleGetActiveLogo(request, id);
-}
+});
 
-export async function DELETE(
+export const DELETE = apiHandler(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   requireSameOrigin(request);
   const { id } = await params;
   await requireAuthorizedStore(id);
@@ -544,4 +545,4 @@ export async function DELETE(
     return NextResponse.json({ error: 'ID da loja inválido' }, { status: 400 });
   }
   return handleDeleteLogo(request, id);
-}
+});

@@ -8,13 +8,14 @@ import type { VisualSignatureMetadataInputSnapshot, VisualSignatureMetadataArtDi
 import { assertCanTransition } from '@/lib/identity-transitions';
 import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
 import { requireSameOrigin } from '@/lib/auth/csrf';
+import { apiHandler } from '@/lib/auth/api-handler';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export async function POST(
+export const POST = apiHandler(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   requireSameOrigin(request);
   const storeId = (await params).id;
   await requireAuthorizedStore(storeId);
@@ -193,4 +194,4 @@ export async function POST(
       assetUrl: signature.asset_url,
     },
   });
-}
+});

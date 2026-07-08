@@ -25,6 +25,10 @@ export async function middleware(request: NextRequest) {
 
   if (!claims?.sub) {
     if (isApiRoute) {
+      // Mutations: let route handler decide — CSRF precedence (403) over Auth (401)
+      if (request.method !== "GET" && request.method !== "HEAD") {
+        return response;
+      }
       const unauthorizedResponse = NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 },

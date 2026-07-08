@@ -5,6 +5,7 @@ import type { BrandProfileRecord } from '@/lib/brand-assets/types';
 import { buildStoreProfileInputSnapshot } from '@/lib/snapshot';
 import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
 import { requireSameOrigin } from '@/lib/auth/csrf';
+import { apiHandler } from '@/lib/auth/api-handler';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -12,10 +13,10 @@ function validateUUID(id: string): boolean {
   return UUID_REGEX.test(id);
 }
 
-export async function POST(
+export const POST = apiHandler(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   requireSameOrigin(request);
   const { id: storeId } = await params;
   await requireAuthorizedStore(storeId);
@@ -205,4 +206,4 @@ export async function POST(
       retry: true,
     }, { status: 200 });
   }
-}
+});

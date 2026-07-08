@@ -3,15 +3,16 @@ import { supabaseAdmin as supabase } from '@/lib/supabase/server';
 import { validateBrandColorsChosen, normalizeBrandColorsChosen } from '@/lib/validators/color';
 import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
 import { requireSameOrigin } from '@/lib/auth/csrf';
+import { apiHandler } from '@/lib/auth/api-handler';
 
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
 
 const PLACEHOLDER_HEX = '#RRGGBB';
 
-export async function GET(
+export const GET = apiHandler(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const { id } = await params;
   await requireAuthorizedStore(id);
   const url = new URL(request.url);
@@ -47,16 +48,16 @@ export async function GET(
   }
 
   return NextResponse.json(data, { status: 200 });
-}
+});
 
 function cleanPlaceholderColors(colors: Array<string | null>): Array<string | null> {
   return colors.map(c => c === PLACEHOLDER_HEX ? null : c);
 }
 
-export async function PATCH(
+export const PATCH = apiHandler(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   requireSameOrigin(request);
   const { id } = await params;
   await requireAuthorizedStore(id);
@@ -100,12 +101,12 @@ export async function PATCH(
   }
 
   return NextResponse.json(data, { status: 200 });
-}
+});
 
-export async function POST(
+export const POST = apiHandler(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   requireSameOrigin(request);
   const { id } = await params;
   await requireAuthorizedStore(id);
@@ -117,7 +118,7 @@ export async function POST(
   }
 
   return NextResponse.json({ error: 'Ação não reconhecida' }, { status: 400 });
-}
+});
 
 async function handleArchive(_request: NextRequest, storeId: string) {
   const { data, error } = await supabase

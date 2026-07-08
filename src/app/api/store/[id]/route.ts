@@ -3,6 +3,7 @@ import { supabaseAdmin as supabase } from "@/lib/supabase/server";
 import { requireUser, UnauthorizedError } from "@/lib/auth/require-user";
 import { requireOwnership, StoreNotFoundError } from "@/lib/auth/store-ownership";
 import { requireSameOrigin } from "@/lib/auth/csrf";
+import { apiHandler } from "@/lib/auth/api-handler";
 import { buildStoreResponse } from "@/lib/store-response";
 import { STORE_SUBSEGMENTS } from "@/lib/constants";
 
@@ -26,10 +27,10 @@ function sanitizeSubsegment(value: string): string {
     .join(" ");
 }
 
-export async function GET(
+export const GET = apiHandler(async (
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
     const { id } = await params;
     const user = await requireUser();
@@ -45,12 +46,12 @@ export async function GET(
     }
     throw error;
   }
-}
+});
 
-export async function PATCH(
+export const PATCH = apiHandler(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   requireSameOrigin(request);
   try {
     const { id } = await params;
@@ -200,4 +201,4 @@ export async function PATCH(
     }
     throw error;
   }
-}
+});
