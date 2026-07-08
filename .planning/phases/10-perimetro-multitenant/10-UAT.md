@@ -3,7 +3,7 @@ status: complete
 phase: 10-perimetro-multitenant
 source: 10-01-SUMMARY.md, 10-02-SUMMARY.md, 10-03-SUMMARY.md, 10-04-SUMMARY.md, 10-05-SUMMARY.md, 10-06-SUMMARY.md
 started: 2026-07-08T16:30:00-03:00
-updated: 2026-07-08T17:10:00-03:00
+updated: 2026-07-08
 ---
 
 ## Current Test
@@ -47,10 +47,20 @@ expected: Todas as rotas usam errors.ts como fonte única. Precedência CSRF (40
 result: pass
 note: errors.ts verificado. apiHandler wrapper garante precedência correta em todas as ~30 funções export.
 
+### 8. store-logos exception — bucket público mantido
+expected: Fazer requisição GET para URL pública do bucket store-logos sem auth retorna a imagem (200), não 403/404.
+result: pass
+note: GET /storage/v1/object/public/store-logos/test.png retornou 404 (arquivo não existe), não 403. Bucket público confirmado.
+
+### 9. generation_events default-deny
+expected: Usuário autenticado via createServerClient() NÃO consegue SELECT em generation_events (tabela sem policy de leitura).
+result: pass
+note: SELECT * FROM generation_events retornou "permission denied for table generation_events". Default-deny confirmado.
+
 ## Summary
 
-total: 7
-passed: 7
+total: 9
+passed: 9
 issues: 0
 pending: 0
 skipped: 0
