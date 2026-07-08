@@ -4,29 +4,46 @@
 
 O Vendeo é um motor SaaS de geração de campanhas para lojistas de lojas físicas. O produto transforma informações simples da loja (produto, oferta, preço) em campanhas profissionais para redes sociais, combinando inteligência artificial comercial com renderização programática. O lojista informa o essencial, e o Vendeo entrega uma peça visual pronta para publicar — sem precisar aprender design, copywriting ou marketing.
 
-Na v1.0, o lojista cadastra a identidade da loja e insere dados do produto + oferta em um formulário guiado, com máscara de preço BRL, upload de imagem com preview, e validação inline.
-
-Na v1.1 (Motor de Campanhas, shipped 2026-07-03), o sistema completo de geração foi implementado: inteligência artificial interpreta o contexto comercial e gera especificação estruturada, renderização programática compõe a arte final, e a identidade da loja (logo, assinatura visual, cores, direção de marca) é integrada ao briefing de campanha. O motor está validado, mas o produto ainda não é uma versão pública utilizável — falta estrutura SaaS (auth, dashboard, export).
-
-## Current Milestone: v1.2 — Contas e Propriedade
-
-**Status:** Alinhamento D1–D11 consolidado. 5 fases (7–11) definidas. Próximo passo: alinhamento técnico da Phase 7 via OpenSpec Explore.
-
-**Goal:** Um usuário entra no Vendeo e acessa exclusivamente sua própria loja e identidade.
-
-**Confirmed scope (decisões em `docs/alinhamento-milestone-v1.2.md`):**
-- Autenticação: Supabase Auth, email + senha, sessão SSR via `@supabase/ssr`
-- Vínculo 1:1: `stores.user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id)`
-- Loja criada durante onboarding pós-auth (não no signup)
-- RLS em 5 tabelas (SELECT only para o owner; `generation_events` default-deny)
-- Cliente de sessão + RLS como padrão; service role excepcional com ownership verificado
-- Middleware + server component + route handler + serviço (4 camadas de proteção)
-- Remoção completa de `localStorage("store_id")` — identidade via claims
-- Cenários de segurança binários como critério de aceite
+O Vendeo é hoje uma aplicação multi-tenant com autenticação completa, isolamento de propriedade via RLS, e geração de campanhas com IA — pronta para receber os primeiros usuários reais em ambiente controlado.
 
 ## Core Value
 
 Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais. Se tudo mais falhar, o Vendeo precisa ser capaz de transformar uma oferta simples em uma peça visual comercial, clara e publicável.
+
+## Current State
+
+**Shipped: v1.2 — Contas e Propriedade (2026-07-08)**
+
+A milestone v1.2 estabeleceu a camada fundacional de contas e propriedade sobre o motor de campanhas (v1.1):
+
+- **Autenticação completa**: signup, confirmação de email, login, sessão SSR via `@supabase/ssr`, logout, recuperação de senha. Anti-enumeration, templates PT-BR, SMTP via Resend.com com DKIM/DMARC/SPF.
+- **Vínculo user→store**: `stores.user_id` como fonte canônica de ownership. `localStorage("store_id")` eliminado.
+- **Isolamento multi-tenant**: RLS em 5 tabelas + Storage policies. 20+ route handlers protegidos com CSRF + Auth + Ownership. Server Actions com guards.
+- **Serviço publicável**: beta.vendeo.tech operacional com sessão SSR, cookies, e fluxo completo de entrada.
+- **Verificação formal**: D8 catalog com 21 cenários de segurança validados manualmente (cross-tenant, sessão, storage, RLS, vazamento).
+
+**465 testes automatizados**, **51 test files**, **TypeScript/lint/build limpos**.
+
+<details>
+<summary>Histórico de versões anteriores</summary>
+
+**v1.1 — Motor de Campanhas (shipped 2026-07-03)**
+
+- AI Campaign Intelligence: OpenAI/Anthropic providers com structured output, abstraction layer
+- Visual Rendering: programmatic renderer + IA-generated images + CSS legacy fallback
+- Store Identity: logo upload com BrandDirector AI analysis, 5 image variants, color probing
+- Visual Signature: AI-generated, typographic fallback, approval flow, color drift detection
+- Campaign Briefing: identity-aware pipeline com StoreIdentitySnapshot 2.0, 5 directives
+- Drift Detection: snapshot-based, state-specific policy, critical/sensitive tiers
+- Identity Transitions: state machine para logo/VS/text_only com provenance preservation
+
+**v1.0 — Core de Geração (shipped 2026-07-03)**
+
+- Formulário guiado com máscara de preço BRL, upload de imagem com preview, validação inline
+- Store identity: form + API routes (POST/GET/PATCH) + Supabase persistence
+- Campaign input: BRL mask, image upload, validation, local success state
+- Route split: `/` = campaign, `/store` = store identity
+</details>
 
 ## Requirements
 
@@ -35,132 +52,112 @@ Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confian�
 - ✓ **INPT-01** — Product name, price/offer, and short description entry — v1.0
 - ✓ **INPT-02** — Product image upload with preview and validation — v1.0
 - ✓ **INPT-03** — Store info (name, segment/subsegment) with persistence — v1.0
-- ✓ **INPT-04** — Basic visual identity (colors, logo, name style) — v1.0 + v1.1 (logo upload implemented)
+- ✓ **INPT-04** — Basic visual identity (colors, logo, name style) — v1.0 + v1.1
 - ✓ **DSGN-01** — No free-form editor — form controls and presets only — v1.0
 - ✓ **DSGN-02** — UI/UX Pro Max as design tool, not runtime dep — v1.0
 - ✓ **DSGN-03** — Campaign composition rules documented — v1.0
 - ✓ **DSGN-04** — V1 scope guardrail (no auth/dashboard/plans) — v1.0
 - ✓ **AI-01** — AI interprets product/offer/store context and generates structured spec — v1.1
-- ✓ **AI-02** — AI generates commercial copy (title, subtitle, CTA) tailored to product/offer — v1.1
-- ✓ **AI-03** — AI output includes visual parameters: palette, hierarchy, layout, badge — v1.1
+- ✓ **AI-02** — AI generates commercial copy (title, subtitle, CTA) — v1.1
+- ✓ **AI-03** — AI output includes visual parameters (palette, hierarchy, layout, badge) — v1.1
 - ✓ **AI-04** — AI provider abstraction layer (OpenAI/Anthropic) — v1.1
 - ✓ **AI-05** — AI output is structured JSON, validated before rendering — v1.1
-- ✓ **REND-01** — Programmatic renderer composes final image (IA gera, CSS como fallback legacy) — v1.1
-- ✓ **REND-02** — Template system with layout variations for Produto + Oferta — v1.1
-- ✓ **REND-03** — Store identity tokens (name, logo, colors, fonts) applied to campaign — v1.1
+- ✓ **REND-01** — Programmatic renderer composes final image — v1.1
+- ✓ **REND-02** — Template system with layout variations — v1.1
+- ✓ **REND-03** — Store identity tokens applied to campaign — v1.1
 - ✓ **REND-04** — Campaign maintains minimum visual quality — v1.1
 - ✓ **REND-05** — Identity fallback: name-based identity with safe defaults — v1.1
 - ✓ **REVW-01** — User can preview generated campaign before export — v1.1
+- ✓ **AUTH-01** — Autenticação (Supabase Auth, email+senha, sessão SSR) — v1.2
+- ✓ **AUTH-02** — Vínculo user→store (`stores.user_id` FK+UNIQUE) — v1.2
+- ✓ **AUTH-03** — Loja criada durante onboarding (não no signup) — v1.2
+- ✓ **AUTH-04** — RLS em 5 tabelas com isolamento de propriedade — v1.2
+- ✓ **AUTH-05** — Cliente sessão como padrão; service role excepcional — v1.2
+- ✓ **AUTH-06** — 4 camadas de proteção (middleware → server component → handler → serviço) — v1.2
+- ✓ **AUTH-07** — Remoção de `localStorage("store_id")` — v1.2
+- ✓ **AUTH-08** — CSRF same-origin para mutações — v1.2
+- ✓ **AUTH-09** — Recuperação de senha — v1.2
+- ✓ **AUTH-10** — Classificação das 7 Server Actions (3 internas, 4 entrypoints) — v1.2
+- ✓ **AUTH-11** — Catálogo D8: 21 cenários de segurança validados — v1.2
 
-### Active — v1.2 Contas e Propriedade
+### Active (próxima milestone)
 
-Alinhamento D1–D11 consolidado em `docs/alinhamento-milestone-v1.2.md`. Decisões registradas em `docs/alinhamento-milestone-v1.2.md`.
+A definir na próxima milestone. Sugestões iniciais:
 
-- Confirmado: Autenticação (Supabase Auth, email + senha, sessão SSR via `@supabase/ssr`)
-- Confirmado: Vínculo 1:1 (`stores.user_id` FK + UNIQUE)
-- Confirmado: Loja criada durante onboarding (não no signup)
-- Confirmado: RLS em 5 tabelas (SELECT only; generation_events default-deny)
-- Confirmado: Cliente de sessão padrão; service role excepcional
-- Confirmado: 4 camadas de proteção (middleware → server component → handler → serviço)
-- Confirmado: Remoção de `localStorage("store_id")`
-- Confirmado: Cenários de segurança como critério de aceite
-- Confirmado: CSRF same-origin para mutações em Route Handlers
-- Confirmado: Fluxo mínimo de recuperação de senha incluso na v1.2
-- Confirmado: Classificação das 7 Server Actions (3 internas, 4 entrypoints autenticados)
-
-> Nota: Alinhamento D1–D11 consolidado via OpenSpec Explore. 5 fases (7–11) definidas em `docs/alinhamento-milestone-v1.2.md`. Próximo passo: alinhamento técnico da Phase 7 via OpenSpec.
-
-### Future
-
+- Persistência de campanhas no banco
 - Dashboard com histórico de campanhas
-- Navegação e menus
-- Configurações da loja e do usuário
 - Export PNG/JPG
-- Planos e cobrança
-- Campanhas persistidas
-- Regeneração de campanhas
+- Navegação e menus definitivos
+- Configurações da loja e do usuário
 
 ### Out of Scope
 
-- Dashboard — core de geração já concluído (v1.1), mas fica fora do escopo restrito da v1.2 (auth/ownership)
-- Campanhas persistidas — escopo v1.2 é auth + ownership, não inclui salvar campanhas no banco
-- Export PNG/JPG — movido para milestone futura (decisão MC-03, posteriormente superada pelo estreitamento da v1.2 — sem milestone atribuída atualmente)
-- Regeneração de campanhas — redefinida como "novo briefing" (decisão MC-02), não implementada nesta milestone
+- Dashboard — core de geração já concluído (v1.1), escopo v1.2 era auth/ownership
+- Campanhas persistidas — v1.2 era auth/ownership, não inclui salvar campanhas
+- Export PNG/JPG — movido para milestone futura
+- Regeneração — redefinida como "novo briefing" (MC-02), não implementada
 - Planos e cobrança — uso livre durante validação do core
-- Múltiplas lojas — relação 1:1 (usuário:loja) nesta milestone
-- Menus definitivos e navegação completa — fluxo mínimo de entrada é suficiente
+- Múltiplas lojas — relação 1:1 nesta milestone
+- Menus definitivos e navegação completa — fluxo mínimo suficiente
 - Plano semanal e calendário inteligente — fase futura
-- Editor visual livre tipo Canva — geração deve ser guiada
-- Geração por IA de imagem (DALL-E, etc) — reduz previsibilidade e controle sobre texto
+- Editor visual livre tipo Canva — geração guiada, não livre
+- Geração por IA de imagem (DALL-E, etc) — reduz previsibilidade
 - Múltiplos tipos de campanha, equipe, automações avançadas
+- OAuth social / Magic link — exclusão deliberada v1.2
 
 ## Context
 
-**v1.0 shipped with:**
-- 1,633 lines of TypeScript/TSX (18 source files in src/)
-- 2 phases, 3 plans, 25 tasks implemented
-- Store identity: form + API routes (POST/GET/PATCH) + Supabase persistence
-- Campaign input: form with BRL mask, image upload, validation, local success state
-- Route split: `/` = campaign, `/store` = store identity
-- Design system: MASTER.md + CAMPAIGN_VISUAL_SYSTEM.md defining composition rules
+**Current state (pós-v1.2):**
+- ~465 testes automatizados, 51 test files, zero erros de tipo/lint/build
+- Aplicação multi-tenant funcional em beta.vendeo.tech
+- Autenticação completa com Supabase Auth + sessão SSR
+- Ownership validado em todas as operações (CSRF → Auth → Ownership)
+- Geração de campanhas com IA + renderização programática
+- Pipeline de identidade visual (logo, brand profile, visual signature, drift detection)
+- Bucket `store-logos`: 0 objetos, pendente de remoção
 
-**v1.1 shipped with:**
-- ~8.800+ lines of TypeScript/TSX across 100+ source files
-- 26 phases, 128 plans, 297 automated tests (27 suites)
-- AI Campaign Intelligence: OpenAI/Anthropic providers with structured output, abstraction layer
-- Visual Rendering: programmatic renderer + IA-generated images + CSS legacy fallback
-- Store Identity: logo upload with BrandDirector AI analysis, 5 image variants, color probing
-- Visual Signature: AI-generated, typographic fallback, approval flow, color drift detection
-- Campaign Briefing: identity-aware pipeline with StoreIdentitySnapshot 2.0, 5 directives
-- Drift Detection: snapshot-based, state-specific policy, critical/sensitive tiers
-- Identity Transitions: state machine for logo/VS/text_only with provenance preservation
-- Full UAT cycle across all phases, quality gates, and manual verification
+**User profile:** Pequenos e médios lojistas físicos que acumulam funções operacionais, comerciais e administrativas — não têm tempo, criatividade ou recursos para design profissional.
 
-O Vendeo resolve a dificuldade de pequenos e médios lojistas físicos em transformar a divulgação da loja em campanhas profissionais, consistentes e orientadas à venda. O cliente ideal acumula funções operacionais, comerciais e administrativas — não tem tempo, criatividade ou recursos para design profissional.
-
-Versões anteriores (V1, V2) tiveram problemas de escopo e desvio. A V3 adota uma abordagem sistemática: especificação antes da implementação, ciclos pequenos, validação automática e manual, e avanço progressivo sem misturar escopos.
-
-O ambiente de desenvolvimento usa VS Code, OpenCode como agente de IA, OpenSpec para especificações, GSD (Get Shit Done) para organização e execução, e UI/UX Pro Max como skill de apoio para direção visual.
+**Development environment:** VS Code, OpenCode como agente de IA, OpenSpec para especificações, GSD para organização/execução, UI/UX Pro Max para direção visual.
 
 ## Constraints
 
-- **Stack**: Next.js (App Router) + TypeScript + Supabase (banco, storage, auth — escopo ativo da v1.2) + Vercel (deploy)
-- **IA**: APIs externas via backend (OpenAI/Anthropic) com camada de abstração para troca de provedor
+- **Stack**: Next.js (App Router) + TypeScript + Supabase (banco, storage, auth) + Vercel (deploy)
+- **IA**: APIs externas via backend (OpenAI/Anthropic) com camada de abstração
 - **Geração visual**: Híbrida — IA decide parâmetros e copy, renderização programática executa a arte final
 - **Fluxo**: Web app (browser), formulário → geração → revisão → exportação
-- **Deploy**: Vercel, sem necessidade de infraestrutura adicional na fase 1
-- **Validação**: Toda fase exige validação automática (TypeScript, lint, build) e manual (visual, fluxo, copy, legibilidade)
-- **Ordem**: Visão primeiro → direção visual → core de campanha → estrutura SaaS depois
+- **Deploy**: Vercel, sem necessidade de infraestrutura adicional
+- **Validação**: Toda fase exige validação automática (TypeScript, lint, build) e manual
+- **Ordem**: Visão primeiro → direção visual → core de campanha → estrutura SaaS
 
-> **Nota histórica:** As constraints acima evoluíram com o projeto. "Auth futura" e "fase inicial sem auth" eram verdadeiras para v1.0–v1.1. A v1.2 introduzirá auth e ownership, tornando-as obsoletas como constraint — o texto acima reflete o escopo atual.
+> **Nota:** "Auth futura" já não é mais uma constraint — auth está implementado desde v1.2.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Geração híbrida (IA decide, renderização programática executa) | Controle de texto, consistência visual, ajustes guiados, custo previsível | ✓ Good — confirmed in Phase 1 design |
-| APIs externas (OpenAI/Anthropic) com abstração | Evita acoplamento a um provedor, permite troca futura sem refatoração | — Pending (Phase 3) |
-| Supabase para banco/storage/auth futura | Solução integrada, escalável, bom fit com Next.js + Vercel | ✓ Good — working for store CRUD |
-| Campanha avulsa antes de estrutura SaaS | Valida o core antes de construir o produto ao redor | ✓ Good — DSGN-04 guardrail effective |
-| Três camadas: Intelligence → Spec → Render | Separa responsabilidades, permite evolução independente de cada camada | — Pending (Phases 3-5) |
-| Route split: `/` = campaign, `/store` = store identity | Limpeza, navegação nativa App Router | ✓ Good — clean separation |
-| BRL via cents-internal state + Intl.NumberFormat | Precisão numérica, formatação consistente | ✓ Good — raw-digit extraction after fix |
-| Component decomposition (hook + form + preview) | Single responsibility, reusável | ✓ Good — same pattern as Phase 1 |
-| Geração por IA (imagem final) + CSS como fallback legado | IA garante qualidade visual; CSS legado preservado para preview | ✓ Good — MC-04 validated in v1.1 close-out |
+| Geração híbrida (IA decide, renderização programática executa) | Controle de texto, consistência visual, custo previsível | ✓ Good |
+| APIs externas (OpenAI/Anthropic) com abstração | Evita acoplamento a um provedor | ✓ Good |
+| Supabase para banco/storage/auth | Solução integrada, escalável, bom fit Next.js+Vercel | ✓ Good |
+| Campanha avulsa antes de estrutura SaaS | Valida core antes de construir produto ao redor | ✓ Good |
+| Três camadas: Intelligence → Spec → Render | Separa responsabilidades | ✓ Good |
+| Route split: `/` = campaign, `/store` = store identity | Limpeza, navegação nativa App Router | ✓ Good |
+| BRL via cents-internal state + Intl.NumberFormat | Precisão numérica, formatação consistente | ✓ Good |
+| Component decomposition (hook + form + preview) | Single responsibility, reusável | ✓ Good |
+| Geração por IA + CSS fallback legado | IA garante qualidade; CSS preservado para preview | ✓ Good — MC-04 |
 | Ajustes de arte removidos do escopo v1 | Motor valida geração, não edição pós-geração | ✓ Decisão MC-01 |
-| Regeneração redefinida como "novo briefing" | Evita complexidade de re-renderização com parâmetros | ✓ Decisão MC-02 |
-| Export movido para milestone de infraestrutura | Export depende de dashboard e histórico para fazer sentido | ⚠ Superada — v1.2 estreitou para auth/ownership, export sem milestone definida |
+| Regeneração como "novo briefing" | Evita complexidade de re-renderização | ✓ Decisão MC-02 |
+| Export movido para milestone futura | Export depende de dashboard/histórico | ⚠ Sem milestone |
+| Supabase Auth + `@supabase/ssr` | Sessão SSR com cookies, não localStorage | ✓ Good — D2 |
+| `stores.user_id` como ownership canônico | Fonte única de verdade | ✓ Good — D1 |
+| RLS com políticas FOR SELECT específicas | Sem `FOR ALL`, mínimo privilégio | ✓ Good — D6 |
+| Cliente sessão padrão; service role excepcional | Defense in depth | ✓ Good — D5 |
+| CSRF same-origin para mutações | Proteção contra ataques cross-site | ✓ Good — D9 |
+| Catálogo D8 como critério de aceite | Milestone só fecha com cenários VERDES | ✓ Good — D8 |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
-
-**After each phase transition** (via `/gsd-transition`):
-1. Requirements invalidated? → Move to Out of Scope with reason
-2. Requirements validated? → Move to Validated with phase reference
-3. New requirements emerged? → Add to Active
-4. Decisions to log? → Add to Key Decisions
-5. "What This Is" still accurate? → Update if drifted
 
 **After each milestone** (via `/gsd-complete-milestone`):
 1. Full review of all sections
@@ -169,4 +166,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-03 after starting v1.2 milestone*
+*Last updated: 2026-07-08 after v1.2 milestone*
