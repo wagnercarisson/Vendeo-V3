@@ -5,7 +5,23 @@
 - ✅ **v1.0 Core de Geração** — Phases 1-6 (shipped 2026-07-03)
 - ✅ **v1.1 Motor de Campanhas** — Phases 2-6 (shipped 2026-07-03)
 - ✅ **v1.2 Contas e Propriedade** — Phases 7-11 (shipped 2026-07-08)
-- 🔷 **v1.3 Persistência e Entrega da Campanha** — Escopo documentado, fases a definir via alinhamento
+- 🔷 **v1.3 Persistência e Entrega da Campanha** — Fase 12 planejada, mais 4 fases a definir
+
+## Phases
+
+<details>
+<summary>🔷 v1.3 Persistência e Entrega da Campanha — Planejamento em andamento</summary>
+
+**Critério de conclusão:** O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la.
+
+**Escopo v1.3 (fases identificadas):**
+- [ ] Phase 12: Fundação DB/Storage (Planned) — tabela campaigns, bucket campaign-images, RLS e Storage policies
+- [ ] Phase 13: Serviço de Persistência — persistence.ts, write/read helpers, signed URL
+- [ ] Phase 14: Integração no Fluxo de Geração — salvar campanha pós-renderização
+- [ ] Phase 15: Página de Campanha — `/campanha/[id]` com preview e download
+- [ ] Phase 16: Lista de Campanhas — `/minhas-campanhas` com thumbnails e estado vazio
+
+</details>
 
 ## Phases
 
@@ -43,23 +59,7 @@
 
 </details>
 
-<details>
-<summary>🔷 v1.3 Persistência e Entrega da Campanha — Escopo documentado, aguardando alinhamento</summary>
 
-**Critério de conclusão:** O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la.
-
-**Escopo inicial (intenções):**
-- Campanha como artefato imutável (briefing + resultado final)
-- Registro da campanha no banco
-- Imagem final no Storage
-- Estados mínimos do processo de geração (gerando, pronto, erro)
-- Página de campanha persistida (rota protegida)
-- Download do original
-- Lista simples em rota autenticada `/minhas-campanhas`
-
-> Fases serão definidas após alinhamento detalhado via opsx-explore.
-
-</details>
 
 ## Progress
 
@@ -79,8 +79,29 @@
 
 ---
 
-| 12. v1.3 — Pendente | v1.3 | — | ○ Escopo documentado | — |
+| 12. Fundação DB/Storage | v1.3 | 0/5 | ■ Planned | — |
 
 ---
 
-*Last updated: 2026-07-08 — v1.3 milestone scope documented*
+## Phase Details
+
+### Phase 12 — Fundação DB/Storage
+**Goal:** Criar a tabela `campaigns`, o bucket `campaign-images`, e as políticas de RLS e Storage — sem modificar o fluxo de geração existente.
+
+**Depends on:** Phases 7-11 (multi-tenant RLS consolidated, stores with user_id, `requireOwnership` established)
+
+**Requirement IDs:** REQ-CAMPAIGNS-DDL, REQ-ERROR-CHECK, REQ-TRIGGER-UPDATED-AT, REQ-RLS-CAMPAIGNS, REQ-INDEXES, REQ-BUCKET-CAMPAIGN-IMAGES, REQ-SELECT-POLICY, REQ-INSERT-POLICY, REQ-DELETE-POLICY, REQ-NO-UPDATE-POLICY, REQ-SMOKE-SQL, REQ-UAT-CHECKLIST
+
+**Plans (0/5):** — *Pending creation*
+
+**Non-Goals (deferred to later phases):**
+- persistence.ts service — Phase 13
+- GET /api/campaign/[id]/download — Phase 13  
+- generate-image modification — Phase 14
+- /campanha/[id] page — Phase 15
+- /minhas-campanhas page — Phase 16
+- Supabase gen types — optional in Phase 12
+
+---
+
+*Last updated: 2026-07-08 — Phase 12 defined via OpenSpec alinhamento*

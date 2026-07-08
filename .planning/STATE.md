@@ -18,22 +18,32 @@
 **Tests:** 465 passing (51 files)
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 
+## Planned
+
+### Phase 12 — Fundação DB/Storage
+
+| Plan | Status | Description |
+|------|--------|-------------|
+| 12-01 | ■ Planned | Migration 1 — campaigns table DDL |
+| 12-02 | ■ Planned | Migration 2 — campaign-images bucket + policies |
+| 12-03 | ■ Planned | Verify script |
+| 12-04 | ■ Planned | Smoke test & verification |
+| 12-05 | ■ Planned | Type check & build verification |
+
 ## Current Position
 
-**Status:** Escopo documentado — aguardando alinhamento detalhado via opsx-explore.
+**Status:** Phase 12 defined via OpenSpec change (fase-12-fundacao-db-storage). Planning artifacts generated. Awaiting review before execution.
 
 **Critério de conclusão da milestone:** O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la.
 
-**Escopo inicial documentado:**
-- Campanha como artefato imutável (briefing + resultado final)
-- Registro da campanha no banco
-- Imagem final no Storage
-- Estados mínimos do processo de geração (gerando, pronto, erro)
-- Página de campanha persistida (rota protegida)
-- Download do original
-- Lista simples em rota autenticada `/minhas-campanhas`
+**v1.3 phases identified:**
+- **[◆] Phase 12: Fundação DB/Storage** — campaigns table, campaign-images bucket, RLS/Storage policies
+- **[○] Phase 13: Serviço de Persistência** — persistence.ts, write/read helpers, signed URL
+- **[○] Phase 14: Integração no Fluxo de Geração** — salvar campanha pós-renderização
+- **[○] Phase 15: Página de Campanha** — /campanha/[id] com preview e download
+- **[○] Phase 16: Lista de Campanhas** — /minhas-campanhas com thumbnails
 
-**Próximo passo:** `/opsx-explore` para alinhamento detalhado da milestone.
+**Próximo passo:** Revisar planos da Fase 12 e autorizar implementação.
 
 ## Project Reference
 
