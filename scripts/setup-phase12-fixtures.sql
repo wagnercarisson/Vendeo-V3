@@ -77,24 +77,24 @@ WHERE email IN ('teste1@vendeo.test', 'teste2@vendeo.test')
 -- 2. CRIAR LOJAS
 -- ============================================================================
 
--- Loja A (do usuário 1)
+-- Loja A (do usuário 1) — padaria
 INSERT INTO public.stores (id, user_id, name, segment, subsegment)
 VALUES (
   '00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-00000000000a',
   'Loja Teste A - Padaria do Zé',
-  'alimentacao',
+  'padaria-confeitaria-doces',
   'padaria'
 )
 ON CONFLICT (id) DO NOTHING;
 
--- Loja B (do usuário 2)
+-- Loja B (do usuário 2) — boutí­que
 INSERT INTO public.stores (id, user_id, name, segment, subsegment)
 VALUES (
   '00000000-0000-0000-0000-000000000002',
   '00000000-0000-0000-0000-00000000000b',
   'Loja Teste B - Boutique da Maria',
-  'vestuario',
+  'moda-calcados-acessorios',
   'roupas-femininas'
 )
 ON CONFLICT (id) DO NOTHING;
