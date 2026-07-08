@@ -15,35 +15,29 @@
 | 10. Perímetro Multi-tenant | ✅ | 6/6 | RLS 5 tabelas, CSRF, guards ~20 handlers, 457 tests, Security 14/14 |
 | 11. Verificação e Hardening | ✅ | 1/1 | D8 Catalog 21/21 PASS, store-logos inventário (0 objetos) |
 
+### v1.3 — Persistência e Entrega da Campanha
+
+| Phase | Status | Plans | Description |
+|-------|--------|-------|-------------|
+| 12. Fundação DB/Storage | ✅ | 5/5 | campaigns table, campaign-images bucket, RLS/Storage policies, verify script |
+
 **Tests:** 465 passing (51 files)
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 
-## Planned
-
-### Phase 12 — Fundação DB/Storage
-
-| Plan | Status | Description |
-|------|--------|-------------|
-| 12-01 | ■ Planned | Migration 1 — campaigns table DDL |
-| 12-02 | ■ Planned | Migration 2 — campaign-images bucket + policies |
-| 12-03 | ■ Planned | Verify script |
-| 12-04 | ■ Planned | Smoke test & verification |
-| 12-05 | ■ Planned | Type check & build verification |
-
 ## Current Position
 
-**Status:** Phase 12 defined via OpenSpec change (fase-12-fundacao-db-storage). Planning artifacts generated. Awaiting review before execution.
+**Status:** Phase 12 executada — infraestrutura de banco e Storage criada, smoke tests 9/9 PASS, UAT manual 5/10 verificado (RLS, CHECK, trigger, isolation). Próximo passo: Phase 13 — Serviço de Persistência.
 
 **Critério de conclusão da milestone:** O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la.
 
 **v1.3 phases identified:**
-- **[◆] Phase 12: Fundação DB/Storage** — campaigns table, campaign-images bucket, RLS/Storage policies
+- **[✅] Phase 12: Fundação DB/Storage** — campaigns table, campaign-images bucket, RLS/Storage policies, verify script
 - **[○] Phase 13: Serviço de Persistência** — persistence.ts, write/read helpers, signed URL
 - **[○] Phase 14: Integração no Fluxo de Geração** — salvar campanha pós-renderização
 - **[○] Phase 15: Página de Campanha** — /campanha/[id] com preview e download
 - **[○] Phase 16: Lista de Campanhas** — /minhas-campanhas com thumbnails
 
-**Próximo passo:** Revisar planos da Fase 12 e autorizar implementação.
+**Próximo passo:** Planejar e executar Phase 13 — Serviço de Persistência.
 
 ## Project Reference
 

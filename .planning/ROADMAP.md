@@ -5,7 +5,7 @@
 - ✅ **v1.0 Core de Geração** — Phases 1-6 (shipped 2026-07-03)
 - ✅ **v1.1 Motor de Campanhas** — Phases 2-6 (shipped 2026-07-03)
 - ✅ **v1.2 Contas e Propriedade** — Phases 7-11 (shipped 2026-07-08)
-- 🔷 **v1.3 Persistência e Entrega da Campanha** — Fase 12 planejada, mais 4 fases a definir
+- 🔷 **v1.3 Persistência e Entrega da Campanha** — Fase 12 executada, mais 4 fases a definir
 
 ## Phases
 
@@ -15,7 +15,7 @@
 **Critério de conclusão:** O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la.
 
 **Escopo v1.3 (fases identificadas):**
-- [ ] Phase 12: Fundação DB/Storage (Planned) — tabela campaigns, bucket campaign-images, RLS e Storage policies
+- [x] Phase 12: Fundação DB/Storage (Complete) — tabela campaigns, bucket campaign-images, RLS e Storage policies, verify script
 - [ ] Phase 13: Serviço de Persistência — persistence.ts, write/read helpers, signed URL
 - [ ] Phase 14: Integração no Fluxo de Geração — salvar campanha pós-renderização
 - [ ] Phase 15: Página de Campanha — `/campanha/[id]` com preview e download
@@ -79,7 +79,7 @@
 
 ---
 
-| 12. Fundação DB/Storage | v1.3 | 0/5 | ■ Planned | — |
+| 12. Fundação DB/Storage | v1.3 | 5/5 | ✅ Complete | 2026-07-08 |
 
 ---
 
