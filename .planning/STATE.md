@@ -47,11 +47,11 @@
 |------|------|--------|-------------|
 | 14-01 | 1 | ○ | Image Processor + Publication Copy — sharp, transcodeToJpeg, buildPublicationCopySnapshot, types.ts |
 | 14-02 | 2 | ○ | Orquestração em generate-image — pipeline INSERT→IA→transcode→upload→updateReady |
-| 14-03 | 2 | ○ | Consumer no Cliente — navegação /campanha/[id], sessionStorage |
+| 14-03 | 3 | ○ | Consumer no Cliente — navegação /campanha/[id], sessionStorage |
 
 ## Current Position
 
-**Status:** Phase 14 planejada (3 planos, 2 waves). Próximo passo: Executar Plan 14-01.
+**Status:** Phase 14 planejada (3 planos, 3 waves). Próximo passo: Executar Plan 14-01 (Wave 1).
 
 **Critério de conclusão da milestone:** O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la.
 

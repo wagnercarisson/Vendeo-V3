@@ -139,9 +139,9 @@
 **Requirement IDs:** REQ-IMAGE-PROCESSOR, REQ-PUBLICATION-COPY, REQ-ORCHESTRATION, REQ-CONSUMER-NAVIGATION, REQ-TEST-PROCESSOR, REQ-TEST-INTEGRATION
 
 **Plans (3/3):**
-- [ ] 14-01 — Image Processor + Publication Copy: transcodeToJpeg (sharp), buildPublicationCopySnapshot, types.ts realignment, 6 processor tests
-- [ ] 14-02 — Orchestration in generate-image: persistence pipeline (INSERT→IA→transcode→upload→updateReady), NDJSON estendido, compensação, 6 integration tests
-- [ ] 14-03 — Consumer on Client: navegação para `/campanha/[id]`, remoção de campaign_preview, preservação de rascunho, tests
+- [ ] 14-01 (Wave 1) — Image Processor + Publication Copy: transcodeToJpeg (sharp), buildPublicationCopySnapshot, types.ts realignment, 6 processor tests
+- [ ] 14-02 (Wave 2) — Orchestration in generate-image: persistence pipeline (INSERT→IA→transcode→upload→updateReady), NDJSON estendido, compensação, 6 integration tests
+- [ ] 14-03 (Wave 3) — Consumer on Client: navegação para `/campanha/[id]`, remoção de campaign_preview, preservação de rascunho, tests
 
 **Non-Goals (deferred to later phases):**
 - Página `/campanha/[id]` — Phase 15
