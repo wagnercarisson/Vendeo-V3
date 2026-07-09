@@ -193,9 +193,9 @@ Modificar o fluxo de geração (`generate-image`) para salvar a campanha pós-re
 
 ---
 
-## Phase 15 — Página de Campanha
+## Phase 15 — Página de Campanha ✓
 
-**Status:** `Planned` ○
+**Status:** `Complete` ✓
 **Slug:** `fase-15-pagina-campanha`
 **Change:** `openspec/changes/fase-15-pagina-de-campanha/`
 **Plans:** `.planning/phases/15-pagina-de-campanha/15-01-PLAN.md` — `15-03-PLAN.md`
@@ -208,9 +208,12 @@ Página `/campanha/[id]` com preview e download da campanha persistida. Server C
 **Planos:**
 | Plan | Wave | Status | Descrição |
 |------|------|--------|-----------|
-| 15-01 | 1 | ○ | Data/Display Contract — display.ts com getCampaignForDisplay, generateSignedPreviewUrl, computeDisplayStatus |
-| 15-02 | 2 | ○ | UI `/campanha/[id]` — page.tsx + client.tsx com 4 estados + middleware matcher |
-| 15-03 | 2 | ○ | Testes e Verificação — page states, middleware, typecheck/lint/build |
+| 15-01 | 1 | ✓ | Data/Display Contract — display.ts com getCampaignForDisplay, generateSignedPreviewUrl, computeDisplayStatus |
+| 15-02 | 2 | ✓ | UI `/campanha/[id]` — page.tsx + client.tsx com 4 estados + middleware matcher |
+| 15-03 | 2 | ✓ | Testes e Verificação — page states, middleware, typecheck/lint/build |
+
+**Tests:** 524 passing (60 files, 19 novos)
+**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 
 ---
 

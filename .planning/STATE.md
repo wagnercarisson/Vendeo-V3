@@ -22,22 +22,23 @@
 | 12. Fundação DB/Storage | ✅ | 5/5 | campaigns table, campaign-images bucket, RLS/Storage policies, verify script |
 | 13. Serviço de Persistência | ✅ | 3/3 | types.ts, persistence.ts (7 helpers), download route, 25 testes |
 | 14. Integração no Fluxo de Geração | ✅ | 3/3 | image-processor.ts, orchestration generate-image, consumer navigation |
+| 15. Página de Campanha | ✅ | 3/3 | display.ts (RLS), /campanha/[id], 4 estados visuais, middleware |
 
-**Tests:** 505 passing (56 files)
+**Tests:** 524 passing (60 files)
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 
-## Planned
+## Completed
 
-### Phase 15 — Página de Campanha ◌
+### Phase 15 — Página de Campanha ✅
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
-| 15-01 | 1 | ○ | Data/Display Contract — display.ts (getCampaignForDisplay, generateSignedPreviewUrl, computeDisplayStatus) |
-| 15-02 | 2 | ○ | UI `/campanha/[id]` — page.tsx + client.tsx (4 estados) + middleware |
-| 15-03 | 2 | ○ | Tests & Verification — display, page states, middleware matcher, build |
+| 15-01 | 1 | ✅ | Data/Display Contract — display.ts (getCampaignForDisplay, generateSignedPreviewUrl, computeDisplayStatus, CampaignPageProps) |
+| 15-02 | 2 | ✅ | UI `/campanha/[id]` — page.tsx + client.tsx (4 estados) + middleware |
+| 15-03 | 2 | ✅ | Tests & Verification — 19 novos testes, typecheck/lint/build |
 
-**Context:** `.planning/phases/15-pagina-de-campanha/15-CONTEXT.md`
-**Source:** `openspec/changes/fase-15-pagina-de-campanha/`
+**Tests:** 524 passing (60 files, 19 novos)
+**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 
 ## Completed
 
@@ -62,15 +63,15 @@
 
 ## Current Position
 
-**Status:** Phase 14 concluída (3/3 planos executados). Fase 15 planejada (3/3 planos criados).
+**Status:** Fases 12-15 concluídas (14/14 planos executados). Milestone v1.3 em 4/5 fases.
 
-**Critério de conclusão da milestone:** O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la. (Fases 15-16 pendentes)
+**Critério de conclusão da milestone:** O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la. (Fase 16 pendente — listagem de campanhas)
 
 **v1.3 phases identified:**
 - **[✅] Phase 12: Fundação DB/Storage** — campaigns table, campaign-images bucket, RLS/Storage policies, verify script
 - **[✅] Phase 13: Serviço de Persistência** — types.ts, persistence.ts, download route, 25 testes
 - **[✅] Phase 14: Integração no Fluxo de Geração** — sharp, transcodeToJpeg, persistência, consumer navigation
-- **[◌] Phase 15: Página de Campanha** — /campanha/[id] com preview e download (Planned — 3 planos)
+- **[✅] Phase 15: Página de Campanha** — /campanha/[id] com preview e download (3/3 planos)
 - **[○] Phase 16: Lista de Campanhas** — /minhas-campanhas com thumbnails
 
 ## Project Reference
@@ -79,4 +80,4 @@ See: `.planning/PROJECT.md` (updated 2026-07-08)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** v1.3 — Fase 15 (Página de Campanha) — planos prontos para execução
+**Current focus:** v1.3 — 4/5 fases concluídas. Próximo: Fase 16 (Lista de Campanhas)
