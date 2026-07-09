@@ -60,7 +60,7 @@ O handler usa `provider.name` da mesma instância do provider criada para `Image
 
 Validação de input e detecção de conflito (via `InputValidationService`) ocorrem antes do INSERT. Não queremos persistir tentativas inválidas.
 
-### D9 — `generation_metadata no JSONB usa camelCase
+### D9 — `generation_metadata` no JSONB usa camelCase
 
 Consistente com a interface `GenerationMetadata` em `types.ts` (durationMs, generatedAt). O JSONB armazena como blob — snake_case vs camelCase é irrelevante para o banco.
 
