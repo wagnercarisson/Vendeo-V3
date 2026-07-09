@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
+vi.mock("server-only", () => ({}));
+
 vi.mock('@/lib/supabase/server', () => ({
   supabaseAdmin: {
     from: vi.fn(() => ({
@@ -13,15 +15,30 @@ vi.mock('@/lib/supabase/server', () => ({
   },
 }));
 
-vi.mock('@/lib/actions/store', () => ({
+vi.mock('@/lib/store-identity-service', () => ({
   resolveStoreIdentity: vi.fn(),
   validateIdentityReference: vi.fn(),
   buildCampaignBrief: vi.fn(),
 }));
 
+vi.mock('@/lib/campaign/persistence', () => ({
+  createCampaign: vi.fn(),
+  dataUrlToCampaignImage: vi.fn(),
+  uploadCampaignImage: vi.fn(),
+  updateCampaignReady: vi.fn(),
+  updateCampaignError: vi.fn(),
+  deleteCampaignImage: vi.fn(),
+}));
+
+vi.mock('@/lib/campaign/image-processor', () => ({
+  transcodeToJpeg: vi.fn(),
+  buildPublicationCopySnapshot: vi.fn(),
+}));
+
 vi.mock('@/lib/image-generation/config', () => ({
   IMAGE_GENERATION_GLOBAL_TIMEOUT_MS: 300000,
   MAX_PRODUCT_IMAGE_BASE64_SIZE: 5 * 1024 * 1024,
+  IMAGE_GENERATION_RESPONSES_MODEL: 'test-model',
 }));
 
 vi.mock('@/lib/image-generation/services/image-generation-service', () => ({
