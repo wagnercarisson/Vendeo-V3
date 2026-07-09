@@ -10,7 +10,7 @@ export interface CampaignRecord {
   generation_metadata: Record<string, unknown> | null;
   render_snapshot: Record<string, unknown> | null;
   publication_copy_snapshot: Record<string, unknown> | null;
-  storage_path: string | null;
+  storage_path: string;
   error_message: string | null;
   created_at: string;
   updated_at: string;
