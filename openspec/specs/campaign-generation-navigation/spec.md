@@ -1,32 +1,27 @@
 > **Purpose**: This spec defines the navigation flow and payload lifecycle from campaign generation to preview, including sessionStorage management and object URL lifecycle.
+>
+> Updated by `fase-14-integracao-fluxo-geracao` — post-generation navigation now uses `/campanha/[id]` and reads from database instead of sessionStorage.
 
 ## Requirements
 
-### Requirement: Preview payload stored in sessionStorage on successful generation
+### Requirement: Remove sessionStorage as post-generation source of truth
 
-On successful campaign generation, the system SHALL compose a `PreviewPayload` and store it in sessionStorage before navigating to `/campaign/preview`. The payload SHALL contain:
+> Modified by `fase-14-integracao-fluxo-geracao` — replaces previous behavior of storing preview payload in sessionStorage.
 
-```typescript
-interface PreviewPayload {
-  campaignSpec: CampaignSpec;
-  storeIdentity: StoreIdentitySnapshot;
-  productImageUrl: string | null;
-  generatedAt: string;
-}
-```
+O sistema SHALL remover o uso de `sessionStorage` como fonte de verdade pós-geração. Especificamente:
+- O `campaign_preview` key SHALL NOT ser escrito no `sessionStorage` após geração bem-sucedida
+- O `campaign_draft_image` SHALL permanecer em `sessionStorage` (rascunho do formulário, mantido)
+- O `useInputPreservation` SHALL permanecer em `sessionStorage` (rascunho dos campos de texto, mantido)
 
-The `productImageUrl` SHALL be the existing client-side object URL from `URL.createObjectURL`. No file, blob, or base64 data SHALL be stored in sessionStorage.
+#### Scenario: No sessionStorage write on success
 
-#### Scenario: Payload stored after successful generation
+- **WHEN** a geração é bem-sucedida e o NDJSON final é recebido
+- **THEN** o `sessionStorage` NÃO contém a key `campaign_preview`
 
-- **WHEN** the API returns a successful `CampaignSpec`
-- **THEN** the system SHALL compose a `PreviewPayload` with the spec, store identity, product image URL, and current timestamp
-- **AND** store it in sessionStorage
+#### Scenario: Draft data preserved in sessionStorage
 
-#### Scenario: Payload cleared on new campaign
-
-- **WHEN** the user starts a new campaign from the campaign input
-- **THEN** the existing preview payload SHALL be removed from sessionStorage
+- **WHEN** o usuário navega para gerar uma campanha
+- **THEN** as keys `campaign_draft_image` e `useInputPreservation` permanecem no `sessionStorage`
 
 ### Requirement: Object URL lifecycle management
 
@@ -36,6 +31,8 @@ The object URL created via `URL.createObjectURL` for the product image SHALL NOT
 - Navigating back through an application-controlled preview exit action
 
 On tab close or full page reload, the browser document cleanup is sufficient — no explicit revocation logic is required for those cases.
+
+After F14, the object URL lifecycle is restricted to form draft management — the object URL SHALL remain valid while the form draft exists in `campaign_draft_image` and SHALL NOT be revoked by the navigation flow.
 
 #### Scenario: Object URL persists during navigation to preview
 
@@ -48,12 +45,21 @@ On tab close or full page reload, the browser document cleanup is sufficient —
 - **WHEN** the user starts a new campaign
 - **THEN** the previous object URL SHALL be revoked via `URL.revokeObjectURL`
 
-### Requirement: Navigation to preview route
+### Requirement: Navigate to campaign URL after generation
 
-After storing the payload in sessionStorage, the system SHALL navigate the user to `/campaign/preview` using client-side navigation (`next/navigation` `router.push`).
+> Modified by `fase-14-integracao-fluxo-geracao` — replaces previous navigation to `/campaign/preview`.
 
-#### Scenario: Navigates to preview after generation
+O sistema SHALL substituir a navegação para `/campaign/preview` pela navegação para `/campanha/${campaignId}`.
 
-- **WHEN** the preview payload is successfully stored in sessionStorage
-- **THEN** the system SHALL navigate to `/campaign/preview`
-- **AND** the current tab SHALL remain active (no new tab or window)
+Após receber `{ type: "result", campaignId, campaignUrl }` no NDJSON, o sistema SHALL navegar para `campaignUrl` usando client-side navigation (`next/navigation` `router.push`).
+
+#### Scenario: Navigate to campaign page after generation
+
+- **WHEN** o NDJSON final emite `{ type: "result", campaignId, campaignUrl }`
+- **THEN** o sistema navega para a URL fornecida via `router.push`
+- **AND** a navegação anterior para `/campaign/preview` NÃO ocorre
+
+#### Scenario: Object URL lifecycle restricted to form draft
+
+- **WHEN** a geração é concluída
+- **THEN** o object URL da imagem do produto NÃO é revogado pelo fluxo de navegação (permanece gerenciado pelo rascunho do formulário via `campaign_draft_image`)

@@ -74,12 +74,27 @@ O sistema SHALL definir o shape mínimo de `render_snapshot` com campos: `format
 
 ### Requirement: Publication copy snapshot shape v1
 
-O sistema SHALL definir o shape mínimo de `publication_copy_snapshot` com campos: `title (string)`, `subtitle? (string)`, `hook (string)`, `cta (string)`, `badgeText (string)`, `priceDisplay (string)`.
+> Updated by `fase-14-integracao-fluxo-geracao` — shape realinhado para o kit de publicação da milestone v1.3.
 
-#### Scenario: Publication copy snapshot has all required fields
+O sistema SHALL definir o shape de `publication_copy_snapshot` com campos: `caption (string)`, `hashtags (string[])`, `cta_post (string)`.
 
-- **WHEN** `publication_copy_snapshot` é populado
-- **THEN** contém `title`, `hook`, `cta`, `badgeText`, e `priceDisplay`
+Os campos anteriores (`title`, `subtitle`, `hook`, `cta`, `badgeText`, `priceDisplay`) foram removidos.
+
+#### Scenario: Publication copy snapshot new shape
+
+- **WHEN** `publication_copy_snapshot` é populado após a F14
+- **THEN** contém `caption`, `hashtags` (array de strings), e `cta_post`
+- **AND** NÃO contém `title`, `subtitle`, `hook`, `cta`, `badgeText`, ou `priceDisplay`
+
+### Requirement: CampaignReadyData remains compatible
+
+O sistema SHALL manter `CampaignReadyData` com `publicationCopySnapshot: Record<string, unknown>`. A mudança no shape de `PublicationCopySnapshot` NÃO SHALL quebrar o contrato de `CampaignReadyData`, pois os snapshots usam `Record<string, unknown>` na interface geral. A interface específica `PublicationCopySnapshot` serve como guia de tipo para o builder (`buildPublicationCopySnapshot`) e para consumo futuro.
+
+#### Scenario: CampaignReadyData ignores concrete shape
+
+- **WHEN** `updateCampaignReady` é chamado com `publicationCopySnapshot` no novo shape
+- **THEN** `CampaignReadyData` aceita o objeto sem erro de tipo
+- **AND** a interface `PublicationCopySnapshot` atualizada não afeta o contrato de `CampaignReadyData`
 
 ### Requirement: Generation metadata shape v1
 
