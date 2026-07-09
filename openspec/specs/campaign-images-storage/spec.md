@@ -1,10 +1,11 @@
 # Campaign Images Storage
 
 > Synced from `fase-12-fundacao-db-storage` (ADDED).
+> Synced from `fase-13-servico-persistencia-download` (ADDED).
 
 ## Purpose
 
-Bucket Supabase Storage privado `campaign-images` com limites de tamanho e MIME, e 3 políticas de acesso (sem UPDATE por imutabilidade).
+Bucket Supabase Storage privado `campaign-images` com limites de tamanho e MIME, 3 políticas de acesso (sem UPDATE por imutabilidade), upload via service_role com `upsert: false`, signed URL generation para download.
 
 ## Requirements
 
@@ -90,3 +91,40 @@ O sistema SHALL permitir leitura via signed URL gerada por service_role. A URL p
 
 - **WHEN** uma requisição GET é feita para `{supabaseUrl}/storage/v1/object/public/campaign-images/{path}`
 - **THEN** a requisição retorna 404/403
+
+### Requirement: Upload com upsert false
+
+O sistema SHALL fazer upload para `campaign-images` com `upsert: false`. Se o objeto já existir no path, o upload falha (conflito).
+
+#### Scenario: Upload com upsert false falha se path existe
+
+- **WHEN** `supabaseAdmin.storage.from('campaign-images').upload(path, buffer, { upsert: false })` é chamado
+- **AND** o path já existe
+- **THEN** o upload falha com erro de conflito
+
+### Requirement: Upload com contentType image/jpeg
+
+O sistema SHALL fazer upload com `contentType: 'image/jpeg'`. O formato canônico de entrega é JPEG.
+
+#### Scenario: Upload usa contentType image/jpeg
+
+- **WHEN** `uploadCampaignImage` é chamado
+- **THEN** o upload usa `contentType: 'image/jpeg'`
+
+### Requirement: Path canônico .jpg
+
+O sistema SHALL usar path pattern `{storeId}/{campaignId}.jpg` (extensão .jpg) para todos os uploads em `campaign-images`.
+
+#### Scenario: Path termina em .jpg
+
+- **WHEN** `uploadCampaignImage` é chamado com storeId e campaignId
+- **THEN** o path é `{storeId}/{campaignId}.jpg`
+
+### Requirement: Signed URL com expiração de 1 hora
+
+O sistema SHALL gerar signed URLs com expiração de 3600 segundos (1 hora) para download de campanhas.
+
+#### Scenario: Signed URL tem TTL de 3600s
+
+- **WHEN** `createSignedUrl(storagePath, 3600)` é chamado
+- **THEN** a URL expira após 3600 segundos

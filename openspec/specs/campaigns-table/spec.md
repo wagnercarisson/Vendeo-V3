@@ -1,10 +1,11 @@
 # Campaigns Table
 
 > Synced from `fase-12-fundacao-db-storage` (ADDED).
+> Synced from `fase-13-servico-persistencia-download` (ADDED).
 
 ## Purpose
 
-DDL da tabela `public.campaigns` com constraints, trigger scoped de `updated_at`, RLS com policy de owner subquery, índices e GRANT SELECT TO authenticated.
+DDL da tabela `public.campaigns` com constraints, trigger scoped de `updated_at`, RLS com policy de owner subquery, índices, GRANT SELECT TO authenticated, e operações de INSERT/UPDATE/SELECT via `supabaseAdmin`.
 
 ## Requirements
 
@@ -89,3 +90,30 @@ O sistema SHALL criar índices para performance:
 
 - **WHEN** migration é executada
 - **THEN** ambos os índices existem em `public.campaigns`
+
+### Requirement: INSERT via supabaseAdmin (service_role)
+
+O sistema SHALL usar `supabaseAdmin` para INSERT em `campaigns` — operação não exposta a clientes. O INSERT é feito via `supabaseAdmin.from('campaigns').insert()` (service_role), bypassando RLS.
+
+#### Scenario: supabaseAdmin insert cria registro
+
+- **WHEN** `supabaseAdmin.from('campaigns').insert()` é chamado
+- **THEN** o registro é criado independentemente de RLS
+
+### Requirement: UPDATE via supabaseAdmin (service_role)
+
+O sistema SHALL usar `supabaseAdmin` para UPDATE em `campaigns` — operação não exposta a clientes. O UPDATE é feito via `supabaseAdmin.from('campaigns').update().eq('id', campaignId)` (service_role), bypassando RLS.
+
+#### Scenario: supabaseAdmin update altera registro
+
+- **WHEN** `supabaseAdmin.from('campaigns').update().eq('id', campaignId)` é chamado
+- **THEN** o registro é alterado independentemente de RLS
+
+### Requirement: SELECT via supabaseAdmin (service_role)
+
+O sistema SHALL usar `supabaseAdmin` para SELECT em `campaigns` nas rotas de backend, permitindo buscar qualquer campanha por ID sem restrição de RLS (a restrição de tenant é feita em app layer via `requireOwnership`).
+
+#### Scenario: supabaseAdmin select retorna qualquer campanha
+
+- **WHEN** `supabaseAdmin.from('campaigns').select().eq('id', id).maybeSingle()` é chamado
+- **THEN** retorna a campanha independentemente de qual loja ela pertence
