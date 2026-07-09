@@ -82,6 +82,7 @@ export const config = {
     "/auth/confirm",
     "/store/:path*",
     "/campaign/:path*",
+    "/campanha/:path*",
     "/api/:path*",
   ],
 };
