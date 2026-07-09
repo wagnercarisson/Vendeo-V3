@@ -1,6 +1,6 @@
 # Project State
 
-**Last updated:** 2026-07-08
+**Last updated:** 2026-07-09
 **Milestone:** v1.3 — Persistência e Entrega da Campanha 🔷 PLANNING
 
 ## Completed
@@ -24,20 +24,32 @@
 **Tests:** 465 passing (51 files)
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 
+## In Progress
+
+### Phase 13 — Serviço de Persistência e Download
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 13-01 | 1 | ○ | Types & Persistence Service — types.ts, persistence.ts (7 helpers) |
+| 13-02 | 1 | ○ | Download Route — GET /api/campaign/[id]/download |
+| 13-03 | 2 | ○ | Tests — 19+6 cenários |
+
+**Fonte:** `openspec/changes/fase-13-servico-persistencia-download/`
+
 ## Current Position
 
-**Status:** Phase 12 executada — infraestrutura de banco e Storage criada, smoke tests 9/9 PASS, UAT manual 5/10 verificado (RLS, CHECK, trigger, isolation). Próximo passo: Phase 13 — Serviço de Persistência.
+**Status:** Phase 13 planejada — aguardando revisão dos artefatos antes da implementação.
 
 **Critério de conclusão da milestone:** O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la.
 
 **v1.3 phases identified:**
 - **[✅] Phase 12: Fundação DB/Storage** — campaigns table, campaign-images bucket, RLS/Storage policies, verify script
-- **[○] Phase 13: Serviço de Persistência** — persistence.ts, write/read helpers, signed URL
+- **[🔷] Phase 13: Serviço de Persistência** — types.ts, persistence.ts, download route, 22+ testes
 - **[○] Phase 14: Integração no Fluxo de Geração** — salvar campanha pós-renderização
 - **[○] Phase 15: Página de Campanha** — /campanha/[id] com preview e download
 - **[○] Phase 16: Lista de Campanhas** — /minhas-campanhas com thumbnails
 
-**Próximo passo:** Planejar e executar Phase 13 — Serviço de Persistência.
+**Próximo passo:** Revisar artefatos da Phase 13 (CONTEXT.md + PLAN.md) antes de executar.
 
 ## Project Reference
 
