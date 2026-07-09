@@ -5,7 +5,7 @@
 - ✅ **v1.0 Core de Geração** — Phases 1-6 (shipped 2026-07-03)
 - ✅ **v1.1 Motor de Campanhas** — Phases 2-6 (shipped 2026-07-03)
 - ✅ **v1.2 Contas e Propriedade** — Phases 7-11 (shipped 2026-07-08)
-- 🔷 **v1.3 Persistência e Entrega da Campanha** — Fase 12 executada, mais 4 fases a definir
+- 🔷 **v1.3 Persistência e Entrega da Campanha** — Fases 12-13 executadas (2/5), 3 fases restantes
 
 ## Phases
 
@@ -16,7 +16,7 @@
 
 **Escopo v1.3 (fases identificadas):**
 - [x] Phase 12: Fundação DB/Storage (Complete) — tabela campaigns, bucket campaign-images, RLS e Storage policies, verify script
-- [ ] Phase 13: Serviço de Persistência — persistence.ts, write/read helpers, signed URL
+- [x] Phase 13: Serviço de Persistência (Complete) — persistence.ts, 7 helpers, signed URL, 25 testes
 - [ ] Phase 14: Integração no Fluxo de Geração — salvar campanha pós-renderização
 - [ ] Phase 15: Página de Campanha — `/campanha/[id]` com preview e download
 - [ ] Phase 16: Lista de Campanhas — `/minhas-campanhas` com thumbnails e estado vazio
@@ -83,6 +83,10 @@
 
 ---
 
+| 13. Serviço de Persistência e Download | v1.3 | 3/3 | ✅ Complete | 2026-07-09 |
+
+---
+
 ## Phase Details
 
 ### Phase 12 — Fundação DB/Storage
@@ -104,4 +108,24 @@
 
 ---
 
-*Last updated: 2026-07-08 — Phase 12 defined via OpenSpec alinhamento*
+### Phase 13 — Serviço de Persistência e Download
+**Goal:** Criar camada de persistência isolada para campanhas: tipos, serviço de 7 helpers, rota de download.
+
+**Depends on:** Phase 12 (campaigns table, campaign-images bucket, RLS/Storage policies)
+
+**Requirement IDs:** REQ-CAMPAIGN-TYPES, REQ-CREATE-CAMPAIGN, REQ-DATAURL-TO-IMAGE, REQ-UPLOAD-CAMPAIGN-IMAGE, REQ-UPDATE-READY, REQ-UPDATE-ERROR, REQ-GET-CAMPAIGN, REQ-DELETE-CAMPAIGN-IMAGE, REQ-DOWNLOAD-ROUTE, REQ-DOWNLOAD-GUARDS, REQ-TEST-PERSISTENCE, REQ-TEST-DOWNLOAD
+
+**Plans (3/3):**
+- [x] 13-01 — Types & Persistence Service: `types.ts` + `persistence.ts` (7 helpers)
+- [x] 13-02 — Download Route: `GET /api/campaign/[id]/download` (guard pipeline)
+- [x] 13-03 — Tests: 19 persistence + 6 download route scenarios
+
+**Non-Goals (deferred to later phases):**
+- Modificação do fluxo `generate-image` — Phase 14
+- Página `/campanha/[id]` — Phase 15
+- Página `/minhas-campanhas` — Phase 16
+- Transcoddificação PNG/WEBP → JPEG — Phase 14
+
+---
+
+*Last updated: 2026-07-09 — Phase 13 complete, 3/3 plans executed*
