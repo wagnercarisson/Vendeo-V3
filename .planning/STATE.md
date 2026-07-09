@@ -26,6 +26,19 @@
 **Tests:** 505 passing (56 files)
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 
+## Planned
+
+### Phase 15 — Página de Campanha ◌
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 15-01 | 1 | ○ | Data/Display Contract — display.ts (getCampaignForDisplay, generateSignedPreviewUrl, computeDisplayStatus) |
+| 15-02 | 2 | ○ | UI `/campanha/[id]` — page.tsx + client.tsx (4 estados) + middleware |
+| 15-03 | 2 | ○ | Tests & Verification — display, page states, middleware matcher, build |
+
+**Context:** `.planning/phases/15-pagina-de-campanha/15-CONTEXT.md`
+**Source:** `openspec/changes/fase-15-pagina-de-campanha/`
+
 ## Completed
 
 ### Phase 13 — Serviço de Persistência e Download ✅
@@ -49,7 +62,7 @@
 
 ## Current Position
 
-**Status:** Phase 14 concluída (3/3 planos executados). Próximo passo: Fase 15 (Página de Campanha).
+**Status:** Phase 14 concluída (3/3 planos executados). Fase 15 planejada (3/3 planos criados).
 
 **Critério de conclusão da milestone:** O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la. (Fases 15-16 pendentes)
 
@@ -57,7 +70,7 @@
 - **[✅] Phase 12: Fundação DB/Storage** — campaigns table, campaign-images bucket, RLS/Storage policies, verify script
 - **[✅] Phase 13: Serviço de Persistência** — types.ts, persistence.ts, download route, 25 testes
 - **[✅] Phase 14: Integração no Fluxo de Geração** — sharp, transcodeToJpeg, persistência, consumer navigation
-- **[○] Phase 15: Página de Campanha** — /campanha/[id] com preview e download
+- **[◌] Phase 15: Página de Campanha** — /campanha/[id] com preview e download (Planned — 3 planos)
 - **[○] Phase 16: Lista de Campanhas** — /minhas-campanhas com thumbnails
 
 ## Project Reference
@@ -66,4 +79,4 @@ See: `.planning/PROJECT.md` (updated 2026-07-08)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** v1.3 — Fase 15 (Página de Campanha) — pendente
+**Current focus:** v1.3 — Fase 15 (Página de Campanha) — planos prontos para execução
