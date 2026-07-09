@@ -12,12 +12,12 @@
 <details>
 <summary>🔷 v1.3 Persistência e Entrega da Campanha — Planejamento em andamento</summary>
 
-**Critério de conclusão:** O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la.
+**Critério de conclusão da milestone:** O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la.
 
 **Escopo v1.3 (fases identificadas):**
 - [x] Phase 12: Fundação DB/Storage (Complete) — tabela campaigns, bucket campaign-images, RLS e Storage policies, verify script
 - [x] Phase 13: Serviço de Persistência (Complete) — persistence.ts, 7 helpers, signed URL, 25 testes
-- [ ] Phase 14: Integração no Fluxo de Geração — salvar campanha pós-renderização
+- [ ] Phase 14: Integração no Fluxo de Geração (3 plans criados) — salvar campanha pós-renderização
 - [ ] Phase 15: Página de Campanha — `/campanha/[id]` com preview e download
 - [ ] Phase 16: Lista de Campanhas — `/minhas-campanhas` com thumbnails e estado vazio
 
@@ -85,6 +85,8 @@
 
 | 13. Serviço de Persistência e Download | v1.3 | 3/3 | ✅ Complete | 2026-07-09 |
 
+| 14. Integração no Fluxo de Geração | v1.3 | 3/3 | 🔶 Planned | 2026-07-09 |
+
 ---
 
 ## Phase Details
@@ -128,4 +130,28 @@
 
 ---
 
-*Last updated: 2026-07-09 — Phase 13 complete, 3/3 plans executed*
+### Phase 14 — Integração no Fluxo de Geração
+
+**Goal:** Conectar o fluxo de geração (generate-image) aos serviços de persistência da F13, fazendo com que cada campanha seja registrada no banco e no Storage imediatamente durante a geração. O consumer no cliente navega para `/campanha/[id]` em vez de `/campaign/preview`.
+
+**Depends on:** Phase 13 (types.ts, persistence.ts, download route)
+
+**Requirement IDs:** REQ-IMAGE-PROCESSOR, REQ-PUBLICATION-COPY, REQ-ORCHESTRATION, REQ-CONSUMER-NAVIGATION, REQ-TEST-PROCESSOR, REQ-TEST-INTEGRATION
+
+**Plans (3/3):**
+- [ ] 14-01 — Image Processor + Publication Copy: transcodeToJpeg (sharp), buildPublicationCopySnapshot, types.ts realignment, 6 processor tests
+- [ ] 14-02 — Orchestration in generate-image: persistence pipeline (INSERT→IA→transcode→upload→updateReady), NDJSON estendido, compensação, 6 integration tests
+- [ ] 14-03 — Consumer on Client: navegação para `/campanha/[id]`, remoção de campaign_preview, preservação de rascunho, tests
+
+**Non-Goals (deferred to later phases):**
+- Página `/campanha/[id]` — Phase 15
+- Página `/minhas-campanhas` + limpeza — Phase 16
+- Edição publication copy — pós-v1.3
+- Remoção física de `/campaign/preview` — Phase 15
+- Fallback de signed URL via blob proxy — documentado na F13, não implementado
+- Cleanup de `generating` stale — futuro
+- Geração de tipos com `supabase gen types` — pós-F14
+
+---
+
+*Last updated: 2026-07-09 — Phase 14 plans created (14-01, 14-02, 14-03)*
