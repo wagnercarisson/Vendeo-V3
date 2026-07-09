@@ -74,12 +74,9 @@ export interface RenderSnapshot {
 }
 
 export interface PublicationCopySnapshot {
-  title: string;
-  subtitle?: string;
-  hook: string;
-  cta: string;
-  badgeText: string;
-  priceDisplay: string;
+  caption: string;
+  hashtags: string[];
+  cta_post: string;
 }
 
 export interface GenerationMetadata {
