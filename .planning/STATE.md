@@ -21,9 +21,9 @@
 |-------|--------|-------|-------------|
 | 12. Fundação DB/Storage | ✅ | 5/5 | campaigns table, campaign-images bucket, RLS/Storage policies, verify script |
 | 13. Serviço de Persistência | ✅ | 3/3 | types.ts, persistence.ts (7 helpers), download route, 25 testes |
-| 14. Integração no Fluxo de Geração | 🔶 | 3/3 | image-processor.ts, orchestration generate-image, consumer navigation |
+| 14. Integração no Fluxo de Geração | ✅ | 3/3 | image-processor.ts, orchestration generate-image, consumer navigation |
 
-**Tests:** 490 passing (53 files)
+**Tests:** 505 passing (56 files)
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 
 ## Completed
@@ -39,26 +39,24 @@
 **Tests:** 490 passing (53 files)
 **TypeScript:** Clean | **Lint:** Clean
 
-## In Progress
-
-### Phase 14 — Integração no Fluxo de Geração 🔶
+### Phase 14 — Integração no Fluxo de Geração ✅
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
-| 14-01 | 1 | ○ | Image Processor + Publication Copy — sharp, transcodeToJpeg, buildPublicationCopySnapshot, types.ts |
-| 14-02 | 2 | ○ | Orquestração em generate-image — pipeline INSERT→IA→transcode→upload→updateReady |
-| 14-03 | 3 | ○ | Consumer no Cliente — navegação /campanha/[id], sessionStorage |
+| 14-01 | 1 | ✅ | Image Processor + Publication Copy — sharp, transcodeToJpeg, buildPublicationCopySnapshot, types.ts realinhado |
+| 14-02 | 2 | ✅ | Orquestração em generate-image — pipeline INSERT→IA→transcode→upload→updateReady com compensação |
+| 14-03 | 3 | ✅ | Consumer no Cliente — navegação /campanha/[id], sessionStorage campaign_preview removido |
 
 ## Current Position
 
-**Status:** Phase 14 planejada (3 planos, 3 waves). Próximo passo: Executar Plan 14-01 (Wave 1).
+**Status:** Phase 14 concluída (3/3 planos executados). Próximo passo: Fase 15 (Página de Campanha).
 
-**Critério de conclusão da milestone:** O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la.
+**Critério de conclusão da milestone:** O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la. (Fases 15-16 pendentes)
 
 **v1.3 phases identified:**
 - **[✅] Phase 12: Fundação DB/Storage** — campaigns table, campaign-images bucket, RLS/Storage policies, verify script
 - **[✅] Phase 13: Serviço de Persistência** — types.ts, persistence.ts, download route, 25 testes
-- **[🔶] Phase 14: Integração no Fluxo de Geração** — 3/3 plans criados, aguardando execução
+- **[✅] Phase 14: Integração no Fluxo de Geração** — sharp, transcodeToJpeg, persistência, consumer navigation
 - **[○] Phase 15: Página de Campanha** — /campanha/[id] com preview e download
 - **[○] Phase 16: Lista de Campanhas** — /minhas-campanhas com thumbnails
 
@@ -68,4 +66,4 @@ See: `.planning/PROJECT.md` (updated 2026-07-08)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** v1.3 — Phase 14 (Integração no Fluxo de Geração) — 3/3 plans prontos para execução
+**Current focus:** v1.3 — Fase 15 (Página de Campanha) — pendente

@@ -5,19 +5,19 @@
 - ✅ **v1.0 Core de Geração** — Phases 1-6 (shipped 2026-07-03)
 - ✅ **v1.1 Motor de Campanhas** — Phases 2-6 (shipped 2026-07-03)
 - ✅ **v1.2 Contas e Propriedade** — Phases 7-11 (shipped 2026-07-08)
-- 🔷 **v1.3 Persistência e Entrega da Campanha** — Fases 12-13 executadas (2/5), 3 fases restantes
+- 🔷 **v1.3 Persistência e Entrega da Campanha** — Fases 12-14 executadas (3/5), 2 fases restantes
 
 ## Phases
 
 <details>
-<summary>🔷 v1.3 Persistência e Entrega da Campanha — Planejamento em andamento</summary>
+<summary>🔷 v1.3 Persistência e Entrega da Campanha — 3/5 fases concluídas</summary>
 
 **Critério de conclusão da milestone:** O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la.
 
 **Escopo v1.3 (fases identificadas):**
 - [x] Phase 12: Fundação DB/Storage (Complete) — tabela campaigns, bucket campaign-images, RLS e Storage policies, verify script
 - [x] Phase 13: Serviço de Persistência (Complete) — persistence.ts, 7 helpers, signed URL, 25 testes
-- [ ] Phase 14: Integração no Fluxo de Geração (3 plans criados) — salvar campanha pós-renderização
+- [x] Phase 14: Integração no Fluxo de Geração (Complete) — sharp, transcodeToJpeg, persistência, consumer navigation
 - [ ] Phase 15: Página de Campanha — `/campanha/[id]` com preview e download
 - [ ] Phase 16: Lista de Campanhas — `/minhas-campanhas` com thumbnails e estado vazio
 
@@ -85,7 +85,7 @@
 
 | 13. Serviço de Persistência e Download | v1.3 | 3/3 | ✅ Complete | 2026-07-09 |
 
-| 14. Integração no Fluxo de Geração | v1.3 | 3/3 | 🔶 Planned | 2026-07-09 |
+| 14. Integração no Fluxo de Geração | v1.3 | 3/3 | ✅ Complete | 2026-07-09 |
 
 ---
 
@@ -139,9 +139,9 @@
 **Requirement IDs:** REQ-IMAGE-PROCESSOR, REQ-PUBLICATION-COPY, REQ-ORCHESTRATION, REQ-CONSUMER-NAVIGATION, REQ-TEST-PROCESSOR, REQ-TEST-INTEGRATION
 
 **Plans (3/3):**
-- [ ] 14-01 (Wave 1) — Image Processor + Publication Copy: transcodeToJpeg (sharp), buildPublicationCopySnapshot, types.ts realignment, 6 processor tests
-- [ ] 14-02 (Wave 2) — Orchestration in generate-image: persistence pipeline (INSERT→IA→transcode→upload→updateReady), NDJSON estendido, compensação, 6 integration tests
-- [ ] 14-03 (Wave 3) — Consumer on Client: navegação para `/campanha/[id]`, remoção de campaign_preview, preservação de rascunho, tests
+- [x] 14-01 (Wave 1) — Image Processor + Publication Copy: transcodeToJpeg (sharp ^0.34.5), buildPublicationCopySnapshot, types.ts realignment, 6 processor tests
+- [x] 14-02 (Wave 2) — Orchestration in generate-image: persistence pipeline (INSERT→IA→transcode→upload→updateReady), NDJSON estendido, compensação, 6 integration tests
+- [x] 14-03 (Wave 3) — Consumer on Client: navegação para `/campanha/[id]`, remoção de campaign_preview, preservação de rascunho, 3 navigation tests
 
 **Non-Goals (deferred to later phases):**
 - Página `/campanha/[id]` — Phase 15
