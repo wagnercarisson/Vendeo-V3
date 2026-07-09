@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import { BADGE_OPTIONS } from "@/lib/constants";
 import { formatCurrencyBRL } from "@/lib/formatters";
 import { useInputPreservation } from "@/hooks/use-input-preservation";
-import type { PreviewPayload, StoreIdentitySnapshot } from "@/components/campaign/types";
-import type { CampaignSpec } from "@/lib/campaign-intelligence/schema";
 import type { GenerationPhaseEvent } from "@/lib/image-generation/schema";
 
 function compressImage(file: File, maxSizeBytes: number = 1024 * 1024): Promise<{ file: File; dataUrl: string }> {
@@ -360,8 +358,6 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
 
   async function consumeStream(
     body: Record<string, unknown>,
-    storeIdentityLocal: StoreIdentitySnapshot,
-    frozenImagePreviewUrlLocal: string | null,
     abortController: AbortController
   ): Promise<void> {
     const response = await fetch("/api/campaign/generate-image", {
@@ -446,31 +442,16 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
               detail: event.detail as string | undefined,
             };
             onPhaseChange(phaseEvent);
-          } else if (event.type === "result" && event.success) {
-            const result = event as { imageDataUrl: string; storeIdentity?: Record<string, unknown>; inputCorrections?: { productName: { from: string; to: string; reason: string } } };
+          } else if (event.type === "result" && "campaignId" in event) {
+            const result = event as { campaignId: string; campaignUrl: string; inputCorrections?: { productName: { from: string; to: string; reason: string } } };
 
             if (result.inputCorrections?.productName) {
               const correction = result.inputCorrections.productName;
               setFields((prev) => ({ ...prev, productName: correction.to }));
             }
 
-            // Use storeIdentity from the result event (authoritative snapshot from backend)
-            const resultStoreIdentity = result.storeIdentity
-              ? (result.storeIdentity as any)
-              : storeIdentityLocal;
-
-            const previewPayload: PreviewPayload = {
-              campaignSpec: {} as CampaignSpec,
-              storeIdentity: resultStoreIdentity,
-              productImageUrl: frozenImagePreviewUrlLocal,
-              generatedImageDataUrl: result.imageDataUrl,
-              generatedAt: new Date().toISOString(),
-            };
-
-            sessionStorage.setItem("campaign_preview", JSON.stringify(previewPayload));
-            try { sessionStorage.removeItem(IMAGE_DRAFT_KEY); } catch { /* ignore */ }
-            clearFormState();
-            router.push("/campaign/preview");
+            // Navigate to campaign page — draft data preserved in sessionStorage
+            router.push(result.campaignUrl);
             return;
           } else if (event.type === "error") {
             const errorEvent = event as { code: string; message: string; requiresUserAction?: boolean };
@@ -540,7 +521,6 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     }
 
     const frozenFields = { ...fields };
-    const frozenImagePreviewUrl = imagePreviewUrl;
     const frozenRestoredImageDataUrl = restoredImageDataUrl;
     const abortController = new AbortController();
 
@@ -565,23 +545,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
         productImageDataUrl: imageDataUrl,
       };
 
-      // Use a placeholder identity for the stream consumer — real identity comes from result event
-      const placeholderIdentity = {
-        storeName: '',
-        storeSegment: '',
-        brandColor: '#22C55E',
-        identityState: 'text_only' as const,
-        signature: { url: null as string | null, type: null as 'logo' | 'visual_signature' | null },
-        storeInitials: '',
-        brandProfile: null,
-        toneOfVoice: null,
-        subsegment: null,
-        positioning: null,
-        shortDescription: null,
-        slogan: null,
-      };
-
-      await consumeStream(body, placeholderIdentity, frozenImagePreviewUrl, abortController);
+      await consumeStream(body, abortController);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro inesperado ao gerar imagem";
       setSubmitError(message);
@@ -616,15 +580,8 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
       inputValidationOverride: { productImageCheck: "user_confirmed_continue" },
     };
     setIsSubmitting(true);
-    const placeholderIdentity = {
-      storeName: '', storeSegment: '', brandColor: '#22C55E',
-      identityState: 'text_only' as const,
-      signature: { url: null as string | null, type: null as 'logo' | 'visual_signature' | null },
-      storeInitials: '', brandProfile: null, toneOfVoice: null,
-      subsegment: null, positioning: null, shortDescription: null, slogan: null,
-    };
-    await consumeStream(overriddenBody, placeholderIdentity, imagePreviewUrl, new AbortController());
-  }, [pendingConflict, storeId, imagePreviewUrl]);
+    await consumeStream(overriddenBody, new AbortController());
+  }, [pendingConflict, storeId]);
 
   const handleConflictCorrect = useCallback(() => {
     if (!pendingConflict?.suggestedProductName) return;
