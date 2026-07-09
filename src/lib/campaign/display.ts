@@ -70,11 +70,12 @@ export function computeDisplayStatus(
 }
 
 export function mapCampaignToProps(campaign: CampaignRecord, id: string): CampaignPageProps {
+  const snap = campaign.publication_copy_snapshot as Record<string, unknown> | null;
   return {
     imageUrl: null,
-    caption: campaign.publication_copy_snapshot?.caption ?? "",
-    hashtags: campaign.publication_copy_snapshot?.hashtags ?? [],
-    ctaPost: campaign.publication_copy_snapshot?.cta_post ?? "",
+    caption: typeof snap?.caption === "string" ? snap.caption : "",
+    hashtags: Array.isArray(snap?.hashtags) ? (snap.hashtags as string[]) : [],
+    ctaPost: typeof snap?.cta_post === "string" ? snap.cta_post : "",
     displayStatus: computeDisplayStatus(campaign),
     productName: campaign.product_name ?? "",
     createdAt: campaign.created_at ?? new Date().toISOString(),
