@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { GenerateImageRequestSchema } from "@/lib/image-generation/schema";
-import { IMAGE_GENERATION_GLOBAL_TIMEOUT_MS, MAX_PRODUCT_IMAGE_BASE64_SIZE } from "@/lib/image-generation/config";
+import { IMAGE_GENERATION_GLOBAL_TIMEOUT_MS, MAX_PRODUCT_IMAGE_BASE64_SIZE, IMAGE_GENERATION_RESPONSES_MODEL } from "@/lib/image-generation/config";
 import { ImageGenerationService } from "@/lib/image-generation/services/image-generation-service";
+import type { GenerateImageServiceResult } from "@/lib/image-generation/services/image-generation-service";
 import { InputValidationService } from "@/lib/image-generation/services/input-validation-service";
 import { createImageProvider } from "@/lib/image-generation/providers/factory";
 import { resolveStoreIdentity, validateIdentityReference, buildCampaignBrief } from "@/lib/store-identity-service";
@@ -10,7 +11,11 @@ import { requireApiUser } from "@/lib/auth/require-user";
 import { requireOwnership } from "@/lib/auth/store-ownership";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { supabaseAdmin } from '@/lib/supabase/server';
-import type { CampaignInput } from "@/components/campaign/types";
+import type { CampaignInput, StoreIdentitySnapshot } from "@/components/campaign/types";
+import { createCampaign, dataUrlToCampaignImage, uploadCampaignImage, updateCampaignReady, updateCampaignError, deleteCampaignImage } from "@/lib/campaign/persistence";
+import { transcodeToJpeg, buildPublicationCopySnapshot } from "@/lib/campaign/image-processor";
+
+export const runtime = "nodejs";
 
 export const POST = apiHandler(async (request: NextRequest) => {
   requireSameOrigin(request);
@@ -182,6 +187,74 @@ export const POST = apiHandler(async (request: NextRequest) => {
     }
   }
 
+  // ── Pre-stream: Create campaign record (generating status) ─────
+  let campaignId: string | undefined;
+  let storagePath: string | undefined;
+  try {
+    const inputSnapshot: Record<string, unknown> = {
+      productName: campaignInput.productName,
+      originalPriceCents: campaignInput.originalPriceCents,
+      discountedPriceCents: campaignInput.discountedPriceCents,
+      badgeText: campaignInput.badgeText,
+      hook: campaignInput.hook,
+      cta: campaignInput.cta,
+      description: campaignInput.description,
+      objective: campaignInput.objective,
+      campaignDetails: campaignInput.campaignDetails,
+      additionalDetails: campaignInput.additionalDetails,
+      targetChannel: campaignInput.targetChannel,
+      format: campaignInput.format,
+      validity: campaignInput.validity,
+      availabilityNotes: campaignInput.availabilityNotes,
+      sensitiveConstraints: campaignInput.sensitiveConstraints,
+      inputValidationOverride: campaignInput.inputValidationOverride,
+      productImage: { provided: true, mimeType: "image/jpeg" },
+    };
+
+    const campaign = await createCampaign(storeId, {
+      productName: campaignInput.productName,
+      inputSnapshot,
+      identitySnapshot: validatedSnapshot as unknown as Record<string, unknown>,
+    });
+    campaignId = campaign.id;
+    storagePath = campaign.storagePath;
+  } catch (err) {
+    console.error(`[generate-image] createCampaign error — ${err instanceof Error ? err.message : String(err)}`);
+    return Response.json(
+      { error: { message: "Erro ao iniciar registro da campanha." } },
+      { status: 500 }
+    );
+  }
+
+  const startTime = performance.now();
+
+  // Helper: build caption from campaign input + IA result
+  function buildCaption(input: CampaignInput, result: GenerateImageServiceResult): string {
+    const productName =
+      result.success && result.inputCorrections?.productName?.to
+        ? result.inputCorrections.productName.to
+        : input.productName;
+    const hookText = input.hook || input.description || "";
+    return `${productName}${hookText ? ` — ${hookText}` : ""}`;
+  }
+
+  // Helper: derive hashtags from store segment + product name
+  function buildHashtags(identity: StoreIdentitySnapshot, input: CampaignInput): string[] {
+    const tags: string[] = [];
+    const segment = identity.storeSegment || "";
+    if (segment) tags.push(`#${segment.toLowerCase().replace(/\s+/g, "")}`);
+    tags.push("#oferta");
+    const productName = input.productName || "";
+    if (productName) {
+      const productTag = productName
+        .toLowerCase()
+        .replace(/[^a-z0-9\u00C0-\u024F]/g, "")
+        .slice(0, 20);
+      if (productTag) tags.push(`#${productTag}`);
+    }
+    return tags;
+  }
+
   // ── Stream: Open NDJSON stream ──────────────────────────────────
   const abortController = new AbortController();
   const timeoutId = setTimeout(() => abortController.abort(), IMAGE_GENERATION_GLOBAL_TIMEOUT_MS);
@@ -207,8 +280,13 @@ export const POST = apiHandler(async (request: NextRequest) => {
         }, abortController.signal);
 
         if (!result.success) {
+          // Record error in DB if INSERT already occurred
+          if (campaignId) {
+            try { await updateCampaignError(campaignId, result.message); } catch { /* ignore */ }
+          }
           emit({
             type: "error",
+            campaignId,
             phase: "done",
             code: result.code,
             message: result.message,
@@ -218,21 +296,101 @@ export const POST = apiHandler(async (request: NextRequest) => {
               result.code === "product_image_conflict" || result.code === "input_low_confidence",
           });
         } else {
-          const resultEvent: Record<string, unknown> = {
-            type: "result",
-            success: true,
-            imageDataUrl: result.imageDataUrl,
-            storeIdentity: validatedSnapshot,
-          };
-          if (result.inputCorrections) {
-            resultEvent.inputCorrections = result.inputCorrections;
+          // ── Persistence pipeline ──────────────────────────────────
+          let uploadSucceeded = false;
+          try {
+            // Parse data URL
+            const { buffer, mimeType } = dataUrlToCampaignImage(result.imageDataUrl);
+
+            // Transcode to JPEG
+            const jpegImage = await transcodeToJpeg(buffer, mimeType);
+
+            // Upload to Storage
+            await uploadCampaignImage(storeId, campaignId!, jpegImage);
+            uploadSucceeded = true;
+
+            // Build generation metadata per D7
+            const durationMs = Math.round(performance.now() - startTime);
+            const generationMetadata: Record<string, unknown> = {
+              provider: provider.name,
+              model: IMAGE_GENERATION_RESPONSES_MODEL,
+              durationMs,
+              generatedAt: new Date().toISOString(),
+            };
+            if (result.inputCorrections) {
+              generationMetadata.corrections = result.inputCorrections;
+            }
+
+            // Build render snapshot
+            const renderSnapshot: Record<string, unknown> = {
+              format: "jpeg",
+              width: 1080,
+              height: 1080,
+              aspectRatio: "1:1",
+              mimeType: "image/jpeg",
+              quality: 90,
+              colorSpace: "srgb",
+            };
+
+            // Build publication copy snapshot deterministically per D7
+            const publicationCopySnapshot = buildPublicationCopySnapshot({
+              caption: buildCaption(campaignInput, result),
+              hashtags: buildHashtags(validatedSnapshot, campaignInput),
+              cta_post: campaignInput.cta ?? "",
+            });
+
+            // Mark as ready
+            await updateCampaignReady(campaignId!, {
+              generationMetadata,
+              renderSnapshot,
+              publicationCopySnapshot,
+            });
+
+            // Emit result NDJSON
+            const resultEvent: Record<string, unknown> = {
+              type: "result",
+              campaignId: campaignId!,
+              campaignUrl: `/campanha/${campaignId}`,
+            };
+            if (result.inputCorrections) {
+              resultEvent.inputCorrections = result.inputCorrections;
+            }
+            emit(resultEvent);
+          } catch (err) {
+            // Compensation per D5
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            console.error(`[generate-image] persistence error — ${errorMessage}`);
+
+            if (uploadSucceeded) {
+              // Upload OK but updateReady failed — clean up image
+              try {
+                await deleteCampaignImage(storagePath!);
+              } catch { /* ignore cleanup error */ }
+            }
+
+            try {
+              await updateCampaignError(campaignId!, errorMessage);
+            } catch { /* ignore */ }
+
+            emit({
+              type: "error",
+              campaignId: campaignId!,
+              phase: uploadSucceeded ? "update" : "upload",
+              code: "persistence_error",
+              message: "Erro ao salvar campanha. A geração foi concluída mas não foi possível persistir.",
+              httpStatus: 502,
+              retryable: false,
+            });
           }
-          emit(resultEvent);
         }
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") {
+          if (campaignId) {
+            try { await updateCampaignError(campaignId, "O tempo limite de geração foi excedido. Tente novamente."); } catch { /* ignore */ }
+          }
           emit({
             type: "error",
+            campaignId,
             phase: "image_generation",
             code: "global_timeout",
             message: "O tempo limite de geração foi excedido. Tente novamente.",
@@ -241,8 +399,12 @@ export const POST = apiHandler(async (request: NextRequest) => {
           });
         } else {
           const message = err instanceof Error ? err.message : String(err);
+          if (campaignId) {
+            try { await updateCampaignError(campaignId, message); } catch { /* ignore */ }
+          }
           emit({
             type: "error",
+            campaignId,
             phase: "image_generation",
             code: "provider_error",
             message: "Falha ao gerar imagem. Tente novamente.",
