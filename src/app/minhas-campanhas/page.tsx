@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
 import { requirePageUser } from "@/lib/auth/require-user";
 import { getCurrentStore } from "@/lib/auth/store-ownership";
+import { listCampaigns } from "@/lib/campaign/list";
+import MyCampaignsClient from "./client";
 
-export default async function CampaignPreviewPage() {
+export default async function MyCampaignsPage() {
   const user = await requirePageUser();
   const store = await getCurrentStore(user.userId);
 
@@ -10,5 +12,7 @@ export default async function CampaignPreviewPage() {
     redirect("/store");
   }
 
-  redirect("/minhas-campanhas");
+  const campaigns = await listCampaigns(store.id);
+
+  return <MyCampaignsClient campaigns={campaigns} />;
 }

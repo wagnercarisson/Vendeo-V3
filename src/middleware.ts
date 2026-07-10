@@ -83,6 +83,7 @@ export const config = {
     "/store/:path*",
     "/campaign/:path*",
     "/campanha/:path*",
+    "/minhas-campanhas",
     "/api/:path*",
   ],
 };

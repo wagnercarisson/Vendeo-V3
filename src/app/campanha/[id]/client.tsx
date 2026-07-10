@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { CampaignPageProps } from "@/lib/campaign/display";
 
 export default function CampaignPageClient(props: CampaignPageProps) {
@@ -17,19 +18,17 @@ export default function CampaignPageClient(props: CampaignPageProps) {
     return () => clearInterval(interval);
   }, [props.displayStatus, router]);
 
-  if (props.displayStatus === "generating") {
-    return <GeneratingView />;
-  }
-
-  if (props.displayStatus === "stale") {
-    return <StaleView onNewCampaign={() => router.push("/")} />;
-  }
-
-  if (props.displayStatus === "error") {
-    return <ErrorView onNewCampaign={() => router.push("/")} />;
-  }
-
-  return <ReadyView {...props} />;
+  return (
+    <>
+      <Link href="/minhas-campanhas" className="back-link">
+        ← Minhas Campanhas
+      </Link>
+      {props.displayStatus === "generating" && <GeneratingView />}
+      {props.displayStatus === "stale" && <StaleView onNewCampaign={() => router.push("/")} />}
+      {props.displayStatus === "error" && <ErrorView onNewCampaign={() => router.push("/")} />}
+      {props.displayStatus === "ready" && <ReadyView {...props} />}
+    </>
+  );
 }
 
 function ReadyView(props: CampaignPageProps) {
