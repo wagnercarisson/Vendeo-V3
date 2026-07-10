@@ -1,6 +1,7 @@
 # Store Ownership Pages
 
 > Synced from `fase-9-cutover-ownership` (ADDED).
+> Synced from `fase-16-minhas-campanhas` (MODIFIED). `/campaign/preview` now redirects to `/minhas-campanhas` instead of rendering client component.
 
 ## Purpose
 
@@ -67,20 +68,20 @@ The system SHALL update `src/app/page.tsx` to be a server component that resolve
 
 ### Requirement: /campaign/preview with server wrapper
 
-The system SHALL restructure `/campaign/preview` into a server wrapper page + client component.
+The system SHALL redirect authenticated users with a store to `/minhas-campanhas` instead of rendering `CampaignPreviewClient`.
 
-- `src/app/campaign/preview/page.tsx` SHALL become a server component (wrapper)
+- `src/app/campaign/preview/page.tsx` SHALL remain a server component
 - MUST call `await requirePageUser()` — redirects to `/login` if not authenticated
 - MUST call `const store = await getCurrentStore(user.userId)`
 - If store is null: MUST call `redirect("/store")`
-- If store exists: MUST render `<CampaignPreviewClient />`
-- The existing client logic SHALL be extracted to `src/app/campaign/preview/preview-client.tsx`
+- If store exists: MUST call `redirect("/minhas-campanhas")` instead of rendering `CampaignPreviewClient`
 
-#### Scenario: Authenticated user with store sees preview
+#### Scenario: Authenticated user with store is redirected to /minhas-campanhas
 
 - **WHEN** an authenticated user visits `/campaign/preview`
 - **AND** the user has a store
-- **THEN** `CampaignPreviewClient` is rendered
+- **THEN** the server redirects to `/minhas-campanhas`
+- **AND** `CampaignPreviewClient` is NOT rendered
 
 #### Scenario: Authenticated user without store is redirected
 

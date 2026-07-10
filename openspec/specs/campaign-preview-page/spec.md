@@ -1,6 +1,7 @@
 # Campaign Preview Page
 
 > Synced from `fase-9-cutover-ownership` (MODIFIED). Page restructured into server wrapper + extracted client component.
+> Synced from `fase-16-minhas-campanhas` (MODIFIED). Page now redirects to `/minhas-campanhas` instead of rendering client component.
 
 ## Purpose
 
@@ -123,15 +124,14 @@ No changes to the `GenerationProgress` component logic are required by this phas
 
 ### Requirement: Server wrapper with auth + store resolution
 
-The `/campaign/preview` page SHALL be restructured into a server wrapper page + extracted client component.
+The `/campaign/preview` page SHALL redirect authenticated users with a store to `/minhas-campanhas` instead of rendering `CampaignPreviewClient`.
 
 - `src/app/campaign/preview/page.tsx` SHALL be a server component (wrapper):
   - `await requirePageUser()` — redirects to `/login` if not authenticated
   - `const store = await getCurrentStore(user.userId)` — resolves store
   - If `!store`: `redirect("/store")` — user must have a store
-  - If store exists: renders `<CampaignPreviewClient />`
-- `src/app/campaign/preview/preview-client.tsx` SHALL contain all existing client logic (extracted from the original page.tsx)
-- The client component SHALL continue to handle sessionStorage payload normalization as before
+  - If store exists: `redirect("/minhas-campanhas")` — campaigns are now listed via Fase 16 list page; preview via sessionStorage is deprecated
+- The `CampaignPreviewClient` component SHALL NOT be rendered for any user who reaches the redirect condition
 
 #### Scenario: Server wrapper validates auth before rendering
 
@@ -145,11 +145,11 @@ The `/campaign/preview` page SHALL be restructured into a server wrapper page + 
 - **AND** the user has no store
 - **THEN** the server wrapper redirects to `/store`
 
-#### Scenario: Server wrapper renders client component
+#### Scenario: Server wrapper redirects authenticated user to /minhas-campanhas
 
 - **WHEN** an authenticated user with a store visits `/campaign/preview`
-- **THEN** `<CampaignPreviewClient />` is rendered
-- **AND** the client handles sessionStorage payload as before
+- **THEN** the server wrapper redirects (302) to `/minhas-campanhas`
+- **AND** no `CampaignPreviewClient` component is rendered
 
 ### Requirement: Preview payload normalization for legacy format
 
