@@ -62,7 +62,7 @@ describe("MyCampaignsClient — display", () => {
     render(<MyCampaignsClient campaigns={[mockErrorCampaign]} />);
 
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
-    expect(document.querySelector(".campaign-card__placeholder")).toBeInTheDocument();
+    expect(document.querySelector(".bg-gray-100")).toBeInTheDocument();
   });
 
   it("renders image when thumbnailUrl is provided", () => {
