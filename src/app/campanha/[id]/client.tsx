@@ -19,21 +19,24 @@ export default function CampaignPageClient(props: CampaignPageProps) {
   }, [props.displayStatus, router]);
 
   return (
-    <>
-      <Link href="/minhas-campanhas" className="back-link">
+    <div className="mx-auto max-w-2xl p-6">
+      <Link
+        href="/minhas-campanhas"
+        className="mb-4 inline-block text-sm text-blue-600 hover:text-blue-800"
+      >
         ← Minhas Campanhas
       </Link>
       {props.displayStatus === "generating" && <GeneratingView />}
       {props.displayStatus === "stale" && <StaleView onNewCampaign={() => router.push("/")} />}
       {props.displayStatus === "error" && <ErrorView onNewCampaign={() => router.push("/")} />}
       {props.displayStatus === "ready" && <ReadyView {...props} />}
-    </>
+    </div>
   );
 }
 
 function ReadyView(props: CampaignPageProps) {
   return (
-    <div className="mx-auto max-w-2xl space-y-6 p-6">
+    <div className="space-y-6">
       {props.imageUrl && (
         <img
           src={props.imageUrl}
