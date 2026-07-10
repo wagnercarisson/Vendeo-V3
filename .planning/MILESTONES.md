@@ -75,3 +75,19 @@
 - Auth, dashboard, segurança: não implementados — escopo da próxima milestone
 
 ---
+
+## v1.4 Experiência SaaS (Em Planejamento — 2026-07-10)
+
+**Escopo macro:**
+- Dashboard com visão geral e métricas básicas
+- App shell e menus definitivos (navegação estrutural)
+- Fluxo de onboarding para novos usuários
+- Histórico de campanhas melhor organizado
+- Estados vazios consistentes
+- Busca e filtros essenciais
+- Fluxo mobile completo responsivo
+
+**Fases sugeridas:** 5 fases (18–22), 21 requisitos de alto nível
+**Critério:** O Vendeo passa a parecer e funcionar como um produto SaaS coerente, não apenas como um motor encapsulado.
+
+**Status:** Abertura documental — requisitos detalhados e fases serão definidos via OpenSpec.

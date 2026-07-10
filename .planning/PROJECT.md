@@ -25,6 +25,19 @@ A milestone v1.3 completou o ciclo completo de persistência e entrega: o usuár
 
 **579 testes automatizados**, **67 test files**, **TypeScript/lint/build limpos**.
 
+## Current Milestone: v1.4 — Experiência SaaS
+
+**Goal:** O Vendeo passa a parecer e funcionar como um produto SaaS coerente, não apenas como um motor encapsulado.
+
+**Target features:**
+- Dashboard principal com visão geral
+- App shell e menus definitivos (navegação estrutural)
+- Fluxo de onboarding para novos usuários
+- Histórico de campanhas melhor organizado
+- Estados vazios consistentes em toda a aplicação
+- Busca e filtros essenciais nas listas
+- Fluxo mobile completo responsivo
+
 <details>
 <summary>Versões anteriores</summary>
 
@@ -94,22 +107,31 @@ A milestone v1.3 completou o ciclo completo de persistência e entrega: o usuár
 
 ### Active
 
+- [ ] **DASH-01**: Dashboard principal com visão geral (campanhas recentes, métricas básicas)
+- [ ] **SHELL-01**: App shell com navegação estrutural (sidebar/topbar, menus definitivos)
+- [ ] **ONBRD-01**: Fluxo de onboarding para novos usuários pós-signup
+- [ ] **HIST-01**: Histórico de campanhas melhor organizado (ordenação, paginação)
+- [ ] **UX-01**: Estados vazios consistentes em toda a aplicação
+- [ ] **SEARCH-01**: Busca e filtros essenciais nas listas de campanhas
+- [ ] **MOBILE-01**: Fluxo mobile completo responsivo
+
 ### Out of Scope
 
-- Dashboard — core de geração já concluído (v1.1), escopo v1.2 era auth/ownership
+- Dashboard — AGORA NO ESCOPO (v1.4)
 - Regeneração — redefinida como "novo briefing" (MC-02), não implementada
-- Planos e cobrança — uso livre durante validação do core
-- Múltiplas lojas — relação 1:1 nesta milestone
-- Menus definitivos e navegação completa — fluxo mínimo suficiente
+- Planos e cobrança — uso livre durante validação do SaaS
+- Múltiplas lojas — relação 1:1 mantida
 - Plano semanal e calendário inteligente — fase futura
 - Editor visual livre tipo Canva — geração guiada, não livre
 - Geração por IA de imagem (DALL-E, etc) — reduz previsibilidade
 - Múltiplos tipos de campanha, equipe, automações avançadas
 - OAuth social / Magic link — exclusão deliberada v1.2
+- Export agendado / programado — fora do escopo v1.4
+- Métricas e analytics avançados — métricas básicas apenas no dashboard
 
 ## Context
 
-**Current state (pós-v1.3):**
+**Current state (abertura v1.4):**
 - ~579 testes automatizados, 67 test files, zero erros de tipo/lint/build
 - Aplicação multi-tenant funcional em beta.vendeo.tech
 - Ciclo completo de campanha: formulário → geração com IA → renderização → persistência → visualização → download
@@ -117,6 +139,7 @@ A milestone v1.3 completou o ciclo completo de persistência e entrega: o usuár
 - Edição de publication copy (caption, hashtags, cta_post) sem regenerar imagem
 - Lista de campanhas do usuário logado em `/minhas-campanhas`
 - Bucket `store-logos`: 0 objetos, pendente de remoção
+- **Próximo: v1.4 — Experiência SaaS** — dashboard, app shell, onboarding, histórico, busca/filtros, mobile
 
 **User profile:** Pequenos e médios lojistas físicos que acumulam funções operacionais, comerciais e administrativas — não têm tempo, criatividade ou recursos para design profissional.
 
@@ -173,4 +196,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-10 after v1.3 milestone shipped*
+*Last updated: 2026-07-10 after milestone v1.4 opened*

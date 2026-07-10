@@ -1,232 +1,111 @@
-﻿# Roadmap: Vendeo V3
+﻿# Roadmap: Vendeo V3 — v1.4 Experiência SaaS
 
-## Milestones
+**Milestone:** v1.4 — Experiência SaaS
+**Started:** 2026-07-10
+**Status:** Planning (documentation only — details via OpenSpec)
+**Phase numbering:** Continuing from v1.3 (Phase 18+)
 
-- ✅ **v1.0 Core de Geração** — Phases 1-6 (shipped 2026-07-03)
-- ✅ **v1.1 Motor de Campanhas** — Phases 2-6 (shipped 2026-07-03)
-- ✅ **v1.2 Contas e Propriedade** — Phases 7-11 (shipped 2026-07-08)
-- ✅ **v1.3 Persistência e Entrega da Campanha** — 6/6 fases concluídas
+## Phase Overview
 
-## Phases
+| Phase | Name | Goal | Requirements | Success Criteria |
+|-------|------|------|--------------|------------------|
+| 18 | App Shell & Navegação | Estrutura de navegação definitiva | SHELL-01, SHELL-02, SHELL-03 | 3 |
+| 19 | Dashboard | Visão geral com métricas básicas e acesso rápido | DASH-01, DASH-02, DASH-03 | 3 |
+| 20 | Histórico & Busca | Organização e descoberta de campanhas | HIST-01, HIST-02, HIST-03, SEARCH-01, SEARCH-02, SEARCH-03 | 6 |
+| 21 | Onboarding & Estados Vazios | Experiência do novo usuário e consistência visual | ONBRD-01, ONBRD-02, ONBRD-03, UX-01, UX-02 | 5 |
+| 22 | Mobile | Fluxo completo responsivo | MOBILE-01, MOBILE-02, MOBILE-03, MOBILE-04 | 4 |
 
-<details>
-<summary>✅ v1.3 Persistência e Entrega da Campanha — 6/6 fases concluídas ✅</summary>
-
-**Critério de conclusão da milestone:** O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la. ✅
-
-**Critério de extensão (Phase 17):** O lojista pode editar caption, hashtags e cta_post da campanha sem regerar a imagem. ✅
-
-**Escopo v1.3 (fases identificadas):**
-- [x] Phase 12: Fundação DB/Storage (Complete) — tabela campaigns, bucket campaign-images, RLS e Storage policies, verify script
-- [x] Phase 13: Serviço de Persistência (Complete) — persistence.ts, 7 helpers, signed URL, 25 testes
-- [x] Phase 14: Integração no Fluxo de Geração (Complete) — sharp, transcodeToJpeg, persistência, consumer navigation
-- [x] Phase 15: Página de Campanha (Complete) — `/campanha/[id]` com preview e download
-- [x] Phase 16: Minhas Campanhas (Complete) — `/minhas-campanhas` com listagem, thumbnails, estado vazio
-- [x] Phase 17: Edição de Publication Copy (Complete) — migration column, validação, display contract, PATCH route, UI edição inline
-
-</details>
-
-<details>
-<summary>✅ v1.2 Contas e Propriedade (Phases 7-11) — SHIPPED 2026-07-08</summary>
-
-- [x] Phase 7: Sessão e Login Vertical (5 plans) — completed 2026-07-04
-- [x] Phase 8: Ciclo de Conta (4 plans) — completed 2026-07-05
-- [x] Phase 9: Cutover de Ownership e Onboarding (4 plans) — completed 2026-07-06
-- [x] Phase 10: Perímetro Multi-tenant (6 plans) — completed 2026-07-07
-- [x] Phase 11: Verificação e Hardening (1 plan) — completed 2026-07-08
-
-</details>
-
-<details>
-<summary>✅ v1.1 Motor de Campanhas (Phases 2-6) — SHIPPED 2026-07-03</summary>
-
-- [x] Phase 2: IA de Campanha — Estrutura e Provedores (completed 2026-06-15)
-- [x] Phase 3: IA de Campanha — Geração (completed 2026-06-21)
-- [x] Phase 4: Marca e Assinatura Visual (completed 2026-06-30)
-- [x] Phase 5: Drift e Detecção (completed 2026-07-01)
-- [x] Phase 6: App Router — Rotas e Componentes (completed 2026-07-03)
-
-</details>
-
-<details>
-<summary>✅ v1.0 Core de Geração (Phases 1-6) — SHIPPED 2026-07-03</summary>
-
-- [x] Phase 1: Projeto e Identidade Visual (completed 2026-06-08)
-- [x] Phase 2: Formulário de Campanha (completed 2026-06-12)
-- [x] Phase 3: API de Campanha (completed 2026-06-15)
-- [x] Phase 4: IA + Renderização (completed 2026-06-30)
-- [x] Phase 5: Preview de Campanha (completed 2026-07-01)
-- [x] Phase 6: Polimento (completed 2026-07-03)
-
-</details>
-
-
-
-## Progress
-
-| Phase | Milestone | Plans Complete | Status | Completed |
-|-------|-----------|---------------|--------|-----------|
-| 1. Projeto e Identidade Visual | v1.0 | — | Complete | 2026-06-08 |
-| 2. Formulário de Campanha / IA Estrutura | v1.0 / v1.1 | — | Complete | 2026-06-15 |
-| 3. API de Campanha / IA Geração | v1.0 / v1.1 | — | Complete | 2026-06-21 |
-| 4. Marca e Assinatura Visual | v1.0 / v1.1 | — | Complete | 2026-06-30 |
-| 5. Preview / Drift | v1.0 / v1.1 | — | Complete | 2026-07-01 |
-| 6. Polimento / App Router | v1.0 / v1.1 | — | Complete | 2026-07-03 |
-| 7. Sessão e Login Vertical | v1.2 | 5/5 | Complete | 2026-07-04 |
-| 8. Ciclo de Conta | v1.2 | 4/4 | Complete | 2026-07-05 |
-| 9. Cutover de Ownership | v1.2 | 4/4 | Complete | 2026-07-06 |
-| 10. Perímetro Multi-tenant | v1.2 | 6/6 | Complete | 2026-07-07 |
-| 11. Verificação e Hardening | v1.2 | 1/1 | Complete | 2026-07-08 |
-
----
-
-| 12. Fundação DB/Storage | v1.3 | 5/5 | ✅ Complete | 2026-07-08 |
-
----
-
-| 13. Serviço de Persistência e Download | v1.3 | 3/3 | ✅ Complete | 2026-07-09 |
-
-| 14. Integração no Fluxo de Geração | v1.3 | 3/3 | ✅ Complete | 2026-07-09 |
-
-| 15. Página de Campanha | v1.3 | 3/3 | ✅ Complete | 2026-07-09 |
-
----
-
-| 16. Minhas Campanhas | v1.3 | 3/3 | ✅ Complete | 2026-07-10 |
-
----
-
-| 17. Edição de Publication Copy | v1.3 | 2/2 | ✅ Complete | 2026-07-10 |
-
----
+**Total:** 5 phases | 21 requirements mapped | All covered ✓
 
 ## Phase Details
 
-### Phase 12 — Fundação DB/Storage
-**Goal:** Criar a tabela `campaigns`, o bucket `campaign-images`, e as políticas de RLS e Storage — sem modificar o fluxo de geração existente.
+### Phase 18 — App Shell & Navegação
 
-**Depends on:** Phases 7-11 (multi-tenant RLS consolidated, stores with user_id, `requireOwnership` established)
+**Goal:** Estabelecer a estrutura de navegação definitiva do Vendeo como produto SaaS coerente. Substituir navegação ad-hoc por app shell com sidebar/topbar e menus consistentes.
 
-**Requirement IDs:** REQ-CAMPAIGNS-DDL, REQ-ERROR-CHECK, REQ-TRIGGER-UPDATED-AT, REQ-RLS-CAMPAIGNS, REQ-INDEXES, REQ-BUCKET-CAMPAIGN-IMAGES, REQ-SELECT-POLICY, REQ-INSERT-POLICY, REQ-DELETE-POLICY, REQ-NO-UPDATE-POLICY, REQ-SMOKE-SQL, REQ-UAT-CHECKLIST
+**Requirements:** SHELL-01, SHELL-02, SHELL-03
 
-**Plans (0/5):** — *Pending creation*
+**Success criteria:**
+1. Sidebar/topbar com links para todas as seções principais do produto
+2. Navegação consistente entre páginas (destaque na seção ativa)
+3. Transições suaves entre seções sem perda de estado
 
-**Non-Goals (deferred to later phases):**
-- persistence.ts service — Phase 13
-- GET /api/campaign/[id]/download — Phase 13  
-- generate-image modification — Phase 14
-- /campanha/[id] page — Phase 15
-- /minhas-campanhas page — Phase 16
-- Supabase gen types — optional in Phase 12
+**Depends on:** Nenhuma (fundação da milestone)
 
 ---
 
-### Phase 13 — Serviço de Persistência e Download
-**Goal:** Criar camada de persistência isolada para campanhas: tipos, serviço de 7 helpers, rota de download.
+### Phase 19 — Dashboard
 
-**Depends on:** Phase 12 (campaigns table, campaign-images bucket, RLS/Storage policies)
+**Goal:** Prover uma visão geral do estado da loja com métricas básicas e acesso rápido às ações principais.
 
-**Requirement IDs:** REQ-CAMPAIGN-TYPES, REQ-CREATE-CAMPAIGN, REQ-DATAURL-TO-IMAGE, REQ-UPLOAD-CAMPAIGN-IMAGE, REQ-UPDATE-READY, REQ-UPDATE-ERROR, REQ-GET-CAMPAIGN, REQ-DELETE-CAMPAIGN-IMAGE, REQ-DOWNLOAD-ROUTE, REQ-DOWNLOAD-GUARDS, REQ-TEST-PERSISTENCE, REQ-TEST-DOWNLOAD
+**Requirements:** DASH-01, DASH-02, DASH-03
 
-**Plans (3/3):**
-- [x] 13-01 — Types & Persistence Service: `types.ts` + `persistence.ts` (7 helpers)
-- [x] 13-02 — Download Route: `GET /api/campaign/[id]/download` (guard pipeline)
-- [x] 13-03 — Tests: 19 persistence + 6 download route scenarios
+**Success criteria:**
+1. Dashboard mostra campanhas recentes com métricas básicas (total, sucesso)
+2. Acesso rápido à última campanha e ao formulário de nova campanha
+3. Dashboard é a landing page pós-login
 
-**Non-Goals (deferred to later phases):**
-- Modificação do fluxo `generate-image` — Phase 14
-- Página `/campanha/[id]` — Phase 15
-- Página `/minhas-campanhas` — Phase 16
-- Transcoddificação PNG/WEBP → JPEG — Phase 14
+**Depends on:** Phase 18
 
 ---
 
-### Phase 14 — Integração no Fluxo de Geração
+### Phase 20 — Histórico & Busca
 
-**Goal:** Conectar o fluxo de geração (generate-image) aos serviços de persistência da F13, fazendo com que cada campanha seja registrada no banco e no Storage imediatamente durante a geração. O consumer no cliente navega para `/campanha/[id]` em vez de `/campaign/preview`.
+**Goal:** Melhorar a organização e descoberta de campanhas com ordenação, paginação, busca textual e filtros essenciais.
 
-**Depends on:** Phase 13 (types.ts, persistence.ts, download route)
+**Requirements:** HIST-01, HIST-02, HIST-03, SEARCH-01, SEARCH-02, SEARCH-03
 
-**Requirement IDs:** REQ-IMAGE-PROCESSOR, REQ-PUBLICATION-COPY, REQ-ORCHESTRATION, REQ-CONSUMER-NAVIGATION, REQ-TEST-PROCESSOR, REQ-TEST-INTEGRATION
+**Success criteria:**
+1. Lista de campanhas com ordenação (data, nome, status)
+2. Paginação funcional na lista de campanhas
+3. Campo de busca textual com resultados relevantes
+4. Filtros por data, status e produto
+5. URL state reflete busca/filtros (compartilhável)
+6. Transição suave entre listar, visualizar e criar nova campanha
 
-**Plans (3/3):**
-- [x] 14-01 (Wave 1) — Image Processor + Publication Copy: transcodeToJpeg (sharp ^0.34.5), buildPublicationCopySnapshot, types.ts realignment, 6 processor tests
-- [x] 14-02 (Wave 2) — Orchestration in generate-image: persistence pipeline (INSERT→IA→transcode→upload→updateReady), NDJSON estendido, compensação, 6 integration tests
-- [x] 14-03 (Wave 3) — Consumer on Client: navegação para `/campanha/[id]`, remoção de campaign_preview, preservação de rascunho, 3 navigation tests
-
-**Non-Goals (deferred to later phases):**
-- Página `/campanha/[id]` — Phase 15
-- Página `/minhas-campanhas` + limpeza — Phase 16
-- Edição publication copy — pós-v1.3
-- Remoção física de `/campaign/preview` — Phase 15
-- Fallback de signed URL via blob proxy — documentado na F13, não implementado
-- Cleanup de `generating` stale — futuro
-- Geração de tipos com `supabase gen types` — pós-F14
+**Depends on:** Phase 18
 
 ---
 
-### Phase 15 — Página de Campanha ✅
+### Phase 21 — Onboarding & Estados Vazios
 
-**Goal:** Criar a página `/campanha/[id]` com preview da campanha, 4 estados visuais (ready, generating, stale, error), e botão de download.
+**Goal:** Guiar novos usuários na primeira experiência e garantir estados vazios consistentes em toda a aplicação.
 
-**Depends on:** Phase 13 (types.ts, persistence.ts), Phase 14 (consumer navigation, NDJSON campaignId/campaignUrl)
+**Requirements:** ONBRD-01, ONBRD-02, ONBRD-03, UX-01, UX-02
 
-**Plans (3/3):**
-- [x] 15-01 (Wave 1) — Data/Display Contract: `display.ts` com `getCampaignForDisplay`, `generateSignedPreviewUrl`, `computeDisplayStatus`, `mapCampaignToProps`, `CampaignPageProps`
-- [x] 15-02 (Wave 2) — UI `/campanha/[id]`: page.tsx + client.tsx com 4 estados (Ready/Generating/Stale/Error) + middleware
-- [x] 15-03 (Wave 2) — Tests & Verification: 19 novos testes, typecheck/lint/build
+**Success criteria:**
+1. Novo usuário é guiado por onboarding pós-signup
+2. Onboarding orienta a criar a primeira campanha
+3. Configuração inicial da loja é integrada ao onboarding
+4. Todas as listas e seções têm estados vazios com CTAs claros
+5. Estados vazios seguem padrão consistente de design
 
-**Non-Goals (deferred):**
-- Página `/minhas-campanhas` — Phase 16
-- Edição de publication copy — Phase 17
-- Remoção física de `/campaign/preview` — Phase 16
-
----
-
-### Phase 16 — Minhas Campanhas ✅
-
-**Goal:** Criar a página `/minhas-campanhas` com listagem de campanhas persistidas, fechando o ciclo da milestone v1.3 ("gerou, saiu, voltou, encontrou e baixou").
-
-**Depends on:** Phase 13 (types.ts, persistence.ts), Phase 15 (display.ts pattern, middleware)
-
-**Requirement IDs:** REQ-LIST-CAMPAIGNS, REQ-LIST-ITEM, REQ-BATCH-THUMBNAILS, REQ-LIST-PAGE, REQ-LIST-CLIENT, REQ-LIST-EMPTY, REQ-NAV-HEADER, REQ-NAV-BACK, REQ-REDIRECT-PREVIEW, REQ-MIDDLEWARE-MATCHER, REQ-TEST-LIST, REQ-TEST-PAGE-SERVER, REQ-TEST-PAGE-DISPLAY, REQ-TEST-AUTHHEADER, REQ-TEST-REDIRECT, REQ-TEST-MIDDLEWARE, REQ-BUILD-VERIFICATION
-
-**Plans (3/3):**
-- [x] 16-01 (Wave 1) — Contrato de listagem: `list.ts` com `listCampaigns`, `generateBatchThumbnailUrls`, `CampaignListItem`, 7 testes
-- [x] 16-02 (Wave 2) — UI `/minhas-campanhas` + navegação: page.tsx, client.tsx, auth-header, back link, redirect, middleware
-- [x] 16-03 (Wave 2) — Testes e Verificação: 14 novos testes, typecheck/lint/build
-
-**Non-Goals (deferred):**
-- Paginação visível ("Load More") — LIMIT 50 interno para v1.3
-- Filtros ou busca na lista
-- Geração de miniaturas dedicadas (sharp) — CSS object-cover resolve
-- Campanhas `generating` na lista — excluídas por decisão da milestone
-- Edição de publication copy — futuro
-- Cleanup de `/api/campaign/generate` (legado)
+**Depends on:** Phase 18
 
 ---
 
-### Phase 17 — Edição de Publication Copy ✅
+### Phase 22 — Mobile
 
-**Goal:** Permitir que o lojista edite caption, hashtags e cta_post da campanha sem regerar a imagem. Adiciona coluna `publication_copy_current` (JSONB) com fallback `current > snapshot > vazio`. Rota PATCH segura com CSRF + auth + ownership. UI de edição inline na página `/campanha/[id]`.
+**Goal:** Garantir que o fluxo completo do Vendeo seja utilizável em dispositivos mobile.
 
-**Depends on:** Phase 12 (campaigns table), Phase 13 (persistence pattern), Phase 15 (display.ts, page.tsx, client.tsx)
+**Requirements:** MOBILE-01, MOBILE-02, MOBILE-03, MOBILE-04
 
-**Requirement IDs:** REQ-MIGRATION-ADD-COLUMN, REQ-TYPES-CURRENT-FIELD, REQ-VALIDATION-FUNCTION, REQ-VALIDATION-ISSUE-TYPE, REQ-VALIDATION-RESTORE, REQ-DISPLAY-FALLBACK, REQ-DISPLAY-CAMPAIGN-ID, REQ-DISPLAY-EDITED-FLAG, REQ-PATCH-ROUTE, REQ-PATCH-CSRF, REQ-PATCH-UUID-VALIDATION, REQ-PATCH-OWNERSHIP, REQ-PATCH-RESTORE, REQ-PAGE-NEW-PROPS, REQ-UI-EDIT-MODE, REQ-UI-SAVE, REQ-UI-RESTORE, REQ-UI-CANCEL, REQ-UI-BADGE, REQ-UI-LOADING, REQ-UI-ERROR
+**Success criteria:**
+1. Fluxo de campanha (criar → gerar → visualizar → baixar) funcional em mobile
+2. App shell adaptado para telas pequenas (menu collapsible/hamburger)
+3. Onboarding, histórico e busca utilizáveis em mobile
+4. Estados vazios responsivos em todas as resoluções
 
-**Plans (2/2):**
-- [x] 17-01 (Wave 1) — Migration + Display Contract + Validation: migration SQL `20260710000002_add_publication_copy_current.sql`, `types.ts` (campo opcional), `publication-copy.ts` (validação), `display.ts` (`getEffectivePublicationCopy`, `mapCampaignToProps` modificado), 12 testes
-- [x] 17-02 (Wave 2) — PATCH Route + UI Edit Mode: `route.ts` (PATCH com CSRF + auth + ownership + validação + restore), `client.tsx` (modo edição inline com Editar/Salvar/Restaurar/Cancelar, badge "Editado"), 17 testes (8 route + 9 UI)
-
-**Non-Goals (deferred):**
-- Histórico de edições (versionamento) — exigiria tabela separada
-- Preview visual estilo post (Instagram mock) — fora do escopo
-- Indicador "editado" no dashboard `/minhas-campanhas` — futuro
-- Duplicar campanha reusando copy editado
-- Edição com IA (regenerar caption)
-- Auto-save
-- Validação no frontend (apenas backend por enquanto)
+**Depends on:** Phase 18, Phase 19, Phase 20, Phase 21
 
 ---
 
-*Last updated: 2026-07-10 — Phase 17 complete, v1.3 milestone fully closed (6/6 phases, 19/19 plans)*
+## Notes
+
+- **Detalhamento via OpenSpec:** Cada fase será desdobrada em requisitos atômicos, fluxos, estados e critérios de aceitação durante o ciclo de especificação via OpenSpec.
+- **Ordem sugerida:** As fases 18-21 podem ser executadas em paralelo parcial (18 primeiro, 19-21 em sequência). A fase 22 (Mobile) depende de todas as anteriores.
+- **Estimativa:** Escopo preliminar — ajustes ocorrerão durante o detalhamento OpenSpec de cada fase.
+
+---
+*Roadmap created: 2026-07-10*
+*Last updated: 2026-07-10 after milestone v1.4 opened*

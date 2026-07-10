@@ -1,15 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.3
-milestone_name: Persistência e Entrega da Campanha
-status: complete
-last_updated: "2026-07-10"
+milestone: v1.4
+milestone_name: Experiência SaaS
+status: planning
+last_updated: "2026-07-10T21:33:41.041Z"
+last_activity: 2026-07-10
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 19
-  completed_plans: 19
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -79,10 +80,10 @@ progress:
 
 ## Current Position
 
-Phase: Milestone v1.3 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-07-10 — Milestone v1.3 completed and archived
+Status: Defining requirements
+Last activity: 2026-07-10 — Milestone v1.4 started
 
 ## Project Reference
 
@@ -90,7 +91,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-10)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** v1.3 completa (19/19 planos). Próximo: definição de próximo milestone.
+**Current focus:** v1.4 — Experiência SaaS (em planejamento)
 
 ## Performance Metrics
 
@@ -101,4 +102,5 @@ See: `.planning/PROJECT.md` (updated 2026-07-10)
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Detalhar escopo via OpenSpec para cada fase da v1.4
+- Iniciar: `/gsd-discuss-phase 18 ${GSD_WS}` ou `/gsd-plan-phase 18 ${GSD_WS}`
