@@ -109,11 +109,11 @@ describe("validatePublicationCopy", () => {
     }
   });
 
-  it("accepts Portuguese accented hashtags", async () => {
+  it("accepts Portuguese accented hashtags and hyphens", async () => {
     const { validatePublicationCopy } = await import("@/lib/campaign/publication-copy");
     const result = validatePublicationCopy({
       caption: "Pão Francês",
-      hashtags: ["#pãofrancêskg", "#çafé", "#ótimo"],
+      hashtags: ["#pãofrancêskg", "#padaria-confeitaria-doces", "#çafé"],
       cta_post: "Compre",
     });
 
