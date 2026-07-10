@@ -146,7 +146,7 @@ CONFIRMADO
 - `src/lib/supabase/server.ts` — `createServerClient()` (RLS-aware), `supabaseAdmin`
 
 ### CSRF
-- `src/lib/csrf/require-same-origin.ts` — `requireSameOrigin(request)`
+- `src/lib/auth/csrf.ts` — `requireSameOrigin(request)`
 
 ### OpenSpec change artifacts (source of truth)
 - `openspec/changes/fase-17-edicao-publication-copy/proposal.md` — Why, What Changes, Impact
