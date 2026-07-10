@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Persistência e Entrega da Campanha
-status: executing
-last_updated: "2026-07-10T20:04:49.609Z"
+status: verifying
+last_updated: "2026-07-10T20:10:49.253Z"
 progress:
   total_phases: 11
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 38
-  completed_plans: 36
-  percent: 73
+  completed_plans: 37
+  percent: 82
 ---
 
 # Project State
@@ -38,8 +38,9 @@ progress:
 | 14. Integração no Fluxo de Geração | ✅ | 3/3 | image-processor.ts, orchestration generate-image, consumer navigation |
 | 15. Página de Campanha | ✅ | 3/3 | display.ts (RLS), /campanha/[id], 4 estados visuais, middleware |
 | **16. Minhas Campanhas** | ✅ | **3/3** | **list.ts, /minhas-campanhas UI, navegação, 21 testes** |
+| **17. Edição de Publication Copy** | ✅ | **2/2** | **migration SQL, display contract, validação, PATCH route, UI edição inline, 17 testes** |
 
-**Tests:** 545 passing (63 files, 21 novos)
+**Tests:** 562 passing (65 files, 29 novos)
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 
 ## Completed
@@ -80,7 +81,7 @@ progress:
 
 Phase: 17 (edicao-publication-copy) — EXECUTING
 Plan: 2 of 2
-**Status:** Executing Phase 17 — 17-01 complete, 17-02 pending
+**Status:** Phase complete — ready for verification
 
 **Critério de conclusão da milestone:** ✅ O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la.
 
@@ -99,7 +100,7 @@ Plan: 2 of 2
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
 | 17-01 | 1 | ✅ | Migration + Validation + Display Contract — migration SQL, types.ts, publication-copy.ts, display.ts (getEffectivePublicationCopy), 12 testes |
-| 17-02 | 2 | ○ | PATCH Route + UI Edit Mode — route.ts, client.tsx modo edição inline, testes |
+| 17-02 | 2 | ✅ | PATCH Route + UI Edit Mode — route.ts, client.tsx modo edição inline, 17 testes |
 
 O lojista pode editar caption, hashtags e cta_post da campanha sem regerar a imagem. Adiciona coluna `publication_copy_current` (JSONB) com fallback `current > snapshot > vazio`. Rota PATCH segura com CSRF + auth + ownership. UI de edição inline na página `/campanha/[id]`.
 
@@ -119,3 +120,4 @@ See: `.planning/PROJECT.md` (updated 2026-07-08)
 | Phase | Plan | Duration | Notes |
 |-------|------|----------|-------|
 | Phase 17-edicao-publication-copy P01 | 2min | 6 tasks | 6 files |
+| Phase 17-edicao-publication-copy P02 | 2 min | 5 tasks | 4 files |

@@ -240,7 +240,7 @@ Página `/minhas-campanhas` com listagem de campanhas persistidas, thumbnails vi
 
 ## Phase 17 — Edição de Publication Copy
 
-**Status:** `Planned`
+**Status:** `Complete (2026-07-10)`
 **Slug:** `fase-17-edicao-publication-copy`
 **Change:** `openspec/changes/fase-17-edicao-publication-copy/`
 **Plans:** `.planning/phases/17-edicao-publication-copy/17-01-PLAN.md` — `17-02-PLAN.md`
@@ -253,5 +253,5 @@ O lojista pode editar o publication copy (caption, hashtags, cta_post) da campan
 **Planos:**
 | Plan | Wave | Status | Descrição |
 |------|------|--------|-----------|
-| 17-01 | 1 | ○ | Migration + Validation + Display Contract — migration SQL, types.ts, publication-copy.ts, display.ts (getEffectivePublicationCopy), testes |
-| 17-02 | 2 | ○ | PATCH Route + UI Edit Mode — route.ts, client.tsx modo edição inline, testes |
+| 17-01 | 1 | ✅ | Migration + Validation + Display Contract — migration SQL, types.ts, publication-copy.ts, display.ts (getEffectivePublicationCopy), 12 testes |
+| 17-02 | 2 | ✅ | PATCH Route + UI Edit Mode — route.ts, client.tsx modo edição inline, 17 testes |
