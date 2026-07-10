@@ -10,9 +10,9 @@
 | Phase | Name | Goal | Requirements | Success Criteria |
 |-------|------|------|--------------|------------------|
 | 18 | App Shell & Navegação | Estrutura de navegação definitiva | SHELL-01, SHELL-02, SHELL-03 | 3 |
-| 19 | Dashboard | Visão geral com métricas básicas e acesso rápido | DASH-01, DASH-02, DASH-03 | 3 |
-| 20 | Histórico & Busca | Organização e descoberta de campanhas | HIST-01, HIST-02, HIST-03, SEARCH-01, SEARCH-02, SEARCH-03 | 6 |
-| 21 | Onboarding & Estados Vazios | Experiência do novo usuário e consistência visual | ONBRD-01, ONBRD-02, ONBRD-03, UX-01, UX-02 | 5 |
+| 19 | Onboarding & Estados Vazios | Experiência do novo usuário e consistência visual | ONBRD-01, ONBRD-02, ONBRD-03, UX-01, UX-02 | 5 |
+| 20 | Dashboard | Visão geral com métricas básicas e acesso rápido | DASH-01, DASH-02, DASH-03 | 3 |
+| 21 | Histórico & Busca | Organização e descoberta de campanhas | HIST-01, HIST-02, HIST-03, SEARCH-01, SEARCH-02, SEARCH-03 | 6 |
 | 22 | Mobile | Fluxo completo responsivo | MOBILE-01, MOBILE-02, MOBILE-03, MOBILE-04 | 4 |
 
 **Total:** 5 phases | 21 requirements mapped | All covered ✓
@@ -34,7 +34,24 @@
 
 ---
 
-### Phase 19 — Dashboard
+### Phase 19 — Onboarding & Estados Vazios
+
+**Goal:** Guiar novos usuários na primeira experiência e garantir estados vazios consistentes em toda a aplicação, antes de apresentar o dashboard.
+
+**Requirements:** ONBRD-01, ONBRD-02, ONBRD-03, UX-01, UX-02
+
+**Success criteria:**
+1. Novo usuário é guiado por onboarding pós-signup
+2. Onboarding orienta a criar a primeira campanha
+3. Configuração inicial da loja é integrada ao onboarding
+4. Todas as listas e seções têm estados vazios com CTAs claros
+5. Estados vazios seguem padrão consistente de design
+
+**Depends on:** Phase 18
+
+---
+
+### Phase 20 — Dashboard
 
 **Goal:** Prover uma visão geral do estado da loja com métricas básicas e acesso rápido às ações principais.
 
@@ -45,11 +62,11 @@
 2. Acesso rápido à última campanha e ao formulário de nova campanha
 3. Dashboard é a landing page pós-login
 
-**Depends on:** Phase 18
+**Depends on:** Phase 18, Phase 19
 
 ---
 
-### Phase 20 — Histórico & Busca
+### Phase 21 — Histórico & Busca
 
 **Goal:** Melhorar a organização e descoberta de campanhas com ordenação, paginação, busca textual e filtros essenciais.
 
@@ -63,24 +80,7 @@
 5. URL state reflete busca/filtros (compartilhável)
 6. Transição suave entre listar, visualizar e criar nova campanha
 
-**Depends on:** Phase 18
-
----
-
-### Phase 21 — Onboarding & Estados Vazios
-
-**Goal:** Guiar novos usuários na primeira experiência e garantir estados vazios consistentes em toda a aplicação.
-
-**Requirements:** ONBRD-01, ONBRD-02, ONBRD-03, UX-01, UX-02
-
-**Success criteria:**
-1. Novo usuário é guiado por onboarding pós-signup
-2. Onboarding orienta a criar a primeira campanha
-3. Configuração inicial da loja é integrada ao onboarding
-4. Todas as listas e seções têm estados vazios com CTAs claros
-5. Estados vazios seguem padrão consistente de design
-
-**Depends on:** Phase 18
+**Depends on:** Phase 18, Phase 20
 
 ---
 
