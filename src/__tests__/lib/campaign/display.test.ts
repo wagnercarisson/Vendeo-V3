@@ -159,3 +159,115 @@ describe("computeDisplayStatus", () => {
     expect(result).toBe("error");
   });
 });
+
+describe("getEffectivePublicationCopy", () => {
+  it("returns current when it exists and is valid", async () => {
+    const { getEffectivePublicationCopy } = await import("@/lib/campaign/display");
+    const result = getEffectivePublicationCopy({
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      store_id: "store-123",
+      status: "ready",
+      product_name: "Produto Teste",
+      input_snapshot: null,
+      identity_snapshot: null,
+      generation_metadata: null,
+      render_snapshot: null,
+      publication_copy_snapshot: {
+        caption: "Texto original da IA",
+        hashtags: ["#original"],
+        cta_post: "Compre original",
+      },
+      publication_copy_current: {
+        caption: "Texto editado pelo usuário",
+        hashtags: ["#editado", "#promocao"],
+        cta_post: "Compre agora editado",
+      },
+      storage_path: "store-123/camp.jpg",
+      error_message: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
+    expect(result.caption).toBe("Texto editado pelo usuário");
+    expect(result.hashtags).toEqual(["#editado", "#promocao"]);
+    expect(result.cta_post).toBe("Compre agora editado");
+  });
+
+  it("returns snapshot when current is null", async () => {
+    const { getEffectivePublicationCopy } = await import("@/lib/campaign/display");
+    const result = getEffectivePublicationCopy({
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      store_id: "store-123",
+      status: "ready",
+      product_name: "Produto Teste",
+      input_snapshot: null,
+      identity_snapshot: null,
+      generation_metadata: null,
+      render_snapshot: null,
+      publication_copy_snapshot: {
+        caption: "Texto original da IA",
+        hashtags: ["#original"],
+        cta_post: "Compre original",
+      },
+      publication_copy_current: null,
+      storage_path: "store-123/camp.jpg",
+      error_message: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
+    expect(result.caption).toBe("Texto original da IA");
+    expect(result.hashtags).toEqual(["#original"]);
+    expect(result.cta_post).toBe("Compre original");
+  });
+
+  it("returns snapshot when current has missing fields", async () => {
+    const { getEffectivePublicationCopy } = await import("@/lib/campaign/display");
+    const result = getEffectivePublicationCopy({
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      store_id: "store-123",
+      status: "ready",
+      product_name: "Produto Teste",
+      input_snapshot: null,
+      identity_snapshot: null,
+      generation_metadata: null,
+      render_snapshot: null,
+      publication_copy_snapshot: {
+        caption: "Texto original da IA",
+        hashtags: ["#original"],
+        cta_post: "Compre original",
+      },
+      publication_copy_current: { caption: "only" }, // missing hashtags and cta_post
+      storage_path: "store-123/camp.jpg",
+      error_message: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
+    expect(result.caption).toBe("Texto original da IA");
+    expect(result.hashtags).toEqual(["#original"]);
+    expect(result.cta_post).toBe("Compre original");
+  });
+
+  it("returns empty when both current and snapshot are null", async () => {
+    const { getEffectivePublicationCopy } = await import("@/lib/campaign/display");
+    const result = getEffectivePublicationCopy({
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      store_id: "store-123",
+      status: "ready",
+      product_name: "Produto Teste",
+      input_snapshot: null,
+      identity_snapshot: null,
+      generation_metadata: null,
+      render_snapshot: null,
+      publication_copy_snapshot: null,
+      publication_copy_current: null,
+      storage_path: "store-123/camp.jpg",
+      error_message: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
+    expect(result).toEqual({ caption: "", hashtags: [], cta_post: "" });
+  });
+});
