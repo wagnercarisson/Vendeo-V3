@@ -1,5 +1,7 @@
 # Campaign Display Contract
 
+> Synced from `fase-17-edicao-publication-copy` (MODIFIED).
+
 ## Purpose
 
 Helper de leitura de campanha via RLS (`getCampaignForDisplay`) e geração de signed URL para preview (`generateSignedPreviewUrl`), com validação de UUID e mapeamento de snapshots com fallback. Este contrato é separado do `getCampaign` em `persistence.ts` (que usa `supabaseAdmin`) porque a página deve respeitar RLS para ownership automático.
@@ -96,25 +98,60 @@ Esta função é executada exclusivamente server-side. O Client Component recebe
 
 ### Requirement: Mapeamento de snapshots com fallback
 
-O sistema SHALL mapear os campos de `CampaignRecord` para o Client Component com fallback seguro:
+O sistema SHALL prover uma função `getEffectivePublicationCopy(campaign: CampaignRecord)` que retorna o publication copy efetivo aplicando a regra de fallback:
+
+- Se `publication_copy_current` não é null, é um objeto, e contém `caption: string`, `hashtags: string[]`, `cta_post: string` → usa current
+- Caso contrário → fallback para `publication_copy_snapshot`
+- Se nem current nem snapshot têm dados → string vazia / array vazio
+
+**Critério de shape/tipo:** O critério de fallback é de shape/tipo, não de truthiness. `cta_post` vazio (`""`) é um valor válido e não causa fallback indevido para o snapshot.
+
+O sistema SHALL mapear os campos de `CampaignRecord` para o Client Component com fallback seguro usando `getEffectivePublicationCopy`:
 
 | Campo na página | Fonte | Fallback se null |
 |-----------------|-------|------------------|
-| `caption` | `publication_copy_snapshot.caption` | `""` |
-| `hashtags` | `publication_copy_snapshot.hashtags` | `[]` |
-| `ctaPost` | `publication_copy_snapshot.cta_post` | `""` |
+| `campaignId` | `id` | — |
+| `isPublicationCopyEdited` | `publication_copy_current !== null` | `false` |
+| `caption` | `getEffectivePublicationCopy(campaign).caption` | `""` |
+| `hashtags` | `getEffectivePublicationCopy(campaign).hashtags` | `[]` |
+| `ctaPost` | `getEffectivePublicationCopy(campaign).cta_post` | `""` |
 | `productName` | `product_name` | `""` |
 | `createdAt` | `created_at` | `new Date().toISOString()` |
 | `updatedAt` | `updated_at` | `new Date().toISOString()` |
 | `downloadUrl` | Pré-computado: `"/api/campaign/${id}/download"` | — |
 | `displayStatus` | Derivado server-side de `status` + stale check | `"error"` |
 
-#### Scenario: publication_copy_snapshot completo
+#### Scenario: getEffectivePublicationCopy retorna current quando existe
 
-- **WHEN** `publication_copy_snapshot` contém `{ caption: "texto", hashtags: ["#tag"], cta_post: "compre" }`
-- **THEN** os campos mapeados refletem exatamente os valores do snapshot
+- **WHEN** campaign tem `publication_copy_current` válido (caption, hashtags, cta_post) e `publication_copy_snapshot` válido
+- **THEN** retorna os dados de `publication_copy_current` (current tem prioridade sobre snapshot)
 
-#### Scenario: publication_copy_snapshot nulo
+#### Scenario: getEffectivePublicationCopy retorna snapshot quando current é null
 
-- **WHEN** `publication_copy_snapshot` é `null`
-- **THEN** caption retorna `""`, hashtags retorna `[]`, ctaPost retorna `""`
+- **WHEN** campaign tem `publication_copy_current = null` e `publication_copy_snapshot` válido
+- **THEN** retorna os dados de `publication_copy_snapshot` (fallback)
+
+#### Scenario: getEffectivePublicationCopy retorna snapshot quando current tem campos faltando
+
+- **WHEN** campaign tem `publication_copy_current` mal formatado (ex: sem `caption`)
+- **THEN** retorna os dados de `publication_copy_snapshot` (fallback seguro)
+
+#### Scenario: getEffectivePublicationCopy retorna vazio quando ambos são null
+
+- **WHEN** campaign tem ambos `publication_copy_current` e `publication_copy_snapshot` como null
+- **THEN** retorna `{ caption: "", hashtags: [], cta_post: "" }`
+
+#### Scenario: isPublicationCopyEdited true quando current existe
+
+- **WHEN** campaign tem `publication_copy_current` não null
+- **THEN** `isPublicationCopyEdited` retorna `true`
+
+#### Scenario: isPublicationCopyEdited false quando current é null
+
+- **WHEN** campaign tem `publication_copy_current` null
+- **THEN** `isPublicationCopyEdited` retorna `false`
+
+#### Scenario: campaignId passado ao Client Component
+
+- **WHEN** `mapCampaignToProps` mapeia uma campanha
+- **THEN** o campo `campaignId` contém o valor de `campaigns.id`
