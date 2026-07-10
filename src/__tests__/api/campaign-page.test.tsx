@@ -21,6 +21,8 @@ const defaultProps = {
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   downloadUrl: "/api/campaign/123/download",
+  campaignId: "123",
+  isPublicationCopyEdited: false,
 };
 
 beforeEach(() => {

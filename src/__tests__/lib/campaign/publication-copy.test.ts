@@ -12,7 +12,7 @@ describe("validatePublicationCopy", () => {
     });
 
     expect(result.valid).toBe(true);
-    if (result.valid) {
+    if (result.valid && !("restore" in result.data)) {
       expect(result.data.caption).toBe("Texto promocional");
       expect(result.data.hashtags).toEqual(["#tag", "#oferta"]);
       expect(result.data.cta_post).toBe("Compre agora");
