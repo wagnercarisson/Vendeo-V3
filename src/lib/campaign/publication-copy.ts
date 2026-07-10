@@ -1,5 +1,3 @@
-"use server";
-
 export interface ValidationIssue {
   field: string;
   message: string;
