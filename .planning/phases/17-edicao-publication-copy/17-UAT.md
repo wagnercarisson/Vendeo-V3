@@ -1,5 +1,5 @@
 ---
-status: testing
+status: complete
 uat_type: manual
 phase: 17-edicao-publication-copy
 source: 17-01-SUMMARY.md, 17-02-SUMMARY.md
@@ -9,11 +9,7 @@ updated: "2026-07-10T17:29:29Z"
 
 ## Current Test
 
-number: 2
-name: Badge "Editado" quando publication_copy_current existe
-expected: |
-  Quando a campanha tem publication_copy_current salvo, o badge "Editado" aparece ao lado do título "Kit de Publicação".
-awaiting: user response
+[testing complete]
 
 ## Tests
 
@@ -24,38 +20,40 @@ note: CTA não aparece porque está vazio no BD — comportamento esperado (rend
 
 ### 2. Badge "Editado" quando publication_copy_current existe
 expected: Quando a campanha tem publication_copy_current salvo, o badge "Editado" aparece ao lado do título "Kit de Publicação".
-result: [pending]
+result: pass
+note: Confirmado visualmente após salvar edição
 
 ### 3. Entrar em modo edição
 expected: Clicar em "✏️ Editar" transforma caption em textarea, hashtags em textarea (uma por linha), CTA em input, e mostra botões Salvar/Restaurar/Cancelar. Os campos são pré-preenchidos com os valores atuais.
-result: [pending]
+result: pass
+note: Inputs agora visíveis com bg fix (bg-gray-800)
 
 ### 4. Salvar edição com sucesso
 expected: Preencher novos valores, clicar "💾 Salvar". O PATCH é enviado para /api/campaign/[id]/publication-copy. Após resposta 200, a UI volta ao modo visualização refletindo os novos valores. Badge "Editado" aparece.
-result: [pending]
+result: pass
 
 ### 5. Restaurar texto original da IA
 expected: Clicar "↩️ Restaurar original" abre confirmação. Confirmar envia PATCH com { restore: true }. UI volta ao modo visualização com caption/hashtags/CTA originais da IA. Badge "Editado" some.
-result: [pending]
+result: pass
 
 ### 6. Cancelar edição
 expected: Entrar em modo edição, modificar campos, clicar "Cancelar". A UI volta ao modo visualização com os valores ORIGINAIS (anteriores à edição), descartando as alterações.
-result: [pending]
+result: pass
 
 ### 7. Estado de loading durante salvamento
 expected: Clicar "💾 Salvar" mostra "Salvando..." no botão, desabilita Salvar/Restaurar/Cancelar. Botões voltam ao normal após resposta.
-result: [pending]
+result: pass
 
 ### 8. Estado de erro no salvamento
 expected: Se o PATCH falhar (ex: 400 validation), a UI mostra a mensagem de erro em vermelho e permanece em modo edição — o lojista pode corrigir e tentar novamente.
-result: [pending]
+result: pass
 
 ## Summary
 
 total: 8
-passed: 1
+passed: 8
 issues: 2
-pending: 7
+pending: 0
 skipped: 0
 skipped: 0
 
