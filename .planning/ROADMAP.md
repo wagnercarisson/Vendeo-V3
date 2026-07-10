@@ -10,9 +10,11 @@
 ## Phases
 
 <details>
-<summary>✅ v1.3 Persistência e Entrega da Campanha — 5/5 fases concluídas</summary>
+<summary>✅ v1.3 Persistência e Entrega da Campanha — 6/6 fases concluídas ✅</summary>
 
 **Critério de conclusão da milestone:** O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la. ✅
+
+**Critério de extensão (Phase 17):** O lojista pode editar caption, hashtags e cta_post da campanha sem regerar a imagem. ✅
 
 **Escopo v1.3 (fases identificadas):**
 - [x] Phase 12: Fundação DB/Storage (Complete) — tabela campaigns, bucket campaign-images, RLS e Storage policies, verify script
@@ -20,6 +22,7 @@
 - [x] Phase 14: Integração no Fluxo de Geração (Complete) — sharp, transcodeToJpeg, persistência, consumer navigation
 - [x] Phase 15: Página de Campanha (Complete) — `/campanha/[id]` com preview e download
 - [x] Phase 16: Minhas Campanhas (Complete) — `/minhas-campanhas` com listagem, thumbnails, estado vazio
+- [x] Phase 17: Edição de Publication Copy (Complete) — migration column, validação, display contract, PATCH route, UI edição inline
 
 </details>
 
@@ -86,6 +89,16 @@
 | 13. Serviço de Persistência e Download | v1.3 | 3/3 | ✅ Complete | 2026-07-09 |
 
 | 14. Integração no Fluxo de Geração | v1.3 | 3/3 | ✅ Complete | 2026-07-09 |
+
+| 15. Página de Campanha | v1.3 | 3/3 | ✅ Complete | 2026-07-09 |
+
+---
+
+| 16. Minhas Campanhas | v1.3 | 3/3 | ✅ Complete | 2026-07-10 |
+
+---
+
+| 17. Edição de Publication Copy | v1.3 | 2/2 | ✅ Complete | 2026-07-10 |
 
 ---
 
@@ -177,4 +190,27 @@
 
 ---
 
-*Last updated: 2026-07-10 — Phase 16 complete, v1.3 milestone closed*
+### Phase 17 — Edição de Publication Copy ✅
+
+**Goal:** Permitir que o lojista edite caption, hashtags e cta_post da campanha sem regerar a imagem. Adiciona coluna `publication_copy_current` (JSONB) com fallback `current > snapshot > vazio`. Rota PATCH segura com CSRF + auth + ownership. UI de edição inline na página `/campanha/[id]`.
+
+**Depends on:** Phase 12 (campaigns table), Phase 13 (persistence pattern), Phase 15 (display.ts, page.tsx, client.tsx)
+
+**Requirement IDs:** REQ-MIGRATION-ADD-COLUMN, REQ-TYPES-CURRENT-FIELD, REQ-VALIDATION-FUNCTION, REQ-VALIDATION-ISSUE-TYPE, REQ-VALIDATION-RESTORE, REQ-DISPLAY-FALLBACK, REQ-DISPLAY-CAMPAIGN-ID, REQ-DISPLAY-EDITED-FLAG, REQ-PATCH-ROUTE, REQ-PATCH-CSRF, REQ-PATCH-UUID-VALIDATION, REQ-PATCH-OWNERSHIP, REQ-PATCH-RESTORE, REQ-PAGE-NEW-PROPS, REQ-UI-EDIT-MODE, REQ-UI-SAVE, REQ-UI-RESTORE, REQ-UI-CANCEL, REQ-UI-BADGE, REQ-UI-LOADING, REQ-UI-ERROR
+
+**Plans (2/2):**
+- [x] 17-01 (Wave 1) — Migration + Display Contract + Validation: migration SQL `20260710000002_add_publication_copy_current.sql`, `types.ts` (campo opcional), `publication-copy.ts` (validação), `display.ts` (`getEffectivePublicationCopy`, `mapCampaignToProps` modificado), 12 testes
+- [x] 17-02 (Wave 2) — PATCH Route + UI Edit Mode: `route.ts` (PATCH com CSRF + auth + ownership + validação + restore), `client.tsx` (modo edição inline com Editar/Salvar/Restaurar/Cancelar, badge "Editado"), 17 testes (8 route + 9 UI)
+
+**Non-Goals (deferred):**
+- Histórico de edições (versionamento) — exigiria tabela separada
+- Preview visual estilo post (Instagram mock) — fora do escopo
+- Indicador "editado" no dashboard `/minhas-campanhas` — futuro
+- Duplicar campanha reusando copy editado
+- Edição com IA (regenerar caption)
+- Auto-save
+- Validação no frontend (apenas backend por enquanto)
+
+---
+
+*Last updated: 2026-07-10 — Phase 17 complete, v1.3 milestone fully closed (6/6 phases, 39/39 plans)*

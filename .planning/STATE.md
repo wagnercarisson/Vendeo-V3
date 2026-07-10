@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Persistência e Entrega da Campanha
-status: verifying
-last_updated: "2026-07-10T20:10:49.253Z"
+status: complete
+last_updated: "2026-07-10T20:30:00.000Z"
 progress:
-  total_phases: 11
-  completed_phases: 9
-  total_plans: 38
-  completed_plans: 37
-  percent: 82
+  total_phases: 6
+  completed_phases: 6
+  total_plans: 19
+  completed_plans: 19
+  percent: 100
 ---
 
 # Project State
@@ -79,33 +79,23 @@ progress:
 
 ## Current Position
 
-Phase: 17 (edicao-publication-copy) — EXECUTING
-Plan: 2 of 2
-**Status:** Phase complete — ready for verification
+**Status:** Todas as fases implementadas ✅ (12 fases, 39 planos)
 
-**Critério de conclusão da milestone:** ✅ O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la.
+**Milestone v1.3 — Persistência e Entrega da Campanha** ✅ COMPLETE (6/6 phases)
 
-**v1.3 phases identified:**
-
-- **[✅] Phase 12: Fundação DB/Storage** — campaigns table, campaign-images bucket, RLS/Storage policies, verify script
-- **[✅] Phase 13: Serviço de Persistência** — types.ts, persistence.ts, download route, 25 testes
-- **[✅] Phase 14: Integração no Fluxo de Geração** — sharp, transcodeToJpeg, persistência, consumer navigation
-- **[✅] Phase 15: Página de Campanha** — /campanha/[id] com preview e download (3/3 planos)
-- **[✅] Phase 16: Minhas Campanhas** — /minhas-campanhas com listagem, thumbnails e estado vazio (3/3 planos)
-
-## Upcoming
-
-### Phase 17 — Edição de Publication Copy (Planned)
-
-| Plan | Wave | Status | Description |
-|------|------|--------|-------------|
-| 17-01 | 1 | ✅ | Migration + Validation + Display Contract — migration SQL, types.ts, publication-copy.ts, display.ts (getEffectivePublicationCopy), 12 testes |
-| 17-02 | 2 | ✅ | PATCH Route + UI Edit Mode — route.ts, client.tsx modo edição inline, 17 testes |
+| Phase | Status | Plans | Description |
+|-------|--------|-------|-------------|
+| 12. Fundação DB/Storage | ✅ | 5/5 | campaigns table, campaign-images bucket, RLS/Storage policies, verify script |
+| 13. Serviço de Persistência | ✅ | 3/3 | types.ts, persistence.ts (7 helpers), download route, 25 testes |
+| 14. Integração no Fluxo de Geração | ✅ | 3/3 | image-processor.ts, orchestration generate-image, consumer navigation |
+| 15. Página de Campanha | ✅ | 3/3 | display.ts (RLS), /campanha/[id], 4 estados visuais, middleware |
+| 16. Minhas Campanhas | ✅ | 3/3 | list.ts, /minhas-campanhas UI, navegação, 21 testes |
+| **17. Edição de Publication Copy** | ✅ | **2/2** | **migration SQL, display contract, validação, PATCH route, UI edição inline, 29 testes** |
 
 O lojista pode editar caption, hashtags e cta_post da campanha sem regerar a imagem. Adiciona coluna `publication_copy_current` (JSONB) com fallback `current > snapshot > vazio`. Rota PATCH segura com CSRF + auth + ownership. UI de edição inline na página `/campanha/[id]`.
 
-**Change:** `openspec/changes/fase-17-edicao-publication-copy/`
-**Context:** `.planning/phases/17-edicao-publication-copy/17-CONTEXT.md`
+**Tests:** 562 passing (65 files, 29 novos)
+**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 
 ## Project Reference
 
@@ -113,7 +103,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-08)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** Phase 17 — edicao-publication-copy
+**Current focus:** v1.3 completa (39/39 planos). Próximo: definição de próximo milestone.
 
 ## Performance Metrics
 
