@@ -174,7 +174,7 @@ function ReadyView(props: CampaignPageProps) {
               <textarea
                 value={editData.caption}
                 onChange={(e) => setEditData(prev => ({ ...prev, caption: e.target.value }))}
-                className="w-full rounded border p-2"
+                className="w-full rounded border border-gray-600 bg-gray-800 p-2 text-gray-100"
                 rows={4}
                 maxLength={2200}
                 disabled={isSaving}
@@ -185,7 +185,7 @@ function ReadyView(props: CampaignPageProps) {
               <textarea
                 value={editData.hashtags.join("\n")}
                 onChange={(e) => handleHashtagsChange(e.target.value)}
-                className="w-full rounded border p-2"
+                className="w-full rounded border border-gray-600 bg-gray-800 p-2 text-gray-100"
                 rows={4}
                 disabled={isSaving}
               />
@@ -196,7 +196,7 @@ function ReadyView(props: CampaignPageProps) {
                 type="text"
                 value={editData.cta_post}
                 onChange={(e) => setEditData(prev => ({ ...prev, cta_post: e.target.value }))}
-                className="w-full rounded border p-2"
+                className="w-full rounded border border-gray-600 bg-gray-800 p-2 text-gray-100"
                 maxLength={200}
                 disabled={isSaving}
               />

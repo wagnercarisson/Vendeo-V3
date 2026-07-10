@@ -113,7 +113,7 @@ export function validatePublicationCopy(
           code: "invalid_format",
         });
       } else {
-        if (!/^#\w+$/.test(tag)) {
+        if (!/^#[\p{L}\p{N}_]+$/u.test(tag)) {
           issues.push({
             field: `hashtags[${index}]`,
             message:

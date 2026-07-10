@@ -109,6 +109,17 @@ describe("validatePublicationCopy", () => {
     }
   });
 
+  it("accepts Portuguese accented hashtags", async () => {
+    const { validatePublicationCopy } = await import("@/lib/campaign/publication-copy");
+    const result = validatePublicationCopy({
+      caption: "Pão Francês",
+      hashtags: ["#pãofrancêskg", "#çafé", "#ótimo"],
+      cta_post: "Compre",
+    });
+
+    expect(result.valid).toBe(true);
+  });
+
   it("rejects empty body", async () => {
     const { validatePublicationCopy } = await import("@/lib/campaign/publication-copy");
     const result = validatePublicationCopy({});
