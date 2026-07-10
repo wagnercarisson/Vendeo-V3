@@ -64,7 +64,7 @@
 
 ## Current Position
 
-**Status:** v1.3 completa (17/17 planos executados). Milestone concluída: "gerou, saiu, voltou, encontrou e baixou".
+**Status:** v1.3 completa (17/17 planos executados). Próximo: Phase 17 — Edição de Publication Copy.
 
 **Critério de conclusão da milestone:** ✅ O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la.
 
@@ -75,10 +75,24 @@
 - **[✅] Phase 15: Página de Campanha** — /campanha/[id] com preview e download (3/3 planos)
 - **[✅] Phase 16: Minhas Campanhas** — /minhas-campanhas com listagem, thumbnails e estado vazio (3/3 planos)
 
+## Upcoming
+
+### Phase 17 — Edição de Publication Copy (Planned)
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 17-01 | 1 | ○ | Migration + Validation + Display Contract — migration SQL, types.ts, publication-copy.ts, display.ts (getEffectivePublicationCopy), testes |
+| 17-02 | 2 | ○ | PATCH Route + UI Edit Mode — route.ts, client.tsx modo edição inline, testes |
+
+O lojista pode editar caption, hashtags e cta_post da campanha sem regerar a imagem. Adiciona coluna `publication_copy_current` (JSONB) com fallback `current > snapshot > vazio`. Rota PATCH segura com CSRF + auth + ownership. UI de edição inline na página `/campanha/[id]`.
+
+**Change:** `openspec/changes/fase-17-edicao-publication-copy/`
+**Context:** `.planning/phases/17-edicao-publication-copy/17-CONTEXT.md`
+
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-07-08)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** v1.3 completa. Próximo: definir próximos passos do produto.
+**Current focus:** Planejamento da Phase 17 — Edição de Publication Copy. Após implementação, o lojista poderá ajustar o texto de publicação sem regerar a campanha.

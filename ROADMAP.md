@@ -235,3 +235,23 @@ Página `/minhas-campanhas` com listagem de campanhas persistidas, thumbnails vi
 | 16-01 | 1 | ◀ | Contrato de listagem — list.ts com listCampaigns, CampaignListItem, generateBatchThumbnailUrls |
 | 16-02 | 2 | ◀ | UI `/minhas-campanhas` + navegação — page.tsx, client.tsx, header, middleware, back link |
 | 16-03 | 2 | ◀ | Testes e Verificação — helper, page states, middleware, typecheck/lint/build |
+
+---
+
+## Phase 17 — Edição de Publication Copy
+
+**Status:** `Planned`
+**Slug:** `fase-17-edicao-publication-copy`
+**Change:** `openspec/changes/fase-17-edicao-publication-copy/`
+**Plans:** `.planning/phases/17-edicao-publication-copy/17-01-PLAN.md` — `17-02-PLAN.md`
+**Context:** `.planning/phases/17-edicao-publication-copy/17-CONTEXT.md`
+
+O lojista pode editar o publication copy (caption, hashtags, cta_post) da campanha sem regerar a imagem. Adiciona coluna `publication_copy_current` (JSONB) para armazenar a versão editada, com fallback `current > snapshot > vazio` no display layer. Inclui validação server-side, rota PATCH segura (CSRF + auth + ownership), e UI de edição inline na página `/campanha/[id]`.
+
+**Dependências:** Phase 12 (tabela `campaigns`), Phase 15 (página `/campanha/[id]`, display contract), Phase 13 (padrão route handler)
+
+**Planos:**
+| Plan | Wave | Status | Descrição |
+|------|------|--------|-----------|
+| 17-01 | 1 | ○ | Migration + Validation + Display Contract — migration SQL, types.ts, publication-copy.ts, display.ts (getEffectivePublicationCopy), testes |
+| 17-02 | 2 | ○ | PATCH Route + UI Edit Mode — route.ts, client.tsx modo edição inline, testes |
