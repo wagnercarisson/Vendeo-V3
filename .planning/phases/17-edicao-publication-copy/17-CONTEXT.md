@@ -196,11 +196,9 @@ Adicionar `publication_copy_current: Record<string, unknown> | null` opcional en
 
 ### `publication-copy.ts` — validatePublicationCopy
 ```typescript
-export interface PublicationCopyUpdate {
-  caption: string;
-  hashtags: string[];
-  cta_post: string;
-}
+export type PublicationCopyUpdate =
+  | { caption: string; hashtags: string[]; cta_post: string }
+  | { restore: true };
 
 export interface ValidationIssue {
   field: string;
