@@ -32,6 +32,7 @@ const mockCampaign: CampaignRecord = {
   generation_metadata: null,
   render_snapshot: null,
   publication_copy_snapshot: { caption: "Texto", hashtags: ["#tag"], cta_post: "Compre" },
+  publication_copy_current: null,
   storage_path: "store-123/550e8400-e29b-41d4-a716-446655440000.jpg",
   error_message: null,
   created_at: new Date().toISOString(),
