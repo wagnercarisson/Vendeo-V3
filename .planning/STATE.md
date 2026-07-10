@@ -1,3 +1,17 @@
+---
+gsd_state_version: 1.0
+milestone: v1.3
+milestone_name: Persistência e Entrega da Campanha
+status: executing
+last_updated: "2026-07-10T20:04:49.609Z"
+progress:
+  total_phases: 11
+  completed_phases: 8
+  total_plans: 38
+  completed_plans: 36
+  percent: 73
+---
+
 # Project State
 
 **Last updated:** 2026-07-10
@@ -64,11 +78,14 @@
 
 ## Current Position
 
-**Status:** v1.3 completa (17/17 planos executados). Próximo: Phase 17 — Edição de Publication Copy.
+Phase: 17 (edicao-publication-copy) — EXECUTING
+Plan: 2 of 2
+**Status:** Executing Phase 17 — 17-01 complete, 17-02 pending
 
 **Critério de conclusão da milestone:** ✅ O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la.
 
 **v1.3 phases identified:**
+
 - **[✅] Phase 12: Fundação DB/Storage** — campaigns table, campaign-images bucket, RLS/Storage policies, verify script
 - **[✅] Phase 13: Serviço de Persistência** — types.ts, persistence.ts, download route, 25 testes
 - **[✅] Phase 14: Integração no Fluxo de Geração** — sharp, transcodeToJpeg, persistência, consumer navigation
@@ -81,7 +98,7 @@
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
-| 17-01 | 1 | ○ | Migration + Validation + Display Contract — migration SQL, types.ts, publication-copy.ts, display.ts (getEffectivePublicationCopy), testes |
+| 17-01 | 1 | ✅ | Migration + Validation + Display Contract — migration SQL, types.ts, publication-copy.ts, display.ts (getEffectivePublicationCopy), 12 testes |
 | 17-02 | 2 | ○ | PATCH Route + UI Edit Mode — route.ts, client.tsx modo edição inline, testes |
 
 O lojista pode editar caption, hashtags e cta_post da campanha sem regerar a imagem. Adiciona coluna `publication_copy_current` (JSONB) com fallback `current > snapshot > vazio`. Rota PATCH segura com CSRF + auth + ownership. UI de edição inline na página `/campanha/[id]`.
@@ -95,4 +112,10 @@ See: `.planning/PROJECT.md` (updated 2026-07-08)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** Planejamento da Phase 17 — Edição de Publication Copy. Após implementação, o lojista poderá ajustar o texto de publicação sem regerar a campanha.
+**Current focus:** Phase 17 — edicao-publication-copy
+
+## Performance Metrics
+
+| Phase | Plan | Duration | Notes |
+|-------|------|----------|-------|
+| Phase 17-edicao-publication-copy P01 | 2min | 6 tasks | 6 files |
