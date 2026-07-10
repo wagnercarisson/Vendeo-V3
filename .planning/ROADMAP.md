@@ -5,21 +5,21 @@
 - ✅ **v1.0 Core de Geração** — Phases 1-6 (shipped 2026-07-03)
 - ✅ **v1.1 Motor de Campanhas** — Phases 2-6 (shipped 2026-07-03)
 - ✅ **v1.2 Contas e Propriedade** — Phases 7-11 (shipped 2026-07-08)
-- 🔷 **v1.3 Persistência e Entrega da Campanha** — Fases 12-14 executadas (3/5), 2 fases restantes
+- ✅ **v1.3 Persistência e Entrega da Campanha** — 5/5 fases concluídas
 
 ## Phases
 
 <details>
-<summary>🔷 v1.3 Persistência e Entrega da Campanha — 3/5 fases concluídas</summary>
+<summary>✅ v1.3 Persistência e Entrega da Campanha — 5/5 fases concluídas</summary>
 
-**Critério de conclusão da milestone:** O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la.
+**Critério de conclusão da milestone:** O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la. ✅
 
 **Escopo v1.3 (fases identificadas):**
 - [x] Phase 12: Fundação DB/Storage (Complete) — tabela campaigns, bucket campaign-images, RLS e Storage policies, verify script
 - [x] Phase 13: Serviço de Persistência (Complete) — persistence.ts, 7 helpers, signed URL, 25 testes
 - [x] Phase 14: Integração no Fluxo de Geração (Complete) — sharp, transcodeToJpeg, persistência, consumer navigation
 - [x] Phase 15: Página de Campanha (Complete) — `/campanha/[id]` com preview e download
-- [ ] Phase 16: Minhas Campanhas — `/minhas-campanhas` com listagem, thumbnails e estado vazio
+- [x] Phase 16: Minhas Campanhas (Complete) — `/minhas-campanhas` com listagem, thumbnails, estado vazio
 
 </details>
 
@@ -154,4 +154,27 @@
 
 ---
 
-*Last updated: 2026-07-09 — Phase 14 plans created (14-01, 14-02, 14-03)*
+### Phase 16 — Minhas Campanhas ✅
+
+**Goal:** Criar a página `/minhas-campanhas` com listagem de campanhas persistidas, fechando o ciclo da milestone v1.3 ("gerou, saiu, voltou, encontrou e baixou").
+
+**Depends on:** Phase 13 (types.ts, persistence.ts), Phase 15 (display.ts pattern, middleware)
+
+**Requirement IDs:** REQ-LIST-CAMPAIGNS, REQ-LIST-ITEM, REQ-BATCH-THUMBNAILS, REQ-LIST-PAGE, REQ-LIST-CLIENT, REQ-LIST-EMPTY, REQ-NAV-HEADER, REQ-NAV-BACK, REQ-REDIRECT-PREVIEW, REQ-MIDDLEWARE-MATCHER, REQ-TEST-LIST, REQ-TEST-PAGE-SERVER, REQ-TEST-PAGE-DISPLAY, REQ-TEST-AUTHHEADER, REQ-TEST-REDIRECT, REQ-TEST-MIDDLEWARE, REQ-BUILD-VERIFICATION
+
+**Plans (3/3):**
+- [x] 16-01 (Wave 1) — Contrato de listagem: `list.ts` com `listCampaigns`, `generateBatchThumbnailUrls`, `CampaignListItem`, 7 testes
+- [x] 16-02 (Wave 2) — UI `/minhas-campanhas` + navegação: page.tsx, client.tsx, auth-header, back link, redirect, middleware
+- [x] 16-03 (Wave 2) — Testes e Verificação: 14 novos testes, typecheck/lint/build
+
+**Non-Goals (deferred):**
+- Paginação visível ("Load More") — LIMIT 50 interno para v1.3
+- Filtros ou busca na lista
+- Geração de miniaturas dedicadas (sharp) — CSS object-cover resolve
+- Campanhas `generating` na lista — excluídas por decisão da milestone
+- Edição de publication copy — futuro
+- Cleanup de `/api/campaign/generate` (legado)
+
+---
+
+*Last updated: 2026-07-10 — Phase 16 complete, v1.3 milestone closed*
