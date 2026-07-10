@@ -196,7 +196,7 @@ Modificar o fluxo de geração (`generate-image`) para salvar a campanha pós-re
 ## Phase 15 — Página de Campanha ✓
 
 **Status:** `Complete` ✓
-**Slug:** `fase-15-pagina-campanha`
+**Slug:** `fase-15-pagina-de-campanha`
 **Change:** `openspec/changes/fase-15-pagina-de-campanha/`
 **Plans:** `.planning/phases/15-pagina-de-campanha/15-01-PLAN.md` — `15-03-PLAN.md`
 **Context:** `.planning/phases/15-pagina-de-campanha/15-CONTEXT.md`
@@ -217,11 +217,21 @@ Página `/campanha/[id]` com preview e download da campanha persistida. Server C
 
 ---
 
-## Phase 16 — Lista de Campanhas (Next)
+## Phase 16 — Minhas Campanhas
 
-**Status:** `Pending`
-**Slug:** `fase-16-lista-campanhas`
+**Status:** `Planned`
+**Slug:** `fase-16-minhas-campanhas`
+**Change:** `openspec/changes/fase-16-minhas-campanhas/`
+**Plans:** `.planning/phases/16-minhas-campanhas/16-01-PLAN.md` — `16-03-PLAN.md`
+**Context:** `.planning/phases/16-minhas-campanhas/16-CONTEXT.md`
 
-Página `/minhas-campanhas` com thumbnails, filtros e gerenciamento.
+Página `/minhas-campanhas` com listagem de campanhas persistidas, thumbnails via signed URL, estado vazio, e navegação. Fecha o ciclo da milestone v1.3 ("gerou, saiu, voltou, encontrou e baixou").
 
-**Dependências:** Phase 13
+**Dependências:** Phase 13, Phase 15
+
+**Planos:**
+| Plan | Wave | Status | Descrição |
+|------|------|--------|-----------|
+| 16-01 | 1 | ◀ | Contrato de listagem — list.ts com listCampaigns, CampaignListItem, generateBatchThumbnailUrls |
+| 16-02 | 2 | ◀ | UI `/minhas-campanhas` + navegação — page.tsx, client.tsx, header, middleware, back link |
+| 16-03 | 2 | ◀ | Testes e Verificação — helper, page states, middleware, typecheck/lint/build |

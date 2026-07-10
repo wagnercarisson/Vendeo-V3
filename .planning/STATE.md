@@ -1,7 +1,7 @@
 # Project State
 
-**Last updated:** 2026-07-09
-**Milestone:** v1.3 — Persistência e Entrega da Campanha 🔷 IN PROGRESS (3/5 phases)
+**Last updated:** 2026-07-10
+**Milestone:** v1.3 — Persistência e Entrega da Campanha 🔷 IN PROGRESS (4/5 phases)
 
 ## Completed
 
@@ -26,6 +26,14 @@
 
 **Tests:** 524 passing (60 files)
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
+
+### Phase 16 — Minhas Campanhas
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 16-01 | 1 | ◀ | Contrato de listagem — list.ts com listCampaigns, CampaignListItem, generateBatchThumbnailUrls |
+| 16-02 | 2 | ◀ | UI `/minhas-campanhas` + navegação — page.tsx, client.tsx, header, middleware, back link |
+| 16-03 | 2 | ◀ | Testes e Verificação — helper, page states, middleware, typecheck/lint/build |
 
 ## Completed
 
@@ -63,7 +71,7 @@
 
 ## Current Position
 
-**Status:** Fases 12-15 concluídas (14/14 planos executados). Milestone v1.3 em 4/5 fases.
+**Status:** Fases 12-15 concluídas (14/14 planos executados). Milestone v1.3 em 4/5 fases. Fase 16 em planejamento.
 
 **Critério de conclusão da milestone:** O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la. (Fase 16 pendente — listagem de campanhas)
 
@@ -72,7 +80,7 @@
 - **[✅] Phase 13: Serviço de Persistência** — types.ts, persistence.ts, download route, 25 testes
 - **[✅] Phase 14: Integração no Fluxo de Geração** — sharp, transcodeToJpeg, persistência, consumer navigation
 - **[✅] Phase 15: Página de Campanha** — /campanha/[id] com preview e download (3/3 planos)
-- **[○] Phase 16: Lista de Campanhas** — /minhas-campanhas com thumbnails
+- **[◀] Phase 16: Minhas Campanhas** — /minhas-campanhas com listagem, thumbnails e estado vazio (planejando)
 
 ## Project Reference
 
@@ -80,4 +88,4 @@ See: `.planning/PROJECT.md` (updated 2026-07-08)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** v1.3 — 4/5 fases concluídas. Próximo: Fase 16 (Lista de Campanhas)
+**Current focus:** v1.3 — 4/5 fases concluídas. Planejando Fase 16 (Minhas Campanhas)

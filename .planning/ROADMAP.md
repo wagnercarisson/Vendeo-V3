@@ -18,8 +18,8 @@
 - [x] Phase 12: Fundação DB/Storage (Complete) — tabela campaigns, bucket campaign-images, RLS e Storage policies, verify script
 - [x] Phase 13: Serviço de Persistência (Complete) — persistence.ts, 7 helpers, signed URL, 25 testes
 - [x] Phase 14: Integração no Fluxo de Geração (Complete) — sharp, transcodeToJpeg, persistência, consumer navigation
-- [ ] Phase 15: Página de Campanha — `/campanha/[id]` com preview e download
-- [ ] Phase 16: Lista de Campanhas — `/minhas-campanhas` com thumbnails e estado vazio
+- [x] Phase 15: Página de Campanha (Complete) — `/campanha/[id]` com preview e download
+- [ ] Phase 16: Minhas Campanhas — `/minhas-campanhas` com listagem, thumbnails e estado vazio
 
 </details>
 
