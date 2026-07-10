@@ -1,5 +1,22 @@
 # Milestones
 
+## v1.3 Persistência e Entrega da Campanha (Shipped: 2026-07-10)
+
+**Phases completed:** 6 phases (12-17), 19 plans, 579 tests (67 files)
+
+**Key accomplishments:**
+
+- **Fundação DB/Storage**: Tabela `campaigns` (12 colunas, RLS, CHECK constraints), bucket `campaign-images` (privado, imutável), migrations com revert commands
+- **Serviço de Persistência**: 7 helpers (create/upload/update/get/delete), pipeline de guard para download, 25 testes de unidade
+- **Integração no Fluxo de Geração**: Pipeline INSERT→IA→transcode→upload→updateReady com compensação, sharp para transcodificação, NDJSON extendido com campaignId/campaignUrl
+- **Página de Campanha**: `/campanha/[id]` com 4 estados (ready/generating/stale/error), preview com signed URL, download, polling 5s
+- **Minhas Campanhas**: `/minhas-campanhas` com listagem RLS, thumbnails, estado vazio, navegação integrada (auth-header, back link, preview redirect)
+- **Edição de Publication Copy**: Coluna JSONB, validação caption/hashtags/cta_post, PATCH com CSRF+auth+ownership+restore, UI inline edit
+
+**Ciclo E2E completo:** Gerou → Saiu → Voltou → Encontrou → Baixou ✅
+
+---
+
 ## 1.0 MVP (Shipped: 2026-05-25)
 
 **Phases completed:** 2 phases (Foundation, Campaign Input), 3 plans, 25 tasks

@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Persistência e Entrega da Campanha
 status: complete
-last_updated: "2026-07-10T20:30:00.000Z"
+last_updated: "2026-07-10"
 progress:
   total_phases: 6
   completed_phases: 6
@@ -15,7 +15,7 @@ progress:
 # Project State
 
 **Last updated:** 2026-07-10
-**Milestone:** v1.3 — Persistência e Entrega da Campanha ✅ COMPLETE (5/5 phases)
+**Milestone:** v1.3 — Persistência e Entrega da Campanha ✅ COMPLETE (6/6 phases)
 
 ## Completed
 
@@ -40,7 +40,7 @@ progress:
 | **16. Minhas Campanhas** | ✅ | **3/3** | **list.ts, /minhas-campanhas UI, navegação, 21 testes** |
 | **17. Edição de Publication Copy** | ✅ | **2/2** | **migration SQL, display contract, validação, PATCH route, UI edição inline, 17 testes** |
 
-**Tests:** 562 passing (65 files, 29 novos)
+**Tests:** 579 passing (67 files, 29 novos)
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 
 ## Completed
@@ -79,31 +79,18 @@ progress:
 
 ## Current Position
 
-**Status:** Todas as fases implementadas ✅ (12 fases, 39 planos)
-
-**Milestone v1.3 — Persistência e Entrega da Campanha** ✅ COMPLETE (6/6 phases)
-
-| Phase | Status | Plans | Description |
-|-------|--------|-------|-------------|
-| 12. Fundação DB/Storage | ✅ | 5/5 | campaigns table, campaign-images bucket, RLS/Storage policies, verify script |
-| 13. Serviço de Persistência | ✅ | 3/3 | types.ts, persistence.ts (7 helpers), download route, 25 testes |
-| 14. Integração no Fluxo de Geração | ✅ | 3/3 | image-processor.ts, orchestration generate-image, consumer navigation |
-| 15. Página de Campanha | ✅ | 3/3 | display.ts (RLS), /campanha/[id], 4 estados visuais, middleware |
-| 16. Minhas Campanhas | ✅ | 3/3 | list.ts, /minhas-campanhas UI, navegação, 21 testes |
-| **17. Edição de Publication Copy** | ✅ | **2/2** | **migration SQL, display contract, validação, PATCH route, UI edição inline, 29 testes** |
-
-O lojista pode editar caption, hashtags e cta_post da campanha sem regerar a imagem. Adiciona coluna `publication_copy_current` (JSONB) com fallback `current > snapshot > vazio`. Rota PATCH segura com CSRF + auth + ownership. UI de edição inline na página `/campanha/[id]`.
-
-**Tests:** 562 passing (65 files, 29 novos)
-**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
+Phase: Milestone v1.3 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-10 — Milestone v1.3 completed and archived
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-07-08)
+See: `.planning/PROJECT.md` (updated 2026-07-10)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** v1.3 completa (39/39 planos). Próximo: definição de próximo milestone.
+**Current focus:** v1.3 completa (19/19 planos). Próximo: definição de próximo milestone.
 
 ## Performance Metrics
 
@@ -111,3 +98,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-08)
 |-------|------|----------|-------|
 | Phase 17-edicao-publication-copy P01 | 2min | 6 tasks | 6 files |
 | Phase 17-edicao-publication-copy P02 | 2 min | 5 tasks | 4 files |
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone

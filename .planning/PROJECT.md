@@ -10,61 +10,43 @@ O Vendeo é hoje uma aplicação multi-tenant com autenticação completa, isola
 
 Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais. Se tudo mais falhar, o Vendeo precisa ser capaz de transformar uma oferta simples em uma peça visual comercial, clara e publicável.
 
-## Current Milestone: v1.3 — Persistência e Entrega da Campanha
-
-**Status:** Escopo documentado, aguardando alinhamento detalhado via opsx-explore.
-
-**Critério de conclusão:** O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la.
-
-**Escopo inicial (intenções — hipóteses a validar):**
-- Campanha como artefato imutável (briefing de entrada + resultado final)
-- Registro da campanha no banco (parâmetros, copy, metadados)
-- Imagem final no Storage
-- Estados mínimos do processo de geração (gerando, pronto, erro)
-- Página de campanha persistida (rota protegida exibindo campanha salva)
-- Download do original
-- Lista simples das campanhas geradas em rota autenticada `/minhas-campanhas`
-
-**Perguntas em aberto:**
-- Estrutura exata do registro no banco (tabela, colunas, índices)
-- Formato de download (PNG, JPG, ambos)
-- Experiência de transição entre geração → campanha persistida (auto-redirecionamento?)
-- Ordem e granularidade das fases de implementação
-
----
-
 ## Current State
 
-**Shipped: v1.2 — Contas e Propriedade (2026-07-08)**
+**Shipped: v1.3 — Persistência e Entrega da Campanha (2026-07-10)**
 
-A milestone v1.2 estabeleceu a camada fundacional de contas e propriedade sobre o motor de campanhas (v1.1):
+A milestone v1.3 completou o ciclo completo de persistência e entrega: o usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la.
 
-- **Autenticação completa**: signup, confirmação de email, login, sessão SSR via `@supabase/ssr`, logout, recuperação de senha. Anti-enumeration, templates PT-BR, SMTP via Resend.com com DKIM/DMARC/SPF.
-- **Vínculo user→store**: `stores.user_id` como fonte canônica de ownership. `localStorage("store_id")` eliminado.
-- **Isolamento multi-tenant**: RLS em 5 tabelas + Storage policies. 20+ route handlers protegidos com CSRF + Auth + Ownership. Server Actions com guards.
-- **Serviço publicável**: beta.vendeo.tech operacional com sessão SSR, cookies, e fluxo completo de entrada.
-- **Verificação formal**: D8 catalog com 21 cenários de segurança validados manualmente (cross-tenant, sessão, storage, RLS, vazamento).
+- **Fundação DB/Storage**: tabela `campaigns` (12 colunas, RLS, índices), bucket `campaign-images` (privado, 10MB, sem UPDATE policy para imutabilidade)
+- **Serviço de Persistência**: 7 helpers (`createCampaign`, `dataUrlToCampaignImage`, `uploadCampaignImage`, `updateCampaignReady`, `updateCampaignError`, `getCampaign`, `deleteCampaignImage`) + download route com guard pipeline
+- **Integração no Fluxo de Geração**: pipeline `INSERT→IA→transcode→upload→updateReady` com compensação, `sharp` para transcodificação PNG/WEBP→JPEG, consumo via NDJSON com `campaignId`/`campaignUrl`
+- **Página de Campanha**: `/campanha/[id]` com 4 estados (ready/generating/stale/error), preview com signed URL, botão de download
+- **Minhas Campanhas**: `/minhas-campanhas` com listagem via RLS, thumbnails, estado vazio, navegação integrada
+- **Edição de Publication Copy**: coluna `publication_copy_current`, validação de caption/hashtags/cta_post, rota PATCH com CSRF+auth+ownership+restore, UI de edição inline
 
-**465 testes automatizados**, **51 test files**, **TypeScript/lint/build limpos**.
+**579 testes automatizados**, **67 test files**, **TypeScript/lint/build limpos**.
 
 <details>
-<summary>Histórico de versões anteriores</summary>
+<summary>Versões anteriores</summary>
+
+**v1.2 — Contas e Propriedade (shipped 2026-07-08)**
+
+- Autenticação completa: signup, confirmação de email, login, sessão SSR via @supabase/ssr, logout, recuperação de senha
+- Vínculo user→store: stores.user_id como fonte canônica de ownership
+- Isolamento multi-tenant: RLS em 5 tabelas + Storage policies, 20+ route handlers protegidos
+- Serviço publicável: beta.vendeo.tech operacional
+- Verificação formal: D8 catalog com 21 cenários de segurança validados
 
 **v1.1 — Motor de Campanhas (shipped 2026-07-03)**
 
-- AI Campaign Intelligence: OpenAI/Anthropic providers com structured output, abstraction layer
-- Visual Rendering: programmatic renderer + IA-generated images + CSS legacy fallback
-- Store Identity: logo upload com BrandDirector AI analysis, 5 image variants, color probing
-- Visual Signature: AI-generated, typographic fallback, approval flow, color drift detection
-- Campaign Briefing: identity-aware pipeline com StoreIdentitySnapshot 2.0, 5 directives
-- Drift Detection: snapshot-based, state-specific policy, critical/sensitive tiers
-- Identity Transitions: state machine para logo/VS/text_only com provenance preservation
+- AI Campaign Intelligence: OpenAI/Anthropic providers com structured output
+- Visual Rendering: programmatic renderer + IA-generated images
+- Store Identity: logo upload, brand analysis, visual signature com drift detection
+- Campaign Briefing: identity-aware pipeline com StoreIdentitySnapshot 2.0
 
 **v1.0 — Core de Geração (shipped 2026-07-03)**
 
-- Formulário guiado com máscara de preço BRL, upload de imagem com preview, validação inline
-- Store identity: form + API routes (POST/GET/PATCH) + Supabase persistence
-- Campaign input: BRL mask, image upload, validation, local success state
+- Formulário guiado com máscara BRL, upload de imagem, validação inline
+- Store identity: form + API routes + Supabase persistence
 - Route split: `/` = campaign, `/store` = store identity
 </details>
 
@@ -102,26 +84,19 @@ A milestone v1.2 estabeleceu a camada fundacional de contas e propriedade sobre 
 - ✓ **AUTH-09** — Recuperação de senha — v1.2
 - ✓ **AUTH-10** — Classificação das 7 Server Actions (3 internas, 4 entrypoints) — v1.2
 - ✓ **AUTH-11** — Catálogo D8: 21 cenários de segurança validados — v1.2
+- ✓ **PERSIST-01** — Campanha é persistida como artefato imutável (briefing + resultado final) — v1.3
+- ✓ **PERSIST-02** — Registro da campanha no banco com parâmetros, copy e metadados — v1.3
+- ✓ **PERSIST-03** — Imagem final da campanha salva no Storage — v1.3
+- ✓ **PERSIST-04** — Estados mínimos do processo de geração (gerando, pronto, erro) — v1.3
+- ✓ **PERSIST-05** — Rota protegida `/campanha/[id]` exibe campanha persistida — v1.3
+- ✓ **PERSIST-06** — Download do original (PNG/JPG) — v1.3
+- ✓ **PERSIST-07** — Rota autenticada `/minhas-campanhas` lista campanhas da loja do usuário logado — v1.3
 
-### Active (hipóteses — v1.3)
-
-Escopo documentado como intenções. Alinhamento detalhado pendente (opsx-explore).
-
-- [ ] **PERSIST-01** — Campanha é persistida como artefato imutável (briefing + resultado final)
-- [ ] **PERSIST-02** — Registro da campanha no banco com parâmetros, copy e metadados
-- [ ] **PERSIST-03** — Imagem final da campanha salva no Storage
-- [ ] **PERSIST-04** — Estados mínimos do processo de geração (gerando, pronto, erro)
-- [ ] **PERSIST-05** — Rota protegida `/campanha/[id]` exibe campanha persistida
-- [ ] **PERSIST-06** — Download do original (PNG/JPG — formato a definir)
-- [ ] **PERSIST-07** — Rota autenticada `/minhas-campanhas` lista campanhas da loja do usuário logado
-
-> **Nota:** Itens acima são hipóteses de escopo, não requisitos decididos. O alinhamento detalhado via opsx-explore poderá confirmar, modificar ou descartar cada item.
+### Active
 
 ### Out of Scope
 
 - Dashboard — core de geração já concluído (v1.1), escopo v1.2 era auth/ownership
-- Campanhas persistidas — v1.2 era auth/ownership, não inclui salvar campanhas
-- Export PNG/JPG — movido para milestone futura
 - Regeneração — redefinida como "novo briefing" (MC-02), não implementada
 - Planos e cobrança — uso livre durante validação do core
 - Múltiplas lojas — relação 1:1 nesta milestone
@@ -134,13 +109,13 @@ Escopo documentado como intenções. Alinhamento detalhado pendente (opsx-explor
 
 ## Context
 
-**Current state (pós-v1.2):**
-- ~465 testes automatizados, 51 test files, zero erros de tipo/lint/build
+**Current state (pós-v1.3):**
+- ~579 testes automatizados, 67 test files, zero erros de tipo/lint/build
 - Aplicação multi-tenant funcional em beta.vendeo.tech
-- Autenticação completa com Supabase Auth + sessão SSR
-- Ownership validado em todas as operações (CSRF → Auth → Ownership)
-- Geração de campanhas com IA + renderização programática
-- Pipeline de identidade visual (logo, brand profile, visual signature, drift detection)
+- Ciclo completo de campanha: formulário → geração com IA → renderização → persistência → visualização → download
+- Campaigns persistidas no banco com RLS, imagens no Storage com signed URLs
+- Edição de publication copy (caption, hashtags, cta_post) sem regenerar imagem
+- Lista de campanhas do usuário logado em `/minhas-campanhas`
 - Bucket `store-logos`: 0 objetos, pendente de remoção
 
 **User profile:** Pequenos e médios lojistas físicos que acumulam funções operacionais, comerciais e administrativas — não têm tempo, criatividade ou recursos para design profissional.
@@ -181,6 +156,11 @@ Escopo documentado como intenções. Alinhamento detalhado pendente (opsx-explor
 | Cliente sessão padrão; service role excepcional | Defense in depth | ✓ Good — D5 |
 | CSRF same-origin para mutações | Proteção contra ataques cross-site | ✓ Good — D9 |
 | Catálogo D8 como critério de aceite | Milestone só fecha com cenários VERDES | ✓ Good — D8 |
+| Sharp v0.34.5 para transcodificação PNG/WEBP→JPEG | Industria standard, <50ms 1080×1080 | ✓ Good — F14 |
+| Pipeline INSERT antes da IA (D8) | Registros `generating` só para requisições válidas | ✓ Good — F14 |
+| Compensação por tipo de falha (upload vs updateReady) | Delete imagem se upload OK mas updateReady falha | ✓ Good — F14 |
+| Fallback publication copy: current > snapshot > vazio | Por shape/tipo, não truthiness | ✓ Good — F17 |
+| Validação isolada em publication-copy.ts | Reutilizável entre backend e frontend | ✓ Good — F17 |
 
 ## Evolution
 
@@ -193,4 +173,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-08 after v1.3 milestone scope documented*
+*Last updated: 2026-07-10 after v1.3 milestone shipped*
