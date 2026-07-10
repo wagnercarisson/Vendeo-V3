@@ -15,6 +15,8 @@ export interface CampaignPageProps {
   createdAt: string;
   updatedAt: string;
   downloadUrl: string;
+  campaignId: string;
+  isPublicationCopyEdited: boolean;
 }
 
 export async function getCampaignForDisplay(id: string): Promise<CampaignRecord | null> {
@@ -53,6 +55,43 @@ export async function generateSignedPreviewUrl(storagePath: string): Promise<str
   return data.signedUrl;
 }
 
+export function getEffectivePublicationCopy(
+  campaign: CampaignRecord
+): { caption: string; hashtags: string[]; cta_post: string } {
+  const current = campaign.publication_copy_current as Record<string, unknown> | null;
+  const snapshot = campaign.publication_copy_snapshot as Record<string, unknown> | null;
+
+  if (
+    current &&
+    typeof current.caption === "string" &&
+    Array.isArray(current.hashtags) &&
+    current.hashtags.every((tag) => typeof tag === "string") &&
+    typeof current.cta_post === "string"
+  ) {
+    return {
+      caption: current.caption,
+      hashtags: current.hashtags,
+      cta_post: current.cta_post,
+    };
+  }
+
+  if (
+    snapshot &&
+    typeof snapshot.caption === "string" &&
+    Array.isArray(snapshot.hashtags) &&
+    snapshot.hashtags.every((tag) => typeof tag === "string") &&
+    typeof snapshot.cta_post === "string"
+  ) {
+    return {
+      caption: snapshot.caption,
+      hashtags: snapshot.hashtags,
+      cta_post: snapshot.cta_post,
+    };
+  }
+
+  return { caption: "", hashtags: [], cta_post: "" };
+}
+
 export function computeDisplayStatus(
   campaign: { status: CampaignStatus; updated_at: string }
 ): "ready" | "generating" | "stale" | "error" {
@@ -70,16 +109,18 @@ export function computeDisplayStatus(
 }
 
 export function mapCampaignToProps(campaign: CampaignRecord, id: string): CampaignPageProps {
-  const snap = campaign.publication_copy_snapshot as Record<string, unknown> | null;
+  const effective = getEffectivePublicationCopy(campaign);
   return {
     imageUrl: null,
-    caption: typeof snap?.caption === "string" ? snap.caption : "",
-    hashtags: Array.isArray(snap?.hashtags) ? (snap.hashtags as string[]) : [],
-    ctaPost: typeof snap?.cta_post === "string" ? snap.cta_post : "",
+    caption: effective.caption,
+    hashtags: effective.hashtags,
+    ctaPost: effective.cta_post,
     displayStatus: computeDisplayStatus(campaign),
     productName: campaign.product_name ?? "",
     createdAt: campaign.created_at ?? new Date().toISOString(),
     updatedAt: campaign.updated_at ?? new Date().toISOString(),
     downloadUrl: `/api/campaign/${id}/download`,
+    campaignId: id,
+    isPublicationCopyEdited: campaign.publication_copy_current !== null,
   };
 }
