@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockListCampaigns = vi.fn();
 const mockGetCurrentStore = vi.fn();
 const mockRedirect = vi.fn();
+const mockRequirePageUser = vi.fn().mockResolvedValue({ userId: "user-123", claims: { sub: "user-123" } });
 
 const NEXT_CONTROL = new Error("NEXT_CONTROL");
 const redirectFn = vi.fn(() => { throw NEXT_CONTROL; });
@@ -21,7 +22,7 @@ vi.mock("@/lib/auth/store-ownership", () => ({
 }));
 
 vi.mock("@/lib/auth/require-user", () => ({
-  requirePageUser: vi.fn().mockResolvedValue({ userId: "user-123", claims: { sub: "user-123" } }),
+  requirePageUser: mockRequirePageUser,
 }));
 
 beforeEach(() => {
@@ -83,6 +84,15 @@ describe("CampaignPreviewPage redirect", () => {
 
     await expect(CampaignPreviewPage()).rejects.toThrow("NEXT_CONTROL");
     expect(redirectFn).toHaveBeenCalledWith("/store");
+  });
+
+  it("redirects to /login when not authenticated", async () => {
+    const loginError = new Error("redirect:/login");
+    mockRequirePageUser.mockRejectedValue(loginError);
+
+    const { default: CampaignPreviewPage } = await import("@/app/campaign/preview/page");
+
+    await expect(CampaignPreviewPage()).rejects.toThrow("redirect:/login");
   });
 });
 
