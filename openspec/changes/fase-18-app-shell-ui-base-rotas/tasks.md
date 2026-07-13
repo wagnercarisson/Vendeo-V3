@@ -1,0 +1,137 @@
+## 1. Plano 18-01 — Fundação UI + Estrutura
+
+- [ ] 1.1 Criar `src/components/ui/button.tsx` com variantes `primary`/`secondary`/`ghost`, props `size`, `disabled`, `loading`. Sem `asChild`/Slot. Usar Lucide `Loader2` com `animate-spin` para loading
+- [ ] 1.2 Criar `src/components/ui/card.tsx` (Server Component) com `bg-bg-surface`, `border`, `rounded-xl`, props `className` e `children`
+- [ ] 1.3 Criar `src/components/ui/input.tsx` (Client Component) com `label`, `error`, `...input`, tokens de design
+- [ ] 1.4 Criar `src/components/ui/badge.tsx` (Server Component) com variantes `ready`/`error`/`generating`/`default`
+- [ ] 1.5 Criar `src/components/ui/empty-state.tsx` (Server Component) com `icon`, `title`, `description`, `action` (ReactNode)
+- [ ] 1.6 Criar `src/components/ui/skeleton.tsx` (Server Component) com `width`, `height`, `rounded`, `animate-pulse`
+- [ ] 1.7 Criar `src/components/ui/page-header.tsx` com `title`, `breadcrumbs` (`{label, href?}[]`), `actions`
+- [ ] 1.8 Criar estrutura de diretórios `src/app/(app)/` com:
+  - `layout.tsx` — esqueleto vazio (apenas `{children}`) que será preenchido no 18-02
+  - `dashboard/page.tsx` — vazio (placeholder)
+  - `campanhas/page.tsx` — vazio
+  - `campanhas/nova/page.tsx` — vazio
+  - `campanhas/[id]/page.tsx` — vazio
+  - `loja/page.tsx` — vazio
+  - `conta/page.tsx` — vazio
+- [ ] 1.9 Modificar `src/app/layout.tsx`: remover `<header>` com `AuthHeader`, manter apenas `html`/`body`/fonts/`globals`
+- [ ] 1.10 Modificar `src/app/page.tsx`: simplificar para `redirect("/dashboard")`
+- [ ] 1.11 Adicionar `async redirects()` em `next.config.ts` com 5 redirects 301:
+  - `/` → `/dashboard`
+  - `/minhas-campanhas` → `/campanhas`
+  - `/campanha/:id` → `/campanhas/:id`
+  - `/store` → `/loja`
+  - `/campaign/preview` → `/campanhas/nova`
+- [ ] 1.12 Criar testes dos 7 componentes base em `src/__tests__/components/ui/` (1 cenário cada, 7 testes)
+- [ ] 1.13 Rodar `npm run typecheck`, `npm run lint` — zero erros
+
+## 2. Plano 18-02 — App Shell
+
+- [ ] 2.1 Criar `src/components/shell/sidebar.tsx`:
+  - Links: Dashboard (`LayoutDashboard`), Campanhas (`Megaphone`), Loja (`Store`), Conta (`UserCircle`)
+  - Destaque da rota ativa via `usePathname()`
+  - Tokens de design (`bg-bg-surface`, `text-text-*`, `accent-*`, `border-*`)
+- [ ] 2.2 Criar `src/components/shell/topbar.tsx`:
+  - Logo/app name à esquerda
+  - CTA "Nova Campanha" (link → `/campanhas/nova`)
+  - `AccountMenu` à direita
+  - Hamburger button visível apenas em mobile (<768px)
+  - Tokens de design
+- [ ] 2.3 Criar `src/components/shell/account-menu.tsx`:
+  - Dropdown com identificação do usuário (nome/email curto)
+  - "Configurações" → `/conta` (Lucide `Settings`)
+  - "Sair" → `LogoutButton` com tokens (Lucide `LogOut`)
+  - Tokens de design
+- [ ] 2.4 Criar `src/components/shell/sidebar-drawer.tsx`:
+  - Drawer desliza da esquerda com overlay
+  - Hamburger abre/fecha
+  - Overlay click fecha
+  - Escape fecha
+  - Click em link fecha + navega
+  - `aria-controls`, `aria-expanded`, `aria-label`
+  - Body scroll lock
+- [ ] 2.5 Criar `src/components/shell/app-shell.tsx` (Server Component):
+  - Monta `Sidebar` + `Topbar` + `children`
+  - Layout responsivo: sidebar visível em desktop, drawer em mobile
+  - Não depende de store — tolera `store = null`
+- [ ] 2.6 Implementar `src/app/(app)/layout.tsx`:
+  - `requirePageUser()` para proteger o grupo
+  - NÃO chamar `getCurrentStore()` no layout — o shell tolera `store = null`; cada página resolve store quando necessário
+  - Renderiza `<AppShell>` com `{children}`
+- [ ] 2.7 Criar testes do shell em `src/__tests__/components/shell/` (6-8 cenários):
+  - App Shell renderiza sidebar + topbar + children
+  - Sidebar contém 4 links
+  - Sidebar destaca rota ativa
+  - Topbar contém CTA "Nova Campanha"
+  - Menu de conta mostra Configurações e Sair
+  - Drawer mobile abre/fecha
+  - Drawer fecha ao clicar em link
+  - Shell tolera store = null
+- [ ] 2.8 Rodar `npm run typecheck`, `npm run lint` — zero erros
+
+## 3. Plano 18-03 — Rotas + Migração Visual
+
+- [ ] 3.1 Migrar conteúdo de `src/app/page.tsx` (campaign form) para `src/app/(app)/campanhas/nova/page.tsx`:
+  - Aplicar tokens de design
+  - Atualizar redirect sem loja → `/loja`
+  - Atualizar links internos para novas rotas
+- [ ] 3.2 Migrar conteúdo de `src/app/minhas-campanhas/` para `src/app/(app)/campanhas/page.tsx`:
+  - Aplicar tokens de design
+  - Atualizar redirect sem loja → `/loja`
+  - Atualizar links: "Abrir" → `/campanhas/[id]`, CTA vazio → `/campanhas/nova`, "← Campanhas" → `/campanhas`
+- [ ] 3.3 Migrar conteúdo de `src/app/campanha/[id]/` para `src/app/(app)/campanhas/[id]/`:
+  - Migrar `page.tsx` (Server Component)
+  - Migrar `client.tsx` (Client Component)
+  - Substituir emoji icons por Lucide
+  - Aplicar tokens de design
+  - Atualizar redirect sem loja → `/loja` e link "← Campanhas" → `/campanhas`
+- [ ] 3.4 Migrar conteúdo de `src/app/store/` para `src/app/(app)/loja/page.tsx`:
+  - Conferir e aplicar tokens de design (já usa em grande parte)
+  - Atualizar links para `/campanhas/nova` e demais novas rotas
+- [ ] 3.5 Criar `src/app/(app)/dashboard/page.tsx`:
+  - `<PageHeader title="Dashboard" />`
+  - `<EmptyState>` com mensagem genérica "Em breve"
+  - Tokens de design
+- [ ] 3.6 Criar `src/app/(app)/conta/page.tsx`:
+  - Email via `claims.email` (fallback `claims.sub?.slice(0, 8)`)
+  - Nome apenas se `JwtPayload` tiver campo `name` no futuro — usar email como identificador primário
+  - Link para `/update-password`
+  - `LogoutButton` para "Sair"
+  - `<PageHeader title="Conta" />` + cards de informação
+  - Tokens de design
+- [ ] 3.7 Atualizar `src/middleware.ts`:
+  - Novo matcher: `/dashboard`, `/campanhas/:path*`, `/loja`, `/conta` (manter auth routes e `/api/:path*`)
+  - Remover do matcher: `/`, `/store/:path*`, `/campanha/:path*`
+  - Redirect autenticado → `/dashboard` (em vez de `/`)
+- [ ] 3.8 Remover `src/components/auth/auth-header.tsx`
+- [ ] 3.9 Modificar `src/components/auth/logout-button.tsx`:
+  - Substituir `slate-*`/`blue-*` por `text-text-*`/`accent-*`
+  - Ou aceitar `variant`/`className` para uso flexível no shell e `/conta`
+- [ ] 3.10 Atualizar `campaignUrl` na rota de geração:
+  - `src/app/api/campaign/generate-image/route.ts` linha ~353: `campaignUrl` SHALL retornar `/campanhas/${campaignId}` (em vez de `/campanha/${campaignId}`)
+  - `src/components/flow/use-campaign-form.ts`: `router.push(result.campaignUrl)` — será resolvido pelo valor corrigido no route handler
+  - Atualizar testes em `src/__tests__/api/campaign-generate.test.ts` e `src/__tests__/components/flow/__tests__/use-campaign-form-navigation.test.ts`
+- [ ] 3.11 Atualizar links internos em todos os componentes de domínio:
+  - `src/components/flow/*` — apontar para novas rotas
+  - `src/app/auth/*` — apontar para `/dashboard` (se houver links)
+- [ ] 3.12 Migrar testes existentes que importam caminhos antigos para os novos caminhos em `src/app/(app)/`
+- [ ] 3.13 Criar testes de redirects em `src/__tests__/next.config.test.ts` (5 cenários: cada redirect 301)
+- [ ] 3.14 Criar testes de middleware em `src/__tests__/middleware.test.ts` (2-3 cenários: matcher, redirect autenticado, rotas públicas)
+- [ ] 3.15 Remover arquivos de páginas antigas:
+  - `src/app/minhas-campanhas/` (recursivo)
+  - `src/app/campanha/[id]/` (recursivo)
+  - `src/app/store/` (recursivo)
+  - `src/app/campaign/preview/` (recursivo)
+- [ ] 3.16 Rodar `npm run typecheck`, `npm run lint` — zero erros
+
+## 4. Verificação Final
+
+- [ ] 4.1 Navegação completa em desktop: sidebar, topbar, CTA, menu conta, todas as seções acessíveis
+- [ ] 4.2 Navegação completa em mobile: hamburger, drawer, fechamento ao navegar e overlay
+- [ ] 4.3 Rotas antigas redirecionam 301 para as novas
+- [ ] 4.4 Shell não quebra com `store = null`
+- [ ] 4.5 Rodar `npm run typecheck` — zero erros
+- [ ] 4.6 Rodar `npm run lint` — zero erros
+- [ ] 4.7 Rodar `npx vitest run` — todos os testes passando (20+ novos + 579 existentes)
+- [ ] 4.8 Rodar `npm run build` — build bem-sucedido
