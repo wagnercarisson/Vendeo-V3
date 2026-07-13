@@ -30,13 +30,14 @@ beforeEach(() => {
 });
 
 describe("CampanhasPage (Server Component)", () => {
-  it("calls redirect('/loja') when getCurrentStore returns null", async () => {
+  it("renders empty state 'Configure sua loja' when getCurrentStore returns null (no redirect)", async () => {
     mockGetCurrentStore.mockResolvedValue(null);
 
     const { default: CampanhasPage } = await import("@/app/(app)/campanhas/page");
 
-    await expect(CampanhasPage()).rejects.toThrow("NEXT_CONTROL");
-    expect(redirectFn).toHaveBeenCalledWith("/loja");
+    const result = await CampanhasPage();
+    expect(result).toBeDefined();
+    expect(redirectFn).not.toHaveBeenCalled();
   });
 
   it("calls listCampaigns with store id when store exists", async () => {

@@ -87,12 +87,12 @@ describe("CampaignListClient — display", () => {
   it("renders empty state when no campaigns", () => {
     render(<CampaignListClient campaigns={[]} />);
 
-    expect(screen.getByText("Nenhuma campanha encontrada")).toBeInTheDocument();
+    expect(screen.getByText("Nenhuma campanha ainda")).toBeInTheDocument();
     expect(
-      screen.getByText("Suas campanhas aparecerão aqui depois de geradas."),
+      screen.getByText("Crie sua primeira campanha e ela aparecerá aqui."),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Criar Primeira Campanha" }),
+      screen.getByRole("link", { name: "Criar primeira campanha" }),
     ).toHaveAttribute("href", "/campanhas/nova");
   });
 });
