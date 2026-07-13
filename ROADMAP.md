@@ -1,7 +1,7 @@
 # Vendeo — Roadmap
 
-> Milestone: **Contas e Propriedade** (v1.2) | **Persistência e Entrega da Campanha** (v1.3)
-> v1.2 estabelece a camada fundacional de contas e propriedade. v1.3 implementa persistência e entrega de campanhas.
+> Milestones: **Contas e Propriedade** (v1.2 ✓) | **Persistência e Entrega da Campanha** (v1.3 ✓) | **Experiência SaaS** (v1.4 ✓)
+> v1.2 estabelece a camada fundacional de contas e propriedade. v1.3 implementa persistência e entrega de campanhas. v1.4 transforma o Vendeo em um produto SaaS coerente.
 
 ---
 
@@ -217,9 +217,9 @@ Página `/campanha/[id]` com preview e download da campanha persistida. Server C
 
 ---
 
-## v1.4 — Experiência SaaS
+## v1.4 — Experiência SaaS ✓
 
-> Milestone: **Experiência SaaS**
+> Milestone: **Experiência SaaS** ✅ COMPLETE (2026-07-13)
 > O Vendeo passa a parecer e funcionar como um produto SaaS coerente — app shell profissional, navegação PT-BR, dashboard, onboarding, busca e mobile.
 
 ---
