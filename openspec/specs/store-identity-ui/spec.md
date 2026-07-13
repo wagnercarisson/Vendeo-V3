@@ -1,6 +1,6 @@
 > **Propósito**: Esta spec define a interface visual para cadastro e edição da identidade básica da loja (Store Identity UI), consumindo as APIs da foundation e utilizando Tailwind CSS + design system MASTER.md.
 >
-> > Synced from `fase-9-cutover-ownership` (MODIFIED). Store identity resolved server-side via `initialStore` prop instead of localStorage. POST/PATCH mode determined by local `storeId` state. localStorage("store_id") removed.
+> > Synced from `fase-9-cutover-ownership` (MODIFIED), then `fase-18-app-shell-ui-base-rotas` (MODIFIED). Route migrated from `/store` to `/loja`. Links updated to new route paths.
 
 ## Requirements
 
@@ -27,7 +27,7 @@ The system SHALL have Tailwind CSS configured as the styling framework. The setu
 
 ### Requirement: Store identity form UI
 
-The system SHALL render a store identity form at `src/app/store/page.tsx` (`/store`). The page SHALL be a **server component** that resolves the store via `requirePageUser()` + `getCurrentStore(user.userId)`. The resolved store (or null) is passed as `initialStore` prop to `<StorePageClient />`.
+The system SHALL render a store identity form at `src/app/(app)/loja/page.tsx` (`/loja`). The page SHALL be a **server component** that resolves the store via `requirePageUser()` + `getCurrentStore(user.userId)`. The resolved store (or null) is passed as `initialStore` prop to `<StorePageClient />`.
 
 The server component SHALL:
 - Call `await requirePageUser()` — redirects to `/login` if not authenticated
@@ -43,9 +43,9 @@ The page SHALL be a composition of:
 
 The page SHALL follow the visual and UX rules defined in `openspec/design-system/MASTER.md` and `openspec/design-system/pages/store-identity.md`.
 
-#### Scenario: Store page renders store identity form
+#### Scenario: Store page renders store identity form at /loja
 
-- **WHEN** a user visits `/store`
+- **WHEN** a user visits `/loja`
 - **THEN** the page SHALL render the store identity form
 - **AND** no unrelated content SHALL appear on the page
 
@@ -58,7 +58,7 @@ The page SHALL follow the visual and UX rules defined in `openspec/design-system
 
 #### Scenario: Unauthenticated user redirected to /login
 
-- **WHEN** an unauthenticated user visits `/store`
+- **WHEN** an unauthenticated user visits `/loja`
 - **THEN** `requirePageUser()` redirects to `/login`
 
 #### Scenario: Form follows design system
@@ -67,44 +67,46 @@ The page SHALL follow the visual and UX rules defined in `openspec/design-system
 - **THEN** all elements SHALL use colors, typography, and spacing tokens from MASTER.md
 - **AND** the layout SHALL match the store-identity page override specification
 
-### Requirement: Navigation between `/` and `/store`
+### Requirement: Navigation between `/loja` and `/campanhas/nova`
 
-The `/store` page SHALL include a link/button to return to `/` (campaign input page). The `/` page SHALL be a **server component** that resolves the store and redirects to `/store` if none exists.
+The `/loja` page SHALL include a link/button to return to `/campanhas/nova` (campaign input page). Navigation is also available via the App Shell sidebar (Campanhas link).
 
-The `/` page SHALL:
+The `/campanhas/nova` page SHALL be a **server component** that resolves the store and redirects to `/loja` if none exists.
+
+The `/campanhas/nova` page SHALL:
 - Call `await requirePageUser()` — redirects to `/login` if not authenticated
 - Call `const store = await getCurrentStore(user.userId)`
-- If store is null: `redirect("/store")` — user must create a store first
+- If store is null: `redirect("/loja")` — user must create a store first
 - If store exists: pass `store={store}` to `<CampaignPageClient />`
 - SHALL NOT use localStorage for store resolution
 - SHALL NOT have a blocking/loading state for store resolution
 
 #### Scenario: Store page has link to campaign page
 
-- **WHEN** a user is on `/store`
-- **THEN** a link or button SHALL be present to navigate to `/`
+- **WHEN** a user is on `/loja`
+- **THEN** a link or button SHALL be present to navigate to `/campanhas/nova`
 
 #### Scenario: Authenticated user without store is redirected
 
-- **WHEN** an authenticated user visits `/`
+- **WHEN** an authenticated user visits `/campanhas/nova`
 - **AND** the user has no store
-- **THEN** the server redirects to `/store`
+- **THEN** the server redirects to `/loja`
 
 #### Scenario: Authenticated user with store sees campaign page
 
-- **WHEN** an authenticated user visits `/`
+- **WHEN** an authenticated user visits `/campanhas/nova`
 - **AND** the user has a store
 - **THEN** `CampaignPageClient` receives `store` as a prop
 - **AND** the campaign page renders normally
 
 #### Scenario: No loading state for store resolution
 
-- **WHEN** an authenticated user visits `/`
+- **WHEN** an authenticated user visits `/campanhas/nova`
 - **AND** the user has a store
 - **THEN** the campaign page renders immediately (no loading state)
-- **WHEN** an authenticated user visits `/`
+- **WHEN** an authenticated user visits `/campanhas/nova`
 - **AND** the user has no store
-- **THEN** the server redirects to `/store` before any client rendering
+- **THEN** the server redirects to `/loja` before any client rendering
 
 ### Requirement: Form fields
 

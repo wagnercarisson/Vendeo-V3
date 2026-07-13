@@ -2,7 +2,7 @@
 
 Proteger rotas do Vendeo via `src/middleware.ts`: renovação de sessão (cookie), redirect de páginas não autenticadas para `/login` e resposta 401 JSON para APIs. Middleware usa `getClaims()` (nunca `getSession()`) e não consulta banco de dados.
 
-> Synced from `fase-7-sessao-login-vertical` (ADDED).
+> Synced from `fase-7-sessao-login-vertical` (ADDED), then `fase-18-app-shell-ui-base-rotas` (MODIFIED). Matcher updated: added `/dashboard`, `/campanhas/:path*`, `/loja`, `/conta`; removed `/`, `/store/:path*`, `/campanha/:path*`. Authenticated redirect destination changed from `/` to `/dashboard`.
 
 ## Requirements
 
@@ -23,14 +23,20 @@ The system SHALL have a `src/middleware.ts` file that configures a matcher and p
 
 The middleware SHALL use a positive matcher that explicitly lists protected routes.
 
-- Matcher MUST include: `"/"`, `"/login"`, `"/signup"`, `"/check-email"`, `"/forgot-password"`, `"/update-password"`, `"/auth/confirm"`, `"/store/:path*"`, `"/campaign/:path*"`, `"/api/:path*"`
+- Matcher MUST include: `"/login"`, `"/signup"`, `"/check-email"`, `"/forgot-password"`, `"/update-password"`, `"/auth/confirm"`, `"/dashboard"`, `"/campanhas/:path*"`, `"/loja"`, `"/conta"`, `"/api/:path*"`
 - Routes NOT in the matcher SHALL bypass middleware entirely
+- `"/"`, `"/store/:path*"`, `"/campanha/:path*"` SHALL be removed from the matcher (handled by next.config.ts 301 redirects)
 - `/auth/:path*` MUST NOT be used as a prefix — each `/auth/*` route is listed individually
 
-#### Scenario: Protected route matches
+#### Scenario: New protected routes match
 
-- **WHEN** a request arrives for `/` or `/campaign/preview` or `/api/store/123`
+- **WHEN** a request arrives for `/dashboard` or `/campanhas/nova` or `/loja` or `/conta`
 - **THEN** the middleware SHALL process the request
+
+#### Scenario: Removed routes no longer match
+
+- **WHEN** a request arrives for `/store/settings` or `/campanha/abc-123`
+- **THEN** the middleware SHALL NOT process the request (handled by next.config.ts 301)
 
 #### Scenario: Public asset bypasses
 
@@ -52,15 +58,15 @@ The middleware SHALL redirect unauthenticated requests to protected pages to `/l
   - Redirect to `/login?redirect=<sanitized-path>`
 - `/login`, `/signup`, `/check-email`, `/forgot-password` SHALL remain publicly accessible without authentication
 
-#### Scenario: Anonymous user hits root
+#### Scenario: Anonymous user hits /dashboard
 
-- **WHEN** an unauthenticated user requests `/`
-- **THEN** middleware redirects to `/login?redirect=/`
+- **WHEN** an unauthenticated user requests `/dashboard`
+- **THEN** middleware redirects to `/login?redirect=/dashboard`
 
-#### Scenario: Anonymous user hits campaign preview
+#### Scenario: Anonymous user hits /campanhas/nova
 
-- **WHEN** an unauthenticated user requests `/campaign/preview`
-- **THEN** middleware redirects to `/login?redirect=/campaign/preview`
+- **WHEN** an unauthenticated user requests `/campanhas/nova`
+- **THEN** middleware redirects to `/login?redirect=/campanhas/nova`
 
 #### Scenario: Anonymous user hits /login
 
@@ -72,32 +78,32 @@ The middleware SHALL redirect unauthenticated requests to protected pages to `/l
 - **WHEN** an unauthenticated user requests `/update-password`
 - **THEN** middleware SHALL redirect to `/login`
 
-### Requirement: Public routes redirect to / when authenticated
+### Requirement: Public routes redirect to /dashboard when authenticated
 
-The middleware SHALL redirect authenticated users accessing public routes (`/login`, `/signup`, `/check-email`, `/forgot-password`) to `/`.
+The middleware SHALL redirect authenticated users accessing public routes (`/login`, `/signup`, `/check-email`, `/forgot-password`) to `/dashboard`.
 
 - MUST treat these routes the same when authenticated
-- MUST redirect to `/` using `NextResponse.redirect(new URL("/", request.url))`
+- MUST redirect to `/dashboard` using `NextResponse.redirect(new URL("/dashboard", request.url))`
 
 #### Scenario: Authenticated user hits /login
 
 - **WHEN** an authenticated user requests `/login`
-- **THEN** middleware redirects to `/`
+- **THEN** middleware redirects to `/dashboard`
 
 #### Scenario: Authenticated user hits /signup
 
 - **WHEN** an authenticated user requests `/signup`
-- **THEN** middleware redirects to `/`
+- **THEN** middleware redirects to `/dashboard`
 
 #### Scenario: Authenticated user hits /check-email
 
 - **WHEN** an authenticated user requests `/check-email`
-- **THEN** middleware redirects to `/`
+- **THEN** middleware redirects to `/dashboard`
 
 #### Scenario: Authenticated user hits /forgot-password
 
 - **WHEN** an authenticated user requests `/forgot-password`
-- **THEN** middleware redirects to `/`
+- **THEN** middleware redirects to `/dashboard`
 
 ### Requirement: Unauthenticated API requests return 401 JSON
 
@@ -158,7 +164,7 @@ The middleware SHALL allow `/auth/confirm` to pass through regardless of authent
 
 The middleware SHALL implement a route classification system:
 
-- `PUBLIC_ROUTES`: `Set(["/login", "/signup", "/check-email", "/forgot-password"])` — anonymous passes, authenticated redirects to `/`
+- `PUBLIC_ROUTES`: `Set(["/login", "/signup", "/check-email", "/forgot-password"])` — anonymous passes, authenticated redirects to `/dashboard`
 - `ALWAYS_PASSTHROUGH`: `Set(["/auth/confirm"])` — always passes regardless of auth state
 - Other matched routes: require authentication
 
@@ -169,5 +175,5 @@ The middleware SHALL implement a route classification system:
   - If pathname is in `ALWAYS_PASSTHROUGH`: return response immediately
   - If not authenticated and is `PUBLIC_ROUTES`: pass through
   - If not authenticated and not public: redirect to login
-  - If authenticated and is `PUBLIC_ROUTES`: redirect to `/`
+  - If authenticated and is `PUBLIC_ROUTES`: redirect to `/dashboard`
   - If authenticated and not public: pass through

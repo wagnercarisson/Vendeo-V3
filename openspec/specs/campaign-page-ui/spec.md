@@ -1,6 +1,6 @@
 # Campaign Page UI
 
-> Synced from `fase-17-edicao-publication-copy` (MODIFIED).
+> Synced from `fase-17-edicao-publication-copy` (MODIFIED), then `fase-18-app-shell-ui-base-rotas` (MODIFIED). Route migrated from `/campanha/[id]` to `/campanhas/[id]`. No-store redirect updated to `/loja`. Emoji icons replaced by Lucide. Kit de Publicação uses Card + Badge components. Navigation links updated.
 
 ## Purpose
 
@@ -10,10 +10,10 @@ Server Component (`/campanha/[id]`) com autenticação, ownership via RLS, e Cli
 
 ### Requirement: Server Component com auth e ownership
 
-O Server Component em `src/app/campanha/[id]/page.tsx` SHALL:
+O Server Component em `src/app/(app)/campanhas/[id]/page.tsx` SHALL:
 - Chamar `requirePageUser()` para garantir autenticação
 - Chamar `getCurrentStore(user.userId)` para resolver a loja do usuário
-- Se `getCurrentStore()` retornar `null`, fazer `redirect("/store")`
+- Se `getCurrentStore()` retornar `null`, fazer `redirect("/loja")`
 - Chamar `getCampaignForDisplay(id)` para carregar a campanha via RLS
 - Se `getCampaignForDisplay` retornar `null`, chamar `notFound()`
 - Calcular `displayStatus` server-side: `"ready"` | `"generating"` | `"stale"` | `"error"` usando `campaign.status` e `IMAGE_GENERATION_GLOBAL_TIMEOUT_MS + 30_000` para detectar stale
@@ -22,22 +22,22 @@ O Server Component em `src/app/campanha/[id]/page.tsx` SHALL:
 
 #### Scenario: Usuário autenticado acessa campanha própria
 
-- **WHEN** um usuário autenticado acessa `/campanha/{id}` onde `id` é uma campanha da sua loja
+- **WHEN** um usuário autenticado acessa `/campanhas/{id}` onde `id` é uma campanha da sua loja
 - **THEN** o Server Component carrega a campanha e renderiza o Client Component com os dados
 
 #### Scenario: Usuário autenticado sem loja
 
-- **WHEN** um usuário autenticado mas sem loja associada acessa `/campanha/{id}`
-- **THEN** é redirecionado para `/store`
+- **WHEN** um usuário autenticado mas sem loja associada acessa `/campanhas/{id}`
+- **THEN** é redirecionado para `/loja`
 
 #### Scenario: Campanha não encontrada ou de outro tenant
 
-- **WHEN** um usuário autenticado acessa `/campanha/{id}` onde `id` não existe ou pertence a outra loja
+- **WHEN** um usuário autenticado acessa `/campanhas/{id}` onde `id` não existe ou pertence a outra loja
 - **THEN** `notFound()` é chamado → página 404
 
 #### Scenario: Usuário não autenticado
 
-- **WHEN** um usuário não autenticado acessa `/campanha/{id}`
+- **WHEN** um usuário não autenticado acessa `/campanhas/{id}`
 - **THEN** o middleware redireciona para `/login` (ou o `requirePageUser` retorna 401)
 
 ### Requirement: Estado ready com edição de publication copy
@@ -51,16 +51,16 @@ Quando `displayStatus === "ready"`, o Client Component SHALL exibir:
 O Client Component SHALL receber `campaignId: string` como prop para montar a URL do PATCH.
 
 **Kit de Publicação (seção separada):**
-- Título "Kit de Publicação" com badge "Editado" ao lado se `isPublicationCopyEdited` é `true`
-- Caption, hashtags, cta_post em modo visualização (padrão) com botão "✏️ Editar"
+- Seção usa `<Card>` como container, título local `<h2>`, e `<Badge variant="ready" icon={CheckCheck}>` se `isPublicationCopyEdited` é `true`
+- Caption, hashtags, cta_post em modo visualização (padrão) com botão "Editar" (Lucide `Pencil`)
 
 **Modo edição (após clicar "Editar"):**
 - Caption: textarea preenchido com valor atual
 - Hashtags: textarea "uma por linha" (normalizado como array no save)
 - CTA: input preenchido com valor atual
-- Botão "💾 Salvar" — chama PATCH para `/api/campaign/[campaignId]/publication-copy` usando a prop `campaignId`
-- Botão "↩️ Restaurar original" — confirmação → PATCH `{ restore: true }` para mesma URL
-- Botão "Cancelar" — descarta alterações locais, volta ao modo visualização
+- Botão "Salvar" (Lucide `Save`) — chama PATCH para `/api/campaign/[campaignId]/publication-copy` usando a prop `campaignId`
+- Botão "Restaurar original" (Lucide `RotateCcw`) — confirmação → PATCH `{ restore: true }` para mesma URL
+- Botão "Cancelar" (Lucide `X`) — descarta alterações locais, volta ao modo visualização
 
 #### Scenario: Client recebe campaignId para montar PATCH URL
 
@@ -150,11 +150,30 @@ Quando `displayStatus === "error"`, o Client Component SHALL exibir:
 - **WHEN** `displayStatus` é `"error"`
 - **THEN** exibe mensagem de falha + CTA para criar nova campanha
 
+### Requirement: Design tokens applied
+
+All inline `slate-*`, `blue-*`, `red-*`, `gray-*`, `green-*` classes in the migrated campaign page SHALL be replaced with design tokens (`bg-bg-*`, `text-text-*`, `accent-*`, `border-*`).
+
+#### Scenario: Tokens replace raw Tailwind colors
+
+- **WHEN** the page renders any UI element
+- **THEN** it SHALL use design tokens instead of raw Tailwind color classes
+
+### Requirement: Navigation links updated
+
+The navigation links in the campaign page SHALL be updated:
+- Link "← Campanhas" SHALL point to `/campanhas` (instead of `/minhas-campanhas`)
+
+#### Scenario: Link "← Campanhas" presente na página individual
+
+- **WHEN** um usuário acessa `/campanhas/[id]`
+- **THEN** o topo da página exibe um link "← Campanhas" apontando para `/campanhas`
+
 ### Requirement: Middleware matcher
 
-O sistema SHALL adicionar `/campanha/:path*` ao `config.matcher` em `src/middleware.ts` para garantir que a sessão seja renovada via `updateSession` ao acessar páginas de campanha.
+O sistema SHALL incluir `/campanhas/:path*` no `config.matcher` em `src/middleware.ts` para garantir que a sessão seja renovada via `updateSession` ao acessar páginas de campanha. O antigo `/campanha/:path*` SHALL ser removido do matcher (redirecionado via next.config.ts).
 
-#### Scenario: Matcher inclui campanha
+#### Scenario: Matcher inclui /campanhas/:path*
 
 - **WHEN** o middleware é carregado
-- **THEN** o `config.matcher` inclui `/campanha/:path*`
+- **THEN** o `config.matcher` inclui `/campanhas/:path*`

@@ -2,7 +2,7 @@
 
 Logout via `POST /auth/signout` com limpeza de Web Storage no cliente antes da chamada server-side. Limpeza seletiva (4 chaves conhecidas), não `clear()`. Route Handler server-side com `signOut()` + `revalidatePath()` + redirect.
 
-> Synced from `fase-7-sessao-login-vertical` (ADDED), then `fase-9-cutover-ownership` (MODIFIED). localStorage("store_id") removed from cleanup — store is no longer stored in localStorage.
+> Synced from `fase-7-sessao-login-vertical` (ADDED), then `fase-9-cutover-ownership` (MODIFIED), then `fase-18-app-shell-ui-base-rotas` (MODIFIED). LogoutButton tokens updated: `text-text-*`/`accent-*` replace `slate-*`/`blue-*`. Component accepts `className` prop.
 
 ## Requirements
 
@@ -67,3 +67,21 @@ The system SHALL provide a client component that orchestrates the full logout fl
 
 - **WHEN** unauthenticated user submits the logout form
 - **THEN** storage is still cleaned, and the server redirects to `/login` (idempotent)
+
+### Requirement: LogoutButton design token cleanup
+
+The `LogoutButton` component SHALL use design tokens instead of raw Tailwind color classes:
+- Text SHALL use `text-text-*` tokens (not `slate-*` or `blue-*`)
+- Hover/danger states SHALL use `accent-*` tokens
+- Backgrounds SHALL use `bg-bg-*` tokens
+- The component SHALL accept a `className` prop for flexible styling in both the App Shell (topbar menu) and standalone (`/conta` page) contexts
+
+#### Scenario: LogoutButton uses tokens in shell
+
+- **WHEN** `LogoutButton` renders in the App Shell topbar menu
+- **THEN** it SHALL use design tokens (`text-text-secondary`, `hover:text-text-primary`)
+
+#### Scenario: LogoutButton uses tokens on /conta
+
+- **WHEN** `LogoutButton` renders on the `/conta` page
+- **THEN** it SHALL use design tokens consistent with the page styling

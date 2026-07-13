@@ -1,10 +1,12 @@
 > **Propósito**: Esta spec define a interface visual para input de produto + oferta (Campaign Input UI), consumindo os dados de identidade da loja já cadastrados e preparando os dados para futura geração de campanha.
+>
+> > Synced from `fase-18-app-shell-ui-base-rotas` (MODIFIED). Route migrated from `/` to `/campanhas/nova`. No-store redirect updated to `/loja`. Links updated to new route paths. Design tokens applied.
 
 ## Requirements
 
 ### Requirement: Campaign input form UI
 
-The system SHALL render a campaign input form as the landing page at `src/app/page.tsx` (`/`). The form SHALL collect product and offer data for future campaign generation.
+The system SHALL render a campaign input form at `src/app/(app)/campanhas/nova/page.tsx` (`/campanhas/nova`). The root route `/` SHALL redirect to `/dashboard` via next.config.ts 301. The form SHALL collect product and offer data for future campaign generation.
 
 The page SHALL be a composition of:
 - `src/components/flow/campaign-input-form.tsx` — main form component
@@ -16,12 +18,17 @@ The page SHALL follow the visual and UX rules in `openspec/design-system/MASTER.
 
 Components that access localStorage, file input, object URLs, or client-side form state SHALL be client components using `"use client"`.
 
-#### Scenario: Landing page renders campaign input form
+#### Scenario: Campaign form renders at /campanhas/nova
 
-- **WHEN** a user visits `/`
-- **AND** a valid `store_id` exists in localStorage
+- **WHEN** a user visits `/campanhas/nova`
+- **AND** the user has a valid store
 - **THEN** the page SHALL render the campaign input form
 - **AND** the form SHALL contain fields for product name, description, prices, badge, and image
+
+#### Scenario: Root route redirects to /dashboard
+
+- **WHEN** a user visits `/`
+- **THEN** the system SHALL respond with HTTP 301 to `/dashboard`
 
 #### Scenario: Client components use "use client"
 
@@ -61,29 +68,15 @@ The `StoreIdentityBlock` SHALL consume `identity` from the GET response directly
 - **AND** `StoreIdentitySnapshot` SHALL NOT be passed as a prop
 - **AND** `StoreIdentityBlock` SHALL consume `identity` from the GET response
 
-### Requirement: Blocking state for missing or invalid store_id
+### Requirement: Blocking state for missing or invalid store
 
-When no `store_id` exists in localStorage, the system SHALL render a centered blocking state with:
-- Title: "Cadastre sua loja primeiro"
-- Description explaining the user needs to register their store before creating campaigns
-- Button/link to navigate to `/store`
+When `getCurrentStore()` returns `null` (no store for the authenticated user), the system SHALL redirect to `/loja` server-side. This replaces the old localStorage-based store_id approach.
 
-When `store_id` exists but `GET /api/store/{id}` returns 404, the system SHALL remove `store_id` from localStorage and render the same blocking state with CTA to `/store`.
+#### Scenario: No store redirects to /loja
 
-#### Scenario: No store_id shows blocking state
-
-- **WHEN** a user visits `/`
-- **AND** `localStorage.getItem("store_id")` is null
-- **THEN** the page SHALL display "Cadastre sua loja primeiro" with a CTA to `/store`
-- **AND** no form fields SHALL be rendered
-
-#### Scenario: Invalid store_id resets and shows blocking state
-
-- **WHEN** a user visits `/`
-- **AND** `store_id` exists in localStorage
-- **AND** `GET /api/store/{store_id}` returns 404
-- **THEN** the system SHALL remove `store_id` from localStorage
-- **AND** render the blocking state with CTA to `/store`
+- **WHEN** a user visits `/campanhas/nova`
+- **AND** `getCurrentStore()` returns null
+- **THEN** the server redirects to `/loja`
 
 ### Requirement: Campaign form fields
 
@@ -243,17 +236,15 @@ The submit behavior SHALL be updated. Instead of including identity fields in th
 1. Validate all required fields
 2. Create or reuse the product image object URL from the selected image file
 3. Call `POST /api/campaign/generate-image` with form data including `storeId` — no identity fields
-4. On success: compose a `PreviewPayload` and store in sessionStorage
-5. Navigate to `/campaign/preview`
-6. On error: display error state with retry option
+4. On success: navigate to `/campanhas/${campaignId}` using the `campaignUrl` returned by the API
+5. On error: display error state with retry option
 
-#### Scenario: Valid submit sends storeId in body
+#### Scenario: Valid submit navigates to /campanhas/[id]
 
 - **WHEN** all required fields are valid and the user clicks "Criar Campanha"
 - **THEN** the system SHALL call `POST /api/campaign/generate-image` with `storeId` in the body
 - **AND** the body SHALL NOT include `storeName`, `storeSegment`, `storeTone`, `brandColor`, `storeLogoUrl`, or `brandProfile`
-- **AND** on success, store the preview payload in sessionStorage
-- **AND** navigate to `/campaign/preview`
+- **AND** on success, navigate to `/campanhas/${campaignId}`
 
 #### Scenario: API error shows error state
 
