@@ -9,7 +9,7 @@ export default async function LojaPage() {
 
   return (
     <div>
-      <PageHeader title="Loja" breadcrumbs={[{ label: "Loja" }]} />
+      <PageHeader title="Loja" />
       <StorePageClient initialStore={store} />
     </div>
   );

@@ -1096,7 +1096,7 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
           </div>
 
           <div className="flex items-center justify-between pt-2">
-            {mode === "edit" && (
+            {false && (
               <button type="button" onClick={handleClearStore} className="text-text-muted hover:text-text-primary text-xs font-body underline transition-colors duration-200">
                 Cadastrar nova loja
               </button>
