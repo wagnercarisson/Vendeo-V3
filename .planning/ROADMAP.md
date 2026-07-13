@@ -9,7 +9,7 @@
 
 | Phase | Name | Goal | Requirements | Success Criteria |
 |-------|------|------|--------------|------------------|
-| 18 | App Shell & Navegação | Estrutura de navegação definitiva | SHELL-01, SHELL-02, SHELL-03 | 3 |
+| 18 | App Shell & Navegação | ✅ Estrutura de navegação definitiva | SHELL-01, SHELL-02, SHELL-03 | 3 |
 | 19 | Onboarding & Estados Vazios | Experiência do novo usuário e consistência visual | ONBRD-01, ONBRD-02, ONBRD-03, UX-01, UX-02 | 5 |
 | 20 | Dashboard | Visão geral com métricas básicas e acesso rápido | DASH-01, DASH-02, DASH-03 | 3 |
 | 21 | Histórico & Busca | Organização e descoberta de campanhas | HIST-01, HIST-02, HIST-03, SEARCH-01, SEARCH-02, SEARCH-03 | 6 |
@@ -127,4 +127,4 @@
 
 ---
 *Roadmap created: 2026-07-10*
-*Last updated: 2026-07-10 after milestone v1.4 opened*
+*Last updated: 2026-07-13 after Phase 18 execution*

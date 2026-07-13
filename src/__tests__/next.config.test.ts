@@ -1,70 +1,57 @@
 // @vitest-environment node
 import { describe, it, expect } from "vitest";
 
+async function getRedirects() {
+  const mod = await import("../../next.config");
+  const config: { redirects?: () => Promise<unknown> } = mod.default || mod;
+  const fn = config.redirects;
+  if (typeof fn !== "function") throw new Error("redirects is not a function");
+  const result = await fn();
+  if (!Array.isArray(result)) throw new Error("redirects did not return array");
+  return result as Array<{
+    source: string;
+    destination: string;
+    statusCode: number;
+  }>;
+}
+
 describe("next.config.ts redirects", () => {
   it("has 5 redirect entries", async () => {
-    const mod = await import("../../next.config");
-    const config = mod.default || mod;
-    const redirects = await config.redirects();
+    const redirects = await getRedirects();
     expect(redirects).toHaveLength(5);
   });
 
   it("redirects / to /dashboard with 301", async () => {
-    const mod = await import("../../next.config");
-    const config = mod.default || mod;
-    const redirects = await config.redirects();
-    const rootRedirect = redirects.find(
-      (r: { source: string }) => r.source === "/",
-    );
-    expect(rootRedirect).toBeDefined();
+    const redirects = await getRedirects();
+    const rootRedirect = redirects.find((r) => r.source === "/")!;
     expect(rootRedirect.destination).toBe("/dashboard");
     expect(rootRedirect.statusCode).toBe(301);
   });
 
   it("redirects /minhas-campanhas to /campanhas with 301", async () => {
-    const mod = await import("../../next.config");
-    const config = mod.default || mod;
-    const redirects = await config.redirects();
-    const r = redirects.find(
-      (r: { source: string }) => r.source === "/minhas-campanhas",
-    );
-    expect(r).toBeDefined();
+    const redirects = await getRedirects();
+    const r = redirects.find((r) => r.source === "/minhas-campanhas")!;
     expect(r.destination).toBe("/campanhas");
     expect(r.statusCode).toBe(301);
   });
 
   it("redirects /campanha/:id to /campanhas/:id with 301", async () => {
-    const mod = await import("../../next.config");
-    const config = mod.default || mod;
-    const redirects = await config.redirects();
-    const r = redirects.find(
-      (r: { source: string }) => r.source === "/campanha/:id",
-    );
-    expect(r).toBeDefined();
+    const redirects = await getRedirects();
+    const r = redirects.find((r) => r.source === "/campanha/:id")!;
     expect(r.destination).toBe("/campanhas/:id");
     expect(r.statusCode).toBe(301);
   });
 
   it("redirects /store to /loja with 301", async () => {
-    const mod = await import("../../next.config");
-    const config = mod.default || mod;
-    const redirects = await config.redirects();
-    const r = redirects.find(
-      (r: { source: string }) => r.source === "/store",
-    );
-    expect(r).toBeDefined();
+    const redirects = await getRedirects();
+    const r = redirects.find((r) => r.source === "/store")!;
     expect(r.destination).toBe("/loja");
     expect(r.statusCode).toBe(301);
   });
 
   it("redirects /campaign/preview to /campanhas/nova with 301", async () => {
-    const mod = await import("../../next.config");
-    const config = mod.default || mod;
-    const redirects = await config.redirects();
-    const r = redirects.find(
-      (r: { source: string }) => r.source === "/campaign/preview",
-    );
-    expect(r).toBeDefined();
+    const redirects = await getRedirects();
+    const r = redirects.find((r) => r.source === "/campaign/preview")!;
     expect(r.destination).toBe("/campanhas/nova");
     expect(r.statusCode).toBe(301);
   });

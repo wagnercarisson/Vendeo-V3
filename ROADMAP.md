@@ -226,7 +226,7 @@ Página `/campanha/[id]` com preview e download da campanha persistida. Server C
 
 ## Phase 18 — App Shell + UI Base + Rotas
 
-**Status:** `Planned`
+**Status:** `Complete (2026-07-13)`
 **Slug:** `fase-18-app-shell-ui-base-rotas`
 **Change:** `openspec/changes/fase-18-app-shell-ui-base-rotas/`
 **Plans:** `.planning/phases/18-app-shell-ui-base-rotas/18-01-PLAN.md` — `18-03-PLAN.md`
@@ -241,9 +241,9 @@ App Shell profissional (sidebar + topbar + drawer mobile + menu de conta), 7 com
 **Planos:**
 | Plan | Wave | Status | Descrição |
 |------|------|--------|-----------|
-| 18-01 | 1 | ○ | UI Base (Button, Card, Input, Badge, EmptyState, Skeleton, PageHeader) + estrutura diretórios + root layout cleanup + redirects next.config.ts + testes |
-| 18-02 | 2 | ○ | App Shell: sidebar, topbar, account-menu, sidebar-drawer, (app)/layout.tsx + testes shell |
-| 18-03 | 2 | ○ | Migração rotas: campanhas/nova, campanhas, campanhas/[id], loja; criar dashboard + conta; middleware matcher; remover AuthHeader; token cleanup; testes redirects + middleware |
+| 18-01 | 1 | ✓ | UI Base (Button, Card, Input, Badge, EmptyState, Skeleton, PageHeader) + estrutura diretórios + root layout cleanup + redirects next.config.ts + testes |
+| 18-02 | 2 | ✓ | App Shell: sidebar, topbar, account-menu, sidebar-drawer, (app)/layout.tsx + testes shell |
+| 18-03 | 2 | ✓ | Migração rotas: campanhas/nova, campanhas, campanhas/[id], loja; criar dashboard + conta; middleware matcher; remover AuthHeader; token cleanup; testes redirects + middleware |
 
 ---
 

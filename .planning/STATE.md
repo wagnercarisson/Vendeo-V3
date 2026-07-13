@@ -2,21 +2,21 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Experiência SaaS
-status: planning
-last_updated: "2026-07-10T21:33:41.041Z"
-last_activity: 2026-07-10
+status: in_progress
+last_updated: "2026-07-13T17:00:00.000Z"
+last_activity: 2026-07-13
 progress:
-  total_phases: 0
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 1
+  completed_phases: 1
+  total_plans: 3
+  completed_plans: 3
+  percent: 100
 ---
 
 # Project State
 
-**Last updated:** 2026-07-10
-**Milestone:** v1.3 — Persistência e Entrega da Campanha ✅ COMPLETE (6/6 phases)
+**Last updated:** 2026-07-13
+**Milestone:** v1.4 — Experiência SaaS 🚧 Phase 18 complete (3/3 plans)
 
 ## Completed
 
@@ -80,10 +80,10 @@ progress:
 
 ## Current Position
 
-Phase: 18 — App Shell + UI Base + Rotas (Planned)
-Plan: 3 plans (18-01, 18-02, 18-03)
-Status: Planned — ready for execution
-Last activity: 2026-07-13 — Phase 18 planned from OpenSpec
+**Milestone:** v1.4 — Experiência SaaS
+**Phase:** 18 — App Shell + UI Base + Rotas ✅ COMPLETE (3/3 plans)
+**Current:** Phase 19 ready for planning
+**Last activity:** 2026-07-13 — Phase 18 completed
 
 ## Project Reference
 
@@ -91,28 +91,32 @@ See: `.planning/PROJECT.md` (updated 2026-07-10)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** v1.4 — Experiência SaaS (Phase 18 planejada, aguardando execução)
+**Current focus:** v1.4 — Experiência SaaS (Phase 18 complete)
 
-## Phase 18 — App Shell + UI Base + Rotas
+## Completed
 
-| Plan | Wave | Status | Descrição |
-|------|------|--------|-----------|
-| 18-01 | 1 | ○ | UI Base (7 componentes) + estrutura diretórios + root layout cleanup + redirects + testes |
-| 18-02 | 2 | ○ | App Shell: sidebar, topbar, account-menu, drawer, (app)/layout + testes |
-| 18-03 | 2 | ○ | Migração rotas + dashboard + conta + middleware + token cleanup + testes |
+### Phase 18 — App Shell + UI Base + Rotas ✅
 
-**Source of truth:** `openspec/changes/fase-18-app-shell-ui-base-rotas/`
-**Context:** `.planning/phases/18-app-shell-ui-base-rotas/18-CONTEXT.md`
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 18-01 | 1 | ✓ | UI Base (7 componentes) + estrutura diretórios + root layout cleanup + redirects + testes |
+| 18-02 | 2 | ✓ | App Shell: sidebar, topbar, account-menu, drawer, (app)/layout + testes |
+| 18-03 | 2 | ✓ | Migração rotas + dashboard + conta + middleware + token cleanup + testes |
+
+**Tests:** 600 passing (79 files)
+
+**Commits:**
+- `900be21` — 18-01: UI Base + estrutura + redirects + testes
+- `e24016d` — 18-02: App Shell + sidebar + topbar + account-menu + drawer + (app)/layout + testes
+- `6d97072` — 18-03: Route migration + polish + 600 testes
 
 ## Performance Metrics
 
-| Phase | Plan | Duration | Notes |
-|-------|------|----------|-------|
-| Phase 17-edicao-publication-copy P01 | 2min | 6 tasks | 6 files |
-| Phase 17-edicao-publication-copy P02 | 2 min | 5 tasks | 4 files |
+| Phase | Plans | Duration | Tests |
+|-------|-------|----------|-------|
+| Phase 18-app-shell-ui-base-rotas | 3 plans | ~multi-cycle | 579→600 (21 novos) |
 
 ## Operator Next Steps
 
-- Executar Phase 18: `/gsd-execute-phase 18-01 ${GSD_WS}`
-- Planejar Phase 19 após execução da Phase 18
+- Planejar Phase 19 (próxima fase v1.4)
 - Verificar alinhamento com OpenSpec `openspec/changes/fase-18-app-shell-ui-base-rotas/` antes de modificar
