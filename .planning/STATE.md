@@ -80,10 +80,10 @@ progress:
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-07-10 — Milestone v1.4 started
+Phase: 18 — App Shell + UI Base + Rotas (Planned)
+Plan: 3 plans (18-01, 18-02, 18-03)
+Status: Planned — ready for execution
+Last activity: 2026-07-13 — Phase 18 planned from OpenSpec
 
 ## Project Reference
 
@@ -91,7 +91,18 @@ See: `.planning/PROJECT.md` (updated 2026-07-10)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** v1.4 — Experiência SaaS (em planejamento)
+**Current focus:** v1.4 — Experiência SaaS (Phase 18 planejada, aguardando execução)
+
+## Phase 18 — App Shell + UI Base + Rotas
+
+| Plan | Wave | Status | Descrição |
+|------|------|--------|-----------|
+| 18-01 | 1 | ○ | UI Base (7 componentes) + estrutura diretórios + root layout cleanup + redirects + testes |
+| 18-02 | 2 | ○ | App Shell: sidebar, topbar, account-menu, drawer, (app)/layout + testes |
+| 18-03 | 2 | ○ | Migração rotas + dashboard + conta + middleware + token cleanup + testes |
+
+**Source of truth:** `openspec/changes/fase-18-app-shell-ui-base-rotas/`
+**Context:** `.planning/phases/18-app-shell-ui-base-rotas/18-CONTEXT.md`
 
 ## Performance Metrics
 
@@ -102,5 +113,6 @@ See: `.planning/PROJECT.md` (updated 2026-07-10)
 
 ## Operator Next Steps
 
-- Detalhar escopo via OpenSpec para cada fase da v1.4
-- Iniciar: `/gsd-discuss-phase 18 ${GSD_WS}` ou `/gsd-plan-phase 18 ${GSD_WS}`
+- Executar Phase 18: `/gsd-execute-phase 18-01 ${GSD_WS}`
+- Planejar Phase 19 após execução da Phase 18
+- Verificar alinhamento com OpenSpec `openspec/changes/fase-18-app-shell-ui-base-rotas/` antes de modificar

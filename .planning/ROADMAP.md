@@ -21,14 +21,33 @@
 
 ### Phase 18 — App Shell & Navegação
 
-**Goal:** Estabelecer a estrutura de navegação definitiva do Vendeo como produto SaaS coerente. Substituir navegação ad-hoc por app shell com sidebar/topbar e menus consistentes.
+**Status:** `Planned`
+**Slug:** `18-app-shell-ui-base-rotas`
+**Change:** `openspec/changes/fase-18-app-shell-ui-base-rotas/`
+**Plans:** `.planning/phases/18-app-shell-ui-base-rotas/18-01-PLAN.md` — `18-03-PLAN.md`
+**Context:** `.planning/phases/18-app-shell-ui-base-rotas/18-CONTEXT.md`
+
+**Goal:** Estabelecer a estrutura de navegação definitiva do Vendeo como produto SaaS coerente. Substituir navegação ad-hoc por app shell com sidebar/topbar, UI base profissional (7 componentes), reorganização de rotas para PT-BR, e migração de todas as páginas existentes.
 
 **Requirements:** SHELL-01, SHELL-02, SHELL-03
 
 **Success criteria:**
-1. Sidebar/topbar com links para todas as seções principais do produto
-2. Navegação consistente entre páginas (destaque na seção ativa)
-3. Transições suaves entre seções sem perda de estado
+1. 7 componentes base de UI (Button, Card, Input, Badge, EmptyState, Skeleton, PageHeader) em `src/components/ui/`
+2. App Shell com sidebar + topbar + drawer mobile + menu de conta, responsivo, tolerante a `store = null`
+3. Route group `(app)/` com layout protegido (requirePageUser) e todas as rotas filhas
+4. 5 redirects 301 em `next.config.ts` — rotas antigas → novo padrão PT-BR
+5. `/dashboard` placeholder + `/conta` mínima útil (email + sair)
+6. AuthHeader removido, design token cleanup, emoji → Lucide
+7. 25+ testes (componentes, shell, redirects, middleware)
+
+**Dependencies:** Phases 7–17 (fundação completa)
+
+**Plans:**
+| Plan | Wave | Objective |
+|------|------|-----------|
+| 18-01 | 1 | UI Base (7 componentes) + estrutura diretórios + root layout cleanup + next.config.ts redirects + testes UI |
+| 18-02 | 2 | App Shell: sidebar, topbar, account-menu, sidebar-drawer, (app)/layout + testes shell |
+| 18-03 | 2 | Migrar rotas campanhas/nova, campanhas, campanhas/[id], loja; criar dashboard + conta; middleware matcher; remover AuthHeader; token cleanup; testes redirects + middleware |
 
 **Depends on:** Nenhuma (fundação da milestone)
 

@@ -84,9 +84,9 @@ Relacionamento entre requisitos e fases do roadmap. Preenchido durante a cria√ß√
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SHELL-01 | Phase 18 | Pending scoping |
-| SHELL-02 | Phase 18 | Pending scoping |
-| SHELL-03 | Phase 18 | Pending scoping |
+| SHELL-01 | Phase 18 | Scoped via OpenSpec |
+| SHELL-02 | Phase 18 | Scoped via OpenSpec |
+| SHELL-03 | Phase 18 | Scoped via OpenSpec |
 | ONBRD-01 | Phase 19 | Pending scoping |
 | ONBRD-02 | Phase 19 | Pending scoping |
 | ONBRD-03 | Phase 19 | Pending scoping |

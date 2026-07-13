@@ -217,6 +217,36 @@ Página `/campanha/[id]` com preview e download da campanha persistida. Server C
 
 ---
 
+## v1.4 — Experiência SaaS
+
+> Milestone: **Experiência SaaS**
+> O Vendeo passa a parecer e funcionar como um produto SaaS coerente — app shell profissional, navegação PT-BR, dashboard, onboarding, busca e mobile.
+
+---
+
+## Phase 18 — App Shell + UI Base + Rotas
+
+**Status:** `Planned`
+**Slug:** `fase-18-app-shell-ui-base-rotas`
+**Change:** `openspec/changes/fase-18-app-shell-ui-base-rotas/`
+**Plans:** `.planning/phases/18-app-shell-ui-base-rotas/18-01-PLAN.md` — `18-03-PLAN.md`
+**Context:** `.planning/phases/18-app-shell-ui-base-rotas/18-CONTEXT.md`
+
+App Shell profissional (sidebar + topbar + drawer mobile + menu de conta), 7 componentes base de UI, reorganização de rotas para PT-BR (`/campanhas/nova`, `/campanhas`, `/campanhas/[id]`, `/loja`, `/conta`, `/dashboard`), 5 redirects 301, migração de todas as páginas existentes, design token cleanup.
+
+**Entrega:** Navegação SaaS profissional com sidebar/topbar, 7 componentes UI enxutos, rotas PT-BR consistentes, dashboard placeholder, página de conta mínima, AuthHeader removido, 25+ testes. TypeScript/lint/build limpos.
+
+**Dependências:** Phases 7–17 (fundação completa)
+
+**Planos:**
+| Plan | Wave | Status | Descrição |
+|------|------|--------|-----------|
+| 18-01 | 1 | ○ | UI Base (Button, Card, Input, Badge, EmptyState, Skeleton, PageHeader) + estrutura diretórios + root layout cleanup + redirects next.config.ts + testes |
+| 18-02 | 2 | ○ | App Shell: sidebar, topbar, account-menu, sidebar-drawer, (app)/layout.tsx + testes shell |
+| 18-03 | 2 | ○ | Migração rotas: campanhas/nova, campanhas, campanhas/[id], loja; criar dashboard + conta; middleware matcher; remover AuthHeader; token cleanup; testes redirects + middleware |
+
+---
+
 ## Phase 16 — Minhas Campanhas
 
 **Status:** `Planned`
