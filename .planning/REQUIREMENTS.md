@@ -87,11 +87,11 @@ Relacionamento entre requisitos e fases do roadmap. Preenchido durante a cria√ß√
 | SHELL-01 | Phase 18 | Scoped via OpenSpec |
 | SHELL-02 | Phase 18 | Scoped via OpenSpec |
 | SHELL-03 | Phase 18 | Scoped via OpenSpec |
-| ONBRD-01 | Phase 19 | Pending scoping |
-| ONBRD-02 | Phase 19 | Pending scoping |
-| ONBRD-03 | Phase 19 | Pending scoping |
-| UX-01 | Phase 19 | Pending scoping |
-| UX-02 | Phase 19 | Pending scoping |
+| ONBRD-01 | Phase 19 | Scoped via OpenSpec (19-01, 19-02, 19-03) |
+| ONBRD-02 | Phase 19 | Scoped via OpenSpec (19-02) |
+| ONBRD-03 | Phase 19 | Scoped via OpenSpec (19-03) |
+| UX-01 | Phase 19 | Scoped via OpenSpec (19-01, 19-02, 19-03) |
+| UX-02 | Phase 19 | Scoped via OpenSpec (19-01, 19-02, 19-03) |
 | DASH-01 | Phase 20 | Pending scoping |
 | DASH-02 | Phase 20 | Pending scoping |
 | DASH-03 | Phase 20 | Pending scoping |

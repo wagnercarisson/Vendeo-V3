@@ -249,7 +249,7 @@ App Shell profissional (sidebar + topbar + drawer mobile + menu de conta), 7 com
 
 ## Phase 16 — Minhas Campanhas
 
-**Status:** `Planned`
+**Status:** `Complete`
 **Slug:** `fase-16-minhas-campanhas`
 **Change:** `openspec/changes/fase-16-minhas-campanhas/`
 **Plans:** `.planning/phases/16-minhas-campanhas/16-01-PLAN.md` — `16-03-PLAN.md`
@@ -262,9 +262,9 @@ Página `/minhas-campanhas` com listagem de campanhas persistidas, thumbnails vi
 **Planos:**
 | Plan | Wave | Status | Descrição |
 |------|------|--------|-----------|
-| 16-01 | 1 | ◀ | Contrato de listagem — list.ts com listCampaigns, CampaignListItem, generateBatchThumbnailUrls |
-| 16-02 | 2 | ◀ | UI `/minhas-campanhas` + navegação — page.tsx, client.tsx, header, middleware, back link |
-| 16-03 | 2 | ◀ | Testes e Verificação — helper, page states, middleware, typecheck/lint/build |
+| 16-01 | 1 | ✅ | Contrato de listagem — list.ts com listCampaigns, CampaignListItem, generateBatchThumbnailUrls |
+| 16-02 | 2 | ✅ | UI `/minhas-campanhas` + navegação — page.tsx, client.tsx, header, middleware, back link |
+| 16-03 | 2 | ✅ | Testes e Verificação — helper, page states, middleware, typecheck/lint/build |
 
 ---
 
@@ -285,3 +285,24 @@ O lojista pode editar o publication copy (caption, hashtags, cta_post) da campan
 |------|------|--------|-----------|
 | 17-01 | 1 | ✅ | Migration + Validation + Display Contract — migration SQL, types.ts, publication-copy.ts, display.ts (getEffectivePublicationCopy), 12 testes |
 | 17-02 | 2 | ✅ | PATCH Route + UI Edit Mode — route.ts, client.tsx modo edição inline, 17 testes |
+
+---
+
+## Phase 19 — Onboarding & Estados Vazios
+
+**Status:** `Planned`
+**Slug:** `fase-19-onboarding-estados-vazios`
+**Change:** `openspec/changes/fase-19-onboarding-estados-vazios/`
+**Plans:** `.planning/phases/19-onboarding-estados-vazios/19-01-PLAN.md` — `19-03-PLAN.md`
+**Context:** `.planning/phases/19-onboarding-estados-vazios/19-CONTEXT.md`
+
+Helper centralizado de onboarding (`getUserOnboardingState`) com 3 estados, dashboard inteligente com 3 estados visuais, substituição de redirects por orientação contextual em `/campanhas` e `/campanhas/[id]`, e microcopy centralizada.
+
+**Dependências:** Phase 18
+
+**Planos:**
+| Plan | Wave | Status | Descrição |
+|------|------|--------|-----------|
+| 19-01 | 1 | 📋 | Fundação do Onboarding Helper — types, count, state, microcopy + testes |
+| 19-02 | 2 | 📋 | Dashboard Inteligente — async server component com 3 estados + testes |
+| 19-03 | 2 | 📋 | Campanhas + Detalhe sem Loja — empty states, 404, microcopy + testes |

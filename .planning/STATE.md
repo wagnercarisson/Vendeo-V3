@@ -3,20 +3,20 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Experiência SaaS
 status: in_progress
-last_updated: "2026-07-13T17:00:00.000Z"
+last_updated: "2026-07-13T17:29:00.000Z"
 last_activity: 2026-07-13
 progress:
-  total_phases: 1
+  total_phases: 2
   completed_phases: 1
-  total_plans: 3
+  total_plans: 6
   completed_plans: 3
-  percent: 100
+  percent: 50
 ---
 
 # Project State
 
 **Last updated:** 2026-07-13
-**Milestone:** v1.4 — Experiência SaaS 🚧 Phase 18 complete (3/3 plans)
+**Milestone:** v1.4 — Experiência SaaS 🚧 Phase 18 complete (3/3), Phase 19 planned (3/3 plans)
 
 ## Completed
 
@@ -82,8 +82,9 @@ progress:
 
 **Milestone:** v1.4 — Experiência SaaS
 **Phase:** 18 — App Shell + UI Base + Rotas ✅ COMPLETE (3/3 plans)
-**Current:** Phase 19 ready for planning
-**Last activity:** 2026-07-13 — Phase 18 completed
+**Phase 19:** Onboarding & Estados Vazios 📋 PLANNED (3/3 plans)
+**Current:** Phase 19 ready for execution
+**Last activity:** 2026-07-13 — Phase 19 planned from OpenSpec
 
 ## Project Reference
 
@@ -91,7 +92,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-10)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** v1.4 — Experiência SaaS (Phase 18 complete)
+**Current focus:** v1.4 — Experiência SaaS (Phase 19 planned — ready for execution)
 
 ## Completed
 
@@ -116,7 +117,18 @@ See: `.planning/PROJECT.md` (updated 2026-07-10)
 |-------|-------|----------|-------|
 | Phase 18-app-shell-ui-base-rotas | 3 plans | ~multi-cycle | 579→600 (21 novos) |
 
+### Phase 19 — Onboarding & Estados Vazios 📋
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 19-01 | 1 | 📋 | Fundação do Onboarding Helper — types, count, state, microcopy + testes |
+| 19-02 | 2 | 📋 | Dashboard Inteligente — async server component com 3 estados + testes |
+| 19-03 | 2 | 📋 | Campanhas + Detalhe sem Loja — empty states, 404, microcopy + testes |
+
+**Context:** `.planning/phases/19-onboarding-estados-vazios/19-CONTEXT.md`
+**Source:** `openspec/changes/fase-19-onboarding-estados-vazios/`
+
 ## Operator Next Steps
 
-- Planejar Phase 19 (próxima fase v1.4)
-- Verificar alinhamento com OpenSpec `openspec/changes/fase-18-app-shell-ui-base-rotas/` antes de modificar
+- Executar Phase 19: `/gsd-execute-phase 19-01`
+- Seguir ordem: 19-01 → 19-02 → 19-03

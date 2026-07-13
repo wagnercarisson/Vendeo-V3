@@ -9,7 +9,7 @@
 
 | Phase | Name | Goal | Requirements | Success Criteria |
 |-------|------|------|--------------|------------------|
-| 18 | App Shell & Navegação | ✅ Estrutura de navegação definitiva | SHELL-01, SHELL-02, SHELL-03 | 3 |
+| 18 | App Shell & Navegação | ✅ Estrutura de navegação definitiva | SHELL-01, SHELL-02, SHELL-03 | 6 ✅ |
 | 19 | Onboarding & Estados Vazios | Experiência do novo usuário e consistência visual | ONBRD-01, ONBRD-02, ONBRD-03, UX-01, UX-02 | 5 |
 | 20 | Dashboard | Visão geral com métricas básicas e acesso rápido | DASH-01, DASH-02, DASH-03 | 3 |
 | 21 | Histórico & Busca | Organização e descoberta de campanhas | HIST-01, HIST-02, HIST-03, SEARCH-01, SEARCH-02, SEARCH-03 | 6 |
@@ -21,7 +21,7 @@
 
 ### Phase 18 — App Shell & Navegação
 
-**Status:** `Planned`
+**Status:** `Complete ✓`
 **Slug:** `18-app-shell-ui-base-rotas`
 **Change:** `openspec/changes/fase-18-app-shell-ui-base-rotas/`
 **Plans:** `.planning/phases/18-app-shell-ui-base-rotas/18-01-PLAN.md` — `18-03-PLAN.md`
@@ -55,18 +55,31 @@
 
 ### Phase 19 — Onboarding & Estados Vazios
 
+**Status:** `Planned`
+**Slug:** `19-onboarding-estados-vazios`
+**Change:** `openspec/changes/fase-19-onboarding-estados-vazios/`
+**Plans:** `.planning/phases/19-onboarding-estados-vazios/19-01-PLAN.md` — `19-03-PLAN.md`
+**Context:** `.planning/phases/19-onboarding-estados-vazios/19-CONTEXT.md`
+
 **Goal:** Guiar novos usuários na primeira experiência e garantir estados vazios consistentes em toda a aplicação, antes de apresentar o dashboard.
 
 **Requirements:** ONBRD-01, ONBRD-02, ONBRD-03, UX-01, UX-02
 
 **Success criteria:**
-1. Novo usuário é guiado por onboarding pós-signup
-2. Onboarding orienta a criar a primeira campanha
-3. Configuração inicial da loja é integrada ao onboarding
-4. Todas as listas e seções têm estados vazios com CTAs claros
-5. Estados vazios seguem padrão consistente de design
+1. Helper `getUserOnboardingState(userId)` centralizado com 3 estados: `no_store | has_store_no_campaigns | has_store_with_campaigns`
+2. Dashboard como server component async com 3 estados, reutilizando `<PageHeader>` + `<EmptyState>`
+3. `/campanhas` sem loja mostra empty state contextual com CTA (não redireciona)
+4. `/campanhas/[id]` sem loja retorna 404 (não redireciona)
+5. Microcopy de todos os estados vazios centralizada em `src/lib/onboarding/microcopy.ts`
 
 **Depends on:** Phase 18
+
+**Plans:**
+| Plan | Wave | Objective |
+|------|------|-----------|
+| 19-01 | 1 | Fundação do Onboarding Helper — types, count, state, microcopy + testes |
+| 19-02 | 2 | Dashboard Inteligente — async server component com 3 estados + testes |
+| 19-03 | 2 | Campanhas + Detalhe sem Loja — empty states, 404, microcopy + testes |
 
 ---
 
