@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { CampaignListItem } from "@/lib/campaign/list";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Megaphone } from "lucide-react";
+import { CAMPAIGNS_NO_CAMPAIGNS } from "@/lib/onboarding/microcopy";
 
 interface Props {
   campaigns: CampaignListItem[];
@@ -13,15 +13,15 @@ export default function CampaignListClient({ campaigns }: Props) {
   if (campaigns.length === 0) {
     return (
       <EmptyState
-        icon={Megaphone}
-        title="Nenhuma campanha encontrada"
-        description="Suas campanhas aparecerão aqui depois de geradas."
+        icon={CAMPAIGNS_NO_CAMPAIGNS.icon}
+        title={CAMPAIGNS_NO_CAMPAIGNS.title}
+        description={CAMPAIGNS_NO_CAMPAIGNS.description}
         action={
           <Link
-            href="/campanhas/nova"
+            href={CAMPAIGNS_NO_CAMPAIGNS.ctaHref!}
             className="inline-flex items-center rounded-lg bg-accent-green px-6 py-2 text-sm font-semibold text-white font-heading hover:brightness-110 transition-all duration-200"
           >
-            Criar Primeira Campanha
+            {CAMPAIGNS_NO_CAMPAIGNS.ctaLabel}
           </Link>
         }
       />
