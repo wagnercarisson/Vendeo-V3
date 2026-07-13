@@ -1,14 +1,37 @@
 import Link from "next/link";
 
-import { PageHeader } from "@/components/ui/page-header";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { getCurrentStore } from "@/lib/auth/store-ownership";
 import { requirePageUser } from "@/lib/auth/require-user";
-import { getUserOnboardingState } from "@/lib/onboarding/state";
 import {
-  DASHBOARD_NO_STORE,
+  countCampaigns,
+  countReadyCampaigns,
+  getRecentCampaigns,
+} from "@/lib/campaign/metrics";
+import type { RecentCampaignItem } from "@/lib/campaign/metrics";
+import {
   DASHBOARD_NO_CAMPAIGNS,
-  DASHBOARD_PLACEHOLDER,
+  DASHBOARD_NO_STORE,
 } from "@/lib/onboarding/microcopy";
+import { getUserOnboardingState } from "@/lib/onboarding/state";
+
+function getGreeting(storeName: string | null): string {
+  const hour = new Date().getHours();
+
+  const period =
+    hour >= 6 && hour < 12
+      ? "Bom dia"
+      : hour >= 12 && hour < 18
+        ? "Boa tarde"
+        : "Boa noite";
+
+  if (!storeName) return "Bem-vindo ao Vendeo";
+
+  return `${period}, ${storeName}`;
+}
 
 const ctaClass =
   "inline-flex items-center rounded-lg bg-accent-green px-6 py-2 text-sm font-semibold text-white font-heading hover:brightness-110 transition-all duration-200";
@@ -43,23 +66,167 @@ export default async function DashboardPage() {
             title={DASHBOARD_NO_CAMPAIGNS.title}
             description={DASHBOARD_NO_CAMPAIGNS.description}
             action={
-              <Link href={DASHBOARD_NO_CAMPAIGNS.ctaHref!} className={ctaClass}>
+              <Link
+                href={DASHBOARD_NO_CAMPAIGNS.ctaHref!}
+                className={ctaClass}
+              >
                 {DASHBOARD_NO_CAMPAIGNS.ctaLabel}
               </Link>
             }
           />
         </div>
       );
-    case "has_store_with_campaigns":
+    case "has_store_with_campaigns": {
+      const store = await getCurrentStore(user.userId);
+
+      if (!store) {
+        return (
+          <div>
+            <PageHeader title="Dashboard" />
+            <EmptyState
+              icon={DASHBOARD_NO_STORE.icon}
+              title={DASHBOARD_NO_STORE.title}
+              description={DASHBOARD_NO_STORE.description}
+              action={
+                <Link href={DASHBOARD_NO_STORE.ctaHref!} className={ctaClass}>
+                  {DASHBOARD_NO_STORE.ctaLabel}
+                </Link>
+              }
+            />
+          </div>
+        );
+      }
+
+      const [total, ready, recentCampaigns] = await Promise.all([
+        countCampaigns(store.id),
+        countReadyCampaigns(store.id),
+        getRecentCampaigns(store.id, 5),
+      ]);
+
+      const rate = total > 0 ? Math.round((ready / total) * 100) : 0;
+
       return (
         <div>
           <PageHeader title="Dashboard" />
-          <EmptyState
-            icon={DASHBOARD_PLACEHOLDER.icon}
-            title={DASHBOARD_PLACEHOLDER.title}
-            description={DASHBOARD_PLACEHOLDER.description}
-          />
+          <h2 className="text-lg font-medium text-text-primary mb-6">
+            {getGreeting(store.name)}
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <Card className="p-4">
+              <p className="text-sm font-medium text-text-secondary">
+                Total de Campanhas
+              </p>
+              <p className="text-3xl font-bold text-text-primary mt-1">
+                {total}
+              </p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-sm font-medium text-text-secondary">
+                Campanhas Prontas
+              </p>
+              <p className="text-3xl font-bold text-text-primary mt-1">
+                {ready}
+              </p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-sm font-medium text-text-secondary">
+                Taxa de Sucesso
+              </p>
+              <p className="text-3xl font-bold text-text-primary mt-1">
+                {rate}%
+              </p>
+            </Card>
+          </div>
+
+          <section>
+            <h2 className="text-lg font-semibold text-text-primary mb-4">
+              Campanhas Recentes
+            </h2>
+            <Card className="p-0">
+              <ul className="divide-y divide-border">
+                {recentCampaigns.map((campaign: RecentCampaignItem) => (
+                  <li
+                    key={campaign.id}
+                    className="flex items-center justify-between px-4 py-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="font-medium text-text-primary">
+                        {campaign.productName}
+                      </span>
+                      <span className="text-sm text-text-muted">
+                        {new Date(campaign.createdAt).toLocaleDateString(
+                          "pt-BR",
+                          { day: "2-digit", month: "2-digit" },
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant={
+                          campaign.status === "ready" ? "ready" : "error"
+                        }
+                      >
+                        {campaign.status === "ready" ? "Pronto" : "Erro"}
+                      </Badge>
+                      <Link
+                        href={`/campanhas/${campaign.id}`}
+                        className="text-sm font-medium text-accent-green hover:underline"
+                      >
+                        Abrir
+                      </Link>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+            <div className="mt-2 text-right">
+              <Link
+                href="/campanhas"
+                className="text-sm font-medium text-accent-green hover:underline"
+              >
+                Ver todas as campanhas →
+              </Link>
+            </div>
+          </section>
+
+          <Card className="mt-6 p-4">
+            <h3 className="text-base font-semibold text-text-primary mb-2">
+              Próximo passo
+            </h3>
+            <p className="text-text-secondary mb-4">
+              {recentCampaigns.length > 0
+                ? `Revise sua última campanha: ${recentCampaigns[0].productName}`
+                : "Criar nova campanha"}
+            </p>
+            <div className="flex gap-3">
+              {recentCampaigns.length > 0 && (
+                <Link
+                  href={`/campanhas/${recentCampaigns[0].id}`}
+                  className={ctaClass}
+                >
+                  Abrir campanha
+                </Link>
+              )}
+              <Link
+                href="/campanhas/nova"
+                className="text-sm font-medium text-accent-green hover:underline self-center"
+              >
+                Nova campanha →
+              </Link>
+            </div>
+          </Card>
+
+          <div className="mt-8 border-t border-border pt-4">
+            <Link
+              href="/loja"
+              className="text-sm text-text-muted hover:text-text-secondary"
+            >
+              Configurar loja
+            </Link>
+          </div>
         </div>
       );
+    }
   }
 }
