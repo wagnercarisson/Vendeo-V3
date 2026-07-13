@@ -1,6 +1,6 @@
 # Campaign Page UI
 
-> Synced from `fase-17-edicao-publication-copy` (MODIFIED), then `fase-18-app-shell-ui-base-rotas` (MODIFIED). Route migrated from `/campanha/[id]` to `/campanhas/[id]`. No-store redirect updated to `/loja`. Emoji icons replaced by Lucide. Kit de Publicação uses Card + Badge components. Navigation links updated.
+> Synced from `fase-17-edicao-publication-copy` (MODIFIED), then `fase-18-app-shell-ui-base-rotas` (MODIFIED), then `fase-19-onboarding-estados-vazios` (MODIFIED + REMOVED). Route migrated from `/campanha/[id]` to `/campanhas/[id]`. No-store redirect replaced by `notFound()`. Emoji icons replaced by Lucide. Kit de Publicação uses Card + Badge components. Navigation links updated.
 
 ## Purpose
 
@@ -13,7 +13,7 @@ Server Component (`/campanha/[id]`) com autenticação, ownership via RLS, e Cli
 O Server Component em `src/app/(app)/campanhas/[id]/page.tsx` SHALL:
 - Chamar `requirePageUser()` para garantir autenticação
 - Chamar `getCurrentStore(user.userId)` para resolver a loja do usuário
-- Se `getCurrentStore()` retornar `null`, fazer `redirect("/loja")`
+- Se `getCurrentStore()` retornar `null`, chamar `notFound()` em vez de `redirect("/loja")`
 - Chamar `getCampaignForDisplay(id)` para carregar a campanha via RLS
 - Se `getCampaignForDisplay` retornar `null`, chamar `notFound()`
 - Calcular `displayStatus` server-side: `"ready"` | `"generating"` | `"stale"` | `"error"` usando `campaign.status` e `IMAGE_GENERATION_GLOBAL_TIMEOUT_MS + 30_000` para detectar stale
@@ -25,10 +25,11 @@ O Server Component em `src/app/(app)/campanhas/[id]/page.tsx` SHALL:
 - **WHEN** um usuário autenticado acessa `/campanhas/{id}` onde `id` é uma campanha da sua loja
 - **THEN** o Server Component carrega a campanha e renderiza o Client Component com os dados
 
-#### Scenario: Usuário autenticado sem loja
+#### Scenario: Usuário autenticado sem loja recebe 404
 
 - **WHEN** um usuário autenticado mas sem loja associada acessa `/campanhas/{id}`
-- **THEN** é redirecionado para `/loja`
+- **THEN** `notFound()` é chamado → página 404
+- **AND** o sistema NÃO redireciona para `/loja`
 
 #### Scenario: Campanha não encontrada ou de outro tenant
 

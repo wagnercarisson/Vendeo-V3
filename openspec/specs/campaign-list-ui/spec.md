@@ -1,6 +1,6 @@
 # Campaign List UI
 
-> Synced from `fase-16-minhas-campanhas` (ADDED), then `fase-18-app-shell-ui-base-rotas` (MODIFIED). Route migrated from `/minhas-campanhas` to `/campanhas`. No-store redirect updated to `/loja`. Links updated. AuthHeader link and old back link removed (replaced by App Shell sidebar navigation).
+> Synced from `fase-16-minhas-campanhas` (ADDED), then `fase-18-app-shell-ui-base-rotas` (MODIFIED), then `fase-19-onboarding-estados-vazios` (MODIFIED + REMOVED). Route migrated from `/minhas-campanhas` to `/campanhas`. No-store redirect replaced by empty state with CTA. Microcopy centralized in `microcopy.ts`. Links updated. AuthHeader link and old back link removed (replaced by App Shell sidebar navigation).
 
 ## Requirements
 
@@ -9,7 +9,7 @@
 O Server Component em `src/app/(app)/campanhas/page.tsx` SHALL:
 - Chamar `requirePageUser()` para garantir autenticação
 - Chamar `getCurrentStore(user.userId)` para resolver a loja do usuário
-- Se `getCurrentStore()` retornar `null`, fazer `redirect("/loja")`
+- Se `getCurrentStore()` retornar `null`, renderizar empty state "Configure sua loja" com CTA → `/loja` (NÃO redirecionar)
 - Chamar `listCampaigns(storeId)` para carregar as campanhas da loja via RLS
 - Passar os dados serializáveis para o Client Component: `campaigns: CampaignListItem[]`
 
@@ -18,10 +18,12 @@ O Server Component em `src/app/(app)/campanhas/page.tsx` SHALL:
 - **WHEN** um usuário autenticado com loja acessa `/campanhas`
 - **THEN** o Server Component carrega a lista de campanhas e renderiza o Client Component
 
-#### Scenario: Usuário autenticado sem loja
+#### Scenario: Usuário autenticado sem loja vê empty state
 
 - **WHEN** um usuário autenticado mas sem loja associada acessa `/campanhas`
-- **THEN** é redirecionado para `/loja`
+- **THEN** o sistema SHALL renderizar um empty state com título "Configure sua loja" e descrição "Suas campanhas aparecerão aqui depois que você configurar sua loja."
+- **AND** um CTA "Configurar loja" SHALL linkar para `/loja`
+- **AND** o sistema SHALL NÃO redirecionar para `/loja`
 
 #### Scenario: Usuário não autenticado
 
@@ -56,14 +58,16 @@ Quando `campaigns` tem 1+ itens, o Client Component SHALL exibir uma lista de ca
 ### Requirement: Estado vazio
 
 Quando `campaigns` é array vazio, o Client Component SHALL exibir:
-- Mensagem "Nenhuma campanha encontrada"
-- Texto explicativo "Suas campanhas aparecerão aqui depois de geradas."
-- CTA "Criar Primeira Campanha" que navega para `/campanhas/nova` (formulário de geração)
+- Mensagem "Nenhuma campanha ainda"
+- Texto explicativo "Crie sua primeira campanha e ela aparecerá aqui."
+- CTA "Criar primeira campanha" que navega para `/campanhas/nova`
+- Toda microcopy SHALL ser referenciada de `src/lib/onboarding/microcopy.ts` (`CAMPAIGNS_NO_CAMPAIGNS`)
 
-#### Scenario: Estado vazio com CTA
+#### Scenario: Estado vazio com CTA e microcopy centralizada
 
 - **WHEN** `listCampaigns` retorna `[]`
-- **THEN** a página exibe mensagem de estado vazio + CTA "Criar Primeira Campanha" com link para `/campanhas/nova`
+- **THEN** a página exibe mensagem de estado vazio "Nenhuma campanha ainda" + CTA "Criar primeira campanha" com link para `/campanhas/nova`
+- **AND** os textos SHALL vir da constante `CAMPAIGNS_NO_CAMPAIGNS` em `microcopy.ts`
 
 ### Requirement: Design tokens applied
 
