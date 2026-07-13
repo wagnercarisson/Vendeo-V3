@@ -46,7 +46,7 @@ export async function middleware(request: NextRequest) {
 
   if (isPublicRoute || pathname === "/login") {
     const redirectResponse = NextResponse.redirect(
-      new URL("/", request.url),
+      new URL("/dashboard", request.url),
       { status: 302 },
     );
     copySessionData(redirectResponse, response);
@@ -73,17 +73,16 @@ function copySessionData(
 
 export const config = {
   matcher: [
-    "/",
     "/login",
     "/signup",
     "/check-email",
     "/forgot-password",
     "/update-password",
     "/auth/confirm",
-    "/store/:path*",
-    "/campaign/:path*",
-    "/campanha/:path*",
-    "/minhas-campanhas",
+    "/dashboard",
+    "/campanhas/:path*",
+    "/loja",
+    "/conta",
     "/api/:path*",
   ],
 };

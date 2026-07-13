@@ -35,25 +35,25 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("CampaignPage (Server Component)", () => {
+describe("CampaignDetailPage (Server Component)", () => {
   it("calls notFound() when getCampaignForDisplay returns null", async () => {
     mockGetCurrentStore.mockResolvedValue({ id: "store-123" });
     mockGetCampaignForDisplay.mockResolvedValue(null);
 
-    const { default: CampaignPage } = await import("@/app/campanha/[id]/page");
+    const { default: CampaignDetailPage } = await import("@/app/(app)/campanhas/[id]/page");
     const params = Promise.resolve({ id: "550e8400-e29b-41d4-a716-446655440000" });
 
-    await expect(CampaignPage({ params })).rejects.toThrow("NEXT_CONTROL");
+    await expect(CampaignDetailPage({ params })).rejects.toThrow("NEXT_CONTROL");
     expect(notFoundFn).toHaveBeenCalled();
   });
 
-  it("calls redirect('/store') when getCurrentStore returns null", async () => {
+  it("calls redirect('/loja') when getCurrentStore returns null", async () => {
     mockGetCurrentStore.mockResolvedValue(null);
 
-    const { default: CampaignPage } = await import("@/app/campanha/[id]/page");
+    const { default: CampaignDetailPage } = await import("@/app/(app)/campanhas/[id]/page");
     const params = Promise.resolve({ id: "550e8400-e29b-41d4-a716-446655440000" });
 
-    await expect(CampaignPage({ params })).rejects.toThrow("NEXT_CONTROL");
-    expect(redirectFn).toHaveBeenCalledWith("/store");
+    await expect(CampaignDetailPage({ params })).rejects.toThrow("NEXT_CONTROL");
+    expect(redirectFn).toHaveBeenCalledWith("/loja");
   });
 });

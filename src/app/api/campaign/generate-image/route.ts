@@ -350,7 +350,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
             const resultEvent: Record<string, unknown> = {
               type: "result",
               campaignId: campaignId!,
-              campaignUrl: `/campanha/${campaignId}`,
+              campaignUrl: `/campanhas/${campaignId}`,
             };
             if (result.inputCorrections) {
               resultEvent.inputCorrections = result.inputCorrections;

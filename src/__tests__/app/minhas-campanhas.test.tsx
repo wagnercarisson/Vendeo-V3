@@ -29,23 +29,23 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("MyCampaignsPage (Server Component)", () => {
-  it("calls redirect('/store') when getCurrentStore returns null", async () => {
+describe("CampanhasPage (Server Component)", () => {
+  it("calls redirect('/loja') when getCurrentStore returns null", async () => {
     mockGetCurrentStore.mockResolvedValue(null);
 
-    const { default: MyCampaignsPage } = await import("@/app/minhas-campanhas/page");
+    const { default: CampanhasPage } = await import("@/app/(app)/campanhas/page");
 
-    await expect(MyCampaignsPage()).rejects.toThrow("NEXT_CONTROL");
-    expect(redirectFn).toHaveBeenCalledWith("/store");
+    await expect(CampanhasPage()).rejects.toThrow("NEXT_CONTROL");
+    expect(redirectFn).toHaveBeenCalledWith("/loja");
   });
 
   it("calls listCampaigns with store id when store exists", async () => {
     mockGetCurrentStore.mockResolvedValue({ id: "store-456" });
     mockListCampaigns.mockResolvedValue([]);
 
-    const { default: MyCampaignsPage } = await import("@/app/minhas-campanhas/page");
+    const { default: CampanhasPage } = await import("@/app/(app)/campanhas/page");
 
-    await MyCampaignsPage();
+    await CampanhasPage();
     expect(mockListCampaigns).toHaveBeenCalledWith("store-456");
   });
 
@@ -60,45 +60,16 @@ describe("MyCampaignsPage (Server Component)", () => {
       storagePath: "s/c1.jpg",
     }]);
 
-    const { default: MyCampaignsPage } = await import("@/app/minhas-campanhas/page");
+    const { default: CampanhasPage } = await import("@/app/(app)/campanhas/page");
 
-    const result = await MyCampaignsPage();
+    const result = await CampanhasPage();
     expect(result).toBeDefined();
   });
 });
 
-describe("CampaignPreviewPage redirect", () => {
-  it("redirects authenticated+store to /minhas-campanhas", async () => {
-    mockGetCurrentStore.mockResolvedValue({ id: "store-123" });
-
-    const { default: CampaignPreviewPage } = await import("@/app/campaign/preview/page");
-
-    await expect(CampaignPreviewPage()).rejects.toThrow("NEXT_CONTROL");
-    expect(redirectFn).toHaveBeenCalledWith("/minhas-campanhas");
-  });
-
-  it("redirects to /store when no store", async () => {
-    mockGetCurrentStore.mockResolvedValue(null);
-
-    const { default: CampaignPreviewPage } = await import("@/app/campaign/preview/page");
-
-    await expect(CampaignPreviewPage()).rejects.toThrow("NEXT_CONTROL");
-    expect(redirectFn).toHaveBeenCalledWith("/store");
-  });
-
-  it("redirects to /login when not authenticated", async () => {
-    const loginError = new Error("redirect:/login");
-    mockRequirePageUser.mockRejectedValue(loginError);
-
-    const { default: CampaignPreviewPage } = await import("@/app/campaign/preview/page");
-
-    await expect(CampaignPreviewPage()).rejects.toThrow("redirect:/login");
-  });
-});
-
 describe("Middleware matcher", () => {
-  it("config.matcher includes /minhas-campanhas", async () => {
+  it("config.matcher includes /campanhas/:path*", async () => {
     const mod = await import("@/middleware");
-    expect(mod.config.matcher).toContain("/minhas-campanhas");
+    expect(mod.config.matcher).toContain("/campanhas/:path*");
   });
 });

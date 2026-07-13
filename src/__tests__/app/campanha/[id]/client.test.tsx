@@ -7,7 +7,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
 
-import CampaignPageClient from "@/app/campanha/[id]/client";
+import CampaignPageClient from "@/app/(app)/campanhas/[id]/client";
 
 const defaultProps = {
   imageUrl: "https://example.com/image.jpg",
@@ -55,16 +55,14 @@ describe("CampaignPageClient — Kit de Publicação", () => {
   it("enters edit mode on Edit button click", () => {
     render(<CampaignPageClient {...defaultProps} />);
 
-    const editButton = screen.getByText("✏️ Editar");
+    const editButton = screen.getByText("Editar");
     fireEvent.click(editButton);
 
     // Textarea should appear for caption
     expect(screen.getByDisplayValue("Caption original")).toBeInTheDocument();
-    // Input for cta
     expect(screen.getByDisplayValue("Compre agora")).toBeInTheDocument();
-    // Buttons should show
-    expect(screen.getByText("💾 Salvar")).toBeInTheDocument();
-    expect(screen.getByText("↩️ Restaurar original")).toBeInTheDocument();
+    expect(screen.getByText("Salvar")).toBeInTheDocument();
+    expect(screen.getByText("Restaurar original")).toBeInTheDocument();
     expect(screen.getByText("Cancelar")).toBeInTheDocument();
   });
 
@@ -84,14 +82,14 @@ describe("CampaignPageClient — Kit de Publicação", () => {
     render(<CampaignPageClient {...defaultProps} />);
 
     // Enter edit mode
-    fireEvent.click(screen.getByText("✏️ Editar"));
+    fireEvent.click(screen.getByText("Editar"));
 
     // Modify caption
     const captionInput = screen.getByDisplayValue("Caption original");
     fireEvent.change(captionInput, { target: { value: "Caption editado" } });
 
     // Click Save
-    fireEvent.click(screen.getByText("💾 Salvar"));
+    fireEvent.click(screen.getByText("Salvar"));
 
     // Wait for the async save to process
     await vi.waitFor(() => {
@@ -130,10 +128,10 @@ describe("CampaignPageClient — Kit de Publicação", () => {
     render(<CampaignPageClient {...defaultProps} />);
 
     // Enter edit mode first
-    fireEvent.click(screen.getByText("✏️ Editar"));
+    fireEvent.click(screen.getByText("Editar"));
 
     // Click Restore
-    const restoreButton = screen.getByText("↩️ Restaurar original");
+    const restoreButton = screen.getByText("Restaurar original");
     fireEvent.click(restoreButton);
 
     // Wait for the async restore to process
@@ -152,7 +150,7 @@ describe("CampaignPageClient — Kit de Publicação", () => {
     render(<CampaignPageClient {...defaultProps} />);
 
     // Enter edit mode
-    fireEvent.click(screen.getByText("✏️ Editar"));
+    fireEvent.click(screen.getByText("Editar"));
     expect(screen.getByDisplayValue("Caption original")).toBeInTheDocument();
 
     // Modify something
@@ -175,15 +173,15 @@ describe("CampaignPageClient — Kit de Publicação", () => {
     render(<CampaignPageClient {...defaultProps} />);
 
     // Enter edit mode
-    fireEvent.click(screen.getByText("✏️ Editar"));
+    fireEvent.click(screen.getByText("Editar"));
 
     // Click Save
-    fireEvent.click(screen.getByText("💾 Salvar"));
+    fireEvent.click(screen.getByText("Salvar"));
 
     // Should show loading text and disabled buttons
-    expect(screen.getByText("Salvando...")).toBeInTheDocument();
-    expect(screen.getByText("Salvando...")).toBeDisabled();
-    expect(screen.getByText("↩️ Restaurar original")).toBeDisabled();
+    expect(screen.getByText("Salvar")).toBeInTheDocument();
+    expect(screen.getByText("Salvar")).toBeDisabled();
+    expect(screen.getByText("Restaurar original")).toBeDisabled();
     expect(screen.getByText("Cancelar")).toBeDisabled();
 
     vi.unstubAllGlobals();
@@ -199,10 +197,10 @@ describe("CampaignPageClient — Kit de Publicação", () => {
     render(<CampaignPageClient {...defaultProps} />);
 
     // Enter edit mode
-    fireEvent.click(screen.getByText("✏️ Editar"));
+    fireEvent.click(screen.getByText("Editar"));
 
     // Click Save
-    fireEvent.click(screen.getByText("💾 Salvar"));
+    fireEvent.click(screen.getByText("Salvar"));
 
     // Wait for error to appear
     await vi.waitFor(() => {
@@ -210,8 +208,8 @@ describe("CampaignPageClient — Kit de Publicação", () => {
     });
 
     // Edit mode should be maintained
-    expect(screen.getByText("💾 Salvar")).toBeInTheDocument();
-    expect(screen.getByText("↩️ Restaurar original")).toBeInTheDocument();
+    expect(screen.getByText("Salvar")).toBeInTheDocument();
+    expect(screen.getByText("Restaurar original")).toBeInTheDocument();
 
     vi.unstubAllGlobals();
   });

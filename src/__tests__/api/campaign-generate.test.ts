@@ -254,7 +254,7 @@ describe("POST /api/campaign/generate-image", () => {
     const resultEvent = events.find((e) => e.type === "result");
     expect(resultEvent).toBeDefined();
     expect(resultEvent!.campaignId).toBe(CAMPAIGN_UUID);
-    expect(resultEvent!.campaignUrl).toBe(`/campanha/${CAMPAIGN_UUID}`);
+    expect(resultEvent!.campaignUrl).toBe(`/campanhas/${CAMPAIGN_UUID}`);
 
     // Verify pipeline ran
     expect(mockCreateCampaignImpl).toHaveBeenCalledTimes(1);

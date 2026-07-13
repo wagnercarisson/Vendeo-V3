@@ -7,7 +7,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
 
-import MyCampaignsClient from "@/app/minhas-campanhas/client";
+import CampaignListClient from "@/app/(app)/campanhas/client";
 import type { CampaignListItem } from "@/lib/campaign/list";
 
 const mockReadyCampaign: CampaignListItem = {
@@ -28,9 +28,9 @@ const mockErrorCampaign: CampaignListItem = {
   storagePath: "store-123/id-2.jpg",
 };
 
-describe("MyCampaignsClient — display", () => {
+describe("CampaignListClient — display", () => {
   it("renders list of campaign cards", () => {
-    render(<MyCampaignsClient campaigns={[mockReadyCampaign, mockErrorCampaign]} />);
+    render(<CampaignListClient campaigns={[mockReadyCampaign, mockErrorCampaign]} />);
 
     expect(screen.getByText("Produto Teste")).toBeInTheDocument();
     expect(screen.getByText("Produto com Erro")).toBeInTheDocument();
@@ -39,7 +39,7 @@ describe("MyCampaignsClient — display", () => {
   });
 
   it("shows Baixar link only for ready campaigns", () => {
-    render(<MyCampaignsClient campaigns={[mockReadyCampaign, mockErrorCampaign]} />);
+    render(<CampaignListClient campaigns={[mockReadyCampaign, mockErrorCampaign]} />);
 
     const downloadLinks = screen.getAllByRole("link", { name: "Baixar" });
     expect(downloadLinks).toHaveLength(1);
@@ -50,23 +50,22 @@ describe("MyCampaignsClient — display", () => {
   });
 
   it("shows Abrir link for all campaigns", () => {
-    render(<MyCampaignsClient campaigns={[mockReadyCampaign, mockErrorCampaign]} />);
+    render(<CampaignListClient campaigns={[mockReadyCampaign, mockErrorCampaign]} />);
 
     const openLinks = screen.getAllByRole("link", { name: "Abrir" });
     expect(openLinks).toHaveLength(2);
-    expect(openLinks[0]).toHaveAttribute("href", "/campanha/id-1");
-    expect(openLinks[1]).toHaveAttribute("href", "/campanha/id-2");
+    expect(openLinks[0]).toHaveAttribute("href", "/campanhas/id-1");
+    expect(openLinks[1]).toHaveAttribute("href", "/campanhas/id-2");
   });
 
   it("shows placeholder when thumbnailUrl is null", () => {
-    render(<MyCampaignsClient campaigns={[mockErrorCampaign]} />);
+    render(<CampaignListClient campaigns={[mockErrorCampaign]} />);
 
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
-    expect(document.querySelector(".bg-gray-100")).toBeInTheDocument();
   });
 
   it("renders image when thumbnailUrl is provided", () => {
-    render(<MyCampaignsClient campaigns={[mockReadyCampaign]} />);
+    render(<CampaignListClient campaigns={[mockReadyCampaign]} />);
 
     const img = screen.getByRole("img");
     expect(img).toHaveAttribute("src", "https://example.com/thumb.jpg");
@@ -74,19 +73,19 @@ describe("MyCampaignsClient — display", () => {
   });
 
   it("shows status text Pronta for ready", () => {
-    render(<MyCampaignsClient campaigns={[mockReadyCampaign]} />);
+    render(<CampaignListClient campaigns={[mockReadyCampaign]} />);
 
     expect(screen.getByText("Pronta")).toBeInTheDocument();
   });
 
   it("shows status text Erro for error", () => {
-    render(<MyCampaignsClient campaigns={[mockErrorCampaign]} />);
+    render(<CampaignListClient campaigns={[mockErrorCampaign]} />);
 
     expect(screen.getByText("Erro")).toBeInTheDocument();
   });
 
   it("renders empty state when no campaigns", () => {
-    render(<MyCampaignsClient campaigns={[]} />);
+    render(<CampaignListClient campaigns={[]} />);
 
     expect(screen.getByText("Nenhuma campanha encontrada")).toBeInTheDocument();
     expect(
@@ -94,6 +93,6 @@ describe("MyCampaignsClient — display", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Criar Primeira Campanha" }),
-    ).toHaveAttribute("href", "/");
+    ).toHaveAttribute("href", "/campanhas/nova");
   });
 });

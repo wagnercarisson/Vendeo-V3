@@ -3,7 +3,11 @@
 import { LogOut, Loader2 } from "lucide-react";
 import { useState, FormEvent } from "react";
 
-export function LogoutButton() {
+interface LogoutButtonProps {
+  className?: string;
+}
+
+export function LogoutButton({ className = "" }: LogoutButtonProps) {
   const [loading, setLoading] = useState(false);
 
   function clearStorage() {
@@ -22,12 +26,11 @@ export function LogoutButton() {
   }
 
   return (
-    <form action="/auth/signout" method="POST" onSubmit={handleSubmit}>
+    <form action="/auth/signout" method="POST" onSubmit={handleSubmit} className={className}>
       <button
         type="submit"
         disabled={loading}
-        className="flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm font-medium text-slate-300 transition-colors duration-200 hover:bg-slate-700 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-        style={{ minHeight: "44px" }}
+        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 font-body"
       >
         {loading ? (
           <Loader2 className="h-4 w-4 animate-spin" />

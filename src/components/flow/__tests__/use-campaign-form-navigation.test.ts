@@ -64,7 +64,7 @@ describe("useCampaignForm navigation", () => {
       "fetch",
       vi.fn().mockResolvedValue(
         createNdjsonResponse([
-          { type: "result", campaignId: "abc-123", campaignUrl: "/campanha/abc-123" },
+          { type: "result", campaignId: "abc-123", campaignUrl: "/campanhas/abc-123" },
         ])
       )
     );
@@ -82,7 +82,7 @@ describe("useCampaignForm navigation", () => {
     });
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith("/campanha/abc-123");
+      expect(mockPush).toHaveBeenCalledWith("/campanhas/abc-123");
     });
   });
 
@@ -93,7 +93,7 @@ describe("useCampaignForm navigation", () => {
       "fetch",
       vi.fn().mockResolvedValue(
         createNdjsonResponse([
-          { type: "result", campaignId: "abc-123", campaignUrl: "/campanha/abc-123" },
+          { type: "result", campaignId: "abc-123", campaignUrl: "/campanhas/abc-123" },
         ])
       )
     );
@@ -123,7 +123,7 @@ describe("useCampaignForm navigation", () => {
       "fetch",
       vi.fn().mockResolvedValue(
         createNdjsonResponse([
-          { type: "result", campaignId: "abc-123", campaignUrl: "/campanha/abc-123" },
+          { type: "result", campaignId: "abc-123", campaignUrl: "/campanhas/abc-123" },
         ])
       )
     );

@@ -2,7 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import CampaignPageClient from "@/app/campanha/[id]/client";
+import CampaignPageClient from "@/app/(app)/campanhas/[id]/client";
 
 const mockPush = vi.fn();
 const mockRefresh = vi.fn();
@@ -51,7 +51,7 @@ describe("CampaignPageClient — display states", () => {
     expect(screen.getByText("Oferta!")).toBeInTheDocument();
     expect(screen.getByText("#promo")).toBeInTheDocument();
     expect(screen.getByText("Compre agora")).toBeInTheDocument();
-    expect(screen.getByText("Produto X")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Produto X" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /baixar/i })).toHaveAttribute(
       "href",
       "/api/campaign/123/download"
