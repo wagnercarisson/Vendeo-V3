@@ -55,7 +55,7 @@
 
 ### Phase 19 — Onboarding & Estados Vazios
 
-**Status:** `Planned`
+**Status:** `Complete ✓`
 **Slug:** `19-onboarding-estados-vazios`
 **Change:** `openspec/changes/fase-19-onboarding-estados-vazios/`
 **Plans:** `.planning/phases/19-onboarding-estados-vazios/19-01-PLAN.md` — `19-03-PLAN.md`
@@ -66,20 +66,23 @@
 **Requirements:** ONBRD-01, ONBRD-02, ONBRD-03, UX-01, UX-02
 
 **Success criteria:**
-1. Helper `getUserOnboardingState(userId)` centralizado com 3 estados: `no_store | has_store_no_campaigns | has_store_with_campaigns`
-2. Dashboard como server component async com 3 estados, reutilizando `<PageHeader>` + `<EmptyState>`
-3. `/campanhas` sem loja mostra empty state contextual com CTA (não redireciona)
-4. `/campanhas/[id]` sem loja retorna 404 (não redireciona)
-5. Microcopy de todos os estados vazios centralizada em `src/lib/onboarding/microcopy.ts`
+1. ✅ Helper `getUserOnboardingState(userId)` centralizado com 3 estados
+2. ✅ Dashboard como server component async com 3 estados
+3. ✅ `/campanhas` sem loja mostra empty state contextual com CTA (não redireciona)
+4. ✅ `/campanhas/[id]` sem loja retorna 404 (não redireciona)
+5. ✅ Microcopy de todos os estados vazios centralizada em `src/lib/onboarding/microcopy.ts`
 
 **Depends on:** Phase 18
 
 **Plans:**
-| Plan | Wave | Objective |
-|------|------|-----------|
-| 19-01 | 1 | Fundação do Onboarding Helper — types, count, state, microcopy + testes |
-| 19-02 | 2 | Dashboard Inteligente — async server component com 3 estados + testes |
-| 19-03 | 2 | Campanhas + Detalhe sem Loja — empty states, 404, microcopy + testes |
+| Plan | Wave | Objective | Status |
+|------|------|-----------|--------|
+| 19-01 | 1 | Fundação do Onboarding Helper — types, count, state, microcopy + testes | ✅ |
+| 19-02 | 2 | Dashboard Inteligente — async server component com 3 estados + testes | ✅ |
+| 19-03 | 2 | Campanhas + Detalhe sem Loja — empty states, 404, microcopy + testes | ✅ |
+
+**Tests:** 628 passing (86 files, 28 novos)
+**Commits:** `8dfc693` `801948a` `bbd3d0e` `ef18659`
 
 ---
 
