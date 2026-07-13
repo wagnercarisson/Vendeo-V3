@@ -290,7 +290,7 @@ O lojista pode editar o publication copy (caption, hashtags, cta_post) da campan
 
 ## Phase 19 — Onboarding & Estados Vazios
 
-**Status:** `Planned`
+**Status:** `Complete (2026-07-13)`
 **Slug:** `fase-19-onboarding-estados-vazios`
 **Change:** `openspec/changes/fase-19-onboarding-estados-vazios/`
 **Plans:** `.planning/phases/19-onboarding-estados-vazios/19-01-PLAN.md` — `19-03-PLAN.md`
@@ -300,9 +300,39 @@ Helper centralizado de onboarding (`getUserOnboardingState`) com 3 estados, dash
 
 **Dependências:** Phase 18
 
+**Tests:** 628 passing (86 files, 28 novos)
+**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
+
+**Commits:**
+- `8dfc693` — 19-01: Fundação do Onboarding Helper — types, count, state, microcopy + 9 testes
+- `801948a` — 19-02: Dashboard Inteligente — async server component com 3 estados + 6 testes
+- `bbd3d0e` — 19-03: Campanhas + Detalhe sem Loja — redirects substituídos por empty state/404 + 7 testes
+- `ef18659` — Atualiza testes existentes para redirect→empty state e nova microcopy
+
 **Planos:**
 | Plan | Wave | Status | Descrição |
 |------|------|--------|-----------|
-| 19-01 | 1 | 📋 | Fundação do Onboarding Helper — types, count, state, microcopy + testes |
-| 19-02 | 2 | 📋 | Dashboard Inteligente — async server component com 3 estados + testes |
-| 19-03 | 2 | 📋 | Campanhas + Detalhe sem Loja — empty states, 404, microcopy + testes |
+| 19-01 | 1 | ✅ | Fundação do Onboarding Helper — types, count, state, microcopy + 9 testes |
+| 19-02 | 2 | ✅ | Dashboard Inteligente — async server component com 3 estados + 6 testes |
+| 19-03 | 2 | ✅ | Campanhas + Detalhe sem Loja — redirects substituídos por empty state/404 + 7 testes |
+
+---
+
+## Phase 20 — Dashboard
+
+**Status:** `Planned`
+**Slug:** `fase-20-dashboard`
+**Change:** `openspec/changes/fase-20-dashboard/`
+**Plans:** `.planning/phases/20-dashboard/20-01-PLAN.md` — `20-03-PLAN.md`
+**Context:** `.planning/phases/20-dashboard/20-CONTEXT.md`
+
+Dashboard com conteúdo real para `has_store_with_campaigns`: saudação com hora do servidor, métricas consolidadas (total, prontas, taxa de sucesso), campanhas recentes sem thumbnails, card de próximo passo adaptativo. Preserva estados vazios da F19.
+
+**Dependências:** Phase 18, Phase 19
+
+**Planos:**
+| Plan | Wave | Status | Descrição |
+|------|------|--------|-----------|
+| 20-01 | 1 | 📋 | Métricas e Recentes — `src/lib/campaign/metrics.ts`, reexport em `onboarding/count`, 8 testes unitários |
+| 20-02 | 2 | 📋 | Dashboard Completo — saudação, métricas, recentes, next-step, links em `dashboard/page.tsx` |
+| 20-03 | 2 | 📋 | Testes e Acabamento Responsivo — 15 testes de renderização, edge cases, responsividade |

@@ -6,17 +6,19 @@ status: in_progress
 last_updated: "2026-07-13T17:50:00.000Z"
 last_activity: 2026-07-13
 progress:
-  total_phases: 2
+  total_phases: 3
   completed_phases: 2
-  total_plans: 6
+  planned_phases: 1
+  total_plans: 9
   completed_plans: 6
-  percent: 100
+  planned_plans: 3
+  percent: 67
 ---
 
 # Project State
 
 **Last updated:** 2026-07-13
-**Milestone:** v1.4 — Experiência SaaS 🚧 Phase 18 ✅, Phase 19 ✅ (6/6 plans)
+**Milestone:** v1.4 — Experiência SaaS 🚧 Phase 18 ✅, Phase 19 ✅, Phase 20 📋 (6/9 plans)
 
 ## Completed
 
@@ -83,8 +85,9 @@ progress:
 **Milestone:** v1.4 — Experiência SaaS
 **Phase 18:** App Shell + UI Base + Rotas ✅ COMPLETE (3/3 plans)
 **Phase 19:** Onboarding & Estados Vazios ✅ COMPLETE (3/3 plans)
-**Current:** Phase 20 next (Dashboard)
-**Last activity:** 2026-07-13 — Phase 19 implemented
+**Phase 20:** Dashboard 📋 PLANNED (3/3 plans — awaiting execution)
+**Current:** Phase 20 (Dashboard)
+**Last activity:** 2026-07-13 — Phase 20 planned (via OpenSpec)
 
 ## Project Reference
 
@@ -143,8 +146,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-10)
 |-------|-------|----------|-------|
 | Phase 18 — App Shell + UI Base + Rotas | 3 plans | ~multi-cycle | 579→600 (21 novos) |
 | Phase 19 — Onboarding & Estados Vazios | 3 plans | single session | 600→628 (28 novos) |
+| Phase 20 — Dashboard | 3 plans 📋 | planned | TBD |
 
 ## Operator Next Steps
 
-- Próxima fase: Phase 20 — Dashboard (métricas, campanhas recentes)
-- `/gsd-plan-phase 20` para planejar
+- Executar Phase 20 — Dashboard (métricas, campanhas recentes)
+- `/gsd-execute-phase 20` para iniciar execução
