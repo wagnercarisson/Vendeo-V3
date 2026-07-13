@@ -320,7 +320,7 @@ Helper centralizado de onboarding (`getUserOnboardingState`) com 3 estados, dash
 
 ## Phase 20 — Dashboard
 
-**Status:** `Planned`
+**Status:** `Complete (2026-07-13)` ✓
 **Slug:** `fase-20-dashboard`
 **Change:** `openspec/changes/fase-20-dashboard/`
 **Plans:** `.planning/phases/20-dashboard/20-01-PLAN.md` — `20-03-PLAN.md`
@@ -328,11 +328,16 @@ Helper centralizado de onboarding (`getUserOnboardingState`) com 3 estados, dash
 
 Dashboard com conteúdo real para `has_store_with_campaigns`: saudação com hora do servidor, métricas consolidadas (total, prontas, taxa de sucesso), campanhas recentes sem thumbnails, card de próximo passo adaptativo. Preserva estados vazios da F19.
 
+**Entrega:** `getGreeting` com 3 períodos (manhã/tarde/noite), 3 cards de métricas em grid responsivo, lista de campanhas recentes sem thumbnails, card de próximo passo adaptativo (review ou criar nova), links "Configurar loja", "Ver todas", "Nova campanha". Placeholder F19 removido.
+
 **Dependências:** Phase 18, Phase 19
+
+**Tests:** 651 passing (87 files, 23 novos)
+**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 
 **Planos:**
 | Plan | Wave | Status | Descrição |
 |------|------|--------|-----------|
-| 20-01 | 1 | 📋 | Métricas e Recentes — `src/lib/campaign/metrics.ts`, reexport em `onboarding/count`, 8 testes unitários |
-| 20-02 | 2 | 📋 | Dashboard Completo — saudação, métricas, recentes, next-step, links em `dashboard/page.tsx` |
-| 20-03 | 2 | 📋 | Testes e Acabamento Responsivo — 15 testes de renderização, edge cases, responsividade |
+| 20-01 | 1 | ✅ | Métricas e Recentes — `metrics.ts` (countCampaigns, countReadyCampaigns, getCampaignSuccessRate, getRecentCampaigns, RecentCampaignItem) + reexport count.ts + 9 testes |
+| 20-02 | 2 | ✅ | Dashboard Completo — saudação, 3 cards métricas, campanhas recentes, next-step card, links |
+| 20-03 | 2 | ✅ | Testes e Acabamento Responsivo — 20 testes (15 novos): saudação mock Date, métricas, edge cases, responsividade |

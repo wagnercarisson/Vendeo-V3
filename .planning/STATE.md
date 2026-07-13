@@ -7,18 +7,18 @@ last_updated: "2026-07-13T17:50:00.000Z"
 last_activity: 2026-07-13
 progress:
   total_phases: 3
-  completed_phases: 2
-  planned_phases: 1
+  completed_phases: 3
+  planned_phases: 0
   total_plans: 9
-  completed_plans: 6
-  planned_plans: 3
-  percent: 67
+  completed_plans: 9
+  planned_plans: 0
+  percent: 100
 ---
 
 # Project State
 
 **Last updated:** 2026-07-13
-**Milestone:** v1.4 — Experiência SaaS 🚧 Phase 18 ✅, Phase 19 ✅, Phase 20 📋 (6/9 plans)
+**Milestone:** v1.4 — Experiência SaaS ✅ Phase 18 ✅, Phase 19 ✅, Phase 20 ✅ (9/9 plans)
 
 ## Completed
 
@@ -82,12 +82,12 @@ progress:
 
 ## Current Position
 
-**Milestone:** v1.4 — Experiência SaaS
+**Milestone:** v1.4 — Experiência SaaS ✅ COMPLETE
 **Phase 18:** App Shell + UI Base + Rotas ✅ COMPLETE (3/3 plans)
 **Phase 19:** Onboarding & Estados Vazios ✅ COMPLETE (3/3 plans)
-**Phase 20:** Dashboard 📋 PLANNED (3/3 plans — awaiting execution)
-**Current:** Phase 20 (Dashboard)
-**Last activity:** 2026-07-13 — Phase 20 planned (via OpenSpec)
+**Phase 20:** Dashboard ✅ COMPLETE (3/3 plans)
+**Current:** v1.4 complete — all 3 phases finished
+**Last activity:** 2026-07-13 — Phase 20 implemented and verified
 
 ## Project Reference
 
@@ -95,7 +95,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-10)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** v1.4 — Experiência SaaS (Phase 19 complete — Phase 20 next)
+**Current focus:** v1.4 — Experiência SaaS ✅ COMPLETE (651 tests, 87 files)
 
 ## Completed
 
@@ -128,7 +128,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-10)
 | 19-02 | 2 | ✅ | Dashboard Inteligente — async server component com 3 estados + 6 testes |
 | 19-03 | 3 | ✅ | Campanhas + Detalhe sem Loja — empty states, 404, microcopy + 7 testes |
 
-**Tests:** 628 passing (86 files, 28 novos)
+**Tests:** 600→628 passing (86 files, 28 novos)
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 
 **Context:** `.planning/phases/19-onboarding-estados-vazios/19-CONTEXT.md`
@@ -140,15 +140,40 @@ See: `.planning/PROJECT.md` (updated 2026-07-10)
 - `bbd3d0e` — 19-03: Campanhas + Detalhe sem Loja — redirects substituídos por empty state/404 + 7 testes
 - `ef18659` — Atualiza testes existentes para redirect→empty state e nova microcopy
 
+### Phase 20 — Dashboard ✅
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 20-01 | 1 | ✅ | Métricas e Recentes — `metrics.ts` (4 funções + 1 tipo), `count.ts` reexport + 9 testes |
+| 20-02 | 2 | ✅ | Dashboard Completo — saudação, 3 cards métricas, campanhas recentes, next-step card, links |
+| 20-03 | 2 | ✅ | Testes e Acabamento Responsivo — 20 testes (11 novos cenários + 9 edge cases) |
+
+**Tests:** 628→651 passing (87 files, 23 novos)
+**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
+
+**Context:** `.planning/phases/20-dashboard/20-CONTEXT.md`
+**Source:** `openspec/changes/fase-20-dashboard/`
+
+**Commits:**
+- `3a17fe2` — 20-01: Metrics module + count.ts reexport + 9 tests
+- `e8b5839` — 20-02: Dashboard real + 20-03: Testes (20 tests)
+
 ## Performance Metrics
 
 | Phase | Plans | Duration | Tests |
 |-------|-------|----------|-------|
 | Phase 18 — App Shell + UI Base + Rotas | 3 plans | ~multi-cycle | 579→600 (21 novos) |
 | Phase 19 — Onboarding & Estados Vazios | 3 plans | single session | 600→628 (28 novos) |
-| Phase 20 — Dashboard | 3 plans 📋 | planned | TBD |
+| Phase 20 — Dashboard | 3 plans | single session | 628→651 (23 novos) |
+
+## Milelstone v1.4 — Experiência SaaS ✅
+
+All 3 phases complete (Phase 18, 19, 20). Total: 651 tests, 87 files.
+
+## Next Steps
+
+- Definir próximos milestones (F21: Busca e Filtros, F22: Mobile Hardening, etc.)
 
 ## Operator Next Steps
 
-- Executar Phase 20 — Dashboard (métricas, campanhas recentes)
-- `/gsd-execute-phase 20` para iniciar execução
+- Fase completa — iniciar planejamento da próxima milestone ou fase
