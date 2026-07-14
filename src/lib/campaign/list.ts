@@ -91,6 +91,9 @@ export async function listCampaigns(
   const { data, error, count } = await query;
 
   if (error) {
+    if (error.message === "Requested range not satisfiable") {
+      return { items: [], total: 0, page, pageSize, totalPages: 1 };
+    }
     throw new Error(error.message);
   }
 

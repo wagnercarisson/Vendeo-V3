@@ -291,6 +291,33 @@ describe("listCampaigns", () => {
     await expect(listCampaigns("store-123")).rejects.toThrow("DB error");
   });
 
+  it("handles range not satisfiable gracefully", async () => {
+    const lteFn = vi.fn().mockReturnThis();
+    const gteFn = vi.fn().mockReturnThis();
+    const ilikeFn = vi.fn().mockReturnThis();
+    const rangeFn = vi.fn().mockResolvedValue({ data: null, error: { message: "Requested range not satisfiable" }, count: null });
+    const orderFn = vi.fn().mockReturnValue({ range: rangeFn });
+    const inFn = vi.fn().mockReturnValue({ ilike: ilikeFn, gte: gteFn, lte: lteFn, order: orderFn });
+    const eqFn = vi.fn().mockReturnValue({ in: inFn });
+    const selectFn = vi.fn().mockReturnValue({ eq: eqFn });
+    const fromFn = vi.fn().mockReturnValue({ select: selectFn });
+
+    mockCreateServerClient.mockResolvedValue({ from: fromFn });
+    const createSignedUrlFn = vi.fn().mockResolvedValue({
+      data: { signedUrl: "https://example.com/thumb.jpg" },
+      error: null,
+    });
+    mockStorageFrom.mockReturnValue({ createSignedUrl: createSignedUrlFn });
+
+    const { listCampaigns } = await import("@/lib/campaign/list");
+    const result = await listCampaigns("store-123", { page: 999 });
+
+    expect(result.items).toEqual([]);
+    expect(result.total).toBe(0);
+    expect(result.page).toBe(999);
+    expect(result.totalPages).toBe(1);
+  });
+
   it("uses defaults when no params provided", async () => {
     const rows = mockDefaultRows();
     const { rangeFn, orderFn } = buildChain(rows);
