@@ -30,7 +30,7 @@ export default async function CampanhasPage() {
     );
   }
 
-  const campaigns = await listCampaigns(store.id);
+  const result = await listCampaigns(store.id);
 
-  return <CampaignListClient campaigns={campaigns} />;
+  return <CampaignListClient campaigns={result.items} />;
 }
