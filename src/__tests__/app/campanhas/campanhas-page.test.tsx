@@ -30,6 +30,7 @@ vi.mock("@/lib/campaign/search-params", () => ({
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn() }),
+  redirect: vi.fn(() => { throw new Error("NEXT_REDIRECT"); }),
 }));
 
 const defaultValidated = {
@@ -231,5 +232,29 @@ describe("CampanhasPage (Server Component — SSR with searchParams)", () => {
     const html = renderToString(result);
 
     expect(html).toContain("Nenhuma campanha encontrada");
+  });
+
+  it("redirects to page=1 when result is empty and page > 1", async () => {
+    mockGetCurrentStore.mockResolvedValue({ id: "store-456" });
+    mockParseCampaignListSearchParams.mockReturnValue({
+      ...defaultValidated,
+      page: 999,
+    });
+    mockListCampaigns.mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 999,
+      pageSize: 10,
+      totalPages: 1,
+    });
+
+    const { default: CampanhasPage } = await import(
+      "@/app/(app)/campanhas/page"
+    );
+    await expect(
+      CampanhasPage({
+        searchParams: Promise.resolve({ page: "999" }),
+      }),
+    ).rejects.toThrow("NEXT_REDIRECT");
   });
 });

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requirePageUser } from "@/lib/auth/require-user";
 import { getCurrentStore } from "@/lib/auth/store-ownership";
 import { listCampaigns } from "@/lib/campaign/list";
@@ -47,6 +48,15 @@ export default async function CampanhasPage({
     sortBy: validated.sortBy,
     sortOrder: validated.sortOrder,
   });
+
+  if (result.items.length === 0 && result.page > 1) {
+    const sp = new URLSearchParams();
+    for (const [key, val] of Object.entries(params)) {
+      if (typeof val === "string") sp.set(key, val);
+    }
+    sp.set("page", "1");
+    redirect(`/campanhas?${sp.toString()}`);
+  }
 
   return (
     <CampaignListClient

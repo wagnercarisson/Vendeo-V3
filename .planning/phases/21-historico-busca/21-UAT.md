@@ -1,18 +1,14 @@
 ---
-status: testing
+status: complete
 phase: 21-historico-busca
 source: 21-01-SUMMARY.md, 21-02-SUMMARY.md, 21-03-SUMMARY.md
 started: "2026-07-14T19:55:00.000Z"
-updated: "2026-07-14T20:30:00.000Z"
+updated: "2026-07-14T20:35:00.000Z"
 ---
 
 ## Current Test
 
-number: 10
-name: Página inválida cai para página 1
-expected: |
-  Acessar /campanhas?page=999 mostra página 1 sem erro (crash ou blank)
-awaiting: user response
+[testing complete]
 
 ## Tests
 
