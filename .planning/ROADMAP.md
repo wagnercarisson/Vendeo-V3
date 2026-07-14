@@ -10,8 +10,8 @@
 | Phase | Name | Goal | Requirements | Success Criteria |
 |-------|------|------|--------------|------------------|
 | 18 | App Shell & Navegação | ✅ Estrutura de navegação definitiva | SHELL-01, SHELL-02, SHELL-03 | 6 ✅ |
-| 19 | Onboarding & Estados Vazios | Experiência do novo usuário e consistência visual | ONBRD-01, ONBRD-02, ONBRD-03, UX-01, UX-02 | 5 |
-| 20 | Dashboard | Visão geral com métricas básicas e acesso rápido | DASH-01, DASH-02, DASH-03 | 3 |
+| 19 | Onboarding & Estados Vazios | ✅ Experiência do novo usuário e consistência visual | ONBRD-01, ONBRD-02, ONBRD-03, UX-01, UX-02 | 5 ✅ |
+| 20 | Dashboard | ✅ Visão geral com métricas básicas e acesso rápido | DASH-01, DASH-02, DASH-03 | 3 ✅ |
 | 21 | Histórico & Busca | Organização e descoberta de campanhas | HIST-01, HIST-02, HIST-03, SEARCH-01, SEARCH-02, SEARCH-03 | 6 |
 | 22 | Mobile | Fluxo completo responsivo | MOBILE-01, MOBILE-02, MOBILE-03, MOBILE-04 | 4 |
 
@@ -88,16 +88,32 @@
 
 ### Phase 20 — Dashboard
 
+**Status:** `Complete ✓`
+**Slug:** `20-dashboard`
+**Change:** `openspec/changes/fase-20-dashboard/`
+**Plans:** `.planning/phases/20-dashboard/20-01-PLAN.md` — `20-03-PLAN.md`
+**Context:** `.planning/phases/20-dashboard/20-CONTEXT.md`
+
 **Goal:** Prover uma visão geral do estado da loja com métricas básicas e acesso rápido às ações principais.
 
 **Requirements:** DASH-01, DASH-02, DASH-03
 
 **Success criteria:**
-1. Dashboard mostra campanhas recentes com métricas básicas (total, sucesso)
-2. Acesso rápido à última campanha e ao formulário de nova campanha
-3. Dashboard é a landing page pós-login
+1. ✅ Dashboard mostra campanhas recentes com métricas básicas (total, sucesso)
+2. ✅ Acesso rápido à última campanha e ao formulário de nova campanha
+3. ✅ Dashboard é a landing page pós-login
 
 **Depends on:** Phase 18, Phase 19
+
+**Plans:**
+| Plan | Wave | Objective | Status |
+|------|------|-----------|--------|
+| 20-01 | 1 | Métricas e Recentes — metrics.ts, count.ts reexport, 9 testes | ✅ |
+| 20-02 | 2 | Dashboard Completo — saudação, 3 cards métricas, campanhas recentes, next-step card | ✅ |
+| 20-03 | 2 | Testes e Acabamento Responsivo — 20 testes (11 novos cenários + 9 edge cases) | ✅ |
+
+**Tests:** 651 passing (87 files, 23 novos)
+**Commits:** `3a17fe2` `e8b5839`
 
 ---
 
