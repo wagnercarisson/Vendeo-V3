@@ -1,24 +1,24 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.5
-milestone_name: Busca e Navegação
-status: planning
+milestone: v1.4
+milestone_name: Experiência SaaS
+status: in_progress
 last_updated: "2026-07-14T18:50:00.000Z"
 last_activity: 2026-07-14
 progress:
-  total_phases: 1
-  completed_phases: 0
+  total_phases: 5
+  completed_phases: 3
   planned_phases: 1
-  total_plans: 3
-  completed_plans: 0
+  total_plans: 12
+  completed_plans: 9
   planned_plans: 3
-  percent: 0
+  percent: 75
 ---
 
 # Project State
 
 **Last updated:** 2026-07-14
-**Milestone:** v1.5 — Busca e Navegação ○ Phase 21 Planned (3/3 plans)
+**Milestone:** v1.4 — Experiência SaaS ◆ F18 ✅, F19 ✅, F20 ✅, F21 ◆ Planned, F22 ○ Pending
 
 ## Completed
 
@@ -82,9 +82,9 @@ progress:
 
 ## Current Position
 
-**Milestone:** v1.5 — Busca e Navegação ○ Planning
+**Milestone:** v1.4 — Experiência SaaS ◆ Em andamento (F18-F22: 3/5 phases complete)
 **Phase 21:** Histórico e Busca ○ Planned (3/3 plans)
-**Current:** v1.5 planning — Phase 21 artifacts generated from OpenSpec change
+**Current:** v1.4 planning — Phase 21 artifacts generated from OpenSpec change
 **Last activity:** 2026-07-14 — Phase 21 CONTEXT.md + 3 PLAN.md created
 
 ## Project Reference
@@ -93,7 +93,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-10)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** v1.5 — Busca e Navegação ○ Phase 21 Planned (3/3 plans)
+**Current focus:** v1.4 — Experiência SaaS ◆ F21 Planned (3/3 plans)
 
 ## Completed
 
@@ -164,9 +164,10 @@ See: `.planning/PROJECT.md` (updated 2026-07-10)
 | Phase 19 — Onboarding & Estados Vazios | 3 plans | single session | 600→628 (28 novos) |
 | Phase 20 — Dashboard | 3 plans | single session | 628→651 (23 novos) |
 
-## Milelstone v1.4 — Experiência SaaS ✅
+## Milestone v1.4 — Experiência SaaS ◆
 
-All 3 phases complete (Phase 18, 19, 20). Total: 651 tests, 87 files.
+5 phases (F18-F22): F18 ✅, F19 ✅, F20 ✅, F21 ◆ Planned, F22 ○ Pending.
+Total completed: 651 tests, 87 files. Phase 21 adds ~25 tests.
 
 ## Next Steps
 

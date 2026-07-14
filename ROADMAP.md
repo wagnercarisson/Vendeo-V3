@@ -217,9 +217,9 @@ Página `/campanha/[id]` com preview e download da campanha persistida. Server C
 
 ---
 
-## v1.4 — Experiência SaaS ✓
+## v1.4 — Experiência SaaS
 
-> Milestone: **Experiência SaaS** ✅ COMPLETE (2026-07-13)
+> Milestone: **Experiência SaaS** (F18-F22) — F18 ✅, F19 ✅, F20 ✅, F21 ◆ Planned, F22 ○ Pending
 > O Vendeo passa a parecer e funcionar como um produto SaaS coerente — app shell profissional, navegação PT-BR, dashboard, onboarding, busca e mobile.
 
 ---
@@ -341,13 +341,6 @@ Dashboard com conteúdo real para `has_store_with_campaigns`: saudação com hor
 | 20-01 | 1 | ✅ | Métricas e Recentes — `metrics.ts` (countCampaigns, countReadyCampaigns, getCampaignSuccessRate, getRecentCampaigns, RecentCampaignItem) + reexport count.ts + 9 testes |
 | 20-02 | 2 | ✅ | Dashboard Completo — saudação, 3 cards métricas, campanhas recentes, next-step card, links |
 | 20-03 | 2 | ✅ | Testes e Acabamento Responsivo — 20 testes (15 novos): saudação mock Date, métricas, edge cases, responsividade |
-
----
-
-## v1.5 — Busca e Navegação
-
-> Milestone: **Busca e Navegação** (Planejamento)
-> O lojista encontra qualquer campanha rapidamente com busca textual, filtros por status/data, ordenação e paginação. URL compartilhável permite salvar e retomar consultas.
 
 ---
 
