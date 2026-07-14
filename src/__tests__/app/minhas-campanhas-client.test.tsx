@@ -4,7 +4,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn(), refresh: vi.fn() }),
 }));
 
 import CampaignListClient from "@/app/(app)/campanhas/client";
@@ -28,9 +28,21 @@ const mockErrorCampaign: CampaignListItem = {
   storagePath: "store-123/id-2.jpg",
 };
 
+const baseProps = {
+  total: 2,
+  page: 1,
+  totalPages: 1,
+  searchParams: {},
+};
+
 describe("CampaignListClient — display", () => {
   it("renders list of campaign cards", () => {
-    render(<CampaignListClient campaigns={[mockReadyCampaign, mockErrorCampaign]} />);
+    render(
+      <CampaignListClient
+        items={[mockReadyCampaign, mockErrorCampaign]}
+        {...baseProps}
+      />,
+    );
 
     expect(screen.getByText("Produto Teste")).toBeInTheDocument();
     expect(screen.getByText("Produto com Erro")).toBeInTheDocument();
@@ -39,7 +51,12 @@ describe("CampaignListClient — display", () => {
   });
 
   it("shows Baixar link only for ready campaigns", () => {
-    render(<CampaignListClient campaigns={[mockReadyCampaign, mockErrorCampaign]} />);
+    render(
+      <CampaignListClient
+        items={[mockReadyCampaign, mockErrorCampaign]}
+        {...baseProps}
+      />,
+    );
 
     const downloadLinks = screen.getAllByRole("link", { name: "Baixar" });
     expect(downloadLinks).toHaveLength(1);
@@ -50,7 +67,12 @@ describe("CampaignListClient — display", () => {
   });
 
   it("shows Abrir link for all campaigns", () => {
-    render(<CampaignListClient campaigns={[mockReadyCampaign, mockErrorCampaign]} />);
+    render(
+      <CampaignListClient
+        items={[mockReadyCampaign, mockErrorCampaign]}
+        {...baseProps}
+      />,
+    );
 
     const openLinks = screen.getAllByRole("link", { name: "Abrir" });
     expect(openLinks).toHaveLength(2);
@@ -59,13 +81,25 @@ describe("CampaignListClient — display", () => {
   });
 
   it("shows placeholder when thumbnailUrl is null", () => {
-    render(<CampaignListClient campaigns={[mockErrorCampaign]} />);
+    render(
+      <CampaignListClient
+        items={[mockErrorCampaign]}
+        {...baseProps}
+        total={1}
+      />,
+    );
 
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
 
   it("renders image when thumbnailUrl is provided", () => {
-    render(<CampaignListClient campaigns={[mockReadyCampaign]} />);
+    render(
+      <CampaignListClient
+        items={[mockReadyCampaign]}
+        {...baseProps}
+        total={1}
+      />,
+    );
 
     const img = screen.getByRole("img");
     expect(img).toHaveAttribute("src", "https://example.com/thumb.jpg");
@@ -73,19 +107,41 @@ describe("CampaignListClient — display", () => {
   });
 
   it("shows status text Pronta for ready", () => {
-    render(<CampaignListClient campaigns={[mockReadyCampaign]} />);
+    render(
+      <CampaignListClient
+        items={[mockReadyCampaign]}
+        {...baseProps}
+        total={1}
+      />,
+    );
 
-    expect(screen.getByText("Pronta")).toBeInTheDocument();
+    const prontaElements = screen.getAllByText("Pronta");
+    expect(prontaElements.length).toBeGreaterThanOrEqual(1);
   });
 
   it("shows status text Erro for error", () => {
-    render(<CampaignListClient campaigns={[mockErrorCampaign]} />);
+    render(
+      <CampaignListClient
+        items={[mockErrorCampaign]}
+        {...baseProps}
+        total={1}
+      />,
+    );
 
-    expect(screen.getByText("Erro")).toBeInTheDocument();
+    const erroElements = screen.getAllByText("Erro");
+    expect(erroElements.length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders empty state when no campaigns", () => {
-    render(<CampaignListClient campaigns={[]} />);
+    render(
+      <CampaignListClient
+        items={[]}
+        total={0}
+        page={1}
+        totalPages={0}
+        searchParams={{}}
+      />,
+    );
 
     expect(screen.getByText("Nenhuma campanha ainda")).toBeInTheDocument();
     expect(

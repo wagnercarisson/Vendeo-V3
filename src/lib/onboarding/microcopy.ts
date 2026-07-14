@@ -1,4 +1,4 @@
-import { LayoutDashboard, Megaphone, Store } from "lucide-react";
+import { LayoutDashboard, Megaphone, Store, Search } from "lucide-react";
 import type { EmptyStateCopy } from "@/lib/onboarding/types";
 
 export const DASHBOARD_NO_STORE: EmptyStateCopy = {
@@ -42,4 +42,11 @@ export const CAMPAIGNS_NO_CAMPAIGNS: EmptyStateCopy = {
     "Crie sua primeira campanha e ela aparecerá aqui.",
   ctaLabel: "Criar primeira campanha",
   ctaHref: "/campanhas/nova",
+};
+
+export const CAMPAIGNS_SEARCH_EMPTY: EmptyStateCopy = {
+  icon: Search,
+  title: "Nenhuma campanha encontrada",
+  description:
+    "Tente ajustar sua busca ou limpar os filtros para encontrar mais campanhas.",
 };
