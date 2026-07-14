@@ -1,24 +1,24 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.4
-milestone_name: Experiência SaaS
-status: in_progress
-last_updated: "2026-07-13T17:50:00.000Z"
-last_activity: 2026-07-13
+milestone: v1.5
+milestone_name: Busca e Navegação
+status: planning
+last_updated: "2026-07-14T18:50:00.000Z"
+last_activity: 2026-07-14
 progress:
-  total_phases: 3
-  completed_phases: 3
-  planned_phases: 0
-  total_plans: 9
-  completed_plans: 9
-  planned_plans: 0
-  percent: 100
+  total_phases: 1
+  completed_phases: 0
+  planned_phases: 1
+  total_plans: 3
+  completed_plans: 0
+  planned_plans: 3
+  percent: 0
 ---
 
 # Project State
 
-**Last updated:** 2026-07-13
-**Milestone:** v1.4 — Experiência SaaS ✅ Phase 18 ✅, Phase 19 ✅, Phase 20 ✅ (9/9 plans)
+**Last updated:** 2026-07-14
+**Milestone:** v1.5 — Busca e Navegação ○ Phase 21 Planned (3/3 plans)
 
 ## Completed
 
@@ -82,12 +82,10 @@ progress:
 
 ## Current Position
 
-**Milestone:** v1.4 — Experiência SaaS ✅ COMPLETE
-**Phase 18:** App Shell + UI Base + Rotas ✅ COMPLETE (3/3 plans)
-**Phase 19:** Onboarding & Estados Vazios ✅ COMPLETE (3/3 plans)
-**Phase 20:** Dashboard ✅ COMPLETE (3/3 plans)
-**Current:** v1.4 complete — all 3 phases finished
-**Last activity:** 2026-07-13 — Phase 20 implemented and verified
+**Milestone:** v1.5 — Busca e Navegação ○ Planning
+**Phase 21:** Histórico e Busca ○ Planned (3/3 plans)
+**Current:** v1.5 planning — Phase 21 artifacts generated from OpenSpec change
+**Last activity:** 2026-07-14 — Phase 21 CONTEXT.md + 3 PLAN.md created
 
 ## Project Reference
 
@@ -95,7 +93,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-10)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** v1.4 — Experiência SaaS ✅ COMPLETE (651 tests, 87 files)
+**Current focus:** v1.5 — Busca e Navegação ○ Phase 21 Planned (3/3 plans)
 
 ## Completed
 
@@ -172,8 +170,11 @@ All 3 phases complete (Phase 18, 19, 20). Total: 651 tests, 87 files.
 
 ## Next Steps
 
-- Definir próximos milestones (F21: Busca e Filtros, F22: Mobile Hardening, etc.)
+- Revisar e aprovar artefatos de planejamento da F21
+- Implementar F21 (3 plans): Query Contract → URL State + Filtros → Pagination + Acabamento
+- Planejar F22: Mobile Hardening
 
 ## Operator Next Steps
 
-- Fase completa — iniciar planejamento da próxima milestone ou fase
+- Revisar `.planning/phases/21-historico-busca/` — 21-CONTEXT.md, 21-01-PLAN.md, 21-02-PLAN.md, 21-03-PLAN.md
+- Quando aprovado, executar: `/gsd-execute-phase 21-01`

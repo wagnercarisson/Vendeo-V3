@@ -341,3 +341,33 @@ Dashboard com conteúdo real para `has_store_with_campaigns`: saudação com hor
 | 20-01 | 1 | ✅ | Métricas e Recentes — `metrics.ts` (countCampaigns, countReadyCampaigns, getCampaignSuccessRate, getRecentCampaigns, RecentCampaignItem) + reexport count.ts + 9 testes |
 | 20-02 | 2 | ✅ | Dashboard Completo — saudação, 3 cards métricas, campanhas recentes, next-step card, links |
 | 20-03 | 2 | ✅ | Testes e Acabamento Responsivo — 20 testes (15 novos): saudação mock Date, métricas, edge cases, responsividade |
+
+---
+
+## v1.5 — Busca e Navegação
+
+> Milestone: **Busca e Navegação** (Planejamento)
+> O lojista encontra qualquer campanha rapidamente com busca textual, filtros por status/data, ordenação e paginação. URL compartilhável permite salvar e retomar consultas.
+
+---
+
+## Phase 21 — Histórico e Busca
+
+**Status:** `Planned`
+**Slug:** `fase-21-historico-busca`
+**Change:** `openspec/changes/2026-07-14-fase-21-historico-busca/`
+**Plans:** `.planning/phases/21-historico-busca/21-01-PLAN.md` — `21-03-PLAN.md`
+**Context:** `.planning/phases/21-historico-busca/21-CONTEXT.md`
+
+Evoluir a página `/campanhas` de lista plana com `limit(50)` para listagem completa com busca textual (ILIKE), filtros por status (ready/error) e data (presets), ordenação por data/nome, paginação page-based (10 itens/página), URL state compartilhável, e componente `Pagination` reutilizável.
+
+**Entrega:** `listCampaigns(storeId, params?)` com `ListCampaignsResult`, `countCampaignsFiltered`, `parseCampaignListSearchParams`, SSR com searchParams, client com busca+filtros+pagination, `useDebounce` hook, `Pagination` component, ~25 novos testes. TypeScript/lint/build limpos.
+
+**Dependências:** Phase 18 (app shell, UI components), Phase 19 (empty states, microcopy), Phase 20 (listCampaigns base)
+
+**Planos:**
+| Plan | Wave | Status | Descrição |
+|------|------|--------|-----------|
+| 21-01 | 1 | ○ | Query Contract — listCampaigns evoluído, countCampaignsFiltered, search-params.ts, testes |
+| 21-02 | 2 | ○ | URL State + Filtros — SSR searchParams, client refatorado, useDebounce, empty states |
+| 21-03 | 2 | ○ | Pagination + Acabamento — Pagination component, integração, testes, typecheck/lint/build |
