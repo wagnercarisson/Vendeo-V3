@@ -16,7 +16,7 @@ Phase 21 evolui a página `/campanhas` de uma lista plana com `limit(50)` fixo p
 ## Implementation Decisions
 
 ### D1 — Contrato de `listCampaigns`
-CONFIRMADO. `listCampaigns(storeId, params?)` com `ListCampaignsParams` e `ListCampaignsResult`. Paginação page-based via `.range()`. Busca textual ILIKE. Filtro de status `.in()`. Filtro de data `.gte()/.lte()`. Ordenação `.order()`. Defaults: page=1, pageSize=10, status=["ready","error"], sortBy="created_at", sortOrder="desc". `countCampaignsFiltered` separada com `.select("*", { count: "exact", head: true })` sem `.range()`. Quebra de compatibilidade controlada: retorno muda de `CampaignListItem[]` para `ListCampaignsResult`.
+CONFIRMADO. `listCampaigns(storeId, params?)` com `ListCampaignsParams` e `ListCampaignsResult`. `.eq("store_id", storeId)` explícito em toda query (multi-store safety — essencial para escopo de loja e count totals). Paginação page-based via `.range()`. Busca textual ILIKE. Filtro de status `.in()`. Filtro de data `.gte()/.lte()`. Ordenação `.order()`. Defaults: page=1, pageSize=10, status=["ready","error"], sortBy="created_at", sortOrder="desc". `countCampaignsFiltered` separada com `.select("*", { count: "exact", head: true })` sem `.range()`. Quebra de compatibilidade controlada: retorno muda de `CampaignListItem[]` para `ListCampaignsResult`.
 
 ### D2 — `parseCampaignListSearchParams`
 CONFIRMADO. Função em `src/lib/campaign/search-params.ts` que normaliza e valida query params da URL. `pageSize` sempre 10 (fixo). Validação de cada campo contra whitelist. Date presets resolvidos para `dateFrom`/`dateTo` ISO.
