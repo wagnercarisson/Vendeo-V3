@@ -3,22 +3,22 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Experiência SaaS
 status: in_progress
-last_updated: "2026-07-14T18:50:00.000Z"
+last_updated: "2026-07-14T19:48:00.000Z"
 last_activity: 2026-07-14
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   planned_phases: 1
   total_plans: 12
-  completed_plans: 9
-  planned_plans: 3
-  percent: 75
+  completed_plans: 12
+  planned_plans: 0
+  percent: 100
 ---
 
 # Project State
 
 **Last updated:** 2026-07-14
-**Milestone:** v1.4 — Experiência SaaS ◆ F18 ✅, F19 ✅, F20 ✅, F21 ◆ Planned, F22 ○ Pending
+**Milestone:** v1.4 — Experiência SaaS ◆ F18 ✅, F19 ✅, F20 ✅, F21 ✅, F22 ○ Pending
 
 ## Completed
 
@@ -83,9 +83,9 @@ progress:
 ## Current Position
 
 **Milestone:** v1.4 — Experiência SaaS ◆ Em andamento (F18-F22: 3/5 phases complete)
-**Phase 21:** Histórico e Busca ○ Planned (3/3 plans)
-**Current:** v1.4 planning — Phase 21 artifacts generated from OpenSpec change
-**Last activity:** 2026-07-14 — Phase 21 CONTEXT.md + 3 PLAN.md created
+**Phase 21:** Histórico e Busca ✅ (3/3 plans)
+**Current:** v1.4 — Phase 21 implemented. Next: Phase 22 Mobile Hardening.
+**Last activity:** 2026-07-14 — Phase 21 implementation (3 waves, 691 tests)
 
 ## Project Reference
 
@@ -93,7 +93,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-10)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** v1.4 — Experiência SaaS ◆ F21 Planned (3/3 plans)
+**Current focus:** v1.4 — Experiência SaaS ◆ F21 ✅, F22 ○ Pending
 
 ## Completed
 
@@ -156,6 +156,25 @@ See: `.planning/PROJECT.md` (updated 2026-07-10)
 - `3a17fe2` — 20-01: Metrics module + count.ts reexport + 9 tests
 - `e8b5839` — 20-02: Dashboard real + 20-03: Testes (20 tests)
 
+### Phase 21 — Histórico e Busca ✅
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 21-01 | 1 | ✅ | Query Contract — list.ts (ListCampaignsParams/Result), search-params.ts, countCampaignsFiltered, 29 testes |
+| 21-02 | 2 | ✅ | URL State + Filtros — SSR searchParams, useDebounce, client.tsx com busca/chips/presets/sort/CAMPAIGNS_SEARCH_EMPTY, 12 testes |
+| 21-03 | 3 | ✅ | Pagination + Acabamento — componente Pagination, integração, 10 testes |
+
+**Tests:** 651→691 passing (89 files, 40 novos)
+**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
+
+**Context:** `.planning/phases/21-historico-busca/21-CONTEXT.md`
+**Source:** `openspec/changes/fase-21-historico-busca/`
+
+**Commits:**
+- `3886f96` — 21-01: Query Contract — list.ts, search-params.ts, 29 testes
+- `b31923b` — 21-02: URL State + Filtros — SSR, useDebounce, client.tsx, microcopy, 12 testes
+- `48a6e3b` — 21-03: Pagination + Acabamento — Pagination, integração, 10 testes
+
 ## Performance Metrics
 
 | Phase | Plans | Duration | Tests |
@@ -163,19 +182,13 @@ See: `.planning/PROJECT.md` (updated 2026-07-10)
 | Phase 18 — App Shell + UI Base + Rotas | 3 plans | ~multi-cycle | 579→600 (21 novos) |
 | Phase 19 — Onboarding & Estados Vazios | 3 plans | single session | 600→628 (28 novos) |
 | Phase 20 — Dashboard | 3 plans | single session | 628→651 (23 novos) |
+| Phase 21 — Histórico e Busca | 3 plans | single session | 651→691 (40 novos) |
 
 ## Milestone v1.4 — Experiência SaaS ◆
 
-5 phases (F18-F22): F18 ✅, F19 ✅, F20 ✅, F21 ◆ Planned, F22 ○ Pending.
-Total completed: 651 tests, 87 files. Phase 21 adds ~25 tests.
+5 phases (F18-F22): F18 ✅, F19 ✅, F20 ✅, F21 ✅, F22 ○ Pending.
+Total completed: 691 tests, 89 files. Phase 21 added 40 tests.
 
 ## Next Steps
 
-- Revisar e aprovar artefatos de planejamento da F21
-- Implementar F21 (3 plans): Query Contract → URL State + Filtros → Pagination + Acabamento
 - Planejar F22: Mobile Hardening
-
-## Operator Next Steps
-
-- Revisar `.planning/phases/21-historico-busca/` — 21-CONTEXT.md, 21-01-PLAN.md, 21-02-PLAN.md, 21-03-PLAN.md
-- Quando aprovado, executar: `/gsd-execute-phase 21-01`

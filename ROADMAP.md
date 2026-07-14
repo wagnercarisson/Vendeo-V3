@@ -219,7 +219,7 @@ Página `/campanha/[id]` com preview e download da campanha persistida. Server C
 
 ## v1.4 — Experiência SaaS
 
-> Milestone: **Experiência SaaS** (F18-F22) — F18 ✅, F19 ✅, F20 ✅, F21 ◆ Planned, F22 ○ Pending
+> Milestone: **Experiência SaaS** (F18-F22) — F18 ✅, F19 ✅, F20 ✅, F21 ✅, F22 ○ Pending
 > O Vendeo passa a parecer e funcionar como um produto SaaS coerente — app shell profissional, navegação PT-BR, dashboard, onboarding, busca e mobile.
 
 ---
@@ -344,9 +344,9 @@ Dashboard com conteúdo real para `has_store_with_campaigns`: saudação com hor
 
 ---
 
-## Phase 21 — Histórico e Busca
+## Phase 21 — Histórico e Busca ✅
 
-**Status:** `Planned`
+**Status:** `Complete` ✅
 **Slug:** `fase-21-historico-busca`
 **Change:** `openspec/changes/2026-07-14-fase-21-historico-busca/`
 **Plans:** `.planning/phases/21-historico-busca/21-01-PLAN.md` — `21-03-PLAN.md`
@@ -354,13 +354,18 @@ Dashboard com conteúdo real para `has_store_with_campaigns`: saudação com hor
 
 Evoluir a página `/campanhas` de lista plana com `limit(50)` para listagem completa com busca textual (ILIKE), filtros por status (ready/error) e data (presets), ordenação por data/nome, paginação page-based (10 itens/página), URL state compartilhável, e componente `Pagination` reutilizável.
 
-**Entrega:** `listCampaigns(storeId, params?)` com `ListCampaignsResult`, `countCampaignsFiltered`, `parseCampaignListSearchParams`, SSR com searchParams, client com busca+filtros+pagination, `useDebounce` hook, `Pagination` component, ~25 novos testes. TypeScript/lint/build limpos.
+**Entrega:** `listCampaigns(storeId, params?)` com `ListCampaignsResult`, `countCampaignsFiltered`, `parseCampaignListSearchParams`, SSR com searchParams, client com busca+filtros+pagination, `useDebounce` hook, `Pagination` component, 40 novos testes (691 total). TypeScript/lint/build limpos.
 
-**Dependências:** Phase 18 (app shell, UI components), Phase 19 (empty states, microcopy), Phase 20 (listCampaigns base)
+**Dependências:** Phase 18, Phase 19, Phase 20
 
 **Planos:**
 | Plan | Wave | Status | Descrição |
 |------|------|--------|-----------|
-| 21-01 | 1 | ○ | Query Contract — listCampaigns evoluído, countCampaignsFiltered, search-params.ts, testes |
-| 21-02 | 2 | ○ | URL State + Filtros — SSR searchParams, client refatorado, useDebounce, empty states |
-| 21-03 | 2 | ○ | Pagination + Acabamento — Pagination component, integração, testes, typecheck/lint/build |
+| 21-01 | 1 | ✅ | Query Contract — listCampaigns evoluído, countCampaignsFiltered, search-params.ts, 29 testes |
+| 21-02 | 2 | ✅ | URL State + Filtros — SSR searchParams, client refatorado, useDebounce, empty states, 12 testes |
+| 21-03 | 2 | ✅ | Pagination + Acabamento — Pagination component, integração, 10 testes |
+
+**Commits:**
+- `3886f96` — 21-01
+- `b31923b` — 21-02
+- `48a6e3b` — 21-03
