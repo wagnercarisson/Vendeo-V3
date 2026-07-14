@@ -104,3 +104,26 @@ Considere os seguintes detalhes como argumentos visuais opcionais — use apenas
 ### Instruções de Validação
 
 {{inputValidationSummary}}
+
+### REGRAS CRÍTICAS DE FIDELIDADE
+
+A imagem do produto é uma referência factual protegida.
+
+Não redesenhe, reescreva, complete ou invente:
+- textos da embalagem;
+- selos;
+- certificações;
+- benefícios;
+- volume;
+- quantidade;
+- variante;
+- preço;
+- logotipo.
+
+Caso algum texto pequeno da embalagem não possa ser reproduzido com
+fidelidade, preserve visualmente o produto sem tentar completar esse texto.
+
+Você possui liberdade total para criar fundo, composição, iluminação,
+hierarquia, formas, elementos decorativos e direção visual.
+
+SEMPRE acrescente a arte o seguinte texto (esse texto pode ser minúsculo mas deve ser legível - e deve ser posicionado nas margens da arte, horizontal ou vertical): "Imagem meramente ilustrativa"
