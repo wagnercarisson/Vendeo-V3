@@ -12,6 +12,7 @@ import {
   CAMPAIGNS_NO_CAMPAIGNS,
   CAMPAIGNS_SEARCH_EMPTY,
 } from "@/lib/onboarding/microcopy";
+import { Pagination } from "@/components/ui/pagination";
 import { Search } from "lucide-react";
 
 interface Props {
@@ -76,6 +77,17 @@ export default function CampaignListClient({
     typeof rawParams.q === "string" ? rawParams.q : "",
   );
   const debouncedSearch = useDebounce(searchInput, 300);
+
+  const navigateToPage = useCallback(
+    (newPage: number) => {
+      router.replace(
+        buildCampaignUrl(rawParams, {
+          page: newPage === 1 ? undefined : String(newPage),
+        }),
+      );
+    },
+    [router, rawParams],
+  );
 
   const hasActiveFilters =
     (typeof rawParams.q === "string" && rawParams.q.trim().length > 0) ||
@@ -202,6 +214,14 @@ export default function CampaignListClient({
             <CampaignCard key={campaign.id} campaign={campaign} />
           ))}
         </div>
+      )}
+
+      {totalPages > 1 && (
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          onPageChange={navigateToPage}
+        />
       )}
     </div>
   );
