@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Topbar } from "./topbar";
 import { Sidebar } from "./sidebar";
 import { SidebarDrawer } from "./sidebar-drawer";
@@ -13,6 +13,7 @@ interface AppShellProps {
 
 export function AppShell({ user, children }: AppShellProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const toggleButtonRef = useRef<HTMLButtonElement>(null);
 
   return (
     <div className="flex min-h-screen bg-bg-deep">
@@ -30,13 +31,18 @@ export function AppShell({ user, children }: AppShellProps) {
           user={user}
           onToggleMenu={() => setIsDrawerOpen(!isDrawerOpen)}
           isDrawerOpen={isDrawerOpen}
+          toggleButtonRef={toggleButtonRef}
         />
-        <main className="flex-1 overflow-auto p-6">{children}</main>
+        <main className="flex-1 overflow-auto px-4 py-6 sm:px-6">{children}</main>
       </div>
 
       <SidebarDrawer
         isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
+        onClose={() => {
+          setIsDrawerOpen(false);
+          toggleButtonRef.current?.focus();
+        }}
+        toggleButtonRef={toggleButtonRef}
       />
     </div>
   );

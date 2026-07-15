@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, fireEvent, screen } from "@testing-library/react";
 import { AccountMenu } from "@/components/shell/account-menu";
 
@@ -8,7 +8,26 @@ vi.mock("next/link", () => ({
     <a href={href} {...props}>{children}</a>,
 }));
 
+function mockMatchMedia(reduced: boolean) {
+  const mql = {
+    matches: reduced,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  };
+  window.matchMedia = window.matchMedia || (() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+  vi.spyOn(window, "matchMedia").mockReturnValue(mql as unknown as MediaQueryList);
+  return mql;
+}
+
 describe("AccountMenu", () => {
+  beforeEach(() => {
+    mockMatchMedia(false);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("shows user email", () => {
     render(<AccountMenu user={{ claims: { email: "user@vendeo.tech" } }} />);
     expect(screen.getByText("user@vendeo.tech")).toBeTruthy();
@@ -27,5 +46,29 @@ describe("AccountMenu", () => {
     expect(screen.getByText("Sair")).toBeTruthy();
     const link = screen.getByRole("link", { name: /Configurações/ });
     expect(link.getAttribute("href")).toBe("/conta");
+  });
+
+  it("trigger has aria-haspopup='true'", () => {
+    render(<AccountMenu user={{ claims: { email: "user@vendeo.tech" } }} />);
+    const trigger = screen.getByRole("button");
+    expect(trigger.getAttribute("aria-haspopup")).toBe("true");
+  });
+
+  it("aria-expanded toggles between true and false", () => {
+    render(<AccountMenu user={{ claims: { email: "user@vendeo.tech" } }} />);
+    const trigger = screen.getByRole("button");
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(trigger);
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it("Escape closes the menu", () => {
+    render(<AccountMenu user={{ claims: { email: "user@vendeo.tech" } }} />);
+    const trigger = screen.getByRole("button");
+    fireEvent.click(trigger);
+    expect(screen.getByText("Configurações")).toBeTruthy();
+    const dropdown = screen.getByText("Configurações").closest("div");
+    fireEvent.keyDown(dropdown || document, { key: "Escape" });
+    expect(screen.queryByText("Configurações")).toBeNull();
   });
 });
