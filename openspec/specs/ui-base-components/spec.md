@@ -58,6 +58,7 @@ The system SHALL provide an `Input` component at `src/components/ui/input.tsx` a
 - `error` prop for inline validation message (red text below input using `text-accent-red`)
 - `...input` spread for native `<input>` attributes (placeholder, type, onChange, value, etc.)
 - Styled with design tokens (`bg-bg-surface`, `text-text-primary`, `border-border`, focus `ring-accent-green`, error `border-accent-red`)
+- **SHALL also apply `min-h-[44px]` class for WCAG touch target compliance**
 
 #### Scenario: Input renders label and placeholder
 
@@ -70,6 +71,11 @@ The system SHALL provide an `Input` component at `src/components/ui/input.tsx` a
 - **WHEN** `<Input label="Nome" error="Campo obrigatório" />` is rendered
 - **THEN** an error message "Campo obrigatório" SHALL appear below the input
 - **AND** the error text SHALL use `text-accent-red`
+
+#### Scenario: Input applies min-h-[44px]
+
+- **WHEN** any `<Input>` component is rendered
+- **THEN** it SHALL have `min-h-[44px]` in its className
 
 ### Requirement: Badge component with status variants
 
@@ -143,3 +149,18 @@ The system SHALL provide a `PageHeader` component at `src/components/ui/page-hea
 
 - **WHEN** `<PageHeader title="Campanhas" actions={<Button>Nova</Button>} />` is rendered
 - **THEN** the action button SHALL be rendered in the actions area
+
+### Requirement: Pagination component
+
+The system SHALL provide a `Pagination` component at `src/components/ui/pagination.tsx` with:
+- `PaginationProps` with `currentPage`, `totalPages`, `onPageChange`
+- Botões numéricos com elipse para muitos pages
+- "Anterior" desabilitado na página 1, "Próximo" desabilitado na última página
+- **SHALL have `flex-wrap` for narrow viewports to prevent overflow**
+- Usa `Button` da F18
+
+#### Scenario: Pagination wraps on mobile
+
+- **WHEN** the Pagination component is rendered in a narrow viewport (e.g. 320px)
+- **THEN** it SHALL have `flex-wrap` class to allow wrapping
+- **AND** buttons SHALL not overflow horizontally
