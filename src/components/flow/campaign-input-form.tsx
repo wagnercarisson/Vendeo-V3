@@ -84,7 +84,7 @@ export function CampaignInputForm({ storeId }: CampaignInputFormProps) {
               <button
                 type="button"
                 onClick={handleConflictCorrect}
-                className="px-3 py-1.5 bg-red-700/30 text-red-200 text-xs rounded-lg hover:bg-red-700/50 transition-colors"
+                className="min-h-[44px] px-3 py-1.5 bg-red-700/30 text-red-200 text-xs rounded-lg hover:bg-red-700/50 transition-colors"
               >
                 Usar &quot;{pendingConflict.suggestedProductName}&quot;
               </button>
@@ -92,14 +92,14 @@ export function CampaignInputForm({ storeId }: CampaignInputFormProps) {
             <button
               type="button"
               onClick={handleConflictCancel}
-              className="px-3 py-1.5 bg-bg-surface text-text-muted text-xs rounded-lg hover:text-text-primary transition-colors"
+              className="min-h-[44px] px-3 py-1.5 bg-bg-surface text-text-muted text-xs rounded-lg hover:text-text-primary transition-colors"
             >
               Corrigir nome
             </button>
             <button
               type="button"
               onClick={handleConflictCancel}
-              className="px-3 py-1.5 bg-bg-surface text-text-muted text-xs rounded-lg hover:text-text-primary transition-colors"
+              className="min-h-[44px] px-3 py-1.5 bg-bg-surface text-text-muted text-xs rounded-lg hover:text-text-primary transition-colors"
             >
               Cancelar
             </button>
@@ -129,7 +129,7 @@ export function CampaignInputForm({ storeId }: CampaignInputFormProps) {
               <button
                 type="button"
                 onClick={handleConflictCorrect}
-                className="px-3 py-1.5 bg-yellow-700/30 text-yellow-200 text-xs rounded-lg hover:bg-yellow-700/50 transition-colors"
+                className="min-h-[44px] px-3 py-1.5 bg-yellow-700/30 text-yellow-200 text-xs rounded-lg hover:bg-yellow-700/50 transition-colors"
               >
                 Usar &quot;{pendingConflict.suggestedProductName}&quot;
               </button>
@@ -137,14 +137,14 @@ export function CampaignInputForm({ storeId }: CampaignInputFormProps) {
             <button
               type="button"
               onClick={handleConflictContinue}
-              className="px-3 py-1.5 bg-orange-600/80 text-white text-xs rounded-lg hover:bg-orange-600 transition-colors"
+              className="min-h-[44px] px-3 py-1.5 bg-orange-600/80 text-white text-xs rounded-lg hover:bg-orange-600 transition-colors"
             >
               Continuar mesmo assim — pode gerar arte incorreta
             </button>
             <button
               type="button"
               onClick={handleConflictCancel}
-              className="px-3 py-1.5 bg-bg-surface text-text-muted text-xs rounded-lg hover:text-text-primary transition-colors"
+              className="min-h-[44px] px-3 py-1.5 bg-bg-surface text-text-muted text-xs rounded-lg hover:text-text-primary transition-colors"
             >
               Cancelar
             </button>
@@ -224,7 +224,7 @@ function FormContent({
           placeholder="Ex: Tênis Runner Pro"
           maxLength={60}
           disabled={isSubmitting}
-          className={`w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
+          className={`min-h-[44px] w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
             touched.productName && fieldErrors.productName
               ? "border-accent-red"
               : "border-border-light hover:border-text-muted"
@@ -263,7 +263,7 @@ function FormContent({
           onBlur={() => handleBlur("originalPriceCents")}
           placeholder="R$ 0,00"
           disabled={isSubmitting}
-          className={`w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
+          className={`min-h-[44px] w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
             touched.originalPriceCents && fieldErrors.originalPriceCents
               ? "border-accent-red"
               : "border-border-light hover:border-text-muted"
@@ -292,7 +292,7 @@ function FormContent({
           onBlur={() => handleBlur("discountedPriceCents")}
           placeholder="R$ 0,00"
           disabled={isSubmitting}
-          className={`w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
+          className={`min-h-[44px] w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
             touched.discountedPriceCents && fieldErrors.discountedPriceCents
               ? "border-accent-red"
               : "border-border-light hover:border-text-muted"
@@ -326,7 +326,7 @@ function FormContent({
             maxLength={120}
             rows={3}
             disabled={isSubmitting}
-            className={`w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 resize-none ${
+            className={`min-h-[44px] w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 resize-none ${
               touched.description && fieldErrors.description
                 ? "border-accent-red"
                 : "border-border-light hover:border-text-muted"
@@ -357,7 +357,7 @@ function FormContent({
           onChange={(e) => setField("badge", e.target.value)}
           onBlur={() => handleBlur("badge")}
           disabled={isSubmitting}
-          className={`w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
+          className={`min-h-[44px] w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
             touched.badge && fieldErrors.badge
               ? "border-accent-red"
               : "border-border-light hover:border-text-muted"
@@ -384,7 +384,7 @@ function FormContent({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full sm:w-auto px-8 py-2.5 bg-accent-green text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="min-h-[44px] w-full sm:w-auto px-8 py-2.5 bg-accent-green text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {isSubmitting ? (
             <>

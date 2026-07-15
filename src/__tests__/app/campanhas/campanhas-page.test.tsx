@@ -118,6 +118,33 @@ describe("CampanhasPage (Server Component — SSR with searchParams)", () => {
     expect(html).toContain("Pronta");
   });
 
+  it("touch targets have min-h-[44px]", async () => {
+    mockGetCurrentStore.mockResolvedValue({ id: "store-456" });
+    mockListCampaigns.mockResolvedValue(
+      mockCampaignsResult(
+        [
+          {
+            id: "c1",
+            productName: "Produto Touch",
+            status: "ready",
+            createdAt: "2026-01-01T00:00:00Z",
+            thumbnailUrl: null,
+            storagePath: "s/c1.jpg",
+          },
+        ],
+        1,
+      ),
+    );
+
+    const { default: CampanhasPage } = await import(
+      "@/app/(app)/campanhas/page"
+    );
+    const result = await CampanhasPage({ searchParams: Promise.resolve({}) });
+    const html = renderToString(result);
+
+    expect(html).toContain('min-h-[44px]');
+  });
+
   it("does NOT call listCampaigns when store is null (performance)", async () => {
     mockGetCurrentStore.mockResolvedValue(null);
 

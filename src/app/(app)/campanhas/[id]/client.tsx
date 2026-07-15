@@ -278,7 +278,7 @@ function ReadyView(props: CampaignPageProps) {
                 </p>
               )}
 
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant="primary"
                   size="sm"
@@ -315,7 +315,7 @@ function ReadyView(props: CampaignPageProps) {
 
       <a
         href={props.downloadUrl}
-        className="inline-flex items-center gap-2 rounded-lg bg-accent-green px-6 py-2.5 text-sm font-semibold text-white font-heading hover:brightness-110 transition-all duration-200"
+        className="inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-accent-green px-6 py-2.5 text-sm font-semibold text-white font-heading hover:brightness-110 transition-all duration-200"
       >
         <Download className="h-4 w-4" />
         Baixar Original

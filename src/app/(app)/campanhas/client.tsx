@@ -144,7 +144,7 @@ export default function CampaignListClient({
             typeof rawParams.date === "string" ? rawParams.date : "all"
           }
           onChange={(e) => navigate({ date: e.target.value })}
-          className="rounded-lg border border-border bg-bg-surface px-3 py-2 text-sm text-text-primary"
+          className="min-h-[44px] rounded-lg border border-border bg-bg-surface px-3 py-2 text-sm text-text-primary"
         >
           <option value="all">Todas</option>
           <option value="7d">7 dias</option>
@@ -158,7 +158,7 @@ export default function CampaignListClient({
             const [sort, order] = e.target.value.split(",");
             navigate({ sort, order });
           }}
-          className="rounded-lg border border-border bg-bg-surface px-3 py-2 text-sm text-text-primary"
+          className="min-h-[44px] rounded-lg border border-border bg-bg-surface px-3 py-2 text-sm text-text-primary"
         >
           <option value="created_at,desc">Mais recentes</option>
           <option value="created_at,asc">Mais antigas</option>
@@ -172,7 +172,7 @@ export default function CampaignListClient({
           <button
             key={opt.value}
             type="button"
-            className={`rounded-lg px-4 py-1.5 text-sm font-heading font-semibold transition-all duration-200 ${
+            className={`min-h-[44px] rounded-lg px-4 py-1.5 text-sm font-heading font-semibold transition-all duration-200 ${
               currentStatus === opt.value
                 ? "bg-accent-green text-white"
                 : "border border-border text-text-secondary hover:bg-bg-elevated"
@@ -261,14 +261,14 @@ function CampaignCard({ campaign }: { campaign: CampaignListItem }) {
       <div className="flex flex-col items-end justify-center gap-2">
         <Link
           href={`/campanhas/${campaign.id}`}
-          className="rounded-lg bg-accent-green px-4 py-1.5 text-sm font-semibold text-white font-heading hover:brightness-110 transition-all duration-200"
+          className="min-h-[44px] rounded-lg bg-accent-green px-4 py-1.5 text-sm font-semibold text-white font-heading hover:brightness-110 transition-all duration-200"
         >
           Abrir
         </Link>
         {campaign.status === "ready" && (
           <Link
             href={`/api/campaign/${campaign.id}/download`}
-            className="rounded-lg border border-border px-4 py-1.5 text-sm text-text-secondary font-body hover:bg-bg-elevated transition-all duration-200"
+            className="min-h-[44px] rounded-lg border border-border px-4 py-1.5 text-sm text-text-secondary font-body hover:bg-bg-elevated transition-all duration-200"
           >
             Baixar
           </Link>

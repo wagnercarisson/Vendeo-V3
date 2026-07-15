@@ -48,7 +48,7 @@ export function Pagination({
   const pages = getPageNumbers(currentPage, totalPages);
 
   return (
-    <div className="flex items-center justify-center gap-1">
+    <div className="flex items-center justify-center gap-1 flex-wrap">
       <Button
         variant="secondary"
         size="sm"

@@ -30,7 +30,7 @@ export function LogoutButton({ className = "" }: LogoutButtonProps) {
       <button
         type="submit"
         disabled={loading}
-        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 font-body"
+        className="flex min-h-[44px] w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 font-body"
       >
         {loading ? (
           <Loader2 className="h-4 w-4 animate-spin" />

@@ -33,8 +33,8 @@ function getGreeting(storeName: string | null): string {
   return `${period}, ${storeName}`;
 }
 
-const ctaClass =
-  "inline-flex items-center rounded-lg bg-accent-green px-6 py-2 text-sm font-semibold text-white font-heading hover:brightness-110 transition-all duration-200";
+  const ctaClass =
+  "inline-flex min-h-[44px] items-center rounded-lg bg-accent-green px-6 py-2 text-sm font-semibold text-white font-heading hover:brightness-110 transition-all duration-200";
 
 export default async function DashboardPage() {
   const user = await requirePageUser();
@@ -171,7 +171,7 @@ export default async function DashboardPage() {
                       </Badge>
                       <Link
                         href={`/campanhas/${campaign.id}`}
-                        className="text-sm font-medium text-accent-green hover:underline"
+                        className="inline-flex min-h-[44px] items-center text-sm font-medium text-accent-green hover:underline"
                       >
                         Abrir
                       </Link>

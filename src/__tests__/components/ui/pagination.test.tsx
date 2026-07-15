@@ -87,4 +87,12 @@ describe("Pagination", () => {
     const page3button = screen.getByText("3");
     expect(page3button.className).not.toContain("ghost");
   });
+
+  it("has flex-wrap class for mobile", () => {
+    const { container } = render(
+      <Pagination currentPage={1} totalPages={3} onPageChange={() => {}} />,
+    );
+    const wrapper = container.firstChild as HTMLElement;
+    expect(wrapper.className).toContain("flex-wrap");
+  });
 });

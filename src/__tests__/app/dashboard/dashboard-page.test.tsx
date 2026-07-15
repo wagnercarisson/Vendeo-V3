@@ -36,10 +36,13 @@ vi.mock("next/link", () => ({
   default: ({
     children,
     href,
+    className,
+    ...props
   }: {
     children: React.ReactNode;
     href: string;
-  }) => <a href={href}>{children}</a>,
+    className?: string;
+  }) => <a href={href} className={className} {...props}>{children}</a>,
 }));
 
 function setupStoreWithCampaigns() {
@@ -195,6 +198,17 @@ describe("DashboardPage — metrics grid", () => {
     expect(html).toContain("grid-cols-1");
     expect(html).toContain("md:grid-cols-3");
     expect(html).toContain("gap-4");
+  });
+
+  it("Abrir link has min-h-[44px]", async () => {
+    setupStoreWithCampaigns();
+
+    const { default: DashboardPage } = await import(
+      "@/app/(app)/dashboard/page"
+    );
+    const html = renderToString(await DashboardPage());
+
+    expect(html).toContain("min-h-[44px]");
   });
 });
 

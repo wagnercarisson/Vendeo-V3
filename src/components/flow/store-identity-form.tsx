@@ -905,14 +905,14 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
   }));
 
   const inputClass = (field: string) =>
-    `w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
+    `w-full bg-bg-surface border rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
       touched[field] && fieldErrors[field]
         ? "border-accent-red"
         : "border-border-light hover:border-text-muted"
     }`;
 
   const selectClass = (field: string) =>
-    `w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
+    `w-full bg-bg-surface border rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-body transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
       touched[field] && fieldErrors[field]
         ? "border-accent-red"
         : "border-border-light hover:border-text-muted"
@@ -1041,13 +1041,13 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
                 const subs = STORE_SUBSEGMENTS[formData.segment as keyof typeof STORE_SUBSEGMENTS] ?? [];
                 const sub = subs[0];
                 return (
-                  <select id="subsegment" value={sub?.value ?? ""} disabled className="w-full bg-bg-surface border border-border-light rounded-lg px-3.5 py-2.5 text-text-secondary text-sm font-body cursor-not-allowed">
+                  <select id="subsegment" value={sub?.value ?? ""} disabled className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-secondary text-sm font-body cursor-not-allowed">
                     {sub && <option value={sub.value}>{sub.label}</option>}
                   </select>
                 );
               }
               return (
-                <input id="subsegment" type="text" value={formData.subsegment} disabled placeholder="Selecione um segmento primeiro" className="w-full bg-bg-surface border border-border-light rounded-lg px-3.5 py-2.5 text-text-disabled text-sm font-body placeholder:text-text-muted cursor-not-allowed" />
+                <input id="subsegment" type="text" value={formData.subsegment} disabled placeholder="Selecione um segmento primeiro" className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-disabled text-sm font-body placeholder:text-text-muted cursor-not-allowed" />
               );
             })()}
           </div>
@@ -1055,11 +1055,11 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="city" className={labelClass}>Cidade <span className="font-normal normal-case tracking-normal text-text-disabled">(opcional)</span></label>
-              <input id="city" type="text" value={formData.city} onChange={(e) => setField("city", e.target.value)} placeholder="Ex: São Paulo" className="w-full bg-bg-surface border border-border-light rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20" />
+              <input id="city" type="text" value={formData.city} onChange={(e) => setField("city", e.target.value)} placeholder="Ex: São Paulo" className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20" />
             </div>
             <div>
               <label htmlFor="state" className={labelClass}>Estado <span className="font-normal normal-case tracking-normal text-text-disabled">(opcional)</span></label>
-              <select id="state" value={formData.state} onChange={(e) => setField("state", e.target.value)} className="w-full bg-bg-surface border border-border-light rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20">
+              <select id="state" value={formData.state} onChange={(e) => setField("state", e.target.value)} className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-body transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20">
                 <option value="">Selecione</option>
                 {BRAZILIAN_STATES.map((uf) => (
                   <option key={uf.value} value={uf.value}>{uf.label}</option>
@@ -1073,7 +1073,7 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
             <div className="space-y-4 mt-4">
               <div>
                 <label htmlFor="tone_of_voice" className={labelClass}>Tom de Voz</label>
-                <select id="tone_of_voice" value={formData.tone_of_voice} onChange={(e) => setField("tone_of_voice", e.target.value)} className="w-full bg-bg-surface border border-border-light rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20">
+                <select id="tone_of_voice" value={formData.tone_of_voice} onChange={(e) => setField("tone_of_voice", e.target.value)} className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-body transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20">
                   <option value="">Selecione</option>
                   {TONE_OF_VOICE_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -1082,15 +1082,15 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
               </div>
               <div>
                 <label htmlFor="positioning" className={labelClass}>Posicionamento</label>
-                <input id="positioning" type="text" value={formData.positioning} onChange={(e) => setField("positioning", e.target.value)} placeholder="Ex: A melhor loja de..." className="w-full bg-bg-surface border border-border-light rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20" />
+                <input id="positioning" type="text" value={formData.positioning} onChange={(e) => setField("positioning", e.target.value)} placeholder="Ex: A melhor loja de..." className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20" />
               </div>
               <div>
                 <label htmlFor="short_description" className={labelClass}>Descrição Curta</label>
-                <textarea id="short_description" value={formData.short_description} onChange={(e) => setField("short_description", e.target.value)} placeholder="Descreva sua loja em poucas palavras..." rows={3} className="w-full bg-bg-surface border border-border-light rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20 resize-none" />
+                <textarea id="short_description" value={formData.short_description} onChange={(e) => setField("short_description", e.target.value)} placeholder="Descreva sua loja em poucas palavras..." rows={3} className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20 resize-none" />
               </div>
               <div>
                 <label htmlFor="slogan" className={labelClass}>Slogan</label>
-                <input id="slogan" type="text" value={formData.slogan} onChange={(e) => setField("slogan", e.target.value)} placeholder="Ex: Sua loja de confiança" className="w-full bg-bg-surface border border-border-light rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20" />
+                <input id="slogan" type="text" value={formData.slogan} onChange={(e) => setField("slogan", e.target.value)} placeholder="Ex: Sua loja de confiança" className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20" />
               </div>
             </div>
           </div>
@@ -1101,7 +1101,7 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
                 Cadastrar nova loja
               </button>
             )}
-            <button type="submit" disabled={isSaving} className="ml-auto px-8 py-2.5 bg-accent-blue text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+            <button type="submit" disabled={isSaving} className="min-h-[44px] ml-auto px-8 py-2.5 bg-accent-blue text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
               {isSaving ? (
                 <><Loader2 className="w-4 h-4 animate-spin" /> Salvando...</>
               ) : "Salvar e continuar"}
@@ -1113,7 +1113,7 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
           <div className="lg:col-span-3">
             <div className="flex items-center gap-3 mb-6">
-              <button type="button" onClick={() => setStep(1)} className="text-text-muted hover:text-text-primary transition-colors">
+              <button type="button" onClick={() => setStep(1)} className="min-w-[44px] text-text-muted hover:text-text-primary transition-colors" aria-label="Voltar para dados da loja">
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
@@ -1199,7 +1199,7 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
                       <button
                         type="button"
                         onClick={() => setShowRemoveLogoDialog(true)}
-                        className="shrink-0 px-3 py-1.5 border border-accent-red/30 text-accent-red font-heading font-semibold text-xs rounded-lg hover:bg-accent-red/10 transition-all duration-200"
+                        className="min-h-[44px] shrink-0 px-3 py-1.5 border border-accent-red/30 text-accent-red font-heading font-semibold text-xs rounded-lg hover:bg-accent-red/10 transition-all duration-200"
                       >
                         Remover logotipo
                       </button>
@@ -1217,7 +1217,7 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
                           type="button"
                           onClick={handleRetryBrandDirector}
                           disabled={brandDirectorRetrying}
-                          className="text-accent-blue hover:text-accent-blue/80 text-xs font-body underline transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                          className="min-h-[44px] text-accent-blue hover:text-accent-blue/80 text-xs font-body underline transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                         >
                           {brandDirectorRetrying ? (
                             <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Tentando novamente...</>
@@ -1335,7 +1335,7 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
                         <button
                           type="button"
                           onClick={handleRemoveVS}
-                          className="shrink-0 px-3 py-1.5 border border-accent-red/30 text-accent-red font-heading font-semibold text-xs rounded-lg hover:bg-accent-red/10 transition-all duration-200"
+                          className="min-h-[44px] shrink-0 px-3 py-1.5 border border-accent-red/30 text-accent-red font-heading font-semibold text-xs rounded-lg hover:bg-accent-red/10 transition-all duration-200"
                         >
                           Remover assinatura visual
                         </button>
@@ -1375,7 +1375,7 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
                     <button
                       type="button"
                       onClick={handleNoLogo}
-                      className="mt-2 text-accent-blue hover:text-accent-blue/80 text-xs font-body underline transition-colors duration-200"
+                      className="min-h-[44px] mt-2 text-accent-blue hover:text-accent-blue/80 text-xs font-body underline transition-colors duration-200"
                     >
                       Tentar novamente
                     </button>
@@ -1436,7 +1436,7 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
                         }
                       }}
                       placeholder="#RRGGBB" maxLength={7}
-                      className={`flex-1 bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-mono placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
+                      className={`flex-1 bg-bg-surface border rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-mono placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
                         touched.brand_color && fieldErrors.brand_color ? "border-accent-red" : "border-border-light hover:border-text-muted"
                       }`}
                     />
@@ -1472,7 +1472,7 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
                         }
                       }}
                       placeholder="#RRGGBB" maxLength={7}
-                      className="flex-1 bg-bg-surface border border-border-light rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-mono placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
+                      className="flex-1 bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-mono placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20"
                     />
                   </div>
                 </div>
@@ -1500,11 +1500,11 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
                           <div className="w-10 h-10 rounded-full border-2 border-border-light" style={{ backgroundColor: color }} />
                           <div className="flex gap-1">
                             <button type="button" onClick={() => { setField("brand_color", color); if (storeId) saveBrandColors(color, brandColorsChosen[1] ?? ""); }}
-                              className={`text-[10px] font-heading font-medium px-1.5 py-0.5 rounded transition-colors ${
+                              className={`min-h-[44px] min-w-[44px] text-[10px] font-heading font-medium px-1.5 py-0.5 rounded transition-colors ${
                                 formData.brand_color === color ? "bg-accent-green/20 text-accent-green" : "bg-bg-elevated text-text-muted hover:text-text-primary"
                               }`} title="Usar como cor principal">P</button>
                             <button type="button" onClick={() => { setAccentColor(color); if (storeId) saveBrandColors(formData.brand_color, color); }}
-                              className={`text-[10px] font-heading font-medium px-1.5 py-0.5 rounded transition-colors ${
+                              className={`min-h-[44px] min-w-[44px] text-[10px] font-heading font-medium px-1.5 py-0.5 rounded transition-colors ${
                                 accentColor === color ? "bg-accent-blue/20 text-accent-blue" : "bg-bg-elevated text-text-muted hover:text-text-primary"
                               }`} title="Usar como cor de destaque">S</button>
                           </div>
@@ -1542,7 +1542,7 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
 
               <div className="pt-2">
                 <button type="submit" disabled={!storeId}
-                  className="w-full sm:w-auto px-8 py-2.5 bg-accent-green text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="min-h-[44px] w-full sm:w-auto px-8 py-2.5 bg-accent-green text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {uploadStatus === 'uploading' ? (
                     <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
@@ -1580,11 +1580,11 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
               Ao remover o logo, ele n&atilde;o ficar&aacute; dispon&iacute;vel para reaplica&ccedil;&atilde;o pela interface.
               Voc&ecirc; poder&aacute; enviar o arquivo novamente quando quiser.
             </p>
-            <div className="flex gap-3 justify-end">
+            <div className="flex flex-wrap gap-3 justify-end">
               <button
                 type="button"
                 onClick={() => setShowRemoveLogoDialog(false)}
-                className="px-4 py-2 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200"
+                className="min-h-[44px] px-4 py-2 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200"
               >
                 Cancelar
               </button>
@@ -1594,7 +1594,7 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
                   setShowRemoveLogoDialog(false);
                   await handleRemoveLogo();
                 }}
-                className="px-4 py-2 bg-accent-red text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200"
+                className="min-h-[44px] px-4 py-2 bg-accent-red text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200"
               >
                 Remover
               </button>
