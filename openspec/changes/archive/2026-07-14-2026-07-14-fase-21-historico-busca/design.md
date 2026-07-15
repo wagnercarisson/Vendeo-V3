@@ -84,7 +84,9 @@ export async function listCampaigns(
 
 **Paginação:** `.range((page - 1) * pageSize, page * pageSize - 1)` do Supabase JS.
 
-**Contagem com filtros:** `countCampaignsFiltered` separada porque COUNT com `head: true` não aceita `.range()`:
+**Contagem com filtros:** `listCampaigns` obtém o total via `count: "exact"` na mesma query de `.select()` — o Supabase JS retorna o total de registros correspondentes aos filtros independentemente do `.range()`, eliminando a necessidade de uma segunda query.
+
+`countCampaignsFiltered` permanece exportada como utilitário público para cenários futuros que precisem apenas da contagem sem os dados:
 
 ```typescript
 export async function countCampaignsFiltered(
@@ -94,6 +96,8 @@ export async function countCampaignsFiltered(
 ```
 
 Usa `.select("*", { count: "exact", head: true })` com os mesmos filtros (exceto paginação).
+
+**Decisão:** `listCampaigns` usa count inline por eficiência (1 query em vez de 2). `countCampaignsFiltered` mantida como utilitário público futuro.
 
 **Search:** `ILIKE` na coluna `product_name`:
 ```typescript
@@ -333,4 +337,4 @@ Simples, sem dependências externas. Usa `useState` + `useEffect` com `setTimeou
 | `listCampaigns` é mockado em 2 test files (campanhas-page, list.test) | Ambos refatorados na F21. Mock pattern muda com novo contrato |
 | Paginação no mobile com 30+ páginas | Componente `Pagination` usa elipse para muitos pages. Layout compacto |
 | Conflito entre debounce e `router.replace` (request cancelado) | Debounce de 300ms + `router.replace` substitui entry no histórico. Next.js lida com race conditions |
-| `countCampaignsFiltered` duplica lógica de filtros de `listCampaigns` | Aceitável — COUNT usa `head: true` e não aceita `.range()`. Extrair builder de filtros se houver terceiro uso |
+| `countCampaignsFiltered` duplica lógica de filtros de `listCampaigns` | Aceitável — `listCampaigns` usa count inline por eficiência. `countCampaignsFiltered` mantida como utilitário público para cenários que precisem apenas da contagem. Extrair builder de filtros se houver terceiro uso |

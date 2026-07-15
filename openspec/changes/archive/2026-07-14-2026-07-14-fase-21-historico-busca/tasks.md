@@ -1,0 +1,122 @@
+## 1. Plano 21-01 — Query Contract
+
+- [x] 1.1 Em `src/lib/campaign/list.ts`: adicionar interfaces `ListCampaignsParams` e `ListCampaignsResult` — conforme D1 do design.md
+- [x] 1.2 Evoluir `listCampaigns(storeId)` para `listCampaigns(storeId, params?)` com retorno `Promise<ListCampaignsResult>` — remover `limit(50)` fixo, usar `.range()` com page-based pagination
+- [x] 1.3 Manter `.eq("store_id", storeId)` explícito em ambas as funções — escopo de loja obrigatório para safety multi-store e count totals
+- [x] 1.4 Adicionar busca textual com `.ilike("product_name", "%term%")` quando `params.search` presente
+- [x] 1.5 Adicionar filtro de status com `.in("status", params.status)` — default `["ready", "error"]`
+- [x] 1.6 Adicionar filtro de data com `.gte("created_at", dateFrom)` e `.lte("created_at", dateTo)` — aplicado apenas quando presente
+- [x] 1.7 Adicionar ordenação com `.order(params.sortBy, { ascending: params.sortOrder === "asc" })`
+- [x] 1.8 Adicionar `countCampaignsFiltered(storeId, params?)` com `.select("*", { count: "exact", head: true })`, `.eq("store_id", storeId)`, e mesmos filtros (exceto `.range()`)
+- [x] 1.9 Manter `CampaignListItem` interface existente — compatível com thumbs existentes
+- [x] 1.10 Manter `generateBatchThumbnailUrls` — opera nos `items` da página atual (máximo 10)
+- [x] 1.11 Criar `src/lib/campaign/search-params.ts` com `parseCampaignListSearchParams(raw)` — conforme D2
+- [x] 1.12 Implementar validação de `page`: inteiro ≥ 1; inválido → default 1
+- [x] 1.13 Implementar validação de `q`: `.trim()` + limite 100 caracteres; vazio → `undefined`
+- [x] 1.14 Implementar validação de `status`: split por `,`, cada item contra whitelist `["ready","error"]`; fora da whitelist ignorado; array vazio → default
+- [x] 1.15 Implementar validação de `date`: contra whitelist `["7d","30d","90d","year","all"]`; inválido → `"all"`; `"all"` → `dateFrom`/`dateTo` = `undefined`; caso contrário resolver para ISO string
+- [x] 1.16 Implementar validação de `sort`: contra whitelist `["created_at","product_name"]`; `"status"` rejeitado (contrato apenas); inválido → `"created_at"`
+- [x] 1.17 Implementar validação de `order`: contra whitelist `["asc","desc"]`; inválido → `"desc"`
+- [x] 1.18 Criar testes em `src/__tests__/lib/campaign/list.test.ts` (12+ cenários):
+  - `listCampaigns` com parâmetros default retorna página 1 com 10 itens
+  - `listCampaigns` aplica `.eq("store_id", storeId)` explícito na query
+  - `listCampaigns` com `page=2` retorna itens da página 2 (range calculado corretamente)
+  - `listCampaigns` com busca textual filtra por ILIKE product_name
+  - `listCampaigns` com filtro de status `["ready"]` retorna apenas ready
+  - `listCampaigns` com filtro de data aplica gte/lte
+  - `listCampaigns` com ordenação `product_name asc`
+  - `listCampaigns` retorna `ListCampaignsResult` com total, page, totalPages
+  - `listCampaigns` com page=999 (além do total) retorna items vazio
+  - `listCampaigns` sem parâmetros equivale a default
+  - `countCampaignsFiltered` com search retorna contagem filtrada
+  - `countCampaignsFiltered` sem filtros retorna total
+  - `countCampaignsFiltered` aplica `.eq("store_id", storeId)` explícito na query
+  - `listCampaigns` throws em erro do Supabase
+- [x] 1.19 Criar testes de validação de search params:
+  - `page=0` → default 1
+  - `page=abc` → default 1
+  - `status=generating` → ignorado (default ready,error)
+  - `date=invalid` → all → dateFrom/dateTo = undefined
+  - `sort=status` → rejeitado → created_at
+  - `q` vazio → undefined
+  - `q` com 200 chars → truncado para 100
+  - `q` com espaços → trim aplicado
+- [x] 1.20 Rodar `npm run typecheck`, `npm run lint` — zero erros
+
+## 2. Plano 21-02 — URL State + Filtros
+
+- [x] 2.1 Modificar `src/app/(app)/campanhas/page.tsx`:
+  - Manter branches `no_store` e `has_store_no_campaigns` inalterados (F19 preservado)
+  - Ler `searchParams` como `Promise` (Next.js 15 — `const params = await searchParams`)
+  - Chamar `parseCampaignListSearchParams(params)` — normaliza, valida e resolve datePreset→`dateFrom`/`dateTo` ISO
+  - Chamar `listCampaigns(store.id, { page, pageSize, search, status, dateFrom, dateTo, sortBy, sortOrder })`
+  - Passar `ListCampaignsResult` + searchParams atuais para `CampaignListClient`
+- [x] 2.2 Criar `src/hooks/use-debounce.ts` com `useDebounce<T>(value, delay)` — conforme D10
+- [x] 2.3 Refatorar `src/app/(app)/campanhas/client.tsx`:
+  - Receber `ListCampaignsResult` (`items`, `total`, `page`, `totalPages`) + searchParams atuais
+  - Campo de busca textual com `useDebounce` (300ms) — onChange → `router.replace()`
+  - Chips de status (Todas / Prontas / Erro) — click → `router.replace()`
+  - Dropdown de date preset (7d / 30d / 90d / Este ano / Todas) — change → `router.replace()`
+  - Dropdown de ordenação (4 opções) — change → `router.replace()`
+  - `router.replace()` ao mudar qualquer filtro — URL é a fonte da verdade
+  - URL limpa — parâmetros default omitidos
+  - Manter cards de campanha existentes com thumbnails
+- [x] 2.4 Implementar empty states adaptativos no client:
+  - `campaigns.length === 0 && sem filtros ativos` → `CAMPAIGNS_NO_CAMPAIGNS` (F19 preservado)
+  - `campaigns.length === 0 && com filtros ativos` → `CAMPAIGNS_SEARCH_EMPTY` (novo)
+- [x] 2.5 Adicionar `CAMPAIGNS_SEARCH_EMPTY` em `src/lib/onboarding/microcopy.ts` — conforme D9
+- [x] 2.6 Criar testes em `src/__tests__/app/campanhas/campanhas-page.test.tsx` (8+ cenários):
+  - Estado `no_store` → empty state "Configure sua loja" (F19 preservado)
+  - Estado `has_store_no_campaigns` → empty state "Nenhuma campanha ainda" (F19 preservado)
+  - Página sem searchParams → chama `listCampaigns` com defaults
+  - Página com `?q=tenis` → chama `listCampaigns` com `search: "tenis"`
+  - Página com `?status=ready&date=90d&page=2` → params corretos
+  - Página com `?q=inexistente` → renders empty state "Nenhuma campanha encontrada"
+  - `useDebounce` retorna valor após delay de 300ms
+  - `useDebounce` atualiza apenas após delay
+- [x] 2.7 Rodar `npm run typecheck`, `npm run lint` — zero erros
+
+## 3. Plano 21-03 — Pagination + Acabamento
+
+- [x] 3.1 Criar `src/components/ui/pagination.tsx` — conforme D3:
+  - `PaginationProps` com `currentPage`, `totalPages`, `onPageChange`
+  - Botões numéricos com elipse para muitos pages (ex.: `1 2 3 ... 30`)
+  - "Anterior" desabilitado na página 1
+  - "Próximo" desabilitado na última página
+  - `onPageChange(page: number)` callback
+  - Usa `Button` da F18: `variant="ghost"` para páginas, `variant="secondary"` para navegação
+- [x] 3.2 Integrar `Pagination` no `CampaignListClient`:
+  - Renderizar abaixo da lista de campanhas
+  - `onPageChange` → `router.replace()` preservando outros filtros
+- [x] 3.3 Mobile básico:
+  - Busca + filtros empilhados (<768px), chips quebram para linha seguinte
+  - Pagination com botões compactos
+- [x] 3.4 Criar testes de pagination em `src/__tests__/components/ui/pagination.test.tsx` (5+ cenários):
+  - `Pagination` renderiza botões de página 1-3 com elipse para 30 páginas
+  - `Pagination` desabilita "Anterior" na primeira página
+  - `Pagination` desabilita "Próximo" na última página
+  - `Pagination` chama `onPageChange` ao clicar em página
+  - Cliente renderiza árvore completa: PageHeader + busca + lista + pagination
+- [x] 3.5 Rodar `npm run typecheck` — zero erros
+- [x] 3.6 Rodar `npm run lint` — zero erros
+- [x] 3.7 Rodar `npx vitest run` — todos os testes passando (~25 novos + 651 existentes)
+- [x] 3.8 Rodar `npm run build` — build bem-sucedido
+
+## 4. Verificação Final
+
+- [x] 4.1 `/campanhas` sem parâmetros lista página 1 com 10 itens
+- [x] 4.2 Busca textual filtra por nome do produto com debounce 300ms
+- [x] 4.3 Chips de status funcionam (Todas, Prontas, Erro)
+- [x] 4.4 Presets de data filtram corretamente (7d, 30d, 90d, Este ano, Todas)
+- [x] 4.5 Ordenação muda sequência dos resultados (4 opções)
+- [x] 4.6 URL atualiza ao mudar filtros — compartilhável e reproduzível
+- [x] 4.7 Paginação navega entre páginas preservando filtros
+- [x] 4.8 Busca sem resultados mostra empty state "Nenhuma campanha encontrada"
+- [x] 4.9 Estados vazios da F19 preservados (no_store, no_campaigns)
+- [x] 4.10 `listCampaigns` sem params equivale a page=1, pageSize=10, status=ready+error
+- [x] 4.11 Nenhuma regressão em `metrics.ts` ou `getRecentCampaigns` do dashboard
+- [x] 4.12 Componente `Pagination` reutilizável (não acoplado à página de campanhas)
+- [x] 4.13 `npm run typecheck` — zero erros
+- [x] 4.14 `npm run lint` — zero erros
+- [x] 4.15 `npx vitest run` — todos os testes passando
+- [x] 4.16 `npm run build` — build bem-sucedido
