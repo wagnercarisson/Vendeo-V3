@@ -2,7 +2,7 @@
 
 **Defined:** 2026-07-10
 **Core Value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
-**Status:** Abertura documental — requisitos detalhados serão definidos via OpenSpec
+**Status:** ✅ Completo — 21/21 requisitos implementados (F18–F22)
 
 ## v1.4 Requirements
 
@@ -10,45 +10,45 @@ Requisitos de alto nível para a milestone v1.4. Cada categoria será desdobrada
 
 ### Dashboard
 
-- [ ] **DASH-01**: Dashboard principal com visão geral do estado da loja
-- [ ] **DASH-02**: Métricas básicas (campanhas geradas, taxa de sucesso)
-- [ ] **DASH-03**: Acesso rápido à última campanha e à ação de criar nova
+- [x] **DASH-01**: Dashboard principal com visão geral do estado da loja
+- [x] **DASH-02**: Métricas básicas (campanhas geradas, taxa de sucesso)
+- [x] **DASH-03**: Acesso rápido à última campanha e à ação de criar nova
 
 ### App Shell & Navegação
 
-- [ ] **SHELL-01**: App shell com sidebar e/ou topbar como estrutura de navegação definitiva
-- [ ] **SHELL-02**: Menus consistentes entre todas as páginas
-- [ ] **SHELL-03**: Navegação clara entre seções principais (Dashboard, Campanhas, Loja, Conta)
+- [x] **SHELL-01**: App shell com sidebar e/ou topbar como estrutura de navegação definitiva
+- [x] **SHELL-02**: Menus consistentes entre todas as páginas
+- [x] **SHELL-03**: Navegação clara entre seções principais (Dashboard, Campanhas, Loja, Conta)
 
 ### Onboarding
 
-- [ ] **ONBRD-01**: Fluxo de onboarding pós-signup para novos usuários
-- [ ] **ONBRD-02**: Orientação para criar a primeira campanha
-- [ ] **ONBRD-03**: Configuração inicial da identidade da loja guiada
+- [x] **ONBRD-01**: Fluxo de onboarding pós-signup para novos usuários
+- [x] **ONBRD-02**: Orientação para criar a primeira campanha
+- [x] **ONBRD-03**: Configuração inicial da identidade da loja guiada
 
 ### Histórico de Campanhas
 
-- [ ] **HIST-01**: Lista de campanhas melhor organizada (ordenação, paginação)
-- [ ] **HIST-02**: Visualização de campanhas antigas com metadados claros
-- [ ] **HIST-03**: Transição suave entre listar, visualizar e criar nova campanha
+- [x] **HIST-01**: Lista de campanhas melhor organizada (ordenação, paginação)
+- [x] **HIST-02**: Visualização de campanhas antigas com metadados claros
+- [x] **HIST-03**: Transição suave entre listar, visualizar e criar nova campanha
 
 ### Estados Vazios
 
-- [ ] **UX-01**: Estados vazios consistentes em todas as listas e seções
-- [ ] **UX-02**: Mensagens claras com call-to-action em cada estado vazio
+- [x] **UX-01**: Estados vazios consistentes em todas as listas e seções
+- [x] **UX-02**: Mensagens claras com call-to-action em cada estado vazio
 
 ### Busca & Filtros
 
-- [ ] **SEARCH-01**: Campo de busca textual na lista de campanhas
-- [ ] **SEARCH-02**: Filtros essenciais (por data, status, produto)
-- [ ] **SEARCH-03**: Integração entre busca, filtros e url state
+- [x] **SEARCH-01**: Campo de busca textual na lista de campanhas
+- [x] **SEARCH-02**: Filtros essenciais (por data, status, produto)
+- [x] **SEARCH-03**: Integração entre busca, filtros e url state
 
 ### Mobile
 
-- [ ] **MOBILE-01**: Fluxo completo de campanha funcional em mobile
-- [ ] **MOBILE-02**: App shell adaptado para telas pequenas
-- [ ] **MOBILE-03**: Onboarding, histórico e busca utilizáveis em mobile
-- [ ] **MOBILE-04**: Estados vazios responsivos
+- [x] **MOBILE-01**: Fluxo completo de campanha funcional em mobile
+- [x] **MOBILE-02**: App shell adaptado para telas pequenas
+- [x] **MOBILE-03**: Onboarding, histórico e busca utilizáveis em mobile
+- [x] **MOBILE-04**: Estados vazios responsivos
 
 ## v2 / Futuro
 
@@ -84,27 +84,27 @@ Relacionamento entre requisitos e fases do roadmap. Preenchido durante a criaç�
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SHELL-01 | Phase 18 | Scoped via OpenSpec |
-| SHELL-02 | Phase 18 | Scoped via OpenSpec |
-| SHELL-03 | Phase 18 | Scoped via OpenSpec |
-| ONBRD-01 | Phase 19 | Scoped via OpenSpec (19-01, 19-02, 19-03) |
-| ONBRD-02 | Phase 19 | Scoped via OpenSpec (19-02) |
-| ONBRD-03 | Phase 19 | Scoped via OpenSpec (19-03) |
-| UX-01 | Phase 19 | Scoped via OpenSpec (19-01, 19-02, 19-03) |
-| UX-02 | Phase 19 | Scoped via OpenSpec (19-01, 19-02, 19-03) |
-| DASH-01 | Phase 20 | Pending scoping |
-| DASH-02 | Phase 20 | Pending scoping |
-| DASH-03 | Phase 20 | Pending scoping |
-| HIST-01 | Phase 21 | Pending scoping |
-| HIST-02 | Phase 21 | Pending scoping |
-| HIST-03 | Phase 21 | Pending scoping |
-| SEARCH-01 | Phase 21 | Pending scoping |
-| SEARCH-02 | Phase 21 | Pending scoping |
-| SEARCH-03 | Phase 21 | Pending scoping |
-| MOBILE-01 | Phase 22 | Scoped via OpenSpec (22-01, 22-02, 22-03) |
-| MOBILE-02 | Phase 22 | Scoped via OpenSpec (22-01, 22-03) |
-| MOBILE-03 | Phase 22 | Scoped via OpenSpec (22-02, 22-03) |
-| MOBILE-04 | Phase 22 | Scoped via OpenSpec (22-03) |
+| SHELL-01 | Phase 18 | ✅ Complete via OpenSpec |
+| SHELL-02 | Phase 18 | ✅ Complete via OpenSpec |
+| SHELL-03 | Phase 18 | ✅ Complete via OpenSpec |
+| ONBRD-01 | Phase 19 | ✅ Complete via OpenSpec |
+| ONBRD-02 | Phase 19 | ✅ Complete via OpenSpec |
+| ONBRD-03 | Phase 19 | ✅ Complete via OpenSpec |
+| UX-01 | Phase 19 | ✅ Complete via OpenSpec |
+| UX-02 | Phase 19 | ✅ Complete via OpenSpec |
+| DASH-01 | Phase 20 | ✅ Complete via OpenSpec |
+| DASH-02 | Phase 20 | ✅ Complete via OpenSpec |
+| DASH-03 | Phase 20 | ✅ Complete via OpenSpec |
+| HIST-01 | Phase 21 | ✅ Complete via OpenSpec |
+| HIST-02 | Phase 21 | ✅ Complete via OpenSpec |
+| HIST-03 | Phase 21 | ✅ Complete via OpenSpec |
+| SEARCH-01 | Phase 21 | ✅ Complete via OpenSpec |
+| SEARCH-02 | Phase 21 | ✅ Complete via OpenSpec |
+| SEARCH-03 | Phase 21 | ✅ Complete via OpenSpec |
+| MOBILE-01 | Phase 22 | ✅ Complete via OpenSpec (22-01, 22-02, 22-03) |
+| MOBILE-02 | Phase 22 | ✅ Complete via OpenSpec (22-01, 22-03) |
+| MOBILE-03 | Phase 22 | ✅ Complete via OpenSpec (22-02, 22-03) |
+| MOBILE-04 | Phase 22 | ✅ Complete via OpenSpec (22-03) |
 
 **Coverage:**
 - v1.4 requirements: 21 total
@@ -113,4 +113,4 @@ Relacionamento entre requisitos e fases do roadmap. Preenchido durante a criaç�
 
 ---
 *Requirements defined: 2026-07-10*
-*Last updated: 2026-07-10 after milestone v1.4 opened (documentation only)*
+*Last updated: 2026-07-15 after F18–F22 implementation completed*
