@@ -26,4 +26,13 @@ describe("AppShell", () => {
     expect(html).toContain("Dashboard");
     expect(html).toContain("storeless@test.com");
   });
+
+  it("main has responsive padding px-4 py-6 sm:px-6", () => {
+    const html = renderToString(
+      <AppShell user={{ claims: { email: "test@test.com" } }}>
+        <p>Conteúdo</p>
+      </AppShell>,
+    );
+    expect(html).toContain("px-4 py-6 sm:px-6");
+  });
 });

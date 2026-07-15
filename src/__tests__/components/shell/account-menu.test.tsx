@@ -71,4 +71,13 @@ describe("AccountMenu", () => {
     fireEvent.keyDown(dropdown || document, { key: "Escape" });
     expect(screen.queryByText("Configurações")).toBeNull();
   });
+
+  it("prefers-reduced-motion: reduce removes transition from chevron", () => {
+    mockMatchMedia(true);
+    const { container } = render(<AccountMenu user={{ claims: { email: "user@vendeo.tech" } }} />);
+    const trigger = screen.getByRole("button");
+    fireEvent.click(trigger);
+    const chevron = container.querySelector(".lucide-chevron-down");
+    expect(chevron?.className).not.toContain("duration-200");
+  });
 });

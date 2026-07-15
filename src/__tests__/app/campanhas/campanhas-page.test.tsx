@@ -118,6 +118,34 @@ describe("CampanhasPage (Server Component — SSR with searchParams)", () => {
     expect(html).toContain("Pronta");
   });
 
+  it("filters stack vertically on mobile (flex-col)", async () => {
+    mockGetCurrentStore.mockResolvedValue({ id: "store-456" });
+    mockListCampaigns.mockResolvedValue(
+      mockCampaignsResult(
+        [
+          {
+            id: "c1",
+            productName: "Produto",
+            status: "ready",
+            createdAt: "2026-01-01T00:00:00Z",
+            thumbnailUrl: null,
+            storagePath: "s/c1.jpg",
+          },
+        ],
+        1,
+      ),
+    );
+
+    const { default: CampanhasPage } = await import(
+      "@/app/(app)/campanhas/page"
+    );
+    const result = await CampanhasPage({ searchParams: Promise.resolve({}) });
+    const html = renderToString(result);
+
+    expect(html).toContain("flex-col");
+    expect(html).toContain("md:flex-row");
+  });
+
   it("touch targets have min-h-[44px]", async () => {
     mockGetCurrentStore.mockResolvedValue({ id: "store-456" });
     mockListCampaigns.mockResolvedValue(
