@@ -1,24 +1,24 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.4
-milestone_name: Experiência SaaS
-status: in_progress
-last_updated: "2026-07-14T19:48:00.000Z"
-last_activity: 2026-07-14
+milestone: v1.5
+milestone_name: "(a definir)"
+status: planned
+last_updated: "2026-07-15T16:00:00.000Z"
+last_activity: 2026-07-15
 progress:
-  total_phases: 5
-  completed_phases: 5
+  total_phases: 0
+  completed_phases: 0
   planned_phases: 0
-  total_plans: 18
-  completed_plans: 18
+  total_plans: 0
+  completed_plans: 0
   planned_plans: 0
-  percent: 100
+  percent: 0
 ---
 
 # Project State
 
 **Last updated:** 2026-07-15
-**Milestone:** v1.4 — Experiência SaaS ◆ F18 ✅, F19 ✅, F20 ✅, F21 ✅, F22 ✅
+**Milestone:** v1.4 — Experiência SaaS ✅ SHIPPED
 
 ## Completed
 
@@ -80,23 +80,31 @@ progress:
 | 14-02 | 2 | ✅ | Orquestração em generate-image — pipeline INSERT→IA→transcode→upload→updateReady com compensação |
 | 14-03 | 3 | ✅ | Consumer no Cliente — navegação /campanha/[id], sessionStorage campaign_preview removido |
 
-## Current Position
+## Archived Milestones
 
-**Milestone:** v1.4 — Experiência SaaS ✅ (5/5 phases complete)
-**Phase 21:** Histórico e Busca ✅ (3/3 plans)
-**Phase 22:** Mobile Hardening ✅ (3/3 plans)
-**Current:** v1.4 — Milestone Experiência SaaS completa (22 plans, 713 tests, typecheck/lint/build OK)
-**Last activity:** 2026-07-15 — Phase 22 execution complete (3 plans, 3 SUMMARY.md)
+### v1.4 — Experiência SaaS ✅ SHIPPED
+
+| Phase | Plans | Status | Completed |
+|-------|-------|--------|-----------|
+| 18 — App Shell + UI Base + Rotas | 3/3 | ✅ | 2026-07-13 |
+| 19 — Onboarding & Estados Vazios | 3/3 | ✅ | 2026-07-13 |
+| 20 — Dashboard | 3/3 | ✅ | 2026-07-13 |
+| 21 — Histórico e Busca | 3/3 | ✅ | 2026-07-14 |
+| 22 — Mobile Hardening | 3/3 | ✅ | 2026-07-15 |
+
+**Total:** 5 phases, 18 plans, 713 tests, 89 files
+**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
+**UAT:** 61/61 ✅
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-07-10)
+See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** v1.4 — Experiência SaaS ◆ F21 ✅, F22 ○ Planned
+**Current focus:** v1.5 — (a definir via /gsd-new-milestone)
 
-## Completed
+## Completed Milestones
 
 ### Phase 18 — App Shell + UI Base + Rotas ✅
 
@@ -176,23 +184,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-10)
 - `b31923b` — 21-02: URL State + Filtros — SSR, useDebounce, client.tsx, microcopy, 12 testes
 - `48a6e3b` — 21-03: Pagination + Acabamento — Pagination, integração, 10 testes
 
-## Performance Metrics
 
-| Phase | Plans | Duration | Tests |
-|-------|-------|----------|-------|
-| Phase 18 — App Shell + UI Base + Rotas | 3 plans | ~multi-cycle | 579→600 (21 novos) |
-| Phase 19 — Onboarding & Estados Vazios | 3 plans | single session | 600→628 (28 novos) |
-| Phase 20 — Dashboard | 3 plans | single session | 628→651 (23 novos) |
-| Phase 21 — Histórico e Busca | 3 plans | single session | 651→691 (40 novos) |
-| Phase 22 — Mobile Hardening | 3 plans | single session | 691→713 (22 novos) |
-
-## Milestone v1.4 — Experiência SaaS ✅
-
-5 phases (F18-F22): F18 ✅, F19 ✅, F20 ✅, F21 ✅, F22 ✅.
-Total completed: 713 tests, 89 files (Phase 22: +22 tests).
-Total plans: 18/18 complete.
 
 ## Next Steps
 
-- Milestone v1.4 — Experiência SaaS **concluída** 🎉
-- Definir próximo milestone
+- ✅ Milestone v1.4 — Experiência SaaS **concluída e arquivada** 🎉
+- ▶️ Iniciar v1.5 via `/gsd-new-milestone`

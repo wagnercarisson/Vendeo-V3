@@ -4,7 +4,7 @@
 
 O Vendeo é um motor SaaS de geração de campanhas para lojistas de lojas físicas. O produto transforma informações simples da loja (produto, oferta, preço) em campanhas profissionais para redes sociais, combinando inteligência artificial comercial com renderização programática. O lojista informa o essencial, e o Vendeo entrega uma peça visual pronta para publicar — sem precisar aprender design, copywriting ou marketing.
 
-O Vendeo é hoje uma aplicação multi-tenant com autenticação completa, isolamento de propriedade via RLS, e geração de campanhas com IA — pronta para receber os primeiros usuários reais em ambiente controlado.
+O Vendeo é hoje uma aplicação SaaS multi-tenant com autenticação completa, isolamento de propriedade via RLS, geração de campanhas com IA, app shell profissional, onboarding, dashboard, busca, paginação e suporte mobile — pronta para receber os primeiros usuários reais em ambiente controlado.
 
 ## Core Value
 
@@ -12,31 +12,25 @@ Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confian�
 
 ## Current State
 
-**Shipped: v1.3 — Persistência e Entrega da Campanha (2026-07-10)**
+**Shipped: v1.4 — Experiência SaaS (2026-07-15)**
 
-A milestone v1.3 completou o ciclo completo de persistência e entrega: o usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la.
+A milestone v1.4 transformou o Vendeo em um produto SaaS coerente: app shell profissional, navegação PT-BR, dashboard, onboarding, busca/filtros/paginação e suporte mobile responsivo.
 
-- **Fundação DB/Storage**: tabela `campaigns` (12 colunas, RLS, índices), bucket `campaign-images` (privado, 10MB, sem UPDATE policy para imutabilidade)
-- **Serviço de Persistência**: 7 helpers (`createCampaign`, `dataUrlToCampaignImage`, `uploadCampaignImage`, `updateCampaignReady`, `updateCampaignError`, `getCampaign`, `deleteCampaignImage`) + download route com guard pipeline
-- **Integração no Fluxo de Geração**: pipeline `INSERT→IA→transcode→upload→updateReady` com compensação, `sharp` para transcodificação PNG/WEBP→JPEG, consumo via NDJSON com `campaignId`/`campaignUrl`
-- **Página de Campanha**: `/campanha/[id]` com 4 estados (ready/generating/stale/error), preview com signed URL, botão de download
-- **Minhas Campanhas**: `/minhas-campanhas` com listagem via RLS, thumbnails, estado vazio, navegação integrada
-- **Edição de Publication Copy**: coluna `publication_copy_current`, validação de caption/hashtags/cta_post, rota PATCH com CSRF+auth+ownership+restore, UI de edição inline
+- **App Shell + UI Base**: 7 componentes UI (Button, Card, Input, Badge, EmptyState, Skeleton, PageHeader), sidebar com 4 nav links + Lucide icons, topbar com CTA + AccountMenu, drawer mobile com acessibilidade
+- **Rotas PT-BR**: `/dashboard`, `/campanhas`, `/campanhas/nova`, `/campanhas/[id]`, `/loja`, `/conta` — 5 redirects 301, middleware atualizado
+- **Onboarding & Empty States**: helper 3 estados (no_store, has_store_no_campaigns, has_store_with_campaigns), empty states contextuais em vez de redirects, microcopy centralizada
+- **Dashboard Real**: saudação com 3 períodos (manhã/tarde/noite), 3 metric cards (total, prontas, taxa de sucesso), campanhas recentes, card de próximo passo adaptativo
+- **Histórico e Busca**: busca ILIKE, filtros por status/data, ordenação, paginação page-based (10/página), URL state compartilhável, Pagination component com ellipsis
+- **Mobile Hardening**: drawer com focus trap + body scroll lock + prefers-reduced-motion, touch targets ≥44px em toda a interface, responsivo validado em 320/375/768px
 
-**579 testes automatizados**, **67 test files**, **TypeScript/lint/build limpos**.
+**713 testes automatizados**, **89 test files**, **TypeScript/lint/build limpos**.
 
-## Current Milestone: v1.4 — Experiência SaaS
+## Current Milestone: v1.5 — (A definir)
 
-**Goal:** O Vendeo passa a parecer e funcionar como um produto SaaS coerente, não apenas como um motor encapsulado.
+**Goal:** A definir via `/gsd-new-milestone`.
 
 **Target features:**
-- Dashboard principal com visão geral
-- App shell e menus definitivos (navegação estrutural)
-- Fluxo de onboarding para novos usuários
-- Histórico de campanhas melhor organizado
-- Estados vazios consistentes em toda a aplicação
-- Busca e filtros essenciais nas listas
-- Fluxo mobile completo responsivo
+- _Em definição_
 
 <details>
 <summary>Versões anteriores</summary>
@@ -104,20 +98,20 @@ A milestone v1.3 completou o ciclo completo de persistência e entrega: o usuár
 - ✓ **PERSIST-05** — Rota protegida `/campanha/[id]` exibe campanha persistida — v1.3
 - ✓ **PERSIST-06** — Download do original (PNG/JPG) — v1.3
 - ✓ **PERSIST-07** — Rota autenticada `/minhas-campanhas` lista campanhas da loja do usuário logado — v1.3
+- ✓ **SHELL-01** — App shell com navegação estrutural (sidebar/topbar, menus definitivos) — v1.4
+- ✓ **DASH-01** — Dashboard principal com visão geral (campanhas recentes, métricas básicas) — v1.4
+- ✓ **ONBRD-01** — Fluxo de onboarding para novos usuários pós-signup — v1.4
+- ✓ **HIST-01** — Histórico de campanhas melhor organizado (ordenação, paginação) — v1.4
+- ✓ **UX-01** — Estados vazios consistentes em toda a aplicação — v1.4
+- ✓ **SEARCH-01** — Busca e filtros essenciais nas listas de campanhas — v1.4
+- ✓ **MOBILE-01** — Fluxo mobile completo responsivo — v1.4
 
 ### Active
 
-- [ ] **DASH-01**: Dashboard principal com visão geral (campanhas recentes, métricas básicas)
-- [ ] **SHELL-01**: App shell com navegação estrutural (sidebar/topbar, menus definitivos)
-- [ ] **ONBRD-01**: Fluxo de onboarding para novos usuários pós-signup
-- [ ] **HIST-01**: Histórico de campanhas melhor organizado (ordenação, paginação)
-- [ ] **UX-01**: Estados vazios consistentes em toda a aplicação
-- [ ] **SEARCH-01**: Busca e filtros essenciais nas listas de campanhas
-- [ ] **MOBILE-01**: Fluxo mobile completo responsivo
+_Requirements para v1.5 serão definidos via `/gsd-new-milestone`._
 
 ### Out of Scope
 
-- Dashboard — AGORA NO ESCOPO (v1.4)
 - Regeneração — redefinida como "novo briefing" (MC-02), não implementada
 - Planos e cobrança — uso livre durante validação do SaaS
 - Múltiplas lojas — relação 1:1 mantida
@@ -131,15 +125,16 @@ A milestone v1.3 completou o ciclo completo de persistência e entrega: o usuár
 
 ## Context
 
-**Current state (abertura v1.4):**
-- ~579 testes automatizados, 67 test files, zero erros de tipo/lint/build
-- Aplicação multi-tenant funcional em beta.vendeo.tech
-- Ciclo completo de campanha: formulário → geração com IA → renderização → persistência → visualização → download
-- Campaigns persistidas no banco com RLS, imagens no Storage com signed URLs
-- Edição de publication copy (caption, hashtags, cta_post) sem regenerar imagem
-- Lista de campanhas do usuário logado em `/minhas-campanhas`
+**Current state (após v1.4):**
+- ~713 testes automatizados, 89 test files, zero erros de tipo/lint/build
+- Aplicação SaaS multi-tenant funcional em beta.vendeo.tech
+- Ciclo completo de campanha + persistência + entrega
+- App shell profissional com sidebar, topbar, drawer mobile acessível
+- Dashboard com métricas, campanhas recentes e onboarding adaptativo
+- Histórico com busca ILIKE, filtros, paginação e URL state
+- Interface responsiva com touch targets ≥44px, validada em 320/375/768px
 - Bucket `store-logos`: 0 objetos, pendente de remoção
-- **Próximo: v1.4 — Experiência SaaS** — dashboard, app shell, onboarding, histórico, busca/filtros, mobile
+- **Próximo: v1.5 — a definir**
 
 **User profile:** Pequenos e médios lojistas físicos que acumulam funções operacionais, comerciais e administrativas — não têm tempo, criatividade ou recursos para design profissional.
 
@@ -155,7 +150,7 @@ A milestone v1.3 completou o ciclo completo de persistência e entrega: o usuár
 - **Validação**: Toda fase exige validação automática (TypeScript, lint, build) e manual
 - **Ordem**: Visão primeiro → direção visual → core de campanha → estrutura SaaS
 
-> **Nota:** "Auth futura" já não é mais uma constraint — auth está implementado desde v1.2.
+> **Nota:** Auth, multi-tenant, persistência, entrega, app shell e experiência SaaS estão implementados desde v1.4.
 
 ## Key Decisions
 
@@ -184,6 +179,12 @@ A milestone v1.3 completou o ciclo completo de persistência e entrega: o usuár
 | Compensação por tipo de falha (upload vs updateReady) | Delete imagem se upload OK mas updateReady falha | ✓ Good — F14 |
 | Fallback publication copy: current > snapshot > vazio | Por shape/tipo, não truthiness | ✓ Good — F17 |
 | Validação isolada em publication-copy.ts | Reutilizável entre backend e frontend | ✓ Good — F17 |
+| PT-BR como língua padrão da interface | Produto brasileiro | ✓ Good — F18 |
+| Empty states em vez de redirects | Melhor UX de onboarding, evita bouncing | ✓ Good — F19 |
+| Dashboard adaptativo 3 estados reaproveitando onboarding helper | DRY, single source of truth | ✓ Good — F20 |
+| Busca ILIKE server-side + client-side debounce | Performance sem comprometer UX | ✓ Good — F21 |
+| Touch targets ≥44px como padrão de acessibilidade mobile | WCAG minimum, sem lib externa | ✓ Good — F22 |
+| Focus trap manual no drawer (sem lib externa) | Evita dependência para funcionalidade simples | ✓ Good — F22 |
 
 ## Evolution
 
@@ -196,4 +197,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-10 after milestone v1.4 opened*
+*Last updated: 2026-07-15 after milestone v1.4 shipped*

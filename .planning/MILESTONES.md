@@ -1,93 +1,70 @@
 # Milestones
 
-## v1.3 Persistência e Entrega da Campanha (Shipped: 2026-07-10)
+## v1.4 — Experiência SaaS ✅
 
-**Phases completed:** 6 phases (12-17), 19 plans, 579 tests (67 files)
+**Shipped:** 2026-07-15
+**Phases:** 5 (F18-F22) | **Plans:** 18/18
+**Tests:** 579→713 (+134) | **UAT:** 61/61 ✅
+**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 
-**Key accomplishments:**
+### Delivered
 
-- **Fundação DB/Storage**: Tabela `campaigns` (12 colunas, RLS, CHECK constraints), bucket `campaign-images` (privado, imutável), migrations com revert commands
-- **Serviço de Persistência**: 7 helpers (create/upload/update/get/delete), pipeline de guard para download, 25 testes de unidade
-- **Integração no Fluxo de Geração**: Pipeline INSERT→IA→transcode→upload→updateReady com compensação, sharp para transcodificação, NDJSON extendido com campaignId/campaignUrl
-- **Página de Campanha**: `/campanha/[id]` com 4 estados (ready/generating/stale/error), preview com signed URL, download, polling 5s
-- **Minhas Campanhas**: `/minhas-campanhas` com listagem RLS, thumbnails, estado vazio, navegação integrada (auth-header, back link, preview redirect)
-- **Edição de Publication Copy**: Coluna JSONB, validação caption/hashtags/cta_post, PATCH com CSRF+auth+ownership+restore, UI inline edit
+O Vendeo passou a parecer e funcionar como um produto SaaS coerente — app shell profissional, navegação PT-BR, dashboard, onboarding, busca e mobile.
 
-**Ciclo E2E completo:** Gerou → Saiu → Voltou → Encontrou → Baixou ✅
+### Key Accomplishments
 
----
+1. **App Shell + PT-BR Routes** — 7 UI components, sidebar/topbar/drawer, 5 redirects 301, navegação SaaS profissional
+2. **Onboarding & Empty States** — Helper 3 estados, dashboard inteligente, redirects substituídos por orientação contextual
+3. **Dashboard Real** — Saudação com 3 períodos, 3 cards de métricas, campanhas recentes, card de próximo passo adaptativo
+4. **Histórico e Busca** — Busca ILIKE, filtros status/data, ordenação, paginação page-based, URL state compartilhável
+5. **Mobile Hardening** — Drawer com focus trap + a11y, touch targets ≥44px, responsivo 320/375/768px, 21/21 UAT
 
-## 1.0 MVP (Shipped: 2026-05-25)
+### Known Gaps
 
-**Phases completed:** 2 phases (Foundation, Campaign Input), 3 plans, 25 tasks
-
-**Key accomplishments:**
-
-- Store identity CRUD (name, segment, brand color, city/state) with Supabase persistence and localStorage
-- Campaign input form with product name, BRL currency mask, description, badge selection, and image upload
-- Route split: `/` for campaign input, `/store` for store identity, with bidirectional navigation
-- Client-side validation on all fields with inline errors, BRL mask with raw-digit extraction, and local submit success state
-- Read-only store identity card on campaign page using `resolveStoreIdentity` fallback colors
-
-**Known deferred items at close:** 0
-
-**Known gaps:**
-
-- INPT-04 (logo upload): Intentionally deferred per Phase 1 specs. Name-based visual identity fallback works via `resolveStoreIdentity`.
+- 4 orphaned exports (non-critical dead code accepted as tech debt)
 
 ---
 
-## 1.1 Motor de Campanhas (Shipped: 2026-07-03)
+## v1.3 — Persistência e Entrega da Campanha ✅
 
-**Fases concluídas:** 26 fases (Phases 1-5), 128 plans
+**Shipped:** 2026-07-10
+**Phases:** 6 (F12-F17) | **Plans:** 20/20
+**Tests:** 579 passing
 
-**Principais entregas:**
+### Delivered
 
-- **AI Campaign Intelligence:** Dois provedores (OpenAI/Anthropic), structured outputs, validação Zod, camada de abstração com fallback
-- **Visual Rendering:** Renderização programática com CampaignRenderer, ajustes de copy no preview, geração por IA como saída primária
-- **Store Identity Completa:**
-  - Upload de logo com análise BrandDirector (5 variantes, color probing, guardrails)
-  - Assinatura visual gerada por IA com fluxo de aprovação
-  - Fallback tipográfico e text-only inference
-- **Identidade da Loja:** 3 estados de identidade (logo, visual_signature, text_only), detecção de drift, políticas por estado, ciclo de vida completo
-- **Cores e Preferências:** Persistência de escolhas do usuário, inferência de paleta, realinhamento, validação de cores
-- **Campaign Briefing:** Pipeline identity-aware com StoreIdentitySnapshot 2.0, 5 directives, integração com provider de geração
-- **Qualidade:** 297 testes automatizados (27 suites), UAT por fase com verificação manual e automática
-
-**Decisões de close-out (MC-01 a MC-05):**
-
-| ID | Decisão | Impacto |
-|----|---------|---------|
-| MC-01 | Ajustes de arte removidos como requisito | Motor valida geração, não edição pós-geração |
-| MC-02 | Regeneração redefinida como "novo briefing" | Evita complexidade de re-renderização |
-| MC-03 | Export PNG/JPG movido para próxima milestone | Fará parte da infraestrutura SaaS |
-| MC-04 | CSS Renderer marcado como legado | IA gera a imagem final; CSS é fallback de preview |
-| MC-05 | v1.1 validou o motor, não versão pública | Próxima milestone constrói estrutura SaaS |
-
-**Known deferred items at close:** 7 (see STATE.md Deferred Items — all metadata tracking, no functional gaps)
-
-**Gaps conhecidos:**
-
-- Export PNG/JPG: movido para próxima milestone
-- Ajustes visuais (paleta, fonte, layout): removidos como requisito
-- Regeneração: redefinida, aguardando implementação futura
-- Agency-grade publishability: baseline funcional, qualidade premium não atingida
-- Auth, dashboard, segurança: não implementados — escopo da próxima milestone
+O usuário gera uma campanha, sai do sistema, volta depois e consegue encontrá-la e baixá-la.
 
 ---
 
-## v1.4 Experiência SaaS (Em Planejamento — 2026-07-10)
+## v1.2 — Contas e Propriedade ✅
 
-**Escopo macro:**
-- Dashboard com visão geral e métricas básicas
-- App shell e menus definitivos (navegação estrutural)
-- Fluxo de onboarding para novos usuários
-- Histórico de campanhas melhor organizado
-- Estados vazios consistentes
-- Busca e filtros essenciais
-- Fluxo mobile completo responsivo
+**Shipped:** 2026-07-08
+**Phases:** 5 (F7-F11) | **Plans:** 20/20
+**Tests:** 457 passing
 
-**Fases sugeridas:** 5 fases (18–22), 21 requisitos de alto nível
-**Critério:** O Vendeo passa a parecer e funcionar como um produto SaaS coerente, não apenas como um motor encapsulado.
+### Delivered
 
-**Status:** Abertura documental — requisitos detalhados e fases serão definidos via OpenSpec.
+Autenticação completa, vínculo user→store, isolamento multi-tenant, beta.vendeo.tech operacional.
+
+---
+
+## v1.1 — Motor de Campanhas ✅
+
+**Shipped:** 2026-07-03
+**Phases:** (F3-F6)
+
+### Delivered
+
+IA Campaign Intelligence, Visual Rendering, Store Identity, Campaign Briefing.
+
+---
+
+## v1.0 — Core de Geração ✅
+
+**Shipped:** 2026-07-03
+**Phases:** (F1-F2)
+
+### Delivered
+
+Formulário guiado, upload de imagem, store identity, rotas iniciais.
