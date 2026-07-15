@@ -9,16 +9,16 @@ progress:
   total_phases: 5
   completed_phases: 4
   planned_phases: 1
-  total_plans: 12
+  total_plans: 15
   completed_plans: 12
-  planned_plans: 0
-  percent: 100
+  planned_plans: 3
+  percent: 80
 ---
 
 # Project State
 
-**Last updated:** 2026-07-14
-**Milestone:** v1.4 — Experiência SaaS ◆ F18 ✅, F19 ✅, F20 ✅, F21 ✅, F22 ○ Pending
+**Last updated:** 2026-07-15
+**Milestone:** v1.4 — Experiência SaaS ◆ F18 ✅, F19 ✅, F20 ✅, F21 ✅, F22 ○ Planned
 
 ## Completed
 
@@ -82,10 +82,11 @@ progress:
 
 ## Current Position
 
-**Milestone:** v1.4 — Experiência SaaS ◆ Em andamento (F18-F22: 3/5 phases complete)
+**Milestone:** v1.4 — Experiência SaaS ◆ Em andamento (F18-F22: 4/5 phases complete, 1 planned)
 **Phase 21:** Histórico e Busca ✅ (3/3 plans)
-**Current:** v1.4 — Phase 21 implemented. Next: Phase 22 Mobile Hardening.
-**Last activity:** 2026-07-14 — Phase 21 implementation (3 waves, 691 tests)
+**Phase 22:** Mobile Hardening ○ Planned (3/3 plans created)
+**Current:** v1.4 — Phase 22 mobile-hardening planned (3 plans). Ready for execution.
+**Last activity:** 2026-07-15 — Phase 22 planning (3 plans, 3 plan files)
 
 ## Project Reference
 
@@ -93,7 +94,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-10)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** v1.4 — Experiência SaaS ◆ F21 ✅, F22 ○ Pending
+**Current focus:** v1.4 — Experiência SaaS ◆ F21 ✅, F22 ○ Planned
 
 ## Completed
 
@@ -183,12 +184,14 @@ See: `.planning/PROJECT.md` (updated 2026-07-10)
 | Phase 19 — Onboarding & Estados Vazios | 3 plans | single session | 600→628 (28 novos) |
 | Phase 20 — Dashboard | 3 plans | single session | 628→651 (23 novos) |
 | Phase 21 — Histórico e Busca | 3 plans | single session | 651→691 (40 novos) |
+| Phase 22 — Mobile Hardening | 3 plans (planned) | planning session | — (not yet executed) |
 
 ## Milestone v1.4 — Experiência SaaS ◆
 
-5 phases (F18-F22): F18 ✅, F19 ✅, F20 ✅, F21 ✅, F22 ○ Pending.
-Total completed: 691 tests, 89 files. Phase 21 added 40 tests.
+5 phases (F18-F22): F18 ✅, F19 ✅, F20 ✅, F21 ✅, F22 ○ Planned.
+Total completed: 691 tests, 89 files (Phase 21: +40 tests).
+Total planned: 3 plans (22-01, 22-02, 22-03).
 
 ## Next Steps
 
-- Planejar F22: Mobile Hardening
+- Executar F22: Mobile Hardening — começar com 22-01 (Shell Acessível)

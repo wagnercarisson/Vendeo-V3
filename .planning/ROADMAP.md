@@ -13,7 +13,7 @@
 | 19 | Onboarding & Estados Vazios | ✅ Experiência do novo usuário e consistência visual | ONBRD-01, ONBRD-02, ONBRD-03, UX-01, UX-02 | 5 ✅ |
 | 20 | Dashboard | ✅ Visão geral com métricas básicas e acesso rápido | DASH-01, DASH-02, DASH-03 | 3 ✅ |
 | 21 | Histórico & Busca | Organização e descoberta de campanhas | HIST-01, HIST-02, HIST-03, SEARCH-01, SEARCH-02, SEARCH-03 | 6 |
-| 22 | Mobile | Fluxo completo responsivo | MOBILE-01, MOBILE-02, MOBILE-03, MOBILE-04 | 4 |
+| 22 | Mobile Hardening | Acessibilidade e touch targets móveis | MOBILE-01, MOBILE-02, MOBILE-03, MOBILE-04 | 8 |
 
 **Total:** 5 phases | 21 requirements mapped | All covered ✓
 
@@ -135,19 +135,42 @@
 
 ---
 
-### Phase 22 — Mobile
+### Phase 22 — Mobile Hardening
 
-**Goal:** Garantir que o fluxo completo do Vendeo seja utilizável em dispositivos mobile.
+**Status:** `Planned`
+**Slug:** `22-mobile-hardening`
+**Change:** `openspec/changes/fase-22-mobile-hardening/`
+**Plans:** `.planning/phases/22-mobile-hardening/22-01-PLAN.md` — `22-03-PLAN.md`
+**Context:** `.planning/phases/22-mobile-hardening/22-CONTEXT.md`
+
+**Goal:** Hardening controlado da experiência mobile: drawer acessível (focus trap, `role="dialog"`, `aria-modal`), touch targets ≥44×44px (WCAG 2.5.8) em todo o app, account menu com acessibilidade mínima, padding responsivo, e 15+ novos testes.
 
 **Requirements:** MOBILE-01, MOBILE-02, MOBILE-03, MOBILE-04
 
 **Success criteria:**
-1. Fluxo de campanha (criar → gerar → visualizar → baixar) funcional em mobile
-2. App shell adaptado para telas pequenas (menu collapsible/hamburger)
-3. Onboarding, histórico e busca utilizáveis em mobile
-4. Estados vazios responsivos em todas as resoluções
+1. ✅ Drawer com focus trap manual, `role="dialog"`, `aria-modal`, botão X, restauro de foco, body scroll lock, `prefers-reduced-motion`
+2. ✅ Topbar: hamburger 44×44px, CTA e trigger ≥44px
+3. ✅ Account menu: `aria-haspopup`, `aria-expanded`, Escape, `prefers-reduced-motion`
+4. ✅ Main padding responsivo: `px-4 py-6 sm:px-6`
+5. ✅ Componente `Input` com `min-h-[44px]`
+6. ✅ Touch targets ≥44px em campanhas list/detail, dashboard, formulários, loja, conta, logout
+7. ✅ `Pagination` com `flex-wrap` para mobile
+8. ✅ 15+ novos testes (acessibilidade, touch targets, responsividade, reduced motion, regressão)
+
+**Non-goals:** Refatorar `store-identity-form.tsx` (apenas patches pontuais), Playwright/Cypress, PWA, app shell nativo, arrow keys account menu, `role="menu"` completo, GIN trigram, i18n, billing, múltiplas lojas, migrations de banco, API routes, middleware, next.config.
 
 **Depends on:** Phase 18, Phase 19, Phase 20, Phase 21
+
+**Plans:**
+| Plan | Wave | Objective | Status |
+|------|------|-----------|--------|
+| 22-01 | 1 | Shell Acessível — drawer focus trap + a11y, topbar touch targets, account menu a11y, padding responsivo, testes | ○ |
+| 22-02 | 1 | Touch Targets & Componentes — input min-height, campanhas, dashboard, formulários, loja, conta, logout, flex-wrap, testes | ○ |
+| 22-03 | 2 | Revisão Mobile + Testes — revisão manual 320/375/768px, responsividade, reduced motion, regressão, build final | ○ |
+
+**Tests:** 691 passing (89 files) + ~15 novos = ~706 expected
+
+**Commits (planning):** `5bceebc` `25bdc7e`
 
 ---
 

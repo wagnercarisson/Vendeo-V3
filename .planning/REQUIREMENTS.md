@@ -101,10 +101,10 @@ Relacionamento entre requisitos e fases do roadmap. Preenchido durante a cria√ß√
 | SEARCH-01 | Phase 21 | Pending scoping |
 | SEARCH-02 | Phase 21 | Pending scoping |
 | SEARCH-03 | Phase 21 | Pending scoping |
-| MOBILE-01 | Phase 22 | Pending scoping |
-| MOBILE-02 | Phase 22 | Pending scoping |
-| MOBILE-03 | Phase 22 | Pending scoping |
-| MOBILE-04 | Phase 22 | Pending scoping |
+| MOBILE-01 | Phase 22 | Scoped via OpenSpec (22-01, 22-02, 22-03) |
+| MOBILE-02 | Phase 22 | Scoped via OpenSpec (22-01, 22-03) |
+| MOBILE-03 | Phase 22 | Scoped via OpenSpec (22-02, 22-03) |
+| MOBILE-04 | Phase 22 | Scoped via OpenSpec (22-03) |
 
 **Coverage:**
 - v1.4 requirements: 21 total
