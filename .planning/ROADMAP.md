@@ -137,7 +137,7 @@
 
 ### Phase 22 — Mobile Hardening
 
-**Status:** `Planned`
+**Status:** `Complete ✅`
 **Slug:** `22-mobile-hardening`
 **Change:** `openspec/changes/fase-22-mobile-hardening/`
 **Plans:** `.planning/phases/22-mobile-hardening/22-01-PLAN.md` — `22-03-PLAN.md`
@@ -155,7 +155,7 @@
 5. ✅ Componente `Input` com `min-h-[44px]`
 6. ✅ Touch targets ≥44px em campanhas list/detail, dashboard, formulários, loja, conta, logout
 7. ✅ `Pagination` com `flex-wrap` para mobile
-8. ✅ 15+ novos testes (acessibilidade, touch targets, responsividade, reduced motion, regressão)
+8. ✅ 22 novos testes (acessibilidade, touch targets, responsividade, reduced motion, regressão)
 
 **Non-goals:** Refatorar `store-identity-form.tsx` (apenas patches pontuais), Playwright/Cypress, PWA, app shell nativo, arrow keys account menu, `role="menu"` completo, GIN trigram, i18n, billing, múltiplas lojas, migrations de banco, API routes, middleware, next.config.
 
@@ -164,13 +164,13 @@
 **Plans:**
 | Plan | Wave | Objective | Status |
 |------|------|-----------|--------|
-| 22-01 | 1 | Shell Acessível — drawer focus trap + a11y, topbar touch targets, account menu a11y, padding responsivo, testes | ○ |
-| 22-02 | 1 | Touch Targets & Componentes — input min-height, campanhas, dashboard, formulários, loja, conta, logout, flex-wrap, testes | ○ |
-| 22-03 | 2 | Revisão Mobile + Testes — revisão manual 320/375/768px, responsividade, reduced motion, regressão, build final | ○ |
+| 22-01 | 1 | Shell Acessível — drawer focus trap + a11y, topbar touch targets, account menu a11y, padding responsivo, testes | ✅ |
+| 22-02 | 1 | Touch Targets & Componentes — input min-height, campanhas, dashboard, formulários, loja, conta, logout, flex-wrap, testes | ✅ |
+| 22-03 | 2 | Revisão Mobile + Testes — revisão manual 320/375/768px, responsividade, reduced motion, regressão, build final | ✅ |
 
-**Tests:** 691 passing (89 files) + ~15 novos = ~706 expected
+**Tests:** 713 passing (89 files) — 22 novos testes de F22
 
-**Commits (planning):** `5bceebc` `25bdc7e`
+**Commits:** `8e471af` `d44813f` `ec1e0b1`
 
 ---
 

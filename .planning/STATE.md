@@ -7,18 +7,18 @@ last_updated: "2026-07-14T19:48:00.000Z"
 last_activity: 2026-07-14
 progress:
   total_phases: 5
-  completed_phases: 4
-  planned_phases: 1
-  total_plans: 15
-  completed_plans: 12
-  planned_plans: 3
-  percent: 80
+  completed_phases: 5
+  planned_phases: 0
+  total_plans: 18
+  completed_plans: 18
+  planned_plans: 0
+  percent: 100
 ---
 
 # Project State
 
 **Last updated:** 2026-07-15
-**Milestone:** v1.4 — Experiência SaaS ◆ F18 ✅, F19 ✅, F20 ✅, F21 ✅, F22 ○ Planned
+**Milestone:** v1.4 — Experiência SaaS ◆ F18 ✅, F19 ✅, F20 ✅, F21 ✅, F22 ✅
 
 ## Completed
 
@@ -82,11 +82,11 @@ progress:
 
 ## Current Position
 
-**Milestone:** v1.4 — Experiência SaaS ◆ Em andamento (F18-F22: 4/5 phases complete, 1 planned)
+**Milestone:** v1.4 — Experiência SaaS ✅ (5/5 phases complete)
 **Phase 21:** Histórico e Busca ✅ (3/3 plans)
-**Phase 22:** Mobile Hardening ○ Planned (3/3 plans created)
-**Current:** v1.4 — Phase 22 mobile-hardening planned (3 plans). Ready for execution.
-**Last activity:** 2026-07-15 — Phase 22 planning (3 plans, 3 plan files)
+**Phase 22:** Mobile Hardening ✅ (3/3 plans)
+**Current:** v1.4 — Milestone Experiência SaaS completa (22 plans, 713 tests, typecheck/lint/build OK)
+**Last activity:** 2026-07-15 — Phase 22 execution complete (3 plans, 3 SUMMARY.md)
 
 ## Project Reference
 
@@ -184,14 +184,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-10)
 | Phase 19 — Onboarding & Estados Vazios | 3 plans | single session | 600→628 (28 novos) |
 | Phase 20 — Dashboard | 3 plans | single session | 628→651 (23 novos) |
 | Phase 21 — Histórico e Busca | 3 plans | single session | 651→691 (40 novos) |
-| Phase 22 — Mobile Hardening | 3 plans (planned) | planning session | — (not yet executed) |
+| Phase 22 — Mobile Hardening | 3 plans | single session | 691→713 (22 novos) |
 
-## Milestone v1.4 — Experiência SaaS ◆
+## Milestone v1.4 — Experiência SaaS ✅
 
-5 phases (F18-F22): F18 ✅, F19 ✅, F20 ✅, F21 ✅, F22 ○ Planned.
-Total completed: 691 tests, 89 files (Phase 21: +40 tests).
-Total planned: 3 plans (22-01, 22-02, 22-03).
+5 phases (F18-F22): F18 ✅, F19 ✅, F20 ✅, F21 ✅, F22 ✅.
+Total completed: 713 tests, 89 files (Phase 22: +22 tests).
+Total plans: 18/18 complete.
 
 ## Next Steps
 
-- Executar F22: Mobile Hardening — começar com 22-01 (Shell Acessível)
+- Milestone v1.4 — Experiência SaaS **concluída** 🎉
+- Definir próximo milestone
