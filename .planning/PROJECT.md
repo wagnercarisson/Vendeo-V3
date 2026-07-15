@@ -25,12 +25,19 @@ A milestone v1.4 transformou o Vendeo em um produto SaaS coerente: app shell pro
 
 **713 testes automatizados**, **89 test files**, **TypeScript/lint/build limpos**.
 
-## Current Milestone: v1.5 — (A definir)
+## Current Milestone: v1.5 — Lançamento Externo Controlado
 
-**Goal:** A definir via `/gsd-new-milestone`.
+**Goal:** Preparar o Vendeo para o primeiro público real controlado — copy inteligente via IA, sistema de créditos, compra via Stripe, controle de custos, observabilidade e operação monitorada.
 
 **Target features:**
-- _Em definição_
+- Copy Director (serviço de IA de texto persuasivo com title, caption, hashtags, CTA)
+- Sistema de créditos (saldo por usuário, transações imutáveis, grant/estorno)
+- Pipeline paralelo (Copy ∥ Image) com merge, fallback e atomicidade financeira
+- Stripe Checkout para compra de créditos avulsos (10, 25, 50)
+- Controle de custos (rate limit 10/h, teto 30/dia, timeout 120s)
+- Saldo visível na topbar + seção de créditos em `/conta` com extrato
+- Observabilidade (logging estruturado, telemetria IA, dashboard operacional)
+- Refinamento visual + Launch Readiness (UAT externo, runbook, feature flag)
 
 <details>
 <summary>Versões anteriores</summary>
@@ -108,13 +115,79 @@ A milestone v1.4 transformou o Vendeo em um produto SaaS coerente: app shell pro
 
 ### Active
 
-_Requirements para v1.5 serão definidos via `/gsd-new-milestone`._
+#### Copy Director (COPY)
+
+- [ ] **COPY-01**: TextProvider abstraction layer (createTextProvider, OpenAI/Anthropic implementations)
+- [ ] **COPY-02**: CopyDirectorService generates title, caption, hashtags, CTA from CampaignBrief
+- [ ] **COPY-03**: Prompt template in `prompts/campaign-copy-director.md` with segment-aware copywriting
+- [ ] **COPY-04**: Copy Director callable standalone (without image generation)
+
+#### Sistema de Créditos (CRED)
+
+- [ ] **CRED-01**: credit_balances table with RLS (user can SELECT own balance)
+- [ ] **CRED-02**: credit_transactions table (append-only, types: grant/purchase/deduction/refund/adjustment)
+- [ ] **CRED-03**: CreditService with reserveCredit, confirmCredit, refundCredit, grantCredits, getBalance, getHistory
+- [ ] **CRED-04**: Balance never negative — every deduction checks balance before executing
+- [ ] **CRED-05**: Atomic reserve/refund via SQL transactions (SELECT FOR UPDATE or SQL function)
+
+#### Pipeline de Geração (PIPE)
+
+- [ ] **PIPE-01**: Parallel execution of Copy Director ∥ Image Director in generate-image pipeline
+- [ ] **PIPE-02**: Rate limit guard (10/h per user, 30/dia) before any paid operation
+- [ ] **PIPE-03**: Saldo check before pipeline starts; 402 Payment Required if insufficient
+- [ ] **PIPE-04**: Credit reserve before IA calls; refund on failure; confirm on success
+- [ ] **PIPE-05**: publication_copy_snapshot populated by Copy Director (replaces deterministic buildCaption/hashtags)
+- [ ] **PIPE-06**: Timeout abort (120s total) treated as failure with refund
+
+#### Pagamento (PAY)
+
+- [ ] **PAY-01**: POST /api/credits/create-checkout — Stripe Checkout Session creation
+- [ ] **PAY-02**: POST /api/webhooks/stripe — process checkout.session.completed with HMAC verification
+- [ ] **PAY-03**: 3 credit packs (10/25/50) with fixed pricing
+- [ ] **PAY-04**: CreditService.grant on successful purchase (idempotent)
+
+#### Conta e Saldo Visível (UI-CREDIT)
+
+- [ ] **UI-01**: Credit balance visible in topbar (app shell) — server-side lookup
+- [ ] **UI-02**: Credits section in `/conta` — balance card, purchase dialog, transaction history
+- [ ] **UI-03**: Purchase dialog with 3 pack options → POST /api/credits/create-checkout → Stripe redirect
+- [ ] **UI-04**: Extrato paginado (credit_transactions history with all types except adjustment)
+- [ ] **UI-05**: Onboarding grant: 5 free credits on store creation (POST /api/store integration)
+- [ ] **UI-06**: Zero-credit states: tooltip, disabled button, CTA to buy — product never blocks entirely
+
+#### Observabilidade e Operação (OPS)
+
+- [ ] **OPS-01**: Structured logging in pipeline (campaignId, phase, duration_ms, status)
+- [ ] **OPS-02**: IA telemetry (tokens, cost, model, provider) in generation_events
+- [ ] **OPS-03**: Deploy checklist, rollback process, environment variables documented
+- [ ] **OPS-04**: Support runbook (manual grant, refund, balance check)
+- [ ] **OPS-05**: Feature flag v1.5-credits-enabled for safe rollout
+
+#### Refinamento Visual e Launch Readiness (LAUNCH)
+
+- [ ] **LAUNCH-01**: Loading, empty, error states for all new screens/components
+- [ ] **LAUNCH-02**: Insufficient-credit UX across the app (disabled states, tooltips, microcopy)
+- [ ] **LAUNCH-03**: Mobile hardening for credit flows (viewport 320–768px, touch targets ≥44px)
+- [ ] **LAUNCH-04**: UAT externo com 3–5 lojistas reais
+- [ ] **LAUNCH-05**: Canal de feedback, métricas de saúde, critérios de expansão/pausa documentados
+- [ ] **LAUNCH-06**: Feature flag active and verified in UAT before milestone close
+
+#### Segurança (SEC)
+
+- [ ] **SEC-01**: RLS policies for credit_balances and credit_transactions
+- [ ] **SEC-02**: Ownership validation on all /api/credits/* routes
+- [ ] **SEC-03**: Sanitized inputs to Copy Director (no sensitive data in prompts)
+- [ ] **SEC-04**: Stripe webhook HMAC signature verification
+- [ ] **SEC-05**: Service role usage reviewed — credit operations use service role only after identity validation
+- [ ] **SEC-06**: Data retention policy implemented (90d cleanup for logs/generation_events)
 
 ### Out of Scope
 
 - Regeneração — redefinida como "novo briefing" (MC-02), não implementada
-- Planos e cobrança — uso livre durante validação do SaaS
+- Planos e assinaturas mensais — uso livre + créditos avulsos é suficiente para lançamento controlado
 - Múltiplas lojas — relação 1:1 mantida
+- Times / permissões multi-usuário — single-user
+- Integração com Instagram (API de postagem automática) — milestone futura
 - Plano semanal e calendário inteligente — fase futura
 - Editor visual livre tipo Canva — geração guiada, não livre
 - Geração por IA de imagem (DALL-E, etc) — reduz previsibilidade
@@ -122,6 +195,9 @@ _Requirements para v1.5 serão definidos via `/gsd-new-milestone`._
 - OAuth social / Magic link — exclusão deliberada v1.2
 - Export agendado / programado — fora do escopo v1.4
 - Métricas e analytics avançados — métricas básicas apenas no dashboard
+- PWA / install prompt — não prioritário para lançamento controlado
+- Campanhas multi-formato (Stories, Landscape) — apenas 1080×1080 feed
+- Cache de prompts / otimização de tokens — feature futura de redução de custo
 
 ## Context
 
@@ -134,7 +210,7 @@ _Requirements para v1.5 serão definidos via `/gsd-new-milestone`._
 - Histórico com busca ILIKE, filtros, paginação e URL state
 - Interface responsiva com touch targets ≥44px, validada em 320/375/768px
 - Bucket `store-logos`: 0 objetos, pendente de remoção
-- **Próximo: v1.5 — a definir**
+- **Em andamento: v1.5 — Lançamento Externo Controlado**
 
 **User profile:** Pequenos e médios lojistas físicos que acumulam funções operacionais, comerciais e administrativas — não têm tempo, criatividade ou recursos para design profissional.
 
@@ -185,6 +261,17 @@ _Requirements para v1.5 serão definidos via `/gsd-new-milestone`._
 | Busca ILIKE server-side + client-side debounce | Performance sem comprometer UX | ✓ Good — F21 |
 | Touch targets ≥44px como padrão de acessibilidade mobile | WCAG minimum, sem lib externa | ✓ Good — F22 |
 | Focus trap manual no drawer (sem lib externa) | Evita dependência para funcionalidade simples | ✓ Good — F22 |
+| Copy Director como serviço de IA independente (texto) | Separa responsabilidades, paralelizável com Image Director | ✓ Good — D1 v1.5 |
+| Pipeline paralelo Copy ∥ Image | Copy não influencia arte; latência cortada pela metade | ✓ Good — D2 v1.5 |
+| Crédito só debitado na geração bem-sucedida | Contrato com o usuário: falha = estorno automático | ✓ Good — D3 v1.5 |
+| Stripe Checkout (redirect) em vez de Payment Element | Mínimo viável, sem compliance PCI para lançamento controlado | ✓ Good — D4 v1.5 |
+| Rate limit via tabela generation_events (janela deslizante) | Sem dependência externa (Redis); migra se carga crescer | ✓ Good — D5 v1.5 |
+| Observabilidade começa com logs estruturados + Vercel Logs | Escala conforme necessidade; sem ferramental externo inicial | ✓ Good — D6 v1.5 |
+| Saldo visível na topbar (server component) | Usuário nunca precisa adivinhar quantos créditos tem | ✓ Good — D7 v1.5 |
+| Copy Director usa TextProvider, não ImageProvider | Provider de texto paralelo, intercambiável OpenAI↔Anthropic | ✓ Good — D8 v1.5 |
+| Saldo zero não bloqueia o app | Dashboard/histórico funcionam; apenas geração é limitada | ✓ Good — D9 v1.5 |
+| Política de retenção definida por entidade | Campanhas vitalícias, logs 90 dias, transações financeiras vitalícias | ✓ Good — D10 v1.5 |
+| Feature flag v1.5-credits-enabled para rollout seguro | Milestone concluída só com flag ativa em UAT | ✓ Good — D11 v1.5 |
 
 ## Evolution
 
@@ -197,4 +284,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-15 after milestone v1.4 shipped*
+*Last updated: 2026-07-15 after milestone v1.5 started*

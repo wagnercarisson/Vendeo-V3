@@ -1,116 +1,164 @@
-# Requirements: Vendeo V3 — v1.4 Experiência SaaS
+# Requirements: Vendeo V3
 
-**Defined:** 2026-07-10
+**Defined:** 2026-07-15
 **Core Value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
-**Status:** ✅ Completo — 21/21 requisitos implementados (F18–F22)
 
-## v1.4 Requirements
+## v1 Requirements — Lançamento Externo Controlado
 
-Requisitos de alto nível para a milestone v1.4. Cada categoria será desdobrada em requisitos atômicos, testáveis e com critérios de aceitação durante o ciclo de especificação via OpenSpec.
+### Copy Director (COPY)
 
-### Dashboard
+- [ ] **COPY-01**: TextProvider abstraction layer (createTextProvider, OpenAI/Anthropic implementations)
+- [ ] **COPY-02**: CopyDirectorService generates title, caption, hashtags, CTA from CampaignBrief
+- [ ] **COPY-03**: Prompt template in `prompts/campaign-copy-director.md` with segment-aware copywriting
+- [ ] **COPY-04**: Copy Director callable standalone (without image generation)
 
-- [x] **DASH-01**: Dashboard principal com visão geral do estado da loja
-- [x] **DASH-02**: Métricas básicas (campanhas geradas, taxa de sucesso)
-- [x] **DASH-03**: Acesso rápido à última campanha e à ação de criar nova
+### Sistema de Créditos (CRED)
 
-### App Shell & Navegação
+- [ ] **CRED-01**: credit_balances table with RLS (user can SELECT own balance)
+- [ ] **CRED-02**: credit_transactions table (append-only, types: grant/purchase/deduction/refund/adjustment)
+- [ ] **CRED-03**: CreditService with reserveCredit, confirmCredit, refundCredit, grantCredits, getBalance, getHistory
+- [ ] **CRED-04**: Balance never negative — every deduction checks balance before executing
+- [ ] **CRED-05**: Atomic reserve/refund via SQL transactions (SELECT FOR UPDATE or SQL function)
 
-- [x] **SHELL-01**: App shell com sidebar e/ou topbar como estrutura de navegação definitiva
-- [x] **SHELL-02**: Menus consistentes entre todas as páginas
-- [x] **SHELL-03**: Navegação clara entre seções principais (Dashboard, Campanhas, Loja, Conta)
+### Pipeline de Geração (PIPE)
 
-### Onboarding
+- [ ] **PIPE-01**: Parallel execution of Copy Director || Image Director in generate-image pipeline
+- [ ] **PIPE-02**: Rate limit guard (10/h per user, 30/dia) before any paid operation
+- [ ] **PIPE-03**: Saldo check before pipeline starts; 402 Payment Required if insufficient
+- [ ] **PIPE-04**: Credit reserve before IA calls; refund on failure; confirm on success
+- [ ] **PIPE-05**: publication_copy_snapshot populated by Copy Director (replaces deterministic buildCaption/hashtags)
+- [ ] **PIPE-06**: Timeout abort (120s total) treated as failure with refund
 
-- [x] **ONBRD-01**: Fluxo de onboarding pós-signup para novos usuários
-- [x] **ONBRD-02**: Orientação para criar a primeira campanha
-- [x] **ONBRD-03**: Configuração inicial da identidade da loja guiada
+### Pagamento (PAY)
 
-### Histórico de Campanhas
+- [ ] **PAY-01**: POST /api/credits/create-checkout — Stripe Checkout Session creation
+- [ ] **PAY-02**: POST /api/webhooks/stripe — process checkout.session.completed with HMAC verification
+- [ ] **PAY-03**: 3 credit packs (10/25/50) with fixed pricing
+- [ ] **PAY-04**: CreditService.grant on successful purchase (idempotent)
 
-- [x] **HIST-01**: Lista de campanhas melhor organizada (ordenação, paginação)
-- [x] **HIST-02**: Visualização de campanhas antigas com metadados claros
-- [x] **HIST-03**: Transição suave entre listar, visualizar e criar nova campanha
+### Conta e Saldo Visível (UI-CREDIT)
 
-### Estados Vazios
+- [ ] **UI-01**: Credit balance visible in topbar (app shell) — server-side lookup
+- [ ] **UI-02**: Credits section in `/conta` — balance card, purchase dialog, transaction history
+- [ ] **UI-03**: Purchase dialog with 3 pack options -> POST /api/credits/create-checkout -> Stripe redirect
+- [ ] **UI-04**: Extrato paginado (credit_transactions history with all types except adjustment)
+- [ ] **UI-05**: Onboarding grant: 5 free credits on store creation (POST /api/store integration)
+- [ ] **UI-06**: Zero-credit states: tooltip, disabled button, CTA to buy — product never blocks entirely
 
-- [x] **UX-01**: Estados vazios consistentes em todas as listas e seções
-- [x] **UX-02**: Mensagens claras com call-to-action em cada estado vazio
+### Observabilidade e Operação (OPS)
 
-### Busca & Filtros
+- [ ] **OPS-01**: Structured logging in pipeline (campaignId, phase, duration_ms, status)
+- [ ] **OPS-02**: IA telemetry (tokens, cost, model, provider) in generation_events
+- [ ] **OPS-03**: Deploy checklist, rollback process, environment variables documented
+- [ ] **OPS-04**: Support runbook (manual grant, refund, balance check)
+- [ ] **OPS-05**: Feature flag v1.5-credits-enabled for safe rollout
 
-- [x] **SEARCH-01**: Campo de busca textual na lista de campanhas
-- [x] **SEARCH-02**: Filtros essenciais (por data, status, produto)
-- [x] **SEARCH-03**: Integração entre busca, filtros e url state
+### Refinamento Visual e Launch Readiness (LAUNCH)
 
-### Mobile
+- [ ] **LAUNCH-01**: Loading, empty, error states for all new screens/components
+- [ ] **LAUNCH-02**: Insufficient-credit UX across the app (disabled states, tooltips, microcopy)
+- [ ] **LAUNCH-03**: Mobile hardening for credit flows (viewport 320–768px, touch targets >=44px)
+- [ ] **LAUNCH-04**: UAT externo com 3–5 lojistas reais
+- [ ] **LAUNCH-05**: Canal de feedback, métricas de saúde, critérios de expansão/pausa documentados
+- [ ] **LAUNCH-06**: Feature flag active and verified in UAT before milestone close
 
-- [x] **MOBILE-01**: Fluxo completo de campanha funcional em mobile
-- [x] **MOBILE-02**: App shell adaptado para telas pequenas
-- [x] **MOBILE-03**: Onboarding, histórico e busca utilizáveis em mobile
-- [x] **MOBILE-04**: Estados vazios responsivos
+### Segurança (SEC)
 
-## v2 / Futuro
+- [ ] **SEC-01**: RLS policies for credit_balances and credit_transactions
+- [ ] **SEC-02**: Ownership validation on all /api/credits/* routes
+- [ ] **SEC-03**: Sanitized inputs to Copy Director (no sensitive data in prompts)
+- [ ] **SEC-04**: Stripe webhook HMAC signature verification
+- [ ] **SEC-05**: Service role usage reviewed — credit operations use service role only after identity validation
+- [ ] **SEC-06**: Data retention policy implemented (90d cleanup for logs/generation_events)
 
-Funcionalidades reconhecidas como desejáveis mas fora do escopo da v1.4.
+## v2 Requirements
 
-- **Métricas e analytics avançados**: Dashboard v1.4 terá apenas métricas básicas
-- **Export programado / agendado**: Fora do escopo da experiência SaaS
-- **Múltiplas lojas**: Relação 1:1 mantida
-- **Planos e cobrança**: Uso livre durante validação do SaaS
-- **Plano semanal e calendário inteligente**: Fase futura
-- **Regeneração**: Redefinida como "novo briefing" (MC-02)
+Deferred to future release. Tracked but not in current roadmap.
+
+### Pagamento
+
+- **PAY-05**: Asaas/Pix como provedor de pagamento secundário para mercado brasileiro
+- **PAY-06**: Planos e assinaturas mensais (créditos recorrentes)
+
+### Geração
+
+- **PIPE-07**: Cache de prompts / otimização de tokens para redução de custo
+- **PIPE-08**: Geração de campanhas multi-formato (Stories, Landscape)
+
+### Expansão
+
+- **ADMIN-01**: Dashboard administrativo avançado (receita, LTV, cohorts)
+- **SOCIAL-01**: Integração com Instagram API para postagem automática
+- **PWA-01**: Install prompt e experiência offline
 
 ## Out of Scope
 
-Exclusões explícitas para prevenir scope creep.
-
 | Feature | Reason |
 |---------|--------|
-| Billing / planos | Uso livre durante validação |
-| Múltiplas lojas | Relação 1:1 user→store mantida |
-| Analytics avançado | Métricas básicas apenas |
-| Export agendado | Fora do escopo v1.4 |
+| Planos e assinaturas mensais | Uso livre + créditos avulsos é suficiente para lançamento controlado |
+| Múltiplas lojas (1:N) | Relação 1:1 user->store mantida |
+| Times / permissões multi-usuário | Single-user |
+| Integração com Instagram (API de postagem automática) | Milestone futura |
+| Analytics avançado (CTR, impressões, conversão) | Fora do core de geração |
 | Editor visual livre (Canva-like) | Geração guiada, não livre |
-| Geração por IA de imagem (DALL-E) | Reduz previsibilidade |
-| Múltiplos tipos de campanha | Motor de campanha único |
-| Equipe / permissões | Single-user |
-| OAuth social / Magic link | Exclusão deliberada v1.2 |
-| Plano semanal / calendário | Fase futura |
+| PWA / install prompt | Não prioritário para lançamento controlado |
+| OAuth social / Magic link | Exclusão deliberada desde v1.2 |
+| Campanhas multi-formato (Stories, Landscape) | Apenas 1080x1080 feed |
+| Cache de prompts / otimização de tokens | Feature futura de redução de custo |
+| Dashboard administrativo avançado | Dashboard operacional mínimo (taxa de sucesso, custo médio, erro rate) está dentro do escopo |
 
 ## Traceability
 
-Relacionamento entre requisitos e fases do roadmap. Preenchido durante a criação do roadmap.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SHELL-01 | Phase 18 | ✅ Complete via OpenSpec |
-| SHELL-02 | Phase 18 | ✅ Complete via OpenSpec |
-| SHELL-03 | Phase 18 | ✅ Complete via OpenSpec |
-| ONBRD-01 | Phase 19 | ✅ Complete via OpenSpec |
-| ONBRD-02 | Phase 19 | ✅ Complete via OpenSpec |
-| ONBRD-03 | Phase 19 | ✅ Complete via OpenSpec |
-| UX-01 | Phase 19 | ✅ Complete via OpenSpec |
-| UX-02 | Phase 19 | ✅ Complete via OpenSpec |
-| DASH-01 | Phase 20 | ✅ Complete via OpenSpec |
-| DASH-02 | Phase 20 | ✅ Complete via OpenSpec |
-| DASH-03 | Phase 20 | ✅ Complete via OpenSpec |
-| HIST-01 | Phase 21 | ✅ Complete via OpenSpec |
-| HIST-02 | Phase 21 | ✅ Complete via OpenSpec |
-| HIST-03 | Phase 21 | ✅ Complete via OpenSpec |
-| SEARCH-01 | Phase 21 | ✅ Complete via OpenSpec |
-| SEARCH-02 | Phase 21 | ✅ Complete via OpenSpec |
-| SEARCH-03 | Phase 21 | ✅ Complete via OpenSpec |
-| MOBILE-01 | Phase 22 | ✅ Complete via OpenSpec (22-01, 22-02, 22-03) |
-| MOBILE-02 | Phase 22 | ✅ Complete via OpenSpec (22-01, 22-03) |
-| MOBILE-03 | Phase 22 | ✅ Complete via OpenSpec (22-02, 22-03) |
-| MOBILE-04 | Phase 22 | ✅ Complete via OpenSpec (22-03) |
+| COPY-01 | Phase 23 | Planned |
+| COPY-02 | Phase 23 | Planned |
+| COPY-03 | Phase 23 | Planned |
+| COPY-04 | Phase 23 | Planned |
+| CRED-01 | Phase 24 | Planned |
+| CRED-02 | Phase 24 | Planned |
+| CRED-03 | Phase 24 | Planned |
+| CRED-04 | Phase 24 | Planned |
+| CRED-05 | Phase 24 | Planned |
+| PIPE-01 | Phase 25 | Planned |
+| PIPE-02 | Phase 25 | Planned |
+| PIPE-03 | Phase 25 | Planned |
+| PIPE-04 | Phase 25 | Planned |
+| PIPE-05 | Phase 25 | Planned |
+| PIPE-06 | Phase 25 | Planned |
+| PAY-01 | Phase 26 | Planned |
+| PAY-02 | Phase 26 | Planned |
+| PAY-03 | Phase 26 | Planned |
+| PAY-04 | Phase 26 | Planned |
+| UI-01 | Phase 27 | Planned |
+| UI-02 | Phase 27 | Planned |
+| UI-03 | Phase 27 | Planned |
+| UI-04 | Phase 27 | Planned |
+| UI-05 | Phase 27 | Planned |
+| UI-06 | Phase 27 | Planned |
+| OPS-01 | Phase 28 | Planned |
+| OPS-02 | Phase 28 | Planned |
+| OPS-03 | Phase 28 | Planned |
+| OPS-04 | Phase 28 | Planned |
+| OPS-05 | Phase 28 | Planned |
+| SEC-06 | Phase 28 | Planned |
+| LAUNCH-01 | Phase 29 | Planned |
+| LAUNCH-02 | Phase 29 | Planned |
+| LAUNCH-03 | Phase 29 | Planned |
+| LAUNCH-04 | Phase 29 | Planned |
+| LAUNCH-05 | Phase 29 | Planned |
+| LAUNCH-06 | Phase 29 | Planned |
+| SEC-01 | Phase 29 | Planned |
+| SEC-02 | Phase 29 | Planned |
+| SEC-03 | Phase 29 | Planned |
+| SEC-04 | Phase 29 | Planned |
+| SEC-05 | Phase 29 | Planned |
 
 **Coverage:**
-- v1.4 requirements: 21 total
-- Mapped to phases: 21
+- v1 requirements: 42 total
+- Mapped to phases: 42
 - Unmapped: 0 ✓
 
 ---
-*Requirements defined: 2026-07-10*
-*Last updated: 2026-07-15 after F18–F22 implementation completed*
+*Requirements defined: 2026-07-15*
+*Last updated: 2026-07-15 after milestone v1.5 start*

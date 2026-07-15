@@ -1,185 +1,227 @@
-﻿# Roadmap: Vendeo V3 — v1.4 Experiência SaaS
+﻿# Roadmap: Vendeo V3
 
-**Milestone:** v1.4 — Experiência SaaS
-**Started:** 2026-07-10
-**Status:** Planning (documentation only — details via OpenSpec)
-**Phase numbering:** Continuing from v1.3 (Phase 18+)
+## Milestone v1.5 — Lançamento Externo Controlado
 
-## Phase Overview
+**7 phases** | **42 requirements mapped** | All covered ✓
 
-| Phase | Name | Goal | Requirements | Success Criteria |
-|-------|------|------|--------------|------------------|
-| 18 | App Shell & Navegação | ✅ Estrutura de navegação definitiva | SHELL-01, SHELL-02, SHELL-03 | 6 ✅ |
-| 19 | Onboarding & Estados Vazios | ✅ Experiência do novo usuário e consistência visual | ONBRD-01, ONBRD-02, ONBRD-03, UX-01, UX-02 | 5 ✅ |
-| 20 | Dashboard | ✅ Visão geral com métricas básicas e acesso rápido | DASH-01, DASH-02, DASH-03 | 3 ✅ |
-| 21 | Histórico & Busca | Organização e descoberta de campanhas | HIST-01, HIST-02, HIST-03, SEARCH-01, SEARCH-02, SEARCH-03 | 6 |
-| 22 | Mobile Hardening | Acessibilidade e touch targets móveis | MOBILE-01, MOBILE-02, MOBILE-03, MOBILE-04 | 8 |
+**Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23.
 
-**Total:** 5 phases | 21 requirements mapped | All covered ✓
+---
+
+## Overview
+
+| # | Phase | Goal | Requirements | Success Criteria |
+|---|-------|------|--------------|------------------|
+| 23 | TextProvider + Copy Director | Fundação de IA de texto — Copy Director funcional e testável | COPY-01, COPY-02, COPY-03, COPY-04 | 4 |
+| 24 | Credit Tables + CreditService | Sistema de créditos funcional e testável, sem UI | CRED-01, CRED-02, CRED-03, CRED-04, CRED-05 | 5 |
+| 25 | Pipeline de Geração v1.5 | Copy Director + créditos integrados no generate-image | PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, PIPE-06 | 6 |
+| 26 | Pagamento (Stripe) | Compra de créditos via Stripe Checkout + Webhook | PAY-01, PAY-02, PAY-03, PAY-04 | 4 |
+| 27 | Conta + Saldo Visível | UI de créditos no app shell e /conta | UI-01, UI-02, UI-03, UI-04, UI-05, UI-06 | 6 |
+| 28 | Observabilidade + Deploy + Operação | Operação pronta para lançamento controlado | OPS-01, OPS-02, OPS-03, OPS-04, OPS-05, SEC-06 | 6 |
+| 29 | Refinamento + Launch Readiness | Produto polido e pronto para público externo | LAUNCH-01, LAUNCH-02, LAUNCH-03, LAUNCH-04, LAUNCH-05, LAUNCH-06, SEC-01, SEC-02, SEC-03, SEC-04, SEC-05 | 11 |
+
+---
 
 ## Phase Details
 
-### Phase 18 — App Shell & Navegação
+### Phase 23 — TextProvider + Copy Director
 
-**Status:** `Complete ✓`
-**Slug:** `18-app-shell-ui-base-rotas`
-**Change:** `openspec/changes/fase-18-app-shell-ui-base-rotas/`
-**Plans:** `.planning/phases/18-app-shell-ui-base-rotas/18-01-PLAN.md` — `18-03-PLAN.md`
-**Context:** `.planning/phases/18-app-shell-ui-base-rotas/18-CONTEXT.md`
+**Goal:** Copy Director funcional e testável. TextProvider intercambiável OpenAI/Anthropic.
 
-**Goal:** Estabelecer a estrutura de navegação definitiva do Vendeo como produto SaaS coerente. Substituir navegação ad-hoc por app shell com sidebar/topbar, UI base profissional (7 componentes), reorganização de rotas para PT-BR, e migração de todas as páginas existentes.
-
-**Requirements:** SHELL-01, SHELL-02, SHELL-03
+**Requirements:** COPY-01, COPY-02, COPY-03, COPY-04
 
 **Success criteria:**
-1. 7 componentes base de UI (Button, Card, Input, Badge, EmptyState, Skeleton, PageHeader) em `src/components/ui/`
-2. App Shell com sidebar + topbar + drawer mobile + menu de conta, responsivo, tolerante a `store = null`
-3. Route group `(app)/` com layout protegido (requirePageUser) e todas as rotas filhas
-4. 5 redirects 301 em `next.config.ts` — rotas antigas → novo padrão PT-BR
-5. `/dashboard` placeholder + `/conta` mínima útil (email + sair)
-6. AuthHeader removido, design token cleanup, emoji → Lucide
-7. 25+ testes (componentes, shell, redirects, middleware)
+1. User can call CopyDirectorService.generateCopy(brief) and receive title, caption, hashtags, cta_post
+2. TextProvider switches between OpenAI and Anthropic via config without code changes
+3. Prompt template at `prompts/campaign-copy-director.md` produces segment-aware copy
+4. Copy Director is callable standalone (no image generation required)
 
-**Dependencies:** Phases 7–17 (fundação completa)
-
-**Plans:**
-| Plan | Wave | Objective |
-|------|------|-----------|
-| 18-01 | 1 | UI Base (7 componentes) + estrutura diretórios + root layout cleanup + next.config.ts redirects + testes UI |
-| 18-02 | 2 | App Shell: sidebar, topbar, account-menu, sidebar-drawer, (app)/layout + testes shell |
-| 18-03 | 2 | Migrar rotas campanhas/nova, campanhas, campanhas/[id], loja; criar dashboard + conta; middleware matcher; remover AuthHeader; token cleanup; testes redirects + middleware |
-
-**Depends on:** Nenhuma (fundação da milestone)
+**Dependencies:** Provider abstraction layer exists (OpenAI/Anthropic config already in place)
 
 ---
 
-### Phase 19 — Onboarding & Estados Vazios
+### Phase 24 — Credit Tables + CreditService
 
-**Status:** `Complete ✓`
-**Slug:** `19-onboarding-estados-vazios`
-**Change:** `openspec/changes/fase-19-onboarding-estados-vazios/`
-**Plans:** `.planning/phases/19-onboarding-estados-vazios/19-01-PLAN.md` — `19-03-PLAN.md`
-**Context:** `.planning/phases/19-onboarding-estados-vazios/19-CONTEXT.md`
+**Goal:** Sistema de créditos funcional e testável, sem UI. Créditos podem ser concedidos e consumidos programaticamente.
 
-**Goal:** Guiar novos usuários na primeira experiência e garantir estados vazios consistentes em toda a aplicação, antes de apresentar o dashboard.
-
-**Requirements:** ONBRD-01, ONBRD-02, ONBRD-03, UX-01, UX-02
+**Requirements:** CRED-01, CRED-02, CRED-03, CRED-04, CRED-05
 
 **Success criteria:**
-1. ✅ Helper `getUserOnboardingState(userId)` centralizado com 3 estados
-2. ✅ Dashboard como server component async com 3 estados
-3. ✅ `/campanhas` sem loja mostra empty state contextual com CTA (não redireciona)
-4. ✅ `/campanhas/[id]` sem loja retorna 404 (não redireciona)
-5. ✅ Microcopy de todos os estados vazios centralizada em `src/lib/onboarding/microcopy.ts`
+1. User can receive credits via grant (onboarding, admin)
+2. Credit reserve deducts balance atomically; refund restores it
+3. Balance never goes negative — reserve fails if insufficient
+4. Transaction history is append-only; refund creates new entry
+5. Multiple simultaneous requests don't cause race conditions on balance
 
-**Depends on:** Phase 18
-
-**Plans:**
-| Plan | Wave | Objective | Status |
-|------|------|-----------|--------|
-| 19-01 | 1 | Fundação do Onboarding Helper — types, count, state, microcopy + testes | ✅ |
-| 19-02 | 2 | Dashboard Inteligente — async server component com 3 estados + testes | ✅ |
-| 19-03 | 2 | Campanhas + Detalhe sem Loja — empty states, 404, microcopy + testes | ✅ |
-
-**Tests:** 628 passing (86 files, 28 novos)
-**Commits:** `8dfc693` `801948a` `bbd3d0e` `ef18659`
+**Dependencies:** None (new tables, no dependency on prior phases)
 
 ---
 
-### Phase 20 — Dashboard
+### Phase 25 — Pipeline de Geração v1.5
 
-**Status:** `Complete ✓`
-**Slug:** `20-dashboard`
-**Change:** `openspec/changes/fase-20-dashboard/`
-**Plans:** `.planning/phases/20-dashboard/20-01-PLAN.md` — `20-03-PLAN.md`
-**Context:** `.planning/phases/20-dashboard/20-CONTEXT.md`
+**Goal:** Pipeline completo com copy inteligente, controle de custos e proteção financeira.
 
-**Goal:** Prover uma visão geral do estado da loja com métricas básicas e acesso rápido às ações principais.
-
-**Requirements:** DASH-01, DASH-02, DASH-03
+**Requirements:** PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, PIPE-06
 
 **Success criteria:**
-1. ✅ Dashboard mostra campanhas recentes com métricas básicas (total, sucesso)
-2. ✅ Acesso rápido à última campanha e ao formulário de nova campanha
-3. ✅ Dashboard é a landing page pós-login
+1. Copy Director runs in parallel with Image Director during generation
+2. Rate limit blocks >10 generations/hour and >30/day per user
+3. Insufficient balance returns 402 before any IA call
+4. Credit is reserved before IA; refunded on failure; confirmed on success
+5. publication_copy_snapshot contains Copy Director result, not deterministic fallback
+6. Pipeline aborts at 120s total timeout; abort triggers full refund
 
-**Depends on:** Phase 18, Phase 19
-
-**Plans:**
-| Plan | Wave | Objective | Status |
-|------|------|-----------|--------|
-| 20-01 | 1 | Métricas e Recentes — metrics.ts, count.ts reexport, 9 testes | ✅ |
-| 20-02 | 2 | Dashboard Completo — saudação, 3 cards métricas, campanhas recentes, next-step card | ✅ |
-| 20-03 | 2 | Testes e Acabamento Responsivo — 20 testes (11 novos cenários + 9 edge cases) | ✅ |
-
-**Tests:** 651 passing (87 files, 23 novos)
-**Commits:** `3a17fe2` `e8b5839`
+**Dependencies:** Phase 23 (Copy Director) + Phase 24 (CreditService)
 
 ---
 
-### Phase 21 — Histórico & Busca
+### Phase 26 — Pagamento (Stripe Checkout + Webhook)
 
-**Goal:** Melhorar a organização e descoberta de campanhas com ordenação, paginação, busca textual e filtros essenciais.
+**Goal:** Usuário pode comprar créditos via Stripe Checkout. Compra refletida no saldo em segundos.
 
-**Requirements:** HIST-01, HIST-02, HIST-03, SEARCH-01, SEARCH-02, SEARCH-03
+**Requirements:** PAY-01, PAY-02, PAY-03, PAY-04
 
 **Success criteria:**
-1. Lista de campanhas com ordenação (data, nome, status)
-2. Paginação funcional na lista de campanhas
-3. Campo de busca textual com resultados relevantes
-4. Filtros por data, status e produto
-5. URL state reflete busca/filtros (compartilhável)
-6. Transição suave entre listar, visualizar e criar nova campanha
+1. User selects credit pack (10/25/50) and is redirected to Stripe Checkout
+2. checkout.session.completed webhook credits balance within seconds
+3. Stripe webhook signature is verified (invalid signatures rejected)
+4. Same webhook event processed at most once (idempotency)
 
-**Depends on:** Phase 18, Phase 20
+**Dependencies:** Phase 24 (CreditService.grant)
 
 ---
 
-### Phase 22 — Mobile Hardening
+### Phase 27 — Conta + Saldo Visível
 
-**Status:** `Complete ✅`
-**Slug:** `22-mobile-hardening`
-**Change:** `openspec/changes/fase-22-mobile-hardening/`
-**Plans:** `.planning/phases/22-mobile-hardening/22-01-PLAN.md` — `22-03-PLAN.md`
-**Context:** `.planning/phases/22-mobile-hardening/22-CONTEXT.md`
+**Goal:** Usuário vê saldo, compra créditos e acompanha gastos. Experiência completa de autoatendimento.
 
-**Goal:** Hardening controlado da experiência mobile: drawer acessível (focus trap, `role="dialog"`, `aria-modal`), touch targets ≥44×44px (WCAG 2.5.8) em todo o app, account menu com acessibilidade mínima, padding responsivo, e 15+ novos testes.
-
-**Requirements:** MOBILE-01, MOBILE-02, MOBILE-03, MOBILE-04
+**Requirements:** UI-01, UI-02, UI-03, UI-04, UI-05, UI-06
 
 **Success criteria:**
-1. ✅ Drawer com focus trap manual, `role="dialog"`, `aria-modal`, botão X, restauro de foco, body scroll lock, `prefers-reduced-motion`
-2. ✅ Topbar: hamburger 44×44px, CTA e trigger ≥44px
-3. ✅ Account menu: `aria-haspopup`, `aria-expanded`, Escape, `prefers-reduced-motion`
-4. ✅ Main padding responsivo: `px-4 py-6 sm:px-6`
-5. ✅ Componente `Input` com `min-h-[44px]`
-6. ✅ Touch targets ≥44px em campanhas list/detail, dashboard, formulários, loja, conta, logout
-7. ✅ `Pagination` com `flex-wrap` para mobile
-8. ✅ 22 novos testes (acessibilidade, touch targets, responsividade, reduced motion, regressão)
+1. Credit balance visible in topbar across all authenticated pages
+2. /conta shows balance card, purchase dialog, and paginated transaction history
+3. Purchase dialog offers 3 packs; selection triggers Stripe Checkout redirect
+4. Transaction history shows all types except adjustment (admin-only)
+5. New store creation grants 5 credits automatically
+6. Zero-credit user sees tooltips, disabled button, and CTA — but can browse dashboard/history
 
-**Non-goals:** Refatorar `store-identity-form.tsx` (apenas patches pontuais), Playwright/Cypress, PWA, app shell nativo, arrow keys account menu, `role="menu"` completo, GIN trigram, i18n, billing, múltiplas lojas, migrations de banco, API routes, middleware, next.config.
-
-**Depends on:** Phase 18, Phase 19, Phase 20, Phase 21
-
-**Plans:**
-| Plan | Wave | Objective | Status |
-|------|------|-----------|--------|
-| 22-01 | 1 | Shell Acessível — drawer focus trap + a11y, topbar touch targets, account menu a11y, padding responsivo, testes | ✅ |
-| 22-02 | 1 | Touch Targets & Componentes — input min-height, campanhas, dashboard, formulários, loja, conta, logout, flex-wrap, testes | ✅ |
-| 22-03 | 2 | Revisão Mobile + Testes — revisão manual 320/375/768px, responsividade, reduced motion, regressão, build final | ✅ |
-
-**Tests:** 713 passing (89 files) — 22 novos testes de F22
-
-**Commits:** `8e471af` `d44813f` `ec1e0b1`
+**Dependencies:** Phase 26 (payment functional) — UI can be built in parallel mocking data
 
 ---
 
-## Notes
+### Phase 28 — Observabilidade + Deploy + Operação
 
-- **Detalhamento via OpenSpec:** Cada fase será desdobrada em requisitos atômicos, fluxos, estados e critérios de aceitação durante o ciclo de especificação via OpenSpec.
-- **Ordem sugerida:** As fases 18-21 podem ser executadas em paralelo parcial (18 primeiro, 19-21 em sequência). A fase 22 (Mobile) depende de todas as anteriores.
-- **Estimativa:** Escopo preliminar — ajustes ocorrerão durante o detalhamento OpenSpec de cada fase.
+**Goal:** Operação pronta para lançamento externo controlado.
+
+**Requirements:** OPS-01, OPS-02, OPS-03, OPS-04, OPS-05, SEC-06
+
+**Success criteria:**
+1. Every pipeline stage logs campaignId, phase, duration_ms, status
+2. IA telemetry (tokens, cost, model, provider) persisted in generation_events
+3. Deploy checklist and rollback process documented and tested
+4. Support runbook covers manual grant, refund, balance check
+5. Feature flag v1.5-credits-enabled controls rollout
+6. Data retention cleanup (90d) documented as manual runbook; auto-job planned for D+30
+
+**Dependencies:** Phase 27
 
 ---
-*Roadmap created: 2026-07-10*
-*Last updated: 2026-07-13 after Phase 18 execution*
+
+### Phase 29 — Refinamento Visual + Experiência Publicável + Launch Readiness
+
+**Goal:** Produto com acabamento visual de lançamento externo. Time confiante para abrir para usuários reais.
+
+**Requirements:** LAUNCH-01, LAUNCH-02, LAUNCH-03, LAUNCH-04, LAUNCH-05, LAUNCH-06, SEC-01, SEC-02, SEC-03, SEC-04, SEC-05
+
+**Success criteria:**
+1. Loading, empty, and error states exist for all new screens
+2. Insufficient-credit UX is consistent across the entire app
+3. Credit flows work on mobile (320–768px) with >=44px touch targets
+4. UAT completed with 3–5 external lojistas
+5. Feedback channel active and health metrics visible
+6. Expansion/pause criteria documented and agreed by team
+7. RLS policies verified on credit_balances and credit_transactions
+8. Ownership validated on all /api/credits/* routes
+9. Copy Director inputs sanitized (no sensitive data in prompts)
+10. Stripe webhook HMAC verification active and tested
+11. Service role usage reviewed and compliant with security standards
+
+**Dependencies:** Phase 28
+
+---
+
+## Dependency Graph
+
+```
+Phase 23 (TextProvider + Copy Director) ──┐
+                                           ├──▶ Phase 25 (Pipeline v1.5)
+Phase 24 (Credit Tables + CreditService) ──┘
+                                              │
+                                              ▼
+                                       Phase 26 (Payment Stripe)
+                                              │
+                                              ▼
+                                       Phase 27 (Conta + Saldo)
+                                              │
+                                              ▼
+                                       Phase 28 (Observability + Ops)
+                                              │
+                                              ▼
+                                       Phase 29 (Refinement + Launch)
+```
+
+## Coverage Validation
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| COPY-01 | Phase 23 | Planned |
+| COPY-02 | Phase 23 | Planned |
+| COPY-03 | Phase 23 | Planned |
+| COPY-04 | Phase 23 | Planned |
+| CRED-01 | Phase 24 | Planned |
+| CRED-02 | Phase 24 | Planned |
+| CRED-03 | Phase 24 | Planned |
+| CRED-04 | Phase 24 | Planned |
+| CRED-05 | Phase 24 | Planned |
+| PIPE-01 | Phase 25 | Planned |
+| PIPE-02 | Phase 25 | Planned |
+| PIPE-03 | Phase 25 | Planned |
+| PIPE-04 | Phase 25 | Planned |
+| PIPE-05 | Phase 25 | Planned |
+| PIPE-06 | Phase 25 | Planned |
+| PAY-01 | Phase 26 | Planned |
+| PAY-02 | Phase 26 | Planned |
+| PAY-03 | Phase 26 | Planned |
+| PAY-04 | Phase 26 | Planned |
+| UI-01 | Phase 27 | Planned |
+| UI-02 | Phase 27 | Planned |
+| UI-03 | Phase 27 | Planned |
+| UI-04 | Phase 27 | Planned |
+| UI-05 | Phase 27 | Planned |
+| UI-06 | Phase 27 | Planned |
+| OPS-01 | Phase 28 | Planned |
+| OPS-02 | Phase 28 | Planned |
+| OPS-03 | Phase 28 | Planned |
+| OPS-04 | Phase 28 | Planned |
+| OPS-05 | Phase 28 | Planned |
+| SEC-06 | Phase 28 | Planned |
+| LAUNCH-01 | Phase 29 | Planned |
+| LAUNCH-02 | Phase 29 | Planned |
+| LAUNCH-03 | Phase 29 | Planned |
+| LAUNCH-04 | Phase 29 | Planned |
+| LAUNCH-05 | Phase 29 | Planned |
+| LAUNCH-06 | Phase 29 | Planned |
+| SEC-01 | Phase 29 | Planned |
+| SEC-02 | Phase 29 | Planned |
+| SEC-03 | Phase 29 | Planned |
+| SEC-04 | Phase 29 | Planned |
+| SEC-05 | Phase 29 | Planned |
+
+**Coverage:**
+- v1 requirements: 42 total
+- Mapped to phases: 42
+- Unmapped: 0 ✓
+
+---
+*Roadmap created: 2026-07-15*
+*Milestone: v1.5 — Lançamento Externo Controlado*

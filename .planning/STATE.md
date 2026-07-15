@@ -1,17 +1,15 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.5
-milestone_name: "(a definir)"
-status: planned
-last_updated: "2026-07-15T16:00:00.000Z"
+milestone_name: Lançamento Externo Controlado
+status: planning
+last_updated: "2026-07-15T22:35:57.981Z"
 last_activity: 2026-07-15
 progress:
   total_phases: 0
   completed_phases: 0
-  planned_phases: 0
   total_plans: 0
   completed_plans: 0
-  planned_plans: 0
   percent: 0
 ---
 
@@ -117,6 +115,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 **Tests:** 600 passing (79 files)
 
 **Commits:**
+
 - `900be21` — 18-01: UI Base + estrutura + redirects + testes
 - `e24016d` — 18-02: App Shell + sidebar + topbar + account-menu + drawer + (app)/layout + testes
 - `6d97072` — 18-03: Route migration + polish + 600 testes
@@ -142,6 +141,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 **Source:** `openspec/changes/fase-19-onboarding-estados-vazios/`
 
 **Commits:**
+
 - `8dfc693` — 19-01: Fundação do Onboarding Helper — types, count, state, microcopy + 9 testes
 - `801948a` — 19-02: Dashboard Inteligente — async server component com 3 estados + 6 testes
 - `bbd3d0e` — 19-03: Campanhas + Detalhe sem Loja — redirects substituídos por empty state/404 + 7 testes
@@ -162,6 +162,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 **Source:** `openspec/changes/fase-20-dashboard/`
 
 **Commits:**
+
 - `3a17fe2` — 20-01: Metrics module + count.ts reexport + 9 tests
 - `e8b5839` — 20-02: Dashboard real + 20-03: Testes (20 tests)
 
@@ -180,13 +181,19 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 **Source:** `openspec/changes/fase-21-historico-busca/`
 
 **Commits:**
+
 - `3886f96` — 21-01: Query Contract — list.ts, search-params.ts, 29 testes
 - `b31923b` — 21-02: URL State + Filtros — SSR, useDebounce, client.tsx, microcopy, 12 testes
 - `48a6e3b` — 21-03: Pagination + Acabamento — Pagination, integração, 10 testes
-
-
 
 ## Next Steps
 
 - ✅ Milestone v1.4 — Experiência SaaS **concluída e arquivada** 🎉
 - ▶️ Iniciar v1.5 via `/gsd-new-milestone`
+
+## Current Position
+
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-07-15 — Milestone v1.5 started
