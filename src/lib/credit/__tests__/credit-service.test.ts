@@ -1,4 +1,10 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
+
+// Mock supabase/server to prevent top-level env-var check on import.
+vi.mock("@/lib/supabase/server", () => ({
+  supabaseAdmin: {} as any,
+}));
+
 import { CreditService } from "../credit-service";
 
 // ── Mock setup ──────────────────────────────────────────────────────────────
@@ -84,9 +90,91 @@ function mockRpcError(method: string, message: string) {
 
 // ── Test suites ─────────────────────────────────────────────────────────────
 
-describe("CreditService", () => {
-  // Setup smoke test
-  it("is instantiated with a mock admin client", () => {
-    expect(service).toBeInstanceOf(CreditService);
+describe("Saldo e Grant", () => {
+  it("getBalance retorna 0 para loja sem registro", async () => {
+    mockGetBalanceResult(null);
+
+    const balance = await service.getBalance(storeId);
+
+    expect(balance).toBe(0);
+    expect(mockFrom).toHaveBeenCalledWith("credit_balances");
+    expect(mockSelectBalance).toHaveBeenCalledWith("balance");
+    expect(mockEqBalance).toHaveBeenCalledWith("store_id", storeId);
+    expect(mockSingle).toHaveBeenCalledWith();
+  });
+
+  it("grantCredits adiciona saldo", async () => {
+    mockRpcSuccess("grant_credits", "tx-1");
+    mockGetBalanceResult(5);
+
+    const txId = await service.grantCredits(storeId, 5, "onboarding");
+    const balance = await service.getBalance(storeId);
+
+    expect(txId).toBe("tx-1");
+    expect(balance).toBe(5);
+    expect(mockRpc).toHaveBeenCalledWith(
+      "grant_credits",
+      expect.objectContaining({ p_amount: 5, p_reason: "onboarding" }),
+    );
+  });
+
+  it("grants acumulam", async () => {
+    mockRpc
+      .mockReturnValueOnce({ data: "tx-1", error: null })
+      .mockReturnValueOnce({ data: "tx-2", error: null })
+      .mockReturnValueOnce({ data: "tx-3", error: null });
+    mockGetBalanceResult(15);
+
+    await service.grantCredits(storeId, 5, "test");
+    await service.grantCredits(storeId, 5, "test");
+    await service.grantCredits(storeId, 5, "test");
+    const balance = await service.getBalance(storeId);
+
+    expect(balance).toBe(15);
+    expect(mockRpc).toHaveBeenCalledTimes(3);
+  });
+
+  it("grantCredits com idempotency_key repetido retorna mesma tx", async () => {
+    const key = "idem-onboarding";
+    mockRpc.mockImplementation((m: string) => {
+      if (m === "grant_credits") return { data: "tx-idem-1", error: null };
+      return { data: null, error: null };
+    });
+
+    const result1 = await service.grantCredits(storeId, 5, "onboarding", {
+      idempotencyKey: key,
+    });
+    const result2 = await service.grantCredits(storeId, 5, "onboarding", {
+      idempotencyKey: key,
+    });
+
+    expect(result1).toBe("tx-idem-1");
+    expect(result2).toBe("tx-idem-1");
+    expect(mockRpc).toHaveBeenCalledWith(
+      "grant_credits",
+      expect.objectContaining({ p_idempotency_key: key }),
+    );
+  });
+
+  it("getBalance reflete grant após chamada", async () => {
+    mockRpcSuccess("grant_credits", "tx-1");
+    mockGetBalanceResult(10);
+
+    await service.grantCredits(storeId, 10, "bonus");
+    const balance = await service.getBalance(storeId);
+
+    expect(balance).toBe(10);
+  });
+
+  it("grantCredits com reason null funciona", async () => {
+    mockRpcSuccess("grant_credits", "tx-1");
+
+    const result = await service.grantCredits(storeId, 5, null as unknown as string);
+
+    expect(result).toBe("tx-1");
+    expect(mockRpc).toHaveBeenCalledWith(
+      "grant_credits",
+      expect.objectContaining({ p_reason: null }),
+    );
   });
 });
