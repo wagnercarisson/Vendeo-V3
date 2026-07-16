@@ -91,7 +91,7 @@ async function run() {
     p_store_id: storeId, p_amount: 1, p_reason: "idem", p_idempotency_key: ik,
   });
   assert("I6a: first call returns UUID", !ie1 && i1, ie1?.message || "no UUID");
-  const { data: i2, error: ie2 } = await supabase.rpc("grant_credits", {
+  const { data: i2 } = await supabase.rpc("grant_credits", {
     p_store_id: storeId, p_amount: 1, p_reason: "idem", p_idempotency_key: ik,
   });
   assert("I6b: same key returns same UUID", i1 === i2, `${i1} !== ${i2}`);
