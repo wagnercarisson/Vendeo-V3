@@ -280,3 +280,103 @@ BEGIN
   RETURN tx_id;
 END;
 $$;
+
+-- refund_credit(tx_id, reason, idempotency_key, metadata) → UUID
+-- Refunds (reverses) a deduction transaction, restoring the balance.
+-- Validates original transaction exists and is type 'deduction'.
+-- Idempotent: duplicate refund of same tx (via reference) or same idempotency_key returns existing refund UUID.
+CREATE OR REPLACE FUNCTION public.refund_credit(
+  p_tx_id UUID,
+  p_reason TEXT DEFAULT NULL,
+  p_idempotency_key TEXT DEFAULT NULL,
+  p_metadata JSONB DEFAULT '{}'::jsonb
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  store_id_var UUID;
+  original_amount INTEGER;
+  original_type TEXT;
+  current_balance INTEGER;
+  refund_amount INTEGER;
+  balance_before INTEGER;
+  balance_after INTEGER;
+  tx_id UUID;
+  existing_tx_id UUID;
+  duplicate_refund_id UUID;
+BEGIN
+  -- Look up original transaction with lock
+  SELECT store_id, amount, type
+  INTO store_id_var, original_amount, original_type
+  FROM public.credit_transactions
+  WHERE id = p_tx_id
+  FOR UPDATE;
+
+  -- Check if transaction exists
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'transacao_nao_encontrada';
+  END IF;
+
+  -- Validate original transaction is a deduction
+  IF original_type != 'deduction' THEN
+    RAISE EXCEPTION 'tipo_invalido';
+  END IF;
+
+  -- Idempotency check: same idempotency_key
+  IF p_idempotency_key IS NOT NULL THEN
+    SELECT id INTO existing_tx_id
+    FROM public.credit_transactions
+    WHERE store_id = store_id_var AND idempotency_key = p_idempotency_key;
+
+    IF FOUND THEN
+      IF (SELECT type FROM public.credit_transactions WHERE id = existing_tx_id) = 'refund' THEN
+        RETURN existing_tx_id;
+      ELSE
+        RAISE EXCEPTION 'idempotency_conflict';
+      END IF;
+    END IF;
+  END IF;
+
+  -- Duplicate refund check: look for existing refund referencing the original tx
+  SELECT id INTO duplicate_refund_id
+  FROM public.credit_transactions
+  WHERE reference = p_tx_id::text AND type = 'refund';
+
+  IF FOUND THEN
+    RETURN duplicate_refund_id;
+  END IF;
+
+  -- Lock balance row
+  SELECT balance INTO current_balance
+  FROM public.credit_balances
+  WHERE store_id = store_id_var
+  FOR UPDATE;
+
+  -- Calculate refund amount (absolute value of original deduction)
+  refund_amount := ABS(original_amount);
+
+  -- Calculate balances
+  balance_before := current_balance;
+  balance_after := current_balance + refund_amount;
+
+  -- Insert refund transaction (positive amount)
+  INSERT INTO public.credit_transactions (
+    store_id, type, amount, balance_before, balance_after,
+    reason, reference, idempotency_key, metadata
+  ) VALUES (
+    store_id_var, 'refund', refund_amount, balance_before, balance_after,
+    p_reason, p_tx_id::text, p_idempotency_key, p_metadata
+  )
+  RETURNING id INTO tx_id;
+
+  -- Update balance
+  UPDATE public.credit_balances
+  SET balance = balance_after
+  WHERE store_id = store_id_var;
+
+  RETURN tx_id;
+END;
+$$;
