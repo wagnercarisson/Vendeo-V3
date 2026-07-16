@@ -110,3 +110,91 @@ CREATE POLICY "owner_select_credit_transactions" ON public.credit_transactions
 -- GRANT SELECT necessary for RLS to work with authenticated role
 -- INSERT/UPDATE/DELETE grants explicitly omitted — mutations via SQL functions (service_role only)
 GRANT SELECT ON TABLE public.credit_transactions TO authenticated;
+
+-- =============================================================================
+-- SQL Functions (Atomic Mutations with SELECT FOR UPDATE + Idempotency)
+-- =============================================================================
+
+-- grant_credits(store_id, amount, reason, idempotency_key, metadata) → UUID
+-- Grants credits to a store's wallet. Creates credit_balances row if not exists.
+-- Idempotent: same (store_id, idempotency_key) returns existing tx UUID.
+-- Atomic: SELECT ... FOR UPDATE within single transaction.
+CREATE OR REPLACE FUNCTION public.grant_credits(
+  p_store_id UUID,
+  p_amount INTEGER,
+  p_reason TEXT DEFAULT NULL,
+  p_idempotency_key TEXT DEFAULT NULL,
+  p_metadata JSONB DEFAULT '{}'::jsonb
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  balance_before INTEGER;
+  balance_after INTEGER;
+  tx_id UUID;
+  existing_tx_id UUID;
+BEGIN
+  -- Validate amount > 0
+  IF p_amount <= 0 THEN
+    RAISE EXCEPTION 'amount_invalido';
+  END IF;
+
+  -- Idempotency check: if idempotency_key provided, look for existing transaction
+  IF p_idempotency_key IS NOT NULL THEN
+    SELECT id INTO existing_tx_id
+    FROM public.credit_transactions
+    WHERE store_id = p_store_id AND idempotency_key = p_idempotency_key;
+
+    IF FOUND THEN
+      -- Check if existing transaction has same type (grant)
+      IF (SELECT type FROM public.credit_transactions WHERE id = existing_tx_id) = 'grant' THEN
+        RETURN existing_tx_id;
+      ELSE
+        RAISE EXCEPTION 'idempotency_conflict';
+      END IF;
+    END IF;
+  END IF;
+
+  -- Ensure credit_balances row exists (INSERT ON CONFLICT DO NOTHING)
+  INSERT INTO public.credit_balances (store_id, balance)
+  VALUES (p_store_id, 0)
+  ON CONFLICT (store_id) DO NOTHING;
+
+  -- Lock row and read current balance
+  SELECT balance INTO balance_before
+  FROM public.credit_balances
+  WHERE store_id = p_store_id
+  FOR UPDATE;
+
+  -- If still null (shouldn't happen after INSERT ON CONFLICT), initialize
+  IF balance_before IS NULL THEN
+    INSERT INTO public.credit_balances (store_id, balance)
+    VALUES (p_store_id, 0)
+    ON CONFLICT (store_id) DO NOTHING;
+    balance_before := 0;
+  END IF;
+
+  -- Calculate new balance
+  balance_after := balance_before + p_amount;
+
+  -- Insert transaction record
+  INSERT INTO public.credit_transactions (
+    store_id, type, amount, balance_before, balance_after,
+    reason, idempotency_key, metadata
+  ) VALUES (
+    p_store_id, 'grant', p_amount, balance_before, balance_after,
+    p_reason, p_idempotency_key, p_metadata
+  )
+  RETURNING id INTO tx_id;
+
+  -- Update balance
+  UPDATE public.credit_balances
+  SET balance = balance_after
+  WHERE store_id = p_store_id;
+
+  RETURN tx_id;
+END;
+$$;
