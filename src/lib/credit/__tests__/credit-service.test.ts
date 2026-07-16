@@ -180,6 +180,75 @@ describe("Reserva e Dedução", () => {
   });
 });
 
+describe("Estorno", () => {
+  it("refundCredit restaura saldo", async () => {
+    mockRpcSuccess("refund_credit", "tx-refund-1");
+    mockGetBalanceResult(10);
+
+    const resultTx = await service.refundCredit(txId, "teste");
+    const balance = await service.getBalance(storeId);
+
+    expect(resultTx).toBe("tx-refund-1");
+    expect(balance).toBe(10);
+    expect(mockRpc).toHaveBeenCalledWith(
+      "refund_credit",
+      expect.objectContaining({ p_tx_id: txId, p_reason: "teste" }),
+    );
+  });
+
+  it("refundCredit deduction inexistente → erro", async () => {
+    mockRpcError("refund_credit", "transacao_nao_encontrada");
+
+    await expect(service.refundCredit(txId, "teste")).rejects.toThrow(
+      "transacao_nao_encontrada",
+    );
+  });
+
+  it("refundCredit duplicado é no-op", async () => {
+    const refundTxId = "tx-refund-unico";
+    mockRpc.mockImplementation((m: string) => {
+      if (m === "refund_credit") return { data: refundTxId, error: null };
+      return { data: null, error: null };
+    });
+
+    const result1 = await service.refundCredit(txId, "teste");
+    const result2 = await service.refundCredit(txId, "teste");
+
+    expect(result1).toBe(refundTxId);
+    expect(result2).toBe(refundTxId);
+  });
+
+  it("refundCredit com idempotency_key repetido", async () => {
+    const key = "idem-refund-1";
+    mockRpc.mockImplementation((m: string) => {
+      if (m === "refund_credit") return { data: "tx-refund-idem", error: null };
+      return { data: null, error: null };
+    });
+
+    const result1 = await service.refundCredit(txId, "teste", {
+      idempotencyKey: key,
+    });
+    const result2 = await service.refundCredit(txId, "teste", {
+      idempotencyKey: key,
+    });
+
+    expect(result1).toBe("tx-refund-idem");
+    expect(result2).toBe("tx-refund-idem");
+    expect(mockRpc).toHaveBeenCalledWith(
+      "refund_credit",
+      expect.objectContaining({ p_idempotency_key: key }),
+    );
+  });
+
+  it("refundCredit em transação não-deduction → erro", async () => {
+    mockRpcError("refund_credit", "tipo_invalido");
+
+    await expect(service.refundCredit(txId, "teste")).rejects.toThrow(
+      "tipo_invalido",
+    );
+  });
+});
+
 describe("Saldo e Grant", () => {
   it("getBalance retorna 0 para loja sem registro", async () => {
     mockGetBalanceResult(null);
