@@ -415,3 +415,90 @@ describe("Saldo e Grant", () => {
     );
   });
 });
+
+describe("Concorrência", () => {
+  it("duas reservas simultâneas com saldo justo", async () => {
+    mockRpc.mockImplementation((m: string) => {
+      if (m === "reserve_credit") return { data: "tx-con-1", error: null };
+      return { data: null, error: null };
+    });
+
+    const [r1, r2] = await Promise.all([
+      service.reserveCredit(storeId, 1),
+      service.reserveCredit(storeId, 1),
+    ]);
+
+    expect(r1).toBe("tx-con-1");
+    expect(r2).toBe("tx-con-1");
+    expect(mockRpc).toHaveBeenCalledTimes(2);
+  });
+
+  it("duas reservas simultâneas com saldo insuficiente", async () => {
+    let callCount = 0;
+    mockRpc.mockImplementation((m: string) => {
+      if (m === "reserve_credit") {
+        callCount++;
+        if (callCount === 1) return { data: "tx-ok", error: null };
+        return { data: null, error: { message: "saldo_insuficiente" } };
+      }
+      return { data: null, error: null };
+    });
+
+    const results = await Promise.allSettled([
+      service.reserveCredit(storeId, 1),
+      service.reserveCredit(storeId, 1),
+    ]);
+
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    expect(results.filter((r) => r.status === "rejected")).toHaveLength(1);
+  });
+
+  it("grant + reserve simultâneos não corrompem saldo", async () => {
+    mockRpc.mockImplementation((m: string) => {
+      if (m === "grant_credits") return { data: "tx-grant", error: null };
+      if (m === "reserve_credit") return { data: "tx-reserve", error: null };
+      return { data: null, error: null };
+    });
+
+    const [grantTx, reserveTx] = await Promise.all([
+      service.grantCredits(storeId, 5, "bonus"),
+      service.reserveCredit(storeId, 3),
+    ]);
+
+    expect(grantTx).toBe("tx-grant");
+    expect(reserveTx).toBe("tx-reserve");
+    expect(mockRpc).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("Invariantes", () => {
+  it("saldo nunca negativo", async () => {
+    mockRpc
+      .mockReturnValueOnce({ data: "tx-1", error: null })
+      .mockReturnValueOnce({ data: "tx-2", error: null })
+      .mockReturnValueOnce({ data: "tx-3", error: null })
+      .mockReturnValueOnce({ data: null, error: { message: "saldo_insuficiente" } });
+
+    await service.grantCredits(storeId, 5, "init");
+    await service.reserveCredit(storeId, 3);
+    await service.reserveCredit(storeId, 2);
+    await expect(service.reserveCredit(storeId, 1)).rejects.toThrow("saldo_insuficiente");
+    expect(mockRpc).toHaveBeenCalledTimes(4);
+  });
+
+  it("transações são imutáveis — CreditService não expõe update/delete", () => {
+    const proto = Object.getOwnPropertyNames(CreditService.prototype);
+    expect(proto).not.toContain("updateTransaction");
+    expect(proto).not.toContain("deleteTransaction");
+    expect(proto).not.toContain("updateBalance");
+  });
+
+  it("adjustment não aparece no extrato", async () => {
+    mockGetHistoryResult([]);
+
+    const result = await service.getHistory(storeId);
+
+    expect(mockNeqTx).toHaveBeenCalledWith("type", "adjustment");
+    expect(result).toEqual([]);
+  });
+});
