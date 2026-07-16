@@ -56,14 +56,15 @@ Autenticação completa, vínculo user→store, isolamento multi-tenant, beta.ve
 
 Copy Director com IA, pipeline de geração paralelo, sistema de créditos, pagamento com Stripe, UI de saldo e extrato, observabilidade, launch readiness e UAT externo.
 
-- [ ] Phase 23: Text Provider + Copy Director (2/2 plans planned) — 2026-07-16
+- [x] Phase 23: Text Provider + Copy Director (2/2 plans ✅) — 2026-07-16
+- [ ] Phase 24: Créditos — Schema, Saldo e Transações (planned)
 
 <details>
 <summary>✅ v1.5 Lançamento Externo Controlado (F23-F29) — In Progress</summary>
 
 Copy Director com IA, pipeline de geração paralelo, sistema de créditos, pagamento com Stripe, UI de saldo e extrato, observabilidade e launch readiness.
 
-- [ ] Phase 23: Text Provider + Copy Director (2/2 plans)
+- [x] Phase 23: Text Provider + Copy Director (2/2 plans ✅)
 - [ ] Phase 24: Créditos — Schema, Saldo e Transações (planned)
 - [ ] Phase 25: Pipeline de Geração Paralelo (planned)
 - [ ] Phase 26: Pagamento com Stripe (planned)
@@ -93,7 +94,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, paga
 | 20. Dashboard | v1.4 | 3/3 | ✅ Complete | 2026-07-13 |
 | 21. Histórico e Busca | v1.4 | 3/3 | ✅ Complete | 2026-07-14 |
 | 22. Mobile Hardening | v1.4 | 3/3 | ✅ Complete | 2026-07-15 |
-| 23. Text Provider + Copy Director | v1.5 | 2/2 | 📋 Planned | 2026-07-16 |
+| 23. Text Provider + Copy Director | v1.5 | 2/2 | ✅ Complete | 2026-07-16 |
 
 ---
 

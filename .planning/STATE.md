@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Lançamento Externo Controlado
-status: planning
-last_updated: "2026-07-16T16:20:00.000Z"
+status: active
+last_updated: "2026-07-16T16:28:00.000Z"
 last_activity: 2026-07-16
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 0
-  percent: 0
+  completed_plans: 2
+  percent: 100
 ---
 
 # Project State
@@ -188,25 +188,33 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Milestone v1.5 — Lançamento Externo Controlado ◆
 
-### Phase 23 — Text Provider + Copy Director
+### Phase 23 — Text Provider + Copy Director ✅
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
-| 23-01 | 1 | 📋 Planned | TextProvider Foundation — types, OpenAI, Mock, factory, PublicationCopySnapshot title? |
-| 23-02 | 2 | 📋 Planned | Copy Director + Tests — schema, service, prompt template, parseResult, 10+ testes |
+| 23-01 | 1 | ✅ | TextProvider Foundation — types, OpenAI, Mock, factory, PublicationCopySnapshot title?, 10 testes |
+| 23-02 | 2 | ✅ | Copy Director + Tests — schema, service, prompt template, parseResult, 17 testes |
 
 **Requirements:** COPY-01, COPY-02, COPY-03, COPY-04
+**Tests:** 740 passing (91 files, 27 novos)
+**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 **Context:** `.planning/phases/23-text-provider-copy-director/23-CONTEXT.md`
 **Source:** `openspec/changes/fase-23-text-provider-copy-director/`
+
+**Commits:**
+
+- `1df7298` — 23-01: TextProvider Foundation — interface, OpenAI, Mock, factory, PublicationCopySnapshot title?, +10 testes
+- `b9a8ffc` — 23-02: Copy Director + Tests — schemas, CopyDirectorService, prompt template, parseResult 3-layer fallback, +17 testes
 
 ## Next Steps
 
 - ✅ Milestone v1.4 — Experiência SaaS **concluída e arquivada** 🎉
-- 📋 Phase 23 — Text Provider + Copy Director **planejada** — aguardando autorização para execução
+- ✅ Phase 23 — Text Provider + Copy Director **implementada**
+- 📋 Phase 24 — Créditos (planejada)
 
 ## Current Position
 
-Phase: 23 — Text Provider + Copy Director
-Plan: 2/2 planned
-Status: Planned — awaiting implementation go-ahead
-Last activity: 2026-07-16 — Phase 23 planned
+Phase: 23 — Text Provider + Copy Director ✅
+Plan: 2/2 complete
+Status: Complete
+Last activity: 2026-07-16 — Phase 23 implemented

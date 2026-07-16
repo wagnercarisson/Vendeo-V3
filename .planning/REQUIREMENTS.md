@@ -7,10 +7,10 @@
 
 ### Copy Director (COPY)
 
-- [ ] **COPY-01**: TextProvider abstraction layer (createTextProvider, OpenAI implementation)
-- [ ] **COPY-02**: CopyDirectorService generates title, caption, hashtags, CTA from CopyDirectorInput
-- [ ] **COPY-03**: Prompt template in `prompts/campaign-copy-director.md` with segment-aware copywriting
-- [ ] **COPY-04**: Copy Director callable standalone (without image generation)
+- [x] **COPY-01**: TextProvider abstraction layer (createTextProvider, OpenAI implementation)
+- [x] **COPY-02**: CopyDirectorService generates title, caption, hashtags, CTA from CopyDirectorInput
+- [x] **COPY-03**: Prompt template in `prompts/campaign-copy-director.md` with segment-aware copywriting
+- [x] **COPY-04**: Copy Director callable standalone (without image generation)
 
 ### Sistema de Créditos (CRED)
 
@@ -111,10 +111,10 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| COPY-01 | Phase 23 | Planned |
-| COPY-02 | Phase 23 | Planned |
-| COPY-03 | Phase 23 | Planned |
-| COPY-04 | Phase 23 | Planned |
+| COPY-01 | Phase 23 | ✅ Complete |
+| COPY-02 | Phase 23 | ✅ Complete |
+| COPY-03 | Phase 23 | ✅ Complete |
+| COPY-04 | Phase 23 | ✅ Complete |
 | CRED-01 | Phase 24 | Planned |
 | CRED-02 | Phase 24 | Planned |
 | CRED-03 | Phase 24 | Planned |
