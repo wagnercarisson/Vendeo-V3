@@ -380,3 +380,24 @@ BEGIN
   RETURN tx_id;
 END;
 $$;
+
+-- =============================================================================
+-- REVERT (reverse order of creation)
+-- =============================================================================
+-- DROP FUNCTION IF EXISTS public.refund_credit CASCADE;
+-- DROP FUNCTION IF EXISTS public.reserve_credit CASCADE;
+-- DROP FUNCTION IF EXISTS public.grant_credits CASCADE;
+-- DROP TABLE IF EXISTS public.credit_transactions CASCADE;
+-- DROP TABLE IF EXISTS public.credit_balances CASCADE;
+-- DROP FUNCTION IF EXISTS public.trg_credit_transactions_immutable_fn CASCADE;
+-- DROP TRIGGER IF EXISTS trg_credit_transactions_immutable ON public.credit_transactions;
+-- DROP TRIGGER IF EXISTS trg_credit_balances_updated_at ON public.credit_balances;
+-- DROP FUNCTION IF EXISTS public.update_credit_balances_updated_at CASCADE;
+-- REVOKE SELECT ON TABLE public.credit_transactions FROM authenticated;
+-- REVOKE SELECT ON TABLE public.credit_balances FROM authenticated;
+-- DROP POLICY IF EXISTS "owner_select_credit_transactions" ON public.credit_transactions;
+-- DROP POLICY IF EXISTS "owner_select_credit_balances" ON public.credit_balances;
+-- ALTER TABLE public.credit_transactions DISABLE ROW LEVEL SECURITY;
+-- ALTER TABLE public.credit_balances DISABLE ROW LEVEL SECURITY;
+-- DROP INDEX IF EXISTS idx_credit_transactions_store_id;
+-- DROP INDEX IF EXISTS idx_credit_transactions_idempotency;
