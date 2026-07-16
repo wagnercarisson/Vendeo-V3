@@ -75,6 +75,7 @@ export interface RenderSnapshot {
 }
 
 export interface PublicationCopySnapshot {
+  title?: string;
   caption: string;
   hashtags: string[];
   cta_post: string;
