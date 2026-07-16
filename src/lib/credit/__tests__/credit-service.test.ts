@@ -90,6 +90,96 @@ function mockRpcError(method: string, message: string) {
 
 // ── Test suites ─────────────────────────────────────────────────────────────
 
+describe("Reserva e Dedução", () => {
+  it("reserveCredit deduz saldo", async () => {
+    mockRpcSuccess("reserve_credit", "tx-1");
+    mockGetBalanceResult(9);
+
+    const resultTx = await service.reserveCredit(storeId, 1);
+    const balance = await service.getBalance(storeId);
+
+    expect(resultTx).toBe("tx-1");
+    expect(balance).toBe(9);
+    expect(mockRpc).toHaveBeenCalledWith(
+      "reserve_credit",
+      expect.objectContaining({ p_amount: 1 }),
+    );
+  });
+
+  it("reserveCredit com saldo insuficiente rejeita", async () => {
+    mockRpcError("reserve_credit", "saldo_insuficiente");
+
+    await expect(service.reserveCredit(storeId, 10)).rejects.toThrow(
+      "saldo_insuficiente",
+    );
+  });
+
+  it("reserveCredit com campaignId registra", async () => {
+    mockRpcSuccess("reserve_credit", "tx-1");
+
+    await service.reserveCredit(storeId, 3, { campaignId });
+
+    expect(mockRpc).toHaveBeenCalledWith(
+      "reserve_credit",
+      expect.objectContaining({ p_campaign_id: campaignId }),
+    );
+  });
+
+  it("reserveCredit com idempotency_key repetido retorna mesma tx", async () => {
+    const key = "idem-reserve-1";
+    mockRpc.mockImplementation((m: string) => {
+      if (m === "reserve_credit") return { data: "tx-idem-reserve", error: null };
+      return { data: null, error: null };
+    });
+
+    const result1 = await service.reserveCredit(storeId, 2, {
+      idempotencyKey: key,
+    });
+    const result2 = await service.reserveCredit(storeId, 2, {
+      idempotencyKey: key,
+    });
+
+    expect(result1).toBe("tx-idem-reserve");
+    expect(result2).toBe("tx-idem-reserve");
+    expect(mockRpc).toHaveBeenCalledWith(
+      "reserve_credit",
+      expect.objectContaining({ p_idempotency_key: key }),
+    );
+  });
+
+  it("reservas consecutivas mantêm saldo", async () => {
+    mockRpcSuccess("reserve_credit", "tx-1");
+    mockGetBalanceResult(9);
+
+    await service.reserveCredit(storeId, 1);
+    const balanceApos1 = await service.getBalance(storeId);
+    expect(balanceApos1).toBe(9);
+
+    mockGetBalanceResult(8);
+    await service.reserveCredit(storeId, 1);
+    const balanceApos2 = await service.getBalance(storeId);
+    expect(balanceApos2).toBe(8);
+  });
+
+  it("getBalance reflete deduções", async () => {
+    mockRpcSuccess("reserve_credit", "tx-1");
+    mockGetBalanceResult(7);
+
+    await service.reserveCredit(storeId, 3);
+    const balance = await service.getBalance(storeId);
+
+    expect(balance).toBe(7);
+  });
+
+  it("reserveCredit amount > saldo → erro", async () => {
+    mockRpcError("reserve_credit", "saldo_insuficiente");
+
+    await expect(service.reserveCredit(storeId, 100)).rejects.toThrow(
+      "saldo_insuficiente",
+    );
+  });
+});
+
 describe("Saldo e Grant", () => {
   it("getBalance retorna 0 para loja sem registro", async () => {
     mockGetBalanceResult(null);
