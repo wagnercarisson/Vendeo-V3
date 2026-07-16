@@ -2,7 +2,7 @@
 
 **Gathered:** 2026-07-16
 **Status:** Ready for planning
-**Source:** OpenSpec `openspec/changes/fase-24-wallet-ledger-idempotencia/`
+**Source:** OpenSpec `openspec/changes/2026-07-16-fase-24-wallet-ledger-idempotencia/`
 
 <domain>
 ## Phase Boundary
@@ -106,12 +106,13 @@ Mutações: `this.adminClient.rpc('function_name', params)`. SELECTs (`getBalanc
 
 **Downstream agents MUST read these before planning or implementing.**
 
-### Supabase RPC Pattern (aplicado)
-- `src/lib/image-generation/services/types.ts` — Service class pattern with adminClient injection
+### Service class pattern with adminClient injection
+- `src/lib/image-generation/services/image-generation-service.ts` — ImageGenerationService pattern
+- `src/lib/campaign/persistence.ts` — Campaign persistence using supabaseAdmin (rpc + from pattern)
 
 ### Store/ownership patterns
 - `src/middleware.ts` — requireOwnership pattern
-- `src/lib/stores/store-service.ts` — StoreService with ownership validation
+- `src/lib/auth/store-ownership.ts` — Ownership validation helpers
 
 ### Campaign types (referência)
 - `src/lib/campaign/types.ts` — Campaign types for campaign_id FK reference
@@ -120,12 +121,12 @@ Mutações: `this.adminClient.rpc('function_name', params)`. SELECTs (`getBalanc
 - `supabase/migrations/` — Existing migration pattern (naming, RLS, triggers)
 
 ### OpenSpec Source of Truth
-- `openspec/changes/fase-24-wallet-ledger-idempotencia/proposal.md` — Why, What, Capabilities, Impact
-- `openspec/changes/fase-24-wallet-ledger-idempotencia/design.md` — 9 design decisions (D1-D9), goals/non-goals, risks, migration SQL, CreditService API, tests, invariants
-- `openspec/changes/fase-24-wallet-ledger-idempotencia/tasks.md` — 11 task groups, 58 steps
-- `openspec/changes/fase-24-wallet-ledger-idempotencia/specs/credit-tables/spec.md` — credit_balances e credit_transactions spec
-- `openspec/changes/fase-24-wallet-ledger-idempotencia/specs/credit-sql-functions/spec.md` — SQL functions spec (grant, reserve, refund)
-- `openspec/changes/fase-24-wallet-ledger-idempotencia/specs/credit-service/spec.md` — CreditService spec
+- `openspec/changes/2026-07-16-fase-24-wallet-ledger-idempotencia/proposal.md` — Why, What, Capabilities, Impact
+- `openspec/changes/2026-07-16-fase-24-wallet-ledger-idempotencia/design.md` — 9 design decisions (D1-D9), goals/non-goals, risks, migration SQL, CreditService API, tests, invariants
+- `openspec/changes/2026-07-16-fase-24-wallet-ledger-idempotencia/tasks.md` — 11 task groups, 58 steps
+- `openspec/changes/2026-07-16-fase-24-wallet-ledger-idempotencia/specs/credit-tables/spec.md` — credit_balances e credit_transactions spec
+- `openspec/changes/2026-07-16-fase-24-wallet-ledger-idempotencia/specs/credit-sql-functions/spec.md` — SQL functions spec (grant, reserve, refund)
+- `openspec/changes/2026-07-16-fase-24-wallet-ledger-idempotencia/specs/credit-service/spec.md` — CreditService spec
 
 ### Project Requirements
 - `.planning/REQUIREMENTS.md` — CRED-01, CRED-02, CRED-03, CRED-04, CRED-05 mapped to Phase 24
