@@ -249,6 +249,84 @@ describe("Estorno", () => {
   });
 });
 
+describe("Histórico", () => {
+  it("getHistory retorna transações filtrando adjustment", async () => {
+    const mockTxs = [
+      {
+        id: "tx-1",
+        store_id: storeId,
+        type: "deduction",
+        amount: -1,
+        balance_before: 10,
+        balance_after: 9,
+        campaign_id: null,
+        reason: "reserva",
+        reference: null,
+        idempotency_key: null,
+        metadata: {},
+        created_at: "2026-07-16T12:00:00Z",
+      },
+    ];
+    mockGetHistoryResult(mockTxs);
+
+    const result = await service.getHistory(storeId);
+
+    expect(mockSelectTx).toHaveBeenCalledWith("*");
+    expect(mockNeqTx).toHaveBeenCalledWith("type", "adjustment");
+    expect(mockEqTx).toHaveBeenCalledWith("store_id", storeId);
+    expect(mockOrderTx).toHaveBeenCalledWith("created_at", {
+      ascending: false,
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe("tx-1");
+    expect(result[0].storeId).toBe(storeId);
+    expect(result[0].balanceBefore).toBe(10);
+    expect(result[0].balanceAfter).toBe(9);
+    expect(result[0].createdAt).toBe("2026-07-16T12:00:00Z");
+  });
+
+  it("getHistory paginado com limit/offset", async () => {
+    const mockTxs = Array.from({ length: 5 }, (_, i) => ({
+      id: `tx-${i + 1}`,
+      store_id: storeId,
+      type: "grant",
+      amount: 10,
+      balance_before: i * 10,
+      balance_after: (i + 1) * 10,
+      campaign_id: null,
+      reason: "test",
+      reference: null,
+      idempotency_key: null,
+      metadata: {},
+      created_at: `2026-07-16T${12 + i}:00:00Z`,
+    }));
+    mockGetHistoryResult(mockTxs.slice(1, 3));
+
+    const result = await service.getHistory(storeId, 2, 1);
+
+    expect(mockRangeTx).toHaveBeenCalledWith(1, 2);
+    expect(result).toHaveLength(2);
+    expect(result[0].id).toBe("tx-2");
+    expect(result[1].id).toBe("tx-3");
+  });
+
+  it("getHistory loja sem transações → array vazio", async () => {
+    mockGetHistoryResult([]);
+
+    const result = await service.getHistory(storeId);
+
+    expect(result).toEqual([]);
+  });
+
+  it("getHistory default limit = 50", async () => {
+    mockGetHistoryResult([]);
+
+    await service.getHistory(storeId);
+
+    expect(mockRangeTx).toHaveBeenCalledWith(0, 49);
+  });
+});
+
 describe("Saldo e Grant", () => {
   it("getBalance retorna 0 para loja sem registro", async () => {
     mockGetBalanceResult(null);
