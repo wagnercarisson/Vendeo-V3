@@ -1,6 +1,6 @@
 # Vendeo — Roadmap
 
-> Milestones: **Contas e Propriedade** (v1.2 ✓) | **Persistência e Entrega da Campanha** (v1.3 ✓) | **Experiência SaaS** (v1.4 ✓)
+> Milestones: **Contas e Propriedade** (v1.2 ✓) | **Persistência e Entrega da Campanha** (v1.3 ✓) | **Experiência SaaS** (v1.4 ✓) | **Lançamento Externo Controlado** (v1.5 ◆)
 
 ## Milestones
 
@@ -52,9 +52,26 @@ Autenticação completa, vínculo user→store, isolamento multi-tenant, beta.ve
 
 </details>
 
-### 📋 v1.5 (Planned)
+### 📋 v1.5 — Lançamento Externo Controlado
 
-_Próximo milestone. Use `/gsd-new-milestone` para definir requisitos, fases e roadmap._
+Copy Director com IA, pipeline de geração paralelo, sistema de créditos, pagamento com Stripe, UI de saldo e extrato, observabilidade, launch readiness e UAT externo.
+
+- [ ] Phase 23: Text Provider + Copy Director (2/2 plans planned) — 2026-07-16
+
+<details>
+<summary>✅ v1.5 Lançamento Externo Controlado (F23-F29) — In Progress</summary>
+
+Copy Director com IA, pipeline de geração paralelo, sistema de créditos, pagamento com Stripe, UI de saldo e extrato, observabilidade e launch readiness.
+
+- [ ] Phase 23: Text Provider + Copy Director (2/2 plans)
+- [ ] Phase 24: Créditos — Schema, Saldo e Transações (planned)
+- [ ] Phase 25: Pipeline de Geração Paralelo (planned)
+- [ ] Phase 26: Pagamento com Stripe (planned)
+- [ ] Phase 27: Conta e Saldo Visível (planned)
+- [ ] Phase 28: Observabilidade e Operação (planned)
+- [ ] Phase 29: Refinamento Visual e Launch Readiness (planned)
+
+</details>
 
 ## Progress
 
@@ -76,6 +93,7 @@ _Próximo milestone. Use `/gsd-new-milestone` para definir requisitos, fases e r
 | 20. Dashboard | v1.4 | 3/3 | ✅ Complete | 2026-07-13 |
 | 21. Histórico e Busca | v1.4 | 3/3 | ✅ Complete | 2026-07-14 |
 | 22. Mobile Hardening | v1.4 | 3/3 | ✅ Complete | 2026-07-15 |
+| 23. Text Provider + Copy Director | v1.5 | 2/2 | 📋 Planned | 2026-07-16 |
 
 ---
 
