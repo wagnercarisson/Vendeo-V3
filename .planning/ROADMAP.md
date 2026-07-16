@@ -178,11 +178,11 @@ Phase 24 (Credit Tables + CreditService) ──┘
 | COPY-02 | Phase 23 | Planned |
 | COPY-03 | Phase 23 | Planned |
 | COPY-04 | Phase 23 | Planned |
-| CRED-01 | Phase 24 | Planned |
-| CRED-02 | Phase 24 | Planned |
-| CRED-03 | Phase 24 | Planned |
-| CRED-04 | Phase 24 | Planned |
-| CRED-05 | Phase 24 | Planned |
+| CRED-01 | Phase 24 | Done ✓ |
+| CRED-02 | Phase 24 | Done ✓ |
+| CRED-03 | Phase 24 | Done ✓ |
+| CRED-04 | Phase 24 | Done ✓ |
+| CRED-05 | Phase 24 | Done ✓ |
 | PIPE-01 | Phase 25 | Planned |
 | PIPE-02 | Phase 25 | Planned |
 | PIPE-03 | Phase 25 | Planned |

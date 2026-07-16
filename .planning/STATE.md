@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Lançamento Externo Controlado
 status: active
-last_updated: "2026-07-16T16:28:00.000Z"
+last_updated: "2026-07-16T19:50:00.000Z"
 last_activity: 2026-07-16
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 2
-  percent: 50
+  completed_plans: 4
+  percent: 100
 ---
 
 # Project State
@@ -212,9 +212,40 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 - ✅ Phase 23 — Text Provider + Copy Director **implementada**
 - 👷 Phase 24 — Créditos — Schema, Saldo e Transações (2 plans planejados)
 
+## Completed
+
+### Phase 24 — Créditos — Schema, Saldo e Transações ✅
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 24-01 | 1 | ✅ | Migration SQL + CreditService — 3 SQL functions atômicas, credit_balances, credit_transactions append-only, tipos Zod, classe 6 métodos |
+| 24-02 | 2 | ✅ | Tests + SQL Verification — 28 testes, concorrência, invariantes |
+
+**Tests:** 768 passing (92 files, 28 novos)
+**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
+
+**Context:** `.planning/phases/24-creditos-schema-saldo-transacoes/24-CONTEXT.md`
+
+**Commits:**
+
+- `14136e8` — 24-01: Migration — credit_balances table
+- `8251b7b` — 24-01: Migration — credit_transactions table
+- `db7f1fe` — 24-01: Migration — grant_credits SQL function
+- `1cc492d` — 24-01: Migration — reserve_credit SQL function
+- `9361b96` — 24-01: Migration — refund_credit SQL function
+- `f925d56` — 24-01: Migration — REVERT section
+- `d2b3526` — 24-01: CreditService types (Zod + TypeScript)
+- `eee8fba` — 24-01: CreditService class (6 methods)
+- `cc981eb` — 24-02: Test setup + mocks
+- `7c91c0f` — 24-02: 6 testes Saldo e Grant
+- `29a4af1` — 24-02: 7 testes Reserva e Dedução
+- `81cadd7` — 24-02: 5 testes Estorno
+- `b565cf5` — 24-02: 4 testes Histórico
+- `76f4362` — 24-02: 3 testes Concorrência + 3 Invariantes
+
 ## Current Position
 
-Phase: 24 — Créditos — Schema, Saldo e Transações 👷
-Plan: 0/2 planned
-Status: Planned
-Last activity: 2026-07-16 — Phase 24 context and plans created from OpenSpec
+Phase: 25 — Pipeline de Geração v1.5 ○
+Plan: 0/0 not yet planned
+Status: Not started
+Last activity: 2026-07-16 — Phase 24 (Créditos) completed ✅
