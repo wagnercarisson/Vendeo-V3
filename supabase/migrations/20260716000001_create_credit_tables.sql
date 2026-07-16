@@ -198,3 +198,85 @@ BEGIN
   RETURN tx_id;
 END;
 $$;
+
+-- reserve_credit(store_id, amount, campaign_id, idempotency_key, metadata) → UUID
+-- Reserves (deducts) credits from a store's wallet for campaign generation.
+-- Requires sufficient balance, raises saldo_insuficiente if not.
+-- Idempotent: same (store_id, idempotency_key) returns existing deduction UUID.
+CREATE OR REPLACE FUNCTION public.reserve_credit(
+  p_store_id UUID,
+  p_amount INTEGER,
+  p_campaign_id UUID DEFAULT NULL,
+  p_idempotency_key TEXT DEFAULT NULL,
+  p_metadata JSONB DEFAULT '{}'::jsonb
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  current_balance INTEGER;
+  balance_before INTEGER;
+  balance_after INTEGER;
+  tx_id UUID;
+  existing_tx_id UUID;
+BEGIN
+  -- Validate amount > 0
+  IF p_amount <= 0 THEN
+    RAISE EXCEPTION 'amount_invalido';
+  END IF;
+
+  -- Idempotency check
+  IF p_idempotency_key IS NOT NULL THEN
+    SELECT id INTO existing_tx_id
+    FROM public.credit_transactions
+    WHERE store_id = p_store_id AND idempotency_key = p_idempotency_key;
+
+    IF FOUND THEN
+      IF (SELECT type FROM public.credit_transactions WHERE id = existing_tx_id) = 'deduction' THEN
+        RETURN existing_tx_id;
+      ELSE
+        RAISE EXCEPTION 'idempotency_conflict';
+      END IF;
+    END IF;
+  END IF;
+
+  -- Lock row and read current balance
+  SELECT balance INTO current_balance
+  FROM public.credit_balances
+  WHERE store_id = p_store_id
+  FOR UPDATE;
+
+  -- Check if store has a credit_balances record
+  IF current_balance IS NULL THEN
+    RAISE EXCEPTION 'saldo_inexistente';
+  END IF;
+
+  -- Check if sufficient balance
+  IF current_balance < p_amount THEN
+    RAISE EXCEPTION 'saldo_insuficiente';
+  END IF;
+
+  -- Calculate balances (amount stored as negative in the transaction)
+  balance_before := current_balance;
+  balance_after := current_balance - p_amount;
+
+  -- Insert deduction transaction (negative amount)
+  INSERT INTO public.credit_transactions (
+    store_id, type, amount, balance_before, balance_after,
+    campaign_id, idempotency_key, metadata
+  ) VALUES (
+    p_store_id, 'deduction', -p_amount, balance_before, balance_after,
+    p_campaign_id, p_idempotency_key, p_metadata
+  )
+  RETURNING id INTO tx_id;
+
+  -- Update balance
+  UPDATE public.credit_balances
+  SET balance = balance_after
+  WHERE store_id = p_store_id;
+
+  RETURN tx_id;
+END;
+$$;
