@@ -35,6 +35,7 @@ CREATE POLICY "owner_select_credit_balances" ON public.credit_balances
 -- GRANT SELECT necessary for RLS to work with authenticated role
 -- INSERT/UPDATE/DELETE grants explicitly omitted — mutations via SQL functions (service_role only)
 GRANT SELECT ON TABLE public.credit_balances TO authenticated;
+GRANT SELECT ON TABLE public.credit_balances TO service_role;
 
 -- Create credit_transactions table (append-only ledger)
 -- Each transaction records balance_before and balance_after for linear reconciliation
@@ -110,6 +111,7 @@ CREATE POLICY "owner_select_credit_transactions" ON public.credit_transactions
 -- GRANT SELECT necessary for RLS to work with authenticated role
 -- INSERT/UPDATE/DELETE grants explicitly omitted — mutations via SQL functions (service_role only)
 GRANT SELECT ON TABLE public.credit_transactions TO authenticated;
+GRANT SELECT ON TABLE public.credit_transactions TO service_role;
 
 -- =============================================================================
 -- SQL Functions (Atomic Mutations with SELECT FOR UPDATE + Idempotency)
@@ -394,7 +396,9 @@ $$;
 -- DROP TRIGGER IF EXISTS trg_credit_balances_updated_at ON public.credit_balances;
 -- DROP FUNCTION IF EXISTS public.update_credit_balances_updated_at CASCADE;
 -- REVOKE SELECT ON TABLE public.credit_transactions FROM authenticated;
+-- REVOKE SELECT ON TABLE public.credit_transactions FROM service_role;
 -- REVOKE SELECT ON TABLE public.credit_balances FROM authenticated;
+-- REVOKE SELECT ON TABLE public.credit_balances FROM service_role;
 -- DROP POLICY IF EXISTS "owner_select_credit_transactions" ON public.credit_transactions;
 -- DROP POLICY IF EXISTS "owner_select_credit_balances" ON public.credit_balances;
 -- ALTER TABLE public.credit_transactions DISABLE ROW LEVEL SECURITY;
