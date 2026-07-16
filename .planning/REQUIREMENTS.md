@@ -7,8 +7,8 @@
 
 ### Copy Director (COPY)
 
-- [ ] **COPY-01**: TextProvider abstraction layer (createTextProvider, OpenAI/Anthropic implementations)
-- [ ] **COPY-02**: CopyDirectorService generates title, caption, hashtags, CTA from CampaignBrief
+- [ ] **COPY-01**: TextProvider abstraction layer (createTextProvider, OpenAI implementation)
+- [ ] **COPY-02**: CopyDirectorService generates title, caption, hashtags, CTA from CopyDirectorInput
 - [ ] **COPY-03**: Prompt template in `prompts/campaign-copy-director.md` with segment-aware copywriting
 - [ ] **COPY-04**: Copy Director callable standalone (without image generation)
 
