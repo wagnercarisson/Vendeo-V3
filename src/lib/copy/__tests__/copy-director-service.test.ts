@@ -4,6 +4,7 @@ import { CopyDirectorInputSchema, CopyDirectorResultSchema } from '../schema';
 import type { CopyDirectorInput } from '../schema';
 import { MockTextProvider } from '@/lib/text-provider/mock';
 import type { TextProvider } from '@/lib/text-provider/types';
+import { MalformedResponseError } from '../errors';
 
 const COMPLETE_INPUT: CopyDirectorInput = {
   productName: "Tênis Runner Pro",
@@ -161,7 +162,7 @@ describe('CopyDirectorService — parseResult fallback', () => {
     expect(result.cta_post).toBe('Compre já!');
   });
 
-  it('saída JSON inválida usa fallback determinístico', async () => {
+  it('saída JSON inválida sem campos extraíveis lança MalformedResponseError', async () => {
     const brokenProvider: TextProvider = {
       name: 'broken-test',
       async generateText() {
@@ -173,10 +174,6 @@ describe('CopyDirectorService — parseResult fallback', () => {
       },
     };
     const service = new CopyDirectorService(brokenProvider);
-    const result = await service.generateCopy(MINIMUM_INPUT);
-    expect(result.title).toBe('Promoção Especial');
-    expect(result.caption).toBe('texto completamente inválido sem estrutura JSON nem campos extraíveis');
-    expect(result.hashtags).toEqual([]);
-    expect(result.cta_post).toBe('Saiba mais!');
+    await expect(service.generateCopy(MINIMUM_INPUT)).rejects.toThrow(MalformedResponseError);
   });
 });

@@ -4,6 +4,7 @@ import { NextRequest } from "next/server";
 import type { Store } from "@/lib/store";
 
 const mockSupabaseFrom = vi.fn();
+const mockSupabaseRpc = vi.fn();
 const mockGetClaims = vi.fn();
 let mockRequireUserImpl = vi.fn();
 let mockRequireApiUserImpl = vi.fn();
@@ -18,6 +19,7 @@ vi.mock("@/lib/supabase/server", () => ({
   })),
   supabaseAdmin: {
     from: mockSupabaseFrom,
+    rpc: mockSupabaseRpc,
   },
 }));
 
@@ -108,13 +110,7 @@ function createReq(method: string, body?: unknown, url = "http://localhost/api/s
 describe("POST /api/store", () => {
   it("returns 201 with store when authenticated", async () => {
     mockRequireUserImpl.mockResolvedValue({ userId: "user-123", claims: { sub: "user-123" } });
-    mockSupabaseFrom.mockReturnValue({
-      insert: vi.fn(() => ({
-        select: vi.fn(() => ({
-          single: vi.fn(async () => ({ data: { ...mockStore, user_id: "user-123" }, error: null })),
-        })),
-      })),
-    });
+    mockSupabaseRpc.mockResolvedValue({ data: { ...mockStore, user_id: "user-123" }, error: null });
 
     const { POST } = await import("@/app/api/store/route");
     const res = await POST(createReq("POST", { name: "Minha Loja", segment: "variedades" }));
@@ -136,13 +132,7 @@ describe("POST /api/store", () => {
 
   it("returns 409 on UNIQUE violation", async () => {
     mockRequireUserImpl.mockResolvedValue({ userId: "user-123", claims: { sub: "user-123" } });
-    mockSupabaseFrom.mockReturnValue({
-      insert: vi.fn(() => ({
-        select: vi.fn(() => ({
-          single: vi.fn(async () => ({ data: null, error: { code: "23505", message: "duplicate key" } })),
-        })),
-      })),
-    });
+    mockSupabaseRpc.mockResolvedValue({ data: null, error: { code: "23505", message: "duplicate key" } });
 
     const { POST } = await import("@/app/api/store/route");
     const res = await POST(createReq("POST", { name: "Outra Loja", segment: "variedades" }));
@@ -153,21 +143,15 @@ describe("POST /api/store", () => {
 
   it("ignores user_id in body", async () => {
     mockRequireUserImpl.mockResolvedValue({ userId: "user-123", claims: { sub: "user-123" } });
-    let insertBody: any = null;
-    mockSupabaseFrom.mockReturnValue({
-      insert: vi.fn((body: any) => {
-        insertBody = body;
-        return {
-          select: vi.fn(() => ({
-            single: vi.fn(async () => ({ data: { ...mockStore, user_id: "user-123" }, error: null })),
-          })),
-        };
-      }),
+    let capturedParams: any = null;
+    mockSupabaseRpc.mockImplementation((_rpcName: string, params: any) => {
+      capturedParams = params;
+      return Promise.resolve({ data: { ...mockStore, user_id: "user-123" }, error: null });
     });
 
     const { POST } = await import("@/app/api/store/route");
     await POST(createReq("POST", { name: "Minha Loja", segment: "variedades", user_id: "hacker-id" }));
-    expect(insertBody.user_id).toBe("user-123");
+    expect(capturedParams.p_user_id).toBe("user-123");
   });
 });
 

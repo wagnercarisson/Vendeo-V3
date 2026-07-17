@@ -11,22 +11,22 @@ export async function checkRateLimit(storeId: string): Promise<RateLimitResult> 
   const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
   const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
 
-  const { data: hourlyCount } = await supabaseAdmin
+  const { count: hourlyCount } = await supabaseAdmin
     .from("generation_rate_events")
     .select("id", { count: "exact", head: true })
     .eq("store_id", storeId)
     .eq("event_type", "generation_attempt")
     .gte("created_at", oneHourAgo);
 
-  const { data: dailyCount } = await supabaseAdmin
+  const { count: dailyCount } = await supabaseAdmin
     .from("generation_rate_events")
     .select("id", { count: "exact", head: true })
     .eq("store_id", storeId)
     .eq("event_type", "generation_attempt")
     .gte("created_at", twentyFourHoursAgo);
 
-  const hourlyTotal = hourlyCount?.length ?? 0;
-  const dailyTotal = dailyCount?.length ?? 0;
+  const hourlyTotal = hourlyCount ?? 0;
+  const dailyTotal = dailyCount ?? 0;
 
   if (hourlyTotal >= MAX_HOURLY) {
     return { allowed: false, reason: "hourly_limit_exceeded" };

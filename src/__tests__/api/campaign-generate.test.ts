@@ -19,6 +19,7 @@ let mockValidateIdentityReferenceImpl = vi.fn();
 let mockBuildCampaignBriefImpl = vi.fn();
 let mockCreateImageProviderImpl = vi.fn();
 let mockGenerateImageImpl = vi.fn();
+let mockGenerateCopyImpl = vi.fn();
 
 // ── Module mocks ───────────────────────────────────────────────────────────
 vi.mock("server-only", () => ({}));
@@ -113,10 +114,45 @@ vi.mock("@/lib/image-generation/services/input-validation-service", () => ({
   })),
 }));
 
+const MockCopyDirectorService = vi.fn(function () {
+  return {
+    generateCopy: vi.fn(async () => mockGenerateCopyImpl()),
+  };
+});
+vi.mock("@/lib/copy/copy-director-service", () => ({
+  CopyDirectorService: MockCopyDirectorService,
+}));
+
+vi.mock("@/lib/text-provider/factory", () => ({
+  createTextProvider: vi.fn(() => ({ name: "test-provider" })),
+}));
+
+vi.mock("@/lib/copy/mapper", () => ({
+  mapBriefToCopyDirectorInput: vi.fn(() => ({
+    productName: "Test",
+    description: "Test description",
+    offer: "Test offer",
+    storeName: "Test Store",
+    segment: "test",
+  })),
+}));
+
+vi.mock("@/lib/credit/credit-service", () => ({
+  CreditService: vi.fn(function() {
+    return {
+      getBalance: vi.fn(async () => 10),
+      reserveCredit: vi.fn(async () => "tx-1"),
+      confirmCredit: vi.fn(async () => {}),
+      refundCredit: vi.fn(async () => {}),
+    };
+  }),
+}));
+
 vi.mock("@/lib/image-generation/config", () => ({
   IMAGE_GENERATION_GLOBAL_TIMEOUT_MS: 300000,
   MAX_PRODUCT_IMAGE_BASE64_SIZE: 4 * 1024 * 1024,
   IMAGE_GENERATION_RESPONSES_MODEL: "test-model",
+  COST_PER_GENERATION: 1,
 }));
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -182,13 +218,18 @@ function setupSuccessMocks(): void {
   });
   mockRequireOwnershipImpl.mockResolvedValue({ id: "store-1" });
 
-  mockSupabaseFrom.mockReturnValue({
-    select: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    single: vi.fn().mockResolvedValue({
-      data: { id: STORE_UUID, name: "Test Store", segment: "variedades-utilidades", brand_color: "#22C55E", identity_state: "text_only" },
-      error: null,
-    }),
+  mockSupabaseFrom.mockImplementation((_table: string) => {
+    const chain = {
+      select: vi.fn(() => chain),
+      eq: vi.fn(() => chain),
+      single: vi.fn(() => Promise.resolve({
+        data: { id: STORE_UUID, name: "Test Store", segment: "variedades-utilidades", brand_color: "#22C55E", identity_state: "text_only" },
+        error: null,
+      })),
+      gte: vi.fn(() => Promise.resolve({ data: [], error: null, count: 0 })),
+      insert: vi.fn(() => Promise.resolve({ error: null })),
+    };
+    return chain;
   });
 
   mockResolveStoreIdentityImpl.mockResolvedValue(IDENTITY_SNAPSHOT);
@@ -205,6 +246,15 @@ function setupSuccessMocks(): void {
   });
 
   mockCreateImageProviderImpl.mockReturnValue({ name: "test-provider" });
+  mockGenerateCopyImpl.mockResolvedValue({
+    title: "Promoção Imperdível",
+    hook: "Aproveite agora!",
+    description: "Descrição da campanha",
+    ctaPost: "Compre já",
+    ctaStory: "Saiba mais",
+    applicableProducts: [],
+    campaignDetails: "",
+  });
   mockGenerateImageImpl.mockResolvedValue({
     success: true,
     imageDataUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
@@ -286,7 +336,7 @@ describe("POST /api/campaign/generate-image", () => {
     const errorEvent = events.find((e) => e.type === "error");
     expect(errorEvent).toBeDefined();
     expect(errorEvent!.campaignId).toBe(CAMPAIGN_UUID);
-    expect(errorEvent!.code).toBe("provider_error");
+    expect(errorEvent!.code).toBe("generation_failed");
 
     // updateCampaignError should have been called with the IA error message
     expect(mockUpdateCampaignErrorImpl).toHaveBeenCalledWith(

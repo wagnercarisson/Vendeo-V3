@@ -514,6 +514,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
         discountedPriceCents: true,
         badge: true,
         imageFile: true,
+        mandatoryArtworkText: true,
       });
       setIsSubmitting(false);
       return;

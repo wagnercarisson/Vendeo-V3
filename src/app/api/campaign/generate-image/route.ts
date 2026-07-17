@@ -11,7 +11,7 @@ import { requireApiUser } from "@/lib/auth/require-user";
 import { requireOwnership } from "@/lib/auth/store-ownership";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { supabaseAdmin } from '@/lib/supabase/server';
-import type { CampaignInput, StoreIdentitySnapshot } from "@/components/campaign/types";
+import type { CampaignInput } from "@/components/campaign/types";
 import { createCampaign, dataUrlToCampaignImage, uploadCampaignImage, updateCampaignReady, updateCampaignError, deleteCampaignImage } from "@/lib/campaign/persistence";
 import { transcodeToJpeg } from "@/lib/campaign/image-processor";
 import { checkRateLimit, recordGenerationAttempt } from "@/lib/rate-limit/rate-limit";
@@ -278,33 +278,6 @@ export const POST = apiHandler(async (request: NextRequest) => {
   }
 
   const startTime = performance.now();
-
-  // Helper: build caption from campaign input + IA result
-  function buildCaption(input: CampaignInput, result: GenerateImageServiceResult): string {
-    const productName =
-      result.success && result.inputCorrections?.productName?.to
-        ? result.inputCorrections.productName.to
-        : input.productName;
-    const hookText = input.hook || input.description || "";
-    return `${productName}${hookText ? ` — ${hookText}` : ""}`;
-  }
-
-  // Helper: derive hashtags from store segment + product name
-  function buildHashtags(identity: StoreIdentitySnapshot, input: CampaignInput): string[] {
-    const tags: string[] = [];
-    const segment = identity.storeSegment || "";
-    if (segment) tags.push(`#${segment.toLowerCase().replace(/\s+/g, "")}`);
-    tags.push("#oferta");
-    const productName = input.productName || "";
-    if (productName) {
-      const productTag = productName
-        .toLowerCase()
-        .replace(/[^a-z0-9\u00C0-\u024F]/g, "")
-        .slice(0, 20);
-      if (productTag) tags.push(`#${productTag}`);
-    }
-    return tags;
-  }
 
   // ── Stream: Open NDJSON stream ──────────────────────────────────
   const streamAbortController = new AbortController();
