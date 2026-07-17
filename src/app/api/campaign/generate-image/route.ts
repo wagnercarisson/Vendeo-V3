@@ -321,7 +321,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
             discountedPriceCents: campaignInput.discountedPriceCents,
           });
 
-          emitPhase("copy_generation", "running", "Gerando copy com IA...");
+          emitPhase("copy_generation", "running", "Gerando texto da campanha...");
 
           try {
             copyResult = await copyDirector.generateCopy(copyInput, {
@@ -332,7 +332,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
             const fallbackProvider = process.env.TEXT_FALLBACK_PROVIDER;
 
             if (isRetryableError(firstErr) && fallbackProvider === "gemini") {
-              emitPhase("copy_retry", "running", "Tentando fallback Gemini...");
+              emitPhase("copy_retry", "running", "Usando provedor alternativo...");
 
               try {
                 const geminiProvider = createTextProvider("gemini");
@@ -352,7 +352,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
             }
           }
 
-          emitPhase("copy_generation", "complete", "Copy gerada com sucesso");
+          emitPhase("copy_generation", "complete", "Texto da campanha gerado");
         } catch (err) {
           copyError = err instanceof Error ? err : new Error(String(err));
           emitPhase("copy_generation", "failed", copyError.message);

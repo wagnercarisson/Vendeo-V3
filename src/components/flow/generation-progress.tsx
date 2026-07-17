@@ -14,7 +14,8 @@ interface GenerationProgressProps {
 const PHASE_LABELS: Record<string, { label: string; running: string }> = {
   input_validation: { label: "Validação", running: "Validando dados..." },
   prompt_assembly: { label: "Briefing", running: "Montando briefing criativo..." },
-  image_generation: { label: "Geração", running: "Gerando imagem..." },
+  copy_generation: { label: "Texto", running: "Gerando texto da campanha..." },
+  image_generation: { label: "Arte", running: "Gerando imagem..." },
   quality_review: { label: "Revisão", running: "Revisando qualidade..." },
   done: { label: "Concluído", running: "Campanha gerada!" },
 };
@@ -39,6 +40,8 @@ const ERROR_LABELS: Record<string, string> = {
 const PHASE_FRIENDLY_LABELS: Record<string, string> = {
   input_validation: "Validação dos dados da campanha",
   prompt_assembly: "Montagem do briefing criativo",
+  copy_generation: "Geração do texto da campanha",
+  copy_retry: "Tentativa com provedor alternativo",
   image_generation: "Geração da imagem com IA",
   quality_review: "Revisão de qualidade da imagem",
   done: "Concluído",
