@@ -1,19 +1,14 @@
 import { PromptLoader } from "@/lib/image-generation/prompt-loader";
 import type { TextProvider } from "@/lib/text-provider/types";
+import type { TextProviderOptions } from "@/lib/text-provider/types";
 import {
   CopyDirectorInputSchema,
   CopyDirectorResultSchema,
 } from "@/lib/copy/schema";
 import type { CopyDirectorInput, CopyDirectorResult } from "@/lib/copy/schema";
+import { MalformedResponseError } from "@/lib/copy/errors";
 
 const SYSTEM_PROMPT = "Você é um copywriter especialista em marketing para lojas físicas.";
-
-const DETERMINISTIC_FALLBACK = (raw: string): CopyDirectorResult => ({
-  title: "Promoção Especial",
-  caption: raw,
-  hashtags: [],
-  cta_post: "Saiba mais!",
-});
 
 function parseViaJson(raw: string): CopyDirectorResult | null {
   try {
@@ -61,7 +56,10 @@ export class CopyDirectorService {
     this.promptLoader = promptLoader ?? new PromptLoader();
   }
 
-  async generateCopy(input: CopyDirectorInput): Promise<CopyDirectorResult> {
+  async generateCopy(
+    input: CopyDirectorInput,
+    options?: { signal?: AbortSignal }
+  ): Promise<CopyDirectorResult> {
     const validated = CopyDirectorInputSchema.parse(input);
 
     const variables: Record<string, string> = {
@@ -80,11 +78,17 @@ export class CopyDirectorService {
 
     const prompt = this.promptLoader.load("campaign-copy-director", variables);
 
-    const result = await this.provider.generateText(prompt, {
+    const textOpts: TextProviderOptions = {
       system: SYSTEM_PROMPT,
       temperature: 0.7,
       maxTokens: 1000,
-    });
+    };
+
+    if (options?.signal) {
+      textOpts.signal = options.signal;
+    }
+
+    const result = await this.provider.generateText(prompt, textOpts);
 
     return this.parseResult(result.content);
   }
@@ -96,6 +100,8 @@ export class CopyDirectorService {
     const fromRegex = parseViaRegex(raw);
     if (fromRegex) return fromRegex;
 
-    return DETERMINISTIC_FALLBACK(raw);
+    throw new MalformedResponseError(
+      "Não foi possível extrair campos válidos da resposta do Copy Director"
+    );
   }
 }
