@@ -22,11 +22,10 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
-  store_id UUID;
+  v_store_id UUID;
   store_data JSONB;
-  balance INTEGER;
+  v_balance INTEGER;
 BEGIN
-  -- Insert store
   INSERT INTO public.stores (
     name, segment, user_id, city, state, brand_color, logo_url,
     subsegment, tone_of_voice, positioning, short_description, slogan
@@ -34,28 +33,19 @@ BEGIN
     p_name, p_segment, p_user_id, p_city, p_state, p_brand_color, p_logo_url,
     p_subsegment, p_tone_of_voice, p_positioning, p_short_description, p_slogan
   )
-  RETURNING id INTO store_id;
+  RETURNING id INTO v_store_id;
 
-  -- Grant initial 5 credits (idempotent via onboarding_ prefix)
   PERFORM public.grant_credits(
-    store_id,
-    5,
-    'onboarding',
-    'onboarding_' || store_id,
-    '{}'::jsonb
+    v_store_id, 5, 'onboarding', 'onboarding_' || v_store_id, '{}'::jsonb
   );
 
-  -- Read back balance
-  SELECT COALESCE(balance, 0) INTO balance
+  -- v_balance != credit_balances.balance → no column shadowing
+  SELECT COALESCE(balance, 0) INTO v_balance
   FROM public.credit_balances
-  WHERE store_id = store_id;
+  WHERE store_id = v_store_id;
 
-  -- Build response
   SELECT jsonb_build_object(
-    'id', store_id,
-    'name', p_name,
-    'segment', p_segment,
-    'balance', balance
+    'id', v_store_id, 'name', p_name, 'segment', p_segment, 'balance', v_balance
   ) INTO store_data;
 
   RETURN store_data;
