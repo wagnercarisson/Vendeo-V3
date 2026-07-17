@@ -13,6 +13,7 @@ Função `validatePublicationCopy(body)` e interface `PublicationCopyUpdate` em 
 O sistema SHALL prover uma função `validatePublicationCopy(body: unknown)` que valida o body da requisição PATCH de publicação.
 
 A função SHALL:
+- Aceitar `title?` (string, 0–200 caracteres — opcional, aceito mas não exigido)
 - Aceitar `caption` (string, 1–2200 caracteres)
 - Aceitar `hashtags` (array de strings, 0–30 itens, cada um: 2–100 chars, começa com `#`, sem espaços, apenas letras/números/underscore após o `#`)
 - Aceitar `cta_post` (string, 0–200 caracteres — opcional, pode ser vazio)
@@ -20,10 +21,15 @@ A função SHALL:
 - Se `restore === true`, retornar sem erros (não valida outros campos)
 - Retornar objeto `{ valid: boolean; data?: PublicationCopyUpdate; issues?: ValidationIssue[] }`
 
-#### Scenario: validatePublicationCopy aceita body válido
+#### Scenario: validatePublicationCopy aceita body válido com title
 
-- **WHEN** `validatePublicationCopy` recebe `{ caption: "Texto", hashtags: ["#tag"], cta_post: "Compre" }`
-- **THEN** retorna `{ valid: true, data: { caption, hashtags, cta_post } }`
+- **WHEN** `validatePublicationCopy` recebe `{ title: "Título", caption: "Texto", hashtags: ["#tag"], cta_post: "Compre" }`
+- **THEN** retorna `{ valid: true, data: { title, caption, hashtags, cta_post } }`
+
+#### Scenario: validatePublicationCopy aceita body sem title (v1.3/v1.4)
+
+- **WHEN** `validatePublicationCopy` recebe `{ caption: "Texto", hashtags: ["#tag"], cta_post: "Compre" }` (sem `title`)
+- **THEN** retorna `{ valid: true }` — `title` não é exigido`
 
 #### Scenario: validatePublicationCopy aceita restore: true
 
@@ -65,13 +71,13 @@ A função SHALL:
 O sistema SHALL definir a interface `PublicationCopyUpdate` para tipar o body da requisição.
 
 A interface SHALL ser um union type:
-- `{ caption: string; hashtags: string[]; cta_post: string }` (edição normal)
+- `{ title?: string; caption: string; hashtags: string[]; cta_post: string }` (edição normal com `title` opcional)
 - `{ restore: true }` (restaurar original)
 
-#### Scenario: PublicationCopyUpdate aceita edição normal
+#### Scenario: PublicationCopyUpdate aceita edição normal com title opcional
 
-- **WHEN** `PublicationCopyUpdate` é usado com `{ caption, hashtags, cta_post }`
-- **THEN** os tipos são `caption: string`, `hashtags: string[]`, `cta_post: string`
+- **WHEN** `PublicationCopyUpdate` é usado com `{ title, caption, hashtags, cta_post }`
+- **THEN** os tipos são `title?: string`, `caption: string`, `hashtags: string[]`, `cta_post: string`
 
 #### Scenario: PublicationCopyUpdate aceita restore
 

@@ -106,12 +106,15 @@ O sistema SHALL prover uma função `getEffectivePublicationCopy(campaign: Campa
 
 **Critério de shape/tipo:** O critério de fallback é de shape/tipo, não de truthiness. `cta_post` vazio (`""`) é um valor válido e não causa fallback indevido para o snapshot.
 
+O sistema SHALL incluir o campo `title?` no retorno de `getEffectivePublicationCopy`, extraído de `publication_copy_snapshot.title` (se presente) ou de `publication_copy_current.title` (se presente). Em campanhas v1.3/v1.4 (sem `title`), o campo é simplesmente ausente/undefined.
+
 O sistema SHALL mapear os campos de `CampaignRecord` para o Client Component com fallback seguro usando `getEffectivePublicationCopy`:
 
 | Campo na página | Fonte | Fallback se null |
 |-----------------|-------|------------------|
 | `campaignId` | `id` | — |
 | `isPublicationCopyEdited` | `publication_copy_current !== null` | `false` |
+| `title` | `getEffectivePublicationCopy(campaign).title` | `undefined` |
 | `caption` | `getEffectivePublicationCopy(campaign).caption` | `""` |
 | `hashtags` | `getEffectivePublicationCopy(campaign).hashtags` | `[]` |
 | `ctaPost` | `getEffectivePublicationCopy(campaign).cta_post` | `""` |
@@ -121,25 +124,26 @@ O sistema SHALL mapear os campos de `CampaignRecord` para o Client Component com
 | `downloadUrl` | Pré-computado: `"/api/campaign/${id}/download"` | — |
 | `displayStatus` | Derivado server-side de `status` + stale check | `"error"` |
 
-#### Scenario: getEffectivePublicationCopy retorna current quando existe
+#### Scenario: getEffectivePublicationCopy retorna current com title? quando existe
 
-- **WHEN** campaign tem `publication_copy_current` válido (caption, hashtags, cta_post) e `publication_copy_snapshot` válido
-- **THEN** retorna os dados de `publication_copy_current` (current tem prioridade sobre snapshot)
+- **WHEN** campaign tem `publication_copy_current` válido com `title`
+- **THEN** retorna os dados de `publication_copy_current` incluindo `title`
 
-#### Scenario: getEffectivePublicationCopy retorna snapshot quando current é null
+#### Scenario: getEffectivePublicationCopy retorna snapshot com title? quando current é null
 
-- **WHEN** campaign tem `publication_copy_current = null` e `publication_copy_snapshot` válido
-- **THEN** retorna os dados de `publication_copy_snapshot` (fallback)
+- **WHEN** campaign tem `publication_copy_current = null` e `publication_copy_snapshot` com `title`
+- **THEN** retorna os dados de `publication_copy_snapshot` incluindo `title` (fallback)
 
-#### Scenario: getEffectivePublicationCopy retorna snapshot quando current tem campos faltando
+#### Scenario: getEffectivePublicationCopy retorna sem title em campanhas v1.3/v1.4
 
-- **WHEN** campaign tem `publication_copy_current` mal formatado (ex: sem `caption`)
-- **THEN** retorna os dados de `publication_copy_snapshot` (fallback seguro)
+- **WHEN** campaign tem `publication_copy_snapshot` sem `title` (campanha v1.3/v1.4)
+- **THEN** retorna os dados sem o campo `title` — compatível retroativo
+- **AND** UI trata `title` ausente sem quebra
 
 #### Scenario: getEffectivePublicationCopy retorna vazio quando ambos são null
 
 - **WHEN** campaign tem ambos `publication_copy_current` e `publication_copy_snapshot` como null
-- **THEN** retorna `{ caption: "", hashtags: [], cta_post: "" }`
+- **THEN** retorna `{ caption: "", hashtags: [], cta_post: "" }` sem `title`
 
 #### Scenario: isPublicationCopyEdited true quando current existe
 

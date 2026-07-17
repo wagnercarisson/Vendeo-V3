@@ -54,3 +54,17 @@ Implemented 34+ tests across rate-limit, pipeline, store onboarding, and retroac
 - [x] `npx vitest run src/app/api/campaign/generate-image/__tests__/route.test.ts` — 25/25 passing
 - [x] `npm run typecheck` — zero erros
 - [x] `npx vitest run` — 799/799 passing (94 test files)
+
+## Post-Implementation Quick Fix
+
+Após a implementação da F25, foi executado o quick task `260717-okh` para corrigir guardrail de placeholders no pipeline de geração.
+
+Resumo:
+- Corrigido `badgeText` não interpolado no `ImageReviewService`.
+- Adicionado preflight `validatePrompts()` antes do paralelismo Copy Director ∥ Image Director.
+- Garantido que prompts com placeholders não resolvidos bloqueiam antes de chamadas IA desnecessárias.
+- Testes adicionados: 5 novos testes de serviços + rota sem regressão.
+- Commit final: `5878b0f`.
+
+Referência:
+`../../quick/260717-okh-corrigir-bug-guardrail-no-pipeline-de-ge/260717-okh-SUMMARY.md`
