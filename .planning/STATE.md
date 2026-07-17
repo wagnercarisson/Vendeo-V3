@@ -6,16 +6,16 @@ status: active
 last_updated: "2026-07-16T19:50:00.000Z"
 last_activity: 2026-07-16
 progress:
-  total_phases: 2
+  total_phases: 3
   completed_phases: 2
-  total_plans: 4
+  total_plans: 7
   completed_plans: 4
-  percent: 100
+  percent: 57
 ---
 
 # Project State
 
-**Last updated:** 2026-07-16
+**Last updated:** 2026-07-17
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆
 
 ## Completed
@@ -243,9 +243,21 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 - `b565cf5` — 24-02: 4 testes Histórico
 - `76f4362` — 24-02: 3 testes Concorrência + 3 Invariantes
 
+### Phase 25 — Integração Transacional Pipeline ◆
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 25-01 | 1 | ◆ | Fundação — Config, Migration, Rate Limit, Copy Director e Gemini |
+| 25-02 | 2 | ○ | Integração Transacional — mandatoryArtworkText, Mapper, Pipeline 3 Zonas, Onboarding Grant e Compatibilidade |
+| 25-03 | 3 | ○ | Testes e Verificação — 34+ testes, typecheck, lint, build |
+
+**Requirements:** PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, PIPE-06, UI-05
+**Context:** `.planning/phases/25-integracao-transacional-pipeline/25-CONTEXT.md`
+**Source:** `openspec/changes/fase-25-integracao-transacional-pipeline/`
+
 ## Current Position
 
-Phase: 25 — Pipeline de Geração v1.5 ○
-Plan: 0/0 not yet planned
-Status: Not started
-Last activity: 2026-07-16 — Phase 24 (Créditos) completed ✅
+Phase: 25 — Pipeline de Geração v1.5 ◆
+Plan: 0/3 planned
+Status: Planning
+Last activity: 2026-07-17 — Phase 25 (Integração Transacional) planned ◆

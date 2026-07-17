@@ -14,11 +14,11 @@
 
 ### Sistema de Créditos (CRED)
 
-- [ ] **CRED-01**: credit_balances table with RLS (user can SELECT own balance)
-- [ ] **CRED-02**: credit_transactions table (append-only, types: grant/purchase/deduction/refund/adjustment)
-- [ ] **CRED-03**: CreditService with reserveCredit, confirmCredit, refundCredit, grantCredits, getBalance, getHistory
-- [ ] **CRED-04**: Balance never negative — every deduction checks balance before executing
-- [ ] **CRED-05**: Atomic reserve/refund via SQL transactions (SELECT FOR UPDATE or SQL function)
+- [x] **CRED-01**: credit_balances table with RLS (user can SELECT own balance)
+- [x] **CRED-02**: credit_transactions table (append-only, types: grant/purchase/deduction/refund/adjustment)
+- [x] **CRED-03**: CreditService with reserveCredit, confirmCredit, refundCredit, grantCredits, getBalance, getHistory
+- [x] **CRED-04**: Balance never negative — every deduction checks balance before executing
+- [x] **CRED-05**: Atomic reserve/refund via SQL transactions (SELECT FOR UPDATE or SQL function)
 
 ### Pipeline de Geração (PIPE)
 
@@ -115,11 +115,11 @@ Deferred to future release. Tracked but not in current roadmap.
 | COPY-02 | Phase 23 | ✅ Complete |
 | COPY-03 | Phase 23 | ✅ Complete |
 | COPY-04 | Phase 23 | ✅ Complete |
-| CRED-01 | Phase 24 | Planned |
-| CRED-02 | Phase 24 | Planned |
-| CRED-03 | Phase 24 | Planned |
-| CRED-04 | Phase 24 | Planned |
-| CRED-05 | Phase 24 | Planned |
+| CRED-01 | Phase 24 | ✅ Complete |
+| CRED-02 | Phase 24 | ✅ Complete |
+| CRED-03 | Phase 24 | ✅ Complete |
+| CRED-04 | Phase 24 | ✅ Complete |
+| CRED-05 | Phase 24 | ✅ Complete |
 | PIPE-01 | Phase 25 | Planned |
 | PIPE-02 | Phase 25 | Planned |
 | PIPE-03 | Phase 25 | Planned |
