@@ -102,6 +102,7 @@ const MockImageGenerationService = vi.fn(function () {
       }
       return mockGenerateImageImpl();
     }),
+    validatePrompts: vi.fn(() => ({ valid: true, errors: [] })),
   };
 });
 vi.mock("@/lib/image-generation/services/image-generation-service", () => ({

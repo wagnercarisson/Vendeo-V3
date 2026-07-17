@@ -275,4 +275,4 @@ Last activity: 2026-07-17 - Completed quick task 260717-okh: Corrigir bug/guardr
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
-| 260717-okh | Corrigir bug/guardrail no pipeline de geracao de campanha: evitar chamadas de IA quando houver placeholders nao resolvidos em prompts e corrigir placeholder do revisor. | 2026-07-17 | a315a29 | [260717-okh-corrigir-bug-guardrail-no-pipeline-de-ge](./quick/260717-okh-corrigir-bug-guardrail-no-pipeline-de-ge/) |
+| 260717-okh | Corrigir bug/guardrail no pipeline de geracao de campanha: evitar chamadas de IA quando houver placeholders nao resolvidos em prompts e corrigir placeholder do revisor. | 2026-07-17 | 5878b0f | [260717-okh-corrigir-bug-guardrail-no-pipeline-de-ge](./quick/260717-okh-corrigir-bug-guardrail-no-pipeline-de-ge/) |
