@@ -11,6 +11,7 @@ export type { ValidationContext };
 export interface ImageReviewInput {
   productName: string;
   storeName: string;
+  badgeText: string;
   originalPrice?: string;
   discountedPrice: string;
   validationContext?: ValidationContext;
@@ -83,6 +84,7 @@ export class ImageReviewService {
     const prompt = this.promptLoader.load("campaign-image-reviewer", {
       productName: input.productName,
       storeName: input.storeName,
+      badgeText: input.badgeText ?? "",
       discountedPrice: input.discountedPrice,
       originalPrice: input.originalPrice ?? "",
       validationContextSection,

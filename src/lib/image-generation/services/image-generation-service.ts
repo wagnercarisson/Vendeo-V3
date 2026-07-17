@@ -355,6 +355,7 @@ export class ImageGenerationService {
       const reviewInput: ImageReviewInput = {
         productName: effectiveProductName,
         storeName: brief.store.name,
+        badgeText: body.badgeText ?? "",
         discountedPrice: this.formatPriceBRL(body.discountedPriceCents),
         originalPrice: (body.originalPriceCents ?? 0) > 0
           ? this.formatPriceBRL(body.originalPriceCents ?? 0)
