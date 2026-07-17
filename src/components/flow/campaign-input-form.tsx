@@ -5,6 +5,7 @@ import type { CampaignFormFields } from "./use-campaign-form";
 import { CampaignImageUpload } from "./campaign-image-upload";
 import { GenerationProgress } from "./generation-progress";
 import { BADGE_OPTIONS } from "@/lib/constants";
+import { MandatoryArtworkField } from "@/components/campaign/mandatory-artwork-field";
 import {
   AlertCircle,
   AlertTriangle,
@@ -379,6 +380,11 @@ function FormContent({
           </p>
         )}
       </div>
+
+      <MandatoryArtworkField
+        value={fields.mandatoryArtworkText}
+        onChange={(v) => setField("mandatoryArtworkText", v)}
+      />
 
       <div className="pt-2">
         <button

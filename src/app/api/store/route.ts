@@ -83,26 +83,22 @@ export const POST = apiHandler(async (request: NextRequest) => {
       return NextResponse.json({ error: "Subsegmento obrigatório para segmento outros" }, { status: 400 });
     }
 
-    const { data, error } = await supabase
-      .from("stores")
-      .insert({
-        name: name.trim(),
-        segment,
-        user_id: user.userId,
-        city: typeof city === "string" ? city : null,
-        state: typeof state === "string" ? state : null,
-        brand_color: typeof brand_color === "string" ? brand_color : null,
-        logo_url: typeof logo_url === "string" ? logo_url : null,
-        subsegment: effectiveSubsegment,
-        tone_of_voice: typeof tone_of_voice === "string" ? tone_of_voice : null,
-        positioning: typeof positioning === "string" ? positioning.trim() || null : null,
-        short_description: typeof short_description === "string" ? short_description.trim() || null : null,
-        slogan: typeof slogan === "string" ? slogan.trim() || null : null,
-      })
-      .select()
-      .single();
+    const { data, error } = await supabase.rpc("create_store_with_initial_grant", {
+      p_name: (name as string).trim(),
+      p_segment: segment as string,
+      p_user_id: user.userId,
+      p_city: typeof city === "string" ? city : null,
+      p_state: typeof state === "string" ? state : null,
+      p_brand_color: typeof brand_color === "string" ? brand_color : null,
+      p_logo_url: typeof logo_url === "string" ? logo_url : null,
+      p_subsegment: effectiveSubsegment,
+      p_tone_of_voice: typeof tone_of_voice === "string" ? tone_of_voice : null,
+      p_positioning: typeof positioning === "string" ? positioning.trim() || null : null,
+      p_short_description: typeof short_description === "string" ? short_description.trim() || null : null,
+      p_slogan: typeof slogan === "string" ? slogan.trim() || null : null,
+    });
 
-    if (error?.code === "23505") {
+    if (error?.message?.includes("stores_user_id_key") || error?.code === "23505") {
       return NextResponse.json(
         { error: "Usuário já possui uma loja" },
         { status: 409 }

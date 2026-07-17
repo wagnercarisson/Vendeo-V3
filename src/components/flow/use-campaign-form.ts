@@ -78,6 +78,7 @@ export interface CampaignFormFields {
   discountedPriceCents: number;
   badge: string;
   imageFile: File | null;
+  mandatoryArtworkText: string;
 }
 
 export type FieldErrors = Partial<
@@ -87,7 +88,8 @@ export type FieldErrors = Partial<
     | "originalPriceCents"
     | "discountedPriceCents"
     | "badge"
-    | "imageFile",
+    | "imageFile"
+    | "mandatoryArtworkText",
     string
   >
 >;
@@ -130,6 +132,7 @@ const EMPTY_FIELDS: CampaignFormFields = {
   discountedPriceCents: 0,
   badge: "",
   imageFile: null,
+  mandatoryArtworkText: "",
 };
 
 function validateProductName(value: string): string | null {
@@ -200,6 +203,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     discountedPriceCents: false,
     badge: false,
     imageFile: false,
+    mandatoryArtworkText: false,
   });
   const [rawOriginalPrice, setRawOriginalPrice] = useState("");
   const [rawDiscountedPrice, setRawDiscountedPrice] = useState("");
@@ -489,6 +493,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
       "originalPriceCents",
       "badge",
       "imageFile",
+      "mandatoryArtworkText",
     ];
 
     for (const field of allFields) {
@@ -542,6 +547,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
         discountedPriceCents: frozenFields.discountedPriceCents,
         description: frozenFields.description || undefined,
         badgeText: frozenFields.badge,
+        mandatoryArtworkText: frozenFields.mandatoryArtworkText || undefined,
         productImageDataUrl: imageDataUrl,
       };
 

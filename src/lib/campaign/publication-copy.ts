@@ -5,7 +5,7 @@ export interface ValidationIssue {
 }
 
 export type PublicationCopyUpdate =
-  | { caption: string; hashtags: string[]; cta_post: string }
+  | { caption: string; hashtags: string[]; cta_post: string; title?: string }
   | { restore: true };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -15,7 +15,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export function validatePublicationCopy(
   body: unknown,
 ):
-  | { valid: true; data: { caption: string; hashtags: string[]; cta_post: string } }
+  | { valid: true; data: { caption: string; hashtags: string[]; cta_post: string; title?: string } }
   | { valid: true; data: { restore: true } }
   | { valid: false; issues: ValidationIssue[] }
 {
@@ -37,8 +37,9 @@ export function validatePublicationCopy(
   const hasCaption = "caption" in body;
   const hasHashtags = "hashtags" in body;
   const hasCtaPost = "cta_post" in body;
+  const hasTitle = "title" in body;
 
-  if (!hasCaption && !hasHashtags && !hasCtaPost) {
+  if (!hasCaption && !hasHashtags && !hasCtaPost && !hasTitle) {
     return {
       valid: false,
       issues: [
@@ -50,6 +51,23 @@ export function validatePublicationCopy(
         },
       ],
     };
+  }
+
+  // Validate title (optional, 0-200 chars)
+  if (hasTitle) {
+    if (typeof body.title !== "string") {
+      issues.push({
+        field: "title",
+        message: "Title deve ser uma string.",
+        code: "invalid_type",
+      });
+    } else if (body.title.length > 200) {
+      issues.push({
+        field: "title",
+        message: "Title deve ter no máximo 200 caracteres.",
+        code: "too_long",
+      });
+    }
   }
 
   // Validate caption
@@ -166,6 +184,7 @@ export function validatePublicationCopy(
       caption: body.caption as string,
       hashtags: body.hashtags as string[],
       cta_post: body.cta_post as string,
+      ...(hasTitle && typeof body.title === "string" ? { title: body.title } : {}),
     },
   };
 }

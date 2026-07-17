@@ -10,6 +10,7 @@ export interface CampaignPageProps {
   caption: string;
   hashtags: string[];
   ctaPost: string;
+  title?: string;
   displayStatus: "ready" | "generating" | "stale" | "error";
   productName: string;
   createdAt: string;
@@ -57,7 +58,7 @@ export async function generateSignedPreviewUrl(storagePath: string): Promise<str
 
 export function getEffectivePublicationCopy(
   campaign: CampaignRecord
-): { caption: string; hashtags: string[]; cta_post: string } {
+): { title?: string; caption: string; hashtags: string[]; cta_post: string } {
   const current = campaign.publication_copy_current as Record<string, unknown> | null;
   const snapshot = campaign.publication_copy_snapshot as Record<string, unknown> | null;
 
@@ -69,6 +70,7 @@ export function getEffectivePublicationCopy(
     typeof current.cta_post === "string"
   ) {
     return {
+      title: typeof current.title === "string" ? current.title : undefined,
       caption: current.caption,
       hashtags: current.hashtags,
       cta_post: current.cta_post,
@@ -83,6 +85,7 @@ export function getEffectivePublicationCopy(
     typeof snapshot.cta_post === "string"
   ) {
     return {
+      title: typeof snapshot.title === "string" ? snapshot.title : undefined,
       caption: snapshot.caption,
       hashtags: snapshot.hashtags,
       cta_post: snapshot.cta_post,
@@ -115,6 +118,7 @@ export function mapCampaignToProps(campaign: CampaignRecord, id: string): Campai
     caption: effective.caption,
     hashtags: effective.hashtags,
     ctaPost: effective.cta_post,
+    title: effective.title ?? undefined,
     displayStatus: computeDisplayStatus(campaign),
     productName: campaign.product_name ?? "",
     createdAt: campaign.created_at ?? new Date().toISOString(),

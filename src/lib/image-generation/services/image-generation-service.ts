@@ -763,6 +763,7 @@ export class ImageGenerationService {
       validity: body.validity ?? "",
       availabilityNotes: body.availabilityNotes ?? "",
       sensitiveConstraints: body.sensitiveConstraints ?? "",
+      mandatoryArtworkText: body.mandatoryArtworkText ?? "",
       identityImageUrl: brief?.identity.imageUrl ?? "",
       identityDirective: brief?.identity.directive ?? "",
 

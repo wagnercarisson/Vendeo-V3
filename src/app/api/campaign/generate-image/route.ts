@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { GenerateImageRequestSchema } from "@/lib/image-generation/schema";
-import { IMAGE_GENERATION_GLOBAL_TIMEOUT_MS, MAX_PRODUCT_IMAGE_BASE64_SIZE, IMAGE_GENERATION_RESPONSES_MODEL } from "@/lib/image-generation/config";
+import { IMAGE_GENERATION_GLOBAL_TIMEOUT_MS, MAX_PRODUCT_IMAGE_BASE64_SIZE, IMAGE_GENERATION_RESPONSES_MODEL, COST_PER_GENERATION } from "@/lib/image-generation/config";
 import { ImageGenerationService } from "@/lib/image-generation/services/image-generation-service";
 import type { GenerateImageServiceResult } from "@/lib/image-generation/services/image-generation-service";
 import { InputValidationService } from "@/lib/image-generation/services/input-validation-service";
@@ -13,7 +13,14 @@ import { apiHandler } from "@/lib/auth/api-handler";
 import { supabaseAdmin } from '@/lib/supabase/server';
 import type { CampaignInput, StoreIdentitySnapshot } from "@/components/campaign/types";
 import { createCampaign, dataUrlToCampaignImage, uploadCampaignImage, updateCampaignReady, updateCampaignError, deleteCampaignImage } from "@/lib/campaign/persistence";
-import { transcodeToJpeg, buildPublicationCopySnapshot } from "@/lib/campaign/image-processor";
+import { transcodeToJpeg } from "@/lib/campaign/image-processor";
+import { checkRateLimit, recordGenerationAttempt } from "@/lib/rate-limit/rate-limit";
+import { CreditService } from "@/lib/credit/credit-service";
+import { CopyDirectorService } from "@/lib/copy/copy-director-service";
+import { createTextProvider } from "@/lib/text-provider/factory";
+import { mapBriefToCopyDirectorInput } from "@/lib/copy/mapper";
+import type { CopyDirectorResult } from "@/lib/copy/schema";
+import { isRetryableError } from "@/lib/copy/errors";
 
 export const runtime = "nodejs";
 
@@ -129,6 +136,28 @@ export const POST = apiHandler(async (request: NextRequest) => {
   // Build campaign brief
   const brief = await buildCampaignBrief(validatedSnapshot, campaignInput as CampaignInput);
 
+  // ── Pre-stream: Rate limit guard (no IA, no stream) ────────────
+  const rateLimitResult = await checkRateLimit(storeId);
+  if (!rateLimitResult.allowed) {
+    return Response.json(
+      { error: "rate_limit_exceeded", retryAfter: rateLimitResult.resetTime ?? "1 hour" },
+      { status: 429 }
+    );
+  }
+
+  // ── Pre-stream: Record generation attempt ───────────────────────
+  await recordGenerationAttempt(storeId, user.userId);
+
+  // ── Pre-stream: Balance check (no IA, no stream) ────────────────
+  const creditService = new CreditService(supabaseAdmin);
+  const balance = await creditService.getBalance(storeId);
+  if (balance < COST_PER_GENERATION) {
+    return Response.json(
+      { error: { message: "Saldo insuficiente. São necessários créditos para gerar uma campanha." } },
+      { status: 402 }
+    );
+  }
+
   // ── Pre-stream: Input validation for conflict/confidence ─────────
   if (!parsed.data.inputValidationOverride?.productImageCheck) {
     const inputValidation = new InputValidationService();
@@ -208,6 +237,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
       availabilityNotes: campaignInput.availabilityNotes,
       sensitiveConstraints: campaignInput.sensitiveConstraints,
       inputValidationOverride: campaignInput.inputValidationOverride,
+      mandatoryArtworkText: campaignInput.mandatoryArtworkText,
       productImage: { provided: true, mimeType: "image/jpeg" },
     };
 
@@ -223,6 +253,27 @@ export const POST = apiHandler(async (request: NextRequest) => {
     return Response.json(
       { error: { message: "Erro ao iniciar registro da campanha." } },
       { status: 500 }
+    );
+  }
+
+  // ── Pre-stream: Reserve credit before IA ────────────────────────
+  let creditTxId: string | undefined;
+  try {
+    creditTxId = await creditService.reserveCredit(storeId, COST_PER_GENERATION, {
+      campaignId,
+      idempotencyKey: `reserve_${campaignId}`,
+    });
+  } catch (err: unknown) {
+    // Clean up campaign if reservation fails
+    try { await deleteCampaignImage(storagePath!); } catch { /* ignore */ }
+    try { await supabaseAdmin.from("campaigns").delete().eq("id", campaignId); } catch { /* ignore */ }
+    const message = err && typeof err === "object" && "message" in err
+      ? (err as { message: string }).message
+      : "Erro ao reservar crédito";
+    console.error(`[generate-image] reserveCredit error — ${message}`);
+    return Response.json(
+      { error: { message: message.includes("saldo_insuficiente") ? "Saldo insuficiente." : "Erro ao processar pagamento." } },
+      { status: message.includes("saldo_insuficiente") ? 402 : 500 }
     );
   }
 
@@ -256,15 +307,15 @@ export const POST = apiHandler(async (request: NextRequest) => {
   }
 
   // ── Stream: Open NDJSON stream ──────────────────────────────────
-  const abortController = new AbortController();
-  const timeoutId = setTimeout(() => abortController.abort(), IMAGE_GENERATION_GLOBAL_TIMEOUT_MS);
+  const streamAbortController = new AbortController();
+  const timeoutId = setTimeout(() => streamAbortController.abort(), IMAGE_GENERATION_GLOBAL_TIMEOUT_MS);
 
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
     async start(controller) {
       const provider = createImageProvider();
-      const service = new ImageGenerationService(provider);
+      const imageService = new ImageGenerationService(provider);
 
       const emit = (event: Record<string, unknown>) => {
         try {
@@ -274,42 +325,105 @@ export const POST = apiHandler(async (request: NextRequest) => {
         }
       };
 
-      try {
-        const result = await service.generateImage(brief, (phaseEvent) => {
-          emit({ type: "phase", ...phaseEvent });
-        }, abortController.signal);
+      // ── ZONA PARALELO: Copy Director ∥ Image Director ───────────
+      let copyResult: CopyDirectorResult | undefined;
+      let imageResult: GenerateImageServiceResult | undefined;
+      let copyError: Error | undefined;
+      let imageError: Error | undefined;
 
-        if (!result.success) {
-          // Record error in DB if INSERT already occurred
-          if (campaignId) {
-            try { await updateCampaignError(campaignId, result.message); } catch { /* ignore */ }
-          }
-          emit({
-            type: "error",
-            campaignId,
-            phase: "done",
-            code: result.code,
-            message: result.message,
-            httpStatus: result.code === "global_timeout" ? 504 : 502,
-            retryable: false,
-            requiresUserAction:
-              result.code === "product_image_conflict" || result.code === "input_low_confidence",
+      // Helper: emit phase event
+      const emitPhase = (phase: string, status: string, message?: string) => {
+        emit({ type: "phase", phase, status, message });
+      };
+
+      // Copy Director task with retry Gemini fallback
+      const copyTask = async (): Promise<void> => {
+        try {
+          const primaryProvider = createTextProvider("openai");
+          const copyDirector = new CopyDirectorService(primaryProvider);
+
+          const copyInput = mapBriefToCopyDirectorInput(brief, {
+            badgeText: campaignInput.badgeText,
+            originalPriceCents: campaignInput.originalPriceCents,
+            discountedPriceCents: campaignInput.discountedPriceCents,
           });
-        } else {
-          // ── Persistence pipeline ──────────────────────────────────
+
+          emitPhase("copy_generation", "running", "Gerando copy com IA...");
+
+          try {
+            copyResult = await copyDirector.generateCopy(copyInput, {
+              signal: streamAbortController.signal,
+            });
+          } catch (firstErr) {
+            // Check if retryable and fallback Gemini is configured
+            const fallbackProvider = process.env.TEXT_FALLBACK_PROVIDER;
+
+            if (isRetryableError(firstErr) && fallbackProvider === "gemini") {
+              emitPhase("copy_retry", "running", "Tentando fallback Gemini...");
+
+              try {
+                const geminiProvider = createTextProvider("gemini");
+                const geminiDirector = new CopyDirectorService(geminiProvider);
+                copyResult = await geminiDirector.generateCopy(copyInput, {
+                  signal: streamAbortController.signal,
+                });
+              } catch (secondErr) {
+                throw secondErr;
+              }
+            } else if (isRetryableError(firstErr) && fallbackProvider !== "gemini") {
+              // No fallback configured — rethrow as-is
+              throw firstErr;
+            } else {
+              // Non-retryable error — throw immediately
+              throw firstErr;
+            }
+          }
+
+          emitPhase("copy_generation", "complete", "Copy gerada com sucesso");
+        } catch (err) {
+          copyError = err instanceof Error ? err : new Error(String(err));
+          emitPhase("copy_generation", "failed", copyError.message);
+          // Abort remaining branch
+          streamAbortController.abort();
+        }
+      };
+
+      // Image Director task
+      const imageTask = async (): Promise<void> => {
+        try {
+          emitPhase("image_generation", "running", "Gerando arte com IA...");
+
+          imageResult = await imageService.generateImage(brief, (phaseEvent) => {
+            emit({ type: "phase", ...phaseEvent });
+          }, streamAbortController.signal);
+
+          if (imageResult.success) {
+            emitPhase("image_generation", "complete", "Arte gerada com sucesso");
+          } else {
+            throw new Error(imageResult.message || "Falha na geração de imagem");
+          }
+        } catch (err) {
+          imageError = err instanceof Error ? err : new Error(String(err));
+          emitPhase("image_generation", "failed", imageError.message);
+          // Abort remaining branch
+          streamAbortController.abort();
+        }
+      };
+
+      // Execute both in parallel; if one fails, abort the other
+      try {
+        await Promise.all([copyTask(), imageTask()]);
+
+        // ── ZONA PÓS-PARALELO: Evaluation ─────────────────────────
+        if (!copyError && !imageError && imageResult?.success && copyResult) {
+          // Both succeeded — merge and persist
           let uploadSucceeded = false;
           try {
-            // Parse data URL
-            const { buffer, mimeType } = dataUrlToCampaignImage(result.imageDataUrl);
-
-            // Transcode to JPEG
+            const { buffer, mimeType } = dataUrlToCampaignImage(imageResult.imageDataUrl);
             const jpegImage = await transcodeToJpeg(buffer, mimeType);
-
-            // Upload to Storage
             await uploadCampaignImage(storeId, campaignId!, jpegImage);
             uploadSucceeded = true;
 
-            // Build generation metadata per D7
             const durationMs = Math.round(performance.now() - startTime);
             const generationMetadata: Record<string, unknown> = {
               provider: provider.name,
@@ -317,11 +431,10 @@ export const POST = apiHandler(async (request: NextRequest) => {
               durationMs,
               generatedAt: new Date().toISOString(),
             };
-            if (result.inputCorrections) {
-              generationMetadata.corrections = result.inputCorrections;
+            if (imageResult.inputCorrections) {
+              generationMetadata.corrections = imageResult.inputCorrections;
             }
 
-            // Build render snapshot
             const renderSnapshot: Record<string, unknown> = {
               format: "jpeg",
               width: 1080,
@@ -332,87 +445,78 @@ export const POST = apiHandler(async (request: NextRequest) => {
               colorSpace: "srgb",
             };
 
-            // Build publication copy snapshot deterministically per D7
-            const publicationCopySnapshot = buildPublicationCopySnapshot({
-              caption: buildCaption(campaignInput, result),
-              hashtags: buildHashtags(validatedSnapshot, campaignInput),
-              cta_post: campaignInput.cta ?? "",
-            });
+            const publicationCopySnapshot: Record<string, unknown> = {
+              ...copyResult,
+            };
 
-            // Mark as ready
             await updateCampaignReady(campaignId!, {
               generationMetadata,
               renderSnapshot,
               publicationCopySnapshot,
             });
 
-            // Emit result NDJSON
-            const resultEvent: Record<string, unknown> = {
+            // Credit confirmed (no-op in v1.5)
+            try { await creditService.confirmCredit(creditTxId!); } catch { /* ignore */ }
+
+            emit({
               type: "result",
               campaignId: campaignId!,
               campaignUrl: `/campanhas/${campaignId}`,
-            };
-            if (result.inputCorrections) {
-              resultEvent.inputCorrections = result.inputCorrections;
-            }
-            emit(resultEvent);
+            });
           } catch (err) {
-            // Compensation per D5
             const errorMessage = err instanceof Error ? err.message : String(err);
             console.error(`[generate-image] persistence error — ${errorMessage}`);
 
             if (uploadSucceeded) {
-              // Upload OK but updateReady failed — clean up image
-              try {
-                await deleteCampaignImage(storagePath!);
-              } catch { /* ignore cleanup error */ }
+              try { await deleteCampaignImage(storagePath!); } catch { /* ignore */ }
             }
 
-            try {
-              await updateCampaignError(campaignId!, errorMessage);
-            } catch { /* ignore */ }
+            try { await updateCampaignError(campaignId!, errorMessage); } catch { /* ignore */ }
+
+            // Refund credit
+            try { await creditService.refundCredit(creditTxId!, "persistence_failure", { idempotencyKey: `refund_${creditTxId}` }); } catch { /* ignore */ }
 
             emit({
               type: "error",
               campaignId: campaignId!,
               phase: uploadSucceeded ? "update" : "upload",
               code: "persistence_error",
-              message: "Erro ao salvar campanha. A geração foi concluída mas não foi possível persistir.",
+              message: "Erro ao salvar campanha. Crédito estornado.",
               httpStatus: 502,
               retryable: false,
             });
           }
-        }
-      } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") {
-          if (campaignId) {
-            try { await updateCampaignError(campaignId, "O tempo limite de geração foi excedido. Tente novamente."); } catch { /* ignore */ }
-          }
+        } else {
+          // One or both failed — refund
+          const errorMessage = copyError?.message ?? imageError?.message ?? "Erro na geração";
+          try { await updateCampaignError(campaignId!, errorMessage); } catch { /* ignore */ }
+          try { await creditService.refundCredit(creditTxId!, "generation_failure", { idempotencyKey: `refund_${creditTxId}` }); } catch { /* ignore */ }
+
           emit({
             type: "error",
-            campaignId,
-            phase: "image_generation",
-            code: "global_timeout",
-            message: "O tempo limite de geração foi excedido. Tente novamente.",
-            httpStatus: 504,
+            campaignId: campaignId!,
+            phase: "generation",
+            code: "generation_failed",
+            message: "Falha na geração da campanha. Crédito estornado.",
+            httpStatus: 502,
             retryable: false,
           });
-        } else {
-          const message = err instanceof Error ? err.message : String(err);
-          if (campaignId) {
-            try { await updateCampaignError(campaignId, message); } catch { /* ignore */ }
-          }
-          emit({
-            type: "error",
-            campaignId,
-            phase: "image_generation",
-            code: "provider_error",
-            message: "Falha ao gerar imagem. Tente novamente.",
-            httpStatus: 502,
-            retryable: true,
-          });
-          console.error(`[generate-image-stream] error — ${message}`);
         }
+      } catch (err) {
+        // Catch errors from Promise.all itself (e.g., AbortError)
+        try { await updateCampaignError(campaignId!, err instanceof Error ? err.message : String(err)); } catch { /* ignore */ }
+        try { await creditService.refundCredit(creditTxId!, "generation_aborted", { idempotencyKey: `refund_${creditTxId}` }); } catch { /* ignore */ }
+
+        const isTimeout = err instanceof DOMException && err.name === "AbortError";
+        emit({
+          type: "error",
+          campaignId: campaignId!,
+          phase: "generation",
+          code: isTimeout ? "global_timeout" : "generation_failed",
+          message: isTimeout ? "Tempo limite excedido. Crédito estornado." : "Falha na geração. Crédito estornado.",
+          httpStatus: isTimeout ? 504 : 502,
+          retryable: false,
+        });
       } finally {
         clearTimeout(timeoutId);
         try { controller.close(); } catch { /* already closed */ }

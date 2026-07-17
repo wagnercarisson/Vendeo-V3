@@ -27,6 +27,7 @@ Você é o Diretor de Marketing da {{storeName}}. Sua função é briefar o Dire
 | **Validade** | {{validity}} |
 | **Disponibilidade** | {{availabilityNotes}} |
 | **Restrições sensíveis** | {{sensitiveConstraints}} |
+| **Texto obrigatório na arte** | {{mandatoryArtworkText}} |
 
 ---
 
@@ -127,3 +128,5 @@ Você possui liberdade total para criar fundo, composição, iluminação,
 hierarquia, formas, elementos decorativos e direção visual.
 
 SEMPRE acrescente a arte o seguinte texto (esse texto pode ser minúsculo mas deve ser legível - e deve ser posicionado nas margens da arte, horizontal ou vertical): "Imagem meramente ilustrativa"
+
+Se o campo "Texto obrigatório na arte" estiver preenchido ({{mandatoryArtworkText}}), inclua esse texto na arte de forma visível e legível, em tipografia mínima adequada para leitura em dispositivo móvel. Não o repita na legenda.

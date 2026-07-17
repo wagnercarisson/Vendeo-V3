@@ -22,6 +22,7 @@ export const GenerateImageRequestSchema = z.object({
   availabilityNotes: z.string().optional(),
   sensitiveConstraints: z.string().optional(),
   productImageDataUrl: z.string().min(1, "Imagem do produto é obrigatória"),
+  mandatoryArtworkText: z.string().optional(),
   inputValidationOverride: z
     .object({
       productImageCheck: z.literal("user_confirmed_continue").optional(),
