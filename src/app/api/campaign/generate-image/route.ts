@@ -383,6 +383,18 @@ export const POST = apiHandler(async (request: NextRequest) => {
         }
       };
 
+      // ── PREFLIGHT: Validate all prompts before parallel IA calls ──
+      const preflightResult = imageService.validatePrompts(brief);
+      if (!preflightResult.valid) {
+        console.error(`[generate-image] prompt_preflight_failed — ${preflightResult.errors.join('; ')}`);
+        emit({ type: "error", campaignId: campaignId!, phase: "preflight", code: "invalid_prompt", message: preflightResult.errors.join("; "), httpStatus: 502, retryable: false });
+        try { await updateCampaignError(campaignId!, preflightResult.errors.join("; ")); } catch { /* ignore */ }
+        try { await creditService.refundCredit(creditTxId!, "invalid_prompt", { idempotencyKey: `refund_${creditTxId}` }); } catch { /* ignore */ }
+        clearTimeout(timeoutId);
+        try { controller.close(); } catch { /* already closed */ }
+        return;
+      }
+
       // Execute both in parallel; if one fails, abort the other
       try {
         await Promise.all([copyTask(), imageTask()]);

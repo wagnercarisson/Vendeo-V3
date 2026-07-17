@@ -45,9 +45,10 @@ vi.mock('@/lib/image-generation/config', () => ({
 }));
 
 const mockGenerateImage = vi.fn();
+const mockValidatePrompts = vi.fn();
 vi.mock('@/lib/image-generation/services/image-generation-service', () => ({
   ImageGenerationService: vi.fn(function() {
-    return { generateImage: mockGenerateImage };
+    return { generateImage: mockGenerateImage, validatePrompts: mockValidatePrompts };
   }),
 }));
 
@@ -185,6 +186,9 @@ async function setupSuccessMocks() {
 
   // Image Generation
   mockGenerateImage.mockResolvedValue({ success: true, imageDataUrl: 'data:image/jpeg;base64,xyz' });
+
+  // Preflight
+  mockValidatePrompts.mockReturnValue({ valid: true, errors: [] });
 
   // Persistence
   (dataUrlToCampaignImage as any).mockReturnValue({ buffer: Buffer.from(''), mimeType: 'image/jpeg' });
@@ -412,6 +416,7 @@ describe('POST /api/campaign/generate-image', () => {
     (createCampaign as any).mockResolvedValue({ id: CAMPAIGN_ID, storagePath: `${STORE_ID}/${CAMPAIGN_ID}.jpg` });
     mockGenerateCopy.mockRejectedValue(new Error('Copy generation failed'));
     mockGenerateImage.mockResolvedValue({ success: true, imageDataUrl: 'data:image/jpeg;base64,xyz' });
+    mockValidatePrompts.mockReturnValue({ valid: true, errors: [] });
     (dataUrlToCampaignImage as any).mockReturnValue({ buffer: Buffer.from(''), mimeType: 'image/jpeg' });
     (transcodeToJpeg as any).mockResolvedValue({ buffer: Buffer.from(''), mimeType: 'image/jpeg' });
     (uploadCampaignImage as any).mockResolvedValue(undefined);
@@ -437,6 +442,7 @@ describe('POST /api/campaign/generate-image', () => {
     (createCampaign as any).mockResolvedValue({ id: CAMPAIGN_ID, storagePath: `${STORE_ID}/${CAMPAIGN_ID}.jpg` });
     mockGenerateCopy.mockRejectedValue(new Error('Copy failed'));
     mockGenerateImage.mockRejectedValue(new Error('Image failed'));
+    mockValidatePrompts.mockReturnValue({ valid: true, errors: [] });
 
     const { POST } = await import('../route');
     const req = makeRequest(VALID_REQUEST_BODY);
@@ -512,6 +518,7 @@ describe('POST /api/campaign/generate-image', () => {
     const { SafetyBlockError } = await import('@/lib/copy/errors');
     mockGenerateCopy.mockRejectedValue(new SafetyBlockError('Conteúdo bloqueado'));
     mockGenerateImage.mockResolvedValue({ success: true, imageDataUrl: 'data:image/jpeg;base64,xyz' });
+    mockValidatePrompts.mockReturnValue({ valid: true, errors: [] });
     (dataUrlToCampaignImage as any).mockReturnValue({ buffer: Buffer.from(''), mimeType: 'image/jpeg' });
     (transcodeToJpeg as any).mockResolvedValue({ buffer: Buffer.from(''), mimeType: 'image/jpeg' });
     (uploadCampaignImage as any).mockResolvedValue(undefined);
@@ -545,6 +552,7 @@ describe('POST /api/campaign/generate-image', () => {
       cta_post: 'CTA Gemini',
     });
     mockGenerateImage.mockResolvedValue({ success: true, imageDataUrl: 'data:image/jpeg;base64,xyz' });
+    mockValidatePrompts.mockReturnValue({ valid: true, errors: [] });
     (dataUrlToCampaignImage as any).mockReturnValue({ buffer: Buffer.from(''), mimeType: 'image/jpeg' });
     (transcodeToJpeg as any).mockResolvedValue({ buffer: Buffer.from(''), mimeType: 'image/jpeg' });
     (uploadCampaignImage as any).mockResolvedValue(undefined);
@@ -576,6 +584,7 @@ describe('POST /api/campaign/generate-image', () => {
     const { MalformedResponseError } = await import('@/lib/copy/errors');
     mockGenerateCopy.mockRejectedValue(new MalformedResponseError('Resposta malformada'));
     mockGenerateImage.mockResolvedValue({ success: true, imageDataUrl: 'data:image/jpeg;base64,xyz' });
+    mockValidatePrompts.mockReturnValue({ valid: true, errors: [] });
     (dataUrlToCampaignImage as any).mockReturnValue({ buffer: Buffer.from(''), mimeType: 'image/jpeg' });
     (transcodeToJpeg as any).mockResolvedValue({ buffer: Buffer.from(''), mimeType: 'image/jpeg' });
     (uploadCampaignImage as any).mockResolvedValue(undefined);
@@ -661,6 +670,7 @@ describe('POST /api/campaign/generate-image', () => {
     (createCampaign as any).mockResolvedValue({ id: CAMPAIGN_ID, storagePath: `${STORE_ID}/${CAMPAIGN_ID}.jpg` });
     mockGenerateCopy.mockRejectedValue(new Error('Generation failed'));
     mockGenerateImage.mockResolvedValue({ success: true, imageDataUrl: 'data:image/jpeg;base64,xyz' });
+    mockValidatePrompts.mockReturnValue({ valid: true, errors: [] });
     (dataUrlToCampaignImage as any).mockReturnValue({ buffer: Buffer.from(''), mimeType: 'image/jpeg' });
     (transcodeToJpeg as any).mockResolvedValue({ buffer: Buffer.from(''), mimeType: 'image/jpeg' });
     (uploadCampaignImage as any).mockResolvedValue(undefined);

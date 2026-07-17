@@ -533,6 +533,45 @@ export class ImageGenerationService {
     return response;
   }
 
+  /**
+   * Validate all prompts (director + reviewer) for unresolved placeholders
+   * before any IA call is made. Returns valid=false with error descriptions
+   * if any prompt contains unresolved {{variable}} patterns.
+   *
+   * This is a synchronous check — no network calls.
+   */
+  validatePrompts(brief: CampaignBrief): { valid: boolean; errors: string[] } {
+    const body = brief.campaignInput as GenerateImageRequest;
+    const errors: string[] = [];
+
+    // Check director prompt
+    const directorVariables = this.buildPromptVariables(body, body.productName, undefined, brief);
+    const directorPrompt = this.promptLoader.load("campaign-image-director", directorVariables);
+    const directorCheck = validatePrompt(directorPrompt);
+    if (!directorCheck.valid) {
+      errors.push(`Diretor de imagem: variáveis não resolvidas: ${directorCheck.unresolvedVariables.join(', ')}`);
+    }
+
+    // Check reviewer prompt
+    const reviewerVars: Record<string, string> = {
+      productName: body.productName,
+      storeName: brief.store.name,
+      discountedPrice: this.formatPriceBRL(body.discountedPriceCents),
+      originalPrice: (body.originalPriceCents ?? 0) > 0
+        ? this.formatPriceBRL(body.originalPriceCents ?? 0)
+        : "",
+      badgeText: body.badgeText ?? "",
+      validationContextSection: "",
+    };
+    const reviewerPrompt = this.promptLoader.load("campaign-image-reviewer", reviewerVars);
+    const reviewerCheck = validatePrompt(reviewerPrompt);
+    if (!reviewerCheck.valid) {
+      errors.push(`Revisor de imagem: variáveis não resolvidas: ${reviewerCheck.unresolvedVariables.join(', ')}`);
+    }
+
+    return { valid: errors.length === 0, errors };
+  }
+
   private buildGenerationMetrics(params: {
     runId: string;
     startTime: number;
