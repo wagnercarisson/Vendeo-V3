@@ -52,11 +52,16 @@ describe('POST /api/store — onboarding grant', () => {
     expect(mockRpc).toHaveBeenCalledWith('create_store_with_initial_grant', expect.any(Object));
   });
 
-  it('RPC idempotency — same key returns same balance', async () => {
-    mockRpc.mockResolvedValue({
-      data: { id: 'store-1', name: 'Minha Loja', segment: 'moda-calcados-acessorios', balance: 5 },
-      error: null,
-    });
+  it('RPC idempotency — segundo POST para mesmo user retorna 409', async () => {
+    mockRpc
+      .mockResolvedValueOnce({
+        data: { id: 'store-1', name: 'Minha Loja', segment: 'moda-calcados-acessorios', balance: 5 },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: null,
+        error: { message: 'stores_user_id_key', code: '23505' },
+      });
 
     const { POST } = await import('../route');
 
@@ -82,9 +87,9 @@ describe('POST /api/store — onboarding grant', () => {
       headers: { 'Content-Type': 'application/json' },
     }));
     const res2 = await POST(req2);
-    expect(res2.status).toBe(201);
+    expect(res2.status).toBe(409);
     const body2 = await res2.json();
-    expect(body2.balance).toBe(5);
+    expect(body2.error).toBe('Usuário já possui uma loja');
   });
 
   it('RPC failure returns 500', async () => {
