@@ -1,6 +1,6 @@
 # Vendeo — Roadmap
 
-> Milestones: **Contas e Propriedade** (v1.2 ✓) | **Persistência e Entrega da Campanha** (v1.3 ✓) | **Experiência SaaS** (v1.4 ✓) | **Lançamento Externo Controlado** (v1.5 ◆)
+> Milestones: **Contas e Propriedade** (v1.2 ✓) | **Persistência e Entrega da Campanha** (v1.3 ✓) | **Experiência SaaS** (v1.4 ✓) | **Lançamento Externo Controlado** (v1.5 ◆) | **Monetização Pública** (v1.6 △)
 
 ## Milestones
 
@@ -52,9 +52,9 @@ Autenticação completa, vínculo user→store, isolamento multi-tenant, beta.ve
 
 </details>
 
-### 📋 v1.5 — Lançamento Externo Controlado
+### 📋 v1.5 — Lançamento Externo Controlado ◆
 
-Copy Director com IA, pipeline de geração paralelo, sistema de créditos, pagamento com Stripe, UI de saldo e extrato, observabilidade, launch readiness e UAT externo.
+Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, observabilidade, launch readiness e UAT externo.
 
 - [x] Phase 23: Text Provider + Copy Director (2/2 plans ✅) — 2026-07-16
 - [x] Phase 24: Créditos — Schema, Saldo e Transações (2/2 plans ✅) — 2026-07-16
@@ -62,19 +62,25 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, paga
 <details>
 <summary>✅ v1.5 Lançamento Externo Controlado (F23-F29) — In Progress</summary>
 
-Copy Director com IA, pipeline de geração paralelo, sistema de créditos, pagamento com Stripe, UI de saldo e extrato, observabilidade e launch readiness.
+Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, observabilidade e launch readiness.
 
 - [x] Phase 23: Text Provider + Copy Director (2/2 plans ✅)
 - [x] Phase 24: Créditos — Schema, Saldo e Transações (2/2 plans ✅)
   - Wave 1: 24-01 — Migration SQL + CreditService (SQL DDL, 3 functions, types, service)
   -   Wave 2: 24-02 — Tests + SQL Verification (25+ testes, I1–I7)
-- [x] Phase 25: Pipeline de Geração Paralelo (3 plans ✅)
-- [ ] Phase 26: Pagamento com Stripe (planned)
-- [ ] Phase 27: Conta e Saldo Visível (planned)
-- [ ] Phase 28: Observabilidade e Operação (planned)
-- [ ] Phase 29: Refinamento Visual e Launch Readiness (planned)
+- [x] Phase 25: Pipeline de Geração v1.5 (3 plans ✅)
+- [ ] Phase 26: Admin Operacional + Convites + Créditos Manuais (planned)
+- [ ] Phase 27: Conta e Saldo Visível + Extrato (planned)
+- [ ] Phase 28: Observabilidade + Operação + Launch Controls (planned)
+- [ ] Phase 29: Refinamento Visual + UAT + Launch Readiness (planned)
 
 </details>
+
+### 📋 v1.6 — Monetização Pública △
+
+> Stripe Checkout + Webhook + compra real de créditos. Ativado após validação do beta controlado.
+
+- [ ] Phase 30/v1.6: Stripe / Monetização Pública (planned)
 
 ## Progress
 
@@ -98,7 +104,11 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, paga
 | 22. Mobile Hardening | v1.4 | 3/3 | ✅ Complete | 2026-07-15 |
 | 23. Text Provider + Copy Director | v1.5 | 2/2 | ✅ Complete | 2026-07-16 |
 | 24. Créditos — Schema, Saldo e Transações | v1.5 | 2/2 | ✅ Complete | 2026-07-16 |
-| 25. Pipeline de Geração Paralelo | v1.5 | 3/3 | ✅ Complete | 2026-07-17 |
+| 25. Pipeline de Geração v1.5 | v1.5 | 3/3 | ✅ Complete | 2026-07-17 |
+| 26. Admin Operacional + Convites + Créditos Manuais | v1.5 | 0/0 | △ Planned | — |
+| 27. Conta e Saldo Visível + Extrato | v1.5 | 0/0 | △ Planned | — |
+| 28. Observabilidade + Operação + Launch Controls | v1.5 | 0/0 | △ Planned | — |
+| 29. Refinamento Visual + UAT + Launch Readiness | v1.5 | 0/0 | △ Planned | — |
 
 ---
 

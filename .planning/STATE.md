@@ -1,12 +1,12 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.5
-milestone_name: Lançamento Externo Controlado
+milestone_name: "Lançamento Externo Controlado — Créditos + Admin + Saldo + Observabilidade + Launch"
 status: active
 last_updated: "2026-07-17T15:50:00.000Z"
 last_activity: 2026-07-17
 progress:
-  total_phases: 3
+  total_phases: 7
   completed_phases: 3
   total_plans: 7
   completed_plans: 7
@@ -266,10 +266,25 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 25 — Pipeline de Geração v1.5 ✅
-Plan: 3/3 completed
-Status: Complete
-Last activity: 2026-07-17 - Completed quick task 260717-okh: Corrigir bug/guardrail no pipeline de geracao de campanha: evitar chamadas de IA quando houver placeholders nao resolvidos em prompts e corrigir placeholder do revisor.
+Phase: 26 — Admin Operacional + Convites + Créditos Manuais △
+Plan: Pending — alinhamento em andamento
+Status: Alinhamento — nova F26 substitui "Pagamento Stripe" por "Admin Operacional para suporte beta"
+
+### Next Phases
+
+| Phase | Status | Description |
+|-------|--------|-------------|
+| F26 | △ Alinhamento | Admin Operacional + Convites + Créditos Manuais |
+| F27 | △ Planned | Conta + Saldo Visível + Extrato (sem Stripe; CTA = "fale com o time") |
+| F28 | △ Planned | Observabilidade + Operação + Launch Controls |
+| F29 | △ Planned | Refinamento Visual + UAT + Launch Readiness |
+| F30/v1.6 | △ Future | Stripe / Monetização Pública (pós-beta) |
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260717-okh | Corrigir bug/guardrail no pipeline de geracao de campanha: evitar chamadas de IA quando houver placeholders nao resolvidos em prompts e corrigir placeholder do revisor. | 2026-07-17 | 5878b0f | [260717-okh-corrigir-bug-guardrail-no-pipeline-de-ge](./quick/260717-okh-corrigir-bug-guardrail-no-pipeline-de-ge/) |
 
 ### Quick Tasks Completed
 

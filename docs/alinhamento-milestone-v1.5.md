@@ -22,7 +22,7 @@ Esta milestone resolve esses gaps para que possamos abrir o produto para um grup
 
 ### Critério de conclusão
 
-> Um lojista real (fora do time de desenvolvimento) consegue se cadastrar, receber créditos gratuitos, gerar uma campanha com copy inteligente via IA (título, legenda, hashtags, CTA), revisar o resultado, comprar mais créditos se precisar, e repetir o ciclo — com a operação monitorada, custos controlados, dados retidos conforme política, falhas tratadas sem perder créditos, e experiência visual publicável.
+> Um lojista real (fora do time de desenvolvimento) consegue se cadastrar, receber créditos gratuitos, gerar uma campanha com copy inteligente via IA (título, legenda, hashtags, CTA), revisar o resultado, receber créditos adicionais via operação/admin durante o beta controlado, e repetir o ciclo — com a operação monitorada, custos controlados, dados retidos conforme política, falhas tratadas sem perder créditos, e experiência visual publicável.
 
 ### O que está no escopo
 
@@ -31,7 +31,7 @@ Esta milestone resolve esses gaps para que possamos abrir o produto para um grup
 | Copy Director | Serviço de IA separado para geração de copy persuasivo: **título/gancho**, legenda (caption), CTA e hashtags — com tom de voz, segmento e conhecimento de marketing |
 | Separação copy × geração visual | Copy Director e Image Director rodam em paralelo (copy não influencia a arte). Pipeline dividido desde a arquitetura |
 | Sistema de créditos | Saldo por usuário, dedução por geração bem-sucedida, transações auditáveis, sem planos |
-| Compra de créditos | Fluxo de compra individual via Stripe Checkout (créditos avulsos, sem assinatura) |
+| Admin operacional | Console de suporte para o time operar o beta: convidar usuários, conceder créditos manualmente, visualizar saldo/extrato, investigar erros, auditar ações |
 | Saldo visível | Saldo no app shell (topbar) e na página de conta |
 | Extrato de créditos | Histórico de transações (ganhos, compras, gastos, reembolsos) na página de conta |
 | Controle de custos | Rate limit por usuário, teto de gasto diário, aborto de gerações excessivamente longas |
@@ -59,6 +59,7 @@ Esta milestone resolve esses gaps para que possamos abrir o produto para um grup
 | OAuth social / Magic link | Exclusão deliberada desde v1.2 |
 | Campanhas multi-formato (Stories, Landscape) | Apenas 1080×1080 feed |
 | Cache de prompts / otimização de tokens | Feature futura de redução de custo |
+| Stripe Checkout / compra real de créditos | Reposicionado para F30/v1.6 — pós-beta. Durante v1.5, crédito é operado pelo time via admin | 
 | Dashboard administrativo avançado / analytics de negócio (receita, LTV, cohorts) | Dashboard operacional mínimo (taxa de sucesso, custo médio, erro rate) está dentro do escopo. Analytics avançado é futuro |
 
 ---
@@ -181,21 +182,27 @@ Custo por geração: fixo em 1 crédito na v1.5 (variável por complexidade é f
 
 ### D4 — Provedor de pagamento
 
-`DECIDIDO`
+`ADIADO / REPOSICIONADO`
 
-- **Provedor primário:** Stripe (integração via Stripe Checkout — mínimo viável)
-- **Produto no Stripe:** Crédito avulso (ex.: pacotes de 10, 25, 50 créditos com valores fixos)
-- **Webhook:** `checkout.session.completed` → `stripePayment succeeded` → crédita saldo
-- **Sem assinatura/plano:** Apenas checkout único (one-time payment)
-- **Fallback futuro:** Asaas/Pix para mercado brasileiro após validação
+> Stripe Checkout sai do caminho crítico da v1.5. Durante o beta controlado, 
+> o saldo é operado pelo time via admin grant manual auditável. Stripe será 
+> retomado como F30/v1.6 (Monetização Pública) após validação do beta.
 
-| Pacote | Créditos | Preço sugerido |
-|--------|----------|----------------|
+**Status:** Stripe permanece como direção futura, mas **não fecha v1.5.** 
+O `CreditService.grantCredits()` já está pronto e idempotente — a F30 usará 
+o mesmo mecanismo, substituindo o admin manual pelo webhook Stripe.
+
+- **Direção futura:** Stripe Checkout (mínimo viável)
+- **Quando:** F30/v1.6, pós-beta controlado
+- **Produto no Stripe:** Crédito avulso (pacotes de 10, 25, 50 créditos)
+- **Mecanismo:** `CreditService.grantCredits()` já testado e funcional — será chamado pelo webhook Stripe
+- **Fallback:** Asaas/Pix para mercado brasileiro (avaliar na F30)
+
+| Pacote | Créditos | Preço sugerido (referência) |
+|--------|----------|-----------------------------|
 | Starter | 10 | R$ 19,90 |
 | Pro | 25 | R$ 39,90 |
 | Turbo | 50 | R$ 69,90 |
-
-> Preços são sugestões iniciais. Este artefato registra a decisão do mecanismo. Os valores exatos serão definidos durante o design da fase de pagamento.
 
 ### D5 — Controle de custos e rate limiting
 
@@ -250,9 +257,9 @@ Escopo inicial para lançamento controlado:
 
 - Usuário com saldo zero NÃO é bloqueado de acessar o app
 - O dashboard funciona normalmente, mostra histórico, permite revisar campanhas passadas
-- O formulário de geração mostra aviso claro de saldo insuficiente com CTA para comprar
+- O formulário de geração mostra aviso claro de saldo insuficiente com CTA para solicitar créditos
 - O botão "Gerar campanha" fica desabilitado com tooltip: "Você precisa de créditos para gerar uma campanha"
-- O link de compra leva para a seção de créditos em `/conta`
+- O CTA durante o beta é "Solicitar créditos" / "Fale com o time" — sem redirecionamento Stripe
 - Zero blockers — o produto nunca fica inutilizável por falta de crédito, apenas o motor de geração é limitado
 
 ### D10 — Política de retenção de dados e assets
@@ -284,13 +291,57 @@ Toda a superfície da v1.5 passa por revisão de segurança antes do lançamento
 2. **Ownership em rotas de crédito:** Toda rota `/api/credits/*` valida que `userId = claims.sub` — ninguém mexe no saldo alheio
 3. **Inputs críticos enviados à IA:** Brief do Copy Director contém dados do produto e da loja. Garantir que nenhum dado sensível (email, tokens, IDs internos) vaze no prompt
 4. **Uso de service role:** Manter o padrão existente: service role só após ownership verificado. Crédito é exceção parcial (operações financeiras precisam de atomicidade que RLS não garante), mas toda chamada é precedida de validação de identidade
-5. **Proteção de webhook:** Stripe webhook validado por assinatura HMAC. Nenhum outro webhook aceito sem verificação
-6. **Rate limit como segurança:** Além de controle de custo, rate limit protege contra abuso (múltiplas contas, ataques de negação de serviço no pipeline de IA)
-7. **Validação de input no Copy Director:** O prompt template sanitiza variáveis para evitar injection via dados do produto
+5. **Proteção de rotas admin:** Toda rota `/api/admin/*` protegida por `requireAdmin()` — sem exceção. Admin gate via `admin_users` table, não flag em `auth.users`
+6. **Audit log obrigatório:** Toda ação administrativa sensível registrada em `admin_audit_log` (append-only). Grant sem audit trail é tratado como falha
+7. **Rate limit como segurança:** Além de controle de custo, rate limit protege contra abuso (múltiplas contas, ataques de negação de serviço no pipeline de IA)
+8. **Validação de input no Copy Director:** O prompt template sanitiza variáveis para evitar injection via dados do produto
+9. **Proteção de webhook (Stripe):** Webhook Stripe validado por assinatura HMAC — implementação diferida para F30/v1.6
 
----
+### D12 — Admin Operacional como pré-requisito do beta controlado
 
-## Arquitetura-Alvo
+`DECIDIDO`
+
+A F26 implementa um console operacional de suporte, não um dashboard analítico. O escopo é:
+
+| O que é | O que não é |
+|---------|-------------|
+| Admin gate (`admin_users` table) | RBAC complexo |
+| Listar e buscar usuários/lojas | CRUD destrutivo de usuários |
+| Conceder créditos manualmente (motivo obrigatório) | Stripe Checkout |
+| Visualizar saldo e extrato de qualquer loja | Métricas agregadas |
+| Visualizar campanhas com erro para triagem | Analytics avançado |
+| Audit log imutável de ações administrativas | Impersonation |
+
+**Motivação:** Para operar um beta com 3-5 lojistas reais, o time precisa de capacidade operacional antes de automatizar a venda. Crédito continua no centro — a diferença é que o time opera a alavanca durante o beta.
+
+### D13 — Convite Beta: MVP sem email convite
+
+`DECIDIDO`
+
+O fluxo de convite beta é o mínimo viável:
+
+1. Usuário existe via fluxo normal de auth/Supabase (signup normal)
+2. Admin vê usuário sem loja no diretório admin
+3. Admin completa onboarding: cria loja + concede 5 créditos (RPC `create_store_with_initial_grant` já existe)
+4. Usuário loga e encontra a loja pronta
+
+**Fora do escopo da F26:**
+- Envio de convite por email
+- Criação de usuário pelo admin
+- Magic link / aprovação formal de cadastro
+- Link público de signup beta
+
+### D14 — Admin Access Gate
+
+`DECIDIDO`
+
+- **Tabela:** `admin_users(user_id UUID PRIMARY KEY REFERENCES auth.users(id))` — simples, sem coluna em `auth.users`
+- **Gate:** `requireAdmin()` = `requireApiUser()` + SELECT em `admin_users`
+- **Login:** Mesmo login normal (sem `/admin/login` separado)
+- **Middleware:** Protege rotas `/admin/*` com redirect se não admin
+- **API routes:** Cada rota `/api/admin/*` chama `requireAdmin()` internamente (dupla proteção)
+
+
 
 ```
 ARQUITETURA PÓS-V1.5
@@ -453,50 +504,44 @@ EM CASO DE FALHA:
             (status='error', error_message)
 ```
 
-### Fluxo de compra de créditos
+### Fluxo de admin grant (substitui compra na v1.5)
+
+> O fluxo abaixo substitui a compra Stripe durante o beta controlado. Stripe será retomado na F30/v1.6.
 
 ```
-USUÁRIO                      FRONTEND                   BACKEND                    STRIPE / SUPABASE
-───────                      ────────                   ───────                    ─────────────────
+ADMIN                          FRONTEND ADMIN              BACKEND                      SUPABASE
+─────                          ──────────────              ───────                      ────────
 
-[clica "Comprar créditos"]
+[abre /admin/users]
        │
        ▼
-[/conta#creditos]
+[busca lojista]
        │
        ▼
-[seleciona pacote: 10, 25, 50]
+[abre detalhe: saldo, extrato, campanhas]
        │
        ▼
-[clica "Comprar"]
+[clica "Conceder créditos"]
        │
        ▼
-POST /api/credits/create-checkout
+[preenche: amount, motivo (obrigatório)]
+       │
+       ▼
+POST /api/admin/credits/grant
        │                          │
-       │                          ├── requireUser
-       │                          ├── Cria Stripe Checkout Session
-       │                          │    (price_id, success_url, cancel_url)
-       │                          │
-       │                          └── { sessionUrl }
+       │                          ├── requireAdmin()
+       │                          ├── Valida motivo não vazio
+       │                          ├── CreditService.grantCredits(storeId, amount, reason)
+       │                          │    INSERT grant ──────────────────────►  credit_transactions
+       │                          │    UPDATE credit_balances ───────────►  +amount
+       │                          ├── INSERT admin_audit_log ────────────►  audit trail
+       │                          │    (actor_id, action='credit_grant',
+       │                          │     target_id, amount, reason)
+       │                          └── { transactionId, newBalance }
        │
        ▼
-Redirect → Stripe Checkout
-       │
-       │  (pagamento no Stripe)
-       │
-       ▼
-Stripe → Webhook POST → /api/webhooks/stripe
-       │                          │
-       │                          ├── Verifica assinatura
-       │                          ├── checkout.session.completed
-       │                          ├── CreditService.grant(userId, amount)
-       │                          │    INSERT grant ───────────────►  credit_transactions
-       │                          │    UPDATE credit_balances ─────►  +amount
-       │                          └── 200 OK
-       │
-       ▼
-Redirect → /conta#creditos
-    (saldo atualizado)
+[redirect para admin/users/[id]]
+     (saldo atualizado)
 ```
 
 ---
@@ -539,22 +584,23 @@ ESTADOS DO USUÁRIO — v1.5
                       └──────────────┘  └──────────────┘     │
                                         │                     │
                                         │  ---> saldo 0       │
-                                        ▼                     ▼
-                               ┌──────────────────┐  ┌──────────────────┐
-                               │ Compra créditos  │◀─│ Não pode gerar   │
-                               │ (Stripe)         │  │ (aviso + CTA)    │
-                               └────────┬─────────┘  └──────────────────┘
-                                        │
-                                        ▼
-                               ┌──────────────────┐
-                               │ Recarrega saldo  │
-                               │ (grant via Stripe)│
-                               └────────┬─────────┘
-                                        │
-                                        ▼
-                               ┌──────────────────┐
-                               │ Com saldo (≥1)   │
-                               └──────────────────┘
+                                         ▼                     ▼
+                                ┌──────────────────┐  ┌──────────────────┐
+                                │ Solicitar        │◀─│ Não pode gerar   │
+                                │ créditos         │  │ (aviso + CTA)    │
+                                │ (admin grant)    │  │                  │
+                                └────────┬─────────┘  └──────────────────┘
+                                         │
+                                         ▼
+                                ┌──────────────────┐
+                                │ Recebe créditos  │
+                                │ (grant admin)    │
+                                └────────┬─────────┘
+                                         │
+                                         ▼
+                                ┌──────────────────┐
+                                │ Com saldo (≥1)   │
+                                └──────────────────┘
 ```
 
 ---
@@ -676,21 +722,34 @@ Bucket legado `store-logos` (0 objetos desde o inventário da v1.2). Permanece c
 | `/loja` | Identidade da loja (existente) |
 | `/conta` | Configurações da conta + **créditos (novo)** |
 
-### Novas rotas
+### Novas rotas (F26 — Admin)
 
 | Rota | Descrição | Proteção |
 |------|-----------|----------|
-| `POST /api/credits/create-checkout` | Cria sessão Stripe Checkout para compra de créditos | Auth + ownership |
-| `POST /api/webhooks/stripe` | Webhook de eventos Stripe | Assinatura Stripe (sem auth de sessão) |
-| `GET /api/credits/balance` | Saldo atual do usuário (opcional — SC já pode ler direto) | Auth + RLS |
-| `GET /api/credits/history` | Extrato de transações (opcional — SC já pode ler direto) | Auth + RLS |
+| `/admin` | Dashboard admin operacional | requireAdmin |
+| `/admin/users` | Diretório de usuários/lojas beta | requireAdmin |
+| `/admin/users/[id]` | Detalhe: saldo, extrato, grant form, erros | requireAdmin |
+| `/admin/campaigns/errors` | Campanhas com erro para triagem | requireAdmin |
+| `/admin/audit-log` | Histórico de ações administrativas | requireAdmin |
+| `POST /api/admin/credits/grant` | Concede créditos manualmente | requireAdmin |
+| `GET /api/admin/users` | Lista paginada de usuários | requireAdmin |
+| `GET /api/admin/users/[id]` | Detalhe completo de usuário/loja | requireAdmin |
+| `GET /api/admin/campaigns/errors` | Lista de campanhas com erro | requireAdmin |
+| `GET /api/admin/audit-log` | Histórico de ações | requireAdmin |
+
+### Novas rotas (diferidas para F30/v1.6)
+
+| Rota | Descrição | Proteção |
+|------|-----------|----------|
+| `POST /api/credits/create-checkout` | Stripe Checkout Session | Auth + ownership |
+| `POST /api/webhooks/stripe` | Webhook Stripe | Assinatura HMAC |
 
 ### Rotas modificadas
 
 | Rota | Mudança |
 |------|---------|
-| `POST /api/campaign/generate-image` | Adiciona rate limit, saldo check, reserva de crédito, Copy Director step |
-| `/conta` | Adiciona seção de créditos (saldo, comprar, extrato) |
+| `POST /api/campaign/generate-image` | Rate limit, saldo check, reserva, Copy Director (F25) |
+| `/conta` | Adiciona seção de créditos com saldo e extrato (F27) |
 
 ---
 
@@ -700,28 +759,33 @@ Bucket legado `store-logos` (0 objetos desde o inventário da v1.2). Permanece c
 
 | Operação | Cliente | Auth exigida | Ownership |
 |----------|---------|-------------|-----------|
+| **Admin Operacional (novo F26)** | | | |
+| `/admin/*` pages | Admin (service role ou sessão) | ✅ `requireAdmin()` | N/A (admin lê qualquer loja) |
+| `POST /api/admin/credits/grant` | Admin | ✅ `requireAdmin()` | N/A (admin concede para qualquer loja) |
+| `GET /api/admin/users` | Admin | ✅ `requireAdmin()` | N/A |
+| `GET /api/admin/campaigns/errors` | Admin | ✅ `requireAdmin()` | N/A |
+| `GET /api/admin/audit-log` | Admin | ✅ `requireAdmin()` | N/A |
 | **Créditos** | | | |
-| `GET /conta` (seção créditos, SC) | Admin (precisa ler `credit_balances` e `credit_transactions`) | ✅ `requireUser()` | ✅ Filtra por `user_id = claims.sub` |
+| `GET /conta` (seção créditos, SC) | Admin (service role) | ✅ `requireUser()` | ✅ Filtra por `store_id = claims.sub` |
 | `GET /api/credits/balance` | Admin (preferencial) | ✅ `requireApiUser()` | ✅ `userId = claims.sub` |
 | `GET /api/credits/history` | Admin (preferencial) | ✅ `requireApiUser()` | ✅ `userId = claims.sub` |
-| `POST /api/credits/create-checkout` | Admin | ✅ `requireApiUser()` | ✅ `userId = claims.sub` |
-| `POST /api/webhooks/stripe` | Admin (sem auth de sessão) | ✅ Assinatura Stripe | N/A (webhook) |
-| `CreditService.reserve(userId)` | Admin | Interno (chamado por handler já autenticado) | ✅ Ownership verificado pelo handler chamador |
+| `CreditService.reserve(storeId)` | Admin | Interno (handler já autenticou) | ✅ Ownership verificado pelo handler chamador |
 | `CreditService.confirm(txId)` | Admin | Interno | N/A (já debitado) |
 | `CreditService.refund(txId)` | Admin | Interno | N/A (estorno) |
-| `CreditService.grant(userId, amount)` | Admin | Interno (webhook ou onboarding) | N/A |
+| `CreditService.grant(storeId, amount)` | Admin | Interno (admin grant ou onboarding) | ✅ Admin gate validou |
 | **Copy Director** | | | |
-| `CopyDirectorService.generateCopy(brief)` | Admin | Interno (nunca exposto como rota standalone na v1.5) | ✅ Ownership via handler chamador |
+| `CopyDirectorService.generateCopy(brief)` | Admin | Interno | ✅ Ownership via handler chamador |
 | **Geração (modificada)** | | | |
 | `POST /api/campaign/generate-image` | Admin | ✅ `requireApiUser()` | ✅ + rate limit + saldo check |
 
 ### Estratégia de cliente
 
-- **SELECT em `credit_balances` e `credit_transactions`:** Admin (service role) com filtro por `userId = claims.sub` — necessário porque RLS não cobre todas as operações de leitura do saldo (ex.: saldo precisa ser lido antes da geração, quando ainda não existe campanha)
-- **ALTERNATIVA:** Tentar primeiro com sessão + RLS. Se RLS for suficiente para SELECTs comuns, usar sessão. Admin fica para operações que exigem consistência transacional (reserva/confirmação/estorno)
-- **Mutações de crédito:** Sempre `supabaseAdmin` (service role) — operações financeiras exigem atomicidade e consistência que RLS pode não garantir
+- **SELECT em `credit_balances` e `credit_transactions` (admin F26):** `supabaseAdmin` (service role) sem filtro de ownership — admin pode ver qualquer loja. A proteção é o gate `requireAdmin()`
+- **SELECT em `credit_balances` e `credit_transactions` (usuário F27):** sessão + RLS — cada usuário vê apenas sua própria loja
+- **Mutações de crédito (admin grant):** `supabaseAdmin` via RPC após `requireAdmin()`. `admin_audit_log` registra actor, ação e motivo
+- **Mutações de crédito (pipeline F25):** `supabaseAdmin` via RPC após `requireOwnership()`
 - **Copy Director:** Serviço interno chamado pelo handler de geração, nunca exposto como rota pública
-- **Stripe Webhook:** Endpoint público mas validado por assinatura HMAC do Stripe. Sem auth de sessão
+- **Stripe Webhook:** Endpoint público validado por assinatura HMAC — diferido para F30/v1.6
 
 ---
 
@@ -750,29 +814,46 @@ src/
 
   app/
     api/
-      credits/
-        create-checkout/
-          route.ts                 # POST /api/credits/create-checkout
-        balance/
-          route.ts                 # GET /api/credits/balance
-        history/
-          route.ts                 # GET /api/credits/history
+      admin/
+        credits/
+          grant/
+            route.ts               # POST /api/admin/credits/grant
+        users/
+          route.ts                 # GET /api/admin/users
+          [id]/
+            route.ts               # GET /api/admin/users/[id]
+        campaigns/
+          errors/
+            route.ts               # GET /api/admin/campaigns/errors
+        audit-log/
+          route.ts                 # GET /api/admin/audit-log
       webhooks/
         stripe/
-          route.ts                 # POST /api/webhooks/stripe
+          route.ts                 # DIFERIDO para F30/v1.6
     (app)/
+      admin/
+        layout.tsx                 # NOVO: requireAdmin() check
+        page.tsx                   # NOVO: dashboard operacional
+        users/
+          page.tsx                 # NOVO: diretório de usuários
+          [id]/
+            page.tsx               # NOVO: detalhe + grant form
+        campaigns/
+          errors/
+            page.tsx               # NOVO: triagem de erros
+        audit-log/
+          page.tsx                 # NOVO: histórico de ações
       conta/
-        page.tsx                   # Modificado: adicionar seção de créditos
-        credit-section.tsx         # Novo: saldo, comprar, extrato
-        credit-purchase-dialog.tsx # Novo: seleção de pacote
-        credit-history.tsx         # Novo: tabela de transações
+        page.tsx                   # Modificado: seção créditos (F27)
+        credit-section.tsx         # Novo: saldo + extrato (F27)
 
 prompts/
   campaign-copy-director.md        # NOVO: prompt template do Copy Director
 
 supabase/
   migrations/
-    20260715000001_create_credit_tables.sql   # NOVO: credit_balances + credit_transactions
+    20260715000001_create_credit_tables.sql   # F24: credit_balances + credit_transactions
+    20260717000003_create_admin_tables.sql    # F26: admin_users + admin_audit_log
 ```
 
 ---
@@ -783,15 +864,17 @@ supabase/
 
 ```
 DEPENDÊNCIAS:  F23 → F24 → F25 → F26 → F27 → F28 → F29
+                                       └── F30/v1.6 (futuro, não bloqueia v1.5)
 
 Onde:
   F23 — TextProvider + Copy Director (fundação de IA de texto)
   F24 — Credit Tables + CreditService (fundação financeira)
   F25 — Integração no Pipeline (Copy Director + créditos no generate-image)
-  F26 — Pagamento (Stripe Checkout + Webhook)
-  F27 — Conta + Saldo Visível (UI de créditos no app shell e /conta)
-  F28 — Observabilidade + Deploy + Operação (logs, telemetria, alertas, runbook, validação)
-  F29 — Refinamento Visual + Experiência Publicável + Launch Readiness
+  F26 — Admin Operacional + Convites + Créditos Manuais (substitui Stripe na v1.5)
+  F27 — Conta + Saldo Visível + Extrato (sem Stripe; CTA = "fale com o time")
+  F28 — Observabilidade + Operação + Launch Controls
+  F29 — Refinamento Visual + UAT + Launch Readiness
+  F30 — Stripe / Monetização Pública (adiado para pós-beta)
 ```
 
 ---
@@ -855,49 +938,78 @@ Onde:
 
 ---
 
-### F26 — Pagamento (Stripe Checkout + Webhook)
+### F26 — Admin Operacional + Convites + Créditos Manuais
 
 **O quê:**
-- Produtos fixos no Stripe (3 pacotes de crédito)
-- `POST /api/credits/create-checkout` — cria Stripe Checkout Session
-- `POST /api/webhooks/stripe` — processa `checkout.session.completed`
-  - Verifica assinatura HMAC do Stripe
-  - Mapeia `price_id` → quantidade de créditos
-  - Chama `CreditService.grant(userId, amount)` com `reference = stripe_session_id`
-  - Retorna 200 (Stripe espera confirmação rápida)
-- Config de Webhook no Stripe Dashboard
-- Variável de ambiente `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
-- Testes: 15+ testes (criação de sessão, webhook com assinatura válida/inválida, grant pós-compra, idempotência)
 
-**Entrega:** Usuário pode comprar créditos via Stripe Checkout. Compra é refletida no saldo em segundos.
+**Controle de acesso admin:**
+- `admin_users(user_id UUID PK REFERENCES auth.users(id))` — tabela, sem flag em `auth.users`
+- `requireAdmin()` gate: `requireApiUser()` + SELECT em `admin_users`
+- Login normal, sem `/admin/login` separado
+- Middleware + API routes com dupla proteção
 
-**Dependências:** F24 (CreditService.grant)
+**Diretório de usuários/lojas:**
+- Listar e buscar beta users com: nome, email, segmento, data de criação, última campanha, total de campanhas, total de erros
+- Detalhe de usuário/loja com saldo, extrato, campanhas recentes
+
+**Concessão manual de créditos:**
+- Formulário: `{ storeId, amount, reason }` — motivo **obrigatório** (Zod)
+- Chama `CreditService.grantCredits(storeId, amount, reason, { idempotencyKey })`
+- Toda concessão registrada em `admin_audit_log` (append-only)
+- Grant sem audit trail é tratado como falha (transação compensada ou rollback)
+
+**Visualização financeira (admin):**
+- Saldo atual de qualquer loja
+- Extrato completo de transações (todos os tipos)
+- Filtro por período, tipo, campanha
+
+**Triagem de erros:**
+- Lista de campanhas com `status = 'error'`
+- Colunas: `error_message`, `store_name`, `product_name`, `created_at`, `campaign_id`
+- Link para página da campanha
+
+**Audit log:**
+- `admin_audit_log` imutável (trigger BEFORE UPDATE/DELETE)
+- Colunas: `actor_id`, `action`, `target_type`, `target_id`, `reason`, `metadata`, `created_at`
+- Ações registradas: `credit_grant`, `store_create_invite`, `adjustment`, `manual_refund`
+
+**Tabelas novas:**
+- `admin_users` — gate de acesso
+- `admin_audit_log` — trilha imutável
+
+**Testes: 15+ testes** (gate admin, grant manual, audit log, listagem de usuários, visualização de erros)
+
+**Entrega:** Time consegue operar o beta controlado sem depender de SQL manual, Supabase Dashboard ou Stripe.
+
+**Dependências:** F24 (CreditService.grantCredits, getBalance, getHistory) + F25 (campaigns com error status e error_message)
 
 ---
 
-### F27 — Conta + Saldo Visível
+### F27 — Conta + Saldo Visível + Extrato
 
 **O quê:**
 - Saldo de créditos na topbar do app shell (server component do layout busca `credit_balances`)
-- Ícone + número + link rápido "Comprar créditos"
+- Ícone + número + link opcional para `/conta`
 - Seção de créditos em `/conta`:
   - Card de saldo atual com destaque visual
-  - Botão "Comprar créditos" → abre diálogo de seleção de pacote
-  - Diálogo de compra: 3 opções (10, 25, 50 créditos) com preço
-  - Clique em pacote → `POST /api/credits/create-checkout` → redirect Stripe
-  - Extrato de transações na mesma página (tabela paginada)
-- Estados: saldo cheio, saldo baixo (<3), saldo zero (CTA de compra)
-- Microcopy: "Créditos insuficientes", "Compre mais créditos", "Ganhe créditos ao se cadastrar"
-- Onboarding: grant de 5 créditos na criação da loja (integrar `CreditService.grant` no `POST /api/store`)
-- Testes: 20+ testes (saldo na topbar, diálogo de compra, extrato, estados, onboarding grant)
+  - Extrato de transações na mesma página (tabela paginada, exceto `adjustment`)
+  - Estados: saldo cheio, saldo baixo (<3), saldo zero
+- **CTA de saldo insuficiente durante beta:** "Solicitar créditos" / "Fale com o time"
+  - Sem redirecionamento Stripe, sem diálogo de compra
+  - Botão ou link abre modal/mailto com contato de suporte
+- Microcopy: "Créditos insuficientes", "Solicite créditos com o time", "Ganhe 5 créditos ao criar sua loja"
+- Onboarding: grant de 5 créditos na criação da loja (já implementado na F25)
+- Testes: 15+ testes (saldo na topbar, extrato, estados, microcopy)
 
-**Entrega:** Usuário vê saldo, compra créditos e acompanha gastos. Experiência completa de autoatendimento.
+**Entrega:** Usuário vê saldo, acompanha gastos e sabe como solicitar mais créditos durante o beta.
 
-**Dependências:** F26 (pagamento funcional) — mas a UI pode ser construída em paralelo mockando os dados
+**Dependências:** F24 (CreditService.getBalance, getHistory) — sem dependência de Stripe ou F26.
+F27 e F26 podem ser implementadas em paralelo: ambas leem os mesmos dados (credit_balances, credit_transactions),
+F26 com lente de suporte (qualquer loja), F27 com lente do próprio usuário (apenas a própria loja).
 
 ---
 
-### F28 — Observabilidade + Deploy + Operação
+### F28 — Observabilidade + Operação + Launch Controls
 
 **O quê:**
 
@@ -905,41 +1017,42 @@ Onde:
 - Logging estruturado no pipeline: `campaignId`, `phase`, `duration_ms`, `status` em cada etapa
 - Telemetria de IA: tokens, custo estimado, modelo, provedor — registrados em `generation_events` (tabela existente, sem uso ativo)
 - Rate limit e teto de gasto com logs de auditoria
-- Dashboard operacional (admin/DEV): taxa de sucesso, custo médio/geração, créditos vendidos, users ativos, erro rate
-- Alerta configurado para: erro rate > 5% na última hora, custo outlier > 3σ, webhooks pendentes
+- Dashboard de operação (complementa o admin operacional da F26, não o substitui):
+  - Métricas agregadas: taxa de sucesso, custo médio/geração, créditos concedidos, users ativos, erro rate
+  - Visualizações que o admin operacional (F26) **não** tem: tendências, séries temporais, agregações
+- Alertas configurados para: erro rate > 5% na última hora, custo outlier > 3σ
 
 **Deploy:**
 - Checklist de deploy documentado (passos, verificação, rollback)
-- Variáveis de ambiente documentadas (STRIPE_*, OPENAI_*, ANTHROPIC_*, SUPABASE_*, etc.)
+- Variáveis de ambiente documentadas (OPENAI_*, SUPABASE_*, etc.)
 - Processo de rollback (código + banco: migrations reversíveis)
 - Validação local (testes, typecheck, lint, build) + validação online (staging/production smoke tests)
 
 **Operação:**
-- Runbook de suporte: como conceder crédito manualmente (admin grant), como estornar transação, como verificar saldo de um usuário
-- Procedimento para compra sem crédito cair: verificar webhook no Stripe Dashboard, verificar log de webhooks, conceder manualmente se necessário
+- Runbook de suporte atualizado: grant manual via admin (F26), estorno, verificação de saldo
 - Política de retenção implementada (job de cleanup 90 dias para logs e generation_events)
 - Critérios de saúde do lançamento documentados (ver seção "Critérios de Lançamento Externo Controlado")
 
 **Hardening:**
 - Testes de concorrência (dois usuários gerando simultaneamente, saldo consistente)
-- Regressão geral (build, typecheck, lint, ~713+ testes existentes + novos)
-- Mobile hardening: revisar fluxos de compra, extrato e saldo em viewports 320–768px
+- Regressão geral (build, typecheck, lint, ~800+ testes existentes + novos)
+- Mobile hardening: revisar fluxos de extrato e saldo em viewports 320–768px
 - Touch targets nos novos componentes de crédito
 
-**Entrega:** Operação pronta para lançamento externo controlado. Time consegue monitorar, diagnosticar, estornar e fazer deploy com segurança.
+**Entrega:** Operação pronta para lançamento externo controlado. Time consegue monitorar, diagnosticar e operar com segurança.
 
 **Dependências:** F27
 
 ---
 
-### F29 — Refinamento Visual + Experiência Publicável + Launch Readiness
+### F29 — Refinamento Visual + UAT + Launch Readiness
 
 **O quê:**
 
 **Refinamento visual:**
-- Loading states consistentes em todas as telas (skeleton components existentes + novos para créditos)
+- Loading states consistentes em todas as telas (skeleton components existentes + novos para créditos e admin)
 - Empty states revisados (incluindo estados novos: sem crédito, sem transações, sem campanhas com filtro)
-- Error states: falha de geração com mensagem clara, falha de pagamento, falha de webhook
+- Error states: falha de geração com mensagem clara
 - Bloqueio sem crédito: tooltips, disabled states, microcopy em todo o app
 - Legibilidade da peça gerada: verificar contraste, tamanho de texto, hierarquia visual na campanha final
 - Copy da interface revisado: mensagens em português claro, tom consistente, sem jargão técnico
@@ -949,15 +1062,23 @@ Onde:
 - Canal de feedback definido (email de suporte, formulário in-app, Discord/WhatsApp)
 - Métricas mínimas de saúde configuradas e visíveis (ver "Critérios de Lançamento Externo Controlado")
 - Critérios de expansão/pausa documentados e acordados com o time
-- Perfil de usuário inicial definido (convite manual vs自助, número de usuários, segmento)
-- Teste de aceitação com usuário real (beta interno + 1-2 lojistas externos)
-- UAT completo: fluxo de compra real (Stripe modo test → production), geração, crédito, extrato
+- Perfil de usuário inicial definido (convite manual, 3-5 lojistas, segmento variado)
+- UAT externo com 1-2 lojistas reais validando:
+  - Usuário convidado manualmente completa cadastro
+  - Admin concede créditos → saldo atualizado
+  - Usuário gera campanha → crédito deduzido no sucesso
+  - Usuário gera campanha → estorno na falha (saldo restaurado)
+  - Saldo visível na topbar e em `/conta`
+  - Extrato mostra transações corretamente
+  - Admin visualiza campanha com erro e identifica causa
+  - Admin visualiza audit log e reconcilia ação
 - Verificação cruzada: time testa o produto em dispositivos reais (desktop + mobile)
 
 **Não faz:**
 - Nova feature de produto (tudo que não está no escopo da v1.5)
 - Redesign de páginas existentes (apenas polish e estados faltantes)
 - Testes A/B ou otimização de conversão
+- Stripe Checkout / compra real (diferido para F30/v1.6)
 
 **Entrega:** Produto com acabamento visual de lançamento externo. Time confiante para abrir para usuários externos.
 
@@ -976,13 +1097,19 @@ Onde:
 | **Migrations crédito** | — | Criar | — | — | — | — | — |
 | **generate-image (modificado)** | — | — | Integrar | — | — | Hardening | Revisar |
 | **Rate limit guard** | — | — | Criar | — | — | Hardening | — |
-| **Stripe Checkout** | — | — | — | Criar | — | — | — |
-| **Stripe Webhook** | — | — | — | Criar | — | — | — |
+| **admin_users table** | — | — | — | Criar | — | — | — |
+| **admin_audit_log table** | — | — | — | Criar | — | — | — |
+| **requireAdmin() gate** | — | — | — | Criar | — | — | — |
+| **Admin user/store directory** | — | — | — | Criar | — | — | — |
+| **Admin credit grant UI** | — | — | — | Criar | — | — | — |
+| **Admin campaign error view** | — | — | — | Criar | — | — | — |
+| **Admin audit log view** | — | — | — | Criar | — | — | — |
 | **Saldo na topbar** | — | — | — | — | Criar | Hardening | Revisar |
 | **Seção créditos /conta** | — | — | — | — | Criar | Hardening | Revisar |
-| **Diálogo de compra** | — | — | — | — | Criar | Hardening | Revisar |
 | **Extrato de transações** | — | — | — | — | Criar | Hardening | Revisar |
-| **Onboarding grant** | — | — | — | — | Criar | — | Verificar |
+| **CTA "Fale com o time"** | — | — | — | — | Criar | — | Verificar |
+| **Onboarding grant** | — | — | ✓ | — | — | — | Verificar |
+| **Dashboard métricas agregadas** | — | — | — | — | — | Criar | — |
 | **Deploy checklist** | — | — | — | — | — | Criar | — |
 | **Runbook operacional** | — | — | — | — | — | Criar | — |
 | **Doc variáveis de ambiente** | — | — | — | — | — | Criar | — |
@@ -992,7 +1119,7 @@ Onde:
 | **Launch health metrics** | — | — | — | — | — | — | Criar |
 | **Feedback channel** | — | — | — | — | — | — | Criar |
 | **Loading states** | — | — | — | — | — | — | Criar |
-| **Error states (falha/pagamento)** | — | — | — | — | — | — | Criar |
+| **Error states** | — | — | — | — | — | — | Criar |
 | **Fluxo completo polish** | — | — | — | — | — | — | Executar |
 | **UAT externo** | — | — | — | — | — | — | Executar |
 | **Mobile hardening** | — | — | — | — | — | Criar | Verificar |
@@ -1004,10 +1131,10 @@ Onde:
 | Risco | Probabilidade | Impacto | Mitigação |
 |-------|--------------|---------|-----------|
 | **Estorno de crédito em race condition** | Média | Alto — usuário perde crédito | Transação atômica no banco (`reserve_credit` como função SQL). Testes de concorrência na F28 |
-| **Stripe webhook perdido** | Baixa | Médio — usuário paga mas não recebe | Retry automático do Stripe (até 3 dias). Log de webhooks recebidos. Admin pode conceder manualmente via runbook |
+| **Admin concede crédito sem audit trail** | Média | Alto — ação sem rastro em sistema financeiro | Grant sem audit log é tratado como falha. `admin_audit_log` é append-only, imutável |
 | **Copy Director gera copy de baixa qualidade** | Média | Médio — produto parece menos profissional | Iteração no prompt. Feedback loop: se usuário edita o copy, registrar para melhoria. Edição manual sempre disponível |
 | **Custo de IA sem teto de gasto operacional** | Média | Alto — conta do provedor explode | Rate limit por usuário + teto diário. Monitoramento de custo total. Alerta em gasto anômalo |
-| **Crédito zero: usuário desiste** | Alta | Médio — churn | Gratuidade inicial (5 créditos). Prévia de campanhas antigas visível. CTA de compra claro no momento certo |
+| **Crédito zero: usuário desiste** | Alta | Médio — churn | Gratuidade inicial (5 créditos). Prévia de campanhas antigas visível. CTA "Solicitar créditos" com contato do time |
 | **Abuso: múltiplas contas para mais créditos gratuitos** | Média | Médio — perda de receita | Rate limit e teto diário já mitigam. Verificação de email obrigatória (já existe). Feature flag desliga geração gratuita se necessário |
 | **Retenção não implementada a tempo** | Média | Baixo — acúmulo de dados iniciais é tolerável | Cleanup não precisa estar no ship inicial, mas deve estar em 30 dias. Até lá, volume é baixo |
 | **Qualidade visual insuficiente para público** | Média | Alto — primeira impressão negativa | F29 dedicada a polish. UAT externo antes de ampliar. Feedback canal primário captura problemas |
@@ -1049,7 +1176,7 @@ Onde:
 
 ### Macro-critério
 
-> Um lojista real (fora do time de desenvolvimento) consegue se cadastrar, receber créditos gratuitos, gerar uma campanha com copy inteligente via IA, revisar o resultado, comprar mais créditos se precisar, e repetir o ciclo — com a operação monitorada, custos controlados e falhas tratadas sem perder créditos.
+> Um lojista real (fora do time de desenvolvimento) consegue se cadastrar, receber créditos gratuitos, gerar uma campanha com copy inteligente via IA, revisar o resultado, receber créditos adicionais via operação/admin durante o beta controlado, e repetir o ciclo — com a operação monitorada, custos controlados e falhas tratadas sem perder créditos.
 
 ### Categorias de cenários
 
@@ -1060,39 +1187,39 @@ Os cenários exatos serão numerados durante o planejamento de cada fase. As cat
 | **A — Copy Director** | Geração de copy por IA com `title`, `caption`, `hashtags`, `cta_post`. Qualidade mínima, fallback determinístico, paralelismo com Image Director |
 | **B — Créditos** | Saldo inicial (grant), dedução no sucesso, estorno na falha, saldo nunca negativo, histórico de transações, reserva reversível |
 | **C — Rate limit** | Bloqueio por hora, bloqueio por dia, liberação após janela, mensagem clara para o usuário |
-| **D — Compra** | Checkout session criada, webhook processado, saldo atualizado, idempotência, assinatura inválida rejeitada |
+| **D — Admin** | Admin access gate funcional, diretório de usuários, grant manual com motivo obrigatório, audit log imutável, visualização de erros |
 | **E — UI de saldo** | Saldo visível na topbar, saldo zero com CTA, extrato correto, onboarding com grant, microcopy de bloqueio |
 | **F — Falhas** | Geração abortada (timeout) → estorno, geração com erro → estorno, saldo insuficiente → 402 sem chamada IA |
 | **G — Observabilidade** | Logs estruturados no pipeline, telemetria de IA registrada, alertas configurados, dashboard operacional |
 | **H — Regressão** | Milestone não quebra funcionalidades existentes (v1.2–v1.4). Nenhum teste existente (713+) quebra |
-| **I — Segurança** | RLS verificado nas novas tabelas, ownership em rotas de crédito, inputs sanitizados para IA, service role revisado, webhook com HMAC |
+| **I — Segurança** | RLS verificado nas novas tabelas, ownership em rotas de crédito, inputs sanitizados para IA, service role revisado, admin_users gate, audit log obrigatório |
 | **J — Refinamento visual** | Loading states, empty states, error states, bloqueio sem crédito, legibilidade da peça, copy da interface, fluxo completo polido |
 | **K — Launch readiness** | Canal de feedback funcional, métricas de saúde visíveis, runbook de suporte aprovado, UAT externo concluído, critérios de expansão documentados |
 
 ### Pirâmide de validação
 
 ```
-                ┌──────────┐
-                │ UAT      │  Compra real (Stripe), fluxo completo,
-                │ manual   │  leitura de extrato, mobile
-                ├──────────┤
-                │ E2E      │  Geração → crédito deduzido, saldo atualizado
-                │ (mock)   │  Compra → webhook → grant
-                ├──────────┤
-                │ Banco/   │  Saldo atômico, race condition, transações
-                │ SQL real │  imutáveis, RLS, estorno
-                ├──────────┤
-                │ Integr.  │  Rate limit, 402, webhook, copy director
-                │ HTTP     │  integrado, estorno em falha
-                ├──────────┤
-                │ Unitários│  CreditService, CopyDirectorService,
-                │          │  TextProvider, validações, saldo checks
-                └──────────┘
+                 ┌──────────┐
+                 │ UAT      │  Convite manual + grant admin + geração +
+                 │ manual   │  dedução + estorno + saldo + extrato + triagem
+                 ├──────────┤
+                 │ E2E      │  Geração → crédito deduzido, saldo atualizado
+                 │ (mock)   │  Grant admin → saldo creditado → extrato reflete
+                 ├──────────┤
+                 │ Banco/   │  Saldo atômico, race condition, transações
+                 │ SQL real │  imutáveis, RLS, admin audit log
+                 ├──────────┤
+                 │ Integr.  │  Rate limit, 402, admin gate, copy director
+                 │ HTTP     │  integrado, estorno em falha
+                 ├──────────┤
+                 │ Unitários│  CreditService, CopyDirectorService,
+                 │          │  TextProvider, requireAdmin, admin_audit_log
+                 └──────────┘
 ```
 
 ### Condição de fechamento
 
-> A milestone é considerada concluída quando todos os cenários de todas as categorias (A–K) estão VERDES, com evidências na respectiva camada da pirâmide. Cenários críticos (B — créditos, C — rate limit, F — falhas, I — segurança) **devem** ter cobertura automatizada. UAT manual complementar com fluxo real de compra (Stripe modo test → production). A categoria K (launch readiness) só fecha com aprovação explícita do time após UAT externo.
+> A milestone é considerada concluída quando todos os cenários de todas as categorias (A–K) estão VERDES, com evidências na respectiva camada da pirâmide. Cenários críticos (B — créditos, C — rate limit, D — admin, F — falhas, I — segurança) **devem** ter cobertura automatizada. UAT manual complementar com fluxo real de convite → grant admin → geração → saldo → extrato → triagem de erro. A categoria K (launch readiness) só fecha com aprovação explícita do time após UAT externo.
 
 ---
 
@@ -1119,7 +1246,7 @@ São monitoradas ativamente (dashboard operacional + alertas):
 | Custo médio por geração | < R$ 0,50 | > R$ 1,00 | > R$ 2,00 |
 | Tempo médio de geração | < 30s | > 45s | > 60s |
 | Taxa de erro de IA (provider) | < 5% | > 10% | > 20% |
-| Conversão de compra (visitantes que compram) | > 10% | < 5% | < 2% |
+ | Conversão de solicitação de crédito (users que pedem) | > 20% | < 10% | < 5% |
 | Taxa de estorno (gerações com erro) | < 10% | > 15% | > 25% |
 | Uso de crédito (médio/usuário/dia) | 1–3 | > 5 | > 10 (possível abuso) |
 | NPS/satisfação (coletado após 1ª campanha) | > 7 | < 5 | < 3 |
@@ -1128,7 +1255,7 @@ São monitoradas ativamente (dashboard operacional + alertas):
 
 - **Canal primário:** Grupo de WhatsApp / Discord com os lojistas beta
 - **Canal secundário:** Formulário in-app (feedback button no app shell) — opcional na v1.5, pode ser implementado na F29
-- **Sinalizações automáticas:** Alertas de erro rate, estorno frequente por usuário, tentativa de compra sem sucesso
+- **Sinalizações automáticas:** Alertas de erro rate, estorno frequente por usuário, saldo baixo repetido
 
 ### Decisão de ampliar ou pausar
 
@@ -1136,7 +1263,7 @@ A ampliação do lançamento (mais usuários, link público, divulgação) está
 
 1. **Todas as métricas acima no verde (acima do alvo mínimo)** por 7 dias consecutivos
 2. **Nenhum incidente de segurança** (vazamento de dados, acesso cross-tenant, perda de crédito não estornada)
-3. **Nenhum bug crítico** (geração quebra todo o app, compra sem crédito cair, saldo negativo)
+3. **Nenhum bug crítico** (geração quebra todo o app, grant sem crédito cair, saldo negativo, audit log perdido)
 4. **Suporte operacional documentado e testado** (runbook verificado com pelo menos 1 estorno manual real)
 5. **Aprovação do time** após revisão dos resultados do grupo inicial
 
@@ -1148,14 +1275,13 @@ Toda a v1.5 opera atrás de uma feature flag (`v1.5-credits-enabled`). Enquanto 
 - O sistema de créditos existe no banco mas não é cobrado
 - O Copy Director gera copy mas não substitui o fluxo determinístico
 - Rate limit não é aplicado
-- Stripe webhooks são ignorados
 
 A flag é ativada manualmente pelo time quando o lançamento controlado começar.
 
-> **A conclusão da milestone exige a flag LIGADA em ambiente de UAT e no lançamento controlado.** A v1.5 não pode ser considerada concluída com a funcionalidade implementada mas desligada — o ciclo completo (geração com Copy Director + crédito + compra) precisa estar ativo e verificado com usuário real. A flag existe para rollout seguro (ativar para poucos, observar, escalar), não para shipping da milestone incompleta.
+> **A conclusão da milestone exige a flag LIGADA em ambiente de UAT e no lançamento controlado.** A v1.5 não pode ser considerada concluída com a funcionalidade implementada mas desligada — o ciclo completo (geração com Copy Director + crédito + grant admin + saldo + extrato) precisa estar ativo e verificado com usuário real. A flag existe para rollout seguro (ativar para poucos, observar, escalar), não para shipping da milestone incompleta.
 
 ---
 
 *Documento criado: 2026-07-15*
-*Última atualização: 2026-07-15*
+*Última atualização: 2026-07-17 — Realinhamento: F26 troca Stripe por Admin Operacional. Stripe adiado para F30/v1.6.*
 *Próximo passo: revisão do artefato pelo time. Após aprovação, iniciar planejamento das fases via OpenSpec.*
