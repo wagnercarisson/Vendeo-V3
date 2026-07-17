@@ -269,4 +269,10 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 Phase: 25 — Pipeline de Geração v1.5 ✅
 Plan: 3/3 completed
 Status: Complete
-Last activity: 2026-07-17 — Phase 25 (Integração Transacional) completa ✅
+Last activity: 2026-07-17 - Completed quick task 260717-okh: Corrigir bug/guardrail no pipeline de geracao de campanha: evitar chamadas de IA quando houver placeholders nao resolvidos em prompts e corrigir placeholder do revisor.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260717-okh | Corrigir bug/guardrail no pipeline de geracao de campanha: evitar chamadas de IA quando houver placeholders nao resolvidos em prompts e corrigir placeholder do revisor. | 2026-07-17 | a315a29 | [260717-okh-corrigir-bug-guardrail-no-pipeline-de-ge](./quick/260717-okh-corrigir-bug-guardrail-no-pipeline-de-ge/) |
