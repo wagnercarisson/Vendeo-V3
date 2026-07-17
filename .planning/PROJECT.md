@@ -27,17 +27,18 @@ A milestone v1.4 transformou o Vendeo em um produto SaaS coerente: app shell pro
 
 ## Current Milestone: v1.5 — Lançamento Externo Controlado
 
-**Goal:** Preparar o Vendeo para o primeiro público real controlado — copy inteligente via IA, sistema de créditos, compra via Stripe, controle de custos, observabilidade e operação monitorada.
+**Goal:** Preparar o Vendeo para o primeiro público real controlado — copy inteligente via IA, sistema de créditos, admin operacional para suporte beta, controle de custos, observabilidade e operação monitorada.
 
 **Target features:**
 - Copy Director (serviço de IA de texto persuasivo com title, caption, hashtags, CTA)
-- Sistema de créditos (saldo por usuário, transações imutáveis, grant/estorno)
+- Sistema de créditos (saldo por loja, transações imutáveis, grant/estorno)
 - Pipeline paralelo (Copy ∥ Image) com merge, fallback e atomicidade financeira
-- Stripe Checkout para compra de créditos avulsos (10, 25, 50)
+- Admin operacional: diretório de usuários, grant manual auditável, extrato, triagem de erros
 - Controle de custos (rate limit 10/h, teto 30/dia, timeout 120s)
 - Saldo visível na topbar + seção de créditos em `/conta` com extrato
 - Observabilidade (logging estruturado, telemetria IA, dashboard operacional)
 - Refinamento visual + Launch Readiness (UAT externo, runbook, feature flag)
+- **Stripe / compra real de créditos**: adiado para F30/v1.6 (pós-beta)
 
 <details>
 <summary>Versões anteriores</summary>
@@ -139,21 +140,23 @@ A milestone v1.4 transformou o Vendeo em um produto SaaS coerente: app shell pro
 - [ ] **PIPE-05**: publication_copy_snapshot populated by Copy Director (replaces deterministic buildCaption/hashtags)
 - [ ] **PIPE-06**: Timeout abort (120s total) treated as failure with refund
 
-#### Pagamento (PAY)
+#### Admin Operacional (ADMIN)
 
-- [ ] **PAY-01**: POST /api/credits/create-checkout — Stripe Checkout Session creation
-- [ ] **PAY-02**: POST /api/webhooks/stripe — process checkout.session.completed with HMAC verification
-- [ ] **PAY-03**: 3 credit packs (10/25/50) with fixed pricing
-- [ ] **PAY-04**: CreditService.grant on successful purchase (idempotent)
+- [ ] **ADMIN-01**: Admin access control — only explicitly authorized users (admin_users table) access admin routes/pages
+- [ ] **ADMIN-02**: Admin user/store directory — list and search beta users/stores with support data
+- [ ] **ADMIN-03**: Admin credit grant — manual grant with mandatory reason, using CreditService.grantCredits (idempotent + audit trail)
+- [ ] **ADMIN-04**: Admin credit ledger view — view balance and full transaction history of any store/user
+- [ ] **ADMIN-05**: Admin campaign error review — view errored campaigns with error_message, status, dates
+- [ ] **ADMIN-06**: Admin audit log — every sensitive admin action recorded with actor, target, action, reason, timestamp (append-only)
 
 #### Conta e Saldo Visível (UI-CREDIT)
 
 - [ ] **UI-01**: Credit balance visible in topbar (app shell) — server-side lookup
-- [ ] **UI-02**: Credits section in `/conta` — balance card, purchase dialog, transaction history
-- [ ] **UI-03**: Purchase dialog with 3 pack options → POST /api/credits/create-checkout → Stripe redirect
+- [ ] **UI-02**: Credits section in `/conta` — balance card, transaction history, beta credit request CTA
+- [ ] **UI-03**: Zero-credit CTA during beta — "Solicitar créditos" / "Fale com o time" (não Stripe)
 - [ ] **UI-04**: Extrato paginado (credit_transactions history with all types except adjustment)
 - [ ] **UI-05**: Onboarding grant: 5 free credits on store creation (POST /api/store integration)
-- [ ] **UI-06**: Zero-credit states: tooltip, disabled button, CTA to buy — product never blocks entirely
+- [ ] **UI-06**: Zero-credit states: tooltip, disabled button, CTA to request credits — product never blocks entirely
 
 #### Observabilidade e Operação (OPS)
 
@@ -177,7 +180,7 @@ A milestone v1.4 transformou o Vendeo em um produto SaaS coerente: app shell pro
 - [ ] **SEC-01**: RLS policies for credit_balances and credit_transactions
 - [ ] **SEC-02**: Ownership validation on all /api/credits/* routes
 - [ ] **SEC-03**: Sanitized inputs to Copy Director (no sensitive data in prompts)
-- [ ] **SEC-04**: Stripe webhook HMAC signature verification
+- [ ] **SEC-04**: Admin routes protected by requireAdmin gate — admin_users table, no auth.users flag
 - [ ] **SEC-05**: Service role usage reviewed — credit operations use service role only after identity validation
 - [ ] **SEC-06**: Data retention policy implemented (90d cleanup for logs/generation_events)
 
@@ -264,7 +267,7 @@ A milestone v1.4 transformou o Vendeo em um produto SaaS coerente: app shell pro
 | Copy Director como serviço de IA independente (texto) | Separa responsabilidades, paralelizável com Image Director | ✓ Good — D1 v1.5 |
 | Pipeline paralelo Copy ∥ Image | Copy não influencia arte; latência cortada pela metade | ✓ Good — D2 v1.5 |
 | Crédito só debitado na geração bem-sucedida | Contrato com o usuário: falha = estorno automático | ✓ Good — D3 v1.5 |
-| Stripe Checkout (redirect) em vez de Payment Element | Mínimo viável, sem compliance PCI para lançamento controlado | ✓ Good — D4 v1.5 |
+| Stripe Checkout (redirect) — ADIADO para F30/v1.6 | Crédito operado pelo time durante beta; Stripe retomado pós-validação | △ Adiado — D4 v1.5 |
 | Rate limit via tabela generation_events (janela deslizante) | Sem dependência externa (Redis); migra se carga crescer | ✓ Good — D5 v1.5 |
 | Observabilidade começa com logs estruturados + Vercel Logs | Escala conforme necessidade; sem ferramental externo inicial | ✓ Good — D6 v1.5 |
 | Saldo visível na topbar (server component) | Usuário nunca precisa adivinhar quantos créditos tem | ✓ Good — D7 v1.5 |
@@ -272,6 +275,10 @@ A milestone v1.4 transformou o Vendeo em um produto SaaS coerente: app shell pro
 | Saldo zero não bloqueia o app | Dashboard/histórico funcionam; apenas geração é limitada | ✓ Good — D9 v1.5 |
 | Política de retenção definida por entidade | Campanhas vitalícias, logs 90 dias, transações financeiras vitalícias | ✓ Good — D10 v1.5 |
 | Feature flag v1.5-credits-enabled para rollout seguro | Milestone concluída só com flag ativa em UAT | ✓ Good — D11 v1.5 |
+| Admin Operacional (F26) substitui Stripe no caminho crítico | Beta controlado precisa de capacidade operacional antes de automatizar vendas | ✓ Good — D12 v1.5 |
+| Convite beta MVP: sem email convite, admin completa onboarding | Usuário existe via auth normal; admin apenas cria loja + concede créditos | ✓ Good — D13 v1.5 |
+| Admin gate via admin_users table (não auth.users flag) | Tabela própria, auditável, sem risco de reset em migração auth | ✓ Good — D14 v1.5 |
+| Admin audit log append-only obrigatório | Grant sem audit trail tratado como falha; RPC atômica grant+audit | ✓ Good — D15 v1.5 |
 
 ## Evolution
 

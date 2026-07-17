@@ -42,8 +42,8 @@ Esta milestone resolve esses gaps para que possamos abrir o produto para um grup
 | Retenção de dados e assets | Política de retenção definida para campanhas, imagens no Storage, assets de marca, logs/telemetria, eventos de IA e transações financeiras |
 | Refinamento visual e experiência publicável | Loading states, empty states, error states, bloqueio sem crédito, legibilidade da peça gerada, copy da interface, fluxo formulário → geração → revisão → exportação com acabamento de produto público |
 | Deploy e operação | Checklist de deploy, variáveis de ambiente documentadas, processo de rollback, validação local e online, procedimentos de suporte (estorno manual, concessão de crédito), critérios de saúde do lançamento |
-| Mobile hardening (v2) | Revisão de fluxos críticos em mobile (compra de créditos, geração, copy review) |
-| Critérios de lançamento externo | Canal de feedback, métricas mínimas de saúde (sucesso de geração, custo médio, erro, compra, uso de créditos), decisão de ampliar ou pausar |
+| Mobile hardening (v2) | Revisão de fluxos críticos em mobile (solicitação de créditos, geração, copy review) |
+| Critérios de lançamento externo | Canal de feedback, métricas mínimas de saúde (sucesso de geração, custo médio, erro, solicitação/concessão manual de créditos, uso de créditos), decisão de ampliar ou pausar |
 
 ### O que está fora do escopo
 
@@ -135,12 +135,12 @@ Por decisão desta milestone: manter `generating` → `ready` / `error` como ún
 
 `DECIDIDO`
 
-**Modelo de dados:**
+**Modelo de dados (eixo `store_id`, conforme implementado na F24):**
 
 ```sql
--- Saldo atual do usuário (materializado para leitura rápida)
+-- Saldo atual da loja (materializado para leitura rápida)
 CREATE TABLE credit_balances (
-  user_id UUID PRIMARY KEY REFERENCES auth.users(id),
+  store_id UUID PRIMARY KEY REFERENCES public.stores(id),
   balance INTEGER NOT NULL DEFAULT 0 CHECK (balance >= 0),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -148,9 +148,10 @@ CREATE TABLE credit_balances (
 -- Histórico imutável de transações
 CREATE TABLE credit_transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id),
+  store_id UUID NOT NULL REFERENCES public.stores(id),
   type TEXT NOT NULL CHECK (type IN ('grant', 'purchase', 'deduction', 'refund', 'adjustment')),
   amount INTEGER NOT NULL, -- positivo para grant/purchase/refund, negativo para deduction
+  balance_before INTEGER NOT NULL,
   balance_after INTEGER NOT NULL, -- saldo após esta transação (para reconciliação)
   campaign_id UUID REFERENCES public.campaigns(id),
   reference TEXT, -- ID externo (ex: stripe_session_id, admin_note)
@@ -158,7 +159,7 @@ CREATE TABLE credit_transactions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_credit_transactions_user ON credit_transactions(user_id, created_at DESC);
+CREATE INDEX idx_credit_transactions_store ON credit_transactions(store_id, created_at DESC);
 ```
 
 **Fluxo de dedução:**
@@ -224,8 +225,8 @@ Escopo inicial para lançamento controlado:
 
 - **Logging estruturado:** Cada etapa do pipeline loga com `campaignId`, `storeId`, `userId`, `duration_ms`, `phase`, `status`
 - **Telemetria de IA:** Provedor, modelo, tokens de input/output, custo estimado, duração — registrados em `generation_events` ou nova tabela de telemetria
-- **Alertas:** Erro rate > 5% na última hora, custo outlier > 3σ, fila de webhooks pendentes
-- **Dashboard de operação** (acesso admin/DEV apenas): taxa de sucesso, custo médio por geração, créditos totais vendidos, users ativos
+- **Alertas:** Erro rate > 5% na última hora, custo outlier > 3σ, saldo baixo recorrente por loja, grants manuais anômalos
+- **Dashboard de operação** (acesso admin/DEV apenas): taxa de sucesso, custo médio por geração, saldo médio por loja, grants manuais realizados, users ativos, taxa de estorno
 
 > A decisão de ferramental (Grafana, Datadog, Planilha, logs do Vercel) é adiada — começa com logs estruturados no `console.*` + Vercel Logs, evolui conforme necessidade.
 
@@ -235,7 +236,7 @@ Escopo inicial para lançamento controlado:
 
 - A topbar do app shell exibe o saldo de créditos ao lado do menu de conta
 - Formato: ícone (moeda/bolt) + número (ex.: "42 créditos")
-- Ao clicar, pode abrir um dropdown rápido "Comprar créditos" que leva a `/conta#creditos`
+- Ao clicar, pode abrir um dropdown rápido "Solicitar créditos" / "Fale com o time" que leva a `/conta#creditos`
 - O saldo é server-side: o server component do layout busca `credit_balances.balance` para o usuário logado
 - Fallback: se não encontrar saldo (novo usuário sem registro `credit_balances`), tratar como 0
 
@@ -387,7 +388,7 @@ ARQUITETURA PÓS-V1.5
    │ (campaigns,      │   │ Mutations        │
    │  stores,         │   │ (generate-image, │
    │  credit_balances,│   │  download,       │
-   │  credit_transact)│   │  credit-purchase,│
+   │  credit_transact)│   │  admin-credits,  │
    │                  │   │  copy-director)  │
    └────────┬─────────┘   └────────┬─────────┘
             │                      │
@@ -438,11 +439,11 @@ ARQUITETURA PÓS-V1.5
                     │    → usa ImageProvider           │
                     │                                 │
                     │  CreditService (NOVO)            │
-                    │    → getBalance(userId)          │
-                    │    → reserveCredit(userId)       │
+                    │    → getBalance(storeId)         │
+                    │    → reserveCredit(storeId)      │
                     │    → confirmCredit(txId)         │
                     │    → refundCredit(txId)          │
-                    │    → getHistory(userId)          │
+                    │    → getHistory(storeId)         │
                     └───────────────────────────────┘
 ```
 
@@ -524,20 +525,20 @@ ADMIN                          FRONTEND ADMIN              BACKEND              
 [clica "Conceder créditos"]
        │
        ▼
-[preenche: amount, motivo (obrigatório)]
+[preenche: amount, motivo (obrigatório), operationId (gerado pelo client)]
        │
        ▼
-POST /api/admin/credits/grant
+POST /api/admin/credits/grant { storeId, amount, reason, operationId }
        │                          │
        │                          ├── requireAdmin()
-       │                          ├── Valida motivo não vazio
-       │                          ├── CreditService.grantCredits(storeId, amount, reason)
-       │                          │    INSERT grant ──────────────────────►  credit_transactions
-       │                          │    UPDATE credit_balances ───────────►  +amount
-       │                          ├── INSERT admin_audit_log ────────────►  audit trail
-       │                          │    (actor_id, action='credit_grant',
-       │                          │     target_id, amount, reason)
-       │                          └── { transactionId, newBalance }
+       │                          ├── Valida motivo não vazio + operationId UUID
+       │                          ├── RPC admin_grant_credits(actor_id, store_id,
+       │                          │    amount, reason, operation_id)
+       │                          │    ├── Checa operation_id existente (idempotência)
+       │                          │    ├── grant_credits() ──────────────────►  crédito
+       │                          │    ├── INSERT admin_audit_log ───────────►  trilha
+       │                          │    └── Tudo na mesma transação
+       │                          └── { transactionId, auditId, newBalance }
        │
        ▼
 [redirect para admin/users/[id]]
@@ -611,7 +612,7 @@ ESTADOS DO USUÁRIO — v1.5
 
 ```sql
 CREATE TABLE IF NOT EXISTS public.credit_balances (
-  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  store_id UUID PRIMARY KEY REFERENCES public.stores(id) ON DELETE CASCADE,
   balance INTEGER NOT NULL DEFAULT 0 CHECK (balance >= 0),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -620,7 +621,9 @@ ALTER TABLE public.credit_balances ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "owner_select_credit_balances" ON public.credit_balances
   FOR SELECT TO authenticated
-  USING (user_id = (SELECT auth.uid()));
+  USING (store_id IN (
+    SELECT id FROM public.stores WHERE user_id = (SELECT auth.uid())
+  ));
 
 GRANT SELECT ON TABLE public.credit_balances TO authenticated;
 ```
@@ -630,7 +633,7 @@ GRANT SELECT ON TABLE public.credit_balances TO authenticated;
 ```sql
 CREATE TABLE IF NOT EXISTS public.credit_transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  store_id UUID NOT NULL REFERENCES public.stores(id) ON DELETE CASCADE,
   type TEXT NOT NULL CHECK (type IN ('grant', 'purchase', 'deduction', 'refund', 'adjustment')),
   amount INTEGER NOT NULL,
   balance_before INTEGER NOT NULL,
@@ -641,8 +644,8 @@ CREATE TABLE IF NOT EXISTS public.credit_transactions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_credit_transactions_user_id
-  ON public.credit_transactions (user_id);
+CREATE INDEX IF NOT EXISTS idx_credit_transactions_store_id
+  ON public.credit_transactions (store_id, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_credit_transactions_created_at
   ON public.credit_transactions (created_at DESC);
@@ -651,7 +654,9 @@ ALTER TABLE public.credit_transactions ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "owner_select_credit_transactions" ON public.credit_transactions
   FOR SELECT TO authenticated
-  USING (user_id = (SELECT auth.uid()));
+  USING (store_id IN (
+    SELECT id FROM public.stores WHERE user_id = (SELECT auth.uid())
+  ));
 
 GRANT SELECT ON TABLE public.credit_transactions TO authenticated;
 ```
@@ -766,7 +771,7 @@ Bucket legado `store-logos` (0 objetos desde o inventário da v1.2). Permanece c
 | `GET /api/admin/campaigns/errors` | Admin | ✅ `requireAdmin()` | N/A |
 | `GET /api/admin/audit-log` | Admin | ✅ `requireAdmin()` | N/A |
 | **Créditos** | | | |
-| `GET /conta` (seção créditos, SC) | Admin (service role) | ✅ `requireUser()` | ✅ Filtra por `store_id = claims.sub` |
+| `GET /conta` (seção créditos, SC) | Sessão + RLS | ✅ `requireUser()` | ✅ Filtra por `store_id IN (SELECT id FROM stores WHERE user_id = auth.uid())` |
 | `GET /api/credits/balance` | Admin (preferencial) | ✅ `requireApiUser()` | ✅ `userId = claims.sub` |
 | `GET /api/credits/history` | Admin (preferencial) | ✅ `requireApiUser()` | ✅ `userId = claims.sub` |
 | `CreditService.reserve(storeId)` | Admin | Interno (handler já autenticou) | ✅ Ownership verificado pelo handler chamador |
@@ -901,13 +906,13 @@ Onde:
 
 **O quê:**
 - Migrations: `credit_balances` + `credit_transactions` (DDL, índices, RLS, grants)
-- `CreditService` com:
-  - `getBalance(userId)` — saldo atual
-  - `reserveCredit(userId, amount)` — deduz saldo, registra transação
+- `CreditService` com (todos os métodos usam `storeId`, não `userId`):
+  - `getBalance(storeId)` — saldo atual
+  - `reserveCredit(storeId, amount)` — deduz saldo, registra transação
   - `confirmCredit(txId)` — confirma (no-op na v1.5 — reserva já é definitiva)
   - `refundCredit(txId, reason)` — estorna saldo, registra refund
-  - `grantCredits(userId, amount, reason)` — concede créditos (onboarding, compra)
-  - `getHistory(userId, limit, offset)` — extrato paginado
+  - `grantCredits(storeId, amount, reason)` — concede créditos (onboarding, ajuste manual/admin, futuro pagamento)
+  - `getHistory(storeId, limit, offset)` — extrato paginado
 - Validação: saldo nunca negativo, transações imutáveis, estorno cria nova transação
 - SQL function para atomicidade (`reserve_credit`, `refund_credit`) ou transação na aplicação com retry
 - Testes: 20+ testes (saldo, reserva, estorno, concorrência, grant, histórico)
@@ -953,10 +958,10 @@ Onde:
 - Detalhe de usuário/loja com saldo, extrato, campanhas recentes
 
 **Concessão manual de créditos:**
-- Formulário: `{ storeId, amount, reason }` — motivo **obrigatório** (Zod)
-- Chama `CreditService.grantCredits(storeId, amount, reason, { idempotencyKey })`
-- Toda concessão registrada em `admin_audit_log` (append-only)
-- Grant sem audit trail é tratado como falha (transação compensada ou rollback)
+- Formulário: `{ storeId, amount, reason, operationId }` — motivo **obrigatório** (Zod)
+- Chama RPC `admin_grant_credits` atômica: `grant_credits` + `INSERT admin_audit_log` na mesma transação
+- `operationId` gerado pelo client → idempotência real em retries (checagem no início da RPC)
+- Grant sem audit trail é tratado como falha (ROLLBACK na RPC atômica)
 
 **Visualização financeira (admin):**
 - Saldo atual de qualquer loja
@@ -970,8 +975,9 @@ Onde:
 
 **Audit log:**
 - `admin_audit_log` imutável (trigger BEFORE UPDATE/DELETE)
-- Colunas: `actor_id`, `action`, `target_type`, `target_id`, `reason`, `metadata`, `created_at`
+- Colunas: `actor_id`, `action`, `target_type`, `target_id`, `reason`, `operation_id`, `metadata`, `created_at`
 - Ações registradas: `credit_grant`, `store_create_invite`, `adjustment`, `manual_refund`
+- RPC `admin_grant_credits` atômica: checa operation_id no início (idempotência), executa grant_credits + INSERT audit log na mesma transação
 
 **Tabelas novas:**
 - `admin_users` — gate de acesso
@@ -1152,17 +1158,17 @@ F26 com lente de suporte (qualquer loja), F27 com lente do próprio usuário (ap
 
 **Decisão na fase de design:** Confirmar viabilidade com Supabase (janela deslizante em SQL). Alternativa: Vercel KV (upstash Redis) se latência for problema.
 
-### Stripe — escolha entre Checkout vs Payment Element
+### Stripe — decidido (deferido para F30/v1.6)
 
-**Pergunta:** Stripe Checkout (redirect) vs Payment Element (embedded no site)?
+**Decisão:** Stripe Checkout (redirect) será implementado na F30/v1.6 — após validação do beta controlado. Durante a v1.5, o crédito é operado pelo time via admin grant manual auditável.
 
-**Resposta inicial:** Stripe Checkout — mínimo viável, Stripe hospeda o formulário, sem necessidade de compliance PCI. Adequado para lançamento controlado. Payment Element é evolução futura.
+**Direção futura:** Stripe Checkout — mínimo viável, sem necessidade de compliance PCI. Payment Element é evolução pós-F30.
 
 ### Concorrência no saldo — abordagem
 
 **Pergunta:** Como garantir que dois requests simultâneos não gastem o mesmo crédito?
 
-**Resposta inicial:** Usar transação SQL atômica com `SELECT ... FOR UPDATE` ou função SQL `reserve_credit(user_id, amount)` que verifica e deduz em uma operação. A aplicação chama a função e verifica o resultado (sucesso/falha). Se falhar (saldo insuficiente), retorna 402.
+**Resposta inicial:** Usar transação SQL atômica com `SELECT ... FOR UPDATE` ou função SQL `reserve_credit(store_id, amount)` que verifica e deduz em uma operação. A aplicação chama a função e verifica o resultado (sucesso/falha). Se falhar (saldo insuficiente), retorna 402.
 
 ### `publication_copy_snapshot` — compatibilidade retroativa
 
@@ -1246,7 +1252,7 @@ São monitoradas ativamente (dashboard operacional + alertas):
 | Custo médio por geração | < R$ 0,50 | > R$ 1,00 | > R$ 2,00 |
 | Tempo médio de geração | < 30s | > 45s | > 60s |
 | Taxa de erro de IA (provider) | < 5% | > 10% | > 20% |
- | Conversão de solicitação de crédito (users que pedem) | > 20% | < 10% | < 5% |
+| Conversão de solicitação de crédito (users que pedem) | > 20% | < 10% | < 5% |
 | Taxa de estorno (gerações com erro) | < 10% | > 15% | > 25% |
 | Uso de crédito (médio/usuário/dia) | 1–3 | > 5 | > 10 (possível abuso) |
 | NPS/satisfação (coletado após 1ª campanha) | > 7 | < 5 | < 3 |

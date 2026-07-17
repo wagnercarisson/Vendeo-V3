@@ -11,14 +11,14 @@
 ## Overview
 
 | # | Phase | Goal | Requirements | Success Criteria |
-|---|-------|------|--------------|------------------|
+|---|---|---|---|---|
 | 23 | TextProvider + Copy Director | Fundação de IA de texto — Copy Director funcional e testável | COPY-01, COPY-02, COPY-03, COPY-04 | 4 |
 | 24 | Credit Tables + CreditService | Sistema de créditos funcional e testável, sem UI | CRED-01, CRED-02, CRED-03, CRED-04, CRED-05 | 5 |
 | 25 | Pipeline de Geração v1.5 | Copy Director + créditos integrados no generate-image | PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, PIPE-06 | 6 |
-| 26 | Pagamento (Stripe) | Compra de créditos via Stripe Checkout + Webhook | PAY-01, PAY-02, PAY-03, PAY-04 | 4 |
-| 27 | Conta + Saldo Visível | UI de créditos no app shell e /conta | UI-01, UI-02, UI-03, UI-04, UI-05, UI-06 | 6 |
-| 28 | Observabilidade + Deploy + Operação | Operação pronta para lançamento controlado | OPS-01, OPS-02, OPS-03, OPS-04, OPS-05, SEC-06 | 6 |
-| 29 | Refinamento + Launch Readiness | Produto polido e pronto para público externo | LAUNCH-01, LAUNCH-02, LAUNCH-03, LAUNCH-04, LAUNCH-05, LAUNCH-06, SEC-01, SEC-02, SEC-03, SEC-04, SEC-05 | 11 |
+| 26 | Admin Operacional + Convites + Créditos Manuais | Console de suporte para operar o beta controlado | ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-04, ADMIN-05, ADMIN-06 | 6 |
+| 27 | Conta + Saldo Visível + Extrato | UI de créditos no app shell e /conta (sem Stripe) | UI-01, UI-02, UI-03, UI-04, UI-05, UI-06 | 6 |
+| 28 | Observabilidade + Operação + Launch Controls | Operação pronta para lançamento controlado | OPS-01, OPS-02, OPS-03, OPS-04, OPS-05, SEC-06 | 6 |
+| 29 | Refinamento + UAT + Launch Readiness | Produto polido e pronto para beta externo | LAUNCH-01, LAUNCH-02, LAUNCH-03, LAUNCH-04, LAUNCH-05, LAUNCH-06, SEC-01, SEC-02, SEC-03, SEC-04, SEC-05 | 11 |
 
 ---
 
@@ -75,37 +75,40 @@
 
 ---
 
-### Phase 26 — Pagamento (Stripe Checkout + Webhook)
+### Phase 26 — Admin Operacional + Convites + Créditos Manuais
 
-**Goal:** Usuário pode comprar créditos via Stripe Checkout. Compra refletida no saldo em segundos.
+**Goal:** Time consegue operar o beta controlado sem depender de SQL manual ou Supabase Dashboard.
 
-**Requirements:** PAY-01, PAY-02, PAY-03, PAY-04
+**Requirements:** ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-04, ADMIN-05, ADMIN-06
 
 **Success criteria:**
-1. User selects credit pack (10/25/50) and is redirected to Stripe Checkout
-2. checkout.session.completed webhook credits balance within seconds
-3. Stripe webhook signature is verified (invalid signatures rejected)
-4. Same webhook event processed at most once (idempotency)
+1. Admin access gate via `admin_users` table (not auth.users flag)
+2. Admin can list/search beta users/stores with support data
+3. Admin can manually grant credits with mandatory reason (idempotent + audited)
+4. Admin can view balance and full transaction history of any store
+5. Admin can view errored campaigns with error details for triage
+6. Every admin action recorded in append-only audit log (grant without audit = failure)
 
-**Dependencies:** Phase 24 (CreditService.grant)
+**Dependencies:** Phase 24 (CreditService.grantCredits, getBalance, getHistory) + Phase 25 (campaigns with error status)
 
 ---
 
-### Phase 27 — Conta + Saldo Visível
+### Phase 27 — Conta + Saldo Visível + Extrato
 
-**Goal:** Usuário vê saldo, compra créditos e acompanha gastos. Experiência completa de autoatendimento.
+**Goal:** Usuário vê saldo e acompanha gastos. Sem Stripe durante beta — CTA é "Solicitar créditos / Fale com o time".
 
 **Requirements:** UI-01, UI-02, UI-03, UI-04, UI-05, UI-06
 
 **Success criteria:**
 1. Credit balance visible in topbar across all authenticated pages
-2. /conta shows balance card, purchase dialog, and paginated transaction history
-3. Purchase dialog offers 3 packs; selection triggers Stripe Checkout redirect
+2. /conta shows balance card and paginated transaction history
+3. Zero-credit CTA shows "Solicitar créditos / Fale com o time" (no Stripe purchase dialog)
 4. Transaction history shows all types except adjustment (admin-only)
-5. New store creation grants 5 credits automatically
+5. New store creation grants 5 credits automatically (already implemented in F25)
 6. Zero-credit user sees tooltips, disabled button, and CTA — but can browse dashboard/history
 
-**Dependencies:** Phase 26 (payment functional) — UI can be built in parallel mocking data
+**Dependencies:** Phase 24 (CreditService.getBalance, getHistory) — no dependency on Stripe or Phase 26.
+Phase 27 and Phase 26 can be built in parallel (same data, different lenses).
 
 ---
 
@@ -127,7 +130,7 @@
 
 ---
 
-### Phase 29 — Refinamento Visual + Experiência Publicável + Launch Readiness
+### Phase 29 — Refinamento Visual + UAT + Launch Readiness
 
 **Goal:** Produto com acabamento visual de lançamento externo. Time confiante para abrir para usuários reais.
 
@@ -135,15 +138,15 @@
 
 **Success criteria:**
 1. Loading, empty, and error states exist for all new screens
-2. Insufficient-credit UX is consistent across the entire app
+2. Insufficient-credit UX is consistent across the entire app (CTA "Fale com o time")
 3. Credit flows work on mobile (320–768px) with >=44px touch targets
-4. UAT completed with 3–5 external lojistas
+4. UAT completed with 3–5 external lojistas — validates: invite, admin grant, generation, deduction, refund, balance, ledger, error triage
 5. Feedback channel active and health metrics visible
 6. Expansion/pause criteria documented and agreed by team
 7. RLS policies verified on credit_balances and credit_transactions
-8. Ownership validated on all /api/credits/* routes
+8. Ownership validated on all /api/credits/* and /api/admin/* routes
 9. Copy Director inputs sanitized (no sensitive data in prompts)
-10. Stripe webhook HMAC verification active and tested
+10. Admin audit log verified — grant without trail is impossible
 11. Service role usage reviewed and compliant with security standards
 
 **Dependencies:** Phase 28
@@ -157,17 +160,16 @@ Phase 23 (TextProvider + Copy Director) ──┐
                                            ├──▶ Phase 25 (Pipeline v1.5)
 Phase 24 (Credit Tables + CreditService) ──┘
                                               │
-                                              ▼
-                                       Phase 26 (Payment Stripe)
-                                              │
-                                              ▼
-                                       Phase 27 (Conta + Saldo)
-                                              │
-                                              ▼
-                                       Phase 28 (Observability + Ops)
-                                              │
-                                              ▼
-                                       Phase 29 (Refinement + Launch)
+                    ┌─────────────────────────┼──────────────────┐
+                    ▼                         ▼                  ▼
+          Phase 26 (Admin Ops)       Phase 27 (UI Saldo)   F30/v1.6 (Stripe)
+                    │                         │              (futuro)
+                    └─────────┬───────────────┘
+                              ▼
+                    Phase 28 (Observability + Ops)
+                              │
+                              ▼
+                    Phase 29 (Refinement + Launch)
 ```
 
 ## Coverage Validation
@@ -189,10 +191,16 @@ Phase 24 (Credit Tables + CreditService) ──┘
 | PIPE-04 | Phase 25 | Done ✓ |
 | PIPE-05 | Phase 25 | Done ✓ |
 | PIPE-06 | Phase 25 | Done ✓ |
-| PAY-01 | Phase 26 | Planned |
-| PAY-02 | Phase 26 | Planned |
-| PAY-03 | Phase 26 | Planned |
-| PAY-04 | Phase 26 | Planned |
+| ADMIN-01 | Phase 26 | Planned |
+| ADMIN-02 | Phase 26 | Planned |
+| ADMIN-03 | Phase 26 | Planned |
+| ADMIN-04 | Phase 26 | Planned |
+| ADMIN-05 | Phase 26 | Planned |
+| ADMIN-06 | Phase 26 | Planned |
+| PAY-01 | Phase 30/v1.6 | Deferred |
+| PAY-02 | Phase 30/v1.6 | Deferred |
+| PAY-03 | Phase 30/v1.6 | Deferred |
+| PAY-04 | Phase 30/v1.6 | Deferred |
 | UI-01 | Phase 27 | Planned |
 | UI-02 | Phase 27 | Planned |
 | UI-03 | Phase 27 | Planned |
@@ -218,9 +226,10 @@ Phase 24 (Credit Tables + CreditService) ──┘
 | SEC-05 | Phase 29 | Planned |
 
 **Coverage:**
-- v1 requirements: 42 total
-- Mapped to phases: 42
+- v1 requirements: 44 total
+- Mapped to phases: 44
 - Unmapped: 0 ✓
+- Deferred to v1.6: PAY-01, PAY-02, PAY-03, PAY-04
 
 ---
 *Roadmap created: 2026-07-15*
