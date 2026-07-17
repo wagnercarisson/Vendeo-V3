@@ -68,7 +68,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, paga
 - [x] Phase 24: Créditos — Schema, Saldo e Transações (2/2 plans ✅)
   - Wave 1: 24-01 — Migration SQL + CreditService (SQL DDL, 3 functions, types, service)
   -   Wave 2: 24-02 — Tests + SQL Verification (25+ testes, I1–I7)
-- [ ] Phase 25: Pipeline de Geração Paralelo (3 plans ◆)
+- [x] Phase 25: Pipeline de Geração Paralelo (3 plans ✅)
 - [ ] Phase 26: Pagamento com Stripe (planned)
 - [ ] Phase 27: Conta e Saldo Visível (planned)
 - [ ] Phase 28: Observabilidade e Operação (planned)
@@ -98,7 +98,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, paga
 | 22. Mobile Hardening | v1.4 | 3/3 | ✅ Complete | 2026-07-15 |
 | 23. Text Provider + Copy Director | v1.5 | 2/2 | ✅ Complete | 2026-07-16 |
 | 24. Créditos — Schema, Saldo e Transações | v1.5 | 2/2 | ✅ Complete | 2026-07-16 |
-| 25. Pipeline de Geração Paralelo | v1.5 | 0/3 | ◆ In Progress | — |
+| 25. Pipeline de Geração Paralelo | v1.5 | 3/3 | ✅ Complete | 2026-07-17 |
 
 ---
 

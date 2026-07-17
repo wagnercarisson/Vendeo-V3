@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Lançamento Externo Controlado
 status: active
-last_updated: "2026-07-16T19:50:00.000Z"
-last_activity: 2026-07-16
+last_updated: "2026-07-17T15:50:00.000Z"
+last_activity: 2026-07-17
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 7
-  completed_plans: 4
-  percent: 57
+  completed_plans: 7
+  percent: 100
 ---
 
 # Project State
@@ -243,21 +243,30 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 - `b565cf5` — 24-02: 4 testes Histórico
 - `76f4362` — 24-02: 3 testes Concorrência + 3 Invariantes
 
-### Phase 25 — Integração Transacional Pipeline ◆
+### Phase 25 — Integração Transacional Pipeline ✅
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
-| 25-01 | 1 | ◆ | Fundação — Config, Migration, Rate Limit, Copy Director e Gemini |
-| 25-02 | 2 | ○ | Integração Transacional — mandatoryArtworkText, Mapper, Pipeline 3 Zonas, Onboarding Grant e Compatibilidade |
-| 25-03 | 3 | ○ | Testes e Verificação — 34+ testes, typecheck, lint, build |
+| 25-01 | 1 | ✅ | Fundação — Config, Migration, Rate Limit, Copy Director e Gemini |
+| 25-02 | 2 | ✅ | Integração Transacional — mandatoryArtworkText, Mapper, Pipeline 3 Zonas, Onboarding Grant e Compatibilidade |
+| 25-03 | 3 | ✅ | Testes e Verificação — 34+ testes, rate-limit, pipeline F25, store onboarding, retroactive title?; 799/799 passing |
 
 **Requirements:** PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, PIPE-06, UI-05
+**Tests:** 799 passing (94 files, 34+ novos)
+**TypeScript:** Clean | **Build:** Clean
+
 **Context:** `.planning/phases/25-integracao-transacional-pipeline/25-CONTEXT.md`
 **Source:** `openspec/changes/fase-25-integracao-transacional-pipeline/`
 
+**Commits:**
+
+- `17fd747` — 25-01: foundation — config, migration, rate limit, Gemini, Copy Director errors + AbortSignal + 2-tier parseResult
+- `2e82c5a` — 25-02: transactional integration — 3-zone pipeline, mandatoryArtworkText, mapper, onboarding grant RPC, title? compatibility
+- `d508e9b` — 25-03: tests for pipeline integration — rate-limit, store routes, generate-image route; fix all compilation+test failures (799/799 passing, typecheck clean)
+
 ## Current Position
 
-Phase: 25 — Pipeline de Geração v1.5 ◆
-Plan: 0/3 planned
-Status: Planning
-Last activity: 2026-07-17 — Phase 25 (Integração Transacional) planned ◆
+Phase: 25 — Pipeline de Geração v1.5 ✅
+Plan: 3/3 completed
+Status: Complete
+Last activity: 2026-07-17 — Phase 25 (Integração Transacional) completa ✅
