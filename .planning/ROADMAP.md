@@ -183,12 +183,12 @@ Phase 24 (Credit Tables + CreditService) ──┘
 | CRED-03 | Phase 24 | Done ✓ |
 | CRED-04 | Phase 24 | Done ✓ |
 | CRED-05 | Phase 24 | Done ✓ |
-| PIPE-01 | Phase 25 | Planned |
-| PIPE-02 | Phase 25 | Planned |
-| PIPE-03 | Phase 25 | Planned |
-| PIPE-04 | Phase 25 | Planned |
-| PIPE-05 | Phase 25 | Planned |
-| PIPE-06 | Phase 25 | Planned |
+| PIPE-01 | Phase 25 | Done ✓ |
+| PIPE-02 | Phase 25 | Done ✓ |
+| PIPE-03 | Phase 25 | Done ✓ |
+| PIPE-04 | Phase 25 | Done ✓ |
+| PIPE-05 | Phase 25 | Done ✓ |
+| PIPE-06 | Phase 25 | Done ✓ |
 | PAY-01 | Phase 26 | Planned |
 | PAY-02 | Phase 26 | Planned |
 | PAY-03 | Phase 26 | Planned |
