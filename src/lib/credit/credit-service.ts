@@ -1,24 +1,15 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import type { CreditOperationOptions, CreditTransaction } from "./types";
 
-// Infer the concrete SupabaseClient type from the already-instantiated admin client.
-// This avoids depending on generated database types which do not yet exist.
-type AdminClient = typeof supabaseAdmin;
-
 export class CreditService {
   constructor(
-    private readonly adminClient: AdminClient = supabaseAdmin,
+    private readonly client: SupabaseClient = supabaseAdmin,
   ) {}
 
-  /**
-   * Returns the current credit balance for a store.
-   * If no record exists in credit_balances, returns 0.
-   */
   async getBalance(storeId: string): Promise<number> {
-    const { data } = await this.adminClient
+    const { data } = await this.client
       .from("credit_balances")
       .select("balance")
       .eq("store_id", storeId)
@@ -27,17 +18,12 @@ export class CreditService {
     return data?.balance ?? 0;
   }
 
-  /**
-   * Reserves (deducts) credits from a store's wallet.
-   * Amount must be a positive integer (converted to negative in SQL function).
-   * Propagates saldo_insuficiente error for HTTP handler to treat as 402.
-   */
   async reserveCredit(
     storeId: string,
     amount: number,
     opts?: CreditOperationOptions,
   ): Promise<string> {
-    const { data, error } = await this.adminClient.rpc("reserve_credit", {
+    const { data, error } = await this.client.rpc("reserve_credit", {
       p_store_id: storeId,
       p_amount: amount,
       p_campaign_id: opts?.campaignId ?? null,
@@ -52,24 +38,16 @@ export class CreditService {
     return data as string;
   }
 
-  /**
-   * Confirms a credit reservation. No-op in v1.5.
-   * Prepared for two-phase commit in future versions.
-   */
   async confirmCredit(_txId: string): Promise<void> {
     return Promise.resolve();
   }
 
-  /**
-   * Refunds (reverses) a deduction transaction, restoring the balance.
-   * Validates original transaction exists and is type 'deduction'.
-   */
   async refundCredit(
     txId: string,
     reason: string,
     opts?: CreditOperationOptions,
   ): Promise<string> {
-    const { data, error } = await this.adminClient.rpc("refund_credit", {
+    const { data, error } = await this.client.rpc("refund_credit", {
       p_tx_id: txId,
       p_reason: reason,
       p_idempotency_key: opts?.idempotencyKey ?? null,
@@ -83,17 +61,13 @@ export class CreditService {
     return data as string;
   }
 
-  /**
-   * Grants credits to a store's wallet.
-   * Creates credit_balances row if not exists.
-   */
   async grantCredits(
     storeId: string,
     amount: number,
     reason: string,
     opts?: CreditOperationOptions,
   ): Promise<string> {
-    const { data, error } = await this.adminClient.rpc("grant_credits", {
+    const { data, error } = await this.client.rpc("grant_credits", {
       p_store_id: storeId,
       p_amount: amount,
       p_reason: reason,
@@ -108,11 +82,6 @@ export class CreditService {
     return data as string;
   }
 
-  /**
-   * Returns paginated transaction history for a store.
-   * Filters out 'adjustment' type transactions.
-   * Default limit 50, maximum 100. Ordered by created_at DESC.
-   */
   async getHistory(
     storeId: string,
     limit?: number,
@@ -121,7 +90,7 @@ export class CreditService {
     const effectiveLimit = Math.min(limit ?? 50, 100);
     const effectiveOffset = offset ?? 0;
 
-    const { data, error } = await this.adminClient
+    const { data, error } = await this.client
       .from("credit_transactions")
       .select("*")
       .neq("type", "adjustment")
@@ -134,6 +103,17 @@ export class CreditService {
     }
 
     return (data ?? []).map(mapRowToCamelCase);
+  }
+
+  async countCreditTransactions(storeId: string): Promise<number> {
+    const { count, error } = await this.client
+      .from("credit_transactions")
+      .select("*", { count: "exact", head: true })
+      .neq("type", "adjustment")
+      .eq("store_id", storeId);
+
+    if (error) throw error;
+    return count ?? 0;
   }
 }
 
