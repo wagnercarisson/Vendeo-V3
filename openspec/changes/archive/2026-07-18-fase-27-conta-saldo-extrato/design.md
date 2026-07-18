@@ -70,7 +70,7 @@ Durante o beta controlado, CTA abre modal com instruções de contato ou link `m
 
 `src/components/credit/`:
 - `balance-display.tsx` — Server Component (saldo via SSR), variantes badge/card/inline
-- `balance-card.tsx` — Server Component, card de saldo completo com valor formatado + CTA
+- `balance-card.tsx` — Client Component (embute modal interativo), card de saldo completo com valor formatado + CTA
 - `transaction-history.tsx` — Client Component, tabela paginada com Pagination da F21 (que é Client Component com `onPageChange`). Dados obtidos via SSR e passados como props. Navegação via `useRouter` + `useSearchParams`
 - `credit-cta.tsx` — Client Component (modal interativo), CTA com modal/mailto
 

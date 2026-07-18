@@ -1,10 +1,10 @@
 # Credit Service
 
-> Synced from `fase-24-wallet-ledger-idempotencia` (ADDED).
+> Synced from `fase-24-wallet-ledger-idempotencia` (ADDED). Modified by `fase-27-conta-saldo-extrato` (MODIFIED): constructor accepts generic `SupabaseClient` (not just `typeof supabaseAdmin`), added `countCreditTransactions()` method.
 
 ## Purpose
 
-`CreditService` — classe TypeScript com 6 métodos públicos para operações de crédito: consulta de saldo, reserva, confirmação (no-op v1.5), estorno, concessão e histórico paginado. Usa `supabaseAdmin.rpc()` para mutações e queries diretas para leituras.
+`CreditService` — classe TypeScript com 7 métodos públicos para operações de crédito: consulta de saldo, reserva, confirmação (no-op v1.5), estorno, concessão, histórico paginado e contagem de transações. Usa `supabaseAdmin.rpc()` para mutações e queries diretas para leituras. O construtor aceita `SupabaseClient` genérico, suportando tanto `supabaseAdmin` (service role) quanto `createServerClient()` (sessão + RLS).
 
 ## Requirements
 
@@ -51,7 +51,7 @@ O sistema SHALL definir `CreditBalance` com campos: `storeId (string)`, `balance
 
 ### Requirement: CreditService class
 
-O sistema SHALL implementar `CreditService` com constructor que aceita `adminClient` opcional (default `supabaseAdmin`) e 6 métodos públicos.
+O sistema SHALL implementar `CreditService` com constructor que aceita `adminClient` opcional (default `supabaseAdmin`), com tipagem relaxada para aceitar tanto `supabaseAdmin` (service role) quanto `createServerClient()` (sessão), e 7 métodos públicos.
 
 #### Scenario: CreditService is constructable with default client
 
@@ -59,11 +59,16 @@ O sistema SHALL implementar `CreditService` com constructor que aceita `adminCli
 - **THEN** a construção é bem-sucedida
 - **AND** usa `supabaseAdmin` como cliente padrão
 
-#### Scenario: CreditService is constructable with custom client
+#### Scenario: CreditService is constructable with session client
 
-- **WHEN** `new CreditService(customClient)` é chamado com cliente personalizado
+- **WHEN** `new CreditService(sessionClient)` é chamado com `createServerClient()`
 - **THEN** a construção é bem-sucedida
-- **AND** usa o cliente fornecido
+- **AND** usa o cliente de sessão fornecido
+
+#### Scenario: CreditService with session client queries via RLS
+
+- **WHEN** `getBalance(storeId)` é chamado com cliente de sessão
+- **THEN** a query respeita RLS (apenas dados da própria loja)
 
 ### Requirement: getBalance returns current balance
 
@@ -178,3 +183,27 @@ O sistema SHALL implementar `getHistory(storeId: string, limit?: number, offset?
 
 - **WHEN** `getHistory(storeId)` é chamado
 - **THEN** as colunas `store_id`, `balance_before`, `balance_after`, `campaign_id`, `idempotency_key`, `created_at` são mapeadas para `storeId`, `balanceBefore`, `balanceAfter`, `campaignId`, `idempotencyKey`, `createdAt`
+
+### Requirement: countCreditTransactions returns total count
+
+O sistema SHALL implementar `countCreditTransactions(storeId: string): Promise<number>` que retorna o total de transações de uma loja (excluindo `adjustment`), usando `{ count: "exact", head: true }` para eficiência.
+
+#### Scenario: countCreditTransactions returns total for store with transactions
+
+- **WHEN** `countCreditTransactions(storeId)` é chamado para loja com transações
+- **THEN** retorna o total de transações
+
+#### Scenario: countCreditTransactions filters out adjustment type
+
+- **WHEN** `countCreditTransactions(storeId)` é chamado
+- **THEN** a query inclui `.neq("type", "adjustment")`
+
+#### Scenario: countCreditTransactions returns 0 for store without transactions
+
+- **WHEN** `countCreditTransactions(storeId)` é chamado para loja sem transações
+- **THEN** retorna 0
+
+#### Scenario: countCreditTransactions uses head: true
+
+- **WHEN** `countCreditTransactions(storeId)` é chamado
+- **THEN** a query usa `{ count: "exact", head: true }` sem carregar linhas
