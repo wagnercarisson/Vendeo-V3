@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: "Lançamento Externo Controlado — Créditos + Admin + Saldo + Observabilidade + Launch"
 status: active
-last_updated: "2026-07-18T14:30:00.000Z"
+last_updated: "2026-07-18T19:15:00.000Z"
 last_activity: 2026-07-18
 progress:
   total_phases: 7
-  completed_phases: 5
-  total_plans: 13
-  completed_plans: 10
-  percent: 77
+  completed_phases: 6
+  total_plans: 16
+  completed_plans: 16
+  percent: 100
 ---
 
 # Project State
@@ -210,7 +210,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 - ✅ Milestone v1.4 — Experiência SaaS **concluída e arquivada** 🎉
 - ✅ Phase 23 — Text Provider + Copy Director **implementada**
-- 👷 Phase 24 — Créditos — Schema, Saldo e Transações (2 plans planejados)
+- ✅ Phase 24 — Créditos — Schema, Saldo e Transações **implementada**
 
 ## Completed
 
@@ -263,6 +263,27 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 - `89a5aa0` — 26-02: API routes + admin pages (6 routes, 5 pages, schemas)
 - `3d64f5f` — 26-03: Testes + summaries + STATE/ROADMAP (25 testes, 829 total)
 
+### Phase 27 — Conta + Saldo Visível + Extrato ✅
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 27-01 | 1 | ✅ | Fundação — CreditService Session + BalanceDisplay + BalanceCard |
+| 27-02 | 2 | ✅ | Páginas e Integração — TransactionHistory + CreditCta + Dashboard + /conta + Geração |
+| 27-03 | 3 | ✅ | Testes e Verificação — 20 novos testes |
+
+**Requirements:** UI-01, UI-02, UI-03, UI-04, UI-05, UI-06
+**Tests:** 852 passing (108 files, 20 novos)
+**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
+
+**Context:** `.planning/phases/27-conta-saldo-extrato/27-CONTEXT.md`
+**Source:** `openspec/changes/fase-27-conta-saldo-extrato/`
+
+**Commits:**
+
+- `b7db26c` — 27-01: CreditService session client + countCreditTransactions + BalanceDisplay + BalanceCard
+- `0d61e9a` — 27-02: TransactionHistory + CreditCta + Dashboard + /conta + Geração flow
+- `aa136e0` — 27-03: Testes e Verificação (20 novos testes, 852 total)
+
 ### Phase 25 — Integração Transacional Pipeline ✅
 
 | Plan | Wave | Status | Description |
@@ -286,15 +307,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 27 — Conta e Saldo Visível + Extrato △
-Plan: 3/0 plans (27-01, 27-02, 27-03) — Planejado
-Status: Pronto para implementação
+Phase: 27 — Conta + Saldo Visível + Extrato ✅
+Plan: 3/3 plans — Completo
+Status: Implementado e verificado
 
 ### Next Phases
 
 | Phase | Status | Description |
 |-------|--------|-------------|
-| F27 | △ Planned | Conta + Saldo Visível + Extrato (3 plans, 19+ testes) |
+| F27 | ✅ Completed | Conta + Saldo Visível + Extrato (3 plans, 20 testes) |
 | F28 | △ Planned | Observabilidade + Operação + Launch Controls |
 | F29 | △ Planned | Refinamento Visual + UAT + Launch Readiness |
 | F30/v1.6 | △ Future | Stripe / Monetização Pública (pós-beta) |

@@ -16,7 +16,7 @@
 | 24 | Credit Tables + CreditService | Sistema de créditos funcional e testável, sem UI | CRED-01, CRED-02, CRED-03, CRED-04, CRED-05 | 5 |
 | 25 | Pipeline de Geração v1.5 | Copy Director + créditos integrados no generate-image | PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, PIPE-06 | 6 |
 | 26 | ✅ Admin Operacional + Convites + Créditos Manuais | Console de suporte para operar o beta controlado | ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-04, ADMIN-05, ADMIN-06, SEC-04, SEC-06 | 8 ✅ |
-| 27 | Conta + Saldo Visível + Extrato | UI de créditos no app shell e /conta (sem Stripe) | UI-01, UI-02, UI-03, UI-04, UI-05, UI-06 | 6 |
+| 27 | ✅ Conta + Saldo Visível + Extrato | UI de créditos no app shell e /conta (sem Stripe) | UI-01, UI-02, UI-03, UI-04, UI-05, UI-06 | 6 ✅ |
 | 28 | Observabilidade + Operação + Launch Controls | Operação pronta para lançamento controlado | OPS-01, OPS-02, OPS-03, OPS-04, OPS-05 | 5 |
 | 29 | Refinamento + UAT + Launch Readiness | Produto polido e pronto para beta externo | LAUNCH-01, LAUNCH-02, LAUNCH-03, LAUNCH-04, LAUNCH-05, LAUNCH-06, SEC-01, SEC-02, SEC-03, SEC-05 | 10 |
 
@@ -93,22 +93,23 @@
 
 ---
 
-### Phase 27 — Conta + Saldo Visível + Extrato
+### Phase 27 — Conta + Saldo Visível + Extrato ✅
 
 **Goal:** Usuário vê saldo e acompanha gastos. Sem Stripe durante beta — CTA é "Solicitar créditos / Fale com o time".
 
 **Requirements:** UI-01, UI-02, UI-03, UI-04, UI-05, UI-06
 
 **Success criteria:**
-1. Credit balance visible in topbar across all authenticated pages
-2. /conta shows balance card and paginated transaction history
-3. Zero-credit CTA shows "Solicitar créditos / Fale com o time" (no Stripe purchase dialog)
-4. Transaction history shows all types except adjustment (admin-only)
-5. New store creation grants 5 credits automatically (already implemented in F25)
-6. Zero-credit user sees tooltips, disabled button, and CTA — but can browse dashboard/history
+1. ✅ Balance visible in dashboard metrics grid (contextual, not global — D1)
+2. ✅ /conta shows BalanceCard + TransactionHistory with pagination (D3)
+3. ✅ Zero-credit CTA shows "Solicitar créditos / Fale com o time" (CreditCta modal/mailto, D4)
+4. ✅ Transaction history shows all types except adjustment (D6 — countCreditTransactions neq adjustment)
+5. ✅ New store creation grants 5 credits automatically (already implemented in F25)
+6. ✅ Zero-credit user sees tooltips, disabled button, and CTA — but can browse dashboard/history (D8)
 
-**Dependencies:** Phase 24 (CreditService.getBalance, getHistory) — no dependency on Stripe or Phase 26.
-Phase 27 and Phase 26 can be built in parallel (same data, different lenses).
+**Dependencies:** Phase 24 ✅
+**Tests:** 852 passing (108 files, 20 novos)
+**Commits:** `b7db26c`, `0d61e9a`, `aa136e0`
 
 ---
 
@@ -201,12 +202,12 @@ Phase 24 (Credit Tables + CreditService) ──┘
 | PAY-02 | Phase 30/v1.6 | Deferred |
 | PAY-03 | Phase 30/v1.6 | Deferred |
 | PAY-04 | Phase 30/v1.6 | Deferred |
-| UI-01 | Phase 27 | Planned |
-| UI-02 | Phase 27 | Planned |
-| UI-03 | Phase 27 | Planned |
-| UI-04 | Phase 27 | Planned |
-| UI-05 | Phase 27 | Planned |
-| UI-06 | Phase 27 | Planned |
+| UI-01 | Phase 27 | Done ✓ |
+| UI-02 | Phase 27 | Done ✓ |
+| UI-03 | Phase 27 | Done ✓ |
+| UI-04 | Phase 27 | Done ✓ |
+| UI-05 | Phase 27 | Done ✓ |
+| UI-06 | Phase 27 | Done ✓ |
 | OPS-01 | Phase 28 | Planned |
 | OPS-02 | Phase 28 | Planned |
 | OPS-03 | Phase 28 | Planned |
@@ -228,7 +229,7 @@ Phase 24 (Credit Tables + CreditService) ──┘
 **Coverage:**
 - v1 requirements: 44 total
 - Mapped to phases: 44
-- Completed: 14 (CRED-01–05, PIPE-01–06, ADMIN-01–06, SEC-04, SEC-06)
+- Completed: 20 (CRED-01–05, PIPE-01–06, ADMIN-01–06, SEC-04, SEC-06, UI-01–06)
 - Unmapped: 0 ✓
 - Deferred to v1.6: PAY-01, PAY-02, PAY-03, PAY-04
 
