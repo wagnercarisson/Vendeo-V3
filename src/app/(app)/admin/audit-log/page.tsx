@@ -2,14 +2,6 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
-interface PageProps {
-  searchParams: {
-    page?: string;
-    action?: string;
-    targetType?: string;
-  };
-}
-
 const ACTION_LABELS: Record<string, string> = {
   credit_grant: "Concessão de Créditos",
   credit_adjustment: "Ajuste de Créditos",
@@ -23,14 +15,19 @@ const TARGET_LABELS: Record<string, string> = {
   campaign: "Campanha",
 };
 
-export default async function AdminAuditLogPage({ searchParams }: PageProps) {
+export default async function AdminAuditLogPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; action?: string; targetType?: string }>;
+}) {
   await requireAdmin();
+  const sp = await searchParams;
 
-  const page = Math.max(1, parseInt(searchParams.page ?? "1", 10));
+  const page = Math.max(1, parseInt(sp.page ?? "1", 10));
   const pageSize = 20;
   const offset = (page - 1) * pageSize;
-  const filterAction = searchParams.action ?? "";
-  const filterTargetType = searchParams.targetType ?? "";
+  const filterAction = sp.action ?? "";
+  const filterTargetType = sp.targetType ?? "";
 
   let query = supabaseAdmin.from("admin_audit_log").select("*", { count: "exact" });
   if (filterAction) query = query.eq("action", filterAction);

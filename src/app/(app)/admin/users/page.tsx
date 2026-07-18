@@ -3,15 +3,16 @@ import { requireAdmin } from "@/lib/admin/require-admin";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import type { AdminUserSummary } from "@/lib/admin/schemas";
 
-interface PageProps {
-  searchParams: { search?: string; page?: string };
-}
-
-export default async function AdminUsersPage({ searchParams }: PageProps) {
+export default async function AdminUsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ search?: string; page?: string }>;
+}) {
   await requireAdmin();
+  const sp = await searchParams;
 
-  const search = searchParams.search ?? "";
-  const page = Math.max(1, parseInt(searchParams.page ?? "1", 10));
+  const search = sp.search ?? "";
+  const page = Math.max(1, parseInt(sp.page ?? "1", 10));
   const pageSize = 20;
 
   const { data, error } = await supabaseAdmin.rpc("admin_get_users_summary", {

@@ -2,14 +2,15 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
-interface PageProps {
-  searchParams: { page?: string };
-}
-
-export default async function AdminCampaignErrorsPage({ searchParams }: PageProps) {
+export default async function AdminCampaignErrorsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   await requireAdmin();
+  const sp = await searchParams;
 
-  const page = Math.max(1, parseInt(searchParams.page ?? "1", 10));
+  const page = Math.max(1, parseInt(sp.page ?? "1", 10));
   const pageSize = 20;
   const offset = (page - 1) * pageSize;
 
