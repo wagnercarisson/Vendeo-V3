@@ -15,10 +15,10 @@
 | 23 | TextProvider + Copy Director | Fundação de IA de texto — Copy Director funcional e testável | COPY-01, COPY-02, COPY-03, COPY-04 | 4 |
 | 24 | Credit Tables + CreditService | Sistema de créditos funcional e testável, sem UI | CRED-01, CRED-02, CRED-03, CRED-04, CRED-05 | 5 |
 | 25 | Pipeline de Geração v1.5 | Copy Director + créditos integrados no generate-image | PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, PIPE-06 | 6 |
-| 26 | Admin Operacional + Convites + Créditos Manuais | Console de suporte para operar o beta controlado | ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-04, ADMIN-05, ADMIN-06 | 6 |
+| 26 | Admin Operacional + Convites + Créditos Manuais | Console de suporte para operar o beta controlado | ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-04, ADMIN-05, ADMIN-06, SEC-04, SEC-06 | 8 |
 | 27 | Conta + Saldo Visível + Extrato | UI de créditos no app shell e /conta (sem Stripe) | UI-01, UI-02, UI-03, UI-04, UI-05, UI-06 | 6 |
-| 28 | Observabilidade + Operação + Launch Controls | Operação pronta para lançamento controlado | OPS-01, OPS-02, OPS-03, OPS-04, OPS-05, SEC-06 | 6 |
-| 29 | Refinamento + UAT + Launch Readiness | Produto polido e pronto para beta externo | LAUNCH-01, LAUNCH-02, LAUNCH-03, LAUNCH-04, LAUNCH-05, LAUNCH-06, SEC-01, SEC-02, SEC-03, SEC-04, SEC-05 | 11 |
+| 28 | Observabilidade + Operação + Launch Controls | Operação pronta para lançamento controlado | OPS-01, OPS-02, OPS-03, OPS-04, OPS-05 | 5 |
+| 29 | Refinamento + UAT + Launch Readiness | Produto polido e pronto para beta externo | LAUNCH-01, LAUNCH-02, LAUNCH-03, LAUNCH-04, LAUNCH-05, LAUNCH-06, SEC-01, SEC-02, SEC-03, SEC-05 | 10 |
 
 ---
 
@@ -116,7 +116,7 @@ Phase 27 and Phase 26 can be built in parallel (same data, different lenses).
 
 **Goal:** Operação pronta para lançamento externo controlado.
 
-**Requirements:** OPS-01, OPS-02, OPS-03, OPS-04, OPS-05, SEC-06
+**Requirements:** OPS-01, OPS-02, OPS-03, OPS-04, OPS-05
 
 **Success criteria:**
 1. Every pipeline stage logs campaignId, phase, duration_ms, status
@@ -134,7 +134,7 @@ Phase 27 and Phase 26 can be built in parallel (same data, different lenses).
 
 **Goal:** Produto com acabamento visual de lançamento externo. Time confiante para abrir para usuários reais.
 
-**Requirements:** LAUNCH-01, LAUNCH-02, LAUNCH-03, LAUNCH-04, LAUNCH-05, LAUNCH-06, SEC-01, SEC-02, SEC-03, SEC-04, SEC-05
+**Requirements:** LAUNCH-01, LAUNCH-02, LAUNCH-03, LAUNCH-04, LAUNCH-05, LAUNCH-06, SEC-01, SEC-02, SEC-03, SEC-05
 
 **Success criteria:**
 1. Loading, empty, and error states exist for all new screens
@@ -212,7 +212,8 @@ Phase 24 (Credit Tables + CreditService) ──┘
 | OPS-03 | Phase 28 | Planned |
 | OPS-04 | Phase 28 | Planned |
 | OPS-05 | Phase 28 | Planned |
-| SEC-06 | Phase 28 | Planned |
+| SEC-04 | Phase 26 | Planned |
+| SEC-06 | Phase 26 | Planned |
 | LAUNCH-01 | Phase 29 | Planned |
 | LAUNCH-02 | Phase 29 | Planned |
 | LAUNCH-03 | Phase 29 | Planned |
@@ -222,7 +223,6 @@ Phase 24 (Credit Tables + CreditService) ──┘
 | SEC-01 | Phase 29 | Planned |
 | SEC-02 | Phase 29 | Planned |
 | SEC-03 | Phase 29 | Planned |
-| SEC-04 | Phase 29 | Planned |
 | SEC-05 | Phase 29 | Planned |
 
 **Coverage:**

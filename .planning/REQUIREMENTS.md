@@ -33,7 +33,7 @@
 
 - [ ] **ADMIN-01**: Admin access control — only explicitly authorized users (admin_users table) access admin routes/pages
 - [ ] **ADMIN-02**: Admin user/store directory — list and search beta users/stores with support data
-- [ ] **ADMIN-03**: Admin credit grant — manual credit grant with mandatory reason, using CreditService.grantCredits
+- [ ] **ADMIN-03**: Admin credit grant — manual credit grant with mandatory reason, via RPC admin_grant_credits (encapsula grant_credits + audit log)
 - [ ] **ADMIN-04**: Admin credit ledger view — view balance and full transaction history of any store/user
 - [ ] **ADMIN-05**: Admin campaign error review — view errored campaigns with error_message, status, dates
 - [ ] **ADMIN-06**: Admin audit log — every sensitive admin action recorded with actor, target, action, reason, timestamp
