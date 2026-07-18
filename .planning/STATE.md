@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: "Lançamento Externo Controlado — Créditos + Admin + Saldo + Observabilidade + Launch"
 status: active
-last_updated: "2026-07-18T13:30:00.000Z"
+last_updated: "2026-07-18T14:30:00.000Z"
 last_activity: 2026-07-18
 progress:
   total_phases: 7
-  completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
+  completed_phases: 4
+  total_plans: 10
+  completed_plans: 10
   percent: 100
 ---
 
@@ -243,6 +243,26 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 - `b565cf5` — 24-02: 4 testes Histórico
 - `76f4362` — 24-02: 3 testes Concorrência + 3 Invariantes
 
+### Phase 26 — Admin Operacional + Convites + Créditos Manuais ✅
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 26-01 | 1 | ✅ | Fundação — Migration, Gate, Middleware e Layout Admin |
+| 26-02 | 2 | ✅ | API Routes e Páginas Admin |
+| 26-03 | 3 | ✅ | Testes e Verificação — 25 novos testes |
+
+**Tests:** 829 passing (102 files, 25+ novos)
+**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
+
+**Context:** `.planning/phases/26-admin-operacional/26-CONTEXT.md`
+**Source:** `openspec/changes/fase-26-admin-operacional/`
+
+**Commits:**
+
+- `77e0cf2` — 26-01: Fundação — migration, requireAdmin, middleware, layout
+- `89a5aa0` — 26-02: API routes + admin pages (6 routes, 5 pages, schemas)
+- `3d64f5f` — 26-03: Testes + summaries + STATE/ROADMAP (25 testes, 829 total)
+
 ### Phase 25 — Integração Transacional Pipeline ✅
 
 | Plan | Wave | Status | Description |
@@ -266,15 +286,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 26 — Admin Operacional + Convites + Créditos Manuais ◆
-Plan: 3 plans (26-01, 26-02, 26-03)
-Status: Plano concluído — aguardando implementação
+Phase: 26 — Admin Operacional + Convites + Créditos Manuais ✅
+Plan: 3/3 plans (26-01, 26-02, 26-03) — Completos
+Status: Implementado e verificado
 
 ### Next Phases
 
 | Phase | Status | Description |
 |-------|--------|-------------|
-| F26 | ◆ Planejado | Admin Operacional + Convites + Créditos Manuais (3 plans) |
+| F26 | ✅ Completo | Admin Operacional + Convites + Créditos Manuais (3 plans, 25 testes) |
 | F27 | △ Planned | Conta + Saldo Visível + Extrato (sem Stripe; CTA = "fale com o time") |
 | F28 | △ Planned | Observabilidade + Operação + Launch Controls |
 | F29 | △ Planned | Refinamento Visual + UAT + Launch Readiness |

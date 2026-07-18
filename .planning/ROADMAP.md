@@ -15,7 +15,7 @@
 | 23 | TextProvider + Copy Director | Fundação de IA de texto — Copy Director funcional e testável | COPY-01, COPY-02, COPY-03, COPY-04 | 4 |
 | 24 | Credit Tables + CreditService | Sistema de créditos funcional e testável, sem UI | CRED-01, CRED-02, CRED-03, CRED-04, CRED-05 | 5 |
 | 25 | Pipeline de Geração v1.5 | Copy Director + créditos integrados no generate-image | PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, PIPE-06 | 6 |
-| 26 | Admin Operacional + Convites + Créditos Manuais | Console de suporte para operar o beta controlado | ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-04, ADMIN-05, ADMIN-06, SEC-04, SEC-06 | 8 |
+| 26 | ✅ Admin Operacional + Convites + Créditos Manuais | Console de suporte para operar o beta controlado | ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-04, ADMIN-05, ADMIN-06, SEC-04, SEC-06 | 8 ✅ |
 | 27 | Conta + Saldo Visível + Extrato | UI de créditos no app shell e /conta (sem Stripe) | UI-01, UI-02, UI-03, UI-04, UI-05, UI-06 | 6 |
 | 28 | Observabilidade + Operação + Launch Controls | Operação pronta para lançamento controlado | OPS-01, OPS-02, OPS-03, OPS-04, OPS-05 | 5 |
 | 29 | Refinamento + UAT + Launch Readiness | Produto polido e pronto para beta externo | LAUNCH-01, LAUNCH-02, LAUNCH-03, LAUNCH-04, LAUNCH-05, LAUNCH-06, SEC-01, SEC-02, SEC-03, SEC-05 | 10 |
@@ -191,12 +191,12 @@ Phase 24 (Credit Tables + CreditService) ──┘
 | PIPE-04 | Phase 25 | Done ✓ |
 | PIPE-05 | Phase 25 | Done ✓ |
 | PIPE-06 | Phase 25 | Done ✓ |
-| ADMIN-01 | Phase 26 | Planned |
-| ADMIN-02 | Phase 26 | Planned |
-| ADMIN-03 | Phase 26 | Planned |
-| ADMIN-04 | Phase 26 | Planned |
-| ADMIN-05 | Phase 26 | Planned |
-| ADMIN-06 | Phase 26 | Planned |
+| ADMIN-01 | Phase 26 | Done ✓ |
+| ADMIN-02 | Phase 26 | Done ✓ |
+| ADMIN-03 | Phase 26 | Done ✓ |
+| ADMIN-04 | Phase 26 | Done ✓ |
+| ADMIN-05 | Phase 26 | Done ✓ |
+| ADMIN-06 | Phase 26 | Done ✓ |
 | PAY-01 | Phase 30/v1.6 | Deferred |
 | PAY-02 | Phase 30/v1.6 | Deferred |
 | PAY-03 | Phase 30/v1.6 | Deferred |
@@ -212,8 +212,8 @@ Phase 24 (Credit Tables + CreditService) ──┘
 | OPS-03 | Phase 28 | Planned |
 | OPS-04 | Phase 28 | Planned |
 | OPS-05 | Phase 28 | Planned |
-| SEC-04 | Phase 26 | Planned |
-| SEC-06 | Phase 26 | Planned |
+| SEC-04 | Phase 26 | Done ✓ |
+| SEC-06 | Phase 26 | Done ✓ |
 | LAUNCH-01 | Phase 29 | Planned |
 | LAUNCH-02 | Phase 29 | Planned |
 | LAUNCH-03 | Phase 29 | Planned |
@@ -228,6 +228,7 @@ Phase 24 (Credit Tables + CreditService) ──┘
 **Coverage:**
 - v1 requirements: 44 total
 - Mapped to phases: 44
+- Completed: 14 (CRED-01–05, PIPE-01–06, ADMIN-01–06, SEC-04, SEC-06)
 - Unmapped: 0 ✓
 - Deferred to v1.6: PAY-01, PAY-02, PAY-03, PAY-04
 
