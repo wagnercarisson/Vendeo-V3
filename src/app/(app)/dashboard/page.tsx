@@ -173,9 +173,19 @@ export default async function DashboardPage() {
               <p className="text-sm font-medium text-text-secondary">
                 Créditos
               </p>
-              <p className="text-3xl font-bold text-text-primary mt-1">
-                {creditBalance !== null ? creditBalance : "—"}
-              </p>
+              {creditBalance !== null ? (
+                <div className="mt-1">
+                  <BalanceDisplay
+                    balance={creditBalance}
+                    hasStore={true}
+                    variant="badge"
+                  />
+                </div>
+              ) : (
+                <p className="text-3xl font-bold text-text-primary mt-1">
+                  —
+                </p>
+              )}
             </Card>
           </div>
 
