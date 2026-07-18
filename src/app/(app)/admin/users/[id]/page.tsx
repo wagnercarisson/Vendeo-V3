@@ -21,8 +21,9 @@ export default async function AdminUserDetailPage({
     .maybeSingle();
 
   const storeData = store as Record<string, unknown> | null;
+  const storeId = typeof storeData?.id === "string" ? storeData.id : null;
+  const storeName = typeof storeData?.name === "string" ? storeData.name : "Loja sem nome";
   const hasStore = storeData !== null;
-  const storeId = storeData?.id as string | null;
 
   let balance = 0;
   let history: unknown[] = [];
@@ -75,7 +76,13 @@ export default async function AdminUserDetailPage({
 
           <div className="rounded-md border border-border bg-bg-surface p-4">
             <h2 className="text-lg font-semibold mb-3">Conceder Créditos</h2>
-            <CreditGrantForm storeId={storeId} storeName={storeData.name as string} />
+            {storeId ? (
+              <CreditGrantForm storeId={storeId} storeName={storeName} />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Loja sem identificador valido. Nao e possivel conceder creditos.
+              </p>
+            )}
           </div>
 
           <div className="rounded-md border border-border bg-bg-surface p-4">
