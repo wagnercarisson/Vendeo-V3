@@ -152,7 +152,8 @@ Deferred to future release. Tracked but not in current roadmap.
 | OPS-03 | Phase 28 | Planned |
 | OPS-04 | Phase 28 | Planned |
 | OPS-05 | Phase 28 | Planned |
-| SEC-06 | Phase 28 | Planned |
+| SEC-04 | Phase 26 | Planned |
+| SEC-06 | Phase 26 | Planned |
 | LAUNCH-01 | Phase 29 | Planned |
 | LAUNCH-02 | Phase 29 | Planned |
 | LAUNCH-03 | Phase 29 | Planned |
@@ -162,7 +163,6 @@ Deferred to future release. Tracked but not in current roadmap.
 | SEC-01 | Phase 29 | Planned |
 | SEC-02 | Phase 29 | Planned |
 | SEC-03 | Phase 29 | Planned |
-| SEC-04 | Phase 29 | Planned |
 | SEC-05 | Phase 29 | Planned |
 
 **Coverage:**

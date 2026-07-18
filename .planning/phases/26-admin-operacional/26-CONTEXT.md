@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS public.admin_audit_log (
   target_type TEXT NOT NULL CHECK (target_type IN ('store', 'user', 'campaign')),
   target_id UUID NOT NULL,
   reason TEXT NOT NULL,
+  operation_id UUID,
   metadata JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -140,7 +141,7 @@ Rotas admin usam `supabaseAdmin` (service role) para SELECT em `credit_balances`
 Criar SQL function `admin_create_store_for_user()` que executa verificação + criação + audit log na mesma transação:
 
 1. Verifica se usuário já possui loja → se sim, RAISE EXCEPTION
-2. Chama create_store_with_initial_grant(p_name, p_segment, p_user_id) — RPC existente (F25)
+2. Chama create_store_with_initial_grant(p_name := p_name, p_segment := p_segment, p_user_id := p_user_id) — RPC existente (F25)
 3. INSERT admin_audit_log com action='store_create_invite', target_type='user'
 4. Se qualquer passo falhar → ROLLBACK desfaz tudo
 
