@@ -258,8 +258,29 @@ END;
 $$;
 
 -- =============================================================================
+-- RPC: admin_get_user_emails
+-- SECURITY DEFINER: accesses auth.users to get emails by user IDs
+-- Used by admin endpoints to include user email in responses
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION public.admin_get_user_emails(p_user_ids UUID[])
+RETURNS TABLE(user_id UUID, email TEXT)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT au.id, au.email::TEXT
+  FROM auth.users au
+  WHERE au.id = ANY(p_user_ids);
+END;
+$$;
+
+-- =============================================================================
 -- REVERT (reverse order of creation)
 -- =============================================================================
+-- DROP FUNCTION IF EXISTS public.admin_get_user_emails CASCADE;
 -- DROP FUNCTION IF EXISTS public.admin_get_users_summary CASCADE;
 -- DROP FUNCTION IF EXISTS public.admin_create_store_for_user CASCADE;
 -- DROP FUNCTION IF EXISTS public.admin_grant_credits CASCADE;

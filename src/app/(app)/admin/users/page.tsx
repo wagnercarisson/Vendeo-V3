@@ -40,7 +40,7 @@ export default async function AdminUsersPage({
           name="search"
           defaultValue={search}
           placeholder="Buscar por email, loja ou segmento..."
-          className="flex-1 rounded-md border px-3 py-2 text-sm"
+          className="flex-1 rounded-md border border-border bg-bg-surface px-3 py-2 text-sm text-text-primary"
         />
         <button
           type="submit"

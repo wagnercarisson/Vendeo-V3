@@ -2,12 +2,19 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { Card } from "@/components/ui/card";
 
+const ACTION_LABELS: Record<string, string> = {
+  credit_grant: "Concessão de Créditos",
+  credit_adjustment: "Ajuste de Créditos",
+  store_create_invite: "Criação de Loja",
+  manual_refund: "Estorno Manual",
+};
+
 export default async function AdminDashboardPage() {
   await requireAdmin();
 
-  const [{ count: totalUsers }, { data: recentActions }, { count: errorCampaigns }] =
+  const [usersResult, { data: recentActions }, { count: errorCampaigns }, { count: auditActions }] =
     await Promise.all([
-      supabaseAdmin.from("admin_audit_log").select("*", { count: "exact", head: true }),
+      supabaseAdmin.rpc("admin_get_users_summary", { p_search: null, p_page: 1, p_page_size: 1 }),
       supabaseAdmin
         .from("admin_audit_log")
         .select("*")
@@ -17,7 +24,12 @@ export default async function AdminDashboardPage() {
         .from("campaigns")
         .select("*", { count: "exact", head: true })
         .eq("status", "error"),
+      supabaseAdmin
+        .from("admin_audit_log")
+        .select("*", { count: "exact", head: true }),
     ]);
+
+  const totalUsers = (usersResult.data as { total: number } | null)?.total ?? 0;
 
   return (
     <div className="space-y-6">
@@ -30,7 +42,7 @@ export default async function AdminDashboardPage() {
         <Card>
           <div className="p-4">
             <p className="text-sm text-muted-foreground">Total de Usuários</p>
-            <p className="text-3xl font-bold">{totalUsers ?? 0}</p>
+            <p className="text-3xl font-bold">{totalUsers}</p>
           </div>
         </Card>
         <Card>
@@ -42,7 +54,7 @@ export default async function AdminDashboardPage() {
         <Card>
           <div className="p-4">
             <p className="text-sm text-muted-foreground">Ações no Audit Log</p>
-            <p className="text-3xl font-bold">{totalUsers ?? 0}</p>
+            <p className="text-3xl font-bold">{auditActions ?? 0}</p>
           </div>
         </Card>
       </div>
@@ -54,7 +66,7 @@ export default async function AdminDashboardPage() {
             <ul className="space-y-2">
               {recentActions.slice(0, 10).map((action: Record<string, unknown>) => (
                 <li key={action.id as string} className="text-sm border-b pb-1 last:border-0">
-                  <span className="font-medium">{action.action as string}</span>
+                  <span className="font-medium">{ACTION_LABELS[action.action as string] ?? (action.action as string)}</span>
                   {" — "}
                   <span className="text-muted-foreground">
                     {(action.reason as string)?.slice(0, 80)}

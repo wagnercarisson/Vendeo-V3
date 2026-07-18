@@ -8,10 +8,10 @@ const creditService = new CreditService();
 
 export const GET = apiHandler(async (
   _request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) => {
   await requireAdmin();
-  const userId = params.id;
+  const { id: userId } = await params;
 
   const store = await supabaseAdmin
     .from("stores")

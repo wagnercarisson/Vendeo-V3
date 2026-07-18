@@ -1,16 +1,18 @@
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { CreditService } from "@/lib/credit/credit-service";
+import { StoreCreationForm } from "./store-creation-form";
+import { CreditGrantForm } from "./credit-grant-form";
 
 const creditService = new CreditService();
 
-interface PageProps {
-  params: { id: string };
-}
-
-export default async function AdminUserDetailPage({ params }: PageProps) {
+export default async function AdminUserDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   await requireAdmin();
-  const userId = params.id;
+  const { id: userId } = await params;
 
   const { data: store } = await supabaseAdmin
     .from("stores")
@@ -48,40 +50,18 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
       </div>
 
       {!hasStore && (
-        <div className="rounded-md border border-amber-300 bg-amber-50 p-4">
-          <p className="font-medium text-amber-800">Usuário sem loja</p>
-          <p className="text-sm text-amber-700 mt-1">
+        <div className="rounded-md border border-border bg-bg-surface p-4">
+          <p className="font-medium text-text-primary">Usuário sem loja</p>
+          <p className="text-sm text-muted-foreground mt-1">
             Este usuário ainda não possui uma loja. Crie uma loja para conceder acesso ao beta.
           </p>
-          <div className="mt-3 space-y-2">
-            <input
-              id="storeName"
-              name="storeName"
-              placeholder="Nome da loja"
-              className="block w-full rounded-md border px-3 py-2 text-sm"
-            />
-            <input
-              id="segment"
-              name="segment"
-              placeholder="Segmento (ex: moda-calcados-acessorios)"
-              className="block w-full rounded-md border px-3 py-2 text-sm"
-            />
-            <button
-              className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground"
-              hx-post={`/api/admin/stores`}
-              hx-vals={`{"userId":"${userId}","storeName":document.getElementById('storeName').value,"segment":document.getElementById('segment').value}`}
-              hx-target="#store-result"
-            >
-              Criar Loja
-            </button>
-            <div id="store-result" />
-          </div>
+          <StoreCreationForm userId={userId} />
         </div>
       )}
 
       {hasStore && storeData && (
         <>
-          <div className="rounded-md border p-4">
+          <div className="rounded-md border border-border bg-bg-surface p-4">
             <h2 className="text-lg font-semibold mb-2">Dados da Loja</h2>
             <dl className="grid grid-cols-2 gap-2 text-sm">
               <dt className="text-muted-foreground">Nome</dt>
@@ -93,35 +73,12 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
             </dl>
           </div>
 
-          <div className="rounded-md border p-4">
+          <div className="rounded-md border border-border bg-bg-surface p-4">
             <h2 className="text-lg font-semibold mb-3">Conceder Créditos</h2>
-            <div className="space-y-2">
-              <input
-                id="grant-amount"
-                type="number"
-                min={1}
-                placeholder="Quantidade"
-                className="block w-full rounded-md border px-3 py-2 text-sm"
-              />
-              <textarea
-                id="grant-reason"
-                placeholder="Motivo (mínimo 10 caracteres)"
-                className="block w-full rounded-md border px-3 py-2 text-sm"
-                rows={3}
-              />
-              <button
-                className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground"
-                hx-post={`/api/admin/credits/grant`}
-                hx-vals={`{"storeId":"${storeId}","amount":document.getElementById('grant-amount').value,"reason":document.getElementById('grant-reason').value,"operationId":crypto.randomUUID()}`}
-                hx-target="#grant-result"
-              >
-                Conceder Créditos
-              </button>
-              <div id="grant-result" />
-            </div>
+            <CreditGrantForm storeId={storeId} />
           </div>
 
-          <div className="rounded-md border p-4">
+          <div className="rounded-md border border-border bg-bg-surface p-4">
             <h2 className="text-lg font-semibold mb-3">Extrato</h2>
             {history.length > 0 ? (
               <div className="overflow-x-auto">
@@ -157,7 +114,7 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
             )}
           </div>
 
-          <div className="rounded-md border p-4">
+          <div className="rounded-md border border-border bg-bg-surface p-4">
             <h2 className="text-lg font-semibold mb-3">Campanhas</h2>
             {campaigns.length > 0 ? (
               <div className="overflow-x-auto">

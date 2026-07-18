@@ -1,12 +1,21 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/admin/require-admin";
+import { ForbiddenError } from "@/lib/auth/errors";
 
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  await requireAdmin();
+  try {
+    await requireAdmin();
+  } catch (error) {
+    if (error instanceof ForbiddenError) {
+      redirect("/dashboard");
+    }
+    throw error;
+  }
 
   return (
     <div className="space-y-6">

@@ -55,7 +55,7 @@ export default async function AdminAuditLogPage({
         <select
           name="action"
           defaultValue={filterAction}
-          className="rounded-md border px-3 py-2 text-sm"
+          className="rounded-lg border border-border bg-bg-surface px-3 py-2 text-sm text-text-primary"
         >
           <option value="">Todas as ações</option>
           {Object.entries(ACTION_LABELS).map(([value, label]) => (
@@ -65,7 +65,7 @@ export default async function AdminAuditLogPage({
         <select
           name="targetType"
           defaultValue={filterTargetType}
-          className="rounded-md border px-3 py-2 text-sm"
+          className="rounded-lg border border-border bg-bg-surface px-3 py-2 text-sm text-text-primary"
         >
           <option value="">Todos os alvos</option>
           {Object.entries(TARGET_LABELS).map(([value, label]) => (
