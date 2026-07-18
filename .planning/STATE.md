@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: "Lançamento Externo Controlado — Créditos + Admin + Saldo + Observabilidade + Launch"
 status: active
-last_updated: "2026-07-17T15:50:00.000Z"
-last_activity: 2026-07-17
+last_updated: "2026-07-18T13:30:00.000Z"
+last_activity: 2026-07-18
 progress:
   total_phases: 7
   completed_phases: 3
@@ -266,15 +266,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 26 — Admin Operacional + Convites + Créditos Manuais △
-Plan: Pending — alinhamento em andamento
-Status: Alinhamento — nova F26 substitui "Pagamento Stripe" por "Admin Operacional para suporte beta"
+Phase: 26 — Admin Operacional + Convites + Créditos Manuais ◆
+Plan: 3 plans (26-01, 26-02, 26-03)
+Status: Plano concluído — aguardando implementação
 
 ### Next Phases
 
 | Phase | Status | Description |
 |-------|--------|-------------|
-| F26 | △ Alinhamento | Admin Operacional + Convites + Créditos Manuais |
+| F26 | ◆ Planejado | Admin Operacional + Convites + Créditos Manuais (3 plans) |
 | F27 | △ Planned | Conta + Saldo Visível + Extrato (sem Stripe; CTA = "fale com o time") |
 | F28 | △ Planned | Observabilidade + Operação + Launch Controls |
 | F29 | △ Planned | Refinamento Visual + UAT + Launch Readiness |

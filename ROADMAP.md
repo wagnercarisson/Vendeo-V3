@@ -69,7 +69,10 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - Wave 1: 24-01 — Migration SQL + CreditService (SQL DDL, 3 functions, types, service)
   -   Wave 2: 24-02 — Tests + SQL Verification (25+ testes, I1–I7)
 - [x] Phase 25: Pipeline de Geração v1.5 (3 plans ✅)
-- [ ] Phase 26: Admin Operacional + Convites + Créditos Manuais (planned)
+- [x] Phase 26: Admin Operacional + Convites + Créditos Manuais (3 plans ✓)
+  - Wave 1: 26-01 — Migration + Gate + Middleware + Layout
+  - Wave 2: 26-02 — API Routes + Páginas Admin
+  - Wave 3: 26-03 — Testes e Verificação (21+)
 - [ ] Phase 27: Conta e Saldo Visível + Extrato (planned)
 - [ ] Phase 28: Observabilidade + Operação + Launch Controls (planned)
 - [ ] Phase 29: Refinamento Visual + UAT + Launch Readiness (planned)
@@ -105,7 +108,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 23. Text Provider + Copy Director | v1.5 | 2/2 | ✅ Complete | 2026-07-16 |
 | 24. Créditos — Schema, Saldo e Transações | v1.5 | 2/2 | ✅ Complete | 2026-07-16 |
 | 25. Pipeline de Geração v1.5 | v1.5 | 3/3 | ✅ Complete | 2026-07-17 |
-| 26. Admin Operacional + Convites + Créditos Manuais | v1.5 | 0/0 | △ Planned | — |
+| 26. Admin Operacional + Convites + Créditos Manuais | v1.5 | 3/0 | ◆ In Progress | — |
 | 27. Conta e Saldo Visível + Extrato | v1.5 | 0/0 | △ Planned | — |
 | 28. Observabilidade + Operação + Launch Controls | v1.5 | 0/0 | △ Planned | — |
 | 29. Refinamento Visual + UAT + Launch Readiness | v1.5 | 0/0 | △ Planned | — |
