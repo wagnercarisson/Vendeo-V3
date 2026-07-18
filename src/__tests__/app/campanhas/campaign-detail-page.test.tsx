@@ -33,6 +33,17 @@ vi.mock("@/lib/campaign/display", () => ({
   mapCampaignToProps: mockMapCampaignToProps,
 }));
 
+vi.mock("@/lib/supabase/server", () => ({
+  createServerClient: vi.fn().mockResolvedValue({}),
+}));
+
+vi.mock("@/lib/credit/credit-service", () => {
+  class MockCreditService {
+    getBalance = vi.fn();
+  }
+  return { CreditService: MockCreditService };
+});
+
 vi.mock("next/navigation", () => ({
   notFound: mockNotFound,
   redirect: mockRedirect,

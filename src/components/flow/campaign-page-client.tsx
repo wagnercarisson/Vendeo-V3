@@ -5,7 +5,13 @@ import { StoreIdentityBlock } from "./store-identity-block";
 import { CampaignInputForm } from "./campaign-input-form";
 import type { StoreIdentitySnapshot } from "@/components/campaign/types";
 
-export function CampaignPageClient({ store }: { store: Store }) {
+interface CampaignPageClientProps {
+  store: Store;
+  balance: number | null;
+  supportEmail?: string;
+}
+
+export function CampaignPageClient({ store, balance, supportEmail }: CampaignPageClientProps) {
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
       <div className="mb-6">
@@ -22,7 +28,7 @@ export function CampaignPageClient({ store }: { store: Store }) {
         Informe os dados do produto e da oferta
       </p>
 
-      <CampaignInputForm storeId={store.id} />
+      <CampaignInputForm storeId={store.id} balance={balance} supportEmail={supportEmail} />
     </div>
   );
 }

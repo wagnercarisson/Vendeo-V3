@@ -9,14 +9,18 @@ import { MandatoryArtworkField } from "@/components/campaign/mandatory-artwork-f
 import {
   AlertCircle,
   AlertTriangle,
+  Coins,
   Loader2,
 } from "lucide-react";
+import { CreditCta } from "@/components/credit/credit-cta";
 
 interface CampaignInputFormProps {
   storeId?: string;
+  balance?: number | null;
+  supportEmail?: string;
 }
 
-export function CampaignInputForm({ storeId }: CampaignInputFormProps) {
+export function CampaignInputForm({ storeId, balance, supportEmail }: CampaignInputFormProps) {
   const {
     fields,
     fieldErrors,
@@ -166,6 +170,8 @@ export function CampaignInputForm({ storeId }: CampaignInputFormProps) {
         imagePreviewUrl={imagePreviewUrl}
         isSubmitting={isSubmitting}
         handleSubmit={handleSubmit}
+        balance={balance}
+        supportEmail={supportEmail}
       />
     </div>
   );
@@ -184,6 +190,8 @@ interface FormContentProps {
   imagePreviewUrl: string | null;
   isSubmitting: boolean;
   handleSubmit: () => void;
+  balance?: number | null;
+  supportEmail?: string;
 }
 
 function FormContent({
@@ -199,6 +207,8 @@ function FormContent({
   imagePreviewUrl,
   isSubmitting,
   handleSubmit,
+  balance,
+  supportEmail,
 }: FormContentProps) {
   return (
     <form
@@ -386,10 +396,42 @@ function FormContent({
         onChange={(v) => setField("mandatoryArtworkText", v)}
       />
 
-      <div className="pt-2">
+      <div className="pt-2 space-y-3">
+        {balance !== undefined && (
+          <div className={`flex items-center gap-2 text-sm font-body ${
+            balance !== null && balance > 0
+              ? "text-accent-green"
+              : balance === 0
+                ? "text-accent-red"
+                : "text-accent-amber"
+          }`}>
+            <Coins className="h-4 w-4" />
+            {balance !== null ? (
+              <>
+                <span>Saldo: <strong>{balance}</strong> crédito(s)</span>
+                <span className="text-text-muted">·</span>
+                <span>Custo: 1</span>
+              </>
+            ) : (
+              <span>Não foi possível confirmar seu saldo. Tente novamente.</span>
+            )}
+          </div>
+        )}
+
+        {balance === 0 && (
+          <CreditCta variant="zero" supportEmail={supportEmail} />
+        )}
+
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || balance === 0 || balance === null}
+          title={
+            balance === 0
+              ? "Você precisa de créditos para gerar uma campanha"
+              : balance === null
+                ? "Não foi possível confirmar seu saldo"
+                : undefined
+          }
           className="min-h-[44px] w-full sm:w-auto px-8 py-2.5 bg-accent-green text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {isSubmitting ? (
@@ -401,6 +443,18 @@ function FormContent({
             "Criar Campanha"
           )}
         </button>
+
+        {balance === null && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="text-sm text-accent-green hover:underline font-medium"
+            >
+              Tentar novamente
+            </button>
+          </div>
+        )}
       </div>
     </form>
   );

@@ -4,8 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
+import { BalanceDisplay } from "@/components/credit/balance-display";
 import { getCurrentStore } from "@/lib/auth/store-ownership";
 import { requirePageUser } from "@/lib/auth/require-user";
+import { CreditService } from "@/lib/credit/credit-service";
+import { createServerClient } from "@/lib/supabase/server";
 import {
   countCampaigns,
   countReadyCampaigns,
@@ -57,10 +60,29 @@ export default async function DashboardPage() {
           />
         </div>
       );
-    case "has_store_no_campaigns":
+    case "has_store_no_campaigns": {
+      const storeNoCamp = await getCurrentStore(user.userId);
+      let noCampBalance: number | null = null;
+      if (storeNoCamp) {
+        const sc = await createServerClient();
+        const cs = new CreditService(sc);
+        try {
+          noCampBalance = await cs.getBalance(storeNoCamp.id);
+        } catch {
+          noCampBalance = null;
+        }
+      }
+
       return (
         <div>
           <PageHeader title="Dashboard" />
+          <div className="mb-4">
+            <BalanceDisplay
+              balance={noCampBalance ?? 0}
+              hasStore={true}
+              variant="badge"
+            />
+          </div>
           <EmptyState
             icon={DASHBOARD_NO_CAMPAIGNS.icon}
             title={DASHBOARD_NO_CAMPAIGNS.title}
@@ -76,6 +98,7 @@ export default async function DashboardPage() {
           />
         </div>
       );
+    }
     case "has_store_with_campaigns": {
       const store = await getCurrentStore(user.userId);
 
@@ -97,6 +120,15 @@ export default async function DashboardPage() {
         );
       }
 
+      const supabase = await createServerClient();
+      const creditService = new CreditService(supabase);
+      let creditBalance: number | null = null;
+      try {
+        creditBalance = await creditService.getBalance(store.id);
+      } catch {
+        creditBalance = null;
+      }
+
       const [total, ready, recentCampaigns] = await Promise.all([
         countCampaigns(store.id),
         countReadyCampaigns(store.id),
@@ -112,7 +144,7 @@ export default async function DashboardPage() {
             {getGreeting(store.name)}
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <Card className="p-4">
               <p className="text-sm font-medium text-text-secondary">
                 Total de Campanhas
@@ -135,6 +167,14 @@ export default async function DashboardPage() {
               </p>
               <p className="text-3xl font-bold text-text-primary mt-1">
                 {rate}%
+              </p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-sm font-medium text-text-secondary">
+                Créditos
+              </p>
+              <p className="text-3xl font-bold text-text-primary mt-1">
+                {creditBalance !== null ? creditBalance : "—"}
               </p>
             </Card>
           </div>

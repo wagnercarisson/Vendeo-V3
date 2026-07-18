@@ -32,6 +32,18 @@ vi.mock("@/lib/campaign/metrics", () => ({
   getRecentCampaigns: mockGetRecentCampaigns,
 }));
 
+const mockGetBalance = vi.fn().mockResolvedValue(10);
+vi.mock("@/lib/credit/credit-service", () => {
+  class MockCreditService {
+    getBalance = mockGetBalance;
+  }
+  return { CreditService: MockCreditService };
+});
+
+vi.mock("@/lib/supabase/server", () => ({
+  createServerClient: vi.fn().mockResolvedValue({}),
+}));
+
 vi.mock("next/link", () => ({
   default: ({
     children,
@@ -171,7 +183,7 @@ describe("DashboardPage — greeting with mocked Date", () => {
 });
 
 describe("DashboardPage — metrics grid", () => {
-  it("renders 3 metric cards with correct values", async () => {
+  it("renders 4 metric cards with correct values", async () => {
     setupStoreWithCampaigns();
 
     const { default: DashboardPage } = await import(
@@ -196,7 +208,7 @@ describe("DashboardPage — metrics grid", () => {
     const html = renderToString(await DashboardPage());
 
     expect(html).toContain("grid-cols-1");
-    expect(html).toContain("md:grid-cols-3");
+    expect(html).toContain("md:grid-cols-4");
     expect(html).toContain("gap-4");
   });
 
