@@ -99,10 +99,28 @@ describe("POST /api/admin/credits/grant", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns 500 when RPC returns error", async () => {
+  it("returns 404 when store does not exist", async () => {
     mockRpc.mockResolvedValue({
       data: null,
-      error: { message: "store not found" },
+      error: { message: "store_not_found" },
+    });
+
+    const res = await postGrant({
+      storeId: "00000000-0000-0000-0000-000000000001",
+      amount: 10,
+      reason: "Créditos para verificação de erro",
+      operationId: "00000000-0000-0000-0000-000000000002",
+    });
+
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error).toBe("Loja não encontrada");
+  });
+
+  it("returns 500 on unexpected RPC error", async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { message: "internal database error" },
     });
 
     const res = await postGrant({

@@ -75,7 +75,7 @@ export default async function AdminUserDetailPage({
 
           <div className="rounded-md border border-border bg-bg-surface p-4">
             <h2 className="text-lg font-semibold mb-3">Conceder Créditos</h2>
-            <CreditGrantForm storeId={storeId} />
+            <CreditGrantForm storeId={storeId} storeName={storeData.name as string} />
           </div>
 
           <div className="rounded-md border border-border bg-bg-surface p-4">

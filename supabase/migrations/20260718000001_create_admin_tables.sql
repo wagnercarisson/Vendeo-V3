@@ -83,6 +83,11 @@ DECLARE
   v_balance INTEGER;
   v_result JSONB;
 BEGIN
+  -- Step 0: Verify store exists before proceeding
+  IF NOT EXISTS (SELECT 1 FROM public.stores WHERE id = p_store_id) THEN
+    RAISE EXCEPTION 'store_not_found';
+  END IF;
+
   -- Step 1: Idempotency check — same operation_id returns existing data
   IF p_operation_id IS NOT NULL THEN
     SELECT id, action, metadata INTO v_existing_log

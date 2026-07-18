@@ -28,6 +28,25 @@ export default async function AdminCampaignErrorsPage({
   const campaigns = (data ?? []) as Array<Record<string, unknown>>;
   const totalPages = Math.ceil((count ?? 0) / pageSize);
 
+  const storeUserIds = [...new Set(
+    (data ?? []).map(
+      (row: Record<string, unknown>) =>
+        (row.stores as Record<string, unknown> | undefined)?.user_id as string,
+    ).filter(Boolean) as string[],
+  )];
+
+  const emailMap = new Map<string, string>();
+  if (storeUserIds.length > 0) {
+    const { data: emails } = await supabaseAdmin.rpc("admin_get_user_emails", {
+      p_user_ids: storeUserIds,
+    });
+    if (emails) {
+      for (const entry of emails as Array<{ user_id: string; email: string }>) {
+        emailMap.set(entry.user_id, entry.email);
+      }
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div>
@@ -41,6 +60,7 @@ export default async function AdminCampaignErrorsPage({
             <tr>
               <th className="px-3 py-2 text-left font-medium">Produto</th>
               <th className="px-3 py-2 text-left font-medium">Loja</th>
+              <th className="px-3 py-2 text-left font-medium">Usuário</th>
               <th className="px-3 py-2 text-left font-medium">Erro</th>
               <th className="px-3 py-2 text-left font-medium">Atualizado em</th>
             </tr>
@@ -54,6 +74,9 @@ export default async function AdminCampaignErrorsPage({
                 <td className="px-3 py-2">
                   {(camp.stores as Record<string, unknown> | undefined)?.name as string ?? "—"}
                 </td>
+                <td className="px-3 py-2 text-xs">
+                  {emailMap.get((camp.stores as Record<string, unknown> | undefined)?.user_id as string) ?? "—"}
+                </td>
                 <td className="px-3 py-2">
                   <span className="inline-block rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
                     {(camp.error_message as string) ?? (camp.errorMessage as string) ?? "Erro desconhecido"}
@@ -66,7 +89,7 @@ export default async function AdminCampaignErrorsPage({
             ))}
             {campaigns.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">
+                <td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">
                   Nenhuma campanha com erro encontrada
                 </td>
               </tr>

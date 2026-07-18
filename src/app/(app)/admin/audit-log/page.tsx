@@ -15,6 +15,22 @@ const TARGET_LABELS: Record<string, string> = {
   campaign: "Campanha",
 };
 
+async function resolveActorEmails(entries: Array<Record<string, unknown>>): Promise<Map<string, string>> {
+  const actorIds = [...new Set(entries.map((e) => e.actor_id as string))].filter(Boolean);
+  const map = new Map<string, string>();
+  if (actorIds.length === 0) return map;
+
+  const { data: emails } = await supabaseAdmin.rpc("admin_get_user_emails", {
+    p_user_ids: actorIds,
+  });
+  if (emails) {
+    for (const entry of emails as Array<{ user_id: string; email: string }>) {
+      map.set(entry.user_id, entry.email);
+    }
+  }
+  return map;
+}
+
 export default async function AdminAuditLogPage({
   searchParams,
 }: {
@@ -43,6 +59,7 @@ export default async function AdminAuditLogPage({
 
   const entries = (data ?? []) as Array<Record<string, unknown>>;
   const totalPages = Math.ceil((count ?? 0) / pageSize);
+  const actorEmailMap = await resolveActorEmails(entries);
 
   return (
     <div className="space-y-4">
@@ -84,6 +101,7 @@ export default async function AdminAuditLogPage({
         <table className="w-full text-sm">
           <thead className="bg-muted">
             <tr>
+              <th className="px-3 py-2 text-left font-medium">Ator</th>
               <th className="px-3 py-2 text-left font-medium">Ação</th>
               <th className="px-3 py-2 text-left font-medium">Alvo</th>
               <th className="px-3 py-2 text-left font-medium">Motivo</th>
@@ -93,6 +111,9 @@ export default async function AdminAuditLogPage({
           <tbody>
             {entries.map((entry) => (
               <tr key={entry.id as string} className="border-t hover:bg-muted/50">
+                <td className="px-3 py-2 text-xs">
+                  {actorEmailMap.get(entry.actor_id as string) ?? (entry.actor_id as string).slice(0, 8) + "…"}
+                </td>
                 <td className="px-3 py-2">
                   {ACTION_LABELS[entry.action as string] ?? (entry.action as string)}
                 </td>
@@ -112,7 +133,7 @@ export default async function AdminAuditLogPage({
             ))}
             {entries.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">
+                <td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">
                   Nenhuma ação encontrada
                 </td>
               </tr>

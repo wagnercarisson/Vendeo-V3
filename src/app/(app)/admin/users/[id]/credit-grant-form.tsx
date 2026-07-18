@@ -3,7 +3,7 @@
 import { useState, FormEvent } from "react";
 import { Loader2 } from "lucide-react";
 
-export function CreditGrantForm({ storeId }: { storeId: string }) {
+export function CreditGrantForm({ storeId, storeName }: { storeId: string; storeName: string }) {
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
@@ -58,6 +58,9 @@ export function CreditGrantForm({ storeId }: { storeId: string }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-2">
+      <p className="text-sm text-muted-foreground mb-2">
+        Conceder créditos para: <span className="font-medium text-text-primary">{storeName}</span>
+      </p>
       <input
         type="number"
         min={1}

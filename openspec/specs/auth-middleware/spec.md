@@ -2,7 +2,7 @@
 
 Proteger rotas do Vendeo via `src/middleware.ts`: renovação de sessão (cookie), redirect de páginas não autenticadas para `/login` e resposta 401 JSON para APIs. Middleware usa `getClaims()` (nunca `getSession()`) e não consulta banco de dados.
 
-> Synced from `fase-7-sessao-login-vertical` (ADDED), then `fase-18-app-shell-ui-base-rotas` (MODIFIED). Matcher updated: added `/dashboard`, `/campanhas/:path*`, `/loja`, `/conta`; removed `/`, `/store/:path*`, `/campanha/:path*`. Authenticated redirect destination changed from `/` to `/dashboard`.
+> Synced from `fase-7-sessao-login-vertical` (ADDED), then `fase-18-app-shell-ui-base-rotas` (MODIFIED), then `fase-26-admin-operacional` (MODIFIED). Added `/admin/:path*` to matcher; added "Middleware does not resolve admin status" requirement; middleware never queries `admin_users`.
 
 ## Requirements
 
@@ -23,14 +23,21 @@ The system SHALL have a `src/middleware.ts` file that configures a matcher and p
 
 The middleware SHALL use a positive matcher that explicitly lists protected routes.
 
-- Matcher MUST include: `"/login"`, `"/signup"`, `"/check-email"`, `"/forgot-password"`, `"/update-password"`, `"/auth/confirm"`, `"/dashboard"`, `"/campanhas/:path*"`, `"/loja"`, `"/conta"`, `"/api/:path*"`
+- Matcher MUST include: `"/login"`, `"/signup"`, `"/check-email"`, `"/forgot-password"`, `"/update-password"`, `"/auth/confirm"`, `"/dashboard"`, `"/campanhas/:path*"`, `"/loja"`, `"/conta"`, `"/admin/:path*"`, `"/api/:path*"`
 - Routes NOT in the matcher SHALL bypass middleware entirely
 - `"/"`, `"/store/:path*"`, `"/campanha/:path*"` SHALL be removed from the matcher (handled by next.config.ts 301 redirects)
 - `/auth/:path*` MUST NOT be used as a prefix — each `/auth/*` route is listed individually
+- The middleware SHALL NOT consult `admin_users` table for admin routes — it SHALL only verify session existence
+- Admin gate (`requireAdmin()`) is the responsibility of Server Components and API routes, not middleware
 
 #### Scenario: New protected routes match
 
 - **WHEN** a request arrives for `/dashboard` or `/campanhas/nova` or `/loja` or `/conta`
+- **THEN** the middleware SHALL process the request
+
+#### Scenario: Admin routes matched by middleware
+
+- **WHEN** a request arrives for `/admin/users` or `/admin/campaigns/errors`
 - **THEN** the middleware SHALL process the request
 
 #### Scenario: Removed routes no longer match
@@ -50,7 +57,7 @@ The middleware SHALL use a positive matcher that explicitly lists protected rout
 
 ### Requirement: Unauthenticated page requests redirect to login
 
-The middleware SHALL redirect unauthenticated requests to protected pages to `/login` preserving the original path as `?redirect=` parameter.
+The middleware SHALL redirect unauthenticated requests to protected pages to `/login` preserving the original path as `?redirect=` parameter. `/admin/*` routes are treated as protected pages — unauthenticated requests SHALL redirect to `/login`.
 
 - Uses `getClaims()` to detect authentication
 - If claims are absent or invalid and path is a protected page (not `/api/*`, not `/login`):
@@ -62,6 +69,11 @@ The middleware SHALL redirect unauthenticated requests to protected pages to `/l
 
 - **WHEN** an unauthenticated user requests `/dashboard`
 - **THEN** middleware redirects to `/login?redirect=/dashboard`
+
+#### Scenario: Anonymous user hits /admin/users
+
+- **WHEN** an unauthenticated user requests `/admin/users`
+- **THEN** middleware redirects to `/login?redirect=/admin/users`
 
 #### Scenario: Anonymous user hits /campanhas/nova
 
@@ -141,6 +153,19 @@ The middleware SHALL NOT query the database for store existence or ownership.
 
 - **WHEN** middleware processes any request
 - **THEN** it SHALL NOT make any database queries
+
+### Requirement: Middleware does not resolve admin status
+
+The middleware SHALL NOT query the `admin_users` table. Admin authorization is verified exclusively in Server Components via `requireAdmin()` and in API routes via `requireAdmin()`.
+
+- Middleware SHALL only verify session existence for `/admin/*` routes
+- `admin_users` lookup is forbidden in middleware context (edge runtime, no service_role)
+
+#### Scenario: Middleware bypasses admin_users query
+
+- **WHEN** middleware processes `/admin/*` route
+- **THEN** it SHALL NOT query `admin_users` table
+- **AND** it SHALL only verify session exists
 
 ### Requirement: /auth/confirm is always passthrough
 

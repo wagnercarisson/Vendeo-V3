@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import { ForbiddenError } from "@/lib/auth/errors";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 vi.mock("server-only", () => ({}));
 
@@ -33,6 +35,31 @@ async function getAuditLog(url = "http://localhost/api/admin/audit-log") {
 beforeEach(() => {
   vi.clearAllMocks();
   mockRequireAdmin.mockResolvedValue({ userId: "admin-1" });
+});
+
+function readMigration(): string {
+  const migrationPath = join(
+    __dirname, "..", "..", "..", "..", "..",
+    "supabase", "migrations", "20260718000001_create_admin_tables.sql",
+  );
+  return readFileSync(migrationPath, "utf-8");
+}
+
+describe("admin_audit_log migration integrity", () => {
+  it("migration contains immutability trigger preventing UPDATE and DELETE", () => {
+    const sql = readMigration();
+    expect(sql).toContain("trg_admin_audit_log_immutable");
+    expect(sql).toContain("BEFORE UPDATE OR DELETE ON public.admin_audit_log");
+    expect(sql).toContain("RAISE EXCEPTION");
+    expect(sql).toContain("append-only");
+  });
+
+  it("migration contains UNIQUE index on operation_id for idempotency", () => {
+    const sql = readMigration();
+    expect(sql).toContain("idx_admin_audit_log_operation");
+    expect(sql).toContain("UNIQUE");
+    expect(sql).toContain("operation_id");
+  });
 });
 
 describe("GET /api/admin/audit-log", () => {
