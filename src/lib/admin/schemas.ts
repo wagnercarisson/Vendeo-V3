@@ -1,0 +1,50 @@
+import { z } from "zod";
+
+export const GrantCreditsRequestSchema = z.object({
+  storeId: z.string().uuid(),
+  amount: z.number().int().positive("Amount deve ser maior que zero"),
+  reason: z.string().min(10, "Motivo deve ter no mínimo 10 caracteres").max(500),
+  operationId: z.string().uuid(),
+});
+
+export const CreateStoreSchema = z.object({
+  userId: z.string().uuid(),
+  storeName: z.string().min(1).max(100),
+  segment: z.string().min(1).max(50),
+});
+
+export interface AdminUserSummary {
+  userId: string;
+  email: string;
+  storeId: string | null;
+  storeName: string | null;
+  segment: string | null;
+  balance: number;
+  totalCampaigns: number;
+  errorCampaigns: number;
+  lastCampaignAt: string | null;
+  createdAt: string;
+}
+
+export interface AdminCampaignError {
+  campaignId: string;
+  productName: string;
+  storeId: string;
+  storeName: string;
+  userEmail: string;
+  errorMessage: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminAuditLogEntry {
+  id: string;
+  actorId: string;
+  action: string;
+  targetType: string;
+  targetId: string;
+  reason: string;
+  operationId: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+}
