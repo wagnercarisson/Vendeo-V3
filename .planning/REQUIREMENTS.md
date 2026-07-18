@@ -31,12 +31,12 @@
 
 ### Admin Operacional (ADMIN)
 
-- [ ] **ADMIN-01**: Admin access control — only explicitly authorized users (admin_users table) access admin routes/pages
-- [ ] **ADMIN-02**: Admin user/store directory — list and search beta users/stores with support data
-- [ ] **ADMIN-03**: Admin credit grant — manual credit grant with mandatory reason, via RPC admin_grant_credits (encapsula grant_credits + audit log)
-- [ ] **ADMIN-04**: Admin credit ledger view — view balance and full transaction history of any store/user
-- [ ] **ADMIN-05**: Admin campaign error review — view errored campaigns with error_message, status, dates
-- [ ] **ADMIN-06**: Admin audit log — every sensitive admin action recorded with actor, target, action, reason, timestamp
+- [x] **ADMIN-01**: Admin access control — only explicitly authorized users (admin_users table) access admin routes/pages
+- [x] **ADMIN-02**: Admin user/store directory — list and search beta users/stores with support data
+- [x] **ADMIN-03**: Admin credit grant — manual credit grant with mandatory reason, via RPC admin_grant_credits (encapsula grant_credits + audit log)
+- [x] **ADMIN-04**: Admin credit ledger view — view balance and full transaction history of any store/user
+- [x] **ADMIN-05**: Admin campaign error review — view errored campaigns with error_message, status, dates
+- [x] **ADMIN-06**: Admin audit log — every sensitive admin action recorded with actor, target, action, reason, timestamp
 
 ### Conta e Saldo Visível (UI-CREDIT)
 
@@ -135,18 +135,18 @@ Deferred to future release. Tracked but not in current roadmap.
 | PIPE-04 | Phase 25 | ✅ Complete |
 | PIPE-05 | Phase 25 | ✅ Complete |
 | PIPE-06 | Phase 25 | ✅ Complete |
-| ADMIN-01 | Phase 26 | Planned |
-| ADMIN-02 | Phase 26 | Planned |
-| ADMIN-03 | Phase 26 | Planned |
-| ADMIN-04 | Phase 26 | Planned |
-| ADMIN-05 | Phase 26 | Planned |
-| ADMIN-06 | Phase 26 | Planned |
-| UI-01 | Phase 27 | Planned |
-| UI-02 | Phase 27 | Planned |
-| UI-03 | Phase 27 | Planned |
-| UI-04 | Phase 27 | Planned |
-| UI-05 | Phase 27 | Planned |
-| UI-06 | Phase 27 | Planned |
+| ADMIN-01 | Phase 26 | ✅ Complete |
+| ADMIN-02 | Phase 26 | ✅ Complete |
+| ADMIN-03 | Phase 26 | ✅ Complete |
+| ADMIN-04 | Phase 26 | ✅ Complete |
+| ADMIN-05 | Phase 26 | ✅ Complete |
+| ADMIN-06 | Phase 26 | ✅ Complete |
+| UI-01 | Phase 27 | In Progress |
+| UI-02 | Phase 27 | In Progress |
+| UI-03 | Phase 27 | In Progress |
+| UI-04 | Phase 27 | In Progress |
+| UI-05 | Phase 27 | In Progress |
+| UI-06 | Phase 27 | In Progress |
 | OPS-01 | Phase 28 | Planned |
 | OPS-02 | Phase 28 | Planned |
 | OPS-03 | Phase 28 | Planned |

@@ -7,10 +7,10 @@ last_updated: "2026-07-18T14:30:00.000Z"
 last_activity: 2026-07-18
 progress:
   total_phases: 7
-  completed_phases: 4
-  total_plans: 10
+  completed_phases: 5
+  total_plans: 13
   completed_plans: 10
-  percent: 100
+  percent: 77
 ---
 
 # Project State
@@ -286,16 +286,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 26 — Admin Operacional + Convites + Créditos Manuais ✅
-Plan: 3/3 plans (26-01, 26-02, 26-03) — Completos
-Status: Implementado e verificado
+Phase: 27 — Conta e Saldo Visível + Extrato △
+Plan: 3/0 plans (27-01, 27-02, 27-03) — Planejado
+Status: Pronto para implementação
 
 ### Next Phases
 
 | Phase | Status | Description |
 |-------|--------|-------------|
-| F26 | ✅ Completo | Admin Operacional + Convites + Créditos Manuais (3 plans, 25 testes) |
-| F27 | △ Planned | Conta + Saldo Visível + Extrato (sem Stripe; CTA = "fale com o time") |
+| F27 | △ Planned | Conta + Saldo Visível + Extrato (3 plans, 19+ testes) |
 | F28 | △ Planned | Observabilidade + Operação + Launch Controls |
 | F29 | △ Planned | Refinamento Visual + UAT + Launch Readiness |
 | F30/v1.6 | △ Future | Stripe / Monetização Pública (pós-beta) |
