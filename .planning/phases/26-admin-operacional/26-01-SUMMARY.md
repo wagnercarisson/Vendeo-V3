@@ -4,7 +4,7 @@
 
 ## Files Created
 
-- `supabase/migrations/20260717000003_create_admin_tables.sql` — Migration com admin_users, admin_audit_log, RPCs admin_grant_credits, admin_create_store_for_user, admin_get_users_summary, trigger append-only, índices
+- `supabase/migrations/20260718000001_create_admin_tables.sql` — Migration com admin_users, admin_audit_log, RPCs admin_grant_credits, admin_create_store_for_user, admin_get_users_summary, trigger append-only, índices
 - `src/lib/admin/require-admin.ts` — requireAdmin() combinando requireApiUser + SELECT admin_users via supabaseAdmin
 - `src/app/(app)/admin/layout.tsx` — Layout admin com requireAdmin() gate + navegação entre páginas admin
 
