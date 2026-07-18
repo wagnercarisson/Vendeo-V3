@@ -79,7 +79,7 @@
 
 **Goal:** Time consegue operar o beta controlado sem depender de SQL manual ou Supabase Dashboard.
 
-**Requirements:** ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-04, ADMIN-05, ADMIN-06
+**Requirements:** ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-04, ADMIN-05, ADMIN-06, SEC-04, SEC-06
 
 **Success criteria:**
 1. Admin access gate via `admin_users` table (not auth.users flag)
