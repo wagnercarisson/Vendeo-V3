@@ -21,7 +21,7 @@ Esta fase expõe saldo e extrato ao lojista nos 3 pontos onde a informação é 
 - `TransactionHistory` não existe — sem extrato paginado
 - `CreditCta` não existe — sem CTA "Solicitar créditos"
 - `BalanceDisplay` / `BalanceCard` não existem — sem componentes visuais de saldo
-- Sem SUPPORT_EMAIL configurado para CTA
+- `SUPPORT_EMAIL` precisa ser configurado no ambiente com o email funcional existente — usado apenas no Server Component (lido via `process.env.SUPPORT_EMAIL`), propagado como prop para CreditCta
 
 **Dependências:** F24 (credit_balances, credit_transactions, CreditService), F21 (Pagination component), F20 (Dashboard metrics), F25 (pipeline de geração)
 
