@@ -502,3 +502,54 @@ describe("Invariantes", () => {
     expect(result).toEqual([]);
   });
 });
+
+describe("Session Client (F27)", () => {
+  it("getBalance funciona com session client via RLS", async () => {
+    mockGetBalanceResult(8);
+
+    const sessionService = new CreditService(mockAdminClient as any);
+    const balance = await sessionService.getBalance(storeId);
+
+    expect(balance).toBe(8);
+    expect(mockFrom).toHaveBeenCalledWith("credit_balances");
+  });
+
+  it("countCreditTransactions retorna total excluindo adjustment", async () => {
+    mockEqTx.mockReturnValue({ count: 15, error: null });
+    mockNeqTx.mockReturnValue({ eq: mockEqTx });
+    mockSelectTx.mockReturnValue({ neq: mockNeqTx });
+
+    const sessionService = new CreditService(mockAdminClient as any);
+    const count = await sessionService.countCreditTransactions(storeId);
+
+    expect(count).toBe(15);
+    expect(mockNeqTx).toHaveBeenCalledWith("type", "adjustment");
+  });
+
+  it("getHistory filtra adjustment com session client", async () => {
+    const mockTxs = [
+      {
+        id: "tx-session-1",
+        store_id: storeId,
+        type: "grant",
+        amount: 10,
+        balance_before: 0,
+        balance_after: 10,
+        campaign_id: null,
+        reason: "teste",
+        reference: null,
+        idempotency_key: null,
+        metadata: {},
+        created_at: "2026-07-16T12:00:00Z",
+      },
+    ];
+    mockGetHistoryResult(mockTxs);
+
+    const sessionService = new CreditService(mockAdminClient as any);
+    const result = await sessionService.getHistory(storeId);
+
+    expect(mockNeqTx).toHaveBeenCalledWith("type", "adjustment");
+    expect(result).toHaveLength(1);
+    expect(result[0].storeId).toBe(storeId);
+  });
+});
