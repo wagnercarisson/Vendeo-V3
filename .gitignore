@@ -25,3 +25,5 @@ supabase/.temp/
 
 # Scenarios are deterministic; only placeholder images go in this dir
 # Images require rights verification before committing
+.vercel
+.env*

@@ -4,8 +4,8 @@ export interface PipelineEvent {
   campaignId?: string;
   storeId?: string;
   userId?: string;
-  phase?: string;
-  status: string;
+  phase: string;
+  status: "running" | "complete" | "failed";
   durationMs?: number;
   errorCode?: string;
   errorMessage?: string;

@@ -13,7 +13,7 @@ describe("logPipelineEvent", () => {
       traceId: "abc-123",
       phase: "pre_stream",
       status: "running",
-    };
+    } as const;
     logPipelineEvent(event);
     expect(spy).toHaveBeenCalledTimes(1);
     const arg = spy.mock.calls[0][0];
