@@ -549,7 +549,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
             }
 
             // Telemetry — pipeline complete
-            const pipelineCost = copyCost?.estimatedCostUsd ?? 0 + imageCost?.estimatedCostUsd ?? 0;
+            const pipelineCost = (copyCost?.estimatedCostUsd ?? 0) + (imageCost?.estimatedCostUsd ?? 0);
             logPipelineEvent({ event: "pipeline_complete", traceId, phase: "post_parallel", status: "complete", campaignId, storeId, userId: user.userId, durationMs, metadata: { totalCost: generationMetadata.provider } });
             try {
               await supabaseAdmin.from("generation_events").insert({
