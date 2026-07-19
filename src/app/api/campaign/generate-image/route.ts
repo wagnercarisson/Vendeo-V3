@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import crypto from "crypto";
 import { GenerateImageRequestSchema } from "@/lib/image-generation/schema";
 import { IMAGE_GENERATION_GLOBAL_TIMEOUT_MS, MAX_PRODUCT_IMAGE_BASE64_SIZE, IMAGE_GENERATION_RESPONSES_MODEL, COST_PER_GENERATION } from "@/lib/image-generation/config";
 import { ImageGenerationService } from "@/lib/image-generation/services/image-generation-service";
@@ -18,14 +19,29 @@ import { checkRateLimit, recordGenerationAttempt } from "@/lib/rate-limit/rate-l
 import { CreditService } from "@/lib/credit/credit-service";
 import { CopyDirectorService } from "@/lib/copy/copy-director-service";
 import { createTextProvider } from "@/lib/text-provider/factory";
-import { mapBriefToCopyDirectorInput } from "@/lib/copy/mapper";
+import { mapBriefToCopyDirectorInput, buildOfferText } from "@/lib/copy/mapper";
 import type { CopyDirectorResult } from "@/lib/copy/schema";
 import { isRetryableError } from "@/lib/copy/errors";
+import { getLaunchConfig } from "@/lib/launch-config/config";
+import { logPipelineEvent } from "@/lib/logging/pipeline-logger";
+import { estimateAiCost } from "@/lib/ai-cost";
 
 export const runtime = "nodejs";
 
 export const POST = apiHandler(async (request: NextRequest) => {
   requireSameOrigin(request);
+
+  // ── Pre-stream: Launch config + traceId ─────────────────────────
+  const config = getLaunchConfig();
+  const traceId = crypto.randomUUID();
+
+  if (config.generationPaused) {
+    return Response.json(
+      { error: { message: "Geração temporariamente indisponível." } },
+      { status: 503 }
+    );
+  }
+
   // ── Pre-stream: Parse JSON body ──────────────────────────────────
   let body: Record<string, unknown>;
   try {
@@ -137,26 +153,34 @@ export const POST = apiHandler(async (request: NextRequest) => {
   const brief = await buildCampaignBrief(validatedSnapshot, campaignInput as CampaignInput);
 
   // ── Pre-stream: Rate limit guard (no IA, no stream) ────────────
-  const rateLimitResult = await checkRateLimit(storeId);
+  logPipelineEvent({ event: "rate_limit_check", traceId, phase: "pre_stream", status: "running", storeId, userId: user.userId });
+  const rateLimitResult = await checkRateLimit(storeId, { rateLimitEnabled: config.rateLimitEnabled });
   if (!rateLimitResult.allowed) {
+    logPipelineEvent({ event: "rate_limit_check", traceId, phase: "pre_stream", status: "failed", storeId, userId: user.userId, errorCode: rateLimitResult.reason });
     return Response.json(
       { error: "rate_limit_exceeded", retryAfter: rateLimitResult.resetTime ?? "1 hour" },
       { status: 429 }
     );
   }
+  logPipelineEvent({ event: "rate_limit_check", traceId, phase: "pre_stream", status: "complete", storeId, userId: user.userId });
 
   // ── Pre-stream: Record generation attempt ───────────────────────
   await recordGenerationAttempt(storeId, user.userId);
 
   // ── Pre-stream: Balance check (no IA, no stream) ────────────────
+  logPipelineEvent({ event: "balance_check", traceId, phase: "pre_stream", status: "running", storeId, userId: user.userId });
   const creditService = new CreditService(supabaseAdmin);
-  const balance = await creditService.getBalance(storeId);
-  if (balance < COST_PER_GENERATION) {
-    return Response.json(
-      { error: { message: "Saldo insuficiente. São necessários créditos para gerar uma campanha." } },
-      { status: 402 }
-    );
+  if (config.creditsChargingEnabled) {
+    const balance = await creditService.getBalance(storeId);
+    if (balance < COST_PER_GENERATION) {
+      logPipelineEvent({ event: "balance_check", traceId, phase: "pre_stream", status: "failed", storeId, userId: user.userId, errorCode: "insufficient_balance" });
+      return Response.json(
+        { error: { message: "Saldo insuficiente. São necessários créditos para gerar uma campanha." } },
+        { status: 402 }
+      );
+    }
   }
+  logPipelineEvent({ event: "balance_check", traceId, phase: "pre_stream", status: "complete", storeId, userId: user.userId });
 
   // ── Pre-stream: Input validation for conflict/confidence ─────────
   if (!parsed.data.inputValidationOverride?.productImageCheck) {
@@ -217,6 +241,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
   }
 
   // ── Pre-stream: Create campaign record (generating status) ─────
+  logPipelineEvent({ event: "campaign_create", traceId, phase: "pre_stream", status: "running", storeId, userId: user.userId });
   let campaignId: string | undefined;
   let storagePath: string | undefined;
   try {
@@ -248,7 +273,9 @@ export const POST = apiHandler(async (request: NextRequest) => {
     });
     campaignId = campaign.id;
     storagePath = campaign.storagePath;
+    logPipelineEvent({ event: "campaign_create", traceId, phase: "pre_stream", status: "complete", campaignId: campaign.id, storeId, userId: user.userId });
   } catch (err) {
+    logPipelineEvent({ event: "campaign_create", traceId, phase: "pre_stream", status: "failed", storeId, userId: user.userId, errorMessage: err instanceof Error ? err.message : String(err) });
     console.error(`[generate-image] createCampaign error — ${err instanceof Error ? err.message : String(err)}`);
     return Response.json(
       { error: { message: "Erro ao iniciar registro da campanha." } },
@@ -258,23 +285,27 @@ export const POST = apiHandler(async (request: NextRequest) => {
 
   // ── Pre-stream: Reserve credit before IA ────────────────────────
   let creditTxId: string | undefined;
-  try {
-    creditTxId = await creditService.reserveCredit(storeId, COST_PER_GENERATION, {
-      campaignId,
-      idempotencyKey: `reserve_${campaignId}`,
-    });
-  } catch (err: unknown) {
-    // Clean up campaign if reservation fails
-    try { await deleteCampaignImage(storagePath!); } catch { /* ignore */ }
-    try { await supabaseAdmin.from("campaigns").delete().eq("id", campaignId); } catch { /* ignore */ }
-    const message = err && typeof err === "object" && "message" in err
-      ? (err as { message: string }).message
-      : "Erro ao reservar crédito";
-    console.error(`[generate-image] reserveCredit error — ${message}`);
-    return Response.json(
-      { error: { message: message.includes("saldo_insuficiente") ? "Saldo insuficiente." : "Erro ao processar pagamento." } },
-      { status: message.includes("saldo_insuficiente") ? 402 : 500 }
-    );
+  if (config.creditsChargingEnabled) {
+    logPipelineEvent({ event: "credit_reserve", traceId, phase: "pre_stream", status: "running", campaignId, storeId, userId: user.userId });
+    try {
+      creditTxId = await creditService.reserveCredit(storeId, COST_PER_GENERATION, {
+        campaignId,
+        idempotencyKey: `reserve_${campaignId}`,
+      });
+      logPipelineEvent({ event: "credit_reserve", traceId, phase: "pre_stream", status: "complete", campaignId, storeId, userId: user.userId });
+    } catch (err: unknown) {
+      logPipelineEvent({ event: "credit_reserve", traceId, phase: "pre_stream", status: "failed", campaignId, storeId, userId: user.userId, errorMessage: err instanceof Error ? err.message : String(err) });
+      try { await deleteCampaignImage(storagePath!); } catch { /* ignore */ }
+      try { await supabaseAdmin.from("campaigns").delete().eq("id", campaignId); } catch { /* ignore */ }
+      const message = err && typeof err === "object" && "message" in err
+        ? (err as { message: string }).message
+        : "Erro ao reservar crédito";
+      console.error(`[generate-image] reserveCredit error — ${message}`);
+      return Response.json(
+        { error: { message: message.includes("saldo_insuficiente") ? "Saldo insuficiente." : "Erro ao processar pagamento." } },
+        { status: message.includes("saldo_insuficiente") ? 402 : 500 }
+      );
+    }
   }
 
   const startTime = performance.now();
@@ -311,7 +342,25 @@ export const POST = apiHandler(async (request: NextRequest) => {
 
       // Copy Director task with retry Gemini fallback
       const copyTask = async (): Promise<void> => {
+        logPipelineEvent({ event: "copy_generation", traceId, phase: "parallel", status: "running", campaignId, storeId, userId: user.userId });
         try {
+          if (!config.copyDirectorEnabled) {
+            const offerText = buildOfferText({
+              badgeText: campaignInput.badgeText,
+              originalPriceCents: campaignInput.originalPriceCents,
+              discountedPriceCents: campaignInput.discountedPriceCents,
+            });
+            copyResult = {
+              title: campaignInput.productName,
+              caption: `${campaignInput.productName} — ${offerText}`,
+              cta_post: "Aproveite!",
+              hashtags: [],
+            };
+            emitPhase("copy_generation", "complete", "Texto determinístico (flag desligada)");
+            logPipelineEvent({ event: "copy_generation", traceId, phase: "parallel", status: "complete", campaignId, storeId, userId: user.userId, metadata: { fallback: "deterministic" } });
+            return;
+          }
+
           const primaryProvider = createTextProvider("openai");
           const copyDirector = new CopyDirectorService(primaryProvider);
 
@@ -353,9 +402,11 @@ export const POST = apiHandler(async (request: NextRequest) => {
           }
 
           emitPhase("copy_generation", "complete", "Texto da campanha gerado");
+          logPipelineEvent({ event: "copy_generation", traceId, phase: "parallel", status: "complete", campaignId, storeId, userId: user.userId });
         } catch (err) {
           copyError = err instanceof Error ? err : new Error(String(err));
           emitPhase("copy_generation", "failed", copyError.message);
+          logPipelineEvent({ event: "copy_generation", traceId, phase: "parallel", status: "failed", campaignId, storeId, userId: user.userId, errorMessage: copyError.message });
           // Abort remaining branch
           streamAbortController.abort();
         }
@@ -363,6 +414,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
 
       // Image Director task
       const imageTask = async (): Promise<void> => {
+        logPipelineEvent({ event: "image_generation", traceId, phase: "parallel", status: "running", campaignId, storeId, userId: user.userId });
         try {
           emitPhase("image_generation", "running", "Gerando arte com IA...");
 
@@ -372,12 +424,14 @@ export const POST = apiHandler(async (request: NextRequest) => {
 
           if (imageResult.success) {
             emitPhase("image_generation", "complete", "Arte gerada com sucesso");
+            logPipelineEvent({ event: "image_generation", traceId, phase: "parallel", status: "complete", campaignId, storeId, userId: user.userId });
           } else {
             throw new Error(imageResult.message || "Falha na geração de imagem");
           }
         } catch (err) {
           imageError = err instanceof Error ? err : new Error(String(err));
           emitPhase("image_generation", "failed", imageError.message);
+          logPipelineEvent({ event: "image_generation", traceId, phase: "parallel", status: "failed", campaignId, storeId, userId: user.userId, errorMessage: imageError.message });
           // Abort remaining branch
           streamAbortController.abort();
         }
@@ -402,12 +456,14 @@ export const POST = apiHandler(async (request: NextRequest) => {
         // ── ZONA PÓS-PARALELO: Evaluation ─────────────────────────
         if (!copyError && !imageError && imageResult?.success && copyResult) {
           // Both succeeded — merge and persist
+          logPipelineEvent({ event: "merge", traceId, phase: "post_parallel", status: "running", campaignId, storeId, userId: user.userId });
           let uploadSucceeded = false;
           try {
             const { buffer, mimeType } = dataUrlToCampaignImage(imageResult.imageDataUrl);
             const jpegImage = await transcodeToJpeg(buffer, mimeType);
             await uploadCampaignImage(storeId, campaignId!, jpegImage);
             uploadSucceeded = true;
+            logPipelineEvent({ event: "upload", traceId, phase: "post_parallel", status: "complete", campaignId, storeId, userId: user.userId });
 
             const durationMs = Math.round(performance.now() - startTime);
             const generationMetadata: Record<string, unknown> = {
@@ -439,18 +495,74 @@ export const POST = apiHandler(async (request: NextRequest) => {
               renderSnapshot,
               publicationCopySnapshot,
             });
+            logPipelineEvent({ event: "update_ready", traceId, phase: "post_parallel", status: "complete", campaignId, storeId, userId: user.userId });
 
             // Credit confirmed (no-op in v1.5)
+            logPipelineEvent({ event: "credit_confirm", traceId, phase: "post_parallel", status: "running", campaignId, storeId, userId: user.userId });
             try { await creditService.confirmCredit(creditTxId!); } catch { /* ignore */ }
+            logPipelineEvent({ event: "credit_confirm", traceId, phase: "post_parallel", status: "complete", campaignId, storeId, userId: user.userId });
 
             emit({
               type: "result",
               campaignId: campaignId!,
               campaignUrl: `/campanhas/${campaignId}`,
             });
+
+            // Telemetry — copy generation
+            try {
+              await supabaseAdmin.from("generation_events").insert({
+                generation_type: "campaign_copy",
+                store_id: storeId,
+                user_id: user.userId,
+                campaign_id: campaignId,
+                provider: "openai",
+                status: "success",
+                trace_id: traceId,
+                phase: "copy_generation",
+              });
+            } catch (e) {
+              console.error("[telemetry] copy insert failed", e instanceof Error ? e.message : String(e));
+            }
+
+            // Telemetry — image generation
+            try {
+              await supabaseAdmin.from("generation_events").insert({
+                generation_type: "campaign_image",
+                store_id: storeId,
+                user_id: user.userId,
+                campaign_id: campaignId,
+                provider: provider.name,
+                model: IMAGE_GENERATION_RESPONSES_MODEL,
+                status: "success",
+                duration_ms: durationMs,
+                trace_id: traceId,
+                phase: "image_generation",
+              });
+            } catch (e) {
+              console.error("[telemetry] image insert failed", e instanceof Error ? e.message : String(e));
+            }
+
+            // Telemetry — pipeline complete
+            logPipelineEvent({ event: "pipeline_complete", traceId, phase: "post_parallel", status: "complete", campaignId, storeId, userId: user.userId, durationMs, metadata: { totalCost: generationMetadata.provider } });
+            try {
+              await supabaseAdmin.from("generation_events").insert({
+                generation_type: "campaign_pipeline",
+                store_id: storeId,
+                user_id: user.userId,
+                campaign_id: campaignId,
+                status: "success",
+                duration_ms: durationMs,
+                trace_id: traceId,
+                phase: "pipeline_complete",
+                metadata: { provider: provider.name, model: IMAGE_GENERATION_RESPONSES_MODEL },
+              });
+            } catch (e) {
+              console.error("[telemetry] pipeline insert failed", e instanceof Error ? e.message : String(e));
+            }
           } catch (err) {
             const errorMessage = err instanceof Error ? err.message : String(err);
             console.error(`[generate-image] persistence error — ${errorMessage}`);
+            logPipelineEvent({ event: "merge", traceId, phase: "post_parallel", status: "failed", campaignId, storeId, userId: user.userId, errorMessage });
 
             if (uploadSucceeded) {
               try { await deleteCampaignImage(storagePath!); } catch { /* ignore */ }
@@ -459,7 +571,9 @@ export const POST = apiHandler(async (request: NextRequest) => {
             try { await updateCampaignError(campaignId!, errorMessage); } catch { /* ignore */ }
 
             // Refund credit
+            logPipelineEvent({ event: "credit_refund", traceId, phase: "post_parallel", status: "running", campaignId, storeId, userId: user.userId });
             try { await creditService.refundCredit(creditTxId!, "persistence_failure", { idempotencyKey: `refund_${creditTxId}` }); } catch { /* ignore */ }
+            logPipelineEvent({ event: "credit_refund", traceId, phase: "post_parallel", status: "complete", campaignId, storeId, userId: user.userId });
 
             emit({
               type: "error",
@@ -474,8 +588,11 @@ export const POST = apiHandler(async (request: NextRequest) => {
         } else {
           // One or both failed — refund
           const errorMessage = copyError?.message ?? imageError?.message ?? "Erro na geração";
+          logPipelineEvent({ event: "generation_failed", traceId, phase: "post_parallel", status: "failed", campaignId, storeId, userId: user.userId, errorMessage });
           try { await updateCampaignError(campaignId!, errorMessage); } catch { /* ignore */ }
+          logPipelineEvent({ event: "credit_refund", traceId, phase: "post_parallel", status: "running", campaignId, storeId, userId: user.userId });
           try { await creditService.refundCredit(creditTxId!, "generation_failure", { idempotencyKey: `refund_${creditTxId}` }); } catch { /* ignore */ }
+          logPipelineEvent({ event: "credit_refund", traceId, phase: "post_parallel", status: "complete", campaignId, storeId, userId: user.userId });
 
           emit({
             type: "error",
@@ -486,11 +603,31 @@ export const POST = apiHandler(async (request: NextRequest) => {
             httpStatus: 502,
             retryable: false,
           });
+
+          // Telemetry — pipeline failed
+          try {
+            await supabaseAdmin.from("generation_events").insert({
+              generation_type: "campaign_pipeline",
+              store_id: storeId,
+              user_id: user.userId,
+              campaign_id: campaignId,
+              status: "failed",
+              trace_id: traceId,
+              phase: "pipeline_complete",
+              metadata: { error: errorMessage },
+            });
+          } catch (e) {
+            console.error("[telemetry] pipeline failure insert failed", e instanceof Error ? e.message : String(e));
+          }
         }
       } catch (err) {
         // Catch errors from Promise.all itself (e.g., AbortError)
-        try { await updateCampaignError(campaignId!, err instanceof Error ? err.message : String(err)); } catch { /* ignore */ }
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        logPipelineEvent({ event: "generation_aborted", traceId, phase: "post_parallel", status: "failed", campaignId, storeId, userId: user.userId, errorMessage });
+        try { await updateCampaignError(campaignId!, errorMessage); } catch { /* ignore */ }
+        logPipelineEvent({ event: "credit_refund", traceId, phase: "post_parallel", status: "running", campaignId, storeId, userId: user.userId });
         try { await creditService.refundCredit(creditTxId!, "generation_aborted", { idempotencyKey: `refund_${creditTxId}` }); } catch { /* ignore */ }
+        logPipelineEvent({ event: "credit_refund", traceId, phase: "post_parallel", status: "complete", campaignId, storeId, userId: user.userId });
 
         const isTimeout = err instanceof DOMException && err.name === "AbortError";
         emit({

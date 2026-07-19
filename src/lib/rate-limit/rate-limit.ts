@@ -5,7 +5,14 @@ import type { RateLimitResult } from "./types";
 const MAX_HOURLY = 10;
 const MAX_DAILY = 30;
 
-export async function checkRateLimit(storeId: string): Promise<RateLimitResult> {
+export async function checkRateLimit(
+  storeId: string,
+  options?: { rateLimitEnabled?: boolean }
+): Promise<RateLimitResult> {
+  if (options?.rateLimitEnabled === false) {
+    return { allowed: true, remaining: { hourly: Infinity, daily: Infinity } };
+  }
+
   const now = new Date();
 
   const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
