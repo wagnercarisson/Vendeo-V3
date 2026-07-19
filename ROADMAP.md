@@ -73,10 +73,10 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - Wave 1: 26-01 — Migration + Gate + Middleware + Layout
   - Wave 2: 26-02 — API Routes + Páginas Admin
   - Wave 3: 26-03 — Testes e Verificação (21+)
-- [ ] Phase 27: Conta e Saldo Visível + Extrato (3 plans planned)
+- [x] Phase 27: Conta + Saldo Visível + Extrato (3 plans ✅)
   - Wave 1: 27-01 — CreditService Session + BalanceDisplay + BalanceCard
   - Wave 2: 27-02 — TransactionHistory + CreditCta + Dashboard + /conta + Geração
-  - Wave 3: 27-03 — Testes e Verificação (19+ testes)
+  - Wave 3: 27-03 — Testes e Verificação (20 novos testes, 852 total)
 - [ ] Phase 28: Observabilidade + Operação + Launch Controls (planned)
 - [ ] Phase 29: Refinamento Visual + UAT + Launch Readiness (planned)
 
@@ -112,7 +112,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 24. Créditos — Schema, Saldo e Transações | v1.5 | 2/2 | ✅ Complete | 2026-07-16 |
 | 25. Pipeline de Geração v1.5 | v1.5 | 3/3 | ✅ Complete | 2026-07-17 |
 | 26. Admin Operacional + Convites + Créditos Manuais | v1.5 | 3/3 | ✅ Complete | 2026-07-18 |
-| 27. Conta e Saldo Visível + Extrato | v1.5 | 3/0 | △ Planned | — |
+| 27. Conta e Saldo Visível + Extrato | v1.5 | 3/3 | ✅ Complete | 2026-07-18 |
 | 28. Observabilidade + Operação + Launch Controls | v1.5 | 0/0 | △ Planned | — |
 | 29. Refinamento Visual + UAT + Launch Readiness | v1.5 | 0/0 | △ Planned | — |
 
