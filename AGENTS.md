@@ -74,19 +74,19 @@ Use these entry points:
 
 Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
 
-## Phase 8 — Ciclo de Conta
+## Phase 28 — Observabilidade + Operação + Launch Controls
 
-**Status:** 3/4 plans executed — UAT (08-04) pending manual intervention
+**Status:** 4/4 plans planned — Ready for implementation
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
-| 08-01 | 1 | ✓ | Setup & Middleware Expansion |
-| 08-02 | 2 | ✓ | Pages & Route Handler |
-| 08-03 | 3 | ✓ | Tests (383 passing) |
-| 08-04 | 4 | ○ | UAT — Local & Online (manual) |
+| 28-01 | 1 | △ | Fundação — Launch Config + AI Cost Estimator + Pipeline Logger |
+| 28-02 | 2 | △ | Migrations + Pipeline Integration + Rate Limit |
+| 28-03 | 3 | △ | Pipeline Metrics + Admin Dashboard + Documentation |
+| 28-04 | 4 | △ | Testes e Verificação — Concorrência, Telemetria, Regressão + UAT |
 
-**Change artifacts (source of truth):** `openspec/changes/fase-8-ciclo-de-conta/`
-**Context:** `.planning/phases/08-ciclo-de-conta/CONTEXT.md`
+**Change artifacts (source of truth):** `openspec/changes/fase-28-observabilidade-operacao-launch-controls/`
+**Context:** `.planning/phases/28-observabilidade-operacao-launch-controls/28-CONTEXT.md`
 **State:** `.planning/STATE.md`
 **Roadmap:** `ROADMAP.md`
 <!-- GSD:workflow-end -->

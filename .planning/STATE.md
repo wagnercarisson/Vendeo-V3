@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: "Lançamento Externo Controlado — Créditos + Admin + Saldo + Observabilidade + Launch"
 status: active
-last_updated: "2026-07-18T19:15:00.000Z"
-last_activity: 2026-07-18
+last_updated: "2026-07-19T15:43:00.000Z"
+last_activity: 2026-07-19
 progress:
   total_phases: 7
   completed_phases: 6
@@ -15,7 +15,7 @@ progress:
 
 # Project State
 
-**Last updated:** 2026-07-17
+**Last updated:** 2026-07-19
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆
 
 ## Completed
@@ -307,16 +307,16 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 27 — Conta + Saldo Visível + Extrato ✅
-Plan: 3/3 plans — Completo
-Status: Implementado e verificado
+Phase: 28 — Observabilidade + Operação + Launch Controls △
+Plan: 4/4 plans — Planned
+Status: Pronto para implementação. Contexto e planos gerados do OpenSpec.
 
 ### Next Phases
 
 | Phase | Status | Description |
 |-------|--------|-------------|
-| F27 | ✅ Completed | Conta + Saldo Visível + Extrato (3 plans, 20 testes) |
-| F28 | △ Planned | Observabilidade + Operação + Launch Controls |
+| F27 | ✅ Completed | Conta + Saldo Visível + Extrato (3 plans, 20 testes, 852 total) |
+| F28 | △ Planned | Observabilidade + Operação + Launch Controls (4 plans, 28+ testes) |
 | F29 | △ Planned | Refinamento Visual + UAT + Launch Readiness |
 | F30/v1.6 | △ Future | Stripe / Monetização Pública (pós-beta) |
 
