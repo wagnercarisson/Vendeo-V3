@@ -40,20 +40,24 @@
 
 ### Conta e Saldo Visível (UI-CREDIT)
 
-- [ ] **UI-01**: Credit balance visible in topbar (app shell) — server-side lookup
-- [ ] **UI-02**: Credits section in `/conta` — balance card, transaction history
-- [ ] **UI-03**: Zero-credit CTA during beta — "Solicitar créditos" / "Fale com o time" (não Stripe)
-- [ ] **UI-04**: Extrato paginado (credit_transactions history with all types except adjustment)
-- [ ] **UI-05**: Onboarding grant: 5 free credits on store creation (POST /api/store integration)
-- [ ] **UI-06**: Zero-credit states: tooltip, disabled button, CTA to request credits — product never blocks entirely
+- [x] **UI-01**: Credit balance visible in dashboard metrics grid (contextual, not global — D1)
+- [x] **UI-02**: Credits section in `/conta` — balance card, transaction history
+- [x] **UI-03**: Zero-credit CTA during beta — "Solicitar créditos" / "Fale com o time" (não Stripe)
+- [x] **UI-04**: Extrato paginado (credit_transactions history with all types except adjustment)
+- [x] **UI-05**: Onboarding grant: 5 free credits on store creation (POST /api/store integration)
+- [x] **UI-06**: Zero-credit states: tooltip, disabled button, CTA to request credits — product never blocks entirely
 
 ### Observabilidade e Operação (OPS)
 
-- [ ] **OPS-01**: Structured logging in pipeline (campaignId, phase, duration_ms, status)
+- [ ] **OPS-01**: Structured logging in pipeline (traceId, campaignId, phase, duration_ms, status)
 - [ ] **OPS-02**: IA telemetry (tokens, cost, model, provider) in generation_events
 - [ ] **OPS-03**: Deploy checklist, rollback process, environment variables documented
 - [ ] **OPS-04**: Support runbook (manual grant via admin, refund, balance check)
-- [ ] **OPS-05**: Feature flag v1.5-credits-enabled for safe rollout
+- [ ] **OPS-05**: Launch config centralizado — 5 flags (v15Enabled, creditsChargingEnabled, copyDirectorEnabled, rateLimitEnabled, generationPaused) lidas via helper único, zero process.env espalhado
+- [ ] **OPS-06**: Admin metrics dashboard — /admin/metrics com cards (sucesso, erro, custo, tempo, créditos, estorno, users) + health state banner
+- [ ] **OPS-07**: AI cost estimator — estimateAiCost() com tabela de preços OpenAI + Gemini
+- [ ] **OPS-08**: Data retention cleanup (90d) — função SQL versionada + runbook manual; auto-job planejado para D+30
+- [ ] **OPS-09**: Concurrency test — 2 requests simultâneos, saldo=1, apenas um vence
 
 ### Refinamento Visual e Launch Readiness (LAUNCH)
 
@@ -141,17 +145,21 @@ Deferred to future release. Tracked but not in current roadmap.
 | ADMIN-04 | Phase 26 | ✅ Complete |
 | ADMIN-05 | Phase 26 | ✅ Complete |
 | ADMIN-06 | Phase 26 | ✅ Complete |
-| UI-01 | Phase 27 | In Progress |
-| UI-02 | Phase 27 | In Progress |
-| UI-03 | Phase 27 | In Progress |
-| UI-04 | Phase 27 | In Progress |
-| UI-05 | Phase 27 | In Progress |
-| UI-06 | Phase 27 | In Progress |
+| UI-01 | Phase 27 | ✅ Complete |
+| UI-02 | Phase 27 | ✅ Complete |
+| UI-03 | Phase 27 | ✅ Complete |
+| UI-04 | Phase 27 | ✅ Complete |
+| UI-05 | Phase 27 | ✅ Complete |
+| UI-06 | Phase 27 | ✅ Complete |
 | OPS-01 | Phase 28 | Planned |
 | OPS-02 | Phase 28 | Planned |
 | OPS-03 | Phase 28 | Planned |
 | OPS-04 | Phase 28 | Planned |
 | OPS-05 | Phase 28 | Planned |
+| OPS-06 | Phase 28 | Planned |
+| OPS-07 | Phase 28 | Planned |
+| OPS-08 | Phase 28 | Planned |
+| OPS-09 | Phase 28 | Planned |
 | SEC-04 | Phase 26 | Planned |
 | SEC-06 | Phase 26 | Planned |
 | LAUNCH-01 | Phase 29 | Planned |
@@ -166,7 +174,7 @@ Deferred to future release. Tracked but not in current roadmap.
 | SEC-05 | Phase 29 | Planned |
 
 **Coverage:**
-- v1 requirements: 44 total
+- v1 requirements: 48 total
 - Mapped to phases: 44
 - Unmapped: 0 ✓
 - Deferred to v1.6: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06

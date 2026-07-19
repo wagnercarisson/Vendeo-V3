@@ -17,7 +17,7 @@
 | 25 | Pipeline de Geração v1.5 | Copy Director + créditos integrados no generate-image | PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, PIPE-06 | 6 |
 | 26 | ✅ Admin Operacional + Convites + Créditos Manuais | Console de suporte para operar o beta controlado | ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-04, ADMIN-05, ADMIN-06, SEC-04, SEC-06 | 8 ✅ |
 | 27 | ✅ Conta + Saldo Visível + Extrato | UI de créditos no app shell e /conta (sem Stripe) | UI-01, UI-02, UI-03, UI-04, UI-05, UI-06 | 6 ✅ |
-| 28 | Observabilidade + Operação + Launch Controls | Operação pronta para lançamento controlado | OPS-01, OPS-02, OPS-03, OPS-04, OPS-05 | 5 |
+| 28 | Observabilidade + Operação + Launch Controls | Pipeline instrumentado, launch config centralizado, dashboard operacional, docs de deploy/suporte | OPS-01, OPS-02, OPS-03, OPS-04, OPS-05, OPS-06, OPS-07, OPS-08, OPS-09 | 9 |
 | 29 | Refinamento + UAT + Launch Readiness | Produto polido e pronto para beta externo | LAUNCH-01, LAUNCH-02, LAUNCH-03, LAUNCH-04, LAUNCH-05, LAUNCH-06, SEC-01, SEC-02, SEC-03, SEC-05 | 10 |
 
 ---
@@ -113,21 +113,27 @@
 
 ---
 
-### Phase 28 — Observabilidade + Deploy + Operação
+### Phase 28 — Observabilidade + Operação + Launch Controls
 
-**Goal:** Operação pronta para lançamento externo controlado.
+**Goal:** Operação pronta para lançamento externo controlado. Pipeline instrumentado com logs estruturados, telemetria de IA persistida, feature flags centralizadas, dashboard operacional, documentação de deploy/suporte e testes de concorrência.
 
-**Requirements:** OPS-01, OPS-02, OPS-03, OPS-04, OPS-05
+**Requirements:** OPS-01, OPS-02, OPS-03, OPS-04, OPS-05, OPS-06, OPS-07, OPS-08, OPS-09
 
 **Success criteria:**
-1. Every pipeline stage logs campaignId, phase, duration_ms, status
-2. IA telemetry (tokens, cost, model, provider) persisted in generation_events
-3. Deploy checklist and rollback process documented and tested
-4. Support runbook covers manual grant, refund, balance check
-5. Feature flag v1.5-credits-enabled controls rollout
-6. Data retention cleanup (90d) documented as manual runbook; auto-job planned for D+30
+1. Launch config centralizado com 5 flags (v15Enabled, creditsChargingEnabled, copyDirectorEnabled, rateLimitEnabled, generationPaused) lidas via helper único — zero `process.env` espalhado
+2. Every pipeline stage logs via `logPipelineEvent()` com traceId, campaignId, phase, duration_ms, status — JSON estruturado, fire-and-forget, sem dados sensíveis
+3. IA telemetry (tokens, cost, model, provider) persisted in generation_events via expansão (CHECK constraint + colunas) — best-effort, nunca bloqueia o pipeline
+4. Helper `estimateAiCost()` para custo estimado por provider/modelo (OpenAI + Gemini)
+5. Dashboard `/admin/metrics` com cards de métricas (sucesso, erro, custo, tempo, créditos, estorno, users) + health state banner (healthy/attention/pause)
+6. Deploy checklist, support runbook e catálogo de environment variables documentados em `docs/operations/`
+7. Feature flags verificadas no pipeline: `generationPaused` → 503, `v15Enabled` → v1.4 fallback, `rateLimitEnabled` → bypass, `creditsChargingEnabled` → sem saldo check, `copyDirectorEnabled` → fallback determinístico
+8. Função SQL `cleanup_generation_events_90d()` versionada + runbook manual; job automático adiado para D+30
+9. Testes de concorrência (2 requests simultâneos, saldo=1, apenas um vence) + telemetria + regressão master switch/emergency brake
+10. Nenhuma nova tabela — apenas ALTER CHECK + ADD COLUMNS em generation_events
 
-**Dependencies:** Phase 27
+**Dependencies:** Phase 24 (credit_balances, credit_transactions, CreditService), Phase 25 (generation_rate_events, rate-limit, pipeline route), Phase 26 (admin layout, admin gate)
+
+**Source of truth:** `openspec/changes/fase-28-observabilidade-operacao-launch-controls/`
 
 ---
 
@@ -213,6 +219,10 @@ Phase 24 (Credit Tables + CreditService) ──┘
 | OPS-03 | Phase 28 | Planned |
 | OPS-04 | Phase 28 | Planned |
 | OPS-05 | Phase 28 | Planned |
+| OPS-06 | Phase 28 | Planned |
+| OPS-07 | Phase 28 | Planned |
+| OPS-08 | Phase 28 | Planned |
+| OPS-09 | Phase 28 | Planned |
 | SEC-04 | Phase 26 | Done ✓ |
 | SEC-06 | Phase 26 | Done ✓ |
 | LAUNCH-01 | Phase 29 | Planned |
@@ -229,9 +239,9 @@ Phase 24 (Credit Tables + CreditService) ──┘
 **Coverage:**
 - v1 requirements: 44 total
 - Mapped to phases: 44
-- Completed: 20 (CRED-01–05, PIPE-01–06, ADMIN-01–06, SEC-04, SEC-06, UI-01–06)
+- Completed: 26 (CRED-01–05, PIPE-01–06, ADMIN-01–06, SEC-04, SEC-06, UI-01–06)
 - Unmapped: 0 ✓
-- Deferred to v1.6: PAY-01, PAY-02, PAY-03, PAY-04
+- Deferred to v1.6: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06
 
 ---
 *Roadmap created: 2026-07-15*
