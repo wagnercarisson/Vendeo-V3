@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: "Lançamento Externo Controlado — Créditos + Admin + Saldo + Observabilidade + Launch"
 status: active
-last_updated: "2026-07-19T15:43:00.000Z"
+last_updated: "2026-07-19T16:13:00.000Z"
 last_activity: 2026-07-19
 progress:
   total_phases: 7
-  completed_phases: 6
-  total_plans: 16
-  completed_plans: 16
+  completed_phases: 7
+  total_plans: 20
+  completed_plans: 20
   percent: 100
 ---
 
@@ -284,6 +284,30 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 - `0d61e9a` — 27-02: TransactionHistory + CreditCta + Dashboard + /conta + Geração flow
 - `aa136e0` — 27-03: Testes e Verificação (20 novos testes, 852 total)
 
+## Completed
+
+### Phase 28 — Observabilidade + Operação + Launch Controls ✅
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 28-01 | 1 | ✅ | Fundação — Launch Config, AI Cost Estimator, Pipeline Logger (3 módulos, 16 testes) |
+| 28-02 | 2 | ✅ | Migrations + Pipeline Integration + Rate Limit (2 SQL, pipeline instrumentado) |
+| 28-03 | 3 | ✅ | Pipeline Metrics + Admin Dashboard + Documentação (7 funções, 3 docs) |
+| 28-04 | 4 | ✅ | Testes e Verificação — Concorrência, Telemetria, Regressão + UAT (7+28 testes) |
+
+**Requirements:** OPS-01 a OPS-09
+**Tests:** 889 passing (116 files, 37 novos)
+**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
+**Commits:**
+- `30f35c7` — 28-01: launch config + AI cost estimator + pipeline logger — 16 tests
+- `246df41` — 28-02: migrations + pipeline integration + rate limit bypass
+- `24d2359` — 28-03: pipeline metrics + admin dashboard + operations docs
+- `991de75` — 28-04: concurrency, telemetry, and regression tests
+
+**Context:** `.planning/phases/28-observabilidade-operacao-launch-controls/28-CONTEXT.md`
+
+---
+
 ### Phase 25 — Integração Transacional Pipeline ✅
 
 | Plan | Wave | Status | Description |
@@ -307,16 +331,16 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 28 — Observabilidade + Operação + Launch Controls △
-Plan: 4/4 plans — Planned
-Status: Pronto para implementação. Contexto e planos gerados do OpenSpec.
+Phase: 28 — Observabilidade + Operação + Launch Controls ✅
+Plan: 4/4 plans — Complete
+Status: Implementado. 37 novos testes, 889 total, 116 test files. Operações documentadas.
 
 ### Next Phases
 
 | Phase | Status | Description |
 |-------|--------|-------------|
 | F27 | ✅ Completed | Conta + Saldo Visível + Extrato (3 plans, 20 testes, 852 total) |
-| F28 | △ Planned | Observabilidade + Operação + Launch Controls (4 plans, 28+ testes) |
+| F28 | ✅ Completed | Observabilidade + Operação + Launch Controls (4 plans, 37+ testes, 889 total) |
 | F29 | △ Planned | Refinamento Visual + UAT + Launch Readiness |
 | F30/v1.6 | △ Future | Stripe / Monetização Pública (pós-beta) |
 
