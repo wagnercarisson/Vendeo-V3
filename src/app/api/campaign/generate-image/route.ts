@@ -509,6 +509,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
             });
 
             // Telemetry — copy generation
+            const copyCost = estimateAiCost({ provider: "openai", model: "gpt-4o" });
             try {
               await supabaseAdmin.from("generation_events").insert({
                 generation_type: "campaign_copy",
@@ -516,15 +517,19 @@ export const POST = apiHandler(async (request: NextRequest) => {
                 user_id: user.userId,
                 campaign_id: campaignId,
                 provider: "openai",
+                model: "gpt-4o",
                 status: "success",
+                estimated_cost_usd: copyCost?.estimatedCostUsd ?? null,
                 trace_id: traceId,
                 phase: "copy_generation",
+                duration_ms: durationMs,
               });
             } catch (e) {
               console.error("[telemetry] copy insert failed", e instanceof Error ? e.message : String(e));
             }
 
             // Telemetry — image generation
+            const imageCost = estimateAiCost({ provider: provider.name, model: IMAGE_GENERATION_RESPONSES_MODEL });
             try {
               await supabaseAdmin.from("generation_events").insert({
                 generation_type: "campaign_image",
@@ -534,6 +539,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
                 provider: provider.name,
                 model: IMAGE_GENERATION_RESPONSES_MODEL,
                 status: "success",
+                estimated_cost_usd: imageCost?.estimatedCostUsd ?? null,
                 duration_ms: durationMs,
                 trace_id: traceId,
                 phase: "image_generation",
@@ -543,6 +549,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
             }
 
             // Telemetry — pipeline complete
+            const pipelineCost = copyCost?.estimatedCostUsd ?? 0 + imageCost?.estimatedCostUsd ?? 0;
             logPipelineEvent({ event: "pipeline_complete", traceId, phase: "post_parallel", status: "complete", campaignId, storeId, userId: user.userId, durationMs, metadata: { totalCost: generationMetadata.provider } });
             try {
               await supabaseAdmin.from("generation_events").insert({
@@ -551,6 +558,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
                 user_id: user.userId,
                 campaign_id: campaignId,
                 status: "success",
+                estimated_cost_usd: pipelineCost > 0 ? pipelineCost : null,
                 duration_ms: durationMs,
                 trace_id: traceId,
                 phase: "pipeline_complete",

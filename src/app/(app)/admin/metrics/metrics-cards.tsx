@@ -2,12 +2,6 @@
 
 import type { MetricCard } from "@/lib/metrics/types";
 
-function formatBRL(cents?: number): string {
-  if (cents === undefined || cents === null) return "N/D";
-  const reais = cents / 100;
-  return `R$ ${reais.toFixed(2).replace(".", ",")}`;
-}
-
 function formatDuration(ms: number | null): string {
   if (ms === null || ms === undefined) return "N/D";
   if (ms < 1000) return `${ms}ms`;
