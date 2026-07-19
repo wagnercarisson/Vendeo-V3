@@ -206,7 +206,7 @@ Cards de custo no dashboard convertem USD → BRL usando `VENDEO_USD_BRL_RATE` (
 - `logPipelineEvent()` sanitiza base64 (match `/^[A-Za-z0-9+/=]{100,}$/`) e chaves prompt/Prompt
 - Telemetria INSERT via `supabaseAdmin.from("generation_events").insert()` com try/catch
 - `estimateAiCost()` com tabela de preços: gpt-4o ($2.50/1M input, $10/1M output), gpt-4o-mini, dall-e-3, gemini-2.0-flash
-- Métricas consultam `generation_events` (success_rate, error_rate, avg_cost, avg_duration), `credit_transactions` (credits_granted, refund_rate), `generation_rate_events` (active_users)
+- Métricas consultam `generation_events` (success_rate, error_rate, avg_cost, avg_duration, active_users), `credit_transactions` (credits_granted, refund_rate)
 - Health state = worst-case entre todas as métricas de 24h
 - Dashboard com conversão USD→BRL via `VENDEO_USD_BRL_RATE` (default 5.50)
 - Nenhuma chamada de IA real nos testes — mocks de TextProvider e ImageProvider
