@@ -29,6 +29,9 @@ export default async function AdminLayout({
         <Link href="/admin/campaigns/errors" className="font-medium hover:text-primary">
           Erros
         </Link>
+        <Link href="/admin/metrics" className="font-medium hover:text-primary">
+          Métricas
+        </Link>
         <Link href="/admin/audit-log" className="font-medium hover:text-primary">
           Audit Log
         </Link>
