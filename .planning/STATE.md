@@ -331,17 +331,16 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 28 — Observabilidade + Operação + Launch Controls ✅
-Plan: 4/4 plans — Complete
-Status: Implementado. 37 novos testes, 889 total, 116 test files. Operações documentadas.
+Phase: 29 — Refinamento Visual + UAT + Launch Readiness ◆
+Plan: 0/0 plans — Planning in progress
+Status: Context gathered from OpenSpec source of truth. Planning artifacts being generated.
 
 ### Next Phases
 
 | Phase | Status | Description |
 |-------|--------|-------------|
-| F27 | ✅ Completed | Conta + Saldo Visível + Extrato (3 plans, 20 testes, 852 total) |
 | F28 | ✅ Completed | Observabilidade + Operação + Launch Controls (4 plans, 37+ testes, 889 total) |
-| F29 | △ Planned | Refinamento Visual + UAT + Launch Readiness |
+| F29 | ◆ Planning | Refinamento Visual + UAT + Launch Readiness |
 | F30/v1.6 | △ Future | Stripe / Monetização Pública (pós-beta) |
 
 ### Quick Tasks Completed

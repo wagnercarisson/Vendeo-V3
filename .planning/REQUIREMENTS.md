@@ -49,24 +49,24 @@
 
 ### Observabilidade e Operação (OPS)
 
-- [ ] **OPS-01**: Structured logging in pipeline (traceId, campaignId, phase, duration_ms, status)
-- [ ] **OPS-02**: IA telemetry (tokens, cost, model, provider) in generation_events
-- [ ] **OPS-03**: Deploy checklist, rollback process, environment variables documented
-- [ ] **OPS-04**: Support runbook (manual grant via admin, refund, balance check)
-- [ ] **OPS-05**: Launch config centralizado — 5 flags (v15Enabled, creditsChargingEnabled, copyDirectorEnabled, rateLimitEnabled, generationPaused) lidas via helper único, zero process.env espalhado
-- [ ] **OPS-06**: Admin metrics dashboard — /admin/metrics com cards (sucesso, erro, custo, tempo, créditos, estorno, users) + health state banner
-- [ ] **OPS-07**: AI cost estimator — estimateAiCost() com tabela de preços OpenAI + Gemini
-- [ ] **OPS-08**: Data retention cleanup (90d) — função SQL versionada + runbook manual; auto-job planejado para D+30
-- [ ] **OPS-09**: Concurrency test — 2 requests simultâneos, saldo=1, apenas um vence
+- [x] **OPS-01**: Structured logging in pipeline (traceId, campaignId, phase, duration_ms, status)
+- [x] **OPS-02**: IA telemetry (tokens, cost, model, provider) in generation_events
+- [x] **OPS-03**: Deploy checklist, rollback process, environment variables documented
+- [x] **OPS-04**: Support runbook (manual grant via admin, refund, balance check)
+- [x] **OPS-05**: Launch config centralizado — 5 flags (v15Enabled, creditsChargingEnabled, copyDirectorEnabled, rateLimitEnabled, generationPaused) lidas via helper único, zero process.env espalhado
+- [x] **OPS-06**: Admin metrics dashboard — /admin/metrics com cards (sucesso, erro, custo, tempo, créditos, estorno, users) + health state banner
+- [x] **OPS-07**: AI cost estimator — estimateAiCost() com tabela de preços OpenAI + Gemini
+- [x] **OPS-08**: Data retention cleanup (90d) — função SQL versionada + runbook manual; auto-job planejado para D+30
+- [x] **OPS-09**: Concurrency test — 2 requests simultâneos, saldo=1, apenas um vence
 
 ### Refinamento Visual e Launch Readiness (LAUNCH)
 
-- [ ] **LAUNCH-01**: Loading, empty, error states for all new screens/components
-- [ ] **LAUNCH-02**: Insufficient-credit UX across the app (disabled states, tooltips, microcopy)
-- [ ] **LAUNCH-03**: Mobile hardening for credit flows (viewport 320–768px, touch targets >=44px)
-- [ ] **LAUNCH-04**: UAT externo com 3–5 lojistas reais (convite manual, grant admin, geração, saldo, extrato)
-- [ ] **LAUNCH-05**: Canal de feedback, métricas de saúde, critérios de expansão/pausa documentados
-- [ ] **LAUNCH-06**: Feature flag active and verified in UAT before milestone close
+- [/] **LAUNCH-01**: Loading, empty, error states for all new screens/components
+- [/] **LAUNCH-02**: Insufficient-credit UX across the app (disabled states, tooltips, microcopy)
+- [/] **LAUNCH-03**: Mobile hardening for credit flows (viewport 320–768px, touch targets >=44px)
+- [/] **LAUNCH-04**: UAT externo com 3–5 lojistas reais (convite manual, grant admin, geração, saldo, extrato)
+- [/] **LAUNCH-05**: Canal de feedback, métricas de saúde, critérios de expansão/pausa documentados
+- [/] **LAUNCH-06**: Feature flag active and verified in UAT before milestone close
 
 ### Segurança (SEC)
 
@@ -151,27 +151,27 @@ Deferred to future release. Tracked but not in current roadmap.
 | UI-04 | Phase 27 | ✅ Complete |
 | UI-05 | Phase 27 | ✅ Complete |
 | UI-06 | Phase 27 | ✅ Complete |
-| OPS-01 | Phase 28 | Planned |
-| OPS-02 | Phase 28 | Planned |
-| OPS-03 | Phase 28 | Planned |
-| OPS-04 | Phase 28 | Planned |
-| OPS-05 | Phase 28 | Planned |
-| OPS-06 | Phase 28 | Planned |
-| OPS-07 | Phase 28 | Planned |
-| OPS-08 | Phase 28 | Planned |
-| OPS-09 | Phase 28 | Planned |
-| SEC-04 | Phase 26 | Planned |
-| SEC-06 | Phase 26 | Planned |
-| LAUNCH-01 | Phase 29 | Planned |
-| LAUNCH-02 | Phase 29 | Planned |
-| LAUNCH-03 | Phase 29 | Planned |
-| LAUNCH-04 | Phase 29 | Planned |
-| LAUNCH-05 | Phase 29 | Planned |
-| LAUNCH-06 | Phase 29 | Planned |
-| SEC-01 | Phase 29 | Planned |
-| SEC-02 | Phase 29 | Planned |
-| SEC-03 | Phase 29 | Planned |
-| SEC-05 | Phase 29 | Planned |
+| OPS-01 | Phase 28 | ✅ Complete |
+| OPS-02 | Phase 28 | ✅ Complete |
+| OPS-03 | Phase 28 | ✅ Complete |
+| OPS-04 | Phase 28 | ✅ Complete |
+| OPS-05 | Phase 28 | ✅ Complete |
+| OPS-06 | Phase 28 | ✅ Complete |
+| OPS-07 | Phase 28 | ✅ Complete |
+| OPS-08 | Phase 28 | ✅ Complete |
+| OPS-09 | Phase 28 | ✅ Complete |
+| SEC-04 | Phase 26 | ✅ Complete |
+| SEC-06 | Phase 26 | ✅ Complete |
+| LAUNCH-01 | Phase 29 | Planning |
+| LAUNCH-02 | Phase 29 | Planning |
+| LAUNCH-03 | Phase 29 | Planning |
+| LAUNCH-04 | Phase 29 | Planning |
+| LAUNCH-05 | Phase 29 | Planning |
+| LAUNCH-06 | Phase 29 | Planning |
+| SEC-01 | Phase 24-26 | ✅ Complete (F24 RLS, F26 admin) |
+| SEC-02 | Phase 25-26 | ✅ Complete (F25 pipeline, F26 admin) |
+| SEC-03 | Phase 25 | ✅ Complete (F25 sanitized inputs) |
+| SEC-05 | Phase 25 | ✅ Complete (F25 service role) |
 
 **Coverage:**
 - v1 requirements: 48 total

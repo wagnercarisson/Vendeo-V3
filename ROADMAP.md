@@ -77,8 +77,12 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - Wave 1: 27-01 — CreditService Session + BalanceDisplay + BalanceCard
   - Wave 2: 27-02 — TransactionHistory + CreditCta + Dashboard + /conta + Geração
   - Wave 3: 27-03 — Testes e Verificação (20 novos testes, 852 total)
-- [ ] Phase 28: Observabilidade + Operação + Launch Controls (planned)
-- [ ] Phase 29: Refinamento Visual + UAT + Launch Readiness (planned)
+- [x] Phase 28: Observabilidade + Operação + Launch Controls (4 plans ✅)
+  - Wave 1: 28-01 — Launch Config + AI Cost Estimator + Pipeline Logger (3 módulos, 16 testes)
+  - Wave 2: 28-02 — Migrations + Pipeline Integration + Rate Limit (2 SQL, pipeline instrumentado)
+  - Wave 3: 28-03 — Pipeline Metrics + Admin Dashboard + Documentação (7 funções, 3 docs)
+  - Wave 4: 28-04 — Testes e Verificação — Concorrência, Telemetria, Regressão + UAT (7+28 testes)
+- [ ] Phase 29: Refinamento Visual + UAT + Launch Readiness (planning in progress)
 
 </details>
 
@@ -113,8 +117,8 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 25. Pipeline de Geração v1.5 | v1.5 | 3/3 | ✅ Complete | 2026-07-17 |
 | 26. Admin Operacional + Convites + Créditos Manuais | v1.5 | 3/3 | ✅ Complete | 2026-07-18 |
 | 27. Conta e Saldo Visível + Extrato | v1.5 | 3/3 | ✅ Complete | 2026-07-18 |
-| 28. Observabilidade + Operação + Launch Controls | v1.5 | 0/0 | △ Planned | — |
-| 29. Refinamento Visual + UAT + Launch Readiness | v1.5 | 0/0 | △ Planned | — |
+| 28. Observabilidade + Operação + Launch Controls | v1.5 | 4/4 | ✅ Complete | 2026-07-19 |
+| 29. Refinamento Visual + UAT + Launch Readiness | v1.5 | 0/0 | ◆ Planning | — |
 
 ---
 
