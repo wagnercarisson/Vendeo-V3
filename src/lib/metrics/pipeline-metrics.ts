@@ -9,6 +9,7 @@ export async function getSuccessRate(hours: number): Promise<number | null> {
   const { data, error } = await supabaseAdmin
     .from("generation_events")
     .select("status", { count: "exact", head: false })
+    .eq("generation_type", "campaign_pipeline")
     .gte("created_at", hoursAgo(hours));
 
   if (error || !data || data.length === 0) return null;
@@ -21,6 +22,7 @@ export async function getErrorRate(hours: number): Promise<number | null> {
   const { data, error } = await supabaseAdmin
     .from("generation_events")
     .select("status", { count: "exact", head: false })
+    .eq("generation_type", "campaign_pipeline")
     .gte("created_at", hoursAgo(hours));
 
   if (error || !data || data.length === 0) return 0;
@@ -33,6 +35,7 @@ export async function getAvgCost(hours: number): Promise<number | null> {
   const { data, error } = await supabaseAdmin
     .from("generation_events")
     .select("estimated_cost_usd")
+    .eq("generation_type", "campaign_pipeline")
     .not("estimated_cost_usd", "is", null)
     .gte("created_at", hoursAgo(hours));
 
@@ -46,6 +49,7 @@ export async function getAvgDuration(hours: number): Promise<number | null> {
   const { data, error } = await supabaseAdmin
     .from("generation_events")
     .select("duration_ms")
+    .eq("generation_type", "campaign_pipeline")
     .not("duration_ms", "is", null)
     .gte("created_at", hoursAgo(hours));
 
@@ -83,6 +87,7 @@ export async function getActiveUsers(hours: number): Promise<number | null> {
   const { data, error } = await supabaseAdmin
     .from("generation_events")
     .select("user_id")
+    .eq("generation_type", "campaign_pipeline")
     .not("user_id", "is", null)
     .gte("created_at", hoursAgo(hours));
 

@@ -551,19 +551,21 @@ export const POST = apiHandler(async (request: NextRequest) => {
             // Telemetry — pipeline complete
             const pipelineCost = (copyCost?.estimatedCostUsd ?? 0) + (imageCost?.estimatedCostUsd ?? 0);
             logPipelineEvent({ event: "pipeline_complete", traceId, phase: "post_parallel", status: "complete", campaignId, storeId, userId: user.userId, durationMs, metadata: { totalCost: generationMetadata.provider } });
-            try {
-              await supabaseAdmin.from("generation_events").insert({
-                generation_type: "campaign_pipeline",
-                store_id: storeId,
-                user_id: user.userId,
-                campaign_id: campaignId,
-                status: "success",
-                estimated_cost_usd: pipelineCost > 0 ? pipelineCost : null,
-                duration_ms: durationMs,
-                trace_id: traceId,
-                phase: "pipeline_complete",
-                metadata: { provider: provider.name, model: IMAGE_GENERATION_RESPONSES_MODEL },
-              });
+              try {
+                await supabaseAdmin.from("generation_events").insert({
+                  generation_type: "campaign_pipeline",
+                  store_id: storeId,
+                  user_id: user.userId,
+                  campaign_id: campaignId,
+                  provider: provider.name,
+                  model: IMAGE_GENERATION_RESPONSES_MODEL,
+                  status: "success",
+                  estimated_cost_usd: pipelineCost > 0 ? pipelineCost : null,
+                  duration_ms: durationMs,
+                  trace_id: traceId,
+                  phase: "pipeline_complete",
+                  metadata: { provider: provider.name, model: IMAGE_GENERATION_RESPONSES_MODEL },
+                });
             } catch (e) {
               console.error("[telemetry] pipeline insert failed", e instanceof Error ? e.message : String(e));
             }
@@ -619,6 +621,8 @@ export const POST = apiHandler(async (request: NextRequest) => {
               store_id: storeId,
               user_id: user.userId,
               campaign_id: campaignId,
+              provider: provider.name,
+              model: IMAGE_GENERATION_RESPONSES_MODEL,
               status: "failed",
               trace_id: traceId,
               phase: "pipeline_complete",
