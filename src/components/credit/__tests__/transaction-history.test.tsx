@@ -44,10 +44,10 @@ describe("TransactionHistory", () => {
       />,
     );
 
-    expect(screen.getByText("Geração")).toBeInTheDocument();
-    expect(screen.getByText("Concessão")).toBeInTheDocument();
-    expect(screen.getByText("reserva")).toBeInTheDocument();
-    expect(screen.getByText("bonus")).toBeInTheDocument();
+    expect(screen.getAllByText("Geração")).toHaveLength(2);
+    expect(screen.getAllByText("Concessão")).toHaveLength(2);
+    expect(screen.getAllByText("reserva")).toHaveLength(2);
+    expect(screen.getAllByText("bonus")).toHaveLength(2);
     expect(screen.getByText("Extrato de Créditos")).toBeInTheDocument();
   });
 
@@ -60,7 +60,7 @@ describe("TransactionHistory", () => {
       />,
     );
 
-    expect(screen.getByText("Nenhuma transação encontrada")).toBeInTheDocument();
+    expect(screen.getByText("Nenhuma transação ainda")).toBeInTheDocument();
   });
 
   it("renders pagination controls when totalPages > 1", () => {

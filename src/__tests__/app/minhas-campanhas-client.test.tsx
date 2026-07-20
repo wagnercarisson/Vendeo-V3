@@ -145,10 +145,10 @@ describe("CampaignListClient — display", () => {
 
     expect(screen.getByText("Nenhuma campanha ainda")).toBeInTheDocument();
     expect(
-      screen.getByText("Crie sua primeira campanha e ela aparecerá aqui."),
+      screen.getByText("Crie sua primeira campanha e comece a divulgar seus produtos."),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Criar primeira campanha" }),
+      screen.getByRole("link", { name: "Criar campanha" }),
     ).toHaveAttribute("href", "/campanhas/nova");
   });
 });

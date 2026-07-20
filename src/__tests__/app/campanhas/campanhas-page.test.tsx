@@ -87,7 +87,7 @@ describe("CampanhasPage (Server Component — SSR with searchParams)", () => {
 
     expect(html).toContain("Nenhuma campanha ainda");
     expect(html).toContain("/campanhas/nova");
-    expect(html).toContain("Criar primeira campanha");
+    expect(html).toContain("Criar campanha");
   });
 
   it("renders campaign list when store exists with campaigns", async () => {
