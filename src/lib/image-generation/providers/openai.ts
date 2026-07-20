@@ -99,10 +99,20 @@ export class OpenAIImageProvider implements ImageProvider {
 
       const imageBase64 = imageOutput.result;
 
+      const usage = response.usage
+        ? {
+            promptTokens: response.usage.input_tokens ?? undefined,
+            completionTokens: response.usage.output_tokens ?? undefined,
+            totalTokens: (response.usage.input_tokens ?? 0) + (response.usage.output_tokens ?? 0) || undefined,
+            imageTokens: (response.usage as { output_tokens_details?: { image_tokens?: number } }).output_tokens_details?.image_tokens ?? undefined,
+          }
+        : undefined;
+
       return {
         imageBase64,
         mimeType: "image/png" as const,
         model: this.responsesModel,
+        usage,
       };
     } catch (err) {
       const errorCode =

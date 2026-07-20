@@ -502,12 +502,6 @@ export const POST = apiHandler(async (request: NextRequest) => {
             try { await creditService.confirmCredit(creditTxId!); } catch { /* ignore */ }
             logPipelineEvent({ event: "credit_confirm", traceId, phase: "post_parallel", status: "complete", campaignId, storeId, userId: user.userId });
 
-            emit({
-              type: "result",
-              campaignId: campaignId!,
-              campaignUrl: `/campanhas/${campaignId}`,
-            });
-
             // Telemetry — copy generation
             const copyCost = estimateAiCost({ provider: "openai", model: "gpt-4o" });
             try {
@@ -528,8 +522,9 @@ export const POST = apiHandler(async (request: NextRequest) => {
               console.error("[telemetry] copy insert failed", e instanceof Error ? e.message : String(e));
             }
 
-            // Telemetry — image generation
-            const imageCost = estimateAiCost({ provider: provider.name, model: IMAGE_GENERATION_RESPONSES_MODEL });
+            // Telemetry — image generation (with real usage when available)
+            const imageUsage = imageResult.usage;
+            const imageCost = estimateAiCost({ provider: provider.name, model: IMAGE_GENERATION_RESPONSES_MODEL, usage: imageUsage ? { promptTokens: imageUsage.promptTokens, completionTokens: imageUsage.completionTokens } : undefined });
             try {
               await supabaseAdmin.from("generation_events").insert({
                 generation_type: "campaign_image",
@@ -543,32 +538,48 @@ export const POST = apiHandler(async (request: NextRequest) => {
                 duration_ms: durationMs,
                 trace_id: traceId,
                 phase: "image_generation",
+                prompt_tokens: imageUsage?.promptTokens ?? null,
+                completion_tokens: imageUsage?.completionTokens ?? null,
+                total_tokens: imageUsage?.totalTokens ?? null,
+                metadata: { costSource: imageCost?.source ?? null, imageTokens: imageUsage?.imageTokens ?? null },
               });
             } catch (e) {
               console.error("[telemetry] image insert failed", e instanceof Error ? e.message : String(e));
             }
 
-            // Telemetry — pipeline complete
+            // Telemetry — pipeline complete (before emit result)
             const pipelineCost = (copyCost?.estimatedCostUsd ?? 0) + (imageCost?.estimatedCostUsd ?? 0);
+            const costBreakdown: Record<string, unknown> = {};
+            if (copyCost) { costBreakdown.copy = { estimatedCostUsd: copyCost.estimatedCostUsd, source: copyCost.source }; }
+            if (imageCost) { costBreakdown.image = { estimatedCostUsd: imageCost.estimatedCostUsd, source: imageCost.source }; }
             logPipelineEvent({ event: "pipeline_complete", traceId, phase: "post_parallel", status: "complete", campaignId, storeId, userId: user.userId, durationMs, metadata: { totalCost: generationMetadata.provider } });
-              try {
-                await supabaseAdmin.from("generation_events").insert({
-                  generation_type: "campaign_pipeline",
-                  store_id: storeId,
-                  user_id: user.userId,
-                  campaign_id: campaignId,
-                  provider: provider.name,
-                  model: IMAGE_GENERATION_RESPONSES_MODEL,
-                  status: "success",
-                  estimated_cost_usd: pipelineCost > 0 ? pipelineCost : null,
-                  duration_ms: durationMs,
-                  trace_id: traceId,
-                  phase: "pipeline_complete",
-                  metadata: { provider: provider.name, model: IMAGE_GENERATION_RESPONSES_MODEL },
-                });
+            try {
+              await supabaseAdmin.from("generation_events").insert({
+                generation_type: "campaign_pipeline",
+                store_id: storeId,
+                user_id: user.userId,
+                campaign_id: campaignId,
+                provider: provider.name,
+                model: IMAGE_GENERATION_RESPONSES_MODEL,
+                status: "success",
+                estimated_cost_usd: pipelineCost > 0 ? pipelineCost : null,
+                prompt_tokens: imageUsage?.promptTokens ?? null,
+                completion_tokens: imageUsage?.completionTokens ?? null,
+                total_tokens: imageUsage?.totalTokens ?? null,
+                duration_ms: durationMs,
+                trace_id: traceId,
+                phase: "pipeline_complete",
+                metadata: { provider: provider.name, model: IMAGE_GENERATION_RESPONSES_MODEL, costSource: imageCost?.source ?? null, costBreakdown: Object.keys(costBreakdown).length > 0 ? costBreakdown : null },
+              });
             } catch (e) {
               console.error("[telemetry] pipeline insert failed", e instanceof Error ? e.message : String(e));
             }
+
+            emit({
+              type: "result",
+              campaignId: campaignId!,
+              campaignUrl: `/campanhas/${campaignId}`,
+            });
           } catch (err) {
             const errorMessage = err instanceof Error ? err.message : String(err);
             console.error(`[generate-image] persistence error — ${errorMessage}`);

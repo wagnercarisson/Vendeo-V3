@@ -1,6 +1,6 @@
 import { PromptLoader } from "@/lib/image-generation/prompt-loader";
 import { IMAGE_GENERATION_DEBUG, IMAGE_GENERATION_SIZE, IMAGE_GENERATION_GLOBAL_TIMEOUT_MS, IMAGE_GENERATION_RESPONSES_MODEL } from "@/lib/image-generation/config";
-import type { ImageProvider } from "@/lib/image-generation/providers/types";
+import type { ImageProvider, ImageProviderOutput } from "@/lib/image-generation/providers/types";
 import type { GenerateImageRequest, GenerateImageSuccessResponse, GenerationPhase, GenerationPhaseEvent, ValidationContext, InputValidationResult, ImageReviewResult } from "@/lib/image-generation/schema";
 import type { CampaignBrief } from "@/components/campaign/types";
 import { InputValidationService } from "@/lib/image-generation/services/input-validation-service";
@@ -52,7 +52,7 @@ const CATEGORY_TO_SEGMENT_GROUP: Record<string, string[]> = {
 };
 
 export type GenerateImageServiceResult =
-  | { success: true; imageDataUrl: string; inputCorrections?: { productName: { from: string; to: string; reason: string } } }
+  | { success: true; imageDataUrl: string; inputCorrections?: { productName: { from: string; to: string; reason: string } }; usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number; imageTokens?: number } }
   | { success: false; code: string; message: string; details?: string };
 
 enum GenerationState {
@@ -271,6 +271,7 @@ export class ImageGenerationService {
     let lastReviewIssues: string[] = [];
     let currentImageBase64: string | null = null;
     let currentMimeType: string = "image/png";
+    let currentUsage: ImageProviderOutput["usage"] | undefined;
 
     while (state !== GenerationState.COMPLETE && state !== GenerationState.ERROR) {
       if (attempts >= maxAttempts) {
@@ -343,6 +344,7 @@ export class ImageGenerationService {
 
       currentImageBase64 = providerResult.imageBase64;
       currentMimeType = providerResult.mimeType;
+      currentUsage = providerResult.usage;
       emitComplete("image_generation");
       emitMetricsEvent("image_generation", attempts);
 
@@ -506,6 +508,7 @@ export class ImageGenerationService {
     const response: GenerateImageServiceResult = {
       success: true,
       imageDataUrl,
+      usage: currentUsage,
     };
 
     if (inputCorrections) {
@@ -859,7 +862,7 @@ export class ImageGenerationService {
     remaining: () => number,
     identityImageUrl?: string
   ): Promise<
-    | { success: true; imageBase64: string; mimeType: string }
+    | { success: true; imageBase64: string; mimeType: string; usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number; imageTokens?: number } }
     | { success: false; code: string; message: string; details?: string }
   > {
     const ESTIMATED_RETRY_DURATION = 30000;
@@ -915,7 +918,7 @@ export class ImageGenerationService {
           attempt,
         });
 
-        return { success: true, imageBase64: output.imageBase64, mimeType: output.mimeType };
+        return { success: true, imageBase64: output.imageBase64, mimeType: output.mimeType, usage: output.usage };
       } catch (err) {
         if (attempt >= 3) {
           const message = err instanceof Error ? err.message : String(err);

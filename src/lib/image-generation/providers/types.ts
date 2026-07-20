@@ -18,6 +18,12 @@ export interface ImageProviderOutput {
   imageBase64: string;
   mimeType: "image/png" | "image/jpeg" | "image/webp";
   model: string;
+  usage?: {
+    promptTokens?: number;
+    completionTokens?: number;
+    totalTokens?: number;
+    imageTokens?: number;
+  };
 }
 
 /**

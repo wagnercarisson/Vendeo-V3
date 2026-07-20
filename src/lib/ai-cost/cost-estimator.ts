@@ -18,7 +18,17 @@ const GEMINI_PRICING: Record<string, PricingTier> = {
   "gemini-2.0-flash": { inputPer1M: 0.10, outputPer1M: 0.40 },
 };
 
-const IMAGE_FALLBACK_COST_USD = 0.04;
+// Fallback cost for image generation when no usage data is available.
+// Set via VENDEO_IMAGE_GENERATION_FALLBACK_COST_USD env var (default 0.15 USD).
+// This is a temporary heuristic for UAT — replace with OpenAI Costs API in future phases.
+function getFallbackCost(): number {
+  const raw = process.env.VENDEO_IMAGE_GENERATION_FALLBACK_COST_USD;
+  if (raw) {
+    const parsed = Number(raw);
+    if (!isNaN(parsed) && parsed > 0) return parsed;
+  }
+  return 0.15;
+}
 
 const KNOWN_TEXT_MODELS = new Set(["gpt-4o", "gpt-4o-mini", "gemini-2.0-flash"]);
 
@@ -52,7 +62,7 @@ export function estimateAiCost(params: {
     }
 
     if (!hasUsage && !isKnownTextModel(model)) {
-      return { estimatedCostUsd: IMAGE_FALLBACK_COST_USD, source: "openai_published_pricing" };
+      return { estimatedCostUsd: getFallbackCost(), source: "configured_fallback" };
     }
 
     return null;
