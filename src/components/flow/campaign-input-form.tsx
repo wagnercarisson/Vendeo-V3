@@ -13,6 +13,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { CreditCta } from "@/components/credit/credit-cta";
+import { ErrorState } from "@/components/ui/error-state";
 
 interface CampaignInputFormProps {
   storeId?: string;
@@ -56,19 +57,15 @@ export function CampaignInputForm({ storeId, balance, supportEmail }: CampaignIn
   return (
     <div className="space-y-4">
       {submitError && !pendingConflict && (
-        <div className="flex items-start gap-3 bg-red-900/20 border border-red-700/30 rounded-lg px-4 py-3">
-          <AlertCircle className="w-5 h-5 text-accent-red shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="text-accent-red text-sm font-body">{submitError}</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setSubmitError(null)}
-            className="text-text-muted hover:text-text-primary text-xs underline transition-colors duration-200 shrink-0"
-          >
-            Descartar
-          </button>
-        </div>
+        <ErrorState
+          role="alert"
+          title="Não foi possível gerar a campanha"
+          description={submitError}
+          action={{
+            label: "Tentar novamente",
+            onClick: handleSubmit,
+          }}
+        />
       )}
 
       {pendingConflict?.type === "strong_conflict" && (

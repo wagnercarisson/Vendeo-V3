@@ -2,7 +2,9 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
+import { Coins } from "lucide-react";
 import type { CreditTransaction } from "@/lib/credit/types";
 
 interface TransactionHistoryProps {
@@ -59,9 +61,11 @@ export function TransactionHistory({
       </h3>
 
       {transactions.length === 0 ? (
-        <p className="text-sm text-text-muted font-body">
-          Nenhuma transação encontrada
-        </p>
+        <EmptyState
+          icon={Coins}
+          title="Nenhuma transação ainda"
+          description="Seu extrato será preenchido conforme você usar seus créditos."
+        />
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

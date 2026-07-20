@@ -48,7 +48,7 @@ export default async function AdminDashboardPage() {
         <Card>
           <div className="p-4">
             <p className="text-sm text-muted-foreground">Campanhas com Erro</p>
-            <p className="text-3xl font-bold text-red-600">{errorCampaigns ?? 0}</p>
+            <p className="text-3xl font-bold text-destructive">{errorCampaigns ?? 0}</p>
           </div>
         </Card>
         <Card>

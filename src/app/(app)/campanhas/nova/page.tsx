@@ -3,6 +3,7 @@ import { requirePageUser } from "@/lib/auth/require-user";
 import { getCurrentStore } from "@/lib/auth/store-ownership";
 import { CreditService } from "@/lib/credit/credit-service";
 import { createServerClient } from "@/lib/supabase/server";
+import { getLaunchConfig } from "@/lib/launch-config/config";
 import { CampaignPageClient } from "@/components/flow/campaign-page-client";
 
 export default async function NovaCampanhaPage() {
@@ -16,6 +17,7 @@ export default async function NovaCampanhaPage() {
   const supabase = await createServerClient();
   const creditService = new CreditService(supabase);
   const supportEmail = process.env.SUPPORT_EMAIL;
+  const { generationPaused } = getLaunchConfig();
 
   let balance: number | null = null;
   try {
@@ -26,7 +28,7 @@ export default async function NovaCampanhaPage() {
 
   return (
     <main>
-      <CampaignPageClient store={store} balance={balance} supportEmail={supportEmail} />
+      <CampaignPageClient store={store} balance={balance} supportEmail={supportEmail} generationPaused={generationPaused} />
     </main>
   );
 }

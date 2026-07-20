@@ -10,6 +10,8 @@ import {
   getActiveUsers,
 } from "@/lib/metrics/pipeline-metrics";
 import { computeHealthState } from "@/lib/metrics/health";
+import { EmptyState } from "@/components/ui/empty-state";
+import { BarChart3 } from "lucide-react";
 import type { MetricCard, HealthState } from "@/lib/metrics/types";
 import { HealthBanner } from "./health-banner";
 import { MetricsCards } from "./metrics-cards";
@@ -87,11 +89,31 @@ export default async function AdminMetricsPage() {
     ...toCards(168, metrics7d),
   ];
 
+  const hasData = allCards.some((c) => c.value !== null && c.value !== undefined);
+
+  if (!hasData) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Métricas</h1>
+          <p className="text-sm text-muted-foreground">
+            Indicadores operacionais do pipeline de geração
+          </p>
+        </div>
+        <EmptyState
+          icon={BarChart3}
+          title="Aguardando dados de geração"
+          description="As métricas serão exibidas conforme campanhas forem geradas."
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Métricas</h1>
-        <p className="text-sm text-gray-500">
+        <h1 className="text-2xl font-bold text-foreground">Métricas</h1>
+        <p className="text-sm text-muted-foreground">
           Indicadores operacionais do pipeline de geração
         </p>
       </div>
@@ -99,17 +121,17 @@ export default async function AdminMetricsPage() {
       <HealthBanner healthState={healthState} />
 
       <section>
-        <h2 className="mb-3 text-lg font-semibold text-gray-800">Última hora</h2>
+        <h2 className="mb-3 text-lg font-semibold text-foreground">Última hora</h2>
         <MetricsCards cards={allCards.filter((c) => c.timeRange === "1h")} usdToBrlRate={USD_BRL_RATE} />
       </section>
 
       <section>
-        <h2 className="mb-3 text-lg font-semibold text-gray-800">Últimas 24 horas</h2>
+        <h2 className="mb-3 text-lg font-semibold text-foreground">Últimas 24 horas</h2>
         <MetricsCards cards={allCards.filter((c) => c.timeRange === "24h")} usdToBrlRate={USD_BRL_RATE} />
       </section>
 
       <section>
-        <h2 className="mb-3 text-lg font-semibold text-gray-800">Últimos 7 dias</h2>
+        <h2 className="mb-3 text-lg font-semibold text-foreground">Últimos 7 dias</h2>
         <MetricsCards cards={allCards.filter((c) => c.timeRange === "7d")} usdToBrlRate={USD_BRL_RATE} />
       </section>
     </div>

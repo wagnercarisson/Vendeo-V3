@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Users } from "lucide-react";
 import type { AdminUserSummary } from "@/lib/admin/schemas";
 
 export default async function AdminUsersPage({
@@ -80,7 +82,7 @@ export default async function AdminUsersPage({
                 <td className="px-3 py-2 text-right">{user.totalCampaigns}</td>
                 <td className="px-3 py-2 text-right">
                   {user.errorCampaigns > 0 ? (
-                    <span className="text-red-600 font-medium">{user.errorCampaigns}</span>
+                    <span className="text-destructive font-medium">{user.errorCampaigns}</span>
                   ) : (
                     user.errorCampaigns
                   )}
@@ -92,8 +94,12 @@ export default async function AdminUsersPage({
             ))}
             {result.data.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground">
-                  Nenhum usuário encontrado
+                <td colSpan={7} className="px-3 py-8 text-center">
+                  <EmptyState
+                    icon={Users}
+                    title="Nenhum lojista cadastrado"
+                    description="Aguardando o primeiro cadastro."
+                  />
                 </td>
               </tr>
             )}

@@ -3,24 +3,24 @@
 import type { MetricCard } from "@/lib/metrics/types";
 
 function formatDuration(ms: number | null): string {
-  if (ms === null || ms === undefined) return "N/D";
+  if (ms === null || ms === undefined) return "—";
   if (ms < 1000) return `${ms}ms`;
   if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
   return `${Math.floor(ms / 60000)}m ${Math.round((ms % 60000) / 1000)}s`;
 }
 
 function formatPercent(value: number | null): string {
-  if (value === null || value === undefined) return "N/D";
+  if (value === null || value === undefined) return "—";
   return `${value}%`;
 }
 
 function formatNumber(value: number | null): string {
-  if (value === null || value === undefined) return "N/D";
+  if (value === null || value === undefined) return "—";
   return value.toLocaleString("pt-BR");
 }
 
 function formatCost(value: number | null, usdToBrlRate: number): string {
-  if (value === null || value === undefined) return "N/D";
+  if (value === null || value === undefined) return "—";
   const brl = value * usdToBrlRate;
   return `R$ ${brl.toFixed(2).replace(".", ",")}`;
 }
@@ -34,15 +34,15 @@ export function MetricsCards({ cards, usdToBrlRate }: MetricsCardsProps) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {cards.map((card, i) => (
-        <div key={i} className="rounded-lg border bg-white p-4 shadow-sm">
-          <div className="mb-2 text-sm font-medium text-gray-500">{card.label}</div>
+        <div key={i} className="rounded-lg border border-border bg-bg-surface p-4">
+          <div className="mb-2 text-sm font-medium text-muted-foreground">{card.label}</div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-gray-900">
+            <span className="text-2xl font-bold text-foreground">
               {formatCardValue(card, usdToBrlRate)}
             </span>
-            {card.unit && <span className="text-sm text-gray-500">{card.unit}</span>}
+            {card.unit && <span className="text-sm text-muted-foreground">{card.unit}</span>}
           </div>
-          <div className="mt-1 text-xs text-gray-400">{formatTimeRange(card.timeRange)}</div>
+          <div className="mt-1 text-xs text-muted-foreground">{formatTimeRange(card.timeRange)}</div>
         </div>
       ))}
     </div>
@@ -50,7 +50,7 @@ export function MetricsCards({ cards, usdToBrlRate }: MetricsCardsProps) {
 }
 
 function formatCardValue(card: MetricCard, usdToBrlRate: number): string {
-  if (card.value === null || card.value === undefined) return "N/D";
+  if (card.value === null || card.value === undefined) return "—";
 
   const label = card.label.toLowerCase();
   if (label.includes("custo") || label.includes("cósto")) {

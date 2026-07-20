@@ -54,7 +54,7 @@ export default async function AdminAuditLogPage({
     .range(offset, offset + pageSize - 1);
 
   if (error) {
-    return <div className="text-red-600">Erro ao carregar audit log: {error.message}</div>;
+    return <div className="text-destructive">Erro ao carregar audit log: {error.message}</div>;
   }
 
   const entries = (data ?? []) as Array<Record<string, unknown>>;

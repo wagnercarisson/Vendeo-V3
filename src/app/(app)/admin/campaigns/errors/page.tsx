@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ShieldCheck } from "lucide-react";
 
 export default async function AdminCampaignErrorsPage({
   searchParams,
@@ -22,7 +24,7 @@ export default async function AdminCampaignErrorsPage({
     .range(offset, offset + pageSize - 1);
 
   if (error) {
-    return <div className="text-red-600">Erro ao carregar campanhas: {error.message}</div>;
+    return <div className="text-destructive">Erro ao carregar campanhas: {error.message}</div>;
   }
 
   const campaigns = (data ?? []) as Array<Record<string, unknown>>;
@@ -78,7 +80,7 @@ export default async function AdminCampaignErrorsPage({
                   {emailMap.get((camp.stores as Record<string, unknown> | undefined)?.user_id as string) ?? "—"}
                 </td>
                 <td className="px-3 py-2">
-                  <span className="inline-block rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                    <span className="inline-block rounded bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
                     {(camp.error_message as string) ?? (camp.errorMessage as string) ?? "Erro desconhecido"}
                   </span>
                 </td>
@@ -89,8 +91,12 @@ export default async function AdminCampaignErrorsPage({
             ))}
             {campaigns.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">
-                  Nenhuma campanha com erro encontrada
+                <td colSpan={5} className="px-3 py-8 text-center">
+                  <EmptyState
+                    icon={ShieldCheck}
+                    title="Nenhum erro registrado"
+                    description="Tudo funcionando sem problemas."
+                  />
                 </td>
               </tr>
             )}

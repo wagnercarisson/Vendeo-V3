@@ -103,7 +103,7 @@ export default async function AdminUserDetailPage({
                     {(history as Array<Record<string, unknown>>).map((tx) => (
                       <tr key={tx.id as string} className="border-t">
                         <td className="px-2 py-1">{tx.type as string}</td>
-                        <td className={`px-2 py-1 text-right ${(tx.amount as number) > 0 ? "text-green-600" : "text-red-600"}`}>
+                        <td className={`px-2 py-1 text-right ${(tx.amount as number) > 0 ? "text-success" : "text-destructive"}`}>
                           {(tx.amount as number) > 0 ? "+" : ""}{(tx.amount as number)}
                         </td>
                         <td className="px-2 py-1 text-right">{tx.balanceAfter as number}</td>
@@ -140,12 +140,12 @@ export default async function AdminUserDetailPage({
                         <td className="px-2 py-1">{(camp.product_name ?? camp.productName ?? "—") as string}</td>
                         <td className="px-2 py-1">
                           {(camp.status as string) === "error" ? (
-                            <span className="text-red-600 font-medium">error</span>
+                            <span className="text-destructive font-medium">error</span>
                           ) : (
                             camp.status as string
                           )}
                         </td>
-                        <td className="px-2 py-1 text-xs text-red-600">
+                        <td className="px-2 py-1 text-xs text-destructive">
                           {(camp.error_message ?? camp.errorMessage ?? "") as string}
                         </td>
                         <td className="px-2 py-1 text-xs">

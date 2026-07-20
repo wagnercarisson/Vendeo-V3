@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 
 interface CreditCtaProps {
   variant: "zero" | "low" | "normal";
@@ -9,9 +9,18 @@ interface CreditCtaProps {
 
 export function CreditCta({ variant, supportEmail }: CreditCtaProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const firstInteractiveRef = useRef<HTMLAnchorElement | HTMLButtonElement>(null);
 
-  const open = useCallback(() => setIsOpen(true), []);
-  const close = useCallback(() => setIsOpen(false), []);
+  const open = useCallback(() => {
+    setIsOpen(true);
+  }, []);
+
+  const close = useCallback(() => {
+    setIsOpen(false);
+    setTimeout(() => triggerRef.current?.focus(), 0);
+  }, []);
 
   useEffect(() => {
     function handleEscape(e: KeyboardEvent) {
@@ -20,6 +29,7 @@ export function CreditCta({ variant, supportEmail }: CreditCtaProps) {
 
     if (isOpen) {
       document.addEventListener("keydown", handleEscape);
+      setTimeout(() => firstInteractiveRef.current?.focus(), 0);
       return () => document.removeEventListener("keydown", handleEscape);
     }
   }, [isOpen, close]);
@@ -29,6 +39,7 @@ export function CreditCta({ variant, supportEmail }: CreditCtaProps) {
   return (
     <>
       <button
+        ref={triggerRef}
         type="button"
         onClick={open}
         className={`inline-flex min-h-[44px] items-center rounded-lg px-6 py-2 text-sm font-semibold font-heading transition-all duration-200 ${
@@ -47,8 +58,14 @@ export function CreditCta({ variant, supportEmail }: CreditCtaProps) {
             if (e.target === e.currentTarget) close();
           }}
         >
-          <div className="rounded-xl border border-border bg-bg-surface p-6 max-w-md w-full mx-4 space-y-4">
-            <h3 className="text-lg font-semibold text-text-primary font-heading">
+          <div
+            ref={modalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="credit-modal-title"
+            className="rounded-xl border border-border bg-bg-surface p-6 max-w-md w-full mx-4 space-y-4"
+          >
+            <h3 id="credit-modal-title" className="text-lg font-semibold text-text-primary font-heading">
               Solicitar créditos
             </h3>
             {supportEmail ? (
@@ -56,6 +73,7 @@ export function CreditCta({ variant, supportEmail }: CreditCtaProps) {
                 <p className="text-text-secondary text-sm font-body">
                   Envie um email para{" "}
                   <a
+                    ref={firstInteractiveRef as React.RefObject<HTMLAnchorElement>}
                     href={`mailto:${supportEmail}`}
                     className="text-accent-green underline"
                   >

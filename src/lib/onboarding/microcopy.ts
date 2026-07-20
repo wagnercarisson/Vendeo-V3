@@ -39,8 +39,8 @@ export const CAMPAIGNS_NO_CAMPAIGNS: EmptyStateCopy = {
   icon: Megaphone,
   title: "Nenhuma campanha ainda",
   description:
-    "Crie sua primeira campanha e ela aparecerá aqui.",
-  ctaLabel: "Criar primeira campanha",
+    "Crie sua primeira campanha e comece a divulgar seus produtos.",
+  ctaLabel: "Criar campanha",
   ctaHref: "/campanhas/nova",
 };
 
@@ -48,5 +48,5 @@ export const CAMPAIGNS_SEARCH_EMPTY: EmptyStateCopy = {
   icon: Search,
   title: "Nenhuma campanha encontrada",
   description:
-    "Tente ajustar sua busca ou limpar os filtros para encontrar mais campanhas.",
+    "Tente ajustar sua busca ou limpar os filtros.",
 };
