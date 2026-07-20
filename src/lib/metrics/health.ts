@@ -33,8 +33,8 @@ export function computeHealthState(metrics: MetricValues): HealthState {
   const states: HealthState[] = [
     metricState(metrics.successRate, { healthy: 85, attention: 70, pause: false }),
     metricState(metrics.errorRate, { healthy: 5, attention: 10, pause: true }),
-    metricState(metrics.avgCost, { healthy: 0.02, attention: 0.05, pause: true }),
-    metricState(metrics.avgDuration, { healthy: 30000, attention: 45000, pause: true }),
+    metricState(metrics.avgCost, { healthy: 0.2, attention: 0.5, pause: true }),
+    metricState(metrics.avgDuration, { healthy: 90000, attention: 180000, pause: true }),
     metricState(metrics.refundRate, { healthy: 10, attention: 15, pause: true }),
   ];
 

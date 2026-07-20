@@ -11,7 +11,7 @@ const BANNER_STYLES: Record<HealthState, { bg: string; text: string; indicator: 
 const LABELS: Record<HealthState, string> = {
   healthy: "Saudável",
   attention: "Atenção",
-  pause: "Pausado",
+  pause: "Crítico",
 };
 
 export function HealthBanner({ healthState }: { healthState: HealthState }) {

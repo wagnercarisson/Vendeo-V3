@@ -18,6 +18,14 @@ const GEMINI_PRICING: Record<string, PricingTier> = {
   "gemini-2.0-flash": { inputPer1M: 0.10, outputPer1M: 0.40 },
 };
 
+const IMAGE_FALLBACK_COST_USD = 0.04;
+
+const KNOWN_TEXT_MODELS = new Set(["gpt-4o", "gpt-4o-mini", "gemini-2.0-flash"]);
+
+function isKnownTextModel(model: string): boolean {
+  return KNOWN_TEXT_MODELS.has(model);
+}
+
 export function estimateAiCost(params: {
   provider: string;
   model: string;
@@ -25,37 +33,43 @@ export function estimateAiCost(params: {
 }): AiCostEstimate | null {
   const { provider, model, usage } = params;
 
-  if (!usage || (usage.promptTokens === undefined && usage.completionTokens === undefined)) {
-    return null;
-  }
-
-  const promptTokens = usage.promptTokens ?? 0;
-  const completionTokens = usage.completionTokens ?? 0;
+  const promptTokens = usage?.promptTokens ?? 0;
+  const completionTokens = usage?.completionTokens ?? 0;
+  const hasUsage = usage !== undefined && (usage.promptTokens !== undefined || usage.completionTokens !== undefined);
 
   if (provider === "openai") {
     const pricing = OPENAI_PRICING[model];
-    if (!pricing) return null;
-
-    if (typeof pricing === "number") {
-      return { estimatedCostUsd: pricing, source: "openai_published_pricing" };
+    if (pricing) {
+      if (typeof pricing === "number") {
+        return { estimatedCostUsd: pricing, source: "openai_published_pricing" };
+      }
+      if (hasUsage) {
+        const cost =
+          (promptTokens / 1_000_000) * pricing.inputPer1M +
+          (completionTokens / 1_000_000) * pricing.outputPer1M;
+        return { estimatedCostUsd: Number(cost.toFixed(6)), source: "openai_published_pricing" };
+      }
     }
 
-    const cost =
-      (promptTokens / 1_000_000) * pricing.inputPer1M +
-      (completionTokens / 1_000_000) * pricing.outputPer1M;
+    if (!hasUsage && !isKnownTextModel(model)) {
+      return { estimatedCostUsd: IMAGE_FALLBACK_COST_USD, source: "openai_published_pricing" };
+    }
 
-    return { estimatedCostUsd: Number(cost.toFixed(6)), source: "openai_published_pricing" };
+    return null;
   }
 
   if (provider === "gemini") {
     const pricing = GEMINI_PRICING[model];
     if (!pricing) return null;
 
-    const cost =
-      (promptTokens / 1_000_000) * pricing.inputPer1M +
-      (completionTokens / 1_000_000) * pricing.outputPer1M;
+    if (hasUsage) {
+      const cost =
+        (promptTokens / 1_000_000) * pricing.inputPer1M +
+        (completionTokens / 1_000_000) * pricing.outputPer1M;
+      return { estimatedCostUsd: Number(cost.toFixed(6)), source: "gemini_published_pricing" };
+    }
 
-    return { estimatedCostUsd: Number(cost.toFixed(6)), source: "gemini_published_pricing" };
+    return null;
   }
 
   return null;

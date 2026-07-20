@@ -11,7 +11,7 @@ function formatDuration(ms: number | null): string {
 
 function formatPercent(value: number | null): string {
   if (value === null || value === undefined) return "—";
-  return `${value}%`;
+  return `${value}`;
 }
 
 function formatNumber(value: number | null): string {

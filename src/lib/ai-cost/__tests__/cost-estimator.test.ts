@@ -22,10 +22,46 @@ describe("estimateAiCost", () => {
     expect(result).toBeNull();
   });
 
-  it("returns null when usage is missing", () => {
+  it("returns dalle-3 fixed cost when model is known image model", () => {
+    const result = estimateAiCost({
+      provider: "openai",
+      model: "dall-e-3",
+    });
+    expect(result).not.toBeNull();
+    expect(result!.estimatedCostUsd).toBe(0.04);
+    expect(result!.source).toBe("openai_published_pricing");
+  });
+
+  it("returns null for text model without usage", () => {
     const result = estimateAiCost({
       provider: "openai",
       model: "gpt-4o",
+    });
+    expect(result).toBeNull();
+  });
+
+  it("returns dalle-3 fallback for gpt-image models without usage", () => {
+    const result = estimateAiCost({
+      provider: "openai",
+      model: "gpt-image-2",
+    });
+    expect(result).not.toBeNull();
+    expect(result!.estimatedCostUsd).toBe(0.04);
+  });
+
+  it("returns fallback for unknown OpenAI models without usage", () => {
+    const result = estimateAiCost({
+      provider: "openai",
+      model: "gpt-5.5",
+    });
+    expect(result).not.toBeNull();
+    expect(result!.estimatedCostUsd).toBe(0.04);
+  });
+
+  it("returns null for unknown providers", () => {
+    const result = estimateAiCost({
+      provider: "anthropic",
+      model: "claude-3",
     });
     expect(result).toBeNull();
   });
