@@ -36,6 +36,18 @@ function isKnownTextModel(model: string): boolean {
   return KNOWN_TEXT_MODELS.has(model);
 }
 
+/**
+ * Strip version/date suffixes from model names for pricing lookup.
+ * Examples:
+ *   gpt-4o-2024-08-06       -> gpt-4o
+ *   gpt-4o-mini-2024-07-18  -> gpt-4o-mini
+ *   gpt-5.5-2026-04-23      -> gpt-5.5
+ *   gpt-4.1-2025-04-14      -> gpt-4.1
+ */
+function normalizeModel(model: string): string {
+  return model.replace(/(-\d{4}-\d{2}-\d{2})+$/g, "");
+}
+
 export function estimateAiCost(params: {
   provider: string;
   model: string;
@@ -47,8 +59,11 @@ export function estimateAiCost(params: {
   const completionTokens = usage?.completionTokens ?? 0;
   const hasUsage = usage !== undefined && (usage.promptTokens !== undefined || usage.completionTokens !== undefined);
 
+  const normalizedModel = normalizeModel(model);
+  const baseModel = normalizedModel;
+
   if (provider === "openai") {
-    const pricing = OPENAI_PRICING[model];
+    const pricing = OPENAI_PRICING[model] ?? OPENAI_PRICING[baseModel];
     if (pricing) {
       if (typeof pricing === "number") {
         return { estimatedCostUsd: pricing, source: "openai_published_pricing" };
@@ -61,15 +76,16 @@ export function estimateAiCost(params: {
       }
     }
 
-    if (!hasUsage && !isKnownTextModel(model)) {
-      return { estimatedCostUsd: getFallbackCost(), source: "configured_fallback" };
+    if (!isKnownTextModel(baseModel)) {
+      const source = hasUsage ? "configured_fallback_unknown_model_with_usage" : "configured_fallback";
+      return { estimatedCostUsd: getFallbackCost(), source };
     }
 
     return null;
   }
 
   if (provider === "gemini") {
-    const pricing = GEMINI_PRICING[model];
+    const pricing = GEMINI_PRICING[model] ?? GEMINI_PRICING[baseModel];
     if (!pricing) return null;
 
     if (hasUsage) {

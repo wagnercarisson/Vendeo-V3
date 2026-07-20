@@ -17,13 +17,15 @@ describe("estimateAiCost", () => {
     expect(result!.source).toBe("openai_published_pricing");
   });
 
-  it("returns null for unknown model", () => {
+  it("returns fallback for unknown OpenAI model with usage", () => {
     const result = estimateAiCost({
       provider: "openai",
       model: "unknown-model",
       usage: { promptTokens: 1000, completionTokens: 500 },
     });
-    expect(result).toBeNull();
+    expect(result).not.toBeNull();
+    expect(result!.estimatedCostUsd).toBe(0.15);
+    expect(result!.source).toBe("configured_fallback_unknown_model_with_usage");
   });
 
   it("returns dalle-3 fixed cost when model is known image model", () => {
@@ -64,6 +66,17 @@ describe("estimateAiCost", () => {
     expect(result!.source).toBe("configured_fallback");
   });
 
+  it("returns fallback when model has usage but no pricing in table", () => {
+    const result = estimateAiCost({
+      provider: "openai",
+      model: "gpt-5.5",
+      usage: { promptTokens: 4656, completionTokens: 897 },
+    });
+    expect(result).not.toBeNull();
+    expect(result!.estimatedCostUsd).toBe(0.15);
+    expect(result!.source).toBe("configured_fallback_unknown_model_with_usage");
+  });
+
   it("respects VENDEO_IMAGE_GENERATION_FALLBACK_COST_USD env var", () => {
     vi.stubEnv("VENDEO_IMAGE_GENERATION_FALLBACK_COST_USD", "0.50");
     const result = estimateAiCost({
@@ -87,7 +100,7 @@ describe("estimateAiCost", () => {
     vi.unstubAllEnvs();
   });
 
-  it("uses usage-based calculation when usage is available", () => {
+  it("uses usage-based calculation when usage is available for known model", () => {
     const result = estimateAiCost({
       provider: "openai",
       model: "gpt-4o",
@@ -96,6 +109,27 @@ describe("estimateAiCost", () => {
     expect(result).not.toBeNull();
     expect(result!.estimatedCostUsd).toBeCloseTo(0.0075, 4);
     expect(result!.source).toBe("openai_published_pricing");
+  });
+
+  it("normalizes versioned model name for pricing lookup", () => {
+    const result = estimateAiCost({
+      provider: "openai",
+      model: "gpt-4o-2024-08-06",
+      usage: { promptTokens: 1000, completionTokens: 500 },
+    });
+    expect(result).not.toBeNull();
+    expect(result!.estimatedCostUsd).toBeCloseTo(0.0075, 4);
+    expect(result!.source).toBe("openai_published_pricing");
+  });
+
+  it("normalizes versioned gpt-4o-mini for pricing lookup", () => {
+    const result = estimateAiCost({
+      provider: "openai",
+      model: "gpt-4o-mini-2024-07-18",
+      usage: { promptTokens: 2000, completionTokens: 1000 },
+    });
+    expect(result).not.toBeNull();
+    expect(result!.estimatedCostUsd).toBeCloseTo(0.0009, 6);
   });
 
   it("returns null for unknown providers", () => {
