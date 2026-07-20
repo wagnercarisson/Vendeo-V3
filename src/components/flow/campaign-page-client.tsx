@@ -1,5 +1,6 @@
 "use client";
 
+import { useLayoutEffect } from "react";
 import type { Store } from "@/lib/store";
 import { StoreIdentityBlock } from "./store-identity-block";
 import { CampaignInputForm } from "./campaign-input-form";
@@ -15,6 +16,14 @@ interface CampaignPageClientProps {
 }
 
 export function CampaignPageClient({ store, balance, supportEmail, generationPaused }: CampaignPageClientProps) {
+  useLayoutEffect(() => {
+    try {
+      sessionStorage.removeItem("campaign_draft");
+      sessionStorage.removeItem("campaign_draft_image");
+      sessionStorage.removeItem("campaign_preview");
+    } catch { /* ignore */ }
+  }, []);
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
       {generationPaused && (

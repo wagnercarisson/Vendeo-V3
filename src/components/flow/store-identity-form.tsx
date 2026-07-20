@@ -372,6 +372,19 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
     load();
   }, [storeId, setField]);
 
+  // Scroll to top on save success so feedback is visible
+  useEffect(() => {
+    if (successMessage) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [successMessage]);
+
+  useEffect(() => {
+    if (step2Success) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [step2Success]);
+
   // Hydrate subsegment mode on load: detect if stored subsegment is custom (not predefined)
   useEffect(() => {
     if (!formData.segment || !formData.subsegment) return;

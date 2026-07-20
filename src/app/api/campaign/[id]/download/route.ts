@@ -27,17 +27,27 @@ export const GET = apiHandler(async (
 
   await requireOwnership(campaign.store_id, user.userId);
 
-  const { data: signedData, error: signedError } = await supabaseAdmin
+  const { data: fileData, error: downloadError } = await supabaseAdmin
     .storage
     .from("campaign-images")
-    .createSignedUrl(campaign.storage_path ?? "", 3600);
+    .download(campaign.storage_path ?? "");
 
-  if (signedError || !signedData?.signedUrl) {
+  if (downloadError || !fileData) {
     return NextResponse.json(
-      { error: "Failed to generate download URL" },
+      { error: "Failed to download image" },
       { status: 502 }
     );
   }
 
-  return NextResponse.redirect(signedData.signedUrl, 302);
+  const safeName = campaign.product_name.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase() || "campanha";
+  const dateStr = campaign.created_at?.split("T")[0] ?? new Date().toISOString().split("T")[0];
+  const filename = `${safeName}-${dateStr}.jpg`;
+
+  return new NextResponse(fileData, {
+    headers: {
+      "Content-Type": "image/jpeg",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Cache-Control": "public, max-age=31536000, immutable",
+    },
+  });
 });

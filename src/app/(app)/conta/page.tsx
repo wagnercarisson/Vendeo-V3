@@ -8,7 +8,7 @@ import { TransactionHistory } from "@/components/credit/transaction-history";
 import { getCurrentStore } from "@/lib/auth/store-ownership";
 import { CreditService } from "@/lib/credit/credit-service";
 import { createServerClient } from "@/lib/supabase/server";
-import { User, Coins, Key, LogOut } from "lucide-react";
+import { User, Coins, Key, LogOut, MessageCircle } from "lucide-react";
 
 export default async function ContaPage({
   searchParams,
@@ -110,6 +110,24 @@ export default async function ContaPage({
             >
               Alterar senha
             </Link>
+          </div>
+        </Card>
+
+        <Card>
+          <div className="p-5 space-y-4">
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-text-primary font-heading">
+              <MessageCircle className="h-5 w-5 text-accent-blue" />
+              Suporte
+            </h2>
+            <p className="text-sm text-text-muted font-body">
+              Em caso de dúvidas ou problemas, fale com o time do Vendeo.
+            </p>
+            <a
+              href={`mailto:${supportEmail ?? "suporte@vendeo.tech"}`}
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-text-secondary font-body hover:bg-bg-elevated hover:text-text-primary transition-all duration-200"
+            >
+              Falar com o suporte
+            </a>
           </div>
         </Card>
 

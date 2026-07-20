@@ -7,6 +7,7 @@ import type { CampaignListItem } from "@/lib/campaign/list";
 import { useDebounce } from "@/hooks/use-debounce";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import {
   CAMPAIGNS_NO_CAMPAIGNS,
@@ -228,6 +229,7 @@ export default function CampaignListClient({
 }
 
 function CampaignCard({ campaign }: { campaign: CampaignListItem }) {
+  const router = useRouter();
   const formattedDate = formatDate(campaign.createdAt);
 
   return (
@@ -259,19 +261,21 @@ function CampaignCard({ campaign }: { campaign: CampaignListItem }) {
         </span>
       </div>
       <div className="flex flex-col items-end justify-center gap-2">
-        <Link
-          href={`/campanhas/${campaign.id}`}
-          className="min-h-[44px] rounded-lg bg-accent-green px-4 py-1.5 text-sm font-semibold text-white font-heading hover:brightness-110 transition-all duration-200"
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={() => router.push(`/campanhas/${campaign.id}`)}
         >
           Abrir
-        </Link>
+        </Button>
         {campaign.status === "ready" && (
-          <Link
-            href={`/api/campaign/${campaign.id}/download`}
-            className="min-h-[44px] rounded-lg border border-border px-4 py-1.5 text-sm text-text-secondary font-body hover:bg-bg-elevated transition-all duration-200"
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => { window.location.href = `/api/campaign/${campaign.id}/download`; }}
           >
             Baixar
-          </Link>
+          </Button>
         )}
       </div>
     </div>

@@ -8,15 +8,16 @@ import type { RefObject } from "react";
 
 interface TopbarProps {
   user: { claims: JwtPayload };
+  storeName?: string | null;
   onToggleMenu: () => void;
   isDrawerOpen: boolean;
   toggleButtonRef?: RefObject<HTMLButtonElement | null>;
 }
 
-export function Topbar({ user, onToggleMenu, isDrawerOpen, toggleButtonRef }: TopbarProps) {
+export function Topbar({ user, storeName, onToggleMenu, isDrawerOpen, toggleButtonRef }: TopbarProps) {
   return (
     <header className="flex h-14 items-center justify-between border-b border-border bg-bg-surface px-4">
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
         <button
           type="button"
           ref={toggleButtonRef}
@@ -28,8 +29,8 @@ export function Topbar({ user, onToggleMenu, isDrawerOpen, toggleButtonRef }: To
         >
           <Menu className="h-5 w-5" />
         </button>
-        <span className="text-lg font-bold text-text-primary font-heading">
-          Vendeo
+        <span className="truncate text-lg font-bold text-text-primary font-heading">
+          {storeName ?? "Vendeo"}
         </span>
       </div>
 

@@ -9,6 +9,8 @@ import {
   X,
   CheckCheck,
   Download,
+  Copy,
+  Check,
   Loader2,
 } from "lucide-react";
 import type { CampaignPageProps } from "@/lib/campaign/display";
@@ -54,7 +56,33 @@ export default function CampaignPageClient(props: CampaignPageProps) {
   );
 }
 
+function CopyButton({ text, label }: { text: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* clipboard not available */ }
+  }, [text]);
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={handleCopy}
+      aria-label={`Copiar ${label}`}
+      className="shrink-0"
+    >
+      {copied ? <Check className="h-3.5 w-3.5 text-accent-green" /> : <Copy className="h-3.5 w-3.5" />}
+      {copied ? "Copiado!" : "Copiar"}
+    </Button>
+  );
+}
+
 function ReadyView(props: CampaignPageProps) {
+  const router = useRouter();
   const [currentCopy, setCurrentCopy] = useState({
     caption: props.caption,
     hashtags: props.hashtags,
@@ -191,26 +219,35 @@ function ReadyView(props: CampaignPageProps) {
           {!isEditing ? (
             <div className="space-y-3">
               {currentCopy.caption && (
-                <p className="text-lg text-text-primary font-body">
-                  {currentCopy.caption}
-                </p>
+                <div className="flex items-start gap-2">
+                  <p className="flex-1 text-lg text-text-primary font-body">
+                    {currentCopy.caption}
+                  </p>
+                  <CopyButton text={currentCopy.caption} label="caption" />
+                </div>
               )}
               {currentCopy.hashtags.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {currentCopy.hashtags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full bg-accent-green/10 px-3 py-1 text-sm text-accent-green font-body"
-                    >
-                      {tag}
-                    </span>
-                  ))}
+                <div className="flex items-start gap-2">
+                  <div className="flex flex-1 flex-wrap gap-2">
+                    {currentCopy.hashtags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full bg-accent-green/10 px-3 py-1 text-sm text-accent-green font-body"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                  <CopyButton text={currentCopy.hashtags.join(" ")} label="hashtags" />
                 </div>
               )}
               {currentCopy.cta_post && (
-                <p className="font-semibold text-accent-green font-heading">
-                  {currentCopy.cta_post}
-                </p>
+                <div className="flex items-start gap-2">
+                  <p className="flex-1 font-semibold text-accent-green font-heading">
+                    {currentCopy.cta_post}
+                  </p>
+                  <CopyButton text={currentCopy.cta_post} label="CTA" />
+                </div>
               )}
               <Button
                 variant="ghost"
@@ -313,13 +350,14 @@ function ReadyView(props: CampaignPageProps) {
         </div>
       </Card>
 
-      <a
-        href={props.downloadUrl}
-        className="inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-accent-green px-6 py-2.5 text-sm font-semibold text-white font-heading hover:brightness-110 transition-all duration-200"
+      <Button
+        variant="primary"
+        size="md"
+        onClick={() => { window.location.href = `/api/campaign/${props.campaignId}/download`; }}
       >
         <Download className="h-4 w-4" />
         Baixar Original
-      </a>
+      </Button>
     </div>
   );
 }

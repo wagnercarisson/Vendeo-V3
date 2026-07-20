@@ -221,7 +221,7 @@ export default async function DashboardPage() {
                       </Badge>
                       <Link
                         href={`/campanhas/${campaign.id}`}
-                        className="inline-flex min-h-[44px] items-center text-sm font-medium text-accent-green hover:underline"
+                        className="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-xs font-heading font-semibold text-text-primary bg-transparent hover:bg-bg-elevated transition-all duration-200 focus:ring-2 focus:ring-accent-blue focus:outline-none"
                       >
                         Abrir
                       </Link>
