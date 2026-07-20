@@ -64,12 +64,12 @@ export function AccountMenu({ user }: AccountMenuProps) {
           <Link
             href="/conta"
             onClick={() => setIsOpen(false)}
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-bg-elevated hover:text-text-primary transition-colors duration-200 font-body"
+            className="flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-bg-elevated hover:text-text-primary transition-colors duration-200 font-body"
           >
             <Settings className="h-4 w-4" />
             Configurações
           </Link>
-          <div className="flex items-center rounded-lg px-1 text-sm text-text-secondary hover:bg-bg-elevated transition-colors duration-200 font-body">
+          <div className="flex min-h-[44px] items-center rounded-lg px-1 text-sm text-text-secondary hover:bg-bg-elevated transition-colors duration-200 font-body">
             <LogoutButton />
           </div>
         </div>

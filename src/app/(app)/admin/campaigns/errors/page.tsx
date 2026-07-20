@@ -56,7 +56,7 @@ export default async function AdminCampaignErrorsPage({
         <p className="text-muted-foreground">Triagem de campanhas que falharam na geração</p>
       </div>
 
-      <div className="overflow-x-auto rounded-md border">
+      <div className="hidden sm:block overflow-x-auto rounded-md border">
         <table className="w-full text-sm">
           <thead className="bg-muted">
             <tr>
@@ -102,6 +102,43 @@ export default async function AdminCampaignErrorsPage({
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile stacked cards */}
+      <div className="sm:hidden space-y-3">
+        {campaigns.map((camp) => {
+          const storeData = camp.stores as Record<string, unknown> | undefined;
+          return (
+            <div key={camp.id as string} className="rounded-lg border border-border bg-bg-surface p-3 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-sm text-foreground truncate">
+                  {(camp.product_name as string) ?? (camp.productName as string) ?? "—"}
+                </span>
+                <span className="text-xs text-muted-foreground shrink-0 ml-2">
+                  {storeData?.name as string ?? "—"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{emailMap.get(storeData?.user_id as string) ?? "—"}</span>
+                <span>{new Date((camp.updated_at ?? camp.updatedAt) as string).toLocaleString("pt-BR")}</span>
+              </div>
+              <div>
+                <span className="inline-block rounded bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
+                  {(camp.error_message as string) ?? (camp.errorMessage as string) ?? "Erro desconhecido"}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+        {campaigns.length === 0 && (
+          <div className="py-8">
+            <EmptyState
+              icon={ShieldCheck}
+              title="Nenhum erro registrado"
+              description="Tudo funcionando sem problemas."
+            />
+          </div>
+        )}
       </div>
 
       {totalPages > 1 && (

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Users } from "lucide-react";
 import type { AdminUserSummary } from "@/lib/admin/schemas";
@@ -52,7 +53,8 @@ export default async function AdminUsersPage({
         </button>
       </form>
 
-      <div className="overflow-x-auto rounded-md border">
+      {/* Desktop table */}
+      <div className="hidden sm:block overflow-x-auto rounded-md border">
         <table className="w-full text-sm">
           <thead className="bg-muted">
             <tr>
@@ -105,6 +107,43 @@ export default async function AdminUsersPage({
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile stacked cards */}
+      <div className="sm:hidden space-y-3">
+        {result.data.map((user: AdminUserSummary) => (
+          <Link
+            key={user.userId}
+            href={`/admin/users/${user.userId}`}
+            className="block rounded-lg border border-border bg-bg-surface p-3 space-y-1.5 hover:bg-bg-elevated transition-colors"
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-medium text-sm text-foreground truncate">{user.email}</span>
+              <span className="text-xs text-muted-foreground">{user.storeName ?? "—"}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>{user.segment ?? "—"}</span>
+              <span className="tabular-nums">
+                Saldo: {user.balance} · Campanhas: {user.totalCampaigns}
+                {user.errorCampaigns > 0 && (
+                  <span className="text-destructive ml-1">({user.errorCampaigns} err)</span>
+                )}
+              </span>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Criado em {new Date(user.createdAt).toLocaleDateString("pt-BR")}
+            </div>
+          </Link>
+        ))}
+        {result.data.length === 0 && (
+          <div className="py-8">
+            <EmptyState
+              icon={Users}
+              title="Nenhum lojista cadastrado"
+              description="Aguardando o primeiro cadastro."
+            />
+          </div>
+        )}
       </div>
 
       {totalPages > 1 && (

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ClipboardList } from "lucide-react";
 
 const ACTION_LABELS: Record<string, string> = {
   credit_grant: "Concessão de Créditos",
@@ -97,7 +99,7 @@ export default async function AdminAuditLogPage({
         </button>
       </form>
 
-      <div className="overflow-x-auto rounded-md border">
+      <div className="hidden sm:block overflow-x-auto rounded-md border">
         <table className="w-full text-sm">
           <thead className="bg-muted">
             <tr>
@@ -140,6 +142,38 @@ export default async function AdminAuditLogPage({
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile stacked cards */}
+      <div className="sm:hidden space-y-3">
+        {entries.map((entry) => (
+          <div key={entry.id as string} className="rounded-lg border border-border bg-bg-surface p-3 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-foreground">
+                {actorEmailMap.get(entry.actor_id as string) ?? (entry.actor_id as string).slice(0, 8) + "…"}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {new Date(entry.created_at as string).toLocaleString("pt-BR")}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-medium">{ACTION_LABELS[entry.action as string] ?? (entry.action as string)}</span>
+              <span className="text-xs text-muted-foreground">
+                {TARGET_LABELS[entry.target_type as string] ?? (entry.target_type as string)}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground truncate">{entry.reason as string}</p>
+          </div>
+        ))}
+        {entries.length === 0 && (
+          <div className="py-8">
+            <EmptyState
+              icon={ClipboardList}
+              title="Nenhuma ação encontrada"
+              description="Nenhuma ação administrativa registrada até o momento."
+            />
+          </div>
+        )}
       </div>
 
       {totalPages > 1 && (

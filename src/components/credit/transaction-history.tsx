@@ -67,7 +67,9 @@ export function TransactionHistory({
           description="Seu extrato será preenchido conforme você usar seus créditos."
         />
       ) : (
-        <div className="overflow-x-auto">
+        <>
+          {/* Desktop table */}
+          <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
@@ -115,6 +117,30 @@ export function TransactionHistory({
             </tbody>
           </table>
         </div>
+
+          {/* Mobile stacked cards */}
+          <div className="sm:hidden space-y-3">
+            {transactions.map((tx) => (
+              <div key={tx.id} className="rounded-lg border border-border bg-bg-surface p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <Badge variant={TYPE_BADGE[tx.type] ?? "default"}>
+                    {TYPE_LABEL[tx.type] ?? tx.type}
+                  </Badge>
+                  <span className="text-sm font-semibold tabular-nums text-text-primary">
+                    {formatValue(tx.type, tx.amount)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs text-text-secondary">
+                  <span>Saldo: {tx.balanceAfter}</span>
+                  <span>{formatDate(tx.createdAt)}</span>
+                </div>
+                {tx.reason && (
+                  <p className="text-xs text-text-muted truncate">{tx.reason}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       <Pagination

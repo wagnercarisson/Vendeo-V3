@@ -266,6 +266,7 @@ function FormContent({
         <input
           id="originalPrice"
           type="text"
+          inputMode="decimal"
           value={displayPriceOriginal}
           onChange={(e) => handlePriceOriginalChange(e.target.value)}
           onBlur={() => handleBlur("originalPriceCents")}
@@ -295,6 +296,7 @@ function FormContent({
         <input
           id="discountedPrice"
           type="text"
+          inputMode="decimal"
           value={displayPriceDiscounted}
           onChange={(e) => handlePriceDiscountedChange(e.target.value)}
           onBlur={() => handleBlur("discountedPriceCents")}
