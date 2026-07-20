@@ -82,7 +82,11 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - Wave 2: 28-02 — Migrations + Pipeline Integration + Rate Limit (2 SQL, pipeline instrumentado)
   - Wave 3: 28-03 — Pipeline Metrics + Admin Dashboard + Documentação (7 funções, 3 docs)
   - Wave 4: 28-04 — Testes e Verificação — Concorrência, Telemetria, Regressão + UAT (7+28 testes)
-- [ ] Phase 29: Refinamento Visual + UAT + Launch Readiness (planning in progress)
+- [ ] Phase 29: Refinamento Visual + UAT + Launch Readiness (4 plans ◆)
+  - Wave 1: 29-01 — Componentes Base + Loading States (12) + Error Boundaries (2)
+  - Wave 2: 29-02 — Empty States (7) + Error States (4) + Microcopy (7 fluxos) + Admin Visual
+  - Wave 2: 29-03 — Mobile Hardening (6 áreas) + Legibilidade + Launch Readiness Docs
+  - Wave 3: 29-04 — UAT Externo + Regressão + Validação Visual Final
 
 </details>
 

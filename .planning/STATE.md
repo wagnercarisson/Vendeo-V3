@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: "Lançamento Externo Controlado — Créditos + Admin + Saldo + Observabilidade + Launch"
 status: active
-last_updated: "2026-07-19T16:13:00.000Z"
+last_updated: "2026-07-19T21:50:00.000Z"
 last_activity: 2026-07-19
 progress:
   total_phases: 7
-  completed_phases: 7
-  total_plans: 20
-  completed_plans: 20
-  percent: 100
+  completed_phases: 6
+  total_plans: 21
+  completed_plans: 17
+  percent: 80
 ---
 
 # Project State
