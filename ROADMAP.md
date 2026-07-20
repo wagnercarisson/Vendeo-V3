@@ -82,11 +82,11 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - Wave 2: 28-02 — Migrations + Pipeline Integration + Rate Limit (2 SQL, pipeline instrumentado)
   - Wave 3: 28-03 — Pipeline Metrics + Admin Dashboard + Documentação (7 funções, 3 docs)
   - Wave 4: 28-04 — Testes e Verificação — Concorrência, Telemetria, Regressão + UAT (7+28 testes)
-- [ ] Phase 29: Refinamento Visual + UAT + Launch Readiness (4 plans ◆)
-  - Wave 1: 29-01 — Componentes Base + Loading States (12) + Error Boundaries (2)
-  - Wave 2: 29-02 — Empty States (7) + Error States (4) + Microcopy (7 fluxos) + Admin Visual
-  - Wave 2: 29-03 — Mobile Hardening (6 áreas) + Legibilidade + Launch Readiness Docs
-  - Wave 3: 29-04 — UAT Externo + Regressão + Validação Visual Final
+- [x] Phase 29: Refinamento Visual + UAT + Launch Readiness (3/4 plans ✅)
+  - [x] 29-01 — Componentes Base + Loading States (12) + Error Boundaries (2)
+  - [x] 29-02 — Empty States (7) + Error States (4) + Microcopy (7 fluxos) + Admin Visual
+  - [x] 29-03 — Mobile Hardening (6 áreas) + Legibilidade + Launch Readiness Docs
+  - [~] 29-04 — UAT Externo + Regressão + Validação Visual Final (autonomous:false — ⏳ human action needed)
 
 </details>
 
@@ -122,7 +122,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 26. Admin Operacional + Convites + Créditos Manuais | v1.5 | 3/3 | ✅ Complete | 2026-07-18 |
 | 27. Conta e Saldo Visível + Extrato | v1.5 | 3/3 | ✅ Complete | 2026-07-18 |
 | 28. Observabilidade + Operação + Launch Controls | v1.5 | 4/4 | ✅ Complete | 2026-07-19 |
-| 29. Refinamento Visual + UAT + Launch Readiness | v1.5 | 0/0 | ◆ Planning | — |
+| 29. Refinamento Visual + UAT + Launch Readiness | v1.5 | 3/4 | ✅ | 2026-07-20 |
 
 ---
 
