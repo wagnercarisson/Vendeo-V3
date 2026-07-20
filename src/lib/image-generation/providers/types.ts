@@ -23,6 +23,7 @@ export interface ImageProviderOutput {
     completionTokens?: number;
     totalTokens?: number;
     imageTokens?: number;
+    cachedInputTokens?: number;
   };
 }
 

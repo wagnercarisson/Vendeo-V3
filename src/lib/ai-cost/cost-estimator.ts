@@ -5,12 +5,15 @@ export interface AiCostEstimate {
 
 interface PricingTier {
   inputPer1M: number;
+  cachedInputPer1M?: number;
   outputPer1M: number;
 }
 
 const OPENAI_PRICING: Record<string, PricingTier | number> = {
   "gpt-4o": { inputPer1M: 2.5, outputPer1M: 10.0 },
   "gpt-4o-mini": { inputPer1M: 0.15, outputPer1M: 0.6 },
+  "gpt-5.5": { inputPer1M: 5.0, cachedInputPer1M: 0.5, outputPer1M: 30.0 },
+  "gpt-5.5-2026-04-23": { inputPer1M: 5.0, cachedInputPer1M: 0.5, outputPer1M: 30.0 },
   "dall-e-3": 0.040,
 };
 
@@ -51,11 +54,12 @@ function normalizeModel(model: string): string {
 export function estimateAiCost(params: {
   provider: string;
   model: string;
-  usage?: { promptTokens?: number; completionTokens?: number };
+  usage?: { promptTokens?: number; completionTokens?: number; cachedInputTokens?: number };
 }): AiCostEstimate | null {
   const { provider, model, usage } = params;
 
   const promptTokens = usage?.promptTokens ?? 0;
+  const cachedInputTokens = usage?.cachedInputTokens ?? 0;
   const completionTokens = usage?.completionTokens ?? 0;
   const hasUsage = usage !== undefined && (usage.promptTokens !== undefined || usage.completionTokens !== undefined);
 
@@ -69,8 +73,13 @@ export function estimateAiCost(params: {
         return { estimatedCostUsd: pricing, source: "openai_published_pricing" };
       }
       if (hasUsage) {
+        const uncachedPromptTokens = Math.max(0, promptTokens - cachedInputTokens);
+        const cachedCost = pricing.cachedInputPer1M
+          ? (cachedInputTokens / 1_000_000) * pricing.cachedInputPer1M
+          : 0;
         const cost =
-          (promptTokens / 1_000_000) * pricing.inputPer1M +
+          (uncachedPromptTokens / 1_000_000) * pricing.inputPer1M +
+          cachedCost +
           (completionTokens / 1_000_000) * pricing.outputPer1M;
         return { estimatedCostUsd: Number(cost.toFixed(6)), source: "openai_published_pricing" };
       }

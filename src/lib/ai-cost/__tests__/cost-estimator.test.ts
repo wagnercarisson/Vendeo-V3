@@ -66,15 +66,62 @@ describe("estimateAiCost", () => {
     expect(result!.source).toBe("configured_fallback");
   });
 
-  it("returns fallback when model has usage but no pricing in table", () => {
+  it("calculates gpt-5.5 cost from published pricing", () => {
     const result = estimateAiCost({
       provider: "openai",
       model: "gpt-5.5",
       usage: { promptTokens: 4656, completionTokens: 897 },
     });
     expect(result).not.toBeNull();
+    // 4656/1M * 5.0 + 897/1M * 30.0 = 0.02328 + 0.02691 = 0.05019
+    expect(result!.estimatedCostUsd).toBeCloseTo(0.05019, 5);
+    expect(result!.source).toBe("openai_published_pricing");
+  });
+
+  it("calculates gpt-5.5 cost with cached tokens discount", () => {
+    const result = estimateAiCost({
+      provider: "openai",
+      model: "gpt-5.5",
+      usage: { promptTokens: 5000, completionTokens: 1000, cachedInputTokens: 2000 },
+    });
+    expect(result).not.toBeNull();
+    // uncached: 3000/1M * 5.0 = 0.015, cached: 2000/1M * 0.5 = 0.001
+    // completion: 1000/1M * 30.0 = 0.03 → total: 0.046
+    expect(result!.estimatedCostUsd).toBeCloseTo(0.046, 4);
+    expect(result!.source).toBe("openai_published_pricing");
+  });
+
+  it("returns fallback when model has usage but no pricing in table", () => {
+    const result = estimateAiCost({
+      provider: "openai",
+      model: "gpt-7.7",
+      usage: { promptTokens: 1000, completionTokens: 500 },
+    });
+    expect(result).not.toBeNull();
     expect(result!.estimatedCostUsd).toBe(0.15);
     expect(result!.source).toBe("configured_fallback_unknown_model_with_usage");
+  });
+
+  it("uses gpt-5.5-2026-04-23 explicit pricing entry", () => {
+    const result = estimateAiCost({
+      provider: "openai",
+      model: "gpt-5.5-2026-04-23",
+      usage: { promptTokens: 1000, completionTokens: 500 },
+    });
+    expect(result).not.toBeNull();
+    expect(result!.estimatedCostUsd).toBeCloseTo(0.02, 4);
+    expect(result!.source).toBe("openai_published_pricing");
+  });
+
+  it("normalizes versioned gpt-5.5 to base pricing", () => {
+    const result = estimateAiCost({
+      provider: "openai",
+      model: "gpt-5.5-2026-07-01",
+      usage: { promptTokens: 1000, completionTokens: 500 },
+    });
+    expect(result).not.toBeNull();
+    expect(result!.estimatedCostUsd).toBeCloseTo(0.02, 4);
+    expect(result!.source).toBe("openai_published_pricing");
   });
 
   it("respects VENDEO_IMAGE_GENERATION_FALLBACK_COST_USD env var", () => {

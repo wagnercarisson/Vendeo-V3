@@ -99,12 +99,14 @@ export class OpenAIImageProvider implements ImageProvider {
 
       const imageBase64 = imageOutput.result;
 
+      const inputDetails = response.usage as { input_tokens_details?: { cached_tokens?: number }; output_tokens_details?: { image_tokens?: number } } | undefined;
       const usage = response.usage
         ? {
             promptTokens: response.usage.input_tokens ?? undefined,
             completionTokens: response.usage.output_tokens ?? undefined,
             totalTokens: (response.usage.input_tokens ?? 0) + (response.usage.output_tokens ?? 0) || undefined,
-            imageTokens: (response.usage as { output_tokens_details?: { image_tokens?: number } }).output_tokens_details?.image_tokens ?? undefined,
+            imageTokens: inputDetails?.output_tokens_details?.image_tokens ?? undefined,
+            cachedInputTokens: inputDetails?.input_tokens_details?.cached_tokens ?? undefined,
           }
         : undefined;
 

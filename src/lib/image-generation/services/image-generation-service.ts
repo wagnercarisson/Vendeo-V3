@@ -52,7 +52,7 @@ const CATEGORY_TO_SEGMENT_GROUP: Record<string, string[]> = {
 };
 
 export type GenerateImageServiceResult =
-  | { success: true; imageDataUrl: string; inputCorrections?: { productName: { from: string; to: string; reason: string } }; usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number; imageTokens?: number } }
+  | { success: true; imageDataUrl: string; inputCorrections?: { productName: { from: string; to: string; reason: string } }; usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number; imageTokens?: number; cachedInputTokens?: number } }
   | { success: false; code: string; message: string; details?: string };
 
 enum GenerationState {
@@ -862,7 +862,7 @@ export class ImageGenerationService {
     remaining: () => number,
     identityImageUrl?: string
   ): Promise<
-    | { success: true; imageBase64: string; mimeType: string; usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number; imageTokens?: number } }
+    | { success: true; imageBase64: string; mimeType: string; usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number; imageTokens?: number; cachedInputTokens?: number } }
     | { success: false; code: string; message: string; details?: string }
   > {
     const ESTIMATED_RETRY_DURATION = 30000;

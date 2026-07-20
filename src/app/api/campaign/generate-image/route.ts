@@ -524,7 +524,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
 
             // Telemetry — image generation (with real usage when available)
             const imageUsage = imageResult.usage;
-            const imageCost = estimateAiCost({ provider: provider.name, model: IMAGE_GENERATION_RESPONSES_MODEL, usage: imageUsage ? { promptTokens: imageUsage.promptTokens, completionTokens: imageUsage.completionTokens } : undefined });
+            const imageCost = estimateAiCost({ provider: provider.name, model: IMAGE_GENERATION_RESPONSES_MODEL, usage: imageUsage ? { promptTokens: imageUsage.promptTokens, completionTokens: imageUsage.completionTokens, cachedInputTokens: imageUsage.cachedInputTokens } : undefined });
             try {
               await supabaseAdmin.from("generation_events").insert({
                 generation_type: "campaign_image",
