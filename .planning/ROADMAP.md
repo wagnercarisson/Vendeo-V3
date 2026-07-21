@@ -2,7 +2,7 @@
 
 ## Milestone v1.5 — Lançamento Externo Controlado
 
-**8 phases** | **42 requirements mapped** | All covered ✓
+**9 phases** | **42 requirements mapped** | All covered ✓
 
 **Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23.
 
@@ -20,6 +20,7 @@
 | 28 | Observabilidade + Operação + Launch Controls | Pipeline instrumentado, launch config centralizado, dashboard operacional, docs de deploy/suporte | OPS-01, OPS-02, OPS-03, OPS-04, OPS-05, OPS-06, OPS-07, OPS-08, OPS-09 | 9 |
 | 29 | ✅ Refinamento + UAT + Launch Readiness | Produto polido e pronto para beta externo | LAUNCH-01, LAUNCH-02, LAUNCH-03, LAUNCH-04, LAUNCH-05, LAUNCH-06, SEC-01, SEC-02, SEC-03, SEC-05 | 10 ✅ |
 | 29.1.1 | ✅ Créditos na Assinatura Visual | VS passa a consumir créditos, remove cota fixa de 3 tentativas | CRED-03, CRED-04, CRED-05, OPS-05 | 4 ✅ |
+| 29.1.2 | △ Histórico Curto + Assinatura Visual | HistoryModal reescrito com paginação, filtro client-side, ações condicionais e ponte ApprovalModal | — | 3 |
 
 ---
 
@@ -189,6 +190,29 @@
 
 ---
 
+### Phase 29.1.2 — Histórico Curto + Assinatura Visual △
+
+**Goal:** Histórico de VS reescrito com paginação, filtro client-side de aplicabilidade, ações condicionais ao identity_state, e ponte ApprovalModal → HistoryModal.
+
+**Requirements:** _(Not assigned to specific REQ-IDs — refines LAUNCH-01, LAUNCH-02 user-facing states)_
+
+**Success criteria:**
+1. HistoryModal substituído — grid 3 colunas, max 12 itens, paginação "Ver versões anteriores"
+2. VS com critical_drift ou missing_metadata ocultas da lista (filtro client-side)
+3. Apenas `identity_state = text_only` permite "Aplicar" — demais estados bloqueiam com tooltip
+4. Draft incluído na listagem com revalidação de drift no backend
+5. ApprovalModal → HistoryModal bridge via prop `onOpenGallery` (em ambos os parents)
+6. Backend: condição de drift validation alterada de `status === 'archived'` para `status !== 'active'`
+7. Spec `visual-signature-restore` atualizada: `identity_state = visual_signature` é BLOQUEADO
+8. Sem consumo de crédito para visualizar ou reativar VS
+9. 22+ testes novos + regressão completa
+
+**Dependencies:** Phase 29.1.1 (VS consome créditos), Phase 29 (approval modal, drift system)
+
+**Source of truth:** `openspec/changes/fase-29-1-2-historico-curto-assinatura-visual/`
+
+---
+
 ## Dependency Graph
 
 ```
@@ -273,5 +297,7 @@ Phase 24 (Credit Tables + CreditService) ──┘
 - Deferred to v1.6: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06
 
 ---
+
 *Roadmap created: 2026-07-15*
 *Milestone: v1.5 — Lançamento Externo Controlado*
+*Last updated: 2026-07-21 — Added Phase 29.1.2 (Histórico Curto + Assinatura Visual)*

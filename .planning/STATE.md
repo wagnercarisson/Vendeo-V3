@@ -3,20 +3,21 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: "Lançamento Externo Controlado — Créditos + Admin + Saldo + Observabilidade + Launch"
 status: active
-last_updated: "2026-07-21T17:44:00.000Z"
+last_updated: "2026-07-21T20:23:00.000Z"
 last_activity: 2026-07-21
 progress:
-  total_phases: 9
+  total_phases: 10
   completed_phases: 8
-  total_plans: 31
+  total_plans: 34
   completed_plans: 28
-  percent: 90
+  percent: 82
 ---
 
 # Project State
 
 **Last updated:** 2026-07-21
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆
+**Current phase:** 29.1.2 — Histórico Curto + Assinatura Visual 📋 (Planned)
 
 ## Completed
 
@@ -376,7 +377,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-All v1.5 phases completed. Awaiting v1.6 (F30 — Stripe/Monetização).
+v1.5 em progresso — Fase 29.1.2 (Histórico Curto + Assinatura Visual) planejada, aguardando execução.
 
 ### Next Phases
 
@@ -385,6 +386,7 @@ All v1.5 phases completed. Awaiting v1.6 (F30 — Stripe/Monetização).
 | F28 | ✅ Completed | Observabilidade + Operação + Launch Controls (4 plans, 37+ testes, 889 total) |
 | F29 | ✅ Completed | Refinamento Visual + UAT + Launch Readiness — UAT 4/4 lojistas aprovado |
 | F29.1.1 | ✅ Completed | Créditos na Assinatura Visual — VS consome créditos, remove cota fixa de 3, UAT 15/15 ✅ |
+| F29.1.2 | 📋 Planned | Histórico Curto + Assinatura Visual — HistoryModal reescrito (3 plans) |
 | F30/v1.6 | ○ Future | Stripe / Monetização Pública (pós-beta) |
 
 ### Quick Tasks Completed
