@@ -4,13 +4,13 @@ milestone: v1.5
 milestone_name: "Lançamento Externo Controlado — Créditos + Admin + Saldo + Observabilidade + Launch"
 status: active
 last_updated: "2026-07-20T14:20:00.000Z"
-last_activity: 2026-07-20
+last_activity: 2026-07-21
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 7
-  total_plans: 25
+  total_plans: 28
   completed_plans: 25
-  percent: 100
+  percent: 89
 ---
 
 # Project State
@@ -353,11 +353,23 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 - `2e82c5a` — 25-02: transactional integration — 3-zone pipeline, mandatoryArtworkText, mapper, onboarding grant RPC, title? compatibility
 - `d508e9b` — 25-03: tests for pipeline integration — rate-limit, store routes, generate-image route; fix all compilation+test failures (799/799 passing, typecheck clean)
 
+### Phase 29.1.1 — Créditos na Assinatura Visual △
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 29-1-1-01 | 1 | △ | Backend Foundation — Types, CreditService, Routes (6 tasks) |
+| 29-1-1-02 | 2 | △ | Frontend — Modal UI + Ocultar Modal Antigo (6 tasks) |
+| 29-1-1-03 | 3 | △ | Testes e Verificação — 20+ testes, typecheck, lint, build |
+
+**Requirements:** CRED-03, CRED-04, CRED-05, OPS-05
+**Context:** `.planning/phases/29-1-1-creditos-assinatura-visual/29-1-1-CONTEXT.md`
+**Source:** `openspec/changes/fase-29-1-1-creditos-assinatura-visual/`
+
 ## Current Position
 
-Phase: 29 — Refinamento Visual + UAT + Launch Readiness ✅
-Plan: 4/4 plans implemented
-Status: **Complete.** UAT externo com 4 lojistas (4/4 aprovado), decisão go registrada, todos os gates passando.
+Phase: 29.1.1 — Créditos na Assinatura Visual △
+Plan: 0/3 plans implemented
+Status: **Planned.** Base técnica registrada via OpenSpec. Aguardando implementação.
 
 ### Next Phases
 
@@ -365,6 +377,7 @@ Status: **Complete.** UAT externo com 4 lojistas (4/4 aprovado), decisão go reg
 |-------|--------|-------------|
 | F28 | ✅ Completed | Observabilidade + Operação + Launch Controls (4 plans, 37+ testes, 889 total) |
 | F29 | ✅ Completed | Refinamento Visual + UAT + Launch Readiness — UAT 4/4 lojistas aprovado |
+| F29.1.1 | △ Planned | Créditos na Assinatura Visual — VS consome créditos, remove cota fixa de 3 |
 | F30/v1.6 | △ Future | Stripe / Monetização Pública (pós-beta) |
 
 ### Quick Tasks Completed
