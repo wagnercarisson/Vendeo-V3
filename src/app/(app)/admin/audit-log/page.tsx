@@ -66,7 +66,7 @@ export default async function AdminAuditLogPage({
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold">Audit Log</h1>
+        <h1 className="text-2xl font-bold">Histórico de auditoria</h1>
         <p className="text-muted-foreground">Histórico de ações administrativas</p>
       </div>
 

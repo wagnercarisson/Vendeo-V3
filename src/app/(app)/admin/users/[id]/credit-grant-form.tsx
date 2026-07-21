@@ -95,10 +95,10 @@ export function CreditGrantForm({ storeId, storeName }: { storeId: string; store
         )}
       </button>
       {error && (
-        <p className="text-sm text-red-600">{error}</p>
+        <p className="text-sm text-destructive">{error}</p>
       )}
       {success && (
-        <p className="text-sm text-green-600">
+        <p className="text-sm text-success">
           Créditos concedidos! Novo saldo: {success.newBalance}
         </p>
       )}

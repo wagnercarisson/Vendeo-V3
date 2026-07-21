@@ -359,7 +359,7 @@ function FormContent({
           htmlFor="badge"
           className="block text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2"
         >
-          Badge Promocional *
+          Selo promocional *
         </label>
         <select
           id="badge"

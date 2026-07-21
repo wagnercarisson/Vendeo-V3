@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
 const mockSupabaseFrom = vi.fn();
-const mockCreateSignedUrl = vi.fn();
+const mockDownload = vi.fn();
 let mockRequireApiUserImpl = vi.fn();
 let mockRequireOwnershipImpl = vi.fn();
 let mockGetCampaignImpl = vi.fn();
@@ -13,7 +13,7 @@ vi.mock("@/lib/supabase/server", () => ({
     from: mockSupabaseFrom,
     storage: {
       from: vi.fn(() => ({
-        createSignedUrl: mockCreateSignedUrl,
+        download: mockDownload,
       })),
     },
   },
@@ -157,7 +157,7 @@ describe("GET /api/campaign/[id]/download", () => {
     expect(response.status).toBe(404);
   });
 
-  it("returns 302 with signed URL for own campaign", async () => {
+  it("returns 200 with image data for own campaign", async () => {
     mockRequireApiUserImpl.mockResolvedValue({
       userId: "user-123",
       claims: { sub: "user-123" },
@@ -167,10 +167,13 @@ describe("GET /api/campaign/[id]/download", () => {
       store_id: "store-1",
       status: "ready",
       storage_path: "store-1/camp-123.jpg",
+      product_name: "Produto Teste",
+      created_at: "2026-07-10T12:00:00Z",
     });
     mockRequireOwnershipImpl.mockResolvedValue({ id: "store-1" });
-    mockCreateSignedUrl.mockResolvedValue({
-      data: { signedUrl: "https://supabase.co/storage/v1/object/signed/campaign-images/store-1/camp-123.jpg?token=abc" },
+    const fakeBlob = new Blob(["fake-image-data"], { type: "image/jpeg" });
+    mockDownload.mockResolvedValue({
+      data: fakeBlob,
       error: null,
     });
 
@@ -181,13 +184,12 @@ describe("GET /api/campaign/[id]/download", () => {
       params: Promise.resolve({ id: VALID_UUID }),
     });
 
-    expect(response.status).toBe(302);
-    expect(response.headers.get("Location")).toBe(
-      "https://supabase.co/storage/v1/object/signed/campaign-images/store-1/camp-123.jpg?token=abc"
-    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toBe("image/jpeg");
+    expect(response.headers.get("Content-Disposition")).toContain('attachment; filename="');
   });
 
-  it("returns 502 when createSignedUrl fails", async () => {
+  it("returns 502 when download fails", async () => {
     mockRequireApiUserImpl.mockResolvedValue({
       userId: "user-123",
       claims: { sub: "user-123" },
@@ -199,7 +201,7 @@ describe("GET /api/campaign/[id]/download", () => {
       storage_path: "store-1/camp-123.jpg",
     });
     mockRequireOwnershipImpl.mockResolvedValue({ id: "store-1" });
-    mockCreateSignedUrl.mockResolvedValue({
+    mockDownload.mockResolvedValue({
       data: null,
       error: new Error("Storage error"),
     });
@@ -213,6 +215,6 @@ describe("GET /api/campaign/[id]/download", () => {
 
     expect(response.status).toBe(502);
     const body = await response.json();
-    expect(body.error).toBe("Failed to generate download URL");
+    expect(body.error).toBe("Failed to download image");
   });
 });

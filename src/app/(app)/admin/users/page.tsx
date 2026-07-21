@@ -25,7 +25,7 @@ export default async function AdminUsersPage({
   });
 
   if (error) {
-    return <div className="text-red-600">Erro ao carregar usuários: {error.message}</div>;
+    return <div className="text-destructive">Erro ao carregar usuários: {error.message}</div>;
   }
 
   const result = data as { data: AdminUserSummary[]; total: number };

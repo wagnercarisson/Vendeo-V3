@@ -65,7 +65,7 @@ export default async function AdminMetricsPage() {
     await requireAdmin();
   } catch {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+      <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-destructive">
         Acesso negado. Apenas administradores podem acessar esta página.
       </div>
     );

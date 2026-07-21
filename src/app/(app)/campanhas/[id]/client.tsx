@@ -246,7 +246,7 @@ function ReadyView(props: CampaignPageProps) {
                   <p className="flex-1 font-semibold text-accent-green font-heading">
                     {currentCopy.cta_post}
                   </p>
-                  <CopyButton text={currentCopy.cta_post} label="CTA" />
+                  <CopyButton text={currentCopy.cta_post} label="Chamada" />
                 </div>
               )}
               <Button
@@ -262,7 +262,7 @@ function ReadyView(props: CampaignPageProps) {
             <div className="space-y-4">
               <div>
                 <label className="mb-1 block text-sm font-medium text-text-primary font-heading">
-                  Caption
+                  Legenda
                 </label>
                 <textarea
                   value={editData.caption}

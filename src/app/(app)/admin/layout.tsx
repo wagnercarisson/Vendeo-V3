@@ -33,7 +33,7 @@ export default async function AdminLayout({
           Métricas
         </Link>
         <Link href="/admin/audit-log" className="font-medium hover:text-primary">
-          Audit Log
+          Histórico de auditoria
         </Link>
       </nav>
       <main>{children}</main>

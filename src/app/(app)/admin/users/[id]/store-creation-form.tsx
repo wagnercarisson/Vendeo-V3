@@ -82,10 +82,10 @@ export function StoreCreationForm({ userId }: { userId: string }) {
         )}
       </button>
       {error && (
-        <p className="text-sm text-red-600">{error}</p>
+        <p className="text-sm text-destructive">{error}</p>
       )}
       {success && (
-        <p className="text-sm text-green-600">
+        <p className="text-sm text-success">
           Loja &ldquo;{success.name}&rdquo; criada com sucesso!
         </p>
       )}

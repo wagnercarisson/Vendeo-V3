@@ -50,7 +50,7 @@ describe("CampaignListClient — display", () => {
     expect(screen.getByText("09/07/2026")).toBeInTheDocument();
   });
 
-  it("shows Baixar link only for ready campaigns", () => {
+  it("shows Baixar button only for ready campaigns", () => {
     render(
       <CampaignListClient
         items={[mockReadyCampaign, mockErrorCampaign]}
@@ -58,15 +58,11 @@ describe("CampaignListClient — display", () => {
       />,
     );
 
-    const downloadLinks = screen.getAllByRole("link", { name: "Baixar" });
-    expect(downloadLinks).toHaveLength(1);
-    expect(downloadLinks[0]).toHaveAttribute(
-      "href",
-      "/api/campaign/id-1/download",
-    );
+    const downloadButtons = screen.getAllByRole("button", { name: "Baixar" });
+    expect(downloadButtons).toHaveLength(1);
   });
 
-  it("shows Abrir link for all campaigns", () => {
+  it("shows Abrir button for all campaigns", () => {
     render(
       <CampaignListClient
         items={[mockReadyCampaign, mockErrorCampaign]}
@@ -74,10 +70,8 @@ describe("CampaignListClient — display", () => {
       />,
     );
 
-    const openLinks = screen.getAllByRole("link", { name: "Abrir" });
-    expect(openLinks).toHaveLength(2);
-    expect(openLinks[0]).toHaveAttribute("href", "/campanhas/id-1");
-    expect(openLinks[1]).toHaveAttribute("href", "/campanhas/id-2");
+    const openButtons = screen.getAllByRole("button", { name: "Abrir" });
+    expect(openButtons).toHaveLength(2);
   });
 
   it("shows placeholder when thumbnailUrl is null", () => {

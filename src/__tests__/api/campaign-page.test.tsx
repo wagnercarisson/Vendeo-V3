@@ -52,10 +52,7 @@ describe("CampaignPageClient — display states", () => {
     expect(screen.getByText("#promo")).toBeInTheDocument();
     expect(screen.getByText("Compre agora")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Produto X" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /baixar/i })).toHaveAttribute(
-      "href",
-      "/api/campaign/123/download"
-    );
+    expect(screen.getByRole("button", { name: /baixar/i })).toBeInTheDocument();
   });
 
   it("renders generating state with spinner and message", () => {
