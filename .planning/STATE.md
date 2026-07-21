@@ -6,18 +6,18 @@ status: active
 last_updated: "2026-07-21T20:23:00.000Z"
 last_activity: 2026-07-21
 progress:
-  total_phases: 10
-  completed_phases: 8
-  total_plans: 34
-  completed_plans: 28
-  percent: 82
+  total_phases: 11
+  completed_phases: 9
+  total_plans: 37
+  completed_plans: 31
+  percent: 84
 ---
 
 # Project State
 
 **Last updated:** 2026-07-21
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆
-**Current phase:** 29.1.2 — Histórico Curto + Assinatura Visual 📋 (Planned)
+**Current phase:** 29.1.2 — Histórico Curto + Assinatura Visual ✅ (Complete)
 
 ## Completed
 
@@ -90,6 +90,7 @@ progress:
 | 20 — Dashboard | 3/3 | ✅ | 2026-07-13 |
 | 21 — Histórico e Busca | 3/3 | ✅ | 2026-07-14 |
 | 22 — Mobile Hardening | 3/3 | ✅ | 2026-07-15 |
+| 29.1.2 — Histórico Curto + Assinatura Visual | 3/3 | ✅ | 2026-07-21 |
 
 **Total:** 5 phases, 18 plans, 713 tests, 89 files
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
@@ -375,9 +376,27 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 - `6ff32ee` — 29-1-1-03: Testes — credit flow (8 testes), regressão
 - `b6c8a8c` — fix(29-1-1-03): update makeChain mock for count:exact pagination
 
+### Phase 29.1.2 — Histórico Curto + Assinatura Visual ✅
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 29-1-2-01 | 1 | ✅ | Backend Foundation — approve drift fix + spec update (2 tasks) |
+| 29-1-2-02 | 1 | ✅ | Frontend — HistoryModal rewrite + ApprovalModal bridge + pagination (10 tasks) |
+| 29-1-2-03 | 2 | ✅ | Testes e Verificação — 22+ testes, regressão completa (6 tasks) |
+
+**Context:** `.planning/phases/29-1-2-historico-curto-assinatura-visual/29-1-2-CONTEXT.md`
+**Tests:** 943 passing (118 files, 22+ novos)
+**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
+
+**Commits:**
+- `f0e0af2` — 29-1-2-01: Backend Foundation — approve drift fix + spec update
+- `720ac8c` — 29-1-2-02: Frontend — HistoryModal rewrite + ApprovalModal bridge + pagination
+- `40645d9` — 29-1-2-03: Testes e Verificação — HistoryModal + Backend + Regressão
+- `17a893f` — fix(29-1-2): resolve test issues — missing onOpenGallery destructure, mock drift for missing metadata
+
 ## Current Position
 
-v1.5 em progresso — Fase 29.1.2 (Histórico Curto + Assinatura Visual) planejada, aguardando execução.
+v1.5 em progresso — Fase 29.1.2 (Histórico Curto + Assinatura Visual) concluída.
 
 ### Next Phases
 
@@ -386,7 +405,7 @@ v1.5 em progresso — Fase 29.1.2 (Histórico Curto + Assinatura Visual) planeja
 | F28 | ✅ Completed | Observabilidade + Operação + Launch Controls (4 plans, 37+ testes, 889 total) |
 | F29 | ✅ Completed | Refinamento Visual + UAT + Launch Readiness — UAT 4/4 lojistas aprovado |
 | F29.1.1 | ✅ Completed | Créditos na Assinatura Visual — VS consome créditos, remove cota fixa de 3, UAT 15/15 ✅ |
-| F29.1.2 | 📋 Planned | Histórico Curto + Assinatura Visual — HistoryModal reescrito (3 plans) |
+| F29.1.2 | ✅ Completed | Histórico Curto + Assinatura Visual — HistoryModal reescrito (3 plans, 943 testes) |
 | F30/v1.6 | ○ Future | Stripe / Monetização Pública (pós-beta) |
 
 ### Quick Tasks Completed
