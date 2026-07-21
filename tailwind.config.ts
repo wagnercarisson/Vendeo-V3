@@ -31,6 +31,9 @@ export default {
         heading: ["Poppins", "sans-serif"],
         body: ["Open Sans", "sans-serif"],
       },
+      animation: {
+        "skeleton-shimmer": "skeleton-shimmer 2s ease-in-out infinite",
+      },
     },
   },
   plugins: [],
