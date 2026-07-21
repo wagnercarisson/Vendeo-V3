@@ -216,6 +216,91 @@ describe('GET /api/store/[id]/visual-signature', () => {
     expect(activeSig.art_direction).toHaveProperty('content_used');
   });
 
+  describe('pagination', () => {
+    it('?limit=6 passes range(0, 5) to Supabase and returns total', async () => {
+      const manySigs = Array.from({ length: 10 }, (_, i) => ({
+        id: `sig-${i}`,
+        asset_url: `https://example.com/vs${i}.png`,
+        type: 'ai_generated',
+        status: 'archived',
+        created_at: `2026-06-${String(i + 1).padStart(2, '0')}T00:00:00Z`,
+        updated_at: `2026-06-${String(i + 1).padStart(2, '0')}T00:00:00Z`,
+        metadata: null,
+      }));
+      mockSupabaseFrom.mockImplementation((table: string) => {
+        if (table === 'stores') return makeChain({ data: mockStore, error: null });
+        if (table === 'store_visual_signatures') return makeChain({ data: manySigs, error: null, count: 10 });
+        return makeChain({ data: null, error: null });
+      });
+      const { GET } = await import('../route');
+      const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/visual-signature?limit=6`));
+      const res = await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
+      const body = await res.json();
+      expect(body.total).toBe(10);
+      expect(Array.isArray(body.signatures)).toBe(true);
+      // Verify range was called with correct offset+limit
+      const storeSigCalls = mockSupabaseFrom.mock.calls
+        .map((call: any, i: number) => ({ table: call[0], idx: i }))
+        .filter(c => c.table === 'store_visual_signatures');
+      const chainCall = mockSupabaseFrom.mock.results[storeSigCalls[0].idx]?.value;
+      expect(chainCall?.range).toHaveBeenCalledWith(0, 5);
+    });
+
+    it('?limit=6&offset=6 passes range(6, 11) to Supabase', async () => {
+      const manySigs = Array.from({ length: 10 }, (_, i) => ({
+        id: `sig-${i}`,
+        asset_url: `https://example.com/vs${i}.png`,
+        type: 'ai_generated',
+        status: 'archived',
+        created_at: `2026-06-${String(i + 1).padStart(2, '0')}T00:00:00Z`,
+        updated_at: `2026-06-${String(i + 1).padStart(2, '0')}T00:00:00Z`,
+        metadata: null,
+      }));
+      mockSupabaseFrom.mockImplementation((table: string) => {
+        if (table === 'stores') return makeChain({ data: mockStore, error: null });
+        if (table === 'store_visual_signatures') return makeChain({ data: manySigs, error: null, count: 10 });
+        return makeChain({ data: null, error: null });
+      });
+      const { GET } = await import('../route');
+      const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/visual-signature?limit=6&offset=6`));
+      const res = await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
+      const body = await res.json();
+      expect(body.total).toBe(10);
+      const storeSigCalls = mockSupabaseFrom.mock.calls
+        .map((call: any, i: number) => ({ table: call[0], idx: i }))
+        .filter(c => c.table === 'store_visual_signatures');
+      const chainCall = mockSupabaseFrom.mock.results[storeSigCalls[0].idx]?.value;
+      expect(chainCall?.range).toHaveBeenCalledWith(6, 11);
+    });
+
+    it('default limit is 12 (range(0, 11))', async () => {
+      const manySigs = Array.from({ length: 20 }, (_, i) => ({
+        id: `sig-${i}`,
+        asset_url: `https://example.com/vs${i}.png`,
+        type: 'ai_generated',
+        status: 'archived',
+        created_at: `2026-06-${String(i + 1).padStart(2, '0')}T00:00:00Z`,
+        updated_at: `2026-06-${String(i + 1).padStart(2, '0')}T00:00:00Z`,
+        metadata: null,
+      }));
+      mockSupabaseFrom.mockImplementation((table: string) => {
+        if (table === 'stores') return makeChain({ data: mockStore, error: null });
+        if (table === 'store_visual_signatures') return makeChain({ data: manySigs, error: null, count: 20 });
+        return makeChain({ data: null, error: null });
+      });
+      const { GET } = await import('../route');
+      const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/visual-signature`));
+      const res = await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
+      const body = await res.json();
+      expect(body.total).toBe(20);
+      const storeSigCalls = mockSupabaseFrom.mock.calls
+        .map((call: any, i: number) => ({ table: call[0], idx: i }))
+        .filter(c => c.table === 'store_visual_signatures');
+      const chainCall = mockSupabaseFrom.mock.results[storeSigCalls[0].idx]?.value;
+      expect(chainCall?.range).toHaveBeenCalledWith(0, 11);
+    });
+  });
+
   describe('critical_drift', () => {
     beforeEach(() => {
       mockValidateDrift.mockReturnValue({

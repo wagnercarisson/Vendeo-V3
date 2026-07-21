@@ -216,29 +216,6 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
           </div>
         );
 
-      case "exhausted":
-        return (
-          <div className="space-y-4">
-            <div className="flex flex-col items-center justify-center py-6 gap-2">
-              <ImageIcon className="w-8 h-8 text-text-muted" />
-              <p className="text-text-muted text-sm font-body">Nenhuma assinatura visual</p>
-            </div>
-            {hasArchivedSignatures && (
-              <button type="button" onClick={() => setShowHistoryModal(true)}
-                className="w-full px-4 py-2 text-text-muted hover:text-text-primary text-xs font-body underline transition-colors duration-200"
-              >
-                Assinaturas anteriores
-              </button>
-            )}
-            <button type="button" onClick={handleShowApproval}
-              className="w-full px-4 py-2.5 bg-accent-green text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 flex items-center justify-center gap-2"
-            >
-              <Sparkles className="w-4 h-4" />
-              Criar Assinatura Visual
-            </button>
-          </div>
-        );
-
       default:
         if (activeSignature) {
           return (

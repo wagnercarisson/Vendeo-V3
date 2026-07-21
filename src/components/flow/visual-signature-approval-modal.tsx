@@ -322,7 +322,7 @@ export function VisualSignatureApprovalModal({
     }
   }, [state, storeId, mode, onComplete]);
 
-  const handleApproveExhausted = useCallback(async (signatureId: string) => {
+  const handleApproveFromReview = useCallback(async (signatureId: string) => {
     setState({ phase: "approving" });
 
     try {
@@ -581,7 +581,7 @@ export function VisualSignatureApprovalModal({
                     <span className="block text-center text-xs text-text-muted font-body">Versão {i + 1}</span>
                     <button
                       type="button"
-                      onClick={isActiveDrift ? handleRealignActive : () => handleApproveExhausted(sig.id)}
+                      onClick={isActiveDrift ? handleRealignActive : () => handleApproveFromReview(sig.id)}
                       className="w-full px-2 py-1.5 bg-accent-green text-white font-heading font-semibold text-xs rounded-lg hover:brightness-110 transition-all duration-200"
                     >
                       {isActiveDrift ? "Realinhar" : (isActive ? "Manter" : "Aprovar")}

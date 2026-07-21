@@ -218,6 +218,35 @@ describe('VisualSignatureApprovalModal behavioral (Cancelar) — rendering', () 
     expect(screen.getByText('Cancelar')).toBeInTheDocument();
   });
 
+  it('402 response mostra insufficient_credits com CTA /conta e Tentar novamente', async () => {
+    const props = createModalProps();
+
+    vi.spyOn(global, 'fetch').mockImplementation(async (url) => {
+      const urlStr = typeof url === 'string' ? url : '';
+      if (urlStr.includes('/visual-signature') && !urlStr.includes('/generate')) {
+        return new Response(JSON.stringify({ signatures: [] }), { status: 200 });
+      }
+      if (urlStr.includes('/generate-without-logo')) {
+        return new Response(JSON.stringify({ code: 'insufficient_credits', error: 'Créditos insuficientes' }), { status: 402 });
+      }
+      return new Response(JSON.stringify({}), { status: 200 });
+    });
+
+    render(<VisualSignatureApprovalModal {...props} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Créditos insuficientes para gerar assinatura visual.')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Cada geração de assinatura visual consome 1 crédito.')).toBeInTheDocument();
+
+    const verCreditos = screen.getByText('Ver meus créditos');
+    expect(verCreditos).toBeInTheDocument();
+    expect(verCreditos.closest('a') || verCreditos).toBeTruthy();
+
+    expect(screen.getByText('Tentar novamente')).toBeInTheDocument();
+  });
+
   it('substitution mode + erro mostra "Tentar novamente"', async () => {
     const props = createModalProps({ mode: 'substitution' });
 

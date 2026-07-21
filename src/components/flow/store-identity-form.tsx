@@ -1395,18 +1395,6 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
                   </div>
                 )}
 
-                {logoStatus === 'exhausted' && (
-                  <div className="mt-4">
-                    <p className="text-accent-amber text-xs font-body">Limite de 3 versões atingido.</p>
-                    <button
-                      type="button"
-                      onClick={handleNoLogo}
-                      className="mt-2 text-accent-blue hover:text-accent-blue/80 text-xs font-body underline transition-colors duration-200"
-                    >
-                      Reavaliar assinaturas
-                    </button>
-                  </div>
-                )}
                 </>)}
 
                 {identityActions.showGuidanceCard && (
