@@ -8,6 +8,10 @@ const mockPersistSignature = vi.fn();
 const mockInsertGenerationEvent = vi.fn();
 const mockRevalidateCriticalDrift = vi.fn();
 const mockGetActiveVisualSignature = vi.fn();
+const mockGetLaunchConfig = vi.fn();
+const mockGetBalance = vi.fn();
+const mockReserveCredit = vi.fn();
+const mockRefundCredit = vi.fn();
 
 vi.mock('@/lib/supabase/server', () => ({
   supabaseAdmin: { from: mockSupabaseFrom },
@@ -48,6 +52,18 @@ vi.mock('@/lib/visual-signature/generation-events', () => ({
 
 vi.mock('@/lib/visual-signature/drift-revalidator', () => ({
   revalidateCriticalDrift: mockRevalidateCriticalDrift,
+}));
+
+vi.mock('@/lib/launch-config/config', () => ({
+  getLaunchConfig: mockGetLaunchConfig,
+}));
+
+vi.mock('@/lib/credit/credit-service', () => ({
+  CreditService: class {
+    getBalance = mockGetBalance;
+    reserveCredit = mockReserveCredit;
+    refundCredit = mockRefundCredit;
+  },
 }));
 
 vi.mock('fs', () => ({
@@ -181,6 +197,16 @@ function setupStoreQuery(result: any) {
 describe('POST /api/store/[id]/visual-signature/generate-without-logo — Substitution guards', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetLaunchConfig.mockReturnValue({
+      v15Enabled: true,
+      creditsChargingEnabled: false,
+      copyDirectorEnabled: true,
+      rateLimitEnabled: true,
+      generationPaused: false,
+    });
+    mockGetBalance.mockResolvedValue(5);
+    mockReserveCredit.mockResolvedValue('ct-001');
+    mockRefundCredit.mockResolvedValue('refund-tx');
     mockIdentityDirectorGenerate.mockResolvedValue(mockSignatureResult);
     mockPersistSignature.mockResolvedValue(mockSignatureResult.signature);
     mockInsertGenerationEvent.mockResolvedValue(undefined);
@@ -231,10 +257,10 @@ describe('POST /api/store/[id]/visual-signature/generate-without-logo — Substi
     expect(body.code).toBe('DRIFT_NOT_CONFIRMED');
   });
 
-  it('should reject substitution when 3 signatures already exist', async () => {
+  it('should allow substitution with any number of existing signatures (limit removed)', async () => {
     mockSupabaseFrom.mockImplementation((table: string) => {
       if (table === 'stores') return makeChain({ data: mockStoreVisualSignature, error: null });
-      if (table === 'store_visual_signatures') return makeChain({ data: [{ id: 'sig1' }, { id: 'sig2' }, { id: 'sig3' }], error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: [{ id: 'sig1' }, { id: 'sig2' }, { id: 'sig3' }, { id: 'sig4' }], error: null });
       return makeChain({ data: null, error: null });
     });
     mockGetActiveVisualSignature.mockResolvedValue(mockActiveVS);
@@ -246,16 +272,12 @@ describe('POST /api/store/[id]/visual-signature/generate-without-logo — Substi
 
     const { POST } = await import('../generate-without-logo/route');
     const res = await POST(makeRequest({ mode: 'substitution' }), { params: Promise.resolve({ id: STORE_ID }) });
-    expect(res.status).toBe(403);
-    const body = await res.json();
-    expect(body.exhausted).toBe(true);
+    expect(res.status).toBe(200);
   });
 
-  it('should allow substitution with 2 successful + 1 failed signature', async () => {
-    // 2 successful (type ai_generated) + 1 failed attempt (no signature record with these types)
+  it('should allow substitution without attempt count limit', async () => {
     mockSupabaseFrom.mockImplementation((table: string) => {
-      if (table === 'stores') return makeChain({ data: { ...mockStoreVisualSignature, visual_signature_attempts: 2 }, error: null });
-      // Count only has 2 because the failed attempt doesn't have a record with type in ('ai_generated', 'automatic_generated')
+      if (table === 'stores') return makeChain({ data: { ...mockStoreVisualSignature, visual_signature_attempts: 5 }, error: null });
       if (table === 'store_visual_signatures') return makeChain({ data: [{ id: 'sig1' }, { id: 'sig2' }], error: null });
       return makeChain({ data: null, error: null });
     });
@@ -268,7 +290,7 @@ describe('POST /api/store/[id]/visual-signature/generate-without-logo — Substi
 
     const { POST } = await import('../generate-without-logo/route');
     const res = await POST(makeRequest({ mode: 'substitution' }), { params: Promise.resolve({ id: STORE_ID }) });
-    expect(res.status).toBe(200); // should pass guards and proceed with generation
+    expect(res.status).toBe(200);
   });
 
   it('should allow substitution when historical drafts exist', async () => {
@@ -313,7 +335,6 @@ describe('POST /api/store/[id]/visual-signature/generate-without-logo — Substi
 
 describe('POST /api/store/[id]/visual-signature/generate-without-logo — Failure path logo_status', () => {
   function countLogoStatusFailedUpdate(): number {
-    // Collect ALL chain objects returned by mockSupabaseFrom for 'stores' calls
     const storesChains = mockSupabaseFrom.mock.results
       .filter((r, i) => mockSupabaseFrom.mock.calls[i]?.[0] === 'stores')
       .map(r => r.value)
@@ -331,6 +352,16 @@ describe('POST /api/store/[id]/visual-signature/generate-without-logo — Failur
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetLaunchConfig.mockReturnValue({
+      v15Enabled: true,
+      creditsChargingEnabled: false,
+      copyDirectorEnabled: true,
+      rateLimitEnabled: true,
+      generationPaused: false,
+    });
+    mockGetBalance.mockResolvedValue(5);
+    mockReserveCredit.mockResolvedValue('ct-001');
+    mockRefundCredit.mockResolvedValue('refund-tx');
     mockInsertGenerationEvent.mockResolvedValue(undefined);
     mockGetActiveVisualSignature.mockResolvedValue(null);
   });

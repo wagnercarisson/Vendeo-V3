@@ -6,6 +6,10 @@ const mockIdentityDirectorGenerate = vi.fn();
 const mockAiGeneratorGenerate = vi.fn();
 const mockPersistSignature = vi.fn();
 const mockInsertGenerationEvent = vi.fn();
+const mockGetLaunchConfig = vi.fn();
+const mockGetBalance = vi.fn();
+const mockReserveCredit = vi.fn();
+const mockRefundCredit = vi.fn();
 
 vi.mock('@/lib/supabase/server', () => ({
   supabaseAdmin: { from: mockSupabaseFrom },
@@ -43,6 +47,18 @@ vi.mock('@/lib/visual-signature/generation-events', () => ({
   insertGenerationEvent: mockInsertGenerationEvent,
 }));
 
+vi.mock('@/lib/launch-config/config', () => ({
+  getLaunchConfig: mockGetLaunchConfig,
+}));
+
+vi.mock('@/lib/credit/credit-service', () => ({
+  CreditService: class {
+    getBalance = mockGetBalance;
+    reserveCredit = mockReserveCredit;
+    refundCredit = mockRefundCredit;
+  },
+}));
+
 vi.mock('fs', () => ({
   default: {
     readFileSync: vi.fn(() => 'mocked prompt content'),
@@ -54,12 +70,14 @@ vi.mock('fs', () => ({
 
 vi.mock('crypto', () => ({
   default: {
+    randomUUID: vi.fn(() => 'test-op-id'),
     createHash: vi.fn(() => ({
       update: vi.fn(() => ({
         digest: vi.fn(() => 'abcdef123456'),
       })),
     })),
   },
+  randomUUID: vi.fn(() => 'test-op-id'),
   createHash: vi.fn(() => ({
     update: vi.fn(() => ({
       digest: vi.fn(() => 'abcdef123456'),
@@ -100,6 +118,7 @@ const mockStore = {
   state: null,
   brand_color: '#CC0000',
   visual_signature_attempts: 0,
+  identity_state: 'text_only',
 };
 
 const mockSignatureResult = {
@@ -140,6 +159,16 @@ function makeRequest(body: Record<string, unknown> = {}) {
 describe('POST /api/store/[id]/visual-signature/generate-without-logo', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetLaunchConfig.mockReturnValue({
+      v15Enabled: true,
+      creditsChargingEnabled: true,
+      copyDirectorEnabled: true,
+      rateLimitEnabled: true,
+      generationPaused: false,
+    });
+    mockGetBalance.mockResolvedValue(5);
+    mockReserveCredit.mockResolvedValue('ct-001');
+    mockRefundCredit.mockResolvedValue('refund-tx');
     mockIdentityDirectorGenerate.mockResolvedValue(mockSignatureResult);
     mockPersistSignature.mockResolvedValue(mockSignatureResult.signature);
     mockInsertGenerationEvent.mockResolvedValue(undefined);
@@ -169,15 +198,18 @@ describe('POST /api/store/[id]/visual-signature/generate-without-logo', () => {
     expect(body.error).toBe('Loja não encontrada');
   });
 
-  it('generation limit exhausted returns 403', async () => {
+  it('saldo zero returns 402', async () => {
+    mockGetBalance.mockResolvedValue(0);
     mockSupabaseFrom.mockImplementation((table: string) => {
-      if (table === 'stores') return makeChain({ data: { ...mockStore, visual_signature_attempts: 3 }, error: null });
-      if (table === 'store_visual_signatures') return makeChain({ data: [{ id: 'sig1' }, { id: 'sig2' }, { id: 'sig3' }], error: null });
+      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: [], error: null });
       return makeChain({ data: null, error: null });
     });
     const { POST } = await import('../route');
     const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(402);
+    const body = await res.json();
+    expect(body.code).toBe('insufficient_credits');
   });
 
   it('successful generation returns expected shape', async () => {
@@ -194,8 +226,6 @@ describe('POST /api/store/[id]/visual-signature/generate-without-logo', () => {
     expect(body).toHaveProperty('assetUrl');
     expect(body).toHaveProperty('signatureId');
     expect(body).toHaveProperty('artDirectorOutput');
-    expect(body).toHaveProperty('attempt');
-    expect(body).toHaveProperty('totalGenerated');
   });
 
   it('generation calls StoreIdentityArtDirectorService', async () => {
@@ -209,23 +239,30 @@ describe('POST /api/store/[id]/visual-signature/generate-without-logo', () => {
     expect(mockIdentityDirectorGenerate).toHaveBeenCalled();
   });
 
-  it('generation increments visual_signature_attempts', async () => {
-    let updatedAttempts: number | null = null;
+  it('credit_tx_id nao e definido quando creditsChargingEnabled=false', async () => {
+    mockGetLaunchConfig.mockReturnValue({
+      v15Enabled: true,
+      creditsChargingEnabled: false,
+      copyDirectorEnabled: true,
+      rateLimitEnabled: true,
+      generationPaused: false,
+    });
     mockSupabaseFrom.mockImplementation((table: string) => {
-      if (table === 'stores') {
-        const chain = makeChain({ data: mockStore, error: null });
-        chain.update = vi.fn((data: any) => {
-          if (data.visual_signature_attempts !== undefined) updatedAttempts = data.visual_signature_attempts;
-          return makeChain({ data: null, error: null });
-        });
-        return chain;
-      }
+      if (table === 'stores') return makeChain({ data: mockStore, error: null });
       if (table === 'store_visual_signatures') return makeChain({ data: [], error: null });
       return makeChain({ data: null, error: null });
     });
     const { POST } = await import('../route');
-    await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
-    expect(updatedAttempts).toBe(1);
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(200);
+    const storeSigUpdateCalls = mockSupabaseFrom.mock.results
+      .filter((r: any, i: number) => mockSupabaseFrom.mock.calls[i]?.[0] === 'store_visual_signatures')
+      .map((r: any) => r.value.update?.mock?.calls ?? [])
+      .flat();
+    const hasCreditTx = storeSigUpdateCalls.some((call: any) =>
+      call[0]?.metadata?.credit_tx_id !== undefined
+    );
+    expect(hasCreditTx).toBe(false);
   });
 
   it('generation records generation event on success', async () => {
