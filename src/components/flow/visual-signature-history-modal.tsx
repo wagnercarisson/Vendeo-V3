@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Loader2, X, AlertCircle, CheckCircle2, RotateCcw } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Loader2, X, AlertCircle } from "lucide-react";
 
 interface HistorySignature {
   id: string;
@@ -27,32 +27,56 @@ interface VisualSignatureHistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   storeId: string;
-  onRestore: () => void;
+  identityState: string | null;
+  onApplied?: () => void;
+}
+
+function canApply(identityState: string | null): boolean {
+  return identityState === "text_only";
+}
+
+function getBlockedTooltip(identityState: string | null): string {
+  switch (identityState) {
+    case "visual_signature": return "Remova a assinatura ativa antes de aplicar outra versão";
+    case "logo": return "Remova o logotipo ativo antes de aplicar uma assinatura visual";
+    default: return "Aguarde o carregamento da identidade da loja";
+  }
 }
 
 export function VisualSignatureHistoryModal({
   isOpen,
   onClose,
   storeId,
-  onRestore,
+  identityState,
+  onApplied,
 }: VisualSignatureHistoryModalProps) {
-  const [signatures, setSignatures] = useState<HistorySignature[]>([]);
+  const [rawSignatures, setRawSignatures] = useState<HistorySignature[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [restoringId, setRestoringId] = useState<string | null>(null);
-  const [restoreError, setRestoreError] = useState<string | null>(null);
+  const [apiTotal, setApiTotal] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasLoadedSecondBatch, setHasLoadedSecondBatch] = useState(false);
+  const [applyingId, setApplyingId] = useState<string | null>(null);
+  const [applyError, setApplyError] = useState<string | null>(null);
+
+  const visibleSignatures = useMemo(
+    () => rawSignatures.filter(s => s.restore_eligibility?.reason === "ok"),
+    [rawSignatures]
+  );
 
   useEffect(() => {
     if (!isOpen) return;
 
     setLoading(true);
     setError(null);
-    setRestoreError(null);
+    setApplyError(null);
+    setHasLoadedSecondBatch(false);
 
-    fetch(`/api/store/${storeId}/visual-signature`)
+    fetch(`/api/store/${storeId}/visual-signature?limit=6&offset=0`)
       .then(res => res.json())
       .then(data => {
-        setSignatures(data?.signatures ?? []);
+        setRawSignatures(data?.signatures ?? []);
+        setApiTotal(data?.total ?? 0);
         setLoading(false);
       })
       .catch(() => {
@@ -61,44 +85,69 @@ export function VisualSignatureHistoryModal({
       });
   }, [isOpen, storeId]);
 
-  const handleRestore = useCallback(async (signatureId: string) => {
-    setRestoringId(signatureId);
-    setRestoreError(null);
+  useEffect(() => {
+    if (!isOpen) {
+      setRawSignatures([]);
+      setLoading(true);
+      setError(null);
+      setApiTotal(0);
+      setLoadingMore(false);
+      setHasLoadedSecondBatch(false);
+      setApplyingId(null);
+      setApplyError(null);
+    }
+  }, [isOpen]);
+
+  const handleLoadMore = useCallback(async () => {
+    setLoadingMore(true);
+    try {
+      const res = await fetch(`/api/store/${storeId}/visual-signature?limit=6&offset=6`);
+      const data = await res.json();
+      const newSignatures: HistorySignature[] = data?.signatures ?? [];
+      setRawSignatures(prev => [...prev, ...newSignatures]);
+      setHasLoadedSecondBatch(true);
+    } catch {
+      setError("Erro ao carregar mais assinaturas");
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [storeId]);
+
+  const handleApply = useCallback(async (signatureId: string) => {
+    setApplyingId(signatureId);
+    setApplyError(null);
 
     try {
-      const res = await fetch(`/api/store/${storeId}/visual-signature/restore`, {
+      const res = await fetch(`/api/store/${storeId}/visual-signature/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ signature_id: signatureId }),
+        body: JSON.stringify({ signatureId }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setRestoreError(data.error || "Erro ao restaurar assinatura");
-        setRestoringId(null);
-        return;
-      }
-
-      if (data.success === false && data.drift) {
-        if (data.drift.reason === "critical_drift") {
-          setRestoreError("Os dados da loja mudaram desde esta assinatura. Gere uma nova versão.");
-        } else if (data.drift.reason === "missing_metadata") {
-          setRestoreError("Assinatura antiga não pode ser restaurada. Gere uma nova versão.");
+        if (data.drift?.critical) {
+          setApplyError(data.error || "Drift detectado. Crie uma nova versão.");
         } else {
-          setRestoreError("Não foi possível restaurar esta assinatura.");
+          setApplyError(data.error || "Erro ao aplicar assinatura");
         }
-        setRestoringId(null);
+        setApplyingId(null);
         return;
       }
 
-      onRestore();
-      onClose();
+      if (data.success === true) {
+        onApplied?.();
+        onClose();
+      } else {
+        setApplyError(data.error || "Erro ao aplicar assinatura");
+        setApplyingId(null);
+      }
     } catch {
-      setRestoreError("Erro de conexão. Tente novamente.");
-      setRestoringId(null);
+      setApplyError("Erro de conexão. Tente novamente.");
+      setApplyingId(null);
     }
-  }, [storeId, onRestore, onClose]);
+  }, [storeId, onApplied, onClose]);
 
   const formatDate = (dateStr: string) => {
     try {
@@ -113,15 +162,17 @@ export function VisualSignatureHistoryModal({
     }
   };
 
-  const getRestoreTooltip = (eligibility: HistorySignature["restore_eligibility"]): string | null => {
-    if (eligibility.can_restore) return null;
-    if (eligibility.reason === "critical_drift") {
-      return "Os dados da loja mudaram desde esta assinatura. Gere uma nova versão.";
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "active":
+        return { label: "Ativa", className: "bg-accent-green text-white" };
+      case "archived":
+        return { label: "Arquivada", className: "bg-bg-hover text-text-secondary" };
+      case "draft":
+        return { label: "Rascunho", className: "bg-accent-amber text-white" };
+      default:
+        return { label: status, className: "bg-bg-hover text-text-secondary" };
     }
-    if (eligibility.reason === "missing_metadata") {
-      return "Assinatura antiga não pode ser restaurada. Gere uma nova versão.";
-    }
-    return "Não é possível restaurar esta assinatura.";
   };
 
   if (!isOpen) return null;
@@ -149,79 +200,87 @@ export function VisualSignatureHistoryModal({
           </div>
         )}
 
-        {restoreError && (
+        {applyError && (
           <div className="flex items-center gap-2 px-4 py-3 bg-accent-amber/10 rounded-lg mb-4">
             <AlertCircle className="w-4 h-4 text-accent-amber shrink-0" />
-            <p className="text-accent-amber text-sm font-body">{restoreError}</p>
+            <p className="text-accent-amber text-sm font-body">{applyError}</p>
           </div>
         )}
 
-        {!loading && !error && signatures.length === 0 && (
+        {!loading && !error && visibleSignatures.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 gap-2">
-            <p className="text-text-muted text-sm font-body">Nenhuma assinatura anterior encontrada</p>
+            <p className="text-text-muted text-sm font-body">Nenhuma assinatura anterior</p>
           </div>
         )}
 
-        {!loading && signatures.length > 0 && (
+        {!loading && visibleSignatures.length > 0 && (
           <div className="space-y-4">
-            {signatures.map((sig) => (
-              <div
-                key={sig.id}
-                className="flex gap-4 p-4 bg-bg-elevated rounded-xl border border-border-light"
-              >
-                <div className="w-16 h-16 rounded-lg overflow-hidden bg-bg-surface border border-border-light shrink-0">
-                  <img src={sig.assetUrl} alt={`Assinatura ${sig.attempt}`} className="w-full h-full object-contain" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-text-primary font-heading font-semibold text-sm">
-                      Versão {sig.attempt}
-                    </span>
-                    <span className={`text-[10px] font-heading font-medium px-1.5 py-0.5 rounded-full ${
-                      sig.status === "active"
-                        ? "text-accent-green bg-accent-green/10"
-                        : "text-text-muted bg-bg-surface"
-                    }`}>
-                      {sig.status === "active" ? "Ativa" : sig.status === "archived" ? "Arquivada" : sig.status}
-                    </span>
-                  </div>
-                  <p className="text-text-muted text-xs font-body mt-0.5">
-                    {formatDate(sig.created_at)}
-                  </p>
-                  {sig.art_direction?.visual_direction && (
-                    <p className="text-text-muted text-xs font-body mt-1 truncate">
-                      {sig.art_direction.visual_direction}
-                    </p>
-                  )}
-                  {sig.status !== "active" && (
-                    <div className="mt-2">
-                      {sig.restore_eligibility.can_restore ? (
-                        <button
-                          type="button"
-                          onClick={() => handleRestore(sig.id)}
-                          disabled={restoringId === sig.id}
-                          className="px-3 py-1.5 bg-accent-green text-white font-heading font-semibold text-xs rounded-lg hover:brightness-110 transition-all duration-200 flex items-center gap-1.5 disabled:opacity-50"
-                        >
-                          {restoringId === sig.id ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <RotateCcw className="w-3 h-3" />
-                          )}
-                          Restaurar
-                        </button>
-                      ) : (
-                        <span
-                          className="text-text-muted text-xs font-body cursor-help"
-                          title={getRestoreTooltip(sig.restore_eligibility) ?? ""}
-                        >
-                          Restauro indisponível
-                        </span>
-                      )}
+            <p className="text-xs text-text-muted font-body">
+              {visibleSignatures.length === 1
+                ? "1 assinatura"
+                : `${visibleSignatures.length} de ${Math.min(apiTotal, 12)} assinaturas`}
+            </p>
+
+            <div className="grid grid-cols-3 gap-3">
+              {visibleSignatures.map((sig) => {
+                const badge = getStatusBadge(sig.status);
+                const isActive = sig.status === "active";
+                const canApplySig = canApply(identityState) && !isActive;
+
+                return (
+                  <div key={sig.id} className="space-y-2">
+                    <div className="aspect-square rounded-lg overflow-hidden bg-bg-elevated border border-border-light relative">
+                      <span className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[10px] font-heading font-semibold rounded ${badge.className} leading-tight`}>
+                        {badge.label}
+                      </span>
+                      <img src={sig.assetUrl} alt={`Versão ${sig.attempt}`} className="w-full h-full object-contain" />
                     </div>
-                  )}
-                </div>
-              </div>
-            ))}
+                    <span className="block text-center text-xs text-text-muted font-body">
+                      {formatDate(sig.created_at)}
+                    </span>
+                    {isActive ? (
+                      <div className="w-full px-2 py-1.5 bg-accent-green text-white font-heading font-semibold text-xs rounded-lg text-center">
+                        Ativa
+                      </div>
+                    ) : canApplySig ? (
+                      <button
+                        type="button"
+                        onClick={() => handleApply(sig.id)}
+                        disabled={applyingId === sig.id}
+                        className="w-full px-2 py-1.5 bg-accent-green text-white font-heading font-semibold text-xs rounded-lg hover:brightness-110 transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-1"
+                      >
+                        {applyingId === sig.id ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          "Aplicar"
+                        )}
+                      </button>
+                    ) : (
+                      <span
+                        className="block w-full px-2 py-1.5 bg-bg-hover text-text-muted font-heading font-semibold text-xs rounded-lg text-center cursor-not-allowed"
+                        title={getBlockedTooltip(identityState)}
+                      >
+                        Indisponível
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {apiTotal > rawSignatures.length && !hasLoadedSecondBatch && (
+              <button
+                type="button"
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                className="w-full px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loadingMore ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : null}
+                Ver versões anteriores
+              </button>
+            )}
           </div>
         )}
 

@@ -95,6 +95,15 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
     }
   }, [store.id]);
 
+  const handleOpenGallery = useCallback(() => {
+    setShowApprovalModal(false);
+    setShowHistoryModal(true);
+  }, []);
+
+  const handleHistoryApplied = useCallback(() => {
+    load();
+  }, [load]);
+
   const handleHistoryRestore = useCallback(() => {
     load();
   }, [load]);
@@ -292,6 +301,7 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
           short_description={store.short_description ?? ""}
           slogan={store.slogan ?? ""}
           onComplete={handleApprovalComplete}
+          onOpenGallery={handleOpenGallery}
         />
       )}
 
@@ -300,7 +310,8 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
           isOpen={showHistoryModal}
           onClose={() => setShowHistoryModal(false)}
           storeId={store.id}
-          onRestore={handleHistoryRestore}
+          identityState={identityState}
+          onApplied={handleHistoryApplied}
         />
       )}
     </div>

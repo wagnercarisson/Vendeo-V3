@@ -4,6 +4,7 @@ import { useStoreForm, useIdentityActions } from "./use-store-form";
 import type { Store } from "@/lib/store";
 import { StorePreview } from "./store-preview";
 import { VisualSignatureApprovalModal } from "./visual-signature-approval-modal";
+import { VisualSignatureHistoryModal } from "./visual-signature-history-modal";
 import { STORE_SEGMENTS, STORE_SUBSEGMENTS, BRAZILIAN_STATES } from "@/lib/constants";
 import { AlertCircle, CheckCircle2, Loader2, X, Upload, ArrowLeft, Sparkles } from "lucide-react";
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
@@ -91,6 +92,7 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
   const [logoStatus, setLogoStatus] = useState<string | null>(null);
   const [visualSignatureUrl, setVisualSignatureUrl] = useState<string | null>(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [approvalMode, setApprovalMode] = useState<'standard' | 'substitution'>('standard');
   const [subsegmentIsOther, setSubsegmentIsOther] = useState(false);
   const [identityState, setIdentityState] = useState<string | null>(null);
@@ -579,6 +581,30 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
     console.log(`[StoreIdentityForm] handleNoLogo clicked storeId=${storeId}`);
     setApprovalMode('standard');
     setShowApprovalModal(true);
+  }, [storeId]);
+
+  const handleOpenGallery = useCallback(() => {
+    setShowApprovalModal(false);
+    setShowHistoryModal(true);
+  }, []);
+
+  const handleHistoryApplied = useCallback(async () => {
+    setShowHistoryModal(false);
+
+    try {
+      const res = await fetch(`/api/store/${storeId}`);
+      if (!res.ok) return;
+
+      const data = await res.json();
+      setLogoStatus(data.logo_status ?? null);
+      setIdentityState(data.identity_state ?? null);
+      setVisualSignatureUrl(data.visual_signature_url ?? null);
+      setLogoResultUrl(data.visual_signature_url ?? data.logo_url ?? null);
+      setHasArchivedSignatures(data.has_archived_signatures ?? false);
+      setDriftRefreshKey(k => k + 1);
+    } catch {
+      // refresh silencioso
+    }
   }, [storeId]);
 
   const handleOpenSubstitutionApproval = useCallback(() => {
@@ -1765,6 +1791,16 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
           mode={approvalMode}
           onComplete={handleApprovalComplete}
           onRemove={handleRemoveVS}
+          onOpenGallery={handleOpenGallery}
+        />
+      )}
+      {showHistoryModal && storeId && (
+        <VisualSignatureHistoryModal
+          isOpen={showHistoryModal}
+          onClose={() => setShowHistoryModal(false)}
+          storeId={storeId}
+          identityState={identityState}
+          onApplied={handleHistoryApplied}
         />
       )}
     </div>

@@ -68,6 +68,7 @@ interface VisualSignatureApprovalModalProps {
   }) => void;
   onRemove?: () => void;
   onTier2Retry?: () => Promise<void>;
+  onOpenGallery?: () => void;
 }
 
 export function VisualSignatureApprovalModal({
@@ -542,10 +543,19 @@ export function VisualSignatureApprovalModal({
                 Assinaturas existentes ({signatures.length})
               </span>
             </div>
-            {totalSignatures > 6 && (
+            {totalSignatures > 6 && !onOpenGallery && (
               <p className="text-xs text-text-muted font-body text-center">
                 Há mais versões no histórico. Galeria completa em breve.
               </p>
+            )}
+            {totalSignatures > 6 && onOpenGallery && (
+              <button
+                type="button"
+                onClick={onOpenGallery}
+                className="text-accent-blue hover:text-accent-blue/80 underline font-body transition-colors duration-200"
+              >
+                Ver versões recentes
+              </button>
             )}
 
             <div className="grid grid-cols-3 gap-3">
