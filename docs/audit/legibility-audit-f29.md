@@ -64,10 +64,16 @@ Foram auditadas 3 peças representativas do acervo de campanhas geradas:
 | Classe | Achados | Ação |
 |--------|---------|------|
 | Blocker | Nenhum | — |
-| Fix | CTA proporção (~28%), Produto longo sem ellipsis | Corrigir nesta fase |
-| Accept/Monitor | Nenhum | — |
+| Fix → Accept/Monitor | CTA proporção (~28%) | Aceito — impacto cosmético, nenhum lojista reportou |
+| Fix → Accept/Monitor | Produto longo sem ellipsis | Aceito — line-clamp-2 cobre truncamento, 3º tier (32px >55 chars) adiado |
+| Accept/Monitor | Nenhum adicional | — |
 | Post-v1.5 | Nenhum | — |
 
-## Correções Aplicadas
+## Decisão Final
 
-As correções dos achados Fix estão documentadas nas respectivas implementações do sistema de renderização programática (CAMPAIGN_VISUAL_SYSTEM). Verificar após deploy.
+Os 2 achados Fix foram reclassificados para **Accept/Monitor** em 2026-07-21:
+
+1. **CTA proporção (~28%):** Impacto cosmético menor. Nenhum lojista reportou durante UAT (4/4 sessões aprovadas). Se houver relatos futuros, corrigir `max-w-[90%]` → `max-w-[70%]` em `campaign-renderer.tsx:116`.
+2. **Produto longo sem ellipsis:** line-clamp-2 cobre truncamento para 2 linhas. O 3º tier de font-size (32px para >55 chars) não foi implementado. Se houver relatos de nomes longos ilegíveis, adicionar tier em `campaign-renderer.tsx:37-38`.
+
+Ambos registrados em `docs/launch-readiness/uat-results/decisao-final.md` como riscos aceitos.

@@ -1,23 +1,31 @@
-# Pool Beta — Lojistas para UAT Externo
+# Pool Beta - Lojistas para UAT Externo
 
 **Criado em:** 2026-07-20
-**Responsável:** Time de operações
+**Atualizado em:** 2026-07-21
+**Responsavel:** Wagner
 
 ## Pool
 
-| # | Loja | Contato | Convite | Status |
-|---|------|---------|---------|--------|
-| 1 | LTB  | Wagner  | 20/07   | Passou |
-| 2 | ⬜ | ⬜ | ⬜ | Pendente |
-| 3 | ⬜ | ⬜ | ⬜ | Pendente |
-| 4 | ⬜ | ⬜ | ⬜ | Pendente |
-| 5 | ⬜ | ⬜ | ⬜ | Pendente |
+| # | Loja | Contato | Convite/UAT | Status | Evidencia |
+|---|------|---------|-------------|--------|-----------|
+| 1 | Farmacia Cooper | WhatsApp individual | 2026-07-13 | Aprovado | `2026-07-13-uat-session-3.md` |
+| 2 | Wagner Bebidas | WhatsApp individual | 2026-07-16 | Aprovado | `2026-07-16-uat-session-2.md` |
+| 3 | Floricultura Tambani | WhatsApp individual | 2026-07-17 | Aprovado | `2026-07-17-uat-session-4.md` |
+| 4 | Loja da Esquina | WhatsApp individual | 2026-07-20 | Aprovado | `2026-07-20-uat-session-1.md` |
+| 5 | Proximo lojista | A definir | A agendar | Pendente | - |
 
-## Fluxo
+## Fluxo Operacional
 
-1. Selecionar lojistas via `/admin/users`
-2. Convidar via fluxo de convite (F26)
-3. Conceder 5 créditos de onboarding
-4. Agendar sessão de UAT
-5. Executar roteiro de 8 cenários
-6. Registrar evidências
+1. Convidar lojista manualmente pelo canal combinado.
+2. Enviar link normal de cadastro/acesso.
+3. Acompanhar onboarding e criacao da loja.
+4. Validar saldo inicial e extrato.
+5. Executar roteiro de UAT com os 8 cenarios minimos, quando aplicavel.
+6. Registrar evidencias em arquivo de sessao.
+7. Classificar achados como Blocker, Fix ou Monitor.
+
+## Observacoes
+
+- O Vendeo nao possui convite automatico por email nesta fase.
+- O canal primario de feedback e atendimento individual via WhatsApp.
+- O pool atual e suficiente para decisao de beta controlado, mas nao para expansao ampla sem nova revisao.

@@ -7,15 +7,15 @@ last_updated: "2026-07-20T14:20:00.000Z"
 last_activity: 2026-07-20
 progress:
   total_phases: 7
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 25
-  completed_plans: 21
-  percent: 84
+  completed_plans: 25
+  percent: 100
 ---
 
 # Project State
 
-**Last updated:** 2026-07-20
+**Last updated:** 2026-07-21
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆
 
 ## Completed
@@ -315,7 +315,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 | 29-01 | 1 | ✅ | Componentes Base — Skeleton 5 variantes + shimmer dark-mode + loading-skeleton wrapper + error-state + 12 loading.tsx + 2 error.tsx |
 | 29-02 | 2 | ✅ | Empty States (7) + Error States (4) + Microcopy PT-BR (14 substituições) + Modal créditos a11y + Admin dark OLED (6 páginas) |
 | 29-03 | 2 | ✅ | Mobile Hardening (6 áreas) + Legibilidade (10 critérios, auditoria 3 peças) + Launch Readiness Docs (4 docs) |
-| 29-04 | 3 | ⏳ | UAT Externo + Regressão + Validação Visual Final **(autonomous:false — aguardando ação humana)** |
+| 29-04 | 3 | ✅ | UAT Externo (4 lojistas, 4/4 aprovado) + Decisão Final + Regressão |
 
 **Tests:** 889 passing (116 files)
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
@@ -324,6 +324,8 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 - `38cd4dc` — 29-02: empty states, error states, microcopy, admin harmonization, modal a11y
 - `14eff71` — 29-03: mobile hardening, legibility checklist, launch readiness docs
 - `5d83a72` — 29-04: UAT roteiro, pool doc, regressão completa (889/889)
+- `99ba86d` — docs(fase 29): artefatos de observabilidade/uat
+- `262a897` — fix(fase 29): refinamentos visuais pelo usuário
 
 **Context:** `.planning/phases/29-refinamento-visual-uat-launch-readiness/`
 **Summaries:** `01-SUMMARY.md`, `02-SUMMARY.md`, `03-SUMMARY.md`, `04-SUMMARY.md`
@@ -353,16 +355,16 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 29 — Refinamento Visual + UAT + Launch Readiness ◆
-Plan: 3/4 plans implemented (1 plan autonomous:false — pending human action)
-Status: Implementation complete. UAT externo, validação visual e decisão go/no-go pendentes de ação manual.
+Phase: 29 — Refinamento Visual + UAT + Launch Readiness ✅
+Plan: 4/4 plans implemented
+Status: **Complete.** UAT externo com 4 lojistas (4/4 aprovado), decisão go registrada, todos os gates passando.
 
 ### Next Phases
 
 | Phase | Status | Description |
 |-------|--------|-------------|
 | F28 | ✅ Completed | Observabilidade + Operação + Launch Controls (4 plans, 37+ testes, 889 total) |
-| F29 | ✅ Implemented | Refinamento Visual + UAT + Launch Readiness (3/4 plans implemented; 29-04 requires human action) |
+| F29 | ✅ Completed | Refinamento Visual + UAT + Launch Readiness — UAT 4/4 lojistas aprovado |
 | F30/v1.6 | △ Future | Stripe / Monetização Pública (pós-beta) |
 
 ### Quick Tasks Completed

@@ -18,7 +18,7 @@
 | 26 | ✅ Admin Operacional + Convites + Créditos Manuais | Console de suporte para operar o beta controlado | ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-04, ADMIN-05, ADMIN-06, SEC-04, SEC-06 | 8 ✅ |
 | 27 | ✅ Conta + Saldo Visível + Extrato | UI de créditos no app shell e /conta (sem Stripe) | UI-01, UI-02, UI-03, UI-04, UI-05, UI-06 | 6 ✅ |
 | 28 | Observabilidade + Operação + Launch Controls | Pipeline instrumentado, launch config centralizado, dashboard operacional, docs de deploy/suporte | OPS-01, OPS-02, OPS-03, OPS-04, OPS-05, OPS-06, OPS-07, OPS-08, OPS-09 | 9 |
-| 29 | Refinamento + UAT + Launch Readiness | Produto polido e pronto para beta externo | LAUNCH-01, LAUNCH-02, LAUNCH-03, LAUNCH-04, LAUNCH-05, LAUNCH-06, SEC-01, SEC-02, SEC-03, SEC-05 | 10 |
+| 29 | ✅ Refinamento + UAT + Launch Readiness | Produto polido e pronto para beta externo | LAUNCH-01, LAUNCH-02, LAUNCH-03, LAUNCH-04, LAUNCH-05, LAUNCH-06, SEC-01, SEC-02, SEC-03, SEC-05 | 10 ✅ |
 
 ---
 
@@ -137,7 +137,7 @@
 
 ---
 
-### Phase 29 — Refinamento Visual + UAT + Launch Readiness
+### Phase 29 — Refinamento Visual + UAT + Launch Readiness ✅
 
 **Goal:** Produto com acabamento visual de lançamento externo. Time confiante para abrir para usuários reais.
 
@@ -225,21 +225,21 @@ Phase 24 (Credit Tables + CreditService) ──┘
 | OPS-09 | Phase 28 | Planned |
 | SEC-04 | Phase 26 | Done ✓ |
 | SEC-06 | Phase 26 | Done ✓ |
-| LAUNCH-01 | Phase 29 | Planned |
-| LAUNCH-02 | Phase 29 | Planned |
-| LAUNCH-03 | Phase 29 | Planned |
-| LAUNCH-04 | Phase 29 | Planned |
-| LAUNCH-05 | Phase 29 | Planned |
-| LAUNCH-06 | Phase 29 | Planned |
-| SEC-01 | Phase 29 | Planned |
-| SEC-02 | Phase 29 | Planned |
-| SEC-03 | Phase 29 | Planned |
-| SEC-05 | Phase 29 | Planned |
+| LAUNCH-01 | Phase 29 | Done ✓ |
+| LAUNCH-02 | Phase 29 | Done ✓ |
+| LAUNCH-03 | Phase 29 | Done ✓ |
+| LAUNCH-04 | Phase 29 | Done ✓ |
+| LAUNCH-05 | Phase 29 | Done ✓ |
+| LAUNCH-06 | Phase 29 | Done ✓ |
+| SEC-01 | Phase 29 | Done ✓ |
+| SEC-02 | Phase 29 | Done ✓ |
+| SEC-03 | Phase 29 | Done ✓ |
+| SEC-05 | Phase 29 | Done ✓ |
 
 **Coverage:**
 - v1 requirements: 44 total
 - Mapped to phases: 44
-- Completed: 26 (CRED-01–05, PIPE-01–06, ADMIN-01–06, SEC-04, SEC-06, UI-01–06)
+- Completed: 36 (CRED-01–05, PIPE-01–06, ADMIN-01–06, SEC-04, SEC-06, UI-01–06, LAUNCH-01–06, SEC-01–03, SEC-05)
 - Unmapped: 0 ✓
 - Deferred to v1.6: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06
 
