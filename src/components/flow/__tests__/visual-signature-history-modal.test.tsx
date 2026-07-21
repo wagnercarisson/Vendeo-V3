@@ -120,8 +120,8 @@ describe('HistoryModal filter and display', () => {
 
   it('Loading — spinner visível', async () => {
     const props = createModalProps();
-    let resolvePromise: (value: any) => void;
-    const fetchPromise = new Promise((resolve) => { resolvePromise = resolve; });
+    let resolvePromise: (value: Response | PromiseLike<Response>) => void;
+    const fetchPromise = new Promise<Response>((resolve) => { resolvePromise = resolve; });
 
     vi.spyOn(global, 'fetch').mockReturnValue(fetchPromise);
 
@@ -132,7 +132,7 @@ describe('HistoryModal filter and display', () => {
       expect(spinner).toBeTruthy();
     });
 
-    resolvePromise!(new Response(JSON.stringify({ signatures: [], total: 0 }), { status: 200 }));
+    resolvePromise!(new Response(JSON.stringify({ signatures: [], total: 0 }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
   });
 });
 
