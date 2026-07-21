@@ -247,6 +247,90 @@ describe('VisualSignatureApprovalModal behavioral (Cancelar) — rendering', () 
     expect(screen.getByText('Tentar novamente')).toBeInTheDocument();
   });
 
+  it('onOpenGallery não passada + total > 6 → placeholder original visível', async () => {
+    const props = createModalProps({ onOpenGallery: undefined });
+
+    const signatures = Array.from({ length: 8 }, (_, i) => ({
+      id: `sig-${i}`,
+      assetUrl: 'https://example.com/sig.png',
+      attempt: i + 1,
+      status: i === 0 ? 'active' : 'archived',
+      restore_eligibility: { can_restore: true, drift_fields: [], requires_regeneration: false, reason: 'ok' },
+    }));
+
+    vi.spyOn(global, 'fetch').mockImplementation(async (url) => {
+      const urlStr = typeof url === 'string' ? url : '';
+      if (urlStr.includes('/visual-signature') && !urlStr.includes('/generate')) {
+        return new Response(JSON.stringify({ signatures, total: 8 }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ error: 'erro' }), { status: 500 });
+    });
+
+    render(<VisualSignatureApprovalModal {...props} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Há mais versões no histórico. Galeria completa em breve.')).toBeInTheDocument();
+    });
+  });
+
+  it('onOpenGallery passada + total > 6 → link "Ver versões recentes" visível', async () => {
+    const onOpenGallery = vi.fn();
+    const props = createModalProps({ onOpenGallery });
+
+    const signatures = Array.from({ length: 8 }, (_, i) => ({
+      id: `sig-${i}`,
+      assetUrl: 'https://example.com/sig.png',
+      attempt: i + 1,
+      status: i === 0 ? 'active' : 'archived',
+      restore_eligibility: { can_restore: true, drift_fields: [], requires_regeneration: false, reason: 'ok' },
+    }));
+
+    vi.spyOn(global, 'fetch').mockImplementation(async (url) => {
+      const urlStr = typeof url === 'string' ? url : '';
+      if (urlStr.includes('/visual-signature') && !urlStr.includes('/generate')) {
+        return new Response(JSON.stringify({ signatures, total: 8 }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ error: 'erro' }), { status: 500 });
+    });
+
+    render(<VisualSignatureApprovalModal {...props} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Ver versões recentes')).toBeInTheDocument();
+    });
+  });
+
+  it('Click no link "Ver versões recentes" → onOpenGallery é chamado', async () => {
+    const onOpenGallery = vi.fn();
+    const props = createModalProps({ onOpenGallery });
+
+    const signatures = Array.from({ length: 8 }, (_, i) => ({
+      id: `sig-${i}`,
+      assetUrl: 'https://example.com/sig.png',
+      attempt: i + 1,
+      status: i === 0 ? 'active' : 'archived',
+      restore_eligibility: { can_restore: true, drift_fields: [], requires_regeneration: false, reason: 'ok' },
+    }));
+
+    vi.spyOn(global, 'fetch').mockImplementation(async (url) => {
+      const urlStr = typeof url === 'string' ? url : '';
+      if (urlStr.includes('/visual-signature') && !urlStr.includes('/generate')) {
+        return new Response(JSON.stringify({ signatures, total: 8 }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ error: 'erro' }), { status: 500 });
+    });
+
+    render(<VisualSignatureApprovalModal {...props} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Ver versões recentes')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Ver versões recentes'));
+
+    expect(onOpenGallery).toHaveBeenCalledTimes(1);
+  });
+
   it('substitution mode + erro mostra "Tentar novamente"', async () => {
     const props = createModalProps({ mode: 'substitution' });
 

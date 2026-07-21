@@ -400,6 +400,122 @@ describe('POST /api/store/[id]/visual-signature/approve', () => {
   });
 });
 
+describe('POST /api/store/[id]/visual-signature/approve — F29.1.2 Draft drift validation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    storeBrandProfileUpdates.length = 0;
+    mockBrandProfilerGenerate.mockResolvedValue({
+      profile: { ...mockProfile, id: 'new-profile-draft' },
+      success: true,
+    });
+    mockValidateDrift.mockReturnValue({
+      has_drift: false, fields: [], reason: 'no_drift', requires_regeneration: false,
+    });
+    mockReconcileProfiles.mockResolvedValue({
+      activatedProfiles: ['profile-draft'], outdatedProfiles: [], preservedFallback: false,
+    });
+    mockUpdateEventDecision.mockResolvedValue(undefined);
+  });
+
+  it('F29.1.2-1 — Draft recém-gerado (snapshot = current data) → 200 success', async () => {
+    const draftSig = {
+      ...mockSignature,
+      status: 'draft',
+      metadata: {
+        ...mockSignature.metadata,
+        input_snapshot: {
+          name: 'Test Store', segment: 'food', city: null, state: null, slogan: null,
+        },
+      },
+    };
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: draftSig, error: null });
+      if (table === 'store_brand_profiles') return makeBrandProfileChain({ data: [], error: null });
+      return makeChain({ data: null, error: null });
+    });
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(200);
+  });
+
+  it('F29.1.2-2 — Draft sem drift → 200 success', async () => {
+    const draftSig = {
+      ...mockSignature,
+      status: 'draft',
+      metadata: {
+        ...mockSignature.metadata,
+        input_snapshot: {
+          name: 'Test Store', segment: 'food', city: null, state: null, slogan: null,
+        },
+      },
+    };
+    mockValidateDrift.mockReturnValue({
+      has_drift: false, fields: [], reason: 'no_drift', requires_regeneration: false,
+    });
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: draftSig, error: null });
+      if (table === 'store_brand_profiles') return makeBrandProfileChain({ data: [], error: null });
+      return makeChain({ data: null, error: null });
+    });
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(200);
+  });
+
+  it('F29.1.2-3 — Draft COM drift (snapshot differs) → 409 critical_drift', async () => {
+    const draftSig = {
+      ...mockSignature,
+      status: 'draft',
+      metadata: {
+        ...mockSignature.metadata,
+        input_snapshot: {
+          name: 'Old Store Name', segment: 'food', city: null, state: null, slogan: null,
+        },
+      },
+    };
+    mockValidateDrift.mockReturnValue({
+      has_drift: true, fields: ['name'], reason: 'name_changed', requires_regeneration: true,
+    });
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: draftSig, error: null });
+      if (table === 'store_brand_profiles') return makeBrandProfileChain({ data: [], error: null });
+      return makeChain({ data: null, error: null });
+    });
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.drift).toBeDefined();
+    expect(body.drift.fields).toContain('name');
+  });
+
+  it('F29.1.2-4 — Draft sem input_snapshot no metadata → 409 missing_metadata', async () => {
+    const draftSig = {
+      ...mockSignature,
+      status: 'draft',
+      metadata: {
+        artDirectorOutput: mockSignature.metadata!.artDirectorOutput,
+      },
+    };
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: draftSig, error: null });
+      if (table === 'store_brand_profiles') return makeBrandProfileChain({ data: [], error: null });
+      return makeChain({ data: null, error: null });
+    });
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.drift).toBeDefined();
+    expect(body.drift.fields).toBeDefined();
+    expect(body.drift.requires_regeneration).toBe(true);
+  });
+});
+
 describe('POST /api/store/[id]/visual-signature/approve — Substitution mode', () => {
   const mockVSStore = {
     id: STORE_ID,
