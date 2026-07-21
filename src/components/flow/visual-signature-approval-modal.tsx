@@ -91,6 +91,7 @@ export function VisualSignatureApprovalModal({
   onComplete,
   onRemove,
   onTier2Retry,
+  onOpenGallery,
 }: VisualSignatureApprovalModalProps) {
   const [state, setState] = useState<ApprovalState>({ phase: "checking" });
   const [feedbackText, setFeedbackText] = useState("");

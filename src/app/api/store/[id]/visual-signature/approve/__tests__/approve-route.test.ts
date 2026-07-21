@@ -493,6 +493,9 @@ describe('POST /api/store/[id]/visual-signature/approve — F29.1.2 Draft drift 
   });
 
   it('F29.1.2-4 — Draft sem input_snapshot no metadata → 409 missing_metadata', async () => {
+    mockValidateDrift.mockReturnValue({
+      has_drift: true, fields: ['name', 'slogan'], reason: 'missing_metadata', requires_regeneration: true,
+    });
     const draftSig = {
       ...mockSignature,
       status: 'draft',

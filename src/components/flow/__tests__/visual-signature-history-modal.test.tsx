@@ -188,7 +188,8 @@ describe('HistoryModal actions by identity', () => {
     render(<VisualSignatureHistoryModal {...props} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Ativa')).toBeInTheDocument();
+      const activeElements = screen.getAllByText('Ativa');
+      expect(activeElements.length).toBe(2);
     });
   });
 
