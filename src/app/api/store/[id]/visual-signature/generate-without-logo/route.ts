@@ -12,6 +12,8 @@ import crypto from 'crypto';
 import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
 import { requireSameOrigin } from '@/lib/auth/csrf';
 import { apiHandler } from '@/lib/auth/api-handler';
+import { getLaunchConfig } from '@/lib/launch-config/config';
+import { CreditService } from '@/lib/credit/credit-service';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -43,11 +45,17 @@ export const POST = apiHandler(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) => {
+  // 0. generationPaused guard — ABSOLUTE FIRST, before any other operation
+  const launchConfig = getLaunchConfig();
+  if (launchConfig.generationPaused) {
+    return NextResponse.json({ error: 'Geração temporariamente indisponível.' }, { status: 503 });
+  }
+
   requireSameOrigin(request);
   const { id } = await params;
   await requireAuthorizedStore(id);
   const reqId = ++requestCounter;
-  console.log(`[generate-without-logo][req-${reqId}] 1/12 request recebido`, { storeId: id });
+  console.log(`[generate-without-logo][req-${reqId}] request recebido`, { storeId: id });
 
   if (!UUID_REGEX.test(id)) {
     console.log(`[generate-without-logo][req-${reqId}] UUID inválido`);
@@ -59,126 +67,108 @@ export const POST = apiHandler(async (
     return NextResponse.json({ error: 'Geração já em andamento para esta loja. Aguarde.' }, { status: 429 });
   }
   generationLocks.set(id, true);
+  const lockTimeoutId = setTimeout(() => {
+    console.log(`[generate-without-logo][req-${reqId}] lock timeout — liberando lock`);
+    generationLocks.delete(id);
+  }, ROUTE_TIMEOUT_MS + 5000);
   console.log(`[generate-without-logo][req-${reqId}] lock adquirido`);
 
-  let body: { rejectionContext?: { reason: string; attempt: number }; mode?: 'standard' | 'substitution' };
+  let creditTxId: string | null = null;
+
   try {
-    body = await request.json();
-    console.log(`[generate-without-logo][req-${reqId}] body parsed`, { rejectionContext: body.rejectionContext, mode: body.mode });
-  } catch {
-    body = {};
-    console.log(`[generate-without-logo][req-${reqId}] body vazio (JSON parse falhou)`);
-  }
-
-  const mode = body.mode ?? 'standard';
-  console.log(`[generate-without-logo][req-${reqId}] mode: ${mode}`);
-
-  console.log(`[generate-without-logo][req-${reqId}] 2/12 carregando store...`);
-  const { data: store, error: storeError } = await supabase
-    .from('stores')
-    .select()
-    .eq('id', id)
-    .single();
-
-  if (storeError || !store) {
-    console.log(`[generate-without-logo][req-${reqId}] store não encontrada`, { error: storeError?.message });
-    generationLocks.delete(id);
-    return NextResponse.json({ error: 'Loja não encontrada' }, { status: 404 });
-  }
-  console.log(`[generate-without-logo][req-${reqId}] store carregada`, { name: store.name, segment: store.segment, identity_state: store.identity_state });
-
-  // ----- Substitution mode guards -----
-  if (mode === 'substitution') {
-    // Guard 3: identity_state deve ser 'visual_signature'
-    if (store.identity_state !== 'visual_signature') {
-      console.log(`[generate-without-logo][req-${reqId}] SUBSTITUIÇÃO BLOQUEADA — identity_state inválido: ${store.identity_state}`);
-      generationLocks.delete(id);
-      return NextResponse.json({
-        success: false,
-        code: 'INVALID_IDENTITY_STATE',
-        error: 'Estado de identidade deve ser visual_signature',
-      }, { status: 400 });
+    let body: { rejectionContext?: { reason: string; attempt: number }; mode?: 'standard' | 'substitution' };
+    try {
+      body = await request.json();
+      console.log(`[generate-without-logo][req-${reqId}] body parsed`, { rejectionContext: body.rejectionContext, mode: body.mode });
+    } catch {
+      body = {};
+      console.log(`[generate-without-logo][req-${reqId}] body vazio (JSON parse falhou)`);
     }
 
-    // Guard 3b: VS ativa existe
-    const activeVS = await getActiveVisualSignature(id).catch(() => null);
-    if (!activeVS) {
-      console.log(`[generate-without-logo][req-${reqId}] SUBSTITUIÇÃO BLOQUEADA — nenhuma VS ativa encontrada`);
-      generationLocks.delete(id);
-      return NextResponse.json({
-        success: false,
-        code: 'NO_ACTIVE_VS',
-        error: 'Nenhuma assinatura visual ativa encontrada',
-      }, { status: 404 });
-    }
+    const mode = body.mode ?? 'standard';
+    console.log(`[generate-without-logo][req-${reqId}] mode: ${mode}`);
 
-    // Guard 4: drift crítico revalidado
-    const activeVSMetadata = (activeVS.metadata ?? {}) as Record<string, unknown>;
-    const activeVSArtDir = activeVSMetadata.artDirectorOutput as { content_used?: { slogan?: boolean; city?: boolean; state?: boolean } } | null ?? null;
-    const vsContentUsed = activeVSArtDir?.content_used ?? null;
-    const vsInputSnapshot = activeVSMetadata.input_snapshot as Record<string, unknown> | null ?? null;
-
-    const revalidation = revalidateCriticalDrift({
-      vsSnapshot: vsInputSnapshot as any,
-      contentUsed: vsContentUsed ?? undefined,
-      store: { name: store.name, segment: store.segment, slogan: store.slogan ?? null, city: store.city ?? null, state: store.state ?? null },
-    });
-
-    if (!revalidation.hasDrift) {
-      console.log(`[generate-without-logo][req-${reqId}] SUBSTITUIÇÃO BLOQUEADA — drift crítico não confirmado`, { reason: revalidation.reason });
-      generationLocks.delete(id);
-      return NextResponse.json({
-        success: false,
-        code: 'DRIFT_NOT_CONFIRMED',
-        error: 'Drift crítico não confirmado. Recalcule o diagnóstico.',
-      }, { status: 400 });
-    }
-
-    console.log(`[generate-without-logo][req-${reqId}] SUBSTITUIÇÃO — guardas OK`);
-  }
-
-  const currentAttempts = store.visual_signature_attempts ?? 0;
-  console.log(`[generate-without-logo][req-${reqId}] currentAttempts (session)`, currentAttempts);
-
-  const { data: countData, error: countError } = await supabase
-    .from('store_visual_signatures')
-    .select('id')
-    .eq('store_id', id)
-    .in('type', ['ai_generated', 'automatic_generated']);
-
-  if (countError) {
-    console.log(`[generate-without-logo][req-${reqId}] error counting signatures`, countError.message);
-  }
-
-  const totalCount = countData?.length ?? 0;
-  console.log(`[generate-without-logo][req-${reqId}] total signatures generated so far:`, totalCount);
-
-  if (totalCount >= 3) {
-    console.log(`[generate-without-logo][req-${reqId}] exhausted — already 3 total signatures generated`);
-    const { data: archives } = await supabase
-      .from('store_visual_signatures')
+    console.log(`[generate-without-logo][req-${reqId}] carregando store...`);
+    const { data: store, error: storeError } = await supabase
+      .from('stores')
       .select()
-      .eq('store_id', id)
-      .in('status', ['active', 'archived', 'draft'])
-      .in('type', ['ai_generated', 'automatic_generated'])
-      .order('created_at', { ascending: false })
-      .limit(3);
-    generationLocks.delete(id);
-    return NextResponse.json({
-      success: false,
-      exhausted: true,
-      signatures: (archives ?? []).map(s => ({
-        id: s.id,
-        assetUrl: s.asset_url,
-        attempt: 0,
-      })),
-      totalGenerated: totalCount,
-      message: 'Limite de 3 versões atingido. Reavalie as assinaturas geradas.',
-    }, { status: 403 });
-  }
+      .eq('id', id)
+      .single();
 
-  const newAttempt = totalCount + 1;
-  console.log(`[generate-without-logo][req-${reqId}] next attempt number (quota based):`, newAttempt);
+    if (storeError || !store) {
+      console.log(`[generate-without-logo][req-${reqId}] store não encontrada`, { error: storeError?.message });
+      return NextResponse.json({ error: 'Loja não encontrada' }, { status: 404 });
+    }
+    console.log(`[generate-without-logo][req-${reqId}] store carregada`, { name: store.name, segment: store.segment, identity_state: store.identity_state });
+
+    // ----- Substitution mode guards -----
+    if (mode === 'substitution') {
+      if (store.identity_state !== 'visual_signature') {
+        console.log(`[generate-without-logo][req-${reqId}] SUBSTITUIÇÃO BLOQUEADA — identity_state inválido: ${store.identity_state}`);
+        return NextResponse.json({
+          success: false,
+          code: 'INVALID_IDENTITY_STATE',
+          error: 'Estado de identidade deve ser visual_signature',
+        }, { status: 400 });
+      }
+
+      const activeVS = await getActiveVisualSignature(id).catch(() => null);
+      if (!activeVS) {
+        console.log(`[generate-without-logo][req-${reqId}] SUBSTITUIÇÃO BLOQUEADA — nenhuma VS ativa encontrada`);
+        return NextResponse.json({
+          success: false,
+          code: 'NO_ACTIVE_VS',
+          error: 'Nenhuma assinatura visual ativa encontrada',
+        }, { status: 404 });
+      }
+
+      const activeVSMetadata = (activeVS.metadata ?? {}) as Record<string, unknown>;
+      const activeVSArtDir = activeVSMetadata.artDirectorOutput as { content_used?: { slogan?: boolean; city?: boolean; state?: boolean } } | null ?? null;
+      const vsContentUsed = activeVSArtDir?.content_used ?? null;
+      const vsInputSnapshot = activeVSMetadata.input_snapshot as Record<string, unknown> | null ?? null;
+
+      const revalidation = revalidateCriticalDrift({
+        vsSnapshot: vsInputSnapshot as any,
+        contentUsed: vsContentUsed ?? undefined,
+        store: { name: store.name, segment: store.segment, slogan: store.slogan ?? null, city: store.city ?? null, state: store.state ?? null },
+      });
+
+      if (!revalidation.hasDrift) {
+        console.log(`[generate-without-logo][req-${reqId}] SUBSTITUIÇÃO BLOQUEADA — drift crítico não confirmado`, { reason: revalidation.reason });
+        return NextResponse.json({
+          success: false,
+          code: 'DRIFT_NOT_CONFIRMED',
+          error: 'Drift crítico não confirmado. Recalcule o diagnóstico.',
+        }, { status: 400 });
+      }
+
+      console.log(`[generate-without-logo][req-${reqId}] SUBSTITUIÇÃO — guardas OK`);
+    }
+
+    // ----- v15Enabled check — skip ALL credit logic if false -----
+    const creditsEnabled = launchConfig.v15Enabled && launchConfig.creditsChargingEnabled;
+
+    // ----- Balance check (only if creditsChargingEnabled) -----
+    if (creditsEnabled) {
+      const creditService = new CreditService();
+      const balance = await creditService.getBalance(id);
+      if (balance < 1) {
+        console.log(`[generate-without-logo][req-${reqId}] saldo insuficiente: ${balance}`);
+        return NextResponse.json({
+          error: 'Créditos insuficientes',
+          code: 'insufficient_credits',
+        }, { status: 402 });
+      }
+
+      // ----- Reserve credit BEFORE IA call -----
+      const operationId = crypto.randomUUID();
+      creditTxId = await creditService.reserveCredit(id, 1, {
+        campaignId: null,
+        idempotencyKey: `vs_reserve_${id}_${operationId}`,
+        metadata: { feature: "visual_signature", mode, operationId },
+      });
+      console.log(`[generate-without-logo][req-${reqId}] crédito reservado: ${creditTxId}`);
+    }
 
   const abortController = new AbortController();
   const timeoutId = setTimeout(() => {
@@ -191,6 +181,8 @@ export const POST = apiHandler(async (
     abortController.abort();
     clearTimeout(timeoutId);
   }, { once: true });
+
+  const totalCount = 0; // quota removida — não contamos mais tentativas
 
   const serviceInput = {
     storeId: id,
@@ -205,12 +197,12 @@ export const POST = apiHandler(async (
     state: store.state,
     brandColor: store.brand_color,
     rejectionContext: body.rejectionContext
-      ? { ...body.rejectionContext, attempt: totalCount }
+      ? { ...body.rejectionContext, attempt: 0 }
       : null,
   };
 
   // ----- ATTEMPT 1: image_direct (full art director prompt) -----
-  console.log(`[generate-without-logo][req-${reqId}] 3/12 ATTEMPT 1 — image_direct`);
+  console.log(`[generate-without-logo][req-${reqId}] ATTEMPT 1 — image_direct`);
   const service = new StoreIdentityArtDirectorService();
 
   let result: Awaited<ReturnType<typeof service.generate>> | null = null;
@@ -218,11 +210,11 @@ export const POST = apiHandler(async (
 
   try {
     result = await service.generate(serviceInput, abortController.signal);
-    console.log(`[generate-without-logo][req-${reqId}] 4/12 ATTEMPT 1 — sucesso`, { assetUrl: result.assetUrl, signatureId: result.signature.id });
+    console.log(`[generate-without-logo][req-${reqId}] ATTEMPT 1 — sucesso`, { assetUrl: result.assetUrl, signatureId: result.signature.id });
   } catch (err) {
     attempt1Error = err;
     const isTimeout = err instanceof DOMException && err.name === 'AbortError';
-    console.log(`[generate-without-logo][req-${reqId}] 4/12 ATTEMPT 1 — falhou timeout=${isTimeout}`, { message: err instanceof Error ? err.message : 'erro' });
+    console.log(`[generate-without-logo][req-${reqId}] ATTEMPT 1 — falhou timeout=${isTimeout}`, { message: err instanceof Error ? err.message : 'erro' });
   }
 
   // ----- ATTEMPT 2: image_retry with simplified prompt (only if non-timeout failure) -----
@@ -230,7 +222,7 @@ export const POST = apiHandler(async (
     const isTimeout = attempt1Error instanceof DOMException && attempt1Error.name === 'AbortError';
 
     if (!isTimeout) {
-      console.log(`[generate-without-logo][req-${reqId}] 5/12 ATTEMPT 2 — image_retry (prompt simplificado)`);
+      console.log(`[generate-without-logo][req-${reqId}] ATTEMPT 2 — image_retry (prompt simplificado)`);
       try {
         const aiGenerator = new AiImageGenerator();
         const retryResult = await aiGenerator.generate({
@@ -240,7 +232,7 @@ export const POST = apiHandler(async (
           brandColor: store.brand_color ?? '',
           tone: store.tone_of_voice ?? 'profissional',
           signal: abortController.signal,
-          attempt: newAttempt,
+          attempt: 1,
           simplifiedPrompt: true,
         });
 
@@ -257,7 +249,7 @@ export const POST = apiHandler(async (
 
         const signatureType = retryResult.tier === 'image_direct' ? 'ai_generated' : 'automatic_generated';
 
-        console.log(`[generate-without-logo][req-${reqId}] 6/12 persistindo signature do retry...`);
+        console.log(`[generate-without-logo][req-${reqId}] persistindo signature do retry...`);
         const signature = await persistSignature({
           store_id: id,
           storage_path: retryResult.storagePath,
@@ -320,19 +312,17 @@ export const POST = apiHandler(async (
         },
         assetUrl: retryResult.assetUrl,
       };
-      console.log(`[generate-without-logo][req-${reqId}] 7/12 ATTEMPT 2 — sucesso`, { assetUrl: result.assetUrl, signatureId: result.signature.id });
+      console.log(`[generate-without-logo][req-${reqId}] ATTEMPT 2 — sucesso`, { assetUrl: result.assetUrl, signatureId: result.signature.id });
       } catch (retryErr) {
-        console.log(`[generate-without-logo][req-${reqId}] 7/12 ATTEMPT 2 — falhou`, { message: retryErr instanceof Error ? retryErr.message : 'erro' });
+        console.log(`[generate-without-logo][req-${reqId}] ATTEMPT 2 — falhou`, { message: retryErr instanceof Error ? retryErr.message : 'erro' });
       }
     }
   }
 
   clearTimeout(timeoutId);
 
-  // ----- SUCCESS PATH: increment attempts and insert event -----
+  // ----- SUCCESS PATH: persist credit_tx_id and insert event -----
   if (result) {
-    const attemptNumber = newAttempt;
-
     const inputSnapshot: VisualSignatureMetadataInputSnapshot = {
       name: store.name,
       segment: store.segment,
@@ -347,31 +337,30 @@ export const POST = apiHandler(async (
       accent_color: null,
     };
 
+    const updatedMetadata: Record<string, unknown> = {
+      ...(result.signature.metadata ?? {}),
+      input_snapshot: inputSnapshot,
+      ...(result.metadataArtDirectorOutput ? { artDirectorOutput: result.metadataArtDirectorOutput } : {}),
+    };
+    if (creditTxId) {
+      updatedMetadata.credit_tx_id = creditTxId;
+    }
+
     await supabase
       .from('store_visual_signatures')
       .update({
-        metadata: {
-          ...(result.signature.metadata ?? {}),
-          input_snapshot: inputSnapshot,
-          ...(result.metadataArtDirectorOutput ? { artDirectorOutput: result.metadataArtDirectorOutput } : {}),
-        },
+        metadata: updatedMetadata,
         updated_at: new Date().toISOString(),
       })
       .eq('id', result.signature.id);
 
-    console.log(`[generate-without-logo][req-${reqId}] 8/12 incrementando attempts no DB...`);
-    await supabase
-      .from('stores')
-      .update({ visual_signature_attempts: attemptNumber, updated_at: new Date().toISOString() })
-      .eq('id', id);
-
     const promptVersion = attempt1Error ? PROMPT_VERSION_SIMPLIFIED : PROMPT_VERSION_ART_DIRECTOR;
-    console.log(`[generate-without-logo][req-${reqId}] 9/12 inserindo generation_event (success)...`, { promptVersion });
+    console.log(`[generate-without-logo][req-${reqId}] inserindo generation_event (success)...`, { promptVersion });
     await insertGenerationEvent({
       store_id: id,
       generation_type: 'visual_signature',
       provider: 'openai',
-      attempt_number: attemptNumber,
+      attempt_number: 1,
       status: 'success',
       prompt_version: promptVersion,
       asset_generated: true,
@@ -379,30 +368,35 @@ export const POST = apiHandler(async (
       has_logo: false,
       has_generated_signature: true,
       has_brand_profile: false,
-      input_data_hash: `${store.name}-${store.segment}-${attemptNumber}`,
+      input_data_hash: `${store.name}-${store.segment}-1`,
     });
 
-    console.log(`[generate-without-logo][req-${reqId}] 10/12 enviando response success`);
-    generationLocks.delete(id);
-    console.log(`[generate-without-logo][req-${reqId}] lock liberado`);
+    console.log(`[generate-without-logo][req-${reqId}] enviando response success`);
     return NextResponse.json({
       success: true,
       assetUrl: result.assetUrl,
       signatureId: result.signature.id,
       artDirectorOutput: result.artDirectorOutput,
-      attempt: attemptNumber,
-      totalGenerated: attemptNumber,
-      maxAttempts: 3,
     });
   }
 
-  // ----- FAILURE PATH: controlled error, no quota consumed -----
-  generationLocks.delete(id);
+  // ----- FAILURE PATH: refund credit and return error -----
   const finalMessage = attempt1Error instanceof Error ? attempt1Error.message : 'Erro interno';
   const isStorageError = finalMessage.includes('Failed to upload to Storage');
   const isTimeout = attempt1Error instanceof DOMException && attempt1Error.name === 'AbortError';
 
-  console.log(`[generate-without-logo][req-${reqId}] 11/12 falha total — não consumiu quota`, { message: finalMessage, timeout: isTimeout });
+  console.log(`[generate-without-logo][req-${reqId}] falha total`, { message: finalMessage, timeout: isTimeout });
+
+  // Refund credit on technical failure
+  if (creditTxId) {
+    try {
+      const creditService = new CreditService();
+      await creditService.refundCredit(creditTxId, isTimeout ? 'timeout' : (isStorageError ? 'storage_error' : 'generation_error'));
+      console.log(`[generate-without-logo][req-${reqId}] crédito estornado: ${creditTxId}`);
+    } catch (refundErr) {
+      console.error(`[generate-without-logo][req-${reqId}] erro no estorno:`, refundErr);
+    }
+  }
 
   if (mode !== 'substitution' && !isStorageError) {
     console.log(`[generate-without-logo][req-${reqId}] setando logo_status=failed...`);
@@ -418,7 +412,7 @@ export const POST = apiHandler(async (
     store_id: id,
     generation_type: 'visual_signature',
     provider: 'openai',
-    attempt_number: newAttempt,
+    attempt_number: 1,
     status: isTimeout ? 'timeout' : 'failed',
     error_type: isStorageError ? 'storage_upload_failed' : (isTimeout ? 'timeout' : 'generation_error'),
     prompt_version: promptVersion,
@@ -428,7 +422,7 @@ export const POST = apiHandler(async (
     has_brand_profile: false,
   });
 
-  console.log(`[generate-without-logo][req-${reqId}] 12/12 enviando response error`);
+  console.log(`[generate-without-logo][req-${reqId}] enviando response error`);
   const errorMsg = isStorageError
     ? 'Não conseguimos salvar a assinatura visual gerada. Pode ter ocorrido uma instabilidade temporária no armazenamento. Tente novamente.'
     : isTimeout
@@ -440,8 +434,10 @@ export const POST = apiHandler(async (
     error_type: isStorageError ? 'storage_upload_failed' : (isTimeout ? 'timeout' : 'generation_error'),
     error: errorMsg,
     message: finalMessage,
-    attempt: newAttempt,
-    shouldConsumeAttempt: false,
-    maxAttempts: 3,
   }, { status: isStorageError ? 503 : 500 });
+  } finally {
+    generationLocks.delete(id);
+    clearTimeout(lockTimeoutId);
+    console.log(`[generate-without-logo][req-${reqId}] lock liberado (finally)`);
+  }
 });

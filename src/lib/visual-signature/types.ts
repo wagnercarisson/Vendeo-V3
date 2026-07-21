@@ -36,6 +36,7 @@ export interface VisualSignatureMetadata {
   generationParams?: Record<string, unknown>;
   artDirectorOutput?: VisualSignatureArtDirectorOutput | VisualSignatureMetadataArtDirectorOutput;
   input_snapshot?: VisualSignatureMetadataInputSnapshot;
+  credit_tx_id?: string;
 }
 
 export interface VisualSignatureRecord {

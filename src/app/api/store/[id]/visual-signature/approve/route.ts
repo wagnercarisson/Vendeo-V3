@@ -464,11 +464,6 @@ export const POST = apiHandler(async (
     return NextResponse.json({ error: transitionResult.error }, { status: 500 });
   }
 
-  await supabase
-    .from('stores')
-    .update({ visual_signature_attempts: 0, updated_at: new Date().toISOString() })
-    .eq('id', id);
-
   console.log(`[approve][req-${reqId}] atualizando generation_event decision...`);
   await updateGenerationEventDecision(body.signatureId, attempts, {
     approved: true,

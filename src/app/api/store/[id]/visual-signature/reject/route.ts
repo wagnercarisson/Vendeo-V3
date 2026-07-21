@@ -26,18 +26,6 @@ export const POST = apiHandler(async (
     body = {};
   }
 
-  const { data: store, error: storeError } = await supabase
-    .from('stores')
-    .select('visual_signature_attempts')
-    .eq('id', id)
-    .single();
-
-  if (storeError || !store) {
-    return NextResponse.json({ error: 'Loja não encontrada' }, { status: 404 });
-  }
-
-  const currentAttempts = store.visual_signature_attempts ?? 0;
-
   const { data: draftSignature } = await supabase
     .from('store_visual_signatures')
     .select()
@@ -51,7 +39,6 @@ export const POST = apiHandler(async (
     const metadata = draftSignature.metadata ?? {};
     metadata.rejected = true;
     metadata.reason = body.reason ?? '';
-    metadata.attempt_number = currentAttempts;
 
     await supabase
       .from('store_visual_signatures')
@@ -62,29 +49,8 @@ export const POST = apiHandler(async (
       })
       .eq('id', draftSignature.id);
 
-    await updateGenerationEventDecision(draftSignature.id, currentAttempts, {
+    await updateGenerationEventDecision(draftSignature.id, 0, {
       rejected: true,
-    });
-  }
-
-  if (currentAttempts >= 3) {
-    const { data: archives } = await supabase
-      .from('store_visual_signatures')
-      .select()
-      .eq('store_id', id)
-      .in('status', ['archived', 'draft'])
-      .order('created_at', { ascending: false })
-      .limit(3);
-
-    return NextResponse.json({
-      success: true,
-      exhausted: true,
-      signatures: (archives ?? []).map(s => ({
-        id: s.id,
-        asset_url: s.asset_url,
-        attempt: 0,
-      })),
-      message: 'Limite de 3 versões atingido. Reavalie as assinaturas geradas.',
     });
   }
 
@@ -92,8 +58,7 @@ export const POST = apiHandler(async (
     success: true,
     rejectionContext: {
       reason: body.reason ?? 'O lojista rejeitou a versão anterior sem feedback específico.',
-      attempt: currentAttempts,
+      attempt: 0,
     },
-    exhausted: false,
   });
 });

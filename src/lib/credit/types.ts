@@ -26,7 +26,7 @@ export const CreditTransactionSchema = z.object({
 export type CreditTransaction = z.infer<typeof CreditTransactionSchema>;
 
 export interface CreditOperationOptions {
-  campaignId?: string;
+  campaignId?: string | null;
   idempotencyKey?: string;
   metadata?: Record<string, unknown>;
 }

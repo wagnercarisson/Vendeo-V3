@@ -51,7 +51,7 @@ function computeCriticalDrift(
 }
 
 export const GET = apiHandler(async (
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) => {
   const { id } = await params;
@@ -71,12 +71,17 @@ export const GET = apiHandler(async (
     return NextResponse.json({ error: 'Loja não encontrada' }, { status: 404 });
   }
 
-  const { data, error } = await supabase
+  const searchParams = request.nextUrl.searchParams;
+  const limit = Math.min(Math.max(parseInt(searchParams.get('limit') ?? '12', 10) || 12, 1), 100);
+  const offset = Math.max(parseInt(searchParams.get('offset') ?? '0', 10) || 0, 0);
+
+  const { data, error, count } = await supabase
     .from('store_visual_signatures')
-    .select('id, asset_url, type, status, created_at, updated_at, metadata')
+    .select('id, asset_url, type, status, created_at, updated_at, metadata', { count: 'exact' })
     .eq('store_id', id)
     .in('type', ['ai_generated', 'automatic_generated'])
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
 
   if (error) {
     console.error('[visual-signature:list] error', error.message);
@@ -153,7 +158,7 @@ export const GET = apiHandler(async (
 
   return NextResponse.json({
     signatures,
-    total: data?.length ?? 0,
+    total: count ?? data?.length ?? 0,
   });
 });
 
