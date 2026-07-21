@@ -108,7 +108,7 @@ Coluna `visual_signature_attempts` mantida sem migration. Apenas não é mais in
 ### Review/checking phase changes
 - Modal checking phase carrega `GET /api/store/[id]/visual-signature?limit=6`
 - Sempre mostra review se houver signatures (nunca exhausted)
-- Review mostra "Gerar nova versão" se saldo suficiente
+- Review mostra "Gerar nova versão" — NÃO faz check proativo de saldo. Tenta gerar; se backend retornar 402, entra em `insufficient_credits`
 - Se total > 6, indicador "Há mais versões no histórico. Galeria completa em breve."
 
 </specifics>
