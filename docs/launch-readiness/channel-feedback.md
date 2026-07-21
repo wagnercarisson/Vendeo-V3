@@ -1,38 +1,41 @@
 # Canal de Feedback — Decisão
 
-**Status:** PENDENTE — Decisão a ser tomada na F29 antes do UAT externo
+**Status:** DEFINIDO — Fechado em F29, 20/07/2026
 
-## Opções
-
-### Opção A: WhatsApp (Recomendado)
-- **Prós:** Ubiquidade no Brasil, lojistas já usam, baixa fricção
-- **Contras:** Número pessoal vs. Business API, moderação manual
-- **Sugestão:** Número Business WhatsApp + saudação automática
-
-### Opção B: Discord
-- **Prós:** Organizado por canais, histórico pesquisável, gratuito
-- **Contras:** Menos familiar para lojistas, requer cadastro e onboarding
-
-## Definições Pendentes
+## Decisão
 
 | Item | Decisão |
 |------|---------|
-| Canal primário | ⬜ WhatsApp / Discord |
+| Canal primário | Atendimento individual via WhatsApp (grupo "Vendeo Beta") |
+| Distribuição | Manual — link enviado diretamente aos lojistas do pool UAT |
 | Fallback | Email (suporte@vendeo.tech) |
-| SLA para resposta | 24h úteis |
-| Responsável | Time de operações |
+| SLA para resposta | 1 dia útil durante UAT |
+| Responsável | Wagner |
 
-## Onde o link aparece
+## O que foi implementado
 
-- **Topbar:** Ícone de ajuda/fale conosco
-- **Dashboard:** Card de suporte na seção de next-steps
-- **/conta:** Link na seção de suporte
-- **Geração pausada:** Banner "Fale com o time"
+- **Documentação:** Este documento
+- **App:** Card "Falar com o suporte" em `/conta` com link mailto:suporte@vendeo.tech
 
-## Ação Necessária
+## Fora do Escopo (F29)
 
-- [ ] Decidir canal primário
-- [ ] Criar número/grupo/servidor
-- [ ] Adicionar links no produto
-- [ ] Definir SLA e responsável
-- [ ] Comunicar ao pool beta
+- WhatsApp Business API
+- Formulário de feedback in-app
+- Bot ou automação de atendimento
+- CRM ou helpdesk
+- Link público do grupo WhatsApp no app
+
+## Próximos Passos (pós-F29)
+
+- Avaliar volume de feedback recebido
+- Se justificado, criar formulário in-app de feedback
+- Definir canal comercial exclusivo para pós-UAT
+
+## Ações Concluídas
+
+- [x] Decidir canal primário (WhatsApp, atendimento individual)
+- [x] Criar grupo "Vendeo Beta"
+- [x] Definir SLA (1 dia útil)
+- [x] Definir responsável (Wagner)
+- [x] Documentar decisão
+- [x] Adicionar fallback email no app (/conta)

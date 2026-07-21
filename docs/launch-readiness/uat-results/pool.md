@@ -7,7 +7,7 @@
 
 | # | Loja | Contato | Convite | Status |
 |---|------|---------|---------|--------|
-| 1 | ⬜ | ⬜ | ⬜ | Pendente |
+| 1 | LTB  | Wagner  | 20/07   | Passou |
 | 2 | ⬜ | ⬜ | ⬜ | Pendente |
 | 3 | ⬜ | ⬜ | ⬜ | Pendente |
 | 4 | ⬜ | ⬜ | ⬜ | Pendente |
