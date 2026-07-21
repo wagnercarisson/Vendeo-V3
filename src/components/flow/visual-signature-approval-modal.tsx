@@ -27,7 +27,7 @@ type ApprovalState =
   | { phase: "feedback"; assetUrl: string; signatureId: string; artDirectorOutput: VisualSignatureArtDirectorOutput; attempt: number }
   | { phase: "approving" }
   | { phase: "review"; signatures: ReviewSignature[]; canGenerate: boolean }
-  | { phase: "exhausted"; signatures: ReviewSignature[] }
+  | { phase: "insufficient_credits" }
   | { phase: "error"; message: string; drift?: { fields: string[]; reason: string; requires_regeneration: boolean } }
   | { phase: "done"; logoStatus: string; signatureUrl?: string; brandProfile?: unknown; inferredPrimaryColor?: string; inferredAccentColor?: string; logoColorsDetected?: string[] }
   | { phase: "bp_failed"; message: string; signatureUrl?: string; brandProfileData?: Record<string, unknown> | null; logoStatus?: string };
@@ -95,6 +95,8 @@ export function VisualSignatureApprovalModal({
   const [feedbackText, setFeedbackText] = useState("");
   const [storedRejectionContext, setStoredRejectionContext] = useState<{ reason: string; attempt: number } | null>(null);
   const [reviewFeedbackText, setReviewFeedbackText] = useState("");
+  const [allLoadedSignatures, setAllLoadedSignatures] = useState<ReviewSignature[]>([]);
+  const [totalSignatures, setTotalSignatures] = useState(0);
   const [showReviewFeedback, setShowReviewFeedback] = useState(false);
   const isGeneratingRef = useRef(false);
   const requestSeqRef = useRef(0);
@@ -144,15 +146,8 @@ export function VisualSignatureApprovalModal({
       console.log(`[VisualSignatureApprovalModal][req-${reqId}] response body parsed`, data);
 
       if (!res.ok) {
-          if (data.exhausted) {
-            const signatures = (data.signatures ?? []).map((s: { id: string; asset_url?: string; assetUrl?: string; status?: string; restore_eligibility?: RestoreEligibilityInfo }, i: number) => ({
-              id: s.id,
-              assetUrl: s.assetUrl || s.asset_url || "",
-              attempt: i + 1,
-              status: s.status,
-              restore_eligibility: s.restore_eligibility,
-            }));
-            setState({ phase: "exhausted", signatures });
+        if (res.status === 402) {
+          setState({ phase: "insufficient_credits" });
           return;
         }
         setState({ phase: "error", message: data.error || "Falha ao gerar assinatura" });
@@ -204,18 +199,18 @@ export function VisualSignatureApprovalModal({
         return;
       }
 
-      fetch(`/api/store/${storeId}/visual-signature`)
+      fetch(`/api/store/${storeId}/visual-signature?limit=6`)
         .then(res => res.json())
         .then(data => {
           const sigs: ReviewSignature[] = (data?.signatures ?? []).map((s: ReviewSignature, i: number) => ({
             ...s,
             attempt: s.attempt || i + 1,
           }));
-          if (sigs.length >= 3) {
-            console.log(`[VisualSignatureApprovalModal] found ${sigs.length} signatures, showing exhausted state`);
-            setState({ phase: "exhausted", signatures: sigs });
-          } else if (sigs.length > 0) {
-            console.log(`[VisualSignatureApprovalModal] found ${sigs.length} signatures, showing review`);
+          const total = data?.total ?? sigs.length;
+          setAllLoadedSignatures(sigs);
+          setTotalSignatures(total);
+          if (sigs.length > 0) {
+            console.log(`[VisualSignatureApprovalModal] found ${sigs.length} signatures (total: ${total}), showing review`);
             setState({ phase: "review", signatures: sigs, canGenerate: true });
           } else {
             console.log(`[VisualSignatureApprovalModal] no signatures found, starting generation`);
@@ -234,27 +229,13 @@ export function VisualSignatureApprovalModal({
       setState({ phase: "checking" });
       setFeedbackText("");
       setStoredRejectionContext(null);
+      setAllLoadedSignatures([]);
+      setTotalSignatures(0);
     }
   }, [isOpen]);
 
   const handleReject = useCallback(() => {
     if (state.phase !== "display") return;
-    
-    if (state.attempt >= 3) {
-      console.log('[VisualSignatureApprovalModal] Attempt 3/3 reached. Fetching all versions for re-evaluation.');
-      fetch(`/api/store/${storeId}/visual-signature`)
-        .then(res => res.json())
-        .then(data => {
-          const sigs = data?.signatures ?? [];
-          if (sigs.length > 0) {
-            setState({ phase: "exhausted", signatures: sigs });
-          }
-        })
-        .catch(() => {
-          generate();
-        });
-      return;
-    }
 
     setState({
       phase: "feedback",
@@ -263,7 +244,7 @@ export function VisualSignatureApprovalModal({
       artDirectorOutput: state.artDirectorOutput,
       attempt: state.attempt,
     });
-  }, [state, storeId, generate]);
+  }, [state]);
 
   const handleConfirmReject = useCallback(() => {
     if (state.phase !== "feedback") return;
@@ -470,17 +451,8 @@ export function VisualSignatureApprovalModal({
         );
 
       case "display": {
-        const attempt = state.attempt;
         return (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-heading font-semibold text-text-muted uppercase tracking-wider">
-                  Tentativa {Math.min(attempt, 3)}/3
-                </span>
-              </div>
-            </div>
-
             <div className="w-full aspect-square max-w-[400px] mx-auto rounded-xl overflow-hidden bg-bg-elevated border border-border-light">
               <img src={state.assetUrl} alt="Assinatura visual gerada" className="w-full h-full object-contain" />
             </div>
@@ -500,31 +472,27 @@ export function VisualSignatureApprovalModal({
                 onClick={handleReject}
                 className="w-full px-4 py-3 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 flex items-center justify-center gap-2"
               >
-                {state.attempt >= 3 ? (
-                  <>
-                    Ver versões geradas
-                  </>
-                ) : (
-                  <>
-                    <ThumbsDown className="w-4 h-4" />
-                    Não gostei, gerar outra versão
-                  </>
-                )}
+                <ThumbsDown className="w-4 h-4" />
+                Não gostei, gerar outra versão
               </button>
+
+              {allLoadedSignatures.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setState({ phase: "review", signatures: allLoadedSignatures, canGenerate: true })}
+                  className="w-full px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200"
+                >
+                  Ver versões anteriores
+                </button>
+              )}
             </div>
           </div>
         );
       }
 
       case "feedback": {
-        const attempt = state.attempt;
         return (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-heading font-semibold text-text-muted uppercase tracking-wider">
-                Tentativa {Math.min(attempt, 3)}/3
-              </span>
-            </div>
 
             <div className="w-full aspect-square max-w-[400px] mx-auto rounded-xl overflow-hidden bg-bg-elevated border border-border-light">
               <img src={state.assetUrl} alt="Assinatura visual gerada" className="w-full h-full object-contain" />
@@ -571,9 +539,14 @@ export function VisualSignatureApprovalModal({
           <div className="space-y-6">
             <div className="flex items-center gap-2">
               <span className="text-xs font-heading font-semibold text-text-muted uppercase tracking-wider">
-                Assinaturas existentes ({signatures.length}/3)
+                Assinaturas existentes ({signatures.length})
               </span>
             </div>
+            {totalSignatures > 6 && (
+              <p className="text-xs text-text-muted font-body text-center">
+                Há mais versões no histórico. Galeria completa em breve.
+              </p>
+            )}
 
             <div className="grid grid-cols-3 gap-3">
               {signatures.map((sig, i) => {
@@ -693,82 +666,34 @@ export function VisualSignatureApprovalModal({
         );
       }
 
-      case "exhausted": {
-        const hasActive = state.signatures.some(s => s.status === "active");
+      case "insufficient_credits":
         return (
-          <div className="space-y-6">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-accent-amber" />
-              <span className="text-xs font-heading font-semibold text-text-muted uppercase tracking-wider">
-                Limite de 3 versões atingido
-              </span>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              {state.signatures.map((sig, i) => {
-                const isActive = sig.status === "active";
-                const syncOk = !isActive && sig.restore_eligibility?.reason === "ok";
-                const needsRealign = !isActive && (sig.restore_eligibility?.reason === "critical_drift" || sig.restore_eligibility?.reason === "missing_metadata");
-                const isActiveDrift = isActive && hasActiveSignatureDrift;
-                let badgeLabel = "";
-                let badgeClass = "";
-                if (isActive && !isActiveDrift) { badgeLabel = "Ativa"; badgeClass = "bg-accent-green text-white"; }
-                else if (syncOk) { badgeLabel = "Sincronizada"; badgeClass = "bg-bg-hover text-text-secondary"; }
-                else if (needsRealign) { badgeLabel = "Precisa realinhar"; badgeClass = "bg-accent-amber text-white"; }
-                return (
-                  <div key={sig.id} className="space-y-2">
-                    <div className="aspect-square rounded-lg overflow-hidden bg-bg-elevated border border-border-light relative">
-                      {isActiveDrift ? (
-                        <div className="absolute top-1.5 left-1.5 flex flex-col gap-1">
-                          <span className="px-1.5 py-0.5 text-[10px] font-heading font-semibold rounded bg-accent-green text-white leading-tight">
-                            Ativa
-                          </span>
-                          <span className="px-1.5 py-0.5 text-[10px] font-heading font-semibold rounded bg-accent-amber text-white leading-tight">
-                            Precisa realinhar
-                          </span>
-                        </div>
-                      ) : badgeLabel && (
-                        <span className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[10px] font-heading font-semibold rounded ${badgeClass} leading-tight`}>
-                          {badgeLabel}
-                        </span>
-                      )}
-                      <img src={sig.assetUrl} alt={`Versão ${i + 1}`} className="w-full h-full object-contain" />
-                    </div>
-                    <span className="block text-center text-xs text-text-muted font-body">Versão {i + 1}</span>
-                      <button
-                        type="button"
-                        onClick={isActiveDrift ? handleRealignActive : () => handleApproveExhausted(sig.id)}
-                        className="w-full px-2 py-1.5 bg-accent-green text-white font-heading font-semibold text-xs rounded-lg hover:brightness-110 transition-all duration-200"
-                      >
-                        {isActiveDrift ? "Realinhar" : (isActive ? "Manter" : "Aprovar")}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="text-center">
-                {hasActive && onRemove ? (
-                <button
-                  type="button"
-                  onClick={() => { onRemove(); onClose(); }}
-                  className="text-accent-red hover:text-accent-red/80 text-xs font-body underline transition-colors duration-200"
-                >
-                  Remover assinatura
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="text-text-muted hover:text-text-primary text-xs font-body underline transition-colors duration-200"
-                >
-                  Voltar
-                </button>
-              )}
+          <div className="flex flex-col items-center justify-center py-12 gap-4">
+            <AlertCircle className="w-10 h-10 text-amber-500" />
+            <p className="text-text-primary font-heading font-semibold text-lg text-center">
+              Créditos insuficientes para gerar assinatura visual.
+            </p>
+            <p className="text-text-muted text-xs font-body text-center">
+              Cada geração de assinatura visual consome 1 crédito.
+            </p>
+            <div className="flex flex-col gap-3 w-full">
+              <button
+                type="button"
+                onClick={() => window.location.href = '/conta'}
+                className="w-full px-4 py-2.5 bg-accent-green text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200"
+              >
+                Ver meus créditos
+              </button>
+              <button
+                type="button"
+                onClick={handleRetry}
+                className="w-full px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200"
+              >
+                Tentar novamente
+              </button>
             </div>
           </div>
         );
-      }
 
       case "error":
         return (

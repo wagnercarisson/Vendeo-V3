@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { listSignatures } from "@/lib/visual-signature/server-actions";
-import { VisualSignatureModal } from "./visual-signature-modal";
 import { VisualSignatureApprovalModal } from "./visual-signature-approval-modal";
 import { ImageIcon, Loader2, CheckCircle2, Sparkles, AlertCircle, Trash2, History } from "lucide-react";
 import type { VisualSignatureRecord } from "@/lib/visual-signature/types";
@@ -18,7 +17,6 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
   const [activeSignature, setActiveSignature] = useState<VisualSignatureRecord | null>(null);
   const [hasLogo, setHasLogo] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [localLogoStatus, setLocalLogoStatus] = useState<string | null>(null);
@@ -63,11 +61,6 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
   }, [store]);
 
   useEffect(() => {
-    load();
-  }, [load]);
-
-  const handleModalClose = useCallback(() => {
-    setShowModal(false);
     load();
   }, [load]);
 
@@ -189,11 +182,7 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
           <div className="space-y-4">
             <div className="flex flex-col items-center justify-center py-6 gap-2">
               <ImageIcon className="w-8 h-8 text-text-muted" />
-              <p className="text-text-muted text-sm font-body">
-                {localAttempts >= 3
-                  ? "Continuou sem logo após 3 tentativas"
-                  : "Nenhuma assinatura visual"}
-              </p>
+              <p className="text-text-muted text-sm font-body">Nenhuma assinatura visual</p>
             </div>
             {hasArchivedSignatures && (
               <button type="button" onClick={() => setShowHistoryModal(true)}
@@ -206,7 +195,7 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
               className="w-full px-4 py-2.5 bg-accent-green text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 flex items-center justify-center gap-2"
             >
               <Sparkles className="w-4 h-4" />
-              {localAttempts >= 3 ? "Reavaliar assinaturas" : "Criar Assinatura Visual"}
+              Criar Assinatura Visual
             </button>
           </div>
         );
@@ -230,9 +219,9 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
       case "exhausted":
         return (
           <div className="space-y-4">
-            <div className="flex items-center gap-2 py-4">
-              <AlertCircle className="w-5 h-5 text-accent-amber shrink-0" />
-              <p className="text-accent-amber text-sm font-body">Limite de 3 versões atingido. Reavalie as assinaturas geradas.</p>
+            <div className="flex flex-col items-center justify-center py-6 gap-2">
+              <ImageIcon className="w-8 h-8 text-text-muted" />
+              <p className="text-text-muted text-sm font-body">Nenhuma assinatura visual</p>
             </div>
             {hasArchivedSignatures && (
               <button type="button" onClick={() => setShowHistoryModal(true)}
@@ -245,7 +234,7 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
               className="w-full px-4 py-2.5 bg-accent-green text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 flex items-center justify-center gap-2"
             >
               <Sparkles className="w-4 h-4" />
-              Reavaliar assinaturas
+              Criar Assinatura Visual
             </button>
           </div>
         );
@@ -311,17 +300,6 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
           <Loader2 className="w-5 h-5 animate-spin text-text-muted" />
         </div>
       ) : renderState()}
-
-      {showModal && (
-        <VisualSignatureModal
-          storeId={store.id}
-          storeName={store.name}
-          segment={store.segment}
-          brandColor={store.brand_color ?? ""}
-          onClose={handleModalClose}
-          onLogoUpload={() => setShowModal(false)}
-        />
-      )}
 
       {showApprovalModal && (
         <VisualSignatureApprovalModal
