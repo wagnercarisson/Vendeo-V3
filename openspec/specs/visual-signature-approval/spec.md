@@ -1,4 +1,4 @@
-> **Purpose**: Defines the visual signature approval flow for stores without a logo — the modal/tela presented to the lojista after generation, including approval, rejection with re-generation (up to 3 attempts), exhausted state with re-evaluation, and sequential generation.
+> **Purpose**: Defines the visual signature approval flow for stores without a logo — the modal/tela presented to the lojista after generation, including approval, rejection with re-generation, review of historical versions, and insufficient credits handling.
 
 ## Requirements
 
@@ -8,13 +8,10 @@ When the lojista clicks "Não tenho logo" on the Logo e Cores step, the system S
 
 The modal SHALL display:
 - The generated visual signature in preview (~400x400px)
-- Current attempt indicator (1/3, 2/3, 3/3)
 - Button "Aprovar" (primary green style)
-- Button "Não gostei, gerar outra versão" (outline style, only active when attempts < 3)
+- Button "Não gostei, gerar outra versão" (outline style, always active if the store has sufficient credits)
 
-At attempt 3/3, the "Não gostei, gerar outra versão" button SHALL be inactive with tooltip "Limite de 3 versões atingido".
-
-At attempt 3/3, the system SHALL display all 3 generated signatures for re-evaluation, allowing the lojista to approve any of them or continue without logo.
+The modal SHALL NOT display an attempt indicator (e.g., "Tentativa X/3").
 
 The modal SHALL accept a mode parameter: `'standard' | 'substitution'`.
 
@@ -27,25 +24,18 @@ In `'substitution'` mode, the modal SHALL:
 - Historical drafts SHALL NOT block the flow
 - After generation, transition to standard approval flow with substitution protocol
 
-#### Scenario: Modal shows at attempt 1/3
+#### Scenario: Modal shows at first generation
 
 - **WHEN** the first visual signature is generated
 - **THEN** the modal SHALL display the signature preview
-- **AND** show "1/3" attempt indicator
 - **AND** both "Aprovar" and "Não gostei, gerar outra versão" SHALL be active
 
-#### Scenario: Modal blocks re-generation at 3/3
+#### Scenario: Modal always allows new generation (if credits available)
 
-- **WHEN** attempt is 3/3
-- **THEN** "Não gostei, gerar outra versão" SHALL be inactive
-- **AND** a tooltip SHALL read "Limite de 3 versões atingido"
-
-#### Scenario: Exhausted attempts show all signatures
-
-- **WHEN** attempt is 3/3
-- **THEN** the modal SHALL display all 3 generated signatures side by side
-- **AND** the lojista SHALL be able to select and approve any of them
-- **AND** a "Continuar sem logo" option SHALL be available
+- **WHEN** the lojista has generated 1 or more visual signatures
+- **AND** the store has sufficient credits
+- **THEN** the "Não gostei, gerar outra versão" button SHALL be active
+- **AND** SHALL NOT show attempt counters or limit messaging
 
 #### Scenario: Modal opens in substitution mode
 
@@ -74,16 +64,15 @@ When the lojista clicks "Aprovar", the system SHALL:
 1. Set the current visual signature to `active` in `store_visual_signatures`
 2. Set any previous active signature to `archived`
 3. Set `stores.logo_status` to `generated`
-4. Reset `stores.visual_signature_attempts` to 0
-5. Set `stores.identity_state` to `'visual_signature'`
-6. Update the `generation_events` record matching `asset_id` and `attempt_number` with `approved = true`
-7. **Invoke the Store Brand Profiler with `intendedPalette` from `signature.metadata.artDirectorOutput.intended_palette` and `previousBrandColors` from the last synced profile (if `brand_colors_chosen` has at least one valid HEX)** — `manual_color_override` SHALL NOT be consulted
-8. Close the modal
-9. Return to the Logo e Cores screen
-10. Display the approved visual signature in the store preview
-11. Pre-fill primary and accent colors from `safe_color_tokens.primary`/`.accent` (or identity art director's suggested colors as fallback)
-12. Allow the lojista to edit colors manually before saving
-13. **If the brand profiler fails (`profile.status = 'failed'`)**: the visual signature approval SHALL still succeed. The previous synced profile (if any) SHALL remain valid. The UI SHALL use the previous profile's colors or segment fallback.
+4. Set `stores.identity_state` to `'visual_signature'`
+5. Update the `generation_events` record matching `asset_id` and `attempt_number` with `approved = true`
+6. **Invoke the Store Brand Profiler with `intendedPalette` from `signature.metadata.artDirectorOutput.intended_palette` and `previousBrandColors` from the last synced profile (if `brand_colors_chosen` has at least one valid HEX)** — `manual_color_override` SHALL NOT be consulted
+7. Close the modal
+8. Return to the Logo e Cores screen
+9. Display the approved visual signature in the store preview
+10. Pre-fill primary and accent colors from `safe_color_tokens.primary`/`.accent` (or identity art director's suggested colors as fallback)
+11. Allow the lojista to edit colors manually before saving
+12. **If the brand profiler fails (`profile.status = 'failed'`)**: the visual signature approval SHALL still succeed. The previous synced profile (if any) SHALL remain valid. The UI SHALL use the previous profile's colors or segment fallback.
 
 The endpoint `POST /api/store/[id]/visual-signature/approve` SHALL accept an optional mode field: `'standard' | 'substitution'`.
 
@@ -113,7 +102,7 @@ When mode:'substitution', the endpoint SHALL execute in this order:
 - **THEN** the visual signature SHALL become `active`
 - **AND** `logo_status` SHALL become `generated`
 - **AND** `identity_state` SHALL become `'visual_signature'`
-- **AND** `visual_signature_attempts` SHALL reset to 0
+- **AND** `visual_signature_attempts` SHALL NOT be reset (coluna mantida, não mais alterada)
 - **AND** a brand profile SHALL be created with `source = 'without_logo'` and `intendedPalette` passed to the profiler
 
 #### Scenario: Colors pre-filled after approval
@@ -167,16 +156,16 @@ When mode:'substitution', the endpoint SHALL execute in this order:
 
 ### Requirement: Rejection flow
 
-When the lojista clicks "Não gostei, gerar outra versão" and attempts < 3:
+When the lojista clicks "Não gostei, gerar outra versão":
 
 1. The current visual signature asset SHALL be marked as `archived` with metadata: `rejected: true`, optional rejection reason, `attempt_number`
 2. The `generation_events` record matching `asset_id` and `attempt_number` SHALL be updated with `rejected = true`
 3. An optional text field SHALL be presented: "O que você não gostou?"
-4. The system SHALL NOT increment `visual_signature_attempts` (increment happens at generation time)
+4. The system SHALL NOT increment `visual_signature_attempts`
 5. Rejection context SHALL be structured and sent to the Store Identity Art Director:
    - If feedback provided: include the lojista's text
    - If no feedback: "A versão anterior foi rejeitada sem feedback específico. Busque uma direção criativa completamente diferente."
-6. The next generation SHALL proceed with incremented attempt
+6. The next generation SHALL proceed if the store has sufficient credits
 
 #### Scenario: Rejection archives current asset
 
@@ -196,37 +185,12 @@ When the lojista clicks "Não gostei, gerar outra versão" and attempts < 3:
 - **THEN** the rejection context SHALL state "sem feedback específico"
 - **AND** SHALL instruct the AI to seek a completely new direction
 
-### Requirement: Rejection at exhausted attempts
+#### Scenario: Rejection always proceeds to review (no exhausted state)
 
-When `visual_signature_attempts >= 3` and the lojista attempts to reject:
-
-1. No new generation SHALL be allowed
-2. `logo_status` SHALL be set to or maintained as `exhausted`
-3. All 3 generated signatures SHALL be displayed for re-evaluation
-4. The lojista SHALL be able to approve any of the 3 generated signatures
-5. A "Continuar sem logo" option SHALL be available
-
-#### Scenario: Exhausted shows re-evaluation
-
-- **WHEN** `visual_signature_attempts >= 3`
-- **THEN** all 3 archived signatures SHALL be displayed
-- **AND** each signature SHALL have an "Aprovar" button
-- **AND** a "Continuar sem logo" link SHALL be displayed
-
-#### Scenario: Approve from exhausted state
-
-- **WHEN** the lojista approves one of the 3 signatures after exhaustion
-- **THEN** the selected signature SHALL become `active`
-- **AND** `logo_status` SHALL become `generated`
-- **AND** the normal approval flow SHALL proceed
-
-#### Scenario: Continue without logo from exhausted state
-
-- **WHEN** the lojista clicks "Continuar sem logo" after exhausting 3 attempts
-- **THEN** `logo_status` SHALL be set to `explicit_none`
-- **AND** `visual_signature_attempts` SHALL remain 3
-- **AND** all 3 archived signatures SHALL remain available for future re-evaluation
-- **AND** no new generation SHALL be available in this version
+- **WHEN** the lojista rejects regardless of how many attempts have been made
+- **THEN** the modal SHALL transition to the "review" phase
+- **AND** SHALL display available historical signatures
+- **AND** the "Gerar nova versão" button SHALL be available if the store has sufficient credits
 
 ### Requirement: Close modal without decision
 
@@ -293,14 +257,14 @@ When the lojista approves a visual signature, the system SHALL update the store'
 
 When the lojista provides rejection feedback in the "feedback" phase, the `rejectionContext` SHALL be preserved in the modal state and propagated to `generate()` when the user chooses to generate a new version from the "review" phase.
 
-The modal SHALL store `rejectionContext` as component state across phases. When the user navigates from "feedback" to "review" (by confirming rejection) and then clicks "Gerar nova versão" (attempts < 3), the stored `rejectionContext` SHALL be passed to the `generate-without-logo` API call.
+The modal SHALL store `rejectionContext` as component state across phases. When the user navigates from "feedback" to "review" (by confirming rejection) and then clicks "Gerar nova versão", the stored `rejectionContext` SHALL be passed to the `generate-without-logo` API call.
 
 #### Scenario: Rejection context passed from feedback to review generate
 
 - **WHEN** the lojista provides feedback in the "feedback" phase
 - **AND** confirms the rejection
 - **AND** the modal transitions to "review" phase (existing signatures listed)
-- **AND** the lojista clicks "Gerar nova versão" (attempts < 3)
+- **AND** the lojista clicks "Gerar nova versão"
 - **THEN** the stored `rejectionContext` SHALL be sent to the `generate-without-logo` API
 - **AND** the new generation SHALL include the rejection context in the prompt
 
@@ -321,31 +285,6 @@ The system SHALL generate exactly 1 visual signature per invocation, sequentiall
 - **WHEN** the lojista clicks "Não tenho logo"
 - **THEN** exactly 1 visual signature SHALL be generated
 - **AND** the system SHALL wait for lojista decision before generating another
-
-### Requirement: Generation attempt tracking
-
-`visual_signature_attempts` SHALL count versions generated, not rejections:
-- Generation 1 → `visual_signature_attempts = 1`
-- After rejection, Generation 2 → `visual_signature_attempts = 2`
-- After rejection, Generation 3 → `visual_signature_attempts = 3`
-- After approval → `visual_signature_attempts = 0` (reset)
-
-The attempt number SHALL be incremented at the moment of generation, not at the moment of rejection.
-
-#### Scenario: Attempt increments on generation
-
-- **WHEN** a visual signature is generated
-- **THEN** `visual_signature_attempts` SHALL be incremented by 1
-
-#### Scenario: Attempt resets on approval
-
-- **WHEN** a visual signature is approved
-- **THEN** `visual_signature_attempts` SHALL be reset to 0
-
-#### Scenario: Attempt not incremented on rejection
-
-- **WHEN** a visual signature is rejected
-- **THEN** `visual_signature_attempts` SHALL remain unchanged
 
 ### Requirement: Approval route — brand profiler invocation (updated)
 
@@ -420,3 +359,57 @@ Guard failure -> 4xx with specific message.
 - **WHEN** POST /approve is called with mode:'substitution'
 - **THEN** drift SHALL be revalidated against the currently ACTIVE visual signature
 - **AND** SHALL NOT be revalidated against the new signatureId
+
+### Requirement: Insufficient credits phase
+
+When the `generate-without-logo` API returns HTTP 402, the modal SHALL transition to the `"insufficient_credits"` phase.
+
+The `"insufficient_credits"` phase SHALL display:
+- Alert icon (AlertCircle from lucide-react, accent-amber color)
+- Message: "Créditos insuficientes para gerar assinatura visual."
+- Sub-message: "Cada geração de assinatura visual consome 1 crédito."
+- Primary CTA button: "Ver meus créditos" linking to `/conta`
+- Secondary CTA button: "Tentar novamente" that retries generation
+
+#### Scenario: Modal shows insufficient_credits on 402
+
+- **WHEN** `generate()` receives a response with `status === 402`
+- **THEN** the modal SHALL set phase to `"insufficient_credits"`
+- **AND** SHALL display the message "Créditos insuficientes para gerar assinatura visual."
+
+#### Scenario: CTA "Ver meus créditos" navigates to /conta
+
+- **WHEN** the lojista clicks "Ver meus créditos" in the insufficient_credits phase
+- **THEN** the browser SHALL navigate to `/conta`
+
+#### Scenario: CTA "Tentar novamente" retries generation
+
+- **WHEN** the lojista clicks "Tentar novamente" in the insufficient_credits phase
+- **THEN** the modal SHALL call `generate()` again
+
+### Requirement: Review phase loads limited history
+
+When the modal enters the `"checking"` phase, the system SHALL load the 6 most recent visual signatures via `GET /api/store/[id]/visual-signature?limit=6`.
+
+If `total > 6`, the review phase SHALL display a non-clickable indicator: "Há mais versões no histórico. Galeria completa em breve."
+
+If the store generates without sufficient credits, the API returns 402 and the modal transitions to `insufficient_credits`. No proactive balance check is performed in the UI.
+
+#### Scenario: Review loads up to 6 signatures
+
+- **WHEN** the modal enters the checking phase
+- **THEN** the system SHALL call `GET /api/store/[id]/visual-signature?limit=6`
+- **AND** display up to 6 signatures in the review grid
+
+#### Scenario: Indicator shown when more than 6 signatures exist
+
+- **WHEN** `total > 6` is returned by the API
+- **THEN** the review phase SHALL display a non-clickable indicator
+- **AND** the indicator SHALL read "Há mais versões no histórico. Galeria completa em breve."
+
+#### Scenario: No exhausted state for historical signatures
+
+- **WHEN** the modal loads historical signatures via the checking phase
+- **THEN** the modal SHALL NOT transition to an "exhausted" phase
+- **AND** SHALL always display the review phase if signatures exist
+- **AND** SHALL proceed to generate if no signatures exist and credits are sufficient

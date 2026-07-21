@@ -33,12 +33,20 @@ O sistema SHALL definir `CreditTransactionSchema` (Zod) com campos: `id (uuid)`,
 
 ### Requirement: CreditOperationOptions interface
 
-O sistema SHALL definir `CreditOperationOptions` com campos opcionais: `campaignId? (string)`, `idempotencyKey? (string)`, `metadata? (Record<string, unknown>)`.
+O sistema SHALL definir `CreditOperationOptions` com campos opcionais: `campaignId? (string | null)`, `idempotencyKey? (string)`, `metadata? (Record<string, unknown>)`.
+
+O campo `campaignId` aceita `null` explicitamente para operações que não pertencem a uma campanha (ex.: assinatura visual).
 
 #### Scenario: CreditOperationOptions all fields are optional
 
 - **WHEN** `CreditOperationOptions` é usado sem nenhum campo
 - **THEN** é válido (todos os campos são opcionais)
+
+#### Scenario: CreditOperationOptions campaignId aceita null
+
+- **WHEN** `CreditOperationOptions` é usado com `campaignId: null`
+- **THEN** é válido
+- **AND** o RPC recebe `p_campaign_id: null`
 
 ### Requirement: CreditBalance interface
 
@@ -108,6 +116,39 @@ O sistema SHALL implementar `reserveCredit(storeId: string, amount: number, opts
 
 - **WHEN** RPC retorna `saldo_insuficiente`
 - **THEN** o erro é propagado (para handler HTTP tratar como 402)
+
+#### Scenario: reserveCredit passes metadata to RPC
+
+- **WHEN** `reserveCredit(storeId, 1, { campaignId: null, metadata: { feature: "visual_signature" } })` é chamado
+- **THEN** a chamada RPC inclui `p_metadata: { feature: "visual_signature" }`
+
+### Requirement: reserveCredit supports campaignId null for VS operations
+
+O sistema SHALL allow `reserveCredit()` to be called with `campaignId: null` for visual signature operations. O `metadata` parameter SHALL be used to identify VS transactions instead.
+
+When `campaignId` is null, the `metadata` SHALL include:
+- `feature: "visual_signature"` — identifies the transaction as VS-related
+- `mode: "standard" | "substitution"` — generation mode
+- `operationId: string` — unique operation identifier
+
+The `idempotencyKey` SHALL follow the pattern: `vs_reserve_${storeId}_${operationId}`.
+
+#### Scenario: reserveCredit accepts campaignId null for VS
+
+- **WHEN** `reserveCredit(storeId, 1, { campaignId: null, idempotencyKey, metadata: { feature: "visual_signature", mode: "standard", operationId } })` é chamado
+- **THEN** a chamada RPC inclui `p_campaign_id: null`
+- **AND** `p_idempotency_key` é `vs_reserve_${storeId}_${operationId}`
+- **AND** a transação é registrada no ledger com `campaign_id: null`
+
+### Requirement: refundCredit compatível com VS metadata
+
+O sistema SHALL support calling `refundCredit()` with the transaction ID returned by `reserveCredit()` for VS operations. O `reason` parameter SHALL describe the technical failure.
+
+#### Scenario: refundCredit with VS tx id restores balance
+
+- **WHEN** `refundCredit(creditTxId, "geração falhou: timeout na IA")` é chamado após uma reserva de VS
+- **THEN** o saldo da loja é restaurado
+- **AND** a transação de estorno é registrada no ledger
 
 ### Requirement: confirmCredit is no-op
 
