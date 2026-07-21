@@ -403,7 +403,7 @@ export const POST = apiHandler(async (
   }
   console.log(`[approve][req-${reqId}] signature carregada status=${signature.status}`);
 
-  if (signature.status === 'archived') {
+  if (signature.status !== 'active') {
     const metadata = (signature.metadata ?? {}) as Record<string, unknown>;
     const inputSnapshot = metadata.input_snapshot as VisualSignatureMetadataInputSnapshot | null ?? null;
     const artDirectorOutput = metadata.artDirectorOutput as unknown as VisualSignatureMetadataArtDirectorOutput | null ?? null;

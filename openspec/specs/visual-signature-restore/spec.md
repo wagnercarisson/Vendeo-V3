@@ -17,7 +17,11 @@ The endpoint SHALL execute the following validation before proceeding:
 2. If already `active`, return success with no-op
 3. Validate `identity_state` of the store:
    - `'text_only'` → permitted
-   - `'visual_signature'` → permitted (swap/reapply between archived signatures)
+    - `'visual_signature'` → **REJECTED**: user must remove the active visual signature before applying another
+>      ```json
+>      { "error": "Remova a assinatura ativa antes de aplicar outra versão.",
+>        "requires_vs_removal": true, "current_identity_state": "visual_signature" }
+>      ```
    - `'logo'` → REJECTED: user must remove the logo before restoring a visual signature
      ```json
      { "error": "Remova o logotipo ativo antes de restaurar uma assinatura visual.",
@@ -133,3 +137,23 @@ When restoring a visual signature, the system SHALL reconcile brand profiles:
 - **AND** no brand profile exists for the signature (draft that was never approved)
 - **THEN** `BrandProfilerWithoutLogoService.generate()` SHALL be executed
 - **AND** a new brand profile SHALL be created with `source = 'without_logo'` and `visual_signature_id` linked to the restored signature
+
+## REMOVED Requirements
+
+The following requirement was removed in F29.1.2 (D3):
+
+### Requirement (removed): identity_state = 'visual_signature' permitted
+
+**Removed in:** Phase 29.1.2 — Histórico Curto + Assinatura Visual
+**Reason:** D3 from alinhamento F29.1.2 — users must remove active VS before applying another version. Previously, users could swap/reapply between archived signatures while `identity_state = 'visual_signature'`. Now this state is blocked: user must first remove the active VS (setting `identity_state = 'text_only'`) before applying a different version.
+
+**Previous behavior:**
+- `'visual_signature'` → permitted: swap/reapply between archived signatures
+- The system would archive the current active VS and activate the chosen one (substitution)
+
+**New behavior:**
+- `'visual_signature'` → **REJECTED** with `requires_vs_removal: true`
+- User must first remove the active VS (DELETE /api/store/[id]/visual-signature)
+- Then apply the archived/draft VS from `text_only` state
+
+**Impact:** Substitution mode in POST /approve still exists for the drift-based substitution flow, but the restore endpoint no longer supports in-place substitution while `identity_state = 'visual_signature'`.
