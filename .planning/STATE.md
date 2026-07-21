@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: "Lançamento Externo Controlado — Créditos + Admin + Saldo + Observabilidade + Launch"
 status: active
-last_updated: "2026-07-20T14:20:00.000Z"
+last_updated: "2026-07-21T17:44:00.000Z"
 last_activity: 2026-07-21
 progress:
-  total_phases: 8
-  completed_phases: 7
-  total_plans: 28
-  completed_plans: 25
-  percent: 89
+  total_phases: 9
+  completed_phases: 8
+  total_plans: 31
+  completed_plans: 28
+  percent: 90
 ---
 
 # Project State
@@ -100,7 +100,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** v1.5 — Lançamento Externo Controlado ◆
+**Current focus:** v1.5 — Lançamento Externo Controlado ✅ (All phases complete)
 
 ## Completed Milestones
 
@@ -353,23 +353,29 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 - `2e82c5a` — 25-02: transactional integration — 3-zone pipeline, mandatoryArtworkText, mapper, onboarding grant RPC, title? compatibility
 - `d508e9b` — 25-03: tests for pipeline integration — rate-limit, store routes, generate-image route; fix all compilation+test failures (799/799 passing, typecheck clean)
 
-### Phase 29.1.1 — Créditos na Assinatura Visual △
+### Phase 29.1.1 — Créditos na Assinatura Visual ✅
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
-| 29-1-1-01 | 1 | △ | Backend Foundation — Types, CreditService, Routes (6 tasks) |
-| 29-1-1-02 | 2 | △ | Frontend — Modal UI + Ocultar Modal Antigo (6 tasks) |
-| 29-1-1-03 | 3 | △ | Testes e Verificação — 20+ testes, typecheck, lint, build |
+| 29-1-1-01 | 1 | ✅ | Backend Foundation — Types, CreditService, Routes (6 tasks) |
+| 29-1-1-02 | 2 | ✅ | Frontend — Modal UI + Ocultar Modal Antigo (6 tasks) |
+| 29-1-1-03 | 3 | ✅ | Testes e Verificação — 917 testes, typecheck, lint, build |
 
 **Requirements:** CRED-03, CRED-04, CRED-05, OPS-05
 **Context:** `.planning/phases/29-1-1-creditos-assinatura-visual/29-1-1-CONTEXT.md`
 **Source:** `openspec/changes/fase-29-1-1-creditos-assinatura-visual/`
+**Tests:** 917 passing (117 files, 8 novos)
+**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
+
+**Commits:**
+- `d735d01` — 29-1-1-01: Backend Foundation — types, credit integration, pagination, remove quota
+- `291f605` — 29-1-1-02: Frontend — remove exhausted, add insufficient_credits, hide old modal
+- `6ff32ee` — 29-1-1-03: Testes — credit flow (8 testes), regressão
+- `b6c8a8c` — fix(29-1-1-03): update makeChain mock for count:exact pagination
 
 ## Current Position
 
-Phase: 29.1.1 — Créditos na Assinatura Visual △
-Plan: 0/3 plans implemented
-Status: **Planned.** Base técnica registrada via OpenSpec. Aguardando implementação.
+All v1.5 phases completed. Awaiting v1.6 (F30 — Stripe/Monetização).
 
 ### Next Phases
 
@@ -377,8 +383,8 @@ Status: **Planned.** Base técnica registrada via OpenSpec. Aguardando implement
 |-------|--------|-------------|
 | F28 | ✅ Completed | Observabilidade + Operação + Launch Controls (4 plans, 37+ testes, 889 total) |
 | F29 | ✅ Completed | Refinamento Visual + UAT + Launch Readiness — UAT 4/4 lojistas aprovado |
-| F29.1.1 | △ Planned | Créditos na Assinatura Visual — VS consome créditos, remove cota fixa de 3 |
-| F30/v1.6 | △ Future | Stripe / Monetização Pública (pós-beta) |
+| F29.1.1 | ✅ Completed | Créditos na Assinatura Visual — VS consome créditos, remove cota fixa de 3 |
+| F30/v1.6 | ○ Future | Stripe / Monetização Pública (pós-beta) |
 
 ### Quick Tasks Completed
 

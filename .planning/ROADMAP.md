@@ -2,7 +2,7 @@
 
 ## Milestone v1.5 — Lançamento Externo Controlado
 
-**7 phases** | **42 requirements mapped** | All covered ✓
+**8 phases** | **42 requirements mapped** | All covered ✓
 
 **Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23.
 
@@ -19,6 +19,7 @@
 | 27 | ✅ Conta + Saldo Visível + Extrato | UI de créditos no app shell e /conta (sem Stripe) | UI-01, UI-02, UI-03, UI-04, UI-05, UI-06 | 6 ✅ |
 | 28 | Observabilidade + Operação + Launch Controls | Pipeline instrumentado, launch config centralizado, dashboard operacional, docs de deploy/suporte | OPS-01, OPS-02, OPS-03, OPS-04, OPS-05, OPS-06, OPS-07, OPS-08, OPS-09 | 9 |
 | 29 | ✅ Refinamento + UAT + Launch Readiness | Produto polido e pronto para beta externo | LAUNCH-01, LAUNCH-02, LAUNCH-03, LAUNCH-04, LAUNCH-05, LAUNCH-06, SEC-01, SEC-02, SEC-03, SEC-05 | 10 ✅ |
+| 29.1.1 | ✅ Créditos na Assinatura Visual | VS passa a consumir créditos, remove cota fixa de 3 tentativas | CRED-03, CRED-04, CRED-05, OPS-05 | 4 ✅ |
 
 ---
 
@@ -160,6 +161,34 @@
 
 ---
 
+### Phase 29.1.1 — Créditos na Assinatura Visual ✅
+
+**Goal:** VS passa a consumir créditos como o resto do produto, removendo cota fixa de 3 tentativas.
+
+**Requirements:** CRED-03, CRED-04, CRED-05, OPS-05
+
+**Success criteria:**
+1. ✅ VS generation deducts 1 credit via reserveCredit before IA
+2. ✅ Zero balance returns 402 `{ code: "insufficient_credits" }` before any IA call
+3. ✅ Technical failure refunds the reserved credit
+4. ✅ Launch config flags (generationPaused, v15Enabled, creditsChargingEnabled) respected
+5. ✅ "Tentativa X/3" badge and exhausted-limit UX completely removed
+6. ✅ VisualSignatureApprovalModal shows insufficient_credits state with CTA to /conta
+7. ✅ GET /api/store/[id]/visual-signature supports limit/offset pagination
+8. ✅ Review modal loads max 6 signatures with total count indicator
+9. ✅ No migration — `visual_signature_attempts` column maintained but unused
+
+**Dependencies:** Phase 24 (CreditService), Phase 25 (generate pipeline baseline), Phase 28 (launch config)
+
+**Tests:** 917 passing (117 files, 8 novos) — credit integration, removed limit, regression
+
+**Commits:**
+- `d735d01` — 29-1-1-01: Backend Foundation
+- `291f605` — 29-1-1-02: Frontend
+- `6ff32ee`, `b6c8a8c` — 29-1-1-03: Tests & Verification
+
+---
+
 ## Dependency Graph
 
 ```
@@ -239,7 +268,7 @@ Phase 24 (Credit Tables + CreditService) ──┘
 **Coverage:**
 - v1 requirements: 44 total
 - Mapped to phases: 44
-- Completed: 36 (CRED-01–05, PIPE-01–06, ADMIN-01–06, SEC-04, SEC-06, UI-01–06, LAUNCH-01–06, SEC-01–03, SEC-05)
+- Completed: 40 (CRED-01–05, PIPE-01–06, ADMIN-01–06, SEC-04, SEC-06, UI-01–06, LAUNCH-01–06, SEC-01–03, SEC-05, OPS-05)
 - Unmapped: 0 ✓
 - Deferred to v1.6: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06
 
