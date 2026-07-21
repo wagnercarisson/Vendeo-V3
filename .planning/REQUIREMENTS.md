@@ -62,7 +62,9 @@
 ### Refinamento Visual e Launch Readiness (LAUNCH)
 
 - [/] **LAUNCH-01**: Loading, empty, error states for all new screens/components
+  - Refinado por F29.1.2: HistoryModal reescrito com loading/error/empty states + paginação
 - [/] **LAUNCH-02**: Insufficient-credit UX across the app (disabled states, tooltips, microcopy)
+  - Refinado por F29.1.2: Ações condicionais ao identity_state com tooltips contextuais
 - [/] **LAUNCH-03**: Mobile hardening for credit flows (viewport 320–768px, touch targets >=44px)
 - [/] **LAUNCH-04**: UAT externo com 3–5 lojistas reais (convite manual, grant admin, geração, saldo, extrato)
 - [/] **LAUNCH-05**: Canal de feedback, métricas de saúde, critérios de expansão/pausa documentados
@@ -178,7 +180,9 @@ Deferred to future release. Tracked but not in current roadmap.
 - Mapped to phases: 44
 - Unmapped: 0 ✓
 - Deferred to v1.6: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06
+- F29.1.2: Fase complementar refinando LAUNCH-01 e LAUNCH-02 (sem REQ-IDs próprios)
 
 ---
+
 *Requirements defined: 2026-07-15*
-*Last updated: 2026-07-15 after milestone v1.5 start*
+*Last updated: 2026-07-21 — Added F29.1.2 traceability*
