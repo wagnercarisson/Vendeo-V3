@@ -15,7 +15,7 @@ A F29.1.1 removeu o limite fixo de 3 gerações e introduziu consumo de crédito
 - Ações condicionais ao estado de identidade: `text_only` permite aplicar VS; `visual_signature`, `logo` e `null` bloqueiam com instrução clara
 - Incluir `draft` na listagem com revalidação de drift obrigatória
 - Integrar com `ApprovalModal` via prop `onOpenGallery`
-- Paginação simples — botão "Ver versões anteriores" quando total > 6, máximo 12 itens
+- Paginação simples — botão "Ver versões anteriores" quando `apiTotal > rawSignaturesLoaded`, máximo 12 raw itens carregados
 - Alterar backend: condição de drift validation no POST /approve de `status === 'archived'` para `status !== 'active'`
 - Atualizar spec `visual-signature-restore` para refletir que `identity_state = 'visual_signature'` agora é BLOQUEADO
 - Nenhuma nova API route, migration, schema change, ou consumo de crédito
