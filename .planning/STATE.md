@@ -366,6 +366,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 **Source:** `openspec/changes/fase-29-1-1-creditos-assinatura-visual/`
 **Tests:** 917 passing (117 files, 8 novos)
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
+**UAT:** 15/15 ✅ — crédito, saldo, estorno, flags, exhausted removido, insufficient_credits, paginação, reject/approve routes
 
 **Commits:**
 - `d735d01` — 29-1-1-01: Backend Foundation — types, credit integration, pagination, remove quota
@@ -383,7 +384,7 @@ All v1.5 phases completed. Awaiting v1.6 (F30 — Stripe/Monetização).
 |-------|--------|-------------|
 | F28 | ✅ Completed | Observabilidade + Operação + Launch Controls (4 plans, 37+ testes, 889 total) |
 | F29 | ✅ Completed | Refinamento Visual + UAT + Launch Readiness — UAT 4/4 lojistas aprovado |
-| F29.1.1 | ✅ Completed | Créditos na Assinatura Visual — VS consome créditos, remove cota fixa de 3 |
+| F29.1.1 | ✅ Completed | Créditos na Assinatura Visual — VS consome créditos, remove cota fixa de 3, UAT 15/15 ✅ |
 | F30/v1.6 | ○ Future | Stripe / Monetização Pública (pós-beta) |
 
 ### Quick Tasks Completed
