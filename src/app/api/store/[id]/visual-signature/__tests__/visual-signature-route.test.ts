@@ -42,7 +42,8 @@ vi.mock('@/lib/constants', () => ({
 }));
 
 function makeChain(result: any) {
-  const resolvable = Promise.resolve(result);
+  const data = result?.data ?? result;
+  const resolvable = Promise.resolve({ ...result, data, count: result?.count ?? (Array.isArray(data) ? data.length : undefined) });
   const chain: any = Object.assign(() => resolvable, {
     then: resolvable.then.bind(resolvable),
     select: vi.fn(() => chain),
@@ -50,6 +51,7 @@ function makeChain(result: any) {
     in: vi.fn(() => chain),
     order: vi.fn(() => chain),
     limit: vi.fn(() => chain),
+    range: vi.fn(() => chain),
     single: vi.fn(() => Promise.resolve(result)),
     maybeSingle: vi.fn(() => Promise.resolve(result)),
     update: vi.fn(() => chain),
