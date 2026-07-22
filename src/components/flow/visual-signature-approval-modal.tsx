@@ -49,6 +49,7 @@ interface VisualSignatureApprovalModalProps {
   initialAttempt?: number;
   hasActiveSignatureDrift?: boolean;
   mode?: 'standard' | 'substitution';
+  initialReviewFeedbackOpen?: boolean;
   onComplete: (result: { 
     logoStatus: string; 
     signatureUrl?: string;
@@ -88,6 +89,7 @@ export function VisualSignatureApprovalModal({
   initialAttempt: _initialAttempt,
   hasActiveSignatureDrift,
   mode = 'standard',
+  initialReviewFeedbackOpen = false,
   onComplete,
   onRemove,
   onTier2Retry,
@@ -213,6 +215,7 @@ export function VisualSignatureApprovalModal({
           setTotalSignatures(total);
           if (sigs.length > 0) {
             console.log(`[VisualSignatureApprovalModal] found ${sigs.length} signatures (total: ${total}), showing review`);
+            setShowReviewFeedback(initialReviewFeedbackOpen);
             setState({ phase: "review", signatures: sigs, canGenerate: true });
           } else {
             console.log(`[VisualSignatureApprovalModal] no signatures found, starting generation`);
@@ -224,7 +227,7 @@ export function VisualSignatureApprovalModal({
           generate();
         });
     }
-  }, [isOpen, state.phase, storeId, generate, hasActiveSignatureDrift, mode]);
+  }, [isOpen, state.phase, storeId, generate, hasActiveSignatureDrift, mode, initialReviewFeedbackOpen]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -233,6 +236,8 @@ export function VisualSignatureApprovalModal({
       setStoredRejectionContext(null);
       setAllLoadedSignatures([]);
       setTotalSignatures(0);
+      setShowReviewFeedback(false);
+      setReviewFeedbackText("");
     }
   }, [isOpen]);
 

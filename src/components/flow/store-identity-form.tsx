@@ -92,6 +92,7 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
   const [logoStatus, setLogoStatus] = useState<string | null>(null);
   const [visualSignatureUrl, setVisualSignatureUrl] = useState<string | null>(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [openApprovalWithFeedback, setOpenApprovalWithFeedback] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [approvalMode, setApprovalMode] = useState<'standard' | 'substitution'>('standard');
   const [subsegmentIsOther, setSubsegmentIsOther] = useState(false);
@@ -579,9 +580,21 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
 
   const handleNoLogo = useCallback(() => {
     console.log(`[StoreIdentityForm] handleNoLogo clicked storeId=${storeId}`);
+    setOpenApprovalWithFeedback(false);
     setApprovalMode('standard');
     setShowApprovalModal(true);
   }, [storeId]);
+
+  const handleManageVS = useCallback(() => {
+    setShowHistoryModal(true);
+  }, []);
+
+  const handleGenerateNew = useCallback(() => {
+    setShowHistoryModal(false);
+    setOpenApprovalWithFeedback(true);
+    setApprovalMode('standard');
+    setShowApprovalModal(true);
+  }, []);
 
   const handleOpenGallery = useCallback(() => {
     setShowApprovalModal(false);
@@ -608,6 +621,7 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
   }, [storeId]);
 
   const handleOpenSubstitutionApproval = useCallback(() => {
+    setOpenApprovalWithFeedback(false);
     setApprovalMode('substitution');
     setShowApprovalModal(true);
   }, []);
@@ -1346,7 +1360,7 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
                       {(identityActions.canCreateVS || identityActions.canManageVS) && (
                         <button
                           type="button"
-                          onClick={handleNoLogo}
+                          onClick={identityActions.canManageVS ? handleManageVS : handleNoLogo}
                           className="flex-1 px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 flex items-center justify-center gap-2 relative group"
                         >
                           <Sparkles className="w-4 h-4 text-accent-green" />
@@ -1398,7 +1412,7 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
                       {(identityActions.canCreateVS || identityActions.canManageVS) && (
                         <button
                           type="button"
-                          onClick={handleNoLogo}
+                          onClick={identityActions.canManageVS ? handleManageVS : handleNoLogo}
                           className="flex-1 px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 flex items-center justify-center gap-2"
                         >
                           {identityActions.canManageVS ? 'Gerenciar assinatura visual' : 'Gerar assinatura visual'}
@@ -1775,7 +1789,7 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
       {showApprovalModal && storeId && (
         <VisualSignatureApprovalModal
           isOpen={showApprovalModal}
-          onClose={() => setShowApprovalModal(false)}
+          onClose={() => { setShowApprovalModal(false); setOpenApprovalWithFeedback(false); }}
           storeId={storeId}
           storeName={formData.name}
           segment={formData.segment}
@@ -1792,6 +1806,7 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
           onComplete={handleApprovalComplete}
           onRemove={handleRemoveVS}
           onOpenGallery={handleOpenGallery}
+          initialReviewFeedbackOpen={openApprovalWithFeedback}
         />
       )}
       {showHistoryModal && storeId && (
@@ -1801,6 +1816,7 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
           storeId={storeId}
           identityState={identityState}
           onApplied={handleHistoryApplied}
+          onGenerateNew={handleGenerateNew}
         />
       )}
     </div>

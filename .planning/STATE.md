@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: "Lançamento Externo Controlado — Créditos + Admin + Saldo + Observabilidade + Launch"
 status: active
-last_updated: "2026-07-21T21:55:00.000Z"
-last_activity: 2026-07-21
+last_updated: "2026-07-22T11:58:00.000Z"
+last_activity: 2026-07-22
 progress:
   total_phases: 11
   completed_phases: 9
@@ -15,7 +15,7 @@ progress:
 
 # Project State
 
-**Last updated:** 2026-07-21
+**Last updated:** 2026-07-22
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆
 **Current phase:** 29.1.2 — Histórico Curto + Assinatura Visual ✅ (Complete)
 
@@ -416,9 +416,11 @@ v1.5 em progresso — Fase 29.1.2 (Histórico Curto + Assinatura Visual) conclu�
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260717-okh | Corrigir bug/guardrail no pipeline de geracao de campanha: evitar chamadas de IA quando houver placeholders nao resolvidos em prompts e corrigir placeholder do revisor. | 2026-07-17 | 5878b0f | [260717-okh-corrigir-bug-guardrail-no-pipeline-de-ge](./quick/260717-okh-corrigir-bug-guardrail-no-pipeline-de-ge/) |
+| 260722-001 | Corrigir UX pós-UAT fase 29.1.2 — Gerar nova assinatura abre ApprovalModal direto com textarea | 2026-07-22 | cf19759 | [260722-001-fix-ux-pos-uat-2912](./quick/260722-001-fix-ux-pos-uat-2912/) |
 
 ### Quick Tasks Completed
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260717-okh | Corrigir bug/guardrail no pipeline de geracao de campanha: evitar chamadas de IA quando houver placeholders nao resolvidos em prompts e corrigir placeholder do revisor. | 2026-07-17 | 5878b0f | [260717-okh-corrigir-bug-guardrail-no-pipeline-de-ge](./quick/260717-okh-corrigir-bug-guardrail-no-pipeline-de-ge/) |
+| 260722-001 | Corrigir UX pós-UAT fase 29.1.2 — Gerar nova assinatura abre ApprovalModal direto com textarea | 2026-07-22 | cf19759 | [260722-001-fix-ux-pos-uat-2912](./quick/260722-001-fix-ux-pos-uat-2912/) |

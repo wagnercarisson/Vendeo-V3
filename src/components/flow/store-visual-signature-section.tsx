@@ -18,6 +18,7 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
   const [hasLogo, setHasLogo] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [openApprovalWithFeedback, setOpenApprovalWithFeedback] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [localLogoStatus, setLocalLogoStatus] = useState<string | null>(null);
   const [localAttempts, setLocalAttempts] = useState(0);
@@ -71,6 +72,7 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
   }, [load]);
 
   const handleShowApproval = useCallback(() => {
+    setOpenApprovalWithFeedback(false);
     setShowApprovalModal(true);
   }, []);
 
@@ -99,6 +101,12 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
   const handleOpenGallery = useCallback(() => {
     setShowApprovalModal(false);
     setShowHistoryModal(true);
+  }, []);
+
+  const handleGenerateNew = useCallback(() => {
+    setShowHistoryModal(false);
+    setOpenApprovalWithFeedback(true);
+    setShowApprovalModal(true);
   }, []);
 
   const handleHistoryApplied = useCallback(() => {
@@ -291,7 +299,7 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
       {showApprovalModal && (
         <VisualSignatureApprovalModal
           isOpen={showApprovalModal}
-          onClose={() => setShowApprovalModal(false)}
+          onClose={() => { setShowApprovalModal(false); setOpenApprovalWithFeedback(false); }}
           storeId={store.id}
           storeName={store.name}
           segment={store.segment}
@@ -303,6 +311,7 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
           slogan={store.slogan ?? ""}
           onComplete={handleApprovalComplete}
           onOpenGallery={handleOpenGallery}
+          initialReviewFeedbackOpen={openApprovalWithFeedback}
         />
       )}
 
@@ -313,6 +322,7 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
           storeId={store.id}
           identityState={identityState}
           onApplied={handleHistoryApplied}
+          onGenerateNew={handleGenerateNew}
         />
       )}
     </div>

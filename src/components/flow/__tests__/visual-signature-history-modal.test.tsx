@@ -59,7 +59,7 @@ describe('HistoryModal filter and display', () => {
     });
   });
 
-  it('API returns total=8, first 6 ok, click "Ver versões anteriores" — second batch 2 ok — exibe 8', async () => {
+  it('API returns total=8, first 6 ok, click "Carregar versões anteriores" — second batch 2 ok — exibe 8', async () => {
     const props = createModalProps();
     let callCount = 0;
 
@@ -84,7 +84,7 @@ describe('HistoryModal filter and display', () => {
       expect(screen.getByText('6 de 8 assinaturas')).toBeInTheDocument();
     });
 
-    const loadMore = screen.getByText('Ver versões anteriores');
+    const loadMore = screen.getByText('Carregar versões anteriores');
     fireEvent.click(loadMore);
 
     await waitFor(() => {
@@ -288,6 +288,51 @@ describe('HistoryModal actions by identity', () => {
   });
 });
 
+// ─── Task 3.3.5: onGenerateNew callback ───
+
+describe('HistoryModal onGenerateNew', () => {
+  it('clicar "Gerar nova assinatura" chama onGenerateNew', async () => {
+    const onGenerateNew = vi.fn();
+    const props = createModalProps({ onGenerateNew });
+    const signatures = [
+      createMockSignature({ id: 's1', restore_eligibility: { can_restore: true, drift_fields: [], requires_regeneration: false, reason: 'ok' } }),
+    ];
+
+    vi.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ signatures, total: 1 }), { status: 200 })
+    );
+
+    render(<VisualSignatureHistoryModal {...props} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Gerar nova assinatura')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Gerar nova assinatura'));
+
+    expect(onGenerateNew).toHaveBeenCalledTimes(1);
+  });
+
+  it('onGenerateNew não passado — botão "Gerar nova assinatura" não aparece', async () => {
+    const props = createModalProps({ onGenerateNew: undefined });
+    const signatures = [
+      createMockSignature({ id: 's1', restore_eligibility: { can_restore: true, drift_fields: [], requires_regeneration: false, reason: 'ok' } }),
+    ];
+
+    vi.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ signatures, total: 1 }), { status: 200 })
+    );
+
+    render(<VisualSignatureHistoryModal {...props} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('1 assinatura')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('Gerar nova assinatura')).not.toBeInTheDocument();
+  });
+});
+
 // ─── Task 3.4: Pagination (4 tests) ───
 
 describe('HistoryModal pagination', () => {
@@ -305,19 +350,19 @@ describe('HistoryModal pagination', () => {
     return props;
   }
 
-  it('total = 6 — sem botão "Ver versões anteriores"', async () => {
+  it('total = 6 — sem botão "Carregar versões anteriores"', async () => {
     renderModal(6, 6);
 
     await waitFor(() => {
-      expect(screen.queryByText('Ver versões anteriores')).not.toBeInTheDocument();
+      expect(screen.queryByText('Carregar versões anteriores')).not.toBeInTheDocument();
     });
   });
 
-  it('total = 7 — "Ver versões anteriores" visível', async () => {
+  it('total = 7 — "Carregar versões anteriores" visível', async () => {
     renderModal(7, 6);
 
     await waitFor(() => {
-      expect(screen.getByText('Ver versões anteriores')).toBeInTheDocument();
+      expect(screen.getByText('Carregar versões anteriores')).toBeInTheDocument();
     });
   });
 
@@ -343,13 +388,13 @@ describe('HistoryModal pagination', () => {
     render(<VisualSignatureHistoryModal {...props} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Ver versões anteriores')).toBeInTheDocument();
+      expect(screen.getByText('Carregar versões anteriores')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText('Ver versões anteriores'));
+    fireEvent.click(screen.getByText('Carregar versões anteriores'));
 
     await waitFor(() => {
-      expect(screen.queryByText('Ver versões anteriores')).not.toBeInTheDocument();
+      expect(screen.queryByText('Carregar versões anteriores')).not.toBeInTheDocument();
     });
   });
 
@@ -374,13 +419,13 @@ describe('HistoryModal pagination', () => {
     render(<VisualSignatureHistoryModal {...props} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Ver versões anteriores')).toBeInTheDocument();
+      expect(screen.getByText('Carregar versões anteriores')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText('Ver versões anteriores'));
+    fireEvent.click(screen.getByText('Carregar versões anteriores'));
 
     await waitFor(() => {
-      expect(screen.queryByText('Ver versões anteriores')).not.toBeInTheDocument();
+      expect(screen.queryByText('Carregar versões anteriores')).not.toBeInTheDocument();
     });
 
     expect(screen.getByText('12 de 12 assinaturas')).toBeInTheDocument();

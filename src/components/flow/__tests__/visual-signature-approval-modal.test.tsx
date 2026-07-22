@@ -331,6 +331,77 @@ describe('VisualSignatureApprovalModal behavioral (Cancelar) — rendering', () 
     expect(onOpenGallery).toHaveBeenCalledTimes(1);
   });
 
+  // ─── initialReviewFeedbackOpen tests ───
+
+  describe('initialReviewFeedbackOpen', () => {
+    it('true + signatures existentes → textarea "O que você quer diferente?" aparece direto', async () => {
+      const props = createModalProps({ initialReviewFeedbackOpen: true });
+      const signatures = [
+        { id: 'sig-1', assetUrl: 'https://example.com/sig.png', attempt: 1, status: 'active', restore_eligibility: { can_restore: true, drift_fields: [], requires_regeneration: false, reason: 'ok' as const } },
+      ];
+
+      vi.spyOn(global, 'fetch').mockImplementation(async (url) => {
+        const urlStr = typeof url === 'string' ? url : '';
+        if (urlStr.includes('/visual-signature') && !urlStr.includes('/generate')) {
+          return new Response(JSON.stringify({ signatures, total: 1 }), { status: 200 });
+        }
+        return new Response(JSON.stringify({ error: 'erro' }), { status: 500 });
+      });
+
+      render(<VisualSignatureApprovalModal {...props} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('O que você quer diferente?')).toBeInTheDocument();
+      });
+    });
+
+    it('false (padrão) + signatures existentes → "Nenhuma agradou" visível, textarea oculto', async () => {
+      const props = createModalProps({ initialReviewFeedbackOpen: false });
+      const signatures = [
+        { id: 'sig-1', assetUrl: 'https://example.com/sig.png', attempt: 1, status: 'active', restore_eligibility: { can_restore: true, drift_fields: [], requires_regeneration: false, reason: 'ok' as const } },
+      ];
+
+      vi.spyOn(global, 'fetch').mockImplementation(async (url) => {
+        const urlStr = typeof url === 'string' ? url : '';
+        if (urlStr.includes('/visual-signature') && !urlStr.includes('/generate')) {
+          return new Response(JSON.stringify({ signatures, total: 1 }), { status: 200 });
+        }
+        return new Response(JSON.stringify({ error: 'erro' }), { status: 500 });
+      });
+
+      render(<VisualSignatureApprovalModal {...props} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Nenhuma agradou, gerar nova versão')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText('O que você quer diferente?')).not.toBeInTheDocument();
+    });
+
+    it('ausente (undefined) → fluxo normal, textarea não aparece', async () => {
+      const props = createModalProps({});
+      const signatures = [
+        { id: 'sig-1', assetUrl: 'https://example.com/sig.png', attempt: 1, status: 'active', restore_eligibility: { can_restore: true, drift_fields: [], requires_regeneration: false, reason: 'ok' as const } },
+      ];
+
+      vi.spyOn(global, 'fetch').mockImplementation(async (url) => {
+        const urlStr = typeof url === 'string' ? url : '';
+        if (urlStr.includes('/visual-signature') && !urlStr.includes('/generate')) {
+          return new Response(JSON.stringify({ signatures, total: 1 }), { status: 200 });
+        }
+        return new Response(JSON.stringify({ error: 'erro' }), { status: 500 });
+      });
+
+      render(<VisualSignatureApprovalModal {...props} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Nenhuma agradou, gerar nova versão')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText('O que você quer diferente?')).not.toBeInTheDocument();
+    });
+  });
+
   it('substitution mode + erro mostra "Tentar novamente"', async () => {
     const props = createModalProps({ mode: 'substitution' });
 
