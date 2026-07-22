@@ -10,9 +10,9 @@
 1. Lojista acessa o link de convite
 2. Completa cadastro (email + senha)
 3. Cria loja (nome, segmento)
-4. Verifica saldo: 5 créditos concedidos
+4. Verifica saldo: 10 créditos concedidos (onboarding)
 5. Verifica extrato: transação `grant` aparece
-**Resultado esperado:** ✅ Loja criada, 5 créditos, extrato correto
+**Resultado esperado:** ✅ Loja criada, 10 créditos, extrato correto
 
 ## Cenário 2: Admin concede créditos
 

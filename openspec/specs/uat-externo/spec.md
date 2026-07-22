@@ -15,8 +15,8 @@ O sistema SHALL ser testado com 8 cenários mínimos cobrindo onboarding, crédi
 #### Scenario: Cadastro/onboarding completo
 
 - **WHEN** um lojista convidado completa o cadastro
-- **THEN** a loja é criada e 5 créditos são concedidos (saldo = 5)
-- **AND** o extrato mostra transação `grant` de 5 créditos
+- **THEN** a loja é criada e 10 créditos são concedidos (saldo = 10)
+- **AND** o extrato mostra transação `grant` de 10 créditos
 
 #### Scenario: Admin concede créditos com atualização de saldo
 
