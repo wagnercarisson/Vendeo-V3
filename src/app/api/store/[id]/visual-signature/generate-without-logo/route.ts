@@ -171,6 +171,7 @@ export const POST = apiHandler(async (
       console.log(`[generate-without-logo][req-${reqId}] crédito reservado: ${creditTxId}`);
     }
 
+  const startTime = performance.now();
   const abortController = new AbortController();
   const timeoutId = setTimeout(() => {
     console.log(`[generate-without-logo][req-${reqId}] ⏰ SERVER TIMEOUT ${ROUTE_TIMEOUT_MS}ms atingido, abortando...`);
@@ -363,6 +364,7 @@ export const POST = apiHandler(async (
       provider: 'openai',
       attempt_number: 1,
       status: 'success',
+      duration_ms: Math.round(performance.now() - startTime),
       prompt_version: promptVersion,
       asset_generated: true,
       asset_id: result.signature.id,
@@ -415,6 +417,7 @@ export const POST = apiHandler(async (
     provider: 'openai',
     attempt_number: 1,
     status: isTimeout ? 'timeout' : 'failed',
+    duration_ms: Math.round(performance.now() - startTime),
     error_type: isStorageError ? 'storage_upload_failed' : (isTimeout ? 'timeout' : 'generation_error'),
     prompt_version: promptVersion,
     asset_generated: false,

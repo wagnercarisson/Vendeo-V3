@@ -7,5 +7,11 @@ export {
   getCreditsGranted,
   getRefundRate,
   getActiveUsers,
+  getVsSuccessRate,
+  getVsErrorRate,
+  getVsAvgDuration,
+  getVsCreditsConsumed,
+  getVsRefundRate,
+  getVsCreditsRefunded,
 } from "./pipeline-metrics";
 export { computeHealthState } from "./health";
