@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { Card } from "@/components/ui/card";
+import { MonthlyCreditGrantButton } from "@/components/admin/monthly-credit-grant-button";
 
 const ACTION_LABELS: Record<string, string> = {
   credit_grant: "Concessão de Créditos",
@@ -80,6 +81,16 @@ export default async function AdminDashboardPage() {
           ) : (
             <p className="text-sm text-muted-foreground">Nenhuma ação registrada</p>
           )}
+        </div>
+      </Card>
+
+      <Card>
+        <div className="p-4 space-y-4">
+          <h2 className="text-lg font-semibold">Concessão Mensal de Créditos</h2>
+          <p className="text-sm text-muted-foreground">
+            Executa a RPC grant_monthly_credits com os parâmetros configurados no Launch Config.
+          </p>
+          <MonthlyCreditGrantButton />
         </div>
       </Card>
     </div>
