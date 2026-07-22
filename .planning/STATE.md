@@ -4,7 +4,7 @@ milestone: v1.5
 milestone_name: "Lançamento Externo Controlado — Créditos + Admin + Saldo + Observabilidade + Launch"
 status: active
 last_updated: "2026-07-22T16:07:00.000Z"
-last_activity: 2026-07-22
+last_activity: "2026-07-22T17:20:07.000Z"
 progress:
   total_phases: 11
   completed_phases: 9
@@ -419,3 +419,4 @@ v1.5 em progresso — Fase 29.1.2 (Histórico Curto + Assinatura Visual) conclu�
 | 260722-001 | Corrigir UX pós-UAT fase 29.1.2 — Gerar nova assinatura abre ApprovalModal direto com textarea | 2026-07-22 | cf19759 | [260722-001-fix-ux-pos-uat-2912](./quick/260722-001-fix-ux-pos-uat-2912/) |
 | 260722-hyq | Sanear persistência e cálculo das métricas de crédito — corrigir getRefundRate para filtrar por feature, corrigir getCreditsGranted para somar amounts, adicionar metadata.feature em reserveCredit/refundCredit | 2026-07-22 | 4f73def | [260722-hyq-sanear-persist-ncia-e-c-lculo-das-m-tric](./quick/260722-hyq-sanear-persist-ncia-e-c-lculo-das-m-tric/) |
 | 260722-i7v | Separar visualmente as métricas por domínio — 3 seções no admin, 6 funções VS, cross-window fix, duration_ms | 2026-07-22 | c772ffd | [260722-i7v-separar-visualmente-as-m-tricas-por-dom-](./quick/260722-i7v-separar-visualmente-as-m-tricas-por-dom-/) |
+| 260722-jwr | Fase 29.2 — Onboarding Grant 10 créditos | 2026-07-22 | 976a571 | [260722-jwr-fase-29-2-onboarding-grant-10-cr-ditos-a](./quick/260722-jwr-fase-29-2-onboarding-grant-10-cr-ditos-a/) |
