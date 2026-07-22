@@ -291,6 +291,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
       creditTxId = await creditService.reserveCredit(storeId, COST_PER_GENERATION, {
         campaignId,
         idempotencyKey: `reserve_${campaignId}`,
+        metadata: { feature: "campaign_pipeline" },
       });
       logPipelineEvent({ event: "credit_reserve", traceId, phase: "pre_stream", status: "complete", campaignId, storeId, userId: user.userId });
     } catch (err: unknown) {
@@ -443,7 +444,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
         console.error(`[generate-image] prompt_preflight_failed — ${preflightResult.errors.join('; ')}`);
         emit({ type: "error", campaignId: campaignId!, phase: "preflight", code: "invalid_prompt", message: preflightResult.errors.join("; "), httpStatus: 502, retryable: false });
         try { await updateCampaignError(campaignId!, preflightResult.errors.join("; ")); } catch { /* ignore */ }
-        try { await creditService.refundCredit(creditTxId!, "invalid_prompt", { idempotencyKey: `refund_${creditTxId}` }); } catch { /* ignore */ }
+        try { await creditService.refundCredit(creditTxId!, "invalid_prompt", { idempotencyKey: `refund_${creditTxId}`, metadata: { feature: "campaign_pipeline" } }); } catch { /* ignore */ }
         clearTimeout(timeoutId);
         try { controller.close(); } catch { /* already closed */ }
         return;
@@ -593,7 +594,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
 
             // Refund credit
             logPipelineEvent({ event: "credit_refund", traceId, phase: "post_parallel", status: "running", campaignId, storeId, userId: user.userId });
-            try { await creditService.refundCredit(creditTxId!, "persistence_failure", { idempotencyKey: `refund_${creditTxId}` }); } catch { /* ignore */ }
+            try { await creditService.refundCredit(creditTxId!, "persistence_failure", { idempotencyKey: `refund_${creditTxId}`, metadata: { feature: "campaign_pipeline" } }); } catch { /* ignore */ }
             logPipelineEvent({ event: "credit_refund", traceId, phase: "post_parallel", status: "complete", campaignId, storeId, userId: user.userId });
 
             emit({
@@ -612,7 +613,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
           logPipelineEvent({ event: "generation_failed", traceId, phase: "post_parallel", status: "failed", campaignId, storeId, userId: user.userId, errorMessage });
           try { await updateCampaignError(campaignId!, errorMessage); } catch { /* ignore */ }
           logPipelineEvent({ event: "credit_refund", traceId, phase: "post_parallel", status: "running", campaignId, storeId, userId: user.userId });
-          try { await creditService.refundCredit(creditTxId!, "generation_failure", { idempotencyKey: `refund_${creditTxId}` }); } catch { /* ignore */ }
+          try { await creditService.refundCredit(creditTxId!, "generation_failure", { idempotencyKey: `refund_${creditTxId}`, metadata: { feature: "campaign_pipeline" } }); } catch { /* ignore */ }
           logPipelineEvent({ event: "credit_refund", traceId, phase: "post_parallel", status: "complete", campaignId, storeId, userId: user.userId });
 
           emit({
@@ -649,7 +650,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
         logPipelineEvent({ event: "generation_aborted", traceId, phase: "post_parallel", status: "failed", campaignId, storeId, userId: user.userId, errorMessage });
         try { await updateCampaignError(campaignId!, errorMessage); } catch { /* ignore */ }
         logPipelineEvent({ event: "credit_refund", traceId, phase: "post_parallel", status: "running", campaignId, storeId, userId: user.userId });
-        try { await creditService.refundCredit(creditTxId!, "generation_aborted", { idempotencyKey: `refund_${creditTxId}` }); } catch { /* ignore */ }
+        try { await creditService.refundCredit(creditTxId!, "generation_aborted", { idempotencyKey: `refund_${creditTxId}`, metadata: { feature: "campaign_pipeline" } }); } catch { /* ignore */ }
         logPipelineEvent({ event: "credit_refund", traceId, phase: "post_parallel", status: "complete", campaignId, storeId, userId: user.userId });
 
         const isTimeout = err instanceof DOMException && err.name === "AbortError";

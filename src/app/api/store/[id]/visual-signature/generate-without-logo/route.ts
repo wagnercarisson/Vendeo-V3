@@ -391,7 +391,7 @@ export const POST = apiHandler(async (
   if (creditTxId) {
     try {
       const creditService = new CreditService();
-      await creditService.refundCredit(creditTxId, isTimeout ? 'timeout' : (isStorageError ? 'storage_error' : 'generation_error'));
+      await creditService.refundCredit(creditTxId, isTimeout ? 'timeout' : (isStorageError ? 'storage_error' : 'generation_error'), { metadata: { feature: "visual_signature", mode, operationId } });
       console.log(`[generate-without-logo][req-${reqId}] crédito estornado: ${creditTxId}`);
     } catch (refundErr) {
       console.error(`[generate-without-logo][req-${reqId}] erro no estorno:`, refundErr);
