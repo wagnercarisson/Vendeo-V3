@@ -65,7 +65,7 @@ export async function getCreditsGranted(hours: number): Promise<number | null> {
   const { data, error } = await supabaseAdmin
     .from("credit_transactions")
     .select("amount")
-    .eq("type", "grant")
+    .in("type", ["bonus_onboarding", "bonus_monthly", "admin_grant", "purchase"])
     .gte("created_at", hoursAgo(hours));
 
   if (error || !data) return null;

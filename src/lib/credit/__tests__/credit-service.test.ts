@@ -289,7 +289,7 @@ describe("Histórico", () => {
     const mockTxs = Array.from({ length: 5 }, (_, i) => ({
       id: `tx-${i + 1}`,
       store_id: storeId,
-      type: "grant",
+      type: "admin_grant",
       amount: 10,
       balance_before: i * 10,
       balance_after: (i + 1) * 10,
@@ -531,7 +531,7 @@ describe("Session Client (F27)", () => {
       {
         id: "tx-session-1",
         store_id: storeId,
-        type: "grant",
+        type: "admin_grant",
         amount: 10,
         balance_before: 0,
         balance_after: 10,

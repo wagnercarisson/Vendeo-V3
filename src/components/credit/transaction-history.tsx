@@ -14,14 +14,18 @@ interface TransactionHistoryProps {
 }
 
 const TYPE_LABEL: Record<string, string> = {
-  grant: "Concessão",
+  bonus_onboarding: "Bônus de Boas-Vindas",
+  bonus_monthly: "Bônus Mensal",
+  admin_grant: "Concessão Administrativa",
   purchase: "Compra",
   deduction: "Geração",
   refund: "Estorno",
 };
 
 const TYPE_BADGE: Record<string, "ready" | "error"> = {
-  grant: "ready",
+  bonus_onboarding: "ready",
+  bonus_monthly: "ready",
+  admin_grant: "ready",
   purchase: "ready",
   deduction: "error",
   refund: "ready",

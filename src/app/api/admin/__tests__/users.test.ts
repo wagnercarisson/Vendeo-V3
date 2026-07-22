@@ -27,7 +27,7 @@ vi.mock("@/lib/credit/credit-service", () => ({
         {
           id: "tx-1",
           storeId: "store-1",
-          type: "grant",
+          type: "admin_grant",
           amount: 10,
           balanceBefore: 40,
           balanceAfter: 50,

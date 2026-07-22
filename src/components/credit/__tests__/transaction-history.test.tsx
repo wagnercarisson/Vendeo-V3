@@ -15,7 +15,7 @@ function makeTx(overrides: Partial<CreditTransaction> = {}): CreditTransaction {
   return {
     id: "tx-1",
     storeId: "store-1",
-    type: "grant",
+    type: "admin_grant",
     amount: 10,
     balanceBefore: 0,
     balanceAfter: 10,
@@ -33,7 +33,7 @@ describe("TransactionHistory", () => {
   it("renders table with transaction columns and type mapping", () => {
     const txs = [
       makeTx({ type: "deduction", amount: -1, reason: "reserva" }),
-      makeTx({ id: "tx-2", type: "grant", amount: 5, reason: "bonus" }),
+      makeTx({ id: "tx-2", type: "admin_grant", amount: 5, reason: "bonus" }),
     ];
 
     render(
@@ -45,7 +45,7 @@ describe("TransactionHistory", () => {
     );
 
     expect(screen.getAllByText("Geração")).toHaveLength(2);
-    expect(screen.getAllByText("Concessão")).toHaveLength(2);
+    expect(screen.getAllByText("Concessão Administrativa")).toHaveLength(2);
     expect(screen.getAllByText("reserva")).toHaveLength(2);
     expect(screen.getAllByText("bonus")).toHaveLength(2);
     expect(screen.getByText("Extrato de Créditos")).toBeInTheDocument();

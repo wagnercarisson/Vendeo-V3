@@ -1,7 +1,9 @@
 import { z } from "zod";
 
 export const CreditTransactionTypeSchema = z.enum([
-  "grant",
+  "bonus_onboarding",
+  "bonus_monthly",
+  "admin_grant",
   "purchase",
   "deduction",
   "refund",
@@ -34,5 +36,7 @@ export interface CreditOperationOptions {
 export interface CreditBalance {
   storeId: string;
   balance: number;
+  bonusBalance: number;
+  purchasedBalance: number;
   updatedAt: string;
 }
