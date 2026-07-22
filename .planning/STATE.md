@@ -7,17 +7,17 @@ last_updated: "2026-07-22T17:50:00.000Z"
 last_activity: "2026-07-22T17:50:00.000Z"
 progress:
   total_phases: 12
-  completed_phases: 9
-  total_plans: 41
-  completed_plans: 31
-  percent: 76
+  completed_phases: 10
+  total_plans: 45
+  completed_plans: 35
+  percent: 78
 ---
 
 # Project State
 
 **Last updated:** 2026-07-22
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆
-**Current phase:** 29.3 — Créditos Mensais Automáticos △ (Planned)
+**Current phase:** 29.3 — Créditos Mensais Automáticos ✅ (Complete)
 
 ## Completed
 
@@ -397,9 +397,30 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 - `339052f` — fix(29-1-2): hasArchivedSignatures não era populado sem VS ativa
 - `b27b3f1` — test(29-1-2): finalize UAT — 15 passed, 1 gap fixed
 
+## Completed
+
+### Phase 29.3 — Créditos Mensais Automáticos ✅
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 29-3-01 | 1 | ✅ | Modelo Contábil — Migration buckets, backfill, 3 SQL functions bucket-aware, types |
+| 29-3-02 | 2 | ✅ | grant_monthly_credits RPC + Launch Config — 4 flags mensais, .env.example |
+| 29-3-03 | 3 | ✅ | Vercel Cron + Fallback Admin — /api/cron/monthly-credits, vercel.json, admin grant route, UI button |
+| 29-3-04 | 4 | ✅ | Testes e Verificação — 119 files, 986 testes, typecheck, lint |
+
+**Tests:** 986 passing (119 files, 4 planos)
+**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
+
+**Context:** `.planning/phases/29-3-creditos-mensais-automaticos/29-3-CONTEXT.md`
+**Commits:**
+- `d557fda` — 29-3-01: migration + types + bucket-aware functions
+- `06adb28` — 29-3-02: grant_monthly_credits RPC + Launch Config
+- `d834d68` — 29-3-03: Vercel Cron + admin fallback + button
+- `0329f9b` — 29-3-04: testes + verificação
+
 ## Current Position
 
-v1.5 em progresso — Fase 29.3 (Créditos Mensais Automáticos) planejada.
+v1.5 em progresso — Fase 29.3 concluída.
 
 ### Next Phases
 
@@ -409,7 +430,7 @@ v1.5 em progresso — Fase 29.3 (Créditos Mensais Automáticos) planejada.
 | F29 | ✅ Completed | Refinamento Visual + UAT + Launch Readiness — UAT 4/4 lojistas aprovado |
 | F29.1.1 | ✅ Completed | Créditos na Assinatura Visual — VS consome créditos, remove cota fixa de 3, UAT 15/15 ✅ |
 | F29.1.2 | ✅ Completed | Histórico Curto + Assinatura Visual — HistoryModal reescrito (3 plans, 943 testes) |
-| F29.3 | △ Planned | Créditos Mensais Automáticos — Buckets bônus/compra, grant mensal, Vercel Cron (4 plans) |
+| F29.3 | ✅ Completed | Créditos Mensais Automáticos — Buckets bônus/compra, grant mensal, Vercel Cron (4 plans) |
 | F30/v1.6 | ○ Future | Stripe / Monetização Pública (pós-beta) |
 
 ### Quick Tasks Completed

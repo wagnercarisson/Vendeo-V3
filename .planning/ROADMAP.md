@@ -2,7 +2,7 @@
 
 ## Milestone v1.5 — Lançamento Externo Controlado
 
-**9 phases** | **42 requirements mapped** | All covered ✓
+**10 phases** | **52 requirements mapped** | All covered ✓
 
 **Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23.
 
@@ -21,6 +21,7 @@
 | 29 | ✅ Refinamento + UAT + Launch Readiness | Produto polido e pronto para beta externo | LAUNCH-01, LAUNCH-02, LAUNCH-03, LAUNCH-04, LAUNCH-05, LAUNCH-06, SEC-01, SEC-02, SEC-03, SEC-05 | 10 ✅ |
 | 29.1.1 | ✅ Créditos na Assinatura Visual | VS passa a consumir créditos, remove cota fixa de 3 tentativas | CRED-03, CRED-04, CRED-05, OPS-05 | 4 ✅ |
 | 29.1.2 | ✅ Histórico Curto + Assinatura Visual | HistoryModal reescrito com paginação, filtro client-side, ações condicionais e ponte ApprovalModal | — | 3 ✅ |
+| 29.3 | ✅ Créditos Mensais Automáticos | Buckets bônus/compra, concessão automática via Vercel Cron, fallback admin | MONTHLY-01–10 | 10 ✅ |
 
 ---
 
@@ -213,6 +214,37 @@
 
 ---
 
+### Phase 29.3 — Créditos Mensais Automáticos ✅
+
+**Goal:** Créditos mensais recorrentes com buckets bônus/compra, concessão automática via Vercel Cron, e fallback admin.
+
+**Requirements:** MONTHLY-01, MONTHLY-02, MONTHLY-03, MONTHLY-04, MONTHLY-05, MONTHLY-06, MONTHLY-07, MONTHLY-08, MONTHLY-09, MONTHLY-10
+
+**Success criteria:**
+1. ✅ credit_balances com bonus_balance + purchased_balance, balance sincronizado por trigger
+2. ✅ grant_credits bucket-aware com p_type (bonus_onboarding, bonus_monthly, admin_grant, purchase)
+3. ✅ reserve_credit bucket-aware: bônus primeiro, comprado por último
+4. ✅ refund_credit bucket-aware: lê metadata da deduction, fallback legacy
+5. ✅ credit_transactions com 7 tipos válidos + CHECK constraints
+6. ✅ grant_monthly_credits RPC: elegibilidade por idade, teto, grant parcial, SKIP LOCKED, idempotência
+7. ✅ Launch Config com 4 flags mensais (monthlyCreditsEnabled, amount, cap, minStoreAgeDays)
+8. ✅ GET /api/cron/monthly-credits com CRON_SECRET, schedule 0 6 * * *
+9. ✅ POST /api/admin/monthly-credits/grant com apiHandler + requireAdmin + botão no admin
+10. ✅ 986 testes passando (119 files), typecheck/lint limpo
+
+**Dependencies:** Phase 24 (credit_balances, credit_transactions, SQL functions), F25 (pipeline), F26 (admin), F27 (balance display), F28 (launch config)
+
+**Tests:** 986 passing (119 files, +47 novos)
+**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
+
+**Commits:**
+- `d557fda` — feat(29-3-01): modelo contábil — buckets bônus/compra
+- `06adb28` — feat(29-3-02): grant_monthly_credits RPC + Launch Config
+- `d834d68` — feat(29-3-03): Vercel Cron + Fallback Admin
+- `0329f9b` — test(29-3-04): testes e verificação
+
+---
+
 ## Dependency Graph
 
 ```
@@ -290,9 +322,9 @@ Phase 24 (Credit Tables + CreditService) ──┘
 | SEC-05 | Phase 29 | Done ✓ |
 
 **Coverage:**
-- v1 requirements: 44 total
-- Mapped to phases: 44
-- Completed: 40 (CRED-01–05, PIPE-01–06, ADMIN-01–06, SEC-04, SEC-06, UI-01–06, LAUNCH-01–06, SEC-01–03, SEC-05, OPS-05)
+- v1 requirements: 54 total
+- Mapped to phases: 54
+- Completed: 50 (CRED-01–05, PIPE-01–06, ADMIN-01–06, SEC-04, SEC-06, UI-01–06, LAUNCH-01–06, SEC-01–03, SEC-05, OPS-05, MONTHLY-01–10)
 - Unmapped: 0 ✓
 - Deferred to v1.6: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06
 
@@ -300,4 +332,4 @@ Phase 24 (Credit Tables + CreditService) ──┘
 
 *Roadmap created: 2026-07-15*
 *Milestone: v1.5 — Lançamento Externo Controlado*
-*Last updated: 2026-07-21 — Phase 29.1.2 completed with UAT*
+*Last updated: 2026-07-22 — Phase 29.3 completed — Créditos Mensais Automáticos*
