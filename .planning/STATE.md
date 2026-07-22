@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: "Lançamento Externo Controlado — Créditos + Admin + Saldo + Observabilidade + Launch"
 status: active
-last_updated: "2026-07-22T17:50:00.000Z"
-last_activity: "2026-07-22T17:50:00.000Z"
+last_updated: "2026-07-22T20:41:00.000Z"
+last_activity: "2026-07-22T20:41:00.000Z"
 progress:
   total_phases: 12
   completed_phases: 10
@@ -408,7 +408,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 | 29-3-03 | 3 | ✅ | Vercel Cron + Fallback Admin — /api/cron/monthly-credits, vercel.json, admin grant route, UI button |
 | 29-3-04 | 4 | ✅ | Testes e Verificação — 119 files, 986 testes, typecheck, lint |
 
-**Tests:** 986 passing (119 files, 4 planos)
+**Tests:** 987 passing (119 files, 4 planos)
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 
 **Context:** `.planning/phases/29-3-creditos-mensais-automaticos/29-3-CONTEXT.md`
@@ -417,6 +417,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 - `06adb28` — 29-3-02: grant_monthly_credits RPC + Launch Config
 - `d834d68` — 29-3-03: Vercel Cron + admin fallback + button
 - `0329f9b` — 29-3-04: testes + verificação
+- `41e9156` — fix: libera rota cron no middleware
 
 ## Current Position
 

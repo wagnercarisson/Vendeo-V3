@@ -234,7 +234,7 @@
 
 **Dependencies:** Phase 24 (credit_balances, credit_transactions, SQL functions), F25 (pipeline), F26 (admin), F27 (balance display), F28 (launch config)
 
-**Tests:** 986 passing (119 files, +47 novos)
+**Tests:** 987 passing (119 files, +48 novos)
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 
 **Commits:**
@@ -242,6 +242,7 @@
 - `06adb28` — feat(29-3-02): grant_monthly_credits RPC + Launch Config
 - `d834d68` — feat(29-3-03): Vercel Cron + Fallback Admin
 - `0329f9b` — test(29-3-04): testes e verificação
+- `41e9156` — fix: libera rota cron no middleware
 
 ---
 
