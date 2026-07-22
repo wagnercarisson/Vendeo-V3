@@ -86,7 +86,7 @@ describe("Dashboard — Credit Badge", () => {
 
   it("shows balance badge in empty state when has_store_no_campaigns", async () => {
     mockGetCurrentStore.mockResolvedValue({ id: "store-1", name: "Loja Teste" });
-    mockGetBalance.mockResolvedValue(5);
+    mockGetBalance.mockResolvedValue(10);
     mockGetUserOnboardingState.mockResolvedValue("has_store_no_campaigns");
 
     const { default: DashboardPage } = await import(
@@ -94,7 +94,7 @@ describe("Dashboard — Credit Badge", () => {
     );
     const html = renderToString(await DashboardPage());
 
-    expect(html).toContain("5 créditos");
+    expect(html).toContain("10 créditos");
   });
 
   it("does not show balance badge when no_store", async () => {

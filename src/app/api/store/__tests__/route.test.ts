@@ -29,9 +29,9 @@ describe('POST /api/store — onboarding grant', () => {
     vi.clearAllMocks();
   });
 
-  it('creates store + grants 5 credits via RPC', async () => {
+  it('creates store + grants 10 credits via RPC', async () => {
     mockRpc.mockResolvedValueOnce({
-      data: { id: 'store-1', name: 'Minha Loja', segment: 'moda-calcados-acessorios', balance: 5 },
+      data: { id: 'store-1', name: 'Minha Loja', segment: 'moda-calcados-acessorios', balance: 10 },
       error: null,
     });
 
@@ -48,14 +48,14 @@ describe('POST /api/store — onboarding grant', () => {
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.id).toBe('store-1');
-    expect(body.balance).toBe(5);
+    expect(body.balance).toBe(10);
     expect(mockRpc).toHaveBeenCalledWith('create_store_with_initial_grant', expect.any(Object));
   });
 
   it('RPC idempotency — segundo POST para mesmo user retorna 409', async () => {
     mockRpc
       .mockResolvedValueOnce({
-        data: { id: 'store-1', name: 'Minha Loja', segment: 'moda-calcados-acessorios', balance: 5 },
+        data: { id: 'store-1', name: 'Minha Loja', segment: 'moda-calcados-acessorios', balance: 10 },
         error: null,
       })
       .mockResolvedValueOnce({
@@ -76,7 +76,7 @@ describe('POST /api/store — onboarding grant', () => {
     const res1 = await POST(req1);
     expect(res1.status).toBe(201);
     const body1 = await res1.json();
-    expect(body1.balance).toBe(5);
+    expect(body1.balance).toBe(10);
 
     const req2 = new NextRequest(new Request('http://localhost/api/store', {
       method: 'POST',
