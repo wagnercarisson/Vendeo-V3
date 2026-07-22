@@ -244,7 +244,17 @@ describe('POST generate-without-logo — Credit integration', () => {
 
     expect(res.status).toBe(500);
     expect(mockReserveCredit).toHaveBeenCalled();
-    expect(mockRefundCredit).toHaveBeenCalledWith(CREDIT_TX_ID, expect.any(String));
+    expect(mockRefundCredit).toHaveBeenCalledWith(
+      CREDIT_TX_ID,
+      "generation_error",
+      {
+        metadata: {
+          feature: "visual_signature",
+          mode: "standard",
+          operationId: "test-op-id",
+        },
+      },
+    );
   });
 
   it('falha de storage com estorno: reserveCredit chamado, storage fail → refund + 503', async () => {
@@ -255,7 +265,17 @@ describe('POST generate-without-logo — Credit integration', () => {
 
     expect(res.status).toBe(503);
     expect(mockReserveCredit).toHaveBeenCalled();
-    expect(mockRefundCredit).toHaveBeenCalledWith(CREDIT_TX_ID, expect.any(String));
+    expect(mockRefundCredit).toHaveBeenCalledWith(
+      CREDIT_TX_ID,
+      "storage_error",
+      {
+        metadata: {
+          feature: "visual_signature",
+          mode: "standard",
+          operationId: "test-op-id",
+        },
+      },
+    );
   });
 
   it('creditsChargingEnabled=false: sem balance check, sem reserve, VS gerada sem crédito', async () => {
