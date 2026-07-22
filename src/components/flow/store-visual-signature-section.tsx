@@ -51,6 +51,7 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
         setLocalLogoStatus(storeData.logo_status ?? null);
         setLocalAttempts(storeData.visual_signature_attempts ?? 0);
         setIdentityState(storeData.identity_state ?? null);
+        setHasArchivedSignatures(storeData.has_archived_signatures ?? false);
       }
     } catch {
       setHasLogo(false);
