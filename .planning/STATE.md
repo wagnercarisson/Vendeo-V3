@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: "Lançamento Externo Controlado — Créditos + Admin + Saldo + Observabilidade + Launch"
 status: active
-last_updated: "2026-07-21T20:23:00.000Z"
+last_updated: "2026-07-21T21:55:00.000Z"
 last_activity: 2026-07-21
 progress:
   total_phases: 11
@@ -387,12 +387,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 **Context:** `.planning/phases/29-1-2-historico-curto-assinatura-visual/29-1-2-CONTEXT.md`
 **Tests:** 943 passing (118 files, 22+ novos)
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
+**UAT:** 15/15 ✅ + 1 gap corrigido (hasArchivedSignatures não populado sem VS ativa)
 
 **Commits:**
 - `f0e0af2` — 29-1-2-01: Backend Foundation — approve drift fix + spec update
 - `720ac8c` — 29-1-2-02: Frontend — HistoryModal rewrite + ApprovalModal bridge + pagination
 - `40645d9` — 29-1-2-03: Testes e Verificação — HistoryModal + Backend + Regressão
 - `17a893f` — fix(29-1-2): resolve test issues — missing onOpenGallery destructure, mock drift for missing metadata
+- `339052f` — fix(29-1-2): hasArchivedSignatures não era populado sem VS ativa
+- `b27b3f1` — test(29-1-2): finalize UAT — 15 passed, 1 gap fixed
 
 ## Current Position
 

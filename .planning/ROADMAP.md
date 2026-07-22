@@ -190,7 +190,7 @@
 
 ---
 
-### Phase 29.1.2 — Histórico Curto + Assinatura Visual △
+### Phase 29.1.2 — Histórico Curto + Assinatura Visual ✅
 
 **Goal:** Histórico de VS reescrito com paginação, filtro client-side de aplicabilidade, ações condicionais ao identity_state, e ponte ApprovalModal → HistoryModal.
 
@@ -300,4 +300,4 @@ Phase 24 (Credit Tables + CreditService) ──┘
 
 *Roadmap created: 2026-07-15*
 *Milestone: v1.5 — Lançamento Externo Controlado*
-*Last updated: 2026-07-21 — Added Phase 29.1.2 (Histórico Curto + Assinatura Visual)*
+*Last updated: 2026-07-21 — Phase 29.1.2 completed with UAT*
