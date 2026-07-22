@@ -42,7 +42,7 @@ function mockSelect(data: unknown[]) {
   mockFrom.mockImplementation(() => ({ select: vi.fn(() => chain) }));
 }
 
-function mockFromImplementation(impl: (table: string) => { select: vi.Mock }) {
+function mockFromImplementation(impl: (table: string) => { select: ReturnType<typeof vi.fn> }) {
   mockFrom.mockImplementation(impl);
 }
 
