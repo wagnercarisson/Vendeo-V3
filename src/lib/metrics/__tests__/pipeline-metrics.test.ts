@@ -24,16 +24,8 @@ function mockSelect(data: unknown[]) {
     eq: vi.fn(() => chain),
     neq: vi.fn(() => chain),
     gte: vi.fn(() => Promise.resolve({ data, count: data.length, error: null })),
-  };
-  mockFrom.mockImplementation(() => ({ select: vi.fn(() => chain) }));
-}
-
-function mockCount(count: number) {
-  const chain = {
-    eq: vi.fn(() => chain),
-    neq: vi.fn(() => chain),
-    gte: vi.fn(() => Promise.resolve({ data: null, count, error: null })),
-    not: vi.fn(() => chain),
+    is: vi.fn(() => chain),
+    in: vi.fn(() => chain),
   };
   mockFrom.mockImplementation(() => ({ select: vi.fn(() => chain) }));
 }
@@ -96,27 +88,130 @@ describe("getAvgDuration", () => {
 });
 
 describe("getCreditsGranted", () => {
-  it("returns count of grant transactions", async () => {
-    mockCount(15);
-    expect(await getCreditsGranted(24)).toBe(15);
+  it("sums amounts correctly", async () => {
+    mockSelect([{ amount: 100 }, { amount: 50 }, { amount: 25 }]);
+    expect(await getCreditsGranted(24)).toBe(175);
+  });
+
+  it("returns 0 when no data", async () => {
+    mockSelect([]);
+    expect(await getCreditsGranted(24)).toBe(0);
+  });
+
+  it("handles negative amounts gracefully", async () => {
+    mockSelect([{ amount: -10 }, { amount: 20 }]);
+    expect(await getCreditsGranted(24)).toBe(10);
   });
 });
 
 describe("getRefundRate", () => {
-  it("returns refund percentage over non-grant transactions", async () => {
+  it("ignores VS deductions/refunds completely", async () => {
     mockSelect([
-      { type: "refund" },
-      { type: "refund" },
-      { type: "deduction" },
-      { type: "deduction" },
-      { type: "deduction" },
-      { type: "deduction" },
-      { type: "deduction" },
-      { type: "deduction" },
-      { type: "deduction" },
-      { type: "deduction" },
+      { id: "c1", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "c2", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "c3", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "c4", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "c5", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "c6", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "c7", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "c8", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "r1", type: "refund", amount: -100, campaign_id: null, metadata: null, reference: "c1" },
+      { id: "r2", type: "refund", amount: -100, campaign_id: null, metadata: null, reference: "c2" },
+      { id: "v1", type: "deduction", amount: 1, campaign_id: null, metadata: { feature: "visual_signature" }, reference: null },
+      { id: "v2", type: "deduction", amount: 1, campaign_id: null, metadata: { feature: "visual_signature" }, reference: null },
+      { id: "v3", type: "deduction", amount: 1, campaign_id: null, metadata: { feature: "visual_signature" }, reference: null },
+      { id: "v4", type: "deduction", amount: 1, campaign_id: null, metadata: { feature: "visual_signature" }, reference: null },
+      { id: "v5", type: "deduction", amount: 1, campaign_id: null, metadata: { feature: "visual_signature" }, reference: null },
+      { id: "vr1", type: "refund", amount: -1, campaign_id: null, metadata: null, reference: "v1" },
+    ]);
+    expect(await getRefundRate(24)).toBe(25);
+  });
+
+  it("includes campaign deductions with metadata.feature=campaign_pipeline", async () => {
+    mockSelect([
+      { id: "d1", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d2", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d3", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d4", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d5", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d6", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d7", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d8", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d9", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d10", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "ref1", type: "refund", amount: -100, campaign_id: null, metadata: null, reference: "d1" },
+    ]);
+    expect(await getRefundRate(24)).toBe(10);
+  });
+
+  it("includes legacy campaign deductions (null metadata + campaign_id set)", async () => {
+    mockSelect([
+      { id: "l1", type: "deduction", amount: 100, campaign_id: "abc-123", metadata: null, reference: null },
+      { id: "l2", type: "deduction", amount: 100, campaign_id: "abc-123", metadata: null, reference: null },
+      { id: "l3", type: "deduction", amount: 100, campaign_id: "abc-123", metadata: null, reference: null },
+      { id: "l4", type: "deduction", amount: 100, campaign_id: "abc-123", metadata: null, reference: null },
+      { id: "l5", type: "deduction", amount: 100, campaign_id: "abc-123", metadata: null, reference: null },
+      { id: "lr1", type: "refund", amount: -100, campaign_id: null, metadata: null, reference: "l1" },
     ]);
     expect(await getRefundRate(24)).toBe(20);
+  });
+
+  it("classifies refund via reference inheriting deduction classification", async () => {
+    mockSelect([
+      { id: "d1", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d2", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d3", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d4", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d5", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d6", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d7", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d8", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d9", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d10", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "v1", type: "deduction", amount: 1, campaign_id: null, metadata: { feature: "visual_signature" }, reference: null },
+      { id: "r1", type: "refund", amount: -100, campaign_id: null, metadata: null, reference: "d1" },
+      { id: "r2", type: "refund", amount: -100, campaign_id: null, metadata: null, reference: "d2" },
+      { id: "vr1", type: "refund", amount: -1, campaign_id: null, metadata: null, reference: "v1" },
+    ]);
+    expect(await getRefundRate(24)).toBe(20);
+  });
+
+  it("excludes anomalies (null metadata + null campaign_id) and orphan refunds", async () => {
+    mockSelect([
+      { id: "d1", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d2", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d3", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d4", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d5", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d6", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d7", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d8", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d9", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "d10", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "a1", type: "deduction", amount: 99, campaign_id: null, metadata: null, reference: null },
+      { id: "a2", type: "deduction", amount: 99, campaign_id: null, metadata: null, reference: null },
+      { id: "r1", type: "refund", amount: -100, campaign_id: null, metadata: null, reference: "d1" },
+      { id: "r2", type: "refund", amount: -100, campaign_id: null, metadata: null, reference: "d2" },
+      { id: "orphan", type: "refund", amount: -99, campaign_id: null, metadata: null, reference: "nonexistent" },
+    ]);
+    expect(await getRefundRate(24)).toBe(20);
+  });
+
+  it("returns 0 when only VS transactions exist", async () => {
+    mockSelect([
+      { id: "v1", type: "deduction", amount: 1, campaign_id: null, metadata: { feature: "visual_signature" }, reference: null },
+      { id: "v2", type: "deduction", amount: 1, campaign_id: null, metadata: { feature: "visual_signature" }, reference: null },
+      { id: "v3", type: "deduction", amount: 1, campaign_id: null, metadata: { feature: "visual_signature" }, reference: null },
+      { id: "v4", type: "deduction", amount: 1, campaign_id: null, metadata: { feature: "visual_signature" }, reference: null },
+      { id: "v5", type: "deduction", amount: 1, campaign_id: null, metadata: { feature: "visual_signature" }, reference: null },
+      { id: "vr1", type: "refund", amount: -1, campaign_id: null, metadata: null, reference: "v1" },
+    ]);
+    expect(await getRefundRate(24)).toBe(0);
+  });
+
+  it("returns 0 when empty data", async () => {
+    mockSelect([]);
+    expect(await getRefundRate(24)).toBe(0);
   });
 });
 

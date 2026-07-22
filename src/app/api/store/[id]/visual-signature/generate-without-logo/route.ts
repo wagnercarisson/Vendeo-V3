@@ -74,6 +74,7 @@ export const POST = apiHandler(async (
   console.log(`[generate-without-logo][req-${reqId}] lock adquirido`);
 
   let creditTxId: string | null = null;
+  let operationId: string | undefined;
 
   try {
     let body: { rejectionContext?: { reason: string; attempt: number }; mode?: 'standard' | 'substitution' };
@@ -161,7 +162,7 @@ export const POST = apiHandler(async (
       }
 
       // ----- Reserve credit BEFORE IA call -----
-      const operationId = crypto.randomUUID();
+      operationId = crypto.randomUUID();
       creditTxId = await creditService.reserveCredit(id, 1, {
         campaignId: null,
         idempotencyKey: `vs_reserve_${id}_${operationId}`,
