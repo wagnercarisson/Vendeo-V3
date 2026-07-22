@@ -60,7 +60,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 - [x] Phase 24: Créditos — Schema, Saldo e Transações (2/2 plans ✅) — 2026-07-16
 
 <details>
-<summary>✅ v1.5 Lançamento Externo Controlado (F23-F29) — In Progress</summary>
+<summary>✅ v1.5 Lançamento Externo Controlado (F23-F29.1.2) — Complete</summary>
 
 Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, observabilidade e launch readiness.
 
@@ -87,10 +87,14 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - [x] 29-02 — Empty States (7) + Error States (4) + Microcopy (7 fluxos) + Admin Visual
   - [x] 29-03 — Mobile Hardening (6 áreas) + Legibilidade + Launch Readiness Docs
   - [x] 29-04 — UAT Externo + Regressão + Validação Visual Final
-- [ ] Phase 29.1.1: Créditos na Assinatura Visual (3 plans △)
-  - △ 29-1-1-01 — Backend Foundation — Types, CreditService, Routes
-  - △ 29-1-1-02 — Frontend — Modal UI + Ocultar Modal Antigo
-  - △ 29-1-1-03 — Testes e Verificação — 20+ testes
+- [x] Phase 29.1.1: Créditos na Assinatura Visual (3 plans ✅)
+  - ✅ 29-1-1-01 — Backend Foundation — Types, CreditService, Routes
+  - ✅ 29-1-1-02 — Frontend — Modal UI + Ocultar Modal Antigo
+  - ✅ 29-1-1-03 — Testes e Verificação — 8+ testes (917 total, UAT 15/15)
+- [x] Phase 29.1.2: Histórico Curto + Assinatura Visual (3 plans ✅)
+  - ✅ 29-1-2-01 — Backend Foundation — approve drift fix + spec update
+  - ✅ 29-1-2-02 — Frontend — HistoryModal rewrite + ApprovalModal bridge + pagination
+  - ✅ 29-1-2-03 — Testes e Verificação — 22+ testes (943 total, UAT 15/15 + 1 gap)
 
 </details>
 
@@ -127,7 +131,8 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 27. Conta e Saldo Visível + Extrato | v1.5 | 3/3 | ✅ Complete | 2026-07-18 |
 | 28. Observabilidade + Operação + Launch Controls | v1.5 | 4/4 | ✅ Complete | 2026-07-19 |
 | 29. Refinamento Visual + UAT + Launch Readiness | v1.5 | 4/4 | ✅ | 2026-07-20 |
-| 29.1.1. Créditos na Assinatura Visual | v1.5 | 0/3 | △ | — |
+| 29.1.1. Créditos na Assinatura Visual | v1.5 | 3/3 | ✅ Complete | 2026-07-21 |
+| 29.1.2. Histórico Curto + Assinatura Visual | v1.5 | 3/3 | ✅ Complete | 2026-07-22 |
 
 ---
 
