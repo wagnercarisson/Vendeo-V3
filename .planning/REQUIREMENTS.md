@@ -47,13 +47,26 @@
 - [x] **UI-05**: Onboarding grant: 5 free credits on store creation (POST /api/store integration)
 - [x] **UI-06**: Zero-credit states: tooltip, disabled button, CTA to request credits — product never blocks entirely
 
+### Créditos Mensais Automáticos (MONTHLY)
+
+- [ ] **MONTHLY-01**: Modelo contábil com buckets — `bonus_balance` + `purchased_balance` em `credit_balances`, `balance` como soma automática via trigger
+- [ ] **MONTHLY-02**: Categorias de transação expandidas — `bonus_onboarding`, `bonus_monthly`, `admin_grant`, `purchase` substituem `grant` genérico
+- [ ] **MONTHLY-03**: `grant_credits()` bucket-aware com parâmetro `p_type` — direciona ao bucket correto conforme o tipo
+- [ ] **MONTHLY-04**: `reserve_credit()` com consumo prioritário — deduz de `bonus_balance` primeiro, `purchased_balance` por último
+- [ ] **MONTHLY-05**: `refund_credit()` bucket-aware — restaura `bonus_balance` e `purchased_balance` exatos via metadata; fallback legacy para deductions sem metadata
+- [ ] **MONTHLY-06**: `grant_monthly_credits()` RPC — elegibilidade por idade da loja (>= 30 dias), teto de bônus configurável, grant parcial, idempotência por ciclo efetivo de 30 dias, FOR UPDATE SKIP LOCKED
+- [ ] **MONTHLY-07**: Launch Config expandido — 4 novas flags: `monthlyCreditsEnabled`, `monthlyCreditsAmount`, `monthlyBonusCap`, `monthlyCreditsMinStoreAgeDays`
+- [ ] **MONTHLY-08**: Vercel Cron `GET /api/cron/monthly-credits` — schedule `0 6 * * *`, proteção CRON_SECRET, leitura de Launch Config, execução RPC, logging via `logPipelineEvent()`
+- [ ] **MONTHLY-09**: Admin fallback — botão "Executar concessão mensal" + rota `POST /api/admin/monthly-credits/grant` protegida por `requireAdmin`
+- [ ] **MONTHLY-10**: Backfill de transações existentes — `grant + onboarding` → `bonus_onboarding`; `grant + outros` → `admin_grant`; `bonus_balance` populado com saldo atual
+
 ### Observabilidade e Operação (OPS)
 
 - [x] **OPS-01**: Structured logging in pipeline (traceId, campaignId, phase, duration_ms, status)
 - [x] **OPS-02**: IA telemetry (tokens, cost, model, provider) in generation_events
 - [x] **OPS-03**: Deploy checklist, rollback process, environment variables documented
 - [x] **OPS-04**: Support runbook (manual grant via admin, refund, balance check)
-- [x] **OPS-05**: Launch config centralizado — 5 flags (v15Enabled, creditsChargingEnabled, copyDirectorEnabled, rateLimitEnabled, generationPaused) lidas via helper único, zero process.env espalhado
+- [x] **OPS-05**: Launch config centralizado — 9 flags (5 originais + 4 mensais) lidas via helper único, zero process.env espalhado
 - [x] **OPS-06**: Admin metrics dashboard — /admin/metrics com cards (sucesso, erro, custo, tempo, créditos, estorno, users) + health state banner
 - [x] **OPS-07**: AI cost estimator — estimateAiCost() com tabela de preços OpenAI + Gemini
 - [x] **OPS-08**: Data retention cleanup (90d) — função SQL versionada + runbook manual; auto-job planejado para D+30
@@ -174,10 +187,20 @@ Deferred to future release. Tracked but not in current roadmap.
 | SEC-02 | Phase 25-26 | ✅ Complete (F25 pipeline, F26 admin) |
 | SEC-03 | Phase 25 | ✅ Complete (F25 sanitized inputs) |
 | SEC-05 | Phase 25 | ✅ Complete (F25 service role) |
+| MONTHLY-01 | Phase 29.3 | △ Planning |
+| MONTHLY-02 | Phase 29.3 | △ Planning |
+| MONTHLY-03 | Phase 29.3 | △ Planning |
+| MONTHLY-04 | Phase 29.3 | △ Planning |
+| MONTHLY-05 | Phase 29.3 | △ Planning |
+| MONTHLY-06 | Phase 29.3 | △ Planning |
+| MONTHLY-07 | Phase 29.3 | △ Planning |
+| MONTHLY-08 | Phase 29.3 | △ Planning |
+| MONTHLY-09 | Phase 29.3 | △ Planning |
+| MONTHLY-10 | Phase 29.3 | △ Planning |
 
 **Coverage:**
-- v1 requirements: 48 total
-- Mapped to phases: 44
+- v1 requirements: 58 total
+- Mapped to phases: 54
 - Unmapped: 0 ✓
 - Deferred to v1.6: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06
 - F29.1.2: Fase complementar refinando LAUNCH-01 e LAUNCH-02 (sem REQ-IDs próprios)
@@ -185,4 +208,4 @@ Deferred to future release. Tracked but not in current roadmap.
 ---
 
 *Requirements defined: 2026-07-15*
-*Last updated: 2026-07-21 — Added F29.1.2 traceability*
+*Last updated: 2026-07-22 — Added F29.3 (MONTHLY-01 a MONTHLY-10) requirements*

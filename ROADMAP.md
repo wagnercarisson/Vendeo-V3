@@ -54,13 +54,14 @@ Autenticação completa, vínculo user→store, isolamento multi-tenant, beta.ve
 
 ### 📋 v1.5 — Lançamento Externo Controlado ◆
 
-Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, observabilidade, launch readiness e UAT externo.
+Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness e UAT externo.
 
 - [x] Phase 23: Text Provider + Copy Director (2/2 plans ✅) — 2026-07-16
 - [x] Phase 24: Créditos — Schema, Saldo e Transações (2/2 plans ✅) — 2026-07-16
+- [ ] Phase 29.3: Créditos Mensais Automáticos (planned)
 
 <details>
-<summary>✅ v1.5 Lançamento Externo Controlado (F23-F29.1.2) — Complete</summary>
+<summary>◆ v1.5 Lançamento Externo Controlado (F23-F29.3) — Em andamento</summary>
 
 Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, observabilidade e launch readiness.
 
@@ -95,6 +96,11 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - ✅ 29-1-2-01 — Backend Foundation — approve drift fix + spec update
   - ✅ 29-1-2-02 — Frontend — HistoryModal rewrite + ApprovalModal bridge + pagination
   - ✅ 29-1-2-03 — Testes e Verificação — 22+ testes (943 total, UAT 15/15 + 1 gap)
+- [ ] Phase 29.3: Créditos Mensais Automáticos (planned)
+  - Onda 1: 29-3-01 — Modelo Contábil — Buckets + Categorias + Migração
+  - Onda 2: 29-3-02 — grant_monthly_credits + Launch Config
+  - Onda 3: 29-3-03 — Vercel Cron + Fallback Admin
+  - Onda 4: 29-3-04 — Testes e Verificação
 
 </details>
 
@@ -133,6 +139,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 29. Refinamento Visual + UAT + Launch Readiness | v1.5 | 4/4 | ✅ | 2026-07-20 |
 | 29.1.1. Créditos na Assinatura Visual | v1.5 | 3/3 | ✅ Complete | 2026-07-21 |
 | 29.1.2. Histórico Curto + Assinatura Visual | v1.5 | 3/3 | ✅ Complete | 2026-07-22 |
+| 29.3. Créditos Mensais Automáticos | v1.5 | 0/4 | △ Planned | — |
 
 ---
 
