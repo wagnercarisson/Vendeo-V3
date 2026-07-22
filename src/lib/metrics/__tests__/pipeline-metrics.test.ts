@@ -16,9 +16,15 @@ import {
   getCreditsGranted,
   getRefundRate,
   getActiveUsers,
+  getVsSuccessRate,
+  getVsErrorRate,
+  getVsAvgDuration,
+  getVsCreditsConsumed,
+  getVsRefundRate,
+  getVsCreditsRefunded,
 } from "../pipeline-metrics";
 
-function mockSelect(data: unknown[]) {
+function selectChain(data: unknown[]) {
   const chain = {
     not: vi.fn(() => chain),
     eq: vi.fn(() => chain),
@@ -26,8 +32,18 @@ function mockSelect(data: unknown[]) {
     gte: vi.fn(() => Promise.resolve({ data, count: data.length, error: null })),
     is: vi.fn(() => chain),
     in: vi.fn(() => chain),
+    single: vi.fn(() => Promise.resolve({ data: data[0] ?? null, error: null })),
   };
+  return chain;
+}
+
+function mockSelect(data: unknown[]) {
+  const chain = selectChain(data);
   mockFrom.mockImplementation(() => ({ select: vi.fn(() => chain) }));
+}
+
+function mockFromImplementation(impl: (table: string) => { select: vi.Mock }) {
+  mockFrom.mockImplementation(impl);
 }
 
 beforeEach(() => {
@@ -224,5 +240,282 @@ describe("getActiveUsers", () => {
       { user_id: "c" },
     ]);
     expect(await getActiveUsers(24)).toBe(3);
+  });
+});
+
+// ─── VS domain ────────────────────────────────────────────────────
+
+describe("getVsSuccessRate", () => {
+  it("returns percentage of success events for visual_signature", async () => {
+    mockSelect([
+      { status: "success" },
+      { status: "success" },
+      { status: "success" },
+      { status: "failed" },
+    ]);
+    expect(await getVsSuccessRate(24)).toBe(75);
+  });
+
+  it("returns null when no data", async () => {
+    mockSelect([]);
+    expect(await getVsSuccessRate(24)).toBeNull();
+  });
+});
+
+describe("getVsErrorRate", () => {
+  it("returns percentage of failed events for visual_signature", async () => {
+    mockSelect([
+      { status: "success" },
+      { status: "failed" },
+      { status: "failed" },
+    ]);
+    expect(await getVsErrorRate(24)).toBe(67);
+  });
+
+  it("returns 0 when no data", async () => {
+    mockSelect([]);
+    expect(await getVsErrorRate(24)).toBe(0);
+  });
+});
+
+describe("getVsAvgDuration", () => {
+  it("returns average duration for visual_signature events", async () => {
+    mockSelect([
+      { duration_ms: 5000 },
+      { duration_ms: 15000 },
+      { duration_ms: 25000 },
+    ]);
+    expect(await getVsAvgDuration(24)).toBe(15000);
+  });
+
+  it("returns null when no data", async () => {
+    mockSelect([]);
+    expect(await getVsAvgDuration(24)).toBeNull();
+  });
+});
+
+describe("getVsCreditsConsumed", () => {
+  it("sums ABS(amount) for deduction with feature=visual_signature", async () => {
+    mockSelect([
+      { amount: -1 },
+      { amount: -1 },
+      { amount: -1 },
+    ]);
+    expect(await getVsCreditsConsumed(24)).toBe(3);
+  });
+
+  it("returns 0 when no data", async () => {
+    mockSelect([]);
+    expect(await getVsCreditsConsumed(24)).toBe(0);
+  });
+});
+
+describe("getVsCreditsRefunded", () => {
+  it("sums ABS(amount) for refund with metadata.feature=visual_signature", async () => {
+    mockSelect([
+      { id: "r1", type: "refund", amount: -1, campaign_id: null, metadata: { feature: "visual_signature" }, reference: null },
+      { id: "r2", type: "refund", amount: -2, campaign_id: null, metadata: { feature: "visual_signature" }, reference: null },
+    ]);
+    expect(await getVsCreditsRefunded(24)).toBe(3);
+  });
+
+  it("classifies refund via reference chain when no VS metadata on refund", async () => {
+    // Refund r1 has reference to deduction d1 which has feature="visual_signature"
+    // This simulates cross-window: deduction is outside window, refund inside
+    const callLog: string[][] = [];
+    mockFromImplementation((table: string) => ({
+      select: vi.fn(() => {
+        const chain = {
+          eq: vi.fn(() => chain),
+          gte: vi.fn(() => Promise.resolve({
+            data: [
+              { id: "r1", type: "refund", amount: -1, campaign_id: null, metadata: null, reference: "d1" },
+            ],
+            count: 1,
+            error: null,
+          })),
+          in: vi.fn(() => Promise.resolve({
+            data: [
+              { id: "d1", type: "deduction", amount: -1, campaign_id: null, metadata: { feature: "visual_signature" }, reference: null },
+            ],
+            error: null,
+          })),
+          not: vi.fn(() => chain),
+          is: vi.fn(() => chain),
+          single: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        };
+        return chain;
+      }),
+    }));
+    expect(await getVsCreditsRefunded(24)).toBe(1);
+  });
+
+  it("returns 0 when no data", async () => {
+    mockSelect([]);
+    expect(await getVsCreditsRefunded(24)).toBe(0);
+  });
+});
+
+describe("getVsRefundRate", () => {
+  it("returns rate within VS domain (ignores campaign deductions)", async () => {
+    mockSelect([
+      { id: "v1", type: "deduction", amount: 1, campaign_id: null, metadata: { feature: "visual_signature" }, reference: null },
+      { id: "v2", type: "deduction", amount: 1, campaign_id: null, metadata: { feature: "visual_signature" }, reference: null },
+      { id: "v3", type: "deduction", amount: 1, campaign_id: null, metadata: { feature: "visual_signature" }, reference: null },
+      { id: "v4", type: "deduction", amount: 1, campaign_id: null, metadata: { feature: "visual_signature" }, reference: null },
+      { id: "camp1", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+      { id: "vr1", type: "refund", amount: -1, campaign_id: null, metadata: null, reference: "v1" },
+      { id: "vr2", type: "refund", amount: -1, campaign_id: null, metadata: null, reference: "v2" },
+    ]);
+    expect(await getVsRefundRate(24)).toBe(50);
+  });
+
+  it("returns 0 when denominator=0 (no VS deductions)", async () => {
+    mockSelect([
+      { id: "vr1", type: "refund", amount: -1, campaign_id: null, metadata: null, reference: "v1" },
+    ]);
+    expect(await getVsRefundRate(24)).toBe(0);
+  });
+
+  it("returns 0 when empty data", async () => {
+    mockSelect([]);
+    expect(await getVsRefundRate(24)).toBe(0);
+  });
+});
+
+describe("domain isolation", () => {
+  it("VS-only data returns null/0 for campaign metrics", async () => {
+    mockSelect([]);
+    expect(await getSuccessRate(24)).toBeNull();
+    expect(await getErrorRate(24)).toBe(0);
+    expect(await getAvgCost(24)).toBeNull();
+    expect(await getAvgDuration(24)).toBeNull();
+  });
+
+  it("campaign-only data returns null/0 for VS metrics", async () => {
+    mockSelect([]);
+    expect(await getVsSuccessRate(24)).toBeNull();
+    expect(await getVsErrorRate(24)).toBe(0);
+    expect(await getVsAvgDuration(24)).toBeNull();
+    expect(await getVsCreditsConsumed(24)).toBe(0);
+    expect(await getVsCreditsRefunded(24)).toBe(0);
+  });
+});
+
+describe("cross-window refund reference", () => {
+  it("refund inside window referencing campaign deduction outside window is counted in getRefundRate", async () => {
+    mockFromImplementation((table: string) => ({
+      select: vi.fn(() => {
+        const chain = {
+          eq: vi.fn(() => chain),
+          gte: vi.fn(() => {
+            return Promise.resolve({
+              data: [
+                { id: "d1", type: "deduction", amount: 100, campaign_id: "c1", metadata: null, reference: null },
+                { id: "d2", type: "deduction", amount: 100, campaign_id: "c2", metadata: null, reference: null },
+                { id: "d3", type: "deduction", amount: 100, campaign_id: "c3", metadata: null, reference: null },
+                { id: "d4", type: "deduction", amount: 100, campaign_id: "c4", metadata: null, reference: null },
+                { id: "d5", type: "deduction", amount: 100, campaign_id: "c5", metadata: null, reference: null },
+                { id: "outsideRefund", type: "refund", amount: -100, campaign_id: null, metadata: null, reference: "legacyDeduction" },
+              ],
+              error: null,
+            });
+          }),
+          in: vi.fn(() => {
+            return Promise.resolve({
+              data: [
+                { id: "legacyDeduction", type: "deduction", amount: 100, campaign_id: "abc-123", metadata: null, reference: null },
+              ],
+              error: null,
+            });
+          }),
+          not: vi.fn(() => chain),
+          is: vi.fn(() => chain),
+          single: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        };
+        return chain;
+      }),
+    }));
+    // 5 campaign deductions in-window (legacy, with campaign_id set)
+    // 1 refund referencing outside deduction — resolved via second query
+    // deductionCount in window = 5, refundCount = 1
+    expect(await getRefundRate(24)).toBe(20);
+  });
+
+  it("refund inside window referencing VS deduction outside window is counted in getVsCreditsRefunded", async () => {
+    let callCount = 0;
+    mockFromImplementation((table: string) => ({
+      select: vi.fn(() => {
+        const chain = {
+          eq: vi.fn(() => chain),
+          gte: vi.fn(() => {
+            callCount++;
+            if (callCount === 1) {
+              return Promise.resolve({
+                data: [
+                  { id: "r1", type: "refund", amount: -1, campaign_id: null, metadata: null, reference: "outsideVsDed" },
+                ],
+                error: null,
+              });
+            }
+            return Promise.resolve({ data: [], error: null });
+          }),
+          in: vi.fn(() => {
+            return Promise.resolve({
+              data: [
+                { id: "outsideVsDed", type: "deduction", amount: -1, campaign_id: null, metadata: { feature: "visual_signature" }, reference: null },
+              ],
+              error: null,
+            });
+          }),
+          not: vi.fn(() => chain),
+          is: vi.fn(() => chain),
+          single: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        };
+        return chain;
+      }),
+    }));
+    expect(await getVsCreditsRefunded(24)).toBe(1);
+  });
+
+  it("mixed campaign+VS refunds across window boundary are correctly attributed", async () => {
+    mockFromImplementation((table: string) => ({
+      select: vi.fn(() => {
+        const chain = {
+          eq: vi.fn(() => chain),
+          gte: vi.fn(() => {
+            // Every gte call returns the same combined window data
+            return Promise.resolve({
+              data: [
+                { id: "d1", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+                { id: "d2", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+                { id: "v1", type: "deduction", amount: 1, campaign_id: null, metadata: { feature: "visual_signature" }, reference: null },
+                { id: "cr1", type: "refund", amount: -100, campaign_id: null, metadata: null, reference: "outsideCampDed" },
+                { id: "vr1", type: "refund", amount: -1, campaign_id: null, metadata: null, reference: "outsideVsDed2" },
+              ],
+              error: null,
+            });
+          }),
+          in: vi.fn(() => {
+            // Every in call returns both outside deductions
+            return Promise.resolve({
+              data: [
+                { id: "outsideCampDed", type: "deduction", amount: 100, campaign_id: null, metadata: { feature: "campaign_pipeline" }, reference: null },
+                { id: "outsideVsDed2", type: "deduction", amount: 1, campaign_id: null, metadata: { feature: "visual_signature" }, reference: null },
+              ],
+              error: null,
+            });
+          }),
+          not: vi.fn(() => chain),
+          is: vi.fn(() => chain),
+          single: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        };
+        return chain;
+      }),
+    }));
+    // Campaign refund rate: 1 outside-resolved refund / 2 in-window campaign deductions = 50%
+    expect(await getRefundRate(24)).toBe(50);
+    // VS refund rate: 1 outside-resolved refund / 1 in-window VS deduction = 100%
+    expect(await getVsRefundRate(24)).toBe(100);
   });
 });
