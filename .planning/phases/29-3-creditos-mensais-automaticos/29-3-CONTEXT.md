@@ -147,14 +147,16 @@ Concessão mensal ignora `purchased_balance`. Teto de bônus só considera `bonu
 - `openspec/changes/fase-29-3-creditos-mensais-automaticos/specs/launch-config/spec.md` — 4 novas flags mensais
 
 ### Cron e Admin
-- `src/lib/pipeline-logger.ts` — logPipelineEvent() existente (F28)
+- `src/lib/logging/pipeline-logger.ts` — logPipelineEvent() (síncrono, contrato: event, traceId, phase, status)
 - `openspec/changes/fase-29-3-creditos-mensais-automaticos/specs/monthly-credits-cron/spec.md` — Vercel Cron route + admin fallback
 - `openspec/changes/fase-29-3-creditos-mensais-automaticos/specs/admin-credit-grant/spec.md` — Admin grant direcionado a bonus_balance
 
 ### Admin existente
-- `src/app/admin/credits/` — Páginas admin de créditos (F26)
-- `src/app/api/admin/credits/` — Rotas admin de créditos (F26)
-- `src/lib/admin/gate.ts` — requireAdmin gate (F26)
+- `src/app/(app)/admin/` — Páginas admin (dashboard, metrics, users, audit-log)
+- `src/app/api/admin/credits/grant/route.ts` — Rota admin de grant de créditos (F26)
+- `src/lib/admin/require-admin.ts` — requireAdmin() (lança ForbiddenError, não retorna false)
+- `src/lib/auth/api-handler.ts` — apiHandler() wrapper para rotas admin
+- `src/lib/supabase/server.ts` — supabaseAdmin (singleton service role)
 
 ### Design Geral
 - `openspec/changes/fase-29-3-creditos-mensais-automaticos/design.md` — Decisões de design D1-D9, riscos, migration plan
@@ -167,13 +169,15 @@ Concessão mensal ignora `purchased_balance`. Teto de bônus só considera `bonu
 ### Migration Plan (Ordem Obrigatória)
 
 1. Colunas — `ALTER TABLE credit_balances ADD COLUMN bonus_balance`, `purchased_balance`, `last_monthly_grant_at`
-2. Desabilitar trigger imutável — `DROP TRIGGER trg_credit_transactions_immutable`
-3. Expandir CHECK constraints — recriar com novos tipos
+2. Desabilitar trigger imutável — `DROP TRIGGER IF EXISTS trg_credit_transactions_immutable ON credit_transactions`
+3. Dropar CHECK constraints existentes — `ALTER TABLE credit_transactions DROP CONSTRAINT chk_credit_transactions_type`, `DROP CONSTRAINT chk_credit_transactions_amount_sign` (antes do backfill para não rejeitar `type = 'grant'`)
 4. Backfill credit_balances — `bonus_balance` = saldo atual, `purchased_balance = 0`
 5. Backfill credit_transactions — `grant + onboarding` → `bonus_onboarding`; `grant + outros` → `admin_grant`
-6. Reabilitar trigger imutável
-7. Trigger de sincronização — `sync_credit_balances_total`
-8. Funções — DROP + CREATE OR REPLACE de grant_credits, reserve_credit, refund_credit
+6. Recriar CHECK constraints com novos tipos
+7. Reabilitar trigger imutável — recriar `trg_credit_transactions_immutable` com função `public.trg_credit_transactions_immutable_fn()`, BEFORE UPDATE OR DELETE
+8. Trigger de sincronização — `sync_credit_balances_total`
+9. Índice parcial — `idx_credit_balances_monthly_grant`
+10. Funções — DROP + CREATE OR REPLACE de grant_credits, reserve_credit, refund_credit
 
 ### grant_credits Signature Final
 
