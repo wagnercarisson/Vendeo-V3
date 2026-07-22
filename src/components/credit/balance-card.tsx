@@ -43,7 +43,7 @@ function ReadyContent({ balance, hasStore, supportEmail }: BalanceCardProps) {
           Você ainda não tem uma loja
         </p>
         <p className="text-sm text-text-muted font-body">
-          Crie sua loja para começar a gerar campanhas e ganhar 5 créditos gratuitos.
+          Crie sua loja para começar a gerar campanhas e ganhar 10 créditos gratuitos.
         </p>
         <Link
           href="/loja"

@@ -4,19 +4,19 @@
 
 ## Purpose
 
-Concessão automática de 5 créditos no onboarding (criação da loja), com atomicidade transacional e idempotência.
+Concessão automática de 10 créditos no onboarding (criação da loja), com atomicidade transacional e idempotência.
 
 ## Requirements
 
-### Requirement: Onboarding grant de 5 créditos na criação da loja
+### Requirement: Onboarding grant de 10 créditos na criação da loja
 
-O sistema SHALL conceder 5 créditos automaticamente quando uma loja é criada via `POST /api/store`.
+O sistema SHALL conceder 10 créditos automaticamente quando uma loja é criada via `POST /api/store`.
 
-#### Scenario: Criação de loja concede 5 créditos
+#### Scenario: Criação de loja concede 10 créditos
 
 - **WHEN** `POST /api/store` cria uma nova loja com sucesso
-- **THEN** 5 créditos são concedidos para a loja via `grant_credits`
-- **AND** o saldo inicial da loja é 5
+- **THEN** 10 créditos são concedidos para a loja via `grant_credits`
+- **AND** o saldo inicial da loja é 10
 
 ### Requirement: Atomicidade transacional via RPC
 
@@ -55,4 +55,12 @@ O sistema SHALL modificar o handler `POST /api/store` para: (1) validar input + 
 
 - **WHEN** `POST /api/store` é chamado com dados válidos e usuário autenticado
 - **THEN** retorna 201 com dados da loja
-- **AND** `creditService.getBalance(storeId)` retorna 5
+- **AND** `creditService.getBalance(storeId)` retorna 10
+
+### Requirement: Parametrização do valor do grant (v2)
+
+A RPC `create_store_with_initial_grant` foi parametrizada na migration `20260722000001` (v2) com o parâmetro `p_initial_grant_amount INTEGER DEFAULT 10`.
+
+- Lojas existentes NÃO recebem backfill automático — o grant é apenas no onboarding.
+- O caller (`POST /api/store`) não precisa ser alterado: o DEFAULT 10 é aplicado quando o parâmetro é omitido.
+- Bônus beta tester é concedido manualmente pelo admin via `CreditGrantForm` → `/api/admin/credits/grant` → `admin_grant_credits`, com motivo recomendado: "Bônus beta tester - validação externa controlada".
