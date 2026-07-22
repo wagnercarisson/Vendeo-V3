@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, vi } from "vitest";
+import { updateSession } from "@/lib/supabase/middleware";
 
 function makeNextResponse() {
   const headers = new Headers();
@@ -53,6 +54,18 @@ describe("middleware redirect", () => {
   it("does not redirect authenticated user on /dashboard", async () => {
     const mod = await import("@/middleware");
     const request = makeNextRequest("http://localhost:3000/dashboard");
+    const response = await mod.middleware(request as any);
+    expect(response.status).toBe(200);
+  });
+
+  it("passes through cron API route without session", async () => {
+    vi.mocked(updateSession).mockResolvedValueOnce({
+      response: makeNextResponse() as any,
+      claims: null,
+    });
+
+    const mod = await import("@/middleware");
+    const request = makeNextRequest("http://localhost:3000/api/cron/monthly-credits");
     const response = await mod.middleware(request as any);
     expect(response.status).toBe(200);
   });

@@ -7,6 +7,7 @@ const PUBLIC_ROUTES = new Set([
 ]);
 
 const ALWAYS_PASSTHROUGH = new Set(["/auth/confirm"]);
+const API_PASSTHROUGH = new Set(["/api/cron/monthly-credits"]);
 
 export async function middleware(request: NextRequest) {
   const { response, claims } = await updateSession(request);
@@ -20,8 +21,9 @@ export async function middleware(request: NextRequest) {
   const isApiRoute = pathname.startsWith("/api/");
   const isPublicRoute = PUBLIC_ROUTES.has(pathname);
   const isAlwaysPassthrough = ALWAYS_PASSTHROUGH.has(pathname);
+  const isApiPassthrough = API_PASSTHROUGH.has(pathname);
 
-  if (isAlwaysPassthrough) return response;
+  if (isAlwaysPassthrough || isApiPassthrough) return response;
 
   if (!claims?.sub) {
     if (isApiRoute) {
