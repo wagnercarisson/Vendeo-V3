@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Loader2, X, AlertCircle } from "lucide-react";
+import { Loader2, X, AlertCircle, Sparkles } from "lucide-react";
 
 interface HistorySignature {
   id: string;
@@ -29,6 +29,7 @@ interface VisualSignatureHistoryModalProps {
   storeId: string;
   identityState: string | null;
   onApplied?: () => void;
+  onGenerateNew?: () => void;
 }
 
 function canApply(identityState: string | null): boolean {
@@ -49,6 +50,7 @@ export function VisualSignatureHistoryModal({
   storeId,
   identityState,
   onApplied,
+  onGenerateNew,
 }: VisualSignatureHistoryModalProps) {
   const [rawSignatures, setRawSignatures] = useState<HistorySignature[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,22 +69,45 @@ export function VisualSignatureHistoryModal({
   useEffect(() => {
     if (!isOpen) return;
 
+    let cancelled = false;
     setLoading(true);
     setError(null);
     setApplyError(null);
     setHasLoadedSecondBatch(false);
 
-    fetch(`/api/store/${storeId}/visual-signature?limit=6&offset=0`)
-      .then(res => res.json())
-      .then(data => {
-        setRawSignatures(data?.signatures ?? []);
-        setApiTotal(data?.total ?? 0);
+    async function load() {
+      try {
+        const res1 = await fetch(`/api/store/${storeId}/visual-signature?limit=6&offset=0`);
+        const data1 = await res1.json();
+        if (cancelled) return;
+
+        let raw: HistorySignature[] = data1?.signatures ?? [];
+        const total = data1?.total ?? 0;
+
+        const visible = raw.filter(s => s.restore_eligibility?.reason === "ok");
+        if (visible.length < 6 && raw.length < total && raw.length < 12) {
+          const res2 = await fetch(`/api/store/${storeId}/visual-signature?limit=6&offset=6`);
+          const data2 = await res2.json();
+          if (cancelled) return;
+          const raw2: HistorySignature[] = data2?.signatures ?? [];
+          raw = [...raw, ...raw2];
+          setHasLoadedSecondBatch(true);
+        }
+
+        setRawSignatures(raw);
+        setApiTotal(total);
         setLoading(false);
-      })
-      .catch(() => {
-        setError("Erro ao carregar assinaturas anteriores");
-        setLoading(false);
-      });
+      } catch {
+        if (!cancelled) {
+          setError("Erro ao carregar assinaturas anteriores");
+          setLoading(false);
+        }
+      }
+    }
+
+    load();
+
+    return () => { cancelled = true; };
   }, [isOpen, storeId]);
 
   useEffect(() => {
@@ -278,13 +303,23 @@ export function VisualSignatureHistoryModal({
                 {loadingMore ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : null}
-                Ver versões anteriores
+                Carregar versões anteriores
               </button>
             )}
           </div>
         )}
 
-        <div className="mt-6">
+        <div className="mt-6 space-y-2">
+          {onGenerateNew && (
+            <button
+              type="button"
+              onClick={onGenerateNew}
+              className="w-full px-4 py-2.5 bg-accent-green text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 flex items-center justify-center gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              Gerar nova assinatura
+            </button>
+          )}
           <button
             type="button"
             onClick={onClose}

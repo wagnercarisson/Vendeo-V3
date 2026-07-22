@@ -18,10 +18,10 @@ The endpoint SHALL execute the following validation before proceeding:
 3. Validate `identity_state` of the store:
    - `'text_only'` → permitted
     - `'visual_signature'` → **REJECTED**: user must remove the active visual signature before applying another
->      ```json
->      { "error": "Remova a assinatura ativa antes de aplicar outra versão.",
->        "requires_vs_removal": true, "current_identity_state": "visual_signature" }
->      ```
+      ```json
+      { "error": "Remova a assinatura ativa antes de aplicar outra versão.",
+        "requires_vs_removal": true, "current_identity_state": "visual_signature" }
+      ```
    - `'logo'` → REJECTED: user must remove the logo before restoring a visual signature
      ```json
      { "error": "Remova o logotipo ativo antes de restaurar uma assinatura visual.",
