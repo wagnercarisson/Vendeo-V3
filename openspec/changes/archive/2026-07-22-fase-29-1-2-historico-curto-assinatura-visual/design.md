@@ -79,11 +79,13 @@ identity_state = "text_only" (nenhuma VS ativa)
 
 **Conflito com spec existente:** `openspec/specs/visual-signature-restore/spec.md` linha 20 afirma que `identity_state = 'visual_signature'` é permitido. Isso conflita com D3. O spec precisa ser atualizado.
 
-### D4 — Paginação "Ver versões anteriores" simples
+### D4 — Paginação "Carregar versões anteriores" simples
 
 `DECIDIDO`
 
-Se VS aplicáveis > 6, exibe um único botão "Ver versões anteriores". Após carregar segundo lote (total máximo 12), botão some permanentemente. Carga inicial: `limit=6`. Máximo da fase: 12 itens. Componente re-filtra cada lote (client-side) e acumula.
+Se VS aplicáveis > 6, exibe um único botão "Carregar versões anteriores". O texto "Carregar" foi escolhido deliberadamente em vez de "Ver" porque o botão adiciona o próximo lote na mesma lista (não troca de tela nem abre modal). Após carregar segundo lote (total máximo 12), botão some permanentemente. Carga inicial: `limit=6`. Máximo da fase: 12 itens. Componente re-filtra cada lote (client-side) e acumula.
+
+**Auto-load (preenchimento automático após filtro):** Se o primeiro lote de 6 raw signatures, após filtro client-side, tiver menos de 6 VS aplicáveis (devido a `critical_drift` ou `missing_metadata`), o componente automaticamente carrega o segundo lote (`offset=6`) para tentar completar a grid. Isso garante que o usuário não veja uma grid parcial quando há versões ocultas por inaplicabilidade. Esse comportamento não é considerado uma violação do limite de 12 — o segundo lote já está no máximo. Importante: futuras manutenções não devem "corrigir" removendo este auto-load sem replicar a UX que ele resolve.
 
 ### D5 — Sem consumo de crédito
 
@@ -95,14 +97,14 @@ Visualizar ou reativar VS anterior nunca consome crédito. POST /approve para VS
 
 `DECIDIDO`
 
-`VisualSignatureApprovalModal` recebe prop opcional `onOpenGallery?: () => void`. Placeholder "Galeria completa em breve" vira link "Ver versões recentes" que chama `onOpenGallery()`. Placeholder só aparece se `totalSignatures > 6`.
+`VisualSignatureApprovalModal` recebe prop opcional `onOpenGallery?: () => void`. Placeholder "Galeria completa em breve" vira link "Ver versões recentes" que chama `onOpenGallery()`. Placeholder só aparece se `totalSignatures > 6`. O link leva ao `VisualSignatureHistoryModal` — o parent fecha o ApprovalModal e abre o HistoryModal.
 
 ## Risks / Trade-offs
 
 | Risco | Mitigação |
 |-------|-----------|
 | Usuário confuso entre "Ver versões recentes" (ApprovalModal) e "Assinaturas anteriores" (StoreVS Section) — dois caminhos para o mesmo destino | Aceitável. Contextos diferentes (geração vs. gestão). ApprovalModal só mostra link quando > 6 versões |
-| Filtro client-side vs. paginação — "Ver versões anteriores" pode carregar página cheia de VS inaplicáveis, botão some sem feedback | Aceitável para escopo curto. Fase futura resolve com server-side filtering |
+| Filtro client-side vs. paginação — "Carregar versões anteriores" pode carregar página cheia de VS inaplicáveis, botão some sem feedback | Aceitável para escopo curto. Fase futura resolve com server-side filtering. Auto-load parcialmente mitiga: se primeiro lote tem <6 aplicáveis, segundo lote é carregado automaticamente |
 | POST /approve em VS archived/draft pode falhar por drift não detectado no client | Filtro client-side só considera `reason === "ok"`, então não deveria falhar. Se estado mudar entre load e click, server-side barra com mensagem |
 | VS draft sem input_snapshot — drafts pré-snapshot | Filtro oculta via `missing_metadata`. Pipeline atual sempre salva snapshot |
 | Modal stack confuso — ApprovalModal fecha, HistoryModal abre, usuário "volta" e não reencontra ApprovalModal | Ao fechar HistoryModal sem aplicar, volta ao StoreVS Section. Mesmo comportamento de fechar ApprovalModal e reabrir |

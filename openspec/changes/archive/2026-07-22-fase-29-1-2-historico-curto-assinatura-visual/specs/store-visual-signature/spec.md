@@ -148,17 +148,19 @@ On drift error (`{ error, drift: { critical: true } }`), the component SHALL dis
 - **WHEN** POST /approve returns drift error
 - **THEN** the drift error message SHALL be displayed
 
-### Requirement: HistoryModal — paginação simples "Ver versões anteriores"
+### Requirement: HistoryModal — paginação simples "Carregar versões anteriores"
 
-The component SHALL paginate with a simple "Ver versões anteriores" pattern using the raw API total (not the filtered count) as trigger.
+The component SHALL paginate with a simple "Carregar versões anteriores" pattern using the raw API total (not the filtered count) as trigger.
 
 Carga inicial: `limit=6`, `offset=0`. The component SHALL load up to 6 raw signatures from the API, then filter client-side to show only applicable ones.
 
-A single button "Ver versões anteriores" SHALL appear below the grid when **both** conditions are true:
+**Auto-load (pre-fetch after filter):** After the initial batch is loaded and filtered, if the number of applicable (visible) signatures is fewer than 6 AND there are more raw records in the API, the component SHALL automatically load the second batch (`limit=6`, `offset=6`). This ensures the grid doesn't appear sparse when many signatures are hidden due to ineligibility.
+
+A single button "Carregar versões anteriores" SHALL appear below the grid when **both** conditions are true:
 1. `apiTotal > rawSignaturesLoaded` — there are more records in the API
 2. The second batch has not been loaded yet (at most one pagination step)
 
-When clicked, the component SHALL load the next batch (`limit=6`, `offset=6`), filter client-side (removing ineligible signatures), and append to the current list. After loading the second batch (total maximum 12 raw signatures loaded), the button SHALL disappear permanently — even if the raw API total exceeds 12.
+When clicked (or auto-loaded), the component SHALL load the next batch (`limit=6`, `offset=6`), filter client-side (removing ineligible signatures), and append to the current list. After loading the second batch (total maximum 12 raw signatures loaded), the button SHALL disappear permanently — even if the raw API total exceeds 12.
 
 The component SHALL display the count of visible applicable signatures loaded so far (e.g., "6 de 12" or "4 assinaturas"). It SHALL NOT compute or display a global filtered total.
 
@@ -168,30 +170,38 @@ If the second batch contains no applicable signatures (all filtered out), the bu
 
 - **WHEN** `apiTotal` is 6
 - **AND** the first batch loads 6 raw signatures
-- **THEN** no "Ver versões anteriores" button SHALL appear
+- **THEN** no "Carregar versões anteriores" button SHALL appear
 
 #### Scenario: apiTotal = 20, first batch loads 6 raw — button visible
 
 - **WHEN** `apiTotal` is 20
 - **AND** 6 raw signatures have been loaded (first batch)
-- **THEN** "Ver versões anteriores" SHALL be visible
+- **THEN** "Carregar versões anteriores" SHALL be visible
 
 #### Scenario: Click loads second batch, button disappears
 
-- **WHEN** user clicks "Ver versões anteriores"
+- **WHEN** user clicks "Carregar versões anteriores"
 - **THEN** the second batch SHALL be loaded (6 more raw signatures)
 - **AND** after loading, the button SHALL disappear (maximum 12 raw reached)
 
 #### Scenario: apiTotal = 20 — max 12 raw loaded, button gone
 
 - **WHEN** `apiTotal` is 20
-- **AND** user clicks "Ver versões anteriores"
+- **AND** user clicks "Carregar versões anteriores"
 - **THEN** at most 12 raw signatures SHALL be loaded total
 - **AND** the button SHALL disappear (no further loading)
 
+#### Scenario: Auto-load when first batch has <6 applicable signatures
+
+- **WHEN** the first batch of 6 raw signatures has fewer than 6 `reason === "ok"` after filtering
+- **AND** `raw.length < total` (more records exist in API)
+- **AND** `raw.length < 12` (second batch not yet loaded)
+- **THEN** the second batch SHALL be automatically loaded (`limit=6`, `offset=6`)
+- **AND** the button "Carregar versões anteriores" SHALL be hidden (both batches reached)
+
 #### Scenario: Second batch all filtered out — button disappears
 
-- **WHEN** user clicks "Ver versões anteriores"
+- **WHEN** the second batch is loaded (either by click or auto-load)
 - **AND** the second batch's raw signatures are all ineligible (critical_drift or missing_metadata)
 - **THEN** no new visible items SHALL be added
 - **AND** the button SHALL disappear
