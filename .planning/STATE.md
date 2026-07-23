@@ -3,21 +3,21 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: "Lançamento Externo Controlado — Créditos + Admin + Saldo + Observabilidade + Launch"
 status: active
-last_updated: "2026-07-22T20:41:00.000Z"
-last_activity: "2026-07-22T20:41:00.000Z"
+last_updated: "2026-07-23T12:00:00.000Z"
+last_activity: "2026-07-23T12:00:00.000Z"
 progress:
-  total_phases: 12
-  completed_phases: 10
-  total_plans: 45
-  completed_plans: 35
-  percent: 78
+  total_phases: 13
+  completed_phases: 11
+  total_plans: 49
+  completed_plans: 39
+  percent: 80
 ---
 
 # Project State
 
-**Last updated:** 2026-07-22
+**Last updated:** 2026-07-23
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆
-**Current phase:** 29.3 — Créditos Mensais Automáticos ✅ (Complete)
+**Current phase:** 30 — Fundação Legal △ (Planning)
 
 ## Completed
 
@@ -421,7 +421,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-v1.5 em progresso — Fase 29.3 concluída.
+v1.5 em progresso — Fase 29.3 concluída. Planejando F30 (Fundação Legal).
 
 ### Next Phases
 
@@ -431,8 +431,9 @@ v1.5 em progresso — Fase 29.3 concluída.
 | F29 | ✅ Completed | Refinamento Visual + UAT + Launch Readiness — UAT 4/4 lojistas aprovado |
 | F29.1.1 | ✅ Completed | Créditos na Assinatura Visual — VS consome créditos, remove cota fixa de 3, UAT 15/15 ✅ |
 | F29.1.2 | ✅ Completed | Histórico Curto + Assinatura Visual — HistoryModal reescrito (3 plans, 943 testes) |
-| F29.3 | ✅ Completed | Créditos Mensais Automáticos — Buckets bônus/compra, grant mensal, Vercel Cron (4 plans) |
-| F30/v1.6 | ○ Future | Stripe / Monetização Pública (pós-beta) |
+| F29.3 | ✅ Completed | Créditos Mensais Automáticos — Buckets bônus/compra, grant mensal, Vercel Cron (4 plans, 987 testes) |
+| F30 | △ Planning | Fundação Legal — Documentos, ciência/aceite, clearance, re-aceite, admin |
+| F31/v1.7 | ○ Future | Stripe / Monetização Pública (pós-beta) |
 
 ### Quick Tasks Completed
 

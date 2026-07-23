@@ -92,9 +92,77 @@
 - [ ] **SEC-05**: Service role usage reviewed — credit operations use service role only after identity validation
 - [ ] **SEC-06**: Admin audit log is append-only; grant without audit trail is treated as failure
 
-## v1.6 Requirements (Stripe / Monetização Pública)
+## v1.5 Requirements — Fundação Legal (F30)
 
-Deferred from v1.5 critical path. Stripe será implementada como F30/v1.6 após validação do beta controlado.
+### Documentos Legais (LEGAL-DOC)
+
+- [ ] **LEGAL-DOC-01**: 3 documentos legais draft em `docs/legal/` — Termos de Uso v1.0, Política de Privacidade v1.0 (LGPD), Uso Aceitável v1.0, com ressalva de revisão jurídica
+- [ ] **LEGAL-DOC-02**: Páginas públicas `/termos`, `/privacidade`, `/uso-aceitavel` sem auth, renderizadas do conteúdo versionado
+- [ ] **LEGAL-DOC-03**: `legal_document_versions` table com document_type, version, published_at, effective_at, summary; UNIQUE(document_type, version)
+- [ ] **LEGAL-DOC-04**: `getCurrentVersion()`, `getVersionHistory()`, `isVersionCurrent()` — consultam legal_document_versions via supabaseAdmin
+
+### Ciência de Privacidade (LEGAL-PRIVACY)
+
+- [ ] **LEGAL-PRIVACY-01**: `privacy_acknowledgements` table (PK user_id, upsert) com RLS
+- [ ] **LEGAL-PRIVACY-02**: `registerPrivacyAcknowledgement()` — upsert por user_id, server-side apenas via service role
+- [ ] **LEGAL-PRIVACY-03**: `hasValidPrivacyAcknowledgement(userId)` — compara versão vigente
+- [ ] **LEGAL-PRIVACY-04**: Checkbox obrigatório "Declaro ciência da Política de Privacidade" no signup
+- [ ] **LEGAL-PRIVACY-05**: POST /api/legal/acknowledge-privacy — resolve versão server-side, registra ciência + opcionalmente consentimento
+
+### Aceite Contratual (LEGAL-ACCEPT)
+
+- [ ] **LEGAL-ACCEPT-01**: `legal_acceptances` table com UNIQUE(store_id, accepted_by_user_id, document_type, document_version)
+- [ ] **LEGAL-ACCEPT-02**: `registerAcceptance()` — resolve versão automaticamente, idempotente na mesma versão
+- [ ] **LEGAL-ACCEPT-03**: `registerAllContractAcceptances()` — registra terms_of_service + acceptable_use
+- [ ] **LEGAL-ACCEPT-04**: `getAcceptanceStatus(storeId, documentType)` — current/outdated/never
+- [ ] **LEGAL-ACCEPT-05**: `getStoreAcceptanceHistory(storeId)` — histórico ordenado
+
+### Consentimento LGPD (LEGAL-CONSENT)
+
+- [ ] **LEGAL-CONSENT-01**: `user_consent_events` table append-only (granted/revoked), auditável
+- [ ] **LEGAL-CONSENT-02**: `recordConsentEvent()` — sempre INSERT, nunca UPDATE/DELETE
+- [ ] **LEGAL-CONSENT-03**: `getEffectiveConsent(userId, consentType)` — último evento por occurred_at DESC
+- [ ] **LEGAL-CONSENT-04**: Checkbox opcional "Aceito receber comunicações comerciais" no signup (LGPD art. 7º, I)
+- [ ] **LEGAL-CONSENT-05**: Toggle de consentimento em `/conta` — revoga/reativa via POST /api/legal/communications-consent
+
+### Guardião Legal (LEGAL-CLEARANCE)
+
+- [ ] **LEGAL-CLEARANCE-01**: `requireLegalClearance({ storeId, userId, capability })` — guard central
+- [ ] **LEGAL-CLEARANCE-02**: CAPABILITY_DOCUMENTS map — content_generation → [terms_of_service, acceptable_use]
+- [ ] **LEGAL-CLEARANCE-03**: CAPABILITY_TREE — content_generation sub-capabilities (campaigns.create, visual_signatures.create, exports.create)
+- [ ] **LEGAL-CLEARANCE-04**: Privacy policy NÃO incluída no guard — verificada no signup
+- [ ] **LEGAL-CLEARANCE-05**: Guard no generate-image (pré-stream, antes de rate-limit e saldo)
+- [ ] **LEGAL-CLEARANCE-06**: Guard no visual-signature-approval-modal
+- [ ] **LEGAL-CLEARANCE-07**: 403 padronizado quando clearance falha: message, reason, requiredDocuments, acceptUrl
+
+### Re-aceite (LEGAL-REACCEPT)
+
+- [ ] **LEGAL-REACCEPT-01**: Tela `/legal/reaccept` com sumário de mudanças e botão "Aceitar nova versão"
+- [ ] **LEGAL-REACCEPT-02**: Bloqueio operacional (não absoluto) — docs legais, suporte, conta e cancelamento livres
+- [ ] **LEGAL-REACCEPT-03**: Banner não-bloqueante para mudança de privacidade
+- [ ] **LEGAL-REACCEPT-04**: Histórico de aceites preservado no re-aceite
+
+### RPC Atômica (LEGAL-RPC)
+
+- [ ] **LEGAL-RPC-01**: `create_store_with_legal_acceptance()` — loja + 2 aceites + grant em transação única
+- [ ] **LEGAL-RPC-02**: POST /api/store substituído para usar nova RPC com parâmetros de versão, IP e UA
+- [ ] **LEGAL-RPC-03**: Checkbox obrigatório "Li e aceito os Termos de Uso e a Política de Uso Aceitável" no onboarding
+
+### Admin Legal (LEGAL-ADMIN)
+
+- [ ] **LEGAL-ADMIN-01**: AdminUserSummary estendido com privacyAcknowledged, legalAcceptanceStatus, communicationsConsent
+- [ ] **LEGAL-ADMIN-02**: Badges legais em `/admin/users/[id]` — privacidade, aceite, consentimento
+- [ ] **LEGAL-ADMIN-03**: Detalhamento por documento (versão, data, usuário, IP, UA)
+- [ ] **LEGAL-ADMIN-04**: Admin NÃO pode aceitar em nome do lojista (sem bulk_migration)
+
+### Middleware (LEGAL-MIDDLEWARE)
+
+- [ ] **LEGAL-MIDDLEWARE-01**: `/termos`, `/privacidade`, `/uso-aceitavel` como rotas livres de auth
+- [ ] **LEGAL-MIDDLEWARE-02**: `/legal/reaccept` requer auth mas passa pelo middleware
+
+## v1.7 Requirements (Stripe / Monetização Pública)
+
+Deferred from v1.5 critical path. Stripe será implementada como F31/v1.7 após validação do beta controlado.
 
 ### Pagamento (PAY)
 
@@ -183,6 +251,45 @@ Deferred to future release. Tracked but not in current roadmap.
 | LAUNCH-04 | Phase 29 | Planning |
 | LAUNCH-05 | Phase 29 | Planning |
 | LAUNCH-06 | Phase 29 | Planning |
+| LEGAL-DOC-01 | Phase 30 | △ Planning |
+| LEGAL-DOC-02 | Phase 30 | △ Planning |
+| LEGAL-DOC-03 | Phase 30 | △ Planning |
+| LEGAL-DOC-04 | Phase 30 | △ Planning |
+| LEGAL-PRIVACY-01 | Phase 30 | △ Planning |
+| LEGAL-PRIVACY-02 | Phase 30 | △ Planning |
+| LEGAL-PRIVACY-03 | Phase 30 | △ Planning |
+| LEGAL-PRIVACY-04 | Phase 30 | △ Planning |
+| LEGAL-PRIVACY-05 | Phase 30 | △ Planning |
+| LEGAL-ACCEPT-01 | Phase 30 | △ Planning |
+| LEGAL-ACCEPT-02 | Phase 30 | △ Planning |
+| LEGAL-ACCEPT-03 | Phase 30 | △ Planning |
+| LEGAL-ACCEPT-04 | Phase 30 | △ Planning |
+| LEGAL-ACCEPT-05 | Phase 30 | △ Planning |
+| LEGAL-CONSENT-01 | Phase 30 | △ Planning |
+| LEGAL-CONSENT-02 | Phase 30 | △ Planning |
+| LEGAL-CONSENT-03 | Phase 30 | △ Planning |
+| LEGAL-CONSENT-04 | Phase 30 | △ Planning |
+| LEGAL-CONSENT-05 | Phase 30 | △ Planning |
+| LEGAL-CLEARANCE-01 | Phase 30 | △ Planning |
+| LEGAL-CLEARANCE-02 | Phase 30 | △ Planning |
+| LEGAL-CLEARANCE-03 | Phase 30 | △ Planning |
+| LEGAL-CLEARANCE-04 | Phase 30 | △ Planning |
+| LEGAL-CLEARANCE-05 | Phase 30 | △ Planning |
+| LEGAL-CLEARANCE-06 | Phase 30 | △ Planning |
+| LEGAL-CLEARANCE-07 | Phase 30 | △ Planning |
+| LEGAL-REACCEPT-01 | Phase 30 | △ Planning |
+| LEGAL-REACCEPT-02 | Phase 30 | △ Planning |
+| LEGAL-REACCEPT-03 | Phase 30 | △ Planning |
+| LEGAL-REACCEPT-04 | Phase 30 | △ Planning |
+| LEGAL-RPC-01 | Phase 30 | △ Planning |
+| LEGAL-RPC-02 | Phase 30 | △ Planning |
+| LEGAL-RPC-03 | Phase 30 | △ Planning |
+| LEGAL-ADMIN-01 | Phase 30 | △ Planning |
+| LEGAL-ADMIN-02 | Phase 30 | △ Planning |
+| LEGAL-ADMIN-03 | Phase 30 | △ Planning |
+| LEGAL-ADMIN-04 | Phase 30 | △ Planning |
+| LEGAL-MIDDLEWARE-01 | Phase 30 | △ Planning |
+| LEGAL-MIDDLEWARE-02 | Phase 30 | △ Planning |
 | SEC-01 | Phase 24-26 | ✅ Complete (F24 RLS, F26 admin) |
 | SEC-02 | Phase 25-26 | ✅ Complete (F25 pipeline, F26 admin) |
 | SEC-03 | Phase 25 | ✅ Complete (F25 sanitized inputs) |
@@ -199,11 +306,12 @@ Deferred to future release. Tracked but not in current roadmap.
 | MONTHLY-10 | Phase 29.3 | △ Planning |
 
 **Coverage:**
-- v1 requirements: 58 total
-- Mapped to phases: 54
+- v1 requirements: 94 total (58 v1.0-v1.4 + 36 LEGAL)
+- Mapped to phases: 90
 - Unmapped: 0 ✓
-- Deferred to v1.6: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06
+- Deferred to v1.7: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06
 - F29.1.2: Fase complementar refinando LAUNCH-01 e LAUNCH-02 (sem REQ-IDs próprios)
+- F30 (LEGAL-*): Adicionados em 2026-07-23 via alinhamento com OpenSpec
 
 ---
 

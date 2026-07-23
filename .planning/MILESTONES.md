@@ -1,5 +1,26 @@
 # Milestones
 
+## v1.5 — Lançamento Externo Controlado ◆
+
+**Status:** Em andamento
+**Phases:** 8 (F23-F30) | **Plans:** 39/39 (F23-F29.3) + F30 em planejamento
+**Tests:** 987 passing (119 files)
+**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
+
+### Delivered
+
+Copy Director com IA (F23), pipeline de geração paralelo com créditos (F24-F25), admin operacional (F26), UI de saldo e extrato (F27), observabilidade e launch controls (F28), refinamento visual e UAT externo (F29), créditos mensais automáticos (F29.3), assinatura visual com créditos (F29.1.1-F29.1.2).
+
+### In Progress
+
+**F30 — Fundação Legal:** Documentos legais (Termos de Uso, Privacidade, Uso Aceitável), sistema de ciência/aceite contratual, guardião legal no pipeline, re-aceite em mudança de versão, consentimento LGPD para comunicações comerciais, badges admin.
+
+### Known Gaps
+
+- Stripe / Monetização Pública diferido para v1.7 (F31)
+
+---
+
 ## v1.4 — Experiência SaaS ✅
 
 **Shipped:** 2026-07-15
