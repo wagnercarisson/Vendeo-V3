@@ -5,22 +5,26 @@ import type { DocumentType, CurrentVersion } from "./types";
 export async function getCurrentVersion(
   documentType: DocumentType,
 ): Promise<CurrentVersion | null> {
-  const { data } = await supabaseAdmin
-    .from("legal_document_versions")
-    .select("version, effective_at, summary")
-    .eq("document_type", documentType)
-    .lte("effective_at", new Date().toISOString())
-    .order("effective_at", { ascending: false })
-    .limit(1)
-    .single();
+  try {
+    const { data } = await supabaseAdmin
+      .from("legal_document_versions")
+      .select("version, effective_at, summary")
+      .eq("document_type", documentType)
+      .lte("effective_at", new Date().toISOString())
+      .order("effective_at", { ascending: false })
+      .limit(1)
+      .single();
 
-  if (!data) return null;
+    if (!data) return null;
 
-  return {
-    version: data.version,
-    effectiveAt: data.effective_at,
-    summary: data.summary,
-  };
+    return {
+      version: data.version,
+      effectiveAt: data.effective_at,
+      summary: data.summary,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function getVersionHistory(

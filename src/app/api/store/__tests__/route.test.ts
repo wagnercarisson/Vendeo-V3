@@ -24,12 +24,16 @@ vi.mock('@/lib/store-response', () => ({
   buildStoreResponse: vi.fn(),
 }));
 
+vi.mock('@/lib/legal/document-versions', () => ({
+  getCurrentVersion: vi.fn(async () => ({ version: 'v1.0', effectiveAt: '2026-07-23T00:00:00Z', summary: null })),
+}));
+
 describe('POST /api/store — onboarding grant', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('creates store + grants 10 credits via RPC', async () => {
+  it('creates store + grants credits via legal RPC', async () => {
     mockRpc.mockResolvedValueOnce({
       data: { id: 'store-1', name: 'Minha Loja', segment: 'moda-calcados-acessorios', balance: 10 },
       error: null,
@@ -41,6 +45,7 @@ describe('POST /api/store — onboarding grant', () => {
       body: JSON.stringify({
         name: 'Minha Loja',
         segment: 'moda-calcados-acessorios',
+        acceptedTerms: true,
       }),
       headers: { 'Content-Type': 'application/json' },
     }));
@@ -49,23 +54,12 @@ describe('POST /api/store — onboarding grant', () => {
     const body = await res.json();
     expect(body.id).toBe('store-1');
     expect(body.balance).toBe(10);
-    expect(mockRpc).toHaveBeenCalledWith('create_store_with_initial_grant', expect.any(Object));
+    expect(mockRpc).toHaveBeenCalledWith('create_store_with_legal_acceptance', expect.any(Object));
   });
 
-  it('RPC idempotency — segundo POST para mesmo user retorna 409', async () => {
-    mockRpc
-      .mockResolvedValueOnce({
-        data: { id: 'store-1', name: 'Minha Loja', segment: 'moda-calcados-acessorios', balance: 10 },
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: null,
-        error: { message: 'stores_user_id_key', code: '23505' },
-      });
-
+  it('returns 400 when acceptedTerms missing', async () => {
     const { POST } = await import('../route');
-
-    const req1 = new NextRequest(new Request('http://localhost/api/store', {
+    const req = new NextRequest(new Request('http://localhost/api/store', {
       method: 'POST',
       body: JSON.stringify({
         name: 'Minha Loja',
@@ -73,23 +67,8 @@ describe('POST /api/store — onboarding grant', () => {
       }),
       headers: { 'Content-Type': 'application/json' },
     }));
-    const res1 = await POST(req1);
-    expect(res1.status).toBe(201);
-    const body1 = await res1.json();
-    expect(body1.balance).toBe(10);
-
-    const req2 = new NextRequest(new Request('http://localhost/api/store', {
-      method: 'POST',
-      body: JSON.stringify({
-        name: 'Minha Loja',
-        segment: 'moda-calcados-acessorios',
-      }),
-      headers: { 'Content-Type': 'application/json' },
-    }));
-    const res2 = await POST(req2);
-    expect(res2.status).toBe(409);
-    const body2 = await res2.json();
-    expect(body2.error).toBe('Usuário já possui uma loja');
+    const res = await POST(req);
+    expect(res.status).toBe(400);
   });
 
   it('RPC failure returns 500', async () => {
@@ -104,6 +83,7 @@ describe('POST /api/store — onboarding grant', () => {
       body: JSON.stringify({
         name: 'Minha Loja',
         segment: 'moda-calcados-acessorios',
+        acceptedTerms: true,
       }),
       headers: { 'Content-Type': 'application/json' },
     }));

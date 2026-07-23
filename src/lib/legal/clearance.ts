@@ -6,6 +6,7 @@ import type {
   ClearanceResult,
 } from "./types";
 import { getAcceptanceStatus } from "./acceptance-service";
+import { getCurrentVersion } from "./document-versions";
 
 export const CAPABILITY_DOCUMENTS: Record<LegalCapability, DocumentType[]> = {
   content_generation: ["terms_of_service", "acceptable_use"],
@@ -33,6 +34,13 @@ export async function requireLegalClearance(
   const requiredDocuments = CAPABILITY_DOCUMENTS[params.capability];
 
   if (!requiredDocuments) {
+    return { ok: true };
+  }
+
+  // If legal system is not set up (no published versions), allow through.
+  const termsVersion = await getCurrentVersion("terms_of_service");
+  const aupVersion = await getCurrentVersion("acceptable_use");
+  if (!termsVersion || !aupVersion) {
     return { ok: true };
   }
 

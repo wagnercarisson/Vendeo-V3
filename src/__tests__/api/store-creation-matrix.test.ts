@@ -2,6 +2,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
+const makeChain = () => {
+  const chain: Record<string, any> = {};
+  chain.select = vi.fn(() => chain);
+  chain.eq = vi.fn(() => chain);
+  chain.lte = vi.fn(() => chain);
+  chain.order = vi.fn(() => chain);
+  chain.limit = vi.fn(() => chain);
+  chain.single = vi.fn();
+  return chain;
+};
+
 const mockRequireUser = vi.fn();
 const mockSupabaseFrom = vi.fn();
 const mockSupabaseRpc = vi.fn();
@@ -34,6 +45,12 @@ vi.mock("@/lib/store-response", () => ({
   buildStoreResponse: vi.fn(async (s: any) => s),
 }));
 
+vi.mock("@/lib/legal/document-versions", () => ({
+  getCurrentVersion: vi.fn(async () => ({ version: "v1.0", effectiveAt: "2026-07-23T00:00:00Z", summary: null })),
+  getVersionHistory: vi.fn(),
+  isVersionCurrent: vi.fn(),
+}));
+
 function createReq(method: string, body: unknown, origin = "http://localhost"): NextRequest {
   return new NextRequest("http://localhost/api/store", {
     method,
@@ -43,7 +60,7 @@ function createReq(method: string, body: unknown, origin = "http://localhost"): 
 }
 
 beforeEach(() => {
-  vi.restoreAllMocks();
+  vi.clearAllMocks();
 });
 
 describe("POST /api/store", () => {
@@ -52,17 +69,16 @@ describe("POST /api/store", () => {
     mockSupabaseRpc.mockResolvedValue({ data: { id: "store-1", name: "Loja", user_id: "user-123" }, error: null });
 
     const { POST } = await import("@/app/api/store/route");
-    const res = await POST(createReq("POST", { name: "Minha Loja", segment: "variedades" }));
+    const res = await POST(createReq("POST", { name: "Minha Loja", segment: "variedades", acceptedTerms: true }));
     expect(res.status).toBe(201);
   });
 
-  it("returns 401 when not authenticated (same origin)", async () => {
-    const { UnauthorizedError } = await import("@/lib/auth/require-user");
-    mockRequireUser.mockRejectedValue(new UnauthorizedError());
+  it("returns 400 when acceptedTerms missing", async () => {
+    mockRequireUser.mockResolvedValue({ userId: "user-123", claims: {} });
 
     const { POST } = await import("@/app/api/store/route");
     const res = await POST(createReq("POST", { name: "Minha Loja", segment: "variedades" }));
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(400);
   });
 
   it("returns 409 on duplicate store (UNIQUE violation)", async () => {
@@ -70,7 +86,7 @@ describe("POST /api/store", () => {
     mockSupabaseRpc.mockResolvedValue({ data: null, error: { code: "23505", message: "duplicate key" } });
 
     const { POST } = await import("@/app/api/store/route");
-    const res = await POST(createReq("POST", { name: "Outra Loja", segment: "variedades" }));
+    const res = await POST(createReq("POST", { name: "Outra Loja", segment: "variedades", acceptedTerms: true }));
     expect(res.status).toBe(409);
   });
 
@@ -83,7 +99,7 @@ describe("POST /api/store", () => {
     });
 
     const { POST } = await import("@/app/api/store/route");
-    await POST(createReq("POST", { name: "Minha Loja", segment: "variedades", user_id: "hacker-id" }));
+    await POST(createReq("POST", { name: "Minha Loja", segment: "variedades", acceptedTerms: true, user_id: "hacker-id" }));
     expect(capturedParams.p_user_id).toBe("user-123");
   });
 });

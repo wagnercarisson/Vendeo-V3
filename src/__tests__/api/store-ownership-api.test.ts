@@ -58,6 +58,12 @@ vi.mock("@/lib/constants", () => ({
   STORE_SUBSEGMENTS: {},
 }));
 
+vi.mock("@/lib/legal/document-versions", () => ({
+  getCurrentVersion: vi.fn(async () => ({ version: "v1.0", effectiveAt: "2026-07-23T00:00:00Z", summary: null })),
+  getVersionHistory: vi.fn(),
+  isVersionCurrent: vi.fn(),
+}));
+
 const mockStore: Store = {
   id: "store-1",
   user_id: "user-123",
@@ -113,7 +119,7 @@ describe("POST /api/store", () => {
     mockSupabaseRpc.mockResolvedValue({ data: { ...mockStore, user_id: "user-123" }, error: null });
 
     const { POST } = await import("@/app/api/store/route");
-    const res = await POST(createReq("POST", { name: "Minha Loja", segment: "variedades" }));
+    const res = await POST(createReq("POST", { name: "Minha Loja", segment: "variedades", acceptedTerms: true }));
     expect(res.status).toBe(201);
     const data = await res.json();
     expect(data.user_id).toBe("user-123");
@@ -135,7 +141,7 @@ describe("POST /api/store", () => {
     mockSupabaseRpc.mockResolvedValue({ data: null, error: { code: "23505", message: "duplicate key" } });
 
     const { POST } = await import("@/app/api/store/route");
-    const res = await POST(createReq("POST", { name: "Outra Loja", segment: "variedades" }));
+    const res = await POST(createReq("POST", { name: "Outra Loja", segment: "variedades", acceptedTerms: true }));
     expect(res.status).toBe(409);
     const data = await res.json();
     expect(data.error).toBe("Usuário já possui uma loja");
@@ -150,7 +156,7 @@ describe("POST /api/store", () => {
     });
 
     const { POST } = await import("@/app/api/store/route");
-    await POST(createReq("POST", { name: "Minha Loja", segment: "variedades", user_id: "hacker-id" }));
+    await POST(createReq("POST", { name: "Minha Loja", segment: "variedades", acceptedTerms: true, user_id: "hacker-id" }));
     expect(capturedParams.p_user_id).toBe("user-123");
   });
 });

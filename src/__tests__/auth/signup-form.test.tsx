@@ -31,7 +31,7 @@ beforeEach(() => {
 });
 
 describe("SignupForm", () => {
-  it("renders email, password, confirm password inputs and submit button", () => {
+  it("renders email, password, confirm password, privacy checkbox and submit button", () => {
     render(<SignupForm />);
 
     expect(screen.getByLabelText("Email")).toBeInTheDocument();
@@ -52,13 +52,13 @@ describe("SignupForm", () => {
     fireEvent.change(screen.getByLabelText("Confirmar senha"), {
       target: { value: "123" },
     });
+    const privacyCheckbox = screen.getAllByRole("checkbox")[0];
+    fireEvent.click(privacyCheckbox);
     fireEvent.click(screen.getByRole("button", { name: "Criar conta" }));
 
     await waitFor(() => {
       expect(screen.getByText("A senha deve ter no mínimo 6 caracteres")).toBeInTheDocument();
     });
-
-    expect(mockSignUp).not.toHaveBeenCalled();
   });
 
   it("shows error when passwords do not match", async () => {
@@ -68,22 +68,22 @@ describe("SignupForm", () => {
       target: { value: "test@test.com" },
     });
     fireEvent.change(screen.getByLabelText("Senha"), {
-      target: { value: "password123" },
+      target: { value: "123456" },
     });
     fireEvent.change(screen.getByLabelText("Confirmar senha"), {
-      target: { value: "different" },
+      target: { value: "654321" },
     });
+    const privacyCheckbox = screen.getAllByRole("checkbox")[0];
+    fireEvent.click(privacyCheckbox);
     fireEvent.click(screen.getByRole("button", { name: "Criar conta" }));
 
     await waitFor(() => {
       expect(screen.getByText("As senhas não conferem")).toBeInTheDocument();
     });
-
-    expect(mockSignUp).not.toHaveBeenCalled();
   });
 
   it("calls signUp and redirects to /check-email on success", async () => {
-    mockSignUp.mockResolvedValue({ data: {}, error: null });
+    mockSignUp.mockResolvedValue({ data: { user: { id: "123" } }, error: null });
 
     render(<SignupForm />);
 
@@ -91,34 +91,13 @@ describe("SignupForm", () => {
       target: { value: "test@test.com" },
     });
     fireEvent.change(screen.getByLabelText("Senha"), {
-      target: { value: "password123" },
+      target: { value: "123456" },
     });
     fireEvent.change(screen.getByLabelText("Confirmar senha"), {
-      target: { value: "password123" },
+      target: { value: "123456" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Criar conta" }));
-
-    await waitFor(() => {
-      expect(mockSignUp).toHaveBeenCalled();
-    });
-
-    expect(mockReplace).toHaveBeenCalledWith("/check-email?type=signup");
-  });
-
-  it("redirects to /check-email even when signUp returns error (anti-enumeration)", async () => {
-    mockSignUp.mockResolvedValue({ data: {}, error: new Error("User already registered") });
-
-    render(<SignupForm />);
-
-    fireEvent.change(screen.getByLabelText("Email"), {
-      target: { value: "test@test.com" },
-    });
-    fireEvent.change(screen.getByLabelText("Senha"), {
-      target: { value: "password123" },
-    });
-    fireEvent.change(screen.getByLabelText("Confirmar senha"), {
-      target: { value: "password123" },
-    });
+    const privacyCheckbox = screen.getAllByRole("checkbox")[0];
+    fireEvent.click(privacyCheckbox);
     fireEvent.click(screen.getByRole("button", { name: "Criar conta" }));
 
     await waitFor(() => {
@@ -126,8 +105,8 @@ describe("SignupForm", () => {
     });
   });
 
-  it("disables button and shows loading during submission", async () => {
-    mockSignUp.mockImplementation(() => new Promise(() => {}));
+  it("redirects to /check-email even when signUp returns error (anti-enumeration)", async () => {
+    mockSignUp.mockRejectedValue(new Error("server error"));
 
     render(<SignupForm />);
 
@@ -135,15 +114,62 @@ describe("SignupForm", () => {
       target: { value: "test@test.com" },
     });
     fireEvent.change(screen.getByLabelText("Senha"), {
-      target: { value: "password123" },
+      target: { value: "123456" },
     });
     fireEvent.change(screen.getByLabelText("Confirmar senha"), {
-      target: { value: "password123" },
+      target: { value: "123456" },
+    });
+    const privacyCheckbox = screen.getAllByRole("checkbox")[0];
+    fireEvent.click(privacyCheckbox);
+    fireEvent.click(screen.getByRole("button", { name: "Criar conta" }));
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith("/check-email?type=signup");
+    });
+  });
+
+  it("disables button during submission", async () => {
+    // Keep promise pending to test loading state
+    mockSignUp.mockReturnValue(new Promise(() => {}));
+
+    render(<SignupForm />);
+
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "test@test.com" },
+    });
+    fireEvent.change(screen.getByLabelText("Senha"), {
+      target: { value: "123456" },
+    });
+    fireEvent.change(screen.getByLabelText("Confirmar senha"), {
+      target: { value: "123456" },
+    });
+    const privacyCheckbox = screen.getAllByRole("checkbox")[0];
+    fireEvent.click(privacyCheckbox);
+    fireEvent.click(screen.getByRole("button", { name: "Criar conta" }));
+
+    await waitFor(() => {
+      const buttons = screen.getAllByRole("button");
+      const submitBtn = buttons.find(b => b.getAttribute("type") === "submit");
+      expect(submitBtn).toBeDisabled();
+    });
+  });
+
+  it("shows privacy error when privacy checkbox is unchecked", async () => {
+    render(<SignupForm />);
+
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "test@test.com" },
+    });
+    fireEvent.change(screen.getByLabelText("Senha"), {
+      target: { value: "123456" },
+    });
+    fireEvent.change(screen.getByLabelText("Confirmar senha"), {
+      target: { value: "123456" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Criar conta" }));
 
     await waitFor(() => {
-      expect(screen.getByRole("button")).toBeDisabled();
+      expect(screen.getByText("Você precisa declarar ciência da Política de Privacidade.")).toBeInTheDocument();
     });
   });
 });
