@@ -1,27 +1,28 @@
-> Synced from `fase-26-admin-operacional` (ADDED).
+> Synced from `fase-26-admin-operacional` (ADDED), then `fase-29-3-creditos-mensais-automaticos` (MODIFIED). `admin_grant_credits` agora chama `grant_credits` com `p_type = 'admin_grant'` (direciona ao `bonus_balance`). Audit log metadata inclui `grant_type: 'admin_grant'`. Response `newBalance` reflete `balance` total (soma dos buckets).
 
 ## Purpose
 
-Permitir que administradores concedam créditos manuais a lojistas com motivo obrigatório, idempotência via `operationId` e audit trail atômico na mesma transação (RPC `admin_grant_credits`).
+Permitir que administradores concedam créditos manuais a lojistas com motivo obrigatório, idempotência via `operationId` e audit trail atômico na mesma transação (RPC `admin_grant_credits`). Créditos concedidos via admin direcionam ao `bonus_balance` e contam para o `monthlyBonusCap` (D9).
 
 ## Requirements
 
-### Requirement: admin_grant_credits RPC function
+### Requirement: admin_grant_credits RPC function (MODIFIED F29.3)
 
-O sistema SHALL criar a SQL function `public.admin_grant_credits(p_actor_id UUID, p_store_id UUID, p_amount INTEGER, p_reason TEXT, p_operation_id UUID, p_metadata JSONB DEFAULT '{}'::jsonb) RETURNS JSONB`.
+**F29.3 Changes**: `admin_grant_credits` agora chama `grant_credits` com `p_type = 'admin_grant'` (explícito). O grant direciona para `bonus_balance` e conta para o `monthlyBonusCap`. O parâmetro `p_type` default no `grant_credits` já é `'admin_grant'`, então chamadores existentes continuam funcionando sem alteração.
 
-A função SHALL ser atômica — grant + audit log na mesma transação.
+O sistema SHALL manter a SQL function `public.admin_grant_credits(p_actor_id UUID, p_store_id UUID, p_amount INTEGER, p_reason TEXT, p_operation_id UUID, p_metadata JSONB DEFAULT '{}'::jsonb) RETURNS JSONB`.
 
 - Passo 1: Idempotência — SELECT `operation_id` existente em `admin_audit_log`. Se encontrado, retorna dados sem executar nada
-- Passo 2: Chama `public.grant_credits(p_store_id, p_amount, p_reason, 'admin_grant_' || p_operation_id, p_metadata)` e captura transaction_id
-- Passo 3: INSERT em `admin_audit_log` com actor_id, action='credit_grant', target_type='store', target_id=p_store_id, reason=p_reason, operation_id=p_operation_id, metadata={amount, transaction_id}
+- Passo 2: Chama `public.grant_credits(p_store_id, p_amount, p_reason, 'admin_grant_' || p_operation_id, p_metadata)` — o `p_type` default (`admin_grant`) direciona ao `bonus_balance`
+- Passo 3: INSERT em `admin_audit_log` com `action='credit_grant'`, metadata incluindo `amount, transaction_id, grant_type: 'admin_grant'`
 - Passo 4: Se qualquer passo falhar → ROLLBACK
 - SECURITY DEFINER com SET search_path = ''
 
-#### Scenario: admin_grant_credits creates grant + audit log
+#### Scenario: admin_grant_credits increments bonus_balance
 
 - **WHEN** `admin_grant_credits` é chamado com parâmetros válidos
-- **THEN** executa `grant_credits` que insere transação em `credit_transactions`
+- **THEN** executa `grant_credits` com `p_type = 'admin_grant'`
+- **AND** incrementa `bonus_balance` (não `purchased_balance`)
 - **AND** insere entry em `admin_audit_log` com `action='credit_grant'`
 - **AND** retorna JSON com `transaction_id` e `audit_id`
 
@@ -35,21 +36,24 @@ A função SHALL ser atômica — grant + audit log na mesma transação.
 - **WHEN** `grant_credits` lança exceção (ex.: store não existe)
 - **THEN** nenhum INSERT em `admin_audit_log` é feito (ROLLBACK desfaz tudo)
 
-### Requirement: POST /api/admin/credits/grant
+### Requirement: POST /api/admin/credits/grant (MODIFIED F29.3)
 
-O sistema SHALL expor `POST /api/admin/credits/grant` para concessão manual de créditos.
+**F29.3 Changes**: O handler continua chamando `admin_grant_credits` sem alteração na API. O response `newBalance` agora reflete o `balance` total (soma dos buckets), consistente com o comportamento existente.
+
+O sistema SHALL manter a rota `POST /api/admin/credits/grant` com a mesma assinatura de request. O `newBalance` retornado SHALL refletir o `balance` total (`bonus_balance + purchased_balance`).
 
 - Requer `requireAdmin()`
 - Valida body com `GrantCreditsRequestSchema` (Zod)
 - Chama RPC `admin_grant_credits`
-- Retorna `{ transaction_id, audit_id, newBalance }`
+- Retorna `{ transaction_id, audit_id, idempotent, newBalance }`
 
-#### Scenario: Admin grants credits successfully
+#### Scenario: Admin grant reflects in total balance
 
-- **WHEN** admin POST `/api/admin/credits/grant` com `{ storeId, amount: 50, reason: "Crédito promocional para teste beta", operationId }`
+- **WHEN** admin POST `/api/admin/credits/grant` com `{ storeId, amount: 50, reason: "Crédito promocional", operationId }`
 - **THEN** retorna 200 com `{ transaction_id, audit_id, newBalance }`
-- **AND** saldo da loja é incrementado em 50
-- **AND** audit log registra a ação
+- **AND** `bonus_balance` da loja é incrementado em 50
+- **AND** `balance` total reflete `bonus_balance + purchased_balance`
+- **AND** audit log registra a ação com `grant_type: 'admin_grant'`
 
 #### Scenario: Grant with malformed storeId returns 400
 
@@ -122,3 +126,19 @@ O sistema SHALL exibir formulário de concessão de créditos na página `/admin
 - **WHEN** admin acessa `/admin/users/[id]` e usuário não possui loja (`storeId = null`)
 - **THEN** formulário de grant é exibido desabilitado com mensagem orientativa
 - **AND** admin vê botão/badge para criar loja para o usuário
+
+### Requirement: Admin monthly credit grant button (ADDED F29.3)
+
+O sistema SHALL prover um botão "Executar concessão mensal" na página de admin, protegido por `requireAdmin`, que chama `POST /api/admin/monthly-credits/grant` para execução manual da RPC `grant_monthly_credits`.
+
+#### Scenario: Admin can manually trigger monthly grant
+
+- **WHEN** admin autenticado clica em "Executar concessão mensal"
+- **THEN** faz POST para `/api/admin/monthly-credits/grant`
+- **AND** executa `grant_monthly_credits` com parâmetros do Launch Config
+- **AND** retorna resultado com contagens `{ eligible, granted, skipped, errors }`
+
+#### Scenario: Non-admin cannot trigger monthly grant
+
+- **WHEN** usuário não admin tenta POST `/api/admin/monthly-credits/grant`
+- **THEN** retorna 403
