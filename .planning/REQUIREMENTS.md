@@ -251,45 +251,45 @@ Deferred to future release. Tracked but not in current roadmap.
 | LAUNCH-04 | Phase 29 | Planning |
 | LAUNCH-05 | Phase 29 | Planning |
 | LAUNCH-06 | Phase 29 | Planning |
-| LEGAL-DOC-01 | Phase 30 | △ Planning |
-| LEGAL-DOC-02 | Phase 30 | △ Planning |
-| LEGAL-DOC-03 | Phase 30 | △ Planning |
-| LEGAL-DOC-04 | Phase 30 | △ Planning |
-| LEGAL-PRIVACY-01 | Phase 30 | △ Planning |
-| LEGAL-PRIVACY-02 | Phase 30 | △ Planning |
-| LEGAL-PRIVACY-03 | Phase 30 | △ Planning |
-| LEGAL-PRIVACY-04 | Phase 30 | △ Planning |
-| LEGAL-PRIVACY-05 | Phase 30 | △ Planning |
-| LEGAL-ACCEPT-01 | Phase 30 | △ Planning |
-| LEGAL-ACCEPT-02 | Phase 30 | △ Planning |
-| LEGAL-ACCEPT-03 | Phase 30 | △ Planning |
-| LEGAL-ACCEPT-04 | Phase 30 | △ Planning |
-| LEGAL-ACCEPT-05 | Phase 30 | △ Planning |
-| LEGAL-CONSENT-01 | Phase 30 | △ Planning |
-| LEGAL-CONSENT-02 | Phase 30 | △ Planning |
-| LEGAL-CONSENT-03 | Phase 30 | △ Planning |
-| LEGAL-CONSENT-04 | Phase 30 | △ Planning |
-| LEGAL-CONSENT-05 | Phase 30 | △ Planning |
-| LEGAL-CLEARANCE-01 | Phase 30 | △ Planning |
-| LEGAL-CLEARANCE-02 | Phase 30 | △ Planning |
-| LEGAL-CLEARANCE-03 | Phase 30 | △ Planning |
-| LEGAL-CLEARANCE-04 | Phase 30 | △ Planning |
-| LEGAL-CLEARANCE-05 | Phase 30 | △ Planning |
-| LEGAL-CLEARANCE-06 | Phase 30 | △ Planning |
-| LEGAL-CLEARANCE-07 | Phase 30 | △ Planning |
-| LEGAL-REACCEPT-01 | Phase 30 | △ Planning |
-| LEGAL-REACCEPT-02 | Phase 30 | △ Planning |
-| LEGAL-REACCEPT-03 | Phase 30 | △ Planning |
-| LEGAL-REACCEPT-04 | Phase 30 | △ Planning |
-| LEGAL-RPC-01 | Phase 30 | △ Planning |
-| LEGAL-RPC-02 | Phase 30 | △ Planning |
-| LEGAL-RPC-03 | Phase 30 | △ Planning |
-| LEGAL-ADMIN-01 | Phase 30 | △ Planning |
-| LEGAL-ADMIN-02 | Phase 30 | △ Planning |
-| LEGAL-ADMIN-03 | Phase 30 | △ Planning |
-| LEGAL-ADMIN-04 | Phase 30 | △ Planning |
-| LEGAL-MIDDLEWARE-01 | Phase 30 | △ Planning |
-| LEGAL-MIDDLEWARE-02 | Phase 30 | △ Planning |
+| LEGAL-DOC-01 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-DOC-02 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-DOC-03 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-DOC-04 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-PRIVACY-01 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-PRIVACY-02 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-PRIVACY-03 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-PRIVACY-04 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-PRIVACY-05 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-ACCEPT-01 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-ACCEPT-02 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-ACCEPT-03 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-ACCEPT-04 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-ACCEPT-05 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-CONSENT-01 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-CONSENT-02 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-CONSENT-03 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-CONSENT-04 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-CONSENT-05 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-CLEARANCE-01 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-CLEARANCE-02 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-CLEARANCE-03 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-CLEARANCE-04 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-CLEARANCE-05 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-CLEARANCE-06 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-CLEARANCE-07 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-REACCEPT-01 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-REACCEPT-02 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-REACCEPT-03 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-REACCEPT-04 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-RPC-01 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-RPC-02 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-RPC-03 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-ADMIN-01 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-ADMIN-02 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-ADMIN-03 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-ADMIN-04 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-MIDDLEWARE-01 | Phase 30 | ✅ Complete (Done ✓) |
+| LEGAL-MIDDLEWARE-02 | Phase 30 | ✅ Complete (Done ✓) |
 | SEC-01 | Phase 24-26 | ✅ Complete (F24 RLS, F26 admin) |
 | SEC-02 | Phase 25-26 | ✅ Complete (F25 pipeline, F26 admin) |
 | SEC-03 | Phase 25 | ✅ Complete (F25 sanitized inputs) |

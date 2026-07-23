@@ -3,21 +3,21 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: "Lançamento Externo Controlado — Créditos + Admin + Saldo + Observabilidade + Launch"
 status: active
-last_updated: "2026-07-23T12:00:00.000Z"
-last_activity: "2026-07-23T12:00:00.000Z"
+last_updated: "2026-07-23T19:12:00.000Z"
+last_activity: "2026-07-23T19:12:00.000Z"
 progress:
-  total_phases: 13
-  completed_phases: 11
-  total_plans: 49
-  completed_plans: 39
-  percent: 80
+  total_phases: 14
+  completed_phases: 12
+  total_plans: 55
+  completed_plans: 45
+  percent: 82
 ---
 
 # Project State
 
 **Last updated:** 2026-07-23
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆
-**Current phase:** 30 — Fundação Legal △ (Planning)
+**Current phase:** 30 — Fundação Legal ✅ (Complete)
 
 ## Completed
 
@@ -421,7 +421,22 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-v1.5 em progresso — Fase 29.3 concluída. Planejando F30 (Fundação Legal).
+v1.5 em progresso — Fase 30 concluída. Fundação Legal implementada.
+
+### Phase 30 — Fundação Legal ✅
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 30-01 | 1 | ✅ | Migrations (6) + Legal Documents Drafts (3) |
+| 30-02 | 2 | ✅ | Core Library — Types, Document Versions, Privacy, Consent, Acceptance, Clearance |
+| 30-03 | 3 | ✅ | Public Pages (/termos, /privacidade, /uso-aceitavel) + API Routes (4) + Signup/Onboarding Legal Checkboxes |
+| 30-04 | 4 | ✅ | Pipeline Guards + Re-aceite Flow |
+| 30-05 | 5 | ✅ | Account Legal Status + Admin Legal Badges |
+| 30-06 | 6 | ✅ | Testes e Verificação — 24+ novos, 1018 total |
+
+**Tests:** 1018 passing (125 files, 24+ novos)
+**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
+**Commits:** a2b0873, e2de329, d355268, cfdd788, 9439e9f, 9ab90dc
 
 ### Next Phases
 
@@ -432,7 +447,7 @@ v1.5 em progresso — Fase 29.3 concluída. Planejando F30 (Fundação Legal).
 | F29.1.1 | ✅ Completed | Créditos na Assinatura Visual — VS consome créditos, remove cota fixa de 3, UAT 15/15 ✅ |
 | F29.1.2 | ✅ Completed | Histórico Curto + Assinatura Visual — HistoryModal reescrito (3 plans, 943 testes) |
 | F29.3 | ✅ Completed | Créditos Mensais Automáticos — Buckets bônus/compra, grant mensal, Vercel Cron (4 plans, 987 testes) |
-| F30 | △ Planning | Fundação Legal — Documentos, ciência/aceite, clearance, re-aceite, admin |
+| F30 | ✅ Completed | Fundação Legal — 6 migrations, 5 services, 3 public pages, 4 API routes, pipeline guards, re-aceite, admin badges, 24+ testes |
 | F31/v1.7 | ○ Future | Stripe / Monetização Pública (pós-beta) |
 
 ### Quick Tasks Completed

@@ -2,7 +2,7 @@
 
 ## Milestone v1.5 — Lançamento Externo Controlado
 
-**10 phases** | **52 requirements mapped** | All covered ✓
+**11 phases** | **95 requirements mapped** | All covered ✓
 
 **Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23.
 
@@ -22,6 +22,7 @@
 | 29.1.1 | ✅ Créditos na Assinatura Visual | VS passa a consumir créditos, remove cota fixa de 3 tentativas | CRED-03, CRED-04, CRED-05, OPS-05 | 4 ✅ |
 | 29.1.2 | ✅ Histórico Curto + Assinatura Visual | HistoryModal reescrito com paginação, filtro client-side, ações condicionais e ponte ApprovalModal | — | 3 ✅ |
 | 29.3 | ✅ Créditos Mensais Automáticos | Buckets bônus/compra, concessão automática via Vercel Cron, fallback admin | MONTHLY-01–10 | 10 ✅ |
+| 30 | ✅ Fundação Legal | Documentos legais, ciência/aceite contratual, clearance no pipeline, re-aceite, consentimento LGPD, admin badges | LEGAL-* | 43 ✅ |
 
 ---
 
@@ -333,4 +334,4 @@ Phase 24 (Credit Tables + CreditService) ──┘
 
 *Roadmap created: 2026-07-15*
 *Milestone: v1.5 — Lançamento Externo Controlado*
-*Last updated: 2026-07-22 — Phase 29.3 completed — Créditos Mensais Automáticos*
+*Last updated: 2026-07-23 — Phase 30 completed — Fundação Legal*
