@@ -19,7 +19,7 @@ V1.5 está completa com 987+ testes passando — o Vendeo está tecnicamente pro
 **O que esta fase entrega:**
 - 3 documentos legais draft (Termos de Uso, Política de Privacidade LGPD, Uso Aceitável) com ressalva de revisão jurídica
 - Páginas públicas `/termos`, `/privacidade`, `/uso-aceitavel`
-- 5 novas migrations: `legal_document_versions`, `privacy_acknowledgements`, `legal_acceptances`, `user_consent_events`, seed v1.0
+- 6 novas migrations: `legal_document_versions`, `privacy_acknowledgements`, `legal_acceptances`, `user_consent_events`, `legal_helpers`, seed v1.0
 - Módulo `src/lib/legal/` com services de privacy, clearance, acceptance, consent, document versions
 - Duas camadas: ciência de privacidade no signup + aceite contratual no onboarding
 - `requireLegalClearance()` — guard central no pipeline e VS
@@ -176,11 +176,20 @@ RPC `create_store_with_legal_acceptance()` encapsula tudo em uma transação:
 
 Substitui a RPC existente `create_store_with_initial_grant`.
 
-### D11 — POST /api/legal/acknowledge-privacy: versão resolvida server-side
+### D11 — POST /api/legal/acknowledge-privacy: diferido para primeiro acesso autenticado
 
 `DECIDIDO`
 
-O client NÃO envia version string. O endpoint resolve via `getCurrentVersion("privacy_policy")`. Após signup bem-sucedido, chama-se o endpoint com `{ communicationsOptIn: boolean }`. O resultado do endpoint NÃO bloqueia o redirect (anti-enumeration). Se falhar, o erro é logado e na próxima access pós-login, se não houver `privacy_acknowledgements` válido, o sistema notifica o usuário.
+O client NÃO envia version string. O endpoint resolve via `getCurrentVersion("privacy_policy")`.
+
+**Fluxo atualizado (pós-revisão):** No momento do signup, o usuário não tem sessão JWT (redirect para /check-email). Portanto:
+1. Após signup bem-sucedido, o client salva `{ privacyAcknowledged: true, communicationsOptIn: boolean }` em `sessionStorage`
+2. **Não chama o endpoint agora** — não há sessão autenticada
+3. No primeiro acesso autenticado pós-confirmação de email, verifica `sessionStorage` e chama `POST /api/legal/acknowledge-privacy` COM sessão JWT
+4. `requireUser()` extrai `userId` de `claims.sub` — endpoint NÃO aceita `userId` do client body (previne spoofing)
+5. Se o endpoint falhar, a pendência permanece e o sistema notifica o usuário
+
+**Recovery rule:** Se o usuário chegar sem pendência em `sessionStorage` mas `hasValidPrivacyAcknowledgement(userId)` retornar false, o sistema exibe notificação de pendência de privacidade antes de permitir onboarding/criação de loja.
 
 </decisions>
 
@@ -231,15 +240,22 @@ src/lib/legal/
 
 ### Migrações (ordem)
 
-1. `20260723000001_create_legal_document_versions.sql` — tabela + funções auxiliares + seed
-2. `20260723000002_create_privacy_acknowledgements.sql` — tabela + RLS
-3. `20260723000003_create_legal_acceptances.sql` — tabela + RLS + RPC create_store_with_legal_acceptance
-4. `20260723000004_create_user_consent_events.sql` — tabela append-only + RLS
-5. `20260723000005_seed_legal_document_versions_v1.sql` — INSERT v1.0 dos 3 documentos
+1. `20260723000001_create_legal_document_versions.sql` — tabela `legal_document_versions`
+2. `20260723000002_create_privacy_acknowledgements.sql` — tabela `privacy_acknowledgements` + RLS
+3. `20260723000003_create_legal_acceptances.sql` — tabela `legal_acceptances` + RLS + RPC `create_store_with_legal_acceptance`
+4. `20260723000004_create_user_consent_events.sql` — tabela append-only `user_consent_events` + RLS
+5. `20260723000005_create_legal_helpers.sql` — funções SQL `has_valid_acceptance` e `has_valid_privacy_acknowledgement` (após tabelas existirem)
+6. `20260723000006_seed_legal_document_versions_v1.sql` — INSERT v1.0 dos 3 documentos
 
 ### Regra de recovery de privacy acknowledgement
 
-Se o POST /api/legal/acknowledge-privacy falhar após signup (rede, timeout), o usuário tem conta mas sem trilha legal. Na próxima access pós-login, se `hasValidPrivacyAcknowledgement(userId)` retornar false, o sistema deve mostrar notificação pendente antes de permitir onboarding/criação de loja.
+O POST /api/legal/acknowledge-privacy é chamado no primeiro acesso autenticado pós-confirmação de email, não durante o signup. Isso elimina o race condition de sessão inexistente.
+
+**Dois cenários de recovery:**
+1. **sessionStorage presente:** se a chamada ao endpoint falhar (rede, timeout), o `sessionStorage` persiste a intenção e o sistema notifica o usuário: "Pendência de privacidade — confirme sua ciência da Política de Privacidade para continuar"
+2. **sessionStorage ausente mas pendência real:** se o usuário chegou sem sessionStorage (e.g., outro dispositivo, limpeza) mas `hasValidPrivacyAcknowledgement(userId)` retorna false, o sistema exibe notificação de pendência antes de permitir onboarding/criação de loja
+
+**Onde a recovery roda:** um client component no app shell (`src/components/legal/privacy-recovery.tsx`) verifica ambos os cenários e é renderizado pelo layout autenticado `src/app/(app)/layout.tsx`.
 
 </specifics>
 
