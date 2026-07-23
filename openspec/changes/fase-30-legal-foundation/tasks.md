@@ -113,7 +113,7 @@
 
 ## 20. Testes — Signup + Onboarding Integration
 
-- [ ] 20.1 Criar testes de integração: signup sem ciência bloqueado, signup com ciência cria conta + privacy_acknowledgements, signup com opt-in registra consentimento, onboarding sem aceite bloqueado, onboarding com aceite → RPC atômica completa, legal_acceptances com source='onboarding'
+- [ ] 20.1 Criar testes de integração: signup sem ciência bloqueado, signup com ciência salva pendência em sessionStorage (não chama POST sem sessão), signup com opt-in salva communicationsOptIn em sessionStorage, primeiro acesso autenticado com pendência → POST /api/legal/acknowledge-privacy registra privacy_acknowledgements + consentimento, onboarding sem aceite bloqueado, onboarding com aceite → RPC atômica completa, legal_acceptances com source='onboarding'
 
 ## 21. Testes — Re-aceite
 

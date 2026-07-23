@@ -9,7 +9,7 @@ V1.5 está completa com 987+ testes passando — o Vendeo está tecnicamente pro
 - **6 novas migrations**: `legal_document_versions`, `privacy_acknowledgements`, `legal_acceptances`, `user_consent_events`, `legal_helpers` (funções SQL após tabelas), `seed_legal_document_versions_v1`
 - **Seed v1.0** dos documentos legais na tabela `legal_document_versions`
 - **Duas camadas jurídicas**: ciência de privacidade no signup (`privacy_acknowledgements`) + aceite contratual no onboarding (`legal_acceptances`)
-- **Checkbox obrigatório** "Declaro ciência da Política de Privacidade" no formulário de signup
+- **Checkbox obrigatório** "Declaro ciência da Política de Privacidade" no formulário de signup (pendência salva em sessionStorage, registrada no primeiro acesso autenticado via `privacy-recovery.tsx`)
 - **Checkbox opcional** "Aceito receber comunicações comerciais" no signup (consentimento LGPD destacável)
 - **Checkbox obrigatório** "Li e aceito os Termos de Uso e a Política de Uso Aceitável" no formulário de criação de loja
 - **`requireLegalClearance(capability)`** — guard central que verifica aceite contratual vigente antes de liberar funcionalidades protegidas (content_generation)
@@ -39,7 +39,7 @@ V1.5 está completa com 987+ testes passando — o Vendeo está tecnicamente pro
 - `store-onboarding`: Formulário `store-identity-form.tsx` ganha checkbox de aceite contratual (visível apenas na criação)
 - `auth-signup`: Formulário `signup-form.tsx` ganha 2 checkboxes (ciência de privacidade obrigatório + consentimento comunicações opcional)
 - `campaign-generate`: Rota `POST /api/campaign/generate-image` passa a verificar `requireLegalClearance({ capability: "content_generation" })` antes de rate limit e saldo check
-- `visual-signature`: Modal de aprovação de assinatura visual ganha verificação `requireLegalClearance()` no início
+- `visual-signature`: API `POST .../generate-without-logo` aplica `requireLegalClearance()` como guarda autoritativa; modal consulta `GET /api/legal/status` para UX de bloqueio
 - `admin-operations`: Página `/admin/users/[id]` ganha cards de status de ciência, consentimento e aceite
 - `user-account`: Página `/conta` ganha seção de status legal e toggle de consentimento comercial
 - `store-api`: Rota `POST /api/store` substitui RPC existente pela nova `create_store_with_legal_acceptance` com parâmetros de versão, IP e UA
@@ -47,7 +47,7 @@ V1.5 está completa com 987+ testes passando — o Vendeo está tecnicamente pro
 ## Impact
 
 - **Documentos novos:** 3 drafts legais em `docs/legal/`
-- **5 novas migrations** em `supabase/migrations/` (4 tabelas + 1 seed)
+- **6 novas migrations** em `supabase/migrations/` (4 tabelas + 1 helpers + 1 seed)
 - **Módulo `src/lib/legal/`** com 6 arquivos de service + 5 arquivos de teste
 - **Arquivos novos:** 7 páginas/rotas (termos, privacidade, uso-aceitavel, re-aceite + 4 API routes)
 - **5 formulários modificados** (signup, store-identity, generate-image, VS approval, conta)

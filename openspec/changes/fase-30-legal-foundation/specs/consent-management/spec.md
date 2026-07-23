@@ -97,10 +97,18 @@ The communications consent checkbox in the signup form SHALL:
 - **WHEN** user does NOT check the communications consent checkbox
 - **THEN** signup SHALL proceed normally
 
-#### Scenario: Consent opt-in is recorded during signup
+#### Scenario: Consent opt-in is saved to sessionStorage on signup
 
 - **WHEN** user checks the communications consent checkbox during signup
-- **THEN** a `granted` event SHALL be recorded via `recordConsentEvent()`
+- **THEN** `sessionStorage` SHALL contain `communicationsOptIn: true`
+- **AND** no `user_consent_events` SHALL be recorded yet (no JWT session)
+
+#### Scenario: Consent opt-in is recorded on first authenticated access
+
+- **WHEN** the privacy-recovery component processes the pending acknowledgement on first authenticated access
+- **AND** `communicationsOptIn` is true in `sessionStorage`
+- **THEN** `POST /api/legal/acknowledge-privacy` SHALL include `communicationsOptIn: true`
+- **AND** a `granted` event SHALL be recorded via `recordConsentEvent()`
 
 #### Scenario: Consent can be revoked from account page
 

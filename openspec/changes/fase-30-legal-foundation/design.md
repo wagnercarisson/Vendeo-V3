@@ -9,7 +9,7 @@ A v1.5 está completa com 987+ testes passando — o Vendeo está tecnicamente p
 **Goals:**
 - 3 documentos legais draft em `docs/legal/` (Termos de Uso, Política de Privacidade, Uso Aceitável) com ressalva de revisão jurídica pendente
 - Páginas públicas `/termos`, `/privacidade`, `/uso-aceitavel` sem auth
-- 4 novas migrations: `legal_document_versions`, `privacy_acknowledgements`, `legal_acceptances`, `user_consent_events` + seed v1.0
+- 6 migrations: `legal_document_versions`, `privacy_acknowledgements`, `legal_acceptances`, `user_consent_events`, `legal_helpers` (funções SQL após tabelas), seed v1.0
 - Módulo `src/lib/legal/` com services de privacy, clearance, acceptance, consent, document versions
 - Duas camadas: ciência de privacidade no signup (`privacy_acknowledgements`) + aceite contratual no onboarding (`legal_acceptances`)
 - `requireLegalClearance({ capability: "content_generation" })` — guard central no pipeline e VS
@@ -113,7 +113,7 @@ Tabela `legal_document_versions` com `document_type`, `version`, `effective_at`.
 **No onboarding** (formulário de criação da loja, antes do botão salvar):
 - ☐ "Li e aceito os Termos de Uso e a Política de Uso Aceitável." — **obrigatório** | Links para `/termos` e `/uso-aceitavel`
 
-Após signup bem-sucedido: `INSERT INTO privacy_acknowledgements` + opcional `user_consent_events`. Após loja criada: `INSERT INTO legal_acceptances` para ambos os documentos com `source='onboarding'`.
+Após signup bem-sucedido: salva `{ privacyAcknowledged: true, communicationsOptIn: boolean }` em `sessionStorage` — NÃO insere direto porque não há sessão JWT (redirect para /check-email). No primeiro acesso autenticado pós-confirmação, `privacy-recovery.tsx` chama `POST /api/legal/acknowledge-privacy` (com `requireUser()`, userId de `claims.sub`) que registra `privacy_acknowledgements` + opcionalmente `user_consent_events`. Após loja criada: `INSERT INTO legal_acceptances` para ambos os documentos com `source='onboarding'`.
 
 ### D6 — LGPD: Política de Privacidade informa bases legais; consentimento separado
 
