@@ -14,6 +14,7 @@ import { requireSameOrigin } from '@/lib/auth/csrf';
 import { apiHandler } from '@/lib/auth/api-handler';
 import { getLaunchConfig } from '@/lib/launch-config/config';
 import { CreditService } from '@/lib/credit/credit-service';
+import { requireLegalClearance } from '@/lib/legal/clearance';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -53,9 +54,28 @@ export const POST = apiHandler(async (
 
   requireSameOrigin(request);
   const { id } = await params;
-  await requireAuthorizedStore(id);
+  const authUser = await requireAuthorizedStore(id);
   const reqId = ++requestCounter;
   console.log(`[generate-without-logo][req-${reqId}] request recebido`, { storeId: id });
+
+  // ── Legal clearance check ────────────────────────────────────────
+  const clearance = await requireLegalClearance({
+    storeId: id,
+    userId: authUser.userId,
+    capability: "content_generation",
+  });
+
+  if (!clearance.ok) {
+    return NextResponse.json(
+      {
+        error: { message: "Ação bloqueada por pendência legal." },
+        reason: clearance.reason,
+        requiredDocuments: clearance.requiredDocuments,
+        acceptUrl: "/legal/reaccept",
+      },
+      { status: 403 },
+    );
+  }
 
   if (!UUID_REGEX.test(id)) {
     console.log(`[generate-without-logo][req-${reqId}] UUID inválido`);

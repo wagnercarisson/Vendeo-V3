@@ -25,6 +25,7 @@ import { isRetryableError } from "@/lib/copy/errors";
 import { getLaunchConfig } from "@/lib/launch-config/config";
 import { logPipelineEvent } from "@/lib/logging/pipeline-logger";
 import { estimateAiCost } from "@/lib/ai-cost";
+import { requireLegalClearance } from "@/lib/legal/clearance";
 
 export const runtime = "nodejs";
 
@@ -117,6 +118,27 @@ export const POST = apiHandler(async (request: NextRequest) => {
   // ── Auth & Ownership: requireSameOrigin já executou acima ─────────
   const user = await requireApiUser();
   await requireOwnership(parsed.data.storeId, user.userId);
+
+  // ── Pre-stream: Legal clearance check ────────────────────────────
+  const clearance = await requireLegalClearance({
+    storeId: parsed.data.storeId,
+    userId: user.userId,
+    capability: "content_generation",
+  });
+
+  if (!clearance.ok) {
+    return Response.json(
+      {
+        error: {
+          message: "Ação bloqueada por pendência legal.",
+          reason: clearance.reason,
+          requiredDocuments: clearance.requiredDocuments,
+          acceptUrl: "/legal/reaccept",
+        },
+      },
+      { status: 403 },
+    );
+  }
 
   // ── Pre-stream: Resolve store identity (backend-side) ────────────
   const { storeId, ...campaignInput } = parsed.data;

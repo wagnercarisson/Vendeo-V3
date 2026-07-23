@@ -112,6 +112,24 @@ export function VisualSignatureApprovalModal({
       console.log('[VisualSignatureApprovalModal] generate() SKIPPED — concurrent call blocked');
       return;
     }
+
+    // UX-level legal clearance check
+    try {
+      const legalRes = await fetch('/api/legal/status');
+      if (legalRes.ok) {
+        const legalStatus = await legalRes.json();
+        if (legalStatus.acceptanceStatus && legalStatus.acceptanceStatus !== 'current') {
+          setState({
+            phase: "error",
+            message: "Ação bloqueada por pendência legal. Aceite a nova versão dos documentos para continuar.",
+          });
+          return;
+        }
+      }
+    } catch {
+      // Silently fall through — server-side guard is the authoritative one
+    }
+
     isGeneratingRef.current = true;
     const reqId = ++requestSeqRef.current;
 
