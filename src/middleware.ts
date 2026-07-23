@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const PUBLIC_ROUTES = new Set([
   "/login", "/signup", "/check-email", "/forgot-password",
+  "/termos", "/privacidade", "/uso-aceitavel",
 ]);
 
 const ALWAYS_PASSTHROUGH = new Set(["/auth/confirm"]);
@@ -87,5 +88,7 @@ export const config = {
     "/conta",
     "/admin/:path*",
     "/api/:path*",
+    "/(termos|privacidade|uso-aceitavel)",
+    "/legal/:path*",
   ],
 };

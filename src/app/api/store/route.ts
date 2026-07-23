@@ -6,6 +6,7 @@ import { requireSameOrigin } from "@/lib/auth/csrf";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { buildStoreResponse } from "@/lib/store-response";
 import { STORE_SEGMENTS, STORE_SUBSEGMENTS } from "@/lib/constants";
+import { getCurrentVersion } from "@/lib/legal/document-versions";
 
 const GENERIC_SUBSEGMENT_VALUES = ["outro", "loja", "comercio", "comércio", "varejo"];
 
@@ -36,7 +37,14 @@ export const POST = apiHandler(async (request: NextRequest) => {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const { name, segment, city, state, brand_color, logo_url, subsegment, tone_of_voice, positioning, short_description, slogan } = body as Record<string, unknown>;
+    const { name, segment, city, state, brand_color, logo_url, subsegment, tone_of_voice, positioning, short_description, slogan, acceptedTerms } = body as Record<string, unknown>;
+
+    if (!acceptedTerms) {
+      return NextResponse.json(
+        { error: "Você precisa aceitar os Termos de Uso e a Política de Uso Aceitável." },
+        { status: 400 }
+      );
+    }
 
     if (!name || typeof name !== "string" || name.trim().length < 2 || name.trim().length > 60) {
       return NextResponse.json(
@@ -83,12 +91,34 @@ export const POST = apiHandler(async (request: NextRequest) => {
       return NextResponse.json({ error: "Subsegmento obrigatório para segmento outros" }, { status: 400 });
     }
 
-    const { data, error } = await supabase.rpc("create_store_with_initial_grant", {
+    // Resolve current legal document versions server-side (no version spoofing)
+    const termsVersion = await getCurrentVersion("terms_of_service");
+    const aupVersion = await getCurrentVersion("acceptable_use");
+
+    if (!termsVersion || !aupVersion) {
+      return NextResponse.json(
+        { error: "Documentos legais não publicados. Tente novamente mais tarde." },
+        { status: 500 }
+      );
+    }
+
+    const ipAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+      ?? request.headers.get("x-real-ip")
+      ?? "unknown";
+
+    const userAgent = request.headers.get("user-agent") ?? "unknown";
+
+    const { data, error } = await supabase.rpc("create_store_with_legal_acceptance", {
+      p_user_id: user.userId,
       p_name: (name as string).trim(),
       p_segment: segment as string,
-      p_user_id: user.userId,
       p_city: typeof city === "string" ? city : null,
       p_state: typeof state === "string" ? state : null,
+      p_accepted_by_user_id: user.userId,
+      p_terms_version: termsVersion.version,
+      p_acceptable_use_version: aupVersion.version,
+      p_ip_address: ipAddress,
+      p_user_agent: userAgent,
       p_brand_color: typeof brand_color === "string" ? brand_color : null,
       p_logo_url: typeof logo_url === "string" ? logo_url : null,
       p_subsegment: effectiveSubsegment,

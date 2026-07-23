@@ -28,7 +28,7 @@ export type FormMode = "create" | "edit";
 export interface UseStoreFormReturn {
   formData: FormData;
   setField: (field: keyof FormData, value: string) => void;
-  save: () => Promise<{ storeId: string } | void>;
+  save: (acceptedTerms?: boolean) => Promise<{ storeId: string } | void>;
   isLoading: boolean;
   isSaving: boolean;
   error: string | null;
@@ -177,13 +177,13 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
     setWarningMessage(null);
   }, []);
 
-  const save = useCallback(async () => {
+  const save = useCallback(async (acceptedTerms?: boolean) => {
     setError(null);
     setSuccessMessage(null);
     setIsSaving(true);
 
     try {
-      const body: Record<string, string | null> = {
+      const body: Record<string, string | null | boolean> = {
         name: formData.name.trim(),
         segment: formData.segment,
         city: toNull(formData.city),
@@ -195,6 +195,10 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
         short_description: toNull(formData.short_description),
         slogan: toNull(formData.slogan),
       };
+
+      if (!storeId && acceptedTerms) {
+        body.acceptedTerms = true;
+      }
 
       let res: Response;
 

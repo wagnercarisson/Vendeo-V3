@@ -111,6 +111,8 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
   const [pendingNavUrl, setPendingNavUrl] = useState('');
   const [showRemoveLogoDialog, setShowRemoveLogoDialog] = useState(false);
   const [driftRefreshKey, setDriftRefreshKey] = useState(0);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedTermsError, setAcceptedTermsError] = useState<string | null>(null);
   const [inferredProfile, setInferredProfile] = useState<{
     safe_color_tokens?: Record<string, string>;
     visual_style?: string;
@@ -824,6 +826,7 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
 
   const handleStep1Submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAcceptedTermsError(null);
     const nameErr = validateName(formData.name);
     const segmentErr = validateSegment(formData.segment);
     const errors: FieldErrors = {};
@@ -838,7 +841,12 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
     setTouched({ name: true, segment: true, subsegment: !!errors.subsegment });
     if (Object.keys(errors).length > 0) return;
 
-    const saved = await save();
+    if (!storeId && !acceptedTerms) {
+      setAcceptedTermsError("Você precisa aceitar os Termos de Uso e a Política de Uso Aceitável.");
+      return;
+    }
+
+    const saved = await save(acceptedTerms || undefined);
     if (saved || storeId) {
       setDriftRefreshKey(k => k + 1);
       setStep(2);
@@ -1147,6 +1155,35 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
               </div>
             </div>
           </div>
+
+          {!storeId && (
+            <div className="pt-4 border-t border-border">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => { setAcceptedTerms(e.target.checked); setAcceptedTermsError(null); }}
+                  className="mt-1 h-4 w-4 rounded border-border-light bg-bg-surface text-accent-blue focus:ring-accent-blue/20"
+                />
+                <span className="text-sm text-text-secondary">
+                  Li e aceito os{" "}
+                  <a href="/termos" target="_blank" rel="noopener noreferrer" className="text-accent-blue underline hover:text-accent-blue/80">
+                    Termos de Uso
+                  </a>{" "}
+                  e a{" "}
+                  <a href="/uso-aceitavel" target="_blank" rel="noopener noreferrer" className="text-accent-blue underline hover:text-accent-blue/80">
+                    Política de Uso Aceitável
+                  </a>.
+                </span>
+              </label>
+              {acceptedTermsError && (
+                <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  {acceptedTermsError}
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="flex items-center justify-between pt-2">
             {false && (
