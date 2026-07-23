@@ -3,6 +3,9 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { CreditService } from "@/lib/credit/credit-service";
 import { StoreCreationForm } from "./store-creation-form";
 import { CreditGrantForm } from "./credit-grant-form";
+import { hasValidPrivacyAcknowledgement } from "@/lib/legal/privacy";
+import { getEffectiveConsent } from "@/lib/legal/consent";
+import { getAcceptanceStatus, getStoreAcceptanceHistory } from "@/lib/legal/acceptance-service";
 
 const creditService = new CreditService();
 
@@ -29,9 +32,28 @@ export default async function AdminUserDetailPage({
   let history: unknown[] = [];
   let campaigns: unknown[] = [];
 
+  // Legal status
+  const privacyAcknowledged = await hasValidPrivacyAcknowledgement(userId);
+  const communicationsConsent = await getEffectiveConsent(userId, "commercial_communications");
+  let legalAcceptanceStatus: "current" | "outdated" | "never" | null = null;
+  let acceptanceHistory: Record<string, unknown>[] = [];
+
   if (storeId) {
     balance = await creditService.getBalance(storeId);
     history = await creditService.getHistory(storeId);
+
+    const termsStatus = await getAcceptanceStatus(storeId, "terms_of_service");
+    const aupStatus = await getAcceptanceStatus(storeId, "acceptable_use");
+
+    if (termsStatus === "current" && aupStatus === "current") {
+      legalAcceptanceStatus = "current";
+    } else if (termsStatus === "never" && aupStatus === "never") {
+      legalAcceptanceStatus = "never";
+    } else {
+      legalAcceptanceStatus = "outdated";
+    }
+
+    acceptanceHistory = await getStoreAcceptanceHistory(storeId);
 
     const { data: campData } = await supabaseAdmin
       .from("campaigns")
@@ -72,6 +94,74 @@ export default async function AdminUserDetailPage({
               <dt className="text-muted-foreground">Saldo</dt>
               <dd className="font-semibold">{balance} créditos</dd>
             </dl>
+          </div>
+
+          <div className="rounded-md border border-border bg-bg-surface p-4">
+            <h2 className="text-lg font-semibold mb-3">Situação Legal</h2>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Privacidade</span>
+                <span className={`text-sm font-medium ${privacyAcknowledged ? "text-accent-green" : "text-accent-red"}`}>
+                  {privacyAcknowledged ? "✅ Ciente" : "❌ Não registrado"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Aceite Contratual</span>
+                <span className={`text-sm font-medium ${
+                  legalAcceptanceStatus === "current" ? "text-accent-green"
+                  : legalAcceptanceStatus === "outdated" ? "text-accent-amber"
+                  : "text-text-muted"
+                }`}>
+                  {legalAcceptanceStatus === "current" ? "✅ Vigente"
+                    : legalAcceptanceStatus === "outdated" ? "⏳ Pendente"
+                    : "❌ Nunca aceitou"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Consentimento</span>
+                <span className={`text-sm font-medium ${
+                  communicationsConsent === "granted" ? "text-accent-green"
+                  : communicationsConsent === "revoked" ? "text-accent-amber"
+                  : "text-text-muted"
+                }`}>
+                  {communicationsConsent === "granted" ? "✅ Consentimento ativo"
+                    : communicationsConsent === "revoked" ? "⏳ Consentimento revogado"
+                    : "❌ Nunca definido"}
+                </span>
+              </div>
+            </div>
+
+            {acceptanceHistory.length > 0 && (
+              <div className="mt-4">
+                <h3 className="text-sm font-semibold mb-2">Histórico de Aceitação</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="px-2 py-1 text-left">Documento</th>
+                        <th className="px-2 py-1 text-left">Versão</th>
+                        <th className="px-2 py-1 text-right">Data</th>
+                        <th className="px-2 py-1 text-left">Origem</th>
+                        <th className="px-2 py-1 text-left">IP</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(acceptanceHistory as Array<Record<string, unknown>>).map((entry) => (
+                        <tr key={entry.id as string} className="border-t">
+                          <td className="px-2 py-1">{entry.document_type as string}</td>
+                          <td className="px-2 py-1">{entry.document_version as string}</td>
+                          <td className="px-2 py-1 text-right text-xs">
+                            {new Date(entry.accepted_at as string).toLocaleString("pt-BR")}
+                          </td>
+                          <td className="px-2 py-1">{entry.acceptance_source as string}</td>
+                          <td className="px-2 py-1 text-xs font-mono">{entry.ip_address as string}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="rounded-md border border-border bg-bg-surface p-4">

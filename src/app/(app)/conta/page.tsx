@@ -8,7 +8,8 @@ import { TransactionHistory } from "@/components/credit/transaction-history";
 import { getCurrentStore } from "@/lib/auth/store-ownership";
 import { CreditService } from "@/lib/credit/credit-service";
 import { createServerClient } from "@/lib/supabase/server";
-import { User, Coins, Key, LogOut, MessageCircle } from "lucide-react";
+import { LegalStatusSection } from "@/components/legal/legal-status-section";
+import { User, Coins, Key, LogOut, MessageCircle, Shield } from "lucide-react";
 
 export default async function ContaPage({
   searchParams,
@@ -112,6 +113,8 @@ export default async function ContaPage({
             </Link>
           </div>
         </Card>
+
+        <LegalStatusSection storeId={store?.id ?? null} />
 
         <Card>
           <div className="p-5 space-y-4">
