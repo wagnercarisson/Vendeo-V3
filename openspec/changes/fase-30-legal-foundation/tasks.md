@@ -1,12 +1,12 @@
-## 1. Migrations — Legal Tables + Seed
+## 1. Migrations — Legal Tables + Helpers + Seed
 
-- [ ] 1.1 Criar `supabase/migrations/20260723000001_create_legal_document_versions.sql`: tabela com document_type, version, published_at, effective_at, summary; UNIQUE(document_type, version); CHECK document_type IN ('terms_of_service', 'privacy_policy', 'acceptable_use')
+- [ ] 1.1 Criar `supabase/migrations/20260723000001_create_legal_document_versions.sql`: tabela com document_type, version, published_at, effective_at, summary; UNIQUE(document_type, version); CHECK document_type IN ('terms_of_service', 'privacy_policy', 'acceptable_use'); NÃO criar funções auxiliares aqui (as tabelas que elas consultam ainda não existem)
 - [ ] 1.2 Criar `supabase/migrations/20260723000002_create_privacy_acknowledgements.sql`: tabela com PK user_id, privacy_policy_version, acknowledged_at, ip_address, user_agent; RLS habilitado; policy INSERT/UPDATE service role, SELECT own
-- [ ] 1.3 Criar `supabase/migrations/20260723000003_create_legal_acceptances.sql`: tabela com id, store_id FK, accepted_by_user_id FK, document_type CHECK, document_version, accepted_at, ip_address, user_agent, acceptance_source CHECK; UNIQUE(store_id, accepted_by_user_id, document_type, document_version); RLS habilitado
+- [ ] 1.3 Criar `supabase/migrations/20260723000003_create_legal_acceptances.sql`: tabela com id, store_id FK, accepted_by_user_id FK, document_type CHECK, document_version, accepted_at, ip_address, user_agent, acceptance_source CHECK; UNIQUE(store_id, accepted_by_user_id, document_type, document_version); RLS habilitado; RPC `create_store_with_legal_acceptance` com REVOKE/GRANT EXECUTE TO service_role
 - [ ] 1.4 Criar `supabase/migrations/20260723000004_create_user_consent_events.sql`: tabela append-only com id, user_id, consent_type CHECK, action CHECK (granted/revoked), occurred_at, policy_version, ip_address, user_agent, source CHECK; RLS habilitado; CREATE INDEX idx_user_consent_events_user
-- [ ] 1.5 Criar `supabase/migrations/20260723000005_seed_legal_document_versions_v1.sql`: INSERT v1.0 de terms_of_service, privacy_policy, acceptable_use com summaries
-- [ ] 1.6 Criar funções auxiliares SQL na migration 1.1 ou migration separada: `has_valid_acceptance(store_id, document_type)` e `has_valid_privacy_acknowledgement(user_id)`
-- [ ] 1.7 Executar migrations localmente e verificar schema: tabelas existem, constraints, RLS ativo, seed populado
+- [ ] 1.5 Criar `supabase/migrations/20260723000005_create_legal_helpers.sql`: funções SQL `has_valid_acceptance(store_id, document_type)` e `has_valid_privacy_acknowledgement(user_id)` — migration separada APÓS todas as tabelas (00001-00004) porque ambas consultam tabelas que só existem após as migrations anteriores
+- [ ] 1.6 Criar `supabase/migrations/20260723000006_seed_legal_document_versions_v1.sql`: INSERT v1.0 de terms_of_service, privacy_policy, acceptable_use com summaries (após helpers)
+- [ ] 1.7 Executar migrations localmente e verificar schema: tabelas existem, constraints, RLS ativo, funções compilam, seed populado
 
 ## 2. Legal Document Drafts — docs/legal/
 
@@ -45,8 +45,9 @@
 
 - [ ] 7.1 Modificar `src/app/(auth)/signup/signup-form.tsx`: adicionar checkbox obrigatório "Declaro ciência da Política de Privacidade" com link para /privacidade; validar no submit; bloquear se não marcado
 - [ ] 7.2 Adicionar checkbox opcional "Aceito receber comunicações comerciais do Vendeo" com link; separado visualmente; não bloqueante
-- [ ] 7.3 Após signup bem-sucedido: chamar POST /api/legal/acknowledge-privacy com `{ communicationsOptIn: boolean }` (versão da política resolvida server-side)
-- [ ] 7.4 O endpoint POST /api/legal/acknowledge-privacy resolve a versão vigente e registra privacy_acknowledgements + opcionalmente user_consent_events
+- [ ] 7.3 Após signup bem-sucedido: salvar `{ privacyAcknowledged: true, communicationsOptIn: boolean }` em `sessionStorage` — NÃO chamar POST /api/legal/acknowledge-privacy agora (não há sessão JWT)
+- [ ] 7.4 Criar `src/components/legal/privacy-recovery.tsx`: client component que renderiza no layout autenticado, verifica sessionStorage no primeiro acesso, chama POST /api/legal/acknowledge-privacy COM sessão JWT (requireUser extrai userId de claims.sub)
+- [ ] 7.5 O endpoint POST /api/legal/acknowledge-privacy resolve a versão vigente, exige requireUser(), userId de claims.sub (nunca do body), registra privacy_acknowledgements + opcionalmente user_consent_events
 
 ## 8. Store Identity Form — Acceptance Checkbox
 
@@ -61,8 +62,12 @@
 
 ## 10. Visual Signature Guard — requireLegalClearance no VS
 
-- [ ] 10.1 Modificar `src/components/flow/visual-signature-approval-modal.tsx`: adicionar verificação `requireLegalClearance({ capability: "content_generation" })` no início do fluxo de geração
-- [ ] 10.2 Se clearance falhar: exibir estado de bloqueio com link para /legal/reaccept; não chamar geração
+**Nota:** `visual-signature-approval-modal.tsx` é `"use client"` — não pode chamar `requireLegalClearance` diretamente (usa supabaseAdmin/service role). O guard é aplicado em duas camadas:
+
+- [ ] 10.1 **Camada autoritativa (API route):** Modificar `src/app/api/store/[id]/visual-signature/generate-without-logo/route.ts` — adicionar `requireLegalClearance({ storeId, userId, capability: "content_generation" })` ANTES de qualquer operação de geração. Se clearance falhar, retornar HTTP 403 com JSON padronizado (message, reason, requiredDocuments, acceptUrl)
+- [ ] 10.2 **Camada UX (client):** Modificar `src/components/flow/visual-signature-approval-modal.tsx` — consultar `GET /api/legal/status` ANTES de iniciar o fluxo de geração. Se `acceptanceStatus !== "current"`, exibir estado de bloqueio com mensagem e link para `/legal/reaccept`; não prosseguir com geração
+- [ ] 10.3 Se clearance falhar na API (camada 1): retornar 403 antes de qualquer operação paga
+- [ ] 10.4 Se clearance falhar no client (camada 2): exibir estado de bloqueio com link para /legal/reaccept; não chamar API de geração
 
 ## 11. Re-aceite Flow — /legal/reaccept
 

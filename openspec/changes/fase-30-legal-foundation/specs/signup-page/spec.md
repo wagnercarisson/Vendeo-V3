@@ -19,29 +19,54 @@ The signup form SHALL be a client component with three fields: email, password, 
   - Separate and visually distinct from the privacy checkbox
   - Does NOT block signup if unchecked
   - Backed by LGPD consent (art. 7º, I)
-- MUST call a **server-side endpoint** (`POST /api/legal/acknowledge-privacy`) after `supabase.auth.signUp()` returns, passing only `communicationsOptIn: boolean` — the privacy version SHALL be resolved server-side by the endpoint
-- The endpoint SHALL run on the server after `signUp` completes, resolving the current privacy version via `getCurrentVersion("privacy_policy")` and using the server-side Supabase admin client to:
-  1. Verify the user session exists (user was created)
-  2. Register `privacy_acknowledgements` via `registerPrivacyAcknowledgement()` with the resolved version
-  3. Register `user_consent_events` via `recordConsentEvent()` if communications opt-in
-- The endpoint SHALL be called after `signUp` but before the redirect — the client MUST await the server call; if it fails, the redirect still happens (anti-enumeration preserved) but the error SHALL be logged server-side
-- The legal registration is best-effort after signup (the auth user was already created by Supabase Auth, and legal audit trail is critical). If the server call fails, the account exists but without legal trail — this is a monitored error, not a blocker
-- **Recovery rule:** On next access after login, if the user has no valid `privacy_acknowledgements`, the system SHALL show a pending notification requiring acknowledgement before proceeding to onboarding/store creation
+- **FLUXO ATUALIZADO (pós-revisão):** No momento do signup o usuário NÃO tem sessão JWT (redirect para /check-email). Portanto:
+  - Após `supabase.auth.signUp()` bem-sucedido, o client salva `{ privacyAcknowledged: true, communicationsOptIn: boolean }` em `sessionStorage`
+  - O client NÃO chama o endpoint agora — não há sessão autenticada
+  - Redireciona para `/check-email` (comportamento existente, inalterado)
+- No primeiro acesso autenticado pós-confirmação de email:
+  - O componente `src/components/legal/privacy-recovery.tsx` verifica `sessionStorage`
+  - Se existir pendência, chama `POST /api/legal/acknowledge-privacy` com `{ communicationsOptIn: boolean }`
+  - `userId` é extraído do JWT via `requireUser()` no servidor — NUNCA aceito do client body (previne spoofing)
+  - Se o endpoint falhar, exibe notificação "Pendência de privacidade" com link para re-tentar
+- **O endpoint (`POST /api/legal/acknowledge-privacy`):**
+  - Exige `requireUser()` — userId de `claims.sub`
+  - Resolve a versão vigente server-side via `getCurrentVersion("privacy_policy")`
+  - Registra `privacy_acknowledgements` via `registerPrivacyAcknowledgement()` com versão resolvida
+  - Se `communicationsOptIn`, registra `user_consent_events` via `recordConsentEvent()`
+  - Usa `supabaseAdmin` (service role)
+- **Recovery rule:** Se o usuário chegar sem sessionStorage mas `hasValidPrivacyAcknowledgement(userId)` retornar false, o sistema exibe notificação de pendência de privacidade antes de permitir onboarding
 
 #### Scenario: Signup without privacy acknowledgement is blocked
 
 - **WHEN** user submits the signup form without checking the privacy acknowledgement checkbox
 - **THEN** the form SHALL display an error and NOT submit
 
-#### Scenario: Signup with privacy acknowledgement calls server endpoint
+#### Scenario: Signup with privacy acknowledgement saves to sessionStorage
 
 - **WHEN** user submits the signup form with the privacy acknowledgement checkbox checked
 - **THEN** the form SHALL submit to Supabase Auth
-- **AND** after `signUp` completes, `POST /api/legal/acknowledge-privacy` SHALL be called from the client with `{ communicationsOptIn: boolean }` (version resolved server-side)
-- **AND** the redirect to `/check-email` SHALL occur regardless of the server call result (anti-enumeration preserved)
+- **AND** after `signUp` completes, `{ privacyAcknowledged: true, communicationsOptIn: boolean }` SHALL be saved to `sessionStorage`
+- **AND** `POST /api/legal/acknowledge-privacy` SHALL NOT be called (no JWT session exists)
+- **AND** the redirect to `/check-email` SHALL occur (existing behavior, unchanged)
+
+#### Scenario: On first authenticated access, pending privacy is processed
+
+- **WHEN** the user accesses the app for the first time after email confirmation
+- **AND** `sessionStorage` contains a pending privacy acknowledgement
+- **THEN** `POST /api/legal/acknowledge-privacy` SHALL be called with `{ communicationsOptIn: boolean }`
+- **AND** `userId` SHALL be derived from `requireUser()` (not from client body)
+- **AND** if the call succeeds, the privacy acknowledgement SHALL be registered
+
+#### Scenario: First authenticated access without sessionStorage but no privacy record
+
+- **WHEN** the user accesses the app after email confirmation
+- **AND** `sessionStorage` has no pending privacy acknowledgement
+- **AND** `hasValidPrivacyAcknowledgement(userId)` returns false
+- **THEN** the system SHALL display a pending notification requiring acknowledgement
 
 #### Scenario: Communications consent does not block signup
 
 - **WHEN** user submits the signup form without checking communications consent
 - **THEN** the form SHALL submit successfully (no error for this checkbox)
-- **AND** `POST /api/legal/acknowledge-privacy` SHALL NOT register a communications consent event
+- **AND** `sessionStorage` SHALL contain `communicationsOptIn: false`
+- **AND** on first authenticated access, `POST /api/legal/acknowledge-privacy` SHALL NOT register a communications consent event

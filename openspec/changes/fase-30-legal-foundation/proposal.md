@@ -6,7 +6,7 @@ V1.5 está completa com 987+ testes passando — o Vendeo está tecnicamente pro
 
 - **Documentos legais draft** em `docs/legal/` — Termos de Uso v1.0, Política de Privacidade v1.0 (LGPD), Uso Aceitável v1.0 (com ressalva de revisão jurídica pendente)
 - **Páginas públicas** `/termos`, `/privacidade`, `/uso-aceitavel` — renderizadas a partir do conteúdo versionado
-- **5 novas migrations**: `legal_document_versions`, `privacy_acknowledgements`, `legal_acceptances`, `user_consent_events`, `seed_legal_document_versions_v1`
+- **6 novas migrations**: `legal_document_versions`, `privacy_acknowledgements`, `legal_acceptances`, `user_consent_events`, `legal_helpers` (funções SQL após tabelas), `seed_legal_document_versions_v1`
 - **Seed v1.0** dos documentos legais na tabela `legal_document_versions`
 - **Duas camadas jurídicas**: ciência de privacidade no signup (`privacy_acknowledgements`) + aceite contratual no onboarding (`legal_acceptances`)
 - **Checkbox obrigatório** "Declaro ciência da Política de Privacidade" no formulário de signup
