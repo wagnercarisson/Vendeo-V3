@@ -26,6 +26,8 @@ export function ContractAcceptanceModal({
   const [checked, setChecked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [documentsLoaded, setDocumentsLoaded] = useState<Record<string, boolean>>({});
+  const [documentsError, setDocumentsError] = useState<Record<string, boolean>>({});
 
   if (!open) return null;
 
@@ -44,6 +46,18 @@ export function ContractAcceptanceModal({
       setSubmitting(false);
     }
   };
+
+  const handleDocumentLoad = (label: string, success: boolean) => {
+    setDocumentsLoaded((prev) => ({ ...prev, [label]: success }));
+    if (!success) {
+      setDocumentsError((prev) => ({ ...prev, [label]: true }));
+    }
+  };
+
+  const allLoaded = contractDocuments.length > 0
+    && contractDocuments.every((d) => documentsLoaded[d.label] === true);
+
+  const anyError = contractDocuments.some((d) => documentsError[d.label] === true);
 
   const handleClose = () => {
     if (submitting) return;
@@ -98,6 +112,7 @@ export function ContractAcceptanceModal({
                 url={doc.url}
                 title={doc.label}
                 version={doc.version}
+                onLoad={(success) => handleDocumentLoad(doc.label, success)}
               />
             </section>
           ))}
@@ -138,7 +153,7 @@ export function ContractAcceptanceModal({
             <button
               type="button"
               onClick={handleConfirm}
-              disabled={!checked || submitting}
+              disabled={!checked || submitting || !allLoaded}
               className="flex-1 px-4 py-2.5 bg-accent-blue text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {submitting ? (

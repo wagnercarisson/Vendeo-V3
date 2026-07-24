@@ -7,9 +7,10 @@ interface LegalDocumentViewerProps {
   url: string;
   title: string;
   version: string;
+  onLoad?: (success: boolean) => void;
 }
 
-export function LegalDocumentViewer({ url, title, version }: LegalDocumentViewerProps) {
+export function LegalDocumentViewer({ url, title, version, onLoad }: LegalDocumentViewerProps) {
   const [content, setContent] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -29,17 +30,19 @@ export function LegalDocumentViewer({ url, title, version }: LegalDocumentViewer
         if (!cancelled) {
           setContent(text);
           setLoading(false);
+          onLoad?.(true);
         }
       })
       .catch(() => {
         if (!cancelled) {
           setError(true);
           setLoading(false);
+          onLoad?.(false);
         }
       });
 
     return () => { cancelled = true; };
-  }, [url]);
+  }, [url, onLoad]);
 
   if (loading) {
     return (

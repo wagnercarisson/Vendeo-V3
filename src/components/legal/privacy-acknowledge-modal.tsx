@@ -93,6 +93,7 @@ export function PrivacyAcknowledgeModal({
             url={policyDocument.url}
             title={policyDocument.label}
             version={policyDocument.version}
+            onLoad={handleDocumentLoad}
           />
         </div>
 
@@ -131,7 +132,7 @@ export function PrivacyAcknowledgeModal({
             <button
               type="button"
               onClick={handleConfirm}
-              disabled={!checked || submitting}
+              disabled={!checked || submitting || !documentLoaded}
               className="flex-1 px-4 py-2.5 bg-accent-blue text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {submitting ? (
