@@ -11,7 +11,7 @@
 
 O Vendeo é o controlador dos dados pessoais tratados no âmbito da Plataforma.
 
-Dúvidas sobre esta Política podem ser enviadas para: [email de suporte do Vendeo]
+Dúvidas sobre esta Política podem ser enviadas para: <suporte@vendeo.tech>
 
 ## 2. Dados Coletados
 
