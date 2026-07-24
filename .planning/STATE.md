@@ -1,23 +1,23 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.5
-milestone_name: "Lançamento Externo Controlado — Créditos + Admin + Saldo + Observabilidade + Launch"
+milestone: v1.6
+milestone_name: "Modelo Comercial — Roteamento por intenção comercial"
 status: active
-last_updated: "2026-07-24T15:57:00.000Z"
-last_activity: "2026-07-24T15:57:00.000Z"
+last_updated: "2026-07-24T18:46:00.000Z"
+last_activity: "2026-07-24T18:46:00.000Z"
 progress:
-  total_phases: 14
-  completed_phases: 12
-  total_plans: 55
-  completed_plans: 45
-  percent: 82
+  total_phases: 1
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
-**Last updated:** 2026-07-23
-**Milestone:** v1.5 — Lançamento Externo Controlado ◆
-**Current phase:** 30 — Fundação Legal ✅ (Complete)
+**Last updated:** 2026-07-24
+**Milestone:** v1.6 — Modelo Comercial ◆
+**Current phase:** 31.1 — Modelo Comercial — Formulário ◆ (Planning)
 
 ## Completed
 
@@ -421,7 +421,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-v1.5 em progresso — Fase 30 concluída. Fundação Legal implementada.
+v1.5 concluída. Iniciando v1.6 — Modelo Comercial com Phase 31.1.
 
 ### Phase 30 — Fundação Legal ✅
 
@@ -448,6 +448,9 @@ v1.5 em progresso — Fase 30 concluída. Fundação Legal implementada.
 | F29.1.2 | ✅ Completed | Histórico Curto + Assinatura Visual — HistoryModal reescrito (3 plans, 943 testes) |
 | F29.3 | ✅ Completed | Créditos Mensais Automáticos — Buckets bônus/compra, grant mensal, Vercel Cron (4 plans, 987 testes) |
 | F30 | ✅ Completed | Fundação Legal — 6 migrations, 5 services, 3 public pages, 4 API routes, pipeline guards, re-aceite, admin badges, 24+ testes |
+| **F31.1** | **◆ Planned** | **Modelo Comercial — Formulário — CampaignIntent type, inferência, seletor, badge-by-intent, preserveImageContext, pipeline guard** |
+| F31.2 | ○ Future | Modelo Comercial — Prompts (modificar diretores de IA por intent) |
+| F31.3 | ○ Future | Modelo Comercial — Testes de comportamento por intent |
 | F31/v1.7 | ○ Future | Stripe / Monetização Pública (pós-beta) |
 
 ### Quick Tasks Completed

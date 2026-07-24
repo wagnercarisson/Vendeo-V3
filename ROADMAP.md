@@ -1,6 +1,6 @@
 # Vendeo — Roadmap
 
-> Milestones: **Contas e Propriedade** (v1.2 ✓) | **Persistência e Entrega da Campanha** (v1.3 ✓) | **Experiência SaaS** (v1.4 ✓) | **Lançamento Externo Controlado** (v1.5 ◆) | **Monetização Pública** (v1.7 △)
+> Milestones: **Contas e Propriedade** (v1.2 ✓) | **Persistência e Entrega da Campanha** (v1.3 ✓) | **Experiência SaaS** (v1.4 ✓) | **Lançamento Externo Controlado** (v1.5 ✓) | **Modelo Comercial** (v1.6 ◆) | **Monetização Pública** (v1.7 △)
 
 ## Milestones
 
@@ -52,7 +52,7 @@ Autenticação completa, vínculo user→store, isolamento multi-tenant, beta.ve
 
 </details>
 
-### 📋 v1.5 — Lançamento Externo Controlado ◆
+### 📋 v1.5 — Lançamento Externo Controlado ✅
 
 Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, UAT externo e fundação legal.
 
@@ -111,6 +111,18 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 
 </details>
 
+### 📋 v1.6 — Modelo Comercial ◆
+
+> Roteamento por intenção comercial — formulário prepara o terreno para múltiplos tipos de campanha (Oferta, Destaque, Exclusivo). Base conceitual para o novo modelo comercial.
+
+- [ ] Phase 31.1: Modelo Comercial — Formulário (planned)
+  - CampaignIntent type (`"offer" | "spotlight" | "exclusive"`)
+  - Inferência automática de intent a partir dos campos de preço
+  - Seletor de intent no formulário com "Em breve" para spotlight/exclusive
+  - Badge options separados por intent
+  - preserveImageContext checkbox (visível apenas em spotlight/exclusive)
+  - Pipeline guard para rejeitar intents não-offer
+
 ### 📋 v1.7 — Monetização Pública △
 
 > Stripe Checkout + Webhook + compra real de créditos. Ativado após validação do beta controlado.
@@ -148,6 +160,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 29.1.2. Histórico Curto + Assinatura Visual | v1.5 | 3/3 | ✅ Complete | 2026-07-22 |
 | 29.3. Créditos Mensais Automáticos | v1.5 | 4/4 | ✅ Complete | 2026-07-22 |
 | 30. Fundação Legal | v1.5 | 6/6 | ✅ Complete | 2026-07-23 |
+| 31.1. Modelo Comercial — Formulário | v1.6 | — | ○ Planned | — |
 
 ---
 

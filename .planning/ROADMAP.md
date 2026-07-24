@@ -1,8 +1,8 @@
 ﻿# Roadmap: Vendeo V3
 
-## Milestone v1.5 — Lançamento Externo Controlado
+## Milestone v1.5 — Lançamento Externo Controlado ✅
 
-**11 phases** | **95 requirements mapped** | All covered ✓
+**12 phases** | **107 requirements mapped** | All covered ✓
 
 **Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23.
 
@@ -23,6 +23,7 @@
 | 29.1.2 | ✅ Histórico Curto + Assinatura Visual | HistoryModal reescrito com paginação, filtro client-side, ações condicionais e ponte ApprovalModal | — | 3 ✅ |
 | 29.3 | ✅ Créditos Mensais Automáticos | Buckets bônus/compra, concessão automática via Vercel Cron, fallback admin | MONTHLY-01–10 | 10 ✅ |
 | 30 | ✅ Fundação Legal | Documentos legais, ciência/aceite contratual, clearance no pipeline, re-aceite, consentimento LGPD, admin badges | LEGAL-* | 43 ✅ |
+| 31.1 | ◆ Modelo Comercial — Formulário | CampaignIntent type, seletor de intent no formulário, inferência automática, badge por intent, pipeline guard | INTENT-01–12 | 12 |
 
 ---
 
@@ -251,22 +252,63 @@
 
 ```
 Phase 23 (TextProvider + Copy Director) ──┐
-                                           ├──▶ Phase 25 (Pipeline v1.5)
+                                            ├──▶ Phase 25 (Pipeline v1.5)
 Phase 24 (Credit Tables + CreditService) ──┘
-                                              │
-                    ┌─────────────────────────┼──────────────────┐
-                    ▼                         ▼                  ▼
-          Phase 26 (Admin Ops)       Phase 27 (UI Saldo)   F30/v1.6 (Stripe)
-                    │                         │              (futuro)
-                    └─────────┬───────────────┘
-                              ▼
-                    Phase 28 (Observability + Ops)
-                              │
-                              ▼
-                    Phase 29 (Refinement + Launch)
+                                               │
+                     ┌─────────────────────────┼──────────────────┐
+                     ▼                         ▼                  ▼
+           Phase 26 (Admin Ops)       Phase 27 (UI Saldo)   Phase 30 (Legal)
+                     │                         │                  │
+                     └─────────┬───────────────┘                  │
+                               ▼                                  │
+                     Phase 28 (Observability + Ops)               │
+                               │                                  │
+                               ▼                                  │
+                     Phase 29 (Refinement + Launch)               │
+                               │                                  │
+                               └──────────┬───────────────────────┘
+                                          ▼
+                               Phase 31.1 (Modelo Comercial — Formulário)
+                                          │
+                                          ▼
+                            (F31.2 — Prompts → F31.3 — Ativação)
 ```
 
-## Coverage Validation
+---
+
+## Milestone v1.6 — Modelo Comercial ◆
+
+**Sub-fases da F31:** Roteamento por intenção comercial — formulário, prompts e ativação.
+
+---
+
+### Phase 31.1 — Modelo Comercial — Formulário ◆
+
+**Goal:** Preparar o formulário de campanha para múltiplas intenções comerciais (Oferta, Destaque, Exclusivo), com schemas, inferência automática e bloqueio de submissão para intents não implementadas.
+
+**Requirements:** INTENT-01, INTENT-02, INTENT-03, INTENT-04, INTENT-05, INTENT-06, INTENT-07, INTENT-08, INTENT-09, INTENT-10, INTENT-11, INTENT-12
+
+**Success criteria:**
+1. CampaignIntent type (`"offer" | "spotlight" | "exclusive"`) definido e exportado
+2. Inferência automática de intent a partir dos campos de preço (DE+POR → offer, só preço → spotlight, nenhum → exclusive)
+3. Seletor de intent (radio group) no formulário entre badge e botão "Criar", com opções filtradas
+4. Spotlight/Exclusive exibem "Em breve" e bloqueiam submit
+5. BADGE_OPTIONS_BY_INTENT com badges separados por intent; badge opcional para spotlight/exclusive
+6. preserveImageContext checkbox (invisível em offer, visível em spotlight/exclusive)
+7. discountedPriceCents opcional no form (number | undefined), required nos schemas do pipeline
+8. Pipeline guard rejeita intents não-offer no pré-stream com HTTP 400
+9. inputSnapshot transporta campaignIntent e preserveImageContext (normalizado para false em offer)
+10. 12+ testes de inferência, validação condicional, badge e preserveImageContext
+11. Nenhuma migration de banco — campos transportados apenas no JSONB inputSnapshot
+12. Regressão completa (1018+ testes existentes continuam passando)
+
+**Dependencies:** Phase 25 (pipeline route generate-image), Phase 27 (form/balance), Phase 30 (legal clearance no pipeline)
+
+**Source of truth:** `openspec/changes/fase-31-1-modelo-comercial-formulario/`
+
+---
+
+## Dependency Graph
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
@@ -291,6 +333,18 @@ Phase 24 (Credit Tables + CreditService) ──┘
 | ADMIN-04 | Phase 26 | Done ✓ |
 | ADMIN-05 | Phase 26 | Done ✓ |
 | ADMIN-06 | Phase 26 | Done ✓ |
+| INTENT-01 | Phase 31.1 | ◆ Planned |
+| INTENT-02 | Phase 31.1 | ◆ Planned |
+| INTENT-03 | Phase 31.1 | ◆ Planned |
+| INTENT-04 | Phase 31.1 | ◆ Planned |
+| INTENT-05 | Phase 31.1 | ◆ Planned |
+| INTENT-06 | Phase 31.1 | ◆ Planned |
+| INTENT-07 | Phase 31.1 | ◆ Planned |
+| INTENT-08 | Phase 31.1 | ◆ Planned |
+| INTENT-09 | Phase 31.1 | ◆ Planned |
+| INTENT-10 | Phase 31.1 | ◆ Planned |
+| INTENT-11 | Phase 31.1 | ◆ Planned |
+| INTENT-12 | Phase 31.1 | ◆ Planned |
 | PAY-01 | Phase 30/v1.6 | Deferred |
 | PAY-02 | Phase 30/v1.6 | Deferred |
 | PAY-03 | Phase 30/v1.6 | Deferred |
@@ -324,14 +378,14 @@ Phase 24 (Credit Tables + CreditService) ──┘
 | SEC-05 | Phase 29 | Done ✓ |
 
 **Coverage:**
-- v1 requirements: 54 total
-- Mapped to phases: 54
-- Completed: 50 (CRED-01–05, PIPE-01–06, ADMIN-01–06, SEC-04, SEC-06, UI-01–06, LAUNCH-01–06, SEC-01–03, SEC-05, OPS-05, MONTHLY-01–10)
+- v1 requirements: 66 total (54 v1.5 + 12 INTENT)
+- Mapped to phases: 66
+- Completed: 62
 - Unmapped: 0 ✓
-- Deferred to v1.6: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06
+- Deferred to v1.7: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06
 
 ---
 
 *Roadmap created: 2026-07-15*
-*Milestone: v1.5 — Lançamento Externo Controlado*
-*Last updated: 2026-07-23 — Phase 30 completed — Fundação Legal*
+*Milestone: v1.6 — Modelo Comercial*
+*Last updated: 2026-07-24 — Phase 31.1 planned — Modelo Comercial Formulário*

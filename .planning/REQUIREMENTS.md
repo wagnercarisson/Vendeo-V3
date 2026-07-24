@@ -160,6 +160,45 @@
 - [ ] **LEGAL-MIDDLEWARE-01**: `/termos`, `/privacidade`, `/uso-aceitavel` como rotas livres de auth
 - [ ] **LEGAL-MIDDLEWARE-02**: `/legal/reaccept` requer auth mas passa pelo middleware
 
+## v1.6 Requirements — Modelo Comercial — Formulário (F31.1)
+
+### Intenção Comercial (INTENT)
+
+- [ ] **INTENT-01**: CampaignIntent type — `"offer" | "spotlight" | "exclusive"` em `src/lib/campaign/types.ts`
+- [ ] **INTENT-02**: InputSnapshot com campos opcionais `campaignIntent?: CampaignIntent` e `preserveImageContext?: boolean`
+- [ ] **INTENT-03**: CampaignGenerationInputSchema com `campaignIntent: z.enum([...]).optional().default("offer")`
+- [ ] **INTENT-04**: GenerateImageRequestSchema com `campaignIntent` (optional, default "offer") e `preserveImageContext` (optional boolean)
+- [ ] **INTENT-05**: BADGE_OPTIONS_BY_INTENT: Record<CampaignIntent, readonly string[]> em `src/lib/constants.ts`
+- [ ] **INTENT-06**: inferIntent(originalPriceCents, discountedPriceCents): CampaignIntent — DE+POR → offer, só preço → spotlight, nenhum → exclusive
+- [ ] **INTENT-07**: Seletor de intent (radio group) no formulário entre badge e botão "Criar", com opções filtradas por intent inferida
+- [ ] **INTENT-08**: Spotlight/Exclusive exibem "Em breve" e bloqueiam submit com tooltip "Disponível em breve"
+- [ ] **INTENT-09**: Badge validation condicional por intent — obrigatório apenas para offer; opcional para spotlight/exclusive
+- [ ] **INTENT-10**: preserveImageContext checkbox — invisível em offer, visível e opcional em spotlight/exclusive
+- [ ] **INTENT-11**: discountedPriceCents opcional (number | undefined) no CampaignFormFields, mantido required nos schemas do pipeline
+- [ ] **INTENT-12**: Pipeline guard — rejeitar intents não-offer no pré-stream com HTTP 400 antes de criar campanha ou consumir crédito
+
+### Testes (INTENT-TEST)
+
+- [ ] **INTENT-TEST-01**: inferIntent com DE+POR → "offer"
+- [ ] **INTENT-TEST-02**: inferIntent com só preço → "spotlight"
+- [ ] **INTENT-TEST-03**: inferIntent sem preço (undefined/null) → "exclusive"
+- [ ] **INTENT-TEST-04**: inferIntent com ambos preços zerados → "exclusive"
+- [ ] **INTENT-TEST-05**: DE+POR com intent spotlight → bloqueado no submit
+- [ ] **INTENT-TEST-06**: Preço original sem preço com desconto → erro (quando intent=offer)
+- [ ] **INTENT-TEST-07**: intent=offer sem badge → erro de validação
+- [ ] **INTENT-TEST-08**: intent=spotlight sem badge → sem erro de validação
+- [ ] **INTENT-TEST-09**: Trocar intent de offer para spotlight limpa badge inválido
+- [ ] **INTENT-TEST-10**: Trocar intent de spotlight para exclusive (badge incompatível) limpa badge
+- [ ] **INTENT-TEST-11**: preserveImageContext invisível em offer
+- [ ] **INTENT-TEST-12**: preserveImageContext visível em spotlight
+- [ ] **INTENT-TEST-13**: preserveImageContext reset ao voltar para offer
+- [ ] **INTENT-TEST-14**: GenerateImageRequestSchema aceita campaignIntent e preserveImageContext opcionais
+- [ ] **INTENT-TEST-15**: GenerateImageRequestSchema mantém discountedPriceCents required
+- [ ] **INTENT-TEST-16**: CampaignGenerationInputSchema default campaignIntent = "offer"
+- [ ] **INTENT-TEST-17**: Request com campaignIntent "spotlight" → HTTP 400
+- [ ] **INTENT-TEST-18**: Request com campaignIntent "exclusive" → HTTP 400
+- [ ] **INTENT-TEST-19**: Request sem campaignIntent → pipeline prossegue (default offer)
+
 ## v1.7 Requirements (Stripe / Monetização Pública)
 
 Deferred from v1.5 critical path. Stripe será implementada como F31/v1.7 após validação do beta controlado.
@@ -245,12 +284,12 @@ Deferred to future release. Tracked but not in current roadmap.
 | OPS-09 | Phase 28 | ✅ Complete |
 | SEC-04 | Phase 26 | ✅ Complete |
 | SEC-06 | Phase 26 | ✅ Complete |
-| LAUNCH-01 | Phase 29 | Planning |
-| LAUNCH-02 | Phase 29 | Planning |
-| LAUNCH-03 | Phase 29 | Planning |
-| LAUNCH-04 | Phase 29 | Planning |
-| LAUNCH-05 | Phase 29 | Planning |
-| LAUNCH-06 | Phase 29 | Planning |
+| LAUNCH-01 | Phase 29 | ✅ Complete |
+| LAUNCH-02 | Phase 29 | ✅ Complete |
+| LAUNCH-03 | Phase 29 | ✅ Complete |
+| LAUNCH-04 | Phase 29 | ✅ Complete |
+| LAUNCH-05 | Phase 29 | ✅ Complete |
+| LAUNCH-06 | Phase 29 | ✅ Complete |
 | LEGAL-DOC-01 | Phase 30 | ✅ Complete (Done ✓) |
 | LEGAL-DOC-02 | Phase 30 | ✅ Complete (Done ✓) |
 | LEGAL-DOC-03 | Phase 30 | ✅ Complete (Done ✓) |
@@ -294,26 +333,39 @@ Deferred to future release. Tracked but not in current roadmap.
 | SEC-02 | Phase 25-26 | ✅ Complete (F25 pipeline, F26 admin) |
 | SEC-03 | Phase 25 | ✅ Complete (F25 sanitized inputs) |
 | SEC-05 | Phase 25 | ✅ Complete (F25 service role) |
-| MONTHLY-01 | Phase 29.3 | △ Planning |
-| MONTHLY-02 | Phase 29.3 | △ Planning |
-| MONTHLY-03 | Phase 29.3 | △ Planning |
-| MONTHLY-04 | Phase 29.3 | △ Planning |
-| MONTHLY-05 | Phase 29.3 | △ Planning |
-| MONTHLY-06 | Phase 29.3 | △ Planning |
-| MONTHLY-07 | Phase 29.3 | △ Planning |
-| MONTHLY-08 | Phase 29.3 | △ Planning |
-| MONTHLY-09 | Phase 29.3 | △ Planning |
-| MONTHLY-10 | Phase 29.3 | △ Planning |
+| MONTHLY-01 | Phase 29.3 | ✅ Complete |
+| MONTHLY-02 | Phase 29.3 | ✅ Complete |
+| MONTHLY-03 | Phase 29.3 | ✅ Complete |
+| MONTHLY-04 | Phase 29.3 | ✅ Complete |
+| MONTHLY-05 | Phase 29.3 | ✅ Complete |
+| MONTHLY-06 | Phase 29.3 | ✅ Complete |
+| MONTHLY-07 | Phase 29.3 | ✅ Complete |
+| MONTHLY-08 | Phase 29.3 | ✅ Complete |
+| MONTHLY-09 | Phase 29.3 | ✅ Complete |
+| MONTHLY-10 | Phase 29.3 | ✅ Complete |
+| INTENT-01 | Phase 31.1 | ◆ Planned |
+| INTENT-02 | Phase 31.1 | ◆ Planned |
+| INTENT-03 | Phase 31.1 | ◆ Planned |
+| INTENT-04 | Phase 31.1 | ◆ Planned |
+| INTENT-05 | Phase 31.1 | ◆ Planned |
+| INTENT-06 | Phase 31.1 | ◆ Planned |
+| INTENT-07 | Phase 31.1 | ◆ Planned |
+| INTENT-08 | Phase 31.1 | ◆ Planned |
+| INTENT-09 | Phase 31.1 | ◆ Planned |
+| INTENT-10 | Phase 31.1 | ◆ Planned |
+| INTENT-11 | Phase 31.1 | ◆ Planned |
+| INTENT-12 | Phase 31.1 | ◆ Planned |
 
 **Coverage:**
-- v1 requirements: 94 total (58 v1.0-v1.4 + 36 LEGAL)
-- Mapped to phases: 90
+- v1 requirements: 123 total (54 v1.5 + 36 LEGAL + 12 INTENT + 21 INTENT-TEST)
+- Mapped to phases: 123
 - Unmapped: 0 ✓
 - Deferred to v1.7: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06
 - F29.1.2: Fase complementar refinando LAUNCH-01 e LAUNCH-02 (sem REQ-IDs próprios)
 - F30 (LEGAL-*): Adicionados em 2026-07-23 via alinhamento com OpenSpec
+- F31.1 (INTENT-*): Adicionados em 2026-07-24 via alinhamento com OpenSpec
 
 ---
 
 *Requirements defined: 2026-07-15*
-*Last updated: 2026-07-22 — Added F29.3 (MONTHLY-01 a MONTHLY-10) requirements*
+*Last updated: 2026-07-24 — Added F31.1 (INTENT-01 a INTENT-12 + INTENT-TEST-01 a 19) requirements*

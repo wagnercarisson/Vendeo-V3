@@ -1,23 +1,31 @@
 # Milestones
 
-## v1.5 — Lançamento Externo Controlado ◆
+## v1.5 — Lançamento Externo Controlado ✅
 
-**Status:** Em andamento
-**Phases:** 8 (F23-F30) | **Plans:** 39/39 (F23-F29.3) + F30 em planejamento
-**Tests:** 987 passing (119 files)
+**Status:** Concluído
+**Phases:** 8 (F23-F30) | **Plans:** 39/39 (F23-F29.3) + F30 (6/6)
+**Tests:** 1018 passing (125 files)
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 
 ### Delivered
 
-Copy Director com IA (F23), pipeline de geração paralelo com créditos (F24-F25), admin operacional (F26), UI de saldo e extrato (F27), observabilidade e launch controls (F28), refinamento visual e UAT externo (F29), créditos mensais automáticos (F29.3), assinatura visual com créditos (F29.1.1-F29.1.2).
+Copy Director com IA (F23), pipeline de geração paralelo com créditos (F24-F25), admin operacional (F26), UI de saldo e extrato (F27), observabilidade e launch controls (F28), refinamento visual e UAT externo (F29), créditos mensais automáticos (F29.3), assinatura visual com créditos (F29.1.1-F29.1.2), fundação legal (F30).
+
+---
+
+## v1.6 — Modelo Comercial ◆
+
+**Status:** Em planejamento
+**Phases:** 1 (F31.1 em planejamento, F31.2-F31.3 futuras)
+**Plans:** 0
 
 ### In Progress
 
-**F30 — Fundação Legal:** Documentos legais (Termos de Uso, Privacidade, Uso Aceitável), sistema de ciência/aceite contratual, guardião legal no pipeline, re-aceite em mudança de versão, consentimento LGPD para comunicações comerciais, badges admin.
+**F31.1 — Modelo Comercial — Formulário:** CampaignIntent type (offer/spotlight/exclusive), inferência automática a partir de preços, seletor de intent no formulário com bloqueio de submissão para spotlight/exclusive, badge options por intent, preserveImageContext checkbox, pipeline guard.
 
 ### Known Gaps
 
-- Stripe / Monetização Pública diferido para v1.7 (F31)
+- Stripe / Monetização Pública diferido para v1.7
 
 ---
 
