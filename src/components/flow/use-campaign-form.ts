@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { BADGE_OPTIONS } from "@/lib/constants";
+import { BADGE_OPTIONS, BADGE_OPTIONS_BY_INTENT } from "@/lib/constants";
 import { formatCurrencyBRL } from "@/lib/formatters";
 import { useInputPreservation } from "@/hooks/use-input-preservation";
 import type { GenerationPhaseEvent } from "@/lib/image-generation/schema";
+import type { CampaignIntent } from "@/lib/campaign/types";
 
 function compressImage(file: File, maxSizeBytes: number = 1024 * 1024): Promise<{ file: File; dataUrl: string }> {
   return new Promise((resolve, reject) => {
@@ -75,8 +76,10 @@ export interface CampaignFormFields {
   productName: string;
   description: string;
   originalPriceCents: number;
-  discountedPriceCents: number;
+  discountedPriceCents: number | undefined;
   badge: string;
+  campaignIntent: CampaignIntent;
+  preserveImageContext: boolean;
   imageFile: File | null;
   mandatoryArtworkText: string;
 }
@@ -88,6 +91,8 @@ export type FieldErrors = Partial<
     | "originalPriceCents"
     | "discountedPriceCents"
     | "badge"
+    | "campaignIntent"
+    | "preserveImageContext"
     | "imageFile"
     | "mandatoryArtworkText",
     string
@@ -104,7 +109,7 @@ export interface UseCampaignFormReturn {
   fields: CampaignFormFields;
   fieldErrors: FieldErrors;
   touched: Record<keyof CampaignFormFields, boolean>;
-  setField: (field: keyof CampaignFormFields, value: string | number | File | null) => void;
+  setField: (field: keyof CampaignFormFields, value: string | number | boolean | File | null | undefined) => void;
   handleBlur: (field: keyof CampaignFormFields) => void;
   displayPriceOriginal: string;
   displayPriceDiscounted: string;
@@ -129,8 +134,10 @@ const EMPTY_FIELDS: CampaignFormFields = {
   productName: "",
   description: "",
   originalPriceCents: 0,
-  discountedPriceCents: 0,
+  discountedPriceCents: undefined,
   badge: "",
+  campaignIntent: "offer",
+  preserveImageContext: false,
   imageFile: null,
   mandatoryArtworkText: "",
 };
@@ -142,21 +149,26 @@ function validateProductName(value: string): string | null {
   return null;
 }
 
-function validateDiscountedPrice(value: number): string | null {
-  if (value <= 0) return "Preço deve ser maior que zero";
+function validateDiscountedPrice(value: number | undefined, fields?: Pick<CampaignFormFields, "campaignIntent">): string | null {
+  const intent = fields?.campaignIntent ?? "offer";
+  if (intent !== "offer") return null;
+  if ((value ?? 0) <= 0) return "Preço com desconto é obrigatório para ofertas";
   return null;
 }
 
 function validateOriginalPrice(value: number, discounted: number): string | null {
-  if (value > 0 && value <= discounted) {
+    if (value > 0 && value <= discounted) {
     return "Preço com desconto deve ser menor que o preço original";
   }
   return null;
 }
 
-function validateBadge(value: string): string | null {
-  if (!value || !BADGE_OPTIONS.includes(value as (typeof BADGE_OPTIONS)[number])) {
-    return "Selecione um badge promocional";
+function validateBadge(value: string, fields?: Pick<CampaignFormFields, "campaignIntent">): string | null {
+  const intent = fields?.campaignIntent ?? "offer";
+  if (value === "" && intent !== "offer") return null;
+  if (value === "" && intent === "offer") return "Selecione um badge promocional";
+  if (!BADGE_OPTIONS_BY_INTENT[intent].includes(value)) {
+    return "Badge inválido para esta intenção comercial";
   }
   return null;
 }
@@ -181,16 +193,28 @@ function validateField(
     case "productName":
       return validateProductName(fields.productName);
     case "discountedPriceCents":
-      return validateDiscountedPrice(fields.discountedPriceCents);
+      return validateDiscountedPrice(fields.discountedPriceCents, fields);
     case "originalPriceCents":
-      return validateOriginalPrice(fields.originalPriceCents, fields.discountedPriceCents);
+      return validateOriginalPrice(fields.originalPriceCents, fields.discountedPriceCents ?? 0);
     case "badge":
-      return validateBadge(fields.badge);
+      return validateBadge(fields.badge, fields);
     case "imageFile":
       return validateImage(fields.imageFile);
     default:
       return null;
   }
+}
+
+export function inferIntent(
+  originalPriceCents: number,
+  discountedPriceCents: number | undefined | null
+): CampaignIntent {
+  const hasOriginal = originalPriceCents > 0;
+  const hasDiscounted = (discountedPriceCents ?? 0) > 0;
+
+  if (hasOriginal && hasDiscounted) return "offer";
+  if (hasDiscounted) return "spotlight";
+  return "exclusive";
 }
 
 export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
@@ -202,6 +226,8 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     originalPriceCents: false,
     discountedPriceCents: false,
     badge: false,
+    campaignIntent: false,
+    preserveImageContext: false,
     imageFile: false,
     mandatoryArtworkText: false,
   });
@@ -218,6 +244,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
   const router = useRouter();
   const { saveFormState, restoreFormState, clearFormState } = useInputPreservation<CampaignFormFields>();
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const userChangedIntent = useRef(false);
   const IMAGE_DRAFT_KEY = "campaign_draft_image";
   const [restoredImageDataUrl, setRestoredImageDataUrl] = useState<string | null>(null);
 
@@ -231,7 +258,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
       if (saved.originalPriceCents > 0) {
         setRawOriginalPrice(String(saved.originalPriceCents));
       }
-      if (saved.discountedPriceCents > 0) {
+      if ((saved.discountedPriceCents ?? 0) > 0) {
         setRawDiscountedPrice(String(saved.discountedPriceCents));
       }
       // Restore image data URL from separate key
@@ -252,7 +279,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
       clearTimeout(autoSaveTimer.current);
     }
     autoSaveTimer.current = setTimeout(() => {
-      const hasData = fields.productName || fields.discountedPriceCents > 0 || fields.badge || fields.imageFile;
+      const hasData = fields.productName || (fields.discountedPriceCents ?? 0) > 0 || fields.badge || fields.imageFile;
       if (hasData) {
         saveFormState(fields);
       }
@@ -265,10 +292,32 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     };
   }, [fields, saveFormState]);
 
+  // Intent inference — observe price changes to auto-detect campaign intent
+  useEffect(() => {
+    const inferred = inferIntent(fields.originalPriceCents, fields.discountedPriceCents);
+
+    if (userChangedIntent.current) {
+      const availableOptions: CampaignIntent[] =
+        inferred === "offer" ? ["offer"] :
+        fields.discountedPriceCents !== undefined && (fields.discountedPriceCents ?? 0) > 0 ? ["offer", "spotlight"] :
+        ["spotlight", "exclusive"];
+
+      if (!availableOptions.includes(fields.campaignIntent)) {
+        setFields((prev) => ({ ...prev, campaignIntent: inferred, preserveImageContext: false }));
+        userChangedIntent.current = false;
+      }
+      return;
+    }
+
+    if (inferred !== fields.campaignIntent) {
+      setFields((prev) => ({ ...prev, campaignIntent: inferred }));
+    }
+  }, [fields.originalPriceCents, fields.discountedPriceCents]);
+
   const displayPriceOriginal =
     rawOriginalPrice === "" ? "" : formatCurrencyBRL(fields.originalPriceCents);
   const displayPriceDiscounted =
-    rawDiscountedPrice === "" ? "" : formatCurrencyBRL(fields.discountedPriceCents);
+    rawDiscountedPrice === "" ? "" : formatCurrencyBRL(fields.discountedPriceCents ?? 0);
 
   useEffect(() => {
     const currentFile = fields.imageFile;
@@ -308,11 +357,17 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
   }, [fields.imageFile, restoredImageDataUrl]);
 
   const setField = useCallback(
-    (field: keyof CampaignFormFields, value: string | number | File | null) => {
-      setFields((prev) => ({ ...prev, [field]: value }));
-      if (field === "imageFile") {
-        setRestoredImageDataUrl(null);
-      }
+    (field: keyof CampaignFormFields, value: string | number | boolean | File | null | undefined) => {
+      setFields((prev) => {
+        const next = { ...prev, [field]: value as never };
+        if (field === "campaignIntent") {
+          userChangedIntent.current = true;
+        }
+        if (field === "imageFile") {
+          setRestoredImageDataUrl(null);
+        }
+        return next;
+      });
     },
     []
   );
@@ -350,7 +405,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
       const digits = inputValue.replace(/\D/g, "");
       const normalized = digits.replace(/^0+/, "");
       setRawDiscountedPrice(normalized);
-      const cents = normalized === "" ? 0 : parseInt(normalized, 10);
+      const cents = normalized === "" ? undefined : parseInt(normalized, 10);
       setFields((prev) => ({ ...prev, discountedPriceCents: cents }));
     },
     []
@@ -480,6 +535,12 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
   }
 
   const handleSubmit = useCallback(async () => {
+    if (fields.campaignIntent !== "offer") {
+      setSubmitError("Disponível em breve");
+      setIsSubmitting(false);
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitError(null);
     setFieldErrors({});
@@ -492,6 +553,8 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
       "discountedPriceCents",
       "originalPriceCents",
       "badge",
+      "campaignIntent",
+      "preserveImageContext",
       "imageFile",
       "mandatoryArtworkText",
     ];
@@ -513,6 +576,8 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
         originalPriceCents: true,
         discountedPriceCents: true,
         badge: true,
+        campaignIntent: true,
+        preserveImageContext: true,
         imageFile: true,
         mandatoryArtworkText: true,
       });
@@ -548,6 +613,10 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
         discountedPriceCents: frozenFields.discountedPriceCents,
         description: frozenFields.description || undefined,
         badgeText: frozenFields.badge,
+        campaignIntent: frozenFields.campaignIntent,
+        ...(frozenFields.campaignIntent === "offer"
+          ? {}
+          : { preserveImageContext: frozenFields.preserveImageContext }),
         mandatoryArtworkText: frozenFields.mandatoryArtworkText || undefined,
         productImageDataUrl: imageDataUrl,
       };
@@ -604,11 +673,17 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
   }, []);
 
   const trimmed = fields.productName.trim();
+  const badgeValid = fields.campaignIntent === "offer"
+    ? fields.badge !== "" && BADGE_OPTIONS_BY_INTENT[fields.campaignIntent].includes(fields.badge)
+    : fields.badge === "" || BADGE_OPTIONS_BY_INTENT[fields.campaignIntent].includes(fields.badge);
+  const priceValid = fields.campaignIntent === "offer"
+    ? (fields.discountedPriceCents ?? 0) > 0
+    : true;
   const isValid =
+    fields.campaignIntent === "offer" &&
     trimmed !== "" &&
-    fields.discountedPriceCents > 0 &&
-    fields.badge !== "" &&
-    BADGE_OPTIONS.includes(fields.badge as (typeof BADGE_OPTIONS)[number]) &&
+    priceValid &&
+    badgeValid &&
     (fields.imageFile instanceof File || !!restoredImageDataUrl);
 
   return {
@@ -636,3 +711,5 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     onPhaseChange,
   };
 }
+
+export { validateDiscountedPrice, validateBadge };
