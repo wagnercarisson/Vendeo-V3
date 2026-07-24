@@ -21,8 +21,10 @@ import path from "node:path";
 import { loadEnvConfig } from "@next/env";
 import type { BenchmarkScenario } from "./benchmark-scenarios";
 
+
 // NOTE: src/ imports are dynamic (inside runBenchmark) so we can set env vars
 // before the config module evaluates IMAGE_GENERATION_RESPONSES_MODEL.
+
 
 // ─── CLI argument parsing ──────────────────────────────────────────────────
 
@@ -345,6 +347,7 @@ async function runBenchmark(): Promise<void> {
         validity: scenario.campaign.validity,
         targetChannel: scenario.campaign.targetChannel,
         format: scenario.campaign.format,
+        campaignIntent: "offer",
         productImageDataUrl: imageDataUrl,
       },
       store: {
@@ -369,7 +372,7 @@ async function runBenchmark(): Promise<void> {
     let result: BenchmarkResult;
 
     try {
-      const generationResult = await service.generateImage(brief);
+      const generationResult = await service.generateImage(brief as any);
       const duration = Date.now() - scenarioStart;
 
       if (generationResult.success) {

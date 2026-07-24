@@ -1,3 +1,5 @@
+export type CampaignIntent = "offer" | "spotlight" | "exclusive";
+
 export type CampaignStatus = "generating" | "ready" | "error";
 
 export interface CampaignRecord {
@@ -46,7 +48,9 @@ export interface InputSnapshot {
   availabilityNotes?: string;
   sensitiveConstraints?: string;
   inputValidationOverride?: string;
+  campaignIntent?: CampaignIntent;
   productImage: { provided: true; mimeType: string };
+  preserveImageContext?: boolean;
 }
 
 export interface IdentitySnapshot {

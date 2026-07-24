@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { CampaignIntent } from "@/lib/campaign/types";
 
 // ─── Campaign Generation Input ─────────────────────────────────────────────
 // Input received from the campaign form. `brandColor` is the RESOLVED hex
@@ -15,6 +16,10 @@ export const CampaignGenerationInputSchema = z.object({
     .number()
     .int("Preço com desconto deve ser um número inteiro")
     .positive("Preço com desconto deve ser positivo"),
+  campaignIntent: z
+    .enum(["offer", "spotlight", "exclusive"])
+    .optional()
+    .default("offer"),
   description: z.string().optional(),
   badge: z.string().optional(),
   storeName: z.string().min(1, "Nome da loja é obrigatório"),

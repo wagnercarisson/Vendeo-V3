@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { CampaignIntent } from "@/lib/campaign/types";
 
 // ─── Generate Image Request ───────────────────────────────────────────────
 // Input received from POST /api/campaign/generate-image.
@@ -9,6 +10,11 @@ export const GenerateImageRequestSchema = z.object({
   productName: z.string().min(1),
   originalPriceCents: z.number().int().nonnegative().optional(),
   discountedPriceCents: z.number().int().positive(),
+  campaignIntent: z
+    .enum(["offer", "spotlight", "exclusive"])
+    .optional()
+    .default("offer"),
+  preserveImageContext: z.boolean().optional(),
   badgeText: z.string().optional(),
   hook: z.string().optional(),
   cta: z.string().optional(),

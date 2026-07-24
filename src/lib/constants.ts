@@ -157,12 +157,37 @@ export const IDENTITY_TO_LOGO_STATUS: Record<IdentityState, string | null> = {
   'visual_signature': 'generated',
 };
 
-export const BADGE_OPTIONS = [
-  "Oferta",
+import type { CampaignIntent } from "@/lib/campaign/types";
+
+const BADGE_OPTIONS_OFFER = [
   "Promoção",
+  "Oferta",
   "Queima de Estoque",
-  "Novidade",
   "Últimas Unidades",
+  "Imperdível",
 ] as const;
+
+const BADGE_OPTIONS_SPOTLIGHT = [
+  "Novidade",
+  "Lançamento",
+  "Mais Vendido",
+  "Top de Linha",
+  "Destaque da Semana",
+] as const;
+
+const BADGE_OPTIONS_EXCLUSIVE = [
+  "Exclusivo",
+  "Premium",
+  "Sob Encomenda",
+  "Edição Limitada",
+] as const;
+
+export const BADGE_OPTIONS_BY_INTENT: Record<CampaignIntent, readonly string[]> = {
+  offer: BADGE_OPTIONS_OFFER,
+  spotlight: BADGE_OPTIONS_SPOTLIGHT,
+  exclusive: BADGE_OPTIONS_EXCLUSIVE,
+};
+
+export const BADGE_OPTIONS = BADGE_OPTIONS_OFFER;
 
 export type BadgeOption = (typeof BADGE_OPTIONS)[number];

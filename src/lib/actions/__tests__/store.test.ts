@@ -60,6 +60,7 @@ const mockStore = (overrides: Partial<Pick<Store, 'id' | 'name' | 'segment' | 'b
 const mockCampaignInput: CampaignInput = {
   productName: 'Produto Teste',
   discountedPriceCents: 1990,
+  campaignIntent: 'offer',
   productImageDataUrl: 'data:image/jpeg;base64,abc123',
 };
 
@@ -258,6 +259,7 @@ describe('buildCampaignBrief', () => {
     const minimalInput: CampaignInput = {
       productName: 'Teste',
       discountedPriceCents: 990,
+      campaignIntent: 'offer',
       productImageDataUrl: 'data:image/png;base64,xyz',
     };
     const snapshot = baseSnapshot({ identityState: 'text_only' });

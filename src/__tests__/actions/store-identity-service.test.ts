@@ -101,6 +101,7 @@ describe("buildCampaignBrief", () => {
       productName: "Produto X",
       originalPriceCents: 10000,
       discountedPriceCents: 7999,
+      campaignIntent: "offer" as const,
       productImageDataUrl: "",
     });
 
