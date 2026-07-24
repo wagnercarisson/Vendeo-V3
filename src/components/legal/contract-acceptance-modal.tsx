@@ -2,21 +2,26 @@
 
 import { ExternalLink, Loader2, Check } from "lucide-react";
 import { useState } from "react";
+import { LegalDocumentViewer } from "./legal-document-viewer";
+
+interface ContractDocumentInfo {
+  label: string;
+  version: string;
+  url: string;
+}
 
 interface ContractAcceptanceModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => Promise<boolean>;
-  termsVersion?: string;
-  aupVersion?: string;
+  contractDocuments: ContractDocumentInfo[];
 }
 
 export function ContractAcceptanceModal({
   open,
   onOpenChange,
   onConfirm,
-  termsVersion,
-  aupVersion,
+  contractDocuments,
 }: ContractAcceptanceModalProps) {
   const [checked, setChecked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -47,6 +52,10 @@ export function ContractAcceptanceModal({
     onOpenChange(false);
   };
 
+  const checkboxText = contractDocuments
+    .map((d) => `${d.label} ${d.version}`)
+    .join(" e a ");
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
@@ -61,97 +70,37 @@ export function ContractAcceptanceModal({
           <h2 className="text-lg font-heading font-bold text-text-primary">
             Termos de Uso e Política de Uso Aceitável
           </h2>
-          {(termsVersion || aupVersion) && (
-            <p className="text-xs text-text-muted mt-1">
-              {termsVersion && <>Termos: v{termsVersion}</>}
-              {termsVersion && aupVersion && <> &mdash; </>}
-              {aupVersion && <>Uso Aceitável: v{aupVersion}</>}
-            </p>
-          )}
+          <p className="text-xs text-text-muted mt-1 space-x-2">
+            {contractDocuments.map((d) => (
+              <span key={d.label}>{d.label}: {d.version}</span>
+            ))}
+          </p>
         </div>
 
         {/* Content */}
-        <div className="px-6 py-4 overflow-y-auto space-y-5 text-sm text-text-secondary font-body flex-1">
-          <div className="flex flex-wrap gap-x-4 gap-y-2">
-            <a
-              href="/termos"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-accent-blue underline hover:text-accent-blue/80 text-xs"
-            >
-              Abrir Termos de Uso em nova aba <ExternalLink className="h-3 w-3" />
-            </a>
-            <a
-              href="/uso-aceitavel"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-accent-blue underline hover:text-accent-blue/80 text-xs"
-            >
-              Abrir Política de Uso Aceitável em nova aba <ExternalLink className="h-3 w-3" />
-            </a>
-          </div>
-
-          {/* Termos de Uso */}
-          <section>
-            <h3 className="font-heading font-semibold text-text-primary mb-2">Termos de Uso</h3>
-            <div className="space-y-3">
-              <div>
-                <h4 className="font-heading font-medium text-text-primary text-xs uppercase tracking-wide mb-1">1. Definições</h4>
-                <p>Plataforma Vendeo: sistema SaaS de geração automatizada de campanhas visuais para redes sociais. Usuário: pessoa física ou jurídica cadastrada. Lojista: usuário que cria uma loja e utiliza os serviços de geração.</p>
+        <div className="px-6 py-4 overflow-y-auto flex-1 space-y-6 text-sm text-text-secondary font-body">
+          {contractDocuments.map((doc) => (
+            <section key={doc.label}>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-heading font-semibold text-text-primary">
+                  {doc.label}
+                </h3>
+                <a
+                  href={doc.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-accent-blue underline hover:text-accent-blue/80 text-xs"
+                >
+                  Abrir em nova aba <ExternalLink className="h-3 w-3" />
+                </a>
               </div>
-              <div>
-                <h4 className="font-heading font-medium text-text-primary text-xs uppercase tracking-wide mb-1">2. Cadastro e Conta</h4>
-                <p>O usuário deve criar uma conta com email e senha. É responsável pela confidencialidade de suas credenciais e por todas as atividades na conta. Declara ser maior de 18 anos ou ter autorização legal.</p>
-              </div>
-              <div>
-                <h4 className="font-heading font-medium text-text-primary text-xs uppercase tracking-wide mb-1">3. Uso do Serviço</h4>
-                <p>A plataforma gera campanhas visuais automatizadas. O lojista reconhece que as campanhas são geradas por IA e devem ser revisadas antes da publicação. É proibido gerar conteúdo que viole a Política de Uso Aceitável.</p>
-              </div>
-              <div>
-                <h4 className="font-heading font-medium text-text-primary text-xs uppercase tracking-wide mb-1">4. Propriedade Intelectual</h4>
-                <p>A plataforma é propriedade exclusiva do Vendeo. O conteúdo fornecido pelo usuário permanece de propriedade do usuário. O usuário concede ao Vendeo licença não exclusiva para processar seu conteúdo exclusivamente para prestação do serviço.</p>
-              </div>
-              <div>
-                <h4 className="font-heading font-medium text-text-primary text-xs uppercase tracking-wide mb-1">5. Limitação de Responsabilidade</h4>
-                <p>A plataforma é fornecida "no estado em que se encontra". O Vendeo não se responsabiliza pelo conteúdo gerado por IA. A responsabilidade máxima está limitada ao valor efetivamente pago nos 12 meses anteriores.</p>
-              </div>
-              <div>
-                <h4 className="font-heading font-medium text-text-primary text-xs uppercase tracking-wide mb-1">6. Cancelamento</h4>
-                <p>O usuário pode cancelar sua conta a qualquer momento. O Vendeo pode suspender ou cancelar o acesso em caso de violação dos termos. Após cancelamento, o conteúdo gerado não é mantido por prazo superior a 90 dias.</p>
-              </div>
-              <div>
-                <h4 className="font-heading font-medium text-text-primary text-xs uppercase tracking-wide mb-1">7. Disposições Gerais</h4>
-                <p>Estes termos são regidos pela legislação brasileira. Alterações serão comunicadas ao usuário. A aceitação dos termos é condição necessária para criação da loja e uso dos recursos de geração.</p>
-              </div>
-            </div>
-          </section>
-
-          {/* Uso Aceitável */}
-          <section>
-            <h3 className="font-heading font-semibold text-text-primary mb-2">Política de Uso Aceitável</h3>
-            <div className="space-y-3">
-              <div>
-                <h4 className="font-heading font-medium text-text-primary text-xs uppercase tracking-wide mb-1">1. Propósito</h4>
-                <p>Esta política estabelece as regras para utilização da Plataforma Vendeo e complementa os Termos de Uso.</p>
-              </div>
-              <div>
-                <h4 className="font-heading font-medium text-text-primary text-xs uppercase tracking-wide mb-1">2. Restrições de Conteúdo</h4>
-                <p>É proibido gerar campanhas que contenham nudez, conteúdo sexual explícito, violência, discurso de ódio, atividades ilegais, plágio, desinformação, conteúdo enganoso ou conteúdo restrito a menores.</p>
-              </div>
-              <div>
-                <h4 className="font-heading font-medium text-text-primary text-xs uppercase tracking-wide mb-1">3. Conduta Proibida</h4>
-                <p>Não é permitido enviar spam, burlar sistemas de rate limit/autenticação/créditos, realizar engenharia reversa, usar bots ou scrapers, criar múltiplas contas para contornar restrições, ou compartilhar credenciais.</p>
-              </div>
-              <div>
-                <h4 className="font-heading font-medium text-text-primary text-xs uppercase tracking-wide mb-1">4. Sanções</h4>
-                <p>A violação pode resultar em advertência, suspensão temporária, cancelamento da conta ou da loja. Violações graves podem resultar em cancelamento imediato sem reembolso.</p>
-              </div>
-              <div>
-                <h4 className="font-heading font-medium text-text-primary text-xs uppercase tracking-wide mb-1">5. Responsabilidade do Usuário</h4>
-                <p>O lojista é o único responsável pelo conteúdo das campanhas geradas e publicadas, devendo garantir que cumprem o Código de Defesa do Consumidor e regulamentações do CONAR.</p>
-              </div>
-            </div>
-          </section>
+              <LegalDocumentViewer
+                url={doc.url}
+                title={doc.label}
+                version={doc.version}
+              />
+            </section>
+          ))}
         </div>
 
         {/* Error */}
@@ -174,7 +123,7 @@ export function ContractAcceptanceModal({
               className="mt-0.5 h-4 w-4 rounded border-border-light accent-accent-blue shrink-0"
             />
             <span className="text-sm text-text-primary font-body">
-              Li e aceito os Termos de Uso e a Política de Uso Aceitável.
+              Li e aceito integralmente {checkboxText}.
             </span>
           </label>
           <div className="flex gap-3">

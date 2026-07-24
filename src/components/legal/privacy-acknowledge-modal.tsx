@@ -2,23 +2,32 @@
 
 import { ExternalLink, Loader2, Check } from "lucide-react";
 import { useState } from "react";
+import { LegalDocumentViewer } from "./legal-document-viewer";
+
+interface LegalDocumentInfo {
+  label: string;
+  version: string;
+  url: string;
+}
 
 interface PrivacyAcknowledgeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => Promise<boolean>;
-  policyVersion?: string;
+  policyDocument: LegalDocumentInfo;
 }
 
 export function PrivacyAcknowledgeModal({
   open,
   onOpenChange,
   onConfirm,
-  policyVersion,
+  policyDocument,
 }: PrivacyAcknowledgeModalProps) {
   const [checked, setChecked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [documentLoaded, setDocumentLoaded] = useState(false);
+  const [documentError, setDocumentError] = useState(false);
 
   if (!open) return null;
 
@@ -45,6 +54,11 @@ export function PrivacyAcknowledgeModal({
     onOpenChange(false);
   };
 
+  const handleDocumentLoad = (loaded: boolean) => {
+    setDocumentLoaded(loaded);
+    if (!loaded) setDocumentError(true);
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
@@ -57,70 +71,29 @@ export function PrivacyAcknowledgeModal({
         {/* Header */}
         <div className="px-6 pt-6 pb-3 border-b border-border shrink-0">
           <h2 className="text-lg font-heading font-bold text-text-primary">
-            Política de Privacidade
+            {policyDocument.label}
           </h2>
-          {policyVersion && (
-            <p className="text-xs text-text-muted mt-1">Versão {policyVersion}</p>
-          )}
+          <p className="text-xs text-text-muted mt-1">
+            Versão {policyDocument.version}
+          </p>
         </div>
 
         {/* Content */}
-        <div className="px-6 py-4 overflow-y-auto space-y-4 text-sm text-text-secondary font-body flex-1">
+        <div className="px-6 py-4 overflow-y-auto flex-1 space-y-4 text-sm text-text-secondary font-body">
           <a
-            href="/privacidade"
+            href={policyDocument.url}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-accent-blue underline hover:text-accent-blue/80 text-xs"
           >
-            Abrir Política de Privacidade em nova aba <ExternalLink className="h-3 w-3" />
+            Abrir {policyDocument.label} em nova aba <ExternalLink className="h-3 w-3" />
           </a>
 
-          <div className="space-y-4">
-            <section>
-              <h3 className="font-heading font-semibold text-text-primary mb-1">1. Controlador e Contato</h3>
-              <p>O Vendeo é o controlador dos dados pessoais tratados no âmbito da Plataforma. Dúvidas sobre esta Política podem ser enviadas para o email de suporte do Vendeo.</p>
-            </section>
-
-            <section>
-              <h3 className="font-heading font-semibold text-text-primary mb-1">2. Dados Coletados</h3>
-              <ul className="list-disc pl-5 space-y-1">
-                <li><strong>Fornecidos pelo usuário:</strong> email, senha, nome da loja, segmento, cidade, estado, logotipo, informações de produto e oferta.</li>
-                <li><strong>Coletados automaticamente:</strong> endereço IP, user agent, dados de uso, cookies essenciais.</li>
-                <li><strong>Gerados pela plataforma:</strong> campanhas visuais, metadados de geração.</li>
-              </ul>
-            </section>
-
-            <section>
-              <h3 className="font-heading font-semibold text-text-primary mb-1">3. Bases Legais (LGPD)</h3>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Operação do serviço — execução de contrato</li>
-                <li>Comunicações transacionais — execução de contrato</li>
-                <li>Prevenção a fraude — legítimo interesse</li>
-                <li>Obrigação fiscal/regulatória — obrigação legal</li>
-                <li>Comunicações comerciais — <strong>consentimento</strong></li>
-              </ul>
-            </section>
-
-            <section>
-              <h3 className="font-heading font-semibold text-text-primary mb-1">4. Finalidades do Tratamento</h3>
-              <p>Os dados são tratados para operação da plataforma, geração de campanhas, controle de créditos, prevenção a fraudes, comunicações transacionais e, mediante consentimento, comunicações comerciais.</p>
-            </section>
-
-            <section>
-              <h3 className="font-heading font-semibold text-text-primary mb-1">5. Compartilhamento com Terceiros</h3>
-              <p>Compartilhamos dados com Supabase, OpenAI, Vercel e Anthropic/Gemini, limitado ao necessário para o serviço. Não vendemos dados pessoais.</p>
-            </section>
-
-            <section>
-              <h3 className="font-heading font-semibold text-text-primary mb-1">6. Direitos do Titular (LGPD art. 18)</h3>
-              <p>Você tem direito a confirmar, acessar, corrigir, anonimizar, portar, eliminar dados, revogar consentimento e opor-se ao tratamento com base em legítimo interesse.</p>
-            </section>
-
-            <section>
-              <h3 className="font-heading font-semibold text-text-primary mb-1">7. Disposições Gerais</h3>
-              <p>Esta Política pode ser atualizada. Alterações serão comunicadas ao usuário. É regida pela Lei Geral de Proteção de Dados Pessoais (Lei nº 13.709/2018).</p>
-            </section>
-          </div>
+          <LegalDocumentViewer
+            url={policyDocument.url}
+            title={policyDocument.label}
+            version={policyDocument.version}
+          />
         </div>
 
         {/* Error */}
@@ -143,7 +116,7 @@ export function PrivacyAcknowledgeModal({
               className="mt-0.5 h-4 w-4 rounded border-border-light accent-accent-blue shrink-0"
             />
             <span className="text-sm text-text-primary font-body">
-              Li e declaro ciência da Política de Privacidade.
+              Li e declaro ciência integral da {policyDocument.label} {policyDocument.version}.
             </span>
           </label>
           <div className="flex gap-3">

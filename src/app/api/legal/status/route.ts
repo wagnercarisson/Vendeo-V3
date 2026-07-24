@@ -4,6 +4,8 @@ import { apiHandler } from "@/lib/auth/api-handler";
 import { hasValidPrivacyAcknowledgement } from "@/lib/legal/privacy";
 import { getEffectiveConsent } from "@/lib/legal/consent";
 import { getAcceptanceStatus } from "@/lib/legal/acceptance-service";
+import { getCurrentVersion } from "@/lib/legal/document-versions";
+import { buildDocumentInfo } from "@/lib/legal/document-content";
 
 export const GET = apiHandler(async (request: NextRequest) => {
   const user = await requireApiUser();
@@ -27,5 +29,19 @@ export const GET = apiHandler(async (request: NextRequest) => {
     }
   }
 
-  return NextResponse.json({ privacyAcknowledged, effectiveConsent, acceptanceStatus });
+  const privacyVersion = await getCurrentVersion("privacy_policy");
+  const termsVersion = await getCurrentVersion("terms_of_service");
+  const aupVersion = await getCurrentVersion("acceptable_use");
+
+  const documents = {
+    privacyPolicy: privacyVersion
+      ? buildDocumentInfo("privacy_policy", privacyVersion.version)
+      : null,
+    contractDocuments: [
+      termsVersion ? buildDocumentInfo("terms_of_service", termsVersion.version) : null,
+      aupVersion ? buildDocumentInfo("acceptable_use", aupVersion.version) : null,
+    ].filter(Boolean),
+  };
+
+  return NextResponse.json({ privacyAcknowledged, effectiveConsent, acceptanceStatus, documents });
 });
