@@ -18,11 +18,6 @@ import { DriftCriticalModal } from "./drift-critical-modal";
 import { isValidHex, normalizeBrandColorsChosen, hasUserChosenColors } from "@/lib/validators/color";
 import { ContractAcceptanceModal } from "@/components/legal/contract-acceptance-modal";
 
-const CONTRACT_DOCUMENTS = [
-  { label: "Termos de Uso", version: "v1.1", url: "/docs/legal/terms-of-service-v1-1.md" },
-  { label: "Política de Uso Aceitável", version: "v1.0", url: "/docs/legal/acceptable-use-v1.md" },
-];
-
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
 const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
 const MAX_LOGO_SIZE = 5 * 1024 * 1024;
@@ -120,6 +115,25 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [acceptedTermsError, setAcceptedTermsError] = useState<string | null>(null);
   const [showContractModal, setShowContractModal] = useState(false);
+  const [contractDocuments, setContractDocuments] = useState<Array<{ label: string; version: string; url: string }> | null>(null);
+  const [versionsLoading, setVersionsLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/legal/current-versions")
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        const tos = data?.versions?.terms_of_service;
+        const aup = data?.versions?.acceptable_use;
+        if (tos?.url && aup?.url) {
+          setContractDocuments([
+            { label: tos.label, version: tos.version, url: tos.url },
+            { label: aup.label, version: aup.version, url: aup.url },
+          ]);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setVersionsLoading(false));
+  }, []);
   const [inferredProfile, setInferredProfile] = useState<{
     safe_color_tokens?: Record<string, string>;
     visual_style?: string;
@@ -1174,7 +1188,12 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
                     Termos de Uso e Política de Uso Aceitável aceitos
                   </span>
                 </div>
-              ) : (
+              ) : versionsLoading ? (
+                <div className="flex items-center justify-center gap-2 py-2.5 text-text-muted text-sm">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Carregando documentos...
+                </div>
+              ) : contractDocuments ? (
                 <button
                   type="button"
                   onClick={() => { setShowContractModal(true); setAcceptedTermsError(null); }}
@@ -1183,6 +1202,10 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
                   <ExternalLink className="h-4 w-4" />
                   Ler e aceitar Termos de Uso e Uso Aceitável
                 </button>
+              ) : (
+                <p className="text-sm text-accent-amber text-center py-2.5">
+                  Documentos legais indisponíveis no momento.
+                </p>
               )}
               {acceptedTermsError && (
                 <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs">
@@ -1864,12 +1887,14 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
           onGenerateNew={handleGenerateNew}
         />
       )}
-      <ContractAcceptanceModal
-        open={showContractModal}
-        onOpenChange={setShowContractModal}
-        onConfirm={async () => { setAcceptedTerms(true); return true; }}
-        contractDocuments={CONTRACT_DOCUMENTS}
-      />
+      {contractDocuments && (
+        <ContractAcceptanceModal
+          open={showContractModal}
+          onOpenChange={setShowContractModal}
+          onConfirm={async () => { setAcceptedTerms(true); return true; }}
+          contractDocuments={contractDocuments}
+        />
+      )}
     </div>
   );
 }

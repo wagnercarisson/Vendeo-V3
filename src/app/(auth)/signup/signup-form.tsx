@@ -3,15 +3,15 @@
 import { createBrowserClient } from "@/lib/supabase/client";
 import { getSiteUrl } from "@/lib/supabase/site-url";
 import { useRouter } from "next/navigation";
-import { useState, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { Mail, Lock, Loader2, ExternalLink } from "lucide-react";
 import { PrivacyAcknowledgeModal } from "@/components/legal/privacy-acknowledge-modal";
 
-const PRIVACY_DOCUMENT = {
-  label: "Política de Privacidade",
-  version: "v1.0",
-  url: "/docs/legal/privacy-policy-v1.md",
-};
+interface DocumentInfo {
+  label: string;
+  version: string;
+  url: string | null;
+}
 
 export function SignupForm() {
   const router = useRouter();
@@ -21,6 +21,25 @@ export function SignupForm() {
   const [communicationsOptIn, setCommunicationsOptIn] = useState(false);
   const [privacyError, setPrivacyError] = useState<string | null>(null);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [privacyDocument, setPrivacyDocument] = useState<DocumentInfo | null>(null);
+  const [versionsLoading, setVersionsLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/legal/current-versions")
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        const pp = data?.versions?.privacy_policy;
+        if (pp) {
+          setPrivacyDocument({
+            label: pp.label,
+            version: pp.version,
+            url: pp.url,
+          });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setVersionsLoading(false));
+  }, []);
 
   function validate(password: string, confirm: string): string | null {
     if (password.length < 6) return "A senha deve ter no mínimo 6 caracteres";
@@ -139,7 +158,12 @@ export function SignupForm() {
               Ciência declarada da Política de Privacidade
             </span>
           </div>
-        ) : (
+        ) : versionsLoading ? (
+          <div className="flex items-center justify-center gap-2 py-2.5 text-slate-400 text-sm">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Carregando documentos...
+          </div>
+        ) : privacyDocument ? (
           <button
             type="button"
             onClick={() => setShowPrivacyModal(true)}
@@ -148,6 +172,10 @@ export function SignupForm() {
             <ExternalLink className="h-4 w-4" />
             Ler e declarar ciência da Política de Privacidade
           </button>
+        ) : (
+          <p className="text-sm text-amber-400 text-center py-2.5">
+            Documentos legais indisponíveis no momento.
+          </p>
         )}
 
         <label className="flex items-start gap-3 cursor-pointer">
@@ -163,12 +191,18 @@ export function SignupForm() {
         </label>
       </div>
 
-      <PrivacyAcknowledgeModal
-        open={showPrivacyModal}
-        onOpenChange={setShowPrivacyModal}
-        onConfirm={async () => { setPrivacyChecked(true); return true; }}
-        policyDocument={PRIVACY_DOCUMENT}
-      />
+      {privacyDocument && (
+        <PrivacyAcknowledgeModal
+          open={showPrivacyModal}
+          onOpenChange={setShowPrivacyModal}
+          onConfirm={async () => { setPrivacyChecked(true); return true; }}
+          policyDocument={{
+            label: privacyDocument.label,
+            version: privacyDocument.version,
+            url: privacyDocument.url ?? "",
+          }}
+        />
+      )}
 
       {(error || privacyError) && (
         <p className="text-sm text-red-400">{error || privacyError}</p>
