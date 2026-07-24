@@ -101,13 +101,13 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - Wave 2: 29-3-02 — grant_monthly_credits + Launch Config
   - Wave 3: 29-3-03 — Vercel Cron + Fallback Admin
   - Wave 4: 29-3-04 — Testes e Verificação
-- [ ] Phase 30: Fundação Legal (planned)
-  - Wave 1: Migrations + Legal Documents Drafts — 5 migrations, 3 docs legais em `docs/legal/`
-  - Wave 2: Core Library — types, services (privacy, consent, clearance, acceptance, document versions)
-  - Wave 3: Public Pages + Signup/Onboarding — `/termos`, `/privacidade`, `/uso-aceitavel`, checkboxes
-  - Wave 4: Pipeline Guards + Re-aceite — `requireLegalClearance` no generate-image e VS, tela `/legal/reaccept`
-  - Wave 5: Account + Admin — seção legal em `/conta`, badges em `/admin/users/[id]`
-  - Wave 6: Testes + Verificação — 35+ testes, regressão 987+
+- [x] Phase 30: Fundação Legal ✅
+  - ✅ Wave 1: Migrations + Legal Documents Drafts — 5 migrations, 3 docs legais em `docs/legal/`
+  - ✅ Wave 2: Core Library — types, services (privacy, consent, clearance, acceptance, document versions)
+  - ✅ Wave 3: Public Pages + Signup/Onboarding — `/termos`, `/privacidade`, `/uso-aceitavel`, checkboxes
+  - ✅ Wave 4: Pipeline Guards + Re-aceite — `requireLegalClearance` no generate-image e VS, tela `/legal/reaccept`
+  - ✅ Wave 5: Account + Admin — seção legal em `/conta`, badges em `/admin/users/[id]`
+  - ✅ Wave 6: Testes + Verificação — 35+ testes, regressão 987+
 
 </details>
 
@@ -147,7 +147,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 29.1.1. Créditos na Assinatura Visual | v1.5 | 3/3 | ✅ Complete | 2026-07-21 |
 | 29.1.2. Histórico Curto + Assinatura Visual | v1.5 | 3/3 | ✅ Complete | 2026-07-22 |
 | 29.3. Créditos Mensais Automáticos | v1.5 | 4/4 | ✅ Complete | 2026-07-22 |
-| 30. Fundação Legal | v1.5 | 0/0 | △ Planned | — |
+| 30. Fundação Legal | v1.5 | 6/6 | ✅ Complete | 2026-07-23 |
 
 ---
 

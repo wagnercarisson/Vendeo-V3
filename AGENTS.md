@@ -74,19 +74,21 @@ Use these entry points:
 
 Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
 
-## Phase 28 — Observabilidade + Operação + Launch Controls
+## Phase 30 — Fundação Legal
 
-**Status:** 4/4 plans planned — Ready for implementation
+**Status:** 6/6 plans completed ✅
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
-| 28-01 | 1 | △ | Fundação — Launch Config + AI Cost Estimator + Pipeline Logger |
-| 28-02 | 2 | △ | Migrations + Pipeline Integration + Rate Limit |
-| 28-03 | 3 | △ | Pipeline Metrics + Admin Dashboard + Documentation |
-| 28-04 | 4 | △ | Testes e Verificação — Concorrência, Telemetria, Regressão + UAT |
+| 30-01 | 1 | ✅ | Migrations + Legal Documents Drafts |
+| 30-02 | 2 | ✅ | Core Library — Types, Services, Clearance |
+| 30-03 | 3 | ✅ | Public Pages + API Routes + Signup/Onboarding |
+| 30-04 | 4 | ✅ | Pipeline Guards + Re-aceite Flow |
+| 30-05 | 5 | ✅ | Account Legal Status + Admin Legal Badges |
+| 30-06 | 6 | ✅ | Testes e Verificação — 1018 total |
 
-**Change artifacts (source of truth):** `openspec/changes/fase-28-observabilidade-operacao-launch-controls/`
-**Context:** `.planning/phases/28-observabilidade-operacao-launch-controls/28-CONTEXT.md`
+**Change artifacts (source of truth):** `openspec/changes/fase-30-legal-foundation/`
+**Context:** `.planning/phases/30-legal-foundation/30-CONTEXT.md`
 **State:** `.planning/STATE.md`
 **Roadmap:** `ROADMAP.md`
 <!-- GSD:workflow-end -->
