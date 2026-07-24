@@ -1,12 +1,18 @@
 import { requirePageUser } from "@/lib/auth/require-user";
 import { getCurrentStore } from "@/lib/auth/store-ownership";
-import { getCurrentVersion, getVersionHistory } from "@/lib/legal/document-versions";
+import { getCurrentVersion } from "@/lib/legal/document-versions";
 import { getAcceptanceStatus } from "@/lib/legal/acceptance-service";
 import { ReacceptForm } from "./reaccept-form";
 
-export default async function LegalReacceptPage() {
+export default async function LegalReacceptPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ returnTo?: string }>;
+}) {
   const user = await requirePageUser();
   const store = await getCurrentStore(user.userId);
+  const sp = await searchParams;
+  const returnTo = sp.returnTo ?? "/dashboard";
 
   if (!store) {
     return (
@@ -24,9 +30,6 @@ export default async function LegalReacceptPage() {
   const termsCurrent = await getCurrentVersion("terms_of_service");
   const aupCurrent = await getCurrentVersion("acceptable_use");
 
-  const termsHistory = await getVersionHistory("terms_of_service");
-  const aupHistory = await getVersionHistory("acceptable_use");
-
   const termsStatus = await getAcceptanceStatus(store.id, "terms_of_service");
   const aupStatus = await getAcceptanceStatus(store.id, "acceptable_use");
 
@@ -35,25 +38,31 @@ export default async function LegalReacceptPage() {
     label: string;
     currentVersion: string;
     summary: string | null;
+    isFirstAcceptance: boolean;
   }> = [];
 
-  if (termsStatus === "outdated" && termsCurrent) {
+  if ((termsStatus === "outdated" || termsStatus === "never") && termsCurrent) {
     pendingDocs.push({
       documentType: "terms_of_service",
       label: "Termos de Uso",
       currentVersion: termsCurrent.version,
       summary: termsCurrent.summary,
+      isFirstAcceptance: termsStatus === "never",
     });
   }
 
-  if (aupStatus === "outdated" && aupCurrent) {
+  if ((aupStatus === "outdated" || aupStatus === "never") && aupCurrent) {
     pendingDocs.push({
       documentType: "acceptable_use",
       label: "Política de Uso Aceitável",
       currentVersion: aupCurrent.version,
       summary: aupCurrent.summary,
+      isFirstAcceptance: aupStatus === "never",
     });
   }
+
+  const isFirstTime = pendingDocs.every((d) => d.isFirstAcceptance);
+  const isMixed = pendingDocs.some((d) => d.isFirstAcceptance) && pendingDocs.some((d) => !d.isFirstAcceptance);
 
   return (
     <main className="mx-auto max-w-xl px-4 py-12">
@@ -70,7 +79,9 @@ export default async function LegalReacceptPage() {
       ) : (
         <div className="space-y-6">
           <p className="text-text-secondary">
-            Os seguintes documentos foram atualizados. Aceite a nova versão para continuar utilizando os recursos de geração.
+            {isFirstTime
+              ? "Para utilizar os recursos de geração, leia e aceite os documentos abaixo."
+              : "Os seguintes documentos foram atualizados. Aceite a nova versão para continuar utilizando os recursos de geração."}
           </p>
 
           {pendingDocs.map((doc) => (
@@ -82,7 +93,7 @@ export default async function LegalReacceptPage() {
                 {doc.label}
               </h2>
               <p className="text-sm text-text-muted">
-                Nova versão: <strong>{doc.currentVersion}</strong>
+                {doc.isFirstAcceptance ? "Versão atual:" : "Nova versão:"} <strong>{doc.currentVersion}</strong>
               </p>
               {doc.summary && (
                 <p className="text-sm text-text-secondary bg-bg-elevated rounded p-3">
@@ -93,14 +104,14 @@ export default async function LegalReacceptPage() {
                 href={`/${doc.documentType === "terms_of_service" ? "termos" : "uso-aceitavel"}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-block text-sm text-accent-blue underline hover:text-accent-blue/80"
+                className="inline-flex items-center gap-1.5 text-sm text-accent-blue underline hover:text-accent-blue/80"
               >
                 Revisar documento completo
               </a>
             </div>
           ))}
 
-          <ReacceptForm storeId={store.id} />
+          <ReacceptForm storeId={store.id} returnTo={returnTo} isFirstTime={isFirstTime} />
         </div>
       )}
     </main>

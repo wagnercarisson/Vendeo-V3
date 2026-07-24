@@ -13,7 +13,7 @@ export async function getCurrentVersion(
       .lte("effective_at", new Date().toISOString())
       .order("effective_at", { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (!data) return null;
 

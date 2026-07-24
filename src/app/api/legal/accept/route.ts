@@ -26,26 +26,31 @@ export const POST = apiHandler(async (request: NextRequest) => {
 
   const userAgent = request.headers.get("user-agent") ?? "unknown";
 
-  if (documentTypes && documentTypes.length > 0) {
-    for (const docType of documentTypes) {
-      await registerAcceptance({
+  try {
+    if (documentTypes && documentTypes.length > 0) {
+      for (const docType of documentTypes) {
+        await registerAcceptance({
+          storeId,
+          userId: user.userId,
+          documentType: docType as DocumentType,
+          ipAddress,
+          userAgent,
+          source: source as AcceptanceSource,
+        });
+      }
+    } else {
+      await registerAllContractAcceptances({
         storeId,
         userId: user.userId,
-        documentType: docType as DocumentType,
         ipAddress,
         userAgent,
         source: source as AcceptanceSource,
       });
     }
-  } else {
-    await registerAllContractAcceptances({
-      storeId,
-      userId: user.userId,
-      ipAddress,
-      userAgent,
-      source: source as AcceptanceSource,
-    });
-  }
 
-  return NextResponse.json({}, { status: 200 });
+    return NextResponse.json({ ok: true }, { status: 200 });
+  } catch (error) {
+    console.error("[accept] Error:", error);
+    return NextResponse.json({ ok: false }, { status: 200 });
+  }
 });

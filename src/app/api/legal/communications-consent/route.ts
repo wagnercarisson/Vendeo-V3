@@ -43,5 +43,5 @@ export const POST = apiHandler(async (request: NextRequest) => {
     source: source as "signup" | "account_settings",
   });
 
-  return NextResponse.json({}, { status: 200 });
+  return NextResponse.json({ ok: true }, { status: 200 });
 });

@@ -8,6 +8,7 @@ const makeChain = () => {
   chain.order = vi.fn(() => chain);
   chain.limit = vi.fn(() => chain);
   chain.single = vi.fn();
+  chain.maybeSingle = vi.fn();
   return chain;
 };
 
@@ -22,7 +23,7 @@ beforeEach(() => {
 describe("document-versions", () => {
   it("getCurrentVersion returns version when published", async () => {
     const chain = makeChain();
-    chain.single.mockResolvedValue({
+    chain.maybeSingle.mockResolvedValue({
       data: { version: "v1.0", effective_at: "2026-07-23T00:00:00Z", summary: "Initial version" },
       error: null,
     });
@@ -35,7 +36,7 @@ describe("document-versions", () => {
 
   it("getCurrentVersion returns null when no version", async () => {
     const chain = makeChain();
-    chain.single.mockResolvedValue({ data: null, error: null });
+    chain.maybeSingle.mockResolvedValue({ data: null, error: null });
     mockFrom.mockReturnValue(chain);
 
     const { getCurrentVersion } = await import("../document-versions");

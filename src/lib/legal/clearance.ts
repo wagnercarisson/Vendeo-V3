@@ -37,11 +37,18 @@ export async function requireLegalClearance(
     return { ok: true };
   }
 
-  // If legal system is not set up (no published versions), allow through.
+  // If legal system is not set up, block generation.
+  // Previously this short-circuited to allow through, which was unsafe:
+  // permission errors or missing versions silently bypassed the guard.
   const termsVersion = await getCurrentVersion("terms_of_service");
   const aupVersion = await getCurrentVersion("acceptable_use");
   if (!termsVersion || !aupVersion) {
-    return { ok: true };
+    console.warn(`[legal] requireLegalClearance: no published versions — blocking. terms=${!!termsVersion} aup=${!!aupVersion}`);
+    return {
+      ok: false,
+      reason: "Sistema legal indisponível.",
+      requiredDocuments: ["terms_of_service", "acceptable_use"],
+    };
   }
 
   const pending: DocumentType[] = [];

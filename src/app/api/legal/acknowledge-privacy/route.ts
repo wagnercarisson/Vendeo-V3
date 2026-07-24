@@ -20,7 +20,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
     const currentVersion = await getCurrentVersion("privacy_policy");
     if (!currentVersion) {
       console.error("[acknowledge-privacy] No privacy_policy version published");
-      return NextResponse.json({}, { status: 200 });
+      return NextResponse.json({ ok: false }, { status: 200 });
     }
 
     await registerPrivacyAcknowledgement({
@@ -42,9 +42,9 @@ export const POST = apiHandler(async (request: NextRequest) => {
       });
     }
 
-    return NextResponse.json({}, { status: 200 });
+    return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
     console.error("[acknowledge-privacy] Error:", error);
-    return NextResponse.json({}, { status: 200 });
+    return NextResponse.json({ ok: false }, { status: 200 });
   }
 });

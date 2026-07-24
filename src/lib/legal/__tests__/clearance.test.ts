@@ -22,7 +22,7 @@ beforeEach(() => {
 describe("clearance", () => {
   it("all documents accepted returns ok: true", async () => {
     const docChain = makeChain();
-    docChain.single.mockResolvedValue({
+    docChain.maybeSingle.mockResolvedValue({
       data: { version: "v1.0", effective_at: "2026-07-23T00:00:00Z", summary: null },
       error: null,
     });
@@ -47,7 +47,7 @@ describe("clearance", () => {
 
   it("terms pending returns ok: false with terms_of_service", async () => {
     const docChain = makeChain();
-    docChain.single.mockResolvedValue({
+    docChain.maybeSingle.mockResolvedValue({
       data: { version: "v1.0", effective_at: "2026-07-23T00:00:00Z", summary: null },
       error: null,
     });
@@ -76,7 +76,7 @@ describe("clearance", () => {
 
   it("both pending returns ok: false", async () => {
     const docChain = makeChain();
-    docChain.single.mockResolvedValue({
+    docChain.maybeSingle.mockResolvedValue({
       data: { version: "v1.0", effective_at: "2026-07-23T00:00:00Z", summary: null },
       error: null,
     });

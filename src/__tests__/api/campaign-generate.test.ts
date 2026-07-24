@@ -30,6 +30,8 @@ vi.mock("@/lib/supabase/server", () => ({
   },
 }));
 
+vi.mock("@/lib/legal/clearance", () => ({ requireLegalClearance: vi.fn().mockResolvedValue({ ok: true }) }));
+
 vi.mock("@/lib/auth/errors", () => {
   class UnauthorizedError extends Error {
     constructor(message = "Unauthorized") { super(message); this.name = "UnauthorizedError"; }

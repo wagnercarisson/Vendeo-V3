@@ -26,7 +26,7 @@ beforeEach(() => {
 describe("acceptance-service", () => {
   it("registerAcceptance inserts record with resolved version", async () => {
     const docChain = makeChain();
-    docChain.single.mockResolvedValue({
+    docChain.maybeSingle.mockResolvedValue({
       data: { version: "v1.0", effective_at: "2026-07-23T00:00:00Z", summary: null },
       error: null,
     });
@@ -55,7 +55,7 @@ describe("acceptance-service", () => {
 
   it("getAcceptanceStatus returns current when version matches", async () => {
     const docChain = makeChain();
-    docChain.single.mockResolvedValue({
+    docChain.maybeSingle.mockResolvedValue({
       data: { version: "v1.0", effective_at: "2026-07-23T00:00:00Z", summary: null },
       error: null,
     });
@@ -77,7 +77,7 @@ describe("acceptance-service", () => {
 
   it("getAcceptanceStatus returns outdated when version differs", async () => {
     const docChain = makeChain();
-    docChain.single.mockResolvedValue({
+    docChain.maybeSingle.mockResolvedValue({
       data: { version: "v1.0", effective_at: "2026-07-23T00:00:00Z", summary: null },
       error: null,
     });
@@ -99,7 +99,7 @@ describe("acceptance-service", () => {
 
   it("getAcceptanceStatus returns never when no records", async () => {
     const docChain = makeChain();
-    docChain.single.mockResolvedValue({
+    docChain.maybeSingle.mockResolvedValue({
       data: { version: "v1.0", effective_at: "2026-07-23T00:00:00Z", summary: null },
       error: null,
     });

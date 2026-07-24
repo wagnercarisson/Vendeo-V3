@@ -17,6 +17,8 @@ vi.mock('@/lib/supabase/server', () => ({
   createServerClient: vi.fn(),
 }));
 
+vi.mock('@/lib/legal/clearance', () => ({ requireLegalClearance: vi.fn().mockResolvedValue({ ok: true }) }));
+
 vi.mock('@/lib/store-identity-service', () => ({
   resolveStoreIdentity: vi.fn(),
   validateIdentityReference: vi.fn(),

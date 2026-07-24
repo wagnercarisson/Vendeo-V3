@@ -18,7 +18,7 @@ vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: { from: mockFrom } }));
 
 function setupDocVersion(version: string) {
   const chain = makeChain();
-  chain.single.mockResolvedValue({
+  chain.maybeSingle.mockResolvedValue({
     data: { version, effective_at: "2026-07-23T00:00:00Z", summary: null },
     error: null,
   });

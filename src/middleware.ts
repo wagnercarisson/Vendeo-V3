@@ -7,6 +7,8 @@ const PUBLIC_ROUTES = new Set([
   "/termos", "/privacidade", "/uso-aceitavel",
 ]);
 
+const GUEST_ONLY_ROUTES = new Set(["/login", "/signup", "/check-email", "/forgot-password"]);
+
 const ALWAYS_PASSTHROUGH = new Set(["/auth/confirm"]);
 const API_PASSTHROUGH = new Set(["/api/cron/monthly-credits"]);
 
@@ -47,7 +49,7 @@ export async function middleware(request: NextRequest) {
     return redirectResponse;
   }
 
-  if (isPublicRoute || pathname === "/login") {
+  if (GUEST_ONLY_ROUTES.has(pathname)) {
     const redirectResponse = NextResponse.redirect(
       new URL("/dashboard", request.url),
       { status: 302 },
@@ -55,6 +57,8 @@ export async function middleware(request: NextRequest) {
     copySessionData(redirectResponse, response);
     return redirectResponse;
   }
+
+  if (isPublicRoute) return response;
 
   return response;
 }

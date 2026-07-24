@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 import { requirePageUser } from "@/lib/auth/require-user";
 import { getCurrentStore } from "@/lib/auth/store-ownership";
+import { requireLegalClearance } from "@/lib/legal/clearance";
 import { CreditService } from "@/lib/credit/credit-service";
 import { createServerClient } from "@/lib/supabase/server";
 import { getLaunchConfig } from "@/lib/launch-config/config";
 import { CampaignPageClient } from "@/components/flow/campaign-page-client";
+import { LegalClearanceGate } from "@/components/legal/legal-clearance-gate";
 
 export default async function NovaCampanhaPage() {
   const user = await requirePageUser();
@@ -12,6 +14,16 @@ export default async function NovaCampanhaPage() {
 
   if (!store) {
     redirect("/loja");
+  }
+
+  const clearance = await requireLegalClearance({
+    storeId: store.id,
+    userId: user.userId,
+    capability: "content_generation",
+  });
+
+  if (!clearance.ok) {
+    return <LegalClearanceGate returnTo="/campanhas/nova" />;
   }
 
   const supabase = await createServerClient();

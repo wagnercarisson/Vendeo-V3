@@ -17,6 +17,8 @@ vi.mock('@/lib/supabase/server', () => ({
   supabaseAdmin: { from: mockSupabaseFrom },
 }));
 
+vi.mock('@/lib/legal/clearance', () => ({ requireLegalClearance: vi.fn().mockResolvedValue({ ok: true }) }));
+
 vi.mock('@/lib/auth/store-ownership', () => ({
   requireAuthorizedStore: vi.fn(() => Promise.resolve({
     userId: 'test-user',
