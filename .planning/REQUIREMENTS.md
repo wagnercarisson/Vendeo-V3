@@ -160,7 +160,7 @@
 - [ ] **LEGAL-MIDDLEWARE-01**: `/termos`, `/privacidade`, `/uso-aceitavel` como rotas livres de auth
 - [ ] **LEGAL-MIDDLEWARE-02**: `/legal/reaccept` requer auth mas passa pelo middleware
 
-## v1.6 Requirements — Modelo Comercial — Formulário (F31.1)
+## v1.5 Requirements — Modelo Comercial — Formulário (F31.1)
 
 ### Intenção Comercial (INTENT)
 

@@ -1,6 +1,6 @@
 # Vendeo — Roadmap
 
-> Milestones: **Contas e Propriedade** (v1.2 ✓) | **Persistência e Entrega da Campanha** (v1.3 ✓) | **Experiência SaaS** (v1.4 ✓) | **Lançamento Externo Controlado** (v1.5 ✓) | **Modelo Comercial** (v1.6 ◆) | **Monetização Pública** (v1.7 △)
+> Milestones: **Contas e Propriedade** (v1.2 ✓) | **Persistência e Entrega da Campanha** (v1.3 ✓) | **Experiência SaaS** (v1.4 ✓) | **Lançamento Externo Controlado** (v1.5 ◆) | **Monetização Pública** (v1.7 △)
 
 ## Milestones
 
@@ -52,69 +52,26 @@ Autenticação completa, vínculo user→store, isolamento multi-tenant, beta.ve
 
 </details>
 
-### 📋 v1.5 — Lançamento Externo Controlado ✅
+### 📋 v1.5 — Lançamento Externo Controlado ◆
 
-Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, UAT externo e fundação legal.
+Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, UAT externo, fundação legal e modelo comercial — formulário com intenção comercial.
 
-- [x] Phase 23: Text Provider + Copy Director (2/2 plans ✅) — 2026-07-16
-- [x] Phase 24: Créditos — Schema, Saldo e Transações (2/2 plans ✅) — 2026-07-16
-- [x] Phase 29.3: Créditos Mensais Automáticos (4/4 plans ✅) — 2026-07-22
+<details open>
+<summary>◆ v1.5 Lançamento Externo Controlado (F23-F31.1) — Em andamento</summary>
 
-<details>
-<summary>◆ v1.5 Lançamento Externo Controlado (F23-F30) — Em andamento</summary>
-
-Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness e fundação legal.
+Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, fundação legal e modelo comercial.
 
 - [x] Phase 23: Text Provider + Copy Director (2/2 plans ✅)
 - [x] Phase 24: Créditos — Schema, Saldo e Transações (2/2 plans ✅)
-  - Wave 1: 24-01 — Migration SQL + CreditService (SQL DDL, 3 functions, types, service)
-  -   Wave 2: 24-02 — Tests + SQL Verification (25+ testes, I1–I7)
 - [x] Phase 25: Pipeline de Geração v1.5 (3 plans ✅)
-- [x] Phase 26: Admin Operacional + Convites + Créditos Manuais (3 plans ✓)
-  - Wave 1: 26-01 — Migration + Gate + Middleware + Layout
-  - Wave 2: 26-02 — API Routes + Páginas Admin
-  - Wave 3: 26-03 — Testes e Verificação (21+)
+- [x] Phase 26: Admin Operacional + Convites + Créditos Manuais (3 plans ✅)
 - [x] Phase 27: Conta + Saldo Visível + Extrato (3 plans ✅)
-  - Wave 1: 27-01 — CreditService Session + BalanceDisplay + BalanceCard
-  - Wave 2: 27-02 — TransactionHistory + CreditCta + Dashboard + /conta + Geração
-  - Wave 3: 27-03 — Testes e Verificação (20 novos testes, 852 total)
 - [x] Phase 28: Observabilidade + Operação + Launch Controls (4 plans ✅)
-  - Wave 1: 28-01 — Launch Config + AI Cost Estimator + Pipeline Logger (3 módulos, 16 testes)
-  - Wave 2: 28-02 — Migrations + Pipeline Integration + Rate Limit (2 SQL, pipeline instrumentado)
-  - Wave 3: 28-03 — Pipeline Metrics + Admin Dashboard + Documentação (7 funções, 3 docs)
-  - Wave 4: 28-04 — Testes e Verificação — Concorrência, Telemetria, Regressão + UAT (7+28 testes)
 - [x] Phase 29: Refinamento Visual + UAT + Launch Readiness (4/4 plans ✅)
-  - [x] 29-01 — Componentes Base + Loading States (12) + Error Boundaries (2)
-  - [x] 29-02 — Empty States (7) + Error States (4) + Microcopy (7 fluxos) + Admin Visual
-  - [x] 29-03 — Mobile Hardening (6 áreas) + Legibilidade + Launch Readiness Docs
-  - [x] 29-04 — UAT Externo + Regressão + Validação Visual Final
 - [x] Phase 29.1.1: Créditos na Assinatura Visual (3 plans ✅)
-  - ✅ 29-1-1-01 — Backend Foundation — Types, CreditService, Routes
-  - ✅ 29-1-1-02 — Frontend — Modal UI + Ocultar Modal Antigo
-  - ✅ 29-1-1-03 — Testes e Verificação — 8+ testes (917 total, UAT 15/15)
 - [x] Phase 29.1.2: Histórico Curto + Assinatura Visual (3 plans ✅)
-  - ✅ 29-1-2-01 — Backend Foundation — approve drift fix + spec update
-  - ✅ 29-1-2-02 — Frontend — HistoryModal rewrite + ApprovalModal bridge + pagination
-  - ✅ 29-1-2-03 — Testes e Verificação — 22+ testes (943 total, UAT 15/15 + 1 gap)
 - [x] Phase 29.3: Créditos Mensais Automáticos (4/4 plans ✅)
-  - Wave 1: 29-3-01 — Modelo Contábil — Buckets + Categorias + Migração
-  - Wave 2: 29-3-02 — grant_monthly_credits + Launch Config
-  - Wave 3: 29-3-03 — Vercel Cron + Fallback Admin
-  - Wave 4: 29-3-04 — Testes e Verificação
-- [x] Phase 30: Fundação Legal ✅
-  - ✅ Wave 1: Migrations + Legal Documents Drafts — 5 migrations, 3 docs legais em `docs/legal/`
-  - ✅ Wave 2: Core Library — types, services (privacy, consent, clearance, acceptance, document versions)
-  - ✅ Wave 3: Public Pages + Signup/Onboarding — `/termos`, `/privacidade`, `/uso-aceitavel`, checkboxes
-  - ✅ Wave 4: Pipeline Guards + Re-aceite — `requireLegalClearance` no generate-image e VS, tela `/legal/reaccept`
-  - ✅ Wave 5: Account + Admin — seção legal em `/conta`, badges em `/admin/users/[id]`
-  - ✅ Wave 6: Testes + Verificação — 35+ testes, regressão 987+
-
-</details>
-
-### 📋 v1.6 — Modelo Comercial ◆
-
-> Roteamento por intenção comercial — formulário prepara o terreno para múltiplos tipos de campanha (Oferta, Destaque, Exclusivo). Base conceitual para o novo modelo comercial.
-
+- [x] Phase 30: Fundação Legal (6/6 plans ✅)
 - [ ] Phase 31.1: Modelo Comercial — Formulário (planned)
   - CampaignIntent type (`"offer" | "spotlight" | "exclusive"`)
   - Inferência automática de intent a partir dos campos de preço
@@ -123,11 +80,13 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - preserveImageContext checkbox (visível apenas em spotlight/exclusive)
   - Pipeline guard para rejeitar intents não-offer
 
+</details>
+
 ### 📋 v1.7 — Monetização Pública △
 
 > Stripe Checkout + Webhook + compra real de créditos. Ativado após validação do beta controlado.
 
-- [ ] Phase 31/v1.7: Stripe / Monetização Pública (planned)
+- [ ] Phase 32: Stripe / Monetização Pública (planned)
 
 ## Progress
 
@@ -160,7 +119,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 29.1.2. Histórico Curto + Assinatura Visual | v1.5 | 3/3 | ✅ Complete | 2026-07-22 |
 | 29.3. Créditos Mensais Automáticos | v1.5 | 4/4 | ✅ Complete | 2026-07-22 |
 | 30. Fundação Legal | v1.5 | 6/6 | ✅ Complete | 2026-07-23 |
-| 31.1. Modelo Comercial — Formulário | v1.6 | — | ○ Planned | — |
+| 31.1. Modelo Comercial — Formulário | v1.5 | — | ○ Planned | — |
 
 ---
 

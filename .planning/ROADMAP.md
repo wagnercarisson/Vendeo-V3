@@ -1,8 +1,8 @@
 ﻿# Roadmap: Vendeo V3
 
-## Milestone v1.5 — Lançamento Externo Controlado ✅
+## Milestone v1.5 — Lançamento Externo Controlado ◆
 
-**12 phases** | **107 requirements mapped** | All covered ✓
+**13 phases** | **119 requirements mapped** | All covered ✓
 
 **Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23.
 
@@ -248,40 +248,6 @@
 
 ---
 
-## Dependency Graph
-
-```
-Phase 23 (TextProvider + Copy Director) ──┐
-                                            ├──▶ Phase 25 (Pipeline v1.5)
-Phase 24 (Credit Tables + CreditService) ──┘
-                                               │
-                     ┌─────────────────────────┼──────────────────┐
-                     ▼                         ▼                  ▼
-           Phase 26 (Admin Ops)       Phase 27 (UI Saldo)   Phase 30 (Legal)
-                     │                         │                  │
-                     └─────────┬───────────────┘                  │
-                               ▼                                  │
-                     Phase 28 (Observability + Ops)               │
-                               │                                  │
-                               ▼                                  │
-                     Phase 29 (Refinement + Launch)               │
-                               │                                  │
-                               └──────────┬───────────────────────┘
-                                          ▼
-                               Phase 31.1 (Modelo Comercial — Formulário)
-                                          │
-                                          ▼
-                            (F31.2 — Prompts → F31.3 — Ativação)
-```
-
----
-
-## Milestone v1.6 — Modelo Comercial ◆
-
-**Sub-fases da F31:** Roteamento por intenção comercial — formulário, prompts e ativação.
-
----
-
 ### Phase 31.1 — Modelo Comercial — Formulário ◆
 
 **Goal:** Preparar o formulário de campanha para múltiplas intenções comerciais (Oferta, Destaque, Exclusivo), com schemas, inferência automática e bloqueio de submissão para intents não implementadas.
@@ -305,6 +271,34 @@ Phase 24 (Credit Tables + CreditService) ──┘
 **Dependencies:** Phase 25 (pipeline route generate-image), Phase 27 (form/balance), Phase 30 (legal clearance no pipeline)
 
 **Source of truth:** `openspec/changes/fase-31-1-modelo-comercial-formulario/`
+
+---
+
+## Dependency Graph
+
+```
+Phase 23 (TextProvider + Copy Director) ──┐
+                                            ├──▶ Phase 25 (Pipeline v1.5)
+Phase 24 (Credit Tables + CreditService) ──┘
+                                                │
+                      ┌─────────────────────────┼──────────────────┐
+                      ▼                         ▼                  ▼
+            Phase 26 (Admin Ops)       Phase 27 (UI Saldo)   Phase 30 (Legal)
+                      │                         │                  │
+                      └─────────┬───────────────┘                  │
+                                ▼                                  │
+                      Phase 28 (Observability + Ops)               │
+                                │                                  │
+                                ▼                                  │
+                      Phase 29 (Refinement + Launch)               │
+                                │                                  │
+                                └──────────┬───────────────────────┘
+                                           ▼
+                                Phase 31.1 (Modelo Comercial — Formulário)
+                                           │
+                                           ▼
+                                   Phase 32 (Stripe — v1.7 futuro)
+```
 
 ---
 
@@ -345,10 +339,10 @@ Phase 24 (Credit Tables + CreditService) ──┘
 | INTENT-10 | Phase 31.1 | ◆ Planned |
 | INTENT-11 | Phase 31.1 | ◆ Planned |
 | INTENT-12 | Phase 31.1 | ◆ Planned |
-| PAY-01 | Phase 30/v1.6 | Deferred |
-| PAY-02 | Phase 30/v1.6 | Deferred |
-| PAY-03 | Phase 30/v1.6 | Deferred |
-| PAY-04 | Phase 30/v1.6 | Deferred |
+| PAY-01 | Phase 32/v1.7 | Deferred |
+| PAY-02 | Phase 32/v1.7 | Deferred |
+| PAY-03 | Phase 32/v1.7 | Deferred |
+| PAY-04 | Phase 32/v1.7 | Deferred |
 | UI-01 | Phase 27 | Done ✓ |
 | UI-02 | Phase 27 | Done ✓ |
 | UI-03 | Phase 27 | Done ✓ |
@@ -378,14 +372,14 @@ Phase 24 (Credit Tables + CreditService) ──┘
 | SEC-05 | Phase 29 | Done ✓ |
 
 **Coverage:**
-- v1 requirements: 66 total (54 v1.5 + 12 INTENT)
-- Mapped to phases: 66
-- Completed: 62
+- v1 requirements: 119 total (107 v1.5 + 12 INTENT)
+- Mapped to phases: 119
+- Completed: 107
 - Unmapped: 0 ✓
-- Deferred to v1.7: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06
+- Deferred to v1.7: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06 (Phase 32)
 
 ---
 
 *Roadmap created: 2026-07-15*
-*Milestone: v1.6 — Modelo Comercial*
-*Last updated: 2026-07-24 — Phase 31.1 planned — Modelo Comercial Formulário*
+*Milestone: v1.5 — Lançamento Externo Controlado*
+*Last updated: 2026-07-24 — Phase 31.1 added — Modelo Comercial Formulário*
