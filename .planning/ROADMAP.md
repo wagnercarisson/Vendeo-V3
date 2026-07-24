@@ -272,6 +272,16 @@
 
 **Source of truth:** `openspec/changes/fase-31-1-modelo-comercial-formulario/`
 
+**Plans:** 5 plans in 4 waves
+
+| Plan | Wave | Objective | Requirements | Files |
+|------|------|-----------|--------------|-------|
+| 31-1-01 | 1 | Foundation — Types + Schemas + Constants | INTENT-01, INTENT-02, INTENT-03, INTENT-04, INTENT-05 | types.ts, schemas, constants.ts |
+| 31-1-02 | 2 | Form Logic — State + Inference + Validation | INTENT-06, INTENT-09, INTENT-11 | use-campaign-form.ts |
+| 31-1-03 | 2 | Pipeline — Guard + InputSnapshot | INTENT-02, INTENT-12 | generate-image/route.ts |
+| 31-1-04 | 3 | UI — IntentSelector + Badge + Checkbox + Submit | INTENT-07, INTENT-08, INTENT-09, INTENT-10 | campaign-input-form.tsx |
+| 31-1-05 | 4 | Tests — Inferência, Validação, Badge, Schema, Pipeline Guard | INTENT-01–12 (verificação) | 4 test files |
+
 ---
 
 ## Dependency Graph

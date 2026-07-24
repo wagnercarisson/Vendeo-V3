@@ -8,16 +8,17 @@ last_activity: "2026-07-24T18:50:00.000Z"
 progress:
   total_phases: 13
   completed_phases: 12
-  total_plans: 39
+  total_plans: 44
   completed_plans: 39
   percent: 92
+  current_phase_plans: 5
 ---
 
 # Project State
 
 **Last updated:** 2026-07-24
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆
-**Current phase:** 31.1 — Modelo Comercial — Formulário ◆ (Planning)
+**Current phase:** 31.1 — Modelo Comercial — Formulário ◆ (5 plans, Wave 1-4 planned)
 
 ## Completed
 
