@@ -3,22 +3,22 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: "Lançamento Externo Controlado — Créditos + Admin + Saldo + Observabilidade + Launch + Modelo Comercial"
 status: active
-last_updated: "2026-07-24T18:50:00.000Z"
-last_activity: "2026-07-24T18:50:00.000Z"
-progress:
-  total_phases: 13
-  completed_phases: 12
-  total_plans: 44
-  completed_plans: 39
-  percent: 92
-  current_phase_plans: 5
+last_updated: "2026-07-24T19:35:00.000Z"
+last_activity: "2026-07-24T19:35:00.000Z"
+  progress:
+    total_phases: 13
+    completed_phases: 13
+    total_plans: 49
+    completed_plans: 44
+    percent: 100
+    current_phase_plans: 5
 ---
 
 # Project State
 
 **Last updated:** 2026-07-24
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆
-**Current phase:** 31.1 — Modelo Comercial — Formulário ◆ (5 plans, Wave 1-4 planned)
+**Current phase:** 31.1 — Modelo Comercial — Formulário ✅
 
 ## Completed
 
@@ -422,7 +422,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-v1.5 em andamento — Fase 30 concluída. Phase 31.1 em planejamento — Modelo Comercial — Formulário.
+v1.5 em andamento — Fase 30 concluída. Phase 31.1 concluída — Modelo Comercial — Formulário.
 
 ### Phase 30 — Fundação Legal ✅
 
@@ -439,6 +439,20 @@ v1.5 em andamento — Fase 30 concluída. Phase 31.1 em planejamento — Modelo 
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 **Commits:** a2b0873, e2de329, d355268, cfdd788, 9439e9f, 9ab90dc
 
+### Phase 31.1 — Modelo Comercial — Formulário ✅
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 31-1-01 | 1 | ✅ | Foundation — CampaignIntent type, schemas, BADGE_OPTIONS_BY_INTENT |
+| 31-1-02 | 2 | ✅ | Form Logic — inferIntent, CampaignFormFields, conditional validation |
+| 31-1-03 | 2 | ✅ | Pipeline Guard — intent guard pre-stream + inputSnapshot normalized |
+| 31-1-04 | 3 | ✅ | UI — IntentSelector, conditional badge, preserveImageContext, submit blocking |
+| 31-1-05 | 4 | ✅ | Tests — 20 intent tests, regression 1036 total, typecheck/lint/build |
+
+**Tests:** 1036 passing (129 files, 20 novos)
+**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
+**Commits:** afdfbf7, c2a94ce, 17c3d04, 162d5d5, b7b7d38
+
 ### Next Phases
 
 | Phase | Status | Description |
@@ -449,7 +463,7 @@ v1.5 em andamento — Fase 30 concluída. Phase 31.1 em planejamento — Modelo 
 | F29.1.2 | ✅ Completed | Histórico Curto + Assinatura Visual — HistoryModal reescrito (3 plans, 943 testes) |
 | F29.3 | ✅ Completed | Créditos Mensais Automáticos — Buckets bônus/compra, grant mensal, Vercel Cron (4 plans, 987 testes) |
 | F30 | ✅ Completed | Fundação Legal — 6 migrations, 5 services, 3 public pages, 4 API routes, pipeline guards, re-aceite, admin badges, 24+ testes |
-| **F31.1** | **◆ Planned** | **Modelo Comercial — Formulário — CampaignIntent type, inferência, seletor, badge-by-intent, preserveImageContext, pipeline guard** |
+| **F31.1** | **✅ Completed** | **Modelo Comercial — Formulário — CampaignIntent type, inferência, seletor, badge-by-intent, preserveImageContext, pipeline guard** |
 | F32/v1.7 | ○ Future | Stripe / Monetização Pública (pós-beta) |
 
 ### Quick Tasks Completed

@@ -72,7 +72,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 - [x] Phase 29.1.2: Histórico Curto + Assinatura Visual (3 plans ✅)
 - [x] Phase 29.3: Créditos Mensais Automáticos (4/4 plans ✅)
 - [x] Phase 30: Fundação Legal (6/6 plans ✅)
-- [ ] Phase 31.1: Modelo Comercial — Formulário (planned)
+- [x] Phase 31.1: Modelo Comercial — Formulário (5/5 plans ✅)
   - CampaignIntent type (`"offer" | "spotlight" | "exclusive"`)
   - Inferência automática de intent a partir dos campos de preço
   - Seletor de intent no formulário com "Em breve" para spotlight/exclusive
@@ -119,7 +119,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 29.1.2. Histórico Curto + Assinatura Visual | v1.5 | 3/3 | ✅ Complete | 2026-07-22 |
 | 29.3. Créditos Mensais Automáticos | v1.5 | 4/4 | ✅ Complete | 2026-07-22 |
 | 30. Fundação Legal | v1.5 | 6/6 | ✅ Complete | 2026-07-23 |
-| 31.1. Modelo Comercial — Formulário | v1.5 | — | ○ Planned | — |
+| 31.1. Modelo Comercial — Formulário | v1.5 | 5/5 | ✅ Complete | 2026-07-24 |
 
 ---
 
