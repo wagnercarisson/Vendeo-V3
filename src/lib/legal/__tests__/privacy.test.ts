@@ -41,6 +41,25 @@ describe("privacy", () => {
     );
   });
 
+  it("hasValidPrivacyAcknowledgement returns false when no record", async () => {
+    const docChain = makeChain();
+    docChain.maybeSingle.mockResolvedValue({
+      data: { version: "v1.0", effective_at: "2026-07-23T00:00:00Z", summary: null },
+      error: null,
+    });
+    const ackChain = makeChain();
+    ackChain.maybeSingle.mockResolvedValue({ data: null, error: null });
+
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "legal_document_versions") return docChain;
+      return ackChain;
+    });
+
+    const { hasValidPrivacyAcknowledgement } = await import("../privacy");
+    const result = await hasValidPrivacyAcknowledgement("user-1");
+    expect(result).toBe(false);
+  });
+
   it("upsert idempotent on same version does not error", async () => {
     const chain = makeChain();
     chain.upsert.mockResolvedValue({ error: null });
