@@ -9,38 +9,43 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-vi.mock("@/components/flow/use-campaign-form", () => ({
-  useCampaignForm: () => ({
-    fields: {
-      productName: "",
-      imageFile: null,
-      originalPriceCents: null,
-      discountedPriceCents: null,
-      description: "",
-      badge: "",
-      hasDiscount: true,
-      mandatoryArtworkText: "",
-    },
-    fieldErrors: {},
-    touched: {},
-    setField: vi.fn(),
-    handleBlur: vi.fn(),
-    displayPriceOriginal: "",
-    displayPriceDiscounted: "",
-    handlePriceOriginalChange: vi.fn(),
-    handlePriceDiscountedChange: vi.fn(),
-    imagePreviewUrl: null,
-    isSubmitting: false,
-    submitError: null,
-    setSubmitError: vi.fn(),
-    handleSubmit: vi.fn(),
-    pendingConflict: null,
-    handleConflictContinue: vi.fn(),
-    handleConflictCorrect: vi.fn(),
-    handleConflictCancel: vi.fn(),
-    phases: [],
-  }),
-}));
+vi.mock("@/components/flow/use-campaign-form", () => {
+  const inferIntent = vi.fn(() => "offer" as const);
+  return {
+    inferIntent,
+    useCampaignForm: () => ({
+      fields: {
+        productName: "",
+        imageFile: null,
+        originalPriceCents: 0,
+        discountedPriceCents: undefined,
+        description: "",
+        badge: "",
+        campaignIntent: "offer",
+        preserveImageContext: false,
+        mandatoryArtworkText: "",
+      },
+      fieldErrors: {},
+      touched: {},
+      setField: vi.fn(),
+      handleBlur: vi.fn(),
+      displayPriceOriginal: "",
+      displayPriceDiscounted: "",
+      handlePriceOriginalChange: vi.fn(),
+      handlePriceDiscountedChange: vi.fn(),
+      imagePreviewUrl: null,
+      isSubmitting: false,
+      submitError: null,
+      setSubmitError: vi.fn(),
+      handleSubmit: vi.fn(),
+      pendingConflict: null,
+      handleConflictContinue: vi.fn(),
+      handleConflictCorrect: vi.fn(),
+      handleConflictCancel: vi.fn(),
+      phases: [],
+    }),
+  };
+});
 
 vi.mock("@/components/credit/credit-cta", () => ({
   CreditCta: ({ variant }: { variant: string }) =>
@@ -49,6 +54,11 @@ vi.mock("@/components/credit/credit-cta", () => ({
 
 vi.mock("@/lib/constants", () => ({
   BADGE_OPTIONS: ["Oferta", "Lançamento", "Promoção"],
+  BADGE_OPTIONS_BY_INTENT: {
+    offer: ["Promoção", "Oferta", "Queima de Estoque", "Últimas Unidades", "Imperdível"],
+    spotlight: ["Novidade", "Lançamento", "Mais Vendido", "Top de Linha", "Destaque da Semana"],
+    exclusive: ["Exclusivo", "Premium", "Sob Encomenda", "Edição Limitada"],
+  },
 }));
 
 vi.mock("@/components/campaign/mandatory-artwork-field", () => ({

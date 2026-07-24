@@ -7,7 +7,6 @@ import { GenerationProgress } from "./generation-progress";
 import { BADGE_OPTIONS, BADGE_OPTIONS_BY_INTENT } from "@/lib/constants";
 import { MandatoryArtworkField } from "@/components/campaign/mandatory-artwork-field";
 import type { CampaignIntent } from "@/lib/campaign/types";
-import { useEffect } from "react";
 import {
   AlertCircle,
   AlertTriangle,
@@ -265,17 +264,6 @@ function FormContent({
   balance,
   supportEmail,
 }: FormContentProps) {
-  // Badge cleanup on intent change — reset badge if it doesn't belong to the new intent's list
-  useEffect(() => {
-    const currentBadge = fields.badge;
-    if (currentBadge && !BADGE_OPTIONS_BY_INTENT[fields.campaignIntent].includes(currentBadge)) {
-      setField("badge", "");
-    }
-    if (fields.campaignIntent === "offer" && fields.preserveImageContext) {
-      setField("preserveImageContext", false);
-    }
-  }, [fields.campaignIntent]);
-
   return (
     <form
       onSubmit={(e) => {

@@ -294,6 +294,9 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
 
   // Intent inference — observe price changes to auto-detect campaign intent
   useEffect(() => {
+    const isInitial = fields.originalPriceCents === 0 && (fields.discountedPriceCents === undefined || fields.discountedPriceCents === 0);
+    if (isInitial) return;
+
     const inferred = inferIntent(fields.originalPriceCents, fields.discountedPriceCents);
 
     if (userChangedIntent.current) {
@@ -310,9 +313,28 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     }
 
     if (inferred !== fields.campaignIntent) {
-      setFields((prev) => ({ ...prev, campaignIntent: inferred }));
+      const badge = fields.badge;
+      const newBadge = badge && !BADGE_OPTIONS_BY_INTENT[inferred].includes(badge) ? "" : badge;
+      const preserve = inferred === "offer" ? false : fields.preserveImageContext;
+      setFields((prev) => ({
+        ...prev,
+        campaignIntent: inferred,
+        badge: newBadge,
+        preserveImageContext: preserve,
+      }));
     }
   }, [fields.originalPriceCents, fields.discountedPriceCents]);
+
+  // Badge cleanup on intent change — reset badge if invalid for new intent
+  useEffect(() => {
+    const badge = fields.badge;
+    if (badge && !BADGE_OPTIONS_BY_INTENT[fields.campaignIntent].includes(badge)) {
+      setFields((prev) => ({ ...prev, badge: "" }));
+    }
+    if (fields.campaignIntent === "offer" && fields.preserveImageContext) {
+      setFields((prev) => ({ ...prev, preserveImageContext: false }));
+    }
+  }, [fields.campaignIntent]);
 
   const displayPriceOriginal =
     rawOriginalPrice === "" ? "" : formatCurrencyBRL(fields.originalPriceCents);

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, waitFor, act } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import { useCampaignForm } from "../use-campaign-form";
 
 const mockPush = vi.fn();
@@ -40,24 +40,13 @@ function createNdjsonResponse(
 }
 
 beforeEach(() => {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.clearAllMocks();
   sessionStorage.clear();
-  mockRestoreFormState.mockReturnValue({
-    productName: "Test Product",
-    description: "",
-    originalPriceCents: 0,
-    discountedPriceCents: 1990,
-    badge: "Oferta",
-    imageFile: null,
-  });
-});
-
-afterEach(() => {
-  vi.useRealTimers();
+  mockRestoreFormState.mockReturnValue(null);
 });
 
 describe("useCampaignForm navigation", () => {
-  it("navigates to campaignUrl on successful generation", async () => {
+  it("navigates to campaignUrl on successful generation with restored image", async () => {
     sessionStorage.setItem("campaign_draft_image", VALID_DATA_URL);
 
     vi.stubGlobal(
@@ -69,13 +58,23 @@ describe("useCampaignForm navigation", () => {
       )
     );
 
-    const { result } = renderHook(() => useCampaignForm("store-123"));
-
-    await act(async () => {
-      vi.advanceTimersByTime(600);
+    mockRestoreFormState.mockReturnValue({
+      productName: "Test Product",
+      description: "",
+      originalPriceCents: 10000,
+      discountedPriceCents: 1990,
+      badge: "Oferta",
+      campaignIntent: "offer",
+      preserveImageContext: false,
+      imageFile: null,
+      mandatoryArtworkText: "",
     });
 
-    await waitFor(() => expect(result.current.isValid).toBe(true));
+    const { result } = renderHook(() => useCampaignForm("store-123"));
+
+    await act(async () => {});
+
+    expect(result.current.isValid).toBe(true);
 
     await act(async () => {
       await result.current.handleSubmit();
@@ -98,13 +97,23 @@ describe("useCampaignForm navigation", () => {
       )
     );
 
-    const { result } = renderHook(() => useCampaignForm("store-123"));
-
-    await act(async () => {
-      vi.advanceTimersByTime(600);
+    mockRestoreFormState.mockReturnValue({
+      productName: "Test Product",
+      description: "",
+      originalPriceCents: 10000,
+      discountedPriceCents: 1990,
+      badge: "Oferta",
+      campaignIntent: "offer",
+      preserveImageContext: false,
+      imageFile: null,
+      mandatoryArtworkText: "",
     });
 
-    await waitFor(() => expect(result.current.isValid).toBe(true));
+    const { result } = renderHook(() => useCampaignForm("store-123"));
+
+    await act(async () => {});
+
+    expect(result.current.isValid).toBe(true);
 
     await act(async () => {
       await result.current.handleSubmit();
@@ -128,13 +137,23 @@ describe("useCampaignForm navigation", () => {
       )
     );
 
-    const { result } = renderHook(() => useCampaignForm("store-123"));
-
-    await act(async () => {
-      vi.advanceTimersByTime(600);
+    mockRestoreFormState.mockReturnValue({
+      productName: "Test Product",
+      description: "",
+      originalPriceCents: 10000,
+      discountedPriceCents: 1990,
+      badge: "Oferta",
+      campaignIntent: "offer",
+      preserveImageContext: false,
+      imageFile: null,
+      mandatoryArtworkText: "",
     });
 
-    await waitFor(() => expect(result.current.isValid).toBe(true));
+    const { result } = renderHook(() => useCampaignForm("store-123"));
+
+    await act(async () => {});
+
+    expect(result.current.isValid).toBe(true);
 
     await act(async () => {
       await result.current.handleSubmit();
