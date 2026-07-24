@@ -138,6 +138,14 @@ export const POST = apiHandler(async (request: NextRequest) => {
     );
   }
 
+  // ── Pre-stream: Campaign intent guard ──────────────────────────────
+  if (parsed.data.campaignIntent !== "offer") {
+    return Response.json(
+      { error: { message: "Intenção comercial indisponível. Apenas ofertas podem ser geradas no momento." } },
+      { status: 400 }
+    );
+  }
+
   // ── Pre-stream: Resolve store identity (backend-side) ────────────
   const { storeId, ...campaignInput } = parsed.data;
 
@@ -283,6 +291,10 @@ export const POST = apiHandler(async (request: NextRequest) => {
       sensitiveConstraints: campaignInput.sensitiveConstraints,
       inputValidationOverride: campaignInput.inputValidationOverride,
       mandatoryArtworkText: campaignInput.mandatoryArtworkText,
+      campaignIntent: campaignInput.campaignIntent,
+      preserveImageContext: campaignInput.campaignIntent === "offer"
+        ? false
+        : (campaignInput.preserveImageContext ?? false),
       productImage: { provided: true, mimeType: "image/jpeg" },
     };
 
