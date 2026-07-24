@@ -1,11 +1,13 @@
 "use client";
 
-import { useCampaignForm } from "./use-campaign-form";
+import { useCampaignForm, inferIntent } from "./use-campaign-form";
 import type { CampaignFormFields } from "./use-campaign-form";
 import { CampaignImageUpload } from "./campaign-image-upload";
 import { GenerationProgress } from "./generation-progress";
-import { BADGE_OPTIONS } from "@/lib/constants";
+import { BADGE_OPTIONS, BADGE_OPTIONS_BY_INTENT } from "@/lib/constants";
 import { MandatoryArtworkField } from "@/components/campaign/mandatory-artwork-field";
+import type { CampaignIntent } from "@/lib/campaign/types";
+import { useEffect } from "react";
 import {
   AlertCircle,
   AlertTriangle,
@@ -178,7 +180,7 @@ interface FormContentProps {
   fields: CampaignFormFields;
   fieldErrors: Record<string, string | undefined>;
   touched: Record<string, boolean>;
-  setField: (field: keyof CampaignFormFields, value: string | number | File | null) => void;
+  setField: (field: keyof CampaignFormFields, value: string | number | boolean | File | null | undefined) => void;
   handleBlur: (field: keyof CampaignFormFields) => void;
   displayPriceOriginal: string;
   displayPriceDiscounted: string;
@@ -189,6 +191,62 @@ interface FormContentProps {
   handleSubmit: () => void;
   balance?: number | null;
   supportEmail?: string;
+}
+
+function IntentSelector({
+  value,
+  onChange,
+  availableOptions,
+  disabled,
+}: {
+  value: CampaignIntent;
+  onChange: (intent: CampaignIntent) => void;
+  availableOptions: CampaignIntent[];
+  disabled: boolean;
+}) {
+  const labels: Record<CampaignIntent, string> = {
+    offer: "Oferta",
+    spotlight: "Destaque",
+    exclusive: "Exclusivo",
+  };
+
+  return (
+    <div className="space-y-2">
+      <span className="block text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2">
+        Intenção da campanha
+      </span>
+      <div className="space-y-2">
+        {availableOptions.map((intent) => (
+          <label
+            key={intent}
+            className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+              value === intent
+                ? "border-accent-green bg-accent-green/5"
+                : "border-border-light hover:border-text-muted"
+            }`}
+          >
+            <input
+              type="radio"
+              name="campaignIntent"
+              value={intent}
+              checked={value === intent}
+              onChange={() => onChange(intent)}
+              disabled={disabled}
+              className="h-4 w-4 accent-accent-green"
+            />
+            <span className="text-text-primary text-sm font-body flex-1">
+              {labels[intent]}
+            </span>
+            {(intent === "spotlight" || intent === "exclusive") && (
+              <span className="text-[10px] bg-amber-900/40 text-amber-300 px-1.5 py-0.5 rounded-full font-medium ml-2">
+                Em breve
+              </span>
+            )}
+          </label>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function FormContent({
@@ -207,6 +265,17 @@ function FormContent({
   balance,
   supportEmail,
 }: FormContentProps) {
+  // Badge cleanup on intent change — reset badge if it doesn't belong to the new intent's list
+  useEffect(() => {
+    const currentBadge = fields.badge;
+    if (currentBadge && !BADGE_OPTIONS_BY_INTENT[fields.campaignIntent].includes(currentBadge)) {
+      setField("badge", "");
+    }
+    if (fields.campaignIntent === "offer" && fields.preserveImageContext) {
+      setField("preserveImageContext", false);
+    }
+  }, [fields.campaignIntent]);
+
   return (
     <form
       onSubmit={(e) => {
@@ -359,7 +428,12 @@ function FormContent({
           htmlFor="badge"
           className="block text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2"
         >
-          Selo promocional *
+          Selo promocional{fields.campaignIntent === "offer" ? " *" : " "}
+          {fields.campaignIntent !== "offer" && (
+            <span className="font-normal normal-case tracking-normal text-text-disabled">
+              (opcional)
+            </span>
+          )}
         </label>
         <select
           id="badge"
@@ -373,10 +447,14 @@ function FormContent({
               : "border-border-light hover:border-text-muted"
           }`}
         >
-          <option value="" disabled>
-            Selecione o badge
-          </option>
-          {BADGE_OPTIONS.map((opt) => (
+          {fields.campaignIntent === "offer" ? (
+            <option value="" disabled>
+              Selecione o badge
+            </option>
+          ) : (
+            <option value="">Nenhum</option>
+          )}
+          {BADGE_OPTIONS_BY_INTENT[fields.campaignIntent].map((opt) => (
             <option key={opt} value={opt}>
               {opt}
             </option>
@@ -389,6 +467,37 @@ function FormContent({
           </p>
         )}
       </div>
+
+      <IntentSelector
+        value={fields.campaignIntent}
+        onChange={(intent) => setField("campaignIntent", intent)}
+        availableOptions={
+          (() => {
+            const inferred = inferIntent(fields.originalPriceCents, fields.discountedPriceCents);
+            if (inferred === "offer") return ["offer"];
+            if (fields.discountedPriceCents !== undefined && (fields.discountedPriceCents ?? 0) > 0) {
+              return ["offer", "spotlight"];
+            }
+            return ["spotlight", "exclusive"];
+          })()
+        }
+        disabled={isSubmitting}
+      />
+
+      {fields.campaignIntent !== "offer" && (
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={fields.preserveImageContext}
+            onChange={(e) => setField("preserveImageContext", e.target.checked)}
+            disabled={isSubmitting}
+            className="mt-0.5 h-4 w-4 rounded border-border-light bg-bg-surface text-accent-green focus:ring-accent-green/20"
+          />
+          <span className="text-text-primary text-sm font-body">
+            Preservar imagem original
+          </span>
+        </label>
+      )}
 
       <MandatoryArtworkField
         value={fields.mandatoryArtworkText}
@@ -423,13 +532,15 @@ function FormContent({
 
         <button
           type="submit"
-          disabled={isSubmitting || balance === 0 || balance === null}
+          disabled={isSubmitting || fields.campaignIntent !== "offer" || balance === 0 || balance === null}
           title={
-            balance === 0
-              ? "Você precisa de créditos para gerar uma campanha"
-              : balance === null
-                ? "Não foi possível confirmar seu saldo"
-                : undefined
+            fields.campaignIntent !== "offer"
+              ? "Disponível em breve"
+              : balance === 0
+                ? "Você precisa de créditos para gerar uma campanha"
+                : balance === null
+                  ? "Não foi possível confirmar seu saldo"
+                  : undefined
           }
           className="min-h-[44px] w-full sm:w-auto px-8 py-2.5 bg-accent-green text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
@@ -438,6 +549,8 @@ function FormContent({
               <Loader2 className="w-4 h-4 animate-spin" />
               Criando...
             </>
+          ) : fields.campaignIntent !== "offer" ? (
+            "Disponível em breve"
           ) : (
             "Criar Campanha"
           )}
