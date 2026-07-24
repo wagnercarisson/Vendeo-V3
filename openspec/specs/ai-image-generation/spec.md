@@ -100,6 +100,38 @@ The interface SHALL define:
 - **THEN** `OpenAIImageProvider` SHALL NOT send any identity image
 - **AND** SHALL only send `input_text` and `productImageDataUrl` (if present)
 
+### Requirement: GenerateImageRequestSchema with campaignIntent e preserveImageContext
+
+O schema `GenerateImageRequestSchema` em `src/lib/image-generation/schema.ts` SHALL ser modificado para aceitar:
+
+- `campaignIntent` — `z.enum(["offer", "spotlight", "exclusive"]).optional().default("offer")` — ADICIONADO
+- `preserveImageContext` — `z.boolean().optional()` — ADICIONADO
+- `discountedPriceCents` — mantém `z.number().int().positive()` (required, sem mudança — compatível com pipeline até F31.2)
+
+O schema SHALL usar `.strict()` para rejeitar campos não reconhecidos.
+
+#### Scenario: campaignIntent opcional é aceito
+
+- **WHEN** o body inclui `campaignIntent: "spotlight"`
+- **THEN** `GenerateImageRequestSchema.safeParse()` retorna `{ success: true, data }`
+- **AND** `data.campaignIntent === "spotlight"`
+
+#### Scenario: campaignIntent omitido usa default offer
+
+- **WHEN** o body não inclui `campaignIntent`
+- **THEN** `GenerateImageRequestSchema.safeParse()` retorna `{ success: true, data }`
+- **AND** `data.campaignIntent` é `"offer"`
+
+#### Scenario: preserveImageContext opcional é aceito
+
+- **WHEN** o body inclui `preserveImageContext: true`
+- **THEN** `GenerateImageRequestSchema.safeParse()` retorna `{ success: true, data }`
+
+#### Scenario: discountedPriceCents mantém-se required
+
+- **WHEN** o body omite `discountedPriceCents`
+- **THEN** `GenerateImageRequestSchema.safeParse()` retorna `{ success: false, error }`
+
 ### Requirement: POST /api/campaign/generate-image endpoint
 
 The system SHALL expose a POST endpoint at `/api/campaign/generate-image`.
@@ -107,7 +139,7 @@ The system SHALL expose a POST endpoint at `/api/campaign/generate-image`.
 The endpoint SHALL:
 1. Accept POST requests with `Content-Type: application/json`
 2. Require `storeId` (UUID) and `productImageDataUrl` — return 400 (no stream) if absent
-3. Accept all existing campaign/product fields (`productName`, `originalPriceCents`, `discountedPriceCents`, `badgeText`, `description`, `hook`, `cta`, `objective`, `campaignDetails`, `additionalDetails`, `targetChannel`, `format`, `validity`, `availabilityNotes`, `sensitiveConstraints`) and `inputValidationOverride`
+3. Accept all existing campaign/product fields (`productName`, `originalPriceCents`, `discountedPriceCents`, `badgeText`, `description`, `hook`, `cta`, `objective`, `campaignDetails`, `additionalDetails`, `targetChannel`, `format`, `validity`, `availabilityNotes`, `sensitiveConstraints`, `campaignIntent`, `preserveImageContext`) and `inputValidationOverride`
 4. **NOT accept** `storeName`, `storeSegment`, `storeTone`, `brandColor`, `storeLogoUrl`, or `brandProfile` — if present, return 400
 5. Call `resolveStoreIdentity(storeId)` → `validateIdentityReference()` → `buildCampaignBrief()` → `ImageGenerationService.generateImage(CampaignBrief)`
 6. Run pre-generation input validation (product name vs product image), unless overridden by `inputValidationOverride`

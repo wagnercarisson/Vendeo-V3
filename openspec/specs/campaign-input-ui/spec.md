@@ -2,6 +2,7 @@
 >
 > > Synced from `fase-18-app-shell-ui-base-rotas` (MODIFIED). Route migrated from `/` to `/campanhas/nova`. No-store redirect updated to `/loja`. Links updated to new route paths. Design tokens applied.
 > > Modified by `fase-27-conta-saldo-extrato` (MODIFIED). Added credit balance indicator, generate button disable/tooltip when zero credits, and error state with reload action.
+> > Modified by `fase-31-1-modelo-comercial-formulario` (MODIFIED). Added campaign intent selector, conditional badge by intent, preserveImageContext checkbox, and intent-conditional validation.
 
 ## Requirements
 
@@ -86,16 +87,19 @@ The system SHALL render the following form fields:
 - **Nome do Produto**: required text input, max 60 characters
 - **Descrição Breve**: optional text input, max 120 characters
 - **Preço Original**: optional currency input with BRL mask (`R$` prefix, formatted as `R$ 49,90`)
-- **Preço com Desconto**: required currency input with BRL mask
-- **Badge Promocional**: required dropdown select using `BADGE_OPTIONS` from `src/lib/constants.ts`
+- **Preço com Desconto**: required currency input with BRL mask (obrigatório apenas quando intent=offer)
+- **Badge Promocional**: required dropdown select usando badges da intent atual (obrigatório apenas para offer)
+- **Intenção Comercial**: radio group posicionado entre badge e botão "Criar Campanha", com opções filtradas por inferência. Spotlight e Exclusive exibem "Em breve"
+- **Preservar Imagem Original**: checkbox visível apenas em spotlight/exclusive
 - **Imagem do Produto**: required file upload dropzone, accepts PNG/JPG/WEBP only, max 5MB
 
 #### Scenario: Required fields are rendered
 
 - **WHEN** the form is displayed
 - **THEN** Nome do Produto input SHALL be present and marked as required
-- **AND** Preço com Desconto input SHALL be present and marked as required
-- **AND** Badge Promocional dropdown SHALL be present and marked as required
+- **AND** Preço com Desconto input SHALL be present and marked as required (para intent=offer)
+- **AND** Badge Promocional dropdown SHALL be present and marked as required (para intent=offer)
+- **AND** Intenção Comercial radio group SHALL be present
 - **AND** Imagem do Produto dropzone SHALL be present and marked as required
 
 #### Scenario: Optional fields are rendered
@@ -103,13 +107,35 @@ The system SHALL render the following form fields:
 - **WHEN** the form is displayed
 - **THEN** Descrição Breve input SHALL be present
 - **AND** Preço Original input SHALL be present
+- **AND** Preservar Imagem Original checkbox SHALL be present (apenas quando intent != offer)
 - **AND** they SHALL NOT be marked as required
+
+#### Scenario: Intent selector renderizado entre badge e botão Criar
+
+- **WHEN** o formulário é exibido com campos de preço preenchidos
+- **THEN** o seletor de intent está presente entre o badge select e o botão "Criar Campanha"
+
+#### Scenario: Badge options variam por intent
+
+- **WHEN** a intent selecionada muda
+- **THEN** as opções do badge select atualizam conforme `BADGE_OPTIONS_BY_INTENT[intent]`
+- **AND** para spotlight/exclusive, uma opção vazia ("Nenhum") está disponível
 
 #### Scenario: Badge options are predefined
 
-- **WHEN** the Badge Promocional dropdown is opened
-- **THEN** the options SHALL be: Oferta, Promoção, Queima de Estoque, Novidade, Últimas Unidades
-- **AND** they SHALL come from `BADGE_OPTIONS` in `src/lib/constants.ts`
+- **WHEN** the Badge Promocional dropdown is opened com intent `"offer"`
+- **THEN** the options SHALL be: Promoção, Oferta, Queima de Estoque, Últimas Unidades, Imperdível
+- **AND** they SHALL come from `BADGE_OPTIONS_BY_INTENT["offer"]` in `src/lib/constants.ts`
+
+#### Scenario: Badge options for spotlight
+
+- **WHEN** o badge dropdown está aberto com intent `"spotlight"`
+- **THEN** as opções são: Novidade, Lançamento, Mais Vendido, Top de Linha, Destaque da Semana
+
+#### Scenario: Badge options for exclusive
+
+- **WHEN** o badge dropdown está aberto com intent `"exclusive"`
+- **THEN** as opções são: Exclusivo, Premium, Sob Encomenda, Edição Limitada
 
 ### Requirement: Product image upload with local preview
 
@@ -192,8 +218,10 @@ The system SHALL validate the following rules:
 - **Nome do Produto**: required, max 60 characters, trimmed
 - **Descrição Breve**: optional, max 120 characters
 - **Preço Original**: optional, MUST be greater than zero if provided, MUST be greater than Preço com Desconto
-- **Preço com Desconto**: required, MUST be greater than zero
-- **Badge Promocional**: required, MUST be one of the `BADGE_OPTIONS`
+- **Preço com Desconto**: obrigatório se intent=offer, MUST be greater than zero
+- **Badge Promocional**: obrigatório se intent=offer, MUST be one of `BADGE_OPTIONS_BY_INTENT[intent]`
+- **Intenção Comercial**: seleção obrigatória; apenas `offer` permite submissão
+- **Preservar Imagem Original**: opcional, visível apenas em spotlight/exclusive
 - **Imagem do Produto**: required, MUST be PNG/JPG/WEBP and ≤ 5MB
 
 Validation SHALL trigger on blur for each field. Blocking state SHALL prevent submit when any validation fails.
@@ -212,6 +240,14 @@ Validation SHALL trigger on blur for each field. Blocking state SHALL prevent su
 
 - **WHEN** the user enters 0 in Preço com Desconto and blurs
 - **THEN** an inline error SHALL appear: "Preço deve ser maior que zero"
+
+#### Scenario: Discounted price validation condicional por intent
+
+- **WHEN** intent=`"offer"` e Preço com Desconto é 0
+- **THEN** erro inline: "Preço com desconto é obrigatório para ofertas"
+
+- **WHEN** intent=`"spotlight"` e Preço com Desconto é 0
+- **THEN** nenhum erro de preço com desconto
 
 #### Scenario: Discounted price must be less than original
 
@@ -235,17 +271,33 @@ Validation SHALL trigger on blur for each field. Blocking state SHALL prevent su
 The submit behavior SHALL be updated. Instead of including identity fields in the request body, the system SHALL:
 
 1. Validate all required fields
-2. Create or reuse the product image object URL from the selected image file
-3. Call `POST /api/campaign/generate-image` with form data including `storeId` — no identity fields
-4. On success: navigate to `/campanhas/${campaignId}` using the `campaignUrl` returned by the API
-5. On error: display error state with retry option
+2. Verificar se a intent selecionada é `"offer"` — se não, bloquear com "Disponível em breve"
+3. Create or reuse the product image object URL from the selected image file
+4. Incluir `campaignIntent` e `preserveImageContext` no body
+5. Call `POST /api/campaign/generate-image` with form data including `storeId` — no identity fields
+6. On success: navigate to `/campanhas/${campaignId}` using the `campaignUrl` returned by the API
+7. On error: display error state with retry option
 
 #### Scenario: Valid submit navigates to /campanhas/[id]
 
 - **WHEN** all required fields are valid and the user clicks "Criar Campanha"
 - **THEN** the system SHALL call `POST /api/campaign/generate-image` with `storeId` in the body
 - **AND** the body SHALL NOT include `storeName`, `storeSegment`, `storeTone`, `brandColor`, `storeLogoUrl`, or `brandProfile`
+- **AND** the body SHALL include `campaignIntent: "offer"`
+- **AND** `preserveImageContext` não está presente no body (ou é `false`)
 - **AND** on success, navigate to `/campanhas/${campaignId}`
+
+#### Scenario: Submit bloqueado para spotlight
+
+- **WHEN** intent selecionada é `"spotlight"` e o usuário clica "Criar Campanha"
+- **THEN** o submit NÃO é executado
+- **AND** exibe tooltip "Disponível em breve"
+
+#### Scenario: Submit bloqueado para exclusive
+
+- **WHEN** intent selecionada é `"exclusive"` e o usuário clica "Criar Campanha"
+- **THEN** o submit NÃO é executado
+- **AND** exibe tooltip "Disponível em breve"
 
 #### Scenario: API error shows error state
 

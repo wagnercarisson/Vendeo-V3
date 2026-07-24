@@ -337,18 +337,18 @@ Phase 24 (Credit Tables + CreditService) ──┘
 | ADMIN-04 | Phase 26 | Done ✓ |
 | ADMIN-05 | Phase 26 | Done ✓ |
 | ADMIN-06 | Phase 26 | Done ✓ |
-| INTENT-01 | Phase 31.1 | ◆ Planned |
-| INTENT-02 | Phase 31.1 | ◆ Planned |
-| INTENT-03 | Phase 31.1 | ◆ Planned |
-| INTENT-04 | Phase 31.1 | ◆ Planned |
-| INTENT-05 | Phase 31.1 | ◆ Planned |
-| INTENT-06 | Phase 31.1 | ◆ Planned |
-| INTENT-07 | Phase 31.1 | ◆ Planned |
-| INTENT-08 | Phase 31.1 | ◆ Planned |
-| INTENT-09 | Phase 31.1 | ◆ Planned |
-| INTENT-10 | Phase 31.1 | ◆ Planned |
-| INTENT-11 | Phase 31.1 | ◆ Planned |
-| INTENT-12 | Phase 31.1 | ◆ Planned |
+| INTENT-01 | Phase 31.1 | Done ✓ |
+| INTENT-02 | Phase 31.1 | Done ✓ |
+| INTENT-03 | Phase 31.1 | Done ✓ |
+| INTENT-04 | Phase 31.1 | Done ✓ |
+| INTENT-05 | Phase 31.1 | Done ✓ |
+| INTENT-06 | Phase 31.1 | Done ✓ |
+| INTENT-07 | Phase 31.1 | Done ✓ |
+| INTENT-08 | Phase 31.1 | Done ✓ |
+| INTENT-09 | Phase 31.1 | Done ✓ |
+| INTENT-10 | Phase 31.1 | Done ✓ |
+| INTENT-11 | Phase 31.1 | Done ✓ |
+| INTENT-12 | Phase 31.1 | Done ✓ |
 | PAY-01 | Phase 32/v1.7 | Deferred |
 | PAY-02 | Phase 32/v1.7 | Deferred |
 | PAY-03 | Phase 32/v1.7 | Deferred |
@@ -384,7 +384,7 @@ Phase 24 (Credit Tables + CreditService) ──┘
 **Coverage:**
 - v1 requirements: 119 total (107 v1.5 + 12 INTENT)
 - Mapped to phases: 119
-- Completed: 107
+- Completed: 119
 - Unmapped: 0 ✓
 - Deferred to v1.7: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06 (Phase 32)
 
@@ -392,4 +392,4 @@ Phase 24 (Credit Tables + CreditService) ──┘
 
 *Roadmap created: 2026-07-15*
 *Milestone: v1.5 — Lançamento Externo Controlado*
-*Last updated: 2026-07-24 — Phase 31.1 added — Modelo Comercial Formulário*
+*Last updated: 2026-07-24 — Phase 31.1 verified — all INTENT requirements Done*
