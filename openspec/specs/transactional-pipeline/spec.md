@@ -12,7 +12,7 @@ Pipeline de geração de imagem em 3 zonas (pré-stream, paralelo, pós) com res
 
 O sistema SHALL estruturar o handler `POST /api/campaign/generate-image` em três zonas com responsabilidades distintas:
 
-**PRÉ-STREAM (síncrono, fora do ReadableStream):** parse + auth + ownership + rate limit + saldo check + input validation + criar campanha + reservar crédito. Produz Response HTTP direto (400, 401, 403, 429, 402, 409, 500). Nunca chama IA paga se alguma condição falhar.
+**PRÉ-STREAM (síncrono, fora do ReadableStream):** parse + auth + ownership + **legal clearance** + rate limit + saldo check + input validation + criar campanha + reservar crédito. Produz Response HTTP direto (400, 401, 403, 429, 402, 409, 500). Nunca chama IA paga se alguma condição falhar.
 
 **PARALELO (dentro do ReadableStream):** Copy Director ∥ Image Director com retry seletivo. Produz NDJSON events de progresso.
 
@@ -44,6 +44,24 @@ O sistema SHALL estruturar o handler `POST /api/campaign/generate-image` em trê
 - **AND** ao finalizar, campanha fica com status `ready`
 - **AND** `publication_copy_snapshot` contém resultado do Copy Director
 - **AND** NDJSON result é emitido com `campaignId` e `campaignUrl`
+
+#### Scenario: Legal clearance fails returns 403 before rate limit
+
+- **WHEN** `POST /api/campaign/generate-image` é chamado com legal clearance pendente
+- **THEN** retorna HTTP 403 Forbidden
+- **AND** Nenhuma chamada de IA é feita
+- **AND** Nenhum rate limit check é executado
+
+#### Scenario: Legal clearance passes continues normally
+
+- **WHEN** `POST /api/campaign/generate-image` é chamado com legal clearance ok
+- **THEN** rate limit guard é executado
+- **AND** fluxo normal do pipeline prossegue
+
+#### Scenario: Pipeline regression — generation with clearance succeeds
+
+- **WHEN** `POST /api/campaign/generate-image` é chamado com legal clearance ok e saldo suficiente
+- **THEN** a geração prossegue e completa normalmente (regressão zero)
 
 ### Requirement: COST_PER_GENERATION fixo em 1
 
