@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: "Lançamento Externo Controlado — Créditos + Admin + Saldo + Observabilidade + Launch"
 status: active
-last_updated: "2026-07-23T19:12:00.000Z"
-last_activity: "2026-07-23T19:12:00.000Z"
+last_updated: "2026-07-24T15:57:00.000Z"
+last_activity: "2026-07-24T15:57:00.000Z"
 progress:
   total_phases: 14
   completed_phases: 12
@@ -459,3 +459,4 @@ v1.5 em progresso — Fase 30 concluída. Fundação Legal implementada.
 | 260722-hyq | Sanear persistência e cálculo das métricas de crédito — corrigir getRefundRate para filtrar por feature, corrigir getCreditsGranted para somar amounts, adicionar metadata.feature em reserveCredit/refundCredit | 2026-07-22 | 4f73def | [260722-hyq-sanear-persist-ncia-e-c-lculo-das-m-tric](./quick/260722-hyq-sanear-persist-ncia-e-c-lculo-das-m-tric/) |
 | 260722-i7v | Separar visualmente as métricas por domínio — 3 seções no admin, 6 funções VS, cross-window fix, duration_ms | 2026-07-22 | c772ffd | [260722-i7v-separar-visualmente-as-m-tricas-por-dom-](./quick/260722-i7v-separar-visualmente-as-m-tricas-por-dom-/) |
 | 260722-jwr | Fase 29.2 — Onboarding Grant 10 créditos | 2026-07-22 | 976a571 | [260722-jwr-fase-29-2-onboarding-grant-10-cr-ditos-a](./quick/260722-jwr-fase-29-2-onboarding-grant-10-cr-ditos-a/) |
+| 260724-hzz | Privacy Gate pós-login — ciência de Política de Privacidade | 2026-07-24 | fb02332 | [260724-hzz-privacy-gate-p-s-login-ci-ncia-de-pol-ti](./quick/260724-hzz-privacy-gate-p-s-login-ci-ncia-de-pol-ti/) |
