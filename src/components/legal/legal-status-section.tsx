@@ -8,10 +8,20 @@ import { CommunicationsConsentModal } from "./communications-consent-modal";
 import { RevokeConsentModal } from "./revoke-consent-modal";
 import { ContractAcceptanceModal } from "./contract-acceptance-modal";
 
+interface LegalDocumentInfo {
+  label: string;
+  version: string;
+  url: string;
+}
+
 interface LegalStatus {
   privacyAcknowledged: boolean;
   effectiveConsent: "granted" | "revoked" | "never_set";
   acceptanceStatus: "current" | "outdated" | "never" | null;
+  documents: {
+    privacyPolicy: LegalDocumentInfo | null;
+    contractDocuments: LegalDocumentInfo[];
+  };
 }
 
 export function LegalStatusSection({ storeId }: { storeId: string | null }) {
@@ -265,11 +275,14 @@ export function LegalStatusSection({ storeId }: { storeId: string | null }) {
       </div>
 
       {/* Modais */}
-      <PrivacyAcknowledgeModal
-        open={showPrivacyModal}
-        onOpenChange={setShowPrivacyModal}
-        onConfirm={handlePrivacyConfirm}
-      />
+      {status?.documents?.privacyPolicy && (
+        <PrivacyAcknowledgeModal
+          open={showPrivacyModal}
+          onOpenChange={setShowPrivacyModal}
+          onConfirm={handlePrivacyConfirm}
+          policyDocument={status.documents.privacyPolicy}
+        />
+      )}
 
       <CommunicationsConsentModal
         open={showConsentModal}
@@ -283,11 +296,14 @@ export function LegalStatusSection({ storeId }: { storeId: string | null }) {
         onConfirm={handleConsentRevokeConfirm}
       />
 
-      <ContractAcceptanceModal
-        open={showContractModal}
-        onOpenChange={setShowContractModal}
-        onConfirm={handleContractAcceptConfirm}
-      />
+      {status?.documents?.contractDocuments && (
+        <ContractAcceptanceModal
+          open={showContractModal}
+          onOpenChange={setShowContractModal}
+          onConfirm={handleContractAcceptConfirm}
+          contractDocuments={status.documents.contractDocuments}
+        />
+      )}
     </Card>
   );
 }

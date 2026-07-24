@@ -4,7 +4,14 @@ import { createBrowserClient } from "@/lib/supabase/client";
 import { getSiteUrl } from "@/lib/supabase/site-url";
 import { useRouter } from "next/navigation";
 import { useState, FormEvent } from "react";
-import { Mail, Lock, Loader2 } from "lucide-react";
+import { Mail, Lock, Loader2, ExternalLink } from "lucide-react";
+import { PrivacyAcknowledgeModal } from "@/components/legal/privacy-acknowledge-modal";
+
+const PRIVACY_DOCUMENT = {
+  label: "Política de Privacidade",
+  version: "v1.0",
+  url: "/docs/legal/privacy-policy-v1.md",
+};
 
 export function SignupForm() {
   const router = useRouter();
@@ -13,6 +20,7 @@ export function SignupForm() {
   const [privacyChecked, setPrivacyChecked] = useState(false);
   const [communicationsOptIn, setCommunicationsOptIn] = useState(false);
   const [privacyError, setPrivacyError] = useState<string | null>(null);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
   function validate(password: string, confirm: string): string | null {
     if (password.length < 6) return "A senha deve ter no mínimo 6 caracteres";
@@ -122,21 +130,25 @@ export function SignupForm() {
       </div>
 
       <div className="space-y-3 border-t border-slate-700 pt-4">
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={privacyChecked}
-            onChange={(e) => { setPrivacyChecked(e.target.checked); setPrivacyError(null); }}
-            className="mt-1 h-4 w-4 rounded border-slate-500 bg-slate-700 text-blue-600 focus:ring-blue-500"
-          />
-          <span className="text-sm text-slate-300">
-            Declaro ciência da{" "}
-            <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline hover:text-blue-300">
-              Política de Privacidade
-            </a>
-            .
-          </span>
-        </label>
+        {privacyChecked ? (
+          <div className="flex items-start gap-3">
+            <span className="mt-1 h-4 w-4 rounded shrink-0 bg-blue-600 flex items-center justify-center">
+              <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+            </span>
+            <span className="text-sm text-slate-300">
+              Ciência declarada da Política de Privacidade
+            </span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowPrivacyModal(true)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-600 text-slate-300 font-heading font-semibold text-sm rounded-lg hover:bg-slate-700 transition-all duration-200"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Ler e declarar ciência da Política de Privacidade
+          </button>
+        )}
 
         <label className="flex items-start gap-3 cursor-pointer">
           <input
@@ -150,6 +162,13 @@ export function SignupForm() {
           </span>
         </label>
       </div>
+
+      <PrivacyAcknowledgeModal
+        open={showPrivacyModal}
+        onOpenChange={setShowPrivacyModal}
+        onConfirm={async () => { setPrivacyChecked(true); return true; }}
+        policyDocument={PRIVACY_DOCUMENT}
+      />
 
       {(error || privacyError) && (
         <p className="text-sm text-red-400">{error || privacyError}</p>

@@ -2,6 +2,8 @@ import { requirePageUser } from "@/lib/auth/require-user";
 import { getCurrentStore } from "@/lib/auth/store-ownership";
 import { getCurrentVersion } from "@/lib/legal/document-versions";
 import { getAcceptanceStatus } from "@/lib/legal/acceptance-service";
+import { getDocumentFile, getDocumentLabel, getDocumentRoute } from "@/lib/legal/document-content";
+import type { DocumentType } from "@/lib/legal/types";
 import { ReacceptForm } from "./reaccept-form";
 
 export default async function LegalReacceptPage({
@@ -39,30 +41,35 @@ export default async function LegalReacceptPage({
     currentVersion: string;
     summary: string | null;
     isFirstAcceptance: boolean;
+    needsAcceptance: boolean;
   }> = [];
 
-  if ((termsStatus === "outdated" || termsStatus === "never") && termsCurrent) {
+  if (termsCurrent) {
+    const needsAcceptance = termsStatus === "outdated" || termsStatus === "never";
     pendingDocs.push({
       documentType: "terms_of_service",
-      label: "Termos de Uso",
+      label: getDocumentLabel("terms_of_service"),
       currentVersion: termsCurrent.version,
       summary: termsCurrent.summary,
       isFirstAcceptance: termsStatus === "never",
+      needsAcceptance,
     });
   }
 
-  if ((aupStatus === "outdated" || aupStatus === "never") && aupCurrent) {
+  if (aupCurrent) {
+    const needsAcceptance = aupStatus === "outdated" || aupStatus === "never";
     pendingDocs.push({
       documentType: "acceptable_use",
-      label: "Política de Uso Aceitável",
+      label: getDocumentLabel("acceptable_use"),
       currentVersion: aupCurrent.version,
       summary: aupCurrent.summary,
       isFirstAcceptance: aupStatus === "never",
+      needsAcceptance,
     });
   }
 
+  const hasPending = pendingDocs.some((d) => d.needsAcceptance);
   const isFirstTime = pendingDocs.every((d) => d.isFirstAcceptance);
-  const isMixed = pendingDocs.some((d) => d.isFirstAcceptance) && pendingDocs.some((d) => !d.isFirstAcceptance);
 
   return (
     <main className="mx-auto max-w-xl px-4 py-12">
@@ -70,7 +77,7 @@ export default async function LegalReacceptPage({
         Documentos Legais
       </h1>
 
-      {pendingDocs.length === 0 ? (
+      {!hasPending ? (
         <div className="rounded-lg border border-border bg-bg-surface p-6">
           <p className="text-accent-green font-heading font-semibold">
             Tudo em dia! Você está com a versão mais recente dos documentos legais.
@@ -87,27 +94,55 @@ export default async function LegalReacceptPage({
           {pendingDocs.map((doc) => (
             <div
               key={doc.documentType}
-              className="rounded-lg border border-border bg-bg-surface p-6 space-y-3"
+              className={`rounded-lg border p-6 space-y-3 ${
+                doc.needsAcceptance
+                  ? "border-border bg-bg-surface"
+                  : "border-border-light bg-bg-elevated/50"
+              }`}
             >
-              <h2 className="font-heading font-semibold text-text-primary">
-                {doc.label}
-              </h2>
+              <div className="flex items-center justify-between gap-4">
+                <h2 className="font-heading font-semibold text-text-primary">
+                  {doc.label}
+                </h2>
+                {!doc.needsAcceptance && (
+                  <span className="shrink-0 text-xs text-accent-green font-heading font-semibold">
+                    ✓ Vigente
+                  </span>
+                )}
+              </div>
               <p className="text-sm text-text-muted">
-                {doc.isFirstAcceptance ? "Versão atual:" : "Nova versão:"} <strong>{doc.currentVersion}</strong>
+                {doc.needsAcceptance
+                  ? (doc.isFirstAcceptance ? "Versão atual:" : "Nova versão:")
+                  : "Versão vigente:"} <strong>{doc.currentVersion}</strong>
               </p>
               {doc.summary && (
                 <p className="text-sm text-text-secondary bg-bg-elevated rounded p-3">
                   {doc.summary}
                 </p>
               )}
-              <a
-                href={`/${doc.documentType === "terms_of_service" ? "termos" : "uso-aceitavel"}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm text-accent-blue underline hover:text-accent-blue/80"
-              >
-                Revisar documento completo
-              </a>
+              <div className="flex flex-col gap-1.5">
+                <a
+                  href={getDocumentRoute(doc.documentType)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm text-accent-blue underline hover:text-accent-blue/80"
+                >
+                  Revisar {doc.label} completo
+                </a>
+                {(() => {
+                  const file = getDocumentFile(doc.documentType, doc.currentVersion);
+                  return file ? (
+                    <a
+                      href={file}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs text-text-muted underline hover:text-text-secondary"
+                    >
+                      Documento de referência ({doc.currentVersion})
+                    </a>
+                  ) : null;
+                })()}
+              </div>
             </div>
           ))}
 

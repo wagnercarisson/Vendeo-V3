@@ -4,11 +4,18 @@ import { useRef } from "react";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { PrivacyAcknowledgeModal } from "./privacy-acknowledge-modal";
 
-interface PrivacyGateProps {
-  acknowledged: boolean;
+interface LegalDocumentInfo {
+  label: string;
+  version: string;
+  url: string;
 }
 
-export function PrivacyGate({ acknowledged }: PrivacyGateProps) {
+interface PrivacyGateProps {
+  acknowledged: boolean;
+  policyDocument: LegalDocumentInfo | null;
+}
+
+export function PrivacyGate({ acknowledged, policyDocument }: PrivacyGateProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -21,6 +28,9 @@ export function PrivacyGate({ acknowledged }: PrivacyGateProps) {
   if (pathname === "/conta" && searchParams.get("privacy") === "pending") {
     return null;
   }
+
+  // Can't show modal without document info
+  if (!policyDocument) return null;
 
   const handleConfirm = async () => {
     try {
@@ -55,6 +65,7 @@ export function PrivacyGate({ acknowledged }: PrivacyGateProps) {
       open={true}
       onOpenChange={handleOpenChange}
       onConfirm={handleConfirm}
+      policyDocument={policyDocument}
     />
   );
 }

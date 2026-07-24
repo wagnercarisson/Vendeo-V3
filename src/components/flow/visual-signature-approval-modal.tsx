@@ -28,7 +28,7 @@ type ApprovalState =
   | { phase: "approving" }
   | { phase: "review"; signatures: ReviewSignature[]; canGenerate: boolean }
   | { phase: "insufficient_credits" }
-  | { phase: "error"; message: string; drift?: { fields: string[]; reason: string; requires_regeneration: boolean } }
+  | { phase: "error"; message: string; drift?: { fields: string[]; reason: string; requires_regeneration: boolean }; acceptUrl?: string }
   | { phase: "done"; logoStatus: string; signatureUrl?: string; brandProfile?: unknown; inferredPrimaryColor?: string; inferredAccentColor?: string; logoColorsDetected?: string[] }
   | { phase: "bp_failed"; message: string; signatureUrl?: string; brandProfileData?: Record<string, unknown> | null; logoStatus?: string };
 
@@ -122,6 +122,7 @@ export function VisualSignatureApprovalModal({
           setState({
             phase: "error",
             message: "Ação bloqueada por pendência legal. Aceite a nova versão dos documentos para continuar.",
+            acceptUrl: "/legal/reaccept",
           });
           return;
         }
@@ -170,6 +171,10 @@ export function VisualSignatureApprovalModal({
       if (!res.ok) {
         if (res.status === 402) {
           setState({ phase: "insufficient_credits" });
+          return;
+        }
+        if (res.status === 403 && data.acceptUrl) {
+          setState({ phase: "error", message: data.error || "Ação bloqueada por pendência legal.", acceptUrl: data.acceptUrl });
           return;
         }
         setState({ phase: "error", message: data.error || "Falha ao gerar assinatura" });
@@ -734,18 +739,27 @@ export function VisualSignatureApprovalModal({
           <div className="flex flex-col items-center justify-center py-12 gap-4">
             <AlertCircle className="w-10 h-10 text-accent-red" />
             <p className="text-text-primary font-body text-sm text-center max-w-sm">{state.message}</p>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={handleRetry}
-                className="px-6 py-2.5 bg-accent-green text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200"
-              >
-                {state.drift ? "Ajustar assinatura" : "Tentar novamente"}
-              </button>
+            <div className="flex flex-col gap-3 w-full">
+              {state.acceptUrl ? (
+                <a
+                  href={state.acceptUrl}
+                  className="w-full inline-flex items-center justify-center px-6 py-2.5 bg-accent-blue text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200"
+                >
+                  Aceitar nova versão
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleRetry}
+                  className="w-full px-6 py-2.5 bg-accent-green text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200"
+                >
+                  {state.drift ? "Ajustar assinatura" : "Tentar novamente"}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleCancel}
-                className="px-6 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200"
+                className="w-full px-6 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200"
               >
                 Cancelar
               </button>

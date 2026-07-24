@@ -6,7 +6,7 @@ import { StorePreview } from "./store-preview";
 import { VisualSignatureApprovalModal } from "./visual-signature-approval-modal";
 import { VisualSignatureHistoryModal } from "./visual-signature-history-modal";
 import { STORE_SEGMENTS, STORE_SUBSEGMENTS, BRAZILIAN_STATES } from "@/lib/constants";
-import { AlertCircle, CheckCircle2, Loader2, X, Upload, ArrowLeft, Sparkles } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, X, Upload, ArrowLeft, Sparkles, ExternalLink } from "lucide-react";
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useDriftDetection } from "./use-drift-detection";
@@ -16,6 +16,12 @@ import { getDriftPolicy } from "@/lib/drift";
 import { DriftDecisionModal } from "./drift-decision-modal";
 import { DriftCriticalModal } from "./drift-critical-modal";
 import { isValidHex, normalizeBrandColorsChosen, hasUserChosenColors } from "@/lib/validators/color";
+import { ContractAcceptanceModal } from "@/components/legal/contract-acceptance-modal";
+
+const CONTRACT_DOCUMENTS = [
+  { label: "Termos de Uso", version: "v1.1", url: "/docs/legal/terms-of-service-v1-1.md" },
+  { label: "Política de Uso Aceitável", version: "v1.0", url: "/docs/legal/acceptable-use-v1.md" },
+];
 
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
 const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -113,6 +119,7 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
   const [driftRefreshKey, setDriftRefreshKey] = useState(0);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [acceptedTermsError, setAcceptedTermsError] = useState<string | null>(null);
+  const [showContractModal, setShowContractModal] = useState(false);
   const [inferredProfile, setInferredProfile] = useState<{
     safe_color_tokens?: Record<string, string>;
     visual_style?: string;
@@ -1158,24 +1165,25 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
 
           {!storeId && (
             <div className="pt-4 border-t border-border">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={acceptedTerms}
-                  onChange={(e) => { setAcceptedTerms(e.target.checked); setAcceptedTermsError(null); }}
-                  className="mt-1 h-4 w-4 rounded border-border-light bg-bg-surface text-accent-blue focus:ring-accent-blue/20"
-                />
-                <span className="text-sm text-text-secondary">
-                  Li e aceito os{" "}
-                  <a href="/termos" target="_blank" rel="noopener noreferrer" className="text-accent-blue underline hover:text-accent-blue/80">
-                    Termos de Uso
-                  </a>{" "}
-                  e a{" "}
-                  <a href="/uso-aceitavel" target="_blank" rel="noopener noreferrer" className="text-accent-blue underline hover:text-accent-blue/80">
-                    Política de Uso Aceitável
-                  </a>.
-                </span>
-              </label>
+              {acceptedTerms ? (
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 h-4 w-4 rounded shrink-0 bg-accent-blue flex items-center justify-center">
+                    <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                  </span>
+                  <span className="text-sm text-text-secondary">
+                    Termos de Uso e Política de Uso Aceitável aceitos
+                  </span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => { setShowContractModal(true); setAcceptedTermsError(null); }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Ler e aceitar Termos de Uso e Uso Aceitável
+                </button>
+              )}
               {acceptedTermsError && (
                 <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs">
                   <AlertCircle className="w-3.5 h-3.5" />
@@ -1856,6 +1864,12 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
           onGenerateNew={handleGenerateNew}
         />
       )}
+      <ContractAcceptanceModal
+        open={showContractModal}
+        onOpenChange={setShowContractModal}
+        onConfirm={async () => { setAcceptedTerms(true); return true; }}
+        contractDocuments={CONTRACT_DOCUMENTS}
+      />
     </div>
   );
 }

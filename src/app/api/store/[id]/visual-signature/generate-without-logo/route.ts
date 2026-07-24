@@ -68,7 +68,7 @@ export const POST = apiHandler(async (
   if (!clearance.ok) {
     return NextResponse.json(
       {
-        error: { message: "Ação bloqueada por pendência legal." },
+        error: "Ação bloqueada por pendência legal.",
         reason: clearance.reason,
         requiredDocuments: clearance.requiredDocuments,
         acceptUrl: "/legal/reaccept",
