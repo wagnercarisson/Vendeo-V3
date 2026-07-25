@@ -5,10 +5,6 @@ import type { CampaignIntent } from "@/lib/campaign/types";
 
 export type { ValidationContext };
 
-/**
- * Input data for the image review process.
- * Contains campaign details needed to compare against the generated image.
- */
 export interface ImageReviewInput {
   productName: string;
   storeName: string;
@@ -20,89 +16,114 @@ export interface ImageReviewInput {
   validationContext?: ValidationContext;
 }
 
-/**
- * ImageReviewService — post-generation quality review on every generated
- * campaign image before it reaches the user.
- *
- * Uses a vision-capable text model (e.g., GPT-4o) to inspect the generated
- * image against the expected campaign data and detect issues such as:
- * - Wrong price, product name, or store name
- * - Illegible text, deformed product, invented information
- * - Weak visual quality below publishable threshold
- *
- * Loads the `campaign-image-reviewer.md` prompt via PromptLoader with
- * campaign data variable interpolation for comparison.
- *
- * Uses `response_format: { type: "json_object" }` to encourage structured
- * JSON output from the model.
- */
 export class ImageReviewService {
   private readonly promptLoader: PromptLoader;
   private readonly model: string;
 
-  /**
-   * @param promptLoader - PromptLoader instance (defaults to new PromptLoader())
-   * @param model - Vision model identifier (defaults to VISION_REVIEW_MODEL from config)
-   */
   constructor(promptLoader?: PromptLoader, model?: string) {
     this.promptLoader = promptLoader ?? new PromptLoader();
     this.model = model ?? VISION_REVIEW_MODEL;
   }
 
-  /**
-   * Review a generated campaign image against the expected campaign data.
-   *
-   * @param generatedImageDataUrl - Base64 data URL of the generated campaign image
-   * @param input - Campaign input data (product name, store name, prices) for comparison
-   * @returns ImageReviewResult with passed boolean and issues array
-   */
+  buildReviewPromptVariables(input: ImageReviewInput): Record<string, string> {
+    const intent = input.campaignIntent ?? "offer";
+    return {
+      productName: input.productName,
+      storeName: input.storeName,
+      originalPrice: input.originalPrice ?? "",
+      campaignIntentLabel: this.buildCampaignIntentLabel(intent),
+      expectedPriceBehavior: this.buildExpectedPriceBehavior(intent, input.discountedPrice),
+      expectedBadgeBehavior: this.buildExpectedBadgeBehavior(intent, input.badgeText),
+      expectedImageTreatment: this.buildExpectedImageTreatment(intent, input.preserveImageContext),
+      expectedCommercialTone: this.buildExpectedCommercialTone(intent),
+      validationContextSection: this.buildValidationContextSection(input.validationContext),
+    };
+  }
+
   async review(
     generatedImageDataUrl: string,
     input: ImageReviewInput
   ): Promise<ImageReviewResult> {
-    // Compute validation context section for the review prompt
-    let validationContextSection = "";
-    if (input.validationContext) {
-      const parts: string[] = [];
-
-      if (input.validationContext.inputCorrection) {
-        const c = input.validationContext.inputCorrection;
-        parts.push(
-          `O nome do produto foi corrigido automaticamente de "${c.from}" para "${c.to}" (motivo: ${c.reason}). A revisão deve usar "${c.to}" como referência.`
-        );
-      }
-
-      if (input.validationContext.overrides?.productImageCheck === "user_confirmed_continue") {
-        parts.push(
-          "O usuário confirmou que a imagem do produto está correta, mesmo com divergência na pré-validação. A revisão não deve reportar conflito produto × imagem."
-        );
-      }
-
-      if (parts.length > 0) {
-        validationContextSection = `\n## Contexto de Validação\n${parts.map(p => `- ${p}`).join("\n")}\n`;
-      }
-    }
-
-    // Load the review prompt with campaign data for comparison
-    const prompt = this.promptLoader.load("campaign-image-reviewer", {
-      productName: input.productName,
-      storeName: input.storeName,
-      badgeText: input.badgeText ?? "",
-      discountedPrice: input.discountedPrice ?? "",
-      originalPrice: input.originalPrice ?? "",
-      validationContextSection,
-    });
-
-    // Call the vision model with the generated image
+    const contextVars = this.buildReviewPromptVariables(input);
+    const prompt = this.promptLoader.load("campaign-image-reviewer", contextVars);
     const raw = await this.callVisionModel(prompt, generatedImageDataUrl);
-
-    // Parse the structured JSON response
     return this.parseResult(raw);
   }
 
-  /**
-   * Call the vision-capable model with the review prompt and generated image.
-   */
+  private buildCampaignIntentLabel(intent: CampaignIntent): string {
+    switch (intent) {
+      case "spotlight": return "Destaque";
+      case "exclusive": return "Exclusivo";
+      default: return "Promoção";
+    }
+  }
+
+  private buildExpectedPriceBehavior(intent: CampaignIntent, discountedPrice: string | undefined): string {
+    switch (intent) {
+      case "offer":
+        return discountedPrice
+          ? `A imagem DEVE exibir preço promocional. O preço com desconto é ${discountedPrice}.`
+          : "A imagem DEVE exibir preço promocional.";
+      case "spotlight":
+        return discountedPrice
+          ? `A imagem DEVE exibir preço único de ${discountedPrice}.`
+          : "A imagem DEVE exibir preço (único, sem DE/POR).";
+      case "exclusive":
+        return "A imagem NÃO deve exibir preço. Qualquer preço na imagem é um problema CRÍTICO.";
+    }
+  }
+
+  private buildExpectedBadgeBehavior(intent: CampaignIntent, badgeText: string | undefined): string {
+    if (intent === "offer") {
+      const text = badgeText || "";
+      return text
+        ? `A imagem DEVE exibir badge promocional. O texto deve ser '${text}'. Badge promocional é obrigatório.`
+        : "A imagem DEVE exibir badge promocional.";
+    }
+    if (badgeText) {
+      return `Badge é opcional, mas foi informado '${badgeText}'; se aparecer na imagem, deve bater com o texto exato.`;
+    }
+    return "Nenhum badge foi informado; a imagem pode não ter badge. Se a imagem inventar um badge, ele não deve criar promessa promocional indevida.";
+  }
+
+  private buildExpectedImageTreatment(intent: CampaignIntent, preserveImageContext: boolean | undefined): string {
+    if (intent === "offer") {
+      return preserveImageContext
+        ? "Fundo contextual TOLERADO, mas o produto deve estar em evidência."
+        : "A imagem DEVE isolar o produto em fundo comercial limpo (recorte). Fundo contextual NÃO é aceito.";
+    }
+    if (preserveImageContext) {
+      return "O fundo contextual DA IMAGEM DEVE ser preservado (ambiente, cenário). Não substituir por fundo comercial.";
+    }
+    return "Fundo contextual não é obrigatório nem proibido. O diretor decide o fundo. Revisor bloqueia apenas se o fundo prejudicar legibilidade, qualidade ou identificação do produto.";
+  }
+
+  private buildExpectedCommercialTone(intent: CampaignIntent): string {
+    switch (intent) {
+      case "offer": return "Tom promocional com senso de urgência. CTA de compra esperado.";
+      case "spotlight": return "Tom aspiracional de destaque e desejo. Sem urgência promocional.";
+      case "exclusive": return "Tom premium de exclusividade. Sem linguagem promocional ou de urgência.";
+    }
+  }
+
+  private buildValidationContextSection(context: ValidationContext | undefined): string {
+    if (!context) return "";
+    const parts: string[] = [];
+    if (context.inputCorrection) {
+      const c = context.inputCorrection;
+      parts.push(
+        `O nome do produto foi corrigido automaticamente de "${c.from}" para "${c.to}" (motivo: ${c.reason}). A revisão deve usar "${c.to}" como referência.`
+      );
+    }
+    if (context.overrides?.productImageCheck === "user_confirmed_continue") {
+      parts.push(
+        "O usuário confirmou que a imagem do produto está correta, mesmo com divergência na pré-validação. A revisão não deve reportar conflito produto × imagem."
+      );
+    }
+    if (parts.length === 0) return "";
+    return `\n## Contexto de Validação\n${parts.map(p => `- ${p}`).join("\n")}\n`;
+  }
+
   private async callVisionModel(
     prompt: string,
     imageDataUrl: string
@@ -131,34 +152,27 @@ export class ImageReviewService {
     });
 
     const content = response.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error("Vision model returned empty review");
+    if (!content || content.trim().length === 0) {
+      return JSON.stringify({
+        passed: false,
+        failureType: "empty_review",
+        issues: [{ type: "empty_review", severity: "critical", description: "O modelo de revisão não retornou conteúdo." }],
+      });
     }
 
     return content;
   }
 
-  /**
-   * Parse the model's JSON response into a typed ImageReviewResult.
-   * Handles markdown code fence cleanup before JSON parsing.
-   */
   private parseResult(raw: string): ImageReviewResult {
     const cleaned = raw.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
     const parsed = JSON.parse(cleaned);
-
     const issues = (parsed.issues ?? []).map((issue: any) => ({
       type: issue.type,
       severity: issue.severity as "critical" | "minor",
       description: issue.description,
     }));
-
     const failureType = this.determineFailureType(issues, Boolean(parsed.passed));
-
-    return {
-      passed: Boolean(parsed.passed),
-      issues,
-      failureType,
-    };
+    return { passed: Boolean(parsed.passed), issues, failureType };
   }
 
   private determineFailureType(
@@ -166,14 +180,11 @@ export class ImageReviewService {
     passed: boolean
   ): ImageReviewResult["failureType"] {
     if (passed) return null;
-
     const criticalTypes = new Set(issues.filter(i => i.severity === "critical").map(i => i.type));
-
     if (criticalTypes.has("empty_review")) return "empty_review";
     if (criticalTypes.has("generated_product_mismatch")) return "generated_product_mismatch";
     if (criticalTypes.has("insufficient_image")) return "insufficient_image";
     if (criticalTypes.has("review_low_confidence")) return "review_low_confidence";
-
     return null;
   }
 }
