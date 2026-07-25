@@ -125,8 +125,28 @@ export interface GenerationPhaseEvent {
 // ─── Image Review Types ───────────────────────────────────────────────────
 // Post-generation quality review results from ImageReviewService.
 
+export type ReviewIssueType =
+  | "wrong_price"
+  | "wrong_product_name"
+  | "wrong_store_name"
+  | "illegible_text"
+  | "invented_information"
+  | "deformed_product"
+  | "weak_visual_quality"
+  | "empty_review"
+  | "insufficient_image"
+  | "review_low_confidence"
+  | "generated_product_mismatch"
+  | "product_image_conflict"
+  | "product_image_low_confidence"
+  | "wrong_cta"
+  | "bad_composition"
+  | "invented_badge"
+  | "distorted_product"
+  | "commercial_tone_mismatch";
+
 export interface ReviewIssue {
-  type: string;
+  type: ReviewIssueType;
   severity: "critical" | "minor";
   description: string;
 }
@@ -150,7 +170,7 @@ export interface ValidationContext {
 export interface ImageReviewResult {
   passed: boolean;
   issues: ReviewIssue[];
-  failureType?: "empty_review" | "insufficient_image" | "review_low_confidence" | "generated_product_mismatch";
+  failureType: "empty_review" | "insufficient_image" | "review_low_confidence" | "generated_product_mismatch" | null;
 }
 
 // ─── Error Response Types ─────────────────────────────────────────────────

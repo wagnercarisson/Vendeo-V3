@@ -1057,7 +1057,7 @@ export class ImageGenerationService {
 
     if (!hasBlockingIssue) {
       result.passed = true;
-      result.failureType = undefined;
+      result.failureType = null;
     }
 
     return result;

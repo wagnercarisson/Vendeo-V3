@@ -1,6 +1,7 @@
 import { PromptLoader } from "@/lib/image-generation/prompt-loader";
 import { VISION_REVIEW_MODEL } from "@/lib/image-generation/config";
 import type { ImageReviewResult, ValidationContext } from "@/lib/image-generation/schema";
+import type { CampaignIntent } from "@/lib/campaign/types";
 
 export type { ValidationContext };
 
@@ -11,9 +12,11 @@ export type { ValidationContext };
 export interface ImageReviewInput {
   productName: string;
   storeName: string;
-  badgeText: string;
+  campaignIntent?: CampaignIntent;
+  preserveImageContext?: boolean;
+  badgeText?: string;
   originalPrice?: string;
-  discountedPrice: string;
+  discountedPrice?: string;
   validationContext?: ValidationContext;
 }
 
@@ -85,7 +88,7 @@ export class ImageReviewService {
       productName: input.productName,
       storeName: input.storeName,
       badgeText: input.badgeText ?? "",
-      discountedPrice: input.discountedPrice,
+      discountedPrice: input.discountedPrice ?? "",
       originalPrice: input.originalPrice ?? "",
       validationContextSection,
     });
@@ -162,7 +165,7 @@ export class ImageReviewService {
     issues: { type: string; severity: string; description: string }[],
     passed: boolean
   ): ImageReviewResult["failureType"] {
-    if (passed) return undefined;
+    if (passed) return null;
 
     const criticalTypes = new Set(issues.filter(i => i.severity === "critical").map(i => i.type));
 
@@ -171,6 +174,6 @@ export class ImageReviewService {
     if (criticalTypes.has("insufficient_image")) return "insufficient_image";
     if (criticalTypes.has("review_low_confidence")) return "review_low_confidence";
 
-    return undefined;
+    return null;
   }
 }
