@@ -68,9 +68,9 @@ export class MockProvider implements AIProvider {
     // ── Offer ────────────────────────────────────────────────────────────
     // Brazilian price formatting (decimal comma, thousands dot)
 
-    const discountedFormatted = (
-      input.discountedPriceCents / 100
-    ).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+    const discountedFormatted = input.discountedPriceCents
+      ? (input.discountedPriceCents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })
+      : null;
 
     const originalFormatted = (input.originalPriceCents ?? 0) > 0
       ? ((input.originalPriceCents ?? 0) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })
@@ -79,18 +79,18 @@ export class MockProvider implements AIProvider {
     const offer: {
       product_name: string;
       original_price_display: string | null;
-      discounted_price_display: string;
-      badge_text: string;
+      discounted_price_display: string | null;
+      badge_text: string | null;
     } = {
       product_name: input.productName,
       original_price_display: originalFormatted
         ? `De R$ ${originalFormatted}`
         : null,
-      discounted_price_display: `R$ ${discountedFormatted}`,
+      discounted_price_display: discountedFormatted ? `R$ ${discountedFormatted}` : null,
       badge_text:
         input.badge && input.badge.trim().length > 0
           ? input.badge
-          : "Oferta",
+          : null,
     };
 
     // ── Visual parameters (fixed for this phase) ─────────────────────────

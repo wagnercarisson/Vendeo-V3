@@ -34,7 +34,7 @@ export interface CampaignReadyData {
 export interface InputSnapshot {
   productName: string;
   originalPriceCents?: number;
-  discountedPriceCents: number;
+  discountedPriceCents?: number;
   badgeText?: string;
   hook?: string;
   cta?: string;

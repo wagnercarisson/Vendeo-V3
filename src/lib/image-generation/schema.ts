@@ -9,7 +9,7 @@ export const GenerateImageRequestSchema = z.object({
   storeId: z.string().uuid(),
   productName: z.string().min(1),
   originalPriceCents: z.number().int().nonnegative().optional(),
-  discountedPriceCents: z.number().int().positive(),
+  discountedPriceCents: z.number().int().positive().optional(),
   campaignIntent: z
     .enum(["offer", "spotlight", "exclusive"])
     .optional()

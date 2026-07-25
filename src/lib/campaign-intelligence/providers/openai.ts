@@ -61,7 +61,7 @@ REGRAS IMPORTANTES:
 **Produto:** ${input.productName}
 **Descrição:** ${input.description || "Nenhuma descrição fornecida"}
 **Preço original:** ${input.originalPriceCents ? `R$ ${(input.originalPriceCents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "N/A"}
-**Preço com desconto:** R$ ${(input.discountedPriceCents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+**Preço com desconto:** ${input.discountedPriceCents ? `R$ ${(input.discountedPriceCents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "N/A"}
 **Badge:** ${input.badge || "Automático (baseado no desconto)"}
 **Cor da marca:** ${input.brandColor}
 

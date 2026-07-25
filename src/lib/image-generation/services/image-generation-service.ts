@@ -848,7 +848,8 @@ export class ImageGenerationService {
     return basePrompt;
   }
 
-  private formatPriceBRL(cents: number): string {
+  private formatPriceBRL(cents: number | undefined): string {
+    if (cents === undefined || cents === null) return "";
     return (cents / 100).toLocaleString("pt-BR", {
       style: "currency",
       currency: "BRL",

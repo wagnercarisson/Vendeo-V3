@@ -4,8 +4,9 @@ import type { CopyDirectorInput } from "@/lib/copy/schema";
 export function buildOfferText(input: {
   badgeText?: string;
   originalPriceCents?: number;
-  discountedPriceCents: number;
+  discountedPriceCents?: number;
 }): string {
+  if (!input.discountedPriceCents) return "Oferta";
   const formattedDiscounted = formatBRL(input.discountedPriceCents);
 
   if (input.badgeText) {
@@ -24,15 +25,16 @@ function formatBRL(cents: number): string {
 
 export function mapBriefToCopyDirectorInput(
   brief: CampaignBrief,
-  input: { badgeText?: string; originalPriceCents?: number; discountedPriceCents: number }
+  input: { badgeText?: string; originalPriceCents?: number; discountedPriceCents?: number }
 ): CopyDirectorInput {
+  const discountedPriceCents = input.discountedPriceCents ?? brief.campaignInput.discountedPriceCents;
   return {
     productName: brief.campaignInput.productName,
     description: brief.campaignInput.description,
     offer: buildOfferText({
       badgeText: input.badgeText ?? brief.campaignInput.badgeText,
       originalPriceCents: input.originalPriceCents ?? brief.campaignInput.originalPriceCents,
-      discountedPriceCents: input.discountedPriceCents ?? brief.campaignInput.discountedPriceCents,
+      discountedPriceCents,
     }),
     storeName: brief.store.name,
     segment: brief.store.segment,

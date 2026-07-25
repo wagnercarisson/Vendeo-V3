@@ -76,7 +76,7 @@ export function CampaignAdjustmentsPanel({
             type="text"
             value={
               adjustments.discountedPriceDisplay ??
-              originalSpec.offer.discounted_price_display
+              (originalSpec.offer.discounted_price_display ?? "")
             }
             onChange={(e) =>
               onAdjustmentChange("discountedPriceDisplay", e.target.value)
@@ -89,7 +89,7 @@ export function CampaignAdjustmentsPanel({
           )}
         </div>
         <p className="text-xs text-gray-400 mt-1">
-          Original: &quot;{originalSpec.offer.discounted_price_display}&quot;
+            Original: &quot;{originalSpec.offer.discounted_price_display ?? "não informado"}&quot;
         </p>
       </div>
 
@@ -102,7 +102,7 @@ export function CampaignAdjustmentsPanel({
           <input
             type="text"
             value={
-              adjustments.badgeText ?? originalSpec.offer.badge_text
+              adjustments.badgeText ?? (originalSpec.offer.badge_text ?? "")
             }
             onChange={(e) =>
               onAdjustmentChange("badgeText", e.target.value)

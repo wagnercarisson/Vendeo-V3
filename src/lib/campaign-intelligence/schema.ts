@@ -15,7 +15,8 @@ export const CampaignGenerationInputSchema = z.object({
   discountedPriceCents: z
     .number()
     .int("Preço com desconto deve ser um número inteiro")
-    .positive("Preço com desconto deve ser positivo"),
+    .positive("Preço com desconto deve ser positivo")
+    .optional(),
   campaignIntent: z
     .enum(["offer", "spotlight", "exclusive"])
     .optional()
@@ -49,8 +50,8 @@ export const CampaignSpecSchema = z.object({
   offer: z.object({
     product_name: z.string().min(1, "Nome do produto é obrigatório"),
     original_price_display: z.string().nullable(),
-    discounted_price_display: z.string().min(1, "Preço com desconto é obrigatório"),
-    badge_text: z.string().min(1, "Texto do badge é obrigatório"),
+    discounted_price_display: z.string().nullable(),
+    badge_text: z.string().nullable(),
   }),
   visual_parameters: z.object({
     layout_preset: z.string().min(1, "Layout é obrigatório"),
