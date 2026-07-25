@@ -19,8 +19,9 @@ import { checkRateLimit, recordGenerationAttempt } from "@/lib/rate-limit/rate-l
 import { CreditService } from "@/lib/credit/credit-service";
 import { CopyDirectorService } from "@/lib/copy/copy-director-service";
 import { createTextProvider } from "@/lib/text-provider/factory";
-import { mapBriefToCopyDirectorInput, buildOfferText } from "@/lib/copy/mapper";
+import { mapBriefToCopyDirectorInput, buildDeterministicCopy, buildCommercialFrame } from "@/lib/copy/mapper";
 import type { CopyDirectorResult } from "@/lib/copy/schema";
+import type { CampaignIntent } from "@/lib/campaign/types";
 import { isRetryableError } from "@/lib/copy/errors";
 import { getLaunchConfig } from "@/lib/launch-config/config";
 import { logPipelineEvent } from "@/lib/logging/pipeline-logger";
@@ -385,17 +386,19 @@ export const POST = apiHandler(async (request: NextRequest) => {
         logPipelineEvent({ event: "copy_generation", traceId, phase: "parallel", status: "running", campaignId, storeId, userId: user.userId });
         try {
           if (!config.copyDirectorEnabled) {
-            const offerText = buildOfferText({
-              badgeText: campaignInput.badgeText,
-              originalPriceCents: campaignInput.originalPriceCents,
+            const campaignIntent = (campaignInput.campaignIntent ?? "offer") as CampaignIntent;
+            const deterministic = buildDeterministicCopy(campaignIntent, {
+              productName: campaignInput.productName,
+              storeName: brief.store.name,
+              commercialFrame: buildCommercialFrame(campaignIntent, {
+                badgeText: campaignInput.badgeText,
+                originalPriceCents: campaignInput.originalPriceCents,
+                discountedPriceCents: campaignInput.discountedPriceCents,
+              }),
               discountedPriceCents: campaignInput.discountedPriceCents,
+              badgeText: campaignInput.badgeText,
             });
-            copyResult = {
-              title: campaignInput.productName,
-              caption: `${campaignInput.productName} — ${offerText}`,
-              cta_post: "Aproveite!",
-              hashtags: [],
-            };
+            copyResult = deterministic;
             emitPhase("copy_generation", "complete", "Texto determinístico (flag desligada)");
             logPipelineEvent({ event: "copy_generation", traceId, phase: "parallel", status: "complete", campaignId, storeId, userId: user.userId, metadata: { fallback: "deterministic" } });
             return;

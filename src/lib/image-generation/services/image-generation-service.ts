@@ -358,7 +358,9 @@ export class ImageGenerationService {
         productName: effectiveProductName,
         storeName: brief.store.name,
         badgeText: body.badgeText ?? "",
-        discountedPrice: this.formatPriceBRL(body.discountedPriceCents),
+        discountedPrice: body.discountedPriceCents
+          ? this.formatPriceBRL(body.discountedPriceCents)
+          : "",
         originalPrice: (body.originalPriceCents ?? 0) > 0
           ? this.formatPriceBRL(body.originalPriceCents ?? 0)
           : undefined,
@@ -638,25 +640,27 @@ export class ImageGenerationService {
 
   private buildCommercialRepertoire(body: GenerateImageRequest): string {
     const parts: string[] = [];
+    const campaignIntent = body.campaignIntent ?? "offer";
 
     const hasAvailabilityNotes = !!body.availabilityNotes;
     const hasValidity = !!body.validity;
     const hasCampaignDetails = !!body.campaignDetails;
     const hasAdditionalDetails = !!body.additionalDetails;
 
-    if (body.availabilityNotes) {
+    if (body.availabilityNotes && campaignIntent !== "spotlight") {
       const notes = body.availabilityNotes.toLowerCase();
       const scarcityKeywords = ["poucas unidades", "últimas", "limitado", "estoque"];
       const varietyKeywords = ["vários sabores", "cores variadas", "diversos", "várias"];
 
       if (scarcityKeywords.some(kw => notes.includes(kw))) {
-        parts.push(`- Disponível: ${body.availabilityNotes}`);
+        const prefix = campaignIntent === "exclusive" ? "Disponibilidade:" : "Disponível:";
+        parts.push(`- ${prefix} ${body.availabilityNotes}`);
       } else if (varietyKeywords.some(kw => notes.includes(kw))) {
         parts.push(`- Variedade disponível: ${body.availabilityNotes}`);
       }
     }
 
-    if (body.validity && (
+    if (body.validity && campaignIntent === "offer" && (
       body.validity.toLowerCase().includes("/") ||
       body.validity.toLowerCase().includes("até") ||
       body.validity.toLowerCase().includes("válida")

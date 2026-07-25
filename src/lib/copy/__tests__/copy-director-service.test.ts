@@ -9,7 +9,8 @@ import { MalformedResponseError } from '../errors';
 const COMPLETE_INPUT: CopyDirectorInput = {
   productName: "Tênis Runner Pro",
   description: "Tênis esportivo com amortecimento avançado",
-  offer: "De R$ 399,90 por R$ 249,90",
+  commercialFrame: "De R$ 399,90 por R$ 249,90",
+  campaignIntent: "offer",
   storeName: "Esportes e Cia",
   segment: "moda-calcados-acessorios",
   toneOfVoice: "jovem e energético",
@@ -22,7 +23,8 @@ const COMPLETE_INPUT: CopyDirectorInput = {
 
 const MINIMUM_INPUT: CopyDirectorInput = {
   productName: "Café Gourmet",
-  offer: "Leve 2 pague 1",
+  commercialFrame: "Leve 2 pague 1",
+  campaignIntent: "offer",
   storeName: "Café & Aroma",
   segment: "bebidas-adegas-conveniencia",
 };
@@ -37,7 +39,7 @@ describe('CopyDirectorInputSchema', () => {
   it('aceita input mínimo (só obrigatórios)', () => {
     const result = CopyDirectorInputSchema.parse(MINIMUM_INPUT);
     expect(result.productName).toBe('Café Gourmet');
-    expect(result.offer).toBe('Leve 2 pague 1');
+    expect(result.commercialFrame).toBe('Leve 2 pague 1');
   });
 
   it('rejeita productName vazio', () => {
@@ -46,9 +48,9 @@ describe('CopyDirectorInputSchema', () => {
     ).toThrow();
   });
 
-  it('rejeita offer vazio', () => {
+  it('rejeita commercialFrame vazio', () => {
     expect(() =>
-      CopyDirectorInputSchema.parse({ ...MINIMUM_INPUT, offer: '' })
+      CopyDirectorInputSchema.parse({ ...MINIMUM_INPUT, commercialFrame: '' })
     ).toThrow();
   });
 

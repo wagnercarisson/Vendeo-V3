@@ -3,7 +3,11 @@ import { z } from "zod";
 export const CopyDirectorInputSchema = z.object({
   productName: z.string().min(1, "productName é obrigatório"),
   description: z.string().optional(),
-  offer: z.string().min(1, "offer é obrigatório"),
+  commercialFrame: z.string().min(1, "commercialFrame é obrigatório"),
+  campaignIntent: z
+    .enum(["offer", "spotlight", "exclusive"])
+    .optional()
+    .default("offer"),
   storeName: z.string().min(1, "storeName é obrigatório"),
   segment: z.string().min(1, "segment é obrigatório"),
   toneOfVoice: z.string().optional(),

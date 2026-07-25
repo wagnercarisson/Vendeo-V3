@@ -62,10 +62,13 @@ export class CopyDirectorService {
   ): Promise<CopyDirectorResult> {
     const validated = CopyDirectorInputSchema.parse(input);
 
+    const campaignIntent = validated.campaignIntent ?? "offer";
+
     const variables: Record<string, string> = {
       productName: validated.productName,
       description: validated.description ?? "",
-      offer: validated.offer,
+      commercialFrame: validated.commercialFrame,
+      campaignIntent,
       storeName: validated.storeName,
       segment: validated.segment,
       toneOfVoice: validated.toneOfVoice ?? "",
@@ -76,7 +79,8 @@ export class CopyDirectorService {
       campaignGuidelines: validated.campaignGuidelines ?? "",
     };
 
-    const prompt = this.promptLoader.load("campaign-copy-director", variables);
+    const promptName = `campaign-copy-director-${campaignIntent}`;
+    const prompt = this.promptLoader.load(promptName, variables);
 
     const textOpts: TextProviderOptions = {
       system: SYSTEM_PROMPT,
