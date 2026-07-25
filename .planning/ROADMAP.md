@@ -23,7 +23,8 @@
 | 29.1.2 | ✅ Histórico Curto + Assinatura Visual | HistoryModal reescrito com paginação, filtro client-side, ações condicionais e ponte ApprovalModal | — | 3 ✅ |
 | 29.3 | ✅ Créditos Mensais Automáticos | Buckets bônus/compra, concessão automática via Vercel Cron, fallback admin | MONTHLY-01–10 | 10 ✅ |
 | 30 | ✅ Fundação Legal | Documentos legais, ciência/aceite contratual, clearance no pipeline, re-aceite, consentimento LGPD, admin badges | LEGAL-* | 43 ✅ |
-| 31.1 | ◆ Modelo Comercial — Formulário | CampaignIntent type, seletor de intent no formulário, inferência automática, badge por intent, pipeline guard | INTENT-01–12 | 12 |
+| 31.1 | ✅ Modelo Comercial — Formulário | CampaignIntent type, seletor de intent no formulário, inferência automática, badge por intent, pipeline guard | INTENT-01–12 | 12 ✅ |
+| 31.2 | ✅ Diretores por Intenção | Schemas tolerantes, desbloqueio de intents, 6 prompts por intent, roteamento de diretores, conteúdo adaptado | — | 9 ✅ |
 
 ---
 
@@ -248,7 +249,7 @@
 
 ---
 
-### Phase 31.1 — Modelo Comercial — Formulário ◆
+### Phase 31.1 — Modelo Comercial — Formulário ✅
 
 **Goal:** Preparar o formulário de campanha para múltiplas intenções comerciais (Oferta, Destaque, Exclusivo), com schemas, inferência automática e bloqueio de submissão para intents não implementadas.
 
@@ -284,6 +285,39 @@
 
 ---
 
+### Phase 31.2 — Diretores por Intenção ✅
+
+**Goal:** Schemas tolerantes, desbloqueio total de spotlight/exclusive, prompts e roteamento por intent, conteúdo adaptado.
+
+**Requirements:** _(Refinamento de F31.1 — sem novos REQ-IDs)_
+
+**Success criteria:**
+1. discountedPriceCents opcional nos schemas; Campos nullable no CampaignSpecSchema
+2. Spotlight/exclusive desbloqueados na UI, form e pipeline (sem "Em breve", sem bloqueio de submit, sem HTTP 400)
+3. Exclusive normaliza discountedPriceCents para undefined
+4. 6 prompts separados por intent (3 image + 3 copy), sem fallback silencioso
+5. Roteamento de prompt por campaignIntent em assemblePrompt, validatePrompts e CopyDirectorService
+6. commercialFrame substituindo offer no Copy Director
+7. Conteúdo adaptado: buildCommercialRepertoire, buildCreativeContextGuidance, buildDeterministicCopy
+8. 15 novos testes, 1051 total, regressão zero para offer
+
+**Dependencies:** Phase 31.1 (types, schemas, UI, pipeline guard)
+
+**Source of truth:** `openspec/changes/fase-31-2-diretores-por-intencao/`
+
+**Plans:** 6 plans (2 waves)
+
+| Plan | Wave | Objective |
+|------|------|-----------|
+| 31-2-01 | 1 | Schema Contracts — discountedPriceCents opcional, CampaignSpecSchema nullable |
+| 31-2-02 | 1 | Unblock — UI/Form/Route: remover bloqueios, normalização exclusive, validação offer |
+| 31-2-03 | 2 | 6 Prompt Templates — 3 image + 3 copy por intent |
+| 31-2-04 | 2 | Image Director Routing — assemblePrompt, buildPromptVariables, validatePrompts por intent |
+| 31-2-05 | 2 | Copy Director + Content — commercialFrame, buildDeterministicCopy |
+| 31-2-06 | 3 | Tests + Verification — 15 novos testes, regressão 1051, typecheck/lint/build |
+
+---
+
 ## Dependency Graph
 
 ```
@@ -303,11 +337,14 @@ Phase 24 (Credit Tables + CreditService) ──┘
                       Phase 29 (Refinement + Launch)               │
                                 │                                  │
                                 └──────────┬───────────────────────┘
-                                           ▼
-                                Phase 31.1 (Modelo Comercial — Formulário)
-                                           │
-                                           ▼
-                                   Phase 32 (Stripe — v1.7 futuro)
+                                            ▼
+                                 Phase 31.1 (Modelo Comercial — Formulário)
+                                            │
+                                            ▼
+                                 Phase 31.2 (Diretores por Intenção)
+                                            │
+                                            ▼
+                                    Phase 32 (Stripe — v1.7 futuro)
 ```
 
 ---
@@ -392,4 +429,4 @@ Phase 24 (Credit Tables + CreditService) ──┘
 
 *Roadmap created: 2026-07-15*
 *Milestone: v1.5 — Lançamento Externo Controlado*
-*Last updated: 2026-07-24 — Phase 31.1 verified — all INTENT requirements Done*
+*Last updated: 2026-07-25 — Phase 31.2 complete — UAT 9/9 passed*
