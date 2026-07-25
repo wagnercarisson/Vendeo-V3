@@ -247,6 +247,63 @@ describe('POST /api/campaign/generate-image', () => {
     expect(body.error.message).toContain('inválidos');
   });
 
+  // ── F31.2 7.5: Spotlight não retorna 400 por intent ─────────────
+
+  it('spotlight — não retorna 400 por intent (F31.2 7.5)', async () => {
+    await setupSuccessMocks();
+    const { POST } = await import('../route');
+    const req = makeRequest({ ...VALID_REQUEST_BODY, campaignIntent: "spotlight" });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+  });
+
+  // ── F31.2 7.6: Exclusive não retorna 400 por intent ─────────────
+
+  it('exclusive — não retorna 400 por intent (F31.2 7.6)', async () => {
+    await setupSuccessMocks();
+    const { POST } = await import('../route');
+    const req = makeRequest({ ...VALID_REQUEST_BODY, campaignIntent: "exclusive" });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+  });
+
+  // ── F31.2 7.7: Exclusive com preço normaliza para undefined ─────
+
+  it('exclusive com discountedPriceCents — normaliza para undefined (F31.2 7.7)', async () => {
+    await setupSuccessMocks();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const { POST } = await import('../route');
+    const req = makeRequest({
+      ...VALID_REQUEST_BODY,
+      campaignIntent: "exclusive",
+      discountedPriceCents: 5000,
+    });
+    const res = await POST(req);
+    await res.text();
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      "[generate-image] exclusive com discountedPriceCents presente — normalizando para ausente."
+    );
+    expect(res.status).toBe(200);
+    warnSpy.mockRestore();
+  });
+
+  // ── F31.2 7.8: Offer sem preço retorna 400 ─────────────────────
+
+  it('offer sem discountedPriceCents — retorna 400 (F31.2 7.8)', async () => {
+    const { POST } = await import('../route');
+    const req = makeRequest({
+      storeId: STORE_ID,
+      productName: 'Produto',
+      productImageDataUrl: 'data:image/jpeg;base64,abc',
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.message).toBe("Preço com desconto é obrigatório para ofertas");
+  });
+
   // ── Test #1: Fluxo completo saldo suficiente → ready ────────────
 
   it('fluxo completo — saldo suficiente retorna 200 com NDJSON result', async () => {

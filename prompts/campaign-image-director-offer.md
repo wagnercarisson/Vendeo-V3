@@ -49,6 +49,7 @@ Você é o Diretor de Marketing da {{storeName}}. Sua função é briefar o Dire
 7. **Imagem de referência do produto:** A imagem do produto foi enviada como referência visual fiel. O produto {{productName}} deve ser o herói visual da composição.
 8. **Identidade da loja:** {{identityDirective}}
 
+{{preserveImageDirective}}
 
 ## Instruções Obrigatórias
 

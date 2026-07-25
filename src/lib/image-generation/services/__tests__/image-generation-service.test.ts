@@ -122,4 +122,34 @@ describe('ImageGenerationService.validatePrompts', () => {
     expect(result.errors[0]).toContain('Revisor de imagem');
     expect(result.errors[0]).toContain('outraVar');
   });
+
+  it('validatePrompts falha quando prompt de intent válida não existe — sem fallback (F31.2 7.12)', () => {
+    mockLoad.mockImplementation((name: string) => {
+      if (name === 'campaign-image-director-spotlight') {
+        throw new Error('ENOENT: prompt not found');
+      }
+      if (name === 'campaign-image-reviewer') {
+        return 'Revise produto';
+      }
+      return '';
+    });
+
+    const brief = createMinimalBrief({
+      campaignInput: {
+        productName: 'Produto Teste',
+        productImageDataUrl: 'data:image/jpeg;base64,test',
+        campaignIntent: 'spotlight',
+      } as import('@/components/campaign/types').CampaignInput,
+    });
+    const result = service.validatePrompts(brief);
+
+    expect(result.valid).toBe(false);
+    expect(result.errors.length).toBeGreaterThan(0);
+    expect(result.errors[0]).toContain('campaign-image-director-spotlight');
+    expect(result.errors[0]).toContain('spotlight');
+
+    // Verifica que NÃO houve fallback para o prompt antigo
+    expect(mockLoad).not.toHaveBeenCalledWith('campaign-image-director', expect.anything());
+    expect(mockLoad).not.toHaveBeenCalledWith('campaign-image-director.md', expect.anything());
+  });
 });
