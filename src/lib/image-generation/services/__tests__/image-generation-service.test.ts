@@ -61,7 +61,7 @@ describe('ImageGenerationService.validatePrompts', () => {
   it('validatePrompts retorna valid=true para prompt válido', () => {
     // Configure mock loader to return prompts with no unresolved variables
     mockLoad.mockImplementation((name: string) => {
-      if (name === 'campaign-image-director') {
+      if (name === 'campaign-image-director-offer') {
         // All director variables resolved (no {{...}} patterns)
         return 'Prompt de direção visual para Produto Teste na Loja Teste segmento outros';
       }
@@ -81,7 +81,7 @@ describe('ImageGenerationService.validatePrompts', () => {
 
   it('validatePrompts retorna valid=false quando director prompt tem placeholder não resolvido', () => {
     mockLoad.mockImplementation((name: string) => {
-      if (name === 'campaign-image-director') {
+      if (name === 'campaign-image-director-offer') {
         // Unresolved placeholder
         return 'Prompt sobre {{variavelInexistente}}';
       }
@@ -103,7 +103,7 @@ describe('ImageGenerationService.validatePrompts', () => {
 
   it('validatePrompts retorna valid=false quando reviewer prompt tem placeholder não resolvido', () => {
     mockLoad.mockImplementation((name: string) => {
-      if (name === 'campaign-image-director') {
+      if (name === 'campaign-image-director-offer') {
         // Clean director prompt
         return 'Prompt de direção visual para Produto Teste';
       }

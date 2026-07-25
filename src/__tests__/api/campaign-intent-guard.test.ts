@@ -31,12 +31,12 @@ describe("GenerateImageRequestSchema — campaignIntent and preserveImageContext
     }
   });
 
-  it("maintains discountedPriceCents as required", () => {
+  it("discountedPriceCents is now optional", () => {
     const result = GenerateImageRequestSchema.safeParse({
       ...baseBody,
       discountedPriceCents: undefined,
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 });
 
