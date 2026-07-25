@@ -89,7 +89,7 @@ The system SHALL render the following form fields:
 - **Preço Original**: optional currency input with BRL mask (`R$` prefix, formatted as `R$ 49,90`)
 - **Preço com Desconto**: required currency input with BRL mask (obrigatório apenas quando intent=offer)
 - **Badge Promocional**: required dropdown select usando badges da intent atual (obrigatório apenas para offer)
-- **Intenção Comercial**: radio group posicionado entre badge e botão "Criar Campanha", com opções filtradas por inferência. Spotlight e Exclusive exibem "Em breve"
+- **Intenção Comercial**: radio group posicionado entre badge e botão "Criar Campanha", com opções filtradas por inferência. Todas as intents estão habilitadas.
 - **Preservar Imagem Original**: checkbox visível apenas em spotlight/exclusive
 - **Imagem do Produto**: required file upload dropzone, accepts PNG/JPG/WEBP only, max 5MB
 
@@ -220,7 +220,7 @@ The system SHALL validate the following rules:
 - **Preço Original**: optional, MUST be greater than zero if provided, MUST be greater than Preço com Desconto
 - **Preço com Desconto**: obrigatório se intent=offer, MUST be greater than zero
 - **Badge Promocional**: obrigatório se intent=offer, MUST be one of `BADGE_OPTIONS_BY_INTENT[intent]`
-- **Intenção Comercial**: seleção obrigatória; apenas `offer` permite submissão
+- **Intenção Comercial**: seleção obrigatória; todas as intents permitem submissão
 - **Preservar Imagem Original**: opcional, visível apenas em spotlight/exclusive
 - **Imagem do Produto**: required, MUST be PNG/JPG/WEBP and ≤ 5MB
 
@@ -271,7 +271,7 @@ Validation SHALL trigger on blur for each field. Blocking state SHALL prevent su
 The submit behavior SHALL be updated. Instead of including identity fields in the request body, the system SHALL:
 
 1. Validate all required fields
-2. Verificar se a intent selecionada é `"offer"` — se não, bloquear com "Disponível em breve"
+2. Verificar se a intent selecionada é válida (offer, spotlight, exclusive) — todas são permitidas
 3. Create or reuse the product image object URL from the selected image file
 4. Incluir `campaignIntent` e `preserveImageContext` no body
 5. Call `POST /api/campaign/generate-image` with form data including `storeId` — no identity fields
@@ -283,21 +283,21 @@ The submit behavior SHALL be updated. Instead of including identity fields in th
 - **WHEN** all required fields are valid and the user clicks "Criar Campanha"
 - **THEN** the system SHALL call `POST /api/campaign/generate-image` with `storeId` in the body
 - **AND** the body SHALL NOT include `storeName`, `storeSegment`, `storeTone`, `brandColor`, `storeLogoUrl`, or `brandProfile`
-- **AND** the body SHALL include `campaignIntent: "offer"`
-- **AND** `preserveImageContext` não está presente no body (ou é `false`)
 - **AND** on success, navigate to `/campanhas/${campaignId}`
 
-#### Scenario: Submit bloqueado para spotlight
+#### Scenario: Submit de spotlight não bloqueado
+
+> Added by `fase-31-2-diretores-por-intencao`.
 
 - **WHEN** intent selecionada é `"spotlight"` e o usuário clica "Criar Campanha"
-- **THEN** o submit NÃO é executado
-- **AND** exibe tooltip "Disponível em breve"
+- **THEN** o submit é executado (não bloqueado)
 
-#### Scenario: Submit bloqueado para exclusive
+#### Scenario: Submit de exclusive não bloqueado
+
+> Added by `fase-31-2-diretores-por-intencao`.
 
 - **WHEN** intent selecionada é `"exclusive"` e o usuário clica "Criar Campanha"
-- **THEN** o submit NÃO é executado
-- **AND** exibe tooltip "Disponível em breve"
+- **THEN** o submit é executado (não bloqueado)
 
 #### Scenario: API error shows error state
 

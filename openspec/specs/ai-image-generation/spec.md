@@ -102,13 +102,17 @@ The interface SHALL define:
 
 ### Requirement: GenerateImageRequestSchema with campaignIntent e preserveImageContext
 
+> Modified by `fase-31-2-diretores-por-intencao`.
+
 O schema `GenerateImageRequestSchema` em `src/lib/image-generation/schema.ts` SHALL ser modificado para aceitar:
 
 - `campaignIntent` — `z.enum(["offer", "spotlight", "exclusive"]).optional().default("offer")` — ADICIONADO
 - `preserveImageContext` — `z.boolean().optional()` — ADICIONADO
-- `discountedPriceCents` — mantém `z.number().int().positive()` (required, sem mudança — compatível com pipeline até F31.2)
+- `discountedPriceCents` — `z.number().int().positive().optional()` — MODIFICADO (era required, passou a optional para tolerância por intent)
 
 O schema SHALL usar `.strict()` para rejeitar campos não reconhecidos.
+
+A validação semântica de preço é externalizada: offer exige preço no frontend e no backend, exclusive normaliza para ausente no backend.
 
 #### Scenario: campaignIntent opcional é aceito
 
@@ -127,10 +131,12 @@ O schema SHALL usar `.strict()` para rejeitar campos não reconhecidos.
 - **WHEN** o body inclui `preserveImageContext: true`
 - **THEN** `GenerateImageRequestSchema.safeParse()` retorna `{ success: true, data }`
 
-#### Scenario: discountedPriceCents mantém-se required
+#### Scenario: discountedPriceCents opcional aceito
 
-- **WHEN** o body omite `discountedPriceCents`
-- **THEN** `GenerateImageRequestSchema.safeParse()` retorna `{ success: false, error }`
+> Modified by `fase-31-2-diretores-por-intencao`.
+
+- **WHEN** o body omite `discountedPriceCents` com `campaignIntent: "exclusive"`
+- **THEN** `GenerateImageRequestSchema.safeParse()` retorna `{ success: true }`
 
 ### Requirement: POST /api/campaign/generate-image endpoint
 
@@ -312,11 +318,17 @@ The `originalPrice` field in the campaign input schema SHALL be `string | undefi
 - **WHEN** a campaign is generated with `originalPrice`
 - **THEN** the rendered image SHALL show both the original (strikethrough) and discounted price
 
-### Requirement: buildPromptVariables includes creative direction context
+### Requirement: buildPromptVariables includes creative direction context and intent variables
 
-The `ImageGenerationService.buildPromptVariables()` method SHALL be extended to accept a `CampaignBrief` and return the following new variable:
+> Modified by `fase-31-2-diretores-por-intencao`.
+
+The `ImageGenerationService.buildPromptVariables()` method SHALL be extended to accept a `CampaignBrief` and return the following new variables:
 
 - `identityDirective` — string, derived from `CampaignBrief.identity.directive`
+- `campaignIntent` — string, valor da intent
+- `preserveImageDirective` — string, instrução condicional (vazia para offer, `"NÃO recortar..."` para spotlight/exclusive com preserveImageContext=true)
+- `commercialFrame` — string, texto comercial por intent (oferta/destaque/exclusivo)
+- `discountedPrice` e `originalPrice` condicionais por intent (vazio quando não aplicável)
 
 All existing variables SHALL be preserved unchanged. The following existing variables remain:
 - `creativePersona` — segment-based persona string
@@ -341,21 +353,34 @@ All existing variables SHALL be preserved unchanged. The following existing vari
 - **THEN** the returned record SHALL include all existing variables
 - **AND** SHALL include `identityDirective`
 
-### Requirement: buildCommercialRepertoire extracts actionable arguments
+#### Scenario: buildPromptVariables inclui commercialFrame
 
-The system SHALL implement `ImageGenerationService.buildCommercialRepertoire(body: GenerateImageRequest): string` that analyzes the following fields for commercially actionable content:
+> Added by `fase-31-2-diretores-por-intencao`.
 
-- `additionalDetails` — free-form text
-- `availabilityNotes` — availability information (e.g., "poucas unidades", "cores variadas")
-- `validity` — promotion validity period
-- `campaignDetails` — additional campaign context
+- **WHEN** `buildPromptVariables()` é chamado com brief de `campaignIntent: "spotlight"`
+- **THEN** as variáveis incluem `commercialFrame` com texto de destaque
 
-The method SHALL return a single PT-BR string with extracted arguments formatted as visual repertoire. When no actionable content is found, the method SHALL return an empty string.
+### Requirement: buildCommercialRepertoire adaptado por intent
 
-#### Scenario: Availability notes become commercial repertoire
+> Modified by `fase-31-2-diretores-por-intencao`.
 
-- **WHEN** `availabilityNotes` is `"vários sabores disponíveis"`
-- **THEN** the returned string SHALL contain `"Disponível em vários sabores"` or equivalent PT-BR text
+The system SHALL implement `ImageGenerationService.buildCommercialRepertoire(body: GenerateImageRequest): string` that analyzes the following fields for commercially actionable content, filtrado por intent:
+
+| Funcionalidade | offer | spotlight | exclusive |
+|---------------|-------|-----------|-----------|
+| Escassez ("poucas unidades") | sim | não | sim (se aplicável) |
+| Validade ("até dd/mm") | sim | não | não |
+| Detalhes da campanha | sim | sim | sim |
+| Detalhes adicionais | sim | sim | sim |
+| Benefícios do produto | contextual | sim | sim |
+| Caráter exclusivo | não | não | sim |
+
+#### Scenario: buildCommercialRepertoire para spotlight omite escassez
+
+> Added by `fase-31-2-diretores-por-intencao`.
+
+- **WHEN** `buildCommercialRepertoire()` é chamado com `campaignIntent: "spotlight"` e `availabilityNotes: "poucas unidades"`
+- **THEN** o retorno NÃO contém a nota de escassez
 
 ### Requirement: buildValidationSummary generates sanitized summary
 
@@ -372,14 +397,27 @@ The summary SHALL be in PT-BR and SHALL NOT expose raw model output, API keys, o
 - **WHEN** the product name was corrected from `"neskau"` to `"Nescau"` with reason `"O texto na imagem é 'Nescau'"`
 - **THEN** the summary SHALL include `"Nome corrigido automaticamente de 'neskau' para 'Nescau'"`
 
-### Requirement: assemblePrompt uses evolved prompt with new sections
+### Requirement: assemblePrompt selects template by campaignIntent
 
-The `ImageGenerationService.assemblePrompt()` method SHALL load the `campaign-image-director.md` prompt and interpolate all existing plus new creative direction variables. The evolved prompt SHALL include the new sections for creative persona, category context, commercial repertoire, and validation summary.
+> Modified by `fase-31-2-diretores-por-intencao`.
+
+The `ImageGenerationService.assemblePrompt()` method SHALL load the `campaign-image-director-${campaignIntent}` prompt (e.g., `campaign-image-director-offer`, `campaign-image-director-spotlight`, `campaign-image-director-exclusive`) and interpolate all existing plus new creative direction variables.
+
+Sem fallback silencioso: se o prompt não existir para intent válida, o sistema SHALL falhar no preflight como `invalid_prompt`. O arquivo `campaign-image-director.md` original não é fallback.
+
+The evolved prompt SHALL include the new sections for creative persona, category context, commercial repertoire, and validation summary.
 
 #### Scenario: Evolved prompt includes creative direction
 
 - **WHEN** `assemblePrompt()` is called with variables that include creative direction context
 - **THEN** the returned prompt string SHALL contain the interpolated creative direction sections
+
+#### Scenario: assemblePrompt carrega template por intent
+
+> Added by `fase-31-2-diretores-por-intencao`.
+
+- **WHEN** `assemblePrompt()` é chamado com `campaignIntent: "exclusive"`
+- **THEN** carrega `campaign-image-director-exclusive.md`
 
 ### Requirement: Pipeline emits sanitized technical detail events
 
@@ -437,6 +475,75 @@ reviewResult = applyValidationContextToReviewResult(reviewResult, validationCont
 - **WHEN** the review completes with issues that include user-approved conflicts
 - **THEN** `applyValidationContextToReviewResult()` SHALL remove only the approved conflict issues
 - **AND** the state machine SHALL evaluate the filtered result
+
+### Requirement: buildCreativeContextGuidance adaptado por intent
+
+> Modified by `fase-31-2-diretores-por-intencao`.
+
+O sistema SHALL modificar `buildCreativeContextGuidance()` para usar framing adequado:
+
+- **offer**: manter "Preço é oportunidade/vantagem" (comportamento atual)
+- **spotlight**: substituir "Preço é..." por "Benefício é..." ou "Diferencial é..."
+- **exclusive**: substituir framing de preço por framing de valor percebido
+
+#### Scenario: buildCreativeContextGuidance para spotlight evita framing de preço
+
+- **WHEN** `buildCreativeContextGuidance()` é chamado com segmento e categoria para spotlight
+- **THEN** o texto NÃO contém "Preço é"
+- **AND** contém framing de benefício ou descoberta
+
+### Requirement: Validação backend de offer sem preço
+
+> Added by `fase-31-2-diretores-por-intencao`.
+
+O sistema SHALL validar no endpoint, após parse e auth/ownership/legal e antes de montar `campaignInput`, que `campaignIntent === "offer"` requer `discountedPriceCents` presente e positivo. Se ausente ou zero, retornar HTTP 400 com mensagem "Preço com desconto é obrigatório para ofertas".
+
+#### Scenario: offer sem discountedPriceCents retorna 400
+
+- **WHEN** POST para `/api/campaign/generate-image` com `campaignIntent: "offer"` e sem `discountedPriceCents`
+- **THEN** retorna HTTP 400 com mensagem "Preço com desconto é obrigatório para ofertas"
+- **AND** sem stream
+
+### Requirement: validatePrompts valida director por intent
+
+> Added by `fase-31-2-diretores-por-intencao`.
+
+O sistema SHALL validar o template `campaign-image-director-${campaignIntent}` em `validatePrompts()`. Se o prompt não existir, retorna `{ valid: false, errors: [...] }`.
+
+O `discountedPrice` passado ao revisor (`campaign-image-reviewer`) SHALL ser vazio quando `campaignIntent === "exclusive"`.
+
+#### Scenario: validatePrompts valida exclusive director
+
+- **WHEN** `validatePrompts()` é chamado para intent `"exclusive"`
+- **THEN** valida `campaign-image-director-exclusive.md`
+- **AND** valida `campaign-image-reviewer.md` com `discountedPrice` vazio
+
+### Requirement: POST /api/campaign/generate-image sem guard de intent
+
+> Added by `fase-31-2-diretores-por-intencao`.
+
+O endpoint SHALL NÃO bloquear requisições com `campaignIntent !== "offer"`. O guard HTTP 400 adicionado na F31.1 SHALL ser removido. A validação de offer sem preço é mantida (HTTP 400).
+
+#### Scenario: Spotlight passa pelo endpoint
+
+- **WHEN** POST para `/api/campaign/generate-image` com `campaignIntent: "spotlight"`
+- **THEN** o endpoint NÃO retorna HTTP 400
+- **AND** o fluxo prossegue normalmente
+
+### Requirement: Fallback determinístico buildDeterministicCopy
+
+> Added by `fase-31-2-diretores-por-intencao`.
+
+O sistema SHALL implementar `buildDeterministicCopy(campaignIntent, params)` para o fallback do Copy Director quando desligado:
+
+- offer: `"{{productName}} — {{badgeText}}: de R$ X por R$ Y"`
+- spotlight: `"{{productName}} — Novo na {{storeName}}!"` (com preço se disponível)
+- exclusive: `"{{productName}} — Exclusivo na {{storeName}}!"` (sem preço, sem badge promocional)
+
+#### Scenario: Fallback para exclusive não menciona preço
+
+- **WHEN** `buildDeterministicCopy("exclusive", { productName: "Produto X", storeName: "Loja Y" })` é chamado
+- **THEN** retorna texto sem preço ou badge promocional
 
 ### Requirement: Preservação comportamental — nenhuma variável criativa alterada
 

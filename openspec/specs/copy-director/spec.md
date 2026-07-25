@@ -8,9 +8,11 @@ Geração de copy persuasivo para campanhas usando `TextProvider` e `PromptLoade
 
 ## Requirements
 
-### Requirement: CopyDirectorInput schema (Zod)
+### Requirement: CopyDirectorInput schema (Zod) — commercialFrame e campaignIntent
 
-O sistema SHALL definir o schema `CopyDirectorInput` (Zod) com campos: `productName (string, obrigatório)`, `description? (string)`, `offer (string, obrigatório)`, `storeName (string, obrigatório)`, `segment (string, obrigatório)`, `toneOfVoice? (string)`, `positioning? (string)`, `shortDescription? (string)`, `slogan? (string)`, `brandPersonality? (string)`, `campaignGuidelines? (string)`.
+> Modified by `fase-31-2-diretores-por-intencao`.
+
+O sistema SHALL definir o schema `CopyDirectorInput` (Zod) com campos: `productName (string, obrigatório)`, `description? (string)`, `commercialFrame (string, obrigatório)` — substitui `offer`, `campaignIntent (enum, opcional, default "offer")` — ADICIONADO, `storeName (string, obrigatório)`, `segment (string, obrigatório)`, `toneOfVoice? (string)`, `positioning? (string)`, `shortDescription? (string)`, `slogan? (string)`, `brandPersonality? (string)`, `campaignGuidelines? (string)`.
 
 #### Scenario: CopyDirectorInput accepts complete input
 
@@ -19,8 +21,9 @@ O sistema SHALL definir o schema `CopyDirectorInput` (Zod) com campos: `productN
 
 #### Scenario: CopyDirectorInput accepts minimal input
 
-- **WHEN** `CopyDirectorInput` é validado com apenas campos obrigatórios (`productName`, `offer`, `storeName`, `segment`)
+- **WHEN** `CopyDirectorInput` é validado com apenas campos obrigatórios (`productName`, `commercialFrame`, `storeName`, `segment`)
 - **THEN** a validação passa
+- **AND** `campaignIntent` assume default `"offer"`
 
 #### Scenario: CopyDirectorInput rejects empty productName
 
@@ -31,6 +34,13 @@ O sistema SHALL definir o schema `CopyDirectorInput` (Zod) com campos: `productN
 
 - **WHEN** `productName` está ausente
 - **THEN** a validação rejeita
+
+#### Scenario: CopyDirectorInput sem campaignIntent usa default offer
+
+> Added by `fase-31-2-diretores-por-intencao`.
+
+- **WHEN** `campaignIntent` está ausente
+- **THEN** `CopyDirectorInputSchema` aplica default `"offer"`
 
 ### Requirement: CopyDirectorInput does not include mandatoryArtworkText
 
@@ -88,14 +98,24 @@ O sistema SHALL garantir que `generateCopy(input)` com input mínimo (apenas obr
 - **WHEN** `generateCopy` é chamado com apenas campos obrigatórios
 - **THEN** retorna `CopyDirectorResult` válido
 
-### Requirement: generateCopy uses PromptLoader to load campaign-copy-director prompt
+### Requirement: generateCopy carrega prompt por campaignIntent
 
-O sistema SHALL carregar o template `campaign-copy-director` via `PromptLoader.load()` e interpolar as variáveis do input.
+> Modified by `fase-31-2-diretores-por-intencao`.
+
+O sistema SHALL carregar o template `campaign-copy-director-${input.campaignIntent}` via `PromptLoader.load()`, interpolando `commercialFrame` nas variáveis (em vez de `offer`). Sem fallback silencioso — se o prompt não existir para intent válida, o erro é propagado.
 
 #### Scenario: generateCopy loads prompt template
 
 - **WHEN** `generateCopy` é chamado
-- **THEN** `PromptLoader.load("campaign-copy-director", { ... })` é chamado com as variáveis mapeadas do input
+- **THEN** `PromptLoader.load("campaign-copy-director-offer", { commercialFrame: "..." })` é chamado com as variáveis mapeadas do input
+- **AND** `offer` NÃO está presente nas variáveis
+
+#### Scenario: generateCopy carrega campaign-copy-director-spotlight
+
+> Added by `fase-31-2-diretores-por-intencao`.
+
+- **WHEN** `generateCopy` é chamado com `campaignIntent: "spotlight"`
+- **THEN** `PromptLoader.load("campaign-copy-director-spotlight", { ... })` é chamado
 
 ### Requirement: generateCopy calls TextProvider with system prompt and temperature
 
@@ -226,3 +246,39 @@ O sistema SHALL fazer `GeminiTextProvider.generateText()` lançar `MalformedResp
 
 - **WHEN** `GeminiTextProvider.generateText()` recebe resposta vazia da API Gemini
 - **THEN** lança `MalformedResponseError`
+
+### Requirement: mapBriefToCopyDirectorInput monta commercialFrame por intent
+
+> Added by `fase-31-2-diretores-por-intencao`.
+
+O sistema SHALL adaptar `mapBriefToCopyDirectorInput` para construir `commercialFrame` por intent:
+
+- offer: `commercialFrame` com badge + "de X por Y" (formato BRL)
+- spotlight: `commercialFrame` = "Destaque — R$ X" ou "Destaque do produto" (se sem preço)
+- exclusive: `commercialFrame` = "Produto exclusivo — sem divulgação de preço"
+
+O mapper SHALL propagar `campaignIntent` do brief para o `CopyDirectorInput`.
+
+#### Scenario: mapBriefToCopyDirectorInput monta commercialFrame para offer
+
+- **WHEN** o brief tem `campaignIntent: "offer"` com preço
+- **THEN** `commercialFrame` contém badge e valor formatado (BRL)
+
+#### Scenario: mapBriefToCopyDirectorInput monta commercialFrame para exclusive
+
+- **WHEN** o brief tem `campaignIntent: "exclusive"`
+- **THEN** `commercialFrame` contém "Produto exclusivo — sem divulgação de preço"
+- **AND** não contém preço ou desconto
+
+### Requirement: buildCommercialFrame substitui buildOfferText
+
+> Added by `fase-31-2-diretores-por-intencao`.
+
+O sistema SHALL implementar `buildCommercialFrame(campaignIntent, input)` que retorna o texto comercial apropriado para cada intent, substituindo `buildOfferText`.
+
+`buildOfferText` pode ser mantida internamente delegando para `buildCommercialFrame("offer", ...)`, mas a interface pública passa a ser `buildCommercialFrame`.
+
+#### Scenario: buildCommercialFrame para offer retorna mesmo resultado
+
+- **WHEN** `buildCommercialFrame("offer", { discountedPriceCents: 4990, badgeText: "Promoção" })` é chamado
+- **THEN** retorna `"Promoção: Apenas R$ 49,90"` (formato igual ao `buildOfferText` anterior)

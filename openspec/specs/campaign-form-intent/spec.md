@@ -46,7 +46,7 @@ O sistema SHALL modificar a validação para ser condicional à intent seleciona
 
 - `validateDiscountedPrice`: retorna erro apenas quando `campaignIntent === "offer"` e preço vazio/zero. Para spotlight/exclusive, sempre retorna null.
 - `validateBadge`: usa `BADGE_OPTIONS_BY_INTENT[campaignIntent]` para validar o badge. Badge é obrigatório apenas para offer; para spotlight/exclusive, badge vazio é válido.
-- `isValid`: só retorna true quando `campaignIntent === "offer"` (spotlight/exclusive bloqueiam submit).
+- `isValid`: retorna true quando a validação passa, independente da intent (todas as intents permitem submissão).
 
 #### Scenario: Offer exige preço com desconto
 
@@ -68,10 +68,10 @@ O sistema SHALL modificar a validação para ser condicional à intent seleciona
 - **WHEN** `campaignIntent === "spotlight"` ou `"exclusive"` e badge está vazio
 - **THEN** `validateBadge` retorna null
 
-#### Scenario: isValid bloqueia non-offer
+#### Scenario: isValid retorna true para spotlight
 
-- **WHEN** `campaignIntent !== "offer"`
-- **THEN** `isValid` retorna false
+- **WHEN** `campaignIntent === "spotlight"` e validação passa
+- **THEN** `isValid` retorna `true` (antes retornava `false` para non-offer)
 
 ### Requirement: Badge cleanup on intent change
 
@@ -96,6 +96,40 @@ O sistema SHALL tornar `discountedPriceCents` opcional (`number | undefined`) em
 - **WHEN** o campo "Preço com Desconto" está vazio
 - **THEN** `CampaignFormFields.discountedPriceCents` é `undefined`
 - **AND** nenhum erro de validação é disparado (desde que intent não seja offer)
+
+### Requirement: Submit permitido para todas as intents
+
+> Modified by `fase-31-2-diretores-por-intencao`.
+
+O sistema SHALL modificar `handleSubmit()` e `isValid` para permitir submissão de todas as intents (offer, spotlight, exclusive). O bloqueio anterior ("Disponível em breve" para non-offer) SHALL ser removido.
+
+A validação condicional de preço e badge permanece:
+- Offer: `discountedPriceCents` obrigatório, badge obrigatório
+- Spotlight: `discountedPriceCents` normalmente presente (validação tolerante), badge opcional
+- Exclusive: `discountedPriceCents` sempre omitido, badge opcional
+
+#### Scenario: Spotlight pode submeter
+
+- **WHEN** `campaignIntent === "spotlight"` e campos válidos
+- **THEN** `handleSubmit()` prossegue com a requisição
+- **AND** não retorna "Disponível em breve"
+
+#### Scenario: Exclusive pode submeter
+
+- **WHEN** `campaignIntent === "exclusive"` e campos válidos
+- **THEN** `handleSubmit()` prossegue com a requisição
+- **AND** não retorna "Disponível em breve"
+
+### Requirement: discountedPriceCents fluido no submit body
+
+> Added by `fase-31-2-diretores-por-intencao`.
+
+O sistema SHALL incluir `discountedPriceCents` no body do submit apenas quando presente no form. Para exclusive, o campo é omitido.
+
+#### Scenario: Submit exclusive omite discountedPriceCents
+
+- **WHEN** o formulário envia com `campaignIntent: "exclusive"` e `discountedPriceCents: undefined`
+- **THEN** o body NÃO contém `discountedPriceCents`
 
 ### Requirement: CampaignFormFields extended with intent fields
 
