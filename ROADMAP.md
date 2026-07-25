@@ -57,7 +57,7 @@ Autenticação completa, vínculo user→store, isolamento multi-tenant, beta.ve
 Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, UAT externo, fundação legal e modelo comercial — formulário com intenção comercial.
 
 <details open>
-<summary>◆ v1.5 Lançamento Externo Controlado (F23-F31.1) — Em andamento</summary>
+<summary>◆ v1.5 Lançamento Externo Controlado (F23-F31.3) — Em andamento</summary>
 
 Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, fundação legal e modelo comercial.
 
@@ -89,6 +89,18 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - Conteúdo adaptado por intent (repertoire, guidance, fallback determinístico)
   - Normalização de exclusive com preço indevido
   - 15 testes, regressão zero para offer, 1051 testes totais
+
+- [ ] Phase 31.3: Quality Gate por Intenção Comercial (6 plans ◆)
+  - ImageReviewInput com campaignIntent, preserveImageContext; badgeText/discountedPrice opcionais
+  - ReviewIssueType union nomeada (17 valores); failureType string | null explícito
+  - commercial_tone_mismatch como novo issue type
+  - Prompt campaign-image-reviewer.md reestruturado com variáveis contextuais (expectedPriceBehavior, expectedBadgeBehavior, expectedImageTreatment, expectedCommercialTone, campaignIntentLabel)
+  - review() monta variáveis em 2 etapas; expectedBadgeBehavior com 3 variantes por intent
+  - callVisionModel trata empty_review como resultado estruturado
+  - validatePrompts intent-aware com verificação de placeholders antigos
+  - applyValidationContextToReviewResult reconhece commercial_tone_mismatch como non-removable
+  - InputValidationService verificado (sem alteração)
+  - 5 cenários E2E com IA real
 
 </details>
 
@@ -131,6 +143,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 30. Fundação Legal | v1.5 | 6/6 | ✅ Complete | 2026-07-23 |
 | 31.1. Modelo Comercial — Formulário | v1.5 | 5/5 | ✅ Complete | 2026-07-24 |
 | 31.2. Diretores por Intenção | v1.5 | 6/6 | ✅ Complete | 2026-07-25 |
+| 31.3. Quality Gate por Intenção Comercial | v1.5 | 0/6 | ◆ Planned | — |
 
 ---
 

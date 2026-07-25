@@ -3,22 +3,22 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: "Lançamento Externo Controlado — Créditos + Admin + Saldo + Observabilidade + Launch + Modelo Comercial"
 status: active
-last_updated: "2026-07-25T14:30:00.000Z"
-last_activity: "2026-07-25T14:30:00.000Z"
-  progress:
-    total_phases: 14
-    completed_phases: 14
-    total_plans: 61
-    completed_plans: 50
-    percent: 82
-    current_phase_plans: 0
+last_updated: "2026-07-25T17:30:00.000Z"
+last_activity: "2026-07-25T17:30:00.000Z"
+progress:
+  total_phases: 15
+  completed_phases: 14
+  total_plans: 67
+  completed_plans: 50
+  percent: 75
+  current_phase_plans: 6
 ---
 
 # Project State
 
-**Last updated:** 2026-07-24
+**Last updated:** 2026-07-25
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆
-**Current phase:** 31.2 — Diretores por Intenção ✅
+**Current phase:** 31.3 — Quality Gate por Intenção Comercial ◆
 
 ## Completed
 
@@ -422,7 +422,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-v1.5 em andamento — Fases 31.1 e 31.2 concluídas. Próxima fase: F32 Stripe/Monetização Pública.
+v1.5 em andamento — Fases 31.1 e 31.2 concluídas. Fase corrente: 31.3 — Quality Gate por Intenção Comercial (6 plans planejados).
 
 ### Phase 30 — Fundação Legal ✅
 
@@ -469,6 +469,20 @@ v1.5 em andamento — Fases 31.1 e 31.2 concluídas. Próxima fase: F32 Stripe/M
 **Context:** `.planning/phases/31-2-diretores-por-intencao/31-2-CONTEXT.md`
 **Source:** `openspec/changes/fase-31-2-diretores-por-intencao/`
 
+### Phase 31.3 — Quality Gate por Intenção Comercial ◆
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 31-3-01 | 1 | ○ Planned | Schema + Foundation — ImageReviewInput, ReviewIssueType union, failureType null |
+| 31-3-02 | 1 | ○ Planned | Intent-Aware Review Service — 2-stage vars, expectedBadgeBehavior, empty_review |
+| 31-3-03 | 2 | ○ Planned | Prompt Restructuring — campaign-image-reviewer.md com variáveis contextuais |
+| 31-3-04 | 2 | ○ Planned | Pipeline Integration — buildReviewInput, validatePrompts intent-aware |
+| 31-3-05 | 3 | ○ Planned | Automated Tests — contract/drift tests, regressão |
+| 31-3-06 | 3 | ○ Planned | UAT Real — 5 cenários E2E com IA real |
+
+**Source:** `openspec/changes/fase-31-3-quality-gate-por-intencao-comercial/`
+**Context:** `.planning/phases/31-3-quality-gate-por-intencao-comercial/31-3-CONTEXT.md`
+
 **Commits:**
 - `cee901a` — 31-2-01: Schema Contracts — discountedPriceCents opcional, CampaignSpecSchema nullable
 - `0ece865` — 31-2-02: Unblock — UI/Form/Route: remover bloqueios, normalização exclusive, validação offer
@@ -489,6 +503,7 @@ v1.5 em andamento — Fases 31.1 e 31.2 concluídas. Próxima fase: F32 Stripe/M
 | F30 | ✅ Completed | Fundação Legal — 6 migrations, 5 services, 3 public pages, 4 API routes, pipeline guards, re-aceite, admin badges, 24+ testes |
 | **F31.1** | **✅ Completed** | **Modelo Comercial — Formulário — CampaignIntent type, inferência, seletor, badge-by-intent, preserveImageContext, pipeline guard** |
 | **F31.2** | **✅ Completed** | **Diretores por Intenção — Schemas tolerantes, desbloqueio de intents, 6 prompts, roteamento, conteúdo adaptado, 6 plans, UAT 9/9 ✅** |
+| **F31.3** | **◆ Planned** | **Quality Gate por Intenção Comercial — ImageReviewInput intent-aware, prompt reestruturado, commercial_tone_mismatch, 6 plans** |
 | F32/v1.7 | ○ Future | Stripe / Monetização Pública (pós-beta) |
 
 ### Quick Tasks Completed
