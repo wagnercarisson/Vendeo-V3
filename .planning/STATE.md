@@ -6,19 +6,19 @@ status: active
 last_updated: "2026-07-24T19:35:00.000Z"
 last_activity: "2026-07-24T19:35:00.000Z"
   progress:
-    total_phases: 13
+    total_phases: 14
     completed_phases: 13
-    total_plans: 49
+    total_plans: 55
     completed_plans: 44
-    percent: 100
-    current_phase_plans: 5
+    percent: 80
+    current_phase_plans: 6
 ---
 
 # Project State
 
 **Last updated:** 2026-07-24
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆
-**Current phase:** 31.1 — Modelo Comercial — Formulário ✅
+**Current phase:** 31.2 — Diretores por Intenção ○
 
 ## Completed
 
@@ -422,7 +422,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-v1.5 em andamento — Fase 30 concluída. Phase 31.1 concluída — Modelo Comercial — Formulário.
+v1.5 em andamento — Fase 31.1 concluída. Phase 31.2 em planejamento — Diretores por Intenção.
 
 ### Phase 30 — Fundação Legal ✅
 
@@ -453,6 +453,21 @@ v1.5 em andamento — Fase 30 concluída. Phase 31.1 concluída — Modelo Comer
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 **Commits:** afdfbf7, c2a94ce, 17c3d04, 162d5d5, b7b7d38
 
+### Phase 31.2 — Diretores por Intenção ○
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 31-2-01 | 1 | ○ | Schema Contracts — discountedPriceCents opcional, CampaignSpecSchema nullable |
+| 31-2-02 | 1 | ○ | Unblock — UI/Form/Route: remover bloqueios, normalização exclusive, validação offer |
+| 31-2-03 | 2 | ○ | 6 Prompt Templates — 3 image + 3 copy por intent |
+| 31-2-04 | 2 | ○ | Image Director Routing — assemblePrompt, buildPromptVariables, validatePrompts por intent |
+| 31-2-05 | 2 | ○ | Copy Director + Content — commercialFrame, buildCommercialRepertoire, buildDeterministicCopy |
+| 31-2-06 | 3 | ○ | Tests + Verification — 14+ testes, regressão 1036+, typecheck/lint/build |
+
+**Tests:** 1036 passing (129 files, 0 novos — baseline)
+**Context:** `.planning/phases/31-2-diretores-por-intencao/31-2-CONTEXT.md`
+**Source:** `openspec/changes/fase-31-2-diretores-por-intencao/`
+
 ### Next Phases
 
 | Phase | Status | Description |
@@ -464,6 +479,7 @@ v1.5 em andamento — Fase 30 concluída. Phase 31.1 concluída — Modelo Comer
 | F29.3 | ✅ Completed | Créditos Mensais Automáticos — Buckets bônus/compra, grant mensal, Vercel Cron (4 plans, 987 testes) |
 | F30 | ✅ Completed | Fundação Legal — 6 migrations, 5 services, 3 public pages, 4 API routes, pipeline guards, re-aceite, admin badges, 24+ testes |
 | **F31.1** | **✅ Completed** | **Modelo Comercial — Formulário — CampaignIntent type, inferência, seletor, badge-by-intent, preserveImageContext, pipeline guard** |
+| **F31.2** | **○ Planned** | **Diretores por Intenção — Schemas tolerantes, desbloqueio de intents, 6 prompts, roteamento, conteúdo adaptado, 6 plans** |
 | F32/v1.7 | ○ Future | Stripe / Monetização Pública (pós-beta) |
 
 ### Quick Tasks Completed
