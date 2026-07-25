@@ -138,12 +138,19 @@ export const POST = apiHandler(async (request: NextRequest) => {
     );
   }
 
-  // ── Pre-stream: Campaign intent guard ──────────────────────────────
-  if (parsed.data.campaignIntent !== "offer") {
+  // ── Pre-stream: Semantic validation + normalization by intent ──────
+  // Validation: offer requires discountedPriceCents
+  if (parsed.data.campaignIntent === "offer" && !parsed.data.discountedPriceCents) {
     return Response.json(
-      { error: { message: "Intenção comercial indisponível. Apenas ofertas podem ser geradas no momento." } },
+      { error: { message: "Preço com desconto é obrigatório para ofertas" } },
       { status: 400 }
     );
+  }
+
+  // Normalization: exclusive never carries price
+  if (parsed.data.campaignIntent === "exclusive" && parsed.data.discountedPriceCents) {
+    parsed.data.discountedPriceCents = undefined;
+    console.warn("[generate-image] exclusive com discountedPriceCents presente — normalizando para ausente.");
   }
 
   // ── Pre-stream: Resolve store identity (backend-side) ────────────

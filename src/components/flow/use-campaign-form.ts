@@ -557,12 +557,6 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
   }
 
   const handleSubmit = useCallback(async () => {
-    if (fields.campaignIntent !== "offer") {
-      setSubmitError("Disponível em breve");
-      setIsSubmitting(false);
-      return;
-    }
-
     setIsSubmitting(true);
     setSubmitError(null);
     setFieldErrors({});
@@ -702,7 +696,6 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     ? (fields.discountedPriceCents ?? 0) > 0
     : true;
   const isValid =
-    fields.campaignIntent === "offer" &&
     trimmed !== "" &&
     priceValid &&
     badgeValid &&

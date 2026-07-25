@@ -236,11 +236,7 @@ function IntentSelector({
             <span className="text-text-primary text-sm font-body flex-1">
               {labels[intent]}
             </span>
-            {(intent === "spotlight" || intent === "exclusive") && (
-              <span className="text-[10px] bg-amber-900/40 text-amber-300 px-1.5 py-0.5 rounded-full font-medium ml-2">
-                Em breve
-              </span>
-            )}
+
           </label>
         ))}
       </div>
@@ -520,15 +516,13 @@ function FormContent({
 
         <button
           type="submit"
-          disabled={isSubmitting || fields.campaignIntent !== "offer" || balance === 0 || balance === null}
+          disabled={isSubmitting || balance === 0 || balance === null}
           title={
-            fields.campaignIntent !== "offer"
-              ? "Disponível em breve"
-              : balance === 0
-                ? "Você precisa de créditos para gerar uma campanha"
-                : balance === null
-                  ? "Não foi possível confirmar seu saldo"
-                  : undefined
+            balance === 0
+              ? "Você precisa de créditos para gerar uma campanha"
+              : balance === null
+                ? "Não foi possível confirmar seu saldo"
+                : undefined
           }
           className="min-h-[44px] w-full sm:w-auto px-8 py-2.5 bg-accent-green text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
@@ -537,8 +531,6 @@ function FormContent({
               <Loader2 className="w-4 h-4 animate-spin" />
               Criando...
             </>
-          ) : fields.campaignIntent !== "offer" ? (
-            "Disponível em breve"
           ) : (
             "Criar Campanha"
           )}
