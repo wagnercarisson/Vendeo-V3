@@ -25,6 +25,7 @@
 | 30 | ✅ Fundação Legal | Documentos legais, ciência/aceite contratual, clearance no pipeline, re-aceite, consentimento LGPD, admin badges | LEGAL-* | 43 ✅ |
 | 31.1 | ✅ Modelo Comercial — Formulário | CampaignIntent type, seletor de intent no formulário, inferência automática, badge por intent, pipeline guard | INTENT-01–12 | 12 ✅ |
 | 31.2 | ✅ Diretores por Intenção | Schemas tolerantes, desbloqueio de intents, 6 prompts por intent, roteamento de diretores, conteúdo adaptado | — | 9 ✅ |
+| 31.3 | ✅ Quality Gate por Intenção Comercial | Revisor intent-aware, prompt reestruturado, commercial_tone_mismatch, variáveis contextuais | — | 11 ✅ |
 
 ---
 
@@ -318,6 +319,42 @@
 
 ---
 
+### Phase 31.3 — Quality Gate por Intenção Comercial ✅
+
+**Goal:** Adaptar o revisor de qualidade (`ImageReviewService`) para ser intent-aware, eliminando falsos negativos para spotlight e exclusive.
+
+**Requirements:** _(Refinamento de F31.2 — sem novos REQ-IDs)_
+
+**Success criteria:**
+1. ✅ ImageReviewInput aceita campaignIntent (default "offer"), preserveImageContext; badgeText, discountedPrice, originalPrice opcionais
+2. ✅ ReviewIssueType union com 18 valores (17 existentes + commercial_tone_mismatch)
+3. ✅ review() monta variáveis contextuais em 2 etapas (resolver placeholders → montar strings finais sem {{...}})
+4. ✅ expectedBadgeBehavior com 3 variantes: offer obrigatório / spotlight+exclusive com badge / spotlight+exclusive sem badge
+5. ✅ commercial_tone_mismatch como novo tipo de issue — critical se contradiz intent, minor se publicável
+6. ✅ Prompt campaign-image-reviewer.md reestruturado — seção "Comportamento Esperado" com 5 variáveis contextuais
+7. ✅ callVisionModel() trata empty_review como resultado estruturado (não exceção)
+8. ✅ validatePrompts intent-aware — verifica variáveis contextuais e placeholders antigos
+9. ✅ buildReviewPromptVariables() público — single source of truth para runtime e preflight
+10. ✅ InputValidationService verificado — sem alterações necessárias
+11. ✅ UAT structure criada — 5 cenários E2E com micro-runbook
+
+**Dependencies:** Phase 31.2 (schemas tolerantes, desbloqueio de intents, 6 prompts, roteamento)
+
+**Source of truth:** `openspec/changes/fase-31-3-quality-gate-por-intencao-comercial/`
+
+**Plans:** 6 plans (3 waves)
+
+| Plan | Wave | Objective |
+|------|------|-----------|
+| 31-3-01 | 1 | Schema + Foundation — ImageReviewInput, ReviewIssueType union, failureType null |
+| 31-3-02 | 1 | Intent-Aware Review Service — 2-stage vars, expectedBadgeBehavior, empty_review |
+| 31-3-03 | 2 | Prompt Restructuring — campaign-image-reviewer.md com variáveis contextuais |
+| 31-3-04 | 2 | Pipeline Integration — buildReviewInput, validatePrompts intent-aware |
+| 31-3-05 | 3 | Automated Tests — contract/drift tests, regressão |
+| 31-3-06 | 3 | UAT Real — 5 cenários E2E com IA real |
+
+---
+
 ## Dependency Graph
 
 ```
@@ -342,6 +379,9 @@ Phase 24 (Credit Tables + CreditService) ──┘
                                             │
                                             ▼
                                  Phase 31.2 (Diretores por Intenção)
+                                            │
+                                            ▼
+                                 Phase 31.3 (Quality Gate por Intenção Comercial) ✅
                                             │
                                             ▼
                                     Phase 32 (Stripe — v1.7 futuro)
@@ -429,4 +469,4 @@ Phase 24 (Credit Tables + CreditService) ──┘
 
 *Roadmap created: 2026-07-15*
 *Milestone: v1.5 — Lançamento Externo Controlado*
-*Last updated: 2026-07-25 — Phase 31.2 complete — UAT 9/9 passed*
+*Last updated: 2026-07-25 — Phase 31.3 complete — 1071 tests passing*

@@ -7,10 +7,10 @@ last_updated: "2026-07-25T17:30:00.000Z"
 last_activity: "2026-07-25T17:30:00.000Z"
 progress:
   total_phases: 15
-  completed_phases: 14
-  total_plans: 67
-  completed_plans: 50
-  percent: 75
+  completed_phases: 15
+  total_plans: 73
+  completed_plans: 56
+  percent: 77
   current_phase_plans: 6
 ---
 
@@ -18,7 +18,7 @@ progress:
 
 **Last updated:** 2026-07-25
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆
-**Current phase:** 31.3 — Quality Gate por Intenção Comercial ◆
+**Current phase:** 31.3 — Quality Gate por Intenção Comercial ✅
 
 ## Completed
 
@@ -422,7 +422,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-v1.5 em andamento — Fases 31.1 e 31.2 concluídas. Fase corrente: 31.3 — Quality Gate por Intenção Comercial (6 plans planejados).
+v1.5 em andamento — Fases 31.1, 31.2 e 31.3 concluídas. Fase corrente: 31.3 — Quality Gate por Intenção Comercial ✅ implementada (6/6 plans, UAT estrutura criada — execução pendente com IA real).
 
 ### Phase 30 — Fundação Legal ✅
 
@@ -469,27 +469,30 @@ v1.5 em andamento — Fases 31.1 e 31.2 concluídas. Fase corrente: 31.3 — Qua
 **Context:** `.planning/phases/31-2-diretores-por-intencao/31-2-CONTEXT.md`
 **Source:** `openspec/changes/fase-31-2-diretores-por-intencao/`
 
-### Phase 31.3 — Quality Gate por Intenção Comercial ◆
+### Phase 31.3 — Quality Gate por Intenção Comercial ✅
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
-| 31-3-01 | 1 | ○ Planned | Schema + Foundation — ImageReviewInput, ReviewIssueType union, failureType null |
-| 31-3-02 | 1 | ○ Planned | Intent-Aware Review Service — 2-stage vars, expectedBadgeBehavior, empty_review |
-| 31-3-03 | 2 | ○ Planned | Prompt Restructuring — campaign-image-reviewer.md com variáveis contextuais |
-| 31-3-04 | 2 | ○ Planned | Pipeline Integration — buildReviewInput, validatePrompts intent-aware |
-| 31-3-05 | 3 | ○ Planned | Automated Tests — contract/drift tests, regressão |
-| 31-3-06 | 3 | ○ Planned | UAT Real — 5 cenários E2E com IA real |
+| 31-3-01 | 1 | ✅ | Schema + Foundation — ImageReviewInput, ReviewIssueType union, failureType null |
+| 31-3-02 | 1 | ✅ | Intent-Aware Review Service — 2-stage vars, expectedBadgeBehavior, empty_review |
+| 31-3-03 | 2 | ✅ | Prompt Restructuring — campaign-image-reviewer.md com variáveis contextuais |
+| 31-3-04 | 2 | ✅ | Pipeline Integration — buildReviewInput, validatePrompts intent-aware |
+| 31-3-05 | 3 | ✅ | Automated Tests — contract/drift tests, regressão |
+| 31-3-06 | 3 | ⏳ | UAT Real — 5 cenários E2E com IA real (estrutura criada, execução pendente) |
 
 **Source:** `openspec/changes/fase-31-3-quality-gate-por-intencao-comercial/`
 **Context:** `.planning/phases/31-3-quality-gate-por-intencao-comercial/31-3-CONTEXT.md`
 
+**Tests:** 1071 passing (131 files, 20 novos)
+**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
+
 **Commits:**
-- `cee901a` — 31-2-01: Schema Contracts — discountedPriceCents opcional, CampaignSpecSchema nullable
-- `0ece865` — 31-2-02: Unblock — UI/Form/Route: remover bloqueios, normalização exclusive, validação offer
-- `9698aec` — 31-2-03: 6 Prompt Templates — 3 image + 3 copy por intent
-- `2827985` — 31-2-04: Image Director Routing — assemblePrompt, buildPromptVariables, validatePrompts por intent
-- `a0783a8` — 31-2-05: Copy Director + Content — commercialFrame, buildCommercialRepertoire, buildDeterministicCopy
-- `d3f16c3` — 31-2-06: Tests + Verification — 15 novos testes, regressão 1051, typecheck/lint/build
+- `be83d7d` — 31-3-01: Schema + Foundation — ImageReviewInput estendido, ReviewIssueType union, failureType string|null
+- `f7cbdaf` — 31-3-02: Intent-Aware Review Service — 2-stage var builder, 3-variant expectedBadgeBehavior, empty_review estruturado
+- `45daa35` — 31-3-03: Prompt Restructuring — comportamento esperado, commercial_tone_mismatch, remove placeholders antigos
+- `7d4efa1` — 31-3-04: Pipeline Integration — buildReviewInput intent-aware, validatePrompts usa builder compartilhado, verificação de vars contextuais e placeholders antigos
+- `faaf234` — 31-3-05: Automated Tests — contract tests, intent-aware review tests, validatePrompts com campaignIntent, regressão offer
+- `bc2b2af` — 31-3-06: UAT evidence structure — 5 cenarios E2E com micro-runbook, criterios de aceite e template de evidencias
 
 ### Next Phases
 
@@ -503,7 +506,7 @@ v1.5 em andamento — Fases 31.1 e 31.2 concluídas. Fase corrente: 31.3 — Qua
 | F30 | ✅ Completed | Fundação Legal — 6 migrations, 5 services, 3 public pages, 4 API routes, pipeline guards, re-aceite, admin badges, 24+ testes |
 | **F31.1** | **✅ Completed** | **Modelo Comercial — Formulário — CampaignIntent type, inferência, seletor, badge-by-intent, preserveImageContext, pipeline guard** |
 | **F31.2** | **✅ Completed** | **Diretores por Intenção — Schemas tolerantes, desbloqueio de intents, 6 prompts, roteamento, conteúdo adaptado, 6 plans, UAT 9/9 ✅** |
-| **F31.3** | **◆ Planned** | **Quality Gate por Intenção Comercial — ImageReviewInput intent-aware, prompt reestruturado, commercial_tone_mismatch, 6 plans** |
+| **F31.3** | **✅ Completed** | **Quality Gate por Intenção Comercial — ImageReviewInput intent-aware, prompt reestruturado, commercial_tone_mismatch, 6 plans, 1071 testes, UAT pendente** |
 | F32/v1.7 | ○ Future | Stripe / Monetização Pública (pós-beta) |
 
 ### Quick Tasks Completed
