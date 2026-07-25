@@ -357,10 +357,12 @@ export class ImageGenerationService {
       const reviewInput: ImageReviewInput = {
         productName: effectiveProductName,
         storeName: brief.store.name,
-        badgeText: body.badgeText ?? "",
+        campaignIntent: body.campaignIntent ?? "offer",
+        preserveImageContext: body.preserveImageContext,
+        badgeText: body.badgeText,
         discountedPrice: body.discountedPriceCents
           ? this.formatPriceBRL(body.discountedPriceCents)
-          : "",
+          : undefined,
         originalPrice: (body.originalPriceCents ?? 0) > 0
           ? this.formatPriceBRL(body.originalPriceCents ?? 0)
           : undefined,
@@ -565,23 +567,47 @@ export class ImageGenerationService {
       errors.push(`Diretor de imagem: variáveis não resolvidas: ${directorCheck.unresolvedVariables.join(', ')}`);
     }
 
-    // Check reviewer prompt
-    const reviewerVars: Record<string, string> = {
+    // Check reviewer prompt using shared builder
+    const reviewerInput: ImageReviewInput = {
       productName: body.productName,
       storeName: brief.store.name,
+      campaignIntent: body.campaignIntent,
+      preserveImageContext: body.preserveImageContext,
+      badgeText: body.badgeText,
       discountedPrice: body.discountedPriceCents
         ? this.formatPriceBRL(body.discountedPriceCents)
-        : "",
+        : undefined,
       originalPrice: (body.originalPriceCents ?? 0) > 0
         ? this.formatPriceBRL(body.originalPriceCents ?? 0)
-        : "",
-      badgeText: body.badgeText ?? "",
-      validationContextSection: "",
+        : undefined,
     };
+    const reviewerVars = this.imageReview.buildReviewPromptVariables(reviewerInput);
     const reviewerPrompt = this.promptLoader.load("campaign-image-reviewer", reviewerVars);
     const reviewerCheck = validatePrompt(reviewerPrompt);
     if (!reviewerCheck.valid) {
       errors.push(`Revisor de imagem: variáveis não resolvidas: ${reviewerCheck.unresolvedVariables.join(', ')}`);
+    }
+
+    // Verify required contextual variables are present and non-empty
+    const requiredReviewerVars = [
+      "campaignIntentLabel",
+      "expectedPriceBehavior",
+      "expectedBadgeBehavior",
+      "expectedImageTreatment",
+      "expectedCommercialTone",
+    ];
+    for (const varName of requiredReviewerVars) {
+      if (!reviewerVars[varName] || reviewerVars[varName].trim() === "") {
+        errors.push(`Revisor: variável contextual '${varName}' está ausente ou vazia.`);
+      }
+    }
+
+    // Verify old placeholders are not in the reviewer prompt
+    const oldPlaceholders = ["{{discountedPrice}}", "{{badgeText}}"];
+    for (const placeholder of oldPlaceholders) {
+      if (reviewerPrompt.includes(placeholder)) {
+        errors.push(`Revisor: placeholder antigo '${placeholder}' ainda está presente no prompt.`);
+      }
     }
 
     return { valid: errors.length === 0, errors };
