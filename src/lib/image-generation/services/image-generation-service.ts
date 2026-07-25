@@ -546,10 +546,18 @@ export class ImageGenerationService {
   validatePrompts(brief: CampaignBrief): { valid: boolean; errors: string[] } {
     const body = brief.campaignInput as GenerateImageRequest;
     const errors: string[] = [];
+    const campaignIntent = body.campaignIntent ?? "offer";
 
     // Check director prompt
     const directorVariables = this.buildPromptVariables(body, body.productName, undefined, brief);
-    const directorPrompt = this.promptLoader.load("campaign-image-director", directorVariables);
+    const promptName = `campaign-image-director-${campaignIntent}`;
+    let directorPrompt: string;
+    try {
+      directorPrompt = this.promptLoader.load(promptName, directorVariables);
+    } catch {
+      errors.push(`Prompt para intent '${campaignIntent}' não encontrado: ${promptName}`);
+      return { valid: false, errors };
+    }
     const directorCheck = validatePrompt(directorPrompt);
     if (!directorCheck.valid) {
       errors.push(`Diretor de imagem: variáveis não resolvidas: ${directorCheck.unresolvedVariables.join(', ')}`);
@@ -559,7 +567,9 @@ export class ImageGenerationService {
     const reviewerVars: Record<string, string> = {
       productName: body.productName,
       storeName: brief.store.name,
-      discountedPrice: this.formatPriceBRL(body.discountedPriceCents),
+      discountedPrice: body.discountedPriceCents
+        ? this.formatPriceBRL(body.discountedPriceCents)
+        : "",
       originalPrice: (body.originalPriceCents ?? 0) > 0
         ? this.formatPriceBRL(body.originalPriceCents ?? 0)
         : "",
@@ -702,64 +712,65 @@ export class ImageGenerationService {
    * Provides the director with a short contextual suggestion for visual positioning.
    * Defaults to empty string when no specific guidance applies.
    */
-  private buildCreativeContextGuidance(segment: string, category: string, hasConflict: boolean): string {
+  private buildCreativeContextGuidance(segment: string, category: string, hasConflict: boolean, campaignIntent: string = "offer"): string {
     const s = segment.toLowerCase();
     const c = category.toLowerCase();
 
+    let result: string;
+
     if (hasConflict) {
-      // Category conflict — balance the two universes
       if (c.includes("eletronico") || c.includes("tecnologia") || c.includes("celular") || c.includes("computador")) {
-        return "Equilibre o apelo popular do segmento com o desejo por tecnologia.";
+        result = "Equilibre o apelo popular do segmento com o desejo por tecnologia.";
+      } else if (c.includes("bebida") || c.includes("alimento") || c.includes("cerveja") || c.includes("energetico")) {
+        result = "Valorize o produto com apelo aspiracional.";
+      } else if (c.includes("moda") || c.includes("roupa") || c.includes("calcado") || c.includes("tenis")) {
+        result = "Destaque estilo e desejo dentro de um contexto acessível.";
+      } else if (c.includes("beleza") || c.includes("cosmetico") || c.includes("perfume")) {
+        result = "Eleve o produto como item de desejo — preço é bônus, não motivo principal.";
+      } else if (c.includes("pet") || c.includes("racao")) {
+        result = "Conecte carinho pelo pet com a conveniência da oferta.";
+      } else if (c.includes("casa") || c.includes("decoracao") || c.includes("movel")) {
+        result = "Transforme o produto em aspiração para o lar.";
+      } else {
+        result = "Equilibre o universo do produto com a identidade da loja.";
       }
-      if (c.includes("bebida") || c.includes("alimento") || c.includes("cerveja") || c.includes("energetico")) {
-        return "Valorize o produto com apelo aspiracional. Preço é oportunidade.";
-      }
-      if (c.includes("moda") || c.includes("roupa") || c.includes("calcado") || c.includes("tenis")) {
-        return "Destaque estilo e desejo dentro de um contexto acessível.";
-      }
-      if (c.includes("beleza") || c.includes("cosmetico") || c.includes("perfume")) {
-        return "Eleve o produto como item de desejo — preço é bônus, não motivo principal.";
-      }
-      if (c.includes("pet") || c.includes("racao")) {
-        return "Conecte carinho pelo pet com a conveniência da oferta.";
-      }
-      if (c.includes("casa") || c.includes("decoracao") || c.includes("movel")) {
-        return "Transforme o produto em aspiração para o lar. Preço é o empurrão final.";
-      }
-      return "Equilibre o universo do produto com a identidade da loja.";
+    } else if (s.includes("bebidas-adegas-conveniencia") || s.includes("bebida")) {
+      if (c.includes("energetico")) result = "Valorize energia e disposição.";
+      else if (c.includes("cerveja")) result = "Valorize confraternização e qualidade.";
+      else if (c.includes("cafe")) result = "Valorize aconchego e ritual.";
+      else result = "Valorize sabor e qualidade.";
+    } else if (s.includes("moda") || s.includes("calcados")) {
+      if (c.includes("calcado") || c.includes("tenis")) result = "Valorize estilo e performance.";
+      else result = "Valorize estilo e personalidade.";
+    } else if (s.includes("beleza") || s.includes("estetica")) {
+      result = "Valorize autoestima e cuidado pessoal.";
+    } else if (s.includes("farmacia-saude") || s.includes("farmacia")) {
+      result = "Valorize bem-estar e confiança.";
+    } else if (s.includes("eletronico") || s.includes("tecnologia")) {
+      result = "Valorize inovação e performance.";
+    } else if (s.includes("casa") || s.includes("decoracao")) {
+      result = "Valorize conforto e estilo.";
+    } else if (s.includes("pet")) {
+      result = "Valorize carinho e bem-estar do pet.";
+    } else if (s.includes("variedades")) {
+      result = "Valorize variedade e praticidade.";
+    } else {
+      result = "";
     }
 
-    // Aligned — reinforce segment-specific values
-    if (s.includes("bebidas-adegas-conveniencia") || s.includes("bebida")) {
-      if (c.includes("energetico")) return "Valorize energia e disposição. Preço é oportunidade.";
-      if (c.includes("cerveja")) return "Valorize confraternização e qualidade. Preço é vantagem.";
-      if (c.includes("cafe")) return "Valorize aconchego e ritual. Preço é convite.";
-      return "Valorize sabor e qualidade. Preço é vantagem.";
-    }
-    if (s.includes("moda") || s.includes("calcados")) {
-      if (c.includes("calcado") || c.includes("tenis")) return "Valorize estilo e performance. Preço é investimento.";
-      return "Valorize estilo e personalidade. Preço é oportunidade.";
-    }
-    if (s.includes("beleza") || s.includes("estetica")) {
-      return "Valorize autoestima e cuidado pessoal. Preço é mimo.";
-    }
-    if (s.includes("farmacia-saude") || s.includes("farmacia")) {
-      return "Valorize bem-estar e confiança. Preço é cuidado.";
-    }
-    if (s.includes("eletronico") || s.includes("tecnologia")) {
-      return "Valorize inovação e performance. Preço é investimento inteligente.";
-    }
-    if (s.includes("casa") || s.includes("decoracao")) {
-      return "Valorize conforto e estilo. Preço é transformação.";
-    }
-    if (s.includes("pet")) {
-      return "Valorize carinho e bem-estar do pet. Preço é cuidado.";
-    }
-    if (s.includes("variedades")) {
-      return "Valorize variedade e praticidade. Preço é vantagem.";
+    if (campaignIntent === "spotlight") {
+      return `${result} Apresentar como destaque ou novidade, sem urgência. Benefício e diferencial são o foco.`.trim();
     }
 
-    return "";
+    if (campaignIntent === "exclusive") {
+      return `${result} Valor percebido e exclusividade são os pilares. Tom premium, sem preço.`.trim();
+    }
+
+    if (result && campaignIntent === "offer") {
+      return `${result} Preço é oportunidade.`;
+    }
+
+    return result;
   }
 
   private buildPromptVariables(
@@ -783,7 +794,30 @@ export class ImageGenerationService {
 
     const commercialRepertoire = this.buildCommercialRepertoire(body);
     const inputValidationSummary = this.buildValidationSummary(body, effectiveProductName);
-    const creativeContextGuidance = this.buildCreativeContextGuidance(storeSegment, effectiveInferredCategory, hasConflict);
+    const creativeContextGuidance = this.buildCreativeContextGuidance(storeSegment, effectiveInferredCategory, hasConflict, body.campaignIntent ?? "offer");
+
+    const campaignIntent = body.campaignIntent ?? "offer";
+
+    const commercialFrame = (() => {
+      const dpc = body.discountedPriceCents;
+      switch (campaignIntent) {
+        case "spotlight":
+          return dpc ? `Destaque — ${this.formatPriceBRL(dpc)}` : "Destaque do produto";
+        case "exclusive":
+          return "Produto exclusivo — sem divulgação de preço";
+        default: {
+          if (!dpc) return "Oferta";
+          const formattedDiscounted = this.formatPriceBRL(dpc);
+          if (body.badgeText) {
+            const formattedOriginal = (body.originalPriceCents ?? 0) > 0
+              ? `de ${this.formatPriceBRL(body.originalPriceCents ?? 0)} por `
+              : "";
+            return `${body.badgeText}: ${formattedOriginal}${formattedDiscounted}`;
+          }
+          return `Apenas ${formattedDiscounted}`;
+        }
+      }
+    })();
 
     return {
       productName: effectiveProductName,
@@ -794,7 +828,9 @@ export class ImageGenerationService {
       originalPrice: (body.originalPriceCents ?? 0) > 0
         ? this.formatPriceBRL(body.originalPriceCents ?? 0)
         : "",
-      discountedPrice: this.formatPriceBRL(body.discountedPriceCents),
+      discountedPrice: body.discountedPriceCents
+        ? this.formatPriceBRL(body.discountedPriceCents)
+        : "",
       badgeText: body.badgeText ?? "",
       hook: body.hook ?? "",
       cta: body.cta ?? "",
@@ -809,6 +845,11 @@ export class ImageGenerationService {
       mandatoryArtworkText: body.mandatoryArtworkText ?? "",
       identityImageUrl: brief?.identity.imageUrl ?? "",
       identityDirective: brief?.identity.directive ?? "",
+      campaignIntent,
+      preserveImageDirective: campaignIntent !== "offer" && body.preserveImageContext
+        ? "NÃO recortar o produto. Preservar o contexto original da imagem. Adaptar a composição ao redor do produto sem isolá-lo. Legibilidade continua obrigatória."
+        : "",
+      commercialFrame,
 
       // Brand profile context (Phase 4.4.1)
       brandProfileSection: this.buildBrandProfileSection(brief?.brandProfile ?? null),
@@ -835,7 +876,9 @@ export class ImageGenerationService {
     variables: Record<string, string>,
     previousIssues: string[]
   ): string {
-    const basePrompt = this.promptLoader.load("campaign-image-director", variables);
+    const intent = variables.campaignIntent ?? "offer";
+    const promptName = `campaign-image-director-${intent}`;
+    const basePrompt = this.promptLoader.load(promptName, variables);
 
     if (state === GenerationState.CORRECT) {
       return `${basePrompt}\n\n---\n**Instrução de Correção:**\n\nA imagem gerada anteriormente apresentou os seguintes problemas:\n${previousIssues.map((i) => `- ${i}`).join("\n")}\n\nCorrija esses problemas específicos enquanto preserva a composição geral e o layout.`;
