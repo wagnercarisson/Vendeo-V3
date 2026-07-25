@@ -102,4 +102,73 @@ describe('ImageReviewService', () => {
     expect(result.failureType).toBe('empty_review');
     expect(result.issues[0].type).toBe('empty_review');
   });
+
+  it('review() monta expectedPriceBehavior para offer com preço', async () => {
+    const input: ImageReviewInput = {
+      productName: 'Bolo de Cenoura',
+      storeName: 'Padaria Pão & Cia',
+      campaignIntent: 'offer',
+      discountedPrice: 'R$ 29,90',
+      badgeText: 'Promoção',
+    };
+
+    await service.review('data:image/jpeg;base64,abc', input);
+
+    const vars = mockLoader.load.mock.calls[0][1];
+    expect(vars.expectedPriceBehavior).toContain('R$ 29,90');
+    expect(vars.expectedPriceBehavior).not.toContain('{{');
+    expect(vars.expectedBadgeBehavior).toContain('DEVE exibir badge promocional');
+    expect(vars.campaignIntentLabel).toBe('Promoção');
+  });
+
+  it('review() monta expectedPriceBehavior para spotlight com preço único', async () => {
+    const input: ImageReviewInput = {
+      productName: 'Vestido Floral',
+      storeName: 'Moda & Estilo',
+      campaignIntent: 'spotlight',
+      discountedPrice: 'R$ 149,90',
+      badgeText: 'Novidade',
+    };
+
+    await service.review('data:image/jpeg;base64,abc', input);
+
+    const vars = mockLoader.load.mock.calls[0][1];
+    expect(vars.expectedPriceBehavior).toContain('preço único');
+    expect(vars.expectedPriceBehavior).toContain('R$ 149,90');
+    expect(vars.campaignIntentLabel).toBe('Destaque');
+    expect(vars.expectedCommercialTone).toContain('aspiracional');
+  });
+
+  it('review() monta expectedImageTreatment por intent + preserveImageContext', async () => {
+    const offerClean: ImageReviewInput = { productName: 'P', storeName: 'L', campaignIntent: 'offer', preserveImageContext: false };
+    await service.review('data:image/jpeg;base64,a', offerClean);
+    expect(mockLoader.load.mock.calls[0][1].expectedImageTreatment).toContain('isolar o produto em fundo comercial');
+
+    mockLoader.load.mockClear();
+    const spotlightCtx: ImageReviewInput = { productName: 'P', storeName: 'L', campaignIntent: 'spotlight', preserveImageContext: true };
+    await service.review('data:image/jpeg;base64,a', spotlightCtx);
+    expect(mockLoader.load.mock.calls[0][1].expectedImageTreatment).toContain('fundo contextual DA IMAGEM DEVE ser preservado');
+
+    mockLoader.load.mockClear();
+    const exclusiveNeutral: ImageReviewInput = { productName: 'P', storeName: 'L', campaignIntent: 'exclusive' };
+    await service.review('data:image/jpeg;base64,a', exclusiveNeutral);
+    expect(mockLoader.load.mock.calls[0][1].expectedImageTreatment).toContain('não é obrigatório nem proibido');
+  });
+
+  it('review() — regressão offer com comportamento equivalente ao anterior', async () => {
+    const input: ImageReviewInput = {
+      productName: 'Regressão Teste',
+      storeName: 'Loja Teste',
+      campaignIntent: 'offer',
+      discountedPrice: 'R$ 29,90',
+      badgeText: 'Promoção',
+    };
+
+    await service.review('data:image/jpeg;base64,abc', input);
+
+    const vars = mockLoader.load.mock.calls[0][1];
+    expect(vars.campaignIntentLabel).toBe('Promoção');
+    expect(vars.expectedBadgeBehavior).toContain('DEVE exibir badge promocional');
+    expect(vars.expectedPriceBehavior).toContain('R$ 29,90');
+  });
 });

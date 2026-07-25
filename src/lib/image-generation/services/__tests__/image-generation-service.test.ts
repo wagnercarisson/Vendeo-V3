@@ -152,4 +152,73 @@ describe('ImageGenerationService.validatePrompts', () => {
     expect(mockLoad).not.toHaveBeenCalledWith('campaign-image-director', expect.anything());
     expect(mockLoad).not.toHaveBeenCalledWith('campaign-image-director.md', expect.anything());
   });
+
+  it('validatePrompts valida prompt do revisor com campaignIntent (F31.3)', () => {
+    mockLoad.mockImplementation((name: string) => {
+      if (name === 'campaign-image-director-offer') {
+        return 'Prompt de direção visual';
+      }
+      if (name === 'campaign-image-reviewer') {
+        return 'Revise produto com comportamento esperado: preço promocional';
+      }
+      return '';
+    });
+
+    const brief = createMinimalBrief();
+    const result = service.validatePrompts(brief);
+
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it('validatePrompts valida com spotlight e exclusive intents', () => {
+    mockLoad.mockImplementation((name: string) => {
+      if (name === 'campaign-image-director-spotlight') {
+        return 'Prompt spotlight';
+      }
+      if (name === 'campaign-image-director-exclusive') {
+        return 'Prompt exclusive';
+      }
+      if (name === 'campaign-image-reviewer') {
+        return 'Revise produto com comportamento esperado';
+      }
+      return '';
+    });
+
+    const spotlightBrief = createMinimalBrief({
+      campaignInput: {
+        productName: 'Vestido',
+        productImageDataUrl: 'data:image/jpeg;base64,test',
+        campaignIntent: 'spotlight',
+      } as import('@/components/campaign/types').CampaignInput,
+    });
+    expect(service.validatePrompts(spotlightBrief).valid).toBe(true);
+
+    const exclusiveBrief = createMinimalBrief({
+      campaignInput: {
+        productName: 'Buquê',
+        productImageDataUrl: 'data:image/jpeg;base64,test',
+        campaignIntent: 'exclusive',
+      } as import('@/components/campaign/types').CampaignInput,
+    });
+    expect(service.validatePrompts(exclusiveBrief).valid).toBe(true);
+  });
+
+  it('validatePrompts falha se placeholder antigo {{discountedPrice}} no prompt do revisor', () => {
+    mockLoad.mockImplementation((name: string) => {
+      if (name === 'campaign-image-director-offer') {
+        return 'Prompt direção';
+      }
+      if (name === 'campaign-image-reviewer') {
+        return 'Revise produto com {{discountedPrice}}';
+      }
+      return '';
+    });
+
+    const brief = createMinimalBrief();
+    const result = service.validatePrompts(brief);
+
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e: string) => e.includes('{{discountedPrice}}'))).toBe(true);
+  });
 });
