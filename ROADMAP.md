@@ -80,7 +80,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - preserveImageContext checkbox (visível apenas em spotlight/exclusive)
   - Pipeline guard para rejeitar intents não-offer
 
-- [ ] Phase 31.2: Diretores por Intenção (planned)
+- [x] Phase 31.2: Diretores por Intenção (6 plans ✅)
   - Schemas tolerantes: discountedPriceCents opcional, CampaignSpecSchema nullable
   - Desbloqueio de spotlight/exclusive na UI, form e pipeline
   - 6 prompts separados por intent (3 image + 3 copy)
@@ -88,7 +88,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - commercialFrame substituindo offer no Copy Director
   - Conteúdo adaptado por intent (repertoire, guidance, fallback determinístico)
   - Normalização de exclusive com preço indevido
-  - 14+ testes, regressão zero para offer
+  - 15 testes, regressão zero para offer, 1051 testes totais
 
 </details>
 
@@ -130,7 +130,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 29.3. Créditos Mensais Automáticos | v1.5 | 4/4 | ✅ Complete | 2026-07-22 |
 | 30. Fundação Legal | v1.5 | 6/6 | ✅ Complete | 2026-07-23 |
 | 31.1. Modelo Comercial — Formulário | v1.5 | 5/5 | ✅ Complete | 2026-07-24 |
-| 31.2. Diretores por Intenção | v1.5 | 0/6 | ○ Planned | — |
+| 31.2. Diretores por Intenção | v1.5 | 6/6 | ✅ Complete | 2026-07-25 |
 
 ---
 

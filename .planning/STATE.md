@@ -3,22 +3,22 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: "Lançamento Externo Controlado — Créditos + Admin + Saldo + Observabilidade + Launch + Modelo Comercial"
 status: active
-last_updated: "2026-07-24T19:35:00.000Z"
-last_activity: "2026-07-24T19:35:00.000Z"
+last_updated: "2026-07-25T14:30:00.000Z"
+last_activity: "2026-07-25T14:30:00.000Z"
   progress:
     total_phases: 14
-    completed_phases: 13
-    total_plans: 55
-    completed_plans: 44
-    percent: 80
-    current_phase_plans: 6
+    completed_phases: 14
+    total_plans: 61
+    completed_plans: 50
+    percent: 82
+    current_phase_plans: 0
 ---
 
 # Project State
 
 **Last updated:** 2026-07-24
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆
-**Current phase:** 31.2 — Diretores por Intenção ○
+**Current phase:** 31.2 — Diretores por Intenção ✅
 
 ## Completed
 
@@ -422,7 +422,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-v1.5 em andamento — Fase 31.1 concluída. Phase 31.2 em planejamento — Diretores por Intenção.
+v1.5 em andamento — Fases 31.1 e 31.2 concluídas. Próxima fase: F32 Stripe/Monetização Pública.
 
 ### Phase 30 — Fundação Legal ✅
 
@@ -453,20 +453,29 @@ v1.5 em andamento — Fase 31.1 concluída. Phase 31.2 em planejamento — Diret
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 **Commits:** afdfbf7, c2a94ce, 17c3d04, 162d5d5, b7b7d38
 
-### Phase 31.2 — Diretores por Intenção ○
+### Phase 31.2 — Diretores por Intenção ✅
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
-| 31-2-01 | 1 | ○ | Schema Contracts — discountedPriceCents opcional, CampaignSpecSchema nullable |
-| 31-2-02 | 1 | ○ | Unblock — UI/Form/Route: remover bloqueios, normalização exclusive, validação offer |
-| 31-2-03 | 2 | ○ | 6 Prompt Templates — 3 image + 3 copy por intent |
-| 31-2-04 | 2 | ○ | Image Director Routing — assemblePrompt, buildPromptVariables, validatePrompts por intent |
-| 31-2-05 | 2 | ○ | Copy Director + Content — commercialFrame, buildCommercialRepertoire, buildDeterministicCopy |
-| 31-2-06 | 3 | ○ | Tests + Verification — 14+ testes, regressão 1036+, typecheck/lint/build |
+| 31-2-01 | 1 | ✅ | Schema Contracts — discountedPriceCents opcional, CampaignSpecSchema nullable |
+| 31-2-02 | 1 | ✅ | Unblock — UI/Form/Route: remover bloqueios, normalização exclusive, validação offer |
+| 31-2-03 | 2 | ✅ | 6 Prompt Templates — 3 image + 3 copy por intent |
+| 31-2-04 | 2 | ✅ | Image Director Routing — assemblePrompt, buildPromptVariables, validatePrompts por intent |
+| 31-2-05 | 2 | ✅ | Copy Director + Content — commercialFrame, buildCommercialRepertoire, buildDeterministicCopy |
+| 31-2-06 | 3 | ✅ | Tests + Verification — 15 novos testes, regressão 1051, typecheck/lint/build |
 
-**Tests:** 1036 passing (129 files, 0 novos — baseline)
+**Tests:** 1051 passing (130 files, 15 novos)
+**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 **Context:** `.planning/phases/31-2-diretores-por-intencao/31-2-CONTEXT.md`
 **Source:** `openspec/changes/fase-31-2-diretores-por-intencao/`
+
+**Commits:**
+- `cee901a` — 31-2-01: Schema Contracts — discountedPriceCents opcional, CampaignSpecSchema nullable
+- `0ece865` — 31-2-02: Unblock — UI/Form/Route: remover bloqueios, normalização exclusive, validação offer
+- `9698aec` — 31-2-03: 6 Prompt Templates — 3 image + 3 copy por intent
+- `2827985` — 31-2-04: Image Director Routing — assemblePrompt, buildPromptVariables, validatePrompts por intent
+- `a0783a8` — 31-2-05: Copy Director + Content — commercialFrame, buildCommercialRepertoire, buildDeterministicCopy
+- `d3f16c3` — 31-2-06: Tests + Verification — 15 novos testes, regressão 1051, typecheck/lint/build
 
 ### Next Phases
 
