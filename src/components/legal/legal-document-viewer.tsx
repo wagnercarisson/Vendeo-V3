@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ExternalLink, Loader2, AlertCircle } from "lucide-react";
 
 interface LegalDocumentViewerProps {
@@ -14,6 +14,8 @@ export function LegalDocumentViewer({ url, title, version, onLoad }: LegalDocume
   const [content, setContent] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
+  const onLoadRef = useRef(onLoad);
+  onLoadRef.current = onLoad;
 
   useEffect(() => {
     let cancelled = false;
@@ -30,19 +32,19 @@ export function LegalDocumentViewer({ url, title, version, onLoad }: LegalDocume
         if (!cancelled) {
           setContent(text);
           setLoading(false);
-          onLoad?.(true);
+          onLoadRef.current?.(true);
         }
       })
       .catch(() => {
         if (!cancelled) {
           setError(true);
           setLoading(false);
-          onLoad?.(false);
+          onLoadRef.current?.(false);
         }
       });
 
     return () => { cancelled = true; };
-  }, [url, onLoad]);
+  }, [url]);
 
   if (loading) {
     return (

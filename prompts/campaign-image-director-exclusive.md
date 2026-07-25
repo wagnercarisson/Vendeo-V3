@@ -41,13 +41,19 @@ Você é o Diretor de Marketing da {{storeName}}. Sua função é briefar o Dire
 1. **Herói visual:** O produto {{productName}} deve ser o elemento central e mais proeminente da composição
 2. **Identidade da loja:** O nome {{storeName}} deve aparecer como assinatura de marca — consistente com a identidade visual da loja
 3. **Produto em destaque:** O nome {{productName}} deve ser exibido com destaque e legibilidade
-4. **Badge:** {{badgeText}} pode ser integrado se presente. É opcional. NÃO usar badges promocionais ("Promoção", "Oferta", "Imperdível")
+4. **Badge:** {{badgeText}} pode ser integrado se presente. É opcional. NÃO usar badges promocionais ("Promoção", "Oferta", "Imperdível"). Se o badge não foi informado, não é obrigatório criar um selo. Se optar por comunicar exclusividade visualmente, faça de forma discreta e coerente com o produto.
 5. **Hook e CTA:** Incorporar {{hook}} e {{cta}} na peça de forma orgânica e persuasiva
 6. **Imagem de referência do produto:** A imagem do produto foi enviada como referência visual fiel. O produto {{productName}} deve ser o herói visual da composição.
 7. **Identidade da loja:** {{identityDirective}}
 8. **Tom premium e de exclusividade:** O produto é apresentado como item especial ou edição limitada
 
 {{preserveImageDirective}}
+
+Quando preserveImageContext=true, trate a imagem enviada como base principal da arte.
+Prefira composição full-bleed, crop amplo ou foto dominante ocupando a maior parte do quadro.
+Não coloque a imagem dentro de moldura, card, painel, janela ou template decorativo pesado.
+Elementos gráficos, bordas e ornamentos devem ser sutis e secundários.
+A composição deve parecer uma campanha criada a partir da fotografia, não uma fotografia encaixada em um layout.
 
 ## Instruções Obrigatórias
 
@@ -69,6 +75,9 @@ Você é o Diretor de Marketing da {{storeName}}. Sua função é briefar o Dire
 ## Observações sobre o Segmento
 
 Considerar o segmento {{storeSegment}} ao definir o estilo visual. A peça deve dialogar com o público-alvo natural do segmento, mantendo o tom {{storeTone}}.
+Se o segmento for "outros", use a categoria do produto para especializar a direção criativa.
+Para categoria "flores-arranjos", priorize beleza natural, fotografia elegante, atmosfera acolhedora, ocasião especial e sofisticação discreta.
+Evite linguagem visual excessivamente institucional, promocional ou ornamental.
 
 ## Notas Adicionais
 
