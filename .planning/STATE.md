@@ -17,8 +17,8 @@ progress:
 # Project State
 
 **Last updated:** 2026-07-25
-**Milestone:** v1.5 — Lançamento Externo Controlado ◆
-**Current phase:** 31.3 — Quality Gate por Intenção Comercial ✅
+**Milestone:** v1.5 — Lançamento Externo Controlado ✅ **SHIPPED**
+**Current phase:** (todas as fases v1.5 concluídas — aguardando v1.7 Stripe)
 
 ## Completed
 
@@ -422,7 +422,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-v1.5 em andamento — Fases 31.1, 31.2 e 31.3 concluídas. Fase corrente: 31.3 — Quality Gate por Intenção Comercial ✅ implementada (6/6 plans, UAT estrutura criada — execução pendente com IA real).
+v1.5 concluído — Fases 31.1, 31.2 e 31.3 concluídas. UAT 31.3 executada com IA real (6/6 cenários, 5 aprovados, 1 ajuste no prompt do diretor exclusive validado). Milestone v1.5 SHIPPED.
 
 ### Phase 30 — Fundação Legal ✅
 
@@ -478,7 +478,7 @@ v1.5 em andamento — Fases 31.1, 31.2 e 31.3 concluídas. Fase corrente: 31.3 �
 | 31-3-03 | 2 | ✅ | Prompt Restructuring — campaign-image-reviewer.md com variáveis contextuais |
 | 31-3-04 | 2 | ✅ | Pipeline Integration — buildReviewInput, validatePrompts intent-aware |
 | 31-3-05 | 3 | ✅ | Automated Tests — contract/drift tests, regressão |
-| 31-3-06 | 3 | ⏳ | UAT Real — 5 cenários E2E com IA real (estrutura criada, execução pendente) |
+| 31-3-06 | 3 | ✅ | UAT Real — 5 cenários E2E com IA real (6/6 executados, 5 aprovados, 1 ajuste no diretor exclusive) |
 
 **Source:** `openspec/changes/fase-31-3-quality-gate-por-intencao-comercial/`
 **Context:** `.planning/phases/31-3-quality-gate-por-intencao-comercial/31-3-CONTEXT.md`
@@ -506,7 +506,7 @@ v1.5 em andamento — Fases 31.1, 31.2 e 31.3 concluídas. Fase corrente: 31.3 �
 | F30 | ✅ Completed | Fundação Legal — 6 migrations, 5 services, 3 public pages, 4 API routes, pipeline guards, re-aceite, admin badges, 24+ testes |
 | **F31.1** | **✅ Completed** | **Modelo Comercial — Formulário — CampaignIntent type, inferência, seletor, badge-by-intent, preserveImageContext, pipeline guard** |
 | **F31.2** | **✅ Completed** | **Diretores por Intenção — Schemas tolerantes, desbloqueio de intents, 6 prompts, roteamento, conteúdo adaptado, 6 plans, UAT 9/9 ✅** |
-| **F31.3** | **✅ Completed** | **Quality Gate por Intenção Comercial — ImageReviewInput intent-aware, prompt reestruturado, commercial_tone_mismatch, 6 plans, 1071 testes, UAT pendente** |
+| **F31.3** | **✅ Completed** | **Quality Gate por Intenção Comercial — ImageReviewInput intent-aware, prompt reestruturado, commercial_tone_mismatch, 6 plans, 1071 testes, UAT executada com IA real (6/6 cenários)** |
 | F32/v1.7 | ○ Future | Stripe / Monetização Pública (pós-beta) |
 
 ### Quick Tasks Completed
