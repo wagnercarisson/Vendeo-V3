@@ -3,7 +3,15 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import type { Store } from "@/lib/store";
 
-const mockSupabaseFrom = vi.fn();
+const mockSupabaseFrom = vi.fn(() => ({
+  select: vi.fn().mockReturnThis(),
+  eq: vi.fn().mockReturnThis(),
+  maybeSingle: vi.fn().mockResolvedValue({ data: null }),
+  order: vi.fn().mockReturnThis(),
+  limit: vi.fn().mockReturnThis(),
+  single: vi.fn(),
+  update: vi.fn().mockReturnThis(),
+}));
 const mockSupabaseRpc = vi.fn();
 const mockGetClaims = vi.fn();
 let mockRequireUserImpl = vi.fn();
@@ -57,6 +65,24 @@ vi.mock("@/lib/constants", () => ({
   STORE_SEGMENTS: [{ value: "variedades", label: "Variedades" }],
   STORE_SUBSEGMENTS: {},
 }));
+
+vi.mock("@/lib/cnpj/validate", () => ({
+  validateCnpj: vi.fn(() => ({ normalized: "12345678000195" })),
+}));
+
+vi.mock("@/lib/cnpj/mask", () => ({
+  maskCnpj: vi.fn(() => "**.***.***/0001-**"),
+}));
+
+vi.mock("@/lib/cnpj/hash", () => ({
+  hashCnpjRoot: vi.fn(() => "mocked_hash_64chars"),
+}));
+
+vi.mock("@/lib/cnpj/similarity", () => ({
+  compareBusinessName: vi.fn(() => ({ bestScore: 1, nameToLegal: 1, nameToFantasy: null, label: "match" })),
+}));
+
+process.env.CNPJ_PEPPER = "test_pepper_hex_64_chars";
 
 vi.mock("@/lib/legal/document-versions", () => ({
   getCurrentVersion: vi.fn(async () => ({ version: "v1.0", effectiveAt: "2026-07-23T00:00:00Z", summary: null })),
@@ -119,7 +145,7 @@ describe("POST /api/store", () => {
     mockSupabaseRpc.mockResolvedValue({ data: { ...mockStore, user_id: "user-123" }, error: null });
 
     const { POST } = await import("@/app/api/store/route");
-    const res = await POST(createReq("POST", { name: "Minha Loja", segment: "variedades", acceptedTerms: true }));
+    const res = await POST(createReq("POST", { name: "Minha Loja", segment: "variedades", cnpj: "12.345.678/0001-95", acceptedTerms: true }));
     expect(res.status).toBe(201);
     const data = await res.json();
     expect(data.user_id).toBe("user-123");
@@ -141,7 +167,7 @@ describe("POST /api/store", () => {
     mockSupabaseRpc.mockResolvedValue({ data: null, error: { code: "23505", message: "duplicate key" } });
 
     const { POST } = await import("@/app/api/store/route");
-    const res = await POST(createReq("POST", { name: "Outra Loja", segment: "variedades", acceptedTerms: true }));
+    const res = await POST(createReq("POST", { name: "Outra Loja", segment: "variedades", cnpj: "12.345.678/0001-95", acceptedTerms: true }));
     expect(res.status).toBe(409);
     const data = await res.json();
     expect(data.error).toBe("Usuário já possui uma loja");
@@ -156,7 +182,7 @@ describe("POST /api/store", () => {
     });
 
     const { POST } = await import("@/app/api/store/route");
-    await POST(createReq("POST", { name: "Minha Loja", segment: "variedades", acceptedTerms: true, user_id: "hacker-id" }));
+    await POST(createReq("POST", { name: "Minha Loja", segment: "variedades", cnpj: "12.345.678/0001-95", acceptedTerms: true, user_id: "hacker-id" }));
     expect(capturedParams.p_user_id).toBe("user-123");
   });
 });
@@ -242,6 +268,12 @@ describe("PATCH /api/store/:id", () => {
     mockRequireUserImpl.mockResolvedValue({ userId: "user-123", claims: { sub: "user-123" } });
     mockRequireOwnershipImpl.mockResolvedValue(mockStore);
     mockSupabaseFrom.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null }),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      single: vi.fn(),
       update: vi.fn(() => ({
         eq: vi.fn(() => ({
           select: vi.fn(() => ({
@@ -249,7 +281,7 @@ describe("PATCH /api/store/:id", () => {
           })),
         })),
       })),
-    });
+    } as ReturnType<typeof mockSupabaseFrom>);
 
     const { PATCH } = await import("@/app/api/store/[id]/route");
     const res = await PATCH(createReq("PATCH", { name: "Loja Atualizada" }), { params: Promise.resolve({ id: "store-1" }) });
