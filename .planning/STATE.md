@@ -6,12 +6,12 @@ status: active
 last_updated: "2026-07-25T17:30:00.000Z"
 last_activity: "2026-07-25T17:30:00.000Z"
 progress:
-  total_phases: 15
+  total_phases: 17
   completed_phases: 15
-  total_plans: 73
-  completed_plans: 56
-  percent: 77
-  current_phase_plans: 6
+  total_plans: 78
+  completed_plans: 62
+  percent: 79
+  current_phase_plans: 5
 ---
 
 # Project State
@@ -507,7 +507,7 @@ v1.5 em andamento — Fases 31.1, 31.2 e 31.3 concluídas. UAT 31.3 executada co
 | **F31.1** | **✅ Completed** | **Modelo Comercial — Formulário — CampaignIntent type, inferência, seletor, badge-by-intent, preserveImageContext, pipeline guard** |
 | **F31.2** | **✅ Completed** | **Diretores por Intenção — Schemas tolerantes, desbloqueio de intents, 6 prompts, roteamento, conteúdo adaptado, 6 plans, UAT 9/9 ✅** |
 | **F31.3** | **✅ Completed** | **Quality Gate por Intenção Comercial — ImageReviewInput intent-aware, prompt reestruturado, commercial_tone_mismatch, 6 plans, 1071 testes, UAT executada com IA real (6/6 cenários)** |
-| F32 | ◆ Planned | Freemium Anti-Abuso CNPJ — CNPJ obrigatório, entitlement por raiz, admin freemium status |
+| F32 | ◆ Planned | Freemium Anti-Abuso CNPJ — CNPJ obrigatório, entitlement por raiz, admin freemium status (5 plans) |
 | F33 | ○ Future | Stripe / Monetização Pública |
 
 ### Quick Tasks Completed
