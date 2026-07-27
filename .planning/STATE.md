@@ -7,18 +7,18 @@ last_updated: "2026-07-25T17:30:00.000Z"
 last_activity: "2026-07-25T17:30:00.000Z"
 progress:
   total_phases: 17
-  completed_phases: 15
+  completed_phases: 16
   total_plans: 78
-  completed_plans: 62
-  percent: 79
-  current_phase_plans: 5
+  completed_plans: 67
+  percent: 86
+  current_phase_plans: 0
 ---
 
 # Project State
 
 **Last updated:** 2026-07-27
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆ **Em andamento**
-**Current phase:** 32 — Freemium Anti-Abuso CNPJ (planejamento)
+**Current phase:** 32 — Freemium Anti-Abuso CNPJ (✅ completed)
 
 ## Completed
 
@@ -507,7 +507,7 @@ v1.5 em andamento — Fases 31.1, 31.2 e 31.3 concluídas. UAT 31.3 executada co
 | **F31.1** | **✅ Completed** | **Modelo Comercial — Formulário — CampaignIntent type, inferência, seletor, badge-by-intent, preserveImageContext, pipeline guard** |
 | **F31.2** | **✅ Completed** | **Diretores por Intenção — Schemas tolerantes, desbloqueio de intents, 6 prompts, roteamento, conteúdo adaptado, 6 plans, UAT 9/9 ✅** |
 | **F31.3** | **✅ Completed** | **Quality Gate por Intenção Comercial — ImageReviewInput intent-aware, prompt reestruturado, commercial_tone_mismatch, 6 plans, 1071 testes, UAT executada com IA real (6/6 cenários)** |
-| F32 | ◆ Planned | Freemium Anti-Abuso CNPJ — CNPJ obrigatório, entitlement por raiz, admin freemium status (5 plans) |
+| F32 | ✅ Complete | Freemium Anti-Abuso CNPJ — CNPJ obrigatório, entitlement por raiz, admin freemium status (5/5 plans, 27+ tests) |
 | F33 | ○ Future | Stripe / Monetização Pública |
 
 ### Quick Tasks Completed

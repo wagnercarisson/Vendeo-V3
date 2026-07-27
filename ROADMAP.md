@@ -102,7 +102,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - InputValidationService verificado (sem alteração)
   - 5 cenários E2E com IA real
 
-- [ ] Phase 32: Freemium Anti-Abuso CNPJ (pending)
+- [ ] Phase 32: Freemium Anti-Abuso CNPJ (5 plans planned ◆)
   - CNPJ obrigatório na criação da loja com validação de dígitos verificadores + formato
   - `stores.cnpj_normalized` + `stores.cnpj_root_hash` — CNPJ normalizado, hash HMAC-SHA256 da raiz com pepper server-side
   - `freemium_entitlements` — tabela de controle com idempotência (INSERT ... ON CONFLICT)
@@ -112,6 +112,12 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - Termos de Uso v1.2 e Política de Privacidade v1.1
   - Lojas legadas: atualização cadastral sem novo grant de créditos
   - Pipeline guard de reaceite v1.2
+  - **Plans:**
+    - [ ] 32-01-PLAN.md — Migration SQL + CNPJ Core Library
+    - [ ] 32-02-PLAN.md — Freemium Core Library + Store Route
+    - [ ] 32-03-PLAN.md — Store Identity Form + Admin CNPJ/Freemium UI
+    - [ ] 32-04-PLAN.md — Legacy Store Update + Legal Documents v1.2/v1.1
+    - [ ] 32-05-PLAN.md — Tests + Verification
 
 - [ ] Phase 33: Stripe / Monetização Pública (pending)
 
@@ -151,7 +157,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 31.1. Modelo Comercial — Formulário | v1.5 | 5/5 | ✅ Complete | 2026-07-24 |
 | 31.2. Diretores por Intenção | v1.5 | 6/6 | ✅ Complete | 2026-07-25 |
 | 31.3. Quality Gate por Intenção Comercial | v1.5 | 6/6 | ✅ Complete | 2026-07-26 |
-| 32. Freemium Anti-Abuso CNPJ | v1.5 | 0/0 | ◆ Planned | — |
+| 32. Freemium Anti-Abuso CNPJ | v1.5 | 5/5 | ✅ Complete | 2026-07-27 |
 | 33. Stripe / Monetização Pública | v1.5 | 0/0 | ○ Pending | — |
 
 ---
