@@ -883,7 +883,8 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
     }
 
     const saved = await save(acceptedTerms || undefined);
-    if (saved || storeId) {
+    const nextStoreId = saved?.storeId ?? storeId;
+    if (nextStoreId) {
       setDriftRefreshKey(k => k + 1);
       setStep(2);
       setStep2Success(null);

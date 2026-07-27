@@ -84,7 +84,7 @@ beforeEach(() => {
 describe("POST /api/store", () => {
   it("returns 201 when authenticated and valid", async () => {
     mockRequireUser.mockResolvedValue({ userId: "user-123", claims: {} });
-    mockSupabaseRpc.mockResolvedValue({ data: { id: "store-1", name: "Loja", user_id: "user-123" }, error: null });
+    mockSupabaseRpc.mockResolvedValue({ data: { store: [{ id: "store-1", name: "Loja", user_id: "user-123" }] }, error: null });
 
     const { POST } = await import("@/app/api/store/route");
     const res = await POST(createReq("POST", { name: "Minha Loja", segment: "variedades", cnpj: "12.345.678/0001-95", acceptedTerms: true }));

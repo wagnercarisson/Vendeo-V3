@@ -236,15 +236,20 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
         throw new Error(errData.error || "Erro ao salvar");
       }
 
-      const saved: Store = await res.json();
+      const saved: Record<string, unknown> = await res.json();
 
-      if (!storeId) {
-        setStoreId(saved.id);
-        setMode("edit");
+      if (!saved.id || typeof saved.id !== "string") {
+        throw new Error("Loja salva, mas resposta não retornou o ID da loja.");
       }
 
-      setSuccessMessage("Dados salvos com sucesso!");
-      return { storeId: saved.id };
+      if (!storeId) {
+        setStoreId(saved.id as string);
+        setMode("edit");
+      } else {
+        setSuccessMessage("Dados salvos com sucesso!");
+      }
+
+      return { storeId: saved.id as string };
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao salvar");
     } finally {

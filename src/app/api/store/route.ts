@@ -185,10 +185,23 @@ export const POST = apiHandler(async (request: NextRequest) => {
     }
 
     const cnpjMasked = maskCnpj(normalized);
+
+    const rpcData = data as Record<string, unknown>;
+    const rpcStore = Array.isArray(rpcData.store)
+      ? (rpcData.store as Record<string, unknown>[])[0]
+      : (rpcData.store as Record<string, unknown> | undefined);
+
+    if (!rpcStore || typeof rpcStore !== "object" || !("id" in rpcStore)) {
+      return NextResponse.json(
+        { error: "Loja criada, mas resposta não retornou o ID da loja." },
+        { status: 500 }
+      );
+    }
+
     const responseData = {
-      ...(data as Record<string, unknown>),
+      ...(rpcStore as Record<string, unknown>),
       cnpjMasked,
-      onboardingGranted: (data as Record<string, unknown>)?.onboardingGranted ?? false,
+      onboardingGranted: rpcData.onboardingGranted ?? false,
     };
 
     return NextResponse.json(responseData, { status: 201 });

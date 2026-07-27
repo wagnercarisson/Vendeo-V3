@@ -85,7 +85,10 @@ describe("POST /api/store — CNPJ onboarding", () => {
 
   it("creates store with CNPJ and grants onboarding when root is new", async () => {
     mockRpc.mockResolvedValueOnce({
-      data: { id: "store-1", name: "Minha Loja", segment: "moda-calcados-acessorios", onboardingGranted: true },
+      data: {
+        store: [{ id: "store-1", name: "Minha Loja", segment: "moda-calcados-acessorios" }],
+        onboardingGranted: true,
+      },
       error: null,
     });
 
@@ -98,12 +101,17 @@ describe("POST /api/store — CNPJ onboarding", () => {
 
     expect(res.status).toBe(201);
     const body = await res.json();
+    expect(body.id).toBe("store-1");
+    expect(body.onboardingGranted).toBe(true);
     expect(body.cnpjMasked).toBeDefined();
   });
 
   it("creates store without onboarding grant when same root already used", async () => {
     mockRpc.mockResolvedValueOnce({
-      data: { id: "store-2", name: "Filial", segment: "moda-calcados-acessorios", onboardingGranted: false },
+      data: {
+        store: [{ id: "store-2", name: "Filial", segment: "moda-calcados-acessorios" }],
+        onboardingGranted: false,
+      },
       error: null,
     });
 
@@ -116,7 +124,24 @@ describe("POST /api/store — CNPJ onboarding", () => {
 
     expect(res.status).toBe(201);
     const body = await res.json();
+    expect(body.id).toBe("store-2");
     expect(body.onboardingGranted).toBe(false);
+  });
+
+  it("returns 500 when RPC returns no store object", async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: { onboardingGranted: false },
+      error: null,
+    });
+
+    const res = await POST(createRequest({
+      name: "Loja",
+      segment: "moda-calcados-acessorios",
+      cnpj: "12.345.678/0001-95",
+      acceptedTerms: true,
+    }));
+
+    expect(res.status).toBe(500);
   });
 
   it("returns 400 for invalid CNPJ", async () => {
