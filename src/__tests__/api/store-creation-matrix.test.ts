@@ -2,27 +2,27 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-const makeChain = () => {
-  const chain: Record<string, any> = {};
-  chain.select = vi.fn(() => chain);
-  chain.eq = vi.fn(() => chain);
-  chain.lte = vi.fn(() => chain);
-  chain.order = vi.fn(() => chain);
-  chain.limit = vi.fn(() => chain);
-  chain.single = vi.fn();
-  return chain;
-};
+const { mockRequireUser, mockSupabaseFrom, mockSupabaseRpc } = vi.hoisted(() => ({
+  mockRequireUser: vi.fn(),
+  mockSupabaseFrom: vi.fn(),
+  mockSupabaseRpc: vi.fn(),
+}));
 
-const mockRequireUser = vi.fn();
-const mockSupabaseFrom = vi.fn();
-const mockSupabaseRpc = vi.fn();
+const mockFromChain = vi.fn(() => ({
+  select: vi.fn().mockReturnThis(),
+  eq: vi.fn().mockReturnThis(),
+  maybeSingle: vi.fn().mockResolvedValue({ data: null }),
+  order: vi.fn().mockReturnThis(),
+  limit: vi.fn().mockReturnThis(),
+  single: vi.fn(),
+}));
 
 vi.mock("@/lib/supabase/server", () => ({
   createServerClient: vi.fn(async () => ({
     auth: { getClaims: vi.fn() },
-    from: mockSupabaseFrom,
+    from: mockFromChain,
   })),
-  supabaseAdmin: { from: mockSupabaseFrom, rpc: mockSupabaseRpc },
+  supabaseAdmin: { from: mockFromChain, rpc: mockSupabaseRpc },
 }));
 
 vi.mock("@/lib/auth/require-user", () => ({
@@ -51,6 +51,24 @@ vi.mock("@/lib/legal/document-versions", () => ({
   isVersionCurrent: vi.fn(),
 }));
 
+vi.mock("@/lib/cnpj/validate", () => ({
+  validateCnpj: vi.fn(() => ({ normalized: "12345678000195" })),
+}));
+
+vi.mock("@/lib/cnpj/mask", () => ({
+  maskCnpj: vi.fn(() => "**.***.***/0001-**"),
+}));
+
+vi.mock("@/lib/cnpj/hash", () => ({
+  hashCnpjRoot: vi.fn(() => "mocked_hash_64chars"),
+}));
+
+vi.mock("@/lib/cnpj/similarity", () => ({
+  compareBusinessName: vi.fn(() => ({ bestScore: 1, nameToLegal: 1, nameToFantasy: null, label: "match" })),
+}));
+
+process.env.CNPJ_PEPPER = "test_pepper_hex_64_chars_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6";
+
 function createReq(method: string, body: unknown, origin = "http://localhost"): NextRequest {
   return new NextRequest("http://localhost/api/store", {
     method,
@@ -69,7 +87,7 @@ describe("POST /api/store", () => {
     mockSupabaseRpc.mockResolvedValue({ data: { id: "store-1", name: "Loja", user_id: "user-123" }, error: null });
 
     const { POST } = await import("@/app/api/store/route");
-    const res = await POST(createReq("POST", { name: "Minha Loja", segment: "variedades", acceptedTerms: true }));
+    const res = await POST(createReq("POST", { name: "Minha Loja", segment: "variedades", cnpj: "12.345.678/0001-95", acceptedTerms: true }));
     expect(res.status).toBe(201);
   });
 
@@ -86,7 +104,7 @@ describe("POST /api/store", () => {
     mockSupabaseRpc.mockResolvedValue({ data: null, error: { code: "23505", message: "duplicate key" } });
 
     const { POST } = await import("@/app/api/store/route");
-    const res = await POST(createReq("POST", { name: "Outra Loja", segment: "variedades", acceptedTerms: true }));
+    const res = await POST(createReq("POST", { name: "Outra Loja", segment: "variedades", cnpj: "12.345.678/0001-95", acceptedTerms: true }));
     expect(res.status).toBe(409);
   });
 
@@ -99,7 +117,7 @@ describe("POST /api/store", () => {
     });
 
     const { POST } = await import("@/app/api/store/route");
-    await POST(createReq("POST", { name: "Minha Loja", segment: "variedades", acceptedTerms: true, user_id: "hacker-id" }));
+    await POST(createReq("POST", { name: "Minha Loja", segment: "variedades", cnpj: "12.345.678/0001-95", acceptedTerms: true, user_id: "hacker-id" }));
     expect(capturedParams.p_user_id).toBe("user-123");
   });
 });
