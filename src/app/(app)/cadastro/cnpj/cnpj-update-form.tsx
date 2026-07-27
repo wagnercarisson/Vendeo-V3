@@ -96,6 +96,15 @@ export function CnpjUpdateForm({ storeId }: { storeId: string }) {
           type="text"
           value={cnpj}
           onChange={(e) => handleCnpjChange(e.target.value)}
+          onBlur={() => {
+            const digits = cnpj.replace(/\D/g, "");
+            if (digits.length === 14) {
+              const result = validateCnpj(cnpj);
+              if (result instanceof Error) {
+                setError("CNPJ inválido. Verifique os dígitos e tente novamente.");
+              }
+            }
+          }}
           placeholder="XX.XXX.XXX/YYYY-ZZ"
           maxLength={18}
           className="w-full rounded-md border border-border bg-bg-surface px-3 py-2 text-sm"

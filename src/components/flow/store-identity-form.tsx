@@ -17,6 +17,7 @@ import { DriftDecisionModal } from "./drift-decision-modal";
 import { DriftCriticalModal } from "./drift-critical-modal";
 import { isValidHex, normalizeBrandColorsChosen, hasUserChosenColors } from "@/lib/validators/color";
 import { normalizeCnpj } from "@/lib/cnpj/normalize";
+import { validateCnpj } from "@/lib/cnpj/validate";
 import { ContractAcceptanceModal } from "@/components/legal/contract-acceptance-modal";
 
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
@@ -1092,10 +1093,13 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
                   setField("cnpj", masked);
                 }} onBlur={() => {
                   setTouched((prev) => ({ ...prev, cnpj: true }));
-                  if (formData.cnpj && normalizeCnpj(formData.cnpj).length !== 14) {
-                    setFieldErrors((prev) => ({ ...prev, cnpj: "CNPJ inv\u00e1lido" }));
-                  } else {
-                    setFieldErrors((prev) => ({ ...prev, cnpj: undefined }));
+                  if (formData.cnpj) {
+                    const result = validateCnpj(formData.cnpj);
+                    if (result instanceof Error) {
+                      setFieldErrors((prev) => ({ ...prev, cnpj: "CNPJ inválido" }));
+                    } else {
+                      setFieldErrors((prev) => ({ ...prev, cnpj: undefined }));
+                    }
                   }
                 }} placeholder="XX.XXX.XXX/YYYY-ZZ" maxLength={18} className={inputClass("cnpj")} />
                 {touched.cnpj && fieldErrors.cnpj && (
