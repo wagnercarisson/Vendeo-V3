@@ -114,6 +114,7 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
   const [pendingNavUrl, setPendingNavUrl] = useState('');
   const [showRemoveLogoDialog, setShowRemoveLogoDialog] = useState(false);
   const [driftRefreshKey, setDriftRefreshKey] = useState(0);
+  const [formError, setFormError] = useState<string | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [acceptedTermsError, setAcceptedTermsError] = useState<string | null>(null);
   const [showContractModal, setShowContractModal] = useState(false);
@@ -871,9 +872,11 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
     if (errors.cnpj) touchedFields.cnpj = true;
     setTouched(touchedFields);
     if (Object.keys(errors).length > 0) {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      setFormError("Verifique os campos obrigatórios");
+      setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
       return;
     }
+    setFormError(null);
 
     if (!storeId && !acceptedTerms) {
       setAcceptedTermsError("Você precisa aceitar os Termos de Uso e a Política de Uso Aceitável.");
@@ -1048,10 +1051,10 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
         </div>
       )}
 
-      {error && (
+      {(formError || error) && (
         <div className="mb-6 flex items-start gap-3 bg-red-900/20 border border-red-700/30 rounded-lg px-4 py-3">
           <AlertCircle className="w-5 h-5 text-accent-red shrink-0 mt-0.5" />
-          <p className="text-accent-red text-sm font-body flex-1">{error}</p>
+          <p className="text-accent-red text-sm font-body flex-1">{formError || error}</p>
         </div>
       )}
 
