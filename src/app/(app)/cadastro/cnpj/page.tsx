@@ -23,7 +23,7 @@ export default async function CadastroCnpjPage() {
       <h1 className="text-2xl font-bold mb-2">Atualizar CNPJ</h1>
       <p className="text-muted-foreground text-sm mb-6">
         Informe seus dados cadastrais para continuar usando o Vendeo. Seus
-        cr\u00e9ditos e campanhas atuais ser\u00e3o mantidos.
+        créditos e campanhas atuais serão mantidos.
       </p>
       <CnpjUpdateForm storeId={store.id} />
     </div>

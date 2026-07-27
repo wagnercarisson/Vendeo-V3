@@ -6,6 +6,7 @@ import { validateCnpj } from "@/lib/cnpj/validate";
 import { normalizeCnpj } from "@/lib/cnpj/normalize";
 import { hashCnpjRoot } from "@/lib/cnpj/hash";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export function CnpjUpdateForm({ storeId }: { storeId: string }) {
   const router = useRouter();
@@ -33,7 +34,7 @@ export function CnpjUpdateForm({ storeId }: { storeId: string }) {
 
     const result = validateCnpj(cnpj);
     if (result instanceof Error) {
-      setError("CNPJ inv\u00e1lido. Verifique os d\u00edgitos e tente novamente.");
+      setError("CNPJ inválido. Verifique os dígitos e tente novamente.");
       return;
     }
 
@@ -103,14 +104,14 @@ export function CnpjUpdateForm({ storeId }: { storeId: string }) {
       </div>
       <div>
         <label htmlFor="razaoSocial" className="block text-sm font-medium mb-1">
-          Raz\u00e3o Social <span className="text-muted-foreground">(opcional)</span>
+          Razão Social <span className="text-muted-foreground">(opcional)</span>
         </label>
         <input
           id="razaoSocial"
           type="text"
           value={razaoSocial}
           onChange={(e) => setRazaoSocial(e.target.value)}
-          placeholder="Raz\u00e3o social"
+          placeholder="Razão social"
           maxLength={200}
           className="w-full rounded-md border border-border bg-bg-surface px-3 py-2 text-sm"
         />
@@ -137,13 +138,14 @@ export function CnpjUpdateForm({ storeId }: { storeId: string }) {
         </p>
       )}
 
-      <button
+      <Button
         type="submit"
         disabled={saving}
-        className="w-full rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground font-medium hover:brightness-110 transition-all disabled:opacity-50"
+        loading={saving}
+        className="w-full"
       >
         {saving ? "Salvando..." : "Atualizar CNPJ"}
-      </button>
+      </Button>
     </form>
   );
 }

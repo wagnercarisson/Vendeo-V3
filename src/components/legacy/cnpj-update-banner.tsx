@@ -25,7 +25,7 @@ export function CnpjUpdateBanner({
         </p>
         <Link
           href="/cadastro/cnpj"
-          className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:brightness-110 transition-all"
+          className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-accent-green px-3 py-1.5 text-xs font-medium text-white hover:brightness-110 transition-all"
         >
           Atualizar CNPJ agora <ArrowRight className="w-3 h-3" />
         </Link>
