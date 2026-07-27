@@ -18,12 +18,12 @@ export function CnpjUpdateForm({ storeId }: { storeId: string }) {
   const [saving, setSaving] = useState(false);
 
   const handleCnpjChange = (raw: string) => {
-    const digits = raw.replace(/\D/g, "");
+    const digits = raw.replace(/\D/g, "").slice(0, 14);
     let masked = digits;
-    if (digits.length > 2) masked = digits.slice(0, 2) + "." + masked.slice(2);
-    if (digits.length > 5) masked = masked.slice(0, 5) + "." + masked.slice(5);
-    if (digits.length > 8) masked = masked.slice(0, 8) + "/" + masked.slice(8);
-    if (digits.length > 12) masked = masked.slice(0, 12) + "-" + masked.slice(12);
+    if (digits.length > 2) masked = digits.slice(0, 2) + "." + digits.slice(2);
+    if (digits.length > 5) masked = digits.slice(0, 2) + "." + digits.slice(2, 5) + "." + digits.slice(5);
+    if (digits.length > 8) masked = digits.slice(0, 2) + "." + digits.slice(2, 5) + "." + digits.slice(5, 8) + "/" + digits.slice(8);
+    if (digits.length > 12) masked = digits.slice(0, 2) + "." + digits.slice(2, 5) + "." + digits.slice(5, 8) + "/" + digits.slice(8, 12) + "-" + digits.slice(12, 14);
     setCnpj(masked);
     setError(null);
   };

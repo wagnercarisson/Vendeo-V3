@@ -1083,12 +1083,12 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
               <div>
                 <label htmlFor="cnpj" className={labelClass}>CNPJ *</label>
                 <input id="cnpj" type="text" value={formData.cnpj} onChange={(e) => {
-                  const raw = e.target.value.replace(/\D/g, "");
+                  const raw = e.target.value.replace(/\D/g, "").slice(0, 14);
                   let masked = raw;
                   if (raw.length > 2) masked = raw.slice(0, 2) + "." + raw.slice(2);
-                  if (raw.length > 5) masked = masked.slice(0, 5) + "." + masked.slice(5);
-                  if (raw.length > 8) masked = masked.slice(0, 8) + "/" + masked.slice(8);
-                  if (raw.length > 12) masked = masked.slice(0, 12) + "-" + masked.slice(12);
+                  if (raw.length > 5) masked = raw.slice(0, 2) + "." + raw.slice(2, 5) + "." + raw.slice(5);
+                  if (raw.length > 8) masked = raw.slice(0, 2) + "." + raw.slice(2, 5) + "." + raw.slice(5, 8) + "/" + raw.slice(8);
+                  if (raw.length > 12) masked = raw.slice(0, 2) + "." + raw.slice(2, 5) + "." + raw.slice(5, 8) + "/" + raw.slice(8, 12) + "-" + raw.slice(12, 14);
                   setField("cnpj", masked);
                 }} onBlur={() => {
                   setTouched((prev) => ({ ...prev, cnpj: true }));
