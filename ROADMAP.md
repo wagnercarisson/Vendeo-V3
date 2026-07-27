@@ -1,6 +1,6 @@
 # Vendeo — Roadmap
 
-> Milestones: **Contas e Propriedade** (v1.2 ✓) | **Persistência e Entrega da Campanha** (v1.3 ✓) | **Experiência SaaS** (v1.4 ✓) | **Lançamento Externo Controlado** (v1.5 ◆) | **Monetização Pública** (v1.7 △)
+> Milestones: **Contas e Propriedade** (v1.2 ✓) | **Persistência e Entrega da Campanha** (v1.3 ✓) | **Experiência SaaS** (v1.4 ✓) | **Lançamento Externo Controlado** (v1.5 ◆)
 
 ## Milestones
 
@@ -54,10 +54,10 @@ Autenticação completa, vínculo user→store, isolamento multi-tenant, beta.ve
 
 ### 📋 v1.5 — Lançamento Externo Controlado ◆
 
-Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, UAT externo, fundação legal e modelo comercial — formulário com intenção comercial.
+Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, UAT externo, fundação legal, modelo comercial, freemium anti-abuso CNPJ e Stripe.
 
 <details open>
-<summary>◆ v1.5 Lançamento Externo Controlado (F23-F31.3) — Em andamento</summary>
+<summary>◆ v1.5 Lançamento Externo Controlado (F23-F33) — Em andamento</summary>
 
 Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, fundação legal e modelo comercial.
 
@@ -90,7 +90,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - Normalização de exclusive com preço indevido
   - 15 testes, regressão zero para offer, 1051 testes totais
 
-- [ ] Phase 31.3: Quality Gate por Intenção Comercial (6 plans ◆)
+- [x] Phase 31.3: Quality Gate por Intenção Comercial (6 plans ✅)
   - ImageReviewInput com campaignIntent, preserveImageContext; badgeText/discountedPrice opcionais
   - ReviewIssueType union nomeada (17 valores); failureType string | null explícito
   - commercial_tone_mismatch como novo issue type
@@ -102,13 +102,20 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - InputValidationService verificado (sem alteração)
   - 5 cenários E2E com IA real
 
+- [ ] Phase 32: Freemium Anti-Abuso CNPJ (pending)
+  - CNPJ obrigatório na criação da loja com validação de dígitos verificadores + formato
+  - `stores.cnpj_normalized` + `stores.cnpj_root_hash` — CNPJ normalizado, hash HMAC-SHA256 da raiz com pepper server-side
+  - `freemium_entitlements` — tabela de controle com idempotência (INSERT ... ON CONFLICT)
+  - Onboarding grant (10 créditos) uma única vez por raiz de CNPJ
+  - Créditos mensais (5 créditos) uma única vez por raiz de CNPJ por ciclo
+  - Admin: CNPJ mascarado, badge de status freemium, exceção manual auditável
+  - Termos de Uso v1.2 e Política de Privacidade v1.1
+  - Lojas legadas: atualização cadastral sem novo grant de créditos
+  - Pipeline guard de reaceite v1.2
+
+- [ ] Phase 33: Stripe / Monetização Pública (pending)
+
 </details>
-
-### 📋 v1.7 — Monetização Pública △
-
-> Stripe Checkout + Webhook + compra real de créditos. Ativado após validação do beta controlado.
-
-- [ ] Phase 32: Stripe / Monetização Pública (planned)
 
 ## Progress
 
@@ -143,7 +150,9 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 30. Fundação Legal | v1.5 | 6/6 | ✅ Complete | 2026-07-23 |
 | 31.1. Modelo Comercial — Formulário | v1.5 | 5/5 | ✅ Complete | 2026-07-24 |
 | 31.2. Diretores por Intenção | v1.5 | 6/6 | ✅ Complete | 2026-07-25 |
-| 31.3. Quality Gate por Intenção Comercial | v1.5 | 0/6 | ◆ Planned | — |
+| 31.3. Quality Gate por Intenção Comercial | v1.5 | 6/6 | ✅ Complete | 2026-07-26 |
+| 32. Freemium Anti-Abuso CNPJ | v1.5 | 0/0 | ◆ Planned | — |
+| 33. Stripe / Monetização Pública | v1.5 | 0/0 | ○ Pending | — |
 
 ---
 
