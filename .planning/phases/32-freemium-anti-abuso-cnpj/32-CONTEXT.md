@@ -122,7 +122,7 @@ Trocar a unidade econômica do freemium de `store_id` para **raiz de CNPJ** (8 p
 ### New Files to Create
 - `src/lib/cnpj/types.ts`, `validate.ts`, `normalize.ts`, `hash.ts`, `mask.ts`, `similarity.ts`
 - `src/lib/freemium/types.ts`, `entitlement-service.ts`
-- `supabase/migrations/20260728000001_freemium_anti_abuso_cnpj.sql`
+- `supabase/migrations/20260727000001_freemium_anti_abuso_cnpj.sql`
 - `public/docs/legal/terms-of-service-v1-2.md`
 - `public/docs/legal/privacy-policy-v1-1.md`
 </canonical_refs>

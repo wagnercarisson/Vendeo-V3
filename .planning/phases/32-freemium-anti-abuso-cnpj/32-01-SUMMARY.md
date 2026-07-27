@@ -9,7 +9,7 @@
 ## Tasks
 
 ### Task 1: Migration SQL — Freemium Anti-Abuso CNPJ
-- Migration única `20260728000001_freemium_anti_abuso_cnpj.sql` com 7 blocos:
+- Migration única `20260727000001_freemium_anti_abuso_cnpj.sql` com 7 blocos:
   1. ALTER TABLE stores: `cnpj_normalized`, `cnpj_root_hash`, `razao_social`, `nome_fantasia`, `cnpj_validation_score` + índices
   2. CREATE TABLE `freemium_entitlements` com ON DELETE SET NULL, RLS, índices únicos
   3. RPCs auxiliares: `try_grant_onboarding_entitlement`, `try_grant_monthly_entitlement`, `admin_grant_freemium_exception` (todas SECURITY DEFINER SET search_path = '')
@@ -34,7 +34,7 @@
 - `admin_grant_freemium_exception` é transacional (entitlement + grant + audit_log)
 
 ## Files Created
-- `supabase/migrations/20260728000001_freemium_anti_abuso_cnpj.sql` (230+ linhas)
+- `supabase/migrations/20260727000001_freemium_anti_abuso_cnpj.sql` (230+ linhas)
 - `src/lib/cnpj/types.ts`
 - `src/lib/cnpj/normalize.ts`
 - `src/lib/cnpj/validate.ts`

@@ -400,10 +400,10 @@ $$;
 -- =============================================================================
 -- 7. INSERT legal_document_versions (v1.2, v1.1)
 -- =============================================================================
-INSERT INTO public.legal_document_versions (document_type, version, effective_at, content_path)
+INSERT INTO public.legal_document_versions (document_type, version, published_at, effective_at, summary)
 VALUES
-  ('terms_of_service', 'v1.2', now(), '/docs/legal/terms-of-service-v1-2.md'),
-  ('privacy_policy', 'v1.1', now(), '/docs/legal/privacy-policy-v1-1.md')
+  ('terms_of_service', 'v1.2', now(), now(), 'CNPJ obrigatório, freemium por raiz, sanções, compra de créditos'),
+  ('privacy_policy', 'v1.1', now(), now(), 'Finalidades do tratamento do CNPJ, base legal LGPD')
 ON CONFLICT (document_type, version) DO NOTHING;
 
 -- =============================================================================
