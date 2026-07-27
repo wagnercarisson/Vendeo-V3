@@ -77,7 +77,7 @@ export function CnpjUpdateForm({ storeId }: { storeId: string }) {
             Dados cadastrais atualizados com sucesso!
           </p>
           <p className="text-text-muted text-xs mt-0.5">
-            Seus cr\u00e9ditos e campanhas foram mantidos.
+            Seus créditos e campanhas foram mantidos.
           </p>
         </div>
       </div>

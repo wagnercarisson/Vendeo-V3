@@ -21,11 +21,11 @@ export function CnpjUpdateBanner({
         </p>
         <p className="text-text-muted text-xs font-body mt-0.5">
           Para continuar usando o Vendeo, informe seu CNPJ. Seus dados atuais
-          (cr\u00e9ditos, campanhas) ser\u00e3o mantidos.
+          (créditos, campanhas) serão mantidos.
         </p>
         <Link
           href="/cadastro/cnpj"
-          className="mt-2 inline-flex items-center gap-1.5 text-accent-blue hover:text-accent-blue/80 text-xs font-body underline transition-colors"
+          className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:brightness-110 transition-all"
         >
           Atualizar CNPJ agora <ArrowRight className="w-3 h-3" />
         </Link>
