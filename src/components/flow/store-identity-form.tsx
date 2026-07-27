@@ -408,6 +408,12 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
   }, [successMessage]);
 
   useEffect(() => {
+    if (error) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [error]);
+
+  useEffect(() => {
     if (step2Success) {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -1107,8 +1113,8 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
                 )}
               </div>
               <div>
-                <label htmlFor="razaoSocial" className={labelClass}>Raz\u00e3o Social <span className="font-normal normal-case tracking-normal text-text-disabled">(opcional)</span></label>
-                <input id="razaoSocial" type="text" value={formData.razaoSocial} onChange={(e) => setField("razaoSocial", e.target.value)} placeholder="Raz\u00e3o social (opcional)" maxLength={200} className={inputClass("razaoSocial")} />
+                <label htmlFor="razaoSocial" className={labelClass}>Razão Social <span className="font-normal normal-case tracking-normal text-text-disabled">(opcional)</span></label>
+                <input id="razaoSocial" type="text" value={formData.razaoSocial} onChange={(e) => setField("razaoSocial", e.target.value)} placeholder="Razão social (opcional)" maxLength={200} className={inputClass("razaoSocial")} />
               </div>
               <div>
                 <label htmlFor="nomeFantasia" className={labelClass}>Nome Fantasia <span className="font-normal normal-case tracking-normal text-text-disabled">(opcional)</span></label>
