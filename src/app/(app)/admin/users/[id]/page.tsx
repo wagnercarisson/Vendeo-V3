@@ -6,8 +6,12 @@ import { CreditGrantForm } from "./credit-grant-form";
 import { hasValidPrivacyAcknowledgement } from "@/lib/legal/privacy";
 import { getEffectiveConsent } from "@/lib/legal/consent";
 import { getAcceptanceStatus, getStoreAcceptanceHistory } from "@/lib/legal/acceptance-service";
+import { maskCnpj } from "@/lib/cnpj/mask";
+import { FreemiumEntitlementService } from "@/lib/freemium/entitlement-service";
+import type { FreemiumEntitlement, FreemiumStatus } from "@/lib/freemium/types";
 
 const creditService = new CreditService();
+const freemiumService = new FreemiumEntitlementService();
 
 export default async function AdminUserDetailPage({
   params,
@@ -31,6 +35,8 @@ export default async function AdminUserDetailPage({
   let balance = 0;
   let history: unknown[] = [];
   let campaigns: unknown[] = [];
+  let freemiumStatus: FreemiumStatus = "no_cnpj";
+  let entitlements: FreemiumEntitlement[] = [];
 
   // Legal status
   const privacyAcknowledged = await hasValidPrivacyAcknowledgement(userId);
@@ -41,6 +47,16 @@ export default async function AdminUserDetailPage({
   if (storeId) {
     balance = await creditService.getBalance(storeId);
     history = await creditService.getHistory(storeId);
+    entitlements = await freemiumService.getHistoryByStore(storeId);
+
+    const rootHash = storeData?.cnpj_root_hash as string ?? "";
+    if (rootHash && rootHash !== "") {
+      const hasOnboarding = entitlements.some(e => e.benefit_type === "onboarding");
+      const hasMonthly = entitlements.some(e => e.benefit_type === "monthly");
+      if (hasOnboarding && balance > 0) freemiumStatus = "active";
+      else if (hasOnboarding || hasMonthly) freemiumStatus = "used";
+      else freemiumStatus = "exhausted";
+    }
 
     const termsStatus = await getAcceptanceStatus(storeId, "terms_of_service");
     const aupStatus = await getAcceptanceStatus(storeId, "acceptable_use");
@@ -94,6 +110,60 @@ export default async function AdminUserDetailPage({
               <dt className="text-muted-foreground">Saldo</dt>
               <dd className="font-semibold">{balance} créditos</dd>
             </dl>
+          </div>
+
+          <div className="rounded-md border border-border bg-bg-surface p-4">
+            <h2 className="text-lg font-semibold mb-3">CNPJ e Freemium</h2>
+            <dl className="grid grid-cols-2 gap-2 text-sm">
+              <dt className="text-muted-foreground">CNPJ</dt>
+              <dd className="font-mono">
+                {storeData.cnpj_normalized
+                  ? maskCnpj(storeData.cnpj_normalized as string)
+                  : <span className="text-muted-foreground">—</span>}
+              </dd>
+              <dt className="text-muted-foreground">Status Freemium</dt>
+              <dd>
+                {freemiumStatus === "active" && <span className="text-green-600">🟢 Freemium ativo</span>}
+                {freemiumStatus === "used" && <span className="text-yellow-600">🟡 Freemium usado</span>}
+                {freemiumStatus === "exhausted" && <span className="text-red-600">🔴 Freemium esgotado</span>}
+                {freemiumStatus === "no_cnpj" && <span className="text-muted-foreground">⚪ Sem CNPJ</span>}
+              </dd>
+            </dl>
+            {entitlements.length > 0 && (
+              <div className="mt-4">
+                <h3 className="text-sm font-semibold mb-2">Histórico de Entitlements</h3>
+                <table className="w-full text-sm">
+                  <thead className="bg-muted">
+                    <tr>
+                      <th className="px-2 py-1 text-left">Benefício</th>
+                      <th className="px-2 py-1 text-left">Ciclo</th>
+                      <th className="px-2 py-1 text-left">Motivo</th>
+                      <th className="px-2 py-1 text-right">Data</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {entitlements.map(e => (
+                      <tr key={e.id} className="border-t">
+                        <td className="px-2 py-1">{e.benefit_type}</td>
+                        <td className="px-2 py-1">{e.cycle ?? "—"}</td>
+                        <td className="px-2 py-1">{e.reason ?? "—"}</td>
+                        <td className="px-2 py-1 text-right text-xs">
+                          {new Date(e.created_at).toLocaleString("pt-BR")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <div className="mt-4">
+              <a
+                href={`/admin/users/${userId}/grant-freemium-exception`}
+                className="rounded-md bg-accent-blue px-3 py-1.5 text-xs font-medium text-white hover:brightness-110 transition-all inline-block"
+              >
+                Conceder exceção
+              </a>
+            </div>
           </div>
 
           <div className="rounded-md border border-border bg-bg-surface p-4">

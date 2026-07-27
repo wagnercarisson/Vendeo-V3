@@ -7,15 +7,19 @@ import { apiHandler } from "@/lib/auth/api-handler";
 import { buildStoreResponse } from "@/lib/store-response";
 import { STORE_SEGMENTS, STORE_SUBSEGMENTS } from "@/lib/constants";
 import { getCurrentVersion } from "@/lib/legal/document-versions";
+import { validateCnpj } from "@/lib/cnpj/validate";
+import { maskCnpj } from "@/lib/cnpj/mask";
+import { hashCnpjRoot } from "@/lib/cnpj/hash";
+import { compareBusinessName } from "@/lib/cnpj/similarity";
 
-const GENERIC_SUBSEGMENT_VALUES = ["outro", "loja", "comercio", "comércio", "varejo"];
+const GENERIC_SUBSEGMENT_VALUES = ["outro", "loja", "comercio", "com\u00e9rcio", "varejo"];
 
 function validateSubsegment(value: string): string | null {
   const trimmed = value.trim();
   if (trimmed.length < 3) return "Digite ao menos 3 caracteres";
-  if (trimmed.length > 30) return "Máximo de 30 caracteres";
-  if (!/^[A-Za-zÀ-ü\s]+$/.test(trimmed)) return "Use apenas letras e espaços";
-  if (GENERIC_SUBSEGMENT_VALUES.includes(trimmed.toLowerCase())) return "Valor genérico não permitido";
+  if (trimmed.length > 30) return "M\u00e1ximo de 30 caracteres";
+  if (!/^[A-Za-z\u00c0-\u00fc\s]+$/.test(trimmed)) return "Use apenas letras e espa\u00e7os";
+  if (GENERIC_SUBSEGMENT_VALUES.includes(trimmed.toLowerCase())) return "Valor gen\u00e9rico n\u00e3o permitido";
   return null;
 }
 
@@ -37,11 +41,11 @@ export const POST = apiHandler(async (request: NextRequest) => {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const { name, segment, city, state, brand_color, logo_url, subsegment, tone_of_voice, positioning, short_description, slogan, acceptedTerms } = body as Record<string, unknown>;
+    const { name, segment, city, state, brand_color, logo_url, subsegment, tone_of_voice, positioning, short_description, slogan, acceptedTerms, cnpj, razaoSocial, nomeFantasia } = body as Record<string, unknown>;
 
     if (!acceptedTerms) {
       return NextResponse.json(
-        { error: "Você precisa aceitar os Termos de Uso e a Política de Uso Aceitável." },
+        { error: "Voc\u00ea precisa aceitar os Termos de Uso e a Pol\u00edtica de Uso Aceit\u00e1vel." },
         { status: 400 }
       );
     }
@@ -61,11 +65,50 @@ export const POST = apiHandler(async (request: NextRequest) => {
       );
     }
 
-    // Subsegment validation
+    if (!cnpj || typeof cnpj !== "string") {
+      return NextResponse.json({ error: "CNPJ \u00e9 obrigat\u00f3rio" }, { status: 400 });
+    }
+
+    const cnpjResult = validateCnpj(cnpj);
+    if (cnpjResult instanceof Error) {
+      return NextResponse.json({ error: "CNPJ inv\u00e1lido" }, { status: 400 });
+    }
+
+    const { normalized } = cnpjResult;
+    const root = normalized.slice(0, 8);
+    const rootHash = hashCnpjRoot(root);
+
+    const { data: existing } = await supabase
+      .from("stores")
+      .select("id")
+      .eq("cnpj_normalized", normalized)
+      .maybeSingle();
+
+    if (existing) {
+      return NextResponse.json(
+        { error: "Este CNPJ j\u00e1 est\u00e1 cadastrado em outra conta" },
+        { status: 409 }
+      );
+    }
+
+    let cnpjValidationScore: Record<string, unknown> | null = null;
+    if (razaoSocial || nomeFantasia) {
+      const score = compareBusinessName(
+        name as string,
+        (razaoSocial as string) ?? "",
+        nomeFantasia as string | undefined
+      );
+      if (score.bestScore < 0.8) {
+        cnpjValidationScore = { name_mismatch: true, score: score.bestScore };
+      } else {
+        cnpjValidationScore = { name_match: true, score: score.bestScore };
+      }
+    }
+
     let effectiveSubsegment: string | null = null;
     if (subsegment !== undefined && subsegment !== null && subsegment !== "") {
       if (typeof subsegment !== "string") {
-        return NextResponse.json({ error: "subsegment inválido" }, { status: 400 });
+        return NextResponse.json({ error: "subsegment inv\u00e1lido" }, { status: 400 });
       }
 
       const segmentKey = segment as keyof typeof STORE_SUBSEGMENTS;
@@ -77,7 +120,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
         effectiveSubsegment = trimmed.toLowerCase();
       } else {
         if (trimmed.toLowerCase() === "outro") {
-          return NextResponse.json({ error: "Valor inválido para subsegmento" }, { status: 400 });
+          return NextResponse.json({ error: "Valor inv\u00e1lido para subsegmento" }, { status: 400 });
         }
 
         const subError = validateSubsegment(subsegment);
@@ -88,16 +131,15 @@ export const POST = apiHandler(async (request: NextRequest) => {
         effectiveSubsegment = sanitizeSubsegment(subsegment);
       }
     } else if (segment === "outros") {
-      return NextResponse.json({ error: "Subsegmento obrigatório para segmento outros" }, { status: 400 });
+      return NextResponse.json({ error: "Subsegmento obrigat\u00f3rio para segmento outros" }, { status: 400 });
     }
 
-    // Resolve current legal document versions server-side (no version spoofing)
     const termsVersion = await getCurrentVersion("terms_of_service");
     const aupVersion = await getCurrentVersion("acceptable_use");
 
     if (!termsVersion || !aupVersion) {
       return NextResponse.json(
-        { error: "Documentos legais não publicados. Tente novamente mais tarde." },
+        { error: "Documentos legais n\u00e3o publicados. Tente novamente mais tarde." },
         { status: 500 }
       );
     }
@@ -108,7 +150,10 @@ export const POST = apiHandler(async (request: NextRequest) => {
 
     const userAgent = request.headers.get("user-agent") ?? "unknown";
 
-    const { data, error } = await supabase.rpc("create_store_with_legal_acceptance", {
+    const { data, error } = await supabase.rpc("create_store_with_cnpj", {
+      p_cnpj_normalized: normalized,
+      p_cnpj_root_hash: rootHash,
+      p_cnpj_validation_score: cnpjValidationScore ?? null,
       p_user_id: user.userId,
       p_name: (name as string).trim(),
       p_segment: segment as string,
@@ -130,7 +175,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
 
     if (error?.message?.includes("stores_user_id_key") || error?.code === "23505") {
       return NextResponse.json(
-        { error: "Usuário já possui uma loja" },
+        { error: "Usu\u00e1rio j\u00e1 possui uma loja" },
         { status: 409 }
       );
     }
@@ -139,7 +184,14 @@ export const POST = apiHandler(async (request: NextRequest) => {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json(data, { status: 201 });
+    const cnpjMasked = maskCnpj(normalized);
+    const responseData = {
+      ...(data as Record<string, unknown>),
+      cnpjMasked,
+      onboardingGranted: (data as Record<string, unknown>)?.onboardingGranted ?? false,
+    };
+
+    return NextResponse.json(responseData, { status: 201 });
   } catch (error) {
     if (error instanceof UnauthorizedError) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

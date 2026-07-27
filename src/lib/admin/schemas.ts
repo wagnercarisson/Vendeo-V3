@@ -24,6 +24,8 @@ export interface AdminUserSummary {
   errorCampaigns: number;
   lastCampaignAt: string | null;
   createdAt: string;
+  cnpjMasked: string | null;
+  freemiumStatus: "active" | "used" | "exhausted" | "no_cnpj";
 }
 
 export interface AdminCampaignError {

@@ -5,16 +5,19 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Users } from "lucide-react";
 import type { AdminUserSummary } from "@/lib/admin/schemas";
+import { maskCnpj } from "@/lib/cnpj/mask";
+import type { FreemiumStatus } from "@/lib/freemium/types";
 
 export default async function AdminUsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; page?: string }>;
+  searchParams: Promise<{ search?: string; page?: string; freemiumStatus?: string }>;
 }) {
   await requireAdmin();
   const sp = await searchParams;
 
   const search = sp.search ?? "";
+  const freemiumFilter = sp.freemiumStatus ?? "";
   const page = Math.max(1, parseInt(sp.page ?? "1", 10));
   const pageSize = 20;
 
@@ -31,6 +34,54 @@ export default async function AdminUsersPage({
   const result = data as { data: AdminUserSummary[]; total: number };
   const totalPages = Math.ceil(result.total / pageSize);
 
+  // Enrich with CNPJ and freemium status
+  const storeIds = result.data.map(u => u.storeId).filter(Boolean) as string[];
+  const { data: stores } = await supabaseAdmin
+    .from("stores")
+    .select("id, cnpj_normalized, cnpj_root_hash")
+    .in("id", storeIds.length > 0 ? storeIds : ["none"]);
+
+  const storeMap: Record<string, { cnpjNormalized: string | null; cnpjRootHash: string | null }> = {};
+  for (const s of (stores ?? [])) {
+    storeMap[s.id] = { cnpjNormalized: s.cnpj_normalized, cnpjRootHash: s.cnpj_root_hash };
+  }
+
+  // Fetch entitlements for freemium status calculation
+  const { data: entitlements } = await supabaseAdmin
+    .from("freemium_entitlements")
+    .select("store_id, benefit_type")
+    .in("store_id", storeIds.length > 0 ? storeIds : ["none"]);
+
+  const entitlementMap: Record<string, Set<string>> = {};
+  for (const e of (entitlements ?? [])) {
+    if (!entitlementMap[e.store_id]) entitlementMap[e.store_id] = new Set();
+    entitlementMap[e.store_id].add(e.benefit_type);
+  }
+
+  const enrichedUsers = result.data.map((user) => {
+    const storeInfo = user.storeId ? storeMap[user.storeId] : null;
+    const userEntitlements = user.storeId ? entitlementMap[user.storeId] : undefined;
+
+    let freemiumStatus: FreemiumStatus = "no_cnpj";
+    if (storeInfo?.cnpjRootHash && storeInfo.cnpjRootHash !== "") {
+      const hasOnboarding = userEntitlements?.has("onboarding") ?? false;
+      const hasMonthly = userEntitlements?.has("monthly") ?? false;
+      if (hasOnboarding && user.balance > 0) freemiumStatus = "active";
+      else if (hasOnboarding || hasMonthly) freemiumStatus = "used";
+      else freemiumStatus = "exhausted";
+    }
+
+    return {
+      ...user,
+      cnpjMasked: storeInfo?.cnpjNormalized ? maskCnpj(storeInfo.cnpjNormalized) : null,
+      freemiumStatus,
+    };
+  });
+
+  const filteredUsers = freemiumFilter
+    ? enrichedUsers.filter(u => u.freemiumStatus === freemiumFilter)
+    : enrichedUsers;
+
   return (
     <div className="space-y-4">
       <div>
@@ -45,6 +96,16 @@ export default async function AdminUsersPage({
           placeholder="Buscar por email, loja ou segmento..."
           className="flex-1 rounded-md border border-border bg-bg-surface px-3 py-2 text-sm text-text-primary"
         />
+        <select
+          name="freemiumStatus"
+          defaultValue={freemiumFilter}
+          className="rounded-md border border-border bg-bg-surface px-3 py-2 text-sm"
+        >
+          <option value="">Todos</option>
+          <option value="no_cnpj">Sem CNPJ</option>
+          <option value="active">Freemium ativo</option>
+          <option value="used">Freemium usado</option>
+        </select>
         <button
           type="submit"
           className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground"
@@ -61,6 +122,7 @@ export default async function AdminUsersPage({
               <th className="px-3 py-2 text-left font-medium">Email</th>
               <th className="px-3 py-2 text-left font-medium">Loja</th>
               <th className="px-3 py-2 text-left font-medium">Segmento</th>
+              <th className="px-3 py-2 text-left font-medium">CNPJ</th>
               <th className="px-3 py-2 text-right font-medium">Saldo</th>
               <th className="px-3 py-2 text-right font-medium">Campanhas</th>
               <th className="px-3 py-2 text-right font-medium">Erros</th>
@@ -68,7 +130,7 @@ export default async function AdminUsersPage({
             </tr>
           </thead>
           <tbody>
-            {result.data.map((user: AdminUserSummary) => (
+            {filteredUsers.map((user) => (
               <tr key={user.userId} className="border-t hover:bg-muted/50">
                 <td className="px-3 py-2">
                   <Link
@@ -80,6 +142,7 @@ export default async function AdminUsersPage({
                 </td>
                 <td className="px-3 py-2">{user.storeName ?? "—"}</td>
                 <td className="px-3 py-2">{user.segment ?? "—"}</td>
+                <td className="px-3 py-2 text-xs font-mono">{user.cnpjMasked ?? "—"}</td>
                 <td className="px-3 py-2 text-right">{user.balance}</td>
                 <td className="px-3 py-2 text-right">{user.totalCampaigns}</td>
                 <td className="px-3 py-2 text-right">
@@ -94,9 +157,9 @@ export default async function AdminUsersPage({
                 </td>
               </tr>
             ))}
-            {result.data.length === 0 && (
+            {filteredUsers.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-8 text-center">
+                <td colSpan={8} className="px-3 py-8 text-center">
                   <EmptyState
                     icon={Users}
                     title="Nenhum lojista cadastrado"

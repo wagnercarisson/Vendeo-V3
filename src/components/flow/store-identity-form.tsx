@@ -16,6 +16,7 @@ import { getDriftPolicy } from "@/lib/drift";
 import { DriftDecisionModal } from "./drift-decision-modal";
 import { DriftCriticalModal } from "./drift-critical-modal";
 import { isValidHex, normalizeBrandColorsChosen, hasUserChosenColors } from "@/lib/validators/color";
+import { normalizeCnpj } from "@/lib/cnpj/normalize";
 import { ContractAcceptanceModal } from "@/components/legal/contract-acceptance-modal";
 
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
@@ -1076,6 +1077,41 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
               <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs"><AlertCircle className="w-3.5 h-3.5" />{fieldErrors.name}</p>
             )}
           </div>
+
+          {!storeId && (
+            <>
+              <div>
+                <label htmlFor="cnpj" className={labelClass}>CNPJ *</label>
+                <input id="cnpj" type="text" value={formData.cnpj} onChange={(e) => {
+                  const raw = e.target.value.replace(/\D/g, "");
+                  let masked = raw;
+                  if (raw.length > 2) masked = raw.slice(0, 2) + "." + raw.slice(2);
+                  if (raw.length > 5) masked = masked.slice(0, 5) + "." + masked.slice(5);
+                  if (raw.length > 8) masked = masked.slice(0, 8) + "/" + masked.slice(8);
+                  if (raw.length > 12) masked = masked.slice(0, 12) + "-" + masked.slice(12);
+                  setField("cnpj", masked);
+                }} onBlur={() => {
+                  setTouched((prev) => ({ ...prev, cnpj: true }));
+                  if (formData.cnpj && normalizeCnpj(formData.cnpj).length !== 14) {
+                    setFieldErrors((prev) => ({ ...prev, cnpj: "CNPJ inv\u00e1lido" }));
+                  } else {
+                    setFieldErrors((prev) => ({ ...prev, cnpj: undefined }));
+                  }
+                }} placeholder="XX.XXX.XXX/YYYY-ZZ" maxLength={18} className={inputClass("cnpj")} />
+                {touched.cnpj && fieldErrors.cnpj && (
+                  <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs"><AlertCircle className="w-3.5 h-3.5" />{fieldErrors.cnpj}</p>
+                )}
+              </div>
+              <div>
+                <label htmlFor="razaoSocial" className={labelClass}>Raz\u00e3o Social <span className="font-normal normal-case tracking-normal text-text-disabled">(opcional)</span></label>
+                <input id="razaoSocial" type="text" value={formData.razaoSocial} onChange={(e) => setField("razaoSocial", e.target.value)} placeholder="Raz\u00e3o social (opcional)" maxLength={200} className={inputClass("razaoSocial")} />
+              </div>
+              <div>
+                <label htmlFor="nomeFantasia" className={labelClass}>Nome Fantasia <span className="font-normal normal-case tracking-normal text-text-disabled">(opcional)</span></label>
+                <input id="nomeFantasia" type="text" value={formData.nomeFantasia} onChange={(e) => setField("nomeFantasia", e.target.value)} placeholder="Nome fantasia (opcional)" maxLength={200} className={inputClass("nomeFantasia")} />
+              </div>
+            </>
+          )}
 
           <div>
             <label htmlFor="segment" className={labelClass}>Segmento *</label>

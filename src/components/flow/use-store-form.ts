@@ -21,6 +21,9 @@ export interface FormData {
   positioning: string;
   short_description: string;
   slogan: string;
+  cnpj: string;
+  razaoSocial: string;
+  nomeFantasia: string;
 }
 
 export type FormMode = "create" | "edit";
@@ -56,6 +59,9 @@ const EMPTY_FORM: FormData = {
   positioning: "",
   short_description: "",
   slogan: "",
+  cnpj: "",
+  razaoSocial: "",
+  nomeFantasia: "",
 };
 
 function toNull(value: string): string | null {
@@ -124,6 +130,9 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
         positioning: (initialStore as any).positioning ?? "",
         short_description: (initialStore as any).short_description ?? "",
         slogan: (initialStore as any).slogan ?? "",
+        cnpj: (initialStore as any).cnpj_normalized ?? "",
+        razaoSocial: (initialStore as any).razao_social ?? "",
+        nomeFantasia: (initialStore as any).nome_fantasia ?? "",
       };
     }
     return EMPTY_FORM;
@@ -199,6 +208,12 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
       if (!storeId && acceptedTerms) {
         body.acceptedTerms = true;
       }
+
+      if (formData.cnpj) {
+        body.cnpj = formData.cnpj.replace(/\D/g, "");
+      }
+      if (formData.razaoSocial) body.razaoSocial = formData.razaoSocial;
+      if (formData.nomeFantasia) body.nomeFantasia = formData.nomeFantasia;
 
       let res: Response;
 
