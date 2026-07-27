@@ -15,12 +15,14 @@ const DOCUMENT_CATALOG: Record<DocumentType, Record<string, DocumentContentEntry
   terms_of_service: {
     "v1.0": { filePath: "/docs/legal/terms-of-service-v1.md" },
     "v1.1": { filePath: "/docs/legal/terms-of-service-v1-1.md" },
+    "v1.2": { filePath: "/docs/legal/terms-of-service-v1-2.md" },
   },
   acceptable_use: {
     "v1.0": { filePath: "/docs/legal/acceptable-use-v1.md" },
   },
   privacy_policy: {
     "v1.0": { filePath: "/docs/legal/privacy-policy-v1.md" },
+    "v1.1": { filePath: "/docs/legal/privacy-policy-v1-1.md" },
   },
 };
 
