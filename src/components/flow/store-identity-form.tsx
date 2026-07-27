@@ -873,7 +873,6 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
     setTouched(touchedFields);
     if (Object.keys(errors).length > 0) {
       setFormError("Verifique os campos obrigatórios");
-      setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
       return;
     }
     setFormError(null);
@@ -1051,10 +1050,10 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
         </div>
       )}
 
-      {(formError || error) && (
+      {error && (
         <div className="mb-6 flex items-start gap-3 bg-red-900/20 border border-red-700/30 rounded-lg px-4 py-3">
           <AlertCircle className="w-5 h-5 text-accent-red shrink-0 mt-0.5" />
-          <p className="text-accent-red text-sm font-body flex-1">{formError || error}</p>
+          <p className="text-accent-red text-sm font-body flex-1">{error}</p>
         </div>
       )}
 
@@ -1270,6 +1269,12 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
             </div>
           )}
 
+          {formError && (
+            <div className="mb-4 flex items-start gap-3 bg-red-900/20 border border-red-700/30 rounded-lg px-4 py-3">
+              <AlertCircle className="w-5 h-5 text-accent-red shrink-0 mt-0.5" />
+              <p className="text-accent-red text-sm font-body flex-1">{formError}</p>
+            </div>
+          )}
           <div className="flex items-center justify-between pt-2">
             {false && (
               <button type="button" onClick={handleClearStore} className="text-text-muted hover:text-text-primary text-xs font-body underline transition-colors duration-200">
