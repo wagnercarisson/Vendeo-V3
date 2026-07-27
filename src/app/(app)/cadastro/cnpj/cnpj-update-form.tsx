@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { validateCnpj } from "@/lib/cnpj/validate";
 import { normalizeCnpj } from "@/lib/cnpj/normalize";
+import { hashCnpjRoot } from "@/lib/cnpj/hash";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 
 export function CnpjUpdateForm({ storeId }: { storeId: string }) {

@@ -3,15 +3,16 @@ import { validateCnpj } from "../validate";
 
 describe("validateCnpj", () => {
   it("returns normalized for valid CNPJ with punctuation", () => {
-    const result = validateCnpj("12.345.678/0001-90");
+    // CNPJ: 12.345.678/0001-95 — computed from official algorithm
+    const result = validateCnpj("12.345.678/0001-95");
     expect(result).not.toBeInstanceOf(Error);
-    expect((result as { normalized: string }).normalized).toBe("12345678000190");
+    expect((result as { normalized: string }).normalized).toBe("12345678000195");
   });
 
   it("returns normalized for valid CNPJ with digits only", () => {
-    const result = validateCnpj("12345678000190");
+    const result = validateCnpj("12345678000195");
     expect(result).not.toBeInstanceOf(Error);
-    expect((result as { normalized: string }).normalized).toBe("12345678000190");
+    expect((result as { normalized: string }).normalized).toBe("12345678000195");
   });
 
   it("returns error for invalid check digits", () => {

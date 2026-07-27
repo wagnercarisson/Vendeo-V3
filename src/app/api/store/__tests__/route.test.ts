@@ -3,7 +3,9 @@ import { NextRequest } from 'next/server';
 
 vi.mock("server-only", () => ({}));
 
-const mockRpc = vi.fn();
+const { mockRpc } = vi.hoisted(() => ({
+  mockRpc: vi.fn(),
+}));
 
 vi.mock('@/lib/supabase/server', () => ({
   supabaseAdmin: {
@@ -37,10 +39,14 @@ vi.mock('@/lib/legal/document-versions', () => ({
 
 vi.mock('@/lib/cnpj/validate', () => ({
   validateCnpj: vi.fn((raw: string) => {
-    if (raw === "12.345.678/0001-90" || raw === "12345678000190") {
-      return { normalized: "12345678000190" };
+    const digits = raw.replace(/\D/g, "");
+    if (digits === "12345678000195") {
+      return { normalized: "12345678000195" };
     }
-    if (raw === "11.111.111/0001-11") {
+    if (digits === "22345678000195") {
+      return { normalized: "22345678000195" };
+    }
+    if (digits === "11111111111111") {
       return new Error("CNPJ inv\u00e1lido");
     }
     return new Error("CNPJ inv\u00e1lido");
@@ -60,6 +66,9 @@ vi.mock('@/lib/cnpj/similarity', () => ({
 }));
 
 import { POST } from "../route";
+
+// Ensure CNPJ_PEPPER is set for hashCnpjRoot
+process.env.CNPJ_PEPPER = "test_pepper_hex_64_chars_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6";
 
 function createRequest(body: unknown): NextRequest {
   return new NextRequest("http://localhost/api/store", {
@@ -83,7 +92,7 @@ describe("POST /api/store — CNPJ onboarding", () => {
     const res = await POST(createRequest({
       name: "Minha Loja",
       segment: "moda-calcados-acessorios",
-      cnpj: "12.345.678/0001-90",
+      cnpj: "12.345.678/0001-95",
       acceptedTerms: true,
     }));
 
@@ -101,7 +110,7 @@ describe("POST /api/store — CNPJ onboarding", () => {
     const res = await POST(createRequest({
       name: "Filial",
       segment: "moda-calcados-acessorios",
-      cnpj: "22.345.678/0001-90",
+      cnpj: "22.345.678/0001-95",
       acceptedTerms: true,
     }));
 
@@ -135,31 +144,14 @@ describe("POST /api/store — CNPJ onboarding", () => {
     expect(body.error).toBe("CNPJ \u00e9 obrigat\u00f3rio");
   });
 
-  it("returns 409 when CNPJ is duplicate", async () => {
-    vi.mocked(vi.fn()).mockReset();
-
-    vi.doMock('@/lib/supabase/server', () => ({
-      supabaseAdmin: {
-        rpc: mockRpc,
-        from: vi.fn(() => ({
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          maybeSingle: vi.fn().mockResolvedValue({ data: { id: "existing-store" } }),
-        })),
-      },
-      createServerClient: vi.fn(),
-    }));
-
+  it("returns 400 when CNPJ is invalid (known sequence)", async () => {
     const res = await POST(createRequest({
       name: "Loja",
       segment: "moda-calcados-acessorios",
-      cnpj: "12.345.678/0001-90",
+      cnpj: "11.111.111/0001-11",
       acceptedTerms: true,
     }));
 
-    // Note: the mock for supabase.admin was already set up — this test validates
-    // that the 409 logic in route.ts works. Since we can't easily re-mock
-    // from inside a test, this is a contract test for the route structure.
-    expect(res.status).toBe(201); // Mock returns 201 since supabase mock was set up before
+    expect(res.status).toBe(400);
   });
 });

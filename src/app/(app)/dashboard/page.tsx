@@ -77,7 +77,7 @@ export default async function DashboardPage() {
       return (
         <div>
           <PageHeader title="Dashboard" />
-          <CnpjUpdateBanner storeId={storeNoCamp.id} hasCnpj={!!(storeNoCamp as unknown as Record<string, unknown>).cnpj_normalized} />
+          {storeNoCamp && <CnpjUpdateBanner storeId={storeNoCamp.id} hasCnpj={!!(storeNoCamp as unknown as Record<string, unknown>).cnpj_normalized} />}
           <div className="mb-4">
             <BalanceDisplay
               balance={noCampBalance ?? 0}
