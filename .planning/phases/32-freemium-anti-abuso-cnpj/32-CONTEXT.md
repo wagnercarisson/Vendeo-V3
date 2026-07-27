@@ -37,7 +37,7 @@ Trocar a unidade econômica do freemium de `store_id` para **raiz de CNPJ** (8 p
 ### D4 — Validação de CNPJ: duas camadas
 - Frontend: máscara `XX.XXX.XXX/YYYY-ZZ`, feedback imediato
 - Backend: validateCnpj() → normaliza, valida comprimento=14, checkDigits, rejeita sequências
-- RPC `create_store_with_cnpj` calcula root_hash internamente (service_role) — caller nunca vê o hash
+- Rota server-side calcula `cnpj_root_hash` com `hashCnpjRoot()` + `process.env.CNPJ_PEPPER` e passa `p_cnpj_root_hash` para RPC — RPC é service_role only, nunca exposta ao client
 
 ### D5 — Validação cadastral: similaridade textual como score (não bloqueio)
 - `compareBusinessName(name, razaoSocial, nomeFantasia?)` — Levenshtein/Jaro-Winkler
