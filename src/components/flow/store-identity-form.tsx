@@ -408,12 +408,6 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
   }, [successMessage]);
 
   useEffect(() => {
-    if (error) {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-  }, [error]);
-
-  useEffect(() => {
     if (step2Success) {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -866,9 +860,20 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
       const subsegmentErr = validateOtherSubsegment(formData.subsegment);
       if (subsegmentErr) errors.subsegment = subsegmentErr;
     }
+    if (!storeId && formData.cnpj) {
+      const cnpjResult = validateCnpj(formData.cnpj);
+      if (cnpjResult instanceof Error) {
+        errors.cnpj = "CNPJ inválido";
+      }
+    }
     setFieldErrors(errors);
-    setTouched({ name: true, segment: true, subsegment: !!errors.subsegment });
-    if (Object.keys(errors).length > 0) return;
+    const touchedFields: Record<string, boolean> = { name: true, segment: true, subsegment: !!errors.subsegment };
+    if (errors.cnpj) touchedFields.cnpj = true;
+    setTouched(touchedFields);
+    if (Object.keys(errors).length > 0) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
 
     if (!storeId && !acceptedTerms) {
       setAcceptedTermsError("Você precisa aceitar os Termos de Uso e a Política de Uso Aceitável.");
