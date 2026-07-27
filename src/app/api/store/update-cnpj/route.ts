@@ -3,12 +3,12 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { requireUser, UnauthorizedError } from "@/lib/auth/require-user";
 import { getCurrentStore } from "@/lib/auth/store-ownership";
 import { apiHandler } from "@/lib/auth/api-handler";
+import { hashCnpjRoot } from "@/lib/cnpj/hash";
 import { z } from "zod";
 
 const UpdateCnpjSchema = z.object({
   storeId: z.string().uuid(),
   cnpjNormalized: z.string().length(14),
-  cnpjRootHash: z.string().min(1),
   razaoSocial: z.string().max(200).optional(),
   nomeFantasia: z.string().max(200).optional(),
 });
@@ -33,11 +33,13 @@ export const POST = apiHandler(async (request: NextRequest) => {
       );
     }
 
-    const { storeId, cnpjNormalized, cnpjRootHash, razaoSocial, nomeFantasia } = parsed.data;
+    const { storeId, cnpjNormalized, razaoSocial, nomeFantasia } = parsed.data;
 
     if (storeId !== store.id) {
       return NextResponse.json({ error: "Store mismatch" }, { status: 403 });
     }
+
+    const cnpjRootHash = hashCnpjRoot(cnpjNormalized.slice(0, 8));
 
     const { data, error } = await supabaseAdmin.rpc("update_store_cnpj", {
       p_store_id: storeId,

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { validateCnpj } from "@/lib/cnpj/validate";
 import { normalizeCnpj } from "@/lib/cnpj/normalize";
-import { hashCnpjRoot } from "@/lib/cnpj/hash";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -41,7 +40,6 @@ export function CnpjUpdateForm({ storeId }: { storeId: string }) {
     setSaving(true);
     try {
       const { normalized } = result;
-      const rootHash = hashCnpjRoot(normalized.slice(0, 8));
 
       const res = await fetch("/api/store/update-cnpj", {
         method: "POST",
@@ -49,7 +47,6 @@ export function CnpjUpdateForm({ storeId }: { storeId: string }) {
         body: JSON.stringify({
           storeId,
           cnpjNormalized: normalized,
-          cnpjRootHash: rootHash,
           razaoSocial: razaoSocial || undefined,
           nomeFantasia: nomeFantasia || undefined,
         }),

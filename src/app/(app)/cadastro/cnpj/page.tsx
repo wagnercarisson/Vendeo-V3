@@ -2,8 +2,6 @@ import { requireUser } from "@/lib/auth/require-user";
 import { getCurrentStore } from "@/lib/auth/store-ownership";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { validateCnpj } from "@/lib/cnpj/validate";
-import { hashCnpjRoot } from "@/lib/cnpj/hash";
 import { CnpjUpdateForm } from "./cnpj-update-form";
 
 export default async function CadastroCnpjPage() {
