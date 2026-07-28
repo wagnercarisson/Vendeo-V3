@@ -58,6 +58,7 @@ describe("Freemium Integration — onboarding 1x por raiz", () => {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
       maybeSingle: vi.fn().mockResolvedValue({ data: { id: "ent-onb" } }),
     });
     const eligible = await service.checkOnboardingEligibility("root-hash-2");

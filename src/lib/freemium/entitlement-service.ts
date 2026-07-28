@@ -19,7 +19,7 @@ export class FreemiumEntitlementService {
   }
 
   async grantOnboardingEntitlement(
-    storeId: string,
+    storeId: string | null,
     rootHash: string,
     txId?: string
   ): Promise<string | null> {

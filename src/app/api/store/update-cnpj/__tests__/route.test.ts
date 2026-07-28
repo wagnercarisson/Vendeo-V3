@@ -114,7 +114,10 @@ describe("POST /api/store/update-cnpj", () => {
 
   it("returns 403 when storeId does not match user store", async () => {
     const { getCurrentStore } = await import("@/lib/auth/store-ownership");
-    vi.mocked(getCurrentStore).mockResolvedValueOnce({ id: "00000000-0000-4000-a000-000000000099", name: "Outra" });
+    vi.mocked(getCurrentStore).mockResolvedValueOnce({
+      id: "00000000-0000-4000-a000-000000000099",
+      name: "Outra",
+    } as import("@/lib/store").Store);
 
     const { POST } = await import("../route");
     const res = await POST(createRequest({
