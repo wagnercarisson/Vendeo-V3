@@ -219,7 +219,9 @@ CREATE OR REPLACE FUNCTION public.create_store_with_cnpj(
   p_positioning TEXT DEFAULT NULL,
   p_short_description TEXT DEFAULT NULL,
   p_slogan TEXT DEFAULT NULL,
-  p_cnpj_validation_score JSONB DEFAULT NULL
+  p_cnpj_validation_score JSONB DEFAULT NULL,
+  p_razao_social TEXT DEFAULT NULL,
+  p_nome_fantasia TEXT DEFAULT NULL
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -235,11 +237,13 @@ BEGIN
   INSERT INTO public.stores (
     name, segment, user_id, city, state, brand_color, logo_url,
     subsegment, tone_of_voice, positioning, short_description, slogan,
-    cnpj_normalized, cnpj_root_hash, cnpj_validation_score
+    cnpj_normalized, cnpj_root_hash, cnpj_validation_score,
+    razao_social, nome_fantasia
   ) VALUES (
     p_name, p_segment, p_user_id, p_city, p_state, p_brand_color, p_logo_url,
     p_subsegment, p_tone_of_voice, p_positioning, p_short_description, p_slogan,
-    p_cnpj_normalized, p_cnpj_root_hash, p_cnpj_validation_score
+    p_cnpj_normalized, p_cnpj_root_hash, p_cnpj_validation_score,
+    p_razao_social, p_nome_fantasia
   )
   RETURNING id INTO v_store_id;
 

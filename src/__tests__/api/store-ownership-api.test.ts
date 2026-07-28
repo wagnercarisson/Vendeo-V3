@@ -142,7 +142,7 @@ function createReq(method: string, body?: unknown, url = "http://localhost/api/s
 describe("POST /api/store", () => {
   it("returns 201 with store when authenticated", async () => {
     mockRequireUserImpl.mockResolvedValue({ userId: "user-123", claims: { sub: "user-123" } });
-    mockSupabaseRpc.mockResolvedValue({ data: { ...mockStore, user_id: "user-123" }, error: null });
+    mockSupabaseRpc.mockResolvedValue({ data: { store: [{ ...mockStore, user_id: "user-123" }], onboardingGranted: true }, error: null });
 
     const { POST } = await import("@/app/api/store/route");
     const res = await POST(createReq("POST", { name: "Minha Loja", segment: "variedades", cnpj: "12.345.678/0001-95", acceptedTerms: true }));

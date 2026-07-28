@@ -179,4 +179,23 @@ describe("POST /api/store — CNPJ onboarding", () => {
 
     expect(res.status).toBe(400);
   });
+
+  it("returns 409 when CNPJ is already registered", async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: null,
+      error: { code: "23505", message: 'duplicate key value violates unique constraint "idx_stores_cnpj_normalized"' },
+    });
+
+    const { POST } = await import("../route");
+    const res = await POST(createRequest({
+      name: "Outra Loja",
+      segment: "moda-calcados-acessorios",
+      cnpj: "12.345.678/0001-95",
+      acceptedTerms: true,
+    }));
+
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toBe("Usuário já possui uma loja");
+  });
 });

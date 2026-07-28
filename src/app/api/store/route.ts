@@ -171,6 +171,8 @@ export const POST = apiHandler(async (request: NextRequest) => {
       p_positioning: typeof positioning === "string" ? positioning.trim() || null : null,
       p_short_description: typeof short_description === "string" ? short_description.trim() || null : null,
       p_slogan: typeof slogan === "string" ? slogan.trim() || null : null,
+      p_razao_social: typeof razaoSocial === "string" ? razaoSocial : null,
+      p_nome_fantasia: typeof nomeFantasia === "string" ? nomeFantasia : null,
     });
 
     if (error?.message?.includes("stores_user_id_key") || error?.code === "23505") {
