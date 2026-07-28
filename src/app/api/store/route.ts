@@ -11,6 +11,11 @@ import { validateCnpj } from "@/lib/cnpj/validate";
 import { maskCnpj } from "@/lib/cnpj/mask";
 import { hashCnpjRoot } from "@/lib/cnpj/hash";
 import { compareBusinessName } from "@/lib/cnpj/similarity";
+import { CnpjVerificationService, createSupabaseLookupCache } from "@/lib/cnpj/verification-service";
+import { BrasilApiProvider } from "@/lib/cnpj/lookup-providers/brasil-api";
+import { CnpjaProvider } from "@/lib/cnpj/lookup-providers/cnpja";
+import type { CnpjLookupData } from "@/lib/cnpj/lookup-providers/types";
+import { evaluateFreemiumEligibility } from "@/lib/freemium/freemium-risk-service";
 
 const GENERIC_SUBSEGMENT_VALUES = ["outro", "loja", "comercio", "com\u00e9rcio", "varejo"];
 
@@ -89,6 +94,74 @@ export const POST = apiHandler(async (request: NextRequest) => {
         { error: "Este CNPJ j\u00e1 est\u00e1 cadastrado em outra conta" },
         { status: 409 }
       );
+    }
+
+    let verificationStatus = "unverified";
+    let verificationData: Record<string, unknown> | null = null;
+    let cnpjOfficialData: CnpjLookupData | null = null;
+    let verificationReasons: string[] | null = null;
+    let userMessage = "";
+
+    const lookupService = new CnpjVerificationService(
+      new BrasilApiProvider(),
+      new CnpjaProvider(),
+      createSupabaseLookupCache(supabase)
+    );
+    const lookupResult = await lookupService.resolve(normalized);
+
+    if (lookupResult.status === "not_found") {
+      return NextResponse.json(
+        { error: "Não foi possível criar a loja. O CNPJ informado não foi encontrado na Receita Federal. Verifique o número e tente novamente." },
+        { status: 400 }
+      );
+    }
+
+    if (lookupResult.status === "unavailable") {
+      verificationStatus = "defer";
+      verificationReasons = ["api_unavailable"];
+      userMessage = "Loja criada. Não foi possível verificar os dados cadastrais agora. Você pode tentar novamente em 'Dados da Loja'.";
+    }
+
+    if (lookupResult.status === "resolved") {
+      cnpjOfficialData = lookupResult.data;
+      verificationData = { signals: {} };
+
+      const { data: existingEntitlement } = await supabase
+        .from("freemium_entitlements")
+        .select("id")
+        .eq("root_hash", rootHash)
+        .eq("benefit_type", "onboarding")
+        .maybeSingle();
+
+      const rootEligible = !existingEntitlement;
+
+      const eligibility = evaluateFreemiumEligibility({
+        cnpj: normalized,
+        storeName: (name as string).trim(),
+        city: typeof city === "string" ? city : "",
+        state: typeof state === "string" ? state : "",
+        segment: segment as string,
+        officialData: cnpjOfficialData,
+        lookupOutcome: "resolved",
+        rootHash,
+        rootEligible,
+      });
+
+      verificationData = { signals: eligibility.signals, score: eligibility.score };
+      verificationStatus = eligibility.decision;
+      verificationReasons = eligibility.reasons.length > 0 ? eligibility.reasons : null;
+
+      if (eligibility.decision === "approve") {
+        userMessage = "Loja criada com sucesso! Seus créditos de boas-vindas foram liberados.";
+      } else if (eligibility.decision === "review") {
+        userMessage = "Loja criada. Seus créditos de boas-vindas serão liberados após verificação cadastral.";
+      } else if (eligibility.decision === "reject") {
+        if (eligibility.reasons.includes("cnpj_baixada") || eligibility.reasons.includes("cnpj_nula")) {
+          userMessage = "Loja criada. Este CNPJ está com situação cadastral inativa.";
+        } else if (eligibility.reasons.includes("root_already_used")) {
+          userMessage = "Loja criada como filial. Esta empresa já utilizou o benefício de boas-vindas.";
+        }
+      }
     }
 
     let cnpjValidationScore: Record<string, unknown> | null = null;
@@ -173,6 +246,10 @@ export const POST = apiHandler(async (request: NextRequest) => {
       p_slogan: typeof slogan === "string" ? slogan.trim() || null : null,
       p_razao_social: typeof razaoSocial === "string" ? razaoSocial : null,
       p_nome_fantasia: typeof nomeFantasia === "string" ? nomeFantasia : null,
+      p_verification_status: verificationStatus,
+      p_verification_data: verificationData,
+      p_cnpj_official_data: cnpjOfficialData as unknown as Record<string, unknown> | null,
+      p_verification_reasons: verificationReasons,
     });
 
     if (error?.message?.includes("stores_user_id_key") || error?.code === "23505") {
@@ -204,6 +281,8 @@ export const POST = apiHandler(async (request: NextRequest) => {
       ...(rpcStore as Record<string, unknown>),
       cnpjMasked,
       onboardingGranted: rpcData.onboardingGranted ?? false,
+      verificationStatus: rpcData.verificationStatus ?? verificationStatus,
+      message: userMessage,
     };
 
     return NextResponse.json(responseData, { status: 201 });

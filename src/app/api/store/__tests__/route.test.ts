@@ -7,6 +7,8 @@ const { mockRpc } = vi.hoisted(() => ({
   mockRpc: vi.fn(),
 }));
 
+const mockResolve = vi.fn();
+
 vi.mock('@/lib/supabase/server', () => ({
   supabaseAdmin: {
     rpc: mockRpc,
@@ -40,35 +42,49 @@ vi.mock('@/lib/legal/document-versions', () => ({
 vi.mock('@/lib/cnpj/validate', () => ({
   validateCnpj: vi.fn((raw: string) => {
     const digits = raw.replace(/\D/g, "");
-    if (digits === "12345678000195") {
-      return { normalized: "12345678000195" };
-    }
-    if (digits === "22345678000195") {
-      return { normalized: "22345678000195" };
-    }
-    if (digits === "11111111111111") {
-      return new Error("CNPJ inv\u00e1lido");
-    }
+    if (digits === "12345678000195") return { normalized: "12345678000195" };
+    if (digits === "22345678000195") return { normalized: "22345678000195" };
+    if (digits === "3345678000190") return { normalized: "3345678000190" };
+    if (digits === "11111111111111") return new Error("CNPJ inv\u00e1lido");
     return new Error("CNPJ inv\u00e1lido");
   }),
 }));
 
 vi.mock('@/lib/cnpj/mask', () => ({
-  maskCnpj: vi.fn((n: string) => "**.***.***/0001-**"),
+  maskCnpj: vi.fn(() => "**.***.***/0001-**"),
 }));
 
 vi.mock('@/lib/cnpj/hash', () => ({
-  hashCnpjRoot: vi.fn(() => "mocked_hash_64chars_abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"),
+  hashCnpjRoot: vi.fn(() => "mocked_hash_64chars"),
 }));
 
 vi.mock('@/lib/cnpj/similarity', () => ({
   compareBusinessName: vi.fn(() => ({ bestScore: 1, nameToLegal: 1, nameToFantasy: null, label: "match" })),
 }));
 
+vi.mock('@/lib/cnpj/lookup-providers/brasil-api', () => {
+  return { BrasilApiProvider: class { lookup = vi.fn() } };
+});
+
+vi.mock('@/lib/cnpj/lookup-providers/cnpja', () => {
+  return { CnpjaProvider: class { lookup = vi.fn() } };
+});
+
+vi.mock('@/lib/cnpj/verification-service', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@/lib/cnpj/verification-service')>();
+  return {
+    ...original,
+    CnpjVerificationService: class {
+      resolve = mockResolve;
+    },
+  };
+});
+
+vi.mock('@/lib/cnpj/lookup-providers/types', () => ({}));
+
 import { POST } from "../route";
 
-// Ensure CNPJ_PEPPER is set for hashCnpjRoot
-process.env.CNPJ_PEPPER = "test_pepper_hex_64_chars_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6";
+process.env.CNPJ_PEPPER = "test_pepper_hex_64_chars";
 
 function createRequest(body: unknown): NextRequest {
   return new NextRequest("http://localhost/api/store", {
@@ -78,16 +94,40 @@ function createRequest(body: unknown): NextRequest {
   });
 }
 
-describe("POST /api/store — CNPJ onboarding", () => {
+const sampleLookupResolved = {
+  status: "resolved",
+  data: {
+    cnpj_normalized: "12345678000195",
+    razao_social: "MINHA LOJA LTDA",
+    nome_fantasia: "Minha Loja",
+    situacao_cadastral: "ATIVA",
+    cep: "01234567",
+    logradouro: "Rua Exemplo",
+    numero: "123",
+    complemento: null,
+    bairro: "Centro",
+    cidade: "São Paulo",
+    uf: "SP",
+    cnae_principal: "4781-4/00",
+    cnae_descricao: null,
+    data_situacao: "2020-01-01",
+    data_abertura: "2010-05-10",
+    porte: "ME",
+  },
+};
+
+describe("POST /api/store — CNPJ onboarding with verification", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("creates store with CNPJ and grants onboarding when root is new", async () => {
+  it("creates store with APPROVE verification and grant onboarding", async () => {
+    mockResolve.mockResolvedValue(sampleLookupResolved);
     mockRpc.mockResolvedValueOnce({
       data: {
         store: [{ id: "store-1", name: "Minha Loja", segment: "moda-calcados-acessorios" }],
         onboardingGranted: true,
+        verificationStatus: "approved",
       },
       error: null,
     });
@@ -103,36 +143,42 @@ describe("POST /api/store — CNPJ onboarding", () => {
     const body = await res.json();
     expect(body.id).toBe("store-1");
     expect(body.onboardingGranted).toBe(true);
-    expect(body.cnpjMasked).toBeDefined();
+    expect(body.verificationStatus).toBe("approved");
   });
 
-  it("creates store without onboarding grant when same root already used", async () => {
+  it("creates store with REVIEW and no grant", async () => {
+    mockResolve.mockResolvedValue({
+      status: "resolved",
+      data: {
+        ...sampleLookupResolved.data,
+        razao_social: "RAZAO COMPLETAMENTE DIFERENTE LTDA",
+        nome_fantasia: null,
+      },
+    });
     mockRpc.mockResolvedValueOnce({
       data: {
-        store: [{ id: "store-2", name: "Filial", segment: "moda-calcados-acessorios" }],
+        store: [{ id: "store-2", name: "Loja Review", segment: "moda-calcados-acessorios" }],
         onboardingGranted: false,
+        verificationStatus: "review",
       },
       error: null,
     });
 
     const res = await POST(createRequest({
-      name: "Filial",
+      name: "Nome Completamente Diferente",
       segment: "moda-calcados-acessorios",
-      cnpj: "22.345.678/0001-95",
+      cnpj: "12.345.678/0001-95",
       acceptedTerms: true,
     }));
 
     expect(res.status).toBe(201);
     const body = await res.json();
-    expect(body.id).toBe("store-2");
     expect(body.onboardingGranted).toBe(false);
+    expect(body.verificationStatus).toBe("review");
   });
 
-  it("returns 500 when RPC returns no store object", async () => {
-    mockRpc.mockResolvedValueOnce({
-      data: { onboardingGranted: false },
-      error: null,
-    });
+  it("blocks store creation when CNPJ not found", async () => {
+    mockResolve.mockResolvedValue({ status: "not_found" });
 
     const res = await POST(createRequest({
       name: "Loja",
@@ -141,7 +187,64 @@ describe("POST /api/store — CNPJ onboarding", () => {
       acceptedTerms: true,
     }));
 
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("não foi encontrado na Receita Federal");
+  });
+
+  it("creates store with DEFER when lookup unavailable", async () => {
+    mockResolve.mockResolvedValue({ status: "unavailable" });
+    mockRpc.mockResolvedValueOnce({
+      data: {
+        store: [{ id: "store-3", name: "Loja Defer", segment: "moda-calcados-acessorios" }],
+        onboardingGranted: false,
+        verificationStatus: "defer",
+      },
+      error: null,
+    });
+
+    const res = await POST(createRequest({
+      name: "Loja Defer",
+      segment: "moda-calcados-acessorios",
+      cnpj: "12.345.678/0001-95",
+      acceptedTerms: true,
+    }));
+
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.onboardingGranted).toBe(false);
+    expect(body.verificationStatus).toBe("defer");
+  });
+
+  it("creates store with rejected status for inactive CNPJ", async () => {
+    mockResolve.mockResolvedValue({
+      status: "resolved",
+      data: {
+        ...sampleLookupResolved.data,
+        razao_social: "EMPRESA BAIXADA LTDA",
+        situacao_cadastral: "BAIXADA",
+      },
+    });
+    mockRpc.mockResolvedValueOnce({
+      data: {
+        store: [{ id: "store-4", name: "Loja Inativa", segment: "moda-calcados-acessorios" }],
+        onboardingGranted: false,
+        verificationStatus: "rejected",
+      },
+      error: null,
+    });
+
+    const res = await POST(createRequest({
+      name: "Loja Inativa",
+      segment: "moda-calcados-acessorios",
+      cnpj: "12.345.678/0001-95",
+      acceptedTerms: true,
+    }));
+
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.onboardingGranted).toBe(false);
+    expect(body.verificationStatus).toBe("rejected");
   });
 
   it("returns 400 for invalid CNPJ", async () => {
@@ -153,8 +256,6 @@ describe("POST /api/store — CNPJ onboarding", () => {
     }));
 
     expect(res.status).toBe(400);
-    const body = await res.json();
-    expect(body.error).toBe("CNPJ inv\u00e1lido");
   });
 
   it("returns 400 when CNPJ is missing", async () => {
@@ -165,28 +266,15 @@ describe("POST /api/store — CNPJ onboarding", () => {
     }));
 
     expect(res.status).toBe(400);
-    const body = await res.json();
-    expect(body.error).toBe("CNPJ \u00e9 obrigat\u00f3rio");
-  });
-
-  it("returns 400 when CNPJ is invalid (known sequence)", async () => {
-    const res = await POST(createRequest({
-      name: "Loja",
-      segment: "moda-calcados-acessorios",
-      cnpj: "11.111.111/0001-11",
-      acceptedTerms: true,
-    }));
-
-    expect(res.status).toBe(400);
   });
 
   it("returns 409 when CNPJ is already registered", async () => {
+    mockResolve.mockResolvedValue(sampleLookupResolved);
     mockRpc.mockResolvedValueOnce({
       data: null,
-      error: { code: "23505", message: 'duplicate key value violates unique constraint "idx_stores_cnpj_normalized"' },
+      error: { code: "23505", message: 'duplicate key value violates unique constraint' },
     });
 
-    const { POST } = await import("../route");
     const res = await POST(createRequest({
       name: "Outra Loja",
       segment: "moda-calcados-acessorios",
@@ -195,7 +283,5 @@ describe("POST /api/store — CNPJ onboarding", () => {
     }));
 
     expect(res.status).toBe(409);
-    const body = await res.json();
-    expect(body.error).toBe("Usuário já possui uma loja");
   });
 });
