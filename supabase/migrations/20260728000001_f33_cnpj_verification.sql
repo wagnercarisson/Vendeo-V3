@@ -68,7 +68,7 @@ CREATE INDEX IF NOT EXISTS idx_cnpj_lookup_cache_expires
 
 ALTER TABLE public.cnpj_lookup_cache ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "Service role manages cnpj lookup cache"
+CREATE POLICY "Service role manages cnpj lookup cache"
   ON public.cnpj_lookup_cache
   FOR ALL
   TO service_role
