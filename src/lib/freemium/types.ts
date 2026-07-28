@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { CnpjLookupData } from "@/lib/cnpj/lookup-providers/types";
 
 export const BenefitTypeEnum = z.enum(["onboarding", "monthly", "admin_exception"]);
 
@@ -23,3 +24,32 @@ export const FreemiumHistoryQuerySchema = z.object({
 export type FreemiumEntitlement = z.infer<typeof FreemiumEntitlementSchema>;
 
 export type FreemiumStatus = "active" | "used" | "exhausted" | "no_cnpj";
+
+export type Decision = "approve" | "review" | "reject" | "defer";
+
+export type FreemiumEligibilityInput = {
+  cnpj: string;
+  storeName: string;
+  city: string;
+  state: string;
+  segment: string;
+  officialData: CnpjLookupData | null;
+  lookupOutcome: "resolved" | "not_found" | "unavailable";
+  rootHash: string;
+  rootEligible: boolean;
+};
+
+export type FreemiumEligibilityOutput = {
+  decision: Decision;
+  reasons: string[];
+  score: number;
+  signals: {
+    nameSimilarity: number | null;
+    cityMatch: boolean | null;
+    stateMatch: boolean | null;
+    cnpjExists: boolean | null;
+    situacaoCadastral: string | null;
+    rootEligible: boolean | null;
+    cnaeCompatible: boolean | null;
+  };
+};

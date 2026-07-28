@@ -12,3 +12,5 @@ export type CnpjValidationScore = {
   bestScore: number;
   label: "match" | "mismatch" | "partial";
 };
+
+export type { CnpjLookupData } from "./lookup-providers/types";
