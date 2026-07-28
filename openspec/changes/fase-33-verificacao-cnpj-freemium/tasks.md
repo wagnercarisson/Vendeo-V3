@@ -33,7 +33,7 @@
 
 ### 4. Freemium Risk Service (motor de decisão)
 
-- [ ] 4.1 Criar `src/lib/freemium/types.ts`: adicionar `FreemiumEligibilityInput` (com `lookupOutcome: 'resolved' | 'not_found' | 'unavailable'`), `FreemiumEligibilityOutput`, `Signals`, `Decision` (`approve` | `review` | `reject` | `defer`)
+- [ ] 4.1 Criar `src/lib/freemium/types.ts`: adicionar `FreemiumEligibilityInput` (com `lookupOutcome`, `rootEligible: boolean` — resolvido externamente, NÃO consultar Supabase dentro da função), `FreemiumEligibilityOutput`, `Signals`, `Decision` (`approve` | `review` | `reject` | `defer`)
 - [ ] 4.2 Criar `src/lib/freemium/freemium-risk-service.ts`: função `evaluateFreemiumEligibility(input)` — computa sinais (nameSimilarity, cityMatch, stateMatch, cnpjExists, situacaoCadastral, rootEligible), aplica regras determinísticas de approve/review/reject/defer
 - [ ] 4.3 Implementar similaridade de nome com threshold 0.6 (Levenshtein/Jaro-Winkler, reusa função da F32)
 - [ ] 4.4 Implementar cityMatch ignorando acentos e case

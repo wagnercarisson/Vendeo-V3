@@ -125,9 +125,8 @@ interface FreemiumEligibilityInput {
   segment: string;
   officialData: CnpjLookupResult | null;
   lookupOutcome: 'resolved' | 'not_found' | 'unavailable';
-  userId: string;
-  storeId?: string;
   rootHash: string;
+  rootEligible: boolean; // resolvido externamente — NÃO consultar Supabase dentro da função
 }
 
 interface FreemiumEligibilityOutput {
@@ -314,7 +313,8 @@ Migration única: `20260728000001_f33_cnpj_verification.sql`
 4. CREATE OR REPLACE RPC `admin_approve_store_verification` — aprova + tenta onboarding normal + audit log
 5. CREATE OR REPLACE RPC `admin_reject_store_verification` — recusa + audit log
 6. CREATE OR REPLACE RPC `admin_create_test_store` — cria store de teste + audit log
-7. Modificar RPC `create_store_with_cnpj` — recebe `verification_status` como parâmetro, condiciona grant à decisão
+7. CREATE OR REPLACE RPC `admin_exception_store_verification` — concede exceção com `benefit_type='admin_exception'`, bypassa regras de elegibilidade, audit log
+8. Modificar RPC `create_store_with_cnpj` — recebe `verification_status` como parâmetro, condiciona grant à decisão
 
 **Rollback:** Reverter migration `20260728000001`, restaurar RPC `create_store_with_cnpj` original, remover colunas, dropar tabela `cnpj_lookup_cache`.
 

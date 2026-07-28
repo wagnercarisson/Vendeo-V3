@@ -13,9 +13,8 @@ interface FreemiumEligibilityInput {
   segment: string;
   officialData: CnpjLookupData | null;
   lookupOutcome: 'resolved' | 'not_found' | 'unavailable';
-  userId: string;
-  storeId?: string;
   rootHash: string;
+  rootEligible: boolean; // resolvido externamente — NÃO consultar Supabase dentro da função
 }
 
 interface FreemiumEligibilityOutput {

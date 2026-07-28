@@ -43,7 +43,7 @@ A F33 avança para a **próxima camada de integridade cadastral**: consultar fon
 
 ## Impact
 
-- **Migration**: 1 nova migration SQL com 7+ colunas em `stores`, 1 nova tabela (`cnpj_lookup_cache`), 4+ RPCs novas/modificadas (`update_store_verification`, `admin_approve_store_verification`, `admin_reject_store_verification`, `admin_create_test_store`), RPC `create_store_with_cnpj` modificada
+- **Migration**: 1 nova migration SQL com 7+ colunas em `stores`, 1 nova tabela (`cnpj_lookup_cache`), 5+ RPCs novas/modificadas (`update_store_verification`, `admin_approve_store_verification`, `admin_reject_store_verification`, `admin_create_test_store`, `admin_exception_store_verification`), RPC `create_store_with_cnpj` modificada
 - **Novo módulo `src/lib/cnpj/lookup-providers/`**: `types.ts`, `brasil-api.ts`, `cnpja.ts` + testes
 - **Novo módulo `src/lib/cnpj/`**: `verification-service.ts` (orquestrador lookup + cache) + testes
 - **Novo módulo `src/lib/freemium/`**: `freemium-risk-service.ts` + testes
