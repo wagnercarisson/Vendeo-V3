@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { maskCnpj } from "@/lib/cnpj/mask";
+import { ReviewActions } from "@/components/admin/review-actions";
 
 const REASON_LABELS: Record<string, string> = {
   nome_divergente: "Nome divergente",
@@ -124,45 +125,8 @@ export default async function AdminReviewsPage({
                       </div>
                     </td>
                     <td className="py-3 px-2">
-                      {validTab === "review" && (
-                        <div className="flex gap-2">
-                          <form action={`/api/admin/reviews/${store.id}/approve`} method="POST">
-                            <button type="submit" className="text-xs text-accent-green hover:underline font-medium">
-                              Aprovar
-                            </button>
-                          </form>
-                          <form action={`/api/admin/reviews/${store.id}/reject`} method="POST">
-                            <button type="submit" className="text-xs text-accent-red hover:underline font-medium">
-                              Recusar
-                            </button>
-                          </form>
-                        </div>
-                      )}
-                      {validTab === "defer" && (
-                        <div className="flex gap-2">
-                          <form action={`/api/admin/reviews/${store.id}/approve`} method="POST">
-                            <button type="submit" className="text-xs text-accent-green hover:underline font-medium">
-                              Aprovar
-                            </button>
-                          </form>
-                          <form action={`/api/admin/reviews/${store.id}/reject`} method="POST">
-                            <button type="submit" className="text-xs text-accent-red hover:underline font-medium">
-                              Recusar
-                            </button>
-                          </form>
-                          <form action={`/api/admin/reviews/${store.id}/exception`} method="POST">
-                            <button type="submit" className="text-xs text-accent-amber hover:underline font-medium">
-                              Exceção
-                            </button>
-                          </form>
-                        </div>
-                      )}
-                      {validTab === "rejected" && (
-                        <form action={`/api/admin/reviews/${store.id}/exception`} method="POST">
-                          <button type="submit" className="text-xs text-accent-amber hover:underline font-medium">
-                            Exceção
-                          </button>
-                        </form>
+                      {(validTab === "review" || validTab === "defer" || validTab === "rejected") && (
+                        <ReviewActions storeId={store.id} tab={validTab as "review" | "defer" | "rejected"} />
                       )}
                     </td>
                   </tr>
