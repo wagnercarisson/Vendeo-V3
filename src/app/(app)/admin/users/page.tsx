@@ -11,13 +11,14 @@ import type { FreemiumStatus } from "@/lib/freemium/types";
 export default async function AdminUsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; page?: string; freemiumStatus?: string }>;
+  searchParams: Promise<{ search?: string; page?: string; freemiumStatus?: string; verificationStatus?: string }>;
 }) {
   await requireAdmin();
   const sp = await searchParams;
 
   const search = sp.search ?? "";
   const freemiumFilter = sp.freemiumStatus ?? "";
+  const verificationFilter = sp.verificationStatus ?? "";
   const page = Math.max(1, parseInt(sp.page ?? "1", 10));
   const pageSize = 20;
 
@@ -25,6 +26,7 @@ export default async function AdminUsersPage({
     p_search: search || null,
     p_page: page,
     p_page_size: pageSize,
+    p_verification_status: verificationFilter || null,
   });
 
   if (error) {
@@ -96,6 +98,9 @@ export default async function AdminUsersPage({
       }
     }
 
+    const verificationStatus = (user as Record<string, unknown>).verificationStatus as string | undefined;
+    const isTestStore = (user as Record<string, unknown>).isTestStore as boolean | undefined;
+
     return {
       ...user,
       balance: displayBalance,
@@ -103,6 +108,8 @@ export default async function AdminUsersPage({
       purchasedBalance: balanceInfo?.purchasedBalance ?? user.purchasedBalance ?? 0,
       cnpjMasked: storeInfo?.cnpjNormalized ? maskCnpj(storeInfo.cnpjNormalized) : null,
       freemiumStatus,
+      verificationStatus: verificationStatus || "unverified",
+      isTestStore: isTestStore || false,
     };
   });
 
@@ -129,11 +136,23 @@ export default async function AdminUsersPage({
           defaultValue={freemiumFilter}
           className="rounded-md border border-border bg-bg-surface px-3 py-2 text-sm"
         >
-          <option value="">Todos</option>
+          <option value="">Todos (freemium)</option>
           <option value="no_cnpj">Sem CNPJ</option>
           <option value="active">Freemium ativo</option>
           <option value="used">Freemium usado</option>
           <option value="exhausted">Freemium esgotado</option>
+        </select>
+        <select
+          name="verificationStatus"
+          defaultValue={verificationFilter}
+          className="rounded-md border border-border bg-bg-surface px-3 py-2 text-sm"
+        >
+          <option value="">Todas (verificação)</option>
+          <option value="approved">Aprovado</option>
+          <option value="review">Revisão</option>
+          <option value="rejected">Recusado</option>
+          <option value="defer">Adiado</option>
+          <option value="unverified">Não verificado</option>
         </select>
         <button
           type="submit"
@@ -152,6 +171,7 @@ export default async function AdminUsersPage({
               <th className="px-3 py-2 text-left font-medium">Loja</th>
               <th className="px-3 py-2 text-left font-medium">Segmento</th>
               <th className="px-3 py-2 text-left font-medium">CNPJ</th>
+              <th className="px-3 py-2 text-left font-medium">Verificação</th>
               <th className="px-3 py-2 text-right font-medium">Saldo</th>
               <th className="px-3 py-2 text-right font-medium">Campanhas</th>
               <th className="px-3 py-2 text-right font-medium">Erros</th>
@@ -172,6 +192,30 @@ export default async function AdminUsersPage({
                 <td className="px-3 py-2">{user.storeName ?? "—"}</td>
                 <td className="px-3 py-2">{user.segment ?? "—"}</td>
                 <td className="px-3 py-2 text-xs font-mono">{user.cnpjMasked ?? "—"}</td>
+                <td className="px-3 py-2 text-xs">
+                  {user.isTestStore ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-900/20 text-accent-amber text-[10px] font-heading font-semibold">TESTE</span>
+                  ) : (() => {
+                    const vStatus = user.verificationStatus;
+                    const vColors: Record<string, string> = {
+                      approved: "bg-accent-green/10 text-accent-green",
+                      review: "bg-accent-amber/10 text-accent-amber",
+                      rejected: "bg-accent-red/10 text-accent-red",
+                      defer: "bg-accent-blue/10 text-accent-blue",
+                    };
+                    const vLabels: Record<string, string> = {
+                      approved: "Aprovado",
+                      review: "Revisão",
+                      rejected: "Recusado",
+                      defer: "Adiado",
+                    };
+                    return vStatus && vStatus !== "unverified" ? (
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-heading font-semibold ${vColors[vStatus] || "bg-bg-elevated text-text-muted"}`}>
+                        {vLabels[vStatus] || vStatus}
+                      </span>
+                    ) : <span className="text-text-muted text-[10px]">—</span>;
+                  })()}
+                </td>
                 <td className="px-3 py-2 text-right">{user.balance}</td>
                 <td className="px-3 py-2 text-right">{user.totalCampaigns}</td>
                 <td className="px-3 py-2 text-right">
@@ -188,7 +232,7 @@ export default async function AdminUsersPage({
             ))}
             {filteredUsers.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-3 py-8 text-center">
+                <td colSpan={9} className="px-3 py-8 text-center">
                   <EmptyState
                     icon={Users}
                     title="Nenhum lojista cadastrado"
@@ -246,7 +290,7 @@ export default async function AdminUsersPage({
           <div className="flex gap-2">
             {page > 1 && (
               <Link
-                href={`/admin/users?page=${page - 1}${search ? `&search=${search}` : ""}${freemiumFilter ? `&freemiumStatus=${freemiumFilter}` : ""}`}
+                href={`/admin/users?page=${page - 1}${search ? `&search=${search}` : ""}${freemiumFilter ? `&freemiumStatus=${freemiumFilter}` : ""}${verificationFilter ? `&verificationStatus=${verificationFilter}` : ""}`}
                 className="rounded-md border px-3 py-1 hover:bg-muted"
               >
                 Anterior
@@ -254,7 +298,7 @@ export default async function AdminUsersPage({
             )}
             {page < totalPages && (
               <Link
-                href={`/admin/users?page=${page + 1}${search ? `&search=${search}` : ""}${freemiumFilter ? `&freemiumStatus=${freemiumFilter}` : ""}`}
+                href={`/admin/users?page=${page + 1}${search ? `&search=${search}` : ""}${freemiumFilter ? `&freemiumStatus=${freemiumFilter}` : ""}${verificationFilter ? `&verificationStatus=${verificationFilter}` : ""}`}
                 className="rounded-md border px-3 py-1 hover:bg-muted"
               >
                 Próxima

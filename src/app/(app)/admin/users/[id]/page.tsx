@@ -105,6 +105,11 @@ export default async function AdminUserDetailPage({
             Este usuário ainda não possui uma loja. Crie uma loja para conceder acesso ao beta.
           </p>
           <StoreCreationForm userId={userId} />
+          <div className="mt-3">
+            <a href={`/admin/users/${userId}/create-test-store`} className="text-xs text-accent-amber hover:underline font-medium">
+              Criar store de teste
+            </a>
+          </div>
         </div>
       )}
 
@@ -123,6 +128,63 @@ export default async function AdminUserDetailPage({
           </div>
 
           <div className="rounded-md border border-border bg-bg-surface p-4">
+            <h2 className="text-lg font-semibold mb-3">Verificação Cadastral</h2>
+            <dl className="grid grid-cols-2 gap-2 text-sm">
+              <dt className="text-muted-foreground">Status</dt>
+              <dd>
+                {storeData.is_test_store ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-900/20 text-accent-amber text-xs font-heading font-semibold">TESTE</span>
+                ) : (() => {
+                  const v = storeData.verification_status as string;
+                  if (v === "approved") return <span className="text-accent-green">Aprovado</span>;
+                  if (v === "review") return <span className="text-accent-amber">Em revisão</span>;
+                  if (v === "rejected") return <span className="text-accent-red">Recusado</span>;
+                  if (v === "defer") return <span className="text-accent-blue">Adiado</span>;
+                  return <span className="text-muted-foreground">Não verificado</span>;
+                })()}
+              </dd>
+              {storeData.cnpj_official_data && (
+                <>
+                  <dt className="text-muted-foreground">Razão Social</dt>
+                  <dd>{(storeData.cnpj_official_data as Record<string, unknown>).razao_social as string || "—"}</dd>
+                  <dt className="text-muted-foreground">Situação</dt>
+                  <dd>{(storeData.cnpj_official_data as Record<string, unknown>).situacao_cadastral as string || "—"}</dd>
+                  <dt className="text-muted-foreground">Endereço</dt>
+                  <dd className="text-xs">
+                    {[
+                      (storeData.cnpj_official_data as Record<string, unknown>).logradouro,
+                      (storeData.cnpj_official_data as Record<string, unknown>).numero,
+                      (storeData.cnpj_official_data as Record<string, unknown>).bairro,
+                      (storeData.cnpj_official_data as Record<string, unknown>).cidade,
+                      (storeData.cnpj_official_data as Record<string, unknown>).uf,
+                    ].filter(Boolean).join(", ") || "—"}
+                  </dd>
+                </>
+              )}
+              {storeData.verification_reasons && (storeData.verification_reasons as string[]).length > 0 && (
+                <>
+                  <dt className="text-muted-foreground">Motivos</dt>
+                  <dd className="text-xs">{(storeData.verification_reasons as string[]).join(", ")}</dd>
+                </>
+              )}
+            </dl>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <form action={`/api/admin/reviews/${storeId}/reveal-cnpj`} method="POST">
+                <button type="submit" className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-bg-elevated transition-all">
+                  Revelar CNPJ
+                </button>
+              </form>
+              {storeData.verification_status === "defer" && (
+                <form action={`/api/admin/reviews/${storeId}/approve`} method="POST" className="inline">
+                  <button type="submit" className="rounded-md bg-accent-blue px-3 py-1.5 text-xs font-medium text-white hover:brightness-110 transition-all">
+                    Reprocessar
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-md border border-border bg-bg-surface p-4">
             <h2 className="text-lg font-semibold mb-3">CNPJ e Freemium</h2>
             <dl className="grid grid-cols-2 gap-2 text-sm">
               <dt className="text-muted-foreground">CNPJ</dt>
@@ -133,10 +195,10 @@ export default async function AdminUserDetailPage({
               </dd>
               <dt className="text-muted-foreground">Status Freemium</dt>
               <dd>
-                {freemiumStatus === "active" && <span className="text-green-600">🟢 Freemium ativo</span>}
-                {freemiumStatus === "used" && <span className="text-yellow-600">🟡 Freemium usado</span>}
-                {freemiumStatus === "exhausted" && <span className="text-red-600">🔴 Freemium esgotado</span>}
-                {freemiumStatus === "no_cnpj" && <span className="text-muted-foreground">⚪ Sem CNPJ</span>}
+                {freemiumStatus === "active" && <span className="text-accent-green">Freemium ativo</span>}
+                {freemiumStatus === "used" && <span className="text-accent-amber">Freemium usado</span>}
+                {freemiumStatus === "exhausted" && <span className="text-accent-red">Freemium esgotado</span>}
+                {freemiumStatus === "no_cnpj" && <span className="text-muted-foreground">Sem CNPJ</span>}
               </dd>
             </dl>
             {entitlements.length > 0 && (

@@ -35,6 +35,9 @@ export default async function AdminLayout({
         <Link href="/admin/audit-log" className="font-medium hover:text-primary">
           Histórico de auditoria
         </Link>
+        <Link href="/admin/reviews" className="font-medium hover:text-primary">
+          Revisão
+        </Link>
       </nav>
       <main>{children}</main>
     </div>
