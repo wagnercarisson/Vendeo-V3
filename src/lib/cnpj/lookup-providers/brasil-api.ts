@@ -22,7 +22,7 @@ function mapResponse(data: Record<string, unknown>, cnpj: string): CnpjLookupDat
     numero: (data.numero as string) || null,
     complemento: (data.complemento as string) || null,
     bairro: (data.bairro as string) || null,
-    cidade: (data.cidade as string) || null,
+    cidade: (data.municipio as string) || null,
     uf: (data.uf as string) || null,
     cnae_principal: (data.cnae_principal as string) || null,
     cnae_descricao: (data.cnae_descricao as string) || null,

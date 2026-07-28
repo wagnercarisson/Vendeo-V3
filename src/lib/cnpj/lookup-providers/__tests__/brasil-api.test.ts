@@ -22,7 +22,7 @@ describe("BrasilApiProvider", () => {
         logradouro: "Rua Exemplo",
         numero: "123",
         bairro: "Centro",
-        cidade: "São Paulo",
+        municipio: "São Paulo",
         uf: "SP",
         cnae_principal: "4781-4/00",
         cnae_descricao: "Comércio varejista de artigos do vestuário",

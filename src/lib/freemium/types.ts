@@ -25,7 +25,7 @@ export type FreemiumEntitlement = z.infer<typeof FreemiumEntitlementSchema>;
 
 export type FreemiumStatus = "active" | "used" | "exhausted" | "no_cnpj";
 
-export type Decision = "approve" | "review" | "reject" | "defer";
+export type Decision = "approved" | "review" | "reject" | "defer";
 
 export type FreemiumEligibilityInput = {
   cnpj: string;

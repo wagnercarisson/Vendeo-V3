@@ -32,7 +32,7 @@ describe("F33 — Fluxos de Verificação CNPJ Freemium", () => {
       rootEligible: true,
     });
 
-    expect(result.decision).toBe("approve");
+    expect(result.decision).toBe("approved");
     expect(result.reasons).toEqual([]);
     expect(result.score).toBeGreaterThanOrEqual(80);
   });

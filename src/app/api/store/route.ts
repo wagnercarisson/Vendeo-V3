@@ -151,7 +151,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
       verificationStatus = eligibility.decision;
       verificationReasons = eligibility.reasons.length > 0 ? eligibility.reasons : null;
 
-      if (eligibility.decision === "approve") {
+      if (eligibility.decision === "approved") {
         userMessage = "Loja criada com sucesso! Seus créditos de boas-vindas foram liberados.";
       } else if (eligibility.decision === "review") {
         userMessage = "Loja criada. Seus créditos de boas-vindas serão liberados após verificação cadastral.";

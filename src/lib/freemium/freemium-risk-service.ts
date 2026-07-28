@@ -132,7 +132,7 @@ export function evaluateFreemiumEligibility(
   if (signals.stateMatch) score += 10;
 
   return {
-    decision: "approve",
+    decision: "approved",
     reasons: [],
     score,
     signals,

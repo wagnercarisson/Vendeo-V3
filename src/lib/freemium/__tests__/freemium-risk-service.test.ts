@@ -49,7 +49,7 @@ describe("evaluateFreemiumEligibility", () => {
   it("APPROVE when all signals are positive", () => {
     const result = evaluateFreemiumEligibility(makeInput());
 
-    expect(result.decision).toBe("approve");
+    expect(result.decision).toBe("approved");
     expect(result.reasons).toEqual([]);
     expect(result.score).toBeGreaterThanOrEqual(80);
     expect(result.signals.cnpjExists).toBe(true);
@@ -68,7 +68,7 @@ describe("evaluateFreemiumEligibility", () => {
     });
 
     const result = evaluateFreemiumEligibility(input);
-    expect(result.decision).toBe("approve");
+    expect(result.decision).toBe("approved");
     expect(result.signals.nameSimilarity).toBeGreaterThanOrEqual(0.6);
   });
 
