@@ -12,6 +12,9 @@ Rota Vercel Cron `GET /api/cron/monthly-credits` com proteção CRON_SECRET, lei
 
 O sistema SHALL criar a rota `GET /api/cron/monthly-credits` executada pelo Vercel Cron no schedule `0 6 * * *` (06:00 UTC diário).
 
+**MODIFICADO (F32):** O cron mensal SHALL verificar entitlement por raiz antes de conceder créditos mensais. Lojas sem `cnpj_root_hash` (vazio ou nulo) são ignoradas.
+- Dentro do loop de stores elegíveis, antes de `grant_credits`: lê `stores.cnpj_root_hash`, se vazio/nulo → pula, calcula `cycle = TO_CHAR(NOW(), 'YYYY-MM')`, tenta INSERT em `freemium_entitlements`, se retornou id → concede, se ON CONFLICT → pula
+
 #### Scenario: Cron route exists at correct path
 
 - **WHEN** `GET /api/cron/monthly-credits` é acessado
@@ -80,6 +83,30 @@ A rota SHALL retornar JSON com `{ eligible, granted, skipped, errors }` refletin
 
 - **WHEN** `GET /api/cron/monthly-credits` executa com sucesso
 - **THEN** retorna `{ eligible: number, granted: number, skipped: number, errors: number }`
+
+#### Scenario: Raiz sem grant no ciclo → concede
+
+- **WHEN** cron executa para store com cnpj_root_hash válido
+- **AND** raiz não recebeu monthly neste ciclo
+- **THEN** INSERT em freemium_entitlements vence
+- **AND** 5 créditos são concedidos
+
+#### Scenario: Raiz já recebeu no ciclo → pula
+
+- **WHEN** cron executa para store cuja raiz já recebeu monthly neste ciclo
+- **THEN** INSERT não vence (ON CONFLICT)
+- **AND** nenhum crédito é concedido
+
+#### Scenario: Loja sem CNPJ → ignorada
+
+- **WHEN** cron executa para store com `cnpj_root_hash` vazio ou nulo
+- **THEN** a store é pulada sem tentativa de INSERT
+
+#### Scenario: Três filiais + matriz = 1 grant mensal
+
+- **WHEN** cron executa para 4 stores da mesma raiz
+- **THEN** apenas 1 store recebe grant mensal (a primeira do loop)
+- **AND** as outras 3 são puladas (raiz já entitled no ciclo)
 
 ### Requirement: POST /api/admin/monthly-credits/grant
 

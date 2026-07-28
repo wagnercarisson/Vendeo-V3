@@ -12,7 +12,7 @@ Pipeline de geração de imagem em 3 zonas (pré-stream, paralelo, pós) com res
 
 O sistema SHALL estruturar o handler `POST /api/campaign/generate-image` em três zonas com responsabilidades distintas:
 
-**PRÉ-STREAM (síncrono, fora do ReadableStream):** parse + auth + ownership + **legal clearance** + **campaignIntent guard** + rate limit + saldo check + input validation + criar campanha + reservar crédito. Produz Response HTTP direto (400, 401, 403, 429, 402, 409, 500). Nunca chama IA paga se alguma condição falhar.
+**PRÉ-STREAM (síncrono, fora do ReadableStream):** parse + auth + ownership + **legal clearance (inclui reaceite v1.2)** + **campaignIntent guard** + rate limit + saldo check + input validation + criar campanha + reservar crédito. Produz Response HTTP direto (400, 401, 403, 429, 402, 409, 500). Nunca chama IA paga se alguma condição falhar.
 
 O pré-stream SHALL incluir `campaignIntent` (default "offer") e `preserveImageContext` (normalizado para false quando offer) no `inputSnapshot` ao criar a campanha.
 
@@ -53,6 +53,12 @@ O pré-stream SHALL incluir `campaignIntent` (default "offer") e `preserveImageC
 - **THEN** retorna HTTP 403 Forbidden
 - **AND** Nenhuma chamada de IA é feita
 - **AND** Nenhum rate limit check é executado
+
+#### Scenario: Legal clearance bloqueia sem v1.2 (ADDED F32)
+
+- **WHEN** `POST /api/campaign/generate-image` é chamado
+- **AND** loja não aceitou `terms_of_service` v1.2
+- **THEN** retorna HTTP 403 antes de qualquer operação (rate limit, saldo, IA)
 
 #### Scenario: Legal clearance passes continues normally
 

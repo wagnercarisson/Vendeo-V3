@@ -8,51 +8,63 @@ Ownership validation on the 4 CRUD store API routes: POST, GET (atalho), GET by 
 
 ## Requirements
 
-### Requirement: POST /api/store uses requireUser + claims.sub
+### Requirement: POST /api/store uses requireUser + claims.sub (MODIFICADO F32)
 
-The system SHALL update `POST /api/store` to use `requireUser()` and set `user_id` from `claims.sub`.
+The system SHALL update `POST /api/store` to require CNPJ on the request body, validate it, and condition the onboarding grant on root_hash eligibility.
 
 - MUST call `requireUser()` before any database operation
 - MUST set `user_id` to `claims.sub` — any `user_id` in the request body SHALL be ignored
 - MUST use `supabaseAdmin` for the INSERT (service_role)
 - MUST validate required fields (`name`, `segment`) before calling the RPC
+- MUST accept `cnpj: string` as **required** field — format `XX.XXX.XXX/YYYY-ZZ` or `XXXXXXXXXXXXXX`
+- MUST accept `razaoSocial?: string` and `nomeFantasia?: string` as optional fields
+- MUST validate CNPJ via `validateCnpj()` before calling the RPC — if invalid, return 400
+- MUST check if `cnpj_normalized` already exists for another user — if yes, return 409
 - MUST accept `acceptedTerms: boolean` from the request body — this is the only client-sent legal field
-- MUST resolve CURRENT document versions server-side via `getCurrentVersion()` — the client does NOT send version strings (avoids version spoofing and simplifies client code)
-- MUST call `create_store_with_legal_acceptance()` RPC instead of direct INSERT — the RPC creates store + registers legal acceptances + grants credits atomically
+- MUST resolve CURRENT document versions server-side via `getCurrentVersion()` — the client does NOT send version strings
+- MUST call `create_store_with_cnpj(cnpj_normalized, cnpj_root_hash, ..., razao_social, nome_fantasia)` RPC instead of `create_store_with_legal_acceptance()` — the route calculates `cnpj_root_hash = HMAC-SHA256(cnpj_normalized[:8], process.env.CNPJ_PEPPER)` server-side, then the RPC creates store + registers legal acceptances + saves razao_social/nome_fantasia + tries entitlement-first + grants credits IF entitlement succeeds
+- MUST NOT expose `cnpj_root_hash` to the client — the hash is calculated in the Next.js server route (not in the browser), eliminating the hash forgery attack vector; the RPC (service_role) receives the already-computed hash from the route
 - MUST pass `p_ip_address` (from request) and `p_user_agent` (from headers)
-- On success: MUST return 201 with the created store
-- On UNIQUE violation (error code `23505`): MUST return 409 with `{ error: "Usuário já possui uma loja" }`
-- On validation failure: MUST return 400 with error details
-- On validation failure (missing acceptance): MUST return 400 with `{ error: "Você precisa aceitar os Termos de Uso e a Política de Uso Aceitável." }`
+- On success: MUST return 201 with the created store including `cnpjMasked` and `onboardingGranted`
+- On UNIQUE violation for `stores.user_id`: MUST return 409 `{ error: "Usuário já possui uma loja" }`
+- On UNIQUE violation for `stores.cnpj_normalized`: MUST return 409 `{ error: "Este CNPJ já está cadastrado em outra conta" }`
+- On invalid CNPJ: MUST return 400 `{ error: "CNPJ inválido" }`
+- On missing CNPJ: MUST return 400 `{ error: "CNPJ é obrigatório" }`
 - On `UnauthorizedError`: MUST return 401 JSON (not redirect)
 
-#### Scenario: Store created with claims.sub
+#### Scenario: Store created with CNPJ and onboarding grant
 
-- **WHEN** a POST request is sent to `/api/store` with valid body
-- **AND** the user is authenticated
+- **WHEN** a POST request is sent to `/api/store` with valid body including `cnpj`
+- **AND** the CNPJ root_hash is new (never used freemium)
 - **THEN** the store is created with `user_id = claims.sub`
-- **AND** the response status is 201
+- **AND** `cnpj_normalized` and `cnpj_root_hash` are stored
+- **AND** `legal_acceptances` are registered
+- **AND** `razao_social` and `nome_fantasia` are persisted
+- **AND** 10 onboarding credits are granted
+- **AND** response includes `onboardingGranted: true`
 
-#### Scenario: user_id in body is ignored
+#### Scenario: Store created as branch (same root, different CNPJ)
 
-- **WHEN** a POST request includes `user_id` in the body
-- **THEN** the `user_id` from `claims.sub` prevails
-- **AND** the body field is ignored
+- **WHEN** a POST request is sent with CNPJ having different suffix but same root_hash
+- **AND** the root_hash already has `onboarding` entitlement
+- **THEN** the store is created normally
+- **AND** `onboardingGranted: false`
+- **AND** response includes informative message about branch
 
-#### Scenario: Duplicate store returns 409
+#### Scenario: Duplicate CNPJ returns 409
 
-- **WHEN** a POST request is sent
-- **AND** the user already has a store (UNIQUE constraint violation)
-- **THEN** the response is 409 `{ error: "Usuário já possui uma loja" }`
+- **WHEN** a POST request is sent with an already registered `cnpj_normalized`
+- **THEN** the response is 409 `{ error: "Este CNPJ já está cadastrado em outra conta" }`
 
-#### Scenario: Store creation with acceptance flows through atomic RPC
+#### Scenario: Invalid CNPJ returns 400
 
-- **WHEN** a POST request is sent to `/api/store` with valid body and acceptance fields
-- **AND** the user is authenticated
-- **THEN** the store is created via `create_store_with_legal_acceptance()`
-- **AND** both `terms_of_service` and `acceptable_use` acceptances are registered
-- **AND** credits are granted
-- **AND** the response status is 201
+- **WHEN** a POST request is sent with invalid CNPJ format or digits
+- **THEN** the response is 400 `{ error: "CNPJ inválido" }`
+
+#### Scenario: Missing CNPJ returns 400
+
+- **WHEN** a POST request is sent without `cnpj` field
+- **THEN** the response is 400 `{ error: "CNPJ é obrigatório" }`
 
 #### Scenario: Store creation without acceptance returns 400
 

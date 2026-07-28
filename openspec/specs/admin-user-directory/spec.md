@@ -18,6 +18,8 @@ export interface AdminUserSummary {
   storeName: string | null;
   segment: string | null;
   balance: number;
+  bonusBalance: number;
+  purchasedBalance?: number;
   totalCampaigns: number;
   errorCampaigns: number;
   lastCampaignAt: string | null;
@@ -25,14 +27,15 @@ export interface AdminUserSummary {
   privacyAcknowledged: boolean;
   legalAcceptanceStatus: "current" | "outdated" | "never";
   communicationsConsent: "granted" | "revoked" | "never_set";
+  cnpjMasked: string | null;
+  freemiumStatus: "active" | "used" | "exhausted" | "no_cnpj";
 }
 ```
 
 #### Scenario: AdminUserSummary contains all support fields
 
 - **WHEN** admin consulta lista de usuários
-- **AND** cada entry contém privacyAcknowledged, legalAcceptanceStatus, communicationsConsent
-- **THEN** cada entry contém userId, email, storeId, storeName, segment, balance, totalCampaigns, errorCampaigns, lastCampaignAt, createdAt
+- **THEN** cada entry contém userId, email, storeId, storeName, segment, balance, bonusBalance, totalCampaigns, errorCampaigns, lastCampaignAt, createdAt, cnpjMasked, freemiumStatus
 
 ### Requirement: User detail page — legal status badges (ADDED)
 
@@ -115,7 +118,8 @@ O sistema SHALL expor `GET /api/admin/users/[id]` para detalhe completo de um lo
 O sistema SHALL exibir `/admin/users` com diretório de usuários/lojas.
 
 - Server Component com busca SSR via searchParams
-- Tabela com colunas: email, loja, segmento, saldo, total de campanhas, erros, última campanha, criado em
+- Tabela com colunas: email, loja, segmento, CNPJ (mascarado), saldo, total de campanhas, erros, última campanha, criado em
+- Filtro por status freemium (dropdown): "Sem CNPJ", "Freemium ativo", "Freemium usado", "Freemium esgotado"
 - Busca por nome/email/segmento
 - Paginação
 - Link para detalhe `/admin/users/[id]`
@@ -130,18 +134,14 @@ O sistema SHALL exibir `/admin/users` com diretório de usuários/lojas.
 - **WHEN** admin digita "joão" no campo de busca
 - **THEN** lista filtra para usuários cujo email ou storeName contém "joão"
 
-### Requirement: /admin/users/[id] detail page
+### Requirement: /admin/users/[id] detail page — CNPJ, freemium e exceção
 
 O sistema SHALL exibir `/admin/users/[id]` com detalhe completo do lojista.
 
 - Server Component com dados consolidados
-- Seção "Dados da Loja": nome, segmento, criado em
-- Seção "Saldo": saldo atual
+- Seção "Dados da Loja": nome, segmento, saldo
+- Seção "CNPJ e Freemium": CNPJ mascarado, badge de status freemium (ativo/usado/esgotado/sem CNPJ), histórico de entitlements, botão "Conceder exceção" (link para página de formulário)
+- Seção "Situação Legal": privacidade, aceite contratual, consentimento, histórico de aceitação
 - Seção "Extrato": tabela de transações (tipo, valor, data, motivo)
 - Seção "Conceder Créditos": formulário de grant inline (Client Component)
 - Seção "Campanhas": tabela com campanhas recentes, destacando errors em vermelho
-
-#### Scenario: Admin views user detail page
-
-- **WHEN** admin acessa `/admin/users/abc-123`
-- **THEN** exibe dados consolidados com saldo, extrato, formulário de grant e campanhas

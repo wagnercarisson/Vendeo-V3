@@ -114,6 +114,9 @@ The system SHALL render the following form fields in the store identity form:
 
 - **Nome da Loja**: required text input, 2–60 characters
 - **Segmento**: required dropdown select using the `STORE_SEGMENTS` constant from `src/lib/constants.ts` (13 options)
+- **CNPJ**: required text input com máscara `XX.XXX.XXX/YYYY-ZZ` (visible ONLY in create mode, required)
+- **Razão Social**: optional text input (visible ONLY in create mode)
+- **Nome Fantasia**: optional text input (visible ONLY in create mode)
 - **Logo da Loja**: optional upload area with drag-and-drop or click-to-upload. Preview circular after upload. Shows simple processing status ("Enviando...", "Processando...", "Pronto"). Technical variants are NOT exposed.
 - **Cor da Marca**: optional color picker (`<input type="color">`) with companion hex text input. When a brand profile exists with detected colors, show suggested swatches below the picker. No conflict modal if chosen color differs from detected color.
 - **Cidade**: optional text input
@@ -171,6 +174,18 @@ The segment dropdown options SHALL display human-readable labels (not kebab-case
 - **WHEN** the form is displayed
 - **THEN** Cor da Marca, Cidade, and Estado SHALL be present
 - **AND** they SHALL NOT be marked as required
+
+#### Scenario: CNPJ field visible in create mode
+
+- **WHEN** o formulário está em modo criação
+- **THEN** o campo CNPJ é exibido com máscara `XX.XXX.XXX/YYYY-ZZ`
+- **AND** o campo é required
+- **AND** razão social e nome fantasia são exibidos como optional
+
+#### Scenario: CNPJ field hidden in edit mode
+
+- **WHEN** o formulário está em modo edição
+- **THEN** os campos CNPJ, razão social e nome fantasia NÃO são exibidos
 
 #### Scenario: Segment dropdown shows 13 options
 
