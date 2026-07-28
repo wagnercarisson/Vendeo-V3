@@ -3,22 +3,22 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: "Lançamento Externo Controlado — Créditos + Admin + Saldo + Observabilidade + Launch + Modelo Comercial"
 status: active
-last_updated: "2026-07-25T17:30:00.000Z"
-last_activity: "2026-07-25T17:30:00.000Z"
+last_updated: "2026-07-28T12:00:00.000Z"
+last_activity: "2026-07-28T12:00:00.000Z"
 progress:
-  total_phases: 17
+  total_phases: 18
   completed_phases: 16
-  total_plans: 78
+  total_plans: 83
   completed_plans: 67
-  percent: 86
-  current_phase_plans: 0
+  percent: 81
+  current_phase_plans: 5
 ---
 
 # Project State
 
-**Last updated:** 2026-07-27
+**Last updated:** 2026-07-28
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆ **Em andamento**
-**Current phase:** 32 — Freemium Anti-Abuso CNPJ (✅ completed)
+**Current phase:** 33 — Verificação CNPJ Freemium (◆ planning)
 
 ## Completed
 
@@ -422,7 +422,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-v1.5 em andamento — Fases 31.1, 31.2 e 31.3 concluídas. UAT 31.3 executada com IA real (6/6 cenários, 5 aprovados, 1 ajuste no prompt do diretor exclusive validado). F32 (Freemium Anti-Abuso CNPJ) em planejamento.
+v1.5 em andamento — Fases 31.1, 31.2, 31.3 e 32 concluídas. F33 (Verificação CNPJ Freemium) em planejamento. F34 (Stripe / Monetização Pública) como próximo marco.
 
 ### Phase 30 — Fundação Legal ✅
 
@@ -508,7 +508,8 @@ v1.5 em andamento — Fases 31.1, 31.2 e 31.3 concluídas. UAT 31.3 executada co
 | **F31.2** | **✅ Completed** | **Diretores por Intenção — Schemas tolerantes, desbloqueio de intents, 6 prompts, roteamento, conteúdo adaptado, 6 plans, UAT 9/9 ✅** |
 | **F31.3** | **✅ Completed** | **Quality Gate por Intenção Comercial — ImageReviewInput intent-aware, prompt reestruturado, commercial_tone_mismatch, 6 plans, 1071 testes, UAT executada com IA real (6/6 cenários)** |
 | F32 | ✅ Complete | Freemium Anti-Abuso CNPJ — CNPJ obrigatório, entitlement por raiz, admin freemium status (5/5 plans, 27+ tests) |
-| F33 | ○ Future | Stripe / Monetização Pública |
+| F33 | ◆ Planning | Verificação CNPJ Freemium — Consulta BrasilAPI/CNPJá, cross-check, motor de decisão, admin review, test stores |
+| F34 | ○ Future | Stripe / Monetização Pública |
 
 ### Quick Tasks Completed
 

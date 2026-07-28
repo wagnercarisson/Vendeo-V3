@@ -57,7 +57,7 @@ Autenticação completa, vínculo user→store, isolamento multi-tenant, beta.ve
 Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, UAT externo, fundação legal, modelo comercial, freemium anti-abuso CNPJ e Stripe.
 
 <details open>
-<summary>◆ v1.5 Lançamento Externo Controlado (F23-F33) — Em andamento</summary>
+<summary>◆ v1.5 Lançamento Externo Controlado (F23-F34) — Em andamento</summary>
 
 Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, fundação legal e modelo comercial.
 
@@ -102,7 +102,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - InputValidationService verificado (sem alteração)
   - 5 cenários E2E com IA real
 
-- [ ] Phase 32: Freemium Anti-Abuso CNPJ (5 plans planned ◆)
+- [x] Phase 32: Freemium Anti-Abuso CNPJ (5/5 plans ✅)
   - CNPJ obrigatório na criação da loja com validação de dígitos verificadores + formato
   - `stores.cnpj_normalized` + `stores.cnpj_root_hash` — CNPJ normalizado, hash HMAC-SHA256 da raiz com pepper server-side
   - `freemium_entitlements` — tabela de controle com idempotência (INSERT ... ON CONFLICT)
@@ -112,14 +112,27 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - Termos de Uso v1.2 e Política de Privacidade v1.1
   - Lojas legadas: atualização cadastral sem novo grant de créditos
   - Pipeline guard de reaceite v1.2
-  - **Plans:**
-    - [ ] 32-01-PLAN.md — Migration SQL + CNPJ Core Library
-    - [ ] 32-02-PLAN.md — Freemium Core Library + Store Route
-    - [ ] 32-03-PLAN.md — Store Identity Form + Admin CNPJ/Freemium UI
-    - [ ] 32-04-PLAN.md — Legacy Store Update + Legal Documents v1.2/v1.1
-    - [ ] 32-05-PLAN.md — Tests + Verification
 
-- [ ] Phase 33: Stripe / Monetização Pública (pending)
+- [ ] Phase 33: Verificação CNPJ Freemium (planned ◆)
+  - Consulta cadastral externa de CNPJ — BrasilAPI como provedor primário, CNPJá como fallback, tratamento de timeout/erro/rate limit
+  - Preenchimento automático de dados oficiais no formulário de criação de loja (razão social/nome fantasia bloqueados, endereço editável)
+  - Cross-check de verossimilhança — nome da loja vs razão social/nome fantasia oficiais, cidade/UF informada vs oficial
+  - Motor de decisão determinístico de elegibilidade: approve / review / reject / defer
+  - Liberação condicional do freemium — concede onboarding grant apenas se decisão = approve
+  - Cache de consulta CNPJ com TTL 24h (tabela `cnpj_lookup_cache`)
+  - Fila de revisão admin (`/admin/reviews`) com abas Pendentes/Adiados/Recusados/Aprovados, ações Aprovar/Recusar/Exceção com audit trail
+  - Criação de store de teste pelo admin com CNPJ fictício (`is_test_store`)
+  - Revelação de CNPJ auditada no admin com registro em admin_audit_log
+  - Mensagens ao usuário por estado (lookup, approve, review, reject, defer)
+  - **Dependências:** F32 (cnpj validation, freemium entitlements, store route, admin), F30 (legal clearance, admin_audit_log), F24 (credit_transactions)
+  - **Plans:**
+    - [ ] 33-01-PLAN.md — Migration + Core Libraries (Lookup, Verification, Risk Service)
+    - [ ] 33-02-PLAN.md — Store Route + Grant Conditional
+    - [ ] 33-03-PLAN.md — Store Identity Form + Dashboard Banners
+    - [ ] 33-04-PLAN.md — Admin Reviews + Test Stores + Privacy
+    - [ ] 33-05-PLAN.md — Tests + Verification
+
+- [ ] Phase 34: Stripe / Monetização Pública (pending)
 
 </details>
 
@@ -158,7 +171,8 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 31.2. Diretores por Intenção | v1.5 | 6/6 | ✅ Complete | 2026-07-25 |
 | 31.3. Quality Gate por Intenção Comercial | v1.5 | 6/6 | ✅ Complete | 2026-07-26 |
 | 32. Freemium Anti-Abuso CNPJ | v1.5 | 5/5 | ✅ Complete | 2026-07-27 |
-| 33. Stripe / Monetização Pública | v1.5 | 0/0 | ○ Pending | — |
+| 33. Verificação CNPJ Freemium | v1.5 | 0/5 | ◆ Planning | — |
+| 34. Stripe / Monetização Pública | v1.5 | 0/0 | ○ Pending | — |
 
 ---
 
