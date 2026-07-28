@@ -11,6 +11,7 @@ const mockSupabaseFrom = vi.fn(() => ({
   limit: vi.fn().mockReturnThis(),
   single: vi.fn(),
   update: vi.fn().mockReturnThis(),
+  upsert: vi.fn(() => ({ select: vi.fn().mockResolvedValue({ error: null }) })),
 }));
 const mockSupabaseRpc = vi.fn();
 const mockGetClaims = vi.fn();

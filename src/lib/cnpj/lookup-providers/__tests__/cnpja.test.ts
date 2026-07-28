@@ -15,9 +15,10 @@ describe("CnpjaProvider", () => {
     mockFetch.mockResolvedValueOnce({
       status: 200,
       json: async () => ({
-        alias: "EMPRESA EXEMPLO LTDA",
-        name: "Empresa Exemplo",
-        status: { text: "ATIVA", date: "2020-01-01" },
+        name: "EMPRESA EXEMPLO LTDA",
+        alias: "Empresa Exemplo",
+        status: { text: "ATIVA", since: "2020-01-01" },
+        company: { name: "EMPRESA EXEMPLO LTDA" },
         address: {
           zip: "01234567",
           street: "Rua Exemplo",
@@ -26,8 +27,8 @@ describe("CnpjaProvider", () => {
           city: "São Paulo",
           state: "SP",
         },
-        main_activity: { code: "4781-4/00", text: "Comércio varejista" },
-        founded: "2010-05-10",
+        mainActivity: { id: "4781400", text: "Comércio varejista de artigos do vestuário e acessórios" },
+        registration: { date: "2010-05-10", status: "ATIVA" },
         size: "ME",
       }),
     });
@@ -37,7 +38,10 @@ describe("CnpjaProvider", () => {
     expect(result.status).toBe("resolved");
     if (result.status === "resolved") {
       expect(result.data.razao_social).toBe("EMPRESA EXEMPLO LTDA");
+      expect(result.data.nome_fantasia).toBe("Empresa Exemplo");
       expect(result.data.situacao_cadastral).toBe("ATIVA");
+      expect(result.data.data_abertura).toBe("2010-05-10");
+      expect(result.data.cnae_principal).toBe("4781400");
     }
   });
 

@@ -15,6 +15,7 @@ const mockFromChain = vi.fn(() => ({
   order: vi.fn().mockReturnThis(),
   limit: vi.fn().mockReturnThis(),
   single: vi.fn(),
+  upsert: vi.fn(() => ({ select: vi.fn().mockResolvedValue({ error: null }) })),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({

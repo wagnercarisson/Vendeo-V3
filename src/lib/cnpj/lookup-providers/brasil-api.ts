@@ -3,11 +3,12 @@ import type { CnpjLookupProvider, LookupResult, CnpjLookupData } from "./types";
 const TIMEOUT_MS = 5000;
 const MAX_RETRIES = 1;
 const BASE_URL = "https://brasilapi.com.br/api/cnpj/v1";
+const USER_AGENT = "Vendeo/1.0";
 
 function fetchWithTimeout(url: string, timeoutMs: number): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
-  return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
+  return fetch(url, { signal: controller.signal, headers: { "User-Agent": USER_AGENT } }).finally(() => clearTimeout(timer));
 }
 
 function mapResponse(data: Record<string, unknown>, cnpj: string): CnpjLookupData {
@@ -52,13 +53,16 @@ export class BrasilApiProvider implements CnpjLookupProvider {
         }
 
         if (response.status === 429 || response.status >= 500) {
+          console.error(`[BrasilApiProvider] HTTP ${response.status} for ${cnpj}`);
           if (attempt < MAX_RETRIES) continue;
           return { status: "unavailable" };
         }
 
+        console.error(`[BrasilApiProvider] unexpected HTTP ${response.status} for ${cnpj}`);
         if (attempt < MAX_RETRIES) continue;
         return { status: "unavailable" };
-      } catch {
+      } catch (err) {
+        console.error(`[BrasilApiProvider] attempt ${attempt + 1} failed:`, err instanceof Error ? err.message : String(err));
         if (attempt < MAX_RETRIES) continue;
         return { status: "unavailable" };
       }

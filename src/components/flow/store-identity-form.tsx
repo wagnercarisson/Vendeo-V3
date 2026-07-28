@@ -1088,14 +1088,6 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
           <h1 className="text-2xl font-heading font-bold text-text-primary mb-1">Dados da Loja</h1>
           <p className="text-text-secondary text-sm font-body mb-6">Informe os dados básicos da sua loja</p>
 
-          <div>
-            <label htmlFor="name" className={labelClass}>Nome da Loja *</label>
-            <input id="name" type="text" value={formData.name} onChange={(e) => setField("name", e.target.value)} onBlur={() => handleBlur("name")} placeholder="Ex: Minha Loja" maxLength={60} className={inputClass("name")} />
-            {touched.name && fieldErrors.name && (
-              <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs"><AlertCircle className="w-3.5 h-3.5" />{fieldErrors.name}</p>
-            )}
-          </div>
-
           {!storeId && (
             <>
               <div>
@@ -1205,6 +1197,14 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
               </div>
             </>
           )}
+
+          <div>
+            <label htmlFor="name" className={labelClass}>Nome da Loja *</label>
+            <input id="name" type="text" value={formData.name} onChange={(e) => setField("name", e.target.value)} onBlur={() => handleBlur("name")} placeholder="Ex: Minha Loja" maxLength={60} className={inputClass("name")} />
+            {touched.name && fieldErrors.name && (
+              <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs"><AlertCircle className="w-3.5 h-3.5" />{fieldErrors.name}</p>
+            )}
+          </div>
 
           <div>
             <label htmlFor="segment" className={labelClass}>Segmento *</label>
