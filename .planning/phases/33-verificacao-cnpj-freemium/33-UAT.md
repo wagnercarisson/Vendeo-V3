@@ -8,20 +8,21 @@ updated: 2026-07-28T19:35:00Z
 
 ## Current Test
 
-number: 6
-name: Dashboard Banners — Approved Status
+number: 7
+name: Admin Reviews Page — Tabs and Actions
 expected: |
-  The approved store (from test 1) should show a green dismissible banner on the dashboard: "Créditos de boas-vindas liberados".
+  Navigate to /admin/reviews. See 4 tabs: Pendentes, Adiados, Recusados, Aprovados. Each tab shows relevant stores. Click on a pending/review store and approve it.
 awaiting: user response
 
 ## Tests
 
 ### 1. Store Creation with Valid CNPJ — Approve Flow
 expected: Full flow: CNPJ lookup onBlur → auto-fill → submit → store created with freemium grant
-result: issue
-reported: "quase ok - endereço: cidade não foi preenchido [...] estado foi exibido corretamente o restante funciona corretamente"
-severity: minor
-fix: "brasil-api.ts: campo cidade mapeado como municipio (formato real da BrasilAPI)"
+result: pass
+issues_fixed: [
+  "cidade não preenchida — fix: municipio field name",
+  "500 CHECK constraint — fix: approve → approved"
+]
 
 ### 2. CNPJ Field Order
 expected: CNPJ field appears before "Nome da Loja" in the form
@@ -42,7 +43,7 @@ result: pass
 
 ### 6. Dashboard Banners — Approved Status
 expected: After creating a store that results in "approved" status, dashboard shows a green one-time dismissible banner.
-result: [pending]
+result: pass
 
 ### 7. Admin Reviews Page — Tabs and Actions
 expected: Navigate to /admin/reviews. See 4 tabs: Pendentes, Adiados, Recusados, Aprovados. Each tab shows relevant stores. Click Approve/Reject/Exception on a pending store.
@@ -85,4 +86,19 @@ skipped: 0
       issue: "Field name cidade should be municipio"
   missing:
     - "Changed data.cidade to data.municipio in mapResponse"
+  fix_applied: true
+
+- truth: "Store creation with valid CNPJ succeeds with approved status"
+  status: failed
+  reason: "User reported: 500 error — violates check constraint stores_verification_status_check"
+  severity: blocker
+  test: 1
+  root_cause: "evaluateFreemiumEligibility returns 'approve' but DB CHECK constraint expects 'approved'"
+  artifacts:
+    - path: "src/lib/freemium/freemium-risk-service.ts"
+      issue: "returns decision: 'approve' instead of 'approved'"
+    - path: "src/lib/freemium/types.ts"
+      issue: "Decision type includes 'approve' instead of 'approved'"
+  missing:
+    - "Changed all 'approve' to 'approved' in types, service, route, and tests"
   fix_applied: true

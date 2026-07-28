@@ -26,6 +26,7 @@ export const POST = apiHandler(async (_request: NextRequest, { params }: { param
     target_type: "store",
     target_id: id,
     actor_id: admin.userId,
+    reason: "CNPJ revelado por admin",
     metadata: { cnpj_revealed: true },
   });
 
