@@ -2,7 +2,6 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { maskCnpj } from "@/lib/cnpj/mask";
-import { Badge } from "@/components/ui/badge";
 
 const REASON_LABELS: Record<string, string> = {
   nome_divergente: "Nome divergente",
@@ -118,9 +117,9 @@ export default async function AdminReviewsPage({
                     <td className="py-3 px-2">
                       <div className="flex flex-wrap gap-1">
                         {(store.verification_reasons || []).map((r: string) => (
-                          <Badge key={r} variant="outline" className="text-[10px]">
+                          <span key={r} className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-heading font-medium bg-bg-elevated text-text-muted">
                             {REASON_LABELS[r] || r}
-                          </Badge>
+                          </span>
                         ))}
                       </div>
                     </td>

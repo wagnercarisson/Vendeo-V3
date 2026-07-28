@@ -143,30 +143,28 @@ export default async function AdminUserDetailPage({
                   return <span className="text-muted-foreground">Não verificado</span>;
                 })()}
               </dd>
-              {storeData.cnpj_official_data && (
-                <>
+              {(() => {
+                const o = storeData.cnpj_official_data as Record<string, unknown> | null;
+                if (!o) return null;
+                return <>
                   <dt className="text-muted-foreground">Razão Social</dt>
-                  <dd>{(storeData.cnpj_official_data as Record<string, unknown>).razao_social as string || "—"}</dd>
+                  <dd>{(o.razao_social as string) || "—"}</dd>
                   <dt className="text-muted-foreground">Situação</dt>
-                  <dd>{(storeData.cnpj_official_data as Record<string, unknown>).situacao_cadastral as string || "—"}</dd>
+                  <dd>{(o.situacao_cadastral as string) || "—"}</dd>
                   <dt className="text-muted-foreground">Endereço</dt>
                   <dd className="text-xs">
-                    {[
-                      (storeData.cnpj_official_data as Record<string, unknown>).logradouro,
-                      (storeData.cnpj_official_data as Record<string, unknown>).numero,
-                      (storeData.cnpj_official_data as Record<string, unknown>).bairro,
-                      (storeData.cnpj_official_data as Record<string, unknown>).cidade,
-                      (storeData.cnpj_official_data as Record<string, unknown>).uf,
-                    ].filter(Boolean).join(", ") || "—"}
+                    {[o.logradouro, o.numero, o.bairro, o.cidade, o.uf].filter(Boolean).join(", ") || "—"}
                   </dd>
-                </>
-              )}
-              {storeData.verification_reasons && (storeData.verification_reasons as string[]).length > 0 && (
-                <>
+                </>;
+              })()}
+              {(() => {
+                const reasons = storeData.verification_reasons as string[] | null;
+                if (!reasons || reasons.length === 0) return null;
+                return <>
                   <dt className="text-muted-foreground">Motivos</dt>
-                  <dd className="text-xs">{(storeData.verification_reasons as string[]).join(", ")}</dd>
-                </>
-              )}
+                  <dd className="text-xs">{reasons.join(", ")}</dd>
+                </>;
+              })()}
             </dl>
             <div className="mt-4 flex flex-wrap gap-2">
               <form action={`/api/admin/reviews/${storeId}/reveal-cnpj`} method="POST">

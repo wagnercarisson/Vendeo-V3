@@ -98,8 +98,8 @@ export default async function AdminUsersPage({
       }
     }
 
-    const verificationStatus = (user as Record<string, unknown>).verificationStatus as string | undefined;
-    const isTestStore = (user as Record<string, unknown>).isTestStore as boolean | undefined;
+    const verificationStatus = (user as unknown as Record<string, unknown>).verificationStatus as string | undefined;
+    const isTestStore = (user as unknown as Record<string, unknown>).isTestStore as boolean | undefined;
 
     return {
       ...user,
