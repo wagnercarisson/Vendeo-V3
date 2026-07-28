@@ -1,24 +1,23 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.5
-milestone_name: "Lançamento Externo Controlado — Créditos + Admin + Saldo + Observabilidade + Launch + Modelo Comercial"
-status: active
-last_updated: "2026-07-28T12:00:00.000Z"
-last_activity: "2026-07-28T12:00:00.000Z"
+milestone_name: — Lançamento Externo Controlado ◆
+current_phase: 33
+status: Phase 33 complete
+last_updated: "2026-07-28T21:31:54.205Z"
 progress:
-  total_phases: 18
-  completed_phases: 16
-  total_plans: 83
-  completed_plans: 67
-  percent: 81
-  current_phase_plans: 5
+  total_phases: 11
+  completed_phases: 10
+  total_plans: 43
+  completed_plans: 41
+  percent: 91
 ---
 
 # Project State
 
 **Last updated:** 2026-07-28
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆ **Em andamento**
-**Current phase:** 33 — Verificação CNPJ Freemium (◆ planning)
+**Current phase:** 33
 
 ## Completed
 
@@ -103,7 +102,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** v1.5 — Lançamento Externo Controlado ✅ (All phases complete)
+**Current focus:** Phase 33 — verificacao-cnpj-freemium
 
 ## Completed Milestones
 
@@ -302,6 +301,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 **Tests:** 889 passing (116 files, 37 novos)
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 **Commits:**
+
 - `30f35c7` — 28-01: launch config + AI cost estimator + pipeline logger — 16 tests
 - `246df41` — 28-02: migrations + pipeline integration + rate limit bypass
 - `24d2359` — 28-03: pipeline metrics + admin dashboard + operations docs
@@ -323,6 +323,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 **Tests:** 889 passing (116 files)
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 **Commits:**
+
 - `e8981b8` — 29-01: Skeleton variants + 12 loading.tsx + 2 error.tsx + error-state.tsx
 - `38cd4dc` — 29-02: empty states, error states, microcopy, admin harmonization, modal a11y
 - `14eff71` — 29-03: mobile hardening, legibility checklist, launch readiness docs
@@ -372,6 +373,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 **UAT:** 15/15 ✅ — crédito, saldo, estorno, flags, exhausted removido, insufficient_credits, paginação, reject/approve routes
 
 **Commits:**
+
 - `d735d01` — 29-1-1-01: Backend Foundation — types, credit integration, pagination, remove quota
 - `291f605` — 29-1-1-02: Frontend — remove exhausted, add insufficient_credits, hide old modal
 - `6ff32ee` — 29-1-1-03: Testes — credit flow (8 testes), regressão
@@ -391,6 +393,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 **UAT:** 15/15 ✅ + 1 gap corrigido (hasArchivedSignatures não populado sem VS ativa)
 
 **Commits:**
+
 - `f0e0af2` — 29-1-2-01: Backend Foundation — approve drift fix + spec update
 - `720ac8c` — 29-1-2-02: Frontend — HistoryModal rewrite + ApprovalModal bridge + pagination
 - `40645d9` — 29-1-2-03: Testes e Verificação — HistoryModal + Backend + Regressão
@@ -414,6 +417,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 **Context:** `.planning/phases/29-3-creditos-mensais-automaticos/29-3-CONTEXT.md`
 **Commits:**
+
 - `d557fda` — 29-3-01: migration + types + bucket-aware functions
 - `06adb28` — 29-3-02: grant_monthly_credits RPC + Launch Config
 - `d834d68` — 29-3-03: Vercel Cron + admin fallback + button
@@ -422,6 +426,8 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
+Phase: 33 — COMPLETE
+Plan: 1 of 5
 v1.5 em andamento — Fases 31.1, 31.2, 31.3 e 32 concluídas. F33 (Verificação CNPJ Freemium) em planejamento. F34 (Stripe / Monetização Pública) como próximo marco.
 
 ### Phase 30 — Fundação Legal ✅
@@ -487,6 +493,7 @@ v1.5 em andamento — Fases 31.1, 31.2, 31.3 e 32 concluídas. F33 (Verificaçã
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 
 **Commits:**
+
 - `be83d7d` — 31-3-01: Schema + Foundation — ImageReviewInput estendido, ReviewIssueType union, failureType string|null
 - `f7cbdaf` — 31-3-02: Intent-Aware Review Service — 2-stage var builder, 3-variant expectedBadgeBehavior, empty_review estruturado
 - `45daa35` — 31-3-03: Prompt Restructuring — comportamento esperado, commercial_tone_mismatch, remove placeholders antigos
