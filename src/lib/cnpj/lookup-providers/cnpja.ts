@@ -31,7 +31,7 @@ function mapResponse(data: Record<string, unknown>, cnpj: string): CnpjLookupDat
     cnae_principal: (mainActivity?.code as string) || null,
     cnae_descricao: (mainActivity?.text as string) || null,
     data_situacao: (status?.date as string) || null,
-    data_abertura: (data.registration?.date as string) || (data.founded as string) || null,
+    data_abertura: ((data.registration as Record<string, unknown> | undefined)?.date as string) || (data.founded as string) || null,
     porte: (data.size as string) || null,
   };
 }

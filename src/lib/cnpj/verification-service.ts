@@ -1,6 +1,11 @@
 import type { CnpjLookupProvider, CnpjLookupData, LookupOutcome } from "./lookup-providers/types";
 import { normalizeCnpj } from "./normalize";
 
+type SafeLookupResult =
+  | { status: "resolved"; data: CnpjLookupData }
+  | { status: "not_found" }
+  | { status: "unavailable" };
+
 export interface CnpjLookupCache {
   get(cnpjNormalized: string): Promise<{ outcome: string; data: unknown; expiresAt: Date } | null>;
   set(cnpjNormalized: string, outcome: string, data: unknown, ttlHours: number): Promise<void>;
@@ -62,9 +67,10 @@ export class CnpjVerificationService {
   private async safeLookup(
     provider: CnpjLookupProvider,
     cnpj: string
-  ): Promise<{ status: string; data?: CnpjLookupData }> {
+  ): Promise<SafeLookupResult> {
     try {
-      return await provider.lookup(cnpj);
+      const result = await provider.lookup(cnpj);
+      return result as SafeLookupResult;
     } catch {
       return { status: "unavailable" };
     }

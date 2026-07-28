@@ -21,6 +21,7 @@ import {
 } from "@/lib/onboarding/microcopy";
 import { getUserOnboardingState } from "@/lib/onboarding/state";
 import { CnpjUpdateBanner } from "@/components/legacy/cnpj-update-banner";
+import { VerificationBanners } from "@/components/verification/verification-banners";
 
 function getGreeting(storeName: string | null): string {
   const hour = new Date().getHours();
@@ -78,6 +79,7 @@ export default async function DashboardPage() {
         <div>
           <PageHeader title="Dashboard" />
           {storeNoCamp && <CnpjUpdateBanner storeId={storeNoCamp.id} hasCnpj={!!(storeNoCamp as unknown as Record<string, unknown>).cnpj_normalized} />}
+          {storeNoCamp && <VerificationBanners verificationStatus={(storeNoCamp as unknown as Record<string, unknown>).verification_status as string | null} />}
           <div className="mb-4">
             <BalanceDisplay
               balance={noCampBalance ?? 0}
@@ -143,6 +145,7 @@ export default async function DashboardPage() {
         <div>
           <PageHeader title="Dashboard" />
           <CnpjUpdateBanner storeId={store.id} hasCnpj={!!(store as unknown as Record<string, unknown>).cnpj_normalized} />
+          <VerificationBanners verificationStatus={(store as unknown as Record<string, unknown>).verification_status as string | null} />
           <h2 className="text-lg font-medium text-text-primary mb-6">
             {getGreeting(store.name)}
           </h2>

@@ -105,7 +105,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
     const lookupService = new CnpjVerificationService(
       new BrasilApiProvider(),
       new CnpjaProvider(),
-      createSupabaseLookupCache(supabase)
+      createSupabaseLookupCache(supabase as never)
     );
     const lookupResult = await lookupService.resolve(normalized);
 
