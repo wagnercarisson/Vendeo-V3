@@ -116,7 +116,7 @@ A F33 avança para a **próxima camada de integridade cadastral**: consultar fon
 ## Specific Ideas
 
 - **Migration única:** `20260728000001_f33_cnpj_verification.sql` com ALTER TABLE stores, CREATE TABLE cnpj_lookup_cache, RPCs update/admin/store-test
-- **6+ novas RPCs:** update_store_verification, admin_approve_store_verification, admin_reject_store_verification, admin_create_test_store, admin_exception_store_verification, create_store_with_cnpj modificada
+- **6+ RPCs novas/modificadas:** update_store_verification, admin_approve_store_verification, admin_reject_store_verification, admin_create_test_store, admin_exception_store_verification, create_store_with_cnpj modificada
 - **Interface `CnpjLookupProvider`** com `lookup(cnpj): Promise<LookupResult>` — três outcomes: resolved/not_found/unavailable
 - **`CnpjVerificationService.resolve()`** — orquestra cache → BrasilAPI → CNPJá
 - **`FreemiumRiskService.evaluateFreemiumEligibility()`** — motor determinístico com 4 decisões
