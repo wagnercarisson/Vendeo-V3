@@ -66,9 +66,16 @@ export default async function AdminUsersPage({
     if (storeInfo?.cnpjRootHash && storeInfo.cnpjRootHash !== "") {
       const hasOnboarding = userEntitlements?.has("onboarding") ?? false;
       const hasMonthly = userEntitlements?.has("monthly") ?? false;
-      if (hasOnboarding && user.balance > 0) freemiumStatus = "active";
-      else if (hasOnboarding || hasMonthly) freemiumStatus = "used";
-      else freemiumStatus = "exhausted";
+      const hasAdminException = userEntitlements?.has("admin_exception") ?? false;
+      const hasAnyFreemiumRecord = hasOnboarding || hasMonthly || hasAdminException;
+
+      if (user.bonusBalance > 0) {
+        freemiumStatus = "active";
+      } else if (hasAnyFreemiumRecord) {
+        freemiumStatus = "used";
+      } else {
+        freemiumStatus = "exhausted";
+      }
     }
 
     return {
@@ -105,6 +112,7 @@ export default async function AdminUsersPage({
           <option value="no_cnpj">Sem CNPJ</option>
           <option value="active">Freemium ativo</option>
           <option value="used">Freemium usado</option>
+          <option value="exhausted">Freemium esgotado</option>
         </select>
         <button
           type="submit"

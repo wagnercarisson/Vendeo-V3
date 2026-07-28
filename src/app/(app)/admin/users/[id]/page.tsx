@@ -49,13 +49,23 @@ export default async function AdminUserDetailPage({
     history = await creditService.getHistory(storeId);
     entitlements = await freemiumService.getHistoryByStore(storeId);
 
+    const breakdown = await creditService.getBalanceBreakdown(storeId);
+    const bonusBalance = breakdown.bonusBalance;
+
     const rootHash = storeData?.cnpj_root_hash as string ?? "";
     if (rootHash && rootHash !== "") {
       const hasOnboarding = entitlements.some(e => e.benefit_type === "onboarding");
       const hasMonthly = entitlements.some(e => e.benefit_type === "monthly");
-      if (hasOnboarding && balance > 0) freemiumStatus = "active";
-      else if (hasOnboarding || hasMonthly) freemiumStatus = "used";
-      else freemiumStatus = "exhausted";
+      const hasAdminException = entitlements.some(e => e.benefit_type === "admin_exception");
+      const hasAnyFreemiumRecord = hasOnboarding || hasMonthly || hasAdminException;
+
+      if (bonusBalance > 0) {
+        freemiumStatus = "active";
+      } else if (hasAnyFreemiumRecord) {
+        freemiumStatus = "used";
+      } else {
+        freemiumStatus = "exhausted";
+      }
     }
 
     const termsStatus = await getAcceptanceStatus(storeId, "terms_of_service");

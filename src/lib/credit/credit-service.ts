@@ -18,6 +18,20 @@ export class CreditService {
     return data?.balance ?? 0;
   }
 
+  async getBalanceBreakdown(storeId: string): Promise<{ balance: number; bonusBalance: number; purchasedBalance: number }> {
+    const { data } = await this.client
+      .from("credit_balances")
+      .select("balance, bonus_balance, purchased_balance")
+      .eq("store_id", storeId)
+      .single();
+
+    return {
+      balance: data?.balance ?? 0,
+      bonusBalance: data?.bonus_balance ?? 0,
+      purchasedBalance: data?.purchased_balance ?? 0,
+    };
+  }
+
   async reserveCredit(
     storeId: string,
     amount: number,

@@ -20,6 +20,8 @@ export interface AdminUserSummary {
   storeName: string | null;
   segment: string | null;
   balance: number;
+  bonusBalance: number;
+  purchasedBalance?: number;
   totalCampaigns: number;
   errorCampaigns: number;
   lastCampaignAt: string | null;
