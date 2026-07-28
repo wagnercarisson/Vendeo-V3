@@ -46,6 +46,21 @@ export default async function AdminUsersPage({
     storeMap[s.id] = { cnpjNormalized: s.cnpj_normalized, cnpjRootHash: s.cnpj_root_hash };
   }
 
+  // Fetch credit balances for freemium status calculation
+  const { data: balances } = await supabaseAdmin
+    .from("credit_balances")
+    .select("store_id, balance, bonus_balance, purchased_balance")
+    .in("store_id", storeIds.length > 0 ? storeIds : ["none"]);
+
+  const balanceMap: Record<string, { balance: number; bonusBalance: number; purchasedBalance: number }> = {};
+  for (const b of (balances ?? [])) {
+    balanceMap[b.store_id] = {
+      balance: b.balance ?? 0,
+      bonusBalance: b.bonus_balance ?? 0,
+      purchasedBalance: b.purchased_balance ?? 0,
+    };
+  }
+
   // Fetch entitlements for freemium status calculation
   const { data: entitlements } = await supabaseAdmin
     .from("freemium_entitlements")
@@ -61,6 +76,9 @@ export default async function AdminUsersPage({
   const enrichedUsers = result.data.map((user) => {
     const storeInfo = user.storeId ? storeMap[user.storeId] : null;
     const userEntitlements = user.storeId ? entitlementMap[user.storeId] : undefined;
+    const balanceInfo = user.storeId ? balanceMap[user.storeId] : undefined;
+    const bonusBalance = balanceInfo?.bonusBalance ?? 0;
+    const displayBalance = balanceInfo?.balance ?? user.balance ?? 0;
 
     let freemiumStatus: FreemiumStatus = "no_cnpj";
     if (storeInfo?.cnpjRootHash && storeInfo.cnpjRootHash !== "") {
@@ -69,7 +87,7 @@ export default async function AdminUsersPage({
       const hasAdminException = userEntitlements?.has("admin_exception") ?? false;
       const hasAnyFreemiumRecord = hasOnboarding || hasMonthly || hasAdminException;
 
-      if (user.bonusBalance > 0) {
+      if (bonusBalance > 0) {
         freemiumStatus = "active";
       } else if (hasAnyFreemiumRecord) {
         freemiumStatus = "used";
@@ -80,6 +98,9 @@ export default async function AdminUsersPage({
 
     return {
       ...user,
+      balance: displayBalance,
+      bonusBalance,
+      purchasedBalance: balanceInfo?.purchasedBalance ?? user.purchasedBalance ?? 0,
       cnpjMasked: storeInfo?.cnpjNormalized ? maskCnpj(storeInfo.cnpjNormalized) : null,
       freemiumStatus,
     };
@@ -182,7 +203,7 @@ export default async function AdminUsersPage({
 
       {/* Mobile stacked cards */}
       <div className="sm:hidden space-y-3">
-        {result.data.map((user: AdminUserSummary) => (
+        {filteredUsers.map((user: AdminUserSummary) => (
           <Link
             key={user.userId}
             href={`/admin/users/${user.userId}`}
@@ -206,7 +227,7 @@ export default async function AdminUsersPage({
             </div>
           </Link>
         ))}
-        {result.data.length === 0 && (
+        {filteredUsers.length === 0 && (
           <div className="py-8">
             <EmptyState
               icon={Users}
@@ -225,7 +246,7 @@ export default async function AdminUsersPage({
           <div className="flex gap-2">
             {page > 1 && (
               <Link
-                href={`/admin/users?page=${page - 1}${search ? `&search=${search}` : ""}`}
+                href={`/admin/users?page=${page - 1}${search ? `&search=${search}` : ""}${freemiumFilter ? `&freemiumStatus=${freemiumFilter}` : ""}`}
                 className="rounded-md border px-3 py-1 hover:bg-muted"
               >
                 Anterior
@@ -233,7 +254,7 @@ export default async function AdminUsersPage({
             )}
             {page < totalPages && (
               <Link
-                href={`/admin/users?page=${page + 1}${search ? `&search=${search}` : ""}`}
+                href={`/admin/users?page=${page + 1}${search ? `&search=${search}` : ""}${freemiumFilter ? `&freemiumStatus=${freemiumFilter}` : ""}`}
                 className="rounded-md border px-3 py-1 hover:bg-muted"
               >
                 Próxima
