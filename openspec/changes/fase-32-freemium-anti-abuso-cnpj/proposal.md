@@ -17,7 +17,7 @@ O modelo de freemium atual é vulnerável a abuso por multiplicação de contas:
 - **Termos de Uso v1.2** — cláusulas de CNPJ obrigatório, freemium por raiz, sanções, reaceite obrigatório
 - **Política de Privacidade v1.1** — finalidades documentadas do CNPJ (cobrança, NF, antifraude, freemium, segurança)
 - **Validação cadastral** — cruzamento nome fantasia/razão social com CNPJ como camada de score (não bloqueio cego)
-- **Migration SQL única** — `20260728000001_freemium_anti_abuso_cnpj.sql` com todas as alterações de schema
+- **Migration SQL única** — `20260727000001_freemium_anti_abuso_cnpj.sql` com todas as alterações de schema
 - **CNPJ nunca exposto cru** — mascarado em UI, APIs e logs; apenas `root_hash` em logs estruturados
 
 ## Capabilities

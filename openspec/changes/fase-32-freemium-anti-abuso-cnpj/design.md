@@ -123,13 +123,14 @@ Validação em duas camadas:
 4. Valida dígitos verificadores (algoritmo oficial do CNPJ)
 5. Rejeita sequências conhecidas (11.111.111/..., 00.000.000/..., etc.)
 6. Se inválido → erro 400
-7. Passa `cnpj_normalized` para RPC `create_store_with_cnpj()` — o cálculo do root_hash acontece DENTRO da RPC, com pepper do banco, nunca exposto ao caller
+7. Calcula `cnpj_root_hash = HMAC-SHA256(cnpj_normalized[:8], process.env.CNPJ_PEPPER)` na rota Next.js (server-side), nunca exposto ao client
+8. Passa `cnpj_normalized` e `cnpj_root_hash` para RPC `create_store_with_cnpj()`
 
 **RPC `create_store_with_cnpj` (executada como service_role):**
-1. Recebe `cnpj_normalized` (já validado pela rota)
-2. Calcula root_hash = `HMAC-SHA256(cnpj_normalized[:8], get_cnpj_pepper())` — pepper lido de variável de ambiente/server secret
+1. Recebe `cnpj_normalized` (já validado) e `cnpj_root_hash` (já calculado pela rota)
+2. O hash é calculado na rota Next.js com pepper de ambiente (`CNPJ_PEPPER`), não dentro da RPC — isso mantém o pepper acessível apenas ao server-side e evita a complexidade de gerenciar pepper no banco
 3. Prossegue com INSERT store + entitlement-first + grant-second
-4. O caller (rota autenticada) NUNCA vê ou envia `cnpj_root_hash` — isso elimina o vetor de forjamento de hash
+4. O caller (browser/cliente) NUNCA vê ou envia `cnpj_root_hash` — isso elimina o vetor de forjamento de hash
 
 ### D5 — Validação cadastral: cruzamento com razão social/nome fantasia
 
@@ -155,10 +156,10 @@ POST /api/store
 body: { ..., cnpj, razao_social?, nome_fantasia? }
 → valida CNPJ (dígitos + formato) — se inválido → 400
 → verifica duplicidade de cnpj_normalized — se existe → 409
-→ chama RPC create_store_with_cnpj(cnpj_normalized, ...):
-  [DENTRO DA RPC — service_role]
-  → calcula root_hash = HMAC-SHA256(cnpj_normalized[:8], pepper)
-  → INSERT stores (cnpj_normalized, cnpj_root_hash, ...)
+→ calcula root_hash = hashCnpjRoot(cnpj_normalized[:8]) — rota Next.js, server-side
+→ chama RPC create_store_with_cnpj(cnpj_normalized, cnpj_root_hash, ...):
+  [RPC — service_role]
+  → INSERT stores (cnpj_normalized, cnpj_root_hash, razao_social, nome_fantasia, ...)
   → INSERT legal_acceptances
   → INSERT INTO freemium_entitlements (...) ON CONFLICT DO NOTHING RETURNING id
   → SE entitlement inserido: grant_credits(10, 'onboarding')
@@ -237,7 +238,7 @@ AUP v1.0 já cobre os novos cenários (cláusulas 3.2 e 3.5) — não requer nov
 
 ## Migration Plan
 
-Migration única: `20260728000001_freemium_anti_abuso_cnpj.sql`
+Migration única: `20260727000001_freemium_anti_abuso_cnpj.sql`
 1. ALTER TABLE stores — adiciona colunas CNPJ + índices
 2. CREATE TABLE freemium_entitlements + índices + RLS
 3. CREATE OR REPLACE RPC create_store_with_cnpj (substitui create_store_with_legal_acceptance)
@@ -245,7 +246,9 @@ Migration única: `20260728000001_freemium_anti_abuso_cnpj.sql`
 5. ALTER FUNCTION grant_monthly_credits — entitlement-aware
 6. INSERT legal_document_versions — privacy_policy v1.1 + terms_of_service v1.2
 
-**Rollback:** Reverter migration, restaurar RPC `create_store_with_legal_acceptance` original, remover colunas CNPJ, dropar tabela freemium_entitlements, reverter versões legais.
+**Rollback:** Reverter migration `20260727000001`, restaurar RPC `create_store_with_legal_acceptance` original, remover colunas CNPJ, dropar tabela freemium_entitlements, reverter versões legais.
+
+> **Nota sobre o nome da migration:** O arquivo real é `20260727000001_freemium_anti_abuso_cnpj.sql` (data 27, não 28). A numeração segue o padrão de timestamp de criação do arquivo, e esta migration foi criada em 2026-07-27.
 
 ## Open Questions
 

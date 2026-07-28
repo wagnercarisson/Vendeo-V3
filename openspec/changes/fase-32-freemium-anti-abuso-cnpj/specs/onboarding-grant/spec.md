@@ -5,6 +5,8 @@
 O sistema SHALL conceder 10 créditos de onboarding APENAS se a raiz do CNPJ nunca recebeu onboarding antes. O fluxo é entitlement-first: primeiro tenta inserir em `freemium_entitlements`, e só concede créditos se o INSERT venceu.
 
 - A RPC `create_store_with_cnpj()` substitui `create_store_with_legal_acceptance()`
+- O `cnpj_root_hash` é calculado na rota Next.js via `hashCnpjRoot(cnpj_normalized[:8])` com `process.env.CNPJ_PEPPER` — nunca exposto ao client
+- A RPC recebe `p_cnpj_root_hash` já calculado (não calcula hash internamente)
 - O grant é condicionado a `v_entitlement_id IS NOT NULL` após INSERT ... ON CONFLICT DO NOTHING
 - Lojas legadas (atualização cadastral) NÃO recebem grant
 - A resposta inclui `onboardingGranted: boolean` para o frontend informar o lojista

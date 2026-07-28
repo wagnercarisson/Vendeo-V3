@@ -10,8 +10,8 @@ The system SHALL update `POST /api/store` to require CNPJ on the request body, v
 - MUST accept `razaoSocial?: string` and `nomeFantasia?: string` as optional fields
 - MUST validate CNPJ via `validateCnpj()` before calling the RPC — if invalid, return 400
 - MUST check if `cnpj_normalized` already exists for another user — if yes, return 409
-- MUST call `create_store_with_cnpj(cnpj_normalized, ...)` RPC instead of `create_store_with_legal_acceptance()` — the new RPC receives only `cnpj_normalized` (validated), calculates `cnpj_root_hash` internally via HMAC-SHA256 with server pepper, creates store + registers legal acceptances + tries entitlement-first + grants credits IF entitlement succeeds
-- MUST NOT pass `cnpj_root_hash` to the RPC — the hash is calculated server-side within the RPC (service_role), eliminating the hash forgery attack vector
+- MUST call `create_store_with_cnpj(cnpj_normalized, cnpj_root_hash, ...)` RPC instead of `create_store_with_legal_acceptance()` — the route calculates `cnpj_root_hash = HMAC-SHA256(cnpj_normalized[:8], process.env.CNPJ_PEPPER)` server-side, then the RPC creates store + registers legal acceptances + tries entitlement-first + grants credits IF entitlement succeeds
+- MUST NOT expose `cnpj_root_hash` to the client — the hash is calculated in the Next.js server route (not in the browser), eliminating the hash forgery attack vector; the RPC (service_role) receives the already-computed hash from the route
 - MUST include `onboardingGranted: boolean` in the response body
 - On success: MUST return 201 with the created store including `cnpjMasked` and `onboardingGranted`
 - On UNIQUE violation for `stores.user_id`: MUST return 409 `{ error: "Usuário já possui uma loja" }`
