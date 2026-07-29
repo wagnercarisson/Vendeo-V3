@@ -130,6 +130,8 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
   const [billingConfirmed, setBillingConfirmed] = useState(false);
   const [billingSaving, setBillingSaving] = useState(false);
   const [reconsultLoading, setReconsultLoading] = useState(false);
+  const [billingManualActive, setBillingManualActive] = useState(false);
+  const [billingError, setBillingError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/legal/current-versions")
@@ -1113,9 +1115,9 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
 
           {/* Cadastro Fiscal — sempre visível para completar readiness */}
           {(() => {
-            const hasCnpj = !!formData.cnpj;
-            const dataFromLookup = hasCnpj || cnpjLookupStatus === 'resolved';
-            if (hasCnpj) {
+            const hasStoredCnpj = !!initialStore?.cnpj_normalized;
+            const dataFromLookup = hasStoredCnpj || cnpjLookupStatus === 'resolved';
+            if (hasStoredCnpj) {
               const masked = formData.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
               const nomeFantasiaDisplay = formData.nomeFantasia || formData.razaoSocial;
               return (
@@ -1492,6 +1494,8 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
                         disabled={reconsultLoading}
                         onClick={async () => {
                           setReconsultLoading(true);
+                          setBillingError(null);
+                          setBillingManualActive(false);
                           try {
                             const res = await fetch(`/api/store/${storeId}/reconsult-cnpj`, {
                               method: "POST",
@@ -1514,8 +1518,17 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
                               }
                               if (data.razao_social) setField("razaoSocial", data.razao_social);
                               if (data.nome_fantasia) setField("nomeFantasia", data.nome_fantasia);
+                            } else if (res.status === 503) {
+                              setBillingError("Serviço de consulta indisponível. Tente novamente mais tarde ou preencha manualmente.");
+                            } else if (res.status === 404) {
+                              const errData = await res.json().catch(() => ({ error: "CNPJ não encontrado" }));
+                              setBillingError(errData.error || "CNPJ não encontrado na Receita Federal. Preencha manualmente.");
+                            } else {
+                              setBillingError("Erro ao consultar CNPJ. Preencha manualmente.");
                             }
-                          } catch {}
+                          } catch {
+                            setBillingError("Erro de conexão. Preencha os dados manualmente.");
+                          }
                           setReconsultLoading(false);
                         }}
                         className="flex-1 min-h-[38px] rounded-lg bg-accent-blue px-4 py-2 text-xs font-semibold text-white hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1524,22 +1537,31 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
                       </button>
                       <button
                         type="button"
-                        onClick={() => setBillingData({
-                          billing_email: '',
-                          billing_phone: '',
-                          billing_address_street: '',
-                          billing_address_number: '',
-                          billing_address_complement: '',
-                          billing_address_neighborhood: '',
-                          billing_address_city: '',
-                          billing_address_state: '',
-                          billing_address_zipcode: '',
-                        })}
+                        onClick={() => {
+                          setBillingData({
+                            billing_email: '',
+                            billing_phone: '',
+                            billing_address_street: '',
+                            billing_address_number: '',
+                            billing_address_complement: '',
+                            billing_address_neighborhood: '',
+                            billing_address_city: '',
+                            billing_address_state: '',
+                            billing_address_zipcode: '',
+                          });
+                          setBillingManualActive(true);
+                          setBillingError(null);
+                        }}
                         className="flex-1 min-h-[38px] rounded-lg border border-border-light px-4 py-2 text-xs font-semibold text-text-primary hover:bg-bg-elevated transition-all"
                       >
                         Preencher dados de faturamento manualmente
                       </button>
                     </div>
+                    {billingError && (
+                      <p className="flex items-center gap-1.5 text-accent-red text-xs mt-2">
+                        <AlertCircle className="w-3 h-3 shrink-0" />{billingError}
+                      </p>
+                    )}
                   </div>
                 )}
                 {!billingData.billing_address_street && !formData.cnpj && (
@@ -1547,7 +1569,7 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
                     Informe o CNPJ para pré-preencher o endereço fiscal automaticamente.
                   </p>
                 )}
-                {billingData.billing_address_street ? (
+                {(billingData.billing_address_street || billingManualActive) ? (
                   <>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="col-span-2">
