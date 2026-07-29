@@ -4,7 +4,7 @@ milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 current_phase: 34
 status: Phase 34 complete
-last_updated: "2026-07-29T15:17:00.000Z"
+last_updated: "2026-07-29T17:49:00.000Z"
 progress:
   total_phases: 13
   completed_phases: 11
@@ -511,11 +511,16 @@ v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33 e 34 concluídas. F35 (Stri
 | 34-02 | 2 | ✅ | Guarda Dupla + Fluxo Legacy — page guard `/campanhas/nova`, API guard 412, redirect chaining, fallback nome_fantasia, contextual microcopy |
 | 34-03 | 2 | ✅ | Step 2 UX + Billing Card — renaming "Direção Visual" + badge, query param suport, billing collapsible card, confirm route |
 | 34-04 | 3 | ✅ | Dashboard Banner + Brand Profile — ReadinessBanner with checklist, async server component, three visual direction paths |
-| 34-05 | 3 | ✅ | Tests + Verification — 17+ novos testes, 1189 total, typecheck/lint/build clean |
+| 34-05 | 3 | ✅ | Tests + Verification — 17+ novos testes, 1201 total, typecheck/lint/build clean |
 
-**Tests:** 1189 passing (152 files, 17+ novos)
+**Tests:** 1201 passing (154 files, 17+ novos)
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 **Context:** `.planning/phases/34-store-readiness/34-CONTEXT.md`
+
+**Fix commits (pós-verificação):**
+- `76199b3` — fix(f34): revise store readiness — 7 correções obrigatórias
+- `fae35c8` — fix(f34): correções restantes — fiscal read-only, billing reconsulta, aceite legal
+- `06ee23a` — fix(f34): billing manual abre campos + feedback erro reconsulta CNPJ
 
 ### Next Phases
 

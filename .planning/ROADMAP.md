@@ -2,7 +2,7 @@
 
 ## Milestone v1.5 — Lançamento Externo Controlado ◆
 
-**13 phases** | **119 requirements mapped** | All covered ✓
+**16 phases** | **127 requirements mapped** | All covered ✓
 
 **Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23.
 
@@ -26,6 +26,9 @@
 | 31.1 | ✅ Modelo Comercial — Formulário | CampaignIntent type, seletor de intent no formulário, inferência automática, badge por intent, pipeline guard | INTENT-01–12 | 12 ✅ |
 | 31.2 | ✅ Diretores por Intenção | Schemas tolerantes, desbloqueio de intents, 6 prompts por intent, roteamento de diretores, conteúdo adaptado | — | 9 ✅ |
 | 31.3 | ✅ Quality Gate por Intenção Comercial | Revisor intent-aware, prompt reestruturado, commercial_tone_mismatch, variáveis contextuais | — | 11 ✅ |
+| 32 | ✅ Freemium Anti-Abuso CNPJ | CNPJ obrigatório no cadastro, entitlement por raiz de CNPJ, admin freemium status | CNPJ-01–06, FREEMIUM-01–04 | 10 ✅ |
+| 33 | ✅ Verificação CNPJ Freemium | Consulta BrasilAPI/CNPJá, cross-check, motor de decisão, admin review, test stores | CNPJ-07–12 | 6 ✅ |
+| 34 | ✅ Store Readiness | Readiness RPC + guarda dupla + direção visual obrigatória + dashboard banner + billing info | F34-READINESS, F34-BILLING, F34-STORE-TYPE, F34-GUARD, F34-LEGACY, F34-UI, F34-DASHBOARD, F34-BRANDPROFILE | 8 ✅ |
 
 ---
 
@@ -459,14 +462,14 @@ Phase 24 (Credit Tables + CreditService) ──┘
 | SEC-05 | Phase 29 | Done ✓ |
 
 **Coverage:**
-- v1 requirements: 119 total (107 v1.5 + 12 INTENT)
-- Mapped to phases: 119
-- Completed: 119
+- v1 requirements: 127 total (107 v1.5 + 12 INTENT + 8 F34)
+- Mapped to phases: 127
+- Completed: 127
 - Unmapped: 0 ✓
-- Deferred to v1.7: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06 (Phase 32)
+- Deferred to v1.7: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06
 
 ---
 
 *Roadmap created: 2026-07-15*
 *Milestone: v1.5 — Lançamento Externo Controlado*
-*Last updated: 2026-07-25 — Phase 31.3 complete — 1071 tests passing*
+*Last updated: 2026-07-29 — Phase 34 complete — 1201 tests passing*
