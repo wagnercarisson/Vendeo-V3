@@ -73,10 +73,10 @@ function getSubsegmentMode(segment: string): 'rich' | 'travado' | 'other' | 'loc
   return 'rich';
 }
 
-export function StoreIdentityForm({ initialStore }: { initialStore?: Store | null }) {
+export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?: Store | null; initialStep?: number }) {
   const { formData, setField, save, isLoading, isSaving, error, warningMessage, dismissWarning, successMessage, mode, clearStore, storeId } = useStoreForm({ initialStore: initialStore ?? null });
 
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2>(initialStep === 2 ? 2 : 1);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Partial<Record<string, boolean>>>({});
 
@@ -123,6 +123,10 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
   const [showContractModal, setShowContractModal] = useState(false);
   const [contractDocuments, setContractDocuments] = useState<Array<{ label: string; version: string; url: string }> | null>(null);
   const [versionsLoading, setVersionsLoading] = useState(true);
+  const [billingExpanded, setBillingExpanded] = useState(false);
+  const [billingData, setBillingData] = useState<Record<string, string>>({});
+  const [billingConfirmed, setBillingConfirmed] = useState(false);
+  const [billingSaving, setBillingSaving] = useState(false);
 
   useEffect(() => {
     fetch("/api/legal/current-versions")
@@ -1040,7 +1044,8 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
           }`}>
             2
           </div>
-          <span className="text-xs font-heading font-semibold">Logo e Cores</span>
+          <span className="text-xs font-heading font-semibold">Direção Visual</span>
+          <span className="text-[10px] font-heading font-semibold text-accent-amber bg-amber-900/30 px-1.5 py-0.5 rounded">Necessário</span>
         </div>
       </div>
 
@@ -1133,6 +1138,16 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
                           setField("nomeFantasia", data.data.nome_fantasia || '');
                           if (data.data.cidade) setField("city", data.data.cidade);
                           if (data.data.uf) setField("state", data.data.uf);
+                          setBillingData({
+                            billing_address_street: data.data.logradouro || '',
+                            billing_address_number: data.data.numero || '',
+                            billing_address_complement: data.data.complemento || '',
+                            billing_address_neighborhood: data.data.bairro || '',
+                            billing_address_city: data.data.cidade || '',
+                            billing_address_state: data.data.uf || '',
+                            billing_address_zipcode: data.data.cep || '',
+                          });
+                          setBillingExpanded(true);
                         } else if (data.status === 'not_found') {
                           setCnpjLookupStatus('not_found');
                           setCnpjLookupMessage('CNPJ não encontrado na Receita Federal.');
@@ -1351,6 +1366,112 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
               <p className="text-accent-red text-sm font-body flex-1">{formError}</p>
             </div>
           )}
+
+          {/* Billing card */}
+          <div className="border border-border rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setBillingExpanded(!billingExpanded)}
+              className="w-full flex items-center justify-between px-4 py-3 text-sm font-heading font-semibold text-text-primary hover:bg-bg-elevated transition-colors"
+            >
+              <span>Dados para faturamento (opcional)</span>
+              <span className={`transform transition-transform ${billingExpanded ? 'rotate-180' : ''}`}>
+                ▼
+              </span>
+            </button>
+            {billingExpanded && (
+              <div className="px-4 pb-4 space-y-3">
+                {!billingData.billing_address_street ? (
+                  <p className="text-xs text-text-muted">
+                    Complete os dados da loja primeiro para pré-preencher o endereço fiscal.
+                  </p>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="col-span-2">
+                        <label className="text-xs font-medium text-text-secondary">Email para faturamento</label>
+                        <input type="email" value={billingData.billing_email || ''}
+                          onChange={(e) => setBillingData(d => ({ ...d, billing_email: e.target.value }))}
+                          placeholder="email@exemplo.com" className="w-full bg-bg-surface border border-border rounded-lg min-h-[38px] px-3 py-1.5 text-sm" />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-xs font-medium text-text-secondary">Telefone</label>
+                        <input type="tel" value={billingData.billing_phone || ''}
+                          onChange={(e) => setBillingData(d => ({ ...d, billing_phone: e.target.value }))}
+                          placeholder="(11) 99999-9999" className="w-full bg-bg-surface border border-border rounded-lg min-h-[38px] px-3 py-1.5 text-sm" />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-xs font-medium text-text-secondary">Logradouro</label>
+                        <input type="text" value={billingData.billing_address_street || ''}
+                          onChange={(e) => setBillingData(d => ({ ...d, billing_address_street: e.target.value }))}
+                          className="w-full bg-bg-surface border border-border rounded-lg min-h-[38px] px-3 py-1.5 text-sm" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-text-secondary">Número</label>
+                        <input type="text" value={billingData.billing_address_number || ''}
+                          onChange={(e) => setBillingData(d => ({ ...d, billing_address_number: e.target.value }))}
+                          className="w-full bg-bg-surface border border-border rounded-lg min-h-[38px] px-3 py-1.5 text-sm" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-text-secondary">Complemento</label>
+                        <input type="text" value={billingData.billing_address_complement || ''}
+                          onChange={(e) => setBillingData(d => ({ ...d, billing_address_complement: e.target.value }))}
+                          className="w-full bg-bg-surface border border-border rounded-lg min-h-[38px] px-3 py-1.5 text-sm" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-text-secondary">Bairro</label>
+                        <input type="text" value={billingData.billing_address_neighborhood || ''}
+                          onChange={(e) => setBillingData(d => ({ ...d, billing_address_neighborhood: e.target.value }))}
+                          className="w-full bg-bg-surface border border-border rounded-lg min-h-[38px] px-3 py-1.5 text-sm" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-text-secondary">CEP</label>
+                        <input type="text" value={billingData.billing_address_zipcode || ''}
+                          onChange={(e) => setBillingData(d => ({ ...d, billing_address_zipcode: e.target.value }))}
+                          className="w-full bg-bg-surface border border-border rounded-lg min-h-[38px] px-3 py-1.5 text-sm" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-text-secondary">Cidade</label>
+                        <input type="text" value={billingData.billing_address_city || ''}
+                          onChange={(e) => setBillingData(d => ({ ...d, billing_address_city: e.target.value }))}
+                          className="w-full bg-bg-surface border border-border rounded-lg min-h-[38px] px-3 py-1.5 text-sm" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-text-secondary">UF</label>
+                        <input type="text" value={billingData.billing_address_state || ''}
+                          onChange={(e) => setBillingData(d => ({ ...d, billing_address_state: e.target.value }))}
+                          className="w-full bg-bg-surface border border-border rounded-lg min-h-[38px] px-3 py-1.5 text-sm" />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={billingSaving || (!billingData.billing_email && (!billingData.billing_address_street || !billingData.billing_address_number || !billingData.billing_address_city || !billingData.billing_address_state))}
+                      onClick={async () => {
+                        setBillingSaving(true);
+                        try {
+                          await fetch("/api/store/billing/confirm", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              storeId: storeId,
+                              billingData: billingData,
+                              confirmed: true,
+                            }),
+                          });
+                          setBillingConfirmed(true);
+                        } catch {}
+                        setBillingSaving(false);
+                      }}
+                      className="w-full mt-2 min-h-[38px] rounded-lg bg-accent-green px-4 py-2 text-xs font-semibold text-white hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {billingSaving ? "Salvando..." : billingConfirmed ? "✓ Confirmado" : "Confirmar dados de faturamento"}
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="flex items-center justify-between pt-2">
             {false && (
               <button type="button" onClick={handleClearStore} className="text-text-muted hover:text-text-primary text-xs font-body underline transition-colors duration-200">
@@ -1373,8 +1494,8 @@ export function StoreIdentityForm({ initialStore }: { initialStore?: Store | nul
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
-                <h1 className="text-2xl font-heading font-bold text-text-primary">Logo e Cores</h1>
-                <p className="text-text-secondary text-sm font-body">Faça upload do logotipo e defina as cores da marca</p>
+                <h1 className="text-2xl font-heading font-bold text-text-primary">Direção Visual</h1>
+                <p className="text-text-secondary text-sm font-body">Defina a identidade visual da sua loja com logo, assinatura visual ou apenas texto</p>
               </div>
             </div>
 

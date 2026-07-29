@@ -245,8 +245,9 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
       if (!storeId) {
         setStoreId(saved.id as string);
         setMode("edit");
+        setSuccessMessage("Loja salva. Agora configure a direção visual.");
       } else {
-        setSuccessMessage("Dados salvos com sucesso!");
+        setSuccessMessage("Loja salva. Agora configure a direção visual.");
       }
 
       return { storeId: saved.id as string };
