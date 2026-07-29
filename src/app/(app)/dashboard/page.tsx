@@ -22,6 +22,7 @@ import {
 import { getUserOnboardingState } from "@/lib/onboarding/state";
 import { CnpjUpdateBanner } from "@/components/legacy/cnpj-update-banner";
 import { VerificationBanners } from "@/components/verification/verification-banners";
+import { ReadinessCheckBanner } from "@/components/readiness/readiness-check-banner";
 
 function getGreeting(storeName: string | null): string {
   const hour = new Date().getHours();
@@ -78,8 +79,9 @@ export default async function DashboardPage() {
       return (
         <div>
           <PageHeader title="Dashboard" />
-{storeNoCamp && <CnpjUpdateBanner storeId={storeNoCamp.id} hasCnpj={!!storeNoCamp.cnpj_normalized} />}
-{storeNoCamp && <VerificationBanners verificationStatus={storeNoCamp.verification_status} />}
+          {storeNoCamp && <CnpjUpdateBanner storeId={storeNoCamp.id} hasCnpj={!!storeNoCamp.cnpj_normalized} />}
+          {storeNoCamp && <VerificationBanners verificationStatus={storeNoCamp.verification_status} />}
+          {storeNoCamp && <ReadinessCheckBanner storeId={storeNoCamp.id} />}
           <div className="mb-4">
             <BalanceDisplay
               balance={noCampBalance ?? 0}
@@ -146,6 +148,7 @@ export default async function DashboardPage() {
           <PageHeader title="Dashboard" />
           <CnpjUpdateBanner storeId={store.id} hasCnpj={!!store.cnpj_normalized} />
           <VerificationBanners verificationStatus={store.verification_status} />
+          <ReadinessCheckBanner storeId={store.id} />
           <h2 className="text-lg font-medium text-text-primary mb-6">
             {getGreeting(store.name)}
           </h2>
