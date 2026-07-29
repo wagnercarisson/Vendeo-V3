@@ -119,6 +119,8 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
   const [driftRefreshKey, setDriftRefreshKey] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [existingLegalOk, setExistingLegalOk] = useState(true);
+  const [legalCheckLoading, setLegalCheckLoading] = useState(true);
   const [acceptedTermsError, setAcceptedTermsError] = useState<string | null>(null);
   const [showContractModal, setShowContractModal] = useState(false);
   const [contractDocuments, setContractDocuments] = useState<Array<{ label: string; version: string; url: string }> | null>(null);
@@ -127,6 +129,7 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
   const [billingData, setBillingData] = useState<Record<string, string>>({});
   const [billingConfirmed, setBillingConfirmed] = useState(false);
   const [billingSaving, setBillingSaving] = useState(false);
+  const [reconsultLoading, setReconsultLoading] = useState(false);
 
   useEffect(() => {
     fetch("/api/legal/current-versions")
@@ -144,6 +147,20 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
       .catch(() => {})
       .finally(() => setVersionsLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!storeId) {
+      setLegalCheckLoading(false);
+      return;
+    }
+    fetch(`/api/store/${storeId}/legal-status`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        setExistingLegalOk(data?.hasValidAcceptance ?? true);
+      })
+      .catch(() => setExistingLegalOk(true))
+      .finally(() => setLegalCheckLoading(false));
+  }, [storeId]);
   const [inferredProfile, setInferredProfile] = useState<{
     safe_color_tokens?: Record<string, string>;
     visual_style?: string;
@@ -884,7 +901,8 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
     }
     setFormError(null);
 
-    if (!storeId && !acceptedTerms) {
+    const legalBlocked = storeId ? !existingLegalOk && !acceptedTerms : !acceptedTerms;
+    if (legalBlocked) {
       setAcceptedTermsError("Você precisa aceitar os Termos de Uso e a Política de Uso Aceitável.");
       return;
     }
@@ -1096,32 +1114,36 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
           {/* Cadastro Fiscal — sempre visível para completar readiness */}
           {(() => {
             const hasCnpj = !!formData.cnpj;
+            const dataFromLookup = hasCnpj || cnpjLookupStatus === 'resolved';
             if (hasCnpj) {
               const masked = formData.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+              const nomeFantasiaDisplay = formData.nomeFantasia || formData.razaoSocial;
               return (
                 <>
                   <div>
-                    <label className={labelClass}>CNPJ</label>
+                    <label className={labelClass}>CNPJ (Receita Federal)</label>
                     <div className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-muted text-sm font-body">
                       {masked}
                     </div>
                   </div>
                   <div>
-                    <label htmlFor="razaoSocial" className={labelClass}>Razão Social *</label>
+                    <label htmlFor="razaoSocial" className={labelClass}>Razão Social (Receita Federal)</label>
                     <input id="razaoSocial" type="text" value={formData.razaoSocial}
-                      onChange={(e) => setField("razaoSocial", e.target.value)}
+                      readOnly tabIndex={-1}
                       placeholder="Razão social" maxLength={200}
-                      className={inputClass("razaoSocial")} />
+                      className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-muted text-sm font-body cursor-not-allowed" />
                   </div>
                   <div>
-                    <label htmlFor="nomeFantasia" className={labelClass}>Nome Fantasia <span className="font-normal normal-case tracking-normal text-text-disabled">(opcional)</span></label>
-                    <input id="nomeFantasia" type="text" value={formData.nomeFantasia}
-                      onChange={(e) => setField("nomeFantasia", e.target.value)}
+                    <label htmlFor="nomeFantasia" className={labelClass}>Nome Fantasia (Receita Federal)</label>
+                    <input id="nomeFantasia" type="text" value={nomeFantasiaDisplay}
+                      readOnly tabIndex={-1}
                       placeholder="Nome fantasia" maxLength={200}
-                      className={inputClass("nomeFantasia")} />
-                    <p className="text-xs text-text-muted mt-1">
-                      Se não informado, será usado o nome da Razão Social.
-                    </p>
+                      className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-muted text-sm font-body cursor-not-allowed" />
+                    {!formData.nomeFantasia && formData.razaoSocial && (
+                      <p className="text-xs text-text-muted mt-1">
+                        Nome fantasia não informado na Receita. Usando Razão Social como fallback.
+                      </p>
+                    )}
                   </div>
                 </>
               );
@@ -1168,7 +1190,7 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
                             setCnpjLookupData(data.data);
                             setCnpjLookupMessage('Dados carregados da Receita Federal.');
                             setField("razaoSocial", data.data.razao_social);
-                            setField("nomeFantasia", data.data.nome_fantasia || '');
+                            setField("nomeFantasia", data.data.nome_fantasia || data.data.razao_social);
                             if (data.data.cidade) setField("city", data.data.cidade);
                             if (data.data.uf) setField("state", data.data.uf);
                             setBillingData({
@@ -1212,32 +1234,40 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
                   )}
                 </div>
                 <div>
-                  <label htmlFor="razaoSocial" className={labelClass}>Razão Social <span className="font-normal normal-case tracking-normal text-text-disabled">(opcional)</span></label>
+                  <label htmlFor="razaoSocial" className={labelClass}>Razão Social (Receita Federal) <span className="font-normal normal-case tracking-normal text-text-disabled">(opcional)</span></label>
                   <input id="razaoSocial" type="text" value={formData.razaoSocial}
                     onChange={(e) => setField("razaoSocial", e.target.value)}
                     readOnly={cnpjLookupStatus === 'resolved'}
+                    tabIndex={cnpjLookupStatus === 'resolved' ? -1 : 0}
                     placeholder="Razão social (opcional)" maxLength={200}
                     className={`${inputClass("razaoSocial")} ${cnpjLookupStatus === 'resolved' ? 'opacity-70 cursor-not-allowed' : ''}`} />
+                  {cnpjLookupStatus === 'resolved' && (
+                    <p className="text-xs text-text-muted mt-1">Dado oficial da Receita Federal.</p>
+                  )}
                 </div>
                 <div>
-                  <label htmlFor="nomeFantasia" className={labelClass}>Nome Fantasia <span className="font-normal normal-case tracking-normal text-text-disabled">(opcional)</span></label>
+                  <label htmlFor="nomeFantasia" className={labelClass}>Nome Fantasia (Receita Federal) <span className="font-normal normal-case tracking-normal text-text-disabled">(opcional)</span></label>
                   <input id="nomeFantasia" type="text" value={formData.nomeFantasia}
                     onChange={(e) => setField("nomeFantasia", e.target.value)}
                     readOnly={cnpjLookupStatus === 'resolved'}
+                    tabIndex={cnpjLookupStatus === 'resolved' ? -1 : 0}
                     placeholder="Nome fantasia (opcional)" maxLength={200}
                     className={`${inputClass("nomeFantasia")} ${cnpjLookupStatus === 'resolved' ? 'opacity-70 cursor-not-allowed' : ''}`} />
+                  {cnpjLookupStatus === 'resolved' && !formData.nomeFantasia && formData.razaoSocial && (
+                    <p className="text-xs text-text-muted mt-1">Nome fantasia não informado na Receita. Usando Razão Social como fallback.</p>
+                  )}
                   {cnpjLookupStatus === 'resolved' && cnpjLookupData && (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {cnpjLookupData.nome_fantasia ? (
                         <button type="button" onClick={() => setField("name", cnpjLookupData.nome_fantasia as string)}
                           className="text-xs text-accent-blue hover:text-accent-blue/80 font-body underline transition-colors">
-                          Usar nome fantasia
+                          Usar nome fantasia como nome da loja
                         </button>
                       ) : null}
                       {cnpjLookupData.razao_social ? (
                         <button type="button" onClick={() => setField("name", cnpjLookupData.razao_social as string)}
                           className="text-xs text-accent-blue hover:text-accent-blue/80 font-body underline transition-colors">
-                          {cnpjLookupData.nome_fantasia ? 'Usar razão social' : 'Usar razão social'}
+                          Usar razão social como nome da loja
                         </button>
                       ) : null}
                     </div>
@@ -1355,9 +1385,11 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
             </div>
           </div>
 
-          {!storeId && (
-            <div className="pt-4 border-t border-border">
-              {acceptedTerms ? (
+          {/* Aceite legal — sempre visível quando necessário */}
+          <div className="pt-4 border-t border-border">
+            {!storeId ? (
+              /* Nova loja: aceite obrigatório */
+              acceptedTerms ? (
                 <div className="flex items-start gap-3">
                   <span className="mt-0.5 h-4 w-4 rounded shrink-0 bg-accent-blue flex items-center justify-center">
                     <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
@@ -1384,15 +1416,49 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
                 <p className="text-sm text-accent-amber text-center py-2.5">
                   Documentos legais indisponíveis no momento.
                 </p>
-              )}
-              {acceptedTermsError && (
-                <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs">
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  {acceptedTermsError}
+              )
+            ) : /* Loja existente: verificar aceite */
+              legalCheckLoading ? (
+                <div className="flex items-center justify-center gap-2 py-2.5 text-text-muted text-sm">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Verificando situação legal...
+                </div>
+              ) : existingLegalOk ? (
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 h-4 w-4 rounded shrink-0 bg-accent-blue flex items-center justify-center">
+                    <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                  </span>
+                  <span className="text-sm text-text-secondary">
+                    Termos de Uso e Política de Uso Aceitável aceitos
+                  </span>
+                </div>
+              ) : contractDocuments ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-accent-amber">
+                    Seus documentos legais precisam ser atualizados para continuar gerando campanhas.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => { setShowContractModal(true); setAcceptedTermsError(null); }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Regularizar documentos legais
+                  </button>
+                </div>
+              ) : (
+                <p className="text-sm text-accent-amber text-center py-2.5">
+                  Documentos legais indisponíveis no momento. Entre em contato com o suporte.
                 </p>
-              )}
-            </div>
-          )}
+              )
+            }
+            {acceptedTermsError && (
+              <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs">
+                <AlertCircle className="w-3.5 h-3.5" />
+                {acceptedTermsError}
+              </p>
+            )}
+          </div>
 
           {formError && (
             <div className="mb-4 flex items-start gap-3 bg-red-900/20 border border-red-700/30 rounded-lg px-4 py-3">
@@ -1415,11 +1481,73 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
             </button>
             {billingExpanded && (
               <div className="px-4 pb-4 space-y-3">
-                {!billingData.billing_address_street ? (
+                {!billingData.billing_address_street && formData.cnpj && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-text-muted">
+                      Loja com CNPJ cadastrado. Você pode reconsultar os dados automaticamente ou preencher manualmente.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        disabled={reconsultLoading}
+                        onClick={async () => {
+                          setReconsultLoading(true);
+                          try {
+                            const res = await fetch(`/api/store/${storeId}/reconsult-cnpj`, {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                            });
+                            if (res.ok) {
+                              const data = await res.json();
+                              if (data.billing) {
+                                setBillingData({
+                                  billing_email: '',
+                                  billing_phone: '',
+                                  billing_address_street: data.billing.billing_address_street || '',
+                                  billing_address_number: data.billing.billing_address_number || '',
+                                  billing_address_complement: data.billing.billing_address_complement || '',
+                                  billing_address_neighborhood: data.billing.billing_address_neighborhood || '',
+                                  billing_address_city: data.billing.billing_address_city || '',
+                                  billing_address_state: data.billing.billing_address_state || '',
+                                  billing_address_zipcode: data.billing.billing_address_zipcode || '',
+                                });
+                              }
+                              if (data.razao_social) setField("razaoSocial", data.razao_social);
+                              if (data.nome_fantasia) setField("nomeFantasia", data.nome_fantasia);
+                            }
+                          } catch {}
+                          setReconsultLoading(false);
+                        }}
+                        className="flex-1 min-h-[38px] rounded-lg bg-accent-blue px-4 py-2 text-xs font-semibold text-white hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {reconsultLoading ? "Consultando..." : "Atualizar dados pelo CNPJ"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBillingData({
+                          billing_email: '',
+                          billing_phone: '',
+                          billing_address_street: '',
+                          billing_address_number: '',
+                          billing_address_complement: '',
+                          billing_address_neighborhood: '',
+                          billing_address_city: '',
+                          billing_address_state: '',
+                          billing_address_zipcode: '',
+                        })}
+                        className="flex-1 min-h-[38px] rounded-lg border border-border-light px-4 py-2 text-xs font-semibold text-text-primary hover:bg-bg-elevated transition-all"
+                      >
+                        Preencher dados de faturamento manualmente
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {!billingData.billing_address_street && !formData.cnpj && (
                   <p className="text-xs text-text-muted">
-                    Complete os dados da loja primeiro para pré-preencher o endereço fiscal.
+                    Informe o CNPJ para pré-preencher o endereço fiscal automaticamente.
                   </p>
-                ) : (
+                )}
+                {billingData.billing_address_street ? (
                   <>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="col-span-2">
@@ -1501,7 +1629,7 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
                       {billingSaving ? "Salvando..." : billingConfirmed ? "✓ Confirmado" : "Confirmar dados de faturamento"}
                     </button>
                   </>
-                )}
+                ) : null}
               </div>
             )}
           </div>
