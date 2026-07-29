@@ -9,6 +9,19 @@ import { getAcceptanceStatus, getStoreAcceptanceHistory } from "@/lib/legal/acce
 import { maskCnpj } from "@/lib/cnpj/mask";
 import { FreemiumEntitlementService } from "@/lib/freemium/entitlement-service";
 import type { FreemiumEntitlement, FreemiumStatus } from "@/lib/freemium/types";
+import { RevealCnpjButton } from "@/components/admin/reveal-cnpj-button";
+import { ReprocessButton } from "@/components/admin/reprocess-button";
+
+const REASON_LABELS: Record<string, string> = {
+  nome_divergente: "Nome divergente",
+  cidade_divergente: "Cidade divergente",
+  uf_divergente: "UF divergente",
+  situacao_suspensa: "Situação suspensa",
+  api_unavailable: "API indisponível",
+  cnpj_baixada: "CNPJ baixado",
+  cnpj_nula: "CNPJ nulo",
+  root_already_used: "Raiz já usada",
+};
 
 const creditService = new CreditService();
 const freemiumService = new FreemiumEntitlementService();
@@ -162,24 +175,26 @@ export default async function AdminUserDetailPage({
                 if (!reasons || reasons.length === 0) return null;
                 return <>
                   <dt className="text-muted-foreground">Motivos</dt>
-                  <dd className="text-xs">{reasons.join(", ")}</dd>
+                  <dd className="text-xs">
+                    <div className="flex flex-wrap gap-1">
+                      {reasons.map((r: string) => (
+                        <span key={r} className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-heading font-medium bg-bg-elevated text-text-muted">
+                          {REASON_LABELS[r] || r}
+                        </span>
+                      ))}
+                    </div>
+                  </dd>
                 </>;
               })()}
             </dl>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <form action={`/api/admin/reviews/${storeId}/reveal-cnpj`} method="POST">
-                <button type="submit" className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-bg-elevated transition-all">
-                  Revelar CNPJ
-                </button>
-              </form>
-              {storeData.verification_status === "defer" && (
-                <form action={`/api/admin/reviews/${storeId}/approve`} method="POST" className="inline">
-                  <button type="submit" className="rounded-md bg-accent-blue px-3 py-1.5 text-xs font-medium text-white hover:brightness-110 transition-all">
-                    Reprocessar
-                  </button>
-                </form>
-              )}
-            </div>
+            {storeId && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                <RevealCnpjButton storeId={storeId} />
+                {storeData.verification_status === "defer" && (
+                  <ReprocessButton storeId={storeId} />
+                )}
+              </div>
+            )}
           </div>
 
           <div className="rounded-md border border-border bg-bg-surface p-4">
