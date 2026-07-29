@@ -2,22 +2,22 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
-current_phase: 33
-status: Phase 33 complete
-last_updated: "2026-07-29T14:30:00.000Z"
+current_phase: 34
+status: Phase 34 complete
+last_updated: "2026-07-29T15:17:00.000Z"
 progress:
-  total_phases: 12
-  completed_phases: 10
-  total_plans: 48
-  completed_plans: 41
-  percent: 85
+  total_phases: 13
+  completed_phases: 11
+  total_plans: 53
+  completed_plans: 53
+  percent: 100
 ---
 
 # Project State
 
-**Last updated:** 2026-07-28
+**Last updated:** 2026-07-29
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆ **Em andamento**
-**Current phase:** 33
+**Current phase:** 34
 
 ## Completed
 
@@ -102,7 +102,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** Phase 33 — verificacao-cnpj-freemium
+**Current focus:** Phase 34 — Store Readiness ✅
 
 ## Completed Milestones
 
@@ -426,9 +426,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 33 — COMPLETE
+Phase: 34 — STORE READINESS ✅
 Plan: 5 of 5
-v1.5 em andamento — Fases 31.1, 31.2, 31.3 e 32 concluídas. F33 (Verificação CNPJ Freemium) completa. F34 (Store Readiness) como próximo marco. F35 (Stripe / Monetização Pública) posterior.
+v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33 e 34 concluídas. F35 (Stripe / Monetização Pública) como próximo marco.
 
 ### Phase 30 — Fundação Legal ✅
 
@@ -501,6 +501,22 @@ v1.5 em andamento — Fases 31.1, 31.2, 31.3 e 32 concluídas. F33 (Verificaçã
 - `faaf234` — 31-3-05: Automated Tests — contract tests, intent-aware review tests, validatePrompts com campaignIntent, regressão offer
 - `bc2b2af` — 31-3-06: UAT evidence structure — 5 cenarios E2E com micro-runbook, criterios de aceite e template de evidencias
 
+## Completed
+
+### Phase 34 — Store Readiness ✅
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 34-01 | 1 | ✅ | Migration + Core Libraries — store_billing_info table, RPC check_store_readiness, StoreReadiness/StoreBillingInfo modules, CNPJ Address Mapper, Store type CNPJ fields, cast removal |
+| 34-02 | 2 | ✅ | Guarda Dupla + Fluxo Legacy — page guard `/campanhas/nova`, API guard 412, redirect chaining, fallback nome_fantasia, contextual microcopy |
+| 34-03 | 2 | ✅ | Step 2 UX + Billing Card — renaming "Direção Visual" + badge, query param suport, billing collapsible card, confirm route |
+| 34-04 | 3 | ✅ | Dashboard Banner + Brand Profile — ReadinessBanner with checklist, async server component, three visual direction paths |
+| 34-05 | 3 | ✅ | Tests + Verification — 17+ novos testes, 1189 total, typecheck/lint/build clean |
+
+**Tests:** 1189 passing (152 files, 17+ novos)
+**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
+**Context:** `.planning/phases/34-store-readiness/34-CONTEXT.md`
+
 ### Next Phases
 
 | Phase | Status | Description |
@@ -515,8 +531,8 @@ v1.5 em andamento — Fases 31.1, 31.2, 31.3 e 32 concluídas. F33 (Verificaçã
 | **F31.2** | **✅ Completed** | **Diretores por Intenção — Schemas tolerantes, desbloqueio de intents, 6 prompts, roteamento, conteúdo adaptado, 6 plans, UAT 9/9 ✅** |
 | **F31.3** | **✅ Completed** | **Quality Gate por Intenção Comercial — ImageReviewInput intent-aware, prompt reestruturado, commercial_tone_mismatch, 6 plans, 1071 testes, UAT executada com IA real (6/6 cenários)** |
 | F32 | ✅ Complete | Freemium Anti-Abuso CNPJ — CNPJ obrigatório, entitlement por raiz, admin freemium status (5/5 plans, 27+ tests) |
-| F33 | ◆ Planning | Verificação CNPJ Freemium — Consulta BrasilAPI/CNPJá, cross-check, motor de decisão, admin review, test stores |
-| F34 | ○ Pending | Store Readiness |
+| F33 | ✅ Complete | Verificação CNPJ Freemium — Consulta BrasilAPI/CNPJá, cross-check, motor de decisão, admin review, test stores |
+| F34 | ✅ Completed | Store Readiness — 5 plans, 17+ testes, 1189 total |
 | F35 | ○ Future | Stripe / Monetização Pública |
 
 ### Quick Tasks Completed
