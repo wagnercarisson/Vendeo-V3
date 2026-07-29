@@ -1,4 +1,5 @@
 > Synced from `fase-26-admin-operacional` (ADDED).
+> Synced from `fase-33-verificacao-cnpj-freemium` (MODIFIED). Added action types: approve_verification, reject_verification, create_test_store, admin_exception, reveal_cnpj.
 
 ## Purpose
 
@@ -12,7 +13,7 @@ O sistema SHALL criar a tabela `public.admin_audit_log` para registrar ações a
 
 - `id UUID PK DEFAULT gen_random_uuid()`
 - `actor_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE`
-- `action TEXT NOT NULL` com CHECK constraint: `action IN ('credit_grant', 'credit_adjustment', 'store_create_invite', 'manual_refund')`
+- `action TEXT NOT NULL` com CHECK constraint: `action IN ('credit_grant', 'credit_adjustment', 'store_create_invite', 'manual_refund', 'approve_verification', 'reject_verification', 'create_test_store', 'admin_exception', 'reveal_cnpj')`
 - `target_type TEXT NOT NULL` com CHECK constraint: `target_type IN ('store', 'user', 'campaign')`
 - `target_id UUID NOT NULL`
 - `reason TEXT NOT NULL`
@@ -99,3 +100,9 @@ O sistema SHALL exibir `/admin/audit-log` com tabela do histórico de ações.
 
 - **WHEN** admin acessa `/admin/audit-log`
 - **THEN** exibe tabela com histórico paginado de ações administrativas
+
+#### Scenario: Verification actions are recorded
+
+- **WHEN** admin realiza approve, reject, exception, reveal-cnpj, ou create-test-store
+- **THEN** cada ação é registrada em `admin_audit_log` com `actor_id`, `action`, `target_type`, `target_id`, `reason`, `metadata`, `created_at`
+- **AND** a CHECK constraint da coluna `action` inclui os novos tipos: `approve_verification`, `reject_verification`, `create_test_store`, `admin_exception`, `reveal_cnpj`

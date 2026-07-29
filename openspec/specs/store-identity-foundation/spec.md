@@ -1,6 +1,7 @@
 > **Nota de escopo**: Esta spec define apenas a fundação técnica de dados, API e fallbacks para identidade da loja. Não cria página, formulário, step navigation, preview visual, seletor de cor, upload de logo ou fluxo de interface.
 >
 > > Synced from `fase-9-cutover-ownership` (MODIFIED). Added `user_id` column, RLS, auth requirements for CRUD APIs, GET /api/store atalho, buildStoreResponse, and ownership validation.
+> Synced from `fase-33-verificacao-cnpj-freemium` (MODIFIED). Added verification parameters to Create store API, conditional grant.
 
 ## Requirements
 
@@ -249,6 +250,50 @@ The endpoint SHALL:
 - **WHEN** a POST request is sent to `/api/store` with `{ "name": "Loja", "segment": "invalid" }`
 - **THEN** the response status SHALL be 400
 - **AND** the error body SHALL indicate that `segment` is invalid
+
+#### Scenario: Submit APPROVE — loja criada com grant condicional
+
+- **WHEN** `POST /api/store` recebe CNPJ válido
+- **AND** lookup resolve com dados oficiais
+- **AND** `evaluateFreemiumEligibility` retorna `decision = 'approve'`
+- **THEN** loja é criada com `verification_status = 'approved'`
+- **AND** grant de 10 créditos é concedido
+- **AND** response: `{ onboardingGranted: true, verificationStatus: 'approved' }`
+
+#### Scenario: Submit REVIEW — loja criada sem grant
+
+- **WHEN** `POST /api/store` recebe CNPJ válido
+- **AND** `evaluateFreemiumEligibility` retorna `decision = 'review'`
+- **THEN** loja é criada com `verification_status = 'review'`
+- **AND** grant de onboarding NÃO é concedido
+- **AND** response: `{ onboardingGranted: false, verificationStatus: 'review' }`
+
+#### Scenario: Submit REJECT (CNPJ inexistente) — bloqueia criação
+
+- **WHEN** `POST /api/store` é chamado
+- **AND** lookup retorna `not_found`
+- **THEN** loja NÃO é criada
+- **AND** response: 400 com mensagem de CNPJ não encontrado
+
+#### Scenario: Submit REJECT (CNPJ baixado/nulo) — loja criada sem grant
+
+- **WHEN** `POST /api/store` recebe CNPJ baixado ou nulo
+- **AND** `evaluateFreemiumEligibility` retorna `decision = 'reject'` por situação cadastral
+- **THEN** loja é criada com `verification_status = 'rejected'`
+- **AND** grant de onboarding NÃO é concedido
+
+#### Scenario: Submit DEFER — loja criada sem grant
+
+- **WHEN** `POST /api/store` é chamado
+- **AND** lookup retorna `unavailable` (ambos provedores indisponíveis)
+- **THEN** loja é criada com `verification_status = 'defer'`
+- **AND** grant de onboarding NÃO é concedido
+
+#### Scenario: Backend não confia no estado do client
+
+- **WHEN** `POST /api/store` recebe CNPJ sem dados oficiais resolvidos no client
+- **THEN** backend tenta resolver server-side via `CnpjVerificationService.resolve()`
+- **AND** a decisão é baseada no resultado server-side, não no estado do client
 
 ### Requirement: Read store API
 

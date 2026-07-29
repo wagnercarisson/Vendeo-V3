@@ -1,4 +1,5 @@
 > Synced from `fase-26-admin-operacional` (ADDED).
+> Synced from `fase-33-verificacao-cnpj-freemium` (MODIFIED). Added verification_status column, filter, and verification card on user detail.
 
 ## Purpose
 
@@ -29,6 +30,8 @@ export interface AdminUserSummary {
   communicationsConsent: "granted" | "revoked" | "never_set";
   cnpjMasked: string | null;
   freemiumStatus: "active" | "used" | "exhausted" | "no_cnpj";
+  verificationStatus: string | null; // unverified | pending | approved | review | rejected | defer
+  isTestStore: boolean;
 }
 ```
 
@@ -118,10 +121,12 @@ O sistema SHALL expor `GET /api/admin/users/[id]` para detalhe completo de um lo
 O sistema SHALL exibir `/admin/users` com diretório de usuários/lojas.
 
 - Server Component com busca SSR via searchParams
-- Tabela com colunas: email, loja, segmento, CNPJ (mascarado), saldo, total de campanhas, erros, última campanha, criado em
+- Tabela com colunas: email, loja, segmento, CNPJ (mascarado), saldo, total de campanhas, erros, última campanha, criado em, status de verificação
 - Filtro por status freemium (dropdown): "Sem CNPJ", "Freemium ativo", "Freemium usado", "Freemium esgotado"
+- Filtro por `verification_status` (dropdown): "Todos", "unverified", "pending", "approved", "review", "rejected", "defer"
 - Busca por nome/email/segmento
 - Paginação
+- Badge "TESTE" para lojas com `is_test_store = true`
 - Link para detalhe `/admin/users/[id]`
 
 #### Scenario: Admin views user directory
@@ -145,3 +150,31 @@ O sistema SHALL exibir `/admin/users/[id]` com detalhe completo do lojista.
 - Seção "Extrato": tabela de transações (tipo, valor, data, motivo)
 - Seção "Conceder Créditos": formulário de grant inline (Client Component)
 - Seção "Campanhas": tabela com campanhas recentes, destacando errors em vermelho
+
+### Requirement: Verification card on user detail (ADDED)
+
+The `/admin/users/[id]` detail page SHALL include a "Verificação Cadastral" card section displaying:
+
+- `verification_status` (com badge colorido: verde para approved, amarelo para review, vermelho para rejected, cinza para defer)
+- Dados oficiais do CNPJ (razão social, endereço, CNAE, situação cadastral) quando disponíveis
+- Motivos de verificação (tags: nome_divergente, cidade_divergente, etc.)
+- Botão "Revelar CNPJ" que mostra CNPJ completo e registra em `admin_audit_log`
+- Botão "Reprocessar" para lojas em status DEFER (tenta lookup novamente)
+- Link "Conceder Exceção" para conceder freemium manualmente
+
+#### Scenario: Admin sees verification card on user detail
+
+- **WHEN** admin acessa `/admin/users/[id]`
+- **THEN** o card "Verificação Cadastral" é exibido com status e dados oficiais
+
+#### Scenario: Reveal CNPJ button shown on detail
+
+- **WHEN** admin visualiza card de verificação
+- **THEN** botão "Revelar CNPJ" está presente
+- **AND** ao clicar, CNPJ completo é exibido e ação é registrada em audit log
+
+#### Scenario: Reprocess button shown for DEFER
+
+- **WHEN** `verification_status = 'defer'`
+- **THEN** botão "Reprocessar" é exibido
+- **AND** ao clicar, tenta lookup novamente via API
