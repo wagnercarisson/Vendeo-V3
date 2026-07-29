@@ -1066,7 +1066,9 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
             2
           </div>
           <span className="text-xs font-heading font-semibold">Direção Visual</span>
-          <span className="text-[10px] font-heading font-semibold text-accent-amber bg-amber-900/30 px-1.5 py-0.5 rounded">Necessário</span>
+          {!inferredProfile && (
+            <span className="text-[10px] font-heading font-semibold text-accent-amber bg-amber-900/30 px-1.5 py-0.5 rounded">Necessário</span>
+          )}
         </div>
       </div>
 
