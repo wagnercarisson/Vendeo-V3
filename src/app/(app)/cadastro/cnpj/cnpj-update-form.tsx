@@ -1,19 +1,28 @@
 "use client";
 
-import { useState, use } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { validateCnpj } from "@/lib/cnpj/validate";
-import { normalizeCnpj } from "@/lib/cnpj/normalize";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export function CnpjUpdateForm({ storeId }: { storeId: string }) {
+export function CnpjUpdateForm({
+  storeId,
+  existingCnpj,
+  existingRazaoSocial,
+  existingNomeFantasia,
+}: {
+  storeId: string;
+  existingCnpj?: string;
+  existingRazaoSocial?: string;
+  existingNomeFantasia?: string;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo");
-  const [cnpj, setCnpj] = useState("");
-  const [razaoSocial, setRazaoSocial] = useState("");
-  const [nomeFantasia, setNomeFantasia] = useState("");
+  const [cnpj, setCnpj] = useState(existingCnpj ?? "");
+  const [razaoSocial, setRazaoSocial] = useState(existingRazaoSocial ?? "");
+  const [nomeFantasia, setNomeFantasia] = useState(existingNomeFantasia ?? "");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -39,26 +48,47 @@ export function CnpjUpdateForm({ storeId }: { storeId: string }) {
       return;
     }
 
+    if (!razaoSocial.trim()) {
+      setError("Razão social é obrigatória.");
+      return;
+    }
+
+    const nomeFantasiaFinal = nomeFantasia.trim() || razaoSocial.trim();
+
     setSaving(true);
     try {
       const { normalized } = result;
 
-      const nomeFantasiaFinal = nomeFantasia || razaoSocial;
+      if (existingCnpj) {
+        const res = await fetch(`/api/store/${storeId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            razaoSocial: razaoSocial.trim(),
+            nomeFantasia: nomeFantasiaFinal,
+          }),
+        });
 
-      const res = await fetch("/api/store/update-cnpj", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          storeId,
-          cnpjNormalized: normalized,
-          razaoSocial: razaoSocial || undefined,
-          nomeFantasia: nomeFantasiaFinal || undefined,
-        }),
-      });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({ error: "Erro ao atualizar" }));
+          throw new Error(data.error || "Erro ao atualizar dados cadastrais");
+        }
+      } else {
+        const res = await fetch("/api/store/update-cnpj", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            storeId,
+            cnpjNormalized: normalized,
+            razaoSocial: razaoSocial.trim(),
+            nomeFantasia: nomeFantasiaFinal,
+          }),
+        });
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({ error: "Erro ao atualizar" }));
-        throw new Error(data.error || "Erro ao atualizar CNPJ");
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({ error: "Erro ao atualizar" }));
+          throw new Error(data.error || "Erro ao atualizar CNPJ");
+        }
       }
 
       setSuccess(true);
@@ -79,7 +109,7 @@ export function CnpjUpdateForm({ storeId }: { storeId: string }) {
         }
       }, 1500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao atualizar CNPJ");
+      setError(err instanceof Error ? err.message : "Erro ao atualizar");
     } finally {
       setSaving(false);
     }
@@ -107,29 +137,35 @@ export function CnpjUpdateForm({ storeId }: { storeId: string }) {
         <label htmlFor="cnpj" className="block text-sm font-medium mb-1">
           CNPJ *
         </label>
-        <input
-          id="cnpj"
-          type="text"
-          value={cnpj}
-          onChange={(e) => handleCnpjChange(e.target.value)}
-          onBlur={() => {
-            const digits = cnpj.replace(/\D/g, "");
-            if (digits.length === 14) {
-              const result = validateCnpj(cnpj);
-              if (result instanceof Error) {
-                setError("CNPJ inválido. Verifique os dígitos e tente novamente.");
+        {existingCnpj ? (
+          <div className="w-full rounded-md border border-border bg-bg-surface px-3 py-2 text-sm text-text-muted">
+            {existingCnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5")}
+          </div>
+        ) : (
+          <input
+            id="cnpj"
+            type="text"
+            value={cnpj}
+            onChange={(e) => handleCnpjChange(e.target.value)}
+            onBlur={() => {
+              const digits = cnpj.replace(/\D/g, "");
+              if (digits.length === 14) {
+                const result = validateCnpj(cnpj);
+                if (result instanceof Error) {
+                  setError("CNPJ inválido. Verifique os dígitos e tente novamente.");
+                }
               }
-            }
-          }}
-          placeholder="XX.XXX.XXX/YYYY-ZZ"
-          maxLength={18}
-          className="w-full rounded-md border border-border bg-bg-surface px-3 py-2 text-sm"
-          required
-        />
+            }}
+            placeholder="XX.XXX.XXX/YYYY-ZZ"
+            maxLength={18}
+            className="w-full rounded-md border border-border bg-bg-surface px-3 py-2 text-sm"
+            required
+          />
+        )}
       </div>
       <div>
         <label htmlFor="razaoSocial" className="block text-sm font-medium mb-1">
-          Razão Social <span className="text-muted-foreground">(opcional)</span>
+          Razão Social *
         </label>
         <input
           id="razaoSocial"
@@ -139,6 +175,7 @@ export function CnpjUpdateForm({ storeId }: { storeId: string }) {
           placeholder="Razão social"
           maxLength={200}
           className="w-full rounded-md border border-border bg-bg-surface px-3 py-2 text-sm"
+          required
         />
       </div>
       <div>
@@ -172,7 +209,7 @@ export function CnpjUpdateForm({ storeId }: { storeId: string }) {
         loading={saving}
         className="w-full"
       >
-        {saving ? "Salvando..." : "Atualizar CNPJ"}
+        {saving ? "Salvando..." : existingCnpj ? "Completar dados cadastrais" : "Atualizar CNPJ"}
       </Button>
     </form>
   );

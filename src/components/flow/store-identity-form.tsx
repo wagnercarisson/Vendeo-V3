@@ -868,7 +868,7 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
       const subsegmentErr = validateOtherSubsegment(formData.subsegment);
       if (subsegmentErr) errors.subsegment = subsegmentErr;
     }
-    if (!storeId && formData.cnpj) {
+    if (formData.cnpj) {
       const cnpjResult = validateCnpj(formData.cnpj);
       if (cnpjResult instanceof Error) {
         errors.cnpj = "CNPJ inválido";
@@ -1093,125 +1093,159 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
           <h1 className="text-2xl font-heading font-bold text-text-primary mb-1">Dados da Loja</h1>
           <p className="text-text-secondary text-sm font-body mb-6">Informe os dados básicos da sua loja</p>
 
-          {!storeId && (
-            <>
-              <div>
-                <label htmlFor="cnpj" className={labelClass}>CNPJ *</label>
-                <input id="cnpj" type="text" value={formData.cnpj}
-                  title="Verificamos os dados do CNPJ para liberar os créditos gratuitos."
-                  onChange={(e) => {
-                    const raw = e.target.value.replace(/\D/g, "").slice(0, 14);
-                    let masked = raw;
-                    if (raw.length > 2) masked = raw.slice(0, 2) + "." + raw.slice(2);
-                    if (raw.length > 5) masked = raw.slice(0, 2) + "." + raw.slice(2, 5) + "." + raw.slice(5);
-                    if (raw.length > 8) masked = raw.slice(0, 2) + "." + raw.slice(2, 5) + "." + raw.slice(5, 8) + "/" + raw.slice(8);
-                    if (raw.length > 12) masked = raw.slice(0, 2) + "." + raw.slice(2, 5) + "." + raw.slice(5, 8) + "/" + raw.slice(8, 12) + "-" + raw.slice(12, 14);
-                    setField("cnpj", masked);
-                    if (cnpjLookupStatus !== 'idle') {
-                      setCnpjLookupStatus('idle');
-                      setCnpjLookupData(null);
-                      setCnpjLookupMessage(null);
-                      setField("razaoSocial", "");
-                      setField("nomeFantasia", "");
-                    }
-                  }}
-                  onBlur={async () => {
-                    setTouched((prev) => ({ ...prev, cnpj: true }));
-                    if (formData.cnpj) {
-                      const result = validateCnpj(formData.cnpj);
-                      if (result instanceof Error) {
-                        setFieldErrors((prev) => ({ ...prev, cnpj: "CNPJ inválido" }));
-                        return;
-                      }
-                      setFieldErrors((prev) => ({ ...prev, cnpj: undefined }));
-                      const normalized = result.normalized;
-                      setCnpjLookupStatus('loading');
-                      setCnpjLookupMessage('Consultando dados cadastrais...');
-                      try {
-                        const res = await fetch(`/api/cnpj/lookup?cnpj=${normalized}`);
-                        const data = await res.json();
-                        if (data.status === 'resolved') {
-                          setCnpjLookupStatus('resolved');
-                          setCnpjLookupData(data.data);
-                          setCnpjLookupMessage('Dados carregados da Receita Federal.');
-                          setField("razaoSocial", data.data.razao_social);
-                          setField("nomeFantasia", data.data.nome_fantasia || '');
-                          if (data.data.cidade) setField("city", data.data.cidade);
-                          if (data.data.uf) setField("state", data.data.uf);
-                          setBillingData({
-                            billing_address_street: data.data.logradouro || '',
-                            billing_address_number: data.data.numero || '',
-                            billing_address_complement: data.data.complemento || '',
-                            billing_address_neighborhood: data.data.bairro || '',
-                            billing_address_city: data.data.cidade || '',
-                            billing_address_state: data.data.uf || '',
-                            billing_address_zipcode: data.data.cep || '',
-                          });
-                          setBillingExpanded(true);
-                        } else if (data.status === 'not_found') {
-                          setCnpjLookupStatus('not_found');
-                          setCnpjLookupMessage('CNPJ não encontrado na Receita Federal.');
-                        } else {
-                          setCnpjLookupStatus('unavailable');
-                          setCnpjLookupMessage('Não foi possível consultar os dados deste CNPJ agora. A loja será criada sem créditos iniciais. Você pode tentar novamente em \'Dados da Loja\'.');
-                        }
-                      } catch {
-                        setCnpjLookupStatus('unavailable');
-                        setCnpjLookupMessage('Não foi possível consultar os dados deste CNPJ agora.');
-                      }
-                    }
-                  }}
-                  placeholder="XX.XXX.XXX/YYYY-ZZ" maxLength={18} className={inputClass("cnpj")} />
-                {touched.cnpj && fieldErrors.cnpj && (
-                  <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs"><AlertCircle className="w-3.5 h-3.5" />{fieldErrors.cnpj}</p>
-                )}
-                {cnpjLookupStatus === 'loading' && (
-                  <p className="mt-1.5 flex items-center gap-1.5 text-text-secondary text-xs"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Consultando dados cadastrais...</p>
-                )}
-                {cnpjLookupStatus === 'resolved' && (
-                  <p className="mt-1.5 flex items-center gap-1.5 text-accent-green text-xs"><CheckCircle2 className="w-3.5 h-3.5" /> Dados carregados da Receita Federal.</p>
-                )}
-                {cnpjLookupStatus === 'not_found' && (
-                  <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs"><AlertCircle className="w-3.5 h-3.5" /> CNPJ não encontrado na Receita Federal.</p>
-                )}
-                {cnpjLookupStatus === 'unavailable' && (
-                  <p className="mt-1.5 flex items-center gap-1.5 text-accent-amber text-xs"><AlertCircle className="w-3.5 h-3.5" /> {cnpjLookupMessage}</p>
-                )}
-              </div>
-              <div>
-                <label htmlFor="razaoSocial" className={labelClass}>Razão Social <span className="font-normal normal-case tracking-normal text-text-disabled">(opcional)</span></label>
-                <input id="razaoSocial" type="text" value={formData.razaoSocial}
-                  onChange={(e) => setField("razaoSocial", e.target.value)}
-                  readOnly={cnpjLookupStatus === 'resolved'}
-                  placeholder="Razão social (opcional)" maxLength={200}
-                  className={`${inputClass("razaoSocial")} ${cnpjLookupStatus === 'resolved' ? 'opacity-70 cursor-not-allowed' : ''}`} />
-              </div>
-              <div>
-                <label htmlFor="nomeFantasia" className={labelClass}>Nome Fantasia <span className="font-normal normal-case tracking-normal text-text-disabled">(opcional)</span></label>
-                <input id="nomeFantasia" type="text" value={formData.nomeFantasia}
-                  onChange={(e) => setField("nomeFantasia", e.target.value)}
-                  readOnly={cnpjLookupStatus === 'resolved'}
-                  placeholder="Nome fantasia (opcional)" maxLength={200}
-                  className={`${inputClass("nomeFantasia")} ${cnpjLookupStatus === 'resolved' ? 'opacity-70 cursor-not-allowed' : ''}`} />
-                {cnpjLookupStatus === 'resolved' && cnpjLookupData && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {cnpjLookupData.nome_fantasia ? (
-                      <button type="button" onClick={() => setField("name", cnpjLookupData.nome_fantasia as string)}
-                        className="text-xs text-accent-blue hover:text-accent-blue/80 font-body underline transition-colors">
-                        Usar nome fantasia
-                      </button>
-                    ) : null}
-                    {cnpjLookupData.razao_social ? (
-                      <button type="button" onClick={() => setField("name", cnpjLookupData.razao_social as string)}
-                        className="text-xs text-accent-blue hover:text-accent-blue/80 font-body underline transition-colors">
-                        {cnpjLookupData.nome_fantasia ? 'Usar razão social' : 'Usar razão social'}
-                      </button>
-                    ) : null}
+          {/* Cadastro Fiscal — sempre visível para completar readiness */}
+          {(() => {
+            const hasCnpj = !!formData.cnpj;
+            if (hasCnpj) {
+              const masked = formData.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+              return (
+                <>
+                  <div>
+                    <label className={labelClass}>CNPJ</label>
+                    <div className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-muted text-sm font-body">
+                      {masked}
+                    </div>
                   </div>
-                )}
-              </div>
-            </>
-          )}
+                  <div>
+                    <label htmlFor="razaoSocial" className={labelClass}>Razão Social *</label>
+                    <input id="razaoSocial" type="text" value={formData.razaoSocial}
+                      onChange={(e) => setField("razaoSocial", e.target.value)}
+                      placeholder="Razão social" maxLength={200}
+                      className={inputClass("razaoSocial")} />
+                  </div>
+                  <div>
+                    <label htmlFor="nomeFantasia" className={labelClass}>Nome Fantasia <span className="font-normal normal-case tracking-normal text-text-disabled">(opcional)</span></label>
+                    <input id="nomeFantasia" type="text" value={formData.nomeFantasia}
+                      onChange={(e) => setField("nomeFantasia", e.target.value)}
+                      placeholder="Nome fantasia" maxLength={200}
+                      className={inputClass("nomeFantasia")} />
+                    <p className="text-xs text-text-muted mt-1">
+                      Se não informado, será usado o nome da Razão Social.
+                    </p>
+                  </div>
+                </>
+              );
+            }
+            return (
+              <>
+                <div>
+                  <label htmlFor="cnpj" className={labelClass}>CNPJ *</label>
+                  <input id="cnpj" type="text" value={formData.cnpj}
+                    title="Verificamos os dados do CNPJ para liberar os créditos gratuitos."
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/\D/g, "").slice(0, 14);
+                      let masked = raw;
+                      if (raw.length > 2) masked = raw.slice(0, 2) + "." + raw.slice(2);
+                      if (raw.length > 5) masked = raw.slice(0, 2) + "." + raw.slice(2, 5) + "." + raw.slice(5);
+                      if (raw.length > 8) masked = raw.slice(0, 2) + "." + raw.slice(2, 5) + "." + raw.slice(5, 8) + "/" + raw.slice(8);
+                      if (raw.length > 12) masked = raw.slice(0, 2) + "." + raw.slice(2, 5) + "." + raw.slice(5, 8) + "/" + raw.slice(8, 12) + "-" + raw.slice(12, 14);
+                      setField("cnpj", masked);
+                      if (cnpjLookupStatus !== 'idle') {
+                        setCnpjLookupStatus('idle');
+                        setCnpjLookupData(null);
+                        setCnpjLookupMessage(null);
+                        setField("razaoSocial", "");
+                        setField("nomeFantasia", "");
+                      }
+                    }}
+                    onBlur={async () => {
+                      setTouched((prev) => ({ ...prev, cnpj: true }));
+                      if (formData.cnpj) {
+                        const result = validateCnpj(formData.cnpj);
+                        if (result instanceof Error) {
+                          setFieldErrors((prev) => ({ ...prev, cnpj: "CNPJ inválido" }));
+                          return;
+                        }
+                        setFieldErrors((prev) => ({ ...prev, cnpj: undefined }));
+                        const normalized = result.normalized;
+                        setCnpjLookupStatus('loading');
+                        setCnpjLookupMessage('Consultando dados cadastrais...');
+                        try {
+                          const res = await fetch(`/api/cnpj/lookup?cnpj=${normalized}`);
+                          const data = await res.json();
+                          if (data.status === 'resolved') {
+                            setCnpjLookupStatus('resolved');
+                            setCnpjLookupData(data.data);
+                            setCnpjLookupMessage('Dados carregados da Receita Federal.');
+                            setField("razaoSocial", data.data.razao_social);
+                            setField("nomeFantasia", data.data.nome_fantasia || '');
+                            if (data.data.cidade) setField("city", data.data.cidade);
+                            if (data.data.uf) setField("state", data.data.uf);
+                            setBillingData({
+                              billing_address_street: data.data.logradouro || '',
+                              billing_address_number: data.data.numero || '',
+                              billing_address_complement: data.data.complemento || '',
+                              billing_address_neighborhood: data.data.bairro || '',
+                              billing_address_city: data.data.cidade || '',
+                              billing_address_state: data.data.uf || '',
+                              billing_address_zipcode: data.data.cep || '',
+                            });
+                            setBillingExpanded(true);
+                          } else if (data.status === 'not_found') {
+                            setCnpjLookupStatus('not_found');
+                            setCnpjLookupMessage('CNPJ não encontrado na Receita Federal.');
+                          } else {
+                            setCnpjLookupStatus('unavailable');
+                            setCnpjLookupMessage('Não foi possível consultar os dados deste CNPJ agora. A loja será criada sem créditos iniciais. Você pode tentar novamente em \'Dados da Loja\'.');
+                          }
+                        } catch {
+                          setCnpjLookupStatus('unavailable');
+                          setCnpjLookupMessage('Não foi possível consultar os dados deste CNPJ agora.');
+                        }
+                      }
+                    }}
+                    placeholder="XX.XXX.XXX/YYYY-ZZ" maxLength={18} className={inputClass("cnpj")} />
+                  {touched.cnpj && fieldErrors.cnpj && (
+                    <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs"><AlertCircle className="w-3.5 h-3.5" />{fieldErrors.cnpj}</p>
+                  )}
+                  {cnpjLookupStatus === 'loading' && (
+                    <p className="mt-1.5 flex items-center gap-1.5 text-text-secondary text-xs"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Consultando dados cadastrais...</p>
+                  )}
+                  {cnpjLookupStatus === 'resolved' && (
+                    <p className="mt-1.5 flex items-center gap-1.5 text-accent-green text-xs"><CheckCircle2 className="w-3.5 h-3.5" /> Dados carregados da Receita Federal.</p>
+                  )}
+                  {cnpjLookupStatus === 'not_found' && (
+                    <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs"><AlertCircle className="w-3.5 h-3.5" /> CNPJ não encontrado na Receita Federal.</p>
+                  )}
+                  {cnpjLookupStatus === 'unavailable' && (
+                    <p className="mt-1.5 flex items-center gap-1.5 text-accent-amber text-xs"><AlertCircle className="w-3.5 h-3.5" /> {cnpjLookupMessage}</p>
+                  )}
+                </div>
+                <div>
+                  <label htmlFor="razaoSocial" className={labelClass}>Razão Social <span className="font-normal normal-case tracking-normal text-text-disabled">(opcional)</span></label>
+                  <input id="razaoSocial" type="text" value={formData.razaoSocial}
+                    onChange={(e) => setField("razaoSocial", e.target.value)}
+                    readOnly={cnpjLookupStatus === 'resolved'}
+                    placeholder="Razão social (opcional)" maxLength={200}
+                    className={`${inputClass("razaoSocial")} ${cnpjLookupStatus === 'resolved' ? 'opacity-70 cursor-not-allowed' : ''}`} />
+                </div>
+                <div>
+                  <label htmlFor="nomeFantasia" className={labelClass}>Nome Fantasia <span className="font-normal normal-case tracking-normal text-text-disabled">(opcional)</span></label>
+                  <input id="nomeFantasia" type="text" value={formData.nomeFantasia}
+                    onChange={(e) => setField("nomeFantasia", e.target.value)}
+                    readOnly={cnpjLookupStatus === 'resolved'}
+                    placeholder="Nome fantasia (opcional)" maxLength={200}
+                    className={`${inputClass("nomeFantasia")} ${cnpjLookupStatus === 'resolved' ? 'opacity-70 cursor-not-allowed' : ''}`} />
+                  {cnpjLookupStatus === 'resolved' && cnpjLookupData && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {cnpjLookupData.nome_fantasia ? (
+                        <button type="button" onClick={() => setField("name", cnpjLookupData.nome_fantasia as string)}
+                          className="text-xs text-accent-blue hover:text-accent-blue/80 font-body underline transition-colors">
+                          Usar nome fantasia
+                        </button>
+                      ) : null}
+                      {cnpjLookupData.razao_social ? (
+                        <button type="button" onClick={() => setField("name", cnpjLookupData.razao_social as string)}
+                          className="text-xs text-accent-blue hover:text-accent-blue/80 font-body underline transition-colors">
+                          {cnpjLookupData.nome_fantasia ? 'Usar razão social' : 'Usar razão social'}
+                        </button>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
+              </>
+            );
+          })()}
 
           <div>
             <label htmlFor="name" className={labelClass}>Nome da Loja *</label>

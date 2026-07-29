@@ -23,6 +23,16 @@ vi.mock("@/lib/auth/store-ownership", () => ({
   getCurrentStore: vi.fn(async () => ({ id: STORE_UUID, name: "Minha Loja" })),
 }));
 
+vi.mock("@/lib/cnpj/validate", () => ({
+  validateCnpj: vi.fn((raw: string) => {
+    const digits = raw.replace(/\D/g, "");
+    if (digits === "12345678000195" || digits === "22345678000195") {
+      return { normalized: digits };
+    }
+    return new Error("CNPJ inválido");
+  }),
+}));
+
 vi.mock("@/lib/cnpj/hash", () => ({
   hashCnpjRoot: vi.fn(() => "mocked_hash_64chars"),
 }));
@@ -76,12 +86,14 @@ describe("POST /api/store/update-cnpj", () => {
     const res = await POST(createRequest({
       storeId: STORE_UUID,
       cnpjNormalized: "12345678000195",
+      razaoSocial: "Razao Social Ltda",
     }));
 
     expect(res.status).toBe(200);
     expect(mockRpc).toHaveBeenCalledWith("update_store_cnpj", expect.objectContaining({
       p_store_id: STORE_UUID,
       p_cnpj_normalized: "12345678000195",
+      p_razao_social: "Razao Social Ltda",
     }));
   });
 
@@ -95,6 +107,7 @@ describe("POST /api/store/update-cnpj", () => {
     const res = await POST(createRequest({
       storeId: STORE_UUID,
       cnpjNormalized: "22345678000195",
+      razaoSocial: "Razao Social Ltda",
     }));
 
     expect(res.status).toBe(409);
@@ -107,6 +120,7 @@ describe("POST /api/store/update-cnpj", () => {
     const res = await POST(createRequest({
       storeId: STORE_UUID,
       cnpjNormalized: "123",
+      razaoSocial: "Razao",
     }));
 
     expect(res.status).toBe(400);
@@ -123,6 +137,7 @@ describe("POST /api/store/update-cnpj", () => {
     const res = await POST(createRequest({
       storeId: STORE_UUID,
       cnpjNormalized: "12345678000195",
+      razaoSocial: "Razao Social Ltda",
     }));
 
     expect(res.status).toBe(403);

@@ -153,6 +153,32 @@ export const PATCH = apiHandler(async (
       updates.slogan = typeof body.slogan === 'string' ? body.slogan.trim() || null : null;
     }
 
+    if (body.razaoSocial !== undefined) {
+      if (typeof body.razaoSocial !== "string" || body.razaoSocial.trim().length < 2) {
+        return NextResponse.json(
+          { error: "Razão social deve ter ao menos 2 caracteres" },
+          { status: 400 }
+        );
+      }
+      updates.razao_social = body.razaoSocial.trim();
+    }
+
+    if (body.nomeFantasia !== undefined) {
+      if (body.nomeFantasia === null || body.nomeFantasia === "") {
+        // If nomeFantasia empty and razao_social exists in same update or DB, fallback
+        const fallback = (updates.razao_social as string) ?? null;
+        if (fallback) {
+          updates.nome_fantasia = fallback;
+        } else {
+          updates.nome_fantasia = null;
+        }
+      } else if (typeof body.nomeFantasia === "string") {
+        updates.nome_fantasia = body.nomeFantasia.trim();
+      } else {
+        return NextResponse.json({ error: "nomeFantasia inválido" }, { status: 400 });
+      }
+    }
+
     if (body.logo_status !== undefined) {
       const VALID_STATUSES = ['uploaded', 'generated', 'explicit_none', 'failed', 'exhausted'];
       if (body.logo_status !== null && !VALID_STATUSES.includes(body.logo_status as string)) {

@@ -151,3 +151,63 @@ describe('GET /api/store/[id] — enriched with identity', () => {
     expect(body.error).toBe('Store not found');
   });
 });
+
+describe('PATCH /api/store/[id] — persist razaoSocial/nomeFantasia', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetClaims.mockResolvedValue({ data: { claims: { sub: 'user-123' } }, error: null });
+    vi.mocked(requireOwnership).mockResolvedValue(mockStore);
+  });
+
+  function patchRequest(body: Record<string, unknown>) {
+    return new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'origin': 'http://localhost', 'host': 'localhost' },
+      body: JSON.stringify(body),
+    }));
+  }
+
+  function mockSupabaseChain(supabaseResult: Record<string, unknown>) {
+    const mockSingle = vi.fn().mockResolvedValue({ data: supabaseResult, error: null });
+    const mockSelect = vi.fn(() => ({ single: mockSingle }));
+    const mockEq = vi.fn(() => ({ select: mockSelect }));
+    const mockUpdate = vi.fn(() => ({ eq: mockEq }));
+    mockSupabaseFrom.mockReturnValue({ update: mockUpdate, eq: mockEq, select: mockSelect });
+    return mockUpdate;
+  }
+
+  it('persists razao_social and nome_fantasia', async () => {
+    const mockUpdate = mockSupabaseChain({ ...mockStore, razao_social: 'Minha Loja Ltda', nome_fantasia: 'Minha Loja' });
+
+    const { PATCH } = await import('../route');
+    const res = await PATCH(patchRequest({ razaoSocial: 'Minha Loja Ltda', nomeFantasia: 'Minha Loja' }), { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(res.status).toBe(200);
+    expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      razao_social: 'Minha Loja Ltda',
+      nome_fantasia: 'Minha Loja',
+    }));
+  });
+
+  it('applies fallback nome_fantasia = razao_social when nomeFantasia is empty', async () => {
+    const mockUpdate = mockSupabaseChain({ ...mockStore, razao_social: 'Razao Social Ltda', nome_fantasia: 'Razao Social Ltda' });
+
+    const { PATCH } = await import('../route');
+    const res = await PATCH(patchRequest({ razaoSocial: 'Razao Social Ltda', nomeFantasia: '' }), { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(res.status).toBe(200);
+    expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      razao_social: 'Razao Social Ltda',
+      nome_fantasia: 'Razao Social Ltda',
+    }));
+  });
+
+  it('rejects razaoSocial shorter than 2 characters', async () => {
+    mockSupabaseChain({ ...mockStore });
+
+    const { PATCH } = await import('../route');
+    const res = await PATCH(patchRequest({ razaoSocial: 'X' }), { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(res.status).toBe(400);
+  });
+});

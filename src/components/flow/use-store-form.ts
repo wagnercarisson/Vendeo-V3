@@ -213,7 +213,8 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
         body.cnpj = formData.cnpj.replace(/\D/g, "");
       }
       if (formData.razaoSocial) body.razaoSocial = formData.razaoSocial;
-      if (formData.nomeFantasia) body.nomeFantasia = formData.nomeFantasia;
+      const nomeFantasiaFinal = formData.nomeFantasia || formData.razaoSocial;
+      if (nomeFantasiaFinal) body.nomeFantasia = nomeFantasiaFinal;
 
       let res: Response;
 

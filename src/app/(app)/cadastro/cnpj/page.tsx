@@ -1,6 +1,5 @@
 import { requireUser } from "@/lib/auth/require-user";
 import { getCurrentStore } from "@/lib/auth/store-ownership";
-import { supabaseAdmin } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { CnpjUpdateForm } from "./cnpj-update-form";
 
@@ -12,7 +11,15 @@ export default async function CadastroCnpjPage(props: { searchParams?: Promise<R
     redirect("/");
   }
 
-  if (store.cnpj_normalized) {
+  const fiscalComplete =
+    store.cnpj_normalized &&
+    store.cnpj_normalized !== "" &&
+    store.razao_social &&
+    store.razao_social !== "" &&
+    store.nome_fantasia &&
+    store.nome_fantasia !== "";
+
+  if (fiscalComplete) {
     redirect("/");
   }
 
@@ -33,7 +40,7 @@ export default async function CadastroCnpjPage(props: { searchParams?: Promise<R
         Informe seus dados cadastrais para continuar usando o Vendeo. Seus
         créditos e campanhas atuais serão mantidos.
       </p>
-      <CnpjUpdateForm storeId={store.id} />
+      <CnpjUpdateForm storeId={store.id} existingCnpj={store.cnpj_normalized ?? undefined} existingRazaoSocial={store.razao_social ?? undefined} existingNomeFantasia={store.nome_fantasia ?? undefined} />
     </div>
   );
 }

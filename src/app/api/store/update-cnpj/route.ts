@@ -5,11 +5,12 @@ import { getCurrentStore } from "@/lib/auth/store-ownership";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { hashCnpjRoot } from "@/lib/cnpj/hash";
 import { z } from "zod";
+import { validateCnpj } from "@/lib/cnpj/validate";
 
 const UpdateCnpjSchema = z.object({
   storeId: z.string().uuid(),
   cnpjNormalized: z.string().length(14),
-  razaoSocial: z.string().max(200).optional(),
+  razaoSocial: z.string().min(2).max(200),
   nomeFantasia: z.string().max(200).optional(),
 });
 
@@ -39,22 +40,29 @@ export const POST = apiHandler(async (request: NextRequest) => {
       return NextResponse.json({ error: "Store mismatch" }, { status: 403 });
     }
 
+    const cnpjResult = validateCnpj(cnpjNormalized);
+    if (cnpjResult instanceof Error) {
+      return NextResponse.json({ error: "CNPJ inválido" }, { status: 400 });
+    }
+
     const cnpjRootHash = hashCnpjRoot(cnpjNormalized.slice(0, 8));
+
+    const nomeFantasiaFinal = (nomeFantasia && nomeFantasia.trim()) || razaoSocial.trim();
 
     const { data, error } = await supabaseAdmin.rpc("update_store_cnpj", {
       p_store_id: storeId,
       p_cnpj_normalized: cnpjNormalized,
       p_cnpj_root_hash: cnpjRootHash,
-      p_razao_social: razaoSocial ?? null,
-      p_nome_fantasia: nomeFantasia ?? null,
+      p_razao_social: razaoSocial.trim(),
+      p_nome_fantasia: nomeFantasiaFinal,
     });
 
     if (error) {
       if (error.message?.includes("store_not_found")) {
-        return NextResponse.json({ error: "Loja n\u00e3o encontrada" }, { status: 404 });
+        return NextResponse.json({ error: "Loja não encontrada" }, { status: 404 });
       }
       if (error.message?.includes("cnpj_already_set")) {
-        return NextResponse.json({ error: "Esta loja j\u00e1 possui CNPJ cadastrado" }, { status: 409 });
+        return NextResponse.json({ error: "Esta loja já possui CNPJ cadastrado" }, { status: 409 });
       }
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
