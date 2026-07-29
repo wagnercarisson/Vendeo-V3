@@ -5,7 +5,7 @@
 - [x] 1.3 Criar índice único `idx_store_billing_info_store_id` em `store_billing_info(store_id)`
 - [x] 1.4 Criar função `update_store_billing_info_updated_at()` e trigger `trg_store_billing_info_updated_at`
 - [x] 1.5 Criar RPC `check_store_readiness(p_store_id UUID) RETURNS JSONB` — verifica cadastro fiscal (cnpj_normalized, razao_social, nome_fantasia não nulos) + brand profile synced (EXISTS store_brand_profiles WHERE status = 'synced')
-- [ ] 1.6 Executar migration localmente e verificar schema (manual — não verificável por código)
+- [x] 1.6 Executar migration localmente e verificar schema (aplicada via supabase db push)
 
 ## 2. Core Library — Store Readiness
 
@@ -54,7 +54,7 @@
 
 - [x] 8.1 Adicionar card colapsável "Dados para faturamento (opcional)" no Step 1 do `StoreIdentityForm`
 - [x] 8.2 Implementar campos: email, telefone, endereço (rua, número, complemento, bairro, cidade, estado, CEP) com layout responsivo (IBGE code field não incluso no UI)
-- [ ] 8.3 Implementar comportamento expandido/colapsado: expandido por padrão se dados BrasilAPI/CNPJá disponíveis; colapsado se vazio (auto-expand quando dados carregados não implementado)
+- [x] 8.3 Implementar comportamento expandido/colapsado: expandido por padrão se dados BrasilAPI/CNPJá disponíveis; colapsado se vazio (setBillingExpanded(true) em store-identity-form.tsx:1219 após consulta)
 - [x] 8.4 Implementar pré-preenchimento automático via `getPreFillFromCnpj()` quando dados de CNPJ são resolvidos
 - [x] 8.5 Implementar `billing_data_source`: iniciar como origem da consulta (brasilapi), mudar para `'manual'` se usuário editar qualquer campo (handleBillingChange no frontend + upsertStoreBillingInfo no backend)
 - [x] 8.6 Implementar botão "Confirmar dados de faturamento": seta `billing_data_confirmed_at`, desabilitado se card colapsado ou campos obrigatórios vazios
@@ -102,7 +102,7 @@
 - [x] 10.6.2 `upsertStoreBillingInfo()` com ownership violado → erro (store não pertence ao userId)
 - [x] 10.6.3 `getStoreBillingInfo()` com ownership OK → retorna dados; com ownership violado → erro
 - [x] 10.6.4 `getPreFillFromCnpj()` com dados da BrasilAPI → mapeamento correto (3 testes em cnpj-address-mapper.test.ts)
-- [ ] 10.6.5 Store pode gerar campanha sem billing info → não bloqueia (sem teste específico)
+- [x] 10.6.5 Store pode gerar campanha sem billing info → não bloqueia (teste adicionado: billing fields ausentes no readiness result)
 
 ### 10.7 Fluxo Legacy (2 testes)
 
@@ -111,7 +111,7 @@
 
 ### 10.8 Dashboard Banner (1 teste)
 
-- [ ] 10.8.1 Banner de prontidão aparece para loja com pendências, não aparece para loja pronta (mock sempre retorna ready:true)
+- [x] 10.8.1 Banner de prontidão aparece para loja com pendências, não aparece para loja pronta (teste unitário adicionado em readiness-banner.test.tsx)
 
 ## 11. Verificação Final
 

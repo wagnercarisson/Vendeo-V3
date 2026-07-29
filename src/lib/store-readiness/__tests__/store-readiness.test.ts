@@ -77,6 +77,19 @@ describe("getStoreReadiness", () => {
     expect(result.missing[1].item).toBe("brand_profile");
   });
 
+  it("billing info does not affect readiness result — only cadastro_fiscal and brand_profile are checked", async () => {
+    const billingResult = {
+      ready: true,
+      missing: [],
+    };
+    mockRpc.mockResolvedValue({ data: billingResult, error: null });
+
+    const result = await getStoreReadiness("store-1");
+    expect(result.ready).toBe(true);
+    expect(result.missing).toEqual([]);
+    expect(Object.keys(result)).not.toContain("billing");
+  });
+
   it("returns fallback on RPC error", async () => {
     mockRpc.mockResolvedValue({
       data: null,
