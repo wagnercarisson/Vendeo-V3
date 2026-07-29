@@ -132,6 +132,7 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
   const [reconsultLoading, setReconsultLoading] = useState(false);
   const [billingManualActive, setBillingManualActive] = useState(false);
   const [billingError, setBillingError] = useState<string | null>(null);
+  const hasAnyBilling = !!(billingData.billing_address_street || billingData.billing_address_number || billingData.billing_address_neighborhood || billingData.billing_address_city || billingData.billing_address_state || billingData.billing_address_zipcode);
 
   useEffect(() => {
     fetch("/api/legal/current-versions")
@@ -1483,7 +1484,7 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
             </button>
             {billingExpanded && (
               <div className="px-4 pb-4 space-y-3">
-                {!billingData.billing_address_street && formData.cnpj && (
+                {!hasAnyBilling && formData.cnpj && (
                   <div className="space-y-2">
                     <p className="text-xs text-text-muted">
                       Loja com CNPJ cadastrado. Você pode reconsultar os dados automaticamente ou preencher manualmente.
@@ -1564,12 +1565,12 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
                     )}
                   </div>
                 )}
-                {!billingData.billing_address_street && !formData.cnpj && (
+                {!hasAnyBilling && !formData.cnpj && (
                   <p className="text-xs text-text-muted">
                     Informe o CNPJ para pré-preencher o endereço fiscal automaticamente.
                   </p>
                 )}
-                {(billingData.billing_address_street || billingManualActive) ? (
+                {(hasAnyBilling || billingManualActive) ? (
                   <>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="col-span-2">
@@ -2331,7 +2332,23 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
         <ContractAcceptanceModal
           open={showContractModal}
           onOpenChange={setShowContractModal}
-          onConfirm={async () => { setAcceptedTerms(true); return true; }}
+          onConfirm={async () => {
+            if (storeId) {
+              try {
+                const res = await fetch("/api/legal/accept", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ storeId, source: "onboarding" }),
+                });
+                const data = await res.json();
+                if (!data.ok) return false;
+              } catch {
+                return false;
+              }
+            }
+            setAcceptedTerms(true);
+            return true;
+          }}
           contractDocuments={contractDocuments}
         />
       )}
