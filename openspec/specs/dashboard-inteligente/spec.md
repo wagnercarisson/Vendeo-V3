@@ -3,6 +3,7 @@
 > Created from `fase-19-onboarding-estados-vazios` (ADDED). Transforms the dashboard from a generic placeholder into an async Server Component with 3-state rendering based on onboarding state.
 > Modified by `fase-20-dashboard` (MODIFIED). Replaces `has_store_with_campaigns` placeholder with real dashboard content (metrics, recent campaigns, greeting, next-step card).
 > Modified by `fase-27-conta-saldo-extrato` (MODIFIED). Added credit balance indicator in metrics grid and empty state.
+> Modified by `fase-34-store-readiness` (ADDED). Added readiness check banner when store is not ready.
 
 ## Requirements
 
@@ -139,6 +140,41 @@ O saldo é obtido via `CreditService.getBalance(store.id)` usando cliente de ses
 
 - **WHEN** dashboard renderiza `no_store`
 - **THEN** não exibe badge de saldo
+
+### Requirement: Banner de prontidão no dashboard (ADDED)
+
+> Added by `fase-34-store-readiness`.
+
+O sistema SHALL exibir um banner de prontidão no dashboard quando `getStoreReadiness()` retorna `ready: false`. O banner SHALL:
+
+- Ser exibido APENAS quando a loja existe e `ready === false`
+- Conter um checklist com os itens de readiness: ❌ CNPJ cadastral (se cadastro_fiscal ausente), ❌ Direção visual (se brand_profile ausente)
+- Cada item pendente é link direto: "CNPJ cadastral" → `/cadastro/cnpj?returnTo=/dashboard`, "Direção visual" → `/loja?required=visual-direction`
+- Botão "Configurar agora" que aponta para a primeira pendência
+- Itens fora da readiness (legal clearance e saldo) são verificados nos guards de geração, não no banner
+
+#### Scenario: Banner exibido para loja sem cadastro fiscal
+
+- **WHEN** dashboard é carregado
+- **AND** `getStoreReadiness(store.id)` retorna `missing: ["cadastro_fiscal"]`
+- **THEN** banner de prontidão é exibido com "CNPJ cadastral" como pendente
+
+#### Scenario: Banner exibido para loja sem brand profile
+
+- **WHEN** dashboard é carregado
+- **AND** `getStoreReadiness(store.id)` retorna `missing: ["brand_profile"]`
+- **THEN** banner exibe "Direção visual" como pendente
+
+#### Scenario: Banner não exibido para loja pronta
+
+- **WHEN** dashboard é carregado
+- **AND** `getStoreReadiness(store.id)` retorna `ready: true`
+- **THEN** banner NÃO é exibido
+
+#### Scenario: Banner não exibido quando loja não existe
+
+- **WHEN** usuário não tem loja (`no_store`)
+- **THEN** banner NÃO é exibido
 
 ### Requirement: Dashboard handles balance states
 

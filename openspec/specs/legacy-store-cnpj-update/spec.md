@@ -1,4 +1,5 @@
 > Synced from `fase-32-freemium-anti-abuso-cnpj` (ADDED).
+> Modified by `fase-34-store-readiness` (MODIFIED + ADDED). Legacy stores blocked from generation instead of just warned. Redirect with returnTo chaining. Context messages for redirect guard.
 
 ## Purpose
 
@@ -6,18 +7,30 @@ Atualização cadastral de lojas legadas sem CNPJ — banner, formulário, RPC `
 
 ## Requirements
 
-### Requirement: Lojas legadas sem CNPJ — banner de atualização cadastral
+### Requirement: Lojas legadas sem CNPJ — bloqueio de geração (MODIFIED F34)
 
-Lojas existentes (criadas antes da F32) sem CNPJ vêem banner no dashboard: "Atualize seus dados cadastrais para continuar usando o Vendeo" com link para formulário de atualização.
+> Modified by `fase-34-store-readiness`.
+
+O sistema SHALL bloquear geração para lojas legacy sem cadastro fiscal completo. Quando uma loja legacy sem `cnpj_normalized`, `razao_social` ou `nome_fantasia` tenta acessar `/campanhas/nova` ou chamar a API de geração, o guard de readiness SHALL redirecionar para `/cadastro/cnpj?returnTo=/campanhas/nova`. O banner no dashboard continua sendo exibido.
+
+#### Scenario: Loja legacy bloqueada ao gerar campanha
+
+- **WHEN** loja legacy (sem cadastro fiscal) tenta acessar `/campanhas/nova`
+- **THEN** o guard de readiness redireciona para `/cadastro/cnpj?returnTo=/campanhas/nova`
+- **AND** banner no dashboard continua sendo exibido
 
 #### Scenario: Banner exibido para loja sem CNPJ
 
 - **WHEN** loja com `cnpj_normalized IS NULL` acessa o dashboard
 - **THEN** o banner de atualização cadastral é exibido
 
-### Requirement: Formulário de atualização cadastral
+### Requirement: Formulário de atualização cadastral com returnTo (MODIFIED F34)
+
+> Modified by `fase-34-store-readiness`.
 
 O formulário de atualização contém apenas CNPJ + razão social + nome fantasia. Não recria loja, não refaz onboarding, não concede créditos.
+
+Após atualização bem-sucedida, o sistema SHALL ler `returnTo` dos query params. Se store também não tem brand profile, SHALL redirecionar para `/loja?required=visual-direction&message=cnpj-updated`. Se store está pronta, SHALL redirecionar para `returnTo`, ou `/dashboard` se ausente.
 
 #### Scenario: Atualização não concede créditos
 
@@ -25,6 +38,55 @@ O formulário de atualização contém apenas CNPJ + razão social + nome fantas
 - **THEN** `update_store_cnpj()` é chamado
 - **AND** NENHUM crédito de onboarding é concedido
 - **AND** saldo existente permanece intacto
+
+#### Scenario: Atualização redireciona para brand profile se necessário
+
+- **WHEN** loja legacy completa cadastro fiscal com sucesso
+- **AND** store também não tem brand profile synced
+- **THEN** redireciona para `/loja?required=visual-direction&message=cnpj-updated`
+
+#### Scenario: Atualização redireciona para returnTo se pronta
+
+- **WHEN** loja legacy completa cadastro fiscal com sucesso
+- **AND** store já tem brand profile synced
+- **AND** `returnTo` está presente nos query params
+- **THEN** redireciona para o valor de `returnTo`
+
+#### Scenario: Atualização sem returnTo vai para dashboard
+
+- **WHEN** loja legacy completa cadastro fiscal com sucesso
+- **AND** store já tem brand profile synced
+- **AND** `returnTo` não está presente
+- **THEN** redireciona para `/dashboard`
+
+### Requirement: Mensagens do redirect de guarda (ADDED F34)
+
+> Added by `fase-34-store-readiness`.
+
+O sistema SHALL exibir mensagens específicas no contexto de redirect de guarda:
+
+| Contexto | Mensagem |
+|----------|----------|
+| Redirect do guard (cadastro fiscal ausente) | "Sua loja precisa do CNPJ, razão social e nome fantasia para gerar campanhas. Atualize seus dados cadastrais para continuar." |
+| Redirect do guard (brand profile ausente) | "Sua loja precisa de uma direção visual para gerar campanhas. Configure agora." |
+| Após atualizar cadastro + sem brand profile | "Dados atualizados! Agora configure a direção visual da sua loja." |
+
+As mensagens SHALL ser passadas via query param `message` para o destino do redirect.
+
+#### Scenario: Mensagem de redirect para cadastro fiscal
+
+- **WHEN** usuário é redirecionado para `/cadastro/cnpj?returnTo=/campanhas/nova`
+- **THEN** a página de cadastro exibe a mensagem "Sua loja precisa do CNPJ..."
+
+#### Scenario: Mensagem de redirect para direção visual (brand ausente)
+
+- **WHEN** usuário é redirecionado para `/loja?required=visual-direction&message=needs-visual-direction`
+- **THEN** a página exibe "Sua loja precisa de uma direção visual para gerar campanhas. Configure agora."
+
+#### Scenario: Mensagem após atualizar cadastro sem brand profile
+
+- **WHEN** usuário completa cadastro fiscal e é redirecionado via `&message=cnpj-updated`
+- **THEN** a página exibe "Dados atualizados! Agora configure a direção visual da sua loja."
 
 ### Requirement: RPC update_store_cnpj()
 

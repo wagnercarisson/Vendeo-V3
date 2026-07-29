@@ -3,6 +3,7 @@
 > > Synced from `fase-18-app-shell-ui-base-rotas` (MODIFIED). Route migrated from `/` to `/campanhas/nova`. No-store redirect updated to `/loja`. Links updated to new route paths. Design tokens applied.
 > > Modified by `fase-27-conta-saldo-extrato` (MODIFIED). Added credit balance indicator, generate button disable/tooltip when zero credits, and error state with reload action.
 > > Modified by `fase-31-1-modelo-comercial-formulario` (MODIFIED). Added campaign intent selector, conditional badge by intent, preserveImageContext checkbox, and intent-conditional validation.
+> Modified by `fase-34-store-readiness` (MODIFIED + ADDED). Added readiness guard after store-exists check; redirect based on missing readiness item.
 
 ## Requirements
 
@@ -70,15 +71,34 @@ The `StoreIdentityBlock` SHALL consume `identity` from the GET response directly
 - **AND** `StoreIdentitySnapshot` SHALL NOT be passed as a prop
 - **AND** `StoreIdentityBlock` SHALL consume `identity` from the GET response
 
-### Requirement: Blocking state for missing or invalid store
+### Requirement: Blocking state for missing or invalid store (MODIFIED F34)
 
-When `getCurrentStore()` returns `null` (no store for the authenticated user), the system SHALL redirect to `/loja` server-side. This replaces the old localStorage-based store_id approach.
+When `getCurrentStore()` returns `null` (no store for the authenticated user), the system SHALL redirect to `/loja` server-side. A NOVO guard de readiness SHALL ser adicionado APÓS a verificação de store existente. Se a store existe mas não está pronta, o sistema SHALL redirecionar conforme o item faltante.
+
+When `getStoreReadiness(store.id)` returns `ready: false`, the system SHALL redirect based on the first missing item:
+- `cadastro_fiscal` → `/cadastro/cnpj?returnTo=/campanhas/nova`
+- `brand_profile` → `/loja?required=visual-direction&message=needs-visual-direction`
 
 #### Scenario: No store redirects to /loja
 
 - **WHEN** a user visits `/campanhas/nova`
 - **AND** `getCurrentStore()` returns null
 - **THEN** the server redirects to `/loja`
+
+#### Scenario: Store sem cadastro fiscal redireciona para /cadastro/cnpj
+
+- **WHEN** `getStoreReadiness(store.id)` retorna `missing: ["cadastro_fiscal"]`
+- **THEN** o servidor redireciona para `/cadastro/cnpj?returnTo=/campanhas/nova`
+
+#### Scenario: Store sem brand profile redireciona para direção visual
+
+- **WHEN** `getStoreReadiness(store.id)` retorna `missing: ["brand_profile"]`
+- **THEN** o servidor redireciona para `/loja?required=visual-direction`
+
+#### Scenario: Store pronta — renderiza formulário
+
+- **WHEN** `getStoreReadiness(store.id)` retorna `ready: true`
+- **THEN** o formulário de campanha é renderizado normalmente
 
 ### Requirement: Campaign form fields
 

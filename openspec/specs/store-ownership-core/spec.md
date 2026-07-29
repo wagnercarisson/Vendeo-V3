@@ -1,6 +1,7 @@
 # Store Ownership Core
 
 > Synced from `fase-9-cutover-ownership` (ADDED), then `fase-10-perimetro-multitenant` (MODIFIED + ADDED).
+> Modified by `fase-34-store-readiness` (MODIFIED). Added CNPJ fields to Store type.
 
 ## Purpose
 
@@ -75,6 +76,24 @@ The system SHALL provide a `requireOwnership(storeId, userId?)` function in `src
 
 - **WHEN** `requireOwnership(storeId, userId)` is called with a valid userId
 - **THEN** it queries directly without calling `requireUser()`
+
+### Requirement: Store type com campos CNPJ tipados (ADDED)
+
+> Added by `fase-34-store-readiness`.
+
+O tipo `Store` em `src/lib/store.ts` SHALL incluir todos os campos de cadastro fiscal que existem no banco desde a F32/F33: `cnpj_normalized`, `cnpj_root_hash`, `razao_social`, `nome_fantasia`, `cnpj_validation_score`, `verification_status`, `verification_data`, `cnpj_official_data`, `cnpj_lookup_hash`, `verification_requested_at`, `verification_decided_at`, `verification_reasons`, `is_test_store`.
+
+Todos os casts `(store as unknown as Record<string, unknown>).campo` SHALL ser substituídos por acesso tipado direto nos arquivos: `dashboard/page.tsx`, `cadastro/cnpj/page.tsx`, `cnpj-update-banner.tsx`, `verification-banners.tsx`, e `store-identity-service.ts`.
+
+#### Scenario: Store type inclui campos CNPJ tipados
+
+- **WHEN** o tipo `Store` em `src/lib/store.ts` é inspecionado
+- **THEN** os campos CNPJ estão presentes com tipos explícitos (não `unknown`)
+
+#### Scenario: Cast removidos do código existente
+
+- **WHEN** o código nos 5 arquivos do escopo é inspecionado
+- **THEN** NENHUM cast `(store as unknown as Record<string, unknown>).campo` está presente
 
 ### Requirement: StoreNotFoundError class (MODIFIED)
 

@@ -4,6 +4,8 @@
 
 Core image generation pipeline: orchestrates prompt assembly, model invocation, quality review, and correction loops. Defines the service, provider interface, API endpoint, and client-side NDJSON streaming consumer.
 
+> Modified by `fase-34-store-readiness` (ADDED). Added readiness guard in the handler, after ownership/auth and before rate limit/balance check.
+
 ## Requirements
 
 ### Requirement: ImageGenerationService orchestrates AI-native image generation
@@ -573,3 +575,33 @@ No new creative rules, composition directives, or mandatory requirements SHALL b
 - **WHEN** the same store (`identity_state = 'visual_signature'`) and campaign input are processed before and after this change
 - **THEN** the generated prompt SHALL be equivalent in all fields, rules, and creative context
 - **AND** the only differences SHALL be: `{{identityDirective}}` replaces the fixed logo instruction, and the VS URL SHALL be sent as the identity image reference (was not sent before)
+
+### Requirement: Guarda de readiness no handler generate-image (ADDED F34)
+
+> Added by `fase-34-store-readiness`.
+
+O sistema SHALL adicionar uma guarda de readiness no início do handler `POST /api/campaign/generate-image/route.ts`, após a validação de ownership/autenticação e antes do rate limit e saldo check.
+
+Se `getStoreReadiness(storeId)` retornar `ready: false`, o handler SHALL retornar HTTP 412 com `{ error: { message, reasons, missing } }`.
+
+#### Scenario: Store sem cadastro fiscal — API retorna 412
+
+- **WHEN** requisição POST chega ao handler
+- **AND** `getStoreReadiness(storeId)` retorna `missing: ["cadastro_fiscal"]`
+- **THEN** retorna HTTP 412 com `error.missing` contendo `["cadastro_fiscal"]`
+- **AND** a geração NÃO é executada
+
+#### Scenario: Store sem brand profile — API retorna 412
+
+- **WHEN** `getStoreReadiness(storeId)` retorna `missing: ["brand_profile"]`
+- **THEN** retorna HTTP 412 com `error.missing` contendo `["brand_profile"]`
+
+#### Scenario: Store pronta — pipeline prossegue
+
+- **WHEN** `getStoreReadiness(storeId)` retorna `ready: true`
+- **THEN** o pipeline de geração prossegue normalmente
+
+#### Scenario: Readiness verificada antes de rate limit
+
+- **WHEN** requisição chega ao handler
+- **THEN** readiness check é executado antes de rate limit e saldo check

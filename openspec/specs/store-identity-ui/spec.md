@@ -2,6 +2,7 @@
 >
 > > Synced from `fase-9-cutover-ownership` (MODIFIED), then `fase-18-app-shell-ui-base-rotas` (MODIFIED). Route migrated from `/store` to `/loja`. Links updated to new route paths.
 > Synced from `fase-33-verificacao-cnpj-freemium` (MODIFIED). Added CNPJ async lookup on blur, locked fields, buttons, tooltip, status messages, and dashboard verification banners.
+> Modified by `fase-34-store-readiness` (MODIFIED). Step 1 success message updated, Step 2 renamed to "Direção Visual" with badge, billing card added. Navigation between `/loja` and `/campanhas/nova` updated with readiness guard and redirect params.
 
 ## Requirements
 
@@ -78,7 +79,10 @@ The `/campanhas/nova` page SHALL:
 - Call `await requirePageUser()` — redirects to `/login` if not authenticated
 - Call `const store = await getCurrentStore(user.userId)`
 - If store is null: `redirect("/loja")` — user must create a store first
-- If store exists: pass `store={store}` to `<CampaignPageClient />`
+- If store exists: call `getStoreReadiness(store.id)` — if `ready: false`, redirect based on first missing item:
+  - `cadastro_fiscal` → `/cadastro/cnpj?returnTo=/campanhas/nova`
+  - `brand_profile` → `/loja?required=visual-direction&message=needs-visual-direction`
+- If store exists and ready: pass `store={store}` to `<CampaignPageClient />`
 - SHALL NOT use localStorage for store resolution
 - SHALL NOT have a blocking/loading state for store resolution
 
@@ -367,15 +371,15 @@ After a successful creation, the returned `store.id` SHALL be kept in local stat
 - **WHEN** user is editing an existing store
 - **THEN** the legal acceptance checkbox SHALL NOT be displayed
 
-#### Scenario: Submit APPROVE mostra mensagem de sucesso
+#### Scenario: Submit APPROVE mostra mensagem de sucesso (MODIFIED F34)
 
 - **WHEN** submit retorna `verificationStatus: 'approved'`
-- **THEN** exibe toast/mensagem: "Loja criada com sucesso! Seus créditos de boas-vindas foram liberados."
+- **THEN** exibe toast/mensagem: "Loja salva. Agora configure a direção visual."
 
-#### Scenario: Submit REVIEW mostra mensagem de verificação
+#### Scenario: Submit REVIEW mostra mensagem de verificação (MODIFIED F34)
 
 - **WHEN** submit retorna `verificationStatus: 'review'`
-- **THEN** exibe toast/mensagem: "Loja criada. Seus créditos de boas-vindas serão liberados após verificação cadastral."
+- **THEN** exibe toast/mensagem: "Loja salva. Seus créditos de boas-vindas serão liberados após verificação cadastral."
 
 #### Scenario: Submit REJECT (CNPJ inexistente) mostra erro
 
@@ -969,6 +973,57 @@ The DELETE request SHALL only be sent after the user explicitly confirms.
 - **THEN** the dialog SHALL close
 - **AND** the DELETE request SHALL NOT be sent
 - **AND** the logo SHALL remain active
+
+### Requirement: Step 2 renomeado para "Direção Visual" com badge "Necessário" (ADDED F34)
+
+> Added by `fase-34-store-readiness`.
+
+O sistema SHALL renomear o Step 2 do formulário de identidade da loja de "Logo e Cores" para **"Direção Visual"**. No stepper, ao lado do label do Step 2, SHALL ser exibido um badge "Necessário".
+
+O sistema SHALL suportar o query param `?required=visual-direction` em `/loja`. Quando presente, `StorePageClient` SHALL passar `initialStep={2}` para `StoreIdentityForm`, que SHALL abrir diretamente no Step 2.
+
+#### Scenario: Step 2 exibe "Direção Visual" com badge
+
+- **WHEN** o formulário de identidade da loja é exibido
+- **THEN** o Step 2 no stepper mostra "Direção Visual"
+- **AND** um badge "Necessário" é exibido ao lado do label do Step 2
+
+#### Scenario: Query param ?required=visual-direction abre Step 2
+
+- **WHEN** usuário acessa `/loja?required=visual-direction`
+- **THEN** `StorePageClient` passa `initialStep={2}` para `StoreIdentityForm`
+- **AND** o formulário abre diretamente no Step 2
+
+### Requirement: Card colapsável "Dados para faturamento (opcional)" no Step 1 (ADDED F34)
+
+> Added by `fase-34-store-readiness`.
+
+O sistema SHALL adicionar um card colapsável no Step 1 do formulário com os campos de billing/NFSe. O card SHALL:
+
+- Título: "Dados para faturamento (opcional)"
+- Iniciar expandido se dados da BrasilAPI/CNPJá estiverem disponíveis (pré-preenchidos)
+- Ser expansível/colapsável a qualquer momento sem perda de dados
+- Campos: email, telefone, endereço (rua, número, complemento, bairro, cidade, estado, CEP, código IBGE)
+- Botão "Confirmar dados de faturamento" dentro do card, separado do "Salvar e continuar"
+- Botão desabilitado se card colapsado ou sem dados obrigatórios mínimos
+- `billing_data_source`: inicia como origem da consulta, muda para `'manual'` se usuário editar qualquer campo
+- `billing_data_confirmed_at`: setado via `upsertStoreBillingInfo()` com `{ confirm: true }`
+- Resetar `billing_data_confirmed_at` se usuário editar campos após confirmar
+
+#### Scenario: Card de billing aparece no Step 1
+
+- **WHEN** usuário está no Step 1 do formulário
+- **THEN** o card "Dados para faturamento (opcional)" está visível
+
+#### Scenario: Confirmação de billing é ação separada
+
+- **WHEN** usuário clica "Confirmar dados de faturamento"
+- **THEN** `billing_data_confirmed_at` é setado via `upsertStoreBillingInfo()` com `{ confirm: true }`
+
+#### Scenario: Edição após confirmação reseta confirmed_at
+
+- **WHEN** usuário edita qualquer campo de billing após ter confirmado
+- **THEN** `billing_data_confirmed_at` é resetado para null via `upsertStoreBillingInfo()`
 
 ### Requirement: Step 2 guidance card replacing "Continuar sem logo"
 
