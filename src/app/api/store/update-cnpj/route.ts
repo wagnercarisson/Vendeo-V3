@@ -4,6 +4,7 @@ import { requireUser, UnauthorizedError } from "@/lib/auth/require-user";
 import { getCurrentStore } from "@/lib/auth/store-ownership";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { hashCnpjRoot } from "@/lib/cnpj/hash";
+import { isCnpjDuplicateError, CNPJ_DUPLICATE_RESPONSE } from "@/lib/cnpj/duplicate-error";
 import { z } from "zod";
 import { validateCnpj } from "@/lib/cnpj/validate";
 
@@ -63,6 +64,9 @@ export const POST = apiHandler(async (request: NextRequest) => {
       }
       if (error.message?.includes("cnpj_already_set")) {
         return NextResponse.json({ error: "Esta loja já possui CNPJ cadastrado" }, { status: 409 });
+      }
+      if (isCnpjDuplicateError(error)) {
+        return CNPJ_DUPLICATE_RESPONSE();
       }
       return NextResponse.json({ error: error.message }, { status: 500 });
     }

@@ -10,6 +10,7 @@ import { getCurrentVersion } from "@/lib/legal/document-versions";
 import { validateCnpj } from "@/lib/cnpj/validate";
 import { maskCnpj } from "@/lib/cnpj/mask";
 import { hashCnpjRoot } from "@/lib/cnpj/hash";
+import { isCnpjDuplicateError, CNPJ_DUPLICATE_RESPONSE } from "@/lib/cnpj/duplicate-error";
 import { compareBusinessName } from "@/lib/cnpj/similarity";
 import { CnpjVerificationService, createSupabaseLookupCache } from "@/lib/cnpj/verification-service";
 import { BrasilApiProvider } from "@/lib/cnpj/lookup-providers/brasil-api";
@@ -252,14 +253,17 @@ export const POST = apiHandler(async (request: NextRequest) => {
       p_verification_reasons: verificationReasons,
     });
 
-    if (error?.message?.includes("stores_user_id_key") || error?.code === "23505") {
-      return NextResponse.json(
-        { error: "Usu\u00e1rio j\u00e1 possui uma loja" },
-        { status: 409 }
-      );
-    }
-
     if (error) {
+      if (isCnpjDuplicateError(error)) {
+        return CNPJ_DUPLICATE_RESPONSE();
+      }
+      const errText = `${error.message ?? ""} ${error.details ?? ""}`;
+      if (errText.includes("stores_user_id_key")) {
+        return NextResponse.json(
+          { error: "Usu\u00e1rio j\u00e1 possui uma loja" },
+          { status: 409 }
+        );
+      }
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 

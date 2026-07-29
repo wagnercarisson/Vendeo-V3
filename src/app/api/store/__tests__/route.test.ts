@@ -268,11 +268,15 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns 409 when CNPJ is already registered", async () => {
+  it("returns 409 with cnpj_already_registered when CNPJ index conflicts", async () => {
     mockResolve.mockResolvedValue(sampleLookupResolved);
     mockRpc.mockResolvedValueOnce({
       data: null,
-      error: { code: "23505", message: 'duplicate key value violates unique constraint' },
+      error: {
+        code: "23505",
+        message: 'duplicate key value violates unique constraint "idx_stores_cnpj_normalized"',
+        details: 'Key (cnpj_normalized)=(12345678000195) already exists.',
+      },
     });
 
     const res = await POST(createRequest({
@@ -283,6 +287,32 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
     }));
 
     expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toContain("CNPJ já está cadastrado");
+    expect(body.code).toBe("cnpj_already_registered");
+  });
+
+  it("returns 409 with user-already-has-store when user_id key conflicts", async () => {
+    mockResolve.mockResolvedValue(sampleLookupResolved);
+    mockRpc.mockResolvedValueOnce({
+      data: null,
+      error: {
+        code: "23505",
+        message: 'duplicate key value violates unique constraint "stores_user_id_key"',
+        details: 'Key (user_id)=(00000000-0000-0000-0000-000000000001) already exists.',
+      },
+    });
+
+    const res = await POST(createRequest({
+      name: "Outra Loja",
+      segment: "moda-calcados-acessorios",
+      cnpj: "12.345.678/0001-95",
+      acceptedTerms: true,
+    }));
+
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toContain("Usuário já possui uma loja");
   });
 
   it("persists CNPJ, razao_social and nome_fantasia atomically via RPC", async () => {

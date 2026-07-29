@@ -126,6 +126,47 @@ describe("POST /api/store/update-cnpj", () => {
     expect(res.status).toBe(400);
   });
 
+  it("returns 409 with cnpj_already_registered when CNPJ index conflicts", async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: null,
+      error: {
+        code: "23505",
+        message: 'duplicate key value violates unique constraint "idx_stores_cnpj_normalized"',
+        details: 'Key (cnpj_normalized)=(12345678000195) already exists.',
+      },
+    });
+
+    const { POST } = await import("../route");
+    const res = await POST(createRequest({
+      storeId: STORE_UUID,
+      cnpjNormalized: "12345678000195",
+      razaoSocial: "Razao Social Ltda",
+    }));
+
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toContain("CNPJ já está cadastrado");
+    expect(body.code).toBe("cnpj_already_registered");
+  });
+
+  it("returns 500 for unknown RPC errors instead of leaking raw SQL", async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: null,
+      error: { message: "some_random_internal_error" },
+    });
+
+    const { POST } = await import("../route");
+    const res = await POST(createRequest({
+      storeId: STORE_UUID,
+      cnpjNormalized: "12345678000195",
+      razaoSocial: "Razao Social Ltda",
+    }));
+
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toBe("some_random_internal_error");
+  });
+
   it("returns 403 when storeId does not match user store", async () => {
     const { getCurrentStore } = await import("@/lib/auth/store-ownership");
     vi.mocked(getCurrentStore).mockResolvedValueOnce({
