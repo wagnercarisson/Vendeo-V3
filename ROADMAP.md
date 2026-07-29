@@ -57,9 +57,9 @@ Autenticação completa, vínculo user→store, isolamento multi-tenant, beta.ve
 Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, UAT externo, fundação legal, modelo comercial, freemium anti-abuso CNPJ e Stripe.
 
 <details open>
-<summary>◆ v1.5 Lançamento Externo Controlado (F23-F34) — Em andamento</summary>
+<summary>◆ v1.5 Lançamento Externo Controlado (F23-F35) — Em andamento</summary>
 
-Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, fundação legal e modelo comercial.
+Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, fundação legal, modelo comercial e store readiness.
 
 - [x] Phase 23: Text Provider + Copy Director (2/2 plans ✅)
 - [x] Phase 24: Créditos — Schema, Saldo e Transações (2/2 plans ✅)
@@ -132,8 +132,18 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
     - [ ] 33-04-PLAN.md — Admin Reviews + Test Stores + Privacy
     - [ ] 33-05-PLAN.md — Tests + Verification
 
-- [ ] Phase 34: Stripe / Monetização Pública (pending)
+- [ ] Phase 34: Store Readiness (pending)
+  - getStoreReadiness() com RPC check_store_readiness — ready: boolean, missing: MissingItem[]
+  - Guarda dupla: server component (/campanhas/nova) + API (412 Precondition Required)
+  - Step 2 renomeado para "Direção Visual" com badge "Necessário", três caminhos (logo, VS, text-only)
+  - Store type com campos CNPJ tipados (eliminar casts as unknown)
+  - StoreBillingInfo type + tabela store_billing_info (não bloqueante)
+  - Card colapsável de billing no Step 1 com pré-preenchimento via BrasilAPI/CNPJá
+  - Dashboard banner de prontidão com checklist de pendências
+  - Migration SQL: tabela store_billing_info + RPC check_store_readiness()
+  - Dependências: F32 (cnpj_normalized, razao_social, nome_fantasia), F33 (store_brand_profiles, verification_status), F30 (legal clearance)
 
+- [ ] Phase 35: Stripe / Monetização Pública (pending)
 </details>
 
 ## Progress
@@ -172,7 +182,8 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 31.3. Quality Gate por Intenção Comercial | v1.5 | 6/6 | ✅ Complete | 2026-07-26 |
 | 32. Freemium Anti-Abuso CNPJ | v1.5 | 5/5 | ✅ Complete | 2026-07-27 |
 | 33. Verificação CNPJ Freemium | v1.5 | 0/5 | ◆ Planning | — |
-| 34. Stripe / Monetização Pública | v1.5 | 0/0 | ○ Pending | — |
+| 34. Store Readiness | v1.5 | 0/0 | ○ Pending | — |
+| 35. Stripe / Monetização Pública | v1.5 | 0/0 | ○ Pending | — |
 
 ---
 

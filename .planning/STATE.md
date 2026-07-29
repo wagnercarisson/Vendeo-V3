@@ -4,13 +4,13 @@ milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 current_phase: 33
 status: Phase 33 complete
-last_updated: "2026-07-28T21:31:54.205Z"
+last_updated: "2026-07-29T14:30:00.000Z"
 progress:
-  total_phases: 11
+  total_phases: 12
   completed_phases: 10
-  total_plans: 43
+  total_plans: 48
   completed_plans: 41
-  percent: 91
+  percent: 85
 ---
 
 # Project State
@@ -427,8 +427,8 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 ## Current Position
 
 Phase: 33 — COMPLETE
-Plan: 1 of 5
-v1.5 em andamento — Fases 31.1, 31.2, 31.3 e 32 concluídas. F33 (Verificação CNPJ Freemium) em planejamento. F34 (Stripe / Monetização Pública) como próximo marco.
+Plan: 5 of 5
+v1.5 em andamento — Fases 31.1, 31.2, 31.3 e 32 concluídas. F33 (Verificação CNPJ Freemium) completa. F34 (Store Readiness) como próximo marco. F35 (Stripe / Monetização Pública) posterior.
 
 ### Phase 30 — Fundação Legal ✅
 
@@ -516,7 +516,8 @@ v1.5 em andamento — Fases 31.1, 31.2, 31.3 e 32 concluídas. F33 (Verificaçã
 | **F31.3** | **✅ Completed** | **Quality Gate por Intenção Comercial — ImageReviewInput intent-aware, prompt reestruturado, commercial_tone_mismatch, 6 plans, 1071 testes, UAT executada com IA real (6/6 cenários)** |
 | F32 | ✅ Complete | Freemium Anti-Abuso CNPJ — CNPJ obrigatório, entitlement por raiz, admin freemium status (5/5 plans, 27+ tests) |
 | F33 | ◆ Planning | Verificação CNPJ Freemium — Consulta BrasilAPI/CNPJá, cross-check, motor de decisão, admin review, test stores |
-| F34 | ○ Future | Stripe / Monetização Pública |
+| F34 | ○ Pending | Store Readiness |
+| F35 | ○ Future | Stripe / Monetização Pública |
 
 ### Quick Tasks Completed
 

@@ -199,9 +199,62 @@
 - [ ] **INTENT-TEST-18**: Request com campaignIntent "exclusive" → HTTP 400
 - [ ] **INTENT-TEST-19**: Request sem campaignIntent → pipeline prossegue (default offer)
 
+## v1.5 Requirements — Store Readiness (F34)
+
+### Store Readiness (READINESS)
+
+- [ ] **READINESS-01**: RPC `check_store_readiness(p_store_id UUID) RETURNS JSONB` — verifica cadastro fiscal mínimo (cnpj_normalized, razao_social, nome_fantasia não nulos) + brand profile synced (EXISTS store_brand_profiles WHERE status = 'synced')
+- [ ] **READINESS-02**: `getStoreReadiness(storeId)` em `src/lib/store-readiness.ts` — chama RPC, retorna `StoreReadinessResult { ready, missing }`, fallback seguro em erro
+- [ ] **READINESS-03**: Prioridade de resolução: cadastro_fiscal → brand_profile
+- [ ] **READINESS-04**: Fallback `nome_fantasia = razao_social` se CNPJ sem nome_fantasia oficial
+
+### Store Billing Info (BILLING)
+
+- [ ] **BILLING-01**: Tabela `store_billing_info` com RLS, índice único, triggers updated_at
+- [ ] **BILLING-02**: `StoreBillingInfo` type + `StoreWithBillingInfo` em `src/lib/billing/store-billing-info.ts`
+- [ ] **BILLING-03**: `getStoreBillingInfo(storeId, userId)` com ownership check obrigatório
+- [ ] **BILLING-04**: `upsertStoreBillingInfo(storeId, userId, data)` com ownership check + reset de billing_data_confirmed_at se editado após confirmação
+- [ ] **BILLING-05**: `getPreFillFromCnpj(cnpjData)` — mapeia dados oficiais do CNPJ para endereço fiscal
+- [ ] **BILLING-06**: Billing info não bloqueia geração de campanhas
+
+### Store Type / CNPJ Fields (STORE-TYPE)
+
+- [ ] **STORE-TYPE-01**: Store interface com todos os campos CNPJ tipados (cnpj_normalized, cnpj_root_hash, razao_social, nome_fantasia, verification_status, is_test_store, etc.)
+- [ ] **STORE-TYPE-02**: Todos os casts `(store as unknown as Record<string, unknown>)` substituídos por acesso tipado
+
+### Guarda Dupla (GUARD)
+
+- [ ] **GUARD-01**: Guarda de readiness no server component `/campanhas/nova` — redirect conforme primeira pendência
+- [ ] **GUARD-02**: Guarda de readiness na API `generate-image/route.ts` — 412 Precondition Required com reasons
+
+### Fluxo Legacy (LEGACY)
+
+- [ ] **LEGACY-01**: Lojas legacy sem cadastro fiscal bloqueadas na geração com redirect
+- [ ] **LEGACY-02**: Redirect encadeado: cadastro fiscal → verificar brand profile → direção visual se necessário
+- [ ] **LEGACY-03**: Microcopy contextual em cada etapa de redirect
+
+### Store Identity UI (UI)
+
+- [ ] **UI-01**: Step 2 renomeado para "Direção Visual" com badge "Necessário"
+- [ ] **UI-02**: Mensagem pós-Step 1 alterada para "Loja salva. Agora configure a direção visual."
+- [ ] **UI-03**: Query param `?required=visual-direction` abre formulário no Step 2
+- [ ] **UI-04**: Card colapsável "Dados para faturamento (opcional)" com pré-preenchimento e botão de confirmação próprio
+
+### Dashboard (DASHBOARD)
+
+- [ ] **DASHBOARD-01**: Banner de prontidão com checklist das pendências quando `ready: false`
+- [ ] **DASHBOARD-02**: Cada item pendente é link direto para configuração
+- [ ] **DASHBOARD-03**: Botão "Configurar agora" aponta para primeira pendência
+- [ ] **DASHBOARD-04**: Botão "Configurar direção visual" para lojas sem brand profile
+
+### Brand Profile (BRANDPROFILE)
+
+- [ ] **BRANDPROFILE-01**: Três caminhos de direção visual (logo upload, VS, text-only) convergem para brand profile synced
+- [ ] **BRANDPROFILE-02**: "Confirmar direção visual" só libera com profile synced
+
 ## v1.7 Requirements (Stripe / Monetização Pública)
 
-Deferred from v1.5 critical path. Stripe será implementada como F31/v1.7 após validação do beta controlado.
+Deferred from v1.5 critical path. Stripe será implementada como F35/v1.7 após validação do beta controlado.
 
 ### Pagamento (PAY)
 
@@ -355,15 +408,43 @@ Deferred to future release. Tracked but not in current roadmap.
 | INTENT-10 | Phase 31.1 | ◆ Planned |
 | INTENT-11 | Phase 31.1 | ◆ Planned |
 | INTENT-12 | Phase 31.1 | ◆ Planned |
+| READINESS-01 | Phase 34 | ○ Pending |
+| READINESS-02 | Phase 34 | ○ Pending |
+| READINESS-03 | Phase 34 | ○ Pending |
+| READINESS-04 | Phase 34 | ○ Pending |
+| BILLING-01 | Phase 34 | ○ Pending |
+| BILLING-02 | Phase 34 | ○ Pending |
+| BILLING-03 | Phase 34 | ○ Pending |
+| BILLING-04 | Phase 34 | ○ Pending |
+| BILLING-05 | Phase 34 | ○ Pending |
+| BILLING-06 | Phase 34 | ○ Pending |
+| STORE-TYPE-01 | Phase 34 | ○ Pending |
+| STORE-TYPE-02 | Phase 34 | ○ Pending |
+| GUARD-01 | Phase 34 | ○ Pending |
+| GUARD-02 | Phase 34 | ○ Pending |
+| LEGACY-01 | Phase 34 | ○ Pending |
+| LEGACY-02 | Phase 34 | ○ Pending |
+| LEGACY-03 | Phase 34 | ○ Pending |
+| UI-01 | Phase 34 | ○ Pending |
+| UI-02 | Phase 34 | ○ Pending |
+| UI-03 | Phase 34 | ○ Pending |
+| UI-04 | Phase 34 | ○ Pending |
+| DASHBOARD-01 | Phase 34 | ○ Pending |
+| DASHBOARD-02 | Phase 34 | ○ Pending |
+| DASHBOARD-03 | Phase 34 | ○ Pending |
+| DASHBOARD-04 | Phase 34 | ○ Pending |
+| BRANDPROFILE-01 | Phase 34 | ○ Pending |
+| BRANDPROFILE-02 | Phase 34 | ○ Pending |
 
 **Coverage:**
-- v1 requirements: 123 total (54 v1.5 + 36 LEGAL + 12 INTENT + 21 INTENT-TEST)
-- Mapped to phases: 123
+- v1 requirements: 153 total (54 v1.5 + 36 LEGAL + 12 INTENT + 21 INTENT-TEST + 30 F34)
+- Mapped to phases: 153
 - Unmapped: 0 ✓
 - Deferred to v1.7: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06
 - F29.1.2: Fase complementar refinando LAUNCH-01 e LAUNCH-02 (sem REQ-IDs próprios)
 - F30 (LEGAL-*): Adicionados em 2026-07-23 via alinhamento com OpenSpec
 - F31.1 (INTENT-*): Adicionados em 2026-07-24 via alinhamento com OpenSpec
+- F34 (F34-*): Adicionados em 2026-07-29 via alinhamento com OpenSpec (Store Readiness)
 
 ---
 
