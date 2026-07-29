@@ -44,6 +44,14 @@ vi.mock("@/lib/supabase/server", () => ({
   createServerClient: vi.fn().mockResolvedValue({}),
 }));
 
+vi.mock("@/lib/store-readiness", () => ({
+  getStoreReadiness: vi.fn().mockResolvedValue({ ready: true, missing: [] }),
+}));
+
+vi.mock("@/components/readiness/readiness-check-banner", () => ({
+  ReadinessCheckBanner: () => null,
+}));
+
 vi.mock("next/link", () => ({
   default: ({
     children,

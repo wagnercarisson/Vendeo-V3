@@ -24,9 +24,11 @@ let mockGenerateCopyImpl = vi.fn();
 // ── Module mocks ───────────────────────────────────────────────────────────
 vi.mock("server-only", () => ({}));
 
+const { mockRpc } = vi.hoisted(() => ({ mockRpc: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({
   supabaseAdmin: {
     from: mockSupabaseFrom,
+    rpc: mockRpc,
   },
 }));
 
@@ -288,6 +290,7 @@ describe("POST /api/campaign/generate-image", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSupabaseFrom.mockReset();
+    mockRpc.mockResolvedValue({ data: { ready: true, missing: [] }, error: null });
   });
 
   it("returns 200+result NDJSON on full success", async () => {

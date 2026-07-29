@@ -9,10 +9,11 @@ const mockStoreEq = vi.fn();
 const mockStoreSingle = vi.fn();
 const mockStoreFrom = vi.fn();
 
+const { mockRpc } = vi.hoisted(() => ({ mockRpc: vi.fn() }));
 vi.mock('@/lib/supabase/server', () => ({
   supabaseAdmin: {
     from: mockStoreFrom,
-    rpc: vi.fn(),
+    rpc: mockRpc,
   },
   createServerClient: vi.fn(),
 }));
@@ -201,6 +202,7 @@ async function setupSuccessMocks() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockRpc.mockResolvedValue({ data: { ready: true, missing: [] }, error: null });
 });
 
 describe('POST /api/campaign/generate-image', () => {

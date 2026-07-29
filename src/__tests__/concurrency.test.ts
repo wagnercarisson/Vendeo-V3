@@ -4,8 +4,9 @@ import { NextRequest } from "next/server";
 vi.mock("server-only", () => ({}));
 
 const { mockStoreFrom } = vi.hoisted(() => ({ mockStoreFrom: vi.fn() }));
+const { mockRpc } = vi.hoisted(() => ({ mockRpc: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({
-  supabaseAdmin: { from: mockStoreFrom, rpc: vi.fn() },
+  supabaseAdmin: { from: mockStoreFrom, rpc: mockRpc },
   createServerClient: vi.fn(),
 }));
 
@@ -122,6 +123,7 @@ function makeRequest(): NextRequest {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockRpc.mockResolvedValue({ data: { ready: true, missing: [] }, error: null });
   mockValidatePrompts.mockReturnValue({ valid: true, errors: [] });
   mockCheckRateLimit.mockResolvedValue({ allowed: true, remaining: { hourly: 9, daily: 29 } });
   mockRecordGenerationAttempt.mockResolvedValue(undefined);
