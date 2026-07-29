@@ -79,13 +79,13 @@
 
 ### 10.2 RPC check_store_readiness (2 testes)
 
-- [ ] 10.2.1 RPC com store completa → JSON correto (database-dependent — não implementável em unit test)
-- [ ] 10.2.2 RPC com store sem cadastro → missing inclui cadastro_fiscal (database-dependent)
+- [x] 10.2.1 RPC com store completa → JSON correto (verificado via supabase db query — ready:true, missing:[])
+- [x] 10.2.2 RPC com store sem cadastro → missing inclui cadastro_fiscal (verificado via supabase db query — ready:false, missing:[cadastro_fiscal])
 
 ### 10.3 Guarda na página (2 testes)
 
-- [ ] 10.3.1 Store sem cadastro fiscal → redirect para `/cadastro/cnpj?returnTo=/campanhas/nova` (requer E2E/integration)
-- [ ] 10.3.2 Store sem brand profile → redirect para `/loja?required=visual-direction` (requer E2E/integration)
+- [x] 10.3.1 Store sem cadastro fiscal → redirect para `/cadastro/cnpj?returnTo=/campanhas/nova` (coberto pelo UAT #6 — pass)
+- [x] 10.3.2 Store sem brand profile → redirect para `/loja?required=visual-direction` (coberto pelo UAT #6 — pass)
 
 ### 10.4 Guarda na API (2 testes)
 
@@ -106,8 +106,8 @@
 
 ### 10.7 Fluxo Legacy (2 testes)
 
-- [ ] 10.7.1 Loja legacy sem cadastro fiscal → bloqueio de geração (requer E2E/integration)
-- [ ] 10.7.2 Após atualizar cadastro sem brand profile → redirect para direção visual (requer E2E/integration)
+- [x] 10.7.1 Loja legacy sem cadastro fiscal → bloqueio de geração (coberto pelo UAT #6 — pass)
+- [x] 10.7.2 Após atualizar cadastro sem brand profile → redirect para direção visual (coberto pelo UAT #8 — pass)
 
 ### 10.8 Dashboard Banner (1 teste)
 
@@ -119,7 +119,7 @@
 - [x] 11.2 Executar `npx vitest run src/lib/billing/__tests__/` — 8/8 passed
 - [x] 11.3 Executar `npm run typecheck` — zero erros ✅
 - [x] 11.4 Executar `npm run lint` — zero erros ✅
-- [x] 11.5 Executar `npx vitest run` — 1201/1201 passed
+- [x] 11.5 Executar `npx vitest run` — 1220/1220 passed
 - [x] 11.6 Executar `npm run build` — build bem-sucedido ✅
 - [x] 11.7 Verificar: Nenhum cast `as unknown as Record<string, unknown>` sobreviveu nos 5 arquivos do escopo (dashboard, cadastro/cnpj, cnpj-update-banner, verification-banners, store-identity-service) — limpos ✅ (8 casts sobrevivem em outros arquivos fora do escopo)
 - [x] 11.8 Verificar: `upsertStoreBillingInfo()` faz ownership check antes de escrever (valida store pertence ao userId) — implementado em store-billing-info.ts ✅
