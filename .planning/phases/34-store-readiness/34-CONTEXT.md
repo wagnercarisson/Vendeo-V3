@@ -113,7 +113,8 @@ Banner condicional aparece apenas quando `getStoreReadiness()` retorna `ready: f
 
 - **Migration única:** `20260729000001_f34_store_readiness.sql` — CREATE TABLE store_billing_info + RPC check_store_readiness + triggers + índices
 - **Novo módulo `src/lib/store-readiness.ts`:** getStoreReadiness(), tipos StoreReadinessResult, MissingItem com import "server-only"
-- **Novo módulo `src/lib/billing/store-billing-info.ts`:** StoreBillingInfo, getStoreBillingInfo(), upsertStoreBillingInfo(), getPreFillFromCnpj(), StoreWithBillingInfo
+- **Novo módulo `src/lib/billing/store-billing-info.ts`:** StoreBillingInfo, getStoreBillingInfo(), upsertStoreBillingInfo(), StoreWithBillingInfo (server-only, import "server-only")
+- **Novo módulo `src/lib/billing/cnpj-address-mapper.ts`:** getPreFillFromCnpj() — módulo puro/shared sem server-only, mapeia CNPJ data para campos de endereço fiscal
 - **Store type extendido:** Adicionar campos CNPJ tipados em src/lib/store.ts — eliminar casts `(store as unknown as Record<string, unknown>)`
 - **Server component:** src/app/(app)/campanhas/nova/page.tsx — guarda de readiness antes de renderizar
 - **API route:** src/app/api/campaign/generate-image/route.ts — guarda 412 antes de rate limit e saldo
