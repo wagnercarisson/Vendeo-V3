@@ -22,6 +22,19 @@ export interface Store {
   visual_signature_attempts: number;
   created_at: string;
   updated_at: string;
+  cnpj_normalized: string | null;
+  cnpj_root_hash: string;
+  razao_social: string | null;
+  nome_fantasia: string | null;
+  cnpj_validation_score: Record<string, unknown> | null;
+  verification_status: string;
+  verification_data: Record<string, unknown> | null;
+  cnpj_official_data: Record<string, unknown> | null;
+  cnpj_lookup_hash: string | null;
+  verification_requested_at: string | null;
+  verification_decided_at: string | null;
+  verification_reasons: string[] | null;
+  is_test_store: boolean;
 }
 
 export const SEGMENT_COLOR_FALLBACK: Record<string, string> = {

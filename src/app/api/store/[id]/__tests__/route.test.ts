@@ -57,6 +57,19 @@ const mockStore = {
   text_only_origin: null,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-07-01T00:00:00Z',
+  cnpj_normalized: null,
+  cnpj_root_hash: '',
+  razao_social: null,
+  nome_fantasia: null,
+  cnpj_validation_score: null,
+  verification_status: 'unverified',
+  verification_data: null,
+  cnpj_official_data: null,
+  cnpj_lookup_hash: null,
+  verification_requested_at: null,
+  verification_decided_at: null,
+  verification_reasons: null,
+  is_test_store: false,
 };
 
 const mockEnrichedResponse = {

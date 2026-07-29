@@ -78,8 +78,8 @@ export default async function DashboardPage() {
       return (
         <div>
           <PageHeader title="Dashboard" />
-          {storeNoCamp && <CnpjUpdateBanner storeId={storeNoCamp.id} hasCnpj={!!(storeNoCamp as unknown as Record<string, unknown>).cnpj_normalized} />}
-          {storeNoCamp && <VerificationBanners verificationStatus={(storeNoCamp as unknown as Record<string, unknown>).verification_status as string | null} />}
+{storeNoCamp && <CnpjUpdateBanner storeId={storeNoCamp.id} hasCnpj={!!storeNoCamp.cnpj_normalized} />}
+{storeNoCamp && <VerificationBanners verificationStatus={storeNoCamp.verification_status} />}
           <div className="mb-4">
             <BalanceDisplay
               balance={noCampBalance ?? 0}
@@ -144,8 +144,8 @@ export default async function DashboardPage() {
       return (
         <div>
           <PageHeader title="Dashboard" />
-          <CnpjUpdateBanner storeId={store.id} hasCnpj={!!(store as unknown as Record<string, unknown>).cnpj_normalized} />
-          <VerificationBanners verificationStatus={(store as unknown as Record<string, unknown>).verification_status as string | null} />
+          <CnpjUpdateBanner storeId={store.id} hasCnpj={!!store.cnpj_normalized} />
+          <VerificationBanners verificationStatus={store.verification_status} />
           <h2 className="text-lg font-medium text-text-primary mb-6">
             {getGreeting(store.name)}
           </h2>

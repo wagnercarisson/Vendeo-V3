@@ -12,7 +12,7 @@ export default async function CadastroCnpjPage() {
     redirect("/");
   }
 
-  if ((store as unknown as Record<string, unknown>).cnpj_normalized) {
+  if (store.cnpj_normalized) {
     redirect("/");
   }
 

@@ -56,6 +56,19 @@ const mockStore: Store = {
   visual_signature_attempts: 0,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
+  cnpj_normalized: null,
+  cnpj_root_hash: "",
+  razao_social: null,
+  nome_fantasia: null,
+  cnpj_validation_score: null,
+  verification_status: "unverified",
+  verification_data: null,
+  cnpj_official_data: null,
+  cnpj_lookup_hash: null,
+  verification_requested_at: null,
+  verification_decided_at: null,
+  verification_reasons: null,
+  is_test_store: false,
 };
 
 function createMockQuery(result: unknown) {
