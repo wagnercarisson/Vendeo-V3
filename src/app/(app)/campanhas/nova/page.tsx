@@ -7,6 +7,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { getLaunchConfig } from "@/lib/launch-config/config";
 import { CampaignPageClient } from "@/components/flow/campaign-page-client";
 import { LegalClearanceGate } from "@/components/legal/legal-clearance-gate";
+import { getStoreReadiness } from "@/lib/store-readiness";
 
 export default async function NovaCampanhaPage() {
   const user = await requirePageUser();
@@ -14,6 +15,16 @@ export default async function NovaCampanhaPage() {
 
   if (!store) {
     redirect("/loja");
+  }
+
+  const readiness = await getStoreReadiness(store.id);
+  if (!readiness.ready) {
+    const firstMissing = readiness.missing[0].item;
+    if (firstMissing === "cadastro_fiscal") {
+      redirect(`/cadastro/cnpj?returnTo=/campanhas/nova`);
+    } else {
+      redirect(`/loja?required=visual-direction`);
+    }
   }
 
   const clearance = await requireLegalClearance({

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, use } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { validateCnpj } from "@/lib/cnpj/validate";
 import { normalizeCnpj } from "@/lib/cnpj/normalize";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 
 export function CnpjUpdateForm({ storeId }: { storeId: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get("returnTo");
   const [cnpj, setCnpj] = useState("");
   const [razaoSocial, setRazaoSocial] = useState("");
   const [nomeFantasia, setNomeFantasia] = useState("");
@@ -41,6 +43,8 @@ export function CnpjUpdateForm({ storeId }: { storeId: string }) {
     try {
       const { normalized } = result;
 
+      const nomeFantasiaFinal = nomeFantasia || razaoSocial;
+
       const res = await fetch("/api/store/update-cnpj", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -48,7 +52,7 @@ export function CnpjUpdateForm({ storeId }: { storeId: string }) {
           storeId,
           cnpjNormalized: normalized,
           razaoSocial: razaoSocial || undefined,
-          nomeFantasia: nomeFantasia || undefined,
+          nomeFantasia: nomeFantasiaFinal || undefined,
         }),
       });
 
@@ -58,7 +62,22 @@ export function CnpjUpdateForm({ storeId }: { storeId: string }) {
       }
 
       setSuccess(true);
-      setTimeout(() => router.push("/"), 2000);
+      setTimeout(async () => {
+        const readinessRes = await fetch("/api/store/check-readiness", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ storeId }),
+        });
+        const readiness = await readinessRes.json();
+
+        if (!readiness.ready && readiness.missing?.some((m: { item: string }) => m.item === "brand_profile")) {
+          router.push("/loja?required=visual-direction");
+        } else if (returnTo) {
+          router.push(returnTo);
+        } else {
+          router.push("/dashboard");
+        }
+      }, 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao atualizar CNPJ");
     } finally {
@@ -135,6 +154,9 @@ export function CnpjUpdateForm({ storeId }: { storeId: string }) {
           maxLength={200}
           className="w-full rounded-md border border-border bg-bg-surface px-3 py-2 text-sm"
         />
+        <p className="text-xs text-text-muted mt-1">
+          Se não informado, será usado o nome da Razão Social.
+        </p>
       </div>
 
       {error && (

@@ -10,6 +10,7 @@ import { resolveStoreIdentity, validateIdentityReference, buildCampaignBrief } f
 import { requireSameOrigin } from "@/lib/auth/csrf";
 import { requireApiUser } from "@/lib/auth/require-user";
 import { requireOwnership } from "@/lib/auth/store-ownership";
+import { getStoreReadiness } from "@/lib/store-readiness";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { supabaseAdmin } from '@/lib/supabase/server';
 import type { CampaignInput } from "@/components/campaign/types";
@@ -136,6 +137,21 @@ export const POST = apiHandler(async (request: NextRequest) => {
         acceptUrl: "/legal/reaccept",
       },
       { status: 403 },
+    );
+  }
+
+  // ── Pre-stream: Store readiness guard ─────────────────────────────
+  const readiness = await getStoreReadiness(parsed.data.storeId);
+  if (!readiness.ready) {
+    return Response.json(
+      {
+        error: {
+          message: "Loja não está pronta para gerar campanhas.",
+          reasons: readiness.missing.map(m => m.reason),
+          missing: readiness.missing.map(m => m.item),
+        },
+      },
+      { status: 412 },
     );
   }
 
