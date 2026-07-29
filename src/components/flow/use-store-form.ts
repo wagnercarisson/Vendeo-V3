@@ -31,7 +31,7 @@ export type FormMode = "create" | "edit";
 export interface UseStoreFormReturn {
   formData: FormData;
   setField: (field: keyof FormData, value: string) => void;
-  save: (acceptedTerms?: boolean) => Promise<{ storeId: string } | void>;
+  save: (acceptedTerms?: boolean) => Promise<{ storeId: string } | { error: string; code?: string } | void>;
   isLoading: boolean;
   isSaving: boolean;
   error: string | null;
@@ -259,7 +259,8 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({ error: "Erro ao salvar" }));
-        throw new Error(errData.error || "Erro ao salvar");
+        setError(errData.error || "Erro ao salvar");
+        return { error: errData.error || "Erro ao salvar", code: errData.code };
       }
 
       const saved: Record<string, unknown> = await res.json();
@@ -267,7 +268,8 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
       if (!storeId) {
         // Response from create (POST /api/store)
         if (!saved.id || typeof saved.id !== "string") {
-          throw new Error("Loja salva, mas resposta não retornou o ID da loja.");
+          setError("Loja salva, mas resposta não retornou o ID da loja.");
+          return { error: "Loja salva, mas resposta não retornou o ID da loja." };
         }
         setStoreId(saved.id as string);
         setMode("edit");
@@ -279,14 +281,17 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
           // update-cnpj response: { success: true, store: [...] }
           setHasExistingCnpj(true);
         } else if (!saved.id || typeof saved.id !== "string") {
-          throw new Error("Loja salva, mas resposta não retornou o ID da loja.");
+          setError("Loja salva, mas resposta não retornou o ID da loja.");
+          return { error: "Loja salva, mas resposta não retornou o ID da loja." };
         }
         setSuccessMessage("Loja salva. Agora configure a direção visual.");
       }
 
       return { storeId: saved.id as string };
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao salvar");
+      const msg = err instanceof Error ? err.message : "Erro ao salvar";
+      setError(msg);
+      return { error: msg };
     } finally {
       setIsSaving(false);
     }

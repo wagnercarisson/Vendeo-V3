@@ -920,11 +920,13 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
     }
 
     const saved = await save(acceptedTerms || undefined);
-    const nextStoreId = saved?.storeId ?? storeId;
-    if (nextStoreId) {
+    if (saved && "storeId" in saved) {
       setDriftRefreshKey(k => k + 1);
       setStep(2);
       setStep2Success(null);
+    } else if (saved && saved.code === "cnpj_already_registered") {
+      setFieldErrors((prev) => ({ ...prev, cnpj: saved.error }));
+      setTouched((prev) => ({ ...prev, cnpj: true }));
     }
   };
 
