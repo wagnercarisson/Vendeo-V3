@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/auth/require-user";
-import { requireOwnership } from "@/lib/auth/store-ownership";
-import { supabaseAdmin } from "@/lib/supabase/server";
 import { apiHandler } from "@/lib/auth/api-handler";
-import { StoreNotFoundError } from "@/lib/auth/store-ownership";
+import { upsertStoreBillingInfo } from "@/lib/billing/store-billing-info";
 import { z } from "zod";
 
 const ConfirmBillingSchema = z.object({
@@ -30,32 +28,18 @@ export const POST = apiHandler(async (request: NextRequest) => {
   const { storeId, billingData, confirmed } = parsed.data;
 
   try {
-    await requireOwnership(storeId, user.userId);
+    const result = await upsertStoreBillingInfo(
+      storeId,
+      user.userId,
+      (billingData ?? {}) as Partial<import("@/lib/billing/store-billing-info").StoreBillingInfo>,
+      { confirm: confirmed },
+    );
+
+    return NextResponse.json({ success: true, billingInfo: result });
   } catch (err) {
-    if (err instanceof StoreNotFoundError) {
+    if (err instanceof Error && err.name === "StoreNotFoundError") {
       return NextResponse.json({ error: "Loja não encontrada ou acesso negado" }, { status: 404 });
     }
     throw err;
   }
-
-  const upsertData: Record<string, unknown> = {
-    store_id: storeId,
-    ...(billingData ?? {}),
-  };
-
-  if (confirmed) {
-    upsertData.billing_data_confirmed_at = new Date().toISOString();
-  }
-
-  const { data: result, error } = await supabaseAdmin
-    .from("store_billing_info")
-    .upsert(upsertData)
-    .select()
-    .single();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ success: true, billingInfo: result });
 });

@@ -23,7 +23,7 @@ export default async function NovaCampanhaPage() {
     if (firstMissing === "cadastro_fiscal") {
       redirect(`/cadastro/cnpj?returnTo=/campanhas/nova`);
     } else {
-      redirect(`/loja?required=visual-direction`);
+      redirect(`/loja?required=visual-direction&message=needs-visual-direction`);
     }
   }
 

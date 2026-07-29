@@ -101,7 +101,7 @@ export function CnpjUpdateForm({
         const readiness = await readinessRes.json();
 
         if (!readiness.ready && readiness.missing?.some((m: { item: string }) => m.item === "brand_profile")) {
-          router.push("/loja?required=visual-direction");
+          router.push("/loja?required=visual-direction&message=cnpj-updated");
         } else if (returnTo) {
           router.push(returnTo);
         } else {

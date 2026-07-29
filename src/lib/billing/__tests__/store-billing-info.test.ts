@@ -138,4 +138,125 @@ describe("upsertStoreBillingInfo", () => {
 
     await expect(upsertStoreBillingInfo("store-1", "user-other", { billing_email: "loja@test.com" })).rejects.toThrow(StoreNotFoundError);
   });
+
+  it("sets billing_data_confirmed_at when confirm=true", async () => {
+    const ownershipQ = makeStoreQuery(makeQueryResult({ id: "store-1" }));
+    const getStoreQ = makeStoreQuery(makeQueryResult({ id: "store-1" }));
+    const billingQ = makeBillingQuery(makeError("PGRST116"));
+
+    let capturedUpsertData: Record<string, unknown> | null = null;
+    const single = vi.fn().mockResolvedValue({
+      data: { id: "billing-1", store_id: "store-1", billing_email: "loja@test.com", billing_data_confirmed_at: new Date().toISOString() },
+      error: null,
+    });
+    const select = vi.fn().mockReturnValue({ single });
+    const upsert = vi.fn().mockImplementation((data) => {
+      capturedUpsertData = data;
+      return { select };
+    });
+
+    mockFrom
+      .mockReturnValueOnce({ select: ownershipQ.select })
+      .mockReturnValueOnce({ select: getStoreQ.select })
+      .mockReturnValueOnce({ select: billingQ.select })
+      .mockReturnValueOnce({ upsert });
+
+    const result = await upsertStoreBillingInfo("store-1", "user-1", { billing_email: "loja@test.com" }, { confirm: true });
+    expect(result).toBeDefined();
+    expect(result.billing_data_confirmed_at).toBeTruthy();
+    expect((capturedUpsertData as unknown as Record<string, unknown>)?.billing_data_confirmed_at).toBeTruthy();
+  });
+
+  it("resets billing_data_confirmed_at when data edited after prior confirmation (confirm not set)", async () => {
+    const ownershipQ = makeStoreQuery(makeQueryResult({ id: "store-1" }));
+    const getStoreQ = makeStoreQuery(makeQueryResult({ id: "store-1" }));
+    const billingQ = makeBillingQuery(makeQueryResult({
+      id: "billing-1",
+      store_id: "store-1",
+      billing_email: "loja@antiga@test.com",
+      billing_data_confirmed_at: "2026-06-01T00:00:00Z",
+    }));
+
+    let capturedUpsertData: Record<string, unknown> | null = null;
+    const single = vi.fn().mockResolvedValue({
+      data: { id: "billing-1", store_id: "store-1", billing_email: "loja@nova@test.com", billing_data_confirmed_at: null },
+      error: null,
+    });
+    const select = vi.fn().mockReturnValue({ single });
+    const upsert = vi.fn().mockImplementation((data) => {
+      capturedUpsertData = data;
+      return { select };
+    });
+
+    mockFrom
+      .mockReturnValueOnce({ select: ownershipQ.select })
+      .mockReturnValueOnce({ select: getStoreQ.select })
+      .mockReturnValueOnce({ select: billingQ.select })
+      .mockReturnValueOnce({ upsert });
+
+    const result = await upsertStoreBillingInfo("store-1", "user-1", { billing_email: "loja@nova@test.com" });
+    expect(result).toBeDefined();
+    expect(result.billing_data_confirmed_at).toBeNull();
+    expect((capturedUpsertData as unknown as Record<string, unknown>)?.billing_data_confirmed_at).toBeNull();
+  });
+
+  it("does NOT reset billing_data_confirmed_at when confirm=true even if prior confirmation exists", async () => {
+    const ownershipQ = makeStoreQuery(makeQueryResult({ id: "store-1" }));
+    const getStoreQ = makeStoreQuery(makeQueryResult({ id: "store-1" }));
+    const billingQ = makeBillingQuery(makeQueryResult({
+      id: "billing-1",
+      store_id: "store-1",
+      billing_email: "loja@test.com",
+      billing_data_confirmed_at: "2026-06-01T00:00:00Z",
+    }));
+
+    let capturedUpsertData: Record<string, unknown> | null = null;
+    const single = vi.fn().mockResolvedValue({
+      data: { id: "billing-1", store_id: "store-1", billing_email: "loja@test.com", billing_data_confirmed_at: new Date().toISOString() },
+      error: null,
+    });
+    const select = vi.fn().mockReturnValue({ single });
+    const upsert = vi.fn().mockImplementation((data) => {
+      capturedUpsertData = data;
+      return { select };
+    });
+
+    mockFrom
+      .mockReturnValueOnce({ select: ownershipQ.select })
+      .mockReturnValueOnce({ select: getStoreQ.select })
+      .mockReturnValueOnce({ select: billingQ.select })
+      .mockReturnValueOnce({ upsert });
+
+    const result = await upsertStoreBillingInfo("store-1", "user-1", { billing_email: "loja@test.com" }, { confirm: true });
+    expect(result).toBeDefined();
+    expect(result.billing_data_confirmed_at).toBeTruthy();
+    expect((capturedUpsertData as unknown as Record<string, unknown>)?.billing_data_confirmed_at).toBeTruthy();
+  });
+
+  it("persists billing_data_source when provided", async () => {
+    const ownershipQ = makeStoreQuery(makeQueryResult({ id: "store-1" }));
+    const getStoreQ = makeStoreQuery(makeQueryResult({ id: "store-1" }));
+    const billingQ = makeBillingQuery(makeError("PGRST116"));
+
+    let capturedUpsertData: Record<string, unknown> | null = null;
+    const single = vi.fn().mockResolvedValue({
+      data: { id: "billing-1", store_id: "store-1", billing_data_source: "manual" },
+      error: null,
+    });
+    const select = vi.fn().mockReturnValue({ single });
+    const upsert = vi.fn().mockImplementation((data) => {
+      capturedUpsertData = data;
+      return { select };
+    });
+
+    mockFrom
+      .mockReturnValueOnce({ select: ownershipQ.select })
+      .mockReturnValueOnce({ select: getStoreQ.select })
+      .mockReturnValueOnce({ select: billingQ.select })
+      .mockReturnValueOnce({ upsert });
+
+    const result = await upsertStoreBillingInfo("store-1", "user-1", { billing_data_source: "manual" });
+    expect(result).toBeDefined();
+    expect((capturedUpsertData as unknown as Record<string, unknown>)?.billing_data_source).toBe("manual");
+  });
 });

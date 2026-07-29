@@ -67,6 +67,7 @@ export async function upsertStoreBillingInfo(
   storeId: string,
   userId: string,
   data: Partial<StoreBillingInfo>,
+  options?: { confirm?: boolean },
 ): Promise<StoreBillingInfo> {
   await assertOwnership(storeId, userId);
 
@@ -78,7 +79,9 @@ export async function upsertStoreBillingInfo(
     ...data,
   };
 
-  if (hasExistingConfirmation) {
+  if (options?.confirm) {
+    upsertData.billing_data_confirmed_at = new Date().toISOString();
+  } else if (hasExistingConfirmation) {
     upsertData.billing_data_confirmed_at = null;
   }
 

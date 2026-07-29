@@ -3,17 +3,10 @@ import { NextRequest } from "next/server";
 
 const STORE_ID = "550e8400-e29b-41d4-a716-446655440000";
 
-const { mockFrom, mockUpsert, mockSelect } = vi.hoisted(() => ({
-  mockFrom: vi.fn(),
-  mockUpsert: vi.fn(),
-  mockSelect: vi.fn(),
-}));
+const mockUpsertStoreBillingInfo = vi.fn();
 
-vi.mock("@/lib/supabase/server", () => ({
-  createServerClient: vi.fn(),
-  supabaseAdmin: {
-    from: mockFrom,
-  },
+vi.mock("@/lib/billing/store-billing-info", () => ({
+  upsertStoreBillingInfo: mockUpsertStoreBillingInfo,
 }));
 
 vi.mock("@/lib/auth/require-user", () => ({
@@ -24,36 +17,27 @@ vi.mock("@/lib/auth/require-user", () => ({
   },
 }));
 
-import { StoreNotFoundError } from "@/lib/auth/store-ownership";
+class MockStoreNotFoundError extends Error {
+  constructor(message = "Store not found or access denied") { super(message); this.name = "StoreNotFoundError"; }
+}
 
-vi.mock("@/lib/auth/store-ownership", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/auth/store-ownership")>("@/lib/auth/store-ownership");
-  return {
-    ...actual,
-    requireOwnership: vi.fn(),
-  };
-});
-
-import { requireOwnership } from "@/lib/auth/store-ownership";
+vi.mock("@/lib/auth/store-ownership", () => ({
+  StoreNotFoundError: MockStoreNotFoundError,
+  requireOwnership: vi.fn(),
+}));
 
 describe("POST /api/store/billing/confirm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    const single = vi.fn().mockResolvedValue({ data: null, error: null });
-    mockSelect.mockReturnValue({ single });
-    mockUpsert.mockReturnValue({ select: mockSelect });
-    mockFrom.mockReturnValue({ upsert: mockUpsert });
   });
 
-  it("returns 200 with confirmed_at when confirmed=true", async () => {
-    vi.mocked(requireOwnership).mockResolvedValue({ id: STORE_ID } as any);
-    const now = new Date().toISOString();
-    const single = vi.fn().mockResolvedValue({
-      data: { id: "billing-1", store_id: STORE_ID, billing_email: "loja@test.com", billing_data_confirmed_at: now },
-      error: null,
+  it("delegates to upsertStoreBillingInfo with confirm=true when confirmed=true", async () => {
+    mockUpsertStoreBillingInfo.mockResolvedValue({
+      id: "billing-1",
+      store_id: STORE_ID,
+      billing_email: "loja@test.com",
+      billing_data_confirmed_at: new Date().toISOString(),
     });
-    mockSelect.mockReturnValue({ single });
-    mockUpsert.mockReturnValue({ select: mockSelect });
 
     const { POST } = await import("../route");
     const req = new NextRequest(`http://localhost/api/store/billing/confirm`, {
@@ -66,16 +50,21 @@ describe("POST /api/store/billing/confirm", () => {
     expect(res.status).toBe(200);
     expect(body.success).toBe(true);
     expect(body.billingInfo.billing_data_confirmed_at).toBeTruthy();
+    expect(mockUpsertStoreBillingInfo).toHaveBeenCalledWith(
+      STORE_ID,
+      "user-123",
+      { billing_email: "loja@test.com" },
+      { confirm: true },
+    );
   });
 
-  it("returns 200 with null confirmed_at when confirmed=false", async () => {
-    vi.mocked(requireOwnership).mockResolvedValue({ id: STORE_ID } as any);
-    const single = vi.fn().mockResolvedValue({
-      data: { id: "billing-1", store_id: STORE_ID, billing_email: "loja@test.com", billing_data_confirmed_at: null },
-      error: null,
+  it("delegates to upsertStoreBillingInfo with confirm=false when confirmed=false", async () => {
+    mockUpsertStoreBillingInfo.mockResolvedValue({
+      id: "billing-1",
+      store_id: STORE_ID,
+      billing_email: "loja@test.com",
+      billing_data_confirmed_at: null,
     });
-    mockSelect.mockReturnValue({ single });
-    mockUpsert.mockReturnValue({ select: mockSelect });
 
     const { POST } = await import("../route");
     const req = new NextRequest(`http://localhost/api/store/billing/confirm`, {
@@ -88,10 +77,16 @@ describe("POST /api/store/billing/confirm", () => {
     expect(res.status).toBe(200);
     expect(body.success).toBe(true);
     expect(body.billingInfo.billing_data_confirmed_at).toBeNull();
+    expect(mockUpsertStoreBillingInfo).toHaveBeenCalledWith(
+      STORE_ID,
+      "user-123",
+      { billing_email: "loja@test.com" },
+      { confirm: false },
+    );
   });
 
-  it("returns 404 when ownership violated", async () => {
-    vi.mocked(requireOwnership).mockRejectedValue(new StoreNotFoundError());
+  it("returns 404 when upsertStoreBillingInfo throws StoreNotFoundError", async () => {
+    mockUpsertStoreBillingInfo.mockRejectedValue(new MockStoreNotFoundError());
 
     const { POST } = await import("../route");
     const req = new NextRequest(`http://localhost/api/store/billing/confirm`, {
@@ -99,6 +94,37 @@ describe("POST /api/store/billing/confirm", () => {
       body: JSON.stringify({ storeId: STORE_ID, billingData: {}, confirmed: true }),
     });
     const res = await POST(req);
+
     expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error).toBe("Loja não encontrada ou acesso negado");
+  });
+
+  it("passes billing_data_source through to upsertStoreBillingInfo", async () => {
+    mockUpsertStoreBillingInfo.mockResolvedValue({
+      id: "billing-1",
+      store_id: STORE_ID,
+      billing_data_source: "manual",
+      billing_data_confirmed_at: null,
+    });
+
+    const { POST } = await import("../route");
+    const req = new NextRequest(`http://localhost/api/store/billing/confirm`, {
+      method: "POST",
+      body: JSON.stringify({
+        storeId: STORE_ID,
+        billingData: { billing_email: "loja@test.com", billing_data_source: "manual" },
+        confirmed: false,
+      }),
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(200);
+    expect(mockUpsertStoreBillingInfo).toHaveBeenCalledWith(
+      STORE_ID,
+      "user-123",
+      { billing_email: "loja@test.com", billing_data_source: "manual" },
+      { confirm: false },
+    );
   });
 });

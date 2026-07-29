@@ -73,7 +73,7 @@ function getSubsegmentMode(segment: string): 'rich' | 'travado' | 'other' | 'loc
   return 'rich';
 }
 
-export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?: Store | null; initialStep?: number }) {
+export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }: { initialStore?: Store | null; initialStep?: number; redirectMessage?: string }) {
   const { formData, setField, save, isLoading, isSaving, error, warningMessage, dismissWarning, successMessage, mode, clearStore, storeId } = useStoreForm({ initialStore: initialStore ?? null });
 
   const [step, setStep] = useState<1 | 2>(initialStep === 2 ? 2 : 1);
@@ -133,6 +133,15 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
   const [billingManualActive, setBillingManualActive] = useState(false);
   const [billingError, setBillingError] = useState<string | null>(null);
   const hasAnyBilling = !!(billingData.billing_address_street || billingData.billing_address_number || billingData.billing_address_neighborhood || billingData.billing_address_city || billingData.billing_address_state || billingData.billing_address_zipcode);
+
+  const handleBillingChange = useCallback((field: string, value: string) => {
+    setBillingData(d => ({
+      ...d,
+      [field]: value,
+      billing_data_source: 'manual',
+    }));
+    setBillingConfirmed(false);
+  }, []);
 
   useEffect(() => {
     fetch("/api/legal/current-versions")
@@ -1517,6 +1526,8 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
                                   billing_address_city: data.billing.billing_address_city || '',
                                   billing_address_state: data.billing.billing_address_state || '',
                                   billing_address_zipcode: data.billing.billing_address_zipcode || '',
+                                  billing_data_source: 'brasilapi',
+                                  billing_data_last_prefilled_from: 'brasilapi',
                                 });
                               }
                               if (data.razao_social) setField("razaoSocial", data.razao_social);
@@ -1551,6 +1562,7 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
                             billing_address_city: '',
                             billing_address_state: '',
                             billing_address_zipcode: '',
+                            billing_data_source: 'manual',
                           });
                           setBillingManualActive(true);
                           setBillingError(null);
@@ -1578,55 +1590,55 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
                       <div className="col-span-2">
                         <label className="text-xs font-medium text-text-secondary">Email para faturamento</label>
                         <input type="email" value={billingData.billing_email || ''}
-                          onChange={(e) => setBillingData(d => ({ ...d, billing_email: e.target.value }))}
+                          onChange={(e) => handleBillingChange('billing_email', e.target.value)}
                           placeholder="email@exemplo.com" className="w-full bg-bg-surface border border-border rounded-lg min-h-[38px] px-3 py-1.5 text-sm" />
                       </div>
                       <div className="col-span-2">
                         <label className="text-xs font-medium text-text-secondary">Telefone</label>
                         <input type="tel" value={billingData.billing_phone || ''}
-                          onChange={(e) => setBillingData(d => ({ ...d, billing_phone: e.target.value }))}
+                          onChange={(e) => handleBillingChange('billing_phone', e.target.value)}
                           placeholder="(11) 99999-9999" className="w-full bg-bg-surface border border-border rounded-lg min-h-[38px] px-3 py-1.5 text-sm" />
                       </div>
                       <div className="col-span-2">
                         <label className="text-xs font-medium text-text-secondary">Logradouro</label>
                         <input type="text" value={billingData.billing_address_street || ''}
-                          onChange={(e) => setBillingData(d => ({ ...d, billing_address_street: e.target.value }))}
+                          onChange={(e) => handleBillingChange('billing_address_street', e.target.value)}
                           className="w-full bg-bg-surface border border-border rounded-lg min-h-[38px] px-3 py-1.5 text-sm" />
                       </div>
                       <div>
                         <label className="text-xs font-medium text-text-secondary">Número</label>
                         <input type="text" value={billingData.billing_address_number || ''}
-                          onChange={(e) => setBillingData(d => ({ ...d, billing_address_number: e.target.value }))}
+                          onChange={(e) => handleBillingChange('billing_address_number', e.target.value)}
                           className="w-full bg-bg-surface border border-border rounded-lg min-h-[38px] px-3 py-1.5 text-sm" />
                       </div>
                       <div>
                         <label className="text-xs font-medium text-text-secondary">Complemento</label>
                         <input type="text" value={billingData.billing_address_complement || ''}
-                          onChange={(e) => setBillingData(d => ({ ...d, billing_address_complement: e.target.value }))}
+                          onChange={(e) => handleBillingChange('billing_address_complement', e.target.value)}
                           className="w-full bg-bg-surface border border-border rounded-lg min-h-[38px] px-3 py-1.5 text-sm" />
                       </div>
                       <div>
                         <label className="text-xs font-medium text-text-secondary">Bairro</label>
                         <input type="text" value={billingData.billing_address_neighborhood || ''}
-                          onChange={(e) => setBillingData(d => ({ ...d, billing_address_neighborhood: e.target.value }))}
+                          onChange={(e) => handleBillingChange('billing_address_neighborhood', e.target.value)}
                           className="w-full bg-bg-surface border border-border rounded-lg min-h-[38px] px-3 py-1.5 text-sm" />
                       </div>
                       <div>
                         <label className="text-xs font-medium text-text-secondary">CEP</label>
                         <input type="text" value={billingData.billing_address_zipcode || ''}
-                          onChange={(e) => setBillingData(d => ({ ...d, billing_address_zipcode: e.target.value }))}
+                          onChange={(e) => handleBillingChange('billing_address_zipcode', e.target.value)}
                           className="w-full bg-bg-surface border border-border rounded-lg min-h-[38px] px-3 py-1.5 text-sm" />
                       </div>
                       <div>
                         <label className="text-xs font-medium text-text-secondary">Cidade</label>
                         <input type="text" value={billingData.billing_address_city || ''}
-                          onChange={(e) => setBillingData(d => ({ ...d, billing_address_city: e.target.value }))}
+                          onChange={(e) => handleBillingChange('billing_address_city', e.target.value)}
                           className="w-full bg-bg-surface border border-border rounded-lg min-h-[38px] px-3 py-1.5 text-sm" />
                       </div>
                       <div>
                         <label className="text-xs font-medium text-text-secondary">UF</label>
                         <input type="text" value={billingData.billing_address_state || ''}
-                          onChange={(e) => setBillingData(d => ({ ...d, billing_address_state: e.target.value }))}
+                          onChange={(e) => handleBillingChange('billing_address_state', e.target.value)}
                           className="w-full bg-bg-surface border border-border rounded-lg min-h-[38px] px-3 py-1.5 text-sm" />
                       </div>
                     </div>
@@ -1686,6 +1698,23 @@ export function StoreIdentityForm({ initialStore, initialStep }: { initialStore?
               </div>
             </div>
 
+            {redirectMessage === "needs-visual-direction" && (
+              <div className="mb-4 flex items-start gap-3 bg-amber-900/20 border border-amber-700/30 rounded-lg px-4 py-3">
+                <AlertCircle className="w-5 h-5 text-accent-amber shrink-0 mt-0.5" />
+                <p className="text-accent-amber text-sm font-body flex-1">
+                  Sua loja precisa de uma direção visual para gerar campanhas. Configure agora.
+                </p>
+              </div>
+            )}
+
+            {redirectMessage === "cnpj-updated" && (
+              <div className="mb-4 flex items-start gap-3 bg-green-900/20 border border-green-700/30 rounded-lg px-4 py-3">
+                <CheckCircle2 className="w-5 h-5 text-accent-green shrink-0 mt-0.5" />
+                <p className="text-accent-green text-sm font-body flex-1">
+                  Dados atualizados! Agora configure a direção visual da sua loja.
+                </p>
+              </div>
+            )}
 
             {/* Post-dismiss recovery links — only for dismissed drift, never for 'new' (handled by save modal) */}
             {driftStatus === 'dismissed' && !driftSaveIntercept && !driftNavIntercept && (

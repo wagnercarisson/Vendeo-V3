@@ -7,19 +7,20 @@ import { StoreIdentityForm } from "./store-identity-form";
 export function StorePageClient({ initialStore }: { initialStore: Store | null }) {
   const searchParams = useSearchParams();
   const required = searchParams.get("required");
+  const message = searchParams.get("message");
   const initialStep = required === "visual-direction" ? 2 : undefined;
 
   if (!initialStore) {
     return (
       <div className="space-y-8">
-        <StoreIdentityForm initialStep={initialStep} />
+        <StoreIdentityForm initialStep={initialStep} redirectMessage={message ?? undefined} />
       </div>
     );
   }
 
   return (
     <div className="space-y-8">
-      <StoreIdentityForm initialStore={initialStore} initialStep={initialStep} />
+      <StoreIdentityForm initialStore={initialStore} initialStep={initialStep} redirectMessage={message ?? undefined} />
     </div>
   );
 }
