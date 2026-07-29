@@ -25,6 +25,20 @@ SET cnpj_root_hash = ''
 WHERE cnpj_normalized IS NULL
   AND cnpj_root_hash != '';
 
+-- Habilita pgcrypto se ainda não estiver ativo (comum em Supabase, mas seguro garantir)
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Gera root_hash para lojas que têm CNPJ mas estão sem root_hash
+-- (dados legados de F32/F33 que pre-datam a coluna cnpj_root_hash).
+-- Usa pgcrypto (disponível por padrão no Supabase) para SHA-256 do root CNPJ.
+-- NOTA: o hash gerado aqui é do root CNPJ puro (sem pepper HMAC), diferente do
+-- hash HMAC-SHA256 que o servidor gera em update-cnpj. O servidor substituirá
+-- este placeholder pelo hash correto na próxima atualização.
+UPDATE public.stores
+SET cnpj_root_hash = encode(digest(substring(cnpj_normalized, 1, 8), 'sha256'), 'hex')
+WHERE cnpj_normalized IS NOT NULL
+  AND cnpj_root_hash = '';
+
 -- =============================================================================
 -- 2. CHECK constraint — atomicidade fiscal
 -- =============================================================================
