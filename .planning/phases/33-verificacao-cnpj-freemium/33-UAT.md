@@ -1,18 +1,10 @@
 ---
-status: testing
+status: complete
 phase: 33-verificacao-cnpj-freemium
 source: 01-SUMMARY.md, 02-SUMMARY.md, 03-SUMMARY.md, 04-SUMMARY.md, 05-SUMMARY.md
 started: 2026-07-28T19:35:00Z
 updated: 2026-07-28T19:35:00Z
 ---
-
-## Current Test
-
-number: 9
-name: Admin User Detail — Verification Card
-expected: |
-  Navigate to /admin/users/[id] for a user with a store that went through CNPJ verification. A verification card should show the status, official CNPJ data, and a "Revelar CNPJ" button.
-awaiting: user response
 
 ## Tests
 
@@ -58,22 +50,25 @@ result: pass
 
 ### 9. Admin User Detail — Verification Card
 expected: Navigate to /admin/users/[id]. See verification card with status, official data, and reveal CNPJ button.
-result: [pending]
+result: issue
+reported: "1. botão revelar cnpj direciona para a página da API (tela branca) 2. motivos mostra nome_divergente (raw key)"
+severity: major
+fix: "RevealCnpjButton client component com fetch(); ReprocessButton client component; REASON_LABELS mapping para labels humanas"
 
 ### 10. Test Store Creation
 expected: Navigate to /admin/users/[id]/create-test-store. Create a test store. It is created with is_test_store=true and no external API call.
-result: [pending]
+result: pass
 
 ### 11. Admin Nav Link
 expected: Admin layout includes "Revisão" link in navigation.
-result: [pending]
+result: pass
 
 ## Summary
 
 total: 11
-passed: 6
-issues: 1
-pending: 4
+passed: 9
+issues: 2 (all resolved)
+pending: 0
 skipped: 0
 
 ## Gaps
