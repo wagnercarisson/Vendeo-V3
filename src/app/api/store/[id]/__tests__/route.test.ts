@@ -155,6 +155,7 @@ describe('GET /api/store/[id] — enriched with identity', () => {
 describe('PATCH /api/store/[id] — persist razaoSocial/nomeFantasia', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSupabaseFrom.mockReset(); // Clear lingering mockReturnValueOnce from prior tests
     mockGetClaims.mockResolvedValue({ data: { claims: { sub: 'user-123' } }, error: null });
     vi.mocked(requireOwnership).mockResolvedValue(mockStore);
   });
@@ -167,12 +168,40 @@ describe('PATCH /api/store/[id] — persist razaoSocial/nomeFantasia', () => {
     }));
   }
 
-  function mockSupabaseChain(supabaseResult: Record<string, unknown>) {
-    const mockSingle = vi.fn().mockResolvedValue({ data: supabaseResult, error: null });
-    const mockSelect = vi.fn(() => ({ single: mockSingle }));
-    const mockEq = vi.fn(() => ({ select: mockSelect }));
+  /**
+   * Mock supabase chain for PATCH handler with CNPJ atomicity guard.
+   * Works for ANY combination of guard SELECT + UPDATE chains because it
+   * uses a single `from()` return value that routes through `single()` call
+   * count to serve different results for guard (CNPJ check) vs update (store data).
+   *
+   * Guard chain:  .select("cnpj_normalized").eq("id", id).single()
+   * Update chain: .update(updates).eq("id", id).select().single()
+   *
+   * @param guardCnpj CNPJ value the guard should return (default valid CNPJ)
+   * @param supabaseResult Data the update chain should return
+   * @returns The mockUpdate function for assertions
+   */
+  function mockSupabaseChain(supabaseResult: Record<string, unknown>, guardCnpj: string | null = "12345678000195") {
+    let singleCallCount = 0;
+    const mockSingle = vi.fn().mockImplementation(() => {
+      singleCallCount++;
+      // 1st .single() call → guard result; 2nd → update result
+      if (singleCallCount === 1) {
+        return Promise.resolve({ data: { cnpj_normalized: guardCnpj }, error: null });
+      }
+      return Promise.resolve({ data: supabaseResult, error: null });
+    });
+    const mockEq = vi.fn(() => ({ single: mockSingle, select: mockSelect }));
+    const mockSelect = vi.fn(() => ({ single: mockSingle, eq: mockEq }));
     const mockUpdate = vi.fn(() => ({ eq: mockEq }));
-    mockSupabaseFrom.mockReturnValue({ update: mockUpdate, eq: mockEq, select: mockSelect });
+
+    mockSupabaseFrom.mockReturnValue({
+      select: mockSelect,
+      update: mockUpdate,
+      eq: mockEq,
+      single: mockSingle,
+    });
+
     return mockUpdate;
   }
 
@@ -209,5 +238,59 @@ describe('PATCH /api/store/[id] — persist razaoSocial/nomeFantasia', () => {
     const res = await PATCH(patchRequest({ razaoSocial: 'X' }), { params: Promise.resolve({ id: STORE_ID }) });
 
     expect(res.status).toBe(400);
+  });
+
+  // --- CNPJ atomicity guard tests ---
+
+  it('rejects razaoSocial when store has no cnpj_normalized', async () => {
+    // Guard chain: store has NO cnpj_normalized
+    const mockSingleGuard = vi.fn().mockResolvedValue({ data: { cnpj_normalized: null }, error: null });
+    mockSupabaseFrom.mockReturnValueOnce({
+      select: vi.fn(() => ({ eq: vi.fn(() => ({ single: mockSingleGuard })) })),
+    });
+
+    const { PATCH } = await import('../route');
+    const res = await PATCH(patchRequest({ razaoSocial: 'Razao Social Ltda' }), { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toContain('CNPJ');
+  });
+
+  it('rejects nomeFantasia when store has no cnpj_normalized', async () => {
+    const mockSingleGuard = vi.fn().mockResolvedValue({ data: { cnpj_normalized: null }, error: null });
+    mockSupabaseFrom.mockReturnValueOnce({
+      select: vi.fn(() => ({ eq: vi.fn(() => ({ single: mockSingleGuard })) })),
+    });
+
+    const { PATCH } = await import('../route');
+    const res = await PATCH(patchRequest({ nomeFantasia: 'Nome Fantasia' }), { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toContain('CNPJ');
+  });
+
+  it('allows razaoSocial when store has cnpj_normalized', async () => {
+    mockSupabaseChain({ ...mockStore, razao_social: 'Razao Autorizada Ltda' }, "12345678000195");
+
+    const { PATCH } = await import('../route');
+    const res = await PATCH(patchRequest({ razaoSocial: 'Razao Autorizada Ltda' }), { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(res.status).toBe(200);
+  });
+
+  it('allows non-fiscal fields when store has no cnpj_normalized', async () => {
+    // Even without CNPJ, non-fiscal fields (e.g. name, segment) should still work.
+    // The guard only checks when razaoSocial or nomeFantasia are present.
+    const mockUpdate = mockSupabaseChain({ ...mockStore, name: 'Novo Nome' });
+
+    const { PATCH } = await import('../route');
+    const res = await PATCH(patchRequest({ name: 'Novo Nome' }), { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(res.status).toBe(200);
+    expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'Novo Nome',
+    }));
   });
 });

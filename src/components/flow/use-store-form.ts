@@ -145,6 +145,7 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const [colorTouched, setColorTouched] = useState(false);
   const [storeId, setStoreId] = useState<string | null>(initialStore?.id ?? null);
+  const [hasExistingCnpj, setHasExistingCnpj] = useState(() => !!initialStore?.cnpj_normalized);
   const [colorDirtyState, setColorDirtyState] = useState<ColorDirtyState>({
     primaryInitial: null,
     accentInitial: null,
@@ -179,6 +180,7 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
     setStoreId(null);
     setFormData(EMPTY_FORM);
     setMode("create");
+    setHasExistingCnpj(false);
     setColorTouched(false);
     setColorDirtyState({ primaryInitial: null, accentInitial: null, primaryDirty: false, accentDirty: false });
     setError(null);
@@ -209,22 +211,45 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
         body.acceptedTerms = true;
       }
 
-      if (formData.cnpj) {
-        body.cnpj = formData.cnpj.replace(/\D/g, "");
-      }
-      if (formData.razaoSocial) body.razaoSocial = formData.razaoSocial;
-      const nomeFantasiaFinal = formData.nomeFantasia || formData.razaoSocial;
-      if (nomeFantasiaFinal) body.nomeFantasia = nomeFantasiaFinal;
-
       let res: Response;
 
       if (storeId) {
-        res = await fetch(`/api/store/${storeId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
+        // Edit mode — check if store needs CNPJ routing
+        const cnpjDigits = formData.cnpj.replace(/\D/g, "");
+
+        if (!hasExistingCnpj && cnpjDigits.length === 14) {
+          // Store sem CNPJ + formulário com CNPJ válido → rota dedicada
+          res = await fetch("/api/store/update-cnpj", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              storeId,
+              cnpjNormalized: cnpjDigits,
+              razaoSocial: formData.razaoSocial,
+              nomeFantasia: formData.nomeFantasia || formData.razaoSocial,
+            }),
+          });
+        } else {
+          // PATCH normal — razaoSocial/nomeFantasia são permitidos (store tem CNPJ)
+          if (formData.razaoSocial) body.razaoSocial = formData.razaoSocial;
+          const nomeFantasiaFinal = formData.nomeFantasia || formData.razaoSocial;
+          if (nomeFantasiaFinal) body.nomeFantasia = nomeFantasiaFinal;
+
+          res = await fetch(`/api/store/${storeId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+        }
       } else {
+        // Create mode — inclui CNPJ e dados fiscais
+        if (formData.cnpj) {
+          body.cnpj = formData.cnpj.replace(/\D/g, "");
+        }
+        if (formData.razaoSocial) body.razaoSocial = formData.razaoSocial;
+        const nomeFantasiaFinal = formData.nomeFantasia || formData.razaoSocial;
+        if (nomeFantasiaFinal) body.nomeFantasia = nomeFantasiaFinal;
+
         res = await fetch("/api/store", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -239,15 +264,23 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
 
       const saved: Record<string, unknown> = await res.json();
 
-      if (!saved.id || typeof saved.id !== "string") {
-        throw new Error("Loja salva, mas resposta não retornou o ID da loja.");
-      }
-
       if (!storeId) {
+        // Response from create (POST /api/store)
+        if (!saved.id || typeof saved.id !== "string") {
+          throw new Error("Loja salva, mas resposta não retornou o ID da loja.");
+        }
         setStoreId(saved.id as string);
         setMode("edit");
+        if (formData.cnpj) setHasExistingCnpj(true);
         setSuccessMessage("Loja salva. Agora configure a direção visual.");
       } else {
+        // Response from update-cnpj or PATCH
+        if (saved.success === true) {
+          // update-cnpj response: { success: true, store: [...] }
+          setHasExistingCnpj(true);
+        } else if (!saved.id || typeof saved.id !== "string") {
+          throw new Error("Loja salva, mas resposta não retornou o ID da loja.");
+        }
         setSuccessMessage("Loja salva. Agora configure a direção visual.");
       }
 
@@ -257,7 +290,7 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
     } finally {
       setIsSaving(false);
     }
-  }, [formData, storeId, colorTouched]);
+  }, [formData, storeId, colorTouched, hasExistingCnpj]);
 
   return {
     formData,

@@ -284,4 +284,36 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
 
     expect(res.status).toBe(409);
   });
+
+  it("persists CNPJ, razao_social and nome_fantasia atomically via RPC", async () => {
+    mockResolve.mockResolvedValue(sampleLookupResolved);
+    mockRpc.mockResolvedValueOnce({
+      data: {
+        store: [{ id: "store-atomic", name: "Loja Atomica", segment: "moda-calcados-acessorios", cnpj_normalized: "12345678000195", razao_social: "MINHA LOJA LTDA", nome_fantasia: "Minha Loja" }],
+        onboardingGranted: true,
+        verificationStatus: "approved",
+      },
+      error: null,
+    });
+
+    const res = await POST(createRequest({
+      name: "Loja Atomica",
+      segment: "moda-calcados-acessorios",
+      cnpj: "12.345.678/0001-95",
+      razaoSocial: "MINHA LOJA LTDA",
+      nomeFantasia: "Minha Loja",
+      acceptedTerms: true,
+    }));
+
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.id).toBe("store-atomic");
+
+    // Verify all three fiscal fields are passed in a single RPC call
+    expect(mockRpc).toHaveBeenCalledWith("create_store_with_cnpj", expect.objectContaining({
+      p_cnpj_normalized: "12345678000195",
+      p_razao_social: "MINHA LOJA LTDA",
+      p_nome_fantasia: "Minha Loja",
+    }));
+  });
 });

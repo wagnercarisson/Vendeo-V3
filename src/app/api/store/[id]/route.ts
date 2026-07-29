@@ -153,6 +153,25 @@ export const PATCH = apiHandler(async (
       updates.slogan = typeof body.slogan === 'string' ? body.slogan.trim() || null : null;
     }
 
+    // CNPJ atomicity guard (RAG-260729): rejeita razaoSocial/nomeFantasia sem CNPJ
+    if (body.razaoSocial !== undefined || body.nomeFantasia !== undefined) {
+      const { data: storeCheck } = await supabase
+        .from("stores")
+        .select("cnpj_normalized")
+        .eq("id", id)
+        .single();
+
+      if (!storeCheck?.cnpj_normalized) {
+        return NextResponse.json(
+          {
+            error:
+              "Razão social e nome fantasia só podem ser alterados após o cadastro do CNPJ. Use /api/store/update-cnpj para cadastrar os dados fiscais.",
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     if (body.razaoSocial !== undefined) {
       if (typeof body.razaoSocial !== "string" || body.razaoSocial.trim().length < 2) {
         return NextResponse.json(
