@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import {
@@ -15,6 +16,7 @@ import {
   getVsRefundRate,
   getVsCreditsRefunded,
 } from "@/lib/metrics/pipeline-metrics";
+import type { StoreKind } from "@/lib/metrics/pipeline-metrics";
 import { computeHealthState } from "@/lib/metrics/health";
 import { EmptyState } from "@/components/ui/empty-state";
 import { BarChart3 } from "lucide-react";
@@ -43,25 +45,25 @@ interface MetricsData {
   creditsGranted: number | null;
 }
 
-async function fetchMetrics(hours: number): Promise<MetricsData> {
+async function fetchMetrics(hours: number, storeKind: StoreKind = "production"): Promise<MetricsData> {
   const [
     successRate, errorRate, avgCost, avgDuration, refundRate, activeUsers,
     vsSuccessRate, vsErrorRate, vsAvgDuration, vsCreditsConsumed, vsRefundRate, vsCreditsRefunded,
     creditsGranted,
   ] = await Promise.all([
-    getSuccessRate(hours),
-    getErrorRate(hours),
-    getAvgCost(hours),
-    getAvgDuration(hours),
-    getRefundRate(hours),
-    getActiveUsers(hours),
-    getVsSuccessRate(hours),
-    getVsErrorRate(hours),
-    getVsAvgDuration(hours),
-    getVsCreditsConsumed(hours),
-    getVsRefundRate(hours),
-    getVsCreditsRefunded(hours),
-    getCreditsGranted(hours),
+    getSuccessRate(hours, storeKind),
+    getErrorRate(hours, storeKind),
+    getAvgCost(hours, storeKind),
+    getAvgDuration(hours, storeKind),
+    getRefundRate(hours, storeKind),
+    getActiveUsers(hours, storeKind),
+    getVsSuccessRate(hours, storeKind),
+    getVsErrorRate(hours, storeKind),
+    getVsAvgDuration(hours, storeKind),
+    getVsCreditsConsumed(hours, storeKind),
+    getVsRefundRate(hours, storeKind),
+    getVsCreditsRefunded(hours, storeKind),
+    getCreditsGranted(hours, storeKind),
   ]);
 
   return {
@@ -104,7 +106,11 @@ function buildWalletCards(hours: number, data: MetricsData): MetricCard[] {
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminMetricsPage() {
+export default async function AdminMetricsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>;
+}) {
   try {
     await requireAdmin();
   } catch {
@@ -115,10 +121,16 @@ export default async function AdminMetricsPage() {
     );
   }
 
+  const sp = await searchParams;
+  const storeKind: StoreKind = sp.view === "all" ? "all" : "production";
+  const modeLabel = storeKind === "all" ? "Todos (produção + teste)" : "Apenas produção";
+  const modeLinkHref = storeKind === "all" ? "/admin/metrics" : "/admin/metrics?view=all";
+  const modeLinkLabel = storeKind === "all" ? "Ver apenas produção" : "Ver todos (incluir teste)";
+
   const [metrics1h, metrics24h, metrics7d] = await Promise.all([
-    fetchMetrics(1),
-    fetchMetrics(24),
-    fetchMetrics(168),
+    fetchMetrics(1, storeKind),
+    fetchMetrics(24, storeKind),
+    fetchMetrics(168, storeKind),
   ]);
 
   const healthState: HealthState = computeHealthState({
@@ -150,11 +162,23 @@ export default async function AdminMetricsPage() {
   if (allIsEmpty) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Métricas</h1>
-          <p className="text-sm text-muted-foreground">
-            Indicadores operacionais do sistema
-          </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Métricas</h1>
+            <p className="text-sm text-muted-foreground">
+              Indicadores operacionais do sistema
+            </p>
+          </div>
+          <Link
+            href={modeLinkHref}
+            className={`text-xs font-medium px-3 py-1 rounded-md border transition-colors whitespace-nowrap ${
+              storeKind === "all"
+                ? "bg-accent-amber/10 border-accent-amber/30 text-accent-amber"
+                : "bg-muted border-border text-muted-foreground"
+            }`}
+          >
+            {storeKind === "all" ? "⬡ Modo: Todos" : "☐ Modo: Produção"}
+          </Link>
         </div>
         <EmptyState
           icon={BarChart3}
@@ -167,12 +191,29 @@ export default async function AdminMetricsPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Métricas</h1>
-        <p className="text-sm text-muted-foreground">
-          Indicadores operacionais do sistema
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Métricas</h1>
+          <p className="text-sm text-muted-foreground">
+            Indicadores operacionais do sistema
+          </p>
+        </div>
+        <Link
+          href={modeLinkHref}
+          className={`text-xs font-medium px-3 py-1 rounded-md border transition-colors whitespace-nowrap ${
+            storeKind === "all"
+              ? "bg-accent-amber/10 border-accent-amber/30 text-accent-amber"
+              : "bg-muted border-border text-muted-foreground"
+          }`}
+        >
+          {storeKind === "all" ? "⬡ Modo: Todos" : "☐ Modo: Produção"}
+        </Link>
       </div>
+      <p className="text-xs text-muted-foreground -mt-4">
+        <Link href={modeLinkHref} className="hover:text-foreground transition-colors">
+          {modeLinkLabel}
+        </Link>
+      </p>
 
       <HealthBanner healthState={healthState} />
 
