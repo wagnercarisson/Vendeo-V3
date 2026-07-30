@@ -104,7 +104,7 @@ describe("GET /api/admin/users", () => {
     const res = await getUsers("http://localhost/api/admin/users?search=joao");
     expect(res.status).toBe(200);
     expect(mockRpc).toHaveBeenCalledWith("admin_get_users_summary", {
-      p_search: "joao", p_page: 1, p_page_size: 20,
+      p_search: "joao", p_page: 1, p_page_size: 20, p_store_kind: "all",
     });
   });
 

@@ -23,9 +23,10 @@ import {
   getVsRefundRate,
   getVsCreditsRefunded,
   clearMetricsCache,
+  type MetricsBundle,
 } from "../pipeline-metrics";
 
-const PRODUCTION_BUNDLE = {
+const PRODUCTION_BUNDLE: MetricsBundle = {
   pipeline: { total: 10, success: 8, error: 2, avg_cost_ms: 0.015, avg_duration_ms: 12000, active_users: 5 },
   vs: { success_rate: 75, error_rate: 25, avg_duration_ms: 15000 },
   wallet: {
@@ -35,7 +36,7 @@ const PRODUCTION_BUNDLE = {
   },
 };
 
-const TEST_BUNDLE = {
+const TEST_BUNDLE: MetricsBundle = {
   pipeline: { total: 3, success: 2, error: 1, avg_cost_ms: 0.01, avg_duration_ms: 8000, active_users: 2 },
   vs: { success_rate: 67, error_rate: 33, avg_duration_ms: 10000 },
   wallet: {
@@ -45,7 +46,7 @@ const TEST_BUNDLE = {
   },
 };
 
-const ALL_BUNDLE = {
+const ALL_BUNDLE: MetricsBundle = {
   pipeline: { total: 13, success: 10, error: 3, avg_cost_ms: 0.014, avg_duration_ms: 11000, active_users: 7 },
   vs: { success_rate: 73, error_rate: 27, avg_duration_ms: 14000 },
   wallet: {
@@ -298,9 +299,9 @@ describe("test store filtering (storeKind)", () => {
     mockBundle(ALL_BUNDLE);
     const all = await getActiveUsers(24, "all");
 
-    expect(prod).toBeLessThan(all);
     expect(prod).toBe(5);
     expect(all).toBe(7);
+    expect(prod!).toBeLessThan(all!);
   });
 
   it("storeKind='test' returns only test store metrics", async () => {

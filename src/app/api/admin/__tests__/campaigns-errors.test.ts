@@ -10,9 +10,11 @@ vi.mock("@/lib/admin/require-admin", () => ({
 }));
 
 const mockFrom = vi.fn();
+const mockRpc = vi.fn();
 vi.mock("@/lib/supabase/server", () => ({
   supabaseAdmin: {
     from: (...args: unknown[]) => mockFrom(...args),
+    rpc: (...args: unknown[]) => mockRpc(...args),
   },
 }));
 
@@ -33,6 +35,7 @@ async function getCampaignErrors(url = "http://localhost/api/admin/campaigns/err
 beforeEach(() => {
   vi.clearAllMocks();
   mockRequireAdmin.mockResolvedValue({ userId: "admin-1" });
+  mockRpc.mockResolvedValue({ data: [{ user_id: "test-user-1", email: "test@example.com" }], error: null });
 });
 
 describe("GET /api/admin/campaigns/errors", () => {
