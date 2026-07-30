@@ -4,7 +4,7 @@ milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 current_phase: 34
 status: Phase 34 complete
-last_updated: "2026-07-29T17:49:00.000Z"
+last_updated: "2026-07-30T21:35:00.000Z"
 progress:
   total_phases: 13
   completed_phases: 11
