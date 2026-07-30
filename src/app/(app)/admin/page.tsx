@@ -15,7 +15,12 @@ export default async function AdminDashboardPage() {
 
   const [usersResult, { data: recentActions }, { count: errorCampaigns }, { count: auditActions }] =
     await Promise.all([
-      supabaseAdmin.rpc("admin_get_users_summary", { p_search: null, p_page: 1, p_page_size: 1 }),
+      supabaseAdmin.rpc("admin_get_users_summary", {
+        p_search: null,
+        p_page: 1,
+        p_page_size: 1,
+        p_store_kind: "production",
+      }),
       supabaseAdmin
         .from("admin_audit_log")
         .select("*")
@@ -23,8 +28,9 @@ export default async function AdminDashboardPage() {
         .limit(10),
       supabaseAdmin
         .from("campaigns")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "error"),
+        .select("*, stores!inner(id, is_test_store)", { count: "exact", head: true })
+        .eq("status", "error")
+        .eq("stores.is_test_store", false),
       supabaseAdmin
         .from("admin_audit_log")
         .select("*", { count: "exact", head: true }),
