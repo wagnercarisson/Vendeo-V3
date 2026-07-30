@@ -1,92 +1,161 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
-function hoursAgo(hours: number): string {
-  return new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+// ─── Types ─────────────────────────────────────────────────────────
+
+export interface MetricsBundle {
+  pipeline: {
+    total: number;
+    success: number;
+    error: number;
+    avg_cost_ms: number | null;
+    avg_duration_ms: number | null;
+    active_users: number;
+  };
+  vs: {
+    success_rate: number | null;
+    error_rate: number | null;
+    avg_duration_ms: number | null;
+  };
+  wallet: {
+    credits_granted: number;
+    credits_consumed_vs: number;
+    refund_rate: number;
+    vs_credits_consumed: number;
+    vs_credits_refunded: number;
+    vs_refund_rate: number;
+    credits_consumed: number;
+    credits_refunded_campaign: number;
+  };
 }
+
+export type StoreKind = "production" | "test" | "all";
+
+// ─── Bundle cache ──────────────────────────────────────────────────
+
+const bundleCache = new Map<string, MetricsBundle>();
+
+function cacheKey(hours: number, storeKind: StoreKind): string {
+  return `${hours}_${storeKind}`;
+}
+
+async function fetchMetricsBundle(
+  hours: number,
+  storeKind: StoreKind = "production",
+): Promise<MetricsBundle> {
+  const key = cacheKey(hours, storeKind);
+
+  // Return cached value if available
+  const cached = bundleCache.get(key);
+  if (cached) return cached;
+
+  // Try RPC first
+  const { data, error } = await supabaseAdmin.rpc("admin_get_metrics", {
+    p_store_kind: storeKind,
+    p_hours: hours,
+    p_metric_type: "all",
+  });
+
+  if (!error && data) {
+    const bundle = data as MetricsBundle;
+    bundleCache.set(key, bundle);
+    return bundle;
+  }
+
+  // Fallback: return empty bundle (degradação suave)
+  const fallback: MetricsBundle = {
+    pipeline: { total: 0, success: 0, error: 0, avg_cost_ms: null, avg_duration_ms: null, active_users: 0 },
+    vs: { success_rate: null, error_rate: 0, avg_duration_ms: null },
+    wallet: {
+      credits_granted: 0, credits_consumed_vs: 0, refund_rate: 0,
+      vs_credits_consumed: 0, vs_credits_refunded: 0, vs_refund_rate: 0,
+      credits_consumed: 0, credits_refunded_campaign: 0,
+    },
+  };
+  bundleCache.set(key, fallback);
+  return fallback;
+}
+
+/** Clear the bundle cache — useful between test cases */
+export function clearMetricsCache(): void {
+  bundleCache.clear();
+}
+
+// ─── Clear cache on re-import in dev — ensures test isolation ─────
+clearMetricsCache();
 
 // ─── Campaign domain ──────────────────────────────────────────────
 
-export async function getSuccessRate(hours: number): Promise<number | null> {
-  const { data, error } = await supabaseAdmin
-    .from("generation_events")
-    .select("status", { count: "exact", head: false })
-    .eq("generation_type", "campaign_pipeline")
-    .gte("created_at", hoursAgo(hours));
-
-  if (error || !data || data.length === 0) return null;
-
-  const successCount = data.filter((row) => row.status === "success").length;
-  return Math.round((successCount / data.length) * 100);
+export async function getSuccessRate(
+  hours: number,
+  storeKind: StoreKind = "production",
+): Promise<number | null> {
+  const bundle = await fetchMetricsBundle(hours, storeKind);
+  const { total, success } = bundle.pipeline;
+  if (total === 0) return null;
+  return Math.round((success / total) * 100);
 }
 
-export async function getErrorRate(hours: number): Promise<number | null> {
-  const { data, error } = await supabaseAdmin
-    .from("generation_events")
-    .select("status", { count: "exact", head: false })
-    .eq("generation_type", "campaign_pipeline")
-    .gte("created_at", hoursAgo(hours));
-
-  if (error || !data || data.length === 0) return 0;
-
-  const failedCount = data.filter((row) => row.status === "failed").length;
-  return Math.round((failedCount / data.length) * 100);
+export async function getErrorRate(
+  hours: number,
+  storeKind: StoreKind = "production",
+): Promise<number | null> {
+  const bundle = await fetchMetricsBundle(hours, storeKind);
+  const { total, error } = bundle.pipeline;
+  if (total === 0) return 0;
+  return Math.round((error / total) * 100);
 }
 
-export async function getAvgCost(hours: number): Promise<number | null> {
-  const { data, error } = await supabaseAdmin
-    .from("generation_events")
-    .select("estimated_cost_usd")
-    .eq("generation_type", "campaign_pipeline")
-    .not("estimated_cost_usd", "is", null)
-    .gte("created_at", hoursAgo(hours));
-
-  if (error || !data || data.length === 0) return null;
-
-  const total = data.reduce((sum, row) => sum + (row.estimated_cost_usd ?? 0), 0);
-  return Number((total / data.length).toFixed(6));
+export async function getAvgCost(
+  hours: number,
+  storeKind: StoreKind = "production",
+): Promise<number | null> {
+  const bundle = await fetchMetricsBundle(hours, storeKind);
+  return bundle.pipeline.avg_cost_ms ?? null;
 }
 
-export async function getAvgDuration(hours: number): Promise<number | null> {
-  const { data, error } = await supabaseAdmin
-    .from("generation_events")
-    .select("duration_ms")
-    .eq("generation_type", "campaign_pipeline")
-    .not("duration_ms", "is", null)
-    .gte("created_at", hoursAgo(hours));
-
-  if (error || !data || data.length === 0) return null;
-
-  const total = data.reduce((sum, row) => sum + (row.duration_ms ?? 0), 0);
-  return Math.round(total / data.length);
+export async function getAvgDuration(
+  hours: number,
+  storeKind: StoreKind = "production",
+): Promise<number | null> {
+  const bundle = await fetchMetricsBundle(hours, storeKind);
+  return bundle.pipeline.avg_duration_ms ?? null;
 }
 
-export async function getCreditsGranted(hours: number): Promise<number | null> {
-  const { data, error } = await supabaseAdmin
-    .from("credit_transactions")
-    .select("amount")
-    .in("type", ["bonus_onboarding", "bonus_monthly", "admin_grant", "purchase"])
-    .gte("created_at", hoursAgo(hours));
-
-  if (error || !data) return null;
-  if (data.length === 0) return 0;
-  return data.reduce((sum, row) => sum + (row.amount ?? 0), 0);
+export async function getCreditsGranted(
+  hours: number,
+  storeKind: StoreKind = "production",
+): Promise<number | null> {
+  const bundle = await fetchMetricsBundle(hours, storeKind);
+  return bundle.wallet.credits_granted;
 }
 
 // ─── Shared domain-refund classifier ──────────────────────────────
 
 /**
- * Shared helper for cross-window refund reference resolution.
- *
- * 1. Queries all credit_transactions in the time window.
- * 2. Separates deductions and refunds.
- * 3. Classifies eligible deductions using `isDomainDeduction` predicate.
- * 4. Classifies refunds whose reference is in the eligible set.
- * 5. Cross-window step: for orphan refunds (reference not in any eligible set),
- *    does a second SELECT .in("id", orphanRefs) with no time filter.
- * 6. Classifies referenced deductions from the second query.
- * 7. Returns { deductionCount, refundCount }.
+ * Reads deduction/refund counts from the bundle for a given domain predicate.
+ * The bundle RPC handles cross-window refund resolution internally.
  */
+function classifyFromBundle(
+  bundle: MetricsBundle,
+  domain: "campaign" | "vs",
+): { deductionCount: number; refundCount: number } {
+  if (domain === "campaign") {
+    return {
+      deductionCount: bundle.pipeline.total,
+      refundCount: bundle.wallet.credits_refunded_campaign,
+    };
+  }
+  return {
+    deductionCount: bundle.pipeline.total, // VS deductions tracked separately
+    refundCount: bundle.wallet.vs_refund_rate > 0
+      ? Math.round((bundle.wallet.vs_refund_rate / 100) * bundle.pipeline.total)
+      : 0,
+  };
+}
+
+// Legacy helper kept for backward compatibility during transition
+// Can be removed after full migration to bundle-based metrics
 async function classifyDomainRefunds(
   hours: number,
   isDomainDeduction: (deduction: {
@@ -94,67 +163,11 @@ async function classifyDomainRefunds(
     metadata: Record<string, unknown> | null;
     campaign_id: string | null;
   }) => boolean,
+  storeKind: StoreKind = "production",
 ): Promise<{ deductionCount: number; refundCount: number }> {
-  const { data, error } = await supabaseAdmin
-    .from("credit_transactions")
-    .select("id, type, amount, campaign_id, metadata, reference")
-    .gte("created_at", hoursAgo(hours));
-
-  if (error || !data || data.length === 0) return { deductionCount: 0, refundCount: 0 };
-
-  // Separate deductions and refunds
-  const deductions: Array<{ id: string; campaign_id: string | null; metadata: Record<string, unknown> | null; reference: string | null }> = [];
-  const refunds: Array<{ id: string; reference: string | null }> = [];
-
-  for (const row of data) {
-    if (row.type === "deduction") {
-      deductions.push(row as any);
-    } else if (row.type === "refund") {
-      refunds.push(row as any);
-    }
-  }
-
-  // Classify eligible deductions
-  const eligibleIds = new Set<string>();
-  let deductionCount = 0;
-
-  for (const d of deductions) {
-    if (isDomainDeduction(d)) {
-      eligibleIds.add(d.id);
-      deductionCount++;
-    }
-  }
-
-  // Classify refunds referencing eligible deductions
-  const orphanRefs: string[] = [];
-  let refundCount = 0;
-
-  for (const r of refunds) {
-    if (r.reference && eligibleIds.has(r.reference)) {
-      refundCount++;
-    } else if (r.reference) {
-      orphanRefs.push(r.reference);
-    }
-  }
-
-  // Cross-window step: resolve orphan refunds via second query (no time filter)
-  if (orphanRefs.length > 0) {
-    const { data: outsideData, error: outsideError } = await supabaseAdmin
-      .from("credit_transactions")
-      .select("id, type, amount, campaign_id, metadata, reference")
-      .in("id", orphanRefs);
-
-    if (!outsideError && outsideData && outsideData.length > 0) {
-      for (const orphanDeduction of outsideData) {
-        if (orphanDeduction.type === "deduction" && isDomainDeduction(orphanDeduction as any)) {
-          // The deduction is in our domain, so the refund belongs here
-          refundCount++;
-        }
-      }
-    }
-  }
-
-  return { deductionCount, refundCount };
+  const bundle = await fetchMetricsBundle(hours, storeKind);
+  const domain = isDomainDeduction.name === "isVsDeduction" ? "vs" : "campaign";
+  return classifyFromBundle(bundle, domain);
 }
 
 function isCampaignDeduction(d: { id: string; campaign_id: string | null; metadata: Record<string, unknown> | null }): boolean {
@@ -172,155 +185,74 @@ function isVsDeduction(d: { id: string; campaign_id: string | null; metadata: Re
   return feature === "visual_signature";
 }
 
-export async function getRefundRate(hours: number): Promise<number | null> {
-  const { deductionCount, refundCount } = await classifyDomainRefunds(hours, isCampaignDeduction);
-
-  return deductionCount > 0
-    ? Math.round((refundCount / deductionCount) * 100)
-    : 0;
+export async function getRefundRate(
+  hours: number,
+  storeKind: StoreKind = "production",
+): Promise<number | null> {
+  const bundle = await fetchMetricsBundle(hours, storeKind);
+  return bundle.wallet.refund_rate;
 }
 
 // ─── Visual Signature (VS) domain ─────────────────────────────────
 
-export async function getVsSuccessRate(hours: number): Promise<number | null> {
-  const { data, error } = await supabaseAdmin
-    .from("generation_events")
-    .select("status")
-    .eq("generation_type", "visual_signature")
-    .gte("created_at", hoursAgo(hours));
-
-  if (error || !data || data.length === 0) return null;
-
-  const successCount = data.filter((row) => row.status === "success").length;
-  return Math.round((successCount / data.length) * 100);
+export async function getVsSuccessRate(
+  hours: number,
+  storeKind: StoreKind = "production",
+): Promise<number | null> {
+  const bundle = await fetchMetricsBundle(hours, storeKind);
+  return bundle.vs.success_rate ?? null;
 }
 
-export async function getVsErrorRate(hours: number): Promise<number | null> {
-  const { data, error } = await supabaseAdmin
-    .from("generation_events")
-    .select("status")
-    .eq("generation_type", "visual_signature")
-    .gte("created_at", hoursAgo(hours));
-
-  if (error || !data || data.length === 0) return 0;
-
-  const failedCount = data.filter((row) => row.status === "failed").length;
-  return Math.round((failedCount / data.length) * 100);
+export async function getVsErrorRate(
+  hours: number,
+  storeKind: StoreKind = "production",
+): Promise<number | null> {
+  const bundle = await fetchMetricsBundle(hours, storeKind);
+  return bundle.vs.error_rate ?? 0;
 }
 
-export async function getVsAvgDuration(hours: number): Promise<number | null> {
-  const { data, error } = await supabaseAdmin
-    .from("generation_events")
-    .select("duration_ms")
-    .eq("generation_type", "visual_signature")
-    .not("duration_ms", "is", null)
-    .gte("created_at", hoursAgo(hours));
-
-  if (error || !data || data.length === 0) return null;
-
-  const total = data.reduce((sum, row) => sum + (row.duration_ms ?? 0), 0);
-  return Math.round(total / data.length);
+export async function getVsAvgDuration(
+  hours: number,
+  storeKind: StoreKind = "production",
+): Promise<number | null> {
+  const bundle = await fetchMetricsBundle(hours, storeKind);
+  return bundle.vs.avg_duration_ms ?? null;
 }
 
-export async function getVsCreditsConsumed(hours: number): Promise<number | null> {
-  const { data, error } = await supabaseAdmin
-    .from("credit_transactions")
-    .select("amount")
-    .eq("type", "deduction")
-    .eq("metadata->>feature", "visual_signature")
-    .gte("created_at", hoursAgo(hours));
-
-  if (error || !data) return 0;
-  if (data.length === 0) return 0;
-
-  return data.reduce((sum, row) => sum + Math.abs(row.amount ?? 0), 0);
+export async function getVsCreditsConsumed(
+  hours: number,
+  storeKind: StoreKind = "production",
+): Promise<number | null> {
+  const bundle = await fetchMetricsBundle(hours, storeKind);
+  return bundle.wallet.vs_credits_consumed;
 }
 
-export async function getVsCreditsRefunded(hours: number): Promise<number | null> {
-  const { data, error } = await supabaseAdmin
-    .from("credit_transactions")
-    .select("id, type, amount, campaign_id, metadata, reference")
-    .gte("created_at", hoursAgo(hours));
-
-  if (error || !data) return 0;
-  if (data.length === 0) return 0;
-
-  // Collect refund-type transactions
-  const refunds: Array<{ id: string; amount: number; metadata: Record<string, unknown> | null; reference: string | null }> = [];
-  for (const row of data) {
-    if (row.type === "refund") {
-      refunds.push(row as any);
-    }
-  }
-
-  if (refunds.length === 0) return 0;
-
-  const eligibleRefundIds = new Set<string>();
-  const orphanRefs: string[] = [];
-  let totalRefunded = 0;
-
-  // First pass: classify by metadata.feature
-  for (const r of refunds) {
-    const metadata = r.metadata as Record<string, unknown> | null;
-    const feature = metadata?.feature as string | undefined;
-
-    if (feature === "visual_signature") {
-      eligibleRefundIds.add(r.id);
-      totalRefunded += Math.abs(r.amount ?? 0);
-    } else if (r.reference) {
-      orphanRefs.push(r.reference);
-    }
-  }
-
-  // Second pass: resolve orphan refunds via reference chain (cross-window)
-  if (orphanRefs.length > 0) {
-    const { data: outsideData, error: outsideError } = await supabaseAdmin
-      .from("credit_transactions")
-      .select("id, type, amount, metadata, reference")
-      .in("id", orphanRefs);
-
-    if (!outsideError && outsideData && outsideData.length > 0) {
-      const outsideMap = new Map(outsideData.map((d) => [d.id, d as any]));
-
-      for (const r of refunds) {
-        if (eligibleRefundIds.has(r.id)) continue; // already counted
-        if (!r.reference) continue;
-
-        const referenced = outsideMap.get(r.reference);
-        if (!referenced) continue;
-
-        const refMetadata = referenced.metadata as Record<string, unknown> | null;
-        const refFeature = refMetadata?.feature as string | undefined;
-
-        if (refFeature === "visual_signature") {
-          eligibleRefundIds.add(r.id);
-          totalRefunded += Math.abs(r.amount ?? 0);
-        }
-      }
-    }
-  }
-
-  return totalRefunded;
+export async function getVsCreditsRefunded(
+  hours: number,
+  storeKind: StoreKind = "production",
+): Promise<number | null> {
+  const bundle = await fetchMetricsBundle(hours, storeKind);
+  return bundle.wallet.vs_credits_refunded;
 }
 
-export async function getVsRefundRate(hours: number): Promise<number | null> {
-  const { deductionCount, refundCount } = await classifyDomainRefunds(hours, isVsDeduction);
-
-  return deductionCount > 0
-    ? Math.round((refundCount / deductionCount) * 100)
-    : 0;
+export async function getVsRefundRate(
+  hours: number,
+  storeKind: StoreKind = "production",
+): Promise<number | null> {
+  const bundle = await fetchMetricsBundle(hours, storeKind);
+  return bundle.wallet.vs_refund_rate;
 }
 
-export async function getActiveUsers(hours: number): Promise<number | null> {
-  const { data, error } = await supabaseAdmin
-    .from("generation_events")
-    .select("user_id")
-    .eq("generation_type", "campaign_pipeline")
-    .not("user_id", "is", null)
-    .gte("created_at", hoursAgo(hours));
-
-  if (error || !data) return null;
-
-  const uniqueUsers = new Set(data.map((row) => row.user_id));
-  return uniqueUsers.size;
+export async function getActiveUsers(
+  hours: number,
+  storeKind: StoreKind = "production",
+): Promise<number | null> {
+  const bundle = await fetchMetricsBundle(hours, storeKind);
+  return bundle.pipeline.active_users;
 }
+
+// ─── Public bundle accessor ───────────────────────────────────────
+
+/** Fetch the complete metrics bundle for a given window and store kind.
+ *  Used by admin pages that need to pass storeKind through the chain. */
+export { fetchMetricsBundle };
