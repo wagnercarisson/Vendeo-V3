@@ -135,6 +135,7 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
   const [reconsultLoading, setReconsultLoading] = useState(false);
   const [billingManualActive, setBillingManualActive] = useState(false);
   const [billingError, setBillingError] = useState<string | null>(null);
+  const [billingCompleteness, setBillingCompleteness] = useState<'complete' | 'partial' | 'empty' | null>(null);
   const hasAnyBilling = !!(billingData.billing_address_street || billingData.billing_address_number || billingData.billing_address_neighborhood || billingData.billing_address_city || billingData.billing_address_state || billingData.billing_address_zipcode);
 
   const handleBillingChange = useCallback((field: string, value: string) => {
@@ -896,6 +897,7 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
       if (!res.ok) {
         setCnpjLookupStatus('unavailable');
         setCnpjLookupMessage('Não foi possível reconsultar o CNPJ.');
+        setBillingCompleteness(null);
         return;
       }
       const data = await res.json();
@@ -903,10 +905,30 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
       setCnpjLookupMessage('Dados atualizados da Receita Federal.');
       if (data.razao_social) setField("razaoSocial", data.razao_social);
       if (data.nome_fantasia) setField("nomeFantasia", data.nome_fantasia || data.razao_social);
-      if (data.billing) { setBillingData(data.billing); setBillingExpanded(true); }
+      if (data.billing) {
+        setBillingData({
+          billing_email: '',
+          billing_phone: '',
+          billing_address_street: data.billing.billing_address_street || '',
+          billing_address_number: data.billing.billing_address_number || '',
+          billing_address_complement: data.billing.billing_address_complement || '',
+          billing_address_neighborhood: data.billing.billing_address_neighborhood || '',
+          billing_address_city: data.billing.billing_address_city || '',
+          billing_address_state: data.billing.billing_address_state || '',
+          billing_address_zipcode: data.billing.billing_address_zipcode || '',
+          billing_data_source: data.billing.billing_data_source || 'brasilapi',
+          billing_data_last_prefilled_from: data.billing.billing_data_last_prefilled_from || 'brasilapi',
+        });
+        setBillingExpanded(true);
+        setBillingCompleteness(data.billing_completeness || null);
+        if (data.billing_completeness === 'partial' || data.billing_completeness === 'empty') {
+          setBillingManualActive(true);
+        }
+      }
     } catch {
       setCnpjLookupStatus('unavailable');
       setCnpjLookupMessage('Erro ao reconsultar CNPJ.');
+      setBillingCompleteness(null);
     }
   }, [storeId, setField, setBillingData, setBillingExpanded]);
 
@@ -1613,16 +1635,28 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
                               }
                               if (data.razao_social) setField("razaoSocial", data.razao_social);
                               if (data.nome_fantasia) setField("nomeFantasia", data.nome_fantasia);
+                              setBillingCompleteness(data.billing_completeness || null);
+                              if (data.billing_completeness === 'partial' || data.billing_completeness === 'empty') {
+                                setBillingManualActive(true);
+                              }
                             } else if (res.status === 503) {
                               setBillingError("Serviço de consulta indisponível. Tente novamente mais tarde ou preencha manualmente.");
+                              setBillingCompleteness(null);
                             } else if (res.status === 404) {
                               const errData = await res.json().catch(() => ({ error: "CNPJ não encontrado" }));
                               setBillingError(errData.error || "CNPJ não encontrado na Receita Federal. Preencha manualmente.");
+                              setBillingCompleteness(null);
+                            } else if (res.status === 422) {
+                              const errData = await res.json().catch(() => ({ error: "CNPJ com situação cadastral não ativa." }));
+                              setBillingError(errData.error || "CNPJ com situação cadastral não ativa.");
+                              setBillingCompleteness(null);
                             } else {
                               setBillingError("Erro ao consultar CNPJ. Preencha manualmente.");
+                              setBillingCompleteness(null);
                             }
                           } catch {
                             setBillingError("Erro de conexão. Preencha os dados manualmente.");
+                            setBillingCompleteness(null);
                           }
                           setReconsultLoading(false);
                         }}
@@ -1647,6 +1681,7 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
                           });
                           setBillingManualActive(true);
                           setBillingError(null);
+                          setBillingCompleteness(null);
                         }}
                         className="flex-1 min-h-[38px] rounded-lg border border-border-light px-4 py-2 text-xs font-semibold text-text-primary hover:bg-bg-elevated transition-all"
                       >
@@ -1657,6 +1692,15 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
                       <p className="flex items-center gap-1.5 text-accent-red text-xs mt-2">
                         <AlertCircle className="w-3 h-3 shrink-0" />{billingError}
                       </p>
+                    )}
+                    {(billingCompleteness === 'partial' || billingCompleteness === 'empty') && (
+                      <div className="flex items-start gap-2 bg-amber-900/20 border border-amber-700/30 rounded-lg px-3 py-2 mt-2">
+                        <AlertCircle className="w-4 h-4 text-accent-amber shrink-0 mt-0.5" />
+                        <div className="text-xs text-accent-amber">
+                          <p className="font-medium">Dados parciais da Receita Federal</p>
+                          <p className="mt-0.5">Alguns campos não puderam ser preenchidos automaticamente. Complete os campos em branco antes de confirmar.</p>
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}

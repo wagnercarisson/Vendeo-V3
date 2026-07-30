@@ -59,6 +59,19 @@ export const POST = apiHandler(async (
     }
 
     const data: CnpjLookupData = lookupResult.data;
+
+    const situacao = data.situacao_cadastral?.trim().toUpperCase();
+    if (situacao !== "ATIVA") {
+      return NextResponse.json(
+        {
+          error: "CNPJ encontrado, mas a situação cadastral não está ativa.",
+          lookupStatus: "inactive",
+          situacao_cadastral: data.situacao_cadastral,
+        },
+        { status: 422 }
+      );
+    }
+
     const nomeFantasiaFinal = (data.nome_fantasia && data.nome_fantasia.trim()) || data.razao_social;
 
     // Calcula verification_status com base nos dados oficiais
@@ -94,6 +107,11 @@ export const POST = apiHandler(async (
     }
 
     const billingPrefill = getPreFillFromCnpj(data);
+    const billingCompleteness = (() => {
+      if (Object.keys(billingPrefill).length === 0) return "empty";
+      if (billingPrefill.billing_address_street && billingPrefill.billing_address_number && billingPrefill.billing_address_city && billingPrefill.billing_address_state) return "complete";
+      return "partial";
+    })();
 
     const upsertData: Record<string, unknown> = {
       store_id: storeId,
@@ -118,6 +136,7 @@ export const POST = apiHandler(async (
       nome_fantasia: nomeFantasiaFinal,
       verification_status: verificationStatus,
       billing: billingPrefill,
+      billing_completeness: billingCompleteness,
     });
   } catch (err) {
     if (err instanceof UnauthorizedError) {

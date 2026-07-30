@@ -15,7 +15,7 @@ progress:
 
 # Project State
 
-**Last updated:** 2026-07-29
+**Last updated:** 2026-07-30
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆ **Em andamento**
 **Current phase:** 34
 
@@ -553,3 +553,4 @@ v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33 e 34 concluídas. F35 (Stri
 | 260729-rag | Corrigir atomicidade do cadastro fiscal pós-F34 | 2026-07-29 | bfc07b4 | [260729-rag-corrigir-atomicidade-do-cadastro-fiscal-](./quick/260729-rag-corrigir-atomicidade-do-cadastro-fiscal-/) |
 | 260729-t6x | Adicionar verificação CNPJ externa ao update-cnpj + unificar fluxo fiscal em /loja | 2026-07-30 | 36ae2a7 | [260729-t6x-corrigir-update-cnpj-route-para-verifica](./quick/260729-t6x-corrigir-update-cnpj-route-para-verifica/) |
 | 260730-j73 | Corrigir UX de feedback visível no onboarding — feedbacks críticos (erro/sucesso) ficam fora da viewport após ações de salvar/confirmar/gerar | 2026-07-30 | 058c342 | [260730-j73-onboarding-feedback-visivel-quero-corrig](./quick/260730-j73-onboarding-feedback-visivel-quero-corrig/) |
+| 260730-kka | Corrigir UX/robustez no card de billing do onboarding para tolerar dados parciais de CNPJ | 2026-07-30 | 33f173e | [260730-kka-billing-cnpj-parcial](./quick/260730-kka-billing-cnpj-parcial/) |
