@@ -7,9 +7,10 @@ type FeedbackOverlayProps = {
   message: string | null;
   type: "error" | "success";
   onDismiss: () => void;
+  focusSelector?: string;
 };
 
-export function FeedbackOverlay({ message, type, onDismiss }: FeedbackOverlayProps) {
+export function FeedbackOverlay({ message, type, onDismiss, focusSelector }: FeedbackOverlayProps) {
   const prevActiveElement = useRef<HTMLElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -24,12 +25,15 @@ export function FeedbackOverlay({ message, type, onDismiss }: FeedbackOverlayPro
       requestAnimationFrame(() => closeButtonRef.current?.focus());
     }
     return () => {
-      if (prevActiveElement.current && typeof prevActiveElement.current.focus === "function") {
+      if (focusSelector) {
+        const target = document.querySelector<HTMLElement>(focusSelector);
+        target?.focus();
+      } else if (prevActiveElement.current && typeof prevActiveElement.current.focus === "function") {
         prevActiveElement.current.focus();
-        prevActiveElement.current = null;
       }
+      prevActiveElement.current = null;
     };
-  }, [message, type]);
+  }, [message, type, focusSelector]);
 
   useEffect(() => {
     if (message && type === "success") {

@@ -124,7 +124,8 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
   const [legalCheckLoading, setLegalCheckLoading] = useState(true);
   const [acceptedTermsError, setAcceptedTermsError] = useState<string | null>(null);
   const [showContractModal, setShowContractModal] = useState(false);
-  const [feedbackOverlay, setFeedbackOverlay] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
+  const [feedbackOverlay, setFeedbackOverlay] = useState<{ message: string; type: 'error' | 'success'; focusSelector?: string } | null>(null);
+  const [suppressErrorBanner, setSuppressErrorBanner] = useState(false);
   const [contractDocuments, setContractDocuments] = useState<Array<{ label: string; version: string; url: string }> | null>(null);
   const [versionsLoading, setVersionsLoading] = useState(true);
   const [billingExpanded, setBillingExpanded] = useState(false);
@@ -442,12 +443,14 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
   // Feedback crítico pós-ação → overlay visível
   const dismissFeedbackOverlay = useCallback(() => {
     setFeedbackOverlay(null);
+    setSuppressErrorBanner(false);
   }, []);
 
   useEffect(() => {
     if (error) {
       setFeedbackOverlay({ message: error, type: 'error' });
     }
+    setSuppressErrorBanner(false);
   }, [error]);
 
   // Hydrate subsegment mode on load: detect if stored subsegment is custom (not predefined)
@@ -957,22 +960,18 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
       if (readiness.missing?.some((m: { item: string }) => m.item === "cadastro_fiscal")) {
         setFormError("Os dados fiscais não foram salvos. Verifique o CNPJ e tente novamente.");
         setFeedbackOverlay({ message: "Os dados fiscais não foram salvos. Verifique o CNPJ e tente novamente.", type: 'error' });
-      } else if (readiness.missing?.some((m: { item: string }) => m.item === "brand_profile")) {
-        // 2. brand_profile pendente → Step 2
+      } else {
+        // Sempre avança para Step 2 — permite ajustes mesmo se brand_profile já existe
         setDriftRefreshKey(k => k + 1);
         setStep(2);
         setStep2Success(null);
         setFeedbackOverlay({ message: "Loja salva. Agora configure a direção visual.", type: 'success' });
-      } else if (readiness.ready) {
-        // 3. Tudo ok → returnTo ou dashboard
-        const searchParams = new URLSearchParams(window.location.search);
-        const returnTo = searchParams.get("returnTo");
-        router.push(returnTo || "/dashboard");
       }
     } else if (saved && saved.code === "cnpj_already_registered") {
       setFieldErrors((prev) => ({ ...prev, cnpj: saved.error }));
       setTouched((prev) => ({ ...prev, cnpj: true }));
-      setFeedbackOverlay({ message: saved.error ?? "CNPJ já registrado", type: 'error' });
+      setSuppressErrorBanner(true);
+      setFeedbackOverlay({ message: saved.error ?? "CNPJ já registrado", type: 'error', focusSelector: '#cnpj' });
     }
   };
 
@@ -1147,7 +1146,7 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
         </div>
       )}
 
-      {error && (
+      {error && !suppressErrorBanner && (
         <div className="mb-6 flex items-start gap-3 bg-red-900/20 border border-red-700/30 rounded-lg px-4 py-3">
           <AlertCircle className="w-5 h-5 text-accent-red shrink-0 mt-0.5" />
           <p className="text-accent-red text-sm font-body flex-1">{error}</p>
@@ -2472,6 +2471,7 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
         message={feedbackOverlay?.message ?? null}
         type={feedbackOverlay?.type ?? 'error'}
         onDismiss={dismissFeedbackOverlay}
+        focusSelector={feedbackOverlay?.focusSelector}
       />
     </div>
   );
