@@ -1651,7 +1651,8 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
                               setBillingError(errData.error || "CNPJ com situação cadastral não ativa.");
                               setBillingCompleteness(null);
                             } else {
-                              setBillingError("Erro ao consultar CNPJ. Preencha manualmente.");
+                              const errData = await res.json().catch(() => null);
+                              setBillingError(errData?.error || "Erro ao consultar CNPJ. Preencha manualmente.");
                               setBillingCompleteness(null);
                             }
                           } catch {

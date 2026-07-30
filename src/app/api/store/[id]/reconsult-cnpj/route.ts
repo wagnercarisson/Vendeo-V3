@@ -123,7 +123,7 @@ export const POST = apiHandler(async (
 
     const { error: billingError } = await supabaseAdmin
       .from("store_billing_info")
-      .upsert(upsertData)
+      .upsert(upsertData, { onConflict: "store_id" })
       .select()
       .single();
 
