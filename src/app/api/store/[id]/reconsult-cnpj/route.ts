@@ -60,8 +60,9 @@ export const POST = apiHandler(async (
 
     const data: CnpjLookupData = lookupResult.data;
 
-    const situacao = data.situacao_cadastral?.trim().toUpperCase();
-    if (situacao !== "ATIVA") {
+    const situacao = String(data.situacao_cadastral ?? "").trim().toUpperCase();
+    const situacaoCodesAtiva = new Set(["ATIVA", "2"]);
+    if (!situacaoCodesAtiva.has(situacao)) {
       return NextResponse.json(
         {
           error: "CNPJ encontrado, mas a situação cadastral não está ativa.",

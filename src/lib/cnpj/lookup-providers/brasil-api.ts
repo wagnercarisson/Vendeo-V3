@@ -11,12 +11,30 @@ function fetchWithTimeout(url: string, timeoutMs: number): Promise<Response> {
   return fetch(url, { signal: controller.signal, headers: { "User-Agent": USER_AGENT } }).finally(() => clearTimeout(timer));
 }
 
+function mapSituacaoCadastral(data: Record<string, unknown>): string {
+  const descricao = data.descricao_situacao_cadastral;
+  if (typeof descricao === "string" && descricao.trim()) {
+    return descricao.trim().toUpperCase();
+  }
+
+  const codigo = String(data.situacao_cadastral ?? "").trim();
+  const byCode: Record<string, string> = {
+    "1": "NULA",
+    "2": "ATIVA",
+    "3": "SUSPENSA",
+    "4": "INAPTA",
+    "8": "BAIXADA",
+  };
+
+  return byCode[codigo] ?? codigo;
+}
+
 function mapResponse(data: Record<string, unknown>, cnpj: string): CnpjLookupData {
   return {
     cnpj_normalized: cnpj,
     razao_social: (data.razao_social as string) || "",
     nome_fantasia: (data.nome_fantasia as string) || null,
-    situacao_cadastral: (data.situacao_cadastral as string) || "",
+    situacao_cadastral: mapSituacaoCadastral(data),
     cep: (data.cep as string) || null,
     logradouro: (data.logradouro as string) || null,
     numero: (data.numero as string) || null,
