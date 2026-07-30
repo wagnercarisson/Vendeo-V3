@@ -19,6 +19,7 @@ import { isValidHex, normalizeBrandColorsChosen, hasUserChosenColors } from "@/l
 import { normalizeCnpj } from "@/lib/cnpj/normalize";
 import { validateCnpj } from "@/lib/cnpj/validate";
 import { ContractAcceptanceModal } from "@/components/legal/contract-acceptance-modal";
+import { FeedbackOverlay } from "./feedback-overlay";
 
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
 const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -123,6 +124,7 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
   const [legalCheckLoading, setLegalCheckLoading] = useState(true);
   const [acceptedTermsError, setAcceptedTermsError] = useState<string | null>(null);
   const [showContractModal, setShowContractModal] = useState(false);
+  const [feedbackOverlay, setFeedbackOverlay] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
   const [contractDocuments, setContractDocuments] = useState<Array<{ label: string; version: string; url: string }> | null>(null);
   const [versionsLoading, setVersionsLoading] = useState(true);
   const [billingExpanded, setBillingExpanded] = useState(false);
@@ -437,18 +439,16 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
     load();
   }, [storeId, setField]);
 
-  // Scroll to top on save success so feedback is visible
-  useEffect(() => {
-    if (successMessage) {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-  }, [successMessage]);
+  // Feedback crítico pós-ação → overlay visível
+  const dismissFeedbackOverlay = useCallback(() => {
+    setFeedbackOverlay(null);
+  }, []);
 
   useEffect(() => {
-    if (step2Success) {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+    if (error) {
+      setFeedbackOverlay({ message: error, type: 'error' });
     }
-  }, [step2Success]);
+  }, [error]);
 
   // Hydrate subsegment mode on load: detect if stored subsegment is custom (not predefined)
   useEffect(() => {
@@ -932,6 +932,7 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
     setTouched(touchedFields);
     if (Object.keys(errors).length > 0) {
       setFormError("Verifique os campos obrigatórios");
+      setFeedbackOverlay({ message: "Verifique os campos obrigatórios", type: 'error' });
       return;
     }
     setFormError(null);
@@ -955,11 +956,13 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
       // Prioridade: 1. cadastro_fiscal pendente → Step 1
       if (readiness.missing?.some((m: { item: string }) => m.item === "cadastro_fiscal")) {
         setFormError("Os dados fiscais não foram salvos. Verifique o CNPJ e tente novamente.");
+        setFeedbackOverlay({ message: "Os dados fiscais não foram salvos. Verifique o CNPJ e tente novamente.", type: 'error' });
       } else if (readiness.missing?.some((m: { item: string }) => m.item === "brand_profile")) {
         // 2. brand_profile pendente → Step 2
         setDriftRefreshKey(k => k + 1);
         setStep(2);
         setStep2Success(null);
+        setFeedbackOverlay({ message: "Loja salva. Agora configure a direção visual.", type: 'success' });
       } else if (readiness.ready) {
         // 3. Tudo ok → returnTo ou dashboard
         const searchParams = new URLSearchParams(window.location.search);
@@ -969,6 +972,7 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
     } else if (saved && saved.code === "cnpj_already_registered") {
       setFieldErrors((prev) => ({ ...prev, cnpj: saved.error }));
       setTouched((prev) => ({ ...prev, cnpj: true }));
+      setFeedbackOverlay({ message: saved.error ?? "CNPJ já registrado", type: 'error' });
     }
   };
 
@@ -1024,18 +1028,22 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
             setBrandColorsChosen(data.profile.brand_colors_chosen);
           }
           setStep2Success("Direção visual gerada com sucesso!");
+          setFeedbackOverlay({ message: "Direção visual gerada com sucesso!", type: 'success' });
         } else {
           setInferenceError(data.message || 'Não foi possível gerar a direção visual.');
           setStep2Success("Dados salvos com sucesso!");
+          setFeedbackOverlay({ message: "Dados salvos com sucesso!", type: 'success' });
         }
       } catch {
         setInferenceError('Erro ao gerar direção visual. Tente novamente.');
         setStep2Success("Dados salvos com sucesso!");
+        setFeedbackOverlay({ message: "Dados salvos com sucesso!", type: 'success' });
       } finally {
         setInferenceLoading(false);
       }
     } else {
       setStep2Success("Dados salvos com sucesso!");
+      setFeedbackOverlay({ message: "Dados salvos com sucesso!", type: 'success' });
     }
 
     const inputSnap = inferredProfile?.metadata?.input_snapshot as Record<string, string | null | undefined> | undefined;
@@ -1059,7 +1067,7 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
         }).catch(() => {});
       }
     }
-  }, [storeId, formData, brandColorsChosen, logoStatus, visualSignatureUrl, inferenceError, setField, saveBrandColors, identityState, inferredProfile]);
+  }, [storeId, formData, brandColorsChosen, logoStatus, visualSignatureUrl, inferenceError, setField, saveBrandColors, identityState, inferredProfile, setFeedbackOverlay]);
 
   const handleStep2Submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1075,7 +1083,11 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
       return;
     }
 
-    await executeStep2Save();
+    try {
+      await executeStep2Save();
+    } catch {
+      setFeedbackOverlay({ message: 'Erro ao salvar. Tente novamente.', type: 'error' });
+    }
   };
 
   const segmentOptions = STORE_SEGMENTS.map((seg) => ({
@@ -2293,6 +2305,7 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
               await executeStep2Save();
             } catch {
               setDriftError('Não foi possível realinhar. Tente novamente mais tarde.');
+              setFeedbackOverlay({ message: 'Não foi possível realinhar. Tente novamente mais tarde.', type: 'error' });
             }
           }}
           onIgnorar={async () => {
@@ -2301,7 +2314,7 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
               await ignorar();
               await executeStep2Save();
             } catch {
-              // modal já fechou; drift permanece ativo
+              setFeedbackOverlay({ message: 'Erro ao salvar após ignorar drift. Tente novamente.', type: 'error' });
             }
           }}
           onContinueWithoutDismiss={async () => {
@@ -2310,7 +2323,7 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
               await executeStep2Save();
               // Não chama ignorar() — badge permanece
             } catch {
-              // save executed independently; error handled by executeStep2Save
+              setFeedbackOverlay({ message: 'Erro ao salvar. Tente novamente.', type: 'error' });
             }
           }}
           onCancel={() => { setShowDriftDecisionModal(false); setDriftError(null); }}
@@ -2333,6 +2346,7 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
               await executeStep2Save();
             } catch {
               setDriftError('Não foi possível salvar. Tente novamente.');
+              setFeedbackOverlay({ message: 'Não foi possível salvar. Tente novamente.', type: 'error' });
             }
           }}
           onRemoveVs={async () => {
@@ -2341,6 +2355,7 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
               setShowDriftCriticalModal(false);
             } catch {
               setDriftError('Não foi possível remover a assinatura visual.');
+              setFeedbackOverlay({ message: 'Não foi possível remover a assinatura visual.', type: 'error' });
             }
           }}
           onOpenApproval={() => {
@@ -2453,6 +2468,11 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
           contractDocuments={contractDocuments}
         />
       )}
+      <FeedbackOverlay
+        message={feedbackOverlay?.message ?? null}
+        type={feedbackOverlay?.type ?? 'error'}
+        onDismiss={dismissFeedbackOverlay}
+      />
     </div>
   );
 }
