@@ -15,7 +15,7 @@ progress:
 
 # Project State
 
-**Last updated:** 2026-07-30 (quick task 260730-zfe: Admin Legibilidade)
+**Last updated:** 2026-07-30 (quick task 260730-pfq: corrigir criação de loja de teste admin quebrada por chk_stores_cnpj_atomic)
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆ **Em andamento**
 **Current phase:** 34
 
@@ -556,3 +556,4 @@ v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33 e 34 concluídas. F35 (Stri
 | 260730-kka | Corrigir UX/robustez no card de billing do onboarding para tolerar dados parciais de CNPJ | 2026-07-30 | 33f173e | [260730-kka-billing-cnpj-parcial](./quick/260730-kka-billing-cnpj-parcial/) |
 | 260730-mrr | Separar test store de produção no admin — filtro ternário (production/test/all), RPC admin_get_metrics bundle, pipeline refactor, admin pages + testes | 2026-07-30 | 7abffe5 | [260730-mrr-admin-separar-teste-producao](./quick/260730-mrr-admin-separar-teste-producao/) |
 | 260730-zfe | Admin Legibilidade — Datas e Labels | 2026-07-30 | 8753513 | [260730-zfe-admin-legibilidade-datas-labels](./quick/260730-zfe-admin-legibilidade-datas-labels/) |
+| 260730-pfq | corrigir criação de loja de teste admin quebrada por chk_stores_cnpj_atomic | 2026-07-30 | 239443e | [260730-pfq-corrigir-cria-o-de-loja-de-teste-admin-q](./quick/260730-pfq-corrigir-cria-o-de-loja-de-teste-admin-q/) |
