@@ -3,7 +3,7 @@ import type { MissingItem } from "@/lib/store-readiness";
 
 function missingToDisplay(item: MissingItem): { label: string; href: string } {
   if (item.item === "cadastro_fiscal") {
-    return { label: "CNPJ cadastral", href: "/cadastro/cnpj?returnTo=/dashboard" };
+    return { label: "CNPJ cadastral", href: "/loja?required=cadastro-fiscal&returnTo=/dashboard" };
   }
   return { label: "Direção visual", href: "/loja?required=visual-direction" };
 }

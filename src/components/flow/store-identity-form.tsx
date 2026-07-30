@@ -884,6 +884,29 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
   const handleDragLeave = useCallback(() => { setIsDragging(false); }, []);
   const handleDrop = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); handleFileSelected(e.dataTransfer.files?.[0] ?? null); }, [handleFileSelected]);
 
+  const handleReconsultCnpj = useCallback(async () => {
+    if (!storeId) return;
+    setCnpjLookupStatus('loading');
+    setCnpjLookupMessage('Reconsultando dados do CNPJ...');
+    try {
+      const res = await fetch(`/api/store/${storeId}/reconsult-cnpj`, { method: "POST" });
+      if (!res.ok) {
+        setCnpjLookupStatus('unavailable');
+        setCnpjLookupMessage('Não foi possível reconsultar o CNPJ.');
+        return;
+      }
+      const data = await res.json();
+      setCnpjLookupStatus('resolved');
+      setCnpjLookupMessage('Dados atualizados da Receita Federal.');
+      if (data.razao_social) setField("razaoSocial", data.razao_social);
+      if (data.nome_fantasia) setField("nomeFantasia", data.nome_fantasia || data.razao_social);
+      if (data.billing) { setBillingData(data.billing); setBillingExpanded(true); }
+    } catch {
+      setCnpjLookupStatus('unavailable');
+      setCnpjLookupMessage('Erro ao reconsultar CNPJ.');
+    }
+  }, [storeId, setField, setBillingData, setBillingExpanded]);
+
   const handleStep1Submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAcceptedTermsError(null);
@@ -921,9 +944,28 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
 
     const saved = await save(acceptedTerms || undefined);
     if (saved && "storeId" in saved) {
-      setDriftRefreshKey(k => k + 1);
-      setStep(2);
-      setStep2Success(null);
+      const savedStoreId = saved.storeId;
+      // Sempre verificar readiness antes de decidir navegação
+      const readinessRes = await fetch("/api/store/check-readiness", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storeId: savedStoreId }),
+      });
+      const readiness = await readinessRes.json();
+      // Prioridade: 1. cadastro_fiscal pendente → Step 1
+      if (readiness.missing?.some((m: { item: string }) => m.item === "cadastro_fiscal")) {
+        setFormError("Os dados fiscais não foram salvos. Verifique o CNPJ e tente novamente.");
+      } else if (readiness.missing?.some((m: { item: string }) => m.item === "brand_profile")) {
+        // 2. brand_profile pendente → Step 2
+        setDriftRefreshKey(k => k + 1);
+        setStep(2);
+        setStep2Success(null);
+      } else if (readiness.ready) {
+        // 3. Tudo ok → returnTo ou dashboard
+        const searchParams = new URLSearchParams(window.location.search);
+        const returnTo = searchParams.get("returnTo");
+        router.push(returnTo || "/dashboard");
+      }
     } else if (saved && saved.code === "cnpj_already_registered") {
       setFieldErrors((prev) => ({ ...prev, cnpj: saved.error }));
       setTouched((prev) => ({ ...prev, cnpj: true }));
@@ -1130,27 +1172,53 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
           {/* Cadastro Fiscal — sempre visível para completar readiness */}
           {(() => {
             const hasStoredCnpj = !!initialStore?.cnpj_normalized;
+            const isOfficialData = cnpjLookupStatus === 'resolved'
+              || (!!(initialStore as any)?.cnpj_official_data
+                && (initialStore as any).cnpj_normalized === formData.cnpj.replace(/\D/g, ""));
             const dataFromLookup = hasStoredCnpj || cnpjLookupStatus === 'resolved';
             if (hasStoredCnpj) {
               const masked = formData.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
               const nomeFantasiaDisplay = formData.nomeFantasia || formData.razaoSocial;
+              const hasOfficialData = !!(initialStore as any)?.cnpj_official_data;
               return (
                 <>
-                  <div>
-                    <label className={labelClass}>CNPJ (Receita Federal)</label>
-                    <div className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-muted text-sm font-body">
-                      {masked}
-                    </div>
+                  <div className="flex items-start justify-between gap-2">
+                    <label className={labelClass}>CNPJ</label>
+                    {!hasOfficialData && (
+                      <button type="button" onClick={handleReconsultCnpj}
+                        className="text-xs text-accent-blue hover:text-accent-blue/80 underline shrink-0 mt-1">
+                        Reconsultar CNPJ
+                      </button>
+                    )}
                   </div>
+                  <div className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-muted text-sm font-body">
+                    {masked}
+                  </div>
+                  {cnpjLookupStatus === 'loading' && (
+                    <p className="mt-1.5 flex items-center gap-1.5 text-text-secondary text-xs"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Reconsultando dados do CNPJ...</p>
+                  )}
+                  {cnpjLookupStatus === 'resolved' && (
+                    <p className="mt-1.5 flex items-center gap-1.5 text-accent-green text-xs"><CheckCircle2 className="w-3.5 h-3.5" /> Dados atualizados da Receita Federal.</p>
+                  )}
+                  {cnpjLookupStatus === 'unavailable' && (
+                    <p className="mt-1.5 flex items-center gap-1.5 text-accent-amber text-xs"><AlertCircle className="w-3.5 h-3.5" /> {cnpjLookupMessage}</p>
+                  )}
                   <div>
-                    <label htmlFor="razaoSocial" className={labelClass}>Razão Social (Receita Federal)</label>
+                    <label htmlFor="razaoSocial" className={labelClass}>
+                      Razão Social
+                      {isOfficialData && <span className="font-normal normal-case tracking-normal text-text-disabled"> (Dado oficial da Receita Federal)</span>}
+                    </label>
                     <input id="razaoSocial" type="text" value={formData.razaoSocial}
                       readOnly tabIndex={-1}
-                      placeholder="Razão social" maxLength={200}
+                      placeholder={hasOfficialData ? "Razão social" : "Reconsulte o CNPJ para carregar"}
+                      maxLength={200}
                       className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-muted text-sm font-body cursor-not-allowed" />
                   </div>
                   <div>
-                    <label htmlFor="nomeFantasia" className={labelClass}>Nome Fantasia (Receita Federal)</label>
+                    <label htmlFor="nomeFantasia" className={labelClass}>
+                      Nome Fantasia
+                      {isOfficialData && <span className="font-normal normal-case tracking-normal text-text-disabled"> (Dado oficial da Receita Federal)</span>}
+                    </label>
                     <input id="nomeFantasia" type="text" value={nomeFantasiaDisplay}
                       readOnly tabIndex={-1}
                       placeholder="Nome fantasia" maxLength={200}
@@ -1258,7 +1326,7 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
                     placeholder="Razão social (opcional)" maxLength={200}
                     className={`${inputClass("razaoSocial")} ${cnpjLookupStatus === 'resolved' ? 'opacity-70 cursor-not-allowed' : ''}`} />
                   {cnpjLookupStatus === 'resolved' && (
-                    <p className="text-xs text-text-muted mt-1">Dado oficial da Receita Federal.</p>
+                    <p className="text-xs text-text-muted mt-1">Dado oficial da Receita Federal. <span className="text-accent-green">Carregado automaticamente.</span></p>
                   )}
                 </div>
                 <div>

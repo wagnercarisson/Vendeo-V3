@@ -5,6 +5,11 @@ import { getCurrentStore } from "@/lib/auth/store-ownership";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { hashCnpjRoot } from "@/lib/cnpj/hash";
 import { isCnpjDuplicateError, CNPJ_DUPLICATE_RESPONSE } from "@/lib/cnpj/duplicate-error";
+import { CnpjVerificationService, createSupabaseLookupCache } from "@/lib/cnpj/verification-service";
+import { BrasilApiProvider } from "@/lib/cnpj/lookup-providers/brasil-api";
+import { CnpjaProvider } from "@/lib/cnpj/lookup-providers/cnpja";
+import { compareBusinessName } from "@/lib/cnpj/similarity";
+import type { CnpjLookupData } from "@/lib/cnpj/lookup-providers/types";
 import { z } from "zod";
 import { validateCnpj } from "@/lib/cnpj/validate";
 
@@ -48,14 +53,96 @@ export const POST = apiHandler(async (request: NextRequest) => {
 
     const cnpjRootHash = hashCnpjRoot(cnpjNormalized.slice(0, 8));
 
-    const nomeFantasiaFinal = (nomeFantasia && nomeFantasia.trim()) || razaoSocial.trim();
+    // App-level duplicate check (antes do RPC)
+    const { data: existingCnpj } = await supabaseAdmin
+      .from("stores")
+      .select("id")
+      .eq("cnpj_normalized", cnpjNormalized)
+      .neq("id", storeId)
+      .maybeSingle();
+
+    if (existingCnpj) {
+      return CNPJ_DUPLICATE_RESPONSE();
+    }
+
+    // Verificação externa do CNPJ (BrasilAPI → CNPJá)
+    const lookupService = new CnpjVerificationService(
+      new BrasilApiProvider(),
+      new CnpjaProvider(),
+      createSupabaseLookupCache(supabaseAdmin as never)
+    );
+    const lookupResult = await lookupService.resolve(cnpjNormalized);
+
+    if (lookupResult.status === "not_found") {
+      return NextResponse.json(
+        { error: "O CNPJ informado não foi encontrado na Receita Federal. Verifique o número e tente novamente." },
+        { status: 400 }
+      );
+    }
+
+    if (lookupResult.status === "unavailable") {
+      // Para loja normal, bloqueia. Exceção: test store.
+      if (!(store as any).is_test_store) {
+        return NextResponse.json(
+          { error: "Serviço de consulta CNPJ temporariamente indisponível. Tente novamente mais tarde." },
+          { status: 503 }
+        );
+      }
+    }
+
+    // Monta dados para persistir
+    let officialRazaoSocial = razaoSocial.trim();
+    let officialNomeFantasia = (nomeFantasia && nomeFantasia.trim()) || officialRazaoSocial;
+    let cnpjOfficialData: CnpjLookupData | null = null;
+    let verificationStatus = "unverified";
+    let verificationData: Record<string, unknown> | null = null;
+    let verificationReasons: string[] | null = null;
+    let cnpjValidationScore: Record<string, unknown> | null = null;
+
+    if (lookupResult.status === "resolved") {
+      cnpjOfficialData = lookupResult.data;
+      // Dados oficiais são autoritativos — sobrescrevem input do cliente
+      officialRazaoSocial = lookupResult.data.razao_social;
+      officialNomeFantasia = lookupResult.data.nome_fantasia || officialRazaoSocial;
+
+      // Calcula score de similaridade com dados oficiais
+      const score = compareBusinessName(
+        (store as any).name ?? "",
+        officialRazaoSocial,
+        officialNomeFantasia
+      );
+      cnpjValidationScore = score.bestScore >= 0.8
+        ? { name_match: true, score: score.bestScore }
+        : { name_mismatch: true, score: score.bestScore };
+
+      // Define verification_status com base na compatibilidade
+      if (score.bestScore >= 0.8) {
+        verificationStatus = "approved";
+        verificationData = { signals: { nameSimilarity: score.bestScore } };
+      } else {
+        verificationStatus = "review";
+        verificationReasons = ["nome_divergente"];
+        verificationData = { signals: { nameSimilarity: score.bestScore } };
+      }
+    } else if (lookupResult.status === "unavailable" && (store as any).is_test_store) {
+      // Test store com API indisponível: permite continuar com defer
+      verificationStatus = "defer";
+      verificationReasons = ["api_unavailable"];
+    }
+
+    const nomeFantasiaFinal = officialNomeFantasia;
 
     const { data, error } = await supabaseAdmin.rpc("update_store_cnpj", {
       p_store_id: storeId,
       p_cnpj_normalized: cnpjNormalized,
       p_cnpj_root_hash: cnpjRootHash,
-      p_razao_social: razaoSocial.trim(),
+      p_razao_social: officialRazaoSocial,
       p_nome_fantasia: nomeFantasiaFinal,
+      p_cnpj_official_data: cnpjOfficialData as unknown as Record<string, unknown> | null,
+      p_verification_status: verificationStatus,
+      p_verification_data: verificationData,
+      p_cnpj_validation_score: cnpjValidationScore,
+      p_verification_reasons: verificationReasons,
     });
 
     if (error) {

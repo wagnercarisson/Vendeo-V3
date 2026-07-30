@@ -19,7 +19,8 @@ describe('ReadinessBanner', () => {
       missing: [{ item: 'cadastro_fiscal', reason: 'CNPJ obrigatório' }],
     }));
     expect(html).toContain('CNPJ cadastral');
-    expect(html).toContain('/cadastro/cnpj?returnTo=/dashboard');
+    expect(html).toContain('/loja?required=cadastro-fiscal');
+    expect(html).toContain('returnTo=/dashboard');
   });
 
   it('shows Direção visual when brand_profile is missing', () => {
@@ -48,7 +49,7 @@ describe('ReadinessBanner', () => {
         { item: 'brand_profile', reason: 'Direção visual não configurada' },
       ],
     }));
-    expect(html).toContain('/cadastro/cnpj?returnTo=/dashboard');
+    expect(html).toContain('/loja?required=cadastro-fiscal');
     expect(html).toContain('Configurar agora');
   });
 

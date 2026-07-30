@@ -7,6 +7,7 @@ import { requireSameOrigin } from "@/lib/auth/csrf";
 import { CnpjVerificationService, createSupabaseLookupCache } from "@/lib/cnpj/verification-service";
 import { BrasilApiProvider } from "@/lib/cnpj/lookup-providers/brasil-api";
 import { CnpjaProvider } from "@/lib/cnpj/lookup-providers/cnpja";
+import { compareBusinessName } from "@/lib/cnpj/similarity";
 import { getPreFillFromCnpj } from "@/lib/billing/cnpj-address-mapper";
 import type { CnpjLookupData } from "@/lib/cnpj/lookup-providers/types";
 
@@ -60,12 +61,30 @@ export const POST = apiHandler(async (
     const data: CnpjLookupData = lookupResult.data;
     const nomeFantasiaFinal = (data.nome_fantasia && data.nome_fantasia.trim()) || data.razao_social;
 
+    // Calcula verification_status com base nos dados oficiais
+    const score = compareBusinessName(
+      store.store.name ?? "",
+      data.razao_social,
+      nomeFantasiaFinal
+    );
+    const verificationStatus = score.bestScore >= 0.8 ? "approved" : "review";
+    const verificationReasons = score.bestScore < 0.8 ? ["nome_divergente"] : null;
+    const verificationData = { signals: { nameSimilarity: score.bestScore } };
+    const cnpjValidationScore = score.bestScore >= 0.8
+      ? { name_match: true, score: score.bestScore }
+      : { name_mismatch: true, score: score.bestScore };
+
     const { error: storeUpdateError } = await supabaseAdmin
       .from("stores")
       .update({
         razao_social: data.razao_social,
         nome_fantasia: nomeFantasiaFinal,
         cnpj_official_data: data as unknown as Record<string, unknown>,
+        verification_status: verificationStatus,
+        verification_data: verificationData,
+        cnpj_validation_score: cnpjValidationScore,
+        verification_reasons: verificationReasons,
+        verification_requested_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq("id", storeId);
@@ -97,6 +116,7 @@ export const POST = apiHandler(async (
       success: true,
       razao_social: data.razao_social,
       nome_fantasia: nomeFantasiaFinal,
+      verification_status: verificationStatus,
       billing: billingPrefill,
     });
   } catch (err) {
