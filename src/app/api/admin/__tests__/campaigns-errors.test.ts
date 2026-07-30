@@ -78,4 +78,54 @@ describe("GET /api/admin/campaigns/errors", () => {
     const res = await getCampaignErrors();
     expect(res.status).toBe(403);
   });
+
+  it("excludes test stores by default — filters by stores.is_test_store = false", async () => {
+    const chain = buildChain();
+    chain.range.mockResolvedValue({ data: [], error: null, count: 0 });
+    mockFrom.mockReturnValue(chain);
+
+    const res = await getCampaignErrors("http://localhost/api/admin/campaigns/errors");
+
+    expect(res.status).toBe(200);
+    // Verify the query chain includes the test store filter
+    expect(chain.eq).toHaveBeenCalledWith("stores.is_test_store", false);
+  });
+
+  it("includes test stores when include_test=1", async () => {
+    const chain = buildChain();
+    chain.range.mockResolvedValue({
+      data: [{
+        id: "test-camp-1", product_name: "Produto Teste", store_id: "test-store-1",
+        stores: { name: "Loja Teste", user_id: "test-user-1", is_test_store: true },
+        error_message: "Erro de teste",
+        created_at: "2026-07-18T10:00:00Z",
+        updated_at: "2026-07-18T11:00:00Z", status: "error",
+      }],
+      error: null, count: 1,
+    });
+    mockFrom.mockReturnValue(chain);
+
+    const res = await getCampaignErrors("http://localhost/api/admin/campaigns/errors?include_test=1");
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0].storeName).toBe("Loja Teste");
+    // When include_test=1, is_test_store filter should NOT be applied
+    expect(chain.eq).not.toHaveBeenCalledWith("stores.is_test_store", false);
+  });
+
+  it("uses stores!inner with is_test_store field in select", async () => {
+    const chain = buildChain();
+    chain.range.mockResolvedValue({ data: [], error: null, count: 0 });
+    mockFrom.mockReturnValue(chain);
+
+    await getCampaignErrors("http://localhost/api/admin/campaigns/errors?include_test=1");
+
+    expect(chain.select).toHaveBeenCalled();
+    // The select should include stores!inner with is_test_store
+    const selectArg = chain.select.mock.calls[0][0] as string;
+    expect(selectArg).toContain("stores!inner");
+    expect(selectArg).toContain("is_test_store");
+  });
 });

@@ -114,6 +114,58 @@ describe("GET /api/admin/users", () => {
     const res = await getUsers();
     expect(res.status).toBe(403);
   });
+
+  it("filters by store kind (production)", async () => {
+    mockRpc.mockResolvedValue({
+      data: {
+        data: [{
+          userId: "user-1", email: "prod@test.com", storeId: "store-1",
+          storeName: "Loja Produção", segment: "moda", balance: 50,
+          totalCampaigns: 10, errorCampaigns: 1,
+          createdAt: "2026-07-01T08:00:00Z",
+        }],
+        total: 1,
+      },
+      error: null,
+    });
+
+    const res = await getUsers("http://localhost/api/admin/users?kind=production");
+    expect(res.status).toBe(200);
+    expect(mockRpc).toHaveBeenCalledWith("admin_get_users_summary", {
+      p_search: null, p_page: 1, p_page_size: 20, p_store_kind: "production",
+    });
+  });
+
+  it("filters by store kind (test)", async () => {
+    mockRpc.mockResolvedValue({
+      data: {
+        data: [{
+          userId: "user-2", email: "test@test.com", storeId: "store-2",
+          storeName: "Loja Teste", segment: "moda", balance: 10,
+          totalCampaigns: 3, errorCampaigns: 0,
+          createdAt: "2026-07-01T08:00:00Z",
+        }],
+        total: 1,
+      },
+      error: null,
+    });
+
+    const res = await getUsers("http://localhost/api/admin/users?kind=test");
+    expect(res.status).toBe(200);
+    expect(mockRpc).toHaveBeenCalledWith("admin_get_users_summary", {
+      p_search: null, p_page: 1, p_page_size: 20, p_store_kind: "test",
+    });
+  });
+
+  it("defaults to kind=all when no kind param", async () => {
+    mockRpc.mockResolvedValue({ data: { data: [], total: 0 }, error: null });
+
+    const res = await getUsers("http://localhost/api/admin/users");
+    expect(res.status).toBe(200);
+    expect(mockRpc).toHaveBeenCalledWith("admin_get_users_summary", {
+      p_search: null, p_page: 1, p_page_size: 20, p_store_kind: "all",
+    });
+  });
 });
 
 describe("GET /api/admin/users/[id]", () => {
