@@ -11,11 +11,18 @@ export const GET = apiHandler(async (request: Request) => {
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
   const pageSize = Math.min(Math.max(1, parseInt(searchParams.get("pageSize") ?? "20", 10)), 100);
   const offset = (page - 1) * pageSize;
+  const includeTest = searchParams.get("include_test") === "1";
 
-  const { data, error, count } = await supabaseAdmin
+  const query = supabaseAdmin
     .from("campaigns")
-    .select("*, stores!inner(name, user_id)", { count: "exact" })
-    .eq("status", "error")
+    .select("*, stores!inner(name, user_id, is_test_store)", { count: "exact" })
+    .eq("status", "error");
+
+  if (!includeTest) {
+    query.eq("stores.is_test_store", false);
+  }
+
+  const { data, error, count } = await query
     .order("updated_at", { ascending: false })
     .range(offset, offset + pageSize - 1);
 
