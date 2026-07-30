@@ -3,19 +3,9 @@ import { requireAdmin } from "@/lib/admin/require-admin";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ClipboardList } from "lucide-react";
-
-const ACTION_LABELS: Record<string, string> = {
-  credit_grant: "Concessão de Créditos",
-  credit_adjustment: "Ajuste de Créditos",
-  store_create_invite: "Criação de Loja",
-  manual_refund: "Estorno Manual",
-};
-
-const TARGET_LABELS: Record<string, string> = {
-  store: "Loja",
-  user: "Usuário",
-  campaign: "Campanha",
-};
+import { AUDIT_ACTION_LABELS, TARGET_TYPE_LABELS } from "@/lib/admin/labels";
+import { getLabel } from "@/lib/labels";
+import { formatDateTimeBR } from "@/lib/formatters";
 
 async function resolveActorEmails(entries: Array<Record<string, unknown>>): Promise<Map<string, string>> {
   const actorIds = [...new Set(entries.map((e) => e.actor_id as string))].filter(Boolean);
@@ -77,7 +67,7 @@ export default async function AdminAuditLogPage({
           className="rounded-lg border border-border bg-bg-surface px-3 py-2 text-sm text-text-primary"
         >
           <option value="">Todas as ações</option>
-          {Object.entries(ACTION_LABELS).map(([value, label]) => (
+          {Object.entries(AUDIT_ACTION_LABELS).map(([value, label]) => (
             <option key={value} value={value}>{label}</option>
           ))}
         </select>
@@ -87,7 +77,7 @@ export default async function AdminAuditLogPage({
           className="rounded-lg border border-border bg-bg-surface px-3 py-2 text-sm text-text-primary"
         >
           <option value="">Todos os alvos</option>
-          {Object.entries(TARGET_LABELS).map(([value, label]) => (
+          {Object.entries(TARGET_TYPE_LABELS).map(([value, label]) => (
             <option key={value} value={value}>{label}</option>
           ))}
         </select>
@@ -117,10 +107,10 @@ export default async function AdminAuditLogPage({
                   {actorEmailMap.get(entry.actor_id as string) ?? (entry.actor_id as string).slice(0, 8) + "…"}
                 </td>
                 <td className="px-3 py-2">
-                  {ACTION_LABELS[entry.action as string] ?? (entry.action as string)}
+                  {getLabel(AUDIT_ACTION_LABELS, entry.action as string)}
                 </td>
                 <td className="px-3 py-2">
-                  {TARGET_LABELS[entry.target_type as string] ?? (entry.target_type as string)}
+                  {getLabel(TARGET_TYPE_LABELS, entry.target_type as string)}
                   <span className="text-xs text-muted-foreground ml-1">
                     ({entry.target_id as string})
                   </span>
@@ -129,7 +119,7 @@ export default async function AdminAuditLogPage({
                   {entry.reason as string}
                 </td>
                 <td className="px-3 py-2 text-xs">
-                  {new Date(entry.created_at as string).toLocaleString("pt-BR")}
+                  {formatDateTimeBR(entry.created_at as string)}
                 </td>
               </tr>
             ))}
@@ -153,13 +143,13 @@ export default async function AdminAuditLogPage({
                 {actorEmailMap.get(entry.actor_id as string) ?? (entry.actor_id as string).slice(0, 8) + "…"}
               </span>
               <span className="text-xs text-muted-foreground">
-                {new Date(entry.created_at as string).toLocaleString("pt-BR")}
+                {formatDateTimeBR(entry.created_at as string)}
               </span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="font-medium">{ACTION_LABELS[entry.action as string] ?? (entry.action as string)}</span>
+              <span className="font-medium">{getLabel(AUDIT_ACTION_LABELS, entry.action as string)}</span>
               <span className="text-xs text-muted-foreground">
-                {TARGET_LABELS[entry.target_type as string] ?? (entry.target_type as string)}
+                {getLabel(TARGET_TYPE_LABELS, entry.target_type as string)}
               </span>
             </div>
             <p className="text-xs text-muted-foreground truncate">{entry.reason as string}</p>

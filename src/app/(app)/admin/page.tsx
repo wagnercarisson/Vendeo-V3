@@ -2,13 +2,9 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { Card } from "@/components/ui/card";
 import { MonthlyCreditGrantButton } from "@/components/admin/monthly-credit-grant-button";
-
-const ACTION_LABELS: Record<string, string> = {
-  credit_grant: "Concessão de Créditos",
-  credit_adjustment: "Ajuste de Créditos",
-  store_create_invite: "Criação de Loja",
-  manual_refund: "Estorno Manual",
-};
+import { AUDIT_ACTION_LABELS } from "@/lib/admin/labels";
+import { getLabel } from "@/lib/labels";
+import { formatDateTimeBR } from "@/lib/formatters";
 
 export default async function AdminDashboardPage() {
   await requireAdmin();
@@ -73,13 +69,13 @@ export default async function AdminDashboardPage() {
             <ul className="space-y-2">
               {recentActions.slice(0, 10).map((action: Record<string, unknown>) => (
                 <li key={action.id as string} className="text-sm border-b pb-1 last:border-0">
-                  <span className="font-medium">{ACTION_LABELS[action.action as string] ?? (action.action as string)}</span>
+                  <span className="font-medium">{getLabel(AUDIT_ACTION_LABELS, action.action as string)}</span>
                   {" — "}
                   <span className="text-muted-foreground">
                     {(action.reason as string)?.slice(0, 80)}
                   </span>
                   <span className="text-xs text-muted-foreground ml-2">
-                    {new Date(action.created_at as string).toLocaleString("pt-BR")}
+                    {formatDateTimeBR(action.created_at as string)}
                   </span>
                 </li>
               ))}

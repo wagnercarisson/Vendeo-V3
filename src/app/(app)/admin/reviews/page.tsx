@@ -3,17 +3,9 @@ import { requireAdmin } from "@/lib/admin/require-admin";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { maskCnpj } from "@/lib/cnpj/mask";
 import { ReviewActions } from "@/components/admin/review-actions";
-
-const REASON_LABELS: Record<string, string> = {
-  nome_divergente: "Nome divergente",
-  cidade_divergente: "Cidade divergente",
-  uf_divergente: "UF divergente",
-  situacao_suspensa: "Situação suspensa",
-  api_unavailable: "API indisponível",
-  cnpj_baixada: "CNPJ baixado",
-  cnpj_nula: "CNPJ nulo",
-  root_already_used: "Raiz já usada",
-};
+import { VERIFICATION_REASON_LABELS } from "@/lib/admin/labels";
+import { getLabel } from "@/lib/labels";
+import { formatDateBR } from "@/lib/formatters";
 
 const TABS = [
   { key: "review", label: "Pendentes" },
@@ -113,13 +105,13 @@ export default async function AdminReviewsPage({
                     </td>
                     <td className="py-3 px-2 text-text-muted">{userMap[store.user_id] || "—"}</td>
                     <td className="py-3 px-2 text-text-muted text-xs">
-                      {new Date(store.created_at).toLocaleDateString("pt-BR")}
+                      {formatDateBR(store.created_at)}
                     </td>
                     <td className="py-3 px-2">
                       <div className="flex flex-wrap gap-1">
                         {(store.verification_reasons || []).map((r: string) => (
                           <span key={r} className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-heading font-medium bg-bg-elevated text-text-muted">
-                            {REASON_LABELS[r] || r}
+                            {getLabel(VERIFICATION_REASON_LABELS, r)}
                           </span>
                         ))}
                       </div>

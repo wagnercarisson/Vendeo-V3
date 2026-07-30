@@ -7,6 +7,7 @@ import { Users } from "lucide-react";
 import type { AdminUserSummary } from "@/lib/admin/schemas";
 import { maskCnpj } from "@/lib/cnpj/mask";
 import type { FreemiumStatus } from "@/lib/freemium/types";
+import { formatDateBR } from "@/lib/formatters";
 
 export default async function AdminUsersPage({
   searchParams,
@@ -237,7 +238,7 @@ export default async function AdminUsersPage({
                   )}
                 </td>
                 <td className="px-3 py-2 text-xs">
-                  {new Date(user.createdAt).toLocaleDateString("pt-BR")}
+                  {formatDateBR(user.createdAt)}
                 </td>
               </tr>
             ))}
@@ -278,7 +279,7 @@ export default async function AdminUsersPage({
               </span>
             </div>
             <div className="text-xs text-muted-foreground">
-              Criado em {new Date(user.createdAt).toLocaleDateString("pt-BR")}
+              Criado em {formatDateBR(user.createdAt)}
             </div>
           </Link>
         ))}

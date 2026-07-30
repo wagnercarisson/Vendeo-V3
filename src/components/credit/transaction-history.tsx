@@ -6,6 +6,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
 import { Coins } from "lucide-react";
 import type { CreditTransaction } from "@/lib/credit/types";
+import { CREDIT_TYPE_LABELS, CREDIT_TYPE_BADGE } from "@/lib/credit/labels";
+import { getLabel } from "@/lib/labels";
+import { formatDateBR } from "@/lib/formatters";
 
 interface TransactionHistoryProps {
   transactions: CreditTransaction[];
@@ -13,35 +16,9 @@ interface TransactionHistoryProps {
   currentPage: number;
 }
 
-const TYPE_LABEL: Record<string, string> = {
-  bonus_onboarding: "Bônus de Boas-Vindas",
-  bonus_monthly: "Bônus Mensal",
-  admin_grant: "Concessão Administrativa",
-  purchase: "Compra",
-  deduction: "Geração",
-  refund: "Estorno",
-};
-
-const TYPE_BADGE: Record<string, "ready" | "error"> = {
-  bonus_onboarding: "ready",
-  bonus_monthly: "ready",
-  admin_grant: "ready",
-  purchase: "ready",
-  deduction: "error",
-  refund: "ready",
-};
-
 function formatValue(type: string, amount: number): string {
   const prefix = type === "deduction" ? "-" : "+";
   return `${prefix}${Math.abs(amount)}`;
-}
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
 }
 
 export function TransactionHistory({
@@ -99,9 +76,9 @@ export function TransactionHistory({
                 <tr key={tx.id} className="border-b border-border last:border-b-0">
                   <td className="py-3 pr-4">
                     <Badge
-                      variant={TYPE_BADGE[tx.type] ?? "default"}
+                      variant={CREDIT_TYPE_BADGE[tx.type] ?? "default"}
                     >
-                      {TYPE_LABEL[tx.type] ?? tx.type}
+                      {getLabel(CREDIT_TYPE_LABELS, tx.type)}
                     </Badge>
                   </td>
                   <td className="py-3 pr-4 text-text-primary font-body tabular-nums">
@@ -114,7 +91,7 @@ export function TransactionHistory({
                     {tx.reason ?? "—"}
                   </td>
                   <td className="py-3 text-text-muted font-body whitespace-nowrap">
-                    {formatDate(tx.createdAt)}
+                    {formatDateBR(tx.createdAt)}
                   </td>
                 </tr>
               ))}
@@ -127,8 +104,8 @@ export function TransactionHistory({
             {transactions.map((tx) => (
               <div key={tx.id} className="rounded-lg border border-border bg-bg-surface p-3 space-y-2">
                 <div className="flex items-center justify-between">
-                  <Badge variant={TYPE_BADGE[tx.type] ?? "default"}>
-                    {TYPE_LABEL[tx.type] ?? tx.type}
+                  <Badge variant={CREDIT_TYPE_BADGE[tx.type] ?? "default"}>
+                    {getLabel(CREDIT_TYPE_LABELS, tx.type)}
                   </Badge>
                   <span className="text-sm font-semibold tabular-nums text-text-primary">
                     {formatValue(tx.type, tx.amount)}
@@ -136,7 +113,7 @@ export function TransactionHistory({
                 </div>
                 <div className="flex justify-between text-xs text-text-secondary">
                   <span>Saldo: {tx.balanceAfter}</span>
-                  <span>{formatDate(tx.createdAt)}</span>
+                  <span>{formatDateBR(tx.createdAt)}</span>
                 </div>
                 {tx.reason && (
                   <p className="text-xs text-text-muted truncate">{tx.reason}</p>

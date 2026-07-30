@@ -1,3 +1,37 @@
+export const BR_TIMEZONE = "America/Sao_Paulo";
+
+export function formatDateBR(date: string | Date): string {
+  return new Date(date).toLocaleDateString("pt-BR", {
+    timeZone: BR_TIMEZONE,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+export function formatDateTimeBR(date: string | Date): string {
+  return new Date(date).toLocaleString("pt-BR", {
+    timeZone: BR_TIMEZONE,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+export function formatDateTimeFullBR(date: string | Date): string {
+  return new Date(date).toLocaleString("pt-BR", {
+    timeZone: BR_TIMEZONE,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
 export function formatCurrencyBRL(valueCents: number): string {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",

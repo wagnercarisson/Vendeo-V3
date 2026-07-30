@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin/require-admin";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ShieldCheck } from "lucide-react";
+import { formatDateTimeBR } from "@/lib/formatters";
 
 export default async function AdminCampaignErrorsPage({
   searchParams,
@@ -127,7 +128,7 @@ export default async function AdminCampaignErrorsPage({
                   </span>
                 </td>
                 <td className="px-3 py-2 text-xs">
-                  {new Date((camp.updated_at ?? camp.updatedAt) as string).toLocaleString("pt-BR")}
+                  {formatDateTimeBR((camp.updated_at ?? camp.updatedAt) as string)}
                 </td>
               </tr>
             )})}
@@ -164,7 +165,7 @@ export default async function AdminCampaignErrorsPage({
               </div>
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>{emailMap.get(storeData?.user_id as string) ?? "—"}</span>
-                <span>{new Date((camp.updated_at ?? camp.updatedAt) as string).toLocaleString("pt-BR")}</span>
+                <span>{formatDateTimeBR((camp.updated_at ?? camp.updatedAt) as string)}</span>
               </div>
               <div>
                 <span className="inline-block rounded bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">

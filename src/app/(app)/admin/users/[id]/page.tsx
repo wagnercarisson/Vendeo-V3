@@ -11,17 +11,10 @@ import { FreemiumEntitlementService } from "@/lib/freemium/entitlement-service";
 import type { FreemiumEntitlement, FreemiumStatus } from "@/lib/freemium/types";
 import { RevealCnpjButton } from "@/components/admin/reveal-cnpj-button";
 import { ReprocessButton } from "@/components/admin/reprocess-button";
-
-const REASON_LABELS: Record<string, string> = {
-  nome_divergente: "Nome divergente",
-  cidade_divergente: "Cidade divergente",
-  uf_divergente: "UF divergente",
-  situacao_suspensa: "Situação suspensa",
-  api_unavailable: "API indisponível",
-  cnpj_baixada: "CNPJ baixado",
-  cnpj_nula: "CNPJ nulo",
-  root_already_used: "Raiz já usada",
-};
+import { VERIFICATION_REASON_LABELS, BENEFIT_TYPE_LABELS, DOCUMENT_TYPE_LABELS, CAMPAIGN_STATUS_LABELS } from "@/lib/admin/labels";
+import { CREDIT_TYPE_LABELS } from "@/lib/credit/labels";
+import { getLabel } from "@/lib/labels";
+import { formatDateTimeBR } from "@/lib/formatters";
 
 const creditService = new CreditService();
 const freemiumService = new FreemiumEntitlementService();
@@ -179,7 +172,7 @@ export default async function AdminUserDetailPage({
                     <div className="flex flex-wrap gap-1">
                       {reasons.map((r: string) => (
                         <span key={r} className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-heading font-medium bg-bg-elevated text-text-muted">
-                          {REASON_LABELS[r] || r}
+                          {getLabel(VERIFICATION_REASON_LABELS, r)}
                         </span>
                       ))}
                     </div>
@@ -229,11 +222,11 @@ export default async function AdminUserDetailPage({
                   <tbody>
                     {entitlements.map(e => (
                       <tr key={e.id} className="border-t">
-                        <td className="px-2 py-1">{e.benefit_type}</td>
+                        <td className="px-2 py-1">{getLabel(BENEFIT_TYPE_LABELS, e.benefit_type)}</td>
                         <td className="px-2 py-1">{e.cycle ?? "—"}</td>
                         <td className="px-2 py-1">{e.reason ?? "—"}</td>
                         <td className="px-2 py-1 text-right text-xs">
-                          {new Date(e.created_at).toLocaleString("pt-BR")}
+                          {formatDateTimeBR(e.created_at)}
                         </td>
                       </tr>
                     ))}
@@ -303,10 +296,10 @@ export default async function AdminUserDetailPage({
                     <tbody>
                       {(acceptanceHistory as Array<Record<string, unknown>>).map((entry) => (
                         <tr key={entry.id as string} className="border-t">
-                          <td className="px-2 py-1">{entry.document_type as string}</td>
+                          <td className="px-2 py-1">{getLabel(DOCUMENT_TYPE_LABELS, entry.document_type as string)}</td>
                           <td className="px-2 py-1">{entry.document_version as string}</td>
                           <td className="px-2 py-1 text-right text-xs">
-                            {new Date(entry.accepted_at as string).toLocaleString("pt-BR")}
+                            {formatDateTimeBR(entry.accepted_at as string)}
                           </td>
                           <td className="px-2 py-1">{entry.acceptance_source as string}</td>
                           <td className="px-2 py-1 text-xs font-mono">{entry.ip_address as string}</td>
@@ -347,14 +340,14 @@ export default async function AdminUserDetailPage({
                   <tbody>
                     {(history as Array<Record<string, unknown>>).map((tx) => (
                       <tr key={tx.id as string} className="border-t">
-                        <td className="px-2 py-1">{tx.type as string}</td>
+                        <td className="px-2 py-1">{getLabel(CREDIT_TYPE_LABELS, tx.type as string)}</td>
                         <td className={`px-2 py-1 text-right ${(tx.amount as number) > 0 ? "text-success" : "text-destructive"}`}>
                           {(tx.amount as number) > 0 ? "+" : ""}{(tx.amount as number)}
                         </td>
                         <td className="px-2 py-1 text-right">{tx.balanceAfter as number}</td>
                         <td className="px-2 py-1">{(tx.reason as string) ?? "—"}</td>
                         <td className="px-2 py-1 text-xs">
-                          {new Date(tx.createdAt as string).toLocaleString("pt-BR")}
+                          {formatDateTimeBR(tx.createdAt as string)}
                         </td>
                       </tr>
                     ))}
@@ -384,17 +377,19 @@ export default async function AdminUserDetailPage({
                       <tr key={camp.id as string} className="border-t">
                         <td className="px-2 py-1">{(camp.product_name ?? camp.productName ?? "—") as string}</td>
                         <td className="px-2 py-1">
-                          {(camp.status as string) === "error" ? (
-                            <span className="text-destructive font-medium">error</span>
-                          ) : (
-                            camp.status as string
-                          )}
+                          {(() => {
+                            const s = camp.status as string;
+                            const label = getLabel(CAMPAIGN_STATUS_LABELS, s);
+                            return s === "error"
+                              ? <span className="text-destructive font-medium">{label}</span>
+                              : <span>{label}</span>;
+                          })()}
                         </td>
                         <td className="px-2 py-1 text-xs text-destructive">
                           {(camp.error_message ?? camp.errorMessage ?? "") as string}
                         </td>
                         <td className="px-2 py-1 text-xs">
-                          {new Date((camp.created_at ?? camp.createdAt) as string).toLocaleString("pt-BR")}
+                          {formatDateTimeBR((camp.created_at ?? camp.createdAt) as string)}
                         </td>
                       </tr>
                     ))}
