@@ -258,7 +258,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
         return CNPJ_DUPLICATE_RESPONSE();
       }
       const errText = `${error.message ?? ""} ${error.details ?? ""}`;
-      if (errText.includes("stores_user_id_key")) {
+      if (error.code === "23505" || errText.includes("stores_user_id_key")) {
         return NextResponse.json(
           { error: "Usu\u00e1rio j\u00e1 possui uma loja" },
           { status: 409 }
