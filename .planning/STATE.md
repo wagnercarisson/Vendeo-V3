@@ -4,7 +4,7 @@ milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 current_phase: 34
 status: Phase 34 complete
-last_updated: "2026-07-30T21:35:00.000Z"
+last_updated: "2026-07-30T23:15:00.000Z"
 progress:
   total_phases: 13
   completed_phases: 11
@@ -554,3 +554,4 @@ v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33 e 34 concluídas. F35 (Stri
 | 260729-t6x | Adicionar verificação CNPJ externa ao update-cnpj + unificar fluxo fiscal em /loja | 2026-07-30 | 36ae2a7 | [260729-t6x-corrigir-update-cnpj-route-para-verifica](./quick/260729-t6x-corrigir-update-cnpj-route-para-verifica/) |
 | 260730-j73 | Corrigir UX de feedback visível no onboarding — feedbacks críticos (erro/sucesso) ficam fora da viewport após ações de salvar/confirmar/gerar | 2026-07-30 | 058c342 | [260730-j73-onboarding-feedback-visivel-quero-corrig](./quick/260730-j73-onboarding-feedback-visivel-quero-corrig/) |
 | 260730-kka | Corrigir UX/robustez no card de billing do onboarding para tolerar dados parciais de CNPJ | 2026-07-30 | 33f173e | [260730-kka-billing-cnpj-parcial](./quick/260730-kka-billing-cnpj-parcial/) |
+| 260730-mrr | Separar test store de produção no admin — filtro ternário (production/test/all), RPC admin_get_metrics bundle, pipeline refactor, admin pages + testes | 2026-07-30 | 7abffe5 | [260730-mrr-admin-separar-teste-producao](./quick/260730-mrr-admin-separar-teste-producao/) |
