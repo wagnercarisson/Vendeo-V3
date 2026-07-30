@@ -11,7 +11,7 @@ import type { FreemiumStatus } from "@/lib/freemium/types";
 export default async function AdminUsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; page?: string; freemiumStatus?: string; verificationStatus?: string }>;
+  searchParams: Promise<{ search?: string; page?: string; freemiumStatus?: string; verificationStatus?: string; kind?: string }>;
 }) {
   await requireAdmin();
   const sp = await searchParams;
@@ -19,6 +19,7 @@ export default async function AdminUsersPage({
   const search = sp.search ?? "";
   const freemiumFilter = sp.freemiumStatus ?? "";
   const verificationFilter = sp.verificationStatus ?? "";
+  const storeKind = sp.kind ?? "all";
   const page = Math.max(1, parseInt(sp.page ?? "1", 10));
   const pageSize = 20;
 
@@ -27,6 +28,7 @@ export default async function AdminUsersPage({
     p_page: page,
     p_page_size: pageSize,
     p_verification_status: verificationFilter || null,
+    p_store_kind: storeKind,
   });
 
   if (error) {
@@ -153,6 +155,15 @@ export default async function AdminUsersPage({
           <option value="rejected">Recusado</option>
           <option value="defer">Adiado</option>
           <option value="unverified">Não verificado</option>
+        </select>
+        <select
+          name="kind"
+          defaultValue={storeKind}
+          className="rounded-md border border-border bg-bg-surface px-3 py-2 text-sm"
+        >
+          <option value="all">Todos (tipo)</option>
+          <option value="production">Produção</option>
+          <option value="test">Teste</option>
         </select>
         <button
           type="submit"
@@ -290,7 +301,7 @@ export default async function AdminUsersPage({
           <div className="flex gap-2">
             {page > 1 && (
               <Link
-                href={`/admin/users?page=${page - 1}${search ? `&search=${search}` : ""}${freemiumFilter ? `&freemiumStatus=${freemiumFilter}` : ""}${verificationFilter ? `&verificationStatus=${verificationFilter}` : ""}`}
+                href={`/admin/users?page=${page - 1}${search ? `&search=${search}` : ""}${freemiumFilter ? `&freemiumStatus=${freemiumFilter}` : ""}${verificationFilter ? `&verificationStatus=${verificationFilter}` : ""}${storeKind !== "all" ? `&kind=${storeKind}` : ""}`}
                 className="rounded-md border px-3 py-1 hover:bg-muted"
               >
                 Anterior
@@ -298,7 +309,7 @@ export default async function AdminUsersPage({
             )}
             {page < totalPages && (
               <Link
-                href={`/admin/users?page=${page + 1}${search ? `&search=${search}` : ""}${freemiumFilter ? `&freemiumStatus=${freemiumFilter}` : ""}${verificationFilter ? `&verificationStatus=${verificationFilter}` : ""}`}
+                href={`/admin/users?page=${page + 1}${search ? `&search=${search}` : ""}${freemiumFilter ? `&freemiumStatus=${freemiumFilter}` : ""}${verificationFilter ? `&verificationStatus=${verificationFilter}` : ""}${storeKind !== "all" ? `&kind=${storeKind}` : ""}`}
                 className="rounded-md border px-3 py-1 hover:bg-muted"
               >
                 Próxima
