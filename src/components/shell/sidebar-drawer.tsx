@@ -9,12 +9,18 @@ interface SidebarDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   toggleButtonRef?: RefObject<HTMLButtonElement | null>;
+  latestEntryId?: string | null;
 }
 
 const focusableSelector =
   'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
 
-export function SidebarDrawer({ isOpen, onClose, toggleButtonRef }: SidebarDrawerProps) {
+export function SidebarDrawer({
+  isOpen,
+  onClose,
+  toggleButtonRef,
+  latestEntryId,
+}: SidebarDrawerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const originalOverflowRef = useRef<string>("");
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -120,7 +126,7 @@ export function SidebarDrawer({ isOpen, onClose, toggleButtonRef }: SidebarDrawe
           <span className="mb-6 mt-2 block text-lg font-bold text-text-primary font-heading">
             Vendeo
           </span>
-          <Sidebar isDrawer onNavigate={onClose} />
+          <Sidebar isDrawer onNavigate={onClose} latestEntryId={latestEntryId} />
         </div>
       </div>
     </>

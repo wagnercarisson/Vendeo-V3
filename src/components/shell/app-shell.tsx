@@ -9,10 +9,16 @@ import type { JwtPayload } from "@/types/auth";
 interface AppShellProps {
   user: { claims: JwtPayload };
   storeName?: string | null;
+  latestChangelogEntryId?: string | null;
   children: React.ReactNode;
 }
 
-export function AppShell({ user, storeName, children }: AppShellProps) {
+export function AppShell({
+  user,
+  storeName,
+  latestChangelogEntryId,
+  children,
+}: AppShellProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const toggleButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -24,7 +30,7 @@ export function AppShell({ user, storeName, children }: AppShellProps) {
             Vendeo
           </span>
         </div>
-        <Sidebar />
+        <Sidebar latestEntryId={latestChangelogEntryId} />
       </aside>
 
       <div className="flex min-h-0 flex-1 flex-col">
@@ -45,6 +51,7 @@ export function AppShell({ user, storeName, children }: AppShellProps) {
           toggleButtonRef.current?.focus();
         }}
         toggleButtonRef={toggleButtonRef}
+        latestEntryId={latestChangelogEntryId}
       />
     </div>
   );

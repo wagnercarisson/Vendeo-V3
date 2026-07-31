@@ -1,5 +1,6 @@
 import { requirePageUser } from "@/lib/auth/require-user";
 import { getCurrentStore } from "@/lib/auth/store-ownership";
+import { getAllEntries } from "@/lib/changelog/get-changelog";
 import { AppShell } from "@/components/shell/app-shell";
 import { PrivacyRecovery } from "@/components/legal/privacy-recovery";
 import { hasValidPrivacyAcknowledgement } from "@/lib/legal/privacy";
@@ -14,6 +15,8 @@ export default async function AppLayout({
 }) {
   const user = await requirePageUser();
   const store = await getCurrentStore(user.userId);
+  const entries = await getAllEntries();
+  const latestEntryId = entries[0]?.frontmatter.id ?? null;
   const acknowledged = await hasValidPrivacyAcknowledgement(user.userId);
 
   const privacyVersion = await getCurrentVersion("privacy_policy");
@@ -22,7 +25,11 @@ export default async function AppLayout({
     : null;
 
   return (
-    <AppShell user={user} storeName={store?.name ?? null}>
+    <AppShell
+      user={user}
+      storeName={store?.name ?? null}
+      latestChangelogEntryId={latestEntryId}
+    >
       {children}
       <PrivacyRecovery />
       <PrivacyGate acknowledged={acknowledged} policyDocument={policyDocument} />
