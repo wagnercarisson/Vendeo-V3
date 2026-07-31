@@ -16,7 +16,7 @@ stopped_at: Milestone complete (Phase 35 was final phase)
 
 # Project State
 
-**Last updated:** 2026-07-31 (fase 35 — Changelog/Novidades concluída: 5/5 plans, 42 testes novos, verificação limpa; checkpoint humano pendente)
+**Last updated:** 2026-07-31 (fase 35 — Changelog/Novidades concluída: 5/5 plans, 42 testes novos, verificação 31/31 verdades, checkpoint humano aprovado, milestone v1.5 completo — F36 Stripe como próximo marco)
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆ **Em andamento**
 **Current phase:** 35
 

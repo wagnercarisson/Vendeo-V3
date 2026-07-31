@@ -23,7 +23,9 @@ A milestone v1.4 transformou o Vendeo em um produto SaaS coerente: app shell pro
 - **Histórico e Busca**: busca ILIKE, filtros por status/data, ordenação, paginação page-based (10/página), URL state compartilhável, Pagination component com ellipsis
 - **Mobile Hardening**: drawer com focus trap + body scroll lock + prefers-reduced-motion, touch targets ≥44px em toda a interface, responsivo validado em 320/375/768px
 
-**713 testes automatizados**, **89 test files**, **TypeScript/lint/build limpos**.
+**1345 testes automatizados**, **170 test files**, **TypeScript/lint/build limpos**.
+
+**v1.5 — Lançamento Externo Controlado (2026-07-31):** F35 Changelog/Novidades completa — voz do produto via changelog editorial (content/changelog, /novidades, sidebar 5º item com indicador, anúncio contextual na dashboard, localStorage) — 42 testes novos, verificação 31/31 verdades, checkpoint humano aprovado.
 
 ## Current Milestone: v1.5 — Lançamento Externo Controlado
 
@@ -38,7 +40,7 @@ A milestone v1.4 transformou o Vendeo em um produto SaaS coerente: app shell pro
 - Saldo visível na topbar + seção de créditos em `/conta` com extrato
 - Observabilidade (logging estruturado, telemetria IA, dashboard operacional)
 - Refinamento visual + Launch Readiness (UAT externo, runbook, feature flag)
-- **Stripe / compra real de créditos**: adiado para F30/v1.6 (pós-beta)
+- **Stripe / compra real de créditos**: adiado para F36 (pós-beta)
 
 <details>
 <summary>Versões anteriores</summary>
@@ -113,6 +115,11 @@ A milestone v1.4 transformou o Vendeo em um produto SaaS coerente: app shell pro
 - ✓ **UX-01** — Estados vazios consistentes em toda a aplicação — v1.4
 - ✓ **SEARCH-01** — Busca e filtros essenciais nas listas de campanhas — v1.4
 - ✓ **MOBILE-01** — Fluxo mobile completo responsivo — v1.4
+- ✓ **F35-CONTENT-01..06** — Changelog: fonte de dados estática content/changelog (3 seeds), parser próprio, renderer sanitizado (h2/p/ul/li/strong), schema Zod fail-fast, formato de data sem shift de fuso, get-changelog server-only — v1.5 (F35)
+- ✓ **F35-STATE-01..06** — Estado de leitura via localStorage (2 chaves vendeo:*) SSR-safe, sem estado global — v1.5 (F35)
+- ✓ **F35-UI-01..07** — Página /novidades, ChangelogCard/List/Announcement, SidebarBadge, estilo design system — v1.5 (F35)
+- ✓ **F35-APP-SHELL-01..03** — Fluxo latestEntryId por prop, sidebar 5º item, AccountMenu link Novidades — v1.5 (F35)
+- ✓ **F35-DASHBOARD-01..03** — Anúncio contextual no dashboard (null-safe), guia docs/changelog-update.md — v1.5 (F35)
 
 ### Active
 
@@ -291,4 +298,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-15 after milestone v1.5 started*
+*Last updated: 2026-07-31 after Phase 35 (Changelog/Novidades) — milestone v1.5 concluída, F36 Stripe próximo marco*
