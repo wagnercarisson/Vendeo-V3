@@ -92,7 +92,7 @@ Each task was committed atomically:
 2. **Task 2: Core Library — types + parse-frontmatter + schema (TDD)** - `0adf07f` (test, RED) + `7e82cc7` (feat, GREEN)
 3. **Task 3: Renderer controlado + formatação de data (TDD)** - `939719b` (test, RED) + `b0bbf2b` (feat, GREEN)
 
-**Plan metadata:** `pendente — commit docs(35-01)` (próximo passo deste executor)
+**Plan metadata:** `27634af` (docs: complete changelog foundation plan — SUMMARY + self-check)
 
 ## Files Created/Modified
 
