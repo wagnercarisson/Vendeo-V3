@@ -18,7 +18,7 @@ files_modified:
   - public/docs/legal/privacy-policy-v1-2.md
   - public/docs/legal/acceptable-use-v1-1.md
   - src/lib/legal/document-content.ts
-  - supabase/migrations/20260731000001_publish_legal_beta_freemium_versions.sql
+  - supabase/migrations/20260731000004_publish_legal_beta_freemium_versions.sql
   - src/components/flow/campaign-input-form.tsx
   - src/app/(app)/campanhas/[id]/client.tsx
 autonomous: true
@@ -51,7 +51,7 @@ must_haves:
     - path: "src/lib/legal/document-content.ts"
       provides: "Catálogo documento+versão → arquivo"
       contains: "v1.3"
-    - path: "supabase/migrations/20260731000001_publish_legal_beta_freemium_versions.sql"
+    - path: "supabase/migrations/20260731000004_publish_legal_beta_freemium_versions.sql"
       provides: "Publicação das 3 versões com effective_at"
       exports: ["terms_of_service v1.3", "privacy_policy v1.2", "acceptable_use v1.1"]
   key_links:
@@ -59,7 +59,7 @@ must_haves:
       to: "public/docs/legal/terms-of-service-v1-3.md"
       via: "DOCUMENT_CATALOG filePath"
       pattern: "terms-of-service-v1-3"
-    - from: "supabase/migrations/20260731000001_publish_legal_beta_freemium_versions.sql"
+    - from: "supabase/migrations/20260731000004_publish_legal_beta_freemium_versions.sql"
       to: "public.legal_document_versions"
       via: "INSERT ... ON CONFLICT DO UPDATE"
       pattern: "legal_document_versions"
@@ -146,7 +146,7 @@ O mesmo aviso de draft está **hardcoded em JSX** nas páginas de marketing. Sem
 | Arquivo | Ação |
 |---------|------|
 | `src/lib/legal/document-content.ts` | Adicionar entradas `v1.3` (terms), `v1.2` (privacy), `v1.1` (acceptable_use) ao `DOCUMENT_CATALOG` |
-| `supabase/migrations/20260731000001_publish_legal_beta_freemium_versions.sql` | Nova migration publicando as 3 versões em `legal_document_versions` (padrão 20260724000003) |
+| `supabase/migrations/20260731000004_publish_legal_beta_freemium_versions.sql` | Nova migration publicando as 3 versões em `legal_document_versions` (padrão 20260724000003) |
 | `src/components/flow/campaign-input-form.tsx` | Microcopy discreta perto do botão "Criar Campanha" |
 | `src/app/(app)/campanhas/[id]/client.tsx` | Microcopy discreta perto do botão "Baixar Original" |
 
@@ -321,7 +321,7 @@ Análise do conteúdo atual: a v1.0 **já cobre** nudez, violência, ódio, ileg
 - **Feito:** Catálogo resolve as 3 novas versões para os arquivos corretos; testes legais passam.
 
 **Task 7: Migration de publicação das novas versões + artefato interno de revisão jurídica**
-- **Arquivo:** `supabase/migrations/20260731000001_publish_legal_beta_freemium_versions.sql` (novo); `.planning/quick/260731-qep-adequar-documentos-legais-beta-freemium-/legal-review-notes.md` (novo, interno — D1)
+- **Arquivo:** `supabase/migrations/20260731000004_publish_legal_beta_freemium_versions.sql` (novo); `.planning/quick/260731-qep-adequar-documentos-legais-beta-freemium-/legal-review-notes.md` (novo, interno — D1)
 - **Ação:**
   - **Migration:** seguir o padrão de `20260724000003_publish_terms_of_service_v1_1.sql` (INSERT + `ON CONFLICT DO UPDATE` + bloco `-- REVERT` comentado). Inserir em `public.legal_document_versions (document_type, version, summary, effective_at)` com `effective_at = now()` (D5):
     - `('terms_of_service', 'v1.3', 'Beta freemium: créditos promocionais, compra/planos como funcionalidade futura, raiz de CNPJ como critério técnico, responsabilidade e revisão do lojista.', now())`
@@ -330,11 +330,11 @@ Análise do conteúdo atual: a v1.0 **já cobre** nudez, violência, ódio, ileg
     - **NÃO incluir** nenhum comentário mencionando revisão jurídica/draft na migration (D1 ajustada — migration entra no histórico do repo e pode vazar contexto indevido).
   - **Artefato interno:** criar `legal-review-notes.md` no diretório do quick task com a lista completa R1-R13 da Seção 6 (pontos pendentes de validação jurídica) e o registro de que os documentos passaram por revisão editorial do time antes de publicação comercial ampla. Este arquivo fica em `.planning/` e NÃO é servido publicamente.
 - **Verificação:**
-  - `rg -n "'v1.3'|'v1.2'|'v1.1'" supabase/migrations/20260731000001_publish_legal_beta_freemium_versions.sql` → 3 linhas
-  - `rg -n "ON CONFLICT" supabase/migrations/20260731000001_publish_legal_beta_freemium_versions.sql` → presente (idempotente)
-  - `rg -n "effective_at" supabase/migrations/20260731000001_publish_legal_beta_freemium_versions.sql` → presente
-  - `rg -n "REVERT" supabase/migrations/20260731000001_publish_legal_beta_freemium_versions.sql` → presente
-  - `rg -i -c "jurídic|advogad|draft" supabase/migrations/20260731000001_publish_legal_beta_freemium_versions.sql` → 0 (sem cavê na migration)
+  - `rg -n "'v1.3'|'v1.2'|'v1.1'" supabase/migrations/20260731000004_publish_legal_beta_freemium_versions.sql` → 3 linhas
+  - `rg -n "ON CONFLICT" supabase/migrations/20260731000004_publish_legal_beta_freemium_versions.sql` → presente (idempotente)
+  - `rg -n "effective_at" supabase/migrations/20260731000004_publish_legal_beta_freemium_versions.sql` → presente
+  - `rg -n "REVERT" supabase/migrations/20260731000004_publish_legal_beta_freemium_versions.sql` → presente
+  - `rg -i -c "jurídic|advogad|draft" supabase/migrations/20260731000004_publish_legal_beta_freemium_versions.sql` → 0 (sem cavê na migration)
   - `Test-Path ".planning/quick/260731-qep-adequar-documentos-legais-beta-freemium-/legal-review-notes.md"` → True
 - **Feito:** Migration idempotente publicando as 3 versões com `effective_at = now()` sem comentários de revisão jurídica; artefato interno `legal-review-notes.md` criado com R1-R13.
 
@@ -371,8 +371,8 @@ Análise do conteúdo atual: a v1.0 **já cobre** nudez, violência, ódio, ileg
 | Sem "grupo econômico" nos novos docs | `rg -c "grupo econômico" public/docs/legal/terms-of-service-v1-3.md public/docs/legal/privacy-policy-v1-2.md` | 0 |
 | Provedores não confirmados ausentes na Privacidade | `rg -c "Anthropic" public/docs/legal/privacy-policy-v1-2.md; rg -c "Resend" public/docs/legal/privacy-policy-v1-2.md` | 0 / 0 |
 | Catálogo atualizado | `rg -n "v1.3|v1.2|v1.1" src/lib/legal/document-content.ts` | Entradas presentes para os tipos corretos |
-| Migration publica tudo | `rg -n "'v1.3'|'v1.2'|'v1.1'" supabase/migrations/20260731000001_publish_legal_beta_freemium_versions.sql` | 3 versões |
-| Migration sem cavê jurídico | `rg -i -c "jurídic|advogad|draft" supabase/migrations/20260731000001_publish_legal_beta_freemium_versions.sql` | 0 |
+| Migration publica tudo | `rg -n "'v1.3'|'v1.2'|'v1.1'" supabase/migrations/20260731000004_publish_legal_beta_freemium_versions.sql` | 3 versões |
+| Migration sem cavê jurídico | `rg -i -c "jurídic|advogad|draft" supabase/migrations/20260731000004_publish_legal_beta_freemium_versions.sql` | 0 |
 
 ### 5.3. Validação manual / visual
 
@@ -431,7 +431,7 @@ Análise do conteúdo atual: a v1.0 **já cobre** nudez, violência, ódio, ileg
 └──────────────────────────┬───────────────────────────────────┘
                            │ INSERT (idempotente)
 ┌──────────────────────────▼───────────────────────────────────┐
-│  migration 20260731000001_publish_legal_beta_freemium_versions│
+│  migration 20260731000004_publish_legal_beta_freemium_versions│
 │  • legal_document_versions + 3 linhas, effective_at = now()   │
 │  • SEM comentário de revisão jurídica (D1 ajustada)           │
 │  → getAcceptanceStatus detecta "outdated" → re-aceite         │

@@ -28,7 +28,7 @@ key-files:
     - public/docs/legal/terms-of-service-v1-3.md
     - public/docs/legal/privacy-policy-v1-2.md
     - public/docs/legal/acceptable-use-v1-1.md
-    - supabase/migrations/20260731000001_publish_legal_beta_freemium_versions.sql
+    - supabase/migrations/20260731000004_publish_legal_beta_freemium_versions.sql
     - .planning/quick/260731-qep-adequar-documentos-legais-beta-freemium-/legal-review-notes.md
   modified:
     - public/docs/legal/terms-of-service-v1.md
@@ -77,7 +77,7 @@ completed: 2026-07-31
 - **Política de Uso Aceitável v1.1:** publicidade enganosa, promoções sem estoque, "de/por" sem preço anterior real (CONAR), reforço de autorização de marcas/imagens, seção de categorias sensíveis (saúde, suplementos, bebidas, financeiro, falsificados, política/eleitoral, menores)
 - **Aviso de draft removido** dos 6 markdowns públicos e do blockquote hardcoded nas 3 páginas de marketing (decisões A/D4)
 - **DOCUMENT_CATALOG** atualizado com as 3 novas versões (v1.3 terms, v1.2 privacy, v1.1 acceptable_use)
-- **Migration idempotente** `20260731000001_publish_legal_beta_freemium_versions.sql` publica as 3 versões com `effective_at = now()` (D5), sem qualquer comentário de revisão jurídica (D1)
+- **Migration idempotente** `20260731000004_publish_legal_beta_freemium_versions.sql` publica as 3 versões com `effective_at = now()` (D5), sem qualquer comentário de revisão jurídica (D1)
 - **Artefato interno** `legal-review-notes.md` com R1-R13 (D1) — nunca servido publicamente
 - **Microcopy discreta** (D3, texto aprovado, ASCII sem em dash) em `campaign-input-form.tsx` (perto de "Criar Campanha") e `campanhas/[id]/client.tsx` (perto de "Baixar Original") — passiva, sem modal/checkbox (F)
 
@@ -99,7 +99,7 @@ Cada tarefa foi commitada atomicamente:
 - `public/docs/legal/terms-of-service-v1-3.md` — Termos v1.3 beta freemium (novo)
 - `public/docs/legal/privacy-policy-v1-2.md` — Privacidade v1.2 com suboperadores e IA (novo)
 - `public/docs/legal/acceptable-use-v1-1.md` — AUP v1.1 compliance comercial (novo)
-- `supabase/migrations/20260731000001_publish_legal_beta_freemium_versions.sql` — publicação das 3 versões (novo)
+- `supabase/migrations/20260731000004_publish_legal_beta_freemium_versions.sql` — publicação das 3 versões (novo)
 - `.planning/quick/260731-qep-adequar-documentos-legais-beta-freemium-/legal-review-notes.md` — R1-R13, uso interno (novo, não commitado)
 - `public/docs/legal/{terms-of-service-v1,terms-of-service-v1-1,terms-of-service-v1-2,privacy-policy-v1,privacy-policy-v1-1,acceptable-use-v1}.md` — linha 6 (aviso de draft) removida
 - `src/app/(marketing)/{termos,privacidade,uso-aceitavel}/page.tsx` — blockquote de aviso removido
