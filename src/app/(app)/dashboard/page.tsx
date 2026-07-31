@@ -22,6 +22,8 @@ import {
 import { getUserOnboardingState } from "@/lib/onboarding/state";
 import { VerificationBanners } from "@/components/verification/verification-banners";
 import { ReadinessCheckBanner } from "@/components/readiness/readiness-check-banner";
+import { getLatestAnnouncement } from "@/lib/changelog/get-changelog";
+import { ChangelogAnnouncement } from "@/components/changelog/changelog-announcement";
 
 function getGreeting(storeName: string | null): string {
   const hour = new Date().getHours();
@@ -64,6 +66,7 @@ export default async function DashboardPage() {
       );
     case "has_store_no_campaigns": {
       const storeNoCamp = await getCurrentStore(user.userId);
+      const latestAnnouncement = await getLatestAnnouncement();
       let noCampBalance: number | null = null;
       if (storeNoCamp) {
         const sc = await createServerClient();
@@ -80,6 +83,7 @@ export default async function DashboardPage() {
           <PageHeader title="Dashboard" />
           {storeNoCamp && <VerificationBanners verificationStatus={storeNoCamp.verification_status} />}
           {storeNoCamp && <ReadinessCheckBanner storeId={storeNoCamp.id} />}
+          <ChangelogAnnouncement entry={latestAnnouncement} />
           <div className="mb-4">
             <BalanceDisplay
               balance={noCampBalance ?? 0}
@@ -139,6 +143,8 @@ export default async function DashboardPage() {
         getRecentCampaigns(store.id, 5),
       ]);
 
+      const latestAnnouncement = await getLatestAnnouncement();
+
       const rate = total > 0 ? Math.round((ready / total) * 100) : 0;
 
       return (
@@ -146,6 +152,7 @@ export default async function DashboardPage() {
           <PageHeader title="Dashboard" />
           <VerificationBanners verificationStatus={store.verification_status} />
           <ReadinessCheckBanner storeId={store.id} />
+          <ChangelogAnnouncement entry={latestAnnouncement} />
           <h2 className="text-lg font-medium text-text-primary mb-6">
             {getGreeting(store.name)}
           </h2>
