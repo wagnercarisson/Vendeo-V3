@@ -54,10 +54,10 @@ Autenticação completa, vínculo user→store, isolamento multi-tenant, beta.ve
 
 ### 📋 v1.5 — Lançamento Externo Controlado ◆
 
-Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, UAT externo, fundação legal, modelo comercial, freemium anti-abuso CNPJ e Stripe.
+Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, UAT externo, fundação legal, modelo comercial, freemium anti-abuso CNPJ, changelog/novidades e Stripe (F36).
 
 <details open>
-<summary>◆ v1.5 Lançamento Externo Controlado (F23-F35) — Em andamento</summary>
+<summary>◆ v1.5 Lançamento Externo Controlado (F23-F36) — Em andamento</summary>
 
 Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, fundação legal, modelo comercial e store readiness.
 
@@ -143,7 +143,8 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - Migration SQL: tabela store_billing_info + RPC check_store_readiness()
   - Dependências: F32 (cnpj_normalized, razao_social, nome_fantasia), F33 (store_brand_profiles, verification_status), F30 (legal clearance)
 
-- [ ] Phase 35: Stripe / Monetização Pública (pending)
+- [x] Phase 35: Changelog / Novidades (5/5 plans)
+- [ ] Phase 36: Stripe / Monetização Pública (pending)
 </details>
 
 ## Progress
@@ -183,7 +184,8 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 32. Freemium Anti-Abuso CNPJ | v1.5 | 5/5 | ✅ Complete | 2026-07-27 |
 | 33. Verificação CNPJ Freemium | v1.5 | 0/5 | ◆ Planning | — |
 | 34. Store Readiness | v1.5 | 0/0 | ○ Pending | — |
-| 35. Stripe / Monetização Pública | v1.5 | 0/0 | ○ Pending | — |
+| 35. Changelog / Novidades | v1.5 | 5/5 | ✅ Complete | 2026-07-31 |
+| 36. Stripe / Monetização Pública | v1.5 | 0/0 | ○ Pending | — |
 
 ---
 

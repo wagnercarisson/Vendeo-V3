@@ -29,7 +29,7 @@
 | 32 | ✅ Freemium Anti-Abuso CNPJ | CNPJ obrigatório no cadastro, entitlement por raiz de CNPJ, admin freemium status | CNPJ-01–06, FREEMIUM-01–04 | 10 ✅ |
 | 33 | ✅ Verificação CNPJ Freemium | Consulta BrasilAPI/CNPJá, cross-check, motor de decisão, admin review, test stores | CNPJ-07–12 | 6 ✅ |
 | 34 | ✅ Store Readiness | Readiness RPC + guarda dupla + direção visual obrigatória + dashboard banner + billing info | F34-READINESS, F34-BILLING, F34-STORE-TYPE, F34-GUARD, F34-LEGACY, F34-UI, F34-DASHBOARD, F34-BRANDPROFILE | 8 ✅ |
-| 35 | 📋 Changelog/Novidades | Fonte de dados estática content/changelog + página /novidades + indicador sidebar + anúncio contextual dashboard | F35-CONTENT-01–06, F35-STATE-01–06, F35-UI-01–07, F35-APP-SHELL-01–03, F35-DASHBOARD-01–03 | 25 |
+| 35 | ✅ Changelog/Novidades | Fonte de dados estática content/changelog + página /novidades + indicador sidebar + anúncio contextual dashboard | F35-CONTENT-01–06, F35-STATE-01–06, F35-UI-01–07, F35-APP-SHELL-01–03, F35-DASHBOARD-01–03 | 25 ✅ |
 
 ---
 
@@ -359,7 +359,7 @@
 
 ---
 
-### Phase 35 — Changelog/Novidades
+### Phase 35 — Changelog/Novidades ✅
 
 **Goal:** Dar voz ao produto — comunicar entregas dentro do app via changelog editorial em `content/changelog/*.md`, página `/novidades`, indicador na sidebar e anúncio contextual na dashboard, sem Supabase e sem dependências novas.
 
@@ -383,25 +383,28 @@
 
 **Plans:** 5 plans (3 waves)
 
+**Status:** 5/5 plans completos ✅
+**Tests:** 1345 passing (170 files, 42 novos F35) — typecheck/lint/build limpos
+
 **Wave 1** *(Foundation + Core Library — 35-02 depends on 35-01; roda após 35-01 na mesma wave)*
 
 | Plan | Wave | Objective |
 |------|------|-----------|
-| 35-01 | 1 | Foundation — Seed content/changelog + Core Library (types, parser, renderer, schema) |
-| 35-02 | 1 | Core Library — get-changelog.ts + Hook use-changelog-state |
+| 35-01 | 1 ✅ | Foundation — Seed content/changelog + Core Library (types, parser, renderer, schema) |
+| 35-02 | 1 ✅ | Core Library — get-changelog.ts + Hook use-changelog-state |
 
 **Wave 2** *(bloqueada na Wave 1 — 35-03 depende de 35-02; 35-04 depende de 35-03, roda após 35-03 na mesma wave)*
 
 | Plan | Wave | Objective |
 |------|------|-----------|
-| 35-03 | 2 | Página /novidades + Componentes Changelog (card, list, announcement, sidebar-badge) |
-| 35-04 | 2 | App Shell + Dashboard — fluxo latestEntryId, sidebar 5º item, AccountMenu, anúncio dashboard |
+| 35-03 | 2 ✅ | Página /novidades + Componentes Changelog (card, list, announcement, sidebar-badge) |
+| 35-04 | 2 ✅ | App Shell + Dashboard — fluxo latestEntryId, sidebar 5º item, AccountMenu, anúncio dashboard |
 
 **Wave 3** *(bloqueada nas Waves 1–2 — 35-05 depende de todos os planos)*
 
 | Plan | Wave | Objective |
 |------|------|-----------|
-| 35-05 | 3 | Testes + Verificação + Tracking — 14+ testes, typecheck/lint/build, renumeração STATE/ROADMAP |
+| 35-05 | 3 ✅ | Testes + Verificação + Tracking — 14+ testes, typecheck/lint/build, renumeração STATE/ROADMAP |
 
 **Cross-cutting constraints:**
 - Zero dependências novas (D8) — parser próprio de frontmatter + renderer controlado; `zod` e `lucide-react` já presentes (todos os planos)
@@ -451,10 +454,10 @@ Phase 24 (Credit Tables + CreditService) ──┘
                                   Phase 34 (Store Readiness) ✅
                                              │
                                              ▼
-                                  Phase 35 (Changelog/Novidades)
-                                             │
-                                             ▼
-                                  Phase 36 (Stripe / Monetização Pública — futura)
+                                   Phase 35 (Changelog/Novidades) ✅
+                                              │
+                                              ▼
+                                   Phase 36 (Stripe / Monetização Pública — futura)
 ```
 
 ---
@@ -539,4 +542,4 @@ Phase 24 (Credit Tables + CreditService) ──┘
 
 *Roadmap created: 2026-07-15*
 *Milestone: v1.5 — Lançamento Externo Controlado*
-*Last updated: 2026-07-31 — Phase 35 planned (Changelog/Novidades) — renumeração F36 = Stripe*
+*Last updated: 2026-07-31 — Phase 35 complete (Changelog/Novidades) — renumeração F36 = Stripe*

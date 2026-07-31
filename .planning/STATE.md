@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 current_phase: 35
-status: Phase 35 planned — ready to execute
-last_updated: "2026-07-31T19:00:00.000Z"
+status: Phase 35 — CHANGELOG/NOVIDADES ✅
+last_updated: "2026-07-31T15:15:00.000Z"
 progress:
   total_phases: 18
-  completed_phases: 15
-  total_plans: 79
-  completed_plans: 63
-  percent: 80
+  completed_phases: 16
+  total_plans: 74
+  completed_plans: 68
+  percent: 92
 ---
 
 # Project State
 
-**Last updated:** 2026-07-31 (plan-phase 35 — Changelog/Novidades: 5 plans, 3 waves, checker aprovado)
+**Last updated:** 2026-07-31 (fase 35 — Changelog/Novidades concluída: 5/5 plans, 42 testes novos, verificação limpa; checkpoint humano pendente)
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆ **Em andamento**
 **Current phase:** 35
 
@@ -102,7 +102,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** Phase 34 — Store Readiness ✅
+**Current focus:** Phase 35 — changelog-novidades
 
 ## Completed Milestones
 
@@ -426,19 +426,22 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 35 — CHANGELOG/NOVIDADES (Planned — ready to execute)
-Plan: 5 of 5 (3 waves)
+Phase: 35 — CHANGELOG/NOVIDADES ✅
+Plan: 5 of 5 — verificação completa; checkpoint humano de validação visual pendente
 v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34 e 35 concluídas. F36 (Stripe / Monetização Pública) como próximo marco (renumerada de F35 → F36).
 
-### Phase 35 — Changelog/Novidades (Planned)
+### Phase 35 — Changelog/Novidades ✅
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
-| 35-01 | 1 | 📋 | Foundation — Seed content/changelog (F30, F32, F34) + Core Library pura (types, parser, renderer, schema, date) |
-| 35-02 | 1 | 📋 | Core Library — get-changelog.ts (server-only, fail-fast) + Hook use-changelog-state (SSR-safe) |
-| 35-03 | 2 | 📋 | Página /novidades + Componentes Changelog (card, list, announcement, sidebar-badge) |
-| 35-04 | 2 | 📋 | App Shell + Dashboard — fluxo latestEntryId, sidebar 5º item, AccountMenu, anúncio contextual |
-| 35-05 | 3 | 📋 | Rotina + Verificação + Tracking — docs/changelog-update.md cirúrgico, testes/typecheck/lint/build, renumeração |
+| 35-01 | 1 | ✅ | Foundation — Seed content/changelog (F30, F32, F34) + Core Library pura (types, parser, renderer, schema, date) |
+| 35-02 | 1 | ✅ | Core Library — get-changelog.ts (server-only, fail-fast) + Hook use-changelog-state (SSR-safe) |
+| 35-03 | 2 | ✅ | Página /novidades + Componentes Changelog (card, list, announcement, sidebar-badge) |
+| 35-04 | 2 | ✅ | App Shell + Dashboard — fluxo latestEntryId, sidebar 5º item, AccountMenu, anúncio contextual |
+| 35-05 | 3 | ✅ | Rotina + Verificação + Tracking — docs/changelog-update.md cirúrgico, testes/typecheck/lint/build, renumeração |
+
+**Tests:** 1345 passing (170 files, 42 novos F35 — base 1201 + 42 F35 + adicionais das fases 35-01..04)
+**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 
 **Context:** `.planning/phases/35-changelog-novidades/35-CONTEXT.md`
 **Source:** `openspec/changes/fase-35-changelog-novidades/`
@@ -553,7 +556,7 @@ v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34 e 35 concluídas. F36 (
 | F32 | ✅ Complete | Freemium Anti-Abuso CNPJ — CNPJ obrigatório, entitlement por raiz, admin freemium status (5/5 plans, 27+ tests) |
 | F33 | ✅ Complete | Verificação CNPJ Freemium — Consulta BrasilAPI/CNPJá, cross-check, motor de decisão, admin review, test stores |
 | F34 | ✅ Completed | Store Readiness — 5 plans, 17+ testes, 1189 total |
-| **F35** | **📋 Planned** | **Changelog/Novidades — 5 plans, 3 waves, 25/25 reqs, checker aprovado (0 blockers)** |
+| **F35** | **✅ Completed** | **Changelog/Novidades — 5 plans, 3 waves, 42 testes novos, 1345 total, typecheck/lint/build limpos** |
 | F36 | ○ Future | Stripe / Monetização Pública (renumerada de F35 → F36) |
 
 ### Quick Tasks Completed
