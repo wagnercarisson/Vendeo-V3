@@ -136,7 +136,7 @@ announcement: "none"
 |-------|------|-------|
 | `id` | string | Slug unico e estavel. Use fase ou nome da entrega. |
 | `title` | string | Titulo claro para usuario, nao tecnico. |
-| `date` | `YYYY-MM-DD` | Data de publicacao da entry. |
+| `date` | `YYYY-MM-DD` | Data civil (sem hora) da publicacao no fuso brasileiro. A exibicao `dd/mm/aaaa` deriva da propria string, sem conversao de timezone — evita shift de dia em UTC-3. |
 | `milestone` | string opcional | Exemplo: `"v1.5"`. |
 | `category` | `"feature"`, `"improvement"` ou `"fix"` | Categoria principal percebida pelo usuario. |
 | `importance` | `"major"` ou `"minor"` | Use `major` para mudanca relevante de produto ou comportamento. |
@@ -177,6 +177,8 @@ Use `announcement: "card"` quando a novidade merece destaque leve na dashboard, 
 - melhoria importante em campanha, loja ou dashboard;
 - mudanca que aumenta valor percebido;
 - entrega que o usuario provavelmente gostaria de descobrir.
+
+Exemplo: uma entry com `announcement: "card"` no frontmatter vira um card descartavel no topo da dashboard, com destaque leve e botao para ver as novidades em `/novidades`.
 
 Use `announcement: "modal"` apenas para mudancas criticas. Exemplos:
 
