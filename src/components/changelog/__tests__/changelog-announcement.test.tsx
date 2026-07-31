@@ -79,8 +79,9 @@ describe("ChangelogAnnouncement", () => {
   });
 
   it("dispensar NÃO altera lastSeenId (SEEN_KEY nunca escrita)", () => {
-    const setItemSpy = vi.spyOn(Storage.prototype, "setItem");
+    // Seed ANTES do spy — senão a escrita de seed seria registrada como chamada.
     localStorage.setItem(CHANGELOG_SEEN_KEY, "fase-34-store-readiness");
+    const setItemSpy = vi.spyOn(Storage.prototype, "setItem");
 
     render(<ChangelogAnnouncement entry={makeEntry()} />);
     fireEvent.click(screen.getByLabelText("Fechar anúncio"));
