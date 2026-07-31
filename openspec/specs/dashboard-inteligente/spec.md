@@ -4,6 +4,7 @@
 > Modified by `fase-20-dashboard` (MODIFIED). Replaces `has_store_with_campaigns` placeholder with real dashboard content (metrics, recent campaigns, greeting, next-step card).
 > Modified by `fase-27-conta-saldo-extrato` (MODIFIED). Added credit balance indicator in metrics grid and empty state.
 > Modified by `fase-34-store-readiness` (ADDED). Added readiness check banner when store is not ready.
+> Modified by `fase-35-changelog-novidades` (ADDED). Added contextual changelog announcement after banners.
 
 ## Requirements
 
@@ -189,3 +190,29 @@ O sistema SHALL tratar os estados de carregamento e erro do saldo sem quebrar a 
 
 - **WHEN** carregamento do saldo falha
 - **THEN** exibe fallback "—" no lugar do badge sem quebrar a página
+
+### Requirement: ChangelogAnnouncement no dashboard (ADDED)
+
+> Added by `fase-35-changelog-novidades`.
+
+O sistema SHALL renderizar o componente `<ChangelogAnnouncement entry={latestAnnouncement} />` no dashboard (`src/app/(app)/dashboard/page.tsx`) quando o usuário tem loja. O dashboard SHALL:
+
+- Buscar a entry de anúncio via `getLatestAnnouncement()` (entry mais recente com `announcement !== "none"`)
+- Renderizar `<ChangelogAnnouncement>` após `<VerificationBanners>` e `<ReadinessCheckBanner>`, antes do conteúdo principal
+- Não quebrar quando `latestAnnouncement === null` — o componente retorna `null`
+- A visibilidade do card/modal é decidida pelo hook `useChangelogState` no client (`isAnnouncementVisible`); `/novidades` chama `markChangelogAsViewed`
+
+#### Scenario: Dashboard renderiza anúncio quando existe
+
+- **WHEN** `getLatestAnnouncement()` retorna uma entry com `announcement: "card"` e ela não foi dispensada
+- **THEN** o dashboard renderiza `<ChangelogAnnouncement>` com o card visível, posicionado após os banners e antes do conteúdo principal
+
+#### Scenario: Dashboard não renderiza anúncio sem entry
+
+- **WHEN** `getLatestAnnouncement()` retorna `null`
+- **THEN** o dashboard renderiza normalmente sem card/modal (não quebra)
+
+#### Scenario: Dashboard posiciona anúncio após banners
+
+- **WHEN** `latestAnnouncement` existe
+- **THEN** `<ChangelogAnnouncement>` é renderizado depois de `VerificationBanners` e `ReadinessCheckBanner` e antes do conteúdo principal do dashboard
