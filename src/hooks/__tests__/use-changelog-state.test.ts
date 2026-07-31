@@ -1,24 +1,56 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useChangelogState } from "../use-changelog-state";
+import { useChangelogState, type UseChangelogStateReturn } from "../use-changelog-state";
 
 beforeEach(() => {
   localStorage.clear();
   vi.restoreAllMocks();
 });
 
+afterEach(() => {
+  localStorage.clear();
+  vi.restoreAllMocks();
+});
+
 describe("useChangelogState", () => {
-  it("inicia com null e NÃO lê localStorage durante o render (SSR-safe)", () => {
+  it("render inicial devolve null sem ler localStorage (SSR-safe); efeito lê só as chaves contratuais", () => {
+    localStorage.setItem("vendeo:last_seen_changelog_id", "fase-34-store-readiness");
+    localStorage.setItem(
+      "vendeo:dismissed_changelog_announcement_id",
+      "fase-32-freemium-cnpj",
+    );
+
     const getItemSpy = vi.spyOn(Storage.prototype, "getItem");
 
-    const { result } = renderHook(() => useChangelogState());
+    // Captura o retorno do hook durante o PRIMEIRO render (antes dos efeitos).
+    // Se o render lesse localStorage, o estado inicial já viria populado.
+    const firstRender: { state: UseChangelogStateReturn | null } = { state: null };
+    let firstRenderDone = false;
 
-    expect(result.current.lastSeenId).toBeNull();
-    expect(result.current.dismissedId).toBeNull();
+    const { result } = renderHook(() => {
+      const state = useChangelogState();
+      if (!firstRenderDone) {
+        firstRender.state = state;
+        firstRenderDone = true;
+      }
+      return state;
+    });
 
-    // Nenhuma leitura de localStorage durante o render inicial
-    expect(getItemSpy).not.toHaveBeenCalled();
+    // Primeiro render: estado inicial null — o render NÃO leu localStorage
+    expect(firstRender.state?.lastSeenId).toBeNull();
+    expect(firstRender.state?.dismissedId).toBeNull();
+
+    // O efeito de montagem leu exatamente as duas chaves contratuais
+    expect(getItemSpy).toHaveBeenCalledWith("vendeo:last_seen_changelog_id");
+    expect(getItemSpy).toHaveBeenCalledWith(
+      "vendeo:dismissed_changelog_announcement_id",
+    );
+    expect(getItemSpy.mock.calls.length).toBe(2);
+
+    // Após o efeito, o estado reflete os valores do localStorage
+    expect(result.current.lastSeenId).toBe("fase-34-store-readiness");
+    expect(result.current.dismissedId).toBe("fase-32-freemium-cnpj");
   });
 
   it("markChangelogAsViewed atualiza lastSeenId, limpa hasUnseen e escreve SEEN_KEY", () => {
