@@ -12,7 +12,7 @@ O sistema SHALL prover a página `src/app/(app)/novidades/page.tsx` (server comp
 
 #### Scenario: Página renderiza entries ordenadas
 
-- **WHEN** `/novidades` é acessada com 3 entries
+- **WHEN** `/novidades` é acessada com entries no diretório (ex: 3 seeds + F35)
 - **THEN** renderiza `PageHeader` "Novidades"
 - **AND** renderiza a lista com as entries na ordem cronológica DESC
 

@@ -1,7 +1,7 @@
 ---
 id: "fase-34-store-readiness"
 title: "Loja mais pronta para gerar campanhas"
-date: "2026-08-01"
+date: "2026-07-30"
 milestone: "v1.5"
 category: "improvement"
 importance: "minor"

@@ -7,20 +7,28 @@ O sistema SHALL prover a fonte de dados de changelog como arquivos Markdown com 
 - Frontmatter YAML delimitado por `---` com os campos: `id` (string, obrigatório, slug único), `title` (string, obrigatório), `date` (string ISO `YYYY-MM-DD`, obrigatório, data de publicação em fuso brasileiro — sem componente de hora), `milestone` (string, opcional, ex: "v1.5"), `category` (`"feature" | "improvement" | "fix"`, obrigatório), `importance` (`"major" | "minor"`, obrigatório), `announcement` (`"none" | "card" | "modal"`, obrigatório)
 - Body em Markdown (apenas `## heading`, parágrafos, `- listas`, `**negrito**`) respondendo a três perguntas: o que mudou, por que importa para o lojista, o que ele precisa fazer
 
-O diretório SHALL conter ao menos 3 entries de exemplo: F30 (`fase-30-legal-foundation`, feature/major/announcement none), F32 (`fase-32-freemium-cnpj`, feature/major/announcement card), F34 (`fase-34-store-readiness`, improvement/minor/announcement none). Apenas a entry mais relevante para anúncio no seed (F32) SHALL ter `announcement: "card"`; demais `"none"`. F34 (data `2026-08-01`) é a entry mais recente da lista por data; F32 é apenas o anúncio ativo.
+O diretório SHALL conter ao menos 3 entries de exemplo: F30 (`fase-30-legal-foundation`, feature/major/announcement none, data `2026-07-28`), F32 (`fase-32-freemium-cnpj`, feature/major/announcement card, data `2026-07-29`), F34 (`fase-34-store-readiness`, improvement/minor/announcement none, data `2026-07-30`). No seed inicial, apenas a entry mais relevante para anúncio (F32) SHALL ter `announcement: "card"`; demais `"none"`. F34 é a entry mais recente do seed inicial por data.
 
-#### Scenario: Diretório possui 3 entries de exemplo com frontmatter válido
+**Conteúdo vivo (dogfooding):** ao final da fase (após o próprio changelog ser implementado), o diretório SHALL conter também a entry F35 (`fase-35-changelog-novidades`, feature/major/announcement card, data `2026-07-31`) como a entry mais recente por data e o anúncio ativo da dashboard. A regra "apenas F32 com card" é uma propriedade do seed inicial, não uma regra permanente do changelog.
+
+#### Scenario: Diretório possui ao menos 3 entries de exemplo com frontmatter válido
 
 - **WHEN** `content/changelog/` é inspecionado
 - **THEN** contém ao menos 3 arquivos `.md` (F30, F32, F34)
 - **AND** cada arquivo tem frontmatter válido com id, title, date, category, importance e announcement
 
-#### Scenario: Apenas a entry mais relevante gera anúncio no seed
+#### Scenario: Apenas a entry mais relevante gera anúncio no seed inicial
 
-- **WHEN** as entries de exemplo são validadas
+- **WHEN** as entries de exemplo do seed são validadas
 - **THEN** apenas a entry F32 tem `announcement: "card"`
 - **AND** F30 e F34 têm `announcement: "none"`
-- **AND** a entry mais recente por data é a F34 (`2026-08-01`), que não gera anúncio
+- **AND** a entry mais recente do seed por data é a F34 (`2026-07-30`), que não gera anúncio
+
+#### Scenario: Após o dogfooding, a entry F35 é a mais recente e o anúncio ativo
+
+- **WHEN** o diretório contém a entry F35 (implementação da própria fase)
+- **THEN** a entry F35 (`2026-07-31`) é a mais recente por data
+- **AND** `getLatestAnnouncement()` retorna a F35 (announcement `"card"`)
 
 ### Requirement: Parser de frontmatter sem dependências externas
 
@@ -164,8 +172,8 @@ Comportamento SHALL:
 
 #### Scenario: getAllEntries retorna entries ordenadas por data DESC
 
-- **WHEN** existem 3 arquivos `.md` no diretório
-- **THEN** retorna 3 entries na ordem F34 (2026-08-01) → F32 (2026-07-31) → F30 (2026-07-30)
+- **WHEN** existem 4 arquivos `.md` no diretório (F35, F34, F32, F30)
+- **THEN** retorna entries na ordem F35 (2026-07-31) → F34 (2026-07-30) → F32 (2026-07-29) → F30 (2026-07-28)
 
 #### Scenario: getLatestAnnouncement retorna entry com anúncio
 
@@ -207,8 +215,8 @@ O sistema SHALL tratar `date` como string ISO `YYYY-MM-DD` (data de publicação
 
 #### Scenario: Ordenação por data usa comparação da string ISO
 
-- **WHEN** entries têm dates `2026-07-30`, `2026-07-31` e `2026-08-01`
-- **THEN** a ordem DESC por data é `2026-08-01` → `2026-07-31` → `2026-07-30` independente do fuso horário do servidor
+- **WHEN** entries têm dates `2026-07-28`, `2026-07-29`, `2026-07-30` e `2026-07-31`
+- **THEN** a ordem DESC por data é `2026-07-31` → `2026-07-30` → `2026-07-29` → `2026-07-28` independente do fuso horário do servidor
 
 ### Requirement: Rotina de atualização documentada
 

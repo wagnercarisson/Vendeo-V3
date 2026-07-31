@@ -1,7 +1,7 @@
 ---
 id: "fase-32-freemium-cnpj"
 title: "Freemium CNPJ"
-date: "2026-07-31"
+date: "2026-07-29"
 milestone: "v1.5"
 category: "feature"
 importance: "major"

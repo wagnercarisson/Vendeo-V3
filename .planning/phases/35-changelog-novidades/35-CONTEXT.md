@@ -24,11 +24,11 @@ Cada entry é um arquivo `.md` com frontmatter YAML, versionado no repositório.
 
 | Arquivo | category | importance | announcement |
 |---------|----------|------------|--------------|
-| `2026-07-30-fase-30-legal-foundation.md` | feature | major | none |
-| `2026-07-31-fase-32-freemium-cnpj.md` | feature | major | card |
-| `2026-08-01-fase-34-store-readiness.md` | improvement | minor | none |
+| `2026-07-28-fase-30-legal-foundation.md` | feature | major | none |
+| `2026-07-29-fase-32-freemium-cnpj.md` | feature | major | card |
+| `2026-07-30-fase-34-store-readiness.md` | improvement | minor | none |
 
-Apenas a entry mais relevante para anúncio no seed (F32) tem `announcement: "card"`; F30 e F34 com `"none"`. F34 (data `2026-08-01`) é a entry mais recente da lista por data; F32 é apenas o anúncio ativo. Frontmatter: id (slug único), title, date (`YYYY-MM-DD` ISO sem hora, fuso brasileiro), milestone (opcional), category (`feature|improvement|fix`), importance (`major|minor`), announcement (`none|card|modal`). Body em português claro respondendo: o que mudou, por que importa, o que o lojista precisa fazer (D5).
+Datas editoriais do seed (sem datas futuras): F30 em `2026-07-28`, F32 em `2026-07-29`, F34 em `2026-07-30`. No seed, apenas a entry mais relevante para anúncio (F32) tem `announcement: "card"`; F30 e F34 com `"none"`. F34 é a entry mais recente do seed por data. Ao fechar a fase (dogfooding), o changelog ganha a entry F35 (`2026-07-31-fase-35-changelog-novidades.md`, feature/major/card) como a mais recente por data e anúncio ativo — "apenas F32 com card" é propriedade do seed inicial. Frontmatter: id (slug único), title, date (`YYYY-MM-DD` ISO sem hora, fuso brasileiro), milestone (opcional), category (`feature|improvement|fix`), importance (`major|minor`), announcement (`none|card|modal`). Body em português claro respondendo: o que mudou, por que importa, o que o lojista precisa fazer (D5).
 
 ### D2 — Página dedicada `/novidades` + item fixo na sidebar
 `DECIDIDO`

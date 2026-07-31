@@ -18,7 +18,7 @@ O Vendeo entrega valor ao lojista em 14 fases de frontend, mas nenhuma entrega �
 - Validação Zod fail-fast no build (frontmatter inválido quebra o build/CI)
 - Tom editorial: comunicação de produto em português claro (D5)
 - Rotina documentada em `docs/changelog-update.md` (guia já existente, criado no alinhamento da F35)
-- 3 entries de exemplo (F30, F32, F34) — apenas a mais relevante para anúncio no seed (F32) com `announcement: "card"`; F34 continua sendo a mais recente da lista por data
+- 3 entries de exemplo (F30, F32, F34) — apenas a mais relevante para anúncio no seed (F32) com `announcement: "card"`; F34 é a mais recente do seed por data. Ao final da fase (dogfooding), o changelog passa a conter também a entry F35 (`2026-07-31`, `announcement: "card"`) como a mais recente e o anúncio ativo — "apenas F32 com card" é propriedade do seed inicial, não regra permanente
 - 14+ testes (get-changelog, useChangelogState, ChangelogList, ChangelogAnnouncement)
 
 **Non-Goals:**
@@ -36,20 +36,21 @@ O Vendeo entrega valor ao lojista em 14 fases de frontend, mas nenhuma entrega �
 
 `DECIDIDO`
 
-Cada entry é um arquivo `.md` com frontmatter YAML, versionado no repositório:
+Cada entry é um arquivo `.md` com frontmatter YAML, versionado no repositório. Datas editoriais do seed (sem datas futuras — F35 registrada no dia real de fechamento, `2026-07-31`):
 
 ```
 content/changelog/
-  2026-07-30-fase-30-legal-foundation.md   ← feature (major, announcement: none) — histórica
-  2026-07-31-fase-32-freemium-cnpj.md      ← feature (major, announcement: card) — card na dashboard
-  2026-08-01-fase-34-store-readiness.md    ← improvement (minor, announcement: none) — apoio
+  2026-07-28-fase-30-legal-foundation.md   ← feature (major, announcement: none) — histórica
+  2026-07-29-fase-32-freemium-cnpj.md      ← feature (major, announcement: card) — card no seed inicial
+  2026-07-30-fase-34-store-readiness.md    ← improvement (minor, announcement: none) — apoio
+  2026-07-31-fase-35-changelog-novidades.md ← feature (major, announcement: card) — dogfooding/atual
 ```
 
 ```md
 ---
 id: "fase-30-legal-foundation"
 title: "Fundação Legal"
-date: "2026-07-30"
+date: "2026-07-28"
 milestone: "v1.5"
 category: "feature"
 importance: "major"

@@ -1,7 +1,7 @@
 ---
 id: "fase-30-legal-foundation"
 title: "Fundação Legal"
-date: "2026-07-30"
+date: "2026-07-28"
 milestone: "v1.5"
 category: "feature"
 importance: "major"
