@@ -2,9 +2,9 @@
 
 ## Milestone v1.5 — Lançamento Externo Controlado ◆
 
-**16 phases** | **127 requirements mapped** | All covered ✓
+**17 phases** | **139 requirements mapped** | All covered ✓
 
-**Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23.
+**Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23. F35 = Changelog/Novidades, F36 = Stripe/Monetização Pública (renumeração alinhada no OpenSpec F35).
 
 ---
 
@@ -29,6 +29,7 @@
 | 32 | ✅ Freemium Anti-Abuso CNPJ | CNPJ obrigatório no cadastro, entitlement por raiz de CNPJ, admin freemium status | CNPJ-01–06, FREEMIUM-01–04 | 10 ✅ |
 | 33 | ✅ Verificação CNPJ Freemium | Consulta BrasilAPI/CNPJá, cross-check, motor de decisão, admin review, test stores | CNPJ-07–12 | 6 ✅ |
 | 34 | ✅ Store Readiness | Readiness RPC + guarda dupla + direção visual obrigatória + dashboard banner + billing info | F34-READINESS, F34-BILLING, F34-STORE-TYPE, F34-GUARD, F34-LEGACY, F34-UI, F34-DASHBOARD, F34-BRANDPROFILE | 8 ✅ |
+| 35 | Changelog/Novidades | Fonte de dados estática content/changelog + página /novidades + indicador sidebar + anúncio contextual dashboard | F35-CONTENT-01–06, F35-STATE-01–06, F35-UI-01–07, F35-APP-SHELL-01–03, F35-DASHBOARD-01–03 | 25 |
 
 ---
 
@@ -358,6 +359,40 @@
 
 ---
 
+### Phase 35 — Changelog/Novidades
+
+**Goal:** Dar voz ao produto — comunicar entregas dentro do app via changelog editorial em `content/changelog/*.md`, página `/novidades`, indicador na sidebar e anúncio contextual na dashboard, sem Supabase e sem dependências novas.
+
+**Requirements:** F35-CONTENT-01 a F35-CONTENT-06, F35-STATE-01 a F35-STATE-06, F35-UI-01 a F35-UI-07, F35-APP-SHELL-01 a F35-APP-SHELL-03, F35-DASHBOARD-01 a F35-DASHBOARD-03
+
+**Success criteria:**
+1. Fonte de dados `content/changelog/*.md` com frontmatter YAML versionado (3 entries seed: F30, F32, F34)
+2. Página `/novidades` com listagem cronológica DESC, badges de categoria e indicador de importância
+3. "Novidades" como 5º item da sidebar com indicador de conteúdo novo; link secundário no AccountMenu
+4. Card/modal de anúncio na dashboard controlado por `announcement: none|card|modal`; apenas o mais recente
+5. Indicador via localStorage com dois controles independentes (visita × dispensa) — SSR-safe
+6. Parser próprio de frontmatter + renderer controlado — zero dependências novas; Zod fail-fast no build
+7. 14+ testes novos; typecheck, lint e build limpos
+8. `docs/changelog-update.md` ajustado cirurgicamente se necessário (sem recriar)
+
+**Dependencies:** Phase 30 (terminologia legal no seed), Phase 32 (Freemium CNPJ no seed), Phase 34 (Store Readiness no seed), design system, zod ^3.24.4, lucide-react
+
+**Source of truth:** `openspec/changes/fase-35-changelog-novidades/`
+
+**Renumeração (documentada no OpenSpec):** F35 = Changelog/Novidades; Stripe/Monetização Pública deslocada para F36.
+
+**Plans:** 5 plans (3 waves)
+
+| Plan | Wave | Objective |
+|------|------|-----------|
+| 35-01 | 1 | Foundation — Seed content/changelog + Core Library (types, parser, renderer, schema) |
+| 35-02 | 1 | Core Library — get-changelog.ts + Hook use-changelog-state |
+| 35-03 | 2 | Página /novidades + Componentes Changelog (card, list, announcement, sidebar-badge) |
+| 35-04 | 2 | App Shell + Dashboard — fluxo latestEntryId, sidebar 5º item, AccountMenu, anúncio dashboard |
+| 35-05 | 3 | Testes + Verificação + Tracking — 14+ testes, typecheck/lint/build, renumeração STATE/ROADMAP |
+
+---
+
 ## Dependency Graph
 
 ```
@@ -382,12 +417,24 @@ Phase 24 (Credit Tables + CreditService) ──┘
                                             │
                                             ▼
                                  Phase 31.2 (Diretores por Intenção)
-                                            │
-                                            ▼
-                                 Phase 31.3 (Quality Gate por Intenção Comercial) ✅
-                                            │
-                                            ▼
-                                    Phase 32 (Stripe — v1.7 futuro)
+                                             │
+                                             ▼
+                                  Phase 31.3 (Quality Gate por Intenção Comercial) ✅
+                                             │
+                                             ▼
+                                  Phase 32 (Freemium Anti-Abuso CNPJ) ✅
+                                             │
+                                             ▼
+                                  Phase 33 (Verificação CNPJ Freemium) ✅
+                                             │
+                                             ▼
+                                  Phase 34 (Store Readiness) ✅
+                                             │
+                                             ▼
+                                  Phase 35 (Changelog/Novidades)
+                                             │
+                                             ▼
+                                  Phase 36 (Stripe / Monetização Pública — futura)
 ```
 
 ---
@@ -462,8 +509,8 @@ Phase 24 (Credit Tables + CreditService) ──┘
 | SEC-05 | Phase 29 | Done ✓ |
 
 **Coverage:**
-- v1 requirements: 127 total (107 v1.5 + 12 INTENT + 8 F34)
-- Mapped to phases: 127
+- v1 requirements: 139 total (107 v1.5 + 12 INTENT + 8 F34 + 12 F35-CHANGELOG/UI etc.)
+- Mapped to phases: 139
 - Completed: 127
 - Unmapped: 0 ✓
 - Deferred to v1.7: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06
@@ -472,4 +519,4 @@ Phase 24 (Credit Tables + CreditService) ──┘
 
 *Roadmap created: 2026-07-15*
 *Milestone: v1.5 — Lançamento Externo Controlado*
-*Last updated: 2026-07-29 — Phase 34 complete — 1201 tests passing*
+*Last updated: 2026-07-31 — Phase 35 planned (Changelog/Novidades) — renumeração F36 = Stripe*

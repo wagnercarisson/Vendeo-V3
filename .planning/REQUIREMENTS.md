@@ -252,9 +252,53 @@
 - [ ] **BRANDPROFILE-01**: Três caminhos de direção visual (logo upload, VS, text-only) convergem para brand profile synced
 - [ ] **BRANDPROFILE-02**: "Confirmar direção visual" só libera com profile synced
 
+## v1.5 Requirements — Changelog/Novidades (F35)
+
+Adicionados em 2026-07-31 via alinhamento com OpenSpec (`openspec/changes/fase-35-changelog-novidades/`).
+
+### Conteúdo do Changelog (F35-CONTENT)
+
+- [ ] **F35-CONTENT-01**: Fonte de dados `content/changelog/*.md` com frontmatter YAML (id, title, date ISO `YYYY-MM-DD`, milestone opcional, category, importance, announcement) versionada no repositório; 3 entries seed (F30, F32, F34), apenas F32 com `announcement: "card"`
+- [ ] **F35-CONTENT-02**: `parseFrontmatter(raw)` em `src/lib/changelog/parse-frontmatter.ts` — valida `---` de abertura/fechamento, split no primeiro `:`, remove aspas opcionais de valores escalares, retorna `{ frontmatter, body }`
+- [ ] **F35-CONTENT-03**: `renderMarkdown(md)` em `src/lib/changelog/render-markdown.ts` — suporta `## heading`, parágrafos, `- listas`, `**negrito**`; HTML sanitizado (h2, p, ul, li, strong); escapa texto bruto; lança erro em sintaxe não suportada (build)
+- [ ] **F35-CONTENT-04**: `ChangelogFrontmatterSchema` (Zod) em `src/lib/changelog/schema.ts` — id/title string min 1, date regex `^\d{4}-\d{2}-\d{2}$`, milestone opcional, enums category/importance/announcement; fail-fast no build
+- [ ] **F35-CONTENT-05**: Tipos em `src/lib/changelog/types.ts` — ChangelogCategory, ChangelogImportance, ChangelogFrontmatter, ChangelogEntry (slug derivado do filename)
+- [ ] **F35-CONTENT-06**: `get-changelog.ts` com `import "server-only"` — `getAllEntries()` (data DESC, diretório vazio → `[]`), `getLatestAnnouncement()` (entry mais recente com `announcement !== "none"` ou null), `getEntryById(id)`; frontmatter inválido → throw no build
+
+### Estado de Leitura (F35-STATE)
+
+- [ ] **F35-STATE-01**: Hook `useChangelogState()` em `src/hooks/use-changelog-state.ts` — duas chaves `vendeo:last_seen_changelog_id` e `vendeo:dismissed_changelog_announcement_id`; SSR-safe (localStorage apenas em useEffect; estado inicial null)
+- [ ] **F35-STATE-02**: `markChangelogAsViewed(latestEntryId, latestAnnouncementId?)` — atualiza SEEN_KEY e, se announcementId, DISMISSED_KEY
+- [ ] **F35-STATE-03**: `dismissAnnouncement(id)` — atualiza APENAS DISMISSED_KEY (não afeta indicador da sidebar)
+- [ ] **F35-STATE-04**: `hasUnseen(latestId)` — `lastSeenId !== latestId`; false se latestId vazio; comparação de ID exato
+- [ ] **F35-STATE-05**: `isAnnouncementVisible(entryId)` — `dismissedId !== entryId`; false se entryId vazio
+- [ ] **F35-STATE-06**: Sem Supabase, sem requisição extra, sem estado global (D3/D7)
+
+### UI do Changelog (F35-UI)
+
+- [ ] **F35-UI-01**: Página `/novidades` (server component) — `getAllEntries()`, PageHeader, breadcrumb "Dashboard > Novidades", ChangelogList, EmptyState sem entries
+- [ ] **F35-UI-02**: Componente client chama `markChangelogAsViewed` ao montar (limpa indicador + dispensa anúncio ativo)
+- [ ] **F35-UI-03**: `ChangelogCard` — badge categoria (feature=accent-green, improvement=accent-blue, fix=accent-amber), título, data pt-BR sem shift de fuso, importância, conteúdo via renderMarkdown
+- [ ] **F35-UI-04**: `ChangelogList` — múltiplos cards ordenados com separação visual; estado vazio tratado
+- [ ] **F35-UI-05**: `ChangelogAnnouncement` (client) — card (padrão) ou modal (exceção) conforme `announcement`; "Ver novidades" → `/novidades`; × → `dismissAnnouncement`; null quando entry null ou announcement none
+- [ ] **F35-UI-06**: `SidebarBadge` (client) — usa `useChangelogState`, recebe `latestEntryId` por prop, badge quando `hasUnseen`; nada quando null
+- [ ] **F35-UI-07**: Estilo conforme design system (dark mode, tokens bg-*, text-*, accent-*, Poppins/Open Sans)
+
+### App Shell (F35-APP-SHELL)
+
+- [ ] **F35-APP-SHELL-01**: Fluxo `latestEntryId` do server (layout) → AppShell → Sidebar/SidebarDrawer por prop; NUNCA importar `get-changelog`/`server-only` em componentes client
+- [ ] **F35-APP-SHELL-02**: Sidebar com 5º item "Novidades" (`/novidades`, ícone Sparkles/Newspaper) + active state + SidebarBadge
+- [ ] **F35-APP-SHELL-03**: AccountMenu com link "Novidades" (`/novidades`, ícone Lucide) entre Configurações e Sair
+
+### Dashboard (F35-DASHBOARD)
+
+- [ ] **F35-DASHBOARD-01**: Dashboard renderiza `<ChangelogAnnouncement entry={latestAnnouncement} />` via `getLatestAnnouncement()` após VerificationBanners e ReadinessCheckBanner, antes do conteúdo principal (nos estados com loja)
+- [ ] **F35-DASHBOARD-02**: Dashboard não quebra quando `latestAnnouncement === null`
+- [ ] **F35-DASHBOARD-03**: Rotina documentada `docs/changelog-update.md` ajustada cirurgicamente se necessário (sem recriar)
+
 ## v1.7 Requirements (Stripe / Monetização Pública)
 
-Deferred from v1.5 critical path. Stripe será implementada como F35/v1.7 após validação do beta controlado.
+Deferred from v1.5 critical path. Stripe será implementada como F36/v1.7 após validação do beta controlado (renumerada de F35 → F36 no alinhamento do Changelog/Novidades).
 
 ### Pagamento (PAY)
 
