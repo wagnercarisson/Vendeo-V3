@@ -22,13 +22,6 @@ export default async function TermosPage() {
           </p>
         )}
 
-        <blockquote>
-          <p>
-            <strong>Aviso importante:</strong> Este documento é um draft preparado pelo time do Vendeo para
-            revisão jurídica. Não constitui aconselhamento legal. Consulte um advogado antes de publicar.
-          </p>
-        </blockquote>
-
         {docFile && version && (
           <LegalDocumentViewer
             url={docFile}

@@ -3,8 +3,6 @@
 **Versão:** v1.2
 **Data de publicação:** 2026-07-28
 
-> **Aviso importante:** Este documento é um draft preparado pelo time do Vendeo para revisão jurídica. Não constitui aconselhamento legal. Consulte um advogado antes de publicar.
-
 ---
 
 ## 1. Definições
