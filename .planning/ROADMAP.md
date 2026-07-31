@@ -29,7 +29,7 @@
 | 32 | ✅ Freemium Anti-Abuso CNPJ | CNPJ obrigatório no cadastro, entitlement por raiz de CNPJ, admin freemium status | CNPJ-01–06, FREEMIUM-01–04 | 10 ✅ |
 | 33 | ✅ Verificação CNPJ Freemium | Consulta BrasilAPI/CNPJá, cross-check, motor de decisão, admin review, test stores | CNPJ-07–12 | 6 ✅ |
 | 34 | ✅ Store Readiness | Readiness RPC + guarda dupla + direção visual obrigatória + dashboard banner + billing info | F34-READINESS, F34-BILLING, F34-STORE-TYPE, F34-GUARD, F34-LEGACY, F34-UI, F34-DASHBOARD, F34-BRANDPROFILE | 8 ✅ |
-| 35 | ✅ Changelog/Novidades | Fonte de dados estática content/changelog + página /novidades + indicador sidebar + anúncio contextual dashboard | F35-CONTENT-01–06, F35-STATE-01–06, F35-UI-01–07, F35-APP-SHELL-01–03, F35-DASHBOARD-01–03 | 25 ✅ |
+| 35 | ✅ Changelog/Novidades | 5/5 | Complete    | 2026-07-31 |
 
 ---
 
@@ -381,7 +381,7 @@
 
 **Renumeração (documentada no OpenSpec):** F35 = Changelog/Novidades; Stripe/Monetização Pública deslocada para F36.
 
-**Plans:** 5 plans (3 waves)
+**Plans:** 5/5 plans complete
 
 **Status:** 5/5 plans completos ✅
 **Tests:** 1345 passing (170 files, 42 novos F35) — typecheck/lint/build limpos

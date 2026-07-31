@@ -3,14 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 current_phase: 35
-status: Phase 35 — CHANGELOG/NOVIDADES ✅
-last_updated: "2026-07-31T15:15:00.000Z"
+status: milestone_complete
+last_updated: 2026-07-31T18:51:17.313Z
 progress:
   total_phases: 18
   completed_phases: 16
   total_plans: 74
   completed_plans: 68
-  percent: 92
+  percent: 89
+stopped_at: Milestone complete (Phase 35 was final phase)
 ---
 
 # Project State
@@ -102,7 +103,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** Phase 35 — changelog-novidades
+**Current focus:** Milestone complete
 
 ## Completed Milestones
 
@@ -427,7 +428,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 ## Current Position
 
 Phase: 35 — CHANGELOG/NOVIDADES ✅
-Plan: 5 of 5 — verificação completa; checkpoint humano de validação visual pendente
+Plan: Not started
 v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34 e 35 concluídas. F36 (Stripe / Monetização Pública) como próximo marco (renumerada de F35 → F36).
 
 ### Phase 35 — Changelog/Novidades ✅
