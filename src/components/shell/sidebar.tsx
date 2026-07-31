@@ -5,13 +5,16 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Megaphone,
+  Sparkles,
   Store,
   UserCircle,
 } from "lucide-react";
+import { SidebarBadge } from "@/components/changelog/sidebar-badge";
 
 interface SidebarProps {
   isDrawer?: boolean;
   onNavigate?: () => void;
+  latestEntryId?: string | null;
 }
 
 const NAV_ITEMS = [
@@ -19,9 +22,10 @@ const NAV_ITEMS = [
   { href: "/campanhas", label: "Campanhas", icon: Megaphone },
   { href: "/loja", label: "Loja", icon: Store },
   { href: "/conta", label: "Conta", icon: UserCircle },
+  { href: "/novidades", label: "Novidades", icon: Sparkles },
 ];
 
-export function Sidebar({ isDrawer, onNavigate }: SidebarProps) {
+export function Sidebar({ isDrawer, onNavigate, latestEntryId }: SidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -48,6 +52,9 @@ export function Sidebar({ isDrawer, onNavigate }: SidebarProps) {
           >
             <Icon className="h-5 w-5" />
             {item.label}
+            {item.href === "/novidades" && (
+              <SidebarBadge latestEntryId={latestEntryId} />
+            )}
           </Link>
         );
       })}

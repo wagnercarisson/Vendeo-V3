@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { Settings, ChevronDown } from "lucide-react";
+import { Settings, ChevronDown, Sparkles } from "lucide-react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import type { JwtPayload } from "@/types/auth";
 
@@ -68,6 +68,14 @@ export function AccountMenu({ user }: AccountMenuProps) {
           >
             <Settings className="h-4 w-4" />
             Configurações
+          </Link>
+          <Link
+            href="/novidades"
+            onClick={() => setIsOpen(false)}
+            className="flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-bg-elevated hover:text-text-primary transition-colors duration-200 font-body"
+          >
+            <Sparkles className="h-4 w-4" />
+            Novidades
           </Link>
           <div className="flex min-h-[44px] items-center rounded-lg px-1 text-sm text-text-secondary hover:bg-bg-elevated transition-colors duration-200 font-body">
             <LogoutButton />
