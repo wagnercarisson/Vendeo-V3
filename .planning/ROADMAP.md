@@ -29,7 +29,7 @@
 | 32 | ✅ Freemium Anti-Abuso CNPJ | CNPJ obrigatório no cadastro, entitlement por raiz de CNPJ, admin freemium status | CNPJ-01–06, FREEMIUM-01–04 | 10 ✅ |
 | 33 | ✅ Verificação CNPJ Freemium | Consulta BrasilAPI/CNPJá, cross-check, motor de decisão, admin review, test stores | CNPJ-07–12 | 6 ✅ |
 | 34 | ✅ Store Readiness | Readiness RPC + guarda dupla + direção visual obrigatória + dashboard banner + billing info | F34-READINESS, F34-BILLING, F34-STORE-TYPE, F34-GUARD, F34-LEGACY, F34-UI, F34-DASHBOARD, F34-BRANDPROFILE | 8 ✅ |
-| 35 | Changelog/Novidades | Fonte de dados estática content/changelog + página /novidades + indicador sidebar + anúncio contextual dashboard | F35-CONTENT-01–06, F35-STATE-01–06, F35-UI-01–07, F35-APP-SHELL-01–03, F35-DASHBOARD-01–03 | 25 |
+| 35 | 📋 Changelog/Novidades | Fonte de dados estática content/changelog + página /novidades + indicador sidebar + anúncio contextual dashboard | F35-CONTENT-01–06, F35-STATE-01–06, F35-UI-01–07, F35-APP-SHELL-01–03, F35-DASHBOARD-01–03 | 25 |
 
 ---
 
@@ -383,13 +383,33 @@
 
 **Plans:** 5 plans (3 waves)
 
+**Wave 1** *(Foundation + Core Library — 35-02 depends on 35-01; roda após 35-01 na mesma wave)*
+
 | Plan | Wave | Objective |
 |------|------|-----------|
 | 35-01 | 1 | Foundation — Seed content/changelog + Core Library (types, parser, renderer, schema) |
 | 35-02 | 1 | Core Library — get-changelog.ts + Hook use-changelog-state |
+
+**Wave 2** *(bloqueada na Wave 1 — 35-03 depende de 35-02; 35-04 depende de 35-03, roda após 35-03 na mesma wave)*
+
+| Plan | Wave | Objective |
+|------|------|-----------|
 | 35-03 | 2 | Página /novidades + Componentes Changelog (card, list, announcement, sidebar-badge) |
 | 35-04 | 2 | App Shell + Dashboard — fluxo latestEntryId, sidebar 5º item, AccountMenu, anúncio dashboard |
+
+**Wave 3** *(bloqueada nas Waves 1–2 — 35-05 depende de todos os planos)*
+
+| Plan | Wave | Objective |
+|------|------|-----------|
 | 35-05 | 3 | Testes + Verificação + Tracking — 14+ testes, typecheck/lint/build, renumeração STATE/ROADMAP |
+
+**Cross-cutting constraints:**
+- Zero dependências novas (D8) — parser próprio de frontmatter + renderer controlado; `zod` e `lucide-react` já presentes (todos os planos)
+- Sem Supabase, sem requisição extra, sem estado global (D3/D7) — 35-02, 35-03, 35-04
+- Datas exibidas como `dd/mm/aaaa` via `formatChangelogDate`, sem `new Date(ISO)` (fuso UTC-3) — 35-01, 35-03, 35-05
+- XSS: `dangerouslySetInnerHTML` recebe exclusivamente saída de `renderMarkdown` (sanitizada) — 35-01, 35-03, 35-04
+- Componentes client NUNCA importam `get-changelog`/`server-only` (fluxo por prop) — 35-02, 35-03, 35-04
+- Chaves de estado `vendeo:last_seen_changelog_id` e `vendeo:dismissed_changelog_announcement_id` — 35-02, 35-03, 35-04
 
 ---
 

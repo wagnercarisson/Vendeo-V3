@@ -2,22 +2,22 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
-current_phase: 34
-status: Phase 34 complete
-last_updated: "2026-07-30T17:35:00.000Z"
+current_phase: 35
+status: Phase 35 planned — ready to execute
+last_updated: "2026-07-31T19:00:00.000Z"
 progress:
-  total_phases: 13
-  completed_phases: 11
-  total_plans: 53
-  completed_plans: 53
-  percent: 100
+  total_phases: 18
+  completed_phases: 15
+  total_plans: 79
+  completed_plans: 63
+  percent: 80
 ---
 
 # Project State
 
-**Last updated:** 2026-07-30 (quick task 260730-o30: Hotfix admin_get_metrics uuid = text + dead code grant_monthly_credits)
+**Last updated:** 2026-07-31 (plan-phase 35 — Changelog/Novidades: 5 plans, 3 waves, checker aprovado)
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆ **Em andamento**
-**Current phase:** 34
+**Current phase:** 35
 
 ## Completed
 
@@ -426,9 +426,23 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 34 — STORE READINESS ✅
-Plan: 5 of 5
-v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33 e 34 concluídas. F35 (Stripe / Monetização Pública) como próximo marco.
+Phase: 35 — CHANGELOG/NOVIDADES (Planned — ready to execute)
+Plan: 5 of 5 (3 waves)
+v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34 e 35 concluídas. F36 (Stripe / Monetização Pública) como próximo marco (renumerada de F35 → F36).
+
+### Phase 35 — Changelog/Novidades (Planned)
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 35-01 | 1 | 📋 | Foundation — Seed content/changelog (F30, F32, F34) + Core Library pura (types, parser, renderer, schema, date) |
+| 35-02 | 1 | 📋 | Core Library — get-changelog.ts (server-only, fail-fast) + Hook use-changelog-state (SSR-safe) |
+| 35-03 | 2 | 📋 | Página /novidades + Componentes Changelog (card, list, announcement, sidebar-badge) |
+| 35-04 | 2 | 📋 | App Shell + Dashboard — fluxo latestEntryId, sidebar 5º item, AccountMenu, anúncio contextual |
+| 35-05 | 3 | 📋 | Rotina + Verificação + Tracking — docs/changelog-update.md cirúrgico, testes/typecheck/lint/build, renumeração |
+
+**Context:** `.planning/phases/35-changelog-novidades/35-CONTEXT.md`
+**Source:** `openspec/changes/fase-35-changelog-novidades/`
+**Checker:** 25/25 requirements covered, 0 blockers, 0 warnings
 
 ### Phase 30 — Fundação Legal ✅
 
@@ -518,6 +532,7 @@ v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33 e 34 concluídas. F35 (Stri
 **Context:** `.planning/phases/34-store-readiness/34-CONTEXT.md`
 
 **Fix commits (pós-verificação):**
+
 - `76199b3` — fix(f34): revise store readiness — 7 correções obrigatórias
 - `fae35c8` — fix(f34): correções restantes — fiscal read-only, billing reconsulta, aceite legal
 - `06ee23a` — fix(f34): billing manual abre campos + feedback erro reconsulta CNPJ
@@ -538,7 +553,8 @@ v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33 e 34 concluídas. F35 (Stri
 | F32 | ✅ Complete | Freemium Anti-Abuso CNPJ — CNPJ obrigatório, entitlement por raiz, admin freemium status (5/5 plans, 27+ tests) |
 | F33 | ✅ Complete | Verificação CNPJ Freemium — Consulta BrasilAPI/CNPJá, cross-check, motor de decisão, admin review, test stores |
 | F34 | ✅ Completed | Store Readiness — 5 plans, 17+ testes, 1189 total |
-| F35 | ○ Future | Stripe / Monetização Pública |
+| **F35** | **📋 Planned** | **Changelog/Novidades — 5 plans, 3 waves, 25/25 reqs, checker aprovado (0 blockers)** |
+| F36 | ○ Future | Stripe / Monetização Pública (renumerada de F35 → F36) |
 
 ### Quick Tasks Completed
 
