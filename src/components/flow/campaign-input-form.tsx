@@ -514,6 +514,10 @@ function FormContent({
           <CreditCta variant="zero" supportEmail={supportEmail} />
         )}
 
+        <p className="text-xs text-text-muted">
+          Use apenas materiais que você tem autorização para divulgar. Revise textos, preços e imagens antes de publicar: a IA pode cometer erros.
+        </p>
+
         <button
           type="submit"
           disabled={isSubmitting || balance === 0 || balance === null}

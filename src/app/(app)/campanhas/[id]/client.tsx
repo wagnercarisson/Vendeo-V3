@@ -358,6 +358,9 @@ function ReadyView(props: CampaignPageProps) {
         <Download className="h-4 w-4" />
         Baixar Original
       </Button>
+      <p className="text-xs text-text-muted">
+        Use apenas materiais que você tem autorização para divulgar. Revise textos, preços e imagens antes de publicar: a IA pode cometer erros.
+      </p>
     </div>
   );
 }
