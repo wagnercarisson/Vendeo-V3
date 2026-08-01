@@ -298,7 +298,7 @@ Adicionados em 2026-07-31 via alinhamento com OpenSpec (`openspec/changes/fase-3
 
 ## v1.7 Requirements (Stripe / Monetização Pública)
 
-Deferred from v1.5 critical path. Stripe será implementada como F36/v1.7 após validação do beta controlado (renumerada de F35 → F36 no alinhamento do Changelog/Novidades).
+Deferred from v1.5 critical path. Stripe será implementada como F37/v1.7 após validação do beta controlado (renumerada de F35 → F36 → F37 nos alinhamentos do Changelog/Novidades e do Onboarding — Navegação por Abas).
 
 ### Pagamento (PAY)
 

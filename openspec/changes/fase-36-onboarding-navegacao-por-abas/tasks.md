@@ -1,0 +1,43 @@
+## 1. Backend — criação de loja draft sem CNPJ
+
+- [ ] 1.1 Criar migration SQL com a RPC `create_store_draft` (insere loja com campos fiscais NULL + registra 2 aceites legais `onboarding` em transação, SEM grant freemium, `SECURITY DEFINER`/`search_path`/GRANT apenas `service_role`), seguindo o padrão de `20260727000001_freemium_anti_abuso_cnpj.sql` (a antiga `create_store_with_legal_acceptance` NÃO é restaurada)
+- [ ] 1.2 Aplicar a migration (Supabase) e validar a RPC via SQL/psql: retorna `{ store, onboardingGranted: false }` e não executa `grant_credits`
+- [ ] 1.3 Refatorar `POST /api/store` (`src/app/api/store/route.ts`): `cnpj` vira opcional; branch sem CNPJ → `create_store_draft` (reuso das validações de `name`/`segment`/`acceptedTerms` e coleta de IP/UA), retorno 201 com `onboardingGranted: false`; branch com CNPJ → fluxo verified/fiscal existente intacto (F32/F33)
+- [ ] 1.4 Atualizar a spec delta de `store-ownership-api` no sync (headers mantidos) e revisar cobertura de testes do endpoint (POST sem CNPJ 201 draft, POST com CNPJ verified, 409 duplicado, 400 inválido, 400 sem aceite, 401 sem auth)
+
+## 2. Core — máquina de abas e estado por aba
+
+- [ ] 2.1 Criar `src/lib/store-onboarding/tabs.ts` com a definição das 3 abas (`dados`/`posicionamento`/`direcao-visual`), labels desktop e mobile (`Dados`/`Perfil`/`Visual`), e `computeTabUnlock(tab, ctx)` puro retornando `{ unlocked, reason }` (regras D1/D9: dados = aberta por padrão; posicionamento = nome + segmento + aceite legal + `storeId` criado via auto-save; direção visual = `storeId` existente + tom de voz)
+- [ ] 2.2 Criar `src/lib/store-onboarding/tab-state.ts` com `computeTabState(tab, ctx)` puro retornando `{ state, reason? }` e a prioridade `pending_generation > blocked > draft > ready > saved` (D7)
+- [ ] 2.3 Criar `src/lib/store-onboarding/draft-store.ts` com `draftKey/saveDraft/restoreDraft/clearDraft` (TTL 24h, chaves `:new`/`:${storeId}`, `updatedAt`, restauração remove chave expirada) e testes unitários (chave, TTL, escopo por usuário)
+- [ ] 2.4 Escrever testes unitários de `tabs.ts` e `tab-state.ts` cobrindo os cenários dos deltas (desbloqueio progressivo, prioridade de estados, motivo no painel)
+
+## 3. Auto-save, rascunho e drift
+
+- [ ] 3.1 Adicionar `autoSave(fields)` em `src/components/flow/use-store-form.ts` (silencioso, persiste apenas campos válidos; sem `storeId` + mínimo válido → POST draft; sem mínimo → `{ ok: false }` sem chamar POST) e `saveStatus` no estado do hook
+- [ ] 3.2 Criar `src/hooks/use-onboarding-tabs.ts`: `activeTab`/`setActiveTab` (auto-save antes de navegar; se as edições tocam campos do snapshot e há drift novo, o modal abre antes do PATCH desses campos — campos fora do snapshot salvam normalmente), `tabStates` via `computeTabState`, `saveStatus`, `handleInternalNavigation` (intercepta links internos, salva antes de sair), `handlePageHide`/`handleVisibilityChange` (draft síncrono + PATCH best-effort), serialização de saves com ref/seq guard
+- [ ] 3.3 Integrar `useOnboardingTabs` na `StoreIdentityForm` e conectar `saveDraft`/`restoreDraft` (restauração com reconciliação: banco prevalece em campos persistidos; limpeza da chave `:new` após 1º save; limpeza no logout via hook de auth)
+- [ ] 3.4 Atualizar `src/components/flow/use-drift-detection.ts` para interceptar **qualquer saída de contexto** com rascunho ativo que toca campos do snapshot (troca de aba, navegação interna, back/forward, saída da página; além do `step === 2` atual), via callbacks `onNavigate`/`onLeave` do hook, **preservando a bifurcação e endpoints atuais** (requisito `store-onboarding-autosave`): `driftCategory === 'critical'` → `DriftCriticalModal` com `dismissCriticalDrift()` → **POST** `/api/store/{storeId}/visual-signature/dismiss-critical-drift`; `driftCategory === 'sensitive'` → `DriftDecisionModal` com `realinhar()` → **POST** `/api/store/{storeId}/brand-profile/realign` e `ignorar()` → **PATCH** `/api/store/{storeId}/brand-profile/metadata` com `{ drift_dismissed_snapshot: currentSnapshot }`; PATCH dos campos do snapshot adiado até a decisão
+
+## 4. UI — abas, coluna de aceite legal e refatoração do formulário
+
+- [ ] 4.1 Criar `src/components/flow/store-tabs.tsx`: container ARIA tabs (`tablist`/`tab`/`tabpanel`, roving tabindex, setas ←/→ e Home/End, `aria-selected`, `aria-label` com estado), labels mobile compactos, badge pequeno por estado, motivo fora do botão (painel ativo), alvo de toque ≥ 44px (F22)
+- [ ] 4.2 Criar `src/components/flow/legal-acceptance-panel.tsx`: estados `pending/accepted/needs_reacceptance` (enum único), variantes `desktop-sticky-column`/`mobile-compact`, CTA abre `ContractAcceptanceModal` (F30), derivação via `legalClearance` da F30, `aria-label`/`aria-expanded`
+- [ ] 4.3 Refatorar `src/components/flow/store-identity-form.tsx` de wizard 2 steps para painéis por aba: `useState<1|2>` → estado de abas via `useOnboardingTabs`, aceite legal removido do formulário (vira coluna lateral), bloqueio da aba Posicionamento com motivo `falta aceite legal`, CTA "Continuar" fixo no mobile
+- [ ] 4.4 Atualizar `src/components/flow/store-page-client.tsx`: parsing de `?tab=` → aba inicial (deep-link), compat `required=visual-direction` → aba Direção Visual, `required=cadastro-fiscal` → aba Dados, leitura de `message=` mantida, layout desktop (coluna sticky) × mobile (abas compactas)
+
+## 5. Migração de redirects e banners
+
+- [ ] 5.1 Atualizar o guard de `src/app/(app)/campanhas/nova/page.tsx`: `?required=cadastro-fiscal` → `?tab=dados&fiscal=pending&returnTo=/campanhas/nova` e `?required=visual-direction` → `?tab=direcao-visual&message=needs-visual-direction&returnTo=/campanhas/nova`
+- [ ] 5.2 Atualizar o redirect de `src/app/(app)/cadastro/cnpj/page.tsx` e o `cnpj-update-form.tsx`: pós-atualização → `/loja?tab=dados&fiscal=pending` (sem CNPJ pendente) ou `/loja?tab=direcao-visual&message=cnpj-updated` (sem brand profile)
+- [ ] 5.3 Atualizar `src/components/readiness/readiness-banner.tsx` e `src/components/legacy/cnpj-update-banner.tsx`: links → `?tab=` da pendência mantendo mensagem contextual (`?tab=dados&fiscal=pending&returnTo=/dashboard`, `?tab=direcao-visual&message=needs-visual-direction`)
+- [ ] 5.4 Atualizar os testes existentes de redirect/mensagens (`campanhas/nova`, `cadastro/cnpj`, `readiness-banner`, `store-identity-form.redirect-messages`) para os novos targets `?tab=` e garantir que o compat `required=` legado ainda funciona
+
+## 6. Testes e verificação final
+
+- [ ] 6.1 Escrever testes de endpoint do `POST /api/store` (modo draft sem CNPJ 201 sem crédito; verified com CNPJ; gates: geração bloqueada sem fiscal; `is_test_store` gera sem CNPJ somente com entitlement de teste, sem grant freemium automático) e de integração draft → `update-cnpj` (readiness vira ready após anexar CNPJ)
+- [ ] 6.2 Escrever testes de componente para `StoreTabs` (ARIA, deep-link, back/forward, aba bloqueada, mobile compacto) e `LegalAcceptancePanel` (estados, variantes, acessibilidade)
+- [ ] 6.3 Escrever testes do hook `useOnboardingTabs` (troca de aba com/sem mínimo, navegação interna, saveStatus error, serialização de saves) e de `autoSave`/draft (restauração, reconciliação, limpeza após 1º save e logout)
+- [ ] 6.4 Regressão dos fluxos da F30/F32/F33/F34: criação com CNPJ + crédito, readiness, guard de `/campanhas/nova`, banner do dashboard (verificar que gates de geração continuam inalterados)
+- [ ] 6.5 Rodar `npm run typecheck`, `npm run lint` e `npx vitest run` sem erros; validar manualmente em mobile (abandono com `pagehide`/`visibilitychange`, rascunho restaurado, CTA "Continuar" fixo) e desktop (coluna sticky de aceite, back/forward)
+- [ ] 6.6 **Testes de regressão de drift (bloqueadores da F36)** — cobrir: (a) saída do contexto (troca de aba / gerar campanha / dashboard) com drift sensível novo abre `DriftDecisionModal` e não envia PATCH de campos do snapshot antes da decisão; (b) navegação interna com drift sensível intercepta e abre o modal; (c) drift crítico abre `DriftCriticalModal` (não o sensível); (d) cancelar o modal mantém o usuário no contexto atual sem persistir; (e) após realinhar/ignorar/dismissCriticalDrift o save prossegue e a navegação é concluída; (f) loja com assinatura visual ativa mantém `totalGeneratedSignatures` e o gatilho de limite intactos; (g) edições em campos fora do snapshot (ex.: billing) fazem auto-save normalmente mesmo com drift pendente

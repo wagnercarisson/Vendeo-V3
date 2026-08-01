@@ -4,7 +4,7 @@
 
 **17 phases** | **139 requirements mapped** | All covered ✓
 
-**Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23. F35 = Changelog/Novidades, F36 = Stripe/Monetização Pública (renumeração alinhada no OpenSpec F35).
+**Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23. F35 = Changelog/Novidades, F36 = Onboarding — Navegação por Abas, F37 = Stripe/Monetização Pública (renumeração alinhada no documento de alinhamento F36).
 
 ---
 
@@ -30,6 +30,7 @@
 | 33 | ✅ Verificação CNPJ Freemium | Consulta BrasilAPI/CNPJá, cross-check, motor de decisão, admin review, test stores | CNPJ-07–12 | 6 ✅ |
 | 34 | ✅ Store Readiness | Readiness RPC + guarda dupla + direção visual obrigatória + dashboard banner + billing info | F34-READINESS, F34-BILLING, F34-STORE-TYPE, F34-GUARD, F34-LEGACY, F34-UI, F34-DASHBOARD, F34-BRANDPROFILE | 8 ✅ |
 | 35 | ✅ Changelog/Novidades | 5/5 | Complete    | 2026-07-31 |
+| 36 | ○ Onboarding — Navegação por Abas | Em alinhamento | Em planejamento | — |
 
 ---
 
@@ -379,7 +380,7 @@
 
 **Source of truth:** `openspec/changes/fase-35-changelog-novidades/`
 
-**Renumeração (documentada no OpenSpec):** F35 = Changelog/Novidades; Stripe/Monetização Pública deslocada para F36.
+**Renumeração (documentada no alinhamento F36):** F35 = Changelog/Novidades; F36 = Onboarding — Navegação por Abas (nova, v1.5); Stripe/Monetização Pública deslocada para F37 (v1.7, pós-beta).
 
 **Plans:** 5/5 plans complete
 
@@ -454,10 +455,13 @@ Phase 24 (Credit Tables + CreditService) ──┘
                                   Phase 34 (Store Readiness) ✅
                                              │
                                              ▼
-                                   Phase 35 (Changelog/Novidades) ✅
-                                              │
-                                              ▼
-                                   Phase 36 (Stripe / Monetização Pública — futura)
+                                    Phase 35 (Changelog/Novidades) ✅
+                                               │
+                                               ▼
+                                    Phase 36 (Onboarding — Navegação por Abas)
+                                               │
+                                               ▼
+                                    Phase 37 (Stripe / Monetização Pública — v1.7 futura)
 ```
 
 ---
@@ -542,4 +546,4 @@ Phase 24 (Credit Tables + CreditService) ──┘
 
 *Roadmap created: 2026-07-15*
 *Milestone: v1.5 — Lançamento Externo Controlado*
-*Last updated: 2026-07-31 — Phase 35 complete (Changelog/Novidades) — renumeração F36 = Stripe*
+*Last updated: 2026-08-01 — Phase 35 complete (Changelog/Novidades); renumeração F36 = Onboarding — Navegação por Abas, F37 = Stripe/Monetização Pública (v1.7)*

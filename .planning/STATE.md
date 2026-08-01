@@ -2,23 +2,23 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
-current_phase: 35
-status: milestone_complete
-last_updated: 2026-07-31T22:00:50.859Z
+current_phase: 36
+status: in_progress
+last_updated: 2026-08-01T00:00:00.000Z
 progress:
-  total_phases: 18
+  total_phases: 19
   completed_phases: 16
   total_plans: 74
   completed_plans: 68
-  percent: 89
-stopped_at: Milestone complete (Phase 35 was final phase)
+  percent: 84
+stopped_at: F36 (Onboarding — Navegação por Abas) em alinhamento; F37 (Stripe) futura
 ---
 
 # Project State
 
-**Last updated:** 2026-07-31 (quick 260731-qep — documentação legal beta freemium: Termos v1.3, Privacidade v1.2, AUP v1.1 publicadas, aviso de draft removido dos docs e páginas públicas, microcopy em campanhas)
+**Last updated:** 2026-08-01 (alinhamento F36 — Onboarding: Navegação por Abas; renumeração Stripe → F37)
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆ **Em andamento**
-**Current phase:** 35
+**Current phase:** 36
 
 ## Completed
 
@@ -427,9 +427,17 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 35 — CHANGELOG/NOVIDADES ✅
+Phase: 36 — ONBOARDING: NAVEGAÇÃO POR ABAS (em alinhamento)
 Plan: Not started
-v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34 e 35 concluídas. F36 (Stripe / Monetização Pública) como próximo marco (renumerada de F35 → F36).
+v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34 e 35 concluídas. F36 (Onboarding — Navegação por Abas) em alinhamento; F37 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37).
+
+### Phase 36 — Onboarding: Navegação por Abas (em alinhamento)
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| — | — | ○ Alinhamento | docs/alinhamento-fase-36-onboarding-navegacao-por-abas.md (3 abas + desbloqueio progressivo + auto-save + rascunho sessionStorage + URL ?tab= + redirects migrados) |
+
+**Context:** — (planejamento via OpenSpec após aprovação do alinhamento)
 
 ### Phase 35 — Changelog/Novidades ✅
 
@@ -558,7 +566,8 @@ v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34 e 35 concluídas. F36 (
 | F33 | ✅ Complete | Verificação CNPJ Freemium — Consulta BrasilAPI/CNPJá, cross-check, motor de decisão, admin review, test stores |
 | F34 | ✅ Completed | Store Readiness — 5 plans, 17+ testes, 1189 total |
 | **F35** | **✅ Completed** | **Changelog/Novidades — 5 plans, 3 waves, 42 testes novos, 1345 total, typecheck/lint/build limpos** |
-| F36 | ○ Future | Stripe / Monetização Pública (renumerada de F35 → F36) |
+| F36 | ○ In progress | Onboarding — Navegação por Abas (em alinhamento — docs/alinhamento-fase-36-onboarding-navegacao-por-abas.md) |
+| F37 | ○ Future | Stripe / Monetização Pública (renumerada de F36 → F37; v1.7, pós-beta) |
 
 ### Quick Tasks Completed
 

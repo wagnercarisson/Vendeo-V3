@@ -40,7 +40,7 @@ A milestone v1.4 transformou o Vendeo em um produto SaaS coerente: app shell pro
 - Saldo visível na topbar + seção de créditos em `/conta` com extrato
 - Observabilidade (logging estruturado, telemetria IA, dashboard operacional)
 - Refinamento visual + Launch Readiness (UAT externo, runbook, feature flag)
-- **Stripe / compra real de créditos**: adiado para F36 (pós-beta)
+- **Stripe / compra real de créditos**: adiado para F37 (v1.7, pós-beta)
 
 <details>
 <summary>Versões anteriores</summary>
@@ -298,4 +298,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-31 after Phase 35 (Changelog/Novidades) — milestone v1.5 concluída, F36 Stripe próximo marco*
+*Last updated: 2026-08-01 after Phase 35 (Changelog/Novidades) — v1.5 segue com F36 (Onboarding: Navegação por Abas) em alinhamento; F37 (Stripe) futura pós-beta*

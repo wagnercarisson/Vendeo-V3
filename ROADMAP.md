@@ -54,10 +54,12 @@ Autenticação completa, vínculo user→store, isolamento multi-tenant, beta.ve
 
 ### 📋 v1.5 — Lançamento Externo Controlado ◆
 
-Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, UAT externo, fundação legal, modelo comercial, freemium anti-abuso CNPJ, changelog/novidades e Stripe (F36).
+Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, UAT externo, fundação legal, modelo comercial, freemium anti-abuso CNPJ, changelog/novidades, onboarding por abas (F36) e Stripe (F37).
 
 <details open>
 <summary>◆ v1.5 Lançamento Externo Controlado (F23-F36) — Em andamento</summary>
+
+> Stripe / Monetização Pública deslocada para F37 (v1.7, pós-beta).
 
 Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, fundação legal, modelo comercial e store readiness.
 
@@ -144,7 +146,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - Dependências: F32 (cnpj_normalized, razao_social, nome_fantasia), F33 (store_brand_profiles, verification_status), F30 (legal clearance)
 
 - [x] Phase 35: Changelog / Novidades (5/5 plans)
-- [ ] Phase 36: Stripe / Monetização Pública (pending)
+- [ ] Phase 36: Onboarding — Navegação por Abas (pending)
 </details>
 
 ## Progress
@@ -185,7 +187,8 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 33. Verificação CNPJ Freemium | v1.5 | 0/5 | ◆ Planning | — |
 | 34. Store Readiness | v1.5 | 0/0 | ○ Pending | — |
 | 35. Changelog / Novidades | v1.5 | 5/5 | ✅ Complete | 2026-07-31 |
-| 36. Stripe / Monetização Pública | v1.5 | 0/0 | ○ Pending | — |
+| 36. Onboarding — Navegação por Abas | v1.5 | 0/0 | ○ Pending | — |
+| 37. Stripe / Monetização Pública | v1.7 | 0/0 | ○ Pending | — |
 
 ---
 
