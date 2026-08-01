@@ -1,4 +1,4 @@
-# Política de Uso Aceitável — Vendeo
+# Política de Uso Aceitável - Vendeo
 
 **Versão:** v1.1
 **Data de publicação:** 2026-07-31
@@ -21,32 +21,30 @@ Esta Política de Uso Aceitável estabelece as regras para utilização da Plata
 
 2.4. **Atividades ilegais:** Promoção ou instrução para práticas ilegais, incluindo tráfico de drogas, armas, produtos falsificados ou qualquer atividade criminosa.
 
-2.5. **Plágio e violação de direitos autorais:** Conteúdo que infrinja direitos de propriedade intelectual de terceiros, incluindo o uso de marcas, imagens ou materiais de terceiros sem a devida autorização.
+2.5. **Plágio e violação de direitos:** Conteúdo que infrinja direitos de propriedade intelectual, direitos autorais, marcas, direito de imagem, privacidade ou outros direitos de terceiros, incluindo o uso de marcas, imagens ou materiais de terceiros sem a devida autorização.
 
 2.6. **Desinformação:** Informações falsas ou enganosas sobre saúde, segurança, eleições ou qualquer assunto de interesse público.
 
-2.7. **Conteúdo enganoso:** Práticas de publicidade enganosa ou abusiva, incluindo alegações falsas sobre produtos ou serviços.
+2.7. **Conteúdo enganoso:** Práticas de publicidade enganosa ou abusiva, incluindo alegações falsas, exageradas ou não comprováveis sobre produtos ou serviços, benefícios, resultados, certificações, selos ou garantias.
 
 2.8. **Conteúdo restrito a menores:** Conteúdo destinado a menores de 18 anos que não atenda à regulamentação aplicável.
 
-2.9. **Publicidade enganosa:** Alegações falsas ou não comprováveis sobre produtos ou serviços, incluindo benefícios, resultados, certificações ou selos que o Lojista não possa comprovar.
+2.9. **Ofertas sem disponibilidade razoável:** Divulgar ofertas sem disponibilidade razoável do produto ou sem informar de maneira clara limitações relevantes de quantidade, período, unidades participantes ou condições da promoção.
 
-2.10. **Promoções sem estoque:** Divulgar oferta ou promoção sem estoque suficiente para o atendimento dos consumidores, nos termos do Código de Defesa do Consumidor.
-
-2.11. **Preço "de/por" sem preço anterior real:** Praticar a comparação "de/por" sem um preço anterior real e efetivamente praticado, conforme as normas do CONAR.
+2.10. **Preço "de/por" sem preço anterior real:** Praticar a comparação "de/por" sem um preço anterior real e efetivamente praticado, conforme as normas aplicáveis de publicidade e defesa do consumidor.
 
 ## 3. Categorias Sensíveis
 
-3.1. O uso da Plataforma para campanhas das seguintes categorias é permitido sob responsabilidade exclusiva do Lojista, que deve garantir a conformidade com a regulamentação específica aplicável:
+3.1. O uso da Plataforma para campanhas das seguintes categorias é permitido sob responsabilidade do Lojista, que deve garantir a conformidade com a regulamentação específica aplicável:
 
-   - **Saúde e suplementos:** alegações de eficácia ou propriedades devem ser comprovadas e atender à regulamentação da ANVISA
-   - **Bebidas:** incluindo bebidas alcoólicas, observadas as restrições legais de publicidade
-   - **Produtos financeiros:** crédito, empréstimos e serviços financeiros, observadas as normas aplicáveis (ex.: CVM, BACEN)
-   - **Produtos falsificados ou de procedência duvidosa:** proibida a veiculação de produtos falsificados ou com origem não comprovada
-   - **Conteúdo político/eleitoral:** observada a legislação eleitoral aplicável
-   - **Conteúdo envolvendo menores:** deve atender à regulamentação aplicável e não explorar a imagem de menores de forma inadequada
+   - **Saúde, medicamentos e suplementos:** alegações de eficácia, propriedades terapêuticas, composição ou benefícios devem ser comprovadas e atender à regulamentação aplicável, inclusive ANVISA quando cabível.
+   - **Bebidas:** incluindo bebidas alcoólicas, observadas as restrições legais e autorregulatórias de publicidade.
+   - **Produtos financeiros:** crédito, empréstimos, investimentos, seguros e serviços financeiros, observadas as normas aplicáveis.
+   - **Produtos falsificados ou de procedência duvidosa:** proibida a veiculação de produtos falsificados, não autorizados ou com origem não comprovada.
+   - **Conteúdo político ou eleitoral:** observada a legislação eleitoral aplicável.
+   - **Conteúdo envolvendo menores:** deve atender à regulamentação aplicável e não explorar a imagem de menores de forma inadequada.
 
-3.2. O Vendeo pode, a seu critério, recusar ou remover campanhas de categorias sensíveis que não apresentem conformidade evidente com a regulamentação aplicável.
+3.2. O Vendeo pode recusar, bloquear ou remover campanhas de categorias sensíveis quando houver indícios de ilegalidade, abuso, risco relevante, violação desta Política ou falta de conformidade evidente com a regulamentação aplicável.
 
 ## 4. Conduta Proibida
 
@@ -54,41 +52,42 @@ O Usuário não pode:
 
 4.1. Utilizar a Plataforma para enviar spam ou mensagens não solicitadas.
 
-4.2. Tentar burlar os sistemas de rate limit, autenticação ou controle de créditos.
+4.2. Tentar burlar os sistemas de rate limit, autenticação, segurança, elegibilidade promocional ou controle de créditos.
 
 4.3. Realizar engenharia reversa, descompilar ou tentar extrair o código-fonte da Plataforma.
 
 4.4. Utilizar bots, scrapers ou qualquer meio automatizado para acessar a Plataforma fora dos mecanismos previstos.
 
-4.5. Criar múltiplas contas para contornar restrições ou limites aplicáveis.
+4.5. Criar múltiplas contas ou lojas para contornar restrições, limites aplicáveis ou benefícios gratuitos.
 
 4.6. Compartilhar credenciais de acesso ou permitir que terceiros não autorizados utilizem sua conta.
 
 ## 5. Sanções
 
-5.1. A violação desta Política pode resultar, a critério exclusivo do Vendeo:
+5.1. A violação desta Política pode resultar em advertência, suspensão temporária, cancelamento de créditos promocionais, cancelamento da loja, encerramento da conta, remoção de campanhas ou outras medidas proporcionais, conforme a gravidade, o risco, a reincidência, o potencial de dano, a urgência, a cooperação do Usuário e as obrigações legais aplicáveis.
 
-   - **Advertência:** Notificação ao Usuário sobre a violação
-   - **Suspensão temporária:** Bloqueio do acesso por período determinado
-   - **Cancelamento da conta:** Encerramento definitivo do acesso à Plataforma
-   - **Cancelamento da loja:** Remoção da loja e campanhas associadas
+5.2. O Vendeo poderá remover ou bloquear conteúdo que viole esta Política, sem aviso prévio quando houver urgência, risco relevante, necessidade de preservar a Plataforma, proteger terceiros ou cumprir obrigação legal.
 
-5.2. O Vendeo se reserva o direito de remover qualquer conteúdo que viole esta Política sem aviso prévio.
-
-5.3. Violações graves ou reincidentes podem resultar em cancelamento imediato sem direito a reembolso de créditos não utilizados.
+5.3. Violações graves ou reincidentes podem resultar no cancelamento imediato da conta e na perda dos créditos promocionais não utilizados, sem direito a conversão, restituição em dinheiro ou compensação.
 
 ## 6. Responsabilidade do Usuário
 
-6.1. O Lojista é o único responsável pelo conteúdo das campanhas geradas e publicadas.
+6.1. O Lojista é responsável pelo conteúdo das campanhas geradas, revisadas, baixadas e publicadas.
 
-6.2. O Lojista deve garantir que seu produto, oferta e materiais promocionais cumprem a legislação aplicável, incluindo o Código de Defesa do Consumidor e as regulamentações do CONAR.
+6.2. O Lojista deve garantir que seu produto, oferta e materiais promocionais cumprem a legislação aplicável, incluindo regras de defesa do consumidor, publicidade, propriedade intelectual, direito de imagem e regulamentações setoriais.
 
-6.3. O Lojista deve obter todas as autorizações necessárias para uso de imagens, marcas e conteúdos de terceiros.
+6.3. O Lojista deve obter todas as autorizações necessárias para uso de imagens, marcas, fotografias, logotipos, embalagens, nomes comerciais, pessoas retratadas e conteúdos de terceiros.
 
-## 7. Disposições Gerais
+## 7. Alterações Desta Política
 
-7.1. Esta Política pode ser atualizada periodicamente. A versão vigente é aquela aceita pelo Usuário no momento da criação da loja.
+7.1. Esta Política poderá ser atualizada periodicamente. As alterações entrarão em vigor na data informada na comunicação ou na própria versão publicada.
 
-7.2. Dúvidas sobre esta Política podem ser direcionadas ao suporte do Vendeo.
+7.2. Quando a alteração afetar substancialmente direitos, responsabilidades ou condições de uso, o Vendeo poderá solicitar novo aceite. Caso o Usuário não concorde, poderá encerrar sua conta antes da entrada em vigor da alteração, observado o caráter gratuito e experimental do beta.
 
-7.3. Esta Política incorpora-se por referência aos Termos de Uso do Vendeo.
+7.3. Mudanças urgentes exigidas por lei, segurança, prevenção de abuso ou preservação da Plataforma poderão ter vigência imediata, com comunicação simultânea ou posterior quando razoavelmente possível.
+
+## 8. Disposições Gerais
+
+8.1. Dúvidas sobre esta Política podem ser direcionadas ao suporte do Vendeo.
+
+8.2. Esta Política incorpora-se por referência aos Termos de Uso do Vendeo.

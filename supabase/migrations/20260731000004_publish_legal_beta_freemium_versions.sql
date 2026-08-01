@@ -11,19 +11,19 @@ VALUES
   (
     'terms_of_service',
     'v1.3',
-    'Beta freemium: créditos promocionais, compra/planos como funcionalidade futura, raiz de CNPJ como critério técnico, responsabilidade e revisão do lojista.',
+    'Beta fechado freemium: creditos promocionais, licenca operacional de materiais, IA, responsabilidades, encerramento do beta e funcionalidades pagas futuras.',
     now()
   ),
   (
     'privacy_policy',
     'v1.2',
-    'Suboperadores por categoria, provedores de IA, transferência internacional, senha com hash, CNPJ tecnicamente correto.',
+    'Fornecedores e operadores de dados, provedores de IA, transferencia internacional, bases legais, direitos LGPD, seguranca e retencao.',
     now()
   ),
   (
     'acceptable_use',
     'v1.1',
-    'Publicidade enganosa, promoções sem estoque, de/por sem preço real, categorias sensíveis.',
+    'Publicidade enganosa, ofertas sem disponibilidade razoavel, de/por sem preco real, direitos de terceiros, categorias sensiveis e creditos promocionais.',
     now()
   )
 ON CONFLICT (document_type, version)

@@ -71,6 +71,36 @@ must_haves:
 
 # QEP — Adequar Documentação Legal para Beta Freemium
 
+## Adendo Pós-Revisão Especializada - 2026-07-31
+
+Após a execução inicial, os documentos versionados atuais foram ajustados
+diretamente, sem criar novas versões, porque ainda não houve acesso/aceite das
+versões v1.3/v1.2/v1.1 por beta testers.
+
+Este adendo prevalece sobre trechos anteriores do plano que falem em
+"suboperadores", teto de responsabilidade baseado em valores pagos, prazo geral
+de 15 dias úteis, eliminação universal em 90 dias ou validade dos créditos
+enquanto a conta estiver ativa.
+
+Decisões finais incorporadas:
+
+- Não publicar dados pessoais do responsável pelo projeto no beta fechado. O
+  risco foi registrado apenas em `legal-review-notes.md` e deverá ser corrigido
+  quando houver pessoa jurídica constituída, antes de cobrança ou operação
+  comercial ampla.
+- Termos v1.3 passam a incluir beta fechado, licença operacional dos Materiais
+  do Lojista, ressalvas sobre resultados de IA, destino de créditos
+  promocionais, revisão humana ampliada e responsabilidade sem teto baseado em
+  valores pagos.
+- Privacidade v1.2 passa a usar "fornecedores e operadores de dados", bases
+  legais gerais, direitos LGPD ampliados, prazos legais, segurança sem promessas
+  absolutas e retenção compatível com obrigações legais, antifraude, auditoria
+  e backups.
+- AUP v1.1 passa a usar "ofertas sem disponibilidade razoável" e "perda de
+  créditos promocionais" em vez de "reembolso".
+- Microcopy de campanha permanece como implementada, sem novos checkboxes,
+  modais ou fricção.
+
 <objective>
 
 **Purpose:** Adequar a documentação legal pública do Vendeo para a fase de beta testers na versão freemium: sem cobrança pública, sem Stripe, sem planos pagos, sem compra self-service de créditos. Créditos são gratuitos/promocionais ou concedidos manualmente pelo time. A redação deve preparar a evolução futura para créditos pagos SEM implementar cobrança.
