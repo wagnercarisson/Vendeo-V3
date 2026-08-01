@@ -30,7 +30,7 @@
 | 33 | ✅ Verificação CNPJ Freemium | Consulta BrasilAPI/CNPJá, cross-check, motor de decisão, admin review, test stores | CNPJ-07–12 | 6 ✅ |
 | 34 | ✅ Store Readiness | Readiness RPC + guarda dupla + direção visual obrigatória + dashboard banner + billing info | F34-READINESS, F34-BILLING, F34-STORE-TYPE, F34-GUARD, F34-LEGACY, F34-UI, F34-DASHBOARD, F34-BRANDPROFILE | 8 ✅ |
 | 35 | ✅ Changelog/Novidades | 5/5 | Complete    | 2026-07-31 |
-| 36 | ○ Onboarding — Navegação por Abas | Em alinhamento | Em planejamento | — |
+| 36 | ○ Onboarding — Navegação por Abas | Em planejamento | Em planejamento | — |
 
 ---
 
@@ -414,6 +414,66 @@
 - XSS: `dangerouslySetInnerHTML` recebe exclusivamente saída de `renderMarkdown` (sanitizada) — 35-01, 35-03, 35-04
 - Componentes client NUNCA importam `get-changelog`/`server-only` (fluxo por prop) — 35-02, 35-03, 35-04
 - Chaves de estado `vendeo:last_seen_changelog_id` e `vendeo:dismissed_changelog_announcement_id` — 35-02, 35-03, 35-04
+
+---
+
+### Phase 36 — Onboarding: Navegação por Abas
+
+**Goal:** Transformar o onboarding de loja em um painel de **3 abas** (Dados / Posicionamento / Direção Visual) em `/loja` com navegação por `?tab=`, desbloqueio progressivo com soft-block, aceite legal como coluna lateral global, auto-save confiável e rascunho `localStorage` com TTL 24h — e backend de criação de loja em **modo draft** sem CNPJ (loja draft não é loja pronta: não gera campanha nem recebe freemium até cadastro fiscal válido, exceto `is_test_store`).
+
+**Requirements:** F36-TABS-01 a F36-TABS-05, F36-DRAFT-01 a F36-DRAFT-04, F36-AUTOSAVE-01 a F36-AUTOSAVE-04, F36-DRAFT-CREATE-01 a F36-DRAFT-CREATE-04, F36-IDENTITY-UI-01 a F36-IDENTITY-UI-07, F36-LEGAL-01 a F36-LEGAL-02, F36-READINESS-01 a F36-READINESS-04, F36-OWNERSHIP-01 a F36-OWNERSHIP-01
+
+**Success criteria:**
+1. `/loja` com 3 abas navegáveis por `?tab=` (back/forward funcionam); abas mobile compactas (Dados/Perfil/Visual)
+2. Desbloqueio progressivo com `computeTabUnlock` (D1/D9): dados sempre aberta; posicionamento = nome+segmento+aceite legal+storeId; direção visual = storeId+tom de voz; CNPJ nunca bloqueia navegação
+3. Aceite legal como coluna lateral global (`LegalAcceptancePanel`) bloqueia Posicionamento quando pendente/reaceite
+4. Auto-save em troca de aba + navegação interna; abandono mobile protegido por localStorage TTL 24h (pagehide/visibilitychange síncronos)
+5. Rascunho `localStorage` escopado por usuário, chaves `:new`/`:${storeId}`, limpo após 1º save e logout
+6. Backend: `POST /api/store` em dois modos (draft × verified/fiscal) via RPC `create_store_draft` (sem grant freemium, `onboardingGranted: false`)
+7. Loja draft não gera campanha nem recebe crédito; readiness reporta `cadastro_fiscal` pendente; `is_test_store` contorna fiscal só com entitlement de teste (F33)
+8. Redirects/banners migrados para `?tab=` (guard `/campanhas/nova`, `/cadastro/cnpj`, ReadinessBanner); compat `required=` mantido
+9. Drift detection integrada à navegação por abas (D13) — intercepta troca de aba, navegação interna, back/forward e saída da página; ordem e endpoints preservados
+10. ARIA tabs completo (D11); touch targets ≥ 44px (F22); 34+ testes novos; typecheck/lint/build limpos
+
+**Dependencies:** Phase 30 (legalClearance, ContractAcceptanceModal, getAcceptanceStatus), Phase 32/33 (CNPJ obrigatório na geração/crédito, update_store_cnpj, is_test_store), Phase 34 (check_store_readiness, getStoreReadiness, MissingItem), Phase 22 (touch targets ≥ 44px), design system (`openspec/design-system/MASTER.md` + `pages/store-identity.md`)
+
+**Source of truth:** `openspec/changes/fase-36-onboarding-navegacao-por-abas/`
+
+**Renumeração (D14):** F36 = Onboarding — Navegação por Abas (nova, v1.5); F37 = Stripe / Monetização Pública (v1.7, pós-beta).
+
+**Plans:** planejamento em andamento (plan-phase)
+
+**Status:** Em planejamento
+
+**Wave 1** *(Backend + Core Library — 36-02 depende de 36-01; roda após 36-01 na mesma wave)*
+
+| Plan | Wave | Objective |
+|------|------|-----------|
+| 36-01 | 1 | Backend — RPC create_store_draft + POST /api/store em dois modos |
+| 36-02 | 1 | Core Library — tabs.ts, tab-state.ts, draft-store.ts + testes unitários |
+
+**Wave 2** *(bloqueada na Wave 1 — auto-save/drift e UI dependem da máquina de abas)*
+
+| Plan | Wave | Objective |
+|------|------|-----------|
+| 36-03 | 2 | Auto-save, rascunho e drift — useOnboardingTabs, autoSave, use-drift-detection |
+| 36-04 | 2 | UI — StoreTabs, LegalAcceptancePanel, refatoração store-identity-form/page-client |
+
+**Wave 3** *(bloqueada nas Waves 1–2 — migração de redirects + testes)*
+
+| Plan | Wave | Objective |
+|------|------|-----------|
+| 36-05 | 3 | Migração de redirects/banners para ?tab= + compat required= |
+| 36-06 | 3 | Testes + Verificação + Tracking — testes de endpoint/componente/hook, drift blockers, typecheck/lint/build, tracking |
+
+**Cross-cutting constraints:**
+- CNPJ não bloqueia navegação no onboarding (D8); bloqueia apenas geração/crédito (gates F34/F32/F33)
+- Loja draft não é loja pronta — sem grant freemium na criação draft; crédito só via fluxo com CNPJ ou update-cnpj
+- Rascunho `localStorage` com TTL 24h, chaves `vendeo:store_draft:${userId}:new` / `:${storeId}`, limpo após 1º save e logout (D5)
+- Escrita síncrona no abandono via pagehide/visibilitychange (D4/D5); PATCH no unload best-effort
+- Drift: intercepta qualquer saída de contexto; ordem/endpoints preservados (D13)
+- `?required=` legado aceito como compat (D6/D12)
+- ARIA tabs + touch targets ≥ 44px (D11/F22)
 
 ---
 

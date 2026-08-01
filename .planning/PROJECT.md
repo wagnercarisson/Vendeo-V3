@@ -298,4 +298,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-01 after Phase 35 (Changelog/Novidades) — v1.5 segue com F36 (Onboarding: Navegação por Abas) em alinhamento; F37 (Stripe) futura pós-beta*
+*Last updated: 2026-08-01 after Phase 35 (Changelog/Novidades) — v1.5 segue com F36 (Onboarding: Navegação por Abas) em planejamento; F37 (Stripe) futura pós-beta*

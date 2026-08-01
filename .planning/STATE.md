@@ -11,12 +11,12 @@ progress:
   total_plans: 74
   completed_plans: 68
   percent: 84
-stopped_at: F36 (Onboarding — Navegação por Abas) em alinhamento; F37 (Stripe) futura
+stopped_at: F36 (Onboarding — Navegação por Abas) em planejamento; F37 (Stripe) futura
 ---
 
 # Project State
 
-**Last updated:** 2026-08-01 (alinhamento F36 — Onboarding: Navegação por Abas; renumeração Stripe → F37)
+**Last updated:** 2026-08-01 (planejamento F36 — Onboarding: Navegação por Abas; renumeração Stripe → F37)
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆ **Em andamento**
 **Current phase:** 36
 
@@ -427,17 +427,17 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 36 — ONBOARDING: NAVEGAÇÃO POR ABAS (em alinhamento)
+Phase: 36 — ONBOARDING: NAVEGAÇÃO POR ABAS (em planejamento)
 Plan: Not started
-v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34 e 35 concluídas. F36 (Onboarding — Navegação por Abas) em alinhamento; F37 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37).
+v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34 e 35 concluídas. F36 (Onboarding — Navegação por Abas) em planejamento; F37 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37).
 
-### Phase 36 — Onboarding: Navegação por Abas (em alinhamento)
+### Phase 36 — Onboarding: Navegação por Abas (em planejamento)
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
-| — | — | ○ Alinhamento | docs/alinhamento-fase-36-onboarding-navegacao-por-abas.md (3 abas + desbloqueio progressivo + auto-save + rascunho sessionStorage + URL ?tab= + redirects migrados) |
+| — | — | ○ Planejamento | openspec/changes/fase-36-onboarding-navegacao-por-abas/ (3 abas + desbloqueio progressivo + auto-save + rascunho localStorage TTL 24h + URL ?tab= + redirects migrados + POST /api/store em dois modos) |
 
-**Context:** — (planejamento via OpenSpec após aprovação do alinhamento)
+**Context:** — (fonte da verdade: `openspec/changes/fase-36-onboarding-navegacao-por-abas/`; alinhamento base em `docs/alinhamento-fase-36-onboarding-navegacao-por-abas.md`)
 
 ### Phase 35 — Changelog/Novidades ✅
 
@@ -566,7 +566,7 @@ v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34 e 35 concluídas. F36 (
 | F33 | ✅ Complete | Verificação CNPJ Freemium — Consulta BrasilAPI/CNPJá, cross-check, motor de decisão, admin review, test stores |
 | F34 | ✅ Completed | Store Readiness — 5 plans, 17+ testes, 1189 total |
 | **F35** | **✅ Completed** | **Changelog/Novidades — 5 plans, 3 waves, 42 testes novos, 1345 total, typecheck/lint/build limpos** |
-| F36 | ○ In progress | Onboarding — Navegação por Abas (em alinhamento — docs/alinhamento-fase-36-onboarding-navegacao-por-abas.md) |
+| F36 | ○ In progress | Onboarding — Navegação por Abas (em planejamento — openspec/changes/fase-36-onboarding-navegacao-por-abas/) |
 | F37 | ○ Future | Stripe / Monetização Pública (renumerada de F36 → F37; v1.7, pós-beta) |
 
 ### Quick Tasks Completed
