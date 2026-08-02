@@ -4,19 +4,18 @@ milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 current_phase: 36
 status: in_progress
-last_updated: 2026-08-01T00:00:00.000Z
+last_updated: "2026-08-02T00:30:00.000Z"
 progress:
   total_phases: 19
   completed_phases: 16
-  total_plans: 74
+  total_plans: 80
   completed_plans: 68
   percent: 84
-stopped_at: F36 (Onboarding — Navegação por Abas) em planejamento; F37 (Stripe) futura
 ---
 
 # Project State
 
-**Last updated:** 2026-08-01 (planejamento F36 — Onboarding: Navegação por Abas; renumeração Stripe → F37)
+**Last updated:** 2026-08-01 (planejamento F36 completo — 6 plans / 5 waves; renumeração Stripe → F37)
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆ **Em andamento**
 **Current phase:** 36
 
@@ -427,17 +426,24 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 36 — ONBOARDING: NAVEGAÇÃO POR ABAS (em planejamento)
-Plan: Not started
-v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34 e 35 concluídas. F36 (Onboarding — Navegação por Abas) em planejamento; F37 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37).
+Phase: 36 — ONBOARDING: NAVEGAÇÃO POR ABAS (pronto para executar)
+Plan: 6 plans (5 waves) — aguardando execução
+v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34 e 35 concluídas. F36 (Onboarding — Navegação por Abas) planejada (6 plans / 5 waves), pronta para execução; F37 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37).
 
-### Phase 36 — Onboarding: Navegação por Abas (em planejamento)
+### Phase 36 — Onboarding: Navegação por Abas (pronto para executar)
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
-| — | — | ○ Planejamento | openspec/changes/fase-36-onboarding-navegacao-por-abas/ (3 abas + desbloqueio progressivo + auto-save + rascunho localStorage TTL 24h + URL ?tab= + redirects migrados + POST /api/store em dois modos) |
+| 36-01 | 1 | ○ | Migration `create_store_draft` + `POST /api/store` dois modos (draft/fiscal) + `[BLOCKING] supabase db push` |
+| 36-02 | 1 | ○ | Core — tabs.ts, tab-state.ts, draft-store.ts + testes (sem dep. do banco) |
+| 36-03 | 2 | ○ | autoSave, use-onboarding-tabs (popstate back/forward), drift estendido, cleanup logout |
+| 36-04 | 3 | ○ | StoreTabs ARIA + LegalAcceptancePanel + form refactor + parsing `?tab=` |
+| 36-05 | 4 | ○ | Redirects/banners → `?tab=` |
+| 36-06 | 5 | ○ | Testes endpoint/gates/draft→fiscal, regressão, checkpoint humano |
 
-**Context:** — (fonte da verdade: `openspec/changes/fase-36-onboarding-navegacao-por-abas/`; alinhamento base em `docs/alinhamento-fase-36-onboarding-navegacao-por-abas.md`)
+**Context:** `.planning/phases/36-onboarding-navegacao-por-abas/36-CONTEXT.md`
+**Source:** `openspec/changes/fase-36-onboarding-navegacao-por-abas/` (fonte da verdade)
+**Checker:** 31/31 requirements covered, 0 blockers, 0 warnings
 
 ### Phase 35 — Changelog/Novidades ✅
 

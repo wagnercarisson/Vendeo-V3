@@ -30,7 +30,7 @@
 | 33 | ✅ Verificação CNPJ Freemium | Consulta BrasilAPI/CNPJá, cross-check, motor de decisão, admin review, test stores | CNPJ-07–12 | 6 ✅ |
 | 34 | ✅ Store Readiness | Readiness RPC + guarda dupla + direção visual obrigatória + dashboard banner + billing info | F34-READINESS, F34-BILLING, F34-STORE-TYPE, F34-GUARD, F34-LEGACY, F34-UI, F34-DASHBOARD, F34-BRANDPROFILE | 8 ✅ |
 | 35 | ✅ Changelog/Novidades | 5/5 | Complete    | 2026-07-31 |
-| 36 | ○ Onboarding — Navegação por Abas | Em planejamento | Em planejamento | — |
+| 36 | ○ Onboarding — Navegação por Abas | Planejado | Planejado (6 plans / 5 waves) | 2026-08-01 |
 
 ---
 
@@ -441,37 +441,46 @@
 
 **Renumeração (D14):** F36 = Onboarding — Navegação por Abas (nova, v1.5); F37 = Stripe / Monetização Pública (v1.7, pós-beta).
 
-**Plans:** planejamento em andamento (plan-phase)
+**Plans:** 6 plans / 5 waves — ver tabelas por wave abaixo.
 
-**Status:** Em planejamento
-
-**Wave 1** *(Backend + Core Library — 36-02 depende de 36-01; roda após 36-01 na mesma wave)*
+**Wave 1** *(Backend + Core Library — 36-02 depende de 36-01; roda após 36-01 na mesma wave; 36-01 autonomous: no — requer supabase db push)*
 
 | Plan | Wave | Objective |
 |------|------|-----------|
-| 36-01 | 1 | Backend — RPC create_store_draft + POST /api/store em dois modos |
+| 36-01 | 1 | Backend — RPC create_store_draft + POST /api/store em dois modos + `[BLOCKING] supabase db push` |
 | 36-02 | 1 | Core Library — tabs.ts, tab-state.ts, draft-store.ts + testes unitários |
 
-**Wave 2** *(bloqueada na Wave 1 — auto-save/drift e UI dependem da máquina de abas)*
+**Wave 2** *(bloqueada na Wave 1 — auto-save/drift dependem da máquina de abas)*
 
 | Plan | Wave | Objective |
 |------|------|-----------|
-| 36-03 | 2 | Auto-save, rascunho e drift — useOnboardingTabs, autoSave, use-drift-detection |
-| 36-04 | 2 | UI — StoreTabs, LegalAcceptancePanel, refatoração store-identity-form/page-client |
+| 36-03 | 2 | Auto-save, rascunho e drift — useOnboardingTabs (popstate back/forward), autoSave, drift estendido, cleanup logout |
 
-**Wave 3** *(bloqueada nas Waves 1–2 — migração de redirects + testes)*
+**Wave 3** *(bloqueada nas Waves 1–2 — UI depende de tabs + auto-save)*
 
 | Plan | Wave | Objective |
 |------|------|-----------|
-| 36-05 | 3 | Migração de redirects/banners para ?tab= + compat required= |
-| 36-06 | 3 | Testes + Verificação + Tracking — testes de endpoint/componente/hook, drift blockers, typecheck/lint/build, tracking |
+| 36-04 | 3 | UI — StoreTabs ARIA, LegalAcceptancePanel, form refactor, parsing `?tab=` |
+
+**Wave 4** *(bloqueada na Wave 3 — migração de redirects para a nova navegação)*
+
+| Plan | Wave | Objective |
+|------|------|-----------|
+| 36-05 | 4 | Migração de redirects/banners para `?tab=` + compat `required=` |
+
+**Wave 5** *(bloqueada nas Waves 1–4 — testes/verificação completos + checkpoint humano; autonomous: no)*
+
+| Plan | Wave | Objective |
+|------|------|-----------|
+| 36-06 | 5 | Testes endpoint/gates/draft→fiscal + regressão + verificação + tracking |
 
 **Cross-cutting constraints:**
 - CNPJ não bloqueia navegação no onboarding (D8); bloqueia apenas geração/crédito (gates F34/F32/F33)
-- Loja draft não é loja pronta — sem grant freemium na criação draft; crédito só via fluxo com CNPJ ou update-cnpj
+- Loja draft não é loja pronta — `create_store_draft` NÃO chama `try_grant_onboarding_entitlement`/`grant_credits`; `onboardingGranted` hardcoded `false` (D15) — 36-01, 36-06
 - Rascunho `localStorage` com TTL 24h, chaves `vendeo:store_draft:${userId}:new` / `:${storeId}`, limpo após 1º save e logout (D5)
 - Escrita síncrona no abandono via pagehide/visibilitychange (D4/D5); PATCH no unload best-effort
-- Drift: intercepta qualquer saída de contexto; ordem/endpoints preservados (D13)
+- Drift: intercepta qualquer saída de contexto; ordem/endpoints preservados (D13) — 36-03
+- `?tab=` sync back/forward via popstate (D6) — 36-03, 36-04, 36-05
 - `?required=` legado aceito como compat (D6/D12)
 - ARIA tabs + touch targets ≥ 44px (D11/F22)
 
