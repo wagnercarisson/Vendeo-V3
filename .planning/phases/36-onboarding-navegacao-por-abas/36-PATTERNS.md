@@ -1,7 +1,7 @@
 # Phase 36: Onboarding — Navegação por Abas — Pattern Map
 
 **Mapped:** 2026-08-01
-**Files analyzed:** 20 (7 new + 10 modified + 3 test-groups)
+**Files analyzed:** 20 (7 new + 10 modified + 3 test-groups; `use-drift-detection.ts` PRESERVED — consumed, not modified)
 **Analogs found:** 19 / 20 (ARIA tabs container has no direct analog — partial)
 
 ## File Classification
@@ -17,7 +17,7 @@
 | `src/components/flow/store-identity-form.tsx` (mod) | component | CRUD + event-driven | itself (refactor target) | exact |
 | `src/components/flow/store-page-client.tsx` (mod) | component (wrapper) | request-response | itself (26 lines) | exact |
 | `src/components/flow/use-store-form.ts` (mod) | hook | CRUD | itself | exact |
-| `src/components/flow/use-drift-detection.ts` (mod) | hook | event-driven | itself + `src/lib/drift.ts` | exact |
+| `src/components/flow/use-drift-detection.ts` (preserved) | hook | event-driven | itself + `src/lib/drift.ts` | exact — CONSUMIDO como está (D13); NÃO modificar |
 | `src/components/readiness/readiness-banner.tsx` (mod) | component | request-response | itself (`missingToDisplay`) | exact |
 | `src/components/legacy/cnpj-update-banner.tsx` (mod) | component | request-response | itself | exact |
 | `src/app/(app)/campanhas/nova/page.tsx` (mod) | page (server) | request-response | itself (`redirect` on readiness) | exact |
@@ -319,7 +319,7 @@ if (saved && "storeId" in saved) {
 
 **Step indicator → tab bar** (lines 1138-1159) — the "Necessário" badge logic (line 1155-1157: `{!inferredProfile && (<span ...>Necessário</span>)}`) stays on the Direção Visual tab (D7).
 
-**Drift modal wiring (lines 2312-2457)** — `DriftDecisionModal` props (`drift-decision-modal.tsx:5-12`): `{ onRealinhar: ()=>Promise<void>; onIgnorar: ()=>Promise<void>; onCancel: ()=>void; isLoading: boolean; error: string|null; onContinueWithoutDismiss?: ()=>Promise<void> }`. `DriftCriticalModal` props (`drift-critical-modal.tsx:6-16`): `{ open; onOpenChange; storeId; identityState; canGenerateNewSignature; onDismissAndSave; onRemoveVs; onOpenApproval; onCancel }`. These blocks stay intact — only the *interception moment* changes (tab switch + internal nav, not just `step===2`).
+**Drift modal wiring (lines 2312-2457)** — `DriftDecisionModal` props (`drift-decision-modal.tsx:5-12`): `{ onRealinhar: ()=>Promise<void>; onIgnorar: ()=>Promise<void>; onCancel: ()=>void; isLoading: boolean; error: string|null; onContinueWithoutDismiss?: ()=>Promise<void> }`. `DriftCriticalModal` props (`drift-critical-modal.tsx:6-16`): `{ open; onOpenChange; storeId; identityState; canGenerateNewSignature; onDismissAndSave; onRemoveVs; onOpenApproval; onCancel }`. These blocks stay intact in the orchestrator component (`StoreIdentityForm`) — only the *interception moment* broadens (tab switch + internal nav, not just `step===2`), orchestrated by `useOnboardingTabs`, NOT inside `use-drift-detection.ts` (D13, hook preserved).
 
 **Contract (D4/D13):** `setActiveTab` runs `autoSave()` before navigating. Auto-save is selective: fields in `SNAPSHOT_FIELDS` (from `@/lib/snapshot.ts:15-18`: `segment, subsegment, tone_of_voice, name, positioning, short_description, slogan`) with pending drift → PATCH deferred until drift decision; non-snapshot fields (fiscal/billing/visual) auto-save normally.
 
@@ -372,7 +372,7 @@ autoSave(fields: Partial<FormData>): Promise<{ ok: boolean }>
 
 ---
 
-### `src/components/flow/use-drift-detection.ts` (MODIFIED — tab-change interception)
+### `src/components/flow/use-drift-detection.ts` (PRESERVED — consumed, not modified)
 
 **Analog:** itself + `src/lib/drift.ts`.
 
@@ -381,7 +381,7 @@ autoSave(fields: Partial<FormData>): Promise<{ ok: boolean }>
 - `computeDriftStatus` (`drift.ts:100-126`), `evaluateCriticalDrift` (55-76), `evaluateSensitiveDrift` (78-98)
 - Endpoints (lines 144-192): `realinhar()` → **POST** `/api/store/{id}/brand-profile/realign`; `ignorar()` → **PATCH** `/api/store/{id}/brand-profile/metadata` `{ drift_dismissed_snapshot: currentSnapshot }`; `dismissCriticalDrift()` → **POST** `/api/store/{id}/visual-signature/dismiss-critical-drift`
 
-**Delta (D13):** the interception effect (currently `store-identity-form.tsx:231-269`, gated on `step === 2`) moves into the hook via `onNavigate`/`onLeave` callbacks, and fires on: tab switch, internal nav (dashboard/campanhas), back/forward, page exit. The drift modal block in `store-identity-form.tsx` (2312-2457) is reused as-is; interception state flags (`driftSaveIntercept`, `driftNavIntercept`, `pendingNavUrl` at lines 113-115) and `executeStep2Save`'s post-decision `dismiss-critical-drift`/`metadata` calls (lines 1070-1090) stay.
+**Delta (D13):** `use-drift-detection.ts` permanece a fonte de DETECÇÃO e AÇÕES de drift — export type/params/retorno INTACTOS. NÃO migrar interceptação nem callbacks (`onNavigate`/`onLeave`/`pendingNavUrl`/`driftSaveIntercept`/`driftNavIntercept`) para dentro do hook. A ORQUESTRAÇÃO de saída de contexto (troca de aba, navegação interna, back/forward, saída da página) fica no `useOnboardingTabs` (hook orquestrador) e/ou `StoreIdentityForm` (componente), que CONSUMEM `driftStatus`/`driftCategory`/`realinhar`/`ignorar`/`dismissCriticalDrift` já expostos. O bloco de modais em `store-identity-form.tsx:2312-2457` é reutilizado como está; as flags de interceptação (`driftSaveIntercept`, `driftNavIntercept`, `pendingNavUrl` em linhas 113-115) e o `executeStep2Save` pós-decisão (dismiss/`metadata`, linhas 1070-1090) permanecem no componente orquestrador.
 
 ---
 
@@ -509,7 +509,9 @@ BEGIN
     (v_store_id, p_accepted_by_user_id, 'terms_of_service', p_terms_version, p_ip_address, p_user_agent, 'onboarding'),
     (v_store_id, p_accepted_by_user_id, 'acceptable_use', p_acceptable_use_version, p_ip_address, p_user_agent, 'onboarding');
 
-  -- NO try_grant_onboarding_entitlement, NO grant_credits (D15)
+  -- no grant freemium na criação draft (D15); loja draft não recebe crédito
+  -- até cadastro fiscal válido (NÃO citar nomes de funções grant aqui —
+  -- o verify do 36-01 usa grep dessas strings no arquivo SQL)
 
   SELECT jsonb_agg(row_to_json(s)) INTO v_store_data
   FROM (SELECT * FROM public.stores WHERE id = v_store_id) s;
@@ -594,7 +596,7 @@ A draft store (NULL fiscal fields) already falls into `missing: ["cadastro_fisca
 
 ### Drift integration (D13) — save deferred until decision
 **Source:** `store-identity-form.tsx:1093-1112` (bifurcation), `2312-2457` (modals), `use-drift-detection.ts:144-192` (endpoints)
-**Apply to:** `use-onboarding-tabs.ts` (`onNavigate`/`onLeave`), `use-drift-detection.ts` (interception)
+**Apply to:** `use-onboarding-tabs.ts` (orquestração de saída: `onNavigate`/`onLeave` callbacks + flags `pendingNavUrl`/`driftSaveIntercept`/`driftNavIntercept`), `StoreIdentityForm` (componente orquestrador — monta modais e consome `useDriftDetection`). `use-drift-detection.ts` NÃO é alterado (apenas consumido).
 Flow: drift `critical`+`new` → DriftCriticalModal → `dismissCriticalDrift()` (POST dismiss) → then PATCH snapshot fields. Drift `sensitive` → DriftDecisionModal → `realinhar()` (POST realign) or `ignorar()` (PATCH metadata with `{ drift_dismissed_snapshot: currentSnapshot }`) → then PATCH + navigate. Cancel → stay in context, snapshot fields NOT persisted. Non-snapshot fields (fiscal/billing/visual) save normally.
 
 ---

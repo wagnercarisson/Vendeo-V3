@@ -198,7 +198,7 @@ src/components/flow/legal-acceptance-panel.tsx ← coluna lateral global (D3)
 src/components/flow/store-identity-form.tsx    ← refatoração central
 src/components/flow/store-page-client.tsx      ← parsing ?tab=, compat required=
 src/components/flow/use-store-form.ts          ← autoSave(), saveDraft/restoreDraft
-src/components/flow/use-drift-detection.ts     ← intercepta troca de aba + navegação interna
+src/components/flow/use-drift-detection.ts     ← CONSUMIDO como está (D13) — fonte de detecção/ações de drift; NÃO modificar; interceptação orquestrada em use-onboarding-tabs/StoreIdentityForm
 src/app/api/store/route.ts                     ← modo draft × verified
 supabase/migrations/<timestamp>_f36_create_store_draft.sql ← RPC create_store_draft
 ```
@@ -241,7 +241,8 @@ supabase/migrations/<timestamp>_f36_create_store_draft.sql ← RPC create_store_
 - **Novo módulo `src/lib/store-onboarding/draft-store.ts`:** `DRAFT_TTL_MS = 24h`, `StoreDraft { userId, storeId, fields, updatedAt }`, `draftKey/saveDraft/restoreDraft/clearDraft` + `__tests__/`
 - **Novo hook `src/hooks/use-onboarding-tabs.ts`:** `activeTab`/`setActiveTab` (auto-save antes de navegar), `tabStates`, `saveStatus: "idle" | "saving" | "saved" | "error"`, `handleInternalNavigation`, `handlePageHide`/`handleVisibilityChange`, `onNavigate`/`onLeave` (drift), serialização de saves (fila + ref/seq guard)
 - **Novos componentes:** `src/components/flow/store-tabs.tsx` (ARIA tabs + variante mobile compacta), `src/components/flow/legal-acceptance-panel.tsx` (coluna lateral global)
-- **Modificados:** `store-identity-form.tsx` (wizard 2 steps → painel 3 abas), `store-page-client.tsx` (parsing `?tab=` + compat `required=`), `use-store-form.ts` (`autoSave()`, `saveDraft/restoreDraft`), `use-drift-detection.ts` (intercepta troca de aba + navegação interna), `readiness-banner.tsx` + `cnpj-update-banner.tsx` (links `?tab=`), `campanhas/nova/page.tsx` (redirect `?tab=` + `message=`), `cadastro/cnpj/page.tsx` + `cnpj-update-form.tsx` (redirect `?tab=dados&fiscal=pending`)
+- **Modificados:** `store-identity-form.tsx` (wizard 2 steps → painel 3 abas), `store-page-client.tsx` (parsing `?tab=` + compat `required=`), `use-store-form.ts` (`autoSave()`, `saveDraft/restoreDraft`), `readiness-banner.tsx` + `cnpj-update-banner.tsx` (links `?tab=`), `campanhas/nova/page.tsx` (redirect `?tab=` + `message=`), `cadastro/cnpj/page.tsx` + `cnpj-update-form.tsx` (redirect `?tab=dados&fiscal=pending`)
+- **Preservado (D13 — NÃO modificar):** `use-drift-detection.ts` permanece fonte de detecção e ações de drift; a interceptação de saída de contexto (troca de aba, navegação interna, back/forward, saída) é orquestrada por `use-onboarding-tabs.ts` / `StoreIdentityForm`, que consomem o hook existente
 - **API route:** `src/app/api/store/route.ts` — `cnpj` vira opcional; branch draft → `create_store_draft` (reuso das validações de name/segment/acceptedTerms + IP/UA), retorno 201 com `onboardingGranted: false`; branch verified → `create_store_with_cnpj` intacto
 - **Regressões a cobrir:** F30/F32/F33/F34 (criação com CNPJ + crédito, readiness, guard de `/campanhas/nova`, banner do dashboard) + drift (bloqueadores) + testes de endpoint (draft, verified, 409, 400, 401)
 - **Entrega verificável:** `npm run typecheck`, `npm run lint`, `npx vitest run` sem erros; validação manual mobile (pagehide/visibilitychange, rascunho restaurado, CTA "Continuar" fixo) e desktop (coluna sticky, back/forward)
