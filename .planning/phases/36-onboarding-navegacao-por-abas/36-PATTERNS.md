@@ -198,7 +198,14 @@ export function useDebounce<T>(value: T, delay: number): T {
 
 **Contract to implement** (spec `store-onboarding-autosave` + `store-onboarding-draft`):
 ```typescript
-export function useOnboardingTabs(...): {
+// DIRECTION: hook RECEIVES drift callbacks via options; RETURNS only public handlers.
+export function useOnboardingTabs(
+  deps: {...},
+  options?: {
+    onDriftNavigate?: () => void;   // drift callback registered by 36-04 (opens modal)
+    onDriftLeave?: () => void;      // drift callback registered by 36-04 (opens modal)
+  },
+): {
   activeTab: OnboardingTab;
   setActiveTab: (next: OnboardingTab) => Promise<void>;   // autoSave() BEFORE navigating (awaited)
   tabStates: Record<OnboardingTab, { state: TabState; reason?: TabBlockReason }>;  // via computeTabState
@@ -206,9 +213,11 @@ export function useOnboardingTabs(...): {
   handleInternalNavigation: (e: MouseEvent) => void;       // intercept internal links, autoSave before leaving
   handlePageHide: () => void;                              // sync draft write + best-effort PATCH
   handleVisibilityChange: () => void;                      // when document.visibilityState === 'hidden'
-  onNavigate: () => void;  onLeave: () => void;            // drift integration callbacks (D13)
+  // NO onNavigate/onLeave in return — those are INPUT callbacks (options). Flags
+  // pendingNavUrl/driftSaveIntercept/driftNavIntercept stay in StoreIdentityForm (orchestrator).
 }
 ```
+The hook calls `options.onDriftNavigate()`/`options.onDriftLeave()` when it detects an exit with drift `new` in snapshot fields; 36-04 passes them at mount. `setActiveTab`/`handleInternalNavigation`/`handlePageHide`/`handleVisibilityChange` are the PUBLIC handlers the orchestrator binds to the DOM.
 **Save serialization:** simple queue + ref/seq guard (ignore stale responses). PATCH failure → `saveStatus:"error"` but does NOT block navigation. POST (create) failure → stays on Dados, next tab stays `needs_store_created`.
 
 ---
@@ -381,7 +390,7 @@ autoSave(fields: Partial<FormData>): Promise<{ ok: boolean }>
 - `computeDriftStatus` (`drift.ts:100-126`), `evaluateCriticalDrift` (55-76), `evaluateSensitiveDrift` (78-98)
 - Endpoints (lines 144-192): `realinhar()` → **POST** `/api/store/{id}/brand-profile/realign`; `ignorar()` → **PATCH** `/api/store/{id}/brand-profile/metadata` `{ drift_dismissed_snapshot: currentSnapshot }`; `dismissCriticalDrift()` → **POST** `/api/store/{id}/visual-signature/dismiss-critical-drift`
 
-**Delta (D13):** `use-drift-detection.ts` permanece a fonte de DETECÇÃO e AÇÕES de drift — export type/params/retorno INTACTOS. NÃO migrar interceptação nem callbacks (`onNavigate`/`onLeave`/`pendingNavUrl`/`driftSaveIntercept`/`driftNavIntercept`) para dentro do hook. A ORQUESTRAÇÃO de saída de contexto (troca de aba, navegação interna, back/forward, saída da página) fica no `useOnboardingTabs` (hook orquestrador) e/ou `StoreIdentityForm` (componente), que CONSUMEM `driftStatus`/`driftCategory`/`realinhar`/`ignorar`/`dismissCriticalDrift` já expostos. O bloco de modais em `store-identity-form.tsx:2312-2457` é reutilizado como está; as flags de interceptação (`driftSaveIntercept`, `driftNavIntercept`, `pendingNavUrl` em linhas 113-115) e o `executeStep2Save` pós-decisão (dismiss/`metadata`, linhas 1070-1090) permanecem no componente orquestrador.
+**Delta (D13):** `use-drift-detection.ts` permanece a fonte de DETECÇÃO e AÇÕES de drift — export type/params/retorno INTACTOS. NÃO migrar interceptação nem callbacks (`onDriftNavigate`/`onDriftLeave`/`pendingNavUrl`/`driftSaveIntercept`/`driftNavIntercept`) para dentro do hook. A ORQUESTRAÇÃO de saída de contexto (troca de aba, navegação interna, back/forward, saída da página) fica no `useOnboardingTabs` (hook orquestrador) e/ou `StoreIdentityForm` (componente), que CONSUMEM `driftStatus`/`driftCategory`/`realinhar`/`ignorar`/`dismissCriticalDrift` já expostos. O bloco de modais em `store-identity-form.tsx:2312-2457` é reutilizado como está; as flags de interceptação (`driftSaveIntercept`, `driftNavIntercept`, `pendingNavUrl` em linhas 113-115) e o `executeStep2Save` pós-decisão (dismiss/`metadata`, linhas 1070-1090) permanecem no componente orquestrador.
 
 ---
 
@@ -596,7 +605,7 @@ A draft store (NULL fiscal fields) already falls into `missing: ["cadastro_fisca
 
 ### Drift integration (D13) — save deferred until decision
 **Source:** `store-identity-form.tsx:1093-1112` (bifurcation), `2312-2457` (modals), `use-drift-detection.ts:144-192` (endpoints)
-**Apply to:** `use-onboarding-tabs.ts` (orquestração de saída: `onNavigate`/`onLeave` callbacks + flags `pendingNavUrl`/`driftSaveIntercept`/`driftNavIntercept`), `StoreIdentityForm` (componente orquestrador — monta modais e consome `useDriftDetection`). `use-drift-detection.ts` NÃO é alterado (apenas consumido).
+**Apply to:** `use-onboarding-tabs.ts` (orquestração de saída: `options.onDriftNavigate`/`options.onDriftLeave` callbacks de entrada + flags `pendingNavUrl`/`driftSaveIntercept`/`driftNavIntercept` no componente), `StoreIdentityForm` (componente orquestrador — monta modais e consome `useDriftDetection`). `use-drift-detection.ts` NÃO é alterado (apenas consumido).
 Flow: drift `critical`+`new` → DriftCriticalModal → `dismissCriticalDrift()` (POST dismiss) → then PATCH snapshot fields. Drift `sensitive` → DriftDecisionModal → `realinhar()` (POST realign) or `ignorar()` (PATCH metadata with `{ drift_dismissed_snapshot: currentSnapshot }`) → then PATCH + navigate. Cancel → stay in context, snapshot fields NOT persisted. Non-snapshot fields (fiscal/billing/visual) save normally.
 
 ---
