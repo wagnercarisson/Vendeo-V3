@@ -367,6 +367,9 @@ export class ImageGenerationService {
           ? this.formatPriceBRL(body.originalPriceCents ?? 0)
           : undefined,
         validationContext,
+        mandatoryArtworkText: body.mandatoryArtworkText,
+        campaignDetails: body.campaignDetails,
+        additionalDetails: body.additionalDetails,
       };
 
       let reviewResult;
@@ -580,6 +583,9 @@ export class ImageGenerationService {
       originalPrice: (body.originalPriceCents ?? 0) > 0
         ? this.formatPriceBRL(body.originalPriceCents ?? 0)
         : undefined,
+      mandatoryArtworkText: body.mandatoryArtworkText,
+      campaignDetails: body.campaignDetails,
+      additionalDetails: body.additionalDetails,
     };
     const reviewerVars = this.imageReview.buildReviewPromptVariables(reviewerInput);
     const reviewerPrompt = this.promptLoader.load("campaign-image-reviewer", reviewerVars);
