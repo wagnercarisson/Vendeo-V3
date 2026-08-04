@@ -171,4 +171,86 @@ describe('ImageReviewService', () => {
     expect(vars.expectedBadgeBehavior).toContain('DEVE exibir badge promocional');
     expect(vars.expectedPriceBehavior).toContain('R$ 29,90');
   });
+
+  it('review() gera mandatoryArtworkTextSection com texto obrigatório e linguagem crítica', async () => {
+    const input: ImageReviewInput = {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+      campaignIntent: 'offer',
+      mandatoryArtworkText: 'Imagens meramente ilustrativas',
+    };
+
+    await service.review('data:image/jpeg;base64,abc', input);
+
+    const vars = mockLoader.load.mock.calls[0][1];
+    expect(vars.mandatoryArtworkTextSection).toContain('Imagens meramente ilustrativas');
+    expect(vars.mandatoryArtworkTextSection).toMatch(/AUSENTE/i);
+    expect(vars.mandatoryArtworkTextSection).toMatch(/VISÍVEL/i);
+    expect(vars.mandatoryArtworkTextSection).toMatch(/crítica/i);
+  });
+
+  it('review() gera authorizedContextSection com campaignDetails e additionalDetails', async () => {
+    const input: ImageReviewInput = {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+      campaignIntent: 'offer',
+      campaignDetails: 'Frete grátis acima de R$ 100',
+      additionalDetails: 'Válido somente em loja física',
+    };
+
+    await service.review('data:image/jpeg;base64,abc', input);
+
+    const vars = mockLoader.load.mock.calls[0][1];
+    expect(vars.authorizedContextSection).toContain('Frete grátis acima de R$ 100');
+    expect(vars.authorizedContextSection).toContain('Válido somente em loja física');
+    expect(vars.authorizedContextSection).toMatch(/AUTORIZAD/i);
+    expect(vars.authorizedContextSection).not.toContain('{{');
+  });
+
+  it('review() sem mandatoryArtworkText não exige texto obrigatório', async () => {
+    const input: ImageReviewInput = {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+    };
+
+    await service.review('data:image/jpeg;base64,abc', input);
+    expect(mockLoader.load.mock.calls[0][1].mandatoryArtworkTextSection).toBe('');
+
+    mockLoader.load.mockClear();
+    await service.review('data:image/jpeg;base64,abc', {
+      ...input,
+      mandatoryArtworkText: '   ',
+    });
+    expect(mockLoader.load.mock.calls[0][1].mandatoryArtworkTextSection).toBe('');
+  });
+
+  it('review() sem campaignDetails/additionalDetails gera authorizedContextSection vazia', async () => {
+    const input: ImageReviewInput = {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+    };
+
+    await service.review('data:image/jpeg;base64,abc', input);
+    expect(mockLoader.load.mock.calls[0][1].authorizedContextSection).toBe('');
+  });
+
+  it('review() sanitiza placeholders em valores de entrada', async () => {
+    const input: ImageReviewInput = {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+      campaignIntent: 'offer',
+      mandatoryArtworkText: 'Oferta {{imperdível}}',
+      campaignDetails: 'Promoção {{válida}} até domingo',
+      additionalDetails: 'Condições {{sujeitas}} a consulta',
+    };
+
+    await service.review('data:image/jpeg;base64,abc', input);
+
+    const vars = mockLoader.load.mock.calls[0][1];
+    for (const value of Object.values(vars)) {
+      expect(value).not.toContain('{{');
+      expect(value).not.toContain('}}');
+    }
+    expect(vars.mandatoryArtworkTextSection).toContain('Oferta {imperdível}');
+  });
 });

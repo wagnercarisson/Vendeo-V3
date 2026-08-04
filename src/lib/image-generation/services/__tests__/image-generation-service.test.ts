@@ -221,4 +221,143 @@ describe('ImageGenerationService.validatePrompts', () => {
     expect(result.valid).toBe(false);
     expect(result.errors.some((e: string) => e.includes('{{discountedPrice}}'))).toBe(true);
   });
+
+  it('validatePrompts propaga mandatoryArtworkText, campaignDetails e additionalDetails ao revisor', () => {
+    mockLoad.mockImplementation((name: string) => {
+      if (name === 'campaign-image-director-offer') {
+        return 'Prompt de direção visual';
+      }
+      if (name === 'campaign-image-reviewer') {
+        return 'Revise produto com contexto';
+      }
+      return '';
+    });
+
+    const brief = createMinimalBrief({
+      campaignInput: {
+        productName: 'Produto Teste',
+        productImageDataUrl: 'data:image/jpeg;base64,test',
+        campaignIntent: 'offer',
+        mandatoryArtworkText: 'Imagens meramente ilustrativas',
+        campaignDetails: 'Frete grátis acima de R$ 100',
+        additionalDetails: 'Válido somente em loja física',
+      } as CampaignInput,
+    });
+
+    const result = service.validatePrompts(brief);
+    expect(result.valid).toBe(true);
+
+    const reviewerCall = mockLoad.mock.calls.find((call) => call[0] === 'campaign-image-reviewer');
+    expect(reviewerCall).toBeDefined();
+    const vars = reviewerCall![1] as Record<string, string>;
+    expect(vars).toHaveProperty('mandatoryArtworkTextSection');
+    expect(vars).toHaveProperty('authorizedContextSection');
+    expect(vars.mandatoryArtworkTextSection).toContain('Imagens meramente ilustrativas');
+    expect(vars.authorizedContextSection).toContain('Frete grátis acima de R$ 100');
+    expect(vars.authorizedContextSection).toContain('Válido somente em loja física');
+  });
+
+  it('validatePrompts continua valid=true com os novos campos preenchidos', () => {
+    mockLoad.mockImplementation((name: string) => {
+      if (name === 'campaign-image-director-offer') {
+        return 'Prompt de direção visual';
+      }
+      if (name === 'campaign-image-reviewer') {
+        return 'Revise produto com contexto';
+      }
+      return '';
+    });
+
+    const brief = createMinimalBrief({
+      campaignInput: {
+        productName: 'Produto Teste',
+        productImageDataUrl: 'data:image/jpeg;base64,test',
+        campaignIntent: 'offer',
+        mandatoryArtworkText: 'Imagens meramente ilustrativas',
+        campaignDetails: 'Frete grátis acima de R$ 100',
+        additionalDetails: 'Válido somente em loja física',
+      } as CampaignInput,
+    });
+
+    const result = service.validatePrompts(brief);
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it('validatePrompts sem mandatoryArtworkText continua válido', () => {
+    mockLoad.mockImplementation((name: string) => {
+      if (name === 'campaign-image-director-offer') {
+        return 'Prompt de direção visual';
+      }
+      if (name === 'campaign-image-reviewer') {
+        return 'Revise produto';
+      }
+      return '';
+    });
+
+    const brief = createMinimalBrief();
+    const result = service.validatePrompts(brief);
+    expect(result.valid).toBe(true);
+  });
+});
+
+describe('ImageGenerationService.generateImage', () => {
+  it('generateImage propaga os 3 campos ao review() no fluxo REAL de geração', async () => {
+    const mockProvider = {
+      name: 'test',
+      generateImage: vi.fn().mockResolvedValue({
+        success: true,
+        imageBase64: 'aGVsbG8=',
+        mimeType: 'image/png',
+        usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+      }),
+    };
+    const mockLoad = vi.fn((name: string) => {
+      if (name === 'campaign-image-director-offer') {
+        return 'Prompt de direção visual sem placeholders';
+      }
+      if (name === 'campaign-image-reviewer') {
+        return 'Prompt de revisão sem placeholders';
+      }
+      return '';
+    });
+    const mockInputValidation = {
+      validate: vi.fn().mockResolvedValue({ classification: 'match' }),
+    };
+    const mockImageReview = {
+      review: vi.fn().mockResolvedValue({ passed: true, issues: [], failureType: null }),
+      buildReviewPromptVariables: vi.fn(),
+    };
+    const mockMetricsWriter = {
+      write: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const service = new ImageGenerationService(
+      mockProvider as any,
+      { load: mockLoad, clearCache: vi.fn() } as unknown as PromptLoader,
+      mockInputValidation as any,
+      mockImageReview as any,
+      mockMetricsWriter as any
+    );
+
+    const brief = createMinimalBrief({
+      campaignInput: {
+        productName: 'Produto Teste',
+        productImageDataUrl: 'data:image/jpeg;base64,test',
+        campaignIntent: 'offer',
+        mandatoryArtworkText: 'Imagens meramente ilustrativas',
+        campaignDetails: 'Frete grátis acima de R$ 100',
+        additionalDetails: 'Válido somente em loja física',
+      } as CampaignInput,
+    });
+
+    const result = await service.generateImage(brief);
+
+    expect(result.success).toBe(true);
+    expect(mockImageReview.review).toHaveBeenCalledTimes(1);
+    const reviewInput = mockImageReview.review.mock.calls[0][1];
+    expect(reviewInput.mandatoryArtworkText).toBe('Imagens meramente ilustrativas');
+    expect(reviewInput.campaignDetails).toBe('Frete grátis acima de R$ 100');
+    expect(reviewInput.additionalDetails).toBe('Válido somente em loja física');
+  });
 });
