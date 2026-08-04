@@ -14,6 +14,9 @@ export interface ImageReviewInput {
   originalPrice?: string;
   discountedPrice?: string;
   validationContext?: ValidationContext;
+  mandatoryArtworkText?: string;
+  campaignDetails?: string;
+  additionalDetails?: string;
 }
 
 export class ImageReviewService {
@@ -37,6 +40,8 @@ export class ImageReviewService {
       expectedImageTreatment: this.buildExpectedImageTreatment(intent, input.preserveImageContext),
       expectedCommercialTone: this.buildExpectedCommercialTone(intent),
       validationContextSection: this.buildValidationContextSection(input.validationContext),
+      mandatoryArtworkTextSection: this.buildMandatoryArtworkTextSection(input.mandatoryArtworkText),
+      authorizedContextSection: this.buildAuthorizedContextSection(input.campaignDetails, input.additionalDetails),
     };
   }
 
@@ -122,6 +127,49 @@ export class ImageReviewService {
     }
     if (parts.length === 0) return "";
     return `\n## Contexto de Validação\n${parts.map(p => `- ${p}`).join("\n")}\n`;
+  }
+
+  /**
+   * Substitui sequências de chaves duplas usadas por placeholders de prompt
+   * (`{{` → `{`, `}}` → `}`) para que o texto do lojista nunca deixe um
+   * placeholder não resolvido no prompt final, mantendo a legibilidade.
+   */
+  private sanitizePromptText(value: string): string {
+    return value.replace(/\{\{/g, "{").replace(/\}\}/g, "}");
+  }
+
+  private buildMandatoryArtworkTextSection(text: string | undefined): string {
+    const sanitized = this.sanitizePromptText(text?.trim() ?? "");
+    if (!sanitized) return "";
+    return [
+      "## Texto Obrigatório na Arte",
+      "",
+      "O lojista exigiu o texto abaixo na arte. O texto é parte da fidelidade comercial da arte, não uma escolha criativa do diretor, e deve estar VISÍVEL, EXATO e LEGÍVEL na arte:",
+      "",
+      '"' + sanitized + '"',
+      "",
+      'Se o texto obrigatório estiver AUSENTE, DIVERGENTE (parcial ou com erro de grafia), ILEGÍVEL ou CORTADO (tipografia mínima insuficiente, cortado na borda ou sobreposto), reporte como issue CRÍTICA com type "illegible_text" e descreva o texto esperado vs. o texto encontrado na imagem.',
+      "",
+      "NÃO repetir o texto obrigatório em legenda — o texto é escopo da arte, não da legenda.",
+    ].join("\n");
+  }
+
+  private buildAuthorizedContextSection(campaignDetails: string | undefined, additionalDetails: string | undefined): string {
+    const campaign = this.sanitizePromptText(campaignDetails?.trim() ?? "");
+    const additional = this.sanitizePromptText(additionalDetails?.trim() ?? "");
+    if (!campaign && !additional) return "";
+    const parts: string[] = [
+      "## Contexto Autorizado da Campanha",
+      "",
+      "Os detalhes comerciais abaixo foram fornecidos pelo lojista e são considerados AUTORIZADOS. Informações coerentes com eles NÃO devem ser reportadas como invented_information:",
+    ];
+    if (campaign) {
+      parts.push("- Detalhes da campanha: " + campaign);
+    }
+    if (additional) {
+      parts.push("- Detalhes adicionais: " + additional);
+    }
+    return parts.join("\n");
   }
 
   private async callVisionModel(

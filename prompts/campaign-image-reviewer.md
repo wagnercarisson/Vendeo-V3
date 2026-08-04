@@ -26,6 +26,10 @@ A intenção comercial da campanha define o que é esperado em termos de preço,
 
 {{validationContextSection}}
 
+{{mandatoryArtworkTextSection}}
+
+{{authorizedContextSection}}
+
 ## Critérios de Inspeção
 
 Analise a imagem gerada contra cada critério abaixo. Para cada problema encontrado, registre o tipo, a gravidade e uma descrição.
@@ -46,6 +50,8 @@ Há texto ilegível, corrompido, cortado, sobreposto ou com contraste insuficien
 A imagem contém informações comerciais não fornecidas nos dados da campanha? Exemplos:
 - **Crítico:** Parcelamento, frete grátis, garantia estendida, prazos de entrega ou condições promocionais não autorizadas
 - **Minor:** Avisos genéricos como "estoque limitado", "consulte condições" ou "sujeito a disponibilidade"
+
+Se houver contexto autorizado da campanha presente (seção "Contexto Autorizado da Campanha"), informações coerentes com esse contexto NÃO devem ser tratadas como invenção.
 
 ### 6. deformed_product (critical)
 O produto na imagem está distorcido, esticado, cortado, desproporcional ou irreconhecível em relação à referência? Qualquer deformação significativa é crítica.
