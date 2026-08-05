@@ -426,20 +426,20 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 36 (onboarding-navegacao-por-abas) — EXECUTING
-Plan: 1 of 6
-v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34 e 35 concluídas. F36 (Onboarding — Navegação por Abas) planejada (6 plans / 5 waves), pronta para execução; F37 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37).
+Phase: 36 (onboarding-navegacao-por-abas) — EXECUTING (6/6 plans implementados; aguardando validação manual F36-06 Task 4 + supabase db push)
+Plan: 6 of 6 (Tasks 1-3 da 36-06 concluídas; Task 4 humana pendente)
+v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34 e 35 concluídas. F36 (Onboarding — Navegação por Abas) implementada (6 plans / 5 waves, 1478 testes); pendente: validação manual + `supabase db push` (migration create_store_draft); F37 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37).
 
 ### Phase 36 — Onboarding: Navegação por Abas (pronto para executar)
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
-| 36-01 | 1 | ○ | Migration `create_store_draft` + `POST /api/store` dois modos (draft/fiscal) + `[BLOCKING] supabase db push` |
-| 36-02 | 1 | ○ | Core — tabs.ts, tab-state.ts, draft-store.ts + testes (sem dep. do banco) |
-| 36-03 | 2 | ○ | autoSave, use-onboarding-tabs (popstate back/forward), drift estendido, cleanup logout |
-| 36-04 | 3 | ○ | StoreTabs ARIA + LegalAcceptancePanel + form refactor + parsing `?tab=` |
-| 36-05 | 4 | ○ | Redirects/banners → `?tab=` |
-| 36-06 | 5 | ○ | Testes endpoint/gates/draft→fiscal, regressão, checkpoint humano |
+| 36-01 | 1 | ✅ | Migration `create_store_draft` + `POST /api/store` dois modos (draft/fiscal) + `supabase db push` (deferred-manual) |
+| 36-02 | 1 | ✅ | Core — tabs.ts, tab-state.ts, draft-store.ts + testes (sem dep. do banco) |
+| 36-03 | 2 | ✅ | autoSave, use-onboarding-tabs (popstate back/forward), drift estendido, cleanup logout |
+| 36-04 | 3 | ✅ | StoreTabs ARIA + LegalAcceptancePanel + form refactor + parsing `?tab=` |
+| 36-05 | 4 | ✅ | Redirects/banners → `?tab=` |
+| 36-06 | 5 | ✅ | Testes endpoint/gates/draft→fiscal, regressão, checkpoint humano (Tasks 1-3) |
 
 **Context:** `.planning/phases/36-onboarding-navegacao-por-abas/36-CONTEXT.md`
 **Source:** `openspec/changes/fase-36-onboarding-navegacao-por-abas/` (fonte da verdade)
