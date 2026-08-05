@@ -11,6 +11,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useDriftDetection } from "./use-drift-detection";
 import { getDriftPolicy } from "@/lib/drift";
+import type { OnboardingTab } from "@/lib/store-onboarding/tabs";
 
 // DriftDiscreetButton import removed — replaced by inline post-dismiss links
 import { DriftDecisionModal } from "./drift-decision-modal";
@@ -74,10 +75,13 @@ function getSubsegmentMode(segment: string): 'rich' | 'travado' | 'other' | 'loc
   return 'rich';
 }
 
-export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }: { initialStore?: Store | null; initialStep?: number; redirectMessage?: string }) {
+export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMessage, fiscalPending }: { initialStore?: Store | null; userId?: string; initialTab?: OnboardingTab; redirectMessage?: string; fiscalPending?: boolean }) {
   const { formData, setField, save, isLoading, isSaving, error, warningMessage, dismissWarning, successMessage, mode, clearStore, storeId } = useStoreForm({ initialStore: initialStore ?? null });
 
-  const [step, setStep] = useState<1 | 2>(initialStep === 2 ? 2 : 1);
+  // F36: initialStep foi substituído por initialTab (parsing ?tab= em store-page-client).
+  // Mapeamento provisório para o step interno até o rewiring completo no useOnboardingTabs
+  // (task 3) — apenas direcao-visual abre direto no painel 2.
+  const [step, setStep] = useState<1 | 2>(initialTab === "direcao-visual" ? 2 : 1);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Partial<Record<string, boolean>>>({});
 
