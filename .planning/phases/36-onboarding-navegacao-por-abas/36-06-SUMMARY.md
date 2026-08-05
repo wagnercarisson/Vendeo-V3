@@ -72,7 +72,7 @@ completed: 2026-08-05
 - **Duration:** 60 min
 - **Started:** 2026-08-05T15:45:00Z
 - **Completed:** 2026-08-05T16:45:00Z
-- **Tasks:** 3/4 (Task 4 — checkpoint humano — pendente de aprovação)
+- **Tasks:** 4/4 (Task 4 — checkpoint humano — **aprovado pelo usuário**)
 - **Files modified:** 11
 
 ## Accomplishments
@@ -88,7 +88,7 @@ completed: 2026-08-05
 1. **Task 1: Endpoint tests** - `d2970e4` (test)
 2. **Task 2: Component/hook/lib + drift blockers** - `eca7137` (test)
 3. **Task 3: Readiness + regressão + suíte completa** - `6c244be`, `fab74bb`, `624ab3f` (test/fix/test)
-4. **Task 4: Checkpoint humano (mobile+desktop)** - pendente de aprovação do usuário
+4. **Task 4: Checkpoint humano (mobile+desktop)** - aprovado pelo usuário ("aparentemente está tudo funcionando - approved")
 
 **Plan metadata:** SUMMARY.md (docs) — commitado pelo orquestrador na sequência de tracking.
 
@@ -152,8 +152,9 @@ completed: 2026-08-05
 
 ## Next Phase Readiness
 
-- **Task 4 (checkpoint humano)**: aguardando validação manual mobile + desktop (passo a passo no plan). Responder "approved" ou reportar problemas.
-- ⚠️ BLOQUEADOR: aplicar `supabase db push` antes da conclusão da fase.
+- **Task 4 (checkpoint humano)**: ✅ aprovado pelo usuário — validação mobile (abas compactas, "Continuar" fixo, rascunho restaurado, background seguro), desktop (coluna legal sticky, back/forward ?tab=, deep-link bloqueado com "Voltar para Dados"), fluxos de entrada (guard draft → ?tab=dados&fiscal=pending, banners ?tab=) e legal (Posicionamento bloqueado sem aceite).
+- ✅ `supabase db push` aplicado — migration `20260801000001_f36_create_store_draft` presente no remoto (confirmado em `supabase migration list`). RPC `create_store_draft` operacional — pré-requisito de verificação da fase satisfeito.
+- Fase 36 pronta para conclusão: 1478 testes, typecheck/lint limpos, 6/6 plans implementados.
 
 ---
 
