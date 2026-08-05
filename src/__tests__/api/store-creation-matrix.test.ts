@@ -6,7 +6,7 @@ const { mockRequireUser, mockSupabaseFrom, mockSupabaseRpc, mockValidateCnpj } =
   mockRequireUser: vi.fn(),
   mockSupabaseFrom: vi.fn(),
   mockSupabaseRpc: vi.fn(),
-  mockValidateCnpj: vi.fn(() => ({ normalized: "12345678000195" })),
+  mockValidateCnpj: vi.fn((raw: string) => ({ normalized: "12345678000195" }) as { normalized: string } | Error),
 }));
 
 const mockFromChain = vi.fn(() => ({
@@ -140,7 +140,7 @@ describe("POST /api/store — modo verified/fiscal (com CNPJ)", () => {
   it("returns 201 calling create_store_with_cnpj with cnpjMasked present", async () => {
     mockRequireUser.mockResolvedValue({ userId: "user-123", claims: {} });
     let capturedName = "";
-    let capturedParams: Record<string, unknown> | null = null;
+    let capturedParams: Record<string, unknown> = {};
     mockSupabaseRpc.mockImplementation((rpcName: string, params: any) => {
       capturedName = rpcName;
       capturedParams = params;
@@ -192,7 +192,7 @@ describe("POST /api/store — modo draft (sem CNPJ)", () => {
   it("returns 201 with onboardingGranted:false calling create_store_draft without p_cnpj_normalized", async () => {
     mockRequireUser.mockResolvedValue({ userId: "user-123", claims: {} });
     let capturedName = "";
-    let capturedParams: Record<string, unknown> | null = null;
+    let capturedParams: Record<string, unknown> = {};
     mockSupabaseRpc.mockImplementation((rpcName: string, params: any) => {
       capturedName = rpcName;
       capturedParams = params;
@@ -305,7 +305,7 @@ describe("POST /api/store — validações compartilhadas", () => {
 describe("POST /api/store — ownership (body user_id ignorado)", () => {
   it("ignores user_id in body (uses claims.sub) — verified mode", async () => {
     mockRequireUser.mockResolvedValue({ userId: "user-123", claims: { sub: "user-123" } });
-    let capturedParams: Record<string, unknown> | null = null;
+    let capturedParams: Record<string, unknown> = {};
     mockSupabaseRpc.mockImplementation((_rpcName: string, params: any) => {
       capturedParams = params;
       return Promise.resolve({ data: { id: "store-1", user_id: "user-123" }, error: null });
@@ -319,7 +319,7 @@ describe("POST /api/store — ownership (body user_id ignorado)", () => {
   it("ignores user_id in body (uses claims.sub) — draft mode", async () => {
     mockRequireUser.mockResolvedValue({ userId: "user-123", claims: { sub: "user-123" } });
     let capturedName = "";
-    let capturedParams: Record<string, unknown> | null = null;
+    let capturedParams: Record<string, unknown> = {};
     mockSupabaseRpc.mockImplementation((rpcName: string, params: any) => {
       capturedName = rpcName;
       capturedParams = params;
@@ -378,7 +378,7 @@ describe("POST /api/store — encadeamento draft → fiscal (F36-DRAFT-CREATE-04
     expect(before.missing.map((m) => m.item)).toContain("cadastro_fiscal");
 
     // (b) update-cnpj via RPC update_store_cnpj (mock — o que a rota update-cnpj executa)
-    const upd = await (supabaseAdmin as { rpc: (name: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }> }).rpc(
+    const upd = await (supabaseAdmin as unknown as { rpc: (name: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }> }).rpc(
       "update_store_cnpj",
       {
         p_store_id: "store-1",

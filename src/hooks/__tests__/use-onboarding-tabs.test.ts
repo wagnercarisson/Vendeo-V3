@@ -335,7 +335,7 @@ describe("useOnboardingTabs — back/forward popstate com drift (D13/F36-TABS-04
           }),
           { onDriftNavigate },
         ),
-      { initialProps: { driftCategory: "sensitive" as const } },
+      { initialProps: { driftCategory: "sensitive" as "sensitive" | "none" } },
     );
 
     act(() => {

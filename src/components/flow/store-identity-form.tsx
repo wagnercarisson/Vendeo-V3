@@ -1,6 +1,7 @@
 "use client";
 
 import { useStoreForm, useIdentityActions } from "./use-store-form";
+import type { FormData as StoreFormData } from "./use-store-form";
 import type { Store } from "@/lib/store";
 import { StorePreview } from "./store-preview";
 import { VisualSignatureApprovalModal } from "./visual-signature-approval-modal";
@@ -82,7 +83,7 @@ function getSubsegmentMode(segment: string): 'rich' | 'travado' | 'other' | 'loc
 }
 
 export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMessage, fiscalPending }: { initialStore?: Store | null; userId?: string; initialTab?: OnboardingTab; redirectMessage?: string; fiscalPending?: boolean }) {
-  const { formData, setField, save, isLoading, isSaving, error, warningMessage, dismissWarning, successMessage, mode, clearStore, storeId, acceptedTerms, setAcceptedTerms } = useStoreForm({ initialStore: initialStore ?? null });
+  const { formData, setField, save, isLoading, isSaving, error, warningMessage, dismissWarning, successMessage, mode, clearStore, storeId, acceptedTerms, setAcceptedTerms, autoSave, saveStatus } = useStoreForm({ initialStore: initialStore ?? null });
 
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Partial<Record<string, boolean>>>({});
@@ -287,8 +288,8 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
     const draft = restoreDraft(userId, storeId);
     if (!draft) return;
     draftRestoredRef.current = true;
-    const stored = initialStore as Partial<Record<keyof FormData, unknown>> | null;
-    const entries = Object.entries(draft.fields) as [keyof FormData, string | undefined][];
+    const stored = initialStore as Partial<Record<keyof StoreFormData, unknown>> | null;
+    const entries = Object.entries(draft.fields) as [keyof StoreFormData, string | undefined][];
     for (const [field, value] of entries) {
       if (typeof value !== "string") continue;
       const persisted = stored?.[field];

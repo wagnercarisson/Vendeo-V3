@@ -463,7 +463,7 @@ describe("drift-tabs — useOnboardingTabs orquestrando a saída (a/b/d/e/g)", (
           }),
           { onDriftNavigate },
         ),
-      { initialProps: { driftCategory: "sensitive" as const } },
+      { initialProps: { driftCategory: "sensitive" as "sensitive" | "none" } },
     );
 
     await act(async () => {
