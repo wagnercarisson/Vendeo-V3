@@ -37,6 +37,12 @@ vi.mock("@/lib/supabase/server", () => ({
   createServerClient: vi.fn().mockResolvedValue({}),
 }));
 
+const mockGetStoreReadiness = vi.fn();
+
+vi.mock("@/lib/store-readiness", () => ({
+  getStoreReadiness: mockGetStoreReadiness,
+}));
+
 vi.mock("@/lib/credit/credit-service", () => {
   class MockCreditService {
     getBalance = vi.fn();
@@ -114,5 +120,68 @@ describe("NovaCampanhaPage — redirect mantido", () => {
 
     await expect(NovaCampanhaPage()).rejects.toThrow("NEXT_CONTROL");
     expect(mockRedirect).toHaveBeenCalledWith("/loja");
+  });
+
+  it("redirects draft store (cadastro_fiscal pendente) to /loja?tab=dados&fiscal=pending (F36-READINESS-02/D12)", async () => {
+    mockGetCurrentStore.mockResolvedValue({ id: "store-draft-1", user_id: "user-123" });
+    mockGetStoreReadiness.mockResolvedValue({
+      ready: false,
+      missing: [{ item: "cadastro_fiscal", reason: "CNPJ, razão social e nome fantasia são obrigatórios" }],
+    });
+    mockRedirect.mockImplementation(() => {
+      throw NEXT_CONTROL;
+    });
+
+    const { default: NovaCampanhaPage } = await import(
+      "@/app/(app)/campanhas/nova/page"
+    );
+
+    await expect(NovaCampanhaPage()).rejects.toThrow("NEXT_CONTROL");
+    expect(mockRedirect).toHaveBeenCalledWith(
+      "/loja?tab=dados&fiscal=pending&returnTo=%2Fcampanhas%2Fnova",
+    );
+  });
+
+  it("redirects to /loja?tab=direcao-visual when only brand_profile is missing (F36-READINESS-02)", async () => {
+    mockGetCurrentStore.mockResolvedValue({ id: "store-1", user_id: "user-123" });
+    mockGetStoreReadiness.mockResolvedValue({
+      ready: false,
+      missing: [{ item: "brand_profile", reason: "Direção visual da loja não configurada" }],
+    });
+    mockRedirect.mockImplementation(() => {
+      throw NEXT_CONTROL;
+    });
+
+    const { default: NovaCampanhaPage } = await import(
+      "@/app/(app)/campanhas/nova/page"
+    );
+
+    await expect(NovaCampanhaPage()).rejects.toThrow("NEXT_CONTROL");
+    expect(mockRedirect).toHaveBeenCalledWith(
+      "/loja?tab=direcao-visual&message=needs-visual-direction&returnTo=%2Fcampanhas%2Fnova",
+    );
+  });
+
+  it("redirects to fiscal first when both are missing (prioridade cadastro_fiscal → brand_profile)", async () => {
+    mockGetCurrentStore.mockResolvedValue({ id: "store-draft-2", user_id: "user-123" });
+    mockGetStoreReadiness.mockResolvedValue({
+      ready: false,
+      missing: [
+        { item: "cadastro_fiscal", reason: "CNPJ, razão social e nome fantasia são obrigatórios" },
+        { item: "brand_profile", reason: "Direção visual da loja não configurada" },
+      ],
+    });
+    mockRedirect.mockImplementation(() => {
+      throw NEXT_CONTROL;
+    });
+
+    const { default: NovaCampanhaPage } = await import(
+      "@/app/(app)/campanhas/nova/page"
+    );
+
+    await expect(NovaCampanhaPage()).rejects.toThrow("NEXT_CONTROL");
+    expect(mockRedirect).toHaveBeenCalledWith(
+      "/loja?tab=dados&fiscal=pending&returnTo=%2Fcampanhas%2Fnova",
+    );
   });
 });
