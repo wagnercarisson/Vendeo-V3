@@ -172,7 +172,7 @@ describe('ImageReviewService', () => {
     expect(vars.expectedPriceBehavior).toContain('R$ 29,90');
   });
 
-  it('review() gera mandatoryArtworkTextSection com texto obrigatório e linguagem crítica', async () => {
+  it('review() gera mandatoryArtworkTextSection com fidelidade semantica e rigor legal', async () => {
     const input: ImageReviewInput = {
       productName: 'Produto Teste',
       storeName: 'Loja Teste',
@@ -184,9 +184,11 @@ describe('ImageReviewService', () => {
 
     const vars = mockLoader.load.mock.calls[0][1];
     expect(vars.mandatoryArtworkTextSection).toContain('Imagens meramente ilustrativas');
-    expect(vars.mandatoryArtworkTextSection).toMatch(/AUSENTE/i);
-    expect(vars.mandatoryArtworkTextSection).toMatch(/VISÍVEL/i);
-    expect(vars.mandatoryArtworkTextSection).toMatch(/crítica/i);
+    expect(vars.mandatoryArtworkTextSection).toMatch(/conteudo essencial/i);
+    expect(vars.mandatoryArtworkTextSection).toMatch(/Nao reprove apenas/i);
+    expect(vars.mandatoryArtworkTextSection).toMatch(/quebra de linha/i);
+    expect(vars.mandatoryArtworkTextSection).toMatch(/aviso legal ou regulatorio/i);
+    expect(vars.mandatoryArtworkTextSection).toMatch(/CRITICA/i);
   });
 
   it('review() gera authorizedContextSection com campaignDetails e additionalDetails', async () => {

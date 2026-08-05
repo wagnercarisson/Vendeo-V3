@@ -142,15 +142,23 @@ export class ImageReviewService {
     const sanitized = this.sanitizePromptText(text?.trim() ?? "");
     if (!sanitized) return "";
     return [
-      "## Texto Obrigatório na Arte",
+      "## Texto Obrigatorio na Arte",
       "",
-      "O lojista exigiu o texto abaixo na arte. O texto é parte da fidelidade comercial da arte, não uma escolha criativa do diretor, e deve estar VISÍVEL, EXATO e LEGÍVEL na arte:",
+      "O lojista informou o conteudo abaixo como referencia obrigatoria para a arte:",
       "",
       '"' + sanitized + '"',
       "",
-      'Se o texto obrigatório estiver AUSENTE, DIVERGENTE (parcial ou com erro de grafia), ILEGÍVEL ou CORTADO (tipografia mínima insuficiente, cortado na borda ou sobreposto), reporte como issue CRÍTICA com type "illegible_text" e descreva o texto esperado vs. o texto encontrado na imagem.',
+      "Avalie se a arte preserva o conteudo essencial, os fatos e o sentido comercial informado. O texto pode ser reorganizado, quebrado em linhas, distribuido em blocos, cards, selos ou areas diferentes da composicao.",
       "",
-      "NÃO repetir o texto obrigatório em legenda — o texto é escopo da arte, não da legenda.",
+      "Nao reprove apenas por mudanca de ordem, quebra de linha, pontuacao, hifen, barra ou separacao visual, desde que preco, quantidade, datas, condicao promocional e sentido estejam corretos e legiveis.",
+      "",
+      "Reprove somente se houver omissao de informacao essencial, erro factual, alteracao de sentido, ambiguidade comercial relevante, truncamento, corte ou ilegibilidade.",
+      "",
+      "Se o conteudo for aviso legal ou regulatorio, aplique maior rigor literal: nao aceite alteracao, omissao ou reescrita que possa mudar o alcance legal do aviso.",
+      "",
+      'Quando reprovar por texto obrigatorio, reporte como issue CRITICA com type "illegible_text".',
+      "",
+      "Nao repetir o texto obrigatorio em legenda; o texto e escopo da arte, nao da legenda.",
     ].join("\n");
   }
 
