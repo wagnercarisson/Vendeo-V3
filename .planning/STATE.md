@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 current_phase: 36
-status: in_progress
-last_updated: "2026-08-02T00:30:00.000Z"
+status: Executing Phase 36
+last_updated: "2026-08-05T17:03:41.178Z"
 progress:
   total_phases: 19
   completed_phases: 16
@@ -102,7 +102,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** Milestone complete
+**Current focus:** Phase 36 — onboarding-navegacao-por-abas
 
 ## Completed Milestones
 
@@ -426,8 +426,8 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 36 — ONBOARDING: NAVEGAÇÃO POR ABAS (pronto para executar)
-Plan: 6 plans (5 waves) — aguardando execução
+Phase: 36 (onboarding-navegacao-por-abas) — EXECUTING
+Plan: 1 of 6
 v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34 e 35 concluídas. F36 (Onboarding — Navegação por Abas) planejada (6 plans / 5 waves), pronta para execução; F37 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37).
 
 ### Phase 36 — Onboarding: Navegação por Abas (pronto para executar)
