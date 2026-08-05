@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
-current_phase: 36
-status: Executing Phase 36
-last_updated: "2026-08-05T17:03:41.178Z"
+current_phase: 37
+status: Phase 36 Complete
+last_updated: "2026-08-05T19:51:14.871Z"
 progress:
   total_phases: 19
-  completed_phases: 16
+  completed_phases: 17
   total_plans: 80
-  completed_plans: 68
-  percent: 84
+  completed_plans: 74
+  percent: 86
 ---
 
 # Project State
@@ -426,20 +426,20 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 36 (onboarding-navegacao-por-abas) — EXECUTING (6/6 plans implementados; aguardando validação manual F36-06 Task 4 + supabase db push)
-Plan: 6 of 6 (Tasks 1-3 da 36-06 concluídas; Task 4 humana pendente)
-v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34 e 35 concluídas. F36 (Onboarding — Navegação por Abas) implementada (6 plans / 5 waves, 1478 testes); pendente: validação manual + `supabase db push` (migration create_store_draft); F37 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37).
+Phase: 36 (onboarding-navegacao-por-abas) — COMPLETE ✅
+Plan: 6 of 6
+v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35 e 36 concluídas. F36 (Onboarding — Navegação por Abas) completa (6 plans / 5 waves, 1479 testes, 31/31 requirements, code review aplicado); F37 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37).
 
-### Phase 36 — Onboarding: Navegação por Abas (pronto para executar)
+### Phase 36 — Onboarding: Navegação por Abas ✅ Complete
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
-| 36-01 | 1 | ✅ | Migration `create_store_draft` + `POST /api/store` dois modos (draft/fiscal) + `supabase db push` (deferred-manual) |
+| 36-01 | 1 | ✅ | Migration `create_store_draft` + `POST /api/store` dois modos (draft/fiscal) + schema push aplicado |
 | 36-02 | 1 | ✅ | Core — tabs.ts, tab-state.ts, draft-store.ts + testes (sem dep. do banco) |
 | 36-03 | 2 | ✅ | autoSave, use-onboarding-tabs (popstate back/forward), drift estendido, cleanup logout |
 | 36-04 | 3 | ✅ | StoreTabs ARIA + LegalAcceptancePanel + form refactor + parsing `?tab=` |
 | 36-05 | 4 | ✅ | Redirects/banners → `?tab=` |
-| 36-06 | 5 | ✅ | Testes endpoint/gates/draft→fiscal, regressão, checkpoint humano (Tasks 1-3) |
+| 36-06 | 5 | ✅ | Testes endpoint/gates/draft→fiscal, regressão, checkpoint humano aprovado |
 
 **Context:** `.planning/phases/36-onboarding-navegacao-por-abas/36-CONTEXT.md`
 **Source:** `openspec/changes/fase-36-onboarding-navegacao-por-abas/` (fonte da verdade)

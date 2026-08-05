@@ -30,7 +30,7 @@
 | 33 | ✅ Verificação CNPJ Freemium | Consulta BrasilAPI/CNPJá, cross-check, motor de decisão, admin review, test stores | CNPJ-07–12 | 6 ✅ |
 | 34 | ✅ Store Readiness | Readiness RPC + guarda dupla + direção visual obrigatória + dashboard banner + billing info | F34-READINESS, F34-BILLING, F34-STORE-TYPE, F34-GUARD, F34-LEGACY, F34-UI, F34-DASHBOARD, F34-BRANDPROFILE | 8 ✅ |
 | 35 | ✅ Changelog/Novidades | 5/5 | Complete    | 2026-07-31 |
-| 36 | ○ Onboarding — Navegação por Abas | 6/6 | Complete   | 2026-08-05 |
+| 36 | ○ Onboarding — Navegação por Abas | 6/6 | Complete    | 2026-08-05 |
 
 ---
 
