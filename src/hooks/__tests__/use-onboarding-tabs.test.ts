@@ -288,6 +288,102 @@ describe("useOnboardingTabs — sync de URL / back-forward (D6)", () => {
   });
 });
 
+describe("useOnboardingTabs — back/forward popstate com drift (D13/F36-TABS-04)", () => {
+  it("popstate com ?tab= válido + drift novo em campos do snapshot → modal intercepta ANTES do save", async () => {
+    const onDriftNavigate = vi.fn();
+    const autoSave = vi.fn(async () => ({ ok: true }));
+
+    const { result } = renderHook(() =>
+      useOnboardingTabs(
+        makeDeps({
+          storeId: "store-1",
+          formData: makeFormData({ name: "Nome Editado" }),
+          editedFields: ["name"],
+          driftCategory: "sensitive",
+          driftStatus: "new",
+          autoSave,
+        }),
+        { onDriftNavigate },
+      ),
+    );
+
+    act(() => {
+      window.history.pushState(null, "", "/loja?tab=posicionamento");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    // D13: a ordem do fluxo de saída exige a decisão do modal ANTES do PATCH
+    expect(onDriftNavigate).toHaveBeenCalledTimes(1);
+    expect(result.current.activeTab).toBe("dados");
+    expect(autoSave).not.toHaveBeenCalled();
+  });
+
+  it("após a decisão (driftCategory → none) o alvo pendente do popstate é navegado com autoSave", async () => {
+    const onDriftNavigate = vi.fn();
+    const autoSave = vi.fn(async () => ({ ok: true }));
+
+    const { result, rerender } = renderHook(
+      (props: { driftCategory: "sensitive" | "none" }) =>
+        useOnboardingTabs(
+          makeDeps({
+            storeId: "store-1",
+            formData: makeFormData({ name: "Nome Editado" }),
+            editedFields: ["name"],
+            driftCategory: props.driftCategory,
+            driftStatus: props.driftCategory === "sensitive" ? "new" : "none",
+            autoSave,
+          }),
+          { onDriftNavigate },
+        ),
+      { initialProps: { driftCategory: "sensitive" as const } },
+    );
+
+    act(() => {
+      window.history.pushState(null, "", "/loja?tab=posicionamento");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    expect(onDriftNavigate).toHaveBeenCalledTimes(1);
+    expect(result.current.activeTab).toBe("dados");
+    expect(autoSave).not.toHaveBeenCalled();
+
+    // Decisão do modal (realinhar/ignorar/dismiss) → driftCategory volta a 'none' →
+    // o resume do hook navega para o alvo pendente rodando o autoSave (D13/e)
+    rerender({ driftCategory: "none" });
+    await waitFor(() => expect(result.current.activeTab).toBe("posicionamento"));
+    expect(autoSave).toHaveBeenCalledTimes(1);
+  });
+
+  it("popstate com drift + alvo bloqueado: drift intercepta primeiro (modal antes do painel D6)", async () => {
+    const onDriftNavigate = vi.fn();
+    const autoSave = vi.fn(async () => ({ ok: true }));
+
+    const { result } = renderHook(() =>
+      useOnboardingTabs(
+        makeDeps({
+          storeId: "store-1",
+          formData: makeFormData({ name: "Nome Editado", tone_of_voice: "" }),
+          editedFields: ["name"],
+          driftCategory: "sensitive",
+          driftStatus: "new",
+          autoSave,
+        }),
+        { onDriftNavigate },
+      ),
+    );
+
+    act(() => {
+      // direcao-visual está bloqueada (sem tom de voz) MAS há drift → intercepta
+      window.history.pushState(null, "", "/loja?tab=direcao-visual");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    expect(onDriftNavigate).toHaveBeenCalledTimes(1);
+    expect(result.current.activeTab).toBe("dados");
+    expect(autoSave).not.toHaveBeenCalled();
+  });
+});
+
 describe("useOnboardingTabs — drift (D13, useDriftDetection consumido)", () => {
   it("saída de contexto com drift new nos campos do snapshot invoca onDriftNavigate e NÃO navega", async () => {
     const onDriftNavigate = vi.fn();

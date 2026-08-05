@@ -1,0 +1,507 @@
+// @vitest-environment jsdom
+import "@testing-library/jest-dom/vitest";
+/**
+ * Regressão de drift por abas (F36 — bloqueadores D13, grupo 6.6 do tasks.md).
+ * Estratégia (padrão do repo — drift.test.ts): a StoreIdentityForm é o
+ * orquestrador de 2581 linhas; os cenários bloqueadores são provados na camada
+ * que ORQUESTRA a saída de contexto:
+ *
+ * 1. `useDriftDetection` (REAL, preservado — D13) com fetch mockado → asserts
+ *    dos ENDPOINTS de drift (brand-profile/realign, brand-profile/metadata com
+ *    drift_dismissed_snapshot, visual-signature/dismiss-critical-drift) e do
+ *    gatilho de limite (totalGeneratedSignatures).
+ * 2. `useOnboardingTabs` (REAL) → ordem de interceptação (modal ANTES do PATCH),
+ *    navegação interna, cancelamento sem persistir, resume pós-decisão e
+ *    auto-save seletivo (campos fora do snapshot).
+ * 3. `resolveModalType` replica fielmente o `openDriftModalFromContext` do form
+ *    (store-identity-form.tsx:317-323) — critical+new → DriftCriticalModal,
+ *    sensitive → DriftDecisionModal.
+ * 4. Render dos modais reais (DriftDecisionModal/DriftCriticalModal) para provar
+ *    que o modal certo abre e que os gatilhos disparam os callbacks certos.
+ */
+
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { createElement } from "react";
+import { renderHook, act, waitFor, render, screen, fireEvent } from "@testing-library/react";
+import { useDriftDetection } from "../use-drift-detection";
+import { useOnboardingTabs } from "@/hooks/use-onboarding-tabs";
+import type { UseOnboardingTabsDeps } from "@/hooks/use-onboarding-tabs";
+import type { FormData } from "@/components/flow/use-store-form";
+import type { StoreProfileInputSnapshot } from "@/lib/snapshot";
+import { DriftDecisionModal } from "../drift-decision-modal";
+import { DriftCriticalModal } from "../drift-critical-modal";
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+/**
+ * Réplica fiel do `openDriftModalFromContext` do StoreIdentityForm
+ * (store-identity-form.tsx:317-323): drift crítico novo → DriftCriticalModal;
+ * qualquer outro drift sensível → DriftDecisionModal.
+ */
+type ModalType = "critical" | "decision" | null;
+function resolveModalType(
+  driftCategory: "critical" | "sensitive" | "none",
+  criticalStatus: "none" | "new" | "dismissed" | null | undefined,
+): ModalType {
+  if (driftCategory === "critical" && criticalStatus === "new") return "critical";
+  if (driftCategory === "sensitive") return "decision";
+  return null;
+}
+
+function mockFetchResponse(data: unknown, ok = true) {
+  return { ok, json: async () => data };
+}
+
+function makeFormData(overrides: Partial<FormData> = {}): FormData {
+  return {
+    name: "Minha Loja",
+    segment: "outros",
+    brand_color: "",
+    city: "",
+    state: "",
+    subsegment: "loja de roupas",
+    tone_of_voice: "",
+    positioning: "",
+    short_description: "",
+    slogan: "",
+    cnpj: "",
+    razaoSocial: "",
+    nomeFantasia: "",
+    ...overrides,
+  };
+}
+
+function makeDeps(overrides: Partial<UseOnboardingTabsDeps> = {}): UseOnboardingTabsDeps {
+  return {
+    initialTab: "dados",
+    userId: "user-1",
+    formData: makeFormData(),
+    storeId: null,
+    legalAccepted: true,
+    hasVisualDirection: false,
+    readiness: { ready: true, missing: [] },
+    hasLocalEdits: true,
+    isPersisted: false,
+    autoSave: vi.fn(async () => ({ ok: true })),
+    saveStatus: "idle",
+    driftStatus: "none",
+    driftCategory: "none",
+    ...overrides,
+  };
+}
+
+// Store com drift sensível vs. o input_snapshot do brand profile (text_only).
+const DRIFTED_STORE = {
+  id: "store-1",
+  name: "Nome Editado",
+  segment: "alimentacao",
+  subsegment: "padaria",
+  tone_of_voice: "moderno",
+  positioning: "A melhor padaria",
+  short_description: "Descrição",
+  slogan: "Slogan",
+  city: "São Paulo",
+  state: "SP",
+};
+
+const INPUT_SNAPSHOT: StoreProfileInputSnapshot = {
+  segment: "alimentacao",
+  subsegment: "padaria",
+  tone_of_voice: "moderno",
+  name: "Nome Original",
+  positioning: "A melhor padaria",
+  short_description: "Descrição",
+  slogan: "Slogan",
+};
+
+const DRIFTED_PROFILE = {
+  metadata: {
+    input_snapshot: INPUT_SNAPSHOT,
+    drift_dismissed_snapshot: null,
+  },
+};
+
+// Arquivo .ts (plano 36-06) → render de modais via React.createElement (sem JSX).
+function renderDecisionModal(props: Partial<Parameters<typeof DriftDecisionModal>[0]> = {}) {
+  render(
+    createElement(DriftDecisionModal, {
+      onRealinhar: vi.fn(),
+      onIgnorar: vi.fn(),
+      onCancel: vi.fn(),
+      isLoading: false,
+      error: null,
+      ...props,
+    }),
+  );
+}
+
+function renderCriticalModal(props: Partial<Parameters<typeof DriftCriticalModal>[0]> = {}) {
+  render(
+    createElement(DriftCriticalModal, {
+      open: true,
+      onOpenChange: vi.fn(),
+      storeId: "store-1",
+      identityState: "visual_signature",
+      canGenerateNewSignature: true,
+      onDismissAndSave: vi.fn(),
+      onRemoveVs: vi.fn(),
+      onOpenApproval: vi.fn(),
+      onCancel: vi.fn(),
+      ...props,
+    }),
+  );
+}
+
+let fetchMock: ReturnType<typeof vi.fn>;
+
+beforeEach(() => {
+  localStorage.clear();
+  window.history.replaceState(null, "", "/loja");
+  fetchMock = vi.fn(async () => mockFetchResponse({ signatures: [] }));
+  vi.stubGlobal("fetch", fetchMock);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
+
+// ── useDriftDetection REAL: detecção + endpoints preservados ───────────────
+
+describe("drift-tabs — useDriftDetection real (D13, endpoints preservados)", () => {
+  it("(a/c) drift sensível novo é detectado (driftStatus new → driftCategory sensitive)", async () => {
+    const { result } = renderHook(() =>
+      useDriftDetection(DRIFTED_STORE, DRIFTED_PROFILE, "text_only"),
+    );
+
+    await waitFor(() => expect(result.current.driftStatus).toBe("new"));
+    expect(result.current.driftCategory).toBe("sensitive");
+    expect(resolveModalType(result.current.driftCategory, null)).toBe("decision");
+  });
+
+  it("(e) realinhar() → POST /api/store/{id}/brand-profile/realign e zera driftStatus", async () => {
+    fetchMock.mockResolvedValueOnce(mockFetchResponse({ success: true }));
+    const onRealinhado = vi.fn();
+    const { result } = renderHook(() =>
+      useDriftDetection(DRIFTED_STORE, DRIFTED_PROFILE, "text_only", { onRealinhado }),
+    );
+    await waitFor(() => expect(result.current.driftStatus).toBe("new"));
+
+    await act(async () => {
+      await result.current.realinhar();
+    });
+
+    const call = fetchMock.mock.calls[0];
+    expect(call[0]).toBe("/api/store/store-1/brand-profile/realign");
+    expect(call[1]).toMatchObject({ method: "POST" });
+    expect(onRealinhado).toHaveBeenCalled();
+    expect(result.current.driftStatus).toBe("none");
+  });
+
+  it("(e) ignorar() → PATCH /api/store/{id}/brand-profile/metadata com drift_dismissed_snapshot = snapshot atual", async () => {
+    fetchMock.mockResolvedValueOnce(mockFetchResponse({ ok: true }));
+    const { result } = renderHook(() =>
+      useDriftDetection(DRIFTED_STORE, DRIFTED_PROFILE, "text_only"),
+    );
+    await waitFor(() => expect(result.current.currentSnapshot).not.toBeNull());
+
+    await act(async () => {
+      await result.current.ignorar();
+    });
+
+    const call = fetchMock.mock.calls[0];
+    expect(call[0]).toBe("/api/store/store-1/brand-profile/metadata");
+    expect(call[1]).toMatchObject({ method: "PATCH" });
+    const body = JSON.parse((call[1] as { body: string }).body);
+    expect(body.drift_dismissed_snapshot).toEqual(result.current.currentSnapshot);
+    expect(body.drift_dismissed_snapshot.name).toBe("Nome Editado");
+    expect(result.current.driftStatus).toBe("dismissed");
+  });
+
+  it("(c) drift crítico: assinatura visual ativa com critical_drift new → driftCategory critical (NÃO sensitive)", async () => {
+    fetchMock.mockResolvedValueOnce(
+      mockFetchResponse({
+        signatures: [
+          {
+            id: "vs-1",
+            status: "active",
+            type: "ai_generated",
+            critical_drift: { status: "new", fields: ["name"], reason: "critical_drift" },
+          },
+        ],
+      }),
+    );
+
+    const { result } = renderHook(() =>
+      useDriftDetection(DRIFTED_STORE, DRIFTED_PROFILE, "visual_signature"),
+    );
+
+    await waitFor(() => expect(result.current.driftCategory).toBe("critical"));
+    expect(result.current.criticalDrift?.status).toBe("new");
+    // O form (openDriftModalFromContext) escolhe o DriftCriticalModal, não o sensível
+    expect(resolveModalType(result.current.driftCategory, result.current.criticalDrift?.status)).toBe("critical");
+    expect(resolveModalType(result.current.driftCategory, result.current.criticalDrift?.status)).not.toBe("decision");
+  });
+
+  it("(e) dismissCriticalDrift() → POST /api/store/{id}/visual-signature/dismiss-critical-drift e marca dismissed", async () => {
+    fetchMock.mockResolvedValueOnce(
+      mockFetchResponse({
+        signatures: [
+          {
+            id: "vs-1",
+            status: "active",
+            type: "ai_generated",
+            critical_drift: { status: "new", fields: ["name"], reason: "critical_drift" },
+          },
+        ],
+      }),
+    );
+    fetchMock.mockResolvedValueOnce(mockFetchResponse({ ok: true }));
+
+    const { result } = renderHook(() =>
+      useDriftDetection(DRIFTED_STORE, DRIFTED_PROFILE, "visual_signature"),
+    );
+    await waitFor(() => expect(result.current.driftCategory).toBe("critical"));
+
+    await act(async () => {
+      await result.current.dismissCriticalDrift();
+    });
+
+    const dismissCall = fetchMock.mock.calls[1];
+    expect(dismissCall[0]).toBe("/api/store/store-1/visual-signature/dismiss-critical-drift");
+    expect(dismissCall[1]).toMatchObject({ method: "POST" });
+    expect(result.current.criticalDrift?.status).toBe("dismissed");
+  });
+
+  it("(f) totalGeneratedSignatures conta apenas gerações válidas (exclui failed) e alimenta o gatilho de limite", async () => {
+    fetchMock.mockResolvedValueOnce(
+      mockFetchResponse({
+        signatures: [
+          { id: "vs-1", status: "active", type: "ai_generated", critical_drift: null },
+          { id: "vs-2", status: "active", type: "automatic_generated", critical_drift: null },
+          { id: "vs-3", status: "failed", type: "ai_generated", critical_drift: null },
+        ],
+      }),
+    );
+
+    const { result } = renderHook(() =>
+      useDriftDetection(DRIFTED_STORE, DRIFTED_PROFILE, "visual_signature"),
+    );
+
+    await waitFor(() => expect(result.current.totalGeneratedSignatures).toBe(2));
+    // Gatilho do form: canGenerateNewSignature = totalGeneratedSignatures < 3
+    expect(result.current.totalGeneratedSignatures < 3).toBe(true);
+  });
+
+  it("(f) com 3 gerações válidas o gatilho de limite trava a nova assinatura (DriftCriticalModal sem crédito)", async () => {
+    fetchMock.mockResolvedValueOnce(
+      mockFetchResponse({
+        signatures: [
+          { id: "vs-1", status: "active", type: "ai_generated", critical_drift: { status: "new", fields: ["name"], reason: "critical_drift" } },
+          { id: "vs-2", status: "active", type: "ai_generated", critical_drift: null },
+          { id: "vs-3", status: "active", type: "ai_generated", critical_drift: null },
+        ],
+      }),
+    );
+
+    const { result } = renderHook(() =>
+      useDriftDetection(DRIFTED_STORE, DRIFTED_PROFILE, "visual_signature"),
+    );
+
+    await waitFor(() => expect(result.current.totalGeneratedSignatures).toBe(3));
+    const canGenerateNewSignature = result.current.totalGeneratedSignatures < 3;
+    expect(canGenerateNewSignature).toBe(false);
+
+    // Modal real com o gatilho: mostra o alerta de limite (nunca abre com crédito)
+    renderCriticalModal({ canGenerateNewSignature: false });
+    expect(screen.getByText("Assinatura visual desatualizada")).toBeInTheDocument();
+    expect(screen.getByText(/Você já utilizou as 3 gerações disponíveis/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Atualizar assinatura visual" })).not.toBeInTheDocument();
+  });
+});
+
+// ── useOnboardingTabs REAL: interceptação da saída de contexto ─────────────
+
+describe("drift-tabs — useOnboardingTabs orquestrando a saída (a/b/d/e/g)", () => {
+  it("(a) troca de aba com drift sensível novo nos campos do snapshot: modal abre e NENHUM PATCH é enviado", async () => {
+    const onDriftNavigate = vi.fn();
+    const autoSave = vi.fn(async () => ({ ok: true }));
+
+    const { result } = renderHook(() =>
+      useOnboardingTabs(
+        makeDeps({
+          storeId: "store-1",
+          formData: makeFormData({ name: "Nome Editado" }),
+          editedFields: ["name"],
+          driftCategory: "sensitive",
+          driftStatus: "new",
+          autoSave,
+        }),
+        { onDriftNavigate },
+      ),
+    );
+
+    await act(async () => {
+      await result.current.setActiveTab("posicionamento");
+    });
+
+    // Ordem D13: modal decide ANTES do PATCH dos campos do snapshot
+    expect(onDriftNavigate).toHaveBeenCalledTimes(1);
+    expect(autoSave).not.toHaveBeenCalled();
+    expect(result.current.activeTab).toBe("dados");
+  });
+
+  it("(a) o modal correto abre: DriftDecisionModal renderizado com o fluxo sensível", () => {
+    // resolveModalType replica openDriftModalFromContext do form
+    expect(resolveModalType("sensitive", null)).toBe("decision");
+
+    const onRealinhar = vi.fn();
+    const onIgnorar = vi.fn();
+    const onCancel = vi.fn();
+    renderDecisionModal({ onRealinhar, onIgnorar, onCancel });
+
+    expect(screen.getByText("Direção visual desatualizada")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Realinhar" }));
+    expect(onRealinhar).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Manter e salvar" }));
+    expect(onIgnorar).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(onCancel).toHaveBeenCalled();
+  });
+
+  it("(c) drift crítico → DriftCriticalModal (nunca o DriftDecisionModal)", () => {
+    expect(resolveModalType("critical", "new")).toBe("critical");
+    expect(resolveModalType("critical", "new")).not.toBe("decision");
+    expect(resolveModalType("sensitive", null)).toBe("decision");
+
+    // Modal real crítico com crédito → CTA "Atualizar assinatura visual"
+    renderCriticalModal({ canGenerateNewSignature: true });
+    expect(screen.getByText("Assinatura visual desatualizada")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Atualizar assinatura visual" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Direção visual desatualizada")).not.toBeInTheDocument();
+  });
+
+  it("(b) navegação interna com drift sensível intercepta (preventDefault + onDriftLeave) sem salvar", () => {
+    const onDriftLeave = vi.fn();
+    const autoSave = vi.fn(async () => ({ ok: true }));
+
+    const { result } = renderHook(() =>
+      useOnboardingTabs(
+        makeDeps({
+          storeId: "store-1",
+          formData: makeFormData({ name: "Nome Editado" }),
+          editedFields: ["name"],
+          driftCategory: "sensitive",
+          driftStatus: "new",
+          autoSave,
+        }),
+        { onDriftLeave },
+      ),
+    );
+
+    const anchor = document.createElement("a");
+    anchor.href = "/dashboard";
+    const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+    anchor.dispatchEvent(event);
+
+    act(() => {
+      result.current.handleInternalNavigation(event);
+    });
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(onDriftLeave).toHaveBeenCalledTimes(1);
+    expect(autoSave).not.toHaveBeenCalled();
+  });
+
+  it("(d) cancelar o modal mantém o usuário no contexto atual sem persistir", async () => {
+    const onDriftNavigate = vi.fn();
+    const autoSave = vi.fn(async () => ({ ok: true }));
+
+    const { result } = renderHook(() =>
+      useOnboardingTabs(
+        makeDeps({
+          storeId: "store-1",
+          formData: makeFormData({ name: "Nome Editado", city: "São Paulo" }),
+          editedFields: ["name"],
+          driftCategory: "sensitive",
+          driftStatus: "new",
+          autoSave,
+        }),
+        { onDriftNavigate },
+      ),
+    );
+
+    await act(async () => {
+      await result.current.setActiveTab("posicionamento");
+    });
+
+    // Cancelar = fechar o modal sem decidir: driftCategory continua 'sensitive' →
+    // nada é navegado, nada é persistido
+    await act(async () => {});
+    expect(onDriftNavigate).toHaveBeenCalledTimes(1);
+    expect(result.current.activeTab).toBe("dados");
+    expect(autoSave).not.toHaveBeenCalled();
+    expect(localStorage.getItem("vendeo:store_draft:user-1:store-1")).toBeNull();
+  });
+
+  it("(e) após realinhar/ignorar/dismiss (driftCategory → none) o save prossegue e a navegação é concluída", async () => {
+    const onDriftNavigate = vi.fn();
+    const autoSave = vi.fn(async () => ({ ok: true }));
+
+    const { result, rerender } = renderHook(
+      (props: { driftCategory: "sensitive" | "none" }) =>
+        useOnboardingTabs(
+          makeDeps({
+            storeId: "store-1",
+            formData: makeFormData({ name: "Nome Editado" }),
+            editedFields: ["name"],
+            driftCategory: props.driftCategory,
+            driftStatus: props.driftCategory === "sensitive" ? "new" : "none",
+            autoSave,
+          }),
+          { onDriftNavigate },
+        ),
+      { initialProps: { driftCategory: "sensitive" as const } },
+    );
+
+    await act(async () => {
+      await result.current.setActiveTab("posicionamento");
+    });
+    expect(onDriftNavigate).toHaveBeenCalledTimes(1);
+    expect(autoSave).not.toHaveBeenCalled();
+
+    // Decisão do modal → driftCategory 'none' → resume navega para o alvo pendente
+    rerender({ driftCategory: "none" });
+    await waitFor(() => expect(result.current.activeTab).toBe("posicionamento"));
+    expect(autoSave).toHaveBeenCalledTimes(1);
+  });
+
+  it("(g) edições em campos fora do snapshot (billing/cidade) fazem auto-save mesmo com drift pendente", async () => {
+    const onDriftNavigate = vi.fn();
+    const autoSave = vi.fn(async () => ({ ok: true }));
+
+    const { result } = renderHook(() =>
+      useOnboardingTabs(
+        makeDeps({
+          storeId: "store-1",
+          formData: makeFormData({ name: "Nome Editado", city: "São Paulo" }),
+          editedFields: ["city"], // fora de SNAPSHOT_FIELDS → auto-save normal (D13)
+          driftCategory: "sensitive",
+          driftStatus: "new",
+          autoSave,
+        }),
+        { onDriftNavigate },
+      ),
+    );
+
+    await act(async () => {
+      await result.current.setActiveTab("posicionamento");
+    });
+
+    expect(onDriftNavigate).not.toHaveBeenCalled();
+    expect(autoSave).toHaveBeenCalledTimes(1);
+    expect(result.current.activeTab).toBe("posicionamento");
+  });
+});

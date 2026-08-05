@@ -139,6 +139,9 @@ export function StoreTabs({
   const tabRefs = useRef<
     Partial<Record<OnboardingTab, HTMLButtonElement | null>>
   >({});
+  // Roving tabindex (D11): a seta parte da aba FOCADA (não da ativa) — permite
+  // percorrer todas as abas com teclas consecutivas (padrão WAI-ARIA APG).
+  const focusedTabRef = useRef<OnboardingTab | null>(null);
 
   // Região aria-live (D11): anuncia troca de aba/estado.
   const announcement = `Aba ${activeDef?.label ?? activeTab} — ${activeStateLabel}`;
@@ -152,7 +155,8 @@ export function StoreTabs({
   /** Roving tabindex: ArrowLeft/ArrowRight circular, Home/End — move foco, não seleciona. */
   const handleTablistKeyDown = useCallback(
     (e: ReactKeyboardEvent<HTMLDivElement>) => {
-      const currentIndex = TAB_ORDER.indexOf(activeTab);
+      const anchorTab = focusedTabRef.current ?? activeTab;
+      const currentIndex = TAB_ORDER.indexOf(anchorTab);
       if (currentIndex === -1) return;
 
       let nextIndex = -1;
@@ -239,6 +243,9 @@ export function StoreTabs({
               tabIndex={isActive ? 0 : -1}
               ref={(el) => {
                 tabRefs.current[tab.id] = el;
+              }}
+              onFocus={() => {
+                focusedTabRef.current = tab.id;
               }}
               onClick={() => onTabChange(tab.id)}
               onKeyDown={handleTabKeyDown(tab.id)}
