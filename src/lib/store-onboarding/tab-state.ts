@@ -2,7 +2,7 @@
  * Estado por aba do onboarding (F36, D7) — função pura com prioridade fixa:
  * `pending_generation` > `blocked` > `draft` > `ready` > `saved`.
  *
- * Módulo puro: sem React, sem server-only (import de tipo apenas).
+ * Módulo puro: sem runtime de UI, sem ambiente de servidor (import de tipo apenas).
  * O reason de `pending_generation` (`fiscal_pending`) indica que a loja não
  * pode gerar campanha — navegação continua permitida (D2/D8).
  */

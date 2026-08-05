@@ -2,7 +2,7 @@
  * Máquina de abas do onboarding de loja (F36) — definição tipada das 3 abas
  * e desbloqueio progressivo via função pura (D1/D8/D9).
  *
- * Módulo puro: sem React, sem server-only, sem imports de side-effect.
+ * Módulo puro: sem runtime de UI, sem ambiente de servidor, sem imports de side-effect.
  * CNPJ NUNCA bloqueia navegação (D8) — o desbloqueio considera apenas
  * dados da loja + aceite legal + tom de voz.
  */
