@@ -21,9 +21,9 @@ export default async function NovaCampanhaPage() {
   if (!readiness.ready) {
     const firstMissing = readiness.missing[0].item;
     if (firstMissing === "cadastro_fiscal") {
-      redirect(`/loja?required=cadastro-fiscal&returnTo=${encodeURIComponent("/campanhas/nova")}`);
+      redirect(`/loja?tab=dados&fiscal=pending&returnTo=${encodeURIComponent("/campanhas/nova")}`);
     } else {
-      redirect(`/loja?required=visual-direction&message=needs-visual-direction`);
+      redirect(`/loja?tab=direcao-visual&message=needs-visual-direction&returnTo=${encodeURIComponent("/campanhas/nova")}`);
     }
   }
 
