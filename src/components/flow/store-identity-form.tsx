@@ -200,7 +200,9 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
         }
       })
       .catch(() => {
-        setExistingLegalOk(true);
+        // LW-01: falha de rede → fail-closed (não libera Posicionamento sem
+        // aceite verificável); estado pendente com retry no próximo render.
+        setExistingLegalOk(false);
         setLegalState("pending");
       })
       .finally(() => setLegalCheckLoading(false));
@@ -255,6 +257,8 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
 
   // F36 (D4/D6/D13): readiness consumido pelo hook (tabStates / geração).
   const [readiness, setReadiness] = useState<StoreReadinessResult>({ ready: true, missing: [] });
+  // MD-03: força refetch após update-cnpj (storeId não muda → sem trigger natural).
+  const [readinessRefreshKey, setReadinessRefreshKey] = useState(0);
   useEffect(() => {
     if (!storeId) {
       setReadiness({ ready: true, missing: [] });
@@ -276,7 +280,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
         if (!cancelled) setReadiness({ ready: false, missing: [] });
       });
     return () => { cancelled = true; };
-  }, [storeId]);
+  }, [storeId, readinessRefreshKey]);
 
   // F36 (F36-IDENTITY-UI-05): restauração do rascunho no auto-load. `:new` (sem
   // loja) ou `:${storeId}` reconciliado com o banco — o banco prevalece em campos
@@ -289,7 +293,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
     if (!draft) return;
     draftRestoredRef.current = true;
     const stored = initialStore as Partial<Record<keyof StoreFormData, unknown>> | null;
-    const entries = Object.entries(draft.fields) as [keyof StoreFormData, string | undefined][];
+    const entries = Object.entries(draft.fields ?? {}) as [keyof StoreFormData, string | undefined][];
     for (const [field, value] of entries) {
       if (typeof value !== "string") continue;
       const persisted = stored?.[field];
@@ -326,6 +330,21 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
   const legalAccepted = storeId ? (existingLegalOk || acceptedTerms) : acceptedTerms;
   const hasVisualDirection = !!inferredProfile || identityState === "visual_signature";
 
+  // MD-01 (D13): campos com edição local (auto-save seletivo). Derivados da
+  // baseline persistida (initialStore + último save) — evita abrir o modal de
+  // drift em toda troca de aba sem edições reais nos campos do snapshot.
+  const persistedFormRef = useRef<FormData | null>(null);
+  useEffect(() => {
+    if (saveStatus === "saved") persistedFormRef.current = { ...formData };
+  }, [saveStatus, formData]);
+  const editedFields = useMemo<(keyof FormData)[]>(() => {
+    const persisted = persistedFormRef.current;
+    if (!persisted) return [];
+    return (Object.keys(formData) as (keyof FormData)[]).filter(
+      (field) => formData[field] !== persisted[field],
+    );
+  }, [formData]);
+
   const {
     activeTab,
     setActiveTab,
@@ -334,6 +353,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
     handleInternalNavigation,
     handlePageHide,
     handleVisibilityChange,
+    cancelPendingNavigation,
   } = useOnboardingTabs(
     {
       initialTab,
@@ -345,6 +365,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
       readiness,
       hasLocalEdits,
       isPersisted: !!storeId,
+      editedFields,
       autoSave,
       saveStatus,
       driftStatus,
@@ -1079,6 +1100,8 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
     if (saved && "storeId" in saved) {
       // F36 (D1/D8): cadastro_fiscal pendente NÃO bloqueia navegação — apenas geração.
       setDriftRefreshKey(k => k + 1);
+      // MD-03: refetch readiness após save (cobre update-cnpj draft→fiscal).
+      setReadinessRefreshKey(k => k + 1);
       setStep2Success(null);
       setFeedbackOverlay({ message: "Loja salva. Continue com o posicionamento da sua loja.", type: 'success' });
       await setActiveTab("posicionamento");
@@ -2429,7 +2452,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
               setFeedbackOverlay({ message: 'Erro ao salvar. Tente novamente.', type: 'error' });
             }
           }}
-          onCancel={() => { setShowDriftDecisionModal(false); setDriftError(null); }}
+          onCancel={() => { setShowDriftDecisionModal(false); setDriftError(null); cancelPendingNavigation(); }}
           isLoading={isRealinhando}
           error={driftError}
         />
@@ -2465,7 +2488,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
             setShowDriftCriticalModal(false);
             handleOpenSubstitutionApproval();
           }}
-          onCancel={() => setShowDriftCriticalModal(false)}
+          onCancel={() => { setShowDriftCriticalModal(false); cancelPendingNavigation(); }}
         />
       )}
       {driftNavIntercept && (
@@ -2509,7 +2532,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
               // modal já fechou; drift permanece ativo
             }
           }}
-          onCancel={() => { setDriftNavIntercept(false); setDriftError(null); }}
+          onCancel={() => { setDriftNavIntercept(false); setDriftError(null); cancelPendingNavigation(); }}
           isLoading={isRealinhando}
           error={driftError}
         />

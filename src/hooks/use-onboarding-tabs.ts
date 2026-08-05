@@ -69,6 +69,8 @@ export interface UseOnboardingTabsReturn {
   handleInternalNavigation: (e: MouseEvent) => void;
   handlePageHide: () => void;
   handleVisibilityChange: () => void;
+  /** Limpa navegação pendente adiada por drift (usado no CANCELAR do modal — HR-02). */
+  cancelPendingNavigation: () => void;
 }
 
 const EMPTY_READINESS: StoreReadiness = { ready: true, missing: [] };
@@ -221,7 +223,16 @@ export function useOnboardingTabs(
       if (!unlock.unlocked) {
         // D1: única exceção — aba bloqueada por needs_store_created pode ser
         // resolvida pela própria troca (autoSave cria a loja draft, D4)
-        if (unlock.reason !== "needs_store_created") return;
+        if (unlock.reason !== "needs_store_created") {
+          // MD-05 (D6/D10): sincroniza a aba bloqueada para que o painel ativo
+          // renderize o motivo + link "Voltar para X" (feedback de clique, nunca
+          // silencioso). Sem autoSave — não há saída a persistir.
+          updateActiveTab(next);
+          const url = new URL(window.location.href);
+          url.searchParams.set("tab", next);
+          window.history.pushState(null, "", `${url.pathname}${url.search}${url.hash}`);
+          return;
+        }
         if (!hasMinimumForCreation()) return;
       }
 
@@ -234,7 +245,7 @@ export function useOnboardingTabs(
 
       await commitTabChange(next, { updateUrl: true });
     },
-    [computeUnlockFor, hasMinimumForCreation, hasPendingDrift, commitTabChange],
+    [computeUnlockFor, hasMinimumForCreation, hasPendingDrift, commitTabChange, updateActiveTab],
   );
 
   // Sync back/forward (D6/F36-TABS-04): listener popstate registrado no mount,
@@ -285,6 +296,14 @@ export function useOnboardingTabs(
       window.location.href = pendingHref;
     }
   }, [deps.driftCategory, commitTabChange]);
+
+  // HR-02: limpa navegação pendente adiada por drift quando o usuário CANCELA
+  // o modal de drift. Sem isto, um pendingTabRef stale disparava navegação
+  // espúria numa decisão de drift posterior de outro caminho.
+  const cancelPendingNavigation = useCallback(() => {
+    pendingTabRef.current = null;
+    pendingHrefRef.current = null;
+  }, []);
 
   const tabStates = useMemo<Record<OnboardingTab, { state: TabState; reason?: TabBlockReason }>>(() => {
     const result = {} as Record<OnboardingTab, { state: TabState; reason?: TabBlockReason }>;
@@ -338,11 +357,13 @@ export function useOnboardingTabs(
         return;
       }
 
-      // D4: autoSave antes de sair; falha na criação (POST) → não sai
+      // D4: autoSave antes de sair; falha REAL (POST enviado e recusado) → não sai.
+      // HR-01: `skipped` (mínimo não preenchido, sem fetch) não é falha — permite
+      // sair (rascunho é preservado síncrono no pagehide, D4/D5).
       void (async () => {
         const { seq, result } = await enqueueAutoSave(depsRef.current.formData);
         if (seq !== saveSeqRef.current) return;
-        if (!result.ok && !depsRef.current.storeId) return;
+        if (!result.ok && !result.skipped && !depsRef.current.storeId) return;
         window.location.href = anchor.href;
       })();
     },
@@ -380,6 +401,22 @@ export function useOnboardingTabs(
     }
   }, [handlePageHide]);
 
+  // MD-02 (D5): escrita do rascunho DEBOUNCED (~400ms) a cada edição — garantia
+  // primária de persistência; o pagehide é a escrita síncrona complementar.
+  useEffect(() => {
+    const { userId, storeId, formData } = deps;
+    if (!userId) return;
+    const timer = setTimeout(() => {
+      try {
+        saveDraft({ userId, storeId, fields: formData, updatedAt: Date.now() });
+      } catch {
+        // best-effort
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deps.formData, deps.storeId, deps.userId]);
+
   return {
     activeTab,
     setActiveTab,
@@ -388,5 +425,6 @@ export function useOnboardingTabs(
     handleInternalNavigation,
     handlePageHide,
     handleVisibilityChange,
+    cancelPendingNavigation,
   };
 }

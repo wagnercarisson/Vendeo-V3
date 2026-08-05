@@ -57,6 +57,12 @@ export function restoreDraft(userId: string, storeId: string | null): StoreDraft
 
     const parsed = JSON.parse(raw) as StoreDraft;
 
+    // LW-03: updatedAt ausente/não-finito → tratado como expirado (nunca ressuscita)
+    if (!Number.isFinite(parsed.updatedAt)) {
+      localStorage.removeItem(key);
+      return null;
+    }
+
     // D5: expirado → ignorado e removido (draft velho nunca ressuscita)
     if (Date.now() - parsed.updatedAt > DRAFT_TTL_MS) {
       localStorage.removeItem(key);

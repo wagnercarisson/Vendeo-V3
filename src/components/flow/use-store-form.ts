@@ -44,7 +44,7 @@ export interface UseStoreFormReturn {
    *   (modo draft da rota — 36-01); falha BLOQUEIA o avanço
    * - sem storeId + mínimo inválido → sem fetch, { ok: false }, draft permanece no localStorage
    */
-  autoSave: (fields: Partial<FormData>) => Promise<{ ok: boolean; storeId?: string }>;
+  autoSave: (fields: Partial<FormData>) => Promise<{ ok: boolean; storeId?: string; skipped?: boolean }>;
   saveStatus: SaveStatus;
   /** Aceite legal corrente — alimenta o mínimo válido do autoSave (POST draft). */
   acceptedTerms: boolean;
@@ -163,6 +163,13 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const [colorTouched, setColorTouched] = useState(false);
   const [storeId, setStoreId] = useState<string | null>(initialStore?.id ?? null);
+  // F36 (MD-04): ref espelha storeId para o autoSave ler o valor CORRENTE (sem
+  // depender do re-render) logo após a criação — evita re-POST no fluxo criar→navegar.
+  const storeIdRef = useRef<string | null>(initialStore?.id ?? null);
+  const updateStoreId = useCallback((id: string | null) => {
+    storeIdRef.current = id;
+    setStoreId(id);
+  }, []);
   const [hasExistingCnpj, setHasExistingCnpj] = useState(() => !!initialStore?.cnpj_normalized);
   const [acceptedTerms, setAcceptedTermsState] = useState(false);
   const setAcceptedTerms = useCallback((accepted: boolean) => {
@@ -199,7 +206,7 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
   }, []);
 
   const clearStore = useCallback(() => {
-    setStoreId(null);
+    updateStoreId(null);
     setFormData(EMPTY_FORM);
     setMode("create");
     setHasExistingCnpj(false);
@@ -210,7 +217,7 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
     setWarningMessage(null);
     setSaveStatus("idle");
     setAcceptedTermsState(false);
-  }, []);
+  }, [updateStoreId]);
 
   const save = useCallback(async (acceptedTermsArg?: boolean) => {
     setError(null);
@@ -300,7 +307,7 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
           setSaveStatus("error");
           return { error: "Loja salva, mas resposta não retornou o ID da loja." };
         }
-        setStoreId(saved.id as string);
+        updateStoreId(saved.id as string);
         setMode("edit");
         if (formData.cnpj) setHasExistingCnpj(true);
         setSuccessMessage("Loja salva. Agora configure a direção visual.");
@@ -327,7 +334,7 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
     } finally {
       setIsSaving(false);
     }
-  }, [formData, storeId, colorTouched, hasExistingCnpj]);
+  }, [formData, storeId, colorTouched, hasExistingCnpj, updateStoreId]);
 
   /**
    * F36 D4/D15 — auto-save silencioso do onboarding.
@@ -339,7 +346,7 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
    * Loja draft não libera campanha/freemium — readiness reporta cadastro_fiscal.
    */
   const autoSave = useCallback(
-    async (fields: Partial<FormData>): Promise<{ ok: boolean; storeId?: string }> => {
+    async (fields: Partial<FormData>): Promise<{ ok: boolean; storeId?: string; skipped?: boolean }> => {
       setSaveStatus("saving");
 
       // Merge com o form atual: campos não informados mantêm o valor corrente.
@@ -386,14 +393,18 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
       // cnpj/razaoSocial/nomeFantasia NÃO entram no auto-save — o fluxo fiscal
       // (update-cnpj / save explícito) é separado (D8/D15).
 
-      if (storeId) {
+      // MD-04: usa o storeId CORRENTE via ref (sem depender de re-render) —
+      // evita re-POST no fluxo salvar→navegar logo após a criação.
+      const currentStoreId = storeIdRef.current;
+
+      if (currentStoreId) {
         // PATCH silencioso — falha NÃO bloqueia navegação (D4)
         if (Object.keys(body).length === 0) {
           setSaveStatus("idle");
           return { ok: true };
         }
         try {
-          const res = await fetch(`/api/store/${storeId}`, {
+          const res = await fetch(`/api/store/${currentStoreId}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),
@@ -412,8 +423,10 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
 
       // Sem storeId + mínimo inválido → sem POST (D4: não se cria loja prematuramente)
       if (!body.name || !body.segment || !acceptedTerms) {
+        // HR-01: nada foi enviado (skip real, não falha) — quem navega internamente
+        // pode prosseguir; o rascunho é preservado síncrono no pagehide.
         setSaveStatus("idle");
-        return { ok: false };
+        return { ok: true, skipped: true };
       }
 
       // Sem storeId + mínimo válido → POST /api/store SEM cnpj (modo draft, 36-01)
@@ -432,7 +445,7 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
           setSaveStatus("error");
           return { ok: false };
         }
-        setStoreId(saved.id as string);
+        updateStoreId(saved.id as string);
         setMode("edit");
         setSaveStatus("saved");
         return { ok: true, storeId: saved.id as string };
@@ -441,7 +454,7 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
         return { ok: false };
       }
     },
-    [formData, storeId, acceptedTerms],
+    [formData, acceptedTerms, updateStoreId],
   );
 
   return {

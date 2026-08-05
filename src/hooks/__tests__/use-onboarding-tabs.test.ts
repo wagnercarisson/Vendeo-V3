@@ -64,6 +64,7 @@ describe("useOnboardingTabs module shape", () => {
     const keys = Object.keys(result.current).sort();
     expect(keys).toEqual([
       "activeTab",
+      "cancelPendingNavigation",
       "handleInternalNavigation",
       "handlePageHide",
       "handleVisibilityChange",
@@ -71,6 +72,57 @@ describe("useOnboardingTabs module shape", () => {
       "setActiveTab",
       "tabStates",
     ]);
+  });
+
+  it("cancelPendingNavigation limpa navegação adiada por drift (HR-02)", async () => {
+    const onDriftNavigate = vi.fn();
+    const autoSave = vi.fn(async () => ({ ok: true }));
+
+    const { result } = renderHook(() =>
+      useOnboardingTabs(
+        makeDeps({
+          storeId: "store-1",
+          formData: makeFormData({ name: "Nome Editado" }),
+          editedFields: ["name"],
+          driftCategory: "sensitive",
+          driftStatus: "new",
+          autoSave,
+        }),
+        { onDriftNavigate },
+      ),
+    );
+
+    // Intercepta troca de aba com drift → pendingTab fica pendente
+    await act(async () => {
+      await result.current.setActiveTab("posicionamento");
+    });
+    expect(onDriftNavigate).toHaveBeenCalledTimes(1);
+    expect(result.current.activeTab).toBe("dados");
+
+    // Usuário CANCELA o modal → navegação pendente é limpa
+    act(() => {
+      result.current.cancelPendingNavigation();
+    });
+
+    // Decisão de drift de outro caminho (driftCategory → none) NÃO navega espúrio
+    const { rerender } = renderHook(
+      (props: { driftCategory: "sensitive" | "none" }) =>
+        useOnboardingTabs(
+          makeDeps({
+            storeId: "store-1",
+            formData: makeFormData({ name: "Nome Editado" }),
+            editedFields: ["name"],
+            driftCategory: props.driftCategory,
+            driftStatus: props.driftCategory === "sensitive" ? "new" : "none",
+            autoSave,
+          }),
+          { onDriftNavigate },
+        ),
+      { initialProps: { driftCategory: "sensitive" as "sensitive" | "none" } },
+    );
+    rerender({ driftCategory: "none" });
+    expect(result.current.activeTab).toBe("dados");
+    expect(autoSave).not.toHaveBeenCalled();
   });
 });
 
