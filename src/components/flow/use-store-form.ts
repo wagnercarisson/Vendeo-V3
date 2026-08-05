@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import type { Store } from "@/lib/store";
+import { STORE_SEGMENTS, STORE_SUBSEGMENTS } from "@/lib/constants";
+import { isValidHex } from "@/lib/validators/color";
 
 export interface ColorDirtyState {
   primaryInitial: string | null
@@ -28,10 +30,25 @@ export interface FormData {
 
 export type FormMode = "create" | "edit";
 
+/** Estado do auto-save (F36 D4) — badge "Não salvo"/"Salva ✓" na UI da 36-04. */
+export type SaveStatus = "idle" | "saving" | "saved" | "error";
+
 export interface UseStoreFormReturn {
   formData: FormData;
   setField: (field: keyof FormData, value: string) => void;
   save: (acceptedTerms?: boolean) => Promise<{ storeId: string } | { error: string; code?: string } | void>;
+  /**
+   * F36 D4/D15 — auto-save silencioso (sem toast; feedback via `saveStatus`).
+   * - storeId existe → PATCH silencioso em /api/store/${storeId} (falha NÃO bloqueia navegação)
+   * - sem storeId + mínimo válido (name+segment+acceptedTerms) → POST /api/store SEM cnpj
+   *   (modo draft da rota — 36-01); falha BLOQUEIA o avanço
+   * - sem storeId + mínimo inválido → sem fetch, { ok: false }, draft permanece no localStorage
+   */
+  autoSave: (fields: Partial<FormData>) => Promise<{ ok: boolean; storeId?: string }>;
+  saveStatus: SaveStatus;
+  /** Aceite legal corrente — alimenta o mínimo válido do autoSave (POST draft). */
+  acceptedTerms: boolean;
+  setAcceptedTerms: (accepted: boolean) => void;
   isLoading: boolean;
   isSaving: boolean;
   error: string | null;
@@ -140,12 +157,17 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
   const [mode, setMode] = useState<FormMode>(initialStore ? "edit" : "create");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const [colorTouched, setColorTouched] = useState(false);
   const [storeId, setStoreId] = useState<string | null>(initialStore?.id ?? null);
   const [hasExistingCnpj, setHasExistingCnpj] = useState(() => !!initialStore?.cnpj_normalized);
+  const [acceptedTerms, setAcceptedTermsState] = useState(false);
+  const setAcceptedTerms = useCallback((accepted: boolean) => {
+    setAcceptedTermsState(accepted);
+  }, []);
   const [colorDirtyState, setColorDirtyState] = useState<ColorDirtyState>({
     primaryInitial: null,
     accentInitial: null,
@@ -186,12 +208,16 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
     setError(null);
     setSuccessMessage(null);
     setWarningMessage(null);
+    setSaveStatus("idle");
+    setAcceptedTermsState(false);
   }, []);
 
-  const save = useCallback(async (acceptedTerms?: boolean) => {
+  const save = useCallback(async (acceptedTermsArg?: boolean) => {
     setError(null);
     setSuccessMessage(null);
     setIsSaving(true);
+    setSaveStatus("saving");
+    if (acceptedTermsArg) setAcceptedTermsState(true);
 
     try {
       const body: Record<string, string | null | boolean> = {
@@ -207,7 +233,7 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
         slogan: toNull(formData.slogan),
       };
 
-      if (!storeId && acceptedTerms) {
+      if (!storeId && acceptedTermsArg) {
         body.acceptedTerms = true;
       }
 
@@ -242,7 +268,8 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
           });
         }
       } else {
-        // Create mode — inclui CNPJ e dados fiscais
+        // Create mode — F36 D8/D15: CNPJ é OPCIONAL (não validar localmente quando
+        // ausente); sem CNPJ no body, o POST atinge o branch DRAFT da rota (36-01).
         if (formData.cnpj) {
           body.cnpj = formData.cnpj.replace(/\D/g, "");
         }
@@ -260,6 +287,7 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
       if (!res.ok) {
         const errData = await res.json().catch(() => ({ error: "Erro ao salvar" }));
         setError(errData.error || "Erro ao salvar");
+        setSaveStatus("error");
         return { error: errData.error || "Erro ao salvar", code: errData.code };
       }
 
@@ -269,6 +297,7 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
         // Response from create (POST /api/store)
         if (!saved.id || typeof saved.id !== "string") {
           setError("Loja salva, mas resposta não retornou o ID da loja.");
+          setSaveStatus("error");
           return { error: "Loja salva, mas resposta não retornou o ID da loja." };
         }
         setStoreId(saved.id as string);
@@ -282,25 +311,147 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
           setHasExistingCnpj(true);
         } else if (!saved.id || typeof saved.id !== "string") {
           setError("Loja salva, mas resposta não retornou o ID da loja.");
+          setSaveStatus("error");
           return { error: "Loja salva, mas resposta não retornou o ID da loja." };
         }
         setSuccessMessage("Loja salva. Agora configure a direção visual.");
       }
 
+      setSaveStatus("saved");
       return { storeId: saved.id as string };
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro ao salvar";
       setError(msg);
+      setSaveStatus("error");
       return { error: msg };
     } finally {
       setIsSaving(false);
     }
   }, [formData, storeId, colorTouched, hasExistingCnpj]);
 
+  /**
+   * F36 D4/D15 — auto-save silencioso do onboarding.
+   * Persiste APENAS campos válidos (inválidos são ignorados). Com storeId →
+   * PATCH silencioso (falha NÃO bloqueia navegação). Sem storeId + mínimo
+   * válido (name+segment+acceptedTerms) → POST /api/store SEM cnpj (modo
+   * draft da rota — 36-01); falha BLOQUEIA o avanço. Sem mínimo → sem fetch
+   * (não se cria loja prematuramente; o draft permanece no localStorage).
+   * Loja draft não libera campanha/freemium — readiness reporta cadastro_fiscal.
+   */
+  const autoSave = useCallback(
+    async (fields: Partial<FormData>): Promise<{ ok: boolean; storeId?: string }> => {
+      setSaveStatus("saving");
+
+      // Merge com o form atual: campos não informados mantêm o valor corrente.
+      const merged: FormData = { ...formData, ...fields };
+
+      const body: Record<string, string | null> = {};
+
+      const name = merged.name.trim();
+      if (name.length >= 2 && name.length <= 60) body.name = name;
+
+      const validSegmentValues = STORE_SEGMENTS.map((s) => s.value) as string[];
+      if (validSegmentValues.includes(merged.segment)) body.segment = merged.segment;
+
+      if (merged.brand_color === "" || isValidHex(merged.brand_color)) {
+        body.brand_color = toNull(merged.brand_color);
+      }
+
+      body.city = toNull(merged.city);
+      body.state = toNull(merged.state);
+
+      // Subsegmento: pré-definido OU texto livre válido; inválido → ignorado
+      const segKey = merged.segment as keyof typeof STORE_SUBSEGMENTS;
+      const segmentSubs = STORE_SUBSEGMENTS[segKey] ?? [];
+      const subTrimmed = merged.subsegment.trim();
+      const subLower = subTrimmed.toLowerCase();
+      if (segmentSubs.some((s) => s.value === subLower)) {
+        body.subsegment = subLower;
+      } else if (subTrimmed === "") {
+        body.subsegment = null;
+      } else if (
+        subLower !== "outro" &&
+        !["outro", "loja", "comercio", "comércio", "varejo"].includes(subLower) &&
+        subTrimmed.length >= 3 &&
+        subTrimmed.length <= 30 &&
+        /^[A-Za-zÀ-ü\s]+$/.test(subTrimmed)
+      ) {
+        body.subsegment = subTrimmed;
+      }
+
+      body.tone_of_voice = toNull(merged.tone_of_voice);
+      body.positioning = toNull(merged.positioning);
+      body.short_description = toNull(merged.short_description);
+      body.slogan = toNull(merged.slogan);
+      // cnpj/razaoSocial/nomeFantasia NÃO entram no auto-save — o fluxo fiscal
+      // (update-cnpj / save explícito) é separado (D8/D15).
+
+      if (storeId) {
+        // PATCH silencioso — falha NÃO bloqueia navegação (D4)
+        if (Object.keys(body).length === 0) {
+          setSaveStatus("idle");
+          return { ok: true };
+        }
+        try {
+          const res = await fetch(`/api/store/${storeId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          if (!res.ok) {
+            setSaveStatus("error");
+            return { ok: false };
+          }
+          setSaveStatus("saved");
+          return { ok: true };
+        } catch {
+          setSaveStatus("error");
+          return { ok: false };
+        }
+      }
+
+      // Sem storeId + mínimo inválido → sem POST (D4: não se cria loja prematuramente)
+      if (!body.name || !body.segment || !acceptedTerms) {
+        setSaveStatus("idle");
+        return { ok: false };
+      }
+
+      // Sem storeId + mínimo válido → POST /api/store SEM cnpj (modo draft, 36-01)
+      try {
+        const res = await fetch("/api/store", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...body, acceptedTerms: true }),
+        });
+        if (!res.ok) {
+          setSaveStatus("error");
+          return { ok: false };
+        }
+        const saved: Record<string, unknown> = await res.json();
+        if (!saved.id || typeof saved.id !== "string") {
+          setSaveStatus("error");
+          return { ok: false };
+        }
+        setStoreId(saved.id as string);
+        setMode("edit");
+        setSaveStatus("saved");
+        return { ok: true, storeId: saved.id as string };
+      } catch {
+        setSaveStatus("error");
+        return { ok: false };
+      }
+    },
+    [formData, storeId, acceptedTerms],
+  );
+
   return {
     formData,
     setField,
     save,
+    autoSave,
+    saveStatus,
+    acceptedTerms,
+    setAcceptedTerms,
     isLoading,
     isSaving,
     error,
