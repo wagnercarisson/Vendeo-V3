@@ -64,6 +64,7 @@ describe("useOnboardingTabs module shape", () => {
     const keys = Object.keys(result.current).sort();
     expect(keys).toEqual([
       "activeTab",
+      "blockedNotice",
       "cancelPendingNavigation",
       "handleInternalNavigation",
       "handlePageHide",
@@ -320,7 +321,7 @@ describe("useOnboardingTabs — sync de URL / back-forward (D6)", () => {
     expect(autoSave).not.toHaveBeenCalled();
   });
 
-  it("popstate para aba bloqueada ainda sincroniza activeTab (D6 — nunca tela em branco)", async () => {
+  it("popstate para aba bloqueada NÃO sincroniza activeTab — redireciona à primeira aba anterior válida (D16)", () => {
     const autoSave = vi.fn(async () => ({ ok: true }));
     const { result } = renderHook(() =>
       useOnboardingTabs(
@@ -333,10 +334,143 @@ describe("useOnboardingTabs — sync de URL / back-forward (D6)", () => {
       window.dispatchEvent(new PopStateEvent("popstate"));
     });
 
-    // D6: sincroniza mesmo bloqueada (painel de bloqueio + link "Voltar para X")
-    expect(result.current.activeTab).toBe("direcao-visual");
+    // D16 (hard-block): a aba bloqueada nunca fica ativa — roteia para a
+    // primeira aba anterior válida (posicionamento, com storeId criado).
+    expect(result.current.activeTab).toBe("posicionamento");
+    expect(result.current.blockedNotice).toEqual({
+      tab: "direcao-visual",
+      reason: "needs_tone_of_voice",
+    });
     // Bloqueada → sem autoSave (não há saída a persistir)
     expect(autoSave).not.toHaveBeenCalled();
+    // URL corrigida para a aba anterior válida (replaceState)
+    expect(window.location.search).toContain("tab=posicionamento");
+  });
+
+  it("popstate para aba bloqueada no passo 1 roteia para dados (sem storeId)", () => {
+    const autoSave = vi.fn(async () => ({ ok: true }));
+    const { result } = renderHook(() =>
+      useOnboardingTabs(makeDeps({ storeId: null, autoSave })),
+    );
+
+    act(() => {
+      window.history.pushState(null, "", "/loja?tab=posicionamento");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    // Sem loja criada (needs_store_created), a primeira aba anterior válida é dados.
+    expect(result.current.activeTab).toBe("dados");
+    expect(result.current.blockedNotice).toEqual({
+      tab: "posicionamento",
+      reason: "needs_store_created",
+    });
+    expect(autoSave).not.toHaveBeenCalled();
+  });
+});
+
+describe("useOnboardingTabs — deep-link destravamento: data-load vs edição (D16 fix)", () => {
+  it("deep-link para direcao-visual bloqueada redireciona à primeira aba anterior válida + aviso", () => {
+    const autoSave = vi.fn(async () => ({ ok: true }));
+    const { result } = renderHook(() =>
+      useOnboardingTabs(
+        makeDeps({
+          initialTab: "direcao-visual",
+          storeId: "store-1",
+          formData: makeFormData({ tone_of_voice: "" }),
+          hasVisualDirection: false,
+          autoSave,
+        }),
+      ),
+    );
+
+    expect(result.current.activeTab).toBe("posicionamento");
+    expect(result.current.blockedNotice).toEqual({
+      tab: "direcao-visual",
+      reason: "needs_tone_of_voice",
+    });
+    expect(window.location.search).toContain("tab=posicionamento");
+  });
+
+  it("preencher tom de voz NÃO auto-avança para Direção Visual — permanece em Posicionamento e o aviso é limpo", async () => {
+    const autoSave = vi.fn(async () => ({ ok: true }));
+    const { result, rerender } = renderHook(
+      (props: { tone: string }) =>
+        useOnboardingTabs(
+          makeDeps({
+            initialTab: "direcao-visual",
+            storeId: "store-1",
+            formData: makeFormData({ tone_of_voice: props.tone }),
+            hasVisualDirection: false,
+            autoSave,
+          }),
+        ),
+      { initialProps: { tone: "" } },
+    );
+
+    expect(result.current.activeTab).toBe("posicionamento");
+
+    await act(async () => {
+      rerender({ tone: "moderno" });
+    });
+
+    expect(result.current.activeTab).toBe("posicionamento");
+    expect(result.current.blockedNotice).toBeNull();
+    expect(autoSave).not.toHaveBeenCalled();
+  });
+
+  it("tom de voz (edição) consome o deep-link — um hasVisualDirection posterior NÃO auto-avança (sem armadilha)", async () => {
+    const autoSave = vi.fn(async () => ({ ok: true }));
+    const { result, rerender } = renderHook(
+      (props: { tone: string; hasVisualDirection: boolean }) =>
+        useOnboardingTabs(
+          makeDeps({
+            initialTab: "direcao-visual",
+            storeId: "store-1",
+            formData: makeFormData({ tone_of_voice: props.tone }),
+            hasVisualDirection: props.hasVisualDirection,
+            autoSave,
+          }),
+        ),
+      { initialProps: { tone: "", hasVisualDirection: false } },
+    );
+
+    await act(async () => {
+      rerender({ tone: "moderno", hasVisualDirection: false });
+    });
+    expect(result.current.activeTab).toBe("posicionamento");
+
+    await act(async () => {
+      rerender({ tone: "moderno", hasVisualDirection: true });
+    });
+
+    expect(result.current.activeTab).toBe("posicionamento");
+    expect(autoSave).not.toHaveBeenCalled();
+  });
+
+  it("data-load de loja existente (hasVisualDirection) ainda auto-abre Direção Visual", async () => {
+    const autoSave = vi.fn(async () => ({ ok: true }));
+    const { result, rerender } = renderHook(
+      (props: { hasVisualDirection: boolean }) =>
+        useOnboardingTabs(
+          makeDeps({
+            initialTab: "direcao-visual",
+            storeId: "store-1",
+            formData: makeFormData({ tone_of_voice: "" }),
+            hasVisualDirection: props.hasVisualDirection,
+            autoSave,
+          }),
+        ),
+      { initialProps: { hasVisualDirection: false } },
+    );
+
+    expect(result.current.activeTab).toBe("posicionamento");
+
+    await act(async () => {
+      rerender({ hasVisualDirection: true });
+    });
+
+    await waitFor(() => expect(result.current.activeTab).toBe("direcao-visual"));
+    expect(autoSave).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -519,5 +653,60 @@ describe("useOnboardingTabs — tabStates / saveStatus", () => {
       useOnboardingTabs(makeDeps({ saveStatus: "saving" as SaveStatus })),
     );
     expect(result.current.saveStatus).toBe("saving");
+  });
+
+  it("editar o tom de voz desbloqueia Direção Visual NA HORA, mesmo com hasLocalEdits já true (memo stale)", () => {
+    const autoSave = vi.fn(async () => ({ ok: true }));
+    const { result, rerender } = renderHook(
+      (props: { tone: string }) =>
+        useOnboardingTabs(
+          makeDeps({
+            storeId: "store-1",
+            formData: makeFormData({ tone_of_voice: props.tone }),
+            hasLocalEdits: true,
+            isPersisted: true,
+            readiness: { ready: true, missing: [] },
+            autoSave,
+          }),
+        ),
+      { initialProps: { tone: "" } },
+    );
+
+    // Antes do tom de voz: bloqueada (storeId existe, mas sem tone)
+    expect(result.current.tabStates["direcao-visual"].state).toBe("blocked");
+    expect(result.current.tabStates["direcao-visual"].reason).toBe("needs_tone_of_voice");
+
+    // Usuário seleciona o tom de voz — formData muda, mas hasLocalEdits continua true
+    rerender({ tone: "moderno" });
+
+    expect(result.current.tabStates["direcao-visual"].state).not.toBe("blocked");
+    expect(result.current.tabStates["direcao-visual"].unlockReason).toBeUndefined();
+  });
+
+  it("aceitar o legal desbloqueia Posicionamento mesmo sem edição de campo (memo stale)", () => {
+    const autoSave = vi.fn(async () => ({ ok: true }));
+    const { result, rerender } = renderHook(
+      (props: { legalAccepted: boolean }) =>
+        useOnboardingTabs(
+          makeDeps({
+            storeId: "store-1",
+            formData: makeFormData({ name: "Minha Loja", segment: "outros" }),
+            legalAccepted: props.legalAccepted,
+            hasLocalEdits: false,
+            isPersisted: true,
+            readiness: { ready: true, missing: [] },
+            autoSave,
+          }),
+        ),
+      { initialProps: { legalAccepted: false } },
+    );
+
+    expect(result.current.tabStates.posicionamento.state).toBe("blocked");
+    expect(result.current.tabStates.posicionamento.reason).toBe("needs_legal_acceptance");
+
+    rerender({ legalAccepted: true });
+
+    expect(result.current.tabStates.posicionamento.state).not.toBe("blocked");
+    expect(result.current.tabStates.posicionamento.unlockReason).toBeUndefined();
   });
 });

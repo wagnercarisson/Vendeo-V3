@@ -17,6 +17,7 @@ export const TAB_ORDER: OnboardingTab[] = [
 ];
 
 export type TabBlockReason =
+  | "needs_basic_data"
   | "needs_legal_acceptance"
   | "needs_tone_of_voice"
   | "needs_store_created"
@@ -52,7 +53,8 @@ export interface TabUnlockContext {
 /**
  * Desbloqueio progressivo das abas (D1/D8/D9):
  * - `dados` → sempre desbloqueada (aberta por padrão)
- * - `posicionamento` → exige aceite legal + mínimo (name/segment) + loja criada
+ * - `posicionamento` → exige mínimo (name/segment) + aceite legal + loja criada;
+ *   motivo priorizado: `needs_basic_data` → `needs_legal_acceptance` → `needs_store_created`
  * - `direcao-visual` → exige loja criada + tom de voz; `hasVisualDirection`
  *   faz bypass (loja existente com direção visual nasce com a aba ③ aberta)
  * - Tab inválida → fallback seguro bloqueado
@@ -66,10 +68,16 @@ export function computeTabUnlock(
   }
 
   if (tab === "posicionamento") {
+    // Prioridade do motivo (UX): primeiro dados básicos ausentes, depois aceite
+    // legal, depois loja ainda não criada — evita que a falta de aceite mascare
+    // nome/segmento vazios.
+    if (!ctx.name.trim() || !ctx.segment) {
+      return { unlocked: false, reason: "needs_basic_data" };
+    }
     if (!ctx.legalAccepted) {
       return { unlocked: false, reason: "needs_legal_acceptance" };
     }
-    if (!ctx.name.trim() || !ctx.segment || !ctx.storeId) {
+    if (!ctx.storeId) {
       return { unlocked: false, reason: "needs_store_created" };
     }
     return { unlocked: true };

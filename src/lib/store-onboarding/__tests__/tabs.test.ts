@@ -64,13 +64,22 @@ describe('computeTabUnlock', () => {
     expect(result).toEqual({ unlocked: false, reason: 'needs_store_created' });
   });
 
-  it('posicionamento sem name/segment → needs_store_created', () => {
+  it('posicionamento sem name/segment → needs_basic_data', () => {
     const result = computeTabUnlock('posicionamento', {
       ...baseCtx,
       name: '   ',
       segment: '',
     });
-    expect(result).toEqual({ unlocked: false, reason: 'needs_store_created' });
+    expect(result).toEqual({ unlocked: false, reason: 'needs_basic_data' });
+  });
+
+  it('posicionamento sem name/segment tem precedência sobre o aceite legal → needs_basic_data', () => {
+    const result = computeTabUnlock('posicionamento', {
+      ...baseCtx,
+      name: '',
+      legalAccepted: false,
+    });
+    expect(result).toEqual({ unlocked: false, reason: 'needs_basic_data' });
   });
 
   it('posicionamento desbloqueada com mínimo (legal + name + segment + storeId)', () => {

@@ -24,6 +24,21 @@ export interface TabStateContext {
   readiness: StoreReadiness;
 }
 
+/**
+ * Estado por aba exposto à UI.
+ *
+ * `reason` é o motivo do `computeTabState` (ex.: `fiscal_pending` de
+ * pending_generation). `unlockReason` é o motivo de desbloqueio quando a aba
+ * NÃO está desbloqueada (D9) — mantido mesmo quando `pending_generation`
+ * domina o estado (D7/D8: navegação livre, mas o gate de desbloqueio continua
+ * visível no painel ativo).
+ */
+export interface TabStateRecord {
+  state: TabState;
+  reason?: TabBlockReason;
+  unlockReason?: TabBlockReason;
+}
+
 export function computeTabState(
   _tab: OnboardingTab,
   ctx: TabStateContext,

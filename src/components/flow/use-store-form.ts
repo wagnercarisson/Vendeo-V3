@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { Store } from "@/lib/store";
 import { STORE_SEGMENTS, STORE_SUBSEGMENTS } from "@/lib/constants";
 import { isValidHex } from "@/lib/validators/color";

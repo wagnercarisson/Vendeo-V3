@@ -8,11 +8,12 @@
  * - Roving tabindex: apenas a aba ativa é tabulável; ArrowLeft/ArrowRight
  *   (ordem circular de TAB_ORDER), Home e End movem o foco (D11).
  * - Estado de cada aba exposto via aria-label (nunca cor sozinha); o motivo
- *   do bloqueio aparece APENAS no painel ativo (aria-describedby), nunca no
- *   botão da aba (D10).
+ *   do bloqueio é acessível no PRÓPRIO botão (aria-label + title/tooltip),
+ *   nunca dependendo de painel ativo — a aba bloqueada não é ativável (D16).
  * - Região aria-live="polite" anuncia troca de aba/estado (D11).
  * - Variante mobile-compact: labels curtos (labelMobile), badge discreto
- *   (ponto no canto), botão "Continuar" fixo no rodapé do container e
+ *   (ponto no canto), botão "Continuar" fixo no rodapé do container
+ *   (desabilitado quando a próxima aba está bloqueada — D16) e
  *   touch targets >= 44px (F22).
  *
  * Este componente é presentacional: NÃO deriva estado — recebe `tabs`,
@@ -31,12 +32,13 @@ import {
   Lock,
 } from "lucide-react";
 import { TAB_ORDER } from "@/lib/store-onboarding/tabs";
+import { tabBlockReasonText } from "@/lib/store-onboarding/reason-text";
 import type {
   OnboardingTab,
   OnboardingTabDef,
   TabBlockReason,
 } from "@/lib/store-onboarding/tabs";
-import type { TabState } from "@/lib/store-onboarding/tab-state";
+import type { TabState, TabStateRecord } from "@/lib/store-onboarding/tab-state";
 
 export interface StoreTabsProps {
   /** Defs das abas (tipicamente ONBOARDING_TABS) — ordem de renderização. */
@@ -44,10 +46,7 @@ export interface StoreTabsProps {
   /** Aba ativa (controlada pelo form/hook — não estado interno). */
   activeTab: OnboardingTab;
   /** Estado por aba (computeTabState) — drive de badges/aria-label. */
-  states: Record<
-    OnboardingTab,
-    { state: TabState; reason?: TabBlockReason }
-  >;
+  states: Record<OnboardingTab, TabStateRecord>;
   /** Dispara troca de aba (clique, Enter/Space e "Continuar" no mobile). */
   onTabChange: (tab: OnboardingTab) => void;
   variant: "desktop" | "mobile-compact";
@@ -105,8 +104,10 @@ const MOBILE_DOT: Record<TabState, string> = {
   pending_generation: "bg-accent-amber",
 };
 
-/** Texto do motivo exibido no painel ativo (D10 — nunca no botão da aba). */
+/** Texto do motivo — acessível no botão da aba (D16: aria-label + title/tooltip). */
 const REASON_TEXT: Record<TabBlockReason, string> = {
+  needs_basic_data:
+    "Informe o nome e o segmento da loja para liberar esta etapa.",
   needs_legal_acceptance:
     "Esta etapa exige o aceite legal dos Termos de Uso e da Política de Uso Aceitável.",
   needs_tone_of_voice:
@@ -135,6 +136,26 @@ export function StoreTabs({
     states[activeTab] ?? { state: "blocked" as TabState };
   const activeStateLabel =
     STATE_LABEL[activeState.state] ?? "Sem estado";
+
+  /** D16 (hard-block): aba NÃO ativável quando não está desbloqueada — state
+   *  blocked OU unlockReason presente (o motivo de desbloqueio domina mesmo
+   *  quando pending_generation prevalece no badge, D9/D16). */
+  const isBlockedTab = useCallback(
+    (tabId: OnboardingTab): boolean => {
+      const s = states[tabId];
+      return s?.state === "blocked" || !!s?.unlockReason;
+    },
+    [states],
+  );
+
+  /** Motivo de bloqueio da aba para aria-label/title (D16). */
+  const reasonFor = useCallback(
+    (tabId: OnboardingTab): TabBlockReason | undefined => {
+      const s = states[tabId];
+      return s?.state === "blocked" ? s.reason : s?.unlockReason;
+    },
+    [states],
+  );
 
   const tabRefs = useRef<
     Partial<Record<OnboardingTab, HTMLButtonElement | null>>
@@ -182,15 +203,17 @@ export function StoreTabs({
     [activeTab],
   );
 
-  /** Enter/Space selecionam a aba (o clique cobre o mouse; keydown cobre teclado). */
+  /** Enter/Space selecionam a aba LIBERADA (o clique cobre o mouse; keydown
+   *  cobre teclado). Aba bloqueada NÃO seleciona (hard-block D16). */
   const handleTabKeyDown = useCallback(
     (tab: OnboardingTab) => (e: ReactKeyboardEvent<HTMLButtonElement>) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
+        if (isBlockedTab(tab)) return;
         onTabChange(tab);
       }
     },
-    [onTabChange],
+    [isBlockedTab, onTabChange],
   );
 
   const currentIndex = TAB_ORDER.indexOf(activeTab);
@@ -203,9 +226,11 @@ export function StoreTabs({
   const nextDef = tabs.find((t) => t.id === nextTabId);
   const prevDef = tabs.find((t) => t.id === prevTabId);
 
-  const blockedReason = activeState.reason
-    ? REASON_TEXT[activeState.reason]
-    : GENERIC_BLOCK_TEXT;
+  // D16 (hard-block): "Continuar" mobile desabilitado quando a próxima aba
+  // está bloqueada — microcopy do que falta (avança para a próxima liberada
+  // ou retrocede).
+  const nextBlocked = nextTabId ? isBlockedTab(nextTabId) : false;
+  const nextBlockReason = nextTabId ? reasonFor(nextTabId) : undefined;
 
   return (
     <div>
@@ -224,11 +249,15 @@ export function StoreTabs({
             STATE_LABEL[tabState.state] ?? "Sem estado";
           const badge = DESKTOP_BADGE[tabState.state];
           const BadgeIcon = badge.Icon;
-          const isBlocked = tabState.state === "blocked";
-          // O motivo do bloqueio vive no painel ativo — aria-describedby só
-          // aponta quando este botão É o painel ativo (deep-link bloqueado).
-          const describedBy =
-            isBlocked && isActive ? `reason-${tab.id}` : undefined;
+          const blocked = isBlockedTab(tab.id);
+          const reason = reasonFor(tab.id);
+          // D16: o motivo do bloqueio fica ACESSÍVEL NO BOTÃO (aria-label +
+          // title/tooltip) — a aba bloqueada nunca vira painel ativo, então o
+          // motivo nunca depende de painel.
+          const reasonText = reason ? REASON_TEXT[reason] : undefined;
+          const accessibleLabel = blocked
+            ? `${tab.label} — ${stateLabel}${reasonText ? ` — ${reasonText}` : ` — ${GENERIC_BLOCK_TEXT}`}`
+            : `${tab.label} — ${stateLabel}`;
 
           return (
             <button
@@ -238,8 +267,9 @@ export function StoreTabs({
               id={`tab-${tab.id}`}
               aria-selected={isActive}
               aria-controls={`panel-${tab.id}`}
-              aria-label={`${tab.label} — ${stateLabel}`}
-              aria-describedby={describedBy}
+              aria-label={accessibleLabel}
+              aria-disabled={blocked || undefined}
+              title={blocked ? (reasonText ?? GENERIC_BLOCK_TEXT) : undefined}
               tabIndex={isActive ? 0 : -1}
               ref={(el) => {
                 tabRefs.current[tab.id] = el;
@@ -247,13 +277,15 @@ export function StoreTabs({
               onFocus={() => {
                 focusedTabRef.current = tab.id;
               }}
-              onClick={() => onTabChange(tab.id)}
+              onClick={() => {
+                if (!blocked) onTabChange(tab.id);
+              }}
               onKeyDown={handleTabKeyDown(tab.id)}
               className={`relative inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-heading font-medium transition-colors duration-200 cursor-pointer ${
                 isActive
                   ? "bg-bg-elevated text-text-primary border border-border-light"
                   : "text-text-muted border border-transparent hover:bg-bg-elevated/60 hover:text-text-primary"
-              }`}
+              } ${blocked ? "opacity-60" : ""}`}
             >
               <span>{isMobile ? tab.labelMobile : tab.label}</span>
 
@@ -285,24 +317,6 @@ export function StoreTabs({
         tabIndex={0}
         className="mt-6 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-accent-blue"
       >
-        {/* Motivo do bloqueio no painel ATIVO (D10) — alvo de aria-describedby */}
-        {activeState.state === "blocked" && (
-          <div
-            id={`reason-${activeTab}`}
-            className="mb-4 flex items-start gap-3 rounded-lg border border-amber-700/30 bg-amber-900/20 px-4 py-3"
-          >
-            <Lock className="mt-0.5 h-4 w-4 shrink-0 text-accent-amber" />
-            <div>
-              <p className="text-sm font-heading font-semibold text-accent-amber">
-                Etapa bloqueada
-              </p>
-              <p className="mt-0.5 text-xs font-body text-text-secondary">
-                {blockedReason}
-              </p>
-            </div>
-          </div>
-        )}
-
         {children}
 
         {/* Barra "Continuar" fixa no rodapé do container (mobile compacto — D10/F22) */}
@@ -324,16 +338,23 @@ export function StoreTabs({
 
             <button
               type="button"
-              onClick={() => nextTabId && onTabChange(nextTabId)}
-              disabled={!nextTabId}
+              onClick={() => nextTabId && !nextBlocked && onTabChange(nextTabId)}
+              disabled={!nextTabId || nextBlocked}
               aria-label={
-                nextDef
-                  ? `Continuar para ${nextDef.labelMobile}`
-                  : undefined
+                nextBlocked && nextDef && nextBlockReason
+                  ? `Continuar bloqueado — ${REASON_TEXT[nextBlockReason]}`
+                  : nextDef
+                    ? `Continuar para ${nextDef.labelMobile}`
+                    : undefined
               }
+              title={nextBlocked && nextBlockReason ? REASON_TEXT[nextBlockReason] : undefined}
               className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-lg bg-accent-blue px-4 text-sm font-heading font-semibold text-white transition-all duration-200 cursor-pointer hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {nextDef ? `Continuar: ${nextDef.labelMobile}` : "Continuar"}
+              {nextBlocked && nextDef
+                ? tabBlockReasonText(nextTabId as OnboardingTab, nextBlockReason, nextDef.labelMobile)
+                : nextDef
+                  ? `Continuar: ${nextDef.labelMobile}`
+                  : "Continuar"}
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>

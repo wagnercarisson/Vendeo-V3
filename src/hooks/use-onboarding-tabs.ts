@@ -25,7 +25,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { OnboardingTab, TabBlockReason } from "@/lib/store-onboarding/tabs";
 import { TAB_ORDER, isOnboardingTab, computeTabUnlock } from "@/lib/store-onboarding/tabs";
-import type { TabState } from "@/lib/store-onboarding/tab-state";
+import type { TabStateRecord } from "@/lib/store-onboarding/tab-state";
 import { computeTabState } from "@/lib/store-onboarding/tab-state";
 import type { StoreReadinessResult as StoreReadiness } from "@/lib/store-readiness";
 import type { FormData, SaveStatus } from "@/components/flow/use-store-form";
@@ -47,7 +47,7 @@ export interface UseOnboardingTabsDeps {
   isPersisted: boolean;
   /** Campos com edição local — usado na checagem de drift (D13). */
   editedFields?: (keyof FormData)[];
-  autoSave: (fields: Partial<FormData>) => Promise<{ ok: boolean; storeId?: string }>;
+  autoSave: (fields: Partial<FormData>) => Promise<{ ok: boolean; storeId?: string; skipped?: boolean }>;
   saveStatus: SaveStatus;
   /** Estado/ações de drift vindos de useDriftDetection (consumido como está — D13). */
   driftStatus: DriftStatus;
@@ -64,13 +64,16 @@ export interface UseOnboardingTabsOptions {
 export interface UseOnboardingTabsReturn {
   activeTab: OnboardingTab;
   setActiveTab: (next: OnboardingTab) => Promise<void>;
-  tabStates: Record<OnboardingTab, { state: TabState; reason?: TabBlockReason }>;
+  tabStates: Record<OnboardingTab, TabStateRecord>;
   saveStatus: SaveStatus;
   handleInternalNavigation: (e: MouseEvent) => void;
   handlePageHide: () => void;
   handleVisibilityChange: () => void;
   /** Limpa navegação pendente adiada por drift (usado no CANCELAR do modal — HR-02). */
   cancelPendingNavigation: () => void;
+  /** D16 (hard-block): última tentativa de ativar uma aba bloqueada, negada. A UI
+   *  renderiza o aviso "Complete esta etapa para liberar {aba}" no painel atual. */
+  blockedNotice: { tab: OnboardingTab; reason?: TabBlockReason } | null;
 }
 
 const EMPTY_READINESS: StoreReadiness = { ready: true, missing: [] };
@@ -132,6 +135,19 @@ export function useOnboardingTabs(
   const depsRef = useRef(deps);
   depsRef.current = deps;
 
+  // D16 (hard-block): estado do aviso de ativação negada de aba bloqueada.
+  const [blockedNotice, setBlockedNotice] = useState<{
+    tab: OnboardingTab;
+    reason?: TabBlockReason;
+  } | null>(null);
+
+  // D16: usuário já navegou por interação própria (clique/back-forward) — o
+  // redirecionamento do deep-link (montagem) deixa de se aplicar.
+  const userNavigatedRef = useRef(false);
+  // D16: alvo original do deep-link (?tab= na montagem) — re-checado quando os
+  // dados carregam para navegar à primeira aba anterior válida correta.
+  const deepLinkTargetRef = useRef<OnboardingTab | null>(null);
+
   // Serialização de saves (D4): fila simples (promise encadeada) + ref/seq guard.
   const saveSeqRef = useRef(0);
   const saveQueueRef = useRef<Promise<unknown>>(Promise.resolve());
@@ -159,6 +175,24 @@ export function useOnboardingTabs(
       hasVisualDirection,
     });
   }, []);
+
+  /**
+   * D16 (hard-block): primeira aba ANTERIOR ao alvo em TAB_ORDER que esteja
+   * desbloqueada; fallback `"dados"` (sempre desbloqueada). Usada quando a
+   * ativação de uma aba bloqueada é negada (clique/teclado/Continuar/deep-link/
+   * back-forward) — o usuário nunca fica na aba bloqueada.
+   */
+  const firstValidPreviousTab = useCallback(
+    (target: OnboardingTab): OnboardingTab => {
+      const index = TAB_ORDER.indexOf(target);
+      for (let i = index - 1; i >= 0; i--) {
+        const candidate = TAB_ORDER[i];
+        if (computeUnlockFor(candidate).unlocked) return candidate;
+      }
+      return "dados";
+    },
+    [computeUnlockFor],
+  );
 
   /** Mínimo válido para criar a loja via autoSave (D4: name+segment+aceite legal). */
   const hasMinimumForCreation = useCallback(() => {
@@ -215,22 +249,81 @@ export function useOnboardingTabs(
     [enqueueAutoSave, updateActiveTab],
   );
 
+  /**
+   * D16 (hard-block) — deep-link na montagem: `?tab=` apontando para aba
+   * bloqueada NUNCA a ativa. Redireciona/sincroniza para a primeira aba
+   * anterior válida + aviso. Re-checa quando os dados carregam: o alvo
+   * destravado por data-load (loja existente com direção visual que ainda não
+   * tinha sido carregada) navega automaticamente; o alvo destravado por edição
+   * do usuário (ex.: tom de voz) NÃO auto-avança — o deep-link é consumido e o
+   * avanço fica manual.
+   */
+  const resolveBlockedDeepLink = useCallback(() => {
+    const target = deepLinkTargetRef.current;
+    if (!target || userNavigatedRef.current) return;
+    const current = activeTabRef.current;
+
+    // Já redirecionado — se o alvo destravou, decide entre auto-avançar e
+    // manter o usuário (D16 fix).
+    if (current !== target) {
+      if (!computeUnlockFor(target).unlocked) return;
+
+      // Auto-avança APENAS quando o destravamento veio de data-load de loja
+      // existente (direção visual carregada assincronamente). Unlock por edição
+      // do usuário (ex.: tom de voz) NUNCA auto-avança — o deep-link é
+      // consumido (ref limpo) e o avanço passa a ser manual (clique na aba ou
+      // botão "Continuar"); apenas o aviso de bloqueio é limpo.
+      if (depsRef.current.hasVisualDirection) {
+        deepLinkTargetRef.current = null;
+        void commitTabChange(target, { updateUrl: true });
+      } else {
+        deepLinkTargetRef.current = null;
+        setBlockedNotice(null);
+      }
+      return;
+    }
+
+    const unlock = computeUnlockFor(target);
+    if (unlock.unlocked) {
+      deepLinkTargetRef.current = null;
+      return;
+    }
+
+    setBlockedNotice({ tab: target, reason: unlock.reason });
+    const prev = firstValidPreviousTab(target);
+    if (prev !== current) {
+      updateActiveTab(prev);
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", prev);
+      window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+    }
+  }, [computeUnlockFor, firstValidPreviousTab, updateActiveTab, commitTabChange]);
+
   const setActiveTab = useCallback(
     async (next: OnboardingTab) => {
       if (next === activeTabRef.current) return;
 
+      // D16: qualquer interação de usuário com as abas encerra o redirecionamento
+      // do deep-link (montagem) e limpa o aviso de bloqueio anterior.
+      userNavigatedRef.current = true;
+      setBlockedNotice(null);
+
       const unlock = computeUnlockFor(next);
       if (!unlock.unlocked) {
-        // D1: única exceção — aba bloqueada por needs_store_created pode ser
-        // resolvida pela própria troca (autoSave cria a loja draft, D4)
-        if (unlock.reason !== "needs_store_created") {
-          // MD-05 (D6/D10): sincroniza a aba bloqueada para que o painel ativo
-          // renderize o motivo + link "Voltar para X" (feedback de clique, nunca
-          // silencioso). Sem autoSave — não há saída a persistir.
-          updateActiveTab(next);
-          const url = new URL(window.location.href);
-          url.searchParams.set("tab", next);
-          window.history.pushState(null, "", `${url.pathname}${url.search}${url.hash}`);
+        // D1/D16: única exceção — aba bloqueada por needs_store_created pode ser
+        // resolvida pela própria troca (autoSave cria a loja draft, D4).
+        if (unlock.reason !== "needs_store_created" || !hasMinimumForCreation()) {
+          // D16 (hard-block): NEGA a ativação — o usuário permanece/é levado à
+          // primeira aba anterior válida e vê o aviso do que falta. A aba
+          // bloqueada nunca fica ativa.
+          setBlockedNotice({ tab: next, reason: unlock.reason });
+          const prev = firstValidPreviousTab(next);
+          if (prev !== activeTabRef.current) {
+            updateActiveTab(prev);
+            const url = new URL(window.location.href);
+            url.searchParams.set("tab", prev);
+            window.history.pushState(null, "", `${url.pathname}${url.search}${url.hash}`);
+          }
           return;
         }
         if (!hasMinimumForCreation()) return;
@@ -245,7 +338,14 @@ export function useOnboardingTabs(
 
       await commitTabChange(next, { updateUrl: true });
     },
-    [computeUnlockFor, hasMinimumForCreation, hasPendingDrift, commitTabChange, updateActiveTab],
+    [
+      computeUnlockFor,
+      firstValidPreviousTab,
+      hasMinimumForCreation,
+      hasPendingDrift,
+      commitTabChange,
+      updateActiveTab,
+    ],
   );
 
   // Sync back/forward (D6/F36-TABS-04): listener popstate registrado no mount,
@@ -257,6 +357,9 @@ export function useOnboardingTabs(
       if (!tabParam || !isOnboardingTab(tabParam)) return; // inválido → mantém aba atual
       if (tabParam === activeTabRef.current) return;
 
+      userNavigatedRef.current = true;
+      setBlockedNotice(null);
+
       // D13: drift intercepta back/forward também (ordem preservada)
       if (hasPendingDrift()) {
         pendingTabRef.current = tabParam;
@@ -264,11 +367,19 @@ export function useOnboardingTabs(
         return;
       }
 
-      // D6: alvo bloqueado ainda sincroniza activeTab — a UI renderiza o painel
-      // de bloqueio + link "Voltar para X" (nunca tela em branco)
-      const blocked = !computeUnlockFor(tabParam).unlocked;
-      updateActiveTab(tabParam);
-      if (blocked) return;
+      // D16 (hard-block): alvo bloqueado NÃO sincroniza activeTab — roteia para
+      // a primeira aba anterior válida, corrige a URL e mostra o aviso. A aba
+      // bloqueada nunca fica ativa.
+      const unlock = computeUnlockFor(tabParam);
+      if (!unlock.unlocked) {
+        setBlockedNotice({ tab: tabParam, reason: unlock.reason });
+        const prev = firstValidPreviousTab(tabParam);
+        updateActiveTab(prev);
+        const url = new URL(window.location.href);
+        url.searchParams.set("tab", prev);
+        window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+        return;
+      }
 
       // URL já foi atualizada pelo browser — não faz pushState de novo
       void commitTabChange(tabParam, { updateUrl: false });
@@ -276,7 +387,7 @@ export function useOnboardingTabs(
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [computeUnlockFor, hasPendingDrift, commitTabChange, updateActiveTab]);
+  }, [computeUnlockFor, firstValidPreviousTab, hasPendingDrift, commitTabChange, updateActiveTab]);
 
   // Resume de navegação adiada por drift: após a decisão (realinhar/ignorar/
   // dismiss), driftCategory volta a 'none' → navega para o alvo pendente.
@@ -305,8 +416,35 @@ export function useOnboardingTabs(
     pendingHrefRef.current = null;
   }, []);
 
-  const tabStates = useMemo<Record<OnboardingTab, { state: TabState; reason?: TabBlockReason }>>(() => {
-    const result = {} as Record<OnboardingTab, { state: TabState; reason?: TabBlockReason }>;
+  // D16 (hard-block): captura o alvo do deep-link na montagem e resolve o
+  // redirecionamento de aba bloqueada — também re-checa quando os dados
+  // carregam (formData/storeId/legalAccepted) para navegar à primeira aba
+  // anterior válida correta.
+  useEffect(() => {
+    deepLinkTargetRef.current =
+      deps.initialTab && isOnboardingTab(deps.initialTab) ? deps.initialTab : null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    resolveBlockedDeepLink();
+  }, [
+    resolveBlockedDeepLink,
+    deps.formData,
+    deps.storeId,
+    deps.legalAccepted,
+    deps.hasVisualDirection,
+  ]);
+
+  // Reativo às entradas REAIS de unlock/estado (F36): além do estado local
+  // (hasLocalEdits/isPersisted/readiness), o memo depende do formData, storeId,
+  // legalAccepted e hasVisualDirection — `computeUnlockFor` lê `depsRef.current`
+  // fresco no recompute, então editar o tom de voz (ou aceitar o legal) atualiza
+  // o desbloqueio NA HORA, mesmo quando `hasLocalEdits` já era `true` (bug de
+  // memo stale: `true === true` não recomputava — aba Direção Visual ficava
+  // presa em `needs_tone_of_voice`).
+  const tabStates = useMemo<Record<OnboardingTab, TabStateRecord>>(() => {
+    const result = {} as Record<OnboardingTab, TabStateRecord>;
     for (const tab of TAB_ORDER) {
       const unlock = computeUnlockFor(tab);
       const state = computeTabState(tab, {
@@ -314,7 +452,12 @@ export function useOnboardingTabs(
         isPersisted: deps.isPersisted,
         unlocked: unlock.unlocked,
         readiness: deps.readiness ?? EMPTY_READINESS,
-      });
+      }) as TabStateRecord;
+      // D9: motivo de desbloqueio preservado mesmo quando pending_generation
+      // domina o estado (D7/D8) — a UI exibe o gate no painel ativo.
+      if (!unlock.unlocked) {
+        state.unlockReason = unlock.reason;
+      }
       if (state.state === "blocked" && !state.reason) {
         state.reason = unlock.reason;
       }
@@ -323,6 +466,10 @@ export function useOnboardingTabs(
     return result;
   }, [
     computeUnlockFor,
+    deps.formData,
+    deps.storeId,
+    deps.legalAccepted,
+    deps.hasVisualDirection,
     deps.hasLocalEdits,
     deps.isPersisted,
     deps.readiness,
@@ -426,5 +573,6 @@ export function useOnboardingTabs(
     handlePageHide,
     handleVisibilityChange,
     cancelPendingNavigation,
+    blockedNotice,
   };
 }

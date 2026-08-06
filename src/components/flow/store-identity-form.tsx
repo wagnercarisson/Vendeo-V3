@@ -12,7 +12,8 @@ import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useDriftDetection } from "./use-drift-detection";
 import { getDriftPolicy } from "@/lib/drift";
-import type { OnboardingTab } from "@/lib/store-onboarding/tabs";
+import type { OnboardingTab, TabBlockReason } from "@/lib/store-onboarding/tabs";
+import { tabBlockReasonText } from "@/lib/store-onboarding/reason-text";
 
 // DriftDiscreetButton import removed — replaced by inline post-dismiss links
 import { DriftDecisionModal } from "./drift-decision-modal";
@@ -333,14 +334,14 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
   // MD-01 (D13): campos com edição local (auto-save seletivo). Derivados da
   // baseline persistida (initialStore + último save) — evita abrir o modal de
   // drift em toda troca de aba sem edições reais nos campos do snapshot.
-  const persistedFormRef = useRef<FormData | null>(null);
+  const persistedFormRef = useRef<StoreFormData | null>(null);
   useEffect(() => {
     if (saveStatus === "saved") persistedFormRef.current = { ...formData };
   }, [saveStatus, formData]);
-  const editedFields = useMemo<(keyof FormData)[]>(() => {
+  const editedFields = useMemo<(keyof StoreFormData)[]>(() => {
     const persisted = persistedFormRef.current;
     if (!persisted) return [];
-    return (Object.keys(formData) as (keyof FormData)[]).filter(
+    return (Object.keys(formData) as (keyof StoreFormData)[]).filter(
       (field) => formData[field] !== persisted[field],
     );
   }, [formData]);
@@ -354,6 +355,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
     handlePageHide,
     handleVisibilityChange,
     cancelPendingNavigation,
+    blockedNotice,
   } = useOnboardingTabs(
     {
       initialTab,
@@ -396,6 +398,21 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [handleInternalNavigation, handlePageHide, handleVisibilityChange]);
+
+  // D16 (hard-block): aba NÃO ativável quando não está desbloqueada (state
+  // blocked OU unlockReason presente). Usada para desabilitar CTAs.
+  const isTabBlocked = useCallback(
+    (tab: OnboardingTab): boolean => {
+      const s = tabStates[tab];
+      return s?.state === "blocked" || !!s?.unlockReason;
+    },
+    [tabStates],
+  );
+  const direcaoVisualBlocked = isTabBlocked("direcao-visual");
+  const direcaoVisualReason = useMemo<TabBlockReason | undefined>(() => {
+    const s = tabStates["direcao-visual"];
+    return s?.state === "blocked" ? s.reason : s?.unlockReason;
+  }, [tabStates]);
 
   const saveBrandColors = useCallback(async (primary: string, secondary: string) => {
     if (!storeId) return;
@@ -1297,6 +1314,27 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
             <div className="lg:hidden mb-6">
               <LegalAcceptancePanel acceptance={legalState} onOpenModal={() => setShowContractModal(true)} variant="mobile-compact" open={showContractModal} />
             </div>
+            {/* D16 (hard-block): aviso de ativação negada de aba bloqueada — a
+                aba bloqueada nunca fica ativa; o motivo fica no botão e/ou aqui
+                (texto específico do que falta, não apenas "Complete esta etapa"). */}
+            {blockedNotice && (() => {
+              const blockedDef = ONBOARDING_TABS.find((t) => t.id === blockedNotice.tab);
+              const blockedLabel = blockedDef?.label ?? blockedNotice.tab;
+              const reasonText = tabBlockReasonText(blockedNotice.tab, blockedNotice.reason, blockedLabel);
+              return (
+                <div
+                  role="status"
+                  className="mb-4 flex items-start gap-3 rounded-lg border border-amber-700/30 bg-amber-900/20 px-4 py-3"
+                >
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-accent-amber" />
+                  <p className="text-sm font-body text-text-secondary">
+                    Complete esta etapa para liberar <span className="font-semibold text-text-primary">{blockedLabel}</span>.
+                  </p>
+                  <p className="text-xs font-body text-accent-amber">{reasonText}</p>
+                </div>
+              );
+            })()}
+
             <StoreTabs
               tabs={ONBOARDING_TABS}
               activeTab={activeTab}
@@ -1304,16 +1342,6 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
               onTabChange={(tab) => { void setActiveTab(tab); }}
               variant={isMobile ? "mobile-compact" : "desktop"}
             >
-              {activeTab !== "dados" && tabStates[activeTab]?.state === "blocked" && (
-                <button
-                  type="button"
-                  onClick={() => void setActiveTab("dados")}
-                  className="mb-4 min-h-[44px] inline-flex items-center gap-2 text-accent-blue hover:text-accent-blue/80 text-sm font-body underline transition-colors duration-200"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  Voltar para Dados
-                </button>
-              )}
               {activeTab === "dados" && (
                 /* ═══════════════ Tab: Dados ═══════════════ */
                 <form onSubmit={handleStep1Submit} className="space-y-6" noValidate>
@@ -1876,7 +1904,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
                       <button type="button" onClick={() => void setActiveTab("dados")} className="min-w-[44px] text-text-muted hover:text-text-primary transition-colors" aria-label="Voltar para dados da loja">
                         <ArrowLeft className="w-5 h-5" />
                       </button>
-                      <button type="button" onClick={() => void setActiveTab("direcao-visual")} className="min-h-[44px] px-8 py-2.5 bg-accent-blue text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                      <button type="button" onClick={() => void setActiveTab("direcao-visual")} disabled={direcaoVisualBlocked} aria-label={direcaoVisualBlocked && direcaoVisualReason ? tabBlockReasonText("direcao-visual", direcaoVisualReason) : undefined} title={direcaoVisualBlocked && direcaoVisualReason ? tabBlockReasonText("direcao-visual", direcaoVisualReason) : undefined} className="min-h-[44px] px-8 py-2.5 bg-accent-blue text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                         Continuar para Direção Visual
                       </button>
                     </div>

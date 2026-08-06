@@ -9,7 +9,7 @@ import type { TabState } from "@/lib/store-onboarding/tab-state";
 
 type TabStates = Record<
   OnboardingTab,
-  { state: TabState; reason?: TabBlockReason }
+  { state: TabState; reason?: TabBlockReason; unlockReason?: TabBlockReason }
 >;
 
 function makeStates(overrides: Partial<TabStates> = {}): TabStates {
@@ -121,8 +121,13 @@ describe("StoreTabs — ARIA tabs (F36-TABS-03/04)", () => {
     );
   });
 
-  it("Enter e Space selecionam a aba; clique chama onTabChange com o id", () => {
-    const { onTabChange } = renderTabs();
+  it("Enter e Space selecionam a aba LIBERADA; clique chama onTabChange com o id", () => {
+    const { onTabChange } = renderTabs({
+      states: makeStates({
+        posicionamento: { state: "saved" },
+        "direcao-visual": { state: "saved" },
+      }),
+    });
 
     fireEvent.keyDown(screen.getByRole("tab", { name: /Posicionamento/ }), {
       key: "Enter",
@@ -138,30 +143,61 @@ describe("StoreTabs — ARIA tabs (F36-TABS-03/04)", () => {
     expect(onTabChange).toHaveBeenCalledWith("dados");
   });
 
-  it("deep-link em aba bloqueada: aria-describedby aponta para o motivo e o painel renderiza o bloqueio", () => {
+  it("aba bloqueada tem aria-disabled + motivo acessível no botão e NÃO dispara onTabChange (hard-block D16)", () => {
+    const { onTabChange } = renderTabs();
+
+    const posicionamentoTab = screen.getByRole("tab", { name: /Posicionamento/ });
+    const direcaoVisualTab = screen.getByRole("tab", { name: /Direção Visual/ });
+
+    // aria-disabled + motivo acessível no próprio botão (aria-label/title)
+    expect(posicionamentoTab).toHaveAttribute("aria-disabled", "true");
+    expect(posicionamentoTab).toHaveAttribute(
+      "title",
+      "Esta etapa exige o aceite legal dos Termos de Uso e da Política de Uso Aceitável.",
+    );
+    expect(direcaoVisualTab).toHaveAttribute("aria-disabled", "true");
+
+    // Clique/Enter/Space em aba bloqueada NÃO ativa (D16 — sem onTabChange)
+    fireEvent.click(posicionamentoTab);
+    expect(onTabChange).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(direcaoVisualTab, { key: "Enter" });
+    expect(onTabChange).not.toHaveBeenCalled();
+
+    // Motivo NÃO depende de painel: nada de "Etapa bloqueada" no painel ativo
+    expect(screen.queryByText("Etapa bloqueada")).not.toBeInTheDocument();
+  });
+
+  it("fiscal pendente dominando o estado NÃO esconde o gate: motivo acessível no botão mesmo com pending_generation (D9/D16)", () => {
     renderTabs({
       activeTab: "posicionamento",
       states: makeStates({
-        dados: { state: "saved" },
-        posicionamento: { state: "blocked", reason: "needs_legal_acceptance" },
+        posicionamento: { state: "saved" },
+        "direcao-visual": {
+          state: "pending_generation",
+          reason: "fiscal_pending",
+          unlockReason: "needs_tone_of_voice",
+        },
       }),
     });
 
-    // O botão da aba bloqueada E ativa ganha aria-describedby → painel de motivo
-    const blockedTab = screen.getByRole("tab", { name: /Posicionamento/ });
-    expect(blockedTab).toHaveAttribute("aria-describedby", "reason-posicionamento");
+    // O gate (tom de voz) fica acessível no botão da aba — não no painel ativo
+    const tab = screen.getByRole("tab", { name: /Direção Visual/ });
+    expect(tab).toHaveAttribute("aria-disabled", "true");
+    expect(tab).toHaveAttribute(
+      "title",
+      "Defina o tom de voz na aba anterior para liberar esta etapa.",
+    );
+    expect(tab).toHaveAttribute(
+      "aria-label",
+      expect.stringContaining("Defina o tom de voz na aba anterior para liberar esta etapa"),
+    );
 
-    // Painel de bloqueio renderizado (nunca tela em branco — D6)
-    expect(screen.getByText("Etapa bloqueada")).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        /Esta etapa exige o aceite legal dos Termos de Uso e da Política de Uso Aceitável/,
-      ),
-    ).toBeInTheDocument();
-
-    // Aba bloqueada NÃO ativa → sem aria-describedby (motivo apenas no painel ativo, D10)
-    const inactiveBlockedTab = screen.getByRole("tab", { name: /Direção Visual/ });
-    expect(inactiveBlockedTab).not.toHaveAttribute("aria-describedby");
+    // Badge continua pendente (D7/D8: navegação livre) — não "Bloqueada"
+    expect(screen.getByText("Pendente")).toBeInTheDocument();
+    expect(screen.queryByText("Bloqueada")).not.toBeInTheDocument();
+    // Sem painel de bloqueio — o motivo vive no botão (D16)
+    expect(screen.queryByText("Etapa bloqueada")).not.toBeInTheDocument();
   });
 
   it("região aria-live polite presente para anúncio de troca de aba/estado (D11)", () => {
@@ -175,7 +211,14 @@ describe("StoreTabs — ARIA tabs (F36-TABS-03/04)", () => {
 
 describe("StoreTabs — variante mobile-compact (F36-TABS-03/F22)", () => {
   it("renderiza labels labelMobile (Perfil/Visual) e barra 'Continuar' fixa", () => {
-    renderTabs({ variant: "mobile-compact", activeTab: "dados" });
+    renderTabs({
+      variant: "mobile-compact",
+      activeTab: "dados",
+      states: makeStates({
+        posicionamento: { state: "saved" },
+        "direcao-visual": { state: "saved" },
+      }),
+    });
 
     // Labels curtos do mobile são o TEXTO VISÍVEL; o aria-label mantém o
     // vocabulário estável (Posicionamento/Direção Visual — D10)
@@ -198,6 +241,10 @@ describe("StoreTabs — variante mobile-compact (F36-TABS-03/F22)", () => {
     const { onTabChange } = renderTabs({
       variant: "mobile-compact",
       activeTab: "posicionamento",
+      states: makeStates({
+        posicionamento: { state: "saved" },
+        "direcao-visual": { state: "saved" },
+      }),
       panelContent: "conteudo posicionamento",
     });
 
@@ -227,21 +274,59 @@ describe("StoreTabs — variante mobile-compact (F36-TABS-03/F22)", () => {
     expect(backButton).toHaveClass("min-w-[44px]");
   });
 
-  it("o painel ativo também renderiza o motivo de bloqueio no mobile (comportamento desktop preservado)", () => {
+  it("o motivo do bloqueio é acessível no botão mobile (não no painel) — D16", () => {
     renderTabs({
       variant: "mobile-compact",
-      activeTab: "direcao-visual",
+      activeTab: "dados",
       states: makeStates({
-        "direcao-visual": { state: "blocked", reason: "needs_tone_of_voice" },
+        posicionamento: { state: "blocked", reason: "needs_legal_acceptance" },
       }),
     });
 
-    const tab = screen.getByRole("tab", { name: /Visual/ });
-    expect(tab).toHaveAttribute("aria-describedby", "reason-direcao-visual");
-    expect(screen.getByText("Etapa bloqueada")).toBeInTheDocument();
-    expect(
-      screen.getByText(/Defina o tom de voz na aba anterior para liberar esta etapa/),
-    ).toBeInTheDocument();
+    const tab = screen.getByRole("tab", { name: /Posicionamento/ });
+    expect(tab).toHaveAttribute("aria-disabled", "true");
+    expect(tab).toHaveAttribute(
+      "title",
+      "Esta etapa exige o aceite legal dos Termos de Uso e da Política de Uso Aceitável.",
+    );
+    // Nenhum painel de bloqueio ativo (o motivo vive no botão — D16)
+    expect(screen.queryByText("Etapa bloqueada")).not.toBeInTheDocument();
+  });
+
+  it("'Continuar' mobile fica desabilitado com microcopy quando a próxima aba está bloqueada (D16)", () => {
+    renderTabs({ variant: "mobile-compact", activeTab: "dados" });
+
+    const continueButton = screen.getByRole("button", {
+      name: /Continuar bloqueado/,
+    });
+    expect(continueButton).toBeDisabled();
+    expect(continueButton).toHaveTextContent(
+      /Aceite os Termos de Uso e a Política de Uso Aceitável para liberar Perfil/,
+    );
+
+    // Clicar no botão desabilitado NÃO navega
+    fireEvent.click(continueButton);
+    expect(screen.getByRole("tab", { name: /Dados/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  it("'Continuar' mobile habilita quando a próxima aba está liberada (D16)", () => {
+    renderTabs({
+      variant: "mobile-compact",
+      activeTab: "dados",
+      states: makeStates({
+        posicionamento: { state: "saved" },
+        "direcao-visual": { state: "saved" },
+      }),
+    });
+
+    const continueButton = screen.getByRole("button", {
+      name: "Continuar para Perfil",
+    });
+    expect(continueButton).toBeEnabled();
+    expect(continueButton).toHaveTextContent("Continuar: Perfil");
   });
 });
 
