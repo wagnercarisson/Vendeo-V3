@@ -52,6 +52,11 @@ export interface UseOnboardingTabsDeps {
   /** Estado/ações de drift vindos de useDriftDetection (consumido como está — D13). */
   driftStatus: DriftStatus;
   driftCategory: DriftCategory;
+  /** Status do drift crítico (assinatura visual). Gate de interceptação/resume
+   *  por drift ATIVO (D13 fix): sensitive = driftStatus 'new'; critical =
+   *  criticalDriftStatus 'new'. driftCategory NÃO é usado como bloqueio
+   *  operacional — drift 'dismissed' não reintercepta. */
+  criticalDriftStatus?: "none" | "new" | "dismissed" | null;
 }
 
 export interface UseOnboardingTabsOptions {
@@ -207,10 +212,13 @@ export function useOnboardingTabs(
     );
   }, []);
 
-  /** Há drift pendente (novo) tocando campos do snapshot que estão editados? (D13) */
+  /** Há drift ATIVO pendente tocando campos do snapshot que estão editados? (D13)
+   *  Gate por atividade (driftStatus 'new' / criticalDriftStatus 'new') — NÃO por
+   *  driftCategory. Drift 'dismissed' não reintercepta a saída de contexto. */
   const hasPendingDrift = useCallback(() => {
-    const { formData, editedFields, driftCategory } = depsRef.current;
-    if (driftCategory === "none") return false;
+    const { formData, editedFields, driftStatus, criticalDriftStatus } = depsRef.current;
+    const hasActiveDrift = driftStatus === "new" || criticalDriftStatus === "new";
+    if (!hasActiveDrift) return false;
     return snapshotEditedFields(formData, editedFields).length > 0;
   }, []);
 
@@ -390,9 +398,12 @@ export function useOnboardingTabs(
   }, [computeUnlockFor, firstValidPreviousTab, hasPendingDrift, commitTabChange, updateActiveTab]);
 
   // Resume de navegação adiada por drift: após a decisão (realinhar/ignorar/
-  // dismiss), driftCategory volta a 'none' → navega para o alvo pendente.
+  // dismiss), o drift deixa de estar ATIVO → navega para o alvo pendente.
+  // Gate por atividade (driftStatus 'new' / criticalDriftStatus 'new'), não por
+  // driftCategory — drift 'dismissed' destrava o resume (D13 fix).
   useEffect(() => {
-    if (deps.driftCategory !== "none") return;
+    const hasActiveDrift = deps.driftStatus === "new" || deps.criticalDriftStatus === "new";
+    if (hasActiveDrift) return;
 
     const pendingTab = pendingTabRef.current;
     if (pendingTab) {
@@ -406,7 +417,7 @@ export function useOnboardingTabs(
       pendingHrefRef.current = null;
       window.location.href = pendingHref;
     }
-  }, [deps.driftCategory, commitTabChange]);
+  }, [deps.driftStatus, deps.criticalDriftStatus, commitTabChange]);
 
   // HR-02: limpa navegação pendente adiada por drift quando o usuário CANCELA
   // o modal de drift. Sem isto, um pendingTabRef stale disparava navegação

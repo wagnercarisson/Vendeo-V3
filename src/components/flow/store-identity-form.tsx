@@ -117,6 +117,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
   const [brandDirectorRetrying, setBrandDirectorRetrying] = useState(false);
   const [driftError, setDriftError] = useState<string | null>(null);
   const [showDriftCriticalModal, setShowDriftCriticalModal] = useState(false);
+  const [isPersistingForApproval, setIsPersistingForApproval] = useState(false);
   const [showDriftDecisionModal, setShowDriftDecisionModal] = useState(false);
   const [driftSaveIntercept, setDriftSaveIntercept] = useState(false);
   const [driftNavIntercept, setDriftNavIntercept] = useState(false);
@@ -244,7 +245,8 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
     driftStatus,
     driftCategory,
     criticalDrift,
-    totalGeneratedSignatures,
+    creditBalance,
+    creditsChargingEnabled,
     dismissCriticalDrift,
     realinhar,
     ignorar,
@@ -255,6 +257,11 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
       // Handled inline in DriftDecisionModal.onRealinhar
     },
   });
+
+  // F36: gate de geração por CRÉDITOS reais (não o limite legado de 3 gerações).
+  // Crédito disponível OU charging desativado → "Gerar novamente" habilitado.
+  // Saldo 0 + charging ativo → modal orienta /conta.
+  const canGenerateNewSignature = !creditsChargingEnabled || (creditBalance ?? 0) > 0;
 
   // F36 (D4/D6/D13): readiness consumido pelo hook (tabStates / geração).
   const [readiness, setReadiness] = useState<StoreReadinessResult>({ ready: true, missing: [] });
@@ -375,6 +382,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
       saveStatus,
       driftStatus,
       driftCategory,
+      criticalDriftStatus: criticalDrift?.status ?? null,
     },
     {
       onDriftNavigate: () => {
@@ -1270,18 +1278,27 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
   // snapshot (tone_of_voice/positioning/short_description/slogan) e
   // executeStep2Save() persiste cores/logo/inferência. Deve rodar ANTES do POST
   // /realign — a rota reconstrói o snapshot a partir do banco; salvar depois
-  // realinhar deixaria o snapshot stale. Retorna true se havia origem pendente.
+  // realinhar deixaria o snapshot stale. Fix C: também persiste no caminho de
+  // NAVEGAÇÃO (driftFromSaveRef === null com edições locais), para realinhar/
+  // manter-e-salvar refletirem os dados aceitos (spec store-onboarding-autosave
+  // L135/L136). Retorna true se havia persistência pendente.
   const persistSaveFromDrift = useCallback(async () => {
-    if (driftFromSaveRef.current === 'step1' || driftFromSaveRef.current === 'step2') {
+    const origin = driftFromSaveRef.current;
+    if (origin === 'step1' || origin === 'step2') {
       const result = await save(acceptedTerms || undefined);
       if (result && 'error' in result) throw new Error(result.error ?? 'Erro ao salvar');
-      if (driftFromSaveRef.current === 'step2') {
+      if (origin === 'step2') {
         await executeStep2Save();
       }
       return true;
     }
+    if (hasLocalEdits) {
+      const result = await save(acceptedTerms || undefined);
+      if (result && 'error' in result) throw new Error(result.error ?? 'Erro ao salvar');
+      return true;
+    }
     return false;
-  }, [driftFromSaveRef, save, acceptedTerms, executeStep2Save]);
+  }, [driftFromSaveRef, save, acceptedTerms, executeStep2Save, hasLocalEdits]);
 
   const segmentOptions = STORE_SEGMENTS.map((seg) => ({
     value: seg.value,
@@ -2534,13 +2551,14 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
           onOpenChange={setShowDriftCriticalModal}
           storeId={storeId}
           identityState={identityState ?? 'text_only'}
-          canGenerateNewSignature={totalGeneratedSignatures < 3}
+          canGenerateNewSignature={canGenerateNewSignature}
           onDismissAndSave={async () => {
             try {
               await dismissCriticalDrift();
               setDriftRefreshKey(k => k + 1);
               await persistSaveFromDrift();
               driftFromSaveRef.current = null;
+              setDriftError(null);
               setShowDriftCriticalModal(false);
             } catch {
               setDriftError('Não foi possível salvar. Tente novamente.');
@@ -2556,11 +2574,28 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
               setFeedbackOverlay({ message: 'Não foi possível remover a assinatura visual.', type: 'error' });
             }
           }}
-          onOpenApproval={() => {
-            setShowDriftCriticalModal(false);
-            handleOpenSubstitutionApproval();
+          onOpenApproval={async () => {
+            // Ordem (drift crítico): persiste os dados ACEITOS ANTES de abrir a
+            // aprovação de geração — a nova VS nasceria com dados antigos se
+            // persistíssemos depois. Se o save falhar, NÃO abre a aprovação como
+            // se estivesse tudo pronto: o modal crítico permanece aberto.
+            setIsPersistingForApproval(true);
+            try {
+              await persistSaveFromDrift();
+              driftFromSaveRef.current = null;
+              setDriftError(null);
+              setShowDriftCriticalModal(false);
+              handleOpenSubstitutionApproval();
+            } catch {
+              setDriftError('Não foi possível salvar seus dados antes de gerar. Tente novamente.');
+              setFeedbackOverlay({ message: 'Não foi possível salvar seus dados antes de gerar. Tente novamente.', type: 'error' });
+            } finally {
+              setIsPersistingForApproval(false);
+            }
           }}
-          onCancel={() => { setShowDriftCriticalModal(false); cancelPendingNavigation(); }}
+          onCancel={() => { setShowDriftCriticalModal(false); setDriftError(null); cancelPendingNavigation(); }}
+          isLoading={isPersistingForApproval}
+          error={driftError}
         />
       )}
       {driftNavIntercept && (

@@ -13,6 +13,8 @@ interface DriftCriticalModalProps {
   onRemoveVs: () => Promise<void>;
   onOpenApproval: () => void;
   onCancel: () => void;
+  isLoading?: boolean;
+  error?: string | null;
 }
 
 export function DriftCriticalModal({
@@ -25,6 +27,8 @@ export function DriftCriticalModal({
   onRemoveVs,
   onOpenApproval,
   onCancel,
+  isLoading = false,
+  error = null,
 }: DriftCriticalModalProps) {
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [isDismissing, setIsDismissing] = useState(false);
@@ -67,15 +71,24 @@ export function DriftCriticalModal({
           criação da sua assinatura visual
         </p>
 
+        {error && (
+          <div className="mb-4 flex items-start gap-3 bg-red-900/20 border border-red-700/30 rounded-lg px-4 py-3">
+            <AlertCircle className="w-5 h-5 text-accent-red shrink-0 mt-0.5" />
+            <p className="text-accent-red text-sm font-body">{error}</p>
+          </div>
+        )}
+
         {canGenerateNewSignature ? (
           /* ── Com crédito ── */
           <div className="space-y-3">
             <button
               type="button"
               onClick={onOpenApproval}
-              className="w-full px-4 py-2.5 bg-accent-amber text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 flex items-center justify-center gap-2"
+              disabled={isLoading}
+              className="w-full px-4 py-2.5 bg-accent-amber text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              Atualizar assinatura visual
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              Gerar novamente
             </button>
             <button
               type="button"
@@ -102,9 +115,8 @@ export function DriftCriticalModal({
             <div className="flex items-start gap-3 bg-amber-900/20 border border-amber-700/30 rounded-lg px-4 py-3">
               <AlertCircle className="w-5 h-5 text-accent-amber shrink-0 mt-0.5" />
               <p className="text-accent-amber text-sm font-body">
-                Você já utilizou as 3 gerações disponíveis. Se remover esta
-                assinatura, não será possível gerar uma nova até que a compra de
-                créditos esteja disponível.
+                Você não tem créditos suficientes para gerar uma nova assinatura
+                visual. Cada geração consome 1 crédito.
               </p>
             </div>
 
@@ -153,11 +165,10 @@ export function DriftCriticalModal({
                 </button>
                 <button
                   type="button"
-                  disabled
-                  title="Funcionalidade em desenvolvimento"
-                  className="w-full px-4 py-2.5 border border-border-light text-text-muted font-heading font-semibold text-sm rounded-lg cursor-not-allowed"
+                  onClick={() => { window.location.href = '/conta'; }}
+                  className="w-full px-4 py-2.5 bg-accent-green text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200"
                 >
-                  Comprar créditos — Em breve
+                  Ver meus créditos
                 </button>
               </>
             )}
