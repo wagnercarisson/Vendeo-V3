@@ -128,10 +128,15 @@ Quando houver drift novo (`driftCategory` em `critical` ou `sensitive`) e o usu�
 
 - `driftCategory === 'critical'` (com `criticalDrift.status === 'new'`) SHALL abrir o `DriftCriticalModal`
 - `driftCategory === 'sensitive'` SHALL abrir o `DriftDecisionModal`
+- A interceptação SHALL valer também para o **save explícito** (botão "Salvar e continuar") de **qualquer** aba que persiste campos do snapshot — inclusive a aba Dados (`name`/`segment`/`subsegment`) — abrindo o modal **antes** do PATCH
 - A persistência (PATCH) dos campos do snapshot fica **adiada** até a decisão do usuário
 - A decisão reutiliza os efeitos e endpoints atuais: `dismissCriticalDrift()` → **POST** `/api/store/{storeId}/visual-signature/dismiss-critical-drift`; `realinhar()` → **POST** `/api/store/{storeId}/brand-profile/realign`; `ignorar()` → **PATCH** `/api/store/{storeId}/brand-profile/metadata` com `{ drift_dismissed_snapshot: currentSnapshot }`
+- A origem do save interceptado SHALL determinar a persistência pós-decisão: aba Dados (`'step1'`) → `save()`; aba Posicionamento (`'step2'`) → `save()` + efeitos visuais (cores/logo/inferência)
+- **Realinhar** SHALL **persistir os dados aceitos ANTES do POST `/realign`** — a rota reconstrói o snapshot a partir do banco; salvar depois realinhar deixaria o snapshot stale e o drift voltaria
+- **Ignorar / "Manter e salvar" / dismiss crítico** SHALL persistir os dados aceitos **sem** realinhar
+- **Cancelar** o modal SHALL manter o usuário no contexto atual, **sem** persistir os campos do snapshot e sem decidir drift
+- O drift **não é one-shot**: após realinhar/ignorar/dismiss, uma **nova divergência** em campos do snapshot SHALL reabrir o fluxo (refs de guard do `useDriftDetection` sincronizados com o estado público)
 - Campos que **não** entram no snapshot (ex.: fiscal/billing, visuais não relacionados) SHALL poder auto-save normalmente, mesmo com drift pendente
-- Cancelar o modal SHALL manter o usuário no contexto atual, **sem** persistir os campos do snapshot
 - Após a decisão, o PATCH dos campos do snapshot e a navegação pretendida SHALL prosseguir
 - A capacidade de assinaturas visuais (`totalGeneratedSignatures`) e o gatilho de limite SHALL permanecer inalterados
 
@@ -159,6 +164,39 @@ Quando houver drift novo (`driftCategory` em `critical` ou `sensitive`) e o usu�
 - **THEN** a operação de drift é executada
 - **AND** o auto-save dos campos do snapshot pendentes prossegue
 - **AND** a navegação alvo é concluída
+
+#### Scenario: Save explícito da aba Dados intercepta drift antes do PATCH
+
+- **WHEN** o usuário clica em "Salvar e continuar" na aba Dados com drift novo e edições locais em `name`/`segment`/`subsegment`
+- **THEN** o modal de drift abre (decisão se sensível; crítico se assinatura visual)
+- **AND** **nenhum PATCH** de `/api/store/{storeId}` é enviado antes da decisão
+- **AND** a origem `'step1'` é registrada para a persistência pós-decisão
+
+#### Scenario: Realinhar persiste os dados aceitos antes do POST /realign
+
+- **WHEN** o usuário escolhe "Realinhar" após um save interceptado
+- **THEN** a persistência da origem interceptada roda **primeiro** (`save()` para Dados; `save()` + efeitos visuais para Posicionamento)
+- **AND** somente depois o **POST** `/api/store/{storeId}/brand-profile/realign` é disparado
+- **AND** o snapshot reconstruído pela rota reflete os dados recém-persistidos (drift não retorna)
+
+#### Scenario: Ignorar ou manter e salvar persiste sem realinhar
+
+- **WHEN** o usuário escolhe "Ignorar" ou "Manter e salvar" após um save interceptado
+- **THEN** a persistência da origem interceptada roda **sem** chamar `/realign`
+- **AND** no caso "Ignorar", o `drift_dismissed_snapshot` é gravado (badge some)
+- **AND** no caso "Manter e salvar", o badge de drift permanece
+
+#### Scenario: Cancelar o save interceptado não persiste nada
+
+- **WHEN** o usuário cancela o modal aberto por um save explícito interceptado
+- **THEN** nenhum PATCH dos campos do snapshot é enviado
+- **AND** o usuário permanece na aba atual com as edições locais preservadas
+
+#### Scenario: Drift reabre em nova divergência após realinhar/ignorar
+
+- **WHEN** o usuário resolve um drift (realinhar/ignorar/dismiss) e depois altera novamente um campo do snapshot
+- **THEN** a detecção re-classifica o estado (ex.: `'new'`) e o fluxo de drift abre novamente
+- **AND** a resolução anterior não torna o drift one-shot
 
 #### Scenario: Campos fora do snapshot são salvos normalmente com drift pendente
 
