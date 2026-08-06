@@ -34,7 +34,7 @@ Para loja existente, o desbloqueio é calculado dos dados salvos + edições loc
 
 | Dimensão | Regra | Impacto | Onde aparece na UI |
 |----------|-------|---------|--------------------|
-| **Avanço** | Mínimo da aba anterior válido (D1) | Controla o que dá para **navegar** | Bloqueio das abas + motivo no painel |
+| **Avanço** | Mínimo da aba anterior válido (D1) | Controla o que dá para **navegar** | **Hard-block** das abas + motivo acessível no botão/status (tooltip/`aria-label`) |
 | **Qualidade da identidade** | Campos recomendados, sem bloqueio (D9) | Melhora o resultado da arte | Card informativo "recomendado" |
 | **Permissão de gerar** | Gates da F34 (readiness RPC + guarda dupla) | Controla se dá para **gerar campanha** | Estados `Pendente para gerar` + banners |
 
@@ -84,12 +84,12 @@ Regras:
 ### D6 — URL `?tab=` (substitui o hack `initialStep`)
 `DECIDIDO`
 
-`/loja?tab=dados|posicionamento|direcao-visual`. `StorePageClient` lê `?tab=` via `useSearchParams` → `initialTab`. Aba ativa vive no history (back/forward funcionam). Deep-link em aba bloqueada → cai na aba com bloqueio + link "Voltar para X" (nunca tela em branco). `required=` legado continua aceito (compat F36), mapeando para a aba correspondente (`cadastro-fiscal` → dados, `visual-direction` → direcao-visual). `message=` continua lido para banner contextual.
+`/loja?tab=dados|posicionamento|direcao-visual`. `StorePageClient` lê `?tab=` via `useSearchParams` → `initialTab`. Aba ativa vive no history (back/forward funcionam). Deep-link em aba bloqueada → **não abre a aba bloqueada**: redireciona/sincroniza para a **primeira aba anterior válida** (posicionamento bloqueada → Dados; direcao-visual bloqueada → Posicionamento se liberada, senão Dados) + aviso "Complete esta etapa para liberar {aba}" (D6/D16, nunca tela em branco). `required=` legado continua aceito (compat F36), mapeando para a aba correspondente (`cadastro-fiscal` → dados, `visual-direction` → direcao-visual). `message=` continua lido para banner contextual.
 
 ### D7 — Estados por aba (badges simplificados)
 `DECIDIDO`
 
-`computeTabState(tab, ctx)` em `src/lib/store-onboarding/tab-state.ts` — função pura testável. Estados: `Bloqueada` / `Rascunho` / `Salva ✓` / `✓ Pronta` / `⚠ Pendente para gerar`. Motivo específico no **painel ativo**, não no botão da aba (D10). Prioridade se dois estados aplicam: `Pendente para gerar` > `Bloqueada` > `Rascunho` > `Pronta` > `Salva`. A aba Direção Visual mantém o badge "Necessário" da F34 quando o brand profile não está syncado.
+`computeTabState(tab, ctx)` em `src/lib/store-onboarding/tab-state.ts` — função pura testável. Estados: `Bloqueada` / `Rascunho` / `Salva ✓` / `✓ Pronta` / `⚠ Pendente para gerar`. Motivo específico **acessível no botão da aba** (tooltip/`aria-label`), não dependendo do painel ativo (D16). Prioridade se dois estados aplicam: `Pendente para gerar` > `Bloqueada` > `Rascunho` > `Pronta` > `Salva`. A aba Direção Visual mantém o badge "Necessário" da F34 quando o brand profile não está syncado.
 
 ### D8 — CNPJ: não bloqueia onboarding; bloqueia geração/crédito
 `DECIDIDO`
@@ -101,15 +101,15 @@ No onboarding, CNPJ não bloqueia navegação. Aba Dados mostra "Fiscal pendente
 
 Para loja nova, a aba ③ desbloqueia com **`storeId` existente + apenas o tom de voz** preenchido na aba ② (o tom de voz é persistido na loja, então a aba só libera após a criação via auto-save). Posicionamento/descrição/slogan são opcionais e recomendados. Card informativo curto na aba ② ("Essas informações ajudam o Vendeo a criar artes com linguagem, estilo e argumentos mais próximos da sua loja."). Para loja existente com direção visual salva, a aba ③ nasce aberta.
 
-### D10 — Abas no mobile: compactas, motivo fora do botão
+### D10 — Abas no mobile: compactas, motivo acessível no botão
 `DECIDIDO`
 
-Tabs compactas horizontais: `Dados`, `Perfil`, `Visual` — **APENAS label responsivo**; o `id` da aba permanece `posicionamento`/`direcao-visual` (query param, testes, analytics). Badge pequeno por estado (ponto/ícone discreto no canto), não texto completo. Motivo exibido no painel ativo, nunca dentro do botão da aba. Botão inferior "Continuar" sempre visível (avança/retrocede) — área de toque confortável. Touch targets ≥ 44px (F22). No desktop, labels completos (Dados / Posicionamento / Direção Visual).
+Tabs compactas horizontais: `Dados`, `Perfil`, `Visual` — **APENAS label responsivo**; o `id` da aba permanece `posicionamento`/`direcao-visual` (query param, testes, analytics). Badge pequeno por estado (ponto/ícone discreto no canto), não texto completo. Motivo acessível no botão da aba (tooltip/`aria-label`) — nunca depende do painel ativo (D16). Botão inferior "Continuar" sempre visível (avança/retrocede), **desabilitado quando a próxima aba está bloqueada** com microcopy do que falta — área de toque confortável. Touch targets ≥ 44px (F22). No desktop, labels completos (Dados / Posicionamento / Direção Visual).
 
 ### D11 — Acessibilidade (ARIA tabs)
 `DECIDIDO`
 
-`role="tablist"`/`role="tab"`/`role="tabpanel"` + `aria-selected`/`aria-controls`; roving tabindex (só o ativo tabulável; setas ←/→ e Home/End movem o foco); `aria-describedby` no tab bloqueado apontando para o motivo no painel; estados via `aria-label` (não só cor); `aria-live` na região da aba; aceite legal via `aria-label`/`aria-expanded`; touch targets ≥ 44px.
+`role="tablist"`/`role="tab"`/`role="tabpanel"` + `aria-selected`/`aria-controls`; roving tabindex (só o ativo tabulável; setas ←/→ e Home/End movem o foco); aba bloqueada com `aria-disabled="true"` e o motivo acessível via `aria-label`/`aria-describedby`/tooltip no próprio botão (D16); estados via `aria-label` (não só cor); `aria-live` na região da aba; aceite legal via `aria-label`/`aria-expanded`; touch targets ≥ 44px.
 
 ### D12 — Migração dos redirects/banners existentes
 `DECIDIDO`
@@ -142,7 +142,7 @@ Nenhuma mensagem contextual é perdida: `fiscal=pending`, `message=needs-visual-
 2. senão `driftCategory === 'sensitive'` → **`DriftDecisionModal`**; `realinhar()` → **POST** `/api/store/${store.id}/brand-profile/realign`; `ignorar()` → **PATCH** `/api/store/${store.id}/brand-profile/metadata` com `{ drift_dismissed_snapshot: currentSnapshot }`
 3. só após a decisão (realinhar/ignorar/dismissCriticalDrift) o PATCH dos campos do snapshot e a navegação prosseguem
 
-**Auto-save seletivo:** na troca de aba/navegação interna, se as edições locais tocam campos do snapshot e há drift novo, o PATCH desses campos fica **adiado** até a decisão. Campos que **não** entram no snapshot (ex.: fiscal/billing, visuais não relacionados) podem auto-save normalmente. Cancelar o modal mantém o usuário no contexto atual, sem persistir campos do snapshot. A capacidade de múltiplas assinaturas visuais (`totalGeneratedSignatures`) e o gatilho de limite permanecem inalterados.
+**Auto-save seletivo:** na troca de aba/navegação interna, se as edições locais tocam campos do snapshot e há drift novo, o PATCH desses campos fica **adiado** até a decisão. Campos que **não** entram no snapshot (ex.: fiscal/billing, visuais não relacionados) podem auto-save normalmente. Cancelar o modal mantém o usuário no contexto atual, sem persistir campos do snapshot. O drift **crítico** é computado **client-side contra o formData vivo** (computeCriticalDriftStatus — o GET visual-signature avalia contra o banco, estale antes do save); a capacidade de novas assinaturas é gateada por **créditos** (`canGenerateNewSignature = !creditsChargingEnabled || saldo>0`) e `totalGeneratedSignatures` permanece apenas como contagem.
 
 ### D14 — Renumeração F36/F37
 `DECIDIDO`

@@ -8,6 +8,9 @@ vi.mock('next/link', () => ({
 
 import { ReadinessBanner } from '../readiness-banner';
 
+// renderToString escapa & e " em atributos — decodifica antes de assertar as URLs canônicas.
+const decodeHtml = (html: string) => html.replace(/&amp;/g, '&').replace(/&quot;/g, '"');
+
 describe('ReadinessBanner', () => {
   it('returns null when missing is empty', () => {
     const result = ReadinessBanner({ missing: [] });
@@ -15,20 +18,20 @@ describe('ReadinessBanner', () => {
   });
 
   it('shows CNPJ cadastral when cadastro_fiscal is missing', () => {
-    const html = renderToString(ReadinessBanner({
+    const html = decodeHtml(renderToString(ReadinessBanner({
       missing: [{ item: 'cadastro_fiscal', reason: 'CNPJ obrigatório' }],
-    }));
+    })));
     expect(html).toContain('CNPJ cadastral');
-    expect(html).toContain('/loja?required=cadastro-fiscal');
+    expect(html).toContain('/loja?tab=dados&fiscal=pending&returnTo=/dashboard');
     expect(html).toContain('returnTo=/dashboard');
   });
 
   it('shows Direção visual when brand_profile is missing', () => {
-    const html = renderToString(ReadinessBanner({
+    const html = decodeHtml(renderToString(ReadinessBanner({
       missing: [{ item: 'brand_profile', reason: 'Direção visual não configurada' }],
-    }));
+    })));
     expect(html).toContain('Direção visual');
-    expect(html).toContain('/loja?required=visual-direction');
+    expect(html).toContain('/loja?tab=direcao-visual&message=needs-visual-direction');
   });
 
   it('shows both items when multiple missing', () => {
@@ -43,13 +46,13 @@ describe('ReadinessBanner', () => {
   });
 
   it('Configurar agora button points to first missing item', () => {
-    const html = renderToString(ReadinessBanner({
+    const html = decodeHtml(renderToString(ReadinessBanner({
       missing: [
         { item: 'cadastro_fiscal', reason: 'CNPJ obrigatório' },
         { item: 'brand_profile', reason: 'Direção visual não configurada' },
       ],
-    }));
-    expect(html).toContain('/loja?required=cadastro-fiscal');
+    })));
+    expect(html).toContain('/loja?tab=dados&fiscal=pending&returnTo=/dashboard');
     expect(html).toContain('Configurar agora');
   });
 

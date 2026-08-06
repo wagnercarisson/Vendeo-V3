@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateDrift } from '@/lib/visual-signature/drift-validator';
+import { validateDrift, computeCriticalDriftStatus } from '@/lib/visual-signature/drift-validator';
 import type { DriftValidationInput } from '@/lib/visual-signature/drift-validator';
 
 const validSnapshot = {
@@ -211,5 +211,115 @@ describe('validateDrift', () => {
       }));
       expect(result.has_drift).toBe(false);
     });
+  });
+});
+
+describe('computeCriticalDriftStatus (paridade client/server)', () => {
+  it('no drift → status none, reason ok', () => {
+    const result = computeCriticalDriftStatus({
+      input_snapshot: validSnapshot,
+      content_used: validContentUsed,
+      currentStoreData: validStoreData,
+      dismissedSnapshot: null,
+    });
+    expect(result).toEqual({ status: 'none', fields: [], reason: 'ok' });
+  });
+
+  it('name/segment sempre críticos: divergência sem content_used → new', () => {
+    const result = computeCriticalDriftStatus({
+      input_snapshot: validSnapshot,
+      content_used: { ...validContentUsed, slogan: false, city: false, state: false },
+      currentStoreData: { ...validStoreData, name: 'Nome Editado' },
+      dismissedSnapshot: null,
+    });
+    expect(result.status).toBe('new');
+    expect(result.fields).toEqual(['name']);
+    expect(result.reason).toBe('critical_drift');
+  });
+
+  it('slogan só crítico se content_used.slogan=true (slogan false → NÃO conta)', () => {
+    const noSlogan = computeCriticalDriftStatus({
+      input_snapshot: validSnapshot,
+      content_used: { ...validContentUsed, slogan: false },
+      currentStoreData: { ...validStoreData, slogan: 'Slogan Editado' },
+      dismissedSnapshot: null,
+    });
+    expect(noSlogan.status).toBe('none');
+
+    const withSlogan = computeCriticalDriftStatus({
+      input_snapshot: validSnapshot,
+      content_used: { ...validContentUsed, slogan: true },
+      currentStoreData: { ...validStoreData, slogan: 'Slogan Editado' },
+      dismissedSnapshot: null,
+    });
+    expect(withSlogan.status).toBe('new');
+    expect(withSlogan.fields).toEqual(['slogan']);
+  });
+
+  it('city/state só críticos se content_used indicar uso', () => {
+    const noCity = computeCriticalDriftStatus({
+      input_snapshot: validSnapshot,
+      content_used: { ...validContentUsed, city: false },
+      currentStoreData: { ...validStoreData, city: 'Rio de Janeiro' },
+      dismissedSnapshot: null,
+    });
+    expect(noCity.status).toBe('none');
+
+    const withCity = computeCriticalDriftStatus({
+      input_snapshot: validSnapshot,
+      content_used: { ...validContentUsed, city: true },
+      currentStoreData: { ...validStoreData, city: 'Rio de Janeiro' },
+      dismissedSnapshot: null,
+    });
+    expect(withCity.status).toBe('new');
+    expect(withCity.fields).toEqual(['city']);
+  });
+
+  it('dismissed_snapshot batendo com os 5 campos atuais → status dismissed', () => {
+    const accepted = {
+      name: 'Nome Editado',
+      segment: validStoreData.segment,
+      slogan: validStoreData.slogan,
+      city: validStoreData.city,
+      state: validStoreData.state,
+    };
+    const result = computeCriticalDriftStatus({
+      input_snapshot: validSnapshot,
+      content_used: validContentUsed,
+      currentStoreData: { ...validStoreData, name: 'Nome Editado' },
+      dismissedSnapshot: accepted,
+    });
+    expect(result.status).toBe('dismissed');
+    expect(result.reason).toBe('critical_drift');
+  });
+
+  it('dismissed_snapshot divergindo de QUALQUER campo crítico → new (dismiss por-snapshot)', () => {
+    const result = computeCriticalDriftStatus({
+      input_snapshot: validSnapshot,
+      content_used: validContentUsed,
+      currentStoreData: { ...validStoreData, name: 'Nome Editado' },
+      dismissedSnapshot: { ...validStoreData, name: 'Outro Aceito' },
+    });
+    expect(result.status).toBe('new');
+
+    const sloganToo = computeCriticalDriftStatus({
+      input_snapshot: validSnapshot,
+      content_used: validContentUsed,
+      currentStoreData: { ...validStoreData, name: 'Nome Editado', slogan: 'Novo Slogan' },
+      dismissedSnapshot: { name: 'Nome Editado', segment: validStoreData.segment, slogan: 'Antigo', city: validStoreData.city, state: validStoreData.state },
+    });
+    expect(sloganToo.status).toBe('new');
+    expect(sloganToo.fields).toEqual(['name', 'slogan']);
+  });
+
+  it('metadata ausente → status new com reason missing_metadata', () => {
+    const result = computeCriticalDriftStatus({
+      input_snapshot: null,
+      content_used: null,
+      currentStoreData: validStoreData,
+      dismissedSnapshot: null,
+    });
+    expect(result.status).toBe('new');
+    expect(result.reason).toBe('missing_metadata');
   });
 });

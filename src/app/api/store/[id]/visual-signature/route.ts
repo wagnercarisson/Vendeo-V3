@@ -7,6 +7,8 @@ import { transition } from '@/lib/identity-transitions';
 import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
 import { requireSameOrigin } from '@/lib/auth/csrf';
 import { apiHandler } from '@/lib/auth/api-handler';
+import { CreditService } from '@/lib/credit/credit-service';
+import { getLaunchConfig } from '@/lib/launch-config/config';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -153,12 +155,25 @@ export const GET = apiHandler(async (
       critical_drift: s.status === 'active'
         ? computeCriticalDrift(restoreEligibility, metadata, store)
         : null,
+      input_snapshot: inputSnapshot,
+      dismissed_snapshot: metadata.visual_signature_drift_dismissed_snapshot ?? null,
     };
   });
+
+  // Saldo de créditos para o gate de geração do DriftCriticalModal (client-side).
+  // Best-effort: falha de leitura de saldo não pode derrubar a listagem.
+  let credit_balance = 0;
+  try {
+    credit_balance = await new CreditService().getBalance(id);
+  } catch (e) {
+    console.error('[visual-signature:list] falha ao ler saldo de créditos', e);
+  }
 
   return NextResponse.json({
     signatures,
     total: count ?? data?.length ?? 0,
+    credit_balance,
+    credits_charging_enabled: getLaunchConfig().creditsChargingEnabled,
   });
 });
 

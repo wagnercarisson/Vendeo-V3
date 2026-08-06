@@ -258,14 +258,35 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns 400 when CNPJ is missing", async () => {
+  it("creates draft store when CNPJ is missing (F36 D15 — no grant, no p_cnpj_normalized)", async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: {
+        store: [{ id: "store-draft-1", name: "Loja", segment: "moda-calcados-acessorios" }],
+        onboardingGranted: false,
+      },
+      error: null,
+    });
+
     const res = await POST(createRequest({
       name: "Loja",
       segment: "moda-calcados-acessorios",
       acceptedTerms: true,
     }));
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.id).toBe("store-draft-1");
+    // Loja draft nunca recebe grant freemium
+    expect(body.onboardingGranted).toBe(false);
+    // Modo draft usa create_store_draft SEM p_cnpj_normalized
+    expect(mockRpc).toHaveBeenCalledWith("create_store_draft", expect.objectContaining({
+      p_user_id: "00000000-0000-0000-0000-000000000001",
+      p_name: "Loja",
+    }));
+    const draftCall = mockRpc.mock.calls.find(([name]) => name === "create_store_draft");
+    expect(draftCall).toBeDefined();
+    expect(Object.keys(draftCall![1])).not.toContain("p_cnpj_normalized");
+    expect(mockRpc).not.toHaveBeenCalledWith("create_store_with_cnpj", expect.anything());
   });
 
   it("returns 409 with cnpj_already_registered when CNPJ index conflicts", async () => {

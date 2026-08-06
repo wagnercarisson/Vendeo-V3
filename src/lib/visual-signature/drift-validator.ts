@@ -110,3 +110,66 @@ export function validateDrift(input: DriftValidationInput): DriftValidationResul
     requires_regeneration: false,
   };
 }
+
+export type CriticalDriftStatus = 'none' | 'new' | 'dismissed';
+
+export interface CriticalDriftInput {
+  input_snapshot: DriftValidationInput['input_snapshot'];
+  content_used: DriftValidationInput['content_used'];
+  currentStoreData: DriftValidationInput['currentStoreData'];
+  // Snapshot dos valores ACEITOS no dismiss crítico. Sempre completo (5 campos).
+  dismissedSnapshot: {
+    name: string;
+    segment: string;
+    slogan: string | null;
+    city: string | null;
+    state: string | null;
+  } | null | undefined;
+}
+
+export interface CriticalDriftResult {
+  status: CriticalDriftStatus;
+  fields: string[];
+  reason: RestoreEligibilityReason;
+}
+
+/**
+ * Espelho client-safe do `computeCriticalDrift` do servidor
+ * (src/app/api/store/[id]/visual-signature/route.ts). Reproduz EXATAMENTE a
+ * semântica de paridade: validateDrift sobre o snapshot de input + content_used,
+ * e o snapshot de dismiss comparado contra os 5 campos críticos atuais
+ * (nome/segmento sempre críticos; slogan/cidade/estado condicionados por
+ * content_used). O cliente computa contra o formData vivo; o servidor contra o
+ * banco — devem concordar antes de persistir.
+ */
+export function computeCriticalDriftStatus(input: CriticalDriftInput): CriticalDriftResult {
+  const drift = validateDrift({
+    input_snapshot: input.input_snapshot,
+    content_used: input.content_used,
+    currentStoreData: input.currentStoreData,
+  });
+
+  if (drift.reason === 'ok') {
+    return { status: 'none', fields: [], reason: 'ok' };
+  }
+
+  // reason é 'critical_drift' ou 'missing_metadata'
+  const dismissed = input.dismissedSnapshot;
+  if (dismissed) {
+    // Compare ALL 5 fields (name, segment, slogan, city, state)
+    // O snapshot de dismiss é SEMPRE completo — persistido com os 5 campos.
+    const store = input.currentStoreData;
+    const allMatch =
+      dismissed.name === store.name &&
+      dismissed.segment === store.segment &&
+      dismissed.slogan === store.slogan &&
+      dismissed.city === store.city &&
+      dismissed.state === store.state;
+
+    if (allMatch) {
+      return { status: 'dismissed', fields: drift.fields, reason: drift.reason };
+    }
+  }
+
+  return { status: 'new', fields: drift.fields, reason: drift.reason };
+}

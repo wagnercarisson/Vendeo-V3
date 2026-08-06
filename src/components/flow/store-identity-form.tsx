@@ -1,16 +1,19 @@
 "use client";
 
 import { useStoreForm, useIdentityActions } from "./use-store-form";
+import type { FormData as StoreFormData } from "./use-store-form";
 import type { Store } from "@/lib/store";
 import { StorePreview } from "./store-preview";
 import { VisualSignatureApprovalModal } from "./visual-signature-approval-modal";
 import { VisualSignatureHistoryModal } from "./visual-signature-history-modal";
 import { STORE_SEGMENTS, STORE_SUBSEGMENTS, BRAZILIAN_STATES } from "@/lib/constants";
-import { AlertCircle, CheckCircle2, Loader2, X, Upload, ArrowLeft, Sparkles, ExternalLink } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, X, Upload, ArrowLeft, Sparkles } from "lucide-react";
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useDriftDetection } from "./use-drift-detection";
 import { getDriftPolicy } from "@/lib/drift";
+import type { OnboardingTab, TabBlockReason } from "@/lib/store-onboarding/tabs";
+import { tabBlockReasonText } from "@/lib/store-onboarding/reason-text";
 
 // DriftDiscreetButton import removed — replaced by inline post-dismiss links
 import { DriftDecisionModal } from "./drift-decision-modal";
@@ -20,6 +23,12 @@ import { normalizeCnpj } from "@/lib/cnpj/normalize";
 import { validateCnpj } from "@/lib/cnpj/validate";
 import { ContractAcceptanceModal } from "@/components/legal/contract-acceptance-modal";
 import { FeedbackOverlay } from "./feedback-overlay";
+import { StoreTabs } from "./store-tabs";
+import { LegalAcceptancePanel, type LegalAcceptanceState } from "./legal-acceptance-panel";
+import { useOnboardingTabs } from "@/hooks/use-onboarding-tabs";
+import { ONBOARDING_TABS } from "@/lib/store-onboarding/tabs";
+import { restoreDraft } from "@/lib/store-onboarding/draft-store";
+import type { StoreReadinessResult } from "@/lib/store-readiness";
 
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
 const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -74,10 +83,9 @@ function getSubsegmentMode(segment: string): 'rich' | 'travado' | 'other' | 'loc
   return 'rich';
 }
 
-export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }: { initialStore?: Store | null; initialStep?: number; redirectMessage?: string }) {
-  const { formData, setField, save, isLoading, isSaving, error, warningMessage, dismissWarning, successMessage, mode, clearStore, storeId } = useStoreForm({ initialStore: initialStore ?? null });
+export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMessage }: { initialStore?: Store | null; userId?: string; initialTab?: OnboardingTab; redirectMessage?: string }) {
+  const { formData, setField, save, isLoading, isSaving, error, warningMessage, dismissWarning, successMessage, mode, clearStore, storeId, acceptedTerms, setAcceptedTerms, autoSave, saveStatus } = useStoreForm({ initialStore: initialStore ?? null });
 
-  const [step, setStep] = useState<1 | 2>(initialStep === 2 ? 2 : 1);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Partial<Record<string, boolean>>>({});
 
@@ -109,6 +117,7 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
   const [brandDirectorRetrying, setBrandDirectorRetrying] = useState(false);
   const [driftError, setDriftError] = useState<string | null>(null);
   const [showDriftCriticalModal, setShowDriftCriticalModal] = useState(false);
+  const [isPersistingForApproval, setIsPersistingForApproval] = useState(false);
   const [showDriftDecisionModal, setShowDriftDecisionModal] = useState(false);
   const [driftSaveIntercept, setDriftSaveIntercept] = useState(false);
   const [driftNavIntercept, setDriftNavIntercept] = useState(false);
@@ -119,13 +128,20 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
   const [showRemoveLogoDialog, setShowRemoveLogoDialog] = useState(false);
   const [driftRefreshKey, setDriftRefreshKey] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [existingLegalOk, setExistingLegalOk] = useState(true);
   const [legalCheckLoading, setLegalCheckLoading] = useState(true);
-  const [acceptedTermsError, setAcceptedTermsError] = useState<string | null>(null);
   const [showContractModal, setShowContractModal] = useState(false);
   const [feedbackOverlay, setFeedbackOverlay] = useState<{ message: string; type: 'error' | 'success'; focusSelector?: string } | null>(null);
   const [suppressErrorBanner, setSuppressErrorBanner] = useState(false);
+  // F36 (D10): variante compacta das abas em telas < 1024px.
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1023px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
   const [contractDocuments, setContractDocuments] = useState<Array<{ label: string; version: string; url: string }> | null>(null);
   const [versionsLoading, setVersionsLoading] = useState(true);
   const [billingExpanded, setBillingExpanded] = useState(false);
@@ -164,19 +180,34 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
       .finally(() => setVersionsLoading(false));
   }, []);
 
+  const [legalState, setLegalState] = useState<LegalAcceptanceState>("pending");
   useEffect(() => {
     if (!storeId) {
       setLegalCheckLoading(false);
+      setLegalState(acceptedTerms ? "accepted" : "pending");
       return;
     }
     fetch(`/api/store/${storeId}/legal-status`)
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         setExistingLegalOk(data?.hasValidAcceptance ?? true);
+        // F36 (D3): current→accepted, outdated→needs_reacceptance, ausente→pending
+        if (data?.hasValidAcceptance) {
+          setLegalState("accepted");
+        } else if (data?.tosStatus === "outdated" || data?.aupStatus === "outdated") {
+          setLegalState("needs_reacceptance");
+        } else {
+          setLegalState("pending");
+        }
       })
-      .catch(() => setExistingLegalOk(true))
+      .catch(() => {
+        // LW-01: falha de rede → fail-closed (não libera Posicionamento sem
+        // aceite verificável); estado pendente com retry no próximo render.
+        setExistingLegalOk(false);
+        setLegalState("pending");
+      })
       .finally(() => setLegalCheckLoading(false));
-  }, [storeId]);
+  }, [storeId, acceptedTerms]);
   const [inferredProfile, setInferredProfile] = useState<{
     safe_color_tokens?: Record<string, string>;
     visual_style?: string;
@@ -213,7 +244,8 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
     driftStatus,
     driftCategory,
     criticalDrift,
-    totalGeneratedSignatures,
+    creditBalance,
+    creditsChargingEnabled,
     dismissCriticalDrift,
     realinhar,
     ignorar,
@@ -225,48 +257,185 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
     },
   });
 
-  const router = useRouter();
-  const currentUrlRef = useRef('');
+  // F36: gate de geração por CRÉDITOS reais (não o limite legado de 3 gerações).
+  // Crédito disponível OU charging desativado → "Gerar novamente" habilitado.
+  // Saldo 0 + charging ativo → modal orienta /conta.
+  const canGenerateNewSignature = !creditsChargingEnabled || (creditBalance ?? 0) > 0;
 
+  // F36 (D4/D6/D13): readiness consumido pelo hook (tabStates / geração).
+  const [readiness, setReadiness] = useState<StoreReadinessResult>({ ready: true, missing: [] });
+  // MD-03: força refetch após update-cnpj (storeId não muda → sem trigger natural).
+  const [readinessRefreshKey, setReadinessRefreshKey] = useState(0);
   useEffect(() => {
-    if (step === 2 && driftStatus === 'new') {
-      currentUrlRef.current = window.location.href;
-
-      const handleClick = (e: MouseEvent) => {
-        const anchor = (e.target as HTMLElement).closest('a');
-        if (!anchor || !anchor.href) return;
-        if (anchor.target === '_blank') return;
-
-        const href = anchor.getAttribute('href');
-        if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
-
-        e.preventDefault();
-        e.stopPropagation();
-        setPendingNavUrl(href);
-        setDriftNavIntercept(true);
-      };
-
-      const handlePopState = () => {
-        history.pushState(null, '', currentUrlRef.current);
-        setDriftNavIntercept(true);
-      };
-
-      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-        e.preventDefault();
-        e.returnValue = '';
-      };
-
-      document.addEventListener('click', handleClick, true);
-      window.addEventListener('popstate', handlePopState);
-      window.addEventListener('beforeunload', handleBeforeUnload);
-
-      return () => {
-        document.removeEventListener('click', handleClick, true);
-        window.removeEventListener('popstate', handlePopState);
-        window.removeEventListener('beforeunload', handleBeforeUnload);
-      };
+    if (!storeId) {
+      setReadiness({ ready: true, missing: [] });
+      return;
     }
-  }, [step, driftStatus, setPendingNavUrl, setDriftNavIntercept]);
+    let cancelled = false;
+    fetch("/api/store/check-readiness", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ storeId }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data) {
+          setReadiness({ ready: data.ready ?? false, missing: data.missing ?? [] });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setReadiness({ ready: false, missing: [] });
+      });
+    return () => { cancelled = true; };
+  }, [storeId, readinessRefreshKey]);
+
+  // F36 (F36-IDENTITY-UI-05): restauração do rascunho no auto-load. `:new` (sem
+  // loja) ou `:${storeId}` reconciliado com o banco — o banco prevalece em campos
+  // persistidos; expirado (restoreDraft retorna null) é ignorado. NUNCA ler
+  // localStorage("store_id").
+  const draftRestoredRef = useRef(false);
+  useEffect(() => {
+    if (!userId || isLoading || draftRestoredRef.current) return;
+    const draft = restoreDraft(userId, storeId);
+    if (!draft) return;
+    draftRestoredRef.current = true;
+    const stored = initialStore as Partial<Record<keyof StoreFormData, unknown>> | null;
+    const entries = Object.entries(draft.fields ?? {}) as [keyof StoreFormData, string | undefined][];
+    for (const [field, value] of entries) {
+      if (typeof value !== "string") continue;
+      const persisted = stored?.[field];
+      if (persisted !== undefined && persisted !== null && String(persisted) !== "") continue;
+      if (formData[field] === "") setField(field, value);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, isLoading, storeId, initialStore, setField]);
+
+  // F36 (D7): rascunho local detectado por comparação com a baseline persistida.
+  const baselineRef = useRef<string>("");
+  useEffect(() => {
+    baselineRef.current = JSON.stringify(initialStore ?? {});
+  }, [initialStore]);
+  const hasLocalEdits = useMemo(() => JSON.stringify(formData) !== baselineRef.current, [formData]);
+  useEffect(() => {
+    if (saveStatus === "saved") baselineRef.current = JSON.stringify(formData);
+  }, [saveStatus, formData]);
+
+  const router = useRouter();
+
+  // F36 (D13): interceptação de saída orquestrada pelo useOnboardingTabs —
+  // NÃO mais restrita a step === 2. Os modais de drift (DriftDecisionModal/
+  // DriftCriticalModal) e o executeStep2Save pós-decisão permanecem intactos.
+  // Bug B/C: origem do save que interceptou drift — 'step1' (Dados) ou 'step2'
+  // (Posicionamento). Determina a ação pós-decisão do modal e a ordem
+  // (persistir antes de realinhar no step1).
+  const driftFromSaveRef = useRef<'step1' | 'step2' | null>(null);
+  const openDriftModalFromContext = useCallback(() => {
+    if (driftCategory === "critical" && criticalDrift?.status === "new") {
+      setShowDriftCriticalModal(true);
+    } else {
+      setShowDriftDecisionModal(true);
+    }
+  }, [driftCategory, criticalDrift]);
+
+  const legalAccepted = storeId ? (existingLegalOk || acceptedTerms) : acceptedTerms;
+  const hasVisualDirection = !!inferredProfile || identityState === "visual_signature";
+
+  // MD-01 (D13): campos com edição local (auto-save seletivo). Derivados da
+  // baseline persistida (initialStore + último save) — evita abrir o modal de
+  // drift em toda troca de aba sem edições reais nos campos do snapshot.
+  const persistedFormRef = useRef<StoreFormData | null>(null);
+  useEffect(() => {
+    if (saveStatus === "saved") persistedFormRef.current = { ...formData };
+  }, [saveStatus, formData]);
+  const editedFields = useMemo<(keyof StoreFormData)[]>(() => {
+    const persisted = persistedFormRef.current;
+    if (!persisted) return [];
+    return (Object.keys(formData) as (keyof StoreFormData)[]).filter(
+      (field) => formData[field] !== persisted[field],
+    );
+  }, [formData]);
+
+  // F36 (fix fiscal): autoSave com refetch de readiness quando o cadastro
+  // fiscal persiste via autoSave (draft→fiscal, update-cnpj). Sem isto o
+  // readiness/banner ficaria stale — só o save explícito incrementava
+  // readinessRefreshKey (handleStep1Submit).
+  const autoSaveWithFiscalReadiness = useCallback(
+    async (fields: Partial<StoreFormData>) => {
+      const result = await autoSave(fields);
+      if (result.fiscalPersisted) setReadinessRefreshKey((k) => k + 1);
+      return result;
+    },
+    [autoSave],
+  );
+
+  const {
+    activeTab,
+    setActiveTab,
+    tabStates,
+    saveStatus: tabHookSaveStatus,
+    handleInternalNavigation,
+    handlePageHide,
+    handleVisibilityChange,
+    cancelPendingNavigation,
+    blockedNotice,
+  } = useOnboardingTabs(
+    {
+      initialTab,
+      userId: userId ?? "",
+      formData,
+      storeId,
+      legalAccepted,
+      hasVisualDirection,
+      readiness,
+      hasLocalEdits,
+      isPersisted: !!storeId,
+      editedFields,
+      autoSave: autoSaveWithFiscalReadiness,
+      saveStatus,
+      driftStatus,
+      driftCategory,
+      criticalDriftStatus: criticalDrift?.status ?? null,
+    },
+    {
+      onDriftNavigate: () => {
+        driftFromSaveRef.current = null;
+        openDriftModalFromContext();
+      },
+      onDriftLeave: () => {
+        driftFromSaveRef.current = null;
+        openDriftModalFromContext();
+      },
+    },
+  );
+
+  // F36 (D13/D4): liga os handlers públicos do hook ao DOM — document click
+  // (navegação interna) + pagehide/visibilitychange (abandono mobile). O
+  // listener popstate é registrado pelo próprio hook (back/forward — D6).
+  useEffect(() => {
+    document.addEventListener("click", handleInternalNavigation, true);
+    window.addEventListener("pagehide", handlePageHide);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("click", handleInternalNavigation, true);
+      window.removeEventListener("pagehide", handlePageHide);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [handleInternalNavigation, handlePageHide, handleVisibilityChange]);
+
+  // D16 (hard-block): aba NÃO ativável quando não está desbloqueada (state
+  // blocked OU unlockReason presente). Usada para desabilitar CTAs.
+  const isTabBlocked = useCallback(
+    (tab: OnboardingTab): boolean => {
+      const s = tabStates[tab];
+      return s?.state === "blocked" || !!s?.unlockReason;
+    },
+    [tabStates],
+  );
+  const direcaoVisualBlocked = isTabBlocked("direcao-visual");
+  const direcaoVisualReason = useMemo<TabBlockReason | undefined>(() => {
+    const s = tabStates["direcao-visual"];
+    return s?.state === "blocked" ? s.reason : s?.unlockReason;
+  }, [tabStates]);
 
   const saveBrandColors = useCallback(async (primary: string, secondary: string) => {
     if (!storeId) return;
@@ -362,7 +531,6 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
     setStep2Success(null);
 
     if (!storeId) {
-      setStep(1);
       return;
     }
 
@@ -934,7 +1102,6 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
 
   const handleStep1Submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setAcceptedTermsError(null);
     const nameErr = validateName(formData.name);
     const segmentErr = validateSegment(formData.segment);
     const errors: FieldErrors = {};
@@ -964,31 +1131,43 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
 
     const legalBlocked = storeId ? !existingLegalOk && !acceptedTerms : !acceptedTerms;
     if (legalBlocked) {
-      setAcceptedTermsError("Você precisa aceitar os Termos de Uso e a Política de Uso Aceitável.");
+      // Fix (260806-fsl-feedback-aceite-legal): feedback explícito no submit sem
+      // aceite legal — antes setava acceptedTermsError (estado morto, nunca
+      // renderizado → falha silenciosa). Modal imediato; ao fechar, o foco/scroll
+      // vai ao card de aceite VISÍVEL no viewport atual (ids únicos por variante;
+      // a outra variante fica display:none no DOM).
+      setFeedbackOverlay({
+        message: "Para continuar, leia e aceite os termos de uso.",
+        type: 'error',
+        focusSelector: isMobile ? "#aceite-legal-mobile" : "#aceite-legal",
+      });
+      return;
+    }
+
+    // Bug B (D13): save explícito da aba Dados também intercepta drift ANTES de
+    // persistir campos do snapshot (name/segment/subsegment) — espelha a
+    // bifurcação do handleStep2Submit.
+    if (driftCategory === 'critical' && criticalDrift?.status === 'new') {
+      driftFromSaveRef.current = 'step1';
+      setShowDriftCriticalModal(true);
+      return;
+    }
+
+    if (driftCategory === 'sensitive') {
+      driftFromSaveRef.current = 'step1';
+      setShowDriftDecisionModal(true);
       return;
     }
 
     const saved = await save(acceptedTerms || undefined);
     if (saved && "storeId" in saved) {
-      const savedStoreId = saved.storeId;
-      // Sempre verificar readiness antes de decidir navegação
-      const readinessRes = await fetch("/api/store/check-readiness", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeId: savedStoreId }),
-      });
-      const readiness = await readinessRes.json();
-      // Prioridade: 1. cadastro_fiscal pendente → Step 1
-      if (readiness.missing?.some((m: { item: string }) => m.item === "cadastro_fiscal")) {
-        setFormError("Os dados fiscais não foram salvos. Verifique o CNPJ e tente novamente.");
-        setFeedbackOverlay({ message: "Os dados fiscais não foram salvos. Verifique o CNPJ e tente novamente.", type: 'error' });
-      } else {
-        // Sempre avança para Step 2 — permite ajustes mesmo se brand_profile já existe
-        setDriftRefreshKey(k => k + 1);
-        setStep(2);
-        setStep2Success(null);
-        setFeedbackOverlay({ message: "Loja salva. Agora configure a direção visual.", type: 'success' });
-      }
+      // F36 (D1/D8): cadastro_fiscal pendente NÃO bloqueia navegação — apenas geração.
+      setDriftRefreshKey(k => k + 1);
+      // MD-03: refetch readiness após save (cobre update-cnpj draft→fiscal).
+      setReadinessRefreshKey(k => k + 1);
+      setStep2Success(null);
+      setFeedbackOverlay({ message: "Loja salva. Continue com o posicionamento da sua loja.", type: 'success' });
+      await setActiveTab("posicionamento");
     } else if (saved && saved.code === "cnpj_already_registered") {
       setFieldErrors((prev) => ({ ...prev, cnpj: saved.error }));
       setTouched((prev) => ({ ...prev, cnpj: true }));
@@ -1095,11 +1274,13 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
     if (!storeId) return;
 
     if (driftCategory === 'critical' && criticalDrift?.status === 'new') {
+      driftFromSaveRef.current = 'step2';
       setShowDriftCriticalModal(true);
       return;
     }
 
     if (driftCategory === 'sensitive') {
+      driftFromSaveRef.current = 'step2';
       setShowDriftDecisionModal(true);
       return;
     }
@@ -1110,6 +1291,34 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
       setFeedbackOverlay({ message: 'Erro ao salvar. Tente novamente.', type: 'error' });
     }
   };
+
+  // Bug C (D13): persiste os dados aceitos conforme a ORIGEM do save que
+  // interceptou drift. step1 (Dados) → save() (name/segment/subsegment + campos
+  // de texto); step2 (Posicionamento) → save() persiste os campos de texto do
+  // snapshot (tone_of_voice/positioning/short_description/slogan) e
+  // executeStep2Save() persiste cores/logo/inferência. Deve rodar ANTES do POST
+  // /realign — a rota reconstrói o snapshot a partir do banco; salvar depois
+  // realinhar deixaria o snapshot stale. Fix C: também persiste no caminho de
+  // NAVEGAÇÃO (driftFromSaveRef === null com edições locais), para realinhar/
+  // manter-e-salvar refletirem os dados aceitos (spec store-onboarding-autosave
+  // L135/L136). Retorna true se havia persistência pendente.
+  const persistSaveFromDrift = useCallback(async () => {
+    const origin = driftFromSaveRef.current;
+    if (origin === 'step1' || origin === 'step2') {
+      const result = await save(acceptedTerms || undefined);
+      if (result && 'error' in result) throw new Error(result.error ?? 'Erro ao salvar');
+      if (origin === 'step2') {
+        await executeStep2Save();
+      }
+      return true;
+    }
+    if (hasLocalEdits) {
+      const result = await save(acceptedTerms || undefined);
+      if (result && 'error' in result) throw new Error(result.error ?? 'Erro ao salvar');
+      return true;
+    }
+    return false;
+  }, [driftFromSaveRef, save, acceptedTerms, executeStep2Save, hasLocalEdits]);
 
   const segmentOptions = STORE_SEGMENTS.map((seg) => ({
     value: seg.value,
@@ -1134,30 +1343,6 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 py-8">
-      {/* Step indicator */}
-      <div className="flex items-center gap-3 mb-8">
-        <div className={`flex items-center gap-2 ${step === 1 ? "text-text-primary" : "text-accent-green"}`}>
-          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-heading font-bold ${
-            step === 1 ? "bg-accent-blue/20 text-accent-blue" : "bg-accent-green/20 text-accent-green"
-          }`}>
-            {step === 1 ? "1" : <CheckCircle2 className="w-4 h-4" />}
-          </div>
-          <span className="text-xs font-heading font-semibold">Dados da Loja</span>
-        </div>
-        <div className="w-8 h-px bg-border" />
-        <div className={`flex items-center gap-2 ${step === 2 ? "text-text-primary" : "text-text-muted"}`}>
-          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-heading font-bold ${
-            step === 2 ? "bg-accent-blue/20 text-accent-blue" : "bg-bg-elevated text-text-muted"
-          }`}>
-            2
-          </div>
-          <span className="text-xs font-heading font-semibold">Direção Visual</span>
-          {!inferredProfile && (
-            <span className="text-[10px] font-heading font-semibold text-accent-amber bg-amber-900/30 px-1.5 py-0.5 rounded">Necessário</span>
-          )}
-        </div>
-      </div>
-
       {warningMessage && (
         <div className="mb-6 flex items-start gap-3 bg-amber-900/20 border border-amber-700/30 rounded-lg px-4 py-3">
           <AlertCircle className="w-5 h-5 text-accent-amber shrink-0 mt-0.5" />
@@ -1175,14 +1360,14 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
         </div>
       )}
 
-      {successMessage && step === 1 && (
+      {successMessage && activeTab === "dados" && (
         <div className="mb-6 flex items-start gap-3 bg-green-900/20 border border-green-700/30 rounded-lg px-4 py-3">
           <CheckCircle2 className="w-5 h-5 text-accent-green shrink-0 mt-0.5" />
           <p className="text-accent-green text-sm font-body flex-1">{successMessage}</p>
         </div>
       )}
 
-      {step2Success && (
+      {step2Success && activeTab === "direcao-visual" && (
         <div className="mb-6 flex items-start gap-3 bg-green-900/20 border border-green-700/30 rounded-lg px-4 py-3">
           <CheckCircle2 className="w-5 h-5 text-accent-green shrink-0 mt-0.5" />
           <p className="text-accent-green text-sm font-body flex-1">{step2Success}</p>
@@ -1196,11 +1381,57 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
           <div className="h-5 w-24 bg-bg-elevated rounded animate-pulse" />
           <div className="h-10 bg-bg-elevated rounded-lg animate-pulse" />
         </div>
-      ) : step === 1 ? (
-        /* ═══════════════ Step 1: Basic Data ═══════════════ */
-        <form onSubmit={handleStep1Submit} className="space-y-6" noValidate>
-          <h1 className="text-2xl font-heading font-bold text-text-primary mb-1">Dados da Loja</h1>
-          <p className="text-text-secondary text-sm font-body mb-6">Informe os dados básicos da sua loja</p>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+          <div className="lg:col-span-4">
+            {/* Aceite legal — bloco compacto no topo em mobile (D3, sem sticky) */}
+            <div className="lg:hidden mb-6">
+              <LegalAcceptancePanel acceptance={legalState} onOpenModal={() => setShowContractModal(true)} variant="mobile-compact" open={showContractModal} panelId="aceite-legal-mobile" />
+            </div>
+            {/* D16 (hard-block): aviso de ativação negada de aba bloqueada — a
+                aba bloqueada nunca fica ativa; o motivo fica no botão e/ou aqui
+                (texto específico do que falta, não apenas "Complete esta etapa"). */}
+            {blockedNotice && (() => {
+              const blockedDef = ONBOARDING_TABS.find((t) => t.id === blockedNotice.tab);
+              const blockedLabel = blockedDef?.label ?? blockedNotice.tab;
+              const reasonText = tabBlockReasonText(blockedNotice.tab, blockedNotice.reason, blockedLabel);
+              return (
+                <div
+                  role="status"
+                  className="mb-4 flex items-start gap-3 rounded-lg border border-amber-700/30 bg-amber-900/20 px-4 py-3"
+                >
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-accent-amber" />
+                  <p className="text-sm font-body text-text-secondary">
+                    Complete esta etapa para liberar <span className="font-semibold text-text-primary">{blockedLabel}</span>.
+                  </p>
+                  <p className="text-xs font-body text-accent-amber">{reasonText}</p>
+                </div>
+              );
+            })()}
+
+            <StoreTabs
+              tabs={ONBOARDING_TABS}
+              activeTab={activeTab}
+              states={tabStates}
+              onTabChange={(tab) => { void setActiveTab(tab); }}
+              variant={isMobile ? "mobile-compact" : "desktop"}
+            >
+              {activeTab === "dados" && (
+                /* ═══════════════ Tab: Dados ═══════════════ */
+                <form onSubmit={handleStep1Submit} className="space-y-6" noValidate>
+                  <h1 className="text-2xl font-heading font-bold text-text-primary mb-1">Dados da Loja</h1>
+                  <p className="text-text-secondary text-sm font-body mb-6">Informe os dados básicos da sua loja</p>
+                  {/* F36 (fix fiscal): banner por readiness VIVO (cadastro_fiscal
+                      em missing) — não por initialStore/cnpj_normalized (stale
+                      após autosave fiscal) nem pelo param fiscal=pending. */}
+                  {readiness.missing.some((m) => m.item === "cadastro_fiscal") && (
+                    <div className="mb-4 flex items-start gap-3 bg-amber-900/20 border border-amber-700/30 rounded-lg px-4 py-3">
+                      <AlertCircle className="w-5 h-5 text-accent-amber shrink-0 mt-0.5" />
+                      <p className="text-accent-amber text-sm font-body flex-1">
+                        Fiscal pendente: informe o CNPJ para liberar a geração de campanhas e os créditos gratuitos.
+                      </p>
+                    </div>
+                  )}
 
           {/* Cadastro Fiscal — sempre visível para completar readiness */}
           {(() => {
@@ -1475,108 +1706,6 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
             </div>
           </div>
 
-          <div className="pt-4 border-t border-border">
-            <h3 className={labelClass}>Direção de Marketing <span className="font-normal normal-case tracking-normal text-text-disabled">(opcional)</span></h3>
-            <div className="space-y-4 mt-4">
-              <div>
-                <label htmlFor="tone_of_voice" className={labelClass}>Tom de Voz</label>
-                <select id="tone_of_voice" value={formData.tone_of_voice} onChange={(e) => setField("tone_of_voice", e.target.value)} className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-body transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20">
-                  <option value="">Selecione</option>
-                  {TONE_OF_VOICE_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label htmlFor="positioning" className={labelClass}>Posicionamento</label>
-                <input id="positioning" type="text" value={formData.positioning} onChange={(e) => setField("positioning", e.target.value)} placeholder="Ex: A melhor loja de..." className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20" />
-              </div>
-              <div>
-                <label htmlFor="short_description" className={labelClass}>Descrição Curta</label>
-                <textarea id="short_description" value={formData.short_description} onChange={(e) => setField("short_description", e.target.value)} placeholder="Descreva sua loja em poucas palavras..." rows={3} className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20 resize-none" />
-              </div>
-              <div>
-                <label htmlFor="slogan" className={labelClass}>Slogan</label>
-                <input id="slogan" type="text" value={formData.slogan} onChange={(e) => setField("slogan", e.target.value)} placeholder="Ex: Sua loja de confiança" className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20" />
-              </div>
-            </div>
-          </div>
-
-          {/* Aceite legal — sempre visível quando necessário */}
-          <div className="pt-4 border-t border-border">
-            {!storeId ? (
-              /* Nova loja: aceite obrigatório */
-              acceptedTerms ? (
-                <div className="flex items-start gap-3">
-                  <span className="mt-0.5 h-4 w-4 rounded shrink-0 bg-accent-blue flex items-center justify-center">
-                    <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                  </span>
-                  <span className="text-sm text-text-secondary">
-                    Termos de Uso e Política de Uso Aceitável aceitos
-                  </span>
-                </div>
-              ) : versionsLoading ? (
-                <div className="flex items-center justify-center gap-2 py-2.5 text-text-muted text-sm">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Carregando documentos...
-                </div>
-              ) : contractDocuments ? (
-                <button
-                  type="button"
-                  onClick={() => { setShowContractModal(true); setAcceptedTermsError(null); }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Ler e aceitar Termos de Uso e Uso Aceitável
-                </button>
-              ) : (
-                <p className="text-sm text-accent-amber text-center py-2.5">
-                  Documentos legais indisponíveis no momento.
-                </p>
-              )
-            ) : /* Loja existente: verificar aceite */
-              legalCheckLoading ? (
-                <div className="flex items-center justify-center gap-2 py-2.5 text-text-muted text-sm">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Verificando situação legal...
-                </div>
-              ) : existingLegalOk ? (
-                <div className="flex items-start gap-3">
-                  <span className="mt-0.5 h-4 w-4 rounded shrink-0 bg-accent-blue flex items-center justify-center">
-                    <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                  </span>
-                  <span className="text-sm text-text-secondary">
-                    Termos de Uso e Política de Uso Aceitável aceitos
-                  </span>
-                </div>
-              ) : contractDocuments ? (
-                <div className="space-y-2">
-                  <p className="text-sm text-accent-amber">
-                    Seus documentos legais precisam ser atualizados para continuar gerando campanhas.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => { setShowContractModal(true); setAcceptedTermsError(null); }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    Regularizar documentos legais
-                  </button>
-                </div>
-              ) : (
-                <p className="text-sm text-accent-amber text-center py-2.5">
-                  Documentos legais indisponíveis no momento. Entre em contato com o suporte.
-                </p>
-              )
-            }
-            {acceptedTermsError && (
-              <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs">
-                <AlertCircle className="w-3.5 h-3.5" />
-                {acceptedTermsError}
-              </p>
-            )}
-          </div>
-
           {formError && (
             <div className="mb-4 flex items-start gap-3 bg-red-900/20 border border-red-700/30 rounded-lg px-4 py-3">
               <AlertCircle className="w-5 h-5 text-accent-red shrink-0 mt-0.5" />
@@ -1809,18 +1938,69 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
               ) : "Salvar e continuar"}
             </button>
           </div>
-        </form>
-      ) : (
-        /* ═══════════════ Step 2: Logo & Colors ═══════════════ */
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          <div className="lg:col-span-3">
+                  </form>
+                )}
+                {activeTab === "posicionamento" && (
+                  /* ═══════════════ Tab: Posicionamento ═══════════════ */
+                  <form className="space-y-6" noValidate>
+                    <h1 className="text-2xl font-heading font-bold text-text-primary mb-1">Posicionamento</h1>
+                    <p className="text-text-secondary text-sm font-body mb-6">Defina como a sua loja se comunica e se posiciona no mercado</p>
+
+                    <div className="mb-6 flex items-start gap-3 bg-bg-elevated border border-border rounded-lg px-4 py-3">
+                      <Sparkles className="w-5 h-5 text-accent-green shrink-0 mt-0.5" />
+                      <p className="text-text-secondary text-sm font-body flex-1">
+                        Essas informações ajudam o Vendeo a criar artes com linguagem, estilo e argumentos mais próximos da sua loja.
+                      </p>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label htmlFor="tone_of_voice" className={labelClass}>Tom de Voz</label>
+                        <select id="tone_of_voice" value={formData.tone_of_voice} onChange={(e) => setField("tone_of_voice", e.target.value)} className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-body transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20">
+                          <option value="">Selecione</option>
+                          {TONE_OF_VOICE_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label htmlFor="positioning" className={labelClass}>Posicionamento</label>
+                        <input id="positioning" type="text" value={formData.positioning} onChange={(e) => setField("positioning", e.target.value)} placeholder="Ex: A melhor loja de..." className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20" />
+                      </div>
+                      <div>
+                        <label htmlFor="short_description" className={labelClass}>Descrição Curta</label>
+                        <textarea id="short_description" value={formData.short_description} onChange={(e) => setField("short_description", e.target.value)} placeholder="Descreva sua loja em poucas palavras..." rows={3} className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20 resize-none" />
+                      </div>
+                      <div>
+                        <label htmlFor="slogan" className={labelClass}>Slogan</label>
+                        <input id="slogan" type="text" value={formData.slogan} onChange={(e) => setField("slogan", e.target.value)} placeholder="Ex: Sua loja de confiança" className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20" />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2">
+                      <button type="button" onClick={() => void setActiveTab("dados")} className="min-w-[44px] text-text-muted hover:text-text-primary transition-colors" aria-label="Voltar para dados da loja">
+                        <ArrowLeft className="w-5 h-5" />
+                      </button>
+                      <button type="button" onClick={() => void setActiveTab("direcao-visual")} disabled={direcaoVisualBlocked} aria-label={direcaoVisualBlocked && direcaoVisualReason ? tabBlockReasonText("direcao-visual", direcaoVisualReason) : undefined} title={direcaoVisualBlocked && direcaoVisualReason ? tabBlockReasonText("direcao-visual", direcaoVisualReason) : undefined} className="min-h-[44px] px-8 py-2.5 bg-accent-blue text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                        Continuar para Direção Visual
+                      </button>
+                    </div>
+                  </form>
+                )}
+                {activeTab === "direcao-visual" && (
+                  /* ═══════════════ Tab: Direção Visual ═══════════════ */
+                  <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                    <div className="lg:col-span-3">
             <div className="flex items-center gap-3 mb-6">
-              <button type="button" onClick={() => setStep(1)} className="min-w-[44px] text-text-muted hover:text-text-primary transition-colors" aria-label="Voltar para dados da loja">
+              <button type="button" onClick={() => void setActiveTab("posicionamento")} className="min-w-[44px] text-text-muted hover:text-text-primary transition-colors" aria-label="Voltar para posicionamento">
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
                 <h1 className="text-2xl font-heading font-bold text-text-primary">Direção Visual</h1>
                 <p className="text-text-secondary text-sm font-body">Defina a identidade visual da sua loja com logo, assinatura visual ou apenas texto</p>
+                {!inferredProfile && (
+                  <span className="mt-2 inline-block text-[10px] font-heading font-semibold text-accent-amber bg-amber-900/30 px-1.5 py-0.5 rounded">Necessário</span>
+                )}
               </div>
             </div>
 
@@ -2277,6 +2457,13 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
             </div>
           </div>
         </div>
+                )}
+            </StoreTabs>
+          </div>
+          <div className="hidden lg:block lg:col-span-1">
+            <LegalAcceptancePanel acceptance={legalState} onOpenModal={() => setShowContractModal(true)} variant="desktop-sticky-column" open={showContractModal} panelId="aceite-legal" />
+          </div>
+        </div>
       )}
 
       {showRemoveLogoDialog && (
@@ -2313,6 +2500,10 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
         <DriftDecisionModal
           onRealinhar={async () => {
             try {
+              // Bug C: persiste dados aceitos ANTES do POST /realign — a rota
+              // reconstrói o snapshot a partir do banco. Salvar só depois
+              // deixaria o snapshot stale (drift voltaria).
+              await persistSaveFromDrift();
               const data = await realinhar();
               const profile = (data as Record<string, unknown>)?.profile as Record<string, unknown> | undefined;
               if (profile) {
@@ -2345,8 +2536,8 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
                   metadata: profile.metadata as Record<string, unknown>,
                 });
               }
+              driftFromSaveRef.current = null;
               setShowDriftDecisionModal(false);
-              await executeStep2Save();
             } catch {
               setDriftError('Não foi possível realinhar. Tente novamente mais tarde.');
               setFeedbackOverlay({ message: 'Não foi possível realinhar. Tente novamente mais tarde.', type: 'error' });
@@ -2356,7 +2547,8 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
             setShowDriftDecisionModal(false);
             try {
               await ignorar();
-              await executeStep2Save();
+              await persistSaveFromDrift();
+              driftFromSaveRef.current = null;
             } catch {
               setFeedbackOverlay({ message: 'Erro ao salvar após ignorar drift. Tente novamente.', type: 'error' });
             }
@@ -2364,13 +2556,14 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
           onContinueWithoutDismiss={async () => {
             setShowDriftDecisionModal(false);
             try {
-              await executeStep2Save();
+              await persistSaveFromDrift();
+              driftFromSaveRef.current = null;
               // Não chama ignorar() — badge permanece
             } catch {
               setFeedbackOverlay({ message: 'Erro ao salvar. Tente novamente.', type: 'error' });
             }
           }}
-          onCancel={() => { setShowDriftDecisionModal(false); setDriftError(null); }}
+          onCancel={() => { setShowDriftDecisionModal(false); setDriftError(null); driftFromSaveRef.current = null; cancelPendingNavigation(); }}
           isLoading={isRealinhando}
           error={driftError}
         />
@@ -2381,13 +2574,15 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
           onOpenChange={setShowDriftCriticalModal}
           storeId={storeId}
           identityState={identityState ?? 'text_only'}
-          canGenerateNewSignature={totalGeneratedSignatures < 3}
+          canGenerateNewSignature={canGenerateNewSignature}
           onDismissAndSave={async () => {
             try {
               await dismissCriticalDrift();
               setDriftRefreshKey(k => k + 1);
+              await persistSaveFromDrift();
+              driftFromSaveRef.current = null;
+              setDriftError(null);
               setShowDriftCriticalModal(false);
-              await executeStep2Save();
             } catch {
               setDriftError('Não foi possível salvar. Tente novamente.');
               setFeedbackOverlay({ message: 'Não foi possível salvar. Tente novamente.', type: 'error' });
@@ -2402,11 +2597,28 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
               setFeedbackOverlay({ message: 'Não foi possível remover a assinatura visual.', type: 'error' });
             }
           }}
-          onOpenApproval={() => {
-            setShowDriftCriticalModal(false);
-            handleOpenSubstitutionApproval();
+          onOpenApproval={async () => {
+            // Ordem (drift crítico): persiste os dados ACEITOS ANTES de abrir a
+            // aprovação de geração — a nova VS nasceria com dados antigos se
+            // persistíssemos depois. Se o save falhar, NÃO abre a aprovação como
+            // se estivesse tudo pronto: o modal crítico permanece aberto.
+            setIsPersistingForApproval(true);
+            try {
+              await persistSaveFromDrift();
+              driftFromSaveRef.current = null;
+              setDriftError(null);
+              setShowDriftCriticalModal(false);
+              handleOpenSubstitutionApproval();
+            } catch {
+              setDriftError('Não foi possível salvar seus dados antes de gerar. Tente novamente.');
+              setFeedbackOverlay({ message: 'Não foi possível salvar seus dados antes de gerar. Tente novamente.', type: 'error' });
+            } finally {
+              setIsPersistingForApproval(false);
+            }
           }}
-          onCancel={() => setShowDriftCriticalModal(false)}
+          onCancel={() => { setShowDriftCriticalModal(false); setDriftError(null); cancelPendingNavigation(); }}
+          isLoading={isPersistingForApproval}
+          error={driftError}
         />
       )}
       {driftNavIntercept && (
@@ -2450,7 +2662,7 @@ export function StoreIdentityForm({ initialStore, initialStep, redirectMessage }
               // modal já fechou; drift permanece ativo
             }
           }}
-          onCancel={() => { setDriftNavIntercept(false); setDriftError(null); }}
+          onCancel={() => { setDriftNavIntercept(false); setDriftError(null); cancelPendingNavigation(); }}
           isLoading={isRealinhando}
           error={driftError}
         />

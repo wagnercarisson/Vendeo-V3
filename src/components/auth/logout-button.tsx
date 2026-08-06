@@ -2,6 +2,7 @@
 
 import { LogOut, Loader2 } from "lucide-react";
 import { useState, FormEvent } from "react";
+import { clearAllDrafts } from "@/lib/store-onboarding/draft-store";
 
 interface LogoutButtonProps {
   className?: string;
@@ -17,6 +18,13 @@ export function LogoutButton({ className = "" }: LogoutButtonProps) {
       sessionStorage.removeItem("campaign_preview");
     } catch {
       // Storage cleanup is best-effort; form submission still proceeds.
+    }
+    // F36-DRAFT-04: rascunho de onboarding (localStorage, escopado por usuário)
+    // é limpo no logout — T-36-09 (não vaza draft entre contas). Best-effort.
+    try {
+      clearAllDrafts();
+    } catch {
+      // best-effort — o rascunho expira pelo TTL 24h mesmo se a limpeza falhar
     }
   }
 

@@ -165,13 +165,14 @@ describe("POST /api/store", () => {
     expect(data.user_id).toBe("user-123");
   });
 
-  it("returns 401 when not authenticated", async () => {
+  it("returns 401 when not authenticated (JSON, not redirect)", async () => {
     const { UnauthorizedError } = await import("@/lib/auth/require-user");
     mockRequireUserImpl.mockRejectedValue(new UnauthorizedError());
 
     const { POST } = await import("@/app/api/store/route");
     const res = await POST(createReq("POST", { name: "Minha Loja", segment: "variedades" }));
     expect(res.status).toBe(401);
+    expect(res.headers.get("content-type")).toContain("application/json");
     const data = await res.json();
     expect(data.error).toBe("Unauthorized");
   });
@@ -187,16 +188,39 @@ describe("POST /api/store", () => {
     expect(data.error).toBe("Usuário já possui uma loja");
   });
 
-  it("ignores user_id in body", async () => {
+  it("ignores user_id in body (uses claims.sub) — verified mode", async () => {
     mockRequireUserImpl.mockResolvedValue({ userId: "user-123", claims: { sub: "user-123" } });
+    let capturedName = "";
     let capturedParams: any = null;
-    mockSupabaseRpc.mockImplementation((_rpcName: string, params: any) => {
+    mockSupabaseRpc.mockImplementation((rpcName: string, params: any) => {
+      capturedName = rpcName;
       capturedParams = params;
       return Promise.resolve({ data: { ...mockStore, user_id: "user-123" }, error: null });
     });
 
     const { POST } = await import("@/app/api/store/route");
     await POST(createReq("POST", { name: "Minha Loja", segment: "variedades", cnpj: "12.345.678/0001-95", acceptedTerms: true, user_id: "hacker-id" }));
+    expect(capturedName).toBe("create_store_with_cnpj");
+    expect(capturedParams.p_user_id).toBe("user-123");
+  });
+
+  it("ignores user_id in body (uses claims.sub) — draft mode", async () => {
+    mockRequireUserImpl.mockResolvedValue({ userId: "user-123", claims: { sub: "user-123" } });
+    let capturedName = "";
+    let capturedParams: any = null;
+    mockSupabaseRpc.mockImplementation((rpcName: string, params: any) => {
+      capturedName = rpcName;
+      capturedParams = params;
+      return Promise.resolve({
+        data: { store: [{ ...mockStore, user_id: "user-123" }], onboardingGranted: false },
+        error: null,
+      });
+    });
+
+    const { POST } = await import("@/app/api/store/route");
+    const res = await POST(createReq("POST", { name: "Minha Loja", segment: "variedades", acceptedTerms: true, user_id: "hacker-id" }));
+    expect(res.status).toBe(201);
+    expect(capturedName).toBe("create_store_draft");
     expect(capturedParams.p_user_id).toBe("user-123");
   });
 });

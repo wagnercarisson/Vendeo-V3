@@ -48,15 +48,35 @@ export const POST = apiHandler(async (
   // Merge snapshot into existing metadata, preserving all existing fields
   const existingMetadata = (activeVS.metadata ?? {}) as Record<string, unknown>;
 
-  const updatedMetadata = {
-    ...existingMetadata,
-    visual_signature_drift_dismissed_snapshot: {
+  // Snapshot dos valores ACEITOS vem do cliente (formData vivo — o usuário pode
+  // ainda não ter persistido). Fallback: valores atuais do banco. Sem isto, um
+  // dismiss disparado contra valores ainda não salvos gravaria o snapshot ANTIGO
+  // do banco e o recompute client-side reabriria o crítico (loop no "Manter").
+  type CriticalSnapshot = { name: string; segment: string; slogan: string | null; city: string | null; state: string | null };
+  const rawBody = await request.json().catch(() => null) as { snapshot?: Record<string, unknown> } | null;
+  const provided = rawBody?.snapshot;
+  let snapshot: CriticalSnapshot;
+  if (provided && typeof provided === 'object' && typeof provided.name === 'string' && typeof provided.segment === 'string') {
+    snapshot = {
+      name: provided.name,
+      segment: provided.segment,
+      slogan: provided.slogan == null ? null : String(provided.slogan),
+      city: provided.city == null ? null : String(provided.city),
+      state: provided.state == null ? null : String(provided.state),
+    };
+  } else {
+    snapshot = {
       name: store.name,
       segment: store.segment,
       slogan: store.slogan ?? null,
       city: store.city ?? null,
       state: store.state ?? null,
-    },
+    };
+  }
+
+  const updatedMetadata = {
+    ...existingMetadata,
+    visual_signature_drift_dismissed_snapshot: snapshot,
   };
 
   const { error: updateError } = await supabase

@@ -16,13 +16,13 @@ describe("CadastroCnpjPage - redirect logic", () => {
     vi.clearAllMocks();
   });
 
-  it("redirects to /loja with cadastro-fiscal requirement and default returnTo", async () => {
+  it("redirects to /loja with fiscal pending tab and default returnTo", async () => {
     const { default: Page } = await import("../page");
 
     await expect(Page({})).rejects.toThrow(NEXT_CONTROL);
 
     expect(redirectFn).toHaveBeenCalledWith(
-      "/loja?required=cadastro-fiscal&returnTo=%2Fdashboard",
+      "/loja?tab=dados&fiscal=pending&returnTo=%2Fdashboard",
     );
   });
 
@@ -36,7 +36,7 @@ describe("CadastroCnpjPage - redirect logic", () => {
     ).rejects.toThrow(NEXT_CONTROL);
 
     expect(redirectFn).toHaveBeenCalledWith(
-      "/loja?required=cadastro-fiscal&returnTo=%2Fcampanhas%2Fnova",
+      "/loja?tab=dados&fiscal=pending&returnTo=%2Fcampanhas%2Fnova",
     );
   });
 });

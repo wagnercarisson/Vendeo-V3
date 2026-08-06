@@ -57,6 +57,27 @@ describe("LogoutButton", () => {
     expect(sessionStorage.getItem("other-key")).toBe("should-stay");
   });
 
+  it("clears onboarding draft keys (F36-DRAFT-04) but preserves non-draft keys", () => {
+    localStorage.setItem(
+      "vendeo:store_draft:user-1:new",
+      JSON.stringify({ userId: "user-1", storeId: null, fields: {}, updatedAt: Date.now() }),
+    );
+    localStorage.setItem(
+      "vendeo:store_draft:user-2:store-abc",
+      JSON.stringify({ userId: "user-2", storeId: "store-abc", fields: {}, updatedAt: Date.now() }),
+    );
+    localStorage.setItem("vendeo:changelog-read", "keep");
+
+    render(<LogoutButton />);
+
+    const form = screen.getByRole("button").closest("form");
+    fireEvent.submit(form!);
+
+    expect(localStorage.getItem("vendeo:store_draft:user-1:new")).toBeNull();
+    expect(localStorage.getItem("vendeo:store_draft:user-2:store-abc")).toBeNull();
+    expect(localStorage.getItem("vendeo:changelog-read")).toBe("keep");
+  });
+
   it("submits even if storage cleanup throws", () => {
     const orig = sessionStorage.removeItem;
     sessionStorage.removeItem = vi.fn(() => {

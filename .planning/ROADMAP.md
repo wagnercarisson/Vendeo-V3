@@ -30,7 +30,7 @@
 | 33 | ✅ Verificação CNPJ Freemium | Consulta BrasilAPI/CNPJá, cross-check, motor de decisão, admin review, test stores | CNPJ-07–12 | 6 ✅ |
 | 34 | ✅ Store Readiness | Readiness RPC + guarda dupla + direção visual obrigatória + dashboard banner + billing info | F34-READINESS, F34-BILLING, F34-STORE-TYPE, F34-GUARD, F34-LEGACY, F34-UI, F34-DASHBOARD, F34-BRANDPROFILE | 8 ✅ |
 | 35 | ✅ Changelog/Novidades | 5/5 | Complete    | 2026-07-31 |
-| 36 | ○ Onboarding — Navegação por Abas | Planejado | Planejado (6 plans / 5 waves) | 2026-08-01 |
+| 36 | ○ Onboarding — Navegação por Abas | 6/6 | Complete    | 2026-08-05 |
 
 ---
 
@@ -43,6 +43,7 @@
 **Requirements:** COPY-01, COPY-02, COPY-03, COPY-04
 
 **Success criteria:**
+
 1. User can call CopyDirectorService.generateCopy(brief) and receive title, caption, hashtags, cta_post
 2. TextProvider switches between OpenAI and Anthropic via config without code changes
 3. Prompt template at `prompts/campaign-copy-director.md` produces segment-aware copy
@@ -59,6 +60,7 @@
 **Requirements:** CRED-01, CRED-02, CRED-03, CRED-04, CRED-05
 
 **Success criteria:**
+
 1. User can receive credits via grant (onboarding, admin)
 2. Credit reserve deducts balance atomically; refund restores it
 3. Balance never goes negative — reserve fails if insufficient
@@ -76,6 +78,7 @@
 **Requirements:** PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, PIPE-06
 
 **Success criteria:**
+
 1. Copy Director runs in parallel with Image Director during generation
 2. Rate limit blocks >10 generations/hour and >30/day per user
 3. Insufficient balance returns 402 before any IA call
@@ -94,6 +97,7 @@
 **Requirements:** ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-04, ADMIN-05, ADMIN-06, SEC-04, SEC-06
 
 **Success criteria:**
+
 1. Admin access gate via `admin_users` table (not auth.users flag)
 2. Admin can list/search beta users/stores with support data
 3. Admin can manually grant credits with mandatory reason (idempotent + audited)
@@ -112,6 +116,7 @@
 **Requirements:** UI-01, UI-02, UI-03, UI-04, UI-05, UI-06
 
 **Success criteria:**
+
 1. ✅ Balance visible in dashboard metrics grid (contextual, not global — D1)
 2. ✅ /conta shows BalanceCard + TransactionHistory with pagination (D3)
 3. ✅ Zero-credit CTA shows "Solicitar créditos / Fale com o time" (CreditCta modal/mailto, D4)
@@ -132,6 +137,7 @@
 **Requirements:** OPS-01, OPS-02, OPS-03, OPS-04, OPS-05, OPS-06, OPS-07, OPS-08, OPS-09
 
 **Success criteria:**
+
 1. Launch config centralizado com 5 flags (v15Enabled, creditsChargingEnabled, copyDirectorEnabled, rateLimitEnabled, generationPaused) lidas via helper único — zero `process.env` espalhado
 2. Every pipeline stage logs via `logPipelineEvent()` com traceId, campaignId, phase, duration_ms, status — JSON estruturado, fire-and-forget, sem dados sensíveis
 3. IA telemetry (tokens, cost, model, provider) persisted in generation_events via expansão (CHECK constraint + colunas) — best-effort, nunca bloqueia o pipeline
@@ -156,6 +162,7 @@
 **Requirements:** LAUNCH-01, LAUNCH-02, LAUNCH-03, LAUNCH-04, LAUNCH-05, LAUNCH-06, SEC-01, SEC-02, SEC-03, SEC-05
 
 **Success criteria:**
+
 1. Loading, empty, and error states exist for all new screens
 2. Insufficient-credit UX is consistent across the entire app (CTA "Fale com o time")
 3. Credit flows work on mobile (320–768px) with >=44px touch targets
@@ -179,6 +186,7 @@
 **Requirements:** CRED-03, CRED-04, CRED-05, OPS-05
 
 **Success criteria:**
+
 1. ✅ VS generation deducts 1 credit via reserveCredit before IA
 2. ✅ Zero balance returns 402 `{ code: "insufficient_credits" }` before any IA call
 3. ✅ Technical failure refunds the reserved credit
@@ -194,6 +202,7 @@
 **Tests:** 917 passing (117 files, 8 novos) — credit integration, removed limit, regression
 
 **Commits:**
+
 - `d735d01` — 29-1-1-01: Backend Foundation
 - `291f605` — 29-1-1-02: Frontend
 - `6ff32ee`, `b6c8a8c` — 29-1-1-03: Tests & Verification
@@ -207,6 +216,7 @@
 **Requirements:** _(Not assigned to specific REQ-IDs — refines LAUNCH-01, LAUNCH-02 user-facing states)_
 
 **Success criteria:**
+
 1. HistoryModal substituído — grid 3 colunas, max 12 itens, paginação "Ver versões anteriores"
 2. VS com critical_drift ou missing_metadata ocultas da lista (filtro client-side)
 3. Apenas `identity_state = text_only` permite "Aplicar" — demais estados bloqueiam com tooltip
@@ -230,6 +240,7 @@
 **Requirements:** MONTHLY-01, MONTHLY-02, MONTHLY-03, MONTHLY-04, MONTHLY-05, MONTHLY-06, MONTHLY-07, MONTHLY-08, MONTHLY-09, MONTHLY-10
 
 **Success criteria:**
+
 1. ✅ credit_balances com bonus_balance + purchased_balance, balance sincronizado por trigger
 2. ✅ grant_credits bucket-aware com p_type (bonus_onboarding, bonus_monthly, admin_grant, purchase)
 3. ✅ reserve_credit bucket-aware: bônus primeiro, comprado por último
@@ -247,6 +258,7 @@
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
 
 **Commits:**
+
 - `d557fda` — feat(29-3-01): modelo contábil — buckets bônus/compra
 - `06adb28` — feat(29-3-02): grant_monthly_credits RPC + Launch Config
 - `d834d68` — feat(29-3-03): Vercel Cron + Fallback Admin
@@ -262,6 +274,7 @@
 **Requirements:** INTENT-01, INTENT-02, INTENT-03, INTENT-04, INTENT-05, INTENT-06, INTENT-07, INTENT-08, INTENT-09, INTENT-10, INTENT-11, INTENT-12
 
 **Success criteria:**
+
 1. CampaignIntent type (`"offer" | "spotlight" | "exclusive"`) definido e exportado
 2. Inferência automática de intent a partir dos campos de preço (DE+POR → offer, só preço → spotlight, nenhum → exclusive)
 3. Seletor de intent (radio group) no formulário entre badge e botão "Criar", com opções filtradas
@@ -298,6 +311,7 @@
 **Requirements:** _(Refinamento de F31.1 — sem novos REQ-IDs)_
 
 **Success criteria:**
+
 1. discountedPriceCents opcional nos schemas; Campos nullable no CampaignSpecSchema
 2. Spotlight/exclusive desbloqueados na UI, form e pipeline (sem "Em breve", sem bloqueio de submit, sem HTTP 400)
 3. Exclusive normaliza discountedPriceCents para undefined
@@ -331,6 +345,7 @@
 **Requirements:** _(Refinamento de F31.2 — sem novos REQ-IDs)_
 
 **Success criteria:**
+
 1. ✅ ImageReviewInput aceita campaignIntent (default "offer"), preserveImageContext; badgeText, discountedPrice, originalPrice opcionais
 2. ✅ ReviewIssueType union com 18 valores (17 existentes + commercial_tone_mismatch)
 3. ✅ review() monta variáveis contextuais em 2 etapas (resolver placeholders → montar strings finais sem {{...}})
@@ -367,6 +382,7 @@
 **Requirements:** F35-CONTENT-01 a F35-CONTENT-06, F35-STATE-01 a F35-STATE-06, F35-UI-01 a F35-UI-07, F35-APP-SHELL-01 a F35-APP-SHELL-03, F35-DASHBOARD-01 a F35-DASHBOARD-03
 
 **Success criteria:**
+
 1. Fonte de dados `content/changelog/*.md` com frontmatter YAML versionado (3 entries seed: F30, F32, F34)
 2. Página `/novidades` com listagem cronológica DESC, badges de categoria e indicador de importância
 3. "Novidades" como 5º item da sidebar com indicador de conteúdo novo; link secundário no AccountMenu
@@ -408,6 +424,7 @@
 | 35-05 | 3 ✅ | Testes + Verificação + Tracking — 14+ testes, typecheck/lint/build, renumeração STATE/ROADMAP |
 
 **Cross-cutting constraints:**
+
 - Zero dependências novas (D8) — parser próprio de frontmatter + renderer controlado; `zod` e `lucide-react` já presentes (todos os planos)
 - Sem Supabase, sem requisição extra, sem estado global (D3/D7) — 35-02, 35-03, 35-04
 - Datas exibidas como `dd/mm/aaaa` via `formatChangelogDate`, sem `new Date(ISO)` (fuso UTC-3) — 35-01, 35-03, 35-05
@@ -424,6 +441,7 @@
 **Requirements:** F36-TABS-01 a F36-TABS-05, F36-DRAFT-01 a F36-DRAFT-04, F36-AUTOSAVE-01 a F36-AUTOSAVE-04, F36-DRAFT-CREATE-01 a F36-DRAFT-CREATE-04, F36-IDENTITY-UI-01 a F36-IDENTITY-UI-07, F36-LEGAL-01 a F36-LEGAL-02, F36-READINESS-01 a F36-READINESS-04, F36-OWNERSHIP-01 a F36-OWNERSHIP-01
 
 **Success criteria:**
+
 1. `/loja` com 3 abas navegáveis por `?tab=` (back/forward funcionam); abas mobile compactas (Dados/Perfil/Visual)
 2. Desbloqueio progressivo com `computeTabUnlock` (D1/D9): dados sempre aberta; posicionamento = nome+segmento+aceite legal+storeId; direção visual = storeId+tom de voz; CNPJ nunca bloqueia navegação
 3. Aceite legal como coluna lateral global (`LegalAcceptancePanel`) bloqueia Posicionamento quando pendente/reaceite
@@ -441,7 +459,7 @@
 
 **Renumeração (D14):** F36 = Onboarding — Navegação por Abas (nova, v1.5); F37 = Stripe / Monetização Pública (v1.7, pós-beta).
 
-**Plans:** 6 plans / 5 waves — ver tabelas por wave abaixo.
+**Plans:** 6/6 plans complete
 
 **Wave 1** *(Backend + Core Library — 36-02 depende de 36-01; roda após 36-01 na mesma wave; 36-01 autonomous: no — requer supabase db push)*
 
@@ -475,6 +493,7 @@
 | 36-06 | 5 | Testes endpoint/gates/draft→fiscal + regressão + verificação + tracking |
 
 **Cross-cutting constraints:**
+
 - CNPJ não bloqueia navegação no onboarding (D8); bloqueia apenas geração/crédito (gates F34/F32/F33)
 - Loja draft não é loja pronta — `create_store_draft` NÃO chama `try_grant_onboarding_entitlement`/`grant_credits`; `onboardingGranted` hardcoded `false` (D15) — 36-01, 36-06
 - Rascunho `localStorage` com TTL 24h, chaves `vendeo:store_draft:${userId}:new` / `:${storeId}`, limpo após 1º save e logout (D5)
@@ -605,6 +624,7 @@ Phase 24 (Credit Tables + CreditService) ──┘
 | SEC-05 | Phase 29 | Done ✓ |
 
 **Coverage:**
+
 - v1 requirements: 139 total (107 v1.5 + 12 INTENT + 8 F34 + 12 F35-CHANGELOG/UI etc.)
 - Mapped to phases: 139
 - Completed: 127

@@ -4,6 +4,8 @@ import { NextRequest } from 'next/server';
 const mockSupabaseFrom = vi.fn();
 const mockValidateDrift = vi.fn();
 const mockReconcileProfiles = vi.fn();
+const mockGetBalance = vi.fn();
+const mockGetLaunchConfig = vi.fn();
 
 vi.mock('@/lib/supabase/server', () => ({
   supabaseAdmin: { from: mockSupabaseFrom },
@@ -27,6 +29,16 @@ vi.mock('@/lib/visual-signature/drift-validator', () => ({
 
 vi.mock('@/lib/brand-assets/profile-reconciliation', () => ({
   reconcileProfiles: mockReconcileProfiles,
+}));
+
+vi.mock('@/lib/launch-config/config', () => ({
+  getLaunchConfig: mockGetLaunchConfig,
+}));
+
+vi.mock('@/lib/credit/credit-service', () => ({
+  CreditService: class {
+    getBalance = mockGetBalance;
+  },
 }));
 
 vi.mock('@/lib/identity-transitions', () => ({
@@ -113,6 +125,8 @@ describe('GET /api/store/[id]/visual-signature', () => {
       reason: 'ok',
       requires_regeneration: false,
     });
+    mockGetBalance.mockResolvedValue(0);
+    mockGetLaunchConfig.mockReturnValue({ creditsChargingEnabled: true });
   });
 
   it('invalid store ID returns 400', async () => {
@@ -502,6 +516,73 @@ describe('GET /api/store/[id]/visual-signature', () => {
       const body = await res.json();
       const activeSig = body.signatures.find((s: any) => s.status === 'active');
       expect(activeSig.critical_drift.status).toBe('new');
+    });
+  });
+
+  describe('credit + drift metadata (F36 gate de geração)', () => {
+    beforeEach(() => {
+      mockValidateDrift.mockReturnValue({
+        has_drift: false,
+        fields: [],
+        reason: 'ok',
+        requires_regeneration: false,
+      });
+      mockGetBalance.mockResolvedValue(0);
+      mockGetLaunchConfig.mockReturnValue({ creditsChargingEnabled: true });
+    });
+
+    it('GET returns credit_balance and credits_charging_enabled at top level', async () => {
+      mockGetBalance.mockResolvedValue(7);
+      mockGetLaunchConfig.mockReturnValue({ creditsChargingEnabled: true });
+      mockSupabaseFrom.mockImplementation((table: string) => {
+        if (table === 'stores') return makeChain({ data: mockStore, error: null });
+        if (table === 'store_visual_signatures') return makeChain({ data: mockVisualSignatures, error: null });
+        return makeChain({ data: null, error: null });
+      });
+      const { GET } = await import('../route');
+      const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/visual-signature`));
+      const res = await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
+      const body = await res.json();
+      expect(body.credit_balance).toBe(7);
+      expect(body.credits_charging_enabled).toBe(true);
+    });
+
+    it('GET returns credit_balance 0 and charging false when configured so', async () => {
+      mockGetBalance.mockResolvedValue(0);
+      mockGetLaunchConfig.mockReturnValue({ creditsChargingEnabled: false });
+      mockSupabaseFrom.mockImplementation((table: string) => {
+        if (table === 'stores') return makeChain({ data: mockStore, error: null });
+        if (table === 'store_visual_signatures') return makeChain({ data: mockVisualSignatures, error: null });
+        return makeChain({ data: null, error: null });
+      });
+      const { GET } = await import('../route');
+      const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/visual-signature`));
+      const res = await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
+      const body = await res.json();
+      expect(body.credit_balance).toBe(0);
+      expect(body.credits_charging_enabled).toBe(false);
+    });
+
+    it('each signature exposes input_snapshot and dismissed_snapshot for the client-side critical compute', async () => {
+      mockSupabaseFrom.mockImplementation((table: string) => {
+        if (table === 'stores') return makeChain({ data: mockStore, error: null });
+        if (table === 'store_visual_signatures') return makeChain({ data: mockVisualSignatures, error: null });
+        return makeChain({ data: null, error: null });
+      });
+      const { GET } = await import('../route');
+      const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/visual-signature`));
+      const res = await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
+      const body = await res.json();
+      const activeSig = body.signatures.find((s: any) => s.status === 'active');
+      expect(activeSig.input_snapshot).toEqual({
+        name: 'Minha Loja',
+        segment: 'alimentacao',
+        city: null,
+        state: null,
+        slogan: null,
+      });
+      expect(activeSig.dismissed_snapshot).toBeNull();
+      expect(activeSig.art_direction.content_used).toEqual({ store_name: true, city: false, state: false, slogan: false });
     });
   });
 });

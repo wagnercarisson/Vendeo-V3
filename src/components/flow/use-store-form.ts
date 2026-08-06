@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { Store } from "@/lib/store";
+import { STORE_SEGMENTS, STORE_SUBSEGMENTS } from "@/lib/constants";
+import { isValidHex } from "@/lib/validators/color";
+import { validateCnpj } from "@/lib/cnpj/validate";
 
 export interface ColorDirtyState {
   primaryInitial: string | null
@@ -28,10 +31,32 @@ export interface FormData {
 
 export type FormMode = "create" | "edit";
 
+/** Estado do auto-save (F36 D4) — badge "Não salvo"/"Salva ✓" na UI da 36-04. */
+export type SaveStatus = "idle" | "saving" | "saved" | "error";
+
 export interface UseStoreFormReturn {
   formData: FormData;
   setField: (field: keyof FormData, value: string) => void;
   save: (acceptedTerms?: boolean) => Promise<{ storeId: string } | { error: string; code?: string } | void>;
+  /**
+   * F36 D4/D15 — auto-save silencioso (sem toast; feedback via `saveStatus`).
+   * - storeId existe → PATCH silencioso em /api/store/${storeId} (falha NÃO bloqueia navegação)
+   * - sem storeId + mínimo válido (name+segment+acceptedTerms) → POST /api/store SEM cnpj
+   *   (modo draft da rota — 36-01); falha BLOQUEIA o avanço
+   * - sem storeId + mínimo inválido → sem fetch, { ok: false }, draft permanece no localStorage
+   */
+  autoSave: (fields: Partial<FormData>) => Promise<{
+    ok: boolean;
+    storeId?: string;
+    skipped?: boolean;
+    /** True quando o autoSave persistiu o cadastro fiscal (loja draft → fiscal
+     *  via /api/store/update-cnpj) — o componente usa para refazer o readiness. */
+    fiscalPersisted?: boolean;
+  }>;
+  saveStatus: SaveStatus;
+  /** Aceite legal corrente — alimenta o mínimo válido do autoSave (POST draft). */
+  acceptedTerms: boolean;
+  setAcceptedTerms: (accepted: boolean) => void;
   isLoading: boolean;
   isSaving: boolean;
   error: string | null;
@@ -140,12 +165,24 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
   const [mode, setMode] = useState<FormMode>(initialStore ? "edit" : "create");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const [colorTouched, setColorTouched] = useState(false);
   const [storeId, setStoreId] = useState<string | null>(initialStore?.id ?? null);
+  // F36 (MD-04): ref espelha storeId para o autoSave ler o valor CORRENTE (sem
+  // depender do re-render) logo após a criação — evita re-POST no fluxo criar→navegar.
+  const storeIdRef = useRef<string | null>(initialStore?.id ?? null);
+  const updateStoreId = useCallback((id: string | null) => {
+    storeIdRef.current = id;
+    setStoreId(id);
+  }, []);
   const [hasExistingCnpj, setHasExistingCnpj] = useState(() => !!initialStore?.cnpj_normalized);
+  const [acceptedTerms, setAcceptedTermsState] = useState(false);
+  const setAcceptedTerms = useCallback((accepted: boolean) => {
+    setAcceptedTermsState(accepted);
+  }, []);
   const [colorDirtyState, setColorDirtyState] = useState<ColorDirtyState>({
     primaryInitial: null,
     accentInitial: null,
@@ -177,7 +214,7 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
   }, []);
 
   const clearStore = useCallback(() => {
-    setStoreId(null);
+    updateStoreId(null);
     setFormData(EMPTY_FORM);
     setMode("create");
     setHasExistingCnpj(false);
@@ -186,12 +223,16 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
     setError(null);
     setSuccessMessage(null);
     setWarningMessage(null);
-  }, []);
+    setSaveStatus("idle");
+    setAcceptedTermsState(false);
+  }, [updateStoreId]);
 
-  const save = useCallback(async (acceptedTerms?: boolean) => {
+  const save = useCallback(async (acceptedTermsArg?: boolean) => {
     setError(null);
     setSuccessMessage(null);
     setIsSaving(true);
+    setSaveStatus("saving");
+    if (acceptedTermsArg) setAcceptedTermsState(true);
 
     try {
       const body: Record<string, string | null | boolean> = {
@@ -207,7 +248,7 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
         slogan: toNull(formData.slogan),
       };
 
-      if (!storeId && acceptedTerms) {
+      if (!storeId && acceptedTermsArg) {
         body.acceptedTerms = true;
       }
 
@@ -242,7 +283,8 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
           });
         }
       } else {
-        // Create mode — inclui CNPJ e dados fiscais
+        // Create mode — F36 D8/D15: CNPJ é OPCIONAL (não validar localmente quando
+        // ausente); sem CNPJ no body, o POST atinge o branch DRAFT da rota (36-01).
         if (formData.cnpj) {
           body.cnpj = formData.cnpj.replace(/\D/g, "");
         }
@@ -260,6 +302,7 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
       if (!res.ok) {
         const errData = await res.json().catch(() => ({ error: "Erro ao salvar" }));
         setError(errData.error || "Erro ao salvar");
+        setSaveStatus("error");
         return { error: errData.error || "Erro ao salvar", code: errData.code };
       }
 
@@ -269,9 +312,10 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
         // Response from create (POST /api/store)
         if (!saved.id || typeof saved.id !== "string") {
           setError("Loja salva, mas resposta não retornou o ID da loja.");
+          setSaveStatus("error");
           return { error: "Loja salva, mas resposta não retornou o ID da loja." };
         }
-        setStoreId(saved.id as string);
+        updateStoreId(saved.id as string);
         setMode("edit");
         if (formData.cnpj) setHasExistingCnpj(true);
         setSuccessMessage("Loja salva. Agora configure a direção visual.");
@@ -282,25 +326,223 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
           setHasExistingCnpj(true);
         } else if (!saved.id || typeof saved.id !== "string") {
           setError("Loja salva, mas resposta não retornou o ID da loja.");
+          setSaveStatus("error");
           return { error: "Loja salva, mas resposta não retornou o ID da loja." };
         }
         setSuccessMessage("Loja salva. Agora configure a direção visual.");
       }
 
+      setSaveStatus("saved");
       return { storeId: saved.id as string };
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro ao salvar";
       setError(msg);
+      setSaveStatus("error");
       return { error: msg };
     } finally {
       setIsSaving(false);
     }
-  }, [formData, storeId, colorTouched, hasExistingCnpj]);
+  }, [formData, storeId, colorTouched, hasExistingCnpj, updateStoreId]);
+
+  /**
+   * F36 D4/D15 — auto-save silencioso do onboarding.
+   * Persiste APENAS campos válidos (inválidos são ignorados). Com storeId →
+   * PATCH silencioso (falha NÃO bloqueia navegação). Sem storeId + mínimo
+   * válido (name+segment+acceptedTerms) → POST /api/store SEM cnpj (modo
+   * draft da rota — 36-01); falha BLOQUEIA o avanço. Sem mínimo → sem fetch
+   * (não se cria loja prematuramente; o draft permanece no localStorage).
+   * Loja draft não libera campanha/freemium — readiness reporta cadastro_fiscal.
+   * Com storeId + loja SEM CNPJ + CNPJ válido (14 dígitos) + razão social
+   * mínima → roda /api/store/update-cnpj (draft→fiscal) além do PATCH;
+   * retorna fiscalPersisted em sucesso. CNPJ inválido/incompleto NÃO vira
+   * fiscal válido (readiness permanece pendente). Loja COM CNPJ → PATCH inclui
+   * razaoSocial/nomeFantasia (paridade com save()).
+   */
+  const autoSave = useCallback(
+    async (fields: Partial<FormData>): Promise<{
+      ok: boolean;
+      storeId?: string;
+      skipped?: boolean;
+      fiscalPersisted?: boolean;
+    }> => {
+      setSaveStatus("saving");
+
+      // Merge com o form atual: campos não informados mantêm o valor corrente.
+      const merged: FormData = { ...formData, ...fields };
+
+      const body: Record<string, string | null> = {};
+
+      const name = merged.name.trim();
+      if (name.length >= 2 && name.length <= 60) body.name = name;
+
+      const validSegmentValues = STORE_SEGMENTS.map((s) => s.value) as string[];
+      if (validSegmentValues.includes(merged.segment)) body.segment = merged.segment;
+
+      if (merged.brand_color === "" || isValidHex(merged.brand_color)) {
+        body.brand_color = toNull(merged.brand_color);
+      }
+
+      body.city = toNull(merged.city);
+      body.state = toNull(merged.state);
+
+      // Subsegmento: pré-definido OU texto livre válido; inválido → ignorado
+      const segKey = merged.segment as keyof typeof STORE_SUBSEGMENTS;
+      const segmentSubs = STORE_SUBSEGMENTS[segKey] ?? [];
+      const subTrimmed = merged.subsegment.trim();
+      const subLower = subTrimmed.toLowerCase();
+      if (segmentSubs.some((s) => s.value === subLower)) {
+        body.subsegment = subLower;
+      } else if (subTrimmed === "") {
+        body.subsegment = null;
+      } else if (
+        subLower !== "outro" &&
+        !["outro", "loja", "comercio", "comércio", "varejo"].includes(subLower) &&
+        subTrimmed.length >= 3 &&
+        subTrimmed.length <= 30 &&
+        /^[A-Za-zÀ-ü\s]+$/.test(subTrimmed)
+      ) {
+        body.subsegment = subTrimmed;
+      }
+
+      body.tone_of_voice = toNull(merged.tone_of_voice);
+      body.positioning = toNull(merged.positioning);
+      body.short_description = toNull(merged.short_description);
+      body.slogan = toNull(merged.slogan);
+      // cnpj/razaoSocial/nomeFantasia NÃO entram no PATCH genérico do auto-save:
+      // loja SEM CNPJ usa a rota dedicada /api/store/update-cnpj (valida CNPJ
+      // via BrasilAPI→CNPJá e roda update_store_cnpj — D8/D15). CNPJ
+      // inválido/incompleto NÃO persiste como fiscal válido.
+
+      // MD-04: usa o storeId CORRENTE via ref (sem depender de re-render) —
+      // evita re-POST no fluxo salvar→navegar logo após a criação.
+      const currentStoreId = storeIdRef.current;
+
+      // F36 (fix fiscal): elegibilidade para transição draft → fiscal no
+      // autoSave — storeId existente + loja sem CNPJ + CNPJ normalizado válido
+      // (14 dígitos + check digits) + razão social mínima (mínimo da rota).
+      const cnpjDigits = merged.cnpj.replace(/\D/g, "");
+      const cnpjValido =
+        cnpjDigits.length === 14 && !(validateCnpj(cnpjDigits) instanceof Error);
+      const razaoSocialTrimmed = merged.razaoSocial.trim();
+      const razaoMinima = razaoSocialTrimmed.length >= 2;
+      const fiscalElegivel =
+        !!currentStoreId && !hasExistingCnpj && cnpjValido && razaoMinima;
+
+      // Loja COM CNPJ → razaoSocial/nomeFantasia vão no PATCH (paridade com
+      // save(); o guard 409 do PATCH só vale para loja SEM CNPJ).
+      if (currentStoreId && hasExistingCnpj) {
+        if (razaoMinima) body.razaoSocial = razaoSocialTrimmed;
+        const nomeFantasiaFinal = merged.nomeFantasia.trim() || razaoSocialTrimmed;
+        if (nomeFantasiaFinal) body.nomeFantasia = nomeFantasiaFinal;
+      }
+
+      if (currentStoreId) {
+        const emptyPatch = Object.keys(body).length === 0;
+        // PATCH silencioso dos campos não-fiscais — falha NÃO bloqueia (D4)
+        if (!emptyPatch) {
+          try {
+            const res = await fetch(`/api/store/${currentStoreId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+            });
+            if (!res.ok) {
+              setSaveStatus("error");
+              return { ok: false };
+            }
+          } catch {
+            setSaveStatus("error");
+            return { ok: false };
+          }
+        }
+
+        // Transição draft → fiscal via rota dedicada (valida na Receita).
+        // Sucesso → hasExistingCnpj + fiscalPersisted (componente refaz
+        // readiness). Falha NÃO finge sucesso: ok:false + erro visível, o
+        // fiscal permanece pendente (readiness cadastro_fiscal) e a navegação
+        // prossegue pois a loja existe (semântica de falha de PATCH).
+        if (fiscalElegivel) {
+          try {
+            const res = await fetch("/api/store/update-cnpj", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                storeId: currentStoreId,
+                cnpjNormalized: cnpjDigits,
+                razaoSocial: merged.razaoSocial,
+                nomeFantasia: merged.nomeFantasia.trim() || merged.razaoSocial,
+              }),
+            });
+            if (!res.ok) {
+              const errData = await res
+                .json()
+                .catch(() => ({ error: "Não foi possível salvar os dados fiscais." }));
+              setError(errData.error || "Não foi possível salvar os dados fiscais.");
+              setSaveStatus("error");
+              return { ok: false };
+            }
+            setHasExistingCnpj(true);
+            setSaveStatus("saved");
+            return { ok: true, fiscalPersisted: true, storeId: currentStoreId };
+          } catch {
+            setError("Não foi possível salvar os dados fiscais. Tente novamente.");
+            setSaveStatus("error");
+            return { ok: false };
+          }
+        }
+
+        if (emptyPatch) {
+          setSaveStatus("idle");
+          return { ok: true };
+        }
+        setSaveStatus("saved");
+        return { ok: true };
+      }
+
+      // Sem storeId + mínimo inválido → sem POST (D4: não se cria loja prematuramente)
+      if (!body.name || !body.segment || !acceptedTerms) {
+        // HR-01: nada foi enviado (skip real, não falha) — quem navega internamente
+        // pode prosseguir; o rascunho é preservado síncrono no pagehide.
+        setSaveStatus("idle");
+        return { ok: true, skipped: true };
+      }
+
+      // Sem storeId + mínimo válido → POST /api/store SEM cnpj (modo draft, 36-01)
+      try {
+        const res = await fetch("/api/store", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...body, acceptedTerms: true }),
+        });
+        if (!res.ok) {
+          setSaveStatus("error");
+          return { ok: false };
+        }
+        const saved: Record<string, unknown> = await res.json();
+        if (!saved.id || typeof saved.id !== "string") {
+          setSaveStatus("error");
+          return { ok: false };
+        }
+        updateStoreId(saved.id as string);
+        setMode("edit");
+        setSaveStatus("saved");
+        return { ok: true, storeId: saved.id as string };
+      } catch {
+        setSaveStatus("error");
+        return { ok: false };
+      }
+    },
+    [formData, acceptedTerms, updateStoreId, hasExistingCnpj],
+  );
 
   return {
     formData,
     setField,
     save,
+    autoSave,
+    saveStatus,
+    acceptedTerms,
+    setAcceptedTerms,
     isLoading,
     isSaving,
     error,

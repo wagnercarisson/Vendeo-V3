@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
-current_phase: 36
-status: in_progress
-last_updated: "2026-08-02T00:30:00.000Z"
+current_phase: 37
+status: Phase 36 Complete
+last_updated: "2026-08-05T19:51:14.871Z"
 progress:
   total_phases: 19
-  completed_phases: 16
+  completed_phases: 17
   total_plans: 80
-  completed_plans: 68
-  percent: 84
+  completed_plans: 74
+  percent: 86
 ---
 
 # Project State
@@ -102,7 +102,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** Milestone complete
+**Current focus:** Phase 36 — onboarding-navegacao-por-abas
 
 ## Completed Milestones
 
@@ -426,20 +426,20 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 36 — ONBOARDING: NAVEGAÇÃO POR ABAS (pronto para executar)
-Plan: 6 plans (5 waves) — aguardando execução
-v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34 e 35 concluídas. F36 (Onboarding — Navegação por Abas) planejada (6 plans / 5 waves), pronta para execução; F37 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37).
+Phase: 36 (onboarding-navegacao-por-abas) — COMPLETE ✅
+Plan: 6 of 6
+v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35 e 36 concluídas. F36 (Onboarding — Navegação por Abas) completa (6 plans / 5 waves, 1479 testes, 31/31 requirements, code review aplicado); F37 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37).
 
-### Phase 36 — Onboarding: Navegação por Abas (pronto para executar)
+### Phase 36 — Onboarding: Navegação por Abas ✅ Complete
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
-| 36-01 | 1 | ○ | Migration `create_store_draft` + `POST /api/store` dois modos (draft/fiscal) + `[BLOCKING] supabase db push` |
-| 36-02 | 1 | ○ | Core — tabs.ts, tab-state.ts, draft-store.ts + testes (sem dep. do banco) |
-| 36-03 | 2 | ○ | autoSave, use-onboarding-tabs (popstate back/forward), drift estendido, cleanup logout |
-| 36-04 | 3 | ○ | StoreTabs ARIA + LegalAcceptancePanel + form refactor + parsing `?tab=` |
-| 36-05 | 4 | ○ | Redirects/banners → `?tab=` |
-| 36-06 | 5 | ○ | Testes endpoint/gates/draft→fiscal, regressão, checkpoint humano |
+| 36-01 | 1 | ✅ | Migration `create_store_draft` + `POST /api/store` dois modos (draft/fiscal) + schema push aplicado |
+| 36-02 | 1 | ✅ | Core — tabs.ts, tab-state.ts, draft-store.ts + testes (sem dep. do banco) |
+| 36-03 | 2 | ✅ | autoSave, use-onboarding-tabs (popstate back/forward), drift estendido, cleanup logout |
+| 36-04 | 3 | ✅ | StoreTabs ARIA + LegalAcceptancePanel + form refactor + parsing `?tab=` |
+| 36-05 | 4 | ✅ | Redirects/banners → `?tab=` |
+| 36-06 | 5 | ✅ | Testes endpoint/gates/draft→fiscal, regressão, checkpoint humano aprovado |
 
 **Context:** `.planning/phases/36-onboarding-navegacao-por-abas/36-CONTEXT.md`
 **Source:** `openspec/changes/fase-36-onboarding-navegacao-por-abas/` (fonte da verdade)

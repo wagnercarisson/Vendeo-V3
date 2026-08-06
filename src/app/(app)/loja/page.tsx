@@ -10,7 +10,7 @@ export default async function LojaPage() {
   return (
     <div>
       <PageHeader title="Loja" />
-      <StorePageClient initialStore={store} />
+      <StorePageClient initialStore={store} userId={user.userId} />
     </div>
   );
 }

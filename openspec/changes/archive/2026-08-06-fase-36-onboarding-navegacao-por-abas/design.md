@@ -13,15 +13,15 @@ Três fatos de backend condicionam o design:
 ## Goals / Non-Goals
 
 **Goals:**
-- `/loja` com 3 abas (Dados / Posicionamento / Direção Visual), navegação por `?tab=` no history (back/forward funcionam), desbloqueio progressivo com soft-block
+- `/loja` com 3 abas (Dados / Posicionamento / Direção Visual), navegação por `?tab=` no history (back/forward funcionam), desbloqueio progressivo com **hard-block** (aba bloqueada NÃO é ativável)
 - Três conceitos separados: avanço (abas) × qualidade da identidade (campos recomendados) × permissão de gerar (gates F34)
 - Aceite legal como coluna lateral global (Pendente/Aceito/Reaceite necessário), responsivo, bloqueia Posicionamento quando pendente
 - Auto-save confiável em troca de aba + navegação interna; abandono mobile protegido por `localStorage` TTL 24h via `pagehide`/`visibilitychange` (escrita síncrona); PATCH no `unload` best-effort
 - Rascunho `localStorage` com TTL, chave `vendeo:store_draft:${userId}:new` → `:${storeId}`, limpo após 1º save e logout
 - CNPJ não bloqueia navegação (pendência de readiness); bloqueia geração/crédito (inalterado)
 - Regra mínima p/ Direção Visual: só tom de voz (loja nova)
-- Estados por aba: Bloqueada / Rascunho / Salva / Pronta / Pendente para gerar + motivo no painel ativo
-- Abas mobile compactas (Dados/Perfil/Visual), badge pequeno, botão "Continuar" sempre visível
+- Estados por aba: Bloqueada / Rascunho / Salva / Pronta / Pendente para gerar + motivo acessível no botão/status (tooltip/`aria-label`) — a aba bloqueada nunca fica ativa
+- Abas mobile compactas (Dados/Perfil/Visual), badge pequeno, botão "Continuar" sempre visível e **desabilitado quando a próxima aba está bloqueada** (com microcopy do que falta)
 - ARIA tabs completo (tablist/tab/tabpanel, roving tabindex, setas, aria-live)
 - Redirects/banners migrados para `?tab=` (`/campanhas/nova`, `/cadastro/cnpj`, `ReadinessBanner`); `required=` legado compatível
 - **Backend**: `POST /api/store` em dois modos — draft (sem CNPJ, `create_store_draft`) × verified/fiscal (com CNPJ, `create_store_with_cnpj`); loja draft não concede crédito nem libera geração
@@ -64,7 +64,7 @@ Contrato: `computeTabUnlock(tab, ctx)` em `src/lib/store-onboarding/tabs.ts` ret
 
 | Dimensão | Regra | Impacto | Onde aparece na UI |
 |----------|-------|---------|--------------------|
-| **Avanço** | Mínimo da aba anterior válido (D1) | Controla o que dá para **navegar** | Bloqueio das abas + motivo no painel |
+| **Avanço** | Mínimo da aba anterior válido (D1) | Controla o que dá para **navegar** | **Hard-block** das abas + motivo acessível no botão/status (tooltip/`aria-label`) |
 | **Qualidade da identidade** | Campos recomendados, sem bloqueio (D9) | Melhora o resultado da arte | Card informativo "recomendado" |
 | **Permissão de gerar** | Gates da F34 (readiness RPC + guarda dupla) | Controla se dá para **gerar campanha** | Estados `Pendente para gerar` + banners |
 
@@ -101,7 +101,7 @@ Regras:
 - **Antes do 1º `storeId` não se cria loja prematuramente** — o draft vai para o `localStorage` (D5)
 - Direção Visual mantém botão Salvar explícito (aba que consome créditos/upload)
 
-Fluxo do save ao sair da aba Dados (troca de aba): tem nome+segmento+aceite? → NÃO: mantém draft no localStorage, navega para aba (bloqueada). → SIM: `POST /api/store` (cria loja via modo draft — D15) → `storeId` → "Salva ✓", limpa draft, desbloqueia Posicionamento. Falha → "Não salvo" (badge + toast), permanece na aba ① com dados preservados.
+Fluxo do save ao tentar sair da aba Dados (troca de aba): tem nome+segmento+aceite? → NÃO: mantém draft no localStorage, **permanece na aba Dados** com feedback do que falta (D16 — hard-block). → SIM: `POST /api/store` (cria loja via modo draft — D15) → `storeId` → "Salva ✓", limpa draft, desbloqueia Posicionamento. Falha → "Não salvo" (badge + toast), permanece na aba ① com dados preservados.
 
 ### D5 — Rascunho persistente: `localStorage` com TTL escopado por usuário
 
@@ -127,8 +127,8 @@ Fluxo do save ao sair da aba Dados (troca de aba): tem nome+segmento+aceite? →
 ```
 
 - `StorePageClient` lê `?tab=` via `useSearchParams` → `initialTab`. Aba ativa vive no history (back/forward funcionam)
-- Deep-link em aba bloqueada → cai na aba com bloqueio + link "Voltar para X" (nunca tela em branco)
-- `required=` legado continua aceito (compat F36), mapeando para a aba correspondente (`cadastro-fiscal` → dados, `visual-direction` → direcao-visual)
+- Deep-link em aba bloqueada → **não abre a aba bloqueada**: redireciona/sincroniza para a **primeira aba anterior válida** (posicionamento bloqueada → Dados; direcao-visual bloqueada → Posicionamento se liberada, senão Dados) e exibe aviso contextual "Complete esta etapa para liberar {aba}" (nunca tela em branco, nunca conteúdo funcional da aba bloqueada)
+- `required=` legado continua aceito (compat F36), mapeando para a aba correspondente (`cadastro-fiscal` → dados, `visual-direction` → direcao-visual) — a mesma regra de bloqueio se aplica ao alvo mapeado
 
 Mapeamento de redirects (D12): ver tabela na D12.
 
@@ -146,7 +146,7 @@ Mapeamento de redirects (D12): ver tabela na D12.
 | **Pronta** | `✓ Pronta` |
 | **Pendente para gerar** | `⚠ Pendente para gerar` |
 
-Motivo específico no **painel ativo**, não no botão da aba (D10). Prioridade se dois estados aplicam: `Pendente para gerar` > `Bloqueada` > `Rascunho` > `Pronta` > `Salva`. A aba Direção Visual mantém o badge "Necessário" da F34 quando o brand profile não está syncado.
+Motivo específico **acessível no botão da aba** (tooltip/`aria-label`/descrição curta) — a aba bloqueada nunca fica ativa, então o motivo NÃO depende de painel ativo (D16/D11). Prioridade se dois estados aplicam: `Pendente para gerar` > `Bloqueada` > `Rascunho` > `Pronta` > `Salva`. A aba Direção Visual mantém o badge "Necessário" da F34 quando o brand profile não está syncado.
 
 ### D8 — CNPJ: não bloqueia onboarding; bloqueia geração/crédito
 
@@ -164,14 +164,14 @@ Motivo específico no **painel ativo**, não no botão da aba (D10). Prioridade 
 
 Para loja nova, a aba ③ desbloqueia com **`storeId` existente + apenas o tom de voz** preenchido na aba ② (o tom de voz é persistido na loja, então a aba só libera após a criação via auto-save). Posicionamento/descrição/slogan são opcionais e recomendados. Card informativo curto na aba ② ("Essas informações ajudam o Vendeo a criar artes com linguagem, estilo e argumentos mais próximos da sua loja."). Para loja existente com direção visual salva, a aba ③ nasce aberta.
 
-### D10 — Abas no mobile: compactas, motivo fora do botão
+### D10 — Abas no mobile: compactas, motivo acessível no botão
 
 `DECIDIDO`
 
 - Tabs compactas horizontais: `Dados`, `Perfil`, `Visual` — **APENAS label responsivo**; o `id` da aba permanece `posicionamento`/`direcao-visual` (query param, testes, analytics)
 - Badge pequeno por estado (ponto/ícone discreto no canto), não texto completo
-- Motivo exibido no painel ativo, nunca dentro do botão da aba
-- Botão inferior "Continuar" sempre visível (avança/retrocede) — área de toque confortável
+- Motivo exibido em **tooltip/`aria-label` do botão da aba** (nunca depende do painel ativo — a aba bloqueada não é ativável, D16)
+- Botão inferior "Continuar" sempre visível (avança/retrocede), **desabilitado quando a próxima aba está bloqueada** com microcopy indicando o que falta (ex.: "Complete Dados para liberar Posicionamento") — área de toque confortável
 - Touch targets ≥ 44px (F22)
 - No desktop, labels completos (Dados / Posicionamento / Direção Visual)
 
@@ -179,7 +179,7 @@ Para loja nova, a aba ③ desbloqueia com **`storeId` existente + apenas o tom d
 
 `DECIDIDO`
 
-`role="tablist"`/`role="tab"`/`role="tabpanel"` + `aria-selected`/`aria-controls`; roving tabindex (só o ativo tabulável; setas ←/→ e Home/End movem o foco); `aria-describedby` no tab bloqueado apontando para o motivo no painel; estados via `aria-label` (não só cor); `aria-live` na região da aba; aceite legal via `aria-label`/`aria-expanded`; touch targets ≥ 44px.
+`role="tablist"`/`role="tab"`/`role="tabpanel"` + `aria-selected`/`aria-controls`; roving tabindex (só o ativo tabulável; setas ←/→ e Home/End movem o foco); aba bloqueada com `aria-disabled="true"` e o motivo acessível via `aria-label`/`aria-describedby` no próprio botão (tooltip/descrição curta); estados via `aria-label` (não só cor); `aria-live` na região da aba; aceite legal via `aria-label`/`aria-expanded`; touch targets ≥ 44px.
 
 ### D12 — Migração dos redirects/banners existentes
 
@@ -259,6 +259,25 @@ POST /api/store
 - Guard `/campanhas/nova` e `LegalClearanceGate` (F34): inalterados — loja draft sem fiscal/aceite não gera
 - Crédito freemium: **não concedido** na criação draft (sem entitlement/grant na RPC); concedido apenas pelo fluxo com CNPJ (`create_store_with_cnpj`) ou `update-cnpj` posterior
 
+### D16 — Hard-block progressivo nas abas (substitui o soft-block)
+
+`DECIDIDO` (revisão pós-UAT F36)
+
+**Problema:** o soft-block inicial permitia ativar a aba bloqueada (mostrava aviso, mas renderizava campos/botões/ações funcionais). Isso permitia acessar Posicionamento sem mínimo, e Direção Visual sem tom de voz — inclusive gerar assinatura visual / direção visual text-only e salvar. Comportamento não desejado.
+
+**Decisão:** as abas passam a ser **hard-block progressivo**: a aba bloqueada não é ativável (clique, teclado, "Continuar", deep-link ou back/forward), e o conteúdo funcional da aba bloqueada nunca renderiza.
+
+Regras:
+
+1. **Aba Dados** — sempre acessível. CNPJ não bloqueia onboarding (D8); bloqueia apenas geração/crédito, exceto loja teste/experimental com entitlement próprio.
+2. **Aba Posicionamento** — acessível somente após: nome válido + segmento válido + aceite legal vigente + loja criada/persistida via auto-save (`storeId`). Se faltar mínimo: clique na aba ou botão "Continuar" mantém o usuário em Dados e mostra feedback claro do que falta, **sem ativar a aba bloqueada**. Motivo por precedência: falta nome/segmento → `needs_basic_data`; tem mínimo mas falta aceite → `needs_legal_acceptance`; tem mínimo+aceite mas sem loja → `needs_store_created`.
+3. **Aba Direção Visual** — acessível somente após: `storeId` existente + tom de voz preenchido. Não é possível pular Posicionamento para upload/logo/assinatura visual/geração text-only/salvar visual. Se bloqueada: clique na aba ou "Continuar para Direção Visual" mantém o usuário em Posicionamento e mostra o motivo (tooltip/`aria-label` com `tabBlockReasonText` no CTA desktop; aviso `blockedNotice` com o motivo específico). Posicionamento/descrição/slogan seguem recomendados, não bloqueantes (D9).
+4. **Deep-link** — `/loja?tab=<bloqueada>` NÃO abre a aba bloqueada com conteúdo funcional; redireciona/sincroniza para a **primeira aba anterior válida** (posicionamento bloqueada → Dados; direcao-visual bloqueada → Posicionamento se liberada, senão Dados) com aviso contextual "Complete esta etapa para liberar {aba}" + motivo específico. Nunca tela em branco. **Auto-avanço refinado:** após o redirect, o re-check do alvo NUNCA auto-avança por edição do usuário (ex.: preencher `tone_of_voice`); só auto-avança quando o desbloqueio vem de **data-load** (`hasVisualDirection === true`). Edição do usuário consome o deep-link e limpa o aviso — o avanço fica manual, sem armadilha de re-render.
+5. **Back/forward** — se o histórico tentar voltar/avançar para uma aba agora bloqueada, a ativação é negada; sincroniza para a aba anterior válida e atualiza a URL para refletir a aba realmente ativa.
+6. **UI/A11y** — aba bloqueada parece e se comporta como bloqueada: `disabled` ou `aria-disabled="true"` (melhor padrão para tabs), NÃO aciona `onTabChange`, motivo acessível via tooltip/`aria-label`/descrição curta no botão (não depende de painel ativo da aba bloqueada). Mobile: "Continuar" `disabled` quando a próxima aba está bloqueada, com microcopy indicando o que falta.
+
+`computeTabUnlock` permanece a fonte da verdade de desbloqueio (D1/D9); a mudança é no **uso**: `setActiveTab`/popstate passam a **negar** navegação para alvo não desbloqueado (exceto Dados → Posicionamento quando o auto-save pode criar a loja), e o conteúdo renderizado por aba é condicionado ao desbloqueio (nunca pelo estado de badge).
+
 ### Estrutura de arquivos (ref.)
 
 ```
@@ -291,7 +310,7 @@ supabase/migrations/<timestamp>_f36_create_store_draft.sql ← RPC create_store_
 | **Auto-save × drift race (saves concorrentes)** | `useOnboardingTabs` serializa saves (fila simples) e ignora respostas defasadas (ref/seq guard) |
 | **Draft diverge do banco após 1º save** | Migração explícita e atômica ao criar loja; reconciliação ao reabrir |
 | **Aceite legal ocupar a tela no mobile** | Bloco compacto no topo da aba ou antes do CTA, sem sticky persistente (D3/D10) |
-| **`?tab=` deep-link para aba bloqueada** | Nunca tela em branco: aba solicitada aparece com bloqueio + link "Voltar" (D6) |
+| **`?tab=` deep-link para aba bloqueada** | Nunca tela em branco: redireciona para a primeira aba anterior válida com aviso contextual "Complete esta etapa para liberar {aba}" + motivo específico (D6/D16). Após o redirect, NÃO auto-avança por edição do usuário — apenas por data-load (`hasVisualDirection`) |
 | **Compat `required=` legado vira código morto** | Mantido apenas na F36 como transição; removido numa fase futura (nota no código) |
 | **Regressão em testes que dependem de step 1/2 e do POST com CNPJ obrigatório** | Refatoração com testes migrados juntos (mesmo PR); mocks de `POST /api/store` atualizados para o modo draft; suíte completa roda antes do merge |
 | **`create_store_draft` duplicar lógica de inserção de loja** | Caminho curto e explícito; semelhante à RPC removida da F30; as validações de nome/segmento/subsegmento permanecem na rota (reuso das funções atuais) |
@@ -305,4 +324,4 @@ supabase/migrations/<timestamp>_f36_create_store_draft.sql ← RPC create_store_
 
 ## Open Questions
 
-Nenhuma. Todas as decisões (D1-D14 do alinhamento + D15 desta revisão) estão documentadas. A divergência de CNPJ foi resolvida com o re-alinhamento: `POST /api/store` em dois modos (draft × verified/fiscal), com a regra "loja draft não é loja pronta".
+Nenhuma. Todas as decisões (D1-D14 do alinhamento + D15 desta revisão + D16 hard-block pós-UAT) estão documentadas. A divergência de CNPJ foi resolvida com o re-alinhamento: `POST /api/store` em dois modos (draft × verified/fiscal), com a regra "loja draft não é loja pronta".

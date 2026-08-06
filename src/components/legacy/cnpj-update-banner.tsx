@@ -24,7 +24,7 @@ export function CnpjUpdateBanner({
           (créditos, campanhas) serão mantidos.
         </p>
         <Link
-          href="/loja?required=cadastro-fiscal&returnTo=/dashboard"
+          href="/loja?tab=dados&fiscal=pending&returnTo=/dashboard"
           className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-accent-green px-3 py-1.5 text-xs font-medium text-white hover:brightness-110 transition-all"
         >
           Atualizar CNPJ agora <ArrowRight className="w-3 h-3" />

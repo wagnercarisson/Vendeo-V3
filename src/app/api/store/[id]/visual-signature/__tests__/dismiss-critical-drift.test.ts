@@ -166,6 +166,72 @@ describe('POST /api/store/[id]/visual-signature/dismiss-critical-drift', () => {
     expect(res.status).toBe(400);
   });
 
+  it('should use the snapshot provided in the body (valores aceitos) instead of the DB store', async () => {
+    const updates: { data: Record<string, unknown> | null }[] = [];
+
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'store_visual_signatures') {
+        if (updates.length === 0) {
+          return makeUpdateTrackingChain({ data: mockActiveVS, error: null }, updates);
+        }
+        return makeChain({ data: null, error: null });
+      }
+      return makeChain({ data: null, error: null });
+    });
+
+    const { POST } = await import('../dismiss-critical-drift/route');
+    const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/visual-signature/dismiss-critical-drift`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        snapshot: { name: 'Nome Aceito', segment: 'alimentacao', slogan: 'Slogan Aceito', city: 'São Paulo', state: 'SP' },
+      }),
+    }));
+    const res = await POST(req, { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(res.status).toBe(204);
+    const snapshotUpdate = updates.find(u => u.data?.metadata);
+    expect(snapshotUpdate).toBeDefined();
+    const metadata = snapshotUpdate!.data!.metadata as Record<string, unknown>;
+    const snapshot = metadata.visual_signature_drift_dismissed_snapshot as Record<string, unknown>;
+    expect(snapshot.name).toBe('Nome Aceito');
+    expect(snapshot.segment).toBe('alimentacao');
+    expect(snapshot.slogan).toBe('Slogan Aceito');
+    expect(snapshot.city).toBe('São Paulo');
+    expect(snapshot.state).toBe('SP');
+  });
+
+  it('should fall back to the DB store snapshot when body snapshot is missing or invalid', async () => {
+    const updates: { data: Record<string, unknown> | null }[] = [];
+
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'store_visual_signatures') {
+        if (updates.length === 0) {
+          return makeUpdateTrackingChain({ data: mockActiveVS, error: null }, updates);
+        }
+        return makeChain({ data: null, error: null });
+      }
+      return makeChain({ data: null, error: null });
+    });
+
+    const { POST } = await import('../dismiss-critical-drift/route');
+    // snapshot inválido (sem name string) → fallback para o store do banco
+    const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/visual-signature/dismiss-critical-drift`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ snapshot: { name: 42 } }),
+    }));
+    const res = await POST(req, { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(res.status).toBe(204);
+    const snapshotUpdate = updates.find(u => u.data?.metadata);
+    const snapshot = (snapshotUpdate!.data!.metadata as Record<string, unknown>).visual_signature_drift_dismissed_snapshot as Record<string, unknown>;
+    expect(snapshot.name).toBe('Minha Loja');
+    expect(snapshot.segment).toBe('alimentacao');
+  });
+
   it('should preserve existing metadata fields when persisting snapshot', async () => {
     const updates: { data: Record<string, unknown> | null }[] = [];
 

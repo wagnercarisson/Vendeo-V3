@@ -71,11 +71,59 @@ export const POST = apiHandler(async (request: NextRequest) => {
       );
     }
 
-    if (!cnpj || typeof cnpj !== "string") {
-      return NextResponse.json({ error: "CNPJ \u00e9 obrigat\u00f3rio" }, { status: 400 });
+    // F36 DELTA (D15): cnpj agora é opcional — POST /api/store em dois modos
+    // (draft × verified/fiscal). Validações compartilhadas (subsegmento, versões
+    // legais, IP/UA) rodam antes do branch e são reutilizadas pelo modo draft.
+    let effectiveSubsegment: string | null = null;
+    if (subsegment !== undefined && subsegment !== null && subsegment !== "") {
+      if (typeof subsegment !== "string") {
+        return NextResponse.json({ error: "subsegment inv\u00e1lido" }, { status: 400 });
+      }
+
+      const segmentKey = segment as keyof typeof STORE_SUBSEGMENTS;
+      const segmentSubs = STORE_SUBSEGMENTS[segmentKey] ?? [];
+      const trimmed = subsegment.trim();
+      const isPredefined = segmentSubs.some(s => s.value === trimmed.toLowerCase());
+
+      if (isPredefined) {
+        effectiveSubsegment = trimmed.toLowerCase();
+      } else {
+        if (trimmed.toLowerCase() === "outro") {
+          return NextResponse.json({ error: "Valor inv\u00e1lido para subsegmento" }, { status: 400 });
+        }
+
+        const subError = validateSubsegment(subsegment);
+        if (subError) {
+          return NextResponse.json({ error: subError }, { status: 400 });
+        }
+
+        effectiveSubsegment = sanitizeSubsegment(subsegment);
+      }
+    } else if (segment === "outros") {
+      return NextResponse.json({ error: "Subsegmento obrigat\u00f3rio para segmento outros" }, { status: 400 });
     }
 
-    const cnpjResult = validateCnpj(cnpj);
+    const termsVersion = await getCurrentVersion("terms_of_service");
+    const aupVersion = await getCurrentVersion("acceptable_use");
+
+    if (!termsVersion || !aupVersion) {
+      return NextResponse.json(
+        { error: "Documentos legais n\u00e3o publicados. Tente novamente mais tarde." },
+        { status: 500 }
+      );
+    }
+
+    const ipAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+      ?? request.headers.get("x-real-ip")
+      ?? "unknown";
+
+    const userAgent = request.headers.get("user-agent") ?? "unknown";
+
+    const hasCnpj = typeof cnpj === "string" && cnpj.trim() !== "";
+
+    if (hasCnpj) {
+      // === MODO VERIFIED/FISCAL (F32/F33 — caminho inalterado) ===
+      const cnpjResult = validateCnpj(cnpj);
     if (cnpjResult instanceof Error) {
       return NextResponse.json({ error: "CNPJ inv\u00e1lido" }, { status: 400 });
     }
@@ -179,51 +227,6 @@ export const POST = apiHandler(async (request: NextRequest) => {
       }
     }
 
-    let effectiveSubsegment: string | null = null;
-    if (subsegment !== undefined && subsegment !== null && subsegment !== "") {
-      if (typeof subsegment !== "string") {
-        return NextResponse.json({ error: "subsegment inv\u00e1lido" }, { status: 400 });
-      }
-
-      const segmentKey = segment as keyof typeof STORE_SUBSEGMENTS;
-      const segmentSubs = STORE_SUBSEGMENTS[segmentKey] ?? [];
-      const trimmed = subsegment.trim();
-      const isPredefined = segmentSubs.some(s => s.value === trimmed.toLowerCase());
-
-      if (isPredefined) {
-        effectiveSubsegment = trimmed.toLowerCase();
-      } else {
-        if (trimmed.toLowerCase() === "outro") {
-          return NextResponse.json({ error: "Valor inv\u00e1lido para subsegmento" }, { status: 400 });
-        }
-
-        const subError = validateSubsegment(subsegment);
-        if (subError) {
-          return NextResponse.json({ error: subError }, { status: 400 });
-        }
-
-        effectiveSubsegment = sanitizeSubsegment(subsegment);
-      }
-    } else if (segment === "outros") {
-      return NextResponse.json({ error: "Subsegmento obrigat\u00f3rio para segmento outros" }, { status: 400 });
-    }
-
-    const termsVersion = await getCurrentVersion("terms_of_service");
-    const aupVersion = await getCurrentVersion("acceptable_use");
-
-    if (!termsVersion || !aupVersion) {
-      return NextResponse.json(
-        { error: "Documentos legais n\u00e3o publicados. Tente novamente mais tarde." },
-        { status: 500 }
-      );
-    }
-
-    const ipAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-      ?? request.headers.get("x-real-ip")
-      ?? "unknown";
-
-    const userAgent = request.headers.get("user-agent") ?? "unknown";
-
     const { data, error } = await supabase.rpc("create_store_with_cnpj", {
       p_cnpj_normalized: normalized,
       p_cnpj_root_hash: rootHash,
@@ -290,6 +293,58 @@ export const POST = apiHandler(async (request: NextRequest) => {
     };
 
     return NextResponse.json(responseData, { status: 201 });
+    }
+
+    // === MODO DRAFT (F36 D15) — sem CNPJ ===
+    // Loja draft não é loja pronta: sem grant freemium; readiness reporta
+    // cadastro_fiscal pendente; transição draft → fiscal via POST /api/store/update-cnpj.
+    const { data: draftData, error: draftError } = await supabase.rpc("create_store_draft", {
+      p_user_id: user.userId,
+      p_name: (name as string).trim(),
+      p_segment: segment as string,
+      p_city: typeof city === "string" ? city : null,
+      p_state: typeof state === "string" ? state : null,
+      p_accepted_by_user_id: user.userId,
+      p_terms_version: termsVersion.version,
+      p_acceptable_use_version: aupVersion.version,
+      p_ip_address: ipAddress,
+      p_user_agent: userAgent,
+      p_brand_color: typeof brand_color === "string" ? brand_color : null,
+      p_logo_url: typeof logo_url === "string" ? logo_url : null,
+      p_subsegment: effectiveSubsegment,
+      p_tone_of_voice: typeof tone_of_voice === "string" ? tone_of_voice : null,
+      p_positioning: typeof positioning === "string" ? positioning.trim() || null : null,
+      p_short_description: typeof short_description === "string" ? short_description.trim() || null : null,
+      p_slogan: typeof slogan === "string" ? slogan.trim() || null : null,
+    });
+
+    if (draftError) {
+      const errText = `${draftError.message ?? ""} ${draftError.details ?? ""}`;
+      if (draftError.code === "23505" || errText.includes("stores_user_id_key")) {
+        return NextResponse.json(
+          { error: "Usu\u00e1rio j\u00e1 possui uma loja" },
+          { status: 409 }
+        );
+      }
+      return NextResponse.json({ error: draftError.message }, { status: 500 });
+    }
+
+    const draftRpcData = draftData as Record<string, unknown>;
+    const draftRpcStore = Array.isArray(draftRpcData.store)
+      ? (draftRpcData.store as Record<string, unknown>[])[0]
+      : (draftRpcData.store as Record<string, unknown> | undefined);
+
+    if (!draftRpcStore || typeof draftRpcStore !== "object" || !("id" in draftRpcStore)) {
+      return NextResponse.json(
+        { error: "Loja criada, mas resposta não retornou o ID da loja." },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      { ...(draftRpcStore as Record<string, unknown>), onboardingGranted: draftRpcData.onboardingGranted ?? false },
+      { status: 201 }
+    );
   } catch (error) {
     if (error instanceof UnauthorizedError) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -7,5 +7,5 @@ export default async function CadastroCnpjPage(props: {
   const returnTo = typeof searchParams.returnTo === "string"
     ? searchParams.returnTo
     : "/dashboard";
-  redirect(`/loja?required=cadastro-fiscal&returnTo=${encodeURIComponent(returnTo)}`);
+  redirect(`/loja?tab=dados&fiscal=pending&returnTo=${encodeURIComponent(returnTo)}`);
 }
