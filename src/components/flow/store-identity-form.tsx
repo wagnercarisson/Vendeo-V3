@@ -130,7 +130,6 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
   const [formError, setFormError] = useState<string | null>(null);
   const [existingLegalOk, setExistingLegalOk] = useState(true);
   const [legalCheckLoading, setLegalCheckLoading] = useState(true);
-  const [acceptedTermsError, setAcceptedTermsError] = useState<string | null>(null);
   const [showContractModal, setShowContractModal] = useState(false);
   const [feedbackOverlay, setFeedbackOverlay] = useState<{ message: string; type: 'error' | 'success'; focusSelector?: string } | null>(null);
   const [suppressErrorBanner, setSuppressErrorBanner] = useState(false);
@@ -1103,7 +1102,6 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
 
   const handleStep1Submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setAcceptedTermsError(null);
     const nameErr = validateName(formData.name);
     const segmentErr = validateSegment(formData.segment);
     const errors: FieldErrors = {};
@@ -1133,7 +1131,16 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
 
     const legalBlocked = storeId ? !existingLegalOk && !acceptedTerms : !acceptedTerms;
     if (legalBlocked) {
-      setAcceptedTermsError("Você precisa aceitar os Termos de Uso e a Política de Uso Aceitável.");
+      // Fix (260806-fsl-feedback-aceite-legal): feedback explícito no submit sem
+      // aceite legal — antes setava acceptedTermsError (estado morto, nunca
+      // renderizado → falha silenciosa). Modal imediato; ao fechar, o foco/scroll
+      // vai ao card de aceite VISÍVEL no viewport atual (ids únicos por variante;
+      // a outra variante fica display:none no DOM).
+      setFeedbackOverlay({
+        message: "Para continuar, leia e aceite os termos de uso.",
+        type: 'error',
+        focusSelector: isMobile ? "#aceite-legal-mobile" : "#aceite-legal",
+      });
       return;
     }
 
@@ -1379,7 +1386,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
           <div className="lg:col-span-4">
             {/* Aceite legal — bloco compacto no topo em mobile (D3, sem sticky) */}
             <div className="lg:hidden mb-6">
-              <LegalAcceptancePanel acceptance={legalState} onOpenModal={() => setShowContractModal(true)} variant="mobile-compact" open={showContractModal} />
+              <LegalAcceptancePanel acceptance={legalState} onOpenModal={() => setShowContractModal(true)} variant="mobile-compact" open={showContractModal} panelId="aceite-legal-mobile" />
             </div>
             {/* D16 (hard-block): aviso de ativação negada de aba bloqueada — a
                 aba bloqueada nunca fica ativa; o motivo fica no botão e/ou aqui
@@ -2454,7 +2461,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
             </StoreTabs>
           </div>
           <div className="hidden lg:block lg:col-span-1">
-            <LegalAcceptancePanel acceptance={legalState} onOpenModal={() => setShowContractModal(true)} variant="desktop-sticky-column" open={showContractModal} />
+            <LegalAcceptancePanel acceptance={legalState} onOpenModal={() => setShowContractModal(true)} variant="desktop-sticky-column" open={showContractModal} panelId="aceite-legal" />
           </div>
         </div>
       )}

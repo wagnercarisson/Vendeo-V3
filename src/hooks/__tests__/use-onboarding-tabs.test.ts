@@ -789,3 +789,54 @@ describe("useOnboardingTabs — persistência fiscal ANTES da navegação (fix 2
     expect(locationMock.href).toBe(target);
   });
 });
+
+describe("useOnboardingTabs — bloqueio legal na troca de aba (fix 260806-fsl-feedback-aceite-legal)", () => {
+  it("sem aceite legal, setActiveTab('posicionamento') → blockedNotice needs_legal_acceptance, permanece em dados e não chama autoSave", async () => {
+    const autoSave = vi.fn(async () => ({ ok: true }));
+    const { result } = renderHook(() =>
+      useOnboardingTabs(
+        makeDeps({
+          storeId: "store-1",
+          formData: makeFormData({ name: "Minha Loja", segment: "outros" }),
+          legalAccepted: false,
+          autoSave,
+        }),
+      ),
+    );
+
+    await act(async () => {
+      await result.current.setActiveTab("posicionamento");
+    });
+
+    // Motivo visível/coerente com D16 e NÃO navega
+    expect(result.current.activeTab).toBe("dados");
+    expect(result.current.blockedNotice).toEqual({
+      tab: "posicionamento",
+      reason: "needs_legal_acceptance",
+    });
+    // Sem saída a persistir → autoSave não é chamado
+    expect(autoSave).not.toHaveBeenCalled();
+  });
+
+  it("após aceitar o legal, a troca de aba para posicionamento funciona (autoSave chamado e navega)", async () => {
+    const autoSave = vi.fn(async () => ({ ok: true }));
+    const { result } = renderHook(() =>
+      useOnboardingTabs(
+        makeDeps({
+          storeId: "store-1",
+          formData: makeFormData({ name: "Minha Loja", segment: "outros" }),
+          legalAccepted: true,
+          autoSave,
+        }),
+      ),
+    );
+
+    await act(async () => {
+      await result.current.setActiveTab("posicionamento");
+    });
+
+    expect(autoSave).toHaveBeenCalledTimes(1);
+    expect(result.current.activeTab).toBe("posicionamento");
+    expect(result.current.blockedNotice).toBeNull();
+  });
+});

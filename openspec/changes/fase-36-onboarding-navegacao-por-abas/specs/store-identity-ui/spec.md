@@ -70,6 +70,23 @@ The page SHALL follow the visual and UX rules defined in `openspec/design-system
 - **THEN** o usuário permanece na aba Dados
 - **AND** um feedback do que falta é exibido, sem ativar a aba bloqueada
 
+#### Scenario: "Salvar e continuar" sem aceite legal mostra feedback explícito e foca o card (fix aceite)
+
+- **WHEN** o usuário preenche os dados mínimos (nome/segmento válidos) mas NÃO aceitou os termos
+- **AND** clica no botão "Salvar e continuar" (desktop ou mobile)
+- **THEN** o save NÃO é chamado (sem POST/PATCH)
+- **AND** o usuário permanece na aba Dados (sem navegação)
+- **AND** um feedback claro e imediato é exibido com a mensagem curta "Para continuar, leia e aceite os termos de uso." (modal de erro do `FeedbackOverlay`)
+- **AND** ao fechar o feedback, o foco/scroll vai para o card de aceite legal **visível** no viewport atual — `#aceite-legal` (desktop) ou `#aceite-legal-mobile` (mobile), ids únicos por variante (a variante oculta fica `display:none`)
+- **AND** com o aceite válido, "Salvar e continuar" volta a salvar e navegar (sem mudança no fluxo pós-aceite)
+
+#### Scenario: Tentar avançar por aba sem aceite legal mostra o motivo D16 (fix aceite)
+
+- **WHEN** o usuário clica na aba Posicionamento (ou CTA equivalente) sem aceite legal
+- **THEN** a aba NÃO é ativada (permanece em Dados)
+- **AND** `blockedNotice` exibe o motivo `needs_legal_acceptance` (texto coerente com D16)
+- **AND** o autoSave NÃO é chamado (sem saída a persistir)
+
 #### Scenario: Banner "Fiscal pendente" é derivado do readiness vivo (fix fiscal)
 
 - **WHEN** `readiness.missing` contém `cadastro_fiscal` (loja draft ou CNPJ ainda não persistido)

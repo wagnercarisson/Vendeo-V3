@@ -34,6 +34,12 @@ export interface LegalAcceptancePanelProps {
    * do CTA. Opcional: se omitido, o CTA usa `aria-expanded={false}`.
    */
   open?: boolean;
+  /**
+   * Id único do card (ex.: "aceite-legal" desktop / "aceite-legal-mobile").
+   * O card é focável programaticamente (tabIndex={-1}) para foco/scroll ao
+   * feedback de aceite pendente — fora da tab order.
+   */
+  panelId?: string;
 }
 
 const STATE_CONFIG: Record<
@@ -73,6 +79,7 @@ export function LegalAcceptancePanel({
   onOpenModal,
   variant,
   open,
+  panelId,
 }: LegalAcceptancePanelProps) {
   const config = STATE_CONFIG[acceptance];
   const StateIcon = config.Icon;
@@ -85,6 +92,8 @@ export function LegalAcceptancePanel({
   return (
     <div className={isMobile ? undefined : "lg:sticky lg:top-6"}>
       <section
+        id={panelId}
+        tabIndex={-1}
         aria-label={`Aceite legal — ${config.label}`}
         className={`bg-bg-surface border border-border rounded-xl ${
           isMobile ? "p-4" : "p-5"
