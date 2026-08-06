@@ -139,13 +139,16 @@ describe('StoreIdentityForm handleStep2Submit drift bifurcation', () => {
     expect(realinhar).toHaveBeenCalledTimes(2);
   });
 
-  it('(Bug C) origem nula (navegação interceptada) NÃO persiste nem realinha', async () => {
+  it('(Bug C fix) origem nula (navegação interceptada) com edições locais persiste ANTES do realinhar', async () => {
     const order: string[] = [];
     const save = vi.fn(async () => { order.push('save'); });
     const visualEffects = vi.fn(async () => { order.push('visual'); });
 
+    // Réplica da persistSaveFromDrift pós-fix (store-identity-form.tsx:1278-1294):
+    // origem null + hasLocalEdits → save() ANTES do realinhar (spec L135/L136).
     async function persistSaveFromDrift(
       origin: 'step1' | 'step2' | null,
+      hasLocalEdits: boolean,
       deps: { save: () => Promise<void>; visualEffects: () => Promise<void> },
     ): Promise<boolean> {
       if (origin === 'step1' || origin === 'step2') {
@@ -153,10 +156,42 @@ describe('StoreIdentityForm handleStep2Submit drift bifurcation', () => {
         if (origin === 'step2') await deps.visualEffects();
         return true;
       }
+      if (hasLocalEdits) {
+        await deps.save();
+        return true;
+      }
       return false;
     }
 
-    const persisted = await persistSaveFromDrift(null, { save, visualEffects });
+    const persisted = await persistSaveFromDrift(null, true, { save, visualEffects });
+    expect(persisted).toBe(true);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(visualEffects).not.toHaveBeenCalled();
+    expect(order).toEqual(['save']);
+  });
+
+  it('(Bug C fix) origem nula sem edições locais não persiste nem realinha', async () => {
+    const save = vi.fn(async () => {});
+    const visualEffects = vi.fn(async () => {});
+
+    async function persistSaveFromDrift(
+      origin: 'step1' | 'step2' | null,
+      hasLocalEdits: boolean,
+      deps: { save: () => Promise<void>; visualEffects: () => Promise<void> },
+    ): Promise<boolean> {
+      if (origin === 'step1' || origin === 'step2') {
+        await deps.save();
+        if (origin === 'step2') await deps.visualEffects();
+        return true;
+      }
+      if (hasLocalEdits) {
+        await deps.save();
+        return true;
+      }
+      return false;
+    }
+
+    const persisted = await persistSaveFromDrift(null, false, { save, visualEffects });
     expect(persisted).toBe(false);
     expect(save).not.toHaveBeenCalled();
     expect(visualEffects).not.toHaveBeenCalled();
