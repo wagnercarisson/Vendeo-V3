@@ -2,7 +2,7 @@
 
 ### Requirement: autoSave em use-store-form (save silencioso de campos válidos)
 
-O sistema SHALL prover o método `autoSave(fields: Partial<StoreFormData>): Promise<{ ok: boolean }>` em `src/components/flow/use-store-form.ts` (D4), reutilizando o `save()` existente:
+O sistema SHALL prover o método `autoSave(fields: Partial<StoreFormData>): Promise<{ ok: boolean; storeId?: string; skipped?: boolean; fiscalPersisted?: boolean }>` em `src/components/flow/use-store-form.ts` (D4):
 
 - Salva de forma **silenciosa** (sem mensagens de sucesso obrigatórias no fluxo de troca de aba)
 - Persiste **apenas campos válidos** — campos inválidos são ignorados, não bloqueiam o save
@@ -10,6 +10,7 @@ O sistema SHALL prover o método `autoSave(fields: Partial<StoreFormData>): Prom
 - Se não existe `storeId` e o mínimo de criação está válido (nome + segmento + aceite legal) → `POST /api/store` em **modo draft** (cria a loja sem CNPJ — D15)
 - Se não existe `storeId` e o mínimo **não** está válido → **não cria loja**; retorna `{ ok: false }` e o draft vai para o `localStorage` (D5)
 - Retorna `{ ok: true }` em sucesso, `{ ok: false }` em falha (para o `saveStatus` do hook)
+- **Nota de implementação:** o `autoSave` NÃO reutiliza literalmente o `save()` (que exibe feedback e roteia o fluxo fiscal de forma síncrona) — tem lógica própria de save silencioso, incluindo o ramo fiscal (ver requirement "autoSave persiste cadastro fiscal")
 
 #### Scenario: Auto-save com loja existente faz PATCH silencioso
 
@@ -46,6 +47,67 @@ O sistema SHALL prover o método `autoSave(fields: Partial<StoreFormData>): Prom
 - **THEN** retorna `{ ok: false }`
 - **AND** o estado do hook vira `saveStatus: "error"` (badge "Não salvo" + toast)
 - **AND** o impacto na navegação depende do contexto: PATCH falha não bloqueia (pode navegar); falha na criação da loja mantém o usuário na aba Dados (ver cenários do `useOnboardingTabs`)
+
+### Requirement: autoSave persiste cadastro fiscal (draft → fiscal) antes de navegação
+
+O sistema SHALL persistir o cadastro fiscal no `autoSave` quando a loja é **draft** (sem CNPJ) e o lojista informa CNPJ válido — **antes** de qualquer troca de aba, navegação interna (dashboard, campanhas) ou geração de campanha, sem exigir o clique em "Salvar e continuar":
+
+- Dispara `POST /api/store/update-cnpj` **somente** quando TODAS as condições valem:
+  - `storeId` existe;
+  - loja ainda sem CNPJ (`hasExistingCnpj === false`);
+  - CNPJ normalizado com 14 dígitos E `validateCnpj` não retorna `Error`;
+  - razão social com mínimo de 2 caracteres (mínimo exigido pela rota)
+- Sucesso → `hasExistingCnpj` vira `true` e o retorno SHALL incluir `fiscalPersisted: true` — o componente usa para refazer o readiness (`readinessRefreshKey`)
+- Falha (400/409/503) → retorna `{ ok: false }`, `setError(msg)` (feedback visível, badge "Não salvo"); o fiscal **não** é persistido e o readiness permanece `cadastro_fiscal` pendente (campanha continua bloqueada); a navegação prossegue pois o `storeId` existe (semântica de falha de PATCH)
+- CNPJ inválido/incompleto ou sem razão social → `update-cnpj` **não** é chamado; o CNPJ **não** vira fiscal válido
+- Loja que JÁ tem CNPJ (`hasExistingCnpj === true`) → `razaoSocial`/`nomeFantasia` vão no PATCH (paridade com `save()`); `update-cnpj` **não** é chamado (evita `cnpj_already_set`)
+- Criação sem `storeId` permanece **draft sem CNPJ** (D8/D15) — o anexo fiscal ocorre na navegação seguinte, quando `storeId` existe
+- A navegação/redirect SHALL aguardar o `autoSave` resolver (o `useOnboardingTabs` já serializa e aguarda antes de trocar de aba / seguir o link)
+
+#### Scenario: Troca de aba com CNPJ válido persiste o fiscal antes de navegar
+
+- **WHEN** o usuário informa CNPJ válido + razão social em uma loja draft e troca de aba
+- **THEN** o `autoSave` roda o `POST /api/store/update-cnpj` **antes** de navegar
+- **AND** em sucesso retorna `fiscalPersisted: true`
+- **AND** a aba muda somente após o save resolver
+- **AND** o readiness é refeito (`cadastro_fiscal` sai de `missing`)
+
+#### Scenario: Navegação interna / gerar campanha com CNPJ válido persiste o fiscal antes do redirect
+
+- **WHEN** o usuário clica em "Gerar campanha" (ou Dashboard) com CNPJ válido não salvo
+- **THEN** `handleInternalNavigation` aguarda o `autoSave` (que roda `update-cnpj`) resolver
+- **AND** somente depois o `window.location.href` é trocado — o gate de `/campanhas/nova` lê a DB já com fiscal
+
+#### Scenario: CNPJ inválido ou incompleto não vira fiscal válido
+
+- **WHEN** o CNPJ informado é inválido (check digits) ou incompleto (< 14 dígitos)
+- **THEN** `update-cnpj` NÃO é chamado
+- **AND** o readiness permanece `cadastro_fiscal` pendente (campanha bloqueada)
+
+#### Scenario: CNPJ válido sem razão social não dispara update-cnpj
+
+- **WHEN** o CNPJ é válido mas a razão social tem menos de 2 caracteres
+- **THEN** `update-cnpj` NÃO é chamado (mínimo da rota não atendido)
+- **AND** o fiscal permanece pendente
+
+#### Scenario: Falha do update-cnpj não finge sucesso fiscal
+
+- **WHEN** `POST /api/store/update-cnpj` falha (409 duplicado / 400 inválido / 503 indisponível)
+- **THEN** retorna `{ ok: false }`
+- **AND** `setError(msg)` é chamado (feedback visível)
+- **AND** `saveStatus` vira `"error"` (badge "Não salvo")
+- **AND** o fiscal NÃO é marcado como salvo (readiness permanece pendente)
+
+#### Scenario: Loja com CNPJ atualiza razão social/nome fantasia via PATCH
+
+- **WHEN** a loja JÁ tem CNPJ e o lojista edita razão social/nome fantasia e navega
+- **THEN** o PATCH do autoSave inclui `razaoSocial`/`nomeFantasia`
+- **AND** `update-cnpj` NÃO é chamado
+
+#### Scenario: Após fiscalPersisted a próxima navegação não repete update-cnpj
+
+- **WHEN** o `autoSave` persiste o fiscal com sucesso (`fiscalPersisted`) e depois o usuário navega novamente
+- **THEN** `hasExistingCnpj` está `true` → o próximo autoSave usa PATCH (com razao/nome) e NÃO chama `update-cnpj` (evita `cnpj_already_set` 409)
 
 ### Requirement: Hook useOnboardingTabs — orquestração de aba, auto-save e URL
 
@@ -232,6 +294,7 @@ Quando houver **drift ativo** — sensitive: `driftStatus === 'new'`; critical: 
 - **WHEN** há drift novo pendente e o usuário troca de aba com edições em campos que não entram no snapshot (ex.: fiscal/billing)
 - **THEN** o auto-save desses campos roda normalmente
 - **AND** o fluxo de drift só bloqueia os campos do snapshot
+- **AND** no caso do cadastro fiscal com CNPJ válido, o auto-save roda `POST /api/store/update-cnpj` (draft→fiscal) e o retorno `fiscalPersisted` aciona o refetch de readiness
 
 #### Scenario: Capacidade de assinaturas visuais é gateada por créditos
 

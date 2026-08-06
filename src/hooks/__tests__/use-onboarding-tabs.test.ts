@@ -710,3 +710,82 @@ describe("useOnboardingTabs — tabStates / saveStatus", () => {
     expect(result.current.tabStates.posicionamento.unlockReason).toBeUndefined();
   });
 });
+
+describe("useOnboardingTabs — persistência fiscal ANTES da navegação (fix 260806-fsl)", () => {
+  it("troca de aba aguarda o autoSave (que persiste o fiscal) resolver antes de navegar", async () => {
+    let resolveAutoSave: ((v: { ok: boolean; storeId?: string }) => void) | null = null;
+    const autoSave = vi.fn(
+      () =>
+        new Promise<{ ok: boolean; storeId?: string }>((resolve) => {
+          resolveAutoSave = resolve;
+        }),
+    );
+    const { result } = renderHook(() =>
+      useOnboardingTabs(makeDeps({ storeId: "store-1", autoSave })),
+    );
+
+    let pending: Promise<void> | undefined;
+    await act(async () => {
+      pending = result.current.setActiveTab("posicionamento");
+    });
+
+    // autoSave (draft→fiscal) ainda pendente → NÃO navegou
+    expect(autoSave).toHaveBeenCalledTimes(1);
+    expect(result.current.activeTab).toBe("dados");
+
+    resolveAutoSave!({ ok: true });
+    await act(async () => {
+      await pending;
+    });
+
+    expect(result.current.activeTab).toBe("posicionamento");
+  });
+
+  it("navegação interna (ex.: gerar campanha) só navega DEPOIS do autoSave resolver", async () => {
+    let resolveAutoSave: ((v: { ok: boolean }) => void) | null = null;
+    const autoSave = vi.fn(
+      () =>
+        new Promise<{ ok: boolean }>((resolve) => {
+          resolveAutoSave = resolve;
+        }),
+    );
+    const { result } = renderHook(() =>
+      useOnboardingTabs(makeDeps({ storeId: "store-1", autoSave })),
+    );
+
+    // jsdom não implementa navegação real — substitui window.location por um
+    // objeto com href gravável para capturar a TENTATIVA de redirect.
+    const locationMock = {
+      href: window.location.href,
+      origin: window.location.origin,
+      search: window.location.search,
+      pathname: window.location.pathname,
+      hash: window.location.hash,
+    };
+    Object.defineProperty(window, "location", {
+      value: locationMock,
+      writable: true,
+      configurable: true,
+    });
+
+    const anchor = document.createElement("a");
+    const target = `${locationMock.origin}/campanhas/nova`;
+    anchor.href = target;
+    const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+    Object.defineProperty(event, "target", { value: anchor });
+
+    await act(async () => {
+      result.current.handleInternalNavigation(event);
+    });
+
+    // autoSave pendente → nenhuma tentativa de navegação ainda
+    expect(autoSave).toHaveBeenCalledTimes(1);
+    expect(locationMock.href).not.toBe(target);
+
+    resolveAutoSave!({ ok: true });
+    await act(async () => {});
+
+    // só após o autoSave resolver o redirect é tentado
+    expect(locationMock.href).toBe(target);
+  });
+});

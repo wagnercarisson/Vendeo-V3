@@ -70,6 +70,20 @@ The page SHALL follow the visual and UX rules defined in `openspec/design-system
 - **THEN** o usuário permanece na aba Dados
 - **AND** um feedback do que falta é exibido, sem ativar a aba bloqueada
 
+#### Scenario: Banner "Fiscal pendente" é derivado do readiness vivo (fix fiscal)
+
+- **WHEN** `readiness.missing` contém `cadastro_fiscal` (loja draft ou CNPJ ainda não persistido)
+- **THEN** o banner "Fiscal pendente: informe o CNPJ..." é exibido na aba Dados
+- **AND** o banner NÃO depende de `initialStore.cnpj_normalized` (prop stale após autosave) nem do param `fiscal=pending`
+- **AND** quando o fiscal é persistido via autoSave (`fiscalPersisted`), o readiness é refeito e o banner some quando `cadastro_fiscal` sai de `missing`
+
+#### Scenario: Readiness refeito quando o autoSave persiste o fiscal (fix fiscal)
+
+- **WHEN** o `autoSave` retorna `fiscalPersisted: true` (draft→fiscal via `update-cnpj`)
+- **THEN** o componente incrementa `readinessRefreshKey`
+- **AND** o `POST /api/store/check-readiness` é re-executado
+- **AND** o estado das abas (`computeTabState`) reflete a nova prontidão (sem `cadastro_fiscal` pendente)
+
 ### Requirement: Navigation between `/loja` and `/campanhas/nova`
 
 > **Delta F36 (D12):** Os redirects SHALL migrar de `?required=` para `?tab=` mantendo a mensagem contextual. `?required=` SHALL continuar aceito como **compat** (F36), mapeando para a aba correspondente. A navegação por abas SHALL usar a URL (`?tab=dados|posicionamento|direcao-visual`) com deep-link e back/forward.

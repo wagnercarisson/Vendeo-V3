@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { Store } from "@/lib/store";
 import { STORE_SEGMENTS, STORE_SUBSEGMENTS } from "@/lib/constants";
 import { isValidHex } from "@/lib/validators/color";
+import { validateCnpj } from "@/lib/cnpj/validate";
 
 export interface ColorDirtyState {
   primaryInitial: string | null
@@ -44,7 +45,14 @@ export interface UseStoreFormReturn {
    *   (modo draft da rota — 36-01); falha BLOQUEIA o avanço
    * - sem storeId + mínimo inválido → sem fetch, { ok: false }, draft permanece no localStorage
    */
-  autoSave: (fields: Partial<FormData>) => Promise<{ ok: boolean; storeId?: string; skipped?: boolean }>;
+  autoSave: (fields: Partial<FormData>) => Promise<{
+    ok: boolean;
+    storeId?: string;
+    skipped?: boolean;
+    /** True quando o autoSave persistiu o cadastro fiscal (loja draft → fiscal
+     *  via /api/store/update-cnpj) — o componente usa para refazer o readiness. */
+    fiscalPersisted?: boolean;
+  }>;
   saveStatus: SaveStatus;
   /** Aceite legal corrente — alimenta o mínimo válido do autoSave (POST draft). */
   acceptedTerms: boolean;
@@ -344,9 +352,19 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
    * draft da rota — 36-01); falha BLOQUEIA o avanço. Sem mínimo → sem fetch
    * (não se cria loja prematuramente; o draft permanece no localStorage).
    * Loja draft não libera campanha/freemium — readiness reporta cadastro_fiscal.
+   * Com storeId + loja SEM CNPJ + CNPJ válido (14 dígitos) + razão social
+   * mínima → roda /api/store/update-cnpj (draft→fiscal) além do PATCH;
+   * retorna fiscalPersisted em sucesso. CNPJ inválido/incompleto NÃO vira
+   * fiscal válido (readiness permanece pendente). Loja COM CNPJ → PATCH inclui
+   * razaoSocial/nomeFantasia (paridade com save()).
    */
   const autoSave = useCallback(
-    async (fields: Partial<FormData>): Promise<{ ok: boolean; storeId?: string; skipped?: boolean }> => {
+    async (fields: Partial<FormData>): Promise<{
+      ok: boolean;
+      storeId?: string;
+      skipped?: boolean;
+      fiscalPersisted?: boolean;
+    }> => {
       setSaveStatus("saving");
 
       // Merge com o form atual: campos não informados mantêm o valor corrente.
@@ -390,35 +408,95 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
       body.positioning = toNull(merged.positioning);
       body.short_description = toNull(merged.short_description);
       body.slogan = toNull(merged.slogan);
-      // cnpj/razaoSocial/nomeFantasia NÃO entram no auto-save — o fluxo fiscal
-      // (update-cnpj / save explícito) é separado (D8/D15).
+      // cnpj/razaoSocial/nomeFantasia NÃO entram no PATCH genérico do auto-save:
+      // loja SEM CNPJ usa a rota dedicada /api/store/update-cnpj (valida CNPJ
+      // via BrasilAPI→CNPJá e roda update_store_cnpj — D8/D15). CNPJ
+      // inválido/incompleto NÃO persiste como fiscal válido.
 
       // MD-04: usa o storeId CORRENTE via ref (sem depender de re-render) —
       // evita re-POST no fluxo salvar→navegar logo após a criação.
       const currentStoreId = storeIdRef.current;
 
+      // F36 (fix fiscal): elegibilidade para transição draft → fiscal no
+      // autoSave — storeId existente + loja sem CNPJ + CNPJ normalizado válido
+      // (14 dígitos + check digits) + razão social mínima (mínimo da rota).
+      const cnpjDigits = merged.cnpj.replace(/\D/g, "");
+      const cnpjValido =
+        cnpjDigits.length === 14 && !(validateCnpj(cnpjDigits) instanceof Error);
+      const razaoSocialTrimmed = merged.razaoSocial.trim();
+      const razaoMinima = razaoSocialTrimmed.length >= 2;
+      const fiscalElegivel =
+        !!currentStoreId && !hasExistingCnpj && cnpjValido && razaoMinima;
+
+      // Loja COM CNPJ → razaoSocial/nomeFantasia vão no PATCH (paridade com
+      // save(); o guard 409 do PATCH só vale para loja SEM CNPJ).
+      if (currentStoreId && hasExistingCnpj) {
+        if (razaoMinima) body.razaoSocial = razaoSocialTrimmed;
+        const nomeFantasiaFinal = merged.nomeFantasia.trim() || razaoSocialTrimmed;
+        if (nomeFantasiaFinal) body.nomeFantasia = nomeFantasiaFinal;
+      }
+
       if (currentStoreId) {
-        // PATCH silencioso — falha NÃO bloqueia navegação (D4)
-        if (Object.keys(body).length === 0) {
-          setSaveStatus("idle");
-          return { ok: true };
-        }
-        try {
-          const res = await fetch(`/api/store/${currentStoreId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
-          });
-          if (!res.ok) {
+        const emptyPatch = Object.keys(body).length === 0;
+        // PATCH silencioso dos campos não-fiscais — falha NÃO bloqueia (D4)
+        if (!emptyPatch) {
+          try {
+            const res = await fetch(`/api/store/${currentStoreId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+            });
+            if (!res.ok) {
+              setSaveStatus("error");
+              return { ok: false };
+            }
+          } catch {
             setSaveStatus("error");
             return { ok: false };
           }
-          setSaveStatus("saved");
-          return { ok: true };
-        } catch {
-          setSaveStatus("error");
-          return { ok: false };
         }
+
+        // Transição draft → fiscal via rota dedicada (valida na Receita).
+        // Sucesso → hasExistingCnpj + fiscalPersisted (componente refaz
+        // readiness). Falha NÃO finge sucesso: ok:false + erro visível, o
+        // fiscal permanece pendente (readiness cadastro_fiscal) e a navegação
+        // prossegue pois a loja existe (semântica de falha de PATCH).
+        if (fiscalElegivel) {
+          try {
+            const res = await fetch("/api/store/update-cnpj", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                storeId: currentStoreId,
+                cnpjNormalized: cnpjDigits,
+                razaoSocial: merged.razaoSocial,
+                nomeFantasia: merged.nomeFantasia.trim() || merged.razaoSocial,
+              }),
+            });
+            if (!res.ok) {
+              const errData = await res
+                .json()
+                .catch(() => ({ error: "Não foi possível salvar os dados fiscais." }));
+              setError(errData.error || "Não foi possível salvar os dados fiscais.");
+              setSaveStatus("error");
+              return { ok: false };
+            }
+            setHasExistingCnpj(true);
+            setSaveStatus("saved");
+            return { ok: true, fiscalPersisted: true, storeId: currentStoreId };
+          } catch {
+            setError("Não foi possível salvar os dados fiscais. Tente novamente.");
+            setSaveStatus("error");
+            return { ok: false };
+          }
+        }
+
+        if (emptyPatch) {
+          setSaveStatus("idle");
+          return { ok: true };
+        }
+        setSaveStatus("saved");
+        return { ok: true };
       }
 
       // Sem storeId + mínimo inválido → sem POST (D4: não se cria loja prematuramente)
@@ -454,7 +532,7 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
         return { ok: false };
       }
     },
-    [formData, acceptedTerms, updateStoreId],
+    [formData, acceptedTerms, updateStoreId, hasExistingCnpj],
   );
 
   return {

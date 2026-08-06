@@ -76,14 +76,15 @@ describe("StorePageClient — resolução de ordem (D6/D12)", () => {
 });
 
 describe("StorePageClient — fiscal / message / props (F36-TABS-04/D12)", () => {
-  it("fiscal=pending → fiscalPending true", () => {
+  it("fiscal=pending NÃO é repassado (banner é derivado do readiness no form)", () => {
     const props = renderWithParams("?tab=dados&fiscal=pending");
-    expect(props.fiscalPending).toBe(true);
+    expect(props.fiscalPending).toBeUndefined();
   });
 
-  it("sem fiscal → fiscalPending false", () => {
-    const props = renderWithParams("?tab=dados");
-    expect(props.fiscalPending).toBe(false);
+  it("fiscal puro (sem ?tab=) → 'dados' e sem repasse de fiscalPending", () => {
+    const props = renderWithParams("?fiscal=pending");
+    expect(props.initialTab).toBe("dados");
+    expect(props.fiscalPending).toBeUndefined();
   });
 
   it("message= é repassado como redirectMessage", () => {

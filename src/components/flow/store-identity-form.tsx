@@ -83,7 +83,7 @@ function getSubsegmentMode(segment: string): 'rich' | 'travado' | 'other' | 'loc
   return 'rich';
 }
 
-export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMessage, fiscalPending }: { initialStore?: Store | null; userId?: string; initialTab?: OnboardingTab; redirectMessage?: string; fiscalPending?: boolean }) {
+export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMessage }: { initialStore?: Store | null; userId?: string; initialTab?: OnboardingTab; redirectMessage?: string }) {
   const { formData, setField, save, isLoading, isSaving, error, warningMessage, dismissWarning, successMessage, mode, clearStore, storeId, acceptedTerms, setAcceptedTerms, autoSave, saveStatus } = useStoreForm({ initialStore: initialStore ?? null });
 
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -356,6 +356,19 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
     );
   }, [formData]);
 
+  // F36 (fix fiscal): autoSave com refetch de readiness quando o cadastro
+  // fiscal persiste via autoSave (draft→fiscal, update-cnpj). Sem isto o
+  // readiness/banner ficaria stale — só o save explícito incrementava
+  // readinessRefreshKey (handleStep1Submit).
+  const autoSaveWithFiscalReadiness = useCallback(
+    async (fields: Partial<StoreFormData>) => {
+      const result = await autoSave(fields);
+      if (result.fiscalPersisted) setReadinessRefreshKey((k) => k + 1);
+      return result;
+    },
+    [autoSave],
+  );
+
   const {
     activeTab,
     setActiveTab,
@@ -378,7 +391,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
       hasLocalEdits,
       isPersisted: !!storeId,
       editedFields,
-      autoSave,
+      autoSave: autoSaveWithFiscalReadiness,
       saveStatus,
       driftStatus,
       driftCategory,
@@ -1401,7 +1414,10 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
                 <form onSubmit={handleStep1Submit} className="space-y-6" noValidate>
                   <h1 className="text-2xl font-heading font-bold text-text-primary mb-1">Dados da Loja</h1>
                   <p className="text-text-secondary text-sm font-body mb-6">Informe os dados básicos da sua loja</p>
-                  {fiscalPending && !initialStore?.cnpj_normalized && (
+                  {/* F36 (fix fiscal): banner por readiness VIVO (cadastro_fiscal
+                      em missing) — não por initialStore/cnpj_normalized (stale
+                      após autosave fiscal) nem pelo param fiscal=pending. */}
+                  {readiness.missing.some((m) => m.item === "cadastro_fiscal") && (
                     <div className="mb-4 flex items-start gap-3 bg-amber-900/20 border border-amber-700/30 rounded-lg px-4 py-3">
                       <AlertCircle className="w-5 h-5 text-accent-amber shrink-0 mt-0.5" />
                       <p className="text-accent-amber text-sm font-body flex-1">

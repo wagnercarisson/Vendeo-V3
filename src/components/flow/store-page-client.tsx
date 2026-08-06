@@ -11,7 +11,6 @@ export function StorePageClient({ initialStore, userId }: { initialStore: Store 
   const tab = searchParams.get("tab");
   const required = searchParams.get("required");
   const message = searchParams.get("message");
-  const fiscal = searchParams.get("fiscal");
 
   // initialTab é resolvido APENAS na montagem (deep-link). A sincronização de
   // back/forward (?tab= → aba) é responsabilidade do hook useOnboardingTabs
@@ -26,11 +25,8 @@ export function StorePageClient({ initialStore, userId }: { initialStore: Store 
         ? "dados"
         : "dados";
 
-  // fiscal=pending → banner de fiscal pendente na aba Dados (D12).
-  const fiscalPending = fiscal === "pending";
-
-  // storeId NUNCA vem de localStorage("store_id") (F36-IDENTITY-UI-05) —
-  // vem de initialStore/estado local.
+  // O banner de "Fiscal pendente" é derivado do readiness vivo dentro do
+  // StoreIdentityForm (cadastro_fiscal em missing) — não do param fiscal=.
   return (
     <div className="space-y-8">
       <StoreIdentityForm
@@ -38,7 +34,6 @@ export function StorePageClient({ initialStore, userId }: { initialStore: Store 
         userId={userId}
         initialTab={initialTab}
         redirectMessage={message ?? undefined}
-        fiscalPending={fiscalPending}
       />
     </div>
   );
