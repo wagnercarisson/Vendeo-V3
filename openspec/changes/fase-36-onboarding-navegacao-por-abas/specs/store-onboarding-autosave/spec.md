@@ -119,26 +119,35 @@ O hook SHALL **serializar saves** (fila simples) e ignorar respostas defasadas (
 
 ### Requirement: Drift visual sensível/crítico preservado na navegação por abas
 
-O drift SHALL pertencer aos **campos que alimentam a direção visual**, não a uma aba: quando a loja já tem brand profile/assinatura visual e o usuário altera campos do snapshot, qualquer tentativa de **sair do contexto atual** SHALL respeitar drift: trocar de aba, navegação interna (dashboard, campanhas), back/forward e saída da página. A detecção SHALL continuar via snapshot (`computeDriftStatus`/`getDriftPolicy`/`evaluateCriticalDrift`/`evaluateSensitiveDrift`), sem alterar a lógica de drift — apenas o momento de interceptação muda. A distinção de categorias SHALL seguir o código atual (`getDriftPolicy`):
+O drift SHALL pertencer aos **campos que alimentam a direção visual**, não a uma aba: quando a loja já tem brand profile/assinatura visual e o usuário altera campos do snapshot, qualquer tentativa de **sair do contexto atual** SHALL respeitar drift: trocar de aba, navegação interna (dashboard, campanhas), back/forward e saída da página. A detecção do **sensível** SHALL continuar via snapshot (`computeDriftStatus`/`getDriftPolicy`), e a do **crítico** SHALL ser computada **client-side contra o formData vivo** (espelho `computeCriticalDriftStatus` em `drift-validator.ts`, paridade exata com o servidor) — apenas o momento de interceptação muda. A distinção de categorias SHALL seguir `getDriftPolicy`:
 
 - **Sensível** — campos de `SNAPSHOT_FIELDS` aplicáveis ao `identityState` (ex.: `text_only`: `name`, `segment`, `subsegment`, `tone_of_voice`, `positioning`, `short_description`, `slogan`)
-- **Crítico (assinatura visual)** — `name`/`segment` sempre; mais `slogan`/`city`/`state` **somente** conforme `contentUsed.{slogan,city,state}` (esses campos não estão em `SNAPSHOT_FIELDS`; entram pela lógica crítica via `evaluateCriticalDrift`)
+- **Crítico (assinatura visual)** — `name`/`segment` sempre; mais `slogan`/`city`/`state` **somente** conforme `contentUsed.{slogan,city,state}` (esses campos não estão em `SNAPSHOT_FIELDS`; entram pela lógica crítica via `computeCriticalDriftStatus`/`evaluateCriticalDrift`)
 
-Quando houver drift novo (`driftCategory` em `critical` ou `sensitive`) e o usuário tentar sair do contexto com edições locais que tocam campos do snapshot, o sistema SHALL disparar o fluxo de drift **antes de persistir qualquer um desses campos**:
+O servidor (GET `/api/store/{storeId}/visual-signature`) avalia o crítico contra o **banco**; antes de um PATCH ele ainda vê os valores antigos e retornaria `'none'`, deixando o save explícito da aba Dados passar sem interceptação. Por isso o **crítico SHALL ser computado client-side** (reagindo à edição em tempo real) e o GET SHALL expor os metadados que o cliente precisa para isso: `input_snapshot`, `art_direction.content_used`, `dismissed_snapshot`, além de `credit_balance` e `credits_charging_enabled` para o gate de geração.
 
+Quando houver **drift ativo** — sensitive: `driftStatus === 'new'`; critical: `criticalDriftStatus === 'new'` — e o usuário tentar sair do contexto com edições locais que tocam campos do snapshot, o sistema SHALL disparar o fluxo de drift **antes de persistir qualquer um desses campos**:
+
+- O gate de interceptação e de **resume** SHALL ser por **atividade** do drift (`driftStatus === 'new'` / `criticalDriftStatus === 'new'`), **não** por `driftCategory` — após "Manter e salvar"/`ignorar()`, `driftCategory` pode permanecer `'sensitive'`/`'critical'` (Bug A por design) mas o status vira `'dismissed'`; a saída de contexto e a navegação adiada SHALL prosseguir sem reinterceptar o mesmo drift
 - `driftCategory === 'critical'` (com `criticalDrift.status === 'new'`) SHALL abrir o `DriftCriticalModal`
 - `driftCategory === 'sensitive'` SHALL abrir o `DriftDecisionModal`
 - A interceptação SHALL valer também para o **save explícito** (botão "Salvar e continuar") de **qualquer** aba que persiste campos do snapshot — inclusive a aba Dados (`name`/`segment`/`subsegment`) — abrindo o modal **antes** do PATCH
 - A persistência (PATCH) dos campos do snapshot fica **adiada** até a decisão do usuário
 - A decisão reutiliza os efeitos e endpoints atuais: `dismissCriticalDrift()` → **POST** `/api/store/{storeId}/visual-signature/dismiss-critical-drift`; `realinhar()` → **POST** `/api/store/{storeId}/brand-profile/realign`; `ignorar()` → **PATCH** `/api/store/{storeId}/brand-profile/metadata` com `{ drift_dismissed_snapshot: currentSnapshot }`
-- A origem do save interceptado SHALL determinar a persistência pós-decisão: aba Dados (`'step1'`) → `save()`; aba Posicionamento (`'step2'`) → `save()` + efeitos visuais (cores/logo/inferência)
-- **Realinhar** SHALL **persistir os dados aceitos ANTES do POST `/realign`** — a rota reconstrói o snapshot a partir do banco; salvar depois realinhar deixaria o snapshot stale e o drift voltaria
+- O **POST** `/dismiss-critical-drift` SHALL aceitar no body o snapshot dos **valores aceitos** (`{ snapshot: { name, segment, slogan, city, state } }` — formData vivo) com **fallback** para o store do banco: persistir o snapshot antigo do banco contra os valores ainda não salvos reabriria o crítico no recompute (loop no "Manter")
+- A origem do save interceptado SHALL determinar a persistência pós-decisão: aba Dados (`'step1'`) → `save()`; aba Posicionamento (`'step2'`) → `save()` + efeitos visuais (cores/logo/inferência); **navegação/troca de aba interceptada** (origem `null`) → `save()` sempre que houver edições locais (`hasLocalEdits`)
+- **Realinhar** SHALL **persistir os dados aceitos ANTES do POST `/realign`** — em **qualquer** origem (save explícito interceptado `'step1'`/`'step2'` OU navegação interceptada com `hasLocalEdits`) — a rota reconstrói o snapshot a partir do banco; salvar depois realinhar deixaria o snapshot stale e o drift voltaria
 - **Ignorar / "Manter e salvar" / dismiss crítico** SHALL persistir os dados aceitos **sem** realinhar
+- **"Manter e salvar"** SHALL gravar o `drift_dismissed_snapshot` (via `ignorar()`) e **não reabrir o mesmo drift**; uma **nova divergência** posterior SHALL reabrir o fluxo
+- **"Continuar por agora"** (`onContinueWithoutDismiss`) SHALL persistir os dados aceitos **sem** gravar o `drift_dismissed_snapshot` — o badge de drift permanece `'new'`
+- O **dismiss** SHALL ser refletido **localmente** (espelho `dismissedSnapshot` no `useDriftDetection`): o PATCH do `ignorar()` grava no servidor, mas o profile local não é refletido; sem o espelho, um recompute (ex.: edição fora do snapshot) recomputa com dismissed `null` e reabre drift falso antes de um refetch do profile
+- O **dismiss crítico** SHALL ter espelho local análogo (`dismissedCriticalSnapshot`): o POST grava os valores aceitos no servidor, mas o refetch só ocorre depois (`driftRefreshKey`); sem o espelho, um recompute no intervalo usaria o dismissed antigo (`null`) e reabriria o crítico (loop no "Manter")
 - **Cancelar** o modal SHALL manter o usuário no contexto atual, **sem** persistir os campos do snapshot e sem decidir drift
 - O drift **não é one-shot**: após realinhar/ignorar/dismiss, uma **nova divergência** em campos do snapshot SHALL reabrir o fluxo (refs de guard do `useDriftDetection` sincronizados com o estado público)
 - Campos que **não** entram no snapshot (ex.: fiscal/billing, visuais não relacionados) SHALL poder auto-save normalmente, mesmo com drift pendente
 - Após a decisão, o PATCH dos campos do snapshot e a navegação pretendida SHALL prosseguir
-- A capacidade de assinaturas visuais (`totalGeneratedSignatures`) e o gatilho de limite SHALL permanecer inalterados
+- **"Gerar novamente"** no `DriftCriticalModal` SHALL **persistir os dados aceitos ANTES de abrir a aprovação** (`persistSaveFromDrift()` → `handleOpenSubstitutionApproval()`): a nova VS nasceria com dados antigos se persistíssemos depois. Se o save falhar, a aprovação **NÃO** abre — o modal crítico permanece aberto com erro visível
+- A capacidade de novas assinaturas SHALL ser gateada por **créditos reais** (não pelo limite legado de 3 gerações): `canGenerateNewSignature = !creditsChargingEnabled || credit_balance > 0`; `totalGeneratedSignatures` permanece como **contagem** informativa (exclui `failed`). Sem crédito (saldo 0 + charging ativo), o `DriftCriticalModal` SHALL oferecer "Ver meus créditos" (→ `/conta`), "Manter direção atual" e "Remover mesmo assim" — **nunca** "Gerar novamente"
 
 #### Scenario: Saída do contexto com drift sensível abre DriftDecisionModal antes de salvar
 
@@ -181,10 +190,30 @@ Quando houver drift novo (`driftCategory` em `critical` ou `sensitive`) e o usu�
 
 #### Scenario: Ignorar ou manter e salvar persiste sem realinhar
 
-- **WHEN** o usuário escolhe "Ignorar" ou "Manter e salvar" após um save interceptado
+- **WHEN** o usuário escolhe "Manter e salvar" (ou o caminho de erro "Continuar por agora") após um save interceptado
 - **THEN** a persistência da origem interceptada roda **sem** chamar `/realign`
-- **AND** no caso "Ignorar", o `drift_dismissed_snapshot` é gravado (badge some)
-- **AND** no caso "Manter e salvar", o badge de drift permanece
+- **AND** no caso "Manter e salvar", o `drift_dismissed_snapshot` é gravado e o drift vira `'dismissed'` (o mesmo drift não reabre)
+- **AND** no caso "Continuar por agora", o `drift_dismissed_snapshot` **não** é gravado — o badge de drift permanece `'new'`
+
+#### Scenario: Dismiss em navegação/troca de aba não reabre o mesmo drift (Fix A)
+
+- **WHEN** o usuário resolve o drift (realinhar/ignorar/dismiss) durante uma troca de aba ou navegação interceptada
+- **AND** o `driftStatus`/`criticalDriftStatus` vira `'dismissed'` (enquanto `driftCategory` pode permanecer `'sensitive'`/`'critical'`)
+- **THEN** a saída de contexto SHALL prosseguir sem reinterceptar (o gate usa a **atividade** do drift, não a categoria)
+- **AND** a navegação adiada SHALL ser retomada (resume) e o auto-save dos campos pendentes prossegue
+
+#### Scenario: Dismiss refletido localmente evita reabertura falsa antes do refetch (Fix B)
+
+- **WHEN** após "Manter e salvar" um recompute acontece por uma mudança **fora** do snapshot (ex.: cidade) antes de um refetch do profile
+- **THEN** o `driftStatus` SHALL permanecer `'dismissed'` — o espelho local do `drift_dismissed_snapshot` no `useDriftDetection` é usado no recompute, sem esperar o refetch
+- **AND** uma **nova divergência** real (campo do snapshot ≠ snapshot dismissado) SHALL reabrir o drift `'new'`
+
+#### Scenario: Realinhar em navegação interceptada persiste antes do POST /realign (Fix C)
+
+- **WHEN** o usuário escolhe "Realinhar" após uma troca de aba/navegação interceptada (origem `null`) com edições locais
+- **THEN** o `save()` das edições locais roda **primeiro** (sem efeitos visuais — origem `null`)
+- **AND** somente depois o **POST** `/api/store/{storeId}/brand-profile/realign` é disparado
+- **AND** o snapshot reconstruído pela rota reflete os dados recém-persistidos (drift não retorna)
 
 #### Scenario: Cancelar o save interceptado não persiste nada
 
@@ -204,11 +233,35 @@ Quando houver drift novo (`driftCategory` em `critical` ou `sensitive`) e o usu�
 - **THEN** o auto-save desses campos roda normalmente
 - **AND** o fluxo de drift só bloqueia os campos do snapshot
 
-#### Scenario: Capacidade de assinaturas visuais é preservada
+#### Scenario: Capacidade de assinaturas visuais é gateada por créditos
 
-- **WHEN** a loja já tem assinatura visual ativa e o fluxo de drift roda
-- **THEN** `totalGeneratedSignatures` permanece intacto
-- **AND** o gatilho de limite de assinaturas não é alterado
+- **WHEN** a loja já tem assinatura visual ativa, há drift crítico novo e o usuário tenta gerar uma nova assinatura
+- **THEN** `totalGeneratedSignatures` permanece como **contagem** informativa (exclui `failed`) — sem ser fonte de bloqueio
+- **AND** a capacidade de gerar é determinada por `canGenerateNewSignature = !creditsChargingEnabled || credit_balance > 0`
+- **AND** com crédito (ou charging desativado), o modal oferece **"Gerar novamente"**
+- **AND** sem crédito (saldo 0 + charging ativo), o modal **não** oferece "Gerar novamente" — oferece "Ver meus créditos" (→ `/conta`), "Manter direção atual" e "Remover mesmo assim"
+
+#### Scenario: Drift crítico é detectado client-side contra o formData vivo (antes de qualquer PATCH)
+
+- **WHEN** a loja tem assinatura visual ativa e o usuário edita `name` (ou outro campo crítico) na aba Dados e clica "Salvar e continuar" **sem** ter salvo antes
+- **THEN** o `criticalDriftStatus` SHALL ser `'new'` computado **client-side** contra o formData vivo (via `computeCriticalDriftStatus`, com `input_snapshot`/`content_used`/`dismissed_snapshot` vindos do GET `/api/store/{storeId}/visual-signature`)
+- **AND** o `DriftCriticalModal` abre **antes** de qualquer PATCH de `/api/store/{storeId}` — o servidor (que avalia contra o banco ainda com os valores antigos) retornaria `'none'`; a detecção não pode depender dele
+- **AND** nenhuma chamada de POST/PATCH/DELETE é disparada pela detecção
+
+#### Scenario: Dismiss crítico persiste o snapshot dos valores aceitos
+
+- **WHEN** o usuário escolhe "Manter direção atual" no `DriftCriticalModal`
+- **THEN** o POST `/api/store/{storeId}/visual-signature/dismiss-critical-drift` envia no body `{ snapshot: { name, segment, slogan, city, state } }` com os valores **aceitos** (formData vivo)
+- **AND** a rota persiste esse snapshot (fallback: store do banco se o body for inválido)
+- **AND** o espelho local `dismissedCriticalSnapshot` é atualizado — o recompute do crítico vira `'dismissed'` sem depender de refetch, evitando o loop no "Manter"
+- **AND** uma **nova divergência** crítica (≠ snapshot aceito) reabre `'new'`
+
+#### Scenario: Gerar novamente persiste os dados aceitos antes da aprovação
+
+- **WHEN** o usuário escolhe "Gerar novamente" no `DriftCriticalModal` com crédito
+- **THEN** `persistSaveFromDrift()` roda **primeiro** (persiste os dados aceitos conforme a origem interceptada)
+- **AND** somente depois a `VisualSignatureApprovalModal` abre — a nova VS não pode nascer com dados antigos
+- **AND** se o `persistSaveFromDrift()` falhar, a aprovação **NÃO** abre e o modal crítico permanece aberto com erro visível
 
 ### Requirement: Computação de estado por aba (computeTabState)
 

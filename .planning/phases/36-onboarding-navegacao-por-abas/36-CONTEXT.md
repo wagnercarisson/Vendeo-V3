@@ -142,7 +142,7 @@ Nenhuma mensagem contextual é perdida: `fiscal=pending`, `message=needs-visual-
 2. senão `driftCategory === 'sensitive'` → **`DriftDecisionModal`**; `realinhar()` → **POST** `/api/store/${store.id}/brand-profile/realign`; `ignorar()` → **PATCH** `/api/store/${store.id}/brand-profile/metadata` com `{ drift_dismissed_snapshot: currentSnapshot }`
 3. só após a decisão (realinhar/ignorar/dismissCriticalDrift) o PATCH dos campos do snapshot e a navegação prosseguem
 
-**Auto-save seletivo:** na troca de aba/navegação interna, se as edições locais tocam campos do snapshot e há drift novo, o PATCH desses campos fica **adiado** até a decisão. Campos que **não** entram no snapshot (ex.: fiscal/billing, visuais não relacionados) podem auto-save normalmente. Cancelar o modal mantém o usuário no contexto atual, sem persistir campos do snapshot. A capacidade de múltiplas assinaturas visuais (`totalGeneratedSignatures`) e o gatilho de limite permanecem inalterados.
+**Auto-save seletivo:** na troca de aba/navegação interna, se as edições locais tocam campos do snapshot e há drift novo, o PATCH desses campos fica **adiado** até a decisão. Campos que **não** entram no snapshot (ex.: fiscal/billing, visuais não relacionados) podem auto-save normalmente. Cancelar o modal mantém o usuário no contexto atual, sem persistir campos do snapshot. O drift **crítico** é computado **client-side contra o formData vivo** (computeCriticalDriftStatus — o GET visual-signature avalia contra o banco, estale antes do save); a capacidade de novas assinaturas é gateada por **créditos** (`canGenerateNewSignature = !creditsChargingEnabled || saldo>0`) e `totalGeneratedSignatures` permanece apenas como contagem.
 
 ### D14 — Renumeração F36/F37
 `DECIDIDO`

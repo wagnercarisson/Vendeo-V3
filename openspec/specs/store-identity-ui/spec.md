@@ -1789,49 +1789,53 @@ The system SHALL provide a new modal component for critical drift scenarios. The
 Textos alinhados:
 - Title: "Assinatura visual desatualizada"
 - Message explaining that critical data (name, segment) changed since VS creation
-- Primary CTA: "Atualizar assinatura visual" (with credit) or unavailable (without credit)
+- Primary CTA: "Gerar novamente" (with credit) or unavailable (without credit)
 - Secondary CTA: "Manter direção atual" -- dismiss + save (persists dismiss of critical fields)
 - Tertiary: "Cancelar"
 - Without credit: "Remover mesmo assim" -- opens VS removal confirmation (changes to text_only)
-- Without credit: "Comprar créditos -- Em breve" -- disabled, informational tooltip
+- Without credit: "Ver meus créditos" -- navigates to `/conta`
 
 NOTE: "Manter direção atual" saves the user's NEW store data, not the old values. The dismiss persists the current snapshot of critical fields, but the store values are the new ones the user just edited.
 
-**With credit (signatures < 3):**
-- Primary CTA: "Atualizar assinatura visual" -- opens ApprovalModal with mode:'substitution'
+**With credit (`canGenerateNewSignature = !creditsChargingEnabled || credit_balance > 0`):**
+- Primary CTA: "Gerar novamente" -- persists the accepted data FIRST (`persistSaveFromDrift()`), then opens ApprovalModal with mode:'substitution'
 - Secondary CTA: "Manter direção atual" -- executes dismiss + save
 - Tertiary: "Cancelar"
 
-**Without credit (signatures >= 3):**
-- Alert: signature limit reached
+**Without credit (saldo 0 + `creditsChargingEnabled`):**
+- Alert: "Você não tem créditos suficientes para gerar uma nova assinatura visual. Cada geração consome 1 crédito."
 - Button "Manter direção atual" -- dismiss + save
 - Button "Remover mesmo assim" -- opens VS removal confirmation (changes to text_only)
-- Button "Comprar créditos -- Em breve" -- disabled, informational tooltip
+- Button "Ver meus créditos" -- navigates to `/conta`
 - Button "Cancelar"
 
 In both scenarios, dismiss + save SHALL:
-1. Call POST /dismiss-critical-drift
+1. Call POST /dismiss-critical-drift (with `{ snapshot }` = the accepted values from the live formData; server falls back to the DB store)
 2. Save store normally
 3. Reload data
 
-#### Scenario: Critical modal with credit opens approval
+"Gerar novamente" SHALL NOT open the approval flow when the pre-save fails: if `persistSaveFromDrift()` rejects, the modal stays open and shows an error.
 
-- **WHEN** user has < 3 successful signatures
-- **AND** user clicks "Atualizar assinatura visual"
-- **THEN** ApprovalModal SHALL open with mode:'substitution'
-- **AND** the flow proceeds to signature generation and approval
+#### Scenario: Critical modal with credit opens approval after persisting
+
+- **WHEN** user has credit (or charging disabled)
+- **AND** user clicks "Gerar novamente"
+- **THEN** `persistSaveFromDrift()` SHALL run FIRST (persisting the accepted store data)
+- **AND** only after success, ApprovalModal SHALL open with mode:'substitution'
+- **AND** if the pre-save fails, the approval SHALL NOT open and the error SHALL be shown in the modal
 
 #### Scenario: Critical modal without credit shows options
 
-- **WHEN** user has >= 3 successful signatures
-- **THEN** "Atualizar assinatura visual" SHALL NOT be available
+- **WHEN** user has no credit and charging is enabled
+- **THEN** "Gerar novamente" SHALL NOT be available
 - **AND** "Manter direção atual" SHALL dismiss + save
 - **AND** "Remover mesmo assim" SHALL show confirmation dialog
+- **AND** "Ver meus créditos" SHALL navigate to `/conta`
 
 #### Scenario: Critical modal dismiss + save flow
 
 - **WHEN** user clicks "Manter direção atual"
-- **THEN** POST /dismiss-critical-drift SHALL be called
+- **THEN** POST /dismiss-critical-drift SHALL be called with the accepted values snapshot
 - **AND** store save SHALL proceed (with the NEW store values, not old ones)
 - **AND** data SHALL be reloaded
 
