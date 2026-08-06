@@ -1,19 +1,19 @@
 ---
-status: testing
+status: complete
 phase: 36-onboarding-navegacao-por-abas
 source: 36-01-SUMMARY.md, 36-02-SUMMARY.md, 36-03-SUMMARY.md, 36-04-SUMMARY.md, 36-05-SUMMARY.md, 36-06-SUMMARY.md
 started: 2026-08-05T17:45:00Z
-updated: 2026-08-05T20:00:00Z
+updated: 2026-08-06T18:45:00Z
 ---
 
 ## Current Test
 <!-- OVERWRITE each test - shows where we are -->
 
-number: 4/6/11
-name: Re-verificação hard-block (D16) — Posicionamento / Direção Visual / Deep-link
+number: 20/20
+name: UAT final F36 — coerência cruzada (abas/autosave/legal/CNPJ/drift sensível/crítico/mobile)
 expected: |
-  Após implementar o D16 (hard-block), re-testar 4, 6 e 11: aba bloqueada não ativável, conteúdo funcional não renderiza, deep-link/back-forward redirecionam para a primeira aba válida.
-awaiting: user adjustments (artefatos aguardando revisão)
+  Revisão final de coerência antes do openspec verify: validações automáticas (typecheck/lint/vitest/openspec validate --strict) + cenários críticos das 7 dimensões (navegação por abas, autosave, legal acceptance, CNPJ/readiness, drift sensível, drift crítico, mobile/desktop). Pronto para openspec verify.
+awaiting: openspec verify (próximo passo)
 
 ## Tests
 
@@ -90,14 +90,36 @@ expected: `npm run typecheck` finaliza sem erros (todas as SUMMARYs declaram "ty
 result: pass
 note: "Era issue (5 erros do commit 44eb92d: useRef sem import, skipped sem tipo, colisão FormData). Corrigido em sessão e reexecutado: typecheck limpo, lint limpo, 1480/1480 testes. Gap resolvido (ver Gaps)."
 
+### 17. Drift sensível recorrente (D13)
+expected: Alterar um campo do snapshot e tentar sair do contexto (trocar de aba / gerar campanha / dashboard / back-forward) abre o DriftDecisionModal **antes** de qualquer PATCH dos campos do snapshot. Realinhar persiste os dados aceitos **antes** do POST `/realign`; "Manter e salvar"/ignorar persiste sem realinhar e grava o `drift_dismissed_snapshot`; cancelar não persiste nada; nova divergência reabre o fluxo (drift NÃO é one-shot); espelho local (`dismissedSnapshot`) evita reabertura falsa antes de um refetch; edições em campos fora do snapshot (ex.: billing/cidade) fazem auto-save normalmente mesmo com drift pendente.
+result: pass
+note: "Coberto por store-identity-form.drift-tabs.test.ts (30 cenários): (a) interceptação por atividade (driftStatus 'new', não driftCategory), (b) navegação interna intercepta, (c) modal correto (sensível vs crítico), (d) cancelar sem persistir, (e) endpoints (realign/metadata/dismiss) + resume pós-decisão, (Fix A) dismissed não reintercepta + resume, (Fix B) espelho local, (g) auto-save seletivo de campos fora do snapshot. Revalidado na revisão final → pass."
+
+### 18. Drift crítico de assinatura visual + créditos (D13)
+expected: VS ativa + edição de `name`/`segment` (ou `slogan`/`cidade`/`UF` quando `content_used` indicar) → DriftCriticalModal computado **client-side contra o formData vivo** antes de qualquer PATCH (o servidor veria valores antigos e retornaria 'none'). Dismiss persiste o snapshot dos **valores aceitos** (`{ name, segment, slogan, city, state }`) com fallback para o banco. "Gerar novamente" só com crédito (`canGenerateNewSignature = !charging || saldo > 0`); sem crédito, o modal oferece "Ver meus créditos" (→ `/conta`), "Manter direção atual" e "Remover mesmo assim" — nunca "Gerar novamente". "Gerar novamente" persiste os dados aceitos **antes** de abrir a aprovação (save falho NÃO abre a aprovação; modal permanece com erro visível). `totalGeneratedSignatures` permanece contagem informativa (exclui `failed`).
+result: pass
+note: "Coberto por store-identity-form.drift-tabs.test.ts (crítico client-side, dismiss com valores aceitos, créditos com/sem saldo, persist antes da aprovação) + rota `dismiss-critical-drift` (merge do snapshot no metadata com fallback DB). Revalidado na revisão final → pass."
+
+### 19. Autosave fiscal / CNPJ (fix fiscal)
+expected: CNPJ válido + troca de aba / navegação interna / "Gerar campanha" persiste o fiscal via `POST /api/store/update-cnpj` **antes** de navegar (sem exigir "Salvar e continuar"); CNPJ inválido/incompleto ou sem razão social NÃO dispara update-cnpj (readiness permanece `cadastro_fiscal` pendente); falha 400/409/503 → `{ ok: false }` + erro visível (não finge sucesso fiscal; navegação prossegue pois storeId existe); loja que JÁ tem CNPJ usa PATCH com `razaoSocial/nomeFantasia` (sem update-cnpj); após `fiscalPersisted` a próxima navegação NÃO repete update-cnpj; o readiness é refeito (`readinessRefreshKey`) e o banner "Fiscal pendente" some quando `cadastro_fiscal` sai de `missing` (derivado do readiness vivo, não de `initialStore` stale).
+result: pass
+note: "Coberto por use-store-form.autosave-fiscal.test.ts (11 cenários) + use-onboarding-tabs.test.ts (ordem: update-cnpj resolve ANTES da navegação) + store-page-client.test.tsx. Revalidado na revisão final → pass."
+
+### 20. Feedback explícito de aceite legal (fix aceite)
+expected: Com dados mínimos mas sem aceite, clicar em "Salvar e continuar" (desktop ou mobile) NÃO salva, NÃO navega e exibe feedback imediato — modal com a mensagem curta "Para continuar, leia e aceite os termos de uso."; ao fechar, o foco/scroll vai ao card de aceite **visível** no viewport (`#aceite-legal` desktop / `#aceite-legal-mobile` mobile, ids únicos). Tentar avançar por aba sem aceite → `blockedNotice` com motivo `needs_legal_acceptance` e autoSave NÃO chamado. Após aceitar → salva e navega. Mobile "Continue" mantém o microcopy do motivo (inalterado).
+result: pass
+note: "Coberto por store-identity-form.aceite-legal.test.tsx (3 cenários: modal + sem save, foco ao card, pós-aceite navega) + use-onboarding-tabs.test.ts (bloqueio legal na troca de aba). Revalidado na revisão final → pass."
+
 ## Summary
 
-total: 16
-passed: 16
+total: 20
+passed: 20
 issues: 0
 pending: 0
 skipped: 0
 blocked: 0
+
+> **UAT final (coerência cruzada — 2026-08-06):** revisão de coerência das 7 dimensões (navegação por abas / autosave / legal acceptance / CNPJ-readiness / drift sensível / drift crítico / mobile-desktop) confrontando os artefatos (design.md D1-D16 + specs `store-onboarding-tabs`, `store-onboarding-autosave`, `store-identity-ui`, `legal-acceptance-panel`, `store-readiness`, `store-ownership-api`, `store-onboarding-draft`, `store-draft-creation`) com a implementação (`use-onboarding-tabs.ts`, `use-store-form.ts`, `use-drift-detection.ts`, `store-identity-form.tsx`, `store-tabs.tsx`, `legal-acceptance-panel.tsx`, `drift-critical-modal.tsx`, `drift-decision-modal.tsx`, rotas `update-cnpj`/`dismiss-critical-drift`, `POST /api/store` draft × verified, migration `create_store_draft`). **Validações automáticas:** `npx tsc -p tsconfig.typecheck.json --noEmit` (limpo), `npm run lint` (limpo), `npx vitest run` (**182 arquivos / 1546 testes pass**), `npx openspec validate fase-36-onboarding-navegacao-por-abas --strict` (valid). **Divergências menores (não bloqueantes):** (1) flags de interceptação `driftNavIntercept`/`driftSaveIntercept` são código morto (nunca `setXxx(true)`) — o modal de navegação duplicado (linha 2624) é inalcançável e não persiste antes do realign, risco se religado; (2) label "CNPJ *" mantém o asterisco mesmo com CNPJ opcional (F36 D8); (3) `onContinueWithoutDismiss` (estado de erro do modal) não limpa `pendingTabRef` — edge case, drift segue `new` e o resume fica pendente. **Recomendação:** pronto para `openspec verify` — correções opcionais de higiene podem ser tratadas em follow-up.
 
 > **D16 (revisão pós-UAT):** testes 4, 6 e 11 reabertos para re-verificação após a implementação do **hard-block** (decisão de produto que substitui o soft-block). Artefatos atualizados: `openspec/.../design.md` (D16), `specs/store-onboarding-tabs|store-onboarding-autosave|store-identity-ui|legal-acceptance-panel`. Implementado em `src/hooks/use-onboarding-tabs.ts`, `src/components/flow/store-tabs.tsx` e `src/components/flow/store-identity-form.tsx`; testes D16 em `store-tabs.test.tsx` e `use-onboarding-tabs.test.ts`. Re-verificado: typecheck limpo, lint limpo, **1483/1483 testes** (13 novos/reescritos D16). Testes 4/6/11 revalidados → pass.
 
