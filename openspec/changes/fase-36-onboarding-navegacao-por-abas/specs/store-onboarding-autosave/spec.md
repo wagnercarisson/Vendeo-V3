@@ -70,10 +70,26 @@ O hook SHALL **serializar saves** (fila simples) e ignorar respostas defasadas (
 
 #### Scenario: Troca de aba sem mínimo não cria loja
 
-- **WHEN** o usuário troca da aba Dados para Posicionamento sem nome, segmento ou aceite válidos
+- **WHEN** o usuário tenta trocar da aba Dados para Posicionamento sem nome, segmento ou aceite válidos
 - **THEN** o draft é gravado no `localStorage`
 - **AND** `POST /api/store` NÃO é chamado
-- **AND** a aba Posicionamento permanece bloqueada (com motivo no painel)
+- **AND** a aba Posicionamento permanece bloqueada
+- **AND** o usuário **permanece na aba Dados** (hard-block D16 — a aba bloqueada não é ativada)
+- **AND** um feedback claro do que falta é exibido (na aba atual), sem ativar a aba bloqueada
+
+#### Scenario: Troca para aba bloqueada não navega nem persiste (D16)
+
+- **WHEN** o usuário tenta trocar para uma aba bloqueada (ex.: Posicionamento sem mínimo, ou Direção Visual sem tom de voz)
+- **THEN** o `activeTab` NÃO muda para a aba bloqueada
+- **AND** nenhum auto-save de navegação é disparado pelo alvo bloqueado (não há saída a persistir)
+- **AND** o usuário permanece na aba atual com o motivo do bloqueio visível
+
+#### Scenario: Dados → Posicionamento com mínimo válido cria a loja e navega (única exceção de alvo "bloqueado")
+
+- **WHEN** o usuário tenta trocar de Dados para Posicionamento
+- **AND** nome + segmento + aceite legal estão válidos mas `storeId` ainda não existe
+- **THEN** o auto-save cria a loja via POST draft (D15)
+- **AND** com `storeId` criado, o alvo passa a estar desbloqueado e a navegação prossegue
 
 #### Scenario: Navegação interna roda auto-save antes de sair
 

@@ -56,7 +56,7 @@ A derivação do estado SHALL vir do `legalClearance` da F30: `getAcceptanceStat
 O sistema SHALL, quando o aceite legal está `pending` ou `needs_reacceptance`:
 
 - Bloquear a aba **Posicionamento** com motivo claro: `falta aceite legal`
-- Exibir o motivo no painel ativo com link para abrir o card de aceite (D3)
+- **Hard-block (D16):** a aba Posicionamento **não se torna painel ativo**; o motivo fica acessível no **botão da aba bloqueada** (tooltip/`aria-label`) e/ou como orientação na **aba atual** (Dados) com link para abrir o card de aceite
 - A aba Direção Visual é desbloqueada pelos seus próprios pré-requisitos (`storeId` existente + tom de voz, D9) — o aceite não é pré-requisito direto dela, mas sem aceite vigente a geração permanece bloqueada (gate F34 inalterado)
 
 #### Scenario: Aceite pendente bloqueia Posicionamento com motivo
@@ -64,7 +64,8 @@ O sistema SHALL, quando o aceite legal está `pending` ou `needs_reacceptance`:
 - **WHEN** o usuário está na aba Dados
 - **AND** `acceptance` é `pending` ou `needs_reacceptance`
 - **THEN** a aba Posicionamento exibe estado `blocked`
-- **AND** o motivo `falta aceite legal` é exibido no painel
+- **AND** a aba Posicionamento **não é ativável** (clicar nela não navega — D16)
+- **AND** o motivo `falta aceite legal` é exibido no **botão da aba** (tooltip/`aria-label`) e/ou como orientação na aba atual
 - **AND** um link abre o card de aceite
 
 #### Scenario: Aceite aceito destrava Posicionamento

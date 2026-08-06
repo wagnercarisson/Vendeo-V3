@@ -20,6 +20,8 @@ provides:
   - Testes de componente/hook/lib (StoreTabs, LegalAcceptancePanel, useOnboardingTabs, draft-store-autosave, store-page-client)
   - Drift bloqueador D13 (cenários a-g) com asserts de endpoints
   - Readiness de loja draft documentada em teste + regressão F30/F32/F33/F34 completa
+
+> **D16 — supersede (pós-implementação):** cenários de teste deste plano para aba bloqueada (painel + "Voltar para X") foram **substituídos pelo hard-block (D16)** — ver `36-06-PLAN.md` nota. Re-verificar os testes de bloqueio ao implementar (testes 4/6/11/12/13 da UAT reabertos).
 affects: []
 
 tech-stack:
@@ -152,7 +154,7 @@ completed: 2026-08-05
 
 ## Next Phase Readiness
 
-- **Task 4 (checkpoint humano)**: ✅ aprovado pelo usuário — validação mobile (abas compactas, "Continuar" fixo, rascunho restaurado, background seguro), desktop (coluna legal sticky, back/forward ?tab=, deep-link bloqueado com "Voltar para Dados"), fluxos de entrada (guard draft → ?tab=dados&fiscal=pending, banners ?tab=) e legal (Posicionamento bloqueado sem aceite).
+- **Task 4 (checkpoint humano)**: ✅ aprovado pelo usuário — validação mobile (abas compactas, "Continuar" fixo, rascunho restaurado, background seguro), desktop (coluna legal sticky, back/forward ?tab=, deep-link bloqueado com "Voltar para Dados"), fluxos de entrada (guard draft → ?tab=dados&fiscal=pending, banners ?tab=) e legal (Posicionamento bloqueado sem aceite). **Pós-UAT — reaberto pela decisão D16 (hard-block):** aba bloqueada não ativável, conteúdo funcional não renderiza, deep-link/back-forward redirecionam para a primeira aba anterior válida (ver `36-UAT.md` testes 4/6/11 e `36-CONTEXT.md` D16).
 - ✅ `supabase db push` aplicado — migration `20260801000001_f36_create_store_draft` presente no remoto (confirmado em `supabase migration list`). RPC `create_store_draft` operacional — pré-requisito de verificação da fase satisfeito.
 - Fase 36 pronta para conclusão: 1478 testes, typecheck/lint limpos, 6/6 plans implementados.
 

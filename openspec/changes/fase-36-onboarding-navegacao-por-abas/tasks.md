@@ -10,7 +10,7 @@
 - [ ] 2.1 Criar `src/lib/store-onboarding/tabs.ts` com a definição das 3 abas (`dados`/`posicionamento`/`direcao-visual`), labels desktop e mobile (`Dados`/`Perfil`/`Visual`), e `computeTabUnlock(tab, ctx)` puro retornando `{ unlocked, reason }` (regras D1/D9: dados = aberta por padrão; posicionamento = nome + segmento + aceite legal + `storeId` criado via auto-save; direção visual = `storeId` existente + tom de voz)
 - [ ] 2.2 Criar `src/lib/store-onboarding/tab-state.ts` com `computeTabState(tab, ctx)` puro retornando `{ state, reason? }` e a prioridade `pending_generation > blocked > draft > ready > saved` (D7)
 - [ ] 2.3 Criar `src/lib/store-onboarding/draft-store.ts` com `draftKey/saveDraft/restoreDraft/clearDraft` (TTL 24h, chaves `:new`/`:${storeId}`, `updatedAt`, restauração remove chave expirada) e testes unitários (chave, TTL, escopo por usuário)
-- [ ] 2.4 Escrever testes unitários de `tabs.ts` e `tab-state.ts` cobrindo os cenários dos deltas (desbloqueio progressivo, prioridade de estados, motivo no painel)
+- [ ] 2.4 Escrever testes unitários de `tabs.ts` e `tab-state.ts` cobrindo os cenários dos deltas (desbloqueio progressivo, prioridade de estados, **negação de ativação de aba bloqueada / hard-block D16**)
 
 ## 3. Auto-save, rascunho e drift
 
@@ -21,10 +21,10 @@
 
 ## 4. UI — abas, coluna de aceite legal e refatoração do formulário
 
-- [ ] 4.1 Criar `src/components/flow/store-tabs.tsx`: container ARIA tabs (`tablist`/`tab`/`tabpanel`, roving tabindex, setas ←/→ e Home/End, `aria-selected`, `aria-label` com estado), labels mobile compactos, badge pequeno por estado, motivo fora do botão (painel ativo), alvo de toque ≥ 44px (F22)
+- [ ] 4.1 Criar `src/components/flow/store-tabs.tsx`: container ARIA tabs (`tablist`/`tab`/`tabpanel`, roving tabindex, setas ←/→ e Home/End, `aria-selected`, `aria-label` com estado), labels mobile compactos, badge pequeno por estado, aba bloqueada com `aria-disabled="true"` e **motivo acessível no próprio botão** (tooltip/`aria-label`/`aria-describedby`) — clique/seta em aba bloqueada **não dispara `onTabChange`** (hard-block D16), alvo de toque ≥ 44px (F22)
 - [ ] 4.2 Criar `src/components/flow/legal-acceptance-panel.tsx`: estados `pending/accepted/needs_reacceptance` (enum único), variantes `desktop-sticky-column`/`mobile-compact`, CTA abre `ContractAcceptanceModal` (F30), derivação via `legalClearance` da F30, `aria-label`/`aria-expanded`
-- [ ] 4.3 Refatorar `src/components/flow/store-identity-form.tsx` de wizard 2 steps para painéis por aba: `useState<1|2>` → estado de abas via `useOnboardingTabs`, aceite legal removido do formulário (vira coluna lateral), bloqueio da aba Posicionamento com motivo `falta aceite legal`, CTA "Continuar" fixo no mobile
-- [ ] 4.4 Atualizar `src/components/flow/store-page-client.tsx`: parsing de `?tab=` → aba inicial (deep-link), compat `required=visual-direction` → aba Direção Visual, `required=cadastro-fiscal` → aba Dados, leitura de `message=` mantida, layout desktop (coluna sticky) × mobile (abas compactas)
+- [ ] 4.3 Refatorar `src/components/flow/store-identity-form.tsx` de wizard 2 steps para painéis por aba: `useState<1|2>` → estado de abas via `useOnboardingTabs`, aceite legal removido do formulário (vira coluna lateral), aba Posicionamento bloqueada (sem aceite) **não fica ativa** — motivo `falta aceite legal` fica acessível no botão da aba e na aba atual, CTA "Continuar" fixo no mobile e **desabilitado quando a próxima aba está bloqueada** (microcopy do que falta)
+- [ ] 4.4 Atualizar `src/components/flow/store-page-client.tsx`: parsing de `?tab=` → aba inicial (deep-link) — **aba bloqueada nunca vira aba inicial: redireciona/sincroniza para a primeira aba anterior válida + aviso "Complete esta etapa para liberar {aba}" (D16)**, compat `required=visual-direction` → aba Direção Visual, `required=cadastro-fiscal` → aba Dados, leitura de `message=` mantida, layout desktop (coluna sticky) × mobile (abas compactas)
 
 ## 5. Migração de redirects e banners
 
@@ -36,7 +36,7 @@
 ## 6. Testes e verificação final
 
 - [ ] 6.1 Escrever testes de endpoint do `POST /api/store` (modo draft sem CNPJ 201 sem crédito; verified com CNPJ; gates: geração bloqueada sem fiscal; `is_test_store` gera sem CNPJ somente com entitlement de teste, sem grant freemium automático) e de integração draft → `update-cnpj` (readiness vira ready após anexar CNPJ)
-- [ ] 6.2 Escrever testes de componente para `StoreTabs` (ARIA, deep-link, back/forward, aba bloqueada, mobile compacto) e `LegalAcceptancePanel` (estados, variantes, acessibilidade)
+- [ ] 6.2 Escrever testes de componente para `StoreTabs` (ARIA, deep-link/back-forward em aba bloqueada → redireciona para a primeira aba anterior válida + aviso, clique/seta em aba bloqueada **não ativa** (sem `onTabChange`), `aria-disabled` + motivo no botão, mobile compacto com "Continuar" desabilitado quando a próxima aba bloqueada) e `LegalAcceptancePanel` (estados, variantes, acessibilidade)
 - [ ] 6.3 Escrever testes do hook `useOnboardingTabs` (troca de aba com/sem mínimo, navegação interna, saveStatus error, serialização de saves) e de `autoSave`/draft (restauração, reconciliação, limpeza após 1º save e logout)
 - [ ] 6.4 Regressão dos fluxos da F30/F32/F33/F34: criação com CNPJ + crédito, readiness, guard de `/campanhas/nova`, banner do dashboard (verificar que gates de geração continuam inalterados)
 - [ ] 6.5 Rodar `npm run typecheck`, `npm run lint` e `npx vitest run` sem erros; validar manualmente em mobile (abandono com `pagehide`/`visibilitychange`, rascunho restaurado, CTA "Continuar" fixo) e desktop (coluna sticky de aceite, back/forward)

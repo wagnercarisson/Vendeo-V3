@@ -16,12 +16,14 @@ provides:
   - store-page-client parsing ?tab= + compat required= + loja/page.tsx userId
 affects: [36-05, 36-06]
 
+> **D16 — supersede (pós-implementação):** este plano descreve o comportamento **soft-block** original (aba bloqueada renderizava painel de motivo + link "Voltar para X", motivo APENAS no painel ativo, formulário da aba bloqueada editável). Tudo isso foi **substituído pelo hard-block (D16)** por decisão de produto pós-UAT. Fonte da verdade atual: `openspec/.../design.md` (seção D16) + specs. Linhas deste arquivo com "painel ativo", "'Voltar para X'" e "bloqueio" referem-se ao estado a implementar — re-verificar conforme D16.
+
 tech-stack:
   added: []
   patterns:
-    - "ARIA tabs (tablist/tab/tabpanel, roving tabindex, aria-describedby, aria-live)"
+    - "ARIA tabs (tablist/tab/tabpanel, roving tabindex, aria-disabled + motivo no botão, aria-live) — hard-block D16"
     - "Aceite legal como coluna lateral global (desktop sticky / mobile compacto)"
-    - "Deep-link em aba bloqueada → painel de bloqueio + link 'Voltar para X'"
+    - "Deep-link em aba bloqueada → redireciona/sincroniza para a primeira aba anterior válida + aviso (D16)"
 
 key-files:
   created:
@@ -33,7 +35,7 @@ key-files:
     - src/app/(app)/loja/page.tsx
 
 key-decisions:
-  - "StoreTabs recebe children (painel ativo renderizado pelo form); motivo do bloqueio apenas no painel ativo (D10)"
+  - "StoreTabs recebe children (painel ativo renderizado pelo form); **D16 (hard-block): aba bloqueada não fica ativa e o motivo fica acessível no próprio botão (tooltip/aria-label/aria-describedby) — nunca no painel ativo**"
   - "LegalAcceptancePanel recebe acceptance via prop (derivação no form via getAcceptanceStatus — current→accepted, outdated→needs_reacceptance, never→pending)"
   - "Drift preservado: modais DriftDecisionModal/DriftCriticalModal + executeStep2Save intactos; interceptação orquestrada pelo hook (onDriftNavigate/onDriftLeave); flags driftSaveIntercept/driftNavIntercept/pendingNavUrl permanecem no componente"
   - "acceptedTerms/setAcceptedTerms agora vêm de useStoreForm (fonte única p/ autoSave mínimo válido)"
@@ -74,7 +76,7 @@ completed: 2026-08-05
 
 - **StoreTabs**: container ARIA tabs completo (`role="tablist"/"tab"/"tabpanel"`, `aria-selected`/`aria-controls`/`aria-describedby`/`aria-live`), roving tabindex com ArrowLeft/ArrowRight (circular) + Home/End, badge por estado via `aria-label` (nunca cor sozinha), variante mobile-compact com labels `labelMobile` (Dados/Perfil/Visual), ponto discreto, botão "Continuar" fixo e touch targets ≥ 44px (F22).
 - **LegalAcceptancePanel**: coluna lateral global (D3) — desktop `lg:sticky top-6` dentro do grid, mobile compacto sem sticky; enum `LegalAcceptanceState` (`pending`/`accepted`/`needs_reacceptance`); CTA "Revisar e aceitar"/"Revisar aceite" com `aria-expanded`/`aria-pressed`; recebe estado via prop (derivação no form).
-- **store-identity-form refatorado**: wizard 2 steps → painel 3 abas (dados/posicionamento/direcao-visual) consumindo `useOnboardingTabs` (36-03); aceite legal removido do formulário e movido para a coluna global; CNPJ opcional (máscara + lookup `GET /api/cnpj/lookup` mantidos, aviso "Fiscal pendente"); restauração de rascunho via `restoreDraft` no auto-load (banco prevalece em campos persistidos); deep-link em aba bloqueada renderiza bloqueio + link "Voltar para Dados"; microcopy card na aba Posicionamento (D9); badge "Necessário" mantido na aba Direção Visual (D7).
+- **store-identity-form refatorado**: wizard 2 steps → painel 3 abas (dados/posicionamento/direcao-visual) consumindo `useOnboardingTabs` (36-03); aceite legal removido do formulário e movido para a coluna global; CNPJ opcional (máscara + lookup `GET /api/cnpj/lookup` mantidos, aviso "Fiscal pendente"); restauração de rascunho via `restoreDraft` no auto-load (banco prevalece em campos persistidos); **deep-link em aba bloqueada NÃO ativa a aba — redireciona/sincroniza para a primeira aba anterior válida + aviso "Complete esta etapa para liberar {aba}" (D16)**; microcopy card na aba Posicionamento (D9); badge "Necessário" mantido na aba Direção Visual (D7).
 - **store-page-client + loja/page**: parsing de `?tab=` (validado por `isOnboardingTab`) com resolução `?tab=` → compat `required=` → default `dados`; `fiscal=pending` → `fiscalPending` (banner na aba Dados); `message=` preservado; `userId` repassado para `restoreDraft`; sem leitura/escrita de `localStorage("store_id")`.
 - **Drift preservado (D13)**: modais `DriftDecisionModal`/`DriftCriticalModal` e `executeStep2Save` pós-decisão intactos; interceptação de saída orquestrada pelo hook (`options.onDriftNavigate`/`onDriftLeave`); `use-drift-detection.ts` byte-idêntico (git diff vazio); endpoints de realinhar/ignorar/dismiss inalterados.
 
@@ -96,7 +98,7 @@ completed: 2026-08-05
 
 ## Decisions Made
 
-- `StoreTabs` recebe `children` (painel ativo) — o motivo do bloqueio é renderizado no painel ativo, nunca no botão da aba (D10).
+- `StoreTabs` recebe `children` (painel ativo) — **D16 (hard-block): aba bloqueada NUNCA vira painel ativo; o motivo fica acessível no próprio botão (aria-label/aria-describedby/tooltip) e o clique/seta nela não dispara `onTabChange`.**
 - `LegalAcceptancePanel` é presentacional: recebe `acceptance` via prop; a derivação via `getAcceptanceStatus` (current→accepted, outdated→needs_reacceptance, never→pending) acontece no form (task 3).
 - `acceptedTerms`/`setAcceptedTerms` agora vêm de `useStoreForm` (fonte única) para que o mínimo válido do `autoSave` (POST draft) reflita o aceite confirmado no modal — a 36-03 já havia adicionado esse par ao hook.
 - Drift: o caminho de save (botão Salvar da Direção Visual) mantém `executeStep2Save` pós-decisão; o caminho de saída de contexto (troca de aba/navegação/back-forward) deixa a navegação para o resume do hook (ref `driftFromSaveRef`), evitando dupla gravação.

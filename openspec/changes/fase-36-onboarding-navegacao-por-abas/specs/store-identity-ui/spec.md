@@ -42,6 +42,34 @@ The page SHALL follow the visual and UX rules defined in `openspec/design-system
 - **WHEN** an unauthenticated user visits `/loja`
 - **THEN** `requirePageUser()` redirects to `/login`
 
+#### Scenario: Conteúdo funcional de aba bloqueada nunca renderiza (D16)
+
+- **WHEN** a aba `direcao-visual` está bloqueada (sem tom de voz / sem `storeId`)
+- **THEN** upload/logo, assinatura visual, geração de direção visual text-only e o botão "Salvar" da Direção Visual NÃO são renderizados nem acessíveis
+- **AND** nenhuma ação de Direção Visual pode ser disparada (clique, teclado ou programática)
+- **AND** o painel de conteúdo da aba bloqueada não exibe formulário funcional
+
+#### Scenario: Botão "Continuar para Direção Visual" desabilitado quando bloqueada (D16)
+
+- **WHEN** o usuário está na aba Posicionamento
+- **AND** o tom de voz está vazio (ou `storeId` não existe)
+- **THEN** o botão "Continuar para Direção Visual" está `disabled`
+- **AND** o motivo específico (ex.: "Defina o tom de voz para liberar Direção Visual." via `tabBlockReasonText`) é acessível no botão via `title`/`aria-label`
+- **AND** clicar no botão não navega para a aba bloqueada
+
+#### Scenario: Aviso de bloqueio (blockedNotice) exibe o motivo específico (D16)
+
+- **WHEN** um deep-link/ativação de aba bloqueada é negado e o aviso `blockedNotice` é exibido
+- **THEN** o aviso mostra "Complete esta etapa para liberar {aba}" E o motivo específico do que falta (ex.: `needs_basic_data` → "Informe o nome e o segmento da loja..."; `needs_legal_acceptance` → "Aceite os Termos de Uso..."; `needs_tone_of_voice` → "Defina o tom de voz...")
+- **AND** o aviso usa `role="status"` (anúncio não-interruptivo de mudança de estado)
+
+#### Scenario: Sem mínimo, "Continuar para Posicionamento" mantém em Dados (D16)
+
+- **WHEN** o usuário está na aba Dados sem nome/segmento/aceite válidos
+- **AND** tenta avançar (clique na aba Posicionamento ou botão "Continuar")
+- **THEN** o usuário permanece na aba Dados
+- **AND** um feedback do que falta é exibido, sem ativar a aba bloqueada
+
 ### Requirement: Navigation between `/loja` and `/campanhas/nova`
 
 > **Delta F36 (D12):** Os redirects SHALL migrar de `?required=` para `?tab=` mantendo a mensagem contextual. `?required=` SHALL continuar aceito como **compat** (F36), mapeando para a aba correspondente. A navegação por abas SHALL usar a URL (`?tab=dados|posicionamento|direcao-visual`) com deep-link e back/forward.
@@ -188,11 +216,11 @@ The store data SHALL come from the server component via `initialStore` prop, not
 
 ### Requirement: Step 2 renomeado para "Direção Visual" com badge "Necessário" (ADDED F34)
 
-> **Delta F36 (D6):** O Step 2 SHALL virar a **aba Direção Visual** (`?tab=direcao-visual`), mantendo o badge "Necessário". O parsing de `?required=visual-direction` → `initialStep={2}` SHALL ser substituído por parsing de `?tab=` → aba inicial; `required=visual-direction` SHALL continuar aceito como **compat**, mapeando para a aba Direção Visual. Back/forward SHALL funcionar via `?tab=` na URL (D6).
+> **Delta F36 (D6/D16):** O Step 2 SHALL virar a **aba Direção Visual** (`?tab=direcao-visual`), mantendo o badge "Necessário". O parsing de `?required=visual-direction` → `initialStep={2}` SHALL ser substituído por parsing de `?tab=` → aba inicial; `required=visual-direction` SHALL continuar aceito como **compat**, mapeando para a aba Direção Visual. Back/forward SHALL funcionar via `?tab=` na URL (D6). **Hard-block (D16):** `?tab=direcao-visual` abre **diretamente** na aba Direção Visual **somente se a aba estiver liberada**; se bloqueada, o deep-link SHALL redirecionar/sincronizar para a **primeira aba anterior válida** (Posicionamento se liberada, senão Dados) com o aviso "Complete esta etapa para liberar Direção Visual" — a aba bloqueada nunca fica ativa.
 
 O sistema SHALL renomear o Step 2 do formulário de identidade da loja de "Logo e Cores" para **"Direção Visual"** (agora a aba "Direção Visual"). Na navegação de abas, ao lado do label da aba, SHALL ser exibido um badge "Necessário".
 
-O sistema SHALL suportar o query param `?tab=direcao-visual` em `/loja` (canônico) e o `?required=visual-direction` legado (compat). Em ambos, `StorePageClient` SHALL abrir diretamente na aba Direção Visual.
+O sistema SHALL suportar o query param `?tab=direcao-visual` em `/loja` (canônico) e o `?required=visual-direction` legado (compat). Em ambos, `StorePageClient` SHALL abrir diretamente na aba Direção Visual **apenas quando a aba estiver liberada** (D16); se bloqueada, aplica o redirecionamento do D16 para a primeira aba anterior válida.
 
 #### Scenario: Aba Direção Visual exibe badge "Necessário"
 
@@ -203,13 +231,22 @@ O sistema SHALL suportar o query param `?tab=direcao-visual` em `/loja` (canôni
 #### Scenario: Query param ?tab=direcao-visual abre a aba Direção Visual
 
 - **WHEN** usuário acessa `/loja?tab=direcao-visual`
+- **AND** a aba Direção Visual está liberada (storeId + tom de voz — D9)
 - **THEN** `StorePageClient` abre diretamente na aba Direção Visual
+
+#### Scenario: Query param ?tab=direcao-visual bloqueada redireciona (D16)
+
+- **WHEN** usuário acessa `/loja?tab=direcao-visual`
+- **AND** a aba Direção Visual está bloqueada (sem storeId e/ou sem tom de voz)
+- **THEN** a aba Direção Visual **não** é ativada
+- **AND** `StorePageClient` redireciona/sincroniza para a **primeira aba anterior válida** (Posicionamento se liberada, senão Dados)
+- **AND** um aviso "Complete esta etapa para liberar Direção Visual" é exibido
 
 #### Scenario: Query param legado ?required=visual-direction abre a aba Direção Visual
 
 - **WHEN** usuário acessa `/loja?required=visual-direction`
 - **THEN** o compat mapeia para a aba Direção Visual
-- **AND** a aba abre diretamente (mesma regra de bloqueio se não liberada)
+- **AND** a aba abre diretamente se liberada, senão aplica o redirecionamento do D16 (mesma regra de bloqueio)
 
 ### Requirement: Form fields — CNPJ no modo criação
 

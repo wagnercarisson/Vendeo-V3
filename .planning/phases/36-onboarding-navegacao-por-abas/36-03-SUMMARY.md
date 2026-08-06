@@ -18,6 +18,8 @@ provides:
   - Orquestração de saída consumindo useDriftDetection (D13, hook preservado) + limpeza de drafts no logout (F36-DRAFT-04)
 affects: [36-04 (StoreIdentityForm consome o hook), 36-06 (estende testes do hook: drift intercept, aba bloqueada)]
 
+> **D16 — supersede (pós-implementação):** as linhas 43/101 deste arquivo ("popstate para aba bloqueada sincroniza activeTab + painel de bloqueio") descrevem o **soft-block** original. Substituído pelo hard-block (D16): aba bloqueada **não sincroniza ativa** — `setActiveTab`/popstate roteiam para a **primeira aba anterior válida** + aviso "Complete esta etapa para liberar {aba}". Fonte da verdade atual: `openspec/.../design.md` (D16) + specs. Drift inalterado nesta rodada (revisão separada).
+
 # Tech tracking
 tech-stack:
   added: []
@@ -40,7 +42,7 @@ key-decisions:
   - "autoSave() com merge { ...formData, ...fields }: campos não informados mantêm o valor corrente; apenas campos válidos são persistidos (inválidos ignorados — D4)"
   - "acceptedTerms/setAcceptedTerms adicionados a UseStoreFormReturn (extensão mínima do contrato): o check de mínimo válido do autoSave exige aceite legal, mas a assinatura fixa autoSave(fields) não pode carregá-lo — o hook rastreia o estado internamente"
   - "Unlock de setActiveTab permite o caso needs_store_created quando o mínimo (name+segment+aceite) vale: a troca de aba é o momento que CRIA a loja draft via autoSave (D4); POST falho mantém a aba"
-  - "popstate para aba bloqueada sincroniza activeTab mesmo assim (D6 — painel de bloqueio + 'Voltar para X'), mas NÃO roda autoSave (sem saída a persistir)"
+  - "popstate para aba bloqueada **NÃO sincroniza activeTab para o alvo (D16)**: roteia para a primeira aba anterior válida + aviso 'Complete esta etapa para liberar {aba}' e não roda autoSave (sem saída a persistir)"
   - "Drift é consumido via driftCategory/driftStatus de useDriftDetection (preservado): hasPendingDrift = campos editados ∩ SNAPSHOT_FIELDS ≠ ∅ E driftCategory ≠ none — auto-save seletivo (campos fora do snapshot salvam normalmente, D13)"
   - "handlePageHide grava o draft BRUTO no localStorage (restauração/reconciliação é da 36-04) e o PATCH best-effort usa body de campos válidos com keepalive:true"
 
@@ -71,7 +73,7 @@ completed: 2026-08-05
 
 - `autoSave(fields)` em `use-store-form.ts`: merge com o form atual, validação por campo (inválidos ignorados), PATCH silencioso `/api/store/${storeId}` (falha NÃO bloqueia navegação), POST `/api/store` SEM cnpj com mínimo válido (modo draft da rota 36-01; falha BLOQUEIA o avanço), sem mínimo → sem fetch (`{ok:false}`), retorno `{ ok: boolean; storeId?: string }` + `saveStatus: "idle"|"saving"|"saved"|"error"` no `UseStoreFormReturn`; `save()` em create mode com CNPJ condicional (draft branch)
 - Hook `useOnboardingTabs`: `activeTab`/`setActiveTab` (autoSave ANTES de navegar, aguardado), `tabStates` via `computeTabState`, `saveStatus` repassado, `handleInternalNavigation` (intercepta links internos), `handlePageHide`/`handleVisibilityChange` (draft SÍNCRONO no localStorage + PATCH best-effort `keepalive:true`); callbacks de drift `onDriftNavigate`/`onDriftLeave` RECEBIDOS via `options` (36-04 monta os modais) — não retornados
-- Sync de URL no próprio hook: `pushState` com `?tab=` no setActiveTab + listener `popstate` no mount (back/forward roteado pelo MESMO fluxo de saída — ordem de drift D13); alvo bloqueado ainda sincroniza activeTab (D6 — nunca tela em branco); `?tab=` inválido ignorado
+- Sync de URL no próprio hook: `pushState` com `?tab=` no setActiveTab + listener `popstate` no mount (back/forward roteado pelo MESMO fluxo de saída — ordem de drift D13); **alvo bloqueado NÃO sincroniza `activeTab` — roteia para a primeira aba anterior válida + aviso "Complete esta etapa para liberar {aba}" (D16)**; `?tab=` inválido ignorado
 - Serialização de saves: fila (promise encadeada) + ref/seq guard — resposta antiga após uma nova é descartada (teste com promises resolvidas fora de ordem)
 - Drift (D13): `use-drift-detection.ts` e `src/lib/drift.ts` INTACTOS (verificado via git diff); o hook consome `driftCategory`/`driftStatus` e adia PATCH de campos do snapshot até a decisão (auto-save seletivo — campos fora do snapshot salvam normalmente); navegação pendente é retomada quando driftCategory volta a `'none'`
 - Logout (F36-DRAFT-04): `clearStorage()` chama `clearAllDrafts()` de draft-store (remove `vendeo:store_draft:*`, T-36-09), try/catch best-effort; teste novo cobre a limpeza preservando chaves não-draft
@@ -98,7 +100,7 @@ Each task was committed atomically:
 
 - **Extensão mínima do contrato autoSave:** o check de mínimo válido exige `acceptedTerms`, mas a assinatura fixa `autoSave(fields: Partial<FormData>)` não o carrega → `acceptedTerms`/`setAcceptedTerms` adicionados ao `UseStoreFormReturn` (a 36-04 chama `setAcceptedTerms(true)` no confirm do modal legal). Sem isso, o POST draft nunca dispararia.
 - **`needs_store_created` não bloqueia a troca de aba** quando o mínimo vale: a própria troca cria a loja draft via autoSave (D4 — "loja criada via auto-save"); se o POST falhar, `commitTabChange` mantém a aba atual. Demais motivos de bloqueio (`needs_legal_acceptance`, `needs_tone_of_voice`) impedem a navegação.
-- **popstate em aba bloqueada:** sincroniza `activeTab` (D6) mas não roda autoSave — não há saída a persistir; a UI renderiza o painel de bloqueio + "Voltar para X".
+- **popstate em aba bloqueada (D16):** o alvo bloqueado **não sincroniza `activeTab`** — o hook roteia para a primeira aba anterior válida e emite o aviso "Complete esta etapa para liberar {aba}"; não roda autoSave (sem saída a persistir).
 - **Drift check sem re-implementar `computeDriftStatus`:** o hook consome `driftCategory`/`driftStatus` de `useDriftDetection` (preservado) e intersecta com `SNAPSHOT_FIELDS` via `editedFields` (deps) — fallback para campos de snapshot não-vazios.
 
 ## Deviations from Plan
