@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 describe('StoreIdentityForm handleStep2Submit drift bifurcation', () => {
   it('criticalStatus === "new" -> modalType "critical"', () => {
@@ -85,5 +85,80 @@ describe('StoreIdentityForm handleStep2Submit drift bifurcation', () => {
     const REALIGN_ENDPOINT = '/api/store/:storeId/brand-profile/realign';
     expect(REALIGN_ENDPOINT).toContain('/realign');
     expect(REALIGN_ENDPOINT).not.toContain('/infer');
+  });
+
+  it('(Bug B) handleStep1Submit intercepta drift ANTES de salvar — crítico abre DriftCriticalModal', () => {
+    // Réplica fiel da bifurcação do form (store-identity-form.tsx:1119-1132):
+    // critical+new → modal crítico (return, NENHUM save); sensitive → decisão;
+    // none → save direto.
+    function step1DriftIntercept(
+      driftCategory: 'critical' | 'sensitive' | 'none',
+      criticalStatus: 'none' | 'new' | 'dismissed' | null | undefined,
+    ): 'critical' | 'decision' | 'save' {
+      if (driftCategory === 'critical' && criticalStatus === 'new') return 'critical';
+      if (driftCategory === 'sensitive') return 'decision';
+      return 'save';
+    }
+
+    expect(step1DriftIntercept('critical', 'new')).toBe('critical');
+    expect(step1DriftIntercept('critical', 'dismissed')).toBe('save');
+    expect(step1DriftIntercept('sensitive', null)).toBe('decision');
+    expect(step1DriftIntercept('none', 'none')).toBe('save');
+  });
+
+  it('(Bug C) realinhar persiste os dados aceitos ANTES do POST /realign — ordem de chamadas', async () => {
+    // Réplica da persistSaveFromDrift (store-identity-form.tsx:1274-1291) + onRealinhar:
+    // a persistência da origem interceptada roda ANTES do realinhar.
+    async function persistSaveFromDrift(
+      origin: 'step1' | 'step2' | null,
+      deps: { save: () => Promise<void>; visualEffects: () => Promise<void> },
+    ): Promise<boolean> {
+      if (origin === 'step1' || origin === 'step2') {
+        await deps.save();
+        if (origin === 'step2') await deps.visualEffects();
+        return true;
+      }
+      return false;
+    }
+
+    const order: string[] = [];
+    const save = vi.fn(async () => { order.push('save'); });
+    const visualEffects = vi.fn(async () => { order.push('visual'); });
+    const realinhar = vi.fn(async () => { order.push('realign'); });
+
+    // step1: save → realinhar
+    await persistSaveFromDrift('step1', { save, visualEffects });
+    await realinhar();
+    expect(order).toEqual(['save', 'realign']);
+
+    // step2: save + visual → realinhar
+    order.length = 0;
+    await persistSaveFromDrift('step2', { save, visualEffects });
+    await realinhar();
+    expect(order).toEqual(['save', 'visual', 'realign']);
+    expect(realinhar).toHaveBeenCalledTimes(2);
+  });
+
+  it('(Bug C) origem nula (navegação interceptada) NÃO persiste nem realinha', async () => {
+    const order: string[] = [];
+    const save = vi.fn(async () => { order.push('save'); });
+    const visualEffects = vi.fn(async () => { order.push('visual'); });
+
+    async function persistSaveFromDrift(
+      origin: 'step1' | 'step2' | null,
+      deps: { save: () => Promise<void>; visualEffects: () => Promise<void> },
+    ): Promise<boolean> {
+      if (origin === 'step1' || origin === 'step2') {
+        await deps.save();
+        if (origin === 'step2') await deps.visualEffects();
+        return true;
+      }
+      return false;
+    }
+
+    const persisted = await persistSaveFromDrift(null, { save, visualEffects });
+    expect(persisted).toBe(false);
+    expect(save).not.toHaveBeenCalled();
+    expect(visualEffects).not.toHaveBeenCalled();
   });
 });

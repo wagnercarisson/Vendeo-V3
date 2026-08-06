@@ -152,6 +152,12 @@ export function useDriftDetection(
       const data = await res.json();
       if (data.success) {
         setDriftStatus('none');
+        // Bug A: manter os refs de guard em sincronia com o estado público. Sem
+        // isto, o guard `status !== prevStatusRef.current` do effect suprime a
+        // re-detecção de drift quando o status recomputado (ex.: 'new' num novo
+        // desalinhamento) coincide com o ref stale — drift vira one-shot.
+        prevStatusRef.current = 'none';
+        prevCategoryRef.current = 'none';
         options?.onRealinhado?.();
         return data;
       } else {
@@ -173,6 +179,10 @@ export function useDriftDetection(
       });
       if (!res.ok) throw new Error('Erro ao ignorar desalinhamento');
       setDriftStatus('dismissed');
+      // Bug A: mesma sincronia de refs do realinhar — sem isto o guard suprime
+      // re-detecção após o ignorar (drift vira one-shot).
+      prevStatusRef.current = 'dismissed';
+      prevCategoryRef.current = 'none';
     } finally {
       setIsRealinhando(false);
     }
@@ -188,6 +198,9 @@ export function useDriftDetection(
     const dismissed: CriticalDriftInfo = { status: 'dismissed', fields: [], reason: 'ok' };
     setCriticalDrift(dismissed);
     setActiveVsSummary(prev => prev ? { ...prev, critical_drift: dismissed } : null);
+    // Bug A: sincroniza o ref de categoria — o effect de category só atualiza
+    // quando `category !== prevCategoryRef.current`.
+    prevCategoryRef.current = 'none';
     options?.onDriftDismissed?.();
   }, [store?.id, options]);
 

@@ -198,6 +198,45 @@ describe("drift-tabs — useDriftDetection real (D13, endpoints preservados)", (
     expect(result.current.driftStatus).toBe("none");
   });
 
+  it("(Bug A) drift NÃO é one-shot: após realinhar, nova divergência reabre o fluxo (refs sincronizados)", async () => {
+    fetchMock.mockResolvedValueOnce(mockFetchResponse({ success: true }));
+    const { result, rerender } = renderHook(
+      (props: { store: typeof DRIFTED_STORE }) =>
+        useDriftDetection(props.store, DRIFTED_PROFILE, "text_only"),
+      { initialProps: { store: DRIFTED_STORE } },
+    );
+    await waitFor(() => expect(result.current.driftStatus).toBe("new"));
+
+    await act(async () => {
+      await result.current.realinhar();
+    });
+    expect(result.current.driftStatus).toBe("none");
+
+    // Nova divergência após o realinhar — o guard de status não pode suprimir
+    // (sem o sync de refs, 'new' === prevStatusRef stale e o drift vira one-shot).
+    rerender({ store: { ...DRIFTED_STORE, name: "Nome Editado 2" } });
+    await waitFor(() => expect(result.current.driftStatus).toBe("new"));
+    expect(result.current.driftCategory).toBe("sensitive");
+  });
+
+  it("(Bug A) drift NÃO é one-shot: após ignorar, nova divergência reabre o fluxo", async () => {
+    fetchMock.mockResolvedValueOnce(mockFetchResponse({ ok: true }));
+    const { result, rerender } = renderHook(
+      (props: { store: typeof DRIFTED_STORE }) =>
+        useDriftDetection(props.store, DRIFTED_PROFILE, "text_only"),
+      { initialProps: { store: DRIFTED_STORE } },
+    );
+    await waitFor(() => expect(result.current.currentSnapshot).not.toBeNull());
+
+    await act(async () => {
+      await result.current.ignorar();
+    });
+    expect(result.current.driftStatus).toBe("dismissed");
+
+    rerender({ store: { ...DRIFTED_STORE, slogan: "Novo slogan" } });
+    await waitFor(() => expect(result.current.driftStatus).toBe("new"));
+  });
+
   it("(e) ignorar() → PATCH /api/store/{id}/brand-profile/metadata com drift_dismissed_snapshot = snapshot atual", async () => {
     fetchMock.mockResolvedValueOnce(mockFetchResponse({ ok: true }));
     const { result } = renderHook(() =>

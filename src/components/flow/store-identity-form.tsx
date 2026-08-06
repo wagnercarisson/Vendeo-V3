@@ -319,7 +319,10 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
   // F36 (D13): interceptação de saída orquestrada pelo useOnboardingTabs —
   // NÃO mais restrita a step === 2. Os modais de drift (DriftDecisionModal/
   // DriftCriticalModal) e o executeStep2Save pós-decisão permanecem intactos.
-  const driftFromSaveRef = useRef(false);
+  // Bug B/C: origem do save que interceptou drift — 'step1' (Dados) ou 'step2'
+  // (Posicionamento). Determina a ação pós-decisão do modal e a ordem
+  // (persistir antes de realinhar no step1).
+  const driftFromSaveRef = useRef<'step1' | 'step2' | null>(null);
   const openDriftModalFromContext = useCallback(() => {
     if (driftCategory === "critical" && criticalDrift?.status === "new") {
       setShowDriftCriticalModal(true);
@@ -375,11 +378,11 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
     },
     {
       onDriftNavigate: () => {
-        driftFromSaveRef.current = false;
+        driftFromSaveRef.current = null;
         openDriftModalFromContext();
       },
       onDriftLeave: () => {
-        driftFromSaveRef.current = false;
+        driftFromSaveRef.current = null;
         openDriftModalFromContext();
       },
     },
@@ -1113,6 +1116,21 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
       return;
     }
 
+    // Bug B (D13): save explícito da aba Dados também intercepta drift ANTES de
+    // persistir campos do snapshot (name/segment/subsegment) — espelha a
+    // bifurcação do handleStep2Submit.
+    if (driftCategory === 'critical' && criticalDrift?.status === 'new') {
+      driftFromSaveRef.current = 'step1';
+      setShowDriftCriticalModal(true);
+      return;
+    }
+
+    if (driftCategory === 'sensitive') {
+      driftFromSaveRef.current = 'step1';
+      setShowDriftDecisionModal(true);
+      return;
+    }
+
     const saved = await save(acceptedTerms || undefined);
     if (saved && "storeId" in saved) {
       // F36 (D1/D8): cadastro_fiscal pendente NÃO bloqueia navegação — apenas geração.
@@ -1228,13 +1246,13 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
     if (!storeId) return;
 
     if (driftCategory === 'critical' && criticalDrift?.status === 'new') {
-      driftFromSaveRef.current = true;
+      driftFromSaveRef.current = 'step2';
       setShowDriftCriticalModal(true);
       return;
     }
 
     if (driftCategory === 'sensitive') {
-      driftFromSaveRef.current = true;
+      driftFromSaveRef.current = 'step2';
       setShowDriftDecisionModal(true);
       return;
     }
@@ -1245,6 +1263,25 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
       setFeedbackOverlay({ message: 'Erro ao salvar. Tente novamente.', type: 'error' });
     }
   };
+
+  // Bug C (D13): persiste os dados aceitos conforme a ORIGEM do save que
+  // interceptou drift. step1 (Dados) → save() (name/segment/subsegment + campos
+  // de texto); step2 (Posicionamento) → save() persiste os campos de texto do
+  // snapshot (tone_of_voice/positioning/short_description/slogan) e
+  // executeStep2Save() persiste cores/logo/inferência. Deve rodar ANTES do POST
+  // /realign — a rota reconstrói o snapshot a partir do banco; salvar depois
+  // realinhar deixaria o snapshot stale. Retorna true se havia origem pendente.
+  const persistSaveFromDrift = useCallback(async () => {
+    if (driftFromSaveRef.current === 'step1' || driftFromSaveRef.current === 'step2') {
+      const result = await save(acceptedTerms || undefined);
+      if (result && 'error' in result) throw new Error(result.error ?? 'Erro ao salvar');
+      if (driftFromSaveRef.current === 'step2') {
+        await executeStep2Save();
+      }
+      return true;
+    }
+    return false;
+  }, [driftFromSaveRef, save, acceptedTerms, executeStep2Save]);
 
   const segmentOptions = STORE_SEGMENTS.map((seg) => ({
     value: seg.value,
@@ -2423,6 +2460,10 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
         <DriftDecisionModal
           onRealinhar={async () => {
             try {
+              // Bug C: persiste dados aceitos ANTES do POST /realign — a rota
+              // reconstrói o snapshot a partir do banco. Salvar só depois
+              // deixaria o snapshot stale (drift voltaria).
+              await persistSaveFromDrift();
               const data = await realinhar();
               const profile = (data as Record<string, unknown>)?.profile as Record<string, unknown> | undefined;
               if (profile) {
@@ -2455,8 +2496,8 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
                   metadata: profile.metadata as Record<string, unknown>,
                 });
               }
+              driftFromSaveRef.current = null;
               setShowDriftDecisionModal(false);
-              if (driftFromSaveRef.current) await executeStep2Save();
             } catch {
               setDriftError('Não foi possível realinhar. Tente novamente mais tarde.');
               setFeedbackOverlay({ message: 'Não foi possível realinhar. Tente novamente mais tarde.', type: 'error' });
@@ -2466,7 +2507,8 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
             setShowDriftDecisionModal(false);
             try {
               await ignorar();
-              if (driftFromSaveRef.current) await executeStep2Save();
+              await persistSaveFromDrift();
+              driftFromSaveRef.current = null;
             } catch {
               setFeedbackOverlay({ message: 'Erro ao salvar após ignorar drift. Tente novamente.', type: 'error' });
             }
@@ -2474,13 +2516,14 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
           onContinueWithoutDismiss={async () => {
             setShowDriftDecisionModal(false);
             try {
-              if (driftFromSaveRef.current) await executeStep2Save();
+              await persistSaveFromDrift();
+              driftFromSaveRef.current = null;
               // Não chama ignorar() — badge permanece
             } catch {
               setFeedbackOverlay({ message: 'Erro ao salvar. Tente novamente.', type: 'error' });
             }
           }}
-          onCancel={() => { setShowDriftDecisionModal(false); setDriftError(null); cancelPendingNavigation(); }}
+          onCancel={() => { setShowDriftDecisionModal(false); setDriftError(null); driftFromSaveRef.current = null; cancelPendingNavigation(); }}
           isLoading={isRealinhando}
           error={driftError}
         />
@@ -2496,8 +2539,9 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
             try {
               await dismissCriticalDrift();
               setDriftRefreshKey(k => k + 1);
+              await persistSaveFromDrift();
+              driftFromSaveRef.current = null;
               setShowDriftCriticalModal(false);
-              if (driftFromSaveRef.current) await executeStep2Save();
             } catch {
               setDriftError('Não foi possível salvar. Tente novamente.');
               setFeedbackOverlay({ message: 'Não foi possível salvar. Tente novamente.', type: 'error' });
