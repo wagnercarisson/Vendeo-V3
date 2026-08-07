@@ -28,6 +28,18 @@ import { renderHook, act, waitFor, render, screen, fireEvent } from "@testing-li
 import { useDriftDetection } from "../use-drift-detection";
 import { useOnboardingTabs } from "@/hooks/use-onboarding-tabs";
 import type { UseOnboardingTabsDeps } from "@/hooks/use-onboarding-tabs";
+
+const mockUseOperationCosts = vi.fn(() => ({
+  costs: {
+    campaign_generation: { costCredits: 1, enabled: true },
+    visual_signature_generation: { costCredits: 1, enabled: true },
+  },
+  status: "loaded",
+  refetch: vi.fn(),
+}));
+vi.mock("@/hooks/use-operation-costs", () => ({
+  useOperationCosts: (...args: unknown[]) => mockUseOperationCosts(...args),
+}));
 import type { FormData } from "@/components/flow/use-store-form";
 import type { StoreProfileInputSnapshot } from "@/lib/snapshot";
 import { DriftDecisionModal } from "../drift-decision-modal";

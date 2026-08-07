@@ -1,4 +1,16 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+const mockUseOperationCosts = vi.fn(() => ({
+  costs: {
+    campaign_generation: { costCredits: 1, enabled: true },
+    visual_signature_generation: { costCredits: 1, enabled: true },
+  },
+  status: "loaded",
+  refetch: vi.fn(),
+}));
+vi.mock("@/hooks/use-operation-costs", () => ({
+  useOperationCosts: (...args: unknown[]) => mockUseOperationCosts(...args),
+}));
 
 describe('DriftCriticalModal decision logic', () => {
   it('canGenerateNewSignature determines credit flow', () => {

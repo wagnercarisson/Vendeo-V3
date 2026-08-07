@@ -4,6 +4,18 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { VisualSignatureApprovalModal } from '../visual-signature-approval-modal';
 
+const mockUseOperationCosts = vi.fn(() => ({
+  costs: {
+    campaign_generation: { costCredits: 1, enabled: true },
+    visual_signature_generation: { costCredits: 1, enabled: true },
+  },
+  status: "loaded",
+  refetch: vi.fn(),
+}));
+vi.mock("@/hooks/use-operation-costs", () => ({
+  useOperationCosts: (...args: unknown[]) => mockUseOperationCosts(...args),
+}));
+
 function createModalProps(overrides: Record<string, unknown> = {}) {
   return {
     isOpen: true,
@@ -19,6 +31,14 @@ function createModalProps(overrides: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  mockUseOperationCosts.mockReturnValue({
+    costs: {
+      campaign_generation: { costCredits: 1, enabled: true },
+      visual_signature_generation: { costCredits: 1, enabled: true },
+    },
+    status: "loaded",
+    refetch: vi.fn(),
+  });
 });
 
 // --- Existing function-level tests (preserved) ---

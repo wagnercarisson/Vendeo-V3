@@ -4,6 +4,18 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { CampaignInputForm } from "@/components/flow/campaign-input-form";
 
+const mockUseOperationCosts = vi.fn(() => ({
+  costs: {
+    campaign_generation: { costCredits: 1, enabled: true },
+    visual_signature_generation: { costCredits: 1, enabled: true },
+  },
+  status: "loaded",
+  refetch: vi.fn(),
+}));
+vi.mock("@/hooks/use-operation-costs", () => ({
+  useOperationCosts: (...args: unknown[]) => mockUseOperationCosts(...args),
+}));
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
   useSearchParams: () => new URLSearchParams(),
@@ -76,6 +88,14 @@ vi.mock("@/components/flow/generation-progress", () => ({
 describe("Campaign Flow — Credit Balance", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseOperationCosts.mockReturnValue({
+      costs: {
+        campaign_generation: { costCredits: 1, enabled: true },
+        visual_signature_generation: { costCredits: 1, enabled: true },
+      },
+      status: "loaded",
+      refetch: vi.fn(),
+    });
   });
 
   it("shows balance indicator and enables submit when balance >= 1", () => {
