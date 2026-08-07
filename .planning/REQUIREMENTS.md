@@ -623,8 +623,8 @@ Deferred to future release. Tracked but not in current roadmap.
 
 **Coverage:**
 
-- v1 requirements: 187 total (54 v1.5 + 36 LEGAL + 12 INTENT + 21 INTENT-TEST + 30 F34 + 34 F38)
-- Mapped to phases: 187
+- v1 requirements: 180 total (54 v1.5 + 36 LEGAL + 12 INTENT + 21 INTENT-TEST + 30 F34 + 27 F38)
+- Mapped to phases: 180
 - Unmapped: 0 ✓
 - Deferred to v1.7: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06
 - F29.1.2: Fase complementar refinando LAUNCH-01 e LAUNCH-02 (sem REQ-IDs próprios)

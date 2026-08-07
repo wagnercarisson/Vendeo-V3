@@ -512,7 +512,7 @@
 
 **Goal:** Criar a fonte única de custo por operação (`credit_operation_costs`) e substituir o hardcoded (`COST_PER_GENERATION = 1`, literal `1` na rota de VS, "1 crédito" na UI) por custo dinâmico resolvido em runtime — com admin sem deploy, auditoria old/new e ledger auto-descritivo via metadata snapshot.
 
-**Requirements:** F38-DB-01 a F38-DB-03, F38-SERVICE-01 a F38-SERVICE-04, F38-API-01 a F38-API-03, F38-ADMIN-01 a F38-ADMIN-04, F38-ROUTES-01 a F38-ROUTES-04, F38-UI-01 a F38-UI-05, F38-VS-01 a F38-VS-02, F38-CONFIG-01 a F38-CONFIG-02
+**Requirements:** F38-DB-01 a F38-DB-04, F38-SERVICE-01 a F38-SERVICE-04, F38-API-01 a F38-API-03, F38-ADMIN-01 a F38-ADMIN-04, F38-ROUTES-01 a F38-ROUTES-04, F38-UI-01 a F38-UI-05, F38-VS-01, F38-CONFIG-01 a F38-CONFIG-02
 
 **Success criteria:**
 
