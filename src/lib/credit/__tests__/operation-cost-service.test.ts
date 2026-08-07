@@ -127,3 +127,99 @@ describe("OperationCostService.getCost", () => {
     expect((service as any).setCost).toBeUndefined();
   });
 });
+
+describe("OperationCostService.getAllCosts", () => {
+  const mockIn = vi.fn();
+
+  beforeEach(() => {
+    mockSelect.mockReturnValue({ eq: mockEq, in: mockIn });
+  });
+
+  function mockGetAllCostsResult(
+    result: {
+      data:
+        | Array<{
+            operation_key: string;
+            cost_credits: number;
+            enabled: boolean;
+            updated_by: string | null;
+            updated_at: string | null;
+          }>
+        | null;
+      error: { message: string } | null;
+    },
+  ) {
+    mockIn.mockResolvedValue(result);
+  }
+
+  it("merge tabela+fallback — todas as chaves do enum", async () => {
+    mockGetAllCostsResult({
+      data: [
+        {
+          operation_key: "campaign_generation",
+          cost_credits: 2,
+          enabled: true,
+          updated_by: "admin-1",
+          updated_at: "2026-08-07T12:00:00.000Z",
+        },
+      ],
+      error: null,
+    });
+
+    const result = await service.getAllCosts();
+
+    expect(result).toHaveLength(OPERATION_KEYS.length);
+    expect(result[0]).toEqual({
+      operationKey: "campaign_generation",
+      costCredits: 2,
+      enabled: true,
+      updatedByUserId: "admin-1",
+      updatedAt: "2026-08-07T12:00:00.000Z",
+      source: "table",
+    });
+    expect(result[1]).toEqual({
+      operationKey: "visual_signature_generation",
+      costCredits: 1,
+      enabled: true,
+      updatedByUserId: null,
+      updatedAt: null,
+      source: "fallback",
+    });
+  });
+
+  it("erro de leitura → fail-closed", async () => {
+    mockGetAllCostsResult({
+      data: null,
+      error: { message: "connection refused" },
+    });
+
+    await expect(service.getAllCosts()).rejects.toThrow(
+      OperationCostUnavailableError,
+    );
+  });
+
+  it("ordem preservada = OPERATION_KEYS", async () => {
+    mockGetAllCostsResult({
+      data: [
+        {
+          operation_key: "visual_signature_generation",
+          cost_credits: 3,
+          enabled: false,
+          updated_by: null,
+          updated_at: "2026-08-07T12:00:00.000Z",
+        },
+        {
+          operation_key: "campaign_generation",
+          cost_credits: 2,
+          enabled: true,
+          updated_by: null,
+          updated_at: "2026-08-07T12:00:00.000Z",
+        },
+      ],
+      error: null,
+    });
+
+    const result = await service.getAllCosts();
+    expect(result.map((r) => r.operationKey)).toEqual([...OPERATION_KEYS]);
+  });
+});

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { OPERATION_KEYS } from "@/lib/credit/types";
 
 export const GrantCreditsRequestSchema = z.object({
   storeId: z.string().uuid(),
@@ -6,6 +7,22 @@ export const GrantCreditsRequestSchema = z.object({
   reason: z.string().min(10, "Motivo deve ter no mínimo 10 caracteres").max(500),
   operationId: z.string().uuid(),
 });
+
+export const UpdateOperationCostRequestSchema = z
+  .object({
+    operationKey: z.enum(OPERATION_KEYS),
+    costCredits: z.number().int().min(1).optional(),
+    enabled: z.boolean().optional(),
+    reason: z.string().min(1),
+    operationId: z.string().uuid().optional(),
+  })
+  .refine(
+    (v) => (v.costCredits === undefined) !== (v.enabled === undefined),
+    {
+      message:
+        "exatamente um campo mutável por chamada (costCredits XOR enabled)",
+    },
+  );
 
 export const CreateStoreSchema = z.object({
   userId: z.string().uuid(),
