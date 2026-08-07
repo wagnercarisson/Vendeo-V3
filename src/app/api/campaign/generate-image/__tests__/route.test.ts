@@ -44,7 +44,26 @@ vi.mock('@/lib/image-generation/config', () => ({
   IMAGE_GENERATION_GLOBAL_TIMEOUT_MS: 300000,
   MAX_PRODUCT_IMAGE_BASE64_SIZE: 5 * 1024 * 1024,
   IMAGE_GENERATION_RESPONSES_MODEL: 'test-model',
-  COST_PER_GENERATION: 1,
+}));
+
+const { mockGetCost, MockOperationCostUnavailableError } = vi.hoisted(() => {
+  class MockOperationCostUnavailableError extends Error {
+    constructor(message?: string) {
+      super(message ?? "Falha ao ler custo de operação");
+      this.name = "OperationCostUnavailableError";
+    }
+  }
+  return { mockGetCost: vi.fn(), MockOperationCostUnavailableError };
+});
+vi.mock('@/lib/credit/operation-cost-service', () => ({
+  OperationCostService: vi.fn(function () {
+    return { getCost: mockGetCost };
+  }),
+  OperationCostUnavailableError: MockOperationCostUnavailableError,
+  DEFAULT_OPERATION_COSTS: {
+    campaign_generation: { costCredits: 1, enabled: true },
+    visual_signature_generation: { costCredits: 1, enabled: true },
+  },
 }));
 
 const mockGenerateImage = vi.fn();
@@ -175,6 +194,12 @@ async function setupSuccessMocks() {
   // Credit
   mockGetBalance.mockResolvedValue(10);
   mockReserveCredit.mockResolvedValue('tx-1');
+  mockGetCost.mockResolvedValue({
+    operationKey: "campaign_generation",
+    costCredits: 1,
+    enabled: true,
+    source: "table",
+  });
 
   // Campaign
   (createCampaign as any).mockResolvedValue({ id: CAMPAIGN_ID, storagePath: `${STORE_ID}/${CAMPAIGN_ID}.jpg` });
@@ -203,6 +228,12 @@ async function setupSuccessMocks() {
 beforeEach(() => {
   vi.clearAllMocks();
   mockRpc.mockResolvedValue({ data: { ready: true, missing: [] }, error: null });
+  mockGetCost.mockResolvedValue({
+    operationKey: "campaign_generation",
+    costCredits: 1,
+    enabled: true,
+    source: "table",
+  });
 });
 
 describe('POST /api/campaign/generate-image', () => {
@@ -341,6 +372,13 @@ describe('POST /api/campaign/generate-image', () => {
     (validateIdentityReference as any).mockResolvedValue({ storeName: 'Loja Teste', storeSegment: 'outros' });
     (buildCampaignBrief as any).mockResolvedValue({ campaignInput: {}, store: { name: 'Loja Teste', segment: 'outros' } });
     mockCheckRateLimit.mockResolvedValue({ allowed: true });
+    mockRecordGenerationAttempt.mockResolvedValue(undefined);
+    mockGetCost.mockResolvedValue({
+      operationKey: "campaign_generation",
+      costCredits: 1,
+      enabled: true,
+      source: "table",
+    });
     mockGetBalance.mockResolvedValue(0);
 
     const { POST } = await import('../route');
@@ -543,7 +581,15 @@ describe('POST /api/campaign/generate-image', () => {
     expect(mockReserveCredit).toHaveBeenCalledWith(
       STORE_ID,
       1,
-      expect.objectContaining({ idempotencyKey: `reserve_${CAMPAIGN_ID}` })
+      expect.objectContaining({
+        idempotencyKey: `reserve_${CAMPAIGN_ID}`,
+        metadata: expect.objectContaining({
+          feature: "campaign_pipeline",
+          operation_key: "campaign_generation",
+          operation_cost_credits: 1,
+          operation_cost_source: "table",
+        }),
+      })
     );
   });
 
@@ -743,5 +789,95 @@ describe('POST /api/campaign/generate-image', () => {
 
     // recordGenerationAttempt was called (event persisted) even though generation failed
     expect(mockRecordGenerationAttempt).toHaveBeenCalled();
+  });
+
+  // ── F38: operation cost guards ─────────────────────────────────
+
+  it('503 operation_disabled quando enabled=false (sem reserva)', async () => {
+    await setupSuccessMocks();
+    mockGetCost.mockResolvedValue({
+      operationKey: "campaign_generation",
+      costCredits: 1,
+      enabled: false,
+      source: "table",
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_REQUEST_BODY));
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.error).toBe("operation_disabled");
+    expect(mockReserveCredit).not.toHaveBeenCalled();
+  });
+
+  it('503 operation_cost_unavailable em erro de leitura (sem reserva/geração)', async () => {
+    await setupSuccessMocks();
+    mockGetCost.mockRejectedValue(new MockOperationCostUnavailableError("down"));
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_REQUEST_BODY));
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.error).toBe("operation_cost_unavailable");
+    expect(mockReserveCredit).not.toHaveBeenCalled();
+    expect(createCampaign).not.toHaveBeenCalled();
+  });
+
+  it('reserva usa snapshot de custo no metadata', async () => {
+    await setupSuccessMocks();
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_REQUEST_BODY));
+    await res.text();
+
+    expect(mockReserveCredit).toHaveBeenCalledWith(
+      STORE_ID,
+      1,
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          feature: "campaign_pipeline",
+          operation_key: "campaign_generation",
+          operation_cost_credits: 1,
+          operation_cost_source: "table",
+        }),
+      })
+    );
+  });
+
+  it('custo 2 da tabela — balance 1 → 402; balance 2 → reserva amount 2', async () => {
+    await setupSuccessMocks();
+    mockGetCost.mockResolvedValue({
+      operationKey: "campaign_generation",
+      costCredits: 2,
+      enabled: true,
+      source: "table",
+    });
+    mockGetBalance.mockResolvedValue(1);
+
+    const { POST } = await import('../route');
+    const res402 = await POST(makeRequest(VALID_REQUEST_BODY));
+    expect(res402.status).toBe(402);
+    expect(mockReserveCredit).not.toHaveBeenCalled();
+
+    await setupSuccessMocks();
+    mockGetCost.mockResolvedValue({
+      operationKey: "campaign_generation",
+      costCredits: 2,
+      enabled: true,
+      source: "table",
+    });
+    mockGetBalance.mockResolvedValue(2);
+
+    const resOk = await POST(makeRequest(VALID_REQUEST_BODY));
+    await resOk.text();
+    expect(mockReserveCredit).toHaveBeenCalledWith(
+      STORE_ID,
+      2,
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          operation_cost_credits: 2,
+        }),
+      })
+    );
   });
 });
