@@ -7,10 +7,10 @@ status: Executing Phase 38
 last_updated: "2026-08-07T22:42:27.660Z"
 progress:
   total_phases: 15
-  completed_phases: 12
+  completed_phases: 13
   total_plans: 67
-  completed_plans: 59
-  percent: 80
+  completed_plans: 67
+  percent: 87
 ---
 
 # Project State
@@ -462,15 +462,26 @@ v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35 e 36 concluídas. F
 **Source:** `openspec/changes/fase-35-changelog-novidades/`
 **Checker:** 25/25 requirements covered, 0 blockers, 0 warnings
 
-### Phase 38 — Tabela de Custos por Operação ◆ In Planning
+### Phase 38 — Tabela de Custos por Operação ✅ Complete
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
-| — | — | ○ Pending | Planejamento em andamento — ver `38-CONTEXT.md` |
+| 38-01 | 1 | ✅ | Migration `credit_operation_costs` + audit + RPC `admin_update_operation_cost` |
+| 38-02 | 1 | ✅ | Core Library — OperationCostService, DEFAULT_OPERATION_COSTS, fail-open/fail-closed |
+| 38-03 | 2 | ✅ | generate-image consome custo dinâmico com guards 503 |
+| 38-04 | 2 | ✅ | generate-without-logo consome custo dinâmico + snapshot metadata |
+| 38-05 | 3 | ✅ | Admin — schema, API GET/PUT, página `/admin/operation-costs` + navegação |
+| 38-06 | 3 | ✅ | GET `/api/operation-costs` + hook `useOperationCosts` + balance-card dinâmico |
+| 38-07 | 4 | ✅ | UI dinâmica — campaign-input-form, drift-critical-modal, visual-signature-approval-modal |
+| 38-08 | 5 | ✅ | Verificação real I1-I6 + teste de integração + build gate + UAT tracking |
 
-**Source:** `openspec/changes/fase-38-credit-operation-costs/` (fonte da verdade — proposal, design D1–D12, tasks, 14 specs)
+**Tests:** 1592 passing (187 files)
+**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
+**UAT:** 1/4 automated pass; 3/4 pending human checkpoint
 
-**Renumeração (D1):** F38 = Tabela de Custos por Operação (v1.5); F37 = Revisão e Aprovação da Arte (v1.5, experimento beta); F39 = Stripe / Monetização Pública (v1.7, pós-beta).
+**Source:** `openspec/changes/fase-38-credit-operation-costs/` (fonte da verdade)
+**Context:** `.planning/phases/38-credit-operation-costs/38-CONTEXT.md`
+**UAT:** `.planning/phases/38-credit-operation-costs/38-UAT.md`
 
 ### Phase 30 — Fundação Legal ✅
 
@@ -584,7 +595,7 @@ v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35 e 36 concluídas. F
 | **F35** | **✅ Completed** | **Changelog/Novidades — 5 plans, 3 waves, 42 testes novos, 1345 total, typecheck/lint/build limpos** |
 | F36 | ✅ Complete | Onboarding — Navegação por Abas (6/6 plans, 31/31 requirements, 1479 testes, code review aplicado) |
 | F37 | ○ In progress | Revisão e Aprovação da Arte (v1.5, experimento beta — planejamento futuro) |
-| F38 | ○ In progress | Tabela de Custos por Operação (v1.5 — em planejamento, openspec/changes/fase-38-credit-operation-costs/) |
+| **F38** | **✅ Complete** | **Tabela de Custos por Operação — 8/8 plans, 1592 testes, I1-I6 verificados no banco real, build gate verde, UAT aguardando checkpoint humano** |
 | F39 | ○ Future | Stripe / Monetização Pública (v1.7, pós-beta — renumerada de F36 → F37 → F39) |
 
 ### Quick Tasks Completed

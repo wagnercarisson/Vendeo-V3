@@ -148,7 +148,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 - [x] Phase 35: Changelog / Novidades (5/5 plans)
 - [x] Phase 36: Onboarding — Navegação por Abas (6/6 plans ✅)
 - [ ] Phase 37: Revisão e Aprovação da Arte (pending)
-- [ ] Phase 38: Tabela de Custos por Operação (pending)
+- [x] Phase 38: Tabela de Custos por Operação (8/8 plans ✅)
 
 </details>
 
@@ -192,7 +192,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 35. Changelog / Novidades | v1.5 | 5/5 | ✅ Complete | 2026-07-31 |
 | 36. Onboarding — Navegação por Abas | v1.5 | 6/6 | ✅ Complete | 2026-08-05 |
 | 37. Revisão e Aprovação da Arte | v1.5 | 0/0 | ○ Pending | — |
-| 38. Tabela de Custos por Operação | v1.5 | 0/0 | ○ Pending | — |
+| 38. Tabela de Custos por Operação | v1.5 | 8/8 | ✅ Complete | 2026-08-07 |
 | 39. Stripe / Monetização Pública | v1.7 | 0/0 | ○ Pending | — |
 
 ---
