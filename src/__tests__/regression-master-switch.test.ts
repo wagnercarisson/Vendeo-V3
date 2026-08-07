@@ -41,7 +41,18 @@ vi.mock("@/lib/image-generation/config", () => ({
   IMAGE_GENERATION_GLOBAL_TIMEOUT_MS: 300000,
   MAX_PRODUCT_IMAGE_BASE64_SIZE: 5 * 1024 * 1024,
   IMAGE_GENERATION_RESPONSES_MODEL: "test-model",
-  COST_PER_GENERATION: 1,
+}));
+
+const { mockGetCost } = vi.hoisted(() => ({ mockGetCost: vi.fn() }));
+vi.mock("@/lib/credit/operation-cost-service", () => ({
+  OperationCostService: vi.fn(function () {
+    return { getCost: mockGetCost };
+  }),
+  OperationCostUnavailableError: class extends Error {},
+  DEFAULT_OPERATION_COSTS: {
+    campaign_generation: { costCredits: 1, enabled: true },
+    visual_signature_generation: { costCredits: 1, enabled: true },
+  },
 }));
 
 const { mockGenerateImageResult } = vi.hoisted(() => ({ mockGenerateImageResult: vi.fn() }));
@@ -125,6 +136,12 @@ beforeEach(() => {
   mockRecordGenerationAttempt.mockResolvedValue(undefined);
   mockGetBalance.mockResolvedValue(5);
   mockReserveCredit.mockResolvedValue("tx-001");
+  mockGetCost.mockResolvedValue({
+    operationKey: "campaign_generation",
+    costCredits: 1,
+    enabled: true,
+    source: "table",
+  });
   mockGenerateCopy.mockResolvedValue({
     title: "Oferta Imperdível", caption: "Aproveite esta oferta especial",
     cta_post: "Compre agora", hashtags: ["#oferta", "#promocao"],
