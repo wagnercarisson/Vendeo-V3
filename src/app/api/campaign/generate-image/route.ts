@@ -1,7 +1,9 @@
 import { NextRequest } from "next/server";
 import crypto from "crypto";
 import { GenerateImageRequestSchema } from "@/lib/image-generation/schema";
-import { IMAGE_GENERATION_GLOBAL_TIMEOUT_MS, MAX_PRODUCT_IMAGE_BASE64_SIZE, IMAGE_GENERATION_RESPONSES_MODEL, COST_PER_GENERATION } from "@/lib/image-generation/config";
+import { IMAGE_GENERATION_GLOBAL_TIMEOUT_MS, MAX_PRODUCT_IMAGE_BASE64_SIZE, IMAGE_GENERATION_RESPONSES_MODEL } from "@/lib/image-generation/config";
+import { OperationCostService, OperationCostUnavailableError } from "@/lib/credit/operation-cost-service";
+import type { OperationCostResolution } from "@/lib/credit/types";
 import { ImageGenerationService } from "@/lib/image-generation/services/image-generation-service";
 import type { GenerateImageServiceResult } from "@/lib/image-generation/services/image-generation-service";
 import { InputValidationService } from "@/lib/image-generation/services/input-validation-service";
@@ -219,12 +221,33 @@ export const POST = apiHandler(async (request: NextRequest) => {
   // ── Pre-stream: Record generation attempt ───────────────────────
   await recordGenerationAttempt(storeId, user.userId);
 
+  // ── Pre-stream: Resolve operation cost (D12) ───────────────────
+  let cost: OperationCostResolution;
+  try {
+    cost = await new OperationCostService().getCost("campaign_generation");
+  } catch (err) {
+    if (err instanceof OperationCostUnavailableError) {
+      logPipelineEvent({ event: "operation_cost_unavailable", traceId, phase: "pre_stream", status: "failed", storeId, userId: user.userId });
+      return Response.json(
+        { error: "operation_cost_unavailable", operationKey: "campaign_generation", message: "Serviço indisponível no momento. Tente novamente em alguns instantes." },
+        { status: 503 }
+      );
+    }
+    throw err;
+  }
+  if (!cost.enabled) {
+    return Response.json(
+      { error: "operation_disabled", operationKey: cost.operationKey },
+      { status: 503 }
+    );
+  }
+
   // ── Pre-stream: Balance check (no IA, no stream) ────────────────
   logPipelineEvent({ event: "balance_check", traceId, phase: "pre_stream", status: "running", storeId, userId: user.userId });
   const creditService = new CreditService(supabaseAdmin);
   if (config.creditsChargingEnabled) {
     const balance = await creditService.getBalance(storeId);
-    if (balance < COST_PER_GENERATION) {
+    if (balance < cost.costCredits) {
       logPipelineEvent({ event: "balance_check", traceId, phase: "pre_stream", status: "failed", storeId, userId: user.userId, errorCode: "insufficient_balance" });
       return Response.json(
         { error: { message: "Saldo insuficiente. São necessários créditos para gerar uma campanha." } },
@@ -344,10 +367,15 @@ export const POST = apiHandler(async (request: NextRequest) => {
   if (config.creditsChargingEnabled) {
     logPipelineEvent({ event: "credit_reserve", traceId, phase: "pre_stream", status: "running", campaignId, storeId, userId: user.userId });
     try {
-      creditTxId = await creditService.reserveCredit(storeId, COST_PER_GENERATION, {
+      creditTxId = await creditService.reserveCredit(storeId, cost.costCredits, {
         campaignId,
         idempotencyKey: `reserve_${campaignId}`,
-        metadata: { feature: "campaign_pipeline" },
+        metadata: {
+          feature: "campaign_pipeline",
+          operation_key: cost.operationKey,
+          operation_cost_credits: cost.costCredits,
+          operation_cost_source: cost.source,
+        },
       });
       logPipelineEvent({ event: "credit_reserve", traceId, phase: "pre_stream", status: "complete", campaignId, storeId, userId: user.userId });
     } catch (err: unknown) {

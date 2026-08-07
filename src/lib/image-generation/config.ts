@@ -36,9 +36,6 @@ export const IMAGE_GENERATION_GLOBAL_TIMEOUT_MS =
 export const IMAGE_PROVIDER =
   process.env.IMAGE_PROVIDER || "openai";
 
-// ─── Generation Cost ─────────────────────────────────────────────────────
-export const COST_PER_GENERATION = 1;
-
 // ─── Debug / Telemetry ────────────────────────────────────────────────────
 export const IMAGE_GENERATION_DEBUG =
   process.env.IMAGE_GENERATION_DEBUG === "true";
