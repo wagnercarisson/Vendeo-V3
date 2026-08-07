@@ -4,7 +4,7 @@
 
 **17 phases** | **139 requirements mapped** | All covered ✓
 
-**Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23. F35 = Changelog/Novidades, F36 = Onboarding — Navegação por Abas, F37 = Stripe/Monetização Pública (renumeração alinhada no documento de alinhamento F36).
+**Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23. F35 = Changelog/Novidades, F36 = Onboarding — Navegação por Abas, F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), F39 = Stripe/Monetização Pública (v1.7) (renumeração alinhada nos documentos de alinhamento F36/F38).
 
 ---
 
@@ -30,7 +30,10 @@
 | 33 | ✅ Verificação CNPJ Freemium | Consulta BrasilAPI/CNPJá, cross-check, motor de decisão, admin review, test stores | CNPJ-07–12 | 6 ✅ |
 | 34 | ✅ Store Readiness | Readiness RPC + guarda dupla + direção visual obrigatória + dashboard banner + billing info | F34-READINESS, F34-BILLING, F34-STORE-TYPE, F34-GUARD, F34-LEGACY, F34-UI, F34-DASHBOARD, F34-BRANDPROFILE | 8 ✅ |
 | 35 | ✅ Changelog/Novidades | 5/5 | Complete    | 2026-07-31 |
-| 36 | ○ Onboarding — Navegação por Abas | 6/6 | Complete    | 2026-08-05 |
+| 36 | ✅ Onboarding — Navegação por Abas | 6/6 | Complete    | 2026-08-05 |
+| 37 | ○ Revisão e Aprovação da Arte | — | Pending    | — |
+| 38 | ○ Tabela de Custos por Operação | — | Pending    | — |
+| 39 | ○ Stripe / Monetização Pública (v1.7) | — | Pending    | — |
 
 ---
 
@@ -396,7 +399,7 @@
 
 **Source of truth:** `openspec/changes/fase-35-changelog-novidades/`
 
-**Renumeração (documentada no alinhamento F36):** F35 = Changelog/Novidades; F36 = Onboarding — Navegação por Abas (nova, v1.5); Stripe/Monetização Pública deslocada para F37 (v1.7, pós-beta).
+**Renumeração (documentada nos alinhamentos F36/F38):** F35 = Changelog/Novidades; F36 = Onboarding — Navegação por Abas (nova, v1.5); F37 = Revisão e Aprovação da Arte (v1.5); F38 = Tabela de Custos por Operação (v1.5); Stripe/Monetização Pública deslocada para F39 (v1.7, pós-beta).
 
 **Plans:** 5/5 plans complete
 
@@ -457,7 +460,7 @@
 
 **Source of truth:** `openspec/changes/fase-36-onboarding-navegacao-por-abas/`
 
-**Renumeração (D14):** F36 = Onboarding — Navegação por Abas (nova, v1.5); F37 = Stripe / Monetização Pública (v1.7, pós-beta).
+**Renumeração (D14 + F38):** F36 = Onboarding — Navegação por Abas (nova, v1.5); F37 = Revisão e Aprovação da Arte (v1.5, experimento beta); F38 = Tabela de Custos por Operação (v1.5); F39 = Stripe / Monetização Pública (v1.7, pós-beta).
 
 **Plans:** 6/6 plans complete
 
@@ -505,6 +508,30 @@
 
 ---
 
+### Phase 38 — Tabela de Custos por Operação
+
+**Goal:** Criar a fonte única de custo por operação (`credit_operation_costs`) e substituir o hardcoded (`COST_PER_GENERATION = 1`, literal `1` na rota de VS, "1 crédito" na UI) por custo dinâmico resolvido em runtime — com admin sem deploy, auditoria old/new e ledger auto-descritivo via metadata snapshot.
+
+**Requirements:** F38-DB-01 a F38-DB-03, F38-SERVICE-01 a F38-SERVICE-04, F38-API-01 a F38-API-03, F38-ADMIN-01 a F38-ADMIN-04, F38-ROUTES-01 a F38-ROUTES-04, F38-UI-01 a F38-UI-05, F38-VS-01 a F38-VS-02, F38-CONFIG-01 a F38-CONFIG-02
+
+**Success criteria:**
+
+1. Tabela `credit_operation_costs` + seeds (`campaign_generation=1`, `visual_signature_generation=1`) + RLS service_role (D2)
+2. Tabela `credit_operation_cost_audit` append-only + RPC `admin_update_operation_cost` transacional e idempotente (D8)
+3. `OperationCostService.getCost(operationKey)` server-only: `source: 'table' | 'fallback'` (linha inexistente) e `OperationCostUnavailableError` em erro de leitura (fail-closed, D5)
+4. Rotas de geração (campanha e VS) resolvem custo uma vez: guard `enabled=false` → 503, balance dinâmico, reserva com metadata snapshot (D12)
+5. `GET /api/operation-costs` (autenticado) + `useOperationCosts()` para client; server components leem o service (D11)
+6. `GET`/`PUT /api/admin/operation-costs` (requireAdmin) + página `/admin/operation-costs` (D9/D10)
+7. UI dinâmica: `campaign-input-form`, `balance-card`, `drift-critical-modal`, `visual-signature-approval-modal` — sem "1 crédito" hardcoded (D11)
+8. Remoção de `COST_PER_GENERATION` de `src/lib/image-generation/config.ts` (D12)
+9. `npx vitest run`, `npm run typecheck`, `npm run lint`, `npm run build` — zero erros
+
+**Dependencies:** Phase 24 (CreditService, reserve_credit, credit_balances), Phase 25 (generate-image route), Phase 28 (launch config, generationPaused), Phase 29.1.1 (generate-without-logo + credit_tx_id), Phase 34 (readiness guards), Phase 36 (form/UI flow), Phase 35 (navegação admin)
+
+**Source of truth:** `openspec/changes/fase-38-credit-operation-costs/`
+
+---
+
 ## Dependency Graph
 
 ```
@@ -546,10 +573,16 @@ Phase 24 (Credit Tables + CreditService) ──┘
                                     Phase 35 (Changelog/Novidades) ✅
                                                │
                                                ▼
-                                    Phase 36 (Onboarding — Navegação por Abas)
+                                     Phase 36 (Onboarding — Navegação por Abas) ✅
                                                │
                                                ▼
-                                    Phase 37 (Stripe / Monetização Pública — v1.7 futura)
+                                     Phase 37 (Revisão e Aprovação da Arte — v1.5)
+                                               │
+                                               ▼
+                                     Phase 38 (Tabela de Custos por Operação — v1.5)
+                                               │
+                                               ▼
+                                     Phase 39 (Stripe / Monetização Pública — v1.7 futura)
 ```
 
 ---
@@ -635,4 +668,4 @@ Phase 24 (Credit Tables + CreditService) ──┘
 
 *Roadmap created: 2026-07-15*
 *Milestone: v1.5 — Lançamento Externo Controlado*
-*Last updated: 2026-08-01 — Phase 35 complete (Changelog/Novidades); renumeração F36 = Onboarding — Navegação por Abas, F37 = Stripe/Monetização Pública (v1.7)*
+*Last updated: 2026-08-07 — Phase 36 complete (Onboarding — Navegação por Abas); renumeração F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), F39 = Stripe/Monetização Pública (v1.7)*

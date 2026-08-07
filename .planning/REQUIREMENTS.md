@@ -355,9 +355,64 @@ Adicionados em 2026-08-01 via OpenSpec (`openspec/changes/fase-36-onboarding-nav
 
 - [x] **F36-OWNERSHIP-01**: `POST /api/store` mantém `requireUser()` antes de qualquer operação de banco; `user_id` = `claims.sub` (body ignorado); `supabaseAdmin` para INSERT/RPC; valida `name`/`segment`/`acceptedTerms` antes de ambas as RPCs; versões de documentos resolvidas server-side via `getCurrentVersion()` (cliente não envia versões); sem CNPJ → `create_store_draft` (201, `onboardingGranted: false`, sem grant); com CNPJ → `create_store_with_cnpj` (root hash HMAC server-side, `cnpjMasked`, `onboardingGranted`); 409 usuário já tem loja / CNPJ em outra conta; 400 CNPJ inválido / sem aceite; 401 não autenticado (JSON, não redirect)
 
+## v1.5 Requirements — Tabela de Custos por Operação (F38)
+
+Adicionados em 2026-08-07 via OpenSpec (`openspec/changes/fase-38-credit-operation-costs/`). OpenSpec é a fonte detalhada; esta tabela é o índice rastreável para o gate de cobertura.
+
+### Banco — Tabelas e RPC (F38-DB)
+
+- [ ] **F38-DB-01**: Tabela `credit_operation_costs` como fonte única de custo por operação (D2) — `operation_key` TEXT PK, `cost_credits` INTEGER NOT NULL CHECK (> 0), `enabled` BOOLEAN NOT NULL DEFAULT true, `updated_by` UUID nullable, `updated_at`/`created_at` TIMESTAMPTZ; trigger scoped de `updated_at`; RLS service_role (sem GRANT para `authenticated`); sem CHECK enum no banco
+- [ ] **F38-DB-02**: Tabela `credit_operation_cost_audit` append-only (D8) — `action` CHECK IN ('update_cost','toggle_enabled'), old/new de cost/enabled, `actor_id`, `reason` NOT NULL, `operation_id` com UNIQUE parcial (idempotência); trigger imutável bloqueia UPDATE/DELETE; RLS service_role
+- [ ] **F38-DB-03**: RPC `admin_update_operation_cost` (D8) — SECURITY DEFINER, `SET search_path=''`; parâmetros p_actor_id/p_operation_key/p_cost_credits/p_enabled/p_reason/p_operation_id; exige **exatamente um** campo mutável por chamada (XOR); reason obrigatório; cost_credits > 0; idempotência por operation_id; transação única update + insert na audit; retorna JSONB `{operation_key, cost_credits, enabled, audit_id, updated_at, idempotent}`; rollback em falha
+- [ ] **F38-DB-04**: Seeds idempotentes (INSERT ... ON CONFLICT DO NOTHING) — `campaign_generation=1` (enabled true) e `visual_signature_generation=1` (enabled true), `updated_by` NULL (seeds de sistema); verificações SQL/integradas I1–I6 (RLS, CHECK, imutabilidade, idempotência, seeds, transacionalidade)
+
+### Core Library — Enum, Tipos e Service (F38-SERVICE)
+
+- [ ] **F38-SERVICE-01**: Enum versionado `OPERATION_KEYS`/`OperationKey` em `src/lib/credit/types.ts` (D7) — `["campaign_generation","visual_signature_generation"]`; fonte da verdade das chaves; módulo sem server-only (importável por zod/UI); junto com `OperationCostResolution` e `OperationCostSnapshot`
+- [ ] **F38-SERVICE-02**: `OperationCostService` em `src/lib/credit/operation-cost-service.ts` (server-only) — `getCost(operationKey)` → `{ operationKey, costCredits, enabled, source: "table" | "fallback" }`; `DEFAULT_OPERATION_COSTS` versionado (mesma fonte do enum); linha inexistente → default seguro (fail-open, `source: 'fallback'`, log aviso); linha existente → `source: 'table'`
+- [ ] **F38-SERVICE-03**: `OperationCostUnavailableError` (D5) — erro real de leitura (rede/banco/query) lança a exceção (fail-closed, nunca retorna `enabled` presumido); log de erro; as rotas convertem em `503 operation_cost_unavailable`
+- [ ] **F38-SERVICE-04**: `OperationCostSnapshot` (D6) — `{ operation_key, operation_cost_credits, operation_cost_source }` no metadata da deduction (ledger auto-descritivo); `reserve_credit` (F24) permanece inalterado
+
+### API — Endpoints (F38-API)
+
+- [ ] **F38-API-01**: `GET /api/operation-costs` (autenticado via apiHandler, D11) — custos resolvidos `{ "campaign_generation": { costCredits, enabled }, ... }`; NÃO expõe `updated_by`/`updated_at`/`source`; erro de leitura → `503 operation_cost_unavailable`
+- [ ] **F38-API-02**: Hook client `useOperationCosts()` em `src/hooks/use-operation-costs.ts` (D11) — fetch + cache do endpoint; estados loading/erro (503 → "custos indisponíveis"); contrato único para form e modais
+- [ ] **F38-API-03**: Server components leem `OperationCostService` diretamente (server-only, D11) — handlers HTTP convertem `OperationCostUnavailableError` em 503; componentes renderizam estado indisponível sem custo presumido
+
+### Admin — API e Página (F38-ADMIN)
+
+- [ ] **F38-ADMIN-01**: `GET /api/admin/operation-costs` (requireAdmin, D9) — lista todas as chaves do enum TS mesclando tabela + fallback, com `operationKey`, `costCredits`, `enabled`, `updatedBy`, `updatedAt`, `source`; 403 não-admin; erro de leitura → 503
+- [ ] **F38-ADMIN-02**: `PUT /api/admin/operation-costs` (requireAdmin, D9) — schema zod (`UpdateOperationCostRequestSchema`), XOR costCredits/enabled, reason obrigatório, costCredits > 0, operationId idempotente; chama RPC `admin_update_operation_cost`; 200/400/403/500; sem mutação direta via query builder
+- [ ] **F38-ADMIN-03**: Schema zod `UpdateOperationCostRequestSchema` em `src/lib/admin/schemas.ts` (D3/D7/D8) — `operationKey: z.enum(OPERATION_KEYS)`, `costCredits: z.number().int().min(1).optional()`, `enabled` optional, `reason: z.string().min(1)`, `operationId` uuid opcional, refine XOR
+- [ ] **F38-ADMIN-04**: Página `/admin/operation-costs` (D10) — tabela por operação (key, cost input ≥1, toggle enabled, updated_by email, updated_at, badge source tabela/fallback); edição de custo + toggle com motivo obrigatório → PUT; feedback com audit_id; estados de erro/load; link na navegação admin (`/admin/layout.tsx`)
+
+### Rotas de Geração — Custo Dinâmico (F38-ROUTES)
+
+- [ ] **F38-ROUTES-01**: Resolução de custo nas rotas de geração (D12) — `OperationCostService.getCost(operationKey)` uma única vez por request, após auth/ownership/readiness/rate guards e antes de saldo/reserva/IA paga; `OperationCostUnavailableError` → `503 operation_cost_unavailable` (sem geração nem reserva); `enabled=false` → `503 operation_disabled` (sempre, independente de `creditsChargingEnabled`); balance check dinâmico `balance < costCredits` → 402; reserva com metadata snapshot; refund mantém metadata de feature
+- [ ] **F38-ROUTES-02**: `generate-image` (campaign_generation, D12) — substitui `COST_PER_GENERATION` por `cost.costCredits` no balance check (`:227`) e na reserva (`:347`) com metadata `feature: "campaign_pipeline"`, `operation_key`, `operation_cost_credits`, `operation_cost_source`; `COST_PER_GENERATION` removido de `src/lib/image-generation/config.ts` sem imports restantes
+- [ ] **F38-ROUTES-03**: `generate-without-logo` (visual_signature_generation, D12) — substitui literal `1` por `cost.costCredits` no balance check (`:176`) e na reserva (`:186`) com metadata `feature: "visual_signature"`, `mode`, `operationId`, snapshot; guards 503 operation_disabled/unavailable sempre (mesmo com cobrança desligada ou `v15Enabled=false`)
+- [ ] **F38-ROUTES-04**: Pipeline pré-stream (`POST /api/campaign/generate-image`, D12) — resolve `campaign_generation` após guards e antes do saldo check; estrutura de 3 zonas mantida; 402 antes do stream sem chamada de IA nem evento NDJSON
+
+### UI Dinâmica (F38-UI)
+
+- [ ] **F38-UI-01**: `campaign-input-form.tsx` (D11) — `Custo: {cost}` dinâmico (via `useOperationCosts`), desabilita submit quando `balance !== null && balance < cost` (hoje só `balance === 0`); `enabled=false` → desabilitado com indisponibilidade; custo indisponível (503) → desabilitado com "Tente novamente em alguns instantes" (sem "1 crédito" presumido)
+- [ ] **F38-UI-02**: `balance-card.tsx` (D11) — "Cada geração consome {cost} crédito(s)." dinâmico via hook; plural correto (`formatCredits`: 1 crédito / N créditos); sem custo presumido em 503
+- [ ] **F38-UI-03**: `drift-critical-modal.tsx` (D11) — alerta sem crédito com custo dinâmico de `visual_signature_generation` + plural correto; sem custo presumido em 503
+- [ ] **F38-UI-04**: `visual-signature-approval-modal.tsx` (D11) — sub-message "Cada geração de assinatura visual consome {cost} crédito(s)." dinâmico + plural; sem custo presumido em 503
+- [ ] **F38-UI-05**: `use-operation-costs.ts` (D11) — hook compartilhado client (fetch/cache de `GET /api/operation-costs`); estados loading / indisponível (503) / carregado; usado por form e modais (sem duplicação de fetch)
+
+### Assinatura Visual — Metadata Snapshot (F38-VS)
+
+- [ ] **F38-VS-01**: Metadata de VS inclui snapshot de custo (D6) — `store_visual_signatures.metadata` ganha `operation_key`, `operation_cost_credits`, `operation_cost_source` além do `credit_tx_id` existente (auto-descritivo do custo na época da geração)
+
+### Launch Config — Interação com Guards (F38-CONFIG)
+
+- [ ] **F38-CONFIG-01**: `creditsChargingEnabled=false` pula saldo/reserva para operações **habilitadas**, mas NÃO ignora `enabled=false` (→ `503 operation_disabled`) nem erro real de leitura (→ `503 operation_cost_unavailable`) (D4/D5)
+- [ ] **F38-CONFIG-02**: `v15Enabled=false` (compat v1.4) pula saldo/reserva mas mantém resolução de custo e guards de habilitação/disponibilidade (D4/D5); `generationPaused` permanece precedente de vocabulário de indisponibilidade
+
 ## v1.7 Requirements (Stripe / Monetização Pública)
 
-Deferred from v1.5 critical path. Stripe será implementada como F37/v1.7 após validação do beta controlado (renumerada de F35 → F36 → F37 nos alinhamentos do Changelog/Novidades e do Onboarding — Navegação por Abas).
+Deferred from v1.5 critical path. Stripe será implementada como F39/v1.7 após validação do beta controlado (renumerada de F35 → F36 → F37 → F39 nos alinhamentos do Changelog/Novidades, do Onboarding — Navegação por Abas e da Tabela de Custos por Operação).
 
 ### Pagamento (PAY)
 
@@ -538,19 +593,47 @@ Deferred to future release. Tracked but not in current roadmap.
 | DASHBOARD-04 | Phase 34 | ○ Pending |
 | BRANDPROFILE-01 | Phase 34 | ○ Pending |
 | BRANDPROFILE-02 | Phase 34 | ○ Pending |
+| F38-DB-01 | Phase 38 | ○ Pending |
+| F38-DB-02 | Phase 38 | ○ Pending |
+| F38-DB-03 | Phase 38 | ○ Pending |
+| F38-DB-04 | Phase 38 | ○ Pending |
+| F38-SERVICE-01 | Phase 38 | ○ Pending |
+| F38-SERVICE-02 | Phase 38 | ○ Pending |
+| F38-SERVICE-03 | Phase 38 | ○ Pending |
+| F38-SERVICE-04 | Phase 38 | ○ Pending |
+| F38-API-01 | Phase 38 | ○ Pending |
+| F38-API-02 | Phase 38 | ○ Pending |
+| F38-API-03 | Phase 38 | ○ Pending |
+| F38-ADMIN-01 | Phase 38 | ○ Pending |
+| F38-ADMIN-02 | Phase 38 | ○ Pending |
+| F38-ADMIN-03 | Phase 38 | ○ Pending |
+| F38-ADMIN-04 | Phase 38 | ○ Pending |
+| F38-ROUTES-01 | Phase 38 | ○ Pending |
+| F38-ROUTES-02 | Phase 38 | ○ Pending |
+| F38-ROUTES-03 | Phase 38 | ○ Pending |
+| F38-ROUTES-04 | Phase 38 | ○ Pending |
+| F38-UI-01 | Phase 38 | ○ Pending |
+| F38-UI-02 | Phase 38 | ○ Pending |
+| F38-UI-03 | Phase 38 | ○ Pending |
+| F38-UI-04 | Phase 38 | ○ Pending |
+| F38-UI-05 | Phase 38 | ○ Pending |
+| F38-VS-01 | Phase 38 | ○ Pending |
+| F38-CONFIG-01 | Phase 38 | ○ Pending |
+| F38-CONFIG-02 | Phase 38 | ○ Pending |
 
 **Coverage:**
 
-- v1 requirements: 153 total (54 v1.5 + 36 LEGAL + 12 INTENT + 21 INTENT-TEST + 30 F34)
-- Mapped to phases: 153
+- v1 requirements: 187 total (54 v1.5 + 36 LEGAL + 12 INTENT + 21 INTENT-TEST + 30 F34 + 34 F38)
+- Mapped to phases: 187
 - Unmapped: 0 ✓
 - Deferred to v1.7: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06
 - F29.1.2: Fase complementar refinando LAUNCH-01 e LAUNCH-02 (sem REQ-IDs próprios)
 - F30 (LEGAL-*): Adicionados em 2026-07-23 via alinhamento com OpenSpec
 - F31.1 (INTENT-*): Adicionados em 2026-07-24 via alinhamento com OpenSpec
 - F34 (F34-*): Adicionados em 2026-07-29 via alinhamento com OpenSpec (Store Readiness)
+- F38 (F38-*): Adicionados em 2026-08-07 via alinhamento com OpenSpec (Tabela de Custos por Operação)
 
 ---
 
 *Requirements defined: 2026-07-15*
-*Last updated: 2026-07-24 — Added F31.1 (INTENT-01 a INTENT-12 + INTENT-TEST-01 a 19) requirements*
+*Last updated: 2026-08-07 — Added F38 (F38-DB-01 a 04, F38-SERVICE-01 a 04, F38-API-01 a 03, F38-ADMIN-01 a 04, F38-ROUTES-01 a 04, F38-UI-01 a 05, F38-VS-01, F38-CONFIG-01 a 02) requirements*

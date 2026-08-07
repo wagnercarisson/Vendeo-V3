@@ -25,7 +25,7 @@ A milestone v1.4 transformou o Vendeo em um produto SaaS coerente: app shell pro
 
 **1345 testes automatizados**, **170 test files**, **TypeScript/lint/build limpos**.
 
-**v1.5 — Lançamento Externo Controlado (2026-07-31):** F35 Changelog/Novidades completa — voz do produto via changelog editorial (content/changelog, /novidades, sidebar 5º item com indicador, anúncio contextual na dashboard, localStorage) — 42 testes novos, verificação 31/31 verdades, checkpoint humano aprovado.
+**v1.5 — Lançamento Externo Controlado (2026-08-05):** F36 Onboarding por Abas completa (6 plans / 5 waves, 1479 testes, 31/31 requirements). Em andamento: F37 (Revisão e Aprovação da Arte) e F38 (Tabela de Custos por Operação) em planejamento.
 
 ## Current Milestone: v1.5 — Lançamento Externo Controlado
 
@@ -40,7 +40,8 @@ A milestone v1.4 transformou o Vendeo em um produto SaaS coerente: app shell pro
 - Saldo visível na topbar + seção de créditos em `/conta` com extrato
 - Observabilidade (logging estruturado, telemetria IA, dashboard operacional)
 - Refinamento visual + Launch Readiness (UAT externo, runbook, feature flag)
-- **Stripe / compra real de créditos**: adiado para F37 (v1.7, pós-beta)
+- Tabela de Custos por Operação (F38): fonte única de custo em `credit_operation_costs`, admin sem deploy, auditoria old/new, UI dinâmica sem "1 crédito" hardcoded
+- **Stripe / compra real de créditos**: adiado para F39 (v1.7, pós-beta)
 
 <details>
 <summary>Versões anteriores</summary>
@@ -298,4 +299,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-01 after Phase 35 (Changelog/Novidades) — v1.5 segue com F36 (Onboarding: Navegação por Abas) em planejamento; F37 (Stripe) futura pós-beta*
+*Last updated: 2026-08-07 after Phase 36 (Onboarding: Navegação por Abas) complete — v1.5 segue com F37 (Revisão e Aprovação da Arte) e F38 (Tabela de Custos por Operação) em planejamento; F39 (Stripe) futura pós-beta*

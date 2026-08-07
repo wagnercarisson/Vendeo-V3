@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
-current_phase: 37
-status: Phase 36 Complete
-last_updated: "2026-08-05T19:51:14.871Z"
+current_phase: 38
+status: Phase 37 Pending / Phase 38 In Planning
+last_updated: "2026-08-07T00:00:00.000Z"
 progress:
   total_phases: 19
   completed_phases: 17
@@ -15,9 +15,9 @@ progress:
 
 # Project State
 
-**Last updated:** 2026-08-01 (planejamento F36 completo — 6 plans / 5 waves; renumeração Stripe → F37)
+**Last updated:** 2026-08-07 (planejamento F38 em andamento — Tabela de Custos por Operação; renumeração F37 = Revisão e Aprovação da Arte, F38 = Tabela de Custos, F39 = Stripe)
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆ **Em andamento**
-**Current phase:** 36
+**Current phase:** 38
 
 ## Completed
 
@@ -426,9 +426,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 36 (onboarding-navegacao-por-abas) — COMPLETE ✅
-Plan: 6 of 6
-v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35 e 36 concluídas. F36 (Onboarding — Navegação por Abas) completa (6 plans / 5 waves, 1479 testes, 31/31 requirements, code review aplicado); F37 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37).
+Phase: 38 (credit-operation-costs / Tabela de Custos por Operação) — IN PLANNING ◆
+Plan: 0 of 0
+v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35 e 36 concluídas. F37 (Revisão e Aprovação da Arte, v1.5, experimento beta) em planejamento futuro; F38 (Tabela de Custos por Operação, v1.5) em planejamento — fonte da verdade `openspec/changes/fase-38-credit-operation-costs/`; F39 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37 → F39).
 
 ### Phase 36 — Onboarding: Navegação por Abas ✅ Complete
 
@@ -461,6 +461,16 @@ v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35 e 36 concluídas. F
 **Context:** `.planning/phases/35-changelog-novidades/35-CONTEXT.md`
 **Source:** `openspec/changes/fase-35-changelog-novidades/`
 **Checker:** 25/25 requirements covered, 0 blockers, 0 warnings
+
+### Phase 38 — Tabela de Custos por Operação ◆ In Planning
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| — | — | ○ Pending | Planejamento em andamento — ver `38-CONTEXT.md` |
+
+**Source:** `openspec/changes/fase-38-credit-operation-costs/` (fonte da verdade — proposal, design D1–D12, tasks, 14 specs)
+
+**Renumeração (D1):** F38 = Tabela de Custos por Operação (v1.5); F37 = Revisão e Aprovação da Arte (v1.5, experimento beta); F39 = Stripe / Monetização Pública (v1.7, pós-beta).
 
 ### Phase 30 — Fundação Legal ✅
 
@@ -572,8 +582,10 @@ v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35 e 36 concluídas. F
 | F33 | ✅ Complete | Verificação CNPJ Freemium — Consulta BrasilAPI/CNPJá, cross-check, motor de decisão, admin review, test stores |
 | F34 | ✅ Completed | Store Readiness — 5 plans, 17+ testes, 1189 total |
 | **F35** | **✅ Completed** | **Changelog/Novidades — 5 plans, 3 waves, 42 testes novos, 1345 total, typecheck/lint/build limpos** |
-| F36 | ○ In progress | Onboarding — Navegação por Abas (em planejamento — openspec/changes/fase-36-onboarding-navegacao-por-abas/) |
-| F37 | ○ Future | Stripe / Monetização Pública (renumerada de F36 → F37; v1.7, pós-beta) |
+| F36 | ✅ Complete | Onboarding — Navegação por Abas (6/6 plans, 31/31 requirements, 1479 testes, code review aplicado) |
+| F37 | ○ In progress | Revisão e Aprovação da Arte (v1.5, experimento beta — planejamento futuro) |
+| F38 | ○ In progress | Tabela de Custos por Operação (v1.5 — em planejamento, openspec/changes/fase-38-credit-operation-costs/) |
+| F39 | ○ Future | Stripe / Monetização Pública (v1.7, pós-beta — renumerada de F36 → F37 → F39) |
 
 ### Quick Tasks Completed
 

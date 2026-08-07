@@ -54,12 +54,12 @@ Autenticação completa, vínculo user→store, isolamento multi-tenant, beta.ve
 
 ### 📋 v1.5 — Lançamento Externo Controlado ◆
 
-Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, UAT externo, fundação legal, modelo comercial, freemium anti-abuso CNPJ, changelog/novidades, onboarding por abas (F36) e Stripe (F37).
+Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, UAT externo, fundação legal, modelo comercial, freemium anti-abuso CNPJ, changelog/novidades, onboarding por abas (F36), revisão e aprovação da arte (F37) e tabela de custos por operação (F38).
 
 <details open>
-<summary>◆ v1.5 Lançamento Externo Controlado (F23-F36) — Em andamento</summary>
+<summary>◆ v1.5 Lançamento Externo Controlado (F23-F38) — Em andamento</summary>
 
-> Stripe / Monetização Pública deslocada para F37 (v1.7, pós-beta).
+> Stripe / Monetização Pública deslocada para F39 (v1.7, pós-beta).
 
 Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, fundação legal, modelo comercial e store readiness.
 
@@ -146,7 +146,10 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - Dependências: F32 (cnpj_normalized, razao_social, nome_fantasia), F33 (store_brand_profiles, verification_status), F30 (legal clearance)
 
 - [x] Phase 35: Changelog / Novidades (5/5 plans)
-- [ ] Phase 36: Onboarding — Navegação por Abas (pending)
+- [x] Phase 36: Onboarding — Navegação por Abas (6/6 plans ✅)
+- [ ] Phase 37: Revisão e Aprovação da Arte (pending)
+- [ ] Phase 38: Tabela de Custos por Operação (pending)
+
 </details>
 
 ## Progress
@@ -187,8 +190,10 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 33. Verificação CNPJ Freemium | v1.5 | 0/5 | ◆ Planning | — |
 | 34. Store Readiness | v1.5 | 0/0 | ○ Pending | — |
 | 35. Changelog / Novidades | v1.5 | 5/5 | ✅ Complete | 2026-07-31 |
-| 36. Onboarding — Navegação por Abas | v1.5 | 0/0 | ○ Pending | — |
-| 37. Stripe / Monetização Pública | v1.7 | 0/0 | ○ Pending | — |
+| 36. Onboarding — Navegação por Abas | v1.5 | 6/6 | ✅ Complete | 2026-08-05 |
+| 37. Revisão e Aprovação da Arte | v1.5 | 0/0 | ○ Pending | — |
+| 38. Tabela de Custos por Operação | v1.5 | 0/0 | ○ Pending | — |
+| 39. Stripe / Monetização Pública | v1.7 | 0/0 | ○ Pending | — |
 
 ---
 
