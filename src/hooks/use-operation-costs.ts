@@ -8,7 +8,9 @@ export type OperationCostsMap = Record<
 
 export type UseOperationCostsStatus = "loading" | "unavailable" | "loaded";
 
-let cache: OperationCostsMap | null = null;
+// Deduplicates concurrent in-flight requests across components, but does NOT
+// keep a persistent cache between mounts. This ensures cost/enablement changes
+// made in admin are reflected as soon as the consumer page mounts.
 let inflight: Promise<OperationCostsMap> | null = null;
 
 export function useOperationCosts(): {
@@ -16,10 +18,8 @@ export function useOperationCosts(): {
   status: UseOperationCostsStatus;
   refetch: () => void;
 } {
-  const [costs, setCosts] = useState<OperationCostsMap | null>(cache);
-  const [status, setStatus] = useState<UseOperationCostsStatus>(
-    cache ? "loaded" : "loading",
-  );
+  const [costs, setCosts] = useState<OperationCostsMap | null>(null);
+  const [status, setStatus] = useState<UseOperationCostsStatus>("loading");
 
   const load = useCallback(() => {
     setStatus("loading");
@@ -30,7 +30,6 @@ export function useOperationCosts(): {
           return res.json() as Promise<OperationCostsMap>;
         })
         .then((data) => {
-          cache = data;
           inflight = null;
           return data;
         })
@@ -52,13 +51,10 @@ export function useOperationCosts(): {
   }, []);
 
   useEffect(() => {
-    if (!cache) {
-      load();
-    }
+    load();
   }, [load]);
 
   const refetch = useCallback(() => {
-    cache = null;
     load();
   }, [load]);
 

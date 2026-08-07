@@ -20,12 +20,14 @@ awaiting: checkpoint humano
 ### 1. Admin muda custo 1 -> 2
 expected: |
   Em /admin/operation-costs, alterar `campaign_generation` de 1 para 2 com motivo obrigatorio. O formulario /campanhas/nova passa a mostrar "Custo: 2" e o balance-card passa a mostrar "Cada geracao consome 2 creditos.". O PUT retorna audit_id e a mudanca e auditada.
-result: pending
+result: pass
+note: "Validado manualmente pelo usuario."
 
 ### 2. Desliga operacao -> 503
 expected: |
   Em /admin/operation-costs, desabilitar `campaign_generation` (enabled=false) com motivo. O formulario /campanhas/nova fica desabilitado com mensagem "Operacao desativada". Tentar gerar via API retorna 503 operation_disabled. Reativar (enabled=true) ao final.
 result: pending
+note: "Bug identificado: useOperationCosts mantinha cache global persistente, entao a UI so refletia a mudanca apos F5. Corrigido para sempre buscar na montagem. Aguardando revalidacao manual."
 
 ### 3. Fail-open linha inexistente
 expected: |
@@ -37,6 +39,7 @@ note: "Verificado automaticamente: OperationCostService.getCost chave inexistent
 expected: |
   Quando a leitura de credit_operation_costs falha de verdade (erro de rede/banco), a rota de geracao responde 503 operation_cost_unavailable, sem gerar nem reservar creditos, e a UI mostra "Tente novamente em alguns instantes".
 result: pending
+note: "Verificado automaticamente: testes unitarios da rota generate-image cobrem o caminho OperationCostUnavailableError -> 503 operation_cost_unavailable."
 
 ## Automated Evidence
 

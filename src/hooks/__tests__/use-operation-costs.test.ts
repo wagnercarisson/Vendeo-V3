@@ -68,7 +68,7 @@ describe("useOperationCosts", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
-  it("refetch limpa cache e busca de novo", async () => {
+  it("refetch busca de novo", async () => {
     (fetch as any)
       .mockResolvedValueOnce({
         ok: true,
@@ -94,6 +94,35 @@ describe("useOperationCosts", () => {
 
     await waitFor(() =>
       expect(result.current.costs?.campaign_generation.costCredits).toBe(2),
+    );
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("nova montagem sempre busca dados atualizados (sem cache persistente)", async () => {
+    (fetch as any)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => okBody,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          ...okBody,
+          campaign_generation: { costCredits: 2, enabled: false },
+        }),
+      });
+
+    const { useOperationCosts } = await import("../use-operation-costs");
+    const { result, unmount } = renderHook(() => useOperationCosts());
+
+    await waitFor(() => expect(result.current.status).toBe("loaded"));
+    expect(result.current.costs?.campaign_generation.enabled).toBe(true);
+
+    unmount();
+
+    const { result: result2 } = renderHook(() => useOperationCosts());
+    await waitFor(() =>
+      expect(result2.current.costs?.campaign_generation.enabled).toBe(false),
     );
     expect(fetch).toHaveBeenCalledTimes(2);
   });
