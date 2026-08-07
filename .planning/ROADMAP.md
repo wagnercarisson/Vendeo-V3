@@ -32,7 +32,7 @@
 | 35 | ✅ Changelog/Novidades | 5/5 | Complete    | 2026-07-31 |
 | 36 | ✅ Onboarding — Navegação por Abas | 6/6 | Complete    | 2026-08-05 |
 | 37 | ○ Revisão e Aprovação da Arte | — | Pending    | — |
-| 38 | ○ Tabela de Custos por Operação | 3/8 | In Progress|  |
+| 38 | ○ Tabela de Custos por Operação | 4/8 | In Progress|  |
 | 39 | ○ Stripe / Monetização Pública (v1.7) | — | Pending    | — |
 
 ---
@@ -530,7 +530,7 @@
 
 **Source of truth:** `openspec/changes/fase-38-credit-operation-costs/`
 
-**Plans:** 3/8 plans executed
+**Plans:** 4/8 plans executed
 
 | Plan | Wave | Objective | Requirements | Files |
 |------|------|-----------|--------------|-------|
