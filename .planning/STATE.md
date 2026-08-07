@@ -4,12 +4,12 @@ milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 current_phase: 38
 status: Executing Phase 38
-last_updated: "2026-08-07T22:32:15.845Z"
+last_updated: "2026-08-07T22:42:27.660Z"
 progress:
   total_phases: 15
   completed_phases: 12
   total_plans: 67
-  completed_plans: 58
+  completed_plans: 59
   percent: 80
 ---
 
