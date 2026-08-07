@@ -68,6 +68,18 @@ vi.mock('@/lib/credit/credit-service', () => ({
   },
 }));
 
+const mockGetCost = vi.fn();
+vi.mock('@/lib/credit/operation-cost-service', () => ({
+  OperationCostService: vi.fn(function () {
+    return { getCost: mockGetCost };
+  }),
+  OperationCostUnavailableError: class extends Error {},
+  DEFAULT_OPERATION_COSTS: {
+    campaign_generation: { costCredits: 1, enabled: true },
+    visual_signature_generation: { costCredits: 1, enabled: true },
+  },
+}));
+
 vi.mock('fs', () => ({
   default: {
     readFileSync: vi.fn(() => 'mocked prompt content'),
@@ -177,6 +189,12 @@ function setupDefaultMocks() {
   mockGetBalance.mockResolvedValue(5);
   mockReserveCredit.mockResolvedValue(CREDIT_TX_ID);
   mockRefundCredit.mockResolvedValue('refund-tx-id');
+  mockGetCost.mockResolvedValue({
+    operationKey: 'visual_signature_generation',
+    costCredits: 1,
+    enabled: true,
+    source: 'table',
+  });
   mockIdentityDirectorGenerate.mockResolvedValue(mockSignatureResult);
   mockPersistSignature.mockResolvedValue(mockSignatureResult.signature);
   mockInsertGenerationEvent.mockResolvedValue(undefined);
@@ -205,7 +223,14 @@ describe('POST generate-without-logo — Credit integration', () => {
     expect(mockReserveCredit).toHaveBeenCalledWith(STORE_ID, 1, {
       campaignId: null,
       idempotencyKey: `vs_reserve_${STORE_ID}_test-op-id`,
-      metadata: { feature: "visual_signature", mode: "standard", operationId: "test-op-id" },
+      metadata: {
+        feature: "visual_signature",
+        mode: "standard",
+        operationId: "test-op-id",
+        operation_key: "visual_signature_generation",
+        operation_cost_credits: 1,
+        operation_cost_source: "table",
+      },
     });
     expect(mockIdentityDirectorGenerate).toHaveBeenCalled();
 
@@ -213,7 +238,7 @@ describe('POST generate-without-logo — Credit integration', () => {
     expect(body.success).toBe(true);
     expect(body.assetUrl).toBeDefined();
     expect(body.signatureId).toBeDefined();
-    // credit_tx_id should be persisted in metadata (verify update called with it)
+    // credit_tx_id + cost snapshot should be persisted in metadata
     const storeSigUpdateCalls = mockSupabaseFrom.mock.results
       .filter((r: any, i: number) => mockSupabaseFrom.mock.calls[i]?.[0] === 'store_visual_signatures')
       .map((r: any) => r.value.update?.mock?.calls ?? [])
@@ -222,6 +247,12 @@ describe('POST generate-without-logo — Credit integration', () => {
       call[0]?.metadata?.credit_tx_id === CREDIT_TX_ID
     );
     expect(hasCreditTx).toBe(true);
+    const hasCostSnapshot = storeSigUpdateCalls.some((call: any) =>
+      call[0]?.metadata?.operation_key === 'visual_signature_generation' &&
+      call[0]?.metadata?.operation_cost_credits === 1 &&
+      call[0]?.metadata?.operation_cost_source === 'table'
+    );
+    expect(hasCostSnapshot).toBe(true);
   });
 
   it('saldo zero: retorna 402 insufficient_credits', async () => {
@@ -344,5 +375,30 @@ describe('POST generate-without-logo — Credit integration', () => {
     expect(res1.status).toBe(200);
     expect(res2.status).toBe(200);
     expect(mockReserveCredit).toHaveBeenCalledTimes(2);
+  });
+
+  it('operation_disabled com cobrança desligada → 503 (D4/F38-CONFIG-01)', async () => {
+    mockGetLaunchConfig.mockReturnValue({
+      v15Enabled: true,
+      creditsChargingEnabled: false,
+      copyDirectorEnabled: true,
+      rateLimitEnabled: true,
+      generationPaused: false,
+    });
+    mockGetCost.mockResolvedValue({
+      operationKey: 'visual_signature_generation',
+      costCredits: 1,
+      enabled: false,
+      source: 'table',
+    });
+
+    const { POST } = await import('../generate-without-logo/route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.error).toBe('operation_disabled');
+    expect(mockReserveCredit).not.toHaveBeenCalled();
+    expect(mockIdentityDirectorGenerate).not.toHaveBeenCalled();
   });
 });

@@ -61,6 +61,18 @@ vi.mock('@/lib/credit/credit-service', () => ({
   },
 }));
 
+const mockGetCost = vi.fn();
+vi.mock('@/lib/credit/operation-cost-service', () => ({
+  OperationCostService: vi.fn(function () {
+    return { getCost: mockGetCost };
+  }),
+  OperationCostUnavailableError: class extends Error {},
+  DEFAULT_OPERATION_COSTS: {
+    campaign_generation: { costCredits: 1, enabled: true },
+    visual_signature_generation: { costCredits: 1, enabled: true },
+  },
+}));
+
 vi.mock('fs', () => ({
   default: {
     readFileSync: vi.fn(() => 'mocked prompt content'),
@@ -171,6 +183,12 @@ describe('POST /api/store/[id]/visual-signature/generate-without-logo', () => {
     mockGetBalance.mockResolvedValue(5);
     mockReserveCredit.mockResolvedValue('ct-001');
     mockRefundCredit.mockResolvedValue('refund-tx');
+    mockGetCost.mockResolvedValue({
+      operationKey: 'visual_signature_generation',
+      costCredits: 1,
+      enabled: true,
+      source: 'table',
+    });
     mockIdentityDirectorGenerate.mockResolvedValue(mockSignatureResult);
     mockPersistSignature.mockResolvedValue(mockSignatureResult.signature);
     mockInsertGenerationEvent.mockResolvedValue(undefined);
