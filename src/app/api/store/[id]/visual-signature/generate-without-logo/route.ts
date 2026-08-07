@@ -14,6 +14,8 @@ import { requireSameOrigin } from '@/lib/auth/csrf';
 import { apiHandler } from '@/lib/auth/api-handler';
 import { getLaunchConfig } from '@/lib/launch-config/config';
 import { CreditService } from '@/lib/credit/credit-service';
+import { OperationCostService, OperationCostUnavailableError } from '@/lib/credit/operation-cost-service';
+import type { OperationCostResolution } from '@/lib/credit/types';
 import { requireLegalClearance } from '@/lib/legal/clearance';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -95,6 +97,7 @@ export const POST = apiHandler(async (
 
   let creditTxId: string | null = null;
   let operationId: string | undefined;
+  let cost: OperationCostResolution | undefined;
 
   try {
     let body: { rejectionContext?: { reason: string; attempt: number }; mode?: 'standard' | 'substitution' };
@@ -166,6 +169,27 @@ export const POST = apiHandler(async (
       console.log(`[generate-without-logo][req-${reqId}] SUBSTITUIÇÃO — guardas OK`);
     }
 
+    // ----- Resolve operation cost (D12) — SEMPRE, mesmo sem cobrança -----
+    try {
+      cost = await new OperationCostService().getCost("visual_signature_generation");
+    } catch (err) {
+      if (err instanceof OperationCostUnavailableError) {
+        console.error(`[generate-without-logo][req-${reqId}] operation_cost_unavailable`, { storeId: id });
+        return NextResponse.json(
+          { error: "operation_cost_unavailable", operationKey: "visual_signature_generation", message: "Serviço indisponível no momento. Tente novamente em alguns instantes." },
+          { status: 503 }
+        );
+      }
+      throw err;
+    }
+    if (!cost.enabled) {
+      console.log(`[generate-without-logo][req-${reqId}] operation_disabled`, { storeId: id });
+      return NextResponse.json(
+        { error: "operation_disabled", operationKey: cost.operationKey },
+        { status: 503 }
+      );
+    }
+
     // ----- v15Enabled check — skip ALL credit logic if false -----
     const creditsEnabled = launchConfig.v15Enabled && launchConfig.creditsChargingEnabled;
 
@@ -173,7 +197,7 @@ export const POST = apiHandler(async (
     if (creditsEnabled) {
       const creditService = new CreditService();
       const balance = await creditService.getBalance(id);
-      if (balance < 1) {
+      if (balance < cost.costCredits) {
         console.log(`[generate-without-logo][req-${reqId}] saldo insuficiente: ${balance}`);
         return NextResponse.json({
           error: 'Créditos insuficientes',
@@ -183,10 +207,17 @@ export const POST = apiHandler(async (
 
       // ----- Reserve credit BEFORE IA call -----
       operationId = crypto.randomUUID();
-      creditTxId = await creditService.reserveCredit(id, 1, {
+      creditTxId = await creditService.reserveCredit(id, cost.costCredits, {
         campaignId: null,
         idempotencyKey: `vs_reserve_${id}_${operationId}`,
-        metadata: { feature: "visual_signature", mode, operationId },
+        metadata: {
+          feature: "visual_signature",
+          mode,
+          operationId,
+          operation_key: cost.operationKey,
+          operation_cost_credits: cost.costCredits,
+          operation_cost_source: cost.source,
+        },
       });
       console.log(`[generate-without-logo][req-${reqId}] crédito reservado: ${creditTxId}`);
     }
@@ -366,6 +397,11 @@ export const POST = apiHandler(async (
     };
     if (creditTxId) {
       updatedMetadata.credit_tx_id = creditTxId;
+    }
+    if (cost) {
+      updatedMetadata.operation_key = cost.operationKey;
+      updatedMetadata.operation_cost_credits = cost.costCredits;
+      updatedMetadata.operation_cost_source = cost.source;
     }
 
     await supabase
