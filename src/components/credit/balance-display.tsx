@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Coins } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { formatCredits } from "@/lib/credit/format";
 
 interface BalanceDisplayProps {
   balance: number;
@@ -9,12 +10,6 @@ interface BalanceDisplayProps {
   variant?: "badge" | "card" | "inline";
   showCta?: boolean;
   ctaHref?: string;
-}
-
-function formatBalance(balance: number): string {
-  if (balance <= 0) return "0 créditos";
-  if (balance === 1) return "1 crédito";
-  return `${balance} créditos`;
 }
 
 function getState(balance: number, hasStore: boolean) {
@@ -37,7 +32,7 @@ function BadgeVariant({ balance, hasStore, showCta, ctaHref }: BalanceDisplayPro
   return (
     <div className="flex items-center gap-2">
       <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium font-heading ${colorClass}`}>
-        {formatBalance(balance)}
+        {formatCredits(balance)}
       </span>
       {showCta && state === "zero" && (
         <Link
@@ -87,7 +82,7 @@ function InlineVariant({ balance, hasStore }: BalanceDisplayProps) {
   return (
     <span className={`inline-flex items-center gap-1.5 text-sm font-medium ${colorClass}`}>
       <Coins className="h-4 w-4" />
-      {formatBalance(balance)}
+      {formatCredits(balance)}
     </span>
   );
 }

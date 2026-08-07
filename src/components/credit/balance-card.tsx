@@ -4,6 +4,8 @@ import Link from "next/link";
 import { Coins } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatCredits } from "@/lib/credit/format";
+import { useOperationCosts } from "@/hooks/use-operation-costs";
 
 interface BalanceCardProps {
   balance?: number;
@@ -14,12 +16,6 @@ interface BalanceCardProps {
   supportEmail?: string;
 }
 
-function formatBalance(balance: number): string {
-  if (balance <= 0) return "0 créditos";
-  if (balance === 1) return "1 crédito";
-  return `${balance} créditos`;
-}
-
 function getState(balance: number, hasStore: boolean) {
   if (!hasStore) return "no_store";
   if (balance >= 3) return "normal";
@@ -28,6 +24,7 @@ function getState(balance: number, hasStore: boolean) {
 }
 
 function ReadyContent({ balance, hasStore, supportEmail }: BalanceCardProps) {
+  const { costs, status } = useOperationCosts();
   const state = getState(balance ?? 0, hasStore ?? true);
 
   if (!hasStore) {
@@ -59,8 +56,8 @@ function ReadyContent({ balance, hasStore, supportEmail }: BalanceCardProps) {
 
   const stateConfig = {
     normal: {
-      title: `${formatBalance(balance ?? 0)} disponíveis`,
-      description: "Cada geração consome 1 crédito.",
+      title: `${formatCredits(balance ?? 0)} disponíveis`,
+      description: status === "loaded" && costs?.campaign_generation ? `Cada geração consome ${formatCredits(costs.campaign_generation.costCredits)}.` : "Cada geração consome créditos.",
       cta: null,
     },
     low: {
