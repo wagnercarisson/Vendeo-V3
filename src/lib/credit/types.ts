@@ -40,3 +40,23 @@ export interface CreditBalance {
   purchasedBalance: number;
   updatedAt: string;
 }
+
+export const OPERATION_KEYS = [
+  "campaign_generation",
+  "visual_signature_generation",
+] as const;
+
+export type OperationKey = (typeof OPERATION_KEYS)[number];
+
+export interface OperationCostResolution {
+  operationKey: OperationKey;
+  costCredits: number;
+  enabled: boolean;
+  source: "table" | "fallback";
+}
+
+export interface OperationCostSnapshot {
+  operation_key: OperationKey;
+  operation_cost_credits: number;
+  operation_cost_source: "table" | "fallback";
+}
