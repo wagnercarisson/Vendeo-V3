@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 current_phase: 38
-status: Phase 37 Pending / Phase 38 In Planning
-last_updated: "2026-08-07T21:21:28.587Z"
+status: Executing Phase 38
+last_updated: "2026-08-07T22:05:36.552Z"
 progress:
-  total_phases: 20
-  completed_phases: 17
-  total_plans: 88
-  completed_plans: 74
-  percent: 84
+  total_phases: 15
+  completed_phases: 12
+  total_plans: 67
+  completed_plans: 53
+  percent: 79
 ---
 
 # Project State
@@ -102,7 +102,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** Phase 36 — onboarding-navegacao-por-abas
+**Current focus:** Phase 38 — credit-operation-costs
 
 ## Completed Milestones
 
@@ -426,8 +426,8 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 38 (credit-operation-costs / Tabela de Custos por Operação) — IN PLANNING ◆
-Plan: 0 of 0
+Phase: 38 (credit-operation-costs) — EXECUTING
+Plan: 1 of 8
 v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35 e 36 concluídas. F37 (Revisão e Aprovação da Arte, v1.5, experimento beta) em planejamento futuro; F38 (Tabela de Custos por Operação, v1.5) em planejamento — fonte da verdade `openspec/changes/fase-38-credit-operation-costs/`; F39 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37 → F39).
 
 ### Phase 36 — Onboarding: Navegação por Abas ✅ Complete
