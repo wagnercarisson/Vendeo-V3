@@ -530,6 +530,18 @@
 
 **Source of truth:** `openspec/changes/fase-38-credit-operation-costs/`
 
+**Plans:** 7 plans in 4 waves
+
+| Plan | Wave | Objective | Requirements | Files |
+|------|------|-----------|--------------|-------|
+| 38-01 | 1 | Migration SQL (tabelas + RPC + seeds) + [BLOCKING] schema push | F38-DB-01 a 04 | `20260807000001_f38_create_credit_operation_costs.sql` |
+| 38-02 | 1 | Core Library — OPERATION_KEYS + OperationCostService + testes | F38-SERVICE-01 a 04 | types.ts, operation-cost-service.ts |
+| 38-03 | 2 | generate-image — custo dinâmico + guards + snapshot + remoção COST_PER_GENERATION | F38-ROUTES-01/02/04, F38-CONFIG-01/02 | generate-image route, config.ts, 4 testes |
+| 38-04 | 2 | generate-without-logo — custo dinâmico + guards + metadata snapshot VS | F38-ROUTES-01/03, F38-VS-01, F38-CONFIG-01/02 | VS route, 3 testes |
+| 38-05 | 3 | Admin — UpdateOperationCostRequestSchema + getAllCosts + API GET/PUT + página | F38-ADMIN-01 a 04 | schemas.ts, service, admin route/page, layout |
+| 38-06 | 3 | Dados client — GET /api/operation-costs + formatCredits + useOperationCosts | F38-API-01 a 03, F38-UI-02/05 | operation-costs route, format.ts, hook, balance-card |
+| 38-07 | 4 | UI dinâmica — campaign-input-form + modais + testes | F38-UI-01/03/04 | 3 componentes + 4 testes |
+
 ---
 
 ## Dependency Graph
