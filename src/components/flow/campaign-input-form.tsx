@@ -14,6 +14,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { CreditCta } from "@/components/credit/credit-cta";
+import { useOperationCosts } from "@/hooks/use-operation-costs";
 import { ErrorState } from "@/components/ui/error-state";
 
 interface CampaignInputFormProps {
@@ -260,6 +261,22 @@ function FormContent({
   balance,
   supportEmail,
 }: FormContentProps) {
+  const { costs, status: costStatus } = useOperationCosts();
+  const campaignCost = costs?.campaign_generation;
+  const costUnavailable = costStatus !== "loaded";
+  const costDisabled = costStatus === "loaded" && campaignCost !== undefined && !campaignCost.enabled;
+  const insufficientBalance =
+    balance !== undefined &&
+    balance !== null &&
+    campaignCost !== undefined &&
+    balance < campaignCost.costCredits;
+  const submitDisabled =
+    isSubmitting ||
+    costUnavailable ||
+    costDisabled ||
+    insufficientBalance ||
+    balance === null;
+
   return (
     <form
       onSubmit={(e) => {
@@ -502,7 +519,15 @@ function FormContent({
               <>
                 <span>Saldo: <strong>{balance}</strong> crédito(s)</span>
                 <span className="text-text-muted">·</span>
-                <span>Custo: 1</span>
+                <span>
+                  {costStatus === "loaded" && campaignCost
+                    ? (campaignCost.enabled
+                        ? `Custo: ${campaignCost.costCredits}`
+                        : "Operação desativada")
+                    : costStatus === "unavailable"
+                      ? "Serviço indisponível no momento"
+                      : "Custo: …"}
+                </span>
               </>
             ) : (
               <span>Não foi possível confirmar seu saldo. Tente novamente.</span>
@@ -520,13 +545,19 @@ function FormContent({
 
         <button
           type="submit"
-          disabled={isSubmitting || balance === 0 || balance === null}
+          disabled={submitDisabled}
           title={
-            balance === 0
-              ? "Você precisa de créditos para gerar uma campanha"
-              : balance === null
-                ? "Não foi possível confirmar seu saldo"
-                : undefined
+            costUnavailable
+              ? (costStatus === "loading"
+                  ? "Verificando custo da geração..."
+                  : "Serviço indisponível no momento. Tente novamente em alguns instantes.")
+              : costDisabled
+                ? "Operação desativada no momento."
+                : insufficientBalance
+                  ? "Você precisa de créditos para gerar uma campanha"
+                  : balance === null
+                    ? "Não foi possível confirmar seu saldo"
+                    : undefined
           }
           className="min-h-[44px] w-full sm:w-auto px-8 py-2.5 bg-accent-green text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >

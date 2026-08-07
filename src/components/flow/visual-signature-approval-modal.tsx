@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import { useOperationCosts } from "@/hooks/use-operation-costs";
+import { formatCredits } from "@/lib/credit/format";
 import { AlertCircle, CheckCircle2, Loader2, X, ThumbsUp, ThumbsDown } from "lucide-react";
 import type { VisualSignatureArtDirectorOutput } from "@/lib/visual-signature/types";
 
@@ -95,6 +97,8 @@ export function VisualSignatureApprovalModal({
   onTier2Retry,
   onOpenGallery,
 }: VisualSignatureApprovalModalProps) {
+  const { costs, status } = useOperationCosts();
+  const vsCost = costs?.visual_signature_generation;
   const [state, setState] = useState<ApprovalState>({ phase: "checking" });
   const [feedbackText, setFeedbackText] = useState("");
   const [storedRejectionContext, setStoredRejectionContext] = useState<{ reason: string; attempt: number } | null>(null);
@@ -713,7 +717,7 @@ export function VisualSignatureApprovalModal({
               Créditos insuficientes para gerar assinatura visual.
             </p>
             <p className="text-text-muted text-xs font-body text-center">
-              Cada geração de assinatura visual consome 1 crédito.
+              {status === "loaded" && vsCost ? `Cada geração de assinatura visual consome ${formatCredits(vsCost.costCredits)}.` : null}
             </p>
             <div className="flex flex-col gap-3 w-full">
               <button

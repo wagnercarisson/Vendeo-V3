@@ -2,6 +2,8 @@
 
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { useOperationCosts } from "@/hooks/use-operation-costs";
+import { formatCredits } from "@/lib/credit/format";
 
 interface DriftCriticalModalProps {
   open: boolean;
@@ -30,6 +32,8 @@ export function DriftCriticalModal({
   isLoading = false,
   error = null,
 }: DriftCriticalModalProps) {
+  const { costs, status } = useOperationCosts();
+  const vsCost = costs?.visual_signature_generation;
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [isDismissing, setIsDismissing] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
@@ -116,7 +120,10 @@ export function DriftCriticalModal({
               <AlertCircle className="w-5 h-5 text-accent-amber shrink-0 mt-0.5" />
               <p className="text-accent-amber text-sm font-body">
                 Você não tem créditos suficientes para gerar uma nova assinatura
-                visual. Cada geração consome 1 crédito.
+                visual.
+            {status === "loaded" && vsCost
+              ? ` Cada geração consome ${formatCredits(vsCost.costCredits)}.`
+              : null}
               </p>
             </div>
 
