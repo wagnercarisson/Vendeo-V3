@@ -530,7 +530,7 @@
 
 **Source of truth:** `openspec/changes/fase-38-credit-operation-costs/`
 
-**Plans:** 7 plans in 4 waves
+**Plans:** 8 plans in 5 waves
 
 | Plan | Wave | Objective | Requirements | Files |
 |------|------|-----------|--------------|-------|
@@ -541,6 +541,7 @@
 | 38-05 | 3 | Admin — UpdateOperationCostRequestSchema + getAllCosts + API GET/PUT + página | F38-ADMIN-01 a 04 | schemas.ts, service, admin route/page, layout |
 | 38-06 | 3 | Dados client — GET /api/operation-costs + formatCredits + useOperationCosts | F38-API-01 a 03, F38-UI-02/05 | operation-costs route, format.ts, hook, balance-card |
 | 38-07 | 4 | UI dinâmica — campaign-input-form + modais + testes | F38-UI-01/03/04 | 3 componentes + 4 testes |
+| 38-08 | 5 | Testes e Verificação — I1–I6 SQL/integrado (banco real) + build gate + UAT | F38-DB-04, F38-SERVICE-02/03, F38-CONFIG-01/02 | verify script, integration test/config, 38-UAT.md |
 
 ---
 
