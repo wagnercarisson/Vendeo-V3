@@ -9,7 +9,7 @@ const mockUseOperationCosts = vi.fn(() => ({
   refetch: vi.fn(),
 }));
 vi.mock("@/hooks/use-operation-costs", () => ({
-  useOperationCosts: (...args: unknown[]) => mockUseOperationCosts(...args),
+  useOperationCosts: () => mockUseOperationCosts(),
 }));
 
 describe('DriftCriticalModal decision logic', () => {

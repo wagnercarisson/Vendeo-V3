@@ -33,21 +33,22 @@ afterEach(async () => {
 });
 
 describe("get-changelog", () => {
-  it("getAllEntries lê o diretório real e retorna entries ordenadas por data DESC (F35 → F34 → F32 → F30)", async () => {
+  it("getAllEntries lê o diretório real e retorna entries ordenadas por data DESC (F36 → F35 → F34 → F32 → F30)", async () => {
     const entries = await getAllEntries();
 
     expect(entries.length).toBeGreaterThanOrEqual(3);
-    expect(entries[0].frontmatter.id).toBe("fase-35-changelog-novidades");
-    expect(entries[0].frontmatter.date).toBe("2026-07-31");
-    expect(entries[1].frontmatter.id).toBe("fase-34-store-readiness");
-    expect(entries[1].frontmatter.date).toBe("2026-07-30");
-    expect(entries[2].frontmatter.id).toBe("fase-32-freemium-cnpj");
-    expect(entries[2].frontmatter.date).toBe("2026-07-29");
+    expect(entries[0].frontmatter.id).toBe("fase-36-onboarding-navegacao-por-abas");
+    expect(entries[0].frontmatter.date).toBe("2026-08-06");
+    expect(entries[1].frontmatter.id).toBe("fase-35-changelog-novidades");
+    expect(entries[1].frontmatter.date).toBe("2026-07-31");
+    expect(entries[2].frontmatter.id).toBe("fase-34-store-readiness");
+    expect(entries[2].frontmatter.date).toBe("2026-07-30");
 
     const ids = entries.map((entry) => entry.frontmatter.id);
     expect(ids).toContain("fase-30-legal-foundation");
     expect(ids).toContain("fase-32-freemium-cnpj");
     expect(ids).toContain("fase-34-store-readiness");
+    expect(ids).toContain("fase-35-changelog-novidades");
 
     for (let i = 1; i < entries.length; i++) {
       expect(entries[i - 1].frontmatter.date >= entries[i].frontmatter.date).toBe(true);
@@ -95,11 +96,11 @@ describe("get-changelog", () => {
     expect(result).toBeNull();
   });
 
-  it("getLatestAnnouncement retorna a entry mais recente com anúncio no diretório real (F35)", async () => {
+  it("getLatestAnnouncement retorna a entry mais recente com anúncio no diretório real (F36)", async () => {
     const result = await getLatestAnnouncement();
 
     expect(result).not.toBeNull();
-    expect(result!.frontmatter.id).toBe("fase-35-changelog-novidades");
+    expect(result!.frontmatter.id).toBe("fase-36-onboarding-navegacao-por-abas");
     expect(result!.frontmatter.announcement).toBe("card");
   });
 

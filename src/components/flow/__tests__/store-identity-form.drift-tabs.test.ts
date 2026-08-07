@@ -38,7 +38,7 @@ const mockUseOperationCosts = vi.fn(() => ({
   refetch: vi.fn(),
 }));
 vi.mock("@/hooks/use-operation-costs", () => ({
-  useOperationCosts: (...args: unknown[]) => mockUseOperationCosts(...args),
+  useOperationCosts: () => mockUseOperationCosts(),
 }));
 import type { FormData } from "@/components/flow/use-store-form";
 import type { StoreProfileInputSnapshot } from "@/lib/snapshot";
