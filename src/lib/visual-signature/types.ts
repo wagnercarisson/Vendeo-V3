@@ -95,7 +95,21 @@ export type GenerateVariationsResult =
 
 export type LogoStatus = 'uploaded' | 'generated' | 'explicit_none' | 'failed' | 'exhausted' | null;
 
-export type GenerationEventType = 'visual_signature' | 'brand_profile_without_logo' | 'brand_profile_with_logo';
+// F38.1 (D5): 12 valores alinhados ao CHECK chk_generation_events_type da migration.
+// 6 tipos existentes mantidos (backward compat) + 6 novos call-level.
+export type GenerationEventType =
+  | 'campaign_pipeline'
+  | 'campaign_copy'
+  | 'campaign_input_validation'
+  | 'campaign_image'
+  | 'campaign_image_review'
+  | 'visual_signature'
+  | 'visual_signature_image'
+  | 'visual_signature_validation'
+  | 'brand_profile_without_logo'
+  | 'brand_profile_with_logo'
+  | 'brand_profile_vision'
+  | 'brand_profile_text';
 
 export type GenerationEventStatus = 'success' | 'failed' | 'rejected' | 'timeout';
 
