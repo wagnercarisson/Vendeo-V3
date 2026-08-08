@@ -569,6 +569,23 @@
 
 **Source of truth:** `openspec/changes/fase-38-1-ai-cost-accounting/`
 
+**Plans:** 11 plans (6 waves)
+
+```
+Plans:
+- [ ] 38-1-01-PLAN.md — Migração + db push [BLOCKING: pós-deploy] (Wave 1)
+- [ ] 38-1-02-PLAN.md — Types + AiCostTracker (Wave 2)
+- [ ] 38-1-03-PLAN.md — Admin APIs pricing (Wave 2)
+- [ ] 38-1-04-PLAN.md — Estimador + pricing (Wave 3)
+- [ ] 38-1-05-PLAN.md — Campaign onCall (Wave 3)
+- [ ] 38-1-06-PLAN.md — VS/brand onCall (Wave 3)
+- [ ] 38-1-07-PLAN.md — generate-image + 6.3 (Wave 4)
+- [ ] 38-1-08-PLAN.md — generate-without-logo + 6.4 (Wave 4)
+- [ ] 38-1-09-PLAN.md — brand rotas + 6.5 (Wave 4)
+- [ ] 38-1-10-PLAN.md — Views/RPCs + verificação + gates [checkpoint] (Wave 5)
+- [ ] 38-1-11-PLAN.md — Runbook trackings (Wave 6)
+```
+
 ---
 
 ## Dependency Graph
