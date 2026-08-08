@@ -27,7 +27,8 @@ beforeEach(() => {
   service = new AiModelPricingService(mockClient as any);
   mockFrom.mockReturnValue({ select: mockSelect });
   mockSelect.mockReturnValue({ eq: mockEq });
-  mockEq.mockReturnValue({ is: mockIs });
+  // Cadeia: .eq(provider).eq(model).is("effective_until", null).maybeSingle()
+  mockEq.mockImplementation(() => ({ eq: mockEq, is: mockIs }));
   mockIs.mockReturnValue({ maybeSingle: mockMaybeSingle });
   mockMaybeSingle.mockResolvedValue({ data: null, error: null });
 });
