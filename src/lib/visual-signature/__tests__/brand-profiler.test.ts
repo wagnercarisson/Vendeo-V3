@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockSupabaseFrom = vi.fn();
 const mockFetch = vi.fn();
+const mockChatCompletionsCreate = vi.fn();
 
 vi.mock('@/lib/supabase/server', () => ({
   supabaseAdmin: { from: mockSupabaseFrom },
@@ -17,7 +18,7 @@ vi.mock('openai', () => ({
   default: class {
     chat = {
       completions: {
-        create: vi.fn(),
+        create: mockChatCompletionsCreate,
       },
     };
   },
@@ -302,5 +303,116 @@ describe('BrandProfilerWithoutLogoService.generate', () => {
       process.env.OPENAI_API_KEY = originalApiKey;
       (process.env as Record<string, string>).NODE_ENV = originalNodeEnv ?? '';
     }
+  });
+});
+
+describe('BrandProfilerWithoutLogoService — onCall (F38.1, D7/D11)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockFetch.mockResolvedValue({
+      ok: true,
+      arrayBuffer: async () => new ArrayBuffer(0),
+    });
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'store_brand_profiles') {
+        return makeChain({ data: [], error: null });
+      }
+      if (table === 'stores') {
+        return makeChain({ data: null, error: null });
+      }
+      return makeChain({ data: null, error: null });
+    });
+    process.env.OPENAI_API_KEY = 'test-key';
+    (process.env as Record<string, string>).NODE_ENV = 'test';
+  });
+
+  afterEach(() => {
+    delete process.env.OPENAI_API_KEY;
+    (process.env as Record<string, string>).NODE_ENV = 'test';
+    mockChatCompletionsCreate.mockReset();
+  });
+
+  it('Teste 7: path 1 (intendedPalette, probe unavailable) → 1 onCall de visão com provider/model/usage/durationMs', async () => {
+    mockChatCompletionsCreate.mockResolvedValue({
+      choices: [{ message: { content: '{"visual_style":"Moderno"}' } }],
+      usage: { prompt_tokens: 100, completion_tokens: 50, total_tokens: 150 },
+    });
+
+    const { BrandProfilerWithoutLogoService } = await import('@/lib/visual-signature/brand-profiler');
+    const service = new BrandProfilerWithoutLogoService();
+    const onCall = vi.fn();
+    const result = await service.generate({
+      ...mockBrandProfilerInput,
+      intendedPalette: { primary: '#FF0000', accent: '#00FF00', background: '#FFFFFF', support: [] },
+      onCall,
+    });
+
+    expect(result.success).toBe(true);
+    expect(onCall).toHaveBeenCalledTimes(1);
+    const info = onCall.mock.calls[0][0];
+    expect(info.provider).toBe('openai');
+    expect(info.model).toBe('gpt-4o');
+    expect(info.usage).toEqual({ promptTokens: 100, completionTokens: 50, totalTokens: 150 });
+    expect(info.durationMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('Teste 8: path 2 (sem paleta) → 1 onCall de visão (brand-profiler só faz chamadas de visão; texto-only é serviço separado 38-1-09)', async () => {
+    mockChatCompletionsCreate.mockResolvedValue({
+      choices: [{ message: { content: '{"visual_style":"Elegante"}' } }],
+      usage: { prompt_tokens: 200, completion_tokens: 80, total_tokens: 280 },
+    });
+
+    const { BrandProfilerWithoutLogoService } = await import('@/lib/visual-signature/brand-profiler');
+    const service = new BrandProfilerWithoutLogoService();
+    const onCall = vi.fn();
+    const result = await service.generate({
+      ...mockBrandProfilerInput,
+      intendedPalette: null,
+      onCall,
+    });
+
+    expect(result.success).toBe(true);
+    expect(onCall).toHaveBeenCalledTimes(1);
+    const info = onCall.mock.calls[0][0];
+    expect(info.provider).toBe('openai');
+    expect(info.model).toBe('gpt-4o');
+    expect(info.usage).toEqual({ promptTokens: 200, completionTokens: 80, totalTokens: 280 });
+  });
+
+  it('Teste 9: sem OPENAI_API_KEY (dev, mockGenerate) → 0 onCalls (sem chamada IA, 6.5)', async () => {
+    delete process.env.OPENAI_API_KEY;
+
+    const { BrandProfilerWithoutLogoService } = await import('@/lib/visual-signature/brand-profiler');
+    const service = new BrandProfilerWithoutLogoService();
+    const onCall = vi.fn();
+    const result = await service.generate({
+      ...mockBrandProfilerInput,
+      intendedPalette: null,
+      onCall,
+    });
+
+    expect(result.success).toBe(true);
+    expect(onCall).not.toHaveBeenCalled();
+  });
+
+  it('Teste 10: onCall lançando → geração continua (best-effort D7) e resultado inalterado', async () => {
+    mockChatCompletionsCreate.mockResolvedValue({
+      choices: [{ message: { content: '{"visual_style":"Elegante"}' } }],
+      usage: { prompt_tokens: 200, completion_tokens: 80, total_tokens: 280 },
+    });
+
+    const { BrandProfilerWithoutLogoService } = await import('@/lib/visual-signature/brand-profiler');
+    const service = new BrandProfilerWithoutLogoService();
+    const onCall = vi.fn(() => {
+      throw new Error('boom — onCall deve ser best-effort');
+    });
+    const result = await service.generate({
+      ...mockBrandProfilerInput,
+      intendedPalette: null,
+      onCall,
+    });
+
+    expect(result.success).toBe(true);
+    expect(onCall).toHaveBeenCalledTimes(1);
   });
 });
