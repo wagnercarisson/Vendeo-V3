@@ -33,7 +33,7 @@
 | 36 | ✅ Onboarding — Navegação por Abas | 6/6 | Complete    | 2026-08-05 |
 | 37 | ○ Revisão e Aprovação da Arte | — | Pending    | — |
 | 38 | ✅ Tabela de Custos por Operação | 8/8 | ✅ Complete | 2026-08-07 |
-| 38.1 | ○ Apuração de Custos de IA por Entrega | — | Pending    | — |
+| 38.1 | 🔄 Apuração de Custos de IA por Entrega | 1/11 | In Progress | — |
 | 39 | ○ Stripe / Monetização Pública (v1.7) | — | Pending    | — |
 
 ---
@@ -573,7 +573,7 @@
 
 ```
 Plans:
-- [ ] 38-1-01-PLAN.md — Migração + db push [BLOCKING: pós-deploy] (Wave 1)
+- [x] 38-1-01-PLAN.md — Migração + db push [BLOCKING: pós-deploy] (Wave 1) ✅ (aplicada no remoto 2026-08-08)
 - [ ] 38-1-02-PLAN.md — Types + AiCostTracker (Wave 2)
 - [ ] 38-1-03-PLAN.md — Admin APIs pricing (Wave 2)
 - [ ] 38-1-04-PLAN.md — Estimador + pricing (Wave 3)
@@ -724,4 +724,4 @@ Phase 24 (Credit Tables + CreditService) ──┘
 
 *Roadmap created: 2026-07-15*
 *Milestone: v1.5 — Lançamento Externo Controlado*
-*Last updated: 2026-08-08 — Phase 38 complete (Tabela de Custos por Operação — 8/8 plans, 1597 testes, UAT 4/4); renumeração F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), F39 = Stripe/Monetização Pública (v1.7); **Phase 38.1 registrada (Apuração de Custos de IA por Entrega — desdobramento da F38, v1.5) em planejamento** — fonte `openspec/changes/fase-38-1-ai-cost-accounting/`*
+*Last updated: 2026-08-08 — Phase 38 complete (Tabela de Custos por Operação — 8/8 plans, 1597 testes, UAT 4/4); renumeração F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), F39 = Stripe/Monetização Pública (v1.7); **Phase 38.1 (Apuração de Custos de IA por Entrega — desdobramento da F38, v1.5) em execução — 38-1-01 concluído (migration + schema push aplicado no remoto 2026-08-08)** — fonte `openspec/changes/fase-38-1-ai-cost-accounting/`*

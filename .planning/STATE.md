@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 current_phase: 38.1
-status: Planning Phase 38.1
-last_updated: "2026-08-08T00:00:00.000Z"
+status: executing
+last_updated: "2026-08-08T21:58:03.465Z"
 progress:
-  total_phases: 16
-  completed_phases: 14
-  total_plans: 78
-  completed_plans: 67
-  percent: 86
+  total_phases: 21
+  completed_phases: 18
+  total_plans: 99
+  completed_plans: 83
+  percent: 84
 ---
 
 # Project State
@@ -127,6 +127,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 | Phase | Plans | Duration | Tests |
 |-------|-------|----------|-------|
 | Phase 18-app-shell-ui-base-rotas | 3 plans | ~multi-cycle | 579→600 (21 novos) |
+| Phase 38-1-ai-cost-accounting P01 | 45min | 3 tasks | 1 files |
 
 ### Phase 19 — Onboarding & Estados Vazios ✅
 
@@ -426,8 +427,8 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 38.1 (ai-cost-accounting) — PLANNING (plans aprovados pelo plan-checker, pronta para execução)
-Plan: 1 of 11 (waves 1–6)
+Phase: 38.1 (ai-cost-accounting) — EXECUTING (plans em execução por wave)
+Plan: 2 of 11 (waves 1–6)
 v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36 e 38 concluídas. F38 (Tabela de Custos por Operação, v1.5) concluída — 8/8 plans, 1597 testes, UAT 4/4, fonte da verdade `openspec/changes/fase-38-credit-operation-costs/`; F38.1 (Apuração de Custos de IA por Entrega, desdobramento da F38) planejada — 11/11 plans em 6 waves, 38/38 requirements, plan-checker PASS, fonte da verdade `openspec/changes/fase-38-1-ai-cost-accounting/`; F37 (Revisão e Aprovação da Arte, v1.5, experimento beta) em planejamento futuro; F39 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37 → F39).
 
 ### Phase 36 — Onboarding: Navegação por Abas ✅ Complete
@@ -483,13 +484,13 @@ v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36 e 38 concluída
 **Context:** `.planning/phases/38-credit-operation-costs/38-CONTEXT.md`
 **UAT:** `.planning/phases/38-credit-operation-costs/38-UAT.md`
 
-### Phase 38.1 — Apuração de Custos de IA por Entrega ⏳ Planning Complete
+### Phase 38.1 — Apuração de Custos de IA por Entrega ⏳ In Progress
 
 Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por entrega via `generation_events` + `operation_run_id`; `AiCostTracker` como camada única de registro; `resolveAiCost` (provider_reported → pricing_table → fallback_static → not_available); tabela `ai_model_pricing` versionada + RPC `admin_set_ai_model_price` + GET/PUT `/api/admin/ai-model-pricing` (sem página); views/RPCs de apuração e reconciliação USD × créditos (sem UI); furos 1–7 da F38 corrigidos; ~51 testes novos + verificação I1–I6.
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
-| 38-1-01 | 1 | ○ | Migration `f38_1_create_ai_cost_accounting` — colunas `generation_events` + CHECKs + índices, `campaigns.operation_run_id`, `ai_model_pricing` + seeds + RPC (db push [BLOCKING]) |
+| 38-1-01 | 1 | ✅ | Migration `f38_1_create_ai_cost_accounting` — colunas `generation_events` + CHECKs + índices, `campaigns.operation_run_id`, `ai_model_pricing` + seeds + RPC (db push [BLOCKING]) |
 | 38-1-02 | 2 | ○ | Types call-level + `AiCostTracker` (único caminho de escrita, best-effort) |
 | 38-1-03 | 2 | ○ | Admin — RPC pricing + GET/PUT `/api/admin/ai-model-pricing` + `/api/admin/ai-costs` + seeds |
 | 38-1-04 | 3 | ○ | `resolveAiCost` 4 fontes + `AiCostEstimator` (client-only) |
@@ -501,7 +502,7 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 | 38-1-10 | 5 | ○ | Views/RPCs apuração + 50 testes + gates + UAT checkpoint |
 | 38-1-11 | 6 | ○ | Runbook trackings 8.1–8.5 |
 
-**Status:** Planning complete — 11/11 plans, 6 waves, plan-checker PASS (3 iterações), 38/38 requirements (F38.1-01 a F38.1-38), `HAS_UI: 0`, threat_model ASVS L1. Pronta para `/gsd-execute-phase`.
+**Status:** In Progress — 1/11 plans concluído (38-1-01 ✅ schema push aplicado no remoto)
 
 **Source:** `openspec/changes/fase-38-1-ai-cost-accounting/` (fonte da verdade)
 **Context:** `.planning/phases/38-1-ai-cost-accounting/38-1-CONTEXT.md`
@@ -643,3 +644,8 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 | 260730-o30 | Hotfix admin_get_metrics uuid = text + dead code grant_monthly_credits | 2026-07-30 | 0051a7a | [260730-o30-hotfix-admin-metrics-rpc-uuid-text](./quick/260730-o30-hotfix-admin-metrics-rpc-uuid-text/) |
 | 260731-qep | Adequar documentação legal para beta freemium — Termos v1.3, Privacidade v1.2, AUP v1.1, remoção de aviso de draft (markdowns + páginas públicas), microcopy discreta em campanhas | 2026-07-31 | 020e197 | [260731-qep-adequar-documentos-legais-beta-freemium-](./quick/260731-qep-adequar-documentos-legais-beta-freemium-/) |
 | 260804-s16 | Corrigir assimetria Diretor/Revisor de Imagem: mandatoryArtworkText chega ao diretor mas nao ao revisor. Espelhar contrato de contexto (mandatoryArtworkText, campaignDetails, additionalDetails) ao ImageReviewInput e ao prompt do revisor com linguagem de revisao, adicionando testes focados. | 2026-08-04 | 47a1a4a | [260804-s16-corrigir-assimetria-diretor-revisor-de-i](./quick/260804-s16-corrigir-assimetria-diretor-revisor-de-i/) |
+
+## Decisions
+
+- [Phase 38-1-ai-cost-accounting]: Fixes Rule 1 no push da migration F38.1-01: REVOKE ALL ON VIEW -> ON TABLE (sintaxe PostgreSQL) e MAX(uuid) -> GROUP BY nas CTEs de admin_cost_vs_credits
+- [Phase 38-1-ai-cost-accounting]: Views admin_ai_* sem GRANT direto ao cliente (404 no REST confirma T-38.1-03) - acesso exclusivo via RPC SECURITY DEFINER

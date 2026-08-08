@@ -422,31 +422,31 @@ Desdobramento da F38, adicionados em 2026-08-08 via OpenSpec (`openspec/changes/
 - [ ] **F38.1-04**: View `admin_ai_cost_by_store` — custo por loja
 - [ ] **F38.1-05**: View `admin_cost_vs_credits` — reconciliação USD × créditos
 - [ ] **F38.1-06**: RPC `admin_get_ai_costs` — apuração filtrada (8 params, `p_hours`)
-- [ ] **F38.1-07**: GET `/api/admin/ai-costs` — apuração (sem UI)
-- [ ] **F38.1-08**: `admin_get_metrics` (F28) permanece inalterado — compatível
+- [x] **F38.1-07**: GET `/api/admin/ai-costs` — apuração (sem UI)
+- [x] **F38.1-08**: `admin_get_metrics` (F28) permanece inalterado — compatível
 
 ### Estimador (F38.1-ESTIMATOR)
 
-- [ ] **F38.1-09**: `estimateAiCost()` calcula custo estimado — corrige gemini-3.1-flash-lite, gpt-image-2, cached/image tokens
+- [x] **F38.1-09**: `estimateAiCost()` calcula custo estimado — corrige gemini-3.1-flash-lite, gpt-image-2, cached/image tokens
 - [ ] **F38.1-10**: Modelo desconhecido → null (legado)
 
 ### Tracker — Tipos e Registro (F38.1-TRACKER)
 
 - [ ] **F38.1-11**: Tipos centrais de custo (`CostSource`, `OperationRunType`, `TokenUsage`, `CostResolution`)
-- [ ] **F38.1-12**: `AiCostEvent` — contrato do evento de chamada real de IA
-- [ ] **F38.1-13**: `AiCallInfo` — callback de usage (padrão dos serviços)
-- [ ] **F38.1-14**: `AiCostTracker` — camada única de registro (best-effort)
+- [x] **F38.1-12**: `AiCostEvent` — contrato do evento de chamada real de IA
+- [x] **F38.1-13**: `AiCallInfo` — callback de usage (padrão dos serviços)
+- [x] **F38.1-14**: `AiCostTracker` — camada única de registro (best-effort)
 
 ### Geração de Imagem (F38.1-IMAGE)
 
-- [ ] **F38.1-15**: `ImageGenerationService` emite métricas por run (attempt granular, duration_ms por chamada)
+- [x] **F38.1-15**: `ImageGenerationService` emite métricas por run (attempt granular, duration_ms por chamada)
 
 ### Tabela de Preço (F38.1-PRICING)
 
-- [ ] **F38.1-16**: Tabela `ai_model_pricing` versionada (`effective_from`/`effective_until`, CHECK `at_least_one_price`, índice parcial único `uq_ai_model_pricing_vigente`)
-- [ ] **F38.1-17**: Seeds verificáveis de `ai_model_pricing` (bootstrap — 7 seeds incl. gemini-3.1-flash-lite e gpt-image-2)
+- [x] **F38.1-16**: Tabela `ai_model_pricing` versionada (`effective_from`/`effective_until`, CHECK `at_least_one_price`, índice parcial único `uq_ai_model_pricing_vigente`)
+- [x] **F38.1-17**: Seeds verificáveis de `ai_model_pricing` (bootstrap — 7 seeds incl. gemini-3.1-flash-lite e gpt-image-2)
 - [ ] **F38.1-18**: RPC `admin_set_ai_model_price` (SECURITY DEFINER, transacional, versiona vigência)
-- [ ] **F38.1-19**: GET `/api/admin/ai-model-pricing`
+- [x] **F38.1-19**: GET `/api/admin/ai-model-pricing`
 - [ ] **F38.1-20**: PUT `/api/admin/ai-model-pricing`
 
 ### Brand Profile (F38.1-BRAND)
