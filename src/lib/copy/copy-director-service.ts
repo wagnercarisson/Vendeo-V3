@@ -7,6 +7,7 @@ import {
 } from "@/lib/copy/schema";
 import type { CopyDirectorInput, CopyDirectorResult } from "@/lib/copy/schema";
 import { MalformedResponseError } from "@/lib/copy/errors";
+import type { AiCallInfo } from "@/lib/ai-cost/types";
 
 const SYSTEM_PROMPT = "Você é um copywriter especialista em marketing para lojas físicas.";
 
@@ -58,7 +59,8 @@ export class CopyDirectorService {
 
   async generateCopy(
     input: CopyDirectorInput,
-    options?: { signal?: AbortSignal }
+    options?: { signal?: AbortSignal },
+    onCall?: (info: AiCallInfo) => void | Promise<void>
   ): Promise<CopyDirectorResult> {
     const validated = CopyDirectorInputSchema.parse(input);
 
@@ -92,9 +94,46 @@ export class CopyDirectorService {
       textOpts.signal = options.signal;
     }
 
+    const startTime = Date.now();
     const result = await this.provider.generateText(prompt, textOpts);
+    const durationMs = Date.now() - startTime;
+
+    // Best-effort telemetry — never blocks generation (D7). Exposes the real
+    // usage the TextProvider already reports (furo 1: copy sem custo).
+    this.invokeOnCall(onCall, {
+      provider: this.provider.name,
+      model: result.model,
+      usage: result.usage,
+      durationMs,
+    });
 
     return this.parseResult(result.content);
+  }
+
+  /**
+   * Invoke the onCall callback best-effort (D7): a throwing or rejecting
+   * callback is logged and ignored — it never breaks copy generation.
+   */
+  private invokeOnCall(
+    onCall: ((info: AiCallInfo) => void | Promise<void>) | undefined,
+    info: AiCallInfo
+  ): void {
+    if (!onCall) return;
+    try {
+      Promise.resolve(onCall(info)).catch((err) => {
+        console.error(
+          `[CopyDirectorService] onCall callback failed (best-effort): ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
+      });
+    } catch (err) {
+      console.error(
+        `[CopyDirectorService] onCall callback failed (best-effort): ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      );
+    }
   }
 
   private parseResult(raw: string): CopyDirectorResult {
