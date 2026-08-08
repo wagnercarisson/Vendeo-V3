@@ -428,11 +428,11 @@ Desdobramento da F38, adicionados em 2026-08-08 via OpenSpec (`openspec/changes/
 ### Estimador (F38.1-ESTIMATOR)
 
 - [x] **F38.1-09**: `estimateAiCost()` calcula custo estimado — corrige gemini-3.1-flash-lite, gpt-image-2, cached/image tokens
-- [ ] **F38.1-10**: Modelo desconhecido → null (legado)
+- [x] **F38.1-10**: Modelo desconhecido → null (legado)
 
 ### Tracker — Tipos e Registro (F38.1-TRACKER)
 
-- [ ] **F38.1-11**: Tipos centrais de custo (`CostSource`, `OperationRunType`, `TokenUsage`, `CostResolution`)
+- [x] **F38.1-11**: Tipos centrais de custo (`CostSource`, `OperationRunType`, `TokenUsage`, `CostResolution`)
 - [x] **F38.1-12**: `AiCostEvent` — contrato do evento de chamada real de IA
 - [x] **F38.1-13**: `AiCallInfo` — callback de usage (padrão dos serviços)
 - [x] **F38.1-14**: `AiCostTracker` — camada única de registro (best-effort)
@@ -445,7 +445,7 @@ Desdobramento da F38, adicionados em 2026-08-08 via OpenSpec (`openspec/changes/
 
 - [x] **F38.1-16**: Tabela `ai_model_pricing` versionada (`effective_from`/`effective_until`, CHECK `at_least_one_price`, índice parcial único `uq_ai_model_pricing_vigente`)
 - [x] **F38.1-17**: Seeds verificáveis de `ai_model_pricing` (bootstrap — 7 seeds incl. gemini-3.1-flash-lite e gpt-image-2)
-- [ ] **F38.1-18**: RPC `admin_set_ai_model_price` (SECURITY DEFINER, transacional, versiona vigência)
+- [x] **F38.1-18**: RPC `admin_set_ai_model_price` (SECURITY DEFINER, transacional, versiona vigência)
 - [x] **F38.1-19**: GET `/api/admin/ai-model-pricing`
 - [ ] **F38.1-20**: PUT `/api/admin/ai-model-pricing`
 

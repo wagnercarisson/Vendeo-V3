@@ -4,18 +4,18 @@ milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 current_phase: 38.1
 status: executing
-last_updated: "2026-08-08T22:13:29.976Z"
+last_updated: "2026-08-08T22:29:11.995Z"
 progress:
   total_phases: 21
   completed_phases: 18
   total_plans: 99
-  completed_plans: 84
-  percent: 85
+  completed_plans: 85
+  percent: 86
 ---
 
 # Project State
 
-**Last updated:** 2026-08-08 (F38 Tabela de Custos por Operação concluída — 8/8 plans, 1597 testes, UAT 4/4; F38.1 Apuração de Custos de IA por Entrega em execução — 2/11 plans concluídos, 38/38 requirements, plan-checker PASS; renumeração F37 = Revisão e Aprovação da Arte, F38 = Tabela de Custos, F39 = Stripe)
+**Last updated:** 2026-08-08 (F38 Tabela de Custos por Operação concluída — 8/8 plans, 1597 testes, UAT 4/4; F38.1 Apuração de Custos de IA por Entrega em execução — 3/11 plans concluídos, 38/38 requirements, plan-checker PASS; renumeração F37 = Revisão e Aprovação da Arte, F38 = Tabela de Custos, F39 = Stripe)
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆ **Em andamento**
 **Current phase:** 38.1
 
@@ -129,6 +129,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 | Phase 18-app-shell-ui-base-rotas | 3 plans | ~multi-cycle | 579→600 (21 novos) |
 | Phase 38-1-ai-cost-accounting P01 | 45min | 3 tasks | 1 files |
 | Phase 38-1-ai-cost-accounting P02 | 7min | 3 tasks | 5 files |
+| Phase 38-1-ai-cost-accounting P03 | 8min | 3 tasks | 7 files |
 
 ### Phase 19 — Onboarding & Estados Vazios ✅
 
@@ -429,7 +430,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 ## Current Position
 
 Phase: 38.1 (ai-cost-accounting) — EXECUTING (plans em execução por wave)
-Plan: 3 of 11 (waves 1–6)
+Plan: 4 of 11 (waves 1–6)
 v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36 e 38 concluídas. F38 (Tabela de Custos por Operação, v1.5) concluída — 8/8 plans, 1597 testes, UAT 4/4, fonte da verdade `openspec/changes/fase-38-credit-operation-costs/`; F38.1 (Apuração de Custos de IA por Entrega, desdobramento da F38) planejada — 11/11 plans em 6 waves, 38/38 requirements, plan-checker PASS, fonte da verdade `openspec/changes/fase-38-1-ai-cost-accounting/`; F37 (Revisão e Aprovação da Arte, v1.5, experimento beta) em planejamento futuro; F39 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37 → F39).
 
 ### Phase 36 — Onboarding: Navegação por Abas ✅ Complete
@@ -493,7 +494,7 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 |------|------|--------|-------------|
 | 38-1-01 | 1 | ✅ | Migration `f38_1_create_ai_cost_accounting` — colunas `generation_events` + CHECKs + índices, `campaigns.operation_run_id`, `ai_model_pricing` + seeds + RPC (db push [BLOCKING]) |
 | 38-1-02 | 2 | ✅ | Types call-level + `AiCostTracker` (único caminho de escrita, best-effort) |
-| 38-1-03 | 2 | ○ | Admin — RPC pricing + GET/PUT `/api/admin/ai-model-pricing` + `/api/admin/ai-costs` + seeds |
+| 38-1-03 | 2 | ✅ | Admin — RPC pricing + GET/PUT `/api/admin/ai-model-pricing` + `/api/admin/ai-costs` + seeds |
 | 38-1-04 | 3 | ○ | `resolveAiCost` 4 fontes + `AiCostEstimator` (client-only) |
 | 38-1-05 | 3 | ○ | Callback `onCall` na rota de campanha (copy, validation, image review) |
 | 38-1-06 | 3 | ○ | `onCall` no VS generator/validator + brand profiler/director + text-only |
@@ -503,7 +504,7 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 | 38-1-10 | 5 | ○ | Views/RPCs apuração + 50 testes + gates + UAT checkpoint |
 | 38-1-11 | 6 | ○ | Runbook trackings 8.1–8.5 |
 
-**Status:** In Progress — 2/11 plans concluídos (38-1-01 ✅ schema push aplicado no remoto; 38-1-02 ✅ types + tracker, 1610 testes)
+**Status:** In Progress — 3/11 plans concluídos (38-1-01 ✅ schema push aplicado no remoto; 38-1-02 ✅ types + tracker; 38-1-03 ✅ admin routes ai-model-pricing + ai-costs, 1626 testes)
 
 **Source:** `openspec/changes/fase-38-1-ai-cost-accounting/` (fonte da verdade)
 **Context:** `.planning/phases/38-1-ai-cost-accounting/38-1-CONTEXT.md`
