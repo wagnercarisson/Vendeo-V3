@@ -33,7 +33,7 @@
 | 36 | ✅ Onboarding — Navegação por Abas | 6/6 | Complete    | 2026-08-05 |
 | 37 | ○ Revisão e Aprovação da Arte | — | Pending    | — |
 | 38 | ✅ Tabela de Custos por Operação | 8/8 | ✅ Complete | 2026-08-07 |
-| 38.1 | 🔄 Apuração de Custos de IA por Entrega | 3/11 | In Progress | — |
+| 38.1 | 🔄 Apuração de Custos de IA por Entrega | 4/11 | In Progress | — |
 | 39 | ○ Stripe / Monetização Pública (v1.7) | — | Pending    | — |
 
 ---
@@ -576,7 +576,7 @@ Plans:
 - [x] 38-1-01-PLAN.md — Migração + db push [BLOCKING: pós-deploy] (Wave 1) ✅ (aplicada no remoto 2026-08-08)
 - [x] 38-1-02-PLAN.md — Types + AiCostTracker (Wave 2)
 - [x] 38-1-03-PLAN.md — Admin APIs pricing (Wave 2)
-- [ ] 38-1-04-PLAN.md — Estimador + pricing (Wave 3)
+- [x] 38-1-04-PLAN.md — Estimador + pricing (Wave 3)
 - [ ] 38-1-05-PLAN.md — Campaign onCall (Wave 3)
 - [ ] 38-1-06-PLAN.md — VS/brand onCall (Wave 3)
 - [ ] 38-1-07-PLAN.md — generate-image + 6.3 (Wave 4)

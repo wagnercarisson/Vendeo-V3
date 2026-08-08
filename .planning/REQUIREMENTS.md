@@ -420,8 +420,8 @@ Desdobramento da F38, adicionados em 2026-08-08 via OpenSpec (`openspec/changes/
 - [x] **F38.1-02**: View `admin_campaign_delivery_costs` — detalhe por etapa da entrega
 - [x] **F38.1-03**: Views `admin_ai_cost_by_provider_model` e `admin_ai_cost_by_stage` — agrupamentos dinâmicos por provider/model e etapa
 - [x] **F38.1-04**: View `admin_ai_cost_by_store` — custo por loja
-- [ ] **F38.1-05**: View `admin_cost_vs_credits` — reconciliação USD × créditos
-- [ ] **F38.1-06**: RPC `admin_get_ai_costs` — apuração filtrada (8 params, `p_hours`)
+- [x] **F38.1-05**: View `admin_cost_vs_credits` — reconciliação USD × créditos
+- [x] **F38.1-06**: RPC `admin_get_ai_costs` — apuração filtrada (8 params, `p_hours`)
 - [x] **F38.1-07**: GET `/api/admin/ai-costs` — apuração (sem UI)
 - [x] **F38.1-08**: `admin_get_metrics` (F28) permanece inalterado — compatível
 
