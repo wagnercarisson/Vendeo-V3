@@ -1,12 +1,42 @@
-import { vi, describe, it, expect } from "vitest";
+import { vi, describe, it, expect, beforeEach } from "vitest";
 
 vi.mock("@/lib/supabase/server", () => ({
   supabaseAdmin: {} as any,
 }));
 
+import { AiCostTracker } from "../tracker";
 import { COST_SOURCES, OPERATION_RUN_TYPES } from "../types";
 import type { AiCostEvent, CostSource } from "../types";
 import type { GenerationEventType } from "@/lib/visual-signature/types";
+
+const mockFrom = vi.fn();
+const mockInsert = vi.fn();
+const mockAdminClient = { from: mockFrom };
+
+let tracker: AiCostTracker;
+
+const baseEvent: AiCostEvent = {
+  operationRunId: "11111111-1111-4111-8111-111111111111",
+  operationRunType: "campaign_delivery",
+  traceId: "trace-1",
+  storeId: "store-1",
+  generationType: "campaign_pipeline",
+  provider: "openai",
+  model: "gpt-4o",
+  attemptNumber: 1,
+  durationMs: 100,
+  status: "success",
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  tracker = new AiCostTracker(mockAdminClient as any);
+  mockFrom.mockImplementation((table: string) => {
+    if (table === "generation_events") return { insert: mockInsert };
+    return {};
+  });
+  mockInsert.mockResolvedValue({ error: null });
+});
 
 describe("tipos centrais (contrato F38.1)", () => {
   it("COST_SOURCES contém exatamente os 5 valores de D4", () => {
@@ -79,5 +109,153 @@ describe("tipos centrais (contrato F38.1)", () => {
     expect(types).toContain("visual_signature_validation");
     expect(types).toContain("brand_profile_vision");
     expect(types).toContain("brand_profile_text");
+  });
+});
+
+describe("AiCostTracker", () => {
+  it("startRun gera operationRunId e traceId distintos (UUID v4 — D1)", () => {
+    const run = tracker.startRun("campaign_delivery");
+    expect(run.operationRunId).not.toBe(run.traceId);
+    expect(run.operationRunId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+  });
+
+  it("record grava todas as colunas novas (D2)", async () => {
+    await tracker.record({
+      operationRunId: "run-1",
+      operationRunType: "visual_signature",
+      traceId: "trace-1",
+      storeId: "store-1",
+      userId: "user-1",
+      campaignId: null,
+      visualSignatureId: "vs-1",
+      themeId: null,
+      generationType: "visual_signature_image",
+      provider: "openai",
+      model: "gpt-4o",
+      attemptNumber: 2,
+      durationMs: 345,
+      status: "success",
+      tokens: {
+        promptTokens: 10,
+        completionTokens: 20,
+        totalTokens: 30,
+        cachedInputTokens: 4,
+        imageTokens: 5,
+      },
+      cost: {
+        estimatedCostUsd: 0.001,
+        providerReportedCostUsd: null,
+        costSource: "pricing_table",
+        pricingVersion: "uuid-1",
+      },
+      metadata: { phase: "image_generation" },
+    });
+
+    expect(mockInsert).toHaveBeenCalledTimes(1);
+    const row = mockInsert.mock.calls[0][0];
+    expect(row.operation_run_id).toBe("run-1");
+    expect(row.operation_run_type).toBe("visual_signature");
+    expect(row.trace_id).toBe("trace-1");
+    expect(row.store_id).toBe("store-1");
+    expect(row.user_id).toBe("user-1");
+    expect(row.campaign_id).toBeNull();
+    expect(row.visual_signature_id).toBe("vs-1");
+    expect(row.theme_id).toBeNull();
+    expect(row.generation_type).toBe("visual_signature_image");
+    expect(row.provider).toBe("openai");
+    expect(row.model).toBe("gpt-4o");
+    expect(row.attempt_number).toBe(2);
+    expect(row.duration_ms).toBe(345);
+    expect(row.status).toBe("success");
+    expect(row.prompt_tokens).toBe(10);
+    expect(row.completion_tokens).toBe(20);
+    expect(row.total_tokens).toBe(30);
+    expect(row.cached_input_tokens).toBe(4);
+    expect(row.image_tokens).toBe(5);
+    expect(row.estimated_cost_usd).toBe(0.001);
+    expect(row.provider_reported_cost_usd).toBeNull();
+    expect(row.cost_source).toBe("pricing_table");
+    expect(row.pricing_version).toBe("uuid-1");
+    expect(row.metadata).toEqual({ phase: "image_generation" });
+  });
+
+  it("record nunca lança quando a escrita rejeita (best-effort — D7)", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockInsert.mockRejectedValue(new Error("network timeout"));
+
+    await expect(
+      tracker.record({ ...baseEvent, generationType: "campaign_copy", cost: { estimatedCostUsd: 0.01, costSource: "pricing_table" } }),
+    ).resolves.toBeUndefined();
+    expect(consoleErrorSpy).toHaveBeenCalled();
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("record loga erro retornado pelo supabase e resolve sem lançar", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockInsert.mockResolvedValue({ error: { message: "insert conflict" } });
+
+    await expect(tracker.record(baseEvent)).resolves.toBeUndefined();
+    expect(consoleErrorSpy).toHaveBeenCalled();
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("delivery marker grava custo/tokens NULL + metadata.duration_is_pipeline (D1/D6)", async () => {
+    await tracker.record({
+      ...baseEvent,
+      operationRunId: "run-2",
+      metadata: { phase: "pipeline_complete" },
+    });
+
+    const row = mockInsert.mock.calls[0][0];
+    expect(row.estimated_cost_usd).toBeNull();
+    expect(row.provider_reported_cost_usd).toBeNull();
+    expect(row.cost_source).toBeNull();
+    expect(row.pricing_version).toBeNull();
+    expect(row.prompt_tokens).toBeNull();
+    expect(row.completion_tokens).toBeNull();
+    expect(row.total_tokens).toBeNull();
+    expect(row.cached_input_tokens).toBeNull();
+    expect(row.image_tokens).toBeNull();
+    expect(row.metadata).toEqual({ phase: "pipeline_complete", duration_is_pipeline: true });
+  });
+
+  it("evento not_available grava tokens com custo NULL (D4)", async () => {
+    await tracker.record({
+      ...baseEvent,
+      generationType: "campaign_copy",
+      tokens: { promptTokens: 120, completionTokens: 40 },
+      cost: { estimatedCostUsd: null, costSource: "not_available" },
+    });
+
+    const row = mockInsert.mock.calls[0][0];
+    expect(row.prompt_tokens).toBe(120);
+    expect(row.completion_tokens).toBe(40);
+    expect(row.estimated_cost_usd).toBeNull();
+    expect(row.provider_reported_cost_usd).toBeNull();
+    expect(row.cost_source).toBe("not_available");
+    expect(row.metadata).toEqual({});
+  });
+
+  it("mesmo operationRunId em N records → N inserts com o mesmo operation_run_id (D1)", async () => {
+    const run = { operationRunId: "run-x", traceId: "trace-x" };
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      await tracker.record({
+        ...baseEvent,
+        operationRunId: run.operationRunId,
+        traceId: run.traceId,
+        attemptNumber: attempt,
+        generationType: "campaign_image",
+        cost: { estimatedCostUsd: 0.01, costSource: "pricing_table" },
+      });
+    }
+
+    expect(mockInsert).toHaveBeenCalledTimes(3);
+    for (const call of mockInsert.mock.calls) {
+      expect(call[0].operation_run_id).toBe("run-x");
+    }
   });
 });
