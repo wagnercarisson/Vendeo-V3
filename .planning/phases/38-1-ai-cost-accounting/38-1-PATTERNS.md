@@ -1,8 +1,8 @@
 # Phase 38.1: Apuração de Custos de IA por Entrega — Pattern Map
 
 **Mapped:** 2026-08-08
-**Files analyzed:** 28 (7 new + 13 modified code + 5 new tests + 3 modified tests)
-**Analogs found:** 24 / 28 (6 pattern gaps flagged — see "No Analog Found")
+**Files analyzed:** 30 (8 new + 13 modified code + 6 new tests + 3 modified tests)
+**Analogs found:** 26 / 30 (6 pattern gaps flagged — see "No Analog Found")
 
 ## File Classification
 
@@ -14,6 +14,7 @@
 | `src/lib/ai-cost/ai-model-pricing.ts` (new) | service | request-response (read + defaults) | `src/lib/credit/operation-cost-service.ts` (DEFAULT_* + table read + fail-open fallback) | exact |
 | `src/lib/ai-cost/index.ts` (modify) | barrel | — | itself (lines 1-2) | exact |
 | `src/lib/ai-cost/cost-estimator.ts` (refactor) | utility | transform | itself — `estimateAiCost` → `resolveAiCost` (keep `normalizeModel`, token math) | exact |
+| `src/lib/ai-cost/legacy-estimator.ts` (new) | utility | transform (sync) | itself — old `estimateAiCost` contract moved intact (sync, `@deprecated`, local fallback) | exact |
 | `src/app/api/admin/ai-model-pricing/route.ts` (new) | route | CRUD (GET+PUT) | `src/app/api/admin/operation-costs/route.ts` (GET list + PUT RPC + zod + apiHandler) | exact |
 | `src/app/api/admin/ai-costs/route.ts` (new) | route | request-response (RPC passthrough) | `src/lib/metrics/pipeline-metrics.ts:53-57` (rpc call w/ p_* params) + `src/app/api/admin/audit-log/route.ts:10-17` (searchParams filters) | role-match (compound) |
 | `src/app/api/campaign/generate-image/route.ts` | route | streaming | itself (lines 31, 41, 221-243, 348, 555-663, 717-735) | exact |
@@ -292,7 +293,7 @@ Fail-open semantics: a healthy query with no row → `null` (caller uses `DEFAUL
 
 ---
 
-### `src/lib/ai-cost/cost-estimator.ts` (refactor — estimateAiCost → resolveAiCost)
+### `src/lib/ai-cost/cost-estimator.ts` (refactor — estimateAiCost → resolveAiCost) + `legacy-estimator.ts`
 
 **Analog:** itself (lines 1-111). Keep `normalizeModel` (lines 50-52), the per-token math (lines 75-84, 100-104), `getFallbackCost` env fallback (lines 27-34, rename env to `VENDEO_AI_FALLBACK_COST_USD` per D9) — but replace the static `OPENAI_PRICING`/`GEMINI_PRICING` Records (lines 12-22) with a lookup against `AiModelPricingService.getCurrent` + `DEFAULT_AI_MODEL_PRICING` bootstrap, and replace the `AiCostEstimate { estimatedCostUsd, source }` contract with `CostResolution`:
 
@@ -306,7 +307,10 @@ export async function resolveAiCost(params: {
   // D9 chain: provider_reported → pricing_table (table row, then code default) → fallback_static → not_available
 }
 ```
-> **Async note:** `resolveAiCost` becomes async (table read). Callers: `generate-image/route.ts:593,614` and the new tracker-driven callbacks in the route — update to `await`. Existing tests (`cost-estimator.test.ts`) must be adapted (task 2.7): drop `source` string assertions (`openai_published_pricing` etc.), assert `costSource: "pricing_table"|"fallback_static"|"not_available"` + `pricingVersion` (`uuid`|`'code_default'`|null) instead.
+
+**Legacy wrapper (NEW file `legacy-estimator.ts`):** the old `estimateAiCost` (sync, `@deprecated`) MOVES out of `cost-estimator.ts` — together with `AiCostEstimate`, `PricingTier`, `OPENAI_PRICING`, `GEMINI_PRICING`, `getFallbackCost` (reads `VENDEO_IMAGE_GENERATION_FALLBACK_COST_USD`), `isKnownTextModel`/`KNOWN_TEXT_MODELS`. It stays **synchronous with local fallback/defaults** and does **NOT** call `resolveAiCost` (which is async). Reason: `generate-image/route.ts:593,614` still calls `estimateAiCost` synchronously until 38-1-07 replaces them; a sync wrapper cannot await an async resolver without breaking the callers' types. The barrel re-exports `estimateAiCost` from `legacy-estimator.ts`.
+
+> **Async note:** `resolveAiCost` becomes async (table read). New callers (tracker-driven callbacks in the route, 38-1-05/06/07) use `await`. Existing tests (`cost-estimator.test.ts`) must be adapted (task 2.7): drop `source` string assertions (`openai_published_pricing` etc.), assert `costSource: "pricing_table"|"fallback_static"|"not_available"` + `pricingVersion` (`uuid`|`'code_default'`|null) instead. Legacy wrapper behavior is preserved by `legacy-estimator.test.ts`.
 
 ---
 
@@ -320,20 +324,20 @@ Extend from itself (lines 1-2) to export `resolveAiCost`, `CostResolution`, `AiC
 
 **Analog:** `src/app/api/admin/operation-costs/route.ts` (lines 1-110) — exact copy. GET = `requireAdmin` + `apiHandler` + list (with `source`/email join if `updated_by` present, mirroring lines 28-57) returning `{ prices: [...] }` (spec ai-model-pricing lines 139-158). PUT = zod parse → 400 (`ZodError`, lines 63-74) → `supabaseAdmin.rpc("admin_set_ai_model_price", { p_actor_id, p_provider, p_model, p_input, p_output, p_reason, p_cached, p_image_unit, p_image_token, p_source_url, p_source_note })` → error mapping 400/500 (lines 88-99) → passthrough `{ id, provider, model, effective_from, previous_id }` (spec lines 160-192).
 
-**Zod schema** — add to `src/lib/admin/schemas.ts` next to `UpdateOperationCostRequestSchema` (lines 11-25), importing enums from `@/lib/credit/types` style:
+**Zod schema** — add to `src/lib/admin/schemas.ts` next to `UpdateOperationCostRequestSchema` (lines 11-25), importing enums from `@/lib/credit/types` style. Field names canonical per 38-1-03 (`*CostUsd` naming — maps to RPC `p_*` params):
 ```typescript
-export const SetAiModelPriceRequestSchema = z.object({
+export const AiModelPricingUpdateSchema = z.object({
   provider: z.string().min(1),
   model: z.string().min(1),
-  input: z.number().positive().nullable().optional(),
-  output: z.number().positive().nullable().optional(),
-  cached: z.number().positive().optional(),
-  imageUnit: z.number().positive().optional(),
-  imageToken: z.number().positive().optional(),
+  inputCostUsd: z.number().nonnegative().optional(),
+  outputCostUsd: z.number().nonnegative().optional(),
+  cachedInputCostUsd: z.number().nonnegative().optional(),
+  imageUnitCostUsd: z.number().nonnegative().optional(),
+  imageTokenCostUsd: z.number().nonnegative().optional(),
   sourceUrl: z.string().url().optional(),
   sourceNote: z.string().optional(),
   reason: z.string().min(1),   // obrigatório (D8)
-}).refine((v) => [v.input, v.output, v.cached, v.imageUnit, v.imageToken].some(x => x != null), {
+}).refine((v) => [v.inputCostUsd, v.outputCostUsd, v.cachedInputCostUsd, v.imageUnitCostUsd, v.imageTokenCostUsd].some(x => x !== undefined), {
   message: "pelo menos uma dimensão de preço",   // espelha CHECK chk_ai_model_pricing_at_least_one_price
 });
 ```
