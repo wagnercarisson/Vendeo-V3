@@ -25,7 +25,7 @@ A milestone v1.4 transformou o Vendeo em um produto SaaS coerente: app shell pro
 
 **1345 testes automatizados**, **170 test files**, **TypeScript/lint/build limpos**.
 
-**v1.5 — Lançamento Externo Controlado (2026-08-05):** F36 Onboarding por Abas completa (6 plans / 5 waves, 1479 testes, 31/31 requirements). Em andamento: F37 (Revisão e Aprovação da Arte) e F38 (Tabela de Custos por Operação) em planejamento.
+**v1.5 — Lançamento Externo Controlado (2026-08-05):** F36 Onboarding por Abas completa (6 plans / 5 waves, 1479 testes, 31/31 requirements). F38 (Tabela de Custos por Operação) concluída (8/8 plans, 1597 testes, UAT 4/4). Em andamento: F37 (Revisão e Aprovação da Arte) e F38.1 (Apuração de Custos de IA por Entrega) em planejamento.
 
 ## Current Milestone: v1.5 — Lançamento Externo Controlado
 
@@ -41,6 +41,7 @@ A milestone v1.4 transformou o Vendeo em um produto SaaS coerente: app shell pro
 - Observabilidade (logging estruturado, telemetria IA, dashboard operacional)
 - Refinamento visual + Launch Readiness (UAT externo, runbook, feature flag)
 - Tabela de Custos por Operação (F38): fonte única de custo em `credit_operation_costs`, admin sem deploy, auditoria old/new, UI dinâmica sem "1 crédito" hardcoded
+- Apuração de Custos de IA por Entrega (F38.1, desdobramento da F38): custo real por chamada de IA (tokens/USD) agregado por entrega via `generation_events` + `operation_run_id`, tabela de preço versionada `ai_model_pricing` + admin API, `AiCostTracker` como camada única de registro, views/RPCs de reconciliação USD × créditos (sem UI)
 - **Stripe / compra real de créditos**: adiado para F39 (v1.7, pós-beta)
 
 <details>
@@ -299,4 +300,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-07 after Phase 36 (Onboarding: Navegação por Abas) complete — v1.5 segue com F37 (Revisão e Aprovação da Arte) e F38 (Tabela de Custos por Operação) em planejamento; F39 (Stripe) futura pós-beta*
+*Last updated: 2026-08-08 after Phase 38 (Tabela de Custos por Operação) complete and F38.1 (Apuração de Custos de IA por Entrega) planned — v1.5 segue com F37 (Revisão e Aprovação da Arte) e F38.1 em planejamento; F39 (Stripe) futura pós-beta*

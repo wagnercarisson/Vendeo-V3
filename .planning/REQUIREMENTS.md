@@ -410,6 +410,87 @@ Adicionados em 2026-08-07 via OpenSpec (`openspec/changes/fase-38-credit-operati
 - [ ] **F38-CONFIG-01**: `creditsChargingEnabled=false` pula saldo/reserva para operações **habilitadas**, mas NÃO ignora `enabled=false` (→ `503 operation_disabled`) nem erro real de leitura (→ `503 operation_cost_unavailable`) (D4/D5)
 - [ ] **F38-CONFIG-02**: `v15Enabled=false` (compat v1.4) pula saldo/reserva mas mantém resolução de custo e guards de habilitação/disponibilidade (D4/D5); `generationPaused` permanece precedente de vocabulário de indisponibilidade
 
+## v1.5 Requirements — Apuração de Custos de IA por Entrega (F38.1)
+
+Desdobramento da F38, adicionados em 2026-08-08 via OpenSpec (`openspec/changes/fase-38-1-ai-cost-accounting/`). OpenSpec é a fonte detalhada; esta tabela é o índice rastreável para o gate de cobertura. F38.1 responde "quanto essa entrega custou para o Vendeo" (USD real/estimado por chamada de IA); a F38 responde "quanto o usuário paga/debita" (créditos) — camadas separadas, encontro apenas nas views de reconciliação.
+
+### Apuração — Views e RPC (F38.1-ACCOUNTING)
+
+- [ ] **F38.1-01**: View `admin_ai_operation_costs` — agrupamento por run (`operation_run_id`), soma apenas call-level (anti-dupla-contagem)
+- [ ] **F38.1-02**: View `admin_campaign_delivery_costs` — detalhe por etapa da entrega
+- [ ] **F38.1-03**: Views `admin_ai_cost_by_provider_model` e `admin_ai_cost_by_stage` — agrupamentos dinâmicos por provider/model e etapa
+- [ ] **F38.1-04**: View `admin_ai_cost_by_store` — custo por loja
+- [ ] **F38.1-05**: View `admin_cost_vs_credits` — reconciliação USD × créditos
+- [ ] **F38.1-06**: RPC `admin_get_ai_costs` — apuração filtrada (8 params, `p_hours`)
+- [ ] **F38.1-07**: GET `/api/admin/ai-costs` — apuração (sem UI)
+- [ ] **F38.1-08**: `admin_get_metrics` (F28) permanece inalterado — compatível
+
+### Estimador (F38.1-ESTIMATOR)
+
+- [ ] **F38.1-09**: `estimateAiCost()` calcula custo estimado — corrige gemini-3.1-flash-lite, gpt-image-2, cached/image tokens
+- [ ] **F38.1-10**: Modelo desconhecido → null (legado)
+
+### Tracker — Tipos e Registro (F38.1-TRACKER)
+
+- [ ] **F38.1-11**: Tipos centrais de custo (`CostSource`, `OperationRunType`, `TokenUsage`, `CostResolution`)
+- [ ] **F38.1-12**: `AiCostEvent` — contrato do evento de chamada real de IA
+- [ ] **F38.1-13**: `AiCallInfo` — callback de usage (padrão dos serviços)
+- [ ] **F38.1-14**: `AiCostTracker` — camada única de registro (best-effort)
+
+### Geração de Imagem (F38.1-IMAGE)
+
+- [ ] **F38.1-15**: `ImageGenerationService` emite métricas por run (attempt granular, duration_ms por chamada)
+
+### Tabela de Preço (F38.1-PRICING)
+
+- [ ] **F38.1-16**: Tabela `ai_model_pricing` versionada (`effective_from`/`effective_until`, CHECK `at_least_one_price`, índice parcial único `uq_ai_model_pricing_vigente`)
+- [ ] **F38.1-17**: Seeds verificáveis de `ai_model_pricing` (bootstrap — 7 seeds incl. gemini-3.1-flash-lite e gpt-image-2)
+- [ ] **F38.1-18**: RPC `admin_set_ai_model_price` (SECURITY DEFINER, transacional, versiona vigência)
+- [ ] **F38.1-19**: GET `/api/admin/ai-model-pricing`
+- [ ] **F38.1-20**: PUT `/api/admin/ai-model-pricing`
+
+### Brand Profile (F38.1-BRAND)
+
+- [ ] **F38.1-21**: Store Brand Director prompt file
+- [ ] **F38.1-22**: Store Brand Director JSON output schema
+
+### Copy (F38.1-COPY)
+
+- [ ] **F38.1-23**: `CopyDirectorService` class — preserva usage para custo real
+
+### Revisão de Imagem (F38.1-REVIEW)
+
+- [ ] **F38.1-24**: `ImageReviewService` revisa imagens geradas — emite evento de custo (vision)
+
+### Brand Profiler sem Logo (F38.1-PROFILER)
+
+- [ ] **F38.1-25**: Brand profiler execution
+- [ ] **F38.1-26**: Presence validation flow
+
+### Assinatura Visual (F38.1-VS)
+
+- [ ] **F38.1-27**: Generate visual signature via AI image generation (Abordagem B — main approach)
+- [ ] **F38.1-28**: Generate 1 variation for automatic mode (Deixar o Vendeo Criar)
+- [ ] **F38.1-29**: Metadata includes generation_tier
+- [ ] **F38.1-30**: Visual signature quality criteria
+- [ ] **F38.1-31**: generate-without-logo resolve custo dinâmico (nova tentativa = novo run)
+
+### Inferência Text-Only (F38.1-TEXT)
+
+- [ ] **F38.1-32**: Brand inference service — `onCall` no caminho real (sem evento no mock dev)
+
+### Pipeline (F38.1-PIPELINE)
+
+- [ ] **F38.1-33**: traceId gerado por request
+- [ ] **F38.1-34**: Telemetria persistida no pipeline
+- [ ] **F38.1-35**: Attempt granular e duration_ms por chamada (furo 6/7)
+- [ ] **F38.1-36**: metadata.totalCost correto (furo 2)
+- [ ] **F38.1-37**: Reconciliação via views — anti-dupla-contagem
+
+### Validação (F38.1-VALIDATION)
+
+- [ ] **F38.1-38**: `ValidationContext` type definido — validação de input emite evento de custo
+
 ## v1.7 Requirements (Stripe / Monetização Pública)
 
 Deferred from v1.5 critical path. Stripe será implementada como F39/v1.7 após validação do beta controlado (renumerada de F35 → F36 → F37 → F39 nos alinhamentos do Changelog/Novidades, do Onboarding — Navegação por Abas e da Tabela de Custos por Operação).
@@ -620,11 +701,49 @@ Deferred to future release. Tracked but not in current roadmap.
 | F38-VS-01 | Phase 38 | ○ Pending |
 | F38-CONFIG-01 | Phase 38 | ○ Pending |
 | F38-CONFIG-02 | Phase 38 | ○ Pending |
+| F38.1-01 | Phase 38.1 | ○ Pending |
+| F38.1-02 | Phase 38.1 | ○ Pending |
+| F38.1-03 | Phase 38.1 | ○ Pending |
+| F38.1-04 | Phase 38.1 | ○ Pending |
+| F38.1-05 | Phase 38.1 | ○ Pending |
+| F38.1-06 | Phase 38.1 | ○ Pending |
+| F38.1-07 | Phase 38.1 | ○ Pending |
+| F38.1-08 | Phase 38.1 | ○ Pending |
+| F38.1-09 | Phase 38.1 | ○ Pending |
+| F38.1-10 | Phase 38.1 | ○ Pending |
+| F38.1-11 | Phase 38.1 | ○ Pending |
+| F38.1-12 | Phase 38.1 | ○ Pending |
+| F38.1-13 | Phase 38.1 | ○ Pending |
+| F38.1-14 | Phase 38.1 | ○ Pending |
+| F38.1-15 | Phase 38.1 | ○ Pending |
+| F38.1-16 | Phase 38.1 | ○ Pending |
+| F38.1-17 | Phase 38.1 | ○ Pending |
+| F38.1-18 | Phase 38.1 | ○ Pending |
+| F38.1-19 | Phase 38.1 | ○ Pending |
+| F38.1-20 | Phase 38.1 | ○ Pending |
+| F38.1-21 | Phase 38.1 | ○ Pending |
+| F38.1-22 | Phase 38.1 | ○ Pending |
+| F38.1-23 | Phase 38.1 | ○ Pending |
+| F38.1-24 | Phase 38.1 | ○ Pending |
+| F38.1-25 | Phase 38.1 | ○ Pending |
+| F38.1-26 | Phase 38.1 | ○ Pending |
+| F38.1-27 | Phase 38.1 | ○ Pending |
+| F38.1-28 | Phase 38.1 | ○ Pending |
+| F38.1-29 | Phase 38.1 | ○ Pending |
+| F38.1-30 | Phase 38.1 | ○ Pending |
+| F38.1-31 | Phase 38.1 | ○ Pending |
+| F38.1-32 | Phase 38.1 | ○ Pending |
+| F38.1-33 | Phase 38.1 | ○ Pending |
+| F38.1-34 | Phase 38.1 | ○ Pending |
+| F38.1-35 | Phase 38.1 | ○ Pending |
+| F38.1-36 | Phase 38.1 | ○ Pending |
+| F38.1-37 | Phase 38.1 | ○ Pending |
+| F38.1-38 | Phase 38.1 | ○ Pending |
 
 **Coverage:**
 
-- v1 requirements: 180 total (54 v1.5 + 36 LEGAL + 12 INTENT + 21 INTENT-TEST + 30 F34 + 27 F38)
-- Mapped to phases: 180
+- v1 requirements: 218 total (54 v1.5 + 36 LEGAL + 12 INTENT + 21 INTENT-TEST + 30 F34 + 27 F38 + 38 F38.1)
+- Mapped to phases: 218
 - Unmapped: 0 ✓
 - Deferred to v1.7: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06
 - F29.1.2: Fase complementar refinando LAUNCH-01 e LAUNCH-02 (sem REQ-IDs próprios)
@@ -632,8 +751,9 @@ Deferred to future release. Tracked but not in current roadmap.
 - F31.1 (INTENT-*): Adicionados em 2026-07-24 via alinhamento com OpenSpec
 - F34 (F34-*): Adicionados em 2026-07-29 via alinhamento com OpenSpec (Store Readiness)
 - F38 (F38-*): Adicionados em 2026-08-07 via alinhamento com OpenSpec (Tabela de Custos por Operação)
+- F38.1 (F38.1-*): Adicionados em 2026-08-08 via alinhamento com OpenSpec (Apuração de Custos de IA por Entrega)
 
 ---
 
 *Requirements defined: 2026-07-15*
-*Last updated: 2026-08-07 — Added F38 (F38-DB-01 a 04, F38-SERVICE-01 a 04, F38-API-01 a 03, F38-ADMIN-01 a 04, F38-ROUTES-01 a 04, F38-UI-01 a 05, F38-VS-01, F38-CONFIG-01 a 02) requirements*
+*Last updated: 2026-08-08 — Added F38.1 (F38.1-01 a 38) requirements*
