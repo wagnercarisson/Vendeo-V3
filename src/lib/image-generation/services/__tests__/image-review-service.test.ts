@@ -1,7 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+const { mockOpenAICreate } = vi.hoisted(() => ({ mockOpenAICreate: vi.fn() }));
+
+vi.mock('openai', () => ({
+  default: class {
+    chat = {
+      completions: { create: mockOpenAICreate },
+    };
+  },
+}));
+
 import { ImageReviewService } from '../image-review-service';
 import type { ImageReviewInput } from '../image-review-service';
 import { PromptLoader } from '@/lib/image-generation/prompt-loader';
+import type { AiCallInfo } from '@/lib/ai-cost/types';
 
 describe('ImageReviewService', () => {
   let mockLoader: { load: ReturnType<typeof vi.fn>; clearCache: ReturnType<typeof vi.fn> };
@@ -254,5 +266,47 @@ describe('ImageReviewService', () => {
       expect(value).not.toContain('}}');
     }
     expect(vars.mandatoryArtworkTextSection).toContain('Oferta {imperdível}');
+  });
+});
+
+describe('ImageReviewService — onCall (D11)', () => {
+  let mockLoader: { load: ReturnType<typeof vi.fn>; clearCache: ReturnType<typeof vi.fn> };
+  let service: ImageReviewService;
+
+  beforeEach(() => {
+    mockLoader = {
+      load: vi.fn().mockReturnValue('review prompt'),
+      clearCache: vi.fn(),
+    };
+    service = new ImageReviewService(mockLoader as unknown as PromptLoader, 'gpt-4o-test');
+    mockOpenAICreate.mockReset();
+    mockOpenAICreate.mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify({ passed: true, issues: [] }) } }],
+      usage: { prompt_tokens: 200, completion_tokens: 60, total_tokens: 260 },
+    });
+  });
+
+  it('Teste 4: review com usage mockado → onCall com usage + durationMs', async () => {
+    const onCall = vi.fn();
+    const result = await service.review(
+      'data:image/jpeg;base64,abc',
+      { productName: 'Produto', storeName: 'Loja' },
+      onCall
+    );
+    expect(result.passed).toBe(true);
+    expect(onCall).toHaveBeenCalledTimes(1);
+    const info: AiCallInfo = onCall.mock.calls[0][0];
+    expect(info.provider).toBe('openai');
+    expect(info.model).toBe('gpt-4o-test');
+    expect(info.usage).toEqual({ promptTokens: 200, completionTokens: 60, totalTokens: 260 });
+    expect(info.durationMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('Teste 5: sem onCall (undefined) → comportamento idêntico ao atual', async () => {
+    const result = await service.review(
+      'data:image/jpeg;base64,abc',
+      { productName: 'Produto', storeName: 'Loja' }
+    );
+    expect(result.passed).toBe(true);
   });
 });
