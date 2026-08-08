@@ -1,7 +1,7 @@
 import type { ColorCluster } from '@/lib/brand-assets/types';
 export type { ColorCluster };
 import { findClosestProbeCluster } from '@/lib/brand-assets/color-probe';
-import type { CostSource, OperationRunType } from '@/lib/ai-cost/types';
+import type { CostSource, OperationRunType, AiCallInfo } from '@/lib/ai-cost/types';
 
 export type VisualSignatureType =
   | "ai_generated"
@@ -334,6 +334,8 @@ export interface BrandProfilerInput {
     state: boolean;
     slogan: boolean;
   } | null;
+  /** F38.1 (D7/D11): callback best-effort com dados de cada chamada de IA (brand_profile_vision / brand_profile_text mapeados na rota). Opcional — nunca bloqueia. */
+  onCall?: (info: AiCallInfo) => void | Promise<void>;
 }
 
 export interface BrandProfilerWithoutLogoResult {

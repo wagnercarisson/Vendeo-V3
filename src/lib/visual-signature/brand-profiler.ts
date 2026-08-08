@@ -1,6 +1,7 @@
 import { PromptLoader } from '@/lib/image-generation/prompt-loader';
 import { supabaseAdmin as supabase } from '@/lib/supabase/server';
 import OpenAI from 'openai';
+import type { AiCallInfo, TokenUsage } from '@/lib/ai-cost/types';
 import type {
   BrandProfilerInput,
   BrandProfilerWithoutLogoResult,
@@ -704,6 +705,7 @@ export class BrandProfilerWithoutLogoService {
       throw new Error('OPENAI_API_KEY não configurada');
     }
     const model = process.env.OPENAI_BRAND_DIRECTOR_MODEL ?? 'gpt-4o';
+    const startTime = Date.now();
     const response = await this.openai.chat.completions.create({
       model,
       messages: [
@@ -719,11 +721,23 @@ export class BrandProfilerWithoutLogoService {
       response_format: { type: 'json_object' },
       max_tokens: 2000,
     });
+    const durationMs = Date.now() - startTime;
+
+    // F38.1 (D7/D11): telemetria best-effort da chamada de visão (brand_profile_vision).
+    // Nunca lança — profiling não é bloqueado por telemetria.
+    this.invokeOnCall(input.onCall, {
+      provider: 'openai',
+      model,
+      usage: this.mapChatUsage(response.usage),
+      durationMs,
+    });
+
     return response.choices[0]?.message?.content ?? '{}';
   }
 
   private async callVisionFull(input: BrandProfilerInput, prompt: string): Promise<string> {
     const model = process.env.OPENAI_BRAND_DIRECTOR_MODEL ?? 'gpt-4o';
+    const startTime = Date.now();
     const response = await this.openai.chat.completions.create({
       model,
       messages: [
@@ -739,7 +753,66 @@ export class BrandProfilerWithoutLogoService {
       response_format: { type: 'json_object' },
       max_tokens: 3000,
     });
+    const durationMs = Date.now() - startTime;
+
+    // F38.1 (D7/D11): telemetria best-effort da chamada de visão completa
+    // (brand_profile_vision). Nunca lança.
+    this.invokeOnCall(input.onCall, {
+      provider: 'openai',
+      model,
+      usage: this.mapChatUsage(response.usage),
+      durationMs,
+    });
+
     return response.choices[0]?.message?.content ?? '{}';
+  }
+
+  /**
+   * Invoca o callback onCall best-effort (D7): callback lançando é logado e
+   * ignorado — nunca interrompe profiling. Aceita retorno síncrono ou Promise.
+   */
+  private invokeOnCall(
+    onCall: ((info: AiCallInfo) => void | Promise<void>) | undefined,
+    info: AiCallInfo
+  ): void {
+    if (!onCall) return;
+    try {
+      Promise.resolve(onCall(info)).catch((err) => {
+        console.error(
+          `[BrandProfiler] onCall callback failed (best-effort): ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
+      });
+    } catch (err) {
+      console.error(
+        `[BrandProfiler] onCall callback failed (best-effort): ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      );
+    }
+  }
+
+  /**
+   * Mapeia o payload de usage do chat.completions (OpenAI) para TokenUsage
+   * normalizado (D12). Defensivo contra drift de shape do SDK.
+   */
+  private mapChatUsage(usage: unknown): TokenUsage | undefined {
+    if (!usage || typeof usage !== 'object') return undefined;
+    const u = usage as Record<string, unknown>;
+    const tokens: TokenUsage = {};
+    if (typeof u.prompt_tokens === 'number') tokens.promptTokens = u.prompt_tokens;
+    if (typeof u.completion_tokens === 'number') tokens.completionTokens = u.completion_tokens;
+    if (typeof u.total_tokens === 'number') tokens.totalTokens = u.total_tokens;
+    const promptDetails = u.prompt_tokens_details as Record<string, unknown> | undefined;
+    if (promptDetails && typeof promptDetails.cached_tokens === 'number') {
+      tokens.cachedInputTokens = promptDetails.cached_tokens;
+    }
+    const completionDetails = u.completion_tokens_details as Record<string, unknown> | undefined;
+    if (completionDetails && typeof completionDetails.image_tokens === 'number') {
+      tokens.imageTokens = completionDetails.image_tokens;
+    }
+    return tokens;
   }
 
   private mergeSemanticFields(result: BrandProfilerWithoutLogoResult, visionJson: string): BrandProfilerWithoutLogoResult {
