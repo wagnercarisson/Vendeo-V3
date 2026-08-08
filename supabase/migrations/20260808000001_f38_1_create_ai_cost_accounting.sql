@@ -284,3 +284,432 @@ REVOKE EXECUTE ON FUNCTION public.admin_set_ai_model_price(UUID, TEXT, TEXT, NUM
   FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_set_ai_model_price(UUID, TEXT, TEXT, NUMERIC, NUMERIC, TEXT, NUMERIC, NUMERIC, NUMERIC, TEXT, TEXT)
   TO service_role;
+
+-- =============================================================================
+-- 8. Views de apuração admin_ai_* (D10)
+-- =============================================================================
+-- NO ANALOG #1: primeiro CREATE VIEW do repositório. SELECT no estilo CTE/
+-- COUNT FILTER/jsonb_build_object do admin_get_metrics (F28), mas como VIEW.
+--
+-- Regras comuns:
+--   - Valor contábil por evento (D3): COALESCE(ge.provider_reported_cost_usd, ge.estimated_cost_usd)
+--   - Anti-dupla-contagem (D1/D6): filtram APENAS eventos call-level — delivery
+--     markers (campaign_pipeline, visual_signature, brand_profile_*) excluídos
+
+-- 8.1 admin_ai_operation_costs — custo total, duração, nº chamadas, nº tentativas
+-- e status da entrega por operation_run_id (status vem do delivery marker do run)
+CREATE OR REPLACE VIEW public.admin_ai_operation_costs AS
+SELECT
+  ge.operation_run_id,
+  ge.operation_run_type,
+  ge.store_id,
+  ge.campaign_id,
+  ge.visual_signature_id,
+  SUM(COALESCE(ge.provider_reported_cost_usd, ge.estimated_cost_usd)) AS custo_usd_total,
+  SUM(ge.duration_ms) AS duracao_total_ms,
+  COUNT(*) AS n_chamadas,
+  MAX(ge.attempt_number) AS n_tentativas,
+  (SELECT delivery.status
+   FROM public.generation_events delivery
+   WHERE delivery.operation_run_id = ge.operation_run_id
+     AND delivery.generation_type IN ('campaign_pipeline','visual_signature','brand_profile_without_logo','brand_profile_with_logo')
+   ORDER BY delivery.created_at DESC
+   LIMIT 1) AS delivery_status
+FROM public.generation_events ge
+WHERE ge.operation_run_id IS NOT NULL
+  AND ge.generation_type NOT IN ('campaign_pipeline','visual_signature','brand_profile_without_logo','brand_profile_with_logo')
+GROUP BY ge.operation_run_id, ge.operation_run_type, ge.store_id, ge.campaign_id, ge.visual_signature_id;
+
+-- 8.2 admin_campaign_delivery_costs — custo da campanha por etapa (generation_type)
+CREATE OR REPLACE VIEW public.admin_campaign_delivery_costs AS
+SELECT
+  ge.campaign_id,
+  ge.generation_type,
+  SUM(COALESCE(ge.provider_reported_cost_usd, ge.estimated_cost_usd)) AS custo_usd_total,
+  COUNT(*) AS n_chamadas,
+  MAX(ge.attempt_number) AS n_tentativas
+FROM public.generation_events ge
+WHERE ge.campaign_id IS NOT NULL
+  AND ge.generation_type NOT IN ('campaign_pipeline','visual_signature','brand_profile_without_logo','brand_profile_with_logo')
+GROUP BY ge.campaign_id, ge.generation_type;
+
+-- 8.3 admin_ai_cost_by_provider_model — gargalos por modelo/provedor
+CREATE OR REPLACE VIEW public.admin_ai_cost_by_provider_model AS
+SELECT
+  ge.provider,
+  ge.model,
+  SUM(COALESCE(ge.provider_reported_cost_usd, ge.estimated_cost_usd)) AS custo_usd_total,
+  COUNT(*) AS n_chamadas,
+  AVG(ge.duration_ms) AS duracao_media_ms
+FROM public.generation_events ge
+WHERE ge.generation_type NOT IN ('campaign_pipeline','visual_signature','brand_profile_without_logo','brand_profile_with_logo')
+GROUP BY ge.provider, ge.model;
+
+-- 8.4 admin_ai_cost_by_stage — gargalos por etapa (copy vs review vs imagem)
+CREATE OR REPLACE VIEW public.admin_ai_cost_by_stage AS
+SELECT
+  ge.generation_type,
+  SUM(COALESCE(ge.provider_reported_cost_usd, ge.estimated_cost_usd)) AS custo_usd_total,
+  COUNT(*) AS n_chamadas,
+  AVG(ge.duration_ms) AS duracao_media_ms
+FROM public.generation_events ge
+WHERE ge.generation_type NOT IN ('campaign_pipeline','visual_signature','brand_profile_without_logo','brand_profile_with_logo')
+GROUP BY ge.generation_type;
+
+-- 8.5 admin_ai_cost_by_store — custo por loja (apuração)
+CREATE OR REPLACE VIEW public.admin_ai_cost_by_store AS
+SELECT
+  ge.store_id,
+  SUM(COALESCE(ge.provider_reported_cost_usd, ge.estimated_cost_usd)) AS custo_usd_total,
+  COUNT(*) AS n_chamadas,
+  SUM(ge.duration_ms) AS duracao_total_ms
+FROM public.generation_events ge
+WHERE ge.generation_type NOT IN ('campaign_pipeline','visual_signature','brand_profile_without_logo','brand_profile_with_logo')
+GROUP BY ge.store_id;
+
+-- Views sem GRANT direto ao cliente (T-38.1-03) — acesso exclusivo via RPC definer
+REVOKE ALL ON VIEW public.admin_ai_operation_costs FROM anon, authenticated;
+REVOKE ALL ON VIEW public.admin_campaign_delivery_costs FROM anon, authenticated;
+REVOKE ALL ON VIEW public.admin_ai_cost_by_provider_model FROM anon, authenticated;
+REVOKE ALL ON VIEW public.admin_ai_cost_by_stage FROM anon, authenticated;
+REVOKE ALL ON VIEW public.admin_ai_cost_by_store FROM anon, authenticated;
+
+-- =============================================================================
+-- 9. View de reconciliação admin_cost_vs_credits (D10)
+-- =============================================================================
+-- Ponte com a F38 (eixo créditos): custo USD apurado (call-level) × créditos
+-- debitados × margem estimada, por entrega (operation_run_id).
+--   - Por campanha: credit_transactions type='deduction' com campaign_id e
+--     metadata->>'feature'='campaign_pipeline' (F25 pipeline reserva/debita)
+--   - Por VS: store_visual_signatures.metadata aponta o id da deduction da
+--     assinatura (F29.1.1) — join com credit_transactions pelo id
+-- margem_estimada: formato ABSOLUTO em créditos (≈USD) — creditos_debitados − custo_usd_total
+-- regeneracoes: MAX(attempt_number) − 1 (tentativas extras além da 1ª)
+CREATE OR REPLACE VIEW public.admin_cost_vs_credits AS
+WITH call_level AS (
+  SELECT
+    ge.operation_run_id,
+    ge.store_id,
+    ge.user_id,
+    ge.campaign_id,
+    ge.visual_signature_id,
+    ge.generation_type,
+    ge.attempt_number,
+    COALESCE(ge.provider_reported_cost_usd, ge.estimated_cost_usd) AS accounting_cost_usd
+  FROM public.generation_events ge
+  WHERE ge.operation_run_id IS NOT NULL
+    AND ge.generation_type NOT IN ('campaign_pipeline','visual_signature','brand_profile_without_logo','brand_profile_with_logo')
+),
+stage_costs AS (
+  SELECT
+    cl.operation_run_id,
+    cl.generation_type,
+    SUM(cl.accounting_cost_usd) AS stage_cost_usd
+  FROM call_level cl
+  GROUP BY cl.operation_run_id, cl.generation_type
+),
+top_stages AS (
+  SELECT
+    sc.operation_run_id,
+    array_agg(sc.generation_type ORDER BY sc.stage_cost_usd DESC) AS etapas_mais_caras
+  FROM stage_costs sc
+  GROUP BY sc.operation_run_id
+),
+campaign_runs AS (
+  SELECT
+    cl.operation_run_id,
+    MAX(cl.store_id) AS store_id,
+    MAX(cl.user_id) AS user_id,
+    MAX(cl.campaign_id) AS campaign_id,
+    SUM(cl.accounting_cost_usd) AS custo_usd_total,
+    MAX(cl.attempt_number) AS n_tentativas
+  FROM call_level cl
+  WHERE cl.campaign_id IS NOT NULL
+  GROUP BY cl.operation_run_id
+),
+campaign_credits AS (
+  SELECT
+    ct.campaign_id,
+    SUM(ABS(ct.amount)) AS creditos_debitados
+  FROM public.credit_transactions ct
+  WHERE ct.type = 'deduction'
+    AND ct.campaign_id IS NOT NULL
+    AND ct.metadata->>'feature' = 'campaign_pipeline'
+  GROUP BY ct.campaign_id
+),
+vs_runs AS (
+  SELECT
+    cl.operation_run_id,
+    MAX(cl.store_id) AS store_id,
+    MAX(cl.user_id) AS user_id,
+    MAX(cl.visual_signature_id) AS visual_signature_id,
+    SUM(cl.accounting_cost_usd) AS custo_usd_total,
+    MAX(cl.attempt_number) AS n_tentativas
+  FROM call_level cl
+  WHERE cl.visual_signature_id IS NOT NULL
+  GROUP BY cl.operation_run_id
+),
+vs_credits AS (
+  SELECT
+    svs.id AS visual_signature_id,
+    SUM(ABS(ct.amount)) AS creditos_debitados
+  FROM public.store_visual_signatures svs
+  JOIN public.credit_transactions ct
+    ON ct.id::text = svs.metadata->>'credit_tx_id'
+  WHERE ct.type = 'deduction'
+  GROUP BY svs.id
+)
+SELECT
+  cr.operation_run_id,
+  'campaign' AS domain,
+  cr.store_id,
+  cr.user_id,
+  cr.campaign_id,
+  NULL::uuid AS visual_signature_id,
+  cr.custo_usd_total,
+  COALESCE(cc.creditos_debitados, 0) AS creditos_debitados,
+  -- margem_estimada: créditos debitados − custo apurado (absoluto, créditos ≈ USD)
+  COALESCE(cc.creditos_debitados, 0) - cr.custo_usd_total AS margem_estimada,
+  ts.etapas_mais_caras,
+  cr.n_tentativas - 1 AS regeneracoes
+FROM campaign_runs cr
+LEFT JOIN campaign_credits cc ON cc.campaign_id = cr.campaign_id
+LEFT JOIN top_stages ts ON ts.operation_run_id = cr.operation_run_id
+
+UNION ALL
+
+SELECT
+  vr.operation_run_id,
+  'visual_signature' AS domain,
+  vr.store_id,
+  vr.user_id,
+  NULL::uuid AS campaign_id,
+  vr.visual_signature_id,
+  vr.custo_usd_total,
+  COALESCE(vc.creditos_debitados, 0) AS creditos_debitados,
+  COALESCE(vc.creditos_debitados, 0) - vr.custo_usd_total AS margem_estimada,
+  ts.etapas_mais_caras,
+  vr.n_tentativas - 1 AS regeneracoes
+FROM vs_runs vr
+LEFT JOIN vs_credits vc ON vc.visual_signature_id = vr.visual_signature_id
+LEFT JOIN top_stages ts ON ts.operation_run_id = vr.operation_run_id;
+
+REVOKE ALL ON VIEW public.admin_cost_vs_credits FROM anon, authenticated;
+
+-- =============================================================================
+-- 10. RPC admin_get_ai_costs (D10)
+-- =============================================================================
+-- Apuração filtrada de custo de IA, mesmo padrão do admin_get_metrics (F28):
+-- CTE filtered_ge + COUNT FILTER + jsonb_build_object. Filtros p_* opcionais
+-- (parâmetros vinculados — T-38.1-05), janela p_hours >= 1 (anti-DoS — T-38.1-06).
+-- Reconciliação reutiliza a view admin_cost_vs_credits (evita duplicar lógica).
+CREATE OR REPLACE FUNCTION public.admin_get_ai_costs(
+  p_operation_run_id UUID DEFAULT NULL,
+  p_campaign_id UUID DEFAULT NULL,
+  p_store_id UUID DEFAULT NULL,
+  p_user_id UUID DEFAULT NULL,
+  p_provider TEXT DEFAULT NULL,
+  p_model TEXT DEFAULT NULL,
+  p_generation_type TEXT DEFAULT NULL,
+  p_hours INTEGER DEFAULT 24
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_cutoff TIMESTAMPTZ;
+  v_result JSONB;
+BEGIN
+  -- Janela mínima de 1h (anti-DoS — T-38.1-06)
+  IF p_hours IS NULL OR p_hours < 1 THEN
+    RAISE EXCEPTION 'ai_costs_hours_min';
+  END IF;
+
+  v_cutoff := NOW() - (p_hours || ' hours')::INTERVAL;
+
+  WITH filtered_ge AS (
+    SELECT
+      ge.operation_run_id,
+      ge.operation_run_type,
+      ge.store_id,
+      ge.user_id,
+      ge.campaign_id,
+      ge.visual_signature_id,
+      ge.provider,
+      ge.model,
+      ge.generation_type,
+      ge.status,
+      ge.duration_ms,
+      ge.attempt_number,
+      COALESCE(ge.provider_reported_cost_usd, ge.estimated_cost_usd) AS accounting_cost_usd
+    FROM public.generation_events ge
+    WHERE ge.created_at >= v_cutoff
+      AND (p_operation_run_id IS NULL OR ge.operation_run_id = p_operation_run_id)
+      AND (p_campaign_id IS NULL OR ge.campaign_id = p_campaign_id)
+      AND (p_store_id IS NULL OR ge.store_id = p_store_id)
+      AND (p_user_id IS NULL OR ge.user_id = p_user_id)
+      AND (p_provider IS NULL OR ge.provider = p_provider)
+      AND (p_model IS NULL OR ge.model = p_model)
+      AND (p_generation_type IS NULL OR ge.generation_type = p_generation_type)
+      AND ge.generation_type NOT IN ('campaign_pipeline','visual_signature','brand_profile_without_logo','brand_profile_with_logo')
+  ),
+  by_operation_run AS (
+    SELECT
+      ge.operation_run_id,
+      ge.operation_run_type,
+      SUM(ge.accounting_cost_usd) AS custo_usd_total,
+      COUNT(*) AS n_chamadas,
+      COUNT(*) FILTER (WHERE ge.status = 'success') AS n_success,
+      SUM(ge.duration_ms) AS duracao_total_ms,
+      MAX(ge.attempt_number) - 1 AS regeneracoes
+    FROM filtered_ge ge
+    WHERE ge.operation_run_id IS NOT NULL
+    GROUP BY ge.operation_run_id, ge.operation_run_type
+  ),
+  by_store AS (
+    SELECT
+      ge.store_id,
+      SUM(ge.accounting_cost_usd) AS custo_usd_total,
+      COUNT(*) AS n_chamadas
+    FROM filtered_ge ge
+    WHERE ge.store_id IS NOT NULL
+    GROUP BY ge.store_id
+  ),
+  by_provider_model AS (
+    SELECT
+      ge.provider,
+      ge.model,
+      SUM(ge.accounting_cost_usd) AS custo_usd_total,
+      COUNT(*) AS n_chamadas,
+      AVG(ge.duration_ms) AS duracao_media_ms
+    FROM filtered_ge ge
+    GROUP BY ge.provider, ge.model
+  ),
+  by_generation_type AS (
+    SELECT
+      ge.generation_type,
+      SUM(ge.accounting_cost_usd) AS custo_usd_total,
+      COUNT(*) AS n_chamadas
+    FROM filtered_ge ge
+    GROUP BY ge.generation_type
+  ),
+  reconciliation AS (
+    SELECT
+      vc.operation_run_id,
+      vc.domain,
+      vc.store_id,
+      vc.campaign_id,
+      vc.custo_usd_total,
+      vc.creditos_debitados,
+      vc.margem_estimada,
+      vc.etapas_mais_caras,
+      vc.regeneracoes
+    FROM public.admin_cost_vs_credits vc
+    WHERE (p_operation_run_id IS NULL OR vc.operation_run_id = p_operation_run_id)
+      AND (p_campaign_id IS NULL OR vc.campaign_id = p_campaign_id)
+      AND (p_store_id IS NULL OR vc.store_id = p_store_id)
+  )
+  SELECT jsonb_build_object(
+    'by_operation_run', COALESCE((
+      SELECT jsonb_agg(jsonb_build_object(
+        'operation_run_id', bo.operation_run_id,
+        'operation_run_type', bo.operation_run_type,
+        'custo_usd_total', bo.custo_usd_total,
+        'chamadas', bo.n_chamadas,
+        'chamadas_success', bo.n_success,
+        'duracao_total_ms', bo.duracao_total_ms,
+        'regeneracoes', bo.regeneracoes
+      ))
+      FROM by_operation_run bo
+    ), '[]'::jsonb),
+    'by_store', COALESCE((
+      SELECT jsonb_agg(jsonb_build_object(
+        'store_id', bs.store_id,
+        'custo_usd_total', bs.custo_usd_total,
+        'chamadas', bs.n_chamadas
+      ))
+      FROM by_store bs
+    ), '[]'::jsonb),
+    'by_provider_model', COALESCE((
+      SELECT jsonb_agg(jsonb_build_object(
+        'provider', bpm.provider,
+        'model', bpm.model,
+        'custo_usd_total', bpm.custo_usd_total,
+        'chamadas', bpm.n_chamadas,
+        'duracao_media_ms', bpm.duracao_media_ms
+      ))
+      FROM by_provider_model bpm
+    ), '[]'::jsonb),
+    'by_generation_type', COALESCE((
+      SELECT jsonb_agg(jsonb_build_object(
+        'generation_type', bgt.generation_type,
+        'custo_usd_total', bgt.custo_usd_total,
+        'chamadas', bgt.n_chamadas
+      ))
+      FROM by_generation_type bgt
+    ), '[]'::jsonb),
+    'reconciliation', COALESCE((
+      SELECT jsonb_agg(jsonb_build_object(
+        'operation_run_id', rc.operation_run_id,
+        'domain', rc.domain,
+        'custo_usd_total', rc.custo_usd_total,
+        'creditos_debitados', rc.creditos_debitados,
+        'margem_estimada', rc.margem_estimada,
+        'etapas_mais_caras', rc.etapas_mais_caras,
+        'regeneracoes', rc.regeneracoes
+      ))
+      FROM reconciliation rc
+    ), '[]'::jsonb)
+  ) INTO v_result;
+
+  RETURN v_result;
+END;
+$$;
+
+COMMENT ON FUNCTION public.admin_get_ai_costs IS
+'RPC definer — apuração filtrada de custo de IA por operation_run/store/provider+model/generation_type + reconciliação USD × créditos (view admin_cost_vs_credits). p_hours >= 1. Acesso exclusivo service_role.';
+
+REVOKE EXECUTE ON FUNCTION public.admin_get_ai_costs(UUID, UUID, UUID, UUID, TEXT, TEXT, TEXT, INTEGER)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_get_ai_costs(UUID, UUID, UUID, UUID, TEXT, TEXT, TEXT, INTEGER)
+  TO service_role;
+
+-- =============================================================================
+-- REVERT (ordem reversa de criação)
+-- =============================================================================
+-- REVOKE EXECUTE ON FUNCTION public.admin_get_ai_costs(UUID, UUID, UUID, UUID, TEXT, TEXT, TEXT, INTEGER) FROM service_role;
+-- DROP FUNCTION IF EXISTS public.admin_get_ai_costs(UUID, UUID, UUID, UUID, TEXT, TEXT, TEXT, INTEGER);
+-- REVOKE EXECUTE ON FUNCTION public.admin_set_ai_model_price(UUID, TEXT, TEXT, NUMERIC, NUMERIC, TEXT, NUMERIC, NUMERIC, NUMERIC, TEXT, TEXT) FROM service_role;
+-- DROP FUNCTION IF EXISTS public.admin_set_ai_model_price(UUID, TEXT, TEXT, NUMERIC, NUMERIC, TEXT, NUMERIC, NUMERIC, NUMERIC, TEXT, TEXT);
+-- DROP VIEW IF EXISTS public.admin_ai_operation_costs;
+-- DROP VIEW IF EXISTS public.admin_campaign_delivery_costs;
+-- DROP VIEW IF EXISTS public.admin_ai_cost_by_provider_model;
+-- DROP VIEW IF EXISTS public.admin_ai_cost_by_stage;
+-- DROP VIEW IF EXISTS public.admin_ai_cost_by_store;
+-- DROP VIEW IF EXISTS public.admin_cost_vs_credits;
+-- DROP TRIGGER IF EXISTS trg_ai_model_pricing_updated_at ON public.ai_model_pricing;
+-- DROP FUNCTION IF EXISTS public.update_ai_model_pricing_updated_at();
+-- DROP TABLE IF EXISTS public.ai_model_pricing;  -- cascata do índice parcial uq_ai_model_pricing_vigente
+-- DROP INDEX IF EXISTS uq_ai_model_pricing_vigente;
+-- DROP INDEX IF EXISTS idx_campaigns_operation_run_id;
+-- DROP INDEX IF EXISTS idx_generation_events_operation_run_id;
+-- DROP INDEX IF EXISTS idx_generation_events_visual_signature_id;
+-- DROP INDEX IF EXISTS idx_generation_events_operation_run_type;
+-- DROP INDEX IF EXISTS idx_generation_events_cost_source;
+-- DROP INDEX IF EXISTS idx_generation_events_provider_model;
+-- ALTER TABLE public.generation_events DROP COLUMN IF EXISTS operation_run_id;
+-- ALTER TABLE public.generation_events DROP COLUMN IF EXISTS operation_run_type;
+-- ALTER TABLE public.generation_events DROP COLUMN IF EXISTS visual_signature_id;
+-- ALTER TABLE public.generation_events DROP COLUMN IF EXISTS theme_id;
+-- ALTER TABLE public.generation_events DROP COLUMN IF EXISTS cached_input_tokens;
+-- ALTER TABLE public.generation_events DROP COLUMN IF EXISTS image_tokens;
+-- ALTER TABLE public.generation_events DROP COLUMN IF EXISTS provider_reported_cost_usd;
+-- ALTER TABLE public.generation_events DROP COLUMN IF EXISTS cost_source;
+-- ALTER TABLE public.generation_events DROP COLUMN IF EXISTS pricing_version;
+-- ALTER TABLE public.generation_events DROP CONSTRAINT IF EXISTS chk_generation_events_cost_source;
+-- ALTER TABLE public.generation_events DROP CONSTRAINT IF EXISTS chk_generation_events_type;
+-- ALTER TABLE public.generation_events
+--   ADD CONSTRAINT chk_generation_events_type
+--   CHECK (generation_type IN ('visual_signature','brand_profile_without_logo','brand_profile_with_logo','campaign_pipeline','campaign_copy','campaign_image'));
