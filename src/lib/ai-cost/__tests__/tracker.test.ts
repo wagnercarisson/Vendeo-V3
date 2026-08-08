@@ -203,7 +203,7 @@ describe("AiCostTracker", () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it("delivery marker grava custo/tokens NULL + metadata.duration_is_pipeline (D1/D6)", async () => {
+  it("delivery marker grava custo/tokens NULL + flag de pipeline (D1/D6)", async () => {
     await tracker.record({
       ...baseEvent,
       operationRunId: "run-2",
