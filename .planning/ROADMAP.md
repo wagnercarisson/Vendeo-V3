@@ -577,7 +577,7 @@ Plans:
 - [x] 38-1-02-PLAN.md — Types + AiCostTracker (Wave 2)
 - [x] 38-1-03-PLAN.md — Admin APIs pricing (Wave 2)
 - [x] 38-1-04-PLAN.md — Estimador + pricing (Wave 3)
-- [ ] 38-1-05-PLAN.md — Campaign onCall (Wave 3)
+- [x] 38-1-05-PLAN.md — Campaign onCall (Wave 3) ✅ (D11 event contract + onCall copy/validation/review/image-gen — 1657 testes)
 - [ ] 38-1-06-PLAN.md — VS/brand onCall (Wave 3)
 - [ ] 38-1-07-PLAN.md — generate-image + 6.3 (Wave 4)
 - [ ] 38-1-08-PLAN.md — generate-without-logo + 6.4 (Wave 4)
@@ -724,4 +724,4 @@ Phase 24 (Credit Tables + CreditService) ──┘
 
 *Roadmap created: 2026-07-15*
 *Milestone: v1.5 — Lançamento Externo Controlado*
-*Last updated: 2026-08-08 — Phase 38 complete (Tabela de Custos por Operação — 8/8 plans, 1597 testes, UAT 4/4); renumeração F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), F39 = Stripe/Monetização Pública (v1.7); **Phase 38.1 (Apuração de Custos de IA por Entrega — desdobramento da F38, v1.5) em execução — 3/11 plans concluídos (38-1-01 ✅ migration + schema push aplicado no remoto 2026-08-08; 38-1-02 ✅ types + AiCostTracker, 1610 testes; 38-1-03 ✅ admin routes ai-model-pricing + ai-costs, 1626 testes)** — fonte `openspec/changes/fase-38-1-ai-cost-accounting/`*
+*Last updated: 2026-08-08 — Phase 38 complete (Tabela de Custos por Operação — 8/8 plans, 1597 testes, UAT 4/4); renumeração F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), F39 = Stripe/Monetização Pública (v1.7); **Phase 38.1 (Apuração de Custos de IA por Entrega — desdobramento da F38, v1.5) em execução — 5/11 plans concluídos (38-1-01 ✅ migration + schema push aplicado no remoto 2026-08-08; 38-1-02 ✅ types + AiCostTracker; 38-1-03 ✅ admin routes ai-model-pricing + ai-costs; 38-1-04 ✅ resolveAiCost + pricing service; 38-1-05 ✅ D11 event contract + onCall copy/validation/review/image-gen, 1657 testes)** — fonte `openspec/changes/fase-38-1-ai-cost-accounting/`*
