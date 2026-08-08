@@ -1,6 +1,7 @@
 import type { ColorCluster } from '@/lib/brand-assets/types';
 export type { ColorCluster };
 import { findClosestProbeCluster } from '@/lib/brand-assets/color-probe';
+import type { CostSource, OperationRunType } from '@/lib/ai-cost/types';
 
 export type VisualSignatureType =
   | "ai_generated"
@@ -157,6 +158,16 @@ export interface GenerationEventInsert {
   has_brand_profile?: boolean | null;
   input_data_hash?: string | null;
   metadata?: Record<string, unknown> | null;
+  // F38.1 (D2/D5) — novas colunas opcionais para o delegate do AiCostTracker
+  visual_signature_id?: string | null;
+  operation_run_id?: string | null;
+  trace_id?: string | null;
+  operation_run_type?: OperationRunType | null;
+  cached_input_tokens?: number | null;
+  image_tokens?: number | null;
+  provider_reported_cost_usd?: number | null;
+  cost_source?: CostSource | null;
+  pricing_version?: string | null;
 }
 
 export interface VisualSignatureArtDirectorOutput {
