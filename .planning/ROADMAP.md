@@ -2,9 +2,9 @@
 
 ## Milestone v1.5 — Lançamento Externo Controlado ◆
 
-**17 phases** | **139 requirements mapped** | All covered ✓
+**18 phases** | **177 requirements mapped** | All covered ✓
 
-**Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23. F35 = Changelog/Novidades, F36 = Onboarding — Navegação por Abas, F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), F39 = Stripe/Monetização Pública (v1.7) (renumeração alinhada nos documentos de alinhamento F36/F38).
+**Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23. F35 = Changelog/Novidades, F36 = Onboarding — Navegação por Abas, F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), F39 = Stripe/Monetização Pública (v1.7) (renumeração alinhada nos documentos de alinhamento F36/F38). **38.1 = Apuração de Custos de IA por Entrega** (desdobramento da F38, mesmo milestone v1.5).
 
 ---
 
@@ -33,6 +33,7 @@
 | 36 | ✅ Onboarding — Navegação por Abas | 6/6 | Complete    | 2026-08-05 |
 | 37 | ○ Revisão e Aprovação da Arte | — | Pending    | — |
 | 38 | ✅ Tabela de Custos por Operação | 8/8 | ✅ Complete | 2026-08-07 |
+| 38.1 | ○ Apuração de Custos de IA por Entrega | — | Pending    | — |
 | 39 | ○ Stripe / Monetização Pública (v1.7) | — | Pending    | — |
 
 ---
@@ -545,6 +546,31 @@
 
 ---
 
+### Phase 38.1 — Apuração de Custos de IA por Entrega
+
+**Goal:** Criar a **trilha granular de custo de IA** (evento por chamada real, agregado por entrega via `operation_run_id`) e as **views/RPCs de apuração e reconciliação** (USD × créditos) que transformam telemetria em inteligência econômica — corrigindo os 7 furos verificados em código (copy sem custo, `metadata.totalCost` errado, modelos sem preço, revisão/validação sem evento, VS sem custo/tokens, `attempt_number` sempre 1, `duration_ms` do pipeline inteiro).
+
+**Requirements:** F38.1-01 a F38.1-38 (derivados dos 13 specs OpenSpec)
+
+**Success criteria:**
+
+1. `generation_events` evoluído — colunas `operation_run_id`, `operation_run_type`, `visual_signature_id`, `theme_id`, `cached_input_tokens`, `image_tokens`, `provider_reported_cost_usd`, `cost_source` (CHECK 5 valores), `pricing_version` + CHECK `generation_type` expandido (6 tipos call-level novos) + índices (D2/D4/D5)
+2. `campaigns.operation_run_id` persistido na criação da campanha (preparo reuso F37) + índice (D1/D2)
+3. `AiCostTracker` como **único caminho de escrita** (best-effort, nunca lança), substituindo os 4 inserts inline da rota de campanha, os inserts de VS e o helper `insertGenerationEvent` (que delega) (D7)
+4. `resolveAiCost` por fonte `provider_reported → pricing_table → fallback_static → not_available`, com `cost_source` (5 valores) e `pricing_version`; corrige gemini-3.1-flash-lite, gpt-image-2, cached/image tokens (D9)
+5. `ai_model_pricing` versionada (`effective_from`/`effective_until`, CHECK `at_least_one_price`) + seeds verificáveis + RPC `admin_set_ai_model_price` (SECURITY DEFINER, `p_reason` antes dos opcionais) + `GET`/`PUT /api/admin/ai-model-pricing` — **sem página** (D8)
+6. Serviços expõem usage via callback opcional `onCall?: (info: AiCallInfo) => void` — copy, input validation, image review, image generation (attempt/duration), VS generator/validator, brand profiler, brand director, text-only (D7/D11)
+7. Rotas instrumentadas: `generate-image` (copy/validation/image/review call-level + delivery `campaign_pipeline` sem custo/tokens + `totalCost` soma real), `generate-without-logo` (`visual_signature_image`/`validation` com custo/tokens + delivery sem custo + nova tentativa pós-falha = novo run), rotas `/brand-profile/*` (delivery + call — hoje sem nenhum evento) (D11/D1)
+8. Views `admin_ai_operation_costs`, `admin_campaign_delivery_costs`, `admin_ai_cost_by_provider_model`, `admin_ai_cost_by_stage`, `admin_ai_cost_by_store` + `admin_cost_vs_credits` (reconciliação USD × créditos) + RPC `admin_get_ai_costs` — somam **apenas call-level** (anti-dupla-contagem); valor contábil `COALESCE(provider_reported_cost_usd, estimated_cost_usd)` (D10/D3)
+9. `admin_get_metrics` (F28) inalterado; `reserve_credit`/`credit_transactions` (F24) intactos; sem tabela `operation_runs`; sem UI admin de pricing/reconciliação (D1/D10)
+10. Furos 1–7 corrigidos; `npx vitest run`, `npm run typecheck`, `npm run lint`, `npm run build` — zero erros; 50 testes novos + verificação SQL/integrada I1–I6 + regressão completa
+
+**Dependencies:** Phase 24 (ledger `credit_transactions` — reconciliação por leitura), Phase 25/F28 (pipeline + telemetria, `admin_get_metrics`), Phase 29.1.1 (VS), Phase 37 (aprovação — decisão, não custa IA), Phase 38 (`credit_operation_costs` — eixo créditos), Phase 39 (Stripe — consumirá o custo real)
+
+**Source of truth:** `openspec/changes/fase-38-1-ai-cost-accounting/`
+
+---
+
 ## Dependency Graph
 
 ```
@@ -681,4 +707,4 @@ Phase 24 (Credit Tables + CreditService) ──┘
 
 *Roadmap created: 2026-07-15*
 *Milestone: v1.5 — Lançamento Externo Controlado*
-*Last updated: 2026-08-08 — Phase 38 complete (Tabela de Custos por Operação — 8/8 plans, 1597 testes, UAT 4/4); renumeração F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), F39 = Stripe/Monetização Pública (v1.7)*
+*Last updated: 2026-08-08 — Phase 38 complete (Tabela de Custos por Operação — 8/8 plans, 1597 testes, UAT 4/4); renumeração F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), F39 = Stripe/Monetização Pública (v1.7); **Phase 38.1 registrada (Apuração de Custos de IA por Entrega — desdobramento da F38, v1.5) em planejamento** — fonte `openspec/changes/fase-38-1-ai-cost-accounting/`*

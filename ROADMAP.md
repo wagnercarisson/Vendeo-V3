@@ -149,6 +149,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 - [x] Phase 36: Onboarding — Navegação por Abas (6/6 plans ✅)
 - [ ] Phase 37: Revisão e Aprovação da Arte (pending)
 - [x] Phase 38: Tabela de Custos por Operação (8/8 plans ✅)
+  - **38.1 = Apuração de Custos de IA por Entrega** (desdobramento da F38, v1.5) — trilha granular de custo de IA por entrega + views/RPCs de apuração e reconciliação (USD × créditos) — em planejamento, fonte `openspec/changes/fase-38-1-ai-cost-accounting/`
 
 </details>
 
