@@ -4,6 +4,7 @@
 > > Synced from `fase-33-verificacao-cnpj-freemium` (MODIFIED). Added CNPJ async lookup on blur, locked fields, buttons, tooltip, status messages, and dashboard verification banners.
 > Modified by `fase-34-store-readiness` (MODIFIED). Step 1 success message updated, Step 2 renamed to "Direção Visual" with badge, billing card added. Navigation between `/loja` and `/campanhas/nova` updated with readiness guard and redirect params.
 > Modified by `fase-36-onboarding-navegacao-por-abas` (MODIFIED). Linear 2-step wizard replaced by a 3-tab onboarding panel (Dados/Posicionamento/Direção Visual) with URL `?tab=` state, global legal acceptance column, auto-save, draft restore and hard-block tab navigation (D16). CNPJ became optional (draft store mode).
+> Modified by `fase-38-credit-operation-costs` (MODIFIED). `DriftCriticalModal` no-credit alert shows dynamic cost of `visual_signature_generation` via `useOperationCosts` with correct plural; no presumed "1 crédito" on 503.
 
 ## Purpose
 
@@ -1944,6 +1945,8 @@ The DriftDecisionModal (sensitive scenario) SHALL be updated to display error an
 
 ### Requirement: DriftCriticalModal
 
+> **Delta F38 (D11):** A mensagem sem crédito ("Você não tem créditos suficientes para gerar uma nova assinatura visual. Cada geração consome 1 crédito.") SHALL passar a exibir o custo **dinâmico** de `visual_signature_generation` via hook `useOperationCosts()`, com plural correto. Se o custo estiver indisponível (`503 operation_cost_unavailable`), o modal NÃO mostra "1 crédito" presumido. Os demais textos e fluxos permanecem inalterados.
+
 The system SHALL provide a new modal component for critical drift scenarios. The modal SHALL be displayed when `driftCategory === 'critical'`.
 
 Textos alinhados:
@@ -1963,7 +1966,7 @@ NOTE: "Manter direção atual" saves the user's NEW store data, not the old valu
 - Tertiary: "Cancelar"
 
 **Without credit (saldo 0 + `creditsChargingEnabled`):**
-- Alert: "Você não tem créditos suficientes para gerar uma nova assinatura visual. Cada geração consome 1 crédito."
+- Alert: "Você não tem créditos suficientes para gerar uma nova assinatura visual. Cada geração consome {cost} crédito(s)." (custo dinâmico de `visual_signature_generation`)
 - Button "Manter direção atual" -- dismiss + save
 - Button "Remover mesmo assim" -- opens VS removal confirmation (changes to text_only)
 - Button "Ver meus créditos" -- navigates to `/conta`
@@ -1983,6 +1986,22 @@ In both scenarios, dismiss + save SHALL:
 - **THEN** `persistSaveFromDrift()` SHALL run FIRST (persisting the accepted store data)
 - **AND** only after success, ApprovalModal SHALL open with mode:'substitution'
 - **AND** if the pre-save fails, the approval SHALL NOT open and the error SHALL be shown in the modal
+
+#### Scenario: Critical modal without credit shows dynamic cost in alert
+
+- **WHEN** user has no credit and charging is enabled
+- **AND** o custo de `visual_signature_generation` é 2
+- **THEN** o alerta exibe "Você não tem créditos suficientes para gerar uma nova assinatura visual. Cada geração consome 2 créditos."
+
+#### Scenario: Critical modal shows plural correctly for cost 1
+
+- **WHEN** o custo de `visual_signature_generation` é 1
+- **THEN** o alerta exibe "Cada geração consome 1 crédito." (singular)
+
+#### Scenario: Critical modal does not show presumed cost when unavailable
+
+- **WHEN** `GET /api/operation-costs` responde `503 operation_cost_unavailable`
+- **THEN** o alerta NÃO exibe "consome 1 crédito" presumido
 
 #### Scenario: Critical modal without credit shows options
 

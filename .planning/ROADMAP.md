@@ -32,7 +32,7 @@
 | 35 | ✅ Changelog/Novidades | 5/5 | Complete    | 2026-07-31 |
 | 36 | ✅ Onboarding — Navegação por Abas | 6/6 | Complete    | 2026-08-05 |
 | 37 | ○ Revisão e Aprovação da Arte | — | Pending    | — |
-| 38 | ○ Tabela de Custos por Operação | 7/8 | In Progress|  |
+| 38 | ✅ Tabela de Custos por Operação | 8/8 | ✅ Complete | 2026-08-07 |
 | 39 | ○ Stripe / Monetização Pública (v1.7) | — | Pending    | — |
 
 ---
@@ -681,4 +681,4 @@ Phase 24 (Credit Tables + CreditService) ──┘
 
 *Roadmap created: 2026-07-15*
 *Milestone: v1.5 — Lançamento Externo Controlado*
-*Last updated: 2026-08-07 — Phase 36 complete (Onboarding — Navegação por Abas); renumeração F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), F39 = Stripe/Monetização Pública (v1.7)*
+*Last updated: 2026-08-08 — Phase 38 complete (Tabela de Custos por Operação — 8/8 plans, 1597 testes, UAT 4/4); renumeração F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), F39 = Stripe/Monetização Pública (v1.7)*

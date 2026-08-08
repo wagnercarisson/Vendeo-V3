@@ -1,4 +1,6 @@
 > **Purpose**: Defines the visual signature approval flow for stores without a logo — the modal/tela presented to the lojista after generation, including approval, rejection with re-generation, review of historical versions, and insufficient credits handling.
+>
+> > Modified by `fase-38-credit-operation-costs` (MODIFIED). `Insufficient credits phase` sub-message shows dynamic cost of `visual_signature_generation` via `useOperationCosts` with correct plural; no presumed "1 crédito" on 503.
 
 ## Requirements
 
@@ -394,12 +396,14 @@ Guard failure -> 4xx with specific message.
 
 ### Requirement: Insufficient credits phase
 
+> **Delta F38 (D11):** A sub-message "Cada geração de assinatura visual consome 1 crédito." SHALL passar a exibir o custo **dinâmico** de `visual_signature_generation` via hook `useOperationCosts()`, com plural correto. Se o custo estiver indisponível (`503 operation_cost_unavailable`), o modal NÃO mostra "1 crédito" presumido.
+
 When the `generate-without-logo` API returns HTTP 402, the modal SHALL transition to the `"insufficient_credits"` phase.
 
 The `"insufficient_credits"` phase SHALL display:
 - Alert icon (AlertCircle from lucide-react, accent-amber color)
 - Message: "Créditos insuficientes para gerar assinatura visual."
-- Sub-message: "Cada geração de assinatura visual consome 1 crédito."
+- Sub-message: "Cada geração de assinatura visual consome {cost} crédito(s)." (custo dinâmico de `visual_signature_generation`)
 - Primary CTA button: "Ver meus créditos" linking to `/conta`
 - Secondary CTA button: "Tentar novamente" that retries generation
 
@@ -408,6 +412,21 @@ The `"insufficient_credits"` phase SHALL display:
 - **WHEN** `generate()` receives a response with `status === 402`
 - **THEN** the modal SHALL set phase to `"insufficient_credits"`
 - **AND** SHALL display the message "Créditos insuficientes para gerar assinatura visual."
+
+#### Scenario: Modal shows dynamic cost in sub-message
+
+- **WHEN** o custo de `visual_signature_generation` é 2
+- **THEN** a sub-message exibe "Cada geração de assinatura visual consome 2 créditos."
+
+#### Scenario: Modal shows plural correctly for cost 1
+
+- **WHEN** o custo de `visual_signature_generation` é 1
+- **THEN** a sub-message exibe "Cada geração de assinatura visual consome 1 crédito."
+
+#### Scenario: Modal does not show presumed cost when unavailable
+
+- **WHEN** `GET /api/operation-costs` responde `503 operation_cost_unavailable`
+- **THEN** o modal NÃO exibe "consome 1 crédito" presumido na sub-message
 
 #### Scenario: CTA "Ver meus créditos" navigates to /conta
 

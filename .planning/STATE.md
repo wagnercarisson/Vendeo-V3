@@ -15,7 +15,7 @@ progress:
 
 # Project State
 
-**Last updated:** 2026-08-07 (planejamento F38 em andamento — Tabela de Custos por Operação; renumeração F37 = Revisão e Aprovação da Arte, F38 = Tabela de Custos, F39 = Stripe)
+**Last updated:** 2026-08-08 (F38 Tabela de Custos por Operação concluída — 8/8 plans, 1597 testes, UAT 4/4; renumeração F37 = Revisão e Aprovação da Arte, F38 = Tabela de Custos, F39 = Stripe)
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆ **Em andamento**
 **Current phase:** 38
 
@@ -428,7 +428,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 Phase: 38 (credit-operation-costs) — EXECUTING
 Plan: 1 of 8
-v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35 e 36 concluídas. F37 (Revisão e Aprovação da Arte, v1.5, experimento beta) em planejamento futuro; F38 (Tabela de Custos por Operação, v1.5) em planejamento — fonte da verdade `openspec/changes/fase-38-credit-operation-costs/`; F39 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37 → F39).
+v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36 e 38 concluídas. F37 (Revisão e Aprovação da Arte, v1.5, experimento beta) em planejamento futuro; F38 (Tabela de Custos por Operação, v1.5) concluída — 8/8 plans, 1597 testes, UAT 4/4, fonte da verdade `openspec/changes/fase-38-credit-operation-costs/`; F39 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37 → F39).
 
 ### Phase 36 — Onboarding: Navegação por Abas ✅ Complete
 
@@ -475,9 +475,9 @@ v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35 e 36 concluídas. F
 | 38-07 | 4 | ✅ | UI dinâmica — campaign-input-form, drift-critical-modal, visual-signature-approval-modal |
 | 38-08 | 5 | ✅ | Verificação real I1-I6 + teste de integração + build gate + UAT tracking |
 
-**Tests:** 1592 passing (187 files)
+**Tests:** 1597 passing
 **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
-**UAT:** 1/4 automated pass; 3/4 pending human checkpoint
+**UAT:** 4/4 passed — custo 1→2, operação desligada → 503, fail-open, fail-closed (verificado em `.planning/phases/38-credit-operation-costs/38-UAT.md`)
 
 **Source:** `openspec/changes/fase-38-credit-operation-costs/` (fonte da verdade)
 **Context:** `.planning/phases/38-credit-operation-costs/38-CONTEXT.md`
@@ -595,7 +595,7 @@ v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35 e 36 concluídas. F
 | **F35** | **✅ Completed** | **Changelog/Novidades — 5 plans, 3 waves, 42 testes novos, 1345 total, typecheck/lint/build limpos** |
 | F36 | ✅ Complete | Onboarding — Navegação por Abas (6/6 plans, 31/31 requirements, 1479 testes, code review aplicado) |
 | F37 | ○ In progress | Revisão e Aprovação da Arte (v1.5, experimento beta — planejamento futuro) |
-| **F38** | **✅ Complete** | **Tabela de Custos por Operação — 8/8 plans, 1592 testes, I1-I6 verificados no banco real, build gate verde, UAT aguardando checkpoint humano** |
+| **F38** | **✅ Complete** | **Tabela de Custos por Operação — 8/8 plans, 1597 testes, I1-I6 verificados no banco real, build gate verde, UAT 4/4 aprovado** |
 | F39 | ○ Future | Stripe / Monetização Pública (v1.7, pós-beta — renumerada de F36 → F37 → F39) |
 
 ### Quick Tasks Completed
