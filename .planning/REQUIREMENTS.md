@@ -416,10 +416,10 @@ Desdobramento da F38, adicionados em 2026-08-08 via OpenSpec (`openspec/changes/
 
 ### Apuração — Views e RPC (F38.1-ACCOUNTING)
 
-- [ ] **F38.1-01**: View `admin_ai_operation_costs` — agrupamento por run (`operation_run_id`), soma apenas call-level (anti-dupla-contagem)
-- [ ] **F38.1-02**: View `admin_campaign_delivery_costs` — detalhe por etapa da entrega
-- [ ] **F38.1-03**: Views `admin_ai_cost_by_provider_model` e `admin_ai_cost_by_stage` — agrupamentos dinâmicos por provider/model e etapa
-- [ ] **F38.1-04**: View `admin_ai_cost_by_store` — custo por loja
+- [x] **F38.1-01**: View `admin_ai_operation_costs` — agrupamento por run (`operation_run_id`), soma apenas call-level (anti-dupla-contagem)
+- [x] **F38.1-02**: View `admin_campaign_delivery_costs` — detalhe por etapa da entrega
+- [x] **F38.1-03**: Views `admin_ai_cost_by_provider_model` e `admin_ai_cost_by_stage` — agrupamentos dinâmicos por provider/model e etapa
+- [x] **F38.1-04**: View `admin_ai_cost_by_store` — custo por loja
 - [ ] **F38.1-05**: View `admin_cost_vs_credits` — reconciliação USD × créditos
 - [ ] **F38.1-06**: RPC `admin_get_ai_costs` — apuração filtrada (8 params, `p_hours`)
 - [x] **F38.1-07**: GET `/api/admin/ai-costs` — apuração (sem UI)
@@ -471,7 +471,7 @@ Desdobramento da F38, adicionados em 2026-08-08 via OpenSpec (`openspec/changes/
 
 - [ ] **F38.1-27**: Generate visual signature via AI image generation (Abordagem B — main approach)
 - [ ] **F38.1-28**: Generate 1 variation for automatic mode (Deixar o Vendeo Criar)
-- [ ] **F38.1-29**: Metadata includes generation_tier
+- [x] **F38.1-29**: Metadata includes generation_tier
 - [ ] **F38.1-30**: Visual signature quality criteria
 - [ ] **F38.1-31**: generate-without-logo resolve custo dinâmico (nova tentativa = novo run)
 
