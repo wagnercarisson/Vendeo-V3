@@ -251,6 +251,9 @@ describe("GET /api/admin/ai-model-pricing (D8 — lista vigentes + histórico)",
       },
     ]);
 
+    // isola a 2ª chamada: limpa histórico antes do GET includeHistory
+    mockIs.mockClear();
+    mockOrder.mockClear();
     const resHistory = await getPricing(
       "http://localhost/api/admin/ai-model-pricing?includeHistory=true",
     );
