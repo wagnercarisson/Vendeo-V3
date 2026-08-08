@@ -8,6 +8,7 @@ import { AiCostTracker } from "../tracker";
 import { COST_SOURCES, OPERATION_RUN_TYPES } from "../types";
 import type { AiCostEvent, CostSource } from "../types";
 import type { GenerationEventType } from "@/lib/visual-signature/types";
+import { insertGenerationEvent } from "@/lib/visual-signature/generation-events";
 
 const mockFrom = vi.fn();
 const mockInsert = vi.fn();
@@ -257,5 +258,49 @@ describe("AiCostTracker", () => {
     for (const call of mockInsert.mock.calls) {
       expect(call[0].operation_run_id).toBe("run-x");
     }
+  });
+});
+
+describe("cost_source inválido (compile time — D4)", () => {
+  it("valor fora de COST_SOURCES é rejeitado pelo TypeScript", () => {
+    // @ts-expect-error — "invalid" não está em COST_SOURCES (D4)
+    const invalid: CostSource = "invalid";
+    expect(invalid).toBe("invalid");
+  });
+});
+
+describe("insertGenerationEvent (delegação ao tracker — D11)", () => {
+  it("delega a gravação ao AiCostTracker.record e retorna valor compatível", async () => {
+    const recordSpy = vi
+      .spyOn(AiCostTracker.prototype, "record")
+      .mockResolvedValue(undefined);
+
+    const result = await insertGenerationEvent({
+      store_id: "store-1",
+      generation_type: "visual_signature",
+      provider: "openai",
+      attempt_number: 1,
+      status: "success",
+      duration_ms: 1200,
+      asset_generated: true,
+      has_logo: false,
+      has_generated_signature: true,
+      has_brand_profile: false,
+    });
+
+    expect(recordSpy).toHaveBeenCalledTimes(1);
+    const event = recordSpy.mock.calls[0][0] as AiCostEvent;
+    expect(event.storeId).toBe("store-1");
+    expect(event.generationType).toBe("visual_signature");
+    expect(event.operationRunType).toBe("visual_signature");
+    expect(event.attemptNumber).toBe(1);
+    expect(event.status).toBe("success");
+    // Sem cost/tokens no insert → delivery marker
+    expect(event.cost).toBeUndefined();
+    expect(event.tokens).toBeUndefined();
+    // Retorno compatível com o uso existente (consumidores apenas await — promise resolvida)
+    expect(result).toBeNull();
+
+    recordSpy.mockRestore();
   });
 });
