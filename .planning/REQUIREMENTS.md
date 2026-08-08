@@ -464,13 +464,13 @@ Desdobramento da F38, adicionados em 2026-08-08 via OpenSpec (`openspec/changes/
 
 ### Brand Profiler sem Logo (F38.1-PROFILER)
 
-- [ ] **F38.1-25**: Brand profiler execution
-- [ ] **F38.1-26**: Presence validation flow
+- [x] **F38.1-25**: Brand profiler execution
+- [x] **F38.1-26**: Presence validation flow
 
 ### Assinatura Visual (F38.1-VS)
 
-- [ ] **F38.1-27**: Generate visual signature via AI image generation (Abordagem B — main approach)
-- [ ] **F38.1-28**: Generate 1 variation for automatic mode (Deixar o Vendeo Criar)
+- [x] **F38.1-27**: Generate visual signature via AI image generation (Abordagem B — main approach)
+- [x] **F38.1-28**: Generate 1 variation for automatic mode (Deixar o Vendeo Criar)
 - [x] **F38.1-29**: Metadata includes generation_tier
 - [ ] **F38.1-30**: Visual signature quality criteria
 - [ ] **F38.1-31**: generate-without-logo resolve custo dinâmico (nova tentativa = novo run)
@@ -482,14 +482,14 @@ Desdobramento da F38, adicionados em 2026-08-08 via OpenSpec (`openspec/changes/
 ### Pipeline (F38.1-PIPELINE)
 
 - [ ] **F38.1-33**: traceId gerado por request
-- [ ] **F38.1-34**: Telemetria persistida no pipeline
-- [ ] **F38.1-35**: Attempt granular e duration_ms por chamada (furo 6/7)
-- [ ] **F38.1-36**: metadata.totalCost correto (furo 2)
-- [ ] **F38.1-37**: Reconciliação via views — anti-dupla-contagem
+- [x] **F38.1-34**: Telemetria persistida no pipeline
+- [x] **F38.1-35**: Attempt granular e duration_ms por chamada (furo 6/7)
+- [x] **F38.1-36**: metadata.totalCost correto (furo 2)
+- [x] **F38.1-37**: Reconciliação via views — anti-dupla-contagem
 
 ### Validação (F38.1-VALIDATION)
 
-- [ ] **F38.1-38**: `ValidationContext` type definido — validação de input emite evento de custo
+- [x] **F38.1-38**: `ValidationContext` type definido — validação de input emite evento de custo
 
 ## v1.7 Requirements (Stripe / Monetização Pública)
 
