@@ -12,6 +12,7 @@ import { logReviewDiagnostic } from "@/lib/image-generation/metrics/review-diagn
 import type { ReviewDiagnosticEntry } from "@/lib/image-generation/metrics/review-diagnostics";
 import { validatePrompt } from "@/lib/image-generation/services/prompt-validator";
 import { STORE_SEGMENTS } from "@/lib/constants";
+import type { TokenUsage } from "@/lib/ai-cost/types";
 
 /**
  * Rotating per-phase human-friendly messages in PT-BR for UI display.
@@ -164,10 +165,17 @@ export class ImageGenerationService {
     const aborted1 = checkAborted();
     if (aborted1) { emitFailed("input_validation", aborted1.message); return abortResult(aborted1); }
 
+    // Captura usage/durationMs da chamada de visão interna (D11) para
+    // enriquecer o evento de input_validation SEM emitir evento extra
+    // (canal único onMetricsEvent — anti-dupla-contagem T-38.1-22).
+    let validationUsage: TokenUsage | undefined;
     const validationResult = await this.inputValidation.validate(
       body.productName,
       body.productImageDataUrl,
-      body.inputValidationOverride
+      body.inputValidationOverride,
+      (info) => {
+        validationUsage = info.usage;
+      }
     );
 
     let effectiveProductName = body.productName;
@@ -256,7 +264,7 @@ export class ImageGenerationService {
     } else {
       emitComplete("input_validation");
     }
-    emitMetricsEvent("input_validation");
+    emitMetricsEvent("input_validation", 0, validationUsage ? { usage: validationUsage } : undefined);
 
     // ── Phase 2: Prompt assembly ────────────────────────────────────
     emitHuman("prompt_assembly");
@@ -356,7 +364,7 @@ export class ImageGenerationService {
       currentMimeType = providerResult.mimeType;
       currentUsage = providerResult.usage;
       emitComplete("image_generation");
-      emitMetricsEvent("image_generation", attempts);
+      emitMetricsEvent("image_generation", attempts, currentUsage ? { usage: currentUsage } : undefined);
 
       // ── Phase 4: Quality review ─────────────────────────────────
       emitHuman("quality_review");
@@ -383,8 +391,14 @@ export class ImageGenerationService {
       };
 
       let reviewResult;
+      // Captura usage/durationMs da revisão de visão interna (D11) para
+      // enriquecer o evento de quality_review SEM emitir evento extra
+      // (canal único onMetricsEvent — anti-dupla-contagem T-38.1-22).
+      let reviewUsage: TokenUsage | undefined;
       try {
-        reviewResult = await this.imageReview.review(imageDataUrl, reviewInput);
+        reviewResult = await this.imageReview.review(imageDataUrl, reviewInput, (info) => {
+          reviewUsage = info.usage;
+        });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         console.error(`[ImageGenerationService] review error — ${message}`);
@@ -457,7 +471,7 @@ export class ImageGenerationService {
         if (reviewResult.passed) {
           emit("quality_review", "complete", undefined,
             `issues: ${totalIssues} (${criticalCount} críticas, ${minorCount} menores), failureType: ${reviewResult.failureType ?? "null"}`);
-          emitMetricsEvent("quality_review", attempts);
+          emitMetricsEvent("quality_review", attempts, reviewUsage ? { usage: reviewUsage } : undefined);
           state = GenerationState.COMPLETE;
           logReviewDiagnostic({ ...diagBase, reviewAction: 'complete' });
         } else {
@@ -465,7 +479,7 @@ export class ImageGenerationService {
 
           if (reviewResult.failureType === "generated_product_mismatch") {
             emitFailed("quality_review", "A imagem gerada exibiu um nome de produto diferente do informado.");
-            emitMetricsEvent("quality_review", attempts);
+            emitMetricsEvent("quality_review", attempts, reviewUsage ? { usage: reviewUsage } : undefined);
             await this.metricsWriter.write(this.buildGenerationMetrics({
               runId,
               startTime,
@@ -509,7 +523,7 @@ export class ImageGenerationService {
           } else {
             emit("quality_review", "complete", undefined,
               `issues: ${totalIssues} (${criticalCount} críticas, ${minorCount} menores), failureType: ${reviewResult.failureType ?? "null"}`);
-            emitMetricsEvent("quality_review", attempts);
+            emitMetricsEvent("quality_review", attempts, reviewUsage ? { usage: reviewUsage } : undefined);
             state = GenerationState.COMPLETE;
             logReviewDiagnostic({ ...diagBase, reviewAction: 'skip_minor' });
           }
