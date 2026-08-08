@@ -368,11 +368,11 @@ WHERE ge.generation_type NOT IN ('campaign_pipeline','visual_signature','brand_p
 GROUP BY ge.store_id;
 
 -- Views sem GRANT direto ao cliente (T-38.1-03) — acesso exclusivo via RPC definer
-REVOKE ALL ON VIEW public.admin_ai_operation_costs FROM anon, authenticated;
-REVOKE ALL ON VIEW public.admin_campaign_delivery_costs FROM anon, authenticated;
-REVOKE ALL ON VIEW public.admin_ai_cost_by_provider_model FROM anon, authenticated;
-REVOKE ALL ON VIEW public.admin_ai_cost_by_stage FROM anon, authenticated;
-REVOKE ALL ON VIEW public.admin_ai_cost_by_store FROM anon, authenticated;
+REVOKE ALL ON TABLE public.admin_ai_operation_costs FROM anon, authenticated;
+REVOKE ALL ON TABLE public.admin_campaign_delivery_costs FROM anon, authenticated;
+REVOKE ALL ON TABLE public.admin_ai_cost_by_provider_model FROM anon, authenticated;
+REVOKE ALL ON TABLE public.admin_ai_cost_by_stage FROM anon, authenticated;
+REVOKE ALL ON TABLE public.admin_ai_cost_by_store FROM anon, authenticated;
 
 -- =============================================================================
 -- 9. View de reconciliação admin_cost_vs_credits (D10)
@@ -418,14 +418,14 @@ top_stages AS (
 campaign_runs AS (
   SELECT
     cl.operation_run_id,
-    MAX(cl.store_id) AS store_id,
-    MAX(cl.user_id) AS user_id,
-    MAX(cl.campaign_id) AS campaign_id,
+    cl.store_id,
+    cl.user_id,
+    cl.campaign_id,
     SUM(cl.accounting_cost_usd) AS custo_usd_total,
     MAX(cl.attempt_number) AS n_tentativas
   FROM call_level cl
   WHERE cl.campaign_id IS NOT NULL
-  GROUP BY cl.operation_run_id
+  GROUP BY cl.operation_run_id, cl.store_id, cl.user_id, cl.campaign_id
 ),
 campaign_credits AS (
   SELECT
@@ -440,14 +440,14 @@ campaign_credits AS (
 vs_runs AS (
   SELECT
     cl.operation_run_id,
-    MAX(cl.store_id) AS store_id,
-    MAX(cl.user_id) AS user_id,
-    MAX(cl.visual_signature_id) AS visual_signature_id,
+    cl.store_id,
+    cl.user_id,
+    cl.visual_signature_id,
     SUM(cl.accounting_cost_usd) AS custo_usd_total,
     MAX(cl.attempt_number) AS n_tentativas
   FROM call_level cl
   WHERE cl.visual_signature_id IS NOT NULL
-  GROUP BY cl.operation_run_id
+  GROUP BY cl.operation_run_id, cl.store_id, cl.user_id, cl.visual_signature_id
 ),
 vs_credits AS (
   SELECT
@@ -494,7 +494,7 @@ FROM vs_runs vr
 LEFT JOIN vs_credits vc ON vc.visual_signature_id = vr.visual_signature_id
 LEFT JOIN top_stages ts ON ts.operation_run_id = vr.operation_run_id;
 
-REVOKE ALL ON VIEW public.admin_cost_vs_credits FROM anon, authenticated;
+REVOKE ALL ON TABLE public.admin_cost_vs_credits FROM anon, authenticated;
 
 -- =============================================================================
 -- 10. RPC admin_get_ai_costs (D10)
