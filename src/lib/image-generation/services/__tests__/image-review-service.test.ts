@@ -26,9 +26,10 @@ describe('ImageReviewService', () => {
     };
     service = new ImageReviewService(mockLoader as unknown as PromptLoader);
 
-    vi.spyOn(service as any, 'callVisionModel').mockResolvedValue(
-      JSON.stringify({ passed: true, issues: [] })
-    );
+    vi.spyOn(service as any, 'callVisionModel').mockResolvedValue({
+      content: JSON.stringify({ passed: true, issues: [] }),
+      usage: { promptTokens: 100, completionTokens: 25, totalTokens: 125 },
+    });
   });
 
   it('review() monta expectedBadgeBehavior para offer com badge', async () => {

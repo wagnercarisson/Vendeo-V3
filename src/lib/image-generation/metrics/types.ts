@@ -5,6 +5,8 @@
  * Metrics are best-effort, local-only, never block generation.
  */
 
+import type { TokenUsage } from "@/lib/ai-cost/types";
+
 export interface GenerationMetrics {
   runId: string;
   timestamp: string;
@@ -41,4 +43,8 @@ export interface GenerationMetricsEvent {
   elapsedMs: number;
   attempt: number;
   estimatedCostUsd?: number;
+  /** Usage normalizado da chamada (D11/D12) — preenchido quando o provider entrega tokens. */
+  usage?: TokenUsage;
+  /** Duração da chamada individual em ms (D6/D11 — furo 7). */
+  durationMs: number;
 }

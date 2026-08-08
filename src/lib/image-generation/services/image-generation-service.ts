@@ -96,16 +96,26 @@ export class ImageGenerationService {
     const remaining = () => IMAGE_GENERATION_GLOBAL_TIMEOUT_MS - (Date.now() - startTime);
     const runId = crypto.randomUUID();
 
-    const emitMetricsEvent = (phase: string, attempt: number = 0) => {
+    const emitMetricsEvent = (phase: string, attempt: number = 0, extra?: Partial<Pick<GenerationMetricsEvent, "usage">>) => {
       if (onMetricsEvent) {
-        onMetricsEvent({
-          runId,
-          phase,
-          provider: this.imageProvider.name,
-          model: IMAGE_GENERATION_RESPONSES_MODEL,
-          elapsedMs: Date.now() - startTime,
-          attempt,
-        });
+        try {
+          onMetricsEvent({
+            runId,
+            phase,
+            provider: this.imageProvider.name,
+            model: IMAGE_GENERATION_RESPONSES_MODEL,
+            elapsedMs: Date.now() - startTime,
+            attempt,
+            durationMs: Date.now() - startTime,
+            ...extra,
+          });
+        } catch (err) {
+          console.error(
+            `[ImageGenerationService] onMetricsEvent callback failed (best-effort): ${
+              err instanceof Error ? err.message : String(err)
+            }`
+          );
+        }
       }
     };
 

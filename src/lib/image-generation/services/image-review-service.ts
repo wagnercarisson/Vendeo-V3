@@ -2,6 +2,7 @@ import { PromptLoader } from "@/lib/image-generation/prompt-loader";
 import { VISION_REVIEW_MODEL } from "@/lib/image-generation/config";
 import type { ImageReviewResult, ValidationContext } from "@/lib/image-generation/schema";
 import type { CampaignIntent } from "@/lib/campaign/types";
+import type { AiCallInfo, TokenUsage } from "@/lib/ai-cost/types";
 
 export type { ValidationContext };
 
@@ -47,12 +48,50 @@ export class ImageReviewService {
 
   async review(
     generatedImageDataUrl: string,
-    input: ImageReviewInput
+    input: ImageReviewInput,
+    onCall?: (info: AiCallInfo) => void | Promise<void>
   ): Promise<ImageReviewResult> {
     const contextVars = this.buildReviewPromptVariables(input);
     const prompt = this.promptLoader.load("campaign-image-reviewer", contextVars);
-    const raw = await this.callVisionModel(prompt, generatedImageDataUrl);
-    return this.parseResult(raw);
+    const startTime = Date.now();
+    const { content, usage } = await this.callVisionModel(prompt, generatedImageDataUrl);
+    const durationMs = Date.now() - startTime;
+
+    // Best-effort telemetry — never blocks review (D7)
+    this.invokeOnCall(onCall, {
+      provider: "openai",
+      model: this.model,
+      usage,
+      durationMs,
+    });
+
+    return this.parseResult(content);
+  }
+
+  /**
+   * Invoke the onCall callback best-effort (D7): a throwing or rejecting
+   * callback is logged and ignored — it never breaks the review.
+   */
+  private invokeOnCall(
+    onCall: ((info: AiCallInfo) => void | Promise<void>) | undefined,
+    info: AiCallInfo
+  ): void {
+    if (!onCall) return;
+    try {
+      Promise.resolve(onCall(info)).catch((err) => {
+        console.error(
+          `[ImageReviewService] onCall callback failed (best-effort): ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
+      });
+    } catch (err) {
+      console.error(
+        `[ImageReviewService] onCall callback failed (best-effort): ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      );
+    }
   }
 
   private buildCampaignIntentLabel(intent: CampaignIntent): string {
@@ -183,7 +222,7 @@ export class ImageReviewService {
   private async callVisionModel(
     prompt: string,
     imageDataUrl: string
-  ): Promise<string> {
+  ): Promise<{ content: string; usage?: TokenUsage }> {
     const { default: OpenAI } = await import("openai");
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
@@ -209,14 +248,39 @@ export class ImageReviewService {
 
     const content = response.choices[0]?.message?.content;
     if (!content || content.trim().length === 0) {
-      return JSON.stringify({
-        passed: false,
-        failureType: "empty_review",
-        issues: [{ type: "empty_review", severity: "critical", description: "O modelo de revisão não retornou conteúdo." }],
-      });
+      return {
+        content: JSON.stringify({
+          passed: false,
+          failureType: "empty_review",
+          issues: [{ type: "empty_review", severity: "critical", description: "O modelo de revisão não retornou conteúdo." }],
+        }),
+        usage: this.mapUsage(response.usage),
+      };
     }
 
-    return content;
+    return { content, usage: this.mapUsage(response.usage) };
+  }
+
+  /**
+   * Map the OpenAI SDK usage payload to the normalized TokenUsage (D12).
+   * Only present fields are included; defensive against SDK shape drift.
+   */
+  private mapUsage(usage: unknown): TokenUsage | undefined {
+    if (!usage || typeof usage !== "object") return undefined;
+    const u = usage as Record<string, unknown>;
+    const tokens: TokenUsage = {};
+    if (typeof u.prompt_tokens === "number") tokens.promptTokens = u.prompt_tokens;
+    if (typeof u.completion_tokens === "number") tokens.completionTokens = u.completion_tokens;
+    if (typeof u.total_tokens === "number") tokens.totalTokens = u.total_tokens;
+    const promptDetails = u.prompt_tokens_details as Record<string, unknown> | undefined;
+    if (promptDetails && typeof promptDetails.cached_tokens === "number") {
+      tokens.cachedInputTokens = promptDetails.cached_tokens;
+    }
+    const completionDetails = u.completion_tokens_details as Record<string, unknown> | undefined;
+    if (completionDetails && typeof completionDetails.image_tokens === "number") {
+      tokens.imageTokens = completionDetails.image_tokens;
+    }
+    return tokens;
   }
 
   private parseResult(raw: string): ImageReviewResult {
