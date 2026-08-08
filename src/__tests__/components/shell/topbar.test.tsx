@@ -1,11 +1,26 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { Topbar } from "@/components/shell/topbar";
 
 beforeEach(() => {
   window.matchMedia = window.matchMedia || (() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
 });
+
+function renderTopbar(pathname: string) {
+  const reload = vi.fn();
+  Object.defineProperty(window, "location", {
+    writable: true,
+    value: {
+      href: `https://beta.vendeo.tech${pathname}`,
+      pathname,
+      reload,
+      assign: vi.fn(),
+      replace: vi.fn(),
+    },
+  });
+  return { reload };
+}
 
 describe("Topbar", () => {
   it("renders CTA Nova Campanha", () => {
@@ -66,5 +81,41 @@ describe("Topbar", () => {
     );
     const trigger = screen.getByText("test@test.com").closest("button");
     expect(trigger?.className).toContain("min-h-[44px]");
+  });
+
+  it("CTA em /campanhas/nova previne default e faz reload", () => {
+    const { reload } = renderTopbar("/campanhas/nova");
+    const preventDefaultSpy = vi.spyOn(Event.prototype, "preventDefault");
+    render(
+      <Topbar
+        user={{ claims: { email: "test@test.com" } }}
+        onToggleMenu={() => {}}
+        isDrawerOpen={false}
+      />,
+    );
+    const cta = screen.getByText("Nova Campanha").closest("a");
+    expect(cta).not.toBeNull();
+    fireEvent.click(cta!);
+    expect(preventDefaultSpy).toHaveBeenCalled();
+    expect(reload).toHaveBeenCalledTimes(1);
+    preventDefaultSpy.mockRestore();
+  });
+
+  it("CTA em outra rota nao previne default (SPA preservado)", () => {
+    const { reload } = renderTopbar("/dashboard");
+    const preventDefaultSpy = vi.spyOn(Event.prototype, "preventDefault");
+    render(
+      <Topbar
+        user={{ claims: { email: "test@test.com" } }}
+        onToggleMenu={() => {}}
+        isDrawerOpen={false}
+      />,
+    );
+    const cta = screen.getByText("Nova Campanha").closest("a");
+    expect(cta).not.toBeNull();
+    fireEvent.click(cta!);
+    expect(preventDefaultSpy).not.toHaveBeenCalled();
+    expect(reload).not.toHaveBeenCalled();
+    preventDefaultSpy.mockRestore();
   });
 });
