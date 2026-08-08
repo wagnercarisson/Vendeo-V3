@@ -179,3 +179,50 @@ describe('CopyDirectorService — parseResult fallback', () => {
     await expect(service.generateCopy(MINIMUM_INPUT)).rejects.toThrow(MalformedResponseError);
   });
 });
+
+describe('CopyDirectorService — onCall (D11, furo 1)', () => {
+  it('Teste 11: generateCopy com onCall → invocado com provider/model/usage/durationMs do TextProviderResult', async () => {
+    const usageProvider: TextProvider = {
+      name: 'openai',
+      async generateText() {
+        return {
+          content: '{"title": "Título", "caption": "Legenda", "hashtags": ["#A", "#B", "#C"], "cta_post": "Compre!"}',
+          usage: { promptTokens: 120, completionTokens: 40 },
+          model: 'gpt-4o-mini',
+        };
+      },
+    };
+    const service = new CopyDirectorService(usageProvider);
+    const onCall = vi.fn();
+
+    const result = await service.generateCopy(MINIMUM_INPUT, undefined, onCall);
+
+    expect(result.title).toBeDefined();
+    expect(onCall).toHaveBeenCalledTimes(1);
+    const info = onCall.mock.calls[0][0];
+    expect(info.provider).toBe('openai');
+    expect(info.model).toBe('gpt-4o-mini');
+    expect(info.usage).toEqual({ promptTokens: 120, completionTokens: 40 });
+    expect(info.durationMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('Teste 12: onCall que lança → generateCopy continua (best-effort) e copy é gerada normalmente', async () => {
+    const service = new CopyDirectorService(new MockTextProvider());
+    const onCall = vi.fn(() => {
+      throw new Error('callback boom');
+    });
+
+    const result = await service.generateCopy(MINIMUM_INPUT, undefined, onCall);
+
+    expect(result.title).toBeDefined();
+    expect(result.caption).toBeDefined();
+    expect(onCall).toHaveBeenCalledTimes(1);
+  });
+
+  it('Teste 13: sem onCall → comportamento inalterado (compat)', async () => {
+    const service = new CopyDirectorService(new MockTextProvider());
+    const result = await service.generateCopy(MINIMUM_INPUT);
+    expect(result.title).toBeDefined();
+    expect(result.caption).toBeDefined();
+  });
+});
