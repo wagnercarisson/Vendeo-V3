@@ -22,7 +22,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
-    include: ["src/lib/credit/__tests__/operation-cost-service.integration.test.ts"],
+    include: [
+      "src/lib/credit/__tests__/operation-cost-service.integration.test.ts",
+      "src/lib/credit/__tests__/operation-cost-service.failclosed.integration.ts",
+    ],
     testTimeout: 30000,
   },
   resolve: {
