@@ -8,12 +8,15 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   create_test_store: "Criação de Store Teste",
   admin_exception: "Exceção Administrativa",
   reveal_cnpj: "Revelar CNPJ",
+  access_request_approve: "Aprovar Solicitação de Acesso",
+  access_request_reject: "Recusar Solicitação de Acesso",
 };
 
 export const TARGET_TYPE_LABELS: Record<string, string> = {
   store: "Loja",
   user: "Usuário",
   campaign: "Campanha",
+  access_request: "Solicitação de Acesso",
 };
 
 export const BENEFIT_TYPE_LABELS: Record<string, string> = {
