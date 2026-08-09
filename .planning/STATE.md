@@ -15,7 +15,7 @@ progress:
 
 # Project State
 
-**Last updated:** 2026-08-09 (F38.1 Apuração de Custos de IA por Entrega em execução — 7/11 plans concluídos: 38-1-07 ✅ rota generate-image instrumentada com custo real por chamada, delivery sem custo, totalCost real, campaigns.operation_run_id persistido — 1672 testes, typecheck/lint/build limpos; 38/38 requirements; F38 concluída 8/8 plans, 1597 testes, UAT 4/4; renumeração F37 = Revisão e Aprovação da Arte, F38 = Tabela de Custos, F39 = Stripe)
+**Last updated:** 2026-08-09 (F38.1 Apuração de Custos de IA por Entrega em execução — 8/11 plans concluídos: 38-1-08 ✅ rota generate-without-logo instrumentada — startRun visual_signature, eventos call-level visual_signature_image/validation com custo real, delivery NULL, retry = novo run, 1678 testes, typecheck/lint/build limpos; 38/38 requirements; F38 concluída 8/8 plans, 1597 testes, UAT 4/4; renumeração F37 = Revisão e Aprovação da Arte, F38 = Tabela de Custos, F39 = Stripe)
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆ **Em andamento**
 **Current phase:** 38.1
 
@@ -134,6 +134,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 | Phase 38-1-ai-cost-accounting P05 | 10min | 3 tasks | 8 files |
 | Phase 38-1-ai-cost-accounting P06 | 8min | 3 tasks | 4 files |
 | Phase 38-1-ai-cost-accounting P07 | 11min | 3 tasks | 5 files |
+| Phase 38-1-ai-cost-accounting P08 | 9min | 3 tasks | 4 files |
 
 ### Phase 19 — Onboarding & Estados Vazios ✅
 
@@ -434,8 +435,8 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 ## Current Position
 
 Phase: 38.1 (ai-cost-accounting) — EXECUTING (plans em execução por wave)
-Plan: 8 of 11 (waves 1–6)
-v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36 e 38 concluídas. F38 (Tabela de Custos por Operação, v1.5) concluída — 8/8 plans, 1597 testes, UAT 4/4, fonte da verdade `openspec/changes/fase-38-credit-operation-costs/`; F38.1 (Apuração de Custos de IA por Entrega, desdobramento da F38) em execução — 7/11 plans concluídos (38-1-07 ✅ generate-image instrumentado — 1672 testes), 38/38 requirements, plan-checker PASS, fonte da verdade `openspec/changes/fase-38-1-ai-cost-accounting/`; F37 (Revisão e Aprovação da Arte, v1.5, experimento beta) em planejamento futuro; F39 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37 → F39).
+Plan: 9 of 11 (waves 1–6)
+v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36 e 38 concluídas. F38 (Tabela de Custos por Operação, v1.5) concluída — 8/8 plans, 1597 testes, UAT 4/4, fonte da verdade `openspec/changes/fase-38-credit-operation-costs/`; F38.1 (Apuração de Custos de IA por Entrega, desdobramento da F38) em execução — 8/11 plans concluídos (38-1-08 ✅ generate-without-logo instrumentado — 1678 testes), 38/38 requirements, plan-checker PASS, fonte da verdade `openspec/changes/fase-38-1-ai-cost-accounting/`; F37 (Revisão e Aprovação da Arte, v1.5, experimento beta) em planejamento futuro; F39 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37 → F39).
 
 ### Phase 36 — Onboarding: Navegação por Abas ✅ Complete
 
@@ -503,12 +504,12 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 | 38-1-05 | 3 | ✅ | D11 event contract (usage+durationMs) + `onCall` copy/validation/review/image-gen (13 cenários, 1657 testes) |
 | 38-1-06 | 3 | ✅ | `onCall` no VS generator (Responses API) + brand profiler (visão, from-zero) — 1661 testes |
 | 38-1-07 | 4 | ✅ | Rotas 6.3 — generate-image (call-level, delivery sem custo, totalCost) |
-| 38-1-08 | 4 | ○ | Rotas 6.4 — generate-without-logo (VS/validation custo, nova tentativa = novo run) |
+| 38-1-08 | 4 | ✅ | Rotas 6.4 — generate-without-logo (VS/validation custo, nova tentativa = novo run) |
 | 38-1-09 | 4 | ○ | Rotas 6.5 — brand-profile/* + infer + realign (3 caminhos IA) + brand-director/text-only onCall |
 | 38-1-10 | 5 | ○ | Views/RPCs apuração + 50 testes + gates + UAT checkpoint |
 | 38-1-11 | 6 | ○ | Runbook trackings 8.1–8.5 |
 
-**Status:** 7/11 plans concluídos (38-1-07 ✅ generate-image instrumentado — startRun campaign_delivery + recordCall com custo real por chamada, delivery sem custo, totalCost real, campaigns.operation_run_id persistido — 1672 testes, typecheck/lint/build limpos)
+**Status:** 8/11 plans concluídos (38-1-08 ✅ generate-without-logo instrumentado — startRun visual_signature, eventos call-level visual_signature_image/validation com custo real via resolveAiCost, delivery NULL + duration_is_pipeline, retry = novo run, visual_signature_id preenchido, 6 testes 6.4 — 1678 testes, typecheck/lint/build limpos)
 
 **Source:** `openspec/changes/fase-38-1-ai-cost-accounting/` (fonte da verdade)
 **Context:** `.planning/phases/38-1-ai-cost-accounting/38-1-CONTEXT.md`
@@ -670,3 +671,6 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 - [Phase 38-1-ai-cost-accounting]: recordCall na rota generate-image e fire-and-forget (void) no caminho de resultado — telemetria nunca bloqueia geracao (T-38.1-29, D7); ordem de resolucao garantida pelos awaits do pipeline (upload/update) antes do logPipelineEvent com totalCost (38-1-07)
 - [Phase 38-1-ai-cost-accounting]: campaign_input_validation vem do onMetricsEvent do ImageGenerationService (fase input_validation, attempt 0) — a validacao pre-stream da rota (guards 409/conflict) nao emite evento pois nao chega a criar campanha (38-1-07)
 - [Phase 38-1-ai-cost-accounting]: duration_is_pipeline centralizada no helper recordCall (delivery) — o tracker a adiciona de novo (idempotente); chamada de delivery nao repassa metadata, mantendo grep de controle em 1 ocorrencia na rota (38-1-07)
+- [Phase 38-1-ai-cost-accounting]: Retry VS = novo startRun + flushCallEvents(null) fechando o run 1 (eventos da tentativa falha gravados com visual_signature_id null) antes de abrir o run 2 — o run falho nao recebe o id da assinatura do retry (T-38.1-37, D1) (38-1-08)
+- [Phase 38-1-ai-cost-accounting]: Imagem e validacao VS atravessam o MESMO onCall (D11); a rota distingue visual_signature_image vs visual_signature_validation pelo model real da chamada (validacao = IMAGE_VALIDATION_MODEL || gpt-4o-mini) (38-1-08)
+- [Phase 38-1-ai-cost-accounting]: Eventos call-level VS enfileirados (pendingCalls) ate o visual_signature_id existir (apos persistSignature) — todos os eventos do run com o id (D2); operationRunId/attempt capturados no momento da chamada (38-1-08)
