@@ -27,11 +27,11 @@ beforeEach(() => {
 });
 
 describe("LoginForm", () => {
-  it("includes link to /signup", () => {
+  it("includes link to request access", () => {
     render(<LoginForm redirect="/" />);
-    const link = screen.getByRole("link", { name: "Criar conta" });
+    const link = screen.getByRole("link", { name: "Solicitar acesso free" });
     expect(link).toBeInTheDocument();
-    expect(link).toHaveAttribute("href", "/signup");
+    expect(link).toHaveAttribute("href", "/");
   });
 
   it("includes link to /forgot-password", () => {
@@ -71,6 +71,46 @@ describe("LoginForm", () => {
     });
 
     expect(mockReplace).toHaveBeenCalledWith("/store");
+  });
+
+  it("redirects to /dashboard on success when no redirect param (bug crítico pós-login)", async () => {
+    mockSignInWithPassword.mockResolvedValue({
+      error: null,
+    });
+
+    render(<LoginForm redirect="" />);
+
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "test@test.com" },
+    });
+    fireEvent.change(screen.getByLabelText("Senha"), {
+      target: { value: "password123" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith("/dashboard");
+    });
+  });
+
+  it("keeps provided redirect value on success", async () => {
+    mockSignInWithPassword.mockResolvedValue({
+      error: null,
+    });
+
+    render(<LoginForm redirect="/campanhas" />);
+
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "test@test.com" },
+    });
+    fireEvent.change(screen.getByLabelText("Senha"), {
+      target: { value: "password123" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith("/campanhas");
+    });
   });
 
   it("shows error message on failed login", async () => {
