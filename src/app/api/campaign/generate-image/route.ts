@@ -1,5 +1,4 @@
 import { NextRequest } from "next/server";
-import crypto from "crypto";
 import { GenerateImageRequestSchema } from "@/lib/image-generation/schema";
 import { IMAGE_GENERATION_GLOBAL_TIMEOUT_MS, MAX_PRODUCT_IMAGE_BASE64_SIZE, IMAGE_GENERATION_RESPONSES_MODEL } from "@/lib/image-generation/config";
 import { OperationCostService, OperationCostUnavailableError } from "@/lib/credit/operation-cost-service";
@@ -28,7 +27,7 @@ import type { CampaignIntent } from "@/lib/campaign/types";
 import { isRetryableError } from "@/lib/copy/errors";
 import { getLaunchConfig } from "@/lib/launch-config/config";
 import { logPipelineEvent } from "@/lib/logging/pipeline-logger";
-import { estimateAiCost } from "@/lib/ai-cost";
+import { AiCostTracker, estimateAiCost } from "@/lib/ai-cost";
 import { requireLegalClearance } from "@/lib/legal/clearance";
 
 export const runtime = "nodejs";
@@ -36,9 +35,12 @@ export const runtime = "nodejs";
 export const POST = apiHandler(async (request: NextRequest) => {
   requireSameOrigin(request);
 
-  // ── Pre-stream: Launch config + traceId ─────────────────────────
+  // ── Pre-stream: Launch config + run context (D1/D7) ───────────
+  // Início do run "campaign_delivery": gera operationRunId (agrupador econômico)
+  // + traceId (rastreio técnico) DISTINTOS; o operationRunId é persistido na
+  // campanha na criação (D1/D2) e propagado a todos os eventos do run.
   const config = getLaunchConfig();
-  const traceId = crypto.randomUUID();
+  const { operationRunId, traceId } = new AiCostTracker().startRun("campaign_delivery");
 
   if (config.generationPaused) {
     return Response.json(
@@ -349,6 +351,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
       productName: campaignInput.productName,
       inputSnapshot,
       identitySnapshot: validatedSnapshot as unknown as Record<string, unknown>,
+      operationRunId,
     });
     campaignId = campaign.id;
     storagePath = campaign.storagePath;

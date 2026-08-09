@@ -9,6 +9,9 @@ export async function createCampaign(
   const campaignId = crypto.randomUUID();
   const storagePath = `${storeId}/${campaignId}.jpg`;
 
+  // F38.1 (D1/D2): operation_run_id persistido na criação da campanha — o
+  // operationRunId do run (campaign_delivery) é gravado aqui, preparando o reuso
+  // do mesmo run pela F37 (recomposição cross-request). Ausente -> NULL.
   const { error } = await supabaseAdmin
     .from("campaigns")
     .insert({
@@ -19,6 +22,7 @@ export async function createCampaign(
       input_snapshot: input.inputSnapshot,
       identity_snapshot: input.identitySnapshot ?? null,
       storage_path: storagePath,
+      operation_run_id: input.operationRunId ?? null,
     });
 
   if (error) {
