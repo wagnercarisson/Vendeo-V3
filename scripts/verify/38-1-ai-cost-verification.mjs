@@ -328,6 +328,159 @@ async function run() {
     .eq("metadata->>verification", "38-1-10-I5");
   assert("I5: neutralização dos eventos de teste (operation_run_id → null)", !neutralErr, neutralErr?.message);
 
+  // ── I5.1: regeneracoes NUNCA negativas e só por etapas de arte ──
+  console.log("\n🧪 I5.1: regeneracoes ≥ 0 e baseadas em etapas de arte (campaign_image/campaign_image_review)");
+  // Resolve uma campanha real da loja de teste para o run aparecer na reconciliação
+  // (view admin_cost_vs_credits filtra cl.campaign_id IS NOT NULL no domínio campaign)
+  const { data: campRows } = await supabase
+    .from("campaigns")
+    .select("id")
+    .eq("store_id", TEST_STORE_ID)
+    .limit(1);
+  const TEST_CAMPAIGN_ID = campRows?.[0]?.id ?? null;
+  assert("I5.1: campanha real da loja de teste resolvida", !!TEST_CAMPAIGN_ID, "nenhuma campanha da loja de teste");
+
+  const RUN_VALIDATION = crypto.randomUUID(); // só input validation, attempt 0
+  const RUN_IMAGE1 = crypto.randomUUID();     // campaign_image attempt 1
+  const RUN_IMAGE2 = crypto.randomUUID();     // campaign_image + review attempt 2
+
+  // Run A: apenas campaign_input_validation attempt 0 → regeneracoes 0
+  const { error: insVal } = await supabase.from("generation_events").insert({
+    store_id: TEST_STORE_ID,
+    campaign_id: TEST_CAMPAIGN_ID,
+    operation_run_id: RUN_VALIDATION,
+    operation_run_type: "campaign_delivery",
+    generation_type: "campaign_input_validation",
+    provider: "gemini",
+    model: "gemini-3.1-flash-lite",
+    status: "failed",
+    attempt_number: 0,
+    duration_ms: 90,
+    prompt_tokens: 400,
+    completion_tokens: 50,
+    estimated_cost_usd: 0.00009,
+    cost_source: "pricing_table",
+    metadata: { verification: "38-1-10-I5" },
+  });
+  assert("I5.1A: input validation attempt 0 inserido", !insVal, insVal?.message);
+
+  // Run B: campaign_image attempt 1 → regeneracoes 0
+  const { error: insImg1 } = await supabase.from("generation_events").insert({
+    store_id: TEST_STORE_ID,
+    campaign_id: TEST_CAMPAIGN_ID,
+    operation_run_id: RUN_IMAGE1,
+    operation_run_type: "campaign_delivery",
+    generation_type: "campaign_image",
+    provider: "openai",
+    model: "gpt-image-2",
+    status: "success",
+    attempt_number: 1,
+    duration_ms: 3000,
+    image_tokens: 100,
+    estimated_cost_usd: 0.04,
+    cost_source: "pricing_table",
+    metadata: { verification: "38-1-10-I5" },
+  });
+  assert("I5.1B: campaign_image attempt 1 inserido", !insImg1, insImg1?.message);
+
+  // Run C: campaign_image attempt 1 + campaign_image_review attempt 2 → regeneracoes 1
+  const { error: insImg2a } = await supabase.from("generation_events").insert({
+    store_id: TEST_STORE_ID,
+    campaign_id: TEST_CAMPAIGN_ID,
+    operation_run_id: RUN_IMAGE2,
+    operation_run_type: "campaign_delivery",
+    generation_type: "campaign_image",
+    provider: "openai",
+    model: "gpt-image-2",
+    status: "success",
+    attempt_number: 1,
+    duration_ms: 3000,
+    image_tokens: 100,
+    estimated_cost_usd: 0.04,
+    cost_source: "pricing_table",
+    metadata: { verification: "38-1-10-I5" },
+  });
+  assert("I5.1C: campaign_image attempt 1 inserido", !insImg2a, insImg2a?.message);
+  const { error: insImg2b } = await supabase.from("generation_events").insert({
+    store_id: TEST_STORE_ID,
+    campaign_id: TEST_CAMPAIGN_ID,
+    operation_run_id: RUN_IMAGE2,
+    operation_run_type: "campaign_delivery",
+    generation_type: "campaign_image_review",
+    provider: "openai",
+    model: "gpt-4o-mini",
+    status: "success",
+    attempt_number: 2,
+    duration_ms: 800,
+    prompt_tokens: 300,
+    completion_tokens: 100,
+    estimated_cost_usd: 0.00015,
+    cost_source: "pricing_table",
+    metadata: { verification: "38-1-10-I5" },
+  });
+  assert("I5.1C: campaign_image_review attempt 2 inserido", !insImg2b, insImg2b?.message);
+
+  const regByRun = async (runId) => {
+    const { data: r, error: e } = await supabase.rpc("admin_get_ai_costs", {
+      p_operation_run_id: runId,
+      p_hours: 24,
+    });
+    if (e) throw new Error(e.message);
+    return r;
+  };
+
+  const valRes = await regByRun(RUN_VALIDATION);
+  const img1Res = await regByRun(RUN_IMAGE1);
+  const img2Res = await regByRun(RUN_IMAGE2);
+  const val = valRes?.by_operation_run?.[0];
+  const img1 = img1Res?.by_operation_run?.[0];
+  const img2 = img2Res?.by_operation_run?.[0];
+  assert(
+    "I5.1A: run só com campaign_input_validation attempt 0 → regeneracoes 0",
+    val?.regeneracoes === 0,
+    `regeneracoes=${val?.regeneracoes} esperado=0`,
+  );
+  assert(
+    "I5.1B: run com campaign_image attempt 1 → regeneracoes 0",
+    img1?.regeneracoes === 0,
+    `regeneracoes=${img1?.regeneracoes} esperado=0`,
+  );
+  assert(
+    "I5.1C: run com campaign_image/review attempt 2 → regeneracoes 1",
+    img2?.regeneracoes === 1,
+    `regeneracoes=${img2?.regeneracoes} esperado=1`,
+  );
+  assert(
+    "I5.1: nenhuma regeneracoes negativa nos runs",
+    [val, img1, img2].every((r) => r && r.regeneracoes >= 0),
+    JSON.stringify({ val, img1, img2 }),
+  );
+
+  // Reconciliação (view admin_cost_vs_credits) também nunca retorna negativo
+  const recVal = valRes?.reconciliation?.[0];
+  const recImg1 = img1Res?.reconciliation?.[0];
+  const recImg2 = img2Res?.reconciliation?.[0];
+  const recs = [recVal, recImg1, recImg2].filter(Boolean);
+  assert(
+    "I5.1: reconciliação admin_cost_vs_credits nunca retorna regeneracoes negativas",
+    recs.every((r) => r.regeneracoes === null || r.regeneracoes >= 0),
+    JSON.stringify(recs),
+  );
+  assert(
+    "I5.1: reconciliação do run C reflete 1 regeneração (etapa de arte attempt 2)",
+    recImg2?.regeneracoes === 1,
+    `regeneracoes=${recImg2?.regeneracoes} esperado=1`,
+  );
+
+  // Cleanup dos eventos I5.1 (mesma regra: neutralização por marcador único, sem DELETE)
+  const { error: neutralErr2 } = await supabase
+    .from("generation_events")
+    .update({ operation_run_id: null, operation_run_type: null, estimated_cost_usd: null, provider_reported_cost_usd: null, cost_source: null })
+    .eq("store_id", TEST_STORE_ID)
+    .eq("metadata->>verification", "38-1-10-I5")
+    .in("operation_run_id", [RUN_VALIDATION, RUN_IMAGE1, RUN_IMAGE2]);
+  assert("I5.1: neutralização dos eventos de teste (operation_run_id → null)", !neutralErr2, neutralErr2?.message);
+
   // ── I6: admin_get_metrics segue respondendo (sem regressão — F28) ──
   console.log("\n🧪 I6: admin_get_metrics segue respondendo (sem regressão)");
   const { data: metrics, error: metricsErr } = await supabase.rpc("admin_get_metrics", {

@@ -96,8 +96,31 @@ linhas fora do escopo (filtra por `metadata->>verification`). Nenhum script dest
 **Estado pós-limpeza:** 118 eventos (56 image + 57 pipeline + 5 VS), zero markers de verificação restantes,
 zero eventos de teste recentes na store de teste. A limpeza segura (com parênteses) removeu os 3 eventos
 de teste da re-execução do script — **apenas os marcados**, sem tocar em dados reais.
-**Ação pendente:** avaliar com o usuário se a perda das 56 linhas de telemetria `campaign_copy` (sem custo,
-sem operação) é aceitável; recomenda-se aceitar (dado de telemetria histórica sem valor contábil).
+
+### Decisão do usuário (2026-08-09): incidente ACEITO como exceção conhecida
+
+- **Aceitar** o incidente — perda das 56 linhas históricas `campaign_copy` (eras F25/F28, sem custo e sem
+  `operation_run_id`, impacto contábil ZERO, `admin_get_metrics` e views 38.1 sem regressão).
+- **Não tentar recuperação** (PITR desabilitado, backups API vazios).
+- **Registrar** explicitamente no fechamento da fase que houve **perda de telemetria histórica sem impacto
+  contábil**, como exceção conhecida.
+- F38.1 considerada apta a continuar após o UAT manual (7.3).
+
+### Regra operacional adotada (a partir daqui)
+
+Verificação em banco real **não deve usar DELETE em `generation_events`** — apenas:
+
+1. **INSERT de eventos de teste marcados** (`metadata->>'verification' = '<run-id>'`, filtro único);
+2. **UPDATE de neutralização por marcador único** (`operation_run_id → null`, custo → null) na limpeza —
+   nunca `DELETE`.
+
+`generation_events` é **append-only** (F28); qualquer necessidade de remoção real exige avaliação manual
+prévia com o usuário.
+
+### Recomendação para fases futuras com banco remoto real
+
+Antes de próximas fases que executem verificação/script em banco remoto real, **avaliar habilitar PITR e/ou
+backups utilizáveis** (via API), principalmente quando a base deixar de ser apenas validação/dev.
 
 ---
 
@@ -130,4 +153,7 @@ prerenderizadas/servidas (Middleware 91.6 kB, First Load JS 102 kB).
 
 ## 7.3 — UAT manual (checkpoint humano — PENDENTE)
 
-Pendente — ver checklist no checkpoint report do executor.
+Pendente — checklist de 7 pontos apresentado ao usuário em 2026-08-09 (gerar campanha → eventos call-level
+no mesmo run; rejeitar/recompor → mesmo run; gerar VS → custo + novo run em falha; brand profile → eventos;
+`admin_cost_vs_credits` → reconciliação; PUT pricing → novo `pricing_version`; regressão geral). Resultado:
+**[aguardando validação]**.
