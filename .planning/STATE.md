@@ -4,18 +4,18 @@ milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 current_phase: 38.1
 status: executing
-last_updated: "2026-08-09T00:09:47.620Z"
+last_updated: "2026-08-09T00:46:30.189Z"
 progress:
   total_phases: 21
   completed_phases: 18
   total_plans: 99
-  completed_plans: 89
+  completed_plans: 91
   percent: 86
 ---
 
 # Project State
 
-**Last updated:** 2026-08-09 (F38.1 Apuração de Custos de IA por Entrega em execução — 8/11 plans concluídos: 38-1-08 ✅ rota generate-without-logo instrumentada — startRun visual_signature, eventos call-level visual_signature_image/validation com custo real, delivery NULL, retry = novo run, 1678 testes, typecheck/lint/build limpos; 38/38 requirements; F38 concluída 8/8 plans, 1597 testes, UAT 4/4; renumeração F37 = Revisão e Aprovação da Arte, F38 = Tabela de Custos, F39 = Stripe)
+**Last updated:** 2026-08-09 (F38.1 Apuração de Custos de IA por Entrega em execução — 9/11 plans concluídos: 38-1-09 ✅ brand rotas + 6.5 — onCall em BrandDirectorService.analyze + BrandTextOnlyInferenceService.infer, threading do wrapper, 4 rotas brand instrumentadas (startRun brand_profile, call-level brand_profile_vision/text com custo real via resolveAiCost, delivery without_logo/with_logo NULL + duration_is_pipeline, infer de zero eventos, realign 3 caminhos IA, regenerate = novo run), 15 testes novos, 1700 testes, typecheck/lint/build limpos; 38/38 requirements; F38 concluída 8/8 plans, 1597 testes, UAT 4/4; renumeração F37 = Revisão e Aprovação da Arte, F38 = Tabela de Custos, F39 = Stripe)
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆ **Em andamento**
 **Current phase:** 38.1
 
@@ -135,6 +135,8 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 | Phase 38-1-ai-cost-accounting P06 | 8min | 3 tasks | 4 files |
 | Phase 38-1-ai-cost-accounting P07 | 11min | 3 tasks | 5 files |
 | Phase 38-1-ai-cost-accounting P08 | 9min | 3 tasks | 4 files |
+| Phase 38-1-ai-cost-accounting P09 | 12min | 3 tasks | 11 files |
+| Phase 38-1-ai-cost-accounting PP09 | 12min | 3 tasks | 11 files |
 
 ### Phase 19 — Onboarding & Estados Vazios ✅
 
@@ -435,8 +437,8 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 ## Current Position
 
 Phase: 38.1 (ai-cost-accounting) — EXECUTING (plans em execução por wave)
-Plan: 9 of 11 (waves 1–6)
-v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36 e 38 concluídas. F38 (Tabela de Custos por Operação, v1.5) concluída — 8/8 plans, 1597 testes, UAT 4/4, fonte da verdade `openspec/changes/fase-38-credit-operation-costs/`; F38.1 (Apuração de Custos de IA por Entrega, desdobramento da F38) em execução — 8/11 plans concluídos (38-1-08 ✅ generate-without-logo instrumentado — 1678 testes), 38/38 requirements, plan-checker PASS, fonte da verdade `openspec/changes/fase-38-1-ai-cost-accounting/`; F37 (Revisão e Aprovação da Arte, v1.5, experimento beta) em planejamento futuro; F39 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37 → F39).
+Plan: 10 of 11 (waves 1–6)
+v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36 e 38 concluídas. F38 (Tabela de Custos por Operação, v1.5) concluída — 8/8 plans, 1597 testes, UAT 4/4, fonte da verdade `openspec/changes/fase-38-credit-operation-costs/`; F38.1 (Apuração de Custos de IA por Entrega, desdobramento da F38) em execução — 9/11 plans concluídos (38-1-09 ✅ brand rotas + 6.5 — 1700 testes), 38/38 requirements, plan-checker PASS, fonte da verdade `openspec/changes/fase-38-1-ai-cost-accounting/`; F37 (Revisão e Aprovação da Arte, v1.5, experimento beta) em planejamento futuro; F39 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37 → F39).
 
 ### Phase 36 — Onboarding: Navegação por Abas ✅ Complete
 
@@ -505,11 +507,11 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 | 38-1-06 | 3 | ✅ | `onCall` no VS generator (Responses API) + brand profiler (visão, from-zero) — 1661 testes |
 | 38-1-07 | 4 | ✅ | Rotas 6.3 — generate-image (call-level, delivery sem custo, totalCost) |
 | 38-1-08 | 4 | ✅ | Rotas 6.4 — generate-without-logo (VS/validation custo, nova tentativa = novo run) |
-| 38-1-09 | 4 | ○ | Rotas 6.5 — brand-profile/* + infer + realign (3 caminhos IA) + brand-director/text-only onCall |
+| 38-1-09 | 4 | ✅ | Rotas 6.5 — brand-profile/* + infer + realign (3 caminhos IA) + brand-director/text-only onCall (15 testes novos, 1700 testes) |
 | 38-1-10 | 5 | ○ | Views/RPCs apuração + 50 testes + gates + UAT checkpoint |
 | 38-1-11 | 6 | ○ | Runbook trackings 8.1–8.5 |
 
-**Status:** 8/11 plans concluídos (38-1-08 ✅ generate-without-logo instrumentado — startRun visual_signature, eventos call-level visual_signature_image/validation com custo real via resolveAiCost, delivery NULL + duration_is_pipeline, retry = novo run, visual_signature_id preenchido, 6 testes 6.4 — 1678 testes, typecheck/lint/build limpos)
+**Status:** 9/11 plans concluídos (38-1-09 ✅ brand rotas + 6.5 — onCall em BrandDirectorService.analyze + BrandTextOnlyInferenceService.infer (usage+durationMs best-effort, mock dev sem evento), threading do BrandProfilerWithoutLogoService, 4 rotas brand instrumentadas — startRun brand_profile, call-level brand_profile_vision/text com custo real via resolveAiCost, delivery without_logo/with_logo NULL + duration_is_pipeline, infer/route.ts de ZERO eventos, realign com text_only/logo/regenerate instrumentados (regenerate = novo run), 15 testes novos de rota + 6 de serviço, 1700 testes, typecheck/lint/build limpos)
 
 **Source:** `openspec/changes/fase-38-1-ai-cost-accounting/` (fonte da verdade)
 **Context:** `.planning/phases/38-1-ai-cost-accounting/38-1-CONTEXT.md`
@@ -674,3 +676,6 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 - [Phase 38-1-ai-cost-accounting]: Retry VS = novo startRun + flushCallEvents(null) fechando o run 1 (eventos da tentativa falha gravados com visual_signature_id null) antes de abrir o run 2 — o run falho nao recebe o id da assinatura do retry (T-38.1-37, D1) (38-1-08)
 - [Phase 38-1-ai-cost-accounting]: Imagem e validacao VS atravessam o MESMO onCall (D11); a rota distingue visual_signature_image vs visual_signature_validation pelo model real da chamada (validacao = IMAGE_VALIDATION_MODEL || gpt-4o-mini) (38-1-08)
 - [Phase 38-1-ai-cost-accounting]: Eventos call-level VS enfileirados (pendingCalls) ate o visual_signature_id existir (apos persistSignature) — todos os eventos do run com o id (D2); operationRunId/attempt capturados no momento da chamada (38-1-08)
+- [Phase 38-1-ai-cost-accounting]: Rota principal /brand-profile (GET/PATCH/archive) NAO gera via profiler — entrega brand_profile_with_logo emitida no path logo do realign (director.analyze); decidido e testado na rota principal (38-1-09 task 2.3)
+- [Phase 38-1-ai-cost-accounting]: Buffer de AiCallInfo por sequencia nas rotas brand: 1a entrada = brand_profile_vision, 2a = brand_profile_text (mapeamento deterministico por path — T-38.1-39); na pratica brand-profiler.ts so emite visao, text-only e servico separado (38-1-09)
+- [Phase 38-1-ai-cost-accounting]: onCall de analyze/infer em try/catch await (aceita sync e async, nunca lanca — D7); caminho mock dev sem OPENAI_API_KEY nao emite onCall (sem chamada real de IA — 6.5) (38-1-09)
