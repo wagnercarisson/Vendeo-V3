@@ -2,6 +2,7 @@ import { PromptLoader } from '@/lib/image-generation/prompt-loader';
 import type { BrandDirectorResult, ColorCluster, ColorProbeResult } from './types';
 import { probeColors, deltaE, hexToLab, rgbToHex, findClosestProbeCluster, isLightNeutral, STRONG_MATCH_DELTA_E, ACCEPTABLE_MATCH_DELTA_E, LOOSE_MATCH_DELTA_E } from './color-probe';
 import OpenAI from 'openai';
+import type { AiCallInfo, TokenUsage } from '@/lib/ai-cost/types';
 
 export interface DeterministicColorResult {
   logo_colors_detected: string[];
@@ -45,6 +46,28 @@ export class BrandDirectorService {
 
   constructor() {
     this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+
+  /**
+   * Mapeia o payload de usage do chat.completions (OpenAI) para TokenUsage
+   * normalizado (D12). Defensivo contra drift de shape do SDK.
+   */
+  private mapChatUsage(usage: unknown): TokenUsage | undefined {
+    if (!usage || typeof usage !== 'object') return undefined;
+    const u = usage as Record<string, unknown>;
+    const tokens: TokenUsage = {};
+    if (typeof u.prompt_tokens === 'number') tokens.promptTokens = u.prompt_tokens;
+    if (typeof u.completion_tokens === 'number') tokens.completionTokens = u.completion_tokens;
+    if (typeof u.total_tokens === 'number') tokens.totalTokens = u.total_tokens;
+    const promptDetails = u.prompt_tokens_details as Record<string, unknown> | undefined;
+    if (promptDetails && typeof promptDetails.cached_tokens === 'number') {
+      tokens.cachedInputTokens = promptDetails.cached_tokens;
+    }
+    const completionDetails = u.completion_tokens_details as Record<string, unknown> | undefined;
+    if (completionDetails && typeof completionDetails.image_tokens === 'number') {
+      tokens.imageTokens = completionDetails.image_tokens;
+    }
+    return tokens;
   }
 
   private buildProbeContext(probe: ColorProbeResult, curated: { primary: string; accent: string; background: string }): string {
@@ -286,6 +309,8 @@ export class BrandDirectorService {
     logoBuffer: Buffer;
     logoMimeType: string;
     storeData: StoreAnalysisInput;
+    /** F38.1 (D7/D11): callback best-effort com dados da chamada de visão (brand_profile_vision). Opcional — nunca bloqueia. */
+    onCall?: (info: AiCallInfo) => void | Promise<void>;
   }): Promise<BrandDirectorResult> {
     const startTime = Date.now();
 
@@ -404,6 +429,25 @@ export class BrandDirectorService {
 
       const elapsedMs = Date.now() - startTime;
       const rawContent = response.choices[0]?.message?.content ?? '{}';
+
+      // F38.1 (D7/D11): telemetria best-effort da chamada de visão
+      // (brand_profile_vision mapeado na rota). Nunca lança — a análise não é
+      // bloqueada por telemetria (mesmo padrão do BrandProfiler callVision).
+      try {
+        await params.onCall?.({
+          provider: 'openai',
+          model,
+          usage: this.mapChatUsage(response.usage),
+          durationMs: elapsedMs,
+        });
+      } catch (err) {
+        console.error(
+          `[BrandDirector] onCall callback failed (best-effort): ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
+      }
+
       const raw = JSON.parse(rawContent);
 
       const CRITICAL_FIELDS = ['visual_style', 'visual_tone', 'brand_personality', 'campaign_guidelines'] as const;
