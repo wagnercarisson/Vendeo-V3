@@ -332,6 +332,30 @@ describe('BrandProfilerWithoutLogoService — onCall (F38.1, D7/D11)', () => {
     mockChatCompletionsCreate.mockReset();
   });
 
+  it('Teste 6: onCall do BrandProfilerInput repassado ao BrandProfiler interno (threading) — spy chega à chamada de visão', async () => {
+    mockChatCompletionsCreate.mockResolvedValue({
+      choices: [{ message: { content: '{"visual_style":"Elegante"}' } }],
+      usage: { prompt_tokens: 90, completion_tokens: 30, total_tokens: 120 },
+    });
+
+    const { BrandProfilerWithoutLogoService } = await import('@/lib/visual-signature/brand-profiler');
+    const service = new BrandProfilerWithoutLogoService();
+    const onCall = vi.fn();
+    const result = await service.generate({
+      ...mockBrandProfilerInput,
+      intendedPalette: { primary: '#FF0000', accent: '#00FF00', background: '#FFFFFF', support: [] },
+      onCall,
+    });
+
+    // O wrapper repassa o onCall do input ao BrandProfiler (callVision) —
+    // o callback do chamador é o MESMO invocado durante generate.
+    expect(result.success).toBe(true);
+    expect(onCall).toHaveBeenCalledTimes(1);
+    const info = onCall.mock.calls[0][0];
+    expect(info.provider).toBe('openai');
+    expect(info.usage).toEqual({ promptTokens: 90, completionTokens: 30, totalTokens: 120 });
+  });
+
   it('Teste 7: path 1 (intendedPalette, probe unavailable) → 1 onCall de visão com provider/model/usage/durationMs', async () => {
     mockChatCompletionsCreate.mockResolvedValue({
       choices: [{ message: { content: '{"visual_style":"Moderno"}' } }],
