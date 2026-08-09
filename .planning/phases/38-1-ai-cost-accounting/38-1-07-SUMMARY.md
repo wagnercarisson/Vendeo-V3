@@ -129,3 +129,10 @@ None - no external service configuration required.
 ---
 *Phase: 38-1-ai-cost-accounting*
 *Completed: 2026-08-09*
+
+## Self-Check: PASSED
+
+- FOUND: `.planning/phases/38-1-ai-cost-accounting/38-1-07-SUMMARY.md`
+- FOUND commits: `50e92c9` (feat), `ed0c281` (feat), `f4af9b5` (test), `98592fd` (docs)
+- Gates: `npx vitest run` 1672/1672 (195 files, 11 novos), `npm run typecheck` limpo, `npm run lint` limpo, `npm run build` "Compiled successfully"
+- Greps de controle: recordCall >= 5 (9), duration_is_pipeline == 1, estimateAiCost == 0, `totalCost: generationMetadata` == 0, operation_run_id persistido (createCampaign)
