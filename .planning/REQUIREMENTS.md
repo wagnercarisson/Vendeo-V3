@@ -447,20 +447,20 @@ Desdobramento da F38, adicionados em 2026-08-08 via OpenSpec (`openspec/changes/
 - [x] **F38.1-17**: Seeds verificáveis de `ai_model_pricing` (bootstrap — 7 seeds incl. gemini-3.1-flash-lite e gpt-image-2)
 - [x] **F38.1-18**: RPC `admin_set_ai_model_price` (SECURITY DEFINER, transacional, versiona vigência)
 - [x] **F38.1-19**: GET `/api/admin/ai-model-pricing`
-- [ ] **F38.1-20**: PUT `/api/admin/ai-model-pricing`
+- [x] **F38.1-20**: PUT `/api/admin/ai-model-pricing`
 
 ### Brand Profile (F38.1-BRAND)
 
-- [ ] **F38.1-21**: Store Brand Director prompt file
-- [ ] **F38.1-22**: Store Brand Director JSON output schema
+- [x] **F38.1-21**: Store Brand Director prompt file
+- [x] **F38.1-22**: Store Brand Director JSON output schema
 
 ### Copy (F38.1-COPY)
 
-- [ ] **F38.1-23**: `CopyDirectorService` class — preserva usage para custo real
+- [x] **F38.1-23**: `CopyDirectorService` class — preserva usage para custo real
 
 ### Revisão de Imagem (F38.1-REVIEW)
 
-- [ ] **F38.1-24**: `ImageReviewService` revisa imagens geradas — emite evento de custo (vision)
+- [x] **F38.1-24**: `ImageReviewService` revisa imagens geradas — emite evento de custo (vision)
 
 ### Brand Profiler sem Logo (F38.1-PROFILER)
 
@@ -472,7 +472,7 @@ Desdobramento da F38, adicionados em 2026-08-08 via OpenSpec (`openspec/changes/
 - [x] **F38.1-27**: Generate visual signature via AI image generation (Abordagem B — main approach)
 - [x] **F38.1-28**: Generate 1 variation for automatic mode (Deixar o Vendeo Criar)
 - [x] **F38.1-29**: Metadata includes generation_tier
-- [ ] **F38.1-30**: Visual signature quality criteria
+- [x] **F38.1-30**: Visual signature quality criteria
 - [ ] **F38.1-31**: generate-without-logo resolve custo dinâmico (nova tentativa = novo run)
 
 ### Inferência Text-Only (F38.1-TEXT)

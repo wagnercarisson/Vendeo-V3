@@ -33,7 +33,7 @@
 | 36 | ✅ Onboarding — Navegação por Abas | 6/6 | Complete    | 2026-08-05 |
 | 37 | ○ Revisão e Aprovação da Arte | — | Pending    | — |
 | 38 | ✅ Tabela de Custos por Operação | 8/8 | ✅ Complete | 2026-08-07 |
-| 38.1 | 🔄 Apuração de Custos de IA por Entrega | 4/11 | In Progress | — |
+| 38.1 | 🔄 Apuração de Custos de IA por Entrega | 7/11 | In Progress | — |
 | 39 | ○ Stripe / Monetização Pública (v1.7) | — | Pending    | — |
 
 ---
@@ -579,7 +579,7 @@ Plans:
 - [x] 38-1-04-PLAN.md — Estimador + pricing (Wave 3)
 - [x] 38-1-05-PLAN.md — Campaign onCall (Wave 3) ✅ (D11 event contract + onCall copy/validation/review/image-gen — 1657 testes)
 - [x] 38-1-06-PLAN.md — VS/brand onCall (Wave 3) ✅ (AiImageGenerator.generate onCall usage Responses API + BrandProfiler onCall visão from-zero — 1661 testes)
-- [ ] 38-1-07-PLAN.md — generate-image + 6.3 (Wave 4)
+- [x] 38-1-07-PLAN.md — generate-image + 6.3 (Wave 4) ✅ (rota instrumentada — startRun campaign_delivery + recordCall com custo real por chamada, delivery sem custo, totalCost real, campaigns.operation_run_id persistido — 1672 testes)
 - [ ] 38-1-08-PLAN.md — generate-without-logo + 6.4 (Wave 4)
 - [ ] 38-1-09-PLAN.md — brand rotas + 6.5 (Wave 4)
 - [ ] 38-1-10-PLAN.md — Views/RPCs + verificação + gates [checkpoint] (Wave 5)
@@ -724,4 +724,4 @@ Phase 24 (Credit Tables + CreditService) ──┘
 
 *Roadmap created: 2026-07-15*
 *Milestone: v1.5 — Lançamento Externo Controlado*
-*Last updated: 2026-08-08 — Phase 38 complete (Tabela de Custos por Operação — 8/8 plans, 1597 testes, UAT 4/4); renumeração F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), F39 = Stripe/Monetização Pública (v1.7); **Phase 38.1 (Apuração de Custos de IA por Entrega — desdobramento da F38, v1.5) em execução — 6/11 plans concluídos (38-1-01 ✅ migration + schema push aplicado no remoto 2026-08-08; 38-1-02 ✅ types + AiCostTracker; 38-1-03 ✅ admin routes ai-model-pricing + ai-costs; 38-1-04 ✅ resolveAiCost + pricing service; 38-1-05 ✅ D11 event contract + onCall copy/validation/review/image-gen, 1657 testes; 38-1-06 ✅ VS generator onCall Responses API + BrandProfiler onCall visão, 1661 testes)** — fonte `openspec/changes/fase-38-1-ai-cost-accounting/`*
+*Last updated: 2026-08-09 — Phase 38 complete (Tabela de Custos por Operação — 8/8 plans, 1597 testes, UAT 4/4); renumeração F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), F39 = Stripe/Monetização Pública (v1.7); **Phase 38.1 (Apuração de Custos de IA por Entrega — desdobramento da F38, v1.5) em execução — 7/11 plans concluídos (38-1-01 ✅ migration + schema push aplicado no remoto 2026-08-08; 38-1-02 ✅ types + AiCostTracker; 38-1-03 ✅ admin routes ai-model-pricing + ai-costs; 38-1-04 ✅ resolveAiCost + pricing service; 38-1-05 ✅ D11 event contract + onCall copy/validation/review/image-gen, 1657 testes; 38-1-06 ✅ VS generator onCall Responses API + BrandProfiler onCall visão, 1661 testes; 38-1-07 ✅ generate-image instrumentado — custo real por chamada, delivery sem custo, totalCost real, operation_run_id persistido, 1672 testes)** — fonte `openspec/changes/fase-38-1-ai-cost-accounting/`*
