@@ -27,7 +27,9 @@ import type { CampaignIntent } from "@/lib/campaign/types";
 import { isRetryableError } from "@/lib/copy/errors";
 import { getLaunchConfig } from "@/lib/launch-config/config";
 import { logPipelineEvent } from "@/lib/logging/pipeline-logger";
-import { AiCostTracker, estimateAiCost } from "@/lib/ai-cost";
+import { AiCostTracker, resolveAiCost } from "@/lib/ai-cost";
+import type { AiCallInfo, CostResolution } from "@/lib/ai-cost/types";
+import type { GenerationEventType } from "@/lib/visual-signature/types";
 import { requireLegalClearance } from "@/lib/legal/clearance";
 
 export const runtime = "nodejs";
@@ -428,6 +430,56 @@ export const POST = apiHandler(async (request: NextRequest) => {
         emit({ type: "phase", phase, status, message });
       };
 
+      // ── F38.1 (D7/D11): Camada única de registro de custo via AiCostTracker ──
+      // Call-level: custo REAL por chamada via resolveAiCost (furo 1) + tokens +
+      // duration_ms da chamada (furo 7) + attempt real (furo 6).
+      // Delivery (campaign_pipeline): SEMPRE sem custo/tokens (anti-dupla-contagem
+      // D1/D6) — o tracker marca a entrega com a flag de pipeline no metadata.
+      // Best-effort (D7): nunca lança e nunca bloqueia o pipeline.
+      let callCostSum = 0;
+      const recordCall = async (params: {
+        generationType: GenerationEventType;
+        status: "success" | "failed";
+        info: AiCallInfo & { attempt?: number };
+        errorType?: string;
+      }): Promise<void> => {
+        try {
+          const isDelivery = params.generationType === "campaign_pipeline";
+          let cost: CostResolution | undefined;
+          if (!isDelivery) {
+            cost = await resolveAiCost({
+              provider: params.info.provider,
+              model: params.info.model,
+              usage: params.info.usage,
+              providerReportedCostUsd: params.info.providerReportedCostUsd,
+            });
+            if (typeof cost.estimatedCostUsd === "number") {
+              callCostSum += cost.estimatedCostUsd;
+            }
+          }
+          await new AiCostTracker().record({
+            operationRunId,
+            operationRunType: "campaign_delivery",
+            traceId,
+            storeId,
+            userId: user.userId,
+            campaignId,
+            generationType: params.generationType,
+            provider: params.info.provider,
+            model: params.info.model,
+            attemptNumber: params.info.attempt ?? 0,
+            durationMs: params.info.durationMs,
+            status: params.status,
+            errorType: params.errorType ?? null,
+            tokens: isDelivery ? undefined : params.info.usage,
+            cost: isDelivery ? undefined : cost,
+            metadata: isDelivery ? { duration_is_pipeline: true } : undefined,
+          });
+        } catch (err) {
+          console.error("[generate-image] recordCall failed (best-effort):", err instanceof Error ? err.message : String(err));
+        }
+      };
+
       // Copy Director task with retry Gemini fallback
       const copyTask = async (): Promise<void> => {
         logPipelineEvent({ event: "copy_generation", traceId, phase: "parallel", status: "running", campaignId, storeId, userId: user.userId });
@@ -465,6 +517,9 @@ export const POST = apiHandler(async (request: NextRequest) => {
           try {
             copyResult = await copyDirector.generateCopy(copyInput, {
               signal: streamAbortController.signal,
+            }, (info) => {
+              // F38.1 (D11/furo 1): campaign_copy com usage REAL do onCall -> custo via resolveAiCost
+              void recordCall({ generationType: "campaign_copy", status: "success", info });
             });
           } catch (firstErr) {
             // Check if retryable and fallback Gemini is configured
@@ -478,6 +533,8 @@ export const POST = apiHandler(async (request: NextRequest) => {
                 const geminiDirector = new CopyDirectorService(geminiProvider);
                 copyResult = await geminiDirector.generateCopy(copyInput, {
                   signal: streamAbortController.signal,
+                }, (info) => {
+                  void recordCall({ generationType: "campaign_copy", status: "success", info });
                 });
               } catch (secondErr) {
                 throw secondErr;
@@ -510,7 +567,37 @@ export const POST = apiHandler(async (request: NextRequest) => {
 
           imageResult = await imageService.generateImage(brief, (phaseEvent) => {
             emit({ type: "phase", ...phaseEvent });
-          }, streamAbortController.signal);
+          }, streamAbortController.signal, (metricsEvent) => {
+            // F38.1 (D11): mapeia fases do onMetricsEvent para eventos call-level.
+            // Só fases que representam chamadas reais de IA geram evento (D5 —
+            // não inventar chamada); done/prompt_assembly são ignoradas.
+            switch (metricsEvent.phase) {
+              case "input_validation":
+                void recordCall({
+                  generationType: "campaign_input_validation",
+                  status: "success",
+                  info: { provider: metricsEvent.provider, model: metricsEvent.model, usage: metricsEvent.usage, durationMs: metricsEvent.durationMs },
+                });
+                break;
+              case "image_generation":
+                void recordCall({
+                  generationType: "campaign_image",
+                  status: "success",
+                  info: { provider: metricsEvent.provider, model: metricsEvent.model, usage: metricsEvent.usage, durationMs: metricsEvent.durationMs, attempt: metricsEvent.attempt },
+                });
+                break;
+              case "quality_review":
+                void recordCall({
+                  generationType: "campaign_image_review",
+                  status: "success",
+                  info: { provider: metricsEvent.provider, model: metricsEvent.model, usage: metricsEvent.usage, durationMs: metricsEvent.durationMs, attempt: metricsEvent.attempt },
+                });
+                break;
+              default:
+                // prompt_assembly/done — não são chamadas de IA (D5/D11)
+                break;
+            }
+          });
 
           if (imageResult.success) {
             emitPhase("image_generation", "complete", "Arte gerada com sucesso");
@@ -592,78 +679,19 @@ export const POST = apiHandler(async (request: NextRequest) => {
             try { await creditService.confirmCredit(creditTxId!); } catch { /* ignore */ }
             logPipelineEvent({ event: "credit_confirm", traceId, phase: "post_parallel", status: "complete", campaignId, storeId, userId: user.userId });
 
-            // Telemetry — copy generation
-            const copyCost = estimateAiCost({ provider: "openai", model: "gpt-4o" });
-            try {
-              await supabaseAdmin.from("generation_events").insert({
-                generation_type: "campaign_copy",
-                store_id: storeId,
-                user_id: user.userId,
-                campaign_id: campaignId,
-                provider: "openai",
-                model: "gpt-4o",
-                status: "success",
-                estimated_cost_usd: copyCost?.estimatedCostUsd ?? null,
-                trace_id: traceId,
-                phase: "copy_generation",
-                duration_ms: durationMs,
-              });
-            } catch (e) {
-              console.error("[telemetry] copy insert failed", e instanceof Error ? e.message : String(e));
-            }
-
-            // Telemetry — image generation (with real usage when available)
-            const imageUsage = imageResult.usage;
-            const imageCost = estimateAiCost({ provider: provider.name, model: IMAGE_GENERATION_RESPONSES_MODEL, usage: imageUsage ? { promptTokens: imageUsage.promptTokens, completionTokens: imageUsage.completionTokens, cachedInputTokens: imageUsage.cachedInputTokens } : undefined });
-            try {
-              await supabaseAdmin.from("generation_events").insert({
-                generation_type: "campaign_image",
-                store_id: storeId,
-                user_id: user.userId,
-                campaign_id: campaignId,
-                provider: provider.name,
-                model: IMAGE_GENERATION_RESPONSES_MODEL,
-                status: "success",
-                estimated_cost_usd: imageCost?.estimatedCostUsd ?? null,
-                duration_ms: durationMs,
-                trace_id: traceId,
-                phase: "image_generation",
-                prompt_tokens: imageUsage?.promptTokens ?? null,
-                completion_tokens: imageUsage?.completionTokens ?? null,
-                total_tokens: imageUsage?.totalTokens ?? null,
-                metadata: { costSource: imageCost?.source ?? null, imageTokens: imageUsage?.imageTokens ?? null },
-              });
-            } catch (e) {
-              console.error("[telemetry] image insert failed", e instanceof Error ? e.message : String(e));
-            }
-
-            // Telemetry — pipeline complete (before emit result)
-            const pipelineCost = (copyCost?.estimatedCostUsd ?? 0) + (imageCost?.estimatedCostUsd ?? 0);
-            const costBreakdown: Record<string, unknown> = {};
-            if (copyCost) { costBreakdown.copy = { estimatedCostUsd: copyCost.estimatedCostUsd, source: copyCost.source }; }
-            if (imageCost) { costBreakdown.image = { estimatedCostUsd: imageCost.estimatedCostUsd, source: imageCost.source }; }
-            logPipelineEvent({ event: "pipeline_complete", traceId, phase: "post_parallel", status: "complete", campaignId, storeId, userId: user.userId, durationMs, metadata: { totalCost: generationMetadata.provider } });
-            try {
-              await supabaseAdmin.from("generation_events").insert({
-                generation_type: "campaign_pipeline",
-                store_id: storeId,
-                user_id: user.userId,
-                campaign_id: campaignId,
-                provider: provider.name,
-                model: IMAGE_GENERATION_RESPONSES_MODEL,
-                status: "success",
-                estimated_cost_usd: pipelineCost > 0 ? pipelineCost : null,
-                prompt_tokens: imageUsage?.promptTokens ?? null,
-                completion_tokens: imageUsage?.completionTokens ?? null,
-                total_tokens: imageUsage?.totalTokens ?? null,
-                duration_ms: durationMs,
-                trace_id: traceId,
-                phase: "pipeline_complete",
-                metadata: { provider: provider.name, model: IMAGE_GENERATION_RESPONSES_MODEL, costSource: imageCost?.source ?? null, costBreakdown: Object.keys(costBreakdown).length > 0 ? costBreakdown : null },
-              });
-            } catch (e) {
-              console.error("[telemetry] pipeline insert failed", e instanceof Error ? e.message : String(e));
-            }
+            // F38.1 (D7/D11): os eventos call-level (campaign_copy,
+            // campaign_input_validation, campaign_image, campaign_image_review)
+            // já foram gravados pelos callbacks onCall/onMetricsEvent acima.
+            // Aqui grava-se apenas o delivery marker campaign_pipeline SEM custo
+            // e SEM tokens (anti-dupla-contagem D1/D6 — a flag de pipeline entra
+            // no metadata pelo tracker) e corrige o furo 2: totalCost = SOMA REAL
+            // dos custos call-level registrados (nunca provider name).
+            logPipelineEvent({ event: "pipeline_complete", traceId, phase: "post_parallel", status: "complete", campaignId, storeId, userId: user.userId, durationMs, metadata: { totalCost: callCostSum } });
+            void recordCall({
+              generationType: "campaign_pipeline",
+              status: "success",
+              info: { provider: provider.name, model: IMAGE_GENERATION_RESPONSES_MODEL, durationMs },
+            });
 
             emit({
               type: "result",
@@ -715,23 +743,14 @@ export const POST = apiHandler(async (request: NextRequest) => {
             retryable: false,
           });
 
-          // Telemetry — pipeline failed
-          try {
-            await supabaseAdmin.from("generation_events").insert({
-              generation_type: "campaign_pipeline",
-              store_id: storeId,
-              user_id: user.userId,
-              campaign_id: campaignId,
-              provider: provider.name,
-              model: IMAGE_GENERATION_RESPONSES_MODEL,
-              status: "failed",
-              trace_id: traceId,
-              phase: "pipeline_complete",
-              metadata: { error: errorMessage },
-            });
-          } catch (e) {
-            console.error("[telemetry] pipeline failure insert failed", e instanceof Error ? e.message : String(e));
-          }
+          // F38.1 (D7): delivery marker campaign_pipeline failed via tracker —
+          // SEM custo/tokens (D1/D6); flag de pipeline entra pelo tracker.
+          void recordCall({
+            generationType: "campaign_pipeline",
+            status: "failed",
+            info: { provider: provider.name, model: IMAGE_GENERATION_RESPONSES_MODEL, durationMs: Math.round(performance.now() - startTime) },
+            errorType: errorMessage,
+          });
         }
       } catch (err) {
         // Catch errors from Promise.all itself (e.g., AbortError)
