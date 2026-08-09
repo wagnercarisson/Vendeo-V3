@@ -103,10 +103,28 @@ sem operação) é aceitável; recomenda-se aceitar (dado de telemetria históri
 
 ## 7.2 — Gates automáticos
 
-> Preenchido no commit da Task 2 (gates executados após a verificação I1-I6).
+### Gate 1 — `npx vitest run`
 
-Atenção a regressões: pipeline 402/409/estorno, VS F29.1.1, gates F32/F33/F34/F36, legal F30, créditos
-F24/F38.
+```
+Test Files  199 passed (199)
+      Tests  1700 passed (1700)
+```
+
+**Resultado: ✅ 1700/1700 testes, 0 falhas, 199 arquivos.** Sem regressões nas suítes de
+pipeline (402/409/estorno), VS F29.1.1, gates F32/F33/F34/F36, legal F30, créditos F24/F38.
+
+### Gate 2 — `npm run typecheck` (`npx tsc -p tsconfig.typecheck.json --noEmit`)
+
+**Resultado: ✅ limpo** — nenhum erro de tipo.
+
+### Gate 3 — `npm run lint` (`npx eslint .`)
+
+**Resultado: ✅ limpo** — 0 erros, 0 warnings (após remover variável não usada no script de verificação).
+
+### Gate 4 — `npm run build` (`npx next build`)
+
+**Resultado: ✅ `✓ Compiled successfully in 8.4s`** — build completo, exit 0, todas as rotas
+prerenderizadas/servidas (Middleware 91.6 kB, First Load JS 102 kB).
 
 ---
 
