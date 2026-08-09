@@ -313,7 +313,8 @@ describe('POST /api/store/[id]/visual-signature/generate-without-logo', () => {
       expect.objectContaining({
         rejectionContext: expect.objectContaining({ reason: 'not_good' }),
       }),
-      expect.any(AbortSignal)
+      expect.any(AbortSignal),
+      expect.any(Function) // F38.1 (D11): onCall propagado ao service (imagem + validação)
     );
   });
 });
