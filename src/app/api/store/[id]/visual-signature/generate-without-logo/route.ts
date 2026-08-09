@@ -358,7 +358,10 @@ export const POST = apiHandler(async (
     if (!isTimeout) {
       console.log(`[generate-without-logo][req-${reqId}] ATTEMPT 2 — image_retry (prompt simplificado)`);
       try {
-        // F38.1 (D1): nova tentativa pós-falha técnica = NOVO run (novo operationRunId)
+        // F38.1 (D1): fecha o run 1 (eventos call-level da tentativa falha — sem
+        // assinatura, id null) e abre NOVO run para a nova tentativa
+        // (novo operationRunId — 6.4 test 3).
+        await flushCallEvents(null);
         run = new AiCostTracker().startRun("visual_signature");
         currentAttemptNumber = 1;
         const aiGenerator = new AiImageGenerator();
