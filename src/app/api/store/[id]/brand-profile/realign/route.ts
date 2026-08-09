@@ -11,9 +11,85 @@ import { buildStoreProfileInputSnapshot } from '@/lib/snapshot';
 import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
 import { requireSameOrigin } from '@/lib/auth/csrf';
 import { apiHandler } from '@/lib/auth/api-handler';
+import { AiCostTracker, resolveAiCost } from '@/lib/ai-cost';
+import type { AiCallInfo } from '@/lib/ai-cost/types';
+import type { GenerationEventType } from '@/lib/visual-signature/types';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const realignLocks = new Map<string, boolean>();
+
+/**
+ * F38.1 (D7): grava um evento call-level do run brand_profile com custo REAL
+ * (resolveAiCost). Best-effort — nunca lança (T-38.1-38, D7).
+ */
+async function recordBrandCall(params: {
+  run: { operationRunId: string; traceId: string };
+  storeId: string;
+  generationType: GenerationEventType;
+  info: AiCallInfo;
+}): Promise<void> {
+  const { run, storeId, generationType, info } = params;
+  try {
+    const cost = await resolveAiCost({
+      provider: info.provider,
+      model: info.model,
+      usage: info.usage,
+      providerReportedCostUsd: info.providerReportedCostUsd,
+    });
+    await new AiCostTracker().record({
+      operationRunId: run.operationRunId,
+      operationRunType: "brand_profile",
+      traceId: run.traceId,
+      storeId,
+      generationType,
+      provider: info.provider,
+      model: info.model,
+      attemptNumber: 0,
+      durationMs: info.durationMs,
+      status: "success",
+      tokens: info.usage,
+      cost,
+    });
+  } catch (err) {
+    console.error(
+      "[realign] recordBrandCall failed (best-effort):",
+      err instanceof Error ? err.message : String(err)
+    );
+  }
+}
+
+/**
+ * F38.1 (D1/D6): grava o delivery marker do run — SEM custo/tokens +
+ * duration_is_pipeline (anti-dupla-contagem T-38.1-40). Best-effort.
+ */
+async function recordBrandDelivery(params: {
+  run: { operationRunId: string; traceId: string };
+  storeId: string;
+  generationType: GenerationEventType;
+  durationMs: number;
+}): Promise<void> {
+  const { run, storeId, generationType, durationMs } = params;
+  try {
+    await new AiCostTracker().record({
+      operationRunId: run.operationRunId,
+      operationRunType: "brand_profile",
+      traceId: run.traceId,
+      storeId,
+      generationType,
+      provider: "openai",
+      model: "gpt-4o",
+      attemptNumber: 0,
+      durationMs,
+      status: "success",
+      metadata: { duration_is_pipeline: true },
+    });
+  } catch (err) {
+    console.error(
+      "[realign] recordBrandDelivery failed (best-effort):",
+      err instanceof Error ? err.message : String(err)
+    );
+  }
+}
 
 /**
  * POST /api/store/[id]/brand-profile/realign
@@ -111,6 +187,12 @@ async function handleTextOnlyRealign(
 
     const service = new BrandTextOnlyInferenceService();
     const timeoutMs = parseInt(process.env.IMAGE_GENERATION_GLOBAL_TIMEOUT_MS ?? '30000', 10);
+    const startTime = Date.now();
+
+    // ── F38.1 (D1/D7): run context do path text_only ────────────────────
+    const run = new AiCostTracker().startRun("brand_profile");
+    const pendingCalls: AiCallInfo[] = [];
+
     const result = await service.infer({
       storeName: store.name,
       segment: store.segment,
@@ -123,6 +205,24 @@ async function handleTextOnlyRealign(
       state: store.state ?? null,
       userPrimaryColor: currentPrimary,
       userAccentColor: currentAccent,
+    }, timeoutMs, (info: AiCallInfo) => {
+      pendingCalls.push(info);
+    });
+
+    // F38.1 (D7/D11): call brand_profile_text com custo real + delivery sem custo
+    for (const info of pendingCalls) {
+      await recordBrandCall({
+        run,
+        storeId: id,
+        generationType: "brand_profile_text",
+        info,
+      });
+    }
+    await recordBrandDelivery({
+      run,
+      storeId: id,
+      generationType: "brand_profile_without_logo",
+      durationMs: Date.now() - startTime,
     });
 
     // Inference succeeded — mark current profile outdated (if any)
@@ -288,6 +388,12 @@ async function handleLogoRealign(
       ?? null;
 
     const director = new BrandDirectorService();
+    const startTime = Date.now();
+
+    // ── F38.1 (D1/D7): run context do path logo (análise com logo) ──────
+    const run = new AiCostTracker().startRun("brand_profile");
+    const pendingCalls: AiCallInfo[] = [];
+
     const analysis = await director.analyze({
       logoBuffer: logoBuffer ?? Buffer.from([]),
       logoMimeType,
@@ -304,6 +410,26 @@ async function handleLogoRealign(
         userPrimaryColor: store.brand_color ?? undefined,
         userAccentColor: accentColor ?? undefined,
       },
+      // F38.1 (D7/D11): telemetria por chamada — nunca bloqueia análise
+      onCall: (info: AiCallInfo) => {
+        pendingCalls.push(info);
+      },
+    });
+
+    // F38.1 (D7/D11): call brand_profile_vision com custo real + delivery sem custo
+    for (const info of pendingCalls) {
+      await recordBrandCall({
+        run,
+        storeId: id,
+        generationType: "brand_profile_vision",
+        info,
+      });
+    }
+    await recordBrandDelivery({
+      run,
+      storeId: id,
+      generationType: "brand_profile_with_logo",
+      durationMs: Date.now() - startTime,
     });
 
     // Inference succeeded — mark current profile outdated (if any)
@@ -479,6 +605,13 @@ async function handleVSRealign(
 
   try {
     const profiler = new BrandProfilerWithoutLogoService();
+    const startTime = Date.now();
+
+    // ── F38.1 (D1/D7): regenerate = NOVO run (novo operationRunId — 6.5
+    // test 4). Cada request de geração/realinhamento é um run (D1). ──────
+    const run = new AiCostTracker().startRun("brand_profile");
+    const pendingCalls: AiCallInfo[] = [];
+
     const result = await profiler.generate({
       storeId: id,
       storeName: store.name,
@@ -507,6 +640,26 @@ async function handleVSRealign(
       previousBrandColors: previousBrandColors,
       mode: 'regenerate',
       contentUsed: contentUsed as BrandProfilerInput['contentUsed'],
+      // F38.1 (D7/D11): telemetria por chamada — nunca bloqueia profiling
+      onCall: (info: AiCallInfo) => {
+        pendingCalls.push(info);
+      },
+    });
+
+    // F38.1 (D7/D11): buffer por sequência (1a = vision, 2a = text) + delivery
+    for (let i = 0; i < pendingCalls.length; i += 1) {
+      await recordBrandCall({
+        run,
+        storeId: id,
+        generationType: i === 0 ? "brand_profile_vision" : "brand_profile_text",
+        info: pendingCalls[i],
+      });
+    }
+    await recordBrandDelivery({
+      run,
+      storeId: id,
+      generationType: "brand_profile_without_logo",
+      durationMs: Date.now() - startTime,
     });
 
     // Profiler handles 3 branches internally with compensation.

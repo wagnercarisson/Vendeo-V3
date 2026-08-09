@@ -639,21 +639,37 @@ describe('Brand cost accounting (6.5) — realign', () => {
     });
 
     const { POST } = await import('../route');
-    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
-    expect(res.status).toBe(200);
 
-    // regenerate = novo run (run-1 é o run inicial; regenerate abre run-2)
-    const callEvents = capturedEvents.filter(
+    // Dois requests de regenerate SEQUENCIAIS: cada um deve abrir um run NOVO
+    // (operationRunId distinto do run anterior — D1, 6.5 test 4)
+    const res1 = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res1.status).toBe(200);
+    const firstRunEvents = capturedEvents.filter(
       (e: any) => e.generationType === 'brand_profile_vision' || e.generationType === 'brand_profile_text'
     );
-    expect(callEvents.length).toBeGreaterThan(0);
-    const callRunIds = new Set(callEvents.map((e: any) => e.operationRunId));
-    expect(callRunIds.size).toBe(1);
-    expect([...callRunIds][0]).toBe('run-2');
+    expect(firstRunEvents.length).toBeGreaterThan(0);
+    const firstRunIds = new Set(firstRunEvents.map((e: any) => e.operationRunId));
+    expect(firstRunIds.size).toBe(1);
+    const firstRunId = [...firstRunIds][0];
 
+    capturedEvents.length = 0;
+    const res2 = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res2.status).toBe(200);
+    const secondRunEvents = capturedEvents.filter(
+      (e: any) => e.generationType === 'brand_profile_vision' || e.generationType === 'brand_profile_text'
+    );
+    expect(secondRunEvents.length).toBeGreaterThan(0);
+    const secondRunIds = new Set(secondRunEvents.map((e: any) => e.operationRunId));
+    expect(secondRunIds.size).toBe(1);
+    const secondRunId = [...secondRunIds][0];
+
+    // regenerate = NOVO run — id distinto do run anterior
+    expect(secondRunId).not.toBe(firstRunId);
+
+    // delivery do segundo run compartilha o mesmo run novo
     const delivery = capturedEvents.find((e: any) => e.generationType === 'brand_profile_without_logo');
     expect(delivery).toBeDefined();
-    expect(delivery.operationRunId).toBe('run-2');
+    expect(delivery.operationRunId).toBe(secondRunId);
     expect(delivery.cost).toBeUndefined();
     expect(delivery.metadata?.duration_is_pipeline).toBe(true);
   });

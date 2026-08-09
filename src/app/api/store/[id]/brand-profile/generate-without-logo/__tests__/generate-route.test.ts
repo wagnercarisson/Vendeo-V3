@@ -189,7 +189,7 @@ describe('Brand cost accounting (6.5)', () => {
     expect(visionEvent.cost?.costSource).toBe('pricing_table');
     expect(visionEvent.attemptNumber).toBe(0);
     expect(visionEvent.status).toBe('success');
-    expect(visionEvent.operationRunId).toBe('run-1');
+    expect(visionEvent.operationRunId).toBeDefined();
     expect(visionEvent.operationRunType).toBe('brand_profile');
   });
 
@@ -208,7 +208,7 @@ describe('Brand cost accounting (6.5)', () => {
     expect(textEvent.tokens).toEqual(TEXT_USAGE);
     expect(textEvent.cost?.estimatedCostUsd).toBeCloseTo(TEXT_COST, 6);
     expect(textEvent.attemptNumber).toBe(0);
-    expect(textEvent.operationRunId).toBe('run-1');
+    expect(textEvent.operationRunId).toBeDefined();
   });
 
   it('Teste 14: delivery brand_profile_without_logo com custo NULL + duration_is_pipeline', async () => {
@@ -227,8 +227,12 @@ describe('Brand cost accounting (6.5)', () => {
     expect(delivery.cost).toBeUndefined();
     expect(delivery.tokens).toBeUndefined();
     expect(delivery.metadata?.duration_is_pipeline).toBe(true);
-    expect(delivery.operationRunId).toBe('run-1');
+    expect(delivery.operationRunId).toBeDefined();
     expect(delivery.visualSignatureId).toBe(VS_ID);
+
+    // TODOS os eventos do request compartilham o mesmo operationRunId (D1)
+    const allRunIds = new Set(capturedEvents.map((e: any) => e.operationRunId));
+    expect(allRunIds.size).toBe(1);
   });
 
   it('sem onCall do profiler — nenhum call-level, apenas delivery (sem chamada IA = sem evento D5)', async () => {
