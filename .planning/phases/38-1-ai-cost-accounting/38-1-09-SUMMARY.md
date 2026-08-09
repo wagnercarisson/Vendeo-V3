@@ -88,7 +88,7 @@ Each task was committed atomically:
 2. **Task 2: Rotas brand — run context + buffer vision/text + delivery NULL** - `d2fafdf` (test, RED) + `d0f71d9` (feat, GREEN)
 3. **Task 3: Testes 6.5 (4 cenários) + rota principal** - `61414eb` (test)
 
-**Plan metadata:** (docs commit follows this summary)
+**Plan metadata:** `351a320` (docs: complete plan)
 
 ## Files Created/Modified
 - `src/lib/brand-assets/brand-director.ts` - onCall no analyze (D11) + helper mapChatUsage
