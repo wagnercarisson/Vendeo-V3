@@ -104,3 +104,26 @@ describe('GET /api/store/[id]/brand-profile', () => {
     expect(body).toBeNull();
   });
 });
+
+// ── F38.1 (6.5): rota principal NÃO gera via profiler ──────────────────────
+// Decisão documentada (38-1-09 task 2.3): a rota /brand-profile (GET/PATCH/
+// archive) não faz chamadas de IA — nenhuma instrumentação de custo se aplica
+// aqui. A entrega com logo (brand_profile_with_logo, custo NULL) é emitida no
+// path logo do realign (director.analyze — testado em realign-route.test.ts).
+describe('Brand cost accounting (6.5) — rota principal', () => {
+  it('GET da rota principal não emite eventos de custo (sem geração via profiler)', async () => {
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'store_brand_profiles') return makeChain({ data: mockRecentProfile, error: null });
+      return makeChain({ data: null, error: null });
+    });
+    const { GET } = await import('../route');
+    const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/brand-profile`));
+    const res = await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(200);
+
+    // Nenhuma chamada à camada de custo (generation_events) — a rota principal
+    // apenas lê/atualiza o perfil; a entrega com logo vive no realign.
+    const touchedTables = mockSupabaseFrom.mock.calls.map((c: any) => c[0]);
+    expect(touchedTables).not.toContain('generation_events');
+  });
+});
