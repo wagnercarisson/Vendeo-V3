@@ -160,7 +160,6 @@ export class ImageGenerationService {
 
     // ── Phase 1: Pre-generation input validation ────────────────────
     emitHuman("input_validation");
-    emitMetricsEvent("input_validation");
 
     const aborted1 = checkAborted();
     if (aborted1) { emitFailed("input_validation", aborted1.message); return abortResult(aborted1); }
@@ -169,14 +168,23 @@ export class ImageGenerationService {
     // enriquecer o evento de input_validation SEM emitir evento extra
     // (canal único onMetricsEvent — anti-dupla-contagem T-38.1-22).
     let validationUsage: TokenUsage | undefined;
+    let validationCallMade = false;
     const validationResult = await this.inputValidation.validate(
       body.productName,
       body.productImageDataUrl,
       body.inputValidationOverride,
       (info) => {
         validationUsage = info.usage;
+        validationCallMade = true;
       }
     );
+
+    // F38.1: evento ÚNICO de input_validation enriquecido com usage REAL da
+    // chamada de visão interna (D11). Sem "tick" de início — anti-dupla-contagem
+    // T-38.1-22. Só emite quando houve chamada de IA real (override não emite).
+    if (validationCallMade) {
+      emitMetricsEvent("input_validation", 0, validationUsage ? { usage: validationUsage } : undefined);
+    }
 
     let effectiveProductName = body.productName;
     let inputCorrections: { productName: { from: string; to: string; reason: string } } | undefined;
@@ -264,7 +272,6 @@ export class ImageGenerationService {
     } else {
       emitComplete("input_validation");
     }
-    emitMetricsEvent("input_validation", 0, validationUsage ? { usage: validationUsage } : undefined);
 
     // ── Phase 2: Prompt assembly ────────────────────────────────────
     emitHuman("prompt_assembly");
@@ -332,7 +339,6 @@ export class ImageGenerationService {
       if (attempts === 0) {
         emitHuman("image_generation");
       }
-      emitMetricsEvent("image_generation", attempts);
 
       const aborted3 = checkAborted();
       if (aborted3) { emitFailed("image_generation", aborted3.message); return abortResult(aborted3); }
@@ -368,7 +374,6 @@ export class ImageGenerationService {
 
       // ── Phase 4: Quality review ─────────────────────────────────
       emitHuman("quality_review");
-      emitMetricsEvent("quality_review", attempts);
 
       const imageDataUrl = `data:${currentMimeType};base64,${currentImageBase64}`;
 

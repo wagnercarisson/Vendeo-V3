@@ -486,4 +486,36 @@ describe('ImageGenerationService.generateImage — telemetria D11 (usage/duratio
     const result = await service.generateImage(brief);
     expect(result.success).toBe(true);
   });
+
+  it('Teste 11 (F38.1 anti-dupla-contagem): cada fase emite EXATAMENTE 1 evento por tentativa — sem tick de início sem usage', async () => {
+    const events: any[] = [];
+    const { service, brief } = buildService();
+    const result = await service.generateImage(brief, undefined, undefined, (e) => events.push(e));
+
+    expect(result.success).toBe(true);
+
+    // Sem eventos fantasma: nenhum evento de fase real sem usage (tick de início)
+    const realPhases = ['input_validation', 'image_generation', 'quality_review'];
+    const noUsagePhantom = events.filter((e) => realPhases.includes(e.phase) && !e.usage);
+    expect(noUsagePhantom).toHaveLength(0);
+
+    // Exatamente 1 evento por fase com usage real
+    for (const phase of realPhases) {
+      const phaseEvents = events.filter((e) => e.phase === phase);
+      expect(phaseEvents).toHaveLength(1);
+      expect(phaseEvents[0].usage).toBeDefined();
+    }
+  });
+
+  it('Teste 12 (F38.1 anti-dupla-contagem): override na validação → NENHUM evento de input_validation (sem chamada de IA real)', async () => {
+    const { service, brief, mockInputValidation } = buildService();
+    mockInputValidation.validate.mockImplementation(async () => ({ classification: 'match', confidence: 1.0 }));
+
+    const events: any[] = [];
+    const result = await service.generateImage(brief, undefined, undefined, (e) => events.push(e));
+
+    expect(result.success).toBe(true);
+    const validationEvents = events.filter((e) => e.phase === 'input_validation');
+    expect(validationEvents).toHaveLength(0);
+  });
 });
