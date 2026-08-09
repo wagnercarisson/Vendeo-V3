@@ -650,6 +650,7 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 | 260730-o30 | Hotfix admin_get_metrics uuid = text + dead code grant_monthly_credits | 2026-07-30 | 0051a7a | [260730-o30-hotfix-admin-metrics-rpc-uuid-text](./quick/260730-o30-hotfix-admin-metrics-rpc-uuid-text/) |
 | 260731-qep | Adequar documentação legal para beta freemium — Termos v1.3, Privacidade v1.2, AUP v1.1, remoção de aviso de draft (markdowns + páginas públicas), microcopy discreta em campanhas | 2026-07-31 | 020e197 | [260731-qep-adequar-documentos-legais-beta-freemium-](./quick/260731-qep-adequar-documentos-legais-beta-freemium-/) |
 | 260804-s16 | Corrigir assimetria Diretor/Revisor de Imagem: mandatoryArtworkText chega ao diretor mas nao ao revisor. Espelhar contrato de contexto (mandatoryArtworkText, campaignDetails, additionalDetails) ao ImageReviewInput e ao prompt do revisor com linguagem de revisao, adicionando testes focados. | 2026-08-04 | 47a1a4a | [260804-s16-corrigir-assimetria-diretor-revisor-de-i](./quick/260804-s16-corrigir-assimetria-diretor-revisor-de-i/) |
+| 260808-udc | PWA básico instalável (sem service worker) + clareza de custo por operação no card de créditos — manifest.ts (start_url /dashboard), 4 PNGs via sharp em public/icons/, metadata PWA/iOS no layout (viewport themeColor), dica iOS discreta na conta, BalanceCard com Campanha/Assinatura visual sem texto ambíguo | 2026-08-09 | 101739e | [260808-udc-planejar-pwa-basico-clareza-no-card-de-c](./quick/260808-udc-planejar-pwa-basico-clareza-no-card-de-c/) |
 
 ## Decisions
 
