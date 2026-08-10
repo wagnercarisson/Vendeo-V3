@@ -36,7 +36,9 @@ export function LoginForm({ redirect }: LoginFormProps) {
         return;
       }
 
-      router.replace(redirect || "/dashboard");
+      // sanitizeRedirectPath("") retorna "/" — tratar "/" como ausência de
+      // redirect para que o default pós-login seja /dashboard (não a landing).
+      router.replace(redirect && redirect !== "/" ? redirect : "/dashboard");
     } catch {
       setError("Email ou senha inválidos");
     } finally {

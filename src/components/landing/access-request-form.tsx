@@ -6,12 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { STORE_SEGMENTS } from "@/lib/constants";
 
-type FormState = "idle" | "submitting" | "success" | "error";
+type FormState = "idle" | "submitting" | "error";
 
-const SUCCESS_MESSAGE =
-  "Recebemos sua solicitação. A liberação é por convite — avisaremos por email.";
-
-export function AccessRequestForm() {
+export function AccessRequestForm({
+  onSuccess,
+}: {
+  onSuccess?: () => void;
+}) {
   const [state, setState] = useState<FormState>("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -42,22 +43,11 @@ export function AccessRequestForm() {
       }
 
       // Resposta idêntica para novo e duplicado — não distinguir (anti-enumeração)
-      setState("success");
+      onSuccess?.();
     } catch {
       setState("error");
       setErrorMessage("Erro de conexão. Tente novamente.");
     }
-  }
-
-  if (state === "success") {
-    return (
-      <div
-        role="status"
-        className="rounded-lg border border-accent-green/40 bg-bg-elevated p-4 text-center text-sm text-text-primary"
-      >
-        {SUCCESS_MESSAGE}
-      </div>
-    );
   }
 
   return (

@@ -73,7 +73,29 @@ describe("LoginForm", () => {
     expect(mockReplace).toHaveBeenCalledWith("/store");
   });
 
-  it("redirects to /dashboard on success when no redirect param (bug crítico pós-login)", async () => {
+  it("redirects to /dashboard on success when redirect is '/' (sanitizer default)", async () => {
+    mockSignInWithPassword.mockResolvedValue({
+      error: null,
+    });
+
+    // login/page.tsx: sanitizeRedirectPath("") retorna "/" — esse é o valor real
+    // recebido pelo form quando não há ?redirect= (bug crítico pós-login).
+    render(<LoginForm redirect="/" />);
+
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "test@test.com" },
+    });
+    fireEvent.change(screen.getByLabelText("Senha"), {
+      target: { value: "password123" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith("/dashboard");
+    });
+  });
+
+  it("redirects to /dashboard on success when redirect is empty (defensive)", async () => {
     mockSignInWithPassword.mockResolvedValue({
       error: null,
     });

@@ -16,6 +16,17 @@
   RPC atômico `admin_review_access_request` (status + trilha em
   `admin_audit_log` na mesma transação).
 
+## Triagem de solicitações (sem notificação por email)
+
+Novas solicitações em `access_requests` **não geram notificação automática** ao
+time (não há envio de email de alerta na `POST /api/access-requests`). A
+triagem é **manual** via `/admin/access-requests`: o admin entra na aba
+"Pendentes" e aprova/recusa cada pedido. A landing pública **não promete**
+aviso por email ao visitante — o texto é neutro ("a liberação é por convite").
+Se um alerta por email ao suporte for desejado no futuro, será preciso criar um
+padrão de envio no app (hoje o projeto só envia email via SMTP do Supabase Auth
+para confirmação/reset de senha — não há util de envio reutilizável).
+
 ## O que esta entrega NÃO cobre (operação manual obrigatória)
 
 A neutralização em `/signup` é **visual/de rotas**. O Supabase Auth continua
