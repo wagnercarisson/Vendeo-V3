@@ -1,4 +1,4 @@
-import type { ImageProvider, ImageProviderInput, ImageProviderOutput } from "./types";
+import type { ImageProvider, ImageProviderInput, ImageProviderOutput, ImageProviderUsageMeta } from "./types";
 import {
   IMAGE_GENERATION_RESPONSES_MODEL,
   IMAGE_EDIT_FALLBACK_MODEL,
@@ -99,14 +99,52 @@ export class OpenAIImageProvider implements ImageProvider {
 
       const imageBase64 = imageOutput.result;
 
-      const inputDetails = response.usage as { input_tokens_details?: { cached_tokens?: number }; output_tokens_details?: { image_tokens?: number } } | undefined;
+      // F38.1: breakdown granular do usage da Responses API image_generation.
+      // A API expõe input_tokens/output_tokens totais + detalhes por dimensão
+      // (cached/text/image). Diferenciamos text vs image na entrada e na saída —
+      // a imagem gerada sai em output_tokens_details.image_tokens, e a foto do
+      // produto entra em input_tokens_details.image_tokens.
+      const inputDetails = response.usage?.input_tokens_details as
+        | { cached_tokens?: number; text_tokens?: number; image_tokens?: number }
+        | undefined;
+      const outputDetails = response.usage?.output_tokens_details as
+        | { text_tokens?: number; image_tokens?: number }
+        | undefined;
+
+      const usageRaw = response.usage
+        ? (response.usage as unknown as Record<string, unknown>)
+        : undefined;
+
       const usage = response.usage
         ? {
             promptTokens: response.usage.input_tokens ?? undefined,
             completionTokens: response.usage.output_tokens ?? undefined,
             totalTokens: (response.usage.input_tokens ?? 0) + (response.usage.output_tokens ?? 0) || undefined,
-            imageTokens: inputDetails?.output_tokens_details?.image_tokens ?? undefined,
-            cachedInputTokens: inputDetails?.input_tokens_details?.cached_tokens ?? undefined,
+            cachedInputTokens: inputDetails?.cached_tokens ?? undefined,
+            imageTokens: outputDetails?.image_tokens ?? undefined,
+            inputTextTokens:
+              inputDetails?.text_tokens ??
+              (response.usage.input_tokens !== undefined && inputDetails?.image_tokens !== undefined
+                ? Math.max(0, response.usage.input_tokens - (inputDetails.image_tokens ?? 0))
+                : undefined),
+            inputImageTokens: inputDetails?.image_tokens ?? undefined,
+            outputTextTokens:
+              outputDetails?.text_tokens ??
+              (response.usage.output_tokens !== undefined && outputDetails?.image_tokens !== undefined
+                ? Math.max(0, response.usage.output_tokens - (outputDetails.image_tokens ?? 0))
+                : undefined),
+            outputImageTokens: outputDetails?.image_tokens ?? undefined,
+          }
+        : undefined;
+
+      // F38.1: auditoria — usage bruto sanitizado + flags do caminho de geração.
+      // NÃO entra em cálculo; usado para auditoria/calibração do pricing.
+      const usageMeta: ImageProviderUsageMeta | undefined = response.usage
+        ? {
+            providerUsageRaw: usageRaw,
+            providerUsageSource: "responses.image_generation",
+            responsesModel: this.responsesModel,
+            imageGenerationTool: true,
           }
         : undefined;
 
@@ -115,6 +153,7 @@ export class OpenAIImageProvider implements ImageProvider {
         mimeType: "image/png" as const,
         model: this.responsesModel,
         usage,
+        usageMeta,
       };
     } catch (err) {
       const errorCode =

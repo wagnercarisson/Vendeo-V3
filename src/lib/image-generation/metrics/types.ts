@@ -6,6 +6,7 @@
  */
 
 import type { TokenUsage } from "@/lib/ai-cost/types";
+import type { ImageProviderUsageMeta } from "@/lib/image-generation/providers/types";
 
 export interface GenerationMetrics {
   runId: string;
@@ -45,6 +46,8 @@ export interface GenerationMetricsEvent {
   estimatedCostUsd?: number;
   /** Usage normalizado da chamada (D11/D12) — preenchido quando o provider entrega tokens. */
   usage?: TokenUsage;
+  /** F38.1: auditoria do usage bruto + flags do caminho de geração (não entra em cálculo). */
+  usageMeta?: ImageProviderUsageMeta;
   /** Duração da chamada individual em ms (D6/D11 — furo 7). */
   durationMs: number;
 }

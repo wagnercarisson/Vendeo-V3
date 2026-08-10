@@ -488,3 +488,60 @@ Rotas /api/store/[id]/brand-profile/*            ← registram brand_profile_* (
 ## Open Questions
 
 Nenhuma. Todas as decisões (D1–D12) estão documentadas no alinhamento e neste design. A fase NÃO altera `reserve_credit`/`credit_transactions` (F24) nem `admin_get_metrics` (F28); NÃO cria `operation_runs`; NÃO inclui UI admin de pricing/reconciliação (D8/D10). A única exceção de compatibilidade é o helper `insertGenerationEvent` (VS) que **delega** ao tracker mantendo sua API externa (D7/D11).
+
+## Closing — Fechamento como camada de ESTIMATIVA OPERACIONAL GRANULAR (2026-08-09)
+
+Após o UAT manual, a F38.1 é fechada com a seguinte delimitação explícita:
+
+### O que a F38.1 entrega (e o que NÃO entrega)
+
+- **Entrega:** estimativa operacional **por chamada/entrega** — custo granular por `operation_run_id`, eventos call-level por etapa, pricing versionável em `ai_model_pricing`, `GET/PUT /api/admin/ai-model-pricing`, `GET /api/admin/ai-costs`, separação `estimated_cost_usd` × `provider_reported_cost_usd`, reconciliação USD × créditos (`admin_cost_vs_credits`), `margem_estimada` null quando `credit_unit_usd_value` ausente, registros de `campaign`/`visual_signature`/`brand_profile`.
+- **Não entrega (fora de escopo, fase futura):** reconciliação financeira final; integração com a **Costs API / dashboard da OpenAI** (custo financeiro real agregado, não custo exato por geração/`operation_run_id`); `billable_cost_usd` e precificação real de créditos; página admin de pricing.
+- **Limitação conhecida:** para Responses API + `image_generation` tool, o `usage` retornado na chamada cobre o modelo textual/orquestrador, mas **não expõe toda a camada econômica da ferramenta de imagem**. Por isso o ajuste provisório (abaixo) é **estimativa calibrada**, não custo real.
+
+### Ajuste provisório versionável da tool image_generation (fórmula v2)
+
+Para uma prévia mais realista de custo no beta, `resolveAiCost` passa a aplicar, **apenas** quando `generation_type = campaign_image` E `imageGenerationTool = true` (Responses API image_generation):
+
+```
+estimated_cost_usd = text_component_usd + image_tool_component_usd
+```
+
+- `text_component_usd` = cálculo atual por tokens do modelo textual/orquestrador.
+- `image_tool_component_usd` = valor **versionável por unidade de imagem** da tool, vindo de:
+  1. preferencialmente `ai_model_pricing` (`provider = 'openai'`, `model = 'responses:image_generation'`, `image_unit_usd`); ou
+  2. default bootstrap explícito em código (`DEFAULT_AI_MODEL_PRICING["responses:image_generation"]`), com `source_note`/`effective_from` na seed da migration;
+  3. atualizável via `GET/PUT /api/admin/ai-model-pricing`.
+- Valor inicial provisório: **USD 0.065 por imagem** (calibrado dos UATs de 2026-08-09; `source_note` registra "F38.1 beta estimate calibrated from OpenAI dashboard/Costs CSV; provisional until provider cost reconciliation").
+- **Não hardcoda valor escondido no estimator** — o estimator só resolve a linha versionável; o valor é dado.
+
+**Regras de aplicação (anti-dupla-cobrança):**
+
+- Não aplicar o componente em `visual_signature`/`brand_profile` nem no fallback `gpt-image-2` (Image API) — usam outros caminhos de precificação.
+- `provider_reported_cost_usd` **permanece reservado** para custo informado pelo provider / reconciliação futura confiável — **nunca** é preenchido com o ajuste provisório.
+- `estimated_cost_usd` pode incluir o ajuste provisório.
+- Se a tool pricing não existir (nem tabela nem bootstrap), mantém só o componente textual e marca `cost_estimation_note` como parcial (`responses_image_generation_tool_without_unit_pricing`).
+
+**Metadata esperado no evento `campaign_image`:**
+
+```
+cost_formula_version: "responses_image_generation_v2"
+text_component_usd
+image_tool_component_usd
+image_tool_pricing_provider
+image_tool_pricing_model
+image_tool_pricing_version
+cost_estimation_note: "provisional_image_tool_unit_cost_until_provider_reconciliation"
+provider_usage_raw (mantido — usage bruto sanitizado já existente)
+```
+
+**Provedores futuros:** Gemini/Anthropic/outros entram por **adapter + pricing catalog**, nunca por lógica OpenAI hardcoded no estimator:
+`provider = "<provider>"`, `model = "image_generation:<caminho-ou-nome>"`, `image_unit_usd = ...` (mesmo contrato; o mapeamento provider→model da tool fica em `IMAGE_GENERATION_TOOL_MODELS` no cost-estimator).
+
+### Decisões de fechamento
+
+- F38.1 é camada de **estimativa operacional granular**, adequada para prévia de custos e calibração de beta — **não** é contabilidade financeira final/reconciliada.
+- OpenAI Costs API/dashboard serão tratados em fase futura.
+- `provider_reported_cost_usd` não é usado para estimativa calibrada.
+- `billable_cost_usd` e precificação real de créditos ficam para fase futura.
+- Incidente das 56 linhas históricas (ver VERIFICATION.md) foi **aceito/documentado** como perda de telemetria sem impacto contábil.

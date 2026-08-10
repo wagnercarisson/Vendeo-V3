@@ -1,3 +1,42 @@
+## ADDED Requirements
+
+### Requirement: Ajuste provisório versionável da tool image_generation (fórmula v2)
+
+O sistema SHALL aplicar, em chamadas de geração de imagem via Responses API `image_generation` tool, uma estimativa operacional com componente provisório da ferramenta, **apenas** quando `generation_type = campaign_image` E `imageGenerationTool = true` (F38.1 fechamento):
+
+```
+estimated_cost_usd = text_component_usd + image_tool_component_usd
+```
+
+- `text_component_usd` SHALL ser o cálculo por tokens do modelo textual/orquestrador (comportamento atual).
+- `image_tool_component_usd` SHALL vir de fonte **versionável** — preferencialmente a linha `ai_model_pricing` (`provider = 'openai'`, `model = 'responses:image_generation'`, `image_unit_usd`) ou o default bootstrap explícito (`DEFAULT_AI_MODEL_PRICING`), nunca um valor hardcoded oculto no estimator.
+- O resolvedor SHALL retornar no `CostResolution`: `costFormulaVersion: "responses_image_generation_v2"`, `textComponentUsd`, `imageToolComponentUsd`, `imageToolPricingProvider`, `imageToolPricingModel`, `imageToolPricingVersion`, `costEstimationNote: "provisional_image_tool_unit_cost_until_provider_reconciliation"`.
+- `provider_reported_cost_usd` NÃO SHALL ser preenchido com o ajuste provisório (reservado para custo informado pelo provider / reconciliação futura).
+- Se a tool pricing não existir (tabela nem bootstrap), o resolvedor SHALL manter só o componente textual e marcar `costEstimationNote: "responses_image_generation_tool_without_unit_pricing"` (estimativa parcial).
+- NÃO SHALL aplicar o componente em `visual_signature`/`brand_profile` nem no fallback `gpt-image-2` (outros caminhos de precificação — anti-dupla-cobrança).
+
+#### Scenario: tool pricing presente → soma text_component + image_tool_component
+
+- **WHEN** `resolveAiCost({ provider: "openai", model: "gpt-5.5", usage, imageGenerationTool: true, generationType: "campaign_image" })` é chamado com linha vigente `responses:image_generation` (`image_unit_usd: 0.065`) e texto `0.0092`
+- **THEN** retorna `estimatedCostUsd: 0.0742`, `costFormulaVersion: "responses_image_generation_v2"`, `textComponentUsd: 0.0092`, `imageToolComponentUsd: 0.065` e `imageToolPricingVersion` = uuid da linha da tool
+- **AND** `costEstimationNote: "provisional_image_tool_unit_cost_until_provider_reconciliation"`
+
+#### Scenario: tool pricing ausente → só text_component + nota parcial
+
+- **WHEN** `resolveAiCost` é chamado com `imageGenerationTool: true` e `generationType: "campaign_image"` mas sem linha/default da tool
+- **THEN** retorna `estimatedCostUsd` = componente textual apenas
+- **AND** `costEstimationNote: "responses_image_generation_tool_without_unit_pricing"` (sem `imageToolComponentUsd`)
+
+#### Scenario: imageGenerationTool=false → comportamento atual
+
+- **WHEN** `resolveAiCost` é chamado com `imageGenerationTool: false` (ou ausente)
+- **THEN** NÃO aplica fórmula nem componente da tool (comportamento atual)
+
+#### Scenario: visual_signature/brand_profile sem cobrança duplicada
+
+- **WHEN** `resolveAiCost` é chamado com `generationType` ≠ `campaign_image` (ex: `visual_signature`)
+- **THEN** NÃO aplica o componente da tool nem consulta a linha `responses:image_generation`
+
 ## MODIFIED Requirements
 
 ### Requirement: estimateAiCost() calcula custo estimado

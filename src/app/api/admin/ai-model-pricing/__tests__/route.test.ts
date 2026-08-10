@@ -168,6 +168,52 @@ describe("PUT /api/admin/ai-model-pricing (D8 — versionamento)", () => {
     const body = await res.json();
     expect(body.error).toBe("Dados inválidos");
   });
+
+  it("PUT versiona a linha da tool image_generation (F38.1 fechamento — provider openai / model responses:image_generation)", async () => {
+    mockRpc.mockResolvedValue({
+      data: {
+        id: "tool-pricing-v2",
+        provider: "openai",
+        model: "responses:image_generation",
+        effective_from: "2026-08-09T14:00:00.000Z",
+        previous_id: "tool-pricing-v1",
+      },
+      error: null,
+    });
+
+    const res = await putPricing({
+      provider: "openai",
+      model: "responses:image_generation",
+      imageUnitCostUsd: 0.08,
+      reason: "ajuste provisório após novos UATs",
+      sourceNote:
+        "F38.1 beta estimate calibrated from OpenAI dashboard/Costs CSV; provisional until provider cost reconciliation",
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.pricing).toEqual({
+      id: "tool-pricing-v2",
+      provider: "openai",
+      model: "responses:image_generation",
+      effectiveFrom: "2026-08-09T14:00:00.000Z",
+      previousId: "tool-pricing-v1",
+    });
+    expect(mockRpc).toHaveBeenCalledWith("admin_set_ai_model_price", {
+      p_actor_id: "admin-1",
+      p_provider: "openai",
+      p_model: "responses:image_generation",
+      p_input: null,
+      p_output: null,
+      p_reason: "ajuste provisório após novos UATs",
+      p_cached: null,
+      p_image_unit: 0.08,
+      p_image_token: null,
+      p_source_url: null,
+      p_source_note:
+        "F38.1 beta estimate calibrated from OpenAI dashboard/Costs CSV; provisional until provider cost reconciliation",
+    });
+  });
 });
 
 describe("GET /api/admin/ai-model-pricing (D8 — lista vigentes + histórico)", () => {
@@ -269,6 +315,50 @@ describe("GET /api/admin/ai-model-pricing (D8 — lista vigentes + histórico)",
       "https://platform.openai.com/docs/pricing",
     );
     expect(historyBody.prices[1].sourceNote).toBe("revisado");
+  });
+
+  it("GET inclui a linha da tool image_generation com imageUnitUsd (F38.1 fechamento)", async () => {
+    mockPricingQuery([
+      {
+        id: "tool-pricing-v1",
+        provider: "openai",
+        model: "responses:image_generation",
+        input_token_usd_per_1m: null,
+        output_token_usd_per_1m: null,
+        cached_input_token_usd_per_1m: null,
+        image_unit_usd: "0.065",
+        image_token_usd_per_1m: null,
+        effective_from: "2026-08-09T00:00:00.000Z",
+        effective_until: null,
+        source_url: "https://platform.openai.com/docs/pricing",
+        source_note:
+          "F38.1 beta estimate calibrated from OpenAI dashboard/Costs CSV; provisional until provider cost reconciliation",
+        updated_by: null,
+        updated_at: "2026-08-09T00:00:00.000Z",
+      },
+    ]);
+
+    const res = await getPricing();
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.prices).toHaveLength(1);
+    expect(body.prices[0]).toEqual({
+      id: "tool-pricing-v1",
+      provider: "openai",
+      model: "responses:image_generation",
+      inputTokenUsdPer1M: null,
+      outputTokenUsdPer1M: null,
+      cachedInputTokenUsdPer1M: null,
+      imageUnitUsd: 0.065,
+      imageTokenUsdPer1M: null,
+      effectiveFrom: "2026-08-09T00:00:00.000Z",
+      effectiveUntil: null,
+      sourceUrl: "https://platform.openai.com/docs/pricing",
+      sourceNote:
+        "F38.1 beta estimate calibrated from OpenAI dashboard/Costs CSV; provisional until provider cost reconciliation",
+      updatedBy: null,
+      updatedAt: "2026-08-09T00:00:00.000Z",
+    });
   });
 });
 

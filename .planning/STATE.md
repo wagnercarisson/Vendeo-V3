@@ -4,18 +4,18 @@ milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 current_phase: 38.1
 status: executing
-last_updated: "2026-08-09T00:46:30.189Z"
+last_updated: "2026-08-09T21:30:53.239Z"
 progress:
   total_phases: 21
-  completed_phases: 18
+  completed_phases: 19
   total_plans: 99
-  completed_plans: 91
-  percent: 86
+  completed_plans: 93
+  percent: 91
 ---
 
 # Project State
 
-**Last updated:** 2026-08-09 (F38.1 Apuração de Custos de IA por Entrega em execução — 9/11 plans concluídos: 38-1-09 ✅ brand rotas + 6.5 — onCall em BrandDirectorService.analyze + BrandTextOnlyInferenceService.infer, threading do wrapper, 4 rotas brand instrumentadas (startRun brand_profile, call-level brand_profile_vision/text com custo real via resolveAiCost, delivery without_logo/with_logo NULL + duration_is_pipeline, infer de zero eventos, realign 3 caminhos IA, regenerate = novo run), 15 testes novos, 1700 testes, typecheck/lint/build limpos; 38/38 requirements; F38 concluída 8/8 plans, 1597 testes, UAT 4/4; renumeração F37 = Revisão e Aprovação da Arte, F38 = Tabela de Custos, F39 = Stripe)
+**Last updated:** 2026-08-09 (F38.1 Apuração de Custos de IA por Entrega **CONCLUÍDA — 11/11 plans**: 38-1-10 ✅ views/RPCs apuração + I1–I6 + gates + UAT manual validado; 38-1-11 ✅ runbook trackings. **Fechamento como camada de estimativa operacional granular** — ajuste provisório versionável da tool image_generation (fórmula `responses_image_generation_v2`): `responses:image_generation = USD 0.065` é **estimativa operacional provisória para beta**, calibrada por UAT/dashboard/CSV da OpenAI — **NÃO é custo financeiro real**; a **reconciliação financeira real fica para a próxima fase**. 38/38+2 requirements, 1713 testes, typecheck/lint/build limpos; F38 concluída 8/8 plans, 1597 testes, UAT 4/4; renumeração F37 = Revisão e Aprovação da Arte, F38 = Tabela de Custos, F39 = Stripe)
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆ **Em andamento**
 **Current phase:** 38.1
 
@@ -436,9 +436,8 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 38.1 (ai-cost-accounting) — EXECUTING (plans em execução por wave)
-Plan: 10 of 11 (waves 1–6)
-v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36 e 38 concluídas. F38 (Tabela de Custos por Operação, v1.5) concluída — 8/8 plans, 1597 testes, UAT 4/4, fonte da verdade `openspec/changes/fase-38-credit-operation-costs/`; F38.1 (Apuração de Custos de IA por Entrega, desdobramento da F38) em execução — 9/11 plans concluídos (38-1-09 ✅ brand rotas + 6.5 — 1700 testes), 38/38 requirements, plan-checker PASS, fonte da verdade `openspec/changes/fase-38-1-ai-cost-accounting/`; F37 (Revisão e Aprovação da Arte, v1.5, experimento beta) em planejamento futuro; F39 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37 → F39).
+Phase: 38.1 (ai-cost-accounting) — ✅ COMPLETE (11/11 plans, UAT validado)
+v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36, 38 e 38.1 concluídas. F38 (Tabela de Custos por Operação, v1.5) concluída — 8/8 plans, 1597 testes, UAT 4/4; F38.1 (Apuração de Custos de IA por Entrega, desdobramento da F38) **CONCLUÍDA** — 11/11 plans, 1713 testes, UAT validado, **fechada como camada de estimativa operacional granular** (ajuste provisório da tool image_generation `0.065` = estimativa beta provisória, não custo real; reconciliação financeira real na próxima fase), fonte da verdade `openspec/changes/fase-38-1-ai-cost-accounting/`; F37 (Revisão e Aprovação da Arte, v1.5, experimento beta) em planejamento futuro; F39 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37 → F39).
 
 ### Phase 36 — Onboarding: Navegação por Abas ✅ Complete
 
@@ -493,9 +492,11 @@ v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36 e 38 concluída
 **Context:** `.planning/phases/38-credit-operation-costs/38-CONTEXT.md`
 **UAT:** `.planning/phases/38-credit-operation-costs/38-UAT.md`
 
-### Phase 38.1 — Apuração de Custos de IA por Entrega ⏳ In Progress
+### Phase 38.1 — Apuração de Custos de IA por Entrega ✅ Complete
 
 Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por entrega via `generation_events` + `operation_run_id`; `AiCostTracker` como camada única de registro; `resolveAiCost` (provider_reported → pricing_table → fallback_static → not_available); tabela `ai_model_pricing` versionada + RPC `admin_set_ai_model_price` + GET/PUT `/api/admin/ai-model-pricing` (sem página); views/RPCs de apuração e reconciliação USD × créditos (sem UI); furos 1–7 da F38 corrigidos; ~51 testes novos + verificação I1–I6.
+
+**Fechamento (2026-08-09) — camada de ESTIMATIVA OPERACIONAL GRANULAR, não reconciliação financeira final.** Ajuste provisório versionável da tool image_generation (fórmula `responses_image_generation_v2`): `estimated_cost_usd = text_component_usd + image_tool_component_usd`, aplicado apenas em `generationType=campaign_image` + `imageGenerationTool=true` (anti-dupla-cobrança em visual_signature/brand_profile/fallback gpt-image-2). **`responses:image_generation = USD 0.065` é ESTIMATIVA OPERACIONAL PROVISÓRIA PARA BETA**, calibrada por UAT/dashboard/CSV da OpenAI — **NÃO preenche `provider_reported_cost_usd` e NÃO é custo financeiro real**; a **reconciliação financeira real fica para a próxima fase**. Fonte versionável: linha `ai_model_pricing ('openai','responses:image_generation')` (migration 20260809000003, aplicada em Local e Remote) ou bootstrap `DEFAULT_AI_MODEL_PRICING`, ajustável via GET/PUT `/api/admin/ai-model-pricing`; metadata do evento `campaign_image` leva `cost_formula_version`, `text_component_usd`, `image_tool_component_usd`, `image_tool_pricing_*` e `cost_estimation_note=provisional_image_tool_unit_cost_until_provider_reconciliation`, mantendo `provider_usage_raw`.
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
@@ -508,10 +509,10 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 | 38-1-07 | 4 | ✅ | Rotas 6.3 — generate-image (call-level, delivery sem custo, totalCost) |
 | 38-1-08 | 4 | ✅ | Rotas 6.4 — generate-without-logo (VS/validation custo, nova tentativa = novo run) |
 | 38-1-09 | 4 | ✅ | Rotas 6.5 — brand-profile/* + infer + realign (3 caminhos IA) + brand-director/text-only onCall (15 testes novos, 1700 testes) |
-| 38-1-10 | 5 | ○ | Views/RPCs apuração + 50 testes + gates + UAT checkpoint |
-| 38-1-11 | 6 | ○ | Runbook trackings 8.1–8.5 |
+| 38-1-10 | 5 | ✅ | Views/RPCs apuração + verificação I1–I6 (banco real) + 50 testes + gates + UAT checkpoint validado |
+| 38-1-11 | 6 | ✅ | Runbook trackings 8.1–8.5 + fechamento (0.065 provisório beta; reconciliação financeira real na próxima fase) |
 
-**Status:** 9/11 plans concluídos (38-1-09 ✅ brand rotas + 6.5 — onCall em BrandDirectorService.analyze + BrandTextOnlyInferenceService.infer (usage+durationMs best-effort, mock dev sem evento), threading do BrandProfilerWithoutLogoService, 4 rotas brand instrumentadas — startRun brand_profile, call-level brand_profile_vision/text com custo real via resolveAiCost, delivery without_logo/with_logo NULL + duration_is_pipeline, infer/route.ts de ZERO eventos, realign com text_only/logo/regenerate instrumentados (regenerate = novo run), 15 testes novos de rota + 6 de serviço, 1700 testes, typecheck/lint/build limpos)
+**Status:** 11/11 plans concluídos — 1713 testes (199 arquivos, 13 novos no fechamento), typecheck/lint/build limpos; migration `20260809000003_f38_1_provisional_image_tool_pricing.sql` aplicada em Local e Remote (linha vigente confirmada); UAT/checkpoint da fase validado.
 
 **Source:** `openspec/changes/fase-38-1-ai-cost-accounting/` (fonte da verdade)
 **Context:** `.planning/phases/38-1-ai-cost-accounting/38-1-CONTEXT.md`
@@ -630,7 +631,7 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 | F36 | ✅ Complete | Onboarding — Navegação por Abas (6/6 plans, 31/31 requirements, 1479 testes, code review aplicado) |
 | F37 | ○ In progress | Revisão e Aprovação da Arte (v1.5, experimento beta — planejamento futuro) |
 | **F38** | **✅ Complete** | **Tabela de Custos por Operação — 8/8 plans, 1597 testes, I1-I6 verificados no banco real, build gate verde, UAT 4/4 aprovado** |
-| **F38.1** | **⏳ Planning Complete** | **Apuração de Custos de IA por Entrega — 11/11 plans (6 waves), 38/38 requirements, plan-checker PASS, pronta para execução (desdobramento da F38)** |
+| **F38.1** | **✅ Complete** | **Apuração de Custos de IA por Entrega — 11/11 plans, 40/40 requirements, 1713 testes (199 arquivos), I1–I6 banco real, UAT validado; fechada como camada de ESTIMATIVA OPERACIONAL GRANULAR (0.065 provisório beta; reconciliação financeira real na próxima fase)** |
 | F39 | ○ Future | Stripe / Monetização Pública (v1.7, pós-beta — renumerada de F36 → F37 → F39) |
 
 ### Quick Tasks Completed

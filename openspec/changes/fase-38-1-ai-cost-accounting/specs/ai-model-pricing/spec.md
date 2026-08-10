@@ -1,5 +1,33 @@
 ## ADDED Requirements
 
+### Requirement: Seed provisória da tool image_generation (responses:image_generation)
+
+O sistema SHALL incluir seed de `ai_model_pricing` para a **ferramenta** de geração de imagem da Responses API, separada do modelo textual/orquestrador e dos modelos do Image API (F38.1 fechamento — anti-mistura de preços):
+
+```
+provider   = 'openai'
+model      = 'responses:image_generation'
+image_unit_usd = 0.065   (provisório/calibrado — UATs 2026-08-09)
+source_note = 'F38.1 beta estimate calibrated from OpenAI dashboard/Costs CSV; provisional until provider cost reconciliation'
+```
+
+- `image_unit_usd` SHALL ser o **único** componente de preço da linha (input/output/cached/image_token NULL — CHECK `at_least_one_price` passa)
+- `source_note` SHALL registrar que o valor é **provisório/calibrado** e não custo financeiro real; `effective_until` NULL (vigente)
+- A linha NÃO se mistura com `gpt-5.5` (orquestrador) nem com `gpt-image-2`/`dall-e-3` (Image API)
+- Providers futuros entram pelo mesmo contrato: `provider = "<provider>"`, `model = "image_generation:<caminho-ou-nome>"`, `image_unit_usd`
+- Versionamento/alteração via `PUT /api/admin/ai-model-pricing` (RPC `admin_set_ai_model_price`) — sem mudança de contrato
+
+#### Scenario: seed da tool vigente e só com image_unit_usd
+
+- **WHEN** as seeds são consultadas em `ai_model_pricing`
+- **THEN** existe linha `('openai', 'responses:image_generation')` com `image_unit_usd` preenchido e `input_token_usd_per_1m`/`output_token_usd_per_1m` NULL
+- **AND** `effective_until` NULL e `source_note` documenta o ajuste provisório
+
+#### Scenario: PUT versiona a linha da tool
+
+- **WHEN** `PUT /api/admin/ai-model-pricing` é chamado com `{ provider: "openai", model: "responses:image_generation", imageUnitCostUsd, reason }`
+- **THEN** o RPC fecha a vigente e abre nova linha (versionamento) — sem mudança de contrato
+
 ### Requirement: Tabela ai_model_pricing versionada
 
 O sistema SHALL criar a tabela `public.ai_model_pricing` via migration versionada (D8) com preços por dimensão **nullable** e CHECK de ao menos uma dimensão:

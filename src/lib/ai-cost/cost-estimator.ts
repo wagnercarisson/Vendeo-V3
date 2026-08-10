@@ -1,5 +1,6 @@
 import "server-only";
 import type { CostResolution, TokenUsage } from "./types";
+import type { GenerationEventType } from "@/lib/visual-signature/types";
 import { getModelPricing } from "./ai-model-pricing";
 import type { ModelPricing } from "./ai-model-pricing";
 
@@ -54,8 +55,34 @@ function hasUsableUsage(usage?: TokenUsage): boolean {
  * Cálculo por tokens — aplica `?? 0` ANTES de multiplicar (dimensões opcionais:
  * ModelPricing pode ter só imageUnitCostUsd). NUNCA escrever `X/1M * inputCostUsd ?? 0`
  * (aplica o default só depois da multiplicação → NaN quando a dimensão está ausente).
+ *
+ * F38.1: quando o usage tem breakdown granular (input/output separados em text vs
+ * image — Responses API image_generation), preço cada dimensão na sua taxa:
+ *   inputTextTokens → inputCostUsd; outputTextTokens → outputCostUsd;
+ *   cached → cachedInputCostUsd; input/output image tokens → imageTokenUsdPer1M.
+ * Sem o breakdown, mantém o caminho legado (prompt/completion/image).
  */
 function calculateTokenCost(usage: TokenUsage, pricing: ModelPricing): number {
+  const hasDetailedBreakdown =
+    usage.inputImageTokens !== undefined || usage.outputImageTokens !== undefined;
+
+  if (hasDetailedBreakdown) {
+    const inputImageTokens = usage.inputImageTokens ?? 0;
+    const outputImageTokens = usage.outputImageTokens ?? 0;
+    const inputTextTokens =
+      usage.inputTextTokens ?? Math.max(0, (usage.promptTokens ?? 0) - inputImageTokens);
+    const outputTextTokens =
+      usage.outputTextTokens ?? Math.max(0, (usage.completionTokens ?? 0) - outputImageTokens);
+    const cachedInputTokens = usage.cachedInputTokens ?? 0;
+    const cost =
+      (inputTextTokens / 1_000_000) * (pricing.inputCostUsd ?? 0) +
+      (cachedInputTokens / 1_000_000) * (pricing.cachedInputCostUsd ?? 0) +
+      (outputTextTokens / 1_000_000) * (pricing.outputCostUsd ?? 0) +
+      (inputImageTokens / 1_000_000) * (pricing.imageTokenUsdPer1M ?? 0) +
+      (outputImageTokens / 1_000_000) * (pricing.imageTokenUsdPer1M ?? 0);
+    return Number(cost.toFixed(6));
+  }
+
   const promptTokens = usage.promptTokens ?? 0;
   const cachedInputTokens = usage.cachedInputTokens ?? 0;
   const completionTokens = usage.completionTokens ?? 0;
@@ -68,6 +95,33 @@ function calculateTokenCost(usage: TokenUsage, pricing: ModelPricing): number {
     (imageTokens / 1_000_000) * (pricing.imageTokenUsdPer1M ?? 0);
   return Number(cost.toFixed(6));
 }
+
+/**
+ * F38.1 fechamento: versão da fórmula usada em chamadas de geração de imagem via
+ * Responses API image_generation tool. Versionável em código (auditabilidade).
+ * v2 = estimativa operacional com componente provisório da tool:
+ *   estimated_cost_usd = text_component_usd + image_tool_component_usd
+ */
+const RESPONSES_IMAGE_GENERATION_FORMULA_VERSION = "responses_image_generation_v2";
+
+/** F38.1: nota de estimativa parcial/calibrada — tool com unit cost provisório. */
+const NOTE_PROVISIONAL_IMAGE_TOOL =
+  "provisional_image_tool_unit_cost_until_provider_reconciliation";
+
+/** F38.1: nota de estimativa parcial — tool sem pricing de unidade configurado. */
+const NOTE_WITHOUT_IMAGE_TOOL_PRICING =
+  "responses_image_generation_tool_without_unit_pricing";
+
+/**
+ * F38.1 fechamento: mapeamento provider → model da tool image_generation no
+ * pricing catalog (ai_model_pricing). NÃO é valor de preço — é o nome da linha
+ * versionável. Providers futuros entram aqui pelo mesmo contrato:
+ *   provider = "<provider>", model = "image_generation:<caminho-ou-nome>"
+ * (adapter + pricing catalog — sem lógica OpenAI hardcoded).
+ */
+const IMAGE_GENERATION_TOOL_MODELS: Record<string, string> = {
+  openai: "responses:image_generation",
+};
 
 /**
  * Resolvedor definitivo de custo de uma chamada de IA (D9) — NUNCA retorna null
@@ -90,6 +144,15 @@ export async function resolveAiCost(params: {
   usage?: TokenUsage;
   providerReportedCostUsd?: number | null;
   manualCostUsd?: number | null; // D4 — ajuste manual sem origem automática
+  /** F38.1: true quando a chamada usou a tool image_generation da Responses API. */
+  imageGenerationTool?: boolean;
+  /**
+   * F38.1 fechamento: generation_type da chamada. Restringe o componente
+   * provisório da tool a campaign_image (evita dupla cobrança em
+   * visual_signature/brand_profile e no fallback gpt-image-2 — outros caminhos
+   * de precificação).
+   */
+  generationType?: GenerationEventType;
 }): Promise<CostResolution> {
   const { provider, model, usage, providerReportedCostUsd, manualCostUsd } = params;
 
@@ -114,11 +177,47 @@ export async function resolveAiCost(params: {
 
     // 3a. Usage disponível → cálculo por tokens (prompt/output/cached/image — D9)
     if (hasUsableUsage(usage)) {
-      return {
-        estimatedCostUsd: calculateTokenCost(usage!, pricing),
+      const textComponentUsd = calculateTokenCost(usage!, pricing);
+      const resolution: CostResolution = {
+        estimatedCostUsd: textComponentUsd,
         costSource: "pricing_table",
         pricingVersion: versionId,
       };
+
+      // F38.1 fechamento: estimativa operacional granular da tool image_generation.
+      // Aplicada APENAS em campaign_image + imageGenerationTool=true (Responses API
+      // image_generation). visual_signature/brand_profile e o fallback gpt-image-2
+      // usam outros caminhos de precificação — não sofrem o componente da tool
+      // (anti-dupla-cobrança). estimated_cost_usd = text_component + image_tool_component;
+      // o componente da tool vem de ai_model_pricing (linha versionável) — se não
+      // existir, mantém só o componente textual e marca a estimativa como parcial.
+      if (params.imageGenerationTool === true && params.generationType === "campaign_image") {
+        resolution.costFormulaVersion = RESPONSES_IMAGE_GENERATION_FORMULA_VERSION;
+
+        const toolModel = IMAGE_GENERATION_TOOL_MODELS[provider];
+        const toolPricingResult = toolModel
+          ? await getModelPricing({ provider, model: toolModel })
+          : null;
+        const imageToolComponentUsd = toolPricingResult?.pricing.imageUnitCostUsd;
+
+        if (toolPricingResult && imageToolComponentUsd !== undefined) {
+          resolution.textComponentUsd = textComponentUsd;
+          resolution.imageToolComponentUsd = imageToolComponentUsd;
+          resolution.imageToolPricingProvider = provider;
+          resolution.imageToolPricingModel = toolModel;
+          resolution.imageToolPricingVersion = toolPricingResult.versionId;
+          resolution.costEstimationNote = NOTE_PROVISIONAL_IMAGE_TOOL;
+          resolution.estimatedCostUsd = Number(
+            (textComponentUsd + imageToolComponentUsd).toFixed(6),
+          );
+        } else {
+          // Tool sem pricing de unidade versionável → estimativa parcial (só texto).
+          // Admin pode configurar a dimensão via PUT /api/admin/ai-model-pricing.
+          resolution.costEstimationNote = NOTE_WITHOUT_IMAGE_TOOL_PRICING;
+        }
+      }
+
+      return resolution;
     }
 
     // 3b. Sem usage + dimensão de imagem (gpt-image-2/dall-e-3) → custo por imagem

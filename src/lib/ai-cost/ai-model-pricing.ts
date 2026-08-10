@@ -29,6 +29,12 @@ export const DEFAULT_AI_MODEL_PRICING: Record<string, ModelPricing> = {
   "dall-e-3": { imageUnitCostUsd: 0.04 },
   "gemini-2.0-flash": { inputCostUsd: 0.1, outputCostUsd: 0.4 },
   "gemini-3.1-flash-lite": { inputCostUsd: 0.1, outputCostUsd: 0.4 },
+  // F38.1 fechamento — tool image_generation da Responses API (OpenAI). Valor
+  // PROVISÓRIO calibrado (2026-08-09, UATs dashboard/Costs CSV) — não é custo real.
+  // Fonte preferida é a linha na tabela ai_model_pricing (source_note documenta o
+  // ajuste); este bootstrap é o fail-open (D8). Providers futuros: provider +
+  // model "image_generation:<caminho>".
+  "responses:image_generation": { imageUnitCostUsd: 0.065 },
 };
 
 /**

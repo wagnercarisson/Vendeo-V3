@@ -28,13 +28,27 @@ export const OPERATION_RUN_TYPES = [
 
 export type OperationRunType = (typeof OPERATION_RUN_TYPES)[number];
 
-/** Usage normalizado de qualquer provider (D12) — inclui cached/image tokens (D9). */
+/**
+ * Usage normalizado de qualquer provider (D12) — inclui cached/image tokens (D9).
+ * F38.1: breakdown granular da Responses API image_generation (input/output
+ * separados em text vs image). Campos opcionais — providers que não expõem os
+ * detalhes continuam entregando apenas os campos base.
+ */
 export interface TokenUsage {
   promptTokens?: number;
   completionTokens?: number;
   totalTokens?: number;
   cachedInputTokens?: number;
+  /** SÓ output image tokens (retrocompat D9) — espelha output_tokens_details.image_tokens. */
   imageTokens?: number;
+  /** F38.1: input_tokens_details.text_tokens — texto de entrada sem tokens de imagem. */
+  inputTextTokens?: number;
+  /** F38.1: input_tokens_details.image_tokens — tokens de imagem na entrada (foto do produto). */
+  inputImageTokens?: number;
+  /** F38.1: output_tokens_details.text_tokens — texto de saída (não inclui a imagem gerada). */
+  outputTextTokens?: number;
+  /** F38.1: output_tokens_details.image_tokens — tokens de imagem gerada (mesmo valor de imageTokens). */
+  outputImageTokens?: number;
 }
 
 /**
@@ -48,6 +62,32 @@ export interface CostResolution {
   costSource: CostSource;
   /** UUID da linha ai_model_pricing usada | 'code_default' | null (D2/D8) */
   pricingVersion?: string | null;
+  /**
+   * F38.1: versão da fórmula usada (auditabilidade). Ex: "responses_image_generation_v2".
+   * Presente quando o resolvedor aplica uma fórmula específica (não genérica).
+   */
+  costFormulaVersion?: string;
+  /**
+   * F38.1: nota quando a estimativa é parcial/calibrável.
+   * Ex: "provisional_image_tool_unit_cost_until_provider_reconciliation" (tool com
+   * unit cost provisório) ou "responses_image_generation_tool_without_unit_pricing"
+   * (tool sem pricing de unidade configurado — só componente textual).
+   */
+  costEstimationNote?: string;
+  /**
+   * F38.1 fechamento — componentes da fórmula responses_image_generation_v2:
+   * estimated_cost_usd = text_component_usd + image_tool_component_usd.
+   * `textComponentUsd` = custo por tokens do modelo textual/orquestrador.
+   * `imageToolComponentUsd` = valor versionável por unidade de imagem da tool
+   * (ai_model_pricing, ex: openai/responses:image_generation) — provisório/calibrável,
+   * NÃO é custo real e nunca preenche provider_reported_cost_usd.
+   */
+  textComponentUsd?: number;
+  imageToolComponentUsd?: number;
+  /** F38.1: origem versionável do componente da tool (provider/model/versionId da linha). */
+  imageToolPricingProvider?: string;
+  imageToolPricingModel?: string;
+  imageToolPricingVersion?: string;
 }
 
 /**

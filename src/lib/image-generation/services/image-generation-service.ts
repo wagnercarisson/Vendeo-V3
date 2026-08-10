@@ -1,6 +1,6 @@
 import { PromptLoader } from "@/lib/image-generation/prompt-loader";
 import { IMAGE_GENERATION_DEBUG, IMAGE_GENERATION_SIZE, IMAGE_GENERATION_GLOBAL_TIMEOUT_MS, IMAGE_GENERATION_RESPONSES_MODEL } from "@/lib/image-generation/config";
-import type { ImageProvider, ImageProviderOutput } from "@/lib/image-generation/providers/types";
+import type { ImageProvider, ImageProviderOutput, ImageProviderUsageMeta } from "@/lib/image-generation/providers/types";
 import type { GenerateImageRequest, GenerateImageSuccessResponse, GenerationPhase, GenerationPhaseEvent, ValidationContext, InputValidationResult, ImageReviewResult } from "@/lib/image-generation/schema";
 import type { CampaignBrief } from "@/components/campaign/types";
 import { InputValidationService } from "@/lib/image-generation/services/input-validation-service";
@@ -53,7 +53,7 @@ const CATEGORY_TO_SEGMENT_GROUP: Record<string, string[]> = {
 };
 
 export type GenerateImageServiceResult =
-  | { success: true; imageDataUrl: string; inputCorrections?: { productName: { from: string; to: string; reason: string } }; usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number; imageTokens?: number; cachedInputTokens?: number } }
+  | { success: true; imageDataUrl: string; inputCorrections?: { productName: { from: string; to: string; reason: string } }; usage?: TokenUsage }
   | { success: false; code: string; message: string; details?: string };
 
 enum GenerationState {
@@ -97,7 +97,7 @@ export class ImageGenerationService {
     const remaining = () => IMAGE_GENERATION_GLOBAL_TIMEOUT_MS - (Date.now() - startTime);
     const runId = crypto.randomUUID();
 
-    const emitMetricsEvent = (phase: string, attempt: number = 0, extra?: Partial<Pick<GenerationMetricsEvent, "usage">>) => {
+    const emitMetricsEvent = (phase: string, attempt: number = 0, extra?: Partial<Pick<GenerationMetricsEvent, "usage" | "usageMeta">>) => {
       if (onMetricsEvent) {
         try {
           onMetricsEvent({
@@ -297,6 +297,7 @@ export class ImageGenerationService {
     let currentImageBase64: string | null = null;
     let currentMimeType: string = "image/png";
     let currentUsage: ImageProviderOutput["usage"] | undefined;
+    let currentUsageMeta: ImageProviderUsageMeta | undefined;
 
     while (state !== GenerationState.COMPLETE && state !== GenerationState.ERROR) {
       if (attempts >= maxAttempts) {
@@ -369,8 +370,9 @@ export class ImageGenerationService {
       currentImageBase64 = providerResult.imageBase64;
       currentMimeType = providerResult.mimeType;
       currentUsage = providerResult.usage;
+      currentUsageMeta = providerResult.usageMeta;
       emitComplete("image_generation");
-      emitMetricsEvent("image_generation", attempts, currentUsage ? { usage: currentUsage } : undefined);
+      emitMetricsEvent("image_generation", attempts, currentUsage || currentUsageMeta ? { usage: currentUsage, usageMeta: currentUsageMeta } : undefined);
 
       // ── Phase 4: Quality review ─────────────────────────────────
       emitHuman("quality_review");
@@ -971,7 +973,7 @@ export class ImageGenerationService {
     remaining: () => number,
     identityImageUrl?: string
   ): Promise<
-    | { success: true; imageBase64: string; mimeType: string; usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number; imageTokens?: number; cachedInputTokens?: number } }
+    | { success: true; imageBase64: string; mimeType: string; usage?: TokenUsage; usageMeta?: ImageProviderUsageMeta }
     | { success: false; code: string; message: string; details?: string }
   > {
     const ESTIMATED_RETRY_DURATION = 30000;
@@ -1027,7 +1029,7 @@ export class ImageGenerationService {
           attempt,
         });
 
-        return { success: true, imageBase64: output.imageBase64, mimeType: output.mimeType, usage: output.usage };
+        return { success: true, imageBase64: output.imageBase64, mimeType: output.mimeType, usage: output.usage, usageMeta: output.usageMeta };
       } catch (err) {
         if (attempt >= 3) {
           const message = err instanceof Error ? err.message : String(err);

@@ -1,3 +1,5 @@
+import type { TokenUsage } from "@/lib/ai-cost/types";
+
 /**
  * Input for AI image generation.
  */
@@ -12,19 +14,31 @@ export interface ImageProviderInput {
 }
 
 /**
+ * Meta de auditoria do usage bruto do provider (F38.1 — Responses API
+ * image_generation). Usado APENAS para auditoria/calibração — não entra em
+ * nenhum cálculo; o cálculo usa o usage normalizado (`TokenUsage`).
+ */
+export interface ImageProviderUsageMeta {
+  /** usage bruto sanitizado do provider (response.usage) — auditoria/calibração. */
+  providerUsageRaw?: Record<string, unknown>;
+  /** Fonte do usage: caminho Responses image_generation | Image API edit. */
+  providerUsageSource?: "responses.image_generation" | "images.edit";
+  /** Modelo real usado no responses.create() (mainline, ex: gpt-5.5). */
+  responsesModel?: string;
+  /** true quando a chamada usou a tool image_generation. */
+  imageGenerationTool?: boolean;
+}
+
+/**
  * Output from AI image generation.
  */
 export interface ImageProviderOutput {
   imageBase64: string;
   mimeType: "image/png" | "image/jpeg" | "image/webp";
   model: string;
-  usage?: {
-    promptTokens?: number;
-    completionTokens?: number;
-    totalTokens?: number;
-    imageTokens?: number;
-    cachedInputTokens?: number;
-  };
+  usage?: TokenUsage;
+  /** F38.1: auditoria do usage bruto + flags do caminho de geração (não entra em cálculo). */
+  usageMeta?: ImageProviderUsageMeta;
 }
 
 /**

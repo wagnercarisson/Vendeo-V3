@@ -62,8 +62,20 @@
 
 ## 8. Runbook — Trackings (F38.1 como desdobramento da F38)
 
-- [ ] 8.1 `.planning/STATE.md`: seção "Phase 38.1 — Apuração de Custos de IA por Entrega" após a Fase 38; atualizar "Current Position" (linha ~429-431); frontmatter "Last updated"
-- [ ] 8.2 `.planning/ROADMAP.md`: linha na tabela Progress `38.1` + seção de detalhes "Phase 38.1" (goal/success criteria/dependencies, fonte `openspec/changes/fase-38-1-ai-cost-accounting/`); contagem da milestone v1.5; rodapé "Last updated"
-- [ ] 8.3 `.planning/REQUIREMENTS.md`: requisitos F38.1 na seção v1.5 (após aprovação dos specs OpenSpec)
-- [ ] 8.4 `.planning/PROJECT.md`: F38.1 na lista de target features do v1.5
-- [ ] 8.5 `ROADMAP.md` (raiz): nota de numbering/linha 38 mencionando "38.1 = Apuração de Custos de IA por Entrega" como desdobramento da F38
+- [x] 8.1 `.planning/STATE.md`: seção "Phase 38.1 — Apuração de Custos de IA por Entrega" após a Fase 38; atualizar "Current Position" (linha ~429-431); frontmatter "Last updated"
+- [x] 8.2 `.planning/ROADMAP.md`: linha na tabela Progress `38.1` + seção de detalhes "Phase 38.1" (goal/success criteria/dependencies, fonte `openspec/changes/fase-38-1-ai-cost-accounting/`); contagem da milestone v1.5; rodapé "Last updated"
+- [x] 8.3 `.planning/REQUIREMENTS.md`: requisitos F38.1 na seção v1.5 (após aprovação dos specs OpenSpec)
+- [x] 8.4 `.planning/PROJECT.md`: F38.1 na lista de target features do v1.5
+- [x] 8.5 `ROADMAP.md` (raiz): nota de numbering/linha 38 mencionando "38.1 = Apuração de Custos de IA por Entrega" como desdobramento da F38
+
+## 9. Fechamento — Estimativa operacional granular + ajuste provisório versionável da tool (2026-08-09)
+
+- [x] 9.1 Migration `20260809000003_f38_1_provisional_image_tool_pricing.sql`: seed `('openai', 'responses:image_generation')` com `image_unit_usd = 0.065`, `effective_from`/`source_note` ("F38.1 beta estimate calibrated from OpenAI dashboard/Costs CSV; provisional until provider cost reconciliation"), `effective_until NULL`, `ON CONFLICT DO NOTHING` — linha da tool separada do orquestrador (gpt-5.5) e do Image API (gpt-image-2/dall-e-3)
+- [x] 9.2 `DEFAULT_AI_MODEL_PRICING` ganha `responses:image_generation: { imageUnitCostUsd: 0.065 }` (bootstrap fail-open; fonte preferida é a linha na tabela) — sem hardcode oculto no estimator
+- [x] 9.3 `CostResolution` ganha `textComponentUsd`, `imageToolComponentUsd`, `imageToolPricingProvider`, `imageToolPricingModel`, `imageToolPricingVersion` (metadata da fórmula v2)
+- [x] 9.4 `resolveAiCost` fórmula v2 (`responses_image_generation_v2`): `estimated_cost_usd = text_component_usd + image_tool_component_usd` aplicada APENAS quando `generationType === "campaign_image"` E `imageGenerationTool === true`; tool pricing vinda de `ai_model_pricing` (linha `responses:image_generation`) ou bootstrap; sem pricing da tool → só componente textual + nota parcial `responses_image_generation_tool_without_unit_pricing`; `provider_reported_cost_usd` nunca recebe o ajuste (reservado p/ reconciliação futura); anti-dupla-cobrança em visual_signature/brand_profile/fallback gpt-image-2; mapeamento provider→tool via `IMAGE_GENERATION_TOOL_MODELS` (adapter p/ providers futuros)
+- [x] 9.5 Rota `generate-image`: repassa `generationType` ao resolvedor; `buildCallMetadata` merge dos componentes da fórmula (cost_formula_version, text_component_usd, image_tool_component_usd, image_tool_pricing_*, cost_estimation_note) mantendo `provider_usage_raw`
+- [x] 9.6 Testes: cost-estimator +4 (tool presente → 0.0092+0.065=0.0742; tool ausente → parcial; false → atual; visual_signature → sem componente); ai-model-pricing admin +2 (GET inclui tool line, PUT versiona tool); bootstrap espelha 8 entradas (7 + tool) — 1713 testes verdes
+- [x] 9.7 Docs de fechamento: design.md (seção Closing — estimativa operacional granular, decisões, metadata v2, providers futuros), specs ai-cost-estimator/ai-model-pricing (ADDED requirements), VERIFICATION.md (seção de fechamento + UAT manual concluído)
+- [x] 9.8 Aplicar migration `20260809000003` no banco (local + remoto) — confirmada aplicada (linha vigente `openai`/`responses:image_generation` com 0.065 consultada no remoto)
+- [x] 9.9 Gates finais: `npm run lint`, `npm run build` — verificados EXIT=0 (lint limpo; build 53 páginas)

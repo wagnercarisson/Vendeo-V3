@@ -473,15 +473,15 @@ Desdobramento da F38, adicionados em 2026-08-08 via OpenSpec (`openspec/changes/
 - [x] **F38.1-28**: Generate 1 variation for automatic mode (Deixar o Vendeo Criar)
 - [x] **F38.1-29**: Metadata includes generation_tier
 - [x] **F38.1-30**: Visual signature quality criteria
-- [ ] **F38.1-31**: generate-without-logo resolve custo dinâmico (nova tentativa = novo run)
+- [x] **F38.1-31**: generate-without-logo resolve custo dinâmico (nova tentativa = novo run)
 
 ### Inferência Text-Only (F38.1-TEXT)
 
-- [ ] **F38.1-32**: Brand inference service — `onCall` no caminho real (sem evento no mock dev)
+- [x] **F38.1-32**: Brand inference service — `onCall` no caminho real (sem evento no mock dev)
 
 ### Pipeline (F38.1-PIPELINE)
 
-- [ ] **F38.1-33**: traceId gerado por request
+- [x] **F38.1-33**: traceId gerado por request
 - [x] **F38.1-34**: Telemetria persistida no pipeline
 - [x] **F38.1-35**: Attempt granular e duration_ms por chamada (furo 6/7)
 - [x] **F38.1-36**: metadata.totalCost correto (furo 2)
@@ -490,6 +490,13 @@ Desdobramento da F38, adicionados em 2026-08-08 via OpenSpec (`openspec/changes/
 ### Validação (F38.1-VALIDATION)
 
 - [x] **F38.1-38**: `ValidationContext` type definido — validação de input emite evento de custo
+
+### Fechamento — Estimativa Operacional Granular (F38.1-CLOSING)
+
+Adicionados 2026-08-09 no fechamento da fase (estado `openspec/changes/fase-38-1-ai-cost-accounting/`). A F38.1 fecha como **camada de ESTIMATIVA OPERACIONAL GRANULAR**, não reconciliação financeira final: o componente provisório da tool `image_generation` é estimativa de operação para beta (calibrada por UAT/dashboard/CSV), **nunca** é preenchido em `provider_reported_cost_usd`; a reconciliação financeira real (dados oficiais OpenAI) fica para a próxima fase.
+
+- [x] **F38.1-39**: Estimativa operacional granular — fórmula v2 `responses_image_generation_v2` (`estimated_cost_usd = text_component_usd + image_tool_component_usd`), aplicada só em `generationType=campaign_image` + `imageGenerationTool=true` (anti-dupla-cobrança); metadata `cost_formula_version`, `text_component_usd`, `image_tool_component_usd`, `image_tool_pricing_provider/model/version`, `cost_estimation_note=provisional_image_tool_unit_cost_until_provider_reconciliation`, mantendo `provider_usage_raw`
+- [x] **F38.1-40**: Seed provisória versionável da tool — linha `ai_model_pricing ('openai','responses:image_generation', image_unit_usd=0.065, source_note "F38.1 beta estimate calibrated from OpenAI dashboard/Costs CSV; provisional until provider cost reconciliation")` via migration `20260809000003` (aplicada Local/Remote) + bootstrap `DEFAULT_AI_MODEL_PRICING`; ajustável por GET/PUT `/api/admin/ai-model-pricing`; provedores futuros via adapter (`IMAGE_GENERATION_TOOL_MODELS`) sem hardcode OpenAI
 
 ## v1.7 Requirements (Stripe / Monetização Pública)
 
@@ -701,49 +708,51 @@ Deferred to future release. Tracked but not in current roadmap.
 | F38-VS-01 | Phase 38 | ○ Pending |
 | F38-CONFIG-01 | Phase 38 | ○ Pending |
 | F38-CONFIG-02 | Phase 38 | ○ Pending |
-| F38.1-01 | Phase 38.1 | ○ Pending |
-| F38.1-02 | Phase 38.1 | ○ Pending |
-| F38.1-03 | Phase 38.1 | ○ Pending |
-| F38.1-04 | Phase 38.1 | ○ Pending |
-| F38.1-05 | Phase 38.1 | ○ Pending |
-| F38.1-06 | Phase 38.1 | ○ Pending |
-| F38.1-07 | Phase 38.1 | ○ Pending |
-| F38.1-08 | Phase 38.1 | ○ Pending |
-| F38.1-09 | Phase 38.1 | ○ Pending |
-| F38.1-10 | Phase 38.1 | ○ Pending |
-| F38.1-11 | Phase 38.1 | ○ Pending |
-| F38.1-12 | Phase 38.1 | ○ Pending |
-| F38.1-13 | Phase 38.1 | ○ Pending |
-| F38.1-14 | Phase 38.1 | ○ Pending |
-| F38.1-15 | Phase 38.1 | ○ Pending |
-| F38.1-16 | Phase 38.1 | ○ Pending |
-| F38.1-17 | Phase 38.1 | ○ Pending |
-| F38.1-18 | Phase 38.1 | ○ Pending |
-| F38.1-19 | Phase 38.1 | ○ Pending |
-| F38.1-20 | Phase 38.1 | ○ Pending |
-| F38.1-21 | Phase 38.1 | ○ Pending |
-| F38.1-22 | Phase 38.1 | ○ Pending |
-| F38.1-23 | Phase 38.1 | ○ Pending |
-| F38.1-24 | Phase 38.1 | ○ Pending |
-| F38.1-25 | Phase 38.1 | ○ Pending |
-| F38.1-26 | Phase 38.1 | ○ Pending |
-| F38.1-27 | Phase 38.1 | ○ Pending |
-| F38.1-28 | Phase 38.1 | ○ Pending |
-| F38.1-29 | Phase 38.1 | ○ Pending |
-| F38.1-30 | Phase 38.1 | ○ Pending |
-| F38.1-31 | Phase 38.1 | ○ Pending |
-| F38.1-32 | Phase 38.1 | ○ Pending |
-| F38.1-33 | Phase 38.1 | ○ Pending |
-| F38.1-34 | Phase 38.1 | ○ Pending |
-| F38.1-35 | Phase 38.1 | ○ Pending |
-| F38.1-36 | Phase 38.1 | ○ Pending |
-| F38.1-37 | Phase 38.1 | ○ Pending |
-| F38.1-38 | Phase 38.1 | ○ Pending |
+| F38.1-01 | Phase 38.1 | ✅ Complete |
+| F38.1-02 | Phase 38.1 | ✅ Complete |
+| F38.1-03 | Phase 38.1 | ✅ Complete |
+| F38.1-04 | Phase 38.1 | ✅ Complete |
+| F38.1-05 | Phase 38.1 | ✅ Complete |
+| F38.1-06 | Phase 38.1 | ✅ Complete |
+| F38.1-07 | Phase 38.1 | ✅ Complete |
+| F38.1-08 | Phase 38.1 | ✅ Complete |
+| F38.1-09 | Phase 38.1 | ✅ Complete |
+| F38.1-10 | Phase 38.1 | ✅ Complete |
+| F38.1-11 | Phase 38.1 | ✅ Complete |
+| F38.1-12 | Phase 38.1 | ✅ Complete |
+| F38.1-13 | Phase 38.1 | ✅ Complete |
+| F38.1-14 | Phase 38.1 | ✅ Complete |
+| F38.1-15 | Phase 38.1 | ✅ Complete |
+| F38.1-16 | Phase 38.1 | ✅ Complete |
+| F38.1-17 | Phase 38.1 | ✅ Complete |
+| F38.1-18 | Phase 38.1 | ✅ Complete |
+| F38.1-19 | Phase 38.1 | ✅ Complete |
+| F38.1-20 | Phase 38.1 | ✅ Complete |
+| F38.1-21 | Phase 38.1 | ✅ Complete |
+| F38.1-22 | Phase 38.1 | ✅ Complete |
+| F38.1-23 | Phase 38.1 | ✅ Complete |
+| F38.1-24 | Phase 38.1 | ✅ Complete |
+| F38.1-25 | Phase 38.1 | ✅ Complete |
+| F38.1-26 | Phase 38.1 | ✅ Complete |
+| F38.1-27 | Phase 38.1 | ✅ Complete |
+| F38.1-28 | Phase 38.1 | ✅ Complete |
+| F38.1-29 | Phase 38.1 | ✅ Complete |
+| F38.1-30 | Phase 38.1 | ✅ Complete |
+| F38.1-31 | Phase 38.1 | ✅ Complete |
+| F38.1-32 | Phase 38.1 | ✅ Complete |
+| F38.1-33 | Phase 38.1 | ✅ Complete |
+| F38.1-34 | Phase 38.1 | ✅ Complete |
+| F38.1-35 | Phase 38.1 | ✅ Complete |
+| F38.1-36 | Phase 38.1 | ✅ Complete |
+| F38.1-37 | Phase 38.1 | ✅ Complete |
+| F38.1-38 | Phase 38.1 | ✅ Complete |
+| F38.1-39 | Phase 38.1 | ✅ Complete |
+| F38.1-40 | Phase 38.1 | ✅ Complete |
 
 **Coverage:**
 
-- v1 requirements: 218 total (54 v1.5 + 36 LEGAL + 12 INTENT + 21 INTENT-TEST + 30 F34 + 27 F38 + 38 F38.1)
-- Mapped to phases: 218
+- v1 requirements: 220 total (54 v1.5 + 36 LEGAL + 12 INTENT + 21 INTENT-TEST + 30 F34 + 27 F38 + 40 F38.1)
+- Mapped to phases: 220
 - Unmapped: 0 ✓
 - Deferred to v1.7: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06
 - F29.1.2: Fase complementar refinando LAUNCH-01 e LAUNCH-02 (sem REQ-IDs próprios)
@@ -756,4 +765,4 @@ Deferred to future release. Tracked but not in current roadmap.
 ---
 
 *Requirements defined: 2026-07-15*
-*Last updated: 2026-08-08 — Added F38.1 (F38.1-01 a 38) requirements*
+*Last updated: 2026-08-09 — Added F38.1 (F38.1-01 a 38) requirements and F38.1 fechamento (F38.1-39/40, estimativa operacional granular — 0.065 provisório beta); F38.1 ✅ Complete (11/11 plans)*
