@@ -10,6 +10,8 @@ Defines the post-generation vision-based quality review service, its structured 
 
 The system SHALL provide an `ImageReviewService` that inspects every generated campaign image before it is shown to the user. The review runs **after** image generation, as part of the correction lifecycle.
 
+The `ImageReviewService.review` SHALL accept an optional `onCall?: (info: AiCallInfo) => void` callback that is invoked after each real vision call, with `provider`, `model`, `usage`, and `durationMs`. The API route SHALL use this callback to record `campaign_image_review` — the vision call (e.g., gpt-4o) SHALL NOT be lost from cost accounting.
+
 The service SHALL use a configured OpenAI vision-capable text model (initial default may be GPT-4o or equivalent) because it needs to analyze the visual content of the generated image.
 
 The service SHALL return a structured review result with:
@@ -93,6 +95,22 @@ The review SHALL adapt its expectations based on `campaignIntent` using contextu
 - **AND** `failureType` is `null`
 - **THEN** the image SHALL be considered passing
 - **AND** minor issues MAY be logged for diagnostics
+
+#### Scenario: review expõe usage via onCall
+
+- **WHEN** `review(dataUrl, input, { onCall })` é chamado
+- **THEN** o callback `onCall` é invocado após a chamada vision com `AiCallInfo` (provider, model, usage, durationMs)
+- **AND** a rota registra `campaign_image_review` com custo/tokens (furo 4 sanado)
+
+#### Scenario: review sem onCall mantém comportamento
+
+- **WHEN** `review(dataUrl, input)` é chamado sem `onCall`
+- **THEN** o comportamento é idêntico ao anterior (callback opcional, retrocompatível)
+
+#### Scenario: Falha na revisão ainda registra custo
+
+- **WHEN** a revisão falha (`passed: false`)
+- **THEN** o evento `campaign_image_review` é gravado com `status: failed` e o custo dos tokens gastos (D5/D7)
 
 ### Requirement: Review drives correction lifecycle
 

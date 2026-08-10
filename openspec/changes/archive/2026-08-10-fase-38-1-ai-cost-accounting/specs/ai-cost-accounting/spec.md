@@ -59,13 +59,14 @@ O sistema SHALL criar a view `admin_cost_vs_credits` (D10) — a ponte com a F38
 
 - **Por campanha:** `generation_events` (call-level, `SUM(COALESCE(provider_reported_cost_usd, estimated_cost_usd))` por `operation_run`/`campaign_id`) JOIN `credit_transactions` (`type='deduction'`, `campaign_id`, `metadata.feature='campaign_pipeline'`)
 - **Por VS:** `generation_events.visual_signature_id` JOIN `store_visual_signatures.metadata->>'credit_tx_id'` = `credit_transactions.id`
-- Saída por entrega: `operation_run_id`, `domain`, `custo_usd_total`, `creditos_debitados`, `margem_estimada`, `etapas_mais_caras` (top `generation_type`), `regeneracoes`
+- Saída por entrega: `operation_run_id`, `domain`, `custo_usd_total`, `creditos_debitados`, `etapas_mais_caras` (top `generation_type`), `regeneracoes`
+- **Ajuste pós-UAT (migration `20260809000002`):** a view expõe **dados brutos** — `receita_estimada_usd`/`margem_estimada` sempre **NULL** (não assume 1 crédito = USD 1); a derivação de receita/margem ocorre no RPC `admin_get_ai_costs` quando `p_credit_unit_usd_value` é fornecido
 - Valor contábil: `COALESCE(provider_reported_cost_usd, estimated_cost_usd)` — evento com só `provider_reported` **não some** da apuração (D3)
 
 #### Scenario: view reconcilia USD × créditos por campanha
 
 - **WHEN** uma campanha debitou 1 crédito e seus eventos call-level somam US$ 0.037
-- **THEN** `admin_cost_vs_credits` retorna `creditos_debitados: 1`, `custo_usd_total: 0.037` e `margem_estimada` calculada
+- **THEN** `admin_cost_vs_credits` retorna `creditos_debitados: 1` e `custo_usd_total: 0.037`, com `margem_estimada`/`receita_estimada_usd` **NULL** (dados brutos; margem derivada no RPC com `p_credit_unit_usd_value`)
 
 #### Scenario: view inclui evento com só provider_reported
 
@@ -85,12 +86,14 @@ O sistema SHALL criar o RPC `admin_get_ai_costs` (SECURITY DEFINER, `SET search_
 admin_get_ai_costs(
   p_operation_run_id UUID, p_campaign_id UUID, p_store_id UUID,
   p_user_id UUID, p_provider TEXT, p_model TEXT,
-  p_generation_type TEXT, p_hours INTEGER
+  p_generation_type TEXT, p_hours INTEGER,
+  p_credit_unit_usd_value NUMERIC
 ) RETURNS JSONB
 ```
 
 - Retorna agrupamentos por `operation_run`, `store`, `provider/model`, `generation_type`, com `custo_usd_total`, `creditos_debitados` (reconciliação), `margem_estimada` e `regeneracoes`
 - Filtros opcionais: store, user, provider, model, generation_type, período (`p_hours`), operation_run_id
+- **`p_credit_unit_usd_value` (ajuste pós-UAT, migration `20260809000002`):** valor monetário por crédito para derivar receita/margem. Configurado server-side via env `VENDEO_AI_CREDIT_UNIT_USD_VALUE` (default: não configurado)
 - Acesso via admin; **sem página/tela** nesta fase (decisão Q&A D10)
 
 #### Scenario: RPC filtra por store/provider/model/tipo/período
@@ -98,10 +101,12 @@ admin_get_ai_costs(
 - **WHEN** `admin_get_ai_costs` é chamado com filtros `p_store_id`/`p_provider`/`p_model`/`p_generation_type`/`p_hours`
 - **THEN** retorna agrupamentos respeitando os filtros
 
-#### Scenario: RPC retorna reconciliação
+#### Scenario: RPC retorna reconciliação com margem condicional
 
-- **WHEN** `admin_get_ai_costs` é chamado para um run
-- **THEN** retorna `custo_usd_total`, `creditos_debitados` e `margem_estimada` (quando o vínculo com o ledger existe)
+- **WHEN** `admin_get_ai_costs` é chamado para um run **sem** `p_credit_unit_usd_value`
+- **THEN** retorna `custo_usd_total` e `creditos_debitados` (quando o vínculo com o ledger existe), com `receita_estimada_usd` e `margem_estimada` **NULL** (a view não assume mais 1 crédito = USD 1)
+- **AND WHEN** `p_credit_unit_usd_value` é fornecido
+- **THEN** `receita_estimada_usd = creditos_debitados * p_credit_unit_usd_value` e `margem_estimada = receita_estimada_usd - custo_usd_total`
 
 ### Requirement: GET /api/admin/ai-costs — apuração (sem UI)
 
