@@ -16,16 +16,14 @@ async function getRedirects() {
 }
 
 describe("next.config.ts redirects", () => {
-  it("has 5 redirect entries", async () => {
+  it("has 4 redirect entries", async () => {
     const redirects = await getRedirects();
-    expect(redirects).toHaveLength(5);
+    expect(redirects).toHaveLength(4);
   });
 
-  it("redirects / to /dashboard with 301", async () => {
+  it("does not redirect / (landing pública)", async () => {
     const redirects = await getRedirects();
-    const rootRedirect = redirects.find((r) => r.source === "/")!;
-    expect(rootRedirect.destination).toBe("/dashboard");
-    expect(rootRedirect.statusCode).toBe(301);
+    expect(redirects.find((r) => r.source === "/")).toBeUndefined();
   });
 
   it("redirects /minhas-campanhas to /campanhas with 301", async () => {

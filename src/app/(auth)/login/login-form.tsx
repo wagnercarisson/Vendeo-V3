@@ -36,7 +36,9 @@ export function LoginForm({ redirect }: LoginFormProps) {
         return;
       }
 
-      router.replace(redirect || "/");
+      // sanitizeRedirectPath("") retorna "/" — tratar "/" como ausência de
+      // redirect para que o default pós-login seja /dashboard (não a landing).
+      router.replace(redirect && redirect !== "/" ? redirect : "/dashboard");
     } catch {
       setError("Email ou senha inválidos");
     } finally {
@@ -106,9 +108,9 @@ export function LoginForm({ redirect }: LoginFormProps) {
         )}
       </button>
       <p className="mt-4 text-center text-sm text-slate-400">
-        Não tem uma conta?{" "}
-        <Link href="/signup" className="text-blue-400 hover:text-blue-300 hover:underline">
-          Criar conta
+        Ainda não tem acesso?{" "}
+        <Link href="/" className="text-blue-400 hover:text-blue-300 hover:underline">
+          Solicitar acesso free
         </Link>
       </p>
     </form>
