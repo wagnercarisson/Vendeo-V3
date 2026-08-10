@@ -143,6 +143,29 @@ vi.mock('@/lib/copy/mapper', () => ({
   })),
 }));
 
+// F38.1 (6.3): mock da camada única de registro de custo (D7). O AiCostTracker
+// mockado captura os eventos gravados em `capturedEvents` e o startRun devolve
+// operationRunId/traceId FIXOS — permitindo afirmar a recomposição do mesmo run.
+const { capturedEvents, mockResolveAiCost, MockAiCostTracker, RUN_IDS } = vi.hoisted(() => {
+  const capturedEvents: any[] = [];
+  const RUN_IDS = { operationRunId: 'run-123', traceId: 'trace-123' };
+  class MockAiCostTracker {
+    startRun(_type: string) {
+      return { ...RUN_IDS };
+    }
+    async record(event: any) {
+      capturedEvents.push(event);
+    }
+  }
+  return { capturedEvents, mockResolveAiCost: vi.fn(), MockAiCostTracker, RUN_IDS };
+});
+
+vi.mock('@/lib/ai-cost', () => ({
+  AiCostTracker: MockAiCostTracker,
+  resolveAiCost: mockResolveAiCost,
+  estimateAiCost: vi.fn(),
+}));
+
 import { resolveStoreIdentity, validateIdentityReference, buildCampaignBrief } from '@/lib/store-identity-service';
 import { createCampaign, dataUrlToCampaignImage, uploadCampaignImage, updateCampaignReady, updateCampaignError, deleteCampaignImage } from '@/lib/campaign/persistence';
 import { transcodeToJpeg } from '@/lib/campaign/image-processor';
@@ -227,12 +250,33 @@ async function setupSuccessMocks() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  capturedEvents.length = 0;
   mockRpc.mockResolvedValue({ data: { ready: true, missing: [] }, error: null });
   mockGetCost.mockResolvedValue({
     operationKey: "campaign_generation",
     costCredits: 1,
     enabled: true,
     source: "table",
+  });
+  // resolveAiCost mockado (6.3): computa custo REAL a partir do usage (furo 1) —
+  // preço simplificado 2.5/M input + 10/M output, espelhando o cálculo do resolvedor.
+  mockResolveAiCost.mockImplementation(async ({ provider, model, usage, providerReportedCostUsd }: any) => {
+    if (typeof providerReportedCostUsd === "number" && !Number.isNaN(providerReportedCostUsd)) {
+      return { estimatedCostUsd: providerReportedCostUsd, providerReportedCostUsd, costSource: "provider_reported" };
+    }
+    const prompt = usage?.promptTokens ?? 0;
+    const completion = usage?.completionTokens ?? 0;
+    if (prompt > 0 || completion > 0) {
+      return {
+        estimatedCostUsd: Number(((prompt / 1_000_000) * 2.5 + (completion / 1_000_000) * 10).toFixed(6)),
+        costSource: "pricing_table",
+        pricingVersion: "code_default",
+      };
+    }
+    if ((usage?.imageTokens ?? 0) > 0) {
+      return { estimatedCostUsd: 0.04, costSource: "pricing_table", pricingVersion: "code_default" };
+    }
+    return { estimatedCostUsd: 0.15, costSource: "fallback_static" };
   });
 });
 
@@ -879,5 +923,239 @@ describe('POST /api/campaign/generate-image', () => {
         }),
       })
     );
+  });
+});
+
+describe('Pipeline cost accounting (6.3)', () => {
+  // Usages reais por chamada (D11) — o resolveAiCost mockado computa o custo.
+  const COPY_USAGE = { promptTokens: 1000, completionTokens: 500, totalTokens: 1500 };
+  const VALIDATION_USAGE = { promptTokens: 10, completionTokens: 20, totalTokens: 30 };
+  const IMAGE_USAGE = { promptTokens: 100, completionTokens: 200, totalTokens: 300 };
+  const REVIEW_USAGE = { promptTokens: 50, completionTokens: 100, totalTokens: 150 };
+  // (1000/1e6)*2.5 + (500/1e6)*10
+  const COPY_COST = 0.0075;
+  // (10/1e6)*2.5 + (20/1e6)*10
+  const VALIDATION_COST = 0.000225;
+  // (100/1e6)*2.5 + (200/1e6)*10
+  const IMAGE_COST = 0.00225;
+  // (50/1e6)*2.5 + (100/1e6)*10
+  const REVIEW_COST = 0.001125;
+
+  const flushMicrotasks = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+  // Configura a suíte de sucesso + serviços que disparam os callbacks com usage
+  // real e durationMs por chamada (furos 1/6/7).
+  async function setupPipelineSuccessMocks(options?: { reviewAttempts?: number }) {
+    await setupSuccessMocks();
+    const reviewAttempts = options?.reviewAttempts ?? 1;
+
+    mockGenerateCopy.mockImplementation(async (_input: any, _opts: any, onCall?: (info: any) => void) => {
+      if (onCall) {
+        onCall({ provider: "openai", model: "gpt-4o", usage: COPY_USAGE, durationMs: 250 });
+      }
+      return {
+        title: 'Título da Campanha',
+        caption: 'Caption gerada pelo Copy Director',
+        hashtags: ['#tag1', '#tag2'],
+        cta_post: 'Compre agora',
+      };
+    });
+
+    mockGenerateImage.mockImplementation(async (_brief: any, _phase: any, _signal: any, onMetricsEvent?: (e: any) => void) => {
+      if (onMetricsEvent) {
+        onMetricsEvent({ phase: "input_validation", provider: "openai", model: "gpt-4o", attempt: 0, usage: VALIDATION_USAGE, durationMs: 100 });
+        // prompt_assembly/done NÃO são chamadas de IA — devem ser ignoradas (D5/D11)
+        onMetricsEvent({ phase: "prompt_assembly", provider: "openai", model: "gpt-4o", attempt: 0, durationMs: 50 });
+        for (let i = 0; i < reviewAttempts; i++) {
+          onMetricsEvent({ phase: "image_generation", provider: "openai", model: "test-model", attempt: i, usage: IMAGE_USAGE, durationMs: 300 });
+          onMetricsEvent({ phase: "quality_review", provider: "openai", model: "gpt-4o", attempt: i, usage: REVIEW_USAGE, durationMs: 400 });
+        }
+        onMetricsEvent({ phase: "done", provider: "openai", model: "test-model", attempt: reviewAttempts, durationMs: 500 });
+      }
+      return { success: true, imageDataUrl: 'data:image/jpeg;base64,xyz' };
+    });
+  }
+
+  async function runPipeline() {
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_REQUEST_BODY));
+    await res.text();
+    await flushMicrotasks();
+    return res;
+  }
+
+  const pipelineLogs = (logSpy: ReturnType<typeof vi.spyOn>) =>
+    (logSpy.mock.calls as unknown[][])
+      .map((call: unknown[]) => call[0])
+      .map((s: unknown) => {
+        try {
+          return JSON.parse(s as string);
+        } catch {
+          return null;
+        }
+      })
+      .filter((p: unknown) => p !== null);
+
+  it('Teste 9 (6.3): campaign_copy com usage real e estimated_cost_usd calculado do usage (furo 1)', async () => {
+    await setupPipelineSuccessMocks();
+    await runPipeline();
+
+    const copyEvent = capturedEvents.find((e: any) => e.generationType === 'campaign_copy');
+    expect(copyEvent).toBeDefined();
+    expect(copyEvent.tokens).toEqual(COPY_USAGE);
+    expect(copyEvent.cost?.estimatedCostUsd).toBeCloseTo(COPY_COST, 6);
+    expect(copyEvent.cost?.costSource).toBe('pricing_table');
+    expect(copyEvent.durationMs).toBe(250);
+  });
+
+  it('Teste 10 (6.3): campaign_input_validation registrado no run com custo/tokens', async () => {
+    await setupPipelineSuccessMocks();
+    await runPipeline();
+
+    const validationEvent = capturedEvents.find((e: any) => e.generationType === 'campaign_input_validation');
+    expect(validationEvent).toBeDefined();
+    expect(validationEvent.tokens).toEqual(VALIDATION_USAGE);
+    expect(validationEvent.attemptNumber).toBe(0);
+    expect(validationEvent.cost?.estimatedCostUsd).toBeCloseTo(VALIDATION_COST, 6);
+    expect(validationEvent.status).toBe('success');
+  });
+
+  it('Teste 11 (6.3): campaign_image_review por tentativa — 2 tentativas → 2 eventos com attempt distinto', async () => {
+    await setupPipelineSuccessMocks({ reviewAttempts: 2 });
+    await runPipeline();
+
+    const reviewEvents = capturedEvents.filter((e: any) => e.generationType === 'campaign_image_review');
+    expect(reviewEvents).toHaveLength(2);
+    const attempts = reviewEvents.map((e: any) => e.attemptNumber).sort();
+    expect(attempts).toEqual([0, 1]);
+    for (const e of reviewEvents) {
+      expect(e.cost?.estimatedCostUsd).toBeCloseTo(REVIEW_COST, 6);
+      expect(e.tokens).toEqual(REVIEW_USAGE);
+    }
+  });
+
+  it('Teste 12 (6.3): recomposição mesmo run — todos os eventos compartilham o MESMO operation_run_id', async () => {
+    await setupPipelineSuccessMocks({ reviewAttempts: 2 });
+    await runPipeline();
+
+    expect(capturedEvents.length).toBeGreaterThan(0);
+    for (const e of capturedEvents) {
+      expect(e.operationRunId).toBe(RUN_IDS.operationRunId);
+      expect(e.operationRunType).toBe('campaign_delivery');
+      expect(e.traceId).toBe(RUN_IDS.traceId);
+    }
+  });
+
+  it('Teste 13 (6.3): metadata.totalCost = soma real dos call-level (furo 2 — nunca provider name)', async () => {
+    await setupPipelineSuccessMocks({ reviewAttempts: 2 });
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await runPipeline();
+
+      const expectedSum = capturedEvents
+        .filter((e: any) => e.generationType !== 'campaign_pipeline' && typeof e.cost?.estimatedCostUsd === 'number')
+        .reduce((s: number, e: any) => s + e.cost.estimatedCostUsd, 0);
+
+      const pipelineComplete: any = pipelineLogs(logSpy).find((p: any) => p.event === 'pipeline_complete');
+      expect(pipelineComplete).toBeDefined();
+      expect(pipelineComplete.metadata.totalCost).toBeCloseTo(expectedSum, 6);
+      expect(typeof pipelineComplete.metadata.totalCost).toBe('number');
+      // furo 2: nunca o nome do provider
+      expect(pipelineComplete.metadata.totalCost).not.toBe('test');
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it('Teste 14 (6.3): delivery campaign_pipeline com custo NULL + duration_is_pipeline true (mesmo com call-level > 0)', async () => {
+    await setupPipelineSuccessMocks({ reviewAttempts: 2 });
+    await runPipeline();
+
+    const delivery = capturedEvents.find((e: any) => e.generationType === 'campaign_pipeline' && e.status === 'success');
+    expect(delivery).toBeDefined();
+    expect(delivery.cost).toBeUndefined();
+    expect(delivery.tokens).toBeUndefined();
+    expect(delivery.metadata?.duration_is_pipeline).toBe(true);
+    expect(delivery.durationMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('Teste 15 (6.3): review falha → campaign_pipeline failed + custo dos call-level já registrados', async () => {
+    await setupPipelineSuccessMocks();
+    mockGenerateImage.mockImplementation(async (_brief: any, _phase: any, _signal: any, onMetricsEvent?: (e: any) => void) => {
+      if (onMetricsEvent) {
+        onMetricsEvent({ phase: "input_validation", provider: "openai", model: "gpt-4o", attempt: 0, usage: VALIDATION_USAGE, durationMs: 100 });
+        onMetricsEvent({ phase: "image_generation", provider: "openai", model: "test-model", attempt: 0, usage: IMAGE_USAGE, durationMs: 300 });
+        onMetricsEvent({ phase: "quality_review", provider: "openai", model: "gpt-4o", attempt: 0, usage: REVIEW_USAGE, durationMs: 400 });
+      }
+      return { success: false, code: 'review_failed', message: 'Falha na revisão de qualidade' };
+    });
+    await runPipeline();
+
+    const failedDelivery = capturedEvents.find((e: any) => e.generationType === 'campaign_pipeline' && e.status === 'failed');
+    expect(failedDelivery).toBeDefined();
+    expect(failedDelivery.errorType).toBe('Falha na revisão de qualidade');
+    expect(failedDelivery.cost).toBeUndefined();
+
+    // call-level registrados antes da falha permanecem
+    const copyEvent = capturedEvents.find((e: any) => e.generationType === 'campaign_copy');
+    expect(copyEvent).toBeDefined();
+    expect(copyEvent.cost?.estimatedCostUsd).toBeCloseTo(COPY_COST, 6);
+  });
+
+  it('Teste 16 (6.3): duration_ms por chamada (furo 7 — copy ≠ pipeline)', async () => {
+    await setupPipelineSuccessMocks();
+    await runPipeline();
+
+    const copyEvent = capturedEvents.find((e: any) => e.generationType === 'campaign_copy');
+    const imageEvent = capturedEvents.find((e: any) => e.generationType === 'campaign_image');
+    const reviewEvent = capturedEvents.find((e: any) => e.generationType === 'campaign_image_review');
+    const delivery = capturedEvents.find((e: any) => e.generationType === 'campaign_pipeline' && e.status === 'success');
+
+    expect(copyEvent.durationMs).toBe(250);
+    expect(imageEvent.durationMs).toBe(300);
+    expect(reviewEvent.durationMs).toBe(400);
+    expect(delivery.durationMs).toBeGreaterThanOrEqual(0);
+    // cada chamada tem a própria duração (não o pipeline inteiro)
+    expect(copyEvent.durationMs).not.toBe(imageEvent.durationMs);
+  });
+
+  it('Teste 17 (6.3): operation_run_id propagado — campanha criada com o MESMO run id dos eventos', async () => {
+    await setupPipelineSuccessMocks({ reviewAttempts: 2 });
+    await runPipeline();
+
+    expect(createCampaign).toHaveBeenCalledWith(STORE_ID, expect.objectContaining({ operationRunId: RUN_IDS.operationRunId }));
+    const types = new Set(capturedEvents.map((e: any) => e.generationType));
+    expect(types).toEqual(new Set(['campaign_copy', 'campaign_input_validation', 'campaign_image', 'campaign_image_review', 'campaign_pipeline']));
+    for (const e of capturedEvents) {
+      expect(e.operationRunId).toBe(RUN_IDS.operationRunId);
+    }
+  });
+
+  it('Teste 18 (6.3): campaigns.operation_run_id persistido na criação — createCampaign chamado com operationRunId', async () => {
+    await setupPipelineSuccessMocks();
+    await runPipeline();
+
+    expect(createCampaign).toHaveBeenCalledWith(
+      STORE_ID,
+      expect.objectContaining({ operationRunId: RUN_IDS.operationRunId })
+    );
+    // o mesmo run id aparece nos eventos call-level e no delivery
+    const delivery = capturedEvents.find((e: any) => e.generationType === 'campaign_pipeline');
+    expect(delivery?.operationRunId).toBe(RUN_IDS.operationRunId);
+  });
+
+  it('Teste 19 (6.3): admin_get_metrics preservado — logPipelineEvent ainda chamado com os eventos do pipeline', async () => {
+    await setupPipelineSuccessMocks();
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await runPipeline();
+
+      const parsed = pipelineLogs(logSpy);
+      expect(parsed.some((p: any) => p.event === 'copy_generation' && p.traceId === RUN_IDS.traceId)).toBe(true);
+      expect(parsed.some((p: any) => p.event === 'image_generation' && p.traceId === RUN_IDS.traceId)).toBe(true);
+      expect(parsed.some((p: any) => p.event === 'pipeline_complete' && p.traceId === RUN_IDS.traceId)).toBe(true);
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 });

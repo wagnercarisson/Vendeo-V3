@@ -23,6 +23,10 @@ export interface CreateCampaignInput {
   productName: string;
   inputSnapshot: Record<string, unknown>;
   identitySnapshot?: Record<string, unknown>;
+  /** F38.1 (D1/D2): operation_run_id do run (campaign_delivery) — persistido na
+   * criação da campanha (campaigns.operation_run_id), preparando o reuso cross-request
+   * pela F37. Requests independentes nesta fase ainda criam novo run. */
+  operationRunId?: string;
 }
 
 export interface CampaignReadyData {

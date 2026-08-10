@@ -30,6 +30,62 @@ export const CreateStoreSchema = z.object({
   segment: z.string().min(1).max(50),
 });
 
+/**
+ * Query params de GET /api/admin/ai-model-pricing (D8).
+ * provider/model filtram a lista; includeHistory="true" traz também as linhas
+ * superseded (sem o filtro effective_until IS NULL).
+ */
+export const AiModelPricingQuerySchema = z.object({
+  provider: z.string().optional(),
+  model: z.string().optional(),
+  includeHistory: z.string().optional(),
+});
+
+/**
+ * Body de PUT /api/admin/ai-model-pricing (D8).
+ * reason OBRIGATÓRIO (rastreabilidade); pelo menos uma dimensão de preço
+ * (espelha o CHECK chk_ai_model_pricing_at_least_one_price do banco).
+ */
+export const AiModelPricingUpdateSchema = z
+  .object({
+    provider: z.string().min(1),
+    model: z.string().min(1),
+    inputCostUsd: z.number().nonnegative().optional(),
+    outputCostUsd: z.number().nonnegative().optional(),
+    cachedInputCostUsd: z.number().nonnegative().optional(),
+    imageUnitCostUsd: z.number().nonnegative().optional(),
+    imageTokenCostUsd: z.number().nonnegative().optional(),
+    sourceUrl: z.string().url().optional(),
+    sourceNote: z.string().optional(),
+    reason: z.string().min(1),
+  })
+  .refine(
+    (d) =>
+      [
+        d.inputCostUsd,
+        d.outputCostUsd,
+        d.cachedInputCostUsd,
+        d.imageUnitCostUsd,
+        d.imageTokenCostUsd,
+      ].some((v) => v !== undefined),
+    { message: "pelo menos um custo" },
+  );
+
+/**
+ * Query params de GET /api/admin/ai-costs (D10) — repassados ao RPC
+ * admin_get_ai_costs (p_*). hours coerced (string→number) com default 24.
+ */
+export const AiCostsQuerySchema = z.object({
+  storeId: z.string().uuid().optional(),
+  userId: z.string().uuid().optional(),
+  provider: z.string().optional(),
+  model: z.string().optional(),
+  generationType: z.string().optional(),
+  operationRunId: z.string().uuid().optional(),
+  campaignId: z.string().uuid().optional(),
+  hours: z.coerce.number().int().min(1).default(24),
+});
+
 export interface AdminUserSummary {
   userId: string;
   email: string;

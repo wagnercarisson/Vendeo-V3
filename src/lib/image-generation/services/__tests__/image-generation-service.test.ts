@@ -361,3 +361,161 @@ describe('ImageGenerationService.generateImage', () => {
     expect(reviewInput.additionalDetails).toBe('Válido somente em loja física');
   });
 });
+
+describe('ImageGenerationService.generateImage — telemetria D11 (usage/durationMs por tentativa)', () => {
+  function buildService(onMetricsEvent?: (e: any) => void) {
+    const mockProvider = {
+      name: 'test',
+      generateImage: vi.fn().mockResolvedValue({
+        imageBase64: 'aGVsbG8=',
+        mimeType: 'image/png',
+        usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
+      }),
+    };
+    const mockLoad = vi.fn((name: string) => {
+      if (name === 'campaign-image-director-offer') {
+        return 'Prompt de direção visual sem placeholders';
+      }
+      if (name === 'campaign-image-reviewer') {
+        return 'Prompt de revisão sem placeholders';
+      }
+      return '';
+    });
+    // Mock validation: invoca o onCall interno do serviço (4º arg) com usage
+    const mockInputValidation = {
+      validate: vi.fn(async (...args: any[]) => {
+        const onCall = args[3];
+        if (typeof onCall === 'function') {
+          onCall({
+            provider: 'openai',
+            model: 'gpt-4o',
+            usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
+            durationMs: 100,
+          });
+        }
+        return { classification: 'match' };
+      }),
+    };
+    // Mock review: invoca o onCall interno do serviço (3º arg) com usage
+    const mockImageReview = {
+      review: vi.fn(async (...args: any[]) => {
+        const onCall = args[2];
+        if (typeof onCall === 'function') {
+          onCall({
+            provider: 'openai',
+            model: 'gpt-4o',
+            usage: { promptTokens: 200, completionTokens: 60, totalTokens: 260 },
+            durationMs: 500,
+          });
+        }
+        return { passed: true, issues: [], failureType: null };
+      }),
+      buildReviewPromptVariables: vi.fn(),
+    };
+    const mockMetricsWriter = {
+      write: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const service = new ImageGenerationService(
+      mockProvider as any,
+      { load: mockLoad, clearCache: vi.fn() } as unknown as PromptLoader,
+      mockInputValidation as any,
+      mockImageReview as any,
+      mockMetricsWriter as any
+    );
+
+    return {
+      service,
+      mockProvider,
+      mockInputValidation,
+      mockImageReview,
+      mockMetricsWriter,
+      brief: createMinimalBrief(),
+    };
+  }
+
+  it('Teste 6: evento image_generation por tentativa com usage + durationMs (attempt 0..n)', async () => {
+    const events: any[] = [];
+    const { service, brief } = buildService();
+    const result = await service.generateImage(brief, undefined, undefined, (e) => events.push(e));
+
+    expect(result.success).toBe(true);
+    const genEvents = events.filter((e) => e.phase === 'image_generation' && e.usage);
+    expect(genEvents.length).toBeGreaterThan(0);
+    expect(genEvents[0].usage).toEqual({ promptTokens: 10, completionTokens: 5, totalTokens: 15 });
+    expect(genEvents[0].durationMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('Teste 7: evento input_validation com usage quando a validação faz chamada de visão', async () => {
+    const events: any[] = [];
+    const { service, brief } = buildService();
+    const result = await service.generateImage(brief, undefined, undefined, (e) => events.push(e));
+
+    expect(result.success).toBe(true);
+    const validationEvents = events.filter((e) => e.phase === 'input_validation' && e.usage);
+    expect(validationEvents.length).toBeGreaterThan(0);
+    expect(validationEvents[0].usage).toEqual({ promptTokens: 10, completionTokens: 5, totalTokens: 15 });
+    expect(validationEvents[0].durationMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('Teste 8: evento quality_review com usage por tentativa (attempt 1..n)', async () => {
+    const events: any[] = [];
+    const { service, brief } = buildService();
+    const result = await service.generateImage(brief, undefined, undefined, (e) => events.push(e));
+
+    expect(result.success).toBe(true);
+    const reviewEvents = events.filter((e) => e.phase === 'quality_review' && e.usage);
+    expect(reviewEvents.length).toBeGreaterThan(0);
+    expect(reviewEvents[0].usage).toEqual({ promptTokens: 200, completionTokens: 60, totalTokens: 260 });
+    expect(reviewEvents[0].durationMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('Teste 9: onMetricsEvent lançando → generateImage continua (best-effort)', async () => {
+    const { service, brief } = buildService();
+    const result = await service.generateImage(
+      brief,
+      undefined,
+      undefined,
+      () => { throw new Error('metrics boom'); }
+    );
+    expect(result.success).toBe(true);
+  });
+
+  it('Teste 10: sem onMetricsEvent → comportamento idêntico ao atual (compat)', async () => {
+    const { service, brief } = buildService();
+    const result = await service.generateImage(brief);
+    expect(result.success).toBe(true);
+  });
+
+  it('Teste 11 (F38.1 anti-dupla-contagem): cada fase emite EXATAMENTE 1 evento por tentativa — sem tick de início sem usage', async () => {
+    const events: any[] = [];
+    const { service, brief } = buildService();
+    const result = await service.generateImage(brief, undefined, undefined, (e) => events.push(e));
+
+    expect(result.success).toBe(true);
+
+    // Sem eventos fantasma: nenhum evento de fase real sem usage (tick de início)
+    const realPhases = ['input_validation', 'image_generation', 'quality_review'];
+    const noUsagePhantom = events.filter((e) => realPhases.includes(e.phase) && !e.usage);
+    expect(noUsagePhantom).toHaveLength(0);
+
+    // Exatamente 1 evento por fase com usage real
+    for (const phase of realPhases) {
+      const phaseEvents = events.filter((e) => e.phase === phase);
+      expect(phaseEvents).toHaveLength(1);
+      expect(phaseEvents[0].usage).toBeDefined();
+    }
+  });
+
+  it('Teste 12 (F38.1 anti-dupla-contagem): override na validação → NENHUM evento de input_validation (sem chamada de IA real)', async () => {
+    const { service, brief, mockInputValidation } = buildService();
+    mockInputValidation.validate.mockImplementation(async () => ({ classification: 'match', confidence: 1.0 }));
+
+    const events: any[] = [];
+    const result = await service.generateImage(brief, undefined, undefined, (e) => events.push(e));
+
+    expect(result.success).toBe(true);
+    const validationEvents = events.filter((e) => e.phase === 'input_validation');
+    expect(validationEvents).toHaveLength(0);
+  });
+});

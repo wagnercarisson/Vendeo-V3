@@ -49,6 +49,30 @@ vi.mock('@/lib/visual-signature/generation-events', () => ({
   insertGenerationEvent: mockInsertGenerationEvent,
 }));
 
+// F38.1 (6.4): mock da camada única de registro de custo (D7). O AiCostTracker
+// mockado captura os eventos gravados em `capturedEvents` e o startRun devolve
+// operationRunId/traceId SEQUENCIAIS — permitindo afirmar que a nova tentativa
+// abre um NOVO run (operationRunId distinto — D1, teste 10).
+const { capturedEvents, mockResolveAiCost, MockAiCostTracker } = vi.hoisted(() => {
+  const capturedEvents: any[] = [];
+  let runCounter = 0;
+  class MockAiCostTracker {
+    startRun(_type: string) {
+      runCounter += 1;
+      return { operationRunId: `run-${runCounter}`, traceId: `trace-${runCounter}` };
+    }
+    async record(event: any) {
+      capturedEvents.push(event);
+    }
+  }
+  return { capturedEvents, mockResolveAiCost: vi.fn(), MockAiCostTracker };
+});
+
+vi.mock('@/lib/ai-cost', () => ({
+  AiCostTracker: MockAiCostTracker,
+  resolveAiCost: mockResolveAiCost,
+}));
+
 vi.mock('@/lib/launch-config/config', () => ({
   getLaunchConfig: mockGetLaunchConfig,
 }));
@@ -118,6 +142,12 @@ function makeChain(result: any) {
 
 const STORE_ID = '550e8400-e29b-41d4-a716-446655440000';
 const SIG_ID = '660e8400-e29b-41d4-a716-446655440001';
+
+// F38.1 (6.4): usage/custo dos eventos call-level (imagem = gpt-5.5, validação = gpt-4o-mini)
+const IMAGE_USAGE = { promptTokens: 100, completionTokens: 50, totalTokens: 150 };
+const VALIDATION_USAGE = { promptTokens: 200, completionTokens: 30, totalTokens: 230 };
+const IMAGE_COST = 0.004;
+const VALIDATION_COST = 0.001;
 
 const mockStore = {
   id: STORE_ID,
@@ -192,6 +222,15 @@ describe('POST /api/store/[id]/visual-signature/generate-without-logo', () => {
     mockIdentityDirectorGenerate.mockResolvedValue(mockSignatureResult);
     mockPersistSignature.mockResolvedValue(mockSignatureResult.signature);
     mockInsertGenerationEvent.mockResolvedValue(undefined);
+    // F38.1 (6.4): reseta o buffer do tracker mockado e resolve custo por model
+    capturedEvents.length = 0;
+    mockResolveAiCost.mockImplementation(({ model }: any) =>
+      Promise.resolve({
+        estimatedCostUsd: model === 'gpt-4o-mini' ? VALIDATION_COST : IMAGE_COST,
+        costSource: 'pricing_table',
+        pricingVersion: 'code_default',
+      })
+    );
   });
 
   it('invalid store ID returns 400', async () => {
@@ -313,7 +352,229 @@ describe('POST /api/store/[id]/visual-signature/generate-without-logo', () => {
       expect.objectContaining({
         rejectionContext: expect.objectContaining({ reason: 'not_good' }),
       }),
-      expect.any(AbortSignal)
+      expect.any(AbortSignal),
+      expect.any(Function) // F38.1 (D11): onCall propagado ao service (imagem + validação)
     );
+  });
+});
+
+// ── F38.1 (6.4): VS cost accounting ─────────────────────────────────────────
+describe('VS cost accounting (6.4)', () => {
+  // beforeEach próprio do bloco (describes irmãos não herdam hooks): reseta o
+  // buffer do tracker mockado e reconstrói o setup padrão de forma idempotente.
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetLaunchConfig.mockReturnValue({
+      v15Enabled: true,
+      creditsChargingEnabled: true,
+      copyDirectorEnabled: true,
+      rateLimitEnabled: true,
+      generationPaused: false,
+    });
+    mockGetBalance.mockResolvedValue(5);
+    mockReserveCredit.mockResolvedValue('ct-001');
+    mockRefundCredit.mockResolvedValue('refund-tx');
+    mockGetCost.mockResolvedValue({
+      operationKey: 'visual_signature_generation',
+      costCredits: 1,
+      enabled: true,
+      source: 'table',
+    });
+    mockPersistSignature.mockResolvedValue(mockSignatureResult.signature);
+    mockInsertGenerationEvent.mockResolvedValue(undefined);
+    capturedEvents.length = 0;
+    mockResolveAiCost.mockImplementation(({ model }: any) =>
+      Promise.resolve({
+        estimatedCostUsd: model === 'gpt-4o-mini' ? VALIDATION_COST : IMAGE_COST,
+        costSource: 'pricing_table',
+        pricingVersion: 'code_default',
+      })
+    );
+  });
+
+  // Setup padrão de sucesso: loja carregada, sem VS ativa, onCall do attempt 1
+  // dispara imagem (gpt-5.5) + validação (gpt-4o-mini) antes de retornar.
+  function setupStandardStore() {
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: [], error: null });
+      return makeChain({ data: null, error: null });
+    });
+  }
+
+  function setupSuccessWithCalls() {
+    setupStandardStore();
+    mockIdentityDirectorGenerate.mockImplementation(async (_input: any, _signal: any, onCall?: any) => {
+      onCall?.({ provider: 'openai', model: 'gpt-5.5', usage: IMAGE_USAGE, durationMs: 300 });
+      onCall?.({ provider: 'openai', model: 'gpt-4o-mini', usage: VALIDATION_USAGE, durationMs: 150 });
+      return mockSignatureResult;
+    });
+  }
+
+  function findDeliveryCall(status: string): any {
+    return mockInsertGenerationEvent.mock.calls.find(
+      (call: any) => call[0]?.generation_type === 'visual_signature' && call[0]?.status === status
+    );
+  }
+
+  it('Teste 8 (6.4): visual_signature_image + visual_signature_validation com custo/tokens reais no run', async () => {
+    setupSuccessWithCalls();
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(200);
+
+    const imageEvent = capturedEvents.find((e: any) => e.generationType === 'visual_signature_image');
+    expect(imageEvent).toBeDefined();
+    expect(imageEvent.tokens).toEqual(IMAGE_USAGE);
+    expect(imageEvent.cost?.estimatedCostUsd).toBeCloseTo(IMAGE_COST, 6);
+    expect(imageEvent.cost?.costSource).toBe('pricing_table');
+    expect(imageEvent.attemptNumber).toBe(0);
+    expect(imageEvent.status).toBe('success');
+
+    const validationEvent = capturedEvents.find((e: any) => e.generationType === 'visual_signature_validation');
+    expect(validationEvent).toBeDefined();
+    expect(validationEvent.tokens).toEqual(VALIDATION_USAGE);
+    expect(validationEvent.cost?.estimatedCostUsd).toBeCloseTo(VALIDATION_COST, 6);
+    expect(validationEvent.attemptNumber).toBe(0);
+  });
+
+  it('Teste 9 (6.4): delivery visual_signature com custo NULL + duration_is_pipeline (soma via view)', async () => {
+    setupSuccessWithCalls();
+    const { POST } = await import('../route');
+    await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+
+    // call-level com custo > 0 existem (a view soma os call-level do run)
+    expect(capturedEvents.length).toBeGreaterThan(0);
+    for (const e of capturedEvents) {
+      expect(e.cost?.estimatedCostUsd).toBeCloseTo(e.generationType === 'visual_signature_validation' ? VALIDATION_COST : IMAGE_COST, 6);
+    }
+
+    // delivery marker: SEM custo e SEM tokens (anti-dupla-contagem D1/D6 — o
+    // tracker adiciona duration_is_pipeline:true no delegate)
+    const delivery = findDeliveryCall('success');
+    expect(delivery).toBeDefined();
+    expect(delivery[0].estimated_cost_usd).toBeUndefined();
+    expect(delivery[0].provider_reported_cost_usd).toBeUndefined();
+    expect(delivery[0].cached_input_tokens).toBeUndefined();
+    expect(delivery[0].image_tokens).toBeUndefined();
+    expect(delivery[0].operation_run_id).toBeDefined();
+    expect(delivery[0].visual_signature_id).toBe(SIG_ID);
+  });
+
+  it('Teste 10 (6.4): nova tentativa pós-falha = NOVO run (operationRunId do retry DIFERENTE do attempt 1)', async () => {
+    setupStandardStore();
+    // ATTEMPT 1 falha após emitir evento de imagem (run 1)
+    mockIdentityDirectorGenerate.mockImplementation(async (_input: any, _signal: any, onCall?: any) => {
+      onCall?.({ provider: 'openai', model: 'gpt-5.5', usage: IMAGE_USAGE, durationMs: 300 });
+      throw new Error('identity_art_director_failed: boom');
+    });
+    // ATTEMPT 2 (retry) com sucesso — novo run
+    mockAiGeneratorGenerate.mockImplementation(async ({ onCall }: any) => {
+      onCall?.({ provider: 'openai', model: 'gpt-5.5', usage: IMAGE_USAGE, durationMs: 300 });
+      onCall?.({ provider: 'openai', model: 'gpt-4o-mini', usage: VALIDATION_USAGE, durationMs: 150 });
+      return {
+        tier: 'image_direct',
+        assetUrl: 'https://example.com/retry.png',
+        storagePath: 'test/retry.png',
+        mimeType: 'image/png',
+        metadata: { generation_tier: 'image_direct', provider: 'openai', model: 'gpt-5.5' },
+        prompt: 'retry prompt',
+      };
+    });
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(200);
+
+    const attempt1Events = capturedEvents.filter((e: any) => e.attemptNumber === 0);
+    const retryEvents = capturedEvents.filter((e: any) => e.attemptNumber === 1);
+    expect(attempt1Events.length).toBeGreaterThan(0);
+    expect(retryEvents.length).toBeGreaterThan(0);
+
+    const attempt1RunIds = new Set(attempt1Events.map((e: any) => e.operationRunId));
+    const retryRunIds = new Set(retryEvents.map((e: any) => e.operationRunId));
+    expect(attempt1RunIds.size).toBe(1);
+    expect(retryRunIds.size).toBe(1);
+    // nova tentativa = NOVO operationRunId (D1)
+    expect([...retryRunIds][0]).not.toBe([...attempt1RunIds][0]);
+
+    // o delivery do sucesso está sob o run do retry
+    const delivery = findDeliveryCall('success');
+    expect(delivery[0].operation_run_id).toBe([...retryRunIds][0]);
+    // eventos do run 1 (falha) gravados sem assinatura
+    for (const e of attempt1Events) {
+      expect(e.visualSignatureId).toBeNull();
+    }
+  });
+
+  it('Teste 11 (6.4): visual_signature_id preenchido em todos os eventos do run', async () => {
+    setupSuccessWithCalls();
+    const { POST } = await import('../route');
+    await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(capturedEvents.length).toBeGreaterThan(0);
+    for (const e of capturedEvents) {
+      expect(e.visualSignatureId).toBe(SIG_ID);
+      expect(e.operationRunId).toBeDefined();
+      expect(e.operationRunType).toBe('visual_signature');
+    }
+    const delivery = findDeliveryCall('success');
+    expect(delivery[0].visual_signature_id).toBe(SIG_ID);
+  });
+
+  it('Teste 12 (6.4): typographic fallback SEM evento call-level (sem chamada IA — D5)', async () => {
+    setupStandardStore();
+    mockIdentityDirectorGenerate.mockRejectedValue(new Error('identity_art_director_failed: boom'));
+    // retry retorna tier typographic (SVG programático) — NENHUM onCall dispara
+    mockAiGeneratorGenerate.mockResolvedValue({
+      tier: 'typographic',
+      assetUrl: 'https://example.com/fallback.svg',
+      storagePath: 'test/fallback.svg',
+      mimeType: 'image/svg+xml',
+    });
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(500);
+
+    // nenhum evento call-level gravado (não inventar chamada — D5)
+    const callLevel = capturedEvents.filter(
+      (e: any) => e.generationType === 'visual_signature_image' || e.generationType === 'visual_signature_validation'
+    );
+    expect(callLevel).toHaveLength(0);
+
+    // delivery failed registrado (sem custo)
+    const failedDelivery = findDeliveryCall('failed');
+    expect(failedDelivery).toBeDefined();
+    expect(failedDelivery[0].estimated_cost_usd).toBeUndefined();
+  });
+
+  it('Teste 13 (6.4): insertGenerationEvent VS compat F37 — mesmos generation_type/status/fields', async () => {
+    // attempt 1 sucesso SEM onCall (como os testes existentes — F37)
+    setupStandardStore();
+    mockIdentityDirectorGenerate.mockResolvedValue(mockSignatureResult);
+    const { POST } = await import('../route');
+    await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(mockInsertGenerationEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        store_id: STORE_ID,
+        generation_type: 'visual_signature', // mesmos generation_type/status/fields do fluxo existente
+        provider: 'openai',
+        attempt_number: 1,
+        status: 'success',
+        asset_generated: true,
+        asset_id: SIG_ID,
+        has_logo: false,
+        has_generated_signature: true,
+        has_brand_profile: false,
+        // F38.1: campos novos do run context, SEM custo/tokens (delivery marker)
+        operation_run_id: expect.any(String),
+        trace_id: expect.any(String),
+        operation_run_type: 'visual_signature',
+        visual_signature_id: SIG_ID,
+      })
+    );
+    expect(mockInsertGenerationEvent.mock.calls[0][0].estimated_cost_usd).toBeUndefined();
+    // sem onCall → nenhum evento call-level no run
+    expect(capturedEvents).toHaveLength(0);
   });
 });

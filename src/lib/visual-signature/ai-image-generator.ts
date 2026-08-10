@@ -1,11 +1,31 @@
 import { PromptLoader } from "@/lib/image-generation/prompt-loader";
 import { uploadToStorage, persistSignature } from "./persistence";
 import type { CascadeResult, VisualSignatureMetadata } from "./types";
+import type { AiCallInfo, TokenUsage } from "@/lib/ai-cost/types";
+
+/**
+ * Mapeia o payload de usage do Responses API para TokenUsage normalizado (D12).
+ * Campos do Responses API: input_tokens → promptTokens, output_tokens →
+ * completionTokens, total_tokens → totalTokens. Retorna undefined se usage ausente.
+ * Compartilhado pela geração de imagem e pela validação LLM (visual_signature_validation).
+ */
+function mapResponsesUsage(usage: unknown): TokenUsage | undefined {
+  if (!usage || typeof usage !== "object") return undefined;
+  const u = usage as Record<string, unknown>;
+  const tokens: TokenUsage = {};
+  if (typeof u.input_tokens === "number") tokens.promptTokens = u.input_tokens;
+  if (typeof u.output_tokens === "number") tokens.completionTokens = u.output_tokens;
+  if (typeof u.total_tokens === "number") tokens.totalTokens = u.total_tokens;
+  return tokens;
+}
 
 export class VisualSignatureValidator {
   async validate(params: {
     imageBase64: string;
     storeName: string;
+    /** F38.1 (D7/D11): callback best-effort com dados da chamada LLM de validação
+     * (visual_signature_validation). Opcional — nunca bloqueia a validação. */
+    onCall?: (info: AiCallInfo) => void | Promise<void>;
   }): Promise<{ valid: boolean; reason?: string }> {
     if (!params.imageBase64 || params.imageBase64.length === 0) {
       return { valid: false, reason: "Empty image data" };
@@ -26,7 +46,7 @@ export class VisualSignatureValidator {
       return { valid: false, reason: "Image too small (less than 1KB)" };
     }
 
-    const semantic = await this.validateSemantic(params.imageBase64, params.storeName);
+    const semantic = await this.validateSemantic(params.imageBase64, params.storeName, params.onCall);
     if (!semantic.valid) {
       return semantic;
     }
@@ -36,7 +56,8 @@ export class VisualSignatureValidator {
 
   private async validateSemantic(
     imageBase64: string,
-    storeName: string
+    storeName: string,
+    onCall?: (info: AiCallInfo) => void | Promise<void>
   ): Promise<{ valid: boolean; reason?: string }> {
     try {
       const { default: OpenAI } = await import("openai");
@@ -46,6 +67,7 @@ export class VisualSignatureValidator {
 
       const model = process.env.IMAGE_VALIDATION_MODEL || "gpt-4o-mini";
       const dataUrl = `data:image/png;base64,${imageBase64}`;
+      const startTime = Date.now();
 
       const response = await openai.responses.create({
         model,
@@ -84,6 +106,33 @@ A imagem é VÁLIDA se:
         temperature: 0.1,
         max_output_tokens: 150,
       });
+
+      // F38.1 (D7/D11): expõe usage + durationMs da chamada LLM de validação
+      // (visual_signature_validation) best-effort — só no caminho de sucesso
+      // (anti-dupla-contagem T-38.1-28) e nunca bloqueia a validação.
+      if (onCall) {
+        try {
+          const info: AiCallInfo = {
+            provider: "openai",
+            model,
+            usage: mapResponsesUsage(response.usage),
+            durationMs: Date.now() - startTime,
+          };
+          await Promise.resolve(onCall(info)).catch((err) => {
+            console.error(
+              `[validator] onCall callback failed (best-effort): ${
+                err instanceof Error ? err.message : String(err)
+              }`
+            );
+          });
+        } catch (err) {
+          console.error(
+            `[validator] onCall callback failed (best-effort): ${
+              err instanceof Error ? err.message : String(err)
+            }`
+          );
+        }
+      }
 
       const outputText = response.output_text?.trim() || "";
       const jsonMatch = outputText.match(/\{[\s\S]*\}/);
@@ -125,6 +174,8 @@ export class AiImageGenerator {
     attempt?: number;
     simplifiedPrompt?: boolean;
     customPrompt?: string;
+    /** F38.1 (D7/D11): callback best-effort com dados da chamada de IA (visual_signature_image). Opcional — nunca bloqueia a geração. */
+    onCall?: (info: AiCallInfo) => void | Promise<void>;
   }): Promise<CascadeResult> {
     const startTime = Date.now();
     console.log('[ai-image-generator] generate() iniciado', { storeName: params.storeName, segment: params.segment, attempt: params.attempt });
@@ -193,6 +244,15 @@ Sem textos promocionais. Apenas a imagem PNG.`;
       );
       console.log('[ai-image-generator] ✅ DEPOIS da chamada OpenAI responses.create()', { timestamp: new Date().toISOString(), elapsedMs: Date.now() - startTime });
 
+      // F38.1 (D7/D11): expõe usage do Responses API best-effort para a rota VS
+      // (visual_signature_image). Nunca lança — telemetria não bloqueia geração.
+      this.invokeOnCall(params.onCall, {
+        provider: "openai",
+        model,
+        usage: mapResponsesUsage(response.usage),
+        durationMs: Date.now() - startTime,
+      });
+
       const imageOutput = response.output?.find(
         (
           item
@@ -228,6 +288,10 @@ Sem textos promocionais. Apenas a imagem PNG.`;
       const validation = await validator.validate({
         imageBase64,
         storeName: params.storeName,
+        // F38.1 (D11): propaga o MESMO callback ao validator — o onCall da
+        // validação (visual_signature_validation) atravessa para a rota, que
+        // distingue pelo model real da chamada.
+        onCall: params.onCall,
       });
 
       if (!validation.valid) {
@@ -278,6 +342,32 @@ Sem textos promocionais. Apenas a imagem PNG.`;
         error instanceof Error ? error.message : "Unknown error";
       console.log('[ai-image-generator] ❌ catch — erro', { elapsedMs, message, stack: error instanceof Error ? error.stack : '' });
       throw new Error(`ai_image_generation_failed: ${message}`);
+    }
+  }
+
+  /**
+   * Invoca o callback onCall best-effort (D7): callback lançando é logado e
+   * ignorado — nunca interrompe a geração. Aceita retorno síncrono ou Promise.
+   */
+  private invokeOnCall(
+    onCall: ((info: AiCallInfo) => void | Promise<void>) | undefined,
+    info: AiCallInfo
+  ): void {
+    if (!onCall) return;
+    try {
+      Promise.resolve(onCall(info)).catch((err) => {
+        console.error(
+          `[ai-image-generator] onCall callback failed (best-effort): ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
+      });
+    } catch (err) {
+      console.error(
+        `[ai-image-generator] onCall callback failed (best-effort): ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      );
     }
   }
 }

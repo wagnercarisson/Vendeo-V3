@@ -85,6 +85,28 @@ vi.mock('@/lib/snapshot', () => ({
   })),
 }));
 
+// F38.1 (6.5): mock do AiCostTracker — captura eventos e startRun sequencial
+// (permite afirmar que regenerate abre NOVO run — operationRunId distinto).
+const { capturedEvents, mockResolveAiCost, MockAiCostTracker } = vi.hoisted(() => {
+  const capturedEvents: any[] = [];
+  let runCounter = 0;
+  class MockAiCostTracker {
+    startRun(_type: string) {
+      runCounter += 1;
+      return { operationRunId: `run-${runCounter}`, traceId: `trace-${runCounter}` };
+    }
+    async record(event: any) {
+      capturedEvents.push(event);
+    }
+  }
+  return { capturedEvents, mockResolveAiCost: vi.fn(), MockAiCostTracker };
+});
+
+vi.mock('@/lib/ai-cost', () => ({
+  AiCostTracker: MockAiCostTracker,
+  resolveAiCost: mockResolveAiCost,
+}));
+
 const STORE_ID = '550e8400-e29b-41d4-a716-446655440000';
 const ASSET_ID = '660e8400-e29b-41d4-a716-446655440001';
 const PROFILE_ID = 'profile-001';
@@ -489,5 +511,166 @@ describe('POST /api/store/[id]/brand-profile/realign', () => {
     expect(body.profile).toHaveProperty('visual_style');
     expect(body.profile).toHaveProperty('visual_tone');
     expect(body.profile).toHaveProperty('brand_personality');
+  });
+});
+
+// ── F38.1 (6.5): realign cost accounting — 3 caminhos de IA ─────────────────
+describe('Brand cost accounting (6.5) — realign', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedEvents.length = 0;
+    mockBrandDirectorAnalyze.mockResolvedValue(mockDirectorResult);
+    mockProfilerGenerate.mockClear();
+    mockTextOnlyInfer.mockResolvedValue({
+      safe_color_tokens: { primary: '#22C55E', secondary: '#3B82F6', accent: '#1E40AF', background: '#0F172A' },
+      visual_style: 'Moderno',
+      visual_tone: 'Elegante',
+      typography_direction: 'Sans-serif',
+      brand_personality: 'Sofisticado',
+      campaign_guidelines: 'Guidelines',
+      campaign_brief: 'Brief',
+      inferred_primary_color: '#22C55E',
+      inferred_accent_color: '#1E40AF',
+      confidence_score: 0.9,
+    });
+    mockStorageDownload.mockResolvedValue({
+      data: new Blob([]),
+      error: null,
+    });
+    mockResolveAiCost.mockImplementation(({ model }: any) =>
+      Promise.resolve({
+        estimatedCostUsd: model === 'gpt-4o-mini' ? 0.001 : 0.004,
+        costSource: 'pricing_table',
+        pricingVersion: 'code_default',
+      })
+    );
+  });
+
+  const VISION_USAGE = { promptTokens: 100, completionTokens: 50, totalTokens: 150 };
+  const TEXT_USAGE = { promptTokens: 120, completionTokens: 40, totalTokens: 160 };
+
+  it('Teste 9a: realign text_only (112-114) -> call brand_profile_text com custo real + delivery sem custo', async () => {
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'store_brand_assets') return makeChain({ data: null, error: null });
+      if (table === 'store_brand_profiles') return makeProfileChain({ data: null, error: null });
+      return makeChain({ data: null, error: null });
+    });
+    mockTextOnlyInfer.mockImplementation(async (_input: any, _timeoutMs: any, onCall?: any) => {
+      onCall?.({ provider: 'openai', model: 'gpt-4o', usage: TEXT_USAGE, durationMs: 200 });
+      return {
+        safe_color_tokens: { primary: '#22C55E', secondary: '#3B82F6', accent: '#1E40AF', background: '#0F172A' },
+        visual_style: 'Moderno', visual_tone: 'Elegante', typography_direction: 'Sans-serif',
+        brand_personality: 'Sofisticado', campaign_guidelines: 'Guidelines', campaign_brief: 'Brief',
+        inferred_primary_color: '#22C55E', inferred_accent_color: '#1E40AF', confidence_score: 0.9,
+      };
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(200);
+
+    const textEvent = capturedEvents.find((e: any) => e.generationType === 'brand_profile_text');
+    expect(textEvent).toBeDefined();
+    expect(textEvent.tokens).toEqual(TEXT_USAGE);
+    expect(textEvent.cost?.estimatedCostUsd).toBeCloseTo(0.004, 6);
+
+    const delivery = capturedEvents.find((e: any) => e.generationType === 'brand_profile_without_logo');
+    expect(delivery).toBeDefined();
+    expect(delivery.cost).toBeUndefined();
+    expect(delivery.tokens).toBeUndefined();
+    expect(delivery.metadata?.duration_is_pipeline).toBe(true);
+  });
+
+  it('Teste 9b: realign logo/analysis (290-291) -> call brand_profile_vision com custo real + delivery brand_profile_with_logo', async () => {
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockLogoStore, error: null });
+      if (table === 'store_brand_assets') return makeChain({ data: mockLogoAsset, error: null });
+      if (table === 'store_brand_profiles') return makeProfileChain({ data: null, error: null });
+      return makeChain({ data: null, error: null });
+    });
+    mockBrandDirectorAnalyze.mockImplementation(async ({ onCall }: any) => {
+      onCall?.({ provider: 'openai', model: 'gpt-4o', usage: VISION_USAGE, durationMs: 300 });
+      return mockDirectorResult;
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(200);
+
+    const visionEvent = capturedEvents.find((e: any) => e.generationType === 'brand_profile_vision');
+    expect(visionEvent).toBeDefined();
+    expect(visionEvent.tokens).toEqual(VISION_USAGE);
+    expect(visionEvent.cost?.estimatedCostUsd).toBeCloseTo(0.004, 6);
+
+    const delivery = capturedEvents.find((e: any) => e.generationType === 'brand_profile_with_logo');
+    expect(delivery).toBeDefined();
+    expect(delivery.cost).toBeUndefined();
+    expect(delivery.tokens).toBeUndefined();
+    expect(delivery.metadata?.duration_is_pipeline).toBe(true);
+  });
+
+  it('Teste 15: regenerate -> NOVO operationRunId (distinto do run anterior)', async () => {
+    const mockProfilerResult = {
+      success: true,
+      profile: {
+        id: 'vs-profile-001',
+        status: 'synced',
+        source: 'without_logo',
+        safe_color_tokens: { primary: '#22C55E', secondary: '#3B82F6', accent: '#1E40AF', background: '#0F172A' },
+        inferred_primary_color: '#22C55E',
+        inferred_accent_color: '#1E40AF',
+        visual_style: 'Moderno', visual_tone: 'Elegante',
+        brand_personality: 'Sofisticado',
+        brand_colors_chosen: ['#22C55E', '#1E40AF'],
+        metadata: {},
+      },
+    };
+    mockProfilerGenerate.mockImplementation(async ({ onCall }: any) => {
+      onCall?.({ provider: 'openai', model: 'gpt-4o', usage: VISION_USAGE, durationMs: 300 });
+      return mockProfilerResult;
+    });
+
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockVSStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: mockActiveVS, error: null });
+      if (table === 'store_brand_profiles') return makeChain({ data: null, error: null });
+      return makeChain({ data: null, error: null });
+    });
+
+    const { POST } = await import('../route');
+
+    // Dois requests de regenerate SEQUENCIAIS: cada um deve abrir um run NOVO
+    // (operationRunId distinto do run anterior — D1, 6.5 test 4)
+    const res1 = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res1.status).toBe(200);
+    const firstRunEvents = capturedEvents.filter(
+      (e: any) => e.generationType === 'brand_profile_vision' || e.generationType === 'brand_profile_text'
+    );
+    expect(firstRunEvents.length).toBeGreaterThan(0);
+    const firstRunIds = new Set(firstRunEvents.map((e: any) => e.operationRunId));
+    expect(firstRunIds.size).toBe(1);
+    const firstRunId = [...firstRunIds][0];
+
+    capturedEvents.length = 0;
+    const res2 = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res2.status).toBe(200);
+    const secondRunEvents = capturedEvents.filter(
+      (e: any) => e.generationType === 'brand_profile_vision' || e.generationType === 'brand_profile_text'
+    );
+    expect(secondRunEvents.length).toBeGreaterThan(0);
+    const secondRunIds = new Set(secondRunEvents.map((e: any) => e.operationRunId));
+    expect(secondRunIds.size).toBe(1);
+    const secondRunId = [...secondRunIds][0];
+
+    // regenerate = NOVO run — id distinto do run anterior
+    expect(secondRunId).not.toBe(firstRunId);
+
+    // delivery do segundo run compartilha o mesmo run novo
+    const delivery = capturedEvents.find((e: any) => e.generationType === 'brand_profile_without_logo');
+    expect(delivery).toBeDefined();
+    expect(delivery.operationRunId).toBe(secondRunId);
+    expect(delivery.cost).toBeUndefined();
+    expect(delivery.metadata?.duration_is_pipeline).toBe(true);
   });
 });

@@ -17,6 +17,9 @@ import { CreditService } from '@/lib/credit/credit-service';
 import { OperationCostService, OperationCostUnavailableError } from '@/lib/credit/operation-cost-service';
 import type { OperationCostResolution } from '@/lib/credit/types';
 import { requireLegalClearance } from '@/lib/legal/clearance';
+import { AiCostTracker, resolveAiCost } from '@/lib/ai-cost';
+import type { AiCallInfo, CostResolution } from '@/lib/ai-cost/types';
+import type { GenerationEventType } from '@/lib/visual-signature/types';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -224,6 +227,83 @@ export const POST = apiHandler(async (
 
   const startTime = performance.now();
   const abortController = new AbortController();
+
+  // ── F38.1 (D1/D7): run context da entrega VS ─────────────────────
+  // Cada request de geração = UM run (uma geração debitável). Falha técnica
+  // seguida de nova tentativa = NOVO run (novo operationRunId — D1, testado).
+  // operationRunId/traceId são propagados às chamadas filhas via onCall e
+  // persistidos no delivery marker (insertGenerationEvent delega ao tracker).
+  let run = new AiCostTracker().startRun("visual_signature");
+
+  // Eventos call-level (visual_signature_image / visual_signature_validation)
+  // chegam via onCall ANTES de a assinatura existir (persistSignature acontece
+  // dentro do fluxo). Ficam pendentes e são gravados quando o
+  // visual_signature_id é conhecido (D2 — todos os eventos do run com o id).
+  interface PendingCall {
+    run: { operationRunId: string; traceId: string };
+    generationType: GenerationEventType;
+    attemptNumber: number;
+    info: AiCallInfo;
+  }
+  const pendingCalls: PendingCall[] = [];
+  let currentAttemptNumber = 0;
+
+  const recordCall = (params: Omit<PendingCall, "run">): void => {
+    pendingCalls.push({
+      ...params,
+      run: { operationRunId: run.operationRunId, traceId: run.traceId },
+    });
+  };
+
+  const flushCallEvents = async (visualSignatureId: string | null): Promise<void> => {
+    const events = pendingCalls.splice(0);
+    for (const ev of events) {
+      try {
+        // Call-level: custo REAL por chamada (resolveAiCost — furo 5 sanado)
+        const cost = await resolveAiCost({
+          provider: ev.info.provider,
+          model: ev.info.model,
+          usage: ev.info.usage,
+          providerReportedCostUsd: ev.info.providerReportedCostUsd,
+        });
+        await new AiCostTracker().record({
+          operationRunId: ev.run.operationRunId,
+          operationRunType: "visual_signature",
+          traceId: ev.run.traceId,
+          storeId: id,
+          visualSignatureId,
+          generationType: ev.generationType,
+          provider: ev.info.provider,
+          model: ev.info.model,
+          attemptNumber: ev.attemptNumber,
+          durationMs: ev.info.durationMs,
+          status: "success",
+          tokens: ev.info.usage,
+          cost,
+        });
+      } catch (err) {
+        console.error(
+          "[generate-without-logo] recordCall failed (best-effort):",
+          err instanceof Error ? err.message : String(err)
+        );
+      }
+    }
+  };
+
+  // Handler do callback onCall emitido pelo AiImageGenerator (imagem E validação
+  // atravessam o MESMO callback — D11). Distingue pelo model real da chamada:
+  // o validator usa IMAGE_VALIDATION_MODEL (default gpt-4o-mini); a imagem usa
+  // IMAGE_GENERATION_RESPONSES_MODEL (default gpt-5.5). Best-effort (D7).
+  const VALIDATION_MODEL = process.env.IMAGE_VALIDATION_MODEL || "gpt-4o-mini";
+  const handleCall = (info: AiCallInfo): void => {
+    recordCall({
+      generationType:
+        info.model === VALIDATION_MODEL ? "visual_signature_validation" : "visual_signature_image",
+      attemptNumber: currentAttemptNumber,
+      info,
+    });
+  };
+
   const timeoutId = setTimeout(() => {
     console.log(`[generate-without-logo][req-${reqId}] ⏰ SERVER TIMEOUT ${ROUTE_TIMEOUT_MS}ms atingido, abortando...`);
     abortController.abort();
@@ -262,7 +342,8 @@ export const POST = apiHandler(async (
   let attempt1Error: unknown = null;
 
   try {
-    result = await service.generate(serviceInput, abortController.signal);
+    currentAttemptNumber = 0;
+    result = await service.generate(serviceInput, abortController.signal, handleCall);
     console.log(`[generate-without-logo][req-${reqId}] ATTEMPT 1 — sucesso`, { assetUrl: result.assetUrl, signatureId: result.signature.id });
   } catch (err) {
     attempt1Error = err;
@@ -277,6 +358,12 @@ export const POST = apiHandler(async (
     if (!isTimeout) {
       console.log(`[generate-without-logo][req-${reqId}] ATTEMPT 2 — image_retry (prompt simplificado)`);
       try {
+        // F38.1 (D1): fecha o run 1 (eventos call-level da tentativa falha — sem
+        // assinatura, id null) e abre NOVO run para a nova tentativa
+        // (novo operationRunId — 6.4 test 3).
+        await flushCallEvents(null);
+        run = new AiCostTracker().startRun("visual_signature");
+        currentAttemptNumber = 1;
         const aiGenerator = new AiImageGenerator();
         const retryResult = await aiGenerator.generate({
           storeId: id,
@@ -287,6 +374,7 @@ export const POST = apiHandler(async (
           signal: abortController.signal,
           attempt: 1,
           simplifiedPrompt: true,
+          onCall: handleCall, // F38.1 (D11): call-level do retry com custo real
         });
 
         const artDirectorOutput: VisualSignatureArtDirectorOutput = {
@@ -414,6 +502,11 @@ export const POST = apiHandler(async (
 
     const promptVersion = attempt1Error ? PROMPT_VERSION_SIMPLIFIED : PROMPT_VERSION_ART_DIRECTOR;
     console.log(`[generate-without-logo][req-${reqId}] inserindo generation_event (success)...`, { promptVersion });
+
+    // F38.1 (D7/D11): grava os eventos call-level do run (visual_signature_image +
+    // visual_signature_validation) com custo/tokens reais e visual_signature_id (D2).
+    await flushCallEvents(result.signature.id);
+
     await insertGenerationEvent({
       store_id: id,
       generation_type: 'visual_signature',
@@ -428,6 +521,12 @@ export const POST = apiHandler(async (
       has_generated_signature: true,
       has_brand_profile: false,
       input_data_hash: `${store.name}-${store.segment}-1`,
+      // F38.1 (D1/D2/D6): run context + visual_signature_id no delivery marker
+      // (sem cost/tokens = delivery marker: custo NULL + duration_is_pipeline — D1/D6)
+      operation_run_id: run.operationRunId,
+      trace_id: run.traceId,
+      operation_run_type: 'visual_signature',
+      visual_signature_id: result.signature.id,
     });
 
     console.log(`[generate-without-logo][req-${reqId}] enviando response success`);
@@ -467,6 +566,11 @@ export const POST = apiHandler(async (
 
   const promptVersion = isTimeout ? PROMPT_VERSION_ART_DIRECTOR : PROMPT_VERSION_SIMPLIFIED;
   console.log(`[generate-without-logo][req-${reqId}] inserindo generation_event (failed)...`, { promptVersion });
+
+  // F38.1 (D7/D11): eventos call-level pendentes do run (ex.: imagem gerada mas
+  // validação rejeitou) são gravados mesmo na falha — sem assinatura, sem id.
+  await flushCallEvents(null);
+
   await insertGenerationEvent({
     store_id: id,
     generation_type: 'visual_signature',
@@ -480,6 +584,11 @@ export const POST = apiHandler(async (
     has_logo: false,
     has_generated_signature: false,
     has_brand_profile: false,
+    // F38.1 (D1/D2/D6): run context no delivery failed (sem cost/tokens = delivery)
+    operation_run_id: run.operationRunId,
+    trace_id: run.traceId,
+    operation_run_type: 'visual_signature',
+    visual_signature_id: null,
   });
 
   console.log(`[generate-without-logo][req-${reqId}] enviando response error`);

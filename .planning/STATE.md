@@ -2,22 +2,22 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
-current_phase: 38
-status: Executing Phase 38
-last_updated: "2026-08-07T22:42:27.660Z"
+current_phase: 38.1
+status: executing
+last_updated: "2026-08-09T21:30:53.239Z"
 progress:
-  total_phases: 15
-  completed_phases: 13
-  total_plans: 67
-  completed_plans: 67
-  percent: 87
+  total_phases: 21
+  completed_phases: 19
+  total_plans: 99
+  completed_plans: 93
+  percent: 91
 ---
 
 # Project State
 
-**Last updated:** 2026-08-08 (F38 Tabela de Custos por Operação concluída — 8/8 plans, 1597 testes, UAT 4/4; renumeração F37 = Revisão e Aprovação da Arte, F38 = Tabela de Custos, F39 = Stripe)
+**Last updated:** 2026-08-09 (F38.1 Apuração de Custos de IA por Entrega **CONCLUÍDA — 11/11 plans**: 38-1-10 ✅ views/RPCs apuração + I1–I6 + gates + UAT manual validado; 38-1-11 ✅ runbook trackings. **Fechamento como camada de estimativa operacional granular** — ajuste provisório versionável da tool image_generation (fórmula `responses_image_generation_v2`): `responses:image_generation = USD 0.065` é **estimativa operacional provisória para beta**, calibrada por UAT/dashboard/CSV da OpenAI — **NÃO é custo financeiro real**; a **reconciliação financeira real fica para a próxima fase**. 38/38+2 requirements, 1713 testes, typecheck/lint/build limpos; F38 concluída 8/8 plans, 1597 testes, UAT 4/4; renumeração F37 = Revisão e Aprovação da Arte, F38 = Tabela de Custos, F39 = Stripe)
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆ **Em andamento**
-**Current phase:** 38
+**Current phase:** 38.1
 
 ## Completed
 
@@ -127,6 +127,16 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 | Phase | Plans | Duration | Tests |
 |-------|-------|----------|-------|
 | Phase 18-app-shell-ui-base-rotas | 3 plans | ~multi-cycle | 579→600 (21 novos) |
+| Phase 38-1-ai-cost-accounting P01 | 45min | 3 tasks | 1 files |
+| Phase 38-1-ai-cost-accounting P02 | 7min | 3 tasks | 5 files |
+| Phase 38-1-ai-cost-accounting P03 | 8min | 3 tasks | 7 files |
+| Phase 38-1-ai-cost-accounting P04 | 19min | 3 tasks | 7 files |
+| Phase 38-1-ai-cost-accounting P05 | 10min | 3 tasks | 8 files |
+| Phase 38-1-ai-cost-accounting P06 | 8min | 3 tasks | 4 files |
+| Phase 38-1-ai-cost-accounting P07 | 11min | 3 tasks | 5 files |
+| Phase 38-1-ai-cost-accounting P08 | 9min | 3 tasks | 4 files |
+| Phase 38-1-ai-cost-accounting P09 | 12min | 3 tasks | 11 files |
+| Phase 38-1-ai-cost-accounting PP09 | 12min | 3 tasks | 11 files |
 
 ### Phase 19 — Onboarding & Estados Vazios ✅
 
@@ -426,9 +436,8 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 38 (credit-operation-costs) — EXECUTING
-Plan: 1 of 8
-v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36 e 38 concluídas. F37 (Revisão e Aprovação da Arte, v1.5, experimento beta) em planejamento futuro; F38 (Tabela de Custos por Operação, v1.5) concluída — 8/8 plans, 1597 testes, UAT 4/4, fonte da verdade `openspec/changes/fase-38-credit-operation-costs/`; F39 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37 → F39).
+Phase: 38.1 (ai-cost-accounting) — ✅ COMPLETE (11/11 plans, UAT validado)
+v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36, 38 e 38.1 concluídas. F38 (Tabela de Custos por Operação, v1.5) concluída — 8/8 plans, 1597 testes, UAT 4/4; F38.1 (Apuração de Custos de IA por Entrega, desdobramento da F38) **CONCLUÍDA** — 11/11 plans, 1713 testes, UAT validado, **fechada como camada de estimativa operacional granular** (ajuste provisório da tool image_generation `0.065` = estimativa beta provisória, não custo real; reconciliação financeira real na próxima fase), fonte da verdade `openspec/changes/fase-38-1-ai-cost-accounting/`; F37 (Revisão e Aprovação da Arte, v1.5, experimento beta) em planejamento futuro; F39 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37 → F39).
 
 ### Phase 36 — Onboarding: Navegação por Abas ✅ Complete
 
@@ -482,6 +491,32 @@ v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36 e 38 concluída
 **Source:** `openspec/changes/fase-38-credit-operation-costs/` (fonte da verdade)
 **Context:** `.planning/phases/38-credit-operation-costs/38-CONTEXT.md`
 **UAT:** `.planning/phases/38-credit-operation-costs/38-UAT.md`
+
+### Phase 38.1 — Apuração de Custos de IA por Entrega ✅ Complete
+
+Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por entrega via `generation_events` + `operation_run_id`; `AiCostTracker` como camada única de registro; `resolveAiCost` (provider_reported → pricing_table → fallback_static → not_available); tabela `ai_model_pricing` versionada + RPC `admin_set_ai_model_price` + GET/PUT `/api/admin/ai-model-pricing` (sem página); views/RPCs de apuração e reconciliação USD × créditos (sem UI); furos 1–7 da F38 corrigidos; ~51 testes novos + verificação I1–I6.
+
+**Fechamento (2026-08-09) — camada de ESTIMATIVA OPERACIONAL GRANULAR, não reconciliação financeira final.** Ajuste provisório versionável da tool image_generation (fórmula `responses_image_generation_v2`): `estimated_cost_usd = text_component_usd + image_tool_component_usd`, aplicado apenas em `generationType=campaign_image` + `imageGenerationTool=true` (anti-dupla-cobrança em visual_signature/brand_profile/fallback gpt-image-2). **`responses:image_generation = USD 0.065` é ESTIMATIVA OPERACIONAL PROVISÓRIA PARA BETA**, calibrada por UAT/dashboard/CSV da OpenAI — **NÃO preenche `provider_reported_cost_usd` e NÃO é custo financeiro real**; a **reconciliação financeira real fica para a próxima fase**. Fonte versionável: linha `ai_model_pricing ('openai','responses:image_generation')` (migration 20260809000003, aplicada em Local e Remote) ou bootstrap `DEFAULT_AI_MODEL_PRICING`, ajustável via GET/PUT `/api/admin/ai-model-pricing`; metadata do evento `campaign_image` leva `cost_formula_version`, `text_component_usd`, `image_tool_component_usd`, `image_tool_pricing_*` e `cost_estimation_note=provisional_image_tool_unit_cost_until_provider_reconciliation`, mantendo `provider_usage_raw`.
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 38-1-01 | 1 | ✅ | Migration `f38_1_create_ai_cost_accounting` — colunas `generation_events` + CHECKs + índices, `campaigns.operation_run_id`, `ai_model_pricing` + seeds + RPC (db push [BLOCKING]) |
+| 38-1-02 | 2 | ✅ | Types call-level + `AiCostTracker` (único caminho de escrita, best-effort) |
+| 38-1-03 | 2 | ✅ | Admin — RPC pricing + GET/PUT `/api/admin/ai-model-pricing` + `/api/admin/ai-costs` + seeds |
+| 38-1-04 | 3 | ✅ | `resolveAiCost` 4 fontes nunca-null (D9) + `ai-model-pricing` (D8) + `legacy-estimator` síncrono + barrel (10 cenários 6.1, 1643 testes) |
+| 38-1-05 | 3 | ✅ | D11 event contract (usage+durationMs) + `onCall` copy/validation/review/image-gen (13 cenários, 1657 testes) |
+| 38-1-06 | 3 | ✅ | `onCall` no VS generator (Responses API) + brand profiler (visão, from-zero) — 1661 testes |
+| 38-1-07 | 4 | ✅ | Rotas 6.3 — generate-image (call-level, delivery sem custo, totalCost) |
+| 38-1-08 | 4 | ✅ | Rotas 6.4 — generate-without-logo (VS/validation custo, nova tentativa = novo run) |
+| 38-1-09 | 4 | ✅ | Rotas 6.5 — brand-profile/* + infer + realign (3 caminhos IA) + brand-director/text-only onCall (15 testes novos, 1700 testes) |
+| 38-1-10 | 5 | ✅ | Views/RPCs apuração + verificação I1–I6 (banco real) + 50 testes + gates + UAT checkpoint validado |
+| 38-1-11 | 6 | ✅ | Runbook trackings 8.1–8.5 + fechamento (0.065 provisório beta; reconciliação financeira real na próxima fase) |
+
+**Status:** 11/11 plans concluídos — 1713 testes (199 arquivos, 13 novos no fechamento), typecheck/lint/build limpos; migration `20260809000003_f38_1_provisional_image_tool_pricing.sql` aplicada em Local e Remote (linha vigente confirmada); UAT/checkpoint da fase validado.
+
+**Source:** `openspec/changes/fase-38-1-ai-cost-accounting/` (fonte da verdade)
+**Context:** `.planning/phases/38-1-ai-cost-accounting/38-1-CONTEXT.md`
+**Patterns:** `.planning/phases/38-1-ai-cost-accounting/38-1-PATTERNS.md`
 
 ### Phase 30 — Fundação Legal ✅
 
@@ -596,6 +631,7 @@ v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36 e 38 concluída
 | F36 | ✅ Complete | Onboarding — Navegação por Abas (6/6 plans, 31/31 requirements, 1479 testes, code review aplicado) |
 | F37 | ○ In progress | Revisão e Aprovação da Arte (v1.5, experimento beta — planejamento futuro) |
 | **F38** | **✅ Complete** | **Tabela de Custos por Operação — 8/8 plans, 1597 testes, I1-I6 verificados no banco real, build gate verde, UAT 4/4 aprovado** |
+| **F38.1** | **✅ Complete** | **Apuração de Custos de IA por Entrega — 11/11 plans, 40/40 requirements, 1713 testes (199 arquivos), I1–I6 banco real, UAT validado; fechada como camada de ESTIMATIVA OPERACIONAL GRANULAR (0.065 provisório beta; reconciliação financeira real na próxima fase)** |
 | F39 | ○ Future | Stripe / Monetização Pública (v1.7, pós-beta — renumerada de F36 → F37 → F39) |
 
 ### Quick Tasks Completed
@@ -618,4 +654,30 @@ v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36 e 38 concluída
 | 260730-o30 | Hotfix admin_get_metrics uuid = text + dead code grant_monthly_credits | 2026-07-30 | 0051a7a | [260730-o30-hotfix-admin-metrics-rpc-uuid-text](./quick/260730-o30-hotfix-admin-metrics-rpc-uuid-text/) |
 | 260731-qep | Adequar documentação legal para beta freemium — Termos v1.3, Privacidade v1.2, AUP v1.1, remoção de aviso de draft (markdowns + páginas públicas), microcopy discreta em campanhas | 2026-07-31 | 020e197 | [260731-qep-adequar-documentos-legais-beta-freemium-](./quick/260731-qep-adequar-documentos-legais-beta-freemium-/) |
 | 260804-s16 | Corrigir assimetria Diretor/Revisor de Imagem: mandatoryArtworkText chega ao diretor mas nao ao revisor. Espelhar contrato de contexto (mandatoryArtworkText, campaignDetails, additionalDetails) ao ImageReviewInput e ao prompt do revisor com linguagem de revisao, adicionando testes focados. | 2026-08-04 | 47a1a4a | [260804-s16-corrigir-assimetria-diretor-revisor-de-i](./quick/260804-s16-corrigir-assimetria-diretor-revisor-de-i/) |
-| 260808-rqw | Landing pública + acesso fechado beta — landing / com form de solicitação, POST /api/access-requests (zod + anti-duplicidade + anti-enumeração), /signup neutralizado (beta fechado), fix pós-login /dashboard, admin /admin/access-requests com RPC atômico + audit log, doc SUPABASE-CLOSED-BETA.md | 2026-08-08 | b481446 | [260808-rqw-landing-p-blica-acesso-fechado-beta](./quick/260808-rqw-landing-p-blica-acesso-fechado-beta/) |
+| 260808-rqw | Landing pública + acesso fechado beta — landing / com form de solicitação, POST /api/access-requests (zod + anti-duplicidade + anti-enumeração), /signup neutralizado (beta fechado), fix pós-login /dashboard, admin /admin/access-requests com RPC atômico + audit log, doc SUPABASE-CLOSED-BETA.md | 2026-08-08 | 00947d0 | [260808-rqw-landing-p-blica-acesso-fechado-beta](./quick/260808-rqw-landing-p-blica-acesso-fechado-beta/) |
+
+## Decisions
+
+- [Phase 38-1-ai-cost-accounting]: provider do onCall do CopyDirectorService derivado de this.provider.name (TextProvider já expõe name) — sem campo providerName extra no construtor (38-1-05)
+- [Phase 38-1-ai-cost-accounting]: durationMs do GenerationMetricsEvent usa elapsedMs do pipeline (Date.now() - startTime) como base no helper emitMetricsEvent — escolha documentada no código (38-1-05)
+- [Phase 38-1-ai-cost-accounting]: onCall interno no generateImage captura usage e enriquece o evento da fase existente — nunca invoca onMetricsEvent direto (anti-dupla-contagem T-38.1-22, canal único) (38-1-05)
+- [Phase 38-1-ai-cost-accounting]: Fixes Rule 1 no push da migration F38.1-01: REVOKE ALL ON VIEW -> ON TABLE (sintaxe PostgreSQL) e MAX(uuid) -> GROUP BY nas CTEs de admin_cost_vs_credits
+- [Phase 38-1-ai-cost-accounting]: Views admin_ai_* sem GRANT direto ao cliente (404 no REST confirma T-38.1-03) - acesso exclusivo via RPC SECURITY DEFINER
+- [Phase 38-1-ai-cost-accounting]: AiCostEvent importa GenerationEventType/Status de visual-signature/types (D5) - enum nao duplicado em ai-cost/types.ts (evita drift com o banco)
+- [Phase 38-1-ai-cost-accounting]: insertGenerationEvent delega ao AiCostTracker e retorna null em sucesso (record e void) - consumidores atuais apenas await; API publica mantida por compat (teste 7 do spec)
+- [Phase 38-1-ai-cost-accounting]: Mapeamento cost/tokens do delegate do insert so gera AiCostEvent.cost/tokens quando campos presentes - sem cost/tokens = delivery marker preservado (D1/D6)
+- [Phase 38-1-ai-cost-accounting]: resolveAiCost normaliza o model ANTES da busca (normalizeModel na BUSCA — D9); ai-model-pricing.ts mantem copia local do normalizeModel (evita dependencia circular com cost-estimator) — Testes 6.1 exigem lookup por modelo base; getModelPricing ja normaliza no bootstrap — dupla normalizacao e idempotente
+- [Phase 38-1-ai-cost-accounting]: not_available alcançável via desabilitação explícita do fallback: env VENDEO_AI_FALLBACK_COST_USD (ou compat antigo) = '0'/'none'/'disabled'/'off' → sem preço/config → custo NULL (D4); env inválido continua → default 0.15 (T-38.1-20) — Cenario 6.1 #8 exige o caminho not_available; a cadeia D9 padrao sempre cai em fallback_static (default 0.15)
+- [Phase 38-1-ai-cost-accounting]: manual_unknown alcançável via parâmetro opcional manualCostUsd (D4: custo inserido/ajustado manualmente sem origem automática) — extensão retrocompatível do contrato documentado — Cenario 6.1 #10 exige o caminho manual_unknown 'presente no contrato e alcançável'; o contrato documentado de 4 params não o permitia
+- [Phase 38-1-ai-cost-accounting]: Teste cached gpt-5.5 usa a semântica do spec (input pago = 600 uncached + 400 cached → 0.0092), não a aritmética do PLAN (0.0112) que duplica contagem dos cached tokens — PLAN anotava 0.0050 (1000 prompt a cheio) + 0.0002 (cached) — cobra os mesmos 400 tokens duas vezes; spec do cenário e contrato legado definem o desconto (uncached = prompt - cached)
+- [Phase 38-1-ai-cost-accounting]: onCall do AiImageGenerator so no caminho de sucesso (chamada concluida); erro nao emite evento - failed gravado pela rota 38-1-08 — anti-dupla-contagem T-38.1-28/F38.1-25
+- [Phase 38-1-ai-cost-accounting]: brand-profiler.ts so tem chamadas de visao (callVision/callVisionFull); brand_profile_text vem do text-only-inference-service.ts na rota 38-1-09 (D11) — D5: nao inventar chamada; plano assumia 2 onCalls no path 2
+- [Phase 38-1-ai-cost-accounting]: recordCall na rota generate-image e fire-and-forget (void) no caminho de resultado — telemetria nunca bloqueia geracao (T-38.1-29, D7); ordem de resolucao garantida pelos awaits do pipeline (upload/update) antes do logPipelineEvent com totalCost (38-1-07)
+- [Phase 38-1-ai-cost-accounting]: campaign_input_validation vem do onMetricsEvent do ImageGenerationService (fase input_validation, attempt 0) — a validacao pre-stream da rota (guards 409/conflict) nao emite evento pois nao chega a criar campanha (38-1-07)
+- [Phase 38-1-ai-cost-accounting]: duration_is_pipeline centralizada no helper recordCall (delivery) — o tracker a adiciona de novo (idempotente); chamada de delivery nao repassa metadata, mantendo grep de controle em 1 ocorrencia na rota (38-1-07)
+- [Phase 38-1-ai-cost-accounting]: Retry VS = novo startRun + flushCallEvents(null) fechando o run 1 (eventos da tentativa falha gravados com visual_signature_id null) antes de abrir o run 2 — o run falho nao recebe o id da assinatura do retry (T-38.1-37, D1) (38-1-08)
+- [Phase 38-1-ai-cost-accounting]: Imagem e validacao VS atravessam o MESMO onCall (D11); a rota distingue visual_signature_image vs visual_signature_validation pelo model real da chamada (validacao = IMAGE_VALIDATION_MODEL || gpt-4o-mini) (38-1-08)
+- [Phase 38-1-ai-cost-accounting]: Eventos call-level VS enfileirados (pendingCalls) ate o visual_signature_id existir (apos persistSignature) — todos os eventos do run com o id (D2); operationRunId/attempt capturados no momento da chamada (38-1-08)
+- [Phase 38-1-ai-cost-accounting]: Rota principal /brand-profile (GET/PATCH/archive) NAO gera via profiler — entrega brand_profile_with_logo emitida no path logo do realign (director.analyze); decidido e testado na rota principal (38-1-09 task 2.3)
+- [Phase 38-1-ai-cost-accounting]: Buffer de AiCallInfo por sequencia nas rotas brand: 1a entrada = brand_profile_vision, 2a = brand_profile_text (mapeamento deterministico por path — T-38.1-39); na pratica brand-profiler.ts so emite visao, text-only e servico separado (38-1-09)
+- [Phase 38-1-ai-cost-accounting]: onCall de analyze/infer em try/catch await (aceita sync e async, nunca lanca — D7); caminho mock dev sem OPENAI_API_KEY nao emite onCall (sem chamada real de IA — 6.5) (38-1-09)

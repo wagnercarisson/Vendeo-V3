@@ -1,6 +1,7 @@
 import type { ColorCluster } from '@/lib/brand-assets/types';
 export type { ColorCluster };
 import { findClosestProbeCluster } from '@/lib/brand-assets/color-probe';
+import type { CostSource, OperationRunType, AiCallInfo } from '@/lib/ai-cost/types';
 
 export type VisualSignatureType =
   | "ai_generated"
@@ -95,7 +96,21 @@ export type GenerateVariationsResult =
 
 export type LogoStatus = 'uploaded' | 'generated' | 'explicit_none' | 'failed' | 'exhausted' | null;
 
-export type GenerationEventType = 'visual_signature' | 'brand_profile_without_logo' | 'brand_profile_with_logo';
+// F38.1 (D5): 12 valores alinhados ao CHECK chk_generation_events_type da migration.
+// 6 tipos existentes mantidos (backward compat) + 6 novos call-level.
+export type GenerationEventType =
+  | 'campaign_pipeline'
+  | 'campaign_copy'
+  | 'campaign_input_validation'
+  | 'campaign_image'
+  | 'campaign_image_review'
+  | 'visual_signature'
+  | 'visual_signature_image'
+  | 'visual_signature_validation'
+  | 'brand_profile_without_logo'
+  | 'brand_profile_with_logo'
+  | 'brand_profile_vision'
+  | 'brand_profile_text';
 
 export type GenerationEventStatus = 'success' | 'failed' | 'rejected' | 'timeout';
 
@@ -143,6 +158,16 @@ export interface GenerationEventInsert {
   has_brand_profile?: boolean | null;
   input_data_hash?: string | null;
   metadata?: Record<string, unknown> | null;
+  // F38.1 (D2/D5) — novas colunas opcionais para o delegate do AiCostTracker
+  visual_signature_id?: string | null;
+  operation_run_id?: string | null;
+  trace_id?: string | null;
+  operation_run_type?: OperationRunType | null;
+  cached_input_tokens?: number | null;
+  image_tokens?: number | null;
+  provider_reported_cost_usd?: number | null;
+  cost_source?: CostSource | null;
+  pricing_version?: string | null;
 }
 
 export interface VisualSignatureArtDirectorOutput {
@@ -309,6 +334,8 @@ export interface BrandProfilerInput {
     state: boolean;
     slogan: boolean;
   } | null;
+  /** F38.1 (D7/D11): callback best-effort com dados de cada chamada de IA (brand_profile_vision / brand_profile_text mapeados na rota). Opcional — nunca bloqueia. */
+  onCall?: (info: AiCallInfo) => void | Promise<void>;
 }
 
 export interface BrandProfilerWithoutLogoResult {

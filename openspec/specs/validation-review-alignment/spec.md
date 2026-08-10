@@ -16,6 +16,8 @@ The system SHALL define a `ValidationContext` type that captures decisions made 
 
 `generated_product_mismatch` SHALL NEVER appear in `allowedConflicts`. Even when the user has confirmed an override, if the review detects that the generated image represents a different product, the generation SHALL fail.
 
+> **Delta F38.1 (D7/D11):** `InputValidationService.validate` passa a aceitar um callback opcional `onCall?: (info: AiCallInfo) => void` invocado após cada chamada vision real (`chat.completions`), com `provider`, `model`, `usage` e `durationMs`. A rota usa esse callback para registrar `campaign_input_validation` — a chamada vision de validação **não some mais** da contabilidade (furo 4 sanado).
+
 #### Scenario: ValidationContext carries input correction
 
 - **WHEN** the input validation corrected the product name from `"neskau"` to `"Nescau"`
@@ -25,6 +27,17 @@ The system SHALL define a `ValidationContext` type that captures decisions made 
 
 - **WHEN** the user accepted a suggestion for a `"product_image_conflict"`
 - **THEN** `allowedConflicts` SHALL contain `{ type: "product_image_conflict", userAction: "accepted_suggestion" }`
+
+#### Scenario: validate expõe usage via onCall
+
+- **WHEN** `validate(name, dataUrl, override?, { onCall })` é chamado
+- **THEN** o callback `onCall` é invocado após a chamada vision com `AiCallInfo` (provider, model, usage, durationMs)
+- **AND** a rota registra `campaign_input_validation` com custo/tokens (furo 4 sanado)
+
+#### Scenario: validate sem onCall mantém comportamento
+
+- **WHEN** `validate(name, dataUrl)` é chamado sem `onCall`
+- **THEN** o comportamento é idêntico ao anterior (callback opcional, retrocompatível)
 
 ### Requirement: ImageReviewInput extended with validationContext
 

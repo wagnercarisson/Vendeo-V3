@@ -1,6 +1,7 @@
 import { PromptLoader } from "@/lib/image-generation/prompt-loader";
 import { VISION_REVIEW_MODEL } from "@/lib/image-generation/config";
 import type { InputValidationResult } from "@/lib/image-generation/schema";
+import type { AiCallInfo, TokenUsage } from "@/lib/ai-cost/types";
 
 /**
  * InputValidationService — pre-generation conflict detection between the
@@ -33,12 +34,14 @@ export class InputValidationService {
    * @param typedProductName - The product name typed by the user in the form
    * @param productImageDataUrl - Base64 data URL of the uploaded product image
    * @param override - Optional override to skip validation
+   * @param onCall - Optional best-effort callback receiving AiCallInfo (D11)
    * @returns InputValidationResult — match, auto-fix, conflict, or low-confidence
    */
   async validate(
     typedProductName: string,
     productImageDataUrl: string,
-    override?: { productImageCheck?: "user_confirmed_continue" }
+    override?: { productImageCheck?: "user_confirmed_continue" },
+    onCall?: (info: AiCallInfo) => void | Promise<void>
   ): Promise<InputValidationResult> {
     // Skip validation when user override is present
     if (override?.productImageCheck === "user_confirmed_continue") {
@@ -51,19 +54,56 @@ export class InputValidationService {
     });
 
     // Call the vision model
-    const result = await this.callVisionModel(prompt, productImageDataUrl);
+    const startTime = Date.now();
+    const { content, usage } = await this.callVisionModel(prompt, productImageDataUrl);
+    const durationMs = Date.now() - startTime;
+
+    // Best-effort telemetry — never blocks validation (D7)
+    this.invokeOnCall(onCall, {
+      provider: "openai",
+      model: this.model,
+      usage,
+      durationMs,
+    });
 
     // Parse and validate the structured JSON response
-    return this.parseResult(result);
+    return this.parseResult(content);
+  }
+
+  /**
+   * Invoke the onCall callback best-effort (D7): a throwing or rejecting
+   * callback is logged and ignored — it never breaks validation.
+   */
+  private invokeOnCall(
+    onCall: ((info: AiCallInfo) => void | Promise<void>) | undefined,
+    info: AiCallInfo
+  ): void {
+    if (!onCall) return;
+    try {
+      Promise.resolve(onCall(info)).catch((err) => {
+        console.error(
+          `[InputValidationService] onCall callback failed (best-effort): ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
+      });
+    } catch (err) {
+      console.error(
+        `[InputValidationService] onCall callback failed (best-effort): ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      );
+    }
   }
 
   /**
    * Call the vision-capable model with the prompt and product image.
+   * Returns the content plus the normalized token usage (D11).
    */
   private async callVisionModel(
     prompt: string,
     imageDataUrl: string
-  ): Promise<string> {
+  ): Promise<{ content: string; usage?: TokenUsage }> {
     const { default: OpenAI } = await import("openai");
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
@@ -91,7 +131,29 @@ export class InputValidationService {
       throw new Error("Vision model returned empty response");
     }
 
-    return content;
+    return { content, usage: this.mapUsage(response.usage) };
+  }
+
+  /**
+   * Map the OpenAI SDK usage payload to the normalized TokenUsage (D12).
+   * Only present fields are included; defensive against SDK shape drift.
+   */
+  private mapUsage(usage: unknown): TokenUsage | undefined {
+    if (!usage || typeof usage !== "object") return undefined;
+    const u = usage as Record<string, unknown>;
+    const tokens: TokenUsage = {};
+    if (typeof u.prompt_tokens === "number") tokens.promptTokens = u.prompt_tokens;
+    if (typeof u.completion_tokens === "number") tokens.completionTokens = u.completion_tokens;
+    if (typeof u.total_tokens === "number") tokens.totalTokens = u.total_tokens;
+    const promptDetails = u.prompt_tokens_details as Record<string, unknown> | undefined;
+    if (promptDetails && typeof promptDetails.cached_tokens === "number") {
+      tokens.cachedInputTokens = promptDetails.cached_tokens;
+    }
+    const completionDetails = u.completion_tokens_details as Record<string, unknown> | undefined;
+    if (completionDetails && typeof completionDetails.image_tokens === "number") {
+      tokens.imageTokens = completionDetails.image_tokens;
+    }
+    return tokens;
   }
 
   /**
