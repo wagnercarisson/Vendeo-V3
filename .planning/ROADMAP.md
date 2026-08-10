@@ -34,7 +34,7 @@
 | 37 | ○ Revisão e Aprovação da Arte | — | Pending    | — |
 | 38 | ✅ Tabela de Custos por Operação | 8/8 | ✅ Complete | 2026-08-07 |
 | 38.1 | ✅ Apuração de Custos de IA por Entrega | 11/11 | ✅ Complete | 2026-08-09 |
-| 38.2 | ○ Admin de Custos Operacionais + Configurações Econômicas | 0/0 | ○ Pending | — |
+| 38.2 | ○ Admin de Custos Operacionais + Configurações Econômicas | 0/11 | Planned    |  |
 | 39 | ○ Stripe / Monetização Pública (v1.7) | — | Pending    | — |
 
 ---
@@ -592,7 +592,7 @@ Plans:
 
 ---
 
-### Phase 38.2 — Admin de Custos Operacionais + Configurações Econômicas
+### Phase 38.2: Admin de Custos Operacionais + Configurações Econômicas
 
 **Goal:** Expor a F38.1 ("medir primeiro, exibir depois") na camada de admin/observabilidade: painel **Custos de Operação** (`/admin/ai-operation-costs`) com KPIs/filtros/tabela por entrega/drilldown call-level e **agregados por segmento econômico** (D9); **Parâmetros Econômicos** configuráveis por admin (`economic_parameters` — `usd_brl_rate` e `credit_value_brl`, defaults 1.00, com auditoria append-only e RPC `admin_set_economic_parameter`); **badges de confiança** do custo (persistência `cost_formula_version`/`cost_estimation_note`/`text_component_usd`/`image_tool_component_usd` em `generation_events` — D5); correção **obrigatória** do `/admin/metrics` (card "Custo Médio IA" via apuração call-level, não delivery marker — D6); UI preparada para F38.3 (placeholder "Custo reconciliado provider: ainda indisponível").
 
@@ -616,7 +616,7 @@ Plans:
 
 **Source of truth:** `openspec/changes/fase-38-2-admin-custos-operacionais/`
 
-**Plans:** 0/11 (planejamento)
+**Plans:** 0/11 plans executed
 
 ```
 Plans:
