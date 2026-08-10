@@ -498,6 +498,10 @@ Adicionados 2026-08-09 no fechamento da fase (estado `openspec/changes/fase-38-1
 - [x] **F38.1-39**: Estimativa operacional granular — fórmula v2 `responses_image_generation_v2` (`estimated_cost_usd = text_component_usd + image_tool_component_usd`), aplicada só em `generationType=campaign_image` + `imageGenerationTool=true` (anti-dupla-cobrança); metadata `cost_formula_version`, `text_component_usd`, `image_tool_component_usd`, `image_tool_pricing_provider/model/version`, `cost_estimation_note=provisional_image_tool_unit_cost_until_provider_reconciliation`, mantendo `provider_usage_raw`
 - [x] **F38.1-40**: Seed provisória versionável da tool — linha `ai_model_pricing ('openai','responses:image_generation', image_unit_usd=0.065, source_note "F38.1 beta estimate calibrated from OpenAI dashboard/Costs CSV; provisional until provider cost reconciliation")` via migration `20260809000003` (aplicada Local/Remote) + bootstrap `DEFAULT_AI_MODEL_PRICING`; ajustável por GET/PUT `/api/admin/ai-model-pricing`; provedores futuros via adapter (`IMAGE_GENERATION_TOOL_MODELS`) sem hardcode OpenAI
 
+## v1.5 Requirements — Admin de Custos Operacionais + Configurações Econômicas (F38.2)
+
+> **Nota placeholder (2026-08-10):** requisitos da F38.2 (F38.2-01 a F38.2-40) entram quando os specs OpenSpec forem aprovados (`openspec/changes/fase-38-2-admin-custos-operacionais/specs/` — 8 capabilities: economic-parameters, ai-operation-runs-api, ai-operation-costs, ai-cost-tracker, ai-cost-accounting, admin-operation-costs, admin-metrics-dashboard, pipeline-metrics). Fase registrada como Pending; esta seção será preenchida no planejamento/execução. Escopo resumido: parâmetros econômicos configuráveis (`usd_brl_rate`/`credit_value_brl`), painel `/admin/ai-operation-costs`, badges de confiança, segmentação econômica (D9), correção do `/admin/metrics` (D6).
+
 ## v1.7 Requirements (Stripe / Monetização Pública)
 
 Deferred from v1.5 critical path. Stripe será implementada como F39/v1.7 após validação do beta controlado (renumerada de F35 → F36 → F37 → F39 nos alinhamentos do Changelog/Novidades, do Onboarding — Navegação por Abas e da Tabela de Custos por Operação).

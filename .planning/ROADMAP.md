@@ -4,7 +4,7 @@
 
 **18 phases** | **177 requirements mapped** | All covered ✓
 
-**Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23. F35 = Changelog/Novidades, F36 = Onboarding — Navegação por Abas, F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), F39 = Stripe/Monetização Pública (v1.7) (renumeração alinhada nos documentos de alinhamento F36/F38). **38.1 = Apuração de Custos de IA por Entrega** (desdobramento da F38, mesmo milestone v1.5).
+**Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23. F35 = Changelog/Novidades, F36 = Onboarding — Navegação por Abas, F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), F39 = Stripe/Monetização Pública (v1.7) (renumeração alinhada nos documentos de alinhamento F36/F38). **38.1 = Apuração de Custos de IA por Entrega** (desdobramento da F38, mesmo milestone v1.5). **38.2 = Admin de Custos Operacionais + Configurações Econômicas** (desdobramento da F38, mesmo milestone v1.5). **38.2 = Admin de Custos Operacionais + Configurações Econômicas** (desdobramento da F38, mesmo milestone v1.5).
 
 ---
 
@@ -34,6 +34,7 @@
 | 37 | ○ Revisão e Aprovação da Arte | — | Pending    | — |
 | 38 | ✅ Tabela de Custos por Operação | 8/8 | ✅ Complete | 2026-08-07 |
 | 38.1 | ✅ Apuração de Custos de IA por Entrega | 11/11 | ✅ Complete | 2026-08-09 |
+| 38.2 | ○ Admin de Custos Operacionais + Configurações Econômicas | 0/0 | ○ Pending | — |
 | 39 | ○ Stripe / Monetização Pública (v1.7) | — | Pending    | — |
 
 ---
@@ -591,6 +592,49 @@ Plans:
 
 ---
 
+### Phase 38.2 — Admin de Custos Operacionais + Configurações Econômicas
+
+**Goal:** Expor a F38.1 ("medir primeiro, exibir depois") na camada de admin/observabilidade: painel **Custos de Operação** (`/admin/ai-operation-costs`) com KPIs/filtros/tabela por entrega/drilldown call-level e **agregados por segmento econômico** (D9); **Parâmetros Econômicos** configuráveis por admin (`economic_parameters` — `usd_brl_rate` e `credit_value_brl`, defaults 1.00, com auditoria append-only e RPC `admin_set_economic_parameter`); **badges de confiança** do custo (persistência `cost_formula_version`/`cost_estimation_note`/`text_component_usd`/`image_tool_component_usd` em `generation_events` — D5); correção **obrigatória** do `/admin/metrics` (card "Custo Médio IA" via apuração call-level, não delivery marker — D6); UI preparada para F38.3 (placeholder "Custo reconciliado provider: ainda indisponível").
+
+**Requirements:** F38.2-01 a F38.2-22 (derivados dos 8 specs OpenSpec: economic-parameters 7, ai-operation-runs-api 5, ai-operation-costs 3, ai-cost-tracker 1, ai-cost-accounting 1, admin-operation-costs 1, admin-metrics-dashboard 2, pipeline-metrics 2)
+
+**Success criteria:**
+
+1. Migrations novas (3): `economic_parameters` + `economic_parameter_audit` (append-only, idempotência por `operation_id`) + seeds 1.00/1.00 `ON CONFLICT DO NOTHING` + RPC `admin_set_economic_parameter` (SECURITY DEFINER, transacional, reason obrigatório) — RLS service_role, sem GRANT `authenticated` (D2)
+2. `generation_events` + 4 colunas de confiança (sem CHECK): `cost_formula_version`, `cost_estimation_note`, `text_component_usd`, `image_tool_component_usd`; `AiCostTracker.record` persiste daqui para frente (D5 — sem reclassificar histórico)
+3. RPCs `admin_get_ai_operation_runs` / `admin_get_ai_operation_run_events` (SECURITY DEFINER) — filtros + paginação + P95 (`percentile_cont`) + evidências brutas de segmento (D9) + insumos agregados de badge (D5); sem leitura direta das views; `admin_get_ai_costs`/`admin_get_metrics` **inalterados** (D4)
+4. `EconomicParameterService` (server-only) — linha inexistente → fallback 1.00 fail-open; erro real → `EconomicParameterUnavailableError` fail-closed → 503 (D2)
+5. API `GET/PUT /api/admin/economic-parameters` (requireAdmin + zod, reason obrigatório, idempotência por operationId) — sem endpoint público (D2)
+6. API `GET /api/admin/ai-operation-runs` (lista: filtros + paginação + segmento D9 + `summary`/`aggregations` sobre conjunto filtrado inteiro + badges) e `GET /api/admin/ai-operation-runs/[operationRunId]` (detalhe call-level com `estimatedCostBrl` e componentes de custo) (D4)
+7. Página `/admin/operation-costs` mantém a rota com **título visual "Configurações Econômicas"** + seção "Parâmetros Econômicos" (`ParamsForm`: inputs + motivo obrigatório + badge `source` + feedback `audit_id`) (D2)
+8. Página `/admin/ai-operation-costs` ("Custos de Operação") — filtros (período com presets 7/30/90d, loja, tipo, status, provider/model, gen_type, run_id, segmento), KPIs, tabela por entrega com badges, drilldown, agregados por segmento/owner/loja/hora; `force-dynamic` + `requireAdmin` + service layer; 503 fail-closed; link na nav admin (D3/D9)
+9. Segmentação econômica (D9) — classificador **no service** (`test`/`freemium/promotional`/`paid`/`manual/admin`/`unknown`, best-effort, shape `admin_grant` confirmado em `credit_transactions`; sem evidência → `unknown`, nunca inferir errado); filtro + agregados por segmento
+10. `/admin/metrics` corrigido (D6) — `getAvgCost` apura custo médio por entrega via call-level (não `campaign_pipeline.estimated_cost_usd`); card "**Custo Médio IA**"; USD→BRL via `economic_parameters.usd_brl_rate` (fonte única, não env)
+11. `npx vitest run`, `npm run typecheck`, `npm run lint`, `npm run build` — zero erros; ~40+ testes novos (12.x) + verificação SQL/integrada I1–I6 + regressão completa
+
+**Dependencies:** Phase 24 (ledger `credit_transactions` — leitura para segmentação D9), Phase 28 (métricas — leitura), Phase 38 (`credit_operation_costs` — eixo créditos), Phase 38.1 (`generation_events` call-level + views/RPCs — base da apuração), Phase 39 (Stripe — consumirá os parâmetros calibrados e o custo apurado). **Sem** `operation_runs`, **sem** reconciliação OpenAI (F38.3), **sem** câmbio automático.
+
+**Source of truth:** `openspec/changes/fase-38-2-admin-custos-operacionais/`
+
+**Plans:** 0/11 (planejamento)
+
+```
+Plans:
+- [ ] 38-2-01-PLAN.md — Migrations (3) + db push [BLOCKING] (Wave 1)
+- [ ] 38-2-02-PLAN.md — Types econômicos + EconomicParameterService (Wave 2)
+- [ ] 38-2-03-PLAN.md — AiCostTracker persistência de confiança (Wave 2)
+- [ ] 38-2-04-PLAN.md — API Configurações Econômicas (GET/PUT) (Wave 3)
+- [ ] 38-2-05-PLAN.md — Service de custos de operação + badges + segmentação (Wave 3)
+- [ ] 38-2-06-PLAN.md — API Custos de Operação (lista + detalhe) (Wave 4)
+- [ ] 38-2-07-PLAN.md — UI /admin/operation-costs "Configurações Econômicas" (Wave 4)
+- [ ] 38-2-08-PLAN.md — UI /admin/ai-operation-costs "Custos de Operação" (Wave 5)
+- [ ] 38-2-09-PLAN.md — Correção /admin/metrics (D6) (Wave 5)
+- [ ] 38-2-10-PLAN.md — Testes + Verificação I1–I6 + gates [checkpoint] (Wave 6)
+- [ ] 38-2-11-PLAN.md — Runbook trackings (Wave 7)
+```
+
+---
+
 ## Dependency Graph
 
 ```
@@ -641,7 +685,11 @@ Phase 24 (Credit Tables + CreditService) ──┘
                                      Phase 38 (Tabela de Custos por Operação — v1.5)
                                                │
                                                ▼
-                                     Phase 39 (Stripe / Monetização Pública — v1.7 futura)
+                          Phase 38.1 (Apuração de Custos de IA — v1.5)
+                          Phase 38.2 (Admin de Custos Operacionais + Configurações Econômicas — v1.5)
+                                               │
+                                               ▼
+                                      Phase 39 (Stripe / Monetização Pública — v1.7 futura)
 ```
 
 ---
@@ -727,4 +775,4 @@ Phase 24 (Credit Tables + CreditService) ──┘
 
 *Roadmap created: 2026-07-15*
 *Milestone: v1.5 — Lançamento Externo Controlado*
-*Last updated: 2026-08-09 — Phase 38 complete (Tabela de Custos por Operação — 8/8 plans, 1597 testes, UAT 4/4); renumeração F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), F39 = Stripe/Monetização Pública (v1.7); **Phase 38.1 (Apuração de Custos de IA por Entrega — desdobramento da F38, v1.5) CONCLUÍDA — 11/11 plans, 1713 testes (199 arquivos), UAT validado, fechada como camada de ESTIMATIVA OPERACIONAL GRANULAR** (ajuste provisório versionável da tool image_generation: `responses:image_generation = USD 0.065` = estimativa provisória para beta, calibrada por UAT/dashboard/CSV — NÃO é custo financeiro real; reconciliação financeira real fica para a próxima fase; seed `ai_model_pricing` via migration 20260809000003 aplicada Local/Remote) — fonte `openspec/changes/fase-38-1-ai-cost-accounting/`*
+*Last updated: 2026-08-10 — **Phase 38.2 (Admin de Custos Operacionais + Configurações Econômicas — desdobramento da F38, v1.5) REGISTRADA como Pending** — fonte `openspec/changes/fase-38-2-admin-custos-operacionais/` (planejamento iniciado).* Fase 38 complete (Tabela de Custos por Operação — 8/8 plans, 1597 testes, UAT 4/4); renumeração F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), F39 = Stripe/Monetização Pública (v1.7); **Phase 38.1 (Apuração de Custos de IA por Entrega — desdobramento da F38, v1.5) CONCLUÍDA — 11/11 plans, 1713 testes (199 arquivos), UAT validado, fechada como camada de ESTIMATIVA OPERACIONAL GRANULAR** (ajuste provisório versionável da tool image_generation: `responses:image_generation = USD 0.065` = estimativa provisória para beta, calibrada por UAT/dashboard/CSV — NÃO é custo financeiro real; reconciliação financeira real fica para a próxima fase; seed `ai_model_pricing` via migration 20260809000003 aplicada Local/Remote) — fonte `openspec/changes/fase-38-1-ai-cost-accounting/`*

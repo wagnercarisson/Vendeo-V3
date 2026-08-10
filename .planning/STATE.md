@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
-current_phase: 38.1
-status: executing
-last_updated: "2026-08-09T21:30:53.239Z"
+current_phase: 38.2
+status: planning
+last_updated: "2026-08-10T00:00:00.000Z"
 progress:
-  total_phases: 21
+  total_phases: 22
   completed_phases: 19
   total_plans: 99
   completed_plans: 93
@@ -15,9 +15,9 @@ progress:
 
 # Project State
 
-**Last updated:** 2026-08-09 (F38.1 Apuração de Custos de IA por Entrega **CONCLUÍDA — 11/11 plans**: 38-1-10 ✅ views/RPCs apuração + I1–I6 + gates + UAT manual validado; 38-1-11 ✅ runbook trackings. **Fechamento como camada de estimativa operacional granular** — ajuste provisório versionável da tool image_generation (fórmula `responses_image_generation_v2`): `responses:image_generation = USD 0.065` é **estimativa operacional provisória para beta**, calibrada por UAT/dashboard/CSV da OpenAI — **NÃO é custo financeiro real**; a **reconciliação financeira real fica para a próxima fase**. 38/38+2 requirements, 1713 testes, typecheck/lint/build limpos; F38 concluída 8/8 plans, 1597 testes, UAT 4/4; renumeração F37 = Revisão e Aprovação da Arte, F38 = Tabela de Custos, F39 = Stripe)
+**Last updated:** 2026-08-10 (F38.2 Admin de Custos Operacionais + Configurações Econômicas **REGISTRADA — 0/11 plans, Pending/planejamento**: desdobramento da F38, v1.5 — painel admin `/admin/ai-operation-costs` + Configurações Econômicas (`economic_parameters`) + badges de confiança + correção do `/admin/metrics`; fonte `openspec/changes/fase-38-2-admin-custos-operacionais/`). F38.1 Apuração de Custos de IA por Entrega **CONCLUÍDA — 11/11 plans**: 38-1-10 ✅ views/RPCs apuração + I1–I6 + gates + UAT manual validado; 38-1-11 ✅ runbook trackings. **Fechamento como camada de estimativa operacional granular** — ajuste provisório versionável da tool image_generation (fórmula `responses_image_generation_v2`): `responses:image_generation = USD 0.065` é **estimativa operacional provisória para beta**, calibrada por UAT/dashboard/CSV da OpenAI — **NÃO é custo financeiro real**; a **reconciliação financeira real fica para a próxima fase**. 38/38+2 requirements, 1713 testes, typecheck/lint/build limpos; F38 concluída 8/8 plans, 1597 testes, UAT 4/4; renumeração F37 = Revisão e Aprovação da Arte, F38 = Tabela de Custos, F39 = Stripe)
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆ **Em andamento**
-**Current phase:** 38.1
+**Current phase:** 38.2
 
 ## Completed
 
@@ -436,8 +436,8 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 38.1 (ai-cost-accounting) — ✅ COMPLETE (11/11 plans, UAT validado)
-v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36, 38 e 38.1 concluídas. F38 (Tabela de Custos por Operação, v1.5) concluída — 8/8 plans, 1597 testes, UAT 4/4; F38.1 (Apuração de Custos de IA por Entrega, desdobramento da F38) **CONCLUÍDA** — 11/11 plans, 1713 testes, UAT validado, **fechada como camada de estimativa operacional granular** (ajuste provisório da tool image_generation `0.065` = estimativa beta provisória, não custo real; reconciliação financeira real na próxima fase), fonte da verdade `openspec/changes/fase-38-1-ai-cost-accounting/`; F37 (Revisão e Aprovação da Arte, v1.5, experimento beta) em planejamento futuro; F39 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37 → F39).
+Phase: 38.2 (admin-custos-operacionais) — ○ PLANNING (0/11 plans, Pending)
+v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36, 38 e 38.1 concluídas. F38 (Tabela de Custos por Operação, v1.5) concluída — 8/8 plans, 1597 testes, UAT 4/4; F38.1 (Apuração de Custos de IA por Entrega, desdobramento da F38) **CONCLUÍDA** — 11/11 plans, 1713 testes, UAT validado, **fechada como camada de estimativa operacional granular** (ajuste provisório da tool image_generation `0.065` = estimativa beta provisória, não custo real; reconciliação financeira real na próxima fase), fonte da verdade `openspec/changes/fase-38-1-ai-cost-accounting/`; **F38.2 (Admin de Custos Operacionais + Configurações Econômicas, desdobramento da F38) em PLANEJAMENTO** — painel `/admin/ai-operation-costs` (KPIs/filtros/tabela/drilldown/segmentos) + `economic_parameters` configuráveis + badges de confiança + correção `/admin/metrics`, fonte `openspec/changes/fase-38-2-admin-custos-operacionais/`; F37 (Revisão e Aprovação da Arte, v1.5, experimento beta) em planejamento futuro; F39 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37 → F39).
 
 ### Phase 36 — Onboarding: Navegação por Abas ✅ Complete
 
@@ -632,6 +632,7 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 | F37 | ○ In progress | Revisão e Aprovação da Arte (v1.5, experimento beta — planejamento futuro) |
 | **F38** | **✅ Complete** | **Tabela de Custos por Operação — 8/8 plans, 1597 testes, I1-I6 verificados no banco real, build gate verde, UAT 4/4 aprovado** |
 | **F38.1** | **✅ Complete** | **Apuração de Custos de IA por Entrega — 11/11 plans, 40/40 requirements, 1713 testes (199 arquivos), I1–I6 banco real, UAT validado; fechada como camada de ESTIMATIVA OPERACIONAL GRANULAR (0.065 provisório beta; reconciliação financeira real na próxima fase)** |
+| **F38.2** | **○ Pending** | **Admin de Custos Operacionais + Configurações Econômicas — painel `/admin/ai-operation-costs` (KPIs, filtros, tabela por entrega, drilldown call-level, agregados por segmento), `economic_parameters` configuráveis (usd_brl_rate/credit_value_brl), badges de confiança, correção `/admin/metrics` (0/11 plans, planejamento)** |
 | F39 | ○ Future | Stripe / Monetização Pública (v1.7, pós-beta — renumerada de F36 → F37 → F39) |
 
 ### Quick Tasks Completed
