@@ -41,6 +41,9 @@ export default async function AdminLayout({
         <Link href="/admin/reviews" className="font-medium hover:text-primary">
           Revisão
         </Link>
+        <Link href="/admin/access-requests" className="font-medium hover:text-primary">
+          Solicitações de acesso
+        </Link>
       </nav>
       <main>{children}</main>
     </div>
