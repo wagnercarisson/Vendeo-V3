@@ -35,6 +35,7 @@
 | 38 | ✅ Tabela de Custos por Operação | 8/8 | ✅ Complete | 2026-08-07 |
 | 38.1 | ✅ Apuração de Custos de IA por Entrega | 11/11 | ✅ Complete | 2026-08-09 |
 | 38.2 | ✅ Admin de Custos Operacionais + Configurações Econômicas | 15/15 | Complete    | 2026-08-11 |
+| 38.2.1 | ○ Snapshot Econômico | 0/0 | Pending    | — |
 | 39 | ○ Stripe / Monetização Pública (v1.7) | — | Pending    | — |
 
 ---
