@@ -35,6 +35,19 @@ async function getParameters(
   return GET(new NextRequest(url));
 }
 
+async function putParameter(body: Record<string, unknown>) {
+  const { PUT } = await import("../route");
+  return PUT(
+    new NextRequest(
+      new Request("http://localhost/api/admin/economic-parameters", {
+        method: "PUT",
+        body: JSON.stringify(body),
+        headers: { "Content-Type": "application/json" },
+      }),
+    ),
+  );
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   mockRequireAdmin.mockResolvedValue({ userId: "admin-1" });
@@ -79,5 +92,116 @@ describe("GET /api/admin/economic-parameters (D2 — lista resolvida via Economi
     expect(res.status).toBe(503);
     const body = await res.json();
     expect(body.error).toBe("economic_parameters_unavailable");
+  });
+});
+
+describe("PUT /api/admin/economic-parameters (D2 — RPC admin_set_economic_parameter)", () => {
+  it("200 via RPC + audit quando admin autenticado (payload correto)", async () => {
+    mockRpc.mockResolvedValue({
+      data: {
+        key: "usd_brl_rate",
+        value: 5.2,
+        audit_id: "audit-1",
+        updated_at: "2026-08-10T12:00:00.000Z",
+        idempotent: false,
+      },
+      error: null,
+    });
+
+    const res = await putParameter({
+      key: "usd_brl_rate",
+      value: 5.2,
+      reason: "Calibração beta",
+      operationId: "00000000-0000-4000-8000-000000000099",
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.parameter).toEqual({ key: "usd_brl_rate", value: 5.2 });
+    expect(body.auditId).toBe("audit-1");
+    expect(body.updatedAt).toBe("2026-08-10T12:00:00.000Z");
+    expect(body.idempotent).toBe(false);
+    expect(mockRpc).toHaveBeenCalledWith("admin_set_economic_parameter", {
+      p_actor_id: "admin-1",
+      p_key: "usd_brl_rate",
+      p_value: 5.2,
+      p_reason: "Calibração beta",
+      p_operation_id: "00000000-0000-4000-8000-000000000099",
+    });
+  });
+
+  it("400 zod — sem reason; key inválido; value <= 0", async () => {
+    const cases = [
+      { key: "usd_brl_rate", value: 5.2 },
+      { key: "invalid", value: 5.2, reason: "x" },
+      { key: "usd_brl_rate", value: 0, reason: "x" },
+      { key: "usd_brl_rate", value: -1, reason: "x" },
+    ];
+    for (const body of cases) {
+      const res = await putParameter(body);
+      expect(res.status).toBe(400);
+      const parsed = await res.json();
+      expect(parsed.error).toBe("Dados inválidos");
+    }
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+
+  it("400 zod — reason vazio (min 1)", async () => {
+    const res = await putParameter({
+      key: "credit_value_brl",
+      value: 1.5,
+      reason: "",
+    });
+    expect(res.status).toBe(400);
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+
+  it("403 sem admin (requireAdmin lança ForbiddenError)", async () => {
+    mockRequireAdmin.mockRejectedValue(new ForbiddenError());
+    const res = await putParameter({
+      key: "usd_brl_rate",
+      value: 5.2,
+      reason: "x",
+    });
+    expect(res.status).toBe(403);
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+
+  it("500 erro do RPC (economic_parameter_update_failed)", async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { message: "rpc down" },
+    });
+    const res = await putParameter({
+      key: "usd_brl_rate",
+      value: 5.2,
+      reason: "x",
+    });
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toBe("economic_parameter_update_failed");
+  });
+
+  it("200 idempotência — mesmo operation_id repetido → idempotent: true repassado", async () => {
+    mockRpc.mockResolvedValue({
+      data: {
+        key: "usd_brl_rate",
+        value: 5.2,
+        audit_id: "audit-1",
+        updated_at: "2026-08-10T12:00:00.000Z",
+        idempotent: true,
+      },
+      error: null,
+    });
+
+    const res = await putParameter({
+      key: "usd_brl_rate",
+      value: 5.2,
+      reason: "retry",
+      operationId: "00000000-0000-4000-8000-000000000099",
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.idempotent).toBe(true);
   });
 });
