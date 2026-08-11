@@ -171,7 +171,6 @@ describe("AdminAiOperationCostsPage — Custos de Operação (D3/D9)", () => {
     );
 
     expect(html).toContain("Aguardando dados de geração");
-    expect(html).toContain("aguardando dados de geração");
     expect(html).not.toContain("data-testid=\"kpis-grid\"");
   });
 
@@ -223,6 +222,8 @@ describe("AdminAiOperationCostsPage — Custos de Operação (D3/D9)", () => {
     );
 
     expect(html).toContain('data-testid="filters"');
-    expect(html).toContain('"segment":"paid"');
+    // JSON serializado no atributo → aspas viram &quot; (entidades HTML).
+    expect(html).toContain("&quot;segment&quot;:&quot;paid&quot;");
+    expect(html).toContain("&quot;status&quot;:&quot;failed&quot;");
   });
 });

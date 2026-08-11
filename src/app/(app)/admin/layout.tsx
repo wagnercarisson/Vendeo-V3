@@ -35,6 +35,9 @@ export default async function AdminLayout({
         <Link href="/admin/operation-costs" className="font-medium hover:text-primary">
           Configurações econômicas
         </Link>
+        <Link href="/admin/ai-operation-costs" className="font-medium hover:text-primary">
+          Custos de Operação
+        </Link>
         <Link href="/admin/audit-log" className="font-medium hover:text-primary">
           Histórico de auditoria
         </Link>
