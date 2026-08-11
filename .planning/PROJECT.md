@@ -12,6 +12,8 @@ Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confian�
 
 ## Current State
 
+**F38.2 Admin de Custos Operacionais + Configurações Econômicas — COMPLETE (2026-08-11)** — 15/15 plans: painel `/admin/ai-operation-costs` (KPIs, filtros, tabela por entrega, drilldown call-level, agregados por segmento, breakdown créditos brutos/estornos/líquidos + receita/resultado/margem), parâmetros econômicos configuráveis (`usd_brl_rate`, `credit_value_brl` com audit), badges de confiança, correção `/admin/metrics` (Custo Médio IA call-level). 1839 testes, verificação I1-I6 63/63 em banco real, 4 gates verdes, UAT manual 12/12 aprovado.
+
 **Shipped: v1.4 — Experiência SaaS (2026-07-15)**
 
 A milestone v1.4 transformou o Vendeo em um produto SaaS coerente: app shell profissional, navegação PT-BR, dashboard, onboarding, busca/filtros/paginação e suporte mobile responsivo.
@@ -301,4 +303,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-10 — F38.2 (Admin de Custos Operacionais + Configurações Econômicas, desdobramento da F38) CONCLUÍDA (11/11 plans, 1832 testes, verificação I1-I6 + gates) — fonte `openspec/changes/fase-38-2-admin-custos-operacionais/`. Antes: Phase 38 complete + F38.1 (Apuração de Custos de IA por Entrega) CONCLUÍDA (11/11 plans, 1713 testes, UAT validado — fechada como estimativa operacional granular: `responses:image_generation = 0.065` provisório beta, reconciliação financeira real na próxima fase) — v1.5 segue com F37 (Revisão e Aprovação da Arte) em planejamento; F39 (Stripe) futura pós-beta*
+*Last updated: 2026-08-11 — F38.2 (Admin de Custos Operacionais + Configurações Econômicas, desdobramento da F38) CONCLUÍDA (15/15 plans, 1839 testes, verificação I1-I6 63/63 + 4 gates + UAT manual 12/12 aprovado; gap closure UAT: créditos líquidos/estornos por run no RPC/service/UI, P95 legend, tracking STATE.md UTF-8 limpo) — fonte `openspec/changes/fase-38-2-admin-custos-operacionais/`. Antes: Phase 38 complete + F38.1 (Apuração de Custos de IA por Entrega) CONCLUÍDA (11/11 plans, 1713 testes, UAT validado — fechada como estimativa operacional granular: `responses:image_generation = 0.065` provisório beta, reconciliação financeira real na próxima fase) — v1.5 segue com F37 (Revisão e Aprovação da Arte) em planejamento; F39 (Stripe) futura pós-beta*
