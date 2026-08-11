@@ -82,7 +82,7 @@ Each task was committed atomically (TDD — RED `test(...)` + GREEN `feat(...)`)
 3. **Task 3: GET /api/admin/ai-operation-runs/[operationRunId] — detalhe (D4)** - `82e8644` (test) + `3b971e2` (feat)
 4. **Task 4: Testes completos da API (tarefa 12.4 — 13 testes)** - `e0db836` (test)
 
-**Plan metadata:** (docs commit — ver final deste SUMMARY)
+**Plan metadata:** `28de776` (docs: complete plan) + `94873df` (docs: update STATE/ROADMAP)
 
 ## Files Created/Modified
 
