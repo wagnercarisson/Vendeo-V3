@@ -256,3 +256,127 @@ describe("OperationRunsService — segmentação econômica (D9)", () => {
     expect(rpcArgs[0].p_page_size).toBe(100);
   });
 });
+
+describe("OperationRunsService — aggregations (D3/D9)", () => {
+  it("aggregations com as 8 chaves sobre o conjunto filtrado inteiro (não a página)", async () => {
+    const runs = Array.from({ length: 20 }, (_, i) =>
+      makeRawRun({
+        operation_run_id: `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`,
+        delivery_status: i % 2 === 0 ? "success" : "failed",
+        created_at: new Date(Date.UTC(2026, 7, 1, i % 24)).toISOString(),
+        generation_type: i % 2 === 0 ? "campaign_image" : "campaign_copy",
+      }),
+    );
+    const { client } = buildClient({ runs });
+    const service = new OperationRunsService(client, buildEconomic({}));
+
+    const result = await service.listRuns({ page: 1, pageSize: 5 });
+
+    expect(Object.keys(result.aggregations).sort()).toEqual([
+      "byDeliveryType",
+      "byHour",
+      "byOwner",
+      "byProviderModel",
+      "bySegment",
+      "byStage",
+      "byStatus",
+      "byStore",
+    ]);
+    expect(result.runs).toHaveLength(5);
+    // KPIs/agregados sobre o conjunto inteiro (20), nunca a página (5)
+    expect(result.summary.totalEntregas).toBe(20);
+    const statusTotal = Object.values(result.aggregations.byStatus).reduce(
+      (a, b) => a + b,
+      0,
+    );
+    expect(statusTotal).toBe(20);
+    expect(result.aggregations.byStatus.failed).toBe(10);
+    expect(result.aggregations.byStage.campaign_image).toBe(10);
+    expect(result.aggregations.byStage.campaign_copy).toBe(10);
+  });
+
+  it("bySegment com custo/resultado/margem/taxa de erro (D9); byOwner via stores.user_id", async () => {
+    const runs = [
+      makeRawRun({
+        operation_run_id: "run-a",
+        store_id: "store-1",
+        store_is_test: true,
+        custo_usd_total: "10",
+        creditos_debitados: "20",
+      }),
+      makeRawRun({
+        operation_run_id: "run-b",
+        store_id: "store-2",
+        deduction_purchased_amount: "3",
+        custo_usd_total: "20",
+        creditos_debitados: "10",
+        delivery_status: "failed",
+      }),
+    ];
+    const stores = [
+      { id: "store-1", name: "Loja A", user_id: "owner-1" },
+      { id: "store-2", name: "Loja B", user_id: "owner-2" },
+    ];
+    const { client } = buildClient({ runs, stores });
+    const service = new OperationRunsService(
+      client,
+      buildEconomic({ usd_brl_rate: 5.0, credit_value_brl: 1.5 }),
+    );
+
+    const { aggregations } = await service.listRuns({});
+
+    // bySegment — custo, resultado operacional estimado, margem % e taxa de erro
+    const testSeg = aggregations.bySegment.test;
+    expect(testSeg).toBeDefined();
+    expect(testSeg.entregas).toBe(1);
+    expect(testSeg.custoBrl).toBe(50);
+    expect(testSeg.resultadoOpBrl).toBe(-20);
+    expect(testSeg.margemOpPct).toBeCloseTo(-66.67, 2);
+    expect(testSeg.taxaErro).toBe(0);
+    expect(aggregations.bySegment.paid).toMatchObject({
+      segment: "paid",
+      entregas: 1,
+      custoBrl: 100,
+      taxaErro: 1,
+    });
+    // byOwner — dono da loja via stores.user_id
+    expect(aggregations.byOwner["owner-1"]).toMatchObject({
+      ownerId: "owner-1",
+      entregas: 1,
+      custoBrl: 50,
+    });
+    expect(aggregations.byOwner["owner-2"]).toMatchObject({
+      ownerId: "owner-2",
+      entregas: 1,
+      custoBrl: 100,
+    });
+  });
+
+  it("summary/aggregations refletem os 60 runs com page=2 (não a página 2)", async () => {
+    const runs = Array.from({ length: 60 }, (_, i) =>
+      makeRawRun({
+        operation_run_id: `run-${i}`,
+        delivery_status: i % 3 === 0 ? "failed" : "success",
+      }),
+    );
+    const { client } = buildClient({
+      runs,
+      stores: [{ id: "store-1", name: "Loja A", user_id: "owner-1" }],
+    });
+    const service = new OperationRunsService(client, buildEconomic({}));
+
+    const result = await service.listRuns({ page: 2 });
+
+    expect(result.runs).toHaveLength(25);
+    expect(result.page).toBe(2);
+    expect(result.total).toBe(60);
+    expect(result.summary.totalEntregas).toBe(60);
+    const statusTotal = Object.values(result.aggregations.byStatus).reduce(
+      (a, b) => a + b,
+      0,
+    );
+    expect(statusTotal).toBe(60);
+    expect(result.aggregations.byStatus.failed).toBe(20);
+    expect(result.aggregations.byStatus.success).toBe(40);
+  });
+});
