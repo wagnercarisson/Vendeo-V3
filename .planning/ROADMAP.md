@@ -616,7 +616,7 @@ Plans:
 
 **Source of truth:** `openspec/changes/fase-38-2-admin-custos-operacionais/`
 
-**Plans:** 6/11 plans executed
+**Plans:** 7/11 plans executed
 
 ```
 Plans:
@@ -626,7 +626,7 @@ Plans:
 - [x] 38-2-04-PLAN.md — API Configurações Econômicas (GET/PUT) (Wave 3)
 - [x] 38-2-05-PLAN.md — Service de custos de operação + badges + segmentação (Wave 3)
 - [x] 38-2-06-PLAN.md — API Custos de Operação (lista + detalhe) (Wave 4)
-- [ ] 38-2-07-PLAN.md — UI /admin/operation-costs "Configurações Econômicas" (Wave 4)
+- [x] 38-2-07-PLAN.md — UI /admin/operation-costs "Configurações Econômicas" (Wave 4)
 - [ ] 38-2-08-PLAN.md — UI /admin/ai-operation-costs "Custos de Operação" (Wave 5)
 - [ ] 38-2-09-PLAN.md — Correção /admin/metrics (D6) (Wave 5)
 - [ ] 38-2-10-PLAN.md — Testes + Verificação I1–I6 + gates [checkpoint] (Wave 6)
