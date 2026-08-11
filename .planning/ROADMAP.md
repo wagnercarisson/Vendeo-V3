@@ -639,6 +639,33 @@ Plans:
 
 ---
 
+### Phase 38.2.1: Snapshot Econômico
+
+**Goal:** Corrigir a base contábil da F38.2: congelar `usd_brl_rate_at_generation` (snapshot contábil do câmbio na geração) e `credit_value_brl_at_generation` (snapshot estimativo/fallback do valor do crédito na geração) em `generation_events` no momento da geração — impedindo que alterar `usd_brl_rate`/`credit_value_brl` recalculque retroativamente `custoBrl`, `receitaEstimadaBrl`, `resultadoEstimadoBrl`, `margemEstimadaPct`, KPIs, agregados e o card "Custo Médio IA" do `/admin/metrics`. Nomenclatura estimada (nunca "receita real"); fallback legacy explícito para eventos sem snapshot; backfill aproximado via `economic_parameter_audit`; receita real por pacote de crédito fica para F39.
+
+**Requirements:** F38.2.1-01 a F38.2.1-14 (derivados do spec `economic-snapshot` + deltas: ai-cost-tracker, ai-operation-runs-api, ai-operation-costs, pipeline-metrics, admin-metrics-dashboard, economic-parameters)
+
+**Success criteria:**
+
+1. Migration `generation_events` + `usd_brl_rate_at_generation`/`credit_value_brl_at_generation` (`IF NOT EXISTS`) + backfill aproximado idempotente via `economic_parameter_audit` (LAG) com fallback seed `1.00`
+2. `AiCostTracker.record` persiste os snapshots no momento da geração; callers de início de run resolvem os parâmetros uma vez e propagam o snapshot (best-effort)
+3. `deriveBrl` usa snapshot do run quando disponível (`custoBrl = custoUsd × usd_brl_rate_at_generation`; `receitaEstimadaBrl = creditosLiquidos × credit_value_brl_at_generation`); fallback corrente explícito com `creditValueSource`/`revenueEstimationNote`
+4. Nomenclatura estimada na API/UI (`receitaEstimadaBrl`/`resultadoEstimadoBrl`/`margemEstimadaPct`) — nenhum contrato afirma "receita real"
+5. `deriveSummary` soma BRL por run (não re-deriva com taxa única); `deriveAggregations` mantida
+6. RPCs de operation runs expõem snapshots por run/evento (contrato backward-compatible)
+7. `/admin/metrics` usa snapshot quando disponível; não recalcula histórico; nunca `VENDEO_USD_BRL_RATE`
+8. UI do painel e Configurações Econômicas informam que alteração vale para novas gerações e não recalcula histórico
+9. Estornos continuam descontados via créditos líquidos
+10. Testes de snapshot/fallback/estabilidade temporal/nomenclatura; `npx vitest run`, `npm run typecheck`, `npm run lint`, `npm run build` — zero erros
+
+**Dependencies:** Phase 38.2 (parâmetros econômicos + audit + RPCs de operation runs + `EconomicParameterService` + tracker), Phase 38.1 (`generation_events` call-level). **Sem** `operation_runs`, **sem** pacotes de créditos (F39), **sem** reconciliação OpenAI (F38.3).
+
+**Source of truth:** `openspec/changes/fase-38-2-1-economic-snapshot/`
+
+**Plans:** 0/0 plans (Pending)
+
+---
+
 ## Dependency Graph
 
 ```

@@ -539,6 +539,27 @@ Desdobramento da F38, adicionados via OpenSpec (`openspec/changes/fase-38-2-admi
 - [x] **F38.2-21**: Funções de métricas agregadas — `getAvgCost` call-level (avg_cost_ms removido do bundle)
 - [x] **F38.2-22**: MetricCard types
 
+## v1.5 Requirements — Snapshot Econômico (F38.2.1)
+
+Desdobramento da F38.2, adicionados via OpenSpec (`openspec/changes/fase-38-2-1-economic-snapshot/` — capability nova economic-snapshot + deltas: ai-cost-tracker, ai-operation-runs-api, ai-operation-costs, pipeline-metrics, admin-metrics-dashboard, economic-parameters). OpenSpec é a fonte detalhada; esta tabela é o índice rastreável para o gate de cobertura. A F38.2.1 corrige a base contábil: congela `usd_brl_rate_at_generation`/`credit_value_brl_at_generation` no momento da geração e impede recálculo retroativo das métricas em BRL.
+
+### Snapshot Econômico (F38.2.1-SNAP — spec economic-snapshot)
+
+- [ ] **F38.2.1-01**: Colunas `usd_brl_rate_at_generation`/`credit_value_brl_at_generation` em `generation_events` (snapshot contábil + estimativo/fallback)
+- [ ] **F38.2.1-02**: `AiCostTracker.record` persiste os snapshots no momento da geração (best-effort; daqui para frente)
+- [ ] **F38.2.1-03**: Callers de início de run resolvem os parâmetros uma vez e propagam o snapshot às chamadas filhas
+- [ ] **F38.2.1-04**: `custoBrl = custoUsdTotal × usd_brl_rate_at_generation` (snapshot; fallback corrente explícito)
+- [ ] **F38.2.1-05**: `receitaEstimadaBrl = creditosLiquidos × credit_value_brl_at_generation` (estorno descontado; nunca receita real)
+- [ ] **F38.2.1-06**: `resultadoEstimadoBrl`/`margemEstimadaPct` derivados (margem null quando receita 0)
+- [ ] **F38.2.1-07**: Nomenclatura estimada na API/UI (`receitaEstimadaBrl`/`resultadoEstimadoBrl`/`margemEstimadaPct`) + `creditValueSource`/`revenueEstimationNote` no fallback
+- [ ] **F38.2.1-08**: RPCs de operation runs expõem os snapshots por run/evento (contrato backward-compatible)
+- [ ] **F38.2.1-09**: `deriveSummary` soma BRL por run (não re-deriva com taxa única); `deriveAggregations` mantida
+- [ ] **F38.2.1-10**: `/admin/metrics` usa snapshot quando disponível; não recalcula histórico; nunca `VENDEO_USD_BRL_RATE`
+- [ ] **F38.2.1-11**: UI do painel e Configurações Econômicas informam que alteração vale para novas gerações e não recalcula histórico
+- [ ] **F38.2.1-12**: Backfill aproximado idempotente via `economic_parameter_audit` (LAG) com fallback seed `1.00`
+- [ ] **F38.2.1-13**: Fallback legacy explícito para eventos sem snapshot (nunca silencioso)
+- [ ] **F38.2.1-14**: Testes de snapshot/fallback/estabilidade temporal/nomenclatura + gates verdes
+
 ## v1.7 Requirements (Stripe / Monetização Pública)
 
 Deferred from v1.5 critical path. Stripe será implementada como F39/v1.7 após validação do beta controlado (renumerada de F35 → F36 → F37 → F39 nos alinhamentos do Changelog/Novidades, do Onboarding — Navegação por Abas e da Tabela de Custos por Operação).
