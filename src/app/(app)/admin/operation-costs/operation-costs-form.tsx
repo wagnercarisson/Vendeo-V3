@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { OperationKey } from "@/lib/credit/types";
+import type { EconomicParameterResolution } from "@/lib/economic/types";
 
 export interface OperationCostRow {
   operationKey: OperationKey;
@@ -249,6 +250,52 @@ export function OperationCostsForm({ rows }: { rows: OperationCostRow[] }) {
           })}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+const PARAM_LABELS: Record<string, string> = {
+  usd_brl_rate: "Taxa de conversão USD→BRL",
+  credit_value_brl: "Valor operacional do crédito em BRL",
+};
+
+export function ParamsForm({
+  parameters,
+}: {
+  parameters: EconomicParameterResolution[];
+}) {
+  const [values, setValues] = useState<Record<string, number>>(() =>
+    Object.fromEntries(parameters.map((p) => [p.key, p.value])),
+  );
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        Parâmetros de conversão monetária — fonte única de USD→BRL e do valor
+        operacional do crédito. Alterações não valem em produção até salvar.
+      </p>
+      <div className="space-y-3">
+        {parameters.map((p) => (
+          <div key={p.key} className="rounded-lg border border-border p-4">
+            <label htmlFor={`param-${p.key}`} className="text-sm font-medium">
+              {PARAM_LABELS[p.key] ?? p.key}
+            </label>
+            <input
+              id={`param-${p.key}`}
+              type="number"
+              step="any"
+              value={values[p.key]}
+              onChange={(e) =>
+                setValues((prev) => ({
+                  ...prev,
+                  [p.key]: parseFloat(e.target.value) || 0,
+                }))
+              }
+              className="mt-2 w-28 rounded-md border border-border bg-bg-surface px-2 py-1 text-sm"
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
