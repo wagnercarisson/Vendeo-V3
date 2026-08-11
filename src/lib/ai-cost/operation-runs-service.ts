@@ -237,7 +237,41 @@ export function deriveEventBadge(
   costSource: string | null | undefined,
   costEstimationNote: string | null | undefined,
 ): CostBadge {
+  if (costSource === "provider_reported") return "provider_reported";
+  if (costSource === "pricing_table") {
+    if (
+      costEstimationNote ===
+      "provisional_image_tool_unit_cost_until_provider_reconciliation"
+    ) {
+      return "provisional image tool estimate";
+    }
+    if (costEstimationNote === "responses_image_generation_tool_without_unit_pricing") {
+      return "partial";
+    }
+    // pricing_table sem nota → estimated
+    return "estimated";
+  }
+  if (costSource === "manual_unknown") return "partial";
+  if (costSource === "fallback_static") return "estimated";
+  if (costSource === "not_available") return "not_available";
+  // cost_source presente mas nota NULL (histórico) ou sem cost_source → estimated genérico
   return "estimated";
+}
+
+/** Ordem de prioridade D5 para o badge da entrega (menor = mais forte). */
+const BADGE_PRIORITY: Record<CostBadge, number> = {
+  "provider_reported": 0,
+  "provisional image tool estimate": 1,
+  "partial": 2,
+  "not_available": 3,
+  "estimated": 4,
+};
+
+function highestPriorityBadge(badges: CostBadge[]): CostBadge {
+  return badges.reduce<CostBadge>(
+    (best, badge) => (BADGE_PRIORITY[badge] < BADGE_PRIORITY[best] ? badge : best),
+    "estimated",
+  );
 }
 
 /**
@@ -246,7 +280,21 @@ export function deriveEventBadge(
  * cost_sources/notes. Fallback: estimated (genérico).
  */
 export function deriveRunBadge(raw: RunBadgeInputs): CostBadge {
-  return "estimated";
+  if (raw.has_provider_reported) return "provider_reported";
+  if (raw.has_provisional_image_estimate) return "provisional image tool estimate";
+  if (raw.has_partial_estimate) return "partial";
+  if (raw.has_not_available) return "not_available";
+  if (raw.has_estimated) return "estimated";
+  // Sem flags: aplica o mapa D5 sobre a distribuição cost_sources/notes
+  const sources = raw.cost_sources ?? [];
+  if (sources.length > 0) {
+    const notes = raw.cost_estimation_notes ?? [];
+    const badges = sources.map((src) =>
+      deriveEventBadge(src, notes.length === 1 ? notes[0] : null),
+    );
+    return highestPriorityBadge(badges);
+  }
+  return "estimated"; // genérico
 }
 
 /** Percentil p (0..1) — réplica no service do percentile_cont do RPC (P95 do painel). */
@@ -398,7 +446,7 @@ export class OperationRunsService {
       provider: raw.provider ?? null,
       model: raw.model ?? null,
       costSource: raw.cost_source ?? null,
-      badge: "estimated",
+      badge: deriveRunBadge(raw),
       segment: "unknown",
       segmentConfidence: "low",
     };
