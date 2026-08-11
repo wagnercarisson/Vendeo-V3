@@ -500,7 +500,44 @@ Adicionados 2026-08-09 no fechamento da fase (estado `openspec/changes/fase-38-1
 
 ## v1.5 Requirements — Admin de Custos Operacionais + Configurações Econômicas (F38.2)
 
-> **Nota placeholder (2026-08-10):** requisitos da F38.2 (F38.2-01 a F38.2-40) entram quando os specs OpenSpec forem aprovados (`openspec/changes/fase-38-2-admin-custos-operacionais/specs/` — 8 capabilities: economic-parameters, ai-operation-runs-api, ai-operation-costs, ai-cost-tracker, ai-cost-accounting, admin-operation-costs, admin-metrics-dashboard, pipeline-metrics). Fase registrada como Pending; esta seção será preenchida no planejamento/execução. Escopo resumido: parâmetros econômicos configuráveis (`usd_brl_rate`/`credit_value_brl`), painel `/admin/ai-operation-costs`, badges de confiança, segmentação econômica (D9), correção do `/admin/metrics` (D6).
+Desdobramento da F38, adicionados via OpenSpec (`openspec/changes/fase-38-2-admin-custos-operacionais/` — 8 specs: economic-parameters, ai-operation-runs-api, ai-operation-costs, ai-cost-tracker, ai-cost-accounting, admin-operation-costs, admin-metrics-dashboard, pipeline-metrics). OpenSpec é a fonte detalhada; esta tabela é o índice rastreável para o gate de cobertura. A F38.2 é o "exibir depois" da F38/F38.1: camada admin de custos operacionais (painel por entrega), parâmetros econômicos configuráveis (`usd_brl_rate`/`credit_value_brl`) e correção do `/admin/metrics` (D6).
+
+### Parâmetros Econômicos (F38.2-ECON — spec economic-parameters)
+
+- [x] **F38.2-01**: Chaves TypeScript (`ECONOMIC_PARAMETER_KEYS`/`EconomicParameterKey`/`EconomicParameterResolution`) sem server-only
+- [x] **F38.2-02**: Tabela `economic_parameters` + audit append-only + RLS service_role + seeds 1.00
+- [x] **F38.2-03**: RPC transacional `admin_set_economic_parameter` (SECURITY DEFINER, old→new na mesma tx, idempotência por `operation_id`)
+- [x] **F38.2-04**: `EconomicParameterService` fail-open (fallback 1.00) / fail-closed (`EconomicParameterUnavailableError` → 503)
+- [x] **F38.2-05**: GET `/api/admin/economic-parameters`
+- [x] **F38.2-06**: PUT `/api/admin/economic-parameters` (motivo obrigatório + operationId)
+- [x] **F38.2-07**: Página `/admin/operation-costs` → título "Configurações Econômicas" + seção Parâmetros (badge source, audit_id)
+
+### API de Runs por Operação (F38.2-RUNS — spec ai-operation-runs-api)
+
+- [x] **F38.2-08**: RPC `admin_get_ai_operation_runs` — lista filtrada (janela ≤ 365d, paginação, evidências de segmento D9)
+- [x] **F38.2-09**: RPC `admin_get_ai_operation_run_events` — detalhe call-level
+- [x] **F38.2-10**: GET `/api/admin/ai-operation-runs` (lista + summary + agregados)
+- [x] **F38.2-11**: GET `/api/admin/ai-operation-runs/[operationRunId]` (detalhe)
+- [x] **F38.2-12**: Derivação de badges de confiança (D5 — evento/entrega)
+
+### Custos de Operação (F38.2-COSTS — specs ai-operation-costs + admin-operation-costs)
+
+- [x] **F38.2-13**: Página `/admin/ai-operation-costs` "Custos de Operação" (KPIs, filtros, tabela, drilldown, placeholder F38.3)
+- [x] **F38.2-14**: Segmentação econômica (D9 — best-effort, admin_grant com shape confirmado, fallback `unknown`)
+- [x] **F38.2-15**: Agregados por segmento (D3/D9 — sobre o conjunto filtrado inteiro)
+- [x] **F38.2-18**: Página `/admin/operation-costs` mantida com rota e tabela F38 inalteradas
+
+### Confiança e Apuração (F38.2-TRACK — specs ai-cost-tracker + ai-cost-accounting)
+
+- [x] **F38.2-16**: `AiCostTracker` persiste 4 campos de confiança (`cost_formula_version`/`cost_estimation_note`/`text_component_usd`/`image_tool_component_usd`)
+- [x] **F38.2-17**: `admin_get_ai_costs` (F38.1) inalterado — compatível
+
+### Métricas Admin (F38.2-METRICS — specs admin-metrics-dashboard + pipeline-metrics)
+
+- [x] **F38.2-19**: Cards de métricas — card "Custo Médio IA" corrigido (D6: apuração call-level via `admin_get_ai_costs` + `usd_brl_rate`)
+- [x] **F38.2-20**: Health banner
+- [x] **F38.2-21**: Funções de métricas agregadas — `getAvgCost` call-level (avg_cost_ms removido do bundle)
+- [x] **F38.2-22**: MetricCard types
 
 ## v1.7 Requirements (Stripe / Monetização Pública)
 
