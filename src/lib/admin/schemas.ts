@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { OPERATION_KEYS } from "@/lib/credit/types";
+import { ECONOMIC_PARAMETER_KEYS } from "@/lib/economic/types";
 
 export const GrantCreditsRequestSchema = z.object({
   storeId: z.string().uuid(),
@@ -84,6 +85,20 @@ export const AiCostsQuerySchema = z.object({
   operationRunId: z.string().uuid().optional(),
   campaignId: z.string().uuid().optional(),
   hours: z.coerce.number().int().min(1).default(24),
+});
+
+/**
+ * Body de PUT /api/admin/economic-parameters (D2).
+ * key validado contra ECONOMIC_PARAMETER_KEYS (enum TS versionado);
+ * value > 0 (espelha o CHECK value > 0 do banco — T-38.2-15);
+ * reason OBRIGATÓRIO (rastreabilidade — audit); operationId opcional
+ * para idempotência (retry seguro — T-38.2-16).
+ */
+export const UpdateEconomicParameterRequestSchema = z.object({
+  key: z.enum(ECONOMIC_PARAMETER_KEYS),
+  value: z.number().positive("Value deve ser maior que zero"),
+  reason: z.string().min(1, "Motivo obrigatório"),
+  operationId: z.string().uuid().optional(),
 });
 
 export interface AdminUserSummary {
