@@ -134,6 +134,17 @@ None - nenhuma configuracao externa requerida (arquivo de tracking apenas).
 - Plans 38-2-13 (service deriveBrl com creditosLiquidos) e 38-2-14 (UI KpisGrid) da gap closure da F38.2 ainda pendentes — posicao "Plan: 13 of 15" preservada
 - Fechamento/verificacao subsequente da fase pode tocar ROADMAP/PROJECT/REQUIREMENTS (fora do escopo deste plano, por must_have #3)
 
+## Self-Check: PASSED
+
+- [x] `.planning/phases/38.2-admin-custos-operacionais/38-2-15-SUMMARY.md` existe no disco
+- [x] `.planning/STATE.md` existe no disco
+- [x] Commit `33a269f` (fix task 1) presente no git log
+- [x] Commit `b7ce91b` (docs SUMMARY) presente no git log
+- [x] Mojibake == 0 (assinaturas combinadas C3 83 C2 A7 / C3 A2 E2 82 / C3 B0 C5 B8 / C3 83 C3 82 / C3 83 C3 83 ausentes — check byte-level)
+- [x] Progress block: total_phases 22 / completed_phases 20 / total_plans 110 / completed_plans 104 / percent 91
+- [x] Sem BOM no STATE.md final (primeiros bytes 2D 2D 2D)
+- [x] Acentos corretos no diff (`Configuracoes Economicas`, `CONCLUIDA`, `Lancamento Externo Controlado`)
+
 ---
 *Phase: 38.2-admin-custos-operacionais*
 *Completed: 2026-08-11*
