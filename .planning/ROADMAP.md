@@ -34,7 +34,7 @@
 | 37 | ○ Revisão e Aprovação da Arte | — | Pending    | — |
 | 38 | ✅ Tabela de Custos por Operação | 8/8 | ✅ Complete | 2026-08-07 |
 | 38.1 | ✅ Apuração de Custos de IA por Entrega | 11/11 | ✅ Complete | 2026-08-09 |
-| 38.2 | ○ Admin de Custos Operacionais + Configurações Econômicas | 4/11 | In Progress|  |
+| 38.2 | ○ Admin de Custos Operacionais + Configurações Econômicas | 5/11 | In Progress|  |
 | 39 | ○ Stripe / Monetização Pública (v1.7) | — | Pending    | — |
 
 ---
@@ -616,7 +616,7 @@ Plans:
 
 **Source of truth:** `openspec/changes/fase-38-2-admin-custos-operacionais/`
 
-**Plans:** 4/11 plans executed
+**Plans:** 5/11 plans executed
 
 ```
 Plans:
@@ -624,7 +624,7 @@ Plans:
 - [x] 38-2-02-PLAN.md — Types econômicos + EconomicParameterService (Wave 2)
 - [x] 38-2-03-PLAN.md — AiCostTracker persistência de confiança (Wave 2)
 - [x] 38-2-04-PLAN.md — API Configurações Econômicas (GET/PUT) (Wave 3)
-- [ ] 38-2-05-PLAN.md — Service de custos de operação + badges + segmentação (Wave 3)
+- [x] 38-2-05-PLAN.md — Service de custos de operação + badges + segmentação (Wave 3)
 - [ ] 38-2-06-PLAN.md — API Custos de Operação (lista + detalhe) (Wave 4)
 - [ ] 38-2-07-PLAN.md — UI /admin/operation-costs "Configurações Econômicas" (Wave 4)
 - [ ] 38-2-08-PLAN.md — UI /admin/ai-operation-costs "Custos de Operação" (Wave 5)

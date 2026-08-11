@@ -4,18 +4,18 @@ milestone: v1.5
 milestone_name: â€” LanÃ§amento Externo Controlado â—†
 current_phase: 38.2
 status: executing
-last_updated: "2026-08-11T00:32:20.927Z"
+last_updated: "2026-08-10T21:53:00Z"
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 11
-  completed_plans: 4
-  percent: 0
+  completed_plans: 5
+  percent: 45
 ---
 
 # Project State
 
-**Last updated:** 2026-08-11 (F38.2 Admin de Custos Operacionais + ConfiguraÃ§Ãµes EconÃ´micas **EXECUTANDO â€” 3/11 plans**: 38-2-01 âœ… migrations 3 + db push [BLOCKING] aplicado no remoto (economic_parameters + audit + seeds 1.00/1.00 + RPC admin_set_economic_parameter + RLS service_role; 4 colunas de confianÃ§a em generation_events; RPCs admin_get_ai_operation_runs/_events com filtros/paginaÃ§Ã£o/P95/evidÃªncias de segmento/insumos de badge); 38-2-02 âœ… tipos econÃ´micos sem server-only (ECONOMIC_PARAMETER_KEYS/EconomicParameterKey/EconomicParameterResolution) + EconomicParameterService server-only fail-open (fallback 1.00)/fail-closed (EconomicParameterUnavailableError â†’ 503) + getAll com source + 10 testes. F38.1 ApuraÃ§Ã£o de Custos de IA por Entrega **CONCLUÃDA â€” 11/11 plans**: 38-1-10 âœ… views/RPCs apuraÃ§Ã£o + I1â€“I6 + gates + UAT manual validado; 38-1-11 âœ… runbook trackings. **Fechamento como camada de estimativa operacional granular** â€” ajuste provisÃ³rio versionÃ¡vel da tool image_generation (fÃ³rmula `responses_image_generation_v2`): `responses:image_generation = USD 0.065` Ã© **estimativa operacional provisÃ³ria para beta**, calibrada por UAT/dashboard/CSV da OpenAI â€” **NÃƒO Ã© custo financeiro real**; a **reconciliaÃ§Ã£o financeira real fica para a prÃ³xima fase**. 38/38+2 requirements, 1713 testes, typecheck/lint/build limpos; F38 concluÃ­da 8/8 plans, 1597 testes, UAT 4/4; renumeraÃ§Ã£o F37 = RevisÃ£o e AprovaÃ§Ã£o da Arte, F38 = Tabela de Custos, F39 = Stripe)
+**Last updated:** 2026-08-10 (F38.2 Admin de Custos Operacionais + ConfiguraÃ§Ãµes EconÃ´micas **EXECUTANDO â€” 5/11 plans**: 38-2-01 âœ… migrations 3 + db push [BLOCKING] aplicado no remoto (economic_parameters + audit + seeds 1.00/1.00 + RPC admin_set_economic_parameter + RLS service_role; 4 colunas de confianÃ§a em generation_events; RPCs admin_get_ai_operation_runs/_events com filtros/paginaÃ§Ã£o/P95/evidÃªncias de segmento/insumos de badge); 38-2-02 âœ… tipos econÃ´micos sem server-only (ECONOMIC_PARAMETER_KEYS/EconomicParameterKey/EconomicParameterResolution) + EconomicParameterService server-only fail-open (fallback 1.00)/fail-closed (EconomicParameterUnavailableError â†’ 503) + getAll com source + 10 testes; 38-2-03 âœ… AiCostTracker persiste 4 campos de confianÃ§a (D5); 38-2-04 âœ… API GET/PUT /api/admin/economic-parameters (zod + RPC admin_set_economic_parameter); 38-2-05 âœ… OperationRunsService (BRL D1/D4 + badges D5 + segmentaÃ§Ã£o D9 + agregados D3 + detalhe D4, 20 testes). F38.1 ApuraÃ§Ã£o de Custos de IA por Entrega **CONCLUÃDA â€” 11/11 plans**: 38-1-10 âœ… views/RPCs apuraÃ§Ã£o + I1â€“I6 + gates + UAT manual validado; 38-1-11 âœ… runbook trackings. **Fechamento como camada de estimativa operacional granular** â€” ajuste provisÃ³rio versionÃ¡vel da tool image_generation (fÃ³rmula `responses_image_generation_v2`): `responses:image_generation = USD 0.065` Ã© **estimativa operacional provisÃ³ria para beta**, calibrada por UAT/dashboard/CSV da OpenAI â€” **NÃƒO Ã© custo financeiro real**; a **reconciliaÃ§Ã£o financeira real fica para a prÃ³xima fase**. 38/38+2 requirements, 1713 testes, typecheck/lint/build limpos; F38 concluÃ­da 8/8 plans, 1597 testes, UAT 4/4; renumeraÃ§Ã£o F37 = RevisÃ£o e AprovaÃ§Ã£o da Arte, F38 = Tabela de Custos, F39 = Stripe)
 **Milestone:** v1.5 â€” LanÃ§amento Externo Controlado â—† **Em andamento**
 **Current phase:** 38.2
 
@@ -141,6 +141,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 | Phase 38.2 P38-2-02 | 3min | 3 tasks | 3 files |
 | Phase 38.2 P38-2-03 | 2min | 3 tasks | 3 files |
 | Phase 38.2 P38-2-04 | 6min | 3 tasks | 3 files |
+| Phase 38.2 P38-2-05 | 13min | 6 tasks | 3 files |
 
 ### Phase 19 â€” Onboarding & Estados Vazios âœ…
 
@@ -441,8 +442,8 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 ## Current Position
 
 Phase: 38.2 (Admin de Custos Operacionais + ConfiguraÃ§Ãµes EconÃ´micas) â€” EXECUTING
-Plan: 5 of 11
-v1.5 em andamento â€” Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36, 38 e 38.1 concluÃ­das. F38 (Tabela de Custos por OperaÃ§Ã£o, v1.5) concluÃ­da â€” 8/8 plans, 1597 testes, UAT 4/4; F38.1 (ApuraÃ§Ã£o de Custos de IA por Entrega, desdobramento da F38) **CONCLUÃDA** â€” 11/11 plans, 1713 testes, UAT validado, **fechada como camada de estimativa operacional granular** (ajuste provisÃ³rio da tool image_generation `0.065` = estimativa beta provisÃ³ria, nÃ£o custo real; reconciliaÃ§Ã£o financeira real na prÃ³xima fase), fonte da verdade `openspec/changes/fase-38-1-ai-cost-accounting/`; **F38.2 (Admin de Custos Operacionais + ConfiguraÃ§Ãµes EconÃ´micas, desdobramento da F38) em EXECUÃ‡ÃƒO â€” 3/11 plans** â€” painel `/admin/ai-operation-costs` (KPIs/filtros/tabela/drilldown/segmentos) + `economic_parameters` configurÃ¡veis + badges de confianÃ§a + correÃ§Ã£o `/admin/metrics`, fonte `openspec/changes/fase-38-2-admin-custos-operacionais/`; 38-2-01 âœ… migrations/db push (schema econÃ´mico + RPCs de runs no remoto), 38-2-02 âœ… tipos econÃ´micos + EconomicParameterService fail-open/fail-closed + 10 testes (base das rotas 38-2-04/05/06/09), 38-2-03 âœ… AiCostTracker persiste 4 campos de confianÃ§a (D5), 38-2-04 âœ… API GET/PUT /api/admin/economic-parameters (zod + RPC admin_set_economic_parameter, 200/400/403/500, idempotÃªncia, 9 testes da rota, sem endpoint pÃºblico); F37 (RevisÃ£o e AprovaÃ§Ã£o da Arte, v1.5, experimento beta) em planejamento futuro; F39 (Stripe / MonetizaÃ§Ã£o PÃºblica) como marco futuro pÃ³s-beta (renumerada de F36 â†’ F37 â†’ F39).
+Plan: 6 of 11
+v1.5 em andamento â€” Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36, 38 e 38.1 concluÃ­das. F38 (Tabela de Custos por OperaÃ§Ã£o, v1.5) concluÃ­da â€” 8/8 plans, 1597 testes, UAT 4/4; F38.1 (ApuraÃ§Ã£o de Custos de IA por Entrega, desdobramento da F38) **CONCLUÃDA** â€” 11/11 plans, 1713 testes, UAT validado, **fechada como camada de estimativa operacional granular** (ajuste provisÃ³rio da tool image_generation `0.065` = estimativa beta provisÃ³ria, nÃ£o custo real; reconciliaÃ§Ã£o financeira real na prÃ³xima fase), fonte da verdade `openspec/changes/fase-38-1-ai-cost-accounting/`; **F38.2 (Admin de Custos Operacionais + ConfiguraÃ§Ãµes EconÃ´micas, desdobramento da F38) em EXECUÃ‡ÃƒO â€” 5/11 plans** â€” painel `/admin/ai-operation-costs` (KPIs/filtros/tabela/drilldown/segmentos) + `economic_parameters` configurÃ¡veis + badges de confianÃ§a + correÃ§Ã£o `/admin/metrics`, fonte `openspec/changes/fase-38-2-admin-custos-operacionais/`; 38-2-01 âœ… migrations/db push (schema econÃ´mico + RPCs de runs no remoto), 38-2-02 âœ… tipos econÃ´micos + EconomicParameterService fail-open/fail-closed + 10 testes (base das rotas 38-2-04/05/06/09), 38-2-03 âœ… AiCostTracker persiste 4 campos de confianÃ§a (D5), 38-2-04 âœ… API GET/PUT /api/admin/economic-parameters (zod + RPC admin_set_economic_parameter, 200/400/403/500, idempotÃªncia, 9 testes da rota, sem endpoint pÃºblico), 38-2-05 âœ… OperationRunsService server-only (BRL D1/D4 via EconomicParameterService + badges D5 por evento/entrega + segmentaÃ§Ã£o classifySegment D9 com filtro e re-paginaÃ§Ã£o + storeName/owner D3 + 8 agregados D3/D9 sobre o conjunto filtrado inteiro + getRunDetail D4 com BRL/badges/componentes por evento; 20 testes, typecheck/lint limpos); F37 (RevisÃ£o e AprovaÃ§Ã£o da Arte, v1.5, experimento beta) em planejamento futuro; F39 (Stripe / MonetizaÃ§Ã£o PÃºblica) como marco futuro pÃ³s-beta (renumerada de F36 â†’ F37 â†’ F39).
 
 ### Phase 36 â€” Onboarding: NavegaÃ§Ã£o por Abas âœ… Complete
 
@@ -698,3 +699,9 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 - [Phase 38.2]: Suite do tracker tinha 13 testes F38.1 (não 8 como o plano estimou) — 4 novos adicionados, total real 17 verdes; critério '12 testes' do acceptance criteria baseado em contagem imprecisa (38-2-03)
 - [Phase 38.2]: PUT usa safeParse no body (catch -> null) para 400 unico { error: 'Dados invalidos', details } — JSON malformado cai no mesmo 400 zod (38-2-04)
 - [Phase 38.2]: Resposta do PUT em camelCase { parameter: { key, value }, auditId, updatedAt, idempotent } — mapeamento do JSONB do RPC para o contrato D2 da UI 38-2-07 (38-2-04)
+- [Phase 38.2]: Paginação progressiva aplicada SEMPRE (não só com filtro de segmento): o RPC devolve só a página, mas summary/aggregations (D3/D4) exigem o conjunto filtrado inteiro — o service acumula o conjunto base (page_size 100) e re-pagina no final (38-2-05)
+- [Phase 38.2]: byStage agrupa sob 'unknown' quando o RPC não expõe generation_type por run (gap de contrato do 38-2-01); campo lido como opcional quando presente; registro em deferred-items.md para 38-2-06/38-2-10 (38-2-05)
+- [Phase 38.2]: admin_grant (D9): shape confirmado do RPC ({ grant_count: N } com N > 0); shape divergente → unknown — nunca inferir errado (T-38.2-20) (38-2-05)
+- [Phase 38.2]: Summary/P95 recomputados no service (helper percentile replicando percentile_cont) sobre o conjunto inteiro — consistência entre summary e aggregations; o summary do RPC permanece como fonte do total da paginação (38-2-05)
+- [Phase 38.2]: storeName/owner fail-open (log + null → bucket 'unknown'): dado de apresentação; caminho monetário/segmento é fail-closed (RPC + parâmetros econômicos → 503) (38-2-05)
+- [Phase 38.2]: byHour usa hora UTC de created_at — determinístico entre ambientes (Vercel = UTC; dev local em São Paulo não desloca o agregado) (38-2-05)
