@@ -314,7 +314,7 @@ async function run() {
   // ── I4: generation_events 4 colunas de confiança (D5) ───────────────
   console.log("\n🧪 I4: generation_events — 4 colunas novas de confiança (D5)");
 
-  const { data: geSample, error: geErr } = await supabase
+  const { error: geErr } = await supabase
     .from("generation_events")
     .select("cost_formula_version, cost_estimation_note, text_component_usd, image_tool_component_usd")
     .limit(1);

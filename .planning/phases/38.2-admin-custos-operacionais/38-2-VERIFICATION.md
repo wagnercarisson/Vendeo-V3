@@ -109,21 +109,31 @@ banco remoto `gvbzwihwgzujwsviufgy` via service_role + RPCs definer. Resultado: 
 
 ### Gate 1 — `npx vitest run`
 
-Resultado: ✅ suite completa verde — total registrado abaixo (nº de testes/failures na seção de execução do plano).
+```
+Test Files  213 passed (213)
+      Tests  1832 passed (1832)
+   Start at  14:50:15
+   Duration  21.85s
+```
+
+**Resultado: ✅ 1832/1832 testes, 0 falhas, 213 arquivos.** Sem regressões nas suítes de
+pipeline (402/409/estorno), VS F29.1.1, gates F32/F33/F34/F36, legal F30, créditos F24/F38, F38.1
+e F38.2 (inclui os 4 testes da tarefa 12.8 do `getAvgCost` e a suite de componentes da página
+Custos de Operação).
 
 ### Gate 2 — `npm run typecheck` (`tsc -p tsconfig.typecheck.json --noEmit`)
 
-Resultado: ✅ limpo — nenhum erro de tipo.
+**Resultado: ✅ limpo (exit 0)** — nenhum erro de tipo.
 
 ### Gate 3 — `npm run lint` (`eslint .`)
 
-Resultado: ✅ limpo — 0 erros.
+**Resultado: ✅ limpo (exit 0)** — 0 erros, 0 warnings (após remover variável não usada no script
+de verificação).
 
 ### Gate 4 — `npm run build` (`next build`)
 
-Resultado: ✅ sucesso — build completo, exit 0.
-
-> Detalhes numéricos exatos (contagem de testes/arquivos, tempo de build) registrados no SUMMARY do plano.
+**Resultado: ✅ sucesso (exit 0)** — build completo (53 páginas), `✓ Compiled successfully`,
+Middleware 91.6 kB, First Load JS 102 kB.
 
 ---
 
