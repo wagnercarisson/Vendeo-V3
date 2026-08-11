@@ -331,7 +331,7 @@ describe("OperationRunsService — aggregations (D3/D9)", () => {
       buildEconomic({ usd_brl_rate: 5.0, credit_value_brl: 1.5 }),
     );
 
-    const { aggregations } = await service.listRuns({});
+    const { aggregations, summary } = await service.listRuns({});
 
     // bySegment — custo, resultado operacional estimado, margem % e taxa de erro
     const testSeg = aggregations.bySegment.test;
@@ -358,6 +358,12 @@ describe("OperationRunsService — aggregations (D3/D9)", () => {
       entregas: 1,
       custoBrl: 100,
     });
+    // summary BRL sobre o conjunto inteiro (D1/D4): custo (10+20)×5 = 150,
+    // receita (20+10)×1.5 = 45, resultado = 45−150 = −105, margem ≈ −233.33
+    expect(summary.custoBrl).toBe(150);
+    expect(summary.receitaOpBrl).toBe(45);
+    expect(summary.resultadoOpBrl).toBe(-105);
+    expect(summary.margemOpPct).toBeCloseTo(-233.33, 1);
   });
 
   it("summary/aggregations refletem os 60 runs com page=2 (não a página 2)", async () => {

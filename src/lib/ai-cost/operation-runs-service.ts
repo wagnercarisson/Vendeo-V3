@@ -461,7 +461,7 @@ export class OperationRunsService {
     const stageByRunId = new Map(
       rawRuns.map((r) => [r.operation_run_id, r.generation_type ?? null]),
     );
-    const aggregations = this.deriveAggregations(filtered, params, stageByRunId);
+    const aggregations = this.deriveAggregations(filtered, stageByRunId);
 
     return {
       runs: pageRuns,
@@ -726,7 +726,6 @@ export class OperationRunsService {
    */
   private deriveAggregations(
     runs: OperationRun[],
-    params: { usdBrlRate: number; creditValueBrl: number },
     stageByRunId: Map<string, string | null>,
   ): OperationRunsAggregations {
     const bySegment: Record<string, SegmentAggregation> = {};
