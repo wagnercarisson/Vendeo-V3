@@ -137,7 +137,9 @@ describe("KpisGrid (D3)", () => {
     expect(screen.getByText("US$ 10,00")).toBeInTheDocument();
     expect(screen.getByText("Custo estimado total (BRL)")).toBeInTheDocument();
     expect(screen.getByText("R$ 50,00")).toBeInTheDocument();
-    expect(screen.getByText("Créditos debitados")).toBeInTheDocument();
+    expect(screen.getByText("Créditos brutos")).toBeInTheDocument();
+    expect(screen.getByText("Estornos")).toBeInTheDocument();
+    expect(screen.getByText("Créditos líquidos")).toBeInTheDocument();
     expect(screen.getByText("Receita operacional (BRL)")).toBeInTheDocument();
     expect(
       screen.getByText("Resultado operacional estimado (BRL)"),
@@ -145,7 +147,7 @@ describe("KpisGrid (D3)", () => {
     expect(screen.getByText("Margem operacional estimada")).toBeInTheDocument();
     expect(screen.getByText("Tempo médio")).toBeInTheDocument();
     expect(screen.getByText("1.0s")).toBeInTheDocument();
-    expect(screen.getByText("P95")).toBeInTheDocument();
+    expect(screen.getByText("Tempo P95 (95% das entregas)")).toBeInTheDocument();
     expect(screen.getByText("Total de entregas")).toBeInTheDocument();
     expect(screen.getByText("Entregas com erro")).toBeInTheDocument();
     expect(screen.getByText("Entregas com sucesso")).toBeInTheDocument();
@@ -162,7 +164,12 @@ describe("OperationRunsTable (D3/D5/D7)", () => {
     expect(screen.getByText("Sucesso")).toBeInTheDocument();
     expect(screen.getByText("US$ 10,00")).toBeInTheDocument();
     expect(screen.getByText("R$ 50,00")).toBeInTheDocument();
-    expect(screen.getByText("20")).toBeInTheDocument(); // créditos
+    expect(screen.getByText("Bruto: 20")).toBeInTheDocument(); // breakdown créditos
+    expect(screen.getByText("Estorno: 0")).toBeInTheDocument();
+    expect(screen.getByText("Líquido: 20")).toBeInTheDocument();
+    expect(
+      screen.getByText("Receita R$ 20,00 · Resultado R$ -30,00"),
+    ).toBeInTheDocument(); // financeiro derivado de líquidos
     expect(screen.getByText("1.0s")).toBeInTheDocument(); // tempo
     expect(screen.getByText("2")).toBeInTheDocument(); // chamadas
     expect(screen.getByText("0")).toBeInTheDocument(); // regenerações
@@ -174,6 +181,27 @@ describe("OperationRunsTable (D3/D5/D7)", () => {
     render(<OperationRunsTable runs={[makeRun()]} />);
     expect(screen.getAllByText("ainda indisponível").length).toBeGreaterThan(0);
     expect(screen.getAllByText("pendente").length).toBeGreaterThan(0);
+  });
+
+  it("run falho 100% estornado: líquido 0, receita R$ 0,00 e resultado negativo (custo de IA permanece)", () => {
+    render(
+      <OperationRunsTable
+        runs={[
+          makeRun({
+            deliveryStatus: "failed",
+            creditosDebitados: 10,
+            creditosEstornados: 10,
+            creditosLiquidos: 0,
+            receitaOpBrl: 0,
+            resultadoOpBrl: -50,
+          }),
+        ]}
+      />,
+    );
+    expect(screen.getByText("Líquido: 0")).toBeInTheDocument();
+    expect(
+      screen.getByText("Receita R$ 0,00 · Resultado R$ -50,00"),
+    ).toBeInTheDocument();
   });
 
   it("clicar numa linha → abre o drilldown e busca o detalhe call-level (D4)", async () => {
@@ -229,6 +257,14 @@ describe("OperationRunsTable (D3/D5/D7)", () => {
     // Placeholder F38.3 no cabeçalho do run
     expect(screen.getByText("Custo reconciliado provider: ainda indisponível")).toBeInTheDocument();
     expect(screen.getByText("Diferença: pendente")).toBeInTheDocument();
+    // Breakdown de créditos + financeiro no cabeçalho do drilldown (D4)
+    expect(
+      screen.getByText("Créditos: bruto 20 · estorno 0 · líquido 20"),
+    ).toBeInTheDocument();
+    // Receita/Resultado aparece na linha da tabela E no cabeçalho do dialog
+    expect(
+      screen.getAllByText("Receita R$ 20,00 · Resultado R$ -30,00").length,
+    ).toBeGreaterThan(0);
   });
 });
 
@@ -282,6 +318,13 @@ describe("RunDetailDialog (D4)", () => {
     expect(screen.getByText("openai/gpt-4o-mini")).toBeInTheDocument();
     expect(screen.getByText("75")).toBeInTheDocument(); // tokens
     expect(screen.getByText("Custo reportado pelo provider")).toBeInTheDocument();
+    // Breakdown de créditos + financeiro no cabeçalho do run (D4)
+    expect(
+      screen.getByText("Créditos: bruto 20 · estorno 0 · líquido 20"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Receita R$ 20,00 · Resultado R$ -30,00"),
+    ).toBeInTheDocument();
   });
 
   it("fetch falha → estado de erro no dialog", async () => {
