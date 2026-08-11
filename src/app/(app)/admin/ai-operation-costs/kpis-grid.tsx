@@ -36,13 +36,16 @@ function formatNumber(value: number | null): string {
 interface KpiDef {
   label: string;
   value: string;
+  tooltip?: string;
 }
 
 function buildKpis(summary: OperationRunsSummary): KpiDef[] {
   return [
     { label: "Custo estimado total (USD)", value: formatUsd(summary.custoUsdTotal) },
     { label: "Custo estimado total (BRL)", value: formatBRL(summary.custoBrl) },
-    { label: "Créditos debitados", value: formatNumber(summary.creditosDebitados) },
+    { label: "Créditos brutos", value: formatNumber(summary.creditosDebitados) },
+    { label: "Estornos", value: formatNumber(summary.creditosEstornados) },
+    { label: "Créditos líquidos", value: formatNumber(summary.creditosLiquidos) },
     { label: "Receita operacional (BRL)", value: formatBRL(summary.receitaOpBrl) },
     {
       label: "Resultado operacional estimado (BRL)",
@@ -53,7 +56,12 @@ function buildKpis(summary: OperationRunsSummary): KpiDef[] {
       value: formatPercent(summary.margemOpPct),
     },
     { label: "Tempo médio", value: formatDuration(summary.tempoMedioMs) },
-    { label: "P95", value: formatDuration(summary.p95Ms) },
+    {
+      label: "Tempo P95 (95% das entregas)",
+      value: formatDuration(summary.p95Ms),
+      tooltip:
+        "95% das entregas terminaram em até este tempo; os 5% mais lentos ficam fora desse corte.",
+    },
     { label: "Total de entregas", value: formatNumber(summary.totalEntregas) },
     { label: "Entregas com erro", value: formatNumber(summary.entregasErro) },
     { label: "Entregas com sucesso", value: formatNumber(summary.entregasSucesso) },
@@ -75,6 +83,7 @@ export function KpisGrid({ summary }: { summary: OperationRunsSummary }) {
             key={kpi.label}
             className="rounded-lg border border-border bg-bg-surface p-4"
             data-testid={`kpi-${kpi.label}`}
+            title={kpi.tooltip}
           >
             <div className="mb-2 text-sm font-medium text-muted-foreground">
               {kpi.label}
