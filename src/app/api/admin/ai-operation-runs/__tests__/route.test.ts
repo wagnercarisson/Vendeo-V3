@@ -179,6 +179,140 @@ describe("GET /api/admin/ai-operation-runs (D4/D9 — lista de entregas)", () =>
     expect(body.error).toBe("operation_runs_unavailable");
   });
 
+  it("repassa todos os filtros ao service (período, loja, tipo, status, provider, model, gen_type, run_id)", async () => {
+    mockListRuns.mockResolvedValue(listResult());
+
+    const res = await getRuns(
+      `http://localhost/api/admin/ai-operation-runs?${[
+        "period_start=2026-07-01T00:00:00.000Z",
+        "period_end=2026-07-31T00:00:00.000Z",
+        "store_id=22222222-2222-4222-8222-222222222222",
+        "operation_run_type=visual_signature",
+        "status=failed",
+        "provider=openai",
+        "model=gpt-image-2",
+        "generation_type=campaign_image",
+        "operation_run_id=55555555-5555-4555-8555-555555555555",
+      ].join("&")}`,
+    );
+    expect(res.status).toBe(200);
+    expect(mockListRuns).toHaveBeenCalledWith({
+      periodStart: "2026-07-01T00:00:00.000Z",
+      periodEnd: "2026-07-31T00:00:00.000Z",
+      storeId: "22222222-2222-4222-8222-222222222222",
+      operationRunType: "visual_signature",
+      status: "failed",
+      provider: "openai",
+      model: "gpt-image-2",
+      generationType: "campaign_image",
+      operationRunId: "55555555-5555-4555-8555-555555555555",
+      segment: undefined,
+      page: 1,
+      pageSize: 25,
+    });
+  });
+
+  it("paginação com page/total — page e page_size repassados e refletidos", async () => {
+    const runs = Array.from({ length: 25 }, (_, i) => ({
+      ...RUN_FIXTURE,
+      operationRunId: `66666666-6666-4666-8666-${String(i).padStart(12, "0")}`,
+    }));
+    mockListRuns.mockResolvedValue(
+      listResult({ runs, page: 2, total: 60 }),
+    );
+
+    const res = await getRuns(
+      "http://localhost/api/admin/ai-operation-runs?page=2&page_size=25",
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.page).toBe(2);
+    expect(body.total).toBe(60);
+    expect(body.runs).toHaveLength(25);
+    expect(mockListRuns).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 2, pageSize: 25 }),
+    );
+  });
+
+  it("summary/aggregations refletem o conjunto filtrado inteiro (não a página)", async () => {
+    // page=2, mas summary.totalEntregas=60 → o service deriva sobre os 60
+    mockListRuns.mockResolvedValue(
+      listResult({
+        runs: Array.from({ length: 25 }, (_, i) => ({
+          ...RUN_FIXTURE,
+          operationRunId: `77777777-7777-4777-8777-${String(i).padStart(12, "0")}`,
+        })),
+        summary: { ...SUMMARY_FIXTURE, totalEntregas: 60 },
+        aggregations: {
+          ...AGGREGATIONS_FIXTURE,
+          bySegment: {
+            test: {
+              segment: "test",
+              entregas: 60,
+              custoBrl: 12.21,
+              resultadoOpBrl: 47.79,
+              margemOpPct: 79.65,
+              taxaErro: 0,
+            },
+          },
+        },
+        page: 2,
+        total: 60,
+      }),
+    );
+
+    const res = await getRuns(
+      "http://localhost/api/admin/ai-operation-runs?page=2",
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.summary.totalEntregas).toBe(60);
+    expect(body.aggregations.bySegment.test.entregas).toBe(60);
+  });
+
+  it("margemOpPct null quando receita é 0 (sem divisão por zero)", async () => {
+    mockListRuns.mockResolvedValue(
+      listResult({
+        runs: [
+          {
+            ...RUN_FIXTURE,
+            creditosDebitados: 0,
+            receitaOpBrl: 0,
+            resultadoOpBrl: -0.037,
+            margemOpPct: null,
+          },
+        ],
+        summary: {
+          ...SUMMARY_FIXTURE,
+          creditosDebitados: 0,
+          receitaOpBrl: 0,
+          resultadoOpBrl: -0.037,
+          margemOpPct: null,
+        },
+        aggregations: {
+          ...AGGREGATIONS_FIXTURE,
+          bySegment: {
+            test: {
+              segment: "test",
+              entregas: 1,
+              custoBrl: 0.2035,
+              resultadoOpBrl: -0.037,
+              margemOpPct: null,
+              taxaErro: 0,
+            },
+          },
+        },
+      }),
+    );
+
+    const res = await getRuns();
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.runs[0].margemOpPct).toBeNull();
+    expect(body.summary.margemOpPct).toBeNull();
+    expect(body.aggregations.bySegment.test.margemOpPct).toBeNull();
+  });
+
   it("segment=test é repassado ao service (filtro antes de paginar — total consistente)", async () => {
     // 60 runs base, 12 de teste → o service retorna total 12 (conjunto segmento-filtrado)
     const testRuns = Array.from({ length: 12 }, (_, i) => ({
