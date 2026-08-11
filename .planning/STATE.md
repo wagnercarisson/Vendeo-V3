@@ -4,12 +4,12 @@ milestone: v1.5
 milestone_name: â€” LanÃ§amento Externo Controlado â—†
 current_phase: 38.2
 status: executing
-last_updated: "2026-08-11T00:16:00.402Z"
+last_updated: "2026-08-11T00:22:46.660Z"
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 11
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -139,6 +139,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 | Phase 38-1-ai-cost-accounting PP09 | 12min | 3 tasks | 11 files |
 | Phase 38.2 P38-2-01 | 16min | 4 tasks | 4 files |
 | Phase 38.2 P38-2-02 | 3min | 3 tasks | 3 files |
+| Phase 38.2 P38-2-03 | 2min | 3 tasks | 3 files |
 
 ### Phase 19 â€” Onboarding & Estados Vazios âœ…
 
@@ -439,7 +440,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 ## Current Position
 
 Phase: 38.2 (Admin de Custos Operacionais + ConfiguraÃ§Ãµes EconÃ´micas) â€” EXECUTING
-Plan: 3 of 11
+Plan: 4 of 11
 v1.5 em andamento â€” Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36, 38 e 38.1 concluÃ­das. F38 (Tabela de Custos por OperaÃ§Ã£o, v1.5) concluÃ­da â€” 8/8 plans, 1597 testes, UAT 4/4; F38.1 (ApuraÃ§Ã£o de Custos de IA por Entrega, desdobramento da F38) **CONCLUÃDA** â€” 11/11 plans, 1713 testes, UAT validado, **fechada como camada de estimativa operacional granular** (ajuste provisÃ³rio da tool image_generation `0.065` = estimativa beta provisÃ³ria, nÃ£o custo real; reconciliaÃ§Ã£o financeira real na prÃ³xima fase), fonte da verdade `openspec/changes/fase-38-1-ai-cost-accounting/`; **F38.2 (Admin de Custos Operacionais + ConfiguraÃ§Ãµes EconÃ´micas, desdobramento da F38) em EXECUÃ‡ÃƒO â€” 2/11 plans** â€” painel `/admin/ai-operation-costs` (KPIs/filtros/tabela/drilldown/segmentos) + `economic_parameters` configurÃ¡veis + badges de confianÃ§a + correÃ§Ã£o `/admin/metrics`, fonte `openspec/changes/fase-38-2-admin-custos-operacionais/`; 38-2-01 âœ… migrations/db push (schema econÃ´mico + RPCs de runs no remoto), 38-2-02 âœ… tipos econÃ´micos + EconomicParameterService fail-open/fail-closed + 10 testes (base das rotas 38-2-04/05/06/09); F37 (RevisÃ£o e AprovaÃ§Ã£o da Arte, v1.5, experimento beta) em planejamento futuro; F39 (Stripe / MonetizaÃ§Ã£o PÃºblica) como marco futuro pÃ³s-beta (renumerada de F36 â†’ F37 â†’ F39).
 
 ### Phase 36 â€” Onboarding: NavegaÃ§Ã£o por Abas âœ… Complete
@@ -691,3 +692,6 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 - [Phase 38.2]: [Phase 38.2] Default/fallback de AMBOS os parâmetros = 1.00 (conservador — D1), via constante DEFAULT_ECONOMIC_PARAMETER_VALUE exportada do service (38-2-02)
 - [Phase 38.2]: Defesa value <= 0 implementada no service (log + fallback 1.00, nunca propaga inválido) como complemento ao CHECK value > 0 do banco — T-38.2-10 mitigado em 3 camadas (service + CHECK + zod na rota 38-2-04) (38-2-02)
 - [Phase 38.2]: getAll usa ordem fixa de ECONOMIC_PARAMETER_KEYS com .find() por chave — source visível por resolução para o admin (38-2-02)
+- [Phase 38.2]: JSDoc do tracker.ts reformulado sem os literais snake_case das colunas para satisfazer o grep verify (== 1 por coluna) — padrão de desvio da 38-2-02 (38-2-03)
+- [Phase 38.2]: Persistência de confiança com ?? null (não undefined): campos opcionais ausentes do CostResolution → colunas NULL explícitas → badge genérico na UI (D5); sem backfill em histórico (38-2-03)
+- [Phase 38.2]: Suite do tracker tinha 13 testes F38.1 (não 8 como o plano estimou) — 4 novos adicionados, total real 17 verdes; critério '12 testes' do acceptance criteria baseado em contagem imprecisa (38-2-03)
