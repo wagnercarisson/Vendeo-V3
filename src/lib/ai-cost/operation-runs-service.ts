@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { EconomicParameterService } from "@/lib/economic/economic-parameter-service";
+import type { EconomicParameterKey } from "@/lib/economic/types";
 
 /**
  * Erro de indisponibilidade da apuração de custos de operação (fail-closed,
@@ -269,10 +270,11 @@ export class OperationRunsService {
     const page = Math.max(1, filters.page ?? 1);
     const pageSize = Math.min(Math.max(filters.pageSize ?? 25, 1), 100);
 
+    const params = await this.getEconomicParams();
     const raw = await this.fetchRunsPage(filters, page, pageSize);
 
-    const runs = (raw.runs ?? []).map((r) => this.mapRun(r));
-    const summary = this.deriveSummary(runs);
+    const runs = (raw.runs ?? []).map((r) => this.mapRun(r, params));
+    const summary = this.deriveSummary(runs, params);
 
     return {
       runs,
@@ -281,6 +283,30 @@ export class OperationRunsService {
       page,
       total: raw.total ?? 0,
     };
+  }
+
+  /**
+   * Resolve os parâmetros econômicos (D1/D2) via EconomicParameterService.
+   * Fail-closed: erro REAL (EconomicParameterUnavailableError ou qualquer outro)
+   * propaga como OperationRunsUnavailableError → 503. Fail-open (linha inexistente
+   * → 1.00) continua sendo tratado pelo service econômico.
+   */
+  private async getEconomicParams(): Promise<{
+    usdBrlRate: number;
+    creditValueBrl: number;
+  }> {
+    try {
+      const [usd, credit] = await Promise.all([
+        this.economic.getParameter("usd_brl_rate" as EconomicParameterKey),
+        this.economic.getParameter("credit_value_brl" as EconomicParameterKey),
+      ]);
+      return { usdBrlRate: usd.value, creditValueBrl: credit.value };
+    } catch (e) {
+      console.error("[operation-runs] parâmetros econômicos indisponíveis", e);
+      throw new OperationRunsUnavailableError(
+        e instanceof Error ? e.message : "Falha ao ler parâmetros econômicos",
+      );
+    }
   }
 
   private async fetchRunsPage(
@@ -311,7 +337,15 @@ export class OperationRunsService {
     return { runs: raw.runs ?? [], total: toNumber(raw.total) };
   }
 
-  private mapRun(raw: RawOperationRun): OperationRun {
+  private mapRun(
+    raw: RawOperationRun,
+    params: { usdBrlRate: number; creditValueBrl: number },
+  ): OperationRun {
+    const { custoBrl, receitaOpBrl, resultadoOpBrl, margemOpPct } = deriveBrl(
+      raw,
+      params.usdBrlRate,
+      params.creditValueBrl,
+    );
     return {
       operationRunId: raw.operation_run_id,
       operationRunType: raw.operation_run_type ?? null,
@@ -321,11 +355,11 @@ export class OperationRunsService {
       createdAt: raw.created_at ?? null,
       deliveryStatus: raw.delivery_status ?? null,
       custoUsdTotal: toNumber(raw.custo_usd_total),
-      custoBrl: null,
+      custoBrl,
       creditosDebitados: toNumber(raw.creditos_debitados),
-      receitaOpBrl: null,
-      resultadoOpBrl: null,
-      margemOpPct: null,
+      receitaOpBrl,
+      resultadoOpBrl,
+      margemOpPct,
       duracaoTotalMs: toNumber(raw.duracao_total_ms),
       chamadas: toNumber(raw.chamadas) ?? 0,
       chamadasSuccess: toNumber(raw.chamadas_success) ?? 0,
@@ -339,19 +373,32 @@ export class OperationRunsService {
     };
   }
 
-  private deriveSummary(runs: OperationRun[]): OperationRunsSummary {
+  private deriveSummary(
+    runs: OperationRun[],
+    params: { usdBrlRate: number; creditValueBrl: number },
+  ): OperationRunsSummary {
     const custoUsdTotal = sumValues(runs.map((r) => r.custoUsdTotal));
     const creditos = sumValues(runs.map((r) => r.creditosDebitados));
+    const custoBrl =
+      custoUsdTotal !== null ? custoUsdTotal * params.usdBrlRate : null;
+    const receitaOpBrl =
+      creditos !== null ? creditos * params.creditValueBrl : null;
+    const resultadoOpBrl =
+      custoBrl !== null && receitaOpBrl !== null ? receitaOpBrl - custoBrl : null;
+    const margemOpPct =
+      receitaOpBrl !== null && receitaOpBrl > 0 && resultadoOpBrl !== null
+        ? (resultadoOpBrl / receitaOpBrl) * 100
+        : null;
     const durations = runs
       .map((r) => r.duracaoTotalMs)
       .filter((d): d is number => d !== null);
     return {
       custoUsdTotal,
-      custoBrl: null,
+      custoBrl,
       creditosDebitados: creditos,
-      receitaOpBrl: null,
-      resultadoOpBrl: null,
-      margemOpPct: null,
+      receitaOpBrl,
+      resultadoOpBrl,
+      margemOpPct,
       tempoMedioMs:
         durations.length > 0
           ? durations.reduce((a, b) => a + b, 0) / durations.length
