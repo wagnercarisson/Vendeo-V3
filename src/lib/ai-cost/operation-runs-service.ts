@@ -421,11 +421,15 @@ export class OperationRunsService {
     const total = filtered.length;
     const pageRuns = filtered.slice((page - 1) * pageSize, page * pageSize);
     const summary = this.deriveSummary(filtered, params);
+    const stageByRunId = new Map(
+      rawRuns.map((r) => [r.operation_run_id, r.generation_type ?? null]),
+    );
+    const aggregations = this.deriveAggregations(filtered, params, stageByRunId);
 
     return {
       runs: pageRuns,
       summary,
-      aggregations: this.emptyAggregations(),
+      aggregations,
       page,
       total,
     };
@@ -577,6 +581,123 @@ export class OperationRunsService {
     };
   }
 
+  /**
+   * Deriva os agregados do painel (D3/D9) sobre o CONJUNTO FILTRADO INTEIRO
+   * (antes da página) — a UI nunca calcula KPIs/agregados:
+   * bySegment (custo/resultado/margem %/taxa de erro), byDeliveryType,
+   * byStage (generation_type), byProviderModel, byStatus, byStore (com
+   * storeName), byOwner (dono da loja via stores.user_id), byHour (hora UTC
+   * de created_at — determinística entre ambientes).
+   */
+  private deriveAggregations(
+    runs: OperationRun[],
+    params: { usdBrlRate: number; creditValueBrl: number },
+    stageByRunId: Map<string, string | null>,
+  ): OperationRunsAggregations {
+    const bySegment: Record<string, SegmentAggregation> = {};
+    const byDeliveryType: Record<string, number> = {};
+    const byStage: Record<string, number> = {};
+    const byProviderModel: Record<string, number> = {};
+    const byStatus: Record<string, number> = {};
+    const byStore: Record<string, StoreAggregation> = {};
+    const byOwner: Record<string, OwnerAggregation> = {};
+    const byHour: Record<number, number> = {};
+    // Acumuladores internos para margem % e taxa de erro por segmento
+    const segReceita: Record<string, number> = {};
+    const segErros: Record<string, number> = {};
+
+    for (const run of runs) {
+      // bySegment (D9)
+      const seg = (bySegment[run.segment] ??= {
+        segment: run.segment,
+        entregas: 0,
+        custoBrl: null,
+        resultadoOpBrl: null,
+        margemOpPct: null,
+        taxaErro: null,
+      });
+      seg.entregas += 1;
+      if (run.custoBrl !== null) seg.custoBrl = (seg.custoBrl ?? 0) + run.custoBrl;
+      if (run.resultadoOpBrl !== null) {
+        seg.resultadoOpBrl = (seg.resultadoOpBrl ?? 0) + run.resultadoOpBrl;
+      }
+      if (run.receitaOpBrl !== null) {
+        segReceita[run.segment] = (segReceita[run.segment] ?? 0) + run.receitaOpBrl;
+      }
+      if (run.deliveryStatus === "failed") {
+        segErros[run.segment] = (segErros[run.segment] ?? 0) + 1;
+      }
+
+      // byDeliveryType
+      const deliveryType = run.operationRunType ?? "unknown";
+      byDeliveryType[deliveryType] = (byDeliveryType[deliveryType] ?? 0) + 1;
+
+      // byStage (generation_type — bucket "unknown" quando o RPC não expõe)
+      const stage = stageByRunId.get(run.operationRunId) ?? "unknown";
+      byStage[stage] = (byStage[stage] ?? 0) + 1;
+
+      // byProviderModel
+      const providerModel =
+        run.provider && run.model
+          ? `${run.provider}/${run.model}`
+          : (run.provider ?? run.model ?? "unknown");
+      byProviderModel[providerModel] = (byProviderModel[providerModel] ?? 0) + 1;
+
+      // byStatus
+      const status = run.deliveryStatus ?? "unknown";
+      byStatus[status] = (byStatus[status] ?? 0) + 1;
+
+      // byStore
+      const storeKey = run.storeId ?? "unknown";
+      const store = (byStore[storeKey] ??= {
+        storeName: run.storeName,
+        entregas: 0,
+        custoBrl: null,
+      });
+      store.entregas += 1;
+      if (run.custoBrl !== null) store.custoBrl = (store.custoBrl ?? 0) + run.custoBrl;
+      if (run.storeName !== null) store.storeName = run.storeName;
+
+      // byOwner (D3/D9 — dono da loja via stores.user_id)
+      const ownerKey = run.ownerId ?? "unknown";
+      const owner = (byOwner[ownerKey] ??= {
+        ownerId: run.ownerId,
+        entregas: 0,
+        custoBrl: null,
+      });
+      owner.entregas += 1;
+      if (run.custoBrl !== null) owner.custoBrl = (owner.custoBrl ?? 0) + run.custoBrl;
+
+      // byHour (hora UTC de created_at)
+      if (run.createdAt) {
+        const hour = new Date(run.createdAt).getUTCHours();
+        byHour[hour] = (byHour[hour] ?? 0) + 1;
+      }
+    }
+
+    // Margem % e taxa de erro por segmento — mesma fórmula D1 sobre o agregado
+    for (const segment of Object.keys(bySegment)) {
+      const seg = bySegment[segment];
+      const receita = segReceita[segment];
+      seg.margemOpPct =
+        receita !== undefined && receita > 0 && seg.resultadoOpBrl !== null
+          ? (seg.resultadoOpBrl / receita) * 100
+          : null;
+      seg.taxaErro = seg.entregas > 0 ? (segErros[segment] ?? 0) / seg.entregas : null;
+    }
+
+    return {
+      bySegment,
+      byDeliveryType,
+      byStage,
+      byProviderModel,
+      byStatus,
+      byStore,
+      byOwner,
+      byHour,
+    };
+  }
+
   private deriveSummary(
     runs: OperationRun[],
     params: { usdBrlRate: number; creditValueBrl: number },
@@ -611,19 +732,6 @@ export class OperationRunsService {
       totalEntregas: runs.length,
       entregasErro: runs.filter((r) => r.deliveryStatus === "failed").length,
       entregasSucesso: runs.filter((r) => r.deliveryStatus === "success").length,
-    };
-  }
-
-  private emptyAggregations(): OperationRunsAggregations {
-    return {
-      bySegment: {},
-      byDeliveryType: {},
-      byStage: {},
-      byProviderModel: {},
-      byStatus: {},
-      byStore: {},
-      byOwner: {},
-      byHour: {},
     };
   }
 }
