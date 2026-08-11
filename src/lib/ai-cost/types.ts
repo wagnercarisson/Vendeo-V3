@@ -55,6 +55,12 @@ export interface TokenUsage {
  * Resolução de custo de uma chamada (D9/D3).
  * `estimatedCostUsd: null` + `costSource: "not_available"` = custo desconhecido
  * (tokens ainda gravados — D4).
+ *
+ * F38.2 (D5): os campos de confiança — costFormulaVersion, costEstimationNote,
+ * textComponentUsd e imageToolComponentUsd — são persistidos pelo
+ * AiCostTracker.record em generation_events (colunas cost_formula_version,
+ * cost_estimation_note, text_component_usd, image_tool_component_usd), daqui
+ * para frente, sem reclassificar histórico.
  */
 export interface CostResolution {
   estimatedCostUsd: number | null;
