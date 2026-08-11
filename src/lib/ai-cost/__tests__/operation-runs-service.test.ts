@@ -9,6 +9,7 @@ import {
   OperationRunsUnavailableError,
   deriveEventBadge,
   deriveRunBadge,
+  classifySegment,
 } from "../operation-runs-service";
 
 /** Run bruto do RPC — mesmo shape do JSONB de admin_get_ai_operation_runs (38-2-01). */
@@ -185,5 +186,69 @@ describe("OperationRunsService — badges de confiança (D5)", () => {
       "estimated",
     );
     expect(deriveRunBadge({})).toBe("estimated");
+  });
+});
+
+describe("OperationRunsService — segmentação econômica (D9)", () => {
+  it("store_is_test true → segmento test (confiança alta)", () => {
+    expect(classifySegment({ store_is_test: true })).toEqual({
+      segment: "test",
+      confidence: "high",
+    });
+  });
+
+  it("bonus_amount > 0 e purchased_amount = 0 → freemium/promotional", () => {
+    expect(
+      classifySegment({ deduction_bonus_amount: 5, deduction_purchased_amount: 0 }),
+    ).toEqual({ segment: "freemium/promotional", confidence: "high" });
+  });
+
+  it("purchased_amount > 0 → paid (confiança baixa)", () => {
+    expect(classifySegment({ deduction_purchased_amount: 3 })).toEqual({
+      segment: "paid",
+      confidence: "low",
+    });
+  });
+
+  it("admin_grant shape confirmado → manual/admin; shape divergente → unknown (nunca inferir errado)", () => {
+    expect(classifySegment({ admin_grant_evidence: { grant_count: 2 } })).toEqual({
+      segment: "manual/admin",
+      confidence: "high",
+    });
+    expect(classifySegment({ admin_grant_evidence: { foo: "x" } })).toEqual({
+      segment: "unknown",
+      confidence: "low",
+    });
+    expect(classifySegment({ admin_grant_evidence: "grant-string" })).toEqual({
+      segment: "unknown",
+      confidence: "low",
+    });
+  });
+
+  it("sem evidência → unknown (fallback, confiança baixa)", () => {
+    expect(classifySegment({})).toEqual({ segment: "unknown", confidence: "low" });
+  });
+
+  it("listRuns com segment=test filtra + re-pagina (total reflete o conjunto segmento-filtrado)", async () => {
+    const runs = [
+      makeRawRun({ operation_run_id: "aaaaaaaa-1111-4111-8111-111111111111", store_is_test: true }),
+      makeRawRun({ operation_run_id: "bbbbbbbb-1111-4111-8111-111111111111", deduction_purchased_amount: 2 }),
+      makeRawRun({ operation_run_id: "cccccccc-1111-4111-8111-111111111111", deduction_purchased_amount: 4 }),
+      makeRawRun({ operation_run_id: "dddddddd-1111-4111-8111-111111111111", deduction_purchased_amount: 1 }),
+      makeRawRun({ operation_run_id: "eeeeeeee-1111-4111-8111-111111111111", deduction_purchased_amount: 6 }),
+    ];
+    const { client, mockRpc } = buildClient({ runs });
+    const service = new OperationRunsService(client, buildEconomic({}));
+
+    const result = await service.listRuns({ segment: "test" });
+
+    expect(result.total).toBe(1);
+    expect(result.runs).toHaveLength(1);
+    expect(result.runs[0].operationRunId).toBe("aaaaaaaa-1111-4111-8111-111111111111");
+    expect(result.runs[0].segment).toBe("test");
+    // Re-paginação no service: o RPC recebe page_size 100 (conjunto base completo)
+    const rpcArgs = mockRpc.mock.calls.map((c) => c[1]);
+    expect(rpcArgs[0].p_page).toBe(1);
+    expect(rpcArgs[0].p_page_size).toBe(100);
   });
 });

@@ -333,6 +333,28 @@ function deriveBrl(
 }
 
 /**
+ * Evidências brutas de segmento (D9) — mesmo shape exposto pelo RPC
+ * (store_is_test, deduction_* via credit_transactions.metadata, admin_grant_evidence).
+ */
+export interface SegmentEvidence {
+  store_is_test?: boolean | null;
+  deduction_purchased_amount?: string | number | null;
+  deduction_bonus_amount?: string | number | null;
+  admin_grant_evidence?: unknown;
+}
+
+/**
+ * Classificador best-effort de segmento econômico (D9) — derivação no service,
+ * NUNCA no RPC. Critérios exatos; fallback unknown; nunca infere admin_grant
+ * sem shape confiável. paid/unknown → confidence "low"; demais "high".
+ */
+export function classifySegment(
+  evidence: SegmentEvidence,
+): { segment: Segment; confidence: "high" | "low" } {
+  return { segment: "unknown", confidence: "low" };
+}
+
+/**
  * Camada de leitura admin dos custos de operação (D4) — server-side apenas.
  * ÚNICA via: RPCs definer admin_get_ai_operation_runs/_events; derivações
  * (BRL D1/D4, badges D5, segmento D9, storeName/owner D3) centralizadas aqui —
