@@ -34,7 +34,7 @@
 | 37 | ○ Revisão e Aprovação da Arte | — | Pending    | — |
 | 38 | ✅ Tabela de Custos por Operação | 8/8 | ✅ Complete | 2026-08-07 |
 | 38.1 | ✅ Apuração de Custos de IA por Entrega | 11/11 | ✅ Complete | 2026-08-09 |
-| 38.2 | ✅ Admin de Custos Operacionais + Configurações Econômicas | 12/15 | ◆ In Progress | 2026-08-11 |
+| 38.2 | ✅ Admin de Custos Operacionais + Configurações Econômicas | 14/15 | In Progress|  |
 | 39 | ○ Stripe / Monetização Pública (v1.7) | — | Pending    | — |
 
 ---
@@ -616,7 +616,7 @@ Plans:
 
 **Source of truth:** `openspec/changes/fase-38-2-admin-custos-operacionais/`
 
-**Plans:** 12/15 plans executed
+**Plans:** 14/15 plans executed
 
 ```
 Plans:

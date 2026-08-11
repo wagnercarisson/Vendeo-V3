@@ -4,13 +4,13 @@ milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 current_phase: 38.2
 status: executing
-last_updated: "2026-08-11T21:01:14.454Z"
+last_updated: "2026-08-11T21:14:50.125Z"
 progress:
-  total_phases: 22
-  completed_phases: 20
-  total_plans: 110
-  completed_plans: 104
-  percent: 91
+  total_phases: 1
+  completed_phases: 0
+  total_plans: 15
+  completed_plans: 14
+  percent: 0
 ---
 
 # Project State
@@ -148,6 +148,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 | Phase 38.2 P38-2-08 | 11min | 4 tasks | 10 files |
 | Phase 38.2 P38-2-10 | 6min | 2 tasks | 2 files |
 | Phase 38.2-admin-custos-operacionais P12 | 32min | 2 tasks | 2 files |
+| Phase 38.2-admin-custos-operacionais P13 | 185min | 2 tasks | 4 files |
 
 ### Phase 19 — Onboarding & Estados Vazios ✅
 
@@ -448,7 +449,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 ## Current Position
 
 Phase: 38.2 (admin-custos-operacionais) — EXECUTING
-Plan: 13 of 15
+Plan: 14 of 15
 v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36, 38 e 38.1 concluídas. F38 (Tabela de Custos por Operação, v1.5) concluída — 8/8 plans, 1597 testes, UAT 4/4; F38.1 (Apuração de Custos de IA por Entrega, desdobramento da F38) **CONCLUÍDA** — 11/11 plans, 1713 testes, UAT validado, **fechada como camada de estimativa operacional granular** (ajuste provisório da tool image_generation `0.065` = estimativa beta provisória, não custo real; reconciliação financeira real na próxima fase), fonte da verdade `openspec/changes/fase-38-1-ai-cost-accounting/`; **F38.2 (Admin de Custos Operacionais + Configurações Econômicas, desdobramento da F38) em EXECUÇÃO — 10/11 plans** — painel `/admin/ai-operation-costs` (KPIs/filtros/tabela/drilldown/segmentos) + `economic_parameters` configuráveis + badges de confiança + correção `/admin/metrics`, fonte `openspec/changes/fase-38-2-admin-custos-operacionais/`; 38-2-01 ✅ migrations/db push (schema econômico + RPCs de runs no remoto), 38-2-02 ✅ tipos econômicos + EconomicParameterService fail-open/fail-closed + 10 testes (base das rotas 38-2-04/05/06/09), 38-2-03 ✅ AiCostTracker persiste 4 campos de confiança (D5), 38-2-04 ✅ API GET/PUT /api/admin/economic-parameters (zod + RPC admin_set_economic_parameter, 200/400/403/500, idempotência, 9 testes da rota, sem endpoint público), 38-2-05 ✅ OperationRunsService server-only (BRL D1/D4 via EconomicParameterService + badges D5 por evento/entrega + segmentação classifySegment D9 com filtro e re-paginação + storeName/owner D3 + 8 agregados D3/D9 sobre o conjunto filtrado inteiro + getRunDetail D4 com BRL/badges/componentes por evento; 20 testes, typecheck/lint limpos), 38-2-06 ✅ API GET /api/admin/ai-operation-runs (lista) + GET /api/admin/ai-operation-runs/[operationRunId] (detalhe) com AiOperationRunsQuerySchema (janela default 90d/max 365d → 400) delegando 100% ao OperationRunsService (BRL/badge/segmento nunca na rota) + 13 testes (tarefa 12.4, piso 11; regressão 1804 testes); F37 (Revisão e Aprovação da Arte, v1.5, experimento beta) em planejamento futuro; F39 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37 → F39). **38-2-10 OK: verificacao I1-I6 em banco real (script 50/50 asserts) + gates verdes (vitest 1832/1832, typecheck, lint, build) + UAT 13.3 coletado para harvest end-of-phase (I1-I6 documentados em 38-2-VERIFICATION.md)**. **38-2-12 OK (gap UAT estornos): migration 20260811000001 com CREATE OR REPLACE dos RPCs admin_get_ai_operation_runs/_events expondo creditos_estornados (refunds via reference→deduction no ledger) e creditos_liquidos = max(bruto−estorno, 0) por run E no summary/detalhe — creditos_debitados BRUTO inalterado, view F38.1 intocada; db push aplicado no remoto (validado via REST: estornados=3/liquidos=17 em 20 runs/90d); I5 estendido com 13 asserts novos → 63/63 asserts 0 falhas em banco real; gates verdes (vitest 1834/1834, typecheck/lint/build exit 0)**.
 
 ### Phase 36 — Onboarding: Navegação por Abas ✅ Complete
@@ -722,3 +723,6 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 - [Phase 38.2]: I6 delivery markers: invariante anti-dupla-contagem = nenhum marker pós-F38.1 (operation_run_id NOT NULL) carrega custo; 51 markers legados (operation_run_id NULL) são inertes por construção (views/RPCs filtram operation_run_id IS NOT NULL + generation_type NOT IN) — Verificação I6 em banco real (38-2-10)
 - [Phase 38.2]: Linhas de teste I2/I3 permanecem na economic_parameter_audit (reason 38-2-10-verification) — append-only por desenho (trigger bloqueia até DELETE de service_role); não afetam a UI — Verificação I2/I3 (38-2-10)
 - [Phase 38.2-admin-custos-operacionais]: RPCs da F38.2 expõem creditos_estornados/creditos_liquidos por run (gap UAT) — fix exclusivo nos RPCs (CREATE OR REPLACE), view F38.1 intocada, creditos_debitados BRUTO mantido
+- [Phase 38.2]: Receita/resultado/margem derivados de creditos_liquidos — bruto (creditosDebitados) permanece como auditoria de deduções — Decisão D1/D4 do phase owner — KPIs refletem estornos; full-refund zera receita mantendo custo de IA
+- [Phase 38.2]: Floor 0 (estorno > bruto) aplicado pelo RPC via GREATEST (38-2-12) — o service consome creditos_liquidos e nunca recalcula o líquido — Decisão D1/D4 do phase owner — KPIs refletem estornos; full-refund zera receita mantendo custo de IA
+- [Phase 38.2]: mapDetailRun delegado a deriveBrl — uma única fórmula monetária para lista e detalhe (RawDetailRun agora carrega os 3 campos de crédito) — Decisão D1/D4 do phase owner — KPIs refletem estornos; full-refund zera receita mantendo custo de IA

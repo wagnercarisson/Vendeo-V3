@@ -133,3 +133,8 @@ None - no external service configuration required.
 ---
 *Phase: 38.2-admin-custos-operacionais*
 *Completed: 2026-08-11*
+
+## Self-Check: PASSED
+
+- 4 arquivos modificados + SUMMARY presentes no disco (5/5)
+- Commits confirmados: 68dde7d (feat), 223a054 (test), 9541e0b (docs SUMMARY)
