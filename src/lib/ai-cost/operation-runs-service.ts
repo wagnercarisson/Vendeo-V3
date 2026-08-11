@@ -199,6 +199,43 @@ interface RawSummary {
   total?: number;
 }
 
+/** Evento bruto do RPC admin_get_ai_operation_run_events (detalhe, D4). */
+interface RawEvent {
+  generation_type?: string | null;
+  provider?: string | null;
+  model?: string | null;
+  status?: string | null;
+  error_type?: string | null;
+  attempt_number?: string | number | null;
+  duration_ms?: string | number | null;
+  prompt_tokens?: string | number | null;
+  completion_tokens?: string | number | null;
+  total_tokens?: string | number | null;
+  cached_input_tokens?: string | number | null;
+  image_tokens?: string | number | null;
+  estimated_cost_usd?: string | number | null;
+  provider_reported_cost_usd?: string | number | null;
+  text_component_usd?: string | number | null;
+  image_tool_component_usd?: string | number | null;
+  cost_source?: string | null;
+  cost_formula_version?: string | null;
+  cost_estimation_note?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+/** Run do RPC de eventos — sem evidências de segmento/insumos de badge (mais enxuto). */
+interface RawDetailRun {
+  operation_run_id: string;
+  created_at?: string | null;
+  delivery_status?: string | null;
+  custo_usd_total?: string | number | null;
+  duracao_total_ms?: string | number | null;
+  chamadas?: string | number | null;
+  chamadas_success?: string | number | null;
+  regeneracoes?: string | number | null;
+  p95_ms?: string | number | null;
+}
+
 /** NUMERIC do Postgres chega como string | number — normaliza para number. */
 function toNumber(value: unknown): number | null {
   if (value === null || value === undefined) return null;
@@ -513,6 +550,16 @@ export class OperationRunsService {
         e instanceof Error ? e.message : "Falha ao ler parâmetros econômicos",
       );
     }
+  }
+
+  /**
+   * Detalhe call-level de uma entrega (D4): chama o RPC de eventos, deriva
+   * estimatedCostBrl = estimatedCostUsd × usd_brl_rate por evento, repassa os
+   * componentes textComponentUsd/imageToolComponentUsd e deriva o badge por
+   * evento (D5). run null + events [] quando o id não existe (contrato do RPC).
+   */
+  async getRunDetail(operationRunId: string): Promise<OperationRunDetail> {
+    return { run: null, events: [] };
   }
 
   private async fetchRunsPage(

@@ -44,12 +44,14 @@ function makeRawRun(overrides: Record<string, unknown> = {}): any {
   };
 }
 
-/** Cliente mock — dispatcher de RPC (lista com paginação) + leitura de stores. */
+/** Cliente mock — dispatcher de RPC (lista com paginação + detalhe) + leitura de stores. */
 function buildClient(options: {
   runs?: any[];
   total?: number;
   stores?: any[];
   rpcError?: string;
+  events?: { run: any; events: any[] } | null;
+  eventsError?: string;
 } = {}) {
   const runs = options.runs ?? [];
   const total = options.total ?? runs.length;
@@ -79,6 +81,12 @@ function buildClient(options: {
         },
         error: null,
       };
+    }
+    if (fn === "admin_get_ai_operation_run_events") {
+      if (options.eventsError) {
+        return { data: null, error: { message: options.eventsError } };
+      }
+      return { data: options.events ?? { run: null, events: [] }, error: null };
     }
     return { data: null, error: { message: `RPC desconhecido: ${fn}` } };
   });
@@ -378,5 +386,112 @@ describe("OperationRunsService — aggregations (D3/D9)", () => {
     expect(statusTotal).toBe(60);
     expect(result.aggregations.byStatus.failed).toBe(20);
     expect(result.aggregations.byStatus.success).toBe(40);
+  });
+});
+
+describe("OperationRunsService — getRunDetail (D4)", () => {
+  const eventsPayload = {
+    run: {
+      operation_run_id: "run-detail-1",
+      created_at: "2026-08-01T12:00:00.000Z",
+      delivery_status: "success",
+      custo_usd_total: "5",
+      duracao_total_ms: "800",
+      chamadas: 2,
+      chamadas_success: 2,
+      regeneracoes: 0,
+      p95_ms: "600",
+    },
+    events: [
+      {
+        generation_type: "campaign_copy",
+        provider: "openai",
+        model: "gpt-4o",
+        status: "success",
+        error_type: null,
+        attempt_number: 1,
+        duration_ms: 400,
+        prompt_tokens: 100,
+        completion_tokens: 50,
+        total_tokens: 150,
+        cached_input_tokens: 0,
+        image_tokens: null,
+        estimated_cost_usd: 0.01,
+        provider_reported_cost_usd: null,
+        text_component_usd: 0.01,
+        image_tool_component_usd: 0,
+        cost_source: "provider_reported",
+        cost_formula_version: null,
+        cost_estimation_note: null,
+        metadata: { trace_id: "t1" },
+      },
+      {
+        generation_type: "campaign_image",
+        provider: "openai",
+        model: "gpt-image-1",
+        status: "success",
+        error_type: null,
+        attempt_number: 1,
+        duration_ms: 300,
+        prompt_tokens: 80,
+        completion_tokens: 20,
+        total_tokens: 100,
+        cached_input_tokens: 0,
+        image_tokens: 10,
+        estimated_cost_usd: 2,
+        provider_reported_cost_usd: null,
+        text_component_usd: 0.5,
+        image_tool_component_usd: 1.5,
+        cost_source: "pricing_table",
+        cost_formula_version: "responses_image_generation_v2",
+        cost_estimation_note:
+          "provisional_image_tool_unit_cost_until_provider_reconciliation",
+        metadata: {},
+      },
+    ],
+  };
+
+  it("RPC de eventos chamado; estimatedCostBrl = estimatedCostUsd × usd_brl_rate por evento", async () => {
+    const { client, mockRpc } = buildClient({ events: eventsPayload });
+    const service = new OperationRunsService(
+      client,
+      buildEconomic({ usd_brl_rate: 5.0, credit_value_brl: 1.5 }),
+    );
+
+    const detail = await service.getRunDetail("run-detail-1");
+
+    expect(mockRpc).toHaveBeenCalledWith(
+      "admin_get_ai_operation_run_events",
+      expect.objectContaining({ p_operation_run_id: "run-detail-1" }),
+    );
+    // run com resumo BRL derivado
+    expect(detail.run).not.toBeNull();
+    expect(detail.run?.custoBrl).toBe(25); // 5 USD × 5.0
+    // eventos com BRL/badges/componentes por evento
+    expect(detail.events).toHaveLength(2);
+    expect(detail.events[0].estimatedCostBrl).toBeCloseTo(0.05, 5);
+    expect(detail.events[0].textComponentUsd).toBe(0.01);
+    expect(detail.events[0].badge).toBe("provider_reported");
+    expect(detail.events[1].estimatedCostBrl).toBe(10); // 2 USD × 5.0
+    expect(detail.events[1].imageToolComponentUsd).toBe(1.5);
+    expect(detail.events[1].badge).toBe("provisional image tool estimate");
+  });
+
+  it("run null + events [] para id inexistente", async () => {
+    const { client } = buildClient({ events: { run: null, events: [] } });
+    const service = new OperationRunsService(client, buildEconomic({}));
+
+    const detail = await service.getRunDetail("id-inexistente");
+
+    expect(detail).toEqual({ run: null, events: [] });
+  });
+
+  it("erro do RPC de eventos → OperationRunsUnavailableError (fail-closed)", async () => {
+    const { client } = buildClient({ eventsError: "boom" });
+    const service = new OperationRunsService(client, buildEconomic({}));
+
+    await expect(service.getRunDetail("run-1")).rejects.toThrow(
+      OperationRunsUnavailableError,
+    );
   });
 });
