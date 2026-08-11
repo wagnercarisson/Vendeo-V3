@@ -78,7 +78,7 @@ Each task was committed atomically:
 2. **Task 2: EconomicParameterService — getParameter fail-open/fail-closed + getAll (D2)** - `362f7be` (feat)
 3. **Task 3: Testes completos do service (tarefa 12.1)** - `de9d5e8` (test)
 
-**Plan metadata:** pendente (docs commit)
+**Plan metadata:** `43ae56d` (docs: complete plan)
 
 ## Files Created/Modified
 - `src/lib/economic/types.ts` - Chaves versionadas (`ECONOMIC_PARAMETER_KEYS` as const) + `EconomicParameterKey` + `EconomicParameterResolution` — sem server-only, importável por zod/UI/route tests (D1)
