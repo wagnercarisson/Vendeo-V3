@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/require-admin";
-import { supabaseAdmin } from "@/lib/supabase/server";
+import { EconomicParameterService } from "@/lib/economic/economic-parameter-service";
 import {
   getSuccessRate,
   getErrorRate,
@@ -23,8 +23,6 @@ import { BarChart3 } from "lucide-react";
 import type { MetricCard, HealthState } from "@/lib/metrics/types";
 import { HealthBanner } from "./health-banner";
 import { MetricsCards } from "./metrics-cards";
-
-const USD_BRL_RATE = Number(process.env.VENDEO_USD_BRL_RATE ?? "5.50");
 
 interface MetricsData {
   // Campaign
@@ -78,7 +76,7 @@ function buildCampaignCards(hours: number, data: MetricsData): MetricCard[] {
   return [
     { label: "Taxa de Sucesso", value: data.successRate, unit: "%", timeRange },
     { label: "Taxa de Erro", value: data.errorRate, unit: "%", timeRange },
-    { label: "Custo Médio", value: data.avgCost, timeRange },
+    { label: "Custo Médio IA", value: data.avgCost, timeRange },
     { label: "Tempo Médio", value: data.avgDuration, timeRange },
     { label: "Taxa de Estorno Campanhas", value: data.refundRate, unit: "%", timeRange },
     { label: "Usuários Ativos", value: data.activeUsers, timeRange },
@@ -189,6 +187,13 @@ export default async function AdminMetricsPage({
     );
   }
 
+  // Fonte única de conversão USD→BRL (D2): economic_parameters.usd_brl_rate via
+  // EconomicParameterService (38-2-02) — default 1.00 no fallback (D1). O env
+  // VENDEO_USD_BRL_RATE fica apenas como fallback de bootstrap documentado,
+  // SEM uso ativo (deprecado).
+  const usdBrl = await new EconomicParameterService().getParameter("usd_brl_rate");
+  const usdToBrlRate = usdBrl.value;
+
   return (
     <div className="space-y-8">
       <div className="flex items-start justify-between">
@@ -227,15 +232,15 @@ export default async function AdminMetricsPage({
         <div className="space-y-6">
           <div>
             <h3 className="mb-2 text-sm font-medium text-muted-foreground">Última hora</h3>
-            <MetricsCards cards={campaignCards1h} usdToBrlRate={USD_BRL_RATE} />
+            <MetricsCards cards={campaignCards1h} usdToBrlRate={usdToBrlRate} />
           </div>
           <div>
             <h3 className="mb-2 text-sm font-medium text-muted-foreground">Últimas 24 horas</h3>
-            <MetricsCards cards={campaignCards24h} usdToBrlRate={USD_BRL_RATE} />
+            <MetricsCards cards={campaignCards24h} usdToBrlRate={usdToBrlRate} />
           </div>
           <div>
             <h3 className="mb-2 text-sm font-medium text-muted-foreground">Últimos 7 dias</h3>
-            <MetricsCards cards={campaignCards7d} usdToBrlRate={USD_BRL_RATE} />
+            <MetricsCards cards={campaignCards7d} usdToBrlRate={usdToBrlRate} />
           </div>
         </div>
       </section>
@@ -250,15 +255,15 @@ export default async function AdminMetricsPage({
         <div className="space-y-6">
           <div>
             <h3 className="mb-2 text-sm font-medium text-muted-foreground">Última hora</h3>
-            <MetricsCards cards={vsCards1h} usdToBrlRate={USD_BRL_RATE} />
+            <MetricsCards cards={vsCards1h} usdToBrlRate={usdToBrlRate} />
           </div>
           <div>
             <h3 className="mb-2 text-sm font-medium text-muted-foreground">Últimas 24 horas</h3>
-            <MetricsCards cards={vsCards24h} usdToBrlRate={USD_BRL_RATE} />
+            <MetricsCards cards={vsCards24h} usdToBrlRate={usdToBrlRate} />
           </div>
           <div>
             <h3 className="mb-2 text-sm font-medium text-muted-foreground">Últimos 7 dias</h3>
-            <MetricsCards cards={vsCards7d} usdToBrlRate={USD_BRL_RATE} />
+            <MetricsCards cards={vsCards7d} usdToBrlRate={usdToBrlRate} />
           </div>
         </div>
       </section>
@@ -273,15 +278,15 @@ export default async function AdminMetricsPage({
         <div className="space-y-6">
           <div>
             <h3 className="mb-2 text-sm font-medium text-muted-foreground">Última hora</h3>
-            <MetricsCards cards={walletCards1h} usdToBrlRate={USD_BRL_RATE} />
+            <MetricsCards cards={walletCards1h} usdToBrlRate={usdToBrlRate} />
           </div>
           <div>
             <h3 className="mb-2 text-sm font-medium text-muted-foreground">Últimas 24 horas</h3>
-            <MetricsCards cards={walletCards24h} usdToBrlRate={USD_BRL_RATE} />
+            <MetricsCards cards={walletCards24h} usdToBrlRate={usdToBrlRate} />
           </div>
           <div>
             <h3 className="mb-2 text-sm font-medium text-muted-foreground">Últimos 7 dias</h3>
-            <MetricsCards cards={walletCards7d} usdToBrlRate={USD_BRL_RATE} />
+            <MetricsCards cards={walletCards7d} usdToBrlRate={usdToBrlRate} />
           </div>
         </div>
       </section>
