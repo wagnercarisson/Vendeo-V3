@@ -206,6 +206,9 @@ function toNumber(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/** Limite defensivo de páginas na paginação progressiva (100 runs/página). */
+const MAX_RPC_PAGES = 10_000;
+
 function clampNonNegative(value: number | null): number {
   const n = value ?? 0;
   return Math.max(0, n);
@@ -343,6 +346,14 @@ export interface SegmentEvidence {
   admin_grant_evidence?: unknown;
 }
 
+/** Shape confirmado do admin_grant no RPC (38-2-01): `{ grant_count: N }` com N > 0. */
+function isConfirmedAdminGrant(evidence: unknown): boolean {
+  if (evidence === null || evidence === undefined) return false;
+  if (typeof evidence !== "object" || Array.isArray(evidence)) return false;
+  const count = toNumber((evidence as Record<string, unknown>).grant_count);
+  return count !== null && count > 0;
+}
+
 /**
  * Classificador best-effort de segmento econômico (D9) — derivação no service,
  * NUNCA no RPC. Critérios exatos; fallback unknown; nunca infere admin_grant
@@ -351,6 +362,25 @@ export interface SegmentEvidence {
 export function classifySegment(
   evidence: SegmentEvidence,
 ): { segment: Segment; confidence: "high" | "low" } {
+  // test: loja de teste (F32/F33)
+  if (evidence.store_is_test === true) {
+    return { segment: "test", confidence: "high" };
+  }
+  const purchased = toNumber(evidence.deduction_purchased_amount);
+  const bonus = toNumber(evidence.deduction_bonus_amount);
+  // freemium/promotional: consumo coberto por grant/bônus sem compra
+  if (bonus !== null && bonus > 0 && (purchased === null || purchased === 0)) {
+    return { segment: "freemium/promotional", confidence: "high" };
+  }
+  // paid: consumo coberto por crédito comprado (F39 ainda sem origem rastreável)
+  if (purchased !== null && purchased > 0) {
+    return { segment: "paid", confidence: "low" };
+  }
+  // manual/admin: evidência com shape real confirmado; senão unknown (nunca inferir errado)
+  if (isConfirmedAdminGrant(evidence.admin_grant_evidence)) {
+    return { segment: "manual/admin", confidence: "high" };
+  }
+  // unknown: sem origem clara no ledger (fallback)
   return { segment: "unknown", confidence: "low" };
 }
 
@@ -372,18 +402,89 @@ export class OperationRunsService {
     const pageSize = Math.min(Math.max(filters.pageSize ?? 25, 1), 100);
 
     const params = await this.getEconomicParams();
-    const raw = await this.fetchRunsPage(filters, page, pageSize);
 
-    const runs = (raw.runs ?? []).map((r) => this.mapRun(r, params));
-    const summary = this.deriveSummary(runs, params);
+    // Paginação progressiva (obrigatória — RPC limita page_size a 100): requisita
+    // o conjunto base completo para derivar summary/aggregations sobre o conjunto
+    // filtrado inteiro (D3/D4) e re-paginar após o filtro de segmento (D9).
+    const rawRuns = await this.fetchAllRuns(filters);
+    const storeInfo = await this.resolveStores(
+      rawRuns.map((r) => r.store_id ?? null),
+    );
+
+    const derived = rawRuns.map((raw) =>
+      this.mapRun(raw, params, storeInfo.get(raw.store_id ?? "")),
+    );
+    const filtered = filters.segment
+      ? derived.filter((r) => r.segment === filters.segment)
+      : derived;
+
+    const total = filtered.length;
+    const pageRuns = filtered.slice((page - 1) * pageSize, page * pageSize);
+    const summary = this.deriveSummary(filtered, params);
 
     return {
-      runs,
+      runs: pageRuns,
       summary,
       aggregations: this.emptyAggregations(),
       page,
-      total: raw.total ?? 0,
+      total,
     };
+  }
+
+  /**
+   * Busca progressiva do conjunto base: loop de páginas (p_page = 1, 2, ...,
+   * p_page_size = 100) até acumular todos os runs do período filtrado
+   * (runs_acumulados >= summary.total do RPC). A janela ≤ 365d é garantida pelo
+   * próprio RPC (window_exceeded_365d).
+   */
+  private async fetchAllRuns(filters: OperationRunsFilters): Promise<RawOperationRun[]> {
+    const all: RawOperationRun[] = [];
+    let rpcTotal = Infinity;
+    let page = 1;
+    while (all.length < rpcTotal) {
+      const raw = await this.fetchRunsPage(filters, page, 100);
+      const pageRuns = raw.runs ?? [];
+      all.push(...pageRuns);
+      rpcTotal = raw.total ?? 0;
+      if (pageRuns.length === 0) break; // defensivo: sem mais dados
+      if (page > MAX_RPC_PAGES) {
+        console.error("[operation-runs] fetchAllRuns excedeu o limite defensivo de páginas");
+        break;
+      }
+      page += 1;
+    }
+    return all;
+  }
+
+  /**
+   * Resolve storeName/owner (D3/D9) para a listagem/agregados — service layer,
+   * via stores.user_id (dono da loja, não o executor técnico). Fail-open para
+   * dado de apresentação: erro de leitura → nomes/owners null (agrupados em
+   * "unknown"); o RPC já falha-closed se a própria leitura de stores falhar
+   * (is_test_store via JOIN).
+   */
+  private async resolveStores(
+    storeIds: Array<string | null>,
+  ): Promise<Map<string, { name: string | null; ownerId: string | null }>> {
+    const ids = [...new Set(storeIds.filter((id): id is string => Boolean(id)))];
+    const map = new Map<string, { name: string | null; ownerId: string | null }>();
+    if (ids.length === 0) return map;
+    // Lote: .in() limitado a 100 ids por chamada
+    for (let i = 0; i < ids.length; i += 100) {
+      const chunk = ids.slice(i, i + 100);
+      const { data, error } = await this.client
+        .from("stores")
+        .select("id, name, user_id")
+        .in("id", chunk);
+      if (error) {
+        console.error("[operation-runs] stores lookup error", error.message);
+        continue;
+      }
+      for (const row of data ?? []) {
+        map.set(row.id, { name: row.name ?? null, ownerId: row.user_id ?? null });
+      }
+    }
+    return map;
   }
 
   /**
@@ -441,18 +542,20 @@ export class OperationRunsService {
   private mapRun(
     raw: RawOperationRun,
     params: { usdBrlRate: number; creditValueBrl: number },
+    store?: { name: string | null; ownerId: string | null },
   ): OperationRun {
     const { custoBrl, receitaOpBrl, resultadoOpBrl, margemOpPct } = deriveBrl(
       raw,
       params.usdBrlRate,
       params.creditValueBrl,
     );
+    const { segment, confidence } = classifySegment(raw);
     return {
       operationRunId: raw.operation_run_id,
       operationRunType: raw.operation_run_type ?? null,
       storeId: raw.store_id ?? null,
-      storeName: null,
-      ownerId: null,
+      storeName: store?.name ?? null,
+      ownerId: store?.ownerId ?? null,
       createdAt: raw.created_at ?? null,
       deliveryStatus: raw.delivery_status ?? null,
       custoUsdTotal: toNumber(raw.custo_usd_total),
@@ -469,8 +572,8 @@ export class OperationRunsService {
       model: raw.model ?? null,
       costSource: raw.cost_source ?? null,
       badge: deriveRunBadge(raw),
-      segment: "unknown",
-      segmentConfidence: "low",
+      segment,
+      segmentConfidence: confidence,
     };
   }
 

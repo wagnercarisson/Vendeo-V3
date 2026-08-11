@@ -82,9 +82,13 @@ function buildClient(options: {
     }
     return { data: null, error: { message: `RPC desconhecido: ${fn}` } };
   });
-  const mockIn = vi.fn(async () => ({ data: options.stores ?? [], error: null }));
+  const mockIn = vi.fn(async (_col: string, ids: string[]) => ({
+    data: (options.stores ?? []).filter((s) => ids.includes(s.id)),
+    error: null,
+  }));
   const mockSelect = vi.fn(() => ({ in: mockIn }));
-  const mockFrom = vi.fn(async (table: string) => {
+  // from() do Supabase é síncrono e encadeável (client real) — mock NÃO async
+  const mockFrom = vi.fn((table: string) => {
     if (table === "stores") return { select: mockSelect };
     return {};
   });
