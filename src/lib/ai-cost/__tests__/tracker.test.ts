@@ -261,6 +261,94 @@ describe("AiCostTracker", () => {
   });
 });
 
+describe("persistência de confiança (F38.2 D5 — tarefa 12.3)", () => {
+  it("record com CostResolution completo persiste as 4 colunas novas preenchidas", async () => {
+    await tracker.record({
+      ...baseEvent,
+      generationType: "campaign_image",
+      cost: {
+        estimatedCostUsd: 0.05,
+        providerReportedCostUsd: null,
+        costSource: "pricing_table",
+        pricingVersion: "uuid-1",
+        costFormulaVersion: "responses_image_generation_v2",
+        costEstimationNote:
+          "provisional_image_tool_unit_cost_until_provider_reconciliation",
+        textComponentUsd: 0.01,
+        imageToolComponentUsd: 0.04,
+      },
+    });
+
+    expect(mockInsert).toHaveBeenCalledTimes(1);
+    expect(mockInsert.mock.calls[0][0]).toEqual(
+      expect.objectContaining({
+        cost_formula_version: "responses_image_generation_v2",
+        cost_estimation_note:
+          "provisional_image_tool_unit_cost_until_provider_reconciliation",
+        text_component_usd: 0.01,
+        image_tool_component_usd: 0.04,
+      }),
+    );
+  });
+
+  it("record sem nota/componentes (cost_source só) → colunas de confiança NULL (badge genérico)", async () => {
+    await tracker.record({
+      ...baseEvent,
+      generationType: "campaign_copy",
+      cost: { estimatedCostUsd: 0.001, costSource: "pricing_table" },
+    });
+
+    const row = mockInsert.mock.calls[0][0];
+    expect(row.cost_source).toBe("pricing_table");
+    expect(row.cost_formula_version).toBeNull();
+    expect(row.cost_estimation_note).toBeNull();
+    expect(row.text_component_usd).toBeNull();
+    expect(row.image_tool_component_usd).toBeNull();
+  });
+
+  it("record com provider_reported → cost_source persistido (badge derivado em 38-2-05)", async () => {
+    await tracker.record({
+      ...baseEvent,
+      generationType: "campaign_image",
+      cost: {
+        estimatedCostUsd: 0.2,
+        providerReportedCostUsd: 0.2,
+        costSource: "provider_reported",
+      },
+    });
+
+    const row = mockInsert.mock.calls[0][0];
+    expect(row.cost_source).toBe("provider_reported");
+    expect(row.provider_reported_cost_usd).toBe(0.2);
+    // Nota/componentes ausentes → NULL (badge provider_reported vem do cost_source)
+    expect(row.cost_estimation_note).toBeNull();
+    expect(row.text_component_usd).toBeNull();
+  });
+
+  it("nota provisional + pricing_table → cost_estimation_note persistida (insumo badge provisional)", async () => {
+    await tracker.record({
+      ...baseEvent,
+      generationType: "campaign_image",
+      cost: {
+        estimatedCostUsd: 0.05,
+        costSource: "pricing_table",
+        costFormulaVersion: "responses_image_generation_v2",
+        costEstimationNote:
+          "provisional_image_tool_unit_cost_until_provider_reconciliation",
+        textComponentUsd: 0.01,
+        imageToolComponentUsd: 0.04,
+      },
+    });
+
+    const row = mockInsert.mock.calls[0][0];
+    expect(row.cost_source).toBe("pricing_table");
+    expect(row.cost_estimation_note).toBe(
+      "provisional_image_tool_unit_cost_until_provider_reconciliation",
+    );
+    expect(row.cost_formula_version).toBe("responses_image_generation_v2");
+  });
+});
+
 describe("cost_source inválido (compile time — D4)", () => {
   it("valor fora de COST_SOURCES é rejeitado pelo TypeScript", () => {
     // @ts-expect-error — "invalid" não está em COST_SOURCES (D4)
