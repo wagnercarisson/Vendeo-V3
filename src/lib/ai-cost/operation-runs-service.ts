@@ -2,7 +2,6 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { EconomicParameterService } from "@/lib/economic/economic-parameter-service";
-import type { EconomicParameterKey } from "@/lib/economic/types";
 
 /**
  * Erro de indisponibilidade da apuração de custos de operação (fail-closed,
@@ -193,10 +192,6 @@ interface RawOperationRun {
   has_estimated?: boolean | null;
   /** Etapa (generation_type) por run — presente apenas quando o RPC expõe; senão "unknown". */
   generation_type?: string | null;
-}
-
-interface RawSummary {
-  total?: number;
 }
 
 /** Evento bruto do RPC admin_get_ai_operation_run_events (detalhe, D4). */
@@ -540,8 +535,8 @@ export class OperationRunsService {
   }> {
     try {
       const [usd, credit] = await Promise.all([
-        this.economic.getParameter("usd_brl_rate" as EconomicParameterKey),
-        this.economic.getParameter("credit_value_brl" as EconomicParameterKey),
+        this.economic.getParameter("usd_brl_rate"),
+        this.economic.getParameter("credit_value_brl"),
       ]);
       return { usdBrlRate: usd.value, creditValueBrl: credit.value };
     } catch (e) {
