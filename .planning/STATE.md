@@ -4,12 +4,12 @@ milestone: v1.5
 milestone_name: â€” LanÃ§amento Externo Controlado â—†
 current_phase: 38.2
 status: executing
-last_updated: "2026-08-11T01:14:53.358Z"
+last_updated: "2026-08-11T17:25:13.030Z"
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 11
-  completed_plans: 7
+  completed_plans: 8
   percent: 0
 ---
 
@@ -144,6 +144,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 | Phase 38.2 P38-2-05 | 13min | 6 tasks | 3 files |
 | Phase 38.2 PP38-2-06 | 8min | 4 tasks | 6 files |
 | Phase 38.2 PP38-2-07 | 12min | 3 tasks | 5 files |
+| Phase 38.2 P38-2-09 | 7min | 3 tasks | 4 files |
 
 ### Phase 19 â€” Onboarding & Estados Vazios âœ…
 
@@ -444,7 +445,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 ## Current Position
 
 Phase: 38.2 (Admin de Custos Operacionais + ConfiguraÃ§Ãµes EconÃ´micas) â€” EXECUTING
-Plan: 8 of 11
+Plan: 9 of 11
 v1.5 em andamento â€” Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36, 38 e 38.1 concluÃ­das. F38 (Tabela de Custos por OperaÃ§Ã£o, v1.5) concluÃ­da â€” 8/8 plans, 1597 testes, UAT 4/4; F38.1 (ApuraÃ§Ã£o de Custos de IA por Entrega, desdobramento da F38) **CONCLUÃDA** â€” 11/11 plans, 1713 testes, UAT validado, **fechada como camada de estimativa operacional granular** (ajuste provisÃ³rio da tool image_generation `0.065` = estimativa beta provisÃ³ria, nÃ£o custo real; reconciliaÃ§Ã£o financeira real na prÃ³xima fase), fonte da verdade `openspec/changes/fase-38-1-ai-cost-accounting/`; **F38.2 (Admin de Custos Operacionais + ConfiguraÃ§Ãµes EconÃ´micas, desdobramento da F38) em EXECUÃ‡ÃƒO â€” 6/11 plans** â€” painel `/admin/ai-operation-costs` (KPIs/filtros/tabela/drilldown/segmentos) + `economic_parameters` configurÃ¡veis + badges de confianÃ§a + correÃ§Ã£o `/admin/metrics`, fonte `openspec/changes/fase-38-2-admin-custos-operacionais/`; 38-2-01 âœ… migrations/db push (schema econÃ´mico + RPCs de runs no remoto), 38-2-02 âœ… tipos econÃ´micos + EconomicParameterService fail-open/fail-closed + 10 testes (base das rotas 38-2-04/05/06/09), 38-2-03 âœ… AiCostTracker persiste 4 campos de confianÃ§a (D5), 38-2-04 âœ… API GET/PUT /api/admin/economic-parameters (zod + RPC admin_set_economic_parameter, 200/400/403/500, idempotÃªncia, 9 testes da rota, sem endpoint pÃºblico), 38-2-05 âœ… OperationRunsService server-only (BRL D1/D4 via EconomicParameterService + badges D5 por evento/entrega + segmentaÃ§Ã£o classifySegment D9 com filtro e re-paginaÃ§Ã£o + storeName/owner D3 + 8 agregados D3/D9 sobre o conjunto filtrado inteiro + getRunDetail D4 com BRL/badges/componentes por evento; 20 testes, typecheck/lint limpos), 38-2-06 âœ… API GET /api/admin/ai-operation-runs (lista) + GET /api/admin/ai-operation-runs/[operationRunId] (detalhe) com AiOperationRunsQuerySchema (janela default 90d/max 365d â†’ 400) delegando 100% ao OperationRunsService (BRL/badge/segmento nunca na rota) + 13 testes (tarefa 12.4, piso 11; regressÃ£o 1804 testes); F37 (RevisÃ£o e AprovaÃ§Ã£o da Arte, v1.5, experimento beta) em planejamento futuro; F39 (Stripe / MonetizaÃ§Ã£o PÃºblica) como marco futuro pÃ³s-beta (renumerada de F36 â†’ F37 â†’ F39).
 
 ### Phase 36 â€” Onboarding: NavegaÃ§Ã£o por Abas âœ… Complete
@@ -709,3 +710,7 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 - [Phase 38.2]: byHour usa hora UTC de created_at — determinístico entre ambientes (Vercel = UTC; dev local em São Paulo não desloca o agregado) (38-2-05)
 - [Phase 38.2]: Segmento validado no zod via enum local OPERATION_RUN_SEGMENTS (sem importar do service server-only) - mesmo contrato D9 do service — schemas.ts e modulo compartilhado importado por rotas admin
 - [Phase 38.2]: Janela de periodo validada no zod com superRefine (periodStart+periodEnd presentes e diff > 365d -> 400); datas ausentes -> OK (default 90d no service/RPC) — Limite operacional de janela T-38.2-25
+- [Phase 38.2]: getAvgCost usa o RPC admin_get_ai_costs (F38.1, estavel, aceita p_hours direto) em vez do novo admin_get_ai_operation_runs (D4) — key_links do plano apontam para o primeiro; documentado no JSDoc (38-2-09)
+- [Phase 38.2]: storeKind nao e suportado pelo RPC de apuracao (sem filtro de loja) — getAvgCost mantem a assinatura (hours, storeKind) por compat mas ignora storeKind; card de custo e global (38-2-09)
+- [Phase 38.2]: Env VENDEO_USD_BRL_RATE mantido apenas como comentario de fallback de bootstrap (sem uso ativo) — atende D2 (fonte unica = parametro) e o grep verify <= 1 (38-2-09)
+- [Phase 38.2]: getParameter('usd_brl_rate') resolvido apos o early-return de empty state — nenhuma leitura de parametro quando nao ha cards a renderizar (38-2-09)
