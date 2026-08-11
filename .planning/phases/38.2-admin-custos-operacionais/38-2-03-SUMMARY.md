@@ -78,7 +78,7 @@ Each task was committed atomically:
 2. **Task 2: AiCostTracker.record — persistir os 4 campos de confiança (D5)** - `2d094e8` (feat)
 3. **Task 3: Testes de persistência de confiança (tarefa 12.3 — 4 testes)** - `c4a2da9` (test)
 
-**Plan metadata:** pendente (docs commit — será registrado após STATE/ROADMAP)
+**Plan metadata:** `4b31c4e` (docs: complete plan)
 
 ## Files Created/Modified
 - `src/lib/ai-cost/types.ts` - JSDoc do CostResolution citando persistência D5 (os 4 campos já estavam no contrato)
