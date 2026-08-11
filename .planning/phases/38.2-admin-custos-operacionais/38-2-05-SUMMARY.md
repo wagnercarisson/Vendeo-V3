@@ -89,7 +89,7 @@ Each task was committed atomically (TDD — RED `test(...)` + GREEN `feat(...)`)
 5. **Task 5: getRunDetail — RPC de eventos + BRL/badges/componentes por evento (D4)** - `0676b51` (test) + `09fa77e` (feat)
 6. **Task 6: Testes completos (tarefa 12.5 + 12.4 parcial)** - `0b1a7b7` (test) + `b807912` (refactor — limpeza de casts/dead code)
 
-**Plan metadata:** pendente (docs commit)
+**Plan metadata:** `6c60dd8` (docs: complete plan)
 
 ## Files Created/Modified
 
