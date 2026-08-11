@@ -32,11 +32,11 @@ describe("ParamsForm", () => {
     render(<ParamsForm parameters={params} />);
 
     const rateInput = screen.getByLabelText("Taxa de conversão");
-    expect(rateInput).toHaveValue(5.5);
+    expect(rateInput).toHaveValue("5.50");
     const creditInput = screen.getByLabelText(
       "Valor operacional do crédito",
     );
-    expect(creditInput).toHaveValue(1);
+    expect(creditInput).toHaveValue("1.00");
 
     // Badge source por parâmetro: "tabela" para valor do banco, "fallback"
     // para default 1.00 (admin ainda não configurou).
@@ -45,6 +45,42 @@ describe("ParamsForm", () => {
 
     const creditBlock = screen.getByTestId("param-credit_value_brl");
     expect(within(creditBlock).getByText("fallback")).toBeInTheDocument();
+  });
+
+  it("decimais editáveis: digita 5.20 e formata para '5.20' no blur (regressão setas/trava)", async () => {
+    render(
+      <ParamsForm
+        parameters={[{ key: "usd_brl_rate", value: 1, source: "table" }]}
+      />,
+    );
+
+    const rateInput = screen.getByLabelText("Taxa de conversão");
+    expect(rateInput).toHaveValue("1.00");
+
+    fireEvent.change(rateInput, { target: { value: "5.20" } });
+    expect(rateInput).toHaveValue("5.20");
+
+    fireEvent.blur(rateInput);
+    expect(rateInput).toHaveValue("5.20");
+
+    fireEvent.change(rateInput, { target: { value: "5.2" } });
+    fireEvent.blur(rateInput);
+    expect(rateInput).toHaveValue("5.20");
+  });
+
+  it("blur com valor inválido/zerado restaura o último valor válido", () => {
+    render(
+      <ParamsForm
+        parameters={[{ key: "usd_brl_rate", value: 5.2, source: "table" }]}
+      />,
+    );
+
+    const rateInput = screen.getByLabelText("Taxa de conversão");
+    fireEvent.change(rateInput, { target: { value: "abc" } });
+    expect(rateInput).toHaveValue("abc");
+
+    fireEvent.blur(rateInput);
+    expect(rateInput).toHaveValue("5.20");
   });
 
   it("salvar sem motivo → erro inline 'Motivo obrigatório' e PUT não chamado; com motivo → PUT com { key, value, reason, operationId } e audit_id exibido", async () => {

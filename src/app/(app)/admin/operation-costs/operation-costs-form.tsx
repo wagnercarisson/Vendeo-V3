@@ -268,11 +268,24 @@ const PARAM_HINTS: Record<string, string> = {
 
 type ParamState = {
   value: number;
+  draft: string;
   reason: string;
   loading: boolean;
   error: string | null;
   success: string | null;
 };
+
+function formatParamValue(value: number): string {
+  return value.toFixed(2);
+}
+
+function parseParamDraft(draft: string): number | null {
+  const normalized = draft.trim().replace(",", ".");
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed)) return null;
+  return parsed;
+}
 
 export function ParamsForm({
   parameters,
@@ -285,6 +298,7 @@ export function ParamsForm({
         p.key,
         {
           value: p.value,
+          draft: formatParamValue(p.value),
           reason: "",
           loading: false,
           error: null,
@@ -306,7 +320,8 @@ export function ParamsForm({
       patchParam(param.key, { error: "Motivo obrigatório" });
       return;
     }
-    if (!Number.isFinite(s.value) || s.value <= 0) {
+    const parsed = parseParamDraft(s.draft);
+    if (parsed === null || parsed <= 0) {
       patchParam(param.key, { error: "Valor deve ser maior que zero" });
       return;
     }
@@ -318,7 +333,7 @@ export function ParamsForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           key: param.key,
-          value: s.value,
+          value: parsed,
           reason: s.reason.trim(),
           // Idempotência por operationId gerado no client (T-38.2-31/D2).
           operationId: crypto.randomUUID(),
@@ -333,6 +348,8 @@ export function ParamsForm({
       const data = await res.json();
       patchParam(param.key, {
         loading: false,
+        value: parsed,
+        draft: formatParamValue(parsed),
         success: `Parâmetro atualizado — auditoria: ${data.auditId}`,
         reason: "",
       });
@@ -374,15 +391,20 @@ export function ParamsForm({
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <input
                   id={`param-${p.key}`}
-                  type="number"
-                  min={0.000001}
-                  step="0.01"
-                  value={s.value === 0 ? "" : s.value.toFixed(2)}
+                  type="text"
+                  inputMode="decimal"
+                  value={s.draft}
                   disabled={s.loading}
-                  onChange={(e) =>
+                  onBlur={() => {
+                    const parsed = parseParamDraft(s.draft);
                     patchParam(p.key, {
-                      value: parseFloat(e.target.value) || 0,
-                    })
+                      draft: formatParamValue(
+                        parsed === null ? s.value : parsed,
+                      ),
+                    });
+                  }}
+                  onChange={(e) =>
+                    patchParam(p.key, { draft: e.target.value })
                   }
                   className="w-28 rounded-md border border-border bg-bg-surface px-2 py-1 text-sm disabled:opacity-50"
                 />
