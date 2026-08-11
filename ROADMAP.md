@@ -150,7 +150,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 - [ ] Phase 37: Revisão e Aprovação da Arte (pending)
 - [x] Phase 38: Tabela de Custos por Operação (8/8 plans ✅)
   - [x] **38.1 = Apuração de Custos de IA por Entrega** (desdobramento da F38, v1.5) — trilha granular de custo de IA por entrega + views/RPCs de apuração e reconciliação (USD × créditos) — **CONCLUÍDA** (11/11 plans, 1713 testes, UAT validado; fechada como camada de ESTIMATIVA OPERACIONAL GRANULAR — `responses:image_generation = 0.065` provisório beta, reconciliação financeira real na próxima fase), fonte `openspec/changes/fase-38-1-ai-cost-accounting/`
-  - [x] **38.2 = Admin de Custos Operacionais + Configurações Econômicas** (desdobramento da F38, v1.5) — painel admin `/admin/ai-operation-costs` (KPIs, filtros, tabela por entrega, drilldown call-level, agregados por segmento), parâmetros econômicos configuráveis (`usd_brl_rate`, `credit_value_brl`), badges de confiança, correção do `/admin/metrics` — **REABERTA p/ gap closure UAT** (12/15 plans: plans 12-15 fecham estornos/líquidos — 38-2-12 RPCs com creditos_estornados/creditos_liquidos ✅, 63/63 asserts I1-I6, gates verdes), fonte `openspec/changes/fase-38-2-admin-custos-operacionais/`
+  - [x] **38.2 = Admin de Custos Operacionais + Configurações Econômicas** (desdobramento da F38, v1.5) — painel admin `/admin/ai-operation-costs` (KPIs, filtros, tabela por entrega, drilldown call-level, agregados por segmento), parâmetros econômicos configuráveis (`usd_brl_rate`, `credit_value_brl`), badges de confiança, correção do `/admin/metrics` — **CONCLUÍDA 15/15 plans** (gap closure UAT: 38-2-12 RPCs com creditos_estornados/creditos_liquidos ✅, 38-2-13 service líquidos, 38-2-14 UI breakdown, 38-2-15 tracking; 63/63 asserts I1-I6, 1839 testes, gates verdes, UAT manual aprovado), fonte `openspec/changes/fase-38-2-admin-custos-operacionais/`
 
 </details>
 
@@ -196,7 +196,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 37. Revisão e Aprovação da Arte | v1.5 | 0/0 | ○ Pending | — |
 | 38. Tabela de Custos por Operação | v1.5 | 8/8 | ✅ Complete | 2026-08-07 |
 | 38.1. Apuração de Custos de IA por Entrega | v1.5 | 11/11 | ✅ Complete | 2026-08-09 |
-| 38.2. Admin de Custos Operacionais + Configurações Econômicas | v1.5 | 12/15 | ◆ In Progress | 2026-08-11 |
+| 38.2. Admin de Custos Operacionais + Configurações Econômicas | v1.5 | 15/15 | ✅ Complete | 2026-08-11 |
 | 39. Stripe / Monetização Pública | v1.7 | 0/0 | ○ Pending | — |
 
 ---
