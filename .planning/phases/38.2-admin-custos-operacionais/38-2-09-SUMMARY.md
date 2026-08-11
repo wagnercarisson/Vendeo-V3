@@ -78,7 +78,7 @@ Each task was committed atomically:
 2. **Task 2 (TDD): Card 'Custo Médio IA' + USD→BRL via economic_parameters (D6/D2)** — `47d0fde` (test/RED) + `377284b` (feat/GREEN)
 3. **Task 3: Testes completos (tarefa 12.8 — 4 testes)** — consolidação/verificação: os 4 testes foram entregues nos REDs das Tasks 1-2 (nenhuma alteração adicional necessária; verify 44/44 + typecheck limpo)
 
-**Plan metadata:** pendente (docs: complete plan)
+**Plan metadata:** `98a7e29` (docs: complete plan)
 
 ## Files Created/Modified
 - `src/lib/metrics/pipeline-metrics.ts` - `getAvgCost` apura custo médio de IA por entrega via `admin_get_ai_costs.by_operation_run` → AVG(`custo_usd_total`); `avg_cost_ms` removido do `MetricsBundle` e do fallback; `toNumber` local; JSDoc documenta a decisão de fonte (D6)
