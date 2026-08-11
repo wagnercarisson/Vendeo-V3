@@ -94,4 +94,32 @@ describe("ParamsForm", () => {
       await screen.findByText(/auditoria: audit-123/),
     ).toBeInTheDocument();
   });
+
+  it("PUT falha → erro inline (sem exibir audit_id)", async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: "Dados inválidos" }),
+    });
+    render(
+      <ParamsForm
+        parameters={[
+          { key: "credit_value_brl", value: 1, source: "fallback" },
+        ]}
+      />,
+    );
+
+    fireEvent.change(
+      screen.getByLabelText("Valor operacional do crédito em BRL"),
+      { target: { value: "2" } },
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText("Motivo da alteração (obrigatório)"),
+      { target: { value: "Revisão do valor" } },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    expect(await screen.findByText("Dados inválidos")).toBeInTheDocument();
+    expect(screen.queryByText(/auditoria:/)).not.toBeInTheDocument();
+  });
 });
