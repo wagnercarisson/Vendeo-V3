@@ -218,6 +218,37 @@ function sumValues(values: Array<number | null>): number | null {
   return valid.reduce((acc, v) => acc + v, 0);
 }
 
+/** Insumos agregados de badge por entrega (D5) — mesmo shape das flags do RPC. */
+export interface RunBadgeInputs {
+  cost_sources?: string[] | null;
+  cost_estimation_notes?: string[] | null;
+  has_provider_reported?: boolean | null;
+  has_provisional_image_estimate?: boolean | null;
+  has_partial_estimate?: boolean | null;
+  has_not_available?: boolean | null;
+  has_estimated?: boolean | null;
+}
+
+/**
+ * Badge de confiança por EVENTO (detalhe, D5) — mapa exato da tabela D5 a partir
+ * de cost_source + cost_estimation_note persistidos.
+ */
+export function deriveEventBadge(
+  costSource: string | null | undefined,
+  costEstimationNote: string | null | undefined,
+): CostBadge {
+  return "estimated";
+}
+
+/**
+ * Badge de confiança por ENTREGA (lista, D5) — prioridade das flags has_* do
+ * RPC; quando as flags não bastam, aplica o mapa D5 sobre a distribuição de
+ * cost_sources/notes. Fallback: estimated (genérico).
+ */
+export function deriveRunBadge(raw: RunBadgeInputs): CostBadge {
+  return "estimated";
+}
+
 /** Percentil p (0..1) — réplica no service do percentile_cont do RPC (P95 do painel). */
 function percentile(values: number[], p: number): number | null {
   if (values.length === 0) return null;

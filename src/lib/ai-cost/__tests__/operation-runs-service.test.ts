@@ -7,6 +7,8 @@ vi.mock("@/lib/supabase/server", () => ({
 import {
   OperationRunsService,
   OperationRunsUnavailableError,
+  deriveEventBadge,
+  deriveRunBadge,
 } from "../operation-runs-service";
 
 /** Run bruto do RPC — mesmo shape do JSONB de admin_get_ai_operation_runs (38-2-01). */
@@ -148,5 +150,40 @@ describe("OperationRunsService — derivação monetária BRL (D1/D4)", () => {
     await expect(service.listRuns({})).rejects.toThrow(
       OperationRunsUnavailableError,
     );
+  });
+});
+
+describe("OperationRunsService — badges de confiança (D5)", () => {
+  it("evento cost_source provider_reported → badge provider_reported", () => {
+    expect(deriveEventBadge("provider_reported", null)).toBe("provider_reported");
+  });
+
+  it("pricing_table + nota provisional → badge provisional image tool estimate", () => {
+    expect(
+      deriveEventBadge(
+        "pricing_table",
+        "provisional_image_tool_unit_cost_until_provider_reconciliation",
+      ),
+    ).toBe("provisional image tool estimate");
+  });
+
+  it("manual_unknown → partial; pricing_table sem nota → estimated; not_available → not_available", () => {
+    expect(deriveEventBadge("manual_unknown", null)).toBe("partial");
+    expect(deriveEventBadge("pricing_table", null)).toBe("estimated");
+    expect(deriveEventBadge("not_available", null)).toBe("not_available");
+  });
+
+  it("entrega: has_provider_reported=true → provider_reported (prioridade); sem flags → estimated genérico", () => {
+    expect(
+      deriveRunBadge({
+        has_provider_reported: true,
+        has_estimated: true,
+        cost_sources: ["provider_reported", "pricing_table"],
+      }),
+    ).toBe("provider_reported");
+    expect(deriveRunBadge({ cost_sources: ["pricing_table"], has_estimated: false })).toBe(
+      "estimated",
+    );
+    expect(deriveRunBadge({})).toBe("estimated");
   });
 });
