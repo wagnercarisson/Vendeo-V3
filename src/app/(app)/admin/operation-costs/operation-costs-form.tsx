@@ -255,15 +255,15 @@ export function OperationCostsForm({ rows }: { rows: OperationCostRow[] }) {
 }
 
 const PARAM_LABELS: Record<string, string> = {
-  usd_brl_rate: "Taxa de conversão USD→BRL",
-  credit_value_brl: "Valor operacional do crédito em BRL",
+  usd_brl_rate: "Taxa de conversão",
+  credit_value_brl: "Valor operacional do crédito",
 };
 
 const PARAM_HINTS: Record<string, string> = {
   usd_brl_rate:
-    "1 USD = R$ X — converte o custo estimado do provider para reais.",
+    "Multiplicador que converte o custo estimado do provider para a moeda local.",
   credit_value_brl:
-    "1 crédito = R$ Y — estima a receita operacional interna por entrega.",
+    "Valor interno da entrega usado para estimar a receita operacional.",
 };
 
 type ParamState = {
@@ -376,8 +376,8 @@ export function ParamsForm({
                   id={`param-${p.key}`}
                   type="number"
                   min={0.000001}
-                  step="any"
-                  value={s.value}
+                  step="0.01"
+                  value={s.value === 0 ? "" : s.value.toFixed(2)}
                   disabled={s.loading}
                   onChange={(e) =>
                     patchParam(p.key, {

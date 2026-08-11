@@ -76,8 +76,8 @@ vi.mock("../operation-costs-form", () => ({
         <div key={p.key}>
           <span>
             {p.key === "usd_brl_rate"
-              ? "Taxa de conversão USD→BRL"
-              : "Valor operacional do crédito em BRL"}
+              ? "Taxa de conversão"
+              : "Valor operacional do crédito"}
           </span>
           <span>{p.value}</span>
           <span>{p.source === "table" ? "tabela" : "fallback"}</span>
@@ -180,8 +180,8 @@ describe("AdminOperationCostsPage", () => {
     const html = renderToString(await Page());
     expect(html).toContain("Configurações Econômicas");
     expect(html).toContain("Parâmetros Econômicos");
-    expect(html).toContain("Taxa de conversão USD→BRL");
-    expect(html).toContain("Valor operacional do crédito em BRL");
+    expect(html).toContain("Taxa de conversão");
+    expect(html).toContain("Valor operacional do crédito");
     expect(html).toContain("Operações");
     expect(html).toContain("campaign_generation");
   });

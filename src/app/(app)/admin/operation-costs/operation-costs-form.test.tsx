@@ -31,10 +31,10 @@ describe("ParamsForm", () => {
     ];
     render(<ParamsForm parameters={params} />);
 
-    const rateInput = screen.getByLabelText("Taxa de conversão USD→BRL");
+    const rateInput = screen.getByLabelText("Taxa de conversão");
     expect(rateInput).toHaveValue(5.5);
     const creditInput = screen.getByLabelText(
-      "Valor operacional do crédito em BRL",
+      "Valor operacional do crédito",
     );
     expect(creditInput).toHaveValue(1);
 
@@ -69,7 +69,7 @@ describe("ParamsForm", () => {
     expect(mockFetch).not.toHaveBeenCalled();
 
     // Com motivo → PUT /api/admin/economic-parameters com operationId.
-    fireEvent.change(screen.getByLabelText("Taxa de conversão USD→BRL"), {
+    fireEvent.change(screen.getByLabelText("Taxa de conversão"), {
       target: { value: "5.5" },
     });
     fireEvent.change(
@@ -110,7 +110,7 @@ describe("ParamsForm", () => {
     );
 
     fireEvent.change(
-      screen.getByLabelText("Valor operacional do crédito em BRL"),
+      screen.getByLabelText("Valor operacional do crédito"),
       { target: { value: "2" } },
     );
     fireEvent.change(
