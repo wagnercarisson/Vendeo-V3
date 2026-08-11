@@ -545,20 +545,20 @@ Desdobramento da F38.2, adicionados via OpenSpec (`openspec/changes/fase-38-2-1-
 
 ### Snapshot Econômico (F38.2.1-SNAP — spec economic-snapshot)
 
-- [ ] **F38.2.1-01**: Colunas `usd_brl_rate_at_generation`/`credit_value_brl_at_generation` em `generation_events` (snapshot contábil + estimativo/fallback)
-- [ ] **F38.2.1-02**: `AiCostTracker.record` persiste os snapshots no momento da geração (best-effort; daqui para frente)
+- [ ] **F38.2.1-01**: Colunas `usd_brl_rate_at_generation`/`credit_value_brl_at_generation` **+ origens `usd_brl_rate_source_at_generation`/`credit_value_brl_source_at_generation`** em `generation_events` (snapshot contábil + estimativo/fallback, com procedência explícita)
+- [ ] **F38.2.1-02**: `AiCostTracker.record` persiste os snapshots **com origem `captured_at_generation`** no momento da geração (best-effort; daqui para frente)
 - [ ] **F38.2.1-03**: Callers de início de run resolvem os parâmetros uma vez e propagam o snapshot às chamadas filhas
 - [ ] **F38.2.1-04**: `custoBrl = custoUsdTotal × usd_brl_rate_at_generation` (snapshot; fallback corrente explícito)
 - [ ] **F38.2.1-05**: `receitaEstimadaBrl = creditosLiquidos × credit_value_brl_at_generation` (estorno descontado; nunca receita real)
 - [ ] **F38.2.1-06**: `resultadoEstimadoBrl`/`margemEstimadaPct` derivados (margem null quando receita 0)
-- [ ] **F38.2.1-07**: Nomenclatura estimada na API/UI (`receitaEstimadaBrl`/`resultadoEstimadoBrl`/`margemEstimadaPct`) + `creditValueSource`/`revenueEstimationNote` no fallback
-- [ ] **F38.2.1-08**: RPCs de operation runs expõem os snapshots por run/evento (contrato backward-compatible)
+- [ ] **F38.2.1-07**: Nomenclatura estimada na API/UI (`receitaEstimadaBrl`/`resultadoEstimadoBrl`/`margemEstimadaPct`) + `creditValueSource`/`usdBrlRateSource`/`revenueEstimationNote` (origem de 4 valores: captured/backfilled_from_audit/backfilled_seed/economic_parameter_fallback)
+- [ ] **F38.2.1-08**: RPCs de operation runs expõem os snapshots **e origens** por run/evento (contrato backward-compatible)
 - [ ] **F38.2.1-09**: `deriveSummary` soma BRL por run (não re-deriva com taxa única); `deriveAggregations` mantida
 - [ ] **F38.2.1-10**: `/admin/metrics` usa snapshot quando disponível; não recalcula histórico; nunca `VENDEO_USD_BRL_RATE`
-- [ ] **F38.2.1-11**: UI do painel e Configurações Econômicas informam que alteração vale para novas gerações e não recalcula histórico
-- [ ] **F38.2.1-12**: Backfill aproximado idempotente via `economic_parameter_audit` (LAG) com fallback seed `1.00`
-- [ ] **F38.2.1-13**: Fallback legacy explícito para eventos sem snapshot (nunca silencioso)
-- [ ] **F38.2.1-14**: Testes de snapshot/fallback/estabilidade temporal/nomenclatura + gates verdes
+- [ ] **F38.2.1-11**: UI do painel e Configurações Econômicas informam que alteração vale para novas gerações e não recalcula histórico; origem do valor exibida (capturado vs reconstruído vs fallback)
+- [ ] **F38.2.1-12**: Backfill aproximado idempotente via `economic_parameter_audit` (LAG) com fallback seed `1.00`, preenchendo valor + origem (`backfilled_from_audit`/`backfilled_seed`)
+- [ ] **F38.2.1-13**: Fallback legacy explícito para eventos sem valor persistido (nunca silencioso; valor backfilled nunca tratado como captured)
+- [ ] **F38.2.1-14**: Testes de snapshot/fallback/estabilidade temporal/nomenclatura/origem + gates verdes
 
 ## v1.7 Requirements (Stripe / Monetização Pública)
 

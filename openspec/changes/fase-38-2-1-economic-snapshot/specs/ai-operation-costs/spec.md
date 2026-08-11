@@ -9,7 +9,7 @@ O sistema SHALL manter a página `src/app/(app)/admin/ai-operation-costs/page.ts
 - **Tabela por entrega:** data · tipo · loja · status · custo (USD/BRL) · créditos (breakdown bruto/estorno/líquido) · **receita estimada/resultado estimado** por run · tempo · chamadas · regenerações · provider/model · confiança (badge)
 - **Drilldown:** detalhe call-level por etapa (via `GET /api/admin/ai-operation-runs/[id]`) com `estimated_cost_brl` (snapshot), badges e componentes de custo por chamada
 - **Agregados por segmento econômico (D9):** custo por segmento · **resultado estimado por segmento** · **margem estimada % por segmento** · taxa de erro por segmento
-- **Origem do valor exibida:** quando um valor derivado usa fallback (sem snapshot), a UI sinaliza (ex.: tooltip/badge "estimado de parâmetro atual") — `creditValueSource`/`revenueEstimationNote` do contrato
+- **Origem do valor exibida:** quando um valor derivado usa fallback (sem valor persistido), a UI sinaliza (ex.: tooltip/badge "estimado de parâmetro atual"); quando o valor é **backfilled** (origem `backfilled_from_audit`/`backfilled_seed`), a UI sinaliza "reconstruído de histórico" — `creditValueSource`/`usdBrlRateSource`/`revenueEstimationNote` do contrato
 - **Aviso de semântica:** a UI exibe que **alterar parâmetros econômicos vale para novas gerações e não recalcula o histórico exibido**
 - **Estado de erro 503** → "Serviço indisponível no momento" (fail-closed, padrão F38); **estado vazio** → "aguardando dados de geração"
 - Link na navegação admin (`src/app/(app)/admin/layout.tsx` → "Custos de Operação")

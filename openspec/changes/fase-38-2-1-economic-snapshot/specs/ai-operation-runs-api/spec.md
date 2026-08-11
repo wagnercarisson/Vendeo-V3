@@ -9,7 +9,8 @@ GET /api/admin/ai-operation-runs?period_start=&period_end=&store_id=&operation_r
   → 200 { runs: [ { operationRunId, operationRunType, storeId, storeName,
                     createdAt, deliveryStatus, custoUsdTotal, custoBrl,
                     creditosDebitados, creditosEstornados, creditosLiquidos,
-                    usdBrlRateAtGeneration, creditValueBrlAtGeneration,
+                    usdBrlRateAtGeneration, usdBrlRateSourceAtGeneration,
+                    creditValueBrlAtGeneration, creditValueBrlSourceAtGeneration,
                     receitaEstimadaBrl, resultadoEstimadoBrl, margemEstimadaPct,
                     creditValueSource, revenueEstimationNote,
                     duracaoTotalMs, chamadas, chamadasSuccess, regeneracoes,
@@ -30,7 +31,9 @@ GET /api/admin/ai-operation-runs?period_start=&period_end=&store_id=&operation_r
 - **`summary`** (KPIs) sobre o **conjunto filtrado inteiro** (não sobre a página)
 - **`aggregations`** (D3/D9) sobre o **conjunto filtrado inteiro**
 - **`custoBrl`** derivado no **service layer** a partir do **snapshot** quando disponível: `custoBrl = custoUsdTotal × usd_brl_rate_at_generation`; fallback legacy: `custoBrl = custoUsdTotal × usd_brl_rate` (corrente) com sinalização explícita
-- **`receitaEstimadaBrl`** = `creditosLiquidos × credit_value_brl_at_generation` (snapshot) OU `creditosLiquidos × credit_value_brl` (fallback) — **nomenclatura estimada, nunca "receita real"**; expõe `creditValueSource` (`"economic_parameter_fallback"` quando fallback) e `revenueEstimationNote` (`"estimated_from_admin_credit_value"` quando fallback)
+- **`receitaEstimadaBrl`** = `creditosLiquidos × credit_value_brl_at_generation` (snapshot/backfill) OU `creditosLiquidos × credit_value_brl` (fallback) — **nomenclatura estimada, nunca "receita real"**
+- **`creditValueSource`/`usdBrlRateSource`** expõem a **origem** do valor usado: `"captured_at_generation"` / `"backfilled_from_audit"` / `"backfilled_seed"` / `"economic_parameter_fallback"` — a origem vem da coluna `*_source_at_generation` quando persistida, ou `economic_parameter_fallback` quando o valor é derivado em leitura
+- **`revenueEstimationNote`** (`"estimated_from_admin_credit_value"`) quando o valor de crédito é fallback; nota adicional `"backfilled_historical_approximation"` quando o valor usado é backfilled
 - **`resultadoEstimadoBrl`** = `receitaEstimadaBrl − custoBrl`; **`margemEstimadaPct`** = `receitaEstimadaBrl > 0 ? (resultadoEstimadoBrl / receitaEstimadaBrl) × 100 : null`
 - **`creditosEstornados`/`creditosLiquidos`** expostos por run (RPC 38-2-12) — estorno sempre descontado via líquidos
 - **`badges`** (D5) derivados no service a partir dos **insumos agregados por run**
@@ -38,10 +41,10 @@ GET /api/admin/ai-operation-runs?period_start=&period_end=&store_id=&operation_r
 - **Limite operacional de janela:** período default ≤ 90 dias, máximo 365 — janela excedente → `400`
 - Paginação obrigatória com `page`/`total`
 
-#### Scenario: GET lista resumo por entrega com snapshots
+#### Scenario: GET lista resumo por entrega com snapshots e origens
 
 - **WHEN** um admin chama `GET /api/admin/ai-operation-runs`
-- **THEN** retorna `200` com `runs` contendo o resumo por entrega, incluindo `usdBrlRateAtGeneration`/`creditValueBrlAtGeneration` e derivados `custoBrl`/`receitaEstimadaBrl`/`resultadoEstimadoBrl`/`margemEstimadaPct`
+- **THEN** retorna `200` com `runs` contendo o resumo por entrega, incluindo `usdBrlRateAtGeneration`/`usdBrlRateSourceAtGeneration`/`creditValueBrlAtGeneration`/`creditValueBrlSourceAtGeneration` e derivados `custoBrl`/`receitaEstimadaBrl`/`resultadoEstimadoBrl`/`margemEstimadaPct`
 
 #### Scenario: GET respeita filtros
 
@@ -70,9 +73,14 @@ GET /api/admin/ai-operation-runs?period_start=&period_end=&store_id=&operation_r
 
 #### Scenario: GET usa fallback legacy com sinalização explícita
 
-- **WHEN** um run legado (sem snapshot) é consultado
+- **WHEN** um run legado (sem valor persistido após o backfill) é consultado
 - **THEN** `custoBrl`/`receitaEstimadaBrl` usam os parâmetros correntes
 - **AND** `creditValueSource = "economic_parameter_fallback"` e `revenueEstimationNote = "estimated_from_admin_credit_value"` são expostos (fallback explícito)
+
+#### Scenario: GET expõe origem backfilled
+
+- **WHEN** um run tem `credit_value_brl_at_generation` preenchido pelo backfill
+- **THEN** `creditValueSource = "backfilled_from_audit"` ou `"backfilled_seed"` (origem persistida, não `captured_at_generation`)
 
 #### Scenario: GET com janela de período excedente retorna 400
 
@@ -104,7 +112,8 @@ GET /api/admin/ai-operation-runs/[operationRunId]
                       cachedInputTokens, imageTokens,
                       estimatedCostUsd, estimatedCostBrl,
                       textComponentUsd, imageToolComponentUsd,
-                      usdBrlRateAtGeneration, creditValueBrlAtGeneration,
+                      usdBrlRateAtGeneration, usdBrlRateSourceAtGeneration,
+                      creditValueBrlAtGeneration, creditValueBrlSourceAtGeneration,
                       costSource, costFormulaVersion, costEstimationNote,
                       metadata } ] }
   → 400 zod (operationRunId inválido)
@@ -115,12 +124,12 @@ GET /api/admin/ai-operation-runs/[operationRunId]
 - **`estimatedCostBrl`** derivado no **service layer** — `estimatedCostUsd × usd_brl_rate_at_generation` (snapshot do evento/run) quando disponível; fallback: `× usd_brl_rate` corrente
 - **`textComponentUsd`** e **`imageToolComponentUsd`** expostos no detalhe (persistidos pela F38.2/D5) para a tela explicar gargalos/distorções de custo
 - **`badges`** (D5) por evento a partir de `cost_source` + `cost_estimation_note`
-- **`usdBrlRateAtGeneration`/`creditValueBrlAtGeneration`** expostos por evento (snapshot no momento da chamada)
+- **`usdBrlRateAtGeneration`/`creditValueBrlAtGeneration`** expostos por evento (snapshot no momento da chamada), sempre com as origens `usdBrlRateSourceAtGeneration`/`creditValueBrlSourceAtGeneration` correspondentes
 
-#### Scenario: GET detalhe retorna eventos call-level com snapshots
+#### Scenario: GET detalhe retorna eventos call-level com snapshots e origens
 
 - **WHEN** um admin chama `GET /api/admin/ai-operation-runs/[id]`
-- **THEN** retorna `200` com `run` (resumo) e `events` (cada etapa com tokens/duração/custo/status/cost_source/notas e `usdBrlRateAtGeneration`/`creditValueBrlAtGeneration` por evento)
+- **THEN** retorna `200` com `run` (resumo) e `events` (cada etapa com tokens/duração/custo/status/cost_source/notas e `usdBrlRateAtGeneration`/`usdBrlRateSourceAtGeneration`/`creditValueBrlAtGeneration`/`creditValueBrlSourceAtGeneration` por evento)
 
 #### Scenario: GET detalhe expõe componentes de custo
 
