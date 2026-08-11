@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 current_phase: 38.2
-status: planning
-last_updated: "2026-08-10T00:00:00.000Z"
+status: executing
+last_updated: "2026-08-11T00:06:57.404Z"
 progress:
-  total_phases: 22
-  completed_phases: 19
-  total_plans: 99
-  completed_plans: 93
-  percent: 91
+  total_phases: 1
+  completed_phases: 0
+  total_plans: 11
+  completed_plans: 1
+  percent: 0
 ---
 
 # Project State
 
-**Last updated:** 2026-08-10 (F38.2 Admin de Custos Operacionais + Configurações Econômicas **REGISTRADA — 0/11 plans, Pending/planejamento**: desdobramento da F38, v1.5 — painel admin `/admin/ai-operation-costs` + Configurações Econômicas (`economic_parameters`) + badges de confiança + correção do `/admin/metrics`; fonte `openspec/changes/fase-38-2-admin-custos-operacionais/`). F38.1 Apuração de Custos de IA por Entrega **CONCLUÍDA — 11/11 plans**: 38-1-10 ✅ views/RPCs apuração + I1–I6 + gates + UAT manual validado; 38-1-11 ✅ runbook trackings. **Fechamento como camada de estimativa operacional granular** — ajuste provisório versionável da tool image_generation (fórmula `responses_image_generation_v2`): `responses:image_generation = USD 0.065` é **estimativa operacional provisória para beta**, calibrada por UAT/dashboard/CSV da OpenAI — **NÃO é custo financeiro real**; a **reconciliação financeira real fica para a próxima fase**. 38/38+2 requirements, 1713 testes, typecheck/lint/build limpos; F38 concluída 8/8 plans, 1597 testes, UAT 4/4; renumeração F37 = Revisão e Aprovação da Arte, F38 = Tabela de Custos, F39 = Stripe)
+**Last updated:** 2026-08-11 (F38.2 Admin de Custos Operacionais + Configurações Econômicas **EXECUTANDO — 1/11 plans**: 38-2-01 ✅ migrations 3 + db push [BLOCKING] aplicado no remoto (economic_parameters + audit + seeds 1.00/1.00 + RPC admin_set_economic_parameter + RLS service_role; 4 colunas de confiança em generation_events; RPCs admin_get_ai_operation_runs/_events com filtros/paginação/P95/evidências de segmento/insumos de badge). F38.1 Apuração de Custos de IA por Entrega **CONCLUÍDA — 11/11 plans**: 38-1-10 ✅ views/RPCs apuração + I1–I6 + gates + UAT manual validado; 38-1-11 ✅ runbook trackings. **Fechamento como camada de estimativa operacional granular** — ajuste provisório versionável da tool image_generation (fórmula `responses_image_generation_v2`): `responses:image_generation = USD 0.065` é **estimativa operacional provisória para beta**, calibrada por UAT/dashboard/CSV da OpenAI — **NÃO é custo financeiro real**; a **reconciliação financeira real fica para a próxima fase**. 38/38+2 requirements, 1713 testes, typecheck/lint/build limpos; F38 concluída 8/8 plans, 1597 testes, UAT 4/4; renumeração F37 = Revisão e Aprovação da Arte, F38 = Tabela de Custos, F39 = Stripe)
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆ **Em andamento**
 **Current phase:** 38.2
 
@@ -102,7 +102,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** Phase 38 — credit-operation-costs
+**Current focus:** Phase 38.2 — Admin de Custos Operacionais + Configurações Econômicas
 
 ## Completed Milestones
 
@@ -137,6 +137,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 | Phase 38-1-ai-cost-accounting P08 | 9min | 3 tasks | 4 files |
 | Phase 38-1-ai-cost-accounting P09 | 12min | 3 tasks | 11 files |
 | Phase 38-1-ai-cost-accounting PP09 | 12min | 3 tasks | 11 files |
+| Phase 38.2 P38-2-01 | 16min | 4 tasks | 4 files |
 
 ### Phase 19 — Onboarding & Estados Vazios ✅
 
@@ -436,7 +437,8 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 38.2 (admin-custos-operacionais) — ○ PLANNING (0/11 plans, Pending)
+Phase: 38.2 (Admin de Custos Operacionais + Configurações Econômicas) — EXECUTING
+Plan: 2 of 11
 v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36, 38 e 38.1 concluídas. F38 (Tabela de Custos por Operação, v1.5) concluída — 8/8 plans, 1597 testes, UAT 4/4; F38.1 (Apuração de Custos de IA por Entrega, desdobramento da F38) **CONCLUÍDA** — 11/11 plans, 1713 testes, UAT validado, **fechada como camada de estimativa operacional granular** (ajuste provisório da tool image_generation `0.065` = estimativa beta provisória, não custo real; reconciliação financeira real na próxima fase), fonte da verdade `openspec/changes/fase-38-1-ai-cost-accounting/`; **F38.2 (Admin de Custos Operacionais + Configurações Econômicas, desdobramento da F38) em PLANEJAMENTO** — painel `/admin/ai-operation-costs` (KPIs/filtros/tabela/drilldown/segmentos) + `economic_parameters` configuráveis + badges de confiança + correção `/admin/metrics`, fonte `openspec/changes/fase-38-2-admin-custos-operacionais/`; F37 (Revisão e Aprovação da Arte, v1.5, experimento beta) em planejamento futuro; F39 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37 → F39).
 
 ### Phase 36 — Onboarding: Navegação por Abas ✅ Complete
@@ -512,7 +514,7 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 | 38-1-10 | 5 | ✅ | Views/RPCs apuração + verificação I1–I6 (banco real) + 50 testes + gates + UAT checkpoint validado |
 | 38-1-11 | 6 | ✅ | Runbook trackings 8.1–8.5 + fechamento (0.065 provisório beta; reconciliação financeira real na próxima fase) |
 
-**Status:** 11/11 plans concluídos — 1713 testes (199 arquivos, 13 novos no fechamento), typecheck/lint/build limpos; migration `20260809000003_f38_1_provisional_image_tool_pricing.sql` aplicada em Local e Remote (linha vigente confirmada); UAT/checkpoint da fase validado.
+**Status:** Ready to execute
 
 **Source:** `openspec/changes/fase-38-1-ai-cost-accounting/` (fonte da verdade)
 **Context:** `.planning/phases/38-1-ai-cost-accounting/38-1-CONTEXT.md`
@@ -682,3 +684,6 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 - [Phase 38-1-ai-cost-accounting]: Rota principal /brand-profile (GET/PATCH/archive) NAO gera via profiler — entrega brand_profile_with_logo emitida no path logo do realign (director.analyze); decidido e testado na rota principal (38-1-09 task 2.3)
 - [Phase 38-1-ai-cost-accounting]: Buffer de AiCallInfo por sequencia nas rotas brand: 1a entrada = brand_profile_vision, 2a = brand_profile_text (mapeamento deterministico por path — T-38.1-39); na pratica brand-profiler.ts so emite visao, text-only e servico separado (38-1-09)
 - [Phase 38-1-ai-cost-accounting]: onCall de analyze/infer em try/catch await (aceita sync e async, nunca lanca — D7); caminho mock dev sem OPENAI_API_KEY nao emite onCall (sem chamada real de IA — 6.5) (38-1-09)
+- [Phase 38.2]: Migration 4 de fix separada (padrão F38.1) para MIN(uuid) no RPC de runs — PostgreSQL não tem agregado MIN/MAX para UUID; subqueries correlacionadas ORDER BY created_at LIMIT 1 (38-2-01)
+- [Phase 38.2]: Evidências de segmento (D9) expostas como dados brutos no RPC (store_is_test, deduction_purchased_amount/bonus, admin_grant_evidence); classificação é do service layer (38-2-05), nunca no RPC (38-2-01)
+- [Phase 38.2]: creditos_debitados reutiliza public.admin_cost_vs_credits via SQL interno do RPC SECURITY DEFINER — proibição de .from() vale para a camada app/service, não para SQL de migration (38-2-01)
