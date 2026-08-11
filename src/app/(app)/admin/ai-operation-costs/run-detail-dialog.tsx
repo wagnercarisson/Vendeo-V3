@@ -110,6 +110,12 @@ export function RunDetailDialog({
                     ? formatBRL(detail.run.custoBrl)
                     : "—"}
                 </p>
+                {detail.run.creditosDebitados !== null && (
+                  <>
+                    <p>{`Créditos: bruto ${formatNumber(detail.run.creditosDebitados)} · estorno ${formatNumber(detail.run.creditosEstornados)} · líquido ${formatNumber(detail.run.creditosLiquidos)}`}</p>
+                    <p>{`Receita ${formatBRL(detail.run.receitaOpBrl)} · Resultado ${formatBRL(detail.run.resultadoOpBrl)}`}</p>
+                  </>
+                )}
                 <p>Custo reconciliado provider: ainda indisponível</p>
                 <p>Diferença: pendente</p>
               </div>

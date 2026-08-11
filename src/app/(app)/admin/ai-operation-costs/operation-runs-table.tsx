@@ -126,8 +126,17 @@ export function OperationRunsTable({ runs }: { runs: OperationRun[] }) {
                 <td className="whitespace-nowrap px-3 py-2">
                   {formatBRL(run.custoBrl)}
                 </td>
-                <td className="whitespace-nowrap px-3 py-2">
-                  {formatNumber(run.creditosDebitados)}
+                <td
+                  className="whitespace-nowrap px-3 py-2 text-xs"
+                  title="Bruto = créditos debitados (auditoria); Estorno = estornos vinculados ao run; Líquido = bruto − estorno (mín. 0)"
+                >
+                  <div>Bruto: {formatNumber(run.creditosDebitados)}</div>
+                  <div>Estorno: {formatNumber(run.creditosEstornados)}</div>
+                  <div>Líquido: {formatNumber(run.creditosLiquidos)}</div>
+                  <div className="text-muted-foreground">
+                    Receita {formatBRL(run.receitaOpBrl)} · Resultado{" "}
+                    {formatBRL(run.resultadoOpBrl)}
+                  </div>
                 </td>
                 <td className="whitespace-nowrap px-3 py-2">
                   {formatDuration(run.duracaoTotalMs)}
