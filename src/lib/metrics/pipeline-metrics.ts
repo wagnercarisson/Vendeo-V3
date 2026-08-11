@@ -8,7 +8,6 @@ export interface MetricsBundle {
     total: number;
     success: number;
     error: number;
-    avg_cost_ms: number | null;
     avg_duration_ms: number | null;
     active_users: number;
   };
@@ -64,7 +63,7 @@ async function fetchMetricsBundle(
 
   // Fallback: return empty bundle (degradação suave)
   const fallback: MetricsBundle = {
-    pipeline: { total: 0, success: 0, error: 0, avg_cost_ms: null, avg_duration_ms: null, active_users: 0 },
+    pipeline: { total: 0, success: 0, error: 0, avg_duration_ms: null, active_users: 0 },
     vs: { success_rate: null, error_rate: 0, avg_duration_ms: null },
     wallet: {
       credits_granted: 0, credits_consumed_vs: 0, refund_rate: 0,
@@ -106,12 +105,54 @@ export async function getErrorRate(
   return Math.round((error / total) * 100);
 }
 
+/** NUMERIC do Postgres chega como string | number — normaliza para number (padrão ai-cost admin service). */
+function toNumber(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Custo médio de IA por entrega (apuração call-level, D6) — NÃO lê mais
+ * `campaign_pipeline.estimated_cost_usd` (delivery marker NULL por desenho
+ * desde a F38.1 — anti-dupla-contagem D1/D6). Apura via RPC
+ * `admin_get_ai_costs` (F38.1, inalterado): `by_operation_run` → média de
+ * `custo_usd_total` (cada run = entrega; o RPC já exclui delivery markers no
+ * SQL). `storeKind` não é suportado pelo RPC de apuração (sem filtro de loja —
+ * documentado). RPC em falha → null (degradação suave — a página continua
+ * renderizando os demais cards, T-38.2-41).
+ */
 export async function getAvgCost(
   hours: number,
-  storeKind: StoreKind = "production",
+  _storeKind: StoreKind = "production",
 ): Promise<number | null> {
-  const bundle = await fetchMetricsBundle(hours, storeKind);
-  return bundle.pipeline.avg_cost_ms ?? null;
+  try {
+    const { data, error } = await supabaseAdmin.rpc("admin_get_ai_costs", {
+      p_hours: hours,
+      p_credit_unit_usd_value: null,
+    });
+
+    if (error || !data) {
+      console.error("[metrics] getAvgCost error", error?.message ?? "no data");
+      return null;
+    }
+
+    const raw = data as { by_operation_run?: unknown };
+    const rows = Array.isArray(raw.by_operation_run)
+      ? (raw.by_operation_run as Array<Record<string, unknown>>)
+      : [];
+    const costs = rows
+      .map((r) => toNumber(r.custo_usd_total))
+      .filter((c): c is number => c !== null);
+    if (costs.length === 0) return null;
+    return costs.reduce((a, b) => a + b, 0) / costs.length;
+  } catch (e) {
+    console.error(
+      "[metrics] getAvgCost error",
+      e instanceof Error ? e.message : e,
+    );
+    return null;
+  }
 }
 
 export async function getAvgDuration(
