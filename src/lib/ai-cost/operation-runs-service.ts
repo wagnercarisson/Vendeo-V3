@@ -559,7 +559,95 @@ export class OperationRunsService {
    * evento (D5). run null + events [] quando o id não existe (contrato do RPC).
    */
   async getRunDetail(operationRunId: string): Promise<OperationRunDetail> {
-    return { run: null, events: [] };
+    const { data, error } = await this.client.rpc(
+      "admin_get_ai_operation_run_events",
+      { p_operation_run_id: operationRunId },
+    );
+
+    if (error) {
+      console.error(
+        "[operation-runs] admin_get_ai_operation_run_events error",
+        error.message,
+      );
+      throw new OperationRunsUnavailableError(error.message);
+    }
+
+    const raw = (data ?? {}) as { run: RawDetailRun | null; events: RawEvent[] | null };
+
+    // Id inexistente → run null + events [] (contrato do RPC — spec D4)
+    if (!raw.run) {
+      return { run: null, events: [] };
+    }
+
+    const params = await this.getEconomicParams();
+    const run = this.mapDetailRun(raw.run, params);
+    const events = (raw.events ?? []).map((e) => this.mapEvent(e, params));
+    return { run, events };
+  }
+
+  /** Run do detalhe — resumo com BRL derivado (custoBrl); sem evidências de segmento no RPC de eventos. */
+  private mapDetailRun(
+    raw: RawDetailRun,
+    params: { usdBrlRate: number; creditValueBrl: number },
+  ): OperationRun {
+    const custoUsd = toNumber(raw.custo_usd_total);
+    return {
+      operationRunId: raw.operation_run_id,
+      operationRunType: null,
+      storeId: null,
+      storeName: null,
+      ownerId: null,
+      createdAt: raw.created_at ?? null,
+      deliveryStatus: raw.delivery_status ?? null,
+      custoUsdTotal: custoUsd,
+      custoBrl: custoUsd !== null ? custoUsd * params.usdBrlRate : null,
+      creditosDebitados: null,
+      receitaOpBrl: null,
+      resultadoOpBrl: null,
+      margemOpPct: null,
+      duracaoTotalMs: toNumber(raw.duracao_total_ms),
+      chamadas: toNumber(raw.chamadas) ?? 0,
+      chamadasSuccess: toNumber(raw.chamadas_success) ?? 0,
+      regeneracoes: clampNonNegative(toNumber(raw.regeneracoes)),
+      provider: null,
+      model: null,
+      costSource: null,
+      badge: "estimated",
+      segment: "unknown",
+      segmentConfidence: "low",
+    };
+  }
+
+  /** Evento call-level derivado — BRL + badge + componentes de custo por evento (D4/D5). */
+  private mapEvent(
+    raw: RawEvent,
+    params: { usdBrlRate: number },
+  ): OperationRunEvent {
+    const estimatedCostUsd = toNumber(raw.estimated_cost_usd);
+    return {
+      generationType: raw.generation_type ?? null,
+      provider: raw.provider ?? null,
+      model: raw.model ?? null,
+      status: raw.status ?? null,
+      errorType: raw.error_type ?? null,
+      attemptNumber: toNumber(raw.attempt_number),
+      durationMs: toNumber(raw.duration_ms),
+      promptTokens: toNumber(raw.prompt_tokens),
+      completionTokens: toNumber(raw.completion_tokens),
+      totalTokens: toNumber(raw.total_tokens),
+      cachedInputTokens: toNumber(raw.cached_input_tokens),
+      imageTokens: toNumber(raw.image_tokens),
+      estimatedCostUsd,
+      estimatedCostBrl:
+        estimatedCostUsd !== null ? estimatedCostUsd * params.usdBrlRate : null,
+      textComponentUsd: toNumber(raw.text_component_usd),
+      imageToolComponentUsd: toNumber(raw.image_tool_component_usd),
+      costSource: raw.cost_source ?? null,
+      costFormulaVersion: raw.cost_formula_version ?? null,
+      costEstimationNote: raw.cost_estimation_note ?? null,
+      metadata: raw.metadata ?? null,
+      badge: deriveEventBadge(raw.cost_source, raw.cost_estimation_note),
+    };
   }
 
   private async fetchRunsPage(
