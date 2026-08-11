@@ -259,42 +259,162 @@ const PARAM_LABELS: Record<string, string> = {
   credit_value_brl: "Valor operacional do crédito em BRL",
 };
 
+const PARAM_HINTS: Record<string, string> = {
+  usd_brl_rate:
+    "1 USD = R$ X — converte o custo estimado do provider para reais.",
+  credit_value_brl:
+    "1 crédito = R$ Y — estima a receita operacional interna por entrega.",
+};
+
+type ParamState = {
+  value: number;
+  reason: string;
+  loading: boolean;
+  error: string | null;
+  success: string | null;
+};
+
 export function ParamsForm({
   parameters,
 }: {
   parameters: EconomicParameterResolution[];
 }) {
-  const [values, setValues] = useState<Record<string, number>>(() =>
-    Object.fromEntries(parameters.map((p) => [p.key, p.value])),
+  const [state, setState] = useState<Record<string, ParamState>>(() =>
+    Object.fromEntries(
+      parameters.map((p) => [
+        p.key,
+        {
+          value: p.value,
+          reason: "",
+          loading: false,
+          error: null,
+          success: null,
+        },
+      ]),
+    ),
   );
+
+  function patchParam(key: string, patch: Partial<ParamState>) {
+    setState((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } }));
+  }
+
+  async function saveParam(param: EconomicParameterResolution) {
+    const s = state[param.key];
+    // T-38.2-31 (Tampering): motivo obrigatório no form — espelha o zod
+    // min(1) da API e o reason NOT NULL da audit table.
+    if (!s.reason.trim()) {
+      patchParam(param.key, { error: "Motivo obrigatório" });
+      return;
+    }
+    if (!Number.isFinite(s.value) || s.value <= 0) {
+      patchParam(param.key, { error: "Valor deve ser maior que zero" });
+      return;
+    }
+
+    patchParam(param.key, { loading: true, error: null, success: null });
+    try {
+      const res = await fetch("/api/admin/economic-parameters", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key: param.key,
+          value: s.value,
+          reason: s.reason.trim(),
+          // Idempotência por operationId gerado no client (T-38.2-31/D2).
+          operationId: crypto.randomUUID(),
+        }),
+      });
+      if (!res.ok) {
+        const body = await res
+          .json()
+          .catch(() => ({ error: "Erro desconhecido" }));
+        throw new Error(body.error || `Erro ${res.status}`);
+      }
+      const data = await res.json();
+      patchParam(param.key, {
+        loading: false,
+        success: `Parâmetro atualizado — auditoria: ${data.auditId}`,
+        reason: "",
+      });
+    } catch (err) {
+      patchParam(param.key, {
+        loading: false,
+        error: err instanceof Error ? err.message : "Erro ao salvar",
+      });
+    }
+  }
 
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
         Parâmetros de conversão monetária — fonte única de USD→BRL e do valor
-        operacional do crédito. Alterações não valem em produção até salvar.
+        operacional do crédito. Alterações não valem em produção até salvar
+        (motivo obrigatório + auditoria).
       </p>
       <div className="space-y-3">
-        {parameters.map((p) => (
-          <div key={p.key} className="rounded-lg border border-border p-4">
-            <label htmlFor={`param-${p.key}`} className="text-sm font-medium">
-              {PARAM_LABELS[p.key] ?? p.key}
-            </label>
-            <input
-              id={`param-${p.key}`}
-              type="number"
-              step="any"
-              value={values[p.key]}
-              onChange={(e) =>
-                setValues((prev) => ({
-                  ...prev,
-                  [p.key]: parseFloat(e.target.value) || 0,
-                }))
-              }
-              className="mt-2 w-28 rounded-md border border-border bg-bg-surface px-2 py-1 text-sm"
-            />
-          </div>
-        ))}
+        {parameters.map((p) => {
+          const s = state[p.key];
+          return (
+            <div
+              key={p.key}
+              data-testid={`param-${p.key}`}
+              className="rounded-lg border border-border p-4"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <label htmlFor={`param-${p.key}`} className="text-sm font-medium">
+                  {PARAM_LABELS[p.key] ?? p.key}
+                </label>
+                <Badge variant={p.source === "table" ? "ready" : "default"}>
+                  {p.source === "table" ? "tabela" : "fallback"}
+                </Badge>
+              </div>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {PARAM_HINTS[p.key]}
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <input
+                  id={`param-${p.key}`}
+                  type="number"
+                  min={0.000001}
+                  step="any"
+                  value={s.value}
+                  disabled={s.loading}
+                  onChange={(e) =>
+                    patchParam(p.key, {
+                      value: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                  className="w-28 rounded-md border border-border bg-bg-surface px-2 py-1 text-sm disabled:opacity-50"
+                />
+                <input
+                  type="text"
+                  value={s.reason}
+                  disabled={s.loading}
+                  placeholder="Motivo da alteração (obrigatório)"
+                  onChange={(e) =>
+                    patchParam(p.key, { reason: e.target.value })
+                  }
+                  className="w-48 rounded-md border border-border bg-bg-surface px-2 py-1 text-sm disabled:opacity-50"
+                />
+                <button
+                  type="button"
+                  disabled={s.loading}
+                  onClick={() => saveParam(p)}
+                  className="inline-flex items-center justify-center gap-1 rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground disabled:opacity-50"
+                >
+                  {s.loading && <Loader2 className="h-3 w-3 animate-spin" />}
+                  Salvar
+                </button>
+              </div>
+              {s.error && (
+                <p className="mt-1 text-xs text-destructive">{s.error}</p>
+              )}
+              {s.success && (
+                <p className="mt-1 text-xs text-accent-green">{s.success}</p>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
