@@ -27,7 +27,7 @@ import {
 } from "../pipeline-metrics";
 
 const PRODUCTION_BUNDLE: MetricsBundle = {
-  pipeline: { total: 10, success: 8, error: 2, avg_cost_ms: 0.015, avg_duration_ms: 12000, active_users: 5 },
+  pipeline: { total: 10, success: 8, error: 2, avg_duration_ms: 12000, active_users: 5 },
   vs: { success_rate: 75, error_rate: 25, avg_duration_ms: 15000 },
   wallet: {
     credits_granted: 500, credits_consumed_vs: 20, refund_rate: 10,
@@ -37,7 +37,7 @@ const PRODUCTION_BUNDLE: MetricsBundle = {
 };
 
 const TEST_BUNDLE: MetricsBundle = {
-  pipeline: { total: 3, success: 2, error: 1, avg_cost_ms: 0.01, avg_duration_ms: 8000, active_users: 2 },
+  pipeline: { total: 3, success: 2, error: 1, avg_duration_ms: 8000, active_users: 2 },
   vs: { success_rate: 67, error_rate: 33, avg_duration_ms: 10000 },
   wallet: {
     credits_granted: 100, credits_consumed_vs: 5, refund_rate: 0,
@@ -47,7 +47,7 @@ const TEST_BUNDLE: MetricsBundle = {
 };
 
 const ALL_BUNDLE: MetricsBundle = {
-  pipeline: { total: 13, success: 10, error: 3, avg_cost_ms: 0.014, avg_duration_ms: 11000, active_users: 7 },
+  pipeline: { total: 13, success: 10, error: 3, avg_duration_ms: 11000, active_users: 7 },
   vs: { success_rate: 73, error_rate: 27, avg_duration_ms: 14000 },
   wallet: {
     credits_granted: 600, credits_consumed_vs: 25, refund_rate: 8,
@@ -57,7 +57,33 @@ const ALL_BUNDLE: MetricsBundle = {
 };
 
 function mockBundle(bundle: typeof PRODUCTION_BUNDLE) {
-  mockRpc.mockResolvedValue({ data: bundle, error: null });
+  mockRpc.mockImplementation((rpcName: string) =>
+    Promise.resolve(
+      rpcName === "admin_get_ai_costs"
+        ? {
+            data: { by_operation_run: [], by_generation_type: [], reconciliation: [] },
+            error: null,
+          }
+        : { data: bundle, error: null },
+    ),
+  );
+}
+
+/** Mock do RPC admin_get_ai_costs (apuração call-level F38.1) com runs controlados. */
+function mockAiCosts(
+  byOperationRun: Array<Record<string, unknown>>,
+  bundle: typeof PRODUCTION_BUNDLE = PRODUCTION_BUNDLE,
+) {
+  mockRpc.mockImplementation((rpcName: string) =>
+    Promise.resolve(
+      rpcName === "admin_get_ai_costs"
+        ? {
+            data: { by_operation_run: byOperationRun, by_generation_type: [], reconciliation: [] },
+            error: null,
+          }
+        : { data: bundle, error: null },
+    ),
+  );
 }
 
 beforeEach(() => {
@@ -93,15 +119,40 @@ describe("getErrorRate", () => {
   });
 });
 
-describe("getAvgCost", () => {
-  it("returns average of estimated_cost_usd", async () => {
-    mockBundle(PRODUCTION_BUNDLE);
-    expect(await getAvgCost(24)).toBeCloseTo(0.015, 3);
+describe("getAvgCost (F38.2 D6 — apuração call-level por entrega)", () => {
+  it("calculates the average cost per delivery from admin_get_ai_costs by_operation_run", async () => {
+    mockAiCosts([
+      { operation_run_id: "r1", custo_usd_total: "10" },
+      { operation_run_id: "r2", custo_usd_total: "20" },
+    ]);
+    expect(await getAvgCost(24)).toBeCloseTo(15, 3);
+    expect(mockRpc).toHaveBeenCalledWith("admin_get_ai_costs", {
+      p_hours: 24,
+      p_credit_unit_usd_value: null,
+    });
   });
 
-  it("returns null when no cost records", async () => {
-    const empty = { ...PRODUCTION_BUNDLE, pipeline: { ...PRODUCTION_BUNDLE.pipeline, total: 0, avg_cost_ms: null } };
-    mockBundle(empty);
+  it("does NOT read campaign_pipeline.estimated_cost_usd (bundle avg_cost_ms) — even when non-null", async () => {
+    // admin_get_metrics devolve avg_cost_ms não-nulo (legado F28), mas getAvgCost
+    // apura via call-level e ignora o campo do delivery marker (NULL por desenho).
+    const bundleWithLegacyCost = {
+      ...PRODUCTION_BUNDLE,
+      pipeline: { ...PRODUCTION_BUNDLE.pipeline, avg_cost_ms: 0.5 },
+    } as unknown as MetricsBundle;
+    mockAiCosts(
+      [{ operation_run_id: "r1", custo_usd_total: "10" }],
+      bundleWithLegacyCost,
+    );
+    expect(await getAvgCost(24)).toBeCloseTo(10, 3);
+  });
+
+  it("returns null when there are no cost rows (by_operation_run [])", async () => {
+    mockAiCosts([]);
+    expect(await getAvgCost(24)).toBeNull();
+  });
+
+  it("returns null when the RPC fails (soft degradation)", async () => {
+    mockRpc.mockRejectedValue(new Error("down"));
     expect(await getAvgCost(24)).toBeNull();
   });
 });
@@ -317,8 +368,14 @@ describe("test store filtering (storeKind)", () => {
     await getAvgCost(24);
     await getActiveUsers(24);
 
-    // Should only call RPC once then use cache
-    expect(mockRpc).toHaveBeenCalledTimes(1);
+    // admin_get_metrics é cacheado (1 chamada); getAvgCost apura via
+    // admin_get_ai_costs (call-level, 1 chamada) — não passa pelo bundle.
+    expect(
+      mockRpc.mock.calls.filter((c) => c[0] === "admin_get_metrics"),
+    ).toHaveLength(1);
+    expect(
+      mockRpc.mock.calls.filter((c) => c[0] === "admin_get_ai_costs"),
+    ).toHaveLength(1);
   });
 
   it("RPC cache key varies by storeKind", async () => {
@@ -335,7 +392,7 @@ describe("test store filtering (storeKind)", () => {
 describe("domain isolation", () => {
   it("VS-only data returns null/0 for campaign metrics", async () => {
     const vsOnly = {
-      pipeline: { total: 0, success: 0, error: 0, avg_cost_ms: null, avg_duration_ms: null, active_users: 0 },
+      pipeline: { total: 0, success: 0, error: 0, avg_duration_ms: null, active_users: 0 },
       vs: { success_rate: 75, error_rate: 25, avg_duration_ms: 15000 },
       wallet: {
         credits_granted: 0, credits_consumed_vs: 20, refund_rate: 0,
@@ -352,7 +409,7 @@ describe("domain isolation", () => {
 
   it("campaign-only data returns null/0 for VS metrics", async () => {
     const campOnly = {
-      pipeline: { total: 10, success: 8, error: 2, avg_cost_ms: 0.015, avg_duration_ms: 12000, active_users: 5 },
+      pipeline: { total: 10, success: 8, error: 2, avg_duration_ms: 12000, active_users: 5 },
       vs: { success_rate: null, error_rate: 0, avg_duration_ms: null },
       wallet: {
         credits_granted: 500, credits_consumed_vs: 0, refund_rate: 10,
