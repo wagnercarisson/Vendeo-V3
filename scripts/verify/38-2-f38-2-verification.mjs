@@ -378,6 +378,26 @@ async function run() {
       (f) => typeof firstRun[f] === "boolean",
     );
     assert("I5: flags has_* booleanas presentes (D5)", hasFlags, JSON.stringify(firstRun));
+    // Créditos por run (gap estornos — 38-2-12): bruto BRUTO preservado + estorno/líquido expostos
+    assert("I5: run expõe creditos_estornados (gap 38-2-12)", "creditos_estornados" in firstRun, "creditos_estornados ausente");
+    assert("I5: run expõe creditos_liquidos (gap 38-2-12)", "creditos_liquidos" in firstRun, "creditos_liquidos ausente");
+    const estNum = toNumber(firstRun.creditos_estornados);
+    const liqNum = toNumber(firstRun.creditos_liquidos);
+    assert("I5: creditos_estornados numérico >= 0", estNum !== null && estNum >= 0, `estornados=${JSON.stringify(firstRun.creditos_estornados)}`);
+    assert("I5: creditos_liquidos numérico >= 0", liqNum !== null && liqNum >= 0, `liquidos=${JSON.stringify(firstRun.creditos_liquidos)}`);
+    assert(
+      "I5: invariante liquidos = max(brutos − estornados, 0)",
+      liqNum === Math.max((toNumber(firstRun.creditos_debitados) ?? 0) - estNum, 0),
+      JSON.stringify({ deb: firstRun.creditos_debitados, est: firstRun.creditos_estornados, liq: firstRun.creditos_liquidos }),
+    );
+    assert("I5: liquidos <= brutos (estorno nunca aumenta)", liqNum <= toNumber(firstRun.creditos_debitados), JSON.stringify({ deb: firstRun.creditos_debitados, liq: firstRun.creditos_liquidos }));
+    // Summary também expõe os novos campos (KPIs financeiros da UI)
+    assert("I5: summary expõe creditos_estornados (gap 38-2-12)", "creditos_estornados" in runsData.summary, JSON.stringify(Object.keys(runsData.summary)));
+    assert("I5: summary expõe creditos_liquidos (gap 38-2-12)", "creditos_liquidos" in runsData.summary, JSON.stringify(Object.keys(runsData.summary)));
+    const sumEst = toNumber(runsData.summary.creditos_estornados);
+    const sumLiq = toNumber(runsData.summary.creditos_liquidos);
+    assert("I5: summary creditos_estornados numérico >= 0", sumEst !== null && sumEst >= 0, `summary.estornados=${JSON.stringify(runsData.summary.creditos_estornados)}`);
+    assert("I5: summary creditos_liquidos numérico >= 0", sumLiq !== null && sumLiq >= 0, `summary.liquidos=${JSON.stringify(runsData.summary.creditos_liquidos)}`);
     // P95 no summary
     const hasP95 = "p95_ms" in runsData.summary;
     assert("I5: summary expõe p95_ms (percentile_cont)", hasP95, JSON.stringify(runsData.summary));
@@ -389,6 +409,24 @@ async function run() {
     assert("I5: RPC de eventos responde", !eventsErr && !!eventsData, eventsErr?.message);
     const events = Array.isArray(eventsData?.events) ? eventsData.events : [];
     assert("I5: events array presente", events.length >= 0, `events=${events.length}`);
+    // Créditos no detalhe (gap 38-2-12): os 3 campos no run do detalhe
+    if (eventsData?.run) {
+      assert(
+        "I5: detalhe expõe creditos_debitados/creditos_estornados/creditos_liquidos no run (gap 38-2-12)",
+        "creditos_debitados" in eventsData.run &&
+          "creditos_estornados" in eventsData.run &&
+          "creditos_liquidos" in eventsData.run,
+        JSON.stringify(Object.keys(eventsData.run)),
+      );
+      assert(
+        "I5: detalhe — invariante liquidos = max(brutos − estornados, 0)",
+        toNumber(eventsData.run.creditos_liquidos) ===
+          Math.max((toNumber(eventsData.run.creditos_debitados) ?? 0) - toNumber(eventsData.run.creditos_estornados), 0),
+        JSON.stringify(eventsData.run),
+      );
+    } else {
+      console.log("  ℹ️  I5: run de detalhe NULL — asserts de créditos do detalhe pulados (id inexistente)");
+    }
     if (events.length > 0) {
       const ev = events[0];
       assert(
@@ -400,6 +438,19 @@ async function run() {
     }
   } else {
     assert("I5: run de referência disponível para detalhe", false, "nenhum run no período (dados de geração ausentes)");
+  }
+
+  // Dado-dependente (informativo, robusto): se há runs com estorno no array,
+  // o summary deve refletir refunds reais > 0; dados vazios apenas logam.
+  const runsWithRefunds = runs.filter((r) => toNumber(r.creditos_estornados) > 0).length;
+  if (runsWithRefunds > 0) {
+    assert(
+      "I5: summary.creditos_estornados > 0 quando há runs estornados na página",
+      toNumber(runsData.summary.creditos_estornados) > 0,
+      `runsComEstorno=${runsWithRefunds} summary.estornados=${JSON.stringify(runsData.summary.creditos_estornados)}`,
+    );
+  } else {
+    console.log(`  ℹ️  I5: nenhum run estornado na página (${runs.length} runs) — assert dado-dependente pulado`);
   }
 
   // Limite de janela: > 365 dias → window_exceeded_365d (defesa T-38.2-06)
