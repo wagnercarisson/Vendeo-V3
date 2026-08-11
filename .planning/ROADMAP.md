@@ -34,7 +34,7 @@
 | 37 | ○ Revisão e Aprovação da Arte | — | Pending    | — |
 | 38 | ✅ Tabela de Custos por Operação | 8/8 | ✅ Complete | 2026-08-07 |
 | 38.1 | ✅ Apuração de Custos de IA por Entrega | 11/11 | ✅ Complete | 2026-08-09 |
-| 38.2 | ✅ Admin de Custos Operacionais + Configurações Econômicas | 11/11 | ✅ Complete | 2026-08-11 |
+| 38.2 | ✅ Admin de Custos Operacionais + Configurações Econômicas | 12/15 | ◆ In Progress | 2026-08-11 |
 | 39 | ○ Stripe / Monetização Pública (v1.7) | — | Pending    | — |
 
 ---
@@ -616,7 +616,7 @@ Plans:
 
 **Source of truth:** `openspec/changes/fase-38-2-admin-custos-operacionais/`
 
-**Plans:** 11/11 plans executed
+**Plans:** 12/15 plans executed
 
 ```
 Plans:
@@ -631,9 +631,10 @@ Plans:
 - [x] 38-2-09-PLAN.md — Correção /admin/metrics (D6) (Wave 5)
 - [x] 38-2-10-PLAN.md — Testes + Verificação I1–I6 + gates [checkpoint] (Wave 6)
 - [x] 38-2-11-PLAN.md — Runbook trackings (Wave 7) ✅
+- [x] 38-2-12-PLAN.md — RPCs creditos_estornados/creditos_liquidos por run (gap UAT) (Wave 1)
 ```
 
-**Closing:** Fase fechada 2026-08-11 — **11/11 plans, 1832 testes (213 arquivos)**, typecheck/lint/build limpos; **verificação I1–I6 em banco real** (50/50 asserts, `scripts/verify/38-2-f38-2-verification.mjs`); UAT 13.3 coletado para harvest end-of-phase (HUMAN-UAT.md pelo verifier). Gap registrado: `byStage` → "unknown" em produção (deferred-items.md #1 — migration aditiva expondo `generation_type` por run ou F38.4). Próxima: F38.3 (reconciliação financeira provider) após Landing/PWA.
+**Closing:** Fase reaberta 2026-08-11 para gap closure UAT (plans 12-15: créditos estornados/líquidos). Fechamento original: 11/11 plans, 1832 testes (213 arquivos), typecheck/lint/build limpos; **verificação I1–I6 em banco real** (50/50 asserts, `scripts/verify/38-2-f38-2-verification.mjs`); UAT 13.3 coletado para harvest end-of-phase (HUMAN-UAT.md pelo verifier). Gap registrado: `byStage` → "unknown" em produção (deferred-items.md #1 — migration aditiva expondo `generation_type` por run ou F38.4). Próxima: F38.3 (reconciliação financeira provider) após Landing/PWA.
 
 ---
 

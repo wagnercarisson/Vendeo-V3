@@ -4,12 +4,12 @@ milestone: v1.5
 milestone_name: â€” LanÃ§amento Externo Controlado â—†
 current_phase: 38.2
 status: executing
-last_updated: "2026-08-11T17:56:08.903Z"
+last_updated: "2026-08-11T20:27:30.793Z"
 progress:
   total_phases: 1
   completed_phases: 0
-  total_plans: 11
-  completed_plans: 11
+  total_plans: 15
+  completed_plans: 12
   percent: 0
 ---
 
@@ -102,7 +102,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confianÃ§a de publicar e que ajude a vender mais.
 
-**Current focus:** Phase 38.2 â€” Admin de Custos Operacionais + ConfiguraÃ§Ãµes EconÃ´micas
+**Current focus:** Phase 38.2 — admin-custos-operacionais
 
 ## Completed Milestones
 
@@ -147,6 +147,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 | Phase 38.2 P38-2-09 | 7min | 3 tasks | 4 files |
 | Phase 38.2 P38-2-08 | 11min | 4 tasks | 10 files |
 | Phase 38.2 P38-2-10 | 6min | 2 tasks | 2 files |
+| Phase 38.2-admin-custos-operacionais P12 | 32min | 2 tasks | 2 files |
 
 ### Phase 19 â€” Onboarding & Estados Vazios âœ…
 
@@ -446,9 +447,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 38.2 (Admin de Custos Operacionais + ConfiguraÃ§Ãµes EconÃ´micas) â€” EXECUTING
-Plan: 11 of 11
-v1.5 em andamento â€” Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36, 38 e 38.1 concluÃ­das. F38 (Tabela de Custos por OperaÃ§Ã£o, v1.5) concluÃ­da â€” 8/8 plans, 1597 testes, UAT 4/4; F38.1 (ApuraÃ§Ã£o de Custos de IA por Entrega, desdobramento da F38) **CONCLUÃDA** â€” 11/11 plans, 1713 testes, UAT validado, **fechada como camada de estimativa operacional granular** (ajuste provisÃ³rio da tool image_generation `0.065` = estimativa beta provisÃ³ria, nÃ£o custo real; reconciliaÃ§Ã£o financeira real na prÃ³xima fase), fonte da verdade `openspec/changes/fase-38-1-ai-cost-accounting/`; **F38.2 (Admin de Custos Operacionais + ConfiguraÃ§Ãµes EconÃ´micas, desdobramento da F38) em EXECUÃ‡ÃƒO â€” 10/11 plans** â€” painel `/admin/ai-operation-costs` (KPIs/filtros/tabela/drilldown/segmentos) + `economic_parameters` configurÃ¡veis + badges de confianÃ§a + correÃ§Ã£o `/admin/metrics`, fonte `openspec/changes/fase-38-2-admin-custos-operacionais/`; 38-2-01 âœ… migrations/db push (schema econÃ´mico + RPCs de runs no remoto), 38-2-02 âœ… tipos econÃ´micos + EconomicParameterService fail-open/fail-closed + 10 testes (base das rotas 38-2-04/05/06/09), 38-2-03 âœ… AiCostTracker persiste 4 campos de confianÃ§a (D5), 38-2-04 âœ… API GET/PUT /api/admin/economic-parameters (zod + RPC admin_set_economic_parameter, 200/400/403/500, idempotÃªncia, 9 testes da rota, sem endpoint pÃºblico), 38-2-05 âœ… OperationRunsService server-only (BRL D1/D4 via EconomicParameterService + badges D5 por evento/entrega + segmentaÃ§Ã£o classifySegment D9 com filtro e re-paginaÃ§Ã£o + storeName/owner D3 + 8 agregados D3/D9 sobre o conjunto filtrado inteiro + getRunDetail D4 com BRL/badges/componentes por evento; 20 testes, typecheck/lint limpos), 38-2-06 âœ… API GET /api/admin/ai-operation-runs (lista) + GET /api/admin/ai-operation-runs/[operationRunId] (detalhe) com AiOperationRunsQuerySchema (janela default 90d/max 365d â†’ 400) delegando 100% ao OperationRunsService (BRL/badge/segmento nunca na rota) + 13 testes (tarefa 12.4, piso 11; regressÃ£o 1804 testes); F37 (RevisÃ£o e AprovaÃ§Ã£o da Arte, v1.5, experimento beta) em planejamento futuro; F39 (Stripe / MonetizaÃ§Ã£o PÃºblica) como marco futuro pÃ³s-beta (renumerada de F36 â†’ F37 â†’ F39). **38-2-10 OK: verificacao I1-I6 em banco real (script 50/50 asserts) + gates verdes (vitest 1832/1832, typecheck, lint, build) + UAT 13.3 coletado para harvest end-of-phase (I1-I6 documentados em 38-2-VERIFICATION.md)**.
+Phase: 38.2 (admin-custos-operacionais) — EXECUTING
+Plan: 13 of 15
+v1.5 em andamento â€” Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36, 38 e 38.1 concluÃ­das. F38 (Tabela de Custos por OperaÃ§Ã£o, v1.5) concluÃ­da â€” 8/8 plans, 1597 testes, UAT 4/4; F38.1 (ApuraÃ§Ã£o de Custos de IA por Entrega, desdobramento da F38) **CONCLUÃDA** â€” 11/11 plans, 1713 testes, UAT validado, **fechada como camada de estimativa operacional granular** (ajuste provisÃ³rio da tool image_generation `0.065` = estimativa beta provisÃ³ria, nÃ£o custo real; reconciliaÃ§Ã£o financeira real na prÃ³xima fase), fonte da verdade `openspec/changes/fase-38-1-ai-cost-accounting/`; **F38.2 (Admin de Custos Operacionais + ConfiguraÃ§Ãµes EconÃ´micas, desdobramento da F38) em EXECUÃ‡ÃƒO â€” 10/11 plans** â€” painel `/admin/ai-operation-costs` (KPIs/filtros/tabela/drilldown/segmentos) + `economic_parameters` configurÃ¡veis + badges de confianÃ§a + correÃ§Ã£o `/admin/metrics`, fonte `openspec/changes/fase-38-2-admin-custos-operacionais/`; 38-2-01 âœ… migrations/db push (schema econÃ´mico + RPCs de runs no remoto), 38-2-02 âœ… tipos econÃ´micos + EconomicParameterService fail-open/fail-closed + 10 testes (base das rotas 38-2-04/05/06/09), 38-2-03 âœ… AiCostTracker persiste 4 campos de confianÃ§a (D5), 38-2-04 âœ… API GET/PUT /api/admin/economic-parameters (zod + RPC admin_set_economic_parameter, 200/400/403/500, idempotÃªncia, 9 testes da rota, sem endpoint pÃºblico), 38-2-05 âœ… OperationRunsService server-only (BRL D1/D4 via EconomicParameterService + badges D5 por evento/entrega + segmentaÃ§Ã£o classifySegment D9 com filtro e re-paginaÃ§Ã£o + storeName/owner D3 + 8 agregados D3/D9 sobre o conjunto filtrado inteiro + getRunDetail D4 com BRL/badges/componentes por evento; 20 testes, typecheck/lint limpos), 38-2-06 âœ… API GET /api/admin/ai-operation-runs (lista) + GET /api/admin/ai-operation-runs/[operationRunId] (detalhe) com AiOperationRunsQuerySchema (janela default 90d/max 365d â†’ 400) delegando 100% ao OperationRunsService (BRL/badge/segmento nunca na rota) + 13 testes (tarefa 12.4, piso 11; regressÃ£o 1804 testes); F37 (RevisÃ£o e AprovaÃ§Ã£o da Arte, v1.5, experimento beta) em planejamento futuro; F39 (Stripe / MonetizaÃ§Ã£o PÃºblica) como marco futuro pÃ³s-beta (renumerada de F36 â†’ F37 â†’ F39). **38-2-10 OK: verificacao I1-I6 em banco real (script 50/50 asserts) + gates verdes (vitest 1832/1832, typecheck, lint, build) + UAT 13.3 coletado para harvest end-of-phase (I1-I6 documentados em 38-2-VERIFICATION.md)**. **38-2-12 OK (gap UAT estornos): migration 20260811000001 com CREATE OR REPLACE dos RPCs admin_get_ai_operation_runs/_events expondo creditos_estornados (refunds via reference→deduction no ledger) e creditos_liquidos = max(bruto−estorno, 0) por run E no summary/detalhe — creditos_debitados BRUTO inalterado, view F38.1 intocada; db push aplicado no remoto (validado via REST: estornados=3/liquidos=17 em 20 runs/90d); I5 estendido com 13 asserts novos → 63/63 asserts 0 falhas em banco real; gates verdes (vitest 1834/1834, typecheck/lint/build exit 0)**.
 
 ### Phase 36 â€” Onboarding: NavegaÃ§Ã£o por Abas âœ… Complete
 
@@ -720,3 +721,4 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 - [Phase 38.2]: I1 seeds: contrato é o valor 1.00 (D1 conservador); updated_by preenchido após edição via UI/RPC é auditoria funcionando, não falha — Verificação I1 em banco real (38-2-10)
 - [Phase 38.2]: I6 delivery markers: invariante anti-dupla-contagem = nenhum marker pós-F38.1 (operation_run_id NOT NULL) carrega custo; 51 markers legados (operation_run_id NULL) são inertes por construção (views/RPCs filtram operation_run_id IS NOT NULL + generation_type NOT IN) — Verificação I6 em banco real (38-2-10)
 - [Phase 38.2]: Linhas de teste I2/I3 permanecem na economic_parameter_audit (reason 38-2-10-verification) — append-only por desenho (trigger bloqueia até DELETE de service_role); não afetam a UI — Verificação I2/I3 (38-2-10)
+- [Phase 38.2-admin-custos-operacionais]: RPCs da F38.2 expõem creditos_estornados/creditos_liquidos por run (gap UAT) — fix exclusivo nos RPCs (CREATE OR REPLACE), view F38.1 intocada, creditos_debitados BRUTO mantido
