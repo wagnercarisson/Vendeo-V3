@@ -59,6 +59,8 @@ export interface OperationRun {
   custoUsdTotal: number | null;
   custoBrl: number | null;
   creditosDebitados: number | null;
+  creditosEstornados: number | null;
+  creditosLiquidos: number | null;
   receitaOpBrl: number | null;
   resultadoOpBrl: number | null;
   margemOpPct: number | null;
@@ -79,6 +81,8 @@ export interface OperationRunsSummary {
   custoUsdTotal: number | null;
   custoBrl: number | null;
   creditosDebitados: number | null;
+  creditosEstornados: number | null;
+  creditosLiquidos: number | null;
   receitaOpBrl: number | null;
   resultadoOpBrl: number | null;
   margemOpPct: number | null;
@@ -172,6 +176,8 @@ interface RawOperationRun {
   delivery_status?: string | null;
   custo_usd_total?: string | number | null;
   creditos_debitados?: string | number | null;
+  creditos_estornados?: string | number | null;
+  creditos_liquidos?: string | number | null;
   duracao_total_ms?: string | number | null;
   chamadas?: string | number | null;
   chamadas_success?: string | number | null;
@@ -224,6 +230,9 @@ interface RawDetailRun {
   created_at?: string | null;
   delivery_status?: string | null;
   custo_usd_total?: string | number | null;
+  creditos_debitados?: string | number | null;
+  creditos_estornados?: string | number | null;
+  creditos_liquidos?: string | number | null;
   duracao_total_ms?: string | number | null;
   chamadas?: string | number | null;
   chamadas_success?: string | number | null;
@@ -343,9 +352,18 @@ function percentile(values: number[], p: number): number | null {
   return sorted[lower] + (sorted[upper] - sorted[lower]) * (index - lower);
 }
 
-/** Derivação monetária BRL (D1/D4) — fórmulas centralizadas no service, nunca no SQL. */
+/**
+ * Derivação monetária BRL (D1/D4) — fórmulas centralizadas no service, nunca no SQL.
+ * BRUTO (creditos_debitados) = auditoria de deduções; LÍQUIDO (creditos_liquidos)
+ * = bruto − estornos (floor 0, aplicado pelo RPC 38-2-12 via GREATEST) usado para
+ * receita/resultado/margem — run falho 100% estornado deriva receita R$0 e mantém
+ * o custo de IA (resultado negativo).
+ */
 function deriveBrl(
-  raw: Pick<RawOperationRun, "custo_usd_total" | "creditos_debitados">,
+  raw: Pick<
+    RawOperationRun,
+    "custo_usd_total" | "creditos_debitados" | "creditos_estornados" | "creditos_liquidos"
+  >,
   usdBrlRate: number,
   creditValueBrl: number,
 ): {
@@ -355,7 +373,7 @@ function deriveBrl(
   margemOpPct: number | null;
 } {
   const custoUsd = toNumber(raw.custo_usd_total);
-  const creditos = toNumber(raw.creditos_debitados);
+  const creditos = toNumber(raw.creditos_liquidos);
   const custoBrl = custoUsd !== null ? custoUsd * usdBrlRate : null;
   const receitaOpBrl = creditos !== null ? creditos * creditValueBrl : null;
   const resultadoOpBrl =
@@ -580,12 +598,16 @@ export class OperationRunsService {
     return { run, events };
   }
 
-  /** Run do detalhe — resumo com BRL derivado (custoBrl); sem evidências de segmento no RPC de eventos. */
+  /** Run do detalhe — resumo com BRL derivado via deriveBrl (líquidos, D1/D4); sem evidências de segmento no RPC de eventos. */
   private mapDetailRun(
     raw: RawDetailRun,
     params: { usdBrlRate: number; creditValueBrl: number },
   ): OperationRun {
-    const custoUsd = toNumber(raw.custo_usd_total);
+    const { custoBrl, receitaOpBrl, resultadoOpBrl, margemOpPct } = deriveBrl(
+      raw,
+      params.usdBrlRate,
+      params.creditValueBrl,
+    );
     return {
       operationRunId: raw.operation_run_id,
       operationRunType: null,
@@ -594,12 +616,14 @@ export class OperationRunsService {
       ownerId: null,
       createdAt: raw.created_at ?? null,
       deliveryStatus: raw.delivery_status ?? null,
-      custoUsdTotal: custoUsd,
-      custoBrl: custoUsd !== null ? custoUsd * params.usdBrlRate : null,
-      creditosDebitados: null,
-      receitaOpBrl: null,
-      resultadoOpBrl: null,
-      margemOpPct: null,
+      custoUsdTotal: toNumber(raw.custo_usd_total),
+      custoBrl,
+      creditosDebitados: toNumber(raw.creditos_debitados),
+      creditosEstornados: toNumber(raw.creditos_estornados),
+      creditosLiquidos: toNumber(raw.creditos_liquidos),
+      receitaOpBrl,
+      resultadoOpBrl,
+      margemOpPct,
       duracaoTotalMs: toNumber(raw.duracao_total_ms),
       chamadas: toNumber(raw.chamadas) ?? 0,
       chamadasSuccess: toNumber(raw.chamadas_success) ?? 0,
@@ -695,6 +719,8 @@ export class OperationRunsService {
       custoUsdTotal: toNumber(raw.custo_usd_total),
       custoBrl,
       creditosDebitados: toNumber(raw.creditos_debitados),
+      creditosEstornados: toNumber(raw.creditos_estornados),
+      creditosLiquidos: toNumber(raw.creditos_liquidos),
       receitaOpBrl,
       resultadoOpBrl,
       margemOpPct,
@@ -832,11 +858,14 @@ export class OperationRunsService {
     params: { usdBrlRate: number; creditValueBrl: number },
   ): OperationRunsSummary {
     const custoUsdTotal = sumValues(runs.map((r) => r.custoUsdTotal));
-    const creditos = sumValues(runs.map((r) => r.creditosDebitados));
+    const creditosDebitados = sumValues(runs.map((r) => r.creditosDebitados));
+    const creditosEstornados = sumValues(runs.map((r) => r.creditosEstornados));
+    const creditosLiquidos = sumValues(runs.map((r) => r.creditosLiquidos));
     const custoBrl =
       custoUsdTotal !== null ? custoUsdTotal * params.usdBrlRate : null;
+    // Receita NUNCA deriva do bruto (T-38.2-G05): líquido = bruto − estornos (floor 0)
     const receitaOpBrl =
-      creditos !== null ? creditos * params.creditValueBrl : null;
+      creditosLiquidos !== null ? creditosLiquidos * params.creditValueBrl : null;
     const resultadoOpBrl =
       custoBrl !== null && receitaOpBrl !== null ? receitaOpBrl - custoBrl : null;
     const margemOpPct =
@@ -849,7 +878,9 @@ export class OperationRunsService {
     return {
       custoUsdTotal,
       custoBrl,
-      creditosDebitados: creditos,
+      creditosDebitados,
+      creditosEstornados,
+      creditosLiquidos,
       receitaOpBrl,
       resultadoOpBrl,
       margemOpPct,
