@@ -107,12 +107,12 @@ Planejar — **sem executar nada** — a migração para que **vendeo.tech** se 
   - Remoção/desvinculação segura do projeto V1: **adiada**; nesta quick apenas inventariar (C-01) e registrar os passos de desvinculação segura como anexo para uma fase futura dedicada.
 
   ### A3. Mapeamento Supabase Auth (documentar fatos + o que coletar)
-  - **Site URL** (Authentication → URL Configuration): hoje = a coletar (C-06); alvo = `https://vendeo.tech`; **manter `https://beta.vendeo.tech` válida durante a janela**.
-  - **Redirect URLs permitidas** — lista a preservar integralmente durante a transição (todas abaixo devem permanecer válidas; nunca remover a antiga antes do fim da janela):
-    - `https://vendeo.tech/auth/confirm`
-    - `https://beta.vendeo.tech/auth/confirm`
-    - `https://vendeo.tech/**` (callbacks PKCE/fragment — confirmar necessidade na config atual)
-    - `https://beta.vendeo.tech/**`
+  - **Site URL** (Authentication → URL Configuration): hoje = a coletar (C-06); alvo = `https://vendeo.tech` — trocado **APENAS na janela de corte**, coordenado com `NEXT_PUBLIC_SITE_URL` + redeploy (ver R-01 → R-04); **manter `https://beta.vendeo.tech` válida durante a janela**.
+  - **Redirect URLs permitidas** — lista a preservar integralmente durante a transição (todas abaixo devem permanecer válidas; nunca remover a antiga antes do fim da janela). **As URLs explícitas `/auth/confirm` são o requisito mínimo e canônico** (único callback usado pelo app: `forgot-password` → `/auth/confirm` e `verifyOtp`). **Wildcards `/**` são complementares**, mantidos apenas se já presentes/aceitos na config atual (C-06) — não adicionar wildcards novos por precaução:
+    - `https://vendeo.tech/auth/confirm` (obrigatória para o novo domínio)
+    - `https://beta.vendeo.tech/auth/confirm` (obrigatória — preservada durante a janela)
+    - `https://vendeo.tech/**` (complementar — APENAS se já usado/aceito hoje: callbacks PKCE/fragment; anotar em C-06)
+    - `https://beta.vendeo.tech/**` (complementar — APENAS se já presente hoje)
     - URLs de preview `https://*.vercel.app/**` (se presentes hoje — anotar na C-06)
     - `http://localhost:3000/**` (dev)
   - **Confirmação de email:** com beta fechado, o caminho de cadastro está desligado; os fluxos vivos são `forgot-password` (redirectTo explícito = `NEXT_PUBLIC_SITE_URL/auth/confirm`, vindo do app) e convite manual via "Add user" (usa o **Site URL** do Supabase). Ambos dependem de Site URL + redirect URLs corretos no novo domínio.
@@ -176,12 +176,17 @@ Planejar — **sem executar nada** — a migração para que **vendeo.tech** se 
   Alternativa considerada (Vercel/DNS primeiro) é mais rápida mas abre janela de callbacks quebrados — não recomendada.
 
   ### B3. Checklist operacional numerado (runbook — humano executa)
-  - R-01 Aplicar Fase A — Supabase: em Authentication → URL Configuration, ADICIONAR as Redirect URLs de `vendeo.tech` (mantendo `beta.vendeo.tech` e as demais da A3); definir Site URL = `https://vendeo.tech` (ou manter beta até o DNS, conforme D-6/D-3). Salvar. NÃO desabilitar/alterar "Allow new users to sign up".
+  - R-01 Aplicar Fase A — Supabase, **passo 1 de 2 (NÃO trocar Site URL aqui)**: em Authentication → URL Configuration, **apenas ADICIONAR** as Redirect URLs de `vendeo.tech` (mínimo obrigatório: `https://vendeo.tech/auth/confirm`; wildcards `/**` só se já usados — A3), **preservando integralmente `beta.vendeo.tech` e as demais da A3**. Salvar. **Manter Site URL como está (beta) até a janela de corte.** NÃO desabilitar/alterar "Allow new users to sign up".
   - R-02 Aplicar Fase B — Vercel: projeto `vendeo-v3` → Settings → Domains → adicionar `vendeo.tech`; seguir a instrução de validação DNS exibida (anotar o valor: A `76.76.21.21` ou CNAME `cname.vercel-dns.com`, conforme o painel). NÃO remover `beta.vendeo.tech`.
   - R-03 Aplicar Fase C — DNS: no registrar, criar/atualizar o registro de `vendeo.tech` conforme R-02 (se o registro antigo apontar para V1/manutenção, anotá-lo primeiro em C-05 para rollback). Aguardar propagação (TTL) e validar no Vercel (domínio → "Valid Configuration").
-  - R-04 Fase D — Vercel: Settings → Environment Variables → Produção: `NEXT_PUBLIC_SITE_URL=https://vendeo.tech` (anotado antes em C-03); disparar deploy/promover build (valor é inlined no client `forgot-password-form.tsx`). Confirmar no Vercel que `vendeo.tech` é o Production Domain.
+  - R-04 Janela de corte — troca coordenada de Site URL (Supabase) + env + redeploy, **apenas neste momento**:
+    (1) Supabase: trocar Site URL para `https://vendeo.tech` (manter `beta.vendeo.tech` nas Redirect URLs — A3/R-01);
+    (2) Vercel: Settings → Environment Variables → Produção: `NEXT_PUBLIC_SITE_URL=https://vendeo.tech` (valor anterior anotado em C-03);
+    (3) **Redeploy de produção OBRIGATÓRIO a partir da main atual** — o valor é inlined no client `forgot-password-form.tsx` em build-time; sem redeploy da branch de produção atual (git integration main → produção) a env nova não tem efeito;
+    (4) Confirmar no Vercel que `vendeo.tech` é o Production Domain.
+    (1)+(2)+(3) devem ocorrer na mesma janela de corte, antes de considerar `vendeo.tech` como domínio canônico validado no UAT final (checklist U-01..U-13 em C1).
   - R-05 Fase E — Validação pós-deploy: executar o checklist UAT curto (U-01..U-10) em `https://vendeo.tech` e confirmar que `https://beta.vendeo.tech` continua íntegro (U-11).
-  - R-06 Fase F — Monitoramento curto (48h): conferir Supabase Auth Logs (erros de OTP/callback), Vercel Logs do projeto (5xx em `/login`, `/auth/confirm`, `/api/access-requests`, `/dashboard`), execução do cron mensal de créditos (`/api/cron/monthly-credits`), e pelo menos 1 fluxo real de forgot-password + 1 login real.
+  - R-06 Fase F — Monitoramento curto (48h): conferir Supabase Auth Logs (erros de OTP/callback), Vercel Logs do projeto (5xx em `/login`, `/auth/confirm`, `/api/access-requests`, `/dashboard`), e pelo menos 1 fluxo real de forgot-password + 1 login real. A execução do cron mensal de créditos (`/api/cron/monthly-credits`) é **observabilidade extra — NÃO é bloqueador direto da migração de domínio** (roda independente da origem); conferir apenas se o disparo cair na janela.
   - R-07 Fase G — Pós-janela (após D-2, ex.: 30 dias): se D-1 = 301, configurar redirect permanente `beta.vendeo.tech` → `vendeo.tech` (Vercel Redirects ou Edge Config — fase futura dedicada, NÃO nesta quick); remover `beta.vendeo.tech` dos Redirect URLs do Supabase somente após confirmar zero emails pendentes e PWA migrado.
   - R-08 Atualizar a doc operacional (`docs/operations/deploy-checklist.md` + `environment-variables.md` + `SUPABASE-CLOSED-BETA.md` se citar domínios) com os novos valores, e registrar a execução no STATE/SUMMARY.
 
@@ -229,7 +234,7 @@ Planejar — **sem executar nada** — a migração para que **vendeo.tech** se 
   ### C2. Monitoramento curto (48h pós-migração)
   - M-01 Supabase → Authentication → Logs: zero erros novos de OTP/verification relacionados a domínio (comparar com C-09).
   - M-02 Vercel → projeto `vendeo-v3` → Logs: sem 5xx em `/login`, `/auth/confirm`, `/api/access-requests`, `/dashboard`.
-  - M-03 Cron mensal de créditos (`/api/cron/monthly-credits`) executou sem erro no próximo disparo.
+  - M-03 Cron mensal de créditos (`/api/cron/monthly-credits`) executou sem erro no próximo disparo — **observabilidade extra, não bloqueador direto da migração de domínio** (não depende da origem; checar só se cair na janela).
   - M-04 Sem relato de usuário beta com callback/email quebrado (canal de suporte, D-4).
   - M-05 Aos 48h: decisão de manter vendeo.tech canônico OU acionar rollback RB-01..RB-08, registrada no doc de execução.
 
