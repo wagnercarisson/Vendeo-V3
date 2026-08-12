@@ -1,5 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { EconomicParameterService } from "@/lib/economic/economic-parameter-service";
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -29,6 +30,19 @@ export interface MetricsBundle {
 }
 
 export type StoreKind = "production" | "test" | "all";
+
+/**
+ * Delivery markers — eventos registrados no fim de uma entrega (sem chamada
+ * de IA própria), com custo NULL por desenho desde a F38.1 (anti-dupla-
+ * contagem D1/D6). Mesma lista usada nos RPCs/views de apuração
+ * (admin_get_ai_costs e afins) para filtrar APENAS eventos call-level.
+ */
+export const AI_COST_DELIVERY_MARKER_TYPES = [
+  "campaign_pipeline",
+  "visual_signature",
+  "brand_profile_without_logo",
+  "brand_profile_with_logo",
+] as const;
 
 // ─── Bundle cache ──────────────────────────────────────────────────
 
@@ -149,6 +163,82 @@ export async function getAvgCost(
   } catch (e) {
     console.error(
       "[metrics] getAvgCost error",
+      e instanceof Error ? e.message : e,
+    );
+    return null;
+  }
+}
+
+/**
+ * Custo médio de IA por entrega em BRL (D7 — snapshot econômico). Consulta
+ * direta `generation_events` (call-level, mesmo filtro do RPC de apuração):
+ * exclui os 4 delivery markers e exige `operation_run_id IS NOT NULL`
+ * (anti-dupla-contagem D1/D6). Por evento:
+ * `cost = COALESCE(provider_reported_cost_usd, estimated_cost_usd)` e
+ * `rate = usd_brl_rate_at_generation ?? taxa corrente` — a taxa corrente vem
+ * de `economic_parameters.usd_brl_rate` (EconomicParameterService, resolvida
+ * UMA vez), fonte única de conversão (D2); o env deprecado nunca é lido
+ * (D7). `avgBrl = Σ(cost × rate) / N` — conversão POR EVENTO: alterar a taxa
+ * corrente depois não recalcula períodos com snapshot (estabilidade temporal,
+ * T-38.2.1-18). Falha de consulta ou de leitura da taxa corrente → null
+ * (degradação suave, padrão getAvgCost).
+ */
+export async function getAvgCostBrl(
+  hours: number,
+  _storeKind: StoreKind = "production",
+): Promise<number | null> {
+  try {
+    const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+    const { data, error } = await supabaseAdmin
+      .from("generation_events")
+      .select(
+        "provider_reported_cost_usd, estimated_cost_usd, usd_brl_rate_at_generation",
+      )
+      .not("generation_type", "in", AI_COST_DELIVERY_MARKER_TYPES)
+      .not("operation_run_id", "is", null)
+      .gte("created_at", cutoff);
+
+    if (error || !data) {
+      console.error(
+        "[metrics] getAvgCostBrl error",
+        error?.message ?? "no data",
+      );
+      return null;
+    }
+
+    // Taxa corrente: fallback explícito (D7) — resolvida UMA vez; erro real →
+    // degradação suave (null), padrão getAvgCost.
+    let currentRate: number | null = null;
+    try {
+      const resolution = await new EconomicParameterService().getParameter(
+        "usd_brl_rate",
+      );
+      currentRate = resolution.value;
+    } catch (e) {
+      console.error(
+        "[metrics] getAvgCostBrl taxa corrente indisponível",
+        e instanceof Error ? e.message : e,
+      );
+      return null;
+    }
+    if (currentRate === null) return null;
+
+    const rows = Array.isArray(data) ? data : [];
+    const brlCosts: number[] = [];
+    for (const row of rows) {
+      const record = row as Record<string, unknown>;
+      const cost =
+        toNumber(record.provider_reported_cost_usd) ??
+        toNumber(record.estimated_cost_usd);
+      if (cost === null) continue;
+      const rate = toNumber(record.usd_brl_rate_at_generation) ?? currentRate;
+      brlCosts.push(cost * rate);
+    }
+    if (brlCosts.length === 0) return null;
+    return brlCosts.reduce((a, b) => a + b, 0) / brlCosts.length;
+  } catch (e) {
+    console.error(
+      "[metrics] getAvgCostBrl error",
       e instanceof Error ? e.message : e,
     );
     return null;
