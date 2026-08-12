@@ -63,6 +63,17 @@ export class AiCostTracker {
         cost_estimation_note: event.cost?.costEstimationNote ?? null,
         text_component_usd: event.cost?.textComponentUsd ?? null,
         image_tool_component_usd: event.cost?.imageToolComponentUsd ?? null,
+        // F38.2.1 (D1/D2/D3): snapshots econômicos — APENAS valores no evento;
+        // a ORIGEM `captured_at_generation` é definida AQUI pelo tracker a partir
+        // da presença do valor (presente → captured; ausente → NULL). O caller
+        // nunca define origem (anti-spoofing); o tracker nunca grava
+        // backfilled_* nem economic_parameter_fallback (D4 — só leitura).
+        usd_brl_rate_at_generation: event.usdBrlRateAtGeneration ?? null,
+        credit_value_brl_at_generation: event.creditValueBrlAtGeneration ?? null,
+        usd_brl_rate_source_at_generation:
+          event.usdBrlRateAtGeneration != null ? "captured_at_generation" : null,
+        credit_value_brl_source_at_generation:
+          event.creditValueBrlAtGeneration != null ? "captured_at_generation" : null,
         metadata: delivery
           ? { ...(event.metadata ?? {}), duration_is_pipeline: true }
           : (event.metadata ?? {}),

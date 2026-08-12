@@ -131,5 +131,24 @@ export interface AiCostEvent {
   errorType?: string | null;
   tokens?: TokenUsage;
   cost?: CostResolution;
+  /**
+   * F38.2.1 (D2/D3): snapshot CONTÁBIL do câmbio conhecido na geração — valor de
+   * `economic_parameters.usd_brl_rate` resolvido UMA vez no início do run e
+   * propagado às chamadas filhas. Estrutural: continua válido em fases futuras
+   * (custoBrl = custoUsdTotal × taxa snapshotada). NULL quando indisponível
+   * (fallback legacy em leitura — geração nunca bloqueada).
+   * **O caller NÃO define origem** — o tracker grava `captured_at_generation`
+   * quando o valor está presente (ausente → NULL). Apenas valores aqui.
+   */
+  usdBrlRateAtGeneration?: number | null;
+  /**
+   * F38.2.1 (D2/D3): snapshot ESTIMATIVO/fallback do valor configurado do
+   * crédito na geração — `economic_parameters.credit_value_brl` resolvido no
+   * início do run. Usado SOMENTE para derivados estimados
+   * (receitaEstimadaBrl/resultadoEstimadoBrl/margemEstimadaPct) — nunca "receita
+   * real". NULL quando indisponível (fallback legacy). **O caller NÃO define
+   * origem** — o tracker grava `captured_at_generation` (ausente → NULL).
+   */
+  creditValueBrlAtGeneration?: number | null;
   metadata?: Record<string, unknown>;
 }
