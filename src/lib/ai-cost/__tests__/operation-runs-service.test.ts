@@ -12,7 +12,7 @@ import {
   classifySegment,
 } from "../operation-runs-service";
 
-/** Run bruto do RPC — mesmo shape do JSONB de admin_get_ai_operation_runs (38-2-01). */
+/** Run bruto do RPC — mesmo shape do JSONB de admin_get_ai_operation_runs (38-2-01/38-2-1-03). */
 function makeRawRun(overrides: Record<string, unknown> = {}): any {
   return {
     operation_run_id: "11111111-1111-4111-8111-111111111111",
@@ -24,6 +24,12 @@ function makeRawRun(overrides: Record<string, unknown> = {}): any {
     creditos_debitados: "20",
     creditos_estornados: "0",
     creditos_liquidos: "20",
+    // Snapshots econômicos (F38.2.1-03): NULL por default → preserva os testes
+    // existentes de fallback legacy; overrides explícitos para snapshot/backfill.
+    usd_brl_rate_at_generation: null,
+    credit_value_brl_at_generation: null,
+    usd_brl_rate_source_at_generation: null,
+    credit_value_brl_source_at_generation: null,
     duracao_total_ms: "1000",
     chamadas: 2,
     chamadas_success: 2,
@@ -129,7 +135,7 @@ describe("OperationRunsService — derivação monetária BRL (D1/D4)", () => {
     expect(result.runs[0].custoBrl).toBe(50);
   });
 
-  it("receitaOpBrl/resultadoOpBrl/margemOpPct derivados (30, −20, −66.67)", async () => {
+  it("receitaEstimadaBrl/resultadoEstimadoBrl/margemEstimadaPct derivados (30, −20, −66.67)", async () => {
     const { client } = buildClient({
       runs: [makeRawRun({ custo_usd_total: "10", creditos_debitados: "20" })],
     });
@@ -141,12 +147,12 @@ describe("OperationRunsService — derivação monetária BRL (D1/D4)", () => {
     const run = (await service.listRuns({})).runs[0];
 
     expect(run.custoBrl).toBe(50);
-    expect(run.receitaOpBrl).toBe(30);
-    expect(run.resultadoOpBrl).toBe(-20);
-    expect(run.margemOpPct).toBeCloseTo(-66.67, 2);
+    expect(run.receitaEstimadaBrl).toBe(30);
+    expect(run.resultadoEstimadoBrl).toBe(-20);
+    expect(run.margemEstimadaPct).toBeCloseTo(-66.67, 2);
   });
 
-  it("margemOpPct null quando receita 0 (sem divisão por zero)", async () => {
+  it("margemEstimadaPct null quando receita 0 (sem divisão por zero)", async () => {
     const { client } = buildClient({
       runs: [makeRawRun({ creditos_debitados: "0", creditos_liquidos: "0" })],
     });
@@ -154,8 +160,8 @@ describe("OperationRunsService — derivação monetária BRL (D1/D4)", () => {
 
     const run = (await service.listRuns({})).runs[0];
 
-    expect(run.receitaOpBrl).toBe(0);
-    expect(run.margemOpPct).toBeNull();
+    expect(run.receitaEstimadaBrl).toBe(0);
+    expect(run.margemEstimadaPct).toBeNull();
   });
 
   it("falha real do parâmetro econômico → OperationRunsUnavailableError (fail-closed)", async () => {
@@ -192,9 +198,9 @@ describe("OperationRunsService — derivação com estornos — créditos líqui
     expect(run.creditosDebitados).toBe(10); // BRUTO — auditoria preservada
     expect(run.creditosEstornados).toBe(3);
     expect(run.creditosLiquidos).toBe(7);
-    expect(run.receitaOpBrl).toBe(10.5); // 7 × 1.5
-    expect(run.resultadoOpBrl).toBe(-39.5); // 10.5 − 50 (custo 10 USD × 5)
-    expect(run.margemOpPct).toBeCloseTo(-376.19, 2);
+    expect(run.receitaEstimadaBrl).toBe(10.5); // 7 × 1.5
+    expect(run.resultadoEstimadoBrl).toBe(-39.5); // 10.5 − 50 (custo 10 USD × 5)
+    expect(run.margemEstimadaPct).toBeCloseTo(-376.19, 2);
   });
 
   it("full-refund (run falho): bruto 10 / estorno 10 / líquido 0 → receita R$0 e custo de IA permanece (resultado −50)", async () => {
@@ -216,9 +222,9 @@ describe("OperationRunsService — derivação com estornos — créditos líqui
 
     const run = (await service.listRuns({})).runs[0];
 
-    expect(run.receitaOpBrl).toBe(0);
-    expect(run.resultadoOpBrl).toBe(-50); // custo permanece mesmo com receita zerada
-    expect(run.margemOpPct).toBeNull();
+    expect(run.receitaEstimadaBrl).toBe(0);
+    expect(run.resultadoEstimadoBrl).toBe(-50); // custo permanece mesmo com receita zerada
+    expect(run.margemEstimadaPct).toBeNull();
   });
 
   it("estorno > bruto: floor 0 no líquido (RPC GREATEST — nunca negativo) → receita R$0 e margem null, inclusive no summary", async () => {
@@ -241,11 +247,11 @@ describe("OperationRunsService — derivação com estornos — créditos líqui
     const run = result.runs[0];
 
     expect(run.creditosLiquidos).toBe(0);
-    expect(run.receitaOpBrl).toBe(0);
-    expect(run.margemOpPct).toBeNull();
+    expect(run.receitaEstimadaBrl).toBe(0);
+    expect(run.margemEstimadaPct).toBeNull();
     // Summary com receita 0 → margem null (sem divisão por zero)
-    expect(result.summary.receitaOpBrl).toBe(0);
-    expect(result.summary.margemOpPct).toBeNull();
+    expect(result.summary.receitaEstimadaBrl).toBe(0);
+    expect(result.summary.margemEstimadaPct).toBeNull();
   });
 
   it("summary de líquidos: brutos 13 / estornos 3 / líquidos 10 → receita 15, custo 100 (20 USD), resultado −85, margem ≈ −566.67", async () => {
@@ -277,10 +283,147 @@ describe("OperationRunsService — derivação com estornos — créditos líqui
     expect(summary.creditosDebitados).toBe(13); // auditoria: soma dos brutos
     expect(summary.creditosEstornados).toBe(3);
     expect(summary.creditosLiquidos).toBe(10);
-    expect(summary.receitaOpBrl).toBe(15); // 10 líquidos × 1.5 — nunca bruto
+    expect(summary.receitaEstimadaBrl).toBe(15); // 10 líquidos × 1.5 — nunca bruto
     expect(summary.custoBrl).toBe(100); // 20 USD × 5.0
-    expect(summary.resultadoOpBrl).toBe(-85);
-    expect(summary.margemOpPct).toBeCloseTo(-566.67, 2);
+    expect(summary.resultadoEstimadoBrl).toBe(-85);
+    expect(summary.margemEstimadaPct).toBeCloseTo(-566.67, 2);
+  });
+});
+
+describe("OperationRunsService — snapshot econômico por run (F38.2.1-04)", () => {
+  it("run com snapshot captured (5.20/2.00) usa a taxa snapshotada, NÃO a corrente (5.0/1.5) — origens captured + note null", async () => {
+    const { client } = buildClient({
+      runs: [
+        makeRawRun({
+          custo_usd_total: "10",
+          creditos_debitados: "10",
+          creditos_estornados: "3",
+          creditos_liquidos: "7",
+          usd_brl_rate_at_generation: "5.20",
+          credit_value_brl_at_generation: "2.00",
+          usd_brl_rate_source_at_generation: "captured_at_generation",
+          credit_value_brl_source_at_generation: "captured_at_generation",
+        }),
+      ],
+    });
+    const service = new OperationRunsService(
+      client,
+      buildEconomic({ usd_brl_rate: 5.0, credit_value_brl: 1.5 }),
+    );
+
+    const run = (await service.listRuns({})).runs[0];
+
+    expect(run.custoBrl).toBe(52.0); // 10 × 5.20 (snapshot, não 5.0 corrente)
+    expect(run.receitaEstimadaBrl).toBe(14.0); // 7 × 2.00 (snapshot, não 1.5 corrente)
+    expect(run.resultadoEstimadoBrl).toBe(-38.0); // 14 − 52
+    expect(run.margemEstimadaPct).toBeCloseTo(-271.43, 2);
+    expect(run.usdBrlRateAtGeneration).toBe(5.2);
+    expect(run.creditValueBrlAtGeneration).toBe(2.0);
+    expect(run.usdBrlRateSource).toBe("captured_at_generation");
+    expect(run.creditValueSource).toBe("captured_at_generation");
+    expect(run.revenueEstimationNote).toBeNull();
+  });
+
+  it("run com valores backfilled → sources refletem backfilled (NUNCA captured) + note backfilled_historical_approximation", async () => {
+    const { client } = buildClient({
+      runs: [
+        makeRawRun({
+          custo_usd_total: "10",
+          creditos_liquidos: "7",
+          usd_brl_rate_at_generation: "5.18",
+          credit_value_brl_at_generation: "1.00",
+          usd_brl_rate_source_at_generation: "backfilled_seed",
+          credit_value_brl_source_at_generation: "backfilled_from_audit",
+        }),
+      ],
+    });
+    const service = new OperationRunsService(
+      client,
+      buildEconomic({ usd_brl_rate: 5.0, credit_value_brl: 1.5 }),
+    );
+
+    const run = (await service.listRuns({})).runs[0];
+
+    expect(run.custoBrl).toBe(51.8); // 10 × 5.18 (backfilled, não 5.0)
+    expect(run.receitaEstimadaBrl).toBe(7.0); // 7 × 1.00 (backfilled, não 1.5)
+    expect(run.usdBrlRateSource).toBe("backfilled_seed");
+    expect(run.creditValueSource).toBe("backfilled_from_audit");
+    expect(run.creditValueSource).not.toBe("captured_at_generation");
+    expect(run.revenueEstimationNote).toBe("backfilled_historical_approximation");
+  });
+
+  it("run SEM valor persistido → fallback corrente 5.0/1.5 com origens economic_parameter_fallback + note estimated_from_admin_credit_value", async () => {
+    const { client } = buildClient({
+      runs: [makeRawRun({ custo_usd_total: "10", creditos_liquidos: "7" })],
+    });
+    const service = new OperationRunsService(
+      client,
+      buildEconomic({ usd_brl_rate: 5.0, credit_value_brl: 1.5 }),
+    );
+
+    const run = (await service.listRuns({})).runs[0];
+
+    expect(run.custoBrl).toBe(50); // 10 × 5.0 (corrente — fallback explícito)
+    expect(run.receitaEstimadaBrl).toBe(10.5); // 7 × 1.5 (corrente — fallback explícito)
+    expect(run.usdBrlRateAtGeneration).toBeNull();
+    expect(run.creditValueBrlAtGeneration).toBeNull();
+    expect(run.usdBrlRateSource).toBe("economic_parameter_fallback");
+    expect(run.creditValueSource).toBe("economic_parameter_fallback");
+    expect(run.revenueEstimationNote).toBe("estimated_from_admin_credit_value");
+  });
+
+  it("receita estimada 0 (líquidos 0) → margemEstimadaPct null; resultadoEstimadoBrl = −custoBrl", async () => {
+    const { client } = buildClient({
+      runs: [
+        makeRawRun({
+          custo_usd_total: "10",
+          creditos_debitados: "10",
+          creditos_estornados: "10",
+          creditos_liquidos: "0",
+          usd_brl_rate_at_generation: "5.20",
+          credit_value_brl_at_generation: "2.00",
+          usd_brl_rate_source_at_generation: "captured_at_generation",
+          credit_value_brl_source_at_generation: "captured_at_generation",
+        }),
+      ],
+    });
+    const service = new OperationRunsService(
+      client,
+      buildEconomic({ usd_brl_rate: 5.0, credit_value_brl: 1.5 }),
+    );
+
+    const run = (await service.listRuns({})).runs[0];
+
+    expect(run.receitaEstimadaBrl).toBe(0);
+    expect(run.resultadoEstimadoBrl).toBe(-52); // 0 − 52 (custo de IA permanece)
+    expect(run.margemEstimadaPct).toBeNull();
+  });
+
+  it("receita estimada usa LÍQUIDOS (estorno descontado): líquidos 7 → 14.00, nunca bruto (10 × 2 = 20)", async () => {
+    const { client } = buildClient({
+      runs: [
+        makeRawRun({
+          custo_usd_total: "10",
+          creditos_debitados: "10",
+          creditos_estornados: "3",
+          creditos_liquidos: "7",
+          usd_brl_rate_at_generation: "5.20",
+          credit_value_brl_at_generation: "2.00",
+          usd_brl_rate_source_at_generation: "captured_at_generation",
+          credit_value_brl_source_at_generation: "captured_at_generation",
+        }),
+      ],
+    });
+    const service = new OperationRunsService(
+      client,
+      buildEconomic({ usd_brl_rate: 5.0, credit_value_brl: 1.5 }),
+    );
+
+    const run = (await service.listRuns({})).runs[0];
+
+    expect(run.creditosLiquidos).toBe(7);
+    expect(run.receitaEstimadaBrl).toBe(14); // 7 líquidos × 2.00 — nunca 10 bruto × 2 = 20
+    expect(run.receitaEstimadaBrl).not.toBe(20);
   });
 });
 
@@ -457,8 +600,8 @@ describe("OperationRunsService — aggregations (D3/D9)", () => {
     expect(testSeg).toBeDefined();
     expect(testSeg.entregas).toBe(1);
     expect(testSeg.custoBrl).toBe(50);
-    expect(testSeg.resultadoOpBrl).toBe(-20);
-    expect(testSeg.margemOpPct).toBeCloseTo(-66.67, 2);
+    expect(testSeg.resultadoEstimadoBrl).toBe(-20);
+    expect(testSeg.margemEstimadaPct).toBeCloseTo(-66.67, 2);
     expect(testSeg.taxaErro).toBe(0);
     expect(aggregations.bySegment.paid).toMatchObject({
       segment: "paid",
@@ -480,9 +623,9 @@ describe("OperationRunsService — aggregations (D3/D9)", () => {
     // summary BRL sobre o conjunto inteiro (D1/D4): custo (10+20)×5 = 150,
     // receita (20+10)×1.5 = 45, resultado = 45−150 = −105, margem ≈ −233.33
     expect(summary.custoBrl).toBe(150);
-    expect(summary.receitaOpBrl).toBe(45);
-    expect(summary.resultadoOpBrl).toBe(-105);
-    expect(summary.margemOpPct).toBeCloseTo(-233.33, 1);
+    expect(summary.receitaEstimadaBrl).toBe(45);
+    expect(summary.resultadoEstimadoBrl).toBe(-105);
+    expect(summary.margemEstimadaPct).toBeCloseTo(-233.33, 1);
   });
 
   it("summary/aggregations refletem os 60 runs com page=2 (não a página 2)", async () => {
@@ -598,9 +741,9 @@ describe("OperationRunsService — getRunDetail (D4)", () => {
     expect(detail.run?.creditosDebitados).toBe(10); // BRUTO — auditoria
     expect(detail.run?.creditosEstornados).toBe(3);
     expect(detail.run?.creditosLiquidos).toBe(7);
-    expect(detail.run?.receitaOpBrl).toBe(10.5); // 7 × 1.5
-    expect(detail.run?.resultadoOpBrl).toBe(-14.5); // 10.5 − 25
-    expect(detail.run?.margemOpPct).toBeCloseTo(-138.1, 1);
+    expect(detail.run?.receitaEstimadaBrl).toBe(10.5); // 7 × 1.5
+    expect(detail.run?.resultadoEstimadoBrl).toBe(-14.5); // 10.5 − 25
+    expect(detail.run?.margemEstimadaPct).toBeCloseTo(-138.1, 1);
     // eventos com BRL/badges/componentes por evento
     expect(detail.events).toHaveLength(2);
     expect(detail.events[0].estimatedCostBrl).toBeCloseTo(0.05, 5);
