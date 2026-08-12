@@ -555,7 +555,7 @@ Desdobramento da F38.2, adicionados via OpenSpec (`openspec/changes/fase-38-2-1-
 - [x] **F38.2.1-08**: RPCs de operation runs expõem os snapshots **e origens** por run/evento (contrato backward-compatible)
 - [x] **F38.2.1-09**: `deriveSummary` soma BRL por run (não re-deriva com taxa única); `deriveAggregations` mantida
 - [ ] **F38.2.1-10**: `/admin/metrics` usa snapshot quando disponível; não recalcula histórico; nunca `VENDEO_USD_BRL_RATE`
-- [ ] **F38.2.1-11**: UI do painel e Configurações Econômicas informam que alteração vale para novas gerações e não recalcula histórico; origem do valor exibida (capturado vs reconstruído vs fallback)
+- [x] **F38.2.1-11**: UI do painel e Configurações Econômicas informam que alteração vale para novas gerações e não recalcula histórico; origem do valor exibida (capturado vs reconstruído vs fallback)
 - [x] **F38.2.1-12**: Backfill aproximado idempotente via `economic_parameter_audit` (LAG) com fallback seed `1.00`, preenchendo valor + origem (`backfilled_from_audit`/`backfilled_seed`)
 - [x] **F38.2.1-13**: Fallback legacy explícito para eventos sem valor persistido (nunca silencioso; valor backfilled nunca tratado como captured)
 - [ ] **F38.2.1-14**: Testes de snapshot/fallback/estabilidade temporal/nomenclatura/origem + gates verdes

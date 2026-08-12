@@ -4,14 +4,14 @@ milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 current_phase: 38.2.1
 status: executing
-last_updated: "2026-08-12T13:33:00.000Z"
+last_updated: "2026-08-12T16:48:32.000Z"
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 22
-  completed_plans: 19
-  percent: 50
-stopped_at: "Completed 38-2-1-04-PLAN.md"
+  completed_plans: 20
+  percent: 91
+stopped_at: "Completed 38-2-1-05-PLAN.md"
 ---
 
 # Project State
@@ -155,6 +155,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 | Phase 38.2.1-economic-snapshot P38-2-1-02 | 14min | 3 tasks | 15 files |
 | Phase 38.2.1-economic-snapshot P38-2-1-03 | 14min | 2 tasks | 1 files |
 | Phase 38.2.1-economic-snapshot P38-2-1-04 | 15min | 3 tasks | 7 files |
+| Phase 38.2.1-economic-snapshot P38-2-1-05 | 8min | 3 tasks | 9 files |
 
 ### Phase 19 — Onboarding & Estados Vazios ✅
 
@@ -454,8 +455,8 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 38.2.1 (economic-snapshot) — IN EXECUTION (4/7 plans)
-Plan: 38-2-1-04 ✅ — OperationRunsService deriva BRL com SNAPSHOT do run/evento (D5): deriveBrl `snapshot ?? corrente` com fallback legacy EXPLÍCITO (`usdBrlRateSource`/`creditValueSource` union 4 valores + `revenueEstimationNote`); contrato renomeado (D8) receitaEstimadaBrl/resultadoEstimadoBrl/margemEstimadaPct; deriveSummary soma BRL JÁ derivados por run (`sumValues(runs.map)`) com origens agregadas (fallback > backfilled > captured); mapEvent com snapshot por evento (estimatedCostBrl = usd × snapshot do evento ?? corrente); 38 testes verdes + estabilidade temporal (corrente 6.00 não muda histórico 5.20/2.00) + typecheck/lint limpos; próximo: 38-2-1-05 (api-ui-labels)
+Phase: 38.2.1 (economic-snapshot) — IN EXECUTION (5/7 plans)
+Plan: 38-2-1-05 ✅ — API/UI sob o contrato renomeado (D8) + origem do valor + aviso: testes das 2 rotas de operation runs com receitaEstimadaBrl/resultadoEstimadoBrl/margemEstimadaPct + snapshots + origens (captured/backfilled/fallback) + revenueEstimationNote (route.ts × 2 intocadas — pass-through); painel /admin/ai-operation-costs com labels "Receita estimada"/"Resultado estimado"/"Margem estimada" (KPIs, tabela, drilldown, agregados), badge de origem por card/linha/câmbio de evento (fallback → "estimado de parâmetro atual"/"parâmetro atual (fallback)"; backfilled → "reconstruído de histórico"), aviso fixo "Alterações nos parâmetros econômicos valem para novas gerações e não recalculam o histórico exibido" (F38.2.1-11) + legend "Estimativas operacionais — não custo financeiro reconciliado"; 41 testes verdes no run-alvo (19 rotas + 22 UI), 150 na regressão das áreas tocadas, typecheck/lint limpos; próximo: 38-2-1-06 (admin-metrics-snapshot)
 v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36, 38 e 38.1 concluídas. F38 (Tabela de Custos por Operação, v1.5) concluída — 8/8 plans, 1597 testes, UAT 4/4; F38.1 (Apuração de Custos de IA por Entrega, desdobramento da F38) **CONCLUÍDA** — 11/11 plans, 1713 testes, UAT validado, **fechada como camada de estimativa operacional granular** (ajuste provisório da tool image_generation `0.065` = estimativa beta provisória, não custo real; reconciliação financeira real na próxima fase), fonte da verdade `openspec/changes/fase-38-1-ai-cost-accounting/`; **F38.2 (Admin de Custos Operacionais + Configurações Econômicas, desdobramento da F38) em EXECUÇÃO — 10/11 plans** — painel `/admin/ai-operation-costs` (KPIs/filtros/tabela/drilldown/segmentos) + `economic_parameters` configuráveis + badges de confiança + correção `/admin/metrics`, fonte `openspec/changes/fase-38-2-admin-custos-operacionais/`; 38-2-01 ✅ migrations/db push (schema econômico + RPCs de runs no remoto), 38-2-02 ✅ tipos econômicos + EconomicParameterService fail-open/fail-closed + 10 testes (base das rotas 38-2-04/05/06/09), 38-2-03 ✅ AiCostTracker persiste 4 campos de confiança (D5), 38-2-04 ✅ API GET/PUT /api/admin/economic-parameters (zod + RPC admin_set_economic_parameter, 200/400/403/500, idempotência, 9 testes da rota, sem endpoint público), 38-2-05 ✅ OperationRunsService server-only (BRL D1/D4 via EconomicParameterService + badges D5 por evento/entrega + segmentação classifySegment D9 com filtro e re-paginação + storeName/owner D3 + 8 agregados D3/D9 sobre o conjunto filtrado inteiro + getRunDetail D4 com BRL/badges/componentes por evento; 20 testes, typecheck/lint limpos), 38-2-06 ✅ API GET /api/admin/ai-operation-runs (lista) + GET /api/admin/ai-operation-runs/[operationRunId] (detalhe) com AiOperationRunsQuerySchema (janela default 90d/max 365d → 400) delegando 100% ao OperationRunsService (BRL/badge/segmento nunca na rota) + 13 testes (tarefa 12.4, piso 11; regressão 1804 testes); **gap closure UAT (plans 12-15) CONCLUÍDO — verificação final: 1839 testes + 4 gates verdes + UAT manual 12/12 aprovado**; F37 (Revisão e Aprovação da Arte, v1.5, experimento beta) em planejamento futuro; F39 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37 → F39). **38-2-10 OK: verificacao I1-I6 em banco real (script 50/50 asserts) + gates verdes (vitest 1832/1832, typecheck, lint, build) + UAT 13.3 coletado para harvest end-of-phase (I1-I6 documentados em 38-2-VERIFICATION.md)**. **38-2-12 OK (gap UAT estornos): migration 20260811000001 com CREATE OR REPLACE dos RPCs admin_get_ai_operation_runs/_events expondo creditos_estornados (refunds via reference→deduction no ledger) e creditos_liquidos = max(bruto−estorno, 0) por run E no summary/detalhe — creditos_debitados BRUTO inalterado, view F38.1 intocada; db push aplicado no remoto (validado via REST: estornados=3/liquidos=17 em 20 runs/90d); I5 estendido com 13 asserts novos → 63/63 asserts 0 falhas em banco real; gates verdes (vitest 1834/1834, typecheck/lint/build exit 0)**.
 
 ### Phase 36 — Onboarding: Navegação por Abas ✅ Complete
@@ -678,6 +679,8 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 
 ## Decisions
 
+- [Phase 38.2.1-economic-snapshot]: Asserts negativos (not.toContain('receitaOpBrl'/'receitaRealBrl')) nos testes das rotas materializam o grep-gate D8 como contrato testável — a resposta NUNCA contém nomes proibidos; as ocorrências dessas strings nos testes são intencionais (verificação), não fixtures (38-2-1-05)
+- [Phase 38.2.1-economic-snapshot]: Fixtures de UI (makeRun/SUMMARY/makeListResult) com default snapshot CAPTURED (5.0/1.0, captured_at_generation, note null) — cenário legado (fallback) vira divergência explícita; origem exibida na UI exclusivamente do contrato do service via sourceOriginLabel (a UI nunca infere — T-38.2.1-14/15); data-testid/data-origin no wrapper div porque o Badge do design system não repassa props (38-2-1-05)
 - [Phase 38.2.1-economic-snapshot]: Snapshot do run = 1º evento call-level com a coluna de valor preenchida (subquery correlacionada ORDER BY created_at ASC LIMIT 1); a origem correspondente usa o MESMO predicado (coluna de VALOR IS NOT NULL) — determinístico, valor e origem da mesma linha (T-38.2.1-09, D6) (38-2-1-03)
 - [Phase 38.2.1-economic-snapshot]: RPCs continuam sem derivar BRL (D1/D5) — CREATE OR REPLACE estritamente aditivo (corpo copiado de 20260811000001 + campos no fim de projeções/JSON); contrato backward-compatible, nada removido; REVOKE/GRANT service_role e assinaturas p_* preservados (38-2-1-03)
 - [Phase 38.2.1-economic-snapshot]: Push via pooler sem token no ambiente (link gvbzwihwgzujwsviufgy) — dry-run "Would push" → push exit 0 → dry-run "Remote database is up to date."; validação REST service_role: 20 runs com os 4 campos (5.18/backfilled_seed, 1.00/backfilled_seed) (38-2-1-03)
