@@ -31,6 +31,19 @@ export type Segment =
   | "manual/admin"
   | "unknown";
 
+/** Origem do valor econômico usado na derivação (D1/D4/D8) — 4 valores. */
+export type EconomicValueSource =
+  | "captured_at_generation"
+  | "backfilled_from_audit"
+  | "backfilled_seed"
+  | "economic_parameter_fallback";
+
+/** Nota de estimativa da receita (D8) — null quando o valor é snapshot captured. */
+export type RevenueEstimationNote =
+  | "estimated_from_admin_credit_value"
+  | "backfilled_historical_approximation"
+  | null;
+
 /** Filtros da listagem de entregas (D3/D4) — espelham os parâmetros p_* do RPC. */
 export interface OperationRunsFilters {
   periodStart?: string | null;
@@ -47,7 +60,7 @@ export interface OperationRunsFilters {
   pageSize?: number;
 }
 
-/** Entrega derivada (lista) — BRL/receita/margem (D1/D4), badge (D5), segmento (D9). */
+/** Entrega derivada (lista) — BRL/receita estimada/margem (D1/D4/D8), badge (D5), segmento (D9), snapshots (F38.2.1). */
 export interface OperationRun {
   operationRunId: string;
   operationRunType: string | null;
@@ -61,9 +74,14 @@ export interface OperationRun {
   creditosDebitados: number | null;
   creditosEstornados: number | null;
   creditosLiquidos: number | null;
-  receitaOpBrl: number | null;
-  resultadoOpBrl: number | null;
-  margemOpPct: number | null;
+  receitaEstimadaBrl: number | null;
+  resultadoEstimadoBrl: number | null;
+  margemEstimadaPct: number | null;
+  usdBrlRateAtGeneration: number | null;
+  creditValueBrlAtGeneration: number | null;
+  usdBrlRateSource: EconomicValueSource;
+  creditValueSource: EconomicValueSource;
+  revenueEstimationNote: RevenueEstimationNote;
   duracaoTotalMs: number | null;
   chamadas: number;
   chamadasSuccess: number;
@@ -83,9 +101,13 @@ export interface OperationRunsSummary {
   creditosDebitados: number | null;
   creditosEstornados: number | null;
   creditosLiquidos: number | null;
-  receitaOpBrl: number | null;
-  resultadoOpBrl: number | null;
-  margemOpPct: number | null;
+  receitaEstimadaBrl: number | null;
+  resultadoEstimadoBrl: number | null;
+  margemEstimadaPct: number | null;
+  /** Origem dominante do conjunto (D5/F38.2.1) — se há fallback, prevalece; senão backfilled; senão captured. */
+  usdBrlRateSource?: EconomicValueSource;
+  creditValueSource?: EconomicValueSource;
+  revenueEstimationNote?: RevenueEstimationNote;
   tempoMedioMs: number | null;
   p95Ms: number | null;
   totalEntregas: number;
@@ -93,13 +115,13 @@ export interface OperationRunsSummary {
   entregasSucesso: number;
 }
 
-/** Agregado por segmento econômico (D9) — custo/resultado/margem/taxa de erro. */
+/** Agregado por segmento econômico (D9) — custo/resultado estimado/margem/taxa de erro. */
 export interface SegmentAggregation {
   segment: Segment;
   entregas: number;
   custoBrl: number | null;
-  resultadoOpBrl: number | null;
-  margemOpPct: number | null;
+  resultadoEstimadoBrl: number | null;
+  margemEstimadaPct: number | null;
   taxaErro: number | null;
 }
 
@@ -137,7 +159,7 @@ export interface OperationRunsListResult {
   total: number;
 }
 
-/** Evento call-level derivado (detalhe, D4) — BRL + badge por evento. */
+/** Evento call-level derivado (detalhe, D4) — BRL + badge por evento + snapshot do evento (F38.2.1). */
 export interface OperationRunEvent {
   generationType: string | null;
   provider: string | null;
@@ -160,6 +182,11 @@ export interface OperationRunEvent {
   costEstimationNote: string | null;
   metadata: Record<string, unknown> | null;
   badge: CostBadge;
+  /** Snapshot econômico do evento (F38.2.1-03) — null quando o evento não persistiu valor. */
+  usdBrlRateAtGeneration: number | null;
+  creditValueBrlAtGeneration: number | null;
+  usdBrlRateSourceAtGeneration: EconomicValueSource | null;
+  creditValueBrlSourceAtGeneration: EconomicValueSource | null;
 }
 
 export interface OperationRunDetail {
@@ -198,6 +225,11 @@ interface RawOperationRun {
   has_estimated?: boolean | null;
   /** Etapa (generation_type) por run — presente apenas quando o RPC expõe; senão "unknown". */
   generation_type?: string | null;
+  /** Snapshot econômico do run + origens (F38.2.1-03 — 1º evento com valor preenchido). */
+  usd_brl_rate_at_generation?: string | number | null;
+  credit_value_brl_at_generation?: string | number | null;
+  usd_brl_rate_source_at_generation?: string | null;
+  credit_value_brl_source_at_generation?: string | null;
 }
 
 /** Evento bruto do RPC admin_get_ai_operation_run_events (detalhe, D4). */
@@ -222,6 +254,11 @@ interface RawEvent {
   cost_formula_version?: string | null;
   cost_estimation_note?: string | null;
   metadata?: Record<string, unknown> | null;
+  /** Snapshot econômico do evento (F38.2.1-03) + origens — null quando não persistido. */
+  usd_brl_rate_at_generation?: string | number | null;
+  credit_value_brl_at_generation?: string | number | null;
+  usd_brl_rate_source_at_generation?: string | null;
+  credit_value_brl_source_at_generation?: string | null;
 }
 
 /** Run do RPC de eventos — sem evidências de segmento/insumos de badge (mais enxuto). */
@@ -238,6 +275,11 @@ interface RawDetailRun {
   chamadas_success?: string | number | null;
   regeneracoes?: string | number | null;
   p95_ms?: string | number | null;
+  /** Snapshot econômico do run de detalhe (F38.2.1-03) + origens. */
+  usd_brl_rate_at_generation?: string | number | null;
+  credit_value_brl_at_generation?: string | number | null;
+  usd_brl_rate_source_at_generation?: string | null;
+  credit_value_brl_source_at_generation?: string | null;
 }
 
 /** NUMERIC do Postgres chega como string | number — normaliza para number. */
@@ -245,6 +287,24 @@ function toNumber(value: unknown): number | null {
   if (value === null || value === undefined) return null;
   const n = typeof value === "number" ? value : Number(value);
   return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Normaliza a origem persistida (F38.2.1) para a union de 4 valores. Valor
+ * inválido/ausente → null (o chamador aplica o fallback de leitura). A origem
+ * persistida nunca é "economic_parameter_fallback" (rejeitada pelo CHECK do
+ * banco — fallback é exclusivamente derivado em leitura).
+ */
+function normalizeSource(value: string | null | undefined): EconomicValueSource | null {
+  if (
+    value === "captured_at_generation" ||
+    value === "backfilled_from_audit" ||
+    value === "backfilled_seed" ||
+    value === "economic_parameter_fallback"
+  ) {
+    return value;
+  }
+  return null;
 }
 
 /** Limite defensivo de páginas na paginação progressiva (100 runs/página). */
@@ -353,36 +413,78 @@ function percentile(values: number[], p: number): number | null {
 }
 
 /**
- * Derivação monetária BRL (D1/D4) — fórmulas centralizadas no service, nunca no SQL.
- * BRUTO (creditos_debitados) = auditoria de deduções; LÍQUIDO (creditos_liquidos)
- * = bruto − estornos (floor 0, aplicado pelo RPC 38-2-12 via GREATEST) usado para
- * receita/resultado/margem — run falho 100% estornado deriva receita R$0 e mantém
- * o custo de IA (resultado negativo).
+ * Derivação monetária BRL (D1/D4/D5) — fórmulas centralizadas no service, nunca no SQL.
+ * Snapshot econômico do run (F38.2.1) com fallback legacy EXPLÍCITO e marcado:
+ *   custoBrl = custoUsd × (usd_brl_rate_at_generation ?? corrente)
+ *   receitaEstimadaBrl = creditosLiquidos × (credit_value_brl_at_generation ?? corrente)
+ *   resultadoEstimadoBrl = receitaEstimadaBrl − custoBrl
+ *   margemEstimadaPct = receitaEstimadaBrl > 0 ? (resultado/receita)×100 : null
+ * Origem (D1/D4): raw source ?? "economic_parameter_fallback"; note derivada da
+ * origem do crédito. LÍQUIDO (creditos_liquidos) = bruto − estornos (floor 0,
+ * RPC 38-2-12 via GREATEST) usado para receita/resultado/margem — run falho
+ * 100% estornado deriva receita R$0 e mantém o custo de IA (resultado negativo).
  */
 function deriveBrl(
   raw: Pick<
     RawOperationRun,
-    "custo_usd_total" | "creditos_debitados" | "creditos_estornados" | "creditos_liquidos"
+    | "custo_usd_total"
+    | "creditos_debitados"
+    | "creditos_estornados"
+    | "creditos_liquidos"
+    | "usd_brl_rate_at_generation"
+    | "credit_value_brl_at_generation"
+    | "usd_brl_rate_source_at_generation"
+    | "credit_value_brl_source_at_generation"
   >,
-  usdBrlRate: number,
-  creditValueBrl: number,
+  params: { usdBrlRate: number; creditValueBrl: number },
 ): {
   custoBrl: number | null;
-  receitaOpBrl: number | null;
-  resultadoOpBrl: number | null;
-  margemOpPct: number | null;
+  receitaEstimadaBrl: number | null;
+  resultadoEstimadoBrl: number | null;
+  margemEstimadaPct: number | null;
+  usdBrlRateAtGeneration: number | null;
+  creditValueBrlAtGeneration: number | null;
+  usdBrlRateSource: EconomicValueSource;
+  creditValueSource: EconomicValueSource;
+  revenueEstimationNote: RevenueEstimationNote;
 } {
   const custoUsd = toNumber(raw.custo_usd_total);
   const creditos = toNumber(raw.creditos_liquidos);
-  const custoBrl = custoUsd !== null ? custoUsd * usdBrlRate : null;
-  const receitaOpBrl = creditos !== null ? creditos * creditValueBrl : null;
-  const resultadoOpBrl =
-    custoBrl !== null && receitaOpBrl !== null ? receitaOpBrl - custoBrl : null;
-  const margemOpPct =
-    receitaOpBrl !== null && receitaOpBrl > 0 && resultadoOpBrl !== null
-      ? (resultadoOpBrl / receitaOpBrl) * 100
+  // Snapshot ?? corrente — fallback explícito (nunca assumir valor sem origem)
+  const usdRate = toNumber(raw.usd_brl_rate_at_generation) ?? params.usdBrlRate;
+  const creditValue =
+    toNumber(raw.credit_value_brl_at_generation) ?? params.creditValueBrl;
+  const custoBrl = custoUsd !== null ? custoUsd * usdRate : null;
+  const receitaEstimadaBrl = creditos !== null ? creditos * creditValue : null;
+  const resultadoEstimadoBrl =
+    custoBrl !== null && receitaEstimadaBrl !== null
+      ? receitaEstimadaBrl - custoBrl
       : null;
-  return { custoBrl, receitaOpBrl, resultadoOpBrl, margemOpPct };
+  const margemEstimadaPct =
+    receitaEstimadaBrl !== null && receitaEstimadaBrl > 0 && resultadoEstimadoBrl !== null
+      ? (resultadoEstimadoBrl / receitaEstimadaBrl) * 100
+      : null;
+  const usdBrlRateSource =
+    normalizeSource(raw.usd_brl_rate_source_at_generation) ?? "economic_parameter_fallback";
+  const creditValueSource =
+    normalizeSource(raw.credit_value_brl_source_at_generation) ?? "economic_parameter_fallback";
+  const revenueEstimationNote: RevenueEstimationNote =
+    creditValueSource === "economic_parameter_fallback"
+      ? "estimated_from_admin_credit_value"
+      : creditValueSource.startsWith("backfilled")
+        ? "backfilled_historical_approximation"
+        : null;
+  return {
+    custoBrl,
+    receitaEstimadaBrl,
+    resultadoEstimadoBrl,
+    margemEstimadaPct,
+    usdBrlRateAtGeneration: toNumber(raw.usd_brl_rate_at_generation),
+    creditValueBrlAtGeneration: toNumber(raw.credit_value_brl_at_generation),
+    usdBrlRateSource,
+    creditValueSource,
+    revenueEstimationNote,
+  };
 }
 
 /**
@@ -598,16 +700,12 @@ export class OperationRunsService {
     return { run, events };
   }
 
-  /** Run do detalhe — resumo com BRL derivado via deriveBrl (líquidos, D1/D4); sem evidências de segmento no RPC de eventos. */
+  /** Run do detalhe — resumo com BRL derivado via deriveBrl (líquidos, D1/D4/D8); sem evidências de segmento no RPC de eventos. */
   private mapDetailRun(
     raw: RawDetailRun,
     params: { usdBrlRate: number; creditValueBrl: number },
   ): OperationRun {
-    const { custoBrl, receitaOpBrl, resultadoOpBrl, margemOpPct } = deriveBrl(
-      raw,
-      params.usdBrlRate,
-      params.creditValueBrl,
-    );
+    const derived = deriveBrl(raw, params);
     return {
       operationRunId: raw.operation_run_id,
       operationRunType: null,
@@ -617,13 +715,18 @@ export class OperationRunsService {
       createdAt: raw.created_at ?? null,
       deliveryStatus: raw.delivery_status ?? null,
       custoUsdTotal: toNumber(raw.custo_usd_total),
-      custoBrl,
+      custoBrl: derived.custoBrl,
       creditosDebitados: toNumber(raw.creditos_debitados),
       creditosEstornados: toNumber(raw.creditos_estornados),
       creditosLiquidos: toNumber(raw.creditos_liquidos),
-      receitaOpBrl,
-      resultadoOpBrl,
-      margemOpPct,
+      receitaEstimadaBrl: derived.receitaEstimadaBrl,
+      resultadoEstimadoBrl: derived.resultadoEstimadoBrl,
+      margemEstimadaPct: derived.margemEstimadaPct,
+      usdBrlRateAtGeneration: derived.usdBrlRateAtGeneration,
+      creditValueBrlAtGeneration: derived.creditValueBrlAtGeneration,
+      usdBrlRateSource: derived.usdBrlRateSource,
+      creditValueSource: derived.creditValueSource,
+      revenueEstimationNote: derived.revenueEstimationNote,
       duracaoTotalMs: toNumber(raw.duracao_total_ms),
       chamadas: toNumber(raw.chamadas) ?? 0,
       chamadasSuccess: toNumber(raw.chamadas_success) ?? 0,
@@ -637,12 +740,14 @@ export class OperationRunsService {
     };
   }
 
-  /** Evento call-level derivado — BRL + badge + componentes de custo por evento (D4/D5). */
+  /** Evento call-level derivado — BRL + badge + componentes + snapshot do evento (D4/D5/F38.2.1). */
   private mapEvent(
     raw: RawEvent,
     params: { usdBrlRate: number },
   ): OperationRunEvent {
     const estimatedCostUsd = toNumber(raw.estimated_cost_usd);
+    // Snapshot do evento ?? corrente — mesma semântica D1/D5 do deriveBrl
+    const usdRate = toNumber(raw.usd_brl_rate_at_generation) ?? params.usdBrlRate;
     return {
       generationType: raw.generation_type ?? null,
       provider: raw.provider ?? null,
@@ -657,8 +762,7 @@ export class OperationRunsService {
       cachedInputTokens: toNumber(raw.cached_input_tokens),
       imageTokens: toNumber(raw.image_tokens),
       estimatedCostUsd,
-      estimatedCostBrl:
-        estimatedCostUsd !== null ? estimatedCostUsd * params.usdBrlRate : null,
+      estimatedCostBrl: estimatedCostUsd !== null ? estimatedCostUsd * usdRate : null,
       textComponentUsd: toNumber(raw.text_component_usd),
       imageToolComponentUsd: toNumber(raw.image_tool_component_usd),
       costSource: raw.cost_source ?? null,
@@ -666,6 +770,12 @@ export class OperationRunsService {
       costEstimationNote: raw.cost_estimation_note ?? null,
       metadata: raw.metadata ?? null,
       badge: deriveEventBadge(raw.cost_source, raw.cost_estimation_note),
+      usdBrlRateAtGeneration: toNumber(raw.usd_brl_rate_at_generation),
+      creditValueBrlAtGeneration: toNumber(raw.credit_value_brl_at_generation),
+      usdBrlRateSourceAtGeneration: normalizeSource(raw.usd_brl_rate_source_at_generation),
+      creditValueBrlSourceAtGeneration: normalizeSource(
+        raw.credit_value_brl_source_at_generation,
+      ),
     };
   }
 
@@ -702,11 +812,7 @@ export class OperationRunsService {
     params: { usdBrlRate: number; creditValueBrl: number },
     store?: { name: string | null; ownerId: string | null },
   ): OperationRun {
-    const { custoBrl, receitaOpBrl, resultadoOpBrl, margemOpPct } = deriveBrl(
-      raw,
-      params.usdBrlRate,
-      params.creditValueBrl,
-    );
+    const derived = deriveBrl(raw, params);
     const { segment, confidence } = classifySegment(raw);
     return {
       operationRunId: raw.operation_run_id,
@@ -717,13 +823,18 @@ export class OperationRunsService {
       createdAt: raw.created_at ?? null,
       deliveryStatus: raw.delivery_status ?? null,
       custoUsdTotal: toNumber(raw.custo_usd_total),
-      custoBrl,
+      custoBrl: derived.custoBrl,
       creditosDebitados: toNumber(raw.creditos_debitados),
       creditosEstornados: toNumber(raw.creditos_estornados),
       creditosLiquidos: toNumber(raw.creditos_liquidos),
-      receitaOpBrl,
-      resultadoOpBrl,
-      margemOpPct,
+      receitaEstimadaBrl: derived.receitaEstimadaBrl,
+      resultadoEstimadoBrl: derived.resultadoEstimadoBrl,
+      margemEstimadaPct: derived.margemEstimadaPct,
+      usdBrlRateAtGeneration: derived.usdBrlRateAtGeneration,
+      creditValueBrlAtGeneration: derived.creditValueBrlAtGeneration,
+      usdBrlRateSource: derived.usdBrlRateSource,
+      creditValueSource: derived.creditValueSource,
+      revenueEstimationNote: derived.revenueEstimationNote,
       duracaoTotalMs: toNumber(raw.duracao_total_ms),
       chamadas: toNumber(raw.chamadas) ?? 0,
       chamadasSuccess: toNumber(raw.chamadas_success) ?? 0,
@@ -767,17 +878,17 @@ export class OperationRunsService {
         segment: run.segment,
         entregas: 0,
         custoBrl: null,
-        resultadoOpBrl: null,
-        margemOpPct: null,
+        resultadoEstimadoBrl: null,
+        margemEstimadaPct: null,
         taxaErro: null,
       });
       seg.entregas += 1;
       if (run.custoBrl !== null) seg.custoBrl = (seg.custoBrl ?? 0) + run.custoBrl;
-      if (run.resultadoOpBrl !== null) {
-        seg.resultadoOpBrl = (seg.resultadoOpBrl ?? 0) + run.resultadoOpBrl;
+      if (run.resultadoEstimadoBrl !== null) {
+        seg.resultadoEstimadoBrl = (seg.resultadoEstimadoBrl ?? 0) + run.resultadoEstimadoBrl;
       }
-      if (run.receitaOpBrl !== null) {
-        segReceita[run.segment] = (segReceita[run.segment] ?? 0) + run.receitaOpBrl;
+      if (run.receitaEstimadaBrl !== null) {
+        segReceita[run.segment] = (segReceita[run.segment] ?? 0) + run.receitaEstimadaBrl;
       }
       if (run.deliveryStatus === "failed") {
         segErros[run.segment] = (segErros[run.segment] ?? 0) + 1;
@@ -834,9 +945,9 @@ export class OperationRunsService {
     for (const segment of Object.keys(bySegment)) {
       const seg = bySegment[segment];
       const receita = segReceita[segment];
-      seg.margemOpPct =
-        receita !== undefined && receita > 0 && seg.resultadoOpBrl !== null
-          ? (seg.resultadoOpBrl / receita) * 100
+      seg.margemEstimadaPct =
+        receita !== undefined && receita > 0 && seg.resultadoEstimadoBrl !== null
+          ? (seg.resultadoEstimadoBrl / receita) * 100
           : null;
       seg.taxaErro = seg.entregas > 0 ? (segErros[segment] ?? 0) / seg.entregas : null;
     }
@@ -864,13 +975,13 @@ export class OperationRunsService {
     const custoBrl =
       custoUsdTotal !== null ? custoUsdTotal * params.usdBrlRate : null;
     // Receita NUNCA deriva do bruto (T-38.2-G05): líquido = bruto − estornos (floor 0)
-    const receitaOpBrl =
+    const receitaEstimadaBrl =
       creditosLiquidos !== null ? creditosLiquidos * params.creditValueBrl : null;
-    const resultadoOpBrl =
-      custoBrl !== null && receitaOpBrl !== null ? receitaOpBrl - custoBrl : null;
-    const margemOpPct =
-      receitaOpBrl !== null && receitaOpBrl > 0 && resultadoOpBrl !== null
-        ? (resultadoOpBrl / receitaOpBrl) * 100
+    const resultadoEstimadoBrl =
+      custoBrl !== null && receitaEstimadaBrl !== null ? receitaEstimadaBrl - custoBrl : null;
+    const margemEstimadaPct =
+      receitaEstimadaBrl !== null && receitaEstimadaBrl > 0 && resultadoEstimadoBrl !== null
+        ? (resultadoEstimadoBrl / receitaEstimadaBrl) * 100
         : null;
     const durations = runs
       .map((r) => r.duracaoTotalMs)
@@ -881,9 +992,9 @@ export class OperationRunsService {
       creditosDebitados,
       creditosEstornados,
       creditosLiquidos,
-      receitaOpBrl,
-      resultadoOpBrl,
-      margemOpPct,
+      receitaEstimadaBrl,
+      resultadoEstimadoBrl,
+      margemEstimadaPct,
       tempoMedioMs:
         durations.length > 0
           ? durations.reduce((a, b) => a + b, 0) / durations.length

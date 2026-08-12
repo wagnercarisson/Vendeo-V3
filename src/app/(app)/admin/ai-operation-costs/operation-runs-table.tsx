@@ -134,8 +134,8 @@ export function OperationRunsTable({ runs }: { runs: OperationRun[] }) {
                   <div>Estorno: {formatNumber(run.creditosEstornados)}</div>
                   <div>Líquido: {formatNumber(run.creditosLiquidos)}</div>
                   <div className="text-muted-foreground">
-                    Receita {formatBRL(run.receitaOpBrl)} · Resultado{" "}
-                    {formatBRL(run.resultadoOpBrl)}
+                    Receita {formatBRL(run.receitaEstimadaBrl)} · Resultado{" "}
+                    {formatBRL(run.resultadoEstimadoBrl)}
                   </div>
                 </td>
                 <td className="whitespace-nowrap px-3 py-2">

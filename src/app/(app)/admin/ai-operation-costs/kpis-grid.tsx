@@ -46,14 +46,14 @@ function buildKpis(summary: OperationRunsSummary): KpiDef[] {
     { label: "Créditos brutos", value: formatNumber(summary.creditosDebitados) },
     { label: "Estornos", value: formatNumber(summary.creditosEstornados) },
     { label: "Créditos líquidos", value: formatNumber(summary.creditosLiquidos) },
-    { label: "Receita operacional (BRL)", value: formatBRL(summary.receitaOpBrl) },
+    { label: "Receita operacional (BRL)", value: formatBRL(summary.receitaEstimadaBrl) },
     {
       label: "Resultado operacional estimado (BRL)",
-      value: formatBRL(summary.resultadoOpBrl),
+      value: formatBRL(summary.resultadoEstimadoBrl),
     },
     {
       label: "Margem operacional estimada",
-      value: formatPercent(summary.margemOpPct),
+      value: formatPercent(summary.margemEstimadaPct),
     },
     { label: "Tempo médio", value: formatDuration(summary.tempoMedioMs) },
     {

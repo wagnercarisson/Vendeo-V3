@@ -113,7 +113,7 @@ export function RunDetailDialog({
                 {detail.run.creditosDebitados !== null && (
                   <>
                     <p>{`Créditos: bruto ${formatNumber(detail.run.creditosDebitados)} · estorno ${formatNumber(detail.run.creditosEstornados)} · líquido ${formatNumber(detail.run.creditosLiquidos)}`}</p>
-                    <p>{`Receita ${formatBRL(detail.run.receitaOpBrl)} · Resultado ${formatBRL(detail.run.resultadoOpBrl)}`}</p>
+                    <p>{`Receita ${formatBRL(detail.run.receitaEstimadaBrl)} · Resultado ${formatBRL(detail.run.resultadoEstimadoBrl)}`}</p>
                   </>
                 )}
                 <p>Custo reconciliado provider: ainda indisponível</p>

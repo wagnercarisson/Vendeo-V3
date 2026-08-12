@@ -94,13 +94,13 @@ export function SegmentAggregations({
                     <dt className="text-muted-foreground">
                       Resultado operacional estimado
                     </dt>
-                    <dd>{formatBRL(agg.resultadoOpBrl)}</dd>
+                    <dd>{formatBRL(agg.resultadoEstimadoBrl)}</dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-muted-foreground">
                       Margem operacional estimada
                     </dt>
-                    <dd>{formatPercent(agg.margemOpPct)}</dd>
+                    <dd>{formatPercent(agg.margemEstimadaPct)}</dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-muted-foreground">Taxa de erro</dt>
