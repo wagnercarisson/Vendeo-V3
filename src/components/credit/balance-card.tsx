@@ -5,7 +5,11 @@ import { Coins } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCredits } from "@/lib/credit/format";
-import { useOperationCosts } from "@/hooks/use-operation-costs";
+import {
+  useOperationCosts,
+  type OperationCostsMap,
+  type UseOperationCostsStatus,
+} from "@/hooks/use-operation-costs";
 
 interface BalanceCardProps {
   balance?: number;
@@ -21,6 +25,42 @@ function getState(balance: number, hasStore: boolean) {
   if (balance >= 3) return "normal";
   if (balance > 0) return "low";
   return "zero";
+}
+
+// Compact per-operation cost view (max 2 lines, mobile-legible). When costs are
+// loaded it shows "Label: valor" using formatCredits (singular/plural); a
+// disabled or missing operation renders "indisponível" instead of inventing a
+// number. Otherwise it falls back to a neutral line without any cost figure.
+function OperationCostRows({
+  costs,
+  status,
+}: {
+  costs: OperationCostsMap | null;
+  status: UseOperationCostsStatus;
+}) {
+  if (status === "loaded" && costs) {
+    const campaign = costs.campaign_generation;
+    const signature = costs.visual_signature_generation;
+    return (
+      <div className="mt-1 space-y-0.5">
+        <p className="text-sm text-text-muted font-body">
+          {campaign && campaign.enabled !== false
+            ? `Campanha: ${formatCredits(campaign.costCredits)}`
+            : "Campanha: indisponível"}
+        </p>
+        <p className="text-sm text-text-muted font-body">
+          {signature && signature.enabled !== false
+            ? `Assinatura visual: ${formatCredits(signature.costCredits)}`
+            : "Assinatura visual: indisponível"}
+        </p>
+      </div>
+    );
+  }
+  return (
+    <p className="text-sm text-text-muted font-body mt-1">
+      Cada geração consome créditos.
+    </p>
+  );
 }
 
 function ReadyContent({ balance, hasStore, supportEmail }: BalanceCardProps) {
@@ -57,7 +97,6 @@ function ReadyContent({ balance, hasStore, supportEmail }: BalanceCardProps) {
   const stateConfig = {
     normal: {
       title: `${formatCredits(balance ?? 0)} disponíveis`,
-      description: status === "loaded" && costs?.campaign_generation ? `Cada geração consome ${formatCredits(costs.campaign_generation.costCredits)}.` : "Cada geração consome créditos.",
       cta: null,
     },
     low: {
@@ -89,9 +128,13 @@ function ReadyContent({ balance, hasStore, supportEmail }: BalanceCardProps) {
         <p className="text-text-primary font-medium font-body">
           {config.title}
         </p>
-        <p className="text-sm text-text-muted font-body mt-1">
-          {config.description}
-        </p>
+        {displayState === "normal" ? (
+          <OperationCostRows costs={costs} status={status} />
+        ) : (
+          <p className="text-sm text-text-muted font-body mt-1">
+            {stateConfig[displayState].description}
+          </p>
+        )}
       </div>
       {config.cta && (
         <div>

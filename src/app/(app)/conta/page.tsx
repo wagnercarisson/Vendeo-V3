@@ -9,6 +9,7 @@ import { getCurrentStore } from "@/lib/auth/store-ownership";
 import { CreditService } from "@/lib/credit/credit-service";
 import { createServerClient } from "@/lib/supabase/server";
 import { LegalStatusSection } from "@/components/legal/legal-status-section";
+import { InstallHint } from "@/components/pwa/install-hint";
 import { User, Coins, Key, LogOut, MessageCircle, Shield } from "lucide-react";
 
 export default async function ContaPage({
@@ -69,6 +70,7 @@ export default async function ContaPage({
               <p className="text-sm text-text-muted font-body">Email</p>
               <p className="text-text-primary font-body">{email}</p>
             </div>
+            <InstallHint />
           </div>
         </Card>
 
