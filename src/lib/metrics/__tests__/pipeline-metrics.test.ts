@@ -260,12 +260,9 @@ describe("getAvgCostBrl (F38.2.1 D7 — média BRL com snapshot por evento)", ()
     const markerFilter = notCalls.find((args) => args[0] === "generation_type");
     expect(markerFilter).toBeDefined();
     expect(markerFilter![1]).toBe("in");
-    expect(markerFilter![2]).toEqual([
-      "campaign_pipeline",
-      "visual_signature",
-      "brand_profile_without_logo",
-      "brand_profile_with_logo",
-    ]);
+    expect(markerFilter![2]).toBe(
+      "(campaign_pipeline,visual_signature,brand_profile_without_logo,brand_profile_with_logo)",
+    );
     // operation_run_id IS NOT NULL — eventos call-level (anti-dupla-contagem D1/D6)
     expect(
       notCalls.some(

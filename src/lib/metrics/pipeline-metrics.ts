@@ -194,7 +194,11 @@ export async function getAvgCostBrl(
       .select(
         "provider_reported_cost_usd, estimated_cost_usd, usd_brl_rate_at_generation",
       )
-      .not("generation_type", "in", AI_COST_DELIVERY_MARKER_TYPES)
+      .not(
+        "generation_type",
+        "in",
+        `(${AI_COST_DELIVERY_MARKER_TYPES.join(",")})`,
+      )
       .not("operation_run_id", "is", null)
       .gte("created_at", cutoff);
 
