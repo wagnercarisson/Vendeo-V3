@@ -4,14 +4,14 @@ milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 current_phase: 38.2.1
 status: executing
-last_updated: "2026-08-12T01:10:00.000Z"
+last_updated: "2026-08-12T13:33:00.000Z"
 progress:
-  total_phases: 23
-  completed_phases: 20
-  total_plans: 110
-  completed_plans: 110
-  percent: 100
-stopped_at: "Completed 38-2-1-03-PLAN.md"
+  total_phases: 2
+  completed_phases: 1
+  total_plans: 22
+  completed_plans: 19
+  percent: 50
+stopped_at: "Completed 38-2-1-04-PLAN.md"
 ---
 
 # Project State
@@ -154,6 +154,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 | Phase 38.2.1-economic-snapshot P38-2-1-01 | 5min | 2 tasks | 1 files |
 | Phase 38.2.1-economic-snapshot P38-2-1-02 | 14min | 3 tasks | 15 files |
 | Phase 38.2.1-economic-snapshot P38-2-1-03 | 14min | 2 tasks | 1 files |
+| Phase 38.2.1-economic-snapshot P38-2-1-04 | 15min | 3 tasks | 7 files |
 
 ### Phase 19 — Onboarding & Estados Vazios ✅
 
@@ -453,8 +454,8 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 38.2.1 (economic-snapshot) — IN EXECUTION (3/7 plans)
-Plan: 38-2-1-03 ✅ — RPCs de operation runs expõem snapshots e origens (CREATE OR REPLACE aditivo D6: admin_get_ai_operation_runs lista e admin_get_ai_operation_run_events detalhe com usd_brl_rate_at_generation/credit_value_brl_at_generation + origens *_source_at_generation por run — 1º evento com valor preenchido — e por evento call-level; push aplicado e validado no remoto via service_role: 20 runs com 5.18/backfilled_seed, 1.00/backfilled_seed); próximo: 38-2-1-04 (service-derive-brl)
+Phase: 38.2.1 (economic-snapshot) — IN EXECUTION (4/7 plans)
+Plan: 38-2-1-04 ✅ — OperationRunsService deriva BRL com SNAPSHOT do run/evento (D5): deriveBrl `snapshot ?? corrente` com fallback legacy EXPLÍCITO (`usdBrlRateSource`/`creditValueSource` union 4 valores + `revenueEstimationNote`); contrato renomeado (D8) receitaEstimadaBrl/resultadoEstimadoBrl/margemEstimadaPct; deriveSummary soma BRL JÁ derivados por run (`sumValues(runs.map)`) com origens agregadas (fallback > backfilled > captured); mapEvent com snapshot por evento (estimatedCostBrl = usd × snapshot do evento ?? corrente); 38 testes verdes + estabilidade temporal (corrente 6.00 não muda histórico 5.20/2.00) + typecheck/lint limpos; próximo: 38-2-1-05 (api-ui-labels)
 v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36, 38 e 38.1 concluídas. F38 (Tabela de Custos por Operação, v1.5) concluída — 8/8 plans, 1597 testes, UAT 4/4; F38.1 (Apuração de Custos de IA por Entrega, desdobramento da F38) **CONCLUÍDA** — 11/11 plans, 1713 testes, UAT validado, **fechada como camada de estimativa operacional granular** (ajuste provisório da tool image_generation `0.065` = estimativa beta provisória, não custo real; reconciliação financeira real na próxima fase), fonte da verdade `openspec/changes/fase-38-1-ai-cost-accounting/`; **F38.2 (Admin de Custos Operacionais + Configurações Econômicas, desdobramento da F38) em EXECUÇÃO — 10/11 plans** — painel `/admin/ai-operation-costs` (KPIs/filtros/tabela/drilldown/segmentos) + `economic_parameters` configuráveis + badges de confiança + correção `/admin/metrics`, fonte `openspec/changes/fase-38-2-admin-custos-operacionais/`; 38-2-01 ✅ migrations/db push (schema econômico + RPCs de runs no remoto), 38-2-02 ✅ tipos econômicos + EconomicParameterService fail-open/fail-closed + 10 testes (base das rotas 38-2-04/05/06/09), 38-2-03 ✅ AiCostTracker persiste 4 campos de confiança (D5), 38-2-04 ✅ API GET/PUT /api/admin/economic-parameters (zod + RPC admin_set_economic_parameter, 200/400/403/500, idempotência, 9 testes da rota, sem endpoint público), 38-2-05 ✅ OperationRunsService server-only (BRL D1/D4 via EconomicParameterService + badges D5 por evento/entrega + segmentação classifySegment D9 com filtro e re-paginação + storeName/owner D3 + 8 agregados D3/D9 sobre o conjunto filtrado inteiro + getRunDetail D4 com BRL/badges/componentes por evento; 20 testes, typecheck/lint limpos), 38-2-06 ✅ API GET /api/admin/ai-operation-runs (lista) + GET /api/admin/ai-operation-runs/[operationRunId] (detalhe) com AiOperationRunsQuerySchema (janela default 90d/max 365d → 400) delegando 100% ao OperationRunsService (BRL/badge/segmento nunca na rota) + 13 testes (tarefa 12.4, piso 11; regressão 1804 testes); **gap closure UAT (plans 12-15) CONCLUÍDO — verificação final: 1839 testes + 4 gates verdes + UAT manual 12/12 aprovado**; F37 (Revisão e Aprovação da Arte, v1.5, experimento beta) em planejamento futuro; F39 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37 → F39). **38-2-10 OK: verificacao I1-I6 em banco real (script 50/50 asserts) + gates verdes (vitest 1832/1832, typecheck, lint, build) + UAT 13.3 coletado para harvest end-of-phase (I1-I6 documentados em 38-2-VERIFICATION.md)**. **38-2-12 OK (gap UAT estornos): migration 20260811000001 com CREATE OR REPLACE dos RPCs admin_get_ai_operation_runs/_events expondo creditos_estornados (refunds via reference→deduction no ledger) e creditos_liquidos = max(bruto−estorno, 0) por run E no summary/detalhe — creditos_debitados BRUTO inalterado, view F38.1 intocada; db push aplicado no remoto (validado via REST: estornados=3/liquidos=17 em 20 runs/90d); I5 estendido com 13 asserts novos → 63/63 asserts 0 falhas em banco real; gates verdes (vitest 1834/1834, typecheck/lint/build exit 0)**.
 
 ### Phase 36 — Onboarding: Navegação por Abas ✅ Complete
@@ -744,3 +745,7 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 - [Phase 38.2]: Breakdown da celula de creditos em linhas separadas (Bruto/Estorno/Liquido) + linha financeira muted — asserts exatos por linha nos testes (38-2-14)
 - [Phase 38.2]: Bloco financeiro do drilldown condicionado a creditosDebitados !== null — runs historicos sem dados nao exibem linha vazia (38-2-14)
 - [Phase 38.2]: Textos compostos via template literal nos componentes — match exato do getByText sem ambiguidade de nos JSX (38-2-14)
+- [Phase 38.2.1-economic-snapshot]: Origem do valor exposta com union de 4 valores em OperationRun/summary: captured_at_generation / backfilled_from_audit / backfilled_seed / economic_parameter_fallback — um valor backfilled NUNCA se apresenta como captured; fallback de leitura sempre sinalizado (T-38.2.1-11)
+- [Phase 38.2.1-economic-snapshot]: deriveSummary passa a somar os BRL JA derivados por run (D5/T-38.2.1-12): re-derivacao do total USD com taxa unica removida — alterar parametro corrente nao recalcula historico com snapshot (estabilidade temporal testada com corrente 6.00)
+- [Phase 38.2.1-economic-snapshot]: Agregacao de origem do summary com precedencia deterministica: fallback > backfilled_from_audit > backfilled_seed > captured; revenueEstimationNote derivada da origem agregada do credito
+- [Phase 38.2.1-economic-snapshot]: Evento call-level expoe snapshots/origens cruas (nullable) + estimatedCostBrl com snapshot do evento ?? corrente; run do detalhe usa os snapshots do RPC (1o evento do run — D6)

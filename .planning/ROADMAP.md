@@ -668,8 +668,8 @@ Plans:
 Plans:
 - [x] 38-2-1-01-PLAN.md — Migration: colunas de snapshot + backfill audit (Wave 1) [BLOCKING db push]
 - [x] 38-2-1-02-PLAN.md — Types + Tracker + Callers propagam snapshot (Wave 2)
-- [ ] 38-2-1-03-PLAN.md — RPCs de operation runs expõem snapshots (Wave 2) [BLOCKING db push]
-- [ ] 38-2-1-04-PLAN.md — Service: deriveBrl/summary/aggregations com snapshot + rename estimado (Wave 3)
+- [x] 38-2-1-03-PLAN.md — RPCs de operation runs expõem snapshots (Wave 2) [BLOCKING db push]
+- [x] 38-2-1-04-PLAN.md — Service: deriveBrl/summary/aggregations com snapshot + rename estimado (Wave 3)
 - [ ] 38-2-1-05-PLAN.md — API contratos + UI painel: labels estimados + origem + aviso (Wave 4)
 - [ ] 38-2-1-06-PLAN.md — /admin/metrics com snapshot + aviso Configurações Econômicas (Wave 2)
 - [ ] 38-2-1-07-PLAN.md — Testes + Verificação I1–I7 + gates + UAT [checkpoint] (Wave 5)
