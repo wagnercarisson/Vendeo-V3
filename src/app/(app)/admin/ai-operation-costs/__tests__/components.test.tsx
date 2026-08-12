@@ -86,11 +86,11 @@ const AGGREGATIONS = {
   bySegment: {
     "freemium/promotional": {
       segment: "freemium/promotional",
-      entregas: 1,
+      entregas: 2,
       custoBrl: 50,
       resultadoEstimadoBrl: -30,
       margemEstimadaPct: -150,
-      taxaErro: 0,
+      taxaErro: 0.5,
     },
   },
   byDeliveryType: { campaign_delivery: 1 },
@@ -561,5 +561,15 @@ describe("SegmentAggregations (D9)", () => {
     expect(screen.getByText("Gerações por loja")).toBeInTheDocument();
     expect(screen.getByText("Gerações por owner")).toBeInTheDocument();
     expect(screen.getByText("Gerações por hora (UTC)")).toBeInTheDocument();
+  });
+
+  it("exibe margem já como percentual (sem ×100) e taxa de erro como ratio×100", () => {
+    render(<SegmentAggregations aggregations={AGGREGATIONS} />);
+    // margemEstimadaPct já vem em % do service (-150 = -150%) — NÃO multiplicar.
+    expect(screen.getByText("-150%")).toBeInTheDocument();
+    // taxaErro é ratio 0..1 (0.5 = 50%) — multiplicar por 100.
+    expect(screen.getByText("50%")).toBeInTheDocument();
+    // Sanity: margem NÃO aparece inflada 100× (bug antigo: -15.000%).
+    expect(screen.queryByText("-15.000%")).not.toBeInTheDocument();
   });
 });

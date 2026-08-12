@@ -32,6 +32,11 @@ function formatBRL(value: number | null): string {
 
 function formatPercent(value: number | null): string {
   if (value === null || value === undefined) return "—";
+  return `${value.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
+}
+
+function formatRatioPercent(value: number | null): string {
+  if (value === null || value === undefined) return "—";
   return `${(value * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
 }
 
@@ -100,7 +105,7 @@ export function SegmentAggregations({
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-muted-foreground">Taxa de erro</dt>
-                    <dd>{formatPercent(agg.taxaErro)}</dd>
+                    <dd>{formatRatioPercent(agg.taxaErro)}</dd>
                   </div>
                 </dl>
               </div>
