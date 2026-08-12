@@ -15,7 +15,7 @@ gaps: []
 
 **Phase Goal:** Snapshot econômico congelado na geração (usd_brl_rate_at_generation / credit_value_brl_at_generation + origens em generation_events), backfill idempotente, RPCs expondo snapshots, service/API/UI com nomenclatura estimada e estabilidade temporal (alterar parâmetro → histórico não muda).
 **Verified:** 2026-08-12
-**Status:** passed — I1–I7 53/53 asserts em banco real, 4 gates verdes (1887 testes), UAT manual pendente de aprovação humana (checkpoint do plano 38-2-1-07).
+**Status:** passed — I1–I7 53/53 asserts em banco real, 4 gates verdes (1887 testes), UAT manual **APROVADO** (checkpoint do plano 38-2-1-07 — usuário: "uat aprovado"). Fix pós-UAT aplicado: filtro `not.in` parentizado em `getAvgCostBrl` (commit `6e84c86`).
 
 ## 9.1 — Verificação SQL/integrada em banco real (script `scripts/verify/38-2-1-f38-2-1-verification.mjs`)
 
@@ -69,6 +69,8 @@ Checklist para aprovação humana (gate blocking, `autonomous: false` — aprese
 | 8 | Reversão | Reverter os parâmetros aos valores originais com motivo (opcional — o script I6 já reverte; confirmar estado final) |
 
 **Resume signal:** "approved" se tudo passou, ou descrição dos problemas.
+
+**Resultado:** ✅ **APROVADO** (2026-08-12) — usuário validou os 8 cenários. Durante o passo 5 foi encontrado e corrigido um bug no `getAvgCostBrl` (filtro PostgREST `not.in` sem parênteses → erro de parse → card BRL vazio); correção aplicada no commit `6e84c86` e validada (47/47 + 5/5 testes, typecheck/lint exit 0).
 
 ## Limitações e notas
 
