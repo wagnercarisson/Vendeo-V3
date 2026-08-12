@@ -552,7 +552,7 @@ Desdobramento da F38.2, adicionados via OpenSpec (`openspec/changes/fase-38-2-1-
 - [ ] **F38.2.1-05**: `receitaEstimadaBrl = creditosLiquidos × credit_value_brl_at_generation` (estorno descontado; nunca receita real)
 - [ ] **F38.2.1-06**: `resultadoEstimadoBrl`/`margemEstimadaPct` derivados (margem null quando receita 0)
 - [ ] **F38.2.1-07**: Nomenclatura estimada na API/UI (`receitaEstimadaBrl`/`resultadoEstimadoBrl`/`margemEstimadaPct`) + `creditValueSource`/`usdBrlRateSource`/`revenueEstimationNote` (origem de 4 valores: captured/backfilled_from_audit/backfilled_seed/economic_parameter_fallback)
-- [ ] **F38.2.1-08**: RPCs de operation runs expõem os snapshots **e origens** por run/evento (contrato backward-compatible)
+- [x] **F38.2.1-08**: RPCs de operation runs expõem os snapshots **e origens** por run/evento (contrato backward-compatible)
 - [ ] **F38.2.1-09**: `deriveSummary` soma BRL por run (não re-deriva com taxa única); `deriveAggregations` mantida
 - [ ] **F38.2.1-10**: `/admin/metrics` usa snapshot quando disponível; não recalcula histórico; nunca `VENDEO_USD_BRL_RATE`
 - [ ] **F38.2.1-11**: UI do painel e Configurações Econômicas informam que alteração vale para novas gerações e não recalcula histórico; origem do valor exibida (capturado vs reconstruído vs fallback)
