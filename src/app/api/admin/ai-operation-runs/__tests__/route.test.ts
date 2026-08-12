@@ -34,9 +34,15 @@ const RUN_FIXTURE = {
   custoUsdTotal: 0.037,
   custoBrl: 0.2035,
   creditosDebitados: 1,
-  receitaOpBrl: 1.0,
-  resultadoOpBrl: 0.7965,
-  margemOpPct: 79.65,
+  receitaEstimadaBrl: 1.0,
+  resultadoEstimadoBrl: 0.7965,
+  margemEstimadaPct: 79.65,
+  // Snapshot econômico captured (D8) — 0.037 × 5.5 = 0.2035; 1 × 1.0 = 1.0
+  usdBrlRateAtGeneration: 5.5,
+  creditValueBrlAtGeneration: 1.0,
+  usdBrlRateSource: "captured_at_generation",
+  creditValueSource: "captured_at_generation",
+  revenueEstimationNote: null,
   duracaoTotalMs: 5200,
   chamadas: 4,
   chamadasSuccess: 4,
@@ -53,9 +59,12 @@ const SUMMARY_FIXTURE = {
   custoUsdTotal: 0.037,
   custoBrl: 0.2035,
   creditosDebitados: 1,
-  receitaOpBrl: 1.0,
-  resultadoOpBrl: 0.7965,
-  margemOpPct: 79.65,
+  receitaEstimadaBrl: 1.0,
+  resultadoEstimadoBrl: 0.7965,
+  margemEstimadaPct: 79.65,
+  usdBrlRateSource: "captured_at_generation",
+  creditValueSource: "captured_at_generation",
+  revenueEstimationNote: null,
   tempoMedioMs: 5200,
   p95Ms: 6100,
   totalEntregas: 1,
@@ -69,8 +78,8 @@ const AGGREGATIONS_FIXTURE = {
       segment: "test",
       entregas: 1,
       custoBrl: 0.2035,
-      resultadoOpBrl: 0.7965,
-      margemOpPct: 79.65,
+      resultadoEstimadoBrl: 0.7965,
+      margemEstimadaPct: 79.65,
       taxaErro: 0,
     },
   },
@@ -117,9 +126,14 @@ describe("GET /api/admin/ai-operation-runs (D4/D9 — lista de entregas)", () =>
       custoUsdTotal: 0.037,
       custoBrl: 0.2035,
       creditosDebitados: 1,
-      receitaOpBrl: 1.0,
-      resultadoOpBrl: 0.7965,
-      margemOpPct: 79.65,
+      receitaEstimadaBrl: 1.0,
+      resultadoEstimadoBrl: 0.7965,
+      margemEstimadaPct: 79.65,
+      usdBrlRateAtGeneration: 5.5,
+      creditValueBrlAtGeneration: 1.0,
+      usdBrlRateSource: "captured_at_generation",
+      creditValueSource: "captured_at_generation",
+      revenueEstimationNote: null,
       badge: "provider_reported",
       segment: "test",
     });
@@ -250,8 +264,8 @@ describe("GET /api/admin/ai-operation-runs (D4/D9 — lista de entregas)", () =>
               segment: "test",
               entregas: 60,
               custoBrl: 12.21,
-              resultadoOpBrl: 47.79,
-              margemOpPct: 79.65,
+              resultadoEstimadoBrl: 47.79,
+              margemEstimadaPct: 79.65,
               taxaErro: 0,
             },
           },
@@ -270,24 +284,24 @@ describe("GET /api/admin/ai-operation-runs (D4/D9 — lista de entregas)", () =>
     expect(body.aggregations.bySegment.test.entregas).toBe(60);
   });
 
-  it("margemOpPct null quando receita é 0 (sem divisão por zero)", async () => {
+  it("margemEstimadaPct null quando receita estimada é 0 (sem divisão por zero)", async () => {
     mockListRuns.mockResolvedValue(
       listResult({
         runs: [
           {
             ...RUN_FIXTURE,
             creditosDebitados: 0,
-            receitaOpBrl: 0,
-            resultadoOpBrl: -0.037,
-            margemOpPct: null,
+            receitaEstimadaBrl: 0,
+            resultadoEstimadoBrl: -0.037,
+            margemEstimadaPct: null,
           },
         ],
         summary: {
           ...SUMMARY_FIXTURE,
           creditosDebitados: 0,
-          receitaOpBrl: 0,
-          resultadoOpBrl: -0.037,
-          margemOpPct: null,
+          receitaEstimadaBrl: 0,
+          resultadoEstimadoBrl: -0.037,
+          margemEstimadaPct: null,
         },
         aggregations: {
           ...AGGREGATIONS_FIXTURE,
@@ -296,8 +310,8 @@ describe("GET /api/admin/ai-operation-runs (D4/D9 — lista de entregas)", () =>
               segment: "test",
               entregas: 1,
               custoBrl: 0.2035,
-              resultadoOpBrl: -0.037,
-              margemOpPct: null,
+              resultadoEstimadoBrl: -0.037,
+              margemEstimadaPct: null,
               taxaErro: 0,
             },
           },
@@ -308,9 +322,9 @@ describe("GET /api/admin/ai-operation-runs (D4/D9 — lista de entregas)", () =>
     const res = await getRuns();
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.runs[0].margemOpPct).toBeNull();
-    expect(body.summary.margemOpPct).toBeNull();
-    expect(body.aggregations.bySegment.test.margemOpPct).toBeNull();
+    expect(body.runs[0].margemEstimadaPct).toBeNull();
+    expect(body.summary.margemEstimadaPct).toBeNull();
+    expect(body.aggregations.bySegment.test.margemEstimadaPct).toBeNull();
   });
 
   it("segment=test é repassado ao service (filtro antes de paginar — total consistente)", async () => {
@@ -337,6 +351,71 @@ describe("GET /api/admin/ai-operation-runs (D4/D9 — lista de entregas)", () =>
     expect(body.runs).toHaveLength(10);
     expect(mockListRuns).toHaveBeenCalledWith(
       expect.objectContaining({ segment: "test", pageSize: 10 }),
+    );
+  });
+
+  it("contrato estimado (D8): resposta expõe receitaEstimadaBrl e NUNCA receitaOpBrl/receitaRealBrl", async () => {
+    mockListRuns.mockResolvedValue(listResult());
+
+    const res = await getRuns();
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const runJson = JSON.stringify(body.runs[0]);
+    expect(runJson).toContain("receitaEstimadaBrl");
+    expect(runJson).not.toContain("receitaOpBrl");
+    expect(runJson).not.toContain("receitaRealBrl");
+    expect(body.runs[0].receitaEstimadaBrl).toBe(1.0);
+  });
+
+  it("run legado (sem snapshot) → fallback legacy sinalizado: economic_parameter_fallback + note", async () => {
+    mockListRuns.mockResolvedValue(
+      listResult({
+        runs: [
+          {
+            ...RUN_FIXTURE,
+            usdBrlRateAtGeneration: null,
+            creditValueBrlAtGeneration: null,
+            usdBrlRateSource: "economic_parameter_fallback",
+            creditValueSource: "economic_parameter_fallback",
+            revenueEstimationNote: "estimated_from_admin_credit_value",
+          },
+        ],
+      }),
+    );
+
+    const res = await getRuns();
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.runs[0].usdBrlRateAtGeneration).toBeNull();
+    expect(body.runs[0].creditValueBrlAtGeneration).toBeNull();
+    expect(body.runs[0].creditValueSource).toBe("economic_parameter_fallback");
+    expect(body.runs[0].usdBrlRateSource).toBe("economic_parameter_fallback");
+    expect(body.runs[0].revenueEstimationNote).toBe(
+      "estimated_from_admin_credit_value",
+    );
+  });
+
+  it("origem backfilled exposta na lista (backfilled_from_audit/backfilled_seed + note de aproximação histórica)", async () => {
+    mockListRuns.mockResolvedValue(
+      listResult({
+        runs: [
+          {
+            ...RUN_FIXTURE,
+            usdBrlRateSource: "backfilled_seed",
+            creditValueSource: "backfilled_from_audit",
+            revenueEstimationNote: "backfilled_historical_approximation",
+          },
+        ],
+      }),
+    );
+
+    const res = await getRuns();
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.runs[0].usdBrlRateSource).toBe("backfilled_seed");
+    expect(body.runs[0].creditValueSource).toBe("backfilled_from_audit");
+    expect(body.runs[0].revenueEstimationNote).toBe(
+      "backfilled_historical_approximation",
     );
   });
 });

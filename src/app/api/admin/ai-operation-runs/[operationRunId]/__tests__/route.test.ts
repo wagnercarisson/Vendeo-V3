@@ -36,9 +36,15 @@ const DETAIL_RUN_FIXTURE = {
   custoUsdTotal: 0.037,
   custoBrl: 0.2035,
   creditosDebitados: 1,
-  receitaOpBrl: 1.0,
-  resultadoOpBrl: 0.7965,
-  margemOpPct: 79.65,
+  receitaEstimadaBrl: 1.0,
+  resultadoEstimadoBrl: 0.7965,
+  margemEstimadaPct: 79.65,
+  // Snapshot econômico captured (D8) — 0.037 × 5.5 = 0.2035; 1 × 1.0 = 1.0
+  usdBrlRateAtGeneration: 5.5,
+  creditValueBrlAtGeneration: 1.0,
+  usdBrlRateSource: "captured_at_generation",
+  creditValueSource: "captured_at_generation",
+  revenueEstimationNote: null,
   duracaoTotalMs: 5200,
   chamadas: 4,
   chamadasSuccess: 4,
@@ -65,7 +71,7 @@ const EVENT_FIXTURE = {
   cachedInputTokens: 0,
   imageTokens: 1200,
   estimatedCostUsd: 0.032,
-  estimatedCostBrl: 0.176,
+  estimatedCostBrl: 0.176, // 0.032 × 5.5 (snapshot do evento)
   textComponentUsd: 0.002,
   imageToolComponentUsd: 0.03,
   costSource: "pricing_table",
@@ -73,6 +79,11 @@ const EVENT_FIXTURE = {
   costEstimationNote: "provisional_image_tool_unit_cost_until_provider_reconciliation",
   metadata: {},
   badge: "provisional image tool estimate",
+  // Snapshot econômico do evento (F38.2.1-03) + origens
+  usdBrlRateAtGeneration: 5.5,
+  creditValueBrlAtGeneration: 1.0,
+  usdBrlRateSourceAtGeneration: "captured_at_generation",
+  creditValueBrlSourceAtGeneration: "captured_at_generation",
 };
 
 const DETAIL_FIXTURE = {
@@ -104,6 +115,11 @@ describe("GET /api/admin/ai-operation-runs/[operationRunId] (D4 — detalhe call
     const body = await res.json();
     expect(body.run.operationRunId).toBe(RUN_ID);
     expect(body.run.custoBrl).toBe(0.2035);
+    expect(body.run.receitaEstimadaBrl).toBe(1.0);
+    expect(body.run.creditValueSource).toBe("captured_at_generation");
+    expect(body.run.usdBrlRateSource).toBe("captured_at_generation");
+    expect(body.run.usdBrlRateAtGeneration).toBe(5.5);
+    expect(body.run.creditValueBrlAtGeneration).toBe(1.0);
     expect(body.events).toHaveLength(1);
     expect(body.events[0]).toMatchObject({
       generationType: "campaign_image",
@@ -112,8 +128,80 @@ describe("GET /api/admin/ai-operation-runs/[operationRunId] (D4 — detalhe call
       textComponentUsd: 0.002,
       imageToolComponentUsd: 0.03,
       badge: "provisional image tool estimate",
+      usdBrlRateAtGeneration: 5.5,
+      creditValueBrlAtGeneration: 1.0,
+      usdBrlRateSourceAtGeneration: "captured_at_generation",
+      creditValueBrlSourceAtGeneration: "captured_at_generation",
     });
     expect(mockGetRunDetail).toHaveBeenCalledWith(RUN_ID);
+  });
+
+  it("contrato estimado (D8): detalhe expõe receitaEstimadaBrl e NUNCA receitaOpBrl/receitaRealBrl", async () => {
+    mockGetRunDetail.mockResolvedValue(DETAIL_FIXTURE);
+
+    const res = await getDetail();
+    const body = await res.json();
+    const runJson = JSON.stringify(body.run);
+    expect(runJson).toContain("receitaEstimadaBrl");
+    expect(runJson).not.toContain("receitaOpBrl");
+    expect(runJson).not.toContain("receitaRealBrl");
+  });
+
+  it("run legado (sem snapshot) → fallback sinalizado no detalhe (run + evento)", async () => {
+    mockGetRunDetail.mockResolvedValue({
+      run: {
+        ...DETAIL_RUN_FIXTURE,
+        usdBrlRateAtGeneration: null,
+        creditValueBrlAtGeneration: null,
+        usdBrlRateSource: "economic_parameter_fallback",
+        creditValueSource: "economic_parameter_fallback",
+        revenueEstimationNote: "estimated_from_admin_credit_value",
+      },
+      events: [
+        {
+          ...EVENT_FIXTURE,
+          usdBrlRateAtGeneration: null,
+          creditValueBrlAtGeneration: null,
+          usdBrlRateSourceAtGeneration: null,
+          creditValueBrlSourceAtGeneration: null,
+        },
+      ],
+    });
+
+    const res = await getDetail();
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.run.creditValueSource).toBe("economic_parameter_fallback");
+    expect(body.run.usdBrlRateSource).toBe("economic_parameter_fallback");
+    expect(body.run.revenueEstimationNote).toBe(
+      "estimated_from_admin_credit_value",
+    );
+    // Evento legado sem snapshot → origens por evento null (sem valor persistido)
+    expect(body.events[0].usdBrlRateAtGeneration).toBeNull();
+    expect(body.events[0].creditValueBrlAtGeneration).toBeNull();
+    expect(body.events[0].usdBrlRateSourceAtGeneration).toBeNull();
+    expect(body.events[0].creditValueBrlSourceAtGeneration).toBeNull();
+  });
+
+  it("origem backfilled exposta no detalhe (backfilled_from_audit + note de aproximação histórica)", async () => {
+    mockGetRunDetail.mockResolvedValue({
+      run: {
+        ...DETAIL_RUN_FIXTURE,
+        usdBrlRateSource: "backfilled_seed",
+        creditValueSource: "backfilled_from_audit",
+        revenueEstimationNote: "backfilled_historical_approximation",
+      },
+      events: [EVENT_FIXTURE],
+    });
+
+    const res = await getDetail();
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.run.usdBrlRateSource).toBe("backfilled_seed");
+    expect(body.run.creditValueSource).toBe("backfilled_from_audit");
+    expect(body.run.revenueEstimationNote).toBe(
+      "backfilled_historical_approximation",
+    );
   });
 
   it("400 quando operationRunId não é uuid válido", async () => {
