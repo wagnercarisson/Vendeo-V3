@@ -1,17 +1,26 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
-const { mockRpc } = vi.hoisted(() => ({
+const { mockRpc, mockFrom, mockGetParameter } = vi.hoisted(() => ({
   mockRpc: vi.fn(),
+  mockFrom: vi.fn(),
+  mockGetParameter: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
-  supabaseAdmin: { rpc: mockRpc, from: vi.fn() },
+  supabaseAdmin: { rpc: mockRpc, from: mockFrom },
+}));
+
+vi.mock("@/lib/economic/economic-parameter-service", () => ({
+  EconomicParameterService: vi.fn(function () {
+    return { getParameter: mockGetParameter };
+  }),
 }));
 
 import {
   getSuccessRate,
   getErrorRate,
   getAvgCost,
+  getAvgCostBrl,
   getAvgDuration,
   getCreditsGranted,
   getRefundRate,
@@ -86,9 +95,44 @@ function mockAiCosts(
   );
 }
 
+/** Query builder encadeável de supabaseAdmin.from("generation_events") — captura os filtros `.not()` aplicados. */
+type GenerationEventsQuery = {
+  select: () => GenerationEventsQuery;
+  not: (...args: unknown[]) => GenerationEventsQuery;
+  gte: (...args: unknown[]) => GenerationEventsQuery;
+  lt: (...args: unknown[]) => GenerationEventsQuery;
+} & PromiseLike<{ data: unknown; error: { message: string } | null }>;
+
+/** Mock encadeável de supabaseAdmin.from("generation_events") — captura os filtros `.not()` aplicados. */
+function mockGenerationEvents(
+  rows: Array<Record<string, unknown>>,
+  error: { message: string } | null = null,
+): { notCalls: unknown[][] } {
+  const notCalls: unknown[][] = [];
+  const resolve = () => ({ data: rows, error });
+  const builder: GenerationEventsQuery = {
+    select: () => builder,
+    not: (...args: unknown[]) => {
+      notCalls.push(args);
+      return builder;
+    },
+    gte: () => builder,
+    lt: () => builder,
+    then: (onfulfilled, onrejected) =>
+      Promise.resolve(resolve()).then(onfulfilled, onrejected),
+  };
+  mockFrom.mockReturnValue(builder);
+  return { notCalls };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   clearMetricsCache();
+  mockGetParameter.mockResolvedValue({
+    key: "usd_brl_rate",
+    value: 5,
+    source: "table",
+  });
 });
 
 // ─── Existing tests (adapted) ──────────────────────────────────────
@@ -154,6 +198,93 @@ describe("getAvgCost (F38.2 D6 — apuração call-level por entrega)", () => {
   it("returns null when the RPC fails (soft degradation)", async () => {
     mockRpc.mockRejectedValue(new Error("down"));
     expect(await getAvgCost(24)).toBeNull();
+  });
+});
+
+describe("getAvgCostBrl (F38.2.1 D7 — média BRL com snapshot por evento)", () => {
+  it("converte POR EVENTO com usd_brl_rate_at_generation (snapshot) quando disponível — taxa corrente NÃO recalcula", async () => {
+    // Taxa corrente (5.0) presente MAS divergente do snapshot — não pode ser usada.
+    mockGetParameter.mockResolvedValue({
+      key: "usd_brl_rate",
+      value: 5,
+      source: "table",
+    });
+    mockGenerationEvents([
+      { estimated_cost_usd: "0.01", provider_reported_cost_usd: null, usd_brl_rate_at_generation: "5.20" },
+      { estimated_cost_usd: "0.02", provider_reported_cost_usd: null, usd_brl_rate_at_generation: "5.20" },
+      { estimated_cost_usd: "0.03", provider_reported_cost_usd: null, usd_brl_rate_at_generation: "5.20" },
+    ]);
+    // (0.052 + 0.104 + 0.156) / 3 = 0.104 — se usasse a corrente 5.0 → 0.10
+    expect(await getAvgCostBrl(24)).toBeCloseTo(0.104, 6);
+  });
+
+  it("sem snapshot por evento → fallback explícito da taxa corrente (EconomicParameterService)", async () => {
+    mockGetParameter.mockResolvedValue({
+      key: "usd_brl_rate",
+      value: 5,
+      source: "table",
+    });
+    mockGenerationEvents([
+      { estimated_cost_usd: "0.01", provider_reported_cost_usd: null, usd_brl_rate_at_generation: null },
+      { estimated_cost_usd: "0.02", provider_reported_cost_usd: null, usd_brl_rate_at_generation: null },
+      { estimated_cost_usd: "0.03", provider_reported_cost_usd: null, usd_brl_rate_at_generation: null },
+    ]);
+    // (0.05 + 0.10 + 0.15) / 3 = 0.10
+    expect(await getAvgCostBrl(24)).toBeCloseTo(0.1, 6);
+    expect(mockGetParameter).toHaveBeenCalledWith("usd_brl_rate");
+  });
+
+  it("provider_reported_cost_usd tem precedência sobre estimated_cost_usd (COALESCE)", async () => {
+    mockGenerationEvents([
+      { estimated_cost_usd: "0.02", provider_reported_cost_usd: "0.01", usd_brl_rate_at_generation: "5.20" },
+    ]);
+    // 0.01 × 5.20 = 0.052 (e não 0.02 × 5.20 = 0.104)
+    expect(await getAvgCostBrl(24)).toBeCloseTo(0.052, 6);
+  });
+
+  it("sem custos no período → null", async () => {
+    mockGenerationEvents([
+      { estimated_cost_usd: null, provider_reported_cost_usd: null, usd_brl_rate_at_generation: "5.20" },
+      { estimated_cost_usd: null, provider_reported_cost_usd: null, usd_brl_rate_at_generation: null },
+    ]);
+    expect(await getAvgCostBrl(24)).toBeNull();
+  });
+
+  it("exclui os 4 delivery markers da consulta (filtro generation_type NOT IN) e exige operation_run_id", async () => {
+    const { notCalls } = mockGenerationEvents([
+      { estimated_cost_usd: "0.01", provider_reported_cost_usd: null, usd_brl_rate_at_generation: "5.20" },
+    ]);
+    await getAvgCostBrl(24);
+
+    expect(mockFrom).toHaveBeenCalledWith("generation_events");
+    const markerFilter = notCalls.find((args) => args[0] === "generation_type");
+    expect(markerFilter).toBeDefined();
+    expect(markerFilter![1]).toBe("in");
+    expect(markerFilter![2]).toEqual([
+      "campaign_pipeline",
+      "visual_signature",
+      "brand_profile_without_logo",
+      "brand_profile_with_logo",
+    ]);
+    // operation_run_id IS NOT NULL — eventos call-level (anti-dupla-contagem D1/D6)
+    expect(
+      notCalls.some(
+        (args) => args[0] === "operation_run_id" && args[1] === "is" && args[2] === null,
+      ),
+    ).toBe(true);
+  });
+
+  it("falha de leitura da taxa corrente → null (degradação suave, sem throw)", async () => {
+    mockGetParameter.mockRejectedValue(new Error("down"));
+    mockGenerationEvents([
+      { estimated_cost_usd: "0.01", provider_reported_cost_usd: null, usd_brl_rate_at_generation: null },
+    ]);
+    expect(await getAvgCostBrl(24)).toBeNull();
+  });
+
+  it("consulta em falha (supabase error) → null (degradação suave)", async () => {
+    mockGenerationEvents([], { message: "down" });
+    expect(await getAvgCostBrl(24)).toBeNull();
   });
 });
 
