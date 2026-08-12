@@ -35,7 +35,7 @@
 | 38 | ✅ Tabela de Custos por Operação | 8/8 | ✅ Complete | 2026-08-07 |
 | 38.1 | ✅ Apuração de Custos de IA por Entrega | 11/11 | ✅ Complete | 2026-08-09 |
 | 38.2 | ✅ Admin de Custos Operacionais + Configurações Econômicas | 15/15 | Complete    | 2026-08-11 |
-| 38.2.1 | ○ Snapshot Econômico | 0/7 | Planning | — |
+| 38.2.1 | ○ Snapshot Econômico | 1/7 | In Progress|  |
 | 39 | ○ Stripe / Monetização Pública (v1.7) | — | Pending    | — |
 
 ---
@@ -662,11 +662,11 @@ Plans:
 
 **Source of truth:** `openspec/changes/fase-38-2-1-economic-snapshot/`
 
-**Plans:** 7 plans in 5 waves
+**Plans:** 1/7 plans executed
 
 ```
 Plans:
-- [ ] 38-2-1-01-PLAN.md — Migration: colunas de snapshot + backfill audit (Wave 1) [BLOCKING db push]
+- [x] 38-2-1-01-PLAN.md — Migration: colunas de snapshot + backfill audit (Wave 1) [BLOCKING db push]
 - [ ] 38-2-1-02-PLAN.md — Types + Tracker + Callers propagam snapshot (Wave 2)
 - [ ] 38-2-1-03-PLAN.md — RPCs de operation runs expõem snapshots (Wave 2) [BLOCKING db push]
 - [ ] 38-2-1-04-PLAN.md — Service: deriveBrl/summary/aggregations com snapshot + rename estimado (Wave 3)
