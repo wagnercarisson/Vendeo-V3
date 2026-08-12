@@ -51,6 +51,15 @@ vi.mock('@/lib/ai-cost', () => ({
   resolveAiCost: mockResolveAiCost,
 }));
 
+// F38.2.1 (D3): mock do EconomicParameterService — snapshot 5.20/2.00 por
+// default; cenário de falha via mockRejectedValue (best-effort, não bloqueia).
+const { mockGetParameter } = vi.hoisted(() => ({ mockGetParameter: vi.fn() }));
+vi.mock('@/lib/economic/economic-parameter-service', () => ({
+  EconomicParameterService: vi.fn(function () {
+    return { getParameter: mockGetParameter };
+  }),
+}));
+
 function makeChain(result: any) {
   const resolvable = Promise.resolve(result);
   const chain: any = Object.assign(() => resolvable, {
@@ -153,6 +162,11 @@ describe('POST /api/store/[id]/brand-profile/infer', () => {
       costSource: 'pricing_table',
       pricingVersion: 'code_default',
     });
+    // F38.2.1 (D3): default do snapshot econômico — usd 5.20 / credit 2.00
+    mockGetParameter.mockImplementation(async (key: string) => {
+      if (key === 'usd_brl_rate') return { key, value: 5.2, source: 'table' };
+      return { key, value: 2.0, source: 'table' };
+    });
   });
 
   it('success — returns text_only profile', async () => {
@@ -187,6 +201,11 @@ describe('infer cost accounting (6.5)', () => {
       estimatedCostUsd: TEXT_COST,
       costSource: 'pricing_table',
       pricingVersion: 'code_default',
+    });
+    // F38.2.1 (D3): default do snapshot econômico — usd 5.20 / credit 2.00
+    mockGetParameter.mockImplementation(async (key: string) => {
+      if (key === 'usd_brl_rate') return { key, value: 5.2, source: 'table' };
+      return { key, value: 2.0, source: 'table' };
     });
   });
 
@@ -230,5 +249,57 @@ describe('infer cost accounting (6.5)', () => {
     expect(callLevel).toHaveLength(0);
     const delivery = capturedEvents.find((e: any) => e.generationType === 'brand_profile_without_logo');
     expect(delivery).toBeDefined();
+  });
+});
+
+// ── F38.2.1 (D3): snapshot econômico propagado aos eventos do run ─────────
+describe('snapshot econômico (F38.2.1) — brand-profile infer', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedEvents.length = 0;
+    mockResolveAiCost.mockResolvedValue({
+      estimatedCostUsd: TEXT_COST,
+      costSource: 'pricing_table',
+      pricingVersion: 'code_default',
+    });
+    // F38.2.1 (D3): default do snapshot econômico — usd 5.20 / credit 2.00
+    mockGetParameter.mockImplementation(async (key: string) => {
+      if (key === 'usd_brl_rate') return { key, value: 5.2, source: 'table' };
+      return { key, value: 2.0, source: 'table' };
+    });
+  });
+
+  it('call brand_profile_text e delivery carregam os valores do snapshot (5.20/2.00) — apenas valores', async () => {
+    setupSuccessStore();
+    mockTextOnlyInfer.mockImplementation(async (_input: any, _timeoutMs: any, onCall?: any) => {
+      onCall?.({ provider: 'openai', model: 'gpt-4o', usage: TEXT_USAGE, durationMs: 200 });
+      return mockInferResult;
+    });
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(200);
+
+    expect(capturedEvents.length).toBeGreaterThan(0);
+    for (const e of capturedEvents) {
+      expect(e.usdBrlRateAtGeneration).toBe(5.2);
+      expect(e.creditValueBrlAtGeneration).toBe(2.0);
+      // o evento NÃO carrega origem — o tracker define captured_at_generation
+      expect(e.usdBrlRateSourceAtGeneration).toBeUndefined();
+      expect(e.creditValueBrlSourceAtGeneration).toBeUndefined();
+    }
+  });
+
+  it('falha na leitura → snapshots null e resposta inalterada (200, sem 5xx novo)', async () => {
+    setupSuccessStore();
+    mockTextOnlyInfer.mockResolvedValue(mockInferResult);
+    mockGetParameter.mockRejectedValue(new Error('economic down'));
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(200);
+
+    const delivery = capturedEvents.find((e: any) => e.generationType === 'brand_profile_without_logo');
+    expect(delivery).toBeDefined();
+    expect(delivery.usdBrlRateAtGeneration).toBeNull();
+    expect(delivery.creditValueBrlAtGeneration).toBeNull();
   });
 });

@@ -49,6 +49,15 @@ vi.mock('@/lib/ai-cost', () => ({
   resolveAiCost: mockResolveAiCost,
 }));
 
+// F38.2.1 (D3): mock do EconomicParameterService — snapshot 5.20/2.00 por
+// default; cenário de falha via mockRejectedValue (best-effort, não bloqueia).
+const { mockGetParameter } = vi.hoisted(() => ({ mockGetParameter: vi.fn() }));
+vi.mock('@/lib/economic/economic-parameter-service', () => ({
+  EconomicParameterService: vi.fn(function () {
+    return { getParameter: mockGetParameter };
+  }),
+}));
+
 function makeChain(result: any) {
   const resolvable = Promise.resolve(result);
   const chain: any = Object.assign(() => resolvable, {
@@ -124,6 +133,11 @@ describe('POST /api/store/[id]/brand-profile/generate-without-logo', () => {
         pricingVersion: 'code_default',
       })
     );
+    // F38.2.1 (D3): default do snapshot econômico — usd 5.20 / credit 2.00
+    mockGetParameter.mockImplementation(async (key: string) => {
+      if (key === 'usd_brl_rate') return { key, value: 5.2, source: 'table' };
+      return { key, value: 2.0, source: 'table' };
+    });
   });
 
   it('success — returns brand profile', async () => {
@@ -160,6 +174,11 @@ describe('Brand cost accounting (6.5)', () => {
         pricingVersion: 'code_default',
       })
     );
+    // F38.2.1 (D3): default do snapshot econômico — usd 5.20 / credit 2.00
+    mockGetParameter.mockImplementation(async (key: string) => {
+      if (key === 'usd_brl_rate') return { key, value: 5.2, source: 'table' };
+      return { key, value: 2.0, source: 'table' };
+    });
   });
 
   // path 2 simulado: profiler emite 2 onCalls (1a = visão, 2a = texto — ordem fixa documentada)
@@ -252,5 +271,65 @@ describe('Brand cost accounting (6.5)', () => {
     expect(callLevel).toHaveLength(0);
     const delivery = capturedEvents.find((e: any) => e.generationType === 'brand_profile_without_logo');
     expect(delivery).toBeDefined();
+  });
+});
+
+// ── F38.2.1 (D3): snapshot econômico propagado aos eventos do run ─────────
+describe('snapshot econômico (F38.2.1) — brand-profile generate-without-logo', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedEvents.length = 0;
+    mockResolveAiCost.mockImplementation(({ model }: any) =>
+      Promise.resolve({
+        estimatedCostUsd: model === 'gpt-4o' ? VISION_COST : TEXT_COST,
+        costSource: 'pricing_table',
+        pricingVersion: 'code_default',
+      })
+    );
+    // F38.2.1 (D3): default do snapshot econômico — usd 5.20 / credit 2.00
+    mockGetParameter.mockImplementation(async (key: string) => {
+      if (key === 'usd_brl_rate') return { key, value: 5.2, source: 'table' };
+      return { key, value: 2.0, source: 'table' };
+    });
+  });
+
+  const reqBody = {
+    visualSignatureId: VS_ID,
+    assetUrl: 'https://example.com/vs.png',
+    artDirectorOutput: { creative_description: 'x', suggested_colors: [], visual_direction: 'y', elements_used: [] },
+  };
+
+  it('call-level e delivery carregam os valores do snapshot (5.20/2.00) — apenas valores, sem origem', async () => {
+    setupStandardStore();
+    mockProfilerGenerate.mockImplementation(async ({ onCall }: any) => {
+      onCall?.({ provider: 'openai', model: 'gpt-4o', usage: VISION_USAGE, durationMs: 300 });
+      return mockProfileResult;
+    });
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(reqBody), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(200);
+
+    expect(capturedEvents.length).toBeGreaterThan(0);
+    for (const e of capturedEvents) {
+      expect(e.usdBrlRateAtGeneration).toBe(5.2);
+      expect(e.creditValueBrlAtGeneration).toBe(2.0);
+      // o evento NÃO carrega origem — o tracker define captured_at_generation
+      expect(e.usdBrlRateSourceAtGeneration).toBeUndefined();
+      expect(e.creditValueBrlSourceAtGeneration).toBeUndefined();
+    }
+  });
+
+  it('falha na leitura → snapshots null e resposta inalterada (200, sem 5xx novo)', async () => {
+    setupStandardStore();
+    mockProfilerGenerate.mockResolvedValue(mockProfileResult);
+    mockGetParameter.mockRejectedValue(new Error('economic down'));
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(reqBody), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(200);
+
+    const delivery = capturedEvents.find((e: any) => e.generationType === 'brand_profile_without_logo');
+    expect(delivery).toBeDefined();
+    expect(delivery.usdBrlRateAtGeneration).toBeNull();
+    expect(delivery.creditValueBrlAtGeneration).toBeNull();
   });
 });

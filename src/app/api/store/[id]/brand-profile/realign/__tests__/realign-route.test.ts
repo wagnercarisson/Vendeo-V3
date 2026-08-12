@@ -107,6 +107,15 @@ vi.mock('@/lib/ai-cost', () => ({
   resolveAiCost: mockResolveAiCost,
 }));
 
+// F38.2.1 (D3): mock do EconomicParameterService — snapshot 5.20/2.00 por
+// default; cenário de falha via mockRejectedValue (best-effort, não bloqueia).
+const { mockGetParameter } = vi.hoisted(() => ({ mockGetParameter: vi.fn() }));
+vi.mock('@/lib/economic/economic-parameter-service', () => ({
+  EconomicParameterService: vi.fn(function () {
+    return { getParameter: mockGetParameter };
+  }),
+}));
+
 const STORE_ID = '550e8400-e29b-41d4-a716-446655440000';
 const ASSET_ID = '660e8400-e29b-41d4-a716-446655440001';
 const PROFILE_ID = 'profile-001';
@@ -544,6 +553,11 @@ describe('Brand cost accounting (6.5) — realign', () => {
         pricingVersion: 'code_default',
       })
     );
+    // F38.2.1 (D3): default do snapshot econômico — usd 5.20 / credit 2.00
+    mockGetParameter.mockImplementation(async (key: string) => {
+      if (key === 'usd_brl_rate') return { key, value: 5.2, source: 'table' };
+      return { key, value: 2.0, source: 'table' };
+    });
   });
 
   const VISION_USAGE = { promptTokens: 100, completionTokens: 50, totalTokens: 150 };
@@ -672,5 +686,89 @@ describe('Brand cost accounting (6.5) — realign', () => {
     expect(delivery.operationRunId).toBe(secondRunId);
     expect(delivery.cost).toBeUndefined();
     expect(delivery.metadata?.duration_is_pipeline).toBe(true);
+  });
+});
+
+// ── F38.2.1 (D3): snapshot econômico propagado aos eventos do run ─────────
+describe('snapshot econômico (F38.2.1) — realign', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedEvents.length = 0;
+    mockBrandDirectorAnalyze.mockResolvedValue(mockDirectorResult);
+    mockProfilerGenerate.mockClear();
+    mockTextOnlyInfer.mockResolvedValue({
+      safe_color_tokens: { primary: '#22C55E', secondary: '#3B82F6', accent: '#1E40AF', background: '#0F172A' },
+      visual_style: 'Moderno', visual_tone: 'Elegante', typography_direction: 'Sans-serif',
+      brand_personality: 'Sofisticado', campaign_guidelines: 'Guidelines', campaign_brief: 'Brief',
+      inferred_primary_color: '#22C55E', inferred_accent_color: '#1E40AF', confidence_score: 0.9,
+    });
+    mockStorageDownload.mockResolvedValue({ data: new Blob([]), error: null });
+    mockResolveAiCost.mockImplementation(({ model }: any) =>
+      Promise.resolve({
+        estimatedCostUsd: model === 'gpt-4o-mini' ? 0.001 : 0.004,
+        costSource: 'pricing_table',
+        pricingVersion: 'code_default',
+      })
+    );
+    // F38.2.1 (D3): default do snapshot econômico — usd 5.20 / credit 2.00
+    mockGetParameter.mockImplementation(async (key: string) => {
+      if (key === 'usd_brl_rate') return { key, value: 5.2, source: 'table' };
+      return { key, value: 2.0, source: 'table' };
+    });
+  });
+
+  const TEXT_USAGE = { promptTokens: 120, completionTokens: 40, totalTokens: 160 };
+
+  function setupTextOnlyStore() {
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'store_brand_assets') return makeChain({ data: null, error: null });
+      if (table === 'store_brand_profiles') return makeProfileChain({ data: null, error: null });
+      return makeChain({ data: null, error: null });
+    });
+  }
+
+  it('text_only path: call brand_profile_text e delivery carregam os valores do snapshot (5.20/2.00) — apenas valores', async () => {
+    setupTextOnlyStore();
+    mockTextOnlyInfer.mockImplementation(async (_input: any, _timeoutMs: any, onCall?: any) => {
+      onCall?.({ provider: 'openai', model: 'gpt-4o', usage: TEXT_USAGE, durationMs: 200 });
+      return {
+        safe_color_tokens: { primary: '#22C55E', secondary: '#3B82F6', accent: '#1E40AF', background: '#0F172A' },
+        visual_style: 'Moderno', visual_tone: 'Elegante', typography_direction: 'Sans-serif',
+        brand_personality: 'Sofisticado', campaign_guidelines: 'Guidelines', campaign_brief: 'Brief',
+        inferred_primary_color: '#22C55E', inferred_accent_color: '#1E40AF', confidence_score: 0.9,
+      };
+    });
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(200);
+
+    expect(capturedEvents.length).toBeGreaterThan(0);
+    for (const e of capturedEvents) {
+      expect(e.usdBrlRateAtGeneration).toBe(5.2);
+      expect(e.creditValueBrlAtGeneration).toBe(2.0);
+      // o evento NÃO carrega origem — o tracker define captured_at_generation
+      expect(e.usdBrlRateSourceAtGeneration).toBeUndefined();
+      expect(e.creditValueBrlSourceAtGeneration).toBeUndefined();
+    }
+  });
+
+  it('falha na leitura → snapshots null e resposta inalterada (200, sem 5xx novo)', async () => {
+    setupTextOnlyStore();
+    mockTextOnlyInfer.mockResolvedValue({
+      safe_color_tokens: { primary: '#22C55E', secondary: '#3B82F6', accent: '#1E40AF', background: '#0F172A' },
+      visual_style: 'Moderno', visual_tone: 'Elegante', typography_direction: 'Sans-serif',
+      brand_personality: 'Sofisticado', campaign_guidelines: 'Guidelines', campaign_brief: 'Brief',
+      inferred_primary_color: '#22C55E', inferred_accent_color: '#1E40AF', confidence_score: 0.9,
+    });
+    mockGetParameter.mockRejectedValue(new Error('economic down'));
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(200);
+
+    const delivery = capturedEvents.find((e: any) => e.generationType === 'brand_profile_without_logo');
+    expect(delivery).toBeDefined();
+    expect(delivery.usdBrlRateAtGeneration).toBeNull();
+    expect(delivery.creditValueBrlAtGeneration).toBeNull();
   });
 });
