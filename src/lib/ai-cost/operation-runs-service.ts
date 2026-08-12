@@ -105,9 +105,9 @@ export interface OperationRunsSummary {
   resultadoEstimadoBrl: number | null;
   margemEstimadaPct: number | null;
   /** Origem dominante do conjunto (D5/F38.2.1) — se há fallback, prevalece; senão backfilled; senão captured. */
-  usdBrlRateSource?: EconomicValueSource;
-  creditValueSource?: EconomicValueSource;
-  revenueEstimationNote?: RevenueEstimationNote;
+  usdBrlRateSource: EconomicValueSource;
+  creditValueSource: EconomicValueSource;
+  revenueEstimationNote: RevenueEstimationNote;
   tempoMedioMs: number | null;
   p95Ms: number | null;
   totalEntregas: number;
@@ -305,6 +305,22 @@ function normalizeSource(value: string | null | undefined): EconomicValueSource 
     return value;
   }
   return null;
+}
+
+/**
+ * Origem dominante de um conjunto de origens (D5/F38.2.1) — regra de
+ * prevalência: qualquer economic_parameter_fallback no conjunto prevalece
+ * (valor sem procedência persistida); senão qualquer backfilled_* (com
+ * backfilled_from_audit — evidência de audit — precedendo backfilled_seed);
+ * senão (todos captured) → captured_at_generation.
+ */
+function aggregateSource(sources: EconomicValueSource[]): EconomicValueSource {
+  if (sources.includes("economic_parameter_fallback")) {
+    return "economic_parameter_fallback";
+  }
+  if (sources.includes("backfilled_from_audit")) return "backfilled_from_audit";
+  if (sources.includes("backfilled_seed")) return "backfilled_seed";
+  return "captured_at_generation";
 }
 
 /** Limite defensivo de páginas na paginação progressiva (100 runs/página). */
@@ -572,7 +588,7 @@ export class OperationRunsService {
 
     const total = filtered.length;
     const pageRuns = filtered.slice((page - 1) * pageSize, page * pageSize);
-    const summary = this.deriveSummary(filtered, params);
+    const summary = this.deriveSummary(filtered);
     const stageByRunId = new Map(
       rawRuns.map((r) => [r.operation_run_id, r.generation_type ?? null]),
     );
@@ -964,25 +980,34 @@ export class OperationRunsService {
     };
   }
 
-  private deriveSummary(
-    runs: OperationRun[],
-    params: { usdBrlRate: number; creditValueBrl: number },
-  ): OperationRunsSummary {
+  /**
+   * KPIs do painel (D3/D4/D5/F38.2.1) — soma os BRL JÁ derivados por run (nunca
+   * re-deriva do total USD com uma taxa única: taxas snapshotadas distintas não
+   * se misturam). Origens agregadas pela regra de prevalência (aggregateSource).
+   */
+  private deriveSummary(runs: OperationRun[]): OperationRunsSummary {
     const custoUsdTotal = sumValues(runs.map((r) => r.custoUsdTotal));
     const creditosDebitados = sumValues(runs.map((r) => r.creditosDebitados));
     const creditosEstornados = sumValues(runs.map((r) => r.creditosEstornados));
     const creditosLiquidos = sumValues(runs.map((r) => r.creditosLiquidos));
-    const custoBrl =
-      custoUsdTotal !== null ? custoUsdTotal * params.usdBrlRate : null;
-    // Receita NUNCA deriva do bruto (T-38.2-G05): líquido = bruto − estornos (floor 0)
-    const receitaEstimadaBrl =
-      creditosLiquidos !== null ? creditosLiquidos * params.creditValueBrl : null;
-    const resultadoEstimadoBrl =
-      custoBrl !== null && receitaEstimadaBrl !== null ? receitaEstimadaBrl - custoBrl : null;
+    const custoBrl = sumValues(runs.map((r) => r.custoBrl));
+    const receitaEstimadaBrl = sumValues(runs.map((r) => r.receitaEstimadaBrl));
+    const resultadoEstimadoBrl = sumValues(runs.map((r) => r.resultadoEstimadoBrl));
+    // Margem derivada das somas (receita > 0 senão null — sem divisão por zero)
     const margemEstimadaPct =
-      receitaEstimadaBrl !== null && receitaEstimadaBrl > 0 && resultadoEstimadoBrl !== null
+      receitaEstimadaBrl !== null &&
+      receitaEstimadaBrl > 0 &&
+      resultadoEstimadoBrl !== null
         ? (resultadoEstimadoBrl / receitaEstimadaBrl) * 100
         : null;
+    const usdBrlRateSource = aggregateSource(runs.map((r) => r.usdBrlRateSource));
+    const creditValueSource = aggregateSource(runs.map((r) => r.creditValueSource));
+    const revenueEstimationNote: RevenueEstimationNote =
+      creditValueSource === "economic_parameter_fallback"
+        ? "estimated_from_admin_credit_value"
+        : creditValueSource.startsWith("backfilled")
+          ? "backfilled_historical_approximation"
+          : null;
     const durations = runs
       .map((r) => r.duracaoTotalMs)
       .filter((d): d is number => d !== null);
@@ -995,6 +1020,9 @@ export class OperationRunsService {
       receitaEstimadaBrl,
       resultadoEstimadoBrl,
       margemEstimadaPct,
+      usdBrlRateSource,
+      creditValueSource,
+      revenueEstimationNote,
       tempoMedioMs:
         durations.length > 0
           ? durations.reduce((a, b) => a + b, 0) / durations.length
