@@ -1,6 +1,6 @@
 ## Purpose
 
-TBD. This capability defines the core types and the single best-effort recording layer for tracking AI call costs (`AiCostTracker`) — capturing real call events, token usage, and cost resolution so the system can account for per-operation AI spend without blocking generation.
+TBD. This capability defines the core types and the single best-effort recording layer for tracking AI call costs (`AiCostTracker`) — capturing real call events, token usage, and cost resolution so the system can account for per-operation AI spend without blocking generation. Synced from `fase-38-ai-cost-tracker` (ADDED) + `fase-38-2-admin-custos-operacionais` (MODIFIED) + `fase-38-2-1-economic-snapshot` (MODIFIED).
 
 ## Requirements
 
@@ -57,7 +57,7 @@ export interface CostResolution {
 
 ### Requirement: AiCostEvent — contrato do evento de chamada real de IA
 
-O sistema SHALL definir o tipo `AiCostEvent` em `src/lib/ai-cost/types.ts` como o contrato único de gravação de um evento de custo (D7):
+O sistema SHALL definir o tipo `AiCostEvent` em `src/lib/ai-cost/types.ts` como o contrato único de gravação de um evento de custo (D7), incluindo o snapshot econômico no momento da geração:
 
 ```typescript
 export interface AiCostEvent {
@@ -78,6 +78,8 @@ export interface AiCostEvent {
   errorType?: string | null;
   tokens?: TokenUsage;
   cost?: CostResolution;
+  usdBrlRateAtGeneration?: number | null;        // snapshot contábil — câmbio conhecido na geração
+  creditValueBrlAtGeneration?: number | null;    // snapshot estimativo/fallback — valor do crédito na geração
   metadata?: Record<string, unknown>;
 }
 ```
@@ -85,6 +87,9 @@ export interface AiCostEvent {
 - `operationRunId` é UUID (string v4) — coluna UUID no banco (D1/D2); `trace_id` é TEXT com semântica técnica distinta
 - `cost: null`/ausente indica **delivery marker** (anti-dupla-contagem — D1/D6): o evento da entrega não grava custo nem tokens
 - `tokens` são gravados **sempre** que existirem, mesmo com `cost.estimatedCostUsd: null` (`not_available` — D4)
+- **`usdBrlRateAtGeneration`/`creditValueBrlAtGeneration`** (F38.2.1) são os valores dos snapshots econômicos resolvidos no início do run (padrão telemetria D7/D12) e propagados às chamadas filhas; NULL quando indisponíveis (fallback legacy em leitura)
+- **O caller NÃO define origem** (F38.2.1) — `AiCostEvent` carrega **apenas os valores**; a origem (`captured_at_generation`) é determinada pelo tracker na gravação (valor presente → `captured_at_generation`; ausente → NULL)
+- `usdBrlRateAtGeneration` é o snapshot **contábil** do câmbio (estrutural, continua válido em fases futuras); `creditValueBrlAtGeneration` é o snapshot **estimativo/fallback** do valor do crédito — usado somente para derivados **estimados** (nunca "receita real")
 
 #### Scenario: AiCostEvent sem cost representa delivery marker
 
@@ -96,6 +101,16 @@ export interface AiCostEvent {
 
 - **WHEN** um `AiCostEvent` é criado com `tokens` preenchidos e `cost: { estimatedCostUsd: null, costSource: "not_available" }`
 - **THEN** o evento representa uma chamada real com consumo registrado e custo desconhecido (D4)
+
+#### Scenario: AiCostEvent carrega snapshot econômico da geração
+
+- **WHEN** um `AiCostEvent` é criado para uma chamada de um run iniciado com `usd_brl_rate = 5.20` e `credit_value_brl = 2.00`
+- **THEN** o evento carrega `usdBrlRateAtGeneration = 5.20` e `creditValueBrlAtGeneration = 2.00` (valores propagados do início do run) — **sem campos de origem** (a origem é definida pelo tracker na gravação)
+
+#### Scenario: AiCostEvent sem snapshot disponível
+
+- **WHEN** a resolução dos parâmetros falha no início do run
+- **THEN** `usdBrlRateAtGeneration`/`creditValueBrlAtGeneration` são NULL (fallback legacy em leitura, sem bloquear geração)
 
 ### Requirement: AiCallInfo — callback de usage (padrão dos serviços)
 
@@ -140,7 +155,9 @@ export class AiCostTracker {
 ```
 
 - **`startRun(type)`** gera `operationRunId` (UUID v4) e `traceId` (UUID/TEXT) **distintos** no início de um request e propaga-os às chamadas filhas via contexto de telemetria (`opts.telemetry`) (D1/D7)
-- **`record(event)`** grava o evento completo em `generation_events` (todas as colunas novas — D2): `operation_run_id`, `operation_run_type`, `visual_signature_id`, `cached_input_tokens`, `image_tokens`, `provider_reported_cost_usd`, `estimated_cost_usd`, `cost_source`, `pricing_version`, além das existentes
+- **`record(event)`** grava o evento completo em `generation_events` (todas as colunas novas — D2): `operation_run_id`, `operation_run_type`, `visual_signature_id`, `cached_input_tokens`, `image_tokens`, `provider_reported_cost_usd`, `estimated_cost_usd`, `cost_source`, `pricing_version`, `cost_formula_version`, `cost_estimation_note`, `text_component_usd`, `image_tool_component_usd`, `usd_brl_rate_at_generation`, `credit_value_brl_at_generation`, `usd_brl_rate_source_at_generation`, `credit_value_brl_source_at_generation`, além das existentes
+- **F38.2 (D5): `record` passa a persistir também** `cost_formula_version`, `cost_estimation_note`, `text_component_usd`, `image_tool_component_usd` a partir do `CostResolution` — o `resolveAiCost` já os computa; **daqui para frente, sem reclassificar histórico** (eventos anteriores à migration ficam NULL)
+- **F38.2.1 (snapshot econômico):** `record` persiste `usd_brl_rate_at_generation`/`credit_value_brl_at_generation` do evento **e DEFINE as origens `captured_at_generation` quando o valor está presente** (valor ausente → valor e origem NULL) — o caller passa apenas os valores; daqui para frente, sem reclassificar histórico; snapshots NULL não bloqueiam a gravação
 - **Nunca lança** — qualquer falha de escrita é logada e ignorada (best-effort, geração não bloqueada por telemetria)
 - **Delivery marker:** `record` do delivery (ex.: `campaign_pipeline`/`visual_signature`/`brand_profile_*`) recebe evento sem `cost` e sem `tokens`, com `durationMs` (pipeline) e `metadata.duration_is_pipeline: true` (anti-dupla-contagem D1/D6)
 - **Substitui** os 4 inserts inline do `generate-image/route.ts`, os inserts do `generate-without-logo/route.ts` e o helper `insertGenerationEvent` (que passa a delegar ao tracker — D11)
@@ -153,8 +170,18 @@ export class AiCostTracker {
 
 #### Scenario: record grava todas as novas colunas
 
-- **WHEN** `tracker.record(event)` é chamado com um evento completo (com `visualSignatureId`, cached/image tokens, `costSource`, `pricingVersion`)
-- **THEN** a linha inserida em `generation_events` contém todas as novas colunas preenchidas (D2/D7)
+- **WHEN** `tracker.record(event)` é chamado com um evento completo (com `visualSignatureId`, cached/image tokens, `costSource`, `pricingVersion`, `usdBrlRateAtGeneration`, `creditValueBrlAtGeneration`)
+- **THEN** a linha inserida em `generation_events` contém todas as novas colunas preenchidas, incluindo os snapshots econômicos e as origens `captured_at_generation` **definidas pelo tracker a partir da presença dos valores** (D2/D7)
+
+#### Scenario: record persiste campos de confiança (F38.2 D5)
+
+- **WHEN** `tracker.record(event)` é chamado com um evento cujo `CostResolution` traz `costFormulaVersion`, `costEstimationNote`, `textComponentUsd` e `imageToolComponentUsd`
+- **THEN** a linha inserida em `generation_events` contém `cost_formula_version`, `cost_estimation_note`, `text_component_usd` e `image_tool_component_usd` preenchidos
+
+#### Scenario: evento sem nota (histórico) → colunas NULL
+
+- **WHEN** `tracker.record(event)` é chamado com um evento sem `costFormulaVersion`/`costEstimationNote`/componentes (ou `CostResolution` sem eles)
+- **THEN** as colunas novas de confiança ficam NULL (badge genérico no service — D5)
 
 #### Scenario: record nunca lança em erro de escrita
 
