@@ -14,9 +14,38 @@ import { apiHandler } from '@/lib/auth/api-handler';
 import { AiCostTracker, resolveAiCost } from '@/lib/ai-cost';
 import type { AiCallInfo } from '@/lib/ai-cost/types';
 import type { GenerationEventType } from '@/lib/visual-signature/types';
+import { EconomicParameterService } from '@/lib/economic/economic-parameter-service';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const realignLocks = new Map<string, boolean>();
+
+/**
+ * F38.2.1 (D3): snapshot econômico resolvido UMA vez por run (best-effort) —
+ * valores vigentes naquele momento. APENAS valores; o tracker define a origem
+ * captured_at_generation na gravação. Falha → log + null — NUNCA bloqueia.
+ */
+async function resolveEconomicSnapshot(): Promise<{
+  usdBrlRateAtGeneration: number | null;
+  creditValueBrlAtGeneration: number | null;
+}> {
+  try {
+    const service = new EconomicParameterService();
+    const [usd, credit] = await Promise.all([
+      service.getParameter("usd_brl_rate"),
+      service.getParameter("credit_value_brl"),
+    ]);
+    return {
+      usdBrlRateAtGeneration: usd.value,
+      creditValueBrlAtGeneration: credit.value,
+    };
+  } catch (err) {
+    console.error(
+      "[realign] snapshot econômico indisponível (best-effort):",
+      err instanceof Error ? err.message : String(err)
+    );
+    return { usdBrlRateAtGeneration: null, creditValueBrlAtGeneration: null };
+  }
+}
 
 /**
  * F38.1 (D7): grava um evento call-level do run brand_profile com custo REAL
@@ -27,6 +56,7 @@ async function recordBrandCall(params: {
   storeId: string;
   generationType: GenerationEventType;
   info: AiCallInfo;
+  snapshot?: { usdBrlRateAtGeneration: number | null; creditValueBrlAtGeneration: number | null };
 }): Promise<void> {
   const { run, storeId, generationType, info } = params;
   try {
@@ -49,6 +79,9 @@ async function recordBrandCall(params: {
       status: "success",
       tokens: info.usage,
       cost,
+      // F38.2.1 (D3): snapshot do run propagado (APENAS valores — tracker define origem)
+      usdBrlRateAtGeneration: params.snapshot?.usdBrlRateAtGeneration ?? null,
+      creditValueBrlAtGeneration: params.snapshot?.creditValueBrlAtGeneration ?? null,
     });
   } catch (err) {
     console.error(
@@ -67,6 +100,7 @@ async function recordBrandDelivery(params: {
   storeId: string;
   generationType: GenerationEventType;
   durationMs: number;
+  snapshot?: { usdBrlRateAtGeneration: number | null; creditValueBrlAtGeneration: number | null };
 }): Promise<void> {
   const { run, storeId, generationType, durationMs } = params;
   try {
@@ -81,6 +115,9 @@ async function recordBrandDelivery(params: {
       attemptNumber: 0,
       durationMs,
       status: "success",
+      // F38.2.1 (D3): snapshot do run no delivery (APENAS valores — tracker define origem)
+      usdBrlRateAtGeneration: params.snapshot?.usdBrlRateAtGeneration ?? null,
+      creditValueBrlAtGeneration: params.snapshot?.creditValueBrlAtGeneration ?? null,
       metadata: { duration_is_pipeline: true },
     });
   } catch (err) {
@@ -192,6 +229,8 @@ async function handleTextOnlyRealign(
     // ── F38.1 (D1/D7): run context do path text_only ────────────────────
     const run = new AiCostTracker().startRun("brand_profile");
     const pendingCalls: AiCallInfo[] = [];
+    // F38.2.1 (D3): snapshot do run — resolvido UMA vez após o startRun.
+    const economicSnapshot = await resolveEconomicSnapshot();
 
     const result = await service.infer({
       storeName: store.name,
@@ -216,6 +255,7 @@ async function handleTextOnlyRealign(
         storeId: id,
         generationType: "brand_profile_text",
         info,
+        snapshot: economicSnapshot,
       });
     }
     await recordBrandDelivery({
@@ -223,6 +263,7 @@ async function handleTextOnlyRealign(
       storeId: id,
       generationType: "brand_profile_without_logo",
       durationMs: Date.now() - startTime,
+      snapshot: economicSnapshot,
     });
 
     // Inference succeeded — mark current profile outdated (if any)
@@ -393,6 +434,8 @@ async function handleLogoRealign(
     // ── F38.1 (D1/D7): run context do path logo (análise com logo) ──────
     const run = new AiCostTracker().startRun("brand_profile");
     const pendingCalls: AiCallInfo[] = [];
+    // F38.2.1 (D3): snapshot do run — resolvido UMA vez após o startRun.
+    const economicSnapshot = await resolveEconomicSnapshot();
 
     const analysis = await director.analyze({
       logoBuffer: logoBuffer ?? Buffer.from([]),
@@ -423,6 +466,7 @@ async function handleLogoRealign(
         storeId: id,
         generationType: "brand_profile_vision",
         info,
+        snapshot: economicSnapshot,
       });
     }
     await recordBrandDelivery({
@@ -430,6 +474,7 @@ async function handleLogoRealign(
       storeId: id,
       generationType: "brand_profile_with_logo",
       durationMs: Date.now() - startTime,
+      snapshot: economicSnapshot,
     });
 
     // Inference succeeded — mark current profile outdated (if any)
@@ -611,6 +656,8 @@ async function handleVSRealign(
     // test 4). Cada request de geração/realinhamento é um run (D1). ──────
     const run = new AiCostTracker().startRun("brand_profile");
     const pendingCalls: AiCallInfo[] = [];
+    // F38.2.1 (D3): snapshot do run — resolvido UMA vez após o startRun.
+    const economicSnapshot = await resolveEconomicSnapshot();
 
     const result = await profiler.generate({
       storeId: id,
@@ -653,6 +700,7 @@ async function handleVSRealign(
         storeId: id,
         generationType: i === 0 ? "brand_profile_vision" : "brand_profile_text",
         info: pendingCalls[i],
+        snapshot: economicSnapshot,
       });
     }
     await recordBrandDelivery({
@@ -660,6 +708,7 @@ async function handleVSRealign(
       storeId: id,
       generationType: "brand_profile_without_logo",
       durationMs: Date.now() - startTime,
+      snapshot: economicSnapshot,
     });
 
     // Profiler handles 3 branches internally with compensation.

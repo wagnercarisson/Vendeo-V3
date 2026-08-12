@@ -7,6 +7,7 @@ import { requireSameOrigin } from '@/lib/auth/csrf';
 import { apiHandler } from '@/lib/auth/api-handler';
 import { AiCostTracker, resolveAiCost } from '@/lib/ai-cost';
 import type { AiCallInfo } from '@/lib/ai-cost/types';
+import { EconomicParameterService } from '@/lib/economic/economic-parameter-service';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -73,6 +74,30 @@ export const POST = apiHandler(async (
     const run = new AiCostTracker().startRun("brand_profile");
     const pendingCalls: AiCallInfo[] = [];
 
+    // F38.2.1 (D3): snapshot econômico resolvido UMA vez no início do run e
+    // propagado aos eventos (call-level + delivery). APENAS valores — o tracker
+    // define captured_at_generation. Best-effort: falha → null → fallback legacy.
+    let economicSnapshot: { usdBrlRateAtGeneration: number | null; creditValueBrlAtGeneration: number | null } = {
+      usdBrlRateAtGeneration: null,
+      creditValueBrlAtGeneration: null,
+    };
+    try {
+      const service = new EconomicParameterService();
+      const [usd, credit] = await Promise.all([
+        service.getParameter("usd_brl_rate"),
+        service.getParameter("credit_value_brl"),
+      ]);
+      economicSnapshot = {
+        usdBrlRateAtGeneration: usd.value,
+        creditValueBrlAtGeneration: credit.value,
+      };
+    } catch (err) {
+      console.error(
+        "[brand-profile/infer] snapshot econômico indisponível (best-effort):",
+        err instanceof Error ? err.message : String(err)
+      );
+    }
+
     const result = await service.infer({
       storeName: store.name,
       segment: store.segment,
@@ -111,6 +136,9 @@ export const POST = apiHandler(async (
           status: "success",
           tokens: info.usage,
           cost,
+          // F38.2.1 (D3): snapshot do run propagado (APENAS valores)
+          usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
+          creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
         });
       } catch (err) {
         console.error(
@@ -133,6 +161,9 @@ export const POST = apiHandler(async (
       attemptNumber: 0,
       durationMs: Date.now() - startTime,
       status: "success",
+      // F38.2.1 (D3): snapshot do run no delivery (APENAS valores)
+      usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
+      creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
       metadata: { duration_is_pipeline: true },
     });
 
