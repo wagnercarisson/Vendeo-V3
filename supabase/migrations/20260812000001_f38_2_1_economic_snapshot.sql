@@ -98,9 +98,9 @@ CHECK ((credit_value_brl_at_generation IS NULL) = (credit_value_brl_source_at_ge
 -- =============================================================================
 UPDATE public.generation_events ge
 SET
-  usd_brl_rate_at_generation = COALESCE(av.new_value, 5.18),
+  usd_brl_rate_at_generation = COALESCE(sub.new_value, 5.18),
   usd_brl_rate_source_at_generation = CASE
-    WHEN av.new_value IS NULL THEN 'backfilled_seed'
+    WHEN sub.new_value IS NULL THEN 'backfilled_seed'
     ELSE 'backfilled_from_audit'
   END
 FROM (
@@ -123,9 +123,9 @@ WHERE ge.id = sub.id;
 
 UPDATE public.generation_events ge
 SET
-  credit_value_brl_at_generation = COALESCE(av.new_value, 1.00),
+  credit_value_brl_at_generation = COALESCE(sub.new_value, 1.00),
   credit_value_brl_source_at_generation = CASE
-    WHEN av.new_value IS NULL THEN 'backfilled_seed'
+    WHEN sub.new_value IS NULL THEN 'backfilled_seed'
     ELSE 'backfilled_from_audit'
   END
 FROM (
