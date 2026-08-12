@@ -3,7 +3,7 @@
 Descobertas fora de escopo dos planos executados, registradas conforme a regra de
 scope boundary (não corrigidas aqui; encaminhadas para os planos/verificação adequados).
 
-## 1. [38-2-05] RPC `admin_get_ai_operation_runs` não expõe `generation_type` por run
+## 1. [38-2-05] RPC `admin_get_ai_operation_runs` não expõe `generation_type` por run — ✅ RESOLVIDO
 
 - **Onde:** Task 4 (aggregations — byStage)
 - **Problema:** O contrato do RPC (migration 20260810000003/04, plano 38-2-01)
@@ -23,3 +23,14 @@ scope boundary (não corrigidas aqui; encaminhadas para os planos/verificação 
 - **Não corrigido aqui por:** scope boundary (gap pré-existente no contrato do
   plano 38-2-01; alterar o RPC exigiria migration + push fora do escopo de arquivos
   deste plano).
+- **✅ RESOLVIDO (fechamento corretivo pós-verificação):** migration aditiva
+  `supabase/migrations/20260813000001_f38_2_stage_generation_types.sql` (CREATE
+  OR REPLACE) agora expõe `generation_types` (`array_agg(DISTINCT ...)` dos
+  eventos call-level do run, excluindo os 4 delivery markers) por run no JSONB da
+  lista, mantendo o contrato backward-compatible (assinatura/filtros/summary/
+  paginação inalterados; `admin_get_ai_operation_run_events` e `admin_get_ai_costs`
+  intocados). O service (`src/lib/ai-cost/operation-runs-service.ts`) usa o novo
+  campo para `byStage` — cada etapa DISTINCT do run conta uma geração; sem etapas
+  → bucket `"unknown"`. Testes novos cobrem multi-etapas por run e o fallback
+  (39 testes em `operation-runs-service.test.ts`, verdes). `byStage` fica funcional
+  em produção.
