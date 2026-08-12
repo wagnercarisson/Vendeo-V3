@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/require-admin";
-import { EconomicParameterService } from "@/lib/economic/economic-parameter-service";
 import {
   getSuccessRate,
   getErrorRate,
   getAvgCost,
+  getAvgCostBrl,
   getAvgDuration,
   getCreditsGranted,
   getRefundRate,
@@ -28,7 +28,8 @@ interface MetricsData {
   // Campaign
   successRate: number | null;
   errorRate: number | null;
-  avgCost: number | null;
+  avgCost: number | null; // USD — consumido pelo computeHealthState (thresholds em USD)
+  avgCostBrl: number | null; // BRL — card "Custo Médio IA" (snapshot por evento, D7)
   avgDuration: number | null;
   refundRate: number | null;
   activeUsers: number | null;
@@ -45,13 +46,14 @@ interface MetricsData {
 
 async function fetchMetrics(hours: number, storeKind: StoreKind = "production"): Promise<MetricsData> {
   const [
-    successRate, errorRate, avgCost, avgDuration, refundRate, activeUsers,
+    successRate, errorRate, avgCost, avgCostBrl, avgDuration, refundRate, activeUsers,
     vsSuccessRate, vsErrorRate, vsAvgDuration, vsCreditsConsumed, vsRefundRate, vsCreditsRefunded,
     creditsGranted,
   ] = await Promise.all([
     getSuccessRate(hours, storeKind),
     getErrorRate(hours, storeKind),
     getAvgCost(hours, storeKind),
+    getAvgCostBrl(hours, storeKind),
     getAvgDuration(hours, storeKind),
     getRefundRate(hours, storeKind),
     getActiveUsers(hours, storeKind),
@@ -65,10 +67,15 @@ async function fetchMetrics(hours: number, storeKind: StoreKind = "production"):
   ]);
 
   return {
-    successRate, errorRate, avgCost, avgDuration, refundRate, activeUsers,
+    successRate, errorRate, avgCost, avgCostBrl, avgDuration, refundRate, activeUsers,
     vsSuccessRate, vsErrorRate, vsAvgDuration, vsCreditsConsumed, vsRefundRate, vsCreditsRefunded,
     creditsGranted,
   };
+}
+
+/** Pré-formata o custo médio em BRL como `R$ X,XX` (pt-BR) — o MetricsCards devolve strings sem re-conversão. */
+function formatBrl(value: number): string {
+  return `R$ ${value.toFixed(2).replace(".", ",")}`;
 }
 
 function buildCampaignCards(hours: number, data: MetricsData): MetricCard[] {
@@ -76,7 +83,11 @@ function buildCampaignCards(hours: number, data: MetricsData): MetricCard[] {
   return [
     { label: "Taxa de Sucesso", value: data.successRate, unit: "%", timeRange },
     { label: "Taxa de Erro", value: data.errorRate, unit: "%", timeRange },
-    { label: "Custo Médio IA", value: data.avgCost, timeRange },
+    {
+      label: "Custo Médio IA",
+      value: data.avgCostBrl === null ? null : formatBrl(data.avgCostBrl),
+      timeRange,
+    },
     { label: "Tempo Médio", value: data.avgDuration, timeRange },
     { label: "Taxa de Estorno Campanhas", value: data.refundRate, unit: "%", timeRange },
     { label: "Usuários Ativos", value: data.activeUsers, timeRange },
@@ -187,13 +198,10 @@ export default async function AdminMetricsPage({
     );
   }
 
-  // Fonte única de conversão USD→BRL (D2): economic_parameters.usd_brl_rate via
-  // EconomicParameterService (38-2-02) — default 1.00 no fallback (D1). O env
-  // VENDEO_USD_BRL_RATE fica apenas como fallback de bootstrap documentado,
-  // SEM uso ativo (deprecado).
-  const usdBrl = await new EconomicParameterService().getParameter("usd_brl_rate");
-  const usdToBrlRate = usdBrl.value;
-
+  // Fonte única de conversão USD→BRL (D2/D7): o card "Custo Médio IA" chega
+  // pré-convertido de getAvgCostBrl (snapshot por evento ?? parâmetro corrente)
+  // — a página não faz mais conversão nem lê parâmetro econômico (env deprecado
+  // permanece SEM uso ativo, D7).
   return (
     <div className="space-y-8">
       <div className="flex items-start justify-between">
@@ -232,15 +240,15 @@ export default async function AdminMetricsPage({
         <div className="space-y-6">
           <div>
             <h3 className="mb-2 text-sm font-medium text-muted-foreground">Última hora</h3>
-            <MetricsCards cards={campaignCards1h} usdToBrlRate={usdToBrlRate} />
+            <MetricsCards cards={campaignCards1h} />
           </div>
           <div>
             <h3 className="mb-2 text-sm font-medium text-muted-foreground">Últimas 24 horas</h3>
-            <MetricsCards cards={campaignCards24h} usdToBrlRate={usdToBrlRate} />
+            <MetricsCards cards={campaignCards24h} />
           </div>
           <div>
             <h3 className="mb-2 text-sm font-medium text-muted-foreground">Últimos 7 dias</h3>
-            <MetricsCards cards={campaignCards7d} usdToBrlRate={usdToBrlRate} />
+            <MetricsCards cards={campaignCards7d} />
           </div>
         </div>
       </section>
@@ -255,15 +263,15 @@ export default async function AdminMetricsPage({
         <div className="space-y-6">
           <div>
             <h3 className="mb-2 text-sm font-medium text-muted-foreground">Última hora</h3>
-            <MetricsCards cards={vsCards1h} usdToBrlRate={usdToBrlRate} />
+            <MetricsCards cards={vsCards1h} />
           </div>
           <div>
             <h3 className="mb-2 text-sm font-medium text-muted-foreground">Últimas 24 horas</h3>
-            <MetricsCards cards={vsCards24h} usdToBrlRate={usdToBrlRate} />
+            <MetricsCards cards={vsCards24h} />
           </div>
           <div>
             <h3 className="mb-2 text-sm font-medium text-muted-foreground">Últimos 7 dias</h3>
-            <MetricsCards cards={vsCards7d} usdToBrlRate={usdToBrlRate} />
+            <MetricsCards cards={vsCards7d} />
           </div>
         </div>
       </section>
@@ -278,15 +286,15 @@ export default async function AdminMetricsPage({
         <div className="space-y-6">
           <div>
             <h3 className="mb-2 text-sm font-medium text-muted-foreground">Última hora</h3>
-            <MetricsCards cards={walletCards1h} usdToBrlRate={usdToBrlRate} />
+            <MetricsCards cards={walletCards1h} />
           </div>
           <div>
             <h3 className="mb-2 text-sm font-medium text-muted-foreground">Últimas 24 horas</h3>
-            <MetricsCards cards={walletCards24h} usdToBrlRate={usdToBrlRate} />
+            <MetricsCards cards={walletCards24h} />
           </div>
           <div>
             <h3 className="mb-2 text-sm font-medium text-muted-foreground">Últimos 7 dias</h3>
-            <MetricsCards cards={walletCards7d} usdToBrlRate={usdToBrlRate} />
+            <MetricsCards cards={walletCards7d} />
           </div>
         </div>
       </section>

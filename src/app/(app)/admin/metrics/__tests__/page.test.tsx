@@ -15,6 +15,7 @@ const metrics = vi.hoisted(() => ({
   getSuccessRate: vi.fn(),
   getErrorRate: vi.fn(),
   getAvgCost: vi.fn(),
+  getAvgCostBrl: vi.fn(),
   getAvgDuration: vi.fn(),
   getCreditsGranted: vi.fn(),
   getRefundRate: vi.fn(),
@@ -31,6 +32,7 @@ vi.mock("@/lib/metrics/pipeline-metrics", () => ({
   getSuccessRate: (...a: unknown[]) => metrics.getSuccessRate(...a),
   getErrorRate: (...a: unknown[]) => metrics.getErrorRate(...a),
   getAvgCost: (...a: unknown[]) => metrics.getAvgCost(...a),
+  getAvgCostBrl: (...a: unknown[]) => metrics.getAvgCostBrl(...a),
   getAvgDuration: (...a: unknown[]) => metrics.getAvgDuration(...a),
   getCreditsGranted: (...a: unknown[]) => metrics.getCreditsGranted(...a),
   getRefundRate: (...a: unknown[]) => metrics.getRefundRate(...a),
@@ -43,13 +45,6 @@ vi.mock("@/lib/metrics/pipeline-metrics", () => ({
   getVsCreditsRefunded: (...a: unknown[]) => metrics.getVsCreditsRefunded(...a),
 }));
 
-const mockGetParameter = vi.fn();
-vi.mock("@/lib/economic/economic-parameter-service", () => ({
-  EconomicParameterService: vi.fn(function () {
-    return { getParameter: mockGetParameter };
-  }),
-}));
-
 vi.mock("@/lib/metrics/health", () => ({
   computeHealthState: () => "healthy" as const,
 }));
@@ -58,6 +53,7 @@ const DEFAULT_METRICS: Record<keyof typeof metrics, number | null> = {
   getSuccessRate: 80,
   getErrorRate: 20,
   getAvgCost: 0.1,
+  getAvgCostBrl: 0.5,
   getAvgDuration: 12000,
   getCreditsGranted: 500,
   getRefundRate: 10,
@@ -73,17 +69,12 @@ const DEFAULT_METRICS: Record<keyof typeof metrics, number | null> = {
 beforeEach(() => {
   vi.clearAllMocks();
   mockRequireAdmin.mockResolvedValue({ userId: "admin-1" });
-  mockGetParameter.mockResolvedValue({
-    key: "usd_brl_rate",
-    value: 5,
-    source: "table",
-  });
   for (const key of Object.keys(metrics) as Array<keyof typeof metrics>) {
     metrics[key].mockResolvedValue(DEFAULT_METRICS[key]);
   }
 });
 
-describe("AdminMetricsPage (F38.2 D6 — card Custo Médio IA + usd_brl_rate)", () => {
+describe("AdminMetricsPage (F38.2.1 D7 — card Custo Médio IA em BRL snapshotado)", () => {
   it("requireAdmin rejeita → Acesso negado", async () => {
     mockRequireAdmin.mockRejectedValue(new Error("forbidden"));
     const { default: Page } = await import("../page");
@@ -91,30 +82,25 @@ describe("AdminMetricsPage (F38.2 D6 — card Custo Médio IA + usd_brl_rate)", 
     expect(html).toContain("Acesso negado");
   });
 
-  it("renderiza card 'Custo Médio IA' com a média por entrega convertida via usd_brl_rate", async () => {
-    metrics.getAvgCost.mockResolvedValue(0.1); // média USD por entrega (apuração call-level)
-    mockGetParameter.mockResolvedValue({ key: "usd_brl_rate", value: 5, source: "table" });
-
+  it("renderiza card 'Custo Médio IA' com o valor BRL vindo de getAvgCostBrl (sem re-conversão na página)", async () => {
+    metrics.getAvgCostBrl.mockResolvedValue(0.5); // média BRL (snapshot por evento)
     const { default: Page } = await import("../page");
     const html = renderToString(await Page({ searchParams: Promise.resolve({}) }));
 
     expect(html).toContain("Custo Médio IA");
-    expect(html).toContain("R$ 0,50"); // 0.10 USD × 5.00
-    expect(mockGetParameter).toHaveBeenCalledWith("usd_brl_rate");
+    expect(html).toContain("R$ 0,50"); // valor pré-formatado — a página NÃO multiplica
+    expect(metrics.getAvgCostBrl).toHaveBeenCalled();
   });
 
-  it("USD→BRL usa economic_parameters.usd_brl_rate — NÃO o env VENDEO_USD_BRL_RATE", async () => {
-    process.env.VENDEO_USD_BRL_RATE = "9.99"; // env deprecada presente — não deve ser usada
-    metrics.getAvgCost.mockResolvedValue(0.1);
-    mockGetParameter.mockResolvedValue({ key: "usd_brl_rate", value: 4.8, source: "table" });
-
+  it("card 'Custo Médio IA' exibe exatamente o retorno de getAvgCostBrl — nenhuma conversão na página", async () => {
+    metrics.getAvgCostBrl.mockResolvedValue(4.8);
     const { default: Page } = await import("../page");
     const html = renderToString(await Page({ searchParams: Promise.resolve({}) }));
 
-    expect(html).toContain("R$ 0,48"); // 0.10 × 4.80 (parâmetro econômico)
-    expect(html).not.toContain("R$ 1,00"); // 0.10 × 9.99 ≈ 1.00 (env) — inativo
-    expect(mockGetParameter).toHaveBeenCalledWith("usd_brl_rate");
-    delete process.env.VENDEO_USD_BRL_RATE;
+    // 4.8 (média BRL) → "R$ 4,80" direto; se a página ainda convertesse
+    // (ex.: × taxa), o valor exibido seria diferente.
+    expect(html).toContain("R$ 4,80");
+    expect(html).not.toContain("R$ 0,50"); // default 0.5 não pode aparecer
   });
 
   it("demais cards sem regressão (campaign + VS + wallet)", async () => {
@@ -134,5 +120,13 @@ describe("AdminMetricsPage (F38.2 D6 — card Custo Médio IA + usd_brl_rate)", 
     expect(html).toContain("Créditos Estornados VS");
     // Wallet
     expect(html).toContain("Créditos Concedidos");
+  });
+
+  it("card 'Custo Médio IA' sem dados → null preservado (sem R$)", async () => {
+    metrics.getAvgCostBrl.mockResolvedValue(null);
+    const { default: Page } = await import("../page");
+    const html = renderToString(await Page({ searchParams: Promise.resolve({}) }));
+    expect(html).toContain("Custo Médio IA");
+    expect(html).not.toContain("R$");
   });
 });
