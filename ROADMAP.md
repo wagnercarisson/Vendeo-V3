@@ -198,7 +198,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 38. Tabela de Custos por Operação | v1.5 | 8/8 | ✅ Complete | 2026-08-07 |
 | 38.1. Apuração de Custos de IA por Entrega | v1.5 | 11/11 | ✅ Complete | 2026-08-09 |
 | 38.2. Admin de Custos Operacionais + Configurações Econômicas | v1.5 | 15/15 | ✅ Complete | 2026-08-11 |
-| 38.2.1. Snapshot Econômico | v1.5 | 3/7 | ◑ In Progress | — |
+| 38.2.1. Snapshot Econômico | v1.5 | 6/7 | ◑ In Progress | — |
 | 39. Stripe / Monetização Pública | v1.7 | 0/0 | ○ Pending | — |
 
 ---
