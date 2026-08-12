@@ -1,6 +1,7 @@
 import { PromptLoader } from '@/lib/image-generation/prompt-loader';
 import type { TextOnlyInferenceInput, TextOnlyInferenceResult } from './types';
 import OpenAI from 'openai';
+import type { AiCallInfo, TokenUsage } from '@/lib/ai-cost/types';
 
 export class BrandTextOnlyInferenceError extends Error {
   public readonly metadata: { provider: string; model: string; elapsedMs: number; errorType: string };
@@ -19,7 +20,34 @@ export class BrandTextOnlyInferenceService {
     this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   }
 
-  async infer(input: TextOnlyInferenceInput, timeoutMs: number = 30000): Promise<TextOnlyInferenceResult> {
+  /**
+   * Mapeia o payload de usage do chat.completions (OpenAI) para TokenUsage
+   * normalizado (D12). Defensivo contra drift de shape do SDK.
+   */
+  private mapChatUsage(usage: unknown): TokenUsage | undefined {
+    if (!usage || typeof usage !== 'object') return undefined;
+    const u = usage as Record<string, unknown>;
+    const tokens: TokenUsage = {};
+    if (typeof u.prompt_tokens === 'number') tokens.promptTokens = u.prompt_tokens;
+    if (typeof u.completion_tokens === 'number') tokens.completionTokens = u.completion_tokens;
+    if (typeof u.total_tokens === 'number') tokens.totalTokens = u.total_tokens;
+    const promptDetails = u.prompt_tokens_details as Record<string, unknown> | undefined;
+    if (promptDetails && typeof promptDetails.cached_tokens === 'number') {
+      tokens.cachedInputTokens = promptDetails.cached_tokens;
+    }
+    const completionDetails = u.completion_tokens_details as Record<string, unknown> | undefined;
+    if (completionDetails && typeof completionDetails.image_tokens === 'number') {
+      tokens.imageTokens = completionDetails.image_tokens;
+    }
+    return tokens;
+  }
+
+  async infer(
+    input: TextOnlyInferenceInput,
+    timeoutMs: number = 30000,
+    /** F38.1 (D7/D11): callback best-effort com dados da chamada (brand_profile_text). Opcional — nunca bloqueia. */
+    onCall?: (info: AiCallInfo) => void | Promise<void>,
+  ): Promise<TextOnlyInferenceResult> {
     const startTime = Date.now();
 
     if (!process.env.OPENAI_API_KEY) {
@@ -95,6 +123,24 @@ export class BrandTextOnlyInferenceService {
 
       const raw = JSON.parse(response.choices[0]?.message?.content ?? '{}');
       const elapsedMs = Date.now() - startTime;
+
+      // F38.1 (D7/D11): telemetria best-effort da chamada (brand_profile_text
+      // mapeado na rota). Nunca lança — a inferência não é bloqueada por
+      // telemetria (D7).
+      try {
+        await onCall?.({
+          provider: 'openai',
+          model: process.env.OPENAI_TEXT_ONLY_INFERENCE_MODEL ?? 'gpt-4o',
+          usage: this.mapChatUsage(response.usage),
+          durationMs: elapsedMs,
+        });
+      } catch (err) {
+        console.error(
+          `[BrandTextOnlyInference] onCall callback failed (best-effort): ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
+      }
 
       const safeColorTokens = raw.safe_color_tokens ?? { primary: '#000000', secondary: '#666666', accent: '#CC0000', background: '#FFFFFF' };
 

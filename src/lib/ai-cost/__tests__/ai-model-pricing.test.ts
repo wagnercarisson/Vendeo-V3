@@ -141,7 +141,7 @@ describe("AiModelPricingService.getModelPricing (D8)", () => {
     prototypeSpy.mockRestore();
   });
 
-  it("DEFAULT_AI_MODEL_PRICING espelha os 7 seeds da migration 38-1-01 (D8)", () => {
+  it("DEFAULT_AI_MODEL_PRICING espelha os seeds da migration (7 modelos 38-1-01 + tool responses:image_generation F38.1 fechamento)", () => {
     expect(Object.keys(DEFAULT_AI_MODEL_PRICING).sort()).toEqual([
       "dall-e-3",
       "gemini-2.0-flash",
@@ -150,6 +150,7 @@ describe("AiModelPricingService.getModelPricing (D8)", () => {
       "gpt-4o-mini",
       "gpt-5.5",
       "gpt-image-2",
+      "responses:image_generation",
     ]);
     expect(DEFAULT_AI_MODEL_PRICING["gpt-4o"]).toEqual({ inputCostUsd: 2.5, outputCostUsd: 10 });
     expect(DEFAULT_AI_MODEL_PRICING["gpt-4o-mini"]).toEqual({ inputCostUsd: 0.15, outputCostUsd: 0.6 });
@@ -158,6 +159,9 @@ describe("AiModelPricingService.getModelPricing (D8)", () => {
     expect(DEFAULT_AI_MODEL_PRICING["dall-e-3"]).toEqual({ imageUnitCostUsd: 0.04 });
     expect(DEFAULT_AI_MODEL_PRICING["gemini-2.0-flash"]).toEqual({ inputCostUsd: 0.1, outputCostUsd: 0.4 });
     expect(DEFAULT_AI_MODEL_PRICING["gemini-3.1-flash-lite"]).toEqual({ inputCostUsd: 0.1, outputCostUsd: 0.4 });
+    // F38.1 fechamento — tool image_generation da Responses API: dimensão única
+    // (image_unit_usd) como os modelos de imagem, nunca misturada com gpt-5.5
+    expect(DEFAULT_AI_MODEL_PRICING["responses:image_generation"]).toEqual({ imageUnitCostUsd: 0.065 });
     // Modelos com sufixo de data NÃO têm entrada própria — o normalizeModel resolve na busca
     expect(DEFAULT_AI_MODEL_PRICING["gpt-5.5-2026-04-23"]).toBeUndefined();
   });

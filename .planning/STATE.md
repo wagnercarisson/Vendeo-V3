@@ -2,22 +2,41 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
-current_phase: 38.1
-status: executing
-last_updated: "2026-08-09T00:09:47.620Z"
+current_phase: 38.2.1
+status: complete
+last_updated: "2026-08-12T18:00:00.000Z"
 progress:
-  total_phases: 21
-  completed_phases: 18
-  total_plans: 99
-  completed_plans: 89
-  percent: 86
+  total_phases: 24
+  completed_phases: 21
+  total_plans: 117
+  completed_plans: 115
+  percent: 98
+stopped_at: ""
 ---
 
 # Project State
 
-**Last updated:** 2026-08-09 (F38.1 Apuração de Custos de IA por Entrega em execução — 7/11 plans concluídos: 38-1-07 ✅ rota generate-image instrumentada com custo real por chamada, delivery sem custo, totalCost real, campaigns.operation_run_id persistido — 1672 testes, typecheck/lint/build limpos; 38/38 requirements; F38 concluída 8/8 plans, 1597 testes, UAT 4/4; renumeração F37 = Revisão e Aprovação da Arte, F38 = Tabela de Custos, F39 = Stripe)
+**Last updated:** 2026-08-10 (F38.2 Admin de Custos Operacionais + Configurações Econômicas **CONCLUÍDA — 11/11 plans**: 38-2-01 ✅ migrations 3 + db push [BLOCKING] aplicado no remoto (economic_parameters + audit + seeds 1.00/1.00 + RPC admin_set_economic_parameter + RLS service_role; 4 colunas de confiança em generation_events; RPCs admin_get_ai_operation_runs/_events com filtros/paginação/P95/evidências de segmento/insumos de badge); 38-2-02 ✅ tipos econômicos sem server-only (ECONOMIC_PARAMETER_KEYS/EconomicParameterKey/EconomicParameterResolution) + EconomicParameterService server-only fail-open (fallback 1.00)/fail-closed (EconomicParameterUnavailableError → 503) + getAll com source + 10 testes; 38-2-03 ✅ AiCostTracker persiste 4 campos de confiança (D5); 38-2-04 ✅ API GET/PUT /api/admin/economic-parameters (zod + RPC admin_set_economic_parameter); 38-2-05 ✅ OperationRunsService (BRL D1/D4 + badges D5 + segmentação D9 + agregados D3 + detalhe D4, 20 testes); 38-2-06 ✅ API GET /api/admin/ai-operation-runs (lista + detalhe) com AiOperationRunsQuerySchema (janela default 90d/max 365d → 400) + 13 testes; 38-2-07 ✅ UI /admin/operation-costs → 'Configurações Econômicas' (título D2 + seção Parâmetros com ParamsForm: motivo obrigatório + badge source + audit_id + toFixed(2); nav renomeada; 503 fail-closed por seção; checkpoint humano aprovado com melhorias de UI + 8 testes). F38.1 Apuração de Custos de IA por Entrega **CONCLUÍDA — 11/11 plans**: 38-1-10 ✅ views/RPCs apuração + I1–I6 + gates + UAT manual validado; 38-1-11 ✅ runbook trackings. **Fechamento como camada de estimativa operacional granular** — ajuste provisório versionável da tool image_generation (fórmula `responses_image_generation_v2`): `responses:image_generation = USD 0.065` é **estimativa operacional provisória para beta**, calibrada por UAT/dashboard/CSV da OpenAI — **NÃO é custo financeiro real**; a **reconciliação financeira real fica para a próxima fase**. 38/38+2 requirements, 1713 testes, typecheck/lint/build limpos; F38 concluída 8/8 plans, 1597 testes, UAT 4/4; renumeração F37 = Revisão e Aprovação da Arte, F38 = Tabela de Custos, F39 = Stripe)
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆ **Em andamento**
-**Current phase:** 38.1
+**Current phase:** 38.2.1 ✅ Complete
+
+### Phase 38.2.1 — Snapshot Econômico ✅ Complete
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 38-2-1-01 | 1 | ✅ | Migration `20260812000001` — 4 colunas de snapshot+origem em generation_events, CHECKs enum/paridade, backfill aproximado via economic_parameter_audit (seed usd 5.18 / credit 1.00, override do usuário; origem backfilled_from_audit/backfilled_seed) + db push [BLOCKING] no remoto (221/221 linhas) |
+| 38-2-1-02 | 2 | ✅ | AiCostEvent (apenas valores) + AiCostTracker.record persiste 4 colunas com origem captured_at_generation + 6 callers (generate-image, VS ×2, brand-profile ×3) resolvem 1× e propagam; falha não bloqueia geração |
+| 38-2-1-03 | 2 | ✅ | RPCs `admin_get_ai_operation_runs`/`_events` expõem snapshots+origens por run/evento (contrato aditivo, sem derivar BRL) + db push |
+| 38-2-1-04 | 3 | ✅ | OperationRunsService: deriveBrl com snapshot ?? corrente, deriveSummary soma por run (taxas distintas não se misturam), contrato renomeado receitaEstimadaBrl/resultadoEstimadoBrl/margemEstimadaPct + creditValueSource/usdBrlRateSource/revenueEstimationNote |
+| 38-2-1-05 | 4 | ✅ | API/UI painel: labels estimados, badge de origem (fallback/backfilled), coluna câmbio, aviso "valem para novas gerações" + legend |
+| 38-2-1-06 | 2 | ✅ | getAvgCostBrl (média BRL call-level por evento com snapshot) + card "Custo Médio IA" em BRL + aviso Configurações Econômicas; nunca VENDEO_USD_BRL_RATE |
+| 38-2-1-07 | 5 | ✅ | Verificação I1–I7 (53/53 asserts banco real) + 4 gates verdes (1887 testes) + UAT manual aprovado + fix pós-UAT do filtro not.in |
+
+**Tests:** 1887 passing (213 files) | **TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
+**Verification:** `scripts/verify/38-2-1-f38-2-1-verification.mjs` — 53/53 asserts
+**UAT:** Aprovado pelo usuário (2026-08-12) — histórico estável, nova geração usa vigente, labels estimados, aviso presente
+**Source of truth:** `openspec/changes/fase-38-2-1-economic-snapshot/`
+**Context:** `.planning/phases/38.2.1-economic-snapshot/38.2.1-CONTEXT.md`
 
 ## Completed
 
@@ -102,7 +121,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** Phase 38 — credit-operation-costs
+**Current focus:** Milestone complete
 
 ## Completed Milestones
 
@@ -134,6 +153,28 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 | Phase 38-1-ai-cost-accounting P05 | 10min | 3 tasks | 8 files |
 | Phase 38-1-ai-cost-accounting P06 | 8min | 3 tasks | 4 files |
 | Phase 38-1-ai-cost-accounting P07 | 11min | 3 tasks | 5 files |
+| Phase 38-1-ai-cost-accounting P08 | 9min | 3 tasks | 4 files |
+| Phase 38-1-ai-cost-accounting P09 | 12min | 3 tasks | 11 files |
+| Phase 38-1-ai-cost-accounting PP09 | 12min | 3 tasks | 11 files |
+| Phase 38.2 P38-2-01 | 16min | 4 tasks | 4 files |
+| Phase 38.2 P38-2-02 | 3min | 3 tasks | 3 files |
+| Phase 38.2 P38-2-03 | 2min | 3 tasks | 3 files |
+| Phase 38.2 P38-2-04 | 6min | 3 tasks | 3 files |
+| Phase 38.2 P38-2-05 | 13min | 6 tasks | 3 files |
+| Phase 38.2 PP38-2-06 | 8min | 4 tasks | 6 files |
+| Phase 38.2 PP38-2-07 | 12min | 3 tasks | 5 files |
+| Phase 38.2 P38-2-09 | 7min | 3 tasks | 4 files |
+| Phase 38.2 P38-2-08 | 11min | 4 tasks | 10 files |
+| Phase 38.2 P38-2-10 | 6min | 2 tasks | 2 files |
+| Phase 38.2-admin-custos-operacionais P12 | 32min | 2 tasks | 2 files |
+| Phase 38.2-admin-custos-operacionais P13 | 185min | 2 tasks | 4 files |
+| Phase 38.2-admin-custos-operacionais P14 | 5min | 3 tasks | 4 files |
+| Phase 38.2.1-economic-snapshot P38-2-1-01 | 5min | 2 tasks | 1 files |
+| Phase 38.2.1-economic-snapshot P38-2-1-02 | 14min | 3 tasks | 15 files |
+| Phase 38.2.1-economic-snapshot P38-2-1-03 | 14min | 2 tasks | 1 files |
+| Phase 38.2.1-economic-snapshot P38-2-1-04 | 15min | 3 tasks | 7 files |
+| Phase 38.2.1-economic-snapshot P38-2-1-05 | 8min | 3 tasks | 9 files |
+| Phase 38.2.1-economic-snapshot P38-2-1-06 | 5min | 3 tasks | 7 files |
 
 ### Phase 19 — Onboarding & Estados Vazios ✅
 
@@ -433,9 +474,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 38.1 (ai-cost-accounting) — EXECUTING (plans em execução por wave)
-Plan: 8 of 11 (waves 1–6)
-v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36 e 38 concluídas. F38 (Tabela de Custos por Operação, v1.5) concluída — 8/8 plans, 1597 testes, UAT 4/4, fonte da verdade `openspec/changes/fase-38-credit-operation-costs/`; F38.1 (Apuração de Custos de IA por Entrega, desdobramento da F38) em execução — 7/11 plans concluídos (38-1-07 ✅ generate-image instrumentado — 1672 testes), 38/38 requirements, plan-checker PASS, fonte da verdade `openspec/changes/fase-38-1-ai-cost-accounting/`; F37 (Revisão e Aprovação da Arte, v1.5, experimento beta) em planejamento futuro; F39 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37 → F39).
+Phase: 38.2.1 (economic-snapshot) — COMPLETE (7/7 plans, UAT aprovado)
+Plan: 38-2-1-07 ✅ — Verificação I1–I7 (53/53 asserts banco real) + 4 gates verdes (1887 testes) + UAT manual aprovado + fix pós-UAT do filtro not.in em getAvgCostBrl; fase completa
+v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36, 38 e 38.1 concluídas. F38 (Tabela de Custos por Operação, v1.5) concluída — 8/8 plans, 1597 testes, UAT 4/4; F38.1 (Apuração de Custos de IA por Entrega, desdobramento da F38) **CONCLUÍDA** — 11/11 plans, 1713 testes, UAT validado, **fechada como camada de estimativa operacional granular** (ajuste provisório da tool image_generation `0.065` = estimativa beta provisória, não custo real; reconciliação financeira real na próxima fase), fonte da verdade `openspec/changes/fase-38-1-ai-cost-accounting/`; **F38.2 (Admin de Custos Operacionais + Configurações Econômicas, desdobramento da F38) em EXECUÇÃO — 10/11 plans** — painel `/admin/ai-operation-costs` (KPIs/filtros/tabela/drilldown/segmentos) + `economic_parameters` configuráveis + badges de confiança + correção `/admin/metrics`, fonte `openspec/changes/fase-38-2-admin-custos-operacionais/`; 38-2-01 ✅ migrations/db push (schema econômico + RPCs de runs no remoto), 38-2-02 ✅ tipos econômicos + EconomicParameterService fail-open/fail-closed + 10 testes (base das rotas 38-2-04/05/06/09), 38-2-03 ✅ AiCostTracker persiste 4 campos de confiança (D5), 38-2-04 ✅ API GET/PUT /api/admin/economic-parameters (zod + RPC admin_set_economic_parameter, 200/400/403/500, idempotência, 9 testes da rota, sem endpoint público), 38-2-05 ✅ OperationRunsService server-only (BRL D1/D4 via EconomicParameterService + badges D5 por evento/entrega + segmentação classifySegment D9 com filtro e re-paginação + storeName/owner D3 + 8 agregados D3/D9 sobre o conjunto filtrado inteiro + getRunDetail D4 com BRL/badges/componentes por evento; 20 testes, typecheck/lint limpos), 38-2-06 ✅ API GET /api/admin/ai-operation-runs (lista) + GET /api/admin/ai-operation-runs/[operationRunId] (detalhe) com AiOperationRunsQuerySchema (janela default 90d/max 365d → 400) delegando 100% ao OperationRunsService (BRL/badge/segmento nunca na rota) + 13 testes (tarefa 12.4, piso 11; regressão 1804 testes); **gap closure UAT (plans 12-15) CONCLUÍDO — verificação final: 1839 testes + 4 gates verdes + UAT manual 12/12 aprovado**; F37 (Revisão e Aprovação da Arte, v1.5, experimento beta) em planejamento futuro; F39 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37 → F39). **38-2-10 OK: verificacao I1-I6 em banco real (script 50/50 asserts) + gates verdes (vitest 1832/1832, typecheck, lint, build) + UAT 13.3 coletado para harvest end-of-phase (I1-I6 documentados em 38-2-VERIFICATION.md)**. **38-2-12 OK (gap UAT estornos): migration 20260811000001 com CREATE OR REPLACE dos RPCs admin_get_ai_operation_runs/_events expondo creditos_estornados (refunds via reference→deduction no ledger) e creditos_liquidos = max(bruto−estorno, 0) por run E no summary/detalhe — creditos_debitados BRUTO inalterado, view F38.1 intocada; db push aplicado no remoto (validado via REST: estornados=3/liquidos=17 em 20 runs/90d); I5 estendido com 13 asserts novos → 63/63 asserts 0 falhas em banco real; gates verdes (vitest 1834/1834, typecheck/lint/build exit 0)**.
 
 ### Phase 36 — Onboarding: Navegação por Abas ✅ Complete
 
@@ -490,9 +531,11 @@ v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36 e 38 concluída
 **Context:** `.planning/phases/38-credit-operation-costs/38-CONTEXT.md`
 **UAT:** `.planning/phases/38-credit-operation-costs/38-UAT.md`
 
-### Phase 38.1 — Apuração de Custos de IA por Entrega ⏳ In Progress
+### Phase 38.1 — Apuração de Custos de IA por Entrega ✅ Complete
 
 Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por entrega via `generation_events` + `operation_run_id`; `AiCostTracker` como camada única de registro; `resolveAiCost` (provider_reported → pricing_table → fallback_static → not_available); tabela `ai_model_pricing` versionada + RPC `admin_set_ai_model_price` + GET/PUT `/api/admin/ai-model-pricing` (sem página); views/RPCs de apuração e reconciliação USD × créditos (sem UI); furos 1–7 da F38 corrigidos; ~51 testes novos + verificação I1–I6.
+
+**Fechamento (2026-08-09) — camada de ESTIMATIVA OPERACIONAL GRANULAR, não reconciliação financeira final.** Ajuste provisório versionável da tool image_generation (fórmula `responses_image_generation_v2`): `estimated_cost_usd = text_component_usd + image_tool_component_usd`, aplicado apenas em `generationType=campaign_image` + `imageGenerationTool=true` (anti-dupla-cobrança em visual_signature/brand_profile/fallback gpt-image-2). **`responses:image_generation = USD 0.065` é ESTIMATIVA OPERACIONAL PROVISÓRIA PARA BETA**, calibrada por UAT/dashboard/CSV da OpenAI — **NÃO preenche `provider_reported_cost_usd` e NÃO é custo financeiro real**; a **reconciliação financeira real fica para a próxima fase**. Fonte versionável: linha `ai_model_pricing ('openai','responses:image_generation')` (migration 20260809000003, aplicada em Local e Remote) ou bootstrap `DEFAULT_AI_MODEL_PRICING`, ajustável via GET/PUT `/api/admin/ai-model-pricing`; metadata do evento `campaign_image` leva `cost_formula_version`, `text_component_usd`, `image_tool_component_usd`, `image_tool_pricing_*` e `cost_estimation_note=provisional_image_tool_unit_cost_until_provider_reconciliation`, mantendo `provider_usage_raw`.
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
@@ -503,12 +546,12 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 | 38-1-05 | 3 | ✅ | D11 event contract (usage+durationMs) + `onCall` copy/validation/review/image-gen (13 cenários, 1657 testes) |
 | 38-1-06 | 3 | ✅ | `onCall` no VS generator (Responses API) + brand profiler (visão, from-zero) — 1661 testes |
 | 38-1-07 | 4 | ✅ | Rotas 6.3 — generate-image (call-level, delivery sem custo, totalCost) |
-| 38-1-08 | 4 | ○ | Rotas 6.4 — generate-without-logo (VS/validation custo, nova tentativa = novo run) |
-| 38-1-09 | 4 | ○ | Rotas 6.5 — brand-profile/* + infer + realign (3 caminhos IA) + brand-director/text-only onCall |
-| 38-1-10 | 5 | ○ | Views/RPCs apuração + 50 testes + gates + UAT checkpoint |
-| 38-1-11 | 6 | ○ | Runbook trackings 8.1–8.5 |
+| 38-1-08 | 4 | ✅ | Rotas 6.4 — generate-without-logo (VS/validation custo, nova tentativa = novo run) |
+| 38-1-09 | 4 | ✅ | Rotas 6.5 — brand-profile/* + infer + realign (3 caminhos IA) + brand-director/text-only onCall (15 testes novos, 1700 testes) |
+| 38-1-10 | 5 | ✅ | Views/RPCs apuração + verificação I1–I6 (banco real) + 50 testes + gates + UAT checkpoint validado |
+| 38-1-11 | 6 | ✅ | Runbook trackings 8.1–8.5 + fechamento (0.065 provisório beta; reconciliação financeira real na próxima fase) |
 
-**Status:** 7/11 plans concluídos (38-1-07 ✅ generate-image instrumentado — startRun campaign_delivery + recordCall com custo real por chamada, delivery sem custo, totalCost real, campaigns.operation_run_id persistido — 1672 testes, typecheck/lint/build limpos)
+**Status:** Milestone complete
 
 **Source:** `openspec/changes/fase-38-1-ai-cost-accounting/` (fonte da verdade)
 **Context:** `.planning/phases/38-1-ai-cost-accounting/38-1-CONTEXT.md`
@@ -627,7 +670,8 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 | F36 | ✅ Complete | Onboarding — Navegação por Abas (6/6 plans, 31/31 requirements, 1479 testes, code review aplicado) |
 | F37 | ○ In progress | Revisão e Aprovação da Arte (v1.5, experimento beta — planejamento futuro) |
 | **F38** | **✅ Complete** | **Tabela de Custos por Operação — 8/8 plans, 1597 testes, I1-I6 verificados no banco real, build gate verde, UAT 4/4 aprovado** |
-| **F38.1** | **⏳ Planning Complete** | **Apuração de Custos de IA por Entrega — 11/11 plans (6 waves), 38/38 requirements, plan-checker PASS, pronta para execução (desdobramento da F38)** |
+| **F38.1** | **✅ Complete** | **Apuração de Custos de IA por Entrega — 11/11 plans, 40/40 requirements, 1713 testes (199 arquivos), I1–I6 banco real, UAT validado; fechada como camada de ESTIMATIVA OPERACIONAL GRANULAR (0.065 provisório beta; reconciliação financeira real na próxima fase)** |
+| **F38.2** | **○ Complete** | **Admin de Custos Operacionais + Configurações Econômicas — 11/11 plans: parâmetros econômicos configuráveis (`economic_parameters` usd_brl_rate/credit_value_brl + RPC + API + página Configurações Econômicas), painel `/admin/ai-operation-costs` (KPIs/filtros/tabela/drilldown/agregados por segmento), badges de confiança, correção `/admin/metrics` (Custo Médio IA call-level), verificação I1-I6 + 4 gates verdes** |
 | F39 | ○ Future | Stripe / Monetização Pública (v1.7, pós-beta — renumerada de F36 → F37 → F39) |
 
 ### Quick Tasks Completed
@@ -650,10 +694,24 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 | 260730-o30 | Hotfix admin_get_metrics uuid = text + dead code grant_monthly_credits | 2026-07-30 | 0051a7a | [260730-o30-hotfix-admin-metrics-rpc-uuid-text](./quick/260730-o30-hotfix-admin-metrics-rpc-uuid-text/) |
 | 260731-qep | Adequar documentação legal para beta freemium — Termos v1.3, Privacidade v1.2, AUP v1.1, remoção de aviso de draft (markdowns + páginas públicas), microcopy discreta em campanhas | 2026-07-31 | 020e197 | [260731-qep-adequar-documentos-legais-beta-freemium-](./quick/260731-qep-adequar-documentos-legais-beta-freemium-/) |
 | 260804-s16 | Corrigir assimetria Diretor/Revisor de Imagem: mandatoryArtworkText chega ao diretor mas nao ao revisor. Espelhar contrato de contexto (mandatoryArtworkText, campaignDetails, additionalDetails) ao ImageReviewInput e ao prompt do revisor com linguagem de revisao, adicionando testes focados. | 2026-08-04 | 47a1a4a | [260804-s16-corrigir-assimetria-diretor-revisor-de-i](./quick/260804-s16-corrigir-assimetria-diretor-revisor-de-i/) |
+| 260808-rqw | Landing pública + acesso fechado beta — landing / com form de solicitação, POST /api/access-requests (zod + anti-duplicidade + anti-enumeração), /signup neutralizado (beta fechado), fix pós-login /dashboard, admin /admin/access-requests com RPC atômico + audit log, doc SUPABASE-CLOSED-BETA.md | 2026-08-08 | 00947d0 | [260808-rqw-landing-p-blica-acesso-fechado-beta](./quick/260808-rqw-landing-p-blica-acesso-fechado-beta/) |
 | 260808-udc | PWA básico instalável (sem service worker) + clareza de custo por operação no card de créditos — manifest.ts (start_url /dashboard), 4 PNGs via sharp em public/icons/, metadata PWA/iOS no layout (viewport themeColor), dica iOS discreta na conta, BalanceCard com Campanha/Assinatura visual sem texto ambíguo | 2026-08-09 | 101739e | [260808-udc-planejar-pwa-basico-clareza-no-card-de-c](./quick/260808-udc-planejar-pwa-basico-clareza-no-card-de-c/) |
 
 ## Decisions
 
+- [Phase 38.2.1-economic-snapshot]: Conversão BRL movida para o domínio de métricas: getAvgCostBrl (pipeline-metrics) pré-formata o card "Custo Médio IA" como string R$ X,XX e o MetricsCards devolve strings sem re-conversão — a página não recalcula histórico (T-38.2.1-18); getAvgCost (USD) mantido APENAS para o computeHealthState (thresholds em USD); env deprecado com grep 0 literal nos diretórios de métricas (prova de não-uso por ausência, sem ocorrência residual em testes) (38-2-1-06)
+
+- [Phase 38.2.1-economic-snapshot]: Asserts negativos (not.toContain('receitaOpBrl'/'receitaRealBrl')) nos testes das rotas materializam o grep-gate D8 como contrato testável — a resposta NUNCA contém nomes proibidos; as ocorrências dessas strings nos testes são intencionais (verificação), não fixtures (38-2-1-05)
+- [Phase 38.2.1-economic-snapshot]: Fixtures de UI (makeRun/SUMMARY/makeListResult) com default snapshot CAPTURED (5.0/1.0, captured_at_generation, note null) — cenário legado (fallback) vira divergência explícita; origem exibida na UI exclusivamente do contrato do service via sourceOriginLabel (a UI nunca infere — T-38.2.1-14/15); data-testid/data-origin no wrapper div porque o Badge do design system não repassa props (38-2-1-05)
+- [Phase 38.2.1-economic-snapshot]: Snapshot do run = 1º evento call-level com a coluna de valor preenchida (subquery correlacionada ORDER BY created_at ASC LIMIT 1); a origem correspondente usa o MESMO predicado (coluna de VALOR IS NOT NULL) — determinístico, valor e origem da mesma linha (T-38.2.1-09, D6) (38-2-1-03)
+- [Phase 38.2.1-economic-snapshot]: RPCs continuam sem derivar BRL (D1/D5) — CREATE OR REPLACE estritamente aditivo (corpo copiado de 20260811000001 + campos no fim de projeções/JSON); contrato backward-compatible, nada removido; REVOKE/GRANT service_role e assinaturas p_* preservados (38-2-1-03)
+- [Phase 38.2.1-economic-snapshot]: Push via pooler sem token no ambiente (link gvbzwihwgzujwsviufgy) — dry-run "Would push" → push exit 0 → dry-run "Remote database is up to date."; validação REST service_role: 20 runs com os 4 campos (5.18/backfilled_seed, 1.00/backfilled_seed) (38-2-1-03)
+- [Phase 38.2.1-economic-snapshot]: Origem do snapshot é SEMPRE do tracker — AiCostEvent/GenerationEventInsert carregam apenas valores (usdBrlRateAtGeneration/creditValueBrlAtGeneration); o caller nunca define origem (anti-spoofing T-38.2.1-04); o tracker grava captured_at_generation quando o valor está presente e NULL quando ausente (paridade do banco preservada) (38-2-1-02)
+- [Phase 38.2.1-economic-snapshot]: Resolução 1× por run (não N+1 por chamada — D3/T-38.2.1-05): cada startRun resolve o snapshot via EconomicParameterService (Promise.all de getParameter); retry do VS e os 3 paths do realign abrem novos runs com novos snapshots (valores vigentes naquele momento) (38-2-1-02)
+- [Phase 38.2.1-economic-snapshot]: Best-effort de resolução em todos os callers — try/catch com log; falha → valores null → eventos NULL → fallback legacy em leitura (economic_parameter_fallback só no service, nunca persistido); geração nunca bloqueada (38-2-1-02)
+- [Phase 38.2.1-economic-snapshot]: OVERRIDE do phase owner (2026-08-11): seed do backfill de usd_brl_rate = 5.18 (o plano dizia 1.00 — eventos legados sem audit anterior refletem o câmbio real do período); credit_value_brl = 1.00; origem backfilled_seed nas duas chaves — aplicado no COALESCE dos UPDATEs do backfill e documentado como deviation (38-2-1-01)
+- [Phase 38.2.1-economic-snapshot]: Fix Rule 1 no backfill — SET deve referenciar a derived table exposta pelo FROM (sub.new_value), nunca o alias interno da LATERAL (av): 42P01 no 1º push, rollback transacional limpo, corrigido e re-pushado (38-2-1-01)
+- [Phase 38.2.1-economic-snapshot]: Backfill executa após os CHECKs (em conformidade: valor+origem sempre juntos, só backfilled_*); idempotência POR COLUNA (WHERE <coluna> IS NULL) (38-2-1-01)
 - [Phase 38-1-ai-cost-accounting]: provider do onCall do CopyDirectorService derivado de this.provider.name (TextProvider já expõe name) — sem campo providerName extra no construtor (38-1-05)
 - [Phase 38-1-ai-cost-accounting]: durationMs do GenerationMetricsEvent usa elapsedMs do pipeline (Date.now() - startTime) como base no helper emitMetricsEvent — escolha documentada no código (38-1-05)
 - [Phase 38-1-ai-cost-accounting]: onCall interno no generateImage captura usage e enriquece o evento da fase existente — nunca invoca onMetricsEvent direto (anti-dupla-contagem T-38.1-22, canal único) (38-1-05)
@@ -671,3 +729,48 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 - [Phase 38-1-ai-cost-accounting]: recordCall na rota generate-image e fire-and-forget (void) no caminho de resultado — telemetria nunca bloqueia geracao (T-38.1-29, D7); ordem de resolucao garantida pelos awaits do pipeline (upload/update) antes do logPipelineEvent com totalCost (38-1-07)
 - [Phase 38-1-ai-cost-accounting]: campaign_input_validation vem do onMetricsEvent do ImageGenerationService (fase input_validation, attempt 0) — a validacao pre-stream da rota (guards 409/conflict) nao emite evento pois nao chega a criar campanha (38-1-07)
 - [Phase 38-1-ai-cost-accounting]: duration_is_pipeline centralizada no helper recordCall (delivery) — o tracker a adiciona de novo (idempotente); chamada de delivery nao repassa metadata, mantendo grep de controle em 1 ocorrencia na rota (38-1-07)
+- [Phase 38-1-ai-cost-accounting]: Retry VS = novo startRun + flushCallEvents(null) fechando o run 1 (eventos da tentativa falha gravados com visual_signature_id null) antes de abrir o run 2 — o run falho nao recebe o id da assinatura do retry (T-38.1-37, D1) (38-1-08)
+- [Phase 38-1-ai-cost-accounting]: Imagem e validacao VS atravessam o MESMO onCall (D11); a rota distingue visual_signature_image vs visual_signature_validation pelo model real da chamada (validacao = IMAGE_VALIDATION_MODEL || gpt-4o-mini) (38-1-08)
+- [Phase 38-1-ai-cost-accounting]: Eventos call-level VS enfileirados (pendingCalls) ate o visual_signature_id existir (apos persistSignature) — todos os eventos do run com o id (D2); operationRunId/attempt capturados no momento da chamada (38-1-08)
+- [Phase 38-1-ai-cost-accounting]: Rota principal /brand-profile (GET/PATCH/archive) NAO gera via profiler — entrega brand_profile_with_logo emitida no path logo do realign (director.analyze); decidido e testado na rota principal (38-1-09 task 2.3)
+- [Phase 38-1-ai-cost-accounting]: Buffer de AiCallInfo por sequencia nas rotas brand: 1a entrada = brand_profile_vision, 2a = brand_profile_text (mapeamento deterministico por path — T-38.1-39); na pratica brand-profiler.ts so emite visao, text-only e servico separado (38-1-09)
+- [Phase 38-1-ai-cost-accounting]: onCall de analyze/infer em try/catch await (aceita sync e async, nunca lanca — D7); caminho mock dev sem OPENAI_API_KEY nao emite onCall (sem chamada real de IA — 6.5) (38-1-09)
+- [Phase 38.2]: Migration 4 de fix separada (padrão F38.1) para MIN(uuid) no RPC de runs — PostgreSQL não tem agregado MIN/MAX para UUID; subqueries correlacionadas ORDER BY created_at LIMIT 1 (38-2-01)
+- [Phase 38.2]: Evidências de segmento (D9) expostas como dados brutos no RPC (store_is_test, deduction_purchased_amount/bonus, admin_grant_evidence); classificação é do service layer (38-2-05), nunca no RPC (38-2-01)
+- [Phase 38.2]: creditos_debitados reutiliza public.admin_cost_vs_credits via SQL interno do RPC SECURITY DEFINER — proibição de .from() vale para a camada app/service, não para SQL de migration (38-2-01)
+- [Phase 38.2]: [Phase 38.2] Default/fallback de AMBOS os parâmetros = 1.00 (conservador — D1), via constante DEFAULT_ECONOMIC_PARAMETER_VALUE exportada do service (38-2-02)
+- [Phase 38.2]: Defesa value <= 0 implementada no service (log + fallback 1.00, nunca propaga inválido) como complemento ao CHECK value > 0 do banco — T-38.2-10 mitigado em 3 camadas (service + CHECK + zod na rota 38-2-04) (38-2-02)
+- [Phase 38.2]: getAll usa ordem fixa de ECONOMIC_PARAMETER_KEYS com .find() por chave — source visível por resolução para o admin (38-2-02)
+- [Phase 38.2]: JSDoc do tracker.ts reformulado sem os literais snake_case das colunas para satisfazer o grep verify (== 1 por coluna) — padrão de desvio da 38-2-02 (38-2-03)
+- [Phase 38.2]: Persistência de confiança com ?? null (não undefined): campos opcionais ausentes do CostResolution → colunas NULL explícitas → badge genérico na UI (D5); sem backfill em histórico (38-2-03)
+- [Phase 38.2]: Suite do tracker tinha 13 testes F38.1 (não 8 como o plano estimou) — 4 novos adicionados, total real 17 verdes; critério '12 testes' do acceptance criteria baseado em contagem imprecisa (38-2-03)
+- [Phase 38.2]: PUT usa safeParse no body (catch -> null) para 400 unico { error: 'Dados invalidos', details } — JSON malformado cai no mesmo 400 zod (38-2-04)
+- [Phase 38.2]: Resposta do PUT em camelCase { parameter: { key, value }, auditId, updatedAt, idempotent } — mapeamento do JSONB do RPC para o contrato D2 da UI 38-2-07 (38-2-04)
+- [Phase 38.2]: Paginação progressiva aplicada SEMPRE (não só com filtro de segmento): o RPC devolve só a página, mas summary/aggregations (D3/D4) exigem o conjunto filtrado inteiro — o service acumula o conjunto base (page_size 100) e re-pagina no final (38-2-05)
+- [Phase 38.2]: byStage agrupa sob 'unknown' quando o RPC não expõe generation_type por run (gap de contrato do 38-2-01); campo lido como opcional quando presente; registro em deferred-items.md para 38-2-06/38-2-10 (38-2-05)
+- [Phase 38.2]: admin_grant (D9): shape confirmado do RPC ({ grant_count: N } com N > 0); shape divergente → unknown — nunca inferir errado (T-38.2-20) (38-2-05)
+- [Phase 38.2]: Summary/P95 recomputados no service (helper percentile replicando percentile_cont) sobre o conjunto inteiro — consistência entre summary e aggregations; o summary do RPC permanece como fonte do total da paginação (38-2-05)
+- [Phase 38.2]: storeName/owner fail-open (log + null → bucket 'unknown'): dado de apresentação; caminho monetário/segmento é fail-closed (RPC + parâmetros econômicos → 503) (38-2-05)
+- [Phase 38.2]: byHour usa hora UTC de created_at — determinístico entre ambientes (Vercel = UTC; dev local em São Paulo não desloca o agregado) (38-2-05)
+- [Phase 38.2]: Segmento validado no zod via enum local OPERATION_RUN_SEGMENTS (sem importar do service server-only) - mesmo contrato D9 do service — schemas.ts e modulo compartilhado importado por rotas admin
+- [Phase 38.2]: Janela de periodo validada no zod com superRefine (periodStart+periodEnd presentes e diff > 365d -> 400); datas ausentes -> OK (default 90d no service/RPC) — Limite operacional de janela T-38.2-25
+- [Phase 38.2]: getAvgCost usa o RPC admin_get_ai_costs (F38.1, estavel, aceita p_hours direto) em vez do novo admin_get_ai_operation_runs (D4) — key_links do plano apontam para o primeiro; documentado no JSDoc (38-2-09)
+- [Phase 38.2]: storeKind nao e suportado pelo RPC de apuracao (sem filtro de loja) — getAvgCost mantem a assinatura (hours, storeKind) por compat mas ignora storeKind; card de custo e global (38-2-09)
+- [Phase 38.2]: Env VENDEO_USD_BRL_RATE mantido apenas como comentario de fallback de bootstrap (sem uso ativo) — atende D2 (fonte unica = parametro) e o grep verify <= 1 (38-2-09)
+- [Phase 38.2]: getParameter('usd_brl_rate') resolvido apos o early-return de empty state — nenhuma leitura de parametro quando nao ha cards a renderizar (38-2-09)
+- [Phase 38.2]: Página /admin/ai-operation-costs consome OperationRunsService direto (padrão operation-costs/metrics — service server-only); drilldown (client) usa fetch à GET /api/admin/ai-operation-runs/[id]. KPIs/agregados vêm de summary/aggregations do service — a UI NUNCA recalcula (D3/D4). Filtros dos searchParams (contrato camelCase da API 38-2-06) repassados ao service; filtros client navegam com router.push. Placeholder F38.3 (D7) como colunas/blocos fixos. (38-2-08)
+- [Phase 38.2]: I1 seeds: contrato é o valor 1.00 (D1 conservador); updated_by preenchido após edição via UI/RPC é auditoria funcionando, não falha — Verificação I1 em banco real (38-2-10)
+- [Phase 38.2]: I6 delivery markers: invariante anti-dupla-contagem = nenhum marker pós-F38.1 (operation_run_id NOT NULL) carrega custo; 51 markers legados (operation_run_id NULL) são inertes por construção (views/RPCs filtram operation_run_id IS NOT NULL + generation_type NOT IN) — Verificação I6 em banco real (38-2-10)
+- [Phase 38.2]: Linhas de teste I2/I3 permanecem na economic_parameter_audit (reason 38-2-10-verification) — append-only por desenho (trigger bloqueia até DELETE de service_role); não afetam a UI — Verificação I2/I3 (38-2-10)
+- [Phase 38.2-admin-custos-operacionais]: RPCs da F38.2 expõem creditos_estornados/creditos_liquidos por run (gap UAT) — fix exclusivo nos RPCs (CREATE OR REPLACE), view F38.1 intocada, creditos_debitados BRUTO mantido
+- [Phase 38.2]: Receita/resultado/margem derivados de creditos_liquidos — bruto (creditosDebitados) permanece como auditoria de deduções — Decisão D1/D4 do phase owner — KPIs refletem estornos; full-refund zera receita mantendo custo de IA
+- [Phase 38.2]: Floor 0 (estorno > bruto) aplicado pelo RPC via GREATEST (38-2-12) — o service consome creditos_liquidos e nunca recalcula o líquido — Decisão D1/D4 do phase owner — KPIs refletem estornos; full-refund zera receita mantendo custo de IA
+- [Phase 38.2]: mapDetailRun delegado a deriveBrl — uma única fórmula monetária para lista e detalhe (RawDetailRun agora carrega os 3 campos de crédito) — Decisão D1/D4 do phase owner — KPIs refletem estornos; full-refund zera receita mantendo custo de IA
+- [Phase 38.2]: KpiDef estendido com tooltip?: string renderizado via title no card — tooltip nativo HTML, sem dependencia nova (38-2-14)
+- [Phase 38.2]: Breakdown da celula de creditos em linhas separadas (Bruto/Estorno/Liquido) + linha financeira muted — asserts exatos por linha nos testes (38-2-14)
+- [Phase 38.2]: Bloco financeiro do drilldown condicionado a creditosDebitados !== null — runs historicos sem dados nao exibem linha vazia (38-2-14)
+- [Phase 38.2]: Textos compostos via template literal nos componentes — match exato do getByText sem ambiguidade de nos JSX (38-2-14)
+- [Phase 38.2.1-economic-snapshot]: Origem do valor exposta com union de 4 valores em OperationRun/summary: captured_at_generation / backfilled_from_audit / backfilled_seed / economic_parameter_fallback — um valor backfilled NUNCA se apresenta como captured; fallback de leitura sempre sinalizado (T-38.2.1-11)
+- [Phase 38.2.1-economic-snapshot]: deriveSummary passa a somar os BRL JA derivados por run (D5/T-38.2.1-12): re-derivacao do total USD com taxa unica removida — alterar parametro corrente nao recalcula historico com snapshot (estabilidade temporal testada com corrente 6.00)
+- [Phase 38.2.1-economic-snapshot]: Agregacao de origem do summary com precedencia deterministica: fallback > backfilled_from_audit > backfilled_seed > captured; revenueEstimationNote derivada da origem agregada do credito
+- [Phase 38.2.1-economic-snapshot]: Evento call-level expoe snapshots/origens cruas (nullable) + estimatedCostBrl com snapshot do evento ?? corrente; run do detalhe usa os snapshots do RPC (1o evento do run — D6)

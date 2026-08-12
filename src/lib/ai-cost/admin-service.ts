@@ -56,6 +56,10 @@ export interface AiCostReconciliation {
   /** Custo reportado pelo provider (D3) — evento com só provider_reported não some da apuração */
   providerReportedCostUsd?: number | null;
   estimatedCostUsd?: number | null;
+  /** F38.1 (C): receita estimada = creditos_debitados × credit_unit_usd_value (NULL quando env não configurada) */
+  receitaEstimadaUsd?: number | null;
+  /** F38.1 (C): valor por crédito usado no cálculo (repasse do RPC; NULL quando não configurado) */
+  creditUnitUsdValue?: number | null;
 }
 
 export interface AiCostAggregations {
@@ -82,9 +86,15 @@ function mapOperationRuns(rows: unknown): AiCostOperationRun[] {
       chamadas: toNumber(row.chamadas) ?? 0,
       chamadasSuccess: toNumber(row.chamadas_success) ?? 0,
       duracaoTotalMs: toNumber(row.duracao_total_ms),
-      regeneracoes: toNumber(row.regeneracoes) ?? 0,
+      regeneracoes: clampNonNegative(toNumber(row.regeneracoes)),
     };
   });
+}
+
+/** Regenerações nunca podem ser negativas (floor 0 — defesa em profundidade; SQL já usa GREATEST). */
+function clampNonNegative(value: number | null): number {
+  const n = value ?? 0;
+  return Math.max(0, n);
 }
 
 function mapCampaignStages(rows: unknown): AiCostCampaignStage[] {
@@ -112,7 +122,10 @@ function mapReconciliation(rows: unknown): AiCostReconciliation[] {
       etapasMaisCaras: Array.isArray(row.etapas_mais_caras)
         ? (row.etapas_mais_caras as string[])
         : null,
-      regeneracoes: toNumber(row.regeneracoes),
+      regeneracoes:
+        row.regeneracoes === undefined || row.regeneracoes === null
+          ? null
+          : clampNonNegative(toNumber(row.regeneracoes)),
     };
     // Campos de contrato repassados quando o JSONB do RPC os inclui (D10/D3)
     if (row.credit_tx_id !== undefined) {
@@ -124,6 +137,13 @@ function mapReconciliation(rows: unknown): AiCostReconciliation[] {
     if (row.estimated_cost_usd !== undefined) {
       item.estimatedCostUsd = toNumber(row.estimated_cost_usd);
     }
+    // F38.1 (C): receita/margem derivadas de p_credit_unit_usd_value no RPC
+    if (row.receita_estimada_usd !== undefined) {
+      item.receitaEstimadaUsd = toNumber(row.receita_estimada_usd);
+    }
+    if (row.credit_unit_usd_value !== undefined) {
+      item.creditUnitUsdValue = toNumber(row.credit_unit_usd_value);
+    }
     return item;
   });
 }
@@ -134,6 +154,20 @@ function mapReconciliation(rows: unknown): AiCostReconciliation[] {
  * admin_ai_* / admin_cost_vs_credits NUNCA são lidas direto (.from() proibido);
  * o SQL-side já exclui delivery markers (anti-dupla-contagem D1/D6).
  */
+/**
+ * Valor monetário por crédito para estimar receita/margem (F38.1-C).
+ * Config server-side via VENDEO_AI_CREDIT_UNIT_USD_VALUE (default: não configurado →
+ * receita_estimada_usd/margem_estimada = NULL no RPC).
+ */
+function getCreditUnitUsdValue(): number | null {
+  const raw = process.env.VENDEO_AI_CREDIT_UNIT_USD_VALUE;
+  if (raw) {
+    const parsed = Number(raw);
+    if (!isNaN(parsed) && parsed > 0) return parsed;
+  }
+  return null;
+}
+
 export class AiCostAdminService {
   constructor(private readonly client: SupabaseClient = supabaseAdmin) {}
 
@@ -147,6 +181,7 @@ export class AiCostAdminService {
       p_model: filters.model ?? null,
       p_generation_type: filters.generationType ?? null,
       p_hours: filters.hours ?? 24,
+      p_credit_unit_usd_value: getCreditUnitUsdValue(),
     });
 
     if (error) {

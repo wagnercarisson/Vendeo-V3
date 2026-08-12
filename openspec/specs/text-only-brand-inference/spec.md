@@ -71,6 +71,8 @@ The system SHALL provide a `BrandTextOnlyInferenceService` that:
 4. Validates the output (hex color format, required fields present)
 5. Returns the validated `TextOnlyInferenceResult`
 
+The service SHALL expose an `onCall` callback that receives `AiCallInfo` (usage, provider, model, durationMs) for each inference call. The brand profile flow SHALL register cost events — today none exist (no brand profile cost accounting). Each generation/re-alignment request SHALL create a new `operation_run_id` (semantics `brand_profile`).
+
 The service SHALL NOT persist data or update store state — those responsibilities belong to the route handler. The service SHALL follow the same pattern as `BrandDirectorService` and `BrandProfilerWithoutLogoService`.
 
 #### Scenario: Service returns complete result with all intelligence fields
@@ -80,6 +82,18 @@ The service SHALL NOT persist data or update store state — those responsibilit
 - **AND** `visual_style`, `visual_tone`, `typography_direction`, `brand_personality`, `campaign_guidelines`, `campaign_brief` SHALL be present
 - **AND** `inferred_primary_color` and `inferred_accent_color` SHALL be present
 - **AND** `confidence_score` SHALL be a number between 0 and 1
+
+#### Scenario: brand_profile_text registrado com custo
+
+- **WHEN** o text-only inference faz a chamada de IA
+- **THEN** um evento `brand_profile_text` é gravado com custo/tokens via callback `onCall` (D11)
+- **AND** o evento compartilha o `operation_run_id` do request (D1)
+
+#### Scenario: inferência expõe usage via onCall
+
+- **WHEN** a inferência é chamada com `onCall`
+- **THEN** o callback é invocado com `AiCallInfo` (usage, provider, model, durationMs)
+- **AND** sem `onCall` o comportamento permanece idêntico (retrocompatível)
 
 #### Scenario: Service handles API key missing
 

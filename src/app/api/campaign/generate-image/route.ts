@@ -30,7 +30,9 @@ import { logPipelineEvent } from "@/lib/logging/pipeline-logger";
 import { AiCostTracker, resolveAiCost } from "@/lib/ai-cost";
 import type { AiCallInfo, CostResolution } from "@/lib/ai-cost/types";
 import type { GenerationEventType } from "@/lib/visual-signature/types";
+import type { ImageProviderUsageMeta } from "@/lib/image-generation/providers/types";
 import { requireLegalClearance } from "@/lib/legal/clearance";
+import { EconomicParameterService } from "@/lib/economic/economic-parameter-service";
 
 export const runtime = "nodejs";
 
@@ -43,6 +45,34 @@ export const POST = apiHandler(async (request: NextRequest) => {
   // campanha na criação (D1/D2) e propagado a todos os eventos do run.
   const config = getLaunchConfig();
   const { operationRunId, traceId } = new AiCostTracker().startRun("campaign_delivery");
+
+  // F38.2.1 (D3): snapshot econômico resolvido UMA vez no início do run (padrão
+  // telemetria) — propagado a TODAS as chamadas filhas via recordCall. Apenas
+  // VALORES: o tracker define a origem `captured_at_generation` na gravação.
+  // Best-effort: falha → valores null → fallback legacy em leitura; NUNCA
+  // bloqueia a geração (T-38.2.1-05).
+  const economicSnapshot = await (async (): Promise<{
+    usdBrlRateAtGeneration: number | null;
+    creditValueBrlAtGeneration: number | null;
+  }> => {
+    try {
+      const service = new EconomicParameterService();
+      const [usd, credit] = await Promise.all([
+        service.getParameter("usd_brl_rate"),
+        service.getParameter("credit_value_brl"),
+      ]);
+      return {
+        usdBrlRateAtGeneration: usd.value,
+        creditValueBrlAtGeneration: credit.value,
+      };
+    } catch (err) {
+      console.error(
+        "[generate-image] snapshot econômico indisponível (best-effort):",
+        err instanceof Error ? err.message : String(err)
+      );
+      return { usdBrlRateAtGeneration: null, creditValueBrlAtGeneration: null };
+    }
+  })();
 
   if (config.generationPaused) {
     return Response.json(
@@ -437,10 +467,45 @@ export const POST = apiHandler(async (request: NextRequest) => {
       // D1/D6) — o tracker marca a entrega com a flag de pipeline no metadata.
       // Best-effort (D7): nunca lança e nunca bloqueia o pipeline.
       let callCostSum = 0;
+
+      // F38.1 fechamento: metadata call-level para auditoria (furo 8 — coluna
+      // call_metadata nunca preenchida na geração de imagem). Carrega o usage bruto
+      // sanitizado do provider + flags do caminho de geração (Responses
+      // image_generation) E os componentes da fórmula de estimativa (v2) quando o
+      // resolvedor aplicou o ajuste provisório da tool.
+      const buildCallMetadata = (
+        info: AiCallInfo & { usageMeta?: ImageProviderUsageMeta },
+        cost?: CostResolution,
+      ): Record<string, unknown> | undefined => {
+        const usageMeta = info.usageMeta
+          ? {
+              provider_usage_raw: info.usageMeta.providerUsageRaw,
+              provider_usage_source: info.usageMeta.providerUsageSource,
+              responses_model: info.usageMeta.responsesModel,
+              image_generation_tool: info.usageMeta.imageGenerationTool,
+            }
+          : undefined;
+
+        const formula =
+          cost && (cost.costFormulaVersion || cost.costEstimationNote || cost.textComponentUsd !== undefined)
+            ? {
+                cost_formula_version: cost.costFormulaVersion,
+                text_component_usd: cost.textComponentUsd,
+                image_tool_component_usd: cost.imageToolComponentUsd,
+                image_tool_pricing_provider: cost.imageToolPricingProvider,
+                image_tool_pricing_model: cost.imageToolPricingModel,
+                image_tool_pricing_version: cost.imageToolPricingVersion,
+                cost_estimation_note: cost.costEstimationNote,
+              }
+            : undefined;
+
+        return usageMeta || formula ? { ...usageMeta, ...formula } : undefined;
+      };
+
       const recordCall = async (params: {
         generationType: GenerationEventType;
         status: "success" | "failed";
-        info: AiCallInfo & { attempt?: number };
+        info: AiCallInfo & { attempt?: number; usageMeta?: ImageProviderUsageMeta };
         errorType?: string;
       }): Promise<void> => {
         try {
@@ -452,6 +517,8 @@ export const POST = apiHandler(async (request: NextRequest) => {
               model: params.info.model,
               usage: params.info.usage,
               providerReportedCostUsd: params.info.providerReportedCostUsd,
+              imageGenerationTool: params.info.usageMeta?.imageGenerationTool === true,
+              generationType: params.generationType,
             });
             if (typeof cost.estimatedCostUsd === "number") {
               callCostSum += cost.estimatedCostUsd;
@@ -473,7 +540,11 @@ export const POST = apiHandler(async (request: NextRequest) => {
             errorType: params.errorType ?? null,
             tokens: isDelivery ? undefined : params.info.usage,
             cost: isDelivery ? undefined : cost,
-            metadata: isDelivery ? { duration_is_pipeline: true } : undefined,
+            // F38.2.1 (D3): snapshot do run propagado às chamadas filhas —
+            // APENAS valores; o tracker define captured_at_generation.
+            usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
+            creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
+            metadata: isDelivery ? { duration_is_pipeline: true } : buildCallMetadata(params.info, cost),
           });
         } catch (err) {
           console.error("[generate-image] recordCall failed (best-effort):", err instanceof Error ? err.message : String(err));
@@ -583,7 +654,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
                 void recordCall({
                   generationType: "campaign_image",
                   status: "success",
-                  info: { provider: metricsEvent.provider, model: metricsEvent.model, usage: metricsEvent.usage, durationMs: metricsEvent.durationMs, attempt: metricsEvent.attempt },
+                  info: { provider: metricsEvent.provider, model: metricsEvent.model, usage: metricsEvent.usage, usageMeta: metricsEvent.usageMeta, durationMs: metricsEvent.durationMs, attempt: metricsEvent.attempt },
                 });
                 break;
               case "quality_review":

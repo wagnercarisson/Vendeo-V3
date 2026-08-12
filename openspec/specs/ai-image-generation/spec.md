@@ -221,16 +221,22 @@ The endpoint SHALL NOT modify, replace, or deprecate the existing `POST /api/cam
 
 The system SHALL emit structured metrics for every image generation execution. The `ImageGenerationService.generateImage()` method SHALL accept an optional `onMetricsEvent` callback in addition to the existing `onPhaseChange` callback.
 
+> Modified by `fase-38-1-ai-cost-accounting` (D11).
+
 The `onMetricsEvent` callback SHALL receive a `GenerationMetricsEvent` containing:
 - `runId` — unique identifier for the execution
 - `phase` — current phase identifier
 - `provider` — provider name
 - `model` — model identifier
 - `elapsedMs` — elapsed time since generation start
-- `attempt` — current attempt number
+- `attempt` — **real attempt number** (1..n from `generateWithRetry`)
 - `estimatedCostUsd` — approximate cost (when available)
+- `usage` — usage tokens (new, D11)
+- `durationMs` — individual call duration (new, D11)
 
 The `onMetricsEvent` callback SHALL NOT be exposed to the UI. It SHALL be consumed only by the metrics recording system.
+
+> **Delta F38.1 (D11):** O `onMetricsEvent` existente é **ampliado** para expor `usage`/custo por tentativa do `generateWithRetry` e o `attempt_number` real. O pipeline (via `AiCostTracker`) registra `campaign_image` e `campaign_image_review` com esses dados — sanando os furos 4 (revisão sumia da contabilidade) e 6 (`attempt_number` sempre 1). `duration_ms` passa a ser por chamada (furo 7).
 
 #### Scenario: Metrics event emitted during generation
 
@@ -239,6 +245,17 @@ The `onMetricsEvent` callback SHALL NOT be exposed to the UI. It SHALL be consum
 - **THEN** the service SHALL emit metrics events through the callback
 - **AND** the events SHALL include `runId`, `phase`, `provider`, `model`, and `elapsedMs`
 - **AND** the events SHALL NOT include prompts, payloads, API keys, or generated images
+
+#### Scenario: usage e attempt_number expostos por tentativa
+
+- **WHEN** a revisão reprova na tentativa 1 e passa na 2
+- **THEN** o `onMetricsEvent` emite `attempt: 1` e `attempt: 2` com `usage` de cada chamada (furo 6 sanado)
+- **AND** o pipeline registra `campaign_image_review` com `attempt_number` 1..n (furo 4 sanado)
+
+#### Scenario: duration_ms por chamada no evento de metrics
+
+- **WHEN** o `onMetricsEvent` é emitido para image/review
+- **THEN** `durationMs` reflete a duração daquela chamada individual (furo 7 sanado)
 
 ### Requirement: Image provider selectable via environment variable
 

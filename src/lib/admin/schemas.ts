@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { OPERATION_KEYS } from "@/lib/credit/types";
+import { ECONOMIC_PARAMETER_KEYS } from "@/lib/economic/types";
 
 export const GrantCreditsRequestSchema = z.object({
   storeId: z.string().uuid(),
@@ -85,6 +86,70 @@ export const AiCostsQuerySchema = z.object({
   campaignId: z.string().uuid().optional(),
   hours: z.coerce.number().int().min(1).default(24),
 });
+
+/**
+ * Body de PUT /api/admin/economic-parameters (D2).
+ * key validado contra ECONOMIC_PARAMETER_KEYS (enum TS versionado);
+ * value > 0 (espelha o CHECK value > 0 do banco — T-38.2-15);
+ * reason OBRIGATÓRIO (rastreabilidade — audit); operationId opcional
+ * para idempotência (retry seguro — T-38.2-16).
+ */
+export const UpdateEconomicParameterRequestSchema = z.object({
+  key: z.enum(ECONOMIC_PARAMETER_KEYS),
+  value: z.number().positive("Value deve ser maior que zero"),
+  reason: z.string().min(1, "Motivo obrigatório"),
+  operationId: z.string().uuid().optional(),
+});
+
+/** Segmentos econômicos da entrega (D9) — mesmo enum do service (sem server-only). */
+export const OPERATION_RUN_SEGMENTS = [
+  "test",
+  "freemium/promotional",
+  "paid",
+  "manual/admin",
+  "unknown",
+] as const;
+
+/** Limite operacional de janela de período — default ≤ 90d, máximo 365d → 400 (T-38.2-25). */
+const MAX_PERIOD_WINDOW_DAYS = 365;
+
+/**
+ * Query params de GET /api/admin/ai-operation-runs (D4) — repassados ao
+ * OperationRunsService.listRuns. Campos em camelCase (a rota converte de
+ * snake_case). Validação de janela: quando periodStart E periodEnd presentes,
+ * intervalo > 365 dias → 400 (zod custom); quando ausentes → OK (janela default
+ * de 90 dias aplicada no service/RPC).
+ */
+export const AiOperationRunsQuerySchema = z
+  .object({
+    periodStart: z.string().datetime().optional(),
+    periodEnd: z.string().datetime().optional(),
+    storeId: z.string().uuid().optional(),
+    operationRunType: z.string().optional(),
+    status: z.string().optional(),
+    provider: z.string().optional(),
+    model: z.string().optional(),
+    generationType: z.string().optional(),
+    operationRunId: z.string().uuid().optional(),
+    segment: z.enum(OPERATION_RUN_SEGMENTS).optional(),
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25),
+  })
+  .superRefine((data, ctx) => {
+    const { periodStart, periodEnd } = data;
+    if (periodStart && periodEnd) {
+      const diffMs =
+        new Date(periodEnd).getTime() - new Date(periodStart).getTime();
+      const diffDays = diffMs / (1000 * 60 * 60 * 24);
+      if (diffDays > MAX_PERIOD_WINDOW_DAYS) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "janela de período máxima de 365 dias",
+          path: ["periodStart"],
+        });
+      }
+    }
+  });
 
 export interface AdminUserSummary {
   userId: string;

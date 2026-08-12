@@ -1,17 +1,26 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
-const { mockRpc } = vi.hoisted(() => ({
+const { mockRpc, mockFrom, mockGetParameter } = vi.hoisted(() => ({
   mockRpc: vi.fn(),
+  mockFrom: vi.fn(),
+  mockGetParameter: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
-  supabaseAdmin: { rpc: mockRpc, from: vi.fn() },
+  supabaseAdmin: { rpc: mockRpc, from: mockFrom },
+}));
+
+vi.mock("@/lib/economic/economic-parameter-service", () => ({
+  EconomicParameterService: vi.fn(function () {
+    return { getParameter: mockGetParameter };
+  }),
 }));
 
 import {
   getSuccessRate,
   getErrorRate,
   getAvgCost,
+  getAvgCostBrl,
   getAvgDuration,
   getCreditsGranted,
   getRefundRate,
@@ -27,7 +36,7 @@ import {
 } from "../pipeline-metrics";
 
 const PRODUCTION_BUNDLE: MetricsBundle = {
-  pipeline: { total: 10, success: 8, error: 2, avg_cost_ms: 0.015, avg_duration_ms: 12000, active_users: 5 },
+  pipeline: { total: 10, success: 8, error: 2, avg_duration_ms: 12000, active_users: 5 },
   vs: { success_rate: 75, error_rate: 25, avg_duration_ms: 15000 },
   wallet: {
     credits_granted: 500, credits_consumed_vs: 20, refund_rate: 10,
@@ -37,7 +46,7 @@ const PRODUCTION_BUNDLE: MetricsBundle = {
 };
 
 const TEST_BUNDLE: MetricsBundle = {
-  pipeline: { total: 3, success: 2, error: 1, avg_cost_ms: 0.01, avg_duration_ms: 8000, active_users: 2 },
+  pipeline: { total: 3, success: 2, error: 1, avg_duration_ms: 8000, active_users: 2 },
   vs: { success_rate: 67, error_rate: 33, avg_duration_ms: 10000 },
   wallet: {
     credits_granted: 100, credits_consumed_vs: 5, refund_rate: 0,
@@ -47,7 +56,7 @@ const TEST_BUNDLE: MetricsBundle = {
 };
 
 const ALL_BUNDLE: MetricsBundle = {
-  pipeline: { total: 13, success: 10, error: 3, avg_cost_ms: 0.014, avg_duration_ms: 11000, active_users: 7 },
+  pipeline: { total: 13, success: 10, error: 3, avg_duration_ms: 11000, active_users: 7 },
   vs: { success_rate: 73, error_rate: 27, avg_duration_ms: 14000 },
   wallet: {
     credits_granted: 600, credits_consumed_vs: 25, refund_rate: 8,
@@ -57,12 +66,73 @@ const ALL_BUNDLE: MetricsBundle = {
 };
 
 function mockBundle(bundle: typeof PRODUCTION_BUNDLE) {
-  mockRpc.mockResolvedValue({ data: bundle, error: null });
+  mockRpc.mockImplementation((rpcName: string) =>
+    Promise.resolve(
+      rpcName === "admin_get_ai_costs"
+        ? {
+            data: { by_operation_run: [], by_generation_type: [], reconciliation: [] },
+            error: null,
+          }
+        : { data: bundle, error: null },
+    ),
+  );
+}
+
+/** Mock do RPC admin_get_ai_costs (apuração call-level F38.1) com runs controlados. */
+function mockAiCosts(
+  byOperationRun: Array<Record<string, unknown>>,
+  bundle: typeof PRODUCTION_BUNDLE = PRODUCTION_BUNDLE,
+) {
+  mockRpc.mockImplementation((rpcName: string) =>
+    Promise.resolve(
+      rpcName === "admin_get_ai_costs"
+        ? {
+            data: { by_operation_run: byOperationRun, by_generation_type: [], reconciliation: [] },
+            error: null,
+          }
+        : { data: bundle, error: null },
+    ),
+  );
+}
+
+/** Query builder encadeável de supabaseAdmin.from("generation_events") — captura os filtros `.not()` aplicados. */
+type GenerationEventsQuery = {
+  select: () => GenerationEventsQuery;
+  not: (...args: unknown[]) => GenerationEventsQuery;
+  gte: (...args: unknown[]) => GenerationEventsQuery;
+  lt: (...args: unknown[]) => GenerationEventsQuery;
+} & PromiseLike<{ data: unknown; error: { message: string } | null }>;
+
+/** Mock encadeável de supabaseAdmin.from("generation_events") — captura os filtros `.not()` aplicados. */
+function mockGenerationEvents(
+  rows: Array<Record<string, unknown>>,
+  error: { message: string } | null = null,
+): { notCalls: unknown[][] } {
+  const notCalls: unknown[][] = [];
+  const resolve = () => ({ data: rows, error });
+  const builder: GenerationEventsQuery = {
+    select: () => builder,
+    not: (...args: unknown[]) => {
+      notCalls.push(args);
+      return builder;
+    },
+    gte: () => builder,
+    lt: () => builder,
+    then: (onfulfilled, onrejected) =>
+      Promise.resolve(resolve()).then(onfulfilled, onrejected),
+  };
+  mockFrom.mockReturnValue(builder);
+  return { notCalls };
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
   clearMetricsCache();
+  mockGetParameter.mockResolvedValue({
+    key: "usd_brl_rate",
+    value: 5,
+    source: "table",
+  });
 });
 
 // ─── Existing tests (adapted) ──────────────────────────────────────
@@ -93,16 +163,125 @@ describe("getErrorRate", () => {
   });
 });
 
-describe("getAvgCost", () => {
-  it("returns average of estimated_cost_usd", async () => {
-    mockBundle(PRODUCTION_BUNDLE);
-    expect(await getAvgCost(24)).toBeCloseTo(0.015, 3);
+describe("getAvgCost (F38.2 D6 — apuração call-level por entrega)", () => {
+  it("calculates the average cost per delivery from admin_get_ai_costs by_operation_run", async () => {
+    mockAiCosts([
+      { operation_run_id: "r1", custo_usd_total: "10" },
+      { operation_run_id: "r2", custo_usd_total: "20" },
+    ]);
+    expect(await getAvgCost(24)).toBeCloseTo(15, 3);
+    expect(mockRpc).toHaveBeenCalledWith("admin_get_ai_costs", {
+      p_hours: 24,
+      p_credit_unit_usd_value: null,
+    });
   });
 
-  it("returns null when no cost records", async () => {
-    const empty = { ...PRODUCTION_BUNDLE, pipeline: { ...PRODUCTION_BUNDLE.pipeline, total: 0, avg_cost_ms: null } };
-    mockBundle(empty);
+  it("does NOT read campaign_pipeline.estimated_cost_usd (bundle avg_cost_ms) — even when non-null", async () => {
+    // admin_get_metrics devolve avg_cost_ms não-nulo (legado F28), mas getAvgCost
+    // apura via call-level e ignora o campo do delivery marker (NULL por desenho).
+    const bundleWithLegacyCost = {
+      ...PRODUCTION_BUNDLE,
+      pipeline: { ...PRODUCTION_BUNDLE.pipeline, avg_cost_ms: 0.5 },
+    } as unknown as MetricsBundle;
+    mockAiCosts(
+      [{ operation_run_id: "r1", custo_usd_total: "10" }],
+      bundleWithLegacyCost,
+    );
+    expect(await getAvgCost(24)).toBeCloseTo(10, 3);
+  });
+
+  it("returns null when there are no cost rows (by_operation_run [])", async () => {
+    mockAiCosts([]);
     expect(await getAvgCost(24)).toBeNull();
+  });
+
+  it("returns null when the RPC fails (soft degradation)", async () => {
+    mockRpc.mockRejectedValue(new Error("down"));
+    expect(await getAvgCost(24)).toBeNull();
+  });
+});
+
+describe("getAvgCostBrl (F38.2.1 D7 — média BRL com snapshot por evento)", () => {
+  it("converte POR EVENTO com usd_brl_rate_at_generation (snapshot) quando disponível — taxa corrente NÃO recalcula", async () => {
+    // Taxa corrente (5.0) presente MAS divergente do snapshot — não pode ser usada.
+    mockGetParameter.mockResolvedValue({
+      key: "usd_brl_rate",
+      value: 5,
+      source: "table",
+    });
+    mockGenerationEvents([
+      { estimated_cost_usd: "0.01", provider_reported_cost_usd: null, usd_brl_rate_at_generation: "5.20" },
+      { estimated_cost_usd: "0.02", provider_reported_cost_usd: null, usd_brl_rate_at_generation: "5.20" },
+      { estimated_cost_usd: "0.03", provider_reported_cost_usd: null, usd_brl_rate_at_generation: "5.20" },
+    ]);
+    // (0.052 + 0.104 + 0.156) / 3 = 0.104 — se usasse a corrente 5.0 → 0.10
+    expect(await getAvgCostBrl(24)).toBeCloseTo(0.104, 6);
+  });
+
+  it("sem snapshot por evento → fallback explícito da taxa corrente (EconomicParameterService)", async () => {
+    mockGetParameter.mockResolvedValue({
+      key: "usd_brl_rate",
+      value: 5,
+      source: "table",
+    });
+    mockGenerationEvents([
+      { estimated_cost_usd: "0.01", provider_reported_cost_usd: null, usd_brl_rate_at_generation: null },
+      { estimated_cost_usd: "0.02", provider_reported_cost_usd: null, usd_brl_rate_at_generation: null },
+      { estimated_cost_usd: "0.03", provider_reported_cost_usd: null, usd_brl_rate_at_generation: null },
+    ]);
+    // (0.05 + 0.10 + 0.15) / 3 = 0.10
+    expect(await getAvgCostBrl(24)).toBeCloseTo(0.1, 6);
+    expect(mockGetParameter).toHaveBeenCalledWith("usd_brl_rate");
+  });
+
+  it("provider_reported_cost_usd tem precedência sobre estimated_cost_usd (COALESCE)", async () => {
+    mockGenerationEvents([
+      { estimated_cost_usd: "0.02", provider_reported_cost_usd: "0.01", usd_brl_rate_at_generation: "5.20" },
+    ]);
+    // 0.01 × 5.20 = 0.052 (e não 0.02 × 5.20 = 0.104)
+    expect(await getAvgCostBrl(24)).toBeCloseTo(0.052, 6);
+  });
+
+  it("sem custos no período → null", async () => {
+    mockGenerationEvents([
+      { estimated_cost_usd: null, provider_reported_cost_usd: null, usd_brl_rate_at_generation: "5.20" },
+      { estimated_cost_usd: null, provider_reported_cost_usd: null, usd_brl_rate_at_generation: null },
+    ]);
+    expect(await getAvgCostBrl(24)).toBeNull();
+  });
+
+  it("exclui os 4 delivery markers da consulta (filtro generation_type NOT IN) e exige operation_run_id", async () => {
+    const { notCalls } = mockGenerationEvents([
+      { estimated_cost_usd: "0.01", provider_reported_cost_usd: null, usd_brl_rate_at_generation: "5.20" },
+    ]);
+    await getAvgCostBrl(24);
+
+    expect(mockFrom).toHaveBeenCalledWith("generation_events");
+    const markerFilter = notCalls.find((args) => args[0] === "generation_type");
+    expect(markerFilter).toBeDefined();
+    expect(markerFilter![1]).toBe("in");
+    expect(markerFilter![2]).toBe(
+      "(campaign_pipeline,visual_signature,brand_profile_without_logo,brand_profile_with_logo)",
+    );
+    // operation_run_id IS NOT NULL — eventos call-level (anti-dupla-contagem D1/D6)
+    expect(
+      notCalls.some(
+        (args) => args[0] === "operation_run_id" && args[1] === "is" && args[2] === null,
+      ),
+    ).toBe(true);
+  });
+
+  it("falha de leitura da taxa corrente → null (degradação suave, sem throw)", async () => {
+    mockGetParameter.mockRejectedValue(new Error("down"));
+    mockGenerationEvents([
+      { estimated_cost_usd: "0.01", provider_reported_cost_usd: null, usd_brl_rate_at_generation: null },
+    ]);
+    expect(await getAvgCostBrl(24)).toBeNull();
+  });
+
+  it("consulta em falha (supabase error) → null (degradação suave)", async () => {
+    mockGenerationEvents([], { message: "down" });
+    expect(await getAvgCostBrl(24)).toBeNull();
   });
 });
 
@@ -317,8 +496,14 @@ describe("test store filtering (storeKind)", () => {
     await getAvgCost(24);
     await getActiveUsers(24);
 
-    // Should only call RPC once then use cache
-    expect(mockRpc).toHaveBeenCalledTimes(1);
+    // admin_get_metrics é cacheado (1 chamada); getAvgCost apura via
+    // admin_get_ai_costs (call-level, 1 chamada) — não passa pelo bundle.
+    expect(
+      mockRpc.mock.calls.filter((c) => c[0] === "admin_get_metrics"),
+    ).toHaveLength(1);
+    expect(
+      mockRpc.mock.calls.filter((c) => c[0] === "admin_get_ai_costs"),
+    ).toHaveLength(1);
   });
 
   it("RPC cache key varies by storeKind", async () => {
@@ -335,7 +520,7 @@ describe("test store filtering (storeKind)", () => {
 describe("domain isolation", () => {
   it("VS-only data returns null/0 for campaign metrics", async () => {
     const vsOnly = {
-      pipeline: { total: 0, success: 0, error: 0, avg_cost_ms: null, avg_duration_ms: null, active_users: 0 },
+      pipeline: { total: 0, success: 0, error: 0, avg_duration_ms: null, active_users: 0 },
       vs: { success_rate: 75, error_rate: 25, avg_duration_ms: 15000 },
       wallet: {
         credits_granted: 0, credits_consumed_vs: 20, refund_rate: 0,
@@ -352,7 +537,7 @@ describe("domain isolation", () => {
 
   it("campaign-only data returns null/0 for VS metrics", async () => {
     const campOnly = {
-      pipeline: { total: 10, success: 8, error: 2, avg_cost_ms: 0.015, avg_duration_ms: 12000, active_users: 5 },
+      pipeline: { total: 10, success: 8, error: 2, avg_duration_ms: 12000, active_users: 5 },
       vs: { success_rate: null, error_rate: 0, avg_duration_ms: null },
       wallet: {
         credits_granted: 500, credits_consumed_vs: 0, refund_rate: 10,

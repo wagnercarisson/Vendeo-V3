@@ -1,5 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { EconomicParameterService } from "@/lib/economic/economic-parameter-service";
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -8,7 +9,6 @@ export interface MetricsBundle {
     total: number;
     success: number;
     error: number;
-    avg_cost_ms: number | null;
     avg_duration_ms: number | null;
     active_users: number;
   };
@@ -30,6 +30,19 @@ export interface MetricsBundle {
 }
 
 export type StoreKind = "production" | "test" | "all";
+
+/**
+ * Delivery markers — eventos registrados no fim de uma entrega (sem chamada
+ * de IA própria), com custo NULL por desenho desde a F38.1 (anti-dupla-
+ * contagem D1/D6). Mesma lista usada nos RPCs/views de apuração
+ * (admin_get_ai_costs e afins) para filtrar APENAS eventos call-level.
+ */
+export const AI_COST_DELIVERY_MARKER_TYPES = [
+  "campaign_pipeline",
+  "visual_signature",
+  "brand_profile_without_logo",
+  "brand_profile_with_logo",
+] as const;
 
 // ─── Bundle cache ──────────────────────────────────────────────────
 
@@ -64,7 +77,7 @@ async function fetchMetricsBundle(
 
   // Fallback: return empty bundle (degradação suave)
   const fallback: MetricsBundle = {
-    pipeline: { total: 0, success: 0, error: 0, avg_cost_ms: null, avg_duration_ms: null, active_users: 0 },
+    pipeline: { total: 0, success: 0, error: 0, avg_duration_ms: null, active_users: 0 },
     vs: { success_rate: null, error_rate: 0, avg_duration_ms: null },
     wallet: {
       credits_granted: 0, credits_consumed_vs: 0, refund_rate: 0,
@@ -106,12 +119,134 @@ export async function getErrorRate(
   return Math.round((error / total) * 100);
 }
 
+/** NUMERIC do Postgres chega como string | number — normaliza para number (padrão ai-cost admin service). */
+function toNumber(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Custo médio de IA por entrega (apuração call-level, D6) — NÃO lê mais
+ * `campaign_pipeline.estimated_cost_usd` (delivery marker NULL por desenho
+ * desde a F38.1 — anti-dupla-contagem D1/D6). Apura via RPC
+ * `admin_get_ai_costs` (F38.1, inalterado): `by_operation_run` → média de
+ * `custo_usd_total` (cada run = entrega; o RPC já exclui delivery markers no
+ * SQL). `storeKind` não é suportado pelo RPC de apuração (sem filtro de loja —
+ * documentado). RPC em falha → null (degradação suave — a página continua
+ * renderizando os demais cards, T-38.2-41).
+ */
 export async function getAvgCost(
   hours: number,
-  storeKind: StoreKind = "production",
+  _storeKind: StoreKind = "production",
 ): Promise<number | null> {
-  const bundle = await fetchMetricsBundle(hours, storeKind);
-  return bundle.pipeline.avg_cost_ms ?? null;
+  try {
+    const { data, error } = await supabaseAdmin.rpc("admin_get_ai_costs", {
+      p_hours: hours,
+      p_credit_unit_usd_value: null,
+    });
+
+    if (error || !data) {
+      console.error("[metrics] getAvgCost error", error?.message ?? "no data");
+      return null;
+    }
+
+    const raw = data as { by_operation_run?: unknown };
+    const rows = Array.isArray(raw.by_operation_run)
+      ? (raw.by_operation_run as Array<Record<string, unknown>>)
+      : [];
+    const costs = rows
+      .map((r) => toNumber(r.custo_usd_total))
+      .filter((c): c is number => c !== null);
+    if (costs.length === 0) return null;
+    return costs.reduce((a, b) => a + b, 0) / costs.length;
+  } catch (e) {
+    console.error(
+      "[metrics] getAvgCost error",
+      e instanceof Error ? e.message : e,
+    );
+    return null;
+  }
+}
+
+/**
+ * Custo médio de IA por entrega em BRL (D7 — snapshot econômico). Consulta
+ * direta `generation_events` (call-level, mesmo filtro do RPC de apuração):
+ * exclui os 4 delivery markers e exige `operation_run_id IS NOT NULL`
+ * (anti-dupla-contagem D1/D6). Por evento:
+ * `cost = COALESCE(provider_reported_cost_usd, estimated_cost_usd)` e
+ * `rate = usd_brl_rate_at_generation ?? taxa corrente` — a taxa corrente vem
+ * de `economic_parameters.usd_brl_rate` (EconomicParameterService, resolvida
+ * UMA vez), fonte única de conversão (D2); o env deprecado nunca é lido
+ * (D7). `avgBrl = Σ(cost × rate) / N` — conversão POR EVENTO: alterar a taxa
+ * corrente depois não recalcula períodos com snapshot (estabilidade temporal,
+ * T-38.2.1-18). Falha de consulta ou de leitura da taxa corrente → null
+ * (degradação suave, padrão getAvgCost).
+ */
+export async function getAvgCostBrl(
+  hours: number,
+  _storeKind: StoreKind = "production",
+): Promise<number | null> {
+  try {
+    const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+    const { data, error } = await supabaseAdmin
+      .from("generation_events")
+      .select(
+        "provider_reported_cost_usd, estimated_cost_usd, usd_brl_rate_at_generation",
+      )
+      .not(
+        "generation_type",
+        "in",
+        `(${AI_COST_DELIVERY_MARKER_TYPES.join(",")})`,
+      )
+      .not("operation_run_id", "is", null)
+      .gte("created_at", cutoff);
+
+    if (error || !data) {
+      console.error(
+        "[metrics] getAvgCostBrl error",
+        error?.message ?? "no data",
+      );
+      return null;
+    }
+
+    // Taxa corrente: fallback explícito (D7) — resolvida UMA vez; erro real →
+    // degradação suave (null), padrão getAvgCost.
+    let currentRate: number | null = null;
+    try {
+      const resolution = await new EconomicParameterService().getParameter(
+        "usd_brl_rate",
+      );
+      currentRate = resolution.value;
+    } catch (e) {
+      console.error(
+        "[metrics] getAvgCostBrl taxa corrente indisponível",
+        e instanceof Error ? e.message : e,
+      );
+      return null;
+    }
+    if (currentRate === null) return null;
+
+    const rows = Array.isArray(data) ? data : [];
+    const brlCosts: number[] = [];
+    for (const row of rows) {
+      const record = row as Record<string, unknown>;
+      const cost =
+        toNumber(record.provider_reported_cost_usd) ??
+        toNumber(record.estimated_cost_usd);
+      if (cost === null) continue;
+      const rate = toNumber(record.usd_brl_rate_at_generation) ?? currentRate;
+      brlCosts.push(cost * rate);
+    }
+    if (brlCosts.length === 0) return null;
+    return brlCosts.reduce((a, b) => a + b, 0) / brlCosts.length;
+  } catch (e) {
+    console.error(
+      "[metrics] getAvgCostBrl error",
+      e instanceof Error ? e.message : e,
+    );
+    return null;
+  }
 }
 
 export async function getAvgDuration(

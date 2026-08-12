@@ -240,3 +240,115 @@ describe("resolveAiCost — extensões (D9/D12)", () => {
     expect(result).toEqual({ estimatedCostUsd: 0.15, costSource: "fallback_static" });
   });
 });
+
+describe("resolveAiCost — ajuste provisório versionável da tool image_generation (F38.1 fechamento, fórmula v2)", () => {
+  const TOOL_UUID = "33333333-3333-4333-8333-333333333333";
+
+  // Modelo textual gpt-5.5: 1000 prompt (600 uncached) + 400 cached + 200 output
+  // → text_component = 0.003 + 0.0002 + 0.006 = 0.0092
+  const TEXT_PRICING = { inputCostUsd: 5, cachedInputCostUsd: 0.5, outputCostUsd: 30 };
+  const TOOL_PRICING = { imageUnitCostUsd: 0.065 };
+  const USAGE = { promptTokens: 1000, completionTokens: 200, cachedInputTokens: 400 };
+
+  it("imageGenerationTool=true + campaign_image + tool pricing presente → soma text_component + image_tool_component (0.0092 + 0.065 = 0.0742)", async () => {
+    mockGetModelPricing.mockImplementation(({ model }: { model: string }) => {
+      if (model === "responses:image_generation") {
+        return Promise.resolve({ pricing: TOOL_PRICING, versionId: TOOL_UUID });
+      }
+      return Promise.resolve({ pricing: TEXT_PRICING, versionId: UUID });
+    });
+
+    const result = await resolveAiCost({
+      provider: "openai",
+      model: "gpt-5.5",
+      usage: USAGE,
+      imageGenerationTool: true,
+      generationType: "campaign_image",
+    });
+
+    expect(result).toEqual({
+      estimatedCostUsd: 0.0742,
+      costSource: "pricing_table",
+      pricingVersion: UUID,
+      costFormulaVersion: "responses_image_generation_v2",
+      textComponentUsd: 0.0092,
+      imageToolComponentUsd: 0.065,
+      imageToolPricingProvider: "openai",
+      imageToolPricingModel: "responses:image_generation",
+      imageToolPricingVersion: TOOL_UUID,
+      costEstimationNote: "provisional_image_tool_unit_cost_until_provider_reconciliation",
+    });
+    // 2 buscas: modelo textual + tool (linha separada no pricing catalog)
+    expect(mockGetModelPricing).toHaveBeenCalledTimes(2);
+    expect(mockGetModelPricing).toHaveBeenCalledWith({
+      provider: "openai",
+      model: "responses:image_generation",
+    });
+  });
+
+  it("imageGenerationTool=true + campaign_image sem pricing da tool → só text_component + nota parcial", async () => {
+    mockGetModelPricing.mockImplementation(({ model }: { model: string }) => {
+      if (model === "responses:image_generation") return Promise.resolve(null);
+      return Promise.resolve({ pricing: TEXT_PRICING, versionId: UUID });
+    });
+
+    const result = await resolveAiCost({
+      provider: "openai",
+      model: "gpt-5.5",
+      usage: USAGE,
+      imageGenerationTool: true,
+      generationType: "campaign_image",
+    });
+
+    expect(result.estimatedCostUsd).toBeCloseTo(0.0092, 6);
+    expect(result.costSource).toBe("pricing_table");
+    expect(result.costFormulaVersion).toBe("responses_image_generation_v2");
+    expect(result.costEstimationNote).toBe(
+      "responses_image_generation_tool_without_unit_pricing",
+    );
+    expect(result.imageToolComponentUsd).toBeUndefined();
+    expect(result.textComponentUsd).toBeUndefined();
+  });
+
+  it("imageGenerationTool=false → comportamento atual, sem fórmula/componente da tool", async () => {
+    mockGetModelPricing.mockResolvedValue({ pricing: TEXT_PRICING, versionId: UUID });
+
+    const result = await resolveAiCost({
+      provider: "openai",
+      model: "gpt-5.5",
+      usage: USAGE,
+      imageGenerationTool: false,
+      generationType: "campaign_image",
+    });
+
+    expect(result.estimatedCostUsd).toBeCloseTo(0.0092, 6);
+    expect(result.costFormulaVersion).toBeUndefined();
+    expect(result.costEstimationNote).toBeUndefined();
+    expect(result.imageToolComponentUsd).toBeUndefined();
+    // sem tool call → só a busca do modelo textual
+    expect(mockGetModelPricing).toHaveBeenCalledTimes(1);
+  });
+
+  it("imageGenerationTool=true mas generationType≠campaign_image (visual_signature) → sem componente da tool (anti-dupla-cobrança)", async () => {
+    mockGetModelPricing.mockImplementation(({ model }: { model: string }) => {
+      if (model === "responses:image_generation") {
+        return Promise.resolve({ pricing: TOOL_PRICING, versionId: TOOL_UUID });
+      }
+      return Promise.resolve({ pricing: TEXT_PRICING, versionId: UUID });
+    });
+
+    const result = await resolveAiCost({
+      provider: "openai",
+      model: "gpt-5.5",
+      usage: USAGE,
+      imageGenerationTool: true,
+      generationType: "visual_signature",
+    });
+
+    expect(result.estimatedCostUsd).toBeCloseTo(0.0092, 6);
+    expect(result.costFormulaVersion).toBeUndefined();
+    expect(result.imageToolComponentUsd).toBeUndefined();
+    // visual_signature não consulta a linha da tool
+    expect(mockGetModelPricing).toHaveBeenCalledTimes(1);
+  });
+});

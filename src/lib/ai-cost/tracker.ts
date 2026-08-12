@@ -9,6 +9,10 @@ import type { AiCostEvent, OperationRunType } from "./types";
  *   um request e propaga às chamadas filhas via contexto de telemetria.
  * - `record(event)`: grava o evento em `generation_events` com todas as colunas
  *   novas (D2). BEST-EFFORT: nunca lança — a geração não é bloqueada por telemetria.
+ *   F38.2 (D5): persiste os 4 campos de confiança do CostResolution como colunas
+ *   próprias (versão da fórmula, nota de estimativa, componentes text e tool em
+ *   USD) — daqui para frente, sem reclassificar histórico (eventos anteriores à
+ *   migration ficam NULL → badge genérico na UI).
  * - Delivery marker (D1/D6): evento sem `cost` e sem `tokens` → colunas de
  *   custo/tokens NULL + flag de pipeline no metadata.
  *
@@ -55,6 +59,21 @@ export class AiCostTracker {
         provider_reported_cost_usd: event.cost?.providerReportedCostUsd ?? null,
         cost_source: event.cost?.costSource ?? null,
         pricing_version: event.cost?.pricingVersion ?? null,
+        cost_formula_version: event.cost?.costFormulaVersion ?? null,
+        cost_estimation_note: event.cost?.costEstimationNote ?? null,
+        text_component_usd: event.cost?.textComponentUsd ?? null,
+        image_tool_component_usd: event.cost?.imageToolComponentUsd ?? null,
+        // F38.2.1 (D1/D2/D3): snapshots econômicos — APENAS valores no evento;
+        // a ORIGEM `captured_at_generation` é definida AQUI pelo tracker a partir
+        // da presença do valor (presente → captured; ausente → NULL). O caller
+        // nunca define origem (anti-spoofing); o tracker nunca grava
+        // backfilled_* nem economic_parameter_fallback (D4 — só leitura).
+        usd_brl_rate_at_generation: event.usdBrlRateAtGeneration ?? null,
+        credit_value_brl_at_generation: event.creditValueBrlAtGeneration ?? null,
+        usd_brl_rate_source_at_generation:
+          event.usdBrlRateAtGeneration != null ? "captured_at_generation" : null,
+        credit_value_brl_source_at_generation:
+          event.creditValueBrlAtGeneration != null ? "captured_at_generation" : null,
         metadata: delivery
           ? { ...(event.metadata ?? {}), duration_is_pipeline: true }
           : (event.metadata ?? {}),

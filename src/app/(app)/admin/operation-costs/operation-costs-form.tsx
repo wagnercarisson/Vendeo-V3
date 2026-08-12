@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { OperationKey } from "@/lib/credit/types";
+import type { EconomicParameterResolution } from "@/lib/economic/types";
 
 export interface OperationCostRow {
   operationKey: OperationKey;
@@ -249,6 +250,201 @@ export function OperationCostsForm({ rows }: { rows: OperationCostRow[] }) {
           })}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+const PARAM_LABELS: Record<string, string> = {
+  usd_brl_rate: "Taxa de conversão",
+  credit_value_brl: "Valor operacional do crédito",
+};
+
+const PARAM_HINTS: Record<string, string> = {
+  usd_brl_rate:
+    "Multiplicador que converte o custo estimado do provider para a moeda local.",
+  credit_value_brl:
+    "Valor interno da entrega usado para estimar a receita operacional.",
+};
+
+type ParamState = {
+  value: number;
+  draft: string;
+  reason: string;
+  loading: boolean;
+  error: string | null;
+  success: string | null;
+};
+
+function formatParamValue(value: number): string {
+  return value.toFixed(2);
+}
+
+function parseParamDraft(draft: string): number | null {
+  const normalized = draft.trim().replace(",", ".");
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed)) return null;
+  return parsed;
+}
+
+export function ParamsForm({
+  parameters,
+}: {
+  parameters: EconomicParameterResolution[];
+}) {
+  const [state, setState] = useState<Record<string, ParamState>>(() =>
+    Object.fromEntries(
+      parameters.map((p) => [
+        p.key,
+        {
+          value: p.value,
+          draft: formatParamValue(p.value),
+          reason: "",
+          loading: false,
+          error: null,
+          success: null,
+        },
+      ]),
+    ),
+  );
+
+  function patchParam(key: string, patch: Partial<ParamState>) {
+    setState((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } }));
+  }
+
+  async function saveParam(param: EconomicParameterResolution) {
+    const s = state[param.key];
+    // T-38.2-31 (Tampering): motivo obrigatório no form — espelha o zod
+    // min(1) da API e o reason NOT NULL da audit table.
+    if (!s.reason.trim()) {
+      patchParam(param.key, { error: "Motivo obrigatório" });
+      return;
+    }
+    const parsed = parseParamDraft(s.draft);
+    if (parsed === null || parsed <= 0) {
+      patchParam(param.key, { error: "Valor deve ser maior que zero" });
+      return;
+    }
+
+    patchParam(param.key, { loading: true, error: null, success: null });
+    try {
+      const res = await fetch("/api/admin/economic-parameters", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key: param.key,
+          value: parsed,
+          reason: s.reason.trim(),
+          // Idempotência por operationId gerado no client (T-38.2-31/D2).
+          operationId: crypto.randomUUID(),
+        }),
+      });
+      if (!res.ok) {
+        const body = await res
+          .json()
+          .catch(() => ({ error: "Erro desconhecido" }));
+        throw new Error(body.error || `Erro ${res.status}`);
+      }
+      const data = await res.json();
+      patchParam(param.key, {
+        loading: false,
+        value: parsed,
+        draft: formatParamValue(parsed),
+        success: `Parâmetro atualizado — auditoria: ${data.auditId}`,
+        reason: "",
+      });
+    } catch (err) {
+      patchParam(param.key, {
+        loading: false,
+        error: err instanceof Error ? err.message : "Erro ao salvar",
+      });
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        Parâmetros de conversão monetária — fonte única de USD→BRL e do valor
+        operacional do crédito. Alterações não valem em produção até salvar
+        (motivo obrigatório + auditoria).
+      </p>
+      <p
+        className="rounded-lg border border-border bg-bg-surface px-3 py-2 text-xs text-muted-foreground"
+        data-testid="economic-parameters-warning"
+      >
+        Alterações nos parâmetros econômicos valem para novas gerações e não
+        recalculam o histórico já gerado.
+      </p>
+      <div className="space-y-3">
+        {parameters.map((p) => {
+          const s = state[p.key];
+          return (
+            <div
+              key={p.key}
+              data-testid={`param-${p.key}`}
+              className="rounded-lg border border-border p-4"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <label htmlFor={`param-${p.key}`} className="text-sm font-medium">
+                  {PARAM_LABELS[p.key] ?? p.key}
+                </label>
+                <Badge variant={p.source === "table" ? "ready" : "default"}>
+                  {p.source === "table" ? "tabela" : "fallback"}
+                </Badge>
+              </div>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {PARAM_HINTS[p.key]}
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <input
+                  id={`param-${p.key}`}
+                  type="text"
+                  inputMode="decimal"
+                  value={s.draft}
+                  disabled={s.loading}
+                  onBlur={() => {
+                    const parsed = parseParamDraft(s.draft);
+                    patchParam(p.key, {
+                      draft: formatParamValue(
+                        parsed === null ? s.value : parsed,
+                      ),
+                    });
+                  }}
+                  onChange={(e) =>
+                    patchParam(p.key, { draft: e.target.value })
+                  }
+                  className="w-28 rounded-md border border-border bg-bg-surface px-2 py-1 text-sm disabled:opacity-50"
+                />
+                <input
+                  type="text"
+                  value={s.reason}
+                  disabled={s.loading}
+                  placeholder="Motivo da alteração (obrigatório)"
+                  onChange={(e) =>
+                    patchParam(p.key, { reason: e.target.value })
+                  }
+                  className="w-48 rounded-md border border-border bg-bg-surface px-2 py-1 text-sm disabled:opacity-50"
+                />
+                <button
+                  type="button"
+                  disabled={s.loading}
+                  onClick={() => saveParam(p)}
+                  className="inline-flex items-center justify-center gap-1 rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground disabled:opacity-50"
+                >
+                  {s.loading && <Loader2 className="h-3 w-3 animate-spin" />}
+                  Salvar
+                </button>
+              </div>
+              {s.error && (
+                <p className="mt-1 text-xs text-destructive">{s.error}</p>
+              )}
+              {s.success && (
+                <p className="mt-1 text-xs text-accent-green">{s.success}</p>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -16,11 +16,25 @@ The prompt SHALL instruct the LLM to:
 
 The prompt SHALL explicitly instruct the LLM NOT to suggest redesigning, recoloring, or creatively altering the logo. The logo SHALL be preserved as-is. The analysis is for creative direction context only.
 
+The `BrandDirectorService` SHALL expose an `onCall` callback with the vision call `usage`. The brand profile flow SHALL record cost events (none exist today). Each generation/realignment request SHALL receive a new `operation_run_id` (semantics `brand_profile`).
+
 #### Scenario: Prompt file exists
 
 - **WHEN** the project is inspected
 - **THEN** a file SHALL exist at `prompts/store-brand-director-with-logo.md`
 - **AND** the file SHALL contain instructions for logo analysis and brand profile generation
+
+#### Scenario: brand_profile_vision registrado (director com logo)
+
+- **WHEN** o BrandDirector faz a chamada vision de análise do logo
+- **THEN** um evento `brand_profile_vision` é gravado com custo/tokens via callback `onCall`
+- **AND** o evento compartilha o `operation_run_id` do request
+
+#### Scenario: BrandDirector expõe usage via onCall
+
+- **WHEN** a análise do logo é chamada com `onCall`
+- **THEN** o callback é invocado com `AiCallInfo` (usage, provider, model, durationMs)
+- **AND** sem `onCall` o comportamento permanece idêntico (retrocompatível)
 
 ### Requirement: Store Brand Director JSON output schema
 
@@ -44,6 +58,8 @@ The Store Brand Director LLM call SHALL return a structured JSON object with the
 }
 ```
 
+The brand profile delivery (`brand_profile_with_logo`/`brand_profile_without_logo` — now using existing types) SHALL be recorded without cost/tokens (anti-double-counting), preserving status and `duration_ms`.
+
 #### Scenario: LLM returns valid JSON
 
 - **WHEN** the Store Brand Director LLM responds
@@ -55,6 +71,13 @@ The Store Brand Director LLM call SHALL return a structured JSON object with the
 - **WHEN** the Store Brand Director LLM response is not valid JSON
 - **THEN** the system SHALL record the error in metadata
 - **AND** set the brand profile status to `failed`
+
+#### Scenario: delivery brand_profile gravado sem custo
+
+- **WHEN** o fluxo de brand profile conclui
+- **THEN** um evento `brand_profile_without_logo`/`brand_profile_with_logo` é gravado com status e `duration_ms`
+- **AND** custo/tokens ficam NULL (anti-dupla-contagem)
+- **AND** o custo da entrega = soma dos eventos call-level (`brand_profile_vision`/`brand_profile_text`) via view
 
 ### Requirement: Store identity data passed to prompt
 

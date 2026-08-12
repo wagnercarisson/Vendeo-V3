@@ -4,11 +4,6 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
-        source: "/",
-        destination: "/dashboard",
-        statusCode: 301,
-      },
-      {
         source: "/minhas-campanhas",
         destination: "/campanhas",
         statusCode: 301,

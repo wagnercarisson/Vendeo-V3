@@ -168,6 +168,10 @@ export interface GenerationEventInsert {
   provider_reported_cost_usd?: number | null;
   cost_source?: CostSource | null;
   pricing_version?: string | null;
+  // F38.2.1 (D2/D3) — snapshots econômicos do run (APENAS valores; a origem
+  // captured_at_generation é definida pelo tracker na gravação)
+  usd_brl_rate_at_generation?: number | null;
+  credit_value_brl_at_generation?: number | null;
 }
 
 export interface VisualSignatureArtDirectorOutput {

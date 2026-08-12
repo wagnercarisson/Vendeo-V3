@@ -140,7 +140,7 @@ describe("AiCostAdminService.getAiCosts (6.7 — contrato views/RPC, D10)", () =
     expect(result.reconciliation[0].creditTxId).toBe("tx-123");
   });
 
-  it("RPC chamado com os 8 params exatos — null quando ausentes, p_hours=24 default; valores com filtros", async () => {
+  it("RPC chamado com os 9 params exatos — null quando ausentes, p_hours=24 default, credit unit null sem env; valores com filtros", async () => {
     mockRpcResult();
 
     await service.getAiCosts();
@@ -154,6 +154,7 @@ describe("AiCostAdminService.getAiCosts (6.7 — contrato views/RPC, D10)", () =
       p_model: null,
       p_generation_type: null,
       p_hours: 24,
+      p_credit_unit_usd_value: null,
     });
 
     mockRpc.mockClear();
@@ -179,6 +180,7 @@ describe("AiCostAdminService.getAiCosts (6.7 — contrato views/RPC, D10)", () =
       p_model: "gpt-4o",
       p_generation_type: "campaign_copy",
       p_hours: 72,
+      p_credit_unit_usd_value: null,
     });
   });
 
@@ -225,5 +227,109 @@ describe("AiCostAdminService.getAiCosts (6.7 — contrato views/RPC, D10)", () =
     expect(typeof parsed.campaignStages[0].custoUsdTotal).toBe("number");
     expect(typeof parsed.reconciliation[0].creditosDebitados).toBe("number");
     expect(typeof parsed.reconciliation[0].margemEstimada).toBe("number");
+  });
+
+  it("regeneracoes nunca negativo — operação com valor negativo vindo do SQL vira 0 (defesa em profundidade)", async () => {
+    mockRpcResult({
+      by_operation_run: [
+        {
+          operation_run_id: "run-1",
+          operation_run_type: "campaign_delivery",
+          custo_usd_total: "0.00018",
+          chamadas: "1",
+          chamadas_success: "1",
+          duracao_total_ms: "120",
+          regeneracoes: "-1",
+        },
+      ],
+    });
+
+    const result = await service.getAiCosts();
+
+    expect(result.operationRuns[0].regeneracoes).toBe(0);
+  });
+
+  it("reconciliation regeneracoes nunca negativo — valor negativo vindo do SQL vira 0 (floor 0)", async () => {
+    mockRpcResult({
+      reconciliation: [
+        {
+          operation_run_id: "run-1",
+          domain: "campaign",
+          custo_usd_total: "0.00018",
+          creditos_debitados: "1",
+          margem_estimada: "0.99982",
+          etapas_mais_caras: ["campaign_input_validation"],
+          regeneracoes: "-1",
+        },
+      ],
+    });
+
+    const result = await service.getAiCosts();
+
+    expect(result.reconciliation[0].regeneracoes).toBe(0);
+  });
+
+  it("reconciliation regeneracoes null preservado (sem etapa de arte — RPC pode omitir)", async () => {
+    mockRpcResult({
+      reconciliation: [
+        {
+          operation_run_id: "run-1",
+          domain: "campaign",
+          custo_usd_total: "0.00018",
+          creditos_debitados: "1",
+          margem_estimada: "0.99982",
+          etapas_mais_caras: ["campaign_input_validation"],
+          regeneracoes: null,
+        },
+      ],
+    });
+
+    const result = await service.getAiCosts();
+
+    expect(result.reconciliation[0].regeneracoes).toBeNull();
+  });
+
+  it("reconciliation receita/margem F38.1-C — receita_estimada_usd/credit_unit_usd_value repassados quando presentes no JSONB", async () => {
+    mockRpcResult({
+      reconciliation: [
+        {
+          operation_run_id: "run-1",
+          domain: "campaign",
+          custo_usd_total: "0.05",
+          creditos_debitados: "10",
+          receita_estimada_usd: "1.5",
+          margem_estimada: "1.45",
+          credit_unit_usd_value: "0.15",
+          etapas_mais_caras: ["campaign_image"],
+          regeneracoes: "0",
+        },
+      ],
+    });
+
+    const result = await service.getAiCosts();
+
+    expect(result.reconciliation[0].receitaEstimadaUsd).toBe(1.5);
+    expect(result.reconciliation[0].margemEstimada).toBe(1.45);
+    expect(result.reconciliation[0].creditUnitUsdValue).toBe(0.15);
+  });
+
+  it("reconciliation F38.1-C sem env — campos ausentes no JSONB ficam undefined (não quebram o contrato)", async () => {
+    mockRpcResult({
+      reconciliation: [
+        {
+          operation_run_id: "run-1",
+          domain: "campaign",
+          custo_usd_total: "0.05",
+          creditos_debitados: "10",
+          etapas_mais_caras: ["campaign_image"],
+          regeneracoes: "0",
+        },
+      ],
+    });
+
+    const result = await service.getAiCosts();
+
+    expect(result.reconciliation[0].receitaEstimadaUsd).toBeUndefined();
+    expect(result.reconciliation[0].creditUnitUsdValue).toBeUndefined();
   });
 });

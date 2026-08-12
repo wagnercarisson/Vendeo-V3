@@ -1,0 +1,640 @@
+-- F38.2.1 — RPCs de operation runs expõem snapshots econômicos + origens (D6)
+-- =============================================================================
+-- Estende os RPCs da F38.2 (admin_get_ai_operation_runs / _events) para expor
+-- os snapshots econômicos congelados na geração E suas origens:
+--   - usd_brl_rate_at_generation (snapshot CONTÁBIL do câmbio)
+--   - credit_value_brl_at_generation (snapshot ESTIMATIVO/fallback do crédito)
+--   - usd_brl_rate_source_at_generation / credit_value_brl_source_at_generation
+--     (origem explícita da procedência — nunca valor sem procedência)
+--
+-- Regras:
+--   - CREATE OR REPLACE dos DOIS RPCs da F38.2, corpo integralmente baseado em
+--     20260811000001 (estado verificado no remoto) — alterações EXCLUSIVAMENTE
+--     aditivas no JSONB: nada removido, contrato backward-compatible (D6)
+--   - O RPC NÃO deriva BRL — continua expondo dados brutos (USD + créditos +
+--     snapshots + origens); derivação é no service layer (D1/D5)
+--   - Evento de referência do run (D6): para runs com múltiplos eventos de
+--     snapshots diferentes (parâmetro alterado no meio do run — caso raro), o
+--     RPC expõe o snapshot do PRIMEIRO evento do run com a coluna de valor
+--     preenchida (ORDER BY created_at ASC LIMIT 1); a origem correspondente usa
+--     o MESMO predicado/ordenação — garantindo que valor e origem vêm da MESMA
+--     linha; o service usa esse valor como o "da geração"
+--   - Summary/paginação/total da lista INALTERADOS; run NULL + events [] quando
+--     o id não existe no detalhe (comportamento preservado)
+--   - REVOKE/GRANT service_role IDÊNTICOS aos atuais (T-38.2.1-07); parâmetros
+--     vinculados p_* preservados (mesmas assinaturas — sem quebra de contrato);
+--     janela 365d preservada
+--   - admin_get_ai_costs (F38.1) / admin_get_metrics (F28) / views admin_ai_* /
+--     admin_set_economic_parameter INALTERADOS — este plano NÃO toca em nada
+--     além dos 2 RPCs de operation runs
+--
+-- Blocos:
+--   1. RPC admin_get_ai_operation_runs (lista) — 4 campos de snapshot/origem por run
+--   2. RPC admin_get_ai_operation_run_events (detalhe) — 4 campos por evento call-level e no run
+--   3. Reversão (comentada) em ordem reversa
+-- =============================================================================
+
+-- =============================================================================
+-- 1. RPC admin_get_ai_operation_runs (lista por entrega) — snapshots + origens
+-- =============================================================================
+CREATE OR REPLACE FUNCTION public.admin_get_ai_operation_runs(
+  p_period_start TIMESTAMPTZ,
+  p_period_end TIMESTAMPTZ,
+  p_store_id UUID,
+  p_run_type TEXT,
+  p_status TEXT,
+  p_provider TEXT,
+  p_model TEXT,
+  p_generation_type TEXT,
+  p_operation_run_id UUID,
+  p_page INTEGER,
+  p_page_size INTEGER
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_page INTEGER;
+  v_page_size INTEGER;
+  v_result JSONB;
+BEGIN
+  -- Janela operacional máxima de 365 dias (anti-DoS — T-38.2-06)
+  IF p_period_start IS NOT NULL AND p_period_end IS NOT NULL
+     AND (p_period_end - p_period_start) > INTERVAL '365 days' THEN
+    RAISE EXCEPTION 'window_exceeded_365d';
+  END IF;
+
+  v_page := COALESCE(p_page, 1);
+  IF v_page < 1 THEN
+    v_page := 1;
+  END IF;
+
+  v_page_size := COALESCE(p_page_size, 25);
+  IF v_page_size < 1 THEN
+    v_page_size := 25;
+  END IF;
+  IF v_page_size > 100 THEN
+    v_page_size := 100;
+  END IF;
+
+  WITH call_level AS (
+    SELECT
+      ge.operation_run_id,
+      ge.operation_run_type,
+      ge.store_id,
+      ge.campaign_id,
+      ge.visual_signature_id,
+      ge.generation_type,
+      ge.provider,
+      ge.model,
+      ge.status,
+      ge.attempt_number,
+      ge.duration_ms,
+      ge.cost_source,
+      ge.cost_estimation_note,
+      ge.created_at,
+      ge.usd_brl_rate_at_generation,
+      ge.credit_value_brl_at_generation,
+      ge.usd_brl_rate_source_at_generation,
+      ge.credit_value_brl_source_at_generation,
+      COALESCE(ge.provider_reported_cost_usd, ge.estimated_cost_usd) AS accounting_cost_usd
+    FROM public.generation_events ge
+    WHERE ge.operation_run_id IS NOT NULL
+      AND ge.generation_type NOT IN ('campaign_pipeline','visual_signature','brand_profile_without_logo','brand_profile_with_logo')
+      AND (p_period_start IS NULL OR ge.created_at >= p_period_start)
+      AND (p_period_end IS NULL OR ge.created_at <= p_period_end)
+      AND (p_store_id IS NULL OR ge.store_id = p_store_id)
+      AND (p_run_type IS NULL OR ge.operation_run_type = p_run_type)
+      AND (p_provider IS NULL OR ge.provider = p_provider)
+      AND (p_model IS NULL OR ge.model = p_model)
+      AND (p_generation_type IS NULL OR ge.generation_type = p_generation_type)
+      AND (p_operation_run_id IS NULL OR ge.operation_run_id = p_operation_run_id)
+  ),
+  runs AS (
+    SELECT
+      cl.operation_run_id,
+      MIN(cl.operation_run_type) AS operation_run_type,
+      (SELECT cl_s.store_id FROM call_level cl_s
+       WHERE cl_s.operation_run_id = cl.operation_run_id
+         AND cl_s.store_id IS NOT NULL
+       ORDER BY cl_s.created_at ASC
+       LIMIT 1) AS store_id,
+      (SELECT cl_c.campaign_id FROM call_level cl_c
+       WHERE cl_c.operation_run_id = cl.operation_run_id
+         AND cl_c.campaign_id IS NOT NULL
+       ORDER BY cl_c.created_at ASC
+       LIMIT 1) AS campaign_id,
+      (SELECT cl_v.visual_signature_id FROM call_level cl_v
+       WHERE cl_v.operation_run_id = cl.operation_run_id
+         AND cl_v.visual_signature_id IS NOT NULL
+       ORDER BY cl_v.created_at ASC
+       LIMIT 1) AS visual_signature_id,
+      -- Snapshot econômico do evento de referência do run (D6): 1º evento
+      -- call-level do run com a coluna de valor preenchida (ORDER BY
+      -- created_at ASC LIMIT 1). A origem correspondente usa o MESMO
+      -- predicado (coluna de VALOR) e ordenação — valor e origem vêm da
+      -- MESMA linha; nunca valor sem procedência.
+      (SELECT cl_s.usd_brl_rate_at_generation
+       FROM call_level cl_s
+       WHERE cl_s.operation_run_id = cl.operation_run_id
+         AND cl_s.usd_brl_rate_at_generation IS NOT NULL
+       ORDER BY cl_s.created_at ASC
+       LIMIT 1) AS usd_brl_rate_at_generation,
+      (SELECT cl_s.usd_brl_rate_source_at_generation
+       FROM call_level cl_s
+       WHERE cl_s.operation_run_id = cl.operation_run_id
+         AND cl_s.usd_brl_rate_at_generation IS NOT NULL
+       ORDER BY cl_s.created_at ASC
+       LIMIT 1) AS usd_brl_rate_source_at_generation,
+      (SELECT cl_s.credit_value_brl_at_generation
+       FROM call_level cl_s
+       WHERE cl_s.operation_run_id = cl.operation_run_id
+         AND cl_s.credit_value_brl_at_generation IS NOT NULL
+       ORDER BY cl_s.created_at ASC
+       LIMIT 1) AS credit_value_brl_at_generation,
+      (SELECT cl_s.credit_value_brl_source_at_generation
+       FROM call_level cl_s
+       WHERE cl_s.operation_run_id = cl.operation_run_id
+         AND cl_s.credit_value_brl_at_generation IS NOT NULL
+       ORDER BY cl_s.created_at ASC
+       LIMIT 1) AS credit_value_brl_source_at_generation,
+      MIN(cl.created_at) AS created_at,
+      (SELECT delivery.status
+       FROM public.generation_events delivery
+       WHERE delivery.operation_run_id = cl.operation_run_id
+         AND delivery.generation_type IN ('campaign_pipeline','visual_signature','brand_profile_without_logo','brand_profile_with_logo')
+       ORDER BY delivery.created_at DESC
+       LIMIT 1) AS delivery_status,
+      SUM(cl.accounting_cost_usd) AS custo_usd_total,
+      SUM(cl.duration_ms) AS duracao_total_ms,
+      COUNT(*) AS chamadas,
+      COUNT(*) FILTER (WHERE cl.status = 'success') AS chamadas_success,
+      GREATEST(
+        COALESCE(MAX(cl.attempt_number) FILTER (
+          WHERE cl.generation_type IN (
+            'campaign_image','campaign_image_review',
+            'visual_signature_image','visual_signature_validation'
+          )
+        ), 0) - 1,
+        0
+      ) AS regeneracoes,
+      (SELECT cl2.provider
+       FROM call_level cl2
+       WHERE cl2.operation_run_id = cl.operation_run_id
+       GROUP BY cl2.provider
+       ORDER BY COUNT(*) DESC, MIN(cl2.created_at) DESC
+       LIMIT 1) AS provider,
+      (SELECT cl3.model
+       FROM call_level cl3
+       WHERE cl3.operation_run_id = cl.operation_run_id
+       GROUP BY cl3.model
+       ORDER BY COUNT(*) DESC, MIN(cl3.created_at) DESC
+       LIMIT 1) AS model,
+      (SELECT cl4.cost_source
+       FROM call_level cl4
+       WHERE cl4.operation_run_id = cl.operation_run_id
+         AND cl4.cost_source IS NOT NULL
+       GROUP BY cl4.cost_source
+       ORDER BY COUNT(*) DESC
+       LIMIT 1) AS cost_source,
+      array_agg(DISTINCT cl.cost_source) FILTER (WHERE cl.cost_source IS NOT NULL) AS cost_sources,
+      array_agg(DISTINCT cl.cost_estimation_note) FILTER (WHERE cl.cost_estimation_note IS NOT NULL) AS cost_estimation_notes,
+      BOOL_OR(cl.cost_source = 'provider_reported') AS has_provider_reported,
+      BOOL_OR(cl.cost_source = 'pricing_table'
+              AND cl.cost_estimation_note = 'provisional_image_tool_unit_cost_until_provider_reconciliation') AS has_provisional_image_estimate,
+      BOOL_OR(cl.cost_source = 'manual_unknown'
+              OR (cl.cost_source = 'pricing_table'
+                  AND cl.cost_estimation_note = 'responses_image_generation_tool_without_unit_pricing')) AS has_partial_estimate,
+      BOOL_OR(cl.cost_source = 'not_available') AS has_not_available,
+      BOOL_OR(cl.cost_source IN ('pricing_table','fallback_static')) AS has_estimated
+    FROM call_level cl
+    GROUP BY cl.operation_run_id
+  ),
+  refunds AS (
+    -- Refunds por operation_run_id — mesmo shape de âncora da CTE `de`
+    -- (evidências de segmento): UNION ALL de campanha + visual_signature.
+    SELECT
+      rf_all.operation_run_id,
+      SUM(rf_all.estornado) AS estornado
+    FROM (
+      -- Refunds de campanha (feature campaign_pipeline) — vincula ao run via
+      -- DISTINCT campaign_id/operation_run_id de generation_events (mesmo
+      -- subquery `cr` da CTE `de`)
+      SELECT
+        cr.operation_run_id,
+        ABS(rf.amount) AS estornado
+      FROM public.credit_transactions rf
+      JOIN public.credit_transactions ded
+        ON rf.reference = ded.id::text
+      JOIN (
+        SELECT DISTINCT ge_c.campaign_id, ge_c.operation_run_id
+        FROM public.generation_events ge_c
+        WHERE ge_c.campaign_id IS NOT NULL
+          AND ge_c.operation_run_id IS NOT NULL
+      ) cr ON cr.campaign_id = ded.campaign_id
+      WHERE rf.type = 'refund'
+        AND ded.type = 'deduction'
+        AND ded.campaign_id IS NOT NULL
+        AND ded.metadata->>'feature' = 'campaign_pipeline'
+      UNION ALL
+      -- Refunds de visual_signature (via credit_tx_id em svs.metadata) —
+      -- mesmo subquery `vr` da CTE `de`
+      SELECT
+        vr.operation_run_id,
+        ABS(rf2.amount) AS estornado
+      FROM public.credit_transactions rf2
+      JOIN public.credit_transactions ded2
+        ON rf2.reference = ded2.id::text
+      JOIN public.store_visual_signatures svs
+        ON ded2.id::text = svs.metadata->>'credit_tx_id'
+      JOIN (
+        SELECT DISTINCT ge_v.visual_signature_id, ge_v.operation_run_id
+        FROM public.generation_events ge_v
+        WHERE ge_v.visual_signature_id IS NOT NULL
+          AND ge_v.operation_run_id IS NOT NULL
+      ) vr ON vr.visual_signature_id = svs.id
+      WHERE rf2.type = 'refund'
+        AND ded2.type = 'deduction'
+    ) rf_all
+    GROUP BY rf_all.operation_run_id
+  ),
+  filtered_runs AS (
+    SELECT
+      r.operation_run_id,
+      r.operation_run_type,
+      r.store_id,
+      r.campaign_id,
+      r.visual_signature_id,
+      r.usd_brl_rate_at_generation,
+      r.usd_brl_rate_source_at_generation,
+      r.credit_value_brl_at_generation,
+      r.credit_value_brl_source_at_generation,
+      r.created_at,
+      r.delivery_status,
+      r.custo_usd_total,
+      r.duracao_total_ms,
+      r.chamadas,
+      r.chamadas_success,
+      r.regeneracoes,
+      r.provider,
+      r.model,
+      r.cost_source,
+      r.cost_sources,
+      r.cost_estimation_notes,
+      r.has_provider_reported,
+      r.has_provisional_image_estimate,
+      r.has_partial_estimate,
+      r.has_not_available,
+      r.has_estimated,
+      -- Reuso da view de reconciliação (F38.1): créditos debitados BRUTO por
+      -- entrega — contrato F38.1, NÃO alterado
+      COALESCE(vc.creditos_debitados, 0) AS creditos_debitados,
+      -- Estornos somados do ledger (refunds via reference → deduction) —
+      -- nunca negativo (COALESCE)
+      COALESCE(re.estornado, 0) AS creditos_estornados,
+      -- Líquido = max(bruto − estorno, 0) — floor em 0 (T-38.2-G01)
+      GREATEST(COALESCE(vc.creditos_debitados, 0) - COALESCE(re.estornado, 0), 0) AS creditos_liquidos,
+      -- Evidências brutas de segmento (D9) — RPC NÃO classifica
+      s.is_test_store AS is_test_flag,
+      de.deduction_purchased_amount,
+      de.deduction_bonus_amount,
+      CASE WHEN sag.grant_count > 0
+           THEN jsonb_build_object('grant_count', sag.grant_count)
+           ELSE NULL
+      END AS admin_grant_evidence
+    FROM runs r
+    LEFT JOIN public.admin_cost_vs_credits vc
+      ON vc.operation_run_id = r.operation_run_id
+    LEFT JOIN refunds re
+      ON re.operation_run_id = r.operation_run_id
+    LEFT JOIN public.stores s
+      ON s.id = r.store_id
+    LEFT JOIN (
+      SELECT
+        de_all.operation_run_id,
+        SUM(de_all.purchased) AS deduction_purchased_amount,
+        SUM(de_all.bonus) AS deduction_bonus_amount
+      FROM (
+        -- Deductions de campanha (feature campaign_pipeline) — sem multiplicar
+        -- por eventos do run (DISTINCT por campaign_id no run)
+        SELECT
+          cr.operation_run_id,
+          COALESCE((ct.metadata->>'purchased_amount')::NUMERIC, 0) AS purchased,
+          COALESCE((ct.metadata->>'bonus_amount')::NUMERIC, 0) AS bonus
+        FROM public.credit_transactions ct
+        JOIN (
+          SELECT DISTINCT ge_c.campaign_id, ge_c.operation_run_id
+          FROM public.generation_events ge_c
+          WHERE ge_c.campaign_id IS NOT NULL
+            AND ge_c.operation_run_id IS NOT NULL
+        ) cr ON cr.campaign_id = ct.campaign_id
+        WHERE ct.type = 'deduction'
+          AND ct.metadata->>'feature' = 'campaign_pipeline'
+        UNION ALL
+        -- Deductions de visual_signature (via credit_tx_id em svs.metadata)
+        SELECT
+          vr.operation_run_id,
+          COALESCE((ct2.metadata->>'purchased_amount')::NUMERIC, 0) AS purchased,
+          COALESCE((ct2.metadata->>'bonus_amount')::NUMERIC, 0) AS bonus
+        FROM public.credit_transactions ct2
+        JOIN public.store_visual_signatures svs
+          ON ct2.id::text = svs.metadata->>'credit_tx_id'
+        JOIN (
+          SELECT DISTINCT ge_v.visual_signature_id, ge_v.operation_run_id
+          FROM public.generation_events ge_v
+          WHERE ge_v.visual_signature_id IS NOT NULL
+            AND ge_v.operation_run_id IS NOT NULL
+        ) vr ON vr.visual_signature_id = svs.id
+        WHERE ct2.type = 'deduction'
+      ) de_all
+      GROUP BY de_all.operation_run_id
+    ) de
+      ON de.operation_run_id = r.operation_run_id
+    LEFT JOIN (
+      SELECT
+        a.target_id AS store_id,
+        COUNT(*) AS grant_count
+      FROM public.admin_audit_log a
+      WHERE a.action = 'credit_grant'
+        AND a.metadata->>'grant_type' = 'admin_grant'
+      GROUP BY a.target_id
+    ) sag
+      ON sag.store_id = r.store_id
+    WHERE (p_status IS NULL OR r.delivery_status = p_status)
+  ),
+  summary AS (
+    SELECT
+      SUM(fr.custo_usd_total) AS custo_usd_total,
+      SUM(fr.creditos_debitados) AS creditos_debitados,
+      SUM(fr.creditos_estornados) AS creditos_estornados,
+      SUM(fr.creditos_liquidos) AS creditos_liquidos,
+      SUM(fr.duracao_total_ms) AS duracao_total_ms,
+      AVG(fr.duracao_total_ms) AS tempo_medio_ms,
+      percentile_cont(0.95) WITHIN GROUP (ORDER BY fr.duracao_total_ms) AS p95_ms,
+      COUNT(*) AS total,
+      COUNT(*) FILTER (WHERE fr.delivery_status = 'failed') AS erros,
+      COUNT(*) FILTER (WHERE fr.delivery_status = 'success') AS sucessos
+    FROM filtered_runs fr
+  )
+  SELECT jsonb_build_object(
+    'runs', COALESCE((
+      SELECT jsonb_agg(jsonb_build_object(
+        'operation_run_id', sub.operation_run_id,
+        'operation_run_type', sub.operation_run_type,
+        'store_id', sub.store_id,
+        'campaign_id', sub.campaign_id,
+        'visual_signature_id', sub.visual_signature_id,
+        'created_at', sub.created_at,
+        'delivery_status', sub.delivery_status,
+        'custo_usd_total', sub.custo_usd_total,
+        'creditos_debitados', sub.creditos_debitados,
+        'creditos_estornados', sub.creditos_estornados,
+        'creditos_liquidos', sub.creditos_liquidos,
+        'duracao_total_ms', sub.duracao_total_ms,
+        'chamadas', sub.chamadas,
+        'chamadas_success', sub.chamadas_success,
+        'regeneracoes', sub.regeneracoes,
+        'provider', sub.provider,
+        'model', sub.model,
+        'cost_source', sub.cost_source,
+        'store_is_test', sub.is_test_flag,
+        'deduction_purchased_amount', sub.deduction_purchased_amount,
+        'deduction_bonus_amount', sub.deduction_bonus_amount,
+        'admin_grant_evidence', sub.admin_grant_evidence,
+        'cost_sources', COALESCE(sub.cost_sources, '{}'::text[]),
+        'cost_estimation_notes', COALESCE(sub.cost_estimation_notes, '{}'::text[]),
+        'has_provider_reported', COALESCE(sub.has_provider_reported, false),
+        'has_provisional_image_estimate', COALESCE(sub.has_provisional_image_estimate, false),
+        'has_partial_estimate', COALESCE(sub.has_partial_estimate, false),
+        'has_not_available', COALESCE(sub.has_not_available, false),
+        'has_estimated', COALESCE(sub.has_estimated, false),
+        'usd_brl_rate_at_generation', sub.usd_brl_rate_at_generation,
+        'usd_brl_rate_source_at_generation', sub.usd_brl_rate_source_at_generation,
+        'credit_value_brl_at_generation', sub.credit_value_brl_at_generation,
+        'credit_value_brl_source_at_generation', sub.credit_value_brl_source_at_generation
+      ) ORDER BY sub.created_at DESC)
+      FROM (
+        SELECT fr.*
+        FROM filtered_runs fr
+        ORDER BY fr.created_at DESC
+        LIMIT v_page_size OFFSET (v_page - 1) * v_page_size
+      ) sub
+    ), '[]'::jsonb),
+    'summary', jsonb_build_object(
+      'custo_usd_total', (SELECT s.custo_usd_total FROM summary s),
+      'creditos_debitados', (SELECT s.creditos_debitados FROM summary s),
+      'creditos_estornados', (SELECT s.creditos_estornados FROM summary s),
+      'creditos_liquidos', (SELECT s.creditos_liquidos FROM summary s),
+      'duracao_total_ms', (SELECT s.duracao_total_ms FROM summary s),
+      'tempo_medio_ms', (SELECT s.tempo_medio_ms FROM summary s),
+      'p95_ms', (SELECT s.p95_ms FROM summary s),
+      'total', (SELECT s.total FROM summary s),
+      'erros', (SELECT s.erros FROM summary s),
+      'sucessos', (SELECT s.sucessos FROM summary s)
+    ),
+    'page', v_page,
+    'total', (SELECT s.total FROM summary s)
+  ) INTO v_result;
+
+  RETURN v_result;
+END;
+$$;
+
+COMMENT ON FUNCTION public.admin_get_ai_operation_runs IS
+'RPC definer — lista entregas (operation_run_id) com filtros, paginação e summary sobre o conjunto filtrado (antes da página). Expõe evidências brutas de segmento (D9), insumos de badge (D5), créditos por run (creditos_debitados BRUTO — view F38.1 admin_cost_vs_credits, creditos_estornados via refunds no ledger, creditos_liquidos = max(bruto − estorno, 0)) e os snapshots econômicos por run (D6): usd_brl_rate_at_generation / credit_value_brl_at_generation e as origens *_source_at_generation do PRIMEIRO evento call-level do run com a coluna de valor preenchida (ORDER BY created_at ASC LIMIT 1 — valor e origem da mesma linha). RPC não deriva BRL (dados brutos — D1/D5). Classificação é do service. Janela máx 365 dias. Acesso exclusivo service_role.';
+
+REVOKE EXECUTE ON FUNCTION public.admin_get_ai_operation_runs(TIMESTAMPTZ, TIMESTAMPTZ, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, UUID, INTEGER, INTEGER)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_get_ai_operation_runs(TIMESTAMPTZ, TIMESTAMPTZ, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, UUID, INTEGER, INTEGER)
+  TO service_role;
+
+-- =============================================================================
+-- 2. RPC admin_get_ai_operation_run_events (detalhe call-level) — snapshots + origens
+-- =============================================================================
+CREATE OR REPLACE FUNCTION public.admin_get_ai_operation_run_events(
+  p_operation_run_id UUID
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_result JSONB;
+BEGIN
+  WITH events AS (
+    SELECT
+      ge.generation_type,
+      ge.campaign_id,
+      ge.visual_signature_id,
+      ge.provider,
+      ge.model,
+      ge.status,
+      ge.error_type,
+      ge.attempt_number,
+      ge.duration_ms,
+      ge.prompt_tokens,
+      ge.completion_tokens,
+      ge.total_tokens,
+      ge.cached_input_tokens,
+      ge.image_tokens,
+      ge.estimated_cost_usd,
+      ge.provider_reported_cost_usd,
+      ge.text_component_usd,
+      ge.image_tool_component_usd,
+      ge.cost_source,
+      ge.cost_formula_version,
+      ge.cost_estimation_note,
+      ge.metadata,
+      ge.usd_brl_rate_at_generation,
+      ge.credit_value_brl_at_generation,
+      ge.usd_brl_rate_source_at_generation,
+      ge.credit_value_brl_source_at_generation,
+      ge.created_at
+    FROM public.generation_events ge
+    WHERE ge.operation_run_id = p_operation_run_id
+      AND ge.generation_type NOT IN ('campaign_pipeline','visual_signature','brand_profile_without_logo','brand_profile_with_logo')
+  ),
+  run_agg AS (
+    SELECT
+      COUNT(*) AS chamadas,
+      COUNT(*) FILTER (WHERE e.status = 'success') AS chamadas_success,
+      SUM(COALESCE(e.provider_reported_cost_usd, e.estimated_cost_usd)) AS custo_usd_total,
+      SUM(e.duration_ms) AS duracao_total_ms,
+      GREATEST(
+        COALESCE(MAX(e.attempt_number) FILTER (
+          WHERE e.generation_type IN (
+            'campaign_image','campaign_image_review',
+            'visual_signature_image','visual_signature_validation'
+          )
+        ), 0) - 1,
+        0
+      ) AS regeneracoes,
+      (SELECT d.status
+       FROM public.generation_events d
+       WHERE d.operation_run_id = p_operation_run_id
+         AND d.generation_type IN ('campaign_pipeline','visual_signature','brand_profile_without_logo','brand_profile_with_logo')
+       ORDER BY d.created_at DESC
+       LIMIT 1) AS delivery_status,
+      percentile_cont(0.95) WITHIN GROUP (ORDER BY e.duration_ms) AS p95_ms
+    FROM events e
+  ),
+  run_credits AS (
+    -- Créditos por run no detalhe — mesma lógica de dedução+refund da lista,
+    -- derivada da CTE `events` (já filtrada por p_operation_run_id).
+    SELECT
+      -- BRUTO — reuso da view F38.1 (sem duplicar lógica)
+      COALESCE((
+        SELECT creditos_debitados
+        FROM public.admin_cost_vs_credits
+        WHERE operation_run_id = p_operation_run_id
+      ), 0) AS creditos_debitados,
+      -- Estornos: refunds via reference → deduction vinculada ao run
+      COALESCE((
+        SELECT SUM(ABS(rf.amount))
+        FROM public.credit_transactions rf
+        JOIN public.credit_transactions ded
+          ON rf.reference = ded.id::text
+        WHERE rf.type = 'refund'
+          AND ded.type = 'deduction'
+          AND (
+            -- Campanha: deduction com feature campaign_pipeline e campaign_id
+            -- presente em algum evento do run
+            (
+              ded.metadata->>'feature' = 'campaign_pipeline'
+              AND ded.campaign_id IN (
+                SELECT campaign_id FROM events WHERE campaign_id IS NOT NULL
+              )
+            )
+            OR
+            -- Visual signature: deduction via credit_tx_id em svs.metadata com
+            -- svs presente em algum evento do run
+            (
+              ded.id::text IN (
+                SELECT svs2.metadata->>'credit_tx_id'
+                FROM public.store_visual_signatures svs2
+                WHERE svs2.id IN (
+                  SELECT visual_signature_id FROM events WHERE visual_signature_id IS NOT NULL
+                )
+              )
+            )
+          )
+      ), 0) AS creditos_estornados
+  )
+  SELECT jsonb_build_object(
+    'run', CASE
+      WHEN (SELECT ra.chamadas FROM run_agg ra) = 0 THEN NULL
+      ELSE jsonb_build_object(
+        'operation_run_id', p_operation_run_id,
+        'created_at', (SELECT MIN(e.created_at) FROM events e),
+        'delivery_status', (SELECT ra.delivery_status FROM run_agg ra),
+        'custo_usd_total', (SELECT ra.custo_usd_total FROM run_agg ra),
+        'creditos_debitados', (SELECT rc.creditos_debitados FROM run_credits rc),
+        'creditos_estornados', (SELECT rc.creditos_estornados FROM run_credits rc),
+        'creditos_liquidos', (SELECT GREATEST(rc.creditos_debitados - rc.creditos_estornados, 0) FROM run_credits rc),
+        'duracao_total_ms', (SELECT ra.duracao_total_ms FROM run_agg ra),
+        'chamadas', (SELECT ra.chamadas FROM run_agg ra),
+        'chamadas_success', (SELECT ra.chamadas_success FROM run_agg ra),
+        'regeneracoes', (SELECT ra.regeneracoes FROM run_agg ra),
+        'p95_ms', (SELECT ra.p95_ms FROM run_agg ra),
+        -- Snapshot econômico do evento de referência do run (D6): 1º evento
+        -- com a coluna de valor preenchida; a origem usa o MESMO predicado e
+        -- ordenação — valor e origem vêm da MESMA linha
+        'usd_brl_rate_at_generation', (SELECT e.usd_brl_rate_at_generation FROM events e WHERE e.usd_brl_rate_at_generation IS NOT NULL ORDER BY e.created_at ASC LIMIT 1),
+        'usd_brl_rate_source_at_generation', (SELECT e.usd_brl_rate_source_at_generation FROM events e WHERE e.usd_brl_rate_at_generation IS NOT NULL ORDER BY e.created_at ASC LIMIT 1),
+        'credit_value_brl_at_generation', (SELECT e.credit_value_brl_at_generation FROM events e WHERE e.credit_value_brl_at_generation IS NOT NULL ORDER BY e.created_at ASC LIMIT 1),
+        'credit_value_brl_source_at_generation', (SELECT e.credit_value_brl_source_at_generation FROM events e WHERE e.credit_value_brl_at_generation IS NOT NULL ORDER BY e.created_at ASC LIMIT 1)
+      )
+    END,
+    'events', COALESCE((
+      SELECT jsonb_agg(jsonb_build_object(
+        'generation_type', e.generation_type,
+        'provider', e.provider,
+        'model', e.model,
+        'status', e.status,
+        'error_type', e.error_type,
+        'attempt_number', e.attempt_number,
+        'duration_ms', e.duration_ms,
+        'prompt_tokens', e.prompt_tokens,
+        'completion_tokens', e.completion_tokens,
+        'total_tokens', e.total_tokens,
+        'cached_input_tokens', e.cached_input_tokens,
+        'image_tokens', e.image_tokens,
+        'estimated_cost_usd', e.estimated_cost_usd,
+        'provider_reported_cost_usd', e.provider_reported_cost_usd,
+        'text_component_usd', e.text_component_usd,
+        'image_tool_component_usd', e.image_tool_component_usd,
+        'cost_source', e.cost_source,
+        'cost_formula_version', e.cost_formula_version,
+        'cost_estimation_note', e.cost_estimation_note,
+        'metadata', e.metadata,
+        'usd_brl_rate_at_generation', e.usd_brl_rate_at_generation,
+        'credit_value_brl_at_generation', e.credit_value_brl_at_generation,
+        'usd_brl_rate_source_at_generation', e.usd_brl_rate_source_at_generation,
+        'credit_value_brl_source_at_generation', e.credit_value_brl_source_at_generation
+      ) ORDER BY e.created_at)
+      FROM events e
+    ), '[]'::jsonb)
+  ) INTO v_result;
+
+  RETURN v_result;
+END;
+$$;
+
+COMMENT ON FUNCTION public.admin_get_ai_operation_run_events IS
+'RPC definer — detalhe call-level de um run (operation_run_id): eventos com tokens/duração/custo/status + P95 de duração por chamada + créditos por run (creditos_debitados BRUTO, creditos_estornados via refunds no ledger, creditos_liquidos = max(bruto − estorno, 0)) + snapshots econômicos por evento call-level e no run (D6): usd_brl_rate_at_generation / credit_value_brl_at_generation e as origens *_source_at_generation (por evento, no momento da chamada; no run, do PRIMEIRO evento com a coluna de valor preenchida — ORDER BY created_at ASC LIMIT 1, valor e origem da mesma linha). RPC não deriva BRL (dados brutos — D1/D5). run NULL + events [] quando o id não existe. Acesso exclusivo service_role.';
+
+REVOKE EXECUTE ON FUNCTION public.admin_get_ai_operation_run_events(UUID)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_get_ai_operation_run_events(UUID)
+  TO service_role;
+
+-- =============================================================================
+-- REVERT (ordem reversa)
+-- =============================================================================
+-- REVOKE EXECUTE ON FUNCTION public.admin_get_ai_operation_run_events(UUID) FROM service_role;
+-- DROP FUNCTION IF EXISTS public.admin_get_ai_operation_run_events(UUID);
+-- REVOKE EXECUTE ON FUNCTION public.admin_get_ai_operation_runs(TIMESTAMPTZ, TIMESTAMPTZ, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, UUID, INTEGER, INTEGER) FROM service_role;
+-- DROP FUNCTION IF EXISTS public.admin_get_ai_operation_runs(TIMESTAMPTZ, TIMESTAMPTZ, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, UUID, INTEGER, INTEGER);

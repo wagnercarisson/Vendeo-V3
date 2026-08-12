@@ -4,7 +4,7 @@
 
 **18 phases** | **177 requirements mapped** | All covered ✓
 
-**Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23. F35 = Changelog/Novidades, F36 = Onboarding — Navegação por Abas, F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), F39 = Stripe/Monetização Pública (v1.7) (renumeração alinhada nos documentos de alinhamento F36/F38). **38.1 = Apuração de Custos de IA por Entrega** (desdobramento da F38, mesmo milestone v1.5).
+**Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23. F35 = Changelog/Novidades, F36 = Onboarding — Navegação por Abas, F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), F39 = Stripe/Monetização Pública (v1.7) (renumeração alinhada nos documentos de alinhamento F36/F38). **38.1 = Apuração de Custos de IA por Entrega** (desdobramento da F38, mesmo milestone v1.5). **38.2 = Admin de Custos Operacionais + Configurações Econômicas** (desdobramento da F38, mesmo milestone v1.5).
 
 ---
 
@@ -33,7 +33,9 @@
 | 36 | ✅ Onboarding — Navegação por Abas | 6/6 | Complete    | 2026-08-05 |
 | 37 | ○ Revisão e Aprovação da Arte | — | Pending    | — |
 | 38 | ✅ Tabela de Custos por Operação | 8/8 | ✅ Complete | 2026-08-07 |
-| 38.1 | 🔄 Apuração de Custos de IA por Entrega | 7/11 | In Progress | — |
+| 38.1 | ✅ Apuração de Custos de IA por Entrega | 11/11 | ✅ Complete | 2026-08-09 |
+| 38.2 | ✅ Admin de Custos Operacionais + Configurações Econômicas | 15/15 | Complete    | 2026-08-11 |
+| 38.2.1 | ✅ Snapshot Econômico | 7/7 | ✅ Complete | 2026-08-12 |
 | 39 | ○ Stripe / Monetização Pública (v1.7) | — | Pending    | — |
 
 ---
@@ -550,7 +552,7 @@
 
 **Goal:** Criar a **trilha granular de custo de IA** (evento por chamada real, agregado por entrega via `operation_run_id`) e as **views/RPCs de apuração e reconciliação** (USD × créditos) que transformam telemetria em inteligência econômica — corrigindo os 7 furos verificados em código (copy sem custo, `metadata.totalCost` errado, modelos sem preço, revisão/validação sem evento, VS sem custo/tokens, `attempt_number` sempre 1, `duration_ms` do pipeline inteiro).
 
-**Requirements:** F38.1-01 a F38.1-38 (derivados dos 13 specs OpenSpec)
+**Requirements:** F38.1-01 a F38.1-40 (derivados dos 13 specs OpenSpec + fechamento F38.1-39/40)
 
 **Success criteria:**
 
@@ -580,10 +582,97 @@ Plans:
 - [x] 38-1-05-PLAN.md — Campaign onCall (Wave 3) ✅ (D11 event contract + onCall copy/validation/review/image-gen — 1657 testes)
 - [x] 38-1-06-PLAN.md — VS/brand onCall (Wave 3) ✅ (AiImageGenerator.generate onCall usage Responses API + BrandProfiler onCall visão from-zero — 1661 testes)
 - [x] 38-1-07-PLAN.md — generate-image + 6.3 (Wave 4) ✅ (rota instrumentada — startRun campaign_delivery + recordCall com custo real por chamada, delivery sem custo, totalCost real, campaigns.operation_run_id persistido — 1672 testes)
-- [ ] 38-1-08-PLAN.md — generate-without-logo + 6.4 (Wave 4)
-- [ ] 38-1-09-PLAN.md — brand rotas + 6.5 (Wave 4)
-- [ ] 38-1-10-PLAN.md — Views/RPCs + verificação + gates [checkpoint] (Wave 5)
-- [ ] 38-1-11-PLAN.md — Runbook trackings (Wave 6)
+- [x] 38-1-08-PLAN.md — generate-without-logo + 6.4 (Wave 4) ✅ (rota VS instrumentada — startRun visual_signature, eventos call-level visual_signature_image/validation com custo real via resolveAiCost, delivery NULL + duration_is_pipeline, retry = novo run, visual_signature_id preenchido, validator onCall, 6 testes 6.4 — 1678 testes)
+- [x] 38-1-09-PLAN.md — brand rotas + 6.5 (Wave 4) ✅ (onCall em BrandDirectorService.analyze + BrandTextOnlyInferenceService.infer, threading BrandProfilerWithoutLogoService, 4 rotas brand instrumentadas — startRun brand_profile, call-level brand_profile_vision/text com custo real via resolveAiCost, delivery without_logo/with_logo NULL + duration_is_pipeline, infer de zero eventos, realign 3 caminhos IA + regenerate novo run, 15 testes novos — 1700 testes)
+- [x] 38-1-10-PLAN.md — Views/RPCs + verificação + gates [checkpoint] ✅ (I1–I6 banco real + 50 testes + UAT checkpoint validado)
+- [x] 38-1-11-PLAN.md — Runbook trackings (Wave 6) ✅ (8.1–8.5 + fechamento — `responses:image_generation = 0.065` é estimativa operacional PROVISÓRIA para beta, calibrada por UAT/dashboard/CSV, NÃO é custo financeiro real; reconciliação financeira real fica para a próxima fase)
+```
+
+**Closing:** Fase fechada 2026-08-09 como **camada de estimativa operacional granular** (não reconciliação financeira final): ajuste provisório versionável da tool image_generation — fórmula `responses_image_generation_v2` (`estimated_cost_usd = text_component_usd + image_tool_component_usd`), seed `ai_model_pricing ('openai','responses:image_generation', 0.065)` via migration `20260809000003` (aplicada Local/Remote), bootstrap em `DEFAULT_AI_MODEL_PRICING`, ajuste via GET/PUT `/api/admin/ai-model-pricing`, metadata `cost_formula_version`/`text_component_usd`/`image_tool_component_usd`/`image_tool_pricing_*`/`cost_estimation_note` no evento `campaign_image`. 1713 testes (199 arquivos), typecheck/lint/build limpos.
+```
+
+---
+
+### Phase 38.2: Admin de Custos Operacionais + Configurações Econômicas
+
+**Goal:** Expor a F38.1 ("medir primeiro, exibir depois") na camada de admin/observabilidade: painel **Custos de Operação** (`/admin/ai-operation-costs`) com KPIs/filtros/tabela por entrega/drilldown call-level e **agregados por segmento econômico** (D9); **Parâmetros Econômicos** configuráveis por admin (`economic_parameters` — `usd_brl_rate` e `credit_value_brl`, defaults 1.00, com auditoria append-only e RPC `admin_set_economic_parameter`); **badges de confiança** do custo (persistência `cost_formula_version`/`cost_estimation_note`/`text_component_usd`/`image_tool_component_usd` em `generation_events` — D5); correção **obrigatória** do `/admin/metrics` (card "Custo Médio IA" via apuração call-level, não delivery marker — D6); UI preparada para F38.3 (placeholder "Custo reconciliado provider: ainda indisponível").
+
+**Requirements:** F38.2-01 a F38.2-22 (derivados dos 8 specs OpenSpec: economic-parameters 7, ai-operation-runs-api 5, ai-operation-costs 3, ai-cost-tracker 1, ai-cost-accounting 1, admin-operation-costs 1, admin-metrics-dashboard 2, pipeline-metrics 2)
+
+**Success criteria:**
+
+1. Migrations novas (3): `economic_parameters` + `economic_parameter_audit` (append-only, idempotência por `operation_id`) + seeds 1.00/1.00 `ON CONFLICT DO NOTHING` + RPC `admin_set_economic_parameter` (SECURITY DEFINER, transacional, reason obrigatório) — RLS service_role, sem GRANT `authenticated` (D2)
+2. `generation_events` + 4 colunas de confiança (sem CHECK): `cost_formula_version`, `cost_estimation_note`, `text_component_usd`, `image_tool_component_usd`; `AiCostTracker.record` persiste daqui para frente (D5 — sem reclassificar histórico)
+3. RPCs `admin_get_ai_operation_runs` / `admin_get_ai_operation_run_events` (SECURITY DEFINER) — filtros + paginação + P95 (`percentile_cont`) + evidências brutas de segmento (D9) + insumos agregados de badge (D5); sem leitura direta das views; `admin_get_ai_costs`/`admin_get_metrics` **inalterados** (D4)
+4. `EconomicParameterService` (server-only) — linha inexistente → fallback 1.00 fail-open; erro real → `EconomicParameterUnavailableError` fail-closed → 503 (D2)
+5. API `GET/PUT /api/admin/economic-parameters` (requireAdmin + zod, reason obrigatório, idempotência por operationId) — sem endpoint público (D2)
+6. API `GET /api/admin/ai-operation-runs` (lista: filtros + paginação + segmento D9 + `summary`/`aggregations` sobre conjunto filtrado inteiro + badges) e `GET /api/admin/ai-operation-runs/[operationRunId]` (detalhe call-level com `estimatedCostBrl` e componentes de custo) (D4)
+7. Página `/admin/operation-costs` mantém a rota com **título visual "Configurações Econômicas"** + seção "Parâmetros Econômicos" (`ParamsForm`: inputs + motivo obrigatório + badge `source` + feedback `audit_id`) (D2)
+8. Página `/admin/ai-operation-costs` ("Custos de Operação") — filtros (período com presets 7/30/90d, loja, tipo, status, provider/model, gen_type, run_id, segmento), KPIs, tabela por entrega com badges, drilldown, agregados por segmento/owner/loja/hora; `force-dynamic` + `requireAdmin` + service layer; 503 fail-closed; link na nav admin (D3/D9)
+9. Segmentação econômica (D9) — classificador **no service** (`test`/`freemium/promotional`/`paid`/`manual/admin`/`unknown`, best-effort, shape `admin_grant` confirmado em `credit_transactions`; sem evidência → `unknown`, nunca inferir errado); filtro + agregados por segmento
+10. `/admin/metrics` corrigido (D6) — `getAvgCost` apura custo médio por entrega via call-level (não `campaign_pipeline.estimated_cost_usd`); card "**Custo Médio IA**"; USD→BRL via `economic_parameters.usd_brl_rate` (fonte única, não env)
+11. `npx vitest run`, `npm run typecheck`, `npm run lint`, `npm run build` — zero erros; ~40+ testes novos (12.x) + verificação SQL/integrada I1–I6 + regressão completa
+
+**Dependencies:** Phase 24 (ledger `credit_transactions` — leitura para segmentação D9), Phase 28 (métricas — leitura), Phase 38 (`credit_operation_costs` — eixo créditos), Phase 38.1 (`generation_events` call-level + views/RPCs — base da apuração), Phase 39 (Stripe — consumirá os parâmetros calibrados e o custo apurado). **Sem** `operation_runs`, **sem** reconciliação OpenAI (F38.3), **sem** câmbio automático.
+
+**Source of truth:** `openspec/changes/fase-38-2-admin-custos-operacionais/`
+
+**Plans:** 15/15 plans complete
+
+```
+Plans:
+- [x] 38-2-01-PLAN.md — Migrations (3) + db push [BLOCKING] (Wave 1)
+- [x] 38-2-02-PLAN.md — Types econômicos + EconomicParameterService (Wave 2)
+- [x] 38-2-03-PLAN.md — AiCostTracker persistência de confiança (Wave 2)
+- [x] 38-2-04-PLAN.md — API Configurações Econômicas (GET/PUT) (Wave 3)
+- [x] 38-2-05-PLAN.md — Service de custos de operação + badges + segmentação (Wave 3)
+- [x] 38-2-06-PLAN.md — API Custos de Operação (lista + detalhe) (Wave 4)
+- [x] 38-2-07-PLAN.md — UI /admin/operation-costs "Configurações Econômicas" (Wave 4)
+- [x] 38-2-08-PLAN.md — UI /admin/ai-operation-costs "Custos de Operação" (Wave 5)
+- [x] 38-2-09-PLAN.md — Correção /admin/metrics (D6) (Wave 5)
+- [x] 38-2-10-PLAN.md — Testes + Verificação I1–I6 + gates [checkpoint] (Wave 6)
+- [x] 38-2-11-PLAN.md — Runbook trackings (Wave 7) ✅
+- [x] 38-2-12-PLAN.md — RPCs creditos_estornados/creditos_liquidos por run (gap UAT) (Wave 1)
+```
+
+**Closing:** Fase reaberta 2026-08-11 para gap closure UAT (plans 12-15: créditos estornados/líquidos). Fechamento original: 11/11 plans, 1832 testes (213 arquivos), typecheck/lint/build limpos; **verificação I1–I6 em banco real** (50/50 asserts, `scripts/verify/38-2-f38-2-verification.mjs`); UAT 13.3 coletado para harvest end-of-phase (HUMAN-UAT.md pelo verifier). Gap registrado: `byStage` → "unknown" em produção (deferred-items.md #1 — migration aditiva expondo `generation_type` por run ou F38.4). Próxima: F38.3 (reconciliação financeira provider) após Landing/PWA.
+
+---
+
+### Phase 38.2.1: Snapshot Econômico
+
+**Goal:** Corrigir a base contábil da F38.2: congelar `usd_brl_rate_at_generation` (snapshot contábil do câmbio na geração) e `credit_value_brl_at_generation` (snapshot estimativo/fallback do valor do crédito na geração) em `generation_events` no momento da geração — impedindo que alterar `usd_brl_rate`/`credit_value_brl` recalculque retroativamente `custoBrl`, `receitaEstimadaBrl`, `resultadoEstimadoBrl`, `margemEstimadaPct`, KPIs, agregados e o card "Custo Médio IA" do `/admin/metrics`. Nomenclatura estimada (nunca "receita real"); fallback legacy explícito para eventos sem snapshot; backfill aproximado via `economic_parameter_audit`; receita real por pacote de crédito fica para F39.
+
+**Requirements:** F38.2.1-01 a F38.2.1-14 (derivados do spec `economic-snapshot` + deltas: ai-cost-tracker, ai-operation-runs-api, ai-operation-costs, pipeline-metrics, admin-metrics-dashboard, economic-parameters)
+
+**Success criteria:**
+
+1. Migration `generation_events` + `usd_brl_rate_at_generation`/`credit_value_brl_at_generation` (`IF NOT EXISTS`) + backfill aproximado idempotente via `economic_parameter_audit` (LAG) com fallback seed `1.00`
+2. `AiCostTracker.record` persiste os snapshots no momento da geração; callers de início de run resolvem os parâmetros uma vez e propagam o snapshot (best-effort)
+3. `deriveBrl` usa snapshot do run quando disponível (`custoBrl = custoUsd × usd_brl_rate_at_generation`; `receitaEstimadaBrl = creditosLiquidos × credit_value_brl_at_generation`); fallback corrente explícito com `creditValueSource`/`revenueEstimationNote`
+4. Nomenclatura estimada na API/UI (`receitaEstimadaBrl`/`resultadoEstimadoBrl`/`margemEstimadaPct`) — nenhum contrato afirma "receita real"
+5. `deriveSummary` soma BRL por run (não re-deriva com taxa única); `deriveAggregations` mantida
+6. RPCs de operation runs expõem snapshots por run/evento (contrato backward-compatible)
+7. `/admin/metrics` usa snapshot quando disponível; não recalcula histórico; nunca `VENDEO_USD_BRL_RATE`
+8. UI do painel e Configurações Econômicas informam que alteração vale para novas gerações e não recalcula histórico
+9. Estornos continuam descontados via créditos líquidos
+10. Testes de snapshot/fallback/estabilidade temporal/nomenclatura; `npx vitest run`, `npm run typecheck`, `npm run lint`, `npm run build` — zero erros
+
+**Dependencies:** Phase 38.2 (parâmetros econômicos + audit + RPCs de operation runs + `EconomicParameterService` + tracker), Phase 38.1 (`generation_events` call-level). **Sem** `operation_runs`, **sem** pacotes de créditos (F39), **sem** reconciliação OpenAI (F38.3).
+
+**Source of truth:** `openspec/changes/fase-38-2-1-economic-snapshot/`
+
+**Plans:** 7/7 plans executed
+
+```
+Plans:
+- [x] 38-2-1-01-PLAN.md — Migration: colunas de snapshot + backfill audit (Wave 1) [BLOCKING db push]
+- [x] 38-2-1-02-PLAN.md — Types + Tracker + Callers propagam snapshot (Wave 2)
+- [x] 38-2-1-03-PLAN.md — RPCs de operation runs expõem snapshots (Wave 2) [BLOCKING db push]
+- [x] 38-2-1-04-PLAN.md — Service: deriveBrl/summary/aggregations com snapshot + rename estimado (Wave 3)
+- [x] 38-2-1-05-PLAN.md — API contratos + UI painel: labels estimados + origem + aviso (Wave 4)
+- [x] 38-2-1-06-PLAN.md — /admin/metrics com snapshot + aviso Configurações Econômicas (Wave 2)
+- [x] 38-2-1-07-PLAN.md — Testes + Verificação I1–I7 + gates + UAT [checkpoint] (Wave 5)
 ```
 
 ---
@@ -638,7 +727,11 @@ Phase 24 (Credit Tables + CreditService) ──┘
                                      Phase 38 (Tabela de Custos por Operação — v1.5)
                                                │
                                                ▼
-                                     Phase 39 (Stripe / Monetização Pública — v1.7 futura)
+                          Phase 38.1 (Apuração de Custos de IA — v1.5)
+                          Phase 38.2 (Admin de Custos Operacionais + Configurações Econômicas — v1.5)
+                                               │
+                                               ▼
+                                      Phase 39 (Stripe / Monetização Pública — v1.7 futura)
 ```
 
 ---
@@ -724,4 +817,4 @@ Phase 24 (Credit Tables + CreditService) ──┘
 
 *Roadmap created: 2026-07-15*
 *Milestone: v1.5 — Lançamento Externo Controlado*
-*Last updated: 2026-08-09 — Phase 38 complete (Tabela de Custos por Operação — 8/8 plans, 1597 testes, UAT 4/4); renumeração F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), F39 = Stripe/Monetização Pública (v1.7); **Phase 38.1 (Apuração de Custos de IA por Entrega — desdobramento da F38, v1.5) em execução — 7/11 plans concluídos (38-1-01 ✅ migration + schema push aplicado no remoto 2026-08-08; 38-1-02 ✅ types + AiCostTracker; 38-1-03 ✅ admin routes ai-model-pricing + ai-costs; 38-1-04 ✅ resolveAiCost + pricing service; 38-1-05 ✅ D11 event contract + onCall copy/validation/review/image-gen, 1657 testes; 38-1-06 ✅ VS generator onCall Responses API + BrandProfiler onCall visão, 1661 testes; 38-1-07 ✅ generate-image instrumentado — custo real por chamada, delivery sem custo, totalCost real, operation_run_id persistido, 1672 testes)** — fonte `openspec/changes/fase-38-1-ai-cost-accounting/`*
+*Last updated: 2026-08-11 — **Phase 38.2 (Admin de Custos Operacionais + Configurações Econômicas — desdobramento da F38, v1.5) CONCLUÍDA — 11/11 plans, 1832 testes (213 arquivos), verificação I1–I6 em banco real (50/50 asserts), UAT 13.3 coletado para harvest end-of-phase** — fonte `openspec/changes/fase-38-2-admin-custos-operacionais/`.* Fase 38 complete (Tabela de Custos por Operação — 8/8 plans, 1597 testes, UAT 4/4); renumeração F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), F39 = Stripe/Monetização Pública (v1.7); **Phase 38.1 (Apuração de Custos de IA por Entrega — desdobramento da F38, v1.5) CONCLUÍDA — 11/11 plans, 1713 testes (199 arquivos), UAT validado, fechada como camada de ESTIMATIVA OPERACIONAL GRANULAR** (ajuste provisório versionável da tool image_generation: `responses:image_generation = USD 0.065` = estimativa provisória para beta, calibrada por UAT/dashboard/CSV — NÃO é custo financeiro real; reconciliação financeira real fica para a próxima fase; seed `ai_model_pricing` via migration 20260809000003 aplicada Local/Remote) — fonte `openspec/changes/fase-38-1-ai-cost-accounting/`*

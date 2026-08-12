@@ -163,6 +163,8 @@ NOTE: The unique index `(store_id, visual_signature_id, source)` for `without_lo
 
 Processing SHALL be inline (same request) — no queue, no polling. Status `processing` is reserved for future queue-based processing.
 
+> **Delta F38.1 (D5/D11):** O `BrandProfilerWithoutLogoService` passa a expor callback `onCall` em `callVision`/`callVisionFull` (usage do `chat.completions`). O fluxo de brand profile passa a registrar eventos de custo — hoje nenhum evento existe (nenhuma contabilidade de brand profile). A cada request de geração/realinhamento, um novo `operation_run_id` (semântica `brand_profile`, D1).
+
 #### Scenario: Reuse mode returns existing profile (unchanged)
 
 - **WHEN** the profiler is invoked with mode:'reuse'
@@ -211,6 +213,18 @@ Processing SHALL be inline (same request) — no queue, no polling. Status `proc
 - **AND** a previous `synced` profile exists
 - **THEN** the previous profile SHALL remain `synced`
 
+#### Scenario: brand_profile_vision registrado com custo
+
+- **WHEN** o profiler/director faz chamada vision (`callVision`/`callVisionFull`)
+- **THEN** um evento `brand_profile_vision` é gravado com custo/tokens via callback `onCall` (D11)
+- **AND** o evento compartilha o `operation_run_id` do request (D1)
+
+#### Scenario: callVision expõe usage via onCall
+
+- **WHEN** `callVision`/`callVisionFull` é chamado com `onCall`
+- **THEN** o callback é invocado com `AiCallInfo` (usage do `chat.completions`, provider, model, durationMs)
+- **AND** sem `onCall` o comportamento permanece idêntico (retrocompatível)
+
 ### Requirement: Presence validation flow
 
 When `intendedPalette` is non-null, the profiler SHALL:
@@ -225,6 +239,8 @@ When `intendedPalette` is non-null, the profiler SHALL:
      - ∆E > 25 → `not_confirmed` — mark role as contested
 3. If no role contested → happy path: `global_status = 'all_confirmed'`, vision called for semantic analysis only (prompt_suffix = 'analyze_only')
 4. If any role contested → divergence: build `observed_colors`, invoke vision with conditional prompt
+
+> **Delta F38.1 (D1):** Realinhamento (mode:'regenerate' via `POST /realign`) gera um **novo** `operation_run_id` (cada request de geração/realinhamento é um run — D1).
 
 #### Scenario: All colors confirmed — semantic analysis only
 
@@ -266,6 +282,11 @@ When `intendedPalette` is non-null, the profiler SHALL:
 - **THEN** `global_status` SHALL be `'vision_adjudicated'`
 - **AND** `safe_color_tokens.secondary` SHALL equal `"#B96F63"` (support[0] preserved)
 - **AND** `metadata.color_validation.support_colors[1]` SHALL equal `"#F5A623"` (corrected)
+
+#### Scenario: Modo regenerate gera novo operation_run_id
+
+- **WHEN** o fluxo de realinhamento (`mode: regenerate`) executa
+- **THEN** os eventos usam um **novo** `operation_run_id` (cada request de geração/realinhamento é um run — D1)
 
 ### Requirement: observed_colors selection
 

@@ -166,6 +166,16 @@ vi.mock('@/lib/ai-cost', () => ({
   estimateAiCost: vi.fn(),
 }));
 
+// F38.2.1 (D3): mock do EconomicParameterService — resolve o snapshot econômico
+// UMA vez no início do run (5.20/2.00 por default; cenário de falha via
+// mockRejectedValue). Best-effort: falha → snapshots null, geração não bloqueada.
+const { mockGetParameter } = vi.hoisted(() => ({ mockGetParameter: vi.fn() }));
+vi.mock('@/lib/economic/economic-parameter-service', () => ({
+  EconomicParameterService: vi.fn(function () {
+    return { getParameter: mockGetParameter };
+  }),
+}));
+
 import { resolveStoreIdentity, validateIdentityReference, buildCampaignBrief } from '@/lib/store-identity-service';
 import { createCampaign, dataUrlToCampaignImage, uploadCampaignImage, updateCampaignReady, updateCampaignError, deleteCampaignImage } from '@/lib/campaign/persistence';
 import { transcodeToJpeg } from '@/lib/campaign/image-processor';
@@ -277,6 +287,11 @@ beforeEach(() => {
       return { estimatedCostUsd: 0.04, costSource: "pricing_table", pricingVersion: "code_default" };
     }
     return { estimatedCostUsd: 0.15, costSource: "fallback_static" };
+  });
+  // F38.2.1 (D3): default do snapshot econômico — usd 5.20 / credit 2.00.
+  mockGetParameter.mockImplementation(async (key: string) => {
+    if (key === "usd_brl_rate") return { key, value: 5.2, source: "table" };
+    return { key, value: 2.0, source: "table" };
   });
 });
 
@@ -1156,6 +1171,62 @@ describe('Pipeline cost accounting (6.3)', () => {
       expect(parsed.some((p: any) => p.event === 'pipeline_complete' && p.traceId === RUN_IDS.traceId)).toBe(true);
     } finally {
       logSpy.mockRestore();
+    }
+  });
+});
+
+// ── F38.2.1 (D3): snapshot econômico propagado aos eventos do run ─────────
+describe('snapshot econômico (F38.2.1)', () => {
+  // Setup de sucesso com call-level (copy via onCall) — todos os eventos do run
+  // devem carregar os valores do snapshot resolvidos no início do run.
+  async function setupSnapshotSuccess() {
+    await setupSuccessMocks();
+    mockGenerateCopy.mockImplementation(async (_input: any, _opts: any, onCall?: (info: any) => void) => {
+      if (onCall) {
+        onCall({ provider: "openai", model: "gpt-4o", usage: { promptTokens: 1000, completionTokens: 500, totalTokens: 1500 }, durationMs: 250 });
+      }
+      return {
+        title: 'Título da Campanha',
+        caption: 'Caption gerada pelo Copy Director',
+        hashtags: ['#tag1', '#tag2'],
+        cta_post: 'Compre agora',
+      };
+    });
+  }
+
+  const flushMicrotasks = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+  it('Teste 1: todos os eventos do run carregam os valores do snapshot (5.20/2.00) — apenas valores, sem origem', async () => {
+    await setupSnapshotSuccess();
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_REQUEST_BODY));
+    expect(res.status).toBe(200);
+    await res.text();
+    await flushMicrotasks();
+
+    expect(capturedEvents.length).toBeGreaterThan(0);
+    for (const e of capturedEvents) {
+      expect(e.usdBrlRateAtGeneration).toBe(5.2);
+      expect(e.creditValueBrlAtGeneration).toBe(2.0);
+      // o evento NÃO carrega origem — o tracker define captured_at_generation
+      expect(e.usdBrlRateSourceAtGeneration).toBeUndefined();
+      expect(e.creditValueBrlSourceAtGeneration).toBeUndefined();
+    }
+  });
+
+  it('Teste 2: falha na leitura dos parâmetros → snapshots null e pipeline NÃO bloqueado (200)', async () => {
+    await setupSnapshotSuccess();
+    mockGetParameter.mockRejectedValue(new Error('economic service down'));
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_REQUEST_BODY));
+    expect(res.status).toBe(200);
+    await res.text();
+    await flushMicrotasks();
+
+    expect(capturedEvents.length).toBeGreaterThan(0);
+    for (const e of capturedEvents) {
+      expect(e.usdBrlRateAtGeneration).toBeNull();
+      expect(e.creditValueBrlAtGeneration).toBeNull();
     }
   });
 });

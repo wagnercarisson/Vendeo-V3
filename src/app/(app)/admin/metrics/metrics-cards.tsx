@@ -19,18 +19,11 @@ function formatNumber(value: number | null): string {
   return value.toLocaleString("pt-BR");
 }
 
-function formatCost(value: number | null, usdToBrlRate: number): string {
-  if (value === null || value === undefined) return "—";
-  const brl = value * usdToBrlRate;
-  return `R$ ${brl.toFixed(2).replace(".", ",")}`;
-}
-
 interface MetricsCardsProps {
   cards: MetricCard[];
-  usdToBrlRate: number;
 }
 
-export function MetricsCards({ cards, usdToBrlRate }: MetricsCardsProps) {
+export function MetricsCards({ cards }: MetricsCardsProps) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {cards.map((card, i) => (
@@ -38,7 +31,7 @@ export function MetricsCards({ cards, usdToBrlRate }: MetricsCardsProps) {
           <div className="mb-2 text-sm font-medium text-muted-foreground">{card.label}</div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-bold text-foreground">
-              {formatCardValue(card, usdToBrlRate)}
+              {formatCardValue(card)}
             </span>
             {card.unit && <span className="text-sm text-muted-foreground">{card.unit}</span>}
           </div>
@@ -49,20 +42,20 @@ export function MetricsCards({ cards, usdToBrlRate }: MetricsCardsProps) {
   );
 }
 
-function formatCardValue(card: MetricCard, usdToBrlRate: number): string {
+function formatCardValue(card: MetricCard): string {
   if (card.value === null || card.value === undefined) return "—";
+  // Valor string = já formatado na página (ex.: "Custo Médio IA" em BRL,
+  // R$ X,XX) — devolvido sem re-conversão (D7, estabilidade temporal).
+  if (typeof card.value === "string") return card.value;
 
   const label = card.label.toLowerCase();
-  if (label.includes("custo") || label.includes("cósto")) {
-    return formatCost(card.value as number, usdToBrlRate);
-  }
   if (label.includes("taxa") || label.includes("rate")) {
-    return formatPercent(card.value as number);
+    return formatPercent(card.value);
   }
   if (label.includes("tempo") || label.includes("duração")) {
-    return formatDuration(card.value as number);
+    return formatDuration(card.value);
   }
-  return formatNumber(card.value as number);
+  return formatNumber(card.value);
 }
 
 function formatTimeRange(range: string): string {
