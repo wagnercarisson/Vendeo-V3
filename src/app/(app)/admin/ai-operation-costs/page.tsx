@@ -10,6 +10,7 @@ import { KpisGrid } from "./kpis-grid";
 import { OperationRunsTable } from "./operation-runs-table";
 import { SegmentAggregations } from "./segment-aggregations";
 import { AiOperationCostsFilters } from "./ai-operation-costs-filters";
+import { CostBadgeLegend } from "./cost-badge";
 
 export const dynamic = "force-dynamic";
 
@@ -128,6 +129,7 @@ export default async function AdminAiOperationCostsPage({
             Apuração call-level de custos de IA por entrega — estimativas
             operacionais.
           </p>
+          <SemanticNotice />
         </div>
         <AiOperationCostsFilters filters={filters} />
         <EmptyState
@@ -149,11 +151,30 @@ export default async function AdminAiOperationCostsPage({
           Apuração call-level de custos de IA por entrega — estimativas
           operacionais, não custo financeiro reconciliado.
         </p>
+        <SemanticNotice />
       </div>
       <AiOperationCostsFilters filters={filters} />
       <KpisGrid summary={result.summary} />
+      <CostBadgeLegend />
       <OperationRunsTable runs={result.runs} />
       <SegmentAggregations aggregations={result.aggregations} />
     </div>
+  );
+}
+
+/**
+ * Aviso de semântica (F38.2.1-11 / D8): parâmetros econômicos correntes
+ * (usd_brl_rate/credit_value_brl) valem SOMENTE para novas gerações — o
+ * histórico exibido usa snapshots/backfill e NÃO é recalculado.
+ */
+function SemanticNotice() {
+  return (
+    <p
+      className="mt-1 text-xs text-muted-foreground"
+      data-testid="economic-parameters-warning"
+    >
+      Alterações nos parâmetros econômicos valem para novas gerações e não
+      recalculam o histórico exibido.
+    </p>
   );
 }

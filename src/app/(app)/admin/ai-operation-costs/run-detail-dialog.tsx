@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import type {
+  EconomicValueSource,
   OperationRunDetail,
   OperationRunEvent,
 } from "@/lib/ai-cost/operation-runs-service";
@@ -35,6 +36,19 @@ function formatDuration(ms: number | null): string {
 function formatNumber(value: number | null): string {
   if (value === null || value === undefined) return "—";
   return value.toLocaleString("pt-BR");
+}
+
+/**
+ * Rótulo de origem do valor por evento (D8) — a UI apenas exibe a origem que
+ * vem do service; nunca infere:
+ *   economic_parameter_fallback → "parâmetro atual" (fallback em leitura)
+ *   backfilled_*               → "reconstruído"
+ *   captured/null              → "capturado" (snapshot real da geração)
+ */
+function eventOriginLabel(source: EconomicValueSource | null): string {
+  if (source === "economic_parameter_fallback") return "parâmetro atual";
+  if (source !== null && source.startsWith("backfilled")) return "reconstruído";
+  return "capturado";
 }
 
 interface RunDetailDialogProps {
@@ -113,7 +127,14 @@ export function RunDetailDialog({
                 {detail.run.creditosDebitados !== null && (
                   <>
                     <p>{`Créditos: bruto ${formatNumber(detail.run.creditosDebitados)} · estorno ${formatNumber(detail.run.creditosEstornados)} · líquido ${formatNumber(detail.run.creditosLiquidos)}`}</p>
-                    <p>{`Receita ${formatBRL(detail.run.receitaEstimadaBrl)} · Resultado ${formatBRL(detail.run.resultadoEstimadoBrl)}`}</p>
+                    <p>{`Receita estimada ${formatBRL(detail.run.receitaEstimadaBrl)} · Resultado estimado ${formatBRL(detail.run.resultadoEstimadoBrl)}`}</p>
+                    {/* Origem do valor (D8/T-38.2.1-15) — do service; fallback nunca sem marcação */}
+                    {detail.run.creditValueSource === "economic_parameter_fallback" && (
+                      <p>Origem: estimado de parâmetro atual (fallback)</p>
+                    )}
+                    {detail.run.creditValueSource.startsWith("backfilled") && (
+                      <p>Origem: reconstruído de histórico</p>
+                    )}
                   </>
                 )}
                 <p>Custo reconciliado provider: ainda indisponível</p>
@@ -166,6 +187,7 @@ function EventTable({ events }: { events: OperationRunEvent[] }) {
             <th className="px-3 py-2 font-medium">Duração</th>
             <th className="px-3 py-2 font-medium">Custo (USD)</th>
             <th className="px-3 py-2 font-medium">Custo (BRL)</th>
+            <th className="px-3 py-2 font-medium">Câmbio</th>
             <th className="px-3 py-2 font-medium">Text/Image</th>
             <th className="px-3 py-2 font-medium">Confiança</th>
           </tr>
@@ -192,6 +214,21 @@ function EventTable({ events }: { events: OperationRunEvent[] }) {
               </td>
               <td className="whitespace-nowrap px-3 py-2">
                 {formatBRL(event.estimatedCostBrl)}
+              </td>
+              {/* Snapshot econômico do evento (F38.2.1) — taxa usada + origem; ausente → fallback explícito */}
+              <td className="whitespace-nowrap px-3 py-2 text-xs">
+                {event.usdBrlRateAtGeneration !== null ? (
+                  <span
+                    title={`Taxa de câmbio usada no custo BRL (origem: ${event.usdBrlRateSourceAtGeneration ?? "captured_at_generation"})`}
+                  >
+                    {event.usdBrlRateAtGeneration.toLocaleString("pt-BR")} ·{" "}
+                    {eventOriginLabel(event.usdBrlRateSourceAtGeneration)}
+                  </span>
+                ) : (
+                  <span title="Sem snapshot no evento — custo BRL derivado do parâmetro econômico corrente">
+                    parâmetro atual (fallback)
+                  </span>
+                )}
               </td>
               <td className="whitespace-nowrap px-3 py-2 text-xs">
                 {event.textComponentUsd !== null ? (

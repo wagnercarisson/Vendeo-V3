@@ -134,9 +134,36 @@ export function OperationRunsTable({ runs }: { runs: OperationRun[] }) {
                   <div>Estorno: {formatNumber(run.creditosEstornados)}</div>
                   <div>Líquido: {formatNumber(run.creditosLiquidos)}</div>
                   <div className="text-muted-foreground">
-                    Receita {formatBRL(run.receitaEstimadaBrl)} · Resultado{" "}
-                    {formatBRL(run.resultadoEstimadoBrl)}
+                    Receita estimada {formatBRL(run.receitaEstimadaBrl)} ·
+                    Resultado estimado {formatBRL(run.resultadoEstimadoBrl)}
                   </div>
+                  {/* Origem do valor (D8/T-38.2.1-15) — vem do service, nunca inferida; fallback nunca sem marcação */}
+                  {run.creditValueSource === "economic_parameter_fallback" ? (
+                    <div
+                      className="mt-1"
+                      title="Estimado de parâmetro atual — valor não capturado na geração (fallback legacy)"
+                    >
+                      <Badge
+                        variant="generating"
+                        data-testid={`run-origin-${run.operationRunId}`}
+                        data-origin="economic_parameter_fallback"
+                      >
+                        parâmetro atual (fallback)
+                      </Badge>
+                    </div>
+                  ) : run.creditValueSource.startsWith("backfilled") ? (
+                    <div
+                      className="mt-1"
+                      title="Reconstruído de histórico — valor não capturado na geração (backfill aproximado)"
+                    >
+                      <Badge
+                        data-testid={`run-origin-${run.operationRunId}`}
+                        data-origin="backfilled"
+                      >
+                        reconstruído de histórico
+                      </Badge>
+                    </div>
+                  ) : null}
                 </td>
                 <td className="whitespace-nowrap px-3 py-2">
                   {formatDuration(run.duracaoTotalMs)}

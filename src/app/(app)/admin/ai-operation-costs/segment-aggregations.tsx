@@ -46,9 +46,9 @@ function label(key: string, map: Record<string, string>): string {
 /**
  * Agregados do painel (D3/D9) — consumidos do service sobre o conjunto
  * filtrado inteiro; a UI nunca calcula. Prioridade visual para o bloco por
- * segmento econômico (D9): custo, resultado operacional estimado, margem
- * operacional estimada % e taxa de erro por segmento; depois as distribuições
- * por hora/owner/loja/tipo/status.
+ * segmento econômico (D9): custo, resultado estimado, margem estimada % e
+ * taxa de erro por segmento; depois as distribuições por hora/owner/loja/tipo/
+ * status.
  */
 export function SegmentAggregations({
   aggregations,
@@ -91,15 +91,11 @@ export function SegmentAggregations({
                     <dd>{formatBRL(agg.custoBrl)}</dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-muted-foreground">
-                      Resultado operacional estimado
-                    </dt>
+                    <dt className="text-muted-foreground">Resultado estimado</dt>
                     <dd>{formatBRL(agg.resultadoEstimadoBrl)}</dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-muted-foreground">
-                      Margem operacional estimada
-                    </dt>
+                    <dt className="text-muted-foreground">Margem estimada</dt>
                     <dd>{formatPercent(agg.margemEstimadaPct)}</dd>
                   </div>
                   <div className="flex justify-between">
