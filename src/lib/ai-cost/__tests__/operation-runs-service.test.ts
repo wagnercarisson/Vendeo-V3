@@ -427,6 +427,132 @@ describe("OperationRunsService — snapshot econômico por run (F38.2.1-04)", ()
   });
 });
 
+describe("OperationRunsService — deriveSummary soma BRL por run + origens agregadas (F38.2.1-04/D5)", () => {
+  it("2 runs com taxas snapshotadas DISTINTAS (5.20/6.00) → summary soma os BRL por run (52+60), NÃO re-deriva do total USD com taxa única", async () => {
+    const { client } = buildClient({
+      runs: [
+        makeRawRun({
+          operation_run_id: "run-sum-a",
+          custo_usd_total: "10",
+          creditos_debitados: "10",
+          creditos_estornados: "3",
+          creditos_liquidos: "7",
+          usd_brl_rate_at_generation: "5.20",
+          credit_value_brl_at_generation: "2.00",
+          usd_brl_rate_source_at_generation: "captured_at_generation",
+          credit_value_brl_source_at_generation: "captured_at_generation",
+        }),
+        makeRawRun({
+          operation_run_id: "run-sum-b",
+          custo_usd_total: "10",
+          creditos_debitados: "3",
+          creditos_estornados: "0",
+          creditos_liquidos: "3",
+          usd_brl_rate_at_generation: "6.00",
+          credit_value_brl_at_generation: "2.50",
+          usd_brl_rate_source_at_generation: "captured_at_generation",
+          credit_value_brl_source_at_generation: "captured_at_generation",
+        }),
+      ],
+    });
+    const service = new OperationRunsService(
+      client,
+      buildEconomic({ usd_brl_rate: 5.0, credit_value_brl: 1.5 }),
+    );
+
+    const summary = (await service.listRuns({})).summary;
+
+    expect(summary.custoBrl).toBe(112); // 52 (10×5.20) + 60 (10×6.00) — por run
+    expect(summary.receitaEstimadaBrl).toBe(21.5); // 14 (7×2.00) + 7.5 (3×2.50)
+    expect(summary.resultadoEstimadoBrl).toBe(-90.5); // (14−52) + (7.5−60)
+    expect(summary.margemEstimadaPct).toBeCloseTo(-420.93, 2);
+  });
+
+  it("summary com 1 run captured + 1 run backfilled → creditValueSource backfilled_from_audit + note backfilled", async () => {
+    const { client } = buildClient({
+      runs: [
+        makeRawRun({
+          operation_run_id: "run-src-a",
+          usd_brl_rate_at_generation: "5.20",
+          credit_value_brl_at_generation: "2.00",
+          usd_brl_rate_source_at_generation: "captured_at_generation",
+          credit_value_brl_source_at_generation: "captured_at_generation",
+        }),
+        makeRawRun({
+          operation_run_id: "run-src-b",
+          usd_brl_rate_at_generation: "5.18",
+          credit_value_brl_at_generation: "1.00",
+          usd_brl_rate_source_at_generation: "backfilled_from_audit",
+          credit_value_brl_source_at_generation: "backfilled_from_audit",
+        }),
+      ],
+    });
+    const service = new OperationRunsService(
+      client,
+      buildEconomic({ usd_brl_rate: 5.0, credit_value_brl: 1.5 }),
+    );
+
+    const summary = (await service.listRuns({})).summary;
+
+    expect(summary.creditValueSource).toBe("backfilled_from_audit");
+    expect(summary.revenueEstimationNote).toBe("backfilled_historical_approximation");
+  });
+
+  it("summary com 1 run snapshot + 1 run fallback → creditValueSource economic_parameter_fallback + note estimated (qualquer fallback no conjunto prevalece)", async () => {
+    const { client } = buildClient({
+      runs: [
+        makeRawRun({
+          operation_run_id: "run-src-c",
+          usd_brl_rate_at_generation: "5.20",
+          credit_value_brl_at_generation: "2.00",
+          usd_brl_rate_source_at_generation: "captured_at_generation",
+          credit_value_brl_source_at_generation: "captured_at_generation",
+        }),
+        makeRawRun({ operation_run_id: "run-src-d", creditos_liquidos: "7" }), // sem snapshot → fallback
+      ],
+    });
+    const service = new OperationRunsService(
+      client,
+      buildEconomic({ usd_brl_rate: 5.0, credit_value_brl: 1.5 }),
+    );
+
+    const summary = (await service.listRuns({})).summary;
+
+    expect(summary.creditValueSource).toBe("economic_parameter_fallback");
+    expect(summary.revenueEstimationNote).toBe("estimated_from_admin_credit_value");
+  });
+
+  it("summary só com runs captured → creditValueSource captured_at_generation + note null", async () => {
+    const { client } = buildClient({
+      runs: [
+        makeRawRun({
+          operation_run_id: "run-src-e",
+          usd_brl_rate_at_generation: "5.20",
+          credit_value_brl_at_generation: "2.00",
+          usd_brl_rate_source_at_generation: "captured_at_generation",
+          credit_value_brl_source_at_generation: "captured_at_generation",
+        }),
+        makeRawRun({
+          operation_run_id: "run-src-f",
+          usd_brl_rate_at_generation: "6.00",
+          credit_value_brl_at_generation: "2.00",
+          usd_brl_rate_source_at_generation: "captured_at_generation",
+          credit_value_brl_source_at_generation: "captured_at_generation",
+        }),
+      ],
+    });
+    const service = new OperationRunsService(
+      client,
+      buildEconomic({ usd_brl_rate: 5.0, credit_value_brl: 1.5 }),
+    );
+
+    const summary = (await service.listRuns({})).summary;
+
+    expect(summary.creditValueSource).toBe("captured_at_generation");
+    expect(summary.revenueEstimationNote).toBeNull();
+  });
+});
+
 describe("OperationRunsService — badges de confiança (D5)", () => {
   it("evento cost_source provider_reported → badge provider_reported", () => {
     expect(deriveEventBadge("provider_reported", null)).toBe("provider_reported");
@@ -752,6 +878,83 @@ describe("OperationRunsService — getRunDetail (D4)", () => {
     expect(detail.events[1].estimatedCostBrl).toBe(10); // 2 USD × 5.0
     expect(detail.events[1].imageToolComponentUsd).toBe(1.5);
     expect(detail.events[1].badge).toBe("provisional image tool estimate");
+  });
+
+  it("detalhe: estimatedCostBrl do evento usa SNAPSHOT do evento (1 USD × 5.20 = 5.20); run do detalhe carrega snapshots/origens do 1º evento", async () => {
+    const { client } = buildClient({
+      events: {
+        run: {
+          operation_run_id: "run-detail-snap",
+          created_at: "2026-08-01T12:00:00.000Z",
+          delivery_status: "success",
+          custo_usd_total: "5",
+          creditos_debitados: "10",
+          creditos_estornados: "3",
+          creditos_liquidos: "7",
+          duracao_total_ms: "800",
+          chamadas: 1,
+          chamadas_success: 1,
+          regeneracoes: 0,
+          p95_ms: "600",
+          usd_brl_rate_at_generation: "5.20",
+          credit_value_brl_at_generation: "2.00",
+          usd_brl_rate_source_at_generation: "captured_at_generation",
+          credit_value_brl_source_at_generation: "captured_at_generation",
+        },
+        events: [
+          {
+            generation_type: "campaign_image",
+            provider: "openai",
+            model: "gpt-image-1",
+            status: "success",
+            error_type: null,
+            attempt_number: 1,
+            duration_ms: 400,
+            prompt_tokens: 0,
+            completion_tokens: 0,
+            total_tokens: 0,
+            cached_input_tokens: 0,
+            image_tokens: 1,
+            estimated_cost_usd: 1,
+            provider_reported_cost_usd: null,
+            text_component_usd: null,
+            image_tool_component_usd: null,
+            cost_source: "pricing_table",
+            cost_formula_version: null,
+            cost_estimation_note: null,
+            metadata: null,
+            usd_brl_rate_at_generation: "5.20",
+            credit_value_brl_at_generation: "2.00",
+            usd_brl_rate_source_at_generation: "captured_at_generation",
+            credit_value_brl_source_at_generation: "captured_at_generation",
+          },
+        ],
+      },
+    });
+    const service = new OperationRunsService(
+      client,
+      buildEconomic({ usd_brl_rate: 5.0, credit_value_brl: 1.5 }),
+    );
+
+    const detail = await service.getRunDetail("run-detail-snap");
+
+    // Evento: snapshot do evento (5.20) vence o corrente (5.0)
+    expect(detail.events[0].estimatedCostBrl).toBe(5.2); // 1 × 5.20
+    expect(detail.events[0].usdBrlRateAtGeneration).toBe(5.2);
+    expect(detail.events[0].creditValueBrlAtGeneration).toBe(2.0);
+    expect(detail.events[0].usdBrlRateSourceAtGeneration).toBe("captured_at_generation");
+    expect(detail.events[0].creditValueBrlSourceAtGeneration).toBe(
+      "captured_at_generation",
+    );
+    // Run do detalhe: carrega snapshots/origens do RPC (1º evento do run)
+    expect(detail.run?.usdBrlRateAtGeneration).toBe(5.2);
+    expect(detail.run?.creditValueBrlAtGeneration).toBe(2.0);
+    expect(detail.run?.usdBrlRateSource).toBe("captured_at_generation");
+    expect(detail.run?.creditValueSource).toBe("captured_at_generation");
+    expect(detail.run?.revenueEstimationNote).toBeNull();
+    expect(detail.run?.custoBrl).toBe(26); // 5 × 5.20
+    expect(detail.run?.receitaEstimadaBrl).toBe(14); // 7 × 2.00
+    expect(detail.run?.resultadoEstimadoBrl).toBe(-12); // 14 − 26
   });
 
   it("run null + events [] para id inexistente", async () => {
