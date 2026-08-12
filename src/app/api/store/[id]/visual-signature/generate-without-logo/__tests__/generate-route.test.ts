@@ -73,6 +73,15 @@ vi.mock('@/lib/ai-cost', () => ({
   resolveAiCost: mockResolveAiCost,
 }));
 
+// F38.2.1 (D3): mock do EconomicParameterService — snapshot 5.20/2.00 por
+// default; cenário de falha via mockRejectedValue (best-effort, não bloqueia).
+const { mockGetParameter } = vi.hoisted(() => ({ mockGetParameter: vi.fn() }));
+vi.mock('@/lib/economic/economic-parameter-service', () => ({
+  EconomicParameterService: vi.fn(function () {
+    return { getParameter: mockGetParameter };
+  }),
+}));
+
 vi.mock('@/lib/launch-config/config', () => ({
   getLaunchConfig: mockGetLaunchConfig,
 }));
@@ -231,6 +240,11 @@ describe('POST /api/store/[id]/visual-signature/generate-without-logo', () => {
         pricingVersion: 'code_default',
       })
     );
+    // F38.2.1 (D3): default do snapshot econômico — usd 5.20 / credit 2.00
+    mockGetParameter.mockImplementation(async (key: string) => {
+      if (key === 'usd_brl_rate') return { key, value: 5.2, source: 'table' };
+      return { key, value: 2.0, source: 'table' };
+    });
   });
 
   it('invalid store ID returns 400', async () => {
@@ -390,6 +404,11 @@ describe('VS cost accounting (6.4)', () => {
         pricingVersion: 'code_default',
       })
     );
+    // F38.2.1 (D3): default do snapshot econômico — usd 5.20 / credit 2.00
+    mockGetParameter.mockImplementation(async (key: string) => {
+      if (key === 'usd_brl_rate') return { key, value: 5.2, source: 'table' };
+      return { key, value: 2.0, source: 'table' };
+    });
   });
 
   // Setup padrão de sucesso: loja carregada, sem VS ativa, onCall do attempt 1
@@ -576,5 +595,107 @@ describe('VS cost accounting (6.4)', () => {
     expect(mockInsertGenerationEvent.mock.calls[0][0].estimated_cost_usd).toBeUndefined();
     // sem onCall → nenhum evento call-level no run
     expect(capturedEvents).toHaveLength(0);
+  });
+});
+
+// ── F38.2.1 (D3): snapshot econômico propagado aos eventos do run VS ──────
+describe('snapshot econômico (F38.2.1) — VS', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetLaunchConfig.mockReturnValue({
+      v15Enabled: true,
+      creditsChargingEnabled: true,
+      copyDirectorEnabled: true,
+      rateLimitEnabled: true,
+      generationPaused: false,
+    });
+    mockGetBalance.mockResolvedValue(5);
+    mockReserveCredit.mockResolvedValue('ct-001');
+    mockRefundCredit.mockResolvedValue('refund-tx');
+    mockGetCost.mockResolvedValue({
+      operationKey: 'visual_signature_generation',
+      costCredits: 1,
+      enabled: true,
+      source: 'table',
+    });
+    mockPersistSignature.mockResolvedValue(mockSignatureResult.signature);
+    mockInsertGenerationEvent.mockResolvedValue(undefined);
+    capturedEvents.length = 0;
+    mockResolveAiCost.mockImplementation(({ model }: any) =>
+      Promise.resolve({
+        estimatedCostUsd: model === 'gpt-4o-mini' ? VALIDATION_COST : IMAGE_COST,
+        costSource: 'pricing_table',
+        pricingVersion: 'code_default',
+      })
+    );
+    // F38.2.1 (D3): default do snapshot econômico — usd 5.20 / credit 2.00
+    mockGetParameter.mockImplementation(async (key: string) => {
+      if (key === 'usd_brl_rate') return { key, value: 5.2, source: 'table' };
+      return { key, value: 2.0, source: 'table' };
+    });
+  });
+
+  it('Teste 3: eventos call-level (flushCallEvents) carregam os valores do snapshot do run', async () => {
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: [], error: null });
+      return makeChain({ data: null, error: null });
+    });
+    mockIdentityDirectorGenerate.mockImplementation(async (_input: any, _signal: any, onCall?: any) => {
+      onCall?.({ provider: 'openai', model: 'gpt-5.5', usage: IMAGE_USAGE, durationMs: 300 });
+      return mockSignatureResult;
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(200);
+
+    const imageEvent = capturedEvents.find((e: any) => e.generationType === 'visual_signature_image');
+    expect(imageEvent).toBeDefined();
+    expect(imageEvent.usdBrlRateAtGeneration).toBe(5.2);
+    expect(imageEvent.creditValueBrlAtGeneration).toBe(2.0);
+    // o evento NÃO carrega origem — o tracker define captured_at_generation
+    expect(imageEvent.usdBrlRateSourceAtGeneration).toBeUndefined();
+    expect(imageEvent.creditValueBrlSourceAtGeneration).toBeUndefined();
+  });
+
+  it('Teste 4: insertGenerationEvent (delivery) carrega os valores quando resolvidos', async () => {
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: [], error: null });
+      return makeChain({ data: null, error: null });
+    });
+    mockIdentityDirectorGenerate.mockResolvedValue(mockSignatureResult);
+
+    const { POST } = await import('../route');
+    await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(mockInsertGenerationEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        usd_brl_rate_at_generation: 5.2,
+        credit_value_brl_at_generation: 2.0,
+      })
+    );
+  });
+
+  it('Teste 5: falha na leitura → snapshots null e geração não bloqueada (200)', async () => {
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: [], error: null });
+      return makeChain({ data: null, error: null });
+    });
+    mockIdentityDirectorGenerate.mockResolvedValue(mockSignatureResult);
+    mockGetParameter.mockRejectedValue(new Error('economic down'));
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(200);
+
+    const delivery = mockInsertGenerationEvent.mock.calls.find(
+      (call: any) => call[0]?.generation_type === 'visual_signature' && call[0]?.status === 'success'
+    );
+    expect(delivery).toBeDefined();
+    expect(delivery[0].usd_brl_rate_at_generation).toBeNull();
+    expect(delivery[0].credit_value_brl_at_generation).toBeNull();
   });
 });
