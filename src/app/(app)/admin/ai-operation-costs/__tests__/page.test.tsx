@@ -67,9 +67,15 @@ function makeRun(overrides: Record<string, unknown> = {}) {
     creditosDebitados: 20,
     creditosEstornados: 0,
     creditosLiquidos: 20,
-    receitaOpBrl: 20,
-    resultadoOpBrl: -30,
-    margemOpPct: -150,
+    receitaEstimadaBrl: 20,
+    resultadoEstimadoBrl: -30,
+    margemEstimadaPct: -150,
+    // Snapshot econômico captured (D8) — default quando o cenário não diverge
+    usdBrlRateAtGeneration: 5,
+    creditValueBrlAtGeneration: 1,
+    usdBrlRateSource: "captured_at_generation",
+    creditValueSource: "captured_at_generation",
+    revenueEstimationNote: null,
     duracaoTotalMs: 1000,
     chamadas: 2,
     chamadasSuccess: 2,
@@ -95,9 +101,12 @@ function makeListResult(overrides: Record<string, unknown> = {}) {
       creditosDebitados: 20,
       creditosEstornados: 0,
       creditosLiquidos: 20,
-      receitaOpBrl: 20,
-      resultadoOpBrl: -30,
-      margemOpPct: -150,
+      receitaEstimadaBrl: 20,
+      resultadoEstimadoBrl: -30,
+      margemEstimadaPct: -150,
+      usdBrlRateSource: "captured_at_generation",
+      creditValueSource: "captured_at_generation",
+      revenueEstimationNote: null,
       tempoMedioMs: 1000,
       p95Ms: 1200,
       totalEntregas: 1,
@@ -110,8 +119,8 @@ function makeListResult(overrides: Record<string, unknown> = {}) {
           segment: "freemium/promotional",
           entregas: 1,
           custoBrl: 50,
-          resultadoOpBrl: -30,
-          margemOpPct: -150,
+          resultadoEstimadoBrl: -30,
+          margemEstimadaPct: -150,
           taxaErro: 0,
         },
       },
@@ -147,6 +156,10 @@ describe("AdminAiOperationCostsPage — Custos de Operação (D3/D9)", () => {
     expect(html).toContain("data-testid=\"kpis-grid\"");
     expect(html).toContain("data-testid=\"operation-runs-table\"");
     expect(html).toContain("data-testid=\"segment-aggregations\"");
+    // Aviso de semântica (F38.2.1-11): alteração de parâmetro não recalcula histórico
+    expect(html).toContain("valem para novas gerações");
+    // Legend: estimativas operacionais, não custo financeiro reconciliado (D8)
+    expect(html).toContain("Estimativas operacionais — não custo financeiro reconciliado");
     // A página repassa summary/aggregations do service — NUNCA recalcula KPIs.
     expect(html).toContain('data-testid="kpis-grid" data-summary=');
     expect(mockListRuns).toHaveBeenCalledWith(expect.any(Object));

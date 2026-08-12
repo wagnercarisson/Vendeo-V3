@@ -43,11 +43,12 @@ function makeRun(overrides: Record<string, unknown> = {}): OperationRun {
     receitaEstimadaBrl: 20,
     resultadoEstimadoBrl: -30,
     margemEstimadaPct: -150,
-    usdBrlRateAtGeneration: null,
-    creditValueBrlAtGeneration: null,
-    usdBrlRateSource: "economic_parameter_fallback",
-    creditValueSource: "economic_parameter_fallback",
-    revenueEstimationNote: "estimated_from_admin_credit_value",
+    // Snapshot econômico captured (D8) — default quando o cenário não diverge
+    usdBrlRateAtGeneration: 5,
+    creditValueBrlAtGeneration: 1,
+    usdBrlRateSource: "captured_at_generation",
+    creditValueSource: "captured_at_generation",
+    revenueEstimationNote: null,
     duracaoTotalMs: 1000,
     chamadas: 2,
     chamadasSuccess: 2,
@@ -71,9 +72,9 @@ const SUMMARY: OperationRunsSummary = {
   receitaEstimadaBrl: 20,
   resultadoEstimadoBrl: -30,
   margemEstimadaPct: -150,
-  usdBrlRateSource: "economic_parameter_fallback",
-  creditValueSource: "economic_parameter_fallback",
-  revenueEstimationNote: "estimated_from_admin_credit_value",
+  usdBrlRateSource: "captured_at_generation",
+  creditValueSource: "captured_at_generation",
+  revenueEstimationNote: null,
   tempoMedioMs: 1000,
   p95Ms: 1200,
   totalEntregas: 1,
@@ -148,17 +149,41 @@ describe("KpisGrid (D3)", () => {
     expect(screen.getByText("Créditos brutos")).toBeInTheDocument();
     expect(screen.getByText("Estornos")).toBeInTheDocument();
     expect(screen.getByText("Créditos líquidos")).toBeInTheDocument();
-    expect(screen.getByText("Receita operacional (BRL)")).toBeInTheDocument();
+    expect(screen.getByText("Receita estimada (BRL)")).toBeInTheDocument();
     expect(
-      screen.getByText("Resultado operacional estimado (BRL)"),
+      screen.getByText("Resultado estimado (BRL)"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Margem operacional estimada")).toBeInTheDocument();
+    expect(screen.getByText("Margem estimada")).toBeInTheDocument();
     expect(screen.getByText("Tempo médio")).toBeInTheDocument();
     expect(screen.getByText("1.0s")).toBeInTheDocument();
     expect(screen.getByText("Tempo P95 (95% das entregas)")).toBeInTheDocument();
     expect(screen.getByText("Total de entregas")).toBeInTheDocument();
     expect(screen.getByText("Entregas com erro")).toBeInTheDocument();
     expect(screen.getByText("Entregas com sucesso")).toBeInTheDocument();
+  });
+
+  it("origem do valor (D8): fallback → badge 'estimado de parâmetro atual'; backfilled → 'reconstruído de histórico'", () => {
+    const fallbackSummary: OperationRunsSummary = {
+      ...SUMMARY,
+      usdBrlRateSource: "economic_parameter_fallback",
+      creditValueSource: "economic_parameter_fallback",
+      revenueEstimationNote: "estimated_from_admin_credit_value",
+    };
+    const { unmount } = render(<KpisGrid summary={fallbackSummary} />);
+    expect(screen.getAllByText("estimado de parâmetro atual").length).toBeGreaterThan(0);
+    expect(
+      screen.getByTestId("kpi-origin-Receita estimada (BRL)"),
+    ).toHaveAttribute("data-origin", "economic_parameter_fallback");
+    unmount();
+
+    const backfilledSummary: OperationRunsSummary = {
+      ...SUMMARY,
+      usdBrlRateSource: "backfilled_seed",
+      creditValueSource: "backfilled_from_audit",
+      revenueEstimationNote: "backfilled_historical_approximation",
+    };
+    render(<KpisGrid summary={backfilledSummary} />);
+    expect(screen.getAllByText("reconstruído de histórico").length).toBeGreaterThan(0);
   });
 });
 
@@ -176,7 +201,7 @@ describe("OperationRunsTable (D3/D5/D7)", () => {
     expect(screen.getByText("Estorno: 0")).toBeInTheDocument();
     expect(screen.getByText("Líquido: 20")).toBeInTheDocument();
     expect(
-      screen.getByText("Receita R$ 20,00 · Resultado R$ -30,00"),
+      screen.getByText("Receita estimada R$ 20,00 · Resultado estimado R$ -30,00"),
     ).toBeInTheDocument(); // financeiro derivado de líquidos
     expect(screen.getByText("1.0s")).toBeInTheDocument(); // tempo
     expect(screen.getByText("2")).toBeInTheDocument(); // chamadas
@@ -189,6 +214,41 @@ describe("OperationRunsTable (D3/D5/D7)", () => {
     render(<OperationRunsTable runs={[makeRun()]} />);
     expect(screen.getAllByText("ainda indisponível").length).toBeGreaterThan(0);
     expect(screen.getAllByText("pendente").length).toBeGreaterThan(0);
+  });
+
+  it("run legado (sem snapshot) → badge de fallback 'parâmetro atual (fallback)' visível (T-38.2.1-15)", () => {
+    render(
+      <OperationRunsTable
+        runs={[
+          makeRun({
+            usdBrlRateAtGeneration: null,
+            creditValueBrlAtGeneration: null,
+            usdBrlRateSource: "economic_parameter_fallback",
+            creditValueSource: "economic_parameter_fallback",
+            revenueEstimationNote: "estimated_from_admin_credit_value",
+          }),
+        ]}
+      />,
+    );
+    expect(screen.getByText("parâmetro atual (fallback)")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("run-origin-11111111-1111-4111-8111-111111111111"),
+    ).toHaveAttribute("data-origin", "economic_parameter_fallback");
+  });
+
+  it("run backfilled → badge 'reconstruído de histórico' visível (D8)", () => {
+    render(
+      <OperationRunsTable
+        runs={[
+          makeRun({
+            usdBrlRateSource: "backfilled_seed",
+            creditValueSource: "backfilled_from_audit",
+            revenueEstimationNote: "backfilled_historical_approximation",
+          }),
+        ]}
+      />,
+    );
+    expect(screen.getByText("reconstruído de histórico")).toBeInTheDocument();
   });
 
   it("run falho 100% estornado: líquido 0, receita R$ 0,00 e resultado negativo (custo de IA permanece)", () => {
@@ -208,7 +268,7 @@ describe("OperationRunsTable (D3/D5/D7)", () => {
     );
     expect(screen.getByText("Líquido: 0")).toBeInTheDocument();
     expect(
-      screen.getByText("Receita R$ 0,00 · Resultado R$ -50,00"),
+      screen.getByText("Receita estimada R$ 0,00 · Resultado estimado R$ -50,00"),
     ).toBeInTheDocument();
   });
 
@@ -240,6 +300,11 @@ describe("OperationRunsTable (D3/D5/D7)", () => {
             costEstimationNote: null,
             metadata: null,
             badge: "estimated",
+            // Snapshot econômico do evento (F38.2.1-03) — 0.1 × 5 = 0.5
+            usdBrlRateAtGeneration: 5,
+            creditValueBrlAtGeneration: 1,
+            usdBrlRateSourceAtGeneration: "captured_at_generation",
+            creditValueBrlSourceAtGeneration: "captured_at_generation",
           },
         ],
       }),
@@ -262,6 +327,8 @@ describe("OperationRunsTable (D3/D5/D7)", () => {
     // textComponentUsd/imageToolComponentUsd — texto quebrado em spans (T / · I)
     expect(screen.getByText("T US$ 0,04")).toBeInTheDocument();
     expect(screen.getByText("· I US$ 0,06")).toBeInTheDocument();
+    // Câmbio do evento: taxa snapshotada + origem capturada (F38.2.1)
+    expect(screen.getByText("5 · capturado")).toBeInTheDocument();
     // Placeholder F38.3 no cabeçalho do run
     expect(screen.getByText("Custo reconciliado provider: ainda indisponível")).toBeInTheDocument();
     expect(screen.getByText("Diferença: pendente")).toBeInTheDocument();
@@ -271,7 +338,7 @@ describe("OperationRunsTable (D3/D5/D7)", () => {
     ).toBeInTheDocument();
     // Receita/Resultado aparece na linha da tabela E no cabeçalho do dialog
     expect(
-      screen.getAllByText("Receita R$ 20,00 · Resultado R$ -30,00").length,
+      screen.getAllByText("Receita estimada R$ 20,00 · Resultado estimado R$ -30,00").length,
     ).toBeGreaterThan(0);
   });
 });
@@ -305,6 +372,11 @@ describe("RunDetailDialog (D4)", () => {
             costEstimationNote: null,
             metadata: null,
             badge: "provider_reported",
+            // Snapshot econômico do evento (F38.2.1-03) — 0.05 × 5 = 0.25
+            usdBrlRateAtGeneration: 5,
+            creditValueBrlAtGeneration: 1,
+            usdBrlRateSourceAtGeneration: "captured_at_generation",
+            creditValueBrlSourceAtGeneration: "captured_at_generation",
           },
         ],
       }),
@@ -326,13 +398,75 @@ describe("RunDetailDialog (D4)", () => {
     expect(screen.getByText("openai/gpt-4o-mini")).toBeInTheDocument();
     expect(screen.getByText("75")).toBeInTheDocument(); // tokens
     expect(screen.getByText("Custo reportado pelo provider")).toBeInTheDocument();
+    // Câmbio do evento: taxa snapshotada + origem capturada (F38.2.1)
+    expect(screen.getByText("5 · capturado")).toBeInTheDocument();
     // Breakdown de créditos + financeiro no cabeçalho do run (D4)
     expect(
       screen.getByText("Créditos: bruto 20 · estorno 0 · líquido 20"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Receita R$ 20,00 · Resultado R$ -30,00"),
+      screen.getByText("Receita estimada R$ 20,00 · Resultado estimado R$ -30,00"),
     ).toBeInTheDocument();
+  });
+
+  it("run legado no detalhe → origem 'estimado de parâmetro atual (fallback)' + câmbio do evento 'parâmetro atual (fallback)'", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        run: {
+          ...makeRun(),
+          usdBrlRateAtGeneration: null,
+          creditValueBrlAtGeneration: null,
+          usdBrlRateSource: "economic_parameter_fallback",
+          creditValueSource: "economic_parameter_fallback",
+          revenueEstimationNote: "estimated_from_admin_credit_value",
+        },
+        events: [
+          {
+            generationType: "campaign_image",
+            provider: "openai",
+            model: "gpt-4o",
+            status: "success",
+            errorType: null,
+            attemptNumber: 1,
+            durationMs: 500,
+            promptTokens: 100,
+            completionTokens: 50,
+            totalTokens: 150,
+            cachedInputTokens: 0,
+            imageTokens: 0,
+            estimatedCostUsd: 0.1,
+            estimatedCostBrl: 0.5,
+            textComponentUsd: 0.04,
+            imageToolComponentUsd: 0.06,
+            costSource: "pricing_table",
+            costFormulaVersion: "responses_image_generation_v2",
+            costEstimationNote: null,
+            metadata: null,
+            badge: "estimated",
+            usdBrlRateAtGeneration: null,
+            creditValueBrlAtGeneration: null,
+            usdBrlRateSourceAtGeneration: null,
+            creditValueBrlSourceAtGeneration: null,
+          },
+        ],
+      }),
+    });
+
+    render(
+      <RunDetailDialog
+        operationRunId="22222222-2222-4222-8222-222222222222"
+        onClose={() => {}}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Origem: estimado de parâmetro atual (fallback)"),
+      ).toBeInTheDocument();
+    });
+    // Câmbio do evento sem snapshot → fallback explícito
+    expect(screen.getByText("parâmetro atual (fallback)")).toBeInTheDocument();
   });
 
   it("fetch falha → estado de erro no dialog", async () => {
@@ -414,10 +548,10 @@ describe("SegmentAggregations (D9)", () => {
     expect(screen.getByText("Custo (BRL)")).toBeInTheDocument();
     expect(screen.getByText("R$ 50,00")).toBeInTheDocument();
     expect(
-      screen.getByText("Resultado operacional estimado"),
+      screen.getByText("Resultado estimado"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Margem operacional estimada"),
+      screen.getByText("Margem estimada"),
     ).toBeInTheDocument();
     expect(screen.getByText("Taxa de erro")).toBeInTheDocument();
     expect(screen.getByText("Gerações por tipo de entrega")).toBeInTheDocument();

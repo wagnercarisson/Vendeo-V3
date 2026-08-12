@@ -142,26 +142,19 @@ export function OperationRunsTable({ runs }: { runs: OperationRun[] }) {
                     <div
                       className="mt-1"
                       title="Estimado de parâmetro atual — valor não capturado na geração (fallback legacy)"
+                      data-testid={`run-origin-${run.operationRunId}`}
+                      data-origin="economic_parameter_fallback"
                     >
-                      <Badge
-                        variant="generating"
-                        data-testid={`run-origin-${run.operationRunId}`}
-                        data-origin="economic_parameter_fallback"
-                      >
-                        parâmetro atual (fallback)
-                      </Badge>
+                      <Badge variant="generating">parâmetro atual (fallback)</Badge>
                     </div>
                   ) : run.creditValueSource.startsWith("backfilled") ? (
                     <div
                       className="mt-1"
                       title="Reconstruído de histórico — valor não capturado na geração (backfill aproximado)"
+                      data-testid={`run-origin-${run.operationRunId}`}
+                      data-origin="backfilled"
                     >
-                      <Badge
-                        data-testid={`run-origin-${run.operationRunId}`}
-                        data-origin="backfilled"
-                      >
-                        reconstruído de histórico
-                      </Badge>
+                      <Badge>reconstruído de histórico</Badge>
                     </div>
                   ) : null}
                 </td>

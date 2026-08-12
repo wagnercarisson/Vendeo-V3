@@ -123,15 +123,17 @@ export function KpisGrid({ summary }: { summary: OperationRunsSummary }) {
             </div>
             <div className="text-2xl font-bold text-foreground">{kpi.value}</div>
             {kpi.origin ? (
-              <div className="mt-1">
+              <div
+                className="mt-1"
+                data-testid={`kpi-origin-${kpi.label}`}
+                data-origin={
+                  kpi.origin === "estimado de parâmetro atual"
+                    ? "economic_parameter_fallback"
+                    : "backfilled"
+                }
+              >
                 <Badge
                   variant={kpi.origin === "estimado de parâmetro atual" ? "generating" : "default"}
-                  data-testid={`kpi-origin-${kpi.label}`}
-                  data-origin={
-                    kpi.origin === "estimado de parâmetro atual"
-                      ? "economic_parameter_fallback"
-                      : "backfilled"
-                  }
                 >
                   {kpi.origin}
                 </Badge>
