@@ -368,6 +368,13 @@ export function ParamsForm({
         operacional do crédito. Alterações não valem em produção até salvar
         (motivo obrigatório + auditoria).
       </p>
+      <p
+        className="rounded-lg border border-border bg-bg-surface px-3 py-2 text-xs text-muted-foreground"
+        data-testid="economic-parameters-warning"
+      >
+        Alterações nos parâmetros econômicos valem para novas gerações e não
+        recalculam o histórico já gerado.
+      </p>
       <div className="space-y-3">
         {parameters.map((p) => {
           const s = state[p.key];

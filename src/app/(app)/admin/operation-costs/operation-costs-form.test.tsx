@@ -47,6 +47,20 @@ describe("ParamsForm", () => {
     expect(within(creditBlock).getByText("fallback")).toBeInTheDocument();
   });
 
+  it("renderiza aviso de semântica: alterações valem para novas gerações e não recalculam o histórico", () => {
+    render(
+      <ParamsForm
+        parameters={[{ key: "usd_brl_rate", value: 5.5, source: "table" }]}
+      />,
+    );
+
+    const warning = screen.getByTestId("economic-parameters-warning");
+    expect(warning).toBeInTheDocument();
+    expect(warning.textContent).toContain(
+      "valem para novas gerações e não recalculam o histórico já gerado",
+    );
+  });
+
   it("decimais editáveis: digita 5.20 e formata para '5.20' no blur (regressão setas/trava)", async () => {
     render(
       <ParamsForm
