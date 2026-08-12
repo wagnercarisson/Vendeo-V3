@@ -695,7 +695,7 @@ describe('snapshot econômico (F38.2.1) — VS', () => {
       (call: any) => call[0]?.generation_type === 'visual_signature' && call[0]?.status === 'success'
     );
     expect(delivery).toBeDefined();
-    expect(delivery[0].usd_brl_rate_at_generation).toBeNull();
-    expect(delivery[0].credit_value_brl_at_generation).toBeNull();
+    expect(delivery![0].usd_brl_rate_at_generation).toBeNull();
+    expect(delivery![0].credit_value_brl_at_generation).toBeNull();
   });
 });

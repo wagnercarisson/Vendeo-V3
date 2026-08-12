@@ -43,6 +43,10 @@ export async function insertGenerationEvent(
             pricingVersion: event.pricing_version ?? null,
           }
         : undefined,
+      // F38.2.1 (D3): repassa os snapshots do run ao tracker (APENAS valores —
+      // a origem captured_at_generation é definida pelo tracker na gravação).
+      usdBrlRateAtGeneration: event.usd_brl_rate_at_generation ?? null,
+      creditValueBrlAtGeneration: event.credit_value_brl_at_generation ?? null,
       metadata: event.metadata ?? {},
     });
 

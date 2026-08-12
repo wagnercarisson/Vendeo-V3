@@ -20,6 +20,7 @@ import { requireLegalClearance } from '@/lib/legal/clearance';
 import { AiCostTracker, resolveAiCost } from '@/lib/ai-cost';
 import type { AiCallInfo, CostResolution } from '@/lib/ai-cost/types';
 import type { GenerationEventType } from '@/lib/visual-signature/types';
+import { EconomicParameterService } from '@/lib/economic/economic-parameter-service';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -46,6 +47,35 @@ const PROMPT_VERSION_SIMPLIFIED = crypto
   .slice(0, 12);
 
 let requestCounter = 0;
+
+/**
+ * F38.2.1 (D3): resolve o snapshot econômico UMA vez por run (best-effort) —
+ * valores vigentes naquele momento. Sucesso → { usdBrlRateAtGeneration,
+ * creditValueBrlAtGeneration } (APENAS valores; o tracker define a origem
+ * captured_at_generation na gravação). Falha → log + null — NUNCA bloqueia.
+ */
+async function resolveEconomicSnapshot(): Promise<{
+  usdBrlRateAtGeneration: number | null;
+  creditValueBrlAtGeneration: number | null;
+}> {
+  try {
+    const service = new EconomicParameterService();
+    const [usd, credit] = await Promise.all([
+      service.getParameter("usd_brl_rate"),
+      service.getParameter("credit_value_brl"),
+    ]);
+    return {
+      usdBrlRateAtGeneration: usd.value,
+      creditValueBrlAtGeneration: credit.value,
+    };
+  } catch (err) {
+    console.error(
+      "[generate-without-logo] snapshot econômico indisponível (best-effort):",
+      err instanceof Error ? err.message : String(err)
+    );
+    return { usdBrlRateAtGeneration: null, creditValueBrlAtGeneration: null };
+  }
+}
 
 export const POST = apiHandler(async (
   request: NextRequest,
@@ -235,6 +265,11 @@ export const POST = apiHandler(async (
   // persistidos no delivery marker (insertGenerationEvent delega ao tracker).
   let run = new AiCostTracker().startRun("visual_signature");
 
+  // F38.2.1 (D3): snapshot econômico do run vigente — resolvido UMA vez após o
+  // startRun (padrão telemetria) e propagado às chamadas filhas via
+  // flushCallEvents e insertGenerationEvent. O retry (novo run) re-resolve.
+  let economicSnapshot = await resolveEconomicSnapshot();
+
   // Eventos call-level (visual_signature_image / visual_signature_validation)
   // chegam via onCall ANTES de a assinatura existir (persistSignature acontece
   // dentro do fluxo). Ficam pendentes e são gravados quando o
@@ -280,6 +315,10 @@ export const POST = apiHandler(async (
           status: "success",
           tokens: ev.info.usage,
           cost,
+          // F38.2.1 (D3): snapshot do run vigente (APENAS valores — o tracker
+          // define a origem captured_at_generation na gravação).
+          usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
+          creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
         });
       } catch (err) {
         console.error(
@@ -363,6 +402,8 @@ export const POST = apiHandler(async (
         // (novo operationRunId — 6.4 test 3).
         await flushCallEvents(null);
         run = new AiCostTracker().startRun("visual_signature");
+        // F38.2.1 (D3): retry = NOVO run → novo snapshot (valores vigentes agora).
+        economicSnapshot = await resolveEconomicSnapshot();
         currentAttemptNumber = 1;
         const aiGenerator = new AiImageGenerator();
         const retryResult = await aiGenerator.generate({
@@ -527,6 +568,10 @@ export const POST = apiHandler(async (
       trace_id: run.traceId,
       operation_run_type: 'visual_signature',
       visual_signature_id: result.signature.id,
+      // F38.2.1 (D3): snapshot do run vigente no delivery (APENAS valores —
+      // o tracker define a origem captured_at_generation na gravação).
+      usd_brl_rate_at_generation: economicSnapshot.usdBrlRateAtGeneration,
+      credit_value_brl_at_generation: economicSnapshot.creditValueBrlAtGeneration,
     });
 
     console.log(`[generate-without-logo][req-${reqId}] enviando response success`);
@@ -589,6 +634,9 @@ export const POST = apiHandler(async (
     trace_id: run.traceId,
     operation_run_type: 'visual_signature',
     visual_signature_id: null,
+    // F38.2.1 (D3): snapshot do run vigente no delivery failed (APENAS valores)
+    usd_brl_rate_at_generation: economicSnapshot.usdBrlRateAtGeneration,
+    credit_value_brl_at_generation: economicSnapshot.creditValueBrlAtGeneration,
   });
 
   console.log(`[generate-without-logo][req-${reqId}] enviando response error`);
