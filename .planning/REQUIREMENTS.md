@@ -545,8 +545,8 @@ Desdobramento da F38.2, adicionados via OpenSpec (`openspec/changes/fase-38-2-1-
 
 ### Snapshot Econômico (F38.2.1-SNAP — spec economic-snapshot)
 
-- [ ] **F38.2.1-01**: Colunas `usd_brl_rate_at_generation`/`credit_value_brl_at_generation` **+ origens `usd_brl_rate_source_at_generation`/`credit_value_brl_source_at_generation`** em `generation_events` (snapshot contábil + estimativo/fallback, com procedência explícita)
-- [ ] **F38.2.1-02**: `AiCostTracker.record` persiste os snapshots **com origem `captured_at_generation`** no momento da geração (best-effort; daqui para frente)
+- [ ] **F38.2.1-01**: Colunas `usd_brl_rate_at_generation`/`credit_value_brl_at_generation` **+ origens `usd_brl_rate_source_at_generation`/`credit_value_brl_source_at_generation`** em `generation_events` (snapshot contábil + estimativo/fallback, com procedência explícita); CHECKs leves de enum nas origens + CHECKs de paridade valor⇔origem
+- [ ] **F38.2.1-02**: `AiCostTracker.record` persiste os valores e **define a origem `captured_at_generation`** (o caller passa apenas os valores; valor ausente → valor e origem NULL) — best-effort; daqui para frente
 - [ ] **F38.2.1-03**: Callers de início de run resolvem os parâmetros uma vez e propagam o snapshot às chamadas filhas
 - [ ] **F38.2.1-04**: `custoBrl = custoUsdTotal × usd_brl_rate_at_generation` (snapshot; fallback corrente explícito)
 - [ ] **F38.2.1-05**: `receitaEstimadaBrl = creditosLiquidos × credit_value_brl_at_generation` (estorno descontado; nunca receita real)

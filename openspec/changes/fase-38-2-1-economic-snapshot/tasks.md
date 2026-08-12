@@ -1,14 +1,16 @@
 ## 1. Migration SQL — Snapshot econômico em generation_events
 
 - [ ] 1.1 Criar `supabase/migrations/2026XXXXXX_f38_2_1_economic_snapshot.sql` com `ALTER TABLE public.generation_events ADD COLUMN IF NOT EXISTS` de 4 colunas: `usd_brl_rate_at_generation NUMERIC`, `credit_value_brl_at_generation NUMERIC`, `usd_brl_rate_source_at_generation TEXT`, `credit_value_brl_source_at_generation TEXT` — D1/D2
-- [ ] 1.2 Backfill aproximado por chave: CTE (LAG/`ROW_NUMBER()` sobre `economic_parameter_audit`) reconstituindo o valor vigente por `created_at` do evento; sem audit anterior → seed `1.00`; **origem preenchida**: `backfilled_from_audit` (janela do audit) ou `backfilled_seed` (seed); **idempotente** (`WHERE valor IS NULL`) — D4
-- [ ] 1.3 Revert commands por objeto; verificação: migration aplica em banco real (I1), backfill idempotente (rodar 2× não altera linhas preenchidas), **nenhum valor persistido sem origem**
+- [ ] 1.2 **CHECKs leves nas origens** (NULL permitido): `usd_brl_rate_source_at_generation IN ('captured_at_generation','backfilled_from_audit','backfilled_seed')` e `credit_value_brl_source_at_generation IN (...)` — D1
+- [ ] 1.3 **CHECKs de paridade**: `(usd_brl_rate_at_generation IS NULL) = (usd_brl_rate_source_at_generation IS NULL)` e equivalente para credit — valor ⇔ origem (NULL ⇔ NULL) — D1
+- [ ] 1.4 Backfill aproximado por chave: CTE (LAG/`ROW_NUMBER()` sobre `economic_parameter_audit`) reconstituindo o valor vigente por `created_at` do evento; sem audit anterior → seed `1.00`; **origem preenchida**: `backfilled_from_audit` (janela do audit) ou `backfilled_seed` (seed); **nunca** `captured_at_generation` nem `economic_parameter_fallback`; **idempotente** (`WHERE valor IS NULL`) — D4
+- [ ] 1.5 Revert commands por objeto (DROP CONSTRAINT ×4 + DROP COLUMN ×4); verificação: migration aplica em banco real (I1), backfill idempotente (rodar 2× não altera linhas preenchidas), **nenhum valor persistido sem origem (paridade enforced)**, `economic_parameter_fallback` rejeitado pelo CHECK
 
 ## 2. Tipos + Tracker — snapshot no momento da geração
 
-- [ ] 2.1 `src/lib/ai-cost/types.ts`: `AiCostEvent` ganha `usdBrlRateAtGeneration?: number | null`, `creditValueBrlAtGeneration?: number | null` e as origens `usdBrlRateSourceAtGeneration?: string | null`/`creditValueBrlSourceAtGeneration?: string | null` (opcionais — backward-compatible; delivery marker não exige) — D3
-- [ ] 2.2 `src/lib/ai-cost/tracker.ts`: `record` persiste `usd_brl_rate_at_generation`/`credit_value_brl_at_generation` do evento **com origem `captured_at_generation`** (nunca `backfilled_*`/`fallback`) — best-effort (snapshot NULL não bloqueia gravação) — D1/D3
-- [ ] 2.3 Callers de início de run resolvem os parâmetros **uma vez no início** via `EconomicParameterService.getParameter` e propagam o snapshot nos `AiCostEvent` das chamadas filhas: `generate-image/route.ts:46`, `generate-without-logo/route.ts:61,236`, `brand-profile/*/route.ts:73,193,394,612`, `visual-signature/generate-without-logo/route.ts:236,365`, `src/lib/visual-signature/generation-events.ts:9` — D3
+- [ ] 2.1 `src/lib/ai-cost/types.ts`: `AiCostEvent` ganha **apenas os valores** `usdBrlRateAtGeneration?: number | null` e `creditValueBrlAtGeneration?: number | null` (opcionais — backward-compatible; delivery marker não exige) — **SEM campos de origem no evento** (origem é do tracker) — D3
+- [ ] 2.2 `src/lib/ai-cost/tracker.ts`: `record` persiste `usd_brl_rate_at_generation`/`credit_value_brl_at_generation` do evento **e DEFINE as origens** `usd_brl_rate_source_at_generation = "captured_at_generation"` quando valor presente (ausente → NULL) — best-effort (snapshot NULL não bloqueia gravação) — D1/D3
+- [ ] 2.3 Callers de início de run resolvem os parâmetros **uma vez no início** via `EconomicParameterService.getParameter` e propagam **apenas os valores** do snapshot nos `AiCostEvent` das chamadas filhas: `generate-image/route.ts:46`, `generate-without-logo/route.ts:61,236`, `brand-profile/*/route.ts:73,193,394,612`, `visual-signature/generate-without-logo/route.ts:236,365`, `src/lib/visual-signature/generation-events.ts:9` — D3
 
 ## 3. RPCs — expor snapshots e origens (contrato backward-compatible)
 
@@ -41,7 +43,7 @@
 
 ## 8. Testes
 
-- [ ] 8.1 Tracker: `record` persiste os 2 snapshots **com origem `captured_at_generation`**; evento sem snapshot grava NULL sem erro — D1/D3
+- [ ] 8.1 Tracker: `record` persiste os 2 valores **e define as origens `captured_at_generation`** quando valor presente (evento só carrega valores — sem campos de origem no AiCostEvent); evento sem snapshot grava NULL sem erro — D1/D3
 - [ ] 8.2 Service: run com snapshot usa taxa snapshotada (não a corrente); **origem exposta** (`captured_at_generation`/`backfilled_from_audit`/`backfilled_seed`); run sem valor usa fallback com `creditValueSource`/`revenueEstimationNote`; `deriveSummary` soma BRL por run com taxas distintas; `margemEstimadaPct` null quando receita estimada 0 — D5
 - [ ] 8.3 API: contratos renomeados (`receitaEstimadaBrl` etc.); snapshot do run usado; fallback legacy sinalizado; **origem backfilled não aparece como capturado** — D6/D8
 - [ ] 8.4 Estabilidade temporal: alterar `usd_brl_rate`/`credit_value_brl` depois não muda `custoBrl`/`receitaEstimadaBrl`/`resultadoEstimadoBrl`/`margemEstimadaPct` de runs com snapshot (critérios de aceite 1-2)

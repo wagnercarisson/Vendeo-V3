@@ -15,11 +15,15 @@ ALTER TABLE public.generation_events
 - **`usd_brl_rate_at_generation`** = snapshot **contábil** do câmbio conhecido na geração (valor de `economic_parameters.usd_brl_rate` lido no momento em que o run começou). É estrutural e continua válido em fases futuras; usado para converter `custoUsdTotal` → `custoBrl`.
 - **`credit_value_brl_at_generation`** = snapshot **estimativo/fallback** do valor configurado do crédito na geração (valor de `economic_parameters.credit_value_brl` lido no momento da geração). Usado **somente** para `receitaEstimadaBrl`, `resultadoEstimadoBrl` e `margemEstimadaPct`. **NUNCA** tratado/nomeado como receita real.
 - **`usd_brl_rate_source_at_generation`** / **`credit_value_brl_source_at_generation`** = **origem explícita** do valor persistido na coluna de valor correspondente. Valores possíveis:
-  - `"captured_at_generation"` — capturado no momento real da geração (via tracker)
+  - `"captured_at_generation"` — capturado no momento real da geração (gravado pelo tracker)
   - `"backfilled_from_audit"` — reconstruído depois via `economic_parameter_audit` (valor vigente na data do evento, aproximado)
   - `"backfilled_seed"` — reconstruído depois com a seed `1.00` (sem audit anterior ao evento)
-  - `"economic_parameter_fallback"` — sem valor persistido; derivado em leitura com o parâmetro corrente
-- A coluna de origem é **obrigatória e não-nula sempre que a coluna de valor for preenchida**: todo valor snapshotado/backfilled tem origem marcada — nada é chamado de "snapshot" sem procedência.
+  - `"economic_parameter_fallback"` — sem valor persistido; derivado em leitura com o parâmetro corrente (**NUNCA persistido** — só derivado no service)
+- A coluna de origem é **controlada por quem persiste o valor**: o **tracker** grava `"captured_at_generation"` quando o valor é capturado na geração; a **migration/backfill** grava `"backfilled_from_audit"`/`"backfilled_seed"`; o valor `"economic_parameter_fallback"` é **exclusivamente de leitura** (service layer), nunca gravado em `generation_events`.
+- **CHECKs leves nas colunas de origem** (sem CHECK nos valores NUMERIC):
+  - `usd_brl_rate_source_at_generation IN ('captured_at_generation', 'backfilled_from_audit', 'backfilled_seed') OR NULL`
+  - `credit_value_brl_source_at_generation IN ('captured_at_generation', 'backfilled_from_audit', 'backfilled_seed') OR NULL`
+- **CHECK de paridade** (por par valor/origem): se a coluna de valor é não-nula, a origem correspondente é não-nula; se o valor é NULL, a origem é NULL. O `economic_parameter_fallback` **não** passa por esses CHECKs porque nunca é persistido.
 - O snapshot **capturado na geração** é gravado **daqui para frente** (eventos anteriores à migration ficam NULL e são tratados por backfill ou fallback legacy — ver `Requirement: Fallback legacy para eventos sem snapshot` e `Requirement: Backfill aproximado na migration`).
 - Os valores snapshotados são **imutáveis por construção**: alterar `economic_parameters` depois não altera os snapshots já gravados.
 
@@ -36,7 +40,17 @@ ALTER TABLE public.generation_events
 #### Scenario: valor de snapshot nunca sem origem
 
 - **WHEN** `usd_brl_rate_at_generation` é não-nulo
-- **THEN** `usd_brl_rate_source_at_generation` é não-nulo e um dos valores permitidos (`captured_at_generation`/`backfilled_from_audit`/`backfilled_seed`)
+- **THEN** `usd_brl_rate_source_at_generation` é não-nulo e um dos valores permitidos (`captured_at_generation`/`backfilled_from_audit`/`backfilled_seed`) — enforced por CHECK no banco
+
+#### Scenario: paridade valor/origem enforced no banco
+
+- **WHEN** uma linha é gravada com valor não-nulo e origem NULL (ou valor NULL e origem não-nula)
+- **THEN** o INSERT falha por violação do CHECK de paridade
+
+#### Scenario: fallback nunca é persistido como origem
+
+- **WHEN** uma tentativa de gravar `usd_brl_rate_source_at_generation = 'economic_parameter_fallback'` em `generation_events` é feita
+- **THEN** o INSERT falha por violação do CHECK (fallback é exclusivamente derivado em leitura)
 
 #### Scenario: evento sem cost (delivery marker) não exige snapshot
 
@@ -45,17 +59,22 @@ ALTER TABLE public.generation_events
 
 ### Requirement: Persistência do snapshot pelo tracker (AiCostTracker.record)
 
-O sistema SHALL fazer `AiCostTracker.record` persistir `usd_brl_rate_at_generation`, `credit_value_brl_at_generation` **e as origens `captured_at_generation`** a partir do snapshot recebido no momento da gravação:
+O sistema SHALL fazer `AiCostTracker.record` persistir `usd_brl_rate_at_generation`, `credit_value_brl_at_generation` **e definir a origem `captured_at_generation`** a partir do snapshot recebido no momento da gravação:
 
-- O `AiCostEvent` (ou o argumento de `record`) SHALL carregar os valores de snapshot (`usdBrlRateAtGeneration`, `creditValueBrlAtGeneration`) **resolvidos no ponto de chamada** — o serviço/rota que inicia o run resolve os parâmetros uma vez no início e propaga o snapshot às chamadas filhas (padrão telemetria D7/D12).
-- Quando o snapshot é gravado pelo tracker (valor presente), a origem persistida SHALL ser `"captured_at_generation"` — o tracker **nunca** grava como `backfilled_*` nem como `economic_parameter_fallback`.
+- O `AiCostEvent` (ou o argumento de `record`) SHALL carregar **apenas os valores** de snapshot (`usdBrlRateAtGeneration`, `creditValueBrlAtGeneration`) **resolvidos no ponto de chamada** — o serviço/rota que inicia o run resolve os parâmetros uma vez no início e propaga os valores às chamadas filhas (padrão telemetria D7/D12). **O caller NÃO define origem** — ele passa só os valores.
+- **A origem é controlada pelo tracker**: quando o valor está presente no evento, `record` grava `"captured_at_generation"`; quando ausente, valor e origem ficam NULL. O tracker **nunca** grava `backfilled_*` nem `economic_parameter_fallback`.
 - O snapshot é **best-effort** como todo o `record`: se a resolução dos parâmetros falhar no ponto de chamada, o evento é gravado com snapshots NULL (fallback legacy em leitura), e a geração **não** é bloqueada.
 - **Daqui para frente**: nenhum reclassificação/backfill de histórico no `record` — eventos anteriores continuam NULL até o backfill da migration.
 
-#### Scenario: record grava snapshots propagados do início do run
+#### Scenario: record grava valores e define a origem
 
-- **WHEN** o run inicia com `usd_brl_rate = 5.20` e `credit_value_brl = 2.00` e as chamadas filhas gravam eventos com o snapshot propagado
-- **THEN** todas as linhas do run carregam `usd_brl_rate_at_generation = 5.20`, `credit_value_brl_at_generation = 2.00`, `usd_brl_rate_source_at_generation = 'captured_at_generation'` e `credit_value_brl_source_at_generation = 'captured_at_generation'`
+- **WHEN** o run inicia com `usd_brl_rate = 5.20` e `credit_value_brl = 2.00`, o caller resolve os valores e as chamadas filhas gravam eventos com `usdBrlRateAtGeneration = 5.20`/`creditValueBrlAtGeneration = 2.00`
+- **THEN** todas as linhas do run carregam `usd_brl_rate_at_generation = 5.20`, `credit_value_brl_at_generation = 2.00` E as origens `usd_brl_rate_source_at_generation = 'captured_at_generation'`/`credit_value_brl_source_at_generation = 'captured_at_generation'` — **definidas pelo tracker, não pelo caller**
+
+#### Scenario: evento sem valor é gravado com NULL (sem origem)
+
+- **WHEN** um evento é gravado sem `usdBrlRateAtGeneration`/`creditValueBrlAtGeneration`
+- **THEN** as 4 colunas (valores + origens) ficam NULL (sem violar o CHECK de paridade — valor NULL ⇒ origem NULL)
 
 #### Scenario: falha na resolução do snapshot não bloqueia geração
 
@@ -159,6 +178,7 @@ O sistema SHALL incluir, na migration de snapshot, um backfill **aproximado** do
 
 - Fonte de reconstrução: `economic_parameter_audit` (append-only, `created_at` + `old_value`/`new_value`) — para cada evento, o valor vigente é o `new_value` da alteração mais recente com `created_at <= generation_events.created_at` para a chave; sem alteração anterior → valor da seed (`1.00`).
 - **Origem preenchida pelo backfill:** quando o valor vem de uma janela do audit → `backfilled_from_audit`; quando vem da seed → `backfilled_seed`. O backfill **nunca** grava `captured_at_generation`.
+- **Fallback nunca é persistido:** o backfill grava apenas `backfilled_*`; o valor `economic_parameter_fallback` é exclusivamente derivado em leitura no service (os CHECKs das colunas de origem rejeitam `economic_parameter_fallback` em `generation_events`).
 - Implementação preferencial: CTE com `ROW_NUMBER()`/`LATERAL` (LAG por chave) — sem `FOR` loop em plpgsql, preservando determinismo e performance em volumes razoáveis.
 - O backfill SHALL ser idempotente (rodar 2× não muda nada) e NÃO tocar linhas que já tenham valor (garante re-aplicação segura; `WHERE usd_brl_rate_at_generation IS NULL`).
 - Limitação documentada: é reconstrução **aproximada** — o valor real da geração não foi persistido antes desta fase; a origem `backfilled_*` comunica exatamente isso.

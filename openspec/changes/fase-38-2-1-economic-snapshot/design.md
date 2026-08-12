@@ -61,7 +61,7 @@ Gravar `usd_brl_rate_at_generation`, `credit_value_brl_at_generation` **e as ori
 
 Os callers que iniciam o run (`generate-image/route.ts:46`, `generate-without-logo/route.ts:61,236`, `brand-profile/*/route.ts:73,193,394,612`, `visual-signature/generate-without-logo/route.ts:236,365`, `generation-events.ts:9`) resolvem os parâmetros **uma vez no início do run** via `EconomicParameterService.getParameter` e propagam `usdBrlRateAtGeneration`/`creditValueBrlAtGeneration` nos `AiCostEvent` gravados pelas chamadas filhas (padrão de propagação já usado para `operationRunId`/`traceId`).
 
-- **Injeção mínima:** `AiCostEvent` ganha os 2 campos de valor (`usdBrlRateAtGeneration?`, `creditValueBrlAtGeneration?`) — callers que não os preencherem geram eventos NULL → fallback legacy. As origens são definidas pelo **tracker** como `captured_at_generation` quando o valor está presente (o caller não grava origem — ela é derivada do fato de o valor ter sido capturado na geração).
+- **Injeção mínima:** `AiCostEvent` ganha os 2 campos de valor (`usdBrlRateAtGeneration?`, `creditValueBrlAtGeneration?`) — callers que não os preencherem geram eventos NULL → fallback legacy. **O caller NÃO carrega origem**: a origem é determinada exclusivamente pelo tracker na gravação (`captured_at_generation` quando o valor está presente; NULL quando ausente) — evita spoofing e mantém a origem controlada pelo ponto certo.
 - **Best-effort:** falha na resolução dos parâmetros no início do run → eventos com snapshot NULL; geração não é bloqueada (consistente com o `record` best-effort do tracker).
 - **Alternativa considerada:** resolver dentro do `record`. Rejeitada — o `record` seria N+1 por chamada e acoplaria o tracker a `EconomicParameterService`; resolver no início do run é 1× por run e propaga o valor da geração.
 
@@ -114,7 +114,7 @@ Renomear no contrato da API de operation runs: `receitaOpBrl`→`receitaEstimada
 | Risco | Mitigação |
 |-------|-----------|
 | **Backfill aproximado** (valor real da geração nunca gravado antes) | **Origem explícita** (`backfilled_from_audit`/`backfilled_seed`) distingue reconstruído de capturado; fallback legacy marcado (`creditValueSource`/`revenueEstimationNote`); UI mostra origem |
-| **Valor backfilled apresentado como snapshot real** | Colunas `*_source_at_generation` garantem procedência; service/API/UI nunca tratam `backfilled_*` como `captured_at_generation` |
+| **Valor backfilled apresentado como snapshot real** | Colunas `*_source_at_generation` garantem procedência; service/API/UI nunca tratam `backfilled_*` como `captured_at_generation`; CHECK de paridade no banco (valor ⇔ origem) + CHECK de enum nas origens |
 | **Migração de rename quebra consumidores** | Rename feito no mesmo PR da F38.2.1 (nenhum consumidor externo); campos antigos não são mantidos como alias — atualização em todos os consumidores no mesmo commit |
 | **Parâmetro alterado no meio do run** (snapshots distintos por evento) | Service usa snapshot do 1º evento do run (valor da geração); casos raros e documentados |
 | **Falha de escrita do snapshot** | Snapshot NULL → fallback legacy explícito; geração não bloqueada (best-effort) |
@@ -130,9 +130,15 @@ Renomear no contrato da API de operation runs: `receitaOpBrl`→`receitaEstimada
 2. `ALTER TABLE public.generation_events ADD COLUMN IF NOT EXISTS credit_value_brl_at_generation NUMERIC;`
 3. `ALTER TABLE public.generation_events ADD COLUMN IF NOT EXISTS usd_brl_rate_source_at_generation TEXT;`
 4. `ALTER TABLE public.generation_events ADD COLUMN IF NOT EXISTS credit_value_brl_source_at_generation TEXT;`
-5. **Backfill** por chave via CTE (LAG/`ROW_NUMBER()` sobre `economic_parameter_audit`), `WHERE valor IS NULL`, preenchendo **valor + origem** (`backfilled_from_audit` para janela do audit, `backfilled_seed` para seed `1.00`) — idempotente
-6. Revert commands documentados por objeto
-7. Verificação: migration aplica em banco real; backfill idempotente; colunas com `IF NOT EXISTS` (retrocompatível); **nenhum valor persistido sem origem**
+5. **CHECKs leves nas colunas de origem** (NULL permitido):
+   - `ADD CONSTRAINT chk_gen_events_usd_rate_source CHECK (usd_brl_rate_source_at_generation IS NULL OR usd_brl_rate_source_at_generation IN ('captured_at_generation','backfilled_from_audit','backfilled_seed'))`
+   - `ADD CONSTRAINT chk_gen_events_credit_value_source CHECK (credit_value_brl_source_at_generation IS NULL OR credit_value_brl_source_at_generation IN ('captured_at_generation','backfilled_from_audit','backfilled_seed'))`
+6. **CHECKs de paridade valor/origem**:
+   - `ADD CONSTRAINT chk_gen_events_usd_rate_parity CHECK ((usd_brl_rate_at_generation IS NULL) = (usd_brl_rate_source_at_generation IS NULL))`
+   - `ADD CONSTRAINT chk_gen_events_credit_value_parity CHECK ((credit_value_brl_at_generation IS NULL) = (credit_value_brl_source_at_generation IS NULL))`
+7. **Backfill** por chave via CTE (LAG/`ROW_NUMBER()` sobre `economic_parameter_audit`), `WHERE valor IS NULL`, preenchendo **valor + origem** (`backfilled_from_audit` para janela do audit, `backfilled_seed` para seed `1.00`) — idempotente; **nunca** grava `captured_at_generation` nem `economic_parameter_fallback`
+8. Revert commands documentados por objeto (DROP CONSTRAINT das 4 CHECKs + DROP COLUMN das 4 colunas)
+9. Verificação: migration aplica em banco real; backfill idempotente; colunas com `IF NOT EXISTS` (retrocompatível); **nenhum valor persistido sem origem (paridade enforced)**; `economic_parameter_fallback` rejeitado pelo CHECK
 
 **Deploy:** migrations + código no mesmo PR (padrão Vercel). Rollback: reverter o commit; colunas órfãs inofensivas (IF NOT EXISTS); backfill determinístico.
 
