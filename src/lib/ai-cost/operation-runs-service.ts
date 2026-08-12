@@ -223,6 +223,8 @@ interface RawOperationRun {
   has_partial_estimate?: boolean | null;
   has_not_available?: boolean | null;
   has_estimated?: boolean | null;
+  /** Etapas (generation_type) por run — expostas pelo RPC (F38.2 corretiva, byStage D3); fallback "unknown". */
+  generation_types?: string[] | null;
   /** Etapa (generation_type) por run — presente apenas quando o RPC expõe; senão "unknown". */
   generation_type?: string | null;
   /** Snapshot econômico do run + origens (F38.2.1-03 — 1º evento com valor preenchido). */
@@ -589,8 +591,16 @@ export class OperationRunsService {
     const total = filtered.length;
     const pageRuns = filtered.slice((page - 1) * pageSize, page * pageSize);
     const summary = this.deriveSummary(filtered);
+    // Etapas por run (F38.2 corretiva byStage — D3): o RPC agora expõe
+    // generation_types (array DISTINCT); fallback para generation_type único
+    // (contrato antigo) e "unknown" quando ausente.
     const stageByRunId = new Map(
-      rawRuns.map((r) => [r.operation_run_id, r.generation_type ?? null]),
+      rawRuns.map((r) => [
+        r.operation_run_id,
+        r.generation_types && r.generation_types.length > 0
+          ? r.generation_types
+          : (r.generation_type ? [r.generation_type] : null),
+      ]),
     );
     const aggregations = this.deriveAggregations(filtered, stageByRunId);
 
@@ -874,7 +884,7 @@ export class OperationRunsService {
    */
   private deriveAggregations(
     runs: OperationRun[],
-    stageByRunId: Map<string, string | null>,
+    stageByRunId: Map<string, string[] | null>,
   ): OperationRunsAggregations {
     const bySegment: Record<string, SegmentAggregation> = {};
     const byDeliveryType: Record<string, number> = {};
@@ -914,9 +924,17 @@ export class OperationRunsService {
       const deliveryType = run.operationRunType ?? "unknown";
       byDeliveryType[deliveryType] = (byDeliveryType[deliveryType] ?? 0) + 1;
 
-      // byStage (generation_type — bucket "unknown" quando o RPC não expõe)
-      const stage = stageByRunId.get(run.operationRunId) ?? "unknown";
-      byStage[stage] = (byStage[stage] ?? 0) + 1;
+      // byStage (generation_type — bucket "unknown" quando o RPC não expõe
+      // nenhuma etapa). Um run pode ter múltiplas etapas (ex.: campaign_copy +
+      // campaign_image): cada etapa DISTINCT presente conta uma geração.
+      const stages = stageByRunId.get(run.operationRunId) ?? null;
+      if (stages && stages.length > 0) {
+        for (const stage of stages) {
+          byStage[stage] = (byStage[stage] ?? 0) + 1;
+        }
+      } else {
+        byStage["unknown"] = (byStage["unknown"] ?? 0) + 1;
+      }
 
       // byProviderModel
       const providerModel =

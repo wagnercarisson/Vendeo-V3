@@ -828,6 +828,40 @@ describe("OperationRunsService — aggregations (D3/D9)", () => {
     expect(result.aggregations.byStage.campaign_copy).toBe(10);
   });
 
+  it("byStage usa generation_types do RPC (F38.2 corretiva) — multi-etapas por run contam cada etapa DISTINCT; sem etapas cai em unknown", async () => {
+    const runs = [
+      // Run com duas etapas reais (campanha: copy + image)
+      makeRawRun({
+        operation_run_id: "multi-1",
+        generation_types: ["campaign_copy", "campaign_image"],
+      }),
+      // Run com uma etapa
+      makeRawRun({
+        operation_run_id: "single-1",
+        generation_types: ["campaign_image"],
+      }),
+      // Run sem etapas expostas pelo RPC (legado) → unknown
+      makeRawRun({
+        operation_run_id: "legacy-1",
+        generation_types: null,
+      }),
+    ];
+    const { client } = buildClient({ runs });
+    const service = new OperationRunsService(client, buildEconomic({}));
+
+    const result = await service.listRuns({});
+
+    expect(result.aggregations.byStage.campaign_copy).toBe(1);
+    expect(result.aggregations.byStage.campaign_image).toBe(2);
+    expect(result.aggregations.byStage.unknown).toBe(1);
+    // A soma de etapas reflete multi-etapas por run, não o nº de runs.
+    const stageTotal = Object.values(result.aggregations.byStage).reduce(
+      (a, b) => a + b,
+      0,
+    );
+    expect(stageTotal).toBe(4);
+  });
+
   it("bySegment com custo/resultado/margem/taxa de erro (D9); byOwner via stores.user_id", async () => {
     const runs = [
       makeRawRun({
