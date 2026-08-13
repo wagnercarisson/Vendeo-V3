@@ -74,21 +74,23 @@ Use these entry points:
 
 Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
 
-## Phase 30 — Fundação Legal
+## Phase 39 — Brief Estruturado de Campanha
 
-**Status:** 6/6 plans completed ✅
+**Status:** 8/8 plans completed ✅ — 1950 testes, 4 gates verdes, UAT aprovado 5/5
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
-| 30-01 | 1 | ✅ | Migrations + Legal Documents Drafts |
-| 30-02 | 2 | ✅ | Core Library — Types, Services, Clearance |
-| 30-03 | 3 | ✅ | Public Pages + API Routes + Signup/Onboarding |
-| 30-04 | 4 | ✅ | Pipeline Guards + Re-aceite Flow |
-| 30-05 | 5 | ✅ | Account Legal Status + Admin Legal Badges |
-| 30-06 | 6 | ✅ | Testes e Verificação — 1018 total |
+| 39-01 | 1 | ✅ | Trackings / renumeração D1 (F39 = Brief, Stripe → F40) |
+| 39-02 | 1 | ✅ | Contrato de domínio `CampaignBrief` + zod per-domínio + invariante exatamente-1-primary |
+| 39-03 | 2 | ✅ | Rename wrapper `CampaignBrief` → `ResolvedCampaignContext` + `InputSnapshot` → `CampaignBriefSnapshot` |
+| 39-04 | 3 | ✅ | Mapper `buildCampaignBriefFromFlat` + builder `buildCampaignBriefSnapshot` (round-trip, sem base64) |
+| 39-05 | 4 | ✅ | Costuras copy + review do domínio (`mapBriefToCopyDirectorInput`, `ImageReviewInput` legalNoticeText/validityText) |
+| 39-06 | 5 | ✅ | Costuras image-generation do domínio + golden tests por intent (38 variáveis idênticas) |
+| 39-07 | 6 | ✅ | Rota: snapshot versionado `campaign_brief_v1` via builder + benchmark via mapper |
+| 39-08 | 7 | ✅ | Testes e Verificação — 1950 total, typecheck/lint/build, VERIFICATION.md + UAT |
 
-**Change artifacts (source of truth):** `openspec/changes/fase-30-legal-foundation/`
-**Context:** `.planning/phases/30-legal-foundation/30-CONTEXT.md`
+**Change artifacts (source of truth):** `openspec/changes/fase-39-brief-estruturado-campanha/`
+**Context:** `.planning/phases/39-brief-estruturado-campanha/39-CONTEXT.md`
 **State:** `.planning/STATE.md`
 **Roadmap:** `ROADMAP.md`
 <!-- GSD:workflow-end -->
