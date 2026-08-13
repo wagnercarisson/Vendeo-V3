@@ -768,7 +768,7 @@ describe('POST /api/campaign/generate-image', () => {
 
   // ── Test #26-28: mandatoryArtworkText propagacao ────────────────
 
-  it('mandatoryArtworkText no inputSnapshot', async () => {
+  it('mandatoryArtworkText no inputSnapshot (snapshot versionado — commercial.legalNotice.text)', async () => {
     await setupSuccessMocks();
 
     const { POST } = await import('../route');
@@ -780,7 +780,10 @@ describe('POST /api/campaign/generate-image', () => {
       STORE_ID,
       expect.objectContaining({
         inputSnapshot: expect.objectContaining({
-          mandatoryArtworkText: 'Imagens meramente ilustrativas',
+          schemaVersion: 'campaign_brief_v1',
+          commercial: expect.objectContaining({
+            legalNotice: { enabled: true, text: 'Imagens meramente ilustrativas' },
+          }),
         }),
       })
     );

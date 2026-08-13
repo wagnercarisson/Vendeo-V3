@@ -276,11 +276,13 @@ async function runBenchmark(): Promise<void> {
     { BENCHMARK_SCENARIOS },
     { createImageProvider },
     { ImageGenerationService },
+    { buildCampaignBriefFromFlat },
     { IMAGE_GENERATION_RESPONSES_MODEL },
   ] = await Promise.all([
     import("./benchmark-scenarios"),
     import("../src/lib/image-generation/providers/factory"),
     import("../src/lib/image-generation/services/image-generation-service"),
+    import("../src/lib/campaign/brief"),
     import("../src/lib/image-generation/config"),
   ]);
 
@@ -329,25 +331,21 @@ async function runBenchmark(): Promise<void> {
     const imageDataUrl = await loadFixtureDataUrl(scenario.imagePath);
     console.log(`  Imagem: ${imageDataUrl === getPlaceholderBase64() ? "placeholder (sem fixture)" : scenario.imagePath ?? "N/A"}`);
 
-    // ── Build request (wrapped as CampaignBrief) ────────────────────
-    const brief = {
+    // ── Build request (structured brief via mapper + resolved context) ──
+    const brief = buildCampaignBriefFromFlat(
+      {
+        ...scenario.campaign,
+        storeId: 'benchmark',
+        campaignIntent: 'offer',
+        productImageDataUrl: imageDataUrl,
+      } as unknown as Parameters<typeof buildCampaignBriefFromFlat>[0],
+      'benchmark'
+    );
+    const context = {
       campaignInput: {
         productName: scenario.campaign.productName,
-        storeId: 'benchmark',
-        originalPriceCents: scenario.campaign.originalPriceCents,
         discountedPriceCents: scenario.campaign.discountedPriceCents,
-        badgeText: scenario.campaign.badgeText,
-        hook: scenario.campaign.hook,
-        cta: scenario.campaign.cta,
-        description: scenario.campaign.description,
-        objective: scenario.campaign.objective,
-        campaignDetails: scenario.campaign.campaignDetails,
-        additionalDetails: scenario.campaign.additionalDetails,
-        availabilityNotes: scenario.campaign.availabilityNotes,
-        validity: scenario.campaign.validity,
-        targetChannel: scenario.campaign.targetChannel,
-        format: scenario.campaign.format,
-        campaignIntent: "offer",
+        campaignIntent: 'offer' as const,
         productImageDataUrl: imageDataUrl,
       },
       store: {
@@ -372,7 +370,7 @@ async function runBenchmark(): Promise<void> {
     let result: BenchmarkResult;
 
     try {
-      const generationResult = await service.generateImage(brief as any, brief as any);
+      const generationResult = await service.generateImage(brief, context);
       const duration = Date.now() - scenarioStart;
 
       if (generationResult.success) {

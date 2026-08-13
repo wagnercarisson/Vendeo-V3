@@ -8,7 +8,7 @@ import type { GenerateImageServiceResult } from "@/lib/image-generation/services
 import { InputValidationService } from "@/lib/image-generation/services/input-validation-service";
 import { createImageProvider } from "@/lib/image-generation/providers/factory";
 import { resolveStoreIdentity, validateIdentityReference, buildCampaignBrief } from "@/lib/store-identity-service";
-import { buildCampaignBriefFromFlat } from "@/lib/campaign/brief";
+import { buildCampaignBriefFromFlat, buildCampaignBriefSnapshot } from "@/lib/campaign/brief";
 import { requireSameOrigin } from "@/lib/auth/csrf";
 import { requireApiUser } from "@/lib/auth/require-user";
 import { requireOwnership } from "@/lib/auth/store-ownership";
@@ -356,30 +356,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
   let campaignId: string | undefined;
   let storagePath: string | undefined;
   try {
-    const inputSnapshot: Record<string, unknown> = {
-      productName: campaignInput.productName,
-      originalPriceCents: campaignInput.originalPriceCents,
-      discountedPriceCents: campaignInput.discountedPriceCents,
-      badgeText: campaignInput.badgeText,
-      hook: campaignInput.hook,
-      cta: campaignInput.cta,
-      description: campaignInput.description,
-      objective: campaignInput.objective,
-      campaignDetails: campaignInput.campaignDetails,
-      additionalDetails: campaignInput.additionalDetails,
-      targetChannel: campaignInput.targetChannel,
-      format: campaignInput.format,
-      validity: campaignInput.validity,
-      availabilityNotes: campaignInput.availabilityNotes,
-      sensitiveConstraints: campaignInput.sensitiveConstraints,
-      inputValidationOverride: campaignInput.inputValidationOverride,
-      mandatoryArtworkText: campaignInput.mandatoryArtworkText,
-      campaignIntent: campaignInput.campaignIntent,
-      preserveImageContext: campaignInput.campaignIntent === "offer"
-        ? false
-        : (campaignInput.preserveImageContext ?? false),
-      productImage: { provided: true, mimeType: "image/jpeg" },
-    };
+    const inputSnapshot: Record<string, unknown> = buildCampaignBriefSnapshot(brief) as unknown as Record<string, unknown>;
 
     const campaign = await createCampaign(storeId, {
       productName: campaignInput.productName,
