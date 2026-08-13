@@ -356,7 +356,7 @@ describe('ImageGenerationService.generateImage', () => {
     expect(result.success).toBe(true);
     expect(mockImageReview.review).toHaveBeenCalledTimes(1);
     const reviewInput = mockImageReview.review.mock.calls[0][1];
-    expect(reviewInput.mandatoryArtworkText).toBe('Imagens meramente ilustrativas');
+    expect(reviewInput.legalNoticeText).toBe('Imagens meramente ilustrativas');
     expect(reviewInput.campaignDetails).toBe('Frete grátis acima de R$ 100');
     expect(reviewInput.additionalDetails).toBe('Válido somente em loja física');
   });

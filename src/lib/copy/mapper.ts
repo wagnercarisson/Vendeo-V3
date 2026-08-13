@@ -1,3 +1,4 @@
+import type { CampaignBrief } from "@/lib/campaign/brief";
 import type { ResolvedCampaignContext } from "@/components/campaign/types";
 import type { CampaignIntent } from "@/lib/campaign/types";
 import type { CopyDirectorInput } from "@/lib/copy/schema";
@@ -89,28 +90,29 @@ function formatBRL(cents: number): string {
 }
 
 export function mapBriefToCopyDirectorInput(
-  brief: ResolvedCampaignContext,
+  brief: CampaignBrief,
+  context: ResolvedCampaignContext,
   input: { badgeText?: string; originalPriceCents?: number; discountedPriceCents?: number }
 ): CopyDirectorInput {
-  const campaignIntent = (brief.campaignInput.campaignIntent ?? "offer") as CampaignIntent;
-  const discountedPriceCents = input.discountedPriceCents ?? brief.campaignInput.discountedPriceCents;
+  const campaignIntent = (brief.commercial.intent ?? "offer") as CampaignIntent;
+  const discountedPriceCents = input.discountedPriceCents ?? brief.commercial.discountedPriceCents;
   const commercialFrame = buildCommercialFrame(campaignIntent, {
-    badgeText: input.badgeText ?? brief.campaignInput.badgeText,
-    originalPriceCents: input.originalPriceCents ?? brief.campaignInput.originalPriceCents,
+    badgeText: input.badgeText ?? brief.commercial.badgeText,
+    originalPriceCents: input.originalPriceCents ?? brief.commercial.originalPriceCents,
     discountedPriceCents,
   });
   return {
-    productName: brief.campaignInput.productName,
-    description: brief.campaignInput.description,
+    productName: brief.product.name,
+    description: brief.product.description,
     commercialFrame,
     campaignIntent,
-    storeName: brief.store.name,
-    segment: brief.store.segment,
-    toneOfVoice: brief.store.toneOfVoice ?? undefined,
-    positioning: brief.store.positioning ?? undefined,
-    shortDescription: brief.store.shortDescription ?? undefined,
-    slogan: brief.store.slogan ?? undefined,
-    brandPersonality: brief.brandProfile?.brand_personality ?? undefined,
-    campaignGuidelines: brief.brandProfile?.campaign_guidelines ?? undefined,
+    storeName: context.store.name,
+    segment: context.store.segment,
+    toneOfVoice: context.store.toneOfVoice ?? undefined,
+    positioning: context.store.positioning ?? undefined,
+    shortDescription: context.store.shortDescription ?? undefined,
+    slogan: context.store.slogan ?? undefined,
+    brandPersonality: context.brandProfile?.brand_personality ?? undefined,
+    campaignGuidelines: context.brandProfile?.campaign_guidelines ?? undefined,
   };
 }

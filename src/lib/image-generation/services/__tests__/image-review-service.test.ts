@@ -190,7 +190,7 @@ describe('ImageReviewService', () => {
       productName: 'Produto Teste',
       storeName: 'Loja Teste',
       campaignIntent: 'offer',
-      mandatoryArtworkText: 'Imagens meramente ilustrativas',
+      legalNoticeText: 'Imagens meramente ilustrativas',
     };
 
     await service.review('data:image/jpeg;base64,abc', input);
@@ -234,7 +234,7 @@ describe('ImageReviewService', () => {
     mockLoader.load.mockClear();
     await service.review('data:image/jpeg;base64,abc', {
       ...input,
-      mandatoryArtworkText: '   ',
+      legalNoticeText: '   ',
     });
     expect(mockLoader.load.mock.calls[0][1].mandatoryArtworkTextSection).toBe('');
   });
@@ -249,12 +249,56 @@ describe('ImageReviewService', () => {
     expect(mockLoader.load.mock.calls[0][1].authorizedContextSection).toBe('');
   });
 
+  it('8.20 legalNotice desabilitado (legalNoticeText ausente) → sem seção de aviso', async () => {
+    const input: ImageReviewInput = {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+    };
+
+    await service.review('data:image/jpeg;base64,abc', input);
+    expect(mockLoader.load.mock.calls[0][1].mandatoryArtworkTextSection).toBe('');
+  });
+
+  it('8.20 legalNotice habilitado (legalNoticeText presente) → seção de aviso no review', async () => {
+    const input: ImageReviewInput = {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+      legalNoticeText: 'Imagem meramente ilustrativa',
+    };
+
+    await service.review('data:image/jpeg;base64,abc', input);
+    expect(mockLoader.load.mock.calls[0][1].mandatoryArtworkTextSection).toContain('Imagem meramente ilustrativa');
+  });
+
+  it('8.20 validityText propagado quando habilitado (nova seção de validade)', async () => {
+    const input: ImageReviewInput = {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+      campaignIntent: 'offer',
+      validityText: 'Até 30/09',
+    };
+
+    await service.review('data:image/jpeg;base64,abc', input);
+    const vars = mockLoader.load.mock.calls[0][1];
+    expect(vars.validityTextSection).toContain('Até 30/09');
+  });
+
+  it('8.20 validityText ausente → validade não entra no review', async () => {
+    const input: ImageReviewInput = {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+    };
+
+    await service.review('data:image/jpeg;base64,abc', input);
+    expect(mockLoader.load.mock.calls[0][1].validityTextSection).toBe('');
+  });
+
   it('review() sanitiza placeholders em valores de entrada', async () => {
     const input: ImageReviewInput = {
       productName: 'Produto Teste',
       storeName: 'Loja Teste',
       campaignIntent: 'offer',
-      mandatoryArtworkText: 'Oferta {{imperdível}}',
+      legalNoticeText: 'Oferta {{imperdível}}',
       campaignDetails: 'Promoção {{válida}} até domingo',
       additionalDetails: 'Condições {{sujeitas}} a consulta',
     };

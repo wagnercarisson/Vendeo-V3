@@ -5,6 +5,54 @@ import type { CopyDirectorInput } from '../schema';
 import { MockTextProvider } from '@/lib/text-provider/mock';
 import type { TextProvider } from '@/lib/text-provider/types';
 import { MalformedResponseError } from '../errors';
+import { mapBriefToCopyDirectorInput } from '../mapper';
+import { buildCampaignBriefFromFlat } from '@/lib/campaign/brief';
+import type { GenerateImageRequest } from '@/lib/image-generation/schema';
+import type { ResolvedCampaignContext } from '@/components/campaign/types';
+
+const STORE_ID = '44444444-4444-4444-8444-444444444444';
+
+function flatPayload(overrides: Partial<GenerateImageRequest> = {}): GenerateImageRequest {
+  return {
+    storeId: STORE_ID,
+    productName: 'Tênis Runner Pro',
+    description: 'Tênis esportivo com amortecimento avançado',
+    originalPriceCents: 39990,
+    discountedPriceCents: 24990,
+    badgeText: 'Oferta',
+    campaignIntent: 'offer',
+    productImageDataUrl: 'data:image/jpeg;base64,abc123',
+    ...overrides,
+  };
+}
+
+function mockContext(overrides: Partial<ResolvedCampaignContext> = {}): ResolvedCampaignContext {
+  return {
+    campaignInput: {
+      productName: 'Tênis Runner Pro',
+      discountedPriceCents: 24990,
+      campaignIntent: 'offer',
+      productImageDataUrl: 'data:image/jpeg;base64,abc123',
+    },
+    store: {
+      name: 'Esportes e Cia',
+      segment: 'moda-calcados-acessorios',
+      subsegment: null,
+      toneOfVoice: 'jovem e energético',
+      positioning: 'Loja referência em artigos esportivos',
+      shortDescription: 'Tênis para corrida e academia',
+      slogan: 'Seu melhor desempenho começa aqui',
+      brandColor: '#22C55E',
+    },
+    brandProfile: null,
+    identity: {
+      state: 'text_only',
+      imageUrl: null,
+      directive: '',
+    },
+    ...overrides,
+  };
+}
 
 const COMPLETE_INPUT: CopyDirectorInput = {
   productName: "Tênis Runner Pro",
@@ -224,5 +272,56 @@ describe('CopyDirectorService — onCall (D11, furo 1)', () => {
     const result = await service.generateCopy(MINIMUM_INPUT);
     expect(result.title).toBeDefined();
     expect(result.caption).toBeDefined();
+  });
+});
+
+describe('mapBriefToCopyDirectorInput — lê do domínio (8.19, D11)', () => {
+  it('brief estruturado → CopyDirectorInput com productName/intent do domínio (equivalência flat)', () => {
+    const brief = buildCampaignBriefFromFlat(flatPayload(), STORE_ID);
+    const result = mapBriefToCopyDirectorInput(brief, mockContext(), {
+      discountedPriceCents: brief.commercial.discountedPriceCents,
+    });
+
+    expect(result.productName).toBe('Tênis Runner Pro');
+    expect(result.campaignIntent).toBe('offer');
+    expect(result.description).toBe('Tênis esportivo com amortecimento avançado');
+    expect(result.storeName).toBe('Esportes e Cia');
+    expect(result.segment).toBe('moda-calcados-acessorios');
+    expect(result.commercialFrame).toContain('R$ 249,90');
+    expect(CopyDirectorInputSchema.safeParse(result).success).toBe(true);
+  });
+
+  it('brief sem description/badge → campos ausentes na saída (mesmo comportamento)', () => {
+    const brief = buildCampaignBriefFromFlat(
+      flatPayload({ description: undefined, badgeText: undefined }),
+      STORE_ID
+    );
+    const result = mapBriefToCopyDirectorInput(brief, mockContext(), {});
+
+    expect(result.description).toBeUndefined();
+    expect(result.commercialFrame).not.toContain('Oferta:');
+  });
+
+  it('legalNotice NUNCA entra no CopyDirectorInput (fronteira copy × arte, D9)', () => {
+    const brief = buildCampaignBriefFromFlat(
+      flatPayload({ mandatoryArtworkText: 'Imagem meramente ilustrativa' }),
+      STORE_ID
+    );
+    const result = mapBriefToCopyDirectorInput(brief, mockContext(), {});
+
+    expect('legalNotice' in result).toBe(false);
+    expect('mandatoryArtworkText' in result).toBe(false);
+    expect(result.commercialFrame).not.toContain('ilustrativa');
+  });
+
+  it('validity não ganha campo novo no CopyDirectorInput (D8/F39-17)', () => {
+    const brief = buildCampaignBriefFromFlat(
+      flatPayload({ validity: 'válida até 30/09' }),
+      STORE_ID
+    );
+    const result = mapBriefToCopyDirectorInput(brief, mockContext(), {});
+
+    expect('validity' in result).toBe(false);
+    expect(result).not.toHaveProperty('validity');
   });
 });

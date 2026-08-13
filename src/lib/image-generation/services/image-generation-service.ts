@@ -392,7 +392,7 @@ export class ImageGenerationService {
           ? this.formatPriceBRL(body.originalPriceCents ?? 0)
           : undefined,
         validationContext,
-        mandatoryArtworkText: body.mandatoryArtworkText,
+        legalNoticeText: body.mandatoryArtworkText,
         campaignDetails: body.campaignDetails,
         additionalDetails: body.additionalDetails,
       };
@@ -614,7 +614,7 @@ export class ImageGenerationService {
       originalPrice: (body.originalPriceCents ?? 0) > 0
         ? this.formatPriceBRL(body.originalPriceCents ?? 0)
         : undefined,
-      mandatoryArtworkText: body.mandatoryArtworkText,
+      legalNoticeText: body.mandatoryArtworkText,
       campaignDetails: body.campaignDetails,
       additionalDetails: body.additionalDetails,
     };

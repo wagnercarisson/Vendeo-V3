@@ -28,6 +28,8 @@ A intenção comercial da campanha define o que é esperado em termos de preço,
 
 {{mandatoryArtworkTextSection}}
 
+{{validityTextSection}}
+
 {{authorizedContextSection}}
 
 ## Critérios de Inspeção

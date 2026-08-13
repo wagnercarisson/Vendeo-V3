@@ -8,6 +8,7 @@ import type { GenerateImageServiceResult } from "@/lib/image-generation/services
 import { InputValidationService } from "@/lib/image-generation/services/input-validation-service";
 import { createImageProvider } from "@/lib/image-generation/providers/factory";
 import { resolveStoreIdentity, validateIdentityReference, buildCampaignBrief } from "@/lib/store-identity-service";
+import { buildCampaignBriefFromFlat } from "@/lib/campaign/brief";
 import { requireSameOrigin } from "@/lib/auth/csrf";
 import { requireApiUser } from "@/lib/auth/require-user";
 import { requireOwnership } from "@/lib/auth/store-ownership";
@@ -237,8 +238,9 @@ export const POST = apiHandler(async (request: NextRequest) => {
   // Validate identity reference before building brief
   const validatedSnapshot = await validateIdentityReference(storeSnapshot);
 
-  // Build campaign brief
-  const brief = await buildCampaignBrief(validatedSnapshot, campaignInput as CampaignInput);
+  // Build campaign context (wrapper resolvido) + domain brief (mapper puro na fronteira)
+  const context = await buildCampaignBrief(validatedSnapshot, campaignInput as CampaignInput);
+  const brief = buildCampaignBriefFromFlat(parsed.data, parsed.data.storeId);
 
   // ── Pre-stream: Rate limit guard (no IA, no stream) ────────────
   logPipelineEvent({ event: "rate_limit_check", traceId, phase: "pre_stream", status: "running", storeId, userId: user.userId });
@@ -559,7 +561,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
             const campaignIntent = (campaignInput.campaignIntent ?? "offer") as CampaignIntent;
             const deterministic = buildDeterministicCopy(campaignIntent, {
               productName: campaignInput.productName,
-              storeName: brief.store.name,
+              storeName: context.store.name,
               commercialFrame: buildCommercialFrame(campaignIntent, {
                 badgeText: campaignInput.badgeText,
                 originalPriceCents: campaignInput.originalPriceCents,
@@ -577,7 +579,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
           const primaryProvider = createTextProvider("openai");
           const copyDirector = new CopyDirectorService(primaryProvider);
 
-          const copyInput = mapBriefToCopyDirectorInput(brief, {
+          const copyInput = mapBriefToCopyDirectorInput(brief, context, {
             badgeText: campaignInput.badgeText,
             originalPriceCents: campaignInput.originalPriceCents,
             discountedPriceCents: campaignInput.discountedPriceCents,
@@ -636,7 +638,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
         try {
           emitPhase("image_generation", "running", "Gerando arte com IA...");
 
-          imageResult = await imageService.generateImage(brief, (phaseEvent) => {
+          imageResult = await imageService.generateImage(context, (phaseEvent) => {
             emit({ type: "phase", ...phaseEvent });
           }, streamAbortController.signal, (metricsEvent) => {
             // F38.1 (D11): mapeia fases do onMetricsEvent para eventos call-level.
@@ -686,7 +688,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
       };
 
       // ── PREFLIGHT: Validate all prompts before parallel IA calls ──
-      const preflightResult = imageService.validatePrompts(brief);
+      const preflightResult = imageService.validatePrompts(context);
       if (!preflightResult.valid) {
         console.error(`[generate-image] prompt_preflight_failed — ${preflightResult.errors.join('; ')}`);
         emit({ type: "error", campaignId: campaignId!, phase: "preflight", code: "invalid_prompt", message: preflightResult.errors.join("; "), httpStatus: 502, retryable: false });

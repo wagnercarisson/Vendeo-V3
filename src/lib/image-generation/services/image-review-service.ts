@@ -15,9 +15,13 @@ export interface ImageReviewInput {
   originalPrice?: string;
   discountedPrice?: string;
   validationContext?: ValidationContext;
-  mandatoryArtworkText?: string;
+  /** Campos originados do domínio CampaignBrief (D8/D9):
+   * legalNoticeText ← commercial.legalNotice.text quando enabled === true;
+   * validityText ← commercial.validity.displayText quando validity.enabled. */
+  legalNoticeText?: string;
   campaignDetails?: string;
   additionalDetails?: string;
+  validityText?: string;
 }
 
 export class ImageReviewService {
@@ -41,8 +45,9 @@ export class ImageReviewService {
       expectedImageTreatment: this.buildExpectedImageTreatment(intent, input.preserveImageContext),
       expectedCommercialTone: this.buildExpectedCommercialTone(intent),
       validationContextSection: this.buildValidationContextSection(input.validationContext),
-      mandatoryArtworkTextSection: this.buildMandatoryArtworkTextSection(input.mandatoryArtworkText),
+      mandatoryArtworkTextSection: this.buildMandatoryArtworkTextSection(input.legalNoticeText),
       authorizedContextSection: this.buildAuthorizedContextSection(input.campaignDetails, input.additionalDetails),
+      validityTextSection: this.buildValidityTextSection(input.validityText),
     };
   }
 
@@ -198,6 +203,22 @@ export class ImageReviewService {
       'Quando reprovar por texto obrigatorio, reporte como issue CRITICA com type "illegible_text".',
       "",
       "Nao repetir o texto obrigatorio em legenda; o texto e escopo da arte, nao da legenda.",
+    ].join("\n");
+  }
+
+  private buildValidityTextSection(text: string | undefined): string {
+    const sanitized = this.sanitizePromptText(text?.trim() ?? "");
+    if (!sanitized) return "";
+    return [
+      "## Validade da Oferta",
+      "",
+      "A oferta e valida conforme informado pelo lojista:",
+      "",
+      '"' + sanitized + '"',
+      "",
+      "Avalie se a arte exibe a validade da oferta de forma legivel e fiel ao texto informado, quando aplicavel ao intent.",
+      "",
+      'Quando reprovar, reporte como issue CRITICA com type "illegible_text".',
     ].join("\n");
   }
 
