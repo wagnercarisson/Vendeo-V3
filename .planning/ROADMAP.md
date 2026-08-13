@@ -36,7 +36,7 @@
 | 38.1 | ✅ Apuração de Custos de IA por Entrega | 11/11 | ✅ Complete | 2026-08-09 |
 | 38.2 | ✅ Admin de Custos Operacionais + Configurações Econômicas | 15/15 | Complete    | 2026-08-11 |
 | 38.2.1 | ✅ Snapshot Econômico | 7/7 | ✅ Complete | 2026-08-12 |
-| 39 | ○ Brief Estruturado de Campanha (v1.5) | 0/8 | Planned    | 2026-08-13 |
+| 39 | ○ Brief Estruturado de Campanha (v1.5) | 8/8 | Complete   | 2026-08-13 |
 | 40 | ○ Stripe / Monetização Pública (v1.7) | — | Pending    | — |
 
 ---
@@ -699,7 +699,7 @@ Plans:
 
 **Source of truth:** `openspec/changes/fase-39-brief-estruturado-campanha/`
 
-**Plans:** 8 plans em 7 waves (`"docs(39-XX)"` / `"feat(39-XX)"` / `"test(39-XX)"` — sem migrations):
+**Plans:** 8/8 plans complete
 
 - **Wave 1** *(blocks waves 2–7)* — 39-01 (trackings D1 — 6 arquivos runbook), 39-02 (contrato de domínio `CampaignBrief` + testes 8.1-8.6/8.15)
 - **Wave 2** *(blocked on Wave 1)* — 39-03 (rename `CampaignBrief` → `ResolvedCampaignContext` + `InputSnapshot` → `CampaignBriefSnapshot`)
