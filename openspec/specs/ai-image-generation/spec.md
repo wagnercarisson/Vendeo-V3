@@ -5,12 +5,15 @@
 Core image generation pipeline: orchestrates prompt assembly, model invocation, quality review, and correction loops. Defines the service, provider interface, API endpoint, and client-side NDJSON streaming consumer.
 
 > Modified by `fase-34-store-readiness` (ADDED). Added readiness guard in the handler, after ownership/auth and before rate limit/balance check.
+> Modified by `fase-39-brief-estruturado-campanha` (MODIFIED). O `ImageGenerationService` passa a consumir o **domínio estruturado** `CampaignBrief` (`brief.product`/`brief.commercial`/`brief.media`/`brief.creativeContext`) em vez do corpo flat (`body.*`). O conjunto de variáveis de prompt permanece **idêntico** para o mesmo input. `buildCommercialRepertoire` decide `validity` por `enabled/displayText` (D8) — sem heurística de string. A ponte `media.primary.dataUrl` → provider/input-validation torna-se explícita (D11).
 
 ## Requirements
 
 ### Requirement: ImageGenerationService orchestrates AI-native image generation
 
-The system SHALL provide an `ImageGenerationService` that orchestrates the full image generation lifecycle: prompt assembly from a `CampaignBrief`, pre-generation validation, image model invocation, post-generation quality review, and finite correction loops.
+The system SHALL provide an `ImageGenerationService` that orchestrates the full image generation lifecycle: prompt assembly from the structured `CampaignBrief` domain, pre-generation validation, image model invocation, post-generation quality review, and finite correction loops.
+
+> Modified by `fase-39-brief-estruturado-campanha` (D11): prompt assembly passa a consumir o `CampaignBrief` de **domínio estruturado** (blocos `product`/`commercial`/`media`) em vez de ler o corpo flat `brief.campaignInput`.
 
 The service SHALL NOT persist any generated images, prompts, or review results. All data exists only in request/session/client scope during this phase.
 
@@ -20,23 +23,29 @@ The service SHALL report progress through named phases via an optional `onPhaseC
 
 The service SHALL accept an optional `AbortSignal` to support global timeout cancellation. When the signal fires, the service SHALL abort any in-flight provider call and emit a terminal `global_timeout` error.
 
-From the `CampaignBrief`, the service SHALL:
-- Use `campaignInput` for all campaign/product fields (unchanged pass-through)
-- Use `store` fields for store identity variables
-- Use `identity.directive` to inject into prompt variables as `identityDirective`
-- Use `identity.imageUrl` to pass to the `ImageProvider` as the identity image reference
-- Use `brandProfile` for brand creative direction
+From the structured `CampaignBrief` (domínio), the service SHALL:
+- Use `brief.product` for product fields (`name`, `description?`, `brand?`, `sizeOrVariant?`)
+- Use `brief.commercial` for campaign/commercial fields (`intent`, preços, `badgeText`, `validity`, `legalNotice`, `availabilityNotes`, `campaignDetails`, `additionalDetails`)
+- Use `brief.creativeContext` for `preserveImageContext`/`themeId`
+- Use `brief.media.images` (imagem `primary`) para a ponte `media.primary.dataUrl` → provider/input-validation (D11)
+- Use `ResolvedCampaignContext.identity.directive` to inject into prompt variables as `identityDirective`
+- Use `ResolvedCampaignContext.identity.imageUrl` to pass to the `ImageProvider` as the identity image reference
+- Use `ResolvedCampaignContext.brandProfile` for brand creative direction
 
-All existing prompt variables, assembly rules, and creative behavior SHALL be preserved unchanged. `buildPromptVariables()` SHALL NOT gain `identityImageUrl` — the identity image reference goes only to the provider, not to the prompt template.
+All existing prompt variables, assembly rules, and creative behavior SHALL be preserved unchanged. `identityImageUrl` MAY exist among the returned prompt variables — it was already present in the golden baseline (38 keys) before this phase (D11 preserves the pre-F39 behavior). The identity image reference goes only to the provider and SHALL NOT be interpolated into the visual prompt template as textual instruction.
 
-#### Scenario: Service generates campaign image from CampaignBrief
+#### Scenario: Service generates campaign image from structured CampaignBrief
 
-- **WHEN** `ImageGenerationService.generateImage()` receives a valid `CampaignBrief`
+- **WHEN** `ImageGenerationService.generateImage()` receives um `CampaignBrief` estruturado (montado pelo mapper da rota)
 - **THEN** the service SHALL assemble a marketing-directed prompt using the `campaign-image-director.md` prompt file
-- **AND** the service SHALL send the prompt + product image + identity image reference to the `ImageProvider`
+- **AND** the service SHALL send the prompt + `media.primary.dataUrl` (produto) + identity image reference to the `ImageProvider`
 - **AND** the service SHALL return a generated 1:1 square image as a base64 data URL
-- **AND** the generated image SHALL be treated as flat, non-editable art (no layer-based editing)
 - **AND** all existing prompt variables and rules SHALL remain unchanged
+
+#### Scenario: Service produz MESMO prompt para o mesmo payload flat
+
+- **WHEN** o mesmo payload flat de hoje é convertido para `CampaignBrief` e passado ao service
+- **THEN** o prompt final é idêntico ao produzido pelo fluxo flat atual (regressão por golden test por intent — D11)
 
 #### Scenario: Service emits phase events via callback
 
@@ -339,12 +348,12 @@ The `originalPrice` field in the campaign input schema SHALL be `string | undefi
 
 ### Requirement: buildPromptVariables includes creative direction context and intent variables
 
-> Modified by `fase-31-2-diretores-por-intencao`.
+> Modified by `fase-31-2-diretores-por-intencao`. Modified by `fase-39-brief-estruturado-campanha` (D11): a fonte dos dados passa a ser o domínio estruturado — as variáveis e regras **não mudam**.
 
-The `ImageGenerationService.buildPromptVariables()` method SHALL be extended to accept a `CampaignBrief` and return the following new variables:
+The `ImageGenerationService.buildPromptVariables()` method SHALL accept the structured `CampaignBrief` (domínio) and return the following new variables:
 
-- `identityDirective` — string, derived from `CampaignBrief.identity.directive`
-- `campaignIntent` — string, valor da intent
+- `identityDirective` — string, derived from `ResolvedCampaignContext.identity.directive`
+- `campaignIntent` — string, valor da intent (`brief.commercial.intent`)
 - `preserveImageDirective` — string, instrução condicional (vazia para offer, `"NÃO recortar..."` para spotlight/exclusive com preserveImageContext=true)
 - `commercialFrame` — string, texto comercial por intent (oferta/destaque/exclusivo)
 - `discountedPrice` e `originalPrice` condicionais por intent (vazio quando não aplicável)
@@ -358,13 +367,13 @@ All existing variables SHALL be preserved unchanged. The following existing vari
 - `inputValidationSummary` — output of `buildValidationSummary()`
 - `creativeContextGuidance` — output of `buildCreativeContextGuidance()`
 
-`buildPromptVariables()` SHALL NOT receive or return `identityImageUrl`. The identity image reference is passed directly to the `ImageProvider`, not interpolated into the prompt text.
+`buildPromptVariables()` SHALL NOT interpolate `identityImageUrl` into the prompt text — the identity image reference is passed directly to the `ImageProvider`. The key MAY remain in the returned record (golden baseline of 38 keys preserved for regression), but the prompt templates MUST NOT reference `{{identityImageUrl}}`.
 
 #### Scenario: identityDirective present in buildPromptVariables output
 
-- **WHEN** `buildPromptVariables()` is called with a `CampaignBrief`
+- **WHEN** `buildPromptVariables()` is called with a structured `CampaignBrief` + `ResolvedCampaignContext`
 - **THEN** the returned record SHALL include `identityDirective` with the directive string
-- **AND** SHALL NOT include `identityImageUrl`
+- **AND** `identityImageUrl` MAY be present in the record but SHALL NOT be interpolated into the visual template (provider-only reference)
 
 #### Scenario: New variables present alongside existing ones
 
@@ -381,18 +390,21 @@ All existing variables SHALL be preserved unchanged. The following existing vari
 
 ### Requirement: buildCommercialRepertoire adaptado por intent
 
-> Modified by `fase-31-2-diretores-por-intencao`.
+> Modified by `fase-31-2-diretores-por-intencao`. Modified by `fase-39-brief-estruturado-campanha` (D8/D11): a decisão de validade passa a ser **semântica** (`validity.enabled` + `displayText`), eliminando a heurística de string (`/`, `até`, `válida`).
 
-The system SHALL implement `ImageGenerationService.buildCommercialRepertoire(body: GenerateImageRequest): string` that analyzes the following fields for commercially actionable content, filtrado por intent:
+The system SHALL implement `ImageGenerationService.buildCommercialRepertoire(brief: CampaignBrief): string` that analyzes the following domains for commercially actionable content, filtrado por intent:
 
 | Funcionalidade | offer | spotlight | exclusive |
 |---------------|-------|-----------|-----------|
 | Escassez ("poucas unidades") | sim | não | sim (se aplicável) |
-| Validade ("até dd/mm") | sim | não | não |
+| Validade (`validity.displayText` quando `enabled`) | sim | não | não |
 | Detalhes da campanha | sim | sim | sim |
 | Detalhes adicionais | sim | sim | sim |
 | Benefícios do produto | contextual | sim | sim |
 | Caráter exclusivo | não | não | sim |
+
+- `validity` SHALL entrar no repertório **somente quando** `brief.commercial.validity?.enabled === true`, usando `validity.displayText` (D8).
+- A decisão SHALL NOT depender de heurística de string (`/`, `até`, `válida`).
 
 #### Scenario: buildCommercialRepertoire para spotlight omite escassez
 
@@ -400,6 +412,16 @@ The system SHALL implement `ImageGenerationService.buildCommercialRepertoire(bod
 
 - **WHEN** `buildCommercialRepertoire()` é chamado com `campaignIntent: "spotlight"` e `availabilityNotes: "poucas unidades"`
 - **THEN** o retorno NÃO contém a nota de escassez
+
+#### Scenario: validade entra no repertório por enabled/displayText
+
+- **WHEN** `brief.commercial.validity = { enabled: true, displayText: "válida até 30/09" }` com intent `offer`
+- **THEN** o retorno contém o texto da validade (sem depender de heurística de string — D8)
+
+#### Scenario: validade desabilitada não entra no repertório
+
+- **WHEN** `brief.commercial.validity` está ausente ou `enabled === false`
+- **THEN** o retorno NÃO contém texto de validade
 
 ### Requirement: buildValidationSummary generates sanitized summary
 

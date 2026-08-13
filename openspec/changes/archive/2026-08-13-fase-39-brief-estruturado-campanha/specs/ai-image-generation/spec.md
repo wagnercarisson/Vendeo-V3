@@ -27,7 +27,7 @@ From the structured `CampaignBrief` (domínio), the service SHALL:
 - Use `ResolvedCampaignContext.identity.imageUrl` to pass to the `ImageProvider` as the identity image reference
 - Use `ResolvedCampaignContext.brandProfile` for brand creative direction
 
-All existing prompt variables, assembly rules, and creative behavior SHALL be preserved unchanged. `buildPromptVariables()` SHALL NOT gain `identityImageUrl` — the identity image reference goes only to the provider, not to the prompt template.
+All existing prompt variables, assembly rules, and creative behavior SHALL be preserved unchanged. `identityImageUrl` MAY exist among the returned prompt variables — it was already present in the golden baseline (38 keys) before this phase (D11 preserves the pre-F39 behavior). The identity image reference goes only to the provider and SHALL NOT be interpolated into the visual prompt template as textual instruction.
 
 #### Scenario: Service generates campaign image from structured CampaignBrief
 
@@ -63,13 +63,13 @@ All existing variables SHALL be preserved unchanged. The following existing vari
 - `inputValidationSummary` — output of `buildValidationSummary()`
 - `creativeContextGuidance` — output of `buildCreativeContextGuidance()`
 
-`buildPromptVariables()` SHALL NOT receive or return `identityImageUrl`. The identity image reference is passed directly to the `ImageProvider`, not interpolated into the prompt text.
+`buildPromptVariables()` SHALL NOT interpolate `identityImageUrl` into the prompt text — the identity image reference is passed directly to the `ImageProvider`. The key MAY remain in the returned record (golden baseline of 38 keys preserved for regression), but the prompt templates MUST NOT reference `{{identityImageUrl}}`.
 
 #### Scenario: identityDirective present in buildPromptVariables output
 
 - **WHEN** `buildPromptVariables()` is called with a structured `CampaignBrief` + `ResolvedCampaignContext`
 - **THEN** the returned record SHALL include `identityDirective` with the directive string
-- **AND** SHALL NOT include `identityImageUrl`
+- **AND** `identityImageUrl` MAY be present in the record but SHALL NOT be interpolated into the visual template (provider-only reference)
 
 #### Scenario: New variables present alongside existing ones
 

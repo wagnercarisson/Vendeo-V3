@@ -220,6 +220,7 @@ Cobertura mínima (~34+ testes): brief mínimo válido; oferta com preço+valida
 | **Mudar o shape interno quebra o pipeline silenciosamente** | Mappers preservam comportamento (D11); verificação por golden tests de prompt + regressão completa |
 | **Colisão de nomeação (3 "briefs")** | Resolvida na D4 (`CampaignBrief` = domínio; wrapper atual → `ResolvedCampaignContext`; `campaign_brief` do Brand Profiler inalterado) |
 | **Base64 vazar no snapshot** | Já ausente hoje; formalizado com teste de contrato (D6) + tipo `CampaignBriefSnapshotImage` sem campo `dataUrl` por construção (D7) |
+| **`mimeType` hardcoded (`image/jpeg`) no mapper** | Transporte flat não carrega metadados da imagem — hardcoded alinhado ao pré-F39 (estado real verificado). **Dívida explícita** para a fase de câmera/múltiplas imagens/catálogo: quando o input passar a carregar metadados reais, o mapper deve derivar `mimeType` do arquivo/prefixo do dataUrl |
 | **Escopo crescer para catálogo de produtos** | Bloqueado pela D3: catálogo é fase subsequente explícita; `source`/`catalogProductId?` são apenas contrato reservado |
 | **F37 (revisão/aprovação) quebrar por mudança de snapshot** | F39 é pré-requisito da F37 (D2); F37 consome o snapshot versionado novo; sem gate retroativo |
 | **Campos adormecidos (hook/cta/objective/etc.) mudarem de semântica na estruturação** | São mantidos no contrato (`commercial`/`creativeContext`) com mapeamento 1:1; prompts continuam recebendo as mesmas variáveis |
