@@ -34,7 +34,11 @@ export interface StoreIdentitySnapshot {
 
 export type CampaignInput = Omit<GenerateImageRequest, 'storeId'>;
 
-export interface CampaignBrief {
+/**
+ * Wrapper de transporte resolvido (store + identity + payload) — NÃO é o domínio
+ * `CampaignBrief` (src/lib/campaign/brief.ts); shape estável consumido pelo pipeline.
+ */
+export interface ResolvedCampaignContext {
   campaignInput: CampaignInput;
   store: {
     name: string;

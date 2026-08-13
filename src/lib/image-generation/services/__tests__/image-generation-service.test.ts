@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ImageGenerationService } from '../image-generation-service';
-import type { CampaignBrief } from '@/components/campaign/types';
+import type { ResolvedCampaignContext } from '@/components/campaign/types';
 import type { CampaignInput } from '@/components/campaign/types';
 import { PromptLoader } from '@/lib/image-generation/prompt-loader';
 
@@ -9,8 +9,8 @@ import { PromptLoader } from '@/lib/image-generation/prompt-loader';
 // but buildPromptVariables indirectly uses promptLoader through other methods.
 // We control the load() return via the constructor-injected mock.
 
-// Helper: build a minimal CampaignBrief suitable for validatePrompts
-function createMinimalBrief(overrides?: Partial<CampaignBrief>): CampaignBrief {
+// Helper: build a minimal ResolvedCampaignContext suitable for validatePrompts
+function createMinimalBrief(overrides?: Partial<ResolvedCampaignContext>): ResolvedCampaignContext {
   return {
     campaignInput: {
       productName: 'Produto Teste',

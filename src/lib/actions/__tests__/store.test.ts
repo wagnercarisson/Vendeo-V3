@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { StoreIdentitySnapshot, CampaignBrief, CampaignInput } from '@/components/campaign/types';
+import type { StoreIdentitySnapshot, ResolvedCampaignContext, CampaignInput } from '@/components/campaign/types';
 
 function makeChain(resolveValue: any) {
   const chain: any = () => Promise.resolve(resolveValue);
@@ -290,5 +290,15 @@ describe('buildCampaignBrief', () => {
     expect(brief.store.brandColor).toBe('#EC4899');
     expect(brief.store.toneOfVoice).toBe('jovem');
     expect(brief.store.subsegment).toBe('calcados');
+  });
+
+  it('8.21 shape preserved as ResolvedCampaignContext (D4)', async () => {
+    const snapshot = baseSnapshot({ identityState: 'text_only' });
+    const result: ResolvedCampaignContext = await buildCampaignBrief(snapshot, mockCampaignInput);
+
+    expect(result).toHaveProperty('store.name');
+    expect(result).toHaveProperty('identity.state');
+    expect(result.brandProfile).toBeNull();
+    expect(result.campaignInput.productName).toBe('Produto Teste');
   });
 });

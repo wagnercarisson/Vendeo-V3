@@ -1,3 +1,7 @@
+import type { CampaignBriefSnapshot } from "./brief";
+
+export type { CampaignBriefSnapshot };
+
 export type CampaignIntent = "offer" | "spotlight" | "exclusive";
 
 export type CampaignStatus = "generating" | "ready" | "error";
@@ -33,28 +37,6 @@ export interface CampaignReadyData {
   generationMetadata: Record<string, unknown>;
   renderSnapshot: Record<string, unknown>;
   publicationCopySnapshot: Record<string, unknown>;
-}
-
-export interface InputSnapshot {
-  productName: string;
-  originalPriceCents?: number;
-  discountedPriceCents?: number;
-  badgeText?: string;
-  hook?: string;
-  cta?: string;
-  description?: string;
-  objective?: string;
-  campaignDetails?: string;
-  additionalDetails?: string;
-  targetChannel?: string;
-  format?: string;
-  validity?: string;
-  availabilityNotes?: string;
-  sensitiveConstraints?: string;
-  inputValidationOverride?: string;
-  campaignIntent?: CampaignIntent;
-  productImage: { provided: true; mimeType: string };
-  preserveImageContext?: boolean;
 }
 
 export interface IdentitySnapshot {

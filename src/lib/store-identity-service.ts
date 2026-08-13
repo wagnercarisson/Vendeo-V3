@@ -1,4 +1,4 @@
-import type { StoreIdentitySnapshot, BrandProfileSnapshot, IdentityState, CampaignBrief, CampaignInput } from "@/components/campaign/types";
+import type { StoreIdentitySnapshot, BrandProfileSnapshot, IdentityState, ResolvedCampaignContext, CampaignInput } from "@/components/campaign/types";
 import { getDefaultBrandColor, getStoreInitials } from "@/lib/store";
 import type { Store } from "@/lib/store";
 import { getActiveVisualSignature } from "@/lib/visual-signature/persistence";
@@ -203,7 +203,7 @@ export async function validateIdentityReference(
 export async function buildCampaignBrief(
   snapshot: StoreIdentitySnapshot,
   campaignInput: CampaignInput
-): Promise<CampaignBrief> {
+): Promise<ResolvedCampaignContext> {
   const hasAsset = snapshot.signature.url !== null;
   const directive = deriveDirective(snapshot.identityState, hasAsset);
 

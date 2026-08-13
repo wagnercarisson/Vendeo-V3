@@ -1,4 +1,4 @@
-import type { CampaignBrief } from "@/components/campaign/types";
+import type { ResolvedCampaignContext } from "@/components/campaign/types";
 import type { CampaignIntent } from "@/lib/campaign/types";
 import type { CopyDirectorInput } from "@/lib/copy/schema";
 
@@ -89,7 +89,7 @@ function formatBRL(cents: number): string {
 }
 
 export function mapBriefToCopyDirectorInput(
-  brief: CampaignBrief,
+  brief: ResolvedCampaignContext,
   input: { badgeText?: string; originalPriceCents?: number; discountedPriceCents?: number }
 ): CopyDirectorInput {
   const campaignIntent = (brief.campaignInput.campaignIntent ?? "offer") as CampaignIntent;

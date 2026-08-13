@@ -2,7 +2,7 @@ import { PromptLoader } from "@/lib/image-generation/prompt-loader";
 import { IMAGE_GENERATION_DEBUG, IMAGE_GENERATION_SIZE, IMAGE_GENERATION_GLOBAL_TIMEOUT_MS, IMAGE_GENERATION_RESPONSES_MODEL } from "@/lib/image-generation/config";
 import type { ImageProvider, ImageProviderOutput, ImageProviderUsageMeta } from "@/lib/image-generation/providers/types";
 import type { GenerateImageRequest, GenerateImageSuccessResponse, GenerationPhase, GenerationPhaseEvent, ValidationContext, InputValidationResult, ImageReviewResult } from "@/lib/image-generation/schema";
-import type { CampaignBrief } from "@/components/campaign/types";
+import type { ResolvedCampaignContext } from "@/components/campaign/types";
 import { InputValidationService } from "@/lib/image-generation/services/input-validation-service";
 import { ImageReviewService } from "@/lib/image-generation/services/image-review-service";
 import type { ImageReviewInput } from "@/lib/image-generation/services/image-review-service";
@@ -87,7 +87,7 @@ export class ImageGenerationService {
   }
 
   async generateImage(
-    brief: CampaignBrief,
+    brief: ResolvedCampaignContext,
     onPhaseChange?: (event: GenerationPhaseEvent) => void,
     signal?: AbortSignal,
     onMetricsEvent?: (event: GenerationMetricsEvent) => void
@@ -581,7 +581,7 @@ export class ImageGenerationService {
    *
    * This is a synchronous check — no network calls.
    */
-  validatePrompts(brief: CampaignBrief): { valid: boolean; errors: string[] } {
+  validatePrompts(brief: ResolvedCampaignContext): { valid: boolean; errors: string[] } {
     const body = brief.campaignInput as GenerateImageRequest;
     const errors: string[] = [];
     const campaignIntent = body.campaignIntent ?? "offer";
@@ -844,7 +844,7 @@ export class ImageGenerationService {
     body: GenerateImageRequest,
     effectiveProductName: string,
     inferredCategory?: string,
-    brief?: CampaignBrief
+    brief?: ResolvedCampaignContext
   ): Record<string, string> {
     const storeSegment = brief?.store.segment ?? '';
     const effectiveInferredCategory = inferredCategory ?? storeSegment;
