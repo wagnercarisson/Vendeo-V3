@@ -261,7 +261,7 @@ import type { StoreIdentitySnapshot, BrandProfileSnapshot, IdentityState, Campai
 ```
 
 **Callers (must stay green without behavior change — F39-10/8.21):**
-- `src/app/api/campaign/generate-image/route.ts:241` — `const brief = await buildCampaignBrief(validatedSnapshot, campaignInput as CampaignInput);`
+- `src/app/api/campaign/generate-image/route.ts:241` — `const context = await buildCampaignBrief(validatedSnapshot, campaignInput as CampaignInput);` (wrapper `ResolvedCampaignContext` — NÃO é o domínio; o domínio `CampaignBrief` entra na fronteira via `buildCampaignBriefFromFlat`, desde o 39-05)
 - `src/lib/actions/store.ts:17-18` — re-export via `Parameters<typeof _buildCampaignBrief>` (`"use server"` wrapper, no type touch needed)
 
 **Data flow:** request-response (server-only service, Supabase reads → transport wrapper).
@@ -309,10 +309,11 @@ The `preserveImageContext` offer-normalization rule (376-378) and the `mimeType:
   storeSnapshot = await resolveStoreIdentity(store);
   const validatedSnapshot = await validateIdentityReference(storeSnapshot);
 
-  // Build campaign brief
-  const brief = await buildCampaignBrief(validatedSnapshot, campaignInput as CampaignInput);
+  // Build campaign context (wrapper resolvido) + domain brief (mapper puro)
+  const context = await buildCampaignBrief(validatedSnapshot, campaignInput as CampaignInput);
+  const brief = buildCampaignBriefFromFlat(parsed.data, parsed.data.storeId);
 ```
-Step 4 flow: after line 241, keep `buildCampaignBrief` (returns `ResolvedCampaignContext` with identity) but **additionally** call `buildCampaignBriefFromFlat(parsed.data, parsed.data.storeId)` once and pass the domain brief `brief.product/commercial/media/creativeContext` down via the new mapper seams (D5/D11). Orchestration after 241 (rate limit 243-253, credits 258+, stream) **untouched** (D11/6.6).
+Step 4 flow: after line 241, `buildCampaignBrief` retorna `ResolvedCampaignContext` (wrapper com loja/identidade — guardado em `context`); o domínio `CampaignBrief` entra via `buildCampaignBriefFromFlat(parsed.data, parsed.data.storeId)` (mapper puro, uma vez, D5) — os dois objetos coexistem desde o 39-05 (idêntico ao desenho do 39-07). Passar o domínio `brief.product/commercial/media/creativeContext` downstream pelas novas costuras de mapper (D5/D11). Orchestration after 241 (rate limit 243-253, credits 258+, stream) **untouched** (D11/6.6).
 
 **Edge rule 400 — already present via zod `productImageDataUrl: z.string().min(1, ...)` at `schema.ts:30`**: route's `safeParse` failure block (137-154) handles it; only add a contract-level re-check inside `buildCampaignBriefFromFlat` if needed (task 7.3 — no change needed in the 400 path).
 
@@ -559,7 +560,7 @@ import type { CampaignBriefSnapshot } from "./brief";
 ### Test fixture co-migrations (MOD)
 
 **`route.test.ts`** — `src/app/api/campaign/generate-image/__tests__/route.test.ts`
-- Analog: self. Mock setup lines 23-27 (`buildCampaignBrief: vi.fn()`) stays; the **dozens of `mockResolvedValue({ campaignInput: {}, store: {} })`** (218, 432, 460, 480, 569, 595, 678, 706, 744, 831) need the brief fed back to the route to now be a **structured domain brief produced by `buildCampaignBriefFromFlat`** (fixtures must return full `ResolvedCampaignContext`-shape objects with `campaignInput` still present, or the mock now returns `{ product, commercial, media, creativeContext, metadata }` + `store`+`identity` — task 9.1). Exact mock pattern to preserve:
+- Analog: self. Mock setup lines 23-27 (`buildCampaignBrief: vi.fn()`) stays; the **dozens of `mockResolvedValue({ campaignInput: {}, store: {} })`** (218, 432, 460, 480, 569, 595, 678, 706, 744, 831) keep returning the **`ResolvedCampaignContext` wrapper** (`campaignInput` + `store` + `identity` — shape do mock de `buildCampaignBrief` inalterada). O **domínio `CampaignBrief` NÃO é mockado aqui** — ele é produzido em rota pelo mapper puro `buildCampaignBriefFromFlat` a partir do payload real (`parsed.data`), desde o 39-05 (task 9.1). **NÃO** fazer o mock retornar um brief estruturado `{ product, commercial, media, creativeContext, metadata }` — esse shape é saída de `buildCampaignBriefFromFlat`, não de `buildCampaignBrief`. Exact mock pattern to preserve:
 ```typescript
   (buildCampaignBrief as any).mockResolvedValue({
     campaignInput: { productName: 'Produto Teste', discountedPriceCents: 1990 },
@@ -572,7 +573,7 @@ import type { CampaignBriefSnapshot } from "./brief";
 - Analog: self `createMinimalBrief` (13-39) — re-build as structured brief (`product`/`commercial`/`media`/`creativeContext`/`metadata`); keep override-spread helper. Golden tests (task 9.4/8.16): assert `buildPromptVariables` produces the **same variable set/key names** as pre-F39 for the same input per intent offer/spotlight/exclusive.
 
 **`image-review-service.test.ts`** — `src/lib/image-generation/services/__tests__/image-review-service.test.ts`
-- Analog: self — `ImageReviewInput` literals (36-42, 89, 120, 138, 156-166, 172, 189-193, 208, 226, 243, 253) are already domain-shaped (this file only gets a **new `legalNotice.enabled=false` → no text** contract case + `validity.displayText` case; input type unchanged — task 9.2/8.20).
+- Analog: self — os literais `ImageReviewInput` (36-42, 89, 120, 138, 156-166, 172, 189-193, 208, 226, 243, 253) renomeiam o campo `mandatoryArtworkText` → **`legalNoticeText`** (canônico D9) e ganham **`validityText?`** (39-05 Task 2); este arquivo adiciona o caso de contrato **`legalNotice.enabled=false` → sem texto** + caso `validity.displayText`; o SHAPE da interface muda conforme o 39-05 (task 9.2/8.20).
 
 **Data flow:** unit/contract fixtures.
 
@@ -605,7 +606,7 @@ All 6 are **markdown doc edits** (no code pattern to copy — edit in-place; chr
 **Source:** zod refine on `mediaSchema` counting `images.filter(i => i.role === "primary")`; transport edge rule already enforced by `schema.ts:30` `.min(1)` → route 400 path (route.ts:137-154).
 
 ### Generated-behavior preservation (D11 — applies to prompt seams + copy + review + golden tests)
-**Source:** `buildPromptVariables` returns same 38 keys; `buildCommercialRepertoire` part ordering and wording identical; `CopyDirectorInput` (copy/schema.ts:3-21) unchanged; `ImageReviewInput` shape unchanged. Verified by golden tests per intent and compat fixture `scripts/benchmark.ts`.
+**Source:** `buildPromptVariables` returns same 38 keys; `buildCommercialRepertoire` part ordering and wording identical; `CopyDirectorInput` (copy/schema.ts:3-21) unchanged; `ImageReviewInput` muda apenas o campo canônico `mandatoryArtworkText` → `legalNoticeText` e ganha `validityText?` (39-05 Task 2) — valores gated por `enabled`, sem mudança de comportamento. Verified by golden tests per intent and compat fixture `scripts/benchmark.ts`.
 
 ### Error handling (route unchanged — applies only to new mapper code)
 `buildCampaignBriefFromFlat` is **pure** (no DB, no throw beyond zod surface) — no try/catch needed; route-level errors keep the existing 400/404/500 blocks (route.ts:137-177, 220-235, 391+). Domain code throws only via zod schema `.safeParse`/`parse` — pattern: `schema.ts:8` + route.ts:137-154 (`safeParse` → `flatten().fieldErrors`).
