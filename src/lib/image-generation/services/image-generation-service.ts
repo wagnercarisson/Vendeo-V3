@@ -3,6 +3,7 @@ import { IMAGE_GENERATION_DEBUG, IMAGE_GENERATION_SIZE, IMAGE_GENERATION_GLOBAL_
 import type { ImageProvider, ImageProviderOutput, ImageProviderUsageMeta } from "@/lib/image-generation/providers/types";
 import type { GenerateImageRequest, GenerateImageSuccessResponse, GenerationPhase, GenerationPhaseEvent, ValidationContext, InputValidationResult, ImageReviewResult } from "@/lib/image-generation/schema";
 import type { ResolvedCampaignContext } from "@/components/campaign/types";
+import type { CampaignBrief } from "@/lib/campaign/brief";
 import { InputValidationService } from "@/lib/image-generation/services/input-validation-service";
 import { ImageReviewService } from "@/lib/image-generation/services/image-review-service";
 import type { ImageReviewInput } from "@/lib/image-generation/services/image-review-service";
@@ -87,12 +88,12 @@ export class ImageGenerationService {
   }
 
   async generateImage(
-    brief: ResolvedCampaignContext,
+    brief: CampaignBrief,
+    context: ResolvedCampaignContext,
     onPhaseChange?: (event: GenerationPhaseEvent) => void,
     signal?: AbortSignal,
     onMetricsEvent?: (event: GenerationMetricsEvent) => void
   ): Promise<GenerateImageServiceResult> {
-    const body = brief.campaignInput as GenerateImageRequest;
     const startTime = Date.now();
     const remaining = () => IMAGE_GENERATION_GLOBAL_TIMEOUT_MS - (Date.now() - startTime);
     const runId = crypto.randomUUID();
@@ -170,9 +171,11 @@ export class ImageGenerationService {
     let validationUsage: TokenUsage | undefined;
     let validationCallMade = false;
     const validationResult = await this.inputValidation.validate(
-      body.productName,
-      body.productImageDataUrl,
-      body.inputValidationOverride,
+      brief.product.name,
+      // PÓS-CONDIÇÃO garantida pelo zod do transporte (schema.ts:30, 400 antes do mapper):
+      // em produção o primary SEMPRE tem dataUrl. Fallback "" só por tipagem.
+      this.primaryImageDataUrl(brief) ?? "",
+      context.campaignInput.inputValidationOverride,
       (info) => {
         validationUsage = info.usage;
         validationCallMade = true;
@@ -186,7 +189,7 @@ export class ImageGenerationService {
       emitMetricsEvent("input_validation", 0, validationUsage ? { usage: validationUsage } : undefined);
     }
 
-    let effectiveProductName = body.productName;
+    let effectiveProductName = brief.product.name;
     let inputCorrections: { productName: { from: string; to: string; reason: string } } | undefined;
     let metricsConflictsDetected: string[] = [];
     let metricsHadOverride = false;
@@ -233,7 +236,7 @@ export class ImageGenerationService {
         effectiveProductName = validationResult.correctedProductName;
         inputCorrections = {
           productName: {
-            from: body.productName,
+            from: brief.product.name,
             to: validationResult.correctedProductName,
             reason: validationResult.reason,
           },
@@ -246,7 +249,7 @@ export class ImageGenerationService {
     // Construct validationContext for review alignment
     let validationContext: ValidationContext | undefined;
 
-    if (body.inputValidationOverride?.productImageCheck === "user_confirmed_continue") {
+    if (context.campaignInput.inputValidationOverride?.productImageCheck === "user_confirmed_continue") {
       metricsHadOverride = true;
       validationContext = {
         overrides: { productImageCheck: "user_confirmed_continue" },
@@ -266,7 +269,7 @@ export class ImageGenerationService {
     }
 
     // Emit detail: input_validation
-    const validationDetail = this.buildValidationDetail(validationResult, body.productName, effectiveProductName);
+    const validationDetail = this.buildValidationDetail(validationResult, brief.product.name, effectiveProductName);
     if (validationDetail) {
       emit("input_validation", "complete", undefined, validationDetail);
     } else {
@@ -280,11 +283,11 @@ export class ImageGenerationService {
     const aborted2 = checkAborted();
     if (aborted2) { emitFailed("prompt_assembly", aborted2.message); return abortResult(aborted2); }
 
-    const promptVariables = this.buildPromptVariables(body, effectiveProductName, inferredCategory, brief);
+    const promptVariables = this.buildPromptVariables(brief, context, effectiveProductName, inferredCategory);
 
-    const segmentEntry = STORE_SEGMENTS.find(s => s.value === brief.store.segment);
-    const segmentPersona = segmentEntry?.label ?? brief.store.segment;
-    const promptDetail = `briefing com persona de ${segmentPersona}, categoria inferida: ${inferredCategory ?? brief.store.segment}`;
+    const segmentEntry = STORE_SEGMENTS.find(s => s.value === context.store.segment);
+    const segmentPersona = segmentEntry?.label ?? context.store.segment;
+    const promptDetail = `briefing com persona de ${segmentPersona}, categoria inferida: ${inferredCategory ?? context.store.segment}`;
     emit("prompt_assembly", "complete", undefined, promptDetail);
     emitMetricsEvent("prompt_assembly");
 
@@ -309,8 +312,8 @@ export class ImageGenerationService {
           model: IMAGE_GENERATION_RESPONSES_MODEL,
           attempts,
           effectiveProductName,
-          storeName: brief.store.name,
-          storeSegment: brief.store.segment,
+          storeName: context.store.name,
+          storeSegment: context.store.segment,
           reviewPassed: false,
           reviewFailureType: "review_failed",
           technicalError: lastReviewIssues.length > 0 ? lastReviewIssues.join("; ") : undefined,
@@ -346,7 +349,7 @@ export class ImageGenerationService {
 
       const promptText = this.assemblePrompt(state, promptVariables, lastReviewIssues);
 
-      const providerResult = await this.generateWithRetry(promptText, body, signal, remaining, brief.identity.imageUrl ?? undefined);
+      const providerResult = await this.generateWithRetry(promptText, this.primaryImageDataUrl(brief), signal, remaining, context.identity.imageUrl ?? undefined);
       if (!providerResult.success) {
         emitFailed("image_generation", providerResult.message);
         await this.metricsWriter.write(this.buildGenerationMetrics({
@@ -356,8 +359,8 @@ export class ImageGenerationService {
           model: IMAGE_GENERATION_RESPONSES_MODEL,
           attempts,
           effectiveProductName,
-          storeName: brief.store.name,
-          storeSegment: brief.store.segment,
+          storeName: context.store.name,
+          storeSegment: context.store.segment,
           reviewPassed: false,
           reviewFailureType: "provider_error",
           technicalError: providerResult.details ?? providerResult.message,
@@ -381,20 +384,25 @@ export class ImageGenerationService {
 
       const reviewInput: ImageReviewInput = {
         productName: effectiveProductName,
-        storeName: brief.store.name,
-        campaignIntent: body.campaignIntent ?? "offer",
-        preserveImageContext: body.preserveImageContext,
-        badgeText: body.badgeText,
-        discountedPrice: body.discountedPriceCents
-          ? this.formatPriceBRL(body.discountedPriceCents)
+        storeName: context.store.name,
+        campaignIntent: brief.commercial.intent ?? "offer",
+        preserveImageContext: brief.creativeContext.preserveImageContext,
+        badgeText: brief.commercial.badgeText,
+        discountedPrice: brief.commercial.discountedPriceCents
+          ? this.formatPriceBRL(brief.commercial.discountedPriceCents)
           : undefined,
-        originalPrice: (body.originalPriceCents ?? 0) > 0
-          ? this.formatPriceBRL(body.originalPriceCents ?? 0)
+        originalPrice: (brief.commercial.originalPriceCents ?? 0) > 0
+          ? this.formatPriceBRL(brief.commercial.originalPriceCents ?? 0)
           : undefined,
         validationContext,
-        legalNoticeText: body.mandatoryArtworkText,
-        campaignDetails: body.campaignDetails,
-        additionalDetails: body.additionalDetails,
+        legalNoticeText: brief.commercial.legalNotice?.enabled
+          ? brief.commercial.legalNotice.text
+          : undefined,
+        campaignDetails: brief.commercial.campaignDetails,
+        additionalDetails: brief.commercial.additionalDetails,
+        validityText: brief.commercial.validity?.enabled
+          ? brief.commercial.validity.displayText
+          : undefined,
       };
 
       let reviewResult;
@@ -422,9 +430,9 @@ export class ImageGenerationService {
           elapsedMs: Date.now() - startTime,
           provider: this.imageProvider.name,
           model: IMAGE_GENERATION_RESPONSES_MODEL,
-          hadLogoAsset: !!brief.identity.imageUrl,
-          hadBrandProfile: !!brief.brandProfile,
-          hadProductImage: !!body.productImageDataUrl,
+          hadLogoAsset: !!context.identity.imageUrl,
+          hadBrandProfile: !!context.brandProfile,
+          hadProductImage: !!this.primaryImageDataUrl(brief),
         });
         emitFailed("quality_review", "Erro na revisão de qualidade.");
         await this.metricsWriter.write(this.buildGenerationMetrics({
@@ -434,8 +442,8 @@ export class ImageGenerationService {
           model: IMAGE_GENERATION_RESPONSES_MODEL,
           attempts,
           effectiveProductName,
-          storeName: brief.store.name,
-          storeSegment: brief.store.segment,
+          storeName: context.store.name,
+          storeSegment: context.store.segment,
           reviewPassed: false,
           reviewFailureType: "review_error",
           technicalError: message,
@@ -470,9 +478,9 @@ export class ImageGenerationService {
           elapsedMs: Date.now() - startTime,
           provider: this.imageProvider.name,
           model: IMAGE_GENERATION_RESPONSES_MODEL,
-          hadLogoAsset: !!brief.identity.imageUrl,
-          hadBrandProfile: !!brief.brandProfile,
-          hadProductImage: !!body.productImageDataUrl,
+          hadLogoAsset: !!context.identity.imageUrl,
+          hadBrandProfile: !!context.brandProfile,
+          hadProductImage: !!this.primaryImageDataUrl(brief),
         };
 
         if (reviewResult.passed) {
@@ -494,8 +502,8 @@ export class ImageGenerationService {
               model: IMAGE_GENERATION_RESPONSES_MODEL,
               attempts,
               effectiveProductName,
-          storeName: brief.store.name,
-          storeSegment: brief.store.segment,
+          storeName: context.store.name,
+          storeSegment: context.store.segment,
               reviewPassed: false,
               reviewFailureType: "generated_product_mismatch",
               technicalError: lastReviewIssues.join("; "),
@@ -553,7 +561,7 @@ export class ImageGenerationService {
       response.inputCorrections = inputCorrections;
     }
 
-    const correctionsCount = body.productName !== effectiveProductName ? 1 : 0;
+    const correctionsCount = brief.product.name !== effectiveProductName ? 1 : 0;
     emit("done", "complete", undefined,
       `geração concluída em ${Math.floor((Date.now() - startTime) / 1000)}s, ${attempts} tentativas, ${correctionsCount} correções`);
     emitMetricsEvent("done", attempts);
@@ -565,8 +573,8 @@ export class ImageGenerationService {
       model: IMAGE_GENERATION_RESPONSES_MODEL,
       attempts,
       effectiveProductName,
-      storeName: brief.store.name,
-      storeSegment: brief.store.segment,
+      storeName: context.store.name,
+      storeSegment: context.store.segment,
       reviewPassed: true,
       conflictsDetected: metricsConflictsDetected,
       hadOverride: metricsHadOverride,
@@ -581,13 +589,12 @@ export class ImageGenerationService {
    *
    * This is a synchronous check — no network calls.
    */
-  validatePrompts(brief: ResolvedCampaignContext): { valid: boolean; errors: string[] } {
-    const body = brief.campaignInput as GenerateImageRequest;
+  validatePrompts(brief: CampaignBrief, context: ResolvedCampaignContext): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
-    const campaignIntent = body.campaignIntent ?? "offer";
+    const campaignIntent = brief.commercial.intent ?? "offer";
 
     // Check director prompt
-    const directorVariables = this.buildPromptVariables(body, body.productName, undefined, brief);
+    const directorVariables = this.buildPromptVariables(brief, context, brief.product.name, undefined);
     const promptName = `campaign-image-director-${campaignIntent}`;
     let directorPrompt: string;
     try {
@@ -603,20 +610,25 @@ export class ImageGenerationService {
 
     // Check reviewer prompt using shared builder
     const reviewerInput: ImageReviewInput = {
-      productName: body.productName,
-      storeName: brief.store.name,
-      campaignIntent: body.campaignIntent,
-      preserveImageContext: body.preserveImageContext,
-      badgeText: body.badgeText,
-      discountedPrice: body.discountedPriceCents
-        ? this.formatPriceBRL(body.discountedPriceCents)
+      productName: brief.product.name,
+      storeName: context.store.name,
+      campaignIntent: brief.commercial.intent,
+      preserveImageContext: brief.creativeContext.preserveImageContext,
+      badgeText: brief.commercial.badgeText,
+      discountedPrice: brief.commercial.discountedPriceCents
+        ? this.formatPriceBRL(brief.commercial.discountedPriceCents)
         : undefined,
-      originalPrice: (body.originalPriceCents ?? 0) > 0
-        ? this.formatPriceBRL(body.originalPriceCents ?? 0)
+      originalPrice: (brief.commercial.originalPriceCents ?? 0) > 0
+        ? this.formatPriceBRL(brief.commercial.originalPriceCents ?? 0)
         : undefined,
-      legalNoticeText: body.mandatoryArtworkText,
-      campaignDetails: body.campaignDetails,
-      additionalDetails: body.additionalDetails,
+      legalNoticeText: brief.commercial.legalNotice?.enabled
+        ? brief.commercial.legalNotice.text
+        : undefined,
+      campaignDetails: brief.commercial.campaignDetails,
+      additionalDetails: brief.commercial.additionalDetails,
+      validityText: brief.commercial.validity?.enabled
+        ? brief.commercial.validity.displayText
+        : undefined,
     };
     const reviewerVars = this.imageReview.buildReviewPromptVariables(reviewerInput);
     const reviewerPrompt = this.promptLoader.load("campaign-image-reviewer", reviewerVars);
@@ -701,45 +713,41 @@ export class ImageGenerationService {
     return false;
   }
 
-  private buildCommercialRepertoire(body: GenerateImageRequest): string {
+  private buildCommercialRepertoire(brief: CampaignBrief): string {
     const parts: string[] = [];
-    const campaignIntent = body.campaignIntent ?? "offer";
+    const campaignIntent = brief.commercial.intent ?? "offer";
 
-    const hasAvailabilityNotes = !!body.availabilityNotes;
-    const hasValidity = !!body.validity;
-    const hasCampaignDetails = !!body.campaignDetails;
-    const hasAdditionalDetails = !!body.additionalDetails;
+    const hasAvailabilityNotes = !!brief.commercial.availabilityNotes;
+    const hasValidity = !!brief.commercial.validity;
+    const hasCampaignDetails = !!brief.commercial.campaignDetails;
+    const hasAdditionalDetails = !!brief.commercial.additionalDetails;
 
-    if (body.availabilityNotes && campaignIntent !== "spotlight") {
-      const notes = body.availabilityNotes.toLowerCase();
+    if (brief.commercial.availabilityNotes && campaignIntent !== "spotlight") {
+      const notes = brief.commercial.availabilityNotes.toLowerCase();
       const scarcityKeywords = ["poucas unidades", "últimas", "limitado", "estoque"];
       const varietyKeywords = ["vários sabores", "cores variadas", "diversos", "várias"];
 
       if (scarcityKeywords.some(kw => notes.includes(kw))) {
         const prefix = campaignIntent === "exclusive" ? "Disponibilidade:" : "Disponível:";
-        parts.push(`- ${prefix} ${body.availabilityNotes}`);
+        parts.push(`- ${prefix} ${brief.commercial.availabilityNotes}`);
       } else if (varietyKeywords.some(kw => notes.includes(kw))) {
-        parts.push(`- Variedade disponível: ${body.availabilityNotes}`);
+        parts.push(`- Variedade disponível: ${brief.commercial.availabilityNotes}`);
       }
     }
 
-    if (body.validity && campaignIntent === "offer" && (
-      body.validity.toLowerCase().includes("/") ||
-      body.validity.toLowerCase().includes("até") ||
-      body.validity.toLowerCase().includes("válida")
-    )) {
-      parts.push(`- Oferta válida: ${body.validity}`);
+    if (brief.commercial.validity?.enabled && brief.commercial.validity.displayText && campaignIntent === "offer") {
+      parts.push(`- Oferta válida: ${brief.commercial.validity.displayText}`);
     }
 
-    if (body.campaignDetails) {
-      const actionable = body.campaignDetails.replace(/[\[\]]/g, "").trim();
+    if (brief.commercial.campaignDetails) {
+      const actionable = brief.commercial.campaignDetails.replace(/[\[\]]/g, "").trim();
       if (actionable.length > 0) {
         parts.push(`- ${actionable}`);
       }
     }
 
-    if (body.additionalDetails) {
-      const actionable = body.additionalDetails.replace(/[\[\]]/g, "").trim();
+    if (brief.commercial.additionalDetails) {
+      const actionable = brief.commercial.additionalDetails.replace(/[\[\]]/g, "").trim();
       if (actionable.length > 0) {
         parts.push(`- ${actionable}`);
       }
@@ -760,14 +768,14 @@ export class ImageGenerationService {
     return result;
   }
 
-  private buildValidationSummary(body: GenerateImageRequest, effectiveProductName: string): string {
+  private buildValidationSummary(brief: CampaignBrief, context: ResolvedCampaignContext, effectiveProductName: string): string {
     const parts: string[] = [];
 
-    if (body.productName !== effectiveProductName) {
-      parts.push(`• Nome corrigido automaticamente de '${body.productName}' para '${effectiveProductName}'`);
+    if (brief.product.name !== effectiveProductName) {
+      parts.push(`• Nome corrigido automaticamente de '${brief.product.name}' para '${effectiveProductName}'`);
     }
 
-    if (body.inputValidationOverride?.productImageCheck === "user_confirmed_continue") {
+    if (context.campaignInput.inputValidationOverride?.productImageCheck === "user_confirmed_continue") {
       parts.push("• O usuário confirmou que a imagem do produto está correta, mesmo com divergência na pré-validação");
     }
 
@@ -841,12 +849,12 @@ export class ImageGenerationService {
   }
 
   private buildPromptVariables(
-    body: GenerateImageRequest,
+    brief: CampaignBrief,
+    context: ResolvedCampaignContext,
     effectiveProductName: string,
-    inferredCategory?: string,
-    brief?: ResolvedCampaignContext
+    inferredCategory?: string
   ): Record<string, string> {
-    const storeSegment = brief?.store.segment ?? '';
+    const storeSegment = context.store.segment ?? '';
     const effectiveInferredCategory = inferredCategory ?? storeSegment;
     const hasConflict = inferredCategory
       ? this.isSameCategory(inferredCategory, storeSegment)
@@ -859,14 +867,14 @@ export class ImageGenerationService {
       ? `ATENÇÃO: O produto anunciado é da categoria "${inferredCategory}", que é diferente do segmento principal da loja "${storeSegment}". A direção visual deve refletir o universo de ${inferredCategory}. A identidade da loja (nome, paleta, logo) deve aparecer como assinatura, não como tema visual.`
       : "";
 
-    const commercialRepertoire = this.buildCommercialRepertoire(body);
-    const inputValidationSummary = this.buildValidationSummary(body, effectiveProductName);
-    const creativeContextGuidance = this.buildCreativeContextGuidance(storeSegment, effectiveInferredCategory, hasConflict, body.campaignIntent ?? "offer");
+    const commercialRepertoire = this.buildCommercialRepertoire(brief);
+    const inputValidationSummary = this.buildValidationSummary(brief, context, effectiveProductName);
+    const creativeContextGuidance = this.buildCreativeContextGuidance(storeSegment, effectiveInferredCategory, hasConflict, brief.commercial.intent ?? "offer");
 
-    const campaignIntent = body.campaignIntent ?? "offer";
+    const campaignIntent = brief.commercial.intent ?? "offer";
 
     const commercialFrame = (() => {
-      const dpc = body.discountedPriceCents;
+      const dpc = brief.commercial.discountedPriceCents;
       switch (campaignIntent) {
         case "spotlight":
           return dpc ? `Destaque — ${this.formatPriceBRL(dpc)}` : "Destaque do produto";
@@ -875,11 +883,11 @@ export class ImageGenerationService {
         default: {
           if (!dpc) return "Oferta";
           const formattedDiscounted = this.formatPriceBRL(dpc);
-          if (body.badgeText) {
-            const formattedOriginal = (body.originalPriceCents ?? 0) > 0
-              ? `de ${this.formatPriceBRL(body.originalPriceCents ?? 0)} por `
+          if (brief.commercial.badgeText) {
+            const formattedOriginal = (brief.commercial.originalPriceCents ?? 0) > 0
+              ? `de ${this.formatPriceBRL(brief.commercial.originalPriceCents ?? 0)} por `
               : "";
-            return `${body.badgeText}: ${formattedOriginal}${formattedDiscounted}`;
+            return `${brief.commercial.badgeText}: ${formattedOriginal}${formattedDiscounted}`;
           }
           return `Apenas ${formattedDiscounted}`;
         }
@@ -888,44 +896,48 @@ export class ImageGenerationService {
 
     return {
       productName: effectiveProductName,
-      storeName: brief?.store.name ?? '',
+      storeName: context.store.name ?? '',
       storeSegment,
-      storeTone: brief?.store.toneOfVoice ?? "profissional",
-      brandColor: brief?.store.brandColor ?? "#22C55E",
-      originalPrice: (body.originalPriceCents ?? 0) > 0
-        ? this.formatPriceBRL(body.originalPriceCents ?? 0)
+      storeTone: context.store.toneOfVoice ?? "profissional",
+      brandColor: context.store.brandColor ?? "#22C55E",
+      originalPrice: (brief.commercial.originalPriceCents ?? 0) > 0
+        ? this.formatPriceBRL(brief.commercial.originalPriceCents ?? 0)
         : "",
-      discountedPrice: body.discountedPriceCents
-        ? this.formatPriceBRL(body.discountedPriceCents)
+      discountedPrice: brief.commercial.discountedPriceCents
+        ? this.formatPriceBRL(brief.commercial.discountedPriceCents)
         : "",
-      badgeText: body.badgeText ?? "",
-      hook: body.hook ?? "",
-      cta: body.cta ?? "",
-      objective: body.objective ?? "",
-      campaignDetails: body.campaignDetails ?? "",
-      additionalDetails: body.additionalDetails ?? "",
-      targetChannel: body.targetChannel ?? "Instagram",
-      format: body.format ?? "quadrado 1:1",
-      validity: body.validity ?? "",
-      availabilityNotes: body.availabilityNotes ?? "",
-      sensitiveConstraints: body.sensitiveConstraints ?? "",
-      mandatoryArtworkText: body.mandatoryArtworkText ?? "",
-      identityImageUrl: brief?.identity.imageUrl ?? "",
-      identityDirective: brief?.identity.directive ?? "",
+      badgeText: brief.commercial.badgeText ?? "",
+      hook: brief.commercial.hook ?? "",
+      cta: brief.commercial.cta ?? "",
+      objective: brief.commercial.objective ?? "",
+      campaignDetails: brief.commercial.campaignDetails ?? "",
+      additionalDetails: brief.commercial.additionalDetails ?? "",
+      targetChannel: brief.commercial.targetChannel ?? "Instagram",
+      format: brief.commercial.format ?? "quadrado 1:1",
+      validity: brief.commercial.validity?.enabled
+        ? (brief.commercial.validity.displayText ?? "")
+        : "",
+      availabilityNotes: brief.commercial.availabilityNotes ?? "",
+      sensitiveConstraints: brief.creativeContext.sensitiveConstraints ?? "",
+      mandatoryArtworkText: brief.commercial.legalNotice?.enabled
+        ? (brief.commercial.legalNotice.text ?? "")
+        : "",
+      identityImageUrl: context.identity.imageUrl ?? "",
+      identityDirective: context.identity.directive ?? "",
       campaignIntent,
-      preserveImageDirective: campaignIntent !== "offer" && body.preserveImageContext
+      preserveImageDirective: campaignIntent !== "offer" && brief.creativeContext.preserveImageContext
         ? "NÃO recortar o produto. Preservar o contexto original da imagem. Adaptar a composição ao redor do produto sem isolá-lo. Legibilidade continua obrigatória."
         : "",
       commercialFrame,
 
       // Brand profile context (Phase 4.4.1)
-      brandProfileSection: this.buildBrandProfileSection(brief?.brandProfile ?? null),
-      brandColorsChosen: brief?.brandProfile?.brand_colors_chosen?.join(', ') ?? '',
-      visualStyle: brief?.brandProfile?.visual_style ?? '',
-      visualTone: brief?.brandProfile?.visual_tone ?? '',
-      brandPersonality: brief?.brandProfile?.brand_personality ?? '',
-      campaignGuidelines: brief?.brandProfile?.campaign_guidelines ?? '',
-      campaignBrief: brief?.brandProfile?.campaign_brief ?? '',
+      brandProfileSection: this.buildBrandProfileSection(context.brandProfile ?? null),
+      brandColorsChosen: context.brandProfile?.brand_colors_chosen?.join(', ') ?? '',
+      visualStyle: context.brandProfile?.visual_style ?? '',
+      visualTone: context.brandProfile?.visual_tone ?? '',
+      brandPersonality: context.brandProfile?.brand_personality ?? '',
+      campaignGuidelines: context.brandProfile?.campaign_guidelines ?? '',
+      campaignBrief: context.brandProfile?.campaign_brief ?? '',
 
       // New creative direction variables
       creativePersona,
@@ -966,9 +978,15 @@ export class ImageGenerationService {
     });
   }
 
+  // Ponte explícita media.primary.dataUrl → provider/input-validation (F39-16).
+  // Base64 apenas em memória/transporte — o snapshot nunca o expõe (D6/D7).
+  private primaryImageDataUrl(brief: CampaignBrief): string | undefined {
+    return brief.media.images.find((i) => i.role === "primary")?.dataUrl;
+  }
+
   private async generateWithRetry(
     promptText: string,
-    body: GenerateImageRequest,
+    productImageDataUrl: string | undefined,
     signal: AbortSignal | undefined,
     remaining: () => number,
     identityImageUrl?: string
@@ -1022,7 +1040,7 @@ export class ImageGenerationService {
       try {
         const output = await this.imageProvider.generateImage({
           prompt: promptText,
-          productImageDataUrl: body.productImageDataUrl,
+          productImageDataUrl,
           identityImageUrl,
           size: IMAGE_GENERATION_SIZE,
           signal,

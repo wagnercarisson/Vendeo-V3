@@ -638,7 +638,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
         try {
           emitPhase("image_generation", "running", "Gerando arte com IA...");
 
-          imageResult = await imageService.generateImage(context, (phaseEvent) => {
+          imageResult = await imageService.generateImage(brief, context, (phaseEvent) => {
             emit({ type: "phase", ...phaseEvent });
           }, streamAbortController.signal, (metricsEvent) => {
             // F38.1 (D11): mapeia fases do onMetricsEvent para eventos call-level.
@@ -688,7 +688,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
       };
 
       // ── PREFLIGHT: Validate all prompts before parallel IA calls ──
-      const preflightResult = imageService.validatePrompts(context);
+      const preflightResult = imageService.validatePrompts(brief, context);
       if (!preflightResult.valid) {
         console.error(`[generate-image] prompt_preflight_failed — ${preflightResult.errors.join('; ')}`);
         emit({ type: "error", campaignId: campaignId!, phase: "preflight", code: "invalid_prompt", message: preflightResult.errors.join("; "), httpStatus: 502, retryable: false });

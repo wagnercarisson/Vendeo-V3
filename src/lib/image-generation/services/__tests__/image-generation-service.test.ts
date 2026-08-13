@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ImageGenerationService } from '../image-generation-service';
+import type { CampaignBrief } from '@/lib/campaign/brief';
+import { buildCampaignBriefFromFlat } from '@/lib/campaign/brief';
 import type { ResolvedCampaignContext } from '@/components/campaign/types';
-import type { CampaignInput } from '@/components/campaign/types';
+import type { GenerateImageRequest } from '@/lib/image-generation/schema';
 import { PromptLoader } from '@/lib/image-generation/prompt-loader';
 
 // Mock prompt-loader module to avoid file system reads in buildPromptVariables
@@ -9,15 +11,36 @@ import { PromptLoader } from '@/lib/image-generation/prompt-loader';
 // but buildPromptVariables indirectly uses promptLoader through other methods.
 // We control the load() return via the constructor-injected mock.
 
-// Helper: build a minimal ResolvedCampaignContext suitable for validatePrompts
-function createMinimalBrief(overrides?: Partial<ResolvedCampaignContext>): ResolvedCampaignContext {
+const STORE_ID = '44444444-4444-4444-8444-444444444444';
+
+// Build a structured domain brief via the canonical mapper (39-04) from a flat payload.
+function createMinimalBrief(
+  overrides?: Partial<GenerateImageRequest>
+): CampaignBrief {
+  return buildCampaignBriefFromFlat(
+    {
+      storeId: STORE_ID,
+      productName: 'Produto Teste',
+      discountedPriceCents: 1990,
+      badgeText: 'Oferta',
+      campaignIntent: 'offer',
+      productImageDataUrl: 'data:image/jpeg;base64,test',
+      ...overrides,
+    } as GenerateImageRequest,
+    STORE_ID
+  );
+}
+
+// ResolvedCampaignContext (wrapper) matching the domain brief above.
+function createContext(overrides?: Partial<ResolvedCampaignContext>): ResolvedCampaignContext {
   return {
     campaignInput: {
       productName: 'Produto Teste',
       discountedPriceCents: 1990,
       productImageDataUrl: 'data:image/jpeg;base64,test',
       badgeText: 'Oferta',
-    } as CampaignInput,
+      campaignIntent: 'offer',
+    },
     store: {
       name: 'Loja Teste',
       segment: 'outros',
@@ -73,7 +96,7 @@ describe('ImageGenerationService.validatePrompts', () => {
     });
 
     const brief = createMinimalBrief();
-    const result = service.validatePrompts(brief);
+    const result = service.validatePrompts(brief, createContext());
 
     expect(result.valid).toBe(true);
     expect(result.errors).toHaveLength(0);
@@ -93,7 +116,7 @@ describe('ImageGenerationService.validatePrompts', () => {
     });
 
     const brief = createMinimalBrief();
-    const result = service.validatePrompts(brief);
+    const result = service.validatePrompts(brief, createContext());
 
     expect(result.valid).toBe(false);
     expect(result.errors.length).toBeGreaterThan(0);
@@ -115,7 +138,7 @@ describe('ImageGenerationService.validatePrompts', () => {
     });
 
     const brief = createMinimalBrief();
-    const result = service.validatePrompts(brief);
+    const result = service.validatePrompts(brief, createContext());
 
     expect(result.valid).toBe(false);
     expect(result.errors.length).toBeGreaterThan(0);
@@ -134,14 +157,8 @@ describe('ImageGenerationService.validatePrompts', () => {
       return '';
     });
 
-    const brief = createMinimalBrief({
-      campaignInput: {
-        productName: 'Produto Teste',
-        productImageDataUrl: 'data:image/jpeg;base64,test',
-        campaignIntent: 'spotlight',
-      } as import('@/components/campaign/types').CampaignInput,
-    });
-    const result = service.validatePrompts(brief);
+    const brief = createMinimalBrief({ campaignIntent: 'spotlight' });
+    const result = service.validatePrompts(brief, createContext());
 
     expect(result.valid).toBe(false);
     expect(result.errors.length).toBeGreaterThan(0);
@@ -165,7 +182,7 @@ describe('ImageGenerationService.validatePrompts', () => {
     });
 
     const brief = createMinimalBrief();
-    const result = service.validatePrompts(brief);
+    const result = service.validatePrompts(brief, createContext());
 
     expect(result.valid).toBe(true);
     expect(result.errors).toHaveLength(0);
@@ -185,23 +202,11 @@ describe('ImageGenerationService.validatePrompts', () => {
       return '';
     });
 
-    const spotlightBrief = createMinimalBrief({
-      campaignInput: {
-        productName: 'Vestido',
-        productImageDataUrl: 'data:image/jpeg;base64,test',
-        campaignIntent: 'spotlight',
-      } as import('@/components/campaign/types').CampaignInput,
-    });
-    expect(service.validatePrompts(spotlightBrief).valid).toBe(true);
+    const spotlightBrief = createMinimalBrief({ campaignIntent: 'spotlight' });
+    expect(service.validatePrompts(spotlightBrief, createContext()).valid).toBe(true);
 
-    const exclusiveBrief = createMinimalBrief({
-      campaignInput: {
-        productName: 'Buquê',
-        productImageDataUrl: 'data:image/jpeg;base64,test',
-        campaignIntent: 'exclusive',
-      } as import('@/components/campaign/types').CampaignInput,
-    });
-    expect(service.validatePrompts(exclusiveBrief).valid).toBe(true);
+    const exclusiveBrief = createMinimalBrief({ campaignIntent: 'exclusive' });
+    expect(service.validatePrompts(exclusiveBrief, createContext()).valid).toBe(true);
   });
 
   it('validatePrompts falha se placeholder antigo {{discountedPrice}} no prompt do revisor', () => {
@@ -216,13 +221,13 @@ describe('ImageGenerationService.validatePrompts', () => {
     });
 
     const brief = createMinimalBrief();
-    const result = service.validatePrompts(brief);
+    const result = service.validatePrompts(brief, createContext());
 
     expect(result.valid).toBe(false);
     expect(result.errors.some((e: string) => e.includes('{{discountedPrice}}'))).toBe(true);
   });
 
-  it('validatePrompts propaga mandatoryArtworkText, campaignDetails e additionalDetails ao revisor', () => {
+  it('validatePrompts propaga legalNotice (mandatoryArtworkText), campaignDetails e additionalDetails ao revisor', () => {
     mockLoad.mockImplementation((name: string) => {
       if (name === 'campaign-image-director-offer') {
         return 'Prompt de direção visual';
@@ -234,17 +239,12 @@ describe('ImageGenerationService.validatePrompts', () => {
     });
 
     const brief = createMinimalBrief({
-      campaignInput: {
-        productName: 'Produto Teste',
-        productImageDataUrl: 'data:image/jpeg;base64,test',
-        campaignIntent: 'offer',
-        mandatoryArtworkText: 'Imagens meramente ilustrativas',
-        campaignDetails: 'Frete grátis acima de R$ 100',
-        additionalDetails: 'Válido somente em loja física',
-      } as CampaignInput,
+      mandatoryArtworkText: 'Imagens meramente ilustrativas',
+      campaignDetails: 'Frete grátis acima de R$ 100',
+      additionalDetails: 'Válido somente em loja física',
     });
 
-    const result = service.validatePrompts(brief);
+    const result = service.validatePrompts(brief, createContext());
     expect(result.valid).toBe(true);
 
     const reviewerCall = mockLoad.mock.calls.find((call) => call[0] === 'campaign-image-reviewer');
@@ -269,17 +269,12 @@ describe('ImageGenerationService.validatePrompts', () => {
     });
 
     const brief = createMinimalBrief({
-      campaignInput: {
-        productName: 'Produto Teste',
-        productImageDataUrl: 'data:image/jpeg;base64,test',
-        campaignIntent: 'offer',
-        mandatoryArtworkText: 'Imagens meramente ilustrativas',
-        campaignDetails: 'Frete grátis acima de R$ 100',
-        additionalDetails: 'Válido somente em loja física',
-      } as CampaignInput,
+      mandatoryArtworkText: 'Imagens meramente ilustrativas',
+      campaignDetails: 'Frete grátis acima de R$ 100',
+      additionalDetails: 'Válido somente em loja física',
     });
 
-    const result = service.validatePrompts(brief);
+    const result = service.validatePrompts(brief, createContext());
     expect(result.valid).toBe(true);
     expect(result.errors).toHaveLength(0);
   });
@@ -296,7 +291,7 @@ describe('ImageGenerationService.validatePrompts', () => {
     });
 
     const brief = createMinimalBrief();
-    const result = service.validatePrompts(brief);
+    const result = service.validatePrompts(brief, createContext());
     expect(result.valid).toBe(true);
   });
 });
@@ -341,17 +336,12 @@ describe('ImageGenerationService.generateImage', () => {
     );
 
     const brief = createMinimalBrief({
-      campaignInput: {
-        productName: 'Produto Teste',
-        productImageDataUrl: 'data:image/jpeg;base64,test',
-        campaignIntent: 'offer',
-        mandatoryArtworkText: 'Imagens meramente ilustrativas',
-        campaignDetails: 'Frete grátis acima de R$ 100',
-        additionalDetails: 'Válido somente em loja física',
-      } as CampaignInput,
+      mandatoryArtworkText: 'Imagens meramente ilustrativas',
+      campaignDetails: 'Frete grátis acima de R$ 100',
+      additionalDetails: 'Válido somente em loja física',
     });
 
-    const result = await service.generateImage(brief);
+    const result = await service.generateImage(brief, createContext());
 
     expect(result.success).toBe(true);
     expect(mockImageReview.review).toHaveBeenCalledTimes(1);
@@ -431,13 +421,14 @@ describe('ImageGenerationService.generateImage — telemetria D11 (usage/duratio
       mockImageReview,
       mockMetricsWriter,
       brief: createMinimalBrief(),
+      context: createContext(),
     };
   }
 
   it('Teste 6: evento image_generation por tentativa com usage + durationMs (attempt 0..n)', async () => {
     const events: any[] = [];
-    const { service, brief } = buildService();
-    const result = await service.generateImage(brief, undefined, undefined, (e) => events.push(e));
+    const { service, brief, context } = buildService();
+    const result = await service.generateImage(brief, context, undefined, undefined, (e) => events.push(e));
 
     expect(result.success).toBe(true);
     const genEvents = events.filter((e) => e.phase === 'image_generation' && e.usage);
@@ -448,8 +439,8 @@ describe('ImageGenerationService.generateImage — telemetria D11 (usage/duratio
 
   it('Teste 7: evento input_validation com usage quando a validação faz chamada de visão', async () => {
     const events: any[] = [];
-    const { service, brief } = buildService();
-    const result = await service.generateImage(brief, undefined, undefined, (e) => events.push(e));
+    const { service, brief, context } = buildService();
+    const result = await service.generateImage(brief, context, undefined, undefined, (e) => events.push(e));
 
     expect(result.success).toBe(true);
     const validationEvents = events.filter((e) => e.phase === 'input_validation' && e.usage);
@@ -460,8 +451,8 @@ describe('ImageGenerationService.generateImage — telemetria D11 (usage/duratio
 
   it('Teste 8: evento quality_review com usage por tentativa (attempt 1..n)', async () => {
     const events: any[] = [];
-    const { service, brief } = buildService();
-    const result = await service.generateImage(brief, undefined, undefined, (e) => events.push(e));
+    const { service, brief, context } = buildService();
+    const result = await service.generateImage(brief, context, undefined, undefined, (e) => events.push(e));
 
     expect(result.success).toBe(true);
     const reviewEvents = events.filter((e) => e.phase === 'quality_review' && e.usage);
@@ -471,9 +462,10 @@ describe('ImageGenerationService.generateImage — telemetria D11 (usage/duratio
   });
 
   it('Teste 9: onMetricsEvent lançando → generateImage continua (best-effort)', async () => {
-    const { service, brief } = buildService();
+    const { service, brief, context } = buildService();
     const result = await service.generateImage(
       brief,
+      context,
       undefined,
       undefined,
       () => { throw new Error('metrics boom'); }
@@ -482,15 +474,15 @@ describe('ImageGenerationService.generateImage — telemetria D11 (usage/duratio
   });
 
   it('Teste 10: sem onMetricsEvent → comportamento idêntico ao atual (compat)', async () => {
-    const { service, brief } = buildService();
-    const result = await service.generateImage(brief);
+    const { service, brief, context } = buildService();
+    const result = await service.generateImage(brief, context);
     expect(result.success).toBe(true);
   });
 
   it('Teste 11 (F38.1 anti-dupla-contagem): cada fase emite EXATAMENTE 1 evento por tentativa — sem tick de início sem usage', async () => {
     const events: any[] = [];
-    const { service, brief } = buildService();
-    const result = await service.generateImage(brief, undefined, undefined, (e) => events.push(e));
+    const { service, brief, context } = buildService();
+    const result = await service.generateImage(brief, context, undefined, undefined, (e) => events.push(e));
 
     expect(result.success).toBe(true);
 
@@ -508,14 +500,136 @@ describe('ImageGenerationService.generateImage — telemetria D11 (usage/duratio
   });
 
   it('Teste 12 (F38.1 anti-dupla-contagem): override na validação → NENHUM evento de input_validation (sem chamada de IA real)', async () => {
-    const { service, brief, mockInputValidation } = buildService();
+    const { service, brief, context, mockInputValidation } = buildService();
     mockInputValidation.validate.mockImplementation(async () => ({ classification: 'match', confidence: 1.0 }));
 
     const events: any[] = [];
-    const result = await service.generateImage(brief, undefined, undefined, (e) => events.push(e));
+    const result = await service.generateImage(brief, context, undefined, undefined, (e) => events.push(e));
 
     expect(result.success).toBe(true);
     const validationEvents = events.filter((e) => e.phase === 'input_validation');
     expect(validationEvents).toHaveLength(0);
+  });
+});
+
+describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F39-15/F39-19)', () => {
+  const EXPECTED_KEYS = [
+    'productName', 'storeName', 'storeSegment', 'storeTone', 'brandColor',
+    'originalPrice', 'discountedPrice', 'badgeText', 'hook', 'cta', 'objective',
+    'campaignDetails', 'additionalDetails', 'targetChannel', 'format', 'validity',
+    'availabilityNotes', 'sensitiveConstraints', 'mandatoryArtworkText',
+    'identityImageUrl', 'identityDirective', 'campaignIntent', 'preserveImageDirective',
+    'commercialFrame', 'brandProfileSection', 'brandColorsChosen', 'visualStyle',
+    'visualTone', 'brandPersonality', 'campaignGuidelines', 'campaignBrief',
+    'creativePersona', 'inferredCategory', 'hasCategoryConflict',
+    'categoryConflictDirective', 'commercialRepertoire', 'inputValidationSummary',
+    'creativeContextGuidance',
+  ];
+
+  function buildService() {
+    const mockProvider = { name: 'test', generateImage: vi.fn() };
+    const mockLoad = vi.fn((name: string) => `prompt ${name}`);
+    const service = new ImageGenerationService(
+      mockProvider as any,
+      { load: mockLoad, clearCache: vi.fn() } as unknown as PromptLoader,
+    );
+    return service;
+  }
+
+  it('8.16 offer: buildPromptVariables produz o MESMO conjunto de 38 keys (regressão F39-15)', () => {
+    const service = buildService();
+    const brief = createMinimalBrief({
+      validity: 'válida até 31/12',
+      mandatoryArtworkText: 'Imagem meramente ilustrativa',
+    });
+    const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
+
+    const keys = Object.keys(vars).sort();
+    expect(keys).toEqual([...EXPECTED_KEYS].sort());
+    expect(keys).toHaveLength(38);
+    expect(vars.productName).toBe('Produto Teste');
+    expect(vars.discountedPrice).toContain('19,90');
+    expect(vars.badgeText).toBe('Oferta');
+    expect(vars.validity).toBe('válida até 31/12');
+    expect(vars.mandatoryArtworkText).toBe('Imagem meramente ilustrativa');
+    expect(vars.campaignIntent).toBe('offer');
+  });
+
+  it('8.16 spotlight: mesmas 38 keys, preserveImageContext não-normalizado', () => {
+    const service = buildService();
+    const brief = createMinimalBrief({
+      campaignIntent: 'spotlight',
+      preserveImageContext: true,
+    });
+    const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
+
+    expect(Object.keys(vars)).toHaveLength(38);
+    expect(vars.campaignIntent).toBe('spotlight');
+    expect(vars.preserveImageDirective).toContain('Preservar o contexto original');
+    expect(vars.validity).toBe('');
+  });
+
+  it('8.16 exclusive: mesmas 38 keys', () => {
+    const service = buildService();
+    const brief = createMinimalBrief({ campaignIntent: 'exclusive' });
+    const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
+
+    expect(Object.keys(vars)).toHaveLength(38);
+    expect(vars.campaignIntent).toBe('exclusive');
+    expect(vars.commercialFrame).toContain('sem divulgação de preço');
+  });
+
+  it('8.17 buildCommercialRepertoire decide por validity.enabled/displayText (sem heurística string)', () => {
+    const service = buildService();
+    const brief = createMinimalBrief({ validity: 'Até 30/09' });
+    const repertoire = (service as any).buildCommercialRepertoire(brief) as string;
+    expect(repertoire).toContain('Oferta válida: Até 30/09');
+
+    // validity disabled/absent → sem parte de validade
+    const semValidity = (service as any).buildCommercialRepertoire(createMinimalBrief()) as string;
+    expect(semValidity).not.toContain('Oferta válida');
+  });
+
+  it('8.18 provider/input-validation recebem media.primary.dataUrl (ponte base64 em memória)', async () => {
+    const mockProvider = {
+      name: 'test',
+      generateImage: vi.fn().mockResolvedValue({
+        imageBase64: 'aGVsbG8=',
+        mimeType: 'image/png',
+        usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+      }),
+    };
+    const mockLoad = vi.fn((name: string) => {
+      if (name === 'campaign-image-director-offer') return 'Prompt sem placeholders';
+      if (name === 'campaign-image-reviewer') return 'Revise sem placeholders';
+      return '';
+    });
+    const mockInputValidation = { validate: vi.fn().mockResolvedValue({ classification: 'match' }) };
+    const mockImageReview = {
+      review: vi.fn().mockResolvedValue({ passed: true, issues: [], failureType: null }),
+      buildReviewPromptVariables: vi.fn(),
+    };
+    const mockMetricsWriter = { write: vi.fn().mockResolvedValue(undefined) };
+    const service = new ImageGenerationService(
+      mockProvider as any,
+      { load: mockLoad, clearCache: vi.fn() } as unknown as PromptLoader,
+      mockInputValidation as any,
+      mockImageReview as any,
+      mockMetricsWriter as any
+    );
+
+    const brief = createMinimalBrief();
+    const result = await service.generateImage(brief, createContext());
+
+    expect(result.success).toBe(true);
+    expect(mockInputValidation.validate).toHaveBeenCalledWith(
+      'Produto Teste',
+      'data:image/jpeg;base64,test',
+      undefined,
+      expect.any(Function)
+    );
+    expect(mockProvider.generateImage).toHaveBeenCalledWith(
+      expect.objectContaining({ productImageDataUrl: 'data:image/jpeg;base64,test' })
+    );
   });
 });

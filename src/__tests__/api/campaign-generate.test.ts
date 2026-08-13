@@ -99,7 +99,7 @@ vi.mock("@/lib/image-generation/providers/factory", () => ({
 
 const MockImageGenerationService = vi.fn(function () {
   return {
-    generateImage: vi.fn(async (_brief: any, onPhaseChange?: (event: any) => void) => {
+    generateImage: vi.fn(async (_brief: any, _context: any, onPhaseChange?: (event: any) => void) => {
       if (onPhaseChange) {
         onPhaseChange({ phase: "input_validation", status: "complete" });
         onPhaseChange({ phase: "done", status: "complete" });

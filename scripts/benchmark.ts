@@ -372,7 +372,7 @@ async function runBenchmark(): Promise<void> {
     let result: BenchmarkResult;
 
     try {
-      const generationResult = await service.generateImage(brief as any);
+      const generationResult = await service.generateImage(brief as any, brief as any);
       const duration = Date.now() - scenarioStart;
 
       if (generationResult.success) {

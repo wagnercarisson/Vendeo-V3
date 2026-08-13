@@ -976,7 +976,7 @@ describe('Pipeline cost accounting (6.3)', () => {
       };
     });
 
-    mockGenerateImage.mockImplementation(async (_brief: any, _phase: any, _signal: any, onMetricsEvent?: (e: any) => void) => {
+    mockGenerateImage.mockImplementation(async (_brief: any, _context: any, _onPhaseChange: any, _signal: any, onMetricsEvent?: (e: any) => void) => {
       if (onMetricsEvent) {
         onMetricsEvent({ phase: "input_validation", provider: "openai", model: "gpt-4o", attempt: 0, usage: VALIDATION_USAGE, durationMs: 100 });
         // prompt_assembly/done NÃO são chamadas de IA — devem ser ignoradas (D5/D11)
@@ -1096,7 +1096,7 @@ describe('Pipeline cost accounting (6.3)', () => {
 
   it('Teste 15 (6.3): review falha → campaign_pipeline failed + custo dos call-level já registrados', async () => {
     await setupPipelineSuccessMocks();
-    mockGenerateImage.mockImplementation(async (_brief: any, _phase: any, _signal: any, onMetricsEvent?: (e: any) => void) => {
+    mockGenerateImage.mockImplementation(async (_brief: any, _context: any, _onPhaseChange: any, _signal: any, onMetricsEvent?: (e: any) => void) => {
       if (onMetricsEvent) {
         onMetricsEvent({ phase: "input_validation", provider: "openai", model: "gpt-4o", attempt: 0, usage: VALIDATION_USAGE, durationMs: 100 });
         onMetricsEvent({ phase: "image_generation", provider: "openai", model: "test-model", attempt: 0, usage: IMAGE_USAGE, durationMs: 300 });
