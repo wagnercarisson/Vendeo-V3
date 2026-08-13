@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
-current_phase: 38.2.1
-status: complete
-last_updated: "2026-08-12T18:00:00.000Z"
+current_phase: 39
+status: planned
+last_updated: "2026-08-13T12:00:00.000Z"
 progress:
-  total_phases: 24
+  total_phases: 26
   completed_phases: 21
   total_plans: 117
   completed_plans: 115
@@ -16,9 +16,26 @@ stopped_at: ""
 
 # Project State
 
-**Last updated:** 2026-08-10 (F38.2 Admin de Custos Operacionais + Configurações Econômicas **CONCLUÍDA — 11/11 plans**: 38-2-01 ✅ migrations 3 + db push [BLOCKING] aplicado no remoto (economic_parameters + audit + seeds 1.00/1.00 + RPC admin_set_economic_parameter + RLS service_role; 4 colunas de confiança em generation_events; RPCs admin_get_ai_operation_runs/_events com filtros/paginação/P95/evidências de segmento/insumos de badge); 38-2-02 ✅ tipos econômicos sem server-only (ECONOMIC_PARAMETER_KEYS/EconomicParameterKey/EconomicParameterResolution) + EconomicParameterService server-only fail-open (fallback 1.00)/fail-closed (EconomicParameterUnavailableError → 503) + getAll com source + 10 testes; 38-2-03 ✅ AiCostTracker persiste 4 campos de confiança (D5); 38-2-04 ✅ API GET/PUT /api/admin/economic-parameters (zod + RPC admin_set_economic_parameter); 38-2-05 ✅ OperationRunsService (BRL D1/D4 + badges D5 + segmentação D9 + agregados D3 + detalhe D4, 20 testes); 38-2-06 ✅ API GET /api/admin/ai-operation-runs (lista + detalhe) com AiOperationRunsQuerySchema (janela default 90d/max 365d → 400) + 13 testes; 38-2-07 ✅ UI /admin/operation-costs → 'Configurações Econômicas' (título D2 + seção Parâmetros com ParamsForm: motivo obrigatório + badge source + audit_id + toFixed(2); nav renomeada; 503 fail-closed por seção; checkpoint humano aprovado com melhorias de UI + 8 testes). F38.1 Apuração de Custos de IA por Entrega **CONCLUÍDA — 11/11 plans**: 38-1-10 ✅ views/RPCs apuração + I1–I6 + gates + UAT manual validado; 38-1-11 ✅ runbook trackings. **Fechamento como camada de estimativa operacional granular** — ajuste provisório versionável da tool image_generation (fórmula `responses_image_generation_v2`): `responses:image_generation = USD 0.065` é **estimativa operacional provisória para beta**, calibrada por UAT/dashboard/CSV da OpenAI — **NÃO é custo financeiro real**; a **reconciliação financeira real fica para a próxima fase**. 38/38+2 requirements, 1713 testes, typecheck/lint/build limpos; F38 concluída 8/8 plans, 1597 testes, UAT 4/4; renumeração F37 = Revisão e Aprovação da Arte, F38 = Tabela de Custos, F39 = Stripe)
+**Last updated:** 2026-08-13 — **F39 (Brief Estruturado de Campanha, v1.5) PLANEJADA — READY TO EXECUTE (8 plans / 7 waves)** a partir da base OpenSpec `openspec/changes/fase-39-brief-estruturado-campanha/`; renumeração aplicada (F39 = Brief, Stripe / Monetização Pública → F40, v1.7 — D1). **Antercessora concluída: F38.2 (Admin de Custos Operacionais + Configurações Econômicas) — 11/11 plans**: 38-2-01 ✅ migrations 3 + db push [BLOCKING] aplicado no remoto (economic_parameters + audit + seeds 1.00/1.00 + RPC admin_set_economic_parameter + RLS service_role; 4 colunas de confiança em generation_events; RPCs admin_get_ai_operation_runs/_events com filtros/paginação/P95/evidências de segmento/insumos de badge); 38-2-02 ✅ tipos econômicos sem server-only (ECONOMIC_PARAMETER_KEYS/EconomicParameterKey/EconomicParameterResolution) + EconomicParameterService server-only fail-open (fallback 1.00)/fail-closed (EconomicParameterUnavailableError → 503) + getAll com source + 10 testes; 38-2-03 ✅ AiCostTracker persiste 4 campos de confiança (D5); 38-2-04 ✅ API GET/PUT /api/admin/economic-parameters (zod + RPC admin_set_economic_parameter); 38-2-05 ✅ OperationRunsService (BRL D1/D4 + badges D5 + segmentação D9 + agregados D3 + detalhe D4, 20 testes); 38-2-06 ✅ API GET /api/admin/ai-operation-runs (lista + detalhe) com AiOperationRunsQuerySchema (janela default 90d/max 365d → 400) + 13 testes; 38-2-07 ✅ UI /admin/operation-costs → 'Configurações Econômicas' (título D2 + seção Parâmetros com ParamsForm: motivo obrigatório + badge source + audit_id + toFixed(2); nav renomeada; 503 fail-closed por seção; checkpoint humano aprovado com melhorias de UI + 8 testes). F38.1 Apuração de Custos de IA por Entrega **CONCLUÍDA — 11/11 plans**: 38-1-10 ✅ views/RPCs apuração + I1–I6 + gates + UAT manual validado; 38-1-11 ✅ runbook trackings. **Fechamento como camada de estimativa operacional granular** — ajuste provisório versionável da tool image_generation (fórmula `responses_image_generation_v2`): `responses:image_generation = USD 0.065` é **estimativa operacional provisória para beta**, calibrada por UAT/dashboard/CSV da OpenAI — **NÃO é custo financeiro real**; a **reconciliação financeira real fica para a próxima fase**. 38/38+2 requirements, 1713 testes, typecheck/lint/build limpos; F38 concluída 8/8 plans, 1597 testes, UAT 4/4; renumeração F37 = Revisão e Aprovação da Arte, F38 = Tabela de Custos, F39 = Stripe)
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆ **Em andamento**
-**Current phase:** 38.2.1 ✅ Complete
+**Current phase:** 39 ✅ Planned / Ready to execute (Brief Estruturado de Campanha — v1.5)
+
+### Phase 39 — Brief Estruturado de Campanha ✅ Ready to execute (8 plans / 7 waves)
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 39-01 | 1 | ◐ | Trackings / renumeração D1 (F39 = Brief, Stripe → F40) nos 6 arquivos de runbook |
+| 39-02 | 1 | ◐ | Contrato de domínio `CampaignBrief` (brief.ts + brief-schema.ts sem server-only) + testes 8.1-8.6/8.15 |
+| 39-03 | 2 | ◐ | Rename wrapper `CampaignBrief` → `ResolvedCampaignContext` + `InputSnapshot` → `CampaignBriefSnapshot` (8.21) |
+| 39-04 | 3 | ◐ | Mapper `buildCampaignBriefFromFlat` + builder `buildCampaignBriefSnapshot` (8.7-8.14) |
+| 39-05 | 4 | ◐ | Costuras copy + review: `mapBriefToCopyDirectorInput` e `ImageReviewInput` do domínio (8.19/8.20) |
+| 39-06 | 5 | ◐ | Costuras image-generation: `buildPromptVariables`/`buildCommercialRepertoire` domínio + golden tests por intent (8.16-8.18) |
+| 39-07 | 6 | ◐ | Rota: converter flat→domínio na fronteira + `input_snapshot` via builder + co-migração fixtures/benchmark |
+| 39-08 | 7 | ◐ | Verificação: vitest/typecheck/lint/build + VERIFICATION.md + UAT humana |
+
+**Source of truth:** `openspec/changes/fase-39-brief-estruturado-campanha/`
+**Antercessora:** F38.2.1 (Snapshot Econômico) — precedente de snapshot imutável
+**Sucessora:** F37 (Revisão e Aprovação da Arte — consome o snapshot versionado)
 
 ### Phase 38.2.1 — Snapshot Econômico ✅ Complete
 
@@ -474,8 +491,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 38.2.1 (economic-snapshot) — COMPLETE (7/7 plans, UAT aprovado)
-Plan: 38-2-1-07 ✅ — Verificação I1–I7 (53/53 asserts banco real) + 4 gates verdes (1887 testes) + UAT manual aprovado + fix pós-UAT do filtro not.in em getAvgCostBrl; fase completa
+Phase: 39 (brief-estruturado-campanha) — PLANNED / READY TO EXECUTE (8 plans / 7 waves; fonte: `openspec/changes/fase-39-brief-estruturado-campanha/`)
+Plan: — (planejamento em andamento; renumeração F39 = Brief, Stripe → F40 aplicada nos trackings — D1)
+v1.5 em andamento — F39 (Brief Estruturado de Campanha) em planejamento. F38.2.1 (Snapshot Econômico) CONCLUÍDA — 7/7 plans, 1887 testes, I1-I7 53/53 asserts, UAT aprovado. F38.2 (Admin de Custos Operacionais + Configurações Econômicas) CONCLUÍDA — 11/11 plans, 1832 testes, verificação I1-I6 em banco real, UAT aprovado. F38.1 (Apuração de Custos de IA por Entrega) CONCLUÍDA — 11/11 plans, 1713 testes, UAT validado, **fechada como camada de estimativa operacional granular** (0.065 provisório beta; reconciliação financeira real na próxima fase). F38 (Tabela de Custos por Operação) concluída — 8/8 plans, 1597 testes, UAT 4/4.
 v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36, 38 e 38.1 concluídas. F38 (Tabela de Custos por Operação, v1.5) concluída — 8/8 plans, 1597 testes, UAT 4/4; F38.1 (Apuração de Custos de IA por Entrega, desdobramento da F38) **CONCLUÍDA** — 11/11 plans, 1713 testes, UAT validado, **fechada como camada de estimativa operacional granular** (ajuste provisório da tool image_generation `0.065` = estimativa beta provisória, não custo real; reconciliação financeira real na próxima fase), fonte da verdade `openspec/changes/fase-38-1-ai-cost-accounting/`; **F38.2 (Admin de Custos Operacionais + Configurações Econômicas, desdobramento da F38) em EXECUÇÃO — 10/11 plans** — painel `/admin/ai-operation-costs` (KPIs/filtros/tabela/drilldown/segmentos) + `economic_parameters` configuráveis + badges de confiança + correção `/admin/metrics`, fonte `openspec/changes/fase-38-2-admin-custos-operacionais/`; 38-2-01 ✅ migrations/db push (schema econômico + RPCs de runs no remoto), 38-2-02 ✅ tipos econômicos + EconomicParameterService fail-open/fail-closed + 10 testes (base das rotas 38-2-04/05/06/09), 38-2-03 ✅ AiCostTracker persiste 4 campos de confiança (D5), 38-2-04 ✅ API GET/PUT /api/admin/economic-parameters (zod + RPC admin_set_economic_parameter, 200/400/403/500, idempotência, 9 testes da rota, sem endpoint público), 38-2-05 ✅ OperationRunsService server-only (BRL D1/D4 via EconomicParameterService + badges D5 por evento/entrega + segmentação classifySegment D9 com filtro e re-paginação + storeName/owner D3 + 8 agregados D3/D9 sobre o conjunto filtrado inteiro + getRunDetail D4 com BRL/badges/componentes por evento; 20 testes, typecheck/lint limpos), 38-2-06 ✅ API GET /api/admin/ai-operation-runs (lista) + GET /api/admin/ai-operation-runs/[operationRunId] (detalhe) com AiOperationRunsQuerySchema (janela default 90d/max 365d → 400) delegando 100% ao OperationRunsService (BRL/badge/segmento nunca na rota) + 13 testes (tarefa 12.4, piso 11; regressão 1804 testes); **gap closure UAT (plans 12-15) CONCLUÍDO — verificação final: 1839 testes + 4 gates verdes + UAT manual 12/12 aprovado**; F37 (Revisão e Aprovação da Arte, v1.5, experimento beta) em planejamento futuro; F39 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37 → F39). **38-2-10 OK: verificacao I1-I6 em banco real (script 50/50 asserts) + gates verdes (vitest 1832/1832, typecheck, lint, build) + UAT 13.3 coletado para harvest end-of-phase (I1-I6 documentados em 38-2-VERIFICATION.md)**. **38-2-12 OK (gap UAT estornos): migration 20260811000001 com CREATE OR REPLACE dos RPCs admin_get_ai_operation_runs/_events expondo creditos_estornados (refunds via reference→deduction no ledger) e creditos_liquidos = max(bruto−estorno, 0) por run E no summary/detalhe — creditos_debitados BRUTO inalterado, view F38.1 intocada; db push aplicado no remoto (validado via REST: estornados=3/liquidos=17 em 20 runs/90d); I5 estendido com 13 asserts novos → 63/63 asserts 0 falhas em banco real; gates verdes (vitest 1834/1834, typecheck/lint/build exit 0)**.
 
 ### Phase 36 — Onboarding: Navegação por Abas ✅ Complete
@@ -672,7 +690,9 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 | **F38** | **✅ Complete** | **Tabela de Custos por Operação — 8/8 plans, 1597 testes, I1-I6 verificados no banco real, build gate verde, UAT 4/4 aprovado** |
 | **F38.1** | **✅ Complete** | **Apuração de Custos de IA por Entrega — 11/11 plans, 40/40 requirements, 1713 testes (199 arquivos), I1–I6 banco real, UAT validado; fechada como camada de ESTIMATIVA OPERACIONAL GRANULAR (0.065 provisório beta; reconciliação financeira real na próxima fase)** |
 | **F38.2** | **○ Complete** | **Admin de Custos Operacionais + Configurações Econômicas — 11/11 plans: parâmetros econômicos configuráveis (`economic_parameters` usd_brl_rate/credit_value_brl + RPC + API + página Configurações Econômicas), painel `/admin/ai-operation-costs` (KPIs/filtros/tabela/drilldown/agregados por segmento), badges de confiança, correção `/admin/metrics` (Custo Médio IA call-level), verificação I1-I6 + 4 gates verdes** |
-| F39 | ○ Future | Stripe / Monetização Pública (v1.7, pós-beta — renumerada de F36 → F37 → F39) |
+| **F38.2.1** | **○ Complete** | **Snapshot Econômico — 7/7 plans: congelar `usd_brl_rate_at_generation`/`credit_value_brl_at_generation` em generation_events, impedir recálculo retroativo, backfill aproximado via audit, verificação I1-I7 53/53 asserts, UAT aprovado** |
+| **F39** | **◐ Planned** | **Brief Estruturado de Campanha (v1.5) — 8 plans / 7 waves: contrato de domínio `CampaignBrief` estruturado + mapper flat→brief na fronteira da rota + snapshot versionado `campaign_brief_v1` (sem base64) + 5 costuras de mappers preservando o comportamento de geração. Ready to execute.** |
+| F40 | ○ Future | Stripe / Monetização Pública (v1.7, pós-beta — renumerada de F39) |
 
 ### Quick Tasks Completed
 
