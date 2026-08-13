@@ -1,4 +1,5 @@
 import type { CampaignIntent } from "@/lib/campaign/types";
+import type { GenerateImageRequest } from "@/lib/image-generation/schema";
 
 // ─── Campaign Brief Domain Contract (F39) ───────────────────────────────────
 // Contrato de domínio estruturado da campanha (D4). Este módulo é puro de tipos
@@ -134,4 +135,101 @@ export function getCampaignLegalNotice(
   brief: CampaignBrief
 ): CampaignOfferLegalNotice | undefined {
   return brief.commercial.legalNotice;
+}
+
+// ─── Mapper: transporte flat → domínio (fronteira da rota, D5) ─────────────
+
+// Função pura (sem DB, sem server-only). ÚNICO ponto de conversão flat → domínio.
+// `storeId` é parâmetro necessário para a conversão na rota, mas o domínio NÃO o
+// carrega (o transporte o separa). `storeId` não é usado no corpo da função —
+// é mantido na assinatura para explicitar a fronteira (spec campaign-brief-mapper).
+export function buildCampaignBriefFromFlat(
+  input: GenerateImageRequest,
+  _storeId: string,
+  source: CampaignBriefSource = "web_form"
+): CampaignBrief {
+  const campaignIntent: CampaignIntent = input.campaignIntent ?? "offer";
+
+  const validity = input.validity
+    ? { enabled: true as const, displayText: input.validity }
+    : undefined;
+
+  const legalNotice = input.mandatoryArtworkText
+    ? { enabled: true as const, text: input.mandatoryArtworkText }
+    : undefined;
+
+  const images: CampaignProductImageInput[] = input.productImageDataUrl
+    ? [
+        {
+          id: crypto.randomUUID(),
+          role: "primary",
+          source: "upload",
+          mimeType: "image/jpeg",
+          dataUrl: input.productImageDataUrl,
+        },
+      ]
+    : [];
+
+  return {
+    product: {
+      source: "manual",
+      name: input.productName,
+      description: input.description || undefined,
+    },
+    commercial: {
+      intent: campaignIntent,
+      originalPriceCents: input.originalPriceCents,
+      discountedPriceCents: input.discountedPriceCents,
+      badgeText: input.badgeText || undefined,
+      hook: input.hook || undefined,
+      cta: input.cta || undefined,
+      objective: input.objective || undefined,
+      targetChannel: input.targetChannel || undefined,
+      format: input.format || undefined,
+      ...(validity ? { validity } : {}),
+      ...(legalNotice ? { legalNotice } : {}),
+      availabilityNotes: input.availabilityNotes || undefined,
+      campaignDetails: input.campaignDetails || undefined,
+      additionalDetails: input.additionalDetails || undefined,
+    },
+    media: { images },
+    creativeContext: {
+      preserveImageContext:
+        campaignIntent === "offer"
+          ? false
+          : (input.preserveImageContext ?? false),
+      themeId: null,
+      sensitiveConstraints: input.sensitiveConstraints || undefined,
+    },
+    metadata: {
+      schemaVersion: CampaignBriefSchemaVersion,
+      source,
+    },
+  };
+}
+
+// ─── Builder: domínio → snapshot versionado (D6/D11) ───────────────────────
+
+// Deriva as imagens DO PRÓPRIO brief (nunca recebe imagem externa — evita
+// divergência de `id`), remove `dataUrl`, produz snapshot imutável por construção
+// com `schemaVersion` no ROOT e `metadata` sem schemaVersion.
+export function buildCampaignBriefSnapshot(brief: CampaignBrief): CampaignBriefSnapshot {
+  return {
+    schemaVersion: CampaignBriefSchemaVersion,
+    product: { ...brief.product },
+    commercial: { ...brief.commercial },
+    media: {
+      images: brief.media.images.map((i) => ({
+        id: i.id,
+        role: i.role,
+        source: i.source,
+        provided: true as const,
+        mimeType: i.mimeType,
+      })),
+    },
+    creativeContext: { ...brief.creativeContext },
+    metadata: {
+      source: brief.metadata.source,
+    },
+  };
 }
