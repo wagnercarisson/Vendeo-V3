@@ -446,11 +446,11 @@ export function mapBriefToCopyDirectorInput(
 
 ---
 
-### `src/lib/image-generation/services/image-review-service.ts` (MOD — ImageReviewInput stays, source changes)
+### `src/lib/image-generation/services/image-review-service.ts` (MOD — ImageReviewInput renames + validityText, source changes)
 
-**Analog:** self — `ImageReviewInput` type (9-21) **does not change shape** (seam #5 consumers already pass `mandatoryArtworkText`/`campaignDetails`/`additionalDetails`); only the **call sites** (in image-generation-service.ts 382-397 and 605-619) change to read the domain. Optionally add JSDoc noting the field now originates from `commercial.legalNotice.text` (gated on `enabled`) / `commercial.validity.displayText`.
+**Analog:** self — `ImageReviewInput` type (9-21) **renames** `mandatoryArtworkText?` → **`legalNoticeText?`** (canônico OpenSpec image-quality-review:17; D9) and **adds** `validityText?` (user decision, ajuste final fase 39); consumers/seam #5 call sites (image-generation-service.ts 382-397 and ~604-620) update the field name in the SAME plan as the interface (regra: nenhum plan termina com typecheck global quebrado), keeping the value sourced from `body.mandatoryArtworkText` until 39-06 re-reads the domain. The section builder `mandatoryArtworkTextSection` (~40+) changes its read to `input.legalNoticeText`. JSDoc: field originates from `commercial.legalNotice.text` (gated on `enabled`) / `commercial.validity.displayText`.
 
-**Exact interface (9-21) — unchanged:**
+**Exact interface (9-21) — after 39-05:**
 ```typescript
 export interface ImageReviewInput {
   productName: string;
@@ -461,13 +461,14 @@ export interface ImageReviewInput {
   originalPrice?: string;
   discountedPrice?: string;
   validationContext?: ValidationContext;
-  mandatoryArtworkText?: string;
+  legalNoticeText?: string;  // renamed from mandatoryArtworkText (canônico D9)
   campaignDetails?: string;
   additionalDetails?: string;
+  validityText?: string;     // NOVO (ADITIVO) — quando validity.enabled
 }
 ```
 
-**Data flow:** request-response (AI vision review); prompt vars `mandatoryArtworkTextSection` (builds at ~40+) consume `input.mandatoryArtworkText` — reviewer receives empty string when `enabled=false` (D9, task 6.5).
+**Data flow:** request-response (AI vision review); prompt vars `mandatoryArtworkTextSection` (builds at ~40+) consume `input.legalNoticeText` — reviewer receives empty/undefined when `enabled=false` (D9, task 6.5). `mandatoryArtworkText` permanece APENAS no transporte flat/form (GenerateImageRequestSchema 21) e no mapper flat→brief (legalNotice).
 
 ---
 
