@@ -37,7 +37,7 @@
 | 38.2 | ✅ Admin de Custos Operacionais + Configurações Econômicas | 15/15 | Complete    | 2026-08-11 |
 | 38.2.1 | ✅ Snapshot Econômico | 7/7 | ✅ Complete | 2026-08-12 |
 | 39 | ✅ Brief Estruturado de Campanha (v1.5) | 8/8 | ✅ Complete | 2026-08-13 |
-| 40 | ● Campos Comerciais e Avisos do Brief (v1.5) | 2/9 | In Progress | — |
+| 40 | ● Campos Comerciais e Avisos do Brief (v1.5) | 3/9 | In Progress | — |
 | 41 | ○ Stripe / Monetização Pública (v1.7) | — | Pending    | — |
 
 ---
