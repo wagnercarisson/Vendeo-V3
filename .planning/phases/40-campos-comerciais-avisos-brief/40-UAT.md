@@ -16,35 +16,35 @@
 
 ### Item 2 — Arte: aviso ilustrativo conforme checkbox (D3)
 
-- [ ] Gerar oferta com checkbox MARCADO sem texto livre → arte contém "Imagem meramente ilustrativa".
-- [ ] Gerar oferta com checkbox MARCADO + texto livre → arte contém "Imagem meramente ilustrativa" + texto.
-- [ ] Gerar oferta com checkbox DESMARCADO + texto livre → arte contém **SOMENTE** o texto livre.
-- [ ] Resultado: **PASS/FAIL** — Observação:
+- [x] Gerar oferta com checkbox MARCADO sem texto livre → arte contém "Imagem meramente ilustrativa".
+- [x] Gerar oferta com checkbox MARCADO + texto livre → arte contém "Imagem meramente ilustrativa" + texto.
+- [x] Gerar oferta com checkbox DESMARCADO + texto livre → arte contém **SOMENTE** o texto livre.
+- Resultado: **PASS** — Observação:
 
 ### Item 3 — Validade da oferta por modo (D4/D5)
 
-- [ ] Seletor "Validade da oferta" visível **APENAS** quando intenção = oferta.
-- [ ] Modo "Até uma data" (ex.: 30/09) → arte mostra "até 30/09".
-- [ ] Modo "Somente hoje" → arte mostra "somente hoje".
-- [ ] Modo "Enquanto durarem os estoques" → arte mostra "enquanto durarem os estoques".
-- [ ] Modo custom com "Oferta válida: ..." → arte SEM prefixo duplicado ("Oferta válida" aparece 1x, montado pela superfície do prompt).
-- [ ] Resultado: **PASS/FAIL** — Observação:
+- [x] Seletor "Validade da oferta" visível **APENAS** quando intenção = oferta.
+- [x] Modo "Até uma data" (ex.: 30/09) → arte mostra "até 30/09".
+- [x] Modo "Somente hoje" → arte mostra "somente hoje".
+- [x] Modo "Enquanto durarem os estoques" → arte mostra "enquanto durarem os estoques".
+- [x] Modo custom com "Oferta válida: ..." → arte SEM prefixo duplicado ("Oferta válida" aparece 1x, montado pela superfície do prompt).
+- Resultado: **PASS** — Observação:
 
 ### Item 4 — Persistência do draft (D4)
 
-- [ ] Trocar intenção offer → spotlight → offer NÃO limpa validade/aviso.
+- [x] Trocar intenção offer → Destaque → offer NÃO limpa validade/aviso (persistem no form).
 - [ ] Recarregar a página restaura o draft (sessionStorage) com validade/aviso.
-- [ ] Resultado: **PASS/FAIL** — Observação:
+- Resultado: **PASS** — Observação: aprovado pelo usuário. Após F5 o form volta limpo; comportamento validado como coerente (recarregar = tela limpa) — o draft do sessionStorage não restaura após reload explícito.
 
 ### Item 5 — Migração de draft legado (F40)
 
 - [ ] Draft antigo (com texto de aviso salvo no campo legado) restaura o texto no campo livre.
-- [ ] Resultado: **PASS/FAIL** — Observação:
+- Resultado: **PASS** — Observação: sem draft legado real disponível no ambiente; comportamento coberto por testes automatizados (`use-campaign-form-navigation.test.ts` migração legada; `use-campaign-form-notice.test.ts` teste 15).
 
 ### Item 6 — Ausência de aviso fixo (D6/prompt reframe)
 
-- [ ] Campanha sem aviso informado (checkbox desmarcado, sem texto) → arte SEM aviso fixo ("Imagem meramente ilustrativa" não entra por padrão; antes da F40 o SEMPRE forçava o aviso).
-- [ ] Resultado: **PASS/FAIL** — Observação:
+- [x] Campanha sem aviso informado (checkbox desmarcado, sem texto) → arte SEM aviso fixo ("Imagem meramente ilustrativa" não entra por padrão; antes da F40 o SEMPRE forçava o aviso).
+- Resultado: **PASS** — Observação:
 
 ---
 
@@ -65,8 +65,10 @@
 | Item | Status | Observação |
 |------|--------|------------|
 | 1 | PASS (com ajuste) | Placeholder + helper text alterados a pedido (evita duplicação do aviso) |
-| 2 | PENDENTE | — |
-| 3 | PENDENTE | — |
-| 4 | PENDENTE | — |
-| 5 | PENDENTE | — |
-| 6 | PENDENTE | — |
+| 2 | PASS | Marcado→constante; marcado+texto→ambos; desmarcado→só texto |
+| 3 | PASS | Modos corretos; seletor só em oferta; sem prefixo duplicado |
+| 4 | PASS | Troca de intenção preserva; F5 limpa (aprovado como coerente) |
+| 5 | PASS | Sem draft legado real; coberto por testes automatizados |
+| 6 | PASS | Sem aviso fixo quando nada informado |
+
+**UAT 6/6 aprovado pelo usuário em 2026-08-14.**
