@@ -16,7 +16,8 @@ describe("maskWhatsApp", () => {
 
   it("mascara progressivamente entradas parciais", () => {
     expect(maskWhatsApp("119")).toBe("(11) 9");
-    expect(maskWhatsApp("119999")).toBe("(11) 99999");
+    expect(maskWhatsApp("119999")).toBe("(11) 9999");
+    expect(maskWhatsApp("1199999")).toBe("(11) 99999");
   });
 
   it("é idempotente para valor já mascarado (paste)", () => {
