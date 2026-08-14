@@ -190,13 +190,13 @@ describe('ImageReviewService', () => {
       productName: 'Produto Teste',
       storeName: 'Loja Teste',
       campaignIntent: 'offer',
-      legalNoticeText: 'Imagens meramente ilustrativas',
+      legalNoticeText: 'Imagem meramente ilustrativa',
     };
 
     await service.review('data:image/jpeg;base64,abc', input);
 
     const vars = mockLoader.load.mock.calls[0][1];
-    expect(vars.mandatoryArtworkTextSection).toContain('Imagens meramente ilustrativas');
+    expect(vars.mandatoryArtworkTextSection).toContain('Imagem meramente ilustrativa');
     expect(vars.mandatoryArtworkTextSection).toMatch(/conteudo essencial/i);
     expect(vars.mandatoryArtworkTextSection).toMatch(/Nao reprove apenas/i);
     expect(vars.mandatoryArtworkTextSection).toMatch(/quebra de linha/i);

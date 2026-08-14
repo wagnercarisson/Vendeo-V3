@@ -239,7 +239,7 @@ describe('ImageGenerationService.validatePrompts', () => {
     });
 
     const brief = createMinimalBrief({
-      mandatoryArtworkText: 'Imagens meramente ilustrativas',
+      mandatoryArtworkText: 'Imagem meramente ilustrativa',
       campaignDetails: 'Frete grátis acima de R$ 100',
       additionalDetails: 'Válido somente em loja física',
     });
@@ -252,7 +252,7 @@ describe('ImageGenerationService.validatePrompts', () => {
     const vars = reviewerCall![1] as Record<string, string>;
     expect(vars).toHaveProperty('mandatoryArtworkTextSection');
     expect(vars).toHaveProperty('authorizedContextSection');
-    expect(vars.mandatoryArtworkTextSection).toContain('Imagens meramente ilustrativas');
+    expect(vars.mandatoryArtworkTextSection).toContain('Imagem meramente ilustrativa');
     expect(vars.authorizedContextSection).toContain('Frete grátis acima de R$ 100');
     expect(vars.authorizedContextSection).toContain('Válido somente em loja física');
   });
@@ -269,7 +269,7 @@ describe('ImageGenerationService.validatePrompts', () => {
     });
 
     const brief = createMinimalBrief({
-      mandatoryArtworkText: 'Imagens meramente ilustrativas',
+      mandatoryArtworkText: 'Imagem meramente ilustrativa',
       campaignDetails: 'Frete grátis acima de R$ 100',
       additionalDetails: 'Válido somente em loja física',
     });
@@ -336,7 +336,7 @@ describe('ImageGenerationService.generateImage', () => {
     );
 
     const brief = createMinimalBrief({
-      mandatoryArtworkText: 'Imagens meramente ilustrativas',
+      mandatoryArtworkText: 'Imagem meramente ilustrativa',
       campaignDetails: 'Frete grátis acima de R$ 100',
       additionalDetails: 'Válido somente em loja física',
     });
@@ -346,7 +346,7 @@ describe('ImageGenerationService.generateImage', () => {
     expect(result.success).toBe(true);
     expect(mockImageReview.review).toHaveBeenCalledTimes(1);
     const reviewInput = mockImageReview.review.mock.calls[0][1];
-    expect(reviewInput.legalNoticeText).toBe('Imagens meramente ilustrativas');
+    expect(reviewInput.legalNoticeText).toBe('Imagem meramente ilustrativa');
     expect(reviewInput.campaignDetails).toBe('Frete grátis acima de R$ 100');
     expect(reviewInput.additionalDetails).toBe('Válido somente em loja física');
   });
@@ -577,6 +577,32 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
     expect(Object.keys(vars)).toHaveLength(38);
     expect(vars.campaignIntent).toBe('exclusive');
     expect(vars.commercialFrame).toContain('sem divulgação de preço');
+  });
+
+  it('9.3 legalNotice ausente (enabled=false) → mandatoryArtworkText vazio no prompt (spotlight e exclusive)', () => {
+    const service = buildService();
+
+    const spotlight = createMinimalBrief({ campaignIntent: 'spotlight', preserveImageContext: true });
+    const spotlightVars = (service as any).buildPromptVariables(spotlight, createContext(), spotlight.product.name) as Record<string, string>;
+    expect(spotlightVars.mandatoryArtworkText).toBe('');
+
+    const exclusive = createMinimalBrief({ campaignIntent: 'exclusive' });
+    const exclusiveVars = (service as any).buildPromptVariables(exclusive, createContext(), exclusive.product.name) as Record<string, string>;
+    expect(exclusiveVars.mandatoryArtworkText).toBe('');
+  });
+
+  it('9.5 golden offer com novos campos preenchidos mantém 38 keys (D6)', () => {
+    const service = buildService();
+    const brief = createMinimalBrief({
+      validity: 'até 30/09',
+      mandatoryArtworkText: 'Imagem meramente ilustrativa',
+    });
+    const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
+
+    expect(Object.keys(vars)).toHaveLength(38);
+    expect([...EXPECTED_KEYS].sort()).toEqual(Object.keys(vars).sort());
+    expect(vars.validity).toBe('até 30/09');
+    expect(vars.mandatoryArtworkText).toBe('Imagem meramente ilustrativa');
   });
 
   it('8.17 buildCommercialRepertoire decide por validity.enabled/displayText (sem heurística string)', () => {
