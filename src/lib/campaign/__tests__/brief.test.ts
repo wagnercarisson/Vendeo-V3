@@ -7,6 +7,7 @@ import {
   type CampaignBriefSnapshot,
 } from "../brief";
 import { campaignBriefSchema, productSchema } from "../brief-schema";
+import { ILLUSTRATIVE_NOTICE_TEXT } from "../constants";
 
 // Fixture base com overrides spread-last (padrão store.test.ts:180-195).
 function baseBrief(overrides: Partial<CampaignBrief> = {}): CampaignBrief {
@@ -296,7 +297,7 @@ describe("8.8 validity/legalNotice via buildCampaignBriefFromFlat (F40)", () => 
   });
 
   it("mandatoryArtworkText concatenado → commercial.legalNotice.text integral (nova linha preservada)", () => {
-    const text = "Imagem meramente ilustrativa\nTexto";
+    const text = `${ILLUSTRATIVE_NOTICE_TEXT}\nTexto`;
     const brief = buildCampaignBriefFromFlat(
       { ...FLAT_BASE, mandatoryArtworkText: text },
       FLAT_BASE.storeId

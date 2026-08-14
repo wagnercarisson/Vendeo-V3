@@ -789,6 +789,27 @@ describe('POST /api/campaign/generate-image', () => {
     );
   });
 
+  it('validity no inputSnapshot (snapshot versionado — commercial.validity.displayText)', async () => {
+    await setupSuccessMocks();
+
+    const { POST } = await import('../route');
+    const req = makeRequest({ ...VALID_REQUEST_BODY, validity: 'até 30/09' });
+    const _res = await POST(req);
+    await _res.text();
+
+    expect(createCampaign).toHaveBeenCalledWith(
+      STORE_ID,
+      expect.objectContaining({
+        inputSnapshot: expect.objectContaining({
+          schemaVersion: 'campaign_brief_v1',
+          commercial: expect.objectContaining({
+            validity: { enabled: true, displayText: 'até 30/09' },
+          }),
+        }),
+      })
+    );
+  });
+
   it('mandatoryArtworkText no Image Director', async () => {
     await setupSuccessMocks();
 

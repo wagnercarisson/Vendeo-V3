@@ -321,6 +321,44 @@ function FormContent({
         )}
       </div>
 
+      <div>
+        <label
+          htmlFor="description"
+          className="block text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2"
+        >
+          Descrição{" "}
+          <span className="font-normal normal-case tracking-normal text-text-disabled">
+            (opcional)
+          </span>
+        </label>
+        <div className="relative">
+          <textarea
+            id="description"
+            value={fields.description}
+            onChange={(e) => setField("description", e.target.value)}
+            onBlur={() => handleBlur("description")}
+            placeholder="Ex: 20% OFF em todo o estoque"
+            maxLength={120}
+            rows={3}
+            disabled={isSubmitting}
+            className={`min-h-[44px] w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 resize-none ${
+              touched.description && fieldErrors.description
+                ? "border-accent-red"
+                : "border-border-light hover:border-text-muted"
+            }`}
+          />
+          <p className="text-xs text-text-muted text-right mt-1">
+            {fields.description.length}/120
+          </p>
+        </div>
+        {touched.description && fieldErrors.description && (
+          <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs">
+            <AlertCircle className="w-3.5 h-3.5" />
+            {fieldErrors.description}
+          </p>
+        )}
+      </div>
+
       <CampaignImageUpload
         imageFile={fields.imageFile}
         error={touched.imageFile ? fieldErrors.imageFile ?? null : null}
@@ -390,44 +428,6 @@ function FormContent({
           <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs">
             <AlertCircle className="w-3.5 h-3.5" />
             {fieldErrors.discountedPriceCents}
-          </p>
-        )}
-      </div>
-
-      <div>
-        <label
-          htmlFor="description"
-          className="block text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2"
-        >
-          Descrição{" "}
-          <span className="font-normal normal-case tracking-normal text-text-disabled">
-            (opcional)
-          </span>
-        </label>
-        <div className="relative">
-          <textarea
-            id="description"
-            value={fields.description}
-            onChange={(e) => setField("description", e.target.value)}
-            onBlur={() => handleBlur("description")}
-            placeholder="Ex: 20% OFF em todo o estoque"
-            maxLength={120}
-            rows={3}
-            disabled={isSubmitting}
-            className={`min-h-[44px] w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 resize-none ${
-              touched.description && fieldErrors.description
-                ? "border-accent-red"
-                : "border-border-light hover:border-text-muted"
-            }`}
-          />
-          <p className="text-xs text-text-muted text-right mt-1">
-            {fields.description.length}/120
-          </p>
-        </div>
-        {touched.description && fieldErrors.description && (
-          <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs">
-            <AlertCircle className="w-3.5 h-3.5" />
-            {fieldErrors.description}
           </p>
         )}
       </div>

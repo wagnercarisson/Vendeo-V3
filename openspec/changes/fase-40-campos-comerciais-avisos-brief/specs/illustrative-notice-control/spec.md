@@ -45,10 +45,11 @@ O sistema SHALL centralizar o texto do aviso ilustrativo em uma única constante
 - **THEN** o valor é exatamente `ILLUSTRATIVE_NOTICE_TEXT` (singular, via `src/lib/campaign/constants.ts`)
 - **AND** não há string solta/divergente (singular × plural) no form
 
-#### Scenario: Placeholder do textarea usa a constante
+#### Scenario: Placeholder do textarea usa exemplo amplo sem a constante
 
 - **WHEN** o textarea "Texto obrigatório na arte" é renderizado
-- **THEN** o placeholder referencia a constante única (`ILLUSTRATIVE_NOTICE_TEXT`), sem variante plural divergente
+- **THEN** o placeholder referencia um **exemplo amplo de regra/restrição** (ex.: "Consulte condições na loja. Promoção não cumulativa.") com helper text indicando o propósito do campo — **NÃO** referencia `ILLUSTRATIVE_NOTICE_TEXT`, para **não induzir o lojista a duplicar** o aviso ilustrativo no campo livre (decisão de UX aprovada na UAT item 1, `2026-08-14`)
+- **AND** não há variante plural divergente do aviso no form
 
 ### Requirement: Transporte normaliza para texto final (concatenação)
 
