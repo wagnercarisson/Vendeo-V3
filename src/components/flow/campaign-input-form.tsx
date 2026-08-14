@@ -6,6 +6,8 @@ import { CampaignImageUpload } from "./campaign-image-upload";
 import { GenerationProgress } from "./generation-progress";
 import { BADGE_OPTIONS, BADGE_OPTIONS_BY_INTENT } from "@/lib/constants";
 import { MandatoryArtworkField } from "@/components/campaign/mandatory-artwork-field";
+import { IllustrativeNoticeField } from "@/components/campaign/illustrative-notice-field";
+import { ValidityField } from "@/components/campaign/validity-field";
 import type { CampaignIntent } from "@/lib/campaign/types";
 import {
   AlertCircle,
@@ -286,6 +288,9 @@ function FormContent({
       noValidate
       className="space-y-5"
     >
+      <h2 className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2">
+        Produto
+      </h2>
       <div>
         <label
           htmlFor="productName"
@@ -323,6 +328,9 @@ function FormContent({
         onSelect={(file) => setField("imageFile", file)}
       />
 
+      <h2 className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2">
+        Oferta
+      </h2>
       <div>
         <label
           htmlFor="originalPrice"
@@ -500,9 +508,32 @@ function FormContent({
         </label>
       )}
 
+      {fields.campaignIntent === "offer" && (
+        <ValidityField
+          mode={fields.validityMode}
+          startDate={fields.validityStartDate}
+          endDate={fields.validityEndDate}
+          customText={fields.validityCustomText}
+          disabled={isSubmitting}
+          onModeChange={(m) => setField("validityMode", m)}
+          onStartDateChange={(d) => setField("validityStartDate", d)}
+          onEndDateChange={(d) => setField("validityEndDate", d)}
+          onCustomTextChange={(t) => setField("validityCustomText", t)}
+        />
+      )}
+
+      <h2 className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2">
+        Avisos e texto obrigatório
+      </h2>
+
+      <IllustrativeNoticeField
+        checked={fields.showIllustrativeNotice}
+        onChange={(c) => setField("showIllustrativeNotice", c)}
+      />
+
       <MandatoryArtworkField
-        value={fields.mandatoryArtworkText}
-        onChange={(v) => setField("mandatoryArtworkText", v)}
+        value={fields.mandatoryArtworkTextFree}
+        onChange={(v) => setField("mandatoryArtworkTextFree", v)}
       />
 
       <div className="pt-2 space-y-3">

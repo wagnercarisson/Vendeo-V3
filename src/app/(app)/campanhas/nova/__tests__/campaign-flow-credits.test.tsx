@@ -36,6 +36,12 @@ vi.mock("@/components/flow/use-campaign-form", () => {
         campaignIntent: "offer",
         preserveImageContext: false,
         mandatoryArtworkText: "",
+        showIllustrativeNotice: true,
+        mandatoryArtworkTextFree: "",
+        validityMode: "",
+        validityStartDate: "",
+        validityEndDate: "",
+        validityCustomText: "",
       },
       fieldErrors: {},
       touched: {},
@@ -75,6 +81,14 @@ vi.mock("@/lib/constants", () => ({
 
 vi.mock("@/components/campaign/mandatory-artwork-field", () => ({
   MandatoryArtworkField: () => null,
+}));
+
+vi.mock("@/components/campaign/illustrative-notice-field", () => ({
+  IllustrativeNoticeField: () => null,
+}));
+
+vi.mock("@/components/campaign/validity-field", () => ({
+  ValidityField: () => null,
 }));
 
 vi.mock("@/components/flow/campaign-image-upload", () => ({
