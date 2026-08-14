@@ -4,13 +4,13 @@ milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 current_phase: 40
 status: in_progress
-last_updated: "2026-08-14T00:00:00.000Z"
+last_updated: "2026-08-14T20:42:58.844Z"
 progress:
-  total_phases: 3
+  total_phases: 4
   completed_phases: 3
-  total_plans: 30
-  completed_plans: 30
-  percent: 100
+  total_plans: 39
+  completed_plans: 31
+  percent: 75
 ---
 
 # Project State
@@ -18,6 +18,20 @@ progress:
 **Last updated:** 2026-08-14 — **F40 (Campos Comerciais e Avisos do Brief, v1.5) em PLANEJAMENTO** — renumeração D1 aplicada (F40 = Campos Comerciais e Avisos do Brief, Stripe/Monetização Pública → F41, v1.7); fonte da verdade `openspec/changes/fase-40-campos-comerciais-avisos-brief/`. **F39 (Brief Estruturado de Campanha, v1.5) CONCLUÍDA — 8/8 plans, 1950 testes, 4 gates verdes**: 39-01 ✅ renumeração D1 (F39 = Brief, Stripe → F40, v1.7 — 6 arquivos de runbook); 39-02 ✅ contrato de domínio CampaignBrief (brief.ts + brief-schema.ts sem server-only, invariante exatamente-1-primary, 21 testes); 39-03 ✅ rename wrapper CampaignBrief → ResolvedCampaignContext + InputSnapshot → CampaignBriefSnapshot (8.21); 39-04 ✅ mapper buildCampaignBriefFromFlat + builder buildCampaignBriefSnapshot (round-trip + varredura sem base64, 21 testes); 39-05 ✅ costuras copy + review (mapBriefToCopyDirectorInput(brief, context, input) do domínio, ImageReviewInput com legalNoticeText canônico + validityText, 8.19/8.20); 39-06 ✅ costuras image-generation (buildPromptVariables/buildCommercialRepertoire do domínio, heurística de validade removida, ponte media.primary.dataUrl, golden tests por intent 8.16-8.18, rota wired); 39-07 ✅ rota com snapshot versionado campaign_brief_v1 via buildCampaignBriefSnapshot + route.test.ts co-migrado + benchmark via mapper; 39-08 ✅ verificação (vitest 1950/1950, typecheck/lint/build exit 0, 39-VERIFICATION.md + 39-UAT.md — **UAT humano APROVADO 5/5**). Sem migration SQL (jsonb tolerante — D6). **Antercessora concluída: F38.2 (Admin de Custos Operacionais + Configurações Econômicas) — 11/11 plans**: 38-2-01 ✅ migrations 3 + db push [BLOCKING] aplicado no remoto (economic_parameters + audit + seeds 1.00/1.00 + RPC admin_set_economic_parameter + RLS service_role; 4 colunas de confiança em generation_events; RPCs admin_get_ai_operation_runs/_events com filtros/paginação/P95/evidências de segmento/insumos de badge); 38-2-02 ✅ tipos econômicos sem server-only (ECONOMIC_PARAMETER_KEYS/EconomicParameterKey/EconomicParameterResolution) + EconomicParameterService server-only fail-open (fallback 1.00)/fail-closed (EconomicParameterUnavailableError → 503) + getAll com source + 10 testes; 38-2-03 ✅ AiCostTracker persiste 4 campos de confiança (D5); 38-2-04 ✅ API GET/PUT /api/admin/economic-parameters (zod + RPC admin_set_economic_parameter); 38-2-05 ✅ OperationRunsService (BRL D1/D4 + badges D5 + segmentação D9 + agregados D3 + detalhe D4, 20 testes); 38-2-06 ✅ API GET /api/admin/ai-operation-runs (lista + detalhe) com AiOperationRunsQuerySchema (janela default 90d/max 365d → 400) + 13 testes; 38-2-07 ✅ UI /admin/operation-costs → 'Configurações Econômicas' (título D2 + seção Parâmetros com ParamsForm: motivo obrigatório + badge source + audit_id + toFixed(2); nav renomeada; 503 fail-closed por seção; checkpoint humano aprovado com melhorias de UI + 8 testes). F38.1 Apuração de Custos de IA por Entrega **CONCLUÍDA — 11/11 plans**: 38-1-10 ✅ views/RPCs apuração + I1–I6 + gates + UAT manual validado; 38-1-11 ✅ runbook trackings. **Fechamento como camada de estimativa operacional granular** — ajuste provisório versionável da tool image_generation (fórmula responses_image_generation_v2): responses:image_generation = USD 0.065 é **estimativa operacional provisória para beta**, calibrada por UAT/dashboard/CSV da OpenAI — **NÃO é custo financeiro real**; a **reconciliação financeira real fica para a próxima fase**. 38/38+2 requirements, 1713 testes, typecheck/lint/build limpos; F38 concluída 8/8 plans, 1597 testes, UAT 4/4; renumeração D1: F37 = Revisão e Aprovação da Arte, F38 = Tabela de Custos, F39 = Brief Estruturado de Campanha, F40 = Stripe)
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆ **Em andamento**
 **Current phase:** 40
+
+### Phase 40 — Campos Comerciais e Avisos do Brief ◆ In Progress (9 plans / 5 waves)
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 40-01 | 1 | ✅ | Trackings / renumeração D1 (verificação grep-consistência F40 = Brief Comercial, Stripe → F41 nos 6 runbooks; zero resíduos) |
+| 40-02 | 1 | ○ | Constante única `ILLUSTRATIVE_NOTICE_TEXT` + checkbox `IllustrativeNoticeField` + placeholder normalizado |
+| 40-03 | 1 | ○ | Reframe do aviso ilustrativo nos 4 prompts do diretor (hardcode → bloco condicional) |
+| 40-04 | 2 | ○ | Form state 6 campos novos + helpers `buildMandatoryArtworkText`/`buildValidityDisplayText`/`formatDDMM` + body + migração de draft legado |
+| 40-05 | 3 | ○ | `ValidityField` presentacional + seções Produto/Oferta/Avisos + credits test co-migrado |
+| 40-06 | 3 | ○ | Testes 1-8 validade + 9-15 aviso + 8.8 brief |
+| 40-07 | 3 | ○ | Testes 16-21 prompt reframe + fixtures image-gen/review co-migradas |
+| 40-08 | 4 | ○ | route.test.ts fixtures + regressão completa |
+| 40-09 | 5 | ○ | Verificação final: gates + VERIFICATION.md + UAT humana (checkpoint) |
 
 ### Phase 39 — Brief Estruturado de Campanha ✅ Complete (8 plans / 7 waves)
 
