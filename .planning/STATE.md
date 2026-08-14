@@ -27,7 +27,7 @@ progress:
 | 40-02 | 1 | ✅ | Constante única `ILLUSTRATIVE_NOTICE_TEXT` + checkbox `IllustrativeNoticeField` + placeholder normalizado |
 | 40-03 | 1 | ✅ | Reframe do aviso ilustrativo nos 4 prompts do diretor (hardcode → bloco condicional) |
 | 40-04 | 2 | ✅ | Form state 6 campos novos + helpers `buildMandatoryArtworkText`/`buildValidityDisplayText`/`formatDDMM` + body + migração de draft legado |
-| 40-05 | 3 | ○ | `ValidityField` presentacional + seções Produto/Oferta/Avisos + credits test co-migrado |
+| 40-05 | 3 | ✅ | `ValidityField` presentacional + seções Produto/Oferta/Avisos + credits test co-migrado |
 | 40-06 | 3 | ○ | Testes 1-8 validade + 9-15 aviso + 8.8 brief |
 | 40-07 | 3 | ✅ | Testes 16-21 prompt reframe + fixtures image-gen/review co-migradas |
 | 40-08 | 4 | ○ | route.test.ts fixtures + regressão completa |
