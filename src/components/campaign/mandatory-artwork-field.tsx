@@ -1,7 +1,5 @@
 "use client";
 
-import { ILLUSTRATIVE_NOTICE_TEXT } from "@/lib/campaign/constants";
-
 interface MandatoryArtworkFieldProps {
   value: string;
   onChange: (value: string) => void;
@@ -23,11 +21,14 @@ export function MandatoryArtworkField({ value, onChange }: MandatoryArtworkField
         id="mandatoryArtworkText"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={`Ex: ${ILLUSTRATIVE_NOTICE_TEXT}`}
+        placeholder="Consulte condições na loja. Promoção não cumulativa."
         maxLength={200}
         rows={2}
         className="min-h-[44px] w-full bg-bg-surface border border-border-light rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 resize-none hover:border-text-muted"
       />
+      <p className="text-xs text-text-muted mt-1">
+        Use para regras, restrições ou informações que precisam aparecer na arte.
+      </p>
     </div>
   );
 }

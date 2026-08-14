@@ -9,9 +9,10 @@
 
 ### Item 1 — Form: seção "Avisos e texto obrigatório" (D3/D8)
 
-- [ ] Seção "Avisos e texto obrigatório" visível com checkbox "Exibir 'Imagem meramente ilustrativa'" **MARCADO por default**.
-- [ ] Campo texto obrigatório com placeholder "Ex: Imagem meramente ilustrativa" (singular).
-- [ ] Resultado: **PASS/FAIL** — Observação:
+- [x] Seção "Avisos e texto obrigatório" visível com checkbox "Exibir 'Imagem meramente ilustrativa'" **MARCADO por default**.
+- [x] Campo texto obrigatório com placeholder "Consulte condições na loja. Promoção não cumulativa." + helper text "Use para regras, restrições ou informações que precisam aparecer na arte." (ajuste pós-verificação — evita induzir o usuário a duplicar o aviso ilustrativo no campo livre).
+- [x] Form agrupado em 3 seções (Produto / Oferta / Avisos e texto obrigatório).
+- Resultado: **PASS** — Observação: aprovado com ajuste de placeholder/helper (desvio de design registrado).
 
 ### Item 2 — Arte: aviso ilustrativo conforme checkbox (D3)
 
@@ -63,7 +64,7 @@
 
 | Item | Status | Observação |
 |------|--------|------------|
-| 1 | PENDENTE | — |
+| 1 | PASS (com ajuste) | Placeholder + helper text alterados a pedido (evita duplicação do aviso) |
 | 2 | PENDENTE | — |
 | 3 | PENDENTE | — |
 | 4 | PENDENTE | — |
