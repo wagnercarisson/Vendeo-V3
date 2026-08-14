@@ -735,7 +735,13 @@ Plans:
 
 **Source of truth:** `openspec/changes/fase-40-campos-comerciais-avisos-brief/`
 
-**Plans:** pending
+**Plans:** 9/9 plans — 5 waves
+
+- **Wave 1** *(blocks waves 2–5)* — 40-01 (trackings D1 — grep-verificação 6 arquivos runbook), 40-02 (constante única `ILLUSTRATIVE_NOTICE_TEXT` + checkbox `IllustrativeNoticeField` + placeholder normalizado), 40-03 (reframe do aviso nos 4 prompts do diretor)
+- **Wave 2** *(blocked on Wave 1)* — 40-04 (form state 6 campos novos + helpers `buildMandatoryArtworkText`/`buildValidityDisplayText`/`formatDDMM` + body assembly + migração de draft legado + nav test co-migrado)
+- **Wave 3** *(blocked on Wave 2)* — 40-05 (`ValidityField` presentacional + seções Produto/Oferta/Avisos + credits test co-migrado), 40-06 (testes 1-8 validade + 9-15 aviso + 8.8 brief), 40-07 (testes 16-21 prompt reframe + fixtures image-gen/review co-migradas)
+- **Wave 4** *(blocked on Wave 3)* — 40-08 (route.test.ts fixtures + regressão completa)
+- **Wave 5** *(blocked on Wave 4)* — 40-09 (verificação final: gates + VERIFICATION.md + UAT humana — checkpoint)
 
 ---
 
