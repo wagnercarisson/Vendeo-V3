@@ -68,6 +68,12 @@ describe("useCampaignForm navigation", () => {
       preserveImageContext: false,
       imageFile: null,
       mandatoryArtworkText: "",
+      showIllustrativeNotice: true,
+      mandatoryArtworkTextFree: "",
+      validityMode: "",
+      validityStartDate: "",
+      validityEndDate: "",
+      validityCustomText: "",
     });
 
     const { result } = renderHook(() => useCampaignForm("store-123"));
@@ -107,6 +113,12 @@ describe("useCampaignForm navigation", () => {
       preserveImageContext: false,
       imageFile: null,
       mandatoryArtworkText: "",
+      showIllustrativeNotice: true,
+      mandatoryArtworkTextFree: "",
+      validityMode: "",
+      validityStartDate: "",
+      validityEndDate: "",
+      validityCustomText: "",
     });
 
     const { result } = renderHook(() => useCampaignForm("store-123"));
@@ -147,6 +159,12 @@ describe("useCampaignForm navigation", () => {
       preserveImageContext: false,
       imageFile: null,
       mandatoryArtworkText: "",
+      showIllustrativeNotice: true,
+      mandatoryArtworkTextFree: "",
+      validityMode: "",
+      validityStartDate: "",
+      validityEndDate: "",
+      validityCustomText: "",
     });
 
     const { result } = renderHook(() => useCampaignForm("store-123"));
@@ -163,5 +181,50 @@ describe("useCampaignForm navigation", () => {
       expect(mockPush).toHaveBeenCalled();
       expect(sessionStorage.getItem("campaign_draft_image")).toBe(VALID_DATA_URL);
     });
+  });
+
+  it("migrates legacy mandatoryArtworkText draft into free text field on restore", async () => {
+    mockRestoreFormState.mockReturnValue({
+      productName: "X",
+      description: "",
+      originalPriceCents: 0,
+      discountedPriceCents: undefined,
+      badge: "",
+      campaignIntent: "offer",
+      preserveImageContext: false,
+      imageFile: null,
+      mandatoryArtworkText: "Legado",
+    });
+
+    const { result } = renderHook(() => useCampaignForm("store-123"));
+
+    await act(async () => {});
+
+    expect(result.current.fields.mandatoryArtworkTextFree).toBe("Legado");
+    expect(result.current.fields.mandatoryArtworkText).toBe("Legado");
+    expect(result.current.fields.showIllustrativeNotice).toBe(true);
+  });
+
+  it("restores mirror alongside free text for new-shape draft", async () => {
+    mockRestoreFormState.mockReturnValue({
+      productName: "X",
+      description: "",
+      originalPriceCents: 0,
+      discountedPriceCents: undefined,
+      badge: "",
+      campaignIntent: "offer",
+      preserveImageContext: false,
+      imageFile: null,
+      showIllustrativeNotice: false,
+      mandatoryArtworkTextFree: "Novo texto",
+      mandatoryArtworkText: "Novo texto",
+    });
+
+    const { result } = renderHook(() => useCampaignForm("store-123"));
+
+    await act(async () => {});
+
+    expect(result.current.fields.mandatoryArtworkTextFree).toBe("Novo texto");
+    expect(result.current.fields.mandatoryArtworkText).toBe("Novo texto");
   });
 });

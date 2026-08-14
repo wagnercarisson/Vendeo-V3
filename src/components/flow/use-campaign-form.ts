@@ -7,6 +7,7 @@ import { formatCurrencyBRL } from "@/lib/formatters";
 import { useInputPreservation } from "@/hooks/use-input-preservation";
 import type { GenerationPhaseEvent } from "@/lib/image-generation/schema";
 import type { CampaignIntent } from "@/lib/campaign/types";
+import { ILLUSTRATIVE_NOTICE_TEXT } from "@/lib/campaign/constants";
 
 function compressImage(file: File, maxSizeBytes: number = 1024 * 1024): Promise<{ file: File; dataUrl: string }> {
   return new Promise((resolve, reject) => {
@@ -72,6 +73,8 @@ function compressImage(file: File, maxSizeBytes: number = 1024 * 1024): Promise<
   });
 }
 
+export type ValidityMode = "" | "until-date" | "range" | "today" | "stock" | "custom";
+
 export interface CampaignFormFields {
   productName: string;
   description: string;
@@ -81,7 +84,13 @@ export interface CampaignFormFields {
   campaignIntent: CampaignIntent;
   preserveImageContext: boolean;
   imageFile: File | null;
-  mandatoryArtworkText: string;
+  mandatoryArtworkText: string; // compat/derivado: espelho de mandatoryArtworkTextFree, NUNCA o texto final concatenado (D3)
+  showIllustrativeNotice: boolean;
+  mandatoryArtworkTextFree: string;
+  validityMode: ValidityMode;
+  validityStartDate: string;
+  validityEndDate: string;
+  validityCustomText: string;
 }
 
 export type FieldErrors = Partial<
@@ -94,7 +103,13 @@ export type FieldErrors = Partial<
     | "campaignIntent"
     | "preserveImageContext"
     | "imageFile"
-    | "mandatoryArtworkText",
+    | "mandatoryArtworkText"
+    | "showIllustrativeNotice"
+    | "mandatoryArtworkTextFree"
+    | "validityMode"
+    | "validityStartDate"
+    | "validityEndDate"
+    | "validityCustomText",
     string
   >
 >;
@@ -140,6 +155,12 @@ const EMPTY_FIELDS: CampaignFormFields = {
   preserveImageContext: false,
   imageFile: null,
   mandatoryArtworkText: "",
+  showIllustrativeNotice: true,
+  mandatoryArtworkTextFree: "",
+  validityMode: "",
+  validityStartDate: "",
+  validityEndDate: "",
+  validityCustomText: "",
 };
 
 function validateProductName(value: string): string | null {
@@ -205,6 +226,50 @@ function validateField(
   }
 }
 
+export function formatDDMM(isoDate: string): string {
+  const parts = isoDate.split("-");
+  if (!isoDate || parts.length !== 3) return isoDate;
+  return `${parts[2]}/${parts[1]}`;
+}
+
+export function buildValidityDisplayText(fields: {
+  validityMode: ValidityMode;
+  validityStartDate: string;
+  validityEndDate: string;
+  validityCustomText: string;
+}): string | undefined {
+  switch (fields.validityMode) {
+    case "":
+      return undefined;
+    case "until-date":
+      return fields.validityEndDate ? `até ${formatDDMM(fields.validityEndDate)}` : undefined;
+    case "range":
+      return fields.validityStartDate && fields.validityEndDate
+        ? `de ${formatDDMM(fields.validityStartDate)} até ${formatDDMM(fields.validityEndDate)}`
+        : undefined;
+    case "today":
+      return "somente hoje";
+    case "stock":
+      return "enquanto durarem os estoques";
+    case "custom":
+      return fields.validityCustomText.replace(/^Oferta válida[:\s-]*/i, "").trim() || undefined;
+    default:
+      return undefined;
+  }
+}
+
+export function buildMandatoryArtworkText(
+  showNotice: boolean,
+  freeText: string
+): string | undefined {
+  const notice = showNotice ? ILLUSTRATIVE_NOTICE_TEXT : "";
+  const free = freeText.trim();
+  if (notice && free) return `${notice}\n${free}`;
+  if (notice) return notice;
+  if (free) return free;
+  return undefined;
+}
+
 export function inferIntent(
   originalPriceCents: number,
   discountedPriceCents: number | undefined | null
@@ -230,6 +295,12 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     preserveImageContext: false,
     imageFile: false,
     mandatoryArtworkText: false,
+    showIllustrativeNotice: false,
+    mandatoryArtworkTextFree: false,
+    validityMode: false,
+    validityStartDate: false,
+    validityEndDate: false,
+    validityCustomText: false,
   });
   const [rawOriginalPrice, setRawOriginalPrice] = useState("");
   const [rawDiscountedPrice, setRawDiscountedPrice] = useState("");
@@ -253,8 +324,14 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     const saved = restoreFormState();
     if (saved) {
       // imageFile can't be serialized — restore as null
-      const { imageFile: _, ...rest } = saved;
-      setFields((prev) => ({ ...prev, ...rest, imageFile: null }));
+      const legacy = saved as CampaignFormFields & { mandatoryArtworkText?: string };
+      const { imageFile: _, mandatoryArtworkText: legacyNotice, ...rest } = legacy;
+      const restored = {
+        ...rest,
+        mandatoryArtworkTextFree: rest.mandatoryArtworkTextFree ?? legacyNotice ?? "",
+        mandatoryArtworkText: rest.mandatoryArtworkTextFree ?? legacyNotice ?? "",
+      };
+      setFields((prev) => ({ ...prev, ...restored, imageFile: null }));
       if (saved.originalPriceCents > 0) {
         setRawOriginalPrice(String(saved.originalPriceCents));
       }
@@ -382,6 +459,8 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     (field: keyof CampaignFormFields, value: string | number | boolean | File | null | undefined) => {
       setFields((prev) => {
         const next = { ...prev, [field]: value as never };
+        if (field === "mandatoryArtworkText") next.mandatoryArtworkTextFree = value as string;
+        if (field === "mandatoryArtworkTextFree") next.mandatoryArtworkText = value as string;
         if (field === "campaignIntent") {
           userChangedIntent.current = true;
         }
@@ -573,6 +652,12 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
       "preserveImageContext",
       "imageFile",
       "mandatoryArtworkText",
+      "showIllustrativeNotice",
+      "mandatoryArtworkTextFree",
+      "validityMode",
+      "validityStartDate",
+      "validityEndDate",
+      "validityCustomText",
     ];
 
     for (const field of allFields) {
@@ -596,6 +681,12 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
         preserveImageContext: true,
         imageFile: true,
         mandatoryArtworkText: true,
+        showIllustrativeNotice: true,
+        mandatoryArtworkTextFree: true,
+        validityMode: true,
+        validityStartDate: true,
+        validityEndDate: true,
+        validityCustomText: true,
       });
       setIsSubmitting(false);
       return;
@@ -622,6 +713,14 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
         throw new Error("Imagem do produto é obrigatória");
       }
 
+      const validity = frozenFields.campaignIntent === "offer"
+        ? buildValidityDisplayText(frozenFields)
+        : undefined;
+      const mandatoryArtworkText = buildMandatoryArtworkText(
+        frozenFields.showIllustrativeNotice,
+        frozenFields.mandatoryArtworkTextFree,
+      );
+
       const body: Record<string, unknown> = {
         storeId,
         productName: frozenFields.productName,
@@ -633,7 +732,8 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
         ...(frozenFields.campaignIntent === "offer"
           ? {}
           : { preserveImageContext: frozenFields.preserveImageContext }),
-        mandatoryArtworkText: frozenFields.mandatoryArtworkText || undefined,
+        ...(validity !== undefined ? { validity } : {}),
+        ...(mandatoryArtworkText !== undefined ? { mandatoryArtworkText } : {}),
         productImageDataUrl: imageDataUrl,
       };
 
