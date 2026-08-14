@@ -74,23 +74,24 @@ Use these entry points:
 
 Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
 
-## Phase 39 — Brief Estruturado de Campanha
+## Phase 40 — Campos Comerciais e Avisos do Brief
 
-**Status:** 8/8 plans completed ✅ — 1950 testes, 4 gates verdes, UAT aprovado 5/5
+**Status:** 9/9 plans completed ✅ — 1997 testes, 4 gates verdes, UAT aprovado 6/6
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
-| 39-01 | 1 | ✅ | Trackings / renumeração D1 (F39 = Brief, Stripe → F40) |
-| 39-02 | 1 | ✅ | Contrato de domínio `CampaignBrief` + zod per-domínio + invariante exatamente-1-primary |
-| 39-03 | 2 | ✅ | Rename wrapper `CampaignBrief` → `ResolvedCampaignContext` + `InputSnapshot` → `CampaignBriefSnapshot` |
-| 39-04 | 3 | ✅ | Mapper `buildCampaignBriefFromFlat` + builder `buildCampaignBriefSnapshot` (round-trip, sem base64) |
-| 39-05 | 4 | ✅ | Costuras copy + review do domínio (`mapBriefToCopyDirectorInput`, `ImageReviewInput` legalNoticeText/validityText) |
-| 39-06 | 5 | ✅ | Costuras image-generation do domínio + golden tests por intent (38 variáveis idênticas) |
-| 39-07 | 6 | ✅ | Rota: snapshot versionado `campaign_brief_v1` via builder + benchmark via mapper |
-| 39-08 | 7 | ✅ | Testes e Verificação — 1950 total, typecheck/lint/build, VERIFICATION.md + UAT |
+| 40-01 | 1 | ✅ | Trackings / renumeração D1 (verificação grep-consistência F40 = Brief Comercial, Stripe → F41 nos 6 runbooks; zero resíduos) |
+| 40-02 | 1 | ✅ | Constante única `ILLUSTRATIVE_NOTICE_TEXT` + checkbox `IllustrativeNoticeField` + placeholder normalizado |
+| 40-03 | 1 | ✅ | Reframe do aviso ilustrativo nos 4 prompts do diretor (hardcode → bloco condicional) |
+| 40-04 | 2 | ✅ | Form state 6 campos novos + helpers `buildMandatoryArtworkText`/`buildValidityDisplayText`/`formatDDMM` + body + migração de draft legado |
+| 40-05 | 3 | ✅ | `ValidityField` presentacional + seções Produto/Oferta/Avisos + credits test co-migrado |
+| 40-06 | 3 | ✅ | Testes 1-8 validade + 9-15 aviso + 8.8 brief |
+| 40-07 | 3 | ✅ | Testes 16-21 prompt reframe + fixtures image-gen/review co-migradas |
+| 40-08 | 4 | ✅ | route.test.ts fixtures + regressão completa |
+| 40-09 | 5 | ✅ | Verificação final: gates + VERIFICATION.md + UAT humana (checkpoint) |
 
-**Change artifacts (source of truth):** `openspec/changes/fase-39-brief-estruturado-campanha/`
-**Context:** `.planning/phases/39-brief-estruturado-campanha/39-CONTEXT.md`
+**Change artifacts (source of truth):** `openspec/changes/fase-40-campos-comerciais-avisos-brief/`
+**Context:** `.planning/phases/40-campos-comerciais-avisos-brief/40-CONTEXT.md`
 **State:** `.planning/STATE.md`
 **Roadmap:** `ROADMAP.md`
 <!-- GSD:workflow-end -->

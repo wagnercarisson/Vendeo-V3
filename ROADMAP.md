@@ -157,7 +157,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - Fonte da verdade: `openspec/changes/fase-39-brief-estruturado-campanha/`
   - **Dependências:** F38.2.1 (snapshot econômico), F31.x (prompts por intent), F24/F25 (pipeline) — antecede a F37 (Revisão e Aprovação da Arte)
 
-- [ ] Phase 40: Campos Comerciais e Avisos do Brief (pending)
+- [x] Phase 40: Campos Comerciais e Avisos do Brief (9/9 plans ✅)
   - Checkbox "Exibir 'Imagem meramente ilustrativa'" (default marcado) com constante única `ILLUSTRATIVE_NOTICE_TEXT` (singular), removendo o hardcode incondicional dos 4 prompts do diretor de imagem
   - Seção "Validade da oferta" (6 modos: sem validade / até uma data / de... até... / somente hoje / enquanto durarem os estoques / texto personalizado), `displayText` determinístico `dd/mm`, apenas para `campaignIntent === "offer"`
   - Formulário agrupado em Produto / Oferta / Avisos e texto obrigatório (checkbox + textarea coexistindo)
@@ -210,7 +210,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 38.2. Admin de Custos Operacionais + Configurações Econômicas | v1.5 | 15/15 | ✅ Complete | 2026-08-11 |
 | 38.2.1. Snapshot Econômico | v1.5 | 7/7 | ✅ Complete | 2026-08-12 |
 | 39. Brief Estruturado de Campanha | v1.5 | 8/8 | ✅ Complete | 2026-08-13 |
-| 40. Campos Comerciais e Avisos do Brief | v1.5 | 0/0 | ○ Pending | — |
+| 40. Campos Comerciais e Avisos do Brief | v1.5 | 9/9 | ✅ Complete | 2026-08-14 |
 | 41. Stripe / Monetização Pública | v1.7 | 0/0 | ○ Pending | — |
 
 ---
