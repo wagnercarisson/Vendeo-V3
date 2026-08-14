@@ -31,7 +31,7 @@ progress:
 | 40-06 | 3 | ✅ | Testes 1-8 validade + 9-15 aviso + 8.8 brief |
 | 40-07 | 3 | ✅ | Testes 16-21 prompt reframe + fixtures image-gen/review co-migradas |
 | 40-08 | 4 | ✅ | route.test.ts fixtures + regressão completa |
-| 40-09 | 5 | ○ | Verificação final: gates + VERIFICATION.md + UAT humana (checkpoint) |
+| 40-09 | 5 | ◆ | Verificação final: gates + VERIFICATION.md + UAT humana (checkpoint) |
 
 ### Phase 39 — Brief Estruturado de Campanha ✅ Complete (8 plans / 7 waves)
 
