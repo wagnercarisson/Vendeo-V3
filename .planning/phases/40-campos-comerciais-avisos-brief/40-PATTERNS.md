@@ -185,7 +185,7 @@ const EMPTY_FIELDS: CampaignFormFields = {
   mandatoryArtworkText: "",
   showIllustrativeNotice: true,     // D2: default marcado preserva comportamento atual
   mandatoryArtworkTextFree: "",
-  validityMode: "none",
+  validityMode: "",  // ValidityMode = "" | "until-date" | "range" | "today" | "stock" | "custom"
   validityStartDate: "",
   validityEndDate: "",
   validityCustomText: "",
@@ -410,11 +410,11 @@ Helper puro de modos→displayText (determinístico, testável isoladamente — 
 ```typescript
 function buildValidityDisplayText(fields: CampaignFormFields): string | undefined {
   switch (fields.validityMode) {
-    case "none": return undefined;
-    case "until": return `até ${formatDDMM(fields.validityEndDate)}`;
+    case "": return undefined;
+    case "until-date": return `até ${formatDDMM(fields.validityEndDate)}`;
     case "range": return `de ${formatDDMM(fields.validityStartDate)} até ${formatDDMM(fields.validityEndDate)}`;
     case "today": return "somente hoje";
-    case "while-stock-lasts": return "enquanto durarem os estoques";
+    case "stock": return "enquanto durarem os estoques";
     case "custom":
       return fields.validityCustomText
         .replace(/^Oferta válida\s*:?\s*/i, "")   // normalização leve D5
