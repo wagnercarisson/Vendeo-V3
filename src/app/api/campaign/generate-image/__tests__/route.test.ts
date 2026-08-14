@@ -527,7 +527,7 @@ describe('POST /api/campaign/generate-image', () => {
     await setupSuccessMocks();
 
     const { POST } = await import('../route');
-    const req = makeRequest({ ...VALID_REQUEST_BODY, mandatoryArtworkText: 'Imagens meramente ilustrativas' });
+    const req = makeRequest({ ...VALID_REQUEST_BODY, mandatoryArtworkText: 'Imagem meramente ilustrativa' });
     const _res = await POST(req);
     await _res.text();
 
@@ -772,7 +772,7 @@ describe('POST /api/campaign/generate-image', () => {
     await setupSuccessMocks();
 
     const { POST } = await import('../route');
-    const req = makeRequest({ ...VALID_REQUEST_BODY, mandatoryArtworkText: 'Imagens meramente ilustrativas' });
+    const req = makeRequest({ ...VALID_REQUEST_BODY, mandatoryArtworkText: 'Imagem meramente ilustrativa' });
     const _res = await POST(req);
     await _res.text();
 
@@ -782,7 +782,7 @@ describe('POST /api/campaign/generate-image', () => {
         inputSnapshot: expect.objectContaining({
           schemaVersion: 'campaign_brief_v1',
           commercial: expect.objectContaining({
-            legalNotice: { enabled: true, text: 'Imagens meramente ilustrativas' },
+            legalNotice: { enabled: true, text: 'Imagem meramente ilustrativa' },
           }),
         }),
       })
@@ -793,7 +793,7 @@ describe('POST /api/campaign/generate-image', () => {
     await setupSuccessMocks();
 
     const { POST } = await import('../route');
-    const req = makeRequest({ ...VALID_REQUEST_BODY, mandatoryArtworkText: 'Imagens meramente ilustrativas' });
+    const req = makeRequest({ ...VALID_REQUEST_BODY, mandatoryArtworkText: 'Imagem meramente ilustrativa' });
     const _res = await POST(req);
     await _res.text();
 
@@ -804,7 +804,7 @@ describe('POST /api/campaign/generate-image', () => {
     await setupSuccessMocks();
 
     const { POST } = await import('../route');
-    const req = makeRequest({ ...VALID_REQUEST_BODY, mandatoryArtworkText: 'Imagens meramente ilustrativas' });
+    const req = makeRequest({ ...VALID_REQUEST_BODY, mandatoryArtworkText: 'Imagem meramente ilustrativa' });
     const _res = await POST(req);
     await _res.text();
 
