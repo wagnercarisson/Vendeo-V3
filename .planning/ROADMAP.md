@@ -4,7 +4,7 @@
 
 **18 phases** | **177 requirements mapped** | All covered ✓
 
-**Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23. F35 = Changelog/Novidades, F36 = Onboarding — Navegação por Abas, F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), **F39 = Brief Estruturado de Campanha (v1.5)**, **F40 = Stripe/Monetização Pública (v1.7, pós-beta — renumerada de F39)** (renumeração alinhada no documento de alinhamento F39, precedente F37 D11). **38.1 = Apuração de Custos de IA por Entrega** (desdobramento da F38, mesmo milestone v1.5). **38.2 = Admin de Custos Operacionais + Configurações Econômicas** (desdobramento da F38, mesmo milestone v1.5).
+**Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23. F35 = Changelog/Novidades, F36 = Onboarding — Navegação por Abas, F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), **F39 = Brief Estruturado de Campanha (v1.5)**, **F40 = Campos Comerciais e Avisos do Brief (v1.5)**, **F41 = Stripe/Monetização Pública (v1.7, pós-beta — renumerada de F39 e de F40)** (renumeração alinhada no documento de alinhamento F40, precedente F37 D11). **38.1 = Apuração de Custos de IA por Entrega** (desdobramento da F38, mesmo milestone v1.5). **38.2 = Admin de Custos Operacionais + Configurações Econômicas** (desdobramento da F38, mesmo milestone v1.5).
 
 ---
 
@@ -37,7 +37,8 @@
 | 38.2 | ✅ Admin de Custos Operacionais + Configurações Econômicas | 15/15 | Complete    | 2026-08-11 |
 | 38.2.1 | ✅ Snapshot Econômico | 7/7 | ✅ Complete | 2026-08-12 |
 | 39 | ✅ Brief Estruturado de Campanha (v1.5) | 8/8 | ✅ Complete | 2026-08-13 |
-| 40 | ○ Stripe / Monetização Pública (v1.7) | — | Pending    | — |
+| 40 | ○ Campos Comerciais e Avisos do Brief (v1.5) | — | Pending    | — |
+| 41 | ○ Stripe / Monetização Pública (v1.7) | — | Pending    | — |
 
 ---
 
@@ -403,7 +404,7 @@
 
 **Source of truth:** `openspec/changes/fase-35-changelog-novidades/`
 
-**Renumeração (documentada no alinhamento F35):** F35 = Changelog/Novidades; F36 = Onboarding — Navegação por Abas (nova, v1.5); F37 = Revisão e Aprovação da Arte (v1.5); F38 = Tabela de Custos por Operação (v1.5); **F39 = Brief Estruturado de Campanha (v1.5)**; Stripe/Monetização Pública deslocada para F40 (v1.7, pós-beta).
+**Renumeração (documentada no alinhamento F35):** F35 = Changelog/Novidades; F36 = Onboarding — Navegação por Abas (nova, v1.5); F37 = Revisão e Aprovação da Arte (v1.5); F38 = Tabela de Custos por Operação (v1.5); **F39 = Brief Estruturado de Campanha (v1.5)**; **F40 = Campos Comerciais e Avisos do Brief (v1.5)**; Stripe/Monetização Pública deslocada para F41 (v1.7, pós-beta).
 
 **Plans:** 5/5 plans complete
 
@@ -464,7 +465,7 @@
 
 **Source of truth:** `openspec/changes/fase-36-onboarding-navegacao-por-abas/`
 
-**Renumeração (D14 + F39):** F36 = Onboarding — Navegação por Abas (nova, v1.5); F37 = Revisão e Aprovação da Arte (v1.5, experimento beta); F38 = Tabela de Custos por Operação (v1.5); **F39 = Brief Estruturado de Campanha (v1.5)**; Stripe / Monetização Pública deslocada para F40 (v1.7, pós-beta).
+**Renumeração (D14 + F39):** F36 = Onboarding — Navegação por Abas (nova, v1.5); F37 = Revisão e Aprovação da Arte (v1.5, experimento beta); F38 = Tabela de Custos por Operação (v1.5); **F39 = Brief Estruturado de Campanha (v1.5)**; **F40 = Campos Comerciais e Avisos do Brief (v1.5)**; Stripe / Monetização Pública deslocada para F41 (v1.7, pós-beta).
 
 **Plans:** 6/6 plans complete
 
@@ -568,7 +569,7 @@
 9. `admin_get_metrics` (F28) inalterado; `reserve_credit`/`credit_transactions` (F24) intactos; sem tabela `operation_runs`; sem UI admin de pricing/reconciliação (D1/D10)
 10. Furos 1–7 corrigidos; `npx vitest run`, `npm run typecheck`, `npm run lint`, `npm run build` — zero erros; 50 testes novos + verificação SQL/integrada I1–I6 + regressão completa
 
-**Dependencies:** Phase 24 (ledger `credit_transactions` — reconciliação por leitura), Phase 25/F28 (pipeline + telemetria, `admin_get_metrics`), Phase 29.1.1 (VS), Phase 37 (aprovação — decisão, não custa IA), Phase 38 (`credit_operation_costs` — eixo créditos), F40 (Stripe — consumirá o custo real)
+**Dependencies:** Phase 24 (ledger `credit_transactions` — reconciliação por leitura), Phase 25/F28 (pipeline + telemetria, `admin_get_metrics`), Phase 29.1.1 (VS), Phase 37 (aprovação — decisão, não custa IA), Phase 38 (`credit_operation_costs` — eixo créditos), F41 (Stripe — consumirá o custo real)
 
 **Source of truth:** `openspec/changes/fase-38-1-ai-cost-accounting/`
 
@@ -614,7 +615,7 @@ Plans:
 10. `/admin/metrics` corrigido (D6) — `getAvgCost` apura custo médio por entrega via call-level (não `campaign_pipeline.estimated_cost_usd`); card "**Custo Médio IA**"; USD→BRL via `economic_parameters.usd_brl_rate` (fonte única, não env)
 11. `npx vitest run`, `npm run typecheck`, `npm run lint`, `npm run build` — zero erros; ~40+ testes novos (12.x) + verificação SQL/integrada I1–I6 + regressão completa
 
-**Dependencies:** Phase 24 (ledger `credit_transactions` — leitura para segmentação D9), Phase 28 (métricas — leitura), Phase 38 (`credit_operation_costs` — eixo créditos), Phase 38.1 (`generation_events` call-level + views/RPCs — base da apuração), F40 (Stripe — consumirá os parâmetros calibrados e o custo apurado). **Sem** `operation_runs`, **sem** reconciliação OpenAI (F38.3), **sem** câmbio automático.
+**Dependencies:** Phase 24 (ledger `credit_transactions` — leitura para segmentação D9), Phase 28 (métricas — leitura), Phase 38 (`credit_operation_costs` — eixo créditos), Phase 38.1 (`generation_events` call-level + views/RPCs — base da apuração), F41 (Stripe — consumirá os parâmetros calibrados e o custo apurado). **Sem** `operation_runs`, **sem** reconciliação OpenAI (F38.3), **sem** câmbio automático.
 
 **Source of truth:** `openspec/changes/fase-38-2-admin-custos-operacionais/`
 
@@ -642,7 +643,7 @@ Plans:
 
 ### Phase 38.2.1: Snapshot Econômico
 
-**Goal:** Corrigir a base contábil da F38.2: congelar `usd_brl_rate_at_generation` (snapshot contábil do câmbio na geração) e `credit_value_brl_at_generation` (snapshot estimativo/fallback do valor do crédito na geração) em `generation_events` no momento da geração — impedindo que alterar `usd_brl_rate`/`credit_value_brl` recalculque retroativamente `custoBrl`, `receitaEstimadaBrl`, `resultadoEstimadoBrl`, `margemEstimadaPct`, KPIs, agregados e o card "Custo Médio IA" do `/admin/metrics`. Nomenclatura estimada (nunca "receita real"); fallback legacy explícito para eventos sem snapshot; backfill aproximado via `economic_parameter_audit`; receita real por pacote de crédito fica para F40.
+**Goal:** Corrigir a base contábil da F38.2: congelar `usd_brl_rate_at_generation` (snapshot contábil do câmbio na geração) e `credit_value_brl_at_generation` (snapshot estimativo/fallback do valor do crédito na geração) em `generation_events` no momento da geração — impedindo que alterar `usd_brl_rate`/`credit_value_brl` recalculque retroativamente `custoBrl`, `receitaEstimadaBrl`, `resultadoEstimadoBrl`, `margemEstimadaPct`, KPIs, agregados e o card "Custo Médio IA" do `/admin/metrics`. Nomenclatura estimada (nunca "receita real"); fallback legacy explícito para eventos sem snapshot; backfill aproximado via `economic_parameter_audit`; receita real por pacote de crédito fica para F41 (Stripe).
 
 **Requirements:** F38.2.1-01 a F38.2.1-14 (derivados do spec `economic-snapshot` + deltas: ai-cost-tracker, ai-operation-runs-api, ai-operation-costs, pipeline-metrics, admin-metrics-dashboard, economic-parameters)
 
@@ -659,7 +660,7 @@ Plans:
 9. Estornos continuam descontados via créditos líquidos
 10. Testes de snapshot/fallback/estabilidade temporal/nomenclatura; `npx vitest run`, `npm run typecheck`, `npm run lint`, `npm run build` — zero erros
 
-**Dependencies:** Phase 38.2 (parâmetros econômicos + audit + RPCs de operation runs + `EconomicParameterService` + tracker), Phase 38.1 (`generation_events` call-level). **Sem** `operation_runs`, **sem** pacotes de créditos (F40), **sem** reconciliação OpenAI (F38.3).
+**Dependencies:** Phase 38.2 (parâmetros econômicos + audit + RPCs de operation runs + `EconomicParameterService` + tracker), Phase 38.1 (`generation_events` call-level). **Sem** `operation_runs`, **sem** pacotes de créditos (F41), **sem** reconciliação OpenAI (F38.3).
 
 **Source of truth:** `openspec/changes/fase-38-2-1-economic-snapshot/`
 
@@ -710,6 +711,31 @@ Plans:
 - **Wave 7** *(blocked on Wave 6)* — 39-08 (verificação final: gates + VERIFICATION.md + UAT humana)
 
 **Cross-cutting constraints:** (a) `brief.ts`/`brief-schema.ts` SEM `server-only` (contrato compartilhado — D4); (b) snapshot `campaign_brief_v1` NUNCA contém base64 (por tipo + builder + varredura 8.12 — D6/D7); (c) invariante exatamente 1 imagem `primary` (zod superRefine); (d) regra de ausência: campo não informado → ausente, nunca `{enabled: false}` fabricado (D8/D9); (e) orquestração da rota INALTERADA + campo de variáveis de prompt IDÊNTICO (golden tests offer/spotlight/exclusive).
+
+---
+
+### Phase 40: Campos Comerciais e Avisos do Brief
+
+**Goal:** Expor no formulário os **campos comerciais e de avisos** que a F39 estruturou no domínio sem UI: checkbox **"Exibir 'Imagem meramente ilustrativa'"** (default marcado) que injeta a constante única `ILLUSTRATIVE_NOTICE_TEXT` (singular) no texto obrigatório — removendo o hardcode incondicional dos 4 prompts do diretor de imagem; seção **"Validade da oferta"** com **6 modos** (Sem validade / Até uma data / De... até... / Somente hoje / Enquanto durarem os estoques / Texto personalizado), `displayText` determinístico em `dd/mm`, enviada apenas para `campaignIntent === "offer"`; formulário agrupado em **Produto / Oferta / Avisos e texto obrigatório** (checkbox + textarea coexistindo, sem substituição). Sem migration SQL, sem mudança de comportamento do Copy Director/revisor, sem novos campos obrigatórios, sem dar UI a campos adormecidos.
+
+**Requirements:** derivados dos 5 specs OpenSpec (campaign-input-ui, illustrative-notice-control, offer-validity-modes, mandatory-artwork-text, ai-image-generation)
+
+**Success criteria:**
+
+1. `src/lib/campaign/constants.ts` (NOVO) — `export const ILLUSTRATIVE_NOTICE_TEXT = "Imagem meramente ilustrativa"`; módulo neutro, sem `server-only`, sem importar builder/domínio; placeholder do textarea e prompts usam a constante (singular)
+2. `src/components/campaign/illustrative-notice-field.tsx` (NOVO) — checkbox default marcado, estilos do design system (`campaign-input` page / MASTER); coexistindo com `MandatoryArtworkField` (textarea `maxLength 200`)
+3. Form state: `showIllustrativeNotice` (default `true`) + `mandatoryArtworkTextFree` separados (concatenação só no submit: marcado+texto → `"${ILLUSTRATIVE_NOTICE_TEXT}\n${texto}"`; marcado sem texto → constante; desmarcado+texto → texto; desmarcado+sem texto → campo ausente)
+4. `src/components/campaign/validity-field.tsx` (NOVO) — 6 modos; datas estruturadas geram `displayText` (`até 30/09`, `de 25/09 até 30/09`, `somente hoje`, `enquanto durarem os estoques`, personalizado com normalização leve de prefixo "Oferta válida"); `endDate` ISO NUNCA enviado; só para `offer` (troca de intent preserva rascunho sem enviar)
+5. `campaign-input-form.tsx` — agrupamento Produto / Oferta / Avisos e texto obrigatório; Descrição permanece em Produto (inalterada); nenhum campo adormecido ganha UI; mock `MandatoryArtworkField` co-migrado em `campaign-flow-credits.test.tsx`
+6. Os 4 prompts do diretor (`campaign-image-director.md`, `-offer.md`, `-spotlight.md`, `-exclusive.md`) perdem a instrução incondicional "SEMPRE acrescente ... 'Imagem meramente ilustrativa'" e ganham bloco condicional de composição (nota legível lateral, sem competir com oferta/produto/preço); linha condicional do texto obrigatório mantida
+7. Testes novos (validade modos→displayText; checkbox×texto obrigatório; prompt reframe) + co-migração de fixtures + regressão completa; golden por intent mantém `EXPECTED_KEYS = 38` (texto do prompt muda intencionalmente — D6)
+8. `npx vitest run`, `npm run typecheck`, `npm run lint`, `npm run build` — zero erros; UAT local (aviso ilustrativo legível, validade correta sem duplicação, rascunho restaurado, campanhas antigas intactas)
+
+**Dependencies:** F39 (brief estruturado — `commercial.validity`/`commercial.legalNotice` no domínio, snapshot `campaign_brief_v1`), F31.x (prompts por intent, revisor). **Sem** migration SQL, **sem** catálogo de produtos, **sem** UI multi-imagem/câmera, **sem** Stripe (F41).
+
+**Source of truth:** `openspec/changes/fase-40-campos-comerciais-avisos-brief/`
+
+**Plans:** pending
 
 ---
 
@@ -770,13 +796,16 @@ Phase 24 (Credit Tables + CreditService) ──┘
                            Phase 38.2.1 (Snapshot Econômico — v1.5)
                                                 │
                                                 ▼
-                                       Phase 39 (Brief Estruturado de Campanha — v1.5)
-                                                │
-                                                ▼
-                                       Phase 37 (Revisão e Aprovação da Arte — v1.5)
-                                                │
-                                                ▼
-                                       Phase 40 (Stripe / Monetização Pública — v1.7 futura)
+Phase 39 (Brief Estruturado de Campanha — v1.5)
+                                                 │
+                                                 ▼
+                                        Phase 40 (Campos Comerciais e Avisos do Brief — v1.5)
+                                                 │
+                                                 ▼
+                                        Phase 37 (Revisão e Aprovação da Arte — v1.5)
+                                                 │
+                                                 ▼
+                                        Phase 41 (Stripe / Monetização Pública — v1.7 futura)
 ```
 
 ---
@@ -818,10 +847,10 @@ Phase 24 (Credit Tables + CreditService) ──┘
 | INTENT-10 | Phase 31.1 | Done ✓ |
 | INTENT-11 | Phase 31.1 | Done ✓ |
 | INTENT-12 | Phase 31.1 | Done ✓ |
-| PAY-01 | Phase 40/v1.7 | Deferred |
-| PAY-02 | Phase 40/v1.7 | Deferred |
-| PAY-03 | Phase 40/v1.7 | Deferred |
-| PAY-04 | Phase 40/v1.7 | Deferred |
+| PAY-01 | Phase 41/v1.7 | Deferred |
+| PAY-02 | Phase 41/v1.7 | Deferred |
+| PAY-03 | Phase 41/v1.7 | Deferred |
+| PAY-04 | Phase 41/v1.7 | Deferred |
 | UI-01 | Phase 27 | Done ✓ |
 | UI-02 | Phase 27 | Done ✓ |
 | UI-03 | Phase 27 | Done ✓ |
@@ -862,4 +891,4 @@ Phase 24 (Credit Tables + CreditService) ──┘
 
 *Roadmap created: 2026-07-15*
 *Milestone: v1.5 — Lançamento Externo Controlado*
-*Last updated: 2026-08-13 — **Fase 39 (Brief Estruturado de Campanha, v1.5) CONCLUÍDA — 8/8 plans, 1950 testes, 4 gates verdes (vitest/typecheck/lint/build), UAT humano aprovado 5/5**; renumeração F39 = Brief Estruturado de Campanha (v1.5) e Stripe/Monetização Pública → **F40** (v1.7, pós-beta) — precedente F37 D11, fonte `openspec/changes/fase-39-brief-estruturado-campanha/`.* Fase 38.2.1 complete (Snapshot Econômico — 7/7 plans, 1887 testes, I1-I7 53/53 asserts); Phase 38.2 complete (Admin de Custos Operacionais + Configurações Econômicas — 11/11 plans, 1832 testes, verificação I1–I6 em banco real); Fase 38 complete (Tabela de Custos por Operação — 8/8 plans, 1597 testes, UAT 4/4); renumeração F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5); **Phase 38.1 (Apuração de Custos de IA por Entrega — desdobramento da F38, v1.5) CONCLUÍDA — 11/11 plans, 1713 testes (199 arquivos), UAT validado, fechada como camada de ESTIMATIVA OPERACIONAL GRANULAR** (ajuste provisório versionável da tool image_generation: `responses:image_generation = USD 0.065` = estimativa provisória para beta, calibrada por UAT/dashboard/CSV — NÃO é custo financeiro real; reconciliação financeira real fica para a próxima fase; seed `ai_model_pricing` via migration 20260809000003 aplicada Local/Remote) — fonte `openspec/changes/fase-38-1-ai-cost-accounting/`*
+*Last updated: 2026-08-14 — **Fase 40 (Campos Comerciais e Avisos do Brief, v1.5) em PLANEJAMENTO**; renumeração D1: F40 = Campos Comerciais e Avisos do Brief (v1.5), Stripe/Monetização Pública → **F41** (v1.7, pós-beta) — precedente F39 D1, fonte `openspec/changes/fase-40-campos-comerciais-avisos-brief/`.* Fase 39 complete (Brief Estruturado de Campanha — 8/8 plans, 1950 testes, 4 gates verdes, UAT aprovado 5/5); renumeração F39 = Brief Estruturado de Campanha (v1.5) e Stripe/Monetização Pública → F40 (v1.7, pós-beta) — precedente F37 D11, fonte `openspec/changes/fase-39-brief-estruturado-campanha/`.* Fase 38.2.1 complete (Snapshot Econômico — 7/7 plans, 1887 testes, I1-I7 53/53 asserts); Phase 38.2 complete (Admin de Custos Operacionais + Configurações Econômicas — 11/11 plans, 1832 testes, verificação I1–I6 em banco real); Fase 38 complete (Tabela de Custos por Operação — 8/8 plans, 1597 testes, UAT 4/4); renumeração F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5); **Phase 38.1 (Apuração de Custos de IA por Entrega — desdobramento da F38, v1.5) CONCLUÍDA — 11/11 plans, 1713 testes (199 arquivos), UAT validado, fechada como camada de ESTIMATIVA OPERACIONAL GRANULAR** (ajuste provisório versionável da tool image_generation: `responses:image_generation = USD 0.065` = estimativa provisória para beta, calibrada por UAT/dashboard/CSV — NÃO é custo financeiro real; reconciliação financeira real fica para a próxima fase; seed `ai_model_pricing` via migration 20260809000003 aplicada Local/Remote) — fonte `openspec/changes/fase-38-1-ai-cost-accounting/`*

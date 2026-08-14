@@ -17,7 +17,7 @@ Copy Director com IA (F23), pipeline de geração paralelo com créditos (F24-F2
 
 ### Known Gaps
 
-- Stripe / Monetização Pública diferido para v1.7 (F40)
+- Stripe / Monetização Pública diferido para v1.7 (F41)
 
 ---
 

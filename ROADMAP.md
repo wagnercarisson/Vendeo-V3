@@ -59,9 +59,9 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 <details open>
 <summary>◆ v1.5 Lançamento Externo Controlado (F23-F39) — Em andamento</summary>
 
-> Stripe / Monetização Pública deslocada para F40 (v1.7, pós-beta).
+> Stripe / Monetização Pública deslocada para F41 (v1.7, pós-beta).
 
-Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, fundação legal, modelo comercial e store readiness.
+Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, fundação legal, modelo comercial, store readiness, campos comerciais e avisos do brief (F40).
 
 - [x] Phase 23: Text Provider + Copy Director (2/2 plans ✅)
 - [x] Phase 24: Créditos — Schema, Saldo e Transações (2/2 plans ✅)
@@ -151,12 +151,18 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 - [x] Phase 38: Tabela de Custos por Operação (8/8 plans ✅)
   - [x] **38.1 = Apuração de Custos de IA por Entrega** (desdobramento da F38, v1.5) — trilha granular de custo de IA por entrega + views/RPCs de apuração e reconciliação (USD × créditos) — **CONCLUÍDA** (11/11 plans, 1713 testes, UAT validado; fechada como camada de ESTIMATIVA OPERACIONAL GRANULAR — `responses:image_generation = 0.065` provisório beta, reconciliação financeira real na próxima fase), fonte `openspec/changes/fase-38-1-ai-cost-accounting/`
   - [x] **38.2 = Admin de Custos Operacionais + Configurações Econômicas** (desdobramento da F38, v1.5) — painel admin `/admin/ai-operation-costs` (KPIs, filtros, tabela por entrega, drilldown call-level, agregados por segmento), parâmetros econômicos configuráveis (`usd_brl_rate`, `credit_value_brl`), badges de confiança, correção do `/admin/metrics` — **CONCLUÍDA 15/15 plans** (gap closure UAT: 38-2-12 RPCs com creditos_estornados/creditos_liquidos ✅, 38-2-13 service líquidos, 38-2-14 UI breakdown, 38-2-15 tracking; 63/63 asserts I1-I6, 1839 testes, gates verdes, UAT manual aprovado), fonte `openspec/changes/fase-38-2-admin-custos-operacionais/`
-  - [x] **38.2.1 = Snapshot Econômico** (desdobramento da F38.2, v1.5) — congelar `usd_brl_rate_at_generation`/`credit_value_brl_at_generation` em `generation_events` no momento da geração; impedir recálculo retroativo; nomenclatura `receitaEstimadaBrl`/`resultadoEstimadoBrl`/`margemEstimadaPct`; fallback legacy explícito; backfill aproximado via audit; receita real por pacote de crédito fica para F40 — **CONCLUÍDA 7/7 plans** (I1-I7 53/53 asserts, 1887 testes, gates verdes, UAT manual aprovado), fonte `openspec/changes/fase-38-2-1-economic-snapshot/`
+  - [x] **38.2.1 = Snapshot Econômico** (desdobramento da F38.2, v1.5) — congelar `usd_brl_rate_at_generation`/`credit_value_brl_at_generation` em `generation_events` no momento da geração; impedir recálculo retroativo; nomenclatura `receitaEstimadaBrl`/`resultadoEstimadoBrl`/`margemEstimadaPct`; fallback legacy explícito; backfill aproximado via audit; receita real por pacote de crédito fica para F41 (Stripe) — **CONCLUÍDA 7/7 plans** (I1-I7 53/53 asserts, 1887 testes, gates verdes, UAT manual aprovado), fonte `openspec/changes/fase-38-2-1-economic-snapshot/`
 - [x] Phase 39: Brief Estruturado de Campanha (8/8 plans ✅)
   - Contrato de domínio `CampaignBrief` estruturado (produto × oferta × mídia × contexto criativo × metadados) + mapper flat→brief na fronteira da rota + snapshot `input_snapshot` versionado (`campaign_brief_v1`, sem base64) + 5 costuras de mappers preservando o comportamento de geração atual
   - Fonte da verdade: `openspec/changes/fase-39-brief-estruturado-campanha/`
   - **Dependências:** F38.2.1 (snapshot econômico), F31.x (prompts por intent), F24/F25 (pipeline) — antecede a F37 (Revisão e Aprovação da Arte)
 
+- [ ] Phase 40: Campos Comerciais e Avisos do Brief (pending)
+  - Checkbox "Exibir 'Imagem meramente ilustrativa'" (default marcado) com constante única `ILLUSTRATIVE_NOTICE_TEXT` (singular), removendo o hardcode incondicional dos 4 prompts do diretor de imagem
+  - Seção "Validade da oferta" (6 modos: sem validade / até uma data / de... até... / somente hoje / enquanto durarem os estoques / texto personalizado), `displayText` determinístico `dd/mm`, apenas para `campaignIntent === "offer"`
+  - Formulário agrupado em Produto / Oferta / Avisos e texto obrigatório (checkbox + textarea coexistindo)
+  - **Fonte da verdade:** `openspec/changes/fase-40-campos-comerciais-avisos-brief/`
+  - **Dependências:** F39 (brief estruturado — validity/legalNotice no domínio), F31.x (prompts por intent) — antecede a F41 (Stripe)
 </details>
 
 ## Progress
@@ -204,7 +210,8 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 38.2. Admin de Custos Operacionais + Configurações Econômicas | v1.5 | 15/15 | ✅ Complete | 2026-08-11 |
 | 38.2.1. Snapshot Econômico | v1.5 | 7/7 | ✅ Complete | 2026-08-12 |
 | 39. Brief Estruturado de Campanha | v1.5 | 8/8 | ✅ Complete | 2026-08-13 |
-| 40. Stripe / Monetização Pública | v1.7 | 0/0 | ○ Pending | — |
+| 40. Campos Comerciais e Avisos do Brief | v1.5 | 0/0 | ○ Pending | — |
+| 41. Stripe / Monetização Pública | v1.7 | 0/0 | ○ Pending | — |
 
 ---
 
