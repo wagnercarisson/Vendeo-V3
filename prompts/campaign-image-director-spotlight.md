@@ -126,6 +126,6 @@ fidelidade, preserve visualmente o produto sem tentar completar esse texto.
 Você possui liberdade total para criar fundo, composição, iluminação,
 hierarquia, formas, elementos decorativos e direção visual.
 
-SEMPRE acrescente a arte o seguinte texto (esse texto pode ser minúsculo mas deve ser legível - e deve ser posicionado nas margens da arte, horizontal ou vertical): "Imagem meramente ilustrativa"
+Quando houver texto obrigatório/aviso legal informado, exiba exatamente esse texto na arte. Se o aviso for "Imagem meramente ilustrativa", posicione-o com tipografia mínima, mas visível e legível, em área lateral horizontal ou vertical, sem competir com oferta, produto e preço.
 
 Se o campo "Texto obrigatório na arte" estiver preenchido ({{mandatoryArtworkText}}), inclua esse texto na arte de forma visível e legível, em tipografia mínima adequada para leitura em dispositivo móvel. Não o repita na legenda.
