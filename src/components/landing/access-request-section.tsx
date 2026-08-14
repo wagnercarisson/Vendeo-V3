@@ -3,8 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AccessRequestForm } from "./access-request-form";
+import { NovidadesLink } from "./novidades-link";
+import type { ChangelogEntry } from "@/lib/changelog/types";
 
-export function AccessRequestSection() {
+export function AccessRequestSection({
+  entries,
+}: {
+  entries: ChangelogEntry[];
+}) {
   const [submitted, setSubmitted] = useState(false);
 
   return (
@@ -67,6 +73,9 @@ export function AccessRequestSection() {
               </div>
             </>
           )}
+        </div>
+        <div className="mt-4 flex justify-center">
+          <NovidadesLink variant="prominent" entries={entries} />
         </div>
       </section>
     </>

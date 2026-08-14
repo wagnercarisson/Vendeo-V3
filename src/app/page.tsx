@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AccessRequestSection } from "@/components/landing/access-request-section";
+import { NovidadesLink } from "@/components/landing/novidades-link";
+import { getAllEntries } from "@/lib/changelog/get-changelog";
 
 export const metadata: Metadata = {
   title: "Vendeo — Campanhas profissionais para sua loja",
@@ -8,7 +10,10 @@ export const metadata: Metadata = {
     "O Vendeo transforma a oferta da sua loja em campanhas profissionais para redes sociais. Acesso liberado por convite em beta fechado — solicite seu acesso free.",
 };
 
-export default function Home() {
+export default async function Home() {
+  const entries = await getAllEntries();
+  const recentEntries = entries.slice(0, 5);
+
   return (
     <div className="flex min-h-screen flex-col bg-bg-deep font-body text-text-primary">
       {/* Header */}
@@ -25,7 +30,7 @@ export default function Home() {
       </header>
 
       {/* Hero + form (estado de envio gerenciado no client) */}
-      <AccessRequestSection />
+      <AccessRequestSection entries={recentEntries} />
 
       {/* Footer */}
       <footer className="border-t border-border">
@@ -43,6 +48,7 @@ export default function Home() {
             <Link href="/uso-aceitavel" className="transition-colors hover:text-text-primary">
               Uso Aceitável
             </Link>
+            <NovidadesLink variant="footer" entries={recentEntries} />
             <Link href="/login" className="transition-colors hover:text-text-primary">
               Entrar
             </Link>
