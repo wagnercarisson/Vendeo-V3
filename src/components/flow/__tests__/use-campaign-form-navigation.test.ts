@@ -227,4 +227,37 @@ describe("useCampaignForm navigation", () => {
     expect(result.current.fields.mandatoryArtworkTextFree).toBe("Novo texto");
     expect(result.current.fields.mandatoryArtworkText).toBe("Novo texto");
   });
+
+  it("15 (F41): restaura draft multi com N imagens (file undefined — File não serializa)", async () => {
+    mockRestoreFormState.mockReturnValue({
+      productName: "Test Product",
+      description: "",
+      originalPriceCents: 10000,
+      discountedPriceCents: 1990,
+      badge: "Oferta",
+      campaignIntent: "offer",
+      preserveImageContext: false,
+      productImages: [
+        { id: "a", role: "primary", source: "upload", mimeType: "image/jpeg", dataUrl: VALID_DATA_URL },
+        { id: "b", role: "reference", source: "camera", mimeType: "image/jpeg", dataUrl: VALID_DATA_URL },
+      ],
+      mandatoryArtworkText: "",
+      showIllustrativeNotice: true,
+      mandatoryArtworkTextFree: "",
+      validityMode: "",
+      validityStartDate: "",
+      validityEndDate: "",
+      validityCustomText: "",
+    });
+
+    const { result } = renderHook(() => useCampaignForm("store-123"));
+    await act(async () => {});
+
+    expect(result.current.fields.productImages).toHaveLength(2);
+    expect(result.current.fields.productImages[0].role).toBe("primary");
+    expect(result.current.fields.productImages[0].dataUrl).toBe(VALID_DATA_URL);
+    expect(result.current.fields.productImages[0].file).toBeUndefined();
+    expect(result.current.fields.productImages[1].role).toBe("reference");
+    expect(result.current.fields.productImages[1].source).toBe("camera");
+  });
 });
