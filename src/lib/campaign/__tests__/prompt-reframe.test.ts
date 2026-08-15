@@ -54,4 +54,13 @@ describe("prompt reframe D6 (testes 16-17 + checks de conteúdo)", () => {
       expect(prompt, `${name} sem o singular canônico`).toContain("Imagem meramente ilustrativa");
     }
   });
+
+  it("21 (F41-21): bloco descritivo 1+N presente nos 4 prompts (D6)", () => {
+    for (const name of PROMPTS) {
+      const prompt = readPrompt(name);
+      expect(prompt, `${name} sem bloco 1+N`).toContain("1 imagem principal");
+      expect(prompt, `${name} sem instrução anti-alucinação`).toContain("NÃO invente conteúdo");
+      expect(prompt, `${name} com linha antiga`).not.toContain("referência visual fiel");
+    }
+  });
 });

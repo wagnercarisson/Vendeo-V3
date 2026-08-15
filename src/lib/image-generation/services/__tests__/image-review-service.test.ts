@@ -355,4 +355,53 @@ describe('ImageReviewService — onCall (D11)', () => {
     );
     expect(result.passed).toBe(true);
   });
+
+  it('23 (F41 D9): review com primary como referência → prompt ganha a linha fixa e callVisionModel recebe 2 imagens', async () => {
+    const input: ImageReviewInput = {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+    };
+    const primaryDataUrl = 'data:image/jpeg;base64,primary';
+
+    const callSpy = vi.spyOn(service as any, 'callVisionModel').mockResolvedValue({
+      content: JSON.stringify({ passed: true, issues: [] }),
+      usage: { promptTokens: 100, completionTokens: 25, totalTokens: 125 },
+    });
+
+    await service.review('data:image/jpeg;base64,gen', input, primaryDataUrl);
+
+    // A linha fixa entra no prompt carregado (D9).
+    expect(mockLoader.load).toHaveBeenCalledWith(
+      'campaign-image-reviewer',
+      expect.objectContaining({ productName: 'Produto Teste' })
+    );
+    const loadedPrompt = mockLoader.load.mock.calls[0][0] === 'campaign-image-reviewer' ? mockLoader.load.mock.results[0].value : '';
+    expect(loadedPrompt + '\n\nCompare o produto da arte com a imagem de referência').toContain(
+      'Compare o produto da arte com a imagem de referência'
+    );
+    // callVisionModel recebe o prompt com a linha fixa + a primary como 2ª imagem.
+    expect(callSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Compare o produto da arte com a imagem de referência'),
+      'data:image/jpeg;base64,gen',
+      primaryDataUrl
+    );
+  });
+
+  it('23b (F41 D9): sem primary (3º arg) → comportamento atual (sem linha fixa, sem 2ª imagem)', async () => {
+    const callSpy = vi.spyOn(service as any, 'callVisionModel').mockResolvedValue({
+      content: JSON.stringify({ passed: true, issues: [] }),
+      usage: { promptTokens: 100, completionTokens: 25, totalTokens: 125 },
+    });
+
+    await service.review(
+      'data:image/jpeg;base64,gen',
+      { productName: 'Produto', storeName: 'Loja' }
+    );
+
+    expect(callSpy).toHaveBeenCalledWith(
+      expect.not.stringContaining('Compare o produto da arte'),
+      'data:image/jpeg;base64,gen',
+      undefined
+    );
+  });
 });
