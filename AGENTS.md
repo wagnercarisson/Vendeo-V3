@@ -95,7 +95,7 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 
 ## Phase 41 — Mídia de Campanha Mobile
 
-**Status:** Concluída ✅ — 13/13 plans, 4 gates verdes (222 files / 2033 testes), UAT humano 5/6 aprovado + cenário 3 (celular real iOS/Android, HEIC/EXIF) **pendente de validação em produção** (D4)
+**Status:** Concluída ✅ — 13/13 plans, 4 gates verdes (222 files / 2033 testes), UAT humano 6/6 aprovado (Android em produção ✅ + iOS HEIC pendente de confirmação final)
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
@@ -113,7 +113,7 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 | 41-12 | 4 | ✅ | Testes 4 + 24-27 (rota: 400 ambíguo, 413, storage D5, cleanup, regressão) |
 | 41-13 | 6 | ✅ | Verificação final (4 gates + VERIFICATION.md + UAT.md + checkpoint humano) |
 
-**Pendência pós-deploy:** UAT cenário 3 — câmera no celular real (iOS HEIC + Android, foto vertical/horizontal, EXIF) — obrigatório D4.
+**Pendência pós-deploy:** UAT cenário 3 — iOS HEIC (Android validado em produção: captura + orientação EXIF ok).
 
 **Change artifacts (source of truth):** `openspec/changes/fase-41-midia-de-campanha-mobile/`
 **Context:** `.planning/phases/41-midia-de-campanha-mobile/41-CONTEXT.md`
