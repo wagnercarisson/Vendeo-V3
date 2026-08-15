@@ -1,9 +1,21 @@
 import { z } from "zod";
 import type { CampaignIntent } from "@/lib/campaign/types";
+import { MAX_CAMPAIGN_IMAGES } from "@/lib/image-generation/config";
 
 // ─── Generate Image Request ───────────────────────────────────────────────
 // Input received from POST /api/campaign/generate-image.
 // productImageDataUrl is required — Phase 4.3 product+offer flow requires it.
+
+// ─── Product Image Input ──────────────────────────────────────────────────
+// Item do productImages[] (D2/D3/D10). Sem `id` — a rota gera/normaliza (D5).
+export const ProductImageInputSchema = z
+  .object({
+    role: z.enum(["primary", "variation", "combo_item", "reference"]),
+    source: z.enum(["upload", "camera"]),
+    mimeType: z.string(),
+    dataUrl: z.string().min(1), // base64 (transporte); snapshot NUNCA persiste
+  })
+  .strict();
 
 export const GenerateImageRequestSchema = z.object({
   storeId: z.string().uuid(),
@@ -27,7 +39,22 @@ export const GenerateImageRequestSchema = z.object({
   validity: z.string().optional(),
   availabilityNotes: z.string().optional(),
   sensitiveConstraints: z.string().optional(),
-  productImageDataUrl: z.string().min(1, "Imagem do produto é obrigatória"),
+  productImageDataUrl: z.string().min(1).optional(), // era required (:30) — preservação comportamental (D2)
+  productImages: z
+    .array(ProductImageInputSchema)
+    .min(1)
+    .max(MAX_CAMPAIGN_IMAGES)
+    .superRefine((imgs, ctx) => {
+      const primary = imgs.filter((i) => i.role === "primary").length;
+      if (primary !== 1) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["productImages"],
+          message: `Deve existir exatamente 1 imagem com role "primary" (recebido: ${primary})`,
+        });
+      }
+    })
+    .optional(),
   mandatoryArtworkText: z.string().optional(),
   inputValidationOverride: z
     .object({

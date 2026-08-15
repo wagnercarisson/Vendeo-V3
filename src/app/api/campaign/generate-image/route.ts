@@ -300,7 +300,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
     try {
       validationResult = await inputValidation.validate(
         parsed.data.productName,
-        parsed.data.productImageDataUrl,
+        parsed.data.productImageDataUrl!,
         undefined
       );
     } catch {
