@@ -58,8 +58,13 @@ describe("prompt reframe D6 (testes 16-17 + checks de conteúdo)", () => {
   it("21 (F41-21): bloco descritivo 1+N presente nos 4 prompts (D6)", () => {
     for (const name of PROMPTS) {
       const prompt = readPrompt(name);
-      expect(prompt, `${name} sem bloco 1+N`).toContain("1 imagem principal");
-      expect(prompt, `${name} sem instrução anti-alucinação`).toContain("NÃO invente conteúdo");
+      expect(prompt, `${name} sem bloco 1+N`).toContain("Quando houver mais de uma imagem de produto");
+      expect(prompt, `${name} sem instrução de apoio comercial real`).toContain(
+        "apoio comercial real da composição"
+      );
+      expect(prompt, `${name} sem proibição de reduzir a ícones/texto`).toContain(
+        "Não reduza as imagens adicionais a cores, ícones, etiquetas ou texto"
+      );
       expect(prompt, `${name} com linha antiga`).not.toContain("referência visual fiel");
     }
   });

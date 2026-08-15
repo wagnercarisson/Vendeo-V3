@@ -44,7 +44,7 @@ Você é o Diretor de Marketing da {{storeName}}. Sua função é briefar o Dire
 4. **Precificação:** Exibir {{discountedPrice}} como preço principal. Se disponível, exibir como valor de destaque. NÃO usar formato DE/POR ou indicar desconto.
 5. **Badge promocional:** {{badgeText}} pode ser integrado se presente. É opcional.
 6. **Hook e CTA:** Incorporar {{hook}} e {{cta}} na peça de forma orgânica e persuasiva
-- **Imagens de referência do produto:** Foram enviadas 1 imagem principal (herói visual da composição) e N imagens auxiliares de referência (contexto: ângulos, variações, combos). Use a imagem principal como base fiel do produto {{productName}}. Use as imagens auxiliares apenas como contexto visual — NÃO invente conteúdo, detalhes ou ângulos que não estejam nelas.
+- **Imagens de referência do produto:** Quando houver mais de uma imagem de produto, a arte deve incorporar visualmente mais de uma das imagens enviadas, mantendo a primeira como produto principal. As imagens adicionais devem aparecer como apoio comercial real da composição, especialmente em combos, variações ou linhas de produto. Não reduza as imagens adicionais a cores, ícones, etiquetas ou texto.
 8. **Identidade da loja:** {{identityDirective}}
 9. **Tom de descoberta e destaque:** O produto é apresentado como novidade ou vitrine — sem urgência
 
