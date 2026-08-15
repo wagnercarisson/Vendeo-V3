@@ -5,6 +5,7 @@ import {
   buildCampaignBriefSnapshot,
   type CampaignBriefSnapshot,
 } from "../brief";
+import { campaignBriefSchema } from "../brief-schema";
 import type { GenerateImageRequest } from "@/lib/image-generation/schema";
 
 // Varredura recursiva por chave e por valor (D12 — sem analog no repo, TS puro).
@@ -123,5 +124,70 @@ describe("buildCampaignBriefSnapshot (8.12/8.13)", () => {
 
     expect(first).toBe(second);
     expect(first).toContain('"schemaVersion":"campaign_brief_v1"');
+  });
+
+  it("6 (F41): snapshot com N imagens — sem base64, storagePath por imagem quando presente", () => {
+    const brief = buildCampaignBriefFromFlat(
+      flatInput({
+        productImageDataUrl: undefined,
+        productImages: [
+          { role: "primary", source: "upload", mimeType: "image/jpeg", dataUrl: "data:image/jpeg;base64,a" },
+          { role: "reference", source: "upload", mimeType: "image/jpeg", dataUrl: "data:image/jpeg;base64,b" },
+          { role: "reference", source: "camera", mimeType: "image/jpeg", dataUrl: "data:image/jpeg;base64,c" },
+        ],
+      }),
+      storeId
+    );
+    // F41 D5: a rota preenche storagePath no runtime ANTES do snapshot
+    brief.media.images[0].storagePath = "store-1/camp-1/inputs/img-1.jpg";
+    brief.media.images[1].storagePath = "store-1/camp-1/inputs/img-2.jpg";
+
+    const snapshot = buildCampaignBriefSnapshot(brief);
+    expect(snapshot.media.images).toHaveLength(3);
+    expect(hasBase64Leak(snapshot)).toBe(false);
+    expect(snapshot.media.images[0].storagePath).toBe("store-1/camp-1/inputs/img-1.jpg");
+    expect(snapshot.media.images[1].storagePath).toBe("store-1/camp-1/inputs/img-2.jpg");
+    // item sem storagePath → campo ausente (não fabricado)
+    expect("storagePath" in snapshot.media.images[2]).toBe(false);
+  });
+
+  it("7 (F41): legado 1 imagem preserva comportamento/shape pós-F40; storagePath ausente sem upload", () => {
+    const brief = buildCampaignBriefFromFlat(
+      flatInput({ productImageDataUrl: "data:image/jpeg;base64,abc123" }),
+      storeId
+    );
+    const snapshot = buildCampaignBriefSnapshot(brief);
+
+    expect(snapshot.media.images).toHaveLength(1);
+    expect(snapshot.media.images[0].mimeType).toBe("image/jpeg");
+    expect(snapshot.media.images[0].role).toBe("primary");
+    expect(snapshot.media.images[0].source).toBe("upload");
+    expect("dataUrl" in snapshot.media.images[0]).toBe(false);
+    // teste unitário sem upload → storagePath ausente (a primary ganha storagePath
+    // aditivo apenas no fluxo de rota F41 — D5 nos dois fluxos, coberto no 41-12/41-13)
+    expect("storagePath" in snapshot.media.images[0]).toBe(false);
+  });
+
+  it("8 (F41): snapshot para N imagens preserva exatamente 1 primary (roles espelhados)", () => {
+    const brief = buildCampaignBriefFromFlat(
+      flatInput({
+        productImageDataUrl: undefined,
+        productImages: [
+          { role: "primary", source: "camera", mimeType: "image/png", dataUrl: "data:image/png;base64,a" },
+          { role: "reference", source: "upload", mimeType: "image/jpeg", dataUrl: "data:image/jpeg;base64,b" },
+          { role: "reference", source: "upload", mimeType: "image/webp", dataUrl: "data:image/webp;base64,c" },
+        ],
+      }),
+      storeId
+    );
+    const snapshot = buildCampaignBriefSnapshot(brief);
+
+    const primaries = snapshot.media.images.filter((i) => i.role === "primary");
+    expect(primaries).toHaveLength(1);
+    expect(snapshot.media.images[0].role).toBe("primary");
+    expect(snapshot.media.images[1].role).toBe("reference");
+    expect(snapshot.media.images[2].role).toBe("reference");
+    // zod do domínio aceita o brief multi (1 primary + N references)
+    expect(campaignBriefSchema.safeParse(brief).success).toBe(true);
   });
 });
