@@ -956,4 +956,4 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
   };
 }
 
-export { validateDiscountedPrice, validateBadge };
+export { validateDiscountedPrice, validateBadge, validateImage, compressImage };
