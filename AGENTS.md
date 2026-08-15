@@ -91,7 +91,15 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 | 40-09 | 5 | ✅ | Verificação final: gates + VERIFICATION.md + UAT humana (checkpoint) |
 
 **Change artifacts (source of truth):** `openspec/changes/fase-40-campos-comerciais-avisos-brief/`
-**Context:** `.planning/phases/40-campos-comerciais-avisos-brief/40-CONTEXT.md`
+## Phase 41 — Mídia de Campanha Mobile
+
+**Status:** Em planejamento (D1 trackings aplicados — F41 = Mídia de Campanha Mobile v1.5, Stripe → F42 v1.7)
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+
+**Change artifacts (source of truth):** `openspec/changes/fase-41-midia-de-campanha-mobile/`
+**Context:** `.planning/phases/41-midia-de-campanha-mobile/41-CONTEXT.md`
 **State:** `.planning/STATE.md`
 **Roadmap:** `ROADMAP.md`
 <!-- GSD:workflow-end -->
