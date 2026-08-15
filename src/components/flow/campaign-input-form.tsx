@@ -5,6 +5,7 @@ import type { CampaignFormFields, CampaignProductFormImage } from "./use-campaig
 import { CampaignImageUpload } from "./campaign-image-upload";
 import { GenerationProgress } from "./generation-progress";
 import { BADGE_OPTIONS, BADGE_OPTIONS_BY_INTENT } from "@/lib/constants";
+import { MAX_CAMPAIGN_IMAGES } from "@/lib/image-generation/config";
 import { MandatoryArtworkField } from "@/components/campaign/mandatory-artwork-field";
 import { IllustrativeNoticeField } from "@/components/campaign/illustrative-notice-field";
 import { ValidityField } from "@/components/campaign/validity-field";
@@ -373,6 +374,15 @@ function FormContent({
         onAdd={addImage}
         onRemove={removeImage}
       />
+
+      <div className="flex items-start gap-2">
+        <h3 className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-1">
+          Imagens adicionais
+        </h3>
+      </div>
+      <p className="text-text-muted text-xs font-body mb-3">
+        Opcional — até {MAX_CAMPAIGN_IMAGES - 1} imagens de apoio (ângulos, variações, combos). A primeira imagem é a principal.
+      </p>
 
       <h2 className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2">
         Oferta

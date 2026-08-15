@@ -28,7 +28,7 @@ vi.mock("@/components/flow/use-campaign-form", () => {
     useCampaignForm: () => ({
       fields: {
         productName: "",
-        imageFile: null,
+        productImages: [],
         originalPriceCents: 0,
         discountedPriceCents: undefined,
         description: "",
