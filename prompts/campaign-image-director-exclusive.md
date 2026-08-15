@@ -43,7 +43,7 @@ Você é o Diretor de Marketing da {{storeName}}. Sua função é briefar o Dire
 3. **Produto em destaque:** O nome {{productName}} deve ser exibido com destaque e legibilidade
 4. **Badge:** {{badgeText}} pode ser integrado se presente. É opcional. NÃO usar badges promocionais ("Promoção", "Oferta", "Imperdível"). Se o badge não foi informado, não é obrigatório criar um selo. Se optar por comunicar exclusividade visualmente, faça de forma discreta e coerente com o produto.
 5. **Hook e CTA:** Incorporar {{hook}} e {{cta}} na peça de forma orgânica e persuasiva
-6. **Imagem de referência do produto:** A imagem do produto foi enviada como referência visual fiel. O produto {{productName}} deve ser o herói visual da composição.
+- **Imagens de referência do produto:** Foram enviadas 1 imagem principal (herói visual da composição) e N imagens auxiliares de referência (contexto: ângulos, variações, combos). Use a imagem principal como base fiel do produto {{productName}}. Use as imagens auxiliares apenas como contexto visual — NÃO invente conteúdo, detalhes ou ângulos que não estejam nelas.
 7. **Identidade da loja:** {{identityDirective}}
 8. **Tom premium e de exclusividade:** O produto é apresentado como item especial ou edição limitada
 
