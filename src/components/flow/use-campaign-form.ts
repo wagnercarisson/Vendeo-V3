@@ -8,72 +8,103 @@ import { useInputPreservation } from "@/hooks/use-input-preservation";
 import type { GenerationPhaseEvent } from "@/lib/image-generation/schema";
 import type { CampaignIntent } from "@/lib/campaign/types";
 import { ILLUSTRATIVE_NOTICE_TEXT } from "@/lib/campaign/constants";
+import { MAX_CAMPAIGN_IMAGES } from "@/lib/image-generation/config";
 
 function compressImage(file: File, maxSizeBytes: number = 1024 * 1024): Promise<{ file: File; dataUrl: string }> {
   return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      let quality = 0.85;
-      let attempt = 0;
-      const maxAttempts = 5;
+    const isHeic = file.type === "image/heic" || file.type === "image/heif";
 
-      const tryCompress = () => {
-        const canvas = document.createElement("canvas");
-        let { width, height } = img;
-
-        // Downscale if larger than 1200px on longest side
-        const maxDim = 1200;
-        if (width > maxDim || height > maxDim) {
-          const ratio = Math.min(maxDim / width, maxDim / height);
-          width = Math.round(width * ratio);
-          height = Math.round(height * ratio);
+    // F41 (D4): HEIC/HEIF decodificado via createImageBitmap com EXIF respeitado
+    // (imageOrientation: "from-image") ANTES do desenho no canvas — sem lib.
+    const loadSource = (): Promise<HTMLImageElement | ImageBitmap> =>
+      new Promise((res, rej) => {
+        if (isHeic) {
+          createImageBitmap(file, { imageOrientation: "from-image" }).then(
+            (bitmap) => res(bitmap),
+            () => rej(new Error("Não foi possível processar a imagem HEIC. Use JPG ou PNG."))
+          );
+        } else {
+          const img = new Image();
+          img.onload = () => res(img);
+          img.onerror = () => rej(new Error("Falha ao carregar imagem para compressão"));
+          img.src = URL.createObjectURL(file);
         }
+      });
 
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          reject(new Error("Falha ao comprimir imagem"));
-          return;
-        }
-        ctx.drawImage(img, 0, 0, width, height);
+    loadSource()
+      .then((source) => {
+        let quality = 0.85;
+        let attempt = 0;
+        const maxAttempts = 5;
 
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) {
-              reject(new Error("Falha ao comprimir imagem"));
-              return;
-            }
-            if (blob.size <= maxSizeBytes || attempt >= maxAttempts) {
-              const reader = new FileReader();
-              reader.onloadend = () => {
-                const dataUrl = reader.result as string;
-                const compressedFile = new File([blob], file.name, {
-                  type: "image/jpeg",
-                });
-                resolve({ file: compressedFile, dataUrl });
-              };
-              reader.onerror = () => reject(new Error("Falha ao ler imagem comprimida"));
-              reader.readAsDataURL(blob);
-            } else {
-              quality -= 0.15;
-              attempt++;
-              tryCompress();
-            }
-          },
-          "image/jpeg",
-          quality
-        );
-      };
+        const tryCompress = () => {
+          const canvas = document.createElement("canvas");
+          let width = source instanceof HTMLImageElement ? source.naturalWidth : source.width;
+          let height = source instanceof HTMLImageElement ? source.naturalHeight : source.height;
 
-      tryCompress();
-    };
-    img.onerror = () => reject(new Error("Falha ao carregar imagem para compressão"));
-    img.src = URL.createObjectURL(file);
+          // Downscale if larger than 1200px on longest side
+          const maxDim = 1200;
+          if (width > maxDim || height > maxDim) {
+            const ratio = Math.min(maxDim / width, maxDim / height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            reject(new Error("Falha ao comprimir imagem"));
+            return;
+          }
+          ctx.drawImage(source, 0, 0, width, height);
+
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(new Error("Falha ao comprimir imagem"));
+                return;
+              }
+              if (blob.size <= maxSizeBytes || attempt >= maxAttempts) {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  const dataUrl = reader.result as string;
+                  const compressedFile = new File([blob], file.name, {
+                    type: "image/jpeg",
+                  });
+                  resolve({ file: compressedFile, dataUrl });
+                };
+                reader.onerror = () => reject(new Error("Falha ao ler imagem comprimida"));
+                reader.readAsDataURL(blob);
+              } else {
+                quality -= 0.15;
+                attempt++;
+                tryCompress();
+              }
+            },
+            "image/jpeg",
+            quality
+          );
+        };
+
+        tryCompress();
+      })
+      .catch(reject);
   });
 }
 
 export type ValidityMode = "" | "until-date" | "range" | "today" | "stock" | "custom";
+
+// F41 (D3/D5): item de imagem do produto no estado do form.
+// `id` é INTERNO da UI (chave de lista/preview) — NUNCA entra no body (D2/D5).
+export interface CampaignProductFormImage {
+  id: string;
+  role: "primary" | "reference"; // primeiro = primary, demais = reference (D3)
+  source: "upload" | "camera"; // conforme a origem real (D4)
+  mimeType: string;
+  file?: File;
+  dataUrl?: string;
+}
 
 export interface CampaignFormFields {
   productName: string;
@@ -83,7 +114,7 @@ export interface CampaignFormFields {
   badge: string;
   campaignIntent: CampaignIntent;
   preserveImageContext: boolean;
-  imageFile: File | null;
+  productImages: CampaignProductFormImage[];
   mandatoryArtworkText: string; // compat/derivado: espelho de mandatoryArtworkTextFree, NUNCA o texto final concatenado (D3)
   showIllustrativeNotice: boolean;
   mandatoryArtworkTextFree: string;
@@ -102,7 +133,7 @@ export type FieldErrors = Partial<
     | "badge"
     | "campaignIntent"
     | "preserveImageContext"
-    | "imageFile"
+    | "productImages"
     | "mandatoryArtworkText"
     | "showIllustrativeNotice"
     | "mandatoryArtworkTextFree"
@@ -124,7 +155,7 @@ export interface UseCampaignFormReturn {
   fields: CampaignFormFields;
   fieldErrors: FieldErrors;
   touched: Record<keyof CampaignFormFields, boolean>;
-  setField: (field: keyof CampaignFormFields, value: string | number | boolean | File | null | undefined) => void;
+  setField: (field: keyof CampaignFormFields, value: string | number | boolean | File | null | undefined | CampaignProductFormImage[]) => void;
   handleBlur: (field: keyof CampaignFormFields) => void;
   displayPriceOriginal: string;
   displayPriceDiscounted: string;
@@ -143,6 +174,8 @@ export interface UseCampaignFormReturn {
   handleConflictCancel: () => void;
   phases: GenerationPhaseEvent[];
   onPhaseChange: (event: GenerationPhaseEvent) => void;
+  addImage: (file: File, source: "upload" | "camera") => void;
+  removeImage: (id: string) => void;
 }
 
 const EMPTY_FIELDS: CampaignFormFields = {
@@ -153,7 +186,7 @@ const EMPTY_FIELDS: CampaignFormFields = {
   badge: "",
   campaignIntent: "offer",
   preserveImageContext: false,
-  imageFile: null,
+  productImages: [],
   mandatoryArtworkText: "",
   showIllustrativeNotice: true,
   mandatoryArtworkTextFree: "",
@@ -196,9 +229,9 @@ function validateBadge(value: string, fields?: Pick<CampaignFormFields, "campaig
 
 function validateImage(file: File | null): string | null {
   if (!file) return "Imagem do produto é obrigatória";
-  const validTypes = ["image/png", "image/jpeg", "image/webp"];
+  const validTypes = ["image/png", "image/jpeg", "image/webp", "image/heic", "image/heif"];
   if (!validTypes.includes(file.type)) {
-    return "Formato não suportado. Use PNG, JPG ou WEBP";
+    return "Formato não suportado. Use PNG, JPG, WEBP ou HEIC";
   }
   if (file.size > 5 * 1024 * 1024) {
     return "Arquivo muito grande. Máximo 5MB";
@@ -219,8 +252,8 @@ function validateField(
       return validateOriginalPrice(fields.originalPriceCents, fields.discountedPriceCents ?? 0);
     case "badge":
       return validateBadge(fields.badge, fields);
-    case "imageFile":
-      return validateImage(fields.imageFile);
+    case "productImages":
+      return validateImage(fields.productImages[0]?.file ?? null);
     default:
       return null;
   }
@@ -293,7 +326,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     badge: false,
     campaignIntent: false,
     preserveImageContext: false,
-    imageFile: false,
+    productImages: false,
     mandatoryArtworkText: false,
     showIllustrativeNotice: false,
     mandatoryArtworkTextFree: false,
@@ -323,15 +356,16 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
   useEffect(() => {
     const saved = restoreFormState();
     if (saved) {
-      // imageFile can't be serialized — restore as null
-      const legacy = saved as CampaignFormFields & { mandatoryArtworkText?: string };
-      const { imageFile: _, mandatoryArtworkText: legacyNotice, ...rest } = legacy;
+      // File can't be serialized — restore productImages with dataUrl only
+      const legacy = saved as Partial<CampaignFormFields> & { imageFile?: File | null; mandatoryArtworkText?: string };
+      const { imageFile: _legacyImageFile, mandatoryArtworkText: legacyNotice, productImages: savedImages, ...rest } = legacy;
       const restored = {
         ...rest,
         mandatoryArtworkTextFree: rest.mandatoryArtworkTextFree ?? legacyNotice ?? "",
         mandatoryArtworkText: rest.mandatoryArtworkTextFree ?? legacyNotice ?? "",
+        productImages: Array.isArray(savedImages) && savedImages.length > 0 ? savedImages : [],
       };
-      setFields((prev) => ({ ...prev, ...restored, imageFile: null }));
+      setFields((prev) => ({ ...prev, ...restored }));
       if (saved.originalPriceCents > 0) {
         setRawOriginalPrice(String(saved.originalPriceCents));
       }
@@ -343,6 +377,25 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
         const savedImageDataUrl = sessionStorage.getItem(IMAGE_DRAFT_KEY);
         if (savedImageDataUrl) {
           setRestoredImageDataUrl(savedImageDataUrl);
+          // F41 (D3): migração de draft legado — sem productImages utilizável +
+          // dataUrl presente → productImages de 1 elemento (primary)
+          if (!(Array.isArray(savedImages) && savedImages.length > 0)) {
+            setFields((prev) => {
+              if (prev.productImages.length > 0) return prev;
+              return {
+                ...prev,
+                productImages: [
+                  {
+                    id: crypto.randomUUID(),
+                    role: "primary",
+                    source: "upload",
+                    mimeType: "image/jpeg",
+                    dataUrl: savedImageDataUrl,
+                  },
+                ],
+              };
+            });
+          }
         }
       } catch {
         // ignore
@@ -356,7 +409,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
       clearTimeout(autoSaveTimer.current);
     }
     autoSaveTimer.current = setTimeout(() => {
-      const hasData = fields.productName || (fields.discountedPriceCents ?? 0) > 0 || fields.badge || fields.imageFile;
+      const hasData = fields.productName || (fields.discountedPriceCents ?? 0) > 0 || fields.badge || fields.productImages.length > 0;
       if (hasData) {
         saveFormState(fields);
       }
@@ -419,7 +472,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     rawDiscountedPrice === "" ? "" : formatCurrencyBRL(fields.discountedPriceCents ?? 0);
 
   useEffect(() => {
-    const currentFile = fields.imageFile;
+    const currentFile = fields.productImages[0]?.file ?? null;
     const prevFile = prevImageFileRef.current;
 
     if (currentFile === prevFile && lastRestoredUrlRef.current === restoredImageDataUrl) return;
@@ -453,10 +506,10 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
 
     prevImageFileRef.current = currentFile;
     lastRestoredUrlRef.current = restoredImageDataUrl;
-  }, [fields.imageFile, restoredImageDataUrl]);
+  }, [fields.productImages, restoredImageDataUrl]);
 
   const setField = useCallback(
-    (field: keyof CampaignFormFields, value: string | number | boolean | File | null | undefined) => {
+    (field: keyof CampaignFormFields, value: string | number | boolean | File | null | undefined | CampaignProductFormImage[]) => {
       setFields((prev) => {
         const next = { ...prev, [field]: value as never };
         if (field === "mandatoryArtworkText") next.mandatoryArtworkTextFree = value as string;
@@ -464,7 +517,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
         if (field === "campaignIntent") {
           userChangedIntent.current = true;
         }
-        if (field === "imageFile") {
+        if (field === "productImages") {
           setRestoredImageDataUrl(null);
         }
         return next;
@@ -650,7 +703,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
       "badge",
       "campaignIntent",
       "preserveImageContext",
-      "imageFile",
+      "productImages",
       "mandatoryArtworkText",
       "showIllustrativeNotice",
       "mandatoryArtworkTextFree",
@@ -661,8 +714,9 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     ];
 
     for (const field of allFields) {
-      // imageFile is null after draft restore — skip validation if we have a restored data URL
-      if (field === "imageFile" && !!restoredImageDataUrl) continue;
+      // productImages restaurado de draft tem dataUrl (File não serializa) — skip
+      // da validação quando há dataUrl utilizável na primary ou restaurada.
+      if (field === "productImages" && (!!fields.productImages[0]?.dataUrl || !!restoredImageDataUrl)) continue;
       const error = validateField(field, fields);
       if (error) {
         errors[field] = error;
@@ -679,7 +733,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
         badge: true,
         campaignIntent: true,
         preserveImageContext: true,
-        imageFile: true,
+        productImages: true,
         mandatoryArtworkText: true,
         showIllustrativeNotice: true,
         mandatoryArtworkTextFree: true,
@@ -703,13 +757,33 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     const abortController = new AbortController();
 
     try {
-      let imageDataUrl: string;
-      if (frozenFields.imageFile instanceof File) {
-        const compressed = await compressImage(frozenFields.imageFile);
-        imageDataUrl = compressed.dataUrl;
-      } else if (frozenRestoredImageDataUrl) {
-        imageDataUrl = frozenRestoredImageDataUrl;
-      } else {
+      // F41 (D2/D4): comprime cada item com `file` e ainda sem `dataUrl`. Após a
+      // compressão, o `mimeType` do item vira "image/jpeg" (o compressImage produz
+      // JPEG via toBlob) — NUNCA enviar o `file.type` original (um HEIC/HEIF
+      // tem file.type "image/heic", que transcodeToJpeg da rota não aceita → 500).
+      const compressedImages = await Promise.all(
+        frozenFields.productImages.map(async (item) => {
+          if (item.dataUrl) {
+            return { ...item, mimeType: "image/jpeg" };
+          }
+          if (item.file instanceof File) {
+            const compressed = await compressImage(item.file);
+            return { ...item, mimeType: "image/jpeg", dataUrl: compressed.dataUrl };
+          }
+          return item;
+        })
+      );
+      const resolvedImages = compressedImages.filter((i) => !!i.dataUrl);
+      if (resolvedImages.length === 0 && frozenRestoredImageDataUrl) {
+        resolvedImages.push({
+          id: crypto.randomUUID(),
+          role: "primary",
+          source: "upload",
+          mimeType: "image/jpeg",
+          dataUrl: frozenRestoredImageDataUrl,
+        });
+      }
+      if (resolvedImages.length === 0) {
         throw new Error("Imagem do produto é obrigatória");
       }
 
@@ -734,8 +808,20 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
           : { preserveImageContext: frozenFields.preserveImageContext }),
         ...(validity !== undefined ? { validity } : {}),
         ...(mandatoryArtworkText !== undefined ? { mandatoryArtworkText } : {}),
-        productImageDataUrl: imageDataUrl,
       };
+
+      // F41 (D2): com auxiliares → productImages[] (SEM id de cliente);
+      // sem auxiliares → productImageDataUrl legado; nunca ambos.
+      if (resolvedImages.length > 1) {
+        body.productImages = resolvedImages.map(({ role, source, mimeType, dataUrl }) => ({
+          role,
+          source,
+          mimeType,
+          dataUrl,
+        }));
+      } else {
+        body.productImageDataUrl = resolvedImages[0].dataUrl;
+      }
 
       await consumeStream(body, abortController);
     } catch (err) {
@@ -788,6 +874,42 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     setIsSubmitting(false);
   }, []);
 
+  // F41 (D3/D10): adiciona imagem (primeiro = primary, demais = reference);
+  // respeita o teto MAX_CAMPAIGN_IMAGES.
+  const addImage = useCallback((file: File, source: "upload" | "camera") => {
+    if (!file) return;
+    setFields((prev) => {
+      if (prev.productImages.length >= MAX_CAMPAIGN_IMAGES) return prev;
+      return {
+        ...prev,
+        productImages: [
+          ...prev.productImages,
+          {
+            id: crypto.randomUUID(),
+            role: prev.productImages.length === 0 ? "primary" : "reference",
+            source,
+            mimeType: file.type,
+            file,
+          },
+        ],
+      };
+    });
+  }, []);
+
+  // F41 (D3): remove por id; se remover a primary e houver itens restantes,
+  // promove o próximo a primary.
+  const removeImage = useCallback((id: string) => {
+    setFields((prev) => {
+      const remaining = prev.productImages.filter((i) => i.id !== id);
+      return {
+        ...prev,
+        productImages: remaining.map((item, index) =>
+          index === 0 ? { ...item, role: "primary" } : item
+        ),
+      };
+    });
+  }, []);
+
   const trimmed = fields.productName.trim();
   const badgeValid = fields.campaignIntent === "offer"
     ? fields.badge !== "" && BADGE_OPTIONS_BY_INTENT[fields.campaignIntent].includes(fields.badge)
@@ -795,11 +917,16 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
   const priceValid = fields.campaignIntent === "offer"
     ? (fields.discountedPriceCents ?? 0) > 0
     : true;
+  const hasUsableImage =
+    fields.productImages.length > 0 &&
+    (fields.productImages[0]?.file instanceof File ||
+      !!fields.productImages[0]?.dataUrl ||
+      !!restoredImageDataUrl);
   const isValid =
     trimmed !== "" &&
     priceValid &&
     badgeValid &&
-    (fields.imageFile instanceof File || !!restoredImageDataUrl);
+    hasUsableImage;
 
   return {
     fields,
@@ -824,6 +951,8 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     handleConflictCancel,
     phases,
     onPhaseChange,
+    addImage,
+    removeImage,
   };
 }
 
