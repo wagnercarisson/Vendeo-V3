@@ -1,7 +1,7 @@
 "use client";
 
 import { useCampaignForm, inferIntent } from "./use-campaign-form";
-import type { CampaignFormFields } from "./use-campaign-form";
+import type { CampaignFormFields, CampaignProductFormImage } from "./use-campaign-form";
 import { CampaignImageUpload } from "./campaign-image-upload";
 import { GenerationProgress } from "./generation-progress";
 import { BADGE_OPTIONS, BADGE_OPTIONS_BY_INTENT } from "@/lib/constants";
@@ -46,6 +46,8 @@ export function CampaignInputForm({ storeId, balance, supportEmail }: CampaignIn
     handleConflictCorrect,
     handleConflictCancel,
     phases,
+    addImage,
+    removeImage,
   } = useCampaignForm(storeId);
 
   if (isSubmitting) {
@@ -171,6 +173,8 @@ export function CampaignInputForm({ storeId, balance, supportEmail }: CampaignIn
         imagePreviewUrl={imagePreviewUrl}
         isSubmitting={isSubmitting}
         handleSubmit={handleSubmit}
+        addImage={addImage}
+        removeImage={removeImage}
         balance={balance}
         supportEmail={supportEmail}
       />
@@ -182,7 +186,7 @@ interface FormContentProps {
   fields: CampaignFormFields;
   fieldErrors: Record<string, string | undefined>;
   touched: Record<string, boolean>;
-  setField: (field: keyof CampaignFormFields, value: string | number | boolean | File | null | undefined) => void;
+  setField: (field: keyof CampaignFormFields, value: string | number | boolean | File | null | undefined | CampaignProductFormImage[]) => void;
   handleBlur: (field: keyof CampaignFormFields) => void;
   displayPriceOriginal: string;
   displayPriceDiscounted: string;
@@ -191,6 +195,8 @@ interface FormContentProps {
   imagePreviewUrl: string | null;
   isSubmitting: boolean;
   handleSubmit: () => void;
+  addImage: (file: File, source: "upload" | "camera") => void;
+  removeImage: (id: string) => void;
   balance?: number | null;
   supportEmail?: string;
 }
@@ -260,6 +266,8 @@ function FormContent({
   imagePreviewUrl,
   isSubmitting,
   handleSubmit,
+  addImage,
+  removeImage,
   balance,
   supportEmail,
 }: FormContentProps) {
@@ -360,10 +368,10 @@ function FormContent({
       </div>
 
       <CampaignImageUpload
-        imageFile={fields.imageFile}
-        error={touched.imageFile ? fieldErrors.imageFile ?? null : null}
-        previewUrl={imagePreviewUrl}
-        onSelect={(file) => setField("imageFile", file)}
+        productImages={fields.productImages}
+        error={touched.productImages ? fieldErrors.productImages ?? null : null}
+        onAdd={addImage}
+        onRemove={removeImage}
       />
 
       <h2 className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2">
