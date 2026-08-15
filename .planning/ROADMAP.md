@@ -38,7 +38,7 @@
 | 38.2.1 | ✅ Snapshot Econômico | 7/7 | ✅ Complete | 2026-08-12 |
 | 39 | ✅ Brief Estruturado de Campanha (v1.5) | 8/8 | ✅ Complete | 2026-08-13 |
 | 40 | ✅ Campos Comerciais e Avisos do Brief (v1.5) | 9/9 | ✅ Complete | 2026-08-14 |
-| 41 | ○ Mídia de Campanha Mobile (v1.5) | 6/13 | In Progress|  |
+| 41 | ○ Mídia de Campanha Mobile (v1.5) | 7/13 | In Progress|  |
 | 42 | ○ Stripe / Monetização Pública (v1.7) | — | Pending    | — |
 
 ---
@@ -767,7 +767,7 @@ Plans:
 
 **Source of truth:** `openspec/changes/fase-41-midia-de-campanha-mobile/`
 
-**Plans:** 6/13 plans executed
+**Plans:** 7/13 plans executed
 
 ```
 - [x] 41-01-PLAN.md — Trackings D1 (grep-verificação renumeração F41/F42, zero resíduos, registro commit 195b467)
@@ -780,7 +780,7 @@ Plans:
 - [ ] 41-08-PLAN.md — UI (CampaignImageUpload multi + capture + grid; seção Imagens adicionais) + credits test co-migrado
 - [ ] 41-09-PLAN.md — Testes 1-8 (mapper/snapshot: multi, legado, invariante, mimeType, storagePath, exactly-1-primary)
 - [ ] 41-10-PLAN.md — Testes 9-16 (UI/form: primary, remoção, source, HEIC/EXIF, body, draft N, limites)
-- [ ] 41-11-PLAN.md — Testes 17-23 (pipeline/provider/review/prompt: N input_image, fallback gated, golden 38, bloco 1+N, primary-only, review)
+- [x] 41-11-PLAN.md — Testes 17-23 (pipeline/provider/review/prompt: N input_image, fallback gated, golden 38, bloco 1+N, primary-only, review)
 - [ ] 41-12-PLAN.md — Testes 4 + 24-27 (rota: 400 ambíguo, 413, storage D5, cleanup, regressão)
 - [ ] 41-13-PLAN.md — Verificação final (4 gates + VERIFICATION.md + UAT.md + checkpoint humano)
 ```
