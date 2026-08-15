@@ -767,7 +767,32 @@ Plans:
 
 **Source of truth:** `openspec/changes/fase-41-midia-de-campanha-mobile/`
 
-**Plans:** pending
+**Plans:** 13 plans (6 waves)
+
+```
+- [ ] 41-01-PLAN.md — Trackings D1 (grep-verificação renumeração F41/F42, zero resíduos, registro commit 195b467)
+- [ ] 41-02-PLAN.md — Config + Transporte schema (MAX_CAMPAIGN_IMAGES=4 + teto agregado; ProductImageInputSchema + productImages[] + productImageDataUrl optional)
+- [ ] 41-03-PLAN.md — Prompts 1+N (bloco descritivo nos 4 prompts, sem variável nova, golden 38 keys)
+- [ ] 41-04-PLAN.md — Domínio + Persistência (mapper multi + mimeTypeFromDataUrl + storagePath; createCampaign campaignId? + uploadCampaignInputImage + removeCampaignInputs)
+- [ ] 41-05-PLAN.md — Provider + Service (N input_image, fallback edit gated, mediaImagesDataUrls, review com primary)
+- [ ] 41-06-PLAN.md — Rota (exclusividade 400, teto 413, campaignId pré-gerado, upload pré-snapshot, cleanup)
+- [ ] 41-07-PLAN.md — Form hook (estado multi, HEIC/EXIF, body D2, draft multi) + co-migração testes irmãos
+- [ ] 41-08-PLAN.md — UI (CampaignImageUpload multi + capture + grid; seção Imagens adicionais) + credits test co-migrado
+- [ ] 41-09-PLAN.md — Testes 1-8 (mapper/snapshot: multi, legado, invariante, mimeType, storagePath, exactly-1-primary)
+- [ ] 41-10-PLAN.md — Testes 9-16 (UI/form: primary, remoção, source, HEIC/EXIF, body, draft N, limites)
+- [ ] 41-11-PLAN.md — Testes 17-23 (pipeline/provider/review/prompt: N input_image, fallback gated, golden 38, bloco 1+N, primary-only, review)
+- [ ] 41-12-PLAN.md — Testes 4 + 24-27 (rota: 400 ambíguo, 413, storage D5, cleanup, regressão)
+- [ ] 41-13-PLAN.md — Verificação final (4 gates + VERIFICATION.md + UAT.md + checkpoint humano)
+```
+
+**Waves:**
+
+- **Wave 1** *(blocks waves 2-6)* — 41-01 (trackings D1 — grep-verificação 6 runbooks + AGENTS.md), 41-02 (config + transporte schema), 41-03 (prompts 1+N)
+- **Wave 2** *(blocked on Wave 1)* — 41-04 (domínio + persistência), 41-05 (provider + service)
+- **Wave 3** *(blocked on Wave 2)* — 41-06 (rota), 41-07 (form hook)
+- **Wave 4** *(blocked on Wave 3)* — 41-08 (UI), 41-09 (testes 1-8), 41-10 (testes 9-16)
+- **Wave 5** *(blocked on Wave 4)* — 41-11 (testes 17-23), 41-12 (testes 4 + 24-27 rota + regressão)
+- **Wave 6** *(blocked on Wave 5)* — 41-13 (verificação final + UAT humana — checkpoint)
 
 ---
 
