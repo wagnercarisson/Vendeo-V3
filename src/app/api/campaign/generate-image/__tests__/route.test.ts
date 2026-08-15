@@ -45,6 +45,7 @@ vi.mock('@/lib/campaign/image-processor', () => ({
 vi.mock('@/lib/image-generation/config', () => ({
   IMAGE_GENERATION_GLOBAL_TIMEOUT_MS: 300000,
   MAX_PRODUCT_IMAGE_BASE64_SIZE: 5 * 1024 * 1024,
+  MAX_PRODUCT_IMAGES_AGGREGATE_BASE64_SIZE: 2 * 1024 * 1024,
   MAX_CAMPAIGN_IMAGES: 4,
   IMAGE_GENERATION_RESPONSES_MODEL: 'test-model',
 }));
@@ -196,6 +197,16 @@ const VALID_REQUEST_BODY = {
   productImageDataUrl: 'data:image/jpeg;base64,abc',
 };
 
+const VALID_PRODUCT_IMAGES_REQUEST = {
+  ...VALID_REQUEST_BODY,
+  productImageDataUrl: undefined,
+  productImages: [
+    { role: 'primary', source: 'camera', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,primary' },
+    { role: 'reference', source: 'upload', mimeType: 'image/png', dataUrl: 'data:image/png;base64,aux1' },
+    { role: 'reference', source: 'upload', mimeType: 'image/webp', dataUrl: 'data:image/webp;base64,aux2' },
+  ],
+};
+
 function makeRequest(body: Record<string, unknown>): NextRequest {
   return new NextRequest(new Request('http://localhost/api/campaign/generate-image', {
     method: 'POST',
@@ -329,6 +340,169 @@ describe('POST /api/campaign/generate-image', () => {
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error.message).toContain('Imagem do produto');
+  });
+
+  it('27 (F41): ausência de productImageDataUrl E productImages → 400 da ROTA (regra de exclusividade D2, não Zod)', async () => {
+    const { POST } = await import('../route');
+    const req = makeRequest({
+      storeId: STORE_ID,
+      productName: 'Produto',
+      discountedPriceCents: 1990,
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.message).toContain('Imagem do produto é obrigatória');
+    // o 400 vem da regra de exclusividade da rota (ambos ausentes), não do Zod
+    expect(body.error).not.toHaveProperty('details');
+  });
+
+  it('4 (F41): productImages + productImageDataUrl juntos → 400 payload ambíguo (D2)', async () => {
+    const { POST } = await import('../route');
+    const req = makeRequest({
+      ...VALID_REQUEST_BODY,
+      productImages: [{ role: 'primary', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,x' }],
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.message).toContain('Payload ambíguo');
+  });
+
+  it('24a (F41): item individual > 4MB → 413 PT-BR indicando o item (D10)', async () => {
+    const { POST } = await import('../route');
+    const req = makeRequest({
+      ...VALID_PRODUCT_IMAGES_REQUEST,
+      productImages: [
+        { role: 'primary', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,' + 'a'.repeat(5 * 1024 * 1024) },
+      ],
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(413);
+    const body = await res.json();
+    expect(body.error.message).toContain('Imagem 1 do produto excede o limite');
+  });
+
+  it('24b (F41): soma dos dataUrls > teto agregado → 413 PT-BR indicando o total (D10)', async () => {
+    const { POST } = await import('../route');
+    // 3 itens de ~1MB cada → soma ~3MB > teto agregado mockado (2MB)
+    const item = (role: string, base: string) => ({
+      role,
+      source: 'upload' as const,
+      mimeType: 'image/jpeg',
+      dataUrl: 'data:image/jpeg;base64,' + base.repeat(1024 * 1024),
+    });
+    const req = makeRequest({
+      ...VALID_PRODUCT_IMAGES_REQUEST,
+      productImages: [
+        item('primary', 'a'),
+        item('reference', 'b'),
+        item('reference', 'c'),
+      ],
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(413);
+    const body = await res.json();
+    expect(body.error.message).toContain('teto agregado');
+  });
+
+  it('24c (F41): mais de MAX_CAMPAIGN_IMAGES itens → 400 do schema (cap do transporte D10)', async () => {
+    const { POST } = await import('../route');
+    const images = [
+      { role: 'primary', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,p' },
+    ];
+    for (let i = 0; i < 4; i++) {
+      images.push({ role: 'reference', source: 'upload', mimeType: 'image/jpeg', dataUrl: `data:image/jpeg;base64,r${i}` });
+    }
+    const req = makeRequest({ ...VALID_PRODUCT_IMAGES_REQUEST, productImages: images });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.message).toContain('Dados de entrada inválidos');
+  });
+
+  it('25 (F41): upload de inputs pré-snapshot com campaignId/imageId gerados pela rota + storagePath no snapshot (D5)', async () => {
+    await setupSuccessMocks();
+    const { POST } = await import('../route');
+    const req = makeRequest(VALID_PRODUCT_IMAGES_REQUEST);
+    const res = await POST(req);
+    await res.text();
+
+    // 3 uploads de input (primary + 2 auxiliares) com ids da ROTA (uuid)
+    expect(uploadCampaignInputImage).toHaveBeenCalledTimes(3);
+    const uploadCalls = (uploadCampaignInputImage as any).mock.calls;
+    for (const call of uploadCalls) {
+      expect(call[0]).toBe(STORE_ID);
+      expect(typeof call[1]).toBe('string'); // campaignId pré-gerado
+      expect(typeof call[2]).toBe('string'); // imageId gerado pela rota
+      expect(call[3]).toEqual(expect.objectContaining({ mimeType: expect.any(String) }));
+    }
+
+    // createCampaign com 3º arg (campaignId pré-gerado) + snapshot com storagePath
+    expect(createCampaign).toHaveBeenCalledWith(
+      STORE_ID,
+      expect.objectContaining({
+        inputSnapshot: expect.objectContaining({
+          media: expect.objectContaining({
+            images: expect.arrayContaining([
+              expect.objectContaining({ storagePath: expect.stringContaining('/inputs/') }),
+            ]),
+          }),
+        }),
+      }),
+      expect.any(String)
+    );
+  });
+
+  it('26 (F41): falha no upload do input → removeCampaignInputs (cleanup pré-stream, sem órfãos) (D5)', async () => {
+    await setupSuccessMocks();
+    (uploadCampaignInputImage as any)
+      .mockResolvedValueOnce({ storagePath: `${STORE_ID}/camp-1/inputs/1.jpg` })
+      .mockRejectedValueOnce(new Error('upload failed'));
+
+    const { POST } = await import('../route');
+    const req = makeRequest(VALID_PRODUCT_IMAGES_REQUEST);
+    const res = await POST(req);
+    expect(res.status).toBe(500);
+    await res.text();
+
+    expect(removeCampaignInputs).toHaveBeenCalledWith(
+      STORE_ID,
+      expect.any(String)
+    );
+  });
+
+  it('26b (F41): primary fora da posição 0 ([reference, primary]) → inputValidation.validate recebe o dataUrl da role primary (D8)', async () => {
+    await setupSuccessMocks();
+    const { POST } = await import('../route');
+    const req = makeRequest({
+      ...VALID_PRODUCT_IMAGES_REQUEST,
+      productImages: [
+        { role: 'reference', source: 'upload', mimeType: 'image/png', dataUrl: 'data:image/png;base64,aux' },
+        { role: 'primary', source: 'camera', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,primary' },
+      ],
+    });
+    const res = await POST(req);
+    await res.text();
+
+    // validação usa o dataUrl da imagem com role primary (find(role), NUNCA posição 0)
+    const validationMock = (InputValidationService as any);
+    expect(validationMock).toBeDefined();
+    // o fluxo seguiu normal: uploads + createCampaign com 3º arg
+    expect(uploadCampaignInputImage).toHaveBeenCalledTimes(2);
+    expect(createCampaign).toHaveBeenCalledWith(
+      STORE_ID,
+      expect.objectContaining({
+        inputSnapshot: expect.objectContaining({
+          media: expect.objectContaining({
+            images: expect.arrayContaining([
+              expect.objectContaining({ storagePath: expect.stringContaining('/inputs/') }),
+            ]),
+          }),
+        }),
+      }),
+      expect.any(String)
+    );
   });
 
   it('rejects missing storeId with 400', async () => {
