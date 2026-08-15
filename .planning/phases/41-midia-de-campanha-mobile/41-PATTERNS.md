@@ -366,13 +366,15 @@ for (const url of productImages) {
 }
 // identityImageUrl continua detail: "low" (inalterado)
 
-// fallback gate (`:58-61`): SÓ com primary única — 1 imagem
-if (attempt >= 1 && (input.productImagesDataUrls?.length === 1 || (!input.productImagesDataUrls && input.productImageDataUrl))) {
-  return this.fallbackToImageApi(openai, input, size);
+// fallback gate (`:58-61` e `:177-184` pós-erro): SÓ com primary única — helper compartilhado
+private isSinglePrimary(input: ImageProviderInput): boolean {
+  return input.productImagesDataUrls ? input.productImagesDataUrls.length === 1 : Boolean(input.productImageDataUrl);
 }
+// gate 1 (pre-response): if (attempt >= 1 && this.isSinglePrimary(input)) → fallback
+// gate 2 (post-error):   if (this.isSinglePrimary(input) && this.isResponsesApiError(err)) → fallback
 // com auxiliares → retries no Responses; Responses indisponível → erro explícito (sem descartar imagens)
 ```
-`fallbackToImageApi` (`:225-307`) **inalterado** — já usa apenas `input.productImageDataUrl` (`:232`, `:288-294`) e documenta a limitação de 1 base image (`:282-287`). O gate é quem impede o fallback com auxiliares.
+`fallbackToImageApi` (`:225-307`) recebe **ajuste mínimo**: o fallback usa apenas `input.productImageDataUrl` (`:232`, `:288-294`), mas `isSinglePrimary` permite fallback com `productImagesDataUrls.length === 1`. Resolver a primary dentro do fallback: `const productImageDataUrl = input.productImageDataUrl ?? input.productImagesDataUrls?.[0];` e usar esse valor no `dataUrlMatch` — legado E novo single-image caem no fallback sem "Invalid productImageDataUrl". A limitação de 1 base image (`:282-287`) permanece.
 
 **Data flow:** request-response — lista de dataUrls → blocks multimodais → Responses API.
 
