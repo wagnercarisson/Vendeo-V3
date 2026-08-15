@@ -3,14 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 current_phase: 41
-status: executing
-last_updated: "2026-08-15T16:26:39.054Z"
+status: milestone_complete
+last_updated: 2026-08-15T22:10:07.199Z
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 52
-  completed_plans: 39
-  percent: 75
+  completed_plans: 145
+  percent: 80
+stopped_at: Milestone complete (Phase 41 was final phase)
 ---
 
 # Project State
@@ -153,7 +154,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais.
 
-**Current focus:** Phase 41 — Mídia de Campanha Mobile
+**Current focus:** Milestone complete
 
 ## Completed Milestones
 
@@ -507,7 +508,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 ## Current Position
 
 Phase: 41 (Mídia de Campanha Mobile) — EXECUTING
-Plan: 1 of 13
+Plan: Not started
 v1.5 em andamento — **F41 (Mídia de Campanha Mobile, v1.5) PLANEJADA — 13 plans / 6 waves, pronta para executar** — form multi-imagem (primary + auxiliares + câmera HEIC/EXIF), transporte aditivo `productImages[]`, persistência dos inputs no storage com `campaignId` pré-gerado (D5 nos dois fluxos), provider N `input_image` com fallback gated, prompt 1+N sem nova variável, validação primary-only, revisor com primary; **renumeração D1: F41 = Mídia de Campanha Mobile (v1.5), Stripe/Monetização Pública → F42 (v1.7, pós-beta — renumerada de F39/F40/F41)**; fonte da verdade `openspec/changes/fase-41-midia-de-campanha-mobile/`. F40 (Campos Comerciais e Avisos do Brief) CONCLUÍDA — 9/9 plans, 1997 testes (221 arquivos), 4 gates verdes, UAT humano aprovado 6/6 (1 ajuste de UX: placeholder/helper do texto obrigatório). F39 (Brief Estruturado de Campanha) CONCLUÍDA — 8/8 plans, 1950 testes, 4 gates verdes, UAT humano aprovado 5/5. F38.2.1 (Snapshot Econômico) CONCLUÍDA — 7/7 plans, 1887 testes, I1-I7 53/53 asserts, UAT aprovado. F38.2 (Admin de Custos Operacionais + Configurações Econômicas) CONCLUÍDA — 11/11 plans, 1832 testes, verificação I1-I6 em banco real, UAT aprovado. F38.1 (Apuração de Custos de IA por Entrega) CONCLUÍDA — 11/11 plans, 1713 testes, UAT validado, **fechada como camada de estimativa operacional granular** (0.065 provisório beta; reconciliação financeira real na próxima fase). F38 (Tabela de Custos por Operação) concluída — 8/8 plans, 1597 testes, UAT 4/4.
 v1.5 em andamento — Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36, 38 e 38.1 concluídas. F38 (Tabela de Custos por Operação, v1.5) concluída — 8/8 plans, 1597 testes, UAT 4/4; F38.1 (Apuração de Custos de IA por Entrega, desdobramento da F38) **CONCLUÍDA** — 11/11 plans, 1713 testes, UAT validado, **fechada como camada de estimativa operacional granular** (ajuste provisório da tool image_generation `0.065` = estimativa beta provisória, não custo real; reconciliação financeira real na próxima fase), fonte da verdade `openspec/changes/fase-38-1-ai-cost-accounting/`; **F38.2 (Admin de Custos Operacionais + Configurações Econômicas, desdobramento da F38) em EXECUÇÃO — 10/11 plans** — painel `/admin/ai-operation-costs` (KPIs/filtros/tabela/drilldown/segmentos) + `economic_parameters` configuráveis + badges de confiança + correção `/admin/metrics`, fonte `openspec/changes/fase-38-2-admin-custos-operacionais/`; 38-2-01 ✅ migrations/db push (schema econômico + RPCs de runs no remoto), 38-2-02 ✅ tipos econômicos + EconomicParameterService fail-open/fail-closed + 10 testes (base das rotas 38-2-04/05/06/09), 38-2-03 ✅ AiCostTracker persiste 4 campos de confiança (D5), 38-2-04 ✅ API GET/PUT /api/admin/economic-parameters (zod + RPC admin_set_economic_parameter, 200/400/403/500, idempotência, 9 testes da rota, sem endpoint público), 38-2-05 ✅ OperationRunsService server-only (BRL D1/D4 via EconomicParameterService + badges D5 por evento/entrega + segmentação classifySegment D9 com filtro e re-paginação + storeName/owner D3 + 8 agregados D3/D9 sobre o conjunto filtrado inteiro + getRunDetail D4 com BRL/badges/componentes por evento; 20 testes, typecheck/lint limpos), 38-2-06 ✅ API GET /api/admin/ai-operation-runs (lista) + GET /api/admin/ai-operation-runs/[operationRunId] (detalhe) com AiOperationRunsQuerySchema (janela default 90d/max 365d → 400) delegando 100% ao OperationRunsService (BRL/badge/segmento nunca na rota) + 13 testes (tarefa 12.4, piso 11; regressão 1804 testes); **gap closure UAT (plans 12-15) CONCLUÍDO — verificação final: 1839 testes + 4 gates verdes + UAT manual 12/12 aprovado**; F37 (Revisão e Aprovação da Arte, v1.5, experimento beta) em planejamento futuro; F39 (Stripe / Monetização Pública) como marco futuro pós-beta (renumerada de F36 → F37 → F39). **38-2-10 OK: verificacao I1-I6 em banco real (script 50/50 asserts) + gates verdes (vitest 1832/1832, typecheck, lint, build) + UAT 13.3 coletado para harvest end-of-phase (I1-I6 documentados em 38-2-VERIFICATION.md)**. **38-2-12 OK (gap UAT estornos): migration 20260811000001 com CREATE OR REPLACE dos RPCs admin_get_ai_operation_runs/_events expondo creditos_estornados (refunds via reference→deduction no ledger) e creditos_liquidos = max(bruto−estorno, 0) por run E no summary/detalhe — creditos_debitados BRUTO inalterado, view F38.1 intocada; db push aplicado no remoto (validado via REST: estornados=3/liquidos=17 em 20 runs/90d); I5 estendido com 13 asserts novos → 63/63 asserts 0 falhas em banco real; gates verdes (vitest 1834/1834, typecheck/lint/build exit 0)**.
 
@@ -584,7 +585,7 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 | 38-1-10 | 5 | ✅ | Views/RPCs apuração + verificação I1–I6 (banco real) + 50 testes + gates + UAT checkpoint validado |
 | 38-1-11 | 6 | ✅ | Runbook trackings 8.1–8.5 + fechamento (0.065 provisório beta; reconciliação financeira real na próxima fase) |
 
-**Status:** Executing Phase 41
+**Status:** Milestone complete
 
 **Source:** `openspec/changes/fase-38-1-ai-cost-accounting/` (fonte da verdade)
 **Context:** `.planning/phases/38-1-ai-cost-accounting/38-1-CONTEXT.md`
