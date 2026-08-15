@@ -66,9 +66,9 @@
 
 | Cenário | Status | Observação |
 |---------|--------|------------|
-| 1 — Legado 1 imagem | PENDING | |
-| 2 — Primary + 2 auxiliares | PENDING | |
-| 3 — Câmera celular real (iOS/Android, HEIC/EXIF) | PENDING | OBRIGATÓRIO |
-| 4 — Remover/adicionar e regenerar | PENDING | |
-| 5 — Sem primary → 400 | PENDING | |
-| 6 — Campanha antiga pré-F41 | PENDING | |
+| 1 — Legado 1 imagem | ✅ PASS | Comportamento idêntico ao pós-F40; snapshot sem base64 + storagePath aditivo da primary |
+| 2 — Primary + 2 auxiliares | ✅ PASS | Grid 3 itens + badge Principal; arte com primary como herói e auxiliares como apoio comercial real (reframe do prompt validado) |
+| 3 — Câmera celular real (iOS/Android, HEIC/EXIF) | ⏸ PENDENTE | Não testável via localhost — **validar após deploy em produção** (D4 obrigatório) |
+| 4 — Remover/adicionar e regenerar | ✅ PASS | Remoção instantânea; remover primary promove o próximo; teto de 4 desabilita controles; regeneração não testável (fluxo pertence à F37) |
+| 5 — Sem primary → 400 | ✅ PASS | Erro claro "Imagem do produto é obrigatória" (regra de exclusividade da rota, não Zod) |
+| 6 — Campanha antiga pré-F41 | ✅ PASS | Exibe/baixa normalmente; sem migração destrutiva, sem storagePath retroativo |
