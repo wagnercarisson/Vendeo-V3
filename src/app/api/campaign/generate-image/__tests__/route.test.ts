@@ -30,6 +30,8 @@ vi.mock('@/lib/campaign/persistence', () => ({
   createCampaign: vi.fn(),
   dataUrlToCampaignImage: vi.fn(),
   uploadCampaignImage: vi.fn(),
+  uploadCampaignInputImage: vi.fn(),
+  removeCampaignInputs: vi.fn(),
   updateCampaignReady: vi.fn(),
   updateCampaignError: vi.fn(),
   deleteCampaignImage: vi.fn(),
@@ -178,7 +180,7 @@ vi.mock('@/lib/economic/economic-parameter-service', () => ({
 }));
 
 import { resolveStoreIdentity, validateIdentityReference, buildCampaignBrief } from '@/lib/store-identity-service';
-import { createCampaign, dataUrlToCampaignImage, uploadCampaignImage, updateCampaignReady, updateCampaignError, deleteCampaignImage } from '@/lib/campaign/persistence';
+import { createCampaign, dataUrlToCampaignImage, uploadCampaignImage, uploadCampaignInputImage, removeCampaignInputs, updateCampaignReady, updateCampaignError, deleteCampaignImage } from '@/lib/campaign/persistence';
 import { transcodeToJpeg } from '@/lib/campaign/image-processor';
 import { InputValidationService } from '@/lib/image-generation/services/input-validation-service';
 
@@ -256,6 +258,8 @@ async function setupSuccessMocks() {
   (dataUrlToCampaignImage as any).mockReturnValue({ buffer: Buffer.from(''), mimeType: 'image/jpeg' });
   (transcodeToJpeg as any).mockResolvedValue({ buffer: Buffer.from(''), mimeType: 'image/jpeg' });
   (uploadCampaignImage as any).mockResolvedValue(undefined);
+  (uploadCampaignInputImage as any).mockResolvedValue({ storagePath: `${STORE_ID}/${CAMPAIGN_ID}/inputs/x.jpg` });
+  (removeCampaignInputs as any).mockResolvedValue(undefined);
   (updateCampaignReady as any).mockResolvedValue(undefined);
 }
 
@@ -786,7 +790,8 @@ describe('POST /api/campaign/generate-image', () => {
             legalNotice: { enabled: true, text: 'Imagem meramente ilustrativa' },
           }),
         }),
-      })
+      }),
+      expect.any(String)
     );
   });
 
@@ -807,7 +812,8 @@ describe('POST /api/campaign/generate-image', () => {
             validity: { enabled: true, displayText: 'até 30/09' },
           }),
         }),
-      })
+      }),
+      expect.any(String)
     );
   });
 
@@ -1163,7 +1169,7 @@ describe('Pipeline cost accounting (6.3)', () => {
     await setupPipelineSuccessMocks({ reviewAttempts: 2 });
     await runPipeline();
 
-    expect(createCampaign).toHaveBeenCalledWith(STORE_ID, expect.objectContaining({ operationRunId: RUN_IDS.operationRunId }));
+    expect(createCampaign).toHaveBeenCalledWith(STORE_ID, expect.objectContaining({ operationRunId: RUN_IDS.operationRunId }), expect.any(String));
     const types = new Set(capturedEvents.map((e: any) => e.generationType));
     expect(types).toEqual(new Set(['campaign_copy', 'campaign_input_validation', 'campaign_image', 'campaign_image_review', 'campaign_pipeline']));
     for (const e of capturedEvents) {
@@ -1177,7 +1183,8 @@ describe('Pipeline cost accounting (6.3)', () => {
 
     expect(createCampaign).toHaveBeenCalledWith(
       STORE_ID,
-      expect.objectContaining({ operationRunId: RUN_IDS.operationRunId })
+      expect.objectContaining({ operationRunId: RUN_IDS.operationRunId }),
+      expect.any(String)
     );
     // o mesmo run id aparece nos eventos call-level e no delivery
     const delivery = capturedEvents.find((e: any) => e.generationType === 'campaign_pipeline');

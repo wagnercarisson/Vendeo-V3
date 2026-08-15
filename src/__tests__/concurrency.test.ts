@@ -20,12 +20,16 @@ vi.mock("@/lib/store-identity-service", () => ({
 
 const { mockCreateCampaign } = vi.hoisted(() => ({ mockCreateCampaign: vi.fn() }));
 const { mockUploadCampaignImage } = vi.hoisted(() => ({ mockUploadCampaignImage: vi.fn() }));
+const { mockUploadCampaignInputImage } = vi.hoisted(() => ({ mockUploadCampaignInputImage: vi.fn() }));
+const { mockRemoveCampaignInputs } = vi.hoisted(() => ({ mockRemoveCampaignInputs: vi.fn() }));
 const { mockUpdateCampaignReady } = vi.hoisted(() => ({ mockUpdateCampaignReady: vi.fn() }));
 const { mockDataUrlToCampaignImage } = vi.hoisted(() => ({ mockDataUrlToCampaignImage: vi.fn() }));
 vi.mock("@/lib/campaign/persistence", () => ({
   createCampaign: mockCreateCampaign,
   dataUrlToCampaignImage: mockDataUrlToCampaignImage,
   uploadCampaignImage: mockUploadCampaignImage,
+  uploadCampaignInputImage: mockUploadCampaignInputImage,
+  removeCampaignInputs: mockRemoveCampaignInputs,
   updateCampaignReady: mockUpdateCampaignReady,
   updateCampaignError: vi.fn(),
   deleteCampaignImage: vi.fn(),
@@ -151,10 +155,11 @@ beforeEach(() => {
     cta_post: "Compre agora", hashtags: ["#oferta", "#promocao"],
   });
   mockGenerateImageResult.mockResolvedValue({ success: true, imageDataUrl: "data:image/jpeg;base64,success" });
-  mockCreateCampaign.mockResolvedValue({ id: CAMPAIGN_ID, storagePath: "test/path.jpg" });
-  mockUploadCampaignImage.mockResolvedValue(undefined);
-  mockUpdateCampaignReady.mockResolvedValue(undefined);
-  mockDataUrlToCampaignImage.mockReturnValue({ buffer: Buffer.from("test"), mimeType: "image/jpeg" });
+mockCreateCampaign.mockResolvedValue({ id: CAMPAIGN_ID, storagePath: "test/path.jpg" });
+mockUploadCampaignImage.mockResolvedValue(undefined);
+mockUploadCampaignInputImage.mockResolvedValue({ storagePath: `${STORE_ID}/${CAMPAIGN_ID}/inputs/x.jpg` });
+mockRemoveCampaignInputs.mockResolvedValue(undefined);
+mockDataUrlToCampaignImage.mockReturnValue({ buffer: Buffer.from("test"), mimeType: "image/jpeg" });
   mockTranscodeToJpeg.mockResolvedValue(Buffer.from("test"));
 
   mockStoreFrom.mockImplementation((table: string) => {
