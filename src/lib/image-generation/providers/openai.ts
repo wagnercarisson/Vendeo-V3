@@ -55,8 +55,8 @@ export class OpenAIImageProvider implements ImageProvider {
     const quality = input.quality ?? IMAGE_GENERATION_QUALITY;
     const attempt = input.attempt ?? 0;
 
-    // attempt 1+ → skip to Image API edit fallback
-    if (attempt >= 1 && input.productImageDataUrl) {
+    // attempt 1+ → skip to Image API edit fallback (SÓ com primary única — D7)
+    if (attempt >= 1 && this.isSinglePrimary(input)) {
       return this.fallbackToImageApi(openai, input, size);
     }
 
@@ -68,8 +68,11 @@ export class OpenAIImageProvider implements ImageProvider {
         { type: "input_text", text: input.prompt },
       ];
 
-      if (input.productImageDataUrl) {
-        content.push({ type: "input_image" as const, image_url: input.productImageDataUrl, detail: "auto" as const });
+      const productImages =
+        input.productImagesDataUrls ??
+        (input.productImageDataUrl ? [input.productImageDataUrl] : []);
+      for (const url of productImages) {
+        content.push({ type: "input_image" as const, image_url: url, detail: "auto" as const });
       }
 
       if (input.identityImageUrl) {
@@ -175,8 +178,8 @@ export class OpenAIImageProvider implements ImageProvider {
       );
 
       // Fallback to Image API edit when product image is available
-      // and error is not auth/quota/rate-limit
-      if (input.productImageDataUrl && this.isResponsesApiError(err)) {
+      // and error is not auth/quota/rate-limit (D7: SÓ com primary única)
+      if (this.isSinglePrimary(input) && this.isResponsesApiError(err)) {
         console.error(
           `[OpenAIImageProvider] falling back to Image API edit (model=${this.editFallbackModel})`
         );
@@ -187,6 +190,17 @@ export class OpenAIImageProvider implements ImageProvider {
         `image provider error (${errorCode || "unknown"})`
       );
     }
+  }
+
+  /**
+   * F41 D7: true quando há APENAS a primary (1 imagem). Com auxiliares (2+),
+   * o fallback images.edit NÃO é usado — retries permanecem no Responses ou
+   * erro explícito (não degrada a fidelidade descartando imagens).
+   */
+  private isSinglePrimary(input: ImageProviderInput): boolean {
+    return input.productImagesDataUrls
+      ? input.productImagesDataUrls.length === 1
+      : Boolean(input.productImageDataUrl);
   }
 
   /**
@@ -229,7 +243,11 @@ export class OpenAIImageProvider implements ImageProvider {
   ): Promise<ImageProviderOutput> {
     const { toFile } = await import("openai");
 
-    const dataUrlMatch = input.productImageDataUrl!.match(
+    // F41 D7: resolve a primary (legado ou novo single-image productImagesDataUrls)
+    const productImageDataUrl =
+      input.productImageDataUrl ?? input.productImagesDataUrls?.[0];
+
+    const dataUrlMatch = productImageDataUrl?.match(
       /^data:(image\/(?:png|jpeg|webp));base64,(.+)$/i
     );
 

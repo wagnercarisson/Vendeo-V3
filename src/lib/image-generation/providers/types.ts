@@ -6,6 +6,8 @@ import type { TokenUsage } from "@/lib/ai-cost/types";
 export interface ImageProviderInput {
   prompt: string;
   productImageDataUrl?: string;
+  /** F41 D7: lista ordenada de dataUrls das imagens do produto; posição 0 = primary. */
+  productImagesDataUrls?: string[];
   identityImageUrl?: string;
   size?: "1024x1024" | "2048x2048";
   quality?: "low" | "medium" | "high" | "auto";
