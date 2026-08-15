@@ -106,9 +106,9 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 | 41-07 | 3 | ⬜ | Form hook (estado multi, HEIC/EXIF, body D2, draft multi) + co-migração testes irmãos |
 | 41-08 | 4 | ⬜ | UI (CampaignImageUpload multi + capture + grid; seção Imagens adicionais) + credits test co-migrado |
 | 41-09 | 4 | ⬜ | Testes 1-8 (mapper/snapshot: multi, legado, invariante, mimeType, storagePath, exactly-1-primary) |
-| 41-10 | 4 | ⬜ | Testes 9-16 (UI/form: primary, remoção, source, HEIC/EXIF, body, draft N, limites) |
+| 41-10 | 5 | ⬜ | Testes 9-16 (UI/form: primary, remoção, source, HEIC/EXIF, body, draft N, limites) |
 | 41-11 | 5 | ⬜ | Testes 17-23 (pipeline/provider/review/prompt: N input_image, fallback gated, golden 38, bloco 1+N, primary-only, review) |
-| 41-12 | 5 | ⬜ | Testes 4 + 24-27 (rota: 400 ambíguo, 413, storage D5, cleanup, regressão) |
+| 41-12 | 4 | ⬜ | Testes 4 + 24-27 (rota: 400 ambíguo, 413, storage D5, cleanup, regressão) |
 | 41-13 | 6 | ⬜ | Verificação final (4 gates + VERIFICATION.md + UAT.md + checkpoint humano) |
 
 **Change artifacts (source of truth):** `openspec/changes/fase-41-midia-de-campanha-mobile/`

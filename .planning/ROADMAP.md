@@ -790,8 +790,8 @@ Plans:
 - **Wave 1** *(blocks waves 2-6)* — 41-01 (trackings D1 — grep-verificação 6 runbooks + AGENTS.md), 41-02 (config + transporte schema), 41-03 (prompts 1+N)
 - **Wave 2** *(blocked on Wave 1)* — 41-04 (domínio + persistência), 41-05 (provider + service)
 - **Wave 3** *(blocked on Wave 2)* — 41-06 (rota), 41-07 (form hook)
-- **Wave 4** *(blocked on Wave 3)* — 41-08 (UI), 41-09 (testes 1-8), 41-10 (testes 9-16)
-- **Wave 5** *(blocked on Wave 4)* — 41-11 (testes 17-23), 41-12 (testes 4 + 24-27 rota + regressão)
+- **Wave 4** *(blocked on Wave 3)* — 41-08 (UI), 41-09 (testes 1-8), 41-12 (testes 4 + 24-27 rota)
+- **Wave 5** *(blocked on Wave 4)* — 41-10 (testes 9-16), 41-11 (testes 17-23)
 - **Wave 6** *(blocked on Wave 5)* — 41-13 (verificação final + UAT humana — checkpoint)
 
 ---
