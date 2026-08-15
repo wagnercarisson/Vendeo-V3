@@ -440,7 +440,7 @@ Padrão do repositório (vitest + Testing Library). Suíte estimada ~32+ testes 
 | 4 | `productImages` + `productImageDataUrl` juntos → 400 ambíguo | D2 |
 | 5 | `mimeType` derivado do dataUrl (png/jpeg/webp) — corrige quirk da F39 | D2 |
 | 6 | Snapshot com N imagens: **sem dataUrl**, com `storagePath` por imagem | D5 |
-| 7 | Legado com 1 imagem → snapshot idêntico ao pós-F40 (regressão) | D2/D5 |
+| 7 | Legado com 1 imagem → comportamento e shape preservados (regressão): snapshot sem base64 com `mimeType: "image/jpeg"`; no teste unitário sem upload `storagePath` ausente — a primary ganha `storagePath` aditivo no fluxo de rota F41 (D5 nos dois fluxos) | D2/D5 |
 | 8 | Exatamente 1 primary no snapshot/domínio (zod) para N imagens | D3 |
 
 ### UI / form — 8 testes
@@ -526,7 +526,7 @@ Padrão do repositório (vitest + Testing Library). Suíte estimada ~32+ testes 
 - [ ] D10 — Limites: `MAX_CAMPAIGN_IMAGES = 4`; compressão por item; teto agregado; erros 400/413 claros
 
 ### Fluxo (comportamento preservado + novos controles)
-- [ ] Gerar campanha com 1 imagem (legado) → comportamento e snapshot idênticos ao pós-F40
+- [ ] Gerar campanha com 1 imagem (legado) → comportamento/UX idênticos ao pós-F40; snapshot sem base64 preservado + `storagePath` aditivo da primary (D5 nos dois fluxos — decisão do usuário 2026-08-14)
 - [ ] Gerar campanha com primary + 2 auxiliares → `media.images[]` com 3 itens (roles/source/mimeType corretos)
 - [ ] UI de seleção/remoção/preview por item; remover primary bloqueado/validado
 - [ ] Câmera (mobile) → `source: "camera"`; foto HEIC convertida; orientação correta (UAT celular real)

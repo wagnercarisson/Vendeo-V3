@@ -91,7 +91,7 @@
 - [ ] 12.4 Teste 4: `productImages` + `productImageDataUrl` juntos → 400 ambíguo (rota) — D2
 - [ ] 12.5 Teste 5: `mimeType` derivado do dataUrl (png/jpeg/webp) — corrige quirk da F39 — D2
 - [ ] 12.6 Teste 6: snapshot com N imagens: **sem dataUrl**, com `storagePath` por imagem — D5
-- [ ] 12.7 Teste 7: legado com 1 imagem → snapshot idêntico ao pós-F40 (regressão) — D2/D5
+- [ ] 12.7 Teste 7: legado com 1 imagem → comportamento e shape preservados (regressão): snapshot sem base64 com `mimeType: "image/jpeg"`; no teste unitário sem upload `storagePath` fica ausente — a primary ganha `storagePath` aditivo apenas no fluxo de rota F41 (D5 nos dois fluxos — decisão do usuário 2026-08-14) — D2/D5
 - [ ] 12.8 Teste 8: exatamente 1 primary no snapshot/domínio (zod) para N imagens — D3
 
 ## 13. Testes — UI / form (D3/D4/D10) — 8 testes
@@ -139,7 +139,7 @@
 - [ ] 16.2 `npm run typecheck` — zero erros
 - [ ] 16.3 `npm run lint` — zero erros
 - [ ] 16.4 `npm run build` — build bem-sucedido
-- [ ] 16.5 UAT local: gerar campanha com 1 imagem (legado) → comportamento e snapshot idênticos ao pós-F40 — D2
+- [ ] 16.5 UAT local: gerar campanha com 1 imagem (legado) → comportamento/UX idênticos ao pós-F40; snapshot sem base64 preservado, mas com `storagePath` aditivo para a primary quando passa pela rota F41 (D5 nos dois fluxos — decisão do usuário 2026-08-14; `storagePath` ausente só em campanhas pré-F41 ou caminhos excepcionais sem upload) — D2
 - [ ] 16.6 UAT local: gerar campanha com primary + 2 auxiliares (galeria) → `media.images[]` com 3 itens (roles/source/mimeType corretos); arte com herói = primary e contexto das auxiliares — D2/D3/D6
 - [ ] 16.7 UAT local: câmera no celular (foto nova) — HEIC/EXIF ok, arte correta — D4
 - [ ] 16.8 UAT local: remover/adicionar auxiliares e regenerar — preview e payload consistentes — D3
