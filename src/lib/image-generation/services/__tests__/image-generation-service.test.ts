@@ -605,6 +605,27 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
     expect(vars.mandatoryArtworkText).toBe('Imagem meramente ilustrativa');
   });
 
+  it('20 (F41): golden com multi-imagem mantém o MESMO conjunto de 38 keys por intent (D6)', () => {
+    const service = buildService();
+    const multiBrief = (intent: 'offer' | 'spotlight' | 'exclusive') =>
+      createMinimalBrief({
+        campaignIntent: intent,
+        productImages: [
+          { role: 'primary', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,primary' },
+          { role: 'reference', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,aux1' },
+          { role: 'reference', source: 'camera', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,aux2' },
+        ],
+      });
+
+    for (const intent of ['offer', 'spotlight', 'exclusive'] as const) {
+      const brief = multiBrief(intent);
+      const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
+      const keys = Object.keys(vars).sort();
+      expect(keys, `intent ${intent}`).toEqual([...EXPECTED_KEYS].sort());
+      expect(keys, `intent ${intent}`).toHaveLength(38);
+    }
+  });
+
   it('8.17 buildCommercialRepertoire decide por validity.enabled/displayText (sem heurística string)', () => {
     const service = buildService();
     const brief = createMinimalBrief({ validity: 'Até 30/09' });
@@ -656,6 +677,60 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
     );
     expect(mockProvider.generateImage).toHaveBeenCalledWith(
       expect.objectContaining({ productImageDataUrl: 'data:image/jpeg;base64,test' })
+    );
+  });
+
+  it('22 (F41): InputValidationService usa APENAS a primary com brief multi-imagem (D8)', async () => {
+    const mockProvider = {
+      name: 'test',
+      generateImage: vi.fn().mockResolvedValue({
+        imageBase64: 'aGVsbG8=',
+        mimeType: 'image/png',
+        usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+      }),
+    };
+    const mockLoad = vi.fn((name: string) => {
+      if (name === 'campaign-image-director-offer') return 'Prompt sem placeholders';
+      if (name === 'campaign-image-reviewer') return 'Revise sem placeholders';
+      return '';
+    });
+    const mockInputValidation = { validate: vi.fn().mockResolvedValue({ classification: 'match' }) };
+    const mockImageReview = {
+      review: vi.fn().mockResolvedValue({ passed: true, issues: [], failureType: null }),
+      buildReviewPromptVariables: vi.fn(),
+    };
+    const mockMetricsWriter = { write: vi.fn().mockResolvedValue(undefined) };
+    const service = new ImageGenerationService(
+      mockProvider as any,
+      { load: mockLoad, clearCache: vi.fn() } as unknown as PromptLoader,
+      mockInputValidation as any,
+      mockImageReview as any,
+      mockMetricsWriter as any
+    );
+
+    const primaryDataUrl = 'data:image/jpeg;base64,primary';
+    const brief = createMinimalBrief({
+      productImages: [
+        { role: 'primary', source: 'upload', mimeType: 'image/jpeg', dataUrl: primaryDataUrl },
+        { role: 'reference', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,aux1' },
+        { role: 'reference', source: 'camera', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,aux2' },
+      ],
+    });
+    const result = await service.generateImage(brief, createContext());
+
+    expect(result.success).toBe(true);
+    // D8: a validação recebe APENAS a primary (mediaImagesDataUrls(brief)[0]).
+    expect(mockInputValidation.validate).toHaveBeenCalledWith(
+      'Produto Teste',
+      primaryDataUrl,
+      undefined,
+      expect.any(Function)
+    );
+    // D7: o provider input carrega a lista ordenada (posição 0 = primary).
+    expect(mockProvider.generateImage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        productImagesDataUrls: expect.arrayContaining([primaryDataUrl]),
+      })
     );
   });
 });
