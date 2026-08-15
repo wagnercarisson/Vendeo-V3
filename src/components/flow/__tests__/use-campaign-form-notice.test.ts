@@ -66,7 +66,7 @@ describe("testes 9-12: combinações checkbox × texto livre no body", () => {
       badge: "Oferta",
       campaignIntent: "offer",
       preserveImageContext: false,
-      imageFile: null,
+      productImages: [],
       mandatoryArtworkText: "",
       showIllustrativeNotice: true,
       mandatoryArtworkTextFree: "",
@@ -160,7 +160,7 @@ describe("teste 15: migração legada + restore de shape novo", () => {
       badge: "",
       campaignIntent: "offer",
       preserveImageContext: false,
-      imageFile: null,
+      productImages: [],
       mandatoryArtworkText: "Texto legado",
     });
 
@@ -180,7 +180,7 @@ describe("teste 15: migração legada + restore de shape novo", () => {
       badge: "",
       campaignIntent: "offer",
       preserveImageContext: false,
-      imageFile: null,
+      productImages: [],
       showIllustrativeNotice: false,
       mandatoryArtworkTextFree: "Texto novo",
       mandatoryArtworkText: "Texto novo",

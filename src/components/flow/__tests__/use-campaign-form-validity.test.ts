@@ -120,7 +120,7 @@ describe("teste 8: validade no body (endDate ISO nunca enviado)", () => {
       badge: "Oferta",
       campaignIntent: "offer",
       preserveImageContext: false,
-      imageFile: null,
+      productImages: [],
       mandatoryArtworkText: "",
       showIllustrativeNotice: true,
       mandatoryArtworkTextFree: "",
