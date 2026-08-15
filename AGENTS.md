@@ -91,19 +91,21 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 | 40-09 | 5 | ✅ | Verificação final: gates + VERIFICATION.md + UAT humana (checkpoint) |
 
 **Change artifacts (source of truth):** `openspec/changes/fase-40-campos-comerciais-avisos-brief/`
+**Context:** `.planning/phases/40-campos-comerciais-avisos-brief/40-CONTEXT.md`
+
 ## Phase 41 — Mídia de Campanha Mobile
 
-**Status:** Em planejamento (D1 trackings aplicados — F41 = Mídia de Campanha Mobile v1.5, Stripe → F42 v1.7; 13 plans / 6 waves criados)
+**Status:** Planejada — 13 plans / 6 waves prontos para executar (checker aprovado: 27/27 requirements, D1–D10)
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
 | 41-01 | 1 | ⬜ | Trackings D1 (grep-verificação renumeração F41/F42, zero resíduos, registro commit 195b467) |
-| 41-02 | 1 | ⬜ | Config + Transporte schema (MAX_CAMPAIGN_IMAGES=4 + teto agregado; ProductImageInputSchema + productImages[] + productImageDataUrl optional) |
+| 41-02 | 1 | ⬜ | Config + Transporte schema (MAX_CAMPAIGN_IMAGES=4 + teto agregado; ProductImageInputSchema + productImages[] + productImageDataUrl optional) + co-migração route.ts |
 | 41-03 | 1 | ⬜ | Prompts 1+N (bloco descritivo nos 4 prompts, sem variável nova, golden 38 keys) |
 | 41-04 | 2 | ⬜ | Domínio + Persistência (mapper multi + mimeTypeFromDataUrl + storagePath; createCampaign campaignId? + uploadCampaignInputImage + removeCampaignInputs) |
-| 41-05 | 2 | ⬜ | Provider + Service (N input_image, fallback edit gated, mediaImagesDataUrls, review com primary) |
-| 41-06 | 3 | ⬜ | Rota (exclusividade 400, teto 413, campaignId pré-gerado, upload pré-snapshot, cleanup) |
-| 41-07 | 3 | ⬜ | Form hook (estado multi, HEIC/EXIF, body D2, draft multi) + co-migração testes irmãos |
+| 41-05 | 1 | ⬜ | Provider + Service (N input_image, fallback edit gated 2 pontos, mediaImagesDataUrls, review com primary) + co-migração testes |
+| 41-06 | 3 | ⬜ | Rota (exclusividade 400, teto 413, campaignId pré-gerado, upload pré-snapshot, cleanup) + co-migração asserts/integração |
+| 41-07 | 3 | ⬜ | Form hook (estado multi, HEIC/EXIF, body D2, draft multi) + co-migração call site/testes irmãos |
 | 41-08 | 4 | ⬜ | UI (CampaignImageUpload multi + capture + grid; seção Imagens adicionais) + credits test co-migrado |
 | 41-09 | 4 | ⬜ | Testes 1-8 (mapper/snapshot: multi, legado, invariante, mimeType, storagePath, exactly-1-primary) |
 | 41-10 | 5 | ⬜ | Testes 9-16 (UI/form: primary, remoção, source, HEIC/EXIF, body, draft N, limites) |
