@@ -31,6 +31,10 @@ export interface CreateCampaignInput {
    * criação da campanha (campaigns.operation_run_id), preparando o reuso cross-request
    * pela F37. Requests independentes nesta fase ainda criam novo run. */
   operationRunId?: string;
+  /** F41 D5: id pré-gerado pela rota (path de inputs {storeId}/{campaignId}/inputs/... conhecido antes do snapshot). */
+  campaignId?: string;
+  /** F41 D5: registro auxiliar dos inputs persistidos; o snapshot campaign_brief_v1 é o canônico. */
+  storagePaths?: Array<{ imageId: string; storagePath: string }>;
 }
 
 export interface CampaignReadyData {

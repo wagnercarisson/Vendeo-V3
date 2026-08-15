@@ -1,13 +1,15 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { transcodeToJpeg } from "./image-processor";
 import type { CampaignRecord, CampaignReadyData, CreateCampaignInput } from "./types";
 
 export async function createCampaign(
   storeId: string,
-  input: CreateCampaignInput
+  input: CreateCampaignInput,
+  campaignId?: string
 ): Promise<{ id: string; storagePath: string }> {
-  const campaignId = crypto.randomUUID();
-  const storagePath = `${storeId}/${campaignId}.jpg`;
+  const campaignIdFinal = campaignId ?? crypto.randomUUID();
+  const storagePath = `${storeId}/${campaignIdFinal}.jpg`;
 
   // F38.1 (D1/D2): operation_run_id persistido na criação da campanha — o
   // operationRunId do run (campaign_delivery) é gravado aqui, preparando o reuso
@@ -15,7 +17,7 @@ export async function createCampaign(
   const { error } = await supabaseAdmin
     .from("campaigns")
     .insert({
-      id: campaignId,
+      id: campaignIdFinal,
       store_id: storeId,
       status: "generating",
       product_name: input.productName,
@@ -29,7 +31,7 @@ export async function createCampaign(
     throw new Error(error.message);
   }
 
-  return { id: campaignId, storagePath };
+  return { id: campaignIdFinal, storagePath };
 }
 
 export function dataUrlToCampaignImage(
@@ -150,5 +152,65 @@ export async function deleteCampaignImage(
 
   if (error) {
     throw new Error(error.message);
+  }
+}
+
+// ─── F41 D5: persistência dos inputs da campanha ─────────────────────────────
+
+// Sobe um input do produto ao bucket campaign-images em
+// {storeId}/{campaignId}/inputs/{imageId}.jpg (objeto imutável, upsert: false).
+// Sempre transcode JPEG via transcodeToJpeg (image-processor.ts).
+export async function uploadCampaignInputImage(
+  storeId: string,
+  campaignId: string,
+  imageId: string,
+  image: { buffer: Buffer; mimeType: string }
+): Promise<{ storagePath: string }> {
+  const storagePath = `${storeId}/${campaignId}/inputs/${imageId}.jpg`;
+
+  const jpeg = await transcodeToJpeg(image.buffer, image.mimeType);
+
+  const { error } = await supabaseAdmin
+    .storage
+    .from("campaign-images")
+    .upload(storagePath, jpeg.buffer, {
+      contentType: "image/jpeg",
+      upsert: false,
+    });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return { storagePath };
+}
+
+// Remove todos os inputs de uma campanha (falha pré-stream — sem órfãos, D5).
+// No-op quando não há objetos no prefixo.
+export async function removeCampaignInputs(
+  storeId: string,
+  campaignId: string
+): Promise<void> {
+  const { data, error } = await supabaseAdmin
+    .storage
+    .from("campaign-images")
+    .list(`${storeId}/${campaignId}/inputs/`, { limit: 100 });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data || data.length === 0) {
+    return;
+  }
+
+  const paths = data.map((file) => `${storeId}/${campaignId}/inputs/${file.name}`);
+  const { error: removeError } = await supabaseAdmin
+    .storage
+    .from("campaign-images")
+    .remove(paths);
+
+  if (removeError) {
+    throw new Error(removeError.message);
   }
 }
