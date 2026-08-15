@@ -32,6 +32,8 @@ export interface CampaignProductImageInput {
   source: CampaignImageSource;
   mimeType: string;
   dataUrl?: string; // APENAS no transporte, nunca no snapshot
+  /** F41 D5 — preenchido pela ROTA após o upload do input ({storeId}/{campaignId}/inputs/{imageId}.jpg), antes de montar o snapshot. */
+  storagePath?: string;
 }
 
 // SNAPSHOT persistido — SEM `dataUrl` por construção (D6/D7/F39-12).
@@ -137,6 +139,13 @@ export function getCampaignLegalNotice(
   return brief.commercial.legalNotice;
 }
 
+// F41-12 (D2/D3): mimeType REAL derivado do dataUrl — corrige o quirk
+// "image/jpeg" fixo da F39 (brief.ts:167). Fallback para "image/jpeg".
+export function mimeTypeFromDataUrl(dataUrl: string): string {
+  const match = dataUrl.match(/^data:(image\/(png|jpeg|webp));base64,/);
+  return match?.[1] ?? "image/jpeg";
+}
+
 // ─── Mapper: transporte flat → domínio (fronteira da rota, D5) ─────────────
 
 // Função pura (sem DB, sem server-only). ÚNICO ponto de conversão flat → domínio.
@@ -158,17 +167,19 @@ export function buildCampaignBriefFromFlat(
     ? { enabled: true as const, text: input.mandatoryArtworkText }
     : undefined;
 
-  const images: CampaignProductImageInput[] = input.productImageDataUrl
-    ? [
-        {
-          id: crypto.randomUUID(),
-          role: "primary",
-          source: "upload",
-          mimeType: "image/jpeg",
-          dataUrl: input.productImageDataUrl,
-        },
-      ]
-    : [];
+  const productImages = input.productImages ?? (
+    input.productImageDataUrl
+      ? [{ role: "primary" as const, source: "upload" as const, mimeType: mimeTypeFromDataUrl(input.productImageDataUrl), dataUrl: input.productImageDataUrl }]
+      : []
+  );
+  const images: CampaignProductImageInput[] = productImages.map((img) => ({
+    id: crypto.randomUUID(),       // rota/domínio gera id (D2)
+    role: img.role,                // espelha o transporte (D3)
+    source: img.source,            // upload | camera (D4)
+    mimeType: mimeTypeFromDataUrl(img.dataUrl) ?? img.mimeType,   // dataUrl como fonte PRIMÁRIA (F41-12); fallback transporte
+    dataUrl: img.dataUrl,
+    // storagePath undefined aqui — a rota preenche APÓS o upload (D5)
+  }));
 
   return {
     product: {
@@ -225,6 +236,7 @@ export function buildCampaignBriefSnapshot(brief: CampaignBrief): CampaignBriefS
         source: i.source,
         provided: true as const,
         mimeType: i.mimeType,
+        ...(i.storagePath ? { storagePath: i.storagePath } : {}),
       })),
     },
     creativeContext: { ...brief.creativeContext },
