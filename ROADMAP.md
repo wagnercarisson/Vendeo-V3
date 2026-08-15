@@ -164,7 +164,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - **Fonte da verdade:** `openspec/changes/fase-40-campos-comerciais-avisos-brief/`
   - **Dependências:** F39 (brief estruturado — validity/legalNotice no domínio), F31.x (prompts por intent) — antecede a F42 (Stripe)
 
-- [ ] Phase 41: Mídia de Campanha Mobile (pending)
+- [x] Phase 41: Mídia de Campanha Mobile (13/13 plans ✅)
   - Form multi-imagem: 1 imagem **primary** obrigatória + até 3 auxiliares (galeria + câmera com `capture="environment"`), preview grid com remoção por item, `source: "upload" | "camera"`, decode HEIC via canvas sem dependência de lib, orientação EXIF respeitada (`createImageBitmap from-image`)
   - Transporte aditivo `productImages[]` (`MAX_CAMPAIGN_IMAGES = 4`, invariante exatamente-1-primary via `superRefine`) com `productImageDataUrl` legado preservado; regra de exclusividade 400 na rota (ambos ausentes / ambos presentes)
   - Mapper flat→domínio multi-imagem com `mimeType` real derivado do dataUrl; snapshot com `storagePath` por input persistido
@@ -172,6 +172,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - Provider Responses com N `input_image`; fallback `images.edit` gated (só primary única); prompt com bloco descritivo 1+N sem nova variável (golden `EXPECTED_KEYS = 38`); validação primary-only; revisor com primary como referência (retrocompatível)
   - **Fonte da verdade:** `openspec/changes/fase-41-midia-de-campanha-mobile/`
   - **Dependências:** F39 (domínio multi-imagem `media.images[]`), F40 (campos comerciais/avisos no form) — antecede a F42 (Stripe)
+  - **Status:** 4 gates verdes (222 files / 2033 testes), UAT humano 6/6 cenários (Android validado em produção ✅; iOS HEIC pendente de confirmação final)
 </details>
 
 ## Progress
@@ -220,7 +221,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 38.2.1. Snapshot Econômico | v1.5 | 7/7 | ✅ Complete | 2026-08-12 |
 | 39. Brief Estruturado de Campanha | v1.5 | 8/8 | ✅ Complete | 2026-08-13 |
 | 40. Campos Comerciais e Avisos do Brief | v1.5 | 9/9 | ✅ Complete | 2026-08-14 |
-| 41. Mídia de Campanha Mobile | v1.5 | 0/0 | ○ Pending | — |
+| 41. Mídia de Campanha Mobile | v1.5 | 13/13 | ✅ Complete | 2026-08-15 |
 | 42. Stripe / Monetização Pública | v1.7 | 0/0 | ○ Pending | — |
 
 ---

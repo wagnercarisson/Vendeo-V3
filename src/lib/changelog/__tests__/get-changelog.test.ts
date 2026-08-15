@@ -33,16 +33,16 @@ afterEach(async () => {
 });
 
 describe("get-changelog", () => {
-  it("getAllEntries lê o diretório real e retorna entries ordenadas por data DESC (F40 2026-08-14 → novo-endereço 2026-08-12 → F36 → F35)", async () => {
+  it("getAllEntries lê o diretório real e retorna entries ordenadas por data DESC (F41 2026-08-15 → F40 2026-08-14 → novo-endereço 2026-08-12 → F36 → F35)", async () => {
     const entries = await getAllEntries();
 
     expect(entries.length).toBeGreaterThanOrEqual(3);
-    expect(entries[0].frontmatter.id).toBe("fase-40-campos-comerciais-avisos-brief");
-    expect(entries[0].frontmatter.date).toBe("2026-08-14");
-    expect(entries[1].frontmatter.id).toBe("vendeo-em-novo-endereco-acesso-simples");
-    expect(entries[1].frontmatter.date).toBe("2026-08-12");
-    expect(entries[2].frontmatter.id).toBe("fase-36-onboarding-navegacao-por-abas");
-    expect(entries[2].frontmatter.date).toBe("2026-08-06");
+    expect(entries[0].frontmatter.id).toBe("fase-41-midia-de-campanha-mobile");
+    expect(entries[0].frontmatter.date).toBe("2026-08-15");
+    expect(entries[1].frontmatter.id).toBe("fase-40-campos-comerciais-avisos-brief");
+    expect(entries[1].frontmatter.date).toBe("2026-08-14");
+    expect(entries[2].frontmatter.id).toBe("vendeo-em-novo-endereco-acesso-simples");
+    expect(entries[2].frontmatter.date).toBe("2026-08-12");
 
     const ids = entries.map((entry) => entry.frontmatter.id);
     expect(ids).toContain("fase-30-legal-foundation");
@@ -96,11 +96,11 @@ describe("get-changelog", () => {
     expect(result).toBeNull();
   });
 
-  it("getLatestAnnouncement retorna a entry mais recente com anúncio no diretório real (nova entry 2026-08-12)", async () => {
+  it("getLatestAnnouncement retorna a entry mais recente com anúncio no diretório real (F41 2026-08-15)", async () => {
     const result = await getLatestAnnouncement();
 
     expect(result).not.toBeNull();
-    expect(result!.frontmatter.id).toBe("vendeo-em-novo-endereco-acesso-simples");
+    expect(result!.frontmatter.id).toBe("fase-41-midia-de-campanha-mobile");
     expect(result!.frontmatter.announcement).toBe("card");
   });
 
