@@ -40,6 +40,7 @@ vi.mock("@/lib/campaign/image-processor", () => ({
 vi.mock("@/lib/image-generation/config", () => ({
   IMAGE_GENERATION_GLOBAL_TIMEOUT_MS: 300000,
   MAX_PRODUCT_IMAGE_BASE64_SIZE: 5 * 1024 * 1024,
+  MAX_CAMPAIGN_IMAGES: 4,
   IMAGE_GENERATION_RESPONSES_MODEL: "test-model",
 }));
 
