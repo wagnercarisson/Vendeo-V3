@@ -681,7 +681,7 @@ try { await removeCampaignInputs(storeId, campaignIdPre); } catch { /* ignore */
 **Pitfalls:**
 - O `inputSnapshot` hoje é montado **antes** de `createCampaign` (`:359`) — a F41 mantém a ordem mas insere os uploads **entre** o mapper (`:243`) e o snapshot; o `brief` precisa dos `storagePath` preenchidos antes de `buildCampaignBriefSnapshot`.
 - O `recordCall`/telemetria (`AiCostTracker`) permanece 1 evento `campaign_image` (task 7.6) — os uploads de inputs **não** geram eventos de custo.
-- Validação primária-only (`:296-316`): `inputValidation.validate(parsed.data.productName, parsed.data.productImageDataUrl, ...)` — para o fluxo novo, passar o dataUrl da primary (posição 0 de `productImages`); fluxo de 409 inalterado (D8).
+- Validação primária-only (`:296-316`): `inputValidation.validate(parsed.data.productName, parsed.data.productImageDataUrl, ...)` — para o fluxo novo, passar o dataUrl da imagem **com `role: "primary"`** via `productImages.find((img) => img.role === "primary")!.dataUrl` (NUNCA posição 0 — o mapper preserva a ordem do transporte, e o zod garante exatamente 1 primary, não a ordem); fluxo de 409 inalterado (D8).
 - `createCampaign` retorna `{ id, storagePath }` (`:368`) — com `campaignIdPre` o retorno `id` = `campaignIdPre`.
 
 **Data flow:** request-response + file-I/O — body → guards (400/413) → mapper → upload inputs → snapshot → createCampaign → stream → compensação.
@@ -751,7 +751,7 @@ Tabela canônica (CONTEXT `:197-203`):
 `crypto.randomUUID()` (`campaignId`) → uuid por imagem → `uploadCampaignInputImage` → preencher `storagePath` no runtime (`CampaignProductImageInput`) → `buildCampaignBriefSnapshot` → `createCampaign(storeId, input, campaignIdPre)`. Cleanup pré-stream: `removeCampaignInputs`; pós-stream: `deleteCampaignImage` atual (`route.ts:397`). **Sem migration SQL** — bucket `campaign-images` existente comporta o subpath `{storeId}/{campaignId}/inputs/` (policies service_role insert/delete + owner select por prefixo `storeId` já cobrem).
 
 ### `mimeType` real derivado (aplica-se a `brief.ts` + testes)
-`mimeTypeFromDataUrl(dataUrl)` (png/jpeg/webp via regex do data URL) corrige o quirk `"image/jpeg"` fixo da F39 (`brief.ts:167`). Teste 5 (task 12.5) + regressão: o legado `data:image/jpeg;base64,...` continua gerando `image/jpeg` (snapshot idêntico ao pós-F40).
+`mimeTypeFromDataUrl(dataUrl)` (png/jpeg/webp via regex do data URL) corrige o quirk `"image/jpeg"` fixo da F39 (`brief.ts:167`). Teste 5 (task 12.5) + regressão: o legado `data:image/jpeg;base64,...` continua gerando `image/jpeg` (comportamento e shape do pós-F40 preservados; `storagePath` ausente no teste unitário sem upload — aditivo apenas no fluxo de rota F41, D5 nos dois fluxos).
 
 ### Golden `EXPECTED_KEYS = 38` preservado (aplica-se aos 4 prompts + `image-generation-service.test.ts`)
 D6: as imagens entram como **input multimodal**, não como variável de prompt. O bloco descritivo 1+N é hardcoded nos 4 prompts; o conjunto de variáveis por intent **não muda** (`EXPECTED_KEYS` `:516-527`, `toHaveLength(38)` `:548`). O texto do prompt muda intencionalmente (regressão por intent). Teste 21 (task 14.5) usa `readFileSync` como `prompt-reframe.test.ts:6-8`.
