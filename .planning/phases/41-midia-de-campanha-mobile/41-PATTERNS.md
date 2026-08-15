@@ -35,6 +35,9 @@
 | `src/app/api/campaign/generate-image/__tests__/route.test.ts` (MOD) | test | co-migration (fixtures `productImages`, 400/413, storage, teste 27) | self — `VALID_REQUEST_BODY` `:188-194`, `makeRequest` `:196-202`, `setupSuccessMocks` `:204-259`, "rejects missing productImageDataUrl" `:316-327` | exact |
 | `src/components/flow/__tests__/use-campaign-form-navigation.test.ts` (MOD) | test | co-migration (state multi no `EMPTY_FIELDS`/restore) | self — restore mock `:61-77`, `:106-114`, `:152-160`, `:187-195`, `:209-217` | exact |
 | `src/app/(app)/campanhas/nova/__tests__/campaign-flow-credits.test.tsx` (MOD) | test | co-migration (mock do upload multi) | self — mock `CampaignImageUpload: () => null` `:94-96`; mock `useCampaignForm` `:28-66` | exact |
+| `src/__tests__/concurrency.test.ts` (MOD) | test | co-migration (mock persistence + 2 helpers novos — D5 ambos os fluxos) | self — `vi.mock("@/lib/campaign/persistence")` `:25-32` sem `uploadCampaignInputImage`/`removeCampaignInputs` | exact |
+| `src/__tests__/regression-master-switch.test.ts` (MOD) | test | co-migration (mock persistence + 2 helpers novos) | self — `vi.mock("@/lib/campaign/persistence")` `:25-32` sem os helpers | exact |
+| `src/__tests__/api/campaign-generate.test.ts` (MOD) | test | co-migration (mock persistence + 2 helpers novos) | self — `vi.mock("@/lib/campaign/persistence")` `:76-83` sem os helpers | exact |
 
 > **Nota de path 1:** o `campaign-flow-credits.test.tsx` **não** está em `src/components/flow/__tests__/` — está em `src/app/(app)/campanhas/nova/__tests__/campaign-flow-credits.test.tsx` (mesmo path real da F40, CONTEXT `:180` abrevia).
 >
@@ -781,6 +784,6 @@ Qualquer arquivo que mocka `use-campaign-form` (`campaign-flow-credits.test.tsx:
 ## Metadata
 
 **Analog search scope:** `src/lib/campaign/`, `src/lib/image-generation/` (schema, config, providers, services + `__tests__`), `src/components/flow/`, `src/app/api/campaign/generate-image/` (+ `__tests__`), `src/app/(app)/campanhas/nova/__tests__/`, `prompts/`, `.planning/phases/40-campos-comerciais-avisos-brief/` (template estrutural)
-**Files scanned:** 22 code/test targets + 14 support files (all verified to exist; 4 large files read in targeted ranges — `route.ts` 835 linhas, `image-generation-service.ts` 1207 linhas, `use-campaign-form.ts` 830 linhas, `route.test.ts` 1256 linhas)
+**Files scanned:** 25 code/test targets + 14 support files (all verified to exist; 4 large files read in targeted ranges — `route.ts` 835 linhas, `image-generation-service.ts` 1207 linhas, `use-campaign-form.ts` 830 linhas, `route.test.ts` 1256 linhas)
 **Pattern extraction date:** 2026-08-14
 **Key precedent referenced:** F40 (form state + body assembly + co-migração de mocks + `prompt-reframe.test.ts` como molde de teste de `.md`), F39 (domínio multi-imagem-ready `media.images[]`, mapper `buildCampaignBriefFromFlat`, snapshot `campaign_brief_v1`), F38.1 (`operationRunId?` opcional em `CreateCampaignInput` + telemetria 1 evento), F38.2.1 (snapshot imutável), F37 (futuro consumidor do snapshot com N imagens e `storagePath`)
