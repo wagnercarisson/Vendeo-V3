@@ -336,6 +336,7 @@ describe('ImageReviewService — onCall (D11)', () => {
     const result = await service.review(
       'data:image/jpeg;base64,abc',
       { productName: 'Produto', storeName: 'Loja' },
+      undefined,
       onCall
     );
     expect(result.passed).toBe(true);

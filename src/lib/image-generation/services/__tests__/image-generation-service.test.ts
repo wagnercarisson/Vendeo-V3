@@ -386,10 +386,10 @@ describe('ImageGenerationService.generateImage — telemetria D11 (usage/duratio
         return { classification: 'match' };
       }),
     };
-    // Mock review: invoca o onCall interno do serviço (3º arg) com usage
+    // Mock review: invoca o onCall interno do serviço (4º arg) com usage
     const mockImageReview = {
       review: vi.fn(async (...args: any[]) => {
-        const onCall = args[2];
+        const onCall = args[3];
         if (typeof onCall === 'function') {
           onCall({
             provider: 'openai',

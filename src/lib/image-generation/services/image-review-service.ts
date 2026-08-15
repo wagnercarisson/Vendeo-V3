@@ -54,12 +54,16 @@ export class ImageReviewService {
   async review(
     generatedImageDataUrl: string,
     input: ImageReviewInput,
+    primaryImageDataUrl?: string,
     onCall?: (info: AiCallInfo) => void | Promise<void>
   ): Promise<ImageReviewResult> {
     const contextVars = this.buildReviewPromptVariables(input);
     const prompt = this.promptLoader.load("campaign-image-reviewer", contextVars);
+    const reviewPrompt = primaryImageDataUrl
+      ? `${prompt}\n\nCompare o produto da arte com a imagem de referência`
+      : prompt;
     const startTime = Date.now();
-    const { content, usage } = await this.callVisionModel(prompt, generatedImageDataUrl);
+    const { content, usage } = await this.callVisionModel(reviewPrompt, generatedImageDataUrl, primaryImageDataUrl);
     const durationMs = Date.now() - startTime;
 
     // Best-effort telemetry — never blocks review (D7)
@@ -242,7 +246,8 @@ export class ImageReviewService {
 
   private async callVisionModel(
     prompt: string,
-    imageDataUrl: string
+    imageDataUrl: string,
+    primaryImageDataUrl?: string
   ): Promise<{ content: string; usage?: TokenUsage }> {
     const { default: OpenAI } = await import("openai");
     const openai = new OpenAI({
@@ -260,6 +265,14 @@ export class ImageReviewService {
               type: "image_url",
               image_url: { url: imageDataUrl, detail: "high" },
             },
+            ...(primaryImageDataUrl
+              ? [
+                  {
+                    type: "image_url" as const,
+                    image_url: { url: primaryImageDataUrl, detail: "high" as const },
+                  },
+                ]
+              : []),
           ],
         },
       ],
