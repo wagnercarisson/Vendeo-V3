@@ -565,6 +565,8 @@ interface CampaignImageUploadProps {
 
 **Data flow:** form state → hook (`setField("productImages", ...)`).
 
+> **Nota de contrato (decisão 41-07/41-08):** a criação/remoção de itens vive **no hook** (`addImage(file, source)`/`removeImage(id)` exportados no retorno do `useCampaignForm`) — o form apenas repassa `onAdd={addImage}`/`onRemove={removeImage}`. `removeImage` **promove a próxima imagem a `primary`** quando a primary é removida (D3). O form NÃO usa `setField("productImages", ...)` inline (regra-mãe de co-migração — duplicar a regra perderia a promoção e o teto `MAX_CAMPAIGN_IMAGES`).
+
 ---
 
 ### `src/components/flow/campaign-input-form.tsx` (MOD — primary + seção "Imagens adicionais")
