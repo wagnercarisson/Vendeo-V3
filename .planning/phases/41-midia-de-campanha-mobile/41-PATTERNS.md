@@ -568,7 +568,7 @@ interface CampaignImageUploadProps {
 - Teto no cliente (D10): desabilitar o botão/dropzone quando `productImages.length >= MAX_CAMPAIGN_IMAGES` (import da constante de `config.ts`).
 - Erros por item (D10): manter o padrão de erro `:77-82` (`AlertCircle` + texto) exibindo o item que falhou.
 
-**Data flow:** form state → hook (`setField("productImages", ...)`).
+**Data flow:** form state → hook — criação/remoção de itens via `addImage(file, source)`/`removeImage(id)` exportados pelo `useCampaignForm`; o form apenas repassa (NOTA de contrato abaixo).
 
 > **Nota de contrato (decisão 41-07/41-08):** a criação/remoção de itens vive **no hook** (`addImage(file, source)`/`removeImage(id)` exportados no retorno do `useCampaignForm`) — o form apenas repassa `onAdd={addImage}`/`onRemove={removeImage}`. `removeImage` **promove a próxima imagem a `primary`** quando a primary é removida (D3). O form NÃO usa `setField("productImages", ...)` inline (regra-mãe de co-migração — duplicar a regra perderia a promoção e o teto `MAX_CAMPAIGN_IMAGES`).
 
@@ -597,9 +597,11 @@ interface CampaignImageUploadProps {
   productImages={fields.productImages}
   error={touched.productImages ? fieldErrors.productImages ?? null : null}
   previewUrl={imagePreviewUrl}   // preview da primary (ou grid completo no componente)
-  onAdd={(file, source) => setField("productImages", [...fields.productImages, { id: crypto.randomUUID(), role: fields.productImages.length === 0 ? "primary" : "reference", source, mimeType: file.type, file }])}
-  onRemove={(id) => setField("productImages", fields.productImages.filter((i) => i.id !== id))}
+  onAdd={addImage}               // helpers do hook (41-07 Task 1 step 12) — cria item com role/source/teto
+  onRemove={removeImage}         // helpers do hook — remove por id + promove próxima a primary (D3)
 />
+```
+- **NUNCA** `onAdd={(file, source) => setField("productImages", [...])}`/`onRemove={(id) => setField(...)}` inline no form — duplicaria a regra e perderia a promoção de primary + teto `MAX_CAMPAIGN_IMAGES` (NOTA de contrato acima; regra vive no hook).
 
 {/* Seção "Imagens adicionais" — padrão de h2 igual `:369-371` */}
 <h2 className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2">
