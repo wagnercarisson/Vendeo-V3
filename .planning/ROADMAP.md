@@ -38,7 +38,7 @@
 | 38.2.1 | ✅ Snapshot Econômico | 7/7 | ✅ Complete | 2026-08-12 |
 | 39 | ✅ Brief Estruturado de Campanha (v1.5) | 8/8 | ✅ Complete | 2026-08-13 |
 | 40 | ✅ Campos Comerciais e Avisos do Brief (v1.5) | 9/9 | ✅ Complete | 2026-08-14 |
-| 41 | ○ Mídia de Campanha Mobile (v1.5) | — | Pending    | — |
+| 41 | ○ Mídia de Campanha Mobile (v1.5) | 1/13 | In Progress|  |
 | 42 | ○ Stripe / Monetização Pública (v1.7) | — | Pending    | — |
 
 ---
@@ -767,10 +767,10 @@ Plans:
 
 **Source of truth:** `openspec/changes/fase-41-midia-de-campanha-mobile/`
 
-**Plans:** 13 plans (6 waves)
+**Plans:** 1/13 plans executed
 
 ```
-- [ ] 41-01-PLAN.md — Trackings D1 (grep-verificação renumeração F41/F42, zero resíduos, registro commit 195b467)
+- [x] 41-01-PLAN.md — Trackings D1 (grep-verificação renumeração F41/F42, zero resíduos, registro commit 195b467)
 - [ ] 41-02-PLAN.md — Config + Transporte schema (MAX_CAMPAIGN_IMAGES=4 + teto agregado; ProductImageInputSchema + productImages[] + productImageDataUrl optional)
 - [ ] 41-03-PLAN.md — Prompts 1+N (bloco descritivo nos 4 prompts, sem variável nova, golden 38 keys)
 - [ ] 41-04-PLAN.md — Domínio + Persistência (mapper multi + mimeTypeFromDataUrl + storagePath; createCampaign campaignId? + uploadCampaignInputImage + removeCampaignInputs)
