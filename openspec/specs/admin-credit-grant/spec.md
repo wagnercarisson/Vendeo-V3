@@ -2,13 +2,13 @@
 
 ## Purpose
 
-Permitir que administradores concedam créditos manuais a lojistas com motivo obrigatório, idempotência via `operationId` e audit trail atômico na mesma transação (RPC `admin_grant_credits`). Créditos concedidos via admin direcionam ao `bonus_balance` e contam para o `monthlyBonusCap` (D9).
+Permitir que administradores concedam créditos manuais a lojistas com motivo obrigatório, idempotência via `operationId` e audit trail atômico na mesma transação (RPC `admin_grant_credits`). Créditos concedidos via admin direcionam ao `bonus_balance` e **contam para o limiar de elegibilidade do grant mensal** (a raiz recebe grant integral enquanto `bonus_balance < monthlyBonusCap`; em ou acima, não recebe no ciclo).
 
 ## Requirements
 
 ### Requirement: admin_grant_credits RPC function (MODIFIED F29.3)
 
-**F29.3 Changes**: `admin_grant_credits` agora chama `grant_credits` com `p_type = 'admin_grant'` (explícito). O grant direciona para `bonus_balance` e conta para o `monthlyBonusCap`. O parâmetro `p_type` default no `grant_credits` já é `'admin_grant'`, então chamadores existentes continuam funcionando sem alteração.
+**F29.3 Changes**: `admin_grant_credits` agora chama `grant_credits` com `p_type = 'admin_grant'` (explícito). O grant direciona para `bonus_balance` e **conta para o limiar de elegibilidade do grant mensal** (`bonus_balance < monthlyBonusCap`). O parâmetro `p_type` default no `grant_credits` já é `'admin_grant'`, então chamadores existentes continuam funcionando sem alteração.
 
 O sistema SHALL manter a SQL function `public.admin_grant_credits(p_actor_id UUID, p_store_id UUID, p_amount INTEGER, p_reason TEXT, p_operation_id UUID, p_metadata JSONB DEFAULT '{}'::jsonb) RETURNS JSONB`.
 

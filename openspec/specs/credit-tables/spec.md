@@ -1,6 +1,7 @@
 # Credit Tables
 
 > Synced from `fase-24-wallet-ledger-idempotencia` (ADDED), then `fase-29-3-creditos-mensais-automaticos` (MODIFIED). Added bucket columns (`bonus_balance`, `purchased_balance`, `last_monthly_grant_at`), sync trigger `trg_credit_balances_sync_total`, partial index, expanded CHECK constraints to 7 transaction types, and backfill logic.
+> **Revisado (alinhamento pós-F32):** `last_monthly_grant_at` e o índice `idx_credit_balances_monthly_grant` são **DEPRECATED** (legado F29.3, não usados desde F32 — a idempotência mensal passou a ser por `freemium_entitlements(root_hash, 'monthly', cycle)`). Mantidos no schema por compatibilidade, sem planos de drop no escopo atual. A tabela NÃO muda neste alinhamento.
 
 ## Purpose
 
@@ -10,7 +11,7 @@ Schema das tabelas de ledger financeiro: `credit_balances` (saldo materializado 
 
 ### Requirement: credit_balances table
 
-O sistema SHALL criar a tabela `credit_balances` com `store_id UUID PK REFERENCES stores(id) ON DELETE CASCADE`, `balance INTEGER NOT NULL DEFAULT 0 CHECK (balance >= 0)`, `bonus_balance INTEGER NOT NULL DEFAULT 0 CHECK (bonus_balance >= 0)`, `purchased_balance INTEGER NOT NULL DEFAULT 0 CHECK (purchased_balance >= 0)`, `last_monthly_grant_at TIMESTAMPTZ`, `updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`.
+O sistema SHALL criar a tabela `credit_balances` com `store_id UUID PK REFERENCES stores(id) ON DELETE CASCADE`, `balance INTEGER NOT NULL DEFAULT 0 CHECK (balance >= 0)`, `bonus_balance INTEGER NOT NULL DEFAULT 0 CHECK (bonus_balance >= 0)`, `purchased_balance INTEGER NOT NULL DEFAULT 0 CHECK (purchased_balance >= 0)`, `last_monthly_grant_at TIMESTAMPTZ` (**DEPRECATED** — legado F29.3, não usado desde F32), `updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`.
 
 #### Scenario: credit_balances has correct schema
 
@@ -20,7 +21,7 @@ O sistema SHALL criar a tabela `credit_balances` com `store_id UUID PK REFERENCE
 #### Scenario: credit_balances has correct schema with buckets (F29.3)
 
 - **WHEN** a migration é executada
-- **THEN** `credit_balances` existe com colunas `store_id` (UUID PK), `balance` (INTEGER, DEFAULT 0, CHECK >=0), `bonus_balance` (INTEGER, DEFAULT 0, CHECK >=0), `purchased_balance` (INTEGER, DEFAULT 0, CHECK >=0), `last_monthly_grant_at` (TIMESTAMPTZ, nullable), `updated_at` (TIMESTAMPTZ, DEFAULT now())
+- **THEN** `credit_balances` existe com colunas `store_id` (UUID PK), `balance` (INTEGER, DEFAULT 0, CHECK >=0), `bonus_balance` (INTEGER, DEFAULT 0, CHECK >=0), `purchased_balance` (INTEGER, DEFAULT 0, CHECK >=0), `last_monthly_grant_at` (TIMESTAMPTZ, nullable, **DEPRECATED** desde F32 — mantido por compatibilidade), `updated_at` (TIMESTAMPTZ, DEFAULT now())
 
 #### Scenario: credit_balances cascade delete
 
@@ -70,7 +71,9 @@ O sistema SHALL criar trigger `trg_credit_balances_updated_at` que atualiza `upd
 - **WHEN** `credit_balances` é atualizada
 - **THEN** `updated_at` é automaticamente atualizado para `now()`
 
-### Requirement: credit_balances monthly_grant index (ADDED F29.3)
+### Requirement: credit_balances monthly_grant index (ADDED F29.3) — DEPRECATED
+
+> **DEPRECATED (alinhamento pós-F32):** o índice `idx_credit_balances_monthly_grant` e a coluna `last_monthly_grant_at` não são usados desde F32 (a idempotência mensal passou a ser por `freemium_entitlements(root_hash, 'monthly', cycle)`). Mantidos no schema por compatibilidade, sem planos de drop no escopo atual.
 
 O sistema SHALL criar índice parcial `idx_credit_balances_monthly_grant` em `public.credit_balances (last_monthly_grant_at)` WHERE `last_monthly_grant_at IS NOT NULL`.
 

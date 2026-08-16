@@ -22,7 +22,7 @@ O sistema SHALL exibir um badge de status freemium no detalhe da loja:
 
 - `🟢 Freemium ativo` — raiz com entitlement + saldo > 0
 - `🟡 Freemium usado` — raiz já usou onboarding, saldo = 0
-- `🔴 Freemium esgotado` — raiz usou onboarding + mensal, teto de bônus atingido
+- `🔴 Freemium esgotado` — raiz usou onboarding + mensal; `bonus_balance` no limiar (`>= monthlyBonusCap`) ou ciclo mensal já concedido
 - `⚪ Sem CNPJ` — loja criada antes da F32 (migration pendente)
 
 #### Scenario: Badge mostra status correto

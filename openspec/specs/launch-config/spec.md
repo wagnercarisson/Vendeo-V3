@@ -111,10 +111,11 @@ export function getLaunchConfig(): LaunchConfig {
 - **WHEN** `VENDEO_MONTHLY_CREDITS_AMOUNT=10` está configurado
 - **THEN** `getLaunchConfig().monthlyCreditsAmount` é `10`
 
-#### Scenario: VENDEO_MONTHLY_BONUS_CAP customiza teto
+#### Scenario: VENDEO_MONTHLY_BONUS_CAP customiza o limiar de elegibilidade do grant mensal
 
 - **WHEN** `VENDEO_MONTHLY_BONUS_CAP=20` está configurado
 - **THEN** `getLaunchConfig().monthlyBonusCap` é `20`
+- **AND** o grant mensal é concedido de forma INTEGRAL enquanto `bonus_balance < 20` (limiar de elegibilidade); em ou acima do limiar, a raiz não recebe no ciclo (limiar, não cap de acumulação — grant sempre integral)
 
 #### Scenario: VENDEO_MONTHLY_CREDITS_MIN_STORE_AGE_DAYS customiza idade mínima
 
