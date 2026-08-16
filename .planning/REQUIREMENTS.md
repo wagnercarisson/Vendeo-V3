@@ -562,7 +562,7 @@ Desdobramento da F38.2, adicionados via OpenSpec (`openspec/changes/fase-38-2-1-
 
 ## v1.7 Requirements (Stripe / Monetização Pública)
 
-Deferred from v1.5 critical path. Stripe será implementada como F42/v1.7 após validação do beta controlado (renumerada de F35 → F36 → F37 → F39 → F40 → F41 → F42 nos alinhamentos do Changelog/Novidades, do Onboarding — Navegação por Abas, da Tabela de Custos por Operação, do Brief Estruturado de Campanha, dos Campos Comerciais e Avisos do Brief e da Mídia de Campanha Mobile).
+Deferred from v1.5 critical path. Stripe será implementada como F43/v1.7 após validação do beta controlado (renumerada de F35 → F36 → F37 → F39 → F40 → F41 → F42 → F43 nos alinhamentos do Changelog/Novidades, do Onboarding — Navegação por Abas, da Tabela de Custos por Operação, do Brief Estruturado de Campanha, dos Campos Comerciais e Avisos do Brief, da Mídia de Campanha Mobile e do Signup Controlado e Elegibilidade Freemium).
 
 ### Pagamento (PAY)
 

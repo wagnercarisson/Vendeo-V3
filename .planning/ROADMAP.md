@@ -4,7 +4,7 @@
 
 **18 phases** | **177 requirements mapped** | All covered ✓
 
-**Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23. F35 = Changelog/Novidades, F36 = Onboarding — Navegação por Abas, F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), **F39 = Brief Estruturado de Campanha (v1.5)**, **F40 = Campos Comerciais e Avisos do Brief (v1.5)**, **F41 = Mídia de Campanha Mobile (v1.5)**, **F42 = Stripe/Monetização Pública (v1.7, pós-beta — renumerada de F39, de F40 e de F41)** (renumeração alinhada no documento de alinhamento F41, precedente F37 D11). **38.1 = Apuração de Custos de IA por Entrega** (desdobramento da F38, mesmo milestone v1.5). **38.2 = Admin de Custos Operacionais + Configurações Econômicas** (desdobramento da F38, mesmo milestone v1.5).
+**Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23. F35 = Changelog/Novidades, F36 = Onboarding — Navegação por Abas, F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), **F39 = Brief Estruturado de Campanha (v1.5)**, **F40 = Campos Comerciais e Avisos do Brief (v1.5)**, **F41 = Mídia de Campanha Mobile (v1.5)**, **F42 = Signup Controlado e Elegibilidade Freemium (v1.5)**, **F43 = Stripe/Monetização Pública (v1.7, pós-beta — renumerada de F42)** (renumeração alinhada no documento de alinhamento F42, precedente F41 D1). **38.1 = Apuração de Custos de IA por Entrega** (desdobramento da F38, mesmo milestone v1.5). **38.2 = Admin de Custos Operacionais + Configurações Econômicas** (desdobramento da F38, mesmo milestone v1.5).
 
 ---
 
@@ -39,7 +39,8 @@
 | 39 | ✅ Brief Estruturado de Campanha (v1.5) | 8/8 | ✅ Complete | 2026-08-13 |
 | 40 | ✅ Campos Comerciais e Avisos do Brief (v1.5) | 9/9 | ✅ Complete | 2026-08-14 |
 | 41 | ✅ Mídia de Campanha Mobile (v1.5) | 13/13 | ✅ Complete | 2026-08-15 |
-| 42 | ○ Stripe / Monetização Pública (v1.7) | — | Pending    | — |
+| 42 | ○ Signup Controlado e Elegibilidade Freemium (v1.5) | — | Pending    | — |
+| 43 | ○ Stripe / Monetização Pública (v1.7) | — | Pending    | — |
 
 ---
 
@@ -405,7 +406,7 @@
 
 **Source of truth:** `openspec/changes/fase-35-changelog-novidades/`
 
-**Renumeração (documentada no alinhamento F35):** F35 = Changelog/Novidades; F36 = Onboarding — Navegação por Abas (nova, v1.5); F37 = Revisão e Aprovação da Arte (v1.5); F38 = Tabela de Custos por Operação (v1.5); **F39 = Brief Estruturado de Campanha (v1.5)**; **F40 = Campos Comerciais e Avisos do Brief (v1.5)**; **F41 = Mídia de Campanha Mobile (v1.5)**; Stripe/Monetização Pública deslocada para F42 (v1.7, pós-beta).
+**Renumeração (documentada no alinhamento F35):** F35 = Changelog/Novidades; F36 = Onboarding — Navegação por Abas (nova, v1.5); F37 = Revisão e Aprovação da Arte (v1.5); F38 = Tabela de Custos por Operação (v1.5); **F39 = Brief Estruturado de Campanha (v1.5)**; **F40 = Campos Comerciais e Avisos do Brief (v1.5)**; **F41 = Mídia de Campanha Mobile (v1.5)**; **F42 = Signup Controlado e Elegibilidade Freemium (v1.5)**; Stripe/Monetização Pública deslocada para F43 (v1.7, pós-beta).
 
 **Plans:** 5/5 plans complete
 
@@ -466,7 +467,7 @@
 
 **Source of truth:** `openspec/changes/fase-36-onboarding-navegacao-por-abas/`
 
-**Renumeração (D14 + F39):** F36 = Onboarding — Navegação por Abas (nova, v1.5); F37 = Revisão e Aprovação da Arte (v1.5, experimento beta); F38 = Tabela de Custos por Operação (v1.5); **F39 = Brief Estruturado de Campanha (v1.5)**; **F40 = Campos Comerciais e Avisos do Brief (v1.5)**; **F41 = Mídia de Campanha Mobile (v1.5)**; Stripe / Monetização Pública deslocada para F42 (v1.7, pós-beta).
+**Renumeração (D14 + F39):** F36 = Onboarding — Navegação por Abas (nova, v1.5); F37 = Revisão e Aprovação da Arte (v1.5, experimento beta); F38 = Tabela de Custos por Operação (v1.5); **F39 = Brief Estruturado de Campanha (v1.5)**; **F40 = Campos Comerciais e Avisos do Brief (v1.5)**; **F41 = Mídia de Campanha Mobile (v1.5)**; **F42 = Signup Controlado e Elegibilidade Freemium (v1.5)**; Stripe / Monetização Pública deslocada para F43 (v1.7, pós-beta).
 
 **Plans:** 6/6 plans complete
 
@@ -570,7 +571,7 @@
 9. `admin_get_metrics` (F28) inalterado; `reserve_credit`/`credit_transactions` (F24) intactos; sem tabela `operation_runs`; sem UI admin de pricing/reconciliação (D1/D10)
 10. Furos 1–7 corrigidos; `npx vitest run`, `npm run typecheck`, `npm run lint`, `npm run build` — zero erros; 50 testes novos + verificação SQL/integrada I1–I6 + regressão completa
 
-**Dependencies:** Phase 24 (ledger `credit_transactions` — reconciliação por leitura), Phase 25/F28 (pipeline + telemetria, `admin_get_metrics`), Phase 29.1.1 (VS), Phase 37 (aprovação — decisão, não custa IA), Phase 38 (`credit_operation_costs` — eixo créditos), F42 (Stripe — consumirá o custo real)
+**Dependencies:** Phase 24 (ledger `credit_transactions` — reconciliação por leitura), Phase 25/F28 (pipeline + telemetria, `admin_get_metrics`), Phase 29.1.1 (VS), Phase 37 (aprovação — decisão, não custa IA), Phase 38 (`credit_operation_costs` — eixo créditos), F43 (Stripe — consumirá o custo real)
 
 **Source of truth:** `openspec/changes/fase-38-1-ai-cost-accounting/`
 
@@ -616,7 +617,7 @@ Plans:
 10. `/admin/metrics` corrigido (D6) — `getAvgCost` apura custo médio por entrega via call-level (não `campaign_pipeline.estimated_cost_usd`); card "**Custo Médio IA**"; USD→BRL via `economic_parameters.usd_brl_rate` (fonte única, não env)
 11. `npx vitest run`, `npm run typecheck`, `npm run lint`, `npm run build` — zero erros; ~40+ testes novos (12.x) + verificação SQL/integrada I1–I6 + regressão completa
 
-**Dependencies:** Phase 24 (ledger `credit_transactions` — leitura para segmentação D9), Phase 28 (métricas — leitura), Phase 38 (`credit_operation_costs` — eixo créditos), Phase 38.1 (`generation_events` call-level + views/RPCs — base da apuração), F42 (Stripe — consumirá os parâmetros calibrados e o custo apurado). **Sem** `operation_runs`, **sem** reconciliação OpenAI (F38.3), **sem** câmbio automático.
+**Dependencies:** Phase 24 (ledger `credit_transactions` — leitura para segmentação D9), Phase 28 (métricas — leitura), Phase 38 (`credit_operation_costs` — eixo créditos), Phase 38.1 (`generation_events` call-level + views/RPCs — base da apuração), F43 (Stripe — consumirá os parâmetros calibrados e o custo apurado). **Sem** `operation_runs`, **sem** reconciliação OpenAI (F38.3), **sem** câmbio automático.
 
 **Source of truth:** `openspec/changes/fase-38-2-admin-custos-operacionais/`
 
@@ -644,7 +645,7 @@ Plans:
 
 ### Phase 38.2.1: Snapshot Econômico
 
-**Goal:** Corrigir a base contábil da F38.2: congelar `usd_brl_rate_at_generation` (snapshot contábil do câmbio na geração) e `credit_value_brl_at_generation` (snapshot estimativo/fallback do valor do crédito na geração) em `generation_events` no momento da geração — impedindo que alterar `usd_brl_rate`/`credit_value_brl` recalculque retroativamente `custoBrl`, `receitaEstimadaBrl`, `resultadoEstimadoBrl`, `margemEstimadaPct`, KPIs, agregados e o card "Custo Médio IA" do `/admin/metrics`. Nomenclatura estimada (nunca "receita real"); fallback legacy explícito para eventos sem snapshot; backfill aproximado via `economic_parameter_audit`; receita real por pacote de crédito fica para F42 (Stripe).
+**Goal:** Corrigir a base contábil da F38.2: congelar `usd_brl_rate_at_generation` (snapshot contábil do câmbio na geração) e `credit_value_brl_at_generation` (snapshot estimativo/fallback do valor do crédito na geração) em `generation_events` no momento da geração — impedindo que alterar `usd_brl_rate`/`credit_value_brl` recalculque retroativamente `custoBrl`, `receitaEstimadaBrl`, `resultadoEstimadoBrl`, `margemEstimadaPct`, KPIs, agregados e o card "Custo Médio IA" do `/admin/metrics`. Nomenclatura estimada (nunca "receita real"); fallback legacy explícito para eventos sem snapshot; backfill aproximado via `economic_parameter_audit`; receita real por pacote de crédito fica para F43 (Stripe).
 
 **Requirements:** F38.2.1-01 a F38.2.1-14 (derivados do spec `economic-snapshot` + deltas: ai-cost-tracker, ai-operation-runs-api, ai-operation-costs, pipeline-metrics, admin-metrics-dashboard, economic-parameters)
 
@@ -661,7 +662,7 @@ Plans:
 9. Estornos continuam descontados via créditos líquidos
 10. Testes de snapshot/fallback/estabilidade temporal/nomenclatura; `npx vitest run`, `npm run typecheck`, `npm run lint`, `npm run build` — zero erros
 
-**Dependencies:** Phase 38.2 (parâmetros econômicos + audit + RPCs de operation runs + `EconomicParameterService` + tracker), Phase 38.1 (`generation_events` call-level). **Sem** `operation_runs`, **sem** pacotes de créditos (F42), **sem** reconciliação OpenAI (F38.3).
+**Dependencies:** Phase 38.2 (parâmetros econômicos + audit + RPCs de operation runs + `EconomicParameterService` + tracker), Phase 38.1 (`generation_events` call-level). **Sem** `operation_runs`, **sem** pacotes de créditos (F43), **sem** reconciliação OpenAI (F38.3).
 
 **Source of truth:** `openspec/changes/fase-38-2-1-economic-snapshot/`
 
@@ -732,7 +733,7 @@ Plans:
 7. Testes novos (validade modos→displayText; checkbox×texto obrigatório; prompt reframe) + co-migração de fixtures + regressão completa; golden por intent mantém `EXPECTED_KEYS = 38` (texto do prompt muda intencionalmente — D6)
 8. `npx vitest run`, `npm run typecheck`, `npm run lint`, `npm run build` — zero erros; UAT local (aviso ilustrativo legível, validade correta sem duplicação, rascunho restaurado, campanhas antigas intactas)
 
-**Dependencies:** F39 (brief estruturado — `commercial.validity`/`commercial.legalNotice` no domínio, snapshot `campaign_brief_v1`), F31.x (prompts por intent, revisor). **Sem** migration SQL, **sem** catálogo de produtos, **sem** UI multi-imagem/câmera, **sem** Stripe (F42).
+**Dependencies:** F39 (brief estruturado — `commercial.validity`/`commercial.legalNotice` no domínio, snapshot `campaign_brief_v1`), F31.x (prompts por intent, revisor). **Sem** migration SQL, **sem** catálogo de produtos, **sem** UI multi-imagem/câmera, **sem** Stripe (F43).
 
 **Source of truth:** `openspec/changes/fase-40-campos-comerciais-avisos-brief/`
 
@@ -763,7 +764,7 @@ Plans:
 7. Testes: ~32+ novos (transporte/mapper 8, UI/form 8, pipeline/provider/review 11, regressão/co-migração fixtures) — `route.test.ts`, `brief-mapper.test.ts`, `brief-snapshot.test.ts`, `image-generation-service.test.ts`, `openai-provider.test.ts`, `image-review-service.test.ts`, `use-campaign-form-navigation.test.ts`, `campaign-flow-credits.test.tsx`
 8. `npx vitest run`, `npm run typecheck`, `npm run lint`, `npm run build` — zero erros; UAT local (legado idêntico, primary+auxiliares, câmera HEIC/EXIF, remover/adicionar, sem primary → erro claro, campanha antiga) + **UAT celular real obrigatória** (foto vertical/horizontal, iOS HEIC e Android)
 
-**Dependencies:** F39 (domínio multi-imagem `media.images[]`, snapshot `campaign_brief_v1`), F40 (campos comerciais/avisos no form — body `validity`/`mandatoryArtworkText`), F31.x (prompts por intent, revisor), F24/F25 (pipeline de créditos/generação). **Sem** migration SQL, **sem** lib HEIC, **sem** roles avançadas expostas ao lojista, **sem** validação multi-imagem (primary-only), **sem** Stripe (F42).
+**Dependencies:** F39 (domínio multi-imagem `media.images[]`, snapshot `campaign_brief_v1`), F40 (campos comerciais/avisos no form — body `validity`/`mandatoryArtworkText`), F31.x (prompts por intent, revisor), F24/F25 (pipeline de créditos/generação). **Sem** migration SQL, **sem** lib HEIC, **sem** roles avançadas expostas ao lojista, **sem** validação multi-imagem (primary-only), **sem** Stripe (F43).
 
 **Source of truth:** `openspec/changes/fase-41-midia-de-campanha-mobile/`
 
@@ -793,6 +794,33 @@ Plans:
 - **Wave 4** *(blocked on Wave 3)* — 41-08 (UI), 41-09 (testes 1-8), 41-12 (testes 4 + 24-27 rota)
 - **Wave 5** *(blocked on Wave 4)* — 41-10 (testes 9-16), 41-11 (testes 17-23)
 - **Wave 6** *(blocked on Wave 5)* — 41-13 (verificação final + UAT humana — checkpoint)
+
+---
+
+### Phase 42: Signup Controlado e Elegibilidade Freemium
+
+**Goal:** Reabrir o cadastro público de forma controlada com **Google OAuth como entrada principal** (`signInWithOAuth`, callback PKCE `/auth/callback`) e **email/senha como fallback** (formulário restaurado com senha mín. 8, confirmação de email, consentimento opcional); **Turnstile** para email/senha, login por senha e recuperação (não no OAuth); anti-enumeração com mensagens genéricas; kill switch duplo (Supabase "Allow new users to sign up" + flag `VENDEO_PUBLIC_SIGNUP_ENABLED` default false). **Invariantes de elegibilidade preservados** (conta ≠ loja ≠ benefício — apenas `verification_status='approved'` concede os 10 créditos de onboarding). Cidade/UF como gate de **elegibilidade** (não de geração; readiness F34 intocada). Motor corrige a lacuna F33 (INAPTA atravessava): situação ≠ ATIVA → review `situacao_nao_ativa`; situação ausente → defer `dados_oficiais_incompletos`. CNAE determinístico segmento×CNAE que **nunca rejeita exclusivamente por CNAE**. Admin de revisão mais rico (informado × oficial, situação cadastral original). Contratos legais (Terms v1.4, Privacy v1.3). **Renumeração D1:** F42 = Signup Controlado e Elegibilidade Freemium (v1.5), Stripe → F43 (v1.7).
+
+**Requirements:** derivados dos 12 specs OpenSpec (access-request-history, admin-reviews, cnae-segment-mapping, freemium-risk-service, google-oauth-signup, launch-config, legal-acceptance-service, login-page, oauth-auth-callback, privacy-acknowledgement, signup-page, turnstile-captcha)
+
+**Success criteria:**
+
+1. Signup público restaurado: flag on → formulário email/senha + "Continuar com Google"; flag off → "Beta fechado"/landing com solicitação de acesso preservado
+2. Google OAuth: `signInWithOAuth({ provider: 'google', redirectTo: ${getSiteUrl()}/auth/callback })`, `/auth/callback` com `exchangeCodeForSession` (PKCE), allowlist de `next`, erro genérico `/login?error=oauth_failed`, PrivacyGate obrigatório pós-callback; `/auth/confirm` (email/OTP) intacto
+3. Turnstile aplicado a signup email/senha, login por senha e recuperação (`captchaToken`); NÃO no OAuth; token ausente/inválido → bloqueio com mensagem genérica
+4. Anti-enumeração: sucesso e "email já cadastrado" → mesma resposta `/check-email?type=signup`; erros operacionais → "Não foi possível concluir. Tente novamente."
+5. Motor: `INAPTA`/`SUSPENSA` → review `situacao_nao_ativa`; situação ausente → defer `dados_oficiais_incompletos`; cidade/UF ausentes → draft (sem review); sem oficial → review `localizacao_oficial_indisponivel`; divergentes → review `cidade_divergente`/`uf_divergente`; CNAE compatible/incompatible/unknown com precedência de subclasse exata
+6. Invariantes D6: criar conta (email/senha OU Google) nunca concede crédito; raiz única; aprovação idempotente/auditada
+7. Admin reviews: dados informados × oficiais + novos labels (`situacao_nao_ativa`, `localizacao_oficial_indisponivel`, `segmento_cnae_divergente`, `dados_oficiais_incompletos`); `situacao_suspensa` legado
+8. `npx vitest run`, `npm run typecheck`, `npm run lint`, `npm run build` — zero erros; UAT local + preview/produção (ordem fail-closed D13)
+
+**Dependencies:** F32 (CNPJ + entitlements), F33 (verificação/elegibilidade), F34 (readiness — **intocada**, separação de conceitos D7), F30 (legal clearance), F36 (onboarding), F41 (mídia — fase prévia completa). **Sem** migration destrutiva em `access_requests`, **sem** alteração de semântica de concessão (D6), **sem** `NOT NULL` em city/state (D7).
+
+**Source of truth:** `openspec/changes/fase-42-signup-controlado-elegibilidade-freemium/`
+
+**Plans:** 0/0 plans pending
+
+**Waves:** (a definir no planejamento)
 
 ---
 
@@ -862,10 +890,13 @@ Phase 39 (Brief Estruturado de Campanha — v1.5)
                                         Phase 41 (Mídia de Campanha Mobile — v1.5)
                                                  │
                                                  ▼
+                                        Phase 42 (Signup Controlado e Elegibilidade Freemium — v1.5)
+                                                 │
+                                                 ▼
                                         Phase 37 (Revisão e Aprovação da Arte — v1.5)
                                                  │
                                                  ▼
-                                        Phase 42 (Stripe / Monetização Pública — v1.7 futura)
+                                        Phase 43 (Stripe / Monetização Pública — v1.7 futura)
 ```
 
 ---
@@ -907,10 +938,10 @@ Phase 39 (Brief Estruturado de Campanha — v1.5)
 | INTENT-10 | Phase 31.1 | Done ✓ |
 | INTENT-11 | Phase 31.1 | Done ✓ |
 | INTENT-12 | Phase 31.1 | Done ✓ |
-| PAY-01 | Phase 42/v1.7 | Deferred |
-| PAY-02 | Phase 42/v1.7 | Deferred |
-| PAY-03 | Phase 42/v1.7 | Deferred |
-| PAY-04 | Phase 42/v1.7 | Deferred |
+| PAY-01 | Phase 43/v1.7 | Deferred |
+| PAY-02 | Phase 43/v1.7 | Deferred |
+| PAY-03 | Phase 43/v1.7 | Deferred |
+| PAY-04 | Phase 43/v1.7 | Deferred |
 | UI-01 | Phase 27 | Done ✓ |
 | UI-02 | Phase 27 | Done ✓ |
 | UI-03 | Phase 27 | Done ✓ |
@@ -951,4 +982,4 @@ Phase 39 (Brief Estruturado de Campanha — v1.5)
 
 *Roadmap created: 2026-07-15*
 *Milestone: v1.5 — Lançamento Externo Controlado*
-*Last updated: 2026-08-15 — **Fase 41 (Mídia de Campanha Mobile, v1.5) CONCLUÍDA — 13/13 plans, 4 gates verdes (222 files / 2033 testes), UAT humano 6/6 cenários (Android validado em produção ✅; iOS HEIC pendente de confirmação final)**; renumeração D1: F41 = Mídia de Campanha Mobile (v1.5), Stripe/Monetização Pública → **F42** (v1.7, pós-beta) — precedente F40 D1, fonte `openspec/changes/fase-41-midia-de-campanha-mobile/`.* Fase 40 complete (Campos Comerciais e Avisos do Brief — 9/9 plans, 1997 testes, 4 gates verdes, UAT aprovado 6/6); renumeração D1: F40 = Campos Comerciais e Avisos do Brief (v1.5), Stripe/Monetização Pública → F41 (v1.7, pós-beta) — precedente F39 D1, fonte `openspec/changes/fase-40-campos-comerciais-avisos-brief/`.* Fase 39 complete (Brief Estruturado de Campanha — 8/8 plans, 1950 testes, 4 gates verdes, UAT aprovado 5/5); renumeração F39 = Brief Estruturado de Campanha (v1.5) e Stripe/Monetização Pública → F40 (v1.7, pós-beta) — precedente F37 D11, fonte `openspec/changes/fase-39-brief-estruturado-campanha/`.* Fase 38.2.1 complete (Snapshot Econômico — 7/7 plans, 1887 testes, I1-I7 53/53 asserts); Phase 38.2 complete (Admin de Custos Operacionais + Configurações Econômicas — 11/11 plans, 1832 testes, verificação I1–I6 em banco real); Fase 38 complete (Tabela de Custos por Operação — 8/8 plans, 1597 testes, UAT 4/4); renumeração F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5); **Phase 38.1 (Apuração de Custos de IA por Entrega — desdobramento da F38, v1.5) CONCLUÍDA — 11/11 plans, 1713 testes (199 arquivos), UAT validado, fechada como camada de ESTIMATIVA OPERACIONAL GRANULAR** (ajuste provisório versionável da tool image_generation: `responses:image_generation = USD 0.065` = estimativa provisória para beta, calibrada por UAT/dashboard/CSV — NÃO é custo financeiro real; reconciliação financeira real fica para a próxima fase; seed `ai_model_pricing` via migration 20260809000003 aplicada Local/Remote) — fonte `openspec/changes/fase-38-1-ai-cost-accounting/`*
+*Last updated: 2026-08-16 — **Fase 42 (Signup Controlado e Elegibilidade Freemium, v1.5) EM PLANEJAMENTO**; renumeração D1: F42 = Signup Controlado e Elegibilidade Freemium (v1.5), Stripe/Monetização Pública → **F43** (v1.7, pós-beta) — precedente F41 D1, fonte `openspec/changes/fase-42-signup-controlado-elegibilidade-freemium/`.* Fase 41 complete (Mídia de Campanha Mobile — 13/13 plans, 2033 testes, 4 gates verdes, UAT 6/6 — Android em produção ✅; iOS HEIC pendente); renumeração D1: F41 = Mídia de Campanha Mobile (v1.5), Stripe/Monetização Pública → F42 (v1.7, pós-beta) — precedente F40 D1, fonte `openspec/changes/fase-41-midia-de-campanha-mobile/`.* Fase 40 complete (Campos Comerciais e Avisos do Brief — 9/9 plans, 1997 testes, 4 gates verdes, UAT aprovado 6/6); renumeração D1: F40 = Campos Comerciais e Avisos do Brief (v1.5), Stripe/Monetização Pública → F41 (v1.7, pós-beta) — precedente F39 D1, fonte `openspec/changes/fase-40-campos-comerciais-avisos-brief/`.* Fase 39 complete (Brief Estruturado de Campanha — 8/8 plans, 1950 testes, 4 gates verdes, UAT aprovado 5/5); renumeração F39 = Brief Estruturado de Campanha (v1.5) e Stripe/Monetização Pública → F40 (v1.7, pós-beta) — precedente F37 D11, fonte `openspec/changes/fase-39-brief-estruturado-campanha/`.* Fase 38.2.1 complete (Snapshot Econômico — 7/7 plans, 1887 testes, I1-I7 53/53 asserts); Phase 38.2 complete (Admin de Custos Operacionais + Configurações Econômicas — 11/11 plans, 1832 testes, verificação I1–I6 em banco real); Fase 38 complete (Tabela de Custos por Operação — 8/8 plans, 1597 testes, UAT 4/4); renumeração F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5); **Phase 38.1 (Apuração de Custos de IA por Entrega — desdobramento da F38, v1.5) CONCLUÍDA — 11/11 plans, 1713 testes (199 arquivos), UAT validado, fechada como camada de ESTIMATIVA OPERACIONAL GRANULAR** (ajuste provisório versionável da tool image_generation: `responses:image_generation = USD 0.065` = estimativa provisória para beta, calibrada por UAT/dashboard/CSV — NÃO é custo financeiro real; reconciliação financeira real fica para a próxima fase; seed `ai_model_pricing` via migration 20260809000003 aplicada Local/Remote) — fonte `openspec/changes/fase-38-1-ai-cost-accounting/`*
