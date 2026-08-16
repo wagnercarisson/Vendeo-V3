@@ -1,5 +1,7 @@
 # Generation Retry & Fallback
 
+> Modified by `fase-41-midia-de-campanha-mobile` (D7): fallback `images.edit` **gated por primary única** (1 imagem) — com auxiliares (2+), retries permanecem no Responses path; se indisponível → erro explícito. O fallback envia **apenas o `productFile`** (identidade/logo fora do fallback).
+
 ## Purpose
 
 Defines the automatic retry policy for recoverable generation errors, budget-aware retry gating, and the fallback path between provider strategies.
@@ -72,15 +74,40 @@ When the primary provider path fails with a recoverable error, the system SHALL 
 
 The fallback path SHALL count as one of the retry attempts for `provider_error` and `provider_timeout` errors.
 
-The fallback SHALL send `identityImageUrl` alongside `productImageDataUrl` as `[productFile, identityFile]` in `images.edit`. The identity URL SHALL already have been validated by `validateIdentityReference()` before the brief was built. If fetching the identity URL fails during the fallback, the system SHALL treat this as a **controlled error** — return error to the client with a PT-BR message. Silent degradation (continuing without identity) SHALL NOT occur.
+**F41 D7 — política fechada (gating):** o fallback `images.edit` (Image API) aceita **apenas 1 base image** (limitação documentada em `openai.ts:282-287`). Portanto:
+
+- **SÓ com a primary única** (1 imagem — `productImageDataUrl` legado ou `productImagesDataUrls` de 1 elemento): o fallback `images.edit` é permitido, enviando **apenas o `productFile`** (a imagem primary) como base image.
+- **Com auxiliares** (2+ imagens): o fallback `images.edit` **NÃO** é usado — os retries permanecem no **Responses path**; se o Responses estiver indisponível → **erro explícito** (sem degradar a fidelidade descartando imagens).
+
+O fallback `images.edit` SHALL enviar apenas o `productFile` (imagem primary) como base image — **a identidade/logo NÃO faz parte do fallback multi-imagem** (limitação pré-existente: `images.edit` aceita uma única imagem de base — `openai.ts:282-287`; antes da fase 5 o fallback também perdia a identidade). A identidade permanece apenas no caminho mainline (Responses path, `detail: "low"`).
+
+Erros permanecem **controlados** — sem degradação silenciosa do produto: se a primary única estiver indisponível/malformada, o fallback SHALL emitir erro terminal com mensagem PT-BR clara, sem gerar arte sem o produto.
 
 #### Scenario: Primary path failure triggers fallback
 
 - **WHEN** the primary provider path (Responses API) fails with a recoverable error
-- **AND** a fallback path is available (Image API edit)
+- **AND** há **apenas a primary única** (1 imagem)
 - **THEN** the service SHALL attempt the fallback path
-- **AND** the fallback SHALL send `[productFile, identityFile]` in `images.edit`
+- **AND** o fallback SHALL enviar **apenas o `productFile`** (a primary) como base image em `images.edit`
 - **AND** if the fallback succeeds, the result SHALL be returned normally
+
+#### Scenario: Identidade não entra no fallback (D7)
+
+- **WHEN** o fallback `images.edit` é invocado com primary única e `identityImageUrl` presente
+- **THEN** apenas o `productFile` é enviado como base image
+- **AND** a identidade/logo NÃO é enviada no `images.edit` (limitação `openai.ts:282-287`; identidade permanece só no Responses path)
+
+#### Scenario: Fallback NÃO usado com auxiliares (D7)
+
+- **WHEN** o input tem 2+ imagens (`productImagesDataUrls` com auxiliares) e o Responses falha com erro retryable
+- **THEN** os retries permanecem no **Responses path**
+- **AND** o fallback `images.edit` NÃO é invocado (não degrada a fidelidade descartando imagens)
+
+#### Scenario: Erro explícito com auxiliares e Responses indisponível (D7)
+
+- **WHEN** há auxiliares e o Responses path esgota os retries
+- **THEN** o sistema emite **erro explícito** (terminal)
+- **AND** nenhuma imagem é descartada silenciosamente
 
 #### Scenario: Fallback failure emits terminal error
 
@@ -88,27 +115,22 @@ The fallback SHALL send `identityImageUrl` alongside `productImageDataUrl` as `[
 - **THEN** the service SHALL emit a terminal error
 - **AND** the error code SHALL reflect the original failure type (e.g., `provider_error`)
 
-#### Scenario: Identity fetch failure in fallback returns controlled error
-
-- **WHEN** the fallback attempts to fetch the identity URL
-- **AND** the fetch fails
-- **THEN** the service SHALL return a terminal error
-- **AND** SHALL NOT degrade silently
-
 ### Requirement: Identity asset preserved across retry and fallback paths
 
-The `identityImageUrl` SHALL be preserved in all retry and fallback paths of `OpenAIImageProvider`. The current behavior where `attempt >= 1` skips directly to the Image API fallback and loses the identity asset SHALL be corrected.
+O sistema SHALL preservar a identidade/logo no **mainline** e NÃO enviá-la no caminho de fallback:
 
-The identity asset reference SHALL be available in:
-- `attempt = 0` (Responses API, primary path): sent as `input_image`
-- `attempt >= 1` (Image API edit, fallback path): fetched and sent as `identityFile`
+- `attempt = 0` (Responses API, primary path): SHALL ser enviado como `input_image` com `detail: "low"` — **inalterado**.
+- `attempt >= 1` (fallback `images.edit`, SÓ com primary única — D7): **NÃO SHALL ser enviado** — o fallback envia apenas o `productFile` (limitação `openai.ts:282-287`; identidade permanece só no Responses path).
+
+> **F41 D7 (gating):** com o fallback `images.edit` agora **gated por primary única** e enviando **apenas o `productFile`**, a identidade/logo NÃO entra no caminho de fallback (limitação pré-existente `openai.ts:282-287`). A identidade permanece **apenas no mainline** (Responses path, `detail: "low"`). Esta seção preserva o requisito original de disponibilidade da identidade no mainline e documenta a nova política do fallback.
 
 #### Scenario: identityImageUrl sent on primary path
 
 - **WHEN** `generateImage()` is called with `attempt = 0`
 - **THEN** `identityImageUrl` SHALL be sent as `input_image` in the Responses API call
 
-#### Scenario: identityImageUrl sent on fallback path
+#### Scenario: identityImageUrl não entra no fallback (D7)
 
-- **WHEN** `generateImage()` is called with `attempt >= 1`
-- **THEN** `identityImageUrl` SHALL be fetched and sent as `identityFile` in the Image API edit call
+- **WHEN** `generateImage()` é chamado com `attempt >= 1` (fallback `images.edit` com primary única)
+- **THEN** apenas o `productFile` é enviado como base image
+- **AND** a identidade/logo NÃO é enviada no `images.edit` (limitação `openai.ts:282-287`)

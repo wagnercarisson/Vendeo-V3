@@ -38,24 +38,33 @@ O sistema SHALL fazer `ImageGenerationService` (`src/lib/image-generation/servic
 - **WHEN** `brief.commercial.legalNotice.enabled === false` (ou ausente)
 - **THEN** o texto obrigatório não entra no prompt visual do Image Director (nem no revisor — D9)
 
-### Requirement: Ponte media.primary.dataUrl → provider/input-validation
+### Requirement: Ponte media.images → provider/input-validation
 
-O sistema SHALL formalizar a ponte **explícita** `brief.media.images[0].dataUrl` (imagem `primary`) para:
+O sistema SHALL formalizar a ponte **explícita** dos dataUrls de `brief.media.images` para:
 
-- o **provider de imagem** (envio da imagem ao modelo)
+- o **provider de imagem** (envio das imagens ao modelo)
 - o **`InputValidationService` / revisor de visão** (validação de input)
+
+A ponte single `primaryImageDataUrl(brief)` SHALL evoluir para **`mediaImagesDataUrls(brief)`** (D7): uma **lista ordenada** de dataUrls dos itens de `brief.media.images`, em que **a posição 0 é sempre a primary**. A lista alimenta `ImageProviderInput.productImagesDataUrls`; quando há **apenas a primary**, o provider pode receber `productImageDataUrl` (legado) ou uma lista de 1 elemento — comportamento equivalente.
 
 O base64 SHALL viver **só em memória/transporte** (tipo runtime `CampaignProductImageInput`); o snapshot nunca o expõe (D6/D7).
 
-#### Scenario: provider recebe media.primary.dataUrl
+#### Scenario: provider recebe a lista de dataUrls (D7)
 
-- **WHEN** o pipeline gera a imagem com um brief estruturado
-- **THEN** o provider de imagem recebe `brief.media.images[0].dataUrl` (base64 em memória/transporte — D11)
+- **WHEN** o pipeline gera a imagem com um brief com primary + 2 auxiliares
+- **THEN** o provider recebe `productImagesDataUrls` com 3 itens (posição 0 = primary)
+- **AND** a ponte `mediaImagesDataUrls(brief)` preserva a ordem dos itens do brief
 
-#### Scenario: InputValidationService recebe media.primary.dataUrl
+#### Scenario: lista de 1 elemento mantém caminho legado
+
+- **WHEN** o brief tem apenas a primary (1 imagem)
+- **THEN** `mediaImagesDataUrls(brief)` retorna uma lista de 1 elemento
+- **AND** o provider pode receber `productImageDataUrl` (legado) com comportamento equivalente
+
+#### Scenario: InputValidationService usa apenas a primary (D8)
 
 - **WHEN** o pipeline valida o input com o `InputValidationService`/revisor de visão
-- **THEN** a validação recebe `brief.media.images[0].dataUrl` (ponte explícita — D11)
+- **THEN** a validação recebe **apenas** o dataUrl da imagem **primary** (posição 0) — auxiliares não participam (primary-only na v1)
 
 #### Scenario: snapshot nunca expõe a ponte
 
@@ -93,6 +102,7 @@ O sistema SHALL montar o `ImageReviewInput` (revisor — `src/lib/image-generati
 - `legalNotice.text` incluído no review **apenas quando** `legalNotice.enabled === true` (D9)
 - `validity.displayText` incluído quando `validity.enabled === true` (D8)
 - `preserveImageContext`/`campaignIntent` lidos de `brief.creativeContext`/`brief.commercial`
+- **F41 D9:** o `ImageReviewInput` passa a carregar, **opcionalmente**, a **dataUrl da imagem principal** (`mediaImagesDataUrls(brief)[0]`) como **referência de fidelidade** — o revisor compara o produto da arte com a imagem de referência.
 
 #### Scenario: revisor recebe legalNotice quando habilitado
 
@@ -108,6 +118,18 @@ O sistema SHALL montar o `ImageReviewInput` (revisor — `src/lib/image-generati
 
 - **WHEN** `brief.commercial.validity = { enabled: true, displayText: "válida até 30/09" }`
 - **THEN** o `ImageReviewInput` contém `validity.displayText` (D8)
+
+#### Scenario: revisor recebe a primary como referência (D9)
+
+- **WHEN** o brief tem uma imagem primary (dataUrl)
+- **THEN** o `ImageReviewInput` carrega a dataUrl da primary
+- **AND** o revisor verifica a fidelidade do produto da arte contra a imagem de referência
+
+#### Scenario: revisor sem primary mantém comportamento atual
+
+- **WHEN** não há imagem primary disponível (caminho legado sem referência)
+- **THEN** o `ImageReviewInput` NÃO carrega imagem de referência
+- **AND** o comportamento do revisor é idêntico ao atual (retrocompatível — D9)
 
 #### Scenario: revisor montado do domínio mantém campos essenciais
 
