@@ -67,10 +67,25 @@ describe("VERIFICATION_REASON_LABELS", () => {
     "cnpj_baixada",
     "cnpj_nula",
     "root_already_used",
+    "situacao_nao_ativa",
+    "localizacao_oficial_indisponivel",
+    "segmento_cnae_divergente",
+    "dados_oficiais_incompletos",
   ];
 
   it.each(knownReasons)("cobre motivo: %s", (reason) => {
     expect(VERIFICATION_REASON_LABELS).toHaveProperty(reason);
+  });
+
+  it("mantém situacao_suspensa como legado histórico", () => {
+    expect(VERIFICATION_REASON_LABELS.situacao_suspensa).toBe("Situação suspensa");
+  });
+
+  it("exibe labels corretos para os novos motivos F42", () => {
+    expect(getLabel(VERIFICATION_REASON_LABELS, "situacao_nao_ativa")).toBe("Situação cadastral não ativa");
+    expect(getLabel(VERIFICATION_REASON_LABELS, "localizacao_oficial_indisponivel")).toBe("Localização oficial indisponível");
+    expect(getLabel(VERIFICATION_REASON_LABELS, "segmento_cnae_divergente")).toBe("Segmento incompatível com CNAE");
+    expect(getLabel(VERIFICATION_REASON_LABELS, "dados_oficiais_incompletos")).toBe("Dados oficiais incompletos");
   });
 });
 
