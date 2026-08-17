@@ -39,7 +39,7 @@
 | 39 | ✅ Brief Estruturado de Campanha (v1.5) | 8/8 | ✅ Complete | 2026-08-13 |
 | 40 | ✅ Campos Comerciais e Avisos do Brief (v1.5) | 9/9 | ✅ Complete | 2026-08-14 |
 | 41 | ✅ Mídia de Campanha Mobile (v1.5) | 13/13 | ✅ Complete | 2026-08-15 |
-| 42 | ○ Signup Controlado e Elegibilidade Freemium (v1.5) | — | Pending    | — |
+| 42 | ○ Signup Controlado e Elegibilidade Freemium (v1.5) | 20/20 | Complete   | 2026-08-17 |
 | 43 | ○ Stripe / Monetização Pública (v1.7) | — | Pending    | — |
 
 ---
@@ -818,7 +818,7 @@ Plans:
 
 **Source of truth:** `openspec/changes/fase-42-signup-controlado-elegibilidade-freemium/`
 
-**Plans:** 20 plans (8 waves)
+**Plans:** 20/20 plans complete
 
 **Waves:** 8 waves (max(deps)+1, DAG acíclico) — 42-01:1, 42-02/03:2, 42-04/07/08/16:3, 42-05/06/10/14/15:4, 42-09/11/17:5, 42-12/13/18:6, 42-19:7, 42-20:8
 

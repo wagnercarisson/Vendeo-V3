@@ -4,14 +4,14 @@ milestone: v1.5
 milestone_name: â€” LanÃ§amento Externo Controlado â—†
 current_phase: 42
 status: in_progress
-last_updated: 2026-08-17T00:00:00.000Z
+last_updated: 2026-08-17T01:00:00.000Z
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 52
-  completed_plans: 145
-  percent: 83
-stopped_at: Planning F42 â€” 20/20 plans escritos (aguardando revisÃ£o humana do plano)
+  completed_plans: 165
+  percent: 87
+stopped_at: F42 em VERIFICACAO - 20/20 plans implementados (2182 testes, 4 gates verdes); UAT humano 20.5-20.15 pendente + push migration 42-12 [BLOCKING]
 ---
 
 # Project State
