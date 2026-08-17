@@ -97,6 +97,7 @@ describe("SignupForm", () => {
   it("valida senha < 8 caracteres — mensagem PT-BR", async () => {
     render(<SignupForm />);
     setCaptchaToken();
+    acknowledgePrivacy();
     fillAndSubmit("test@test.com", "1234567");
 
     await waitFor(() => {
@@ -110,6 +111,7 @@ describe("SignupForm", () => {
   it("valida senha !== confirmar senha — mensagem PT-BR", async () => {
     render(<SignupForm />);
     setCaptchaToken();
+    acknowledgePrivacy();
     fillAndSubmit("test@test.com", "password123", "password456");
 
     await waitFor(() => {
@@ -189,10 +191,10 @@ describe("SignupForm", () => {
 
   it("inclui links legais de Privacidade e Termos", () => {
     render(<SignupForm />);
-    expect(screen.getByRole("link", { name: /Política de Privacidade/i })).toHaveAttribute(
-      "href",
-      "/privacidade",
-    );
+    const privacyLinks = screen.getAllByRole("link", { name: /Política de Privacidade/i });
+    for (const link of privacyLinks) {
+      expect(link).toHaveAttribute("href", "/privacidade");
+    }
     expect(screen.getByRole("link", { name: /Termos de Uso/i })).toHaveAttribute(
       "href",
       "/termos",
