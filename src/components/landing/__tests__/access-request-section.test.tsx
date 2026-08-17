@@ -11,7 +11,7 @@ vi.mock("@/components/auth/google-button", () => ({
   ),
 }));
 
-vi.mock("./access-request-form", () => ({
+vi.mock("../access-request-form", () => ({
   AccessRequestForm: ({ onSuccess }: { onSuccess: () => void }) => (
     <form data-testid="access-request-form">
       <button type="button" onClick={onSuccess}>
