@@ -19,6 +19,21 @@ export function computeSimilarity(
   return score.bestScore;
 }
 
+/**
+ * Motor de elegibilidade freemium (F42 D7/D8/D9/D10).
+ *
+ * Contrato com os callers/rotas:
+ * - PRÉ-GATE D7: o caller NUNCA chama este motor com `city`/`state` ausentes
+ *   (null/empty após trim). Cidade/UF ausentes no formulário → a loja permanece
+ *   NÃO avaliada (`unverified`) no caller, sem review na fila admin e sem concessão.
+ * - O motor NÃO tem branch de "draft" (sem quinto retorno além de
+ *   approved/review/reject/defer) — ausência de cidade/UF é tratada no caller.
+ * - F34 `check_store_readiness` é INTOCADA: elegibilidade decide o benefício;
+ *   readiness decide a capacidade de gerar. Separação de conceitos (D7).
+ *
+ * Ordem D10: CNPJ → situação ATIVA exata (BAIXADA/NULA reject antes) → raiz →
+ * nome ≥ 0.6 → cidade/UF (pré-gate no caller) → CNAE → approved (score ≥ 60).
+ */
 export function evaluateFreemiumEligibility(
   input: FreemiumEligibilityInput
 ): FreemiumEligibilityOutput {

@@ -173,43 +173,57 @@ export const POST = apiHandler(async (request: NextRequest) => {
 
     if (lookupResult.status === "resolved") {
       cnpjOfficialData = lookupResult.data;
-      verificationData = { signals: {} };
+      verificationData = { signals: {}, score: 0 };
 
-      const { data: existingEntitlement } = await supabase
-        .from("freemium_entitlements")
-        .select("id")
-        .eq("root_hash", rootHash)
-        .eq("benefit_type", "onboarding")
-        .maybeSingle();
+      // Pré-gate D7: cidade/UF ausentes (undefined/empty após trim) → NÃO chamar o motor.
+      // A loja permanece NÃO avaliada (unverified): sem review na fila admin, sem concessão.
+      // O motor nunca recebe nulos (contrato único create/update — mesmo pré-gate em update-cnpj).
+      const storeCity = typeof city === "string" ? city.trim() : "";
+      const storeState = typeof state === "string" ? state.trim() : "";
 
-      const rootEligible = !existingEntitlement;
+      if (storeCity !== "" && storeState !== "") {
+        const { data: existingEntitlement } = await supabase
+          .from("freemium_entitlements")
+          .select("id")
+          .eq("root_hash", rootHash)
+          .eq("benefit_type", "onboarding")
+          .maybeSingle();
 
-      const eligibility = evaluateFreemiumEligibility({
-        cnpj: normalized,
-        storeName: (name as string).trim(),
-        city: typeof city === "string" ? city : "",
-        state: typeof state === "string" ? state : "",
-        segment: segment as string,
-        officialData: cnpjOfficialData,
-        lookupOutcome: "resolved",
-        rootHash,
-        rootEligible,
-      });
+        const rootEligible = !existingEntitlement;
 
-      verificationData = { signals: eligibility.signals, score: eligibility.score };
-      verificationStatus = eligibility.decision;
-      verificationReasons = eligibility.reasons.length > 0 ? eligibility.reasons : null;
+        const eligibility = evaluateFreemiumEligibility({
+          cnpj: normalized,
+          storeName: (name as string).trim(),
+          city: storeCity,
+          state: storeState,
+          segment: segment as string,
+          officialData: cnpjOfficialData,
+          lookupOutcome: "resolved",
+          rootHash,
+          rootEligible,
+        });
 
-      if (eligibility.decision === "approved") {
-        userMessage = "Loja criada com sucesso! Seus créditos de boas-vindas foram liberados.";
-      } else if (eligibility.decision === "review") {
-        userMessage = "Loja criada. Seus créditos de boas-vindas serão liberados após verificação cadastral.";
-      } else if (eligibility.decision === "reject") {
-        if (eligibility.reasons.includes("cnpj_baixada") || eligibility.reasons.includes("cnpj_nula")) {
-          userMessage = "Loja criada. Este CNPJ está com situação cadastral inativa.";
-        } else if (eligibility.reasons.includes("root_already_used")) {
-          userMessage = "Loja criada como filial. Esta empresa já utilizou o benefício de boas-vindas.";
+        verificationData = { signals: eligibility.signals, score: eligibility.score };
+        verificationStatus = eligibility.decision;
+        verificationReasons = eligibility.reasons.length > 0 ? eligibility.reasons : null;
+
+        if (eligibility.decision === "approved") {
+          userMessage = "Loja criada com sucesso! Seus créditos de boas-vindas foram liberados.";
+        } else if (eligibility.decision === "review") {
+          userMessage = "Loja criada. Seus créditos de boas-vindas serão liberados após verificação cadastral.";
+        } else if (eligibility.decision === "reject") {
+          if (eligibility.reasons.includes("cnpj_baixada") || eligibility.reasons.includes("cnpj_nula")) {
+            userMessage = "Loja criada. Este CNPJ está com situação cadastral inativa.";
+          } else if (eligibility.reasons.includes("root_already_used")) {
+            userMessage = "Loja criada como filial. Esta empresa já utilizou o benefício de boas-vindas.";
+          }
         }
+      } else {
+        // D7 — cidade/UF ausentes: loja NÃO avaliada (unverified), sem review na fila
+        // admin e sem concessão de crédito (o motor não é chamado).
+        verificationStatus = "unverified";
+        verificationData = { signals: {}, score: 0 };
+        verificationReasons = null;
       }
     }
 

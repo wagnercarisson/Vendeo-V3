@@ -68,8 +68,15 @@ function createRequest(body: unknown): NextRequest {
 }
 
 function mockFromNoDuplicate() {
-  const mockSelect = vi.fn(() => ({ eq: vi.fn(() => ({ neq: vi.fn(() => ({ maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }) })) })) }));
-  mockFrom.mockReturnValue({ select: mockSelect });
+  // Cadeia fluente: suporta a query de duplicata (select→eq→neq→maybeSingle)
+  // E a query de entitlement (select→eq→eq→maybeSingle) usada pelo motor.
+  const chain = {
+    select: vi.fn(() => chain),
+    eq: vi.fn(() => chain),
+    neq: vi.fn(() => chain),
+    maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+  };
+  mockFrom.mockReturnValue(chain);
 }
 
 beforeEach(() => {
@@ -337,7 +344,7 @@ describe("POST /api/store/update-cnpj", () => {
     expect(body.error).toBe("some_random_internal_error");
   });
 
-  it("does NOT call evaluateFreemiumEligibility", async () => {
+  it("keeps store unverified when city/state absent (D7 pre-gate — motor NOT called, no auto-approval)", async () => {
     mockRpc.mockResolvedValueOnce({
       data: { store: [{ id: STORE_UUID }] },
       error: null,
@@ -350,7 +357,124 @@ describe("POST /api/store/update-cnpj", () => {
       razaoSocial: "Razao",
     }));
 
+    // D7: sem city/state no store → motor NÃO é chamado
     expect(mockEvaluateFreemium).not.toHaveBeenCalled();
+    // Nome similar (score 1) NÃO auto-aprova mais: loja permanece unverified
+    expect(mockRpc).toHaveBeenCalledWith("update_store_cnpj", expect.objectContaining({
+      p_verification_status: "unverified",
+      p_verification_data: expect.objectContaining({ score: 0 }),
+    }));
+  });
+
+  it("review situacao_nao_ativa when INAPTA/SUSPENSA despite name score >= 0.8 (D8/D10 — NOT approved)", async () => {
+    const { getCurrentStore } = await import("@/lib/auth/store-ownership");
+    vi.mocked(getCurrentStore).mockResolvedValueOnce({
+      id: STORE_UUID,
+      name: "Minha Loja",
+      city: "São Paulo",
+      state: "SP",
+      segment: "moda-calcados-acessorios",
+    } as import("@/lib/store").Store);
+    mockEvaluateFreemium.mockReturnValue({
+      decision: "review",
+      reasons: ["situacao_nao_ativa"],
+      score: 30,
+      signals: { situacaoCadastral: "INAPTA" },
+    });
+    mockRpc.mockResolvedValueOnce({
+      data: { store: [{ id: STORE_UUID }] },
+      error: null,
+    });
+
+    const { POST } = await import("../route");
+    const res = await POST(createRequest({
+      storeId: STORE_UUID,
+      cnpjNormalized: "12345678000195",
+      razaoSocial: "Razao",
+    }));
+
+    expect(res.status).toBe(200);
+    expect(mockEvaluateFreemium).toHaveBeenCalled();
+    expect(mockRpc).toHaveBeenCalledWith("update_store_cnpj", expect.objectContaining({
+      // Situação não-ativa → review, NUNCA approved (mesmo com nome similar ≥ 0.8)
+      p_verification_status: "review",
+      p_verification_reasons: ["situacao_nao_ativa"],
+      // Nome continua como métrica de apoio, não decisão
+      p_cnpj_validation_score: expect.objectContaining({ name_match: true }),
+    }));
+  });
+
+  it("review segmento_cnae_divergente when CNAE incompatible (D9 — never reject, never approved)", async () => {
+    const { getCurrentStore } = await import("@/lib/auth/store-ownership");
+    vi.mocked(getCurrentStore).mockResolvedValueOnce({
+      id: STORE_UUID,
+      name: "Minha Loja",
+      city: "São Paulo",
+      state: "SP",
+      segment: "variedades-utilidades",
+    } as import("@/lib/store").Store);
+    mockEvaluateFreemium.mockReturnValue({
+      decision: "review",
+      reasons: ["segmento_cnae_divergente"],
+      score: 40,
+      signals: { cnaeCompatible: "incompatible" },
+    });
+    mockRpc.mockResolvedValueOnce({
+      data: { store: [{ id: STORE_UUID }] },
+      error: null,
+    });
+
+    const { POST } = await import("../route");
+    const res = await POST(createRequest({
+      storeId: STORE_UUID,
+      cnpjNormalized: "12345678000195",
+      razaoSocial: "Razao",
+    }));
+
+    expect(res.status).toBe(200);
+    expect(mockRpc).toHaveBeenCalledWith("update_store_cnpj", expect.objectContaining({
+      p_verification_status: "review",
+      p_verification_reasons: ["segmento_cnae_divergente"],
+    }));
+  });
+
+  it("approves via motor when all signals ok (D10 — decision comes from the motor, not name score)", async () => {
+    const { getCurrentStore } = await import("@/lib/auth/store-ownership");
+    vi.mocked(getCurrentStore).mockResolvedValueOnce({
+      id: STORE_UUID,
+      name: "Minha Loja",
+      city: "São Paulo",
+      state: "SP",
+      segment: "moda-calcados-acessorios",
+    } as import("@/lib/store").Store);
+    mockEvaluateFreemium.mockReturnValue({
+      decision: "approved",
+      reasons: [],
+      score: 100,
+      signals: { cnaeCompatible: "compatible" },
+    });
+    mockRpc.mockResolvedValueOnce({
+      data: { store: [{ id: STORE_UUID }] },
+      error: null,
+    });
+
+    const { POST } = await import("../route");
+    const res = await POST(createRequest({
+      storeId: STORE_UUID,
+      cnpjNormalized: "12345678000195",
+      razaoSocial: "Razao",
+    }));
+
+    expect(res.status).toBe(200);
+    expect(mockEvaluateFreemium).toHaveBeenCalledWith(expect.objectContaining({
+      city: "São Paulo",
+      state: "SP",
+      lookupOutcome: "resolved",
+      rootEligible: true,
+    }));
+    expect(mockRpc).toHaveBeenCalledWith("update_store_cnpj", expect.objectContaining({
+      p_verification_status: "approved",
+    }));
   });
 
   it("returns 403 when storeId does not match user store", async () => {
