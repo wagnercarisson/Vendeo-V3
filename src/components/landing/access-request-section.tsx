@@ -71,7 +71,7 @@ export function AccessRequestSection({
       </section>
 
       {/* Form section — apenas flag off (lista de espera). Flag on → sem form. */}
-      {!publicSignupEnabled && (
+      {!publicSignupEnabled ? (
         <section id="acesso" className="mx-auto w-full max-w-5xl px-6 pb-20">
           <div className="mx-auto max-w-md rounded-2xl border border-border bg-bg-surface p-8">
             {submitted ? (
@@ -99,11 +99,17 @@ export function AccessRequestSection({
               </>
             )}
           </div>
+          <div className="mt-4 flex justify-center">
+            <NovidadesLink variant="prominent" entries={entries} />
+          </div>
         </section>
+      ) : (
+        <div className="mx-auto w-full max-w-5xl px-6 pb-20">
+          <div className="flex justify-center">
+            <NovidadesLink variant="prominent" entries={entries} />
+          </div>
+        </div>
       )}
-      <div className={publicSignupEnabled ? "mx-auto w-full max-w-5xl px-6 pb-20" : "mt-4 flex justify-center pb-20"}>
-        <NovidadesLink variant={publicSignupEnabled ? "footer" : "prominent"} entries={entries} />
-      </div>
     </>
   );
 }

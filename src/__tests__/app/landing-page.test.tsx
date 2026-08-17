@@ -60,6 +60,12 @@ vi.mock("@/lib/changelog/get-changelog", () => ({
   getAllEntries: vi.fn().mockResolvedValue(FIXTURE_ENTRIES),
 }));
 
+// GoogleButton importa @/lib/supabase/client (env em module-load) — mock leve
+// porque a landing em flag off NÃO renderiza o botão (contrato flag on é do 42-13).
+vi.mock("@/components/auth/google-button", () => ({
+  GoogleButton: () => <button type="button">Continuar com Google</button>,
+}));
+
 function getProminentNovidades(): HTMLElement {
   const acessoSection = document.getElementById("acesso");
   expect(acessoSection).not.toBeNull();
