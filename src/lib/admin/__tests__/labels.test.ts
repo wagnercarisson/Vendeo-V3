@@ -77,15 +77,16 @@ describe("VERIFICATION_REASON_LABELS", () => {
     expect(VERIFICATION_REASON_LABELS).toHaveProperty(reason);
   });
 
-  it("mantém situacao_suspensa como legado histórico", () => {
-    expect(VERIFICATION_REASON_LABELS.situacao_suspensa).toBe("Situação suspensa");
-  });
-
-  it("exibe labels corretos para os novos motivos F42", () => {
+  it("Teste 47: exibe labels corretos para os novos motivos F42 (D11)", () => {
     expect(getLabel(VERIFICATION_REASON_LABELS, "situacao_nao_ativa")).toBe("Situação cadastral não ativa");
     expect(getLabel(VERIFICATION_REASON_LABELS, "localizacao_oficial_indisponivel")).toBe("Localização oficial indisponível");
     expect(getLabel(VERIFICATION_REASON_LABELS, "segmento_cnae_divergente")).toBe("Segmento incompatível com CNAE");
     expect(getLabel(VERIFICATION_REASON_LABELS, "dados_oficiais_incompletos")).toBe("Dados oficiais incompletos");
+  });
+
+  it("Teste 48: situacao_suspensa permanece legível em registros antigos (D8/D11)", () => {
+    expect(VERIFICATION_REASON_LABELS.situacao_suspensa).toBe("Situação suspensa");
+    expect(getLabel(VERIFICATION_REASON_LABELS, "situacao_suspensa")).toBe("Situação suspensa");
   });
 });
 
