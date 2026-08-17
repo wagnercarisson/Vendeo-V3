@@ -19,7 +19,10 @@ function mockTurnstile() {
     remove: vi.fn(),
     reset: vi.fn(),
   };
-  window.turnstile = turnstileMock;
+  // Cast via o tipo do mock: vi.fn() não é estruturalmente atribuível a
+  // TurnstileApi (os parâmetros do Mock são any[]), mas em runtime é um callable.
+  (window as unknown as { turnstile: typeof turnstileMock }).turnstile =
+    turnstileMock;
 }
 
 beforeEach(() => {
@@ -35,7 +38,7 @@ afterEach(() => {
   } else {
     process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY = ORIGINAL_SITE_KEY;
   }
-  delete window.turnstile;
+  delete (window as { turnstile?: unknown }).turnstile;
 });
 
 describe("CaptchaField — widget Turnstile reutilizável (D3)", () => {
