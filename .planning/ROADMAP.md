@@ -818,9 +818,9 @@ Plans:
 
 **Source of truth:** `openspec/changes/fase-42-signup-controlado-elegibilidade-freemium/`
 
-**Plans:** 0/0 plans pending
+**Plans:** 20 plans (8 waves)
 
-**Waves:** (a definir no planejamento)
+**Waves:** 8 waves (max(deps)+1, DAG acíclico) — 42-01:1, 42-02/03:2, 42-04/07/08/16:3, 42-05/06/10/14/15:4, 42-09/11/17:5, 42-12/13/18:6, 42-19:7, 42-20:8
 
 ---
 

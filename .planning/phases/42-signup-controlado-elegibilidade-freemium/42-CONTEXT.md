@@ -187,7 +187,7 @@ Requisitos derivados dos 12 specs OpenSpec (nomes por spec):
 - `src/lib/legal/acceptance-service.ts` — `getAcceptanceStatus` (`:43-62`); reaceite `login_reacceptance` (D12)
 - `supabase/config.toml` — paridade D13: `minimum_password_length = 8` (`:182` hoje 6), `enable_confirmations = true` (`:226` hoje false), `[auth.captcha]` turnstile (`:213-217` hoje off), Google provider, `enable_manual_linking = false`
 - Migrations: `20260728000001_f33_cnpj_verification.sql` (avaliação/concessão F33), `20260810010000_create_access_requests.sql` (histórico), `20260524210001_create_stores.sql` (city/state TEXT nullable)
-- Testes: `src/lib/freemium/__tests__/freemium-risk-service.test.ts`, `src/lib/admin/__tests__/labels.test.ts`, `src/components/landing/__tests__/access-request-section.test.tsx`, `src/app/(auth)/login/__tests__/login-form.test.tsx`, `src/lib/launch-config/__tests__/launch-config.test.ts`, `src/app/auth/callback/__tests__/route.test.ts`, `src/app/(auth)/signup/__tests__/signup-form.test.tsx`
+- Testes: `src/lib/freemium/__tests__/freemium-risk-service.test.ts`, `src/lib/admin/__tests__/labels.test.ts`, `src/components/landing/__tests__/access-request-section.test.tsx`, `src/app/(auth)/login/__tests__/login-form.test.tsx`, `src/app/(auth)/forgot-password/__tests__/forgot-password-form.test.tsx`, `src/lib/launch-config/__tests__/config.test.ts`, `src/app/auth/callback/__tests__/route.test.ts`, `src/components/auth/__tests__/signup-form.test.tsx`
 
 ### Design system
 - `openspec/design-system/MASTER.md` — princípios do design system

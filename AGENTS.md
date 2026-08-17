@@ -121,6 +121,38 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 **Roadmap:** `ROADMAP.md`
 <!-- GSD:workflow-end -->
 
+## Phase 42 — Signup Controlado e Elegibilidade Freemium
+
+**Status:** Em planejamento — 20/20 plans escritos (8 waves), plan-checker aplicado (5 rodadas, 0 blockers finais), pendente de aprovação humana
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 42-01 | 1 | ✅ escrito | Trackings D1 — renumeração F42 = Signup / Stripe → F43 (runbook + verificação grep, zero resíduos) |
+| 42-02 | 2 | ✅ escrito | Config — flag `publicSignupEnabled` (default false) + paridade `config.toml` (D5/D13) |
+| 42-03 | 2 | ✅ escrito | CNAE — `cnae-mapping.ts` determinístico segmento×CNAE (D9) |
+| 42-04 | 3 | ✅ escrito | Motor — ordem D10, `situacao_nao_ativa`, `dados_oficiais_incompletos`, CNAE tri-state, **pré-gate D7 no caller** (D8/D9/D10) |
+| 42-05 | 4 | ✅ escrito | Admin — 4 novos labels + `review-detail.tsx` informado × oficial (D11) |
+| 42-06 | 4 | ✅ escrito | Signup — flag on/off + `signup-form.tsx` restaurado (mín. 8, anti-enumeração, captcha, Google) (D2/D4/D5) |
+| 42-07 | 3 | ✅ escrito | Google OAuth — `google-button.tsx` + `/auth/callback` PKCE + allowlist + PrivacyGate, scopes mínimos (D15/D16) |
+| 42-08 | 3 | ✅ escrito | Turnstile — `captcha-field.tsx` + aplicação login/recuperação + co-migração testes (D3) |
+| 42-09 | 5 | ✅ escrito | Login + Recuperação — Google sempre visível + captcha + link conforme flag; check-email inalterado (D5/D15) |
+| 42-10 | 4 | ✅ escrito | Landing — flag on: GoogleButton principal "Continuar com Google" + secundário "Continuar com email" → /signup (D4/D15) |
+| 42-11 | 5 | ✅ escrito | Legal — Terms v1.4 / Privacy v1.3 + coordenação PrivacyGate × PrivacyRecovery (D12/D16) |
+| 42-12 | 6 | ✅ escrito | Migration publica v1.4/v1.3 em `legal_document_versions` + **push [BLOCKING]** + paridade config.toml (D12/D13) |
+| 42-13 | 6 | ✅ escrito | Testes 1–13 — Signup/flag/landing/OAuth UI (Teste 10 trava contrato "Continuar com Google") |
+| 42-14 | 4 | ✅ escrito | Testes 14–21 — Callback OAuth / identity linking |
+| 42-15 | 4 | ✅ escrito | Testes 22–36 — Motor de elegibilidade (incl. pré-gate D7 na rota real) |
+| 42-16 | 3 | ✅ escrito | Testes 37–46 — Mapeamento CNAE |
+| 42-17 | 5 | ✅ escrito | Testes 47–53 — Admin |
+| 42-18 | 6 | ✅ escrito | Testes 54–58 — Legal/transição |
+| 42-19 | 7 | ✅ escrito | Regressão e co-migração de fixtures (19.1–19.11) |
+| 42-20 | 8 | ✅ escrito | Verificação — 4 gates + UAT fail-closed (20.1–20.15) |
+
+**Change artifacts (source of truth):** `openspec/changes/fase-42-signup-controlado-elegibilidade-freemium/`
+**Context:** `.planning/phases/42-signup-controlado-elegibilidade-freemium/42-CONTEXT.md`
+**State:** `.planning/STATE.md`
+**Roadmap:** `ROADMAP.md`
+
 <!-- GSD:profile-start -->
 
 ## Developer Profile

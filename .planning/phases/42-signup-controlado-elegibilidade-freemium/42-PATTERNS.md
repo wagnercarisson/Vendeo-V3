@@ -170,10 +170,10 @@
 
 | Test file | Analog to follow |
 |-----------|------------------|
-| `src/__tests__/auth/login-form.test.tsx` | jsdom + `vi.mock("@/lib/supabase/client")` + `vi.mock("next/navigation")` pattern (`:1-21`); extend for GoogleButton + CaptchaField + flag-link swap |
+| `src/app/(auth)/login/__tests__/login-form.test.tsx` | jsdom + `vi.mock("@/lib/supabase/client")` + `vi.mock("next/navigation")` pattern (co-migrado de `src/__tests__/auth/login-form.test.tsx` — CONTEXT:190 canonical); extend for GoogleButton + CaptchaField + flag-link swap |
 | `src/__tests__/auth/signup-page.test.tsx` | server page tests (`:1-34`); add flag-on/off branches |
 | `src/lib/freemium/__tests__/freemium-risk-service.test.ts` | `makeInput()` factory (`:5-35`); add INAPTA/SUSPENSA→`situacao_nao_ativa`, empty situação→`dados_oficiais_incompletos`, city/state null, `cnaeCompatible` cases |
-| `src/lib/__tests__/labels.test.ts` | extend for 4 new labels |
+| `src/lib/admin/__tests__/labels.test.ts` | extend for 4 new labels in `VERIFICATION_REASON_LABELS` (canonical — tests the admin label map, not the generic `@/lib/labels` helpers) |
 | `src/lib/launch-config/__tests__/config.test.ts` | extend for `publicSignupEnabled` default false |
 | `src/app/api/admin/reviews/__tests__/route.test.ts` | regression for label/filter changes |
 | NEW `src/app/auth/callback/__tests__/route.test.ts` | route tests mirroring `src/app/api/cnpj/lookup/__tests__/route.test.ts` or `src/app/api/access-requests/__tests__/route.test.ts` |
