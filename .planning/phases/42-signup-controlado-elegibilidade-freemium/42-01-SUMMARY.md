@@ -90,6 +90,12 @@ None - sem configuração externa.
 - Fase terá 20 planos planejados (8 waves); próximos: 42-02 (config — flag `publicSignupEnabled` + paridade `config.toml`) e 42-03 (mapeamento CNAE)
 - Sem migrations, sem gates de CI nesta task (markdown apenas, verificação por grep seletivo)
 
+## Self-Check: PASSED
+
+- File `42-01-SUMMARY.md` exists on disk — FOUND
+- Commit `026b245` (docs 42-01) exists in git log — FOUND; commit `0e3b572` (D1 renumbering, planning cycle) — FOUND
+- Plan-level verification re-run: residue greps → 0 occurrences in 7 files; `.planning/ROADMAP.md` "### Phase 42" section + `| 42 |`/`| 43 |` rows; root `ROADMAP.md` `| 43. Stripe` row; `.planning/STATE.md` `current_phase: 42`; `AGENTS.md` Phase 42 block + "Status: Em planejamento" — 6/6 PASS
+
 ---
 *Phase: 42-signup-controlado-elegibilidade-freemium*
 *Completed: 2026-08-17*
