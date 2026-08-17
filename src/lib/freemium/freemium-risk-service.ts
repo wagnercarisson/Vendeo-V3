@@ -1,4 +1,5 @@
 import { compareBusinessName } from "@/lib/cnpj/similarity";
+import { cnaeCompatibilityFor } from "@/lib/cnpj/cnae-mapping";
 import type { FreemiumEligibilityInput, FreemiumEligibilityOutput } from "./types";
 
 export function normalizeCity(city: string): string {
@@ -40,7 +41,10 @@ export function evaluateFreemiumEligibility(
         ? input.state.toUpperCase() === input.officialData.uf.toUpperCase()
         : null,
     rootEligible: input.rootEligible,
-    cnaeCompatible: null,
+    // D9: tri-state preenchido via cnae-mapping quando há officialData; null caso contrário
+    cnaeCompatible: input.officialData
+      ? cnaeCompatibilityFor(input.segment, input.officialData.cnae_principal ?? null)
+      : null,
   };
 
   if (input.lookupOutcome === "not_found") {
@@ -70,6 +74,32 @@ export function evaluateFreemiumEligibility(
     };
   }
 
+  // D10 — situação não-vazia ≠ ATIVA (ex.: SUSPENSA, INAPTA) → review genérico `situacao_nao_ativa`
+  // (D8 — corrige a lacuna F33: INAPTA atravessava e podia aprovar; substitui o bloco SUSPENSA).
+  if (
+    input.lookupOutcome === "resolved" &&
+    signals.situacaoCadastral !== null &&
+    signals.situacaoCadastral.trim().toUpperCase() !== "ATIVA"
+  ) {
+    return {
+      decision: "review",
+      reasons: ["situacao_nao_ativa"],
+      score: 30,
+      signals,
+    };
+  }
+
+  // D10 — situação vazia/ausente em resposta resolvida → defer `dados_oficiais_incompletos`
+  // (nunca aprova, sem review ruidoso; distingue de BAIXADA/NULA já tratados acima).
+  if (input.lookupOutcome === "resolved" && signals.situacaoCadastral === null) {
+    return {
+      decision: "defer",
+      reasons: ["dados_oficiais_incompletos"],
+      score: 0,
+      signals,
+    };
+  }
+
   if (input.rootEligible === false) {
     return {
       decision: "reject",
@@ -88,19 +118,24 @@ export function evaluateFreemiumEligibility(
     };
   }
 
-  if (signals.situacaoCadastral === "SUSPENSA") {
-    return {
-      decision: "review",
-      reasons: ["situacao_suspensa"],
-      score: 30,
-      signals,
-    };
-  }
-
   if (signals.nameSimilarity !== null && signals.nameSimilarity < 0.6) {
     return {
       decision: "review",
       reasons: ["nome_divergente"],
+      score: 40,
+      signals,
+    };
+  }
+
+  // D7 — cidade/UF preenchidas (pré-gate no caller; motor nunca recebe nulos):
+  // preenchidas sem contrapartida oficial → review `localizacao_oficial_indisponivel`
+  if (
+    (input.city !== null && !input.officialData.cidade) ||
+    (input.state !== null && !input.officialData.uf)
+  ) {
+    return {
+      decision: "review",
+      reasons: ["localizacao_oficial_indisponivel"],
       score: 40,
       signals,
     };
@@ -119,6 +154,16 @@ export function evaluateFreemiumEligibility(
     return {
       decision: "review",
       reasons: ["uf_divergente"],
+      score: 40,
+      signals,
+    };
+  }
+
+  // D9 — CNAE incompatível → review `segmento_cnae_divergente` (NUNCA reject); unknown → neutro
+  if (signals.cnaeCompatible === "incompatible") {
+    return {
+      decision: "review",
+      reasons: ["segmento_cnae_divergente"],
       score: 40,
       signals,
     };
