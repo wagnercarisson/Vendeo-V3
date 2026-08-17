@@ -263,7 +263,7 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
     expect(body.verificationStatus).toBe("rejected");
   });
 
-  it("does NOT call the motor when city/state absent (D7 pre-gate — unverified, no review, no grant)", async () => {
+  it("Teste 26 (D7): does NOT call the motor when city/state absent — unverified, no review, no grant", async () => {
     const spy = vi.spyOn(freemiumRisk, "evaluateFreemiumEligibility");
     mockResolve.mockResolvedValue(sampleLookupResolved);
     mockRpc.mockResolvedValueOnce({
@@ -291,7 +291,7 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
     spy.mockRestore();
   });
 
-  it("keeps store unverified when city present but state absent (D7 pre-gate)", async () => {
+  it("Teste 26 (D7): keeps store unverified when city present but state absent", async () => {
     const spy = vi.spyOn(freemiumRisk, "evaluateFreemiumEligibility");
     mockResolve.mockResolvedValue(sampleLookupResolved);
     mockRpc.mockResolvedValueOnce({

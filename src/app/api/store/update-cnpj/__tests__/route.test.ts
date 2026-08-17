@@ -344,7 +344,7 @@ describe("POST /api/store/update-cnpj", () => {
     expect(body.error).toBe("some_random_internal_error");
   });
 
-  it("keeps store unverified when city/state absent (D7 pre-gate — motor NOT called, no auto-approval)", async () => {
+  it("Teste 26 (D7a): keeps store unverified when city/state absent — motor NOT called, no auto-approval", async () => {
     mockRpc.mockResolvedValueOnce({
       data: { store: [{ id: STORE_UUID }] },
       error: null,
@@ -366,7 +366,7 @@ describe("POST /api/store/update-cnpj", () => {
     }));
   });
 
-  it("review situacao_nao_ativa when INAPTA/SUSPENSA despite name score >= 0.8 (D8/D10 — NOT approved)", async () => {
+  it("Teste 26 (D7b): review situacao_nao_ativa when INAPTA/SUSPENSA despite name score >= 0.8 — NOT approved", async () => {
     const { getCurrentStore } = await import("@/lib/auth/store-ownership");
     vi.mocked(getCurrentStore).mockResolvedValueOnce({
       id: STORE_UUID,
@@ -404,7 +404,7 @@ describe("POST /api/store/update-cnpj", () => {
     }));
   });
 
-  it("review segmento_cnae_divergente when CNAE incompatible (D9 — never reject, never approved)", async () => {
+  it("Teste 26 (D7c): review segmento_cnae_divergente when CNAE incompatible — never reject, never approved", async () => {
     const { getCurrentStore } = await import("@/lib/auth/store-ownership");
     vi.mocked(getCurrentStore).mockResolvedValueOnce({
       id: STORE_UUID,
@@ -438,7 +438,7 @@ describe("POST /api/store/update-cnpj", () => {
     }));
   });
 
-  it("approves via motor when all signals ok (D10 — decision comes from the motor, not name score)", async () => {
+  it("Teste 26 (D7d): approves via motor when all signals ok — decision from motor, not name score", async () => {
     const { getCurrentStore } = await import("@/lib/auth/store-ownership");
     vi.mocked(getCurrentStore).mockResolvedValueOnce({
       id: STORE_UUID,
