@@ -122,7 +122,8 @@ describe("evaluateFreemiumEligibility", () => {
     expect(result.reasons).toContain("root_already_used");
   });
 
-  it("REVIEW when INAPTA → situacao_nao_ativa (D8, corrige lacuna F33)", () => {
+describe("Teste 22 — INAPTA → review situacao_nao_ativa (D8, corrige lacuna F33)", () => {
+  it("REVIEW when INAPTA → situacao_nao_ativa", () => {
     const input = makeInput({
       officialData: { ...makeInput().officialData!, situacao_cadastral: "INAPTA" },
     });
@@ -132,8 +133,10 @@ describe("evaluateFreemiumEligibility", () => {
     expect(result.reasons).toContain("situacao_nao_ativa");
     expect(result.reasons).not.toContain("situacao_suspensa");
   });
+});
 
-  it("REVIEW when SUSPENSA → situacao_nao_ativa (genérico D8 substitui bloco específico)", () => {
+describe("Teste 23 — SUSPENSA → review situacao_nao_ativa (D8, substitui situacao_suspensa no motor)", () => {
+  it("REVIEW when SUSPENSA → situacao_nao_ativa", () => {
     const input = makeInput({
       officialData: { ...makeInput().officialData!, situacao_cadastral: "SUSPENSA" },
     });
@@ -142,8 +145,42 @@ describe("evaluateFreemiumEligibility", () => {
     expect(result.decision).toBe("review");
     expect(result.reasons).toContain("situacao_nao_ativa");
   });
+});
 
-  it("DEFER when situação absent in resolved response → dados_oficiais_incompletos (D8)", () => {
+describe("Teste 24 — BAIXADA/NULA continuam reject (D8)", () => {
+  it("REJECT when BAIXADA", () => {
+    const input = makeInput({
+      officialData: { ...makeInput().officialData!, situacao_cadastral: "BAIXADA" },
+    });
+
+    const result = evaluateFreemiumEligibility(input);
+    expect(result.decision).toBe("reject");
+    expect(result.reasons).toContain("cnpj_baixada");
+  });
+
+  it("REJECT when NULA", () => {
+    const input = makeInput({
+      officialData: { ...makeInput().officialData!, situacao_cadastral: "NULA" },
+    });
+
+    const result = evaluateFreemiumEligibility(input);
+    expect(result.decision).toBe("reject");
+    expect(result.reasons).toContain("cnpj_nula");
+  });
+});
+
+describe("Teste 25 — situação não-vazia genérica ≠ ATIVA/BAIXADA/NULA → review; ausente → defer (D8/D10)", () => {
+  it("REVIEW quando situação não-vazia desconhecida (ex.: CANCELADA) → situacao_nao_ativa", () => {
+    const input = makeInput({
+      officialData: { ...makeInput().officialData!, situacao_cadastral: "CANCELADA" },
+    });
+
+    const result = evaluateFreemiumEligibility(input);
+    expect(result.decision).toBe("review");
+    expect(result.reasons).toContain("situacao_nao_ativa");
+  });
+
+  it("DEFER when situação absent in resolved response → dados_oficiais_incompletos", () => {
     const input = makeInput({
       officialData: { ...makeInput().officialData!, situacao_cadastral: "" },
     });
@@ -153,8 +190,10 @@ describe("evaluateFreemiumEligibility", () => {
     expect(result.reasons).toContain("dados_oficiais_incompletos");
     expect(result.score).toBe(0);
   });
+});
 
-  it("REVIEW when cidade filled but official cidade absent → localizacao_oficial_indisponivel (D7)", () => {
+describe("Teste 27 — cidade/UF preenchidas mas oficiais ausentes → review localizacao_oficial_indisponivel (D7/D10)", () => {
+  it("REVIEW when cidade filled but official cidade absent", () => {
     const input = makeInput({
       officialData: { ...makeInput().officialData!, cidade: null },
     });
@@ -164,7 +203,7 @@ describe("evaluateFreemiumEligibility", () => {
     expect(result.reasons).toContain("localizacao_oficial_indisponivel");
   });
 
-  it("REVIEW when state filled but official uf absent → localizacao_oficial_indisponivel (D7)", () => {
+  it("REVIEW when state filled but official uf absent", () => {
     const input = makeInput({
       officialData: { ...makeInput().officialData!, uf: null },
     });
@@ -173,46 +212,9 @@ describe("evaluateFreemiumEligibility", () => {
     expect(result.decision).toBe("review");
     expect(result.reasons).toContain("localizacao_oficial_indisponivel");
   });
+});
 
-  it("REVIEW when CNAE incompatible → segmento_cnae_divergente (D9, never reject)", () => {
-    const input = makeInput({
-      segment: "variedades-utilidades",
-      officialData: {
-        ...makeInput().officialData!,
-        cnae_principal: "4789-0/09", // subclasse negativa de variedades (armas e munições)
-      },
-    });
-
-    const result = evaluateFreemiumEligibility(input);
-    expect(result.decision).toBe("review");
-    expect(result.reasons).toContain("segmento_cnae_divergente");
-    expect(result.signals.cnaeCompatible).toBe("incompatible");
-  });
-
-  it("APPROVE when CNAE unknown → neutral (segment outros, D9)", () => {
-    const input = makeInput({ segment: "outros" });
-
-    const result = evaluateFreemiumEligibility(input);
-    expect(result.decision).toBe("approved");
-    expect(result.reasons).toEqual([]);
-    expect(result.signals.cnaeCompatible).toBe("unknown");
-  });
-
-  it("REVIEW when nome_divergente", () => {
-    const input = makeInput({
-      storeName: "Nome Completamente Diferente",
-      officialData: {
-        ...makeInput().officialData!,
-        razao_social: "RAZAO SOCIAL DIFERENTE LTDA",
-        nome_fantasia: null,
-      },
-    });
-
-    const result = evaluateFreemiumEligibility(input);
-    expect(result.decision).toBe("review");
-    expect(result.reasons).toContain("nome_divergente");
-  });
-
+describe("Teste 28 — cidade/UF informadas × oficiais divergentes → review (D10)", () => {
   it("REVIEW when cidade_divergente", () => {
     const input = makeInput({
       city: "Campinas",
@@ -235,6 +237,118 @@ describe("evaluateFreemiumEligibility", () => {
     expect(result.reasons).toContain("uf_divergente");
   });
 
+  it("REVIEW when nome_divergente (regressão D10)", () => {
+    const input = makeInput({
+      storeName: "Nome Completamente Diferente",
+      officialData: {
+        ...makeInput().officialData!,
+        razao_social: "RAZAO SOCIAL DIFERENTE LTDA",
+        nome_fantasia: null,
+      },
+    });
+
+    const result = evaluateFreemiumEligibility(input);
+    expect(result.decision).toBe("review");
+    expect(result.reasons).toContain("nome_divergente");
+  });
+});
+
+describe("Teste 29 — CNAE compatible → segue avaliação (sem revisão por CNAE) (D9)", () => {
+  it("APPROVE com CNAE compatible sem revisão por CNAE", () => {
+    const result = evaluateFreemiumEligibility(makeInput());
+    expect(result.signals.cnaeCompatible).toBe("compatible");
+    expect(result.decision).toBe("approved");
+    expect(result.reasons).toEqual([]);
+  });
+});
+
+describe("Teste 30 — CNAE incompatible → review segmento_cnae_divergente (nunca reject) (D9)", () => {
+  it("REVIEW when CNAE incompatible → segmento_cnae_divergente", () => {
+    const input = makeInput({
+      segment: "variedades-utilidades",
+      officialData: {
+        ...makeInput().officialData!,
+        cnae_principal: "4789-0/09", // subclasse negativa de variedades (armas e munições)
+      },
+    });
+
+    const result = evaluateFreemiumEligibility(input);
+    expect(result.decision).toBe("review");
+    expect(result.reasons).toContain("segmento_cnae_divergente");
+    expect(result.signals.cnaeCompatible).toBe("incompatible");
+  });
+});
+
+describe("Teste 31 — CNAE unknown (ausente/inválido/fora das listas) → neutro (D9)", () => {
+  it("APPROVE when CNAE unknown (segment outros) → neutro", () => {
+    const input = makeInput({ segment: "outros" });
+
+    const result = evaluateFreemiumEligibility(input);
+    expect(result.decision).toBe("approved");
+    expect(result.reasons).toEqual([]);
+    expect(result.signals.cnaeCompatible).toBe("unknown");
+  });
+
+  it("cnaeCompatible null quando não há officialData", () => {
+    const input = makeInput({
+      officialData: null,
+      lookupOutcome: "unavailable",
+    });
+
+    const result = evaluateFreemiumEligibility(input);
+    expect(result.signals.cnaeCompatible).toBeNull();
+  });
+});
+
+describe("Teste 32 — ordem do motor: situação não ATIVA antes de raiz/nome/cidade/UF (D10)", () => {
+  it("situação não-ativa vence root_already_used (situação avaliada antes da raiz)", () => {
+    const input = makeInput({
+      rootEligible: false,
+      officialData: { ...makeInput().officialData!, situacao_cadastral: "INAPTA" },
+    });
+
+    const result = evaluateFreemiumEligibility(input);
+    expect(result.decision).toBe("review");
+    expect(result.reasons).toContain("situacao_nao_ativa");
+    expect(result.reasons).not.toContain("root_already_used");
+  });
+
+  it("situação não-ativa vence nome divergente", () => {
+    const input = makeInput({
+      storeName: "Nome Completamente Diferente",
+      officialData: {
+        ...makeInput().officialData!,
+        situacao_cadastral: "SUSPENSA",
+        razao_social: "RAZAO SOCIAL DIFERENTE LTDA",
+        nome_fantasia: null,
+      },
+    });
+
+    const result = evaluateFreemiumEligibility(input);
+    expect(result.reasons).toContain("situacao_nao_ativa");
+    expect(result.reasons).not.toContain("nome_divergente");
+  });
+
+  it("situação não-ativa vence cidade/UF divergentes", () => {
+    const input = makeInput({
+      city: "Campinas",
+      state: "RJ",
+      officialData: {
+        ...makeInput().officialData!,
+        situacao_cadastral: "INAPTA",
+        cidade: "São Paulo",
+        uf: "SP",
+      },
+    });
+
+    const result = evaluateFreemiumEligibility(input);
+    expect(result.reasons).toContain("situacao_nao_ativa");
+    expect(result.reasons).not.toContain("cidade_divergente");
+    expect(result.reasons).not.toContain("uf_divergente");
+  });
+});
+
+describe("Teste 33 — api_unavailable/sem dados → defer (não falso negativo) (D10)", () => {
   it("DEFER when api_unavailable", () => {
     const input = makeInput({
       officialData: null,
@@ -246,4 +360,5 @@ describe("evaluateFreemiumEligibility", () => {
     expect(result.decision).toBe("defer");
     expect(result.reasons).toContain("api_unavailable");
   });
+});
 });
