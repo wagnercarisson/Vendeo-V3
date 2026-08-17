@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getLaunchConfig } from "@/lib/launch-config/config";
 
 export const metadata = {
   title: "Beta fechado — Vendeo",
@@ -6,9 +7,16 @@ export const metadata = {
     "O Vendeo está em beta fechado. Solicite seu acesso free para participar.",
 };
 
-export default function SignupPage() {
+export default async function SignupPage() {
+  // Leitura server-side da flag (D5): a exposição do formulário (flag on) é
+  // renderização condicional do plan 42-06; aqui apenas conectamos o valor.
+  const { publicSignupEnabled } = await getLaunchConfig();
+
   return (
-    <div className="flex min-h-[70vh] flex-col items-center justify-center px-6 text-center">
+    <div
+      className="flex min-h-[70vh] flex-col items-center justify-center px-6 text-center"
+      data-public-signup-enabled={String(publicSignupEnabled)}
+    >
       <div className="max-w-md">
         <h1 className="font-heading text-3xl font-bold">Beta fechado</h1>
         <p className="mt-4 text-text-secondary">

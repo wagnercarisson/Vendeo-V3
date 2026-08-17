@@ -8,15 +8,20 @@ import type { ChangelogEntry } from "@/lib/changelog/types";
 
 export function AccessRequestSection({
   entries,
+  publicSignupEnabled = false,
 }: {
   entries: ChangelogEntry[];
+  publicSignupEnabled?: boolean;
 }) {
   const [submitted, setSubmitted] = useState(false);
 
   return (
     <>
       {/* Hero */}
-      <section className="mx-auto w-full max-w-5xl flex-1 px-6 pt-16 pb-12 text-center sm:pt-24">
+      <section
+        className="mx-auto w-full max-w-5xl flex-1 px-6 pt-16 pb-12 text-center sm:pt-24"
+        data-public-signup-enabled={String(publicSignupEnabled)}
+      >
         <h1 className="mx-auto max-w-2xl font-heading text-3xl font-bold leading-tight sm:text-5xl">
           Campanhas profissionais para{" "}
           <span className="text-accent-green">lojas físicas</span>

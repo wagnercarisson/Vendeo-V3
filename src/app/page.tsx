@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AccessRequestSection } from "@/components/landing/access-request-section";
 import { NovidadesLink } from "@/components/landing/novidades-link";
 import { getAllEntries } from "@/lib/changelog/get-changelog";
+import { getLaunchConfig } from "@/lib/launch-config/config";
 
 export const metadata: Metadata = {
   title: "Vendeo — Campanhas profissionais para sua loja",
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
 export default async function Home() {
   const entries = await getAllEntries();
   const recentEntries = entries.slice(0, 5);
+  const { publicSignupEnabled } = await getLaunchConfig();
 
   return (
     <div className="flex min-h-screen flex-col bg-bg-deep font-body text-text-primary">
@@ -30,7 +32,10 @@ export default async function Home() {
       </header>
 
       {/* Hero + form (estado de envio gerenciado no client) */}
-      <AccessRequestSection entries={recentEntries} />
+      <AccessRequestSection
+        entries={recentEntries}
+        publicSignupEnabled={publicSignupEnabled}
+      />
 
       {/* Footer */}
       <footer className="border-t border-border">
