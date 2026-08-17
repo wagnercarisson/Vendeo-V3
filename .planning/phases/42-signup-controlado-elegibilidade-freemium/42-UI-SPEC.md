@@ -128,7 +128,7 @@ Exceptions: `0.75rem` (12px) button compact padding from MASTER §4 (`--space-sm
 |-----------|----------|----------|
 | `GoogleButton` | `src/components/auth/google-button.tsx` | "use client"; calls `signInWithOAuth({ provider:'google', options:{ redirectTo: ${getSiteUrl()}/auth/callback } })`; **no captchaToken (D15/D3)**; full-width on login/signup, inline-flex on landing; Google "G" SVG + label "Continuar com Google"; loading state (spinner, disabled); aria-label "Continuar com Google"; `min-height:44px`. Visual on auth surfaces: outline (`border border-slate-600 text-slate-50 hover:bg-slate-800` matching existing login secondary) |
 | `CaptchaField` | `src/components/auth/captcha-field.tsx` | "use client"; wraps Cloudflare Turnstile widget; exposes token to parent form via callback/state; id/name stable for tests; no server route (D3). Placement: signup email/senha, login password form, forgot-password — **not** in GoogleButton |
-| `SignupForm` | `src/app/(auth)/signup/signup-form.tsx` (restored + modernized) | Email + senha (mín. 8) + confirmar senha + checkbox ciência da Privacidade (opens `PrivacyAcknowledgeModal`) + consentimento comunicações opcional + links Privacidade/Termos + `CaptchaField`; submit → `supabase.auth.signUp({ email, password, options: { emailRedirectTo: ${getSiteUrl()}/auth/confirm, captchaToken } })`; **success AND duplicate → `/check-email?type=signup`**; operational error → generic message (D2). Visual: match `login-form.tsx` slate/blue classes |
+| `SignupForm` | `src/components/auth/signup-form.tsx` (restored + modernized — co-located with `GoogleButton`/`CaptchaField` in `components/auth`) | Email + senha (mín. 8) + confirmar senha + checkbox ciência da Privacidade (opens `PrivacyAcknowledgeModal`) + consentimento comunicações opcional + links Privacidade/Termos + `CaptchaField`; submit → `supabase.auth.signUp({ email, password, options: { emailRedirectTo: ${getSiteUrl()}/auth/confirm, captchaToken } })`; **success AND duplicate → `/check-email?type=signup`**; operational error → generic message (D2). Visual: match `login-form.tsx` slate/blue classes. Imported by `src/app/(auth)/signup/page.tsx` |
 | `ReviewDetail` | `src/app/(app)/admin/reviews/review-detail.tsx` | Expandable row/section per review showing informed × official (razão social, nome fantasia, similaridade %, cidade/UF, CNAE + descrição, situação cadastral original, histórico de raiz). MASTER tokens (page already uses them). No new visual language |
 
 ---
@@ -140,7 +140,7 @@ Exceptions: `0.75rem` (12px) button compact padding from MASTER §4 (`--space-sm
 | State | Content |
 |-------|---------|
 | Flag OFF | **Current "Beta fechado" page verbatim** (`signup/page.tsx` — unchanged) |
-| Flag ON | "Criar sua conta" heading + "Continuar com Google" (`GoogleButton`) + divider + `SignupForm` (email/senha/confirmar/captcha/consent) + legal links + "Já tenho uma conta — Entrar" link |
+| Flag ON | "Criar sua conta" heading + "Continuar com Google" (`GoogleButton`) + divider + `SignupForm` (imported from `components/auth/signup-form`) + legal links + "Já tenho uma conta — Entrar" link |
 
 ### Landing (`access-request-section.tsx`)
 
