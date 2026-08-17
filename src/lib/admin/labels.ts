@@ -34,6 +34,10 @@ export const VERIFICATION_REASON_LABELS: Record<string, string> = {
   cnpj_baixada: "CNPJ baixado",
   cnpj_nula: "CNPJ nulo",
   root_already_used: "Raiz já usada",
+  situacao_nao_ativa: "Situação cadastral não ativa",
+  localizacao_oficial_indisponivel: "Localização oficial indisponível",
+  segmento_cnae_divergente: "Segmento incompatível com CNAE",
+  dados_oficiais_incompletos: "Dados oficiais incompletos",
 };
 
 export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
