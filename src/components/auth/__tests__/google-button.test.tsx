@@ -23,7 +23,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("GoogleButton — contrato D15", () => {
+describe("Teste 9 - GoogleButton (D15)", () => {
   it("renderiza label 'Continuar com Google' + aria-label + ícone G oficial", () => {
     render(<GoogleButton />);
     const button = screen.getByRole("button", {

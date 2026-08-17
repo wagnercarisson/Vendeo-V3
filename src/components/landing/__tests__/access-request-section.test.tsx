@@ -29,7 +29,7 @@ import { AccessRequestSection } from "../access-request-section";
 
 const emptyEntries = [] as never[];
 
-describe("AccessRequestSection (flag off)", () => {
+describe("Teste 10a - AccessRequestSection flag off", () => {
   it("renderiza badge Beta fechado + CTA Solicitar acesso free", () => {
     render(<AccessRequestSection entries={emptyEntries} publicSignupEnabled={false} />);
     expect(
@@ -49,7 +49,7 @@ describe("AccessRequestSection (flag off)", () => {
   });
 });
 
-describe("AccessRequestSection (flag on)", () => {
+describe("Teste 10b - AccessRequestSection flag on", () => {
   it("renderiza GoogleButton como CTA principal e NÃO o formulário", () => {
     render(<AccessRequestSection entries={emptyEntries} publicSignupEnabled={true} />);
     const googleBtn = screen.getByRole("button", { name: "Continuar com Google" });

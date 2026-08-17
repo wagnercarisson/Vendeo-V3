@@ -96,6 +96,25 @@ describe("POST /api/access-requests", () => {
     expect(mockInsert).not.toHaveBeenCalled();
   });
 
+  it("Teste 12: approved prévio em access_requests NÃO bloqueia/duplica (histórico, não autorização) (D4)", async () => {
+    // Registro prévio com status "approved" — tratado como histórico, não autorização.
+    mockMaybeSingle.mockResolvedValue({
+      data: { id: "req-approved-1" },
+      error: null,
+    });
+
+    const res = await postAccessRequest({ email: "loja@example.com" });
+
+    // Resposta idêntica ao sucesso (anti-enumeração) — o approved NÃO cria autorização
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+    // Não duplica o registro (histórico preservado)
+    expect(mockInsert).not.toHaveBeenCalled();
+    // A consulta filtra por pending/approved — o approved é reconhecido como existente,
+    // mas NÃO gera nenhum bloqueio de novo acesso (signup é independente)
+    expect(mockFrom).toHaveBeenCalledWith("access_requests");
+  });
+
   it("400 genérico para email inválido — não consulta DB", async () => {
     const res = await postAccessRequest({ email: "not-an-email" });
 

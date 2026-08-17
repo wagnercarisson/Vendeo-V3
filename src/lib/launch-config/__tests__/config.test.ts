@@ -116,7 +116,7 @@ describe("getLaunchConfig", () => {
     });
   });
 
-  describe("public signup flag (F42)", () => {
+  describe("Teste 11 - public signup flag (F42)", () => {
     it("defaults to false when env var is not set", () => {
       const config = getLaunchConfig();
       expect(config.publicSignupEnabled).toBe(false);

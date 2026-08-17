@@ -29,7 +29,7 @@ vi.mock("../login-form", () => ({
 
 import LoginPage from "@/app/(auth)/login/page";
 
-describe("LoginPage (flag off)", () => {
+describe("Teste 13a - LoginPage flag off", () => {
   beforeEach(() => {
     flagMock.publicSignupEnabled = false;
   });
@@ -58,7 +58,7 @@ describe("LoginPage (flag off)", () => {
   });
 });
 
-describe("LoginPage (flag on)", () => {
+describe("Teste 13b - LoginPage flag on", () => {
   beforeEach(() => {
     flagMock.publicSignupEnabled = true;
   });

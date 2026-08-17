@@ -85,16 +85,8 @@ beforeEach(() => {
   window.sessionStorage.clear();
 });
 
-describe("SignupForm", () => {
-  it("renders email, senha, confirmar senha e botão Criar conta", () => {
-    render(<SignupForm />);
-    expect(screen.getByLabelText("Email")).toBeInTheDocument();
-    expect(screen.getByLabelText("Senha")).toBeInTheDocument();
-    expect(screen.getByLabelText("Confirmar senha")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Criar conta/i })).toBeInTheDocument();
-  });
-
-  it("valida senha < 8 caracteres — mensagem PT-BR", async () => {
+describe("SignupForm (Testes 2-8, tasks.md §13)", () => {
+  it("Teste 2a: valida senha < 8 caracteres — mensagem PT-BR", async () => {
     render(<SignupForm />);
     setCaptchaToken();
     acknowledgePrivacy();
@@ -108,7 +100,7 @@ describe("SignupForm", () => {
     expect(mockSignUp).not.toHaveBeenCalled();
   });
 
-  it("valida senha !== confirmar senha — mensagem PT-BR", async () => {
+  it("Teste 2b: valida senha !== confirmar senha — mensagem PT-BR", async () => {
     render(<SignupForm />);
     setCaptchaToken();
     acknowledgePrivacy();
@@ -120,7 +112,7 @@ describe("SignupForm", () => {
     expect(mockSignUp).not.toHaveBeenCalled();
   });
 
-  it("bloqueia submit sem ciência da privacidade", async () => {
+  it("Teste 3a: bloqueia submit sem ciência da privacidade (modal)", async () => {
     render(<SignupForm />);
     setCaptchaToken();
     fillAndSubmit();
@@ -130,7 +122,19 @@ describe("SignupForm", () => {
     });
   });
 
-  it("chama signUp com emailRedirectTo /auth/confirm + captchaToken no sucesso", async () => {
+  it("Teste 3b: consentimento de comunicações é opcional (submete sem ele)", async () => {
+    mockSignUp.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+    render(<SignupForm />);
+    setCaptchaToken();
+    acknowledgePrivacy();
+    fillAndSubmit();
+
+    await waitFor(() => {
+      expect(mockSignUp).toHaveBeenCalled();
+    });
+  });
+
+  it("Teste 4: chama signUp com emailRedirectTo /auth/confirm + captchaToken", async () => {
     mockSignUp.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
 
     render(<SignupForm />);
@@ -151,7 +155,7 @@ describe("SignupForm", () => {
     expect(mockReplace).toHaveBeenCalledWith("/check-email?type=signup");
   });
 
-  it("anti-enumeração: email já registrado → mesma resposta /check-email", async () => {
+  it("Teste 5: anti-enumeração — email já registrado → mesma resposta /check-email", async () => {
     mockSignUp.mockResolvedValue({
       data: { user: null },
       error: new Error("User already registered"),
@@ -170,10 +174,39 @@ describe("SignupForm", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("erro operacional → mensagem genérica (não revela conta)", async () => {
+  it("Teste 6: erro operacional/captcha → mensagem genérica (não revela conta)", async () => {
     mockSignUp.mockResolvedValue({
       data: { user: null },
       error: new Error("captcha verification failed"),
+    });
+
+    render(<SignupForm />);
+    setCaptchaToken();
+    acknowledgePrivacy();
+    fillAndSubmit();
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Não foi possível concluir. Tente novamente."),
+      ).toBeInTheDocument();
+    });
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it("Teste 7: captcha token ausente → bloqueio de cadastro (signUp não chamado)", async () => {
+    render(<SignupForm />);
+    acknowledgePrivacy();
+    fillAndSubmit();
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect(mockSignUp).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it("Teste 8: token inválido/expirado (erro Supabase) → mensagem genérica", async () => {
+    mockSignUp.mockResolvedValue({
+      data: { user: null },
+      error: new Error("token expired"),
     });
 
     render(<SignupForm />);
