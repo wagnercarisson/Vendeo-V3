@@ -1,10 +1,27 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockResetPasswordForEmail = vi.fn();
 const mockReplace = vi.fn();
+
+// Mock controlável do CaptchaField: expõe o callback onVerify para os testes
+// simularem a resolução (token) ou ausência de desafio Turnstile.
+const captchaMock = vi.hoisted(() => ({
+  onVerify: null as null | ((token: string | null) => void),
+}));
+
+vi.mock("@/components/auth/captcha-field", () => ({
+  CaptchaField: ({
+    onVerify,
+  }: {
+    onVerify: (token: string | null) => void;
+  }) => {
+    captchaMock.onVerify = onVerify;
+    return null;
+  },
+}));
 
 vi.mock("@/lib/supabase/client", () => ({
   createBrowserClient: vi.fn(() => ({
@@ -24,10 +41,24 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
-import { ForgotPasswordForm } from "@/app/(auth)/forgot-password/forgot-password-form";
+import { ForgotPasswordForm } from "../forgot-password-form";
+
+function setCaptchaToken(token: string | null = "captcha-token") {
+  act(() => {
+    captchaMock.onVerify?.(token);
+  });
+}
+
+function fillAndSubmit() {
+  fireEvent.change(screen.getByLabelText("Email"), {
+    target: { value: "test@test.com" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Redefinir senha" }));
+}
 
 beforeEach(() => {
-  vi.restoreAllMocks();
+  vi.clearAllMocks();
+  captchaMock.onVerify = null;
 });
 
 describe("ForgotPasswordForm", () => {
@@ -38,19 +69,28 @@ describe("ForgotPasswordForm", () => {
     expect(screen.getByRole("button", { name: "Redefinir senha" })).toBeInTheDocument();
   });
 
-  it("calls resetPasswordForEmail and redirects to /check-email on submit", async () => {
+  it("bloqueia o submit sem captchaToken — resetPasswordForEmail NÃO é chamado", async () => {
+    render(<ForgotPasswordForm />);
+
+    fillAndSubmit();
+
+    await waitFor(() => {
+      expect(mockResetPasswordForEmail).not.toHaveBeenCalled();
+    });
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it("calls resetPasswordForEmail com captchaToken e redireciona a /check-email", async () => {
     mockResetPasswordForEmail.mockResolvedValue({ error: null });
 
     render(<ForgotPasswordForm />);
-
-    fireEvent.change(screen.getByLabelText("Email"), {
-      target: { value: "test@test.com" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Redefinir senha" }));
+    setCaptchaToken();
+    fillAndSubmit();
 
     await waitFor(() => {
       expect(mockResetPasswordForEmail).toHaveBeenCalledWith("test@test.com", {
         redirectTo: "http://localhost:3000/auth/confirm",
+        captchaToken: "captcha-token",
       });
     });
 
@@ -61,11 +101,8 @@ describe("ForgotPasswordForm", () => {
     mockResetPasswordForEmail.mockResolvedValue({ error: new Error("Email not found") });
 
     render(<ForgotPasswordForm />);
-
-    fireEvent.change(screen.getByLabelText("Email"), {
-      target: { value: "test@test.com" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Redefinir senha" }));
+    setCaptchaToken();
+    fillAndSubmit();
 
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith("/check-email?type=recovery");
@@ -76,11 +113,8 @@ describe("ForgotPasswordForm", () => {
     mockResetPasswordForEmail.mockImplementation(() => new Promise(() => {}));
 
     render(<ForgotPasswordForm />);
-
-    fireEvent.change(screen.getByLabelText("Email"), {
-      target: { value: "test@test.com" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Redefinir senha" }));
+    setCaptchaToken();
+    fillAndSubmit();
 
     await waitFor(() => {
       expect(screen.getByRole("button")).toBeDisabled();

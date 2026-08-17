@@ -1,6 +1,7 @@
 "use client";
 
 import { createBrowserClient } from "@/lib/supabase/client";
+import { CaptchaField } from "@/components/auth/captcha-field";
 import { getSiteUrl } from "@/lib/supabase/site-url";
 import { useRouter } from "next/navigation";
 import { useState, FormEvent } from "react";
@@ -9,9 +10,17 @@ import { Mail, Loader2 } from "lucide-react";
 export function ForgotPasswordForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    // D3: token Turnstile obrigatório — sem token o submit é bloqueado.
+    if (!captchaToken) {
+      return;
+    }
+
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
@@ -21,10 +30,14 @@ export function ForgotPasswordForm() {
       const supabase = createBrowserClient();
       await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${getSiteUrl()}/auth/confirm`,
+        captchaToken,
       });
     } catch {
       // silent — anti-enumeration: always redirect
     } finally {
+      // T-42-08b: tokens Turnstile são single-use — reseta o widget e o token.
+      setCaptchaToken(null);
+      setCaptchaResetKey((key) => key + 1);
       router.replace("/check-email?type=recovery");
     }
   }
@@ -48,6 +61,12 @@ export function ForgotPasswordForm() {
           />
         </div>
       </div>
+
+      <CaptchaField
+        onVerify={setCaptchaToken}
+        resetKey={captchaResetKey}
+        hint="Resolva o desafio para continuar."
+      />
 
       <button
         type="submit"
