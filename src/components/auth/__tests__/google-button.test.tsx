@@ -20,7 +20,7 @@ vi.mock("@/lib/supabase/site-url", () => ({
 import { GoogleButton } from "../google-button";
 
 beforeEach(() => {
-  vi.restoreAllMocks();
+  vi.clearAllMocks();
 });
 
 describe("GoogleButton — contrato D15", () => {
