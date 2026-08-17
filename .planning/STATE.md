@@ -4,19 +4,19 @@ milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 current_phase: 42
 status: in_progress
-last_updated: 2026-08-16T00:00:00.000Z
+last_updated: 2026-08-17T00:00:00.000Z
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 52
   completed_plans: 145
   percent: 83
-stopped_at: Planning F42 (Signup Controlado e Elegibilidade Freemium, v1.5)
+stopped_at: Planning F42 — 20/20 plans escritos (aguardando revisão humana do plano)
 ---
 
 # Project State
 
-**Last updated:** 2026-08-16 — **F42 (Signup Controlado e Elegibilidade Freemium, v1.5) EM PLANEJAMENTO**. Fonte da verdade: `openspec/changes/fase-42-signup-controlado-elegibilidade-freemium/`. Antes: F41 (Mídia de Campanha Mobile, v1.5) CONCLUÍDA — 13/13 plans, 4 gates verdes (222 files / 2033 testes), UAT humano 6/6 cenários (Android validado em produção ✅; iOS/HEIC pendente de confirmação final).
+**Last updated:** 2026-08-17 — **F42 (Signup Controlado e Elegibilidade Freemium, v1.5) EM PLANEJAMENTO — fase de planos completa (20/20 plans escritos e commitados)**. Fonte da verdade: `openspec/changes/fase-42-signup-controlado-elegibilidade-freemium/`. Contexto: `42-CONTEXT.md` ✅, UI-SPEC aprovada (1 fix co-location aplicado), `42-PATTERNS.md` ✅, `42-PLAN-OUTLINE.md` (20 plans / 6 waves) + `42-01..42-20-PLAN.md` ✅. Plan-checker self-check: estruturas válidas, dependências DAG, 12/12 specs referenciadas, threat_model em todos os plans. **Próximo: revisão humana dos planos → plan-checker completo → execução.** Antes: F41 (Mídia de Campanha Mobile, v1.5) CONCLUÍDA — 13/13 plans, 4 gates verdes (222 files / 2033 testes), UAT humano 6/6 cenários (Android validado em produção ✅; iOS/HEIC pendente de confirmação final).
 **Milestone:** v1.5 — Lançamento Externo Controlado ◆ **Em andamento**
 **Current phase:** 42
 
