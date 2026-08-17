@@ -46,6 +46,15 @@ describe("normalizeCity", () => {
 });
 
 describe("evaluateFreemiumEligibility", () => {
+  it("exposes tri-state cnaeCompatible signal (D9/D10 contract)", () => {
+    const result = evaluateFreemiumEligibility(makeInput());
+
+    // Type-level contract (D9/D10): cnaeCompatible é "compatible" | "incompatible" | "unknown" | null
+    const cnaeCompatible: "compatible" | "incompatible" | "unknown" | null =
+      result.signals.cnaeCompatible;
+    expect(["compatible", "incompatible", "unknown", null]).toContain(cnaeCompatible);
+  });
+
   it("APPROVE when all signals are positive", () => {
     const result = evaluateFreemiumEligibility(makeInput());
 
