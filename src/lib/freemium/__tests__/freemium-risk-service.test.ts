@@ -8,7 +8,7 @@ function makeInput(overrides: Partial<FreemiumEligibilityInput> = {}): FreemiumE
     storeName: "Minha Loja",
     city: "São Paulo",
     state: "SP",
-    segment: "vestuario",
+    segment: "moda-calcados-acessorios",
     officialData: {
       cnpj_normalized: "12345678000190",
       razao_social: "MINHA LOJA LTDA",
@@ -63,7 +63,9 @@ describe("evaluateFreemiumEligibility", () => {
     expect(result.score).toBeGreaterThanOrEqual(80);
     expect(result.signals.cnpjExists).toBe(true);
     expect(result.signals.rootEligible).toBe(true);
-    expect(result.signals.cnaeCompatible).toBeNull();
+    // D9: com officialData, cnaeCompatible é preenchido via cnae-mapping
+    // (moda-calcados-acessorios + 4781-4/00 → compatible) — não bloqueia approval
+    expect(result.signals.cnaeCompatible).toBe("compatible");
   });
 
   it("APPROVE via nome fantasia when storeName matches fantasy name", () => {
@@ -120,14 +122,80 @@ describe("evaluateFreemiumEligibility", () => {
     expect(result.reasons).toContain("root_already_used");
   });
 
-  it("REVIEW when SUSPENSA", () => {
+  it("REVIEW when INAPTA → situacao_nao_ativa (D8, corrige lacuna F33)", () => {
+    const input = makeInput({
+      officialData: { ...makeInput().officialData!, situacao_cadastral: "INAPTA" },
+    });
+
+    const result = evaluateFreemiumEligibility(input);
+    expect(result.decision).toBe("review");
+    expect(result.reasons).toContain("situacao_nao_ativa");
+    expect(result.reasons).not.toContain("situacao_suspensa");
+  });
+
+  it("REVIEW when SUSPENSA → situacao_nao_ativa (genérico D8 substitui bloco específico)", () => {
     const input = makeInput({
       officialData: { ...makeInput().officialData!, situacao_cadastral: "SUSPENSA" },
     });
 
     const result = evaluateFreemiumEligibility(input);
     expect(result.decision).toBe("review");
-    expect(result.reasons).toContain("situacao_suspensa");
+    expect(result.reasons).toContain("situacao_nao_ativa");
+  });
+
+  it("DEFER when situação absent in resolved response → dados_oficiais_incompletos (D8)", () => {
+    const input = makeInput({
+      officialData: { ...makeInput().officialData!, situacao_cadastral: "" },
+    });
+
+    const result = evaluateFreemiumEligibility(input);
+    expect(result.decision).toBe("defer");
+    expect(result.reasons).toContain("dados_oficiais_incompletos");
+    expect(result.score).toBe(0);
+  });
+
+  it("REVIEW when cidade filled but official cidade absent → localizacao_oficial_indisponivel (D7)", () => {
+    const input = makeInput({
+      officialData: { ...makeInput().officialData!, cidade: null },
+    });
+
+    const result = evaluateFreemiumEligibility(input);
+    expect(result.decision).toBe("review");
+    expect(result.reasons).toContain("localizacao_oficial_indisponivel");
+  });
+
+  it("REVIEW when state filled but official uf absent → localizacao_oficial_indisponivel (D7)", () => {
+    const input = makeInput({
+      officialData: { ...makeInput().officialData!, uf: null },
+    });
+
+    const result = evaluateFreemiumEligibility(input);
+    expect(result.decision).toBe("review");
+    expect(result.reasons).toContain("localizacao_oficial_indisponivel");
+  });
+
+  it("REVIEW when CNAE incompatible → segmento_cnae_divergente (D9, never reject)", () => {
+    const input = makeInput({
+      segment: "variedades-utilidades",
+      officialData: {
+        ...makeInput().officialData!,
+        cnae_principal: "4789-0/09", // subclasse negativa de variedades (armas e munições)
+      },
+    });
+
+    const result = evaluateFreemiumEligibility(input);
+    expect(result.decision).toBe("review");
+    expect(result.reasons).toContain("segmento_cnae_divergente");
+    expect(result.signals.cnaeCompatible).toBe("incompatible");
+  });
+
+  it("APPROVE when CNAE unknown → neutral (segment outros, D9)", () => {
+    const input = makeInput({ segment: "outros" });
+
+    const result = evaluateFreemiumEligibility(input);
+    expect(result.decision).toBe("approved");
+    expect(result.reasons).toEqual([]);
+    expect(result.signals.cnaeCompatible).toBe("unknown");
   });
 
   it("REVIEW when nome_divergente", () => {
