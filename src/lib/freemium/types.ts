@@ -30,8 +30,10 @@ export type Decision = "approved" | "review" | "reject" | "defer";
 export type FreemiumEligibilityInput = {
   cnpj: string;
   storeName: string;
-  city: string;
-  state: string;
+  // D7 — cidade/UF ausentes no formulário são representadas por null.
+  // O caller/rota aplica o pré-gate: NUNCA chama o motor com city/state ausentes.
+  city: string | null;
+  state: string | null;
   segment: string;
   officialData: CnpjLookupData | null;
   lookupOutcome: "resolved" | "not_found" | "unavailable";
@@ -50,6 +52,6 @@ export type FreemiumEligibilityOutput = {
     cnpjExists: boolean | null;
     situacaoCadastral: string | null;
     rootEligible: boolean | null;
-    cnaeCompatible: boolean | null;
+    cnaeCompatible: "compatible" | "incompatible" | "unknown" | null;
   };
 };
