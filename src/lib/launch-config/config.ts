@@ -10,6 +10,7 @@ export interface LaunchConfig {
   monthlyCreditsAmount: number;
   monthlyBonusCap: number;
   monthlyCreditsMinStoreAgeDays: number;
+  publicSignupEnabled: boolean;
 }
 
 function envBool(key: string, defaultValue: boolean): boolean {
@@ -34,6 +35,7 @@ export function getLaunchConfig(): LaunchConfig {
       monthlyCreditsAmount: Number(process.env.VENDEO_MONTHLY_CREDITS_AMOUNT) || 5,
       monthlyBonusCap: Number(process.env.VENDEO_MONTHLY_BONUS_CAP) || 10,
       monthlyCreditsMinStoreAgeDays: Number(process.env.VENDEO_MONTHLY_CREDITS_MIN_STORE_AGE_DAYS) || 30,
+      publicSignupEnabled: envBool("VENDEO_PUBLIC_SIGNUP_ENABLED", false),
     };
   }
 
@@ -47,5 +49,6 @@ export function getLaunchConfig(): LaunchConfig {
     monthlyCreditsAmount: Number(process.env.VENDEO_MONTHLY_CREDITS_AMOUNT) || 5,
     monthlyBonusCap: Number(process.env.VENDEO_MONTHLY_BONUS_CAP) || 10,
     monthlyCreditsMinStoreAgeDays: Number(process.env.VENDEO_MONTHLY_CREDITS_MIN_STORE_AGE_DAYS) || 30,
+    publicSignupEnabled: envBool("VENDEO_PUBLIC_SIGNUP_ENABLED", false),
   };
 }
