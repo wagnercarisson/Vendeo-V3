@@ -29,7 +29,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("AuthCallback GET handler — PKCE + allowlist (D16)", () => {
+describe("Teste 14 — callback code válido → exchangeCodeForSession → /loja → PrivacyGate (D16)", () => {
   it("troca o code e redireciona para next na allowlist", async () => {
     mockExchangeCodeForSession.mockResolvedValue({ error: null });
 
@@ -53,7 +53,31 @@ describe("AuthCallback GET handler — PKCE + allowlist (D16)", () => {
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe("http://localhost/loja");
   });
+});
 
+describe("Teste 15 — callback code inválido/expirado → erro genérico /login?error=oauth_failed (D16)", () => {
+  it("code ausente → erro genérico (anti-enumeração)", async () => {
+    const res = await callbackHandler("http://localhost/auth/callback");
+
+    expect(mockExchangeCodeForSession).not.toHaveBeenCalled();
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toContain("/login?error=oauth_failed");
+  });
+
+  it("exchangeCodeForSession retorna erro (code inválido/expirado) → /login?error=oauth_failed", async () => {
+    mockExchangeCodeForSession.mockResolvedValue({ error: new Error("bad code") });
+
+    const res = await callbackHandler(
+      "http://localhost/auth/callback?code=expired-code",
+    );
+
+    expect(mockExchangeCodeForSession).toHaveBeenCalledWith("expired-code");
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toContain("/login?error=oauth_failed");
+  });
+});
+
+describe("Teste 16 — callback com next externo → bloqueado (allowlist) (D16)", () => {
   it("nunca redireciona para next externo (open redirect bloqueado)", async () => {
     mockExchangeCodeForSession.mockResolvedValue({ error: null });
 
@@ -85,25 +109,5 @@ describe("AuthCallback GET handler — PKCE + allowlist (D16)", () => {
 
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe("http://localhost/loja");
-  });
-
-  it("code ausente → erro genérico /login?error=oauth_failed (anti-enumeração)", async () => {
-    const res = await callbackHandler("http://localhost/auth/callback");
-
-    expect(mockExchangeCodeForSession).not.toHaveBeenCalled();
-    expect(res.status).toBe(302);
-    expect(res.headers.get("location")).toContain("/login?error=oauth_failed");
-  });
-
-  it("exchangeCodeForSession retorna erro (code inválido/expirado) → /login?error=oauth_failed", async () => {
-    mockExchangeCodeForSession.mockResolvedValue({ error: new Error("bad code") });
-
-    const res = await callbackHandler(
-      "http://localhost/auth/callback?code=expired-code",
-    );
-
-    expect(mockExchangeCodeForSession).toHaveBeenCalledWith("expired-code");
-    expect(res.status).toBe(302);
-    expect(res.headers.get("location")).toContain("/login?error=oauth_failed");
   });
 });
