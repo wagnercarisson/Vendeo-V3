@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { Fragment } from "react";
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { maskCnpj } from "@/lib/cnpj/mask";
 import { ReviewActions } from "@/components/admin/review-actions";
+import { ReviewDetail } from "./review-detail";
 import { VERIFICATION_REASON_LABELS } from "@/lib/admin/labels";
 import { getLabel } from "@/lib/labels";
 import { formatDateBR } from "@/lib/formatters";
@@ -30,7 +32,7 @@ export default async function AdminReviewsPage({
 
   let query = supabaseAdmin
     .from("stores")
-    .select("id, name, user_id, created_at, verification_status, verification_reasons, verification_data, cnpj_normalized, cnpj_official_data", { count: "exact" })
+    .select("id, name, user_id, created_at, verification_status, verification_reasons, verification_data, cnpj_normalized, cnpj_official_data, cnpj_root_hash, city, state, segment", { count: "exact" })
     .eq("verification_status", validTab)
     .order("created_at", { ascending: false })
     .range((page - 1) * pageSize, page * pageSize - 1);
@@ -53,6 +55,16 @@ export default async function AdminReviewsPage({
 
   const userMap: Record<string, string> = {};
   for (const u of (users ?? [])) userMap[u.id] = u.email;
+
+  const rootHashes = [...new Set(stores.map(s => s.cnpj_root_hash).filter(Boolean))];
+  const { data: entitlements } = await supabaseAdmin
+    .from("freemium_entitlements")
+    .select("root_hash, benefit_type, cycle, reason, created_at")
+    .in("root_hash", rootHashes.length > 0 ? rootHashes : ["none"]);
+  const historyByRoot: Record<string, unknown[]> = {};
+  for (const e of (entitlements ?? [])) {
+    (historyByRoot[e.root_hash] ??= []).push(e);
+  }
 
   const totalPages = Math.ceil((count ?? 0) / pageSize);
 
@@ -94,34 +106,13 @@ export default async function AdminReviewsPage({
               </thead>
               <tbody>
                 {stores.map(store => (
-                  <tr key={store.id} className="border-b hover:bg-bg-elevated/50">
-                    <td className="py-3 px-2">
-                      <Link href={`/admin/users/${store.user_id}`} className="text-accent-blue hover:underline font-medium">
-                        {store.name}
-                      </Link>
-                    </td>
-                    <td className="py-3 px-2 text-text-muted font-mono text-xs">
-                      {store.cnpj_normalized ? maskCnpj(store.cnpj_normalized) : "—"}
-                    </td>
-                    <td className="py-3 px-2 text-text-muted">{userMap[store.user_id] || "—"}</td>
-                    <td className="py-3 px-2 text-text-muted text-xs">
-                      {formatDateBR(store.created_at)}
-                    </td>
-                    <td className="py-3 px-2">
-                      <div className="flex flex-wrap gap-1">
-                        {(store.verification_reasons || []).map((r: string) => (
-                          <span key={r} className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-heading font-medium bg-bg-elevated text-text-muted">
-                            {getLabel(VERIFICATION_REASON_LABELS, r)}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="py-3 px-2">
-                      {(validTab === "review" || validTab === "defer" || validTab === "rejected") && (
-                        <ReviewActions storeId={store.id} tab={validTab as "review" | "defer" | "rejected"} />
-                      )}
-                    </td>
-                  </tr>
+                  <StoreRows
+                    key={store.id}
+                    store={store}
+                    userMap={userMap}
+                    validTab={validTab}
+                    history={historyByRoot[store.cnpj_root_hash ?? ""] ?? []}
+                  />
                 ))}
               </tbody>
             </table>
@@ -145,5 +136,87 @@ export default async function AdminReviewsPage({
         </>
       )}
     </div>
+  );
+}
+
+function StoreRows({
+  store,
+  userMap,
+  validTab,
+  history,
+}: {
+  store: Record<string, unknown>;
+  userMap: Record<string, string>;
+  validTab: string;
+  history: unknown[];
+}) {
+  const storeId = store.id as string;
+  const storeName = store.name as string | null;
+  const cnpjNormalized = store.cnpj_normalized as string | null;
+  const userId = store.user_id as string;
+  const createdAt = store.created_at as string;
+  const reasons = (store.verification_reasons ?? []) as string[];
+
+  return (
+    <Fragment>
+      <tr className="border-b hover:bg-bg-elevated/50">
+        <td className="py-3 px-2">
+          <Link href={`/admin/users/${userId}`} className="text-accent-blue hover:underline font-medium">
+            {storeName}
+          </Link>
+        </td>
+        <td className="py-3 px-2 text-text-muted font-mono text-xs">
+          {cnpjNormalized ? maskCnpj(cnpjNormalized) : "—"}
+        </td>
+        <td className="py-3 px-2 text-text-muted">{userMap[userId] || "—"}</td>
+        <td className="py-3 px-2 text-text-muted text-xs">
+          {formatDateBR(createdAt)}
+        </td>
+        <td className="py-3 px-2">
+          <div className="flex flex-wrap gap-1">
+            {reasons.map((r: string) => (
+              <span key={r} className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-heading font-medium bg-bg-elevated text-text-muted">
+                {getLabel(VERIFICATION_REASON_LABELS, r)}
+              </span>
+            ))}
+          </div>
+        </td>
+        <td className="py-3 px-2">
+          {(validTab === "review" || validTab === "defer" || validTab === "rejected") && (
+            <ReviewActions storeId={storeId} tab={validTab as "review" | "defer" | "rejected"} />
+          )}
+        </td>
+      </tr>
+      <tr className="border-b hover:bg-bg-elevated/50">
+        <td colSpan={6} className="py-2 px-2">
+          <details>
+            <summary className="cursor-pointer text-xs text-accent-blue hover:underline font-medium">
+              Ver dados informados × oficiais
+            </summary>
+            <ReviewDetail
+              store={{
+                name: storeName,
+                city: store.city as string | null | undefined,
+                state: store.state as string | null | undefined,
+                segment: store.segment as string | null | undefined,
+                cnpj_official_data: store.cnpj_official_data as
+                  | {
+                      razao_social?: string | null;
+                      nome_fantasia?: string | null;
+                      cidade?: string | null;
+                      uf?: string | null;
+                      cnae_principal?: string | null;
+                      cnae_descricao?: string | null;
+                      situacao_cadastral?: string | null;
+                    }
+                  | null
+                  | undefined,
+              }}
+              rootHistory={history as { benefit_type: string; cycle: string | null; created_at: string; reason: string | null }[]}
+            />
+          </details>
+        </td>
+      </tr>
+    </Fragment>
   );
 }
