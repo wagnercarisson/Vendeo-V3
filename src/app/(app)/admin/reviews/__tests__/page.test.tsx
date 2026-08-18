@@ -49,6 +49,12 @@ function makeFrom(table: string) {
     order: vi.fn(),
     range: vi.fn(),
     in: vi.fn(),
+    then: async (resolve: (v: unknown) => unknown) => {
+      if (table === "stores") {
+        return resolve({ data: storesData, error: null, count: storesData.length });
+      }
+      return resolve({ data: [], error: null });
+    },
   };
   // Encadeia: cada método retorna a própria query
   query.select.mockReturnValue(query);
@@ -57,13 +63,6 @@ function makeFrom(table: string) {
   query.order.mockReturnValue(query);
   query.range.mockReturnValue(query);
   query.in.mockReturnValue(query);
-  // A query final é thenable — resolve com os dados do mock
-  query.then = async (resolve: (v: unknown) => unknown) => {
-    if (table === "stores") {
-      return resolve({ data: storesData, error: null, count: storesData.length });
-    }
-    return resolve({ data: [], error: null });
-  };
   return query;
 }
 

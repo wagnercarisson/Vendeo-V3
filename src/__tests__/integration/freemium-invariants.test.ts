@@ -52,10 +52,11 @@ describe("Teste 34 — Invariante D6: fluxo email/senha NUNCA concede crédito",
     const mockSupabase = {
       from: vi.fn(),
       rpc: grantRpc,
+      auth: { signUp: vi.fn() },
     };
 
     // Signup: supabase.auth.signUp não dispara RPC de concessão
-    await mockSupabase.auth?.signUp?.({ email: "x@y.com", password: "12345678" });
+    await mockSupabase.auth.signUp({ email: "x@y.com", password: "12345678" });
     expect(grantRpc).not.toHaveBeenCalled();
 
     // O motor decide approved → a CONCESSÃO é via try_grant_onboarding_entitlement

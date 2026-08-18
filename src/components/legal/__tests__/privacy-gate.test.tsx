@@ -103,7 +103,7 @@ describe("PrivacyGate (D16 — post-OAuth, opt-in opcional + guard anti-flash)",
     );
 
     // confirma
-    await actAsync(() => modalMock.onConfirm?.());
+    await actAsync(modalMock.onConfirm);
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(

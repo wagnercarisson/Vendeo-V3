@@ -94,9 +94,12 @@ describe("Teste 58 — clearance fail-closed: sem aceite da versão nova, funcio
     const result = await requireLegalClearance({
       capability: "content_generation",
       storeId: "store-1",
+      userId: "user-1",
     });
 
-    expect(result.ok).toBe(false);
+    if (result.ok) {
+      throw new Error("clearance should have failed for outdated acceptance");
+    }
     expect(result.reason).toBe("Documentos pendentes de aceitação.");
     expect(result.requiredDocuments).toContain("terms_of_service");
   });
@@ -106,6 +109,7 @@ describe("Teste 58 — clearance fail-closed: sem aceite da versão nova, funcio
     const result = await requireLegalClearance({
       capability: "content_generation",
       storeId: "store-1",
+      userId: "user-1",
     });
 
     expect(result.ok).toBe(true);
