@@ -5,11 +5,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const flagMock = vi.hoisted(() => ({
   publicSignupEnabled: false,
+  captchaEnabled: false,
 }));
 
 vi.mock("@/lib/launch-config/config", () => ({
   getLaunchConfig: vi.fn(() => ({
     publicSignupEnabled: flagMock.publicSignupEnabled,
+    captchaEnabled: flagMock.captchaEnabled,
   })),
 }));
 
@@ -22,8 +24,8 @@ vi.mock("@/components/auth/google-button", () => ({
 }));
 
 vi.mock("../login-form", () => ({
-  LoginForm: ({ redirect }: { redirect: string }) => (
-    <form data-testid="login-form" data-redirect={redirect} />
+  LoginForm: ({ redirect, captchaEnabled }: { redirect: string; captchaEnabled: boolean }) => (
+    <form data-testid="login-form" data-redirect={redirect} data-captcha-enabled={String(captchaEnabled)} />
   ),
 }));
 
@@ -65,6 +67,7 @@ describe("Teste 13b - LoginPage flag on", () => {
 
   afterEach(() => {
     flagMock.publicSignupEnabled = false;
+    flagMock.captchaEnabled = false;
   });
 
   it("renderiza GoogleButton + link 'Criar uma conta' → /signup", async () => {
@@ -81,5 +84,22 @@ describe("Teste 13b - LoginPage flag on", () => {
     expect(
       screen.queryByRole("link", { name: /Solicitar acesso free/ }),
     ).not.toBeInTheDocument();
+  });
+
+  it("captchaEnabled=false: LoginForm recebe data-captcha-enabled=false", async () => {
+    render(await LoginPage({ searchParams: Promise.resolve({}) }));
+    expect(screen.getByTestId("login-form")).toHaveAttribute(
+      "data-captcha-enabled",
+      "false",
+    );
+  });
+
+  it("captchaEnabled=true: LoginForm recebe data-captcha-enabled=true", async () => {
+    flagMock.captchaEnabled = true;
+    render(await LoginPage({ searchParams: Promise.resolve({}) }));
+    expect(screen.getByTestId("login-form")).toHaveAttribute(
+      "data-captcha-enabled",
+      "true",
+    );
   });
 });

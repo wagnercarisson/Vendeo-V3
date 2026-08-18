@@ -12,7 +12,7 @@ export default async function LoginPage({
   const params = await searchParams;
   const redirectParam = typeof params.redirect === "string" ? params.redirect : "";
   const safeRedirect = sanitizeRedirectPath(redirectParam);
-  const { publicSignupEnabled } = await getLaunchConfig();
+  const { publicSignupEnabled, captchaEnabled } = await getLaunchConfig();
 
   return (
     <div className="w-full max-w-md">
@@ -34,7 +34,7 @@ export default async function LoginPage({
         <div className="h-px flex-1 bg-slate-700" />
       </div>
 
-      <LoginForm redirect={safeRedirect} />
+      <LoginForm redirect={safeRedirect} captchaEnabled={captchaEnabled} />
 
       <div className="mt-6 text-center">
         {publicSignupEnabled ? (

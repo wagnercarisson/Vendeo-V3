@@ -6,11 +6,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 // Flag controlável: default false (Beta fechado). Testes de flag on sobrescrevem.
 const flagMock = vi.hoisted(() => ({
   publicSignupEnabled: false,
+  captchaEnabled: false,
 }));
 
 vi.mock("@/lib/launch-config/config", () => ({
   getLaunchConfig: vi.fn(() => ({
     publicSignupEnabled: flagMock.publicSignupEnabled,
+    captchaEnabled: flagMock.captchaEnabled,
   })),
 }));
 
@@ -25,8 +27,8 @@ vi.mock("@/components/auth/google-button", () => ({
 }));
 
 vi.mock("@/components/auth/signup-form", () => ({
-  SignupForm: () => (
-    <form data-testid="signup-form">
+  SignupForm: ({ captchaEnabled }: { captchaEnabled: boolean }) => (
+    <form data-testid="signup-form" data-captcha-enabled={String(captchaEnabled)}>
       <input aria-label="Email" />
       <input aria-label="Senha" />
     </form>
@@ -78,6 +80,7 @@ describe("SignupPage (flag on — formulário + Google)", () => {
 
   afterEach(() => {
     flagMock.publicSignupEnabled = false;
+    flagMock.captchaEnabled = false;
   });
 
   it("renders Criar sua conta heading + Google button + form", async () => {
@@ -110,5 +113,22 @@ describe("SignupPage (flag on — formulário + Google)", () => {
     render(await SignupPage());
     const link = screen.getByRole("link", { name: /Entrar/ });
     expect(link).toHaveAttribute("href", "/login");
+  });
+
+  it("captchaEnabled=false: SignupForm recebe data-captcha-enabled=false", async () => {
+    render(await SignupPage());
+    expect(screen.getByTestId("signup-form")).toHaveAttribute(
+      "data-captcha-enabled",
+      "false",
+    );
+  });
+
+  it("captchaEnabled=true: SignupForm recebe data-captcha-enabled=true", async () => {
+    flagMock.captchaEnabled = true;
+    render(await SignupPage());
+    expect(screen.getByTestId("signup-form")).toHaveAttribute(
+      "data-captcha-enabled",
+      "true",
+    );
   });
 });

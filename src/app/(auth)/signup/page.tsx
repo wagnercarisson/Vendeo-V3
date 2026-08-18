@@ -12,7 +12,7 @@ export const metadata = {
 export default async function SignupPage() {
   // Leitura server-side da flag (D5): flag off → "Beta fechado" verbatim;
   // flag on → formulário + Google (renderização condicional D2/D4).
-  const { publicSignupEnabled } = await getLaunchConfig();
+  const { publicSignupEnabled, captchaEnabled } = await getLaunchConfig();
 
   if (!publicSignupEnabled) {
     return (
@@ -68,7 +68,7 @@ export default async function SignupPage() {
           <div className="h-px flex-1 bg-slate-700" />
         </div>
 
-        <SignupForm />
+        <SignupForm captchaEnabled={captchaEnabled} />
 
         <p className="mt-4 text-center text-sm text-slate-400">
           Já tenho uma conta —{" "}
