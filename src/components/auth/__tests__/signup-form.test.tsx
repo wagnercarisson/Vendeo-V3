@@ -87,7 +87,7 @@ beforeEach(() => {
 
 describe("SignupForm (Testes 2-8, tasks.md §13)", () => {
   it("Teste 2a: valida senha < 8 caracteres — mensagem PT-BR", async () => {
-    render(<SignupForm />);
+    render(<SignupForm captchaEnabled={true} />);
     setCaptchaToken();
     acknowledgePrivacy();
     fillAndSubmit("test@test.com", "1234567");
@@ -101,7 +101,7 @@ describe("SignupForm (Testes 2-8, tasks.md §13)", () => {
   });
 
   it("Teste 2b: valida senha !== confirmar senha — mensagem PT-BR", async () => {
-    render(<SignupForm />);
+    render(<SignupForm captchaEnabled={true} />);
     setCaptchaToken();
     acknowledgePrivacy();
     fillAndSubmit("test@test.com", "password123", "password456");
@@ -113,7 +113,7 @@ describe("SignupForm (Testes 2-8, tasks.md §13)", () => {
   });
 
   it("Teste 3a: bloqueia submit sem ciência da privacidade (modal)", async () => {
-    render(<SignupForm />);
+    render(<SignupForm captchaEnabled={true} />);
     setCaptchaToken();
     fillAndSubmit();
 
@@ -124,7 +124,7 @@ describe("SignupForm (Testes 2-8, tasks.md §13)", () => {
 
   it("Teste 3b: consentimento de comunicações é opcional (submete sem ele)", async () => {
     mockSignUp.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
-    render(<SignupForm />);
+    render(<SignupForm captchaEnabled={true} />);
     setCaptchaToken();
     acknowledgePrivacy();
     fillAndSubmit();
@@ -137,7 +137,7 @@ describe("SignupForm (Testes 2-8, tasks.md §13)", () => {
   it("Teste 4: chama signUp com emailRedirectTo /auth/confirm + captchaToken", async () => {
     mockSignUp.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
 
-    render(<SignupForm />);
+    render(<SignupForm captchaEnabled={true} />);
     setCaptchaToken();
     acknowledgePrivacy();
     fillAndSubmit();
@@ -161,7 +161,7 @@ describe("SignupForm (Testes 2-8, tasks.md §13)", () => {
       error: new Error("User already registered"),
     });
 
-    render(<SignupForm />);
+    render(<SignupForm captchaEnabled={true} />);
     setCaptchaToken();
     acknowledgePrivacy();
     fillAndSubmit();
@@ -180,7 +180,7 @@ describe("SignupForm (Testes 2-8, tasks.md §13)", () => {
       error: new Error("captcha verification failed"),
     });
 
-    render(<SignupForm />);
+    render(<SignupForm captchaEnabled={true} />);
     setCaptchaToken();
     acknowledgePrivacy();
     fillAndSubmit();
@@ -194,7 +194,7 @@ describe("SignupForm (Testes 2-8, tasks.md §13)", () => {
   });
 
   it("Teste 7: captcha token ausente → bloqueio de cadastro (signUp não chamado)", async () => {
-    render(<SignupForm />);
+    render(<SignupForm captchaEnabled={true} />);
     acknowledgePrivacy();
     fillAndSubmit();
 
@@ -209,7 +209,7 @@ describe("SignupForm (Testes 2-8, tasks.md §13)", () => {
       error: new Error("token expired"),
     });
 
-    render(<SignupForm />);
+    render(<SignupForm captchaEnabled={true} />);
     setCaptchaToken();
     acknowledgePrivacy();
     fillAndSubmit();
@@ -223,7 +223,7 @@ describe("SignupForm (Testes 2-8, tasks.md §13)", () => {
   });
 
   it("inclui links legais de Privacidade e Termos", () => {
-    render(<SignupForm />);
+    render(<SignupForm captchaEnabled={true} />);
     const privacyLinks = screen.getAllByRole("link", { name: /Política de Privacidade/i });
     for (const link of privacyLinks) {
       expect(link).toHaveAttribute("href", "/privacidade");
@@ -232,5 +232,30 @@ describe("SignupForm (Testes 2-8, tasks.md §13)", () => {
       "href",
       "/termos",
     );
+  });
+
+  it("captchaEnabled=false: submit sem token chama signUp com emailRedirectTo SEM captchaToken", async () => {
+    mockSignUp.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+
+    render(<SignupForm captchaEnabled={false} />);
+    acknowledgePrivacy();
+    fillAndSubmit();
+
+    await waitFor(() => {
+      expect(mockSignUp).toHaveBeenCalledWith({
+        email: "test@test.com",
+        password: "password123",
+        options: {
+          emailRedirectTo: "https://vendeo.test/auth/confirm",
+        },
+      });
+    });
+    expect(mockReplace).toHaveBeenCalledWith("/check-email?type=signup");
+  });
+
+  it("captchaEnabled=false: CaptchaField NÃO é montado (onVerify permanece null)", () => {
+    render(<SignupForm captchaEnabled={false} />);
+
+    expect(captchaMock.onVerify).toBeNull();
   });
 });

@@ -62,14 +62,14 @@ beforeEach(() => {
 
 describe("LoginForm", () => {
   it("includes link to /forgot-password", () => {
-    render(<LoginForm redirect="/" />);
+    render(<LoginForm redirect="/" captchaEnabled={true} />);
     const link = screen.getByRole("link", { name: "Esqueci minha senha" });
     expect(link).toBeInTheDocument();
     expect(link).toHaveAttribute("href", "/forgot-password");
   });
 
   it("renders email input, password input and submit button", () => {
-    render(<LoginForm redirect="/" />);
+    render(<LoginForm redirect="/" captchaEnabled={true} />);
 
     expect(screen.getByLabelText("Email")).toBeInTheDocument();
     expect(screen.getByLabelText("Senha")).toBeInTheDocument();
@@ -77,7 +77,7 @@ describe("LoginForm", () => {
   });
 
   it("bloqueia o submit sem captchaToken — signInWithPassword NÃO é chamado", async () => {
-    render(<LoginForm redirect="/" />);
+    render(<LoginForm redirect="/" captchaEnabled={true} />);
 
     fillAndSubmit();
 
@@ -92,7 +92,7 @@ describe("LoginForm", () => {
       error: null,
     });
 
-    render(<LoginForm redirect="/store" />);
+    render(<LoginForm redirect="/store" captchaEnabled={true} />);
     setCaptchaToken();
     fillAndSubmit();
 
@@ -114,7 +114,7 @@ describe("LoginForm", () => {
 
     // login/page.tsx: sanitizeRedirectPath("") retorna "/" — esse é o valor real
     // recebido pelo form quando não há ?redirect= (bug crítico pós-login).
-    render(<LoginForm redirect="/" />);
+    render(<LoginForm redirect="/" captchaEnabled={true} />);
     setCaptchaToken();
     fillAndSubmit();
 
@@ -128,7 +128,7 @@ describe("LoginForm", () => {
       error: null,
     });
 
-    render(<LoginForm redirect="" />);
+    render(<LoginForm redirect="" captchaEnabled={true} />);
     setCaptchaToken();
     fillAndSubmit();
 
@@ -142,7 +142,7 @@ describe("LoginForm", () => {
       error: null,
     });
 
-    render(<LoginForm redirect="/campanhas" />);
+    render(<LoginForm redirect="/campanhas" captchaEnabled={true} />);
     setCaptchaToken();
     fillAndSubmit();
 
@@ -156,7 +156,7 @@ describe("LoginForm", () => {
       error: new Error("Invalid credentials"),
     });
 
-    render(<LoginForm redirect="/" />);
+    render(<LoginForm redirect="/" captchaEnabled={true} />);
     setCaptchaToken();
     fillAndSubmit();
 
@@ -170,7 +170,7 @@ describe("LoginForm", () => {
       () => new Promise(() => {}), // never resolves
     );
 
-    render(<LoginForm redirect="/" />);
+    render(<LoginForm redirect="/" captchaEnabled={true} />);
     setCaptchaToken();
     fillAndSubmit();
 
@@ -183,7 +183,7 @@ describe("LoginForm", () => {
       error: null,
     });
 
-    render(<LoginForm redirect="/" />);
+    render(<LoginForm redirect="/" captchaEnabled={true} />);
     setCaptchaToken();
     fillAndSubmit();
 
@@ -198,5 +198,28 @@ describe("LoginForm", () => {
       expect(mockSignInWithPassword).toHaveBeenCalledTimes(1);
     });
     expect(mockReplace).toHaveBeenCalledTimes(1);
+  });
+
+  it("captchaEnabled=false: submit sem token chama signInWithPassword SEM options", async () => {
+    mockSignInWithPassword.mockResolvedValue({
+      error: null,
+    });
+
+    render(<LoginForm redirect="/" captchaEnabled={false} />);
+    fillAndSubmit();
+
+    await waitFor(() => {
+      expect(mockSignInWithPassword).toHaveBeenCalledWith({
+        email: "test@test.com",
+        password: "password123",
+      });
+    });
+    expect(mockReplace).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("captchaEnabled=false: CaptchaField NÃO é montado (onVerify permanece null)", () => {
+    render(<LoginForm redirect="/" captchaEnabled={false} />);
+
+    expect(captchaMock.onVerify).toBeNull();
   });
 });

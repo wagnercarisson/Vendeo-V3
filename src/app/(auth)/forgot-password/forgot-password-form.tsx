@@ -7,7 +7,11 @@ import { useRouter } from "next/navigation";
 import { useState, FormEvent } from "react";
 import { Mail, Loader2 } from "lucide-react";
 
-export function ForgotPasswordForm() {
+interface ForgotPasswordFormProps {
+  captchaEnabled: boolean;
+}
+
+export function ForgotPasswordForm({ captchaEnabled }: ForgotPasswordFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
@@ -16,8 +20,9 @@ export function ForgotPasswordForm() {
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    // D3: token Turnstile obrigatório — sem token o submit é bloqueado.
-    if (!captchaToken) {
+    // D3: token Turnstile exigido apenas quando captchaEnabled (flag off
+    // restaura o comportamento F41 — recuperação sem desafio).
+    if (captchaEnabled && !captchaToken) {
       return;
     }
 
@@ -30,14 +35,18 @@ export function ForgotPasswordForm() {
       const supabase = createBrowserClient();
       await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${getSiteUrl()}/auth/confirm`,
-        captchaToken,
+        ...(captchaEnabled ? { captchaToken } : {}),
       });
     } catch {
       // silent — anti-enumeration: always redirect
     } finally {
       // T-42-08b: tokens Turnstile são single-use — reseta o widget e o token.
-      setCaptchaToken(null);
-      setCaptchaResetKey((key) => key + 1);
+      // Só se aplica com captcha ativo (sem widget, não há token a resetar).
+      if (captchaEnabled) {
+        setCaptchaToken(null);
+        setCaptchaResetKey((key) => key + 1);
+      }
+      // Anti-enumeração: redireciona sempre, mesmo sem captcha ativo.
       router.replace("/check-email?type=recovery");
     }
   }
@@ -62,11 +71,13 @@ export function ForgotPasswordForm() {
         </div>
       </div>
 
-      <CaptchaField
-        onVerify={setCaptchaToken}
-        resetKey={captchaResetKey}
-        hint="Resolva o desafio para continuar."
-      />
+      {captchaEnabled && (
+        <CaptchaField
+          onVerify={setCaptchaToken}
+          resetKey={captchaResetKey}
+          hint="Resolva o desafio para continuar."
+        />
+      )}
 
       <button
         type="submit"

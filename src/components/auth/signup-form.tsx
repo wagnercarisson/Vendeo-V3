@@ -19,9 +19,13 @@ interface PrivacyPending {
   communicationsOptIn: boolean;
 }
 
+interface SignupFormProps {
+  captchaEnabled: boolean;
+}
+
 const GENERIC_ERROR = "Não foi possível concluir. Tente novamente.";
 
-export function SignupForm() {
+export function SignupForm({ captchaEnabled }: SignupFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -68,8 +72,9 @@ export function SignupForm() {
       return;
     }
 
-    // D3: token Turnstile obrigatório — sem token o submit é bloqueado.
-    if (!captchaToken) {
+    // D3: token Turnstile exigido apenas quando captchaEnabled (flag off
+    // restaura o comportamento F41 — cadastro sem desafio).
+    if (captchaEnabled && !captchaToken) {
       return;
     }
 
@@ -82,7 +87,7 @@ export function SignupForm() {
         password,
         options: {
           emailRedirectTo: `${getSiteUrl()}/auth/confirm`,
-          captchaToken,
+          ...(captchaEnabled ? { captchaToken } : {}),
         },
       });
 
@@ -107,8 +112,11 @@ export function SignupForm() {
     } finally {
       setLoading(false);
       // T-42-08b: tokens Turnstile são single-use — reseta após o submit.
-      setCaptchaToken(null);
-      setCaptchaResetKey((key) => key + 1);
+      // Só se aplica com captcha ativo (sem widget, não há token a resetar).
+      if (captchaEnabled) {
+        setCaptchaToken(null);
+        setCaptchaResetKey((key) => key + 1);
+      }
     }
   }
 
@@ -229,11 +237,13 @@ export function SignupForm() {
           <p className="text-sm text-red-400">{error}</p>
         )}
 
-        <CaptchaField
-          onVerify={setCaptchaToken}
-          resetKey={captchaResetKey}
-          hint="Resolva o desafio para continuar."
-        />
+        {captchaEnabled && (
+          <CaptchaField
+            onVerify={setCaptchaToken}
+            resetKey={captchaResetKey}
+            hint="Resolva o desafio para continuar."
+          />
+        )}
 
         <button
           type="submit"

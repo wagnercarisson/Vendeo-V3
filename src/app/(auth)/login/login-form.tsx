@@ -9,9 +9,10 @@ import { Mail, Lock, Loader2 } from "lucide-react";
 
 interface LoginFormProps {
   redirect: string;
+  captchaEnabled: boolean;
 }
 
-export function LoginForm({ redirect }: LoginFormProps) {
+export function LoginForm({ redirect, captchaEnabled }: LoginFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -22,8 +23,9 @@ export function LoginForm({ redirect }: LoginFormProps) {
     e.preventDefault();
     setError(null);
 
-    // D3: token Turnstile obrigatório — sem token o submit é bloqueado.
-    if (!captchaToken) {
+    // D3: token Turnstile exigido apenas quando captchaEnabled (flag off
+    // restaura o comportamento F41 — login sem desafio).
+    if (captchaEnabled && !captchaToken) {
       return;
     }
 
@@ -35,11 +37,11 @@ export function LoginForm({ redirect }: LoginFormProps) {
 
     try {
       const supabase = createBrowserClient();
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-        options: { captchaToken },
-      });
+      const { error: signInError } = await supabase.auth.signInWithPassword(
+        captchaEnabled
+          ? { email, password, options: { captchaToken } }
+          : { email, password },
+      );
 
       if (signInError) {
         setError("Email ou senha inválidos");
@@ -54,9 +56,12 @@ export function LoginForm({ redirect }: LoginFormProps) {
     } finally {
       setLoading(false);
       // T-42-08b: tokens Turnstile são single-use — reseta o widget e o token
-      // após o submit para que um novo submit exija novo desafio.
-      setCaptchaToken(null);
-      setCaptchaResetKey((key) => key + 1);
+      // após o submit para que um novo submit exija novo desafio. Só se aplica
+      // com captcha ativo (sem widget, não há token a resetar).
+      if (captchaEnabled) {
+        setCaptchaToken(null);
+        setCaptchaResetKey((key) => key + 1);
+      }
     }
   }
 
@@ -109,11 +114,13 @@ export function LoginForm({ redirect }: LoginFormProps) {
         <p className="text-sm text-red-400">{error}</p>
       )}
 
-      <CaptchaField
-        onVerify={setCaptchaToken}
-        resetKey={captchaResetKey}
-        hint="Resolva o desafio para continuar."
-      />
+      {captchaEnabled && (
+        <CaptchaField
+          onVerify={setCaptchaToken}
+          resetKey={captchaResetKey}
+          hint="Resolva o desafio para continuar."
+        />
+      )}
 
       <button
         type="submit"

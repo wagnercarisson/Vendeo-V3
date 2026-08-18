@@ -63,14 +63,14 @@ beforeEach(() => {
 
 describe("ForgotPasswordForm", () => {
   it("renders email input and submit button", () => {
-    render(<ForgotPasswordForm />);
+    render(<ForgotPasswordForm captchaEnabled={true} />);
 
     expect(screen.getByLabelText("Email")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Redefinir senha" })).toBeInTheDocument();
   });
 
   it("bloqueia o submit sem captchaToken — resetPasswordForEmail NÃO é chamado", async () => {
-    render(<ForgotPasswordForm />);
+    render(<ForgotPasswordForm captchaEnabled={true} />);
 
     fillAndSubmit();
 
@@ -83,7 +83,7 @@ describe("ForgotPasswordForm", () => {
   it("calls resetPasswordForEmail com captchaToken e redireciona a /check-email", async () => {
     mockResetPasswordForEmail.mockResolvedValue({ error: null });
 
-    render(<ForgotPasswordForm />);
+    render(<ForgotPasswordForm captchaEnabled={true} />);
     setCaptchaToken();
     fillAndSubmit();
 
@@ -100,7 +100,7 @@ describe("ForgotPasswordForm", () => {
   it("redirects even when API returns error (anti-enumeration)", async () => {
     mockResetPasswordForEmail.mockResolvedValue({ error: new Error("Email not found") });
 
-    render(<ForgotPasswordForm />);
+    render(<ForgotPasswordForm captchaEnabled={true} />);
     setCaptchaToken();
     fillAndSubmit();
 
@@ -112,12 +112,32 @@ describe("ForgotPasswordForm", () => {
   it("disables button during loading", async () => {
     mockResetPasswordForEmail.mockImplementation(() => new Promise(() => {}));
 
-    render(<ForgotPasswordForm />);
+    render(<ForgotPasswordForm captchaEnabled={true} />);
     setCaptchaToken();
     fillAndSubmit();
 
     await waitFor(() => {
       expect(screen.getByRole("button")).toBeDisabled();
     });
+  });
+
+  it("captchaEnabled=false: submit sem token chama resetPasswordForEmail SEM captchaToken", async () => {
+    mockResetPasswordForEmail.mockResolvedValue({ error: null });
+
+    render(<ForgotPasswordForm captchaEnabled={false} />);
+    fillAndSubmit();
+
+    await waitFor(() => {
+      expect(mockResetPasswordForEmail).toHaveBeenCalledWith("test@test.com", {
+        redirectTo: "http://localhost:3000/auth/confirm",
+      });
+    });
+    expect(mockReplace).toHaveBeenCalledWith("/check-email?type=recovery");
+  });
+
+  it("captchaEnabled=false: CaptchaField NÃO é montado (onVerify permanece null)", () => {
+    render(<ForgotPasswordForm captchaEnabled={false} />);
+
+    expect(captchaMock.onVerify).toBeNull();
   });
 });
