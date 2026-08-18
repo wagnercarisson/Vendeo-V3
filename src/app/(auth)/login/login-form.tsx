@@ -38,7 +38,7 @@ export function LoginForm({ redirect, captchaEnabled }: LoginFormProps) {
     try {
       const supabase = createBrowserClient();
       const { error: signInError } = await supabase.auth.signInWithPassword(
-        captchaEnabled
+        captchaEnabled && captchaToken
           ? { email, password, options: { captchaToken } }
           : { email, password },
       );

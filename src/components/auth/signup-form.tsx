@@ -87,7 +87,7 @@ export function SignupForm({ captchaEnabled }: SignupFormProps) {
         password,
         options: {
           emailRedirectTo: `${getSiteUrl()}/auth/confirm`,
-          ...(captchaEnabled ? { captchaToken } : {}),
+          ...(captchaEnabled && captchaToken ? { captchaToken } : {}),
         },
       });
 

@@ -35,7 +35,7 @@ export function ForgotPasswordForm({ captchaEnabled }: ForgotPasswordFormProps) 
       const supabase = createBrowserClient();
       await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${getSiteUrl()}/auth/confirm`,
-        ...(captchaEnabled ? { captchaToken } : {}),
+        ...(captchaEnabled && captchaToken ? { captchaToken } : {}),
       });
     } catch {
       // silent — anti-enumeration: always redirect
