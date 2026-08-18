@@ -15,6 +15,7 @@ beforeEach(() => {
   delete process.env.VENDEO_MONTHLY_BONUS_CAP;
   delete process.env.VENDEO_MONTHLY_CREDITS_MIN_STORE_AGE_DAYS;
   delete process.env.VENDEO_PUBLIC_SIGNUP_ENABLED;
+  delete process.env.VENDEO_CAPTCHA_ENABLED;
 });
 
 import { getLaunchConfig } from "../config";
@@ -135,6 +136,28 @@ describe("getLaunchConfig", () => {
     it("invalid env value falls back to default false", () => {
       process.env.VENDEO_PUBLIC_SIGNUP_ENABLED = "sim";
       expect(getLaunchConfig().publicSignupEnabled).toBe(false);
+    });
+  });
+
+  describe("captchaEnabled (quick NVF-260818)", () => {
+    it("defaults to false when env var is not set", () => {
+      const config = getLaunchConfig();
+      expect(config.captchaEnabled).toBe(false);
+    });
+
+    it("VENDEO_CAPTCHA_ENABLED=true", () => {
+      process.env.VENDEO_CAPTCHA_ENABLED = "true";
+      expect(getLaunchConfig().captchaEnabled).toBe(true);
+    });
+
+    it("VENDEO_CAPTCHA_ENABLED=false", () => {
+      process.env.VENDEO_CAPTCHA_ENABLED = "false";
+      expect(getLaunchConfig().captchaEnabled).toBe(false);
+    });
+
+    it("invalid env value falls back to default false", () => {
+      process.env.VENDEO_CAPTCHA_ENABLED = "sim";
+      expect(getLaunchConfig().captchaEnabled).toBe(false);
     });
   });
 });
