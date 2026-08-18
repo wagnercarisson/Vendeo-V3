@@ -127,12 +127,6 @@ export function LoginForm({ redirect }: LoginFormProps) {
           "Entrar"
         )}
       </button>
-      <p className="mt-4 text-center text-sm text-slate-400">
-        Ainda não tem acesso?{" "}
-        <Link href="/" className="text-blue-400 hover:text-blue-300 hover:underline">
-          Solicitar acesso free
-        </Link>
-      </p>
     </form>
   );
 }

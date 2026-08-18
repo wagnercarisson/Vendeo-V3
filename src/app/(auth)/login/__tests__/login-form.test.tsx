@@ -61,13 +61,6 @@ beforeEach(() => {
 });
 
 describe("LoginForm", () => {
-  it("includes link to request access", () => {
-    render(<LoginForm redirect="/" />);
-    const link = screen.getByRole("link", { name: "Solicitar acesso free" });
-    expect(link).toBeInTheDocument();
-    expect(link).toHaveAttribute("href", "/");
-  });
-
   it("includes link to /forgot-password", () => {
     render(<LoginForm redirect="/" />);
     const link = screen.getByRole("link", { name: "Esqueci minha senha" });
