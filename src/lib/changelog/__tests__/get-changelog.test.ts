@@ -33,16 +33,18 @@ afterEach(async () => {
 });
 
 describe("get-changelog", () => {
-  it("getAllEntries lê o diretório real e retorna entries ordenadas por data DESC (F41 2026-08-15 → F40 2026-08-14 → novo-endereço 2026-08-12 → F36 → F35)", async () => {
+  it("getAllEntries lê o diretório real e retorna entries ordenadas por data DESC (F42 2026-08-19 → F41 2026-08-15 → F40 2026-08-14 → novo-endereço 2026-08-12 → F36 → F35)", async () => {
     const entries = await getAllEntries();
 
     expect(entries.length).toBeGreaterThanOrEqual(3);
-    expect(entries[0].frontmatter.id).toBe("fase-41-midia-de-campanha-mobile");
-    expect(entries[0].frontmatter.date).toBe("2026-08-15");
-    expect(entries[1].frontmatter.id).toBe("fase-40-campos-comerciais-avisos-brief");
-    expect(entries[1].frontmatter.date).toBe("2026-08-14");
-    expect(entries[2].frontmatter.id).toBe("vendeo-em-novo-endereco-acesso-simples");
-    expect(entries[2].frontmatter.date).toBe("2026-08-12");
+    expect(entries[0].frontmatter.id).toBe("fase-42-signup-controlado-elegibilidade-freemium");
+    expect(entries[0].frontmatter.date).toBe("2026-08-19");
+    expect(entries[1].frontmatter.id).toBe("fase-41-midia-de-campanha-mobile");
+    expect(entries[1].frontmatter.date).toBe("2026-08-15");
+    expect(entries[2].frontmatter.id).toBe("fase-40-campos-comerciais-avisos-brief");
+    expect(entries[2].frontmatter.date).toBe("2026-08-14");
+    expect(entries[3].frontmatter.id).toBe("vendeo-em-novo-endereco-acesso-simples");
+    expect(entries[3].frontmatter.date).toBe("2026-08-12");
 
     const ids = entries.map((entry) => entry.frontmatter.id);
     expect(ids).toContain("fase-30-legal-foundation");
@@ -96,11 +98,11 @@ describe("get-changelog", () => {
     expect(result).toBeNull();
   });
 
-  it("getLatestAnnouncement retorna a entry mais recente com anúncio no diretório real (F41 2026-08-15)", async () => {
+  it("getLatestAnnouncement retorna a entry mais recente com anúncio no diretório real (F42 2026-08-19)", async () => {
     const result = await getLatestAnnouncement();
 
     expect(result).not.toBeNull();
-    expect(result!.frontmatter.id).toBe("fase-41-midia-de-campanha-mobile");
+    expect(result!.frontmatter.id).toBe("fase-42-signup-controlado-elegibilidade-freemium");
     expect(result!.frontmatter.announcement).toBe("card");
   });
 

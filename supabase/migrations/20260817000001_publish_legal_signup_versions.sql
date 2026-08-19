@@ -12,8 +12,8 @@
 -- Users who accepted a previous version will see acceptanceStatus: "outdated"
 -- and will be prompted to re-accept via /legal/reaccept before using generation
 -- features (tolerance: no store loses access on publish — fail-closed only on
--- protected features). The content documents live at docs/legal/ and resolve via
--- the document-content.ts catalog.
+-- protected features). The content documents live at public/docs/legal/ and
+-- resolve via the document-content.ts catalog.
 --
 -- NOTE: if the rollout requires re-acceptance before go-live, change `now()` below
 -- to a future date BEFORE deploying so the versions become effective at that point.
