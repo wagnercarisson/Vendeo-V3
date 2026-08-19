@@ -74,7 +74,7 @@
 |---|---|
 | ROLE | Server route (GET); exchanges OAuth `code` via PKCE |
 | ANALOG | `src/app/auth/confirm/route.ts` (route structure + VALID_NEXT allowlist pattern at `:4`, redirect pattern `:16`) |
-| KEY POINTS | `createServerClient()` from `src/lib/supabase/server`; `exchangeCodeForSession(code)`; `VALID_NEXT = ["/loja", "/dashboard"]` (D16 — NOT `"/"` or `/onboarding`); fallback `/loja`; external redirect blocked; error → `/login?error=oauth_failed`; success → `/loja` (PrivacyGate handles the rest) |
+| KEY POINTS | `createServerClient()` from `src/lib/supabase/server`; `exchangeCodeForSession(code)`; `VALID_NEXT = ["/loja", "/dashboard"]` (D16 — NOT `"/"` or `/onboarding`); fallback `/dashboard`; external redirect blocked; error → `/login?error=oauth_failed`; success → `/dashboard` (PrivacyGate handles the rest) |
 
 ---
 

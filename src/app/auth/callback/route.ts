@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 
   const safeNext = (VALID_NEXT as readonly string[]).includes(rawNext)
     ? rawNext
-    : "/loja";
+    : "/dashboard";
 
   if (!code) {
     // Erro genérico anti-enumeração (T-42-07)
@@ -26,6 +26,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/login?error=oauth_failed", request.url), { status: 302 });
   }
 
-  // Sucesso → rota protegida /loja (default) → PrivacyGate
+  // Sucesso → rota protegida /dashboard (default) → PrivacyGate
   return NextResponse.redirect(new URL(safeNext, request.url), { status: 302 });
 }

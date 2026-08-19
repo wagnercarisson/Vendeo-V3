@@ -29,7 +29,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("Teste 14 — callback code válido → exchangeCodeForSession → /loja → PrivacyGate (D16)", () => {
+describe("Teste 14 — callback code válido → exchangeCodeForSession → /dashboard → PrivacyGate (D16)", () => {
   it("troca o code e redireciona para next na allowlist", async () => {
     mockExchangeCodeForSession.mockResolvedValue({ error: null });
 
@@ -42,7 +42,7 @@ describe("Teste 14 — callback code válido → exchangeCodeForSession → /loj
     expect(res.headers.get("location")).toBe("http://localhost/dashboard");
   });
 
-  it("redireciona para /loja por padrão no sucesso (sem next)", async () => {
+  it("redireciona para /dashboard por padrão no sucesso (sem next)", async () => {
     mockExchangeCodeForSession.mockResolvedValue({ error: null });
 
     const res = await callbackHandler(
@@ -51,7 +51,7 @@ describe("Teste 14 — callback code válido → exchangeCodeForSession → /loj
 
     expect(mockExchangeCodeForSession).toHaveBeenCalledWith("valid-code");
     expect(res.status).toBe(302);
-    expect(res.headers.get("location")).toBe("http://localhost/loja");
+    expect(res.headers.get("location")).toBe("http://localhost/dashboard");
   });
 });
 
@@ -86,10 +86,10 @@ describe("Teste 16 — callback com next externo → bloqueado (allowlist) (D16)
     );
 
     expect(res.status).toBe(302);
-    expect(res.headers.get("location")).toBe("http://localhost/loja");
+    expect(res.headers.get("location")).toBe("http://localhost/dashboard");
   });
 
-  it("trata '/' como inválido → fallback /loja", async () => {
+  it("trata '/' como inválido → fallback /dashboard", async () => {
     mockExchangeCodeForSession.mockResolvedValue({ error: null });
 
     const res = await callbackHandler(
@@ -97,10 +97,10 @@ describe("Teste 16 — callback com next externo → bloqueado (allowlist) (D16)
     );
 
     expect(res.status).toBe(302);
-    expect(res.headers.get("location")).toBe("http://localhost/loja");
+    expect(res.headers.get("location")).toBe("http://localhost/dashboard");
   });
 
-  it("trata /onboarding como inválido → fallback /loja", async () => {
+  it("trata /onboarding como inválido → fallback /dashboard", async () => {
     mockExchangeCodeForSession.mockResolvedValue({ error: null });
 
     const res = await callbackHandler(
@@ -108,6 +108,6 @@ describe("Teste 16 — callback com next externo → bloqueado (allowlist) (D16)
     );
 
     expect(res.status).toBe(302);
-    expect(res.headers.get("location")).toBe("http://localhost/loja");
+    expect(res.headers.get("location")).toBe("http://localhost/dashboard");
   });
 });

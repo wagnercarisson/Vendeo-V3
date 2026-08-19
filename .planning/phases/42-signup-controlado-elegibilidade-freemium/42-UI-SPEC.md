@@ -159,7 +159,7 @@ Exceptions: `0.75rem` (12px) button compact padding from MASTER §4 (`--space-sm
 
 ### PrivacyGate / PrivacyRecovery (post-OAuth and email path)
 
-- Post-OAuth success → `/loja` → existing `PrivacyGate` (acknowledged check) → modal verbatim; unconfirmed close → `/conta?privacy=pending` (current loop guard stays)
+- Post-OAuth success → `/dashboard` → existing `PrivacyGate` (acknowledged check) → modal verbatim; unconfirmed close → `/conta?privacy=pending` (current loop guard stays)
 - **Single coordination (D16):** no duplicate modal. If `sessionStorage.privacyPending` exists on the email/senha path, the pending state is processed once (via existing `PrivacyRecovery` path) and PrivacyGate does not re-open; no "flash" of two modals
 - Consentimento comunicações: optional, recorded via `/api/legal/acknowledge-privacy` authenticated (never `user_metadata`)
 

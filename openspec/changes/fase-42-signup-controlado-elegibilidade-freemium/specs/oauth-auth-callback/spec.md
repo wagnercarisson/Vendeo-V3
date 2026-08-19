@@ -15,7 +15,7 @@ O sistema SHALL prover uma rota `src/app/auth/callback/route.ts` que lê o parâ
 
 - **WHEN** uma GET request chega em `/auth/callback?code=valid_code`
 - **THEN** `exchangeCodeForSession(valid_code)` é chamado
-- **AND** em sucesso, o handler redireciona para a rota protegida padrão (`/loja`)
+- **AND** em sucesso, o handler redireciona para a rota protegida padrão (`/dashboard`)
 - **AND** a sessão é criada antes do redirect
 
 #### Scenario: Callback com code inválido/expirado
@@ -35,7 +35,7 @@ O sistema SHALL prover uma rota `src/app/auth/callback/route.ts` que lê o parâ
 O handler `/auth/callback` SHALL validar o parâmetro `next` contra uma allowlist estrita antes de redirecionar — mesmo padrão do `VALID_NEXT` do `/auth/confirm`.
 
 - `VALID_NEXT = ["/loja", "/dashboard"]` (mesmo padrão do confirm route).
-- Se `next` não estiver na allowlist → fallback para `/loja` (rota protegida padrão).
+- Se `next` não estiver na allowlist → fallback para `/dashboard` (rota protegida padrão).
 - `"/"` (landing pública) e `/onboarding` (não existe) **nunca** são destinos válidos — não passam pelo layout protegido.
 - Redirecionamento externo SHALL ser bloqueado.
 
@@ -47,12 +47,12 @@ O handler `/auth/callback` SHALL validar o parâmetro `next` contra uma allowlis
 #### Scenario: next externo é bloqueado com fallback
 
 - **WHEN** `/auth/callback?code=valid&next=https://evil.com` é solicitado
-- **THEN** o handler redireciona para `/loja` (padrão seguro)
+- **THEN** o handler redireciona para `/dashboard` (padrão seguro)
 
 #### Scenario: next vazio usa padrão seguro
 
 - **WHEN** `/auth/callback?code=valid` é solicitado sem `next`
-- **THEN** o handler redireciona para `/loja`
+- **THEN** o handler redireciona para `/dashboard`
 
 ### Requirement: Pós-callback cai no layout autenticado com PrivacyGate reusado
 
