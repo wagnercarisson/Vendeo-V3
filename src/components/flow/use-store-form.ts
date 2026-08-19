@@ -317,13 +317,21 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
         }
         updateStoreId(saved.id as string);
         setMode("edit");
-        if (formData.cnpj) setHasExistingCnpj(true);
+        // Re-sync via resposta: a loja foi criada com CNPJ (rpcStore inclui
+        // cnpj_normalized). Se o response não expôs, cai no formData como fallback.
+        if (formData.cnpj || saved.cnpj_normalized) setHasExistingCnpj(true);
         setSuccessMessage("Loja salva. Agora configure a direção visual.");
       } else {
         // Response from update-cnpj or PATCH
         if (saved.success === true) {
-          // update-cnpj response: { success: true, store: [...] }
+          // update-cnpj response: { success: true, store: [...] } — sem id no
+          // topo; o storeId corrente (hook) é o correto para retornar. Re-sync
+          // idempotente de hasExistingCnpj (rota também é idempotente no mesmo
+          // CNPJ — fix 409 cnpj_already_set no re-save do onboarding).
           setHasExistingCnpj(true);
+          setSaveStatus("saved");
+          setSuccessMessage("Loja salva. Agora configure a direção visual.");
+          return { storeId };
         } else if (!saved.id || typeof saved.id !== "string") {
           setError("Loja salva, mas resposta não retornou o ID da loja.");
           setSaveStatus("error");

@@ -52,6 +52,13 @@ export const POST = apiHandler(async (request: NextRequest) => {
       return NextResponse.json({ error: "CNPJ inválido" }, { status: 400 });
     }
 
+    // Idempotência: se a loja já possui EXATAMENTE este CNPJ, o re-save é um
+    // no-op de sucesso — evita o 409 cnpj_already_set quando o cliente
+    // re-envia o mesmo CNPJ (desync de hasExistingCnpj no onboarding).
+    if (store.cnpj_normalized === cnpjNormalized) {
+      return NextResponse.json({ success: true, store: [store] });
+    }
+
     const cnpjRootHash = hashCnpjRoot(cnpjNormalized.slice(0, 8));
 
     // App-level duplicate check (antes do RPC)

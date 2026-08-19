@@ -253,6 +253,31 @@ describe("POST /api/store/update-cnpj", () => {
     expect(body.error).toBe("Esta loja já possui CNPJ cadastrado");
   });
 
+  it("is idempotent when store already has the SAME CNPJ (no-op success, no RPC)", async () => {
+    // Loja já possui exatamente este CNPJ → re-save é no-op (fix 409
+    // cnpj_already_set no re-save do onboarding com hasExistingCnpj dessincronizado).
+    const { getCurrentStore } = await import("@/lib/auth/store-ownership");
+    vi.mocked(getCurrentStore).mockResolvedValueOnce({
+      id: STORE_UUID,
+      name: "Loja Marise",
+      cnpj_normalized: "12345678000195",
+    } as import("@/lib/store").Store);
+
+    const { POST } = await import("../route");
+    const res = await POST(createRequest({
+      storeId: STORE_UUID,
+      cnpjNormalized: "12345678000195",
+      razaoSocial: "Razao Social Ltda",
+    }));
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    // Nenhuma consulta externa/RPC: nada a fazer, CNPJ já persistido.
+    expect(mockRpc).not.toHaveBeenCalled();
+    expect(mockResolve).not.toHaveBeenCalled();
+  });
+
   it("returns 409 with cnpj_already_registered when CNPJ index conflicts", async () => {
     mockRpc.mockResolvedValueOnce({
       data: null,
