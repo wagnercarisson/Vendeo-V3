@@ -1,7 +1,7 @@
 "use client";
 
 import { createBrowserClient } from "@/lib/supabase/client";
-import { CaptchaField } from "@/components/auth/captcha-field";
+import { CaptchaField, CAPTCHA_HINT_TEXT } from "@/components/auth/captcha-field";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, FormEvent } from "react";
@@ -118,7 +118,7 @@ export function LoginForm({ redirect, captchaEnabled }: LoginFormProps) {
         <CaptchaField
           onVerify={setCaptchaToken}
           resetKey={captchaResetKey}
-          hint="Resolva o desafio para continuar."
+          hint={CAPTCHA_HINT_TEXT}
         />
       )}
 

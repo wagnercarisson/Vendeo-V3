@@ -19,6 +19,7 @@ vi.mock("@/components/auth/captcha-field", () => ({
     captchaMock.onVerify = onVerify;
     return null;
   },
+  CAPTCHA_HINT_TEXT: "Aguarde validação Cloudflare.",
 }));
 
 vi.mock("@/lib/supabase/client", () => ({
@@ -178,6 +179,25 @@ describe("SignupForm (Testes 2-8, tasks.md §13)", () => {
     mockSignUp.mockResolvedValue({
       data: { user: null },
       error: new Error("captcha verification failed"),
+    });
+
+    render(<SignupForm captchaEnabled={true} />);
+    setCaptchaToken();
+    acknowledgePrivacy();
+    fillAndSubmit();
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Não foi possível concluir. Tente novamente."),
+      ).toBeInTheDocument();
+    });
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it("Teste 6b: signup_disabled (kill switch D13) → mensagem genérica, não redireciona", async () => {
+    mockSignUp.mockResolvedValue({
+      data: { user: null },
+      error: new Error("Signups not allowed for this instance"),
     });
 
     render(<SignupForm captchaEnabled={true} />);

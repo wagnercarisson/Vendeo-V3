@@ -2,17 +2,24 @@
 
 import { createBrowserClient } from "@/lib/supabase/client";
 import { getSiteUrl } from "@/lib/supabase/site-url";
-import { CaptchaField } from "@/components/auth/captcha-field";
+import { CaptchaField, CAPTCHA_HINT_TEXT } from "@/components/auth/captcha-field";
 import {
   PrivacyAcknowledgeModal,
 } from "@/components/legal/privacy-acknowledge-modal";
 import {
   CommunicationsConsentModal,
 } from "@/components/legal/communications-consent-modal";
+import { buildDocumentInfo } from "@/lib/legal/document-content";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, FormEvent } from "react";
 import { Mail, Lock, Loader2 } from "lucide-react";
+
+interface LegalDocumentInfo {
+  label: string;
+  version: string;
+  url: string;
+}
 
 interface PrivacyPending {
   privacyAcknowledged: boolean;
@@ -21,11 +28,12 @@ interface PrivacyPending {
 
 interface SignupFormProps {
   captchaEnabled: boolean;
+  policyDocument?: LegalDocumentInfo | null;
 }
 
 const GENERIC_ERROR = "Não foi possível concluir. Tente novamente.";
 
-export function SignupForm({ captchaEnabled }: SignupFormProps) {
+export function SignupForm({ captchaEnabled, policyDocument }: SignupFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -42,9 +50,9 @@ export function SignupForm({ captchaEnabled }: SignupFormProps) {
       communicationsOptIn,
     };
     try {
-      window.sessionStorage.setItem("privacyPending", JSON.stringify(pending));
+      window.localStorage.setItem("privacyPending", JSON.stringify(pending));
     } catch {
-      // sessionStorage indisponível — o PrivacyRecovery não consegue processar,
+      // storage indisponível — o PrivacyRecovery não consegue processar,
       // mas o fluxo principal não pode quebrar por isso.
     }
   }
@@ -188,11 +196,7 @@ export function SignupForm({ captchaEnabled }: SignupFormProps) {
               className="mt-0.5 h-4 w-4 rounded border-slate-600 bg-slate-800 accent-blue-600"
             />
             <span className="text-slate-300">
-              Li e declaro ciência integral da{" "}
-              <Link href="/privacidade" target="_blank" className="text-blue-400 hover:text-blue-300 hover:underline">
-                Política de Privacidade
-              </Link>
-              .{" "}
+              Li e declaro ciência integral da Política de Privacidade.{" "}
               <button
                 type="button"
                 onClick={() => setPrivacyOpen(true)}
@@ -241,7 +245,7 @@ export function SignupForm({ captchaEnabled }: SignupFormProps) {
           <CaptchaField
             onVerify={setCaptchaToken}
             resetKey={captchaResetKey}
-            hint="Resolva o desafio para continuar."
+            hint={CAPTCHA_HINT_TEXT}
           />
         )}
 
@@ -266,11 +270,13 @@ export function SignupForm({ captchaEnabled }: SignupFormProps) {
           setPrivacyAcknowledged(true);
           return true;
         }}
-        policyDocument={{
-          label: "Política de Privacidade",
-          version: "v1.3",
-          url: "/privacidade",
-        }}
+        policyDocument={
+          policyDocument ?? buildDocumentInfo("privacy_policy", "v1.3") ?? {
+            label: "Política de Privacidade",
+            version: "v1.3",
+            url: "/docs/legal/privacy-policy-v1-3.md",
+          }
+        }
       />
       <CommunicationsConsentModal
         open={communicationsOpen}

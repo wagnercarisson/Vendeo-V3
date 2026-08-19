@@ -21,6 +21,7 @@ vi.mock("@/components/auth/captcha-field", () => ({
     captchaMock.onVerify = onVerify;
     return null;
   },
+  CAPTCHA_HINT_TEXT: "Aguarde validação Cloudflare.",
 }));
 
 vi.mock("@/lib/supabase/client", () => ({

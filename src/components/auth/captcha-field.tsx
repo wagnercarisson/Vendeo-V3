@@ -6,6 +6,8 @@ const TURNSTILE_SCRIPT_SRC =
   "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 const TURNSTILE_SCRIPT_MARKER = "data-vendeo-turnstile";
 
+export const CAPTCHA_HINT_TEXT = "Aguarde validação Cloudflare.";
+
 interface TurnstileRenderOptions {
   sitekey: string;
   callback?: (token: string) => void;
