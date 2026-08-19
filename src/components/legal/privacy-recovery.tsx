@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 
 interface PendingPrivacy {
   privacyAcknowledged: boolean;
@@ -8,6 +9,7 @@ interface PendingPrivacy {
 }
 
 export function PrivacyRecovery() {
+  const router = useRouter();
   const [pending, setPending] = useState<PendingPrivacy | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -22,9 +24,15 @@ export function PrivacyRecovery() {
         body: JSON.stringify({ communicationsOptIn: data.communicationsOptIn }),
       });
 
-      if (res.ok) {
-        sessionStorage.removeItem("privacyPending");
+      // O endpoint responde 200 mesmo em erro (body.ok=false) — validar o body.
+      const body = (await res.json().catch(() => ({}))) as { ok?: boolean };
+
+      if (res.ok && body.ok === true) {
+        localStorage.removeItem("privacyPending");
         setPending(null);
+        // D16: re-renderiza o layout com acknowledged=true — sem isso o gate
+        // reabriria o modal em toda navegação client-side (estado stale).
+        router.refresh();
       } else {
         setError("Não foi possível registrar sua ciência da Política de Privacidade.");
       }
@@ -33,11 +41,11 @@ export function PrivacyRecovery() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     try {
-      const stored = sessionStorage.getItem("privacyPending");
+      const stored = localStorage.getItem("privacyPending");
       if (stored) {
         const data = JSON.parse(stored) as PendingPrivacy;
         if (data.privacyAcknowledged) {

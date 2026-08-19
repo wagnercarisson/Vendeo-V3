@@ -39,7 +39,7 @@ describe("Teste 56 — Ciência da Privacidade declarada na PRIMEIRA autenticaç
     expect(mockRegister).not.toHaveBeenCalled();
   });
 
-  it("privacyPending (sessionStorage) é processado na autenticação → POST /api/legal/acknowledge-privacy autenticado", async () => {
+  it("privacyPending (localStorage) é processado na autenticação → POST /api/legal/acknowledge-privacy autenticado", async () => {
     const mockFetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true }) });
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = mockFetch;

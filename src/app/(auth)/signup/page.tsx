@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { getLaunchConfig } from "@/lib/launch-config/config";
+import { getCurrentVersion } from "@/lib/legal/document-versions";
+import { buildDocumentInfo } from "@/lib/legal/document-content";
 import { GoogleButton } from "@/components/auth/google-button";
 import { SignupForm } from "@/components/auth/signup-form";
 
@@ -13,6 +15,14 @@ export default async function SignupPage() {
   // Leitura server-side da flag (D5): flag off → "Beta fechado" verbatim;
   // flag on → formulário + Google (renderização condicional D2/D4).
   const { publicSignupEnabled, captchaEnabled } = await getLaunchConfig();
+
+  let policyDocument: ReturnType<typeof buildDocumentInfo> = null;
+  if (publicSignupEnabled) {
+    const privacyVersion = await getCurrentVersion("privacy_policy");
+    policyDocument = privacyVersion
+      ? buildDocumentInfo("privacy_policy", privacyVersion.version)
+      : null;
+  }
 
   if (!publicSignupEnabled) {
     return (
@@ -68,7 +78,7 @@ export default async function SignupPage() {
           <div className="h-px flex-1 bg-slate-700" />
         </div>
 
-        <SignupForm captchaEnabled={captchaEnabled} />
+        <SignupForm captchaEnabled={captchaEnabled} policyDocument={policyDocument} />
 
         <p className="mt-4 text-center text-sm text-slate-400">
           Já tenho uma conta —{" "}

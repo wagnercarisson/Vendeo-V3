@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { PrivacyAcknowledgeModal } from "./privacy-acknowledge-modal";
 
@@ -21,6 +21,21 @@ export function PrivacyGate({ acknowledged, policyDocument }: PrivacyGateProps) 
   const router = useRouter();
   const didConfirmRef = useRef(false);
   const [communicationsOptIn, setCommunicationsOptIn] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [hasPendingPrivacy, setHasPendingPrivacy] = useState(false);
+
+  // Leitura client-only do localStorage (via effect) — evita ler `window` no
+  // SSR (mismatch hidratação) e o "flash" do modal no primeiro load pós-signup.
+  useEffect(() => {
+    setMounted(true);
+    try {
+      setHasPendingPrivacy(!!window.localStorage.getItem("privacyPending"));
+    } catch {
+      setHasPendingPrivacy(false);
+    }
+  }, []);
+
+  if (!mounted) return null;
 
   // Already acknowledged — no gate needed
   if (acknowledged) return null;
@@ -31,14 +46,8 @@ export function PrivacyGate({ acknowledged, policyDocument }: PrivacyGateProps) 
   }
 
   // D16 coordenação única PrivacyGate × PrivacyRecovery: se há privacyPending
-  // no sessionStorage (caminho email/signup), o PrivacyRecovery liquida — o
+  // no localStorage (caminho email/signup), o PrivacyRecovery liquida — o
   // gate NÃO abre modal duplicado (guard anti-flash, leitura síncrona).
-  let hasPendingPrivacy = false;
-  try {
-    hasPendingPrivacy = !!window.sessionStorage.getItem("privacyPending");
-  } catch {
-    hasPendingPrivacy = false;
-  }
   if (hasPendingPrivacy) return null;
 
   // Can't show modal without document info

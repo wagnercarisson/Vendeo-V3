@@ -16,6 +16,11 @@ vi.mock("@/lib/launch-config/config", () => ({
   })),
 }));
 
+// getCurrentVersion consulta o Supabase (server) — mock para o teste de página.
+vi.mock("@/lib/legal/document-versions", () => ({
+  getCurrentVersion: vi.fn(async () => ({ version: "v1.3" })),
+}));
+
 // Componentes client são renderizados no servidor apenas como referência —
 // mock leve para os testes de flag on.
 vi.mock("@/components/auth/google-button", () => ({
@@ -27,8 +32,18 @@ vi.mock("@/components/auth/google-button", () => ({
 }));
 
 vi.mock("@/components/auth/signup-form", () => ({
-  SignupForm: ({ captchaEnabled }: { captchaEnabled: boolean }) => (
-    <form data-testid="signup-form" data-captcha-enabled={String(captchaEnabled)}>
+  SignupForm: ({
+    captchaEnabled,
+    policyDocument,
+  }: {
+    captchaEnabled: boolean;
+    policyDocument?: { label: string; version: string; url: string } | null;
+  }) => (
+    <form
+      data-testid="signup-form"
+      data-captcha-enabled={String(captchaEnabled)}
+      data-policy-url={policyDocument?.url ?? ""}
+    >
       <input aria-label="Email" />
       <input aria-label="Senha" />
     </form>
@@ -129,6 +144,14 @@ describe("SignupPage (flag on — formulário + Google)", () => {
     expect(screen.getByTestId("signup-form")).toHaveAttribute(
       "data-captcha-enabled",
       "true",
+    );
+  });
+
+  it("policyDocument aponta para o arquivo markdown oficial (não /privacidade)", async () => {
+    render(await SignupPage());
+    expect(screen.getByTestId("signup-form")).toHaveAttribute(
+      "data-policy-url",
+      "/docs/legal/privacy-policy-v1-3.md",
     );
   });
 });

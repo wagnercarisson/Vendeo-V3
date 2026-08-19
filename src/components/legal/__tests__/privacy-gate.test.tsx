@@ -52,7 +52,7 @@ const policyDoc = { label: "Política de Privacidade", version: "v1.3", url: "/d
 
 beforeEach(() => {
   vi.clearAllMocks();
-  window.sessionStorage.clear();
+  window.localStorage.clear();
   modalMock.onConfirm = null;
   modalMock.onOpenChange = null;
 });
@@ -78,7 +78,7 @@ describe("PrivacyGate (D16 — post-OAuth, opt-in opcional + guard anti-flash)",
   });
 
   it("guarda anti-flash: NÃO abre modal se privacyPending presente (PrivacyRecovery liquida)", () => {
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       "privacyPending",
       JSON.stringify({ privacyAcknowledged: true, communicationsOptIn: false }),
     );
