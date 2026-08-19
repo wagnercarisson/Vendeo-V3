@@ -1,23 +1,33 @@
 ## Purpose
 
-Página `/signup` com formulário de cadastro (email + senha + confirmação), layout `(auth)`. Anti-enumeration: sempre redireciona para `/check-email` independente de sucesso ou erro. Validação `NEXT_PUBLIC_SITE_URL` em módulo separado.
+Página `/signup` com formulário de cadastro (email + senha + confirmação), layout `(auth)`, controlada pela flag `publicSignupEnabled` (server-side). Anti-enumeration: sucesso/email existente → `/check-email`; captcha/operacional → mensagem genérica. Validação `NEXT_PUBLIC_SITE_URL` em módulo separado.
 
-> Synced from `fase-8-ciclo-de-conta` (ADDED).
+> Synced from `fase-8-ciclo-de-conta` (ADDED), then `fase-42-signup-controlado-elegibilidade-freemium` (MODIFIED). Flag on/off no `/signup`, senha mín. 8, captchaToken (Turnstile), PrivacyAcknowledgeModal.
 
 ## Requirements
 
 ### Requirement: /signup page exists
 
-The system SHALL have a `/signup` page at `src/app/(auth)/signup/page.tsx` with a signup form within the `(auth)` route group.
+The system SHALL have a `/signup` page at `src/app/(auth)/signup/page.tsx` that renders the signup experience within the `(auth)` route group — D2/D4/D5.
 
-- MUST be a server component that renders `<SignupForm />`
-- MUST NOT use `requirePageUser()` — authentication check is handled by middleware
-- MUST inherit the `(auth)` layout (container centralizado, logo, tema dark)
+- MUST be a server component that reads the feature flag `publicSignupEnabled` **server-side** and renders:
+  - **flag on:** `<SignupForm />` (email/senha) + "Continuar com Google" (D15);
+  - **flag off:** a página "Beta fechado" atual (comportamento preservado) com link para "Solicitar acesso free".
+- MUST NOT use `requirePageUser()` — authentication check is handled by middleware.
+- MUST inherit the `(auth)` layout (container centralizado, logo, tema dark).
+- MUST render links para a Política de Privacidade e os Termos na tela de signup (D12).
 
-#### Scenario: Anonymous user accesses /signup
+#### Scenario: Anonymous user accesses /signup with flag on
 
 - **WHEN** an unauthenticated user requests `/signup`
-- **THEN** the signup form SHALL be rendered
+- **AND** `publicSignupEnabled` is `true`
+- **THEN** the signup form SHALL be rendered (email/senha) together with "Continuar com Google"
+
+#### Scenario: Anonymous user accesses /signup with flag off
+
+- **WHEN** an unauthenticated user requests `/signup`
+- **AND** `publicSignupEnabled` is `false`
+- **THEN** the page SHALL render the current "Beta fechado" behavior (solicitação de acesso), preserved
 
 #### Scenario: Authenticated user accesses /signup
 
@@ -26,46 +36,23 @@ The system SHALL have a `/signup` page at `src/app/(auth)/signup/page.tsx` with 
 
 ### Requirement: Signup form validates email and password
 
-The signup form SHALL be a client component with three fields: email, password, and confirm password.
+The signup form (`src/components/auth/signup-form.tsx`, restored/modernized from commit 41986f0/3bf01fc) SHALL be a client component with fields: email, password, and confirm password — D2.
 
-- MUST validate password minimum length of 6 characters client-side
-- MUST validate confirm password matches password client-side
+- MUST validate password minimum length of **8** characters client-side (updated from 6).
+- MUST validate confirm password matches password client-side.
 - SHALL display inline error messages in Portuguese:
-  - "A senha deve ter no mínimo 6 caracteres"
+  - "A senha deve ter no mínimo 8 caracteres"
   - "As senhas não conferem"
-- SHALL use `useState` for error messages (not `useRef` or external libraries)
-- MUST display a loading state during submission
-- MUST include a **privacy acknowledgement checkbox** (obrigatório):
-  - Label: "Declaro ciência da Política de Privacidade."
-  - "Política de Privacidade" is a link to `/privacidade` (opens in new tab)
-  - Submit is blocked if unchecked: "Você precisa declarar ciência da Política de Privacidade."
-  - This is a declaration of awareness (ciência), not contractual acceptance
-- MUST include a **communications consent checkbox** (opcional, LGPD):
-  - Label: "Aceito receber comunicações comerciais do Vendeo."
-  - Separate and visually distinct from the privacy checkbox
-  - Does NOT block signup if unchecked
-  - Backed by LGPD consent (art. 7º, I)
-- **FLUXO ATUALIZADO (pós-revisão):** No momento do signup o usuário NÃO tem sessão JWT (redirect para /check-email). Portanto:
-  - Após `supabase.auth.signUp()` bem-sucedido, o client salva `{ privacyAcknowledged: true, communicationsOptIn: boolean }` em `sessionStorage`
-  - O client NÃO chama o endpoint agora — não há sessão autenticada
-  - Redireciona para `/check-email` (comportamento existente, inalterado)
-- No primeiro acesso autenticado pós-confirmação de email:
-  - O componente `src/components/legal/privacy-recovery.tsx` verifica `sessionStorage`
-  - Se existir pendência, chama `POST /api/legal/acknowledge-privacy` com `{ communicationsOptIn: boolean }`
-  - `userId` é extraído do JWT via `requireUser()` no servidor — NUNCA aceito do client body (previne spoofing)
-  - Se o endpoint falhar, exibe notificação "Pendência de privacidade" com link para re-tentar
-- **O endpoint (`POST /api/legal/acknowledge-privacy`):**
-  - Exige `requireUser()` — userId de `claims.sub`
-  - Resolve a versão vigente server-side via `getCurrentVersion("privacy_policy")`
-  - Registra `privacy_acknowledgements` via `registerPrivacyAcknowledgement()` com versão resolvida
-  - Se `communicationsOptIn`, registra `user_consent_events` via `recordConsentEvent()`
-  - Usa `supabaseAdmin` (service role)
-- **Recovery rule:** Se o usuário chegar sem sessionStorage mas `hasValidPrivacyAcknowledgement(userId)` retornar false, o sistema exibe notificação de pendência de privacidade antes de permitir onboarding
+- SHALL display a loading state during submission.
+- MUST include a **privacy acknowledgement** (modal `PrivacyAcknowledgeModal`): "Declaro ciência da Política de Privacidade." — submit blocked if not acknowledged.
+- MUST include a **communications consent checkbox** (opcional, LGPD): "Aceito receber comunicações comerciais do Vendeo." — does NOT block signup.
+- MUST display links para Privacidade e Termos na tela (D12).
+- **FLUXO (D2/D12):** No momento do signup o usuário NÃO tem sessão JWT (redirect para /check-email). Portanto: após `supabase.auth.signUp()` bem-sucedido, o client salva `{ privacyAcknowledged: true, communicationsOptIn: boolean }` em `sessionStorage`; o client NÃO chama o endpoint de privacidade agora (não há sessão autenticada). No primeiro acesso autenticado pós-confirmação, `PrivacyRecovery`/`PrivacyGate` processa a pendência e registra a ciência em `privacy_acknowledgements` e o opt-in em `consent_events`, com `userId` extraído via `requireUser()` — NUNCA do client body (previne spoofing).
 
-#### Scenario: Password too short
+#### Scenario: Password too short (mín. 8)
 
-- **WHEN** a user submits the signup form with a password shorter than 6 characters
-- **THEN** the form SHALL display "A senha deve ter no mínimo 6 caracteres" and NOT submit
+- **WHEN** a user submits the signup form with a password shorter than 8 characters
+- **THEN** the form SHALL display "A senha deve ter no mínimo 8 caracteres" and NOT submit
 
 #### Scenario: Confirm password does not match
 
@@ -79,12 +66,12 @@ The signup form SHALL be a client component with three fields: email, password, 
 
 #### Scenario: Signup without privacy acknowledgement is blocked
 
-- **WHEN** user submits the signup form without checking the privacy acknowledgement checkbox
+- **WHEN** user submits the signup form without acknowledging the Privacy Policy (modal)
 - **THEN** the form SHALL display an error and NOT submit
 
 #### Scenario: Signup with privacy acknowledgement saves to sessionStorage
 
-- **WHEN** user submits the signup form with the privacy acknowledgement checkbox checked
+- **WHEN** user submits the signup form with the privacy acknowledgement acknowledged (modal)
 - **THEN** the form SHALL submit to Supabase Auth
 - **AND** after `signUp` completes, `{ privacyAcknowledged: true, communicationsOptIn: boolean }` SHALL be saved to `sessionStorage`
 - **AND** `POST /api/legal/acknowledge-privacy` SHALL NOT be called (no JWT session exists)
@@ -112,6 +99,56 @@ The signup form SHALL be a client component with three fields: email, password, 
 - **AND** `sessionStorage` SHALL contain `communicationsOptIn: false`
 - **AND** on first authenticated access, `POST /api/legal/acknowledge-privacy` SHALL NOT register a communications consent event
 
+### Requirement: Signup calls signUp with emailRedirectTo and captchaToken
+
+The signup form SHALL call `supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${getSiteUrl()}/auth/confirm`, captchaToken } })` — D2/D3.
+
+- `captchaToken` obtido do componente reutilizável `captcha-field` (D3).
+- `getSiteUrl()` continua exigindo `NEXT_PUBLIC_SITE_URL` (contrato formalizado) — `src/lib/supabase/site-url.ts`.
+- O consentimento (communicationsOptIn) NÃO é evidência legal em `user_metadata`; é persistido em `sessionStorage`/`privacyPending` e registrado autenticado em `consent_events`/`privacy_acknowledgements` (D12).
+- `minimum_password_length = 8` no Supabase (`supabase/config.toml`) — paridade (D13).
+
+#### Scenario: signUp sends emailRedirectTo and captchaToken
+
+- **WHEN** the user submits the signup form with a valid captcha token
+- **THEN** `supabase.auth.signUp` is called with `emailRedirectTo: "${getSiteUrl()}/auth/confirm"` and `captchaToken`
+- **AND** `privacyPending`/consent choice is saved to `sessionStorage`
+
+#### Scenario: Signup without captcha token is blocked
+
+- **WHEN** the user submits the signup form without a captcha token
+- **THEN** the auth call is NOT made
+- **AND** the generic message "Não foi possível concluir. Tente novamente." is shown
+
+### Requirement: Anti-enumeração — sucesso/email existente → /check-email; captcha/operacional → mensagem genérica
+
+The signup form SHALL apply the anti-enumeration matrix — D2:
+
+- **sucesso** e **email já cadastrado** → **mesma resposta**: redirect para `/check-email?type=signup` (nunca distinguir os dois casos).
+- **captcha falhou / indisponibilidade / erro operacional** → **mensagem genérica** "Não foi possível concluir. Tente novamente." (sem chamada bem-sucedida de `signUp` e sem revelar existência de conta).
+- Em nenhum cenário SHALL o sistema expor se o email já existe.
+
+#### Scenario: Signup with valid credentials
+
+- **WHEN** signup succeeds and confirmation is required
+- **THEN** the user is redirected to `/check-email?type=signup`
+
+#### Scenario: Signup with valid credentials (auto-confirm)
+
+- **WHEN** signup succeeds in auto-confirm mode (dev)
+- **THEN** the user is redirected to `/check-email?type=signup`, then middleware sees session and redirects to `/`
+
+#### Scenario: Signup with existing email
+
+- **WHEN** signup is attempted with an email that already exists
+- **THEN** the user is redirected to `/check-email?type=signup` (same as success, anti-enumeration)
+
+#### Scenario: Captcha/operational error shows generic message
+
+- **WHEN** captcha fails / service unavailable / operational error occurs
+- **THEN** the form displays "Não foi possível concluir. Tente novamente."
+- **AND** the message does not reveal whether the account exists
+
 ### Requirement: NEXT_PUBLIC_SITE_URL is required
 
 `NEXT_PUBLIC_SITE_URL` SHALL be a required environment variable validated at module load / build time, before any auth operation.
@@ -126,27 +163,3 @@ The signup form SHALL be a client component with three fields: email, password, 
 - **WHEN** `NEXT_PUBLIC_SITE_URL` is not set at build/load time
 - **THEN** an error SHALL be thrown indicating the missing variable
 - **AND** `supabase.auth.signUp()` SHALL NOT be called
-
-### Requirement: Signup always redirects to /check-email (anti-enumeration)
-
-The signup form SHALL always redirect to `/check-email?type=signup` after calling `supabase.auth.signUp()`, regardless of success or error.
-
-- MUST call `supabase.auth.signUp()` with `emailRedirectTo: "${NEXT_PUBLIC_SITE_URL}/auth/confirm"`
-- MUST redirect to `/check-email?type=signup` on both success and error
-- MUST NOT display any error message to the user under any circumstance
-- In auto-confirm mode (dev), middleware SHALL redirect the now-authenticated user from `/check-email` to `/`
-
-#### Scenario: Signup with valid credentials (no auto-confirm)
-
-- **WHEN** signup succeeds and confirmation is required
-- **THEN** the user is redirected to `/check-email?type=signup`
-
-#### Scenario: Signup with valid credentials (auto-confirm)
-
-- **WHEN** signup succeeds in auto-confirm mode (dev)
-- **THEN** the user is redirected to `/check-email?type=signup`, then middleware sees session and redirects to `/`
-
-#### Scenario: Signup with existing email
-
-- **WHEN** signup is attempted with an email that already exists
-- **THEN** the user is redirected to `/check-email?type=signup` (same as success, anti-enumeration)
