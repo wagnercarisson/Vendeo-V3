@@ -39,9 +39,19 @@ Gere um JSON válido com os campos abaixo. Responda **APENAS** com o JSON, sem t
 
 3. **`hashtags`** — Array de 3 a 5 hashtags relevantes. Incluir hashtags do produto, segmento, oferta e loja.
 
-4. **`cta_post`** — Call to action persuasivo e acionável (máximo 50 caracteres). Exemplo: "Garanta já a sua!", "Corra e aproveite!", "Clique e compre!"
+4. **`cta_post`** — Call to action persuasivo e acionável (máximo 50 caracteres). Exemplo: "Garanta já o seu!", "Aproveite na loja!", "Fale com a equipe!"
 
 5. **`toneDescription`** (opcional) — Descrição do tom usado no copy (ex: "urgente", "exclusivo", "divertido", "sofisticado").
+
+### Precisão comercial
+
+Use criatividade para tornar a copy desejável, humana e persuasiva, mas trate informações comerciais como fatos protegidos.
+
+Não afirme condições que não estejam nos dados informados acima, como entrega, frete, retirada, compra online, parcelamento, garantia, estoque, últimas unidades, tamanhos, cores, gêneros, variações, prazos ou disponibilidade.
+
+Não transforme inferências em fatos comerciais. Se o canal de compra não foi informado, prefira CTAs neutros de loja física, como "Visite a loja", "Confira na loja", "Fale com a equipe" ou "Venha conhecer".
+
+Pode criar desejo, urgência emocional e benefício percebido, desde que não prometa uma condição operacional ou promocional nova.
 
 ### Regras de tom de voz:
 
