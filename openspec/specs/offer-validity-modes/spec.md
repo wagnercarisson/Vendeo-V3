@@ -15,23 +15,23 @@ O sistema SHALL prover uma seção "Validade da oferta" no formulário de campan
 | Modo | UI | displayText gerado |
 |------|-----|---------------------|
 | Sem validade | nada | (ausente — não envia) |
-| Até uma data | date end | `até 30/09` |
-| De... até... | date start + date end | `de 25/09 até 30/09` |
+| Até uma data | date end | `até 30/09/2026` |
+| De... até... | date start + date end | `de 25/09/2026 até 30/09/2026` |
 | Somente hoje | opção | `somente hoje` |
 | Enquanto durarem os estoques | opção | `enquanto durarem os estoques` |
 | Texto personalizado | input livre | texto do usuário (com normalização leve, D5) |
 
-O formato de data usado no `displayText` é `dd/mm` (ex.: `30/09`).
+O formato de data usado no `displayText` é `dd/mm/aaaa` (ex.: `30/09/2026`).
 
-#### Scenario: Modo até uma data gera displayText dd/mm
+#### Scenario: Modo até uma data gera displayText dd/mm/aaaa
 
-- **WHEN** o usuário escolhe o modo "Até uma data" e informa a data final 30/09
-- **THEN** o `displayText` gerado é `"até 30/09"`
+- **WHEN** o usuário escolhe o modo "Até uma data" e informa a data final 30/09/2026
+- **THEN** o `displayText` gerado é `"até 30/09/2026"`
 
 #### Scenario: Modo de... até... gera displayText com intervalo
 
-- **WHEN** o usuário escolhe o modo "De... até..." com início 25/09 e fim 30/09
-- **THEN** o `displayText` gerado é `"de 25/09 até 30/09"`
+- **WHEN** o usuário escolhe o modo "De... até..." com início 25/09/2026 e fim 30/09/2026
+- **THEN** o `displayText` gerado é `"de 25/09/2026 até 30/09/2026"`
 
 #### Scenario: Modo somente hoje gera displayText fixo
 
@@ -64,29 +64,29 @@ A seção "Validade da oferta" SHALL aparecer **apenas quando** `campaignIntent 
 
 #### Scenario: Troca de intent não envia validade mas preserva rascunho
 
-- **WHEN** o usuário preenche validade em `offer` (ex.: "até 30/09") e troca para `spotlight`
+- **WHEN** o usuário preenche validade em `offer` (ex.: "até 30/09/2026") e troca para `spotlight`
 - **THEN** o body do submit **não contém** `validity`
-- **AND** ao voltar para `offer`, a validade preenchida ("até 30/09") reaparece no form (rascunho preservado)
+- **AND** ao voltar para `offer`, a validade preenchida ("até 30/09/2026") reaparece no form (rascunho preservado)
 
 ### Requirement: displayText frase nua sem prefixo
 
-O `displayText` gerado SHALL representar **apenas o conteúdo da validade**, sem o rótulo "Oferta válida" (D5). Exemplos: `"até 30/09"`, `"de 25/09 até 30/09"`, `"somente hoje"`, `"enquanto durarem os estoques"`.
+O `displayText` gerado SHALL representar **apenas o conteúdo da validade**, sem o rótulo "Oferta válida" (D5). Exemplos: `"até 30/09/2026"`, `"de 25/09/2026 até 30/09/2026"`, `"somente hoje"`, `"enquanto durarem os estoques"`.
 
 - As **duas superfícies do prompt** compõem o rótulo uma única vez: `buildCommercialRepertoire` → `- Oferta válida: ${displayText}` e template offer/base → `**Validade da oferta:** {{validity}}`. A F40 **não mexe em nenhuma das duas superfícies**.
-- **Texto personalizado — normalização leve:** se o usuário digitar `Oferta válida até 30/09`, o sistema SHALL limpar o prefixo "Oferta válida" antes de enviar. A UI é responsável por não deixar o lojista salvar "Oferta válida..." quando escolhe modos estruturados.
+- **Texto personalizado — normalização leve:** se o usuário digitar `Oferta válida até 30/09/2026`, o sistema SHALL limpar o prefixo "Oferta válida" antes de enviar. A UI é responsável por não deixar o lojista salvar "Oferta válida..." quando escolhe modos estruturados.
 - `endDate` (ISO) permanece **reservado, sem envio** (F39 D8): as datas da UI apenas geram `displayText`; o backend recebe texto final.
 
 #### Scenario: displayText nu não duplica rótulo nas duas superfícies
 
-- **WHEN** `validity.displayText = "até 30/09"` com intent `offer`
-- **THEN** `buildCommercialRepertoire` gera `- Oferta válida: até 30/09` (rótulo composto uma vez)
-- **AND** o template mantém `**Validade da oferta:** até 30/09` (sem duplicação "Oferta válida: Oferta válida até 30/09")
+- **WHEN** `validity.displayText = "até 30/09/2026"` com intent `offer`
+- **THEN** `buildCommercialRepertoire` gera `- Oferta válida: até 30/09/2026` (rótulo composto uma vez)
+- **AND** o template mantém `**Validade da oferta:** até 30/09/2026` (sem duplicação "Oferta válida: Oferta válida até 30/09/2026")
 - **AND** a F40 não altera nenhuma das duas superfícies
 
 #### Scenario: Texto personalizado com prefixo é normalizado
 
-- **WHEN** o usuário digita "Oferta válida até 30/09" no modo Texto personalizado
-- **THEN** o `displayText` enviado é `"até 30/09"` (prefixo "Oferta válida" limpo)
+- **WHEN** o usuário digita "Oferta válida até 30/09/2026" no modo Texto personalizado
+- **THEN** o `displayText` enviado é `"até 30/09/2026"` (prefixo "Oferta válida" limpo)
 
 #### Scenario: endDate nunca é enviado
 
@@ -102,9 +102,9 @@ O transporte/domínio permanecem inalterados: `GenerateImageRequestSchema` já a
 
 #### Scenario: Offer com validade envia validity no body
 
-- **WHEN** `campaignIntent === "offer"` e o usuário escolhe modo "Até uma data" com fim 30/09
-- **THEN** o body do submit contém `validity: "até 30/09"`
-- **AND** o mapper produz `commercial.validity = { enabled: true, displayText: "até 30/09" }`
+- **WHEN** `campaignIntent === "offer"` e o usuário escolhe modo "Até uma data" com fim 30/09/2026
+- **THEN** o body do submit contém `validity: "até 30/09/2026"`
+- **AND** o mapper produz `commercial.validity = { enabled: true, displayText: "até 30/09/2026" }`
 
 #### Scenario: Offer sem validade não envia validity
 

@@ -84,6 +84,8 @@ Considerar o segmento {{storeSegment}} ao definir o estilo visual. A peça deve 
 **Disponibilidade:** {{availabilityNotes}}
 **Canal:** {{targetChannel}} — formato {{format}}
 
+> **Validade com data:** se a validade informada contiver data, a arte DEVE exibir dia, mês e ano completos no formato dd/mm/aaaa conforme informado (ex.: "até 30/09/2026", "de 25/09/2026 até 30/09/2026"). NÃO trunque para dd/mm nem omita o ano. Não invente nem altere a data informada.
+
 ## Direção Criativa Contextual
 
 {{creativePersona}}

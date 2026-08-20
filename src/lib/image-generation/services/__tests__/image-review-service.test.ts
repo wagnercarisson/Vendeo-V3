@@ -275,12 +275,57 @@ describe('ImageReviewService', () => {
       productName: 'Produto Teste',
       storeName: 'Loja Teste',
       campaignIntent: 'offer',
-      validityText: 'Até 30/09',
+      validityText: 'Até 30/09/2026',
     };
 
     await service.review('data:image/jpeg;base64,abc', input);
     const vars = mockLoader.load.mock.calls[0][1];
-    expect(vars.validityTextSection).toContain('Até 30/09');
+    expect(vars.validityTextSection).toContain('Até 30/09/2026');
+  });
+
+  it('8.20b validade com data exige fidelidade de dia/mês/ano (dd/mm/aaaa)', async () => {
+    const input: ImageReviewInput = {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+      campaignIntent: 'offer',
+      validityText: 'até 30/09/2026',
+    };
+
+    await service.review('data:image/jpeg;base64,abc', input);
+
+    const vars = mockLoader.load.mock.calls[0][1];
+    expect(vars.validityTextSection).toContain('até 30/09/2026');
+    expect(vars.validityTextSection).toMatch(/dd\/mm\/aaaa/i);
+    expect(vars.validityTextSection).toMatch(/dia, mes e ano/i);
+    expect(vars.validityTextSection).toMatch(/CRITICA/i);
+    expect(vars.validityTextSection).toMatch(/illegible_text/i);
+  });
+
+  it('8.20c validade vazia → seção vazia (regressão)', async () => {
+    const input: ImageReviewInput = {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+      validityText: '   ',
+    };
+
+    await service.review('data:image/jpeg;base64,abc', input);
+    expect(mockLoader.load.mock.calls[0][1].validityTextSection).toBe('');
+  });
+
+  it('8.20d sanitização mantida na seção de validade (sem {{ )', async () => {
+    const input: ImageReviewInput = {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+      campaignIntent: 'offer',
+      validityText: 'até {{30/09/2026}}',
+    };
+
+    await service.review('data:image/jpeg;base64,abc', input);
+
+    const vars = mockLoader.load.mock.calls[0][1];
+    expect(vars.validityTextSection).not.toContain('{{');
+    expect(vars.validityTextSection).not.toContain('}}');
+    expect(vars.validityTextSection).toContain('até {30/09/2026}');
   });
 
   it('8.20 validityText ausente → validade não entra no review', async () => {

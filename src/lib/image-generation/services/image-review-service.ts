@@ -222,6 +222,8 @@ export class ImageReviewService {
       "",
       "Avalie se a arte exibe a validade da oferta de forma legivel e fiel ao texto informado, quando aplicavel ao intent.",
       "",
+      "Se o texto de validade contiver data, a arte deve reproduzi-la completa no formato dd/mm/aaaa (dia, mes e ano) conforme informado. Nao trunque para dd/mm nem omita o ano. Divergencia de dia, mes OU ano e reprovacao.",
+      "",
       'Quando reprovar, reporte como issue CRITICA com type "illegible_text".',
     ].join("\n");
   }
