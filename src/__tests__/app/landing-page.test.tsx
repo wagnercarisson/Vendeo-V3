@@ -87,8 +87,71 @@ describe("Landing page (/)", () => {
   it("renders hero headline", async () => {
     render(await Home());
     expect(
-      screen.getByRole("heading", { name: /Campanhas profissionais/ }),
+      screen.getByRole("heading", { level: 1, name: "Vendeo" }),
     ).toBeInTheDocument();
+  });
+
+  it('h1 é exatamente "Vendeo" e NÃO contém o slogan', async () => {
+    render(await Home());
+    const h1 = screen.getByRole("heading", { level: 1 });
+    expect(h1).toHaveTextContent("Vendeo");
+    expect(h1).not.toHaveTextContent("Postou");
+  });
+
+  it('exibe slogan "Postou, vendeo!" como texto secundário', async () => {
+    render(await Home());
+    expect(screen.getByText(/Postou, vendeo!/)).toBeInTheDocument();
+    // O slogan nunca é um heading — não pode ser confundido com o nome principal
+    expect(screen.queryByRole("heading", { name: /Postou/ })).toBeNull();
+  });
+
+  it('exibe a frase de funcionalidade "O Vendeo é uma plataforma de marketing"', async () => {
+    render(await Home());
+    expect(
+      screen.getByText(/O Vendeo é uma plataforma de marketing/),
+    ).toBeInTheDocument();
+  });
+
+  it('exibe seção "O Vendeo pode criar" com as 4 capacidades', async () => {
+    render(await Home());
+    expect(
+      screen.getByRole("heading", { name: "O Vendeo pode criar" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Arte promocional")).toBeInTheDocument();
+    expect(screen.getByText("Texto e chamada")).toBeInTheDocument();
+    expect(screen.getByText("Legenda para redes sociais")).toBeInTheDocument();
+    expect(screen.getByText("CTA")).toBeInTheDocument();
+  });
+
+  it('exibe seção "Como funciona" com os 4 passos', async () => {
+    render(await Home());
+    expect(
+      screen.getByRole("heading", { name: "Como funciona" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Cadastre sua loja")).toBeInTheDocument();
+    expect(screen.getByText("Informe sua oferta")).toBeInTheDocument();
+    expect(screen.getByText("O Vendeo cria a campanha")).toBeInTheDocument();
+    expect(screen.getByText("Revise e publique")).toBeInTheDocument();
+  });
+
+  it('exibe link "Política de Privacidade" apontando para /privacidade', async () => {
+    render(await Home());
+    expect(
+      screen.getByRole("link", { name: "Política de Privacidade" }),
+    ).toHaveAttribute("href", "/privacidade");
+  });
+
+  it('exibe link "Termos de Uso" apontando para /termos', async () => {
+    render(await Home());
+    expect(
+      screen.getByRole("link", { name: "Termos de Uso" }),
+    ).toHaveAttribute("href", "/termos");
+  });
+
+  it('exibe link "Contato" como mailto', async () => {
+    render(await Home());
+    const contato = screen.getByRole("link", { name: "Contato" });
+    expect(contato.getAttribute("href")).toMatch(/^mailto:/);
   });
 
   it("renders primary CTA to request access (anchor to form)", async () => {
