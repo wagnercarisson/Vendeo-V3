@@ -239,17 +239,22 @@ function validateImage(file: File | null): string | null {
   return null;
 }
 
-function validateValidityEndDate(fields: CampaignFormFields): string | null {
+function validateValidityEndDate(fields: CampaignFormFields, todayISO: string = getTodayISO()): string | null {
   // O modo ativo exige a data final em until-date e range (D2).
   const requiresEndDate = fields.validityMode === "until-date" || fields.validityMode === "range";
   if (!requiresEndDate) return null;
   if (!fields.validityEndDate) return "Informe uma data válida (dd/mm/aaaa)";
+  // Q-P3U: data final no passado bloqueia o submit; igual a hoje é permitida.
+  // Comparação lexicográfica de ISO (YYYY-MM-DD) é segura e determinística.
+  if (fields.validityEndDate < todayISO) return "Data final não pode ser anterior à data de hoje";
   return null;
 }
 
-function validateValidityStartDate(fields: CampaignFormFields): string | null {
+function validateValidityStartDate(fields: CampaignFormFields, todayISO: string = getTodayISO()): string | null {
   if (fields.validityMode !== "range") return null;
   if (!fields.validityStartDate) return "Informe uma data válida (dd/mm/aaaa)";
+  // Q-P3U: data inicial no passado bloqueia o submit; início igual a hoje é permitido.
+  if (fields.validityStartDate < todayISO) return "Data inicial não pode ser anterior à data de hoje";
   // Ordem (D5): só compara quando AMBAS as datas estão preenchidas (revisor).
   // Critério aprovado é `data inicial <= data final` — datas iguais são permitidas.
   // Comparação lexicográfica de ISO (YYYY-MM-DD) é segura e determinística.
@@ -318,6 +323,18 @@ export function parseDateInput(ddmmYYYY: string): string {
   if (parts.length !== 3) return "";
   const [day, month, year] = parts;
   if (!/^\d{2}$/.test(day) || !/^\d{2}$/.test(month) || !/^\d{4}$/.test(year)) return "";
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Q-P3U: "hoje" em YYYY-MM-DD no fuso LOCAL (getFullYear/getMonth/getDate).
+ * Determinístico dado `now`; único uso de `new Date()` no módulo — datas do
+ * usuário NUNCA são parseadas com `new Date()` (comparação é por string ISO).
+ */
+export function getTodayISO(now: Date = new Date()): string {
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
