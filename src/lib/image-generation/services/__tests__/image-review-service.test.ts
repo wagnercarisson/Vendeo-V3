@@ -450,3 +450,148 @@ describe('ImageReviewService — onCall (D11)', () => {
     );
   });
 });
+
+describe('ImageReviewService — multi-referências autorizadas (quick 260820-pl1)', () => {
+  let mockLoader: { load: ReturnType<typeof vi.fn>; clearCache: ReturnType<typeof vi.fn> };
+  let service: ImageReviewService;
+
+  // Loader que interpola {{placeholders}} como o PromptLoader real, para que o
+  // "prompt final" (o que vai ao callVisionModel) contenha a seção interpolada.
+  function interpolatingLoader() {
+    return {
+      load: vi.fn((name: string, vars?: Record<string, string>) => {
+        let content = 'review prompt\n\n{{referenceImagesContextSection}}';
+        if (vars) {
+          for (const [key, value] of Object.entries(vars)) {
+            content = content.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
+          }
+        }
+        return content;
+      }),
+      clearCache: vi.fn(),
+    };
+  }
+
+  const primary = 'data:image/jpeg;base64,primary';
+  const aux1 = 'data:image/jpeg;base64,aux1';
+  const aux2 = 'data:image/jpeg;base64,aux2';
+
+  function mockCall() {
+    return vi.spyOn(service as any, 'callVisionModel').mockResolvedValue({
+      content: JSON.stringify({ passed: true, issues: [] }),
+      usage: { promptTokens: 100, completionTokens: 25, totalTokens: 125 },
+    });
+  }
+
+  beforeEach(() => {
+    mockLoader = interpolatingLoader();
+    service = new ImageReviewService(mockLoader as unknown as PromptLoader);
+  });
+
+  it('1: review() com 3 referências → callVisionModel recebe [generated, primary, aux1, aux2] em ordem', async () => {
+    const callSpy = mockCall();
+
+    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary, aux1, aux2]);
+
+    expect(callSpy).toHaveBeenCalledWith(
+      expect.any(String),
+      'data:image/jpeg;base64,gen',
+      [primary, aux1, aux2]
+    );
+  });
+
+  it('2: prompt final contém a regra — imagem adicional AUTORIZADA e produto fora das referências = invented_information', async () => {
+    const callSpy = mockCall();
+
+    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary, aux1]);
+
+    const finalPrompt = callSpy.mock.calls[0][0] as string;
+    expect(finalPrompt).toContain('Referências Autorizadas da Campanha');
+    expect(finalPrompt).toMatch(/referências autorizadas de apoio, variação, combo ou ângulo/);
+    expect(finalPrompt).toMatch(/não trate como invenção um item visível em qualquer referência/i);
+    expect(finalPrompt).toMatch(/invenção CRÍTICA \(invented_information\)/i);
+  });
+
+  it('3: sem referências (arg undefined) → sem seção, sem imagens extras (regressão 23b F41)', async () => {
+    const callSpy = mockCall();
+
+    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' });
+
+    expect(callSpy).toHaveBeenCalledWith(expect.any(String), 'data:image/jpeg;base64,gen', []);
+    const finalPrompt = callSpy.mock.calls[0][0] as string;
+    expect(finalPrompt).not.toContain('Referências Autorizadas');
+    expect(mockLoader.load.mock.calls[0][1].referenceImagesContextSection).toBe('');
+  });
+
+  it('4: 1 referência → linha fixa singular + 2 imagens (regressão 23 F41)', async () => {
+    const callSpy = mockCall();
+
+    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary]);
+
+    expect(callSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Compare o produto da arte com a imagem de referência.'),
+      'data:image/jpeg;base64,gen',
+      [primary]
+    );
+    expect(mockLoader.load.mock.calls[0][1].referenceImagesContextSection).toBe('');
+  });
+
+  it('5: 2+ referências → linha fixa plural "as imagens de referência autorizadas"', async () => {
+    const callSpy = mockCall();
+
+    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary, aux1]);
+
+    expect(callSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Compare o produto da arte com as imagens de referência autorizadas.'),
+      'data:image/jpeg;base64,gen',
+      [primary, aux1]
+    );
+  });
+
+  it('6: referenceImagesContextSection vazia para count <= 1', async () => {
+    mockCall();
+
+    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' });
+    expect(mockLoader.load.mock.calls[0][1].referenceImagesContextSection).toBe('');
+
+    mockLoader.load.mockClear();
+    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary]);
+    expect(mockLoader.load.mock.calls[0][1].referenceImagesContextSection).toBe('');
+
+    mockLoader.load.mockClear();
+    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary, aux1]);
+    expect(mockLoader.load.mock.calls[0][1].referenceImagesContextSection).not.toBe('');
+  });
+
+  it('7: proteção/hierarquia — seção afirma invenção crítica fora de todas as referências e primeira imagem = referência principal', async () => {
+    mockCall();
+
+    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary, aux1]);
+
+    const section = mockLoader.load.mock.calls[0][1].referenceImagesContextSection as string;
+    expect(section).toMatch(/primeira imagem é a referência principal do produto anunciado/);
+    expect(section).toMatch(/não deve ser substituído por uma referência adicional/);
+    expect(section).toMatch(/ausente de TODAS as referências/);
+    expect(section).toMatch(/invenção CRÍTICA/i);
+  });
+
+  it('1b: callVisionModel monta blocos image_url na ordem gerada → primary → aux1 → aux2', async () => {
+    // Caminho real do callVisionModel (mockOpenAICreate) — sem modelo real.
+    const callSpy = vi.spyOn(service as any, 'callVisionModel');
+    mockOpenAICreate.mockReset();
+    mockOpenAICreate.mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify({ passed: true, issues: [] }) } }],
+      usage: { prompt_tokens: 200, completion_tokens: 60, total_tokens: 260 },
+    });
+
+    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary, aux1, aux2]);
+
+    expect(callSpy).toHaveBeenCalled();
+    const createArgs = mockOpenAICreate.mock.calls[0][0];
+    const content = createArgs.messages[0].content;
+    const imageUrls = content
+      .filter((b: { type: string }) => b.type === 'image_url')
+      .map((b: { image_url: { url: string } }) => b.image_url.url);
+    expect(imageUrls).toEqual(['data:image/jpeg;base64,gen', primary, aux1, aux2]);
+  });
+});

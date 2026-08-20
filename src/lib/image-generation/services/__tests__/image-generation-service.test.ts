@@ -733,4 +733,89 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
       })
     );
   });
+
+  it('8 (quick 260820-pl1): review recebe referenceImageDataUrls = [primary, aux1, aux2] com brief multi-imagem (ordem preservada)', async () => {
+    const mockProvider = {
+      name: 'test',
+      generateImage: vi.fn().mockResolvedValue({
+        imageBase64: 'aGVsbG8=',
+        mimeType: 'image/png',
+        usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+      }),
+    };
+    const mockLoad = vi.fn((name: string) => {
+      if (name === 'campaign-image-director-offer') return 'Prompt sem placeholders';
+      if (name === 'campaign-image-reviewer') return 'Revise sem placeholders';
+      return '';
+    });
+    const mockInputValidation = { validate: vi.fn().mockResolvedValue({ classification: 'match' }) };
+    const mockImageReview = {
+      review: vi.fn().mockResolvedValue({ passed: true, issues: [], failureType: null }),
+      buildReviewPromptVariables: vi.fn(),
+    };
+    const mockMetricsWriter = { write: vi.fn().mockResolvedValue(undefined) };
+    const service = new ImageGenerationService(
+      mockProvider as any,
+      { load: mockLoad, clearCache: vi.fn() } as unknown as PromptLoader,
+      mockInputValidation as any,
+      mockImageReview as any,
+      mockMetricsWriter as any
+    );
+
+    const brief = createMinimalBrief({
+      productImages: [
+        { role: 'primary', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,primary' },
+        { role: 'reference', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,aux1' },
+        { role: 'reference', source: 'camera', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,aux2' },
+      ],
+    });
+
+    const result = await service.generateImage(brief, createContext());
+
+    expect(result.success).toBe(true);
+    expect(mockImageReview.review).toHaveBeenCalledTimes(1);
+    // 3º argumento do review = referenceImageDataUrls na ordem primary-first.
+    expect(mockImageReview.review.mock.calls[0][2]).toEqual([
+      'data:image/jpeg;base64,primary',
+      'data:image/jpeg;base64,aux1',
+      'data:image/jpeg;base64,aux2',
+    ]);
+  });
+
+  it('9 (quick 260820-pl1): brief legado (1 imagem) → review recebe [primary]', async () => {
+    const mockProvider = {
+      name: 'test',
+      generateImage: vi.fn().mockResolvedValue({
+        imageBase64: 'aGVsbG8=',
+        mimeType: 'image/png',
+        usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+      }),
+    };
+    const mockLoad = vi.fn((name: string) => {
+      if (name === 'campaign-image-director-offer') return 'Prompt sem placeholders';
+      if (name === 'campaign-image-reviewer') return 'Revise sem placeholders';
+      return '';
+    });
+    const mockInputValidation = { validate: vi.fn().mockResolvedValue({ classification: 'match' }) };
+    const mockImageReview = {
+      review: vi.fn().mockResolvedValue({ passed: true, issues: [], failureType: null }),
+      buildReviewPromptVariables: vi.fn(),
+    };
+    const mockMetricsWriter = { write: vi.fn().mockResolvedValue(undefined) };
+    const service = new ImageGenerationService(
+      mockProvider as any,
+      { load: mockLoad, clearCache: vi.fn() } as unknown as PromptLoader,
+      mockInputValidation as any,
+      mockImageReview as any,
+      mockMetricsWriter as any
+    );
+
+    const brief = createMinimalBrief(); // productImageDataUrl 'data:image/jpeg;base64,test'
+
+    const result = await service.generateImage(brief, createContext());
+
+    expect(result.success).toBe(true);
+    expect(mockImageReview.review).toHaveBeenCalledTimes(1);
+    expect(mockImageReview.review.mock.calls[0][2]).toEqual(['data:image/jpeg;base64,test']);
+  });
 });
