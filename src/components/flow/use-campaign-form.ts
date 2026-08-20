@@ -239,6 +239,26 @@ function validateImage(file: File | null): string | null {
   return null;
 }
 
+function validateValidityEndDate(fields: CampaignFormFields): string | null {
+  // O modo ativo exige a data final em until-date e range (D2).
+  const requiresEndDate = fields.validityMode === "until-date" || fields.validityMode === "range";
+  if (!requiresEndDate) return null;
+  if (!fields.validityEndDate) return "Informe uma data válida (dd/mm/aaaa)";
+  return null;
+}
+
+function validateValidityStartDate(fields: CampaignFormFields): string | null {
+  if (fields.validityMode !== "range") return null;
+  if (!fields.validityStartDate) return "Informe uma data válida (dd/mm/aaaa)";
+  // Ordem (D5): só compara quando AMBAS as datas estão preenchidas (revisor).
+  // Critério aprovado é `data inicial <= data final` — datas iguais são permitidas.
+  // Comparação lexicográfica de ISO (YYYY-MM-DD) é segura e determinística.
+  if (fields.validityEndDate && fields.validityStartDate > fields.validityEndDate) {
+    return "Data inicial não pode ser posterior à data final";
+  }
+  return null;
+}
+
 function validateField(
   field: keyof CampaignFormFields,
   fields: CampaignFormFields
@@ -254,15 +274,71 @@ function validateField(
       return validateBadge(fields.badge, fields);
     case "productImages":
       return validateImage(fields.productImages[0]?.file ?? null);
+    case "validityStartDate":
+      return validateValidityStartDate(fields);
+    case "validityEndDate":
+      return validateValidityEndDate(fields);
     default:
       return null;
   }
 }
 
-export function formatDDMM(isoDate: string): string {
+/**
+ * Formata ISO `YYYY-MM-DD` → `dd/mm/aaaa` (D1). Entrada vazia ou sem 3 partes
+ * após split "-" retorna a entrada original (comportamento F40 preservado).
+ * Determinístico por string — nunca `new Date()`/timezone.
+ */
+export function formatDateDisplay(isoDate: string): string {
   const parts = isoDate.split("-");
   if (!isoDate || parts.length !== 3) return isoDate;
-  return `${parts[2]}/${parts[1]}`;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+const ISO_DATE_REGEX = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/**
+ * Converte ISO `YYYY-MM-DD` → máscara `dd/mm/aaaa` para exibição no input.
+ * Vazia/inválida → `""`. Determinístico por string (sem timezone).
+ */
+export function formatDateInput(iso: string): string {
+  if (!iso) return "";
+  const match = ISO_DATE_REGEX.exec(iso);
+  if (!match) return "";
+  const [, year, month, day] = match;
+  return `${day}/${month}/${year}`;
+}
+
+/**
+ * Converte máscara `dd/mm/aaaa` → ISO `YYYY-MM-DD` via split("/").
+ * Incompleta/inválida/ano ≠ 4 dígitos → `""` (determinístico, nunca `new Date`).
+ */
+export function parseDateInput(ddmmYYYY: string): string {
+  if (!ddmmYYYY) return "";
+  const parts = ddmmYYYY.split("/");
+  if (parts.length !== 3) return "";
+  const [day, month, year] = parts;
+  if (!/^\d{2}$/.test(day) || !/^\d{2}$/.test(month) || !/^\d{4}$/.test(year)) return "";
+  return `${year}-${month}-${day}`;
+}
+
+function isLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+}
+
+/**
+ * Máscara completa `dd/mm/aaaa` E data de calendário real (dia/mês válidos,
+ * 29/02 respeitando anos bissextos). Incompleta → false. Determinístico.
+ * A validação fina de calendário fica aqui (evento do componente), não no hook.
+ */
+export function isValidDateInput(ddmmYYYY: string): boolean {
+  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(ddmmYYYY)) return false;
+  const [dayStr, monthStr, yearStr] = ddmmYYYY.split("/");
+  const day = Number(dayStr);
+  const month = Number(monthStr);
+  const year = Number(yearStr);
+  if (month < 1 || month > 12 || day < 1) return false;
+  const daysInMonth = [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return day <= daysInMonth[month - 1];
 }
 
 export function buildValidityDisplayText(fields: {
@@ -275,10 +351,10 @@ export function buildValidityDisplayText(fields: {
     case "":
       return undefined;
     case "until-date":
-      return fields.validityEndDate ? `até ${formatDDMM(fields.validityEndDate)}` : undefined;
+      return fields.validityEndDate ? `até ${formatDateDisplay(fields.validityEndDate)}` : undefined;
     case "range":
       return fields.validityStartDate && fields.validityEndDate
-        ? `de ${formatDDMM(fields.validityStartDate)} até ${formatDDMM(fields.validityEndDate)}`
+        ? `de ${formatDateDisplay(fields.validityStartDate)} até ${formatDateDisplay(fields.validityEndDate)}`
         : undefined;
     case "today":
       return "somente hoje";
