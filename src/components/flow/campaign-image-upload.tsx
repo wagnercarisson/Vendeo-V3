@@ -79,12 +79,12 @@ export function CampaignImageUpload({
               {productImages.map((item, idx) => (
                 <div
                   key={item.id}
-                  className="relative rounded-lg overflow-hidden border border-border-light"
+                  className="relative rounded-lg overflow-hidden bg-bg-elevated border border-border-light aspect-square"
                 >
                   <img
                     src={resolveSrc(item)}
                     alt={`Imagem ${idx + 1} do produto`}
-                    className="w-full h-20 object-cover"
+                    className="w-full h-full object-contain"
                   />
                   {item.role === "primary" && (
                     <span className="absolute top-1 left-1 bg-accent-green text-bg-base text-[10px] font-heading font-medium uppercase tracking-wider px-1.5 py-0.5 rounded">
