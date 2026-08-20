@@ -57,8 +57,9 @@ completed: 2026-08-20
 
 - **Duration:** ~5 min (Tarefas 1-2)
 - **Started:** 2026-08-20T19:44:37Z
-- **Completed:** 2026-08-20T19:49:13Z
-- **Tasks:** 2/3 executadas (Task 3 = UAT humano, pendente)
+- **Completed:** 2026-08-20T19:49:13Z (Tarefas 1-2)
+- **UAT humano (Task 3):** APROVADO em 2026-08-20 — evidências em `260820-r4r-UAT.md`
+- **Tasks:** 3/3 (Tasks 1-2 automatizadas; Task 3 UAT humano aprovado)
 - **Files modified:** 5
 
 ## Accomplishments
@@ -76,7 +77,7 @@ Cada tarefa foi commitada atomicamente:
 1. **Task 1: Rebrand da landing (H1 + slogan + funcionalidade + seções + rodapé)** - `4aa7807f` (feat)
 2. **Task 2: Testes de landing + 4 gates** - `c93f9aa0` (test)
 
-**Task 3 (UAT humano): PENDENTE** — executada pelo humano fora deste executor.
+**Task 3 (UAT humano): APROVADO** — resume signal "approved" recebido em 2026-08-20; evidências registradas em `260820-r4r-UAT.md` (checklist 8/8 aprovado, incl. conferência da URL de privacidade vs Google Cloud Console).
 
 ## Files Created/Modified
 - `src/components/landing/access-request-section.tsx` - Hero rebranded (H1 "Vendeo", slogan, frase de funcionalidade); CTA branches flag on/off e `data-public-signup-enabled` intactos
@@ -113,18 +114,18 @@ None - plan executed exactly as written (Tasks 1-2; Task 3 é UAT humano pendent
 
 ## Pending: Task 3 — UAT Manual (checkpoint:human-verify)
 
-**Status: PENDENTE — execução humana requerida.** Checklist completo em `.planning/quick/260820-r4r-alinhar-homepage-p-blica-do-vendeo-aos-r/260820-r4r-PLAN.md` (Task 3). Evidências devem ser registradas em `260820-r4r-UAT.md`. Resumo do checklist:
+**Status: APROVADO em 2026-08-20.** Evidências registradas em `260820-r4r-UAT.md`. Checklist resumido:
 
-1. Abrir `/` em aba anônima/deslogada — abre SEM login
-2. Primeiro viewport: "Vendeo" como título principal inequívoco (não parece login/beta fechado/genérico)
-3. "Postou, vendeo!" como slogan secundário, nunca nome principal
-4. Seções "O Vendeo pode criar" (4 capacidades) e "Como funciona" (4 passos)
-5. "Política de Privacidade" → `/privacidade` abre sem login
-6. Conferir URL de privacidade linkada vs Google Cloud Console (OAuth consent screen) — preferencialmente `https://vendeo.tech/privacidade` (não alterar config Google)
-7. "Termos de Uso" → `/termos` abre sem login; "Contato" → abre cliente de email (mailto)
-8. CTA principal compatível com flag `publicSignupEnabled` no ambiente (local: off → Solicitar acesso free; produção: conforme env)
+1. ✅ Abrir `/` em aba anônima/deslogada — abre SEM login
+2. ✅ Primeiro viewport: "Vendeo" como título principal inequívoco
+3. ✅ "Postou, vendeo!" como slogan secundário, nunca nome principal
+4. ✅ Seções "O Vendeo pode criar" (4 capacidades) e "Como funciona" (4 passos)
+5. ✅ "Política de Privacidade" → `/privacidade` abre sem login
+6. ✅ URL de privacidade linkada vs Google Cloud Console conferida (`https://vendeo.tech/privacidade`; config Google não alterada)
+7. ✅ "Termos de Uso" → `/termos` abre sem login; "Contato" → mailto
+8. ✅ CTA principal compatível com flag `publicSignupEnabled`
 
-**Resume signal:** Type "approved" ou descreva issues encontrados.
+**Pendências pós-aprovação (fora do escopo do quick):** deploy da branch em produção e reenvio da revisão no Google Cloud Console.
 
 ## User Setup Required
 
@@ -137,7 +138,7 @@ None - sem configuração externa. (A conferência da URL de privacidade no Goog
 
 ---
 *Phase: 260820-r4r*
-*Completed: 2026-08-20 (Tasks 1-2; Task 3 UAT pendente)*
+*Completed: 2026-08-20 (Tasks 1-2 automatizadas; Task 3 UAT humano APROVADO)*
 
 ## Self-Check: PASSED
 
