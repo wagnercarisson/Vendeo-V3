@@ -387,6 +387,12 @@ function FormContent({
       <h2 className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2">
         Oferta
       </h2>
+      <div className="mb-3 space-y-0.5 text-text-muted text-xs font-body leading-relaxed">
+        <p>Os campos de preço definem a intenção da campanha:</p>
+        <p>Preço original + preço final = Oferta</p>
+        <p>Somente preço final = Oferta ou Destaque</p>
+        <p>Sem nenhum preço preenchido = Destaque ou Exclusividade</p>
+      </div>
       <div>
         <label
           htmlFor="originalPrice"
@@ -425,7 +431,7 @@ function FormContent({
           htmlFor="discountedPrice"
           className="block text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2"
         >
-          Preço com Desconto *
+          Preço Final
         </label>
         <input
           id="discountedPrice"
