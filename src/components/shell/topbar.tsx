@@ -28,7 +28,7 @@ export function Topbar({ user, storeName, onToggleMenu, isDrawerOpen, toggleButt
   };
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-border bg-bg-surface px-4">
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-bg-surface px-4">
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <button
           type="button"
