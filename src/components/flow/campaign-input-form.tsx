@@ -533,6 +533,10 @@ function FormContent({
           endDate={fields.validityEndDate}
           customText={fields.validityCustomText}
           disabled={isSubmitting}
+          startDateError={touched.validityStartDate ? (fieldErrors.validityStartDate ?? null) : null}
+          endDateError={touched.validityEndDate ? (fieldErrors.validityEndDate ?? null) : null}
+          onStartDateBlur={() => handleBlur("validityStartDate")}
+          onEndDateBlur={() => handleBlur("validityEndDate")}
           onModeChange={(m) => setField("validityMode", m)}
           onStartDateChange={(d) => setField("validityStartDate", d)}
           onEndDateChange={(d) => setField("validityEndDate", d)}
