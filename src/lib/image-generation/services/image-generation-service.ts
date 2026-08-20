@@ -411,7 +411,7 @@ export class ImageGenerationService {
       // (canal único onMetricsEvent — anti-dupla-contagem T-38.1-22).
       let reviewUsage: TokenUsage | undefined;
       try {
-        reviewResult = await this.imageReview.review(imageDataUrl, reviewInput, this.primaryImageDataUrl(brief), (info) => {
+        reviewResult = await this.imageReview.review(imageDataUrl, reviewInput, this.mediaImagesDataUrls(brief), (info) => {
           reviewUsage = info.usage;
         });
       } catch (err) {

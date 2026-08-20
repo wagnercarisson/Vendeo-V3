@@ -32,6 +32,8 @@ A intenção comercial da campanha define o que é esperado em termos de preço,
 
 {{authorizedContextSection}}
 
+{{referenceImagesContextSection}}
+
 ## Critérios de Inspeção
 
 Analise a imagem gerada contra cada critério abaixo. Para cada problema encontrado, registre o tipo, a gravidade e uma descrição.
@@ -54,6 +56,8 @@ A imagem contém informações comerciais não fornecidas nos dados da campanha?
 - **Minor:** Avisos genéricos como "estoque limitado", "consulte condições" ou "sujeito a disponibilidade"
 
 Se houver contexto autorizado da campanha presente (seção "Contexto Autorizado da Campanha"), informações coerentes com esse contexto NÃO devem ser tratadas como invenção.
+
+Se houver referências autorizadas enviadas pelo lojista (seção "Referências Autorizadas da Campanha"): um produto ou variação visível em QUALQUER uma das imagens de referência é autorizado como apoio/variação e NÃO deve ser tratado como invenção. Um produto ausente de TODAS as referências e dos dados da campanha continua sendo invenção CRÍTICA. A primeira imagem de referência permanece a referência principal: uma referência adicional autoriza o item como elemento/variação de apoio, mas não substitui o produto principal anunciado.
 
 ### 6. deformed_product (critical)
 O produto na imagem está distorcido, esticado, cortado, desproporcional ou irreconhecível em relação à referência? Qualquer deformação significativa é crítica.
