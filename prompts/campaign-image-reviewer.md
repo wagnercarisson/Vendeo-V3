@@ -37,7 +37,7 @@ A intenção comercial da campanha define o que é esperado em termos de preço,
 Analise a imagem gerada contra cada critério abaixo. Para cada problema encontrado, registre o tipo, a gravidade e uma descrição.
 
 ### 1. wrong_price (critical)
-O preço exibido na imagem segue o comportamento esperado ({{expectedPriceBehavior}})? Qualquer divergência do comportamento esperado é crítica.
+O preço exibido na imagem segue o comportamento esperado ({{expectedPriceBehavior}})? Qualquer divergência do comportamento esperado é crítica. Se {{originalPrice}} estiver vazio (zerado) então nenhum preço foi informado para esta campanha. Não exiba, não exija e não invente preço. A ausência de preço é intencional e compatível com uma campanha de Destaque.
 
 ### 2. wrong_product_name (critical)
 O nome do produto exibido na imagem corresponde a {{productName}}? Nomes trocados, parcialmente incorretos ou com erros de digitação são críticos.
