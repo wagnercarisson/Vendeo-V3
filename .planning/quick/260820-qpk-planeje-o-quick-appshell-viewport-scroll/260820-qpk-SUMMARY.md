@@ -118,6 +118,10 @@ None — plan executed exactly as written. As 6 revisões do usuário (min-h-0 m
 
 **Resume signal:** "approved" (ou descrever o que quebrou para correção).
 
+## ✅ Task 3 — Checkpoint humano APROVADO (2026-08-20)
+
+O usuário aprovou a verificação manual: desktop (`/dashboard`, `/campanhas/nova`) com barra de rolagem da página inteira + sidebar/topbar sticky; mobile 375/320px sem corte inferior nem "tirar o zoom", drawer congela o fundo; `/loja` com painel legal visível (não escondido sob a topbar — co-migração `top-20` validada); ausência de scroll horizontal. Quick **fechado**.
+
 ## Verification (gates)
 
 | Gate | Comando | Resultado |
@@ -146,7 +150,7 @@ Nenhuma superfície nova: quick altera apenas CSS/layout client-side (classes Ta
 
 ---
 *Phase: quick-appshell-viewport-scroll*
-*Completed: 2026-08-20 (Tasks 1-2; Task 3 pendente)*
+*Completed: 2026-08-20 (Tasks 1-3 — UAT manual aprovado)*
 
 ## Self-Check: PASSED
 
