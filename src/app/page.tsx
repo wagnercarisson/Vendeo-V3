@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AccessRequestSection } from "@/components/landing/access-request-section";
+import { HowItWorksSection } from "@/components/landing/how-it-works-section";
+import { WhatVendeoCreatesSection } from "@/components/landing/what-vendeo-creates-section";
 import { NovidadesLink } from "@/components/landing/novidades-link";
 import { getAllEntries } from "@/lib/changelog/get-changelog";
 import { getLaunchConfig } from "@/lib/launch-config/config";
@@ -37,6 +39,10 @@ export default async function Home() {
         publicSignupEnabled={publicSignupEnabled}
       />
 
+      {/* Capacidades do app + fluxo do produto (conteúdo estático público) */}
+      <WhatVendeoCreatesSection />
+      <HowItWorksSection />
+
       {/* Footer */}
       <footer className="border-t border-border">
         <div className="mx-auto flex w-full max-w-5xl flex-col items-center justify-between gap-4 px-6 py-8 text-sm text-text-muted sm:flex-row">
@@ -45,15 +51,21 @@ export default async function Home() {
           </span>
           <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
             <Link href="/termos" className="transition-colors hover:text-text-primary">
-              Termos
+              Termos de Uso
             </Link>
             <Link href="/privacidade" className="transition-colors hover:text-text-primary">
-              Privacidade
+              Política de Privacidade
             </Link>
             <Link href="/uso-aceitavel" className="transition-colors hover:text-text-primary">
               Uso Aceitável
             </Link>
             <NovidadesLink variant="footer" entries={recentEntries} />
+            <Link
+              href={`mailto:${process.env.SUPPORT_EMAIL ?? "suporte@vendeo.tech"}`}
+              className="transition-colors hover:text-text-primary"
+            >
+              Contato
+            </Link>
             <Link href="/login" className="transition-colors hover:text-text-primary">
               Entrar
             </Link>

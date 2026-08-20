@@ -24,12 +24,19 @@ export function AccessRequestSection({
         data-public-signup-enabled={String(publicSignupEnabled)}
       >
         <h1 className="mx-auto max-w-2xl font-heading text-3xl font-bold leading-tight sm:text-5xl">
-          Campanhas profissionais para{" "}
-          <span className="text-accent-green">lojas físicas</span>
+          Vendeo
         </h1>
+        <p className="mx-auto mt-3 font-heading text-base italic text-accent-green sm:text-lg">
+          Postou, vendeo!
+        </p>
         <p className="mx-auto mt-5 max-w-xl text-base text-text-secondary sm:text-lg">
-          Informe sua oferta e receba uma peça visual pronta para publicar — sem
-          precisar de design, copywriting ou marketing.
+          O Vendeo é uma plataforma de marketing para pequenos e médios lojistas.
+          Com{" "}
+          <span className="text-accent-green">
+            inteligência artificial comercial
+          </span>
+          , transformamos a oferta da sua loja em campanhas profissionais para
+          redes sociais — sem precisar de design, copywriting ou marketing.
         </p>
 
         {publicSignupEnabled ? (
