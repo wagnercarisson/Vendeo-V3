@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
-import { useCampaignForm, buildValidityDisplayText, formatDateDisplay, formatDateInput, parseDateInput, isValidDateInput } from "../use-campaign-form";
+import { useCampaignForm, buildValidityDisplayText, formatDateDisplay, formatDateInput, parseDateInput, isValidDateInput, getTodayISO } from "../use-campaign-form";
 
 const mockPush = vi.fn();
 
@@ -349,5 +349,233 @@ describe("D2/D5: validação de datas no submit (frontend, antes do fetch)", () 
     });
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body.validity).toBe("somente hoje");
+  });
+});
+
+describe("getTodayISO (determinístico por string ISO local)", () => {
+  it("formata data local para YYYY-MM-DD com padStart de mês/dia", () => {
+    expect(getTodayISO(new Date(2026, 7, 20))).toBe("2026-08-20");
+    expect(getTodayISO(new Date(2026, 0, 5))).toBe("2026-01-05");
+  });
+});
+
+describe("Q-P3U: validade no passado bloqueia submit (hoje determinístico)", () => {
+  const OFFER_FIELDS = {
+    productName: "Produto Teste",
+    description: "",
+    originalPriceCents: 10000,
+    discountedPriceCents: 1990,
+    badge: "Oferta",
+    campaignIntent: "offer",
+    preserveImageContext: false,
+    productImages: [],
+    mandatoryArtworkText: "",
+    showIllustrativeNotice: true,
+    mandatoryArtworkTextFree: "",
+    validityMode: "",
+    validityStartDate: "",
+    validityEndDate: "",
+    validityCustomText: "",
+  };
+
+  const PAST_ERROR_END = "Data final não pode ser anterior à data de hoje";
+  const PAST_ERROR_START = "Data inicial não pode ser anterior à data de hoje";
+  const ORDER_ERROR = "Data inicial não pode ser posterior à data final";
+
+  function setupFetchOk() {
+    const fetchMock = vi.fn().mockResolvedValue(
+      createNdjsonResponse([{ type: "result", campaignId: "abc", campaignUrl: "/campanhas/abc" }])
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-08-20T12:00:00"));
+    sessionStorage.setItem("campaign_draft_image", VALID_DATA_URL);
+    mockRestoreFormState.mockReturnValue(OFFER_FIELDS);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("until-date com validityEndDate no passado bloqueia submit sem fetch", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useCampaignForm("store-123"));
+    await act(async () => {});
+
+    act(() => {
+      result.current.setField("validityMode", "until-date");
+      result.current.setField("validityEndDate", "2026-08-19");
+    });
+
+    await act(async () => {
+      await result.current.handleSubmit();
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.current.fieldErrors.validityEndDate).toBe(PAST_ERROR_END);
+    expect(result.current.fieldErrors.validityStartDate).toBeUndefined();
+  });
+
+  it("until-date com validityEndDate igual a hoje passa nessa validação", async () => {
+    const fetchMock = setupFetchOk();
+
+    const { result } = renderHook(() => useCampaignForm("store-123"));
+    await act(async () => {});
+
+    act(() => {
+      result.current.setField("validityMode", "until-date");
+      result.current.setField("validityEndDate", "2026-08-20");
+    });
+
+    await act(async () => {
+      await result.current.handleSubmit();
+    });
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
+    expect(result.current.fieldErrors.validityEndDate).toBeUndefined();
+  });
+
+  it("range com validityStartDate no passado bloqueia e preenche validityStartDate", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useCampaignForm("store-123"));
+    await act(async () => {});
+
+    act(() => {
+      result.current.setField("validityMode", "range");
+      result.current.setField("validityStartDate", "2026-08-19");
+      result.current.setField("validityEndDate", "2026-08-30");
+    });
+
+    await act(async () => {
+      await result.current.handleSubmit();
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.current.fieldErrors.validityStartDate).toBe(PAST_ERROR_START);
+    expect(result.current.fieldErrors.validityEndDate).toBeUndefined();
+  });
+
+  it("range com validityEndDate no passado bloqueia e preenche validityEndDate", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useCampaignForm("store-123"));
+    await act(async () => {});
+
+    act(() => {
+      result.current.setField("validityMode", "range");
+      result.current.setField("validityStartDate", "2026-08-20");
+      result.current.setField("validityEndDate", "2026-08-19");
+    });
+
+    await act(async () => {
+      await result.current.handleSubmit();
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.current.fieldErrors.validityEndDate).toBe(PAST_ERROR_END);
+    // start=hoje > end=passado → o erro de ordem também é emitido em validityStartDate
+    // (validação por campo, ambos válidos de exibir).
+    expect(result.current.fieldErrors.validityStartDate).toBe(ORDER_ERROR);
+  });
+
+  it("range com start > end (ambas futuras) mantém bloqueio por ordem", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useCampaignForm("store-123"));
+    await act(async () => {});
+
+    act(() => {
+      result.current.setField("validityMode", "range");
+      result.current.setField("validityStartDate", "2026-08-25");
+      result.current.setField("validityEndDate", "2026-08-21");
+    });
+
+    await act(async () => {
+      await result.current.handleSubmit();
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.current.fieldErrors.validityStartDate).toBe(ORDER_ERROR);
+    expect(result.current.fieldErrors.validityEndDate).toBeUndefined();
+  });
+
+  it("range com início hoje e fim hoje é permitido nessa validação", async () => {
+    const fetchMock = setupFetchOk();
+
+    const { result } = renderHook(() => useCampaignForm("store-123"));
+    await act(async () => {});
+
+    act(() => {
+      result.current.setField("validityMode", "range");
+      result.current.setField("validityStartDate", "2026-08-20");
+      result.current.setField("validityEndDate", "2026-08-20");
+    });
+
+    await act(async () => {
+      await result.current.handleSubmit();
+    });
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
+    expect(result.current.fieldErrors.validityStartDate).toBeUndefined();
+    expect(result.current.fieldErrors.validityEndDate).toBeUndefined();
+  });
+
+  it("today e stock não passam por validação contra hoje", async () => {
+    for (const mode of ["today", "stock"] as const) {
+      const fetchMock = setupFetchOk();
+
+      const { result } = renderHook(() => useCampaignForm("store-123"));
+      await act(async () => {});
+
+      act(() => {
+        result.current.setField("validityMode", mode);
+      });
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      await waitFor(() => {
+        expect(fetchMock).toHaveBeenCalled();
+      });
+      expect(result.current.fieldErrors.validityStartDate).toBeUndefined();
+      expect(result.current.fieldErrors.validityEndDate).toBeUndefined();
+    }
+  });
+
+  it("custom com validityEndDate preenchida no passado não bloqueia (modo não exige data)", async () => {
+    const fetchMock = setupFetchOk();
+
+    const { result } = renderHook(() => useCampaignForm("store-123"));
+    await act(async () => {});
+
+    act(() => {
+      result.current.setField("validityMode", "custom");
+      result.current.setField("validityEndDate", "2025-12-31");
+    });
+
+    await act(async () => {
+      await result.current.handleSubmit();
+    });
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
+    expect(result.current.fieldErrors.validityStartDate).toBeUndefined();
+    expect(result.current.fieldErrors.validityEndDate).toBeUndefined();
   });
 });
