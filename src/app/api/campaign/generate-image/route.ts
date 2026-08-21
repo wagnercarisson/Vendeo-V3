@@ -6,6 +6,7 @@ import type { OperationCostResolution } from "@/lib/credit/types";
 import { ImageGenerationService } from "@/lib/image-generation/services/image-generation-service";
 import type { GenerateImageServiceResult } from "@/lib/image-generation/services/image-generation-service";
 import { InputValidationService } from "@/lib/image-generation/services/input-validation-service";
+import { isForceBriefVisionCheckEnabled } from "@/lib/feature-flags/feature-flag-service";
 import { createImageProvider } from "@/lib/image-generation/providers/factory";
 import { resolveStoreIdentity, validateIdentityReference, buildCampaignBrief } from "@/lib/store-identity-service";
 import { buildCampaignBriefFromFlat, buildCampaignBriefSnapshot, mimeTypeFromDataUrl } from "@/lib/campaign/brief";
@@ -248,8 +249,35 @@ export const POST = apiHandler(async (request: NextRequest) => {
     console.warn("[generate-image] exclusive com discountedPriceCents presente — normalizando para ausente.");
   }
 
+  // ── F43 (D5): flag administrativa de reativação — normalização ponta a ponta ──
+  // Com a flag `force_brief_vision_check` LIGADA, remove `brief_review_confirmed`
+  // do inputValidationOverride ANTES da checagem pré-stream (route.ts:338) e usa
+  // o MESMO input normalizado para a checagem, o brief e o generateImage — assim
+  // pré-stream E Phase 1 do serviço executam a IA de visão (capacidade reativável
+  // sem redeploy). `user_confirmed_continue` NUNCA é removido ("409 + insistiu").
+  // Com a flag DESLIGADA, `brief_review_confirmed` pula nos dois pontos (padrão).
+  let effectiveParsedData = parsed.data;
+  const forceBriefVisionCheck = await isForceBriefVisionCheckEnabled();
+  if (
+    forceBriefVisionCheck &&
+    parsed.data.inputValidationOverride?.productImageCheck === "brief_review_confirmed"
+  ) {
+    effectiveParsedData = {
+      ...parsed.data,
+      inputValidationOverride: undefined,
+    };
+    logPipelineEvent({
+      event: "feature_flag_force_vision_check",
+      traceId,
+      phase: "pre_stream",
+      status: "complete",
+      storeId: parsed.data.storeId,
+      userId: user.userId,
+    });
+  }
+
   // ── Pre-stream: Resolve store identity (backend-side) ────────────
-  const { storeId, ...campaignInput } = parsed.data;
+  const { storeId, ...campaignInput } = effectiveParsedData;
 
   let storeSnapshot;
   try {
@@ -281,7 +309,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
 
   // Build campaign context (wrapper resolvido) + domain brief (mapper puro na fronteira)
   const context = await buildCampaignBrief(validatedSnapshot, campaignInput as CampaignInput);
-  const brief = buildCampaignBriefFromFlat(parsed.data, parsed.data.storeId);
+  const brief = buildCampaignBriefFromFlat(effectiveParsedData, effectiveParsedData.storeId);
 
   // ── Pre-stream: Rate limit guard (no IA, no stream) ────────────
   logPipelineEvent({ event: "rate_limit_check", traceId, phase: "pre_stream", status: "running", storeId, userId: user.userId });
@@ -335,7 +363,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
   logPipelineEvent({ event: "balance_check", traceId, phase: "pre_stream", status: "complete", storeId, userId: user.userId });
 
   // ── Pre-stream: Input validation for conflict/confidence ─────────
-  if (!parsed.data.inputValidationOverride?.productImageCheck) {
+  if (!effectiveParsedData.inputValidationOverride?.productImageCheck) {
     const inputValidation = new InputValidationService();
     let validationResult: Awaited<ReturnType<typeof inputValidation.validate>>;
     try {
