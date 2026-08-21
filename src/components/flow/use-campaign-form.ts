@@ -186,6 +186,13 @@ export interface UseCampaignFormReturn {
   onPhaseChange: (event: GenerationPhaseEvent) => void;
   addImage: (file: File, source: "upload" | "camera") => void;
   removeImage: (id: string) => void;
+  reviewMode: boolean;
+  preparing: boolean;
+  preparedImages: PreparedCampaignImage[] | null;
+  reviewError: string | null;
+  enterReview: () => Promise<boolean>;
+  exitReview: () => void;
+  confirmReview: () => Promise<void>;
 }
 
 const EMPTY_FIELDS: CampaignFormFields = {
@@ -530,6 +537,11 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [pendingConflict, setPendingConflict] = useState<PendingConflict | null>(null);
   const [phases, setPhases] = useState<GenerationPhaseEvent[]>([]);
+  // F43 (D2/D3): estado da revisão do brief em tela intermediária (não modal).
+  const [reviewMode, setReviewMode] = useState(false);
+  const [preparing, setPreparing] = useState(false);
+  const [preparedImages, setPreparedImages] = useState<PreparedCampaignImage[] | null>(null);
+  const [reviewError, setReviewError] = useState<string | null>(null);
   const prevImageFileRef = useRef<File | null>(null);
   const lastRestoredUrlRef = useRef<string | null>(null);
   const objectUrlRef = useRef<string | null>(null);
@@ -1071,6 +1083,120 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     badgeValid &&
     hasUsableImage;
 
+  // F43 (D2/D3): entra em revisão somente com form válido; roda a preparação das
+  // imagens (compressão + normalização) com estado curto "Preparando imagens...".
+  const enterReview = useCallback(async (): Promise<boolean> => {
+    if (!isValid) {
+      const errors: FieldErrors = {};
+      const allFields: (keyof CampaignFormFields)[] = [
+        "productName",
+        "discountedPriceCents",
+        "originalPriceCents",
+        "badge",
+        "campaignIntent",
+        "preserveImageContext",
+        "productImages",
+        "mandatoryArtworkText",
+        "showIllustrativeNotice",
+        "mandatoryArtworkTextFree",
+        "validityMode",
+        "validityStartDate",
+        "validityEndDate",
+        "validityCustomText",
+      ];
+      for (const field of allFields) {
+        if (field === "productImages" && (!!fields.productImages[0]?.dataUrl || !!restoredImageDataUrl)) continue;
+        const error = validateField(field, fields);
+        if (error) errors[field] = error;
+      }
+      setFieldErrors(errors);
+      setTouched({
+        productName: true,
+        description: true,
+        originalPriceCents: true,
+        discountedPriceCents: true,
+        badge: true,
+        campaignIntent: true,
+        preserveImageContext: true,
+        productImages: true,
+        mandatoryArtworkText: true,
+        showIllustrativeNotice: true,
+        mandatoryArtworkTextFree: true,
+        validityMode: true,
+        validityStartDate: true,
+        validityEndDate: true,
+        validityCustomText: true,
+      });
+      return false;
+    }
+
+    if (!storeId) {
+      setSubmitError("Dados da loja não disponíveis.");
+      return false;
+    }
+
+    // F43-07: sem imagem utilizável → revisão bloqueada com mensagem obrigatória.
+    if (!hasUsableImage) {
+      setSubmitError("Imagem do produto é obrigatória");
+      return false;
+    }
+
+    setPreparing(true);
+    setReviewError(null);
+    try {
+      const prepared = await prepareCampaignImages(fields);
+      if (prepared.length === 0 && restoredImageDataUrl) {
+        prepared.push({
+          id: crypto.randomUUID(),
+          role: "primary",
+          source: "upload",
+          mimeType: "image/jpeg",
+          dataUrl: restoredImageDataUrl,
+        });
+      }
+      if (prepared.length === 0) {
+        setReviewError("Imagem do produto é obrigatória");
+        setPreparing(false);
+        return false;
+      }
+      setPreparedImages(prepared);
+      setReviewMode(true);
+      setPreparing(false);
+      return true;
+    } catch (err) {
+      setReviewError(
+        err instanceof Error ? err.message : "Não foi possível preparar as imagens. Tente novamente."
+      );
+      setPreparing(false);
+      return false;
+    }
+  }, [isValid, fields, storeId, restoredImageDataUrl, hasUsableImage]);
+
+  // F43 (D2): "Voltar e editar" — preserva fields/touched/fieldErrors (nada perdido).
+  const exitReview = useCallback(() => {
+    setReviewMode(false);
+    setReviewError(null);
+  }, []);
+
+  // F43 (D2/D4/D5): "Confirmar e gerar campanha" — trava o snapshot revisado
+  // (fields + preparedImages congelados; body imutável) e dispara o submit real
+  // com inputValidationOverride.productImageCheck = "brief_review_confirmed".
+  const confirmReview = useCallback(async (): Promise<void> => {
+    if (!storeId || !preparedImages) return;
+    const frozenFields = { ...fields };
+    const frozenPrepared = preparedImages.map((p) => ({ ...p }));
+    setReviewMode(false);
+    setIsSubmitting(true);
+    setSubmitError(null);
+    setFieldErrors({});
+    setPendingConflict(null);
+    setPhases([]);
+    const body = buildCampaignGenerationBody(frozenFields, frozenPrepared, storeId, {
+      inputValidationOverride: { productImageCheck: "brief_review_confirmed" },
+    });
+    await consumeStream(body, new AbortController());
+  }, [storeId, preparedImages, fields]);
+
   return {
     fields,
     fieldErrors,
@@ -1096,6 +1222,13 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     onPhaseChange,
     addImage,
     removeImage,
+    reviewMode,
+    preparing,
+    preparedImages,
+    reviewError,
+    enterReview,
+    exitReview,
+    confirmReview,
   };
 }
 
