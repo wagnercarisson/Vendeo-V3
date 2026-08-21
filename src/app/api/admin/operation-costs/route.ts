@@ -78,8 +78,8 @@ export const PUT = apiHandler(async (request: Request) => {
     {
       p_actor_id: admin.userId,
       p_operation_key: body.operationKey,
-      p_cost_credits: body.costCredits ?? null,
-      p_enabled: body.enabled ?? null,
+      p_cost_credits: body.costCredits,
+      p_enabled: null,
       p_reason: body.reason,
       p_operation_id: body.operationId ?? null,
     },

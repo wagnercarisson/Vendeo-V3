@@ -187,7 +187,7 @@ describe("PUT /api/admin/operation-costs", () => {
     expect(body.idempotent).toBe(true);
   });
 
-  it("400 zod — ambos os campos (XOR)", async () => {
+  it("400 zod — enabled não é aceito (schema strict; habilitação via flags)", async () => {
     const res = await putCosts({
       operationKey: "campaign_generation",
       costCredits: 2,
@@ -195,9 +195,10 @@ describe("PUT /api/admin/operation-costs", () => {
       reason: "x",
     });
     expect(res.status).toBe(400);
+    expect(mockRpc).not.toHaveBeenCalled();
   });
 
-  it("400 zod — nenhum dos campos", async () => {
+  it("400 zod — costCredits ausente (obrigatório)", async () => {
     const res = await putCosts({
       operationKey: "campaign_generation",
       reason: "x",

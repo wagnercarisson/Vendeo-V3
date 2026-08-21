@@ -123,6 +123,26 @@ export class FeatureFlagService {
       envVarBool("VENDEO_CAPTCHA_ENABLED", true),
     );
   }
+
+  /**
+   * Lê o `enabled` da flag `campaign_generation_enabled` (QCW).
+   *
+   * Fallback fail-open (F38 D5): falha/not-found de leitura → `true` — NUNCA
+   * desliga a geração de campanhas por acidente.
+   */
+  isCampaignGenerationEnabled(): Promise<boolean> {
+    return this.readFlag(CAMPAIGN_GENERATION_ENABLED_KEY, true);
+  }
+
+  /**
+   * Lê o `enabled` da flag `visual_signature_generation_enabled` (QCW).
+   *
+   * Fallback fail-open (F38 D5): falha/not-found de leitura → `true` — NUNCA
+   * desliga a geração de assinatura visual por acidente.
+   */
+  isVisualSignatureGenerationEnabled(): Promise<boolean> {
+    return this.readFlag(VISUAL_SIGNATURE_GENERATION_ENABLED_KEY, true);
+  }
 }
 
 export async function isForceBriefVisionCheckEnabled(): Promise<boolean> {
@@ -131,4 +151,12 @@ export async function isForceBriefVisionCheckEnabled(): Promise<boolean> {
 
 export async function isCaptchaEnabled(): Promise<boolean> {
   return new FeatureFlagService().isCaptchaEnabled();
+}
+
+export async function isCampaignGenerationEnabled(): Promise<boolean> {
+  return new FeatureFlagService().isCampaignGenerationEnabled();
+}
+
+export async function isVisualSignatureGenerationEnabled(): Promise<boolean> {
+  return new FeatureFlagService().isVisualSignatureGenerationEnabled();
 }

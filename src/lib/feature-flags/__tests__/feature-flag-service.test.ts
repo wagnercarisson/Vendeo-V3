@@ -185,3 +185,58 @@ describe("FeatureFlagService — isCaptchaEnabled (QCW)", () => {
     expect(await service.isCaptchaEnabled()).toBe(false);
   });
 });
+
+describe("FeatureFlagService — flags de geração (QCW, F38 D5 fail-open)", () => {
+  function mockFlag(enabled: boolean | null, error: { message: string } | null = null) {
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "feature_flags") {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              maybeSingle: vi.fn(() =>
+                Promise.resolve(error ? { data: null, error } : { data: { enabled }, error: null })
+              ),
+            })),
+          })),
+        };
+      }
+      return {};
+    });
+  }
+
+  it("isCampaignGenerationEnabled: flag true → true", async () => {
+    mockFlag(true);
+    const service = new FeatureFlagService();
+    expect(await service.isCampaignGenerationEnabled()).toBe(true);
+  });
+
+  it("isCampaignGenerationEnabled: flag false → false", async () => {
+    mockFlag(false);
+    const service = new FeatureFlagService();
+    expect(await service.isCampaignGenerationEnabled()).toBe(false);
+  });
+
+  it("isCampaignGenerationEnabled: erro de leitura → true (fail-open — nunca desliga geração)", async () => {
+    mockFlag(null, { message: "db unavailable" });
+    const service = new FeatureFlagService();
+    expect(await service.isCampaignGenerationEnabled()).toBe(true);
+  });
+
+  it("isVisualSignatureGenerationEnabled: flag true → true", async () => {
+    mockFlag(true);
+    const service = new FeatureFlagService();
+    expect(await service.isVisualSignatureGenerationEnabled()).toBe(true);
+  });
+
+  it("isVisualSignatureGenerationEnabled: flag false → false", async () => {
+    mockFlag(false);
+    const service = new FeatureFlagService();
+    expect(await service.isVisualSignatureGenerationEnabled()).toBe(false);
+  });
+
+  it("isVisualSignatureGenerationEnabled: erro de leitura → true (fail-open)", async () => {
+    mockFlag(null, { message: "db unavailable" });
+    const service = new FeatureFlagService();
+    expect(await service.isVisualSignatureGenerationEnabled()).toBe(true);
+  });
+});

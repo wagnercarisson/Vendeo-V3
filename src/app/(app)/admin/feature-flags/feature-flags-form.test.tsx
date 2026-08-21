@@ -7,6 +7,7 @@ import { FeatureFlagsForm, type FeatureFlagRow } from "./feature-flags-form";
 const ROW: FeatureFlagRow = {
   id: "flag-id-1",
   key: "force_brief_vision_check",
+  label: "Validação IA do brief (produto × imagem)",
   enabled: false,
   description: "Quando ligada, o Vendeo executa novamente a validação por IA das imagens.",
   updatedByEmail: null,
@@ -33,13 +34,14 @@ describe("FeatureFlagsForm — Testes 24-25 (F43)", () => {
 
     render(<FeatureFlagsForm rows={[ROW]} />);
 
-    // descrição e chave exibidas
+    // descrição e chave exibidas (key técnica como subtexto mono)
     expect(screen.getByText("force_brief_vision_check")).toBeInTheDocument();
+    expect(screen.getByText("Validação IA do brief (produto × imagem)")).toBeInTheDocument();
     expect(
       screen.getByText(/Quando ligada, o Vendeo executa novamente/)
     ).toBeInTheDocument();
-    // estado atual — padrão recomendado (Desligada)
-    expect(screen.getByText(/Desligada — padrão recomendado/)).toBeInTheDocument();
+    // estado atual — Badge genérico (Desligada) + botão de alternância
+    expect(screen.getAllByText("Desligada").length).toBeGreaterThan(0);
 
     // liga e informa motivo
     fireEvent.click(screen.getByRole("button", { name: "Desligada" }));

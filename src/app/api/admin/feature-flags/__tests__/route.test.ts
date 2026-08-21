@@ -107,19 +107,34 @@ describe("F43 admin feature-flags (Testes 24-25)", () => {
     );
   });
 
-  it("GET retorna o estado atual da flag para a tela Controles operacionais", async () => {
+  it("GET retorna a lista de flags para a tela Controles operacionais", async () => {
     mockFrom.mockImplementation((table: string) => {
       if (table === "feature_flags") {
         return {
           select: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              maybeSingle: vi.fn(() =>
-                Promise.resolve({
-                  data: { id: "flag-id-1", key: "force_brief_vision_check", enabled: false, description: "desc", updated_by: null, updated_at: null },
-                  error: null,
-                })
-              ),
-            })),
+            in: vi.fn(() =>
+              Promise.resolve({
+                data: [
+                  {
+                    id: "flag-id-1",
+                    key: "force_brief_vision_check",
+                    enabled: false,
+                    description: "desc",
+                    updated_by: null,
+                    updated_at: null,
+                  },
+                  {
+                    id: "flag-id-2",
+                    key: "captcha_enabled",
+                    enabled: true,
+                    description: "desc captcha",
+                    updated_by: null,
+                    updated_at: null,
+                  },
+                ],
+                error: null,
+              })
+            ),
           })),
         };
       }
@@ -129,6 +144,9 @@ describe("F43 admin feature-flags (Testes 24-25)", () => {
     const res = await getFlag();
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.flag.key).toBe("force_brief_vision_check");
+    expect(Array.isArray(body.flags)).toBe(true);
+    expect(body.flags).toHaveLength(2);
+    expect(body.flags[0].key).toBe("force_brief_vision_check");
+    expect(body.flags[1].key).toBe("captcha_enabled");
   });
 });

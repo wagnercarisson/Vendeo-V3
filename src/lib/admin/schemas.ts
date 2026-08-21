@@ -12,18 +12,13 @@ export const GrantCreditsRequestSchema = z.object({
 export const UpdateOperationCostRequestSchema = z
   .object({
     operationKey: z.enum(OPERATION_KEYS),
-    costCredits: z.number().int().min(1).optional(),
-    enabled: z.boolean().optional(),
+    costCredits: z.number().int().min(1),
     reason: z.string().min(1),
     operationId: z.string().uuid().optional(),
   })
-  .refine(
-    (v) => (v.costCredits === undefined) !== (v.enabled === undefined),
-    {
-      message:
-        "exatamente um campo mutável por chamada (costCredits XOR enabled)",
-    },
-  );
+  // .strict(): habilitação agora é via feature flags (Controles operacionais) —
+  // enviar `enabled` nesta rota é rejeitado (400), não silenciosamente ignorado.
+  .strict();
 
 export const CreateStoreSchema = z.object({
   userId: z.string().uuid(),

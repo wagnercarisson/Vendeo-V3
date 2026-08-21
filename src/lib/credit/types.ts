@@ -48,6 +48,13 @@ export const OPERATION_KEYS = [
 
 export type OperationKey = (typeof OPERATION_KEYS)[number];
 
+// Labels humanizados (PT-BR) das operações — usados em admin/costs (a key
+// técnica permanece como subtexto mono).
+export const OPERATION_LABELS: Record<OperationKey, string> = {
+  campaign_generation: "Geração de campanha",
+  visual_signature_generation: "Geração de assinatura visual",
+};
+
 export interface OperationCostResolution {
   operationKey: OperationKey;
   costCredits: number;

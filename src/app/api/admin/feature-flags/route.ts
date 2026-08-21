@@ -3,11 +3,11 @@ import { ZodError } from "zod";
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { FORCE_BRIEF_VISION_CHECK_KEY } from "@/lib/feature-flags/feature-flag-service";
+import { ALL_FEATURE_FLAG_KEYS } from "@/lib/feature-flags/feature-flag-service";
 
-// F43 (D5): superfície admin mínima da flag `force_brief_vision_check` — motivo
-// obrigatório + auditoria (`admin_update_feature_flag` RPC) + idempotência via
-// operationId (precedente operation-costs/economic-parameters).
+// F43 (D5) + QCW: superfície admin das flags operacionais — motivo obrigatório
+// + auditoria (`admin_update_feature_flag` RPC, genérico por key) +
+// idempotência via operationId (precedente operation-costs/economic-parameters).
 
 export const PUT = apiHandler(async (request: Request) => {
   const admin = await requireAdmin();
@@ -70,29 +70,21 @@ export const PUT = apiHandler(async (request: Request) => {
   });
 });
 
-// GET: retorna o estado atual da flag (tela "Controles operacionais").
+// GET: retorna a lista de flags operacionais (tela "Controles operacionais").
 export const GET = apiHandler(async () => {
   const admin = await requireAdmin();
 
   const { data, error } = await supabaseAdmin
     .from("feature_flags")
     .select("id, key, enabled, description, updated_by, updated_at")
-    .eq("key", FORCE_BRIEF_VISION_CHECK_KEY)
-    .maybeSingle();
+    .in("key", [...ALL_FEATURE_FLAG_KEYS]);
 
   if (error) {
     return NextResponse.json(
-      { error: "Falha ao ler a flag", details: error.message },
+      { error: "Falha ao ler as flags", details: error.message },
       { status: 503 },
     );
   }
 
-  if (!data) {
-    return NextResponse.json(
-      { error: "feature_flags não encontrada (migration aplicada?)" },
-      { status: 404 },
-    );
-  }
-
-  return NextResponse.json({ flag: data });
+  return NextResponse.json({ flags: data ?? [] });
 });

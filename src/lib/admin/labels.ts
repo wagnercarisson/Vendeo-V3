@@ -10,6 +10,8 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   reveal_cnpj: "Revelar CNPJ",
   access_request_approve: "Aprovar Solicitação de Acesso",
   access_request_reject: "Recusar Solicitação de Acesso",
+  feature_flag_update: "Atualização de controle operacional",
+  operation_cost_update: "Atualização de custo operacional",
 };
 
 export const TARGET_TYPE_LABELS: Record<string, string> = {
@@ -17,6 +19,8 @@ export const TARGET_TYPE_LABELS: Record<string, string> = {
   user: "Usuário",
   campaign: "Campanha",
   access_request: "Solicitação de Acesso",
+  feature_flag: "Controle operacional",
+  operation_cost: "Custo operacional",
 };
 
 export const BENEFIT_TYPE_LABELS: Record<string, string> = {

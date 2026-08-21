@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 export interface FeatureFlagRow {
   id: string;
   key: string;
+  label: string;
   enabled: boolean;
   description: string | null;
   updatedByEmail: string | null;
@@ -93,7 +94,7 @@ export function FeatureFlagsForm({ rows }: { rows: FeatureFlagRow[] }) {
   return (
     <div className="space-y-4">
       <p className="text-xs text-muted-foreground">
-        A flag é lida em tempo real pelo backend de geração — a alteração vale sem
+        As flags são lidas em tempo real pelo backend — a alteração vale sem
         deploy. Alteração exige motivo (obrigatório) e é auditada.
       </p>
       <div className="space-y-3">
@@ -102,13 +103,16 @@ export function FeatureFlagsForm({ rows }: { rows: FeatureFlagRow[] }) {
           return (
             <div key={row.key} className="rounded-lg border border-border p-4">
               <div className="flex items-center justify-between gap-2">
-                <label htmlFor={`flag-${row.key}`} className="font-mono text-xs font-medium">
-                  {row.key}
-                </label>
+                <div>
+                  <label htmlFor={`flag-${row.key}`} className="text-sm font-medium">
+                    {row.label}
+                  </label>
+                  <div className="font-mono text-[10px] text-muted-foreground">
+                    {row.key}
+                  </div>
+                </div>
                 <Badge variant={s.enabled ? "ready" : "default"}>
-                  {s.enabled
-                    ? "Ligada — força validação IA além da revisão humana"
-                    : "Desligada — padrão recomendado"}
+                  {s.enabled ? "Ligada" : "Desligada"}
                 </Badge>
               </div>
               <p className="mt-0.5 text-xs text-muted-foreground">

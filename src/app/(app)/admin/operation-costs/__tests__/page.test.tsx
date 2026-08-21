@@ -58,7 +58,11 @@ vi.mock("../operation-costs-form", () => ({
     <div data-testid="form">
       {rows.map((r) => (
         <div key={r.operationKey}>
-          <span>{r.operationKey}</span>
+          <span>
+            {r.operationKey === "campaign_generation"
+              ? "Geração de campanha"
+              : "Geração de assinatura visual"}
+          </span>
           <span>{r.costCredits}</span>
           <span>{r.source === "table" ? "tabela" : "fallback"}</span>
           <span>{r.updatedByEmail ?? "—"}</span>
@@ -140,8 +144,8 @@ describe("AdminOperationCostsPage", () => {
 
     const { default: Page } = await import("../page");
     const html = renderToString(await Page());
-    expect(html).toContain("campaign_generation");
-    expect(html).toContain("visual_signature_generation");
+    expect(html).toContain("Geração de campanha");
+    expect(html).toContain("Geração de assinatura visual");
     expect(html).toContain("tabela");
     expect(html).toContain("fallback");
     expect(html).toContain("admin@vendeo.com");
@@ -156,7 +160,7 @@ describe("AdminOperationCostsPage", () => {
     const { default: Page } = await import("../page");
     const html = renderToString(await Page());
     expect(html).toContain("indisponível");
-    expect(html).not.toContain("campaign_generation");
+    expect(html).not.toContain("Geração de campanha");
   });
 
   it("renderiza título Configurações Econômicas + seção Parâmetros Econômicos (2 inputs) + tabela Operações", async () => {
@@ -183,7 +187,7 @@ describe("AdminOperationCostsPage", () => {
     expect(html).toContain("Taxa de conversão");
     expect(html).toContain("Valor operacional do crédito");
     expect(html).toContain("Operações");
-    expect(html).toContain("campaign_generation");
+    expect(html).toContain("Geração de campanha");
   });
 
   it("parâmetros indisponíveis (EconomicParameterUnavailableError) → 503 da seção SEM derrubar a tabela F38", async () => {
@@ -205,6 +209,6 @@ describe("AdminOperationCostsPage", () => {
     const { default: Page } = await import("../page");
     const html = renderToString(await Page());
     expect(html).toContain("Serviço de parâmetros indisponível no momento");
-    expect(html).toContain("campaign_generation");
+    expect(html).toContain("Geração de campanha");
   });
 });

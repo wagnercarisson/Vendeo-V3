@@ -78,7 +78,6 @@ export default async function AdminOperationCostsPage() {
   const rows = costs.map((c) => ({
     operationKey: c.operationKey,
     costCredits: c.costCredits,
-    enabled: c.enabled,
     updatedByEmail: c.updatedByUserId
       ? (userMap[c.updatedByUserId] ?? null)
       : null,

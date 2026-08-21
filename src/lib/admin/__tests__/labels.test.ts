@@ -20,6 +20,8 @@ describe("AUDIT_ACTION_LABELS", () => {
     "create_test_store",
     "admin_exception",
     "reveal_cnpj",
+    "feature_flag_update",
+    "operation_cost_update",
   ];
 
   it.each(knownActions)("cobre ação: %s", (action) => {
@@ -32,18 +34,39 @@ describe("AUDIT_ACTION_LABELS", () => {
     expect(getLabel(AUDIT_ACTION_LABELS, "reveal_cnpj")).toBe("Revelar CNPJ");
   });
 
+  it("getLabel retorna labels humanizados de auditoria operacional (QCW)", () => {
+    expect(getLabel(AUDIT_ACTION_LABELS, "feature_flag_update")).toBe(
+      "Atualização de controle operacional",
+    );
+    expect(getLabel(AUDIT_ACTION_LABELS, "operation_cost_update")).toBe(
+      "Atualização de custo operacional",
+    );
+  });
+
   it("getLabel retorna fallback para ação desconhecida", () => {
     expect(getLabel(AUDIT_ACTION_LABELS, "unknown_action")).toBe("Unknown Action");
   });
 });
 
 describe("TARGET_TYPE_LABELS", () => {
-  it.each(["store", "user", "campaign"])("cobre alvo: %s", (type) => {
-    expect(TARGET_TYPE_LABELS).toHaveProperty(type);
-  });
+  it.each(["store", "user", "campaign", "feature_flag", "operation_cost"])(
+    "cobre alvo: %s",
+    (type) => {
+      expect(TARGET_TYPE_LABELS).toHaveProperty(type);
+    },
+  );
 
   it("getLabel retorna label conhecido", () => {
     expect(getLabel(TARGET_TYPE_LABELS, "store")).toBe("Loja");
+  });
+
+  it("getLabel retorna labels humanizados de alvo operacional (QCW)", () => {
+    expect(getLabel(TARGET_TYPE_LABELS, "feature_flag")).toBe(
+      "Controle operacional",
+    );
+    expect(getLabel(TARGET_TYPE_LABELS, "operation_cost")).toBe(
+      "Custo operacional",
+    );
   });
 });
 
