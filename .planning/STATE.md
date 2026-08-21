@@ -4,22 +4,22 @@ milestone: v1.5
 milestone_name: â€” LanÃ§amento Externo Controlado â—†
 current_phase: 43
 status: in_progress
-last_updated: 2026-08-21T12:00:00.000Z
+last_updated: 2026-08-21T18:00:00.000Z
 progress:
   total_phases: 6
   completed_phases: 6
   total_plans: 52
   completed_plans: 165
   percent: 90
-stopped_at: F42 CONCLUIDA (20/20 plans, 2182 testes, 4 gates verdes, UAT 20.5-20.15 PASS); F43 (Revisao do Brief Pre-Geracao) EM PLANEJAMENTO
+stopped_at: F43 (Revisao do Brief Pre-Geracao, v1.5) EXECUTADA - 15/15 plans, 2315 testes, 4 gates verdes; UAT humana (43-UAT.md 15.5-15.13) PENDENTE (checkpoint final - mobile 320px/375px obrigatorio D7)
 ---
 
 # Project State
 
-**Last updated:** 2026-08-21 â€” **F42 (Signup Controlado e Elegibilidade Freemium, v1.5) CONCLUÃDA â€” 20/20 plans, 2182 testes (238 arquivos), 4 gates verdes, UAT humano 20.5â€“20.15 PASS (todos os cenÃ¡rios, incl. 20.6 retestado em 2026-08-19 contra produÃ§Ã£o)**. Fonte da verdade: `openspec/changes/fase-42-signup-controlado-elegibilidade-freemium/`. **F43 (RevisÃ£o do Brief PrÃ©-GeraÃ§Ã£o, v1.5) EM PLANEJAMENTO** â€” gate client-side de revisÃ£o do brief antes do POST, compressÃ£o de imagens antes da revisÃ£o, helpers puros `prepareCampaignImages`/`buildCampaignGenerationBody`, override `brief_review_confirmed` + flag administrativa `force_brief_vision_check` em `feature_flags`, resumo completo Produto/Oferta/Imagens/Avisos/Custo + loja/marca + slot Tema (preparaÃ§Ã£o F44). **RenumeraÃ§Ã£o D1:** F42 = Signup concluÃ­da; F43 = RevisÃ£o do Brief PrÃ©-GeraÃ§Ã£o; **Stripe/MonetizaÃ§Ã£o PÃºblica fora da numeraÃ§Ã£o (iniciativa diferida v1.7+, nÃ£o numerada)**. Antes: F41 (MÃ­dia de Campanha Mobile, v1.5) CONCLUÃDA â€” 13/13 plans, 4 gates verdes (222 files / 2033 testes), UAT humano 6/6 cenÃ¡rios (Android validado em produÃ§Ã£o âœ…; iOS/HEIC pendente de confirmaÃ§Ã£o final).
+**Last updated:** 2026-08-21 â€” **F43 (RevisÃ£o do Brief PrÃ©-GeraÃ§Ã£o, v1.5) EXECUTADA â€” 15/15 plans, 2315 testes (252 arquivos), 4 gates verdes (vitest/typecheck/lint/build), migration `feature_flags` aplicada no remoto; UAT humana (43-UAT.md 15.5â€“15.13) PENDENTE (checkpoint final â€” mobile real/estreito 320px/375px obrigatÃ³rio, D7)**. Gate client-side de revisÃ£o do brief em tela intermediÃ¡ria (`reviewMode` nÃ£o modal) + botÃ£o "Revisar e gerar"; compressÃ£o antes da revisÃ£o (`prepareCampaignImages`); helpers puros `prepareCampaignImages`/`buildCampaignGenerationBody` (single source de verdade, idempotente); override `brief_review_confirmed` (pula a IA de visÃ£o com fase `input_validation` `skipped`); flag administrativa `force_brief_vision_check` em `feature_flags` (rota normaliza ponta a ponta quando ligada, fallback de leitura `enabled=false` nÃ£o derruba geraÃ§Ã£o, tela admin "Controles operacionais"); resumo Produto/Oferta/Imagens/Avisos/Custo + loja/marca + slot Tema (preparaÃ§Ã£o F44). Fonte da verdade: `openspec/changes/fase-43-revisao-brief-pre-geracao/`. Antes: F42 (Signup Controlado e Elegibilidade Freemium, v1.5) CONCLUÃDA â€” 20/20 plans, 2182 testes, 4 gates verdes, UAT 20.5â€“20.15 PASS. **RenumeraÃ§Ã£o D1:** F42 = Signup concluÃ­da; F43 = RevisÃ£o do Brief PrÃ©-GeraÃ§Ã£o; **Stripe/MonetizaÃ§Ã£o PÃºblica fora da numeraÃ§Ã£o (iniciativa diferida v1.7+, nÃ£o numerada)**.
 **Milestone:** v1.5 â€” LanÃ§amento Externo Controlado â—† **Em andamento**
 **Current phase:** 43
-**Last activity:** 2026-08-20 - Completed quick task 260820-t0o: Topbar mobile compacta (hamburger sempre visível, CTA icon-only, conta sem email, sem overflow)
+**Last activity:** 2026-08-21 - F43 (Revisão do Brief Pré-Geração) EXECUTADA: 15/15 plans, 4 gates verdes (2315 testes), UAT humana pendente (43-UAT.md 15.5-15.13)
 
 ### Phase 40 â€” Campos Comerciais e Avisos do Brief âœ… Complete (9 plans / 5 waves)
 

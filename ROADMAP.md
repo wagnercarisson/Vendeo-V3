@@ -182,7 +182,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - **Fonte da verdade:** `openspec/changes/fase-42-signup-controlado-elegibilidade-freemium/`
   - **Status:** 20/20 plans, 2182 testes, 4 gates verdes, UAT 20.5–20.15 PASS
 
-- [ ] Phase 43: Revisão do Brief Pré-Geração (pending)
+- [x] Phase 43: Revisão do Brief Pré-Geração (executada, UAT pendente)
   - Gate client-side obrigatório de revisão do brief em tela intermediária (`reviewMode`) entre o form e o POST; botão "Revisar e gerar"; "Voltar e editar" preserva tudo; "Confirmar e gerar campanha" trava o snapshot e dispara o submit real
   - Compressão das imagens antes da revisão (`prepareCampaignImages`); resumo completo Produto/Oferta/Imagens/Avisos/Custo + loja/marca + rótulos Principal/Referência + "Vai consumir X crédito(s)" + slot Tema reservado (preparação F44)
   - Helpers puros `prepareCampaignImages`/`buildCampaignGenerationBody`; body idêntico ao exibido; override `brief_review_confirmed` (pula a IA de visão; fase `input_validation` como `skipped`)
@@ -239,7 +239,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 40. Campos Comerciais e Avisos do Brief | v1.5 | 9/9 | ✅ Complete | 2026-08-14 |
 | 41. Mídia de Campanha Mobile | v1.5 | 13/13 | ✅ Complete | 2026-08-15 |
 | 42. Signup Controlado e Elegibilidade Freemium | v1.5 | 20/20 | ✅ Complete | 2026-08-21 |
-| 43. Revisão do Brief Pré-Geração | v1.5 | 0/0 | ○ Pending | — |
+| 43. Revisão do Brief Pré-Geração | v1.5 | 15/15 | ◐ Executada (UAT pendente) | 2026-08-21 |
 | —. Monetização pública / Stripe (diferida, v1.7+) | v1.7 | — | Fora da numeração | — |
 
 ---

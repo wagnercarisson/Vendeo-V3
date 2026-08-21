@@ -155,10 +155,30 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 
 ## Phase 43 — Revisão do Brief Pré-Geração
 
-**Status:** Em planejamento
+**Status:** Executada — 15/15 plans, 2315 testes, 4 gates verdes; UAT humana pendente (checkpoint final)
 
 **Fonte da verdade:** `openspec/changes/fase-43-revisao-brief-pre-geracao/`
 **Context:** `.planning/phases/43-revisao-brief-pre-geracao/43-CONTEXT.md`
+**Verification:** `.planning/phases/43-revisao-brief-pre-geracao/43-VERIFICATION.md`
+**UAT:** `.planning/phases/43-revisao-brief-pre-geracao/43-UAT.md` (15.5–15.13 — pendente execução humana)
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 43-01 | 1 | ✅ | Trackings / renumeração D1 (grep-verificação F42/F43/Stripe-diferida, zero resíduos) |
+| 43-02 | 2 | ✅ | Helpers puros `prepareCampaignImages` + `buildCampaignGenerationBody` (single source, XOR idempotente) |
+| 43-03 | 3 | ✅ | Hook `reviewMode` + snapshot travado + transições (D2/D3/D4/D5) |
+| 43-04 | 4 | ✅ | UI tela de revisão (`campaign-brief-review`) + botão "Revisar e gerar" + identidade real no server (D6/D7) |
+| 43-05 | 2 | ✅ | Schema override `brief_review_confirmed` (z.union, .strict preservado) (D5) |
+| 43-06 | 3 | ✅ | Serviço `input_validation` `skipped` + GenerationProgress trata skipped (D5) |
+| 43-07 | 2 | ✅ | Migration `feature_flags` + RPC `admin_update_feature_flag` + CHECKs (aplicada no remoto) (D5) |
+| 43-08 | 4 | ✅ | Rota normalização flag + serviço de leitura (fallback enabled=false) (D5) |
+| 43-09 | 3 | ✅ | Admin feature-flags (rota PUT + página "Controles operacionais" + navegação) (D5) |
+| 43-10 | 4 | ✅ | Testes 1-10 (hook/form reviewMode + helpers) |
+| 43-11 | 5 | ✅ | Testes 11-16 (UI do resumo) |
+| 43-12 | 5 | ✅ | Testes 17-23 (schema/rota/serviço) |
+| 43-13 | 4 | ✅ | Testes 24-26 (admin da flag + fallback) |
+| 43-14 | 6 | ✅ | Regressão e co-migração de fixtures (2315 testes) |
+| 43-15 | 7 | ✅ | Verificação 4 gates + UAT (43-VERIFICATION.md passed + 43-UAT.md 15.5–15.13) |
 
 **Escopo (D1–D7):** gate client-side obrigatório de revisão do brief em tela intermediária (`reviewMode`) entre o form e o `POST /api/campaign/generate-image`; botão "Revisar e gerar"; "Voltar e editar" preserva tudo; "Confirmar e gerar campanha" trava o snapshot e dispara o submit; compressão das imagens antes da revisão (`prepareCampaignImages`); helpers puros `prepareCampaignImages`/`buildCampaignGenerationBody` (body idêntico ao exibido); resumo Produto/Oferta/Imagens/Avisos/Custo + loja/marca + rótulos Principal/Referência + "Vai consumir X crédito(s)" + slot Tema (preparação F44); override `brief_review_confirmed` (pula a IA de visão; fase `input_validation` como `skipped`); flag administrativa mínima `force_brief_vision_check` em `feature_flags` (tela admin, motivo obrigatório, auditoria, fallback de leitura). **Renumeração D1:** F42 = Signup concluída; F43 = Revisão do Brief; **Stripe/Monetização Pública fora da numeração (iniciativa diferida v1.7+)**.
 
