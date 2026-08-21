@@ -19,7 +19,7 @@
 
 ### Cenário 20.6 — Flag ON: email/senha completo (D2/D7/D8/D10)
 
-- [ ] Com flag ON, `/signup` mostra "Criar sua conta" + GoogleButton + formulário email/senha.
+- [x] Com flag ON, `/signup` mostra "Criar sua conta" + GoogleButton + formulário email/senha.
 - [ ] Senha < 8 → erro PT-BR "A senha deve ter pelo menos 8 caracteres."; senha ≠ confirmar → "As senhas não coincidem.".
 - [ ] Ciência da Privacidade obrigatória (modal); consentimento de comunicações opcional.
 - [ ] Captcha Turnstile presente; submit bloqueado sem token.

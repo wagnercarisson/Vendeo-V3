@@ -77,14 +77,15 @@
 - [x] Pré-gate D7 (cidade/UF ausentes → sem review/concessão)
 - [x] Admin reviews enriquecido (4 novos labels + informado×oficial)
 - [x] Legal Terms v1.4 / Privacy v1.3 (conteúdo + catálogo + coordenação gate/recovery)
-- [ ] Push da migration v1.4/v1.3 no remoto **PENDENTE** (token)
-- [ ] UAT humano 20.5-20.15 **PENDENTE** (ver `42-UAT.md`)
+- [x] Push da migration v1.4/v1.3 no remoto (aplicada)
+- [x] UAT humano 20.5-20.15 (ver `42-UAT.md`)
 
 ## 6. Pendências / Checkpoint
 
-- **CRÍTICO:** `supabase db push` da migration `20260817000001` (fornecer `SUPABASE_ACCESS_TOKEN`).
-- **UAT real (20.15 preview/produção):** requer flag ligada + Google/Turnstile configurados no Dashboard.
-- **Docker local indisponível** — `supabase stop/start` não aplicável até o daemon Docker ativo; UAT via remoto/preview.
+- **UAT humano concluído:** todos os 11 cenários (20.5–20.15) **PASS** em `42-UAT.md` (incluindo o 20.6, retestado em 2026-08-19 contra produção — 5 fixes confirmados). Checkbox do 20.6 marcado como feito.
+- **Migration `20260817000001_publish_legal_signup_versions` aplicada** no remoto (Terms v1.4/Privacy v1.3) — F43 (Revisão do Brief Pré-Geração) já opera sobre a F42 concluída.
+- **Docker local indisponível** — `supabase stop/start` não aplicável até o daemon Docker ativo; UAT executado via remoto/preview.
+- **F42 fechada (2026-08-21):** renumeração F43 = Revisão do Brief Pré-Geração; Stripe / Monetização Pública sai da numeração (iniciativa diferida v1.7+).
 
 ---
 *Phase: 42-signup-controlado-elegibilidade-freemium*

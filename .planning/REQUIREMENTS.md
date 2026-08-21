@@ -560,9 +560,9 @@ Desdobramento da F38.2, adicionados via OpenSpec (`openspec/changes/fase-38-2-1-
 - [x] **F38.2.1-13**: Fallback legacy explícito para eventos sem valor persistido (nunca silencioso; valor backfilled nunca tratado como captured)
 - [x] **F38.2.1-14**: Testes de snapshot/fallback/estabilidade temporal/nomenclatura/origem + gates verdes
 
-## v1.7 Requirements (Stripe / Monetização Pública)
+## v1.7 Requirements (Monetização Pública / Stripe — iniciativa diferida)
 
-Deferred from v1.5 critical path. Stripe será implementada como F43/v1.7 após validação do beta controlado (renumerada de F35 → F36 → F37 → F39 → F40 → F41 → F42 → F43 nos alinhamentos do Changelog/Novidades, do Onboarding — Navegação por Abas, da Tabela de Custos por Operação, do Brief Estruturado de Campanha, dos Campos Comerciais e Avisos do Brief, da Mídia de Campanha Mobile e do Signup Controlado e Elegibilidade Freemium).
+Deferred from v1.5 critical path. **Monetização pública / Stripe: iniciativa diferida v1.7+ (sem fase numerada)**, dependente de decisão comercial/jurídica/contábil — reaberta quando houver condição real de executar. Não é fase numerada no roadmap ativo (decisão do alinhamento F43 D1).
 
 ### Pagamento (PAY)
 
