@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getLaunchConfig } from "@/lib/launch-config/config";
+import { isCaptchaEnabled } from "@/lib/feature-flags/feature-flag-service";
 import { getCurrentVersion } from "@/lib/legal/document-versions";
 import { buildDocumentInfo } from "@/lib/legal/document-content";
 import { GoogleButton } from "@/components/auth/google-button";
@@ -14,7 +15,8 @@ export const metadata = {
 export default async function SignupPage() {
   // Leitura server-side da flag (D5): flag off → "Beta fechado" verbatim;
   // flag on → formulário + Google (renderização condicional D2/D4).
-  const { publicSignupEnabled, captchaEnabled } = await getLaunchConfig();
+  const { publicSignupEnabled } = await getLaunchConfig();
+  const captchaEnabled = await isCaptchaEnabled();
 
   let policyDocument: ReturnType<typeof buildDocumentInfo> = null;
   if (publicSignupEnabled) {

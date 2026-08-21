@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { sanitizeRedirectPath } from "@/lib/auth/redirect";
 import { getLaunchConfig } from "@/lib/launch-config/config";
+import { isCaptchaEnabled } from "@/lib/feature-flags/feature-flag-service";
 import { GoogleButton } from "@/components/auth/google-button";
 import { LoginForm } from "./login-form";
 
@@ -12,7 +13,8 @@ export default async function LoginPage({
   const params = await searchParams;
   const redirectParam = typeof params.redirect === "string" ? params.redirect : "";
   const safeRedirect = sanitizeRedirectPath(redirectParam);
-  const { publicSignupEnabled, captchaEnabled } = await getLaunchConfig();
+  const { publicSignupEnabled } = await getLaunchConfig();
+  const captchaEnabled = await isCaptchaEnabled();
 
   return (
     <div className="w-full max-w-md">

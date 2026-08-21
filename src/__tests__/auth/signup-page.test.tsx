@@ -12,8 +12,12 @@ const flagMock = vi.hoisted(() => ({
 vi.mock("@/lib/launch-config/config", () => ({
   getLaunchConfig: vi.fn(() => ({
     publicSignupEnabled: flagMock.publicSignupEnabled,
-    captchaEnabled: flagMock.captchaEnabled,
   })),
+}));
+
+// captchaEnabled agora vem da flag operacional (QCW) — serviço mockado.
+vi.mock("@/lib/feature-flags/feature-flag-service", () => ({
+  isCaptchaEnabled: vi.fn(() => Promise.resolve(flagMock.captchaEnabled)),
 }));
 
 // getCurrentVersion consulta o Supabase (server) — mock para o teste de página.

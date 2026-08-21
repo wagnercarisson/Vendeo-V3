@@ -1,7 +1,7 @@
-import { getLaunchConfig } from "@/lib/launch-config/config";
+import { isCaptchaEnabled } from "@/lib/feature-flags/feature-flag-service";
 import { ForgotPasswordForm } from "./forgot-password-form";
 
 export default async function ForgotPasswordPage() {
-  const { captchaEnabled } = await getLaunchConfig();
+  const captchaEnabled = await isCaptchaEnabled();
   return <ForgotPasswordForm captchaEnabled={captchaEnabled} />;
 }

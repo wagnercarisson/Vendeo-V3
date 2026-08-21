@@ -8,10 +8,9 @@ const captchaFlagMock = vi.hoisted(() => ({
   captchaEnabled: false,
 }));
 
-vi.mock("@/lib/launch-config/config", () => ({
-  getLaunchConfig: vi.fn(() => ({
-    captchaEnabled: captchaFlagMock.captchaEnabled,
-  })),
+// captchaEnabled agora vem da flag operacional (QCW) — serviço mockado.
+vi.mock("@/lib/feature-flags/feature-flag-service", () => ({
+  isCaptchaEnabled: vi.fn(() => Promise.resolve(captchaFlagMock.captchaEnabled)),
 }));
 
 vi.mock("../forgot-password-form", () => ({
