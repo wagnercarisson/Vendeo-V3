@@ -43,7 +43,7 @@ completed: 2026-08-21
 
 # Plan 43-07: Migration feature_flags + RPC + CHECKs Summary
 
-**Migration F43 criada (`20260821000001_f43_create_feature_flags.sql`): tabela `feature_flags` (greenfield) + seed `force_brief_vision_check` (enabled=false) + RPC `admin_update_feature_flag` (atômico, motivo obrigatório, auditoria na mesma transação, idempotente) + CHECKs de `admin_audit_log` estendidos (action `feature_flag_update` / target_type `feature_flag`); push [BLOCKING] DEFERIDO (SUPABASE_ACCESS_TOKEN ausente, Docker local indisponível)**
+**Migration F43 criada e APLICADA NO REMOTO (`20260821000001_f43_create_feature_flags.sql`): tabela `feature_flags` (greenfield) + seed `force_brief_vision_check` (enabled=false) + RPC `admin_update_feature_flag` (atômico, motivo obrigatório, auditoria na mesma transação, idempotente) + CHECKs de `admin_audit_log` estendidos (action `feature_flag_update` / target_type `feature_flag`); push [BLOCKING] resolvido — aplicado pelo usuário no remoto (projeto `gvbzwihwgzujwsviufgy`)**
 
 ## Performance
 
@@ -60,14 +60,14 @@ completed: 2026-08-21
   - **RPC `admin_update_feature_flag`** (precedente `admin_review_access_request`): `SECURITY DEFINER` + `search_path = ''`; valida `p_key`/`p_reason` (motivo **obrigatório**); **idempotência via `operation_id`** (re-execução da mesma operação retorna `{ idempotent: true }` sem re-aplicar); atualiza `enabled`/`updated_by`/`updated_at` e audita na **mesma transação** em `admin_audit_log` com `action: 'feature_flag_update'`, `target_type: 'feature_flag'`, `target_id = feature_flags.id` (UUID), `metadata { key, old_value, new_value, reason }` + `operation_id`
   - **CHECKs de `admin_audit_log` estendidos** via DROP/ADD preservando valores existentes: `feature_flag_update` na action CHECK; `feature_flag` no target_type CHECK
   - **REVERT** section completo (reverse order)
-- **Task 2 (aplicar/push):** **Docker/Supabase local indisponível** (daemon Docker não responde — precedente F42) e **`SUPABASE_ACCESS_TOKEN` NÃO definido** → **`supabase db push` no remoto (projeto `gvbzwihwgzujwsviufgy`) registrado como [BLOCKING] DEFERIDO** (ação crítica — código 43-08/43-09 só utilizável após a migration aplicada; o fallback de leitura `enabled=false` segura a geração em ambientes sem a tabela)
+- **Task 2 (aplicar/push):** **Docker/Supabase local indisponível** (daemon Docker não responde — precedente F42) e **`SUPABASE_ACCESS_TOKEN` NÃO definido** no ambiente → inicialmente registrado como **push [BLOCKING] DEFERIDO**. **RESOLVIDO PELO USUÁRIO (2026-08-21):** a migration **foi aplicada no remoto** (projeto `gvbzwihwgzujwsviufgy`) — o usuário confirmou "migration aplicada no remoto". O push [BLOCKING] está **concluído**; o código 43-08/43-09 pode consumir a `feature_flags` em produção.
 
 ## Task Commits
 
 Cada task foi commitada atomicamente:
 
 1. **Task 1: Migration — feature_flags + seed + RPC + CHECKs (idempotente)** - (parte do commit do plano, feat)
-2. **Task 2: Aplicar migration local + push [BLOCKING]** - DEFERIDO (token ausente + Docker local indisponível) — registrado no SUMMARY
+2. **Task 2: Aplicar migration local + push [BLOCKING]** - RESOLVIDO (usuário aplicou a migration no remoto em 2026-08-21; token não estava disponível para o executor) — registrado no SUMMARY
 
 ## Files Created/Modified
 - `supabase/migrations/20260821000001_f43_create_feature_flags.sql` - Tabela + seed + RPC + CHECKs + REVERT
@@ -78,14 +78,14 @@ Cada task foi commitada atomicamente:
 
 ## Deviations from Plan
 
-**Task 2 (push [BLOCKING]) — DEFERIDO:** `supabase db push` não executado porque `SUPABASE_ACCESS_TOKEN` não está definido no ambiente e o Docker local está indisponível. Segue o precedente F42 (`42-12`: "Push [BLOCKING] PENDENTE — migration não aplicada no remoto (aguardando SUPABASE_ACCESS_TOKEN)"). **Ação crítica documentada:** quando o token for fornecido, executar `supabase db push` antes de ativar o código 43-08/43-09 em produção. O fallback de leitura (`enabled=false`) segura a geração em ambientes sem a tabela (não derruba o fluxo).
+**Task 2 (push [BLOCKING]) — RESOLVIDO:** `supabase db push` não pôde ser executado pelo executor (Docker local indisponível + `SUPABASE_ACCESS_TOKEN` ausente no ambiente). **O usuário aplicou a migration no remoto manualmente** (projeto `gvbzwihwgzujwsviufgy`, confirmado em 2026-08-21). O push [BLOCKING] está **concluído**; a ação crítica está resolvida e o código 43-08/43-09 pode consumir a `feature_flags` em produção.
 
 ## Issues Encountered
 - Docker local indisponível (daemon não responde) — `supabase status` falha
 - `SUPABASE_ACCESS_TOKEN` não definido — `db push` não autentica
 
 ## User Setup Required
-**Ação crítica pendente:** fornecer `SUPABASE_ACCESS_TOKEN` e executar `supabase db push` para aplicar a migration no remoto (projeto `gvbzwihwgzujwsviufgy`). Ver também `43-USER-SETUP.md` se criado em 43-15 (UAT/verificação).
+**Resolvido:** o usuário aplicou a migration no remoto (projeto `gvbzwihwgzujwsviufgy`) em 2026-08-21. Nenhuma ação pendente de setup.
 
 ## Next Phase Readiness
 - Migration da flag pronta (arquivo) e aplicável quando o token estiver disponível
