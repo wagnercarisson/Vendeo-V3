@@ -7,6 +7,7 @@
 > Modified by `fase-38-credit-operation-costs` (MODIFIED). Cost display is dynamic (`Custo: {cost}` via `useOperationCosts`); submit disabled when `balance < costCredits`, operation disabled, or cost unavailable (503) — without presumed "1 crédito".
 > Modified by `fase-40-campos-comerciais-avisos-brief` (D2/D3/D4/D8): o formulário ganha o agrupamento Produto / Oferta / Avisos e texto obrigatório, o checkbox "Exibir 'Imagem meramente ilustrativa'" (default marcado) coexistindo com o textarea livre, e a seção "Validade da oferta" (6 modos, visível apenas para `offer`). O body do submit passa a incluir `validity` (antes nunca enviado) e `mandatoryArtworkText` concatenado (checkbox + texto livre). A Descrição existente (`product.description`) permanece inalterada — nenhum campo adormecido ganha UI (D8).
 > Modified by `fase-41-midia-de-campanha-mobile` (D2/D3/D4/D10): o campo de imagem evolui de 1 arquivo para **primary obrigatória + até `MAX_CAMPAIGN_IMAGES - 1` auxiliares opcionais** (role interna `reference`) via **galeria + câmera** (`capture="environment"`, HEIC via canvas, EXIF respeitado, preview grid, remoção por item). O body do submit passa a enviar `productImages[]` (com auxiliares) ou `productImageDataUrl` (legado, sem auxiliares) — **nunca ambos**.
+> Modified by `fase-43-revisao-brief-pre-geracao` (D2/D3/D4): o submit passa pela **tela de revisão do brief** — botão "Criar Campanha" → **"Revisar e gerar"**; `reviewMode` no hook; body via `buildCampaignGenerationBody` (mesmos derivados exibidos); confirmação envia `inputValidationOverride.productImageCheck: "brief_review_confirmed"`.
 
 ## Requirements
 
@@ -313,16 +314,23 @@ Validation SHALL trigger on blur for each field. Blocking state SHALL prevent su
 
 ### Requirement: Submit triggers API generation
 
-O submit do formulário SHALL montar o body incluindo os campos novos (D3/D4):
+O submit do formulário SHALL montar o body incluindo os campos novos (D3/D4) e, **na F43, passar obrigatoriamente pela revisão do brief (D2)**:
+
+- O clique no botão principal dispara **"Revisar e gerar"** (entra em `reviewMode`), que roda `prepareCampaignImages` (D3) e exibe a tela de revisão (`campaign-brief-review`).
+- "Confirmar e gerar campanha" monta o body via **`buildCampaignGenerationBody(fields, preparedImages, storeId, { inputValidationOverride: { productImageCheck: "brief_review_confirmed" } })`** (D4) e dispara o fluxo real de geração.
+
+O body SHALL conter:
 
 - `validity: <displayText>` — presente apenas quando `campaignIntent === "offer"` e validade habilitada; ausente caso contrário (troca de intent não envia `validity`, mas preserva o rascunho no form state)
 - `mandatoryArtworkText: <texto final concatenado>` — checkbox marcado + texto livre → `"Imagem meramente ilustrativa\n<texto>"`; checkbox marcado sem texto → `ILLUSTRATIVE_NOTICE_TEXT`; checkbox desmarcado + texto → só o texto; checkbox desmarcado + sem texto → campo ausente
 - **Imagens (F41 D2/D3):**
-  - **Com auxiliares** → `body.productImages = productImages.map(({ role, source, mimeType, dataUrl }) => ({ role, source, mimeType, dataUrl }))` — **sem `id` do cliente** (a rota gera/normaliza — D2/D5)
+  - **Com auxiliares** → `body.productImages = preparedImages.map(({ role, source, mimeType, dataUrl }) => ({ role, source, mimeType, dataUrl }))` — **sem `id` do cliente** (a rota gera/normaliza — D2/D5)
   - **Sem auxiliares** (apenas primary) → `body.productImageDataUrl = <dataUrl da primary>` (caminho legado — compat)
+- `inputValidationOverride.productImageCheck: "brief_review_confirmed"` — **F43 D5**, presente no caminho confirmado
 - Demais campos inalterados: `storeId`, `productName`, `originalPriceCents`, `discountedPriceCents`, `description`, `badgeText`, `campaignIntent`, `preserveImageContext` (condicional)
+- **O submit deixa de re-comprimir** — as imagens já foram preparadas na entrada da revisão (D3).
 
-> Modified by `fase-40-campos-comerciais-avisos-brief` (D3/D4): o body ganha `validity` e a normalização do `mandatoryArtworkText` (concatenação). Sem mudança de contrato HTTP — `GenerateImageRequestSchema` já aceita `validity`/`mandatoryArtworkText`. Modified by `fase-41-midia-de-campanha-mobile` (D2/D3): o body passa a enviar `productImages[]` (com auxiliares) ou `productImageDataUrl` (legado — sem auxiliares); nunca ambos.
+> Modified by `fase-40-campos-comerciais-avisos-brief` (D3/D4): o body ganha `validity` e a normalização do `mandatoryArtworkText` (concatenação). Sem mudança de contrato HTTP — `GenerateImageRequestSchema` já aceita `validity`/`mandatoryArtworkText`. Modified by `fase-41-midia-de-campanha-mobile` (D2/D3): o body passa a enviar `productImages[]` (com auxiliares) ou `productImageDataUrl` (legado — sem auxiliares); nunca ambos. Modified by `fase-43-revisao-brief-pre-geracao` (D2/D4/D5): submit via `buildCampaignGenerationBody` (revisão → confirmação); `brief_review_confirmed` no caminho confirmado.
 
 #### Scenario: Body envia validity e mandatoryArtworkText concatenado
 
@@ -359,6 +367,17 @@ O submit do formulário SHALL montar o body incluindo os campos novos (D3/D4):
 - **WHEN** um rascunho com "checkbox marcado + texto livre" é salvo e o form é recarregado
 - **THEN** o checkbox reaparece marcado e o textarea reaparece com apenas o texto livre (sem a frase concatenada)
 - **AND** a concatenação acontece apenas na montagem do body (D3)
+
+#### Scenario: Confirmar envia brief_review_confirmed (F43 D5)
+
+- **WHEN** o usuário clica "Confirmar e gerar campanha" na tela de revisão
+- **THEN** o body montado via `buildCampaignGenerationBody` carrega `inputValidationOverride.productImageCheck: "brief_review_confirmed"`
+
+#### Scenario: Submit não re-compime (imagens já preparadas — F43 D3)
+
+- **WHEN** o usuário confirma a geração após a revisão
+- **THEN** as imagens já comprimidas da revisão (`preparedImages`) são usadas diretamente no body
+- **AND** o submit não roda `compressImage` novamente
 
 #### Scenario: Valid submit navigates to /campanhas/[id]
 
@@ -529,3 +548,21 @@ O sistema SHALL manter no estado do form um array de imagens do tipo `{ id, role
 
 - **WHEN** o usuário já adicionou `MAX_CAMPAIGN_IMAGES` imagens
 - **THEN** a UI não oferece mais adicionar imagem (teto respeitado no cliente — D10)
+
+### Requirement: Botão principal vira "Revisar e gerar" (F43 D2)
+
+O botão principal do formulário de campanha SHALL exibir **"Revisar e gerar"** (substituindo "Criar Campanha") e, ao ser clicado com o formulário válido, SHALL entrar em `reviewMode` (exibir a tela de revisão do brief) em vez de disparar o POST. Com o formulário inválido, SHALL manter o comportamento atual (erros de validação exibidos, sem abrir a revisão).
+
+- O custo/saldo no form permanece: "Saldo: X · Custo: Y" e `submitDisabled` por custo indisponível/desativado/saldo insuficiente (F38) — agora bloqueando a **entrada na revisão**.
+- Sem imagens utilizáveis → "Revisar e gerar" não abre a revisão (mensagem de imagem obrigatória).
+
+#### Scenario: Botão exibe "Revisar e gerar"
+
+- **WHEN** o formulário é renderizado
+- **THEN** o botão principal exibe "Revisar e gerar" (não "Criar Campanha")
+
+#### Scenario: Custo off/indisponível/saldo insuficiente bloqueia a entrada na revisão
+
+- **WHEN** custo desativado/indisponível ou saldo insuficiente
+- **THEN** o botão "Revisar e gerar" fica bloqueado (mesma lógica `submitDisabled` do form)
+- **AND** a revisão não abre

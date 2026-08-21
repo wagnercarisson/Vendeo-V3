@@ -122,7 +122,7 @@ The interface SHALL define:
 
 ### Requirement: GenerateImageRequestSchema with campaignIntent e preserveImageContext
 
-> Modified by `fase-31-2-diretores-por-intencao`. Modified by `fase-41-midia-de-campanha-mobile` (D2/D10): campo aditivo `productImages[]` + `MAX_CAMPAIGN_IMAGES`; `productImageDataUrl` deixa de ser required no Zod (preservação **comportamental** — a obrigatoriedade passa a ser garantida pela regra de exclusividade validada na rota).
+> Modified by `fase-31-2-diretores-por-intencao`. Modified by `fase-41-midia-de-campanha-mobile` (D2/D10): campo aditivo `productImages[]` + `MAX_CAMPAIGN_IMAGES`; `productImageDataUrl` deixa de ser required no Zod (preservação **comportamental** — a obrigatoriedade passa a ser garantida pela regra de exclusividade validada na rota). Modified by `fase-43-revisao-brief-pre-geracao` (D5): `inputValidationOverride.productImageCheck` ganha o literal `"brief_review_confirmed"` (revisão humana explícita do brief) — `.strict()` preservado.
 
 O schema `GenerateImageRequestSchema` em `src/lib/image-generation/schema.ts` SHALL ser modificado para aceitar:
 
@@ -131,6 +131,31 @@ O schema `GenerateImageRequestSchema` em `src/lib/image-generation/schema.ts` SH
 - `discountedPriceCents` — `z.number().int().positive().optional()` — MODIFICADO (era required, passou a optional para tolerância por intent)
 - `productImages` — `z.array(ProductImageInputSchema).min(1).max(MAX_CAMPAIGN_IMAGES).superRefine(...)` — **ADICIONADO (D2)**, opcional; o item `{ role, source, mimeType, dataUrl }` **NÃO carrega `id`** (a rota gera/normaliza — D5)
 - `productImageDataUrl` — passa a **`optional()`** (antes `z.string().min(1)` required) — preservação **comportamental** do legado (D2)
+- `inputValidationOverride.productImageCheck` — **MODIFICADO (F43 D5):** de `z.literal("user_confirmed_continue")` para `z.union([z.literal("user_confirmed_continue"), z.literal("brief_review_confirmed")]).optional()` — semântica distinta (ver matriz abaixo)
+
+```ts
+export const GenerateImageRequestSchema = z.object({
+  // ...campos atuais inalterados...
+  inputValidationOverride: z
+    .object({
+      productImageCheck: z
+        .union([
+          z.literal("user_confirmed_continue"), // 409 + insistiu (comportamento atual)
+          z.literal("brief_review_confirmed"),  // NOVO — revisou o brief e confirmou (D5)
+        ])
+        .optional(),
+    })
+    .optional(),
+}).strict();
+```
+
+**Matriz de semântica do override (documentada no schema e nos testes):**
+
+| Valor | Origem | Comportamento |
+|-------|--------|---------------|
+| `brief_review_confirmed` | Usuário revisou o brief completo (produto + imagens + preço + validade + avisos) e confirmou | Pula a IA de visão (caminho padrão da F43); fase `input_validation` emitida com **obrigatoriamente** `status: "skipped"` (detail opcional "Brief confirmado pelo usuário") |
+| `user_confirmed_continue` | Usuário recebeu 409 de conflito e **insistiu mesmo assim** | Pula a IA de visão (comportamento atual, "continuar mesmo assim"); fase `input_validation` emitida com **obrigatoriamente** `status: "skipped"` (detail opcional "Validação dispensada") |
+| (sem override) | Cliente legado / fallback | Validação IA produto×imagem roda como rede de segurança (comportamento atual); fase `input_validation` normal |
 
 O schema SHALL definir `MAX_CAMPAIGN_IMAGES = 4` (1 primary + 3 auxiliares — D10) e `ProductImageInputSchema`:
 
@@ -195,9 +220,28 @@ A validação semântica de preço é externalizada: offer exige preço no front
 - **THEN** `GenerateImageRequestSchema.safeParse()` retorna `{ success: true }` — a ausência não é mais erro do Zod
 - **AND** a obrigatoriedade da imagem passa a ser garantida pela **regra de exclusividade da rota** (400)
 
+#### Scenario: brief_review_confirmed aceito (F43 D5)
+
+- **WHEN** o body inclui `inputValidationOverride.productImageCheck: "brief_review_confirmed"`
+- **THEN** `GenerateImageRequestSchema.safeParse()` retorna `{ success: true, data }`
+- **AND** `data.inputValidationOverride.productImageCheck === "brief_review_confirmed"`
+
+#### Scenario: user_confirmed_continue continua aceito (F43 D5)
+
+- **WHEN** o body inclui `inputValidationOverride.productImageCheck: "user_confirmed_continue"`
+- **THEN** `GenerateImageRequestSchema.safeParse()` retorna `{ success: true, data }`
+- **AND** `data.inputValidationOverride.productImageCheck === "user_confirmed_continue"`
+
+#### Scenario: valor desconhecido do override é rejeitado (F43 D5)
+
+- **WHEN** o body inclui `inputValidationOverride.productImageCheck: "valor_desconhecido"`
+- **THEN** `GenerateImageRequestSchema.safeParse()` retorna `{ success: false }` (`.strict()`/enum preservado)
+
 ### Requirement: POST /api/campaign/generate-image endpoint
 
 The system SHALL expose a POST endpoint at `/api/campaign/generate-image`.
+
+> Modified by `fase-43-revisao-brief-pre-geracao` (D5): a regra pré-stream atual (`if (!parsed.data.inputValidationOverride?.productImageCheck)`) já pula a validação IA para **qualquer** override truthy — o novo literal `brief_review_confirmed` é coberto sem mudança de lógica. Com a flag administrativa `force_brief_vision_check` **ligada**, a rota **normaliza um `effectiveParsedData`/`effectiveCampaignInput`** (remove `brief_review_confirmed` do `inputValidationOverride`) **antes** da checagem pré-stream e **usa o mesmo input normalizado** para a checagem, construir o brief e chamar `imageService.generateImage(...)` — pré-stream e Phase 1 do serviço validam. `user_confirmed_continue` **nunca é removido**.
 
 The endpoint SHALL:
 1. Accept POST requests with `Content-Type: application/json`
@@ -289,6 +333,41 @@ The endpoint SHALL NOT modify, replace, or deprecate the existing `POST /api/cam
 
 - **WHEN** a POST request includes `storeName`, `storeLogoUrl`, or `brandProfile`
 - **THEN** the endpoint SHALL return HTTP 400
+
+#### Scenario: Override brief_review_confirmed pula a IA de visão (D5)
+
+- **WHEN** o body carrega `inputValidationOverride.productImageCheck: "brief_review_confirmed"` (flag desligada)
+- **THEN** a rota **pula** a validação IA produto×imagem no pré-stream
+- **AND** nenhuma chamada vision / nenhum evento `campaign_input_validation` é emitido
+- **AND** a geração prossegue para `createCampaign` → `reserveCredit` → stream
+
+#### Scenario: Override user_confirmed_continue pula (comportamento atual preservado — D5)
+
+- **WHEN** o body carrega `inputValidationOverride.productImageCheck: "user_confirmed_continue"`
+- **THEN** a rota **pula** a validação IA produto×imagem no pré-stream (comportamento atual preservado)
+
+#### Scenario: Sem override a validação IA roda (rede de segurança — D5)
+
+- **WHEN** o body não carrega `inputValidationOverride` (cliente legado / fallback)
+- **THEN** a validação IA produto×imagem roda no pré-stream (comportamento atual)
+- **AND** conflitos retornam 409 com `needs_user_action`
+
+#### Scenario: Flag force_brief_vision_check desligada → brief_review_confirmed pula nos dois pontos
+
+- **WHEN** a flag administrativa `force_brief_vision_check` está desligada (default)
+- **AND** o body carrega `brief_review_confirmed`
+- **THEN** a rota pula o pré-stream (validação vision não roda)
+- **AND** o Phase 1 do `ImageGenerationService` pula (override repassado em `campaignInput.inputValidationOverride`)
+- **AND** a fase `input_validation` é emitida com **obrigatoriamente** `status: "skipped"` (detail opcional "Brief confirmado pelo usuário")
+
+#### Scenario: Flag force_brief_vision_check ligada → rota normaliza e valida ponta a ponta
+
+- **WHEN** a flag administrativa `force_brief_vision_check` está ligada
+- **AND** o body carrega `brief_review_confirmed`
+- **THEN** a rota **normaliza** um `effectiveParsedData`/`effectiveCampaignInput` (remove `brief_review_confirmed` do `inputValidationOverride`) **antes** da checagem pré-stream
+- **AND** usa o **mesmo input normalizado** para a checagem pré-stream, construir o brief e chamar `imageService.generateImage(...)`
+- **AND** o pré-stream da rota E o Phase 1 do serviço executam a validação IA (ponta a ponta)
+- **AND** `user_confirmed_continue` **nunca é removido** (caminho "409 + insistiu" sempre pula)
 
 ### Requirement: ImageGenerationService emits metrics per run
 

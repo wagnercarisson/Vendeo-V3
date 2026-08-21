@@ -12,11 +12,13 @@ The system SHALL define a `ValidationContext` type that captures decisions made 
 
 - `inputCorrection?` — object with `field` (currently only `"productName"`), `from` (original value), `to` (corrected value), `reason` (why the correction was made)
 - `allowedConflicts?` — array of conflicts the user explicitly approved, each with `type` (`"product_image_conflict"` or `"product_image_low_confidence"`) and `userAction` (`"user_confirmed_continue"` or `"accepted_suggestion"`)
-- `overrides?` — object with optional `productImageCheck?: "user_confirmed_continue"`
+- `overrides?` — object with optional `productImageCheck?: "user_confirmed_continue" | "brief_review_confirmed"`
 
 `generated_product_mismatch` SHALL NEVER appear in `allowedConflicts`. Even when the user has confirmed an override, if the review detects that the generated image represents a different product, the generation SHALL fail.
 
 > **Delta F38.1 (D7/D11):** `InputValidationService.validate` passa a aceitar um callback opcional `onCall?: (info: AiCallInfo) => void` invocado após cada chamada vision real (`chat.completions`), com `provider`, `model`, `usage` e `durationMs`. A rota usa esse callback para registrar `campaign_input_validation` — a chamada vision de validação **não some mais** da contabilidade (furo 4 sanado).
+
+> **Delta F43 (D5):** `overrides.productImageCheck` aceita o novo literal `brief_review_confirmed` (revisão humana explícita do brief) além de `user_confirmed_continue` (409 + insistiu). `InputValidationService.validate` aceita o override com o novo literal — `override?: { productImageCheck?: "user_confirmed_continue" | "brief_review_confirmed" }` — e **já pula a chamada quando o override é truthy** (`:47-49`), sem mudança de lógica. Nenhuma chamada vision é feita, nenhum `onCall`/`campaign_input_validation` é emitido nesse caminho. Comportamento de `applyValidationContextToReviewResult` inalterado — apenas `product_image_conflict`/`product_image_low_confidence` são filtráveis com override.
 
 #### Scenario: ValidationContext carries input correction
 
@@ -38,6 +40,18 @@ The system SHALL define a `ValidationContext` type that captures decisions made 
 
 - **WHEN** `validate(name, dataUrl)` é chamado sem `onCall`
 - **THEN** o comportamento é idêntico ao anterior (callback opcional, retrocompatível)
+
+#### Scenario: validate pula com override brief_review_confirmed (F43 D5)
+
+- **WHEN** `validate(name, dataUrl, { productImageCheck: "brief_review_confirmed" }, { onCall })` é chamado
+- **THEN** a validação retorna `{ classification: "match", confidence: 1.0 }` sem chamar a IA de visão
+- **AND** `onCall` **não** é invocado (nenhuma chamada real — nenhum `campaign_input_validation`)
+
+#### Scenario: validate pula com override user_confirmed_continue (F43 D5)
+
+- **WHEN** `validate(name, dataUrl, { productImageCheck: "user_confirmed_continue" }, { onCall })` é chamado
+- **THEN** a validação retorna `{ classification: "match", confidence: 1.0 }` sem chamar a IA de visão (comportamento atual preservado)
+- **AND** `onCall` **não** é invocado
 
 ### Requirement: ImageReviewInput extended with validationContext
 
@@ -231,3 +245,33 @@ O sistema SHALL fazer `ImageReviewService.review(generatedImage, input)` (`image
 - **WHEN** não há imagem primary disponível (caminho legado sem referência)
 - **THEN** o revisor não recebe imagem de referência
 - **AND** o comportamento é idêntico ao atual (retrocompatível — D9)
+
+### Requirement: Fase input_validation emitida como skipped quando override pula (F43 D5)
+
+O `ImageGenerationService.generateImage` (`image-generation-service.ts:162-277`, Phase 1 `input_validation`) SHALL **NÃO** emitir a fase como `running → complete` quando o override (`brief_review_confirmed` OU `user_confirmed_continue`) pular a chamada de IA — hoje `emitHuman("input_validation")` (`:163`) e `emitComplete`/detail (`:272-277`) rodam incondicionalmente.
+
+- Quando o override estiver presente (pula a IA), o serviço SHALL emitir a fase `input_validation` com **obrigatoriamente** `status: "skipped"` (precedente `emitSkipped` em `:141`).
+- O detail/mensagem é **opcional** e SHALL usar "Brief confirmado pelo usuário" ou "Validação dispensada" — **nunca** `status: "complete"` com detail (isso reintroduziria a fase falsa de "Validação concluída" sem chamada de IA).
+- Aplica-se igualmente a `brief_review_confirmed` e `user_confirmed_continue`.
+- Nenhum evento de métrica (`emitMetricsEvent("input_validation", ...)`) SHALL ser emitido sem chamada real (já garantido por `validationCallMade`, `:188-190`).
+
+#### Scenario: Override brief_review_confirmed emite skipped
+
+- **WHEN** o `context.campaignInput.inputValidationOverride.productImageCheck` é `"brief_review_confirmed"`
+- **THEN** o Phase 1 do serviço NÃO chama a IA de visão
+- **AND** a fase `input_validation` é emitida com **obrigatoriamente** `status: "skipped"` (detail opcional "Brief confirmado pelo usuário")
+- **AND** nenhuma fase `complete` falsa é emitida
+- **AND** nenhum evento `input_validation` de métrica é emitido
+
+#### Scenario: Override user_confirmed_continue emite skipped
+
+- **WHEN** o `context.campaignInput.inputValidationOverride.productImageCheck` é `"user_confirmed_continue"`
+- **THEN** o Phase 1 do serviço NÃO chama a IA de visão
+- **AND** a fase `input_validation` é emitida com **obrigatoriamente** `status: "skipped"` (detail opcional "Validação dispensada")
+- **AND** nenhuma fase `complete` falsa é emitida
+
+#### Scenario: Sem override a fase input_validation é normal
+
+- **WHEN** o body não carrega `inputValidationOverride`
+- **THEN** o Phase 1 do serviço chama a IA de visão (rede de segurança)
+- **AND** a fase `input_validation` é emitida normalmente (`running` → `complete` com detail) e um evento de métrica é emitido (comportamento atual)
