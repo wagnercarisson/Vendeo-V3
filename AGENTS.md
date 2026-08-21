@@ -155,7 +155,7 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 
 ## Phase 43 — Revisão do Brief Pré-Geração
 
-**Status:** Concluída ✅ — 15/15 plans, 2315 testes, 4 gates verdes, UAT 15.5–15.13 PASS (9/9)
+**Status:** Concluída ✅ — 15/15 plans, 2317 testes, 4 gates verdes, UAT 15.5–15.13 PASS (9/9)
 
 **Fonte da verdade:** `openspec/changes/fase-43-revisao-brief-pre-geracao/`
 **Context:** `.planning/phases/43-revisao-brief-pre-geracao/43-CONTEXT.md`
@@ -177,7 +177,7 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 | 43-11 | 5 | ✅ | Testes 11-16 (UI do resumo) |
 | 43-12 | 5 | ✅ | Testes 17-23 (schema/rota/serviço) |
 | 43-13 | 4 | ✅ | Testes 24-26 (admin da flag + fallback) |
-| 43-14 | 6 | ✅ | Regressão e co-migração de fixtures (2315 testes) |
+| 43-14 | 6 | ✅ | Regressão e co-migração de fixtures (2317 testes) |
 | 43-15 | 7 | ✅ | Verificação 4 gates + UAT (43-VERIFICATION.md passed + 43-UAT.md 15.5–15.13) |
 
 **Escopo (D1–D7):** gate client-side obrigatório de revisão do brief em tela intermediária (`reviewMode`) entre o form e o `POST /api/campaign/generate-image`; botão "Revisar e gerar"; "Voltar e editar" preserva tudo; "Confirmar e gerar campanha" trava o snapshot e dispara o submit; compressão das imagens antes da revisão (`prepareCampaignImages`); helpers puros `prepareCampaignImages`/`buildCampaignGenerationBody` (body idêntico ao exibido); resumo Produto/Oferta/Imagens/Avisos/Custo + loja/marca + rótulos Principal/Referência + "Vai consumir X crédito(s)" + slot Tema (preparação F44); override `brief_review_confirmed` (pula a IA de visão; fase `input_validation` como `skipped`); flag administrativa mínima `force_brief_vision_check` em `feature_flags` (tela admin, motivo obrigatório, auditoria, fallback de leitura). **Renumeração D1:** F42 = Signup concluída; F43 = Revisão do Brief; **Stripe/Monetização Pública fora da numeração (iniciativa diferida v1.7+)**.

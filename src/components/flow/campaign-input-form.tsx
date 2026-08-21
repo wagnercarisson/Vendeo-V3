@@ -47,7 +47,7 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
     isSubmitting,
     submitError,
     setSubmitError,
-    handleSubmit,
+    retrySubmit,
     pendingConflict,
     handleConflictContinue,
     handleConflictCorrect,
@@ -76,7 +76,7 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
       <GenerationProgress
         phases={phases}
         error={submitError}
-        onRetry={submitError ? handleSubmit : undefined}
+        onRetry={submitError ? retrySubmit : undefined}
       />
     );
   }
@@ -107,7 +107,7 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
           description={submitError}
           action={{
             label: "Tentar novamente",
-            onClick: handleSubmit,
+            onClick: retrySubmit,
           }}
         />
       )}

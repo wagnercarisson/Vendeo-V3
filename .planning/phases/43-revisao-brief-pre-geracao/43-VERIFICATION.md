@@ -16,7 +16,7 @@ updated: 2026-08-21
 
 | Gate | Comando | Exit | Evidência |
 |------|---------|------|-----------|
-| Testes | `npx vitest run` | 0 | **252 files / 2315 tests passed** (F42 base: 2182 → +133 na F43) |
+| Testes | `npx vitest run` | 0 | **252 files / 2317 tests passed** (F42 base: 2182 → +135 na F43; mini-fix +2: Teste 27 retry confirmado, Teste 28 preparing na revisão) |
 | Typecheck | `npm run typecheck` (`tsc -p tsconfig.typecheck.json --noEmit`) | 0 | Sem erros |
 | Lint | `npm run lint` (`eslint .`) | 0 | Sem erros |
 | Build | `npm run build` (`next build`) | 0 | Build bem-sucedido (rotas campanhas/nova + admin/feature-flags compiladas) |
@@ -97,6 +97,15 @@ Revisão inicial (2026-08-21) apontou dois pontos, aprovada a Opção A nos dois
 2. **Imagem perdida ao "Voltar e editar" (D3/D7):** o preview do form dependia de blob URLs de `item.file` (revogados no unmount ao entrar na revisão). **Correção:** `enterReview` persiste o `dataUrl` comprimido de volta nos itens de `fields.productImages`; `prepareCampaignImages` passou a ser **dataUrl-first** (não re-comprime) — o preview usa base64 estável, idempotente, e mostra o payload final (D3).
 
 **Validação pós-correção:** 4 gates verdes (vitest 2315 / typecheck / lint / build); testes de revisão (32) e suíte completa passando.
+
+## 7. Mini-fix pré-archive (revisão técnica 2026-08-21)
+
+Revisão técnica pós-fechamento apontou dois pontos de coerência/UX, ambos aplicados:
+
+1. **Retry pós-falha da geração confirmada contornava o gate (WARNING):** o "Tentar novamente" chamava `handleSubmit` (caminho legado), remontando o body **sem** `brief_review_confirmed` — reativando a IA de visão e potencialmente gerando um 409 confuso para quem acabou de revisar o brief. **Correção:** `confirmReview` guarda o body confirmado (`confirmedBodyRef`); novo `retrySubmit` reutiliza **exatamente** essa tentativa (snapshot + `brief_review_confirmed`), caindo no legado apenas quando não há snapshot confirmado. Retry do `GenerationProgress` e do `ErrorState` passam a usar `retrySubmit` (`use-campaign-form.ts`/`campaign-input-form.tsx`). **Teste 27** (ambas as tentativas carregam o override).
+2. **"Preparando imagens..." não aparecia no fluxo real (SUGGESTION):** `enterReview` só ativava `reviewMode` depois da compressão, deixando o usuário sem feedback durante HEIC/mobile. **Correção:** `enterReview` entra em `reviewMode` com `preparing=true` **antes** da compressão; falha → volta ao form com erro. **Teste 28** (reviewMode/preparing durante a compressão; preparedImages após).
+
+**Validação pós-mini-fix:** 4 gates verdes (vitest **2317** / typecheck / lint / build); `use-campaign-form-review` 12/12; suíte completa passando.
 
 ---
 

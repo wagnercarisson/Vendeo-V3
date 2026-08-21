@@ -415,4 +415,81 @@ describe("useCampaignForm review (F43) — Testes 1-10", () => {
     expect(result.current.reviewMode).toBe(false);
     expect(result.current.fieldErrors.productImages).toBe("Imagem do produto é obrigatória");
   });
+
+  it("Teste 27 (mini-fix): retry pós-falha da geração confirmada reutiliza o body confirmado (brief_review_confirmed) — não o caminho legado handleSubmit", async () => {
+    const { result } = renderHook(() => useCampaignForm("store-1"));
+    await fillValidOfferFormWithDataUrl(result);
+
+    await act(async () => {
+      await result.current.enterReview();
+    });
+
+    const bodies: Record<string, unknown>[] = [];
+    const fetchMock = vi
+      .fn()
+      // 1ª tentativa: falha terminal no stream (ex.: timeout/provider)
+      .mockImplementationOnce((_url: string, init: RequestInit) => {
+        bodies.push(JSON.parse(init.body as string));
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ error: { message: "Falha ao gerar a campanha. Crédito estornado." } }),
+            { status: 502, headers: { "Content-Type": "application/json" } }
+          )
+        );
+      })
+      // retry: sucesso → navegação
+      .mockImplementationOnce((_url: string, init: RequestInit) => {
+        bodies.push(JSON.parse(init.body as string));
+        return createNdjsonResponse([
+          { type: "result", campaignId: "abc-123", campaignUrl: "/campanhas/abc-123" },
+        ]);
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await act(async () => {
+      await result.current.confirmReview();
+    });
+    expect(result.current.submitError).not.toBeNull();
+    expect(result.current.isSubmitting).toBe(false);
+
+    await act(async () => {
+      await result.current.retrySubmit();
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    // AMBAS as tentativas carregam o override do caminho confirmado — o retry
+    // não pode reativar a validação vision nem contornar o gate de revisão.
+    for (const body of bodies) {
+      const override = body.inputValidationOverride as { productImageCheck?: string } | undefined;
+      expect(override?.productImageCheck).toBe("brief_review_confirmed");
+    }
+    expect(mockPush).toHaveBeenCalledWith("/campanhas/abc-123");
+  });
+
+  it("Teste 28 (mini-fix): entrada em revisão ativa 'Preparando imagens...' — reviewMode/preparing durante a compressão", async () => {
+    stubImageApis();
+    const { result } = renderHook(() => useCampaignForm("store-1"));
+    await fillValidOfferFormWithFile(result, heicFile());
+
+    let promise!: Promise<boolean>;
+    act(() => {
+      promise = result.current.enterReview();
+    });
+
+    // durante a compressão (HEIC): a revisão já está montada com o estado de
+    // preparação — feedback real para o usuário (D3/D7).
+    expect(result.current.reviewMode).toBe(true);
+    expect(result.current.preparing).toBe(true);
+    expect(result.current.preparedImages).toBeNull();
+
+    await act(async () => {
+      await promise;
+    });
+
+    expect(result.current.reviewMode).toBe(true);
+    expect(result.current.preparing).toBe(false);
+    expect(result.current.preparedImages).toHaveLength(1);
+    expect(result.current.preparedImages![0].role).toBe("primary");
+    expect(result.current.preparedImages![0].mimeType).toBe("image/jpeg");
+  });
 });

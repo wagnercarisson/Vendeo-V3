@@ -176,6 +176,7 @@ export interface UseCampaignFormReturn {
   submitError: string | null;
   setSubmitError: (error: string | null) => void;
   handleSubmit: () => void;
+  retrySubmit: () => Promise<void>;
   resetSubmit: () => void;
   isValid: boolean;
   pendingConflict: PendingConflict | null;
@@ -547,6 +548,10 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
   const prevImageFileRef = useRef<File | null>(null);
   const lastRestoredUrlRef = useRef<string | null>(null);
   const objectUrlRef = useRef<string | null>(null);
+  // F43 (mini-fix): último body CONFIRMADO na revisão (snapshot travado +
+  // brief_review_confirmed) — o retry pós-falha reutiliza EXATAMENTE essa
+  // tentativa, sem contornar o gate de revisão nem reativar a validação vision.
+  const confirmedBodyRef = useRef<Record<string, unknown> | null>(null);
   const router = useRouter();
   const { saveFormState, restoreFormState, clearFormState } = useInputPreservation<CampaignFormFields>();
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -992,6 +997,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     setSubmitError(null);
     setFieldErrors({});
     setPhases([]);
+    confirmedBodyRef.current = null;
     setFields(EMPTY_FIELDS);
     setRawOriginalPrice("");
     setRawDiscountedPrice("");
@@ -1145,6 +1151,10 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
 
     setPreparing(true);
     setReviewError(null);
+    // F43 (mini-fix): entra em reviewMode ANTES da compressão — a tela de revisão
+    // monta com o estado "Preparando imagens..." (campaign-brief-review.tsx) e
+    // mostra feedback real durante HEIC/mobile; falha → volta ao form com erro.
+    setReviewMode(true);
     try {
       const prepared = await prepareCampaignImages(fields);
       if (prepared.length === 0 && restoredImageDataUrl) {
@@ -1158,6 +1168,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
       }
       if (prepared.length === 0) {
         setReviewError("Imagem do produto é obrigatória");
+        setReviewMode(false);
         setPreparing(false);
         return false;
       }
@@ -1173,13 +1184,13 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
           return p ? { ...item, dataUrl: p.dataUrl, mimeType: "image/jpeg" } : item;
         }),
       }));
-      setReviewMode(true);
       setPreparing(false);
       return true;
     } catch (err) {
       setReviewError(
         err instanceof Error ? err.message : "Não foi possível preparar as imagens. Tente novamente."
       );
+      setReviewMode(false);
       setPreparing(false);
       return false;
     }
@@ -1189,6 +1200,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
   const exitReview = useCallback(() => {
     setReviewMode(false);
     setReviewError(null);
+    confirmedBodyRef.current = null;
   }, []);
 
   // F43 (D2/D4/D5): "Confirmar e gerar campanha" — trava o snapshot revisado
@@ -1198,17 +1210,37 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     if (!storeId || !preparedImages) return;
     const frozenFields = { ...fields };
     const frozenPrepared = preparedImages.map((p) => ({ ...p }));
+    const body = buildCampaignGenerationBody(frozenFields, frozenPrepared, storeId, {
+      inputValidationOverride: { productImageCheck: "brief_review_confirmed" },
+    });
+    // F43 (mini-fix): guarda o body confirmado para o retry pós-falha repetir a
+    // MESMA tentativa (não reativar a validação vision via handleSubmit legado).
+    confirmedBodyRef.current = body;
     setReviewMode(false);
     setIsSubmitting(true);
     setSubmitError(null);
     setFieldErrors({});
     setPendingConflict(null);
     setPhases([]);
-    const body = buildCampaignGenerationBody(frozenFields, frozenPrepared, storeId, {
-      inputValidationOverride: { productImageCheck: "brief_review_confirmed" },
-    });
     await consumeStream(body, new AbortController());
   }, [storeId, preparedImages, fields]);
+
+  // F43 (mini-fix): "Tentar novamente" pós-falha — reutiliza o ÚLTIMO body
+  // confirmado (snapshot revisado + brief_review_confirmed) em vez do caminho
+  // legado handleSubmit (que reativaria a IA de visão e contornaria o gate de
+  // revisão). Sem snapshot confirmado, cai no fluxo padrão do formulário.
+  const retrySubmit = useCallback(async (): Promise<void> => {
+    const body = confirmedBodyRef.current;
+    if (!body) {
+      await handleSubmit();
+      return;
+    }
+    setIsSubmitting(true);
+    setSubmitError(null);
+    setPendingConflict(null);
+    setPhases([]);
+    await consumeStream(body, new AbortController());
+  }, [handleSubmit]);
 
   return {
     fields,
@@ -1225,6 +1257,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     submitError,
     setSubmitError,
     handleSubmit,
+    retrySubmit,
     resetSubmit,
     isValid,
     pendingConflict,
