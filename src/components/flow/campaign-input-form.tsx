@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useCampaignForm, inferIntent } from "./use-campaign-form";
 import type { CampaignFormFields, CampaignProductFormImage } from "./use-campaign-form";
 import { CampaignImageUpload } from "./campaign-image-upload";
@@ -28,9 +29,10 @@ interface CampaignInputFormProps {
   supportEmail?: string;
   store?: { name: string; segment: string; brand_color: string; id: string };
   identity?: StoreIdentitySnapshot | null;
+  onReviewModeChange?: (active: boolean) => void;
 }
 
-export function CampaignInputForm({ storeId, balance, supportEmail, store, identity }: CampaignInputFormProps) {
+export function CampaignInputForm({ storeId, balance, supportEmail, store, identity, onReviewModeChange }: CampaignInputFormProps) {
   const {
     fields,
     fieldErrors,
@@ -61,6 +63,13 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
     exitReview,
     confirmReview,
   } = useCampaignForm(storeId);
+
+  // F43 (D7): notifica o pai quando a revisão entra/sai — permite ao
+  // campaign-page-client esconder o StoreIdentityBlock da página (evita o
+  // duplo card de loja: página + revisão).
+  useEffect(() => {
+    onReviewModeChange?.(reviewMode);
+  }, [reviewMode, onReviewModeChange]);
 
   if (isSubmitting) {
     return (
