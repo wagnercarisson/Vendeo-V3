@@ -106,6 +106,16 @@ export interface CampaignProductFormImage {
   dataUrl?: string;
 }
 
+// F43 (D3): imagem já preparada para revisão/submit — mimeType normalizado para
+// image/jpeg; `id` é INTERNO da UI (nunca entra no body, D2/D4).
+export interface PreparedCampaignImage {
+  id: string;
+  role: "primary" | "reference";
+  source: "upload" | "camera";
+  mimeType: "image/jpeg";
+  dataUrl: string;
+}
+
 export interface CampaignFormFields {
   productName: string;
   description: string;
@@ -406,6 +416,91 @@ export function inferIntent(
   if (hasOriginal && hasDiscounted) return "offer";
   if (hasDiscounted) return "spotlight";
   return "exclusive";
+}
+
+// F43 (D3): prepara as imagens do form para revisão/submit — comprime itens com
+// `file` (HEIC/EXIF via compressImage), normaliza mimeType para image/jpeg,
+// preserva role/source e cobre itens restaurados de draft com `dataUrl` (sem
+// re-comprimir). Itens sem `file` nem `dataUrl` são ignorados (não utilizáveis).
+export async function prepareCampaignImages(
+  fields: CampaignFormFields
+): Promise<PreparedCampaignImage[]> {
+  const prepared: PreparedCampaignImage[] = [];
+  for (const img of fields.productImages) {
+    if (img.file instanceof File) {
+      const compressed = await compressImage(img.file);
+      prepared.push({
+        id: img.id,
+        role: img.role,
+        source: img.source,
+        mimeType: "image/jpeg",
+        dataUrl: compressed.dataUrl,
+      });
+    } else if (img.dataUrl) {
+      prepared.push({
+        id: img.id,
+        role: img.role,
+        source: img.source,
+        mimeType: "image/jpeg",
+        dataUrl: img.dataUrl,
+      });
+    }
+  }
+  return prepared;
+}
+
+// F43 (D4): single source of truth do body de geração — mesmo shape do body atual
+// de handleSubmit, usando os MESMOS derivados que a revisão exibe. Lógica XOR de
+// imagens reproduzida: com auxiliares → productImages[] (SEM id de cliente);
+// sem auxiliares → productImageDataUrl (legado); nunca ambos.
+export function buildCampaignGenerationBody(
+  fields: CampaignFormFields,
+  preparedImages: PreparedCampaignImage[],
+  storeId: string,
+  options?: {
+    inputValidationOverride?: {
+      productImageCheck: "brief_review_confirmed" | "user_confirmed_continue";
+    };
+  }
+): Record<string, unknown> {
+  const body: Record<string, unknown> = {
+    storeId,
+    productName: fields.productName,
+    originalPriceCents: fields.originalPriceCents,
+    discountedPriceCents: fields.discountedPriceCents,
+    description: fields.description || undefined,
+    badgeText: fields.badge,
+    campaignIntent: fields.campaignIntent,
+    ...(fields.campaignIntent === "offer"
+      ? {}
+      : { preserveImageContext: fields.preserveImageContext }),
+  };
+
+  const validity = fields.campaignIntent === "offer" ? buildValidityDisplayText(fields) : undefined;
+  if (validity !== undefined) body.validity = validity;
+
+  const mandatoryArtworkText = buildMandatoryArtworkText(
+    fields.showIllustrativeNotice,
+    fields.mandatoryArtworkTextFree,
+  );
+  if (mandatoryArtworkText !== undefined) body.mandatoryArtworkText = mandatoryArtworkText;
+
+  if (preparedImages.length > 1) {
+    body.productImages = preparedImages.map(({ role, source, mimeType, dataUrl }) => ({
+      role,
+      source,
+      mimeType,
+      dataUrl,
+    }));
+  } else {
+    body.productImageDataUrl = preparedImages[0]?.dataUrl;
+  }
+
+  if (options?.inputValidationOverride) {
+    body.inputValidationOverride = options.inputValidationOverride;
+  }
+
+  return body;
 }
 
 export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
@@ -850,23 +945,10 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     const abortController = new AbortController();
 
     try {
-      // F41 (D2/D4): comprime cada item com `file` e ainda sem `dataUrl`. Após a
-      // compressão, o `mimeType` do item vira "image/jpeg" (o compressImage produz
-      // JPEG via toBlob) — NUNCA enviar o `file.type` original (um HEIC/HEIF
-      // tem file.type "image/heic", que transcodeToJpeg da rota não aceita → 500).
-      const compressedImages = await Promise.all(
-        frozenFields.productImages.map(async (item) => {
-          if (item.dataUrl) {
-            return { ...item, mimeType: "image/jpeg" };
-          }
-          if (item.file instanceof File) {
-            const compressed = await compressImage(item.file);
-            return { ...item, mimeType: "image/jpeg", dataUrl: compressed.dataUrl };
-          }
-          return item;
-        })
-      );
-      const resolvedImages = compressedImages.filter((i) => !!i.dataUrl);
+      // F43 (D3/D4): reutiliza os helpers puros — prepara as imagens (compressão
+      // HEIC/EXIF + normalização de mimeType, cobrindo draft com dataUrl) e monta
+      // o body idêntico ao exibido na revisão. O submit NÃO re-comprime.
+      const resolvedImages = await prepareCampaignImages(frozenFields);
       if (resolvedImages.length === 0 && frozenRestoredImageDataUrl) {
         resolvedImages.push({
           id: crypto.randomUUID(),
@@ -880,41 +962,9 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
         throw new Error("Imagem do produto é obrigatória");
       }
 
-      const validity = frozenFields.campaignIntent === "offer"
-        ? buildValidityDisplayText(frozenFields)
-        : undefined;
-      const mandatoryArtworkText = buildMandatoryArtworkText(
-        frozenFields.showIllustrativeNotice,
-        frozenFields.mandatoryArtworkTextFree,
-      );
-
-      const body: Record<string, unknown> = {
-        storeId,
-        productName: frozenFields.productName,
-        originalPriceCents: frozenFields.originalPriceCents,
-        discountedPriceCents: frozenFields.discountedPriceCents,
-        description: frozenFields.description || undefined,
-        badgeText: frozenFields.badge,
-        campaignIntent: frozenFields.campaignIntent,
-        ...(frozenFields.campaignIntent === "offer"
-          ? {}
-          : { preserveImageContext: frozenFields.preserveImageContext }),
-        ...(validity !== undefined ? { validity } : {}),
-        ...(mandatoryArtworkText !== undefined ? { mandatoryArtworkText } : {}),
-      };
-
-      // F41 (D2): com auxiliares → productImages[] (SEM id de cliente);
-      // sem auxiliares → productImageDataUrl legado; nunca ambos.
-      if (resolvedImages.length > 1) {
-        body.productImages = resolvedImages.map(({ role, source, mimeType, dataUrl }) => ({
-          role,
-          source,
-          mimeType,
-          dataUrl,
-        }));
-      } else {
-        body.productImageDataUrl = resolvedImages[0].dataUrl;
-      }
+      // Caminho legado (sem revisão): nenhum inputValidationOverride — o override
+      // só entra no caminho confirmado da revisão (43-03).
+      const body = buildCampaignGenerationBody(frozenFields, resolvedImages, storeId);
 
       await consumeStream(body, abortController);
     } catch (err) {
