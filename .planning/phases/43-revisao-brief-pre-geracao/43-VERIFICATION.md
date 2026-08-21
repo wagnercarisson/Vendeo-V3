@@ -86,7 +86,7 @@ updated: 2026-08-21
 
 ## 5. Pendências / Checkpoint
 
-- **UAT humano pendente:** os cenários 15.5–15.13 (roterio em `43-UAT.md`) requerem execução manual local (mobile real/estreito 320px/375px obrigatório — D7). Os 4 gates automáticos estão **verdes**; a UAT humana é o checkpoint final para fechamento.
+- **UAT humana CONCLUÍDA:** cenários 15.5–15.13 em `43-UAT.md` — **PASS 9/9** (15.10 fallback de leitura e 15.11 sem override validados por testes automatizados: `feature-flag-service.test.ts` Testes 26b/26c e `route.test.ts` Teste 20). Cenários obrigatórios 15.6 (HEIC) e 15.7 (mobile 320px/375px) executados.
 - **Migration aplicada:** `feature_flags` aplicada no remoto pelo usuário (43-07 resolvido).
 
 ## 6. Correções da revisão inicial (UAT)
@@ -100,4 +100,4 @@ Revisão inicial (2026-08-21) apontou dois pontos, aprovada a Opção A nos dois
 
 ---
 
-*Fase 43 verificada: gates automáticos passed; UAT humana em `43-UAT.md` (checkpoint).*
+*Fase 43 verificada: gates automáticos passed + UAT humana PASS (9/9) — fase concluída.*

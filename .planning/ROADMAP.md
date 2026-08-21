@@ -40,7 +40,7 @@
 | 40 | ✅ Campos Comerciais e Avisos do Brief (v1.5) | 9/9 | ✅ Complete | 2026-08-14 |
 | 41 | ✅ Mídia de Campanha Mobile (v1.5) | 13/13 | ✅ Complete | 2026-08-15 |
 | 42 | ✅ Signup Controlado e Elegibilidade Freemium (v1.5) | 20/20 | ✅ Complete | 2026-08-21 |
-| 43 | ○ Revisão do Brief Pré-Geração (v1.5) | 15/15 | Executada (UAT pendente) | 2026-08-21 |
+| 43 | ○ Revisão do Brief Pré-Geração (v1.5) | 15/15 | Complete    | 2026-08-21 |
 | — | Monetização pública / Stripe (iniciativa diferida, v1.7+) | — | Fora da numeração | — |
 
 ---
@@ -849,7 +849,7 @@ Plans:
 
 **Source of truth:** `openspec/changes/fase-43-revisao-brief-pre-geracao/`
 
-**Plans:** 0/0 planned (em planejamento)
+**Plans:** 15/15 plans complete
 
 **Waves:** a definir no planejamento
 
@@ -924,7 +924,7 @@ Phase 39 (Brief Estruturado de Campanha — v1.5)
                                         Phase 42 (Signup Controlado e Elegibilidade Freemium — v1.5) ✅
                                                  │
                                                  ▼
-                                        Phase 43 (Revisão do Brief Pré-Geração — v1.5) ◐ executada (UAT pendente)
+                                        Phase 43 (Revisão do Brief Pré-Geração — v1.5) ✅ concluída (15/15, UAT 9/9 PASS)
                                                  │
                                                  ▼
                                         Phase 37 (Revisão e Aprovação da Arte — v1.5)

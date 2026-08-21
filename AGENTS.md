@@ -155,12 +155,12 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 
 ## Phase 43 — Revisão do Brief Pré-Geração
 
-**Status:** Executada — 15/15 plans, 2315 testes, 4 gates verdes; UAT humana pendente (checkpoint final)
+**Status:** Concluída ✅ — 15/15 plans, 2315 testes, 4 gates verdes, UAT 15.5–15.13 PASS (9/9)
 
 **Fonte da verdade:** `openspec/changes/fase-43-revisao-brief-pre-geracao/`
 **Context:** `.planning/phases/43-revisao-brief-pre-geracao/43-CONTEXT.md`
 **Verification:** `.planning/phases/43-revisao-brief-pre-geracao/43-VERIFICATION.md`
-**UAT:** `.planning/phases/43-revisao-brief-pre-geracao/43-UAT.md` (15.5–15.13 — pendente execução humana)
+**UAT:** `.planning/phases/43-revisao-brief-pre-geracao/43-UAT.md` (15.5–15.13 — PASS 9/9)
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
