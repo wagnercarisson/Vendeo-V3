@@ -33,6 +33,19 @@ describe("AccountMenu", () => {
     expect(screen.getByText("user@vendeo.tech")).toBeTruthy();
   });
 
+  it("trigger has aria-label='Menu da conta'", () => {
+    render(<AccountMenu user={{ claims: { email: "user@vendeo.tech" } }} />);
+    const trigger = screen.getByRole("button");
+    expect(trigger.getAttribute("aria-label")).toBe("Menu da conta");
+  });
+
+  it("email span is hidden on mobile via responsive class (hidden sm:inline-block)", () => {
+    render(<AccountMenu user={{ claims: { email: "user@vendeo.tech" } }} />);
+    const email = screen.getByText("user@vendeo.tech");
+    expect(email.className).toContain("hidden");
+    expect(email.className).toContain("sm:inline-block");
+  });
+
   it("shows fallback when email unavailable", () => {
     render(<AccountMenu user={{ claims: { sub: "abc-123-def" } }} />);
     expect(screen.getByText("abc-123-")).toBeTruthy();
