@@ -43,9 +43,10 @@ export function AccountMenu({ user }: AccountMenuProps) {
         onClick={() => setIsOpen(!isOpen)}
         aria-haspopup="true"
         aria-expanded={isOpen}
-        className="inline-flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-text-secondary hover:bg-bg-elevated hover:text-text-primary transition-colors duration-200 font-body"
+        aria-label="Menu da conta"
+        className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-0 rounded-lg px-2 py-1.5 text-sm text-text-secondary hover:bg-bg-elevated hover:text-text-primary transition-colors duration-200 font-body sm:gap-2 sm:px-3"
       >
-        <span className="max-w-[120px] truncate">{displayName}</span>
+        <span className="hidden sm:inline-block max-w-[120px] truncate">{displayName}</span>
         <ChevronDown
           className={`h-4 w-4 transition-transform ${reducedMotion ? "" : "duration-200"} ${isOpen ? "rotate-180" : ""}`}
         />
