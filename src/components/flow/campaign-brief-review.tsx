@@ -106,8 +106,8 @@ export function CampaignBriefReview({
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider">
-          Revise o brief antes de gerar
+        <h2 className="text-text-primary text-lg font-heading font-semibold">
+          Revise os dados da campanha antes de gerar
         </h2>
         <button
           type="button"
