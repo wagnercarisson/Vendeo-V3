@@ -138,7 +138,7 @@ export class ImageGenerationService {
       }
     };
     const emitComplete = (phase: GenerationPhase) => emit(phase, "complete");
-    const emitSkipped = (phase: GenerationPhase) => emit(phase, "skipped");
+    const emitSkipped = (phase: GenerationPhase, message?: string) => emit(phase, "skipped", message);
     const emitFailed = (phase: GenerationPhase, message?: string) => emit(phase, "failed", message);
 
     const checkAborted = () => {
@@ -160,7 +160,24 @@ export class ImageGenerationService {
     });
 
     // ── Phase 1: Pre-generation input validation ────────────────────
-    emitHuman("input_validation");
+    // F43 (D5): confirmação humana pula a IA de visão — a fase é emitida como
+    // "skipped" (nunca running → complete, nem complete com detail sem chamada
+    // real). Aplica-se a brief_review_confirmed E user_confirmed_continue.
+    const inputValidationOverride = context.campaignInput.inputValidationOverride?.productImageCheck;
+    const validationSkipped =
+      inputValidationOverride === "brief_review_confirmed" ||
+      inputValidationOverride === "user_confirmed_continue";
+
+    if (validationSkipped) {
+      emitSkipped(
+        "input_validation",
+        inputValidationOverride === "brief_review_confirmed"
+          ? "Brief confirmado pelo usuário"
+          : "Validação dispensada"
+      );
+    } else {
+      emitHuman("input_validation");
+    }
 
     const aborted1 = checkAborted();
     if (aborted1) { emitFailed("input_validation", aborted1.message); return abortResult(aborted1); }
@@ -249,10 +266,10 @@ export class ImageGenerationService {
     // Construct validationContext for review alignment
     let validationContext: ValidationContext | undefined;
 
-    if (context.campaignInput.inputValidationOverride?.productImageCheck === "user_confirmed_continue") {
+    if (inputValidationOverride === "user_confirmed_continue" || inputValidationOverride === "brief_review_confirmed") {
       metricsHadOverride = true;
       validationContext = {
-        overrides: { productImageCheck: "user_confirmed_continue" },
+        overrides: { productImageCheck: inputValidationOverride },
       };
     }
 
@@ -269,11 +286,15 @@ export class ImageGenerationService {
     }
 
     // Emit detail: input_validation
-    const validationDetail = this.buildValidationDetail(validationResult, brief.product.name, effectiveProductName);
-    if (validationDetail) {
-      emit("input_validation", "complete", undefined, validationDetail);
-    } else {
-      emitComplete("input_validation");
+    // F43 (D5): quando a validação foi pulada (override), NÃO emitir complete
+    // nem detail — a fase já foi emitida como "skipped" no início.
+    if (!validationSkipped) {
+      const validationDetail = this.buildValidationDetail(validationResult, brief.product.name, effectiveProductName);
+      if (validationDetail) {
+        emit("input_validation", "complete", undefined, validationDetail);
+      } else {
+        emitComplete("input_validation");
+      }
     }
 
     // ── Phase 2: Prompt assembly ────────────────────────────────────
