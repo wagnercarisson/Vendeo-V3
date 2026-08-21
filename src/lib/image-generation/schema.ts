@@ -56,9 +56,19 @@ export const GenerateImageRequestSchema = z.object({
     })
     .optional(),
   mandatoryArtworkText: z.string().optional(),
+  // F43 (D5): override com semântica distinta de user_confirmed_continue.
+  // Matriz de semântica:
+  // - "brief_review_confirmed"  → revisou o brief e confirmou → pula a IA de visão (fase input_validation = skipped)
+  // - "user_confirmed_continue" → 409 + insistiu → pula a IA de visão (fase input_validation = skipped)
+  // - (sem override)            → validação IA roda (rede de segurança)
   inputValidationOverride: z
     .object({
-      productImageCheck: z.literal("user_confirmed_continue").optional(),
+      productImageCheck: z
+        .union([
+          z.literal("user_confirmed_continue"), // 409 + insistiu (comportamento atual)
+          z.literal("brief_review_confirmed"), // NOVO — revisou o brief e confirmou (D5)
+        ])
+        .optional(),
     })
     .optional(),
 }).strict();
@@ -190,7 +200,7 @@ export interface ValidationContext {
     userAction: "user_confirmed_continue" | "accepted_suggestion";
   }>;
   overrides?: {
-    productImageCheck?: "user_confirmed_continue";
+    productImageCheck?: "user_confirmed_continue" | "brief_review_confirmed";
   };
 }
 
