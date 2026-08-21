@@ -204,7 +204,7 @@ describe("useCampaignForm productImages (F41)", () => {
     );
   });
 
-  it("14: body D2 — com auxiliares → productImages[] sem id; sem → productImageDataUrl legado; nunca ambos", async () => {
+  it("14 (F43): body D2 via revisão — com auxiliares → productImages[] sem id; sem → productImageDataUrl legado; nunca ambos", async () => {
     const fetchMock = vi.fn().mockImplementation(() =>
       createNdjsonResponse([
         { type: "result", campaignId: "abc-123", campaignUrl: "/campanhas/abc-123" },
@@ -229,8 +229,13 @@ describe("useCampaignForm productImages (F41)", () => {
       ]);
     });
 
+    // F43 (D2/D3): submit passa pela revisão — entrar em revisão (prepara imagens)
+    // e confirmar (monta body via buildCampaignGenerationBody com brief_review_confirmed).
     await act(async () => {
-      await result.current.handleSubmit();
+      await result.current.enterReview();
+    });
+    await act(async () => {
+      await result.current.confirmReview();
     });
     await waitFor(() => expect(mockPush).toHaveBeenCalled());
 
@@ -245,6 +250,8 @@ describe("useCampaignForm productImages (F41)", () => {
       expect(item).not.toHaveProperty("id");
     }
     expect(body.productImageDataUrl).toBeUndefined();
+    // caminho confirmado → override brief_review_confirmed
+    expect(body.inputValidationOverride.productImageCheck).toBe("brief_review_confirmed");
 
     // Caso 2: só primary → body.productImageDataUrl legado (sem productImages)
     mockPush.mockClear();
@@ -255,7 +262,10 @@ describe("useCampaignForm productImages (F41)", () => {
       ]);
     });
     await act(async () => {
-      await result.current.handleSubmit();
+      await result.current.enterReview();
+    });
+    await act(async () => {
+      await result.current.confirmReview();
     });
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
 

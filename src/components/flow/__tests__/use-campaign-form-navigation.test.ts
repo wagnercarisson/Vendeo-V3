@@ -260,4 +260,54 @@ describe("useCampaignForm navigation", () => {
     expect(result.current.fields.productImages[1].role).toBe("reference");
     expect(result.current.fields.productImages[1].source).toBe("camera");
   });
+
+  it("16 (F43 D2): fluxo revisão → confirmar → navega para /campanhas/[id]", async () => {
+    sessionStorage.setItem("campaign_draft_image", VALID_DATA_URL);
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        createNdjsonResponse([
+          { type: "result", campaignId: "abc-123", campaignUrl: "/campanhas/abc-123" },
+        ])
+      )
+    );
+
+    mockRestoreFormState.mockReturnValue({
+      productName: "Test Product",
+      description: "",
+      originalPriceCents: 10000,
+      discountedPriceCents: 1990,
+      badge: "Oferta",
+      campaignIntent: "offer",
+      preserveImageContext: false,
+      productImages: [],
+      mandatoryArtworkText: "",
+      showIllustrativeNotice: true,
+      mandatoryArtworkTextFree: "",
+      validityMode: "",
+      validityStartDate: "",
+      validityEndDate: "",
+      validityCustomText: "",
+    });
+
+    const { result } = renderHook(() => useCampaignForm("store-123"));
+    await act(async () => {});
+
+    // Revisar e gerar → revisão ativa
+    let entered = false;
+    await act(async () => {
+      entered = await result.current.enterReview();
+    });
+    expect(entered).toBe(true);
+    expect(result.current.reviewMode).toBe(true);
+
+    // Confirmar e gerar campanha → submit real → navegação
+    await act(async () => {
+      await result.current.confirmReview();
+    });
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith("/campanhas/abc-123");
+    });
+  });
 });
