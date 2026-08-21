@@ -14,7 +14,7 @@ files_modified:
   - src/app/(auth)/signup/page.tsx
   - src/app/(auth)/forgot-password/page.tsx
   - src/app/(auth)/login/__tests__/login-page.test.tsx
-  - src/app/(auth)/signup/__tests__/signup-page.test.tsx
+  - src/__tests__/auth/signup-page.test.tsx
   - src/app/(auth)/forgot-password/__tests__/forgot-password-page.test.tsx
   - src/lib/credit/types.ts
   - src/lib/credit/operation-cost-service.ts
@@ -29,6 +29,8 @@ files_modified:
   - src/app/(app)/admin/feature-flags/page.tsx
   - src/app/(app)/admin/feature-flags/feature-flags-form.tsx
   - src/app/(app)/admin/feature-flags/__tests__/page.test.tsx
+  - src/lib/admin/labels.ts
+  - src/lib/admin/__tests__/labels.test.ts
 autonomous: true
 requirements:
   - QCW-CAPTCHA-FLAG
@@ -41,14 +43,20 @@ user_setup:
     dashboard_config:
       - task: "Aplicar migration 20260821000002_qcw_operational_flags.sql no remoto (supabase db push ou SQL editor) — seeds idempotentes ON CONFLICT DO NOTHING"
         location: "Supabase CLI (db push) ou dashboard -> SQL Editor"
+  - service: Supabase Auth / Cloudflare Turnstile (previews/UAT)
+    why: "A flag admin captcha_enabled controla apenas o app; para previews/UAT com domínio variável da Vercel, desligar também o CAPTCHA no Supabase Auth do ambiente correspondente, ou usar domínio autorizado no Turnstile"
+    env_vars: []
+    dashboard_config: []
 
 must_haves:
   truths:
     - "Admin consegue ligar/desligar captcha (Turnstile) de login/cadastro/recuperação pela tela Controles operacionais, com motivo obrigatório + auditoria"
-    - "Login, cadastro e recuperação de senha respeitam a flag captcha_enabled (fonte primária; env var VENDEO_CAPTCHA_ENABLED vira override emergencial)"
+    - "Login, cadastro e recuperação de senha respeitam a flag captcha_enabled (fonte primária, seed `true`; em falha/not-found de leitura, fallback usa VENDEO_CAPTCHA_ENABLED se setada, senão `true` — nunca desliga captcha por acidente)"
+    - "A flag captcha_enabled escopa o app: o Vendeo deixa de renderizar o Turnstile, exigir token no frontend e enviar captchaToken; ela NÃO altera a configuração de CAPTCHA do Supabase Auth — se habilitada lá, o Supabase continua exigindo token válido (limite informado na descrição da flag e na tela de Controles Operacionais)"
     - "Admin liga/desliga Geração de campanhas e Geração de assinatura visual na tela Controles operacionais (não mais em Configurações Econômicas)"
     - "Rotas de geração (generate-image / generate-without-logo) respeitam as novas flags: flag off → 503 operation_disabled; falha de leitura → enabled=true (F38 D5 fail-open)"
     - "Labels técnicos campaign_generation / visual_signature_generation humanizados (Geração de campanha / Geração de assinatura visual) em admin/costs"
+    - "Histórico de auditoria humanizado: AUDIT_ACTION_LABELS.feature_flag_update = 'Atualização de controle operacional', AUDIT_ACTION_LABELS.operation_cost_update = 'Atualização de custo operacional', TARGET_TYPE_LABELS.feature_flag = 'Controle operacional', TARGET_TYPE_LABELS.operation_cost = 'Custo operacional'"
   artifacts:
     - path: "supabase/migrations/20260821000002_qcw_operational_flags.sql"
       provides: "Seeds idempotentes captcha_enabled, campaign_generation_enabled, visual_signature_generation_enabled"
@@ -62,6 +70,9 @@ must_haves:
     - path: "src/app/(app)/admin/feature-flags/page.tsx"
       provides: "Tela Controles operacionais renderizando as 4 flags com labels humanizados"
       contains: "ALL_FEATURE_FLAG_KEYS"
+    - path: "src/lib/admin/labels.ts"
+      provides: "Labels humanizados de auditoria para feature_flag_update / operation_cost_update (AUDIT_ACTION_LABELS + TARGET_TYPE_LABELS)"
+      contains: "feature_flag_update"
   key_links:
     - from: "src/app/(auth)/login/page.tsx"
       to: "src/lib/feature-flags/feature-flag-service.ts"
@@ -83,8 +94,18 @@ Purpose: Controles de operação (captcha on/off, geração on/off) ficam centra
 superfície administrativa com motivo obrigatório + auditoria atômica (RPC
 admin_update_feature_flag já existente e genérico por key — sem mudança de RPC). Custos em
 créditos permanecem em Configurações Econômicas. Fallbacks seguros preservam o comportamento
-atual em falha de leitura (captcha off por padrão; geração on por padrão — F38 D5 fail-open).
-Output: Migration de seeds + FeatureFlagService estendido + telas/rotas atualizadas + testes.
+atual em falha de leitura (captcha ON por padrão — seed `true` + fallback `true`, nunca desliga o
+envio de captchaToken por acidente; geração ON por padrão — F38 D5 fail-open).
+
+Limite honesto da flag captcha_enabled: ela desliga o captcha no nível do APP — o Vendeo deixa
+de renderizar o Turnstile, exigir token no frontend e enviar captchaToken ao Supabase Auth,
+permitindo desligar sem redeploy (UAT/preview com domínio variável da Vercel). A flag NÃO altera
+a configuração de CAPTCHA do Supabase Auth: se o CAPTCHA estiver habilitado lá, o Supabase
+continua exigindo token válido. Para previews/UAT, o operador deve desligar também o CAPTCHA no
+Supabase Auth do ambiente correspondente ou usar domínio autorizado no Turnstile. Esse limite
+deve ficar visível na descrição da flag (seed) e na tela de Controles Operacionais.
+Output: Migration de seeds + FeatureFlagService estendido + telas/rotas atualizadas + labels de
+auditoria + testes.
 </objective>
 
 <execution_context>
@@ -108,7 +129,8 @@ Output: Migration de seeds + FeatureFlagService estendido + telas/rotas atualiza
 @src/app/(app)/admin/operation-costs/operation-costs-form.tsx
 @src/lib/admin/schemas.ts
 
-# Estado atual do captcha (env var VENDEO_CAPTCHA_ENABLED → vira override emergencial):
+# Estado atual do captcha (env var VENDEO_CAPTCHA_ENABLED, default false → vira fallback/override
+# no FeatureFlagService: em falha de leitura, env se setada; senão true):
 @src/lib/launch-config/config.ts
 @src/app/(auth)/login/page.tsx
 @src/app/(auth)/signup/page.tsx
@@ -169,14 +191,14 @@ target_type=feature_flag, metadata { key, old_value, new_value, reason }. Sem mu
     src/app/(auth)/signup/page.tsx
     src/app/(auth)/forgot-password/page.tsx
     src/app/(auth)/login/__tests__/login-page.test.tsx
-    src/app/(auth)/signup/__tests__/signup-page.test.tsx
+    src/__tests__/auth/signup-page.test.tsx
     src/app/(auth)/forgot-password/__tests__/forgot-password-page.test.tsx
   </files>
   <action>
     **Migration (QCW-CAPTCHA-FLAG):** criar `supabase/migrations/20260821000002_qcw_operational_flags.sql`
     com APENAS seeds idempotentes na tabela `feature_flags` existente (ON CONFLICT (key) DO NOTHING,
     padrão da migration F43) — sem mudança de schema nem de RPC. Seeds:
-    1. `('captcha_enabled', false, 'Exige verificacao Turnstile (captcha) nos formularios de login, cadastro e recuperacao de senha. Quando desligada, o captcha nao e exibido nem exigido.')`
+    1. `('captcha_enabled', true, 'Controla se o Vendeo exibe o Turnstile e envia captchaToken nos fluxos de login, cadastro e recuperacao de senha. Nao altera a configuracao de CAPTCHA do Supabase Auth; se ela estiver ligada no Supabase, o Auth continuara exigindo token valido.')`
     2. `('campaign_generation_enabled', true, 'Habilita a geracao de campanhas (POST /api/campaign/generate-image). Quando desligada, a operacao fica indisponivel (503).')`
     3. `('visual_signature_generation_enabled', true, 'Habilita a geracao de assinatura visual (generate-without-logo). Quando desligada, a operacao fica indisponivel (503).')`
     Incluir bloco REVERT comentado (DELETE das 3 keys). NÃO alterar CHECKs do admin_audit_log.
@@ -186,21 +208,28 @@ target_type=feature_flag, metadata { key, old_value, new_value, reason }. Sem mu
     preservando o comportamento EXATO atual: try/catch na cadeia
     `from("feature_flags").select("enabled").eq("key", key).maybeSingle()`; erro ou not-found →
     console.warn operacional; se `envOverride` presente e `process.env[envOverride] === "true"` → `true`;
-    senão → `fallback`. Adicionar constantes exportadas `CAPTCHA_ENABLED_KEY = "captcha_enabled"`,
+    senão → `fallback`. Adicionar helper local `envVarBool(key: string, defaultValue: boolean): boolean`
+    (mesma semântica do `envBool` do launch-config: retorna o valor da env se setada como true/false,
+    senão `defaultValue`). Adicionar constantes exportadas `CAPTCHA_ENABLED_KEY = "captcha_enabled"`,
     `CAMPAIGN_GENERATION_ENABLED_KEY = "campaign_generation_enabled"`,
     `VISUAL_SIGNATURE_GENERATION_ENABLED_KEY = "visual_signature_generation_enabled"` e
     `ALL_FEATURE_FLAG_KEYS = [FORCE_BRIEF_VISION_CHECK_KEY, CAPTCHA_ENABLED_KEY, CAMPAIGN_GENERATION_ENABLED_KEY, VISUAL_SIGNATURE_GENERATION_ENABLED_KEY]`.
-    Métodos (com funções standalone exportadas emparelhadas, padrão existente):
-    - `isForceBriefVisionCheckEnabled()` = `readFlag(FORCE_BRIEF_VISION_CHECK_KEY, false, "VENDEO_FORCE_BRIEF_VISION_CHECK")` (comportamento idêntico)
-    - `isCaptchaEnabled()` = `readFlag(CAPTCHA_ENABLED_KEY, false, "VENDEO_CAPTCHA_ENABLED")` (fallback off preserva o comportamento atual da env var)
-    - `isCampaignGenerationEnabled()` = `readFlag(CAMPAIGN_GENERATION_ENABLED_KEY, true)` (fail-open F38 D5)
-    - `isVisualSignatureGenerationEnabled()` = `readFlag(VISUAL_SIGNATURE_GENERATION_ENABLED_KEY, true)`
-    OBS: nesta task, além das constantes, não implementar os métodos de geração — eles entram na Task 2.
+    NESTA TASK implementar apenas: `isForceBriefVisionCheckEnabled()` =
+    `readFlag(FORCE_BRIEF_VISION_CHECK_KEY, false, "VENDEO_FORCE_BRIEF_VISION_CHECK")` (comportamento
+    idêntico) e `isCaptchaEnabled()` =
+    `readFlag(CAPTCHA_ENABLED_KEY, envVarBool("VENDEO_CAPTCHA_ENABLED", true))`. Fallback do captcha —
+    fail-safe operacional: em falha/not-found de leitura, usa `VENDEO_CAPTCHA_ENABLED` se estiver setada
+    (respeita true E false); se ausente, fallback `true`. Motivo: com seed `true` + fallback `true`, a
+    migration e a falha de leitura NUNCA desligam o envio de captchaToken por acidente — preserva o
+    comportamento de produção e evita quebrar login/signup/recuperação quando o Supabase Auth está com
+    CAPTCHA habilitado. Os métodos de geração (`isCampaignGenerationEnabled()` /
+    `isVisualSignatureGenerationEnabled()`) e as funções standalone correspondentes ficam para a Task 2
+    (aqui, além de `isCaptchaEnabled`, exportar as constantes necessárias para a Task 2).
 
     **Launch config (QCW-CAPTCHA-FLAG):** remover o campo `captchaEnabled` de `LaunchConfig` e dos dois
     retornos de `getLaunchConfig()` em `src/lib/launch-config/config.ts` (fonte única passa a ser a flag;
-    a env var `VENDEO_CAPTCHA_ENABLED` continua viva como override emergencial no FeatureFlagService —
-    não remover do .env.example). Remover o bloco `describe("captchaEnabled (quick NVF-260818)")` de
+    a env var `VENDEO_CAPTCHA_ENABLED` continua viva como fallback/override emergencial no
+    FeatureFlagService — não remover do .env.example). Remover o bloco `describe("captchaEnabled (quick NVF-260818)")` de
     `src/lib/launch-config/__tests__/config.test.ts`.
 
     **Páginas (QCW-CAPTCHA-FLAG):** trocar a origem do prop `captchaEnabled` nas três páginas auth:
@@ -210,19 +239,19 @@ target_type=feature_flag, metadata { key, old_value, new_value, reason }. Sem mu
 
     **Testes (QCW-CAPTCHA-FLAG):**
     - `feature-flag-service.test.ts`: adicionar casos para `isCaptchaEnabled` (flag true → true; flag false → false;
-      erro de leitura sem env → false; erro + `process.env.VENDEO_CAPTCHA_ENABLED="true"` → true) e manter os 3 casos
-      existentes passando (mesmo mock chain do `mockFrom`).
-    - `login-page.test.tsx` / `signup-page.test.tsx` / `forgot-password-page.test.tsx`: substituir o mock de
+      erro de leitura sem env → true (fail-safe); erro + `process.env.VENDEO_CAPTCHA_ENABLED="true"` → true;
+      erro + `process.env.VENDEO_CAPTCHA_ENABLED="false"` → false) e manter os casos existentes passando (mesmo mock chain do `mockFrom`).
+    - `login-page.test.tsx` / `signup-page.test.tsx` (em `src/__tests__/auth/signup-page.test.tsx`) / `forgot-password-page.test.tsx`: substituir o mock de
       `getLaunchConfig().captchaEnabled` por `vi.mock("@/lib/feature-flags/feature-flag-service", () => ({ isCaptchaEnabled: vi.fn(() => Promise.resolve(flagMock.captchaEnabled)) }))`
       — `data-captcha-enabled` agora vem do serviço. Em login/signup, manter o mock de getLaunchConfig apenas para
       `publicSignupEnabled` (remover a chave captchaEnabled do mock).
   </action>
   <verify>
-    <automated>npx vitest run src/lib/feature-flags/__tests__/feature-flag-service.test.ts src/lib/launch-config/__tests__/config.test.ts; npx vitest run "src/app/(auth)" --reporter=verbose</automated>
+    <automated>npx vitest run src/lib/feature-flags/__tests__/feature-flag-service.test.ts src/lib/launch-config/__tests__/config.test.ts; npx vitest run "src/app/(auth)" src/__tests__/auth/signup-page.test.tsx --reporter=verbose</automated>
   </verify>
   <done>
-    - Migration com os 3 seeds idempotentes: `Select-String "ON CONFLICT" supabase/migrations/20260821000002_qcw_operational_flags.sql` → 3 ocorrências (excluindo comentários) e `captcha_enabled` presente
-    - `isCaptchaEnabled()` exportado e usado em login/signup/forgot-password (grep: `isCaptchaEnabled` nos 3 pages + no serviço)
+    - Migration com os 3 seeds idempotentes: `Select-String "ON CONFLICT" supabase/migrations/20260821000002_qcw_operational_flags.sql` → 3 ocorrências (excluindo comentários) e `captcha_enabled` presente com seed `true`
+    - `isCaptchaEnabled()` exportado e usado em login/signup/forgot-password (grep: `isCaptchaEnabled` nos 3 pages + no serviço) com fallback `envVarBool("VENDEO_CAPTCHA_ENABLED", true)` (env se setada, senão true)
     - `LaunchConfig` sem `captchaEnabled`; testes de launch-config e das 3 páginas auth verdes
   </done>
 </task>
@@ -244,6 +273,8 @@ target_type=feature_flag, metadata { key, old_value, new_value, reason }. Sem mu
     src/app/(app)/admin/feature-flags/page.tsx
     src/app/(app)/admin/feature-flags/feature-flags-form.tsx
     src/app/(app)/admin/feature-flags/__tests__/page.test.tsx
+    src/lib/admin/labels.ts
+    src/lib/admin/__tests__/labels.test.ts
   </files>
   <action>
     **Labels humanizados (QCW-LABELS):** em `src/lib/credit/types.ts` (sem server-only), adicionar
@@ -274,6 +305,14 @@ target_type=feature_flag, metadata { key, old_value, new_value, reason }. Sem mu
       como subtexto `font-mono text-[10px] text-muted-foreground` (key técnica preservada como referência).
     - `operation-costs/page.tsx`: parar de mapear/passar `enabled` nas rows do form.
 
+    **Labels de auditoria (QCW-AUDIT-LABELS):** em `src/lib/admin/labels.ts`, adicionar:
+    - `AUDIT_ACTION_LABELS.feature_flag_update = "Atualização de controle operacional"`
+    - `AUDIT_ACTION_LABELS.operation_cost_update = "Atualização de custo operacional"`
+    - `TARGET_TYPE_LABELS.feature_flag = "Controle operacional"`
+    - `TARGET_TYPE_LABELS.operation_cost = "Custo operacional"`
+    Ajustar `src/lib/admin/__tests__/labels.test.ts` para cobrir essas labels (propriedade + `getLabel` retorna
+    texto PT-BR), seguindo o padrão dos casos existentes.
+
     **Página Controles operacionais multi-flags (QCW-GEN-CONTROLS + QCW-CAPTCHA-FLAG):**
     - `src/app/api/admin/feature-flags/route.ts` GET: trocar `.eq("key", FORCE_BRIEF_VISION_CHECK_KEY).maybeSingle()`
       por `.in("key", ALL_FEATURE_FLAG_KEYS)` retornando `{ flags: data }` (lista) — PUT inalterado.
@@ -281,9 +320,11 @@ target_type=feature_flag, metadata { key, old_value, new_value, reason }. Sem mu
       montar rows na ordem canônica `ALL_FEATURE_FLAG_KEYS` com `label` humanizado (mapa local):
       force_brief_vision_check → "Validação IA do brief (produto × imagem)", captcha_enabled → "Captcha
       (Turnstile) em login, cadastro e recuperação de senha", campaign_generation_enabled → "Geração de
-      campanhas", visual_signature_generation_enabled → "Geração de assinatura visual"; `description` do banco;
-      emails de `updated_by` via consulta única `.in("id", [...userIds])` (padrão operation-costs page); se alguma
-      key esperada faltar, exibir aviso (migration não aplicada) mantendo as encontradas.
+      campanhas", visual_signature_generation_enabled → "Geração de assinatura visual"; `description` do banco
+      (para captcha_enabled, o seed traz o limite honesto sobre o Supabase Auth — exibir a description
+      integralmente); emails de `updated_by` via consulta única `.in("id", [...userIds])` (padrão
+      operation-costs page); se alguma key esperada faltar, exibir aviso (migration não aplicada) mantendo as
+      encontradas.
     - `feature-flags-form.tsx`: `FeatureFlagRow` ganha `label: string`; renderizar `row.label` como título +
       `row.key` como subtexto mono; Badge genérico `s.enabled ? "Ligada" : "Desligada"` (remover texto específico
       da vision); manter descrição (`row.description ?? default`), motivo obrigatório, PUT e reload.
@@ -299,16 +340,18 @@ target_type=feature_flag, metadata { key, old_value, new_value, reason }. Sem mu
     - `feature-flags route.test.ts`: GET passa a usar `.in(...)` → mock com array; body agora `{ flags: [...] }`.
     - `feature-flags page.test.tsx`: renderizar as 4 flags (labels humanizados + keys mono presentes); caso de
       migration não aplicada com aviso mantendo as encontradas.
+    - `labels.test.ts`: cobrir as 4 novas labels de auditoria (ação + target type).
   </action>
   <verify>
-    <automated>npx vitest run src/lib/credit src/lib/feature-flags src/app/api/admin/operation-costs src/app/api/admin/feature-flags "src/app/(app)/admin/operation-costs" "src/app/(app)/admin/feature-flags" --reporter=verbose</automated>
+    <automated>npx vitest run src/lib/credit src/lib/feature-flags src/lib/admin/__tests__/labels.test.ts src/app/api/admin/operation-costs src/app/api/admin/feature-flags "src/app/(app)/admin/operation-costs" "src/app/(app)/admin/feature-flags" --reporter=verbose</automated>
   </verify>
   <done>
     - `OPERATION_LABELS` em types.ts; form de custos exibe labels humanizados e não tem mais coluna Habilitada
     - getCost/getAllCosts resolvem enabled das flags (grep: `FeatureFlagService` em operation-cost-service.ts)
     - PUT /api/admin/operation-costs rejeita `enabled` (schema sem o campo; teste 400)
     - GET /api/admin/feature-flags retorna lista; tela Controles operacionais com 4 flags e labels humanizados
-    - Testes dos 6 arquivos de teste acima verdes
+    - `labels.ts` com `feature_flag_update`/`operation_cost_update`/`feature_flag`/`operation_cost`; labels.test.ts cobre os 4
+    - Testes dos 7 arquivos de teste acima verdes
   </done>
 </task>
 
@@ -360,21 +403,26 @@ target_type=feature_flag, metadata { key, old_value, new_value, reason }. Sem mu
 | T-QCW-02 | Tampering | PUT /api/admin/operation-costs | mitigate | schema zod sem `enabled` (costCredits obrigatório); RPC admin_update_operation_cost com XOR + auditoria; requireAdmin |
 | T-QCW-03 | DoS | flag captcha_enabled=false | accept | Decisão operacional legítima do admin (desligar captcha reduz anti-bot em login); mitigado por trilha de auditoria com motivo obrigatório e por ser superfície autenticada de admin |
 | T-QCW-04 | DoS | leitura feature_flags falha (geração) | mitigate | readFlag com fallback `true` para as flags de geração (F38 D5 fail-open) — falha de leitura NUNCA desliga geração |
-| T-QCW-05 | DoS | leitura feature_flags falha (captcha) | mitigate | readFlag com fallback `false` + override emergencial VENDEO_CAPTCHA_ENABLED=true (fail-safe de infra, padrão F43) — falha não derruba login |
+| T-QCW-05 | DoS | leitura feature_flags falha (captcha) | mitigate | readFlag com fallback `envVarBool("VENDEO_CAPTCHA_ENABLED", true)` (env se setada, senão true — fail-safe de infra) — falha de leitura nunca desliga captcha por acidente, evitando quebrar login/signup/recuperação quando o Supabase Auth exige token |
 | T-QCW-06 | Spoofing | flag key arbitrária no PUT | mitigate | RPC retorna flag_not_found para key inexistente (404); seeds idempotentes garantem as 3 novas keys |
 </threat_model>
 
 <verification>
 - Grep-consistência: zero resíduos de `captchaEnabled` em launch-config; zero `saveEnabled`/"Salvar habilitação"/coluna "Habilitada" em operation-costs-form; `getLaunchConfig().captchaEnabled` não existe em nenhum arquivo
+- `AUDIT_ACTION_LABELS.feature_flag_update`/`operation_cost_update` e `TARGET_TYPE_LABELS.feature_flag`/`operation_cost` presentes (labels.ts)
 - 4 gates verdes (typecheck / lint / vitest / build)
 - Migration de seeds aplicada (local via supabase db push; remoto a confirmar — user_setup)
 </verification>
 
 <success_criteria>
-- Admin liga/desliga captcha de login/cadastro/recuperação em Controles operacionais (motivo obrigatório + auditoria + fallback)
+- Captcha default ON: seed `captcha_enabled = true` e fallback de leitura `envVarBool("VENDEO_CAPTCHA_ENABLED", true)` — aplicar a migration ou falhar a leitura NUNCA desliga o captcha por acidente
+- Admin liga/desliga captcha em Controles operacionais (motivo obrigatório + auditoria + fallback)
+- Desligar captcha no admin remove a exigência no app: widget não é renderizado, token não é exigido e captchaToken não é enviado (sem redeploy)
+- A tela e a descrição da flag informam o limite: previews/UAT também dependem da configuração de CAPTCHA do Supabase Auth quando ela estiver habilitada (domínio autorizado no Turnstile ou desligar no Auth do ambiente)
 - Admin liga/desliga Geração de campanhas e Geração de assinatura visual em Controles operacionais; Configurações Econômicas exibe apenas custos
 - Rotas de geração respeitam as flags (503 operation_disabled com flag off; fail-open em erro de leitura)
 - Labels humanizados "Geração de campanha"/"Geração de assinatura visual" em admin/costs (key técnica como subtexto)
+- Histórico de auditoria humanizado para feature_flag_update ("Atualização de controle operacional") e operation_cost_update ("Atualização de custo operacional")
 - Testes novos + suite completa verdes; nenhum comportamento de fallback regrediu (F38 D5 / F43)
 </success_criteria>
 
