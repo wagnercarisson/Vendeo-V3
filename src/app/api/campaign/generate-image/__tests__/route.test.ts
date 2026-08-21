@@ -80,8 +80,24 @@ vi.mock('@/lib/image-generation/services/image-generation-service', () => ({
 
 vi.mock('@/lib/image-generation/services/input-validation-service', () => ({
   InputValidationService: vi.fn(function() {
-    return { validate: vi.fn(async () => ({ classification: "ok" })) };
+    return { validate: mockInputValidationValidate };
   }),
+}));
+
+// F43 (D5): spy compartilhado da validação pré-stream (InputValidationService)
+// para observar quando a IA de visão roda/pula (Testes 18-22).
+const { mockInputValidationValidate } = vi.hoisted(() => ({
+  mockInputValidationValidate: vi.fn(async () => ({ classification: "ok" })),
+}));
+
+// F43 (D5): mock do serviço de leitura da flag force_brief_vision_check.
+const { mockIsForceBriefVisionCheckEnabled } = vi.hoisted(() => ({
+  mockIsForceBriefVisionCheckEnabled: vi.fn(async () => false),
+}));
+vi.mock('@/lib/feature-flags/feature-flag-service', () => ({
+  isForceBriefVisionCheckEnabled: mockIsForceBriefVisionCheckEnabled,
+  FORCE_BRIEF_VISION_CHECK_KEY: "force_brief_vision_check",
+  FeatureFlagService: vi.fn(),
 }));
 
 vi.mock('@/lib/image-generation/providers/factory', () => ({
@@ -278,6 +294,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   capturedEvents.length = 0;
   mockRpc.mockResolvedValue({ data: { ready: true, missing: [] }, error: null });
+  mockIsForceBriefVisionCheckEnabled.mockResolvedValue(false);
   mockGetCost.mockResolvedValue({
     operationKey: "campaign_generation",
     costCredits: 1,
@@ -1143,6 +1160,109 @@ describe('POST /api/campaign/generate-image', () => {
         }),
       })
     );
+  });
+
+  // ── F43 (D5): override brief_review_confirmed + flag force_brief_vision_check ──
+
+  it('Teste 18 (F43): rota com brief_review_confirmed → pula a IA de visão (sem campaign_input_validation)', async () => {
+    await setupSuccessMocks();
+    mockIsForceBriefVisionCheckEnabled.mockResolvedValue(false);
+    mockInputValidationValidate.mockClear();
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest({
+      ...VALID_REQUEST_BODY,
+      inputValidationOverride: { productImageCheck: 'brief_review_confirmed' },
+    }));
+    await res.text();
+
+    expect(res.status).toBe(200);
+    // pré-stream: override presente + flag off → validação NÃO roda
+    expect(mockInputValidationValidate).not.toHaveBeenCalled();
+  });
+
+  it('Teste 19 (F43): rota com user_confirmed_continue → pula (comportamento atual preservado)', async () => {
+    await setupSuccessMocks();
+    mockIsForceBriefVisionCheckEnabled.mockResolvedValue(false);
+    mockInputValidationValidate.mockClear();
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest({
+      ...VALID_REQUEST_BODY,
+      inputValidationOverride: { productImageCheck: 'user_confirmed_continue' },
+    }));
+    await res.text();
+
+    expect(res.status).toBe(200);
+    expect(mockInputValidationValidate).not.toHaveBeenCalled();
+  });
+
+  it('Teste 20 (F43): rota sem override → validação IA roda (rede de segurança)', async () => {
+    await setupSuccessMocks();
+    mockIsForceBriefVisionCheckEnabled.mockResolvedValue(false);
+    mockInputValidationValidate.mockClear();
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_REQUEST_BODY));
+    await res.text();
+
+    expect(res.status).toBe(200);
+    expect(mockInputValidationValidate).toHaveBeenCalled();
+  });
+
+  it('Teste 21 (F43): flag desligada → brief_review_confirmed pula nos dois pontos', async () => {
+    await setupSuccessMocks();
+    mockIsForceBriefVisionCheckEnabled.mockResolvedValue(false);
+    mockInputValidationValidate.mockClear();
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest({
+      ...VALID_REQUEST_BODY,
+      inputValidationOverride: { productImageCheck: 'brief_review_confirmed' },
+    }));
+    await res.text();
+
+    expect(res.status).toBe(200);
+    // pré-stream: validação NÃO roda (override presente, flag off)
+    expect(mockInputValidationValidate).not.toHaveBeenCalled();
+    // Phase 1: override chega intacto ao serviço (context via buildCampaignBrief)
+    expect(buildCampaignBrief).toHaveBeenCalled();
+    const campaignInputArg = (buildCampaignBrief as any).mock.calls[0][1];
+    expect((campaignInputArg as any)?.inputValidationOverride?.productImageCheck).toBe('brief_review_confirmed');
+  });
+
+  it('Teste 22 (F43): flag ligada → rota normaliza (remove brief_review_confirmed antes da checagem); pré-stream e Phase 1 validam; user_confirmed_continue não removido', async () => {
+    await setupSuccessMocks();
+    mockIsForceBriefVisionCheckEnabled.mockResolvedValue(true);
+    mockInputValidationValidate.mockClear();
+
+    const { POST } = await import('../route');
+
+    // brief_review_confirmed → normalizado: pré-stream RODA
+    const res = await POST(makeRequest({
+      ...VALID_REQUEST_BODY,
+      inputValidationOverride: { productImageCheck: 'brief_review_confirmed' },
+    }));
+    await res.text();
+    expect(res.status).toBe(200);
+    expect(mockInputValidationValidate).toHaveBeenCalled();
+    // Phase 1: override removido do campaignInput repassado ao serviço
+    expect(buildCampaignBrief).toHaveBeenCalled();
+    const campaignInput1 = (buildCampaignBrief as any).mock.calls[0][1];
+    expect((campaignInput1 as any)?.inputValidationOverride).toBeUndefined();
+
+    // user_confirmed_continue → NUNCA removido
+    mockInputValidationValidate.mockClear();
+    const res2 = await POST(makeRequest({
+      ...VALID_REQUEST_BODY,
+      inputValidationOverride: { productImageCheck: 'user_confirmed_continue' },
+    }));
+    await res2.text();
+    expect(res2.status).toBe(200);
+    expect(mockInputValidationValidate).not.toHaveBeenCalled();
+    expect((buildCampaignBrief as any).mock.calls.length).toBeGreaterThanOrEqual(2);
+    const campaignInput2 = (buildCampaignBrief as any).mock.calls[1][1];
+    expect((campaignInput2 as any)?.inputValidationOverride?.productImageCheck).toBe('user_confirmed_continue');
   });
 });
 

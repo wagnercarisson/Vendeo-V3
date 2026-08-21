@@ -510,6 +510,46 @@ describe('ImageGenerationService.generateImage — telemetria D11 (usage/duratio
     const validationEvents = events.filter((e) => e.phase === 'input_validation');
     expect(validationEvents).toHaveLength(0);
   });
+
+  it('Teste 23 (F43): override → fase input_validation emitida obrigatoriamente skipped, sem chamada real e sem complete falso', async () => {
+    const { service, brief, context, mockInputValidation } = buildService();
+    // Sem chamada de IA real: validate retorna match SEM invocar onCall (usage)
+    mockInputValidation.validate.mockImplementation(async () => ({ classification: 'match', confidence: 1.0 }));
+
+    for (const literal of ['brief_review_confirmed', 'user_confirmed_continue'] as const) {
+      const ctx = createContext({
+        campaignInput: {
+          ...context.campaignInput,
+          inputValidationOverride: { productImageCheck: literal },
+        },
+      });
+
+      const phaseEvents: any[] = [];
+      const metricsEvents: any[] = [];
+      const res = await service.generateImage(
+        brief,
+        ctx,
+        (e) => phaseEvents.push(e),
+        undefined,
+        (e) => metricsEvents.push(e)
+      );
+
+      expect(res.success).toBe(true);
+
+      // Fase emitida como skipped — nunca running → complete
+      const validationPhases = phaseEvents.filter((e) => e.phase === 'input_validation');
+      expect(validationPhases.length).toBeGreaterThan(0);
+      for (const ev of validationPhases) {
+        expect(ev.status).toBe('skipped');
+      }
+      expect(validationPhases.some((e) => e.status === 'complete')).toBe(false);
+      expect(validationPhases.some((e) => e.status === 'running')).toBe(false);
+
+      // Sem chamada de IA real → sem evento de métrica input_validation
+      const validationMetrics = metricsEvents.filter((e) => e.phase === 'input_validation');
+      expect(validationMetrics).toHaveLength(0);
+    }
+  });
 });
 
 describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F39-15/F39-19)', () => {
