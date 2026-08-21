@@ -425,16 +425,26 @@ export function inferIntent(
   return "exclusive";
 }
 
-// F43 (D3): prepara as imagens do form para revisão/submit — comprime itens com
-// `file` (HEIC/EXIF via compressImage), normaliza mimeType para image/jpeg,
-// preserva role/source e cobre itens restaurados de draft com `dataUrl` (sem
-// re-comprimir). Itens sem `file` nem `dataUrl` são ignorados (não utilizáveis).
+// F43 (D3): prepara as imagens do form para revisão/submit — normaliza mimeType
+// para image/jpeg, preserva role/source e cobre itens restaurados de draft com
+// `dataUrl`. Itens com `dataUrl` (draft OU já comprimidos na entrada da revisão)
+// NÃO são re-comprimidos (idempotente — dataUrl-first); itens só com `file`
+// (HEIC/EXIF via compressImage) são comprimidos. Itens sem `file` nem `dataUrl`
+// são ignorados (não utilizáveis).
 export async function prepareCampaignImages(
   fields: CampaignFormFields
 ): Promise<PreparedCampaignImage[]> {
   const prepared: PreparedCampaignImage[] = [];
   for (const img of fields.productImages) {
-    if (img.file instanceof File) {
+    if (img.dataUrl) {
+      prepared.push({
+        id: img.id,
+        role: img.role,
+        source: img.source,
+        mimeType: "image/jpeg",
+        dataUrl: img.dataUrl,
+      });
+    } else if (img.file instanceof File) {
       const compressed = await compressImage(img.file);
       prepared.push({
         id: img.id,
@@ -442,14 +452,6 @@ export async function prepareCampaignImages(
         source: img.source,
         mimeType: "image/jpeg",
         dataUrl: compressed.dataUrl,
-      });
-    } else if (img.dataUrl) {
-      prepared.push({
-        id: img.id,
-        role: img.role,
-        source: img.source,
-        mimeType: "image/jpeg",
-        dataUrl: img.dataUrl,
       });
     }
   }
@@ -1160,6 +1162,17 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
         return false;
       }
       setPreparedImages(prepared);
+      // F43 (D3/D7): persiste o dataUrl comprimido nos itens do form — após
+      // "Voltar e editar" o preview usa o dataUrl base64 ESTÁVEL (independente
+      // de blob URL de `file`, que é revogado/recriado no unmount/remount do
+      // CampaignImageUpload) e mostra exatamente o payload final que será enviado.
+      setFields((prev) => ({
+        ...prev,
+        productImages: prev.productImages.map((item) => {
+          const p = prepared.find((x) => x.id === item.id);
+          return p ? { ...item, dataUrl: p.dataUrl, mimeType: "image/jpeg" } : item;
+        }),
+      }));
       setReviewMode(true);
       setPreparing(false);
       return true;

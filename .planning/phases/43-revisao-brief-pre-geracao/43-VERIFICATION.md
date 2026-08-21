@@ -89,6 +89,15 @@ updated: 2026-08-21
 - **UAT humano pendente:** os cenários 15.5–15.13 (roterio em `43-UAT.md`) requerem execução manual local (mobile real/estreito 320px/375px obrigatório — D7). Os 4 gates automáticos estão **verdes**; a UAT humana é o checkpoint final para fechamento.
 - **Migration aplicada:** `feature_flags` aplicada no remoto pelo usuário (43-07 resolvido).
 
+## 6. Correções da revisão inicial (UAT)
+
+Revisão inicial (2026-08-21) apontou dois pontos, aprovada a Opção A nos dois:
+
+1. **"Revise o brief antes de gerar" fora da vista (D7):** o clique em "Revisar e gerar" ocorre no fundo do form; a revisão renderiza no mesmo scroll, deixando o topo acima da viewport. **Correção:** `useEffect` em `campaign-brief-review.tsx` faz `window.scrollTo(0, 0)` no mount (instantâneo — ordem de leitura de cima para baixo).
+2. **Imagem perdida ao "Voltar e editar" (D3/D7):** o preview do form dependia de blob URLs de `item.file` (revogados no unmount ao entrar na revisão). **Correção:** `enterReview` persiste o `dataUrl` comprimido de volta nos itens de `fields.productImages`; `prepareCampaignImages` passou a ser **dataUrl-first** (não re-comprime) — o preview usa base64 estável, idempotente, e mostra o payload final (D3).
+
+**Validação pós-correção:** 4 gates verdes (vitest 2315 / typecheck / lint / build); testes de revisão (32) e suíte completa passando.
+
 ---
 
 *Fase 43 verificada: gates automáticos passed; UAT humana em `43-UAT.md` (checkpoint).*

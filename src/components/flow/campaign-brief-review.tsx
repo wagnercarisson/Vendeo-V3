@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import {
   AlertCircle,
   ArrowLeft,
@@ -74,6 +74,13 @@ export function CampaignBriefReview({
   );
   const primaryImage = preparedImages?.find((img) => img.role === "primary") ?? preparedImages?.[0];
   const referenceImages = preparedImages?.filter((img) => img.role !== "primary") ?? [];
+
+  // F43 (D7): ao entrar na revisão, garante o scroll no topo — o clique em
+  // "Revisar e gerar" ocorre no fundo do form; sem isto, o usuário cairia no
+  // meio/fundo da revisão e perderia o título + seção Produto.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   const costLabel = useMemo(() => {
     if (costStatus === "loading") return "Verificando custo...";
