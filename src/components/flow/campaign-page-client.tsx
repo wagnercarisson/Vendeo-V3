@@ -13,9 +13,10 @@ interface CampaignPageClientProps {
   balance: number | null;
   supportEmail?: string;
   generationPaused?: boolean;
+  identity?: StoreIdentitySnapshot | null;
 }
 
-export function CampaignPageClient({ store, balance, supportEmail, generationPaused }: CampaignPageClientProps) {
+export function CampaignPageClient({ store, balance, supportEmail, generationPaused, identity }: CampaignPageClientProps) {
   useLayoutEffect(() => {
     try {
       sessionStorage.removeItem("campaign_draft");
@@ -43,7 +44,7 @@ export function CampaignPageClient({ store, balance, supportEmail, generationPau
       <div className="mb-6">
         <StoreIdentityBlock
           store={store as { name: string; segment: string; brand_color: string; id: string }}
-          identity={null}
+          identity={identity ?? null}
         />
       </div>
 
@@ -54,7 +55,7 @@ export function CampaignPageClient({ store, balance, supportEmail, generationPau
         Informe os dados do produto e da oferta
       </p>
 
-      <CampaignInputForm storeId={store.id} balance={balance} supportEmail={supportEmail} />
+      <CampaignInputForm storeId={store.id} balance={balance} supportEmail={supportEmail} store={store as { name: string; segment: string; brand_color: string; id: string }} identity={identity} />
     </div>
   );
 }

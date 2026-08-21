@@ -4,6 +4,7 @@ import { useCampaignForm, inferIntent } from "./use-campaign-form";
 import type { CampaignFormFields, CampaignProductFormImage } from "./use-campaign-form";
 import { CampaignImageUpload } from "./campaign-image-upload";
 import { GenerationProgress } from "./generation-progress";
+import { CampaignBriefReview } from "./campaign-brief-review";
 import { BADGE_OPTIONS, BADGE_OPTIONS_BY_INTENT } from "@/lib/constants";
 import { MAX_CAMPAIGN_IMAGES } from "@/lib/image-generation/config";
 import { MandatoryArtworkField } from "@/components/campaign/mandatory-artwork-field";
@@ -19,14 +20,17 @@ import {
 import { CreditCta } from "@/components/credit/credit-cta";
 import { useOperationCosts } from "@/hooks/use-operation-costs";
 import { ErrorState } from "@/components/ui/error-state";
+import type { StoreIdentitySnapshot } from "@/components/campaign/types";
 
 interface CampaignInputFormProps {
   storeId?: string;
   balance?: number | null;
   supportEmail?: string;
+  store?: { name: string; segment: string; brand_color: string; id: string };
+  identity?: StoreIdentitySnapshot | null;
 }
 
-export function CampaignInputForm({ storeId, balance, supportEmail }: CampaignInputFormProps) {
+export function CampaignInputForm({ storeId, balance, supportEmail, store, identity }: CampaignInputFormProps) {
   const {
     fields,
     fieldErrors,
@@ -49,6 +53,13 @@ export function CampaignInputForm({ storeId, balance, supportEmail }: CampaignIn
     phases,
     addImage,
     removeImage,
+    reviewMode,
+    preparing,
+    preparedImages,
+    reviewError,
+    enterReview,
+    exitReview,
+    confirmReview,
   } = useCampaignForm(storeId);
 
   if (isSubmitting) {
@@ -57,6 +68,23 @@ export function CampaignInputForm({ storeId, balance, supportEmail }: CampaignIn
         phases={phases}
         error={submitError}
         onRetry={submitError ? handleSubmit : undefined}
+      />
+    );
+  }
+
+  if (reviewMode) {
+    return (
+      <CampaignBriefReview
+        fields={fields}
+        preparedImages={preparedImages}
+        preparing={preparing}
+        error={reviewError}
+        store={store}
+        identity={identity}
+        balance={balance}
+        supportEmail={supportEmail}
+        onBack={exitReview}
+        onConfirm={confirmReview}
       />
     );
   }
@@ -173,7 +201,7 @@ export function CampaignInputForm({ storeId, balance, supportEmail }: CampaignIn
         handlePriceDiscountedChange={handlePriceDiscountedChange}
         imagePreviewUrl={imagePreviewUrl}
         isSubmitting={isSubmitting}
-        handleSubmit={handleSubmit}
+        onReviewRequest={enterReview}
         addImage={addImage}
         removeImage={removeImage}
         balance={balance}
@@ -195,7 +223,7 @@ interface FormContentProps {
   handlePriceDiscountedChange: (raw: string) => void;
   imagePreviewUrl: string | null;
   isSubmitting: boolean;
-  handleSubmit: () => void;
+  onReviewRequest: () => Promise<boolean>;
   addImage: (file: File, source: "upload" | "camera") => void;
   removeImage: (id: string) => void;
   balance?: number | null;
@@ -266,7 +294,7 @@ function FormContent({
   handlePriceDiscountedChange,
   imagePreviewUrl,
   isSubmitting,
-  handleSubmit,
+  onReviewRequest,
   addImage,
   removeImage,
   balance,
@@ -292,7 +320,7 @@ function FormContent({
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        handleSubmit();
+        onReviewRequest();
       }}
       noValidate
       className="space-y-5"
@@ -623,10 +651,10 @@ function FormContent({
           {isSubmitting ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              Criando...
+              Revisando...
             </>
           ) : (
-            "Criar Campanha"
+            "Revisar e gerar"
           )}
         </button>
 

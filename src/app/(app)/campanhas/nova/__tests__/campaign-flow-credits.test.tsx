@@ -115,7 +115,7 @@ describe("Campaign Flow — Credit Balance", () => {
   it("shows balance indicator and enables submit when balance >= 1", () => {
     render(<CampaignInputForm storeId="store-1" balance={5} />);
 
-    expect(screen.getByText("Criar Campanha")).toBeEnabled();
+    expect(screen.getByText("Revisar e gerar")).toBeEnabled();
     expect(screen.getByText(/Saldo/)).toBeInTheDocument();
     expect(screen.getByText(/Custo: 1/)).toBeInTheDocument();
   });
@@ -123,14 +123,14 @@ describe("Campaign Flow — Credit Balance", () => {
   it("disables submit and shows CTA when balance is zero", () => {
     render(<CampaignInputForm storeId="store-1" balance={0} />);
 
-    expect(screen.getByText("Criar Campanha")).toBeDisabled();
+    expect(screen.getByText("Revisar e gerar")).toBeDisabled();
     expect(screen.getByText("Solicitar créditos")).toBeInTheDocument();
   });
 
   it("shows distinct error message when balance is null (error state)", () => {
     render(<CampaignInputForm storeId="store-1" balance={null} />);
 
-    expect(screen.getByText("Criar Campanha")).toBeDisabled();
+    expect(screen.getByText("Revisar e gerar")).toBeDisabled();
     expect(screen.getByText(/não foi possível confirmar/i)).toBeInTheDocument();
     expect(screen.getByText("Tentar novamente")).toBeInTheDocument();
     expect(screen.queryByText("Solicitar créditos")).not.toBeInTheDocument();
