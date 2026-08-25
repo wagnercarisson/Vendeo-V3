@@ -14,6 +14,10 @@ import { z } from "zod";
 import { validateCnpj } from "@/lib/cnpj/validate";
 import { evaluateFreemiumEligibility } from "@/lib/freemium/freemium-risk-service";
 
+function toStoreVerificationStatus(decision: string): string {
+  return decision === "reject" ? "rejected" : decision;
+}
+
 const UpdateCnpjSchema = z.object({
   storeId: z.string().uuid(),
   cnpjNormalized: z.string().length(14),
@@ -154,7 +158,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
         });
 
         verificationData = { signals: eligibility.signals, score: eligibility.score };
-        verificationStatus = eligibility.decision;
+        verificationStatus = toStoreVerificationStatus(eligibility.decision);
         verificationReasons = eligibility.reasons.length > 0 ? eligibility.reasons : null;
       } else {
         // D7 — cidade/UF ausentes: loja NÃO avaliada (unverified), sem approved/review/concessão

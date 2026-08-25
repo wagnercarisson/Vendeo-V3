@@ -20,6 +20,10 @@ import { evaluateFreemiumEligibility } from "@/lib/freemium/freemium-risk-servic
 
 const GENERIC_SUBSEGMENT_VALUES = ["outro", "loja", "comercio", "com\u00e9rcio", "varejo"];
 
+function toStoreVerificationStatus(decision: string): string {
+  return decision === "reject" ? "rejected" : decision;
+}
+
 function validateSubsegment(value: string): string | null {
   const trimmed = value.trim();
   if (trimmed.length < 3) return "Digite ao menos 3 caracteres";
@@ -204,7 +208,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
         });
 
         verificationData = { signals: eligibility.signals, score: eligibility.score };
-        verificationStatus = eligibility.decision;
+        verificationStatus = toStoreVerificationStatus(eligibility.decision);
         verificationReasons = eligibility.reasons.length > 0 ? eligibility.reasons : null;
 
         if (eligibility.decision === "approved") {

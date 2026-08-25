@@ -1,7 +1,6 @@
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { CreditService } from "@/lib/credit/credit-service";
-import { StoreCreationForm } from "./store-creation-form";
 import { CreditGrantForm } from "./credit-grant-form";
 import { hasValidPrivacyAcknowledgement } from "@/lib/legal/privacy";
 import { getEffectiveConsent } from "@/lib/legal/consent";
@@ -108,11 +107,10 @@ export default async function AdminUserDetailPage({
         <div className="rounded-md border border-border bg-bg-surface p-4">
           <p className="font-medium text-text-primary">Usuário sem loja</p>
           <p className="text-sm text-muted-foreground mt-1">
-            Este usuário ainda não possui uma loja. Crie uma loja para conceder acesso ao beta.
+            Este usuário ainda não possui uma loja. Para loja de produção, o usuário deve concluir o onboarding.
           </p>
-          <StoreCreationForm userId={userId} />
           <div className="mt-3">
-            <a href={`/admin/users/${userId}/create-test-store`} className="text-xs text-accent-amber hover:underline font-medium">
+            <a href={`/admin/users/${userId}/create-test-store`} className="text-sm text-accent-amber hover:underline font-medium">
               Criar store de teste
             </a>
           </div>

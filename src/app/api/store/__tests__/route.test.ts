@@ -261,6 +261,10 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
     const body = await res.json();
     expect(body.onboardingGranted).toBe(false);
     expect(body.verificationStatus).toBe("rejected");
+    expect(mockRpc).toHaveBeenCalledWith("create_store_with_cnpj", expect.objectContaining({
+      p_verification_status: "rejected",
+      p_verification_reasons: ["cnpj_baixada"],
+    }));
   });
 
   it("Teste 26 (D7): does NOT call the motor when city/state absent — unverified, no review, no grant", async () => {

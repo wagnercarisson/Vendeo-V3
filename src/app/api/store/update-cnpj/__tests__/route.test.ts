@@ -463,6 +463,40 @@ describe("POST /api/store/update-cnpj", () => {
     }));
   });
 
+  it("maps eligibility reject decision to rejected verification status before RPC", async () => {
+    const { getCurrentStore } = await import("@/lib/auth/store-ownership");
+    vi.mocked(getCurrentStore).mockResolvedValueOnce({
+      id: STORE_UUID,
+      name: "Minha Loja",
+      city: "São Paulo",
+      state: "SP",
+      segment: "moda-calcados-acessorios",
+    } as import("@/lib/store").Store);
+    mockEvaluateFreemium.mockReturnValue({
+      decision: "reject",
+      reasons: ["cnpj_baixada"],
+      score: 10,
+      signals: { situacaoCadastral: "BAIXADA" },
+    });
+    mockRpc.mockResolvedValueOnce({
+      data: { store: [{ id: STORE_UUID }] },
+      error: null,
+    });
+
+    const { POST } = await import("../route");
+    const res = await POST(createRequest({
+      storeId: STORE_UUID,
+      cnpjNormalized: "12345678000195",
+      razaoSocial: "Razao",
+    }));
+
+    expect(res.status).toBe(200);
+    expect(mockRpc).toHaveBeenCalledWith("update_store_cnpj", expect.objectContaining({
+      p_verification_status: "rejected",
+      p_verification_reasons: ["cnpj_baixada"],
+    }));
+  });
+
   it("Teste 26 (D7d): approves via motor when all signals ok — decision from motor, not name score", async () => {
     const { getCurrentStore } = await import("@/lib/auth/store-ownership");
     vi.mocked(getCurrentStore).mockResolvedValueOnce({

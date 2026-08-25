@@ -35,44 +35,17 @@ beforeEach(() => {
 });
 
 describe("POST /api/admin/stores", () => {
-  it("returns 201 when user has no store", async () => {
-    mockRpc.mockResolvedValue({
-      data: {
-        id: "store-1",
-        name: "Loja Teste",
-        segment: "moda",
-        balance: 5,
-      },
-      error: null,
-    });
-
+  it("returns 410 because production store creation via admin is disabled", async () => {
     const res = await postStore({
       userId: "00000000-0000-0000-0000-000000000001",
       storeName: "Loja Teste",
       segment: "moda",
     });
 
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(410);
     const body = await res.json();
-    expect(body.id).toBe("store-1");
-    expect(body.balance).toBe(5);
-  });
-
-  it("returns 409 when user already has a store", async () => {
-    mockRpc.mockResolvedValue({
-      data: null,
-      error: { message: "usuario_ja_possui_loja" },
-    });
-
-    const res = await postStore({
-      userId: "00000000-0000-0000-0000-000000000001",
-      storeName: "Loja Teste",
-      segment: "moda",
-    });
-
-    expect(res.status).toBe(409);
-    const body = await res.json();
-    expect(body.error).toBe("Usuário já possui uma loja");
+    expect(body.code).toBe("admin_store_creation_disabled");
+    expect(mockRpc).not.toHaveBeenCalled();
   });
 
   it("returns 401 when not authenticated", async () => {
