@@ -560,8 +560,11 @@ Desdobramento da F38.2, adicionados via OpenSpec (`openspec/changes/fase-38-2-1-
 - [x] **F38.2.1-13**: Fallback legacy explícito para eventos sem valor persistido (nunca silencioso; valor backfilled nunca tratado como captured)
 - [x] **F38.2.1-14**: Testes de snapshot/fallback/estabilidade temporal/nomenclatura/origem + gates verdes
 
-## v1.7 Requirements (Monetização Pública / Stripe — iniciativa diferida)
+## v1.5 Requirements — Revisão e Aprovação da Arte (F37)
 
+F37 (Revisão e Aprovação da Arte, v1.5) em execução em fatias **37.1/37.2/37.3** (padrão F38/38.1/38.2). Nesta fatia, os requisitos **F37.1-01 a F37.1-27** são mapeados no `37-1-CONTEXT.md` (fonte detalhada: `openspec/changes/fase-37-1-approval-gate-candidata-unica/`). **Os requisitos da F37 entram nesta seção quando os specs forem aprovados** — nenhuma linha de requisito F37 é criada nesta fatia.
+
+## v1.7 Requirements (Monetização Pública / Stripe — iniciativa diferida)
 Deferred from v1.5 critical path. **Monetização pública / Stripe: iniciativa diferida v1.7+ (sem fase numerada)**, dependente de decisão comercial/jurídica/contábil — reaberta quando houver condição real de executar. Não é fase numerada no roadmap ativo (decisão do alinhamento F43 D1).
 
 ### Pagamento (PAY)

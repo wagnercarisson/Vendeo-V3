@@ -4,7 +4,7 @@
 
 **18 phases** | **177 requirements mapped** | All covered ✓
 
-**Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23. F35 = Changelog/Novidades, F36 = Onboarding — Navegação por Abas, F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5), **F39 = Brief Estruturado de Campanha (v1.5)**, **F40 = Campos Comerciais e Avisos do Brief (v1.5)**, **F41 = Mídia de Campanha Mobile (v1.5)**, **F42 = Signup Controlado e Elegibilidade Freemium (v1.5, concluída)**, **F43 = Revisão do Brief Pré-Geração (v1.5)**; **Monetização pública / Stripe sai da numeração (v1.7+, iniciativa diferida não numerada)** (renumeração alinhada no documento de alinhamento F43, precedente F42 D1). **38.1 = Apuração de Custos de IA por Entrega** (desdobramento da F38, mesmo milestone v1.5). **38.2 = Admin de Custos Operacionais + Configurações Econômicas** (desdobramento da F38, mesmo milestone v1.5).
+**Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23. F35 = Changelog/Novidades, F36 = Onboarding — Navegação por Abas, F37 = Revisão e Aprovação da Arte (v1.5, em execução em fatias 37.1/37.2/37.3), F38 = Tabela de Custos por Operação (v1.5), **F39 = Brief Estruturado de Campanha (v1.5)**, **F40 = Campos Comerciais e Avisos do Brief (v1.5)**, **F41 = Mídia de Campanha Mobile (v1.5)**, **F42 = Signup Controlado e Elegibilidade Freemium (v1.5, concluída)**, **F43 = Revisão do Brief Pré-Geração (v1.5)**; **Monetização pública / Stripe sai da numeração (v1.7+, iniciativa diferida não numerada)** (renumeração alinhada no documento de alinhamento F43, precedente F42 D1). **38.1 = Apuração de Custos de IA por Entrega** (desdobramento da F38, mesmo milestone v1.5). **38.2 = Admin de Custos Operacionais + Configurações Econômicas** (desdobramento da F38, mesmo milestone v1.5). **F37 em execução em fatias 37.1/37.2/37.3** (padrão F38/38.1/38.2) — 37.1 = Approval Gate + Candidata Única, fonte da verdade `openspec/changes/fase-37-1-approval-gate-candidata-unica/` (decisão do usuário 2026-09-01).
 
 ---
 
@@ -516,6 +516,51 @@
 
 ---
 
+### Phase 37 — Revisão e Aprovação da Arte
+
+**Goal:** Transformar a primeira entrega da campanha em um **ciclo de aprovação** guiado (experimento beta controlado por feature flag): após a geração, o lojista revisa a arte candidata e a aprova explicitamente antes da entrega (download + Kit de Publicação). Executada em **fatias 37.1/37.2/37.3** (padrão F38/38.1/38.2). A **37.1 — Approval Gate + Candidata Única** valida o modelo de aprovação **sem tocar no pipeline de imagem** (mitiga regressão no core).
+
+**Requirements:** F37.1-01 a F37.1-27 (mapeados no `37-1-CONTEXT.md`; os requisitos da F37 entram no `REQUIREMENTS.md` quando os specs forem aprovados)
+
+**Success criteria:**
+
+1. Flag `campaign_approval_enabled` em `feature_flags` (fail-closed, seed false), listada na tela "Controles operacionais" sem novo RPC/CHECK (D1)
+2. `campaign_art_versions` criada (idempotente, RLS service_role, índice único parcial 1-approved) + colunas em `campaigns` (approval_status/rejection_count/approved_version_id/approved_at) + CHECK `campaigns_approved_requires_version` (D7)
+3. RPC `approve_campaign_art_version` transacional (guarded update + defensivo + repontar campaigns) (D8)
+4. `generate-image` insere v1 (pending/active, brief_snapshot = campaign_brief_v1) quando flag ligada; flag off → comportamento atual; falha no insert → continua (legacy) (D8/D10/D1)
+5. `ApprovalDisplayState`/`computeApprovalState`/`isDeliveryReleased` corretos (not_enabled/legacy/pending/approved/regenerating) (D2)
+6. Download e publication-copy gated: pending/regenerating + flag on → 403; not_enabled/legacy/approved → liberado (D2/decisão 4)
+7. `/campanhas/[id]` exibe tela de revisão (candidata ativa, sem download/copy) quando pending; entrega como hoje quando approved/legacy/not_enabled (D7/decisões 3/12)
+8. `POST /api/campaign/[id]/approve` transacional com mapeamento de erros correto; sucesso → 200 + entrega liberada (D8)
+9. Botão "Corrigir" ausente/desabilitado, nenhum modal de correção abre (D12/decisão 3)
+10. `npx vitest run`, `npm run typecheck`, `npm run lint`, `npm run build` — zero erros; ~17+ testes novos + regressão co-migrada; UAT local (flag ligada/desligada, campanha legada, mobile 320px/375px)
+
+**Dependencies:** F39 (Brief Estruturado — domínio `CampaignBrief`/snapshot `campaign_brief_v1`, `buildCampaignBriefSnapshot`), F40 (Campos Comerciais e Avisos do Brief), F41 (Mídia de Campanha Mobile — multi-imagem, persistência de inputs, `campaignId` pré-gerado), F43 (infra `feature_flags` + `FeatureFlagService` + `ALL_FEATURE_FLAG_KEYS` + admin "Controles operacionais" + RPC `admin_update_feature_flag`), F31.x (intents/prompts/diretores — via pipeline, sem mudança), F38/F38.1 (custos/telemetria — `operation_run_id` já persistido), F24/F25 (pipeline de créditos), F38.2.1 (padrão de snapshot imutável). **Antecede** a 37.2 (correção visual com referência) e a 37.3 (correção factual de briefing).
+
+**Source of truth:** `openspec/changes/fase-37-1-approval-gate-candidata-unica/` (decisão do usuário 2026-09-01 — pasta real da fatia, padrão F38.1/F38.2)
+
+### Sub-fase 37.1 — Approval Gate + Candidata Única
+
+**Status:** Em execução
+
+**Goal:** Approval Gate + Candidata Única — validar o modelo de aprovação sem tocar no pipeline de imagem (mitiga regressão no core). Entrega: flag `campaign_approval_enabled` (fail-closed), tabela `campaign_art_versions` + colunas em `campaigns`, RPC `approve_campaign_art_version` transacional, `generate-image` insere v1 quando flag ligada, estado `ApprovalDisplayState`/gating (download + copy 403 até aprovar), tela de revisão da candidata ativa com botão "Aprovar e liberar campanha", rota `POST /api/campaign/[id]/approve`. **Sem correção em qualquer forma** (37.2/37.3).
+
+**Plans:** 15/15 plans (8 waves) — em execução (plano 37-1-01 = trackings, em andamento)
+
+### Sub-fase 37.2 — Correção Visual/Criativa
+
+**Status:** Planejamento futuro
+
+**Goal:** Correção visual com referência de arte (Correction Brief Parser, `/regenerate`, cap `rejection_count < 2`, modal em 2 etapas, `prompts/regen/*`, `setCorrectionInProgress`/`markVersionRejected`/`discardArtAsset`, `rebuildBriefFromSnapshot`, estratégia A/B text_only × text_plus_reference).
+
+### Sub-fase 37.3 — Correção Factual de Briefing
+
+**Status:** Planejamento futuro
+
+**Goal:** Correção factual de briefing (`briefPatch`/`validateBriefPatch` — preço/validade/aviso legal/badge/digitação).
+
+---
+
 ### Phase 38 — Tabela de Custos por Operação
 
 **Goal:** Criar a fonte única de custo por operação (`credit_operation_costs`) e substituir o hardcoded (`COST_PER_GENERATION = 1`, literal `1` na rota de VS, "1 crédito" na UI) por custo dinâmico resolvido em runtime — com admin sem deploy, auditoria old/new e ledger auto-descritivo via metadata snapshot.
@@ -1016,5 +1061,5 @@ Phase 39 (Brief Estruturado de Campanha — v1.5)
 
 *Roadmap created: 2026-07-15*
 *Milestone: v1.5 — Lançamento Externo Controlado*
-*Last updated: 2026-08-21 — **Fase 43 (Revisão do Brief Pré-Geração, v1.5) CONCLUÍDA** (15/15 plans, 2317 testes, 4 gates verdes, UAT 15.5–15.13 PASS 9/9); renumeração D1: F42 = Signup Controlado e Elegibilidade Freemium (v1.5) **CONCLUÍDA** (20/20 plans, 2182 testes, UAT 20.5–20.15 PASS), **F43 = Revisão do Brief Pré-Geração** (v1.5), **Monetização pública / Stripe fora da numeração (iniciativa diferida v1.7+ não numerada)** — precedente F42 D1, fonte `openspec/changes/fase-43-revisao-brief-pre-geracao/`.*
+*Last updated: 2026-09-01 — **Fase 37 (Revisão e Aprovação da Arte, v1.5) em EXECUÇÃO em fatias 37.1/37.2/37.3** (37.1 = Approval Gate + Candidata Única — em execução, fonte da verdade `openspec/changes/fase-37-1-approval-gate-candidata-unica/`, decisão do usuário 2026-09-01); F43 (Revisão do Brief Pré-Geração, v1.5) **CONCLUÍDA** (15/15 plans, 2317 testes, 4 gates verdes, UAT 15.5–15.13 PASS 9/9); renumeração D1: F42 = Signup Controlado e Elegibilidade Freemium (v1.5) **CONCLUÍDA** (20/20 plans, 2182 testes, UAT 20.5–20.15 PASS), **F43 = Revisão do Brief Pré-Geração** (v1.5), **Monetização pública / Stripe fora da numeração (iniciativa diferida v1.7+ não numerada)** — precedente F42 D1, fonte `openspec/changes/fase-43-revisao-brief-pre-geracao/`.*
 *Histórico anterior: Fase 42 em planejamento (2026-08-16):* Fase 41 complete (Mídia de Campanha Mobile — 13/13 plans, 2033 testes, 4 gates verdes, UAT 6/6 — Android em produção ✅; iOS HEIC pendente); renumeração D1: F41 = Mídia de Campanha Mobile (v1.5), Stripe/Monetização Pública → F42 (v1.7, pós-beta) — precedente F40 D1, fonte `openspec/changes/fase-41-midia-de-campanha-mobile/`.* Fase 40 complete (Campos Comerciais e Avisos do Brief — 9/9 plans, 1997 testes, 4 gates verdes, UAT aprovado 6/6); renumeração D1: F40 = Campos Comerciais e Avisos do Brief (v1.5), Stripe/Monetização Pública → F41 (v1.7, pós-beta) — precedente F39 D1, fonte `openspec/changes/fase-40-campos-comerciais-avisos-brief/`.* Fase 39 complete (Brief Estruturado de Campanha — 8/8 plans, 1950 testes, 4 gates verdes, UAT aprovado 5/5); renumeração F39 = Brief Estruturado de Campanha (v1.5) e Stripe/Monetização Pública → F40 (v1.7, pós-beta) — precedente F37 D11, fonte `openspec/changes/fase-39-brief-estruturado-campanha/`.* Fase 38.2.1 complete (Snapshot Econômico — 7/7 plans, 1887 testes, I1-I7 53/53 asserts); Phase 38.2 complete (Admin de Custos Operacionais + Configurações Econômicas — 11/11 plans, 1832 testes, verificação I1–I6 em banco real); Fase 38 complete (Tabela de Custos por Operação — 8/8 plans, 1597 testes, UAT 4/4); renumeração F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5); **Phase 38.1 (Apuração de Custos de IA por Entrega — desdobramento da F38, v1.5) CONCLUÍDA — 11/11 plans, 1713 testes (199 arquivos), UAT validado, fechada como camada de ESTIMATIVA OPERACIONAL GRANULAR** (ajuste provisório versionável da tool image_generation: `responses:image_generation = USD 0.065` = estimativa provisória para beta, calibrada por UAT/dashboard/CSV — NÃO é custo financeiro real; reconciliação financeira real fica para a próxima fase; seed `ai_model_pricing` via migration 20260809000003 aplicada Local/Remote) — fonte `openspec/changes/fase-38-1-ai-cost-accounting/`*
