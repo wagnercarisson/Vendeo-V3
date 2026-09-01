@@ -10,6 +10,8 @@ const mockRequireOwnership = vi.fn();
 const mockGetCampaign = vi.fn();
 const mockValidatePublicationCopy = vi.fn();
 const mockSupabaseFrom = vi.fn();
+const mockListArtVersions = vi.fn();
+const mockIsCampaignApprovalEnabled = vi.fn();
 
 vi.mock("@/lib/auth/csrf", () => ({
   requireSameOrigin: vi.fn(() => mockRequireSameOrigin()),
@@ -27,6 +29,11 @@ vi.mock("@/lib/auth/store-ownership", () => ({
 
 vi.mock("@/lib/campaign/persistence", () => ({
   getCampaign: vi.fn(async (id: string) => mockGetCampaign(id)),
+  listArtVersions: vi.fn(async (id: string) => mockListArtVersions(id)),
+}));
+
+vi.mock("@/lib/feature-flags/feature-flag-service", () => ({
+  isCampaignApprovalEnabled: vi.fn(async () => mockIsCampaignApprovalEnabled()),
 }));
 
 vi.mock("@/lib/campaign/publication-copy", () => ({
@@ -74,6 +81,8 @@ function createRequest(url: string, body?: unknown): NextRequest {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockIsCampaignApprovalEnabled.mockResolvedValue(false);
+  mockListArtVersions.mockResolvedValue([]);
 });
 
 describe("PATCH /api/campaign/[id]/publication-copy", () => {
@@ -249,5 +258,128 @@ describe("PATCH /api/campaign/[id]/publication-copy", () => {
     expect(response.status).toBe(401);
     const body = await response.json();
     expect(body.error).toBe("Usuário não autenticado");
+  });
+
+  // ── F37.1 (D2/decisão 4): gate de aprovação no publication-copy ─────
+
+  const mockV1Pending = {
+    id: "version-1",
+    campaign_id: VALID_UUID,
+    version_number: 1,
+    status: "pending",
+    storage_path: "store-123/camp-123.jpg",
+    asset_status: "active",
+    asset_deleted_at: null,
+    brief_snapshot: {},
+    render_snapshot: null,
+    generation_metadata: null,
+    rejection_reason: null,
+    correction_in_progress: false,
+    created_at: "2026-09-01T10:00:00Z",
+  };
+
+  it("16.4 — pending + flag on → 403 e update NÃO chamado (nada persistido)", async () => {
+    mockRequireSameOrigin.mockReturnValue(undefined);
+    mockRequireApiUser.mockResolvedValue({ userId: "user-123", claims: { sub: "user-123" } });
+    mockGetCampaign.mockResolvedValue(mockCampaign);
+    mockRequireOwnership.mockResolvedValue({ id: "store-123" });
+    mockIsCampaignApprovalEnabled.mockResolvedValue(true);
+    mockListArtVersions.mockResolvedValue([mockV1Pending]);
+
+    const mockUpdate = vi.fn();
+    mockSupabaseFrom.mockReturnValue({ update: mockUpdate });
+
+    const { PATCH } = await import(
+      "@/app/api/campaign/[id]/publication-copy/route"
+    );
+    const response = await PATCH(
+      createRequest(`http://localhost:3000/api/campaign/${VALID_UUID}/publication-copy`, mockValidBody),
+      { params: Promise.resolve({ id: VALID_UUID }) },
+    );
+
+    expect(response.status).toBe(403);
+    const body = await response.json();
+    expect(body.error).toBe("Campaign pending approval");
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("16.4 — após aprovação + flag on → 200 (edição normal)", async () => {
+    mockRequireSameOrigin.mockReturnValue(undefined);
+    mockRequireApiUser.mockResolvedValue({ userId: "user-123", claims: { sub: "user-123" } });
+    mockGetCampaign.mockResolvedValue({
+      ...mockCampaign,
+      approval_status: "approved",
+      approved_version_id: "version-1",
+      approved_at: "2026-09-01T10:00:00Z",
+    });
+    mockRequireOwnership.mockResolvedValue({ id: "store-123" });
+    mockIsCampaignApprovalEnabled.mockResolvedValue(true);
+    mockListArtVersions.mockResolvedValue([{ ...mockV1Pending, status: "approved" }]);
+    mockValidatePublicationCopy.mockReturnValue({ valid: true, data: mockValidBody });
+
+    const mockUpdate = vi.fn().mockReturnValue({
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    });
+    mockSupabaseFrom.mockReturnValue({ update: mockUpdate });
+
+    const { PATCH } = await import(
+      "@/app/api/campaign/[id]/publication-copy/route"
+    );
+    const response = await PATCH(
+      createRequest(`http://localhost:3000/api/campaign/${VALID_UUID}/publication-copy`, mockValidBody),
+      { params: Promise.resolve({ id: VALID_UUID }) },
+    );
+
+    expect(response.status).toBe(200);
+  });
+
+  it("16.4 — legacy (flag on + zero versões) → 200 (edição)", async () => {
+    mockRequireSameOrigin.mockReturnValue(undefined);
+    mockRequireApiUser.mockResolvedValue({ userId: "user-123", claims: { sub: "user-123" } });
+    mockGetCampaign.mockResolvedValue(mockCampaign);
+    mockRequireOwnership.mockResolvedValue({ id: "store-123" });
+    mockIsCampaignApprovalEnabled.mockResolvedValue(true);
+    mockListArtVersions.mockResolvedValue([]);
+    mockValidatePublicationCopy.mockReturnValue({ valid: true, data: mockValidBody });
+
+    const mockUpdate = vi.fn().mockReturnValue({
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    });
+    mockSupabaseFrom.mockReturnValue({ update: mockUpdate });
+
+    const { PATCH } = await import(
+      "@/app/api/campaign/[id]/publication-copy/route"
+    );
+    const response = await PATCH(
+      createRequest(`http://localhost:3000/api/campaign/${VALID_UUID}/publication-copy`, mockValidBody),
+      { params: Promise.resolve({ id: VALID_UUID }) },
+    );
+
+    expect(response.status).toBe(200);
+  });
+
+  it("16.5 — flag off → 200 (edição e restore como hoje)", async () => {
+    mockRequireSameOrigin.mockReturnValue(undefined);
+    mockRequireApiUser.mockResolvedValue({ userId: "user-123", claims: { sub: "user-123" } });
+    mockGetCampaign.mockResolvedValue(mockCampaign);
+    mockRequireOwnership.mockResolvedValue({ id: "store-123" });
+    mockIsCampaignApprovalEnabled.mockResolvedValue(false);
+    mockListArtVersions.mockResolvedValue([mockV1Pending]);
+    mockValidatePublicationCopy.mockReturnValue({ valid: true, data: mockValidBody });
+
+    const mockUpdate = vi.fn().mockReturnValue({
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    });
+    mockSupabaseFrom.mockReturnValue({ update: mockUpdate });
+
+    const { PATCH } = await import(
+      "@/app/api/campaign/[id]/publication-copy/route"
+    );
+    const response = await PATCH(
+      createRequest(`http://localhost:3000/api/campaign/${VALID_UUID}/publication-copy`, mockValidBody),
+      { params: Promise.resolve({ id: VALID_UUID }) },
+    );
+
+    expect(response.status).toBe(200);
   });
 });

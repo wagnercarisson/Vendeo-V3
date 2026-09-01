@@ -35,6 +35,7 @@ vi.mock('@/lib/campaign/persistence', () => ({
   updateCampaignReady: vi.fn(),
   updateCampaignError: vi.fn(),
   deleteCampaignImage: vi.fn(),
+  createArtVersion: vi.fn(),
 }));
 
 vi.mock('@/lib/campaign/image-processor', () => ({
@@ -201,7 +202,7 @@ vi.mock('@/lib/economic/economic-parameter-service', () => ({
 }));
 
 import { resolveStoreIdentity, validateIdentityReference, buildCampaignBrief } from '@/lib/store-identity-service';
-import { createCampaign, dataUrlToCampaignImage, uploadCampaignImage, uploadCampaignInputImage, removeCampaignInputs, updateCampaignReady, updateCampaignError, deleteCampaignImage } from '@/lib/campaign/persistence';
+import { createCampaign, dataUrlToCampaignImage, uploadCampaignImage, uploadCampaignInputImage, removeCampaignInputs, updateCampaignReady, updateCampaignError, deleteCampaignImage, createArtVersion } from '@/lib/campaign/persistence';
 import { transcodeToJpeg } from '@/lib/campaign/image-processor';
 import { InputValidationService } from '@/lib/image-generation/services/input-validation-service';
 
@@ -1557,6 +1558,60 @@ describe('snapshot econômico (F38.2.1)', () => {
     for (const e of capturedEvents) {
       expect(e.usdBrlRateAtGeneration).toBeNull();
       expect(e.creditValueBrlAtGeneration).toBeNull();
+    }
+  });
+});
+
+// ── F37.1 (D4/D8/D10): generate-image insere v1 quando a flag está ligada ────
+describe('generate-image v1 (F37.1)', () => {
+  // setup de sucesso do pipeline completo (reaproveita setupSuccessMocks).
+  async function setupV1Success() {
+    await setupSuccessMocks();
+    mockIsCampaignApprovalEnabled.mockResolvedValue(true);
+    (createArtVersion as any).mockResolvedValue(undefined);
+  }
+
+  it('Teste 29 (15.1): flag ON → createArtVersion chamada com (campaignId, 1, storagePath, inputSnapshot)', async () => {
+    await setupV1Success();
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_REQUEST_BODY));
+    await res.text();
+    expect(res.status).toBe(200);
+
+    expect(createArtVersion).toHaveBeenCalledWith(
+      CAMPAIGN_ID,
+      1,
+      `${STORE_ID}/${CAMPAIGN_ID}.jpg`,
+      expect.objectContaining({ schemaVersion: "campaign_brief_v1" }),
+    );
+  });
+
+  it('15.1 — flag OFF → createArtVersion NÃO chamada (comportamento atual, zero inserções)', async () => {
+    await setupSuccessMocks();
+    mockIsCampaignApprovalEnabled.mockResolvedValue(false);
+    (createArtVersion as any).mockClear();
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_REQUEST_BODY));
+    await res.text();
+    expect(res.status).toBe(200);
+
+    expect(createArtVersion).not.toHaveBeenCalled();
+  });
+
+  it('15.2 — flag ON + createArtVersion REJEITANDO → geração continua (fail-safe, 200, sem throw)', async () => {
+    await setupV1Success();
+    (createArtVersion as any).mockRejectedValue(new Error('db down'));
+    const logSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      const { POST } = await import('../route');
+      const res = await POST(makeRequest(VALID_REQUEST_BODY));
+      await res.text();
+      // fail-safe: o erro do insert NÃO derruba a geração
+      expect(res.status).toBe(200);
+    } finally {
+      logSpy.mockRestore();
     }
   });
 });
