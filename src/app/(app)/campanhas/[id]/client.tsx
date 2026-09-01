@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
+import CampaignApprovalView from "@/components/campaign/campaign-approval-view";
 
 export default function CampaignPageClient(props: CampaignPageProps) {
   const router = useRouter();
@@ -51,7 +52,19 @@ export default function CampaignPageClient(props: CampaignPageProps) {
       {props.displayStatus === "error" && (
         <ErrorView onNewCampaign={() => router.push("/campanhas/nova")} />
       )}
-      {props.displayStatus === "ready" && <ReadyView {...props} />}
+      {props.displayStatus === "ready" &&
+      props.approval?.state.status === "pending" &&
+      props.approval.candidateImageUrl &&
+      props.approval.candidateVersionId ? (
+        <CampaignApprovalView
+          campaignId={props.campaignId}
+          versionId={props.approval.candidateVersionId}
+          imageUrl={props.approval.candidateImageUrl}
+          productName={props.productName}
+        />
+      ) : (
+        props.displayStatus === "ready" && <ReadyView {...props} />
+      )}
     </div>
   );
 }
