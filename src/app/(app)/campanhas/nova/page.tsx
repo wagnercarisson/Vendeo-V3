@@ -8,6 +8,8 @@ import { getLaunchConfig } from "@/lib/launch-config/config";
 import { CampaignPageClient } from "@/components/flow/campaign-page-client";
 import { LegalClearanceGate } from "@/components/legal/legal-clearance-gate";
 import { getStoreReadiness } from "@/lib/store-readiness";
+import { resolveStoreIdentity, validateIdentityReference } from "@/lib/store-identity-service";
+import type { StoreIdentitySnapshot } from "@/components/campaign/types";
 
 export default async function NovaCampanhaPage() {
   const user = await requirePageUser();
@@ -49,9 +51,21 @@ export default async function NovaCampanhaPage() {
     balance = null;
   }
 
+  // F43 (D4/decisão 2026-08-21): snapshot real de identidade resolvido no server
+  // page (mesma fonte canônica da rota de geração — precedente route.ts:270/280).
+  // Falha na resolução → identity null (StoreIdentityBlock não renderiza; sem
+  // fallback visual divergente entre o que o usuário viu e o que a geração usou).
+  let identity: StoreIdentitySnapshot | null = null;
+  try {
+    const snapshot = await resolveStoreIdentity(store);
+    identity = await validateIdentityReference(snapshot);
+  } catch (err) {
+    console.error(`[nova] resolveStoreIdentity error — ${err instanceof Error ? err.message : String(err)}`);
+  }
+
   return (
     <main>
-      <CampaignPageClient store={store} balance={balance} supportEmail={supportEmail} generationPaused={generationPaused} />
+      <CampaignPageClient store={store} balance={balance} supportEmail={supportEmail} generationPaused={generationPaused} identity={identity} />
     </main>
   );
 }

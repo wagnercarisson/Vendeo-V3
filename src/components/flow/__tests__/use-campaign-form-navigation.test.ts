@@ -66,8 +66,14 @@ describe("useCampaignForm navigation", () => {
       badge: "Oferta",
       campaignIntent: "offer",
       preserveImageContext: false,
-      imageFile: null,
+      productImages: [],
       mandatoryArtworkText: "",
+      showIllustrativeNotice: true,
+      mandatoryArtworkTextFree: "",
+      validityMode: "",
+      validityStartDate: "",
+      validityEndDate: "",
+      validityCustomText: "",
     });
 
     const { result } = renderHook(() => useCampaignForm("store-123"));
@@ -105,8 +111,14 @@ describe("useCampaignForm navigation", () => {
       badge: "Oferta",
       campaignIntent: "offer",
       preserveImageContext: false,
-      imageFile: null,
+      productImages: [],
       mandatoryArtworkText: "",
+      showIllustrativeNotice: true,
+      mandatoryArtworkTextFree: "",
+      validityMode: "",
+      validityStartDate: "",
+      validityEndDate: "",
+      validityCustomText: "",
     });
 
     const { result } = renderHook(() => useCampaignForm("store-123"));
@@ -145,8 +157,14 @@ describe("useCampaignForm navigation", () => {
       badge: "Oferta",
       campaignIntent: "offer",
       preserveImageContext: false,
-      imageFile: null,
+      productImages: [],
       mandatoryArtworkText: "",
+      showIllustrativeNotice: true,
+      mandatoryArtworkTextFree: "",
+      validityMode: "",
+      validityStartDate: "",
+      validityEndDate: "",
+      validityCustomText: "",
     });
 
     const { result } = renderHook(() => useCampaignForm("store-123"));
@@ -162,6 +180,134 @@ describe("useCampaignForm navigation", () => {
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalled();
       expect(sessionStorage.getItem("campaign_draft_image")).toBe(VALID_DATA_URL);
+    });
+  });
+
+  it("migrates legacy mandatoryArtworkText draft into free text field on restore", async () => {
+    mockRestoreFormState.mockReturnValue({
+      productName: "X",
+      description: "",
+      originalPriceCents: 0,
+      discountedPriceCents: undefined,
+      badge: "",
+      campaignIntent: "offer",
+      preserveImageContext: false,
+      productImages: [],
+      mandatoryArtworkText: "Legado",
+    });
+
+    const { result } = renderHook(() => useCampaignForm("store-123"));
+
+    await act(async () => {});
+
+    expect(result.current.fields.mandatoryArtworkTextFree).toBe("Legado");
+    expect(result.current.fields.mandatoryArtworkText).toBe("Legado");
+    expect(result.current.fields.showIllustrativeNotice).toBe(true);
+  });
+
+  it("restores mirror alongside free text for new-shape draft", async () => {
+    mockRestoreFormState.mockReturnValue({
+      productName: "X",
+      description: "",
+      originalPriceCents: 0,
+      discountedPriceCents: undefined,
+      badge: "",
+      campaignIntent: "offer",
+      preserveImageContext: false,
+      productImages: [],
+      showIllustrativeNotice: false,
+      mandatoryArtworkTextFree: "Novo texto",
+      mandatoryArtworkText: "Novo texto",
+    });
+
+    const { result } = renderHook(() => useCampaignForm("store-123"));
+
+    await act(async () => {});
+
+    expect(result.current.fields.mandatoryArtworkTextFree).toBe("Novo texto");
+    expect(result.current.fields.mandatoryArtworkText).toBe("Novo texto");
+  });
+
+  it("15 (F41): restaura draft multi com N imagens (file undefined — File não serializa)", async () => {
+    mockRestoreFormState.mockReturnValue({
+      productName: "Test Product",
+      description: "",
+      originalPriceCents: 10000,
+      discountedPriceCents: 1990,
+      badge: "Oferta",
+      campaignIntent: "offer",
+      preserveImageContext: false,
+      productImages: [
+        { id: "a", role: "primary", source: "upload", mimeType: "image/jpeg", dataUrl: VALID_DATA_URL },
+        { id: "b", role: "reference", source: "camera", mimeType: "image/jpeg", dataUrl: VALID_DATA_URL },
+      ],
+      mandatoryArtworkText: "",
+      showIllustrativeNotice: true,
+      mandatoryArtworkTextFree: "",
+      validityMode: "",
+      validityStartDate: "",
+      validityEndDate: "",
+      validityCustomText: "",
+    });
+
+    const { result } = renderHook(() => useCampaignForm("store-123"));
+    await act(async () => {});
+
+    expect(result.current.fields.productImages).toHaveLength(2);
+    expect(result.current.fields.productImages[0].role).toBe("primary");
+    expect(result.current.fields.productImages[0].dataUrl).toBe(VALID_DATA_URL);
+    expect(result.current.fields.productImages[0].file).toBeUndefined();
+    expect(result.current.fields.productImages[1].role).toBe("reference");
+    expect(result.current.fields.productImages[1].source).toBe("camera");
+  });
+
+  it("16 (F43 D2): fluxo revisão → confirmar → navega para /campanhas/[id]", async () => {
+    sessionStorage.setItem("campaign_draft_image", VALID_DATA_URL);
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        createNdjsonResponse([
+          { type: "result", campaignId: "abc-123", campaignUrl: "/campanhas/abc-123" },
+        ])
+      )
+    );
+
+    mockRestoreFormState.mockReturnValue({
+      productName: "Test Product",
+      description: "",
+      originalPriceCents: 10000,
+      discountedPriceCents: 1990,
+      badge: "Oferta",
+      campaignIntent: "offer",
+      preserveImageContext: false,
+      productImages: [],
+      mandatoryArtworkText: "",
+      showIllustrativeNotice: true,
+      mandatoryArtworkTextFree: "",
+      validityMode: "",
+      validityStartDate: "",
+      validityEndDate: "",
+      validityCustomText: "",
+    });
+
+    const { result } = renderHook(() => useCampaignForm("store-123"));
+    await act(async () => {});
+
+    // Revisar e gerar → revisão ativa
+    let entered = false;
+    await act(async () => {
+      entered = await result.current.enterReview();
+    });
+    expect(entered).toBe(true);
+    expect(result.current.reviewMode).toBe(true);
+
+    // Confirmar e gerar campanha → submit real → navegação
+    await act(async () => {
+      await result.current.confirmReview();
+    });
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith("/campanhas/abc-123");
     });
   });
 });

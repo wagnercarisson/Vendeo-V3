@@ -33,7 +33,7 @@ export class ImageReviewService {
     this.model = model ?? VISION_REVIEW_MODEL;
   }
 
-  buildReviewPromptVariables(input: ImageReviewInput): Record<string, string> {
+  buildReviewPromptVariables(input: ImageReviewInput, referenceCount = 0): Record<string, string> {
     const intent = input.campaignIntent ?? "offer";
     return {
       productName: input.productName,
@@ -48,18 +48,23 @@ export class ImageReviewService {
       mandatoryArtworkTextSection: this.buildMandatoryArtworkTextSection(input.legalNoticeText),
       authorizedContextSection: this.buildAuthorizedContextSection(input.campaignDetails, input.additionalDetails),
       validityTextSection: this.buildValidityTextSection(input.validityText),
+      referenceImagesContextSection: this.buildReferenceImagesContextSection(referenceCount),
     };
   }
 
   async review(
     generatedImageDataUrl: string,
     input: ImageReviewInput,
+    referenceImageDataUrls?: string[],
     onCall?: (info: AiCallInfo) => void | Promise<void>
   ): Promise<ImageReviewResult> {
-    const contextVars = this.buildReviewPromptVariables(input);
+    const references = referenceImageDataUrls ?? [];
+    const contextVars = this.buildReviewPromptVariables(input, references.length);
     const prompt = this.promptLoader.load("campaign-image-reviewer", contextVars);
+    const referenceLine = this.buildReferenceComparisonLine(references.length);
+    const reviewPrompt = referenceLine ? `${prompt}\n\n${referenceLine}` : prompt;
     const startTime = Date.now();
-    const { content, usage } = await this.callVisionModel(prompt, generatedImageDataUrl);
+    const { content, usage } = await this.callVisionModel(reviewPrompt, generatedImageDataUrl, references);
     const durationMs = Date.now() - startTime;
 
     // Best-effort telemetry — never blocks review (D7)
@@ -218,6 +223,8 @@ export class ImageReviewService {
       "",
       "Avalie se a arte exibe a validade da oferta de forma legivel e fiel ao texto informado, quando aplicavel ao intent.",
       "",
+      "Se o texto de validade contiver data, a arte deve reproduzi-la completa no formato dd/mm/aaaa (dia, mes e ano) conforme informado. Nao trunque para dd/mm nem omita o ano. Divergencia de dia, mes OU ano e reprovacao.",
+      "",
       'Quando reprovar, reporte como issue CRITICA com type "illegible_text".',
     ].join("\n");
   }
@@ -240,9 +247,39 @@ export class ImageReviewService {
     return parts.join("\n");
   }
 
+  /**
+   * Seção textual sobre as imagens de referência enviadas pelo lojista.
+   * Vazia quando há 0 ou 1 referência (comportamento F41 preservado); só
+   * existe quando há 2+ referências, para que o revisor entenda que uma
+   * imagem adicional é uma referência AUTORIZADA de apoio/variação — sem
+   * afrouxar a proteção contra invenção fora de todas as referências.
+   */
+  private buildReferenceImagesContextSection(referenceCount: number): string {
+    if (referenceCount <= 1) return "";
+    return [
+      "## Referências Autorizadas da Campanha",
+      "",
+      "A primeira imagem é a referência principal do produto anunciado. As imagens adicionais são referências autorizadas de apoio, variação, combo ou ângulo. Não trate como invenção um item visível em qualquer referência enviada, mas preserve a hierarquia: o produto principal não deve ser substituído por uma referência adicional.",
+      "",
+      "Um produto ou variação visível em QUALQUER imagem de referência enviada pelo lojista é autorizado como apoio/variação. Um produto ausente de TODAS as referências e dos dados da campanha continua sendo invenção CRÍTICA (invented_information).",
+    ].join("\n");
+  }
+
+  /**
+   * Linha de instrução fixa dinâmica conforme o número de referências:
+   * singular (1), plural "as imagens de referência autorizadas" (2+) ou
+   * ausente (sem referências — comportamento atual).
+   */
+  private buildReferenceComparisonLine(referenceCount: number): string {
+    if (referenceCount <= 0) return "";
+    if (referenceCount === 1) return "Compare o produto da arte com a imagem de referência.";
+    return "Compare o produto da arte com as imagens de referência autorizadas.";
+  }
+
   private async callVisionModel(
     prompt: string,
-    imageDataUrl: string
+    imageDataUrl: string,
+    referenceImageDataUrls: string[]
   ): Promise<{ content: string; usage?: TokenUsage }> {
     const { default: OpenAI } = await import("openai");
     const openai = new OpenAI({
@@ -260,6 +297,10 @@ export class ImageReviewService {
               type: "image_url",
               image_url: { url: imageDataUrl, detail: "high" },
             },
+            ...referenceImageDataUrls.map((url) => ({
+              type: "image_url" as const,
+              image_url: { url, detail: "high" as const },
+            })),
           ],
         },
       ],

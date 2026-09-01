@@ -8,9 +8,10 @@ import type { AiCallInfo, TokenUsage } from "@/lib/ai-cost/types";
  * typed product name and the uploaded product image.
  *
  * Uses a vision-capable text model (e.g., GPT-4o) to analyze the product
- * image and compare it against the typed name. Supports an override flag
- * (`productImageCheck: "user_confirmed_continue"`) that skips validation
- * entirely when the user has explicitly confirmed the image is correct.
+ * image and compare it against the typed name. Supports override flags
+ * (`productImageCheck: "user_confirmed_continue" | "brief_review_confirmed"`)
+ * that skip validation entirely when the user has explicitly confirmed the
+ * image is correct (F43 D5).
  *
  * Loads the `campaign-input-visual-check.md` prompt via PromptLoader with
  * `typedProductName` variable interpolation.
@@ -40,11 +41,13 @@ export class InputValidationService {
   async validate(
     typedProductName: string,
     productImageDataUrl: string,
-    override?: { productImageCheck?: "user_confirmed_continue" },
+    override?: { productImageCheck?: "user_confirmed_continue" | "brief_review_confirmed" },
     onCall?: (info: AiCallInfo) => void | Promise<void>
   ): Promise<InputValidationResult> {
-    // Skip validation when user override is present
-    if (override?.productImageCheck === "user_confirmed_continue") {
+    // Skip validation when user override is present (F43 D5): qualquer override
+    // truthy pula — user_confirmed_continue (409) e brief_review_confirmed (brief)
+    if (override?.productImageCheck === "user_confirmed_continue" ||
+        override?.productImageCheck === "brief_review_confirmed") {
       return { classification: "match", confidence: 1.0 };
     }
 

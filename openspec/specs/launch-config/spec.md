@@ -2,16 +2,17 @@
 
 > Synced from `fase-28-observabilidade-operacao-launch-controls` (ADDED), then `fase-29-3-creditos-mensais-automaticos` (ADDED). Added 4 monthly credit flags (`monthlyCreditsEnabled`, `monthlyCreditsAmount`, `monthlyBonusCap`, `monthlyCreditsMinStoreAgeDays`).
 > Modified by `fase-38-credit-operation-costs` (MODIFIED). `creditsChargingEnabled=false`/`v15Enabled=false` skip balance/reserve but do NOT ignore operation disabled (`503 operation_disabled`) or cost read errors (`503 operation_cost_unavailable`); cost resolved via `OperationCostService` before the charging gate (D4/D12).
+> Added by `fase-42-signup-controlado-elegibilidade-freemium` (ADDED). Nova flag `publicSignupEnabled` (default `false`, fail-closed) controlando exposição da landing e do `/signup` (D5).
 
 ## Purpose
 
-Módulo centralizado de feature flags lidas de environment variables, com 9 flags explícitas (5 booleanas + 4 numéricas mensais) e defaults seguros, eliminando `process.env` espalhado pelo código.
+Módulo centralizado de feature flags lidas de environment variables, com 10 flags explícitas (6 booleanas + 4 numéricas mensais) e defaults seguros, eliminando `process.env` espalhado pelo código.
 
 ## Requirements
 
-### Requirement: LaunchConfig type com 9 flags (5 booleanas + 4 mensais)
+### Requirement: LaunchConfig type com 10 flags (6 booleanas + 4 mensais)
 
-O sistema SHALL definir um tipo `LaunchConfig` em `src/lib/launch-config/config.ts` com 5 flags booleanas (F28) e 4 flags mensais (F29.3):
+O sistema SHALL definir um tipo `LaunchConfig` em `src/lib/launch-config/config.ts` com 5 flags booleanas (F28), 4 flags mensais (F29.3) e a flag `publicSignupEnabled` (F42):
 
 ```typescript
 export type LaunchConfig = {
@@ -27,13 +28,16 @@ export type LaunchConfig = {
   monthlyCreditsAmount: number;
   monthlyBonusCap: number;
   monthlyCreditsMinStoreAgeDays: number;
+
+  // Nova flag (F42)
+  publicSignupEnabled: boolean; // envBool("VENDEO_PUBLIC_SIGNUP_ENABLED", false)
 };
 ```
 
 #### Scenario: Tipo LaunchConfig inclui flags existentes e novas
 
 - **WHEN** `LaunchConfig` é importado de `@/lib/launch-config/config`
-- **THEN** o tipo inclui as 5 flags existentes (F28) + as 4 novas flags mensais (F29.3)
+- **THEN** o tipo inclui as 5 flags existentes (F28) + as 4 novas flags mensais (F29.3) + a flag `publicSignupEnabled` (F42)
 
 #### Scenario: Novas flags são do tipo correto
 
@@ -42,10 +46,11 @@ export type LaunchConfig = {
 - **AND** `monthlyCreditsAmount` é `number`
 - **AND** `monthlyBonusCap` é `number`
 - **AND** `monthlyCreditsMinStoreAgeDays` é `number`
+- **AND** `publicSignupEnabled` é `boolean`
 
 ### Requirement: getLaunchConfig() com defaults seguros expandido
 
-O sistema SHALL prover uma função `getLaunchConfig(): LaunchConfig` que lê de environment variables e aplica defaults, incluindo as 4 novas env vars mensais:
+O sistema SHALL prover uma função `getLaunchConfig(): LaunchConfig` que lê de environment variables e aplica defaults, incluindo as 4 novas env vars mensais e a flag `publicSignupEnabled`:
 
 ```typescript
 export function getLaunchConfig(): LaunchConfig {
@@ -62,6 +67,9 @@ export function getLaunchConfig(): LaunchConfig {
     monthlyCreditsAmount: Number(process.env.VENDEO_MONTHLY_CREDITS_AMOUNT) || 5,
     monthlyBonusCap: Number(process.env.VENDEO_MONTHLY_BONUS_CAP) || 10,
     monthlyCreditsMinStoreAgeDays: Number(process.env.VENDEO_MONTHLY_CREDITS_MIN_STORE_AGE_DAYS) || 30,
+
+    // Nova (F42)
+    publicSignupEnabled: process.env.VENDEO_PUBLIC_SIGNUP_ENABLED === "true",
   };
 }
 ```
@@ -69,7 +77,7 @@ export function getLaunchConfig(): LaunchConfig {
 #### Scenario: Default sem env vars
 
 - **WHEN** `getLaunchConfig()` é chamado sem nenhuma env var configurada
-- **THEN** retorna `{ v15Enabled: true, creditsChargingEnabled: true, copyDirectorEnabled: true, rateLimitEnabled: true, generationPaused: false, monthlyCreditsEnabled: true, monthlyCreditsAmount: 5, monthlyBonusCap: 10, monthlyCreditsMinStoreAgeDays: 30 }`
+- **THEN** retorna `{ v15Enabled: true, creditsChargingEnabled: true, copyDirectorEnabled: true, rateLimitEnabled: true, generationPaused: false, monthlyCreditsEnabled: true, monthlyCreditsAmount: 5, monthlyBonusCap: 10, monthlyCreditsMinStoreAgeDays: 30, publicSignupEnabled: false }`
 
 #### Scenario: VENDEO_V15_ENABLED=false desliga master switch
 
@@ -111,10 +119,11 @@ export function getLaunchConfig(): LaunchConfig {
 - **WHEN** `VENDEO_MONTHLY_CREDITS_AMOUNT=10` está configurado
 - **THEN** `getLaunchConfig().monthlyCreditsAmount` é `10`
 
-#### Scenario: VENDEO_MONTHLY_BONUS_CAP customiza teto
+#### Scenario: VENDEO_MONTHLY_BONUS_CAP customiza o limiar de elegibilidade do grant mensal
 
 - **WHEN** `VENDEO_MONTHLY_BONUS_CAP=20` está configurado
 - **THEN** `getLaunchConfig().monthlyBonusCap` é `20`
+- **AND** o grant mensal é concedido de forma INTEGRAL enquanto `bonus_balance < 20` (limiar de elegibilidade); em ou acima do limiar, a raiz não recebe no ciclo (limiar, não cap de acumulação — grant sempre integral)
 
 #### Scenario: VENDEO_MONTHLY_CREDITS_MIN_STORE_AGE_DAYS customiza idade mínima
 
@@ -231,3 +240,45 @@ This is the master switch — if `v15Enabled=false`, credit verification is skip
 - **AND** `getLaunchConfig().v15Enabled` é `false`
 - **AND** `OperationCostService.getCost` lança `OperationCostUnavailableError`
 - **THEN** o handler retorna `503 operation_cost_unavailable`
+
+### Requirement: Nova flag publicSignupEnabled (VENDEO_PUBLIC_SIGNUP_ENABLED)
+
+O sistema SHALL incluir a flag `publicSignupEnabled` no tipo `LaunchConfig` e em `getLaunchConfig()` — D5:
+
+```typescript
+publicSignupEnabled: boolean; // envBool("VENDEO_PUBLIC_SIGNUP_ENABLED", false)
+```
+
+- **Default `false`** — a abertura do signup público é **explícita** (fail-closed), seguindo o padrão `envBool("VENDEO_*", default)` de `launch-config/config.ts`.
+- A flag controla a **exposição** (landing e `/signup`) — a barreira real de criação é server-side ("Allow new users to sign up" / `enable_signup`, configurada no dashboard/projeto, D5/D13).
+- **`/login` NÃO é controlado pela flag** — "Continuar com Google" permanece visível para acesso de usuários existentes mesmo com a flag off (D5).
+- A flag SHALL ser validada **server-side** nas páginas/rotas que controla (landing e `/signup`), não só no cliente.
+- A flag NUNCA altera `enable_signup` a partir do código da app (D5/D13).
+
+#### Scenario: Default sem env var é false
+
+- **WHEN** `getLaunchConfig()` é chamado sem `VENDEO_PUBLIC_SIGNUP_ENABLED` configurada
+- **THEN** `publicSignupEnabled` é `false`
+
+#### Scenario: VENDEO_PUBLIC_SIGNUP_ENABLED=true habilita
+
+- **WHEN** `VENDEO_PUBLIC_SIGNUP_ENABLED=true` está configurado
+- **THEN** `getLaunchConfig().publicSignupEnabled` é `true`
+
+#### Scenario: VENDEO_PUBLIC_SIGNUP_ENABLED=false desabilita
+
+- **WHEN** `VENDEO_PUBLIC_SIGNUP_ENABLED=false` está configurado
+- **THEN** `getLaunchConfig().publicSignupEnabled` é `false`
+
+#### Scenario: Flag off esconde cadastro na landing e /signup
+
+- **WHEN** `publicSignupEnabled` é `false`
+- **THEN** a landing exibe "Solicitar acesso free" (comportamento atual)
+- **AND** `/signup` exibe "Beta fechado"
+- **AND** `/login` continua exibindo "Continuar com Google" (acesso de existentes não é removido pela flag)
+
+#### Scenario: Flag on expõe cadastro
+
+- **WHEN** `publicSignupEnabled` é `true`
+- **THEN** a landing exibe "Continuar com Google" + "Continuar com email"
+- **AND** `/signup` exibe formulário + "Continuar com Google"

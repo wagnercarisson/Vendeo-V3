@@ -74,26 +74,113 @@ Use these entry points:
 
 Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
 
-## Phase 39 — Brief Estruturado de Campanha
+## Phase 40 — Campos Comerciais e Avisos do Brief
 
-**Status:** 8/8 plans completed ✅ — 1950 testes, 4 gates verdes, UAT aprovado 5/5
+**Status:** 9/9 plans completed ✅ — 1997 testes, 4 gates verdes, UAT aprovado 6/6
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
-| 39-01 | 1 | ✅ | Trackings / renumeração D1 (F39 = Brief, Stripe → F40) |
-| 39-02 | 1 | ✅ | Contrato de domínio `CampaignBrief` + zod per-domínio + invariante exatamente-1-primary |
-| 39-03 | 2 | ✅ | Rename wrapper `CampaignBrief` → `ResolvedCampaignContext` + `InputSnapshot` → `CampaignBriefSnapshot` |
-| 39-04 | 3 | ✅ | Mapper `buildCampaignBriefFromFlat` + builder `buildCampaignBriefSnapshot` (round-trip, sem base64) |
-| 39-05 | 4 | ✅ | Costuras copy + review do domínio (`mapBriefToCopyDirectorInput`, `ImageReviewInput` legalNoticeText/validityText) |
-| 39-06 | 5 | ✅ | Costuras image-generation do domínio + golden tests por intent (38 variáveis idênticas) |
-| 39-07 | 6 | ✅ | Rota: snapshot versionado `campaign_brief_v1` via builder + benchmark via mapper |
-| 39-08 | 7 | ✅ | Testes e Verificação — 1950 total, typecheck/lint/build, VERIFICATION.md + UAT |
+| 40-01 | 1 | ✅ | Trackings / renumeração D1 (verificação grep-consistência F40 = Brief Comercial, Stripe → F41 nos 6 runbooks; zero resíduos) |
+| 40-02 | 1 | ✅ | Constante única `ILLUSTRATIVE_NOTICE_TEXT` + checkbox `IllustrativeNoticeField` + placeholder normalizado |
+| 40-03 | 1 | ✅ | Reframe do aviso ilustrativo nos 4 prompts do diretor (hardcode → bloco condicional) |
+| 40-04 | 2 | ✅ | Form state 6 campos novos + helpers `buildMandatoryArtworkText`/`buildValidityDisplayText`/`formatDDMM` + body + migração de draft legado |
+| 40-05 | 3 | ✅ | `ValidityField` presentacional + seções Produto/Oferta/Avisos + credits test co-migrado |
+| 40-06 | 3 | ✅ | Testes 1-8 validade + 9-15 aviso + 8.8 brief |
+| 40-07 | 3 | ✅ | Testes 16-21 prompt reframe + fixtures image-gen/review co-migradas |
+| 40-08 | 4 | ✅ | route.test.ts fixtures + regressão completa |
+| 40-09 | 5 | ✅ | Verificação final: gates + VERIFICATION.md + UAT humana (checkpoint) |
 
-**Change artifacts (source of truth):** `openspec/changes/fase-39-brief-estruturado-campanha/`
-**Context:** `.planning/phases/39-brief-estruturado-campanha/39-CONTEXT.md`
+**Change artifacts (source of truth):** `openspec/changes/fase-40-campos-comerciais-avisos-brief/`
+**Context:** `.planning/phases/40-campos-comerciais-avisos-brief/40-CONTEXT.md`
+
+## Phase 41 — Mídia de Campanha Mobile
+
+**Status:** Concluída ✅ — 13/13 plans, 4 gates verdes (222 files / 2033 testes), UAT humano 6/6 aprovado (Android em produção ✅ + iOS HEIC pendente de confirmação final)
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 41-01 | 1 | ✅ | Trackings D1 (grep-verificação renumeração F41/F42, zero resíduos, registro commit 195b467) |
+| 41-02 | 1 | ✅ | Config + Transporte schema (MAX_CAMPAIGN_IMAGES=4 + teto agregado; ProductImageInputSchema + productImages[] + productImageDataUrl optional) + co-migração route.ts |
+| 41-03 | 1 | ✅ | Prompts 1+N (bloco descritivo nos 4 prompts, sem variável nova, golden 38 keys) |
+| 41-04 | 2 | ✅ | Domínio + Persistência (mapper multi + mimeTypeFromDataUrl + storagePath; createCampaign campaignId? + uploadCampaignInputImage + removeCampaignInputs) |
+| 41-05 | 1 | ✅ | Provider + Service (N input_image, fallback edit gated 2 pontos, mediaImagesDataUrls, review com primary) + co-migração testes |
+| 41-06 | 3 | ✅ | Rota (exclusividade 400, teto 413, campaignId pré-gerado, upload pré-snapshot, cleanup) + co-migração asserts/integração |
+| 41-07 | 3 | ✅ | Form hook (estado multi, HEIC/EXIF, body D2, draft multi) + co-migração call site/testes irmãos |
+| 41-08 | 4 | ✅ | UI (CampaignImageUpload multi + capture + grid; seção Imagens adicionais) + credits test co-migrado |
+| 41-09 | 4 | ✅ | Testes 1-8 (mapper/snapshot: multi, legado, invariante, mimeType, storagePath, exactly-1-primary) |
+| 41-10 | 5 | ✅ | Testes 9-16 (UI/form: primary, remoção, source, HEIC/EXIF, body, draft N, limites) |
+| 41-11 | 5 | ✅ | Testes 17-23 (pipeline/provider/review/prompt: N input_image, fallback gated, golden 38, bloco 1+N, primary-only, review) |
+| 41-12 | 4 | ✅ | Testes 4 + 24-27 (rota: 400 ambíguo, 413, storage D5, cleanup, regressão) |
+| 41-13 | 6 | ✅ | Verificação final (4 gates + VERIFICATION.md + UAT.md + checkpoint humano) |
+
+**Pendência pós-deploy:** UAT cenário 3 — iOS HEIC (Android validado em produção: captura + orientação EXIF ok).
+
+**Change artifacts (source of truth):** `openspec/changes/fase-41-midia-de-campanha-mobile/`
+**Context:** `.planning/phases/41-midia-de-campanha-mobile/41-CONTEXT.md`
 **State:** `.planning/STATE.md`
 **Roadmap:** `ROADMAP.md`
 <!-- GSD:workflow-end -->
+
+## Phase 42 — Signup Controlado e Elegibilidade Freemium
+
+**Status:** Concluída ✅ — 20/20 plans, 2182 testes, 4 gates verdes, UAT 20.5–20.15 PASS
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 42-01 | 1 | ✅ | Trackings D1 — renumeração F42 = Signup / Stripe → F43 (runbook + verificação grep, zero resíduos) |
+| 42-02 | 2 | ✅ | Config — flag `publicSignupEnabled` (default false) + paridade `config.toml` (D5/D13) |
+| 42-03 | 2 | ✅ | CNAE — `cnae-mapping.ts` determinístico segmento×CNAE (D9) |
+| 42-04 | 3 | ✅ | Motor — ordem D10, `situacao_nao_ativa`, `dados_oficiais_incompletos`, CNAE tri-state, **pré-gate D7 no caller** (D8/D9/D10) |
+| 42-05 | 4 | ✅ | Admin — 4 novos labels + `review-detail.tsx` informado × oficial (D11) |
+| 42-06 | 4 | ✅ | Signup — flag on/off + `signup-form.tsx` restaurado (mín. 8, anti-enumeração, captcha, Google) (D2/D4/D5) |
+| 42-07 | 3 | ✅ | Google OAuth — `google-button.tsx` + `/auth/callback` PKCE + allowlist + PrivacyGate, scopes mínimos (D15/D16) |
+| 42-08 | 3 | ✅ | Turnstile — `captcha-field.tsx` + aplicação login/recuperação + co-migração testes (D3) |
+| 42-09 | 5 | ✅ | Login + Recuperação — Google sempre visível + captcha + link conforme flag; check-email inalterado (D5/D15) |
+| 42-10 | 4 | ✅ | Landing — flag on: GoogleButton principal "Continuar com Google" + secundário "Continuar com email" → /signup (D4/D15) |
+| 42-11 | 5 | ✅ | Legal — Terms v1.4 / Privacy v1.3 + coordenação PrivacyGate × PrivacyRecovery (D12/D16) |
+| 42-12 | 6 | ✅ | Migration publica v1.4/v1.3 em `legal_document_versions` + **push [BLOCKING]** + paridade config.toml (D12/D13) |
+| 42-13 | 6 | ✅ | Testes 1–13 — Signup/flag/landing/OAuth UI (Teste 10 trava contrato "Continuar com Google") |
+| 42-14 | 4 | ✅ | Testes 14–21 — Callback OAuth / identity linking |
+| 42-15 | 4 | ✅ | Testes 22–36 — Motor de elegibilidade (incl. pré-gate D7 na rota real) |
+| 42-16 | 3 | ✅ | Testes 37–46 — Mapeamento CNAE |
+| 42-17 | 5 | ✅ | Testes 47–53 — Admin |
+| 42-18 | 6 | ✅ | Testes 54–58 — Legal/transição |
+| 42-19 | 7 | ✅ | Regressão e co-migração de fixtures (19.1–19.11) |
+| 42-20 | 8 | ✅ | Verificação — 4 gates + UAT fail-closed (20.1–20.15) |
+
+**Change artifacts (source of truth):** `openspec/changes/fase-42-signup-controlado-elegibilidade-freemium/`
+**Context:** `.planning/phases/42-signup-controlado-elegibilidade-freemium/42-CONTEXT.md`
+**State:** `.planning/STATE.md`
+**Roadmap:** `ROADMAP.md`
+
+## Phase 43 — Revisão do Brief Pré-Geração
+
+**Status:** Concluída ✅ — 15/15 plans, 2317 testes, 4 gates verdes, UAT 15.5–15.13 PASS (9/9)
+
+**Fonte da verdade:** `openspec/changes/fase-43-revisao-brief-pre-geracao/`
+**Context:** `.planning/phases/43-revisao-brief-pre-geracao/43-CONTEXT.md`
+**Verification:** `.planning/phases/43-revisao-brief-pre-geracao/43-VERIFICATION.md`
+**UAT:** `.planning/phases/43-revisao-brief-pre-geracao/43-UAT.md` (15.5–15.13 — PASS 9/9)
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 43-01 | 1 | ✅ | Trackings / renumeração D1 (grep-verificação F42/F43/Stripe-diferida, zero resíduos) |
+| 43-02 | 2 | ✅ | Helpers puros `prepareCampaignImages` + `buildCampaignGenerationBody` (single source, XOR idempotente) |
+| 43-03 | 3 | ✅ | Hook `reviewMode` + snapshot travado + transições (D2/D3/D4/D5) |
+| 43-04 | 4 | ✅ | UI tela de revisão (`campaign-brief-review`) + botão "Revisar e gerar" + identidade real no server (D6/D7) |
+| 43-05 | 2 | ✅ | Schema override `brief_review_confirmed` (z.union, .strict preservado) (D5) |
+| 43-06 | 3 | ✅ | Serviço `input_validation` `skipped` + GenerationProgress trata skipped (D5) |
+| 43-07 | 2 | ✅ | Migration `feature_flags` + RPC `admin_update_feature_flag` + CHECKs (aplicada no remoto) (D5) |
+| 43-08 | 4 | ✅ | Rota normalização flag + serviço de leitura (fallback enabled=false) (D5) |
+| 43-09 | 3 | ✅ | Admin feature-flags (rota PUT + página "Controles operacionais" + navegação) (D5) |
+| 43-10 | 4 | ✅ | Testes 1-10 (hook/form reviewMode + helpers) |
+| 43-11 | 5 | ✅ | Testes 11-16 (UI do resumo) |
+| 43-12 | 5 | ✅ | Testes 17-23 (schema/rota/serviço) |
+| 43-13 | 4 | ✅ | Testes 24-26 (admin da flag + fallback) |
+| 43-14 | 6 | ✅ | Regressão e co-migração de fixtures (2317 testes) |
+| 43-15 | 7 | ✅ | Verificação 4 gates + UAT (43-VERIFICATION.md passed + 43-UAT.md 15.5–15.13) |
+
+**Escopo (D1–D7):** gate client-side obrigatório de revisão do brief em tela intermediária (`reviewMode`) entre o form e o `POST /api/campaign/generate-image`; botão "Revisar e gerar"; "Voltar e editar" preserva tudo; "Confirmar e gerar campanha" trava o snapshot e dispara o submit; compressão das imagens antes da revisão (`prepareCampaignImages`); helpers puros `prepareCampaignImages`/`buildCampaignGenerationBody` (body idêntico ao exibido); resumo Produto/Oferta/Imagens/Avisos/Custo + loja/marca + rótulos Principal/Referência + "Vai consumir X crédito(s)" + slot Tema (preparação F44); override `brief_review_confirmed` (pula a IA de visão; fase `input_validation` como `skipped`); flag administrativa mínima `force_brief_vision_check` em `feature_flags` (tela admin, motivo obrigatório, auditoria, fallback de leitura). **Renumeração D1:** F42 = Signup concluída; F43 = Revisão do Brief; **Stripe/Monetização Pública fora da numeração (iniciativa diferida v1.7+)**.
 
 <!-- GSD:profile-start -->
 

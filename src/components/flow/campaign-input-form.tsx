@@ -1,11 +1,16 @@
 "use client";
 
+import { useEffect } from "react";
 import { useCampaignForm, inferIntent } from "./use-campaign-form";
-import type { CampaignFormFields } from "./use-campaign-form";
+import type { CampaignFormFields, CampaignProductFormImage } from "./use-campaign-form";
 import { CampaignImageUpload } from "./campaign-image-upload";
 import { GenerationProgress } from "./generation-progress";
+import { CampaignBriefReview } from "./campaign-brief-review";
 import { BADGE_OPTIONS, BADGE_OPTIONS_BY_INTENT } from "@/lib/constants";
+import { MAX_CAMPAIGN_IMAGES } from "@/lib/image-generation/config";
 import { MandatoryArtworkField } from "@/components/campaign/mandatory-artwork-field";
+import { IllustrativeNoticeField } from "@/components/campaign/illustrative-notice-field";
+import { ValidityField } from "@/components/campaign/validity-field";
 import type { CampaignIntent } from "@/lib/campaign/types";
 import {
   AlertCircle,
@@ -16,14 +21,18 @@ import {
 import { CreditCta } from "@/components/credit/credit-cta";
 import { useOperationCosts } from "@/hooks/use-operation-costs";
 import { ErrorState } from "@/components/ui/error-state";
+import type { StoreIdentitySnapshot } from "@/components/campaign/types";
 
 interface CampaignInputFormProps {
   storeId?: string;
   balance?: number | null;
   supportEmail?: string;
+  store?: { name: string; segment: string; brand_color: string; id: string };
+  identity?: StoreIdentitySnapshot | null;
+  onReviewModeChange?: (active: boolean) => void;
 }
 
-export function CampaignInputForm({ storeId, balance, supportEmail }: CampaignInputFormProps) {
+export function CampaignInputForm({ storeId, balance, supportEmail, store, identity, onReviewModeChange }: CampaignInputFormProps) {
   const {
     fields,
     fieldErrors,
@@ -38,20 +47,53 @@ export function CampaignInputForm({ storeId, balance, supportEmail }: CampaignIn
     isSubmitting,
     submitError,
     setSubmitError,
-    handleSubmit,
+    retrySubmit,
     pendingConflict,
     handleConflictContinue,
     handleConflictCorrect,
     handleConflictCancel,
     phases,
+    addImage,
+    removeImage,
+    reviewMode,
+    preparing,
+    preparedImages,
+    reviewError,
+    enterReview,
+    exitReview,
+    confirmReview,
   } = useCampaignForm(storeId);
+
+  // F43 (D7): notifica o pai quando a revisão entra/sai — permite ao
+  // campaign-page-client esconder o StoreIdentityBlock da página (evita o
+  // duplo card de loja: página + revisão).
+  useEffect(() => {
+    onReviewModeChange?.(reviewMode);
+  }, [reviewMode, onReviewModeChange]);
 
   if (isSubmitting) {
     return (
       <GenerationProgress
         phases={phases}
         error={submitError}
-        onRetry={submitError ? handleSubmit : undefined}
+        onRetry={submitError ? retrySubmit : undefined}
+      />
+    );
+  }
+
+  if (reviewMode) {
+    return (
+      <CampaignBriefReview
+        fields={fields}
+        preparedImages={preparedImages}
+        preparing={preparing}
+        error={reviewError}
+        store={store}
+        identity={identity}
+        balance={balance}
+        supportEmail={supportEmail}
+        onBack={exitReview}
+        onConfirm={confirmReview}
       />
     );
   }
@@ -65,7 +107,7 @@ export function CampaignInputForm({ storeId, balance, supportEmail }: CampaignIn
           description={submitError}
           action={{
             label: "Tentar novamente",
-            onClick: handleSubmit,
+            onClick: retrySubmit,
           }}
         />
       )}
@@ -168,7 +210,9 @@ export function CampaignInputForm({ storeId, balance, supportEmail }: CampaignIn
         handlePriceDiscountedChange={handlePriceDiscountedChange}
         imagePreviewUrl={imagePreviewUrl}
         isSubmitting={isSubmitting}
-        handleSubmit={handleSubmit}
+        onReviewRequest={enterReview}
+        addImage={addImage}
+        removeImage={removeImage}
         balance={balance}
         supportEmail={supportEmail}
       />
@@ -180,7 +224,7 @@ interface FormContentProps {
   fields: CampaignFormFields;
   fieldErrors: Record<string, string | undefined>;
   touched: Record<string, boolean>;
-  setField: (field: keyof CampaignFormFields, value: string | number | boolean | File | null | undefined) => void;
+  setField: (field: keyof CampaignFormFields, value: string | number | boolean | File | null | undefined | CampaignProductFormImage[]) => void;
   handleBlur: (field: keyof CampaignFormFields) => void;
   displayPriceOriginal: string;
   displayPriceDiscounted: string;
@@ -188,7 +232,9 @@ interface FormContentProps {
   handlePriceDiscountedChange: (raw: string) => void;
   imagePreviewUrl: string | null;
   isSubmitting: boolean;
-  handleSubmit: () => void;
+  onReviewRequest: () => Promise<boolean>;
+  addImage: (file: File, source: "upload" | "camera") => void;
+  removeImage: (id: string) => void;
   balance?: number | null;
   supportEmail?: string;
 }
@@ -257,7 +303,9 @@ function FormContent({
   handlePriceDiscountedChange,
   imagePreviewUrl,
   isSubmitting,
-  handleSubmit,
+  onReviewRequest,
+  addImage,
+  removeImage,
   balance,
   supportEmail,
 }: FormContentProps) {
@@ -281,11 +329,14 @@ function FormContent({
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        handleSubmit();
+        onReviewRequest();
       }}
       noValidate
       className="space-y-5"
     >
+      <h2 className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2">
+        Produto
+      </h2>
       <div>
         <label
           htmlFor="productName"
@@ -312,76 +363,6 @@ function FormContent({
           <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs">
             <AlertCircle className="w-3.5 h-3.5" />
             {fieldErrors.productName}
-          </p>
-        )}
-      </div>
-
-      <CampaignImageUpload
-        imageFile={fields.imageFile}
-        error={touched.imageFile ? fieldErrors.imageFile ?? null : null}
-        previewUrl={imagePreviewUrl}
-        onSelect={(file) => setField("imageFile", file)}
-      />
-
-      <div>
-        <label
-          htmlFor="originalPrice"
-          className="block text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2"
-        >
-          Preço Original{" "}
-          <span className="font-normal normal-case tracking-normal text-text-disabled">
-            (opcional)
-          </span>
-        </label>
-        <input
-          id="originalPrice"
-          type="text"
-          inputMode="decimal"
-          value={displayPriceOriginal}
-          onChange={(e) => handlePriceOriginalChange(e.target.value)}
-          onBlur={() => handleBlur("originalPriceCents")}
-          placeholder="R$ 0,00"
-          disabled={isSubmitting}
-          className={`min-h-[44px] w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
-            touched.originalPriceCents && fieldErrors.originalPriceCents
-              ? "border-accent-red"
-              : "border-border-light hover:border-text-muted"
-          }`}
-        />
-        {touched.originalPriceCents && fieldErrors.originalPriceCents && (
-          <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs">
-            <AlertCircle className="w-3.5 h-3.5" />
-            {fieldErrors.originalPriceCents}
-          </p>
-        )}
-      </div>
-
-      <div>
-        <label
-          htmlFor="discountedPrice"
-          className="block text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2"
-        >
-          Preço com Desconto *
-        </label>
-        <input
-          id="discountedPrice"
-          type="text"
-          inputMode="decimal"
-          value={displayPriceDiscounted}
-          onChange={(e) => handlePriceDiscountedChange(e.target.value)}
-          onBlur={() => handleBlur("discountedPriceCents")}
-          placeholder="R$ 0,00"
-          disabled={isSubmitting}
-          className={`min-h-[44px] w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
-            touched.discountedPriceCents && fieldErrors.discountedPriceCents
-              ? "border-accent-red"
-              : "border-border-light hover:border-text-muted"
-          }`}
-        />
-        {touched.discountedPriceCents && fieldErrors.discountedPriceCents && (
-          <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs">
-            <AlertCircle className="w-3.5 h-3.5" />
-            {fieldErrors.discountedPriceCents}
           </p>
         )}
       </div>
@@ -420,6 +401,94 @@ function FormContent({
           <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs">
             <AlertCircle className="w-3.5 h-3.5" />
             {fieldErrors.description}
+          </p>
+        )}
+      </div>
+
+      <CampaignImageUpload
+        productImages={fields.productImages}
+        error={touched.productImages ? fieldErrors.productImages ?? null : null}
+        onAdd={addImage}
+        onRemove={removeImage}
+      />
+
+      <div className="flex items-start gap-2">
+        <h3 className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-1">
+          Imagens adicionais
+        </h3>
+      </div>
+      <p className="text-text-muted text-xs font-body mb-3">
+        Opcional — até {MAX_CAMPAIGN_IMAGES - 1} imagens de apoio (ângulos, variações, combos). A primeira imagem é a principal.
+      </p>
+
+      <h2 className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2">
+        Oferta
+      </h2>
+      <div className="mb-3 space-y-0.5 text-text-muted text-xs font-body leading-relaxed">
+        <p>Os campos de preço definem a intenção da campanha:</p>
+        <p>Preço original + preço final = Oferta</p>
+        <p>Somente preço final = Oferta ou Destaque</p>
+        <p>Sem nenhum preço preenchido = Destaque ou Exclusividade</p>
+      </div>
+      <div>
+        <label
+          htmlFor="originalPrice"
+          className="block text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2"
+        >
+          Preço Original{" "}
+          <span className="font-normal normal-case tracking-normal text-text-disabled">
+            (opcional)
+          </span>
+        </label>
+        <input
+          id="originalPrice"
+          type="text"
+          inputMode="decimal"
+          value={displayPriceOriginal}
+          onChange={(e) => handlePriceOriginalChange(e.target.value)}
+          onBlur={() => handleBlur("originalPriceCents")}
+          placeholder="R$ 0,00"
+          disabled={isSubmitting}
+          className={`min-h-[44px] w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
+            touched.originalPriceCents && fieldErrors.originalPriceCents
+              ? "border-accent-red"
+              : "border-border-light hover:border-text-muted"
+          }`}
+        />
+        {touched.originalPriceCents && fieldErrors.originalPriceCents && (
+          <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs">
+            <AlertCircle className="w-3.5 h-3.5" />
+            {fieldErrors.originalPriceCents}
+          </p>
+        )}
+      </div>
+
+      <div>
+        <label
+          htmlFor="discountedPrice"
+          className="block text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2"
+        >
+          Preço Final
+        </label>
+        <input
+          id="discountedPrice"
+          type="text"
+          inputMode="decimal"
+          value={displayPriceDiscounted}
+          onChange={(e) => handlePriceDiscountedChange(e.target.value)}
+          onBlur={() => handleBlur("discountedPriceCents")}
+          placeholder="R$ 0,00"
+          disabled={isSubmitting}
+          className={`min-h-[44px] w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
+            touched.discountedPriceCents && fieldErrors.discountedPriceCents
+              ? "border-accent-red"
+              : "border-border-light hover:border-text-muted"
+          }`}
+        />
+        {touched.discountedPriceCents && fieldErrors.discountedPriceCents && (
+          <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs">
+            <AlertCircle className="w-3.5 h-3.5" />
+            {fieldErrors.discountedPriceCents}
           </p>
         )}
       </div>
@@ -500,9 +569,36 @@ function FormContent({
         </label>
       )}
 
+      {fields.campaignIntent === "offer" && (
+        <ValidityField
+          mode={fields.validityMode}
+          startDate={fields.validityStartDate}
+          endDate={fields.validityEndDate}
+          customText={fields.validityCustomText}
+          disabled={isSubmitting}
+          startDateError={touched.validityStartDate ? (fieldErrors.validityStartDate ?? null) : null}
+          endDateError={touched.validityEndDate ? (fieldErrors.validityEndDate ?? null) : null}
+          onStartDateBlur={() => handleBlur("validityStartDate")}
+          onEndDateBlur={() => handleBlur("validityEndDate")}
+          onModeChange={(m) => setField("validityMode", m)}
+          onStartDateChange={(d) => setField("validityStartDate", d)}
+          onEndDateChange={(d) => setField("validityEndDate", d)}
+          onCustomTextChange={(t) => setField("validityCustomText", t)}
+        />
+      )}
+
+      <h2 className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2">
+        Avisos e texto obrigatório
+      </h2>
+
+      <IllustrativeNoticeField
+        checked={fields.showIllustrativeNotice}
+        onChange={(c) => setField("showIllustrativeNotice", c)}
+      />
+
       <MandatoryArtworkField
-        value={fields.mandatoryArtworkText}
-        onChange={(v) => setField("mandatoryArtworkText", v)}
+        value={fields.mandatoryArtworkTextFree}
+        onChange={(v) => setField("mandatoryArtworkTextFree", v)}
       />
 
       <div className="pt-2 space-y-3">
@@ -564,10 +660,10 @@ function FormContent({
           {isSubmitting ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              Criando...
+              Revisando...
             </>
           ) : (
-            "Criar Campanha"
+            "Revisar e gerar"
           )}
         </button>
 

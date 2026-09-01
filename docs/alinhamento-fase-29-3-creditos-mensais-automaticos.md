@@ -1,5 +1,24 @@
 # Alinhamento Fase 29.3 — Créditos Mensais Automáticos (v1.5)
 
+## Revisão de alinhamento (pós-F32 — semântica por raiz e limiar)
+
+> **Status:** as seções abaixo (D4, D7, tabelas de exemplo e blocos SQL) descrevem o desenho **F29.3 original** (cap/refill/partial, ciclo efetivo de 30 dias, `last_monthly_grant_at` como fonte de verdade). Essas seções estão **substituídas** pelas decisões de alinhamento pós-F32 abaixo, que refletem a implementação atual (migration `20260815000001_grant_monthly_credits_por_raiz.sql`) e o comportamento esperado de produto.
+
+Decisões finais do alinhamento:
+
+1. **Grant por RAIZ de CNPJ** — no máximo 1 grant por raiz por ciclo mensal, independentemente do nº de lojas da raiz (não é "por loja" como no desenho F29.3 original).
+2. **Limiar de elegibilidade (NÃO teto)** — `bonus_balance < monthlyBonusCap` → grant INTEGRAL de `monthlyCreditsAmount` (ex.: 9 → 14 com amount=5); `bonus_balance >= monthlyBonusCap` → NENHUM grant no ciclo (10 → sem grant). Não existe grant parcial (`LEAST(p_amount, cap - balance)`) nem teto de acumulação.
+3. **Ciclo por aniversário com clamp** — raiz concedida apenas no dia-do-mês do `created_at` do recipiente; dia 29/30/31 → último dia do mês curto (`LEAST(v_anniv_day, v_last_day)`); nunca dia 1 do mês seguinte. Fuso explícito `America/Sao_Paulo` em todos os cálculos de dia/ciclo/idade.
+4. **Recipiente determinístico** — matriz (`substring(cnpj_normalized, 9, 4) = '0001'`) preferida; sem matriz, a loja não-teste mais antiga (`created_at ASC, id ASC`). Histórico freemium validado NO NÍVEL DA RAIZ (qualquer loja da raiz), nunca no nível do recipiente; sem filtro EXISTS no recipiente.
+5. **Idempotência por raiz+cycle** — `freemium_entitlements(root_hash, 'monthly', cycle)` com `cycle = TO_CHAR(reference_date, 'YYYY-MM')`; idempotency key da transação `'mensal_' || cycle || '_' || root_hash`. `last_monthly_grant_at` NÃO é mais fonte de verdade (DEPRECATED — ver spec credit-tables).
+6. **Shape canônico de retorno** — `{ eligible, granted, skipped, errors, details: { roots_considered, skipped_no_cnpj, skipped_already_granted, skipped_not_due, skipped_bonus_threshold } }`; `eligible = granted + skipped_already_granted + skipped_bonus_threshold`; `roots_considered = eligible + skipped_not_due`; `skipped_not_due` NÃO entra em `eligible`.
+7. **Segurança** — RPC restrita: `REVOKE EXECUTE FROM PUBLIC, anon, authenticated` + `GRANT EXECUTE TO service_role` (callers cron/admin usam `supabaseAdmin`).
+8. **Parâmetro `p_reference_date DATE DEFAULT NULL`** — adicionado à assinatura `(p_amount, p_bonus_cap, p_min_store_age_days, p_reference_date)` para testabilidade (callers existentes continuam passando só os 3 primeiros).
+
+**"substituído por":** D4 (concessão com teto e grant parcial) → itens 1-2 acima; D7 (idempotência por ciclo efetivo de 30 dias) → item 5 acima; exemplos de saldo de D4 (8 → 2 parcial; 10 teto) → 9 → +5 integral (14); 10 → sem grant.
+
+---
+
 ## Contexto
 
 ```

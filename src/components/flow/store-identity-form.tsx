@@ -2440,7 +2440,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
           </div>
 
           <div className="lg:col-span-2">
-            <div className="lg:sticky lg:top-8">
+            <div className="lg:sticky lg:top-20">
               <StorePreview
                 name={formData.name}
                 segment={formData.segment}

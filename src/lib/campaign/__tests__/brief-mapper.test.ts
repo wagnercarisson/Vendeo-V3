@@ -5,6 +5,7 @@ import {
   buildCampaignBriefSnapshot,
 } from "../brief";
 import { campaignBriefSchema } from "../brief-schema";
+import { GenerateImageRequestSchema } from "@/lib/image-generation/schema";
 import type { GenerateImageRequest } from "@/lib/image-generation/schema";
 
 const storeId = "22222222-2222-4222-8222-222222222222";
@@ -92,6 +93,111 @@ describe("buildCampaignBriefFromFlat (8.7 round-trip)", () => {
     expect(brief.media.images[0].mimeType).toBe("image/jpeg");
     expect(brief.media.images[0].dataUrl).toBe("data:image/jpeg;base64,abc123");
     expect(brief.media.images[0].id).toBeTruthy();
+  });
+
+  it("1 (F41): productImages[] com primary + 2 reference → media.images com roles/source/mimeType corretos", () => {
+    const brief = buildCampaignBriefFromFlat(
+      flatInput({
+        productImageDataUrl: undefined,
+        productImages: [
+          { role: "primary", source: "camera", mimeType: "image/png", dataUrl: "data:image/png;base64,abc" },
+          { role: "reference", source: "upload", mimeType: "image/jpeg", dataUrl: "data:image/jpeg;base64,def" },
+          { role: "reference", source: "upload", mimeType: "image/webp", dataUrl: "data:image/webp;base64,ghi" },
+        ],
+      }),
+      storeId
+    );
+
+    expect(brief.media.images).toHaveLength(3);
+    expect(brief.media.images[0].role).toBe("primary");
+    expect(brief.media.images[0].source).toBe("camera");
+    expect(brief.media.images[0].mimeType).toBe("image/png");
+    expect(brief.media.images[1].role).toBe("reference");
+    expect(brief.media.images[1].source).toBe("upload");
+    expect(brief.media.images[1].mimeType).toBe("image/jpeg");
+    expect(brief.media.images[2].role).toBe("reference");
+    expect(brief.media.images[2].source).toBe("upload");
+    expect(brief.media.images[2].mimeType).toBe("image/webp");
+    for (const img of brief.media.images) {
+      expect(img.id).toBeTruthy();
+      expect(img.storagePath).toBeUndefined();
+    }
+  });
+
+  it("2 (F41): legado productImageDataUrl → productImages de 1 elemento (zero bifurcação)", () => {
+    const legacy = buildCampaignBriefFromFlat(
+      flatInput({ productImageDataUrl: "data:image/jpeg;base64,abc123" }),
+      storeId
+    );
+    const multi = buildCampaignBriefFromFlat(
+      flatInput({
+        productImageDataUrl: undefined,
+        productImages: [
+          { role: "primary", source: "upload", mimeType: "image/jpeg", dataUrl: "data:image/jpeg;base64,abc123" },
+        ],
+      }),
+      storeId
+    );
+
+    expect(legacy.media.images).toHaveLength(1);
+    expect(multi.media.images).toHaveLength(1);
+    expect(legacy.media.images[0].role).toBe("primary");
+    expect(legacy.media.images[0].source).toBe("upload");
+    expect(legacy.media.images[0].mimeType).toBe("image/jpeg");
+    expect(legacy.media.images[0].dataUrl).toBe(multi.media.images[0].dataUrl);
+    expect(legacy.media.images[0].source).toBe(multi.media.images[0].source);
+    expect(legacy.media.images[0].role).toBe(multi.media.images[0].role);
+  });
+
+  it("3 (F41): invariante exactly-1-primary rejeitado no TRANSPORTE (safeParse)", () => {
+    // sem primary (2 reference)
+    const semPrimary = GenerateImageRequestSchema.safeParse(
+      flatInput({
+        productImageDataUrl: undefined,
+        productImages: [
+          { role: "reference", source: "upload", mimeType: "image/jpeg", dataUrl: "data:image/jpeg;base64,a" },
+          { role: "reference", source: "upload", mimeType: "image/jpeg", dataUrl: "data:image/jpeg;base64,b" },
+        ],
+      })
+    );
+    expect(semPrimary.success).toBe(false);
+    if (!semPrimary.success) {
+      expect(JSON.stringify(semPrimary.error.issues)).toContain("Deve existir exatamente 1 imagem com role");
+    }
+
+    // 2 primaries
+    const duasPrimaries = GenerateImageRequestSchema.safeParse(
+      flatInput({
+        productImageDataUrl: undefined,
+        productImages: [
+          { role: "primary", source: "upload", mimeType: "image/jpeg", dataUrl: "data:image/jpeg;base64,a" },
+          { role: "primary", source: "upload", mimeType: "image/jpeg", dataUrl: "data:image/jpeg;base64,b" },
+        ],
+      })
+    );
+    expect(duasPrimaries.success).toBe(false);
+    if (!duasPrimaries.success) {
+      expect(JSON.stringify(duasPrimaries.error.issues)).toContain("Deve existir exatamente 1 imagem com role");
+    }
+  });
+
+  it("5 (F41): mimeType real derivado do dataUrl (png/jpeg/webp) — corrige quirk da F39", () => {
+    for (const [mime, prefix] of [
+      ["image/png", "data:image/png;base64"],
+      ["image/jpeg", "data:image/jpeg;base64"],
+      ["image/webp", "data:image/webp;base64"],
+    ] as const) {
+      const brief = buildCampaignBriefFromFlat(
+        flatInput({
+          productImageDataUrl: undefined,
+          productImages: [
+            { role: "primary", source: "upload", mimeType: "image/jpeg", dataUrl: `${prefix},abc` },
+          ],
+        }),
+        storeId
+      );
+      expect(brief.media.images[0].mimeType).toBe(mime);
+    }
   });
 
   it("campos adormecidos mapeados 1:1 no lar canônico; ausentes quando não informados", () => {

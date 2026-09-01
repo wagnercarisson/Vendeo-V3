@@ -20,12 +20,40 @@ const mockAdminClient = { from: mockFrom };
 
 let service: OperationCostService;
 
+// Fila de respostas para leituras SEQUENCIAIS da feature flag (getAllCosts
+// resolve as duas flags uma após a outra). Cada chamada consome o próximo item.
+type FlagResult = { data: { enabled: boolean } | null; error: { message: string } | null };
+let flagQueue: FlagResult[] = [];
+
 beforeEach(() => {
   vi.clearAllMocks();
+  flagQueue = [];
   service = new OperationCostService(mockAdminClient as any);
 
   mockFrom.mockImplementation((table: string) => {
     if (table === "credit_operation_costs") return { select: mockSelect };
+    if (table === "feature_flags") {
+      return {
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            maybeSingle: () => {
+              const next = flagQueue.shift();
+              if (!next) {
+                return Promise.resolve({
+                  data: null,
+                  error: { message: "no flag mock configured" },
+                });
+              }
+              return Promise.resolve(
+                next.error
+                  ? { data: null, error: next.error }
+                  : { data: next.data, error: null },
+              );
+            },
+          })),
+        })),
+      };
+    }
     return {};
   });
   mockSelect.mockReturnValue({ eq: mockEq });
@@ -38,12 +66,21 @@ function mockGetCostResult(
   mockMaybeSingle.mockResolvedValue(result);
 }
 
+// Controla a leitura da feature flag (enabled da geração).
+function mockFlagResult(
+  data: { enabled: boolean } | null,
+  error: { message: string } | null = null,
+) {
+  flagQueue.push({ data, error });
+}
+
 describe("OperationCostService.getCost", () => {
-  it("linha existente → source table", async () => {
+  it("linha existente → source table + enabled da flag (true)", async () => {
     mockGetCostResult({
       data: { cost_credits: 2, enabled: true },
       error: null,
     });
+    mockFlagResult({ enabled: true });
 
     const result = await service.getCost("campaign_generation");
 
@@ -58,8 +95,9 @@ describe("OperationCostService.getCost", () => {
     expect(mockEq).toHaveBeenCalledWith("operation_key", "campaign_generation");
   });
 
-  it("linha inexistente → fail-open fallback", async () => {
+  it("linha inexistente → fail-open fallback (custo default; enabled da flag)", async () => {
     mockGetCostResult({ data: null, error: null });
+    mockFlagResult({ enabled: true });
 
     const result = await service.getCost("campaign_generation");
 
@@ -79,6 +117,7 @@ describe("OperationCostService.getCost", () => {
       data: null,
       error: { message: "connection refused" },
     });
+    mockFlagResult({ enabled: true });
 
     await expect(service.getCost("campaign_generation")).rejects.toThrow(
       OperationCostUnavailableError,
@@ -94,6 +133,7 @@ describe("OperationCostService.getCost", () => {
         data: { cost_credits: 1, enabled: true },
         error: null,
       });
+      mockFlagResult({ enabled: true });
 
       const result = await service.getCost(key);
 
@@ -106,11 +146,12 @@ describe("OperationCostService.getCost", () => {
     }
   });
 
-  it("enabled=false retorna resolução com enabled false (não lança)", async () => {
+  it("flag false → resolução com enabled false (não lança)", async () => {
     mockGetCostResult({
-      data: { cost_credits: 1, enabled: false },
+      data: { cost_credits: 1, enabled: true },
       error: null,
     });
+    mockFlagResult({ enabled: false });
 
     const result = await service.getCost("visual_signature_generation");
 
@@ -120,6 +161,19 @@ describe("OperationCostService.getCost", () => {
       enabled: false,
       source: "table",
     });
+  });
+
+  it("erro de leitura da flag → enabled true (F38 D5 fail-open — nunca desliga geração)", async () => {
+    mockGetCostResult({
+      data: { cost_credits: 2, enabled: true },
+      error: null,
+    });
+    mockFlagResult(null, { message: "db unavailable" });
+
+    const result = await service.getCost("campaign_generation");
+
+    expect(result.enabled).toBe(true);
+    expect(result.source).toBe("table");
   });
 
   it("não expõe métodos de escrita", () => {
@@ -152,7 +206,7 @@ describe("OperationCostService.getAllCosts", () => {
     mockIn.mockResolvedValue(result);
   }
 
-  it("merge tabela+fallback — todas as chaves do enum", async () => {
+  it("merge tabela+fallback — todas as chaves do enum, enabled mapeado das flags", async () => {
     mockGetAllCostsResult({
       data: [
         {
@@ -165,6 +219,8 @@ describe("OperationCostService.getAllCosts", () => {
       ],
       error: null,
     });
+    mockFlagResult({ enabled: true });
+    mockFlagResult({ enabled: false });
 
     const result = await service.getAllCosts();
 
@@ -177,10 +233,11 @@ describe("OperationCostService.getAllCosts", () => {
       updatedAt: "2026-08-07T12:00:00.000Z",
       source: "table",
     });
+    // visual_signature_generation: custo fallback + flag false
     expect(result[1]).toEqual({
       operationKey: "visual_signature_generation",
       costCredits: 1,
-      enabled: true,
+      enabled: false,
       updatedByUserId: null,
       updatedAt: null,
       source: "fallback",
@@ -192,10 +249,32 @@ describe("OperationCostService.getAllCosts", () => {
       data: null,
       error: { message: "connection refused" },
     });
+    mockFlagResult({ enabled: true });
 
     await expect(service.getAllCosts()).rejects.toThrow(
       OperationCostUnavailableError,
     );
+  });
+
+  it("erro de leitura das flags → enabled true (fail-open)", async () => {
+    mockGetAllCostsResult({
+      data: [
+        {
+          operation_key: "campaign_generation",
+          cost_credits: 2,
+          enabled: true,
+          updated_by: null,
+          updated_at: null,
+        },
+      ],
+      error: null,
+    });
+    mockFlagResult(null, { message: "db unavailable" });
+    mockFlagResult(null, { message: "db unavailable" });
+
+    const result = await service.getAllCosts();
+
+    expect(result.every((r) => r.enabled === true)).toBe(true);
   });
 
   it("ordem preservada = OPERATION_KEYS", async () => {
@@ -218,6 +297,8 @@ describe("OperationCostService.getAllCosts", () => {
       ],
       error: null,
     });
+    mockFlagResult({ enabled: true });
+    mockFlagResult({ enabled: true });
 
     const result = await service.getAllCosts();
     expect(result.map((r) => r.operationKey)).toEqual([...OPERATION_KEYS]);

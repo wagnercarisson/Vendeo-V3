@@ -14,6 +14,7 @@ beforeEach(() => {
   delete process.env.VENDEO_MONTHLY_CREDITS_AMOUNT;
   delete process.env.VENDEO_MONTHLY_BONUS_CAP;
   delete process.env.VENDEO_MONTHLY_CREDITS_MIN_STORE_AGE_DAYS;
+  delete process.env.VENDEO_PUBLIC_SIGNUP_ENABLED;
 });
 
 import { getLaunchConfig } from "../config";
@@ -112,6 +113,28 @@ describe("getLaunchConfig", () => {
     it("empty numeric env falls back to default", () => {
       process.env.VENDEO_MONTHLY_CREDITS_AMOUNT = "";
       expect(getLaunchConfig().monthlyCreditsAmount).toBe(5);
+    });
+  });
+
+  describe("Teste 11 - public signup flag (F42)", () => {
+    it("defaults to false when env var is not set", () => {
+      const config = getLaunchConfig();
+      expect(config.publicSignupEnabled).toBe(false);
+    });
+
+    it("VENDEO_PUBLIC_SIGNUP_ENABLED=true", () => {
+      process.env.VENDEO_PUBLIC_SIGNUP_ENABLED = "true";
+      expect(getLaunchConfig().publicSignupEnabled).toBe(true);
+    });
+
+    it("VENDEO_PUBLIC_SIGNUP_ENABLED=false", () => {
+      process.env.VENDEO_PUBLIC_SIGNUP_ENABLED = "false";
+      expect(getLaunchConfig().publicSignupEnabled).toBe(false);
+    });
+
+    it("invalid env value falls back to default false", () => {
+      process.env.VENDEO_PUBLIC_SIGNUP_ENABLED = "sim";
+      expect(getLaunchConfig().publicSignupEnabled).toBe(false);
     });
   });
 });

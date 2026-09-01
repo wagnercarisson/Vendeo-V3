@@ -82,6 +82,8 @@ vi.mock('@/lib/cnpj/verification-service', async (importOriginal) => {
 
 vi.mock('@/lib/cnpj/lookup-providers/types', () => ({}));
 
+import * as freemiumRisk from "@/lib/freemium/freemium-risk-service";
+
 import { POST } from "../route";
 
 process.env.CNPJ_PEPPER = "test_pepper_hex_64_chars";
@@ -122,6 +124,7 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
   });
 
   it("creates store with APPROVE verification and grant onboarding", async () => {
+    const spy = vi.spyOn(freemiumRisk, "evaluateFreemiumEligibility");
     mockResolve.mockResolvedValue(sampleLookupResolved);
     mockRpc.mockResolvedValueOnce({
       data: {
@@ -136,6 +139,8 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
       name: "Minha Loja",
       segment: "moda-calcados-acessorios",
       cnpj: "12.345.678/0001-95",
+      city: "São Paulo",
+      state: "SP",
       acceptedTerms: true,
     }));
 
@@ -144,6 +149,13 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
     expect(body.id).toBe("store-1");
     expect(body.onboardingGranted).toBe(true);
     expect(body.verificationStatus).toBe("approved");
+    // D7: city/state preenchidos → motor chamado com valores non-null
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({
+      city: "São Paulo",
+      state: "SP",
+      segment: "moda-calcados-acessorios",
+    }));
+    spy.mockRestore();
   });
 
   it("creates store with REVIEW and no grant", async () => {
@@ -168,6 +180,8 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
       name: "Nome Completamente Diferente",
       segment: "moda-calcados-acessorios",
       cnpj: "12.345.678/0001-95",
+      city: "São Paulo",
+      state: "SP",
       acceptedTerms: true,
     }));
 
@@ -238,6 +252,8 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
       name: "Loja Inativa",
       segment: "moda-calcados-acessorios",
       cnpj: "12.345.678/0001-95",
+      city: "São Paulo",
+      state: "SP",
       acceptedTerms: true,
     }));
 
@@ -245,6 +261,59 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
     const body = await res.json();
     expect(body.onboardingGranted).toBe(false);
     expect(body.verificationStatus).toBe("rejected");
+  });
+
+  it("Teste 26 (D7): does NOT call the motor when city/state absent — unverified, no review, no grant", async () => {
+    const spy = vi.spyOn(freemiumRisk, "evaluateFreemiumEligibility");
+    mockResolve.mockResolvedValue(sampleLookupResolved);
+    mockRpc.mockResolvedValueOnce({
+      data: {
+        store: [{ id: "store-5", name: "Loja Sem Cidade", segment: "moda-calcados-acessorios" }],
+        onboardingGranted: false,
+        verificationStatus: "unverified",
+      },
+      error: null,
+    });
+
+    const res = await POST(createRequest({
+      name: "Loja Sem Cidade",
+      segment: "moda-calcados-acessorios",
+      cnpj: "12.345.678/0001-95",
+      acceptedTerms: true,
+    }));
+
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    // D7: motor NÃO chamado; loja não avaliada; sem concessão
+    expect(spy).not.toHaveBeenCalled();
+    expect(body.verificationStatus).toBe("unverified");
+    expect(body.onboardingGranted).toBe(false);
+    spy.mockRestore();
+  });
+
+  it("Teste 26 (D7): keeps store unverified when city present but state absent", async () => {
+    const spy = vi.spyOn(freemiumRisk, "evaluateFreemiumEligibility");
+    mockResolve.mockResolvedValue(sampleLookupResolved);
+    mockRpc.mockResolvedValueOnce({
+      data: {
+        store: [{ id: "store-6", name: "Loja Sem UF", segment: "moda-calcados-acessorios" }],
+        onboardingGranted: false,
+        verificationStatus: "unverified",
+      },
+      error: null,
+    });
+
+    const res = await POST(createRequest({
+      name: "Loja Sem UF",
+      segment: "moda-calcados-acessorios",
+      cnpj: "12.345.678/0001-95",
+      city: "São Paulo",
+      acceptedTerms: true,
+    }));
+
+    expect(res.status).toBe(201);
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
   });
 
   it("returns 400 for invalid CNPJ", async () => {

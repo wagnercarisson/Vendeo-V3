@@ -12,6 +12,7 @@ import { compareBusinessName } from "@/lib/cnpj/similarity";
 import type { CnpjLookupData } from "@/lib/cnpj/lookup-providers/types";
 import { z } from "zod";
 import { validateCnpj } from "@/lib/cnpj/validate";
+import { evaluateFreemiumEligibility } from "@/lib/freemium/freemium-risk-service";
 
 const UpdateCnpjSchema = z.object({
   storeId: z.string().uuid(),
@@ -49,6 +50,13 @@ export const POST = apiHandler(async (request: NextRequest) => {
     const cnpjResult = validateCnpj(cnpjNormalized);
     if (cnpjResult instanceof Error) {
       return NextResponse.json({ error: "CNPJ inválido" }, { status: 400 });
+    }
+
+    // Idempotência: se a loja já possui EXATAMENTE este CNPJ, o re-save é um
+    // no-op de sucesso — evita o 409 cnpj_already_set quando o cliente
+    // re-envia o mesmo CNPJ (desync de hasExistingCnpj no onboarding).
+    if (store.cnpj_normalized === cnpjNormalized) {
+      return NextResponse.json({ success: true, store: [store] });
     }
 
     const cnpjRootHash = hashCnpjRoot(cnpjNormalized.slice(0, 8));
@@ -105,7 +113,8 @@ export const POST = apiHandler(async (request: NextRequest) => {
       officialRazaoSocial = lookupResult.data.razao_social;
       officialNomeFantasia = lookupResult.data.nome_fantasia || officialRazaoSocial;
 
-      // Calcula score de similaridade com dados oficiais
+      // Similaridade de nome é métrica de APOIO (sinal), NÃO a decisão final (F42 D10).
+      // A decisão vem do motor de elegibilidade (evaluateFreemiumEligibility).
       const score = compareBusinessName(
         (store as any).name ?? "",
         officialRazaoSocial,
@@ -115,14 +124,43 @@ export const POST = apiHandler(async (request: NextRequest) => {
         ? { name_match: true, score: score.bestScore }
         : { name_mismatch: true, score: score.bestScore };
 
-      // Define verification_status com base na compatibilidade
-      if (score.bestScore >= 0.8) {
-        verificationStatus = "approved";
-        verificationData = { signals: { nameSimilarity: score.bestScore } };
+      // Pré-gate D7: cidade/UF ausentes (undefined/empty após trim) → NÃO chamar o motor.
+      // A loja permanece NÃO avaliada (unverified): sem approved, sem review, sem concessão.
+      // O motor nunca recebe nulos (contrato único create/update — mesmo pré-gate em store/route.ts).
+      const storeCity = typeof (store as any).city === "string" ? (store as any).city.trim() : "";
+      const storeState = typeof (store as any).state === "string" ? (store as any).state.trim() : "";
+
+      if (storeCity !== "" && storeState !== "") {
+        // rootEligible: mesma consulta do create (freemium_entitlements por root_hash)
+        const { data: existingEntitlement } = await supabaseAdmin
+          .from("freemium_entitlements")
+          .select("id")
+          .eq("root_hash", cnpjRootHash)
+          .eq("benefit_type", "onboarding")
+          .maybeSingle();
+
+        const rootEligible = !existingEntitlement;
+
+        const eligibility = evaluateFreemiumEligibility({
+          cnpj: cnpjNormalized,
+          storeName: (store as any).name ?? "",
+          city: storeCity,
+          state: storeState,
+          segment: (store as any).segment ?? "",
+          officialData: cnpjOfficialData,
+          lookupOutcome: "resolved",
+          rootHash: cnpjRootHash,
+          rootEligible,
+        });
+
+        verificationData = { signals: eligibility.signals, score: eligibility.score };
+        verificationStatus = eligibility.decision;
+        verificationReasons = eligibility.reasons.length > 0 ? eligibility.reasons : null;
       } else {
-        verificationStatus = "review";
-        verificationReasons = ["nome_divergente"];
-        verificationData = { signals: { nameSimilarity: score.bestScore } };
+        // D7 — cidade/UF ausentes: loja NÃO avaliada (unverified), sem approved/review/concessão
+        verificationStatus = "unverified";
+        verificationData = { signals: {}, score: 0 };
+        verificationReasons = null;
       }
     } else if (lookupResult.status === "unavailable" && (store as any).is_test_store) {
       // Test store com API indisponível: permite continuar com defer

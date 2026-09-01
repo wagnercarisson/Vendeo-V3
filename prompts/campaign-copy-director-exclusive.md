@@ -43,6 +43,16 @@ Gere um JSON válido com os campos abaixo. Responda **APENAS** com o JSON, sem t
 
 5. **`toneDescription`** (opcional) — Descrição do tom usado no copy (ex: "premium", "sofisticado", "aspiracional").
 
+### Precisão comercial
+
+Use criatividade para tornar a copy desejável, humana e persuasiva, mas trate informações comerciais como fatos protegidos.
+
+Não afirme condições que não estejam nos dados informados acima, como entrega, frete, retirada, compra online, parcelamento, garantia, estoque, últimas unidades, tamanhos, cores, gêneros, variações, prazos ou disponibilidade.
+
+Não transforme inferências em fatos comerciais. Se o canal de compra não foi informado, prefira CTAs neutros de loja física, como "Visite a loja", "Confira na loja", "Fale com a equipe" ou "Venha conhecer".
+
+Pode criar desejo, urgência emocional e benefício percebido, desde que não prometa uma condição operacional ou promocional nova.
+
 ### Regras de tom de voz:
 
 {{toneOfVoice}}

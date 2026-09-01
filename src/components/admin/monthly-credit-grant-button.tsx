@@ -7,6 +7,13 @@ interface GrantResult {
   granted: number;
   skipped: number;
   errors: number;
+  details?: {
+    roots_considered: number;
+    skipped_no_cnpj: number;
+    skipped_already_granted: number;
+    skipped_not_due: number;
+    skipped_bonus_threshold: number;
+  };
 }
 
 export function MonthlyCreditGrantButton() {
@@ -28,7 +35,7 @@ export function MonthlyCreditGrantButton() {
         return;
       }
 
-      if (body.skipped) {
+      if (body.skipped === true) {
         setResult(null);
         setError("Concessão mensal desabilitada (monthlyCreditsEnabled=false)");
         return;
@@ -58,7 +65,7 @@ export function MonthlyCreditGrantButton() {
             Concessão concluída: {result.granted} concedidos, {result.skipped} pulados, {result.errors} erros
           </p>
           <p className="text-muted-foreground">
-            {result.eligible} lojas elegíveis, {result.granted + result.skipped + result.errors} processadas
+            {result.eligible} raízes elegíveis, {result.granted + result.skipped + result.errors} processadas
           </p>
         </div>
       )}

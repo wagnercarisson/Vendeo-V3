@@ -54,14 +54,14 @@ Autenticação completa, vínculo user→store, isolamento multi-tenant, beta.ve
 
 ### 📋 v1.5 — Lançamento Externo Controlado ◆
 
-Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, UAT externo, fundação legal, modelo comercial, freemium anti-abuso CNPJ, changelog/novidades, onboarding por abas (F36), revisão e aprovação da arte (F37), tabela de custos por operação (F38) e brief estruturado de campanha (F39).
+Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, UAT externo, fundação legal, modelo comercial, freemium anti-abuso CNPJ, changelog/novidades, onboarding por abas (F36), revisão e aprovação da arte (F37), tabela de custos por operação (F38), brief estruturado de campanha (F39), mídia de campanha mobile (F41), signup controlado e elegibilidade freemium (F42) e revisão do brief pré-geração (F43).
 
 <details open>
 <summary>◆ v1.5 Lançamento Externo Controlado (F23-F39) — Em andamento</summary>
 
-> Stripe / Monetização Pública deslocada para F40 (v1.7, pós-beta).
+> **Monetização pública / Stripe** — iniciativa diferida **não numerada** (v1.7+), reaberta quando houver condição real de executar (empresa, jurídico, contabilidade, operação fiscal, decisão de monetização). Fora da tabela de fases numeradas.
 
-Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, fundação legal, modelo comercial e store readiness.
+Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, fundação legal, modelo comercial, store readiness, campos comerciais e avisos do brief (F40), mídia de campanha mobile (F41), signup controlado e elegibilidade freemium (F42) e revisão do brief pré-geração (F43).
 
 - [x] Phase 23: Text Provider + Copy Director (2/2 plans ✅)
 - [x] Phase 24: Créditos — Schema, Saldo e Transações (2/2 plans ✅)
@@ -151,12 +151,44 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 - [x] Phase 38: Tabela de Custos por Operação (8/8 plans ✅)
   - [x] **38.1 = Apuração de Custos de IA por Entrega** (desdobramento da F38, v1.5) — trilha granular de custo de IA por entrega + views/RPCs de apuração e reconciliação (USD × créditos) — **CONCLUÍDA** (11/11 plans, 1713 testes, UAT validado; fechada como camada de ESTIMATIVA OPERACIONAL GRANULAR — `responses:image_generation = 0.065` provisório beta, reconciliação financeira real na próxima fase), fonte `openspec/changes/fase-38-1-ai-cost-accounting/`
   - [x] **38.2 = Admin de Custos Operacionais + Configurações Econômicas** (desdobramento da F38, v1.5) — painel admin `/admin/ai-operation-costs` (KPIs, filtros, tabela por entrega, drilldown call-level, agregados por segmento), parâmetros econômicos configuráveis (`usd_brl_rate`, `credit_value_brl`), badges de confiança, correção do `/admin/metrics` — **CONCLUÍDA 15/15 plans** (gap closure UAT: 38-2-12 RPCs com creditos_estornados/creditos_liquidos ✅, 38-2-13 service líquidos, 38-2-14 UI breakdown, 38-2-15 tracking; 63/63 asserts I1-I6, 1839 testes, gates verdes, UAT manual aprovado), fonte `openspec/changes/fase-38-2-admin-custos-operacionais/`
-  - [x] **38.2.1 = Snapshot Econômico** (desdobramento da F38.2, v1.5) — congelar `usd_brl_rate_at_generation`/`credit_value_brl_at_generation` em `generation_events` no momento da geração; impedir recálculo retroativo; nomenclatura `receitaEstimadaBrl`/`resultadoEstimadoBrl`/`margemEstimadaPct`; fallback legacy explícito; backfill aproximado via audit; receita real por pacote de crédito fica para F40 — **CONCLUÍDA 7/7 plans** (I1-I7 53/53 asserts, 1887 testes, gates verdes, UAT manual aprovado), fonte `openspec/changes/fase-38-2-1-economic-snapshot/`
+  - [x] **38.2.1 = Snapshot Econômico** (desdobramento da F38.2, v1.5) — congelar `usd_brl_rate_at_generation`/`credit_value_brl_at_generation` em `generation_events` no momento da geração; impedir recálculo retroativo; nomenclatura `receitaEstimadaBrl`/`resultadoEstimadoBrl`/`margemEstimadaPct`; fallback legacy explícito; backfill aproximado via audit; receita real por pacote de crédito fica para F43 (Stripe) — **CONCLUÍDA 7/7 plans** (I1-I7 53/53 asserts, 1887 testes, gates verdes, UAT manual aprovado), fonte `openspec/changes/fase-38-2-1-economic-snapshot/`
 - [x] Phase 39: Brief Estruturado de Campanha (8/8 plans ✅)
   - Contrato de domínio `CampaignBrief` estruturado (produto × oferta × mídia × contexto criativo × metadados) + mapper flat→brief na fronteira da rota + snapshot `input_snapshot` versionado (`campaign_brief_v1`, sem base64) + 5 costuras de mappers preservando o comportamento de geração atual
   - Fonte da verdade: `openspec/changes/fase-39-brief-estruturado-campanha/`
   - **Dependências:** F38.2.1 (snapshot econômico), F31.x (prompts por intent), F24/F25 (pipeline) — antecede a F37 (Revisão e Aprovação da Arte)
 
+- [x] Phase 40: Campos Comerciais e Avisos do Brief (9/9 plans ✅)
+  - Checkbox "Exibir 'Imagem meramente ilustrativa'" (default marcado) com constante única `ILLUSTRATIVE_NOTICE_TEXT` (singular), removendo o hardcode incondicional dos 4 prompts do diretor de imagem
+  - Seção "Validade da oferta" (6 modos: sem validade / até uma data / de... até... / somente hoje / enquanto durarem os estoques / texto personalizado), `displayText` determinístico `dd/mm`, apenas para `campaignIntent === "offer"`
+  - Formulário agrupado em Produto / Oferta / Avisos e texto obrigatório (checkbox + textarea coexistindo)
+  - **Fonte da verdade:** `openspec/changes/fase-40-campos-comerciais-avisos-brief/`
+  - **Dependências:** F39 (brief estruturado — validity/legalNotice no domínio), F31.x (prompts por intent) — antecede a F43 (Stripe)
+
+- [x] Phase 41: Mídia de Campanha Mobile (13/13 plans ✅)
+  - Form multi-imagem: 1 imagem **primary** obrigatória + até 3 auxiliares (galeria + câmera com `capture="environment"`), preview grid com remoção por item, `source: "upload" | "camera"`, decode HEIC via canvas sem dependência de lib, orientação EXIF respeitada (`createImageBitmap from-image`)
+  - Transporte aditivo `productImages[]` (`MAX_CAMPAIGN_IMAGES = 4`, invariante exatamente-1-primary via `superRefine`) com `productImageDataUrl` legado preservado; regra de exclusividade 400 na rota (ambos ausentes / ambos presentes)
+  - Mapper flat→domínio multi-imagem com `mimeType` real derivado do dataUrl; snapshot com `storagePath` por input persistido
+  - Persistência dos inputs no bucket `campaign-images` (`{storeId}/{campaignId}/inputs/{imageId}.jpg`) com `campaignId` pré-gerado, `createCampaign` com parâmetro opcional, limpeza pré-stream sem órfãos
+  - Provider Responses com N `input_image`; fallback `images.edit` gated (só primary única); prompt com bloco descritivo 1+N sem nova variável (golden `EXPECTED_KEYS = 38`); validação primary-only; revisor com primary como referência (retrocompatível)
+  - **Fonte da verdade:** `openspec/changes/fase-41-midia-de-campanha-mobile/`
+  - **Dependências:** F39 (domínio multi-imagem `media.images[]`), F40 (campos comerciais/avisos no form) — antecede a F43 (Stripe)
+  - **Status:** 4 gates verdes (222 files / 2033 testes), UAT humano 6/6 cenários (Android validado em produção ✅; iOS HEIC pendente de confirmação final)
+
+- [x] Phase 42: Signup Controlado e Elegibilidade Freemium (20/20 plans ✅)
+  - Reabrir o cadastro público de forma controlada: **Google OAuth como entrada principal** (`signInWithOAuth`, callback PKCE `/auth/callback`, escopos `openid email profile`) + **email/senha como fallback** (formulário restaurado: email, senha mín. 8, confirmação, ciência da privacidade, consentimento opcional)
+  - **Turnstile** para email/senha, login por senha e recuperação (NÃO no Google OAuth); confirmação de email obrigatória apenas para email/senha; anti-enumeração com mensagens genéricas
+  - Kill switch duplo: "Allow new users to sign up" (server-side Supabase) + flag `VENDEO_PUBLIC_SIGNUP_ENABLED` (UI/landing, default false)
+  - Invariantes de elegibilidade preservados (conta ≠ loja ≠ benefício; apenas `approved` concede 10 créditos de onboarding); cidade/UF como gate de elegibilidade; situação ≠ ATIVA → review `situacao_nao_ativa` (corrige lacuna F33 INAPTA); CNAE determinístico sem rejeição exclusiva; admin reviews mais rico
+  - **Fonte da verdade:** `openspec/changes/fase-42-signup-controlado-elegibilidade-freemium/`
+  - **Status:** 20/20 plans, 2182 testes, 4 gates verdes, UAT 20.5–20.15 PASS
+
+- [x] Phase 43: Revisão do Brief Pré-Geração (complete — UAT 9/9 PASS)
+  - Gate client-side obrigatório de revisão do brief em tela intermediária (`reviewMode`) entre o form e o POST; botão "Revisar e gerar"; "Voltar e editar" preserva tudo; "Confirmar e gerar campanha" trava o snapshot e dispara o submit real
+  - Compressão das imagens antes da revisão (`prepareCampaignImages`); resumo completo Produto/Oferta/Imagens/Avisos/Custo + loja/marca + rótulos Principal/Referência + "Vai consumir X crédito(s)" + slot Tema reservado (preparação F44)
+  - Helpers puros `prepareCampaignImages`/`buildCampaignGenerationBody`; body idêntico ao exibido; override `brief_review_confirmed` (pula a IA de visão; fase `input_validation` como `skipped`)
+  - Flag administrativa mínima `force_brief_vision_check` na tabela `feature_flags` (tela admin, motivo obrigatório, auditoria, fallback de leitura `enabled=false` que não derruba geração)
+  - **Fonte da verdade:** `openspec/changes/fase-43-revisao-brief-pre-geracao/`
+  - **Dependências:** F39 (domínio `CampaignBrief`/snapshot), F40 (form `validity`/`mandatoryArtworkText`), F41 (multi-imagem/`compressImage`), F31.x (intents), F38/F38.1 (custos/telemetria), F24/F25 (pipeline) — antecede a F44 (Temas) e a F37 (Revisão e Aprovação da Arte)
 </details>
 
 ## Progress
@@ -204,7 +236,11 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 38.2. Admin de Custos Operacionais + Configurações Econômicas | v1.5 | 15/15 | ✅ Complete | 2026-08-11 |
 | 38.2.1. Snapshot Econômico | v1.5 | 7/7 | ✅ Complete | 2026-08-12 |
 | 39. Brief Estruturado de Campanha | v1.5 | 8/8 | ✅ Complete | 2026-08-13 |
-| 40. Stripe / Monetização Pública | v1.7 | 0/0 | ○ Pending | — |
+| 40. Campos Comerciais e Avisos do Brief | v1.5 | 9/9 | ✅ Complete | 2026-08-14 |
+| 41. Mídia de Campanha Mobile | v1.5 | 13/13 | ✅ Complete | 2026-08-15 |
+| 42. Signup Controlado e Elegibilidade Freemium | v1.5 | 20/20 | ✅ Complete | 2026-08-21 |
+| 43. Revisão do Brief Pré-Geração | v1.5 | 15/15 | ✅ Complete | 2026-08-21 |
+| —. Monetização pública / Stripe (diferida, v1.7+) | v1.7 | — | Fora da numeração | — |
 
 ---
 

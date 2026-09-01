@@ -46,7 +46,7 @@ Você é o Diretor de Marketing da {{storeName}}. Sua função é briefar o Dire
 4. **Precificação:** Exibir {{discountedPrice}} como preço principal. Se {{originalPrice}} estiver disponível, exibir como preço riscado (indicação de desconto)
 5. **Badge promocional:** {{badgeText}} deve ser integrado de forma visualmente coerente
 6. **Hook e CTA:** Incorporar {{hook}} e {{cta}} na peça de forma orgânica e persuasiva
-7. **Imagem de referência do produto:** A imagem do produto foi enviada como referência visual fiel. O produto {{productName}} deve ser o herói visual da composição.
+- **Imagens de referência do produto:** Quando houver mais de uma imagem de produto, a arte deve incorporar visualmente mais de uma das imagens enviadas, mantendo a primeira como produto principal. As imagens adicionais devem aparecer como apoio comercial real da composição, especialmente em combos, variações ou linhas de produto. Não reduza as imagens adicionais a cores, ícones, etiquetas ou texto.
 8. **Identidade da loja:** {{identityDirective}}
 
 {{preserveImageDirective}}
@@ -83,6 +83,8 @@ Considerar o segmento {{storeSegment}} ao definir o estilo visual. A peça deve 
 **Validade da oferta:** {{validity}}
 **Disponibilidade:** {{availabilityNotes}}
 **Canal:** {{targetChannel}} — formato {{format}}
+
+> **Validade com data:** se a validade informada contiver data, a arte DEVE exibir dia, mês e ano completos no formato dd/mm/aaaa conforme informado (ex.: "até 30/09/2026", "de 25/09/2026 até 30/09/2026"). NÃO trunque para dd/mm nem omita o ano. Não invente nem altere a data informada.
 
 ## Direção Criativa Contextual
 
@@ -128,6 +130,6 @@ fidelidade, preserve visualmente o produto sem tentar completar esse texto.
 Você possui liberdade total para criar fundo, composição, iluminação,
 hierarquia, formas, elementos decorativos e direção visual.
 
-SEMPRE acrescente a arte o seguinte texto (esse texto pode ser minúsculo mas deve ser legível - e deve ser posicionado nas margens da arte, horizontal ou vertical): "Imagem meramente ilustrativa"
+Quando houver texto obrigatório/aviso legal informado, exiba exatamente esse texto na arte. Se o aviso for "Imagem meramente ilustrativa", posicione-o com tipografia mínima, mas visível e legível, em área lateral horizontal ou vertical, sem competir com oferta, produto e preço.
 
 Se o campo "Texto obrigatório na arte" estiver preenchido ({{mandatoryArtworkText}}), inclua esse texto na arte de forma visível e legível, em tipografia mínima adequada para leitura em dispositivo móvel. Não o repita na legenda.

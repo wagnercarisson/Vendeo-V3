@@ -28,8 +28,8 @@ export function Topbar({ user, storeName, onToggleMenu, isDrawerOpen, toggleButt
   };
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-border bg-bg-surface px-4">
-      <div className="flex min-w-0 flex-1 items-center gap-3">
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-bg-surface px-3 sm:px-4">
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
         <button
           type="button"
           ref={toggleButtonRef}
@@ -37,7 +37,7 @@ export function Topbar({ user, storeName, onToggleMenu, isDrawerOpen, toggleButt
           aria-controls="mobile-drawer"
           aria-expanded={isDrawerOpen}
           aria-label="Abrir menu de navegação"
-          className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg p-2 text-text-secondary hover:bg-bg-elevated hover:text-text-primary md:hidden"
+          className="inline-flex shrink-0 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg p-2 text-text-secondary hover:bg-bg-elevated hover:text-text-primary md:hidden"
         >
           <Menu className="h-5 w-5" />
         </button>
@@ -46,14 +46,15 @@ export function Topbar({ user, storeName, onToggleMenu, isDrawerOpen, toggleButt
         </span>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center gap-1 sm:gap-3">
         <Link
           href={NEW_CAMPAIGN_PATH}
           onClick={handleNewCampaignClick}
-          className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg bg-accent-green px-3 py-1.5 text-sm font-semibold text-white font-heading hover:brightness-110 transition-all duration-200"
+          aria-label="Criar nova campanha"
+          className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-0 rounded-lg bg-accent-green px-2 py-1.5 text-sm font-semibold text-white font-heading hover:brightness-110 transition-all duration-200 sm:gap-1.5 sm:px-3"
         >
           <Plus className="h-4 w-4" />
-          Nova Campanha
+          <span className="hidden sm:inline">Nova Campanha</span>
         </Link>
         <AccountMenu user={user} />
       </div>

@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AccessRequestSection } from "@/components/landing/access-request-section";
+import { HowItWorksSection } from "@/components/landing/how-it-works-section";
+import { WhatVendeoCreatesSection } from "@/components/landing/what-vendeo-creates-section";
+import { NovidadesLink } from "@/components/landing/novidades-link";
+import { getAllEntries } from "@/lib/changelog/get-changelog";
+import { getLaunchConfig } from "@/lib/launch-config/config";
 
 export const metadata: Metadata = {
   title: "Vendeo — Campanhas profissionais para sua loja",
@@ -8,7 +13,11 @@ export const metadata: Metadata = {
     "O Vendeo transforma a oferta da sua loja em campanhas profissionais para redes sociais. Acesso liberado por convite em beta fechado — solicite seu acesso free.",
 };
 
-export default function Home() {
+export default async function Home() {
+  const entries = await getAllEntries();
+  const recentEntries = entries.slice(0, 5);
+  const { publicSignupEnabled } = await getLaunchConfig();
+
   return (
     <div className="flex min-h-screen flex-col bg-bg-deep font-body text-text-primary">
       {/* Header */}
@@ -25,7 +34,14 @@ export default function Home() {
       </header>
 
       {/* Hero + form (estado de envio gerenciado no client) */}
-      <AccessRequestSection />
+      <AccessRequestSection
+        entries={recentEntries}
+        publicSignupEnabled={publicSignupEnabled}
+      />
+
+      {/* Capacidades do app + fluxo do produto (conteúdo estático público) */}
+      <WhatVendeoCreatesSection />
+      <HowItWorksSection />
 
       {/* Footer */}
       <footer className="border-t border-border">
@@ -35,13 +51,20 @@ export default function Home() {
           </span>
           <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
             <Link href="/termos" className="transition-colors hover:text-text-primary">
-              Termos
+              Termos de Uso
             </Link>
             <Link href="/privacidade" className="transition-colors hover:text-text-primary">
-              Privacidade
+              Política de Privacidade
             </Link>
             <Link href="/uso-aceitavel" className="transition-colors hover:text-text-primary">
               Uso Aceitável
+            </Link>
+            <NovidadesLink variant="footer" entries={recentEntries} />
+            <Link
+              href={`mailto:${process.env.SUPPORT_EMAIL ?? "suporte@vendeo.tech"}`}
+              className="transition-colors hover:text-text-primary"
+            >
+              Contato
             </Link>
             <Link href="/login" className="transition-colors hover:text-text-primary">
               Entrar

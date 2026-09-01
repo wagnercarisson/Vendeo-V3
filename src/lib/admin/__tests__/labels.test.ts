@@ -20,6 +20,8 @@ describe("AUDIT_ACTION_LABELS", () => {
     "create_test_store",
     "admin_exception",
     "reveal_cnpj",
+    "feature_flag_update",
+    "operation_cost_update",
   ];
 
   it.each(knownActions)("cobre ação: %s", (action) => {
@@ -32,18 +34,39 @@ describe("AUDIT_ACTION_LABELS", () => {
     expect(getLabel(AUDIT_ACTION_LABELS, "reveal_cnpj")).toBe("Revelar CNPJ");
   });
 
+  it("getLabel retorna labels humanizados de auditoria operacional (QCW)", () => {
+    expect(getLabel(AUDIT_ACTION_LABELS, "feature_flag_update")).toBe(
+      "Atualização de controle operacional",
+    );
+    expect(getLabel(AUDIT_ACTION_LABELS, "operation_cost_update")).toBe(
+      "Atualização de custo operacional",
+    );
+  });
+
   it("getLabel retorna fallback para ação desconhecida", () => {
     expect(getLabel(AUDIT_ACTION_LABELS, "unknown_action")).toBe("Unknown Action");
   });
 });
 
 describe("TARGET_TYPE_LABELS", () => {
-  it.each(["store", "user", "campaign"])("cobre alvo: %s", (type) => {
-    expect(TARGET_TYPE_LABELS).toHaveProperty(type);
-  });
+  it.each(["store", "user", "campaign", "feature_flag", "operation_cost"])(
+    "cobre alvo: %s",
+    (type) => {
+      expect(TARGET_TYPE_LABELS).toHaveProperty(type);
+    },
+  );
 
   it("getLabel retorna label conhecido", () => {
     expect(getLabel(TARGET_TYPE_LABELS, "store")).toBe("Loja");
+  });
+
+  it("getLabel retorna labels humanizados de alvo operacional (QCW)", () => {
+    expect(getLabel(TARGET_TYPE_LABELS, "feature_flag")).toBe(
+      "Controle operacional",
+    );
+    expect(getLabel(TARGET_TYPE_LABELS, "operation_cost")).toBe(
+      "Custo operacional",
+    );
   });
 });
 
@@ -67,10 +90,26 @@ describe("VERIFICATION_REASON_LABELS", () => {
     "cnpj_baixada",
     "cnpj_nula",
     "root_already_used",
+    "situacao_nao_ativa",
+    "localizacao_oficial_indisponivel",
+    "segmento_cnae_divergente",
+    "dados_oficiais_incompletos",
   ];
 
   it.each(knownReasons)("cobre motivo: %s", (reason) => {
     expect(VERIFICATION_REASON_LABELS).toHaveProperty(reason);
+  });
+
+  it("Teste 47: exibe labels corretos para os novos motivos F42 (D11)", () => {
+    expect(getLabel(VERIFICATION_REASON_LABELS, "situacao_nao_ativa")).toBe("Situação cadastral não ativa");
+    expect(getLabel(VERIFICATION_REASON_LABELS, "localizacao_oficial_indisponivel")).toBe("Localização oficial indisponível");
+    expect(getLabel(VERIFICATION_REASON_LABELS, "segmento_cnae_divergente")).toBe("Segmento incompatível com CNAE");
+    expect(getLabel(VERIFICATION_REASON_LABELS, "dados_oficiais_incompletos")).toBe("Dados oficiais incompletos");
+  });
+
+  it("Teste 48: situacao_suspensa permanece legível em registros antigos (D8/D11)", () => {
+    expect(VERIFICATION_REASON_LABELS.situacao_suspensa).toBe("Situação suspensa");
+    expect(getLabel(VERIFICATION_REASON_LABELS, "situacao_suspensa")).toBe("Situação suspensa");
   });
 });
 

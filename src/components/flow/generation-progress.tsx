@@ -91,12 +91,15 @@ export function GenerationProgress({ phases, error, onRetry }: GenerationProgres
                         ? "bg-accent-green/10 text-accent-green"
                         : status === "failed"
                           ? "bg-red-900/20 text-accent-red"
-                          : "bg-bg-surface text-text-muted"
+                          : status === "skipped"
+                            ? "bg-bg-elevated text-text-muted"
+                            : "bg-bg-surface text-text-muted"
                   }`}
                 >
                   {status === "complete" && <Check className="w-4 h-4" />}
                   {status === "running" && <Loader2 className="w-4 h-4 animate-spin" />}
                   {status === "failed" && <X className="w-4 h-4" />}
+                  {status === "skipped" && <Minus className="w-4 h-4" />}
                   {status === "pending" && (
                     <div className="w-2 h-2 rounded-full bg-text-muted" />
                   )}
@@ -109,7 +112,9 @@ export function GenerationProgress({ phases, error, onRetry }: GenerationProgres
                         ? "text-accent-green"
                         : status === "failed"
                           ? "text-accent-red"
-                          : "text-text-muted"
+                          : status === "skipped"
+                            ? "text-text-muted"
+                            : "text-text-muted"
                   }`}
                 >
                   {phaseInfo.label}

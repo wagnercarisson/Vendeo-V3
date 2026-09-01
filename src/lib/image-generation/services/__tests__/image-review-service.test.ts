@@ -190,13 +190,13 @@ describe('ImageReviewService', () => {
       productName: 'Produto Teste',
       storeName: 'Loja Teste',
       campaignIntent: 'offer',
-      legalNoticeText: 'Imagens meramente ilustrativas',
+      legalNoticeText: 'Imagem meramente ilustrativa',
     };
 
     await service.review('data:image/jpeg;base64,abc', input);
 
     const vars = mockLoader.load.mock.calls[0][1];
-    expect(vars.mandatoryArtworkTextSection).toContain('Imagens meramente ilustrativas');
+    expect(vars.mandatoryArtworkTextSection).toContain('Imagem meramente ilustrativa');
     expect(vars.mandatoryArtworkTextSection).toMatch(/conteudo essencial/i);
     expect(vars.mandatoryArtworkTextSection).toMatch(/Nao reprove apenas/i);
     expect(vars.mandatoryArtworkTextSection).toMatch(/quebra de linha/i);
@@ -275,12 +275,57 @@ describe('ImageReviewService', () => {
       productName: 'Produto Teste',
       storeName: 'Loja Teste',
       campaignIntent: 'offer',
-      validityText: 'Até 30/09',
+      validityText: 'Até 30/09/2026',
     };
 
     await service.review('data:image/jpeg;base64,abc', input);
     const vars = mockLoader.load.mock.calls[0][1];
-    expect(vars.validityTextSection).toContain('Até 30/09');
+    expect(vars.validityTextSection).toContain('Até 30/09/2026');
+  });
+
+  it('8.20b validade com data exige fidelidade de dia/mês/ano (dd/mm/aaaa)', async () => {
+    const input: ImageReviewInput = {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+      campaignIntent: 'offer',
+      validityText: 'até 30/09/2026',
+    };
+
+    await service.review('data:image/jpeg;base64,abc', input);
+
+    const vars = mockLoader.load.mock.calls[0][1];
+    expect(vars.validityTextSection).toContain('até 30/09/2026');
+    expect(vars.validityTextSection).toMatch(/dd\/mm\/aaaa/i);
+    expect(vars.validityTextSection).toMatch(/dia, mes e ano/i);
+    expect(vars.validityTextSection).toMatch(/CRITICA/i);
+    expect(vars.validityTextSection).toMatch(/illegible_text/i);
+  });
+
+  it('8.20c validade vazia → seção vazia (regressão)', async () => {
+    const input: ImageReviewInput = {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+      validityText: '   ',
+    };
+
+    await service.review('data:image/jpeg;base64,abc', input);
+    expect(mockLoader.load.mock.calls[0][1].validityTextSection).toBe('');
+  });
+
+  it('8.20d sanitização mantida na seção de validade (sem {{ )', async () => {
+    const input: ImageReviewInput = {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+      campaignIntent: 'offer',
+      validityText: 'até {{30/09/2026}}',
+    };
+
+    await service.review('data:image/jpeg;base64,abc', input);
+
+    const vars = mockLoader.load.mock.calls[0][1];
+    expect(vars.validityTextSection).not.toContain('{{');
+    expect(vars.validityTextSection).not.toContain('}}');
+    expect(vars.validityTextSection).toContain('até {30/09/2026}');
   });
 
   it('8.20 validityText ausente → validade não entra no review', async () => {
@@ -336,6 +381,7 @@ describe('ImageReviewService — onCall (D11)', () => {
     const result = await service.review(
       'data:image/jpeg;base64,abc',
       { productName: 'Produto', storeName: 'Loja' },
+      undefined,
       onCall
     );
     expect(result.passed).toBe(true);
@@ -353,5 +399,199 @@ describe('ImageReviewService — onCall (D11)', () => {
       { productName: 'Produto', storeName: 'Loja' }
     );
     expect(result.passed).toBe(true);
+  });
+
+  it('23 (F41 D9): review com 1 referência → prompt ganha a linha fixa singular e callVisionModel recebe 2 imagens', async () => {
+    const input: ImageReviewInput = {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+    };
+    const primaryDataUrl = 'data:image/jpeg;base64,primary';
+
+    const callSpy = vi.spyOn(service as any, 'callVisionModel').mockResolvedValue({
+      content: JSON.stringify({ passed: true, issues: [] }),
+      usage: { promptTokens: 100, completionTokens: 25, totalTokens: 125 },
+    });
+
+    await service.review('data:image/jpeg;base64,gen', input, [primaryDataUrl]);
+
+    // A linha fixa entra no prompt carregado (D9).
+    expect(mockLoader.load).toHaveBeenCalledWith(
+      'campaign-image-reviewer',
+      expect.objectContaining({ productName: 'Produto Teste' })
+    );
+    const loadedPrompt = mockLoader.load.mock.calls[0][0] === 'campaign-image-reviewer' ? mockLoader.load.mock.results[0].value : '';
+    expect(loadedPrompt + '\n\nCompare o produto da arte com a imagem de referência.').toContain(
+      'Compare o produto da arte com a imagem de referência.'
+    );
+    // callVisionModel recebe o prompt com a linha fixa + a referência como 2ª imagem.
+    expect(callSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Compare o produto da arte com a imagem de referência.'),
+      'data:image/jpeg;base64,gen',
+      [primaryDataUrl]
+    );
+  });
+
+  it('23b (F41 D9): sem referências (3º arg) → comportamento atual (sem linha fixa, sem imagem extra)', async () => {
+    const callSpy = vi.spyOn(service as any, 'callVisionModel').mockResolvedValue({
+      content: JSON.stringify({ passed: true, issues: [] }),
+      usage: { promptTokens: 100, completionTokens: 25, totalTokens: 125 },
+    });
+
+    await service.review(
+      'data:image/jpeg;base64,gen',
+      { productName: 'Produto', storeName: 'Loja' }
+    );
+
+    expect(callSpy).toHaveBeenCalledWith(
+      expect.not.stringContaining('Compare o produto da arte'),
+      'data:image/jpeg;base64,gen',
+      []
+    );
+  });
+});
+
+describe('ImageReviewService — multi-referências autorizadas (quick 260820-pl1)', () => {
+  let mockLoader: { load: ReturnType<typeof vi.fn>; clearCache: ReturnType<typeof vi.fn> };
+  let service: ImageReviewService;
+
+  // Loader que interpola {{placeholders}} como o PromptLoader real, para que o
+  // "prompt final" (o que vai ao callVisionModel) contenha a seção interpolada.
+  function interpolatingLoader() {
+    return {
+      load: vi.fn((name: string, vars?: Record<string, string>) => {
+        let content = 'review prompt\n\n{{referenceImagesContextSection}}';
+        if (vars) {
+          for (const [key, value] of Object.entries(vars)) {
+            content = content.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
+          }
+        }
+        return content;
+      }),
+      clearCache: vi.fn(),
+    };
+  }
+
+  const primary = 'data:image/jpeg;base64,primary';
+  const aux1 = 'data:image/jpeg;base64,aux1';
+  const aux2 = 'data:image/jpeg;base64,aux2';
+
+  function mockCall() {
+    return vi.spyOn(service as any, 'callVisionModel').mockResolvedValue({
+      content: JSON.stringify({ passed: true, issues: [] }),
+      usage: { promptTokens: 100, completionTokens: 25, totalTokens: 125 },
+    });
+  }
+
+  beforeEach(() => {
+    mockLoader = interpolatingLoader();
+    service = new ImageReviewService(mockLoader as unknown as PromptLoader);
+  });
+
+  it('1: review() com 3 referências → callVisionModel recebe [generated, primary, aux1, aux2] em ordem', async () => {
+    const callSpy = mockCall();
+
+    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary, aux1, aux2]);
+
+    expect(callSpy).toHaveBeenCalledWith(
+      expect.any(String),
+      'data:image/jpeg;base64,gen',
+      [primary, aux1, aux2]
+    );
+  });
+
+  it('2: prompt final contém a regra — imagem adicional AUTORIZADA e produto fora das referências = invented_information', async () => {
+    const callSpy = mockCall();
+
+    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary, aux1]);
+
+    const finalPrompt = callSpy.mock.calls[0][0] as string;
+    expect(finalPrompt).toContain('Referências Autorizadas da Campanha');
+    expect(finalPrompt).toMatch(/referências autorizadas de apoio, variação, combo ou ângulo/);
+    expect(finalPrompt).toMatch(/não trate como invenção um item visível em qualquer referência/i);
+    expect(finalPrompt).toMatch(/invenção CRÍTICA \(invented_information\)/i);
+  });
+
+  it('3: sem referências (arg undefined) → sem seção, sem imagens extras (regressão 23b F41)', async () => {
+    const callSpy = mockCall();
+
+    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' });
+
+    expect(callSpy).toHaveBeenCalledWith(expect.any(String), 'data:image/jpeg;base64,gen', []);
+    const finalPrompt = callSpy.mock.calls[0][0] as string;
+    expect(finalPrompt).not.toContain('Referências Autorizadas');
+    expect(mockLoader.load.mock.calls[0][1].referenceImagesContextSection).toBe('');
+  });
+
+  it('4: 1 referência → linha fixa singular + 2 imagens (regressão 23 F41)', async () => {
+    const callSpy = mockCall();
+
+    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary]);
+
+    expect(callSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Compare o produto da arte com a imagem de referência.'),
+      'data:image/jpeg;base64,gen',
+      [primary]
+    );
+    expect(mockLoader.load.mock.calls[0][1].referenceImagesContextSection).toBe('');
+  });
+
+  it('5: 2+ referências → linha fixa plural "as imagens de referência autorizadas"', async () => {
+    const callSpy = mockCall();
+
+    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary, aux1]);
+
+    expect(callSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Compare o produto da arte com as imagens de referência autorizadas.'),
+      'data:image/jpeg;base64,gen',
+      [primary, aux1]
+    );
+  });
+
+  it('6: referenceImagesContextSection vazia para count <= 1', async () => {
+    mockCall();
+
+    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' });
+    expect(mockLoader.load.mock.calls[0][1].referenceImagesContextSection).toBe('');
+
+    mockLoader.load.mockClear();
+    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary]);
+    expect(mockLoader.load.mock.calls[0][1].referenceImagesContextSection).toBe('');
+
+    mockLoader.load.mockClear();
+    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary, aux1]);
+    expect(mockLoader.load.mock.calls[0][1].referenceImagesContextSection).not.toBe('');
+  });
+
+  it('7: proteção/hierarquia — seção afirma invenção crítica fora de todas as referências e primeira imagem = referência principal', async () => {
+    mockCall();
+
+    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary, aux1]);
+
+    const section = mockLoader.load.mock.calls[0][1].referenceImagesContextSection as string;
+    expect(section).toMatch(/primeira imagem é a referência principal do produto anunciado/);
+    expect(section).toMatch(/não deve ser substituído por uma referência adicional/);
+    expect(section).toMatch(/ausente de TODAS as referências/);
+    expect(section).toMatch(/invenção CRÍTICA/i);
+  });
+
+  it('1b: callVisionModel monta blocos image_url na ordem gerada → primary → aux1 → aux2', async () => {
+    // Caminho real do callVisionModel (mockOpenAICreate) — sem modelo real.
+    const callSpy = vi.spyOn(service as any, 'callVisionModel');
+    mockOpenAICreate.mockReset();
+    mockOpenAICreate.mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify({ passed: true, issues: [] }) } }],
+      usage: { prompt_tokens: 200, completion_tokens: 60, total_tokens: 260 },
+    });
+
+    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary, aux1, aux2]);
+
+    expect(callSpy).toHaveBeenCalled();
+    const createArgs = mockOpenAICreate.mock.calls[0][0];
+    const content = createArgs.messages[0].content;
+    const imageUrls = content
+      .filter((b: { type: string }) => b.type === 'image_url')
+      .map((b: { image_url: { url: string } }) => b.image_url.url);
+    expect(imageUrls).toEqual(['data:image/jpeg;base64,gen', primary, aux1, aux2]);
   });
 });

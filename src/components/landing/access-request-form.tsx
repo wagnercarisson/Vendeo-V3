@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { STORE_SEGMENTS } from "@/lib/constants";
+import { maskWhatsApp } from "@/lib/validators/phone";
 
 type FormState = "idle" | "submitting" | "error";
 
@@ -15,6 +16,7 @@ export function AccessRequestForm({
 }) {
   const [state, setState] = useState<FormState>("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -92,7 +94,9 @@ export function AccessRequestForm({
         name="whatsapp"
         label="WhatsApp"
         placeholder="(00) 00000-0000"
-        maxLength={20}
+        value={whatsapp}
+        onChange={(e) => setWhatsapp(maskWhatsApp(e.target.value))}
+        maxLength={15}
         autoComplete="tel"
       />
 

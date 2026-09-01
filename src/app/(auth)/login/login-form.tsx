@@ -1,6 +1,7 @@
 "use client";
 
 import { createBrowserClient } from "@/lib/supabase/client";
+import { CaptchaField, CAPTCHA_HINT_TEXT } from "@/components/auth/captcha-field";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, FormEvent } from "react";
@@ -8,16 +9,26 @@ import { Mail, Lock, Loader2 } from "lucide-react";
 
 interface LoginFormProps {
   redirect: string;
+  captchaEnabled: boolean;
 }
 
-export function LoginForm({ redirect }: LoginFormProps) {
+export function LoginForm({ redirect, captchaEnabled }: LoginFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+
+    // D3: token Turnstile exigido apenas quando captchaEnabled (flag off
+    // restaura o comportamento F41 — login sem desafio).
+    if (captchaEnabled && !captchaToken) {
+      return;
+    }
+
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
@@ -26,10 +37,11 @@ export function LoginForm({ redirect }: LoginFormProps) {
 
     try {
       const supabase = createBrowserClient();
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { error: signInError } = await supabase.auth.signInWithPassword(
+        captchaEnabled && captchaToken
+          ? { email, password, options: { captchaToken } }
+          : { email, password },
+      );
 
       if (signInError) {
         setError("Email ou senha inválidos");
@@ -43,6 +55,13 @@ export function LoginForm({ redirect }: LoginFormProps) {
       setError("Email ou senha inválidos");
     } finally {
       setLoading(false);
+      // T-42-08b: tokens Turnstile são single-use — reseta o widget e o token
+      // após o submit para que um novo submit exija novo desafio. Só se aplica
+      // com captcha ativo (sem widget, não há token a resetar).
+      if (captchaEnabled) {
+        setCaptchaToken(null);
+        setCaptchaResetKey((key) => key + 1);
+      }
     }
   }
 
@@ -95,6 +114,14 @@ export function LoginForm({ redirect }: LoginFormProps) {
         <p className="text-sm text-red-400">{error}</p>
       )}
 
+      {captchaEnabled && (
+        <CaptchaField
+          onVerify={setCaptchaToken}
+          resetKey={captchaResetKey}
+          hint={CAPTCHA_HINT_TEXT}
+        />
+      )}
+
       <button
         type="submit"
         disabled={loading}
@@ -107,12 +134,6 @@ export function LoginForm({ redirect }: LoginFormProps) {
           "Entrar"
         )}
       </button>
-      <p className="mt-4 text-center text-sm text-slate-400">
-        Ainda não tem acesso?{" "}
-        <Link href="/" className="text-blue-400 hover:text-blue-300 hover:underline">
-          Solicitar acesso free
-        </Link>
-      </p>
     </form>
   );
 }

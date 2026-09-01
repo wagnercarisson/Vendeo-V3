@@ -1,11 +1,13 @@
 import { describe, it, expect } from "vitest";
 import {
   CampaignBriefSchemaVersion,
+  buildCampaignBriefFromFlat,
   getCampaignLegalNotice,
   type CampaignBrief,
   type CampaignBriefSnapshot,
 } from "../brief";
 import { campaignBriefSchema, productSchema } from "../brief-schema";
+import { ILLUSTRATIVE_NOTICE_TEXT } from "../constants";
 
 // Fixture base com overrides spread-last (padrão store.test.ts:180-195).
 function baseBrief(overrides: Partial<CampaignBrief> = {}): CampaignBrief {
@@ -272,5 +274,48 @@ describe("8.15 clareza metadata.schemaVersion (F39-11/D6)", () => {
     expect("dataUrl" in snapshot.media.images[0]).toBe(false);
   });
 });
+
+describe("8.8 validity/legalNotice via buildCampaignBriefFromFlat (F40)", () => {
+  const FLAT_BASE = {
+    storeId: "44444444-4444-4444-8444-444444444444",
+    productName: "Produto Teste",
+    discountedPriceCents: 1990,
+    badgeText: "Oferta",
+    campaignIntent: "offer" as const,
+    productImageDataUrl: "data:image/jpeg;base64,test",
+  };
+
+  it("validity do form (string) → commercial.validity = { enabled: true, displayText }", () => {
+    const brief = buildCampaignBriefFromFlat(
+      { ...FLAT_BASE, validity: "até 30/09" },
+      FLAT_BASE.storeId
+    );
+    expect(brief.commercial.validity).toEqual({
+      enabled: true,
+      displayText: "até 30/09",
+    });
+  });
+
+  it("mandatoryArtworkText concatenado → commercial.legalNotice.text integral (nova linha preservada)", () => {
+    const text = `${ILLUSTRATIVE_NOTICE_TEXT}\nTexto`;
+    const brief = buildCampaignBriefFromFlat(
+      { ...FLAT_BASE, mandatoryArtworkText: text },
+      FLAT_BASE.storeId
+    );
+    expect(brief.commercial.legalNotice).toEqual({
+      enabled: true,
+      text,
+    });
+    expect(getCampaignLegalNotice(brief)?.text).toBe(text);
+  });
+
+  it("ausência canônica: sem validity/mandatoryArtworkText → campos ausentes (nunca fabricados)", () => {
+    const brief = buildCampaignBriefFromFlat(FLAT_BASE, FLAT_BASE.storeId);
+    expect(brief.commercial.validity).toBeUndefined();
+    expect(brief.commercial.legalNotice).toBeUndefined();
+    expect(getCampaignLegalNotice(brief)).toBeUndefined();
+  });
+});
+
 
 // Helper local para testar default do productSchema isolado.

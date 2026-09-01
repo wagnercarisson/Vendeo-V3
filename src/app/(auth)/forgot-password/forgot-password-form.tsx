@@ -1,17 +1,31 @@
 "use client";
 
 import { createBrowserClient } from "@/lib/supabase/client";
+import { CaptchaField, CAPTCHA_HINT_TEXT } from "@/components/auth/captcha-field";
 import { getSiteUrl } from "@/lib/supabase/site-url";
 import { useRouter } from "next/navigation";
 import { useState, FormEvent } from "react";
 import { Mail, Loader2 } from "lucide-react";
 
-export function ForgotPasswordForm() {
+interface ForgotPasswordFormProps {
+  captchaEnabled: boolean;
+}
+
+export function ForgotPasswordForm({ captchaEnabled }: ForgotPasswordFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    // D3: token Turnstile exigido apenas quando captchaEnabled (flag off
+    // restaura o comportamento F41 — recuperação sem desafio).
+    if (captchaEnabled && !captchaToken) {
+      return;
+    }
+
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
@@ -21,10 +35,18 @@ export function ForgotPasswordForm() {
       const supabase = createBrowserClient();
       await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${getSiteUrl()}/auth/confirm`,
+        ...(captchaEnabled && captchaToken ? { captchaToken } : {}),
       });
     } catch {
       // silent — anti-enumeration: always redirect
     } finally {
+      // T-42-08b: tokens Turnstile são single-use — reseta o widget e o token.
+      // Só se aplica com captcha ativo (sem widget, não há token a resetar).
+      if (captchaEnabled) {
+        setCaptchaToken(null);
+        setCaptchaResetKey((key) => key + 1);
+      }
+      // Anti-enumeração: redireciona sempre, mesmo sem captcha ativo.
       router.replace("/check-email?type=recovery");
     }
   }
@@ -48,6 +70,14 @@ export function ForgotPasswordForm() {
           />
         </div>
       </div>
+
+      {captchaEnabled && (
+        <CaptchaField
+          onVerify={setCaptchaToken}
+          resetKey={captchaResetKey}
+          hint={CAPTCHA_HINT_TEXT}
+        />
+      )}
 
       <button
         type="submit"

@@ -7,69 +7,113 @@ import { formatCurrencyBRL } from "@/lib/formatters";
 import { useInputPreservation } from "@/hooks/use-input-preservation";
 import type { GenerationPhaseEvent } from "@/lib/image-generation/schema";
 import type { CampaignIntent } from "@/lib/campaign/types";
+import { ILLUSTRATIVE_NOTICE_TEXT } from "@/lib/campaign/constants";
+import { MAX_CAMPAIGN_IMAGES } from "@/lib/image-generation/config";
 
 function compressImage(file: File, maxSizeBytes: number = 1024 * 1024): Promise<{ file: File; dataUrl: string }> {
   return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      let quality = 0.85;
-      let attempt = 0;
-      const maxAttempts = 5;
+    const isHeic = file.type === "image/heic" || file.type === "image/heif";
 
-      const tryCompress = () => {
-        const canvas = document.createElement("canvas");
-        let { width, height } = img;
-
-        // Downscale if larger than 1200px on longest side
-        const maxDim = 1200;
-        if (width > maxDim || height > maxDim) {
-          const ratio = Math.min(maxDim / width, maxDim / height);
-          width = Math.round(width * ratio);
-          height = Math.round(height * ratio);
+    // F41 (D4): HEIC/HEIF decodificado via createImageBitmap com EXIF respeitado
+    // (imageOrientation: "from-image") ANTES do desenho no canvas — sem lib.
+    const loadSource = (): Promise<HTMLImageElement | ImageBitmap> =>
+      new Promise((res, rej) => {
+        if (isHeic) {
+          createImageBitmap(file, { imageOrientation: "from-image" }).then(
+            (bitmap) => res(bitmap),
+            () => rej(new Error("Não foi possível processar a imagem HEIC. Use JPG ou PNG."))
+          );
+        } else {
+          const img = new Image();
+          img.onload = () => res(img);
+          img.onerror = () => rej(new Error("Falha ao carregar imagem para compressão"));
+          img.src = URL.createObjectURL(file);
         }
+      });
 
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          reject(new Error("Falha ao comprimir imagem"));
-          return;
-        }
-        ctx.drawImage(img, 0, 0, width, height);
+    loadSource()
+      .then((source) => {
+        let quality = 0.85;
+        let attempt = 0;
+        const maxAttempts = 5;
 
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) {
-              reject(new Error("Falha ao comprimir imagem"));
-              return;
-            }
-            if (blob.size <= maxSizeBytes || attempt >= maxAttempts) {
-              const reader = new FileReader();
-              reader.onloadend = () => {
-                const dataUrl = reader.result as string;
-                const compressedFile = new File([blob], file.name, {
-                  type: "image/jpeg",
-                });
-                resolve({ file: compressedFile, dataUrl });
-              };
-              reader.onerror = () => reject(new Error("Falha ao ler imagem comprimida"));
-              reader.readAsDataURL(blob);
-            } else {
-              quality -= 0.15;
-              attempt++;
-              tryCompress();
-            }
-          },
-          "image/jpeg",
-          quality
-        );
-      };
+        const tryCompress = () => {
+          const canvas = document.createElement("canvas");
+          let width = source instanceof HTMLImageElement ? source.naturalWidth : source.width;
+          let height = source instanceof HTMLImageElement ? source.naturalHeight : source.height;
 
-      tryCompress();
-    };
-    img.onerror = () => reject(new Error("Falha ao carregar imagem para compressão"));
-    img.src = URL.createObjectURL(file);
+          // Downscale if larger than 1200px on longest side
+          const maxDim = 1200;
+          if (width > maxDim || height > maxDim) {
+            const ratio = Math.min(maxDim / width, maxDim / height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            reject(new Error("Falha ao comprimir imagem"));
+            return;
+          }
+          ctx.drawImage(source, 0, 0, width, height);
+
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(new Error("Falha ao comprimir imagem"));
+                return;
+              }
+              if (blob.size <= maxSizeBytes || attempt >= maxAttempts) {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  const dataUrl = reader.result as string;
+                  const compressedFile = new File([blob], file.name, {
+                    type: "image/jpeg",
+                  });
+                  resolve({ file: compressedFile, dataUrl });
+                };
+                reader.onerror = () => reject(new Error("Falha ao ler imagem comprimida"));
+                reader.readAsDataURL(blob);
+              } else {
+                quality -= 0.15;
+                attempt++;
+                tryCompress();
+              }
+            },
+            "image/jpeg",
+            quality
+          );
+        };
+
+        tryCompress();
+      })
+      .catch(reject);
   });
+}
+
+export type ValidityMode = "" | "until-date" | "range" | "today" | "stock" | "custom";
+
+// F41 (D3/D5): item de imagem do produto no estado do form.
+// `id` é INTERNO da UI (chave de lista/preview) — NUNCA entra no body (D2/D5).
+export interface CampaignProductFormImage {
+  id: string;
+  role: "primary" | "reference"; // primeiro = primary, demais = reference (D3)
+  source: "upload" | "camera"; // conforme a origem real (D4)
+  mimeType: string;
+  file?: File;
+  dataUrl?: string;
+}
+
+// F43 (D3): imagem já preparada para revisão/submit — mimeType normalizado para
+// image/jpeg; `id` é INTERNO da UI (nunca entra no body, D2/D4).
+export interface PreparedCampaignImage {
+  id: string;
+  role: "primary" | "reference";
+  source: "upload" | "camera";
+  mimeType: "image/jpeg";
+  dataUrl: string;
 }
 
 export interface CampaignFormFields {
@@ -80,8 +124,14 @@ export interface CampaignFormFields {
   badge: string;
   campaignIntent: CampaignIntent;
   preserveImageContext: boolean;
-  imageFile: File | null;
-  mandatoryArtworkText: string;
+  productImages: CampaignProductFormImage[];
+  mandatoryArtworkText: string; // compat/derivado: espelho de mandatoryArtworkTextFree, NUNCA o texto final concatenado (D3)
+  showIllustrativeNotice: boolean;
+  mandatoryArtworkTextFree: string;
+  validityMode: ValidityMode;
+  validityStartDate: string;
+  validityEndDate: string;
+  validityCustomText: string;
 }
 
 export type FieldErrors = Partial<
@@ -93,8 +143,14 @@ export type FieldErrors = Partial<
     | "badge"
     | "campaignIntent"
     | "preserveImageContext"
-    | "imageFile"
-    | "mandatoryArtworkText",
+    | "productImages"
+    | "mandatoryArtworkText"
+    | "showIllustrativeNotice"
+    | "mandatoryArtworkTextFree"
+    | "validityMode"
+    | "validityStartDate"
+    | "validityEndDate"
+    | "validityCustomText",
     string
   >
 >;
@@ -109,7 +165,7 @@ export interface UseCampaignFormReturn {
   fields: CampaignFormFields;
   fieldErrors: FieldErrors;
   touched: Record<keyof CampaignFormFields, boolean>;
-  setField: (field: keyof CampaignFormFields, value: string | number | boolean | File | null | undefined) => void;
+  setField: (field: keyof CampaignFormFields, value: string | number | boolean | File | null | undefined | CampaignProductFormImage[]) => void;
   handleBlur: (field: keyof CampaignFormFields) => void;
   displayPriceOriginal: string;
   displayPriceDiscounted: string;
@@ -120,6 +176,7 @@ export interface UseCampaignFormReturn {
   submitError: string | null;
   setSubmitError: (error: string | null) => void;
   handleSubmit: () => void;
+  retrySubmit: () => Promise<void>;
   resetSubmit: () => void;
   isValid: boolean;
   pendingConflict: PendingConflict | null;
@@ -128,6 +185,15 @@ export interface UseCampaignFormReturn {
   handleConflictCancel: () => void;
   phases: GenerationPhaseEvent[];
   onPhaseChange: (event: GenerationPhaseEvent) => void;
+  addImage: (file: File, source: "upload" | "camera") => void;
+  removeImage: (id: string) => void;
+  reviewMode: boolean;
+  preparing: boolean;
+  preparedImages: PreparedCampaignImage[] | null;
+  reviewError: string | null;
+  enterReview: () => Promise<boolean>;
+  exitReview: () => void;
+  confirmReview: () => Promise<void>;
 }
 
 const EMPTY_FIELDS: CampaignFormFields = {
@@ -138,8 +204,14 @@ const EMPTY_FIELDS: CampaignFormFields = {
   badge: "",
   campaignIntent: "offer",
   preserveImageContext: false,
-  imageFile: null,
+  productImages: [],
   mandatoryArtworkText: "",
+  showIllustrativeNotice: true,
+  mandatoryArtworkTextFree: "",
+  validityMode: "",
+  validityStartDate: "",
+  validityEndDate: "",
+  validityCustomText: "",
 };
 
 function validateProductName(value: string): string | null {
@@ -175,12 +247,37 @@ function validateBadge(value: string, fields?: Pick<CampaignFormFields, "campaig
 
 function validateImage(file: File | null): string | null {
   if (!file) return "Imagem do produto é obrigatória";
-  const validTypes = ["image/png", "image/jpeg", "image/webp"];
+  const validTypes = ["image/png", "image/jpeg", "image/webp", "image/heic", "image/heif"];
   if (!validTypes.includes(file.type)) {
-    return "Formato não suportado. Use PNG, JPG ou WEBP";
+    return "Formato não suportado. Use PNG, JPG, WEBP ou HEIC";
   }
   if (file.size > 5 * 1024 * 1024) {
     return "Arquivo muito grande. Máximo 5MB";
+  }
+  return null;
+}
+
+function validateValidityEndDate(fields: CampaignFormFields, todayISO: string = getTodayISO()): string | null {
+  // O modo ativo exige a data final em until-date e range (D2).
+  const requiresEndDate = fields.validityMode === "until-date" || fields.validityMode === "range";
+  if (!requiresEndDate) return null;
+  if (!fields.validityEndDate) return "Informe uma data válida (dd/mm/aaaa)";
+  // Q-P3U: data final no passado bloqueia o submit; igual a hoje é permitida.
+  // Comparação lexicográfica de ISO (YYYY-MM-DD) é segura e determinística.
+  if (fields.validityEndDate < todayISO) return "Data final não pode ser anterior à data de hoje";
+  return null;
+}
+
+function validateValidityStartDate(fields: CampaignFormFields, todayISO: string = getTodayISO()): string | null {
+  if (fields.validityMode !== "range") return null;
+  if (!fields.validityStartDate) return "Informe uma data válida (dd/mm/aaaa)";
+  // Q-P3U: data inicial no passado bloqueia o submit; início igual a hoje é permitido.
+  if (fields.validityStartDate < todayISO) return "Data inicial não pode ser anterior à data de hoje";
+  // Ordem (D5): só compara quando AMBAS as datas estão preenchidas (revisor).
+  // Critério aprovado é `data inicial <= data final` — datas iguais são permitidas.
+  // Comparação lexicográfica de ISO (YYYY-MM-DD) é segura e determinística.
+  if (fields.validityEndDate && fields.validityStartDate > fields.validityEndDate) {
+    return "Data inicial não pode ser posterior à data final";
   }
   return null;
 }
@@ -198,11 +295,123 @@ function validateField(
       return validateOriginalPrice(fields.originalPriceCents, fields.discountedPriceCents ?? 0);
     case "badge":
       return validateBadge(fields.badge, fields);
-    case "imageFile":
-      return validateImage(fields.imageFile);
+    case "productImages":
+      return validateImage(fields.productImages[0]?.file ?? null);
+    case "validityStartDate":
+      return validateValidityStartDate(fields);
+    case "validityEndDate":
+      return validateValidityEndDate(fields);
     default:
       return null;
   }
+}
+
+/**
+ * Formata ISO `YYYY-MM-DD` → `dd/mm/aaaa` (D1). Entrada vazia ou sem 3 partes
+ * após split "-" retorna a entrada original (comportamento F40 preservado).
+ * Determinístico por string — nunca `new Date()`/timezone.
+ */
+export function formatDateDisplay(isoDate: string): string {
+  const parts = isoDate.split("-");
+  if (!isoDate || parts.length !== 3) return isoDate;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+const ISO_DATE_REGEX = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/**
+ * Converte ISO `YYYY-MM-DD` → máscara `dd/mm/aaaa` para exibição no input.
+ * Vazia/inválida → `""`. Determinístico por string (sem timezone).
+ */
+export function formatDateInput(iso: string): string {
+  if (!iso) return "";
+  const match = ISO_DATE_REGEX.exec(iso);
+  if (!match) return "";
+  const [, year, month, day] = match;
+  return `${day}/${month}/${year}`;
+}
+
+/**
+ * Converte máscara `dd/mm/aaaa` → ISO `YYYY-MM-DD` via split("/").
+ * Incompleta/inválida/ano ≠ 4 dígitos → `""` (determinístico, nunca `new Date`).
+ */
+export function parseDateInput(ddmmYYYY: string): string {
+  if (!ddmmYYYY) return "";
+  const parts = ddmmYYYY.split("/");
+  if (parts.length !== 3) return "";
+  const [day, month, year] = parts;
+  if (!/^\d{2}$/.test(day) || !/^\d{2}$/.test(month) || !/^\d{4}$/.test(year)) return "";
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Q-P3U: "hoje" em YYYY-MM-DD no fuso LOCAL (getFullYear/getMonth/getDate).
+ * Determinístico dado `now`; único uso de `new Date()` no módulo — datas do
+ * usuário NUNCA são parseadas com `new Date()` (comparação é por string ISO).
+ */
+export function getTodayISO(now: Date = new Date()): string {
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function isLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+}
+
+/**
+ * Máscara completa `dd/mm/aaaa` E data de calendário real (dia/mês válidos,
+ * 29/02 respeitando anos bissextos). Incompleta → false. Determinístico.
+ * A validação fina de calendário fica aqui (evento do componente), não no hook.
+ */
+export function isValidDateInput(ddmmYYYY: string): boolean {
+  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(ddmmYYYY)) return false;
+  const [dayStr, monthStr, yearStr] = ddmmYYYY.split("/");
+  const day = Number(dayStr);
+  const month = Number(monthStr);
+  const year = Number(yearStr);
+  if (month < 1 || month > 12 || day < 1) return false;
+  const daysInMonth = [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return day <= daysInMonth[month - 1];
+}
+
+export function buildValidityDisplayText(fields: {
+  validityMode: ValidityMode;
+  validityStartDate: string;
+  validityEndDate: string;
+  validityCustomText: string;
+}): string | undefined {
+  switch (fields.validityMode) {
+    case "":
+      return undefined;
+    case "until-date":
+      return fields.validityEndDate ? `até ${formatDateDisplay(fields.validityEndDate)}` : undefined;
+    case "range":
+      return fields.validityStartDate && fields.validityEndDate
+        ? `de ${formatDateDisplay(fields.validityStartDate)} até ${formatDateDisplay(fields.validityEndDate)}`
+        : undefined;
+    case "today":
+      return "somente hoje";
+    case "stock":
+      return "enquanto durarem os estoques";
+    case "custom":
+      return fields.validityCustomText.replace(/^Oferta válida[:\s-]*/i, "").trim() || undefined;
+    default:
+      return undefined;
+  }
+}
+
+export function buildMandatoryArtworkText(
+  showNotice: boolean,
+  freeText: string
+): string | undefined {
+  const notice = showNotice ? ILLUSTRATIVE_NOTICE_TEXT : "";
+  const free = freeText.trim();
+  if (notice && free) return `${notice}\n${free}`;
+  if (notice) return notice;
+  if (free) return free;
+  return undefined;
 }
 
 export function inferIntent(
@@ -217,6 +426,93 @@ export function inferIntent(
   return "exclusive";
 }
 
+// F43 (D3): prepara as imagens do form para revisão/submit — normaliza mimeType
+// para image/jpeg, preserva role/source e cobre itens restaurados de draft com
+// `dataUrl`. Itens com `dataUrl` (draft OU já comprimidos na entrada da revisão)
+// NÃO são re-comprimidos (idempotente — dataUrl-first); itens só com `file`
+// (HEIC/EXIF via compressImage) são comprimidos. Itens sem `file` nem `dataUrl`
+// são ignorados (não utilizáveis).
+export async function prepareCampaignImages(
+  fields: CampaignFormFields
+): Promise<PreparedCampaignImage[]> {
+  const prepared: PreparedCampaignImage[] = [];
+  for (const img of fields.productImages) {
+    if (img.dataUrl) {
+      prepared.push({
+        id: img.id,
+        role: img.role,
+        source: img.source,
+        mimeType: "image/jpeg",
+        dataUrl: img.dataUrl,
+      });
+    } else if (img.file instanceof File) {
+      const compressed = await compressImage(img.file);
+      prepared.push({
+        id: img.id,
+        role: img.role,
+        source: img.source,
+        mimeType: "image/jpeg",
+        dataUrl: compressed.dataUrl,
+      });
+    }
+  }
+  return prepared;
+}
+
+// F43 (D4): single source of truth do body de geração — mesmo shape do body atual
+// de handleSubmit, usando os MESMOS derivados que a revisão exibe. Lógica XOR de
+// imagens reproduzida: com auxiliares → productImages[] (SEM id de cliente);
+// sem auxiliares → productImageDataUrl (legado); nunca ambos.
+export function buildCampaignGenerationBody(
+  fields: CampaignFormFields,
+  preparedImages: PreparedCampaignImage[],
+  storeId: string,
+  options?: {
+    inputValidationOverride?: {
+      productImageCheck: "brief_review_confirmed" | "user_confirmed_continue";
+    };
+  }
+): Record<string, unknown> {
+  const body: Record<string, unknown> = {
+    storeId,
+    productName: fields.productName,
+    originalPriceCents: fields.originalPriceCents,
+    discountedPriceCents: fields.discountedPriceCents,
+    description: fields.description || undefined,
+    badgeText: fields.badge,
+    campaignIntent: fields.campaignIntent,
+    ...(fields.campaignIntent === "offer"
+      ? {}
+      : { preserveImageContext: fields.preserveImageContext }),
+  };
+
+  const validity = fields.campaignIntent === "offer" ? buildValidityDisplayText(fields) : undefined;
+  if (validity !== undefined) body.validity = validity;
+
+  const mandatoryArtworkText = buildMandatoryArtworkText(
+    fields.showIllustrativeNotice,
+    fields.mandatoryArtworkTextFree,
+  );
+  if (mandatoryArtworkText !== undefined) body.mandatoryArtworkText = mandatoryArtworkText;
+
+  if (preparedImages.length > 1) {
+    body.productImages = preparedImages.map(({ role, source, mimeType, dataUrl }) => ({
+      role,
+      source,
+      mimeType,
+      dataUrl,
+    }));
+  } else {
+    body.productImageDataUrl = preparedImages[0]?.dataUrl;
+  }
+
+  if (options?.inputValidationOverride) {
+    body.inputValidationOverride = options.inputValidationOverride;
+  }
+
+  return body;
+}
+
 export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
   const [fields, setFields] = useState<CampaignFormFields>(EMPTY_FIELDS);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -228,8 +524,14 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     badge: false,
     campaignIntent: false,
     preserveImageContext: false,
-    imageFile: false,
+    productImages: false,
     mandatoryArtworkText: false,
+    showIllustrativeNotice: false,
+    mandatoryArtworkTextFree: false,
+    validityMode: false,
+    validityStartDate: false,
+    validityEndDate: false,
+    validityCustomText: false,
   });
   const [rawOriginalPrice, setRawOriginalPrice] = useState("");
   const [rawDiscountedPrice, setRawDiscountedPrice] = useState("");
@@ -238,9 +540,18 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [pendingConflict, setPendingConflict] = useState<PendingConflict | null>(null);
   const [phases, setPhases] = useState<GenerationPhaseEvent[]>([]);
+  // F43 (D2/D3): estado da revisão do brief em tela intermediária (não modal).
+  const [reviewMode, setReviewMode] = useState(false);
+  const [preparing, setPreparing] = useState(false);
+  const [preparedImages, setPreparedImages] = useState<PreparedCampaignImage[] | null>(null);
+  const [reviewError, setReviewError] = useState<string | null>(null);
   const prevImageFileRef = useRef<File | null>(null);
   const lastRestoredUrlRef = useRef<string | null>(null);
   const objectUrlRef = useRef<string | null>(null);
+  // F43 (mini-fix): último body CONFIRMADO na revisão (snapshot travado +
+  // brief_review_confirmed) — o retry pós-falha reutiliza EXATAMENTE essa
+  // tentativa, sem contornar o gate de revisão nem reativar a validação vision.
+  const confirmedBodyRef = useRef<Record<string, unknown> | null>(null);
   const router = useRouter();
   const { saveFormState, restoreFormState, clearFormState } = useInputPreservation<CampaignFormFields>();
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -252,9 +563,16 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
   useEffect(() => {
     const saved = restoreFormState();
     if (saved) {
-      // imageFile can't be serialized — restore as null
-      const { imageFile: _, ...rest } = saved;
-      setFields((prev) => ({ ...prev, ...rest, imageFile: null }));
+      // File can't be serialized — restore productImages with dataUrl only
+      const legacy = saved as Partial<CampaignFormFields> & { imageFile?: File | null; mandatoryArtworkText?: string };
+      const { imageFile: _legacyImageFile, mandatoryArtworkText: legacyNotice, productImages: savedImages, ...rest } = legacy;
+      const restored = {
+        ...rest,
+        mandatoryArtworkTextFree: rest.mandatoryArtworkTextFree ?? legacyNotice ?? "",
+        mandatoryArtworkText: rest.mandatoryArtworkTextFree ?? legacyNotice ?? "",
+        productImages: Array.isArray(savedImages) && savedImages.length > 0 ? savedImages : [],
+      };
+      setFields((prev) => ({ ...prev, ...restored }));
       if (saved.originalPriceCents > 0) {
         setRawOriginalPrice(String(saved.originalPriceCents));
       }
@@ -266,6 +584,25 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
         const savedImageDataUrl = sessionStorage.getItem(IMAGE_DRAFT_KEY);
         if (savedImageDataUrl) {
           setRestoredImageDataUrl(savedImageDataUrl);
+          // F41 (D3): migração de draft legado — sem productImages utilizável +
+          // dataUrl presente → productImages de 1 elemento (primary)
+          if (!(Array.isArray(savedImages) && savedImages.length > 0)) {
+            setFields((prev) => {
+              if (prev.productImages.length > 0) return prev;
+              return {
+                ...prev,
+                productImages: [
+                  {
+                    id: crypto.randomUUID(),
+                    role: "primary",
+                    source: "upload",
+                    mimeType: "image/jpeg",
+                    dataUrl: savedImageDataUrl,
+                  },
+                ],
+              };
+            });
+          }
         }
       } catch {
         // ignore
@@ -279,7 +616,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
       clearTimeout(autoSaveTimer.current);
     }
     autoSaveTimer.current = setTimeout(() => {
-      const hasData = fields.productName || (fields.discountedPriceCents ?? 0) > 0 || fields.badge || fields.imageFile;
+      const hasData = fields.productName || (fields.discountedPriceCents ?? 0) > 0 || fields.badge || fields.productImages.length > 0;
       if (hasData) {
         saveFormState(fields);
       }
@@ -342,7 +679,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     rawDiscountedPrice === "" ? "" : formatCurrencyBRL(fields.discountedPriceCents ?? 0);
 
   useEffect(() => {
-    const currentFile = fields.imageFile;
+    const currentFile = fields.productImages[0]?.file ?? null;
     const prevFile = prevImageFileRef.current;
 
     if (currentFile === prevFile && lastRestoredUrlRef.current === restoredImageDataUrl) return;
@@ -376,16 +713,18 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
 
     prevImageFileRef.current = currentFile;
     lastRestoredUrlRef.current = restoredImageDataUrl;
-  }, [fields.imageFile, restoredImageDataUrl]);
+  }, [fields.productImages, restoredImageDataUrl]);
 
   const setField = useCallback(
-    (field: keyof CampaignFormFields, value: string | number | boolean | File | null | undefined) => {
+    (field: keyof CampaignFormFields, value: string | number | boolean | File | null | undefined | CampaignProductFormImage[]) => {
       setFields((prev) => {
         const next = { ...prev, [field]: value as never };
+        if (field === "mandatoryArtworkText") next.mandatoryArtworkTextFree = value as string;
+        if (field === "mandatoryArtworkTextFree") next.mandatoryArtworkText = value as string;
         if (field === "campaignIntent") {
           userChangedIntent.current = true;
         }
-        if (field === "imageFile") {
+        if (field === "productImages") {
           setRestoredImageDataUrl(null);
         }
         return next;
@@ -571,13 +910,20 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
       "badge",
       "campaignIntent",
       "preserveImageContext",
-      "imageFile",
+      "productImages",
       "mandatoryArtworkText",
+      "showIllustrativeNotice",
+      "mandatoryArtworkTextFree",
+      "validityMode",
+      "validityStartDate",
+      "validityEndDate",
+      "validityCustomText",
     ];
 
     for (const field of allFields) {
-      // imageFile is null after draft restore — skip validation if we have a restored data URL
-      if (field === "imageFile" && !!restoredImageDataUrl) continue;
+      // productImages restaurado de draft tem dataUrl (File não serializa) — skip
+      // da validação quando há dataUrl utilizável na primary ou restaurada.
+      if (field === "productImages" && (!!fields.productImages[0]?.dataUrl || !!restoredImageDataUrl)) continue;
       const error = validateField(field, fields);
       if (error) {
         errors[field] = error;
@@ -594,8 +940,14 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
         badge: true,
         campaignIntent: true,
         preserveImageContext: true,
-        imageFile: true,
+        productImages: true,
         mandatoryArtworkText: true,
+        showIllustrativeNotice: true,
+        mandatoryArtworkTextFree: true,
+        validityMode: true,
+        validityStartDate: true,
+        validityEndDate: true,
+        validityCustomText: true,
       });
       setIsSubmitting(false);
       return;
@@ -612,30 +964,26 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     const abortController = new AbortController();
 
     try {
-      let imageDataUrl: string;
-      if (frozenFields.imageFile instanceof File) {
-        const compressed = await compressImage(frozenFields.imageFile);
-        imageDataUrl = compressed.dataUrl;
-      } else if (frozenRestoredImageDataUrl) {
-        imageDataUrl = frozenRestoredImageDataUrl;
-      } else {
+      // F43 (D3/D4): reutiliza os helpers puros — prepara as imagens (compressão
+      // HEIC/EXIF + normalização de mimeType, cobrindo draft com dataUrl) e monta
+      // o body idêntico ao exibido na revisão. O submit NÃO re-comprime.
+      const resolvedImages = await prepareCampaignImages(frozenFields);
+      if (resolvedImages.length === 0 && frozenRestoredImageDataUrl) {
+        resolvedImages.push({
+          id: crypto.randomUUID(),
+          role: "primary",
+          source: "upload",
+          mimeType: "image/jpeg",
+          dataUrl: frozenRestoredImageDataUrl,
+        });
+      }
+      if (resolvedImages.length === 0) {
         throw new Error("Imagem do produto é obrigatória");
       }
 
-      const body: Record<string, unknown> = {
-        storeId,
-        productName: frozenFields.productName,
-        originalPriceCents: frozenFields.originalPriceCents,
-        discountedPriceCents: frozenFields.discountedPriceCents,
-        description: frozenFields.description || undefined,
-        badgeText: frozenFields.badge,
-        campaignIntent: frozenFields.campaignIntent,
-        ...(frozenFields.campaignIntent === "offer"
-          ? {}
-          : { preserveImageContext: frozenFields.preserveImageContext }),
-        mandatoryArtworkText: frozenFields.mandatoryArtworkText || undefined,
-        productImageDataUrl: imageDataUrl,
-      };
+      // Caminho legado (sem revisão): nenhum inputValidationOverride — o override
+      // só entra no caminho confirmado da revisão (43-03).
+      const body = buildCampaignGenerationBody(frozenFields, resolvedImages, storeId);
 
       await consumeStream(body, abortController);
     } catch (err) {
@@ -649,6 +997,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     setSubmitError(null);
     setFieldErrors({});
     setPhases([]);
+    confirmedBodyRef.current = null;
     setFields(EMPTY_FIELDS);
     setRawOriginalPrice("");
     setRawDiscountedPrice("");
@@ -688,6 +1037,42 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     setIsSubmitting(false);
   }, []);
 
+  // F41 (D3/D10): adiciona imagem (primeiro = primary, demais = reference);
+  // respeita o teto MAX_CAMPAIGN_IMAGES.
+  const addImage = useCallback((file: File, source: "upload" | "camera") => {
+    if (!file) return;
+    setFields((prev) => {
+      if (prev.productImages.length >= MAX_CAMPAIGN_IMAGES) return prev;
+      return {
+        ...prev,
+        productImages: [
+          ...prev.productImages,
+          {
+            id: crypto.randomUUID(),
+            role: prev.productImages.length === 0 ? "primary" : "reference",
+            source,
+            mimeType: file.type,
+            file,
+          },
+        ],
+      };
+    });
+  }, []);
+
+  // F41 (D3): remove por id; se remover a primary e houver itens restantes,
+  // promove o próximo a primary.
+  const removeImage = useCallback((id: string) => {
+    setFields((prev) => {
+      const remaining = prev.productImages.filter((i) => i.id !== id);
+      return {
+        ...prev,
+        productImages: remaining.map((item, index) =>
+          index === 0 ? { ...item, role: "primary" } : item
+        ),
+      };
+    });
+  }, []);
+
   const trimmed = fields.productName.trim();
   const badgeValid = fields.campaignIntent === "offer"
     ? fields.badge !== "" && BADGE_OPTIONS_BY_INTENT[fields.campaignIntent].includes(fields.badge)
@@ -695,11 +1080,167 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
   const priceValid = fields.campaignIntent === "offer"
     ? (fields.discountedPriceCents ?? 0) > 0
     : true;
+  const hasUsableImage =
+    fields.productImages.length > 0 &&
+    (fields.productImages[0]?.file instanceof File ||
+      !!fields.productImages[0]?.dataUrl ||
+      !!restoredImageDataUrl);
   const isValid =
     trimmed !== "" &&
     priceValid &&
     badgeValid &&
-    (fields.imageFile instanceof File || !!restoredImageDataUrl);
+    hasUsableImage;
+
+  // F43 (D2/D3): entra em revisão somente com form válido; roda a preparação das
+  // imagens (compressão + normalização) com estado curto "Preparando imagens...".
+  const enterReview = useCallback(async (): Promise<boolean> => {
+    if (!isValid) {
+      const errors: FieldErrors = {};
+      const allFields: (keyof CampaignFormFields)[] = [
+        "productName",
+        "discountedPriceCents",
+        "originalPriceCents",
+        "badge",
+        "campaignIntent",
+        "preserveImageContext",
+        "productImages",
+        "mandatoryArtworkText",
+        "showIllustrativeNotice",
+        "mandatoryArtworkTextFree",
+        "validityMode",
+        "validityStartDate",
+        "validityEndDate",
+        "validityCustomText",
+      ];
+      for (const field of allFields) {
+        if (field === "productImages" && (!!fields.productImages[0]?.dataUrl || !!restoredImageDataUrl)) continue;
+        const error = validateField(field, fields);
+        if (error) errors[field] = error;
+      }
+      setFieldErrors(errors);
+      setTouched({
+        productName: true,
+        description: true,
+        originalPriceCents: true,
+        discountedPriceCents: true,
+        badge: true,
+        campaignIntent: true,
+        preserveImageContext: true,
+        productImages: true,
+        mandatoryArtworkText: true,
+        showIllustrativeNotice: true,
+        mandatoryArtworkTextFree: true,
+        validityMode: true,
+        validityStartDate: true,
+        validityEndDate: true,
+        validityCustomText: true,
+      });
+      return false;
+    }
+
+    if (!storeId) {
+      setSubmitError("Dados da loja não disponíveis.");
+      return false;
+    }
+
+    // F43-07: sem imagem utilizável → revisão bloqueada com mensagem obrigatória.
+    if (!hasUsableImage) {
+      setSubmitError("Imagem do produto é obrigatória");
+      return false;
+    }
+
+    setPreparing(true);
+    setReviewError(null);
+    // F43 (mini-fix): entra em reviewMode ANTES da compressão — a tela de revisão
+    // monta com o estado "Preparando imagens..." (campaign-brief-review.tsx) e
+    // mostra feedback real durante HEIC/mobile; falha → volta ao form com erro.
+    setReviewMode(true);
+    try {
+      const prepared = await prepareCampaignImages(fields);
+      if (prepared.length === 0 && restoredImageDataUrl) {
+        prepared.push({
+          id: crypto.randomUUID(),
+          role: "primary",
+          source: "upload",
+          mimeType: "image/jpeg",
+          dataUrl: restoredImageDataUrl,
+        });
+      }
+      if (prepared.length === 0) {
+        setReviewError("Imagem do produto é obrigatória");
+        setReviewMode(false);
+        setPreparing(false);
+        return false;
+      }
+      setPreparedImages(prepared);
+      // F43 (D3/D7): persiste o dataUrl comprimido nos itens do form — após
+      // "Voltar e editar" o preview usa o dataUrl base64 ESTÁVEL (independente
+      // de blob URL de `file`, que é revogado/recriado no unmount/remount do
+      // CampaignImageUpload) e mostra exatamente o payload final que será enviado.
+      setFields((prev) => ({
+        ...prev,
+        productImages: prev.productImages.map((item) => {
+          const p = prepared.find((x) => x.id === item.id);
+          return p ? { ...item, dataUrl: p.dataUrl, mimeType: "image/jpeg" } : item;
+        }),
+      }));
+      setPreparing(false);
+      return true;
+    } catch (err) {
+      setReviewError(
+        err instanceof Error ? err.message : "Não foi possível preparar as imagens. Tente novamente."
+      );
+      setReviewMode(false);
+      setPreparing(false);
+      return false;
+    }
+  }, [isValid, fields, storeId, restoredImageDataUrl, hasUsableImage]);
+
+  // F43 (D2): "Voltar e editar" — preserva fields/touched/fieldErrors (nada perdido).
+  const exitReview = useCallback(() => {
+    setReviewMode(false);
+    setReviewError(null);
+    confirmedBodyRef.current = null;
+  }, []);
+
+  // F43 (D2/D4/D5): "Confirmar e gerar campanha" — trava o snapshot revisado
+  // (fields + preparedImages congelados; body imutável) e dispara o submit real
+  // com inputValidationOverride.productImageCheck = "brief_review_confirmed".
+  const confirmReview = useCallback(async (): Promise<void> => {
+    if (!storeId || !preparedImages) return;
+    const frozenFields = { ...fields };
+    const frozenPrepared = preparedImages.map((p) => ({ ...p }));
+    const body = buildCampaignGenerationBody(frozenFields, frozenPrepared, storeId, {
+      inputValidationOverride: { productImageCheck: "brief_review_confirmed" },
+    });
+    // F43 (mini-fix): guarda o body confirmado para o retry pós-falha repetir a
+    // MESMA tentativa (não reativar a validação vision via handleSubmit legado).
+    confirmedBodyRef.current = body;
+    setReviewMode(false);
+    setIsSubmitting(true);
+    setSubmitError(null);
+    setFieldErrors({});
+    setPendingConflict(null);
+    setPhases([]);
+    await consumeStream(body, new AbortController());
+  }, [storeId, preparedImages, fields]);
+
+  // F43 (mini-fix): "Tentar novamente" pós-falha — reutiliza o ÚLTIMO body
+  // confirmado (snapshot revisado + brief_review_confirmed) em vez do caminho
+  // legado handleSubmit (que reativaria a IA de visão e contornaria o gate de
+  // revisão). Sem snapshot confirmado, cai no fluxo padrão do formulário.
+  const retrySubmit = useCallback(async (): Promise<void> => {
+    const body = confirmedBodyRef.current;
+    if (!body) {
+      await handleSubmit();
+      return;
+    }
+    setIsSubmitting(true);
+    setSubmitError(null);
+    setPendingConflict(null);
+    setPhases([]);
+    await consumeStream(body, new AbortController());
+  }, [handleSubmit]);
 
   return {
     fields,
@@ -716,6 +1257,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     submitError,
     setSubmitError,
     handleSubmit,
+    retrySubmit,
     resetSubmit,
     isValid,
     pendingConflict,
@@ -724,7 +1266,16 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     handleConflictCancel,
     phases,
     onPhaseChange,
+    addImage,
+    removeImage,
+    reviewMode,
+    preparing,
+    preparedImages,
+    reviewError,
+    enterReview,
+    exitReview,
+    confirmReview,
   };
 }
 
-export { validateDiscountedPrice, validateBadge };
+export { validateDiscountedPrice, validateBadge, validateImage, compressImage };

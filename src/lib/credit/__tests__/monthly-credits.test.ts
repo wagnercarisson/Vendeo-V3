@@ -36,10 +36,34 @@ afterAll(() => {
 // ── Helpers ────────────────────────────────────────────────────────
 
 const GRANT_RESULT = {
+  eligible: 20,
+  granted: 20,
+  skipped: 0,
+  errors: 0,
+  details: {
+    roots_considered: 24,
+    skipped_no_cnpj: 1,
+    skipped_already_granted: 0,
+    skipped_not_due: 4,
+    skipped_bonus_threshold: 0,
+  },
+};
+
+// Shape canônico do RPC com skipped NUMÉRICO (limiar/idempotência) — NÃO deve
+// ser interpretado como disabled pelos handlers/routes (o flag booleano de
+// disabled é `{ skipped: true }`, emitido apenas quando monthlyCreditsEnabled=false).
+const GRANT_RESULT_NUMERIC_SKIPPED = {
   eligible: 25,
   granted: 20,
   skipped: 5,
   errors: 0,
+  details: {
+    roots_considered: 26,
+    skipped_no_cnpj: 0,
+    skipped_already_granted: 3,
+    skipped_not_due: 1,
+    skipped_bonus_threshold: 2,
+  },
 };
 
 // ── POST /api/admin/monthly-credits/grant ──────────────────────────
@@ -97,6 +121,21 @@ describe("POST /api/admin/monthly-credits/grant", () => {
     const body = await res.json();
     expect(body).toEqual({ skipped: true });
   });
+
+  it("returns numeric skipped shape without treating it as disabled", async () => {
+    // Contrato botão/flags: o RPC retorna `skipped` NUMÉRICO (shape canônico),
+    // que NÃO deve ser confundido com o flag booleano `{ skipped: true }` dos
+    // routes quando monthlyCreditsEnabled=false. O handler repassa o shape
+    // intacto (status 200, body com skipped: 5) — o botão usa `body.skipped === true`.
+    mockRpc.mockResolvedValue({ data: GRANT_RESULT_NUMERIC_SKIPPED, error: null });
+
+    const res = await postGrant();
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toEqual(GRANT_RESULT_NUMERIC_SKIPPED);
+    expect(typeof body.skipped).toBe("number");
+    expect(body.skipped).not.toBe(true);
+  });
 });
 
 // ── GET /api/cron/monthly-credits ───────────────────────────────────
@@ -153,6 +192,20 @@ describe("GET /api/cron/monthly-credits", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toEqual({ skipped: true });
+  });
+
+  it("returns numeric skipped shape without treating it as disabled", async () => {
+    // Mesmo contrato do admin route: `skipped` numérico do shape canônico não é
+    // flag de disabled — o handler repassa o shape intacto com status 200.
+    process.env.CRON_SECRET = "secret";
+    mockRpc.mockResolvedValue({ data: GRANT_RESULT_NUMERIC_SKIPPED, error: null });
+
+    const res = await getCron("Bearer secret");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toEqual(GRANT_RESULT_NUMERIC_SKIPPED);
+    expect(typeof body.skipped).toBe("number");
+    expect(body.skipped).not.toBe(true);
   });
 
   it("returns 500 on RPC error", async () => {

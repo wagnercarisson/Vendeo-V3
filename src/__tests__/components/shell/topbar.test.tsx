@@ -59,6 +59,18 @@ describe("Topbar", () => {
     expect(hamburger.className).toContain("min-w-[44px]");
   });
 
+  it("hamburger has shrink-0 so it never gets squashed on mobile", () => {
+    render(
+      <Topbar
+        user={{ claims: { email: "test@test.com" } }}
+        onToggleMenu={() => {}}
+        isDrawerOpen={false}
+      />,
+    );
+    const hamburger = screen.getByLabelText("Abrir menu de navegação");
+    expect(hamburger.className).toContain("shrink-0");
+  });
+
   it("CTA Nova Campanha has min-h-[44px]", () => {
     render(
       <Topbar
@@ -69,6 +81,36 @@ describe("Topbar", () => {
     );
     const cta = screen.getByText("Nova Campanha").closest("a");
     expect(cta?.className).toContain("min-h-[44px]");
+  });
+
+  it("CTA Nova Campanha is compact on mobile (aria-label + hidden sm:inline text)", () => {
+    render(
+      <Topbar
+        user={{ claims: { email: "test@test.com" } }}
+        onToggleMenu={() => {}}
+        isDrawerOpen={false}
+      />,
+    );
+    const cta = screen.getByText("Nova Campanha").closest("a");
+    expect(cta?.getAttribute("aria-label")).toBe("Criar nova campanha");
+    expect(cta?.className).toContain("min-w-[44px]");
+    expect(cta?.className).toContain("justify-center");
+    const text = screen.getByText("Nova Campanha");
+    expect(text.className).toContain("hidden");
+    expect(text.className).toContain("sm:inline");
+  });
+
+  it("right container (CTA + account) has shrink-0", () => {
+    render(
+      <Topbar
+        user={{ claims: { email: "test@test.com" } }}
+        onToggleMenu={() => {}}
+        isDrawerOpen={false}
+      />,
+    );
+    const cta = screen.getByText("Nova Campanha").closest("a");
+    const container = cta?.parentElement;
+    expect(container?.className).toContain("shrink-0");
   });
 
   it("account menu trigger has min-h-[44px]", () => {

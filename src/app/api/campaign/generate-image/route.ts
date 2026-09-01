@@ -1,14 +1,15 @@
 import { NextRequest } from "next/server";
 import { GenerateImageRequestSchema } from "@/lib/image-generation/schema";
-import { IMAGE_GENERATION_GLOBAL_TIMEOUT_MS, MAX_PRODUCT_IMAGE_BASE64_SIZE, IMAGE_GENERATION_RESPONSES_MODEL } from "@/lib/image-generation/config";
+import { IMAGE_GENERATION_GLOBAL_TIMEOUT_MS, MAX_PRODUCT_IMAGE_BASE64_SIZE, MAX_PRODUCT_IMAGES_AGGREGATE_BASE64_SIZE, IMAGE_GENERATION_RESPONSES_MODEL } from "@/lib/image-generation/config";
 import { OperationCostService, OperationCostUnavailableError } from "@/lib/credit/operation-cost-service";
 import type { OperationCostResolution } from "@/lib/credit/types";
 import { ImageGenerationService } from "@/lib/image-generation/services/image-generation-service";
 import type { GenerateImageServiceResult } from "@/lib/image-generation/services/image-generation-service";
 import { InputValidationService } from "@/lib/image-generation/services/input-validation-service";
+import { isForceBriefVisionCheckEnabled } from "@/lib/feature-flags/feature-flag-service";
 import { createImageProvider } from "@/lib/image-generation/providers/factory";
 import { resolveStoreIdentity, validateIdentityReference, buildCampaignBrief } from "@/lib/store-identity-service";
-import { buildCampaignBriefFromFlat, buildCampaignBriefSnapshot } from "@/lib/campaign/brief";
+import { buildCampaignBriefFromFlat, buildCampaignBriefSnapshot, mimeTypeFromDataUrl } from "@/lib/campaign/brief";
 import { requireSameOrigin } from "@/lib/auth/csrf";
 import { requireApiUser } from "@/lib/auth/require-user";
 import { requireOwnership } from "@/lib/auth/store-ownership";
@@ -16,7 +17,7 @@ import { getStoreReadiness } from "@/lib/store-readiness";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { supabaseAdmin } from '@/lib/supabase/server';
 import type { CampaignInput } from "@/components/campaign/types";
-import { createCampaign, dataUrlToCampaignImage, uploadCampaignImage, updateCampaignReady, updateCampaignError, deleteCampaignImage } from "@/lib/campaign/persistence";
+import { createCampaign, dataUrlToCampaignImage, uploadCampaignImage, uploadCampaignInputImage, removeCampaignInputs, updateCampaignReady, updateCampaignError, deleteCampaignImage } from "@/lib/campaign/persistence";
 import { transcodeToJpeg } from "@/lib/campaign/image-processor";
 import { checkRateLimit, recordGenerationAttempt } from "@/lib/rate-limit/rate-limit";
 import { CreditService } from "@/lib/credit/credit-service";
@@ -114,16 +115,57 @@ export const POST = apiHandler(async (request: NextRequest) => {
   };
   console.log(`[generate-image] payload_received`, JSON.stringify(safeLog));
 
-  // ── Pre-stream: Validate productImageDataUrl presence ───────────
-  if (!body.productImageDataUrl || typeof body.productImageDataUrl !== "string") {
+  // ── Pre-stream: Regra de exclusividade D2 ───────────────────────
+  // Tabela canônica: productImages XOR productImageDataUrl.
+  // (1) productImages presente + dataUrl ausente → válido (exatamente 1 primary no zod)
+  // (2) productImages ausente + dataUrl presente → legado (mapper gera 1 primary/upload)
+  // (3) ambos ausentes → 400
+  // (4) ambos presentes → 400 (payload ambíguo — mutuamente exclusivos, não "substitui")
+  const hasProductImages = Array.isArray(body.productImages) && body.productImages.length > 0;
+  const hasLegacyDataUrl = typeof body.productImageDataUrl === "string" && body.productImageDataUrl.length > 0;
+  if (!hasProductImages && !hasLegacyDataUrl) {
     return Response.json(
       { error: { message: "Imagem do produto é obrigatória para gerar a campanha visual." } },
       { status: 400 }
     );
   }
+  if (hasProductImages && hasLegacyDataUrl) {
+    return Response.json(
+      { error: { message: "Payload ambíguo: envie productImages[] OU productImageDataUrl, não ambos." } },
+      { status: 400 }
+    );
+  }
 
-  // ── Pre-stream: Check payload size limit ────────────────────────
-  if (body.productImageDataUrl.length > MAX_PRODUCT_IMAGE_BASE64_SIZE) {
+  // ── Pre-stream: Limites D10 — por item + teto agregado (productImages) ─
+  if (hasProductImages) {
+    const items = body.productImages as Array<{ dataUrl: string }>;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].dataUrl.length > MAX_PRODUCT_IMAGE_BASE64_SIZE) {
+        return Response.json(
+          {
+            error: {
+              message: `Imagem ${i + 1} do produto excede o limite de ${Math.round(MAX_PRODUCT_IMAGE_BASE64_SIZE / (1024 * 1024))}MB. Comprima a imagem e tente novamente.`,
+            },
+          },
+          { status: 413 }
+        );
+      }
+    }
+    const aggregateSize = items.reduce((sum, item) => sum + item.dataUrl.length, 0);
+    if (aggregateSize > MAX_PRODUCT_IMAGES_AGGREGATE_BASE64_SIZE) {
+      return Response.json(
+        {
+          error: {
+            message: `As imagens do produto excedem o teto agregado de ${Math.round(MAX_PRODUCT_IMAGES_AGGREGATE_BASE64_SIZE / (1024 * 1024))}MB. Reduza a quantidade ou o tamanho das imagens e tente novamente.`,
+          },
+        },
+        { status: 413 }
+      );
+    }
+  }
+
+  // ── Pre-stream: Check payload size limit (legado single) ────────
+  if (hasLegacyDataUrl && (body.productImageDataUrl as string).length > MAX_PRODUCT_IMAGE_BASE64_SIZE) {
     return Response.json(
       {
         error: {
@@ -207,8 +249,35 @@ export const POST = apiHandler(async (request: NextRequest) => {
     console.warn("[generate-image] exclusive com discountedPriceCents presente — normalizando para ausente.");
   }
 
+  // ── F43 (D5): flag administrativa de reativação — normalização ponta a ponta ──
+  // Com a flag `force_brief_vision_check` LIGADA, remove `brief_review_confirmed`
+  // do inputValidationOverride ANTES da checagem pré-stream (route.ts:338) e usa
+  // o MESMO input normalizado para a checagem, o brief e o generateImage — assim
+  // pré-stream E Phase 1 do serviço executam a IA de visão (capacidade reativável
+  // sem redeploy). `user_confirmed_continue` NUNCA é removido ("409 + insistiu").
+  // Com a flag DESLIGADA, `brief_review_confirmed` pula nos dois pontos (padrão).
+  let effectiveParsedData = parsed.data;
+  const forceBriefVisionCheck = await isForceBriefVisionCheckEnabled();
+  if (
+    forceBriefVisionCheck &&
+    parsed.data.inputValidationOverride?.productImageCheck === "brief_review_confirmed"
+  ) {
+    effectiveParsedData = {
+      ...parsed.data,
+      inputValidationOverride: undefined,
+    };
+    logPipelineEvent({
+      event: "feature_flag_force_vision_check",
+      traceId,
+      phase: "pre_stream",
+      status: "complete",
+      storeId: parsed.data.storeId,
+      userId: user.userId,
+    });
+  }
+
   // ── Pre-stream: Resolve store identity (backend-side) ────────────
-  const { storeId, ...campaignInput } = parsed.data;
+  const { storeId, ...campaignInput } = effectiveParsedData;
 
   let storeSnapshot;
   try {
@@ -240,7 +309,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
 
   // Build campaign context (wrapper resolvido) + domain brief (mapper puro na fronteira)
   const context = await buildCampaignBrief(validatedSnapshot, campaignInput as CampaignInput);
-  const brief = buildCampaignBriefFromFlat(parsed.data, parsed.data.storeId);
+  const brief = buildCampaignBriefFromFlat(effectiveParsedData, effectiveParsedData.storeId);
 
   // ── Pre-stream: Rate limit guard (no IA, no stream) ────────────
   logPipelineEvent({ event: "rate_limit_check", traceId, phase: "pre_stream", status: "running", storeId, userId: user.userId });
@@ -294,13 +363,19 @@ export const POST = apiHandler(async (request: NextRequest) => {
   logPipelineEvent({ event: "balance_check", traceId, phase: "pre_stream", status: "complete", storeId, userId: user.userId });
 
   // ── Pre-stream: Input validation for conflict/confidence ─────────
-  if (!parsed.data.inputValidationOverride?.productImageCheck) {
+  if (!effectiveParsedData.inputValidationOverride?.productImageCheck) {
     const inputValidation = new InputValidationService();
     let validationResult: Awaited<ReturnType<typeof inputValidation.validate>>;
     try {
+      // F41 D8: validação primary-only — resolve a imagem com role "primary",
+      // NUNCA posição 0 (o zod garante exatamente 1 primary, mas a ordem do
+      // array é irrelevante — um cliente pode enviar [reference, primary]).
+      const primaryDataUrl = hasProductImages
+        ? parsed.data.productImages!.find((img) => img.role === "primary")!.dataUrl
+        : parsed.data.productImageDataUrl!;
       validationResult = await inputValidation.validate(
         parsed.data.productName,
-        parsed.data.productImageDataUrl,
+        primaryDataUrl,
         undefined
       );
     } catch {
@@ -351,25 +426,46 @@ export const POST = apiHandler(async (request: NextRequest) => {
     }
   }
 
-  // ── Pre-stream: Create campaign record (generating status) ─────
+  // ── Pre-stream: Create campaign record (generating status) + D5 ──
+  // F41 D5 (aplica-se aos DOIS fluxos — decisão 2026-08-14): pré-gera campaignId,
+  // gera id por imagem, sobe os inputs ANTES do snapshot, monta o snapshot com
+  // storagePath por imagem e chama createCampaign com o id pré-gerado.
   logPipelineEvent({ event: "campaign_create", traceId, phase: "pre_stream", status: "running", storeId, userId: user.userId });
   let campaignId: string | undefined;
   let storagePath: string | undefined;
+  const campaignIdPre = crypto.randomUUID();
   try {
+    // (2) id por imagem — mesma FONTE do loop (domínio, sempre ≥1 via mapper,
+    // inclusive no legado que vira 1 elemento); nunca productImages do transporte.
+    const imageIds = brief.media.images.map(() => crypto.randomUUID());
+
+    // (3) upload ANTES do snapshot — iterar sobre brief.media.images (objetos do
+    // domínio que o snapshot consome), NUNCA sobre o array de transporte.
+    for (const [idx, img] of brief.media.images.entries()) {
+      const { buffer } = dataUrlToCampaignImage(img.dataUrl!);
+      const mimeType = mimeTypeFromDataUrl(img.dataUrl!) ?? img.mimeType;
+      await uploadCampaignInputImage(storeId, campaignIdPre, imageIds[idx], { buffer, mimeType });
+      img.storagePath = `${storeId}/${campaignIdPre}/inputs/${imageIds[idx]}.jpg`;
+    }
+
+    // (4) snapshot COM storagePath por imagem (buildCampaignBriefSnapshot lê brief.media.images[i].storagePath)
     const inputSnapshot: Record<string, unknown> = buildCampaignBriefSnapshot(brief) as unknown as Record<string, unknown>;
 
+    // (5) createCampaign com id pré-gerado (3º argumento opcional)
     const campaign = await createCampaign(storeId, {
       productName: campaignInput.productName,
       inputSnapshot,
       identitySnapshot: validatedSnapshot as unknown as Record<string, unknown>,
       operationRunId,
-    });
+    }, campaignIdPre);
     campaignId = campaign.id;
     storagePath = campaign.storagePath;
     logPipelineEvent({ event: "campaign_create", traceId, phase: "pre_stream", status: "complete", campaignId: campaign.id, storeId, userId: user.userId });
   } catch (err) {
     logPipelineEvent({ event: "campaign_create", traceId, phase: "pre_stream", status: "failed", storeId, userId: user.userId, errorMessage: err instanceof Error ? err.message : String(err) });
     console.error(`[generate-image] createCampaign error — ${err instanceof Error ? err.message : String(err)}`);
+    // F41 D5: limpeza pré-stream — remove os inputs já enviados (sem órfãos)
+    try { await removeCampaignInputs(storeId, campaignIdPre); } catch { /* ignore */ }
     return Response.json(
       { error: { message: "Erro ao iniciar registro da campanha." } },
       { status: 500 }

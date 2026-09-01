@@ -69,7 +69,7 @@ export function CampaignAdjustmentsPanel({
       {/* Discounted Price Field */}
       <div>
         <label className="block text-gray-500 text-xs font-heading font-medium uppercase tracking-wider mb-2">
-          Preço com Desconto
+          Preço Final
         </label>
         <div className="flex gap-2">
           <input

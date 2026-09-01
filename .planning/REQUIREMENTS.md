@@ -54,7 +54,7 @@
 - [ ] **MONTHLY-03**: `grant_credits()` bucket-aware com parâmetro `p_type` — direciona ao bucket correto conforme o tipo
 - [ ] **MONTHLY-04**: `reserve_credit()` com consumo prioritário — deduz de `bonus_balance` primeiro, `purchased_balance` por último
 - [ ] **MONTHLY-05**: `refund_credit()` bucket-aware — restaura `bonus_balance` e `purchased_balance` exatos via metadata; fallback legacy para deductions sem metadata
-- [ ] **MONTHLY-06**: `grant_monthly_credits()` RPC — elegibilidade por idade da loja (>= 30 dias), teto de bônus configurável, grant parcial, idempotência por ciclo efetivo de 30 dias, FOR UPDATE SKIP LOCKED
+- [x] **MONTHLY-06**: `grant_monthly_credits()` RPC por raiz CNPJ — elegibilidade por idade da loja (>= 30 dias), limiar de bônus configurável (grant integral quando `bonus_balance < cap`; nenhum grant quando `>=`), idempotência por ciclo mensal via `freemium_entitlements` (root_hash, 'monthly', cycle), ciclo por aniversário com clamp de dia 29/30/31 (nunca dia 1), recipiente determinístico (matriz → loja mais antiga não-teste)
 - [ ] **MONTHLY-07**: Launch Config expandido — 4 novas flags: `monthlyCreditsEnabled`, `monthlyCreditsAmount`, `monthlyBonusCap`, `monthlyCreditsMinStoreAgeDays`
 - [ ] **MONTHLY-08**: Vercel Cron `GET /api/cron/monthly-credits` — schedule `0 6 * * *`, proteção CRON_SECRET, leitura de Launch Config, execução RPC, logging via `logPipelineEvent()`
 - [ ] **MONTHLY-09**: Admin fallback — botão "Executar concessão mensal" + rota `POST /api/admin/monthly-credits/grant` protegida por `requireAdmin`
@@ -560,9 +560,9 @@ Desdobramento da F38.2, adicionados via OpenSpec (`openspec/changes/fase-38-2-1-
 - [x] **F38.2.1-13**: Fallback legacy explícito para eventos sem valor persistido (nunca silencioso; valor backfilled nunca tratado como captured)
 - [x] **F38.2.1-14**: Testes de snapshot/fallback/estabilidade temporal/nomenclatura/origem + gates verdes
 
-## v1.7 Requirements (Stripe / Monetização Pública)
+## v1.7 Requirements (Monetização Pública / Stripe — iniciativa diferida)
 
-Deferred from v1.5 critical path. Stripe será implementada como F40/v1.7 após validação do beta controlado (renumerada de F35 → F36 → F37 → F39 → F40 nos alinhamentos do Changelog/Novidades, do Onboarding — Navegação por Abas, da Tabela de Custos por Operação e do Brief Estruturado de Campanha).
+Deferred from v1.5 critical path. **Monetização pública / Stripe: iniciativa diferida v1.7+ (sem fase numerada)**, dependente de decisão comercial/jurídica/contábil — reaberta quando houver condição real de executar. Não é fase numerada no roadmap ativo (decisão do alinhamento F43 D1).
 
 ### Pagamento (PAY)
 

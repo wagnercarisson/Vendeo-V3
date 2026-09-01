@@ -9,6 +9,8 @@ let mockRequireOwnershipImpl = vi.fn();
 let mockCreateCampaignImpl = vi.fn();
 let mockDataUrlToCampaignImageImpl = vi.fn();
 let mockUploadCampaignImageImpl = vi.fn();
+let mockUploadCampaignInputImageImpl = vi.fn();
+let mockRemoveCampaignInputsImpl = vi.fn();
 let mockUpdateCampaignReadyImpl = vi.fn();
 let mockUpdateCampaignErrorImpl = vi.fn();
 let mockDeleteCampaignImageImpl = vi.fn();
@@ -77,6 +79,8 @@ vi.mock("@/lib/campaign/persistence", () => ({
   createCampaign: mockCreateCampaignImpl,
   dataUrlToCampaignImage: mockDataUrlToCampaignImageImpl,
   uploadCampaignImage: mockUploadCampaignImageImpl,
+  uploadCampaignInputImage: mockUploadCampaignInputImageImpl,
+  removeCampaignInputs: mockRemoveCampaignInputsImpl,
   updateCampaignReady: mockUpdateCampaignReadyImpl,
   updateCampaignError: mockUpdateCampaignErrorImpl,
   deleteCampaignImage: mockDeleteCampaignImageImpl,
@@ -156,6 +160,7 @@ vi.mock("@/lib/credit/credit-service", () => ({
 vi.mock("@/lib/image-generation/config", () => ({
   IMAGE_GENERATION_GLOBAL_TIMEOUT_MS: 300000,
   MAX_PRODUCT_IMAGE_BASE64_SIZE: 4 * 1024 * 1024,
+  MAX_CAMPAIGN_IMAGES: 4,
   IMAGE_GENERATION_RESPONSES_MODEL: "test-model",
 }));
 
@@ -290,6 +295,11 @@ function setupSuccessMocks(): void {
     storagePath: `${STORE_UUID}/${CAMPAIGN_UUID}.jpg`,
   });
 
+  mockUploadCampaignInputImageImpl.mockResolvedValue({
+    storagePath: `${STORE_UUID}/${CAMPAIGN_UUID}/inputs/x.jpg`,
+  });
+  mockRemoveCampaignInputsImpl.mockResolvedValue(undefined);
+
   mockBuildPublicationCopySnapshotImpl.mockImplementation((data: any) => data);
 
   mockUpdateCampaignReadyImpl.mockResolvedValue(undefined);
@@ -331,8 +341,10 @@ describe("POST /api/campaign/generate-image", () => {
 
     // Verify pipeline ran
     expect(mockCreateCampaignImpl).toHaveBeenCalledTimes(1);
-    expect(mockDataUrlToCampaignImageImpl).toHaveBeenCalledTimes(1);
+    // F41 D5: dataUrlToCampaignImage chamado no upload do input (pré-snapshot) + upload final (pós-paralelo)
+    expect(mockDataUrlToCampaignImageImpl).toHaveBeenCalledTimes(2);
     expect(mockTranscodeToJpegImpl).toHaveBeenCalledTimes(1);
+    expect(mockUploadCampaignInputImageImpl).toHaveBeenCalledTimes(1);
     expect(mockUploadCampaignImageImpl).toHaveBeenCalledTimes(1);
     expect(mockUpdateCampaignReadyImpl).toHaveBeenCalledTimes(1);
     // Error compensation should NOT be called on success
@@ -366,8 +378,8 @@ describe("POST /api/campaign/generate-image", () => {
       CAMPAIGN_UUID,
       "IA provider failed"
     );
-    // Pipeline should NOT proceed beyond IA
-    expect(mockDataUrlToCampaignImageImpl).not.toHaveBeenCalled();
+    // Pipeline should NOT proceed beyond IA (input upload D5 já ocorreu — 1 chamada)
+    expect(mockDataUrlToCampaignImageImpl).toHaveBeenCalledTimes(1);
     expect(mockUploadCampaignImageImpl).not.toHaveBeenCalled();
     expect(mockUpdateCampaignReadyImpl).not.toHaveBeenCalled();
     // No image to clean up

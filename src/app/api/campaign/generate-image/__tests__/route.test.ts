@@ -30,6 +30,8 @@ vi.mock('@/lib/campaign/persistence', () => ({
   createCampaign: vi.fn(),
   dataUrlToCampaignImage: vi.fn(),
   uploadCampaignImage: vi.fn(),
+  uploadCampaignInputImage: vi.fn(),
+  removeCampaignInputs: vi.fn(),
   updateCampaignReady: vi.fn(),
   updateCampaignError: vi.fn(),
   deleteCampaignImage: vi.fn(),
@@ -43,6 +45,8 @@ vi.mock('@/lib/campaign/image-processor', () => ({
 vi.mock('@/lib/image-generation/config', () => ({
   IMAGE_GENERATION_GLOBAL_TIMEOUT_MS: 300000,
   MAX_PRODUCT_IMAGE_BASE64_SIZE: 5 * 1024 * 1024,
+  MAX_PRODUCT_IMAGES_AGGREGATE_BASE64_SIZE: 2 * 1024 * 1024,
+  MAX_CAMPAIGN_IMAGES: 4,
   IMAGE_GENERATION_RESPONSES_MODEL: 'test-model',
 }));
 
@@ -76,8 +80,24 @@ vi.mock('@/lib/image-generation/services/image-generation-service', () => ({
 
 vi.mock('@/lib/image-generation/services/input-validation-service', () => ({
   InputValidationService: vi.fn(function() {
-    return { validate: vi.fn(async () => ({ classification: "ok" })) };
+    return { validate: mockInputValidationValidate };
   }),
+}));
+
+// F43 (D5): spy compartilhado da validação pré-stream (InputValidationService)
+// para observar quando a IA de visão roda/pula (Testes 18-22).
+const { mockInputValidationValidate } = vi.hoisted(() => ({
+  mockInputValidationValidate: vi.fn(async () => ({ classification: "ok" })),
+}));
+
+// F43 (D5): mock do serviço de leitura da flag force_brief_vision_check.
+const { mockIsForceBriefVisionCheckEnabled } = vi.hoisted(() => ({
+  mockIsForceBriefVisionCheckEnabled: vi.fn(async () => false),
+}));
+vi.mock('@/lib/feature-flags/feature-flag-service', () => ({
+  isForceBriefVisionCheckEnabled: mockIsForceBriefVisionCheckEnabled,
+  FORCE_BRIEF_VISION_CHECK_KEY: "force_brief_vision_check",
+  FeatureFlagService: vi.fn(),
 }));
 
 vi.mock('@/lib/image-generation/providers/factory', () => ({
@@ -177,7 +197,7 @@ vi.mock('@/lib/economic/economic-parameter-service', () => ({
 }));
 
 import { resolveStoreIdentity, validateIdentityReference, buildCampaignBrief } from '@/lib/store-identity-service';
-import { createCampaign, dataUrlToCampaignImage, uploadCampaignImage, updateCampaignReady, updateCampaignError, deleteCampaignImage } from '@/lib/campaign/persistence';
+import { createCampaign, dataUrlToCampaignImage, uploadCampaignImage, uploadCampaignInputImage, removeCampaignInputs, updateCampaignReady, updateCampaignError, deleteCampaignImage } from '@/lib/campaign/persistence';
 import { transcodeToJpeg } from '@/lib/campaign/image-processor';
 import { InputValidationService } from '@/lib/image-generation/services/input-validation-service';
 
@@ -191,6 +211,16 @@ const VALID_REQUEST_BODY = {
   discountedPriceCents: 1990,
   badgeText: 'Oferta',
   productImageDataUrl: 'data:image/jpeg;base64,abc',
+};
+
+const VALID_PRODUCT_IMAGES_REQUEST = {
+  ...VALID_REQUEST_BODY,
+  productImageDataUrl: undefined,
+  productImages: [
+    { role: 'primary', source: 'camera', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,primary' },
+    { role: 'reference', source: 'upload', mimeType: 'image/png', dataUrl: 'data:image/png;base64,aux1' },
+    { role: 'reference', source: 'upload', mimeType: 'image/webp', dataUrl: 'data:image/webp;base64,aux2' },
+  ],
 };
 
 function makeRequest(body: Record<string, unknown>): NextRequest {
@@ -255,6 +285,8 @@ async function setupSuccessMocks() {
   (dataUrlToCampaignImage as any).mockReturnValue({ buffer: Buffer.from(''), mimeType: 'image/jpeg' });
   (transcodeToJpeg as any).mockResolvedValue({ buffer: Buffer.from(''), mimeType: 'image/jpeg' });
   (uploadCampaignImage as any).mockResolvedValue(undefined);
+  (uploadCampaignInputImage as any).mockResolvedValue({ storagePath: `${STORE_ID}/${CAMPAIGN_ID}/inputs/x.jpg` });
+  (removeCampaignInputs as any).mockResolvedValue(undefined);
   (updateCampaignReady as any).mockResolvedValue(undefined);
 }
 
@@ -262,6 +294,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   capturedEvents.length = 0;
   mockRpc.mockResolvedValue({ data: { ready: true, missing: [] }, error: null });
+  mockIsForceBriefVisionCheckEnabled.mockResolvedValue(false);
   mockGetCost.mockResolvedValue({
     operationKey: "campaign_generation",
     costCredits: 1,
@@ -324,6 +357,169 @@ describe('POST /api/campaign/generate-image', () => {
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error.message).toContain('Imagem do produto');
+  });
+
+  it('27 (F41): ausência de productImageDataUrl E productImages → 400 da ROTA (regra de exclusividade D2, não Zod)', async () => {
+    const { POST } = await import('../route');
+    const req = makeRequest({
+      storeId: STORE_ID,
+      productName: 'Produto',
+      discountedPriceCents: 1990,
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.message).toContain('Imagem do produto é obrigatória');
+    // o 400 vem da regra de exclusividade da rota (ambos ausentes), não do Zod
+    expect(body.error).not.toHaveProperty('details');
+  });
+
+  it('4 (F41): productImages + productImageDataUrl juntos → 400 payload ambíguo (D2)', async () => {
+    const { POST } = await import('../route');
+    const req = makeRequest({
+      ...VALID_REQUEST_BODY,
+      productImages: [{ role: 'primary', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,x' }],
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.message).toContain('Payload ambíguo');
+  });
+
+  it('24a (F41): item individual > 4MB → 413 PT-BR indicando o item (D10)', async () => {
+    const { POST } = await import('../route');
+    const req = makeRequest({
+      ...VALID_PRODUCT_IMAGES_REQUEST,
+      productImages: [
+        { role: 'primary', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,' + 'a'.repeat(5 * 1024 * 1024) },
+      ],
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(413);
+    const body = await res.json();
+    expect(body.error.message).toContain('Imagem 1 do produto excede o limite');
+  });
+
+  it('24b (F41): soma dos dataUrls > teto agregado → 413 PT-BR indicando o total (D10)', async () => {
+    const { POST } = await import('../route');
+    // 3 itens de ~1MB cada → soma ~3MB > teto agregado mockado (2MB)
+    const item = (role: string, base: string) => ({
+      role,
+      source: 'upload' as const,
+      mimeType: 'image/jpeg',
+      dataUrl: 'data:image/jpeg;base64,' + base.repeat(1024 * 1024),
+    });
+    const req = makeRequest({
+      ...VALID_PRODUCT_IMAGES_REQUEST,
+      productImages: [
+        item('primary', 'a'),
+        item('reference', 'b'),
+        item('reference', 'c'),
+      ],
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(413);
+    const body = await res.json();
+    expect(body.error.message).toContain('teto agregado');
+  });
+
+  it('24c (F41): mais de MAX_CAMPAIGN_IMAGES itens → 400 do schema (cap do transporte D10)', async () => {
+    const { POST } = await import('../route');
+    const images = [
+      { role: 'primary', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,p' },
+    ];
+    for (let i = 0; i < 4; i++) {
+      images.push({ role: 'reference', source: 'upload', mimeType: 'image/jpeg', dataUrl: `data:image/jpeg;base64,r${i}` });
+    }
+    const req = makeRequest({ ...VALID_PRODUCT_IMAGES_REQUEST, productImages: images });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.message).toContain('Dados de entrada inválidos');
+  });
+
+  it('25 (F41): upload de inputs pré-snapshot com campaignId/imageId gerados pela rota + storagePath no snapshot (D5)', async () => {
+    await setupSuccessMocks();
+    const { POST } = await import('../route');
+    const req = makeRequest(VALID_PRODUCT_IMAGES_REQUEST);
+    const res = await POST(req);
+    await res.text();
+
+    // 3 uploads de input (primary + 2 auxiliares) com ids da ROTA (uuid)
+    expect(uploadCampaignInputImage).toHaveBeenCalledTimes(3);
+    const uploadCalls = (uploadCampaignInputImage as any).mock.calls;
+    for (const call of uploadCalls) {
+      expect(call[0]).toBe(STORE_ID);
+      expect(typeof call[1]).toBe('string'); // campaignId pré-gerado
+      expect(typeof call[2]).toBe('string'); // imageId gerado pela rota
+      expect(call[3]).toEqual(expect.objectContaining({ mimeType: expect.any(String) }));
+    }
+
+    // createCampaign com 3º arg (campaignId pré-gerado) + snapshot com storagePath
+    expect(createCampaign).toHaveBeenCalledWith(
+      STORE_ID,
+      expect.objectContaining({
+        inputSnapshot: expect.objectContaining({
+          media: expect.objectContaining({
+            images: expect.arrayContaining([
+              expect.objectContaining({ storagePath: expect.stringContaining('/inputs/') }),
+            ]),
+          }),
+        }),
+      }),
+      expect.any(String)
+    );
+  });
+
+  it('26 (F41): falha no upload do input → removeCampaignInputs (cleanup pré-stream, sem órfãos) (D5)', async () => {
+    await setupSuccessMocks();
+    (uploadCampaignInputImage as any)
+      .mockResolvedValueOnce({ storagePath: `${STORE_ID}/camp-1/inputs/1.jpg` })
+      .mockRejectedValueOnce(new Error('upload failed'));
+
+    const { POST } = await import('../route');
+    const req = makeRequest(VALID_PRODUCT_IMAGES_REQUEST);
+    const res = await POST(req);
+    expect(res.status).toBe(500);
+    await res.text();
+
+    expect(removeCampaignInputs).toHaveBeenCalledWith(
+      STORE_ID,
+      expect.any(String)
+    );
+  });
+
+  it('26b (F41): primary fora da posição 0 ([reference, primary]) → inputValidation.validate recebe o dataUrl da role primary (D8)', async () => {
+    await setupSuccessMocks();
+    const { POST } = await import('../route');
+    const req = makeRequest({
+      ...VALID_PRODUCT_IMAGES_REQUEST,
+      productImages: [
+        { role: 'reference', source: 'upload', mimeType: 'image/png', dataUrl: 'data:image/png;base64,aux' },
+        { role: 'primary', source: 'camera', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,primary' },
+      ],
+    });
+    const res = await POST(req);
+    await res.text();
+
+    // validação usa o dataUrl da imagem com role primary (find(role), NUNCA posição 0)
+    const validationMock = (InputValidationService as any);
+    expect(validationMock).toBeDefined();
+    // o fluxo seguiu normal: uploads + createCampaign com 3º arg
+    expect(uploadCampaignInputImage).toHaveBeenCalledTimes(2);
+    expect(createCampaign).toHaveBeenCalledWith(
+      STORE_ID,
+      expect.objectContaining({
+        inputSnapshot: expect.objectContaining({
+          media: expect.objectContaining({
+            images: expect.arrayContaining([
+              expect.objectContaining({ storagePath: expect.stringContaining('/inputs/') }),
+            ]),
+          }),
+        }),
+      }),
+      expect.any(String)
+    );
   });
 
   it('rejects missing storeId with 400', async () => {
@@ -527,7 +723,7 @@ describe('POST /api/campaign/generate-image', () => {
     await setupSuccessMocks();
 
     const { POST } = await import('../route');
-    const req = makeRequest({ ...VALID_REQUEST_BODY, mandatoryArtworkText: 'Imagens meramente ilustrativas' });
+    const req = makeRequest({ ...VALID_REQUEST_BODY, mandatoryArtworkText: 'Imagem meramente ilustrativa' });
     const _res = await POST(req);
     await _res.text();
 
@@ -772,7 +968,7 @@ describe('POST /api/campaign/generate-image', () => {
     await setupSuccessMocks();
 
     const { POST } = await import('../route');
-    const req = makeRequest({ ...VALID_REQUEST_BODY, mandatoryArtworkText: 'Imagens meramente ilustrativas' });
+    const req = makeRequest({ ...VALID_REQUEST_BODY, mandatoryArtworkText: 'Imagem meramente ilustrativa' });
     const _res = await POST(req);
     await _res.text();
 
@@ -782,10 +978,33 @@ describe('POST /api/campaign/generate-image', () => {
         inputSnapshot: expect.objectContaining({
           schemaVersion: 'campaign_brief_v1',
           commercial: expect.objectContaining({
-            legalNotice: { enabled: true, text: 'Imagens meramente ilustrativas' },
+            legalNotice: { enabled: true, text: 'Imagem meramente ilustrativa' },
           }),
         }),
-      })
+      }),
+      expect.any(String)
+    );
+  });
+
+  it('validity no inputSnapshot (snapshot versionado — commercial.validity.displayText)', async () => {
+    await setupSuccessMocks();
+
+    const { POST } = await import('../route');
+    const req = makeRequest({ ...VALID_REQUEST_BODY, validity: 'até 30/09' });
+    const _res = await POST(req);
+    await _res.text();
+
+    expect(createCampaign).toHaveBeenCalledWith(
+      STORE_ID,
+      expect.objectContaining({
+        inputSnapshot: expect.objectContaining({
+          schemaVersion: 'campaign_brief_v1',
+          commercial: expect.objectContaining({
+            validity: { enabled: true, displayText: 'até 30/09' },
+          }),
+        }),
+      }),
+      expect.any(String)
     );
   });
 
@@ -793,7 +1012,7 @@ describe('POST /api/campaign/generate-image', () => {
     await setupSuccessMocks();
 
     const { POST } = await import('../route');
-    const req = makeRequest({ ...VALID_REQUEST_BODY, mandatoryArtworkText: 'Imagens meramente ilustrativas' });
+    const req = makeRequest({ ...VALID_REQUEST_BODY, mandatoryArtworkText: 'Imagem meramente ilustrativa' });
     const _res = await POST(req);
     await _res.text();
 
@@ -804,7 +1023,7 @@ describe('POST /api/campaign/generate-image', () => {
     await setupSuccessMocks();
 
     const { POST } = await import('../route');
-    const req = makeRequest({ ...VALID_REQUEST_BODY, mandatoryArtworkText: 'Imagens meramente ilustrativas' });
+    const req = makeRequest({ ...VALID_REQUEST_BODY, mandatoryArtworkText: 'Imagem meramente ilustrativa' });
     const _res = await POST(req);
     await _res.text();
 
@@ -941,6 +1160,109 @@ describe('POST /api/campaign/generate-image', () => {
         }),
       })
     );
+  });
+
+  // ── F43 (D5): override brief_review_confirmed + flag force_brief_vision_check ──
+
+  it('Teste 18 (F43): rota com brief_review_confirmed → pula a IA de visão (sem campaign_input_validation)', async () => {
+    await setupSuccessMocks();
+    mockIsForceBriefVisionCheckEnabled.mockResolvedValue(false);
+    mockInputValidationValidate.mockClear();
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest({
+      ...VALID_REQUEST_BODY,
+      inputValidationOverride: { productImageCheck: 'brief_review_confirmed' },
+    }));
+    await res.text();
+
+    expect(res.status).toBe(200);
+    // pré-stream: override presente + flag off → validação NÃO roda
+    expect(mockInputValidationValidate).not.toHaveBeenCalled();
+  });
+
+  it('Teste 19 (F43): rota com user_confirmed_continue → pula (comportamento atual preservado)', async () => {
+    await setupSuccessMocks();
+    mockIsForceBriefVisionCheckEnabled.mockResolvedValue(false);
+    mockInputValidationValidate.mockClear();
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest({
+      ...VALID_REQUEST_BODY,
+      inputValidationOverride: { productImageCheck: 'user_confirmed_continue' },
+    }));
+    await res.text();
+
+    expect(res.status).toBe(200);
+    expect(mockInputValidationValidate).not.toHaveBeenCalled();
+  });
+
+  it('Teste 20 (F43): rota sem override → validação IA roda (rede de segurança)', async () => {
+    await setupSuccessMocks();
+    mockIsForceBriefVisionCheckEnabled.mockResolvedValue(false);
+    mockInputValidationValidate.mockClear();
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_REQUEST_BODY));
+    await res.text();
+
+    expect(res.status).toBe(200);
+    expect(mockInputValidationValidate).toHaveBeenCalled();
+  });
+
+  it('Teste 21 (F43): flag desligada → brief_review_confirmed pula nos dois pontos', async () => {
+    await setupSuccessMocks();
+    mockIsForceBriefVisionCheckEnabled.mockResolvedValue(false);
+    mockInputValidationValidate.mockClear();
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest({
+      ...VALID_REQUEST_BODY,
+      inputValidationOverride: { productImageCheck: 'brief_review_confirmed' },
+    }));
+    await res.text();
+
+    expect(res.status).toBe(200);
+    // pré-stream: validação NÃO roda (override presente, flag off)
+    expect(mockInputValidationValidate).not.toHaveBeenCalled();
+    // Phase 1: override chega intacto ao serviço (context via buildCampaignBrief)
+    expect(buildCampaignBrief).toHaveBeenCalled();
+    const campaignInputArg = (buildCampaignBrief as any).mock.calls[0][1];
+    expect((campaignInputArg as any)?.inputValidationOverride?.productImageCheck).toBe('brief_review_confirmed');
+  });
+
+  it('Teste 22 (F43): flag ligada → rota normaliza (remove brief_review_confirmed antes da checagem); pré-stream e Phase 1 validam; user_confirmed_continue não removido', async () => {
+    await setupSuccessMocks();
+    mockIsForceBriefVisionCheckEnabled.mockResolvedValue(true);
+    mockInputValidationValidate.mockClear();
+
+    const { POST } = await import('../route');
+
+    // brief_review_confirmed → normalizado: pré-stream RODA
+    const res = await POST(makeRequest({
+      ...VALID_REQUEST_BODY,
+      inputValidationOverride: { productImageCheck: 'brief_review_confirmed' },
+    }));
+    await res.text();
+    expect(res.status).toBe(200);
+    expect(mockInputValidationValidate).toHaveBeenCalled();
+    // Phase 1: override removido do campaignInput repassado ao serviço
+    expect(buildCampaignBrief).toHaveBeenCalled();
+    const campaignInput1 = (buildCampaignBrief as any).mock.calls[0][1];
+    expect((campaignInput1 as any)?.inputValidationOverride).toBeUndefined();
+
+    // user_confirmed_continue → NUNCA removido
+    mockInputValidationValidate.mockClear();
+    const res2 = await POST(makeRequest({
+      ...VALID_REQUEST_BODY,
+      inputValidationOverride: { productImageCheck: 'user_confirmed_continue' },
+    }));
+    await res2.text();
+    expect(res2.status).toBe(200);
+    expect(mockInputValidationValidate).not.toHaveBeenCalled();
+    expect((buildCampaignBrief as any).mock.calls.length).toBeGreaterThanOrEqual(2);
+    const campaignInput2 = (buildCampaignBrief as any).mock.calls[1][1];
+    expect((campaignInput2 as any)?.inputValidationOverride?.productImageCheck).toBe('user_confirmed_continue');
   });
 });
 
@@ -1141,7 +1463,7 @@ describe('Pipeline cost accounting (6.3)', () => {
     await setupPipelineSuccessMocks({ reviewAttempts: 2 });
     await runPipeline();
 
-    expect(createCampaign).toHaveBeenCalledWith(STORE_ID, expect.objectContaining({ operationRunId: RUN_IDS.operationRunId }));
+    expect(createCampaign).toHaveBeenCalledWith(STORE_ID, expect.objectContaining({ operationRunId: RUN_IDS.operationRunId }), expect.any(String));
     const types = new Set(capturedEvents.map((e: any) => e.generationType));
     expect(types).toEqual(new Set(['campaign_copy', 'campaign_input_validation', 'campaign_image', 'campaign_image_review', 'campaign_pipeline']));
     for (const e of capturedEvents) {
@@ -1155,7 +1477,8 @@ describe('Pipeline cost accounting (6.3)', () => {
 
     expect(createCampaign).toHaveBeenCalledWith(
       STORE_ID,
-      expect.objectContaining({ operationRunId: RUN_IDS.operationRunId })
+      expect.objectContaining({ operationRunId: RUN_IDS.operationRunId }),
+      expect.any(String)
     );
     // o mesmo run id aparece nos eventos call-level e no delivery
     const delivery = capturedEvents.find((e: any) => e.generationType === 'campaign_pipeline');

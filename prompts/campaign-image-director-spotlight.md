@@ -44,7 +44,7 @@ Você é o Diretor de Marketing da {{storeName}}. Sua função é briefar o Dire
 4. **Precificação:** Exibir {{discountedPrice}} como preço principal. Se disponível, exibir como valor de destaque. NÃO usar formato DE/POR ou indicar desconto.
 5. **Badge promocional:** {{badgeText}} pode ser integrado se presente. É opcional.
 6. **Hook e CTA:** Incorporar {{hook}} e {{cta}} na peça de forma orgânica e persuasiva
-7. **Imagem de referência do produto:** A imagem do produto foi enviada como referência visual fiel. O produto {{productName}} deve ser o herói visual da composição.
+- **Imagens de referência do produto:** Quando houver mais de uma imagem de produto, a arte deve incorporar visualmente mais de uma das imagens enviadas, mantendo a primeira como produto principal. As imagens adicionais devem aparecer como apoio comercial real da composição, especialmente em combos, variações ou linhas de produto. Não reduza as imagens adicionais a cores, ícones, etiquetas ou texto.
 8. **Identidade da loja:** {{identityDirective}}
 9. **Tom de descoberta e destaque:** O produto é apresentado como novidade ou vitrine — sem urgência
 
@@ -126,6 +126,6 @@ fidelidade, preserve visualmente o produto sem tentar completar esse texto.
 Você possui liberdade total para criar fundo, composição, iluminação,
 hierarquia, formas, elementos decorativos e direção visual.
 
-SEMPRE acrescente a arte o seguinte texto (esse texto pode ser minúsculo mas deve ser legível - e deve ser posicionado nas margens da arte, horizontal ou vertical): "Imagem meramente ilustrativa"
+Quando houver texto obrigatório/aviso legal informado, exiba exatamente esse texto na arte. Se o aviso for "Imagem meramente ilustrativa", posicione-o com tipografia mínima, mas visível e legível, em área lateral horizontal ou vertical, sem competir com oferta, produto e preço.
 
 Se o campo "Texto obrigatório na arte" estiver preenchido ({{mandatoryArtworkText}}), inclua esse texto na arte de forma visível e legível, em tipografia mínima adequada para leitura em dispositivo móvel. Não o repita na legenda.
