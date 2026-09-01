@@ -1,7 +1,12 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { transcodeToJpeg } from "./image-processor";
-import type { CampaignRecord, CampaignReadyData, CreateCampaignInput } from "./types";
+import type {
+  CampaignArtVersion,
+  CampaignRecord,
+  CampaignReadyData,
+  CreateCampaignInput,
+} from "./types";
 
 export async function createCampaign(
   storeId: string,
@@ -213,4 +218,51 @@ export async function removeCampaignInputs(
   if (removeError) {
     throw new Error(removeError.message);
   }
+}
+
+// ─── F37.1 (D5/D7): versões de arte (campaign_art_versions) ──────────────────
+
+// Insere a v1 (candidata pending/active). v1 nasce pending/active (candidata da
+// revisão); render_snapshot/generation_metadata/rejection_reason ficam NULL na
+// 37.1 (D4). Chamado pelo generate-image quando a flag campaign_approval_enabled
+// está ligada (fail-safe — falha → log + continua, campanha legacy).
+export async function createArtVersion(
+  campaignId: string,
+  versionNumber: number,
+  storagePath: string | null,
+  briefSnapshot: Record<string, unknown>
+): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from("campaign_art_versions")
+    .insert({
+      campaign_id: campaignId,
+      version_number: versionNumber,
+      status: "pending",
+      asset_status: "active",
+      storage_path: storagePath,
+      brief_snapshot: briefSnapshot,
+    });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+// Lista as versões de arte de uma campanha ordenadas por version_number —
+// fonte única para computeApprovalState e para a tela de revisão (decisão 3).
+// Campanha sem linhas → [] (estado legacy).
+export async function listArtVersions(
+  campaignId: string
+): Promise<CampaignArtVersion[]> {
+  const { data, error } = await supabaseAdmin
+    .from("campaign_art_versions")
+    .select("*")
+    .eq("campaign_id", campaignId)
+    .order("version_number", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as CampaignArtVersion[];
 }

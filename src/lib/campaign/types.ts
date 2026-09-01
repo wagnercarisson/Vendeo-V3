@@ -6,6 +6,27 @@ export type CampaignIntent = "offer" | "spotlight" | "exclusive";
 
 export type CampaignStatus = "generating" | "ready" | "error";
 
+// F37.1 (D5/D7): estado de aprovação da campanha + versões de arte.
+export type CampaignApprovalStatus = "pending_approval" | "approved";
+
+export type ArtVersionStatus = "pending" | "approved" | "rejected";
+
+export interface CampaignArtVersion {
+  id: string;
+  campaign_id: string;
+  version_number: number; // 1..3
+  status: ArtVersionStatus;
+  storage_path: string | null; // NULL após descarte do asset
+  asset_status: "active" | "discarded";
+  asset_deleted_at: string | null;
+  brief_snapshot: Record<string, unknown>; // campaign_brief_v1 (F39), sem base64
+  render_snapshot: Record<string, unknown> | null;
+  generation_metadata: Record<string, unknown> | null;
+  rejection_reason: Record<string, unknown> | null;
+  correction_in_progress: boolean; // decisão 5 — inalcançável na 37.1
+  created_at: string;
+}
+
 export interface CampaignRecord {
   id: string;
   store_id: string;
@@ -19,6 +40,10 @@ export interface CampaignRecord {
   publication_copy_current: Record<string, unknown> | null;
   storage_path: string;
   error_message: string | null;
+  approval_status: CampaignApprovalStatus;
+  rejection_count: number;
+  approved_version_id: string | null;
+  approved_at: string | null;
   created_at: string;
   updated_at: string;
 }
