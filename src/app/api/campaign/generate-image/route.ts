@@ -6,7 +6,7 @@ import type { OperationCostResolution } from "@/lib/credit/types";
 import { ImageGenerationService } from "@/lib/image-generation/services/image-generation-service";
 import type { GenerateImageServiceResult } from "@/lib/image-generation/services/image-generation-service";
 import { InputValidationService } from "@/lib/image-generation/services/input-validation-service";
-import { isForceBriefVisionCheckEnabled } from "@/lib/feature-flags/feature-flag-service";
+import { isForceBriefVisionCheckEnabled, isCampaignApprovalEnabled } from "@/lib/feature-flags/feature-flag-service";
 import { createImageProvider } from "@/lib/image-generation/providers/factory";
 import { resolveStoreIdentity, validateIdentityReference, buildCampaignBrief } from "@/lib/store-identity-service";
 import { buildCampaignBriefFromFlat, buildCampaignBriefSnapshot, mimeTypeFromDataUrl } from "@/lib/campaign/brief";
@@ -17,7 +17,7 @@ import { getStoreReadiness } from "@/lib/store-readiness";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { supabaseAdmin } from '@/lib/supabase/server';
 import type { CampaignInput } from "@/components/campaign/types";
-import { createCampaign, dataUrlToCampaignImage, uploadCampaignImage, uploadCampaignInputImage, removeCampaignInputs, updateCampaignReady, updateCampaignError, deleteCampaignImage } from "@/lib/campaign/persistence";
+import { createCampaign, dataUrlToCampaignImage, uploadCampaignImage, uploadCampaignInputImage, removeCampaignInputs, updateCampaignReady, updateCampaignError, deleteCampaignImage, createArtVersion } from "@/lib/campaign/persistence";
 import { transcodeToJpeg } from "@/lib/campaign/image-processor";
 import { checkRateLimit, recordGenerationAttempt } from "@/lib/rate-limit/rate-limit";
 import { CreditService } from "@/lib/credit/credit-service";
@@ -461,6 +461,18 @@ export const POST = apiHandler(async (request: NextRequest) => {
     campaignId = campaign.id;
     storagePath = campaign.storagePath;
     logPipelineEvent({ event: "campaign_create", traceId, phase: "pre_stream", status: "complete", campaignId: campaign.id, storeId, userId: user.userId });
+
+    // F37.1 (D8/D10): quando a flag está ligada, insere a v1 (candidata
+    // pending/active) com brief_snapshot = campaign_brief_v1 persistido.
+    // Fail-safe: falha no insert → log + continua; a campanha nasce sem versões
+    // e é exibida como legacy (D1 — a flag nunca derruba a geração).
+    try {
+      if (await isCampaignApprovalEnabled()) {
+        await createArtVersion(campaign.id, 1, campaign.storagePath, inputSnapshot);
+      }
+    } catch (err) {
+      console.error(`[generate-image] createArtVersion v1 failed (fail-safe) — ${err instanceof Error ? err.message : String(err)}`);
+    }
   } catch (err) {
     logPipelineEvent({ event: "campaign_create", traceId, phase: "pre_stream", status: "failed", storeId, userId: user.userId, errorMessage: err instanceof Error ? err.message : String(err) });
     console.error(`[generate-image] createCampaign error — ${err instanceof Error ? err.message : String(err)}`);

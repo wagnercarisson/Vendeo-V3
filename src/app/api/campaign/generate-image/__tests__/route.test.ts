@@ -91,11 +91,15 @@ const { mockInputValidationValidate } = vi.hoisted(() => ({
 }));
 
 // F43 (D5): mock do serviço de leitura da flag force_brief_vision_check.
-const { mockIsForceBriefVisionCheckEnabled } = vi.hoisted(() => ({
+// F37.1 (D1): mock de isCampaignApprovalEnabled — default false (flag off
+// preserva o comportamento atual; cenários flag on no plano 37-1-12).
+const { mockIsForceBriefVisionCheckEnabled, mockIsCampaignApprovalEnabled } = vi.hoisted(() => ({
   mockIsForceBriefVisionCheckEnabled: vi.fn(async () => false),
+  mockIsCampaignApprovalEnabled: vi.fn(async () => false),
 }));
 vi.mock('@/lib/feature-flags/feature-flag-service', () => ({
   isForceBriefVisionCheckEnabled: mockIsForceBriefVisionCheckEnabled,
+  isCampaignApprovalEnabled: mockIsCampaignApprovalEnabled,
   FORCE_BRIEF_VISION_CHECK_KEY: "force_brief_vision_check",
   FeatureFlagService: vi.fn(),
 }));
