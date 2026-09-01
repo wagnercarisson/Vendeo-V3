@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireSameOrigin } from "@/lib/auth/csrf";
 import { requireApiUser } from "@/lib/auth/require-user";
-import { getCampaign } from "@/lib/campaign/persistence";
+import { getCampaign, listArtVersions } from "@/lib/campaign/persistence";
 import { requireOwnership } from "@/lib/auth/store-ownership";
 import { validatePublicationCopy } from "@/lib/campaign/publication-copy";
+import { computeApprovalState, isDeliveryReleased } from "@/lib/campaign/display";
+import { isCampaignApprovalEnabled } from "@/lib/feature-flags/feature-flag-service";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { notFound } from "@/lib/api-error-response";
@@ -31,6 +33,17 @@ export const PATCH = apiHandler(async (
   }
 
   await requireOwnership(campaign.store_id, user.userId);
+
+  // F37.1 (D2/decisão 4): gate de aprovação — enquanto a candidata não é
+  // aprovada (pending/regenerating com flag on), a edição/restore da copy é
+  // bloqueada (403, nada persistido). not_enabled/legacy/approved → normal.
+  if (await isCampaignApprovalEnabled()) {
+    const versions = await listArtVersions(campaign.id);
+    const state = computeApprovalState(campaign, versions, true);
+    if (!isDeliveryReleased(state)) {
+      return NextResponse.json({ error: "Campaign pending approval" }, { status: 403 });
+    }
+  }
 
   let body: unknown;
   try {
