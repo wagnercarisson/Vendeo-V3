@@ -879,9 +879,20 @@ Plans:
 
 **Source of truth:** `openspec/changes/fase-45-briefing-contextual-do-diretor-de-arte/`
 
-**Plans:** 0/7 planned (em planejamento)
+**Plans:** 7/7 plans planned (5 waves) — em planejamento
 
-**Waves:** a definir no planejamento
+**Waves:** 5 waves — 45-01/45-02:1, 45-03/45-04:2, 45-05:3, 45-06:4, 45-07:5
+
+```
+Plans:
+- [ ] 45-01-PLAN.md — Trackings (grep F45/F44/Stripe) + inventário de consumidores + baselines (Wave 1)
+- [ ] 45-02-PLAN.md — Helper puro art-director-briefing.ts (extração sem mudança de comportamento) (Wave 1)
+- [ ] 45-03-PLAN.md — Reescrita offer + base em editorial + blocos + montagem contextual offer (Wave 2)
+- [ ] 45-04-PLAN.md — Reescrita spotlight + exclusive + ajustes de blocos por intent (Wave 2)
+- [ ] 45-05-PLAN.md — Testes: golden→invariantes + validatePrompts + prompt-reframe + novo art-director-briefing.test.ts (Wave 3)
+- [ ] 45-06-PLAN.md — Regressão completa + verificação não-mudança + revisão humana dos 4 .md (Wave 4)
+- [ ] 45-07-PLAN.md — Verificação final (VERIFICATION.md + UAT.md + registros/arquivamento) (Wave 5)
+```
 
 ---
 
