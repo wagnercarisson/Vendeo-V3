@@ -4,6 +4,7 @@ import type { ImageProvider, ImageProviderOutput, ImageProviderUsageMeta } from 
 import type { GenerateImageRequest, GenerateImageSuccessResponse, GenerationPhase, GenerationPhaseEvent, ValidationContext, InputValidationResult, ImageReviewResult } from "@/lib/image-generation/schema";
 import type { ResolvedCampaignContext } from "@/components/campaign/types";
 import type { CampaignBrief } from "@/lib/campaign/brief";
+import { ILLUSTRATIVE_NOTICE_TEXT } from "@/lib/campaign/constants";
 import { InputValidationService } from "@/lib/image-generation/services/input-validation-service";
 import { ImageReviewService } from "@/lib/image-generation/services/image-review-service";
 import type { ImageReviewInput } from "@/lib/image-generation/services/image-review-service";
@@ -64,6 +65,29 @@ enum GenerationState {
   REGENERATE = "REGENERATE",
   COMPLETE = "COMPLETE",
   ERROR = "ERROR",
+}
+
+// ─── Split semântico do aviso ilustrativo (quick 260902-kqo) ────────────────
+// O legalNotice.text chega ao diretor concatenado: quando o lojista marca o aviso
+// ilustrativo E digita texto livre, o helper do form monta `${ILLUSTRATIVE_NOTICE_TEXT}\n${free}`
+// (use-campaign-form.ts buildMandatoryArtworkText). Este split acontece SOMENTE na
+// montagem das variáveis do diretor — UI, contrato HTTP, snapshot/domínio (legalNotice.text
+// integral) e o revisor de imagem continuam consumindo o texto completo como hoje.
+// Casos determinísticos sobre o `combined` já resolvido (enabled ? text : ""):
+//   1. texto é apenas a constante (aviso marcado sem texto livre) → aviso isolado;
+//   2. prefixo canônico + "\n" (aviso marcado com texto livre) → separa aviso × texto livre;
+//   3. qualquer outro (texto livre-only / legado) → texto integral do lojista, sem aviso.
+function splitDirectorLegalText(combined: string): { merchantText: string; illustrativeNotice: string } {
+  if (combined === ILLUSTRATIVE_NOTICE_TEXT) {
+    return { merchantText: "", illustrativeNotice: ILLUSTRATIVE_NOTICE_TEXT };
+  }
+  if (combined.startsWith(ILLUSTRATIVE_NOTICE_TEXT + "\n")) {
+    return {
+      merchantText: combined.slice(ILLUSTRATIVE_NOTICE_TEXT.length + 1),
+      illustrativeNotice: ILLUSTRATIVE_NOTICE_TEXT,
+    };
+  }
+  return { merchantText: combined, illustrativeNotice: "" };
 }
 
 export class ImageGenerationService {
@@ -915,6 +939,14 @@ export class ImageGenerationService {
       }
     })();
 
+    // Quick 260902-kqo: separa semanticamente o aviso fixo (constante canônica) do
+    // texto obrigatório livre do lojista, APENAS na montagem das variáveis do diretor.
+    const { merchantText, illustrativeNotice } = splitDirectorLegalText(
+      brief.commercial.legalNotice?.enabled
+        ? (brief.commercial.legalNotice.text ?? "")
+        : ""
+    );
+
     return {
       productName: effectiveProductName,
       storeName: context.store.name ?? '',
@@ -940,9 +972,8 @@ export class ImageGenerationService {
         : "",
       availabilityNotes: brief.commercial.availabilityNotes ?? "",
       sensitiveConstraints: brief.creativeContext.sensitiveConstraints ?? "",
-      mandatoryArtworkText: brief.commercial.legalNotice?.enabled
-        ? (brief.commercial.legalNotice.text ?? "")
-        : "",
+      mandatoryArtworkText: merchantText,
+      illustrativeNotice,
       identityImageUrl: context.identity.imageUrl ?? "",
       identityDirective: context.identity.directive ?? "",
       campaignIntent,

@@ -5,6 +5,7 @@ import { buildCampaignBriefFromFlat } from '@/lib/campaign/brief';
 import type { ResolvedCampaignContext } from '@/components/campaign/types';
 import type { GenerateImageRequest } from '@/lib/image-generation/schema';
 import { PromptLoader } from '@/lib/image-generation/prompt-loader';
+import { ILLUSTRATIVE_NOTICE_TEXT } from '@/lib/campaign/constants';
 
 // Mock prompt-loader module to avoid file system reads in buildPromptVariables
 // The PromptLoader injected via constructor already overrides the default,
@@ -558,6 +559,7 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
     'originalPrice', 'discountedPrice', 'badgeText', 'hook', 'cta', 'objective',
     'campaignDetails', 'additionalDetails', 'targetChannel', 'format', 'validity',
     'availabilityNotes', 'sensitiveConstraints', 'mandatoryArtworkText',
+    'illustrativeNotice',
     'identityImageUrl', 'identityDirective', 'campaignIntent', 'preserveImageDirective',
     'commercialFrame', 'brandProfileSection', 'brandColorsChosen', 'visualStyle',
     'visualTone', 'brandPersonality', 'campaignGuidelines', 'campaignBrief',
@@ -576,7 +578,7 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
     return service;
   }
 
-  it('8.16 offer: buildPromptVariables produz o MESMO conjunto de 38 keys (regressão F39-15)', () => {
+  it('8.16 offer: buildPromptVariables produz o MESMO conjunto de 39 keys (regressão F39-15)', () => {
     const service = buildService();
     const brief = createMinimalBrief({
       validity: 'válida até 31/12',
@@ -586,16 +588,18 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
 
     const keys = Object.keys(vars).sort();
     expect(keys).toEqual([...EXPECTED_KEYS].sort());
-    expect(keys).toHaveLength(38);
+    expect(keys).toHaveLength(39);
     expect(vars.productName).toBe('Produto Teste');
     expect(vars.discountedPrice).toContain('19,90');
     expect(vars.badgeText).toBe('Oferta');
     expect(vars.validity).toBe('válida até 31/12');
-    expect(vars.mandatoryArtworkText).toBe('Imagem meramente ilustrativa');
+    // Aviso marcado SEM texto livre → mandatoryArtworkText vazio e aviso isolado (split caso 1).
+    expect(vars.mandatoryArtworkText).toBe('');
+    expect(vars.illustrativeNotice).toBe(ILLUSTRATIVE_NOTICE_TEXT);
     expect(vars.campaignIntent).toBe('offer');
   });
 
-  it('8.16 spotlight: mesmas 38 keys, preserveImageContext não-normalizado', () => {
+  it('8.16 spotlight: mesmas 39 keys, preserveImageContext não-normalizado', () => {
     const service = buildService();
     const brief = createMinimalBrief({
       campaignIntent: 'spotlight',
@@ -603,18 +607,18 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
     });
     const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
 
-    expect(Object.keys(vars)).toHaveLength(38);
+    expect(Object.keys(vars)).toHaveLength(39);
     expect(vars.campaignIntent).toBe('spotlight');
     expect(vars.preserveImageDirective).toContain('Preservar o contexto original');
     expect(vars.validity).toBe('');
   });
 
-  it('8.16 exclusive: mesmas 38 keys', () => {
+  it('8.16 exclusive: mesmas 39 keys', () => {
     const service = buildService();
     const brief = createMinimalBrief({ campaignIntent: 'exclusive' });
     const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
 
-    expect(Object.keys(vars)).toHaveLength(38);
+    expect(Object.keys(vars)).toHaveLength(39);
     expect(vars.campaignIntent).toBe('exclusive');
     expect(vars.commercialFrame).toContain('sem divulgação de preço');
   });
@@ -625,13 +629,15 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
     const spotlight = createMinimalBrief({ campaignIntent: 'spotlight', preserveImageContext: true });
     const spotlightVars = (service as any).buildPromptVariables(spotlight, createContext(), spotlight.product.name) as Record<string, string>;
     expect(spotlightVars.mandatoryArtworkText).toBe('');
+    expect(spotlightVars.illustrativeNotice).toBe('');
 
     const exclusive = createMinimalBrief({ campaignIntent: 'exclusive' });
     const exclusiveVars = (service as any).buildPromptVariables(exclusive, createContext(), exclusive.product.name) as Record<string, string>;
     expect(exclusiveVars.mandatoryArtworkText).toBe('');
+    expect(exclusiveVars.illustrativeNotice).toBe('');
   });
 
-  it('9.5 golden offer com novos campos preenchidos mantém 38 keys (D6)', () => {
+  it('9.5 golden offer com novos campos preenchidos mantém 39 keys (D6)', () => {
     const service = buildService();
     const brief = createMinimalBrief({
       validity: 'até 30/09',
@@ -639,13 +645,15 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
     });
     const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
 
-    expect(Object.keys(vars)).toHaveLength(38);
+    expect(Object.keys(vars)).toHaveLength(39);
     expect([...EXPECTED_KEYS].sort()).toEqual(Object.keys(vars).sort());
     expect(vars.validity).toBe('até 30/09');
-    expect(vars.mandatoryArtworkText).toBe('Imagem meramente ilustrativa');
+    // Aviso marcado SEM texto livre → aviso isolado em illustrativeNotice (split caso 1).
+    expect(vars.mandatoryArtworkText).toBe('');
+    expect(vars.illustrativeNotice).toBe(ILLUSTRATIVE_NOTICE_TEXT);
   });
 
-  it('20 (F41): golden com multi-imagem mantém o MESMO conjunto de 38 keys por intent (D6)', () => {
+  it('20 (F41): golden com multi-imagem mantém o MESMO conjunto de 39 keys por intent (D6)', () => {
     const service = buildService();
     const multiBrief = (intent: 'offer' | 'spotlight' | 'exclusive') =>
       createMinimalBrief({
@@ -662,8 +670,41 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
       const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
       const keys = Object.keys(vars).sort();
       expect(keys, `intent ${intent}`).toEqual([...EXPECTED_KEYS].sort());
-      expect(keys, `intent ${intent}`).toHaveLength(38);
+      expect(keys, `intent ${intent}`).toHaveLength(39);
     }
+  });
+
+  it('260902-kqo (a): aviso + texto livre → mandatoryArtworkText só com o texto do lojista e illustrativeNotice canônico', () => {
+    const service = buildService();
+    const brief = createMinimalBrief({
+      mandatoryArtworkText: `${ILLUSTRATIVE_NOTICE_TEXT}\nTexto promocional`,
+    });
+    const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
+
+    expect(vars.mandatoryArtworkText).toBe('Texto promocional');
+    expect(vars.illustrativeNotice).toBe(ILLUSTRATIVE_NOTICE_TEXT);
+  });
+
+  it('260902-kqo (b): texto livre apenas (checkbox desmarcado/legado) → texto integral em mandatoryArtworkText e illustrativeNotice vazio', () => {
+    const service = buildService();
+    const brief = createMinimalBrief({
+      mandatoryArtworkText: 'Texto promocional',
+    });
+    const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
+
+    expect(vars.mandatoryArtworkText).toBe('Texto promocional');
+    expect(vars.illustrativeNotice).toBe('');
+  });
+
+  it('260902-kqo (c): texto legado que começa com a constante mas SEM quebra de linha → free-only integral (comportamento atual preservado)', () => {
+    const service = buildService();
+    const brief = createMinimalBrief({
+      mandatoryArtworkText: 'Imagem meramente ilustrativa de produtos',
+    });
+    const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
+
+    expect(vars.mandatoryArtworkText).toBe('Imagem meramente ilustrativa de produtos');
+    expect(vars.illustrativeNotice).toBe('');
   });
 
   it('8.17 buildCommercialRepertoire decide por validity.enabled/displayText (sem heurística string)', () => {
