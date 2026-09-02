@@ -14,10 +14,11 @@ const PROMPTS = [
   "campaign-image-director-exclusive.md",
 ];
 
-const BLOCO_CONDICIONAL =
-  'Quando houver texto obrigatório/aviso legal informado, exiba exatamente esse texto na arte. Se o aviso for "Imagem meramente ilustrativa", posicione-o com tipografia mínima, mas visível e legível, em área lateral horizontal ou vertical, sem competir com oferta, produto e preço.';
+const LINHA_AVISO_SEPARADO =
+  'Quando houver aviso ilustrativo, exiba "{{illustrativeNotice}}" em texto mínimo, legível e discreto, separado dos demais textos, preferencialmente nas laterais da arte.';
 const LINHA_MANTIDA =
   'Se o campo "Texto obrigatório na arte" estiver preenchido ({{mandatoryArtworkText}}), inclua esse texto na arte de forma visível e legível, em tipografia mínima adequada para leitura em dispositivo móvel. Não o repita na legenda.';
+const LINHA_TABELA_AVISO = "| **Aviso ilustrativo** | {{illustrativeNotice}} |";
 const LINHA_VALIDADE = "**Validade da oferta:** {{validity}}";
 
 describe("prompt reframe D6 (testes 16-17 + checks de conteúdo)", () => {
@@ -31,11 +32,12 @@ describe("prompt reframe D6 (testes 16-17 + checks de conteúdo)", () => {
     }
   });
 
-  it("17: os 4 prompts contêm o bloco condicional e a linha mantida ({{mandatoryArtworkText}})", () => {
+  it("17: os 4 prompts contêm a instrução de aviso separado, a linha mantida ({{mandatoryArtworkText}}) e a linha de tabela do aviso ({{illustrativeNotice}})", () => {
     for (const name of PROMPTS) {
       const prompt = readPrompt(name);
-      expect(prompt, `${name} sem bloco condicional`).toContain(BLOCO_CONDICIONAL);
+      expect(prompt, `${name} sem a instrução de aviso separado`).toContain(LINHA_AVISO_SEPARADO);
       expect(prompt, `${name} sem a linha condicional do campo`).toContain(LINHA_MANTIDA);
+      expect(prompt, `${name} sem a linha de tabela do aviso`).toContain(LINHA_TABELA_AVISO);
     }
   });
 
@@ -46,12 +48,13 @@ describe("prompt reframe D6 (testes 16-17 + checks de conteúdo)", () => {
     expect(readPrompt("campaign-image-director-exclusive.md")).not.toContain(LINHA_VALIDADE);
   });
 
-  it("check B: singular alinhado à constante, sem plural, nos 4 prompts (F40-02)", () => {
+  it("check B: singular alinhado à constante (fonte única via variável), sem plural, nos 4 prompts (F40-02/quick 260902-kqo)", () => {
     expect(ILLUSTRATIVE_NOTICE_TEXT).toBe("Imagem meramente ilustrativa");
     for (const name of PROMPTS) {
       const prompt = readPrompt(name);
       expect(prompt, `${name} contém plural`).not.toContain("Imagens meramente ilustrativas");
-      expect(prompt, `${name} sem o singular canônico`).toContain("Imagem meramente ilustrativa");
+      expect(prompt, `${name} duplica o literal canônico`).not.toContain("Imagem meramente ilustrativa");
+      expect(prompt, `${name} sem o placeholder ilustrativo`).toContain("{{illustrativeNotice}}");
     }
   });
 
