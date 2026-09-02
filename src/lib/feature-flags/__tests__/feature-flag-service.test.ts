@@ -240,3 +240,55 @@ describe("FeatureFlagService — flags de geração (QCW, F38 D5 fail-open)", ()
     expect(await service.isVisualSignatureGenerationEnabled()).toBe(true);
   });
 });
+
+describe("FeatureFlagService — isCampaignApprovalEnabled (F37.1 D1, fail-closed)", () => {
+  function mockFlag(enabled: boolean | null, error: { message: string } | null = null) {
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "feature_flags") {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              maybeSingle: vi.fn(() =>
+                Promise.resolve(error ? { data: null, error } : { data: { enabled }, error: null })
+              ),
+            })),
+          })),
+        };
+      }
+      return {};
+    });
+  }
+
+  it("18.3 — leitura ok com enabled: true → true", async () => {
+    mockFlag(true);
+    const service = new FeatureFlagService();
+    expect(await service.isCampaignApprovalEnabled()).toBe(true);
+  });
+
+  it("18.3 — leitura ok com enabled: false → false", async () => {
+    mockFlag(false);
+    const service = new FeatureFlagService();
+    expect(await service.isCampaignApprovalEnabled()).toBe(false);
+  });
+
+  it("18.3 — not-found (data null) → false (fallback fail-closed)", async () => {
+    mockFlag(null);
+    const service = new FeatureFlagService();
+    expect(await service.isCampaignApprovalEnabled()).toBe(false);
+  });
+
+  it("18.3 — erro de leitura → false (fail-closed)", async () => {
+    mockFlag(null, { message: "db unavailable" });
+    const service = new FeatureFlagService();
+    expect(await service.isCampaignApprovalEnabled()).toBe(false);
+  });
+
+  it("18.3 — NENHUMA env var consultada (sem envOverride — readFlag(key, false) com 2 args)", async () => {
+    mockFlag(true);
+    const service = new FeatureFlagService();
+    await service.isCampaignApprovalEnabled();
+    // sem VENDEO_CAPTCHA_ENABLED/VENDEO_FORCE_BRIEF_VISION_CHECK envolvidas
+    expect(process.env.VENDEO_CAPTCHA_ENABLED).toBeUndefined();
+    expect(process.env.VENDEO_FORCE_BRIEF_VISION_CHECK).toBeUndefined();
+  });
+});

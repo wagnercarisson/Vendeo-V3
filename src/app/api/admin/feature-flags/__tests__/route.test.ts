@@ -131,6 +131,14 @@ describe("F43 admin feature-flags (Testes 24-25)", () => {
                     updated_by: null,
                     updated_at: null,
                   },
+                  {
+                    id: "flag-id-3",
+                    key: "campaign_approval_enabled",
+                    enabled: false,
+                    description: "desc approval",
+                    updated_by: null,
+                    updated_at: null,
+                  },
                 ],
                 error: null,
               })
@@ -145,8 +153,35 @@ describe("F43 admin feature-flags (Testes 24-25)", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(Array.isArray(body.flags)).toBe(true);
-    expect(body.flags).toHaveLength(2);
+    expect(body.flags).toHaveLength(3);
     expect(body.flags[0].key).toBe("force_brief_vision_check");
     expect(body.flags[1].key).toBe("captcha_enabled");
+    expect(body.flags[2].key).toBe("campaign_approval_enabled");
+  });
+
+  it("18.4 — PUT da nova flag campaign_approval_enabled funciona com motivo obrigatório (RPC genérico, F43)", async () => {
+    mockRpc.mockResolvedValue({
+      data: { id: "flag-id-3", key: "campaign_approval_enabled", enabled: true },
+      error: null,
+    });
+
+    const res = await putFlag({
+      key: "campaign_approval_enabled",
+      enabled: true,
+      reason: "Iniciar experimento beta de aprovação da arte",
+      operationId: "op-approval-1",
+    });
+
+    expect(res.status).toBe(200);
+    expect(mockRpc).toHaveBeenCalledWith("admin_update_feature_flag", {
+      p_key: "campaign_approval_enabled",
+      p_enabled: true,
+      p_reason: "Iniciar experimento beta de aprovação da arte",
+      p_actor_id: "admin-1",
+      p_operation_id: "op-approval-1",
+    });
+    const body = await res.json();
+    expect(body.key).toBe("campaign_approval_enabled");
+    expect(body.enabled).toBe(true);
   });
 });

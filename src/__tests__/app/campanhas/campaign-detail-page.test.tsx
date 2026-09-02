@@ -31,10 +31,27 @@ vi.mock("@/lib/campaign/display", () => ({
   getCampaignForDisplay: mockGetCampaignForDisplay,
   generateSignedPreviewUrl: mockGenerateSignedPreviewUrl,
   mapCampaignToProps: mockMapCampaignToProps,
+  computeApprovalState: vi.fn(() => ({ status: "not_enabled" })),
+  getActiveCandidateArtVersion: vi.fn(() => null),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
   createServerClient: vi.fn().mockResolvedValue({}),
+  supabaseAdmin: {
+    from: vi.fn(),
+    storage: { from: vi.fn() },
+  },
+}));
+
+// F37.1: mocks da derivação de aprovação do page.tsx (flag off default).
+const mockIsCampaignApprovalEnabled = vi.fn().mockResolvedValue(false);
+vi.mock("@/lib/feature-flags/feature-flag-service", () => ({
+  isCampaignApprovalEnabled: mockIsCampaignApprovalEnabled,
+}));
+
+const mockListArtVersions = vi.fn().mockResolvedValue([]);
+vi.mock("@/lib/campaign/persistence", () => ({
+  listArtVersions: mockListArtVersions,
 }));
 
 const mockGetStoreReadiness = vi.fn();

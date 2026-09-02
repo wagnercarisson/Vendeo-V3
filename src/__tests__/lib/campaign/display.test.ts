@@ -35,6 +35,10 @@ const mockCampaign: CampaignRecord = {
   publication_copy_current: null,
   storage_path: "store-123/550e8400-e29b-41d4-a716-446655440000.jpg",
   error_message: null,
+  approval_status: "pending_approval",
+  rejection_count: 0,
+  approved_version_id: null,
+  approved_at: null,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };
@@ -184,6 +188,10 @@ describe("getEffectivePublicationCopy", () => {
       },
       storage_path: "store-123/camp.jpg",
       error_message: null,
+      approval_status: "pending_approval",
+      rejection_count: 0,
+      approved_version_id: null,
+      approved_at: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
@@ -212,6 +220,10 @@ describe("getEffectivePublicationCopy", () => {
       publication_copy_current: null,
       storage_path: "store-123/camp.jpg",
       error_message: null,
+      approval_status: "pending_approval",
+      rejection_count: 0,
+      approved_version_id: null,
+      approved_at: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
@@ -240,6 +252,10 @@ describe("getEffectivePublicationCopy", () => {
       publication_copy_current: { caption: "only" }, // missing hashtags and cta_post
       storage_path: "store-123/camp.jpg",
       error_message: null,
+      approval_status: "pending_approval",
+      rejection_count: 0,
+      approved_version_id: null,
+      approved_at: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
@@ -264,6 +280,10 @@ describe("getEffectivePublicationCopy", () => {
       publication_copy_current: null,
       storage_path: "store-123/camp.jpg",
       error_message: null,
+      approval_status: "pending_approval",
+      rejection_count: 0,
+      approved_version_id: null,
+      approved_at: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
