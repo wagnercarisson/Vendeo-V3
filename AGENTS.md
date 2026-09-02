@@ -193,9 +193,9 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 |------|------|--------|-------------|
 | 45-01 | 1 | ✍️ escrito | Trackings — grep-verificação F45/F44/Stripe (registro 371077f7) + inventário de consumidores das chaves + baselines de não-mudança e de testes (tasks 1.1–1.4) |
 | 45-02 | 1 | ✍️ escrito | Helper puro `art-director-briefing.ts` — extração SEM mudança de comportamento + `sanitizePromptText` cópia pura + delegação com saída idêntica + testes iniciais (tasks 2.1–2.3) |
-| 45-03 | 2 | ✍️ escrito | Reescrita offer + base em editorial + blocos + montagem contextual offer + deduplicação + validatePrompts/assemblePrompt + saneamento + co-migração do teste do módulo (tasks 3.1–3.6) |
-| 45-04 | 2 | ✍️ escrito | Reescrita spotlight + exclusive + ajustes de blocos por intent (tasks 4.1–4.4) — sequencial após 45-03 |
-| 45-05 | 3 | ✍️ escrito | Testes — golden→invariantes + validatePrompts/kqo + prompt-reframe novas âncoras + `art-director-briefing.test.ts` (aditivo) + suites irmãs SEM co-migração (tasks 5.1–5.5) |
+| 45-03 | 2 | ✍️ escrito | Reescrita offer + base em editorial + blocos + montagem contextual offer + deduplicação + saneamento + **mapa transicional** (mantém chaves legadas de spotlight/exclusive) + **co-migração in-plan** (golden key-set→transicional, prompt-reframe base/offer, validatePrompts offer, teste do módulo) — **4 gates 100% verdes ao final** (tasks 3.1–3.6) |
+| 45-04 | 2 | ✍️ escrito | Reescrita spotlight + exclusive + ajustes de blocos por intent + **remoção de chaves transicionais órfãs (mapa FINAL)** + **co-migração in-plan** (golden→FINAL, prompt-reframe spotlight/exclusive, validatePrompts desses intents) — **4 gates 100% verdes ao final** (tasks 4.1–4.4) — sequencial após 45-03 |
+| 45-05 | 3 | ✍️ escrito | Testes — **ampliação aditiva sobre base verde** (não resolve pendências): golden→invariantes D5 (placeholders ⊆ chaves, determinismo, presente/ausente), validatePrompts por cenário, prompt-reframe invariantes transversais, `art-director-briefing.test.ts` aditivo, suites irmãs SEM co-migração (tasks 5.1–5.5) |
 | 45-06 | 4 | ✍️ escrito | Regressão completa + typecheck/lint/build + verificação não-mudança do contrato externo + revisão humana dos 4 `.md` (checkpoint) (tasks 6.1–6.3) |
 | 45-07 | 5 | ✍️ escrito | Verificação final — `45-VERIFICATION.md` + `45-UAT.md` comparativo + 4 gates + registros/arquivamento do change (checkpoint) (tasks 7.1–7.3) |
 
