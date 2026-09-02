@@ -41,7 +41,7 @@
 | 41 | ✅ Mídia de Campanha Mobile (v1.5) | 13/13 | ✅ Complete | 2026-08-15 |
 | 42 | ✅ Signup Controlado e Elegibilidade Freemium (v1.5) | 20/20 | ✅ Complete | 2026-08-21 |
 | 43 | ✅ Revisão do Brief Pré-Geração (v1.5) | 15/15 | ✅ Complete | 2026-08-21 |
-| 45 | ○ Briefing Contextual do Diretor de Arte (v1.5) | — | Pending    | — |
+| 45 | ○ Briefing Contextual do Diretor de Arte (v1.5) | 0/7 | Planned    | — |
 | — | Monetização pública / Stripe (iniciativa diferida, v1.7+) | — | Fora da numeração | — |
 
 ---
