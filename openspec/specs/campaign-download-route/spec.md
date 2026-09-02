@@ -1,10 +1,10 @@
 # Campaign Download Route
 
-> Synced from `fase-13-servico-persistencia-download` (ADDED).
+> Synced from `fase-13-servico-persistencia-download` (ADDED), then `fase-37-1-approval-gate-candidata-unica` (MODIFIED — gate de aprovação F37 37.1, D2).
 
 ## Purpose
 
-Rota `GET /api/campaign/[id]/download` que gera signed URL temporária e redireciona o owner para download da campanha.
+Rota `GET /api/campaign/[id]/download` que verifica o **estado de aprovação** (gate F37 37.1) e serve o arquivo da campanha ao owner. `pending`/`regenerating` com a flag `campaign_approval_enabled` ligada → **403**; `not_enabled`/`legacy`/`approved` → liberado como hoje.
 
 ## Requirements
 
@@ -16,8 +16,8 @@ O sistema SHALL criar `GET /api/campaign/[id]/download` seguindo o pipeline:
 - Chama `getCampaign(id)` via `supabaseAdmin`
 - Se campanha não existe: 404
 - Chama `requireOwnership(campaign.store_id, user.userId)` — se não pertence: 404 (mesmo status que inexistente)
-- Gera signed URL via `supabaseAdmin.storage.from('campaign-images').createSignedUrl(storage_path, 3600)`
-- Redireciona 302 para a signed URL gerada
+- **Gate de aprovação (F37 37.1, D2):** lê `isCampaignApprovalEnabled()` + `listArtVersions(campaign.id)` e deriva `computeApprovalState`; se `isDeliveryReleased(state) === false` (i.e., `pending`/`regenerating` com a flag ligada) → **403**; `not_enabled`/`legacy`/`approved` → liberado
+- Serve o arquivo de `campaign.storage_path` (para `approved`, repontado para a aprovada no approve; para `legacy`/`not_enabled`, como hoje)
 
 #### Scenario: Sem sessão retorna 401
 
@@ -39,12 +39,17 @@ O sistema SHALL criar `GET /api/campaign/[id]/download` seguindo o pipeline:
 - **WHEN** `GET /api/campaign/[id]/download` é chamado para campanha de outro tenant
 - **THEN** retorna 404 (mesmo status que inexistente)
 
-#### Scenario: Owner acessando retorna 302
+#### Scenario: Download pendente com flag ligada retorna 403
 
-- **WHEN** owner autenticado acessa `GET /api/campaign/[id]/download`
-- **THEN** retorna 302 com signed URL no header `Location`
+- **WHEN** uma campanha `pending` sob a flag `campaign_approval_enabled` tenta o download
+- **THEN** retorna 403 (entrega não liberada)
+
+#### Scenario: Owner acessando campanha liberada retorna a imagem
+
+- **WHEN** owner autenticado acessa o download de uma campanha `not_enabled`/`legacy`/`approved`
+- **THEN** retorna 200 com a imagem de `campaign.storage_path`
 
 #### Scenario: createSignedUrl falha retorna 502
 
-- **WHEN** `createSignedUrl` falha durante o fluxo de download
+- **WHEN** o download de uma campanha liberada falha ao baixar o arquivo
 - **THEN** retorna 502

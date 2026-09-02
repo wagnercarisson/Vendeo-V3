@@ -13,12 +13,12 @@ Copy Director com IA (F23), pipeline de geração paralelo com créditos (F24-F2
 
 ### In Progress
 
-**F37 — Revisão e Aprovação da Arte (v1.5):** em execução em fatias **37.1/37.2/37.3** (padrão F38/38.1/38.2). Fatia 37.1 (Approval Gate + Candidata Única) em andamento — flag `campaign_approval_enabled` (fail-closed), tabela `campaign_art_versions` + colunas de aprovação em `campaigns`, RPC `approve_campaign_art_version` transacional, generate-image insere v1, estado de aprovação/gating (download + copy 403 até aprovar), tela de revisão da candidata, rota approve. Source of truth: `openspec/changes/fase-37-1-approval-gate-candidata-unica/` (decisão do usuário 2026-09-01).
+**F37 — Revisão e Aprovação da Arte (v1.5):** em execução em fatias **37.1/37.2/37.3** (padrão F38/38.1/38.2). **Fatia 37.1 (Approval Gate + Candidata Única) CONCLUÍDA (15/15 plans, 2379 testes, 4 gates verdes, UAT 19.5–19.10 PASS 6/6)** — flag `campaign_approval_enabled` (fail-closed), tabela `campaign_art_versions` + colunas de aprovação em `campaigns`, RPC `approve_campaign_art_version` transacional, generate-image insere v1, estado de aprovação/gating (download + copy 403 até aprovar), tela de revisão da candidata, rota approve. Source of truth: `openspec/changes/fase-37-1-approval-gate-candidata-unica/` (decisão do usuário 2026-09-01).
 
 ### Known Gaps
 
 - Monetização pública / Stripe diferido para v1.7+ (**sem fase numerada** — iniciativa diferida, decisão do alinhamento F43 D1)
-- F37 em execução em fatias 37.1/37.2/37.3 — correção de arte (37.2) e correção factual de briefing (37.3) ainda não implementadas
+- F37 em execução em fatias 37.1/37.2/37.3 — fatia 37.1 CONCLUÍDA (15/15 plans, 2379 testes, 4 gates verdes, UAT 19.5–19.10 PASS); correção de arte (37.2) e correção factual de briefing (37.3) ainda não implementadas
 
 ---
 

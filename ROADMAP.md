@@ -147,7 +147,8 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 
 - [x] Phase 35: Changelog / Novidades (5/5 plans)
 - [x] Phase 36: Onboarding — Navegação por Abas (6/6 plans ✅)
-- [ ] Phase 37: Revisão e Aprovação da Arte (pending)
+- [ ] Phase 37: Revisão e Aprovação da Arte (em execução em fatias 37.1/37.2/37.3 — **37.1 CONCLUÍDA**; 37.2/37.3 em planejamento futuro)
+  - [x] **37.1 = Approval Gate + Candidata Única** — flag `campaign_approval_enabled` (fail-closed), tabela `campaign_art_versions` + colunas em `campaigns` (approval_status/rejection_count/approved_version_id/approved_at), índice único parcial 1-approved, RPC `approve_campaign_art_version` transacional, generate-image insere v1, estado `ApprovalDisplayState`/gating (download + copy 403 até aprovar), tela de revisão da candidata ativa, rota `POST /api/campaign/[id]/approve` — **CONCLUÍDA** (15/15 plans, 2379 testes, 4 gates verdes, UAT 6/6 PASS), fonte `openspec/changes/fase-37-1-approval-gate-candidata-unica/`
 - [x] Phase 38: Tabela de Custos por Operação (8/8 plans ✅)
   - [x] **38.1 = Apuração de Custos de IA por Entrega** (desdobramento da F38, v1.5) — trilha granular de custo de IA por entrega + views/RPCs de apuração e reconciliação (USD × créditos) — **CONCLUÍDA** (11/11 plans, 1713 testes, UAT validado; fechada como camada de ESTIMATIVA OPERACIONAL GRANULAR — `responses:image_generation = 0.065` provisório beta, reconciliação financeira real na próxima fase), fonte `openspec/changes/fase-38-1-ai-cost-accounting/`
   - [x] **38.2 = Admin de Custos Operacionais + Configurações Econômicas** (desdobramento da F38, v1.5) — painel admin `/admin/ai-operation-costs` (KPIs, filtros, tabela por entrega, drilldown call-level, agregados por segmento), parâmetros econômicos configuráveis (`usd_brl_rate`, `credit_value_brl`), badges de confiança, correção do `/admin/metrics` — **CONCLUÍDA 15/15 plans** (gap closure UAT: 38-2-12 RPCs com creditos_estornados/creditos_liquidos ✅, 38-2-13 service líquidos, 38-2-14 UI breakdown, 38-2-15 tracking; 63/63 asserts I1-I6, 1839 testes, gates verdes, UAT manual aprovado), fonte `openspec/changes/fase-38-2-admin-custos-operacionais/`
@@ -230,7 +231,8 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 34. Store Readiness | v1.5 | 0/0 | ○ Pending | — |
 | 35. Changelog / Novidades | v1.5 | 5/5 | ✅ Complete | 2026-07-31 |
 | 36. Onboarding — Navegação por Abas | v1.5 | 6/6 | ✅ Complete | 2026-08-05 |
-| 37. Revisão e Aprovação da Arte | v1.5 | 0/0 | ○ Pending | — |
+| 37. Revisão e Aprovação da Arte | v1.5 | 15/15 (37.1) | ◆ In progress (37.1 ✅) | 2026-09-01 |
+| 37.1. Approval Gate + Candidata Única | v1.5 | 15/15 | ✅ Complete | 2026-09-01 |
 | 38. Tabela de Custos por Operação | v1.5 | 8/8 | ✅ Complete | 2026-08-07 |
 | 38.1. Apuração de Custos de IA por Entrega | v1.5 | 11/11 | ✅ Complete | 2026-08-09 |
 | 38.2. Admin de Custos Operacionais + Configurações Econômicas | v1.5 | 15/15 | ✅ Complete | 2026-08-11 |

@@ -8,6 +8,7 @@ Core image generation pipeline: orchestrates prompt assembly, model invocation, 
 > Modified by `fase-39-brief-estruturado-campanha` (MODIFIED). O `ImageGenerationService` passa a consumir o **domínio estruturado** `CampaignBrief` (`brief.product`/`brief.commercial`/`brief.media`/`brief.creativeContext`) em vez do corpo flat (`body.*`). O conjunto de variáveis de prompt permanece **idêntico** para o mesmo input. `buildCommercialRepertoire` decide `validity` por `enabled/displayText` (D8) — sem heurística de string. A ponte `media.primary.dataUrl` → provider/input-validation torna-se explícita (D11).
 > Modified by `fase-40-campos-comerciais-avisos-brief` (D6): os 4 prompts do diretor (`campaign-image-director.md`, `-offer.md`, `-spotlight.md`, `-exclusive.md`) perdem a instrução **incondicional** "SEMPRE acrescente ... 'Imagem meramente ilustrativa'" (herança UAT-3) e ganham um **bloco condicional de composição** — o aviso ilustrativo só entra na arte quando houver texto obrigatório/aviso legal informado. O conjunto de variáveis/keys do prompt permanece **idêntico** para o mesmo input (golden `EXPECTED_KEYS = 38`); o texto do prompt muda intencionalmente (D6). O comportamento visual default é preservado (checkbox marcado → aviso na arte como hoje). As superfícies de validade (`buildCommercialRepertoire` → `- Oferta válida:` e template offer/base → `**Validade da oferta:**`) NÃO mudam (D5).
 > Modified by `fase-41-midia-de-campanha-mobile` (D2/D6/D7/D9/D10): transporte aditivo `productImages[]` (D2) com `MAX_CAMPAIGN_IMAGES = 4` e invariante exactly-1-primary; `productImageDataUrl` deixa de ser required no Zod (obrigatoriedade passa à regra de exclusividade da rota); provider monta **N `input_image`** (D7); fallback `images.edit` **gated por primary única** (D7); prompt ganha **bloco descritivo 1+N** sem nova variável (D6); revisor recebe a **primary** como referência (D9); limites por item + teto agregado → 413 (D10).
+> Modified by `fase-37-1-approval-gate-candidata-unica` (D8/D10): quando a flag `campaign_approval_enabled` está ligada, o `POST /api/campaign/generate-image` **também** insere a v1 em `campaign_art_versions` (candidata `pending`/`active`, `brief_snapshot` = snapshot `campaign_brief_v1` persistido) — mudança mínima, flag off → comportamento atual inalterado; falha no insert → log + continua (fail-safe, campanha exibida como legacy).
 
 ## Requirements
 
@@ -919,3 +920,33 @@ O sistema SHALL passar, **opcionalmente**, a **dataUrl da imagem principal** ao 
 - **WHEN** não há imagem primary disponível (caminho legado sem referência)
 - **THEN** o revisor não recebe imagem de referência
 - **AND** o comportamento é idêntico ao atual (retrocompatível — D9)
+
+### Requirement: generate-image insere a v1 em campaign_art_versions quando a flag está ligada
+
+> Added by `fase-37-1-approval-gate-candidata-unica` (D8/D10).
+
+O sistema SHALL, no `POST /api/campaign/generate-image`, inserir a versão 1 em `campaign_art_versions` quando a flag `campaign_approval_enabled` está ligada (D8/D10):
+
+- Após o sucesso de `createCampaign` (`route.ts` pré-stream), ler `isCampaignApprovalEnabled()`; se `true`, chamar `createArtVersion(campaign.id, 1, campaign.storagePath, inputSnapshot)`.
+- `inputSnapshot` é **exatamente o objeto `campaign_brief_v1`** persistido em `campaigns.input_snapshot` (`buildCampaignBriefSnapshot(brief)`) — sem base64 por construção (F39).
+- A linha nasce `status='pending'`, `asset_status='active'` (candidata); `storage_path` = path da geração inicial (`{storeId}/{campaignId}.jpg`); `render_snapshot`/`generation_metadata`/`rejection_reason` ficam NULL na 37.1.
+- **Flag off** → nenhuma inserção (comportamento atual preservado).
+- **Falha do insert da v1 → log de erro operacional e continua a geração** (fail-safe): a campanha nasce sem versões e é exibida como `legacy` (a flag nunca derruba o fluxo atual — D1).
+- **Sem persistência nova de produto fonte** (decisão 2 — F41 já persiste os inputs; `persistProductSourceImage`/`getProductSourceImage` não existem nesta fase).
+
+#### Scenario: Flag ligada insere a v1 candidata
+
+- **WHEN** o `POST /api/campaign/generate-image` roda com a flag `campaign_approval_enabled` ligada
+- **THEN** além de `campaigns`, uma linha em `campaign_art_versions` é criada com `version_number=1`, `status='pending'`, `asset_status='active'`, `storage_path` e `brief_snapshot` iguais aos da geração
+
+#### Scenario: Flag desligada não insere (comportamento atual)
+
+- **WHEN** o `POST /api/campaign/generate-image` roda com a flag desligada
+- **THEN** nenhuma linha é criada em `campaign_art_versions`
+- **AND** o fluxo de geração/entrega atual é exatamente o mesmo
+
+#### Scenario: Falha no insert da v1 não derruba a geração
+
+- **WHEN** o insert da v1 falha com a flag ligada
+- **THEN** a geração continua normalmente (log de erro operacional)
+- **AND** a campanha fica sem linhas de versão (exibida como `legacy`, entregue)

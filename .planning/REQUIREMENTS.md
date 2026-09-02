@@ -562,7 +562,37 @@ Desdobramento da F38.2, adicionados via OpenSpec (`openspec/changes/fase-38-2-1-
 
 ## v1.5 Requirements — Revisão e Aprovação da Arte (F37)
 
-F37 (Revisão e Aprovação da Arte, v1.5) em execução em fatias **37.1/37.2/37.3** (padrão F38/38.1/38.2). Nesta fatia, os requisitos **F37.1-01 a F37.1-27** são mapeados no `37-1-CONTEXT.md` (fonte detalhada: `openspec/changes/fase-37-1-approval-gate-candidata-unica/`). **Os requisitos da F37 entram nesta seção quando os specs forem aprovados** — nenhuma linha de requisito F37 é criada nesta fatia.
+F37 (Revisão e Aprovação da Arte, v1.5) em execução em fatias **37.1/37.2/37.3** (padrão F38/38.1/38.2). **Fatia 37.1 (Approval Gate + Candidata Única) CONCLUÍDA** (15/15 plans, 2379 testes, 4 gates verdes, UAT 19.5–19.10 PASS 6/6). Fonte detalhada: `openspec/changes/fase-37-1-approval-gate-candidata-unica/`. Requisitos F37.1-01 a F37.1-27 abaixo (adicionados em 2026-09-01 após aprovação dos specs):
+
+### Approval Gate + Candidata Única (F37.1)
+
+- [x] **F37.1-01** (feature-flag-control): constante `CAMPAIGN_APPROVAL_ENABLED_KEY = "campaign_approval_enabled"` em `feature-flag-service.ts` + inclusão em `ALL_FEATURE_FLAG_KEYS` (D1)
+- [x] **F37.1-02** (feature-flag-control): método `isCampaignApprovalEnabled(): Promise<boolean>` → `readFlag(CAMPAIGN_APPROVAL_ENABLED_KEY, false)` (**fail-closed**, sem envOverride) + export de conveniência (D1)
+- [x] **F37.1-03** (feature-flag-control): seed `campaign_approval_enabled = false` na migration; admin "Controles operacionais" lista a nova flag via `ALL_FEATURE_FLAG_KEYS` sem novo RPC/CHECK (D1)
+- [x] **F37.1-04** (campaign-art-versions): migration `20260901000001_f37_1_create_campaign_art_versions.sql` — tabela `campaign_art_versions` (todas as colunas + UNIQUE(campaign_id, version_number)) + RLS service_role-only + REVERT (D7)
+- [x] **F37.1-05** (campaign-art-versions): colunas em `campaigns` (`approval_status`/`rejection_count`/`approved_version_id`/`approved_at`) + CHECK `campaigns_approved_requires_version` via bloco idempotente `DO $$` (D7)
+- [x] **F37.1-06** (campaign-art-versions): índice único parcial 1 `approved` por `campaign_id` (D7)
+- [x] **F37.1-07** (campaign-art-versions): **sem backfill**; **sem alteração do CHECK `chk_generation_events_type`** (D7/D8)
+- [x] **F37.1-08** (campaign-art-versions): migration `20260901000002_f37_1_approve_campaign_art_version_rpc.sql` — RPC `approve_campaign_art_version` transacional (`SELECT ... FOR UPDATE`, defensivo descarta demais ativas, marca approved, reponta campaigns) + REVOKE/GRANT service_role (D8)
+- [x] **F37.1-09** (campaign-art-versions): tipos `CampaignApprovalStatus`, `ArtVersionStatus`, `CampaignArtVersion` + `CampaignRecord` estendido (D7)
+- [x] **F37.1-10** (campaign-art-versions): `createArtVersion`/`listArtVersions` em `persistence.ts` (v1 pending/active; ordenado por `version_number`) (D7)
+- [x] **F37.1-11** (campaign-approval-gate): `ApprovalDisplayState` + `computeApprovalState` + `isDeliveryReleased` em `display.ts` (D2)
+- [x] **F37.1-12** (campaign-approval-gate): derivação — `not_enabled`/`legacy`/`approved`(+approvedAt)/`regenerating`(contrato)/`pending` (D2/decisão 5)
+- [x] **F37.1-13** (campaign-approval-gate): `isDeliveryReleased` true para not_enabled/legacy/approved; false para pending/regenerating; `campaigns.status` intocado (D2/decisão 5)
+- [x] **F37.1-14** (campaign-approval-gate): candidata ativa (`asset_status='active'`) — fonte oficial da arte da revisão (decisão 3)
+- [x] **F37.1-15** (ai-image-generation): generate-image insere v1 (`createArtVersion(campaign.id, 1, storagePath, inputSnapshot)`) quando flag ligada; fail-safe (falha → log + continua, legacy); flag off → zero inserções (D8/D10/decisão 2)
+- [x] **F37.1-16** (campaign-download-route): gate em download — `!isDeliveryReleased` → 403 `{ error: "Campaign pending approval" }`; not_enabled/legacy/approved → serve como hoje (D2)
+- [x] **F37.1-17** (publication-copy-route): gate em publication-copy — `!isDeliveryReleased` → 403 (nada persistido); not_enabled/legacy/approved → comportamento atual (decisão 4)
+- [x] **F37.1-18** (campaign-approval-gate): rota `POST /api/campaign/[id]/approve` — guards (CSRF/auth/UUID/getCampaign/ownership/flag/ready) + zod body + RPC + mapeamento 404/409; sucesso → `200 { campaignUrl, status: "approved" }` (D8)
+- [x] **F37.1-19** (campaign-page-ui): `[id]/page.tsx` deriva `computeApprovalState` para ready + props `approval` (`state`, `candidateImageUrl`, `candidateVersionId`) (D2/decisão 3)
+- [x] **F37.1-20** (campaign-page-ui): `CampaignApprovalView` — candidata ativa, botão "Aprovar e liberar campanha", "Corrigir" ausente/desabilitado sem modal, sem download/copy (D8/decisões 3/12)
+- [x] **F37.1-21** (campaign-page-ui): `client.tsx` roteia `pending` → revisão; approved/legacy/not_enabled → ReadyView (D2/decisão 3)
+- [x] **F37.1-22** (campaign-page-ui): UX sem histórico recuperável — apenas a candidata ativa (decisão 12)
+- [x] **F37.1-23** (campaign-page-ui): a11y/mobile/microcopy — touch ≥ 44px, `object-contain`, sem scroll horizontal 320/375px, tema dark (design-system)
+- [x] **F37.1-24** (testes): ~17+ testes do checklist (estados, aprovação transacional, generate-image v1, download/copy gated, UI revisão) — 36 testes novos
+- [x] **F37.1-25** (regressão): co-migração de fixtures (generate-image, download, publication-copy, feature-flag-service, admin, display/persistence) — suíte completa 2379 testes
+- [x] **F37.1-26** (verificação): 4 gates verdes (vitest/typecheck/lint/build) + UAT local flag ligada/desligada + campanha legada + mobile
+- [x] **F37.1-27** (trackings): F37 em fatias 37.1/37.2/37.3 preenchido nos 6 arquivos de runbook (D11/D12)
 
 ## v1.7 Requirements (Monetização Pública / Stripe — iniciativa diferida)
 Deferred from v1.5 critical path. **Monetização pública / Stripe: iniciativa diferida v1.7+ (sem fase numerada)**, dependente de decisão comercial/jurídica/contábil — reaberta quando houver condição real de executar. Não é fase numerada no roadmap ativo (decisão do alinhamento F43 D1).

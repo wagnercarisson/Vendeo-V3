@@ -1,10 +1,10 @@
 # Publication Copy Route
 
-> Synced from `fase-17-edicao-publication-copy` (ADDED).
+> Synced from `fase-17-edicao-publication-copy` (ADDED), then `fase-37-1-approval-gate-candidata-unica` (MODIFIED — gate de aprovação F37 37.1, decisão 4).
 
 ## Purpose
 
-Rota `PATCH /api/campaign/[id]/publication-copy` com apiHandler, requireSameOrigin (CSRF), requireApiUser, busca de campanha por id, requireOwnership, validação via `validatePublicationCopy`, e persistência de `publication_copy_current` em `campaigns`. Suporta dois modos: edição normal e restore.
+Rota `PATCH /api/campaign/[id]/publication-copy` com apiHandler, requireSameOrigin (CSRF), requireApiUser, busca de campanha por id, requireOwnership, **gate de aprovação** (decisão 4: enquanto `pending`/`regenerating` com a flag `campaign_approval_enabled` ligada → **403**, nada é persistido), validação via `validatePublicationCopy`, e persistência de `publication_copy_current` em `campaigns`. Suporta dois modos: edição normal e restore.
 
 ## Requirements
 
@@ -19,6 +19,7 @@ O handler SHALL seguir o fluxo:
 - Buscar campanha por `id` via `getCampaign` (persistence.ts)
 - Se não existir → 404
 - `requireOwnership(campaign.store_id, user.userId)` → se falhar → 404
+- **Gate de aprovação (F37 37.1, decisão 4):** lê `isCampaignApprovalEnabled()` + `listArtVersions(campaign.id)` e deriva `computeApprovalState`; se `isDeliveryReleased(state) === false` (i.e., `pending`/`regenerating` com a flag ligada) → **403** (nada é persistido); `not_enabled`/`legacy`/`approved` → liberado
 - Validar body via `validatePublicationCopy(body)`
 - Se inválido → 400 `{ error: "Validation failed", issues: [...] }`
 - Se `restore: true`: `update({ publication_copy_current: null })` → 200 `{ restored: true, publication_copy_snapshot }`
@@ -26,13 +27,19 @@ O handler SHALL seguir o fluxo:
 
 #### Scenario: PATCH com body válido atualiza publication_copy_current
 
-- **WHEN** um owner faz PATCH com `{ caption, hashtags, cta_post }` válido
+- **WHEN** um owner faz PATCH com `{ caption, hashtags, cta_post }` válido para uma campanha `not_enabled`/`legacy`/`approved`
 - **THEN** retorna 200 com `{ publication_copy_current: { caption, hashtags, cta_post } }`
 - **AND** o banco tem `publication_copy_current` atualizado
 
+#### Scenario: PATCH pendente com flag ligada retorna 403
+
+- **WHEN** um owner faz PATCH de copy para uma campanha `pending` (ou `regenerating`) sob a flag `campaign_approval_enabled`
+- **THEN** retorna 403
+- **AND** nada é persistido em `publication_copy_current`
+
 #### Scenario: PATCH com body inválido retorna 400
 
-- **WHEN** um owner faz PATCH com body que falha validação
+- **WHEN** um owner faz PATCH com body que falha validação (campanha liberada)
 - **THEN** retorna 400 com `{ error: "Validation failed", issues: [...] }`
 
 #### Scenario: PATCH com UUID inválido retorna 404
@@ -52,7 +59,7 @@ O handler SHALL seguir o fluxo:
 
 #### Scenario: PATCH com restore: true limpa current e retorna snapshot
 
-- **WHEN** um owner faz PATCH com `{ restore: true }`
+- **WHEN** um owner faz PATCH com `{ restore: true }` para uma campanha liberada
 - **THEN** retorna 200 com `{ restored: true, publication_copy_snapshot: { caption, hashtags, cta_post } }`
 - **AND** o banco tem `publication_copy_current = null`
 
