@@ -90,6 +90,38 @@ describe("CampaignPageClient — display states", () => {
     expect(screen.getByRole("button", { name: /criar nova campanha/i })).toBeInTheDocument();
   });
 
+  describe("approval (F37.1)", () => {
+    it("renders CampaignApprovalView when approval.state.status === 'pending'", () => {
+      render(
+        <CampaignPageClient
+          {...defaultProps}
+          approval={{
+            state: { status: "pending" },
+            candidateImageUrl: "https://preview.example.com/art.jpg",
+            candidateVersionId: "v1",
+          }}
+        />
+      );
+
+      expect(screen.getByRole("button", { name: /aprovar e liberar campanha/i })).toBeInTheDocument();
+      expect(screen.getByText("Revise a arte antes de liberar: a IA pode cometer erros.")).toBeInTheDocument();
+    });
+
+    it("renders ReadyView (entrega) when approval absent (legacy/not_enabled/approved)", () => {
+      render(
+        <CampaignPageClient
+          {...defaultProps}
+          imageUrl="https://example.com/img.jpg"
+          caption="Oferta!"
+          productName="Produto X"
+        />
+      );
+
+      expect(screen.getByRole("button", { name: /baixar/i })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /aprovar e liberar campanha/i })).toBeNull();
+    });
+  });
+
   describe("generating polling", () => {
     it("starts polling with router.refresh every 5s when generating", () => {
       render(
