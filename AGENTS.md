@@ -182,6 +182,15 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 
 **Escopo (D1–D7):** gate client-side obrigatório de revisão do brief em tela intermediária (`reviewMode`) entre o form e o `POST /api/campaign/generate-image`; botão "Revisar e gerar"; "Voltar e editar" preserva tudo; "Confirmar e gerar campanha" trava o snapshot e dispara o submit; compressão das imagens antes da revisão (`prepareCampaignImages`); helpers puros `prepareCampaignImages`/`buildCampaignGenerationBody` (body idêntico ao exibido); resumo Produto/Oferta/Imagens/Avisos/Custo + loja/marca + rótulos Principal/Referência + "Vai consumir X crédito(s)" + slot Tema (preparação F44); override `brief_review_confirmed` (pula a IA de visão; fase `input_validation` como `skipped`); flag administrativa mínima `force_brief_vision_check` em `feature_flags` (tela admin, motivo obrigatório, auditoria, fallback de leitura). **Renumeração D1:** F42 = Signup concluída; F43 = Revisão do Brief; **Stripe/Monetização Pública fora da numeração (iniciativa diferida v1.7+)**.
 
+## Phase 45 — Briefing Contextual do Diretor de Arte
+
+**Status:** Em planejamento — 7 plans previstos (45-01..45-07), fonte da verdade OpenSpec
+
+**Fonte da verdade:** `openspec/changes/fase-45-briefing-contextual-do-diretor-de-arte/`
+**Context:** `.planning/phases/45-briefing-contextual-do-diretor-de-arte/45-CONTEXT.md`
+
+**Escopo (D1–D7):** reestruturação dos 4 `.md` do diretor de imagem (`campaign-image-director.md` base + offer/spotlight/exclusive) em **camada editorial legível + blocos contextuais** nomeados por propósito; novo helper puro `art-director-briefing.ts` montando o prompt final por **presença real de dados** (campo ausente → bloco não enviado; sem seção vazia, sem linha de tabela em branco, sem placeholder não resolvido); separação semântica explícita (texto obrigatório do lojista × aviso ilustrativo × identidade × produto/referências × detalhes comerciais × restrições × direção criativa); eliminação de duplicações — cada natureza opcional/sensível em **um único bloco canônico** (`buildCommercialRepertoire` repartido: validade → fatos; details/availability → contexto comercial); saneamento do texto do lojista nos blocos novos; regras anti-invenção, autorização de criatividade, preservação de identidade e fidelidade primary × auxiliares mantidas. **Sem mudança de superfície externa** (UI/form, contrato HTTP/schema/snapshot/domínio, revisor, Copy Director, fallback OpenAI); paridade de keys substituída por invariantes (placeholders ⊆ chaves; determinismo; presente/ausente por bloco; contrato externo intacto) + UAT humano comparativo. **Numeração:** F45 = Briefing Contextual do Diretor de Arte (v1.5); **F44 = Temas de Campanha permanece fora da numeração** (adicionada pelo runbook da própria F44); **Stripe/Monetização Pública fora da numeração (iniciativa diferida v1.7+)**.
+
 <!-- GSD:profile-start -->
 
 ## Developer Profile

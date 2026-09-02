@@ -54,14 +54,14 @@ Autenticação completa, vínculo user→store, isolamento multi-tenant, beta.ve
 
 ### 📋 v1.5 — Lançamento Externo Controlado ◆
 
-Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, UAT externo, fundação legal, modelo comercial, freemium anti-abuso CNPJ, changelog/novidades, onboarding por abas (F36), revisão e aprovação da arte (F37), tabela de custos por operação (F38), brief estruturado de campanha (F39), mídia de campanha mobile (F41), signup controlado e elegibilidade freemium (F42) e revisão do brief pré-geração (F43).
+Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, UAT externo, fundação legal, modelo comercial, freemium anti-abuso CNPJ, changelog/novidades, onboarding por abas (F36), revisão e aprovação da arte (F37), tabela de custos por operação (F38), brief estruturado de campanha (F39), mídia de campanha mobile (F41), signup controlado e elegibilidade freemium (F42), revisão do brief pré-geração (F43) e briefing contextual do diretor de arte (F45).
 
 <details open>
 <summary>◆ v1.5 Lançamento Externo Controlado (F23-F39) — Em andamento</summary>
 
 > **Monetização pública / Stripe** — iniciativa diferida **não numerada** (v1.7+), reaberta quando houver condição real de executar (empresa, jurídico, contabilidade, operação fiscal, decisão de monetização). Fora da tabela de fases numeradas.
 
-Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, fundação legal, modelo comercial, store readiness, campos comerciais e avisos do brief (F40), mídia de campanha mobile (F41), signup controlado e elegibilidade freemium (F42) e revisão do brief pré-geração (F43).
+Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, fundação legal, modelo comercial, store readiness, campos comerciais e avisos do brief (F40), mídia de campanha mobile (F41), signup controlado e elegibilidade freemium (F42), revisão do brief pré-geração (F43) e briefing contextual do diretor de arte (F45).
 
 - [x] Phase 23: Text Provider + Copy Director (2/2 plans ✅)
 - [x] Phase 24: Créditos — Schema, Saldo e Transações (2/2 plans ✅)
@@ -189,6 +189,15 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - Flag administrativa mínima `force_brief_vision_check` na tabela `feature_flags` (tela admin, motivo obrigatório, auditoria, fallback de leitura `enabled=false` que não derruba geração)
   - **Fonte da verdade:** `openspec/changes/fase-43-revisao-brief-pre-geracao/`
   - **Dependências:** F39 (domínio `CampaignBrief`/snapshot), F40 (form `validity`/`mandatoryArtworkText`), F41 (multi-imagem/`compressImage`), F31.x (intents), F38/F38.1 (custos/telemetria), F24/F25 (pipeline) — antecede a F44 (Temas) e a F37 (Revisão e Aprovação da Arte)
+  - **Status:** 15/15 plans, 2317 testes, 4 gates verdes, UAT 15.5–15.13 PASS (9/9)
+
+- [ ] Phase 45: Briefing Contextual do Diretor de Arte (pending)
+  - Reestruturação dos 4 `.md` do diretor de imagem (`campaign-image-director.md` + offer/spotlight/exclusive) em **camada editorial legível + blocos contextuais** nomeados por propósito (fatos, texto obrigatório, aviso ilustrativo, identidade, produto/referências, detalhes comerciais, restrições, direção criativa)
+  - Novo helper puro `art-director-briefing.ts` (fora do service de 1269 linhas): montagem **contextual por presença real de dados** — campo ausente → bloco não enviado (sem seção vazia, sem linha de tabela em branco, sem placeholder não resolvido)
+  - Separação semântica explícita: texto obrigatório do lojista em seção própria; aviso ilustrativo em seção própria (mínimo/legível/discreto/lateral); identidade como preservação; primary = referência factual forte, auxiliares sem competir
+  - Eliminação de duplicações (validade, detalhes, disponibilidade, aviso) — cada natureza em **um único bloco canônico**; `buildCommercialRepertoire` repartido
+  - **Sem mudança de superfície externa:** UI/form, contrato HTTP, schema público, snapshot/domínio, revisor e Copy Director inalterados (regra de paridade substituída por determinismo + UAT humano comparativo)
+  - **Fonte da verdade:** `openspec/changes/fase-45-briefing-contextual-do-diretor-de-arte/`
 </details>
 
 ## Progress
@@ -240,6 +249,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 41. Mídia de Campanha Mobile | v1.5 | 13/13 | ✅ Complete | 2026-08-15 |
 | 42. Signup Controlado e Elegibilidade Freemium | v1.5 | 20/20 | ✅ Complete | 2026-08-21 |
 | 43. Revisão do Brief Pré-Geração | v1.5 | 15/15 | ✅ Complete | 2026-08-21 |
+| 45. Briefing Contextual do Diretor de Arte | v1.5 | 0/0 | ○ Planning | — |
 | —. Monetização pública / Stripe (diferida, v1.7+) | v1.7 | — | Fora da numeração | — |
 
 ---
