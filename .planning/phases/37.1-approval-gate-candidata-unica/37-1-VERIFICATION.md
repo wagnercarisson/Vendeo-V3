@@ -84,7 +84,7 @@ updated: 2026-09-01
 
 ## 5. Pendências / Checkpoint
 
-- **UAT humana PENDENTE (BLOCKING):** cenários 19.5–19.10 em `37-1-UAT.md` — a automação executou os itens automáticos (19.5 parcial: flag ligada via admin com auditoria; 19.7: "Corrigir" ausente/desabilitado); **19.6 (aprovar → entrega), 19.8 (campanha legada), 19.9 (flag desligada) e 19.10 (mobile 320px/375px) dependem de validação humana**.
+- **UAT humana CONCLUÍDA:** cenários 19.5–19.10 em `37-1-UAT.md` — **PASS 6/6** (19.5 flag ligada → revisão; 19.6 aprovar → entrega liberada; 19.7 "Corrigir" ausente; 19.8 campanha legada entregue sem gate; 19.9 flag desligada → fluxo atual intacto; 19.10 mobile 320px/375px). Checkpoint humano validado pelo usuário (2026-09-01).
 - **Migrations aplicadas no remoto:** `20260901000001` e `20260901000002` aplicadas pelo usuário (37-1-02 resolvido).
 - **Fail-closed de leitura da flag coberto por teste automatizado:** 37-1-14 (18.3 — not-found/erro → false).
 
@@ -96,4 +96,4 @@ updated: 2026-09-01
 
 ---
 
-*Fase 37.1 verificada: gates automáticos passed + UAT humana em andamento (ver `37-1-UAT.md`).*
+*Fase 37.1 verificada: gates automáticos passed + UAT humana PASS (6/6) — fatia concluída e base pronta para a 37.2.*
