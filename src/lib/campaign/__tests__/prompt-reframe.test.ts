@@ -131,4 +131,59 @@ describe("prompt reframe D6 (testes 16-17 + checks de conteúdo)", () => {
       expect(prompt, `${name} com linha antiga`).not.toContain("referência visual fiel");
     }
   });
+
+  it("45-05 transversal (a): prosa editorial além dos placeholders + slots como linha inteira nos 4 .md (sem template seco)", () => {
+    for (const name of PROMPTS) {
+      const prompt = readPrompt(name);
+      const lines = prompt.split("\n");
+      const nonPlaceholderLines = lines.filter((line) => !line.includes("{{")).length;
+      const placeholderLines = lines.filter((line) => line.includes("{{")).length;
+      expect(nonPlaceholderLines, `${name}: template seco de micro-placeholders`).toBeGreaterThanOrEqual(40);
+      expect(placeholderLines, `${name}: sem prosa além dos slots`).toBeLessThan(nonPlaceholderLines / 2);
+      for (const slot of BLOCK_SLOTS) {
+        expect(prompt, `${name}: slot {{${slot}}} não está como linha inteira`).toMatch(
+          new RegExp(`^\\{\\{${slot}\\}\\}$`, "m")
+        );
+      }
+    }
+  });
+
+  it("45-05 transversal (b): 8 slots idênticos por arquivo e naturezas condicionais apenas como slot (sem tabela/heading literal)", () => {
+    for (const name of PROMPTS) {
+      const prompt = readPrompt(name);
+      for (const slot of BLOCK_SLOTS) {
+        expect(prompt, `${name}: sem o slot {{${slot}}}`).toContain(`{{${slot}}}`);
+      }
+      expect(prompt, `${name}: heading literal do aviso no template`).not.toContain("## Aviso Ilustrativo");
+      expect(prompt, `${name}: heading literal do texto obrigatório no template`).not.toContain("## Texto Obrigatório na Arte");
+      expect(prompt, `${name}: linha de tabela do aviso`).not.toMatch(/\| \*\*Aviso ilustrativo/);
+      expect(prompt, `${name}: linha de tabela da validade`).not.toMatch(/\| \*\*Validade\*\*/);
+    }
+  });
+
+  it("45-05 transversal (c): seções editoriais fixas com heading próprio + DNA por intent (base/offer promocional; spotlight sem validade; exclusive sem preço)", () => {
+    for (const name of PROMPTS) {
+      const prompt = readPrompt(name);
+      expect(prompt, `${name}: sem persona do diretor`).toContain("Diretor de Marketing da {{storeName}}");
+      expect(prompt, `${name}: sem heading fixo de fatos`).toContain("## Fatos da Campanha");
+      expect(prompt, `${name}: sem heading fixo de produto/referências`).toContain("## Produto e Imagens de Referência");
+      expect(prompt, `${name}: sem heading fixo de identidade`).toContain("## Identidade da Loja");
+      expect(prompt, `${name}: sem heading fixo de direção criativa`).toContain("## Direção Criativa Contextual");
+    }
+
+    for (const name of ["campaign-image-director.md", "campaign-image-director-offer.md"]) {
+      const prompt = readPrompt(name);
+      expect(prompt, `${name}: base/offer sem framing promocional`).toContain("preço com desconto informado nos fatos");
+      expect(prompt, `${name}: base/offer sem validade`).not.toMatch(/[Vv]alidade/);
+    }
+
+    const spotlight = readPrompt("campaign-image-director-spotlight.md");
+    expect(spotlight, "spotlight com validade").not.toMatch(/[Vv]alidade/);
+    expect(spotlight, "spotlight sem preço de desconto").not.toContain("preço com desconto");
+
+    const exclusive = readPrompt("campaign-image-director-exclusive.md");
+    expect(exclusive, "exclusive sem preço com desconto").not.toContain("Preço com desconto");
+    expect(exclusive, "exclusive sem preço de desconto").not.toContain("preço com desconto");
+    expect(exclusive, "exclusive sem DE/POR").not.toContain("DE/POR");
+  });
 });
