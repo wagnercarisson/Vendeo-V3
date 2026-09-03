@@ -7,11 +7,20 @@ import {
   buildValidationSummary,
   buildCreativeContextGuidance,
   buildBrandProfileSection,
+  campaignFactsSection,
+  commercialDetailsSection,
+  requiredArtworkTextSection,
+  illustrativeNoticeSection,
+  identityReferenceSection,
+  productReferenceSection,
+  constraintsSection,
+  creativeDirectionSection,
 } from '../art-director-briefing';
 import type { CampaignBrief } from '@/lib/campaign/brief';
 import { buildCampaignBriefFromFlat } from '@/lib/campaign/brief';
 import type { ResolvedCampaignContext, BrandProfileSnapshot } from '@/components/campaign/types';
 import type { GenerateImageRequest } from '@/lib/image-generation/schema';
+import { PromptLoader } from '@/lib/image-generation/prompt-loader';
 import { ILLUSTRATIVE_NOTICE_TEXT } from '@/lib/campaign/constants';
 
 const STORE_ID = '44444444-4444-4444-8444-444444444444';
@@ -268,5 +277,176 @@ describe('buildBrandProfileSection', () => {
     expect(section).toContain('| **Tom visual** | Acolhedor |');
     expect(section).toContain('| **Personalidade da marca** | Próxima e confiável |');
     expect(section).toContain('| **Brief do Diretor de Marca** | Campanha de verão |');
+  });
+});
+
+describe('blocos contextuais — presente/ausente + deduplicação + saneamento (45-05, F45-21)', () => {
+  function mountOfferPrompt(brief: CampaignBrief, context: ResolvedCampaignContext): string {
+    const vars = buildModuleVars(brief, context);
+    return new PromptLoader().load('campaign-image-director-offer', vars);
+  }
+
+  function buildModuleVars(brief: CampaignBrief, context: ResolvedCampaignContext): Record<string, string> {
+    const intent = brief.commercial.intent ?? 'offer';
+    const { merchantText, illustrativeNotice } = splitDirectorLegalText(
+      brief.commercial.legalNotice?.enabled ? brief.commercial.legalNotice.text ?? '' : ''
+    );
+    const imageCount = brief.media.images.filter((img) => Boolean(img.dataUrl)).length;
+    return {
+      campaignFactsSection: campaignFactsSection(brief, context, brief.product.name),
+      commercialDetailsSection: commercialDetailsSection(brief),
+      requiredArtworkTextSection: requiredArtworkTextSection(merchantText),
+      illustrativeNoticeSection: illustrativeNoticeSection(illustrativeNotice),
+      identityReferenceSection: identityReferenceSection(brief, context),
+      productReferenceSection: productReferenceSection(brief, context, imageCount),
+      constraintsSection: constraintsSection(brief),
+      creativeDirectionSection: creativeDirectionSection(brief, context),
+      productName: brief.product.name,
+      storeName: context.store.name ?? '',
+      brandColor: context.store.brandColor ?? '#22C55E',
+      campaignIntent: intent,
+    };
+  }
+
+  function countOccurrences(text: string, needle: string): number {
+    return text.split(needle).length - 1;
+  }
+
+  it('brief mínimo: blocos condicionais retornam "" e prompt montado sem seção vazia/heading órfão/linha de tabela/placeholder residual', () => {
+    const brief = createMinimalBrief();
+    const context = createContext();
+
+    expect(commercialDetailsSection(brief)).toBe('');
+    expect(requiredArtworkTextSection('')).toBe('');
+    expect(illustrativeNoticeSection('')).toBe('');
+    expect(constraintsSection(brief)).toBe('');
+
+    const prompt = mountOfferPrompt(brief, context);
+    expect(prompt).not.toContain('## Texto Obrigatório na Arte');
+    expect(prompt).not.toContain('## Aviso Ilustrativo');
+    expect(prompt).not.toContain('## Detalhes Comerciais');
+    expect(prompt).not.toContain('## Restrições Sensíveis');
+    expect(prompt).not.toContain('| **');
+    expect(prompt).not.toMatch(/\{\{[a-zA-Z]+\}\}/);
+  });
+
+  it('brief completo: cada natureza opcional/sensível em UMA ocorrência no prompt montado (deduplicação D3)', () => {
+    const brief = createMinimalBrief({
+      validity: 'Até 30/09/2026',
+      mandatoryArtworkText: `${ILLUSTRATIVE_NOTICE_TEXT}\nTexto promocional`,
+      campaignDetails: '[Queima de estoque] Aproveite',
+      additionalDetails: 'Válido somente em loja física',
+      availabilityNotes: 'Restam poucas unidades',
+      sensitiveConstraints: 'Não exibir modelo sem camisa',
+      productImages: [
+        { role: 'primary', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,primary' },
+        { role: 'reference', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,aux1' },
+        { role: 'reference', source: 'camera', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,aux2' },
+      ],
+    });
+    const context = createContext();
+
+    const vars = buildModuleVars(brief, context);
+    expect(countOccurrences(vars.campaignFactsSection, '**Validade da oferta:**')).toBe(1);
+    expect(countOccurrences(vars.commercialDetailsSection, '**Detalhes da campanha:**')).toBe(1);
+    expect(countOccurrences(vars.commercialDetailsSection, '**Detalhes adicionais:**')).toBe(1);
+    expect(countOccurrences(vars.commercialDetailsSection, 'Disponível: Restam poucas unidades')).toBe(1);
+    expect(countOccurrences(vars.requiredArtworkTextSection, '"Texto promocional"')).toBe(1);
+    expect(countOccurrences(vars.illustrativeNoticeSection, ILLUSTRATIVE_NOTICE_TEXT)).toBe(1);
+    expect(countOccurrences(vars.constraintsSection, 'Não exibir modelo sem camisa')).toBe(1);
+
+    expect(vars.commercialDetailsSection).not.toContain('Até 30/09/2026');
+    expect(vars.creativeDirectionSection).not.toContain('Até 30/09/2026');
+
+    const prompt = mountOfferPrompt(brief, context);
+    expect(countOccurrences(prompt, '**Validade da oferta:**')).toBe(1);
+    expect(countOccurrences(prompt, '## Texto Obrigatório na Arte')).toBe(1);
+    expect(countOccurrences(prompt, '## Aviso Ilustrativo')).toBe(1);
+    expect(countOccurrences(prompt, '## Detalhes Comerciais')).toBe(1);
+    expect(countOccurrences(prompt, '## Restrições Sensíveis')).toBe(1);
+    expect(prompt).not.toMatch(/\{\{[a-zA-Z]+\}\}/);
+  });
+
+  it('saneamento D6: texto do lojista com {{ e }} → blocos e prompt final sem placeholder residual', () => {
+    const brief = createMinimalBrief({
+      mandatoryArtworkText: 'Oferta com {{cupom}} válida }}',
+      campaignDetails: 'Ganhe {{desconto}} extra',
+    });
+    const context = createContext();
+
+    const vars = buildModuleVars(brief, context);
+    expect(vars.requiredArtworkTextSection).toContain('{cupom}');
+    expect(vars.requiredArtworkTextSection).not.toContain('{{cupom}}');
+    expect(vars.requiredArtworkTextSection).not.toContain('}}');
+    expect(vars.commercialDetailsSection).toContain('Ganhe {desconto} extra');
+    expect(vars.commercialDetailsSection).not.toContain('{{desconto}}');
+
+    const prompt = mountOfferPrompt(brief, context);
+    expect(prompt).not.toContain('{{cupom}}');
+    expect(prompt).not.toContain('{{desconto}}');
+    expect(prompt).not.toMatch(/\{\{[a-zA-Z]+\}\}/);
+  });
+
+  it('por intent: spotlight sem validade e com preço único; exclusive sem preço nos fatos', () => {
+    const context = createContext();
+
+    const spotlightBrief = createMinimalBrief({
+      campaignIntent: 'spotlight',
+      validity: 'Até 30/09/2026',
+    });
+    const spotlightFacts = campaignFactsSection(spotlightBrief, context, spotlightBrief.product.name);
+    expect(spotlightFacts).toContain('**Preço:**');
+    expect(spotlightFacts).not.toContain('Preço com desconto');
+    expect(spotlightFacts).not.toContain('Validade da oferta');
+
+    const exclusiveBrief = createMinimalBrief({
+      campaignIntent: 'exclusive',
+      discountedPriceCents: 9900,
+      badgeText: undefined,
+    });
+    const exclusiveFacts = campaignFactsSection(exclusiveBrief, context, exclusiveBrief.product.name);
+    expect(exclusiveFacts).not.toContain('Preço');
+    expect(exclusiveFacts).not.toContain('99,00');
+  });
+
+  it('por intent: preserveImageContext só injeta a diretiva de não-recorte em não-offer', () => {
+    const context = createContext();
+    const baseImages = [
+      { role: 'primary' as const, source: 'upload' as const, mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,primary' },
+      { role: 'reference' as const, source: 'upload' as const, mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,aux1' },
+    ];
+
+    const offerWithContext = createMinimalBrief({ preserveImageContext: true });
+    const offerSection = productReferenceSection(offerWithContext, context, baseImages.length);
+    expect(offerSection).not.toContain('NÃO recortar o produto');
+
+    const spotlightWithContext = createMinimalBrief({ campaignIntent: 'spotlight', preserveImageContext: true });
+    const spotlightSection = productReferenceSection(spotlightWithContext, context, baseImages.length);
+    expect(spotlightSection).toContain('NÃO recortar o produto');
+
+    const exclusiveWithContext = createMinimalBrief({ campaignIntent: 'exclusive', preserveImageContext: true });
+    const exclusiveSection = productReferenceSection(exclusiveWithContext, context, baseImages.length);
+    expect(exclusiveSection).toContain('NÃO recortar o produto');
+
+    const spotlightWithoutContext = createMinimalBrief({ campaignIntent: 'spotlight', preserveImageContext: false });
+    const spotlightPlain = productReferenceSection(spotlightWithoutContext, context, baseImages.length);
+    expect(spotlightPlain).not.toContain('NÃO recortar o produto');
+  });
+
+  it('montagem determinística: mesmo input 2× → mesmo texto', () => {
+    const brief = createMinimalBrief({
+      validity: 'Até 30/09/2026',
+      mandatoryArtworkText: `${ILLUSTRATIVE_NOTICE_TEXT}\nTexto promocional`,
+      sensitiveConstraints: 'Não exibir modelo sem camisa',
+    });
+    const context = createContext();
+
+    const first = mountOfferPrompt(brief, context);
+    const second = mountOfferPrompt(brief, context);
+    expect(second).toBe(first);
+
+    const firstVars = buildModuleVars(brief, context);
+    const secondVars = buildModuleVars(brief, context);
+    expect(secondVars).toEqual(firstVars);
   });
 });
