@@ -2,7 +2,7 @@ import { PromptLoader } from "@/lib/image-generation/prompt-loader";
 import { IMAGE_GENERATION_DEBUG, IMAGE_GENERATION_SIZE, IMAGE_GENERATION_GLOBAL_TIMEOUT_MS, IMAGE_GENERATION_RESPONSES_MODEL } from "@/lib/image-generation/config";
 import type { ImageProvider, ImageProviderOutput, ImageProviderUsageMeta } from "@/lib/image-generation/providers/types";
 import type { GenerateImageRequest, GenerateImageSuccessResponse, GenerationPhase, GenerationPhaseEvent, ValidationContext, InputValidationResult, ImageReviewResult } from "@/lib/image-generation/schema";
-import type { ResolvedCampaignContext, BrandProfileSnapshot } from "@/components/campaign/types";
+import type { ResolvedCampaignContext } from "@/components/campaign/types";
 import type { CampaignBrief } from "@/lib/campaign/brief";
 import { InputValidationService } from "@/lib/image-generation/services/input-validation-service";
 import { ImageReviewService } from "@/lib/image-generation/services/image-review-service";
@@ -15,12 +15,6 @@ import { validatePrompt } from "@/lib/image-generation/services/prompt-validator
 import {
   formatPriceBRL,
   splitDirectorLegalText,
-  buildCommercialRepertoire,
-  buildValidationSummary,
-  buildCreativeContextGuidance,
-  buildBrandProfileSection,
-  hasCategoryConflict,
-  buildCategoryConflictDirective,
   campaignFactsSection,
   commercialDetailsSection,
   requiredArtworkTextSection,
@@ -724,18 +718,6 @@ export class ImageGenerationService {
     };
   }
 
-  private buildCommercialRepertoire(brief: CampaignBrief): string {
-    return buildCommercialRepertoire(brief);
-  }
-
-  private buildValidationSummary(brief: CampaignBrief, context: ResolvedCampaignContext, effectiveProductName: string): string {
-    return buildValidationSummary(brief, context, effectiveProductName);
-  }
-
-  private buildCreativeContextGuidance(segment: string, category: string, hasConflict: boolean, campaignIntent: string = "offer"): string {
-    return buildCreativeContextGuidance(segment, category, hasConflict, campaignIntent);
-  }
-
   private buildPromptVariables(
     brief: CampaignBrief,
     context: ResolvedCampaignContext,
@@ -743,19 +725,6 @@ export class ImageGenerationService {
     inferredCategory?: string
   ): Record<string, string> {
     const campaignIntent = brief.commercial.intent ?? "offer";
-    const storeSegment = context.store.segment ?? '';
-    const effectiveInferredCategory = inferredCategory ?? storeSegment;
-    const hasConflict = inferredCategory
-      ? hasCategoryConflict(inferredCategory, storeSegment)
-      : false;
-
-    const segEntry = STORE_SEGMENTS.find(s => s.value === storeSegment);
-    const creativePersona = `Você é um diretor de marketing especializado em ${segEntry?.label ?? storeSegment}.`;
-
-    const categoryConflictDirective = buildCategoryConflictDirective(inferredCategory, storeSegment, hasConflict);
-    const commercialRepertoire = this.buildCommercialRepertoire(brief);
-    const inputValidationSummary = this.buildValidationSummary(brief, context, effectiveProductName);
-    const creativeContextGuidance = this.buildCreativeContextGuidance(storeSegment, effectiveInferredCategory, hasConflict, campaignIntent);
 
     // Quick 260902-kqo: separa semanticamente o aviso fixo (constante canônica) do
     // texto obrigatório livre do lojista, APENAS na montagem das variáveis do diretor.
@@ -765,6 +734,10 @@ export class ImageGenerationService {
         : ""
     );
 
+    // Mapa FINAL (D5 — 45-04): chaves realmente consumidas pelos 4 templates
+    // reescritos (8 slots contextuais + prosa garantida storeName/productName/
+    // brandColor) + campaignIntent (seleção de arquivo no assemblePrompt). As
+    // chaves legadas da transição (45-03) saíram — nenhum template as interpola.
     return {
       campaignFactsSection: campaignFactsSection(brief, context, effectiveProductName),
       commercialDetailsSection: commercialDetailsSection(brief),
@@ -774,40 +747,9 @@ export class ImageGenerationService {
       productReferenceSection: productReferenceSection(brief, context, this.mediaImagesDataUrls(brief).length),
       constraintsSection: constraintsSection(brief),
       creativeDirectionSection: creativeDirectionSection(brief, context, inferredCategory),
-
-      // Chaves legadas mantidas no mapa transicional (D5): os templates de
-      // spotlight/exclusive (não reescritos) ainda interpolam estes placeholders.
       productName: effectiveProductName,
-      storeName: context.store.name ?? '',
-      storeSegment,
-      storeTone: context.store.toneOfVoice ?? "profissional",
+      storeName: context.store.name ?? "",
       brandColor: context.store.brandColor ?? "#22C55E",
-      discountedPrice: brief.commercial.discountedPriceCents
-        ? this.formatPriceBRL(brief.commercial.discountedPriceCents)
-        : "",
-      badgeText: brief.commercial.badgeText ?? "",
-      hook: brief.commercial.hook ?? "",
-      cta: brief.commercial.cta ?? "",
-      objective: brief.commercial.objective ?? "",
-      campaignDetails: brief.commercial.campaignDetails ?? "",
-      additionalDetails: brief.commercial.additionalDetails ?? "",
-      targetChannel: brief.commercial.targetChannel ?? "Instagram",
-      format: brief.commercial.format ?? "quadrado 1:1",
-      availabilityNotes: brief.commercial.availabilityNotes ?? "",
-      sensitiveConstraints: brief.creativeContext.sensitiveConstraints ?? "",
-      mandatoryArtworkText: merchantText,
-      illustrativeNotice,
-      identityDirective: context.identity.directive ?? "",
-      preserveImageDirective: campaignIntent !== "offer" && brief.creativeContext.preserveImageContext
-        ? "NÃO recortar o produto. Preservar o contexto original da imagem. Adaptar a composição ao redor do produto sem isolá-lo. Legibilidade continua obrigatória."
-        : "",
-      brandProfileSection: this.buildBrandProfileSection(context.brandProfile ?? null),
-      creativePersona,
-      inferredCategory: effectiveInferredCategory,
-      categoryConflictDirective,
-      commercialRepertoire,
-      inputValidationSummary,
-      creativeContextGuidance,
       campaignIntent,
     };
   }
@@ -1010,10 +952,6 @@ export class ImageGenerationService {
     }
 
     return result;
-  }
-
-  private buildBrandProfileSection(brandProfile: BrandProfileSnapshot | null): string {
-    return buildBrandProfileSection(brandProfile);
   }
 
   private buildValidationDetail(
