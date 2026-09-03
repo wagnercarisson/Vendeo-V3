@@ -372,6 +372,107 @@ describe('ImageGenerationService.validatePrompts', () => {
     expect(result.valid).toBe(true);
     expect(result.errors).toHaveLength(0);
   });
+
+  it('validatePrompts loader real por intent: com texto obrigatório livre → valid e prompt final com requiredArtworkTextSection (D4/D5)', () => {
+    const realService = new ImageGenerationService(mockProvider as any);
+    const loadFinalPrompt = (brief: CampaignBrief) => {
+      const vars = (realService as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
+      return new PromptLoader().load(`campaign-image-director-${brief.commercial.intent ?? 'offer'}`, vars);
+    };
+
+    for (const intent of ['offer', 'spotlight', 'exclusive'] as const) {
+      const brief = createMinimalBrief({
+        campaignIntent: intent,
+        mandatoryArtworkText: 'Texto promocional',
+        preserveImageContext: true,
+      });
+      const result = realService.validatePrompts(brief, createContext());
+      expect(result.valid, `intent ${intent}: valid=false (${result.errors.join('; ')})`).toBe(true);
+
+      const promptText = loadFinalPrompt(brief);
+      expect(promptText, `intent ${intent}`).toContain('## Texto Obrigatório na Arte');
+      expect(promptText, `intent ${intent}`).toContain('"Texto promocional"');
+      expect(promptText, `intent ${intent}`).not.toContain('## Aviso Ilustrativo');
+    }
+  });
+
+  it('validatePrompts loader real por intent: apenas aviso ilustrativo → valid e prompt final com illustrativeNoticeSection, sem texto obrigatório (D4/D5)', () => {
+    const realService = new ImageGenerationService(mockProvider as any);
+    const loadFinalPrompt = (brief: CampaignBrief) => {
+      const vars = (realService as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
+      return new PromptLoader().load(`campaign-image-director-${brief.commercial.intent ?? 'offer'}`, vars);
+    };
+
+    for (const intent of ['offer', 'spotlight', 'exclusive'] as const) {
+      const brief = createMinimalBrief({
+        campaignIntent: intent,
+        mandatoryArtworkText: ILLUSTRATIVE_NOTICE_TEXT,
+        preserveImageContext: true,
+      });
+      const result = realService.validatePrompts(brief, createContext());
+      expect(result.valid, `intent ${intent}: valid=false (${result.errors.join('; ')})`).toBe(true);
+
+      const promptText = loadFinalPrompt(brief);
+      expect(promptText, `intent ${intent}`).toContain('## Aviso Ilustrativo');
+      expect(promptText, `intent ${intent}`).toContain(ILLUSTRATIVE_NOTICE_TEXT);
+      expect(promptText, `intent ${intent}`).not.toContain('## Texto Obrigatório na Arte');
+    }
+  });
+
+  it('validatePrompts loader real por intent: sem aviso e sem texto → valid e prompt final sem as duas seções (D4/D5)', () => {
+    const realService = new ImageGenerationService(mockProvider as any);
+    const loadFinalPrompt = (brief: CampaignBrief) => {
+      const vars = (realService as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
+      return new PromptLoader().load(`campaign-image-director-${brief.commercial.intent ?? 'offer'}`, vars);
+    };
+
+    for (const intent of ['offer', 'spotlight', 'exclusive'] as const) {
+      const brief = createMinimalBrief({ campaignIntent: intent, preserveImageContext: true });
+      const result = realService.validatePrompts(brief, createContext());
+      expect(result.valid, `intent ${intent}: valid=false (${result.errors.join('; ')})`).toBe(true);
+
+      const promptText = loadFinalPrompt(brief);
+      expect(promptText, `intent ${intent}`).not.toContain('## Texto Obrigatório na Arte');
+      expect(promptText, `intent ${intent}`).not.toContain('## Aviso Ilustrativo');
+    }
+  });
+
+  it('validatePrompts loader real: texto do lojista com {{ → saneado antes da interpolação, sem placeholder residual (D6)', () => {
+    const realService = new ImageGenerationService(mockProvider as any);
+
+    const brief = createMinimalBrief({
+      mandatoryArtworkText: 'Aproveite {{promocao}} e ganhe }} desconto',
+    });
+    const result = realService.validatePrompts(brief, createContext());
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+
+    const vars = (realService as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
+    const promptText = new PromptLoader().load('campaign-image-director-offer', vars);
+    expect(promptText).not.toContain('{{promocao}}');
+    expect(promptText).not.toContain('}} desconto');
+    expect(promptText).not.toMatch(/\{\{[a-zA-Z]+\}\}/);
+    expect(vars.requiredArtworkTextSection).toContain('{promocao}');
+  });
+
+  it('validatePrompts loader real: kqo (a) aviso + texto livre validado na montagem real — seções próprias no prompt final', () => {
+    const realService = new ImageGenerationService(mockProvider as any);
+
+    const brief = createMinimalBrief({
+      mandatoryArtworkText: `${ILLUSTRATIVE_NOTICE_TEXT}\nTexto promocional`,
+    });
+    const result = realService.validatePrompts(brief, createContext());
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+
+    const vars = (realService as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
+    const promptText = new PromptLoader().load('campaign-image-director-offer', vars);
+    expect(vars.requiredArtworkTextSection).toContain('"Texto promocional"');
+    expect(vars.requiredArtworkTextSection).not.toContain(ILLUSTRATIVE_NOTICE_TEXT);
+    expect(vars.illustrativeNoticeSection).toContain(ILLUSTRATIVE_NOTICE_TEXT);
+    expect(promptText).toContain('## Texto Obrigatório na Arte');
+    expect(promptText).toContain('## Aviso Ilustrativo');
+  });
 });
 
 describe('ImageGenerationService.generateImage', () => {
