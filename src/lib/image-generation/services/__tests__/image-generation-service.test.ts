@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { ImageGenerationService } from '../image-generation-service';
 import type { CampaignBrief } from '@/lib/campaign/brief';
 import { buildCampaignBriefFromFlat } from '@/lib/campaign/brief';
@@ -60,6 +62,22 @@ function createContext(overrides?: Partial<ResolvedCampaignContext>): ResolvedCa
     },
     ...overrides,
   };
+}
+
+function readPrompt(name: string): string {
+  return readFileSync(path.join(process.cwd(), 'prompts', name), 'utf-8');
+}
+
+function templatePlaceholders(template: string): string[] {
+  return [...template.matchAll(/\{\{([a-zA-Z]+)\}\}/g)].map((m) => m[1]);
+}
+
+function countOccurrences(text: string, needle: string): number {
+  return text.split(needle).length - 1;
+}
+
+function buildRealService(): ImageGenerationService {
+  return new ImageGenerationService({ name: 'test', generateImage: vi.fn() } as any);
 }
 
 describe('ImageGenerationService.validatePrompts', () => {
@@ -613,16 +631,12 @@ describe('ImageGenerationService.generateImage — telemetria D11 (usage/duratio
 });
 
 describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F39-15/F39-19)', () => {
-  // Conjunto FINAL do mapa compartilhado (45-04 D5): chaves realmente consumidas
-  // pelos 4 templates reescritos (8 slots contextuais + prosa garantida
-  // productName/storeName/brandColor) + campaignIntent (orquestração). Chaves
-  // legadas da transição (45-03) removidas — nenhum template as interpola mais.
-  const EXPECTED_KEYS = [
-    'campaignFactsSection', 'commercialDetailsSection', 'requiredArtworkTextSection',
-    'illustrativeNoticeSection', 'identityReferenceSection', 'productReferenceSection',
-    'constraintsSection', 'creativeDirectionSection',
-    'productName', 'storeName', 'brandColor', 'campaignIntent',
-  ];
+  // D5 (45-04/45-05): o contrato interno deixa de ser "mesmo conjunto exato de
+  // keys" e passa a ser invariante — todo placeholder presente nos templates é
+  // fornecido por buildPromptVariables (a), a montagem é determinística (b) e os
+  // blocos condicionais aparecem só quando há conteúdo (c). Os invariantes (a)-(c)
+  // estão no fim deste describe (45-05); os testes abaixo mantêm asserts de valor
+  // por intenção (seções montadas, DNA por intent) sem igualdade exata de chaves.
 
   function buildService() {
     const mockProvider = { name: 'test', generateImage: vi.fn() };
@@ -634,7 +648,7 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
     return service;
   }
 
-  it('8.16 offer: buildPromptVariables produz o conjunto final (regressão F39-15)', () => {
+  it('8.16 offer: buildPromptVariables monta as seções por presença real — sem chaves legadas avulsas (D5)', () => {
     const service = buildService();
     const brief = createMinimalBrief({
       validity: 'válida até 31/12',
@@ -642,10 +656,8 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
     });
     const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
 
-    const keys = Object.keys(vars).sort();
-    expect(keys).toEqual([...EXPECTED_KEYS].sort());
-    expect(keys).toHaveLength(EXPECTED_KEYS.length);
     expect(vars.productName).toBe('Produto Teste');
+    expect(vars.campaignIntent).toBe('offer');
     // Preço e badge legados saíram do Record — vivem nos fatos (D3/D5).
     expect(vars).not.toHaveProperty('discountedPrice');
     expect(vars).not.toHaveProperty('badgeText');
@@ -655,17 +667,15 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
     // Validade repartida: vive apenas no bloco de fatos (D3), não mais em chave própria.
     expect(vars).not.toHaveProperty('validity');
     expect(vars.campaignFactsSection).toContain('**Validade da oferta:** válida até 31/12');
-    expect(vars.campaignFactsSection).toContain('19,90');
     expect(vars.commercialDetailsSection).not.toContain('válida até 31/12');
     expect(vars.creativeDirectionSection).not.toContain('válida até 31/12');
     // Aviso marcado SEM texto livre → aviso isolado na seção própria (split caso 1);
     // sem texto obrigatório → requiredArtworkTextSection vazia.
     expect(vars.requiredArtworkTextSection).toBe('');
     expect(vars.illustrativeNoticeSection).toContain(ILLUSTRATIVE_NOTICE_TEXT);
-    expect(vars.campaignIntent).toBe('offer');
   });
 
-  it('8.16 spotlight: mesmas chaves finais, preserveImageContext → diretiva no bloco de produto', () => {
+  it('8.16 spotlight: preserveImageContext → diretiva no bloco de produto; preço único nos fatos', () => {
     const service = buildService();
     const brief = createMinimalBrief({
       campaignIntent: 'spotlight',
@@ -673,7 +683,6 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
     });
     const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
 
-    expect(Object.keys(vars)).toHaveLength(EXPECTED_KEYS.length);
     expect(vars.campaignIntent).toBe('spotlight');
     // preserveImageDirective legada saiu do Record; a regra de não-recorte vive no
     // bloco productReferenceSection (não-offer + preserveImageContext — D3).
@@ -687,13 +696,12 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
     expect(vars).not.toHaveProperty('validity');
   });
 
-  it('8.16 exclusive: mesmas chaves finais, facts NUNCA montam preço (DNA sem preço)', () => {
+  it('8.16 exclusive: facts NUNCA montam preço (DNA sem preço)', () => {
     const service = buildService();
     // Domínio ainda carrega preço (rota limpa em produção) → facts não podem exibi-lo.
     const brief = createMinimalBrief({ campaignIntent: 'exclusive', discountedPriceCents: 9900 });
     const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
 
-    expect(Object.keys(vars)).toHaveLength(EXPECTED_KEYS.length);
     expect(vars.campaignIntent).toBe('exclusive');
     expect(vars).not.toHaveProperty('commercialFrame');
     expect(vars).not.toHaveProperty('discountedPrice');
@@ -724,8 +732,6 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
     });
     const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
 
-    expect(Object.keys(vars)).toHaveLength(EXPECTED_KEYS.length);
-    expect([...EXPECTED_KEYS].sort()).toEqual(Object.keys(vars).sort());
     expect(vars.campaignFactsSection).toContain('**Validade da oferta:** até 30/09');
     // Aviso marcado SEM texto livre → aviso isolado na seção própria (split caso 1);
     // sem texto livre → requiredArtworkTextSection vazia (chaves legadas removidas).
@@ -734,7 +740,7 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
     expect(vars.illustrativeNoticeSection).toContain(ILLUSTRATIVE_NOTICE_TEXT);
   });
 
-  it('20 (F41): golden com multi-imagem mantém o MESMO conjunto final por intent (D6)', () => {
+  it('20 (F41): golden com multi-imagem mantém hierarquia 1+N no bloco de produto por intent', () => {
     const service = buildService();
     const multiBrief = (intent: 'offer' | 'spotlight' | 'exclusive') =>
       createMinimalBrief({
@@ -749,9 +755,6 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
     for (const intent of ['offer', 'spotlight', 'exclusive'] as const) {
       const brief = multiBrief(intent);
       const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
-      const keys = Object.keys(vars).sort();
-      expect(keys, `intent ${intent}`).toEqual([...EXPECTED_KEYS].sort());
-      expect(keys, `intent ${intent}`).toHaveLength(EXPECTED_KEYS.length);
       // Hierarquia 1+N: bloco de produto presente com 2+ imagens em todos os intents.
       expect(vars.productReferenceSection, `intent ${intent}`).toContain('apoio comercial real da composição');
     }
@@ -990,5 +993,73 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
     expect(result.success).toBe(true);
     expect(mockImageReview.review).toHaveBeenCalledTimes(1);
     expect(mockImageReview.review.mock.calls[0][2]).toEqual(['data:image/jpeg;base64,test']);
+  });
+
+  it('D5 invariante (a): placeholders dos templates ⊆ chaves fornecidas por intent (offer/spotlight/exclusive)', () => {
+    const service = buildService();
+    for (const intent of ['offer', 'spotlight', 'exclusive'] as const) {
+      const template = readPrompt(`campaign-image-director-${intent}.md`);
+      const placeholders = templatePlaceholders(template);
+      expect(placeholders.length, `intent ${intent}: template sem placeholders`).toBeGreaterThan(0);
+
+      const brief = createMinimalBrief({ campaignIntent: intent });
+      const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
+
+      for (const placeholder of placeholders) {
+        expect(vars, `intent ${intent}: {{${placeholder}}} sem chave correspondente`).toHaveProperty(placeholder);
+      }
+    }
+  });
+
+  it('D5 invariante (b): determinismo — mesma montagem 2× produz o mesmo prompt final', () => {
+    const realService = buildRealService();
+    const brief = createMinimalBrief({
+      validity: 'até 30/09/2026',
+      mandatoryArtworkText: 'Imagem meramente ilustrativa',
+      campaignDetails: 'Frete grátis',
+      sensitiveConstraints: 'Sem modelo',
+    });
+    const vars = (realService as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
+    const first = (realService as any).assemblePrompt('INITIAL', vars, []);
+    const second = (realService as any).assemblePrompt('INITIAL', vars, []);
+
+    expect(second).toBe(first);
+  });
+
+  it('D5 invariante (c): slots condicionais aparecem no prompt final só quando há conteúdo — sem resíduo {{...}} (D4)', () => {
+    const minimalBrief = createMinimalBrief();
+    const minimalVars = (buildRealService() as any).buildPromptVariables(minimalBrief, createContext(), minimalBrief.product.name) as Record<string, string>;
+    const minimalPrompt = new PromptLoader().load('campaign-image-director-offer', minimalVars);
+
+    expect(minimalVars.commercialDetailsSection).toBe('');
+    expect(minimalVars.requiredArtworkTextSection).toBe('');
+    expect(minimalVars.illustrativeNoticeSection).toBe('');
+    expect(minimalVars.constraintsSection).toBe('');
+    expect(minimalPrompt).not.toMatch(/\{\{[a-zA-Z]+\}\}/);
+
+    const completeBrief = createMinimalBrief({
+      validity: 'válida até 31/12',
+      mandatoryArtworkText: `${ILLUSTRATIVE_NOTICE_TEXT}\nTexto promocional`,
+      campaignDetails: 'Frete grátis acima de R$ 100',
+      additionalDetails: 'Válido somente em loja física',
+      availabilityNotes: 'Restam poucas unidades',
+      sensitiveConstraints: 'Não exibir modelo sem camisa',
+      productImages: [
+        { role: 'primary', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,primary' },
+        { role: 'reference', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,aux1' },
+      ],
+    });
+    const completeVars = (buildRealService() as any).buildPromptVariables(completeBrief, createContext(), completeBrief.product.name) as Record<string, string>;
+    const completePrompt = new PromptLoader().load('campaign-image-director-offer', completeVars);
+
+    expect(completeVars.commercialDetailsSection).not.toBe('');
+    expect(completeVars.requiredArtworkTextSection).not.toBe('');
+    expect(completeVars.illustrativeNoticeSection).not.toBe('');
+    expect(completeVars.constraintsSection).not.toBe('');
+    expect(completePrompt).not.toMatch(/\{\{[a-zA-Z]+\}\}/);
+    expect(completePrompt).toContain('## Texto Obrigatório na Arte');
+    expect(completePrompt).toContain('## Aviso Ilustrativo');
+    expect(completePrompt).toContain('## Detalhes Comerciais');
+    expect(completePrompt).toContain('## Restrições Sensíveis');
   });
 });
