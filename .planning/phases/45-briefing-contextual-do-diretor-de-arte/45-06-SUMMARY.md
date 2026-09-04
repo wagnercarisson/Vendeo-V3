@@ -3,7 +3,7 @@ phase: 45-briefing-contextual-do-diretor-de-arte
 plan: 06
 subsystem: ai-image-generation
 tags: [art-director-briefing, regression, non-change-verification, d7, prompts, human-review, checkpoint]
-status: PARTIAL — tasks 1-2 done; task 3 (checkpoint humano) PENDING — adendos F45-06a (spotlight) e F45-06b (exclusive/offer/base) aplicados
+status: COMPLETE — 3/3 tasks; task 3 (checkpoint humano) HUMAN-APPROVED após adendos F45-06a (spotlight) e F45-06b (exclusive/offer/base)
 
 # Dependency graph
 requires:
@@ -29,31 +29,33 @@ key-decisions:
   - "Nenhuma correção de resíduo foi necessária na Task 1: o vitest total (2392 testes) ficou 100% verde na primeira execução — as co-migrações in-plan dos 45-03/45-04/45-05 já haviam zerado referências ao mapa antigo de variáveis (39→36→12 chaves) e às âncoras antigas dos .md; greps de confirmação (EXPECTED_KEYS, LINHA_*, chaves legadas) retornaram apenas asserções de AUSÊNCIA legítimas (not.toHaveProperty/not.toContain) e nomes de campos de domínio ainda existentes (discountedPriceCents/badgeText)"
   - "Task 2 confirmou via git (diff de0cbc78...HEAD, 25 commits da branch F45) que NENHUM arquivo das superfícies congeladas foi alterado pela fase — arquivos alterados na branch limitam-se aos 4 .md do diretor, art-director-briefing.ts, image-generation-service.ts, 3 suites-alvo de teste e artefatos .planning/openspec/prompts da própria F45"
   - "Nenhum commit de código para Tasks 1-2: ambas foram puramente de verificação (zero arquivos modificados) — mesmo padrão da Task 5 do 45-05 ('sem commit próprio'); o commit docs deste SUMMARY registra o estado parcial com a Task 3 em aberto"
+  - "Task 3 HUMAN-APPROVED (6.3): o humano aprovou os 4 .md reescritos e os textos finais montados após 2 rodadas de ajustes focados (F45-06a spotlight em 2ae83c35; F45-06b exclusive/offer/base em 31a05fd7) — plano 45-06 COMPLETO"
 
 patterns-established:
   - "Checkpoint de revisão humana com material anexado no próprio SUMMARY (estado PARTIAL): textos finais montados via caminho real (service + PromptLoader) para leitura do humano sem exigir que ele rode comandos"
   - "Regressão de não-mudança reproduzível: diff da branch contra merge-base + lista explícita de superfícies congeladas + run direcionado das suites irmãs"
 
-requirements-completed: [] # Parcial — F45-23/F45-24 (Tasks 1-2) atendidas em código; F45-25 (revisão humana) PENDENTE de aprovação no checkpoint. Finalizar no SUMMARY definitivo após resposta do humano.
+requirements-completed: [F45-23, F45-24, F45-25] # Completo — Tasks 1-2 verdes + Task 3 (revisão humana dos 4 .md e textos montados) HUMAN-APPROVED após F45-06a/F45-06b
 
 # Metrics
 duration: 8min (tasks 1-2) + 10min (F45-06a) + 12min (F45-06b: ajustes exclusive/offer/base)
 completed: 2026-09-03
 ---
 
-# Phase 45 Plan 06: Regressão Completa + Não-Mudança D7 — ESTADO PARCIAL (Tasks 1–2 verdes; Task 3 re-apresentada após 2 rodadas de ajustes)
+# Phase 45 Plan 06: Regressão Completa + Não-Mudança D7 — COMPLETO (Tasks 1–3 verdes; Task 3 HUMAN-APPROVED)
 
-**Regressão total F45 VERDE (253 files / 2396 testes) com zero resíduos do mapa antigo/âncoras antigas dos `.md`; gates typecheck/lint/build verdes; superfícies congeladas (rota HTTP/schema/domínio/form/revisor/copy/fallback OpenAI) confirmadas INTACTAS por verificação git (D7); suites irmãs verdes sem edição; material completo de revisão humana dos 4 `.md` reescritos e dos textos finais montados preparado e apresentado; após retorno do humano, 5 ajustes focados no SPOTLIGHT (F45-06a) e 8+6 ajustes focados em EXCLUSIVE/OFFER/BASE (F45-06b) foram aplicados e revalidados — AGUARDANDO REAPROVAÇÃO HUMANA (Task 3)**
+**Regressão total F45 VERDE (253 files / 2396 testes) com zero resíduos do mapa antigo/âncoras antigas dos `.md`; gates typecheck/lint/build verdes; superfícies congeladas (rota HTTP/schema/domínio/form/revisor/copy/fallback OpenAI) confirmadas INTACTAS por verificação git (D7); suites irmãs verdes sem edição; material completo de revisão humana dos 4 `.md` reescritos e dos textos finais montados preparado e apresentado; após retorno do humano, 5 ajustes focados no SPOTLIGHT (F45-06a) e 8+6 ajustes focados em EXCLUSIVE/OFFER/BASE (F45-06b) foram aplicados, revalidados e REAPROVADOS — Task 3 HUMAN-APPROVED, plano COMPLETO**
 
-> **STATUS DO PLANO: PARCIAL.** Tasks 1–2 concluídas e verdes. Task 3 (`checkpoint:human-verify`, gate blocking) NÃO aprovada. A revisão humana pediu ajustes FOCADOS no spotlight (adendo F45-06a, aplicado em `2ae83c35`) e depois em exclusive/offer/base (adendo F45-06b, aplicado em `31a05fd7`); ambos validados (253 files/2396 testes + typecheck/lint/build exit 0) com textos finais re-montados via caminho real. Este documento NÃO declara aprovação humana — aguarda "approved" ou novos ajustes.
+> **STATUS DO PLANO: COMPLETO.** Tasks 1–2 concluídas e verdes (regressão total + não-mudança D7). Task 3 (`checkpoint:human-verify`, gate blocking) foi revisada pelo humano, que solicitou duas rodadas de ajustes focados — spotlight (F45-06a, `2ae83c35`) e exclusive/offer/base (F45-06b, `31a05fd7`) — e **APROVOU o resultado**. As duas rodadas foram validadas (253 files/2396 testes + typecheck/lint/build exit 0) com textos finais re-montados via caminho real. Este SUMMARY registra a APROVAÇÃO HUMANA da Task 3 e a conclusão do plano 45-06.
 
 ## Performance
 
-- **Duration:** 8 min (Tasks 1–2); Task 3 aguardando resposta humana desde 2026-09-03T20:42Z
+- **Duration:** 8 min (Tasks 1–2) + 10 min (F45-06a) + 12 min (F45-06b) + close-out
 - **Started:** 2026-09-03T20:35:40Z
-- **Completed:** (parcial — ver checkpoint)
-- **Tasks:** 2/3 concluídas (Task 3 em checkpoint)
-- **Files modified:** 0 (verificação pura — nenhuma edição necessária)
+- **Completed:** 2026-09-03 (Task 3 HUMAN-APPROVED)
+- **Tasks:** 3/3 concluídas (Task 3 aprovada pelo humano após F45-06a/F45-06b)
+- **Files modified (Tasks 1–2):** 0 (verificação pura — nenhuma edição necessária)
+- **Files modified (adendos):** F45-06a = 5; F45-06b = 7 (ver commits)
 
 ## Accomplishments
 
@@ -77,24 +79,28 @@ completed: 2026-09-03
 - **Run direcionado das suites de não-mudança:** `route.test.ts` + `image-review-service.test.ts` + copy + form + brief/snapshot/mapper → **33 files / 416 tests passed**.
 - Nenhum arquivo congelado precisou de investigação/reversão (nenhum apareceu como alterado).
 
-### Task 3 — Material de revisão humana PREPARADO (6.3) — AGUARDANDO APROVAÇÃO
-- Material completo montado e apresentado no checkpoint (Anexo A: excertos editoriais dos 4 `.md`; Anexo B: 3 textos finais montados via **caminho real** — `ImageGenerationService.buildPromptVariables` + `PromptLoader` real lendo os `.md` do disco; Anexo C: checklist a–e).
-- Nenhuma aprovação declarada neste documento — o plano permanece em estado PARCIAL até a resposta do humano.
+### Task 3 — Material de revisão humana PREPARADO, AJUSTADO e APROVADO (6.3) — HUMAN-APPROVED
+- Material completo montado e apresentado no checkpoint (Anexo A: excertos editoriais dos 4 `.md`; Anexo B: textos finais montados via **caminho real** — `ImageGenerationService.buildPromptVariables` + `PromptLoader` real lendo os `.md` do disco; Anexo C: checklist a–e).
+- O humano solicitou duas rodadas de ajustes focados: **F45-06a (spotlight**, 5 itens) e **F45-06b (exclusive/offer/base**, 8+6 itens) — ambas aplicadas, validadas (253 files/2396 testes + typecheck/lint/build exit 0) e re-apresentadas com textos finais re-montados.
+- **APROVAÇÃO HUMANA registrada:** o humano aprovou a Task 3 após as duas rodadas — plano 45-06 COMPLETO.
 
 ## Task Commits
 
-Tasks 1–2 foram **puramente de verificação** — nenhum arquivo foi modificado, portanto não há commits de código por task (mesmo padrão da Task 5 do 45-05). O commit docs abaixo registra o estado parcial:
+Tasks 1–2 foram **puramente de verificação** — nenhum arquivo foi modificado, portanto não há commits de código por task (mesmo padrão da Task 5 do 45-05). Os commits de código dos adendos e os commits docs abaixo registram o ciclo completo:
 
 1. **Task 1 (6.1): Regressão completa** — verificação apenas; zero resíduos encontrados → sem commit de produção
 2. **Task 2 (6.2): Gates + não-mudança D7** — verificação apenas; gates verdes, superfícies congeladas intactas → sem commit de produção
-3. **Task 3 (6.3): Revisão humana** — PENDENTE (checkpoint; ajustes do adendo F45-06a aplicados, aguardando reaprovação)
-4. **Docs: estado parcial** — `45-06-SUMMARY.md` (este arquivo) com material do checkpoint
-5. **Adendo F45-06a: ajustes de revisão humana no spotlight** — `2ae83c35` (fix; 5 arquivos) + docs deste SUMMARY
+3. **Task 3 (6.3): Revisão humana** — APROVADA pelo humano após 2 rodadas de ajustes (F45-06a spotlight + F45-06b exclusive/offer/base)
+4. **Docs: estado parcial** — `5fc73cb7` (45-06-SUMMARY.md com material do checkpoint)
+5. **Adendo F45-06a: ajustes de revisão humana no spotlight** — `2ae83c35` (fix; 5 arquivos) + docs `aa71d463`
+6. **Adendo F45-06b: ajustes de revisão humana em exclusive/offer/base** — `31a05fd7` (fix; 7 arquivos) + docs `9bae93c5` + `47537fa6`
+7. **Close-out: aprovação humana registrada** — commit docs final deste SUMMARY
 
 ## Files Created/Modified
 
-- `.planning/phases/45-briefing-contextual-do-diretor-de-arte/45-06-SUMMARY.md` — estado parcial (Tasks 1–2 verdes; Task 3 pendente) + material de revisão humana em anexo
+- `.planning/phases/45-briefing-contextual-do-diretor-de-arte/45-06-SUMMARY.md` — estado final COMPLETO (Tasks 1–3; Task 3 HUMAN-APPROVED) + material de revisão humana em anexo
 - Adendo F45-06a (ajustes spotlight): `prompts/campaign-image-director-spotlight.md`, `src/lib/image-generation/services/art-director-briefing.ts`, `src/lib/image-generation/services/image-generation-service.ts`, `src/lib/image-generation/services/__tests__/art-director-briefing.test.ts`, `src/lib/campaign/__tests__/prompt-reframe.test.ts`
+- Adendo F45-06b (ajustes exclusive/offer/base): `prompts/campaign-image-director-exclusive.md`, `prompts/campaign-image-director-offer.md`, `prompts/campaign-image-director.md`, `src/lib/image-generation/services/art-director-briefing.ts`, `src/lib/image-generation/services/image-generation-service.ts`, `src/lib/image-generation/services/__tests__/art-director-briefing.test.ts`, `src/lib/campaign/__tests__/prompt-reframe.test.ts`
 - Nenhum arquivo de código/`.md`/teste das Tasks 1–2 modificado (verificação pura)
 
 ## Decisions Made
@@ -116,15 +122,15 @@ Nenhuma — plano executado como escrito até o ponto do checkpoint. Observaçõ
 
 ## User Setup Required
 
-None — sem configuração externa. O checkpoint humano é de **leitura/revisão** (o agente monta e apresenta; o humano valida e responde "approved" ou descreve ajustes).
+None — sem configuração externa. O checkpoint humano foi de **leitura/revisão** (o agente monta e apresenta; o humano valida e responde "approved" ou descreve ajustes) — concluído com aprovação.
 
 ## Next Phase Readiness
 
 - **Regressão total verde e superfícies congeladas confirmadas intactas (D7)** — base para o 45-07 (verificação final/UAT comparativo).
-- **Bloqueio atual:** Task 3 aguarda REAPROVAÇÃO humana após o adendo F45-06a (ajustes de spotlight aplicados em `2ae83c35`). Após "approved" (ou novos ajustes + reapresentação), o plano é finalizado e este SUMMARY é consolidado (requirements F45-23/24/25, status completo).
-- **Próximo plano:** 45-07 (Verificação final — `45-VERIFICATION.md` + `45-UAT.md` + 4 gates + registros/arquivamento do change) — depende da aprovação humana deste plano.
+- **Task 3 APROVADA:** o humano aprovou os 4 `.md` reescritos e os textos finais montados após as rodadas F45-06a (spotlight, `2ae83c35`) e F45-06b (exclusive/offer/base, `31a05fd7`). Plano 45-06 COMPLETO — requirements F45-23/F45-24/F45-25 atendidos.
+- **Próximo plano:** 45-07 (Verificação final — `45-VERIFICATION.md` + `45-UAT.md` + 4 gates + registros/arquivamento do change).
 
-## Self-Check: PASSED (parcial — Tasks 1–2 + adendos F45-06a e F45-06b)
+## Self-Check: PASSED (plano COMPLETO — Tasks 1–3 + adendos F45-06a e F45-06b)
 
 - `npx vitest run` → **253 test files passed, 2392 tests passed** (zero falhas — Tasks 1–2) ✓
 - `npx vitest run` → **253 test files passed, 2395 tests passed** (adendo F45-06a — +3 testes focados) ✓
@@ -140,7 +146,7 @@ None — sem configuração externa. O checkpoint humano é de **leitura/revisã
 
 ---
 
-## ADENDO F45-06b — Ajustes de revisão humana em EXCLUSIVE/OFFER/BASE (aplicados e revalidados)
+## ADENDO F45-06b — Ajustes de revisão humana em EXCLUSIVE/OFFER/BASE (aplicados, revalidados e APROVADOS)
 
 **Gatilho:** o humano aprovou o spotlight (F45-06a) e solicitou nova rodada FOCADA em exclusive/offer/base. Escopo respeitado: `campaign-image-director-exclusive.md` (partindo das edições manuais do usuário preservadas), `campaign-image-director-offer.md` + base `campaign-image-director.md` (sync editorial), builders estritamente necessários em `art-director-briefing.ts`, call site no service e suites diretamente afetadas. Spotlight, superfícies congeladas D7 e profile de marca intocados.
 
@@ -181,7 +187,7 @@ Conferência checklist (a–e) re-executada sobre os textos montados: (a) briefi
 
 ---
 
-## ADENDO F45-06a — Ajustes de revisão humana no SPOTLIGHT (aplicados e revalidados)
+## ADENDO F45-06a — Ajustes de revisão humana no SPOTLIGHT (aplicados, revalidados e APROVADOS)
 
 **Gatilho:** o humano revisou a Task 3 e solicitou ajustes FOCADOS no formato spotlight (5 itens). Escopo respeitado: apenas `prompts/campaign-image-director-spotlight.md` + builders/blocos estritamente necessários em `art-director-briefing.ts` + call site no service; offer/base/exclusive `.md` e blocos intocados; superfícies congeladas D7 intocadas.
 
@@ -582,4 +588,4 @@ Valorize estilo e performance. Valor percebido e exclusividade são os pilares. 
 
 ---
 *Phase: 45-briefing-contextual-do-diretor-de-arte*
-*Status: PARCIAL — aguardando aprovação humana da Task 3 (2026-09-03)*
+*Status: COMPLETO — Task 3 HUMAN-APPROVED após adendos F45-06a (spotlight) e F45-06b (exclusive/offer/base) (2026-09-03)*
