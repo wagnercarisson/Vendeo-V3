@@ -741,7 +741,7 @@ export class ImageGenerationService {
     return {
       campaignFactsSection: campaignFactsSection(brief, context, effectiveProductName),
       commercialDetailsSection: commercialDetailsSection(brief),
-      requiredArtworkTextSection: requiredArtworkTextSection(merchantText),
+      requiredArtworkTextSection: requiredArtworkTextSection(merchantText, campaignIntent),
       illustrativeNoticeSection: illustrativeNoticeSection(illustrativeNotice),
       identityReferenceSection: identityReferenceSection(brief, context),
       productReferenceSection: productReferenceSection(brief, context, this.mediaImagesDataUrls(brief).length),

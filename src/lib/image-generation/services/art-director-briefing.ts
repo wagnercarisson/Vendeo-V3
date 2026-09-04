@@ -354,16 +354,24 @@ export function commercialDetailsSection(brief: CampaignBrief): string {
   ].join("\n");
 }
 
-export function requiredArtworkTextSection(merchantText: string): string {
+export function requiredArtworkTextSection(merchantText: string, campaignIntent: string = "offer"): string {
   const text = sanitizePromptText((merchantText ?? "").trim());
   if (!text) return "";
-  return [
+  const lines = [
     "## Texto Obrigatório na Arte",
     "",
     "O texto abaixo foi informado pelo lojista para ser incluído na arte. Inclua esse texto na arte de forma visível e legível, em tipografia mínima adequada para leitura em dispositivo móvel. Não o repita na legenda.",
-    "",
-    `"${text}"`,
-  ].join("\n");
+  ];
+  // Spotlight (F45-06): texto multilinha não deve virar um bloco único agrupado —
+  // orientar legibilidade, separação visual e respiro entre linhas/itens.
+  if (campaignIntent === "spotlight" && text.includes("\n")) {
+    lines.push(
+      "",
+      "Se o texto tiver mais de uma linha ou item, mantenha legibilidade, separação visual e respiro adequado entre as linhas/itens — não os trate como um bloco único agrupado."
+    );
+  }
+  lines.push("", `"${text}"`);
+  return lines.join("\n");
 }
 
 export function illustrativeNoticeSection(illustrativeNotice: string): string {
@@ -413,6 +421,21 @@ export function identityReferenceSection(brief: CampaignBrief, context: Resolved
     parts.push(directive);
   } else {
     parts.push("Não colocar logotipo. Não gerar assinatura visual. Considerar a direção visual do perfil de marca como contexto direcional, não obrigatório.");
+  }
+
+  // Spotlight (F45-06): assinatura com respiro — a identidade pode ser posicionada
+  // com liberdade, mas precisa de respiro adequado e nunca cortada nas bordas da arte.
+  const campaignIntent = brief.commercial.intent ?? "offer";
+  if (campaignIntent === "spotlight" && parts.length > 0) {
+    const identityElement =
+      state === "logo" && hasAsset
+        ? "o logotipo"
+        : state === "visual_signature" && hasAsset
+          ? "a assinatura visual"
+          : "o nome da loja";
+    parts.push(
+      `Posicionar ${identityElement} com liberdade na composição, mantendo respiro adequado e sem cortes nas bordas da arte.`
+    );
   }
 
   return parts.join("\n");

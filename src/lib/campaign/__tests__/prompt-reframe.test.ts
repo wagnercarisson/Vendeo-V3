@@ -186,4 +186,24 @@ describe("prompt reframe D6 (testes 16-17 + checks de conteúdo)", () => {
     expect(exclusive, "exclusive sem preço de desconto").not.toContain("preço com desconto");
     expect(exclusive, "exclusive sem DE/POR").not.toContain("DE/POR");
   });
+
+  it("F45-06 (revisão humana): ajustes spotlight — badge informado obrigatório, CTA sem repetir badge, linha de identidade simples no .md", () => {
+    const spotlight = readPrompt("campaign-image-director-spotlight.md");
+    // (1) Badge informado nos fatos → DEVE ser incorporado (não mais opcional).
+    expect(spotlight, "spotlight sem badge obrigatório quando informado").toContain(
+      "Quando houver badge informado nos fatos, incorporá-lo à arte"
+    );
+    // Sem badge informado, apoio discreto é opcional e não inventa promessa comercial.
+    expect(spotlight, "spotlight sem a regra do apoio opcional sem promessa").toContain(
+      "Sem badge informado, um apoio visual discreto é opcional"
+    );
+    // (2) Linha de composição de identidade simplificada (sem repetir a seção).
+    expect(spotlight, "spotlight sem linha de identidade simples").toContain(
+      "A campanha deve ser assinada pela loja — ver a seção \"Identidade da Loja\""
+    );
+    // (5) CTA não repete literalmente o badge.
+    expect(spotlight, "spotlight sem regra de CTA × badge").toContain(
+      "O CTA não deve repetir literalmente o texto do badge"
+    );
+  });
 });
