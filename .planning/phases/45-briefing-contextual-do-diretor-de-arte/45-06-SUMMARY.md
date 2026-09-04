@@ -37,15 +37,15 @@ patterns-established:
 requirements-completed: [] # Parcial — F45-23/F45-24 (Tasks 1-2) atendidas em código; F45-25 (revisão humana) PENDENTE de aprovação no checkpoint. Finalizar no SUMMARY definitivo após resposta do humano.
 
 # Metrics
-duration: 8min (tasks 1-2; task 3 aguardando humano)
+duration: 8min (tasks 1-2) + 10min (adendo F45-06a: ajustes de revisão humana no spotlight)
 completed: 2026-09-03
 ---
 
-# Phase 45 Plan 06: Regressão Completa + Não-Mudança D7 — ESTADO PARCIAL (Tasks 1–2 verdes; Task 3 em checkpoint humano) Summary
+# Phase 45 Plan 06: Regressão Completa + Não-Mudança D7 — ESTADO PARCIAL (Tasks 1–2 verdes; Task 3 re-apresentada com ajustes aplicados)
 
-**Regressão total F45 VERDE (253 files / 2392 testes) com zero resíduos do mapa antigo/âncoras antigas dos `.md`; gates typecheck/lint/build verdes; superfícies congeladas (rota HTTP/schema/domínio/form/revisor/copy/fallback OpenAI) confirmadas INTACTAS por verificação git (D7); suites irmãs verdes sem edição; material completo de revisão humana dos 4 `.md` reescritos e dos textos finais montados preparado e apresentado — AGUARDANDO APROVAÇÃO HUMANA (Task 3)**
+**Regressão total F45 VERDE (253 files / 2392 testes) com zero resíduos do mapa antigo/âncoras antigas dos `.md`; gates typecheck/lint/build verdes; superfícies congeladas (rota HTTP/schema/domínio/form/revisor/copy/fallback OpenAI) confirmadas INTACTAS por verificação git (D7); suites irmãs verdes sem edição; material completo de revisão humana dos 4 `.md` reescritos e dos textos finais montados preparado e apresentado; após retorno do humano, 5 ajustes focados no SPOTLIGHT foram aplicados e revalidados — AGUARDANDO REAPROVAÇÃO HUMANA (Task 3)**
 
-> **STATUS DO PLANO: PARCIAL.** Tasks 1–2 concluídas e verdes. Task 3 (`checkpoint:human-verify`, gate blocking) NÃO aprovada — material apresentado em anexo; a resposta do humano ("approved" ou ajustes) decide a finalização do plano e do SUMMARY definitivo. Este documento NÃO declara aprovação humana.
+> **STATUS DO PLANO: PARCIAL.** Tasks 1–2 concluídas e verdes. Task 3 (`checkpoint:human-verify`, gate blocking) NÃO aprovada. A revisão humana pediu ajustes FOCADOS no spotlight (adendo F45-06a); os ajustes foram aplicados, validados (253 files/2395 testes + typecheck/lint/build exit 0) e o material foi re-montado e re-apresentado. Este documento NÃO declara aprovação humana — aguarda "approved" ou novos ajustes.
 
 ## Performance
 
@@ -87,13 +87,15 @@ Tasks 1–2 foram **puramente de verificação** — nenhum arquivo foi modifica
 
 1. **Task 1 (6.1): Regressão completa** — verificação apenas; zero resíduos encontrados → sem commit de produção
 2. **Task 2 (6.2): Gates + não-mudança D7** — verificação apenas; gates verdes, superfícies congeladas intactas → sem commit de produção
-3. **Task 3 (6.3): Revisão humana** — PENDENTE (checkpoint; aguardando resposta do humano)
+3. **Task 3 (6.3): Revisão humana** — PENDENTE (checkpoint; ajustes do adendo F45-06a aplicados, aguardando reaprovação)
 4. **Docs: estado parcial** — `45-06-SUMMARY.md` (este arquivo) com material do checkpoint
+5. **Adendo F45-06a: ajustes de revisão humana no spotlight** — `2ae83c35` (fix; 5 arquivos) + docs deste SUMMARY
 
 ## Files Created/Modified
 
 - `.planning/phases/45-briefing-contextual-do-diretor-de-arte/45-06-SUMMARY.md` — estado parcial (Tasks 1–2 verdes; Task 3 pendente) + material de revisão humana em anexo
-- Nenhum arquivo de código/`.md`/teste modificado (verificação pura)
+- Adendo F45-06a (ajustes spotlight): `prompts/campaign-image-director-spotlight.md`, `src/lib/image-generation/services/art-director-briefing.ts`, `src/lib/image-generation/services/image-generation-service.ts`, `src/lib/image-generation/services/__tests__/art-director-briefing.test.ts`, `src/lib/campaign/__tests__/prompt-reframe.test.ts`
+- Nenhum arquivo de código/`.md`/teste das Tasks 1–2 modificado (verificação pura)
 
 ## Decisions Made
 
@@ -119,17 +121,60 @@ None — sem configuração externa. O checkpoint humano é de **leitura/revisã
 ## Next Phase Readiness
 
 - **Regressão total verde e superfícies congeladas confirmadas intactas (D7)** — base para o 45-07 (verificação final/UAT comparativo).
-- **Bloqueio atual:** Task 3 aguarda resposta humana sobre os 4 `.md` reescritos e os 3 textos finais montados (Anexos A–C abaixo). Após "approved" (ou ajustes + reapresentação), o plano é finalizado e este SUMMARY é consolidado (requirements F45-23/24/25, status completo).
+- **Bloqueio atual:** Task 3 aguarda REAPROVAÇÃO humana após o adendo F45-06a (ajustes de spotlight aplicados em `2ae83c35`). Após "approved" (ou novos ajustes + reapresentação), o plano é finalizado e este SUMMARY é consolidado (requirements F45-23/24/25, status completo).
 - **Próximo plano:** 45-07 (Verificação final — `45-VERIFICATION.md` + `45-UAT.md` + 4 gates + registros/arquivamento do change) — depende da aprovação humana deste plano.
 
-## Self-Check: PASSED (parcial — Tasks 1–2)
+## Self-Check: PASSED (parcial — Tasks 1–2 + adendo F45-06a)
 
-- `npx vitest run` → **253 test files passed, 2392 tests passed** (zero falhas) ✓
-- `npm run typecheck` → exit 0 ✓ | `npm run lint` → exit 0 ✓ | `npm run build` → exit 0 ✓
+- `npx vitest run` → **253 test files passed, 2392 tests passed** (zero falhas — Tasks 1–2) ✓
+- `npx vitest run` → **253 test files passed, 2395 tests passed** (adendo F45-06a — +3 testes focados) ✓
+- `npm run typecheck` → exit 0 ✓ | `npm run lint` → exit 0 ✓ | `npm run build` → exit 0 (Tasks 1–2) ✓
+- `npm run typecheck` → exit 0 ✓ | `npm run lint` → exit 0 ✓ (adendo F45-06a) ✓
 - Run direcionado das suites de não-mudança → **33 files / 416 tests passed** ✓
 - `git diff --name-only de0cbc78...HEAD` → nenhuma superfície congelada na lista ✓
 - Greps de resíduo (EXPECTED_KEYS/LINHA_*/chaves legadas) → apenas asserções de ausência legítimas ✓
-- Working tree limpo (exceto pasta pré-existente intocada) ✓
+- Adendo F45-06a: diff do commit `2ae83c35` limitado aos 5 arquivos-alvo (spotlight `.md` + módulo + service + 2 suites-alvo) — nenhuma superfície congelada ✓
+- Working tree limpo (exceto pasta pré-existente `docs/alinhamento-fase-44-temas-de-campanhas` e artefatos do revisor humano `resultado.md`/`image.png`, intocados) ✓
+
+---
+
+## ADENDO F45-06a — Ajustes de revisão humana no SPOTLIGHT (aplicados e revalidados)
+
+**Gatilho:** o humano revisou a Task 3 e solicitou ajustes FOCADOS no formato spotlight (5 itens). Escopo respeitado: apenas `prompts/campaign-image-director-spotlight.md` + builders/blocos estritamente necessários em `art-director-briefing.ts` + call site no service; offer/base/exclusive `.md` e blocos intocados; superfícies congeladas D7 intocadas.
+
+### O que mudou (5 ajustes)
+
+**1. Badge informado → OBRIGATÓRIO (não mais opcional)** — `campaign-image-director-spotlight.md` (Diretrizes de Composição nº 5):
+- Antes: "Quando houver badge informado nos fatos, ele pode ser integrado se presente. É opcional"
+- Depois: "Quando houver badge informado nos fatos, incorporá-lo à arte. Sem badge informado, um apoio visual discreto é opcional — apenas se trouxer clareza visual, sem inventar promessa comercial"
+
+**2. Identidade: linha de composição simplificada** — `campaign-image-director-spotlight.md` (nº 2):
+- Antes: "O nome {{storeName}} deve aparecer como assinatura de marca — consistente com a identidade visual da loja" (redundante com a seção)
+- Depois: "A campanha deve ser assinada pela loja — ver a seção 'Identidade da Loja'" (fidelidade/limites/preservação concentrados na seção/bloco)
+
+**3. Assinatura com respiro** — `identityReferenceSection` (`art-director-briefing.ts`), SOMENTE spotlight:
+- Adicionada orientação curta por estado de identidade: "Posicionar {o logotipo | a assinatura visual | o nome da loja} com liberdade na composição, mantendo respiro adequado e sem cortes nas bordas da arte." — sem contradizer o estado `text_only` (fallback "nome da loja") e sem ser longa.
+
+**4. Texto obrigatório multilinha** — `requiredArtworkTextSection` (`art-director-briefing.ts`), SOMENTE spotlight com quebra de linha:
+- Adicionada orientação: "Se o texto tiver mais de uma linha ou item, mantenha legibilidade, separação visual e respiro adequado entre as linhas/itens — não os trate como um bloco único agrupado."
+- A separação texto obrigatório × aviso ilustrativo (seções próprias distintas) NÃO foi alterada. Assinatura ganhou parâmetro `campaignIntent` (default `"offer"` — compatível retroativo); call site do service passa o intent.
+
+**5. CTA × badge** — `campaign-image-director-spotlight.md` (nº 6):
+- Adicionado: "O CTA não deve repetir literalmente o texto do badge — com badge informado, o CTA complementa a chamada para ação sem redundância"
+
+### Testes focados aditivos (+3)
+
+- `art-director-briefing.test.ts` (+2): (a) `identityReferenceSection` com respiro/sem corte nas bordas APENAS para spotlight (offer/exclusive sem a linha); (b) `requiredArtworkTextSection` com separação multilinha APENAS para spotlight com `\n` (offer sem; spotlight linha única sem).
+- `prompt-reframe.test.ts` (+1): âncoras `.md` do spotlight — badge obrigatório quando informado, apoio opcional sem promessa, linha de identidade simples, CTA sem repetir badge.
+
+### Textos finais re-montados (spotlight, caminho real)
+
+Montagem via service real + `PromptLoader` real (fixtures "Loja Bella Moda", `moda-calcados-acessorios`, `#E11D48`, produto "Vestido Floral Verão", preço R$ 159,90, preserveImageContext, 1 primary). Artefatos temporários removidos antes do commit; conteúdo verificado e conferido:
+
+- **Variant A (sem badge, assinatura visual):** composição nº 2 simplificada ("A campanha deve ser assinada pela loja — ver a seção 'Identidade da Loja'"); seção Identidade com "Posicionar a assinatura visual com liberdade na composição, mantendo respiro adequado e sem cortes nas bordas da arte."; sem seções vazias, sem placeholders residuais.
+- **Variant B (com badge "Novidade" + hook + CTA + texto obrigatório multilinha + logo):** Fatos com `- **Badge:** Novidade`; composição nº 5 "incorporá-lo à arte" (obrigatório); nº 6 "O CTA não deve repetir literalmente o texto do badge — com badge informado, o CTA complementa a chamada para ação sem redundância"; seção Identidade com "Posicionar o logotipo com liberdade..."; `## Texto Obrigatório na Arte` com orientação multilinha ("mantenha legibilidade, separação visual e respiro adequado entre as linhas/itens") seguida do texto em 2 linhas; sem `## Aviso Ilustrativo` vazio, sem placeholders residuais.
+
+Conferência checklist (a–e) re-executada sobre os textos montados: (a) briefing coerente sem ruído ✓; (b) cada natureza em sua seção, sem duplicação ✓; (c) tom de destaque sem urgência preservado ✓; (d) seções próprias de texto obrigatório e aviso claras e separadas ✓; (e) identidade/preservação + hierarquia primary×auxiliares explícitas ✓.
 
 ---
 
