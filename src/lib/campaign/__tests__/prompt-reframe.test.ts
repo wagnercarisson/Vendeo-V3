@@ -206,4 +206,67 @@ describe("prompt reframe D6 (testes 16-17 + checks de conteúdo)", () => {
       "O CTA não deve repetir literalmente o texto do badge"
     );
   });
+
+  it("F45-06b (revisão humana): ajustes exclusive/offer/base — badge obrigatório, CTA complementa, identidade simples, sem flag técnico/flores no exclusive, sem flat-design rígido, numeração contínua", () => {
+    const exclusive = readPrompt("campaign-image-director-exclusive.md");
+    // (1) Exclusividade sem inventar fatos: "edição limitada" só se explícito.
+    expect(exclusive, "exclusive sem persona de valor percebido premium").toContain("valor percebido premium");
+    expect(exclusive, "exclusive sem guarda de edição limitada/explícito").toContain(
+      "somente quando estiverem explícitas no briefing"
+    );
+    // (2) Badge informado → obrigatório; sem badge → sem selo/promessa inventada.
+    expect(exclusive, "exclusive sem badge obrigatório").toContain(
+      "Quando houver badge informado nos fatos, incorporá-lo à arte"
+    );
+    expect(exclusive, "exclusive sem proibição de selo/promessa sem badge").toContain(
+      "Sem badge informado, não inventar selo nem promessa promocional"
+    );
+    expect(exclusive, "exclusive sem badge promocional banido").toContain("NÃO usar badges promocionais");
+    // (3) CTA complementa e não repete badge.
+    expect(exclusive, "exclusive sem CTA × badge").toContain(
+      "O CTA não deve repetir literalmente o texto do badge"
+    );
+    // (4) Linha de identidade simples (fidelidade/preservação concentradas na seção/bloco).
+    expect(exclusive, "exclusive sem linha de identidade simples").toContain(
+      "A campanha deve ser assinada pela loja — ver a seção \"Identidade da Loja\""
+    );
+    // (5) Sem o flag técnico preserveImageContext=true no .md e sem full-bleed fixo.
+    expect(exclusive, "exclusive ainda menciona preserveImageContext=true").not.toContain("preserveImageContext=true");
+    // (6) Sem especialização dura de segmento/categoria no prompt fixo.
+    expect(exclusive, "exclusive ainda tem segmento outros").not.toContain('segmento for "outros"');
+    expect(exclusive, "exclusive ainda tem flores-arranjos").not.toContain("flores-arranjos");
+    // (7) Flat-design rígido removido → composição limpa/profissional com luz/sombra natural.
+    expect(exclusive, "exclusive ainda proíbe sombras complexas").not.toContain("sombras complexas");
+    expect(exclusive, "exclusive sem composição premium").toContain(
+      "Composição limpa e profissional, sem efeitos gráficos artificiais ou gradientes agressivos — luz natural, profundidade e sombras do produto são permitidas"
+    );
+    // (8) Numeração contínua 1..6 (sem repetição/omissão).
+    for (const n of [1, 2, 3, 4, 5, 6]) {
+      expect(exclusive, `exclusive sem item ${n} na composição`).toMatch(
+        new RegExp(`^${n}\\. \\*\\*`, "m")
+      );
+    }
+    expect(exclusive, "exclusive com número repetido na composição").not.toMatch(/^5\. \*\*Badge/m);
+
+    // Offer/base: identidade simples, badge obrigatório, CTA × badge, composição premium.
+    for (const name of ["campaign-image-director.md", "campaign-image-director-offer.md"]) {
+      const prompt = readPrompt(name);
+      expect(prompt, `${name}: sem linha de identidade simples`).toContain(
+        "A campanha deve ser assinada pela loja — ver a seção \"Identidade da Loja\""
+      );
+      expect(prompt, `${name}: badge promocional ainda opcional`).not.toContain(
+        "ele pode ser integrado se presente"
+      );
+      expect(prompt, `${name}: sem badge obrigatório`).toContain(
+        "Quando houver badge promocional informado nos fatos, incorporá-lo à arte"
+      );
+      expect(prompt, `${name}: sem CTA × badge`).toContain(
+        "O CTA não deve repetir literalmente o texto do badge"
+      );
+      expect(prompt, `${name}: ainda com flat-design rígido`).not.toContain("sombras complexas");
+      expect(prompt, `${name}: sem composição premium`).toContain(
+        "Composição limpa e profissional, sem efeitos gráficos artificiais ou gradientes agressivos"
+      );
+    }
+  });
 });

@@ -295,7 +295,7 @@ describe('blocos contextuais — presente/ausente + deduplicação + saneamento 
     return {
       campaignFactsSection: campaignFactsSection(brief, context, brief.product.name),
       commercialDetailsSection: commercialDetailsSection(brief),
-      requiredArtworkTextSection: requiredArtworkTextSection(merchantText, intent),
+      requiredArtworkTextSection: requiredArtworkTextSection(merchantText),
       illustrativeNoticeSection: illustrativeNoticeSection(illustrativeNotice),
       identityReferenceSection: identityReferenceSection(brief, context),
       productReferenceSection: productReferenceSection(brief, context, imageCount),
@@ -450,40 +450,36 @@ describe('blocos contextuais — presente/ausente + deduplicação + saneamento 
     expect(secondVars).toEqual(firstVars);
   });
 
-  it('F45-06 spotlight: identityReferenceSection orienta respiro/sem corte nas bordas apenas para spotlight', () => {
+  it('F45-06a/06b: identityReferenceSection orienta respiro/sem corte nas bordas para todos os intents', () => {
     const context = createContext();
     const logoContext = createContext({
       identity: { state: 'logo', imageUrl: 'data:image/png;base64,logo', directive: '' },
     });
 
-    const spotlight = createMinimalBrief({ campaignIntent: 'spotlight' });
-    const spotlightSection = identityReferenceSection(spotlight, logoContext);
-    expect(spotlightSection).toContain('respiro adequado');
-    expect(spotlightSection).toContain('sem cortes nas bordas da arte');
-
-    const offer = createMinimalBrief({ campaignIntent: 'offer' });
-    const offerSection = identityReferenceSection(offer, logoContext);
-    expect(offerSection).not.toContain('respiro adequado');
-
-    const exclusive = createMinimalBrief({ campaignIntent: 'exclusive' });
-    const exclusiveSection = identityReferenceSection(exclusive, logoContext);
-    expect(exclusiveSection).not.toContain('respiro adequado');
+    for (const campaignIntent of ['spotlight', 'offer', 'exclusive'] as const) {
+      const brief = createMinimalBrief({ campaignIntent });
+      const section = identityReferenceSection(brief, logoContext);
+      expect(section, `intent ${campaignIntent} sem respiro`).toContain('respiro adequado');
+      expect(section, `intent ${campaignIntent} sem bordas`).toContain('sem cortes nas bordas da arte');
+    }
   });
 
-  it('F45-06 spotlight: texto obrigatório multilinha não vira bloco agrupado — orientação só em spotlight com \n', () => {
+  it('F45-06b: texto obrigatório multilinha ganha separação visual em qualquer intent (comum por conteúdo, não por intent)', () => {
     const multiLine = 'Linha um do texto obrigatório\nLinha dois do texto obrigatório';
 
-    const spotlightSection = requiredArtworkTextSection(multiLine, 'spotlight');
-    expect(spotlightSection).toContain('separação visual e respiro adequado');
-    expect(spotlightSection).toContain('"Linha um do texto obrigatório\nLinha dois do texto obrigatório"');
+    for (const campaignIntent of ['spotlight', 'offer', 'exclusive'] as const) {
+      const section = requiredArtworkTextSection(multiLine);
+      expect(section, `intent ${campaignIntent} sem orientação multilinha`).toContain(
+        'separação visual e respiro adequado'
+      );
+      expect(section, `intent ${campaignIntent} sem o texto integral`).toContain(
+        '"Linha um do texto obrigatório\nLinha dois do texto obrigatório"'
+      );
+    }
 
-    const offerSection = requiredArtworkTextSection(multiLine, 'offer');
-    expect(offerSection).not.toContain('separação visual e respiro adequado');
-    expect(offerSection).toContain('"Linha um do texto obrigatório\nLinha dois do texto obrigatório"');
-
-    // Spotlight com texto de linha única → sem orientação de multilinha.
-    const singleLineSpotlight = requiredArtworkTextSection('Texto promocional', 'spotlight');
-    expect(singleLineSpotlight).not.toContain('separação visual e respiro adequado');
-    expect(singleLineSpotlight).toContain('"Texto promocional"');
+    // Texto de linha única → sem orientação de multilinha.
+    const singleLine = requiredArtworkTextSection('Texto promocional');
+    expect(singleLine).not.toContain('separação visual e respiro adequado');
+    expect(singleLine).toContain('"Texto promocional"');
   });
 });

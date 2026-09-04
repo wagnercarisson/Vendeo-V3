@@ -354,7 +354,7 @@ export function commercialDetailsSection(brief: CampaignBrief): string {
   ].join("\n");
 }
 
-export function requiredArtworkTextSection(merchantText: string, campaignIntent: string = "offer"): string {
+export function requiredArtworkTextSection(merchantText: string): string {
   const text = sanitizePromptText((merchantText ?? "").trim());
   if (!text) return "";
   const lines = [
@@ -362,9 +362,10 @@ export function requiredArtworkTextSection(merchantText: string, campaignIntent:
     "",
     "O texto abaixo foi informado pelo lojista para ser incluído na arte. Inclua esse texto na arte de forma visível e legível, em tipografia mínima adequada para leitura em dispositivo móvel. Não o repita na legenda.",
   ];
-  // Spotlight (F45-06): texto multilinha não deve virar um bloco único agrupado —
-  // orientar legibilidade, separação visual e respiro entre linhas/itens.
-  if (campaignIntent === "spotlight" && text.includes("\n")) {
+  // Texto multilinha (qualquer intent — comum, deriva do conteúdo, não do intent):
+  // não deve virar um bloco único agrupado — orientar legibilidade, separação
+  // visual e respiro entre linhas/itens.
+  if (text.includes("\n")) {
     lines.push(
       "",
       "Se o texto tiver mais de uma linha ou item, mantenha legibilidade, separação visual e respiro adequado entre as linhas/itens — não os trate como um bloco único agrupado."
@@ -423,10 +424,10 @@ export function identityReferenceSection(brief: CampaignBrief, context: Resolved
     parts.push("Não colocar logotipo. Não gerar assinatura visual. Considerar a direção visual do perfil de marca como contexto direcional, não obrigatório.");
   }
 
-  // Spotlight (F45-06): assinatura com respiro — a identidade pode ser posicionada
-  // com liberdade, mas precisa de respiro adequado e nunca cortada nas bordas da arte.
-  const campaignIntent = brief.commercial.intent ?? "offer";
-  if (campaignIntent === "spotlight" && parts.length > 0) {
+  // Assinatura com respiro (F45-06a/06b): nome/logotipo/assinatura podem ser
+  // posicionados com liberdade, mas precisam de respiro adequado e nunca cortados
+  // nas bordas da arte — aplica-se a todos os intents (spotlight/exclusive/offer).
+  if (parts.length > 0) {
     const identityElement =
       state === "logo" && hasAsset
         ? "o logotipo"
@@ -471,6 +472,16 @@ export function productReferenceSection(brief: CampaignBrief, context: ResolvedC
   const campaignIntent = brief.commercial.intent ?? "offer";
   if (campaignIntent !== "offer" && brief.creativeContext.preserveImageContext) {
     parts.push("", "NÃO recortar o produto. Preservar o contexto original da imagem. Adaptar a composição ao redor do produto sem isolá-lo. Legibilidade continua obrigatória.");
+  }
+
+  // Exclusive (F45-06b): quando a fotografia de contexto está ativa, orientar
+  // presença dominante/full-bleed SEM o flag técnico (remoção do .md) e sem
+  // duplicar a instrução de não-recorte acima.
+  if (campaignIntent === "exclusive" && brief.creativeContext.preserveImageContext) {
+    parts.push(
+      "",
+      "Tratar a imagem enviada como base principal da arte, com presença dominante — composição full-bleed, crop amplo ou foto ocupando a maior parte do quadro. Não colocar a imagem dentro de moldura, card, painel, janela ou template decorativo pesado. Elementos gráficos, bordas e ornamentos devem ser sutis e secundários. A composição deve parecer uma campanha criada a partir da fotografia, não uma fotografia encaixada em um layout."
+    );
   }
 
   return parts.join("\n");
