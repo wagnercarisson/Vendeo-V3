@@ -3,7 +3,7 @@ phase: 45-briefing-contextual-do-diretor-de-arte
 plan: 06
 subsystem: ai-image-generation
 tags: [art-director-briefing, regression, non-change-verification, d7, prompts, human-review, checkpoint]
-status: PARTIAL — tasks 1-2 done; task 3 (checkpoint humano) PENDING
+status: PARTIAL — tasks 1-2 done; task 3 (checkpoint humano) PENDING — adendos F45-06a (spotlight) e F45-06b (exclusive/offer/base) aplicados
 
 # Dependency graph
 requires:
@@ -37,15 +37,15 @@ patterns-established:
 requirements-completed: [] # Parcial — F45-23/F45-24 (Tasks 1-2) atendidas em código; F45-25 (revisão humana) PENDENTE de aprovação no checkpoint. Finalizar no SUMMARY definitivo após resposta do humano.
 
 # Metrics
-duration: 8min (tasks 1-2) + 10min (adendo F45-06a: ajustes de revisão humana no spotlight)
+duration: 8min (tasks 1-2) + 10min (F45-06a) + 12min (F45-06b: ajustes exclusive/offer/base)
 completed: 2026-09-03
 ---
 
-# Phase 45 Plan 06: Regressão Completa + Não-Mudança D7 — ESTADO PARCIAL (Tasks 1–2 verdes; Task 3 re-apresentada com ajustes aplicados)
+# Phase 45 Plan 06: Regressão Completa + Não-Mudança D7 — ESTADO PARCIAL (Tasks 1–2 verdes; Task 3 re-apresentada após 2 rodadas de ajustes)
 
-**Regressão total F45 VERDE (253 files / 2392 testes) com zero resíduos do mapa antigo/âncoras antigas dos `.md`; gates typecheck/lint/build verdes; superfícies congeladas (rota HTTP/schema/domínio/form/revisor/copy/fallback OpenAI) confirmadas INTACTAS por verificação git (D7); suites irmãs verdes sem edição; material completo de revisão humana dos 4 `.md` reescritos e dos textos finais montados preparado e apresentado; após retorno do humano, 5 ajustes focados no SPOTLIGHT foram aplicados e revalidados — AGUARDANDO REAPROVAÇÃO HUMANA (Task 3)**
+**Regressão total F45 VERDE (253 files / 2396 testes) com zero resíduos do mapa antigo/âncoras antigas dos `.md`; gates typecheck/lint/build verdes; superfícies congeladas (rota HTTP/schema/domínio/form/revisor/copy/fallback OpenAI) confirmadas INTACTAS por verificação git (D7); suites irmãs verdes sem edição; material completo de revisão humana dos 4 `.md` reescritos e dos textos finais montados preparado e apresentado; após retorno do humano, 5 ajustes focados no SPOTLIGHT (F45-06a) e 8+6 ajustes focados em EXCLUSIVE/OFFER/BASE (F45-06b) foram aplicados e revalidados — AGUARDANDO REAPROVAÇÃO HUMANA (Task 3)**
 
-> **STATUS DO PLANO: PARCIAL.** Tasks 1–2 concluídas e verdes. Task 3 (`checkpoint:human-verify`, gate blocking) NÃO aprovada. A revisão humana pediu ajustes FOCADOS no spotlight (adendo F45-06a); os ajustes foram aplicados, validados (253 files/2395 testes + typecheck/lint/build exit 0) e o material foi re-montado e re-apresentado. Este documento NÃO declara aprovação humana — aguarda "approved" ou novos ajustes.
+> **STATUS DO PLANO: PARCIAL.** Tasks 1–2 concluídas e verdes. Task 3 (`checkpoint:human-verify`, gate blocking) NÃO aprovada. A revisão humana pediu ajustes FOCADOS no spotlight (adendo F45-06a, aplicado em `2ae83c35`) e depois em exclusive/offer/base (adendo F45-06b, aplicado em `31a05fd7`); ambos validados (253 files/2396 testes + typecheck/lint/build exit 0) com textos finais re-montados via caminho real. Este documento NÃO declara aprovação humana — aguarda "approved" ou novos ajustes.
 
 ## Performance
 
@@ -124,17 +124,60 @@ None — sem configuração externa. O checkpoint humano é de **leitura/revisã
 - **Bloqueio atual:** Task 3 aguarda REAPROVAÇÃO humana após o adendo F45-06a (ajustes de spotlight aplicados em `2ae83c35`). Após "approved" (ou novos ajustes + reapresentação), o plano é finalizado e este SUMMARY é consolidado (requirements F45-23/24/25, status completo).
 - **Próximo plano:** 45-07 (Verificação final — `45-VERIFICATION.md` + `45-UAT.md` + 4 gates + registros/arquivamento do change) — depende da aprovação humana deste plano.
 
-## Self-Check: PASSED (parcial — Tasks 1–2 + adendo F45-06a)
+## Self-Check: PASSED (parcial — Tasks 1–2 + adendos F45-06a e F45-06b)
 
 - `npx vitest run` → **253 test files passed, 2392 tests passed** (zero falhas — Tasks 1–2) ✓
 - `npx vitest run` → **253 test files passed, 2395 tests passed** (adendo F45-06a — +3 testes focados) ✓
+- `npx vitest run` → **253 test files passed, 2396 tests passed** (adendo F45-06b — +1 teste focado) ✓
 - `npm run typecheck` → exit 0 ✓ | `npm run lint` → exit 0 ✓ | `npm run build` → exit 0 (Tasks 1–2) ✓
-- `npm run typecheck` → exit 0 ✓ | `npm run lint` → exit 0 ✓ (adendo F45-06a) ✓
+- `npm run typecheck` → exit 0 ✓ | `npm run lint` → exit 0 ✓ (adendos F45-06a/F45-06b) ✓
 - Run direcionado das suites de não-mudança → **33 files / 416 tests passed** ✓
 - `git diff --name-only de0cbc78...HEAD` → nenhuma superfície congelada na lista ✓
 - Greps de resíduo (EXPECTED_KEYS/LINHA_*/chaves legadas) → apenas asserções de ausência legítimas ✓
 - Adendo F45-06a: diff do commit `2ae83c35` limitado aos 5 arquivos-alvo (spotlight `.md` + módulo + service + 2 suites-alvo) — nenhuma superfície congelada ✓
-- Working tree limpo (exceto pasta pré-existente `docs/alinhamento-fase-44-temas-de-campanhas` e artefatos do revisor humano `resultado.md`/`image.png`, intocados) ✓
+- Adendo F45-06b: diff do commit `31a05fd7` limitado aos 7 arquivos-alvo (exclusive/offer/base `.md` + módulo + service + 2 suites-alvo) — nenhuma superfície congelada; spotlight `.md` intocado ✓
+- Working tree limpo (exceto pasta pré-existente `docs/alinhamento-fase-44-temas-de-campanhas`, intocada; artefatos do revisor humano removidos conforme orientação) ✓
+
+---
+
+## ADENDO F45-06b — Ajustes de revisão humana em EXCLUSIVE/OFFER/BASE (aplicados e revalidados)
+
+**Gatilho:** o humano aprovou o spotlight (F45-06a) e solicitou nova rodada FOCADA em exclusive/offer/base. Escopo respeitado: `campaign-image-director-exclusive.md` (partindo das edições manuais do usuário preservadas), `campaign-image-director-offer.md` + base `campaign-image-director.md` (sync editorial), builders estritamente necessários em `art-director-briefing.ts`, call site no service e suites diretamente afetadas. Spotlight, superfícies congeladas D7 e profile de marca intocados.
+
+### O que mudou
+
+**Exclusive (8 ajustes):**
+1. **Exclusividade sem inventar fato:** persona e item 6 passaram a guiar valor percebido/diferenciação/premium e afirmar "edição limitada"/disponibilidade restrita SOMENTE quando explícitas no briefing (antes: "item exclusivo, premium ou edição limitada" como framing fixo).
+2. **Badge:** informado → incorporado (obrigatório); texto simplificado sem repetições sobre ausência; sem badge → proibido inventar selo/promessa (apoio visual discreto apenas como recurso de composição, sem informação comercial). Mantido "NÃO usar badges promocionais".
+3. **CTA:** quando informado, incorporado; não repete literalmente o texto do badge (complementa a ação).
+4. **Identidade:** `.md` mantém apenas "A campanha deve ser assinada pela loja — ver a seção 'Identidade da Loja'"; fidelidade/preservação/proibições concentradas no bloco; orientação validada no spotlight (liberdade + respiro + sem cortes nas bordas) agora aplicada ao exclusive via `identityReferenceSection` (todos os intents).
+5. **Imagem/contexto:** removido do `.md` o parágrafo fixo com o flag técnico `preserveImageContext=true` e o full-bleed; a orientação útil (foto como base com presença dominante, sem moldura/card pesado) vive agora no bloco `productReferenceSection` SOMENTE quando `preserveImageContext` ativo — sem duplicar a instrução de não-recorte (já existente no bloco).
+6. **Categoria fixa:** removidas do `.md` as instruções de segmento "outros" e categoria "flores-arranjos" (especialização agora vem só da direção criativa contextual).
+7. **Direção visual premium:** regra flat rígida ("plana (flat design), sem sombras complexas") substituída por "Composição limpa e profissional, sem efeitos gráficos artificiais ou gradientes agressivos — luz natural, profundidade e sombras do produto são permitidas"; mantida a exigência de arte publicável (sem UI/placeholder/rascunho).
+8. **Numeração:** corrigida para 1..6 contínua (antes 1,2,3,5,5,6 — repetição/omissão).
+
+**Offer + base (6 ajustes):**
+1. **Identidade:** linha de composição simplificada ("assinada pela loja — ver seção"), sem repetir o nome; respiro/bordas aplicados ao bloco de identidade do offer (mesma orientação spotlight/exclusive).
+2. **Badge:** informado → incorporação OBRIGATÓRIA; sem badge → não inventar selo/benefício/promessa.
+3. **CTA:** incorporado quando informado; com badge, complementa sem repetir literalmente o texto do badge.
+4. **Texto obrigatório multilinha:** orientação de separação visual/respiro estendida ao offer E exclusive como COMPORTAMENTO COMUM do bloco (deriva do conteúdo — presença de `\n` — não do intent); separação texto obrigatório × aviso ilustrativo mantida.
+5. **Direção visual:** regra flat rígida substituída pela mesma composição limpa/profissional (luz/sombra natural permitida) sem enfraquecer clareza promocional/hierarquia de preço.
+6. **Sync editorial:** `campaign-image-director.md` mantido idêntico ao `-offer.md` (verificado por diff).
+
+### Testes focados aditivos (+1)
+
+- `prompt-reframe.test.ts` (+1): âncoras F45-06b — exclusive com persona "valor percebido premium" + guarda de "edição limitada"/explícito; badge obrigatório + proibição de selo sem badge + "NÃO usar badges promocionais"; CTA × badge; linha de identidade simples; ausência de `preserveImageContext=true`/`outros`/`flores-arranjos`/`sombras complexas`; numeração 1..6 contínua sem "5. Badge"; offer/base com identidade simples, badge obrigatório, CTA × badge e composição premium (sem flat rígido).
+- `art-director-briefing.test.ts` (ajustado): testes F45-06a generalizados para o comportamento comum — identidade com respiro/bordas em TODOS os intents (offer/exclusive/spotlight) e texto obrigatório multilinha com separação em qualquer intent.
+
+### Textos finais re-montados (caminho real — service + PromptLoader)
+
+Artefatos temporários removidos antes do commit; textos completos em arquivos fora do working tree (temp do executor) e conferidos item a item:
+
+- **Exclusive A (sem badge, sem preço, details premium, preserveImageContext):** fatos SEM preço; persona "valor percebido premium — sem divulgação de preço"; composição 1..6 numerada; sem flat rígido; `productReferenceSection` com não-recorte + full-bleed contextual (foto como base, sem moldura) apenas porque preserve ativo; identidade com respiro/bordas; sem placeholders residuais, sem seções vazias.
+- **Exclusive B (com badge "Peça Exclusiva" + CTA + texto obrigatório multilinha):** `- **Badge:** Peça Exclusiva` nos fatos + composição nº 4 "incorporá-lo à arte" (obrigatório); CTA nº 5 "não deve repetir literalmente o texto do badge"; `## Texto Obrigatório na Arte` com orientação multilinha (separação/respiro) + texto em 2 linhas; sem aviso vazio; sem preço.
+- **Offer completa (validade + texto obrigatório + aviso + badge + CTA + hierarquia de preço):** preço com desconto R$ 199,90 + original riscado (hierarquia preservada); badge nº 5 obrigatório; CTA nº 6 complementa sem repetir badge; validade em ocorrência única com regra dd/mm/aaaa; identidade com respiro/bordas; texto obrigatório e aviso em seções próprias separadas; composição premium; sem placeholders residuais, sem seções vazias.
+
+Conferência checklist (a–e) re-executada sobre os textos montados: (a) briefing coerente sem ruído ✓; (b) cada natureza em sua seção, sem duplicação ✓; (c) tom por intent preservado (offer promocional com preço; spotlight sem urgência; exclusive premium sem preço) ✓; (d) seções próprias de texto obrigatório e aviso claras e separadas ✓; (e) identidade/preservação + hierarquia primary×aux explícitas ✓.
 
 ---
 
