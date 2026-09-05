@@ -8,6 +8,7 @@ Core image generation pipeline: orchestrates prompt assembly, model invocation, 
 > Modified by `fase-39-brief-estruturado-campanha` (MODIFIED). O `ImageGenerationService` passa a consumir o **domínio estruturado** `CampaignBrief` (`brief.product`/`brief.commercial`/`brief.media`/`brief.creativeContext`) em vez do corpo flat (`body.*`). O conjunto de variáveis de prompt permanece **idêntico** para o mesmo input. `buildCommercialRepertoire` decide `validity` por `enabled/displayText` (D8) — sem heurística de string. A ponte `media.primary.dataUrl` → provider/input-validation torna-se explícita (D11).
 > Modified by `fase-40-campos-comerciais-avisos-brief` (D6): os 4 prompts do diretor (`campaign-image-director.md`, `-offer.md`, `-spotlight.md`, `-exclusive.md`) perdem a instrução **incondicional** "SEMPRE acrescente ... 'Imagem meramente ilustrativa'" (herança UAT-3) e ganham um **bloco condicional de composição** — o aviso ilustrativo só entra na arte quando houver texto obrigatório/aviso legal informado. O conjunto de variáveis/keys do prompt permanece **idêntico** para o mesmo input (golden `EXPECTED_KEYS = 38`); o texto do prompt muda intencionalmente (D6). O comportamento visual default é preservado (checkbox marcado → aviso na arte como hoje). As superfícies de validade (`buildCommercialRepertoire` → `- Oferta válida:` e template offer/base → `**Validade da oferta:**`) NÃO mudam (D5).
 > Modified by `fase-41-midia-de-campanha-mobile` (D2/D6/D7/D9/D10): transporte aditivo `productImages[]` (D2) com `MAX_CAMPAIGN_IMAGES = 4` e invariante exactly-1-primary; `productImageDataUrl` deixa de ser required no Zod (obrigatoriedade passa à regra de exclusividade da rota); provider monta **N `input_image`** (D7); fallback `images.edit` **gated por primary única** (D7); prompt ganha **bloco descritivo 1+N** sem nova variável (D6); revisor recebe a **primary** como referência (D9); limites por item + teto agregado → 413 (D10).
+> Modified by `fase-45-briefing-contextual-do-diretor-de-arte` (F45 — Briefing Contextual do Diretor de Arte, v1.5, concluída 2026-09-05): a montagem do prompt do diretor passa a ser **contextual por blocos** (ver capability `art-director-contextual-briefing`). O texto interno do prompt do diretor e o conjunto de chaves de montagem **mudam intencionalmente** (D5); a **superfície externa** permanece inalterada (contrato HTTP/schema/snapshot/domínio, UI/form, Copy Director e comportamento percebido pelo lojista). A preservação da **intenção/qualidade visual** é alvo da fase (regras de conteúdo + UAT humano comparativo), não uma garantia formal de resultado visual idêntico. Requisitos supersedidos de paridade/reframe textual foram REMOVED (paridade de keys → invariantes; reframe condicional F40 e bloco 1+N F41 → seções/blocos da capability nova).
 
 ## Requirements
 
@@ -16,6 +17,7 @@ Core image generation pipeline: orchestrates prompt assembly, model invocation, 
 The system SHALL provide an `ImageGenerationService` that orchestrates the full image generation lifecycle: prompt assembly from the structured `CampaignBrief` domain, pre-generation validation, image model invocation, post-generation quality review, and finite correction loops.
 
 > Modified by `fase-39-brief-estruturado-campanha` (D11): prompt assembly passa a consumir o `CampaignBrief` de **domínio estruturado** (blocos `product`/`commercial`/`media`) em vez de ler o corpo flat `brief.campaignInput`.
+> Modified by `fase-45-briefing-contextual-do-diretor-de-arte` (F45): a montagem do prompt do diretor SHALL ser **contextual** — `buildPromptVariables` delega a composição dos blocos de seção ao helper puro `art-director-briefing`, que retorna apenas os blocos relevantes ao caso real (campos ausentes não produzem texto; nenhuma seção vazia/linha de tabela em branco é enviada) e a montagem SHALL ser **determinística** (mesmo input → mesmo texto). A mudança textual interna é intencional; a superfície externa permanece inalterada e a intenção/qualidade visual é preservada por regras de conteúdo + UAT humano comparativo (sem promessa de paridade de resultado visual pixel a pixel).
 
 The service SHALL NOT persist any generated images, prompts, or review results. All data exists only in request/session/client scope during this phase.
 
@@ -34,20 +36,20 @@ From the structured `CampaignBrief` (domínio), the service SHALL:
 - Use `ResolvedCampaignContext.identity.imageUrl` to pass to the `ImageProvider` as the identity image reference
 - Use `ResolvedCampaignContext.brandProfile` for brand creative direction
 
-All existing prompt variables, assembly rules, and creative behavior SHALL be preserved unchanged. `identityImageUrl` MAY exist among the returned prompt variables — it was already present in the golden baseline (38 keys) before this phase (D11 preserves the pre-F39 behavior). The identity image reference goes only to the provider and SHALL NOT be interpolated into the visual prompt template as textual instruction.
+O `buildPromptVariables` do diretor SHALL devolver apenas as chaves **realmente consumidas** pelos templates (slots contextuais + prosa garantida) + `campaignIntent` (seleção de arquivo no `assemblePrompt`) — o contrato interno muda intencionalmente na F45. `identityImageUrl` permanece **provider-only**: a referência é passada ao `ImageProvider` e SHALL NOT ser interpolada no template visual como instrução textual (comportamento existente, mantido como regressão). A preservação comportamental de key-set (golden `EXPECTED_KEYS`) foi substituída por **invariantes de montagem** (placeholders dos templates ⊆ chaves fornecidas; determinismo; presente/ausente por bloco; contrato externo inalterado).
 
 #### Scenario: Service generates campaign image from structured CampaignBrief
 
-- **WHEN** `ImageGenerationService.generateImage()` receives um `CampaignBrief` estruturado (montado pelo mapper da rota)
-- **THEN** the service SHALL assemble a marketing-directed prompt using the `campaign-image-director.md` prompt file
+- **WHEN** `ImageGenerationService.generateImage()` recebe um `CampaignBrief` estruturado (montado pelo mapper da rota)
+- **THEN** the service SHALL assemble a marketing-directed prompt using the per-intent `campaign-image-director-${intent}.md` prompt file through the contextual builder
 - **AND** the service SHALL send the prompt + `media.primary.dataUrl` (produto) + identity image reference to the `ImageProvider`
 - **AND** the service SHALL return a generated 1:1 square image as a base64 data URL
-- **AND** all existing prompt variables and rules SHALL remain unchanged
+- **AND** o prompt final não contém seções vazias, linhas de tabela em branco ou placeholders não resolvidos para campos ausentes
 
-#### Scenario: Service produz MESMO prompt para o mesmo payload flat
+#### Scenario: Service produz MESMO prompt para o mesmo payload
 
-- **WHEN** o mesmo payload flat de hoje é convertido para `CampaignBrief` e passado ao service
-- **THEN** o prompt final é idêntico ao produzido pelo fluxo flat atual (regressão por golden test por intent — D11)
+- **WHEN** o mesmo payload é convertido para `CampaignBrief` e passado ao service duas vezes
+- **THEN** o prompt final do diretor é **idêntico** nas duas execuções (montagem determinística por blocos)
 
 #### Scenario: Service emits phase events via callback
 
@@ -489,48 +491,6 @@ The `originalPrice` field in the campaign input schema SHALL be `string | undefi
 - **WHEN** a campaign is generated with `originalPrice`
 - **THEN** the rendered image SHALL show both the original (strikethrough) and discounted price
 
-### Requirement: buildPromptVariables includes creative direction context and intent variables
-
-> Modified by `fase-31-2-diretores-por-intencao`. Modified by `fase-39-brief-estruturado-campanha` (D11): a fonte dos dados passa a ser o domínio estruturado — as variáveis e regras **não mudam**.
-
-The `ImageGenerationService.buildPromptVariables()` method SHALL accept the structured `CampaignBrief` (domínio) and return the following new variables:
-
-- `identityDirective` — string, derived from `ResolvedCampaignContext.identity.directive`
-- `campaignIntent` — string, valor da intent (`brief.commercial.intent`)
-- `preserveImageDirective` — string, instrução condicional (vazia para offer, `"NÃO recortar..."` para spotlight/exclusive com preserveImageContext=true)
-- `commercialFrame` — string, texto comercial por intent (oferta/destaque/exclusivo)
-- `discountedPrice` e `originalPrice` condicionais por intent (vazio quando não aplicável)
-
-All existing variables SHALL be preserved unchanged. The following existing variables remain:
-- `creativePersona` — segment-based persona string
-- `inferredCategory` — product category (inferred or store segment fallback)
-- `hasCategoryConflict` — `"sim"` or `"nao"` based on `isSameCategory()` comparison
-- `categoryConflictDirective` — conditional directive string (empty when no conflict)
-- `commercialRepertoire` — output of `buildCommercialRepertoire()`
-- `inputValidationSummary` — output of `buildValidationSummary()`
-- `creativeContextGuidance` — output of `buildCreativeContextGuidance()`
-
-`buildPromptVariables()` SHALL NOT interpolate `identityImageUrl` into the prompt text — the identity image reference is passed directly to the `ImageProvider`. The key MAY remain in the returned record (golden baseline of 38 keys preserved for regression), but the prompt templates MUST NOT reference `{{identityImageUrl}}`.
-
-#### Scenario: identityDirective present in buildPromptVariables output
-
-- **WHEN** `buildPromptVariables()` is called with a structured `CampaignBrief` + `ResolvedCampaignContext`
-- **THEN** the returned record SHALL include `identityDirective` with the directive string
-- **AND** `identityImageUrl` MAY be present in the record but SHALL NOT be interpolated into the visual template (provider-only reference)
-
-#### Scenario: New variables present alongside existing ones
-
-- **WHEN** `buildPromptVariables()` is called
-- **THEN** the returned record SHALL include all existing variables
-- **AND** SHALL include `identityDirective`
-
-#### Scenario: buildPromptVariables inclui commercialFrame
-
-> Added by `fase-31-2-diretores-por-intencao`.
-
-- **WHEN** `buildPromptVariables()` é chamado com brief de `campaignIntent: "spotlight"`
-- **THEN** as variáveis incluem `commercialFrame` com texto de destaque
-
 ### Requirement: buildCommercialRepertoire adaptado por intent
 
 > Modified by `fase-31-2-diretores-por-intencao`. Modified by `fase-39-brief-estruturado-campanha` (D8/D11): a decisão de validade passa a ser **semântica** (`validity.enabled` + `displayText`), eliminando a heurística de string (`/`, `até`, `válida`).
@@ -729,50 +689,6 @@ O sistema SHALL implementar `buildDeterministicCopy(campaignIntent, params)` par
 - **WHEN** `buildDeterministicCopy("exclusive", { productName: "Produto X", storeName: "Loja Y" })` é chamado
 - **THEN** retorna texto sem preço ou badge promocional
 
-### Requirement: Preservação comportamental — nenhuma variável criativa alterada
-
-`buildPromptVariables()` SHALL preserve all existing variables and their rules. The following SHALL remain unchanged:
-- `creativePersona`, `inferredCategory`, `hasCategoryConflict`, `categoryConflictDirective`
-- `commercialRepertoire`, `inputValidationSummary`, `creativeContextGuidance`
-- `campaignDetails`, `additionalDetails`, `hook`, `cta`, `objective`
-- `targetChannel`, `format`, `validity`, `availabilityNotes`, `sensitiveConstraints`
-
-> Modified by `fase-40-campos-comerciais-avisos-brief` (D6): o conjunto de variáveis/keys do prompt permanece **idêntico** para o mesmo input (golden `EXPECTED_KEYS = 38`). O **texto do prompt muda intencionalmente**: a instrução incondicional do aviso ilustrativo (herança UAT-3) é substituída pelo **bloco condicional de composição**. Não há novas variáveis; apenas a instrução textual é reframada. O comportamento visual default é preservado (checkbox marcado).
-> Modified by `fase-41-midia-de-campanha-mobile` (D6): as imagens entram como **input multimodal** — o prompt ganha um **bloco descritivo** (1 imagem principal + N auxiliares de referência) **sem nova variável** (`EXPECTED_KEYS = 38` por intent permanece). As referências (primary como herói visual, auxiliares como contexto) são descritas no texto; o conteúdo das imagens é fornecido ao provider, não ao template textual.
-
-No new creative rules, composition directives, or mandatory requirements SHALL be added to the prompt. Subsegment, positioning, shortDescription, and slogan SHALL NOT be injected into prompt variables in this phase. As mudanças **textuais** do prompt SHALL ser limitadas a: `{{identityDirective}}` substituindo a instrução fixa de logo (F5.0), o bloco condicional de composição do aviso ilustrativo (F40 D6) e o **bloco descritivo 1+N referências** (F41 D6) — **nenhuma delas introduz variável nova** (golden `EXPECTED_KEYS = 38` preservado por intent). `identityImageUrl` continua **provider-only** (referência passada ao provider, nunca interpolada no template visual como instrução textual).
-
-#### Scenario: Regression parity — conjunto de variáveis idêntico
-
-- **WHEN** o mesmo payload flat de hoje é processado com os novos campos preenchidos (checkbox marcado default + validade preenchida)
-- **THEN** o conjunto de variáveis/keys do prompt final é **idêntico** ao baseline (golden `EXPECTED_KEYS = 38`)
-- **AND** o texto do prompt muda apenas na instrução do aviso ilustrativo (bloco condicional substitui a instrução incondicional — D6)
-
-#### Scenario: Regression parity — comportamento visual default preservado
-
-- **WHEN** o checkbox está marcado (default) e `mandatoryArtworkText = ILLUSTRATIVE_NOTICE_TEXT`
-- **THEN** o prompt instrui a exibição do aviso com a mesma inteligência visual do UAT-3 (tipografia mínima, visível/legível, posição lateral)
-- **AND** o comportamento visual resultante é o mesmo de hoje (aviso presente na arte)
-
-#### Scenario: Regression parity for logo store
-
-- **WHEN** the same store (`identity_state = 'logo'`) and campaign input are processed before and after this change
-- **THEN** the generated prompt SHALL be equivalent in all fields, rules, and creative context
-- **AND** the only differences SHALL be: `{{identityDirective}}` replaces the fixed logo instruction, and the `logoVariantUrl` line SHALL be removed from the `brandProfileSection`
-
-#### Scenario: Regression parity for text_only store
-
-- **WHEN** the same store (`identity_state = 'text_only'`) and campaign input are processed before and after this change
-- **THEN** the generated prompt SHALL be equivalent in all fields, rules, and creative context
-- **AND** the only difference SHALL be `{{identityDirective}}` replacing the fixed logo instruction
-- **AND** no identity image URL SHALL be sent to the provider
-
-#### Scenario: Regression parity for VS store
-
-- **WHEN** the same store (`identity_state = 'visual_signature'`) and campaign input are processed before and after this change
-- **THEN** the generated prompt SHALL be equivalent in all fields, rules, and creative context
-- **AND** the only differences SHALL be: `{{identityDirective}}` replaces the fixed logo instruction, and the VS URL SHALL be sent as the identity image reference (was not sent before)
-
 ### Requirement: Guarda de readiness no handler generate-image (ADDED F34)
 
 > Added by `fase-34-store-readiness`.
@@ -803,79 +719,29 @@ Se `getStoreReadiness(storeId)` retornar `ready: false`, o handler SHALL retorna
 - **WHEN** requisição chega ao handler
 - **THEN** readiness check é executado antes de rate limit e saldo check
 
-### Requirement: Prompt reframe — bloco condicional de composição (D6)
-
-> Added by `fase-40-campos-comerciais-avisos-brief` (D6).
-
-Os 4 prompts do diretor SHALL **NÃO** conter a instrução incondicional "SEMPRE acrescente a arte o seguinte texto ... : 'Imagem meramente ilustrativa'" (herança UAT-3).
-
-No lugar da instrução incondicional, os 4 prompts SHALL conter o **bloco condicional de composição**:
-
-```
-Quando houver texto obrigatório/aviso legal informado, exiba exatamente esse texto na arte.
-Se o aviso for "Imagem meramente ilustrativa", posicione-o com tipografia mínima, mas visível e legível, em área lateral horizontal ou vertical, sem competir com oferta, produto e preço.
-```
-
-A linha condicional do texto obrigatório já existente ("Se o campo 'Texto obrigatório na arte' estiver preenchido ({{mandatoryArtworkText}})... Não o repita na legenda.") SHALL ser mantida em todos os 4 prompts.
-
-#### Scenario: Prompts sem instrução incondicional do aviso
-
-- **WHEN** `campaign-image-director.md`, `campaign-image-director-offer.md`, `campaign-image-director-spotlight.md` e `campaign-image-director-exclusive.md` são inspecionados
-- **THEN** NENHUM deles contém "SEMPRE acrescente a arte o seguinte texto" referente ao aviso ilustrativo
-
-#### Scenario: Prompts com bloco condicional de composição
-
-- **WHEN** os 4 prompts do diretor são inspecionados
-- **THEN** cada um contém o bloco condicional de composição (texto obrigatório informado → exibir exatamente; tipografia mínima/visível/legível; posição lateral; sem competir com oferta/produto/preço)
-
-#### Scenario: Linha condicional do texto obrigatório mantida
-
-- **WHEN** os 4 prompts do diretor são inspecionados
-- **THEN** a linha "Se o campo 'Texto obrigatório na arte' estiver preenchido ({{mandatoryArtworkText}})... Não o repita na legenda." é mantida
-
 ### Requirement: legalNotice desabilitado SHALL resultar em prompt e revisor sem texto obrigatório
 
-> Added by `fase-40-campos-comerciais-avisos-brief`.
+> Added by `fase-40-campos-comerciais-avisos-brief`. Modified by `fase-45-briefing-contextual-do-diretor-de-arte` (F45): no diretor, a ausência de texto obrigatório passa a significar **bloco `requiredArtworkTextSection` ausente** (nada renderizado — montagem contextual por presença real, ver capability `art-director-contextual-briefing`); o revisor permanece com `mandatoryArtworkTextSection` vazio (inalterado).
 
 O sistema SHALL garantir que, quando `legalNotice.enabled === false` (checkbox desmarcado + sem texto livre → `mandatoryArtworkText` ausente):
 
-- o prompt do diretor receba `mandatoryArtworkText` vazio;
+- o prompt do diretor SHALL NOT montar a seção de texto obrigatório (`requiredArtworkTextSection` ausente — sem heading vazio e sem placeholder);
 - o revisor receba `mandatoryArtworkTextSection` vazio (nenhum texto obrigatório a verificar).
 
-Quando `validity.enabled === true` + `displayText` (offer), o sistema SHALL montar `validityTextSection` no revisor com o `displayText`; quando ausente → `validityTextSection` vazio.
+Quando `validity.enabled === true` + `displayText` (offer), o sistema SHALL montar `validityTextSection` no revisor com o `displayText`; quando ausente → `validityTextSection` vazio. O diretor SHALL exibir a validade **uma única vez** (bloco de fatos da campanha) quando `offer` + `validity.enabled`.
 
 #### Scenario: legalNotice desabilitado gera prompt e revisor vazios
 
 - **WHEN** o checkbox está desmarcado e não há texto livre (`mandatoryArtworkText` ausente → `legalNotice.enabled=false`)
-- **THEN** o prompt do diretor recebe `mandatoryArtworkText` vazio
+- **THEN** o prompt do diretor não contém seção de texto obrigatório (nada é renderizado)
 - **AND** `mandatoryArtworkTextSection` do revisor é vazio (nada a verificar)
 
-#### Scenario: Validade habilitada monta seção no revisor
+#### Scenario: Validade habilitada monta seção no revisor e linha única no diretor
 
 - **WHEN** `validity.enabled === true` com `displayText = "até 30/09"` e intent `offer`
 - **THEN** o revisor monta `validityTextSection` contendo "até 30/09"
-- **AND** sem validade → `validityTextSection` é vazio
-
-### Requirement: Prompt com bloco descritivo de 1+N referências (D6)
-
-Os 4 prompts do diretor (`campaign-image-director.md`, `-offer.md`, `-spotlight.md`, `-exclusive.md`) SHALL conter um **bloco descritivo** — hardcoded, **sem placeholder/variável** — descrevendo a presença de **1 imagem principal + N imagens auxiliares de referência**:
-
-- A imagem principal SHALL ser usada como **herói visual** da peça;
-- As imagens auxiliares SHALL ser usadas como **contexto** (ângulos/variações/combos/referências);
-- O diretor SHALL **NÃO inventar conteúdo** dos produtos que não esteja nas imagens.
-
-**Sem nova variável de prompt** → o golden `EXPECTED_KEYS = 38` (por intent) **permanece idêntico** (D6). O texto do prompt muda intencionalmente; as imagens entram como **input multimodal**, não como variável textual.
-
-#### Scenario: Bloco descritivo 1+N presente nos 4 prompts
-
-- **WHEN** `campaign-image-director.md`, `-offer.md`, `-spotlight.md` e `-exclusive.md` são inspecionados
-- **THEN** cada um contém o bloco descrevendo 1 imagem principal (herói visual) + N auxiliares (contexto, sem inventar conteúdo)
-
-#### Scenario: Sem nova variável no bloco (golden 38 keys)
-
-- **WHEN** o golden test por intent roda com multi-imagem
-- **THEN** o conjunto de variáveis/keys do prompt é o **mesmo** do baseline (`EXPECTED_KEYS = 38`)
-- **AND** o texto do prompt muda apenas no bloco descritivo (D6)
+- **AND** o prompt do diretor contém a validade **uma única vez** no bloco de fatos da campanha
+- **AND** sem validade → `validityTextSection` do revisor é vazio e o diretor não menciona validade
 
 ### Requirement: Fallback images.edit gated por primary única (D7)
 
