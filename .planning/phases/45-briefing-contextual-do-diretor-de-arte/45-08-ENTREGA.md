@@ -1,9 +1,22 @@
 # Phase 45 — 45-08: ENTREGA Diretor × Revisor (material para revisão humana)
 
-**Status:** EM CHECKPOINT — Task 8 aguardando aprovação humana (gate `blocking`)
+**Status:** ENTREGA APROVADA — Task 8 human-approved (2026-09-05); UAT arts aprovadas como publicáveis
 **Preparado em:** 2026-09-05 (plano 45-08)
-**Atualizado em:** 2026-09-05 (rodada de ajuste focado pós-revisão humana — offer background, regra de preço original, escassez inventada, ambiguidade tipográfica do nome do produto)
-**Escopo aprovado pelo humano:** 2026-09-05 (3 correções + 4 decisões registradas no 45-08-PLAN.md `<objective>`) + rodada de ajuste focado autorizada em revisão humana
+**Atualizado em:** 2026-09-05 (rodada de ajuste focado pós-revisão humana — offer background, regra de preço original, escassez inventada, ambiguidade tipográfica do nome do produto) + close-out (aprovação das UAT arts + concordância de gênero da identidade)
+**Escopo aprovado pelo humano:** 2026-09-05 (3 correções + 4 decisões registradas no 45-08-PLAN.md `<objective>`) + rodada de ajuste focado autorizada em revisão humana + decisão final de aprovação das UAT arts
+
+---
+
+## Registro de aprovação humana — UAT arts (close-out 45-08)
+
+**Decisão final do humano (2026-09-05):** as duas artes de UAT registradas em `resultado.md` (acompanhadas de `image.png` e `image-1.png`) foram **APROVADAS como boas e publicáveis**. Sem otimização adicional de prompt, sem simplificação/reorganização/reescrita de prompts, sem mudança em regras criativas, comportamento do Diretor ou critérios do Revisor.
+
+**Único ajuste autorizado nesta rodada final:** correção de **concordância de gênero gramatical** no bloco canônico de identidade montado em `src/lib/image-generation/services/art-director-briefing.ts`:
+- `logotipo` (masculino) → mantém "o logotipo ... fornecido ... secundário";
+- `assinatura visual` (feminino) → agora "a assinatura visual ... fornecida ... secundária" (antes gerava "o assinatura visual ... fornecido ... secundário").
+- Significado, regras, ordem e nível de detalhe do bloco preservados integralmente. Nenhum `.md` de prompt, builder, regra criativa ou critério de aprovação foi alterado além dessa concordância.
+
+**Plano 45-08 concluído** (ver `45-08-SUMMARY.md`). A UAT final do 45-07/fechamento da F45 NÃO foi executada/preenchida neste plano.
 
 ---
 
