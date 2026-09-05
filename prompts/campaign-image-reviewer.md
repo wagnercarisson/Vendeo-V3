@@ -61,15 +61,24 @@ Quando aplicáveis, você também recebe as seções abaixo — cada uma com a n
 
 Uma issue **critical** — e somente ela — impede a aprovação e provoca correção/regeneração. São bloqueantes:
 
-- `wrong_price` — preço divergente do comportamento esperado para a intenção. Se {{originalPrice}} estiver vazio (zerado), nenhum preço foi informado: não exiba, não exija e não invente preço. A ausência de preço é intencional e compatível com campanha de Destaque.
-- `wrong_product_name` — nome do produto exibido não corresponde a {{productName}} (trocado, parcialmente incorreto ou com erro de digitação).
+- `wrong_price` — preço divergente do **comportamento de preço esperado para a intenção** (tabela acima — {{expectedPriceBehavior}}). Siga esse comportamento **exclusivamente**: em oferta, valide o preço promocional informado; em destaque, valide o preço único informado, **sem exigir preço original**; em exclusivo, nenhum preço é aceito. A ausência do campo "Preço original" nos dados **NÃO** significa ausência de preço na campanha — nunca deduza ausência total de preço a partir do campo "Preço original" vazio.
+- `wrong_product_name` — divergência **clara e inequívoca** do nome do produto em relação a {{productName}}: produto diferente, marca diferente, variante claramente errada, quantidade/volume inequivocamente diferente, nome truncado a ponto de identificar outro produto, ou erro textual claro sem ambiguidade tipográfica plausível. NÃO reprove por leitura visual incerta (ver "Nome do produto e ambiguidade tipográfica" abaixo).
 - `wrong_store_name` — o nome da loja, quando exigido, não corresponde a {{storeName}}.
 - `illegible_text` — texto aplicável ilegível, corrompido, truncado, sobreposto ou com contraste insuficiente; ou texto obrigatório/aviso ausente quando aplicável; ou alteração inequívoca que transforme o texto obrigatório/aviso em OUTRA informação.
-- `invented_information` (critical) — informação comercial relevante inventada: parcelamento, frete grátis, garantia estendida, prazos de entrega ou condições promocionais não autorizadas, ou qualquer condição comercial relevante sem lastro nos dados.
+- `invented_information` (critical) — informação comercial relevante inventada sem autorização nos dados recebidos: parcelamento, frete grátis, garantia estendida, prazos de entrega, condições promocionais, **alegações de escassez** ("estoque limitado", "últimas unidades", "poucas unidades" e equivalentes) ou qualquer condição comercial relevante sem lastro. Avisos genéricos neutros ("consulte condições", "sujeito a disponibilidade") podem ser `minor` quando não contradizem dado explícito — mas alegações de escassez não autorizadas são `critical`.
 - `deformed_product` — produto principal irreconhecível ou gravemente deformado em relação à referência.
 - `weak_visual_quality` (critical) — qualidade visivelmente amadora que impeça a publicação (composição desequilibrada, cores conflitantes, elementos mal posicionados a ponto de inviabilizar a peça).
 - `commercial_tone_mismatch` (critical) — tom que contradiz frontalmente a intenção comercial (ex.: CTA promocional ou "50% OFF" em uma campanha Exclusivo) ou que inventa condição comercial relevante.
 - Violação **claramente visível** de restrição sensível informada.
+
+### Nome do produto e ambiguidade tipográfica
+
+Não faça comparação de OCR rígida caractere por caractere. Fontes podem tornar letras e números visualmente semelhantes, como `l`, `I` e `1`, ou `O` e `0`. Use o nome esperado, o contexto e a referência do produto. Só marque `wrong_product_name` como crítico quando a divergência for clara e inequívoca. Se houver ambiguidade tipográfica plausível, classifique como `minor` e aprove.
+
+- **Tolerado** (não é divergência inequívoca): confusão visual entre `l`/`I`/`1` e `O`/`0`; diferenças de caixa (maiúscula × minúscula); espaços, pontuação ou acentuação; e pequenas variações tipográficas que não mudem inequivocamente o produto.
+- **Exemplo concreto:** produto esperado "Coca Cola 2l Original" e arte com leitura incerta "Coca Cola 21 Original". O caractere ambíguo pode ser `l` (letra) lido como `1` (número) pela fonte — **trate como correspondência válida**; não registre `wrong_product_name` crítico baseado apenas nessa leitura visual incerta.
+- **NÃO use OCR rígido caractere por caractere** para decidir. Quando a dúvida for entre texto correto e divergência real → `minor` e aprove.
+- **Permanece crítico:** produto claramente diferente, marca diferente, variante claramente errada, quantidade/volume inequivocamente diferente, nome truncado a ponto de identificar outro produto, ou erro textual claro sem ambiguidade tipográfica plausível.
 
 ## O que deve passar (minor)
 
@@ -79,8 +88,8 @@ Issues **minor** não bloqueiam e não provocam regeneração. Devem passar:
 - Posicionamento de elementos diferente do esperado, desde que legível e publicável.
 - Fundo ou elementos decorativos discutíveis, porém publicáveis.
 - Diferenças visuais pequenas que não mudem o produto nem a informação.
-- Avisos genéricos de baixo risco ("estoque limitado", "consulte condições", "sujeito a disponibilidade") — minor, salvo se contrariarem dado explícito.
-- Tom levemente desalinhado mas ainda publicável (ex.: "Últimas unidades" em Exclusivo sem criar condição comercial) — minor.
+- Avisos genéricos neutros de baixo risco ("consulte condições", "sujeito a disponibilidade") — minor, salvo se contrariarem dado explícito. Alegações de escassez não autorizadas ("estoque limitado", "últimas unidades", "poucas unidades") **não** são minor — são `invented_information` critical.
+- Tom levemente desalinhado mas ainda publicável (ex.: um tom de destaque um pouco mais direto em Exclusivo, sem criar condição comercial, sem alegação de escassez e sem urgência) — minor.
 - Dúvidas sem evidência objetiva na imagem.
 
 ## Texto obrigatório × aviso ilustrativo
@@ -107,7 +116,7 @@ O texto obrigatório e o aviso ilustrativo são naturezas independentes e são v
 - `minor` não provoca regeneração.
 - Não reprove por preferência estética.
 - Não crie relações entre campos que não foram fornecidas no contrato.
-- O fundo pode orientar a leitura, mas não bloqueia isoladamente quando produto, legibilidade e qualidade seguem publicáveis.
+- O fundo pode orientar a leitura, mas não bloqueia isoladamente quando produto, legibilidade, qualidade e entendimento da oferta seguem publicáveis. **O tratamento de imagem esperado é uma expectativa visual, não um bloqueio automático:** um fundo contextual apenas diferente do esperado é `minor` e passa; ele só bloqueia se prejudicar claramente a identificação do produto, a legibilidade, a qualidade publicável ou o entendimento da oferta.
 - Quando houver contexto autorizado da campanha (seção "Contexto Autorizado da Campanha"), informações coerentes com ele NÃO devem ser tratadas como invenção.
 - Quando houver referências autorizadas enviadas pelo lojista (seção "Referências Autorizadas da Campanha"): um produto ou variação visível em QUALQUER uma das imagens de referência é autorizado como apoio/variação e NÃO deve ser tratado como invenção. Um produto ausente de TODAS as referências e dos dados da campanha continua sendo invenção CRÍTICA. A primeira imagem de referência permanece a referência principal: uma referência adicional autoriza o item como elemento/variação de apoio, mas não substitui o produto principal anunciado.
 

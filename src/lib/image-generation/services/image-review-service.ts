@@ -156,7 +156,7 @@ export class ImageReviewService {
     if (intent === "offer") {
       return preserveImageContext
         ? "Fundo contextual TOLERADO, mas o produto deve estar em evidência."
-        : "A imagem DEVE isolar o produto em fundo comercial limpo (recorte). Fundo contextual NÃO é aceito.";
+        : "A imagem DEVE isolar o produto em fundo comercial limpo (recorte). Essa é a expectativa visual da oferta — um fundo contextual diferente do esperado NÃO é bloqueio automático: é minor e passa quando a peça permanece publicável; bloqueia apenas se o fundo prejudicar claramente a identificação do produto, a legibilidade, a qualidade publicável ou o entendimento da oferta.";
     }
     if (preserveImageContext) {
       return "O fundo contextual DA IMAGEM DEVE ser preservado (ambiente, cenário). Não substituir por fundo comercial.";
