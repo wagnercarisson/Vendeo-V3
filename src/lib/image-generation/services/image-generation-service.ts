@@ -12,6 +12,18 @@ import { MetricsWriter } from "@/lib/image-generation/metrics/writer";
 import { logReviewDiagnostic } from "@/lib/image-generation/metrics/review-diagnostics";
 import type { ReviewDiagnosticEntry } from "@/lib/image-generation/metrics/review-diagnostics";
 import { validatePrompt } from "@/lib/image-generation/services/prompt-validator";
+import {
+  formatPriceBRL,
+  splitDirectorLegalText,
+  campaignFactsSection,
+  commercialDetailsSection,
+  requiredArtworkTextSection,
+  illustrativeNoticeSection,
+  identityReferenceSection,
+  productReferenceSection,
+  constraintsSection,
+  creativeDirectionSection,
+} from "./art-director-briefing";
 import { STORE_SEGMENTS } from "@/lib/constants";
 import type { TokenUsage } from "@/lib/ai-cost/types";
 
@@ -38,19 +50,6 @@ const PHASE_MESSAGES: Record<string, string[]> = {
     "Revisando a campanha antes de entregar.",
     "Preparando sua campanha para entrega.",
   ],
-};
-
-const CATEGORY_TO_SEGMENT_GROUP: Record<string, string[]> = {
-  "bebidas-adegas-conveniencia": ["bebidas", "alimentos", "bebida", "energetico", "cafe", "cerveja", "refrigerante", "suco", "agua", "comida", "snack", "doce", "salgado"],
-  "moda-calcados-acessorios": ["roupa", "calcado", "tenis", "vestuario", "moda", "acessorio", "bolsa", "camiseta", "jeans"],
-  "beleza-estetica": ["beleza", "cosmetico", "maquiagem", "perfume", "hidratante", "shampoo", "protetor"],
-  "farmacia-saude": ["remedio", "farmacia", "vitamina", "suplemento", "medicamento"],
-  "casa-decoracao": ["casa", "decoracao", "moveis", "tapete", "toalha", "almofada"],
-  "eletronicos-tecnologia": ["eletronico", "tecnologia", "celular", "computador", "fone", "carregador"],
-  "petshop": ["pet", "racao", "cachorro", "gato", "brinquedo pet"],
-  "servicos-locais": ["servico", "consulta", "curso", "assinatura"],
-  "variedades-utilidades": ["presente", "variedade", "geral"],
-  "outros": [],
 };
 
 export type GenerateImageServiceResult =
@@ -416,9 +415,9 @@ export class ImageGenerationService {
           ? this.formatPriceBRL(brief.commercial.originalPriceCents ?? 0)
           : undefined,
         validationContext,
-        legalNoticeText: brief.commercial.legalNotice?.enabled
-          ? brief.commercial.legalNotice.text
-          : undefined,
+        ...this.buildReviewerLegalText(brief),
+        sensitiveConstraints: brief.creativeContext.sensitiveConstraints,
+        objective: brief.commercial.objective,
         campaignDetails: brief.commercial.campaignDetails,
         additionalDetails: brief.commercial.additionalDetails,
         validityText: brief.commercial.validity?.enabled
@@ -642,9 +641,9 @@ export class ImageGenerationService {
       originalPrice: (brief.commercial.originalPriceCents ?? 0) > 0
         ? this.formatPriceBRL(brief.commercial.originalPriceCents ?? 0)
         : undefined,
-      legalNoticeText: brief.commercial.legalNotice?.enabled
-        ? brief.commercial.legalNotice.text
-        : undefined,
+      ...this.buildReviewerLegalText(brief),
+      sensitiveConstraints: brief.creativeContext.sensitiveConstraints,
+      objective: brief.commercial.objective,
       campaignDetails: brief.commercial.campaignDetails,
       additionalDetails: brief.commercial.additionalDetails,
       validityText: brief.commercial.validity?.enabled
@@ -719,255 +718,39 @@ export class ImageGenerationService {
     };
   }
 
-  private isSameCategory(inferredCategory: string, storeSegment: string): boolean {
-    const normalizedInferred = inferredCategory.toLowerCase();
-    const normalizedSegment = storeSegment.toLowerCase();
-
-    for (const [group, keywords] of Object.entries(CATEGORY_TO_SEGMENT_GROUP)) {
-      for (const keyword of keywords) {
-        if (normalizedInferred.includes(keyword)) {
-          return group !== normalizedSegment;
-        }
-      }
-    }
-
-    return false;
-  }
-
-  private buildCommercialRepertoire(brief: CampaignBrief): string {
-    const parts: string[] = [];
-    const campaignIntent = brief.commercial.intent ?? "offer";
-
-    const hasAvailabilityNotes = !!brief.commercial.availabilityNotes;
-    const hasValidity = !!brief.commercial.validity;
-    const hasCampaignDetails = !!brief.commercial.campaignDetails;
-    const hasAdditionalDetails = !!brief.commercial.additionalDetails;
-
-    if (brief.commercial.availabilityNotes && campaignIntent !== "spotlight") {
-      const notes = brief.commercial.availabilityNotes.toLowerCase();
-      const scarcityKeywords = ["poucas unidades", "últimas", "limitado", "estoque"];
-      const varietyKeywords = ["vários sabores", "cores variadas", "diversos", "várias"];
-
-      if (scarcityKeywords.some(kw => notes.includes(kw))) {
-        const prefix = campaignIntent === "exclusive" ? "Disponibilidade:" : "Disponível:";
-        parts.push(`- ${prefix} ${brief.commercial.availabilityNotes}`);
-      } else if (varietyKeywords.some(kw => notes.includes(kw))) {
-        parts.push(`- Variedade disponível: ${brief.commercial.availabilityNotes}`);
-      }
-    }
-
-    if (brief.commercial.validity?.enabled && brief.commercial.validity.displayText && campaignIntent === "offer") {
-      parts.push(`- Oferta válida: ${brief.commercial.validity.displayText}`);
-    }
-
-    if (brief.commercial.campaignDetails) {
-      const actionable = brief.commercial.campaignDetails.replace(/[\[\]]/g, "").trim();
-      if (actionable.length > 0) {
-        parts.push(`- ${actionable}`);
-      }
-    }
-
-    if (brief.commercial.additionalDetails) {
-      const actionable = brief.commercial.additionalDetails.replace(/[\[\]]/g, "").trim();
-      if (actionable.length > 0) {
-        parts.push(`- ${actionable}`);
-      }
-    }
-
-    const result = parts.join("\n");
-    if (IMAGE_GENERATION_DEBUG) {
-      console.log(
-        "[buildCommercialRepertoire]",
-        JSON.stringify({
-          empty: result === "",
-          argsCount: parts.length,
-          fieldsPresent: { hasAvailabilityNotes, hasValidity, hasCampaignDetails, hasAdditionalDetails },
-          preview: result ? result.slice(0, 120) : "(empty)",
-        })
-      );
-    }
-    return result;
-  }
-
-  private buildValidationSummary(brief: CampaignBrief, context: ResolvedCampaignContext, effectiveProductName: string): string {
-    const parts: string[] = [];
-
-    if (brief.product.name !== effectiveProductName) {
-      parts.push(`• Nome corrigido automaticamente de '${brief.product.name}' para '${effectiveProductName}'`);
-    }
-
-    if (context.campaignInput.inputValidationOverride?.productImageCheck === "user_confirmed_continue") {
-      parts.push("• O usuário confirmou que a imagem do produto está correta, mesmo com divergência na pré-validação");
-    }
-
-    return parts.join("\n");
-  }
-
-  /**
-   * Build creative context guidance based on segment, inferred category, and conflict status.
-   * Provides the director with a short contextual suggestion for visual positioning.
-   * Defaults to empty string when no specific guidance applies.
-   */
-  private buildCreativeContextGuidance(segment: string, category: string, hasConflict: boolean, campaignIntent: string = "offer"): string {
-    const s = segment.toLowerCase();
-    const c = category.toLowerCase();
-
-    let result: string;
-
-    if (hasConflict) {
-      if (c.includes("eletronico") || c.includes("tecnologia") || c.includes("celular") || c.includes("computador")) {
-        result = "Equilibre o apelo popular do segmento com o desejo por tecnologia.";
-      } else if (c.includes("bebida") || c.includes("alimento") || c.includes("cerveja") || c.includes("energetico")) {
-        result = "Valorize o produto com apelo aspiracional.";
-      } else if (c.includes("moda") || c.includes("roupa") || c.includes("calcado") || c.includes("tenis")) {
-        result = "Destaque estilo e desejo dentro de um contexto acessível.";
-      } else if (c.includes("beleza") || c.includes("cosmetico") || c.includes("perfume")) {
-        result = "Eleve o produto como item de desejo — preço é bônus, não motivo principal.";
-      } else if (c.includes("pet") || c.includes("racao")) {
-        result = "Conecte carinho pelo pet com a conveniência da oferta.";
-      } else if (c.includes("casa") || c.includes("decoracao") || c.includes("movel")) {
-        result = "Transforme o produto em aspiração para o lar.";
-      } else {
-        result = "Equilibre o universo do produto com a identidade da loja.";
-      }
-    } else if (s.includes("bebidas-adegas-conveniencia") || s.includes("bebida")) {
-      if (c.includes("energetico")) result = "Valorize energia e disposição.";
-      else if (c.includes("cerveja")) result = "Valorize confraternização e qualidade.";
-      else if (c.includes("cafe")) result = "Valorize aconchego e ritual.";
-      else result = "Valorize sabor e qualidade.";
-    } else if (s.includes("moda") || s.includes("calcados")) {
-      if (c.includes("calcado") || c.includes("tenis")) result = "Valorize estilo e performance.";
-      else result = "Valorize estilo e personalidade.";
-    } else if (s.includes("beleza") || s.includes("estetica")) {
-      result = "Valorize autoestima e cuidado pessoal.";
-    } else if (s.includes("farmacia-saude") || s.includes("farmacia")) {
-      result = "Valorize bem-estar e confiança.";
-    } else if (s.includes("eletronico") || s.includes("tecnologia")) {
-      result = "Valorize inovação e performance.";
-    } else if (s.includes("casa") || s.includes("decoracao")) {
-      result = "Valorize conforto e estilo.";
-    } else if (s.includes("pet")) {
-      result = "Valorize carinho e bem-estar do pet.";
-    } else if (s.includes("variedades")) {
-      result = "Valorize variedade e praticidade.";
-    } else {
-      result = "";
-    }
-
-    if (campaignIntent === "spotlight") {
-      return `${result} Apresentar como destaque ou novidade, sem urgência. Benefício e diferencial são o foco.`.trim();
-    }
-
-    if (campaignIntent === "exclusive") {
-      return `${result} Valor percebido e exclusividade são os pilares. Tom premium, sem preço.`.trim();
-    }
-
-    if (result && campaignIntent === "offer") {
-      return `${result} Preço é oportunidade.`;
-    }
-
-    return result;
-  }
-
   private buildPromptVariables(
     brief: CampaignBrief,
     context: ResolvedCampaignContext,
     effectiveProductName: string,
     inferredCategory?: string
   ): Record<string, string> {
-    const storeSegment = context.store.segment ?? '';
-    const effectiveInferredCategory = inferredCategory ?? storeSegment;
-    const hasConflict = inferredCategory
-      ? this.isSameCategory(inferredCategory, storeSegment)
-      : false;
-
-    const segEntry = STORE_SEGMENTS.find(s => s.value === storeSegment);
-    const creativePersona = `Você é um diretor de marketing especializado em ${segEntry?.label ?? storeSegment}.`;
-
-    const categoryConflictDirective = hasConflict
-      ? `ATENÇÃO: O produto anunciado é da categoria "${inferredCategory}", que é diferente do segmento principal da loja "${storeSegment}". A direção visual deve refletir o universo de ${inferredCategory}. A identidade da loja (nome, paleta, logo) deve aparecer como assinatura, não como tema visual.`
-      : "";
-
-    const commercialRepertoire = this.buildCommercialRepertoire(brief);
-    const inputValidationSummary = this.buildValidationSummary(brief, context, effectiveProductName);
-    const creativeContextGuidance = this.buildCreativeContextGuidance(storeSegment, effectiveInferredCategory, hasConflict, brief.commercial.intent ?? "offer");
-
     const campaignIntent = brief.commercial.intent ?? "offer";
 
-    const commercialFrame = (() => {
-      const dpc = brief.commercial.discountedPriceCents;
-      switch (campaignIntent) {
-        case "spotlight":
-          return dpc ? `Destaque — ${this.formatPriceBRL(dpc)}` : "Destaque do produto";
-        case "exclusive":
-          return "Produto exclusivo — sem divulgação de preço";
-        default: {
-          if (!dpc) return "Oferta";
-          const formattedDiscounted = this.formatPriceBRL(dpc);
-          if (brief.commercial.badgeText) {
-            const formattedOriginal = (brief.commercial.originalPriceCents ?? 0) > 0
-              ? `de ${this.formatPriceBRL(brief.commercial.originalPriceCents ?? 0)} por `
-              : "";
-            return `${brief.commercial.badgeText}: ${formattedOriginal}${formattedDiscounted}`;
-          }
-          return `Apenas ${formattedDiscounted}`;
-        }
-      }
-    })();
-
-    return {
-      productName: effectiveProductName,
-      storeName: context.store.name ?? '',
-      storeSegment,
-      storeTone: context.store.toneOfVoice ?? "profissional",
-      brandColor: context.store.brandColor ?? "#22C55E",
-      originalPrice: (brief.commercial.originalPriceCents ?? 0) > 0
-        ? this.formatPriceBRL(brief.commercial.originalPriceCents ?? 0)
-        : "",
-      discountedPrice: brief.commercial.discountedPriceCents
-        ? this.formatPriceBRL(brief.commercial.discountedPriceCents)
-        : "",
-      badgeText: brief.commercial.badgeText ?? "",
-      hook: brief.commercial.hook ?? "",
-      cta: brief.commercial.cta ?? "",
-      objective: brief.commercial.objective ?? "",
-      campaignDetails: brief.commercial.campaignDetails ?? "",
-      additionalDetails: brief.commercial.additionalDetails ?? "",
-      targetChannel: brief.commercial.targetChannel ?? "Instagram",
-      format: brief.commercial.format ?? "quadrado 1:1",
-      validity: brief.commercial.validity?.enabled
-        ? (brief.commercial.validity.displayText ?? "")
-        : "",
-      availabilityNotes: brief.commercial.availabilityNotes ?? "",
-      sensitiveConstraints: brief.creativeContext.sensitiveConstraints ?? "",
-      mandatoryArtworkText: brief.commercial.legalNotice?.enabled
+    // Quick 260902-kqo: separa semanticamente o aviso fixo (constante canônica) do
+    // texto obrigatório livre do lojista, APENAS na montagem das variáveis do diretor.
+    const { merchantText, illustrativeNotice } = splitDirectorLegalText(
+      brief.commercial.legalNotice?.enabled
         ? (brief.commercial.legalNotice.text ?? "")
-        : "",
-      identityImageUrl: context.identity.imageUrl ?? "",
-      identityDirective: context.identity.directive ?? "",
+        : ""
+    );
+
+    // Mapa FINAL (D5 — 45-04): chaves realmente consumidas pelos 4 templates
+    // reescritos (8 slots contextuais + prosa garantida storeName/productName/
+    // brandColor) + campaignIntent (seleção de arquivo no assemblePrompt). As
+    // chaves legadas da transição (45-03) saíram — nenhum template as interpola.
+    return {
+      campaignFactsSection: campaignFactsSection(brief, context, effectiveProductName),
+      commercialDetailsSection: commercialDetailsSection(brief),
+      requiredArtworkTextSection: requiredArtworkTextSection(merchantText),
+      illustrativeNoticeSection: illustrativeNoticeSection(illustrativeNotice),
+      identityReferenceSection: identityReferenceSection(brief, context),
+      productReferenceSection: productReferenceSection(brief, context, this.mediaImagesDataUrls(brief).length),
+      constraintsSection: constraintsSection(brief),
+      creativeDirectionSection: creativeDirectionSection(brief, context, inferredCategory),
+      productName: effectiveProductName,
+      storeName: context.store.name ?? "",
+      brandColor: context.store.brandColor ?? "#22C55E",
       campaignIntent,
-      preserveImageDirective: campaignIntent !== "offer" && brief.creativeContext.preserveImageContext
-        ? "NÃO recortar o produto. Preservar o contexto original da imagem. Adaptar a composição ao redor do produto sem isolá-lo. Legibilidade continua obrigatória."
-        : "",
-      commercialFrame,
-
-      // Brand profile context (Phase 4.4.1)
-      brandProfileSection: this.buildBrandProfileSection(context.brandProfile ?? null),
-      brandColorsChosen: context.brandProfile?.brand_colors_chosen?.join(', ') ?? '',
-      visualStyle: context.brandProfile?.visual_style ?? '',
-      visualTone: context.brandProfile?.visual_tone ?? '',
-      brandPersonality: context.brandProfile?.brand_personality ?? '',
-      campaignGuidelines: context.brandProfile?.campaign_guidelines ?? '',
-      campaignBrief: context.brandProfile?.campaign_brief ?? '',
-
-      // New creative direction variables
-      creativePersona,
-      inferredCategory: effectiveInferredCategory,
-      hasCategoryConflict: hasConflict ? "sim" : "nao",
-      categoryConflictDirective,
-      commercialRepertoire,
-      inputValidationSummary,
-      creativeContextGuidance,
     };
   }
 
@@ -992,11 +775,28 @@ export class ImageGenerationService {
   }
 
   private formatPriceBRL(cents: number | undefined): string {
-    if (cents === undefined || cents === null) return "";
-    return (cents / 100).toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    });
+    return formatPriceBRL(cents);
+  }
+
+  /**
+   * Split canônico do texto legal (45-08): o MESMO `splitDirectorLegalText` que
+   * alimenta o Diretor alimenta o Revisor — `requiredArtworkText` (texto livre
+   * do lojista) e `illustrativeNotice` (aviso fixo canônico) como naturezas
+   * independentes. Quando `legalNotice` não está habilitado, ambos ficam
+   * `undefined` (nenhuma seção entra na revisão).
+   */
+  private buildReviewerLegalText(brief: CampaignBrief): {
+    requiredArtworkText?: string;
+    illustrativeNotice?: string;
+  } {
+    if (!brief.commercial.legalNotice?.enabled) return {};
+    const { merchantText, illustrativeNotice } = splitDirectorLegalText(
+      brief.commercial.legalNotice.text ?? ""
+    );
+    return {
+      requiredArtworkText: merchantText || undefined,
+      illustrativeNotice: illustrativeNotice || undefined,
+    };
   }
 
   // Ponte explícita media.images → provider/input-validation (F39-16, F41-20 D7).
@@ -1173,45 +973,6 @@ export class ImageGenerationService {
     }
 
     return result;
-  }
-
-  private buildBrandProfileSection(brandProfile?: {
-    brand_colors_chosen?: Array<string | null>;
-    safe_color_tokens?: Record<string, string>;
-    visual_style?: string | null;
-    visual_tone?: string | null;
-    brand_personality?: string | null;
-    campaign_guidelines?: string | null;
-    campaign_brief?: string | null;
-  } | null): string {
-    if (!brandProfile) return '';
-
-    const note = '> **Nota:** Este perfil de marca é contexto criativo direcional para repertório da campanha, não regra obrigatória. Use como referência visual e comercial, preservando seu julgamento criativo na composição.\n';
-
-    const rows: string[] = [
-      '| Campo | Valor |',
-      '|-------|-------|',
-    ];
-
-    if (brandProfile.campaign_guidelines) {
-      rows.push(`| **Diretrizes de campanha** | ${brandProfile.campaign_guidelines} |`);
-    }
-    if (brandProfile.campaign_brief) {
-      rows.push(`| **Brief do Diretor de Marca** | ${brandProfile.campaign_brief} |`);
-    }
-    if (brandProfile.brand_personality) {
-      rows.push(`| **Personalidade da marca** | ${brandProfile.brand_personality} |`);
-    }
-    if (brandProfile.visual_style) {
-      rows.push(`| **Estilo visual** | ${brandProfile.visual_style} |`);
-    }
-    if (brandProfile.visual_tone) {
-      rows.push(`| **Tom visual** | ${brandProfile.visual_tone} |`);
-    }
-    if (brandProfile.brand_colors_chosen?.length) {
-      rows.push(`| **Cores da marca** | ${brandProfile.brand_colors_chosen.join(', ')} |`);
-    }
-    return rows.length > 2 ? note + rows.join('\n') : '';
   }
 
   private buildValidationDetail(

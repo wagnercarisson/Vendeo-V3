@@ -15,10 +15,19 @@ export interface ImageReviewInput {
   originalPrice?: string;
   discountedPrice?: string;
   validationContext?: ValidationContext;
-  /** Campos originados do domínio CampaignBrief (D8/D9):
-   * legalNoticeText ← commercial.legalNotice.text quando enabled === true;
+  /** Campos originados do domínio CampaignBrief (D8/D9) via split canônico
+   * `splitDirectorLegalText` (art-director-briefing.ts) — o MESMO split que
+   * alimenta o Diretor também alimenta o Revisor (45-08):
+   * requiredArtworkText ← parte do texto livre do lojista (merchantText) quando legalNotice.enabled;
+   * illustrativeNotice ← aviso ilustrativo fixo (constante canônica) quando presente;
    * validityText ← commercial.validity.displayText quando validity.enabled. */
-  legalNoticeText?: string;
+  requiredArtworkText?: string;
+  illustrativeNotice?: string;
+  /** sensitiveConstraints ← brief.creativeContext.sensitiveConstraints (mesma
+   * origem do Diretor — constraintsSection); objective ← brief.commercial.objective
+   * (mesma origem do Diretor — campaignFactsSection). Contexto não-bloqueante. */
+  sensitiveConstraints?: string;
+  objective?: string;
   campaignDetails?: string;
   additionalDetails?: string;
   validityText?: string;
@@ -45,7 +54,10 @@ export class ImageReviewService {
       expectedImageTreatment: this.buildExpectedImageTreatment(intent, input.preserveImageContext),
       expectedCommercialTone: this.buildExpectedCommercialTone(intent),
       validationContextSection: this.buildValidationContextSection(input.validationContext),
-      mandatoryArtworkTextSection: this.buildMandatoryArtworkTextSection(input.legalNoticeText),
+      requiredArtworkTextSection: this.buildRequiredArtworkTextSection(input.requiredArtworkText),
+      illustrativeNoticeSection: this.buildIllustrativeNoticeSection(input.illustrativeNotice),
+      sensitiveConstraintsSection: this.buildSensitiveConstraintsSection(input.sensitiveConstraints),
+      objectiveSection: this.buildObjectiveSection(input.objective),
       authorizedContextSection: this.buildAuthorizedContextSection(input.campaignDetails, input.additionalDetails),
       validityTextSection: this.buildValidityTextSection(input.validityText),
       referenceImagesContextSection: this.buildReferenceImagesContextSection(referenceCount),
@@ -144,7 +156,7 @@ export class ImageReviewService {
     if (intent === "offer") {
       return preserveImageContext
         ? "Fundo contextual TOLERADO, mas o produto deve estar em evidência."
-        : "A imagem DEVE isolar o produto em fundo comercial limpo (recorte). Fundo contextual NÃO é aceito.";
+        : "A imagem DEVE isolar o produto em fundo comercial limpo (recorte). Essa é a expectativa visual da oferta — um fundo contextual diferente do esperado NÃO é bloqueio automático: é minor e passa quando a peça permanece publicável; bloqueia apenas se o fundo prejudicar claramente a identificação do produto, a legibilidade, a qualidade publicável ou o entendimento da oferta.";
     }
     if (preserveImageContext) {
       return "O fundo contextual DA IMAGEM DEVE ser preservado (ambiente, cenário). Não substituir por fundo comercial.";
@@ -154,7 +166,7 @@ export class ImageReviewService {
 
   private buildExpectedCommercialTone(intent: CampaignIntent): string {
     switch (intent) {
-      case "offer": return "Tom promocional com senso de urgência. CTA de compra esperado.";
+      case "offer": return "Tom comercial e promocional coerente com uma campanha de oferta.";
       case "spotlight": return "Tom aspiracional de destaque e desejo. Sem urgência promocional.";
       case "exclusive": return "Tom premium de exclusividade. Sem linguagem promocional ou de urgência.";
     }
@@ -187,27 +199,82 @@ export class ImageReviewService {
     return value.replace(/\{\{/g, "{").replace(/\}\}/g, "}");
   }
 
-  private buildMandatoryArtworkTextSection(text: string | undefined): string {
+  /**
+   * Seção de texto obrigatório informado pelo lojista (45-08): monta APENAS o
+   * heading + o valor sanitizado entre aspas + a identificação da natureza do
+   * campo. Políticas de severidade/tolerância vivem no `.md` do Revisor.
+   * Sem regra de posição/lateral e sem tratar o aviso ilustrativo como parte
+   * deste texto (naturezas independentes — T-45-08a).
+   */
+  private buildRequiredArtworkTextSection(text: string | undefined): string {
     const sanitized = this.sanitizePromptText(text?.trim() ?? "");
     if (!sanitized) return "";
     return [
-      "## Texto Obrigatorio na Arte",
+      "## Texto Obrigatório na Arte",
       "",
-      "O lojista informou o conteudo abaixo como referencia obrigatoria para a arte:",
+      "O texto abaixo foi informado pelo lojista como referência obrigatória para a arte:",
       "",
       '"' + sanitized + '"',
+    ].join("\n");
+  }
+
+  /**
+   * Seção do aviso ilustrativo fixo habilitado (45-08): monta APENAS o heading +
+   * o valor sanitizado entre aspas + a identificação da natureza do campo.
+   * Políticas de severidade/tolerância vivem no `.md` do Revisor.
+   * NÃO contém regra de posição/lateral nem trata o aviso como parte de outro
+   * texto legal (T-45-08a).
+   */
+  private buildIllustrativeNoticeSection(notice: string | undefined): string {
+    const sanitized = this.sanitizePromptText(notice?.trim() ?? "");
+    if (!sanitized) return "";
+    return [
+      "## Aviso Ilustrativo",
       "",
-      "Avalie se a arte preserva o conteudo essencial, os fatos e o sentido comercial informado. O texto pode ser reorganizado, quebrado em linhas, distribuido em blocos, cards, selos ou areas diferentes da composicao.",
+      "A campanha possui o aviso ilustrativo fixo abaixo:",
       "",
-      "Nao reprove apenas por mudanca de ordem, quebra de linha, pontuacao, hifen, barra ou separacao visual, desde que preco, quantidade, datas, condicao promocional e sentido estejam corretos e legiveis.",
+      '"' + sanitized + '"',
+    ].join("\n");
+  }
+
+  /**
+   * Seção de restrições sensíveis (45-08): monta APENAS o heading + o valor
+   * informado + a identificação da natureza. Toda restrição listada vale para a
+   * arte. Políticas de severidade/tolerância vivem no `.md` (violação
+   * claramente visível), não aqui.
+   */
+  private buildSensitiveConstraintsSection(constraints: string | undefined): string {
+    const sanitized = this.sanitizePromptText(constraints?.trim() ?? "");
+    if (!sanitized) return "";
+    const items = sanitized
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => `- ${line}`);
+    return [
+      "## Restrições Sensíveis",
       "",
-      "Reprove somente se houver omissao de informacao essencial, erro factual, alteracao de sentido, ambiguidade comercial relevante, truncamento, corte ou ilegibilidade.",
+      "As restrições sensíveis informadas pelo lojista abaixo valem para a arte:",
       "",
-      "Se o conteudo for aviso legal ou regulatorio, aplique maior rigor literal: nao aceite alteracao, omissao ou reescrita que possa mudar o alcance legal do aviso.",
+      ...items,
+    ].join("\n");
+  }
+
+  /**
+   * Seção de objetivo da campanha (45-08): contexto explicativo das escolhas do
+   * Diretor — NÃO é conteúdo obrigatório na arte. Monta APENAS heading + valor +
+   * identificação da natureza. Sem regra de julgamento (ausência textual nunca
+   * reprova — política no `.md`).
+   */
+  private buildObjectiveSection(objective: string | undefined): string {
+    const sanitized = this.sanitizePromptText(objective?.trim() ?? "");
+    if (!sanitized) return "";
+    return [
+      "## Objetivo da Campanha",
       "",
-      'Quando reprovar por texto obrigatorio, reporte como issue CRITICA com type "illegible_text".',
+      "Contexto explicativo das escolhas do Diretor de Arte — não é conteúdo obrigatório na arte:",
       "",
-      "Nao repetir o texto obrigatorio em legenda; o texto e escopo da arte, nao da legenda.",
+      sanitized,
     ].join("\n");
   }
 
@@ -236,7 +303,7 @@ export class ImageReviewService {
     const parts: string[] = [
       "## Contexto Autorizado da Campanha",
       "",
-      "Os detalhes comerciais abaixo foram fornecidos pelo lojista e são considerados AUTORIZADOS. Informações coerentes com eles NÃO devem ser reportadas como invented_information:",
+      "Os detalhes comerciais abaixo foram fornecidos pelo lojista como contexto autorizado da campanha:",
     ];
     if (campaign) {
       parts.push("- Detalhes da campanha: " + campaign);

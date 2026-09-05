@@ -1,10 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { ImageGenerationService } from '../image-generation-service';
 import type { CampaignBrief } from '@/lib/campaign/brief';
 import { buildCampaignBriefFromFlat } from '@/lib/campaign/brief';
 import type { ResolvedCampaignContext } from '@/components/campaign/types';
 import type { GenerateImageRequest } from '@/lib/image-generation/schema';
 import { PromptLoader } from '@/lib/image-generation/prompt-loader';
+import { ILLUSTRATIVE_NOTICE_TEXT } from '@/lib/campaign/constants';
 
 // Mock prompt-loader module to avoid file system reads in buildPromptVariables
 // The PromptLoader injected via constructor already overrides the default,
@@ -59,6 +62,22 @@ function createContext(overrides?: Partial<ResolvedCampaignContext>): ResolvedCa
     },
     ...overrides,
   };
+}
+
+function readPrompt(name: string): string {
+  return readFileSync(path.join(process.cwd(), 'prompts', name), 'utf-8');
+}
+
+function templatePlaceholders(template: string): string[] {
+  return [...template.matchAll(/\{\{([a-zA-Z]+)\}\}/g)].map((m) => m[1]);
+}
+
+function countOccurrences(text: string, needle: string): number {
+  return text.split(needle).length - 1;
+}
+
+function buildRealService(): ImageGenerationService {
+  return new ImageGenerationService({ name: 'test', generateImage: vi.fn() } as any);
 }
 
 describe('ImageGenerationService.validatePrompts', () => {
@@ -227,7 +246,7 @@ describe('ImageGenerationService.validatePrompts', () => {
     expect(result.errors.some((e: string) => e.includes('{{discountedPrice}}'))).toBe(true);
   });
 
-  it('validatePrompts propaga legalNotice (mandatoryArtworkText), campaignDetails e additionalDetails ao revisor', () => {
+  it('validatePrompts propaga legalNotice splitado (requiredArtworkText/illustrativeNotice), campaignDetails e additionalDetails ao revisor', () => {
     mockLoad.mockImplementation((name: string) => {
       if (name === 'campaign-image-director-offer') {
         return 'Prompt de direção visual';
@@ -250,9 +269,14 @@ describe('ImageGenerationService.validatePrompts', () => {
     const reviewerCall = mockLoad.mock.calls.find((call) => call[0] === 'campaign-image-reviewer');
     expect(reviewerCall).toBeDefined();
     const vars = reviewerCall![1] as Record<string, string>;
-    expect(vars).toHaveProperty('mandatoryArtworkTextSection');
+    // Split canônico (45-08): texto = constante canônica pura → aviso isolado na
+    // seção própria; sem seção de texto obrigatório e sem mandatoryArtworkTextSection.
+    expect(vars).not.toHaveProperty('mandatoryArtworkTextSection');
+    expect(vars).toHaveProperty('requiredArtworkTextSection');
+    expect(vars).toHaveProperty('illustrativeNoticeSection');
+    expect(vars.requiredArtworkTextSection).toBe('');
+    expect(vars.illustrativeNoticeSection).toContain('Imagem meramente ilustrativa');
     expect(vars).toHaveProperty('authorizedContextSection');
-    expect(vars.mandatoryArtworkTextSection).toContain('Imagem meramente ilustrativa');
     expect(vars.authorizedContextSection).toContain('Frete grátis acima de R$ 100');
     expect(vars.authorizedContextSection).toContain('Válido somente em loja física');
   });
@@ -294,10 +318,170 @@ describe('ImageGenerationService.validatePrompts', () => {
     const result = service.validatePrompts(brief, createContext());
     expect(result.valid).toBe(true);
   });
+
+  it('validatePrompts com PromptLoader REAL: offer completo e offer mínimo sem placeholders residuais (D4/F45-11)', () => {
+    const realService = new ImageGenerationService(mockProvider as any);
+
+    const completeBrief = createMinimalBrief({
+      validity: 'até 30/09/2026',
+      mandatoryArtworkText: `${ILLUSTRATIVE_NOTICE_TEXT}\nTexto promocional`,
+      campaignDetails: '[Queima de estoque] Aproveite',
+      additionalDetails: 'Válido somente em loja física',
+      availabilityNotes: 'Restam poucas unidades',
+      sensitiveConstraints: 'Não exibir modelo sem camisa',
+      hook: 'Oferta imperdível',
+      cta: 'Garanta já o seu',
+      objective: 'Vender mais',
+      targetChannel: 'Instagram',
+      format: 'quadrado 1:1',
+      productImages: [
+        { role: 'primary', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,primary' },
+        { role: 'reference', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,aux1' },
+      ],
+    });
+
+    const completeResult = realService.validatePrompts(completeBrief, createContext());
+    expect(completeResult.valid).toBe(true);
+    expect(completeResult.errors).toHaveLength(0);
+
+    const minimalBrief = createMinimalBrief();
+    const minimalResult = realService.validatePrompts(minimalBrief, createContext());
+    expect(minimalResult.valid).toBe(true);
+    expect(minimalResult.errors).toHaveLength(0);
+  });
+
+  it('validatePrompts com PromptLoader REAL: spotlight (preço único, preserveImageContext, sem validade/texto obrigatório) sem placeholders residuais (D4)', () => {
+    const realService = new ImageGenerationService(mockProvider as any);
+
+    const spotlightBrief = createMinimalBrief({
+      campaignIntent: 'spotlight',
+      preserveImageContext: true,
+      hook: 'Novidade na loja',
+      cta: 'Venha conferir',
+    });
+    const result = realService.validatePrompts(spotlightBrief, createContext());
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it('validatePrompts com PromptLoader REAL: exclusive (sem preço, sem badge) sem placeholders residuais (D4)', () => {
+    const realService = new ImageGenerationService(mockProvider as any);
+
+    const exclusiveBrief = createMinimalBrief({
+      campaignIntent: 'exclusive',
+      discountedPriceCents: undefined,
+      badgeText: undefined,
+      preserveImageContext: true,
+    });
+    const result = realService.validatePrompts(exclusiveBrief, createContext());
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it('validatePrompts loader real por intent: com texto obrigatório livre → valid e prompt final com requiredArtworkTextSection (D4/D5)', () => {
+    const realService = new ImageGenerationService(mockProvider as any);
+    const loadFinalPrompt = (brief: CampaignBrief) => {
+      const vars = (realService as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
+      return new PromptLoader().load(`campaign-image-director-${brief.commercial.intent ?? 'offer'}`, vars);
+    };
+
+    for (const intent of ['offer', 'spotlight', 'exclusive'] as const) {
+      const brief = createMinimalBrief({
+        campaignIntent: intent,
+        mandatoryArtworkText: 'Texto promocional',
+        preserveImageContext: true,
+      });
+      const result = realService.validatePrompts(brief, createContext());
+      expect(result.valid, `intent ${intent}: valid=false (${result.errors.join('; ')})`).toBe(true);
+
+      const promptText = loadFinalPrompt(brief);
+      expect(promptText, `intent ${intent}`).toContain('## Texto Obrigatório na Arte');
+      expect(promptText, `intent ${intent}`).toContain('"Texto promocional"');
+      expect(promptText, `intent ${intent}`).not.toContain('## Aviso Ilustrativo');
+    }
+  });
+
+  it('validatePrompts loader real por intent: apenas aviso ilustrativo → valid e prompt final com illustrativeNoticeSection, sem texto obrigatório (D4/D5)', () => {
+    const realService = new ImageGenerationService(mockProvider as any);
+    const loadFinalPrompt = (brief: CampaignBrief) => {
+      const vars = (realService as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
+      return new PromptLoader().load(`campaign-image-director-${brief.commercial.intent ?? 'offer'}`, vars);
+    };
+
+    for (const intent of ['offer', 'spotlight', 'exclusive'] as const) {
+      const brief = createMinimalBrief({
+        campaignIntent: intent,
+        mandatoryArtworkText: ILLUSTRATIVE_NOTICE_TEXT,
+        preserveImageContext: true,
+      });
+      const result = realService.validatePrompts(brief, createContext());
+      expect(result.valid, `intent ${intent}: valid=false (${result.errors.join('; ')})`).toBe(true);
+
+      const promptText = loadFinalPrompt(brief);
+      expect(promptText, `intent ${intent}`).toContain('## Aviso Ilustrativo');
+      expect(promptText, `intent ${intent}`).toContain(ILLUSTRATIVE_NOTICE_TEXT);
+      expect(promptText, `intent ${intent}`).not.toContain('## Texto Obrigatório na Arte');
+    }
+  });
+
+  it('validatePrompts loader real por intent: sem aviso e sem texto → valid e prompt final sem as duas seções (D4/D5)', () => {
+    const realService = new ImageGenerationService(mockProvider as any);
+    const loadFinalPrompt = (brief: CampaignBrief) => {
+      const vars = (realService as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
+      return new PromptLoader().load(`campaign-image-director-${brief.commercial.intent ?? 'offer'}`, vars);
+    };
+
+    for (const intent of ['offer', 'spotlight', 'exclusive'] as const) {
+      const brief = createMinimalBrief({ campaignIntent: intent, preserveImageContext: true });
+      const result = realService.validatePrompts(brief, createContext());
+      expect(result.valid, `intent ${intent}: valid=false (${result.errors.join('; ')})`).toBe(true);
+
+      const promptText = loadFinalPrompt(brief);
+      expect(promptText, `intent ${intent}`).not.toContain('## Texto Obrigatório na Arte');
+      expect(promptText, `intent ${intent}`).not.toContain('## Aviso Ilustrativo');
+    }
+  });
+
+  it('validatePrompts loader real: texto do lojista com {{ → saneado antes da interpolação, sem placeholder residual (D6)', () => {
+    const realService = new ImageGenerationService(mockProvider as any);
+
+    const brief = createMinimalBrief({
+      mandatoryArtworkText: 'Aproveite {{promocao}} e ganhe }} desconto',
+    });
+    const result = realService.validatePrompts(brief, createContext());
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+
+    const vars = (realService as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
+    const promptText = new PromptLoader().load('campaign-image-director-offer', vars);
+    expect(promptText).not.toContain('{{promocao}}');
+    expect(promptText).not.toContain('}} desconto');
+    expect(promptText).not.toMatch(/\{\{[a-zA-Z]+\}\}/);
+    expect(vars.requiredArtworkTextSection).toContain('{promocao}');
+  });
+
+  it('validatePrompts loader real: kqo (a) aviso + texto livre validado na montagem real — seções próprias no prompt final', () => {
+    const realService = new ImageGenerationService(mockProvider as any);
+
+    const brief = createMinimalBrief({
+      mandatoryArtworkText: `${ILLUSTRATIVE_NOTICE_TEXT}\nTexto promocional`,
+    });
+    const result = realService.validatePrompts(brief, createContext());
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+
+    const vars = (realService as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
+    const promptText = new PromptLoader().load('campaign-image-director-offer', vars);
+    expect(vars.requiredArtworkTextSection).toContain('"Texto promocional"');
+    expect(vars.requiredArtworkTextSection).not.toContain(ILLUSTRATIVE_NOTICE_TEXT);
+    expect(vars.illustrativeNoticeSection).toContain(ILLUSTRATIVE_NOTICE_TEXT);
+    expect(promptText).toContain('## Texto Obrigatório na Arte');
+    expect(promptText).toContain('## Aviso Ilustrativo');
+  });
 });
 
 describe('ImageGenerationService.generateImage', () => {
-  it('generateImage propaga os 3 campos ao review() no fluxo REAL de geração', async () => {
+  it('generateImage propaga os campos splitados e contexto ao review() no fluxo REAL de geração', async () => {
     const mockProvider = {
       name: 'test',
       generateImage: vi.fn().mockResolvedValue({
@@ -336,9 +520,11 @@ describe('ImageGenerationService.generateImage', () => {
     );
 
     const brief = createMinimalBrief({
-      mandatoryArtworkText: 'Imagem meramente ilustrativa',
+      mandatoryArtworkText: `${ILLUSTRATIVE_NOTICE_TEXT}\nTexto promocional livre`,
       campaignDetails: 'Frete grátis acima de R$ 100',
       additionalDetails: 'Válido somente em loja física',
+      sensitiveConstraints: 'Não exibir modelo sem camisa',
+      objective: 'Vender mais',
     });
 
     const result = await service.generateImage(brief, createContext());
@@ -346,7 +532,13 @@ describe('ImageGenerationService.generateImage', () => {
     expect(result.success).toBe(true);
     expect(mockImageReview.review).toHaveBeenCalledTimes(1);
     const reviewInput = mockImageReview.review.mock.calls[0][1];
-    expect(reviewInput.legalNoticeText).toBe('Imagem meramente ilustrativa');
+    // Split canônico (45-08): mesma origem do Diretor — requiredArtworkText = texto
+    // livre; illustrativeNotice = aviso fixo; legalNoticeText concatenado NÃO existe.
+    expect(reviewInput.legalNoticeText).toBeUndefined();
+    expect(reviewInput.requiredArtworkText).toBe('Texto promocional livre');
+    expect(reviewInput.illustrativeNotice).toBe(ILLUSTRATIVE_NOTICE_TEXT);
+    expect(reviewInput.sensitiveConstraints).toBe('Não exibir modelo sem camisa');
+    expect(reviewInput.objective).toBe('Vender mais');
     expect(reviewInput.campaignDetails).toBe('Frete grátis acima de R$ 100');
     expect(reviewInput.additionalDetails).toBe('Válido somente em loja física');
   });
@@ -553,18 +745,12 @@ describe('ImageGenerationService.generateImage — telemetria D11 (usage/duratio
 });
 
 describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F39-15/F39-19)', () => {
-  const EXPECTED_KEYS = [
-    'productName', 'storeName', 'storeSegment', 'storeTone', 'brandColor',
-    'originalPrice', 'discountedPrice', 'badgeText', 'hook', 'cta', 'objective',
-    'campaignDetails', 'additionalDetails', 'targetChannel', 'format', 'validity',
-    'availabilityNotes', 'sensitiveConstraints', 'mandatoryArtworkText',
-    'identityImageUrl', 'identityDirective', 'campaignIntent', 'preserveImageDirective',
-    'commercialFrame', 'brandProfileSection', 'brandColorsChosen', 'visualStyle',
-    'visualTone', 'brandPersonality', 'campaignGuidelines', 'campaignBrief',
-    'creativePersona', 'inferredCategory', 'hasCategoryConflict',
-    'categoryConflictDirective', 'commercialRepertoire', 'inputValidationSummary',
-    'creativeContextGuidance',
-  ];
+  // D5 (45-04/45-05): o contrato interno deixa de ser "mesmo conjunto exato de
+  // keys" e passa a ser invariante — todo placeholder presente nos templates é
+  // fornecido por buildPromptVariables (a), a montagem é determinística (b) e os
+  // blocos condicionais aparecem só quando há conteúdo (c). Os invariantes (a)-(c)
+  // estão no fim deste describe (45-05); os testes abaixo mantêm asserts de valor
+  // por intenção (seções montadas, DNA por intent) sem igualdade exata de chaves.
 
   function buildService() {
     const mockProvider = { name: 'test', generateImage: vi.fn() };
@@ -576,7 +762,7 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
     return service;
   }
 
-  it('8.16 offer: buildPromptVariables produz o MESMO conjunto de 38 keys (regressão F39-15)', () => {
+  it('8.16 offer: buildPromptVariables monta as seções por presença real — sem chaves legadas avulsas (D5)', () => {
     const service = buildService();
     const brief = createMinimalBrief({
       validity: 'válida até 31/12',
@@ -584,18 +770,26 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
     });
     const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
 
-    const keys = Object.keys(vars).sort();
-    expect(keys).toEqual([...EXPECTED_KEYS].sort());
-    expect(keys).toHaveLength(38);
     expect(vars.productName).toBe('Produto Teste');
-    expect(vars.discountedPrice).toContain('19,90');
-    expect(vars.badgeText).toBe('Oferta');
-    expect(vars.validity).toBe('válida até 31/12');
-    expect(vars.mandatoryArtworkText).toBe('Imagem meramente ilustrativa');
     expect(vars.campaignIntent).toBe('offer');
+    // Preço e badge legados saíram do Record — vivem nos fatos (D3/D5).
+    expect(vars).not.toHaveProperty('discountedPrice');
+    expect(vars).not.toHaveProperty('badgeText');
+    expect(vars.campaignFactsSection).toContain('**Preço com desconto:**');
+    expect(vars.campaignFactsSection).toContain('19,90');
+    expect(vars.campaignFactsSection).toContain('**Badge:** Oferta');
+    // Validade repartida: vive apenas no bloco de fatos (D3), não mais em chave própria.
+    expect(vars).not.toHaveProperty('validity');
+    expect(vars.campaignFactsSection).toContain('**Validade da oferta:** válida até 31/12');
+    expect(vars.commercialDetailsSection).not.toContain('válida até 31/12');
+    expect(vars.creativeDirectionSection).not.toContain('válida até 31/12');
+    // Aviso marcado SEM texto livre → aviso isolado na seção própria (split caso 1);
+    // sem texto obrigatório → requiredArtworkTextSection vazia.
+    expect(vars.requiredArtworkTextSection).toBe('');
+    expect(vars.illustrativeNoticeSection).toContain(ILLUSTRATIVE_NOTICE_TEXT);
   });
 
-  it('8.16 spotlight: mesmas 38 keys, preserveImageContext não-normalizado', () => {
+  it('8.16 spotlight: preserveImageContext → diretiva no bloco de produto; preço único nos fatos', () => {
     const service = buildService();
     const brief = createMinimalBrief({
       campaignIntent: 'spotlight',
@@ -603,35 +797,48 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
     });
     const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
 
-    expect(Object.keys(vars)).toHaveLength(38);
     expect(vars.campaignIntent).toBe('spotlight');
-    expect(vars.preserveImageDirective).toContain('Preservar o contexto original');
-    expect(vars.validity).toBe('');
+    // preserveImageDirective legada saiu do Record; a regra de não-recorte vive no
+    // bloco productReferenceSection (não-offer + preserveImageContext — D3).
+    expect(vars).not.toHaveProperty('preserveImageDirective');
+    expect(vars.productReferenceSection).toContain('Preservar o contexto original');
+    // Spotlight: preço ÚNICO nos fatos (sem DE/POR), sem validade.
+    expect(vars.campaignFactsSection).toContain('**Preço:**');
+    expect(vars.campaignFactsSection).toContain('19,90');
+    expect(vars.campaignFactsSection).not.toContain('Preço com desconto');
+    expect(vars.campaignFactsSection).not.toContain('Validade da oferta');
+    expect(vars).not.toHaveProperty('validity');
   });
 
-  it('8.16 exclusive: mesmas 38 keys', () => {
+  it('8.16 exclusive: facts NUNCA montam preço (DNA sem preço)', () => {
     const service = buildService();
-    const brief = createMinimalBrief({ campaignIntent: 'exclusive' });
+    // Domínio ainda carrega preço (rota limpa em produção) → facts não podem exibi-lo.
+    const brief = createMinimalBrief({ campaignIntent: 'exclusive', discountedPriceCents: 9900 });
     const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
 
-    expect(Object.keys(vars)).toHaveLength(38);
     expect(vars.campaignIntent).toBe('exclusive');
-    expect(vars.commercialFrame).toContain('sem divulgação de preço');
+    expect(vars).not.toHaveProperty('commercialFrame');
+    expect(vars).not.toHaveProperty('discountedPrice');
+    expect(vars.productReferenceSection).not.toContain('Preservar o contexto original');
+    expect(vars.campaignFactsSection).not.toContain('Preço');
+    expect(vars.campaignFactsSection).not.toContain('99,00');
   });
 
-  it('9.3 legalNotice ausente (enabled=false) → mandatoryArtworkText vazio no prompt (spotlight e exclusive)', () => {
+  it('9.3 legalNotice ausente (enabled=false) → seções de texto obrigatório e aviso vazias (spotlight e exclusive)', () => {
     const service = buildService();
 
     const spotlight = createMinimalBrief({ campaignIntent: 'spotlight', preserveImageContext: true });
     const spotlightVars = (service as any).buildPromptVariables(spotlight, createContext(), spotlight.product.name) as Record<string, string>;
-    expect(spotlightVars.mandatoryArtworkText).toBe('');
+    expect(spotlightVars.requiredArtworkTextSection).toBe('');
+    expect(spotlightVars.illustrativeNoticeSection).toBe('');
 
     const exclusive = createMinimalBrief({ campaignIntent: 'exclusive' });
     const exclusiveVars = (service as any).buildPromptVariables(exclusive, createContext(), exclusive.product.name) as Record<string, string>;
-    expect(exclusiveVars.mandatoryArtworkText).toBe('');
+    expect(exclusiveVars.requiredArtworkTextSection).toBe('');
+    expect(exclusiveVars.illustrativeNoticeSection).toBe('');
   });
 
-  it('9.5 golden offer com novos campos preenchidos mantém 38 keys (D6)', () => {
+  it('9.5 golden offer com novos campos preenchidos mantém o conjunto final (D6)', () => {
     const service = buildService();
     const brief = createMinimalBrief({
       validity: 'até 30/09',
@@ -639,13 +846,15 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
     });
     const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
 
-    expect(Object.keys(vars)).toHaveLength(38);
-    expect([...EXPECTED_KEYS].sort()).toEqual(Object.keys(vars).sort());
-    expect(vars.validity).toBe('até 30/09');
-    expect(vars.mandatoryArtworkText).toBe('Imagem meramente ilustrativa');
+    expect(vars.campaignFactsSection).toContain('**Validade da oferta:** até 30/09');
+    // Aviso marcado SEM texto livre → aviso isolado na seção própria (split caso 1);
+    // sem texto livre → requiredArtworkTextSection vazia (chaves legadas removidas).
+    expect(vars).not.toHaveProperty('mandatoryArtworkText');
+    expect(vars.requiredArtworkTextSection).toBe('');
+    expect(vars.illustrativeNoticeSection).toContain(ILLUSTRATIVE_NOTICE_TEXT);
   });
 
-  it('20 (F41): golden com multi-imagem mantém o MESMO conjunto de 38 keys por intent (D6)', () => {
+  it('20 (F41): golden com multi-imagem mantém hierarquia 1+N no bloco de produto por intent', () => {
     const service = buildService();
     const multiBrief = (intent: 'offer' | 'spotlight' | 'exclusive') =>
       createMinimalBrief({
@@ -660,21 +869,62 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
     for (const intent of ['offer', 'spotlight', 'exclusive'] as const) {
       const brief = multiBrief(intent);
       const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
-      const keys = Object.keys(vars).sort();
-      expect(keys, `intent ${intent}`).toEqual([...EXPECTED_KEYS].sort());
-      expect(keys, `intent ${intent}`).toHaveLength(38);
+      // Hierarquia 1+N: bloco de produto presente com 2+ imagens em todos os intents.
+      expect(vars.productReferenceSection, `intent ${intent}`).toContain('apoio comercial real da composição');
     }
   });
 
-  it('8.17 buildCommercialRepertoire decide por validity.enabled/displayText (sem heurística string)', () => {
+  it('260902-kqo (a): aviso + texto livre → seções próprias (só texto do lojista / aviso canônico)', () => {
+    const service = buildService();
+    const brief = createMinimalBrief({
+      mandatoryArtworkText: `${ILLUSTRATIVE_NOTICE_TEXT}\nTexto promocional`,
+    });
+    const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
+
+    expect(vars).not.toHaveProperty('mandatoryArtworkText');
+    expect(vars).not.toHaveProperty('illustrativeNotice');
+    expect(vars.requiredArtworkTextSection).toContain('Texto promocional');
+    expect(vars.requiredArtworkTextSection).not.toContain(ILLUSTRATIVE_NOTICE_TEXT);
+    expect(vars.illustrativeNoticeSection).toContain(ILLUSTRATIVE_NOTICE_TEXT);
+    expect(vars.illustrativeNoticeSection).not.toContain('Texto promocional');
+  });
+
+  it('260902-kqo (b): texto livre apenas (checkbox desmarcado/legado) → requiredArtworkTextSection integral, sem aviso', () => {
+    const service = buildService();
+    const brief = createMinimalBrief({
+      mandatoryArtworkText: 'Texto promocional',
+    });
+    const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
+
+    expect(vars.requiredArtworkTextSection).toContain('Texto promocional');
+    expect(vars.illustrativeNoticeSection).toBe('');
+  });
+
+  it('260902-kqo (c): texto legado que começa com a constante mas SEM quebra de linha → free-only integral (comportamento atual preservado)', () => {
+    const service = buildService();
+    const brief = createMinimalBrief({
+      mandatoryArtworkText: 'Imagem meramente ilustrativa de produtos',
+    });
+    const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
+
+    expect(vars.requiredArtworkTextSection).toContain('Imagem meramente ilustrativa de produtos');
+    expect(vars.illustrativeNoticeSection).toBe('');
+  });
+
+  it('8.17 validade em ocorrência ÚNICA em campaignFactsSection (repartição D3 do repertório)', () => {
     const service = buildService();
     const brief = createMinimalBrief({ validity: 'Até 30/09' });
-    const repertoire = (service as any).buildCommercialRepertoire(brief) as string;
-    expect(repertoire).toContain('Oferta válida: Até 30/09');
+    const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
 
-    // validity disabled/absent → sem parte de validade
-    const semValidity = (service as any).buildCommercialRepertoire(createMinimalBrief()) as string;
-    expect(semValidity).not.toContain('Oferta válida');
+    expect(vars.campaignFactsSection).toContain('**Validade da oferta:** Até 30/09');
+    // Repartição: validade NÃO é reintroduzida no contexto comercial nem na direção criativa.
+    expect(vars.commercialDetailsSection).not.toContain('Até 30/09');
+    expect(vars.creativeDirectionSection).not.toContain('Até 30/09');
+
+    // validity disabled/absent → sem parte de validade nos fatos
+    const semValidityBrief = createMinimalBrief();
+    const semValidity = (service as any).buildPromptVariables(semValidityBrief, createContext(), semValidityBrief.product.name) as Record<string, string>;
+    expect(semValidity.campaignFactsSection).not.toContain('Validade da oferta');
   });
 
   it('8.18 provider/input-validation recebem media.primary.dataUrl (ponte base64 em memória)', async () => {
@@ -857,5 +1107,124 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
     expect(result.success).toBe(true);
     expect(mockImageReview.review).toHaveBeenCalledTimes(1);
     expect(mockImageReview.review.mock.calls[0][2]).toEqual(['data:image/jpeg;base64,test']);
+  });
+
+  it('45-08 prova 11: identidade NUNCA é enviada como imagem ao Revisor (contexto logo/VS com asset)', async () => {
+    const mockProvider = {
+      name: 'test',
+      generateImage: vi.fn().mockResolvedValue({
+        success: true,
+        imageBase64: 'aGVsbG8=',
+        mimeType: 'image/png',
+        usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+      }),
+    };
+    const mockLoad = vi.fn((name: string) => {
+      if (name === 'campaign-image-director-offer') return 'Prompt sem placeholders';
+      if (name === 'campaign-image-reviewer') return 'Revise sem placeholders';
+      return '';
+    });
+    const mockInputValidation = { validate: vi.fn().mockResolvedValue({ classification: 'match' }) };
+    const mockImageReview = {
+      review: vi.fn().mockResolvedValue({ passed: true, issues: [], failureType: null }),
+      buildReviewPromptVariables: vi.fn(),
+    };
+    const mockMetricsWriter = { write: vi.fn().mockResolvedValue(undefined) };
+    const service = new ImageGenerationService(
+      mockProvider as any,
+      { load: mockLoad, clearCache: vi.fn() } as unknown as PromptLoader,
+      mockInputValidation as any,
+      mockImageReview as any,
+      mockMetricsWriter as any
+    );
+
+    const brief = createMinimalBrief({
+      productImages: [
+        { role: 'primary', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,product-primary' },
+      ],
+    });
+    // Contexto com logotipo ativo — identidade resolvida com asset disponível.
+    const logoContext = createContext({
+      identity: { state: 'logo', imageUrl: 'data:image/png;base64,store-logo', directive: '' },
+    });
+
+    const result = await service.generateImage(brief, logoContext);
+    expect(result.success).toBe(true);
+    expect(mockImageReview.review).toHaveBeenCalledTimes(1);
+    // Referências do review = SOMENTE imagens do produto (nunca identity.imageUrl).
+    const references = mockImageReview.review.mock.calls[0][2] as string[];
+    expect(references).toEqual(['data:image/jpeg;base64,product-primary']);
+    expect(references.join(' ')).not.toContain('store-logo');
+    // A identidade chega apenas como instrução textual do diretor (sem imagem).
+    const directorCall = mockLoad.mock.calls.find((c) => c[0] === 'campaign-image-director-offer');
+    expect(directorCall).toBeDefined();
+  });
+
+  it('D5 invariante (a): placeholders dos templates ⊆ chaves fornecidas por intent (offer/spotlight/exclusive)', () => {
+    const service = buildService();
+    for (const intent of ['offer', 'spotlight', 'exclusive'] as const) {
+      const template = readPrompt(`campaign-image-director-${intent}.md`);
+      const placeholders = templatePlaceholders(template);
+      expect(placeholders.length, `intent ${intent}: template sem placeholders`).toBeGreaterThan(0);
+
+      const brief = createMinimalBrief({ campaignIntent: intent });
+      const vars = (service as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
+
+      for (const placeholder of placeholders) {
+        expect(vars, `intent ${intent}: {{${placeholder}}} sem chave correspondente`).toHaveProperty(placeholder);
+      }
+    }
+  });
+
+  it('D5 invariante (b): determinismo — mesma montagem 2× produz o mesmo prompt final', () => {
+    const realService = buildRealService();
+    const brief = createMinimalBrief({
+      validity: 'até 30/09/2026',
+      mandatoryArtworkText: 'Imagem meramente ilustrativa',
+      campaignDetails: 'Frete grátis',
+      sensitiveConstraints: 'Sem modelo',
+    });
+    const vars = (realService as any).buildPromptVariables(brief, createContext(), brief.product.name) as Record<string, string>;
+    const first = (realService as any).assemblePrompt('INITIAL', vars, []);
+    const second = (realService as any).assemblePrompt('INITIAL', vars, []);
+
+    expect(second).toBe(first);
+  });
+
+  it('D5 invariante (c): slots condicionais aparecem no prompt final só quando há conteúdo — sem resíduo {{...}} (D4)', () => {
+    const minimalBrief = createMinimalBrief();
+    const minimalVars = (buildRealService() as any).buildPromptVariables(minimalBrief, createContext(), minimalBrief.product.name) as Record<string, string>;
+    const minimalPrompt = new PromptLoader().load('campaign-image-director-offer', minimalVars);
+
+    expect(minimalVars.commercialDetailsSection).toBe('');
+    expect(minimalVars.requiredArtworkTextSection).toBe('');
+    expect(minimalVars.illustrativeNoticeSection).toBe('');
+    expect(minimalVars.constraintsSection).toBe('');
+    expect(minimalPrompt).not.toMatch(/\{\{[a-zA-Z]+\}\}/);
+
+    const completeBrief = createMinimalBrief({
+      validity: 'válida até 31/12',
+      mandatoryArtworkText: `${ILLUSTRATIVE_NOTICE_TEXT}\nTexto promocional`,
+      campaignDetails: 'Frete grátis acima de R$ 100',
+      additionalDetails: 'Válido somente em loja física',
+      availabilityNotes: 'Restam poucas unidades',
+      sensitiveConstraints: 'Não exibir modelo sem camisa',
+      productImages: [
+        { role: 'primary', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,primary' },
+        { role: 'reference', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,aux1' },
+      ],
+    });
+    const completeVars = (buildRealService() as any).buildPromptVariables(completeBrief, createContext(), completeBrief.product.name) as Record<string, string>;
+    const completePrompt = new PromptLoader().load('campaign-image-director-offer', completeVars);
+
+    expect(completeVars.commercialDetailsSection).not.toBe('');
+    expect(completeVars.requiredArtworkTextSection).not.toBe('');
+    expect(completeVars.illustrativeNoticeSection).not.toBe('');
+    expect(completeVars.constraintsSection).not.toBe('');
+    expect(completePrompt).not.toMatch(/\{\{[a-zA-Z]+\}\}/);
+    expect(completePrompt).toContain('## Texto Obrigatório na Arte');
+    expect(completePrompt).toContain('## Aviso Ilustrativo');
+    expect(completePrompt).toContain('## Detalhes Comerciais');
+    expect(completePrompt).toContain('## Restrições Sensíveis');
   });
 });

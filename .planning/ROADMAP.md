@@ -3,8 +3,7 @@
 ## Milestone v1.5 — Lançamento Externo Controlado ◆
 
 **18 phases** | **177 requirements mapped** | All covered ✓
-
-**Phase numbering:** Continues from v1.4 (Phase 22). Starts at Phase 23. F35 = Changelog/Novidades, F36 = Onboarding — Navegação por Abas, F37 = Revisão e Aprovação da Arte (v1.5, em execução em fatias 37.1/37.2/37.3), F38 = Tabela de Custos por Operação (v1.5), **F39 = Brief Estruturado de Campanha (v1.5)**, **F40 = Campos Comerciais e Avisos do Brief (v1.5)**, **F41 = Mídia de Campanha Mobile (v1.5)**, **F42 = Signup Controlado e Elegibilidade Freemium (v1.5, concluída)**, **F43 = Revisão do Brief Pré-Geração (v1.5)**; **Monetização pública / Stripe sai da numeração (v1.7+, iniciativa diferida não numerada)** (renumeração alinhada no documento de alinhamento F43, precedente F42 D1). **38.1 = Apuração de Custos de IA por Entrega** (desdobramento da F38, mesmo milestone v1.5). **38.2 = Admin de Custos Operacionais + Configurações Econômicas** (desdobramento da F38, mesmo milestone v1.5). **F37 em execução em fatias 37.1/37.2/37.3** (padrão F38/38.1/38.2) — 37.1 = Approval Gate + Candidata Única, fonte da verdade `openspec/changes/fase-37-1-approval-gate-candidata-unica/` (decisão do usuário 2026-09-01).
+**Phase numbering:** Continues from v1.4 (Phase 22). F37 = Revisão e Aprovação da Arte (v1.5, em execução em fatias 37.1/37.2/37.3; 37.1 concluída), F38 = Tabela de Custos por Operação, F39 = Brief Estruturado de Campanha, F40 = Campos Comerciais e Avisos do Brief, F41 = Mídia de Campanha Mobile, F42 = Signup Controlado e Elegibilidade Freemium, F43 = Revisão do Brief Pré-Geração e F45 = Briefing Contextual do Diretor de Arte (concluída em 2026-09-05). F44 = Temas de Campanha permanece fora da numeração; Monetização pública / Stripe permanece diferida e fora da numeração. Fonte da F37.1: `openspec/changes/fase-37-1-approval-gate-candidata-unica/`.
 
 ---
 
@@ -42,6 +41,7 @@
 | 41 | ✅ Mídia de Campanha Mobile (v1.5) | 13/13 | ✅ Complete | 2026-08-15 |
 | 42 | ✅ Signup Controlado e Elegibilidade Freemium (v1.5) | 20/20 | ✅ Complete | 2026-08-21 |
 | 43 | ✅ Revisão do Brief Pré-Geração (v1.5) | 15/15 | ✅ Complete | 2026-08-21 |
+| 45 | ✅ Briefing Contextual do Diretor de Arte (v1.5) | 8/8 | ✅ Complete | 2026-09-05 |
 | — | Monetização pública / Stripe (iniciativa diferida, v1.7+) | — | Fora da numeração | — |
 
 ---
@@ -901,6 +901,47 @@ Plans:
 
 ---
 
+### Phase 45: Briefing Contextual do Diretor de Arte
+
+**Goal:** Reorganizar a montagem do prompt do diretor de imagem dos 4 `.md` por intent em **briefing contextual por blocos** (helper puro `art-director-briefing`), eliminando seções vazias, linhas de tabela em branco, placeholders não resolvidos e duplicações/misturas de naturezas no texto final — separando em seções próprias o texto obrigatório do lojista, o aviso ilustrativo, a identidade visual da loja (preservação), o produto/referências (fidelidade + hierarquia primary × auxiliares), o contexto comercial, as restrições e a direção criativa. **Sem mudança de superfície externa** (UI/form, contrato HTTP/schema/snapshot/domínio e Copy Director inalterados; Revisor ajustado somente no adendo 45-08 para paridade crítica com o Diretor) e **sem migration SQL**. O contrato interno de montagem muda intencionalmente (paridade de keys substituída por invariantes: placeholders ⊆ chaves, determinismo, presença/ausência por bloco, contrato externo intacto + UAT humano comparativo). **Numeração:** F45 = Briefing Contextual do Diretor de Arte (v1.5); **F44 = Temas de Campanha permanece fora da numeração** (adicionada pelo runbook da própria F44).
+
+**Requirements:** derivados dos 2 specs OpenSpec (art-director-contextual-briefing — capability nova — e ai-image-generation — delta MODIFIED/REMOVED)
+
+**Success criteria:**
+
+1. Novo helper puro `src/lib/image-generation/services/art-director-briefing.ts` com os blocos contextuais do diretor (extração sem mudança de comportamento no 45-02; montagem contextual por presença de dados)
+2. Os 4 prompts (`campaign-image-director.md` base + `-offer`/`-spotlight`/`-exclusive`) reescritos em camada editorial legível + slots de bloco nomeados; **mão leve** (reorganizar/rotular/remover repetição — preservar o DNA/texto atual)
+3. Prompt final contextual: apenas blocos relevantes; nenhuma seção vazia/heading órfão/linha de tabela em branco/placeholder não resolvido; montagem determinística
+4. Cada natureza opcional/sensível (validade, texto obrigatório, aviso ilustrativo, detalhes, disponibilidade, restrições) em **um único bloco canônico** — repartição do `buildCommercialRepertoire` (validade → fatos; details/availability → contexto comercial)
+5. Texto obrigatório do lojista → `requiredArtworkTextSection` saneada (`{{`→`{`, `}}`→`}`) quando presente; aviso ilustrativo → `illustrativeNoticeSection` (constante única, instrução lateral/mínimo/legível/discreto); ausentes → nada renderizado
+6. Identidade (logo/VS) → instrução de preservação (não editar/alterar/redesenhar/distorcer/inventar); text_only → não criar logo/assinatura; `identityImageUrl` permanece provider-only
+7. Produto/referências → primary como referência factual forte + auxiliares sem competir + `preserveImageContext` (não-offer); regras anti-invenção e autorização de criatividade preservadas
+8. `validatePrompts`/`assemblePrompt` adaptados (zero placeholders residuais por intent; rodapé CORRECT/REGENERATE mantido); specs reconciliadas (REMOVED dos requisitos de paridade; `EXPECTED_KEYS` 38/39)
+9. Co-migração: golden tests (39 keys) → invariantes; `validatePrompts`; `prompt-reframe.test.ts` novas âncoras; novos testes `art-director-briefing.test.ts` por bloco presente/ausente; suites irmãs (revisor/copy/form/rota) **sem co-migração** (regressão de não-mudança)
+10. `npx vitest run`, `npm run typecheck`, `npm run lint`, `npm run build` — zero erros; UAT humano comparativo (campanhas reais antes/depois: identidade, aviso, texto obrigatório, validade, multi-imagem, oferta)
+
+**Dependencies:** F39 (domínio `CampaignBrief` — blocos product/commercial/media/creativeContext), F40 (campos comerciais/avisos — constante `ILLUSTRATIVE_NOTICE_TEXT`, split canônico), F41 (multi-imagem `media.images[]` primary×auxiliares), quick `260902-kqo` (separação aviso × texto obrigatório na camada de variáveis) e quick `260902-mqj` (fallback OpenAI fora do escopo), F31.x (prompts por intent, revisor). **Sem** migration SQL, **sem** UI/form/rota/schema/snapshot/domínio, **sem** revisor/copy director/fallback OpenAI, **sem** `themeId` (pertence à F44 — Temas de Campanha, fora da numeração).
+
+**Source of truth:** `openspec/changes/archive/2026-09-05-fase-45-briefing-contextual-do-diretor-de-arte/`
+
+**Plans:** 8/8 plans complete — **CONCLUÍDA em 2026-09-05** (2427 testes, 4 gates verdes, UAT comparativo antes×depois PASS 7/7 + artes reais aprovadas como publicáveis no 45-08)
+
+**Waves:** 5 waves — 45-01/45-02:1, 45-03/45-04:2, 45-05:3, 45-06:4, 45-07/45-08:5 (45-08 = adendo de alinhamento Diretor × Revisor aprovado em revisão humana)
+
+```
+Plans:
+- [x] 45-01-PLAN.md — Trackings (grep F45/F44/Stripe) + inventário de consumidores + baselines (Wave 1)
+- [x] 45-02-PLAN.md — Helper puro art-director-briefing.ts (extração sem mudança de comportamento) (Wave 1)
+- [x] 45-03-PLAN.md — Reescrita offer + base em editorial + blocos + montagem contextual offer (Wave 2)
+- [x] 45-04-PLAN.md — Reescrita spotlight + exclusive + ajustes de blocos por intent (Wave 2)
+- [x] 45-05-PLAN.md — Testes: golden→invariantes + validatePrompts + prompt-reframe + novo art-director-briefing.test.ts (Wave 3)
+- [x] 45-06-PLAN.md — Regressão completa + verificação não-mudança + revisão humana dos 4 .md (Wave 4)
+- [x] 45-07-PLAN.md — Verificação final (VERIFICATION.md + UAT.md + registros/arquivamento) (Wave 5)
+- [x] 45-08-PLAN.md — Alinhamento Diretor × Revisor (autoridade estreita, identidade fora da avaliação, área segura + concordância de gênero) (Wave 5, adendo)
+```
+
+---
+
 ## Dependency Graph
 
 ```
@@ -973,11 +1014,16 @@ Phase 39 (Brief Estruturado de Campanha — v1.5)
                                         Phase 43 (Revisão do Brief Pré-Geração — v1.5) ✅ concluída (15/15, UAT 9/9 PASS)
                                                  │
                                                  ▼
+                                         Phase 45 (Briefing Contextual do Diretor de Arte — v1.5) ✅ concluída (8/8, UAT comparativo 7/7 PASS + artes reais aprovadas)
+                                                 │
+                                                 ▼
                                         Phase 37 (Revisão e Aprovação da Arte — v1.5)
                                                  │
                                                  ▼
                                         [catálogo] → Monetização pública / Stripe (diferida, v1.7+ — fora da numeração)
 ```
+
+> **Fora da numeração:** F44 = Temas de Campanha (adicionada pelo runbook da própria F44 — esta fase não cria a linha F44); Monetização pública / Stripe (iniciativa diferida, v1.7+).
 
 ---
 
@@ -1062,5 +1108,6 @@ Phase 39 (Brief Estruturado de Campanha — v1.5)
 
 *Roadmap created: 2026-07-15*
 *Milestone: v1.5 — Lançamento Externo Controlado*
-*Last updated: 2026-09-01 — **Fase 37 (Revisão e Aprovação da Arte, v1.5) — fatia 37.1 (Approval Gate + Candidata Única) CONCLUÍDA — 15/15 plans, 2379 testes (255 arquivos), 4 gates verdes, UAT 19.5–19.10 PASS (6/6)**, fonte da verdade `openspec/changes/fase-37-1-approval-gate-candidata-unica/` (decisão do usuário 2026-09-01); 37.2 (correção visual) e 37.3 (correção factual de briefing) em planejamento futuro; F43 (Revisão do Brief Pré-Geração, v1.5) **CONCLUÍDA** (15/15 plans, 2317 testes, 4 gates verdes, UAT 15.5–15.13 PASS 9/9); renumeração D1: F42 = Signup Controlado e Elegibilidade Freemium (v1.5) **CONCLUÍDA** (20/20 plans, 2182 testes, UAT 20.5–20.15 PASS), **F43 = Revisão do Brief Pré-Geração** (v1.5), **Monetização pública / Stripe fora da numeração (iniciativa diferida v1.7+ não numerada)** — precedente F42 D1, fonte `openspec/changes/fase-43-revisao-brief-pre-geracao/`.*
+*Histórico anterior: Fase 43 em planejamento/conclusão (2026-08-21):* renumeração D1: F42 = Signup Controlado e Elegibilidade Freemium (v1.5) **CONCLUÍDA** (20/20 plans, 2182 testes, UAT 20.5–20.15 PASS), **F43 = Revisão do Brief Pré-Geração** (v1.5), **Monetização pública / Stripe fora da numeração (iniciativa diferida v1.7+ não numerada)** — precedente F42 D1, fonte `openspec/changes/fase-43-revisao-brief-pre-geracao/`.*
 *Histórico anterior: Fase 42 em planejamento (2026-08-16):* Fase 41 complete (Mídia de Campanha Mobile — 13/13 plans, 2033 testes, 4 gates verdes, UAT 6/6 — Android em produção ✅; iOS HEIC pendente); renumeração D1: F41 = Mídia de Campanha Mobile (v1.5), Stripe/Monetização Pública → F42 (v1.7, pós-beta) — precedente F40 D1, fonte `openspec/changes/fase-41-midia-de-campanha-mobile/`.* Fase 40 complete (Campos Comerciais e Avisos do Brief — 9/9 plans, 1997 testes, 4 gates verdes, UAT aprovado 6/6); renumeração D1: F40 = Campos Comerciais e Avisos do Brief (v1.5), Stripe/Monetização Pública → F41 (v1.7, pós-beta) — precedente F39 D1, fonte `openspec/changes/fase-40-campos-comerciais-avisos-brief/`.* Fase 39 complete (Brief Estruturado de Campanha — 8/8 plans, 1950 testes, 4 gates verdes, UAT aprovado 5/5); renumeração F39 = Brief Estruturado de Campanha (v1.5) e Stripe/Monetização Pública → F40 (v1.7, pós-beta) — precedente F37 D11, fonte `openspec/changes/fase-39-brief-estruturado-campanha/`.* Fase 38.2.1 complete (Snapshot Econômico — 7/7 plans, 1887 testes, I1-I7 53/53 asserts); Phase 38.2 complete (Admin de Custos Operacionais + Configurações Econômicas — 11/11 plans, 1832 testes, verificação I1–I6 em banco real); Fase 38 complete (Tabela de Custos por Operação — 8/8 plans, 1597 testes, UAT 4/4); renumeração F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5); **Phase 38.1 (Apuração de Custos de IA por Entrega — desdobramento da F38, v1.5) CONCLUÍDA — 11/11 plans, 1713 testes (199 arquivos), UAT validado, fechada como camada de ESTIMATIVA OPERACIONAL GRANULAR** (ajuste provisório versionável da tool image_generation: `responses:image_generation = USD 0.065` = estimativa provisória para beta, calibrada por UAT/dashboard/CSV — NÃO é custo financeiro real; reconciliação financeira real fica para a próxima fase; seed `ai_model_pricing` via migration 20260809000003 aplicada Local/Remote) — fonte `openspec/changes/fase-38-1-ai-cost-accounting/`*
+*Last updated: 2026-09-05 — F45 concluída (8/8 plans, 2427 testes, UAT PASS 7/7) e incorporada à F37, que permanece em execução por fatias: 37.1 concluída (15/15 plans, 2379 testes, UAT PASS 6/6); 37.2/37.3 aguardam continuidade. F44 e Stripe permanecem fora da numeração.*
