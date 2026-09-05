@@ -834,7 +834,7 @@ describe('ImageReviewService — provas 45-08 (contrato splitado Diretor × Revi
       objective: 'Vender mais',
       campaignDetails: 'Frete grátis',
       validityText: 'Até 30/09/2026',
-      validationContext: { inputCorrection: { from: 'A', to: 'B', reason: 'x' } },
+      validationContext: { inputCorrection: { field: 'productName', from: 'A', to: 'B', reason: 'x' } },
     });
     const prompt = new PromptLoader().load('campaign-image-reviewer', vars);
 
