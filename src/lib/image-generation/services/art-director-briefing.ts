@@ -394,45 +394,34 @@ export function identityReferenceSection(brief: CampaignBrief, context: Resolved
 
   const state = context.identity.state;
   const hasAsset = !!context.identity.imageUrl;
-  const directive = (context.identity.directive ?? "").trim();
 
+  // Instrução canônica ÚNICA e preventiva (45-08 Task 4): o bloco abaixo cobre os
+  // estados de identidade de forma concisa e explícita — área segura, margem nas
+  // quatro bordas, posição secundária e fidelidade/anti-invenção. Os 4 `.md` do
+  // diretor mantêm APENAS a linha de composição simples ("assinada pela loja — ver
+  // seção Identidade da Loja") e recebem este bloco via {{identityReferenceSection}}.
+  // Nada de repetição da orientação entre `.md` e bloco (evitar redundância).
   if (state === "logo" || state === "visual_signature") {
-    if (directive) {
-      parts.push(directive);
-    } else if (state === "logo" && hasAsset) {
-      parts.push("Assinar a campanha com o logotipo da loja fornecido como imagem de referência. Manter fidelidade ao arquivo fornecido.");
-    } else if (state === "logo") {
-      parts.push("Não inventar logotipo. Usar apenas a direção visual do perfil de marca como contexto direcional, não obrigatório.");
-    } else if (hasAsset) {
-      parts.push("Assinar a campanha com a assinatura visual da loja fornecida como imagem de referência. Manter fidelidade ao arquivo fornecido. Não adicionar logotipo.");
-    } else {
-      parts.push("Não inventar assinatura visual nem logotipo. Considerar apenas a direção visual do perfil de marca como contexto direcional, não obrigatório.");
-    }
+    const element = state === "logo" ? "logotipo" : "assinatura visual";
     if (hasAsset) {
-      if (state === "logo") {
-        parts.push("NÃO editar, alterar, redesenhar, distorcer nem inventar o logotipo fornecido — reproduzir o ativo enviado com fidelidade.");
-      } else {
-        parts.push("NÃO editar, alterar, redesenhar, distorcer nem inventar a assinatura visual fornecida — reproduzir o ativo enviado com fidelidade. Não adicionar logotipo.");
+      parts.push(
+        `Assinar a campanha com o ${element} da loja fornecido como imagem de referência, reproduzindo o ativo com fidelidade. NÃO editar, redesenhar, distorcer, reinterpretar, completar nem inventar elementos do ativo. Manter o ${element} integralmente dentro da área segura da arte, com margem visível nas quatro bordas — nenhuma parte relevante deve encostar, ultrapassar ou ficar cortada. A posição é livre na composição, desde que o ${element} permaneça legível, reconhecível e secundário ao conteúdo principal da peça.`
+      );
+      if (state === "visual_signature") {
+        parts.push("Não adicionar logotipo além da assinatura visual fornecida.");
       }
+    } else {
+      parts.push(
+        state === "logo"
+          ? "Não inventar logotipo. Usar apenas a direção visual do perfil de marca como contexto direcional, não obrigatório."
+          : "Não inventar assinatura visual nem logotipo. Considerar apenas a direção visual do perfil de marca como contexto direcional, não obrigatório."
+      );
     }
-  } else if (directive) {
-    parts.push(directive);
   } else {
-    parts.push("Não colocar logotipo. Não gerar assinatura visual. Considerar a direção visual do perfil de marca como contexto direcional, não obrigatório.");
-  }
-
-  // Assinatura com respiro (F45-06a/06b): nome/logotipo/assinatura podem ser
-  // posicionados com liberdade, mas precisam de respiro adequado e nunca cortados
-  // nas bordas da arte — aplica-se a todos os intents (spotlight/exclusive/offer).
-  if (parts.length > 0) {
-    const identityElement =
-      state === "logo" && hasAsset
-        ? "o logotipo"
-        : state === "visual_signature" && hasAsset
-          ? "a assinatura visual"
-          : "o nome da loja";
+    // text_only (e estados sem ativo): identidade entra como referência de cores e
+    // linguagem visual — nunca como logotipo/assinatura inventada.
     parts.push(
-      `Posicionar ${identityElement} com liberdade na composição, mantendo respiro adequado e sem cortes nas bordas da arte.`
+      "Não colocar logotipo nem gerar assinatura visual. Usar as cores e a linguagem visual da loja como referência de direção, sem inventar elementos de identidade. A direção visual do perfil de marca é contexto direcional, não obrigatório."
     );
   }
 
