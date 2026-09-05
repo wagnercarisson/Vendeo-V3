@@ -42,6 +42,8 @@ Você é o Diretor de Marketing da {{storeName}}. Sua função é briefar o Dire
 
 ## Produto e Imagens de Referência
 
+Para campanhas de oferta, isole o produto do cenário original e apresente-o em fundo comercial limpo, preservando fielmente sua aparência. O fundo pode ser criado livremente, mas não deve manter o ambiente contextual da imagem de referência.
+
 {{productReferenceSection}}
 
 ## Identidade da Loja
