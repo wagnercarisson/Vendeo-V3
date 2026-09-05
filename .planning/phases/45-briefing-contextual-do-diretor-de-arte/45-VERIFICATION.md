@@ -105,6 +105,9 @@ updated: 2026-09-04
 - **Gates finais (Task 3):** `npx vitest run` → **253 files / 2427 testes**; `npm run typecheck` → exit 0; `npm run lint` → exit 0; `npm run build` → exit 0. Correção de close-out: `image-review-service.test.ts` (prova 14) ganhou `field: 'productName'` no `inputCorrection` (tipo obrigatório do `ValidationContext`) — exclusiva de processo de fechamento, sem mudança de produção.
 - **Registros atualizados:** `AGENTS.md`, `.planning/STATE.md`, `.planning/ROADMAP.md`, `ROADMAP.md` (raiz) e `.planning/PROJECT.md` marcam a F45 como **CONCLUÍDA** (8/8 plans — 45-01..45-08; F44 Temas e Stripe permanecem fora da numeração; grep zero resíduos de estado atual).
 - **Change arquivado:** movido para `openspec/changes/archive/2026-09-05-fase-45-briefing-contextual-do-diretor-de-arte/` + specs principais sincronizadas (`openspec/specs/art-director-contextual-briefing/` criada; `openspec/specs/ai-image-generation/spec.md` atualizada com MODIFIED/REMOVED da F45) — sem reescrever artefatos históricos.
+- **Validação OpenSpec (registro preciso — conferido em 2026-09-05):**
+  - `openspec validate art-director-contextual-briefing --strict` → **green** ("Specification 'art-director-contextual-briefing' is valid", exit 0) — a capability nova da F45 valida em modo estrito.
+  - `openspec validate ai-image-generation --strict` → **NÃO green** (exit 1): a spec consolidada tem **10 requisitos legados sem fraseado SHALL/MUST** (requirements.2, .9, .11, .15, .16, .17, .18, .19, .20, .21 — "Requirement must contain SHALL or MUST keyword") + 1 INFO de requisito muito longo. Isto é **dívida histórica conhecida da spec consolidada** (requisitos pré-OpenSpec/anteriores à F45, mantidos como legado), **não é falha funcional da F45**. NÃO se reivindica validação OpenSpec estrita global verde; os requisitos legados NÃO foram reescritos (fora de escopo).
 
 ---
 

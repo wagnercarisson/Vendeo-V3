@@ -73,6 +73,7 @@ completed: 2026-09-05
 - **Registros:** `AGENTS.md` (bloco Phase 45 → Concluída ✅, tabela 45-01..45-08, escopo D1–D7 + 45-08), `.planning/STATE.md` (frontmatter stopped_at/last_updated + linha F45 CONCLUÍDA + Last activity + Current Position + tabela F45 ✅), `.planning/ROADMAP.md` (linha Progress 8/8 Concluída 2026-09-05 + seção Phase 45 com plans [x] 45-01..45-08 + nota de numeração + diagrama + rodapé), `ROADMAP.md` raiz (checkbox Phase 45 [x] + linha Progress ✅), `.planning/PROJECT.md` (linha F45 → CONCLUÍDA), `45-PLAN-OUTLINE.md` (status → FASE CONCLUÍDA, tabela ✅ + adendo 45-08).
 - **Grep-verificação F44/F45:** zero resíduos de estado atual — F45 não aparece mais como "planejada/em planejamento" nos marcadores correntes; F44 = Temas permanece fora da numeração; Stripe fora da numeração (v1.7+, não numerada).
 - **Arquivamento do change:** `openspec/changes/fase-45-briefing-contextual-do-diretor-de-arte/` movido para **`openspec/changes/archive/2026-09-05-fase-45-briefing-contextual-do-diretor-de-arte/`** (precedente das fases 40-43) + **sync das specs principais**: nova `openspec/specs/art-director-contextual-briefing/spec.md` (capability nova) e `openspec/specs/ai-image-generation/spec.md` atualizada (anotação F45; MODIFIED — montagem contextual/determinística e legalNotice desabilitado → `requiredArtworkTextSection` ausente no diretor; 4 REMOVED excisados: paridade/EXPECTED_KEYS, mapa fixo de chaves, reframe condicional F40, bloco 1+N F41). Artefatos históricos **não reescritos**.
+- **Validação OpenSpec (registro preciso — conferido em 2026-09-05):** a capability nova `openspec validate art-director-contextual-briefing --strict` → **green** ("valid", exit 0). A spec consolidada `openspec validate ai-image-generation --strict` → **NÃO green** (exit 1) com **10 requisitos legados sem SHALL/MUST** (requirements.2/.9/.11/.15/.16/.17/.18/.19/.20/.21) — **dívida histórica conhecida da spec consolidada**, não falha funcional da F45; requisitos legados **não reescritos** (fora de escopo). **Nenhuma reivindicação de validação OpenSpec estrita global verde.**
 
 ## Task Commits
 
@@ -123,6 +124,7 @@ Nenhuma desvio de escopo. Observações registradas (não são desvios):
 - 4 gates: vitest 253 files/2427 testes exit 0; typecheck exit 0; lint exit 0; build exit 0 ✓
 - Registros: AGENTS.md/STATE/ROADMAP ×2/PROJECT com F45 CONCLUÍDA (8/8) — grep zero resíduos de "F45 em planejamento" nos marcadores correntes; F44/Stripe fora da numeração ✓
 - Change arquivado: move para `openspec/changes/archive/2026-09-05-fase-45-briefing-contextual-do-diretor-de-arte/` (renames 100%) + specs principais sincronizadas ✓
+- Validação OpenSpec registrada com precisão: `art-director-contextual-briefing` strict green; `ai-image-generation` strict NÃO green (10 erros legados SHALL/MUST documentados como dívida histórica; sem reivindicação de verde global) ✓
 - Commits: `99796b0a`, `54ca4ef2`, `be40f1f0`, `e16ce6e0`, `510e3dcc`, `1122a6cf` e commit de registros existem ✓
 - Working tree limpo (exceto `docs/alinhamento-fase-44-temas-de-campanhas` pré-existente, intocada) ✓
 
