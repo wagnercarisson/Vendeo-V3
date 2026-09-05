@@ -3,7 +3,7 @@ phase: 45-briefing-contextual-do-diretor-de-arte
 plan: 08
 subsystem: ai-image-generation
 tags: [reviewer, director, alignment, narrow-authority, split-legal-text, identity-out-of-scope, checkpoint]
-status: PARTIAL — Tasks 1–7 concluídas (4 gates verdes 253 files/2415 testes); Task 8 (checkpoint humano de ENTREGA) EM CHECKPOINT aguardando aprovação humana
+status: PARTIAL — Tasks 1–7 concluídas (253 files/2415 testes) + rodada de ajuste focado pós-revisão humana (253 files/2426 testes, 4 gates verdes); Task 8 (checkpoint humano de ENTREGA) EM CHECKPOINT aguardando re-aprovação humana
 
 # Dependency graph
 requires:
@@ -15,6 +15,7 @@ provides:
   - expectedCommercialTone offer sem 'CTA de compra esperado'/'senso de urgência'; availabilityNotes fora da montagem ativa do Diretor (commercialDetailsSection) com legado/schema/domínio intactos
   - identityReferenceSection canônico único (área segura, margem nas 4 bordas, posição secundária, fidelidade/anti-invenção) p/ os 4 intents
   - 19 testes novos provando o contrato (15 provas + regressões), 4 gates verdes (253 files/2415 testes)
+  - RODADA DE AJUSTE FOCADO (pós-revisão humana): offer background = expectativa visual (sem "Fundo contextual NÃO é aceito"), regra de originalPrice corrigida, escassez inventada critical, ambiguidade tipográfica do nome do produto tolerada (caso Coca Cola 2l×21), parágrafo de oferta do Diretor autorizado em commit separado — 253 files/2426 testes, 4 gates verdes
   - 45-08-ENTREGA.md com os 4 prompts finais do Revisor montados via caminho real + prompt do Diretor com identidade + contrato Diretor × Revisor — EM CHECKPOINT
 affects: [retomada do UAT do 45-07 com casos corrigidos (pós-aprovação), fechamento da F45 (registros + arquivamento), F44 (fora da numeração — intacta)]
 
@@ -25,7 +26,7 @@ tech-stack:
 
 key-files:
   created: [.planning/phases/45-briefing-contextual-do-diretor-de-arte/45-08-ENTREGA.md]
-  modified: [prompts/campaign-image-reviewer.md, src/lib/image-generation/services/image-review-service.ts, src/lib/image-generation/services/image-generation-service.ts, src/lib/image-generation/services/art-director-briefing.ts, src/lib/image-generation/services/__tests__/image-review-service.test.ts, src/lib/image-generation/services/__tests__/image-generation-service.test.ts, src/lib/image-generation/services/__tests__/art-director-briefing.test.ts]
+  modified: [prompts/campaign-image-reviewer.md, src/lib/image-generation/services/image-review-service.ts, src/lib/image-generation/services/image-generation-service.ts, src/lib/image-generation/services/art-director-briefing.ts, src/lib/image-generation/services/__tests__/image-review-service.test.ts, src/lib/image-generation/services/__tests__/image-generation-service.test.ts, src/lib/image-generation/services/__tests__/art-director-briefing.test.ts, src/lib/campaign/__tests__/prompt-reframe.test.ts]
 
 key-decisions:
   - "Revisor recebe requiredArtworkText e illustrativeNotice em seções independentes alimentadas pelo MESMO splitDirectorLegalText do Diretor — legalNoticeText concatenado removido do contrato interno (T-45-08a mitigado por testes 1–4)"
@@ -33,32 +34,34 @@ key-decisions:
   - "Offer sem CTA exigido e sem 'senso de urgência' no expectedCommercialTone; urgência avaliada só quando derivada de fato explícito (badge/validade/condição) — política no .md"
   - "availabilityNotes retirado APENAS da montagem ativa do Diretor (commercialDetailsSection); schema/domínio/snapshot, buildAvailabilityLine e buildCommercialRepertoire legados intactos (testes legados verdes)"
   - "Identidade visual consolidada em instrução canônica única no identityReferenceSection (área segura/margem 4 bordas/posição secundária/anti-invenção) e COMPLETAMENTE fora da avaliação do Revisor — o .md do Revisor tem zero menção a identidade como alvo e teste prova que identityImageUrl nunca é enviada como imagem"
+  - "RODADA DE AJUSTE (pós-revisão humana): expectedImageTreatment de offer passou a ser expectativa visual sem 'Fundo contextual NÃO é aceito' (fundo contextual publicável é minor/passa); dedução 'originalPrice vazio → nenhum preço' removida (Revisor segue exclusivamente expectedPriceBehavior); escassez não autorizada virou invented_information critical (disclaimers genéricos neutros seguem minor); wrong_product_name exige divergência clara e inequívoca com tolerância a ambiguidade tipográfica (l/I/1, O/0, caixa, pontuação) e caso Coca Cola 2l×21 documentado como não-bloqueante"
 
 patterns-established:
   - "Contrato Diretor × Revisor com política no .md: builders finos (dados); severidade/tolerância legíveis no prompt; teste 15 garante .md sem vocabulário de identidade; teste 14 garante placeholders ⊆ variáveis sem identidade"
   - "Testes de prova a prova (1–15) com asserts explícitos por natureza (aviso only / obrigatório only / ambos / sensível+objetivo / availability ausente / identidade não-enviada / minor passa)"
+  - "Rodada de ajuste com testes .md-level: deduções inválidas (originalPrice vazio) e expressões absolutas (fundo NÃO aceito) verificadas por AUSÊNCIA no .md; políticas novas (OCR não-rígido, escassez critical, fundo expectativa visual) verificadas por PRESENÇA textual; sincronia base/offer testada por igualdade de conteúdo"
 
 requirements-completed: [F45-REVIEWER-ALIGN]
 
 # Metrics
-duration: ~75min (Tasks 1–7; checkpoint Task 8 na entrega)
+duration: ~75min (Tasks 1–7; checkpoint Task 8 na entrega) + ~20min (rodada de ajuste focado pós-revisão humana)
 completed: 2026-09-05
 ---
 
-# Phase 45 Plan 08: Alinhamento Diretor de Arte × Revisor de Imagem — PARTIAL (Tasks 1–7 verdes; Task 8 EM CHECKPOINT)
+# Phase 45 Plan 08: Alinhamento Diretor de Arte × Revisor de Imagem — PARTIAL (Tasks 1–7 + rodada de ajuste verdes; Task 8 EM CHECKPOINT)
 
-**Contrato legal do Revisor splitado no mesmo split canônico do Diretor (requiredArtworkText × illustrativeNotice), sensitiveConstraints/objective como contexto próprio, políticas de severidade/tolerância legíveis no campaign-image-reviewer.md com autoridade estreita (identidade visual 100% fora da avaliação), offer sem CTA/urgência exigidos, availabilityNotes fora da montagem ativa do Diretor e bloco de identidade canônico único (área segura/margem 4 bordas/posição secundária) — 19 testes novos, 4 gates verdes (253 files/2415 testes); ENTREGA (4 prompts finais do Revisor + Diretor com identidade + contrato) submetida à revisão humana na Task 8**
+**Contrato legal do Revisor splitado no mesmo split canônico do Diretor (requiredArtworkText × illustrativeNotice), sensitiveConstraints/objective como contexto próprio, políticas de severidade/tolerância legíveis no campaign-image-reviewer.md com autoridade estreita (identidade visual 100% fora da avaliação), offer sem CTA/urgência exigidos, availabilityNotes fora da montagem ativa do Diretor e bloco de identidade canônico único (área segura/margem 4 bordas/posição secundária) — 19 testes novos, 4 gates verdes (253 files/2415 testes); RODADA DE AJUSTE FOCADO pós-revisão humana (offer background = expectativa visual, regra de originalPrice corrigida, escassez inventada critical, tolerância a ambiguidade tipográfica do nome do produto, commit separado do parágrafo de offer do Diretor) — 253 files/2426 testes, 4 gates verdes; ENTREGA (4 prompts finais do Revisor + Diretor com identidade + contrato) submetida à RE-aprovação humana na Task 8**
 
-> **STATUS DO PLANO: PARTIAL — checkpoint.** Tasks 1–7 concluídas e commitadas individualmente. Task 8 (checkpoint humano `gate="blocking"`): os 4 gates estão verdes, o escopo foi confirmado por git e a ENTREGA (material de revisão) foi montada via caminho real e salva em `45-08-ENTREGA.md` — **aguardando aprovação humana**. Nenhuma aprovação é inferida; nenhum arquivamento/encerramento foi feito. Segue o precedente do 45-06/45-07 (estado PARTIAL no checkpoint).
+> **STATUS DO PLANO: PARTIAL — checkpoint.** Tasks 1–7 concluídas e commitadas individualmente. Task 8 (checkpoint humano `gate="blocking"`): os 4 gates estão verdes, o escopo foi confirmado por git e a ENTREGA (material de revisão) foi montada via caminho real e salva em `45-08-ENTREGA.md` — **aguardando re-aprovação humana após rodada de ajuste focado**. Nenhuma aprovação é inferida; nenhum arquivamento/encerramento foi feito. Segue o precedente do 45-06/45-07 (estado PARTIAL no checkpoint).
 
 ## Performance
 
-- **Duration:** ~75 min (Tasks 1–7) — checkpoint da Task 8 na entrega
+- **Duration:** ~75 min (Tasks 1–7) + ~20 min (rodada de ajuste focado) — checkpoint da Task 8 na entrega
 - **Started:** 2026-09-05T14:20:00Z (UTC-3)
-- **Completed (parcial):** 2026-09-05 (checkpoint da Task 8)
-- **Tasks:** 7/8 concluídas (Task 8: material pronto + checkpoint)
-- **Files modified:** 7 (3 serviços + 1 .md de prompt + 3 suites de teste)
-- **Testes:** baseline 2396 → **2415** (+19 novos; +1 net de co-migração com 3 arquivos de teste editados)
+- **Completed (parcial):** 2026-09-05 (checkpoint da Task 8 após rodada de ajuste)
+- **Tasks:** 7/8 concluídas + rodada de ajuste (Task 8: material pronto + checkpoint)
+- **Files modified:** 7 no núcleo (3 serviços + 1 .md de prompt + 3 suites) + 1 suite extra (prompt-reframe) + 2 `.md` de diretor (commit separado autorizado) na rodada
+- **Testes:** baseline 2396 → **2426** (+30; +11 na rodada de ajuste)
 
 ## Accomplishments
 
@@ -97,6 +100,14 @@ completed: 2026-09-05
 - **15 provas** cobertas por asserts: ① aviso only → só seção de aviso; ② obrigatório only → só seção obrigatória; ③ ambos → seções independentes sem concatenação; ④ conteúdo distinto nas duas seções (separação aceita); ⑤ sensitiveConstraints em seção própria; ⑥ objective contexto não-bloqueante (ausência → seção vazia); ⑦ details/additional apenas contexto autorizado; ⑧ offer sem CTA/urgência; ⑨ badge intacto (offer obrigatório exato / demais informado-opcional); ⑩ availabilityNotes não chega ao Revisor nem à montagem ativa (legado intacto); ⑪ identidade nunca enviada como imagem ao Revisor (contexto logo/VS); ⑫ 4 intents recebem orientação preventiva de identidade (área segura/margem) + base/text_only canônicos; ⑬ minor continua aprovando; ⑭ prompt final do Revisor sem placeholders residuais (placeholders ⊆ variáveis; sem identidade no conjunto); ⑮ `.md` do Revisor sem vocabulário de identidade nem concatenação/posição dos dois textos.
 - **Suites verdes:** revisor 48, service 45, diretor 41, prompt-reframe 12; **vitest total 253 files/2415 testes**.
 
+### Rodada de ajuste focado (pós-revisão humana) — ver `45-08-ENTREGA.md` (atualizado)
+- **Offer background:** `buildExpectedImageTreatment` de offer (sem preserveImageContext) agora orienta isolar o produto mas declara fundo contextual "NÃO é bloqueio automático" (minor/passa quando publicável; bloqueia só se prejudicar claramente identificação/legibilidade/qualidade/entendimento). Expressão absoluta "Fundo contextual NÃO é aceito" removida do contrato (0 ocorrências no .md e no service). `.md` Regras finais ganhou a mesma política.
+- **Regra de originalPrice corrigida:** removida do `.md` a dedução "Se {{originalPrice}} estiver vazio (zerado), nenhum preço foi informado"; Revisor segue exclusivamente `expectedPriceBehavior` (offer valida preço promocional informado; destaque valida preço único sem exigir original; exclusivo nenhum preço). `expectedPriceBehavior` intacto nos 3 intents (testes).
+- **Escassez inventada:** `invented_information` critical agora inclui alegações de escassez não autorizadas ("estoque limitado", "últimas unidades", "poucas unidades"); "consulte condições"/"sujeito a disponibilidade" seguem minor quando não contradizem dado explícito. `availabilityNotes` NÃO reintroduzido no Diretor nem no Revisor.
+- **Ambiguidade tipográfica (`wrong_product_name`):** crítica apenas em divergência clara e inequívoca; nova subseção "Nome do produto e ambiguidade tipográfica" com tolerância a `l`/`I`/`1`, `O`/`0`, caixa, espaços/pontuação/acentuação; caso "Coca Cola 2l Original" × leitura incerta "Coca Cola 21 Original" documentado como correspondência válida; dúvida → minor → approve; OCR rígido proibido.
+- **Commit separado autorizado:** parágrafo de offer do Diretor (`campaign-image-director.md`/`-offer.md`) commitado em `1cb8a264`; base/offer sincronizados (teste de igualdade adicionado em prompt-reframe).
+- **Suites verdes na rodada:** revisor 58, service 45, diretor 41, prompt-reframe 13; **vitest total 253 files/2426 testes** (+11 na rodada); typecheck/lint/build exit 0.
+
 ## Task Commits
 
 1. **Task 1 (split contrato legal):** `1cb9a3bf` — refactor; 2 arquivos (image-review-service.ts, image-generation-service.ts)
@@ -106,18 +117,23 @@ completed: 2026-09-05
 5. **Task 5 (reescrita do .md do Revisor):** `afd26ee5` — feat; 1 arquivo
 6. **Task 6 (builders finos):** `c9a03918` — refactor; 1 arquivo
 7. **Task 7 (testes + 15 provas):** `91e1a9ac` — test; 3 arquivos de teste (+421/−31)
-8. **Task 8:** EM CHECKPOINT — material em `45-08-ENTREGA.md` (commit docs deste SUMMARY + ENTREGA)
+8. **Rodada de ajuste focado — commit SEPARADO do parágrafo de offer do Diretor:** `1cb8a264` — feat; 2 arquivos (`prompts/campaign-image-director.md` + `-offer.md`, conteúdo autorizado em revisão humana; base/offer sincronizados)
+9. **Rodada de ajuste focado — código + .md do Revisor:** commit desta rodada (refactor/feat; image-review-service.ts + campaign-image-reviewer.md)
+10. **Rodada de ajuste focado — testes:** commit desta rodada (test; image-review-service.test.ts + prompt-reframe.test.ts)
+11. **Task 8:** EM CHECKPOINT — material em `45-08-ENTREGA.md` (commit docs deste SUMMARY + ENTREGA)
 
 ## Files Created/Modified
 
-- `prompts/campaign-image-reviewer.md` — reescrita com autoridade estreita e políticas legíveis (Task 5)
-- `src/lib/image-generation/services/image-review-service.ts` — input splitado + builders finos + seções novas + authorizedContextSection neutra (Tasks 1/2/6)
+- `prompts/campaign-image-reviewer.md` — reescrita com autoridade estreita e políticas legíveis (Task 5) + ajustes da rodada (offer background expectativa visual; regra de originalPrice corrigida; escassez inventada critical; subseção de ambiguidade tipográfica do nome do produto)
+- `src/lib/image-generation/services/image-review-service.ts` — input splitado + builders finos + seções novas + authorizedContextSection neutra (Tasks 1/2/6) + `buildExpectedImageTreatment` offer sem "Fundo contextual NÃO é aceito" (rodada)
 - `src/lib/image-generation/services/image-generation-service.ts` — call sites com splitDirectorLegalText + sensitiveConstraints/objective (Tasks 1/2)
 - `src/lib/image-generation/services/art-director-briefing.ts` — commercialDetailsSection sem availability + identityReferenceSection canônico (Tasks 3/4)
-- `src/lib/image-generation/services/__tests__/image-review-service.test.ts` — co-migração + provas 1–8/10/13–15 (48 testes)
+- `src/lib/image-generation/services/__tests__/image-review-service.test.ts` — co-migração + provas 1–8/10/13–15 (48 testes) + provas da rodada de ajuste (10 testes novos; 58 no total)
 - `src/lib/image-generation/services/__tests__/image-generation-service.test.ts` — co-migração + prova 11 (45 testes)
 - `src/lib/image-generation/services/__tests__/art-director-briefing.test.ts` — co-migração + provas 10/12 (41 testes)
-- `.planning/phases/45-briefing-contextual-do-diretor-de-arte/45-08-ENTREGA.md` — material da Task 8 (4 prompts do Revisor + Diretor + contrato)
+- `src/lib/campaign/__tests__/prompt-reframe.test.ts` — teste de sincronia base/offer (13 testes; rodada)
+- `prompts/campaign-image-director.md` + `prompts/campaign-image-director-offer.md` — parágrafo de offer autorizado (commit separado `1cb8a264`)
+- `.planning/phases/45-briefing-contextual-do-diretor-de-arte/45-08-ENTREGA.md` — material da Task 8 atualizado na rodada (4 prompts do Revisor + Diretor + contrato)
 
 ## Decisions Made
 
@@ -130,10 +146,10 @@ completed: 2026-09-05
 
 ## Deviations from Plan
 
-Nenhuma até o checkpoint — plano executado como escrito (Tasks 1–7). Observações registradas (não são desvios):
-- **Task 8 não concluída por definição:** checkpoint humano `gate="blocking"` — o executor para e aguarda aprovação antes de qualquer arquivamento/encerramento da fase.
-- **Dois arquivos de prompt pré-existentes com modificação local NÃO commitada:** `prompts/campaign-image-director.md` e `campaign-image-director-offer.md` continham (desde 2026-09-04 18:11, antes deste plano) uma edição local não commitada adicionando orientação de isolamento de produto para ofertas ("Para campanhas de oferta, isole o produto..."). **Não foram tocados nem commitados por este executor** — permanecem como estavam no início (fora do escopo do 45-08; o 45-08 não lista esses 2 `.md` como alvo). A pasta pré-existente `docs/alinhamento-fase-44-temas-de-campanhas` permaneceu intocada.
-- Artefatos temporários de montagem (spec vitest `tmp-45-08-mount.spec.ts` + pasta `tmp-45-08-material`) removidos antes do commit; conteúdo preservado em `45-08-ENTREGA.md`.
+Nenhuma até o checkpoint — plano executado como escrito (Tasks 1–7 + rodada de ajuste autorizada). Observações registradas (não são desvios):
+- **Task 8 não concluída por definição:** checkpoint humano `gate="blocking"` — o executor para e aguarda re-aprovação antes de qualquer arquivamento/encerramento da fase.
+- **Parágrafo de offer do Diretor (pré-existente na working tree) commitado em rodada autorizada:** `prompts/campaign-image-director.md` e `campaign-image-director-offer.md` carregavam (desde 2026-09-04 18:11) uma edição local não commitada adicionando orientação de isolamento de produto para ofertas ("Para campanhas de oferta, isole o produto..."). Em rodada de revisão humana o conteúdo foi **autorizado** e commitado em **commit SEPARADO e claramente identificado** (`1cb8a264`) — base/offer confirmados sincronizados (conteúdo idêntico; teste de sincronia em prompt-reframe). A pasta pré-existente `docs/alinhamento-fase-44-temas-de-campanhas` permaneceu intocada.
+- Artefatos temporários de montagem (specs vitest `tmp-45-08-mount.spec.ts`/`tmp-45-08-round2-mount.spec.ts` + pasta `tmp-45-08-material`) removidos antes do commit; conteúdo preservado em `45-08-ENTREGA.md`.
 
 **Total de desvios:** 0 auto-corrigidos
 **Impacto no plano:** Nenhum — escopo respeitado integralmente até o checkpoint.
@@ -171,15 +187,16 @@ Responder **"approved"** (autoriza retomar o UAT do 45-07 com casos corrigidos e
 
 ## Self-Check: PASSED
 
-- Commits Tasks 1–7 existem: `1cb9a3bf`, `db88b9bf`, `7dd82a4c`, `57c0a85a`, `afd26ee5`, `c9a03918`, `91e1a9ac` ✓
-- 4 gates: vitest 253 files/2415 testes exit 0; typecheck exit 0; lint exit 0; build exit 0 ✓
+- Commits Tasks 1–7 existem: `1cb9a3bf`, `db88b9bf`, `7dd82a4c`, `57c0a85a`, `afd26ee5`, `c9a03918`, `91e1a9ac` ✓; commit separado do parágrafo de offer: `1cb8a264` ✓
+- 4 gates: vitest 253 files/2426 testes exit 0; typecheck exit 0; lint exit 0; build exit 0 ✓
 - Greps do plano: Task 1 (`requiredArtworkText|illustrativeNotice`=8, `legalNoticeText`=0 no service) ✓; Task 2 (`sensitiveConstraintsSection|objectiveSection`=4 no service, 2 no .md) ✓; Task 3 (`CTA de compra esperado|senso de urgência`=0; `buildAvailabilityLine`=2 no diretor) ✓; Task 4 (`área segura|margem visível|secundário ao conteúdo`=2 no diretor) ✓; Task 5 (0 menções de identidade no `.md` do Revisor) ✓
-- Superfícies congeladas intactas por git (diff dos 7 commits = só os 7 arquivos-alvo) ✓
-- `45-08-ENTREGA.md` existe (46.976 bytes, fences balanceados, contrato presente) ✓
-- Suites-alvo verdes: revisor 48, service 45, diretor 41, prompt-reframe 12 ✓
-- **NENHUMA aprovação humana é reivindicada** — Task 8 aguarda o avaliador ✓
+- Rodada de ajuste: 0 ocorrências de "Fundo contextual NÃO é aceito"/"nenhum preço foi informado" no `.md`/service ✓; `.md` com subseção de ambiguidade tipográfica + caso Coca Cola ✓; base/offer idênticos (hash igual) ✓
+- Superfícies congeladas intactas por git (diff dos commits = só os arquivos-alvo) ✓
+- `45-08-ENTREGA.md` atualizado na rodada (fences balanceados, contrato presente, seção da rodada) ✓
+- Suites-alvo verdes na rodada: revisor 58, service 45, diretor 41, prompt-reframe 13 ✓
+- **NENHUMA aprovação humana é reivindicada** — Task 8 aguarda o avaliador (re-aprovação) ✓
 
 ---
 
 *Phase: 45-briefing-contextual-do-diretor-de-arte*
-*Status: PARTIAL — Tasks 1–7 verdes; Task 8 EM CHECKPOINT (2026-09-05)*
+*Status: PARTIAL — Tasks 1–7 + rodada de ajuste verdes; Task 8 EM CHECKPOINT (2026-09-05)*
