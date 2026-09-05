@@ -166,7 +166,7 @@ export class ImageReviewService {
 
   private buildExpectedCommercialTone(intent: CampaignIntent): string {
     switch (intent) {
-      case "offer": return "Tom promocional com senso de urgência. CTA de compra esperado.";
+      case "offer": return "Tom comercial e promocional coerente com uma campanha de oferta.";
       case "spotlight": return "Tom aspiracional de destaque e desejo. Sem urgência promocional.";
       case "exclusive": return "Tom premium de exclusividade. Sem linguagem promocional ou de urgência.";
     }

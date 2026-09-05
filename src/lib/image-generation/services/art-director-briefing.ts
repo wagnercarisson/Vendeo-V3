@@ -253,8 +253,10 @@ export function buildBrandProfileSection(brandProfile: BrandProfileSnapshot | nu
   return rows.length > 2 ? note + rows.join('\n') : '';
 }
 
-// Linha de disponibilidade keyword-gated (escassez/variedade) — regra única
-// compartilhada pelo repertório legado e pelo bloco commercialDetailsSection.
+// Linha de disponibilidade keyword-gated (escassez/variedade) — regra usada
+// APENAS pelo repertório legado (buildCommercialRepertoire). Desde o 45-08 a
+// montagem ATIVA (commercialDetailsSection) NÃO envia availabilityNotes ao
+// Diretor (schema/domínio/snapshot intocados; campo não chega ao Revisor).
 function buildAvailabilityLine(brief: CampaignBrief): string {
   const campaignIntent = brief.commercial.intent ?? "offer";
   const notes = brief.commercial.availabilityNotes;
@@ -338,11 +340,6 @@ export function commercialDetailsSection(brief: CampaignBrief): string {
 
   const additional = sanitizePromptText((brief.commercial.additionalDetails ?? "").replace(/[\[\]]/g, "").trim());
   if (additional) lines.push(`- **Detalhes adicionais:** ${additional}`);
-
-  const availabilityLine = buildAvailabilityLine(brief);
-  if (availabilityLine) {
-    lines.push(sanitizePromptText(availabilityLine));
-  }
 
   if (lines.length === 0) return "";
   return [
