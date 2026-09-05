@@ -2,7 +2,7 @@
 
 **Status:** ✅ APROVADO — avaliação humana concluída em 2026-09-05 (PASS em (a)–(f) + PASS na leitura dos 4 `.md`); observação residual não-bloqueante registrada (briefings longos, aceitos deliberadamente); nenhuma paridade visual pixel a pixel é requerida
 **Preparado em:** 2026-09-04 (plano 45-07) — registro de aprovação finalizado em 2026-09-05 (fluxo pós-aprovação)
-**Fonte da verdade:** `openspec/changes/fase-45-briefing-contextual-do-diretor-de-arte/`
+**Fonte da verdade (arquivada):** `openspec/changes/archive/2026-09-05-fase-45-briefing-contextual-do-diretor-de-arte/`
 **Material de referência:** `.planning/phases/45-briefing-contextual-do-diretor-de-arte/45-VERIFICATION.md` (goal-backward, passed), `45-06-SUMMARY.md` (revisão humana dos 4 `.md` HUMAN-APPROVED + textos finais montados), `45-08-SUMMARY.md`/`45-08-ENTREGA.md` (alinhamento Diretor × Revisor HUMAN-APPROVED) e `resultado.md` (artes reais de UAT aprovadas)
 
 ---

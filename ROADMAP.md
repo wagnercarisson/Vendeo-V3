@@ -191,13 +191,14 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - **Dependências:** F39 (domínio `CampaignBrief`/snapshot), F40 (form `validity`/`mandatoryArtworkText`), F41 (multi-imagem/`compressImage`), F31.x (intents), F38/F38.1 (custos/telemetria), F24/F25 (pipeline) — antecede a F44 (Temas) e a F37 (Revisão e Aprovação da Arte)
   - **Status:** 15/15 plans, 2317 testes, 4 gates verdes, UAT 15.5–15.13 PASS (9/9)
 
-- [ ] Phase 45: Briefing Contextual do Diretor de Arte (pending)
+- [x] Phase 45: Briefing Contextual do Diretor de Arte (complete — 8/8 plans, UAT comparativo PASS 7/7 + artes reais aprovadas)
   - Reestruturação dos 4 `.md` do diretor de imagem (`campaign-image-director.md` + offer/spotlight/exclusive) em **camada editorial legível + blocos contextuais** nomeados por propósito (fatos, texto obrigatório, aviso ilustrativo, identidade, produto/referências, detalhes comerciais, restrições, direção criativa)
   - Novo helper puro `art-director-briefing.ts` (fora do service de 1269 linhas): montagem **contextual por presença real de dados** — campo ausente → bloco não enviado (sem seção vazia, sem linha de tabela em branco, sem placeholder não resolvido)
   - Separação semântica explícita: texto obrigatório do lojista em seção própria; aviso ilustrativo em seção própria (mínimo/legível/discreto/lateral); identidade como preservação; primary = referência factual forte, auxiliares sem competir
   - Eliminação de duplicações (validade, detalhes, disponibilidade, aviso) — cada natureza em **um único bloco canônico**; `buildCommercialRepertoire` repartido
-  - **Sem mudança de superfície externa:** UI/form, contrato HTTP, schema público, snapshot/domínio, revisor e Copy Director inalterados (regra de paridade substituída por determinismo + UAT humano comparativo)
-  - **Fonte da verdade:** `openspec/changes/fase-45-briefing-contextual-do-diretor-de-arte/`
+  - **Sem mudança de superfície externa:** UI/form, contrato HTTP, schema público, snapshot/domínio, Copy Director inalterados (regra de paridade substituída por determinismo + UAT humano comparativo). Adendo 45-08 (alinhamento Diretor × Revisor — autoridade estreita, identidade fora da avaliação, bloco canônico de identidade com área segura + concordância de gênero) aprovado com artes reais publicáveis
+  - **Fonte da verdade (arquivada):** `openspec/changes/archive/2026-09-05-fase-45-briefing-contextual-do-diretor-de-arte/`
+  - **Status:** 8/8 plans, 2427 testes (253 files), 4 gates verdes, UAT comparativo antes×depois PASS (7/7) + artes reais aprovadas como publicáveis (45-08)
 </details>
 
 ## Progress
@@ -249,7 +250,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 41. Mídia de Campanha Mobile | v1.5 | 13/13 | ✅ Complete | 2026-08-15 |
 | 42. Signup Controlado e Elegibilidade Freemium | v1.5 | 20/20 | ✅ Complete | 2026-08-21 |
 | 43. Revisão do Brief Pré-Geração | v1.5 | 15/15 | ✅ Complete | 2026-08-21 |
-| 45. Briefing Contextual do Diretor de Arte | v1.5 | 0/7 | ◆ Planned | — |
+| 45. Briefing Contextual do Diretor de Arte | v1.5 | 8/8 | ✅ Complete | 2026-09-05 |
 | —. Monetização pública / Stripe (diferida, v1.7+) | v1.7 | — | Fora da numeração | — |
 
 ---
