@@ -7,7 +7,7 @@ updated: 2026-09-04
 # Phase 45: Briefing Contextual do Diretor de Arte — Verification
 
 **Verificado em:** 2026-09-04 (plano 45-07, Task 1)
-**Fonte da verdade:** `openspec/changes/fase-45-briefing-contextual-do-diretor-de-arte/`
+**Fonte da verdade (arquivada):** `openspec/changes/archive/2026-09-05-fase-45-briefing-contextual-do-diretor-de-arte/`
 **Context:** `.planning/phases/45-briefing-contextual-do-diretor-de-arte/45-CONTEXT.md`
 **Status da verificação automatizada:** passed (gates + goal-backward sobre specs e critérios da proposta)
 **UAT humana comparativa:** pendente — ver `45-UAT.md` (seção 5 deste documento)
@@ -99,6 +99,13 @@ updated: 2026-09-04
 - **Pendência pós-45-06 resolvida:** a revisão humana dos 4 `.md` (6.3) foi HUMAN-APPROVED no 45-06 após os adendos F45-06a/F45-06b — os textos finais montados dos casos representativos estão registrados no `45-06-SUMMARY.md` (Anexo B) e são a base dos pares antes/depois do `45-UAT.md`.
 - **F44/Stripe:** F44 = Temas de Campanha permanece fora da numeração; Stripe/Monetização Pública segue diferida (v1.7+, não numerada) — sem resíduos de estado atual (grep-verificação 45-01/45-07).
 
+## 6. Fechamento (2026-09-05) — UAT APROVADO e fase concluída
+
+- **UAT humana comparativa APROVADA:** `45-UAT.md` registra a aprovação humana em 2026-09-05 — **PASS 7/7** (cenários a–f + leitura dos 4 `.md`), com observação residual **não-bloqueante** (briefings longos, aceitos deliberadamente porque as artes resultantes são boas e publicáveis) e registro de que **nenhuma paridade pixel a pixel** com resultados anteriores é requerida (design D5). Evidência real: artes de UAT aprovadas como publicáveis em `resultado.md` (offer Cerveja Heineken 600ml + spotlight Coca Cola 2l, loja Mercearia da Quinze), já na base corrigida do **45-08** (alinhamento Diretor × Revisor + concordância de gênero da identidade).
+- **Gates finais (Task 3):** `npx vitest run` → **253 files / 2427 testes**; `npm run typecheck` → exit 0; `npm run lint` → exit 0; `npm run build` → exit 0. Correção de close-out: `image-review-service.test.ts` (prova 14) ganhou `field: 'productName'` no `inputCorrection` (tipo obrigatório do `ValidationContext`) — exclusiva de processo de fechamento, sem mudança de produção.
+- **Registros atualizados:** `AGENTS.md`, `.planning/STATE.md`, `.planning/ROADMAP.md`, `ROADMAP.md` (raiz) e `.planning/PROJECT.md` marcam a F45 como **CONCLUÍDA** (8/8 plans — 45-01..45-08; F44 Temas e Stripe permanecem fora da numeração; grep zero resíduos de estado atual).
+- **Change arquivado:** movido para `openspec/changes/archive/2026-09-05-fase-45-briefing-contextual-do-diretor-de-arte/` + specs principais sincronizadas (`openspec/specs/art-director-contextual-briefing/` criada; `openspec/specs/ai-image-generation/spec.md` atualizada com MODIFIED/REMOVED da F45) — sem reescrever artefatos históricos.
+
 ---
 
-*Fase 45 verificada (parte automatizada): gates passed + goal-backward sobre as specs com evidência por requisito + critérios de aceitação confirmados (8/8). Fechamento da fase condicionado à UAT humana comparativa (`45-UAT.md`).*
+*Fase 45 verificada: gates passed + goal-backward sobre as specs com evidência por requisito + critérios de aceitação confirmados (8/8) + UAT humano comparativo APROVADO (PASS 7/7) — **fase concluída em 2026-09-05**.*
