@@ -1,9 +1,21 @@
 # Phase 45: Briefing Contextual do Diretor de Arte — UAT Comparativo (antes × depois)
 
-**Status:** EM CHECKPOINT — aguardando avaliação humana (45-07 Task 2, `gate="blocking"`)
-**Preparado em:** 2026-09-04 (plano 45-07)
+**Status:** ✅ APROVADO — avaliação humana concluída em 2026-09-05 (PASS em (a)–(f) + PASS na leitura dos 4 `.md`); observação residual não-bloqueante registrada (briefings longos, aceitos deliberadamente); nenhuma paridade visual pixel a pixel é requerida
+**Preparado em:** 2026-09-04 (plano 45-07) — registro de aprovação finalizado em 2026-09-05 (fluxo pós-aprovação)
 **Fonte da verdade:** `openspec/changes/fase-45-briefing-contextual-do-diretor-de-arte/`
-**Material de referência:** `.planning/phases/45-briefing-contextual-do-diretor-de-arte/45-VERIFICATION.md` (goal-backward, passed) e `45-06-SUMMARY.md` (revisão humana dos 4 `.md` HUMAN-APPROVED + textos finais montados)
+**Material de referência:** `.planning/phases/45-briefing-contextual-do-diretor-de-arte/45-VERIFICATION.md` (goal-backward, passed), `45-06-SUMMARY.md` (revisão humana dos 4 `.md` HUMAN-APPROVED + textos finais montados), `45-08-SUMMARY.md`/`45-08-ENTREGA.md` (alinhamento Diretor × Revisor HUMAN-APPROVED) e `resultado.md` (artes reais de UAT aprovadas)
+
+---
+
+## Registro de aprovação humana (decisão final — 2026-09-05)
+
+O avaliador **APROVOU** o roteiro comparativo da F45 (45-07 Task 2, `gate="blocking"`). Decisões registradas como autoritativas:
+
+1. **PASS nos 6 cenários (a)–(f)** do comparativo antes × depois — fundamentado nas comparações documentadas abaixo (pares montados via caminho real) e na evidência real de campanhas **publicáveis aprovadas** registrada em `resultado.md` (`image.png`/`image-1.png` — offer **Cerveja Heineken 600ml** e spotlight **Coca Cola 2l Original**, loja Mercearia da Quinze), já na **base corrigida do 45-08** (alinhamento Diretor × Revisor + concordância de gênero da identidade aprovada em `1b4a5e3c`/`5c8da304`).
+2. **PASS na leitura humana dos 4 `.md`** do diretor — continuam documentos de direção criativa legíveis (camada editorial + slots com intenção clara); ver também 45-06 (HUMAN-APPROVED) e 45-08 (identidade canônica/área segura aprovada).
+3. **Observação residual NÃO-BLOQUEANTE:** os briefings finais são **longos** — aceitos **deliberadamente** porque as artes resultantes são **boas e publicáveis**. Nenhuma nova rodada de otimização/simplificação/ajuste editorial é autorizada.
+4. **Nenhuma paridade visual/pixel a pixel** com resultados anteriores é requerida — a F45 não promete paridade de resultado visual (design D5); o que se preserva é riqueza/orientação + regras + contrato externo, confirmado.
+5. Os prompts atuais (Diretor + Revisor) estão **aprovados como estão**; nenhuma geração de imagem nova é necessária.
 
 ---
 
@@ -20,12 +32,14 @@ A F45 reorganizou a montagem do prompt do diretor de arte em **briefing contextu
 
 Para cada cenário, a **mesma entrada** (brief flat → `buildCampaignBriefFromFlat` + contexto `ResolvedCampaignContext`) foi montada nos dois lados. Invariantes verificadas em ambas as montagens: zero `{{placeholder}}` residual; nome do produto presente. O que muda entre os lados é **apenas** o template `.md` + a lógica de montagem — exatamente o escopo da F45.
 
-**O que o avaliador deve responder (checklist geral — ver seção final):**
+> **Base corrigida (pós-45-08):** os blocos ANTES/DEPOIS abaixo refletem a montagem do 45-07 (estado pós-45-06b). Na sequência, o 45-08 (alinhamento Diretor × Revisor, HUMAN-APPROVED) consolidou o bloco canônico de identidade (`identityReferenceSection` — área segura, margem nas 4 bordas, posição secundária, fidelidade/anti-invenção) e corrigiu a **concordância de gênero** ("a assinatura visual ... fornecida ... secundária"). Essas correções **não regridem** nenhuma das naturezas comparadas aqui (estrutura por blocos, deduplicação, seções próprias, preservação de identidade, hierarquia 1+N e tom por intent permanecem); o estado final aprovado é a base 45-08, confirmada pelas artes reais publicáveis de `resultado.md`.
 
-1. Em cada cenário, o prompt **DEPOIS** preservou a **riqueza/orientação** do **ANTES** (toda informação útil continua presente e orientando o diretor)?
-2. As naturezas (validade, texto obrigatório, aviso, detalhes, disponibilidade, restrições, identidade, produto/referências) estão em **seções próprias e sem duplicação** no DEPOIS?
-3. Os 4 `.md` continuam documentos de direção criativa **legíveis** (camada editorial + slots com intenção clara)?
-4. Responda **"approved"** ou liste os cenários com observações.
+**Resposta do avaliador (registrada em 2026-09-05):**
+
+1. Em cada cenário, o prompt **DEPOIS** preservou a **riqueza/orientação** do **ANTES**? → **SIM** (PASS a–f; nada de relevante foi amputado — ver resultados por cenário).
+2. As naturezas estão em **seções próprias e sem duplicação** no DEPOIS? → **SIM** (cada natureza opcional/sensível em 1× no bloco canônico — ver análise estrutural).
+3. Os 4 `.md` continuam documentos de direção criativa **legíveis**? → **SIM** (PASS na leitura dos 4 `.md`).
+4. Resposta final: **"approved"** — com a observação residual não-bloqueante (briefings longos, aceitos deliberadamente) e a dispensa de paridade pixel a pixel.
 
 ---
 
@@ -289,7 +303,7 @@ O produto anunciado é da categoria: **moda-calcados-acessorios**
 Valorize estilo e performance. Preço é oportunidade.
 ```
 
-**Resultado do avaliador (a):** [PASS / observações] — aguardando avaliação humana.
+**Resultado do avaliador (a):** ✅ **PASS** — preservação explícita confirmada no DEPOIS ("NÃO editar, alterar, redesenhar, distorcer nem inventar..."), que **não existia no ANTES**; assinatura de marca e hierarquia preservadas. Na base corrigida (45-08), o bloco de identidade consolida área segura/margem nas 4 bordas/posição secundária com concordância de gênero (logotipo masculino × assinatura visual feminino); artes reais aprovadas em `resultado.md` (assinatura visual da Mercearia da Quinze reproduzida com fidelidade e sem cortes). Riqueza/orientação preservada — nada amputado.
 
 ---
 
@@ -541,7 +555,7 @@ Quando houver aviso ilustrativo, exiba-o em texto mínimo, legível e discreto, 
 Texto do aviso: "Imagem meramente ilustrativa"
 ```
 
-**Resultado do avaliador (b):** [PASS / observações] — aguardando avaliação humana.
+**Resultado do avaliador (b):** ✅ **PASS** — no DEPOIS o aviso ilustrativo aparece **1×** em **seção própria** (`## Aviso Ilustrativo`) com a instrução única (mínimo, legível, discreto, separado dos demais textos, laterais), vs 2× no ANTES (tabela + cauda); sem texto livre, **nenhuma** seção de texto obrigatório é montada. Evidência real: arte de offer aprovada em `resultado.md` exibe "Imagem meramente ilustrativa" discreta e separada; 45-08 manteve o split canônico no Revisor (aviso ≠ parte de outro texto legal). Riqueza/orientação preservada.
 
 ---
 
@@ -791,7 +805,7 @@ O texto abaixo foi informado pelo lojista para ser incluído na arte. Inclua ess
 "Promoção válida enquanto durarem os estoques. Não acumulativo com outras ofertas."
 ```
 
-**Resultado do avaliador (c):** [PASS / observações] — aguardando avaliação humana.
+**Resultado do avaliador (c):** ✅ **PASS** — no DEPOIS o texto livre do lojista está em **seção própria** (`## Texto Obrigatório na Arte`) com instrução de respeitá-lo visível/legível e **sem repeti-lo em legenda**; 1× (vs 2× no ANTES: tabela + cauda); sem aviso, nenhuma seção de aviso vazia é montada. Evidência real: arte de offer aprovada em `resultado.md` inclui "Venda proibida para menores de 18 anos" visível e legível (tipografia mínima), sem legenda. Texto tratado como conteúdo obrigatório (não "repertório opcional"). Riqueza/orientação preservada.
 
 ---
 
@@ -1039,7 +1053,7 @@ O produto anunciado é da categoria: **moda-calcados-acessorios**
 Valorize estilo e performance. Preço é oportunidade.
 ```
 
-**Resultado do avaliador (d):** [PASS / observações] — aguardando avaliação humana.
+**Resultado do avaliador (d):** ✅ **PASS** — no DEPOIS a validade aparece em **ocorrência única** no bloco de fatos (com a regra editorial dd/mm/aaaa preservada ao lado); no ANTES ela aparecia 4× (tabela + `Notas Adicionais` + `Repertório Comercial` + regra). Evidência real: arte de offer aprovada em `resultado.md` (validade "de 05/09/2026 até 14/09/2026" exibida com data completa). Tom/urgência da oferta (badge, preço com desconto + original riscado) preservado. Riqueza/orientação preservada.
 
 ---
 
@@ -1285,7 +1299,7 @@ O produto anunciado é da categoria: **moda-calcados-acessorios**
 Valorize estilo e performance. Apresentar como destaque ou novidade, sem urgência. Benefício e diferencial são o foco.
 ```
 
-**Resultado do avaliador (e):** [PASS / observações] — aguardando avaliação humana.
+**Resultado do avaliador (e):** ✅ **PASS** — hierarquia **primary = referência factual forte; auxiliares = apoio sem competir** (sem reduzir a cores/ícones/etiquetas/texto) presente no DEPOIS via `productReferenceSection`; `NÃO recortar/isolamento proibido` presente nos não-offer com `preserveImageContext`; identidade (assinatura visual) com **preservação explícita** no DEPOIS (0→1). Tom spotlight (destaque sem urgência, sem DE/POR, sem validade) preservado. Evidência: par montado (E) + artes reais aprovadas de spotlight em `resultado.md` (Coca Cola 2l Original, preço único sem DE/POR, badge "Mais Vendido"). Riqueza/orientação preservada.
 
 ---
 
@@ -1587,7 +1601,7 @@ Quando houver aviso ilustrativo, exiba-o em texto mínimo, legível e discreto, 
 Texto do aviso: "Imagem meramente ilustrativa"
 ```
 
-**Resultado do avaliador (f):** [PASS / observações] — aguardando avaliação humana.
+**Resultado do avaliador (f):** ✅ **PASS** — oferta completa com tom promocional preservado (preço + original riscado, badge, hook, CTA, objetivo, validade); cada natureza em **1×** no bloco canônico no DEPOIS (validade 4→2, aviso 2→1, texto obrigatório 2→1, details 3→1, disponibilidade 3→1, restrições 2→1, preservação de identidade 0→1); texto obrigatório × aviso em **seções próprias separadas**; perfil de marca mantido como contexto direcional. Evidência real: arte de offer completa aprovada em `resultado.md` (Heineken 600ml — todos os elementos presentes, publicável). Observação residual não-bloqueante: o briefing é longo, mas a arte resultante é boa e publicável — aceito deliberadamente. Riqueza/orientação preservada.
 
 ---
 
@@ -1595,42 +1609,46 @@ Texto do aviso: "Imagem meramente ilustrativa"
 
 Os 4 arquivos reescritos foram **aprovados pelo humano no 45-06** (Task 3, HUMAN-APPROVED após os adendos F45-06a — spotlight — e F45-06b — exclusive/offer/base). Para este UAT, re-leia os arquivos e confirme a legibilidade da **camada editorial + slots**:
 
-- [ ] `prompts/campaign-image-director.md` (base/referência offer) — persona, composição numerada, instruções obrigatórias, `{{slots}}` com intenção clara.
-- [ ] `prompts/campaign-image-director-offer.md` — espelho do base (offer runtime).
-- [ ] `prompts/campaign-image-director-spotlight.md` — destaque sem urgência, sem DE/POR.
-- [ ] `prompts/campaign-image-director-exclusive.md` — premium **sem preço**, sem badge promocional, sem flag técnico fixo.
-- [ ] Nenhum dos 4 virou "template seco" de `{{campo}}` — os slots restantes têm função compreensível no texto.
+- [x] `prompts/campaign-image-director.md` (base/referência offer) — persona, composição numerada, instruções obrigatórias, `{{slots}}` com intenção clara.
+- [x] `prompts/campaign-image-director-offer.md` — espelho do base (offer runtime).
+- [x] `prompts/campaign-image-director-spotlight.md` — destaque sem urgência, sem DE/POR.
+- [x] `prompts/campaign-image-director-exclusive.md` — premium **sem preço**, sem badge promocional, sem flag técnico fixo.
+- [x] Nenhum dos 4 virou "template seco" de `{{campo}}` — os slots restantes têm função compreensível no texto.
 
 > Anatomia comum dos 4 arquivos (referência rápida de leitura): persona editorial → `## Fatos da Campanha` + `{{campaignFactsSection}}` → `## Especificações Técnicas` → `## Diretrizes de Composição` → `## Instruções Obrigatórias` + `{{constraintsSection}}` → `## Produto e Imagens de Referência` + `{{productReferenceSection}}` → `## Identidade da Loja` + `{{identityReferenceSection}}` → `{{commercialDetailsSection}}` → `## Direção Criativa Contextual` + `{{creativeDirectionSection}}` → `{{requiredArtworkTextSection}}` → `{{illustrativeNoticeSection}}`. Slots de natureza condicional aparecem como linha inteira (o heading vive no valor do bloco).
 
+**Resultado do avaliador (leitura dos 4 `.md`):** ✅ **PASS** — os 4 arquivos continuam documentos de direção criativa legíveis (persona, composição numerada, instruções obrigatórias e slots nomeados com intenção clara); nenhum virou "template seco". Leitura final confirmada em 2026-09-05 sobre o estado atual (4 `.md` do Diretor pós-45-06b/45-08 + `campaign-image-reviewer.md` reescrito no 45-08) — **aprovados como estão, sem nova rodada de ajuste**.
+
 ---
 
-## Instruções de preenchimento
+## Execução do roteiro (registro do avaliador — 2026-09-05)
 
-1. Leia os pares **ANTES × DEPOIS** dos 6 cenários (a)–(f) acima (montagens reais — ver metodologia).
-2. Marque os itens de "O que observar" de cada cenário e registre o resultado em **"Resultado do avaliador"**: `PASS` ou observações (o que perdeu riqueza/orientação, o que está em seção errada ou duplicado).
-3. Execute a leitura dos 4 `.md` (seção anterior).
-4. Responda **"approved"** (UAT aprovado; prossegue para 7.2/7.3 — gates finais + registros + arquivamento) **ou** liste os cenários com observações/ajustes pontuais (serão aplicados e reapresentados).
+Roteiro executado e preenchido pelo avaliador. Respostas consolidadas:
 
-## Summary (preencher pelo avaliador)
+1. Pares ANTES × DEPOIS lidos nos 6 cenários → **PASS (a)–(f)** (ver "Resultado do avaliador" em cada cenário).
+2. Itens de "O que observar" → **confirmados** (as naturezas comparadas estão presentes nas seções próprias, sem duplicação, e nada de relevante foi amputado).
+3. Leitura dos 4 `.md` → **PASS**.
+4. Veredito final: **"approved"** — com observação residual NÃO-BLOQUEANTE (briefings longos, aceitos deliberadamente porque as artes são boas e publicáveis) e registro de que **nenhuma paridade pixel a pixel** com resultados anteriores é requerida.
+
+## Summary (registro final do avaliador)
 
 | Cenário | Status | Observação |
 |---------|--------|------------|
-| (a) Identidade logo/VS | [PASS / observações] | |
-| (b) Aviso ilustrativo | [PASS / observações] | |
-| (c) Texto obrigatório livre | [PASS / observações] | |
-| (d) Validade (oferta) | [PASS / observações] | |
-| (e) Multi-imagem primary × auxiliares | [PASS / observações] | |
-| (f) Oferta completa | [PASS / observações] | |
-| Leitura dos 4 `.md` | [PASS / observações] | |
+| (a) Identidade logo/VS | ✅ PASS | Preservação explícita (nova na F45) + área segura/margens/posição secundária (45-08) + concordância de gênero; arte real de `resultado.md` com assinatura fiel |
+| (b) Aviso ilustrativo | ✅ PASS | Seção própria, 1×, instrução lateral/mínimo/discreto; sem seção de texto obrigatório quando só há aviso |
+| (c) Texto obrigatório livre | ✅ PASS | Seção própria, 1×, visível/legível/sem legenda; arte real com "Venda proibida para menores de 18 anos" |
+| (d) Validade (oferta) | ✅ PASS | Ocorrência única nos fatos + regra dd/mm/aaaa; arte real com validade em data completa |
+| (e) Multi-imagem primary × auxiliares | ✅ PASS | Hierarquia 1+N + não-recorte (preserveImageContext) + preservação da assinatura; arte real de spotlight sem DE/POR |
+| (f) Oferta completa | ✅ PASS | Tom promocional preservado; cada natureza 1× em bloco canônico; seções próprias separadas; arte real publicável |
+| Leitura dos 4 `.md` | ✅ PASS | Documentos legíveis; aprovados como estão (sem nova rodada) |
 
 - total: 7
-- passed: _ (preencher)
-- issues: _ (preencher)
-- pending: _ (preencher)
+- passed: **7**
+- issues: **0** (observação residual não-bloqueante: briefings longos, aceitos deliberadamente — artes boas e publicáveis)
+- pending: 0
 - skipped: 0
 - blocked: 0
 
 ---
 
-*Fase 45 — UAT comparativo antes × depois preparado pelo executor (45-07 Task 2). **AGUARDANDO AVALIAÇÃO HUMANA** (gate blocking). Nenhuma aprovação é inferida até a resposta do avaliador.*
+*Fase 45 — UAT comparativo antes × depois **APROVADO** pelo avaliador em 2026-09-05 (PASS 7/7: cenários (a)–(f) + leitura dos 4 `.md`). Fechamento da F45 autorizado (registros + arquivamento do change).*
