@@ -303,7 +303,7 @@ export class ImageReviewService {
     const parts: string[] = [
       "## Contexto Autorizado da Campanha",
       "",
-      "Os detalhes comerciais abaixo foram fornecidos pelo lojista e são considerados AUTORIZADOS. Informações coerentes com eles NÃO devem ser reportadas como invented_information:",
+      "Os detalhes comerciais abaixo foram fornecidos pelo lojista como contexto autorizado da campanha:",
     ];
     if (campaign) {
       parts.push("- Detalhes da campanha: " + campaign);
