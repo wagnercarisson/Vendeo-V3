@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 
 const { mockOpenAICreate } = vi.hoisted(() => ({ mockOpenAICreate: vi.fn() }));
 
@@ -14,6 +16,7 @@ import { ImageReviewService } from '../image-review-service';
 import type { ImageReviewInput } from '../image-review-service';
 import { PromptLoader } from '@/lib/image-generation/prompt-loader';
 import type { AiCallInfo } from '@/lib/ai-cost/types';
+import { ILLUSTRATIVE_NOTICE_TEXT } from '@/lib/campaign/constants';
 
 describe('ImageReviewService', () => {
   let mockLoader: { load: ReturnType<typeof vi.fn>; clearCache: ReturnType<typeof vi.fn> };
@@ -185,23 +188,82 @@ describe('ImageReviewService', () => {
     expect(vars.expectedPriceBehavior).toContain('R$ 29,90');
   });
 
-  it('review() gera mandatoryArtworkTextSection com fidelidade semantica e rigor legal', async () => {
+  it('review() gera requiredArtworkTextSection com valor e natureza (sem politica embutida)', async () => {
     const input: ImageReviewInput = {
       productName: 'Produto Teste',
       storeName: 'Loja Teste',
       campaignIntent: 'offer',
-      legalNoticeText: 'Imagem meramente ilustrativa',
+      requiredArtworkText: 'Imagem meramente ilustrativa',
     };
 
     await service.review('data:image/jpeg;base64,abc', input);
 
     const vars = mockLoader.load.mock.calls[0][1];
-    expect(vars.mandatoryArtworkTextSection).toContain('Imagem meramente ilustrativa');
-    expect(vars.mandatoryArtworkTextSection).toMatch(/conteudo essencial/i);
-    expect(vars.mandatoryArtworkTextSection).toMatch(/Nao reprove apenas/i);
-    expect(vars.mandatoryArtworkTextSection).toMatch(/quebra de linha/i);
-    expect(vars.mandatoryArtworkTextSection).toMatch(/aviso legal ou regulatorio/i);
-    expect(vars.mandatoryArtworkTextSection).toMatch(/CRITICA/i);
+    expect(vars.requiredArtworkTextSection).toContain('"Imagem meramente ilustrativa"');
+    expect(vars.requiredArtworkTextSection).toContain('## Texto Obrigatório na Arte');
+    // Sem politica de julgamento embutida (vive no .md — Task 6).
+    expect(vars.requiredArtworkTextSection).not.toMatch(/reprove|CRITICA|conteudo essencial|aviso legal ou regulatorio/i);
+    expect(vars.illustrativeNoticeSection).toBe('');
+    expect(vars).not.toHaveProperty('mandatoryArtworkTextSection');
+    expect(vars).not.toHaveProperty('legalNoticeText');
+  });
+
+  it('review() — texto obrigatorio sozinho nao gera secao de aviso (prova 45-08 #2)', async () => {
+    const input: ImageReviewInput = {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+      campaignIntent: 'offer',
+      requiredArtworkText: 'Texto promocional livre',
+    };
+
+    await service.review('data:image/jpeg;base64,abc', input);
+
+    const vars = mockLoader.load.mock.calls[0][1];
+    expect(vars.requiredArtworkTextSection).toContain('"Texto promocional livre"');
+    expect(vars.illustrativeNoticeSection).toBe('');
+  });
+
+  it('review() — aviso somente: recebe APENAS secao de aviso, sem texto obrigatorio (prova 45-08 #1)', async () => {
+    const input: ImageReviewInput = {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+      campaignIntent: 'offer',
+      illustrativeNotice: ILLUSTRATIVE_NOTICE_TEXT,
+    };
+
+    await service.review('data:image/jpeg;base64,abc', input);
+
+    const vars = mockLoader.load.mock.calls[0][1];
+    expect(vars.illustrativeNoticeSection).toContain('"Imagem meramente ilustrativa"');
+    expect(vars.illustrativeNoticeSection).toContain('## Aviso Ilustrativo');
+    expect(vars.requiredArtworkTextSection).toBe('');
+    // Sem regra de posicao/lateral e sem tratar aviso como parte de outro texto legal.
+    expect(vars.illustrativeNoticeSection).not.toMatch(/lateral|posi|outro texto|legal|parte de/i);
+  });
+
+  it('review() — ambos: duas secoes independentes, sem concatenacao (provas 45-08 #3/#4)', async () => {
+    const input: ImageReviewInput = {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+      campaignIntent: 'offer',
+      requiredArtworkText: 'Texto promocional livre',
+      illustrativeNotice: ILLUSTRATIVE_NOTICE_TEXT,
+    };
+
+    await service.review('data:image/jpeg;base64,abc', input);
+
+    const vars = mockLoader.load.mock.calls[0][1];
+    expect(vars.requiredArtworkTextSection).toContain('"Texto promocional livre"');
+    expect(vars.illustrativeNoticeSection).toContain('"Imagem meramente ilustrativa"');
+    // Seccoes independentes: conteudo distinto, sem concatenacao de um no outro.
+    expect(vars.requiredArtworkTextSection).not.toContain(ILLUSTRATIVE_NOTICE_TEXT);
+    expect(vars.illustrativeNoticeSection).not.toContain('Texto promocional livre');
+    expect(vars.requiredArtworkTextSection).toContain('## Texto Obrigatório na Arte');
+    expect(vars.illustrativeNoticeSection).toContain('## Aviso Ilustrativo');
+    // Nenhum valor concatena os dois textos num bloco unico.
+    expect(vars.requiredArtworkTextSection + vars.illustrativeNoticeSection).not.toMatch(
+      /Texto promocional livre[^\n]*Imagem meramente ilustrativa/
+    );
   });
 
   it('review() gera authorizedContextSection com campaignDetails e additionalDetails', async () => {
@@ -222,21 +284,24 @@ describe('ImageReviewService', () => {
     expect(vars.authorizedContextSection).not.toContain('{{');
   });
 
-  it('review() sem mandatoryArtworkText não exige texto obrigatório', async () => {
+  it('review() sem requiredArtworkText/illustrativeNotice não exige texto obrigatório nem aviso', async () => {
     const input: ImageReviewInput = {
       productName: 'Produto Teste',
       storeName: 'Loja Teste',
     };
 
     await service.review('data:image/jpeg;base64,abc', input);
-    expect(mockLoader.load.mock.calls[0][1].mandatoryArtworkTextSection).toBe('');
+    expect(mockLoader.load.mock.calls[0][1].requiredArtworkTextSection).toBe('');
+    expect(mockLoader.load.mock.calls[0][1].illustrativeNoticeSection).toBe('');
 
     mockLoader.load.mockClear();
     await service.review('data:image/jpeg;base64,abc', {
       ...input,
-      legalNoticeText: '   ',
+      requiredArtworkText: '   ',
+      illustrativeNotice: '   ',
     });
-    expect(mockLoader.load.mock.calls[0][1].mandatoryArtworkTextSection).toBe('');
+    expect(mockLoader.load.mock.calls[0][1].requiredArtworkTextSection).toBe('');
+    expect(mockLoader.load.mock.calls[0][1].illustrativeNoticeSection).toBe('');
   });
 
   it('review() sem campaignDetails/additionalDetails gera authorizedContextSection vazia', async () => {
@@ -249,25 +314,39 @@ describe('ImageReviewService', () => {
     expect(mockLoader.load.mock.calls[0][1].authorizedContextSection).toBe('');
   });
 
-  it('8.20 legalNotice desabilitado (legalNoticeText ausente) → sem seção de aviso', async () => {
+  it('8.20 legalNotice desabilitado (campos ausentes) → sem seções de texto obrigatório/aviso', async () => {
     const input: ImageReviewInput = {
       productName: 'Produto Teste',
       storeName: 'Loja Teste',
     };
 
     await service.review('data:image/jpeg;base64,abc', input);
-    expect(mockLoader.load.mock.calls[0][1].mandatoryArtworkTextSection).toBe('');
+    expect(mockLoader.load.mock.calls[0][1].requiredArtworkTextSection).toBe('');
+    expect(mockLoader.load.mock.calls[0][1].illustrativeNoticeSection).toBe('');
   });
 
-  it('8.20 legalNotice habilitado (legalNoticeText presente) → seção de aviso no review', async () => {
+  it('8.20 legalNotice habilitado com texto livre → seção obrigatória no review (split caso 3)', async () => {
     const input: ImageReviewInput = {
       productName: 'Produto Teste',
       storeName: 'Loja Teste',
-      legalNoticeText: 'Imagem meramente ilustrativa',
+      requiredArtworkText: 'Imagem meramente ilustrativa',
     };
 
     await service.review('data:image/jpeg;base64,abc', input);
-    expect(mockLoader.load.mock.calls[0][1].mandatoryArtworkTextSection).toContain('Imagem meramente ilustrativa');
+    expect(mockLoader.load.mock.calls[0][1].requiredArtworkTextSection).toContain('Imagem meramente ilustrativa');
+    expect(mockLoader.load.mock.calls[0][1].illustrativeNoticeSection).toBe('');
+  });
+
+  it('8.20 legalNotice habilitado com aviso puro → seção de aviso no review (split caso 1)', async () => {
+    const input: ImageReviewInput = {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+      illustrativeNotice: ILLUSTRATIVE_NOTICE_TEXT,
+    };
+
+    await service.review('data:image/jpeg;base64,abc', input);
+    expect(mockLoader.load.mock.calls[0][1].illustrativeNoticeSection).toContain(ILLUSTRATIVE_NOTICE_TEXT);
+    expect(mockLoader.load.mock.calls[0][1].requiredArtworkTextSection).toBe('');
   });
 
   it('8.20 validityText propagado quando habilitado (nova seção de validade)', async () => {
@@ -338,12 +417,13 @@ describe('ImageReviewService', () => {
     expect(mockLoader.load.mock.calls[0][1].validityTextSection).toBe('');
   });
 
-  it('review() sanitiza placeholders em valores de entrada', async () => {
+  it('review() sanitiza placeholders em valores de entrada (requiredArtworkText/illustrativeNotice)', async () => {
     const input: ImageReviewInput = {
       productName: 'Produto Teste',
       storeName: 'Loja Teste',
       campaignIntent: 'offer',
-      legalNoticeText: 'Oferta {{imperdível}}',
+      requiredArtworkText: 'Oferta {{imperdível}}',
+      illustrativeNotice: 'Aviso {{ilustrativo}}',
       campaignDetails: 'Promoção {{válida}} até domingo',
       additionalDetails: 'Condições {{sujeitas}} a consulta',
     };
@@ -355,7 +435,8 @@ describe('ImageReviewService', () => {
       expect(value).not.toContain('{{');
       expect(value).not.toContain('}}');
     }
-    expect(vars.mandatoryArtworkTextSection).toContain('Oferta {imperdível}');
+    expect(vars.requiredArtworkTextSection).toContain('Oferta {imperdível}');
+    expect(vars.illustrativeNoticeSection).toContain('Aviso {ilustrativo}');
   });
 });
 
@@ -593,5 +674,197 @@ describe('ImageReviewService — multi-referências autorizadas (quick 260820-pl
       .filter((b: { type: string }) => b.type === 'image_url')
       .map((b: { image_url: { url: string } }) => b.image_url.url);
     expect(imageUrls).toEqual(['data:image/jpeg;base64,gen', primary, aux1, aux2]);
+  });
+});
+
+describe('ImageReviewService — provas 45-08 (contrato splitado Diretor × Revisor)', () => {
+  let mockLoader: { load: ReturnType<typeof vi.fn>; clearCache: ReturnType<typeof vi.fn> };
+  let service: ImageReviewService;
+
+  beforeEach(() => {
+    mockLoader = {
+      load: vi.fn().mockReturnValue('review prompt with {{expectedBadgeBehavior}}'),
+      clearCache: vi.fn(),
+    };
+    service = new ImageReviewService(mockLoader as unknown as PromptLoader);
+  });
+
+  function lastVars(): Record<string, string> {
+    return mockLoader.load.mock.calls[0][1] as Record<string, string>;
+  }
+
+  it('prova 5: sensitiveConstraints chega ao Revisor em seção própria', async () => {
+    await service.review('data:image/jpeg;base64,abc', {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+      campaignIntent: 'offer',
+      sensitiveConstraints: 'Não exibir modelo sem camisa',
+    });
+    const vars = lastVars();
+    expect(vars.sensitiveConstraintsSection).toContain('## Restrições Sensíveis');
+    expect(vars.sensitiveConstraintsSection).toContain('- Não exibir modelo sem camisa');
+    // Sem política de julgamento no builder.
+    expect(vars.sensitiveConstraintsSection).not.toMatch(/CRITICA|reprovar|minor|bloque/i);
+  });
+
+  it('prova 5b: sem sensitiveConstraints → seção vazia', async () => {
+    await service.review('data:image/jpeg;base64,abc', {
+      productName: 'P',
+      storeName: 'L',
+    });
+    expect(lastVars().sensitiveConstraintsSection).toBe('');
+  });
+
+  it('prova 6: objective chega como contexto não-bloqueante (seção presente; ausência nunca reprova)', async () => {
+    await service.review('data:image/jpeg;base64,abc', {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+      campaignIntent: 'offer',
+      objective: 'Vender mais',
+    });
+    const vars = lastVars();
+    expect(vars.objectiveSection).toContain('## Objetivo da Campanha');
+    expect(vars.objectiveSection).toContain('não é conteúdo obrigatório na arte');
+
+    mockLoader.load.mockClear();
+    await service.review('data:image/jpeg;base64,abc', {
+      productName: 'P',
+      storeName: 'L',
+    });
+    expect(lastVars().objectiveSection).toBe('');
+  });
+
+  it('prova 7: campaignDetails/additionalDetails seguem apenas como contexto autorizado', async () => {
+    await service.review('data:image/jpeg;base64,abc', {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+      campaignIntent: 'offer',
+      campaignDetails: 'Frete grátis acima de R$ 100',
+      additionalDetails: 'Válido somente em loja física',
+    });
+    const vars = lastVars();
+    expect(vars.authorizedContextSection).toContain('## Contexto Autorizado da Campanha');
+    expect(vars.authorizedContextSection).toContain('Frete grátis acima de R$ 100');
+    expect(vars.authorizedContextSection).toContain('Válido somente em loja física');
+    // Nenhuma política embutida no builder (regra de invenção vive no .md).
+    expect(vars.authorizedContextSection).not.toMatch(/invented_information|NÃO devem ser reportadas/i);
+  });
+
+  it('prova 8: offer sem "CTA de compra esperado" e sem "senso de urgência" no expectedCommercialTone', async () => {
+    await service.review('data:image/jpeg;base64,abc', {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+      campaignIntent: 'offer',
+    });
+    const vars = lastVars();
+    expect(vars.expectedCommercialTone).toBe('Tom comercial e promocional coerente com uma campanha de oferta.');
+    expect(vars.expectedCommercialTone).not.toContain('CTA de compra esperado');
+    expect(vars.expectedCommercialTone).not.toContain('senso de urgência');
+  });
+
+  it('prova 9: buildExpectedBadgeBehavior intacto — offer obrigatório exato e demais intents informado-opcional', async () => {
+    await service.review('data:image/jpeg;base64,abc', {
+      productName: 'P',
+      storeName: 'L',
+      campaignIntent: 'offer',
+      badgeText: 'Oferta Imperdível',
+    });
+    expect(lastVars().expectedBadgeBehavior).toBe(
+      "A imagem DEVE exibir badge promocional. O texto deve ser 'Oferta Imperdível'. Badge promocional é obrigatório."
+    );
+
+    mockLoader.load.mockClear();
+    await service.review('data:image/jpeg;base64,abc', {
+      productName: 'P',
+      storeName: 'L',
+      campaignIntent: 'spotlight',
+      badgeText: 'Novidade',
+    });
+    expect(lastVars().expectedBadgeBehavior).toContain("Badge é opcional, mas foi informado 'Novidade'");
+  });
+
+  it('prova 10: availabilityNotes não chega ao Revisor (sem campo no input e sem conteúdo na montagem)', async () => {
+    await service.review('data:image/jpeg;base64,abc', {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+      campaignIntent: 'offer',
+      requiredArtworkText: 'Texto livre',
+      validityText: 'Até 30/09/2026',
+    });
+    const vars = lastVars();
+    expect(vars).not.toHaveProperty('availabilityNotes');
+    const allText = Object.values(vars).join('\n');
+    expect(allText).not.toMatch(/Disponíve[lm]|Restam poucas|últimas unidades|estoque/i);
+  });
+
+  it('prova 13: issues minor continuam aprovando (passed=true) — regressão', () => {
+    const raw = JSON.stringify({
+      passed: true,
+      issues: [
+        { type: 'weak_visual_quality', severity: 'minor', description: 'Leve assimetria' },
+        { type: 'commercial_tone_mismatch', severity: 'minor', description: 'Tom levemente desalinhado' },
+      ],
+    });
+    const result = (service as any).parseResult(raw);
+    expect(result.passed).toBe(true);
+    expect(result.failureType).toBeNull();
+  });
+
+  it('prova 13b: crítica mantém passed=false com failureType correspondente', () => {
+    const raw = JSON.stringify({
+      passed: false,
+      issues: [{ type: 'wrong_price', severity: 'critical', description: 'Preço divergente' }],
+    });
+    const result = (service as any).parseResult(raw);
+    expect(result.passed).toBe(false);
+  });
+
+  it('prova 14: prompt final do Revisor sem placeholders residuais; placeholders ⊆ variáveis; sem identidade no conjunto', async () => {
+    const realService = new ImageReviewService();
+    const vars = realService.buildReviewPromptVariables({
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+      campaignIntent: 'offer',
+      originalPrice: 'R$ 49,90',
+      discountedPrice: 'R$ 39,90',
+      badgeText: 'Oferta',
+      requiredArtworkText: 'Texto obrigatório livre',
+      illustrativeNotice: ILLUSTRATIVE_NOTICE_TEXT,
+      sensitiveConstraints: 'Não exibir modelo sem camisa',
+      objective: 'Vender mais',
+      campaignDetails: 'Frete grátis',
+      validityText: 'Até 30/09/2026',
+      validationContext: { inputCorrection: { from: 'A', to: 'B', reason: 'x' } },
+    });
+    const prompt = new PromptLoader().load('campaign-image-reviewer', vars);
+
+    // Placeholders do template ⊆ variáveis fornecidas e sem identidade.
+    expect(prompt).not.toMatch(/\{\{[a-zA-Z]+\}\}/);
+    const templatePlaceholders = [...readFileSync(
+      path.join(process.cwd(), 'prompts', 'campaign-image-reviewer.md'),
+      'utf-8'
+    ).matchAll(/\{\{([a-zA-Z]+)\}\}/g)].map((m) => m[1]);
+    for (const placeholder of templatePlaceholders) {
+      expect(vars, `placeholder {{${placeholder}}} sem variável`).toHaveProperty(placeholder);
+    }
+    expect(templatePlaceholders).not.toContain('identityReferenceSection');
+    expect(templatePlaceholders).not.toContain('identityImageUrl');
+  });
+
+  it('prova 15: .md do Revisor não contém instrução de avaliação de identidade nem concatenação/posição dos dois textos', () => {
+    const md = readFileSync(path.join(process.cwd(), 'prompts', 'campaign-image-reviewer.md'), 'utf-8');
+    // Nenhuma menção a corte/borda/fidelidade/logotipo/assinatura/área segura como alvo.
+    for (const term of ['área segura', 'corte', 'borda', 'fidelidade', 'logotipo', 'assinatura']) {
+      expect(md, `.md menciona "${term}"`).not.toContain(term);
+    }
+    // Verificação separada dos dois textos (sem co-presença/ordem/proximidade/concatenação).
+    expect(md).toMatch(/separadamente/i);
+    expect(md).toMatch(/NÃO exija co-presença, ordem, proximidade, concatenação/i);
+    expect(md).toMatch(/NÃO avalie a posição do aviso/i);
+    // Objetivo não-bloqueante e offer sem CTA/urgência no .md (política: CTA não
+    // exigido — a menção textual existe apenas para negar a exigência).
+    expect(md).toMatch(/ausência textual dele nunca reprova/i);
+    expect(md).toMatch(/CTA e hook não são exigidos/i);
+    expect(md).toMatch(/não há "CTA de compra esperado" em campanha de oferta/i);
   });
 });

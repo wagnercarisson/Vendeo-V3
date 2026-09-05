@@ -246,7 +246,7 @@ describe('ImageGenerationService.validatePrompts', () => {
     expect(result.errors.some((e: string) => e.includes('{{discountedPrice}}'))).toBe(true);
   });
 
-  it('validatePrompts propaga legalNotice (mandatoryArtworkText), campaignDetails e additionalDetails ao revisor', () => {
+  it('validatePrompts propaga legalNotice splitado (requiredArtworkText/illustrativeNotice), campaignDetails e additionalDetails ao revisor', () => {
     mockLoad.mockImplementation((name: string) => {
       if (name === 'campaign-image-director-offer') {
         return 'Prompt de direção visual';
@@ -269,9 +269,14 @@ describe('ImageGenerationService.validatePrompts', () => {
     const reviewerCall = mockLoad.mock.calls.find((call) => call[0] === 'campaign-image-reviewer');
     expect(reviewerCall).toBeDefined();
     const vars = reviewerCall![1] as Record<string, string>;
-    expect(vars).toHaveProperty('mandatoryArtworkTextSection');
+    // Split canônico (45-08): texto = constante canônica pura → aviso isolado na
+    // seção própria; sem seção de texto obrigatório e sem mandatoryArtworkTextSection.
+    expect(vars).not.toHaveProperty('mandatoryArtworkTextSection');
+    expect(vars).toHaveProperty('requiredArtworkTextSection');
+    expect(vars).toHaveProperty('illustrativeNoticeSection');
+    expect(vars.requiredArtworkTextSection).toBe('');
+    expect(vars.illustrativeNoticeSection).toContain('Imagem meramente ilustrativa');
     expect(vars).toHaveProperty('authorizedContextSection');
-    expect(vars.mandatoryArtworkTextSection).toContain('Imagem meramente ilustrativa');
     expect(vars.authorizedContextSection).toContain('Frete grátis acima de R$ 100');
     expect(vars.authorizedContextSection).toContain('Válido somente em loja física');
   });
@@ -476,7 +481,7 @@ describe('ImageGenerationService.validatePrompts', () => {
 });
 
 describe('ImageGenerationService.generateImage', () => {
-  it('generateImage propaga os 3 campos ao review() no fluxo REAL de geração', async () => {
+  it('generateImage propaga os campos splitados e contexto ao review() no fluxo REAL de geração', async () => {
     const mockProvider = {
       name: 'test',
       generateImage: vi.fn().mockResolvedValue({
@@ -515,9 +520,11 @@ describe('ImageGenerationService.generateImage', () => {
     );
 
     const brief = createMinimalBrief({
-      mandatoryArtworkText: 'Imagem meramente ilustrativa',
+      mandatoryArtworkText: `${ILLUSTRATIVE_NOTICE_TEXT}\nTexto promocional livre`,
       campaignDetails: 'Frete grátis acima de R$ 100',
       additionalDetails: 'Válido somente em loja física',
+      sensitiveConstraints: 'Não exibir modelo sem camisa',
+      objective: 'Vender mais',
     });
 
     const result = await service.generateImage(brief, createContext());
@@ -525,7 +532,13 @@ describe('ImageGenerationService.generateImage', () => {
     expect(result.success).toBe(true);
     expect(mockImageReview.review).toHaveBeenCalledTimes(1);
     const reviewInput = mockImageReview.review.mock.calls[0][1];
-    expect(reviewInput.legalNoticeText).toBe('Imagem meramente ilustrativa');
+    // Split canônico (45-08): mesma origem do Diretor — requiredArtworkText = texto
+    // livre; illustrativeNotice = aviso fixo; legalNoticeText concatenado NÃO existe.
+    expect(reviewInput.legalNoticeText).toBeUndefined();
+    expect(reviewInput.requiredArtworkText).toBe('Texto promocional livre');
+    expect(reviewInput.illustrativeNotice).toBe(ILLUSTRATIVE_NOTICE_TEXT);
+    expect(reviewInput.sensitiveConstraints).toBe('Não exibir modelo sem camisa');
+    expect(reviewInput.objective).toBe('Vender mais');
     expect(reviewInput.campaignDetails).toBe('Frete grátis acima de R$ 100');
     expect(reviewInput.additionalDetails).toBe('Válido somente em loja física');
   });
@@ -1094,6 +1107,57 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
     expect(result.success).toBe(true);
     expect(mockImageReview.review).toHaveBeenCalledTimes(1);
     expect(mockImageReview.review.mock.calls[0][2]).toEqual(['data:image/jpeg;base64,test']);
+  });
+
+  it('45-08 prova 11: identidade NUNCA é enviada como imagem ao Revisor (contexto logo/VS com asset)', async () => {
+    const mockProvider = {
+      name: 'test',
+      generateImage: vi.fn().mockResolvedValue({
+        success: true,
+        imageBase64: 'aGVsbG8=',
+        mimeType: 'image/png',
+        usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+      }),
+    };
+    const mockLoad = vi.fn((name: string) => {
+      if (name === 'campaign-image-director-offer') return 'Prompt sem placeholders';
+      if (name === 'campaign-image-reviewer') return 'Revise sem placeholders';
+      return '';
+    });
+    const mockInputValidation = { validate: vi.fn().mockResolvedValue({ classification: 'match' }) };
+    const mockImageReview = {
+      review: vi.fn().mockResolvedValue({ passed: true, issues: [], failureType: null }),
+      buildReviewPromptVariables: vi.fn(),
+    };
+    const mockMetricsWriter = { write: vi.fn().mockResolvedValue(undefined) };
+    const service = new ImageGenerationService(
+      mockProvider as any,
+      { load: mockLoad, clearCache: vi.fn() } as unknown as PromptLoader,
+      mockInputValidation as any,
+      mockImageReview as any,
+      mockMetricsWriter as any
+    );
+
+    const brief = createMinimalBrief({
+      productImages: [
+        { role: 'primary', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,product-primary' },
+      ],
+    });
+    // Contexto com logotipo ativo — identidade resolvida com asset disponível.
+    const logoContext = createContext({
+      identity: { state: 'logo', imageUrl: 'data:image/png;base64,store-logo', directive: '' },
+    });
+
+    const result = await service.generateImage(brief, logoContext);
+    expect(result.success).toBe(true);
+    expect(mockImageReview.review).toHaveBeenCalledTimes(1);
+    // Referências do review = SOMENTE imagens do produto (nunca identity.imageUrl).
+    const references = mockImageReview.review.mock.calls[0][2] as string[];
+    expect(references).toEqual(['data:image/jpeg;base64,product-primary']);
+    expect(references.join(' ')).not.toContain('store-logo');
+    // A identidade chega apenas como instrução textual do diretor (sem imagem).
+    const directorCall = mockLoad.mock.calls.find((c) => c[0] === 'campaign-image-director-offer');
+    expect(directorCall).toBeDefined();
   });
 
   it('D5 invariante (a): placeholders dos templates ⊆ chaves fornecidas por intent (offer/spotlight/exclusive)', () => {

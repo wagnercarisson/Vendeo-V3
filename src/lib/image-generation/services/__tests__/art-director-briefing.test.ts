@@ -350,7 +350,10 @@ describe('blocos contextuais — presente/ausente + deduplicação + saneamento 
     expect(countOccurrences(vars.campaignFactsSection, '**Validade da oferta:**')).toBe(1);
     expect(countOccurrences(vars.commercialDetailsSection, '**Detalhes da campanha:**')).toBe(1);
     expect(countOccurrences(vars.commercialDetailsSection, '**Detalhes adicionais:**')).toBe(1);
-    expect(countOccurrences(vars.commercialDetailsSection, 'Disponível: Restam poucas unidades')).toBe(1);
+    // 45-08: availabilityNotes saiu da montagem ATIVA (commercialDetailsSection) —
+    // zero ocorrências no bloco; a regra continua apenas no repertório legado.
+    expect(countOccurrences(vars.commercialDetailsSection, 'Disponível: Restam poucas unidades')).toBe(0);
+    expect(vars.commercialDetailsSection).not.toContain('Restam poucas unidades');
     expect(countOccurrences(vars.requiredArtworkTextSection, '"Texto promocional"')).toBe(1);
     expect(countOccurrences(vars.illustrativeNoticeSection, ILLUSTRATIVE_NOTICE_TEXT)).toBe(1);
     expect(countOccurrences(vars.constraintsSection, 'Não exibir modelo sem camisa')).toBe(1);
@@ -450,8 +453,7 @@ describe('blocos contextuais — presente/ausente + deduplicação + saneamento 
     expect(secondVars).toEqual(firstVars);
   });
 
-  it('F45-06a/06b: identityReferenceSection orienta respiro/sem corte nas bordas para todos os intents', () => {
-    const context = createContext();
+  it('F45-06a/06b + 45-08: identityReferenceSection orienta área segura/margem nas 4 bordas/posição secundária para todos os intents', () => {
     const logoContext = createContext({
       identity: { state: 'logo', imageUrl: 'data:image/png;base64,logo', directive: '' },
     });
@@ -459,9 +461,60 @@ describe('blocos contextuais — presente/ausente + deduplicação + saneamento 
     for (const campaignIntent of ['spotlight', 'offer', 'exclusive'] as const) {
       const brief = createMinimalBrief({ campaignIntent });
       const section = identityReferenceSection(brief, logoContext);
-      expect(section, `intent ${campaignIntent} sem respiro`).toContain('respiro adequado');
-      expect(section, `intent ${campaignIntent} sem bordas`).toContain('sem cortes nas bordas da arte');
+      expect(section, `intent ${campaignIntent} sem área segura`).toContain('área segura da arte');
+      expect(section, `intent ${campaignIntent} sem margem visível`).toContain('margem visível nas quatro bordas');
+      expect(section, `intent ${campaignIntent} sem posição secundária`).toContain('secundário ao conteúdo principal');
+      expect(section, `intent ${campaignIntent} sem fidelidade`).toContain('fidelidade');
+      expect(section, `intent ${campaignIntent} sem anti-invenção`).toContain('NÃO editar, redesenhar, distorcer, reinterpretar, completar nem inventar');
+      expect(section, `intent ${campaignIntent} com corte na borda`).not.toContain('sem cortes nas bordas da arte');
     }
+  });
+
+  it('45-08 prova 12: os 4 templates do diretor recebem a orientação preventiva de identidade (área segura/margem) quando há ativo', () => {
+    const logoContext = createContext({
+      identity: { state: 'logo', imageUrl: 'data:image/png;base64,logo', directive: '' },
+    });
+    const vsContext = createContext({
+      identity: { state: 'visual_signature', imageUrl: 'data:image/png;base64,vs', directive: '' },
+    });
+
+    for (const context of [logoContext, vsContext]) {
+      for (const intent of ['offer', 'spotlight', 'exclusive'] as const) {
+        const brief = createMinimalBrief({ campaignIntent: intent });
+        const vars = buildModuleVars(brief, context);
+        const prompt = new PromptLoader().load(`campaign-image-director-${intent}`, vars);
+        expect(prompt, `intent ${intent}`).toContain('## Identidade da Loja');
+        expect(vars.identityReferenceSection, `intent ${intent} sem área segura`).toContain('área segura da arte');
+        expect(vars.identityReferenceSection, `intent ${intent} sem margem visível`).toContain('margem visível nas quatro bordas');
+        expect(vars.identityReferenceSection, `intent ${intent} sem secundário`).toContain('secundário ao conteúdo principal');
+        expect(vars.identityReferenceSection, `intent ${intent} sem fidelidade`).toContain('fidelidade');
+      }
+    }
+  });
+
+  it('45-08 prova 12b: base + text_only também recebem o bloco de identidade canônico', () => {
+    const textOnly = createContext();
+    const baseVars = buildModuleVars(createMinimalBrief(), textOnly);
+    const basePrompt = new PromptLoader().load('campaign-image-director', baseVars);
+    expect(basePrompt).toContain('## Identidade da Loja');
+    expect(baseVars.identityReferenceSection).toMatch(/cores e a linguagem visual/i);
+    expect(baseVars.identityReferenceSection).toMatch(/Não colocar logotipo nem gerar assinatura visual/i);
+  });
+
+  it('45-08 prova 10: availabilityNotes NÃO entra na montagem ativa do Diretor (commercialDetailsSection sem Disponibilidade)', () => {
+    const brief = createMinimalBrief({
+      campaignIntent: 'offer',
+      availabilityNotes: 'Restam poucas unidades',
+      campaignDetails: 'Aproveite a oferta',
+    });
+    const vars = buildModuleVars(brief, createContext());
+    expect(vars.commercialDetailsSection).not.toContain('Disponível');
+    expect(vars.commercialDetailsSection).not.toContain('Disponibilidade');
+    expect(vars.commercialDetailsSection).not.toContain('Restam poucas unidades');
+    // O detalhe comercial autorizado continua presente como contexto.
+    expect(vars.commercialDetailsSection).toContain('Aproveite a oferta');
+    // Builder legado permanece com a regra (schema/domínio/testes legados intactos).
+    expect(buildCommercialRepertoire(brief)).toContain('- Disponível: Restam poucas unidades');
   });
 
   it('F45-06b: texto obrigatório multilinha ganha separação visual em qualquer intent (comum por conteúdo, não por intent)', () => {
