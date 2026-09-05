@@ -26,11 +26,17 @@ A intenção comercial da campanha define o que é esperado em termos de preço,
 
 {{validationContextSection}}
 
-{{mandatoryArtworkTextSection}}
+{{requiredArtworkTextSection}}
+
+{{illustrativeNoticeSection}}
 
 {{validityTextSection}}
 
 {{authorizedContextSection}}
+
+{{sensitiveConstraintsSection}}
+
+{{objectiveSection}}
 
 {{referenceImagesContextSection}}
 

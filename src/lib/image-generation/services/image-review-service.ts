@@ -23,6 +23,11 @@ export interface ImageReviewInput {
    * validityText ← commercial.validity.displayText quando validity.enabled. */
   requiredArtworkText?: string;
   illustrativeNotice?: string;
+  /** sensitiveConstraints ← brief.creativeContext.sensitiveConstraints (mesma
+   * origem do Diretor — constraintsSection); objective ← brief.commercial.objective
+   * (mesma origem do Diretor — campaignFactsSection). Contexto não-bloqueante. */
+  sensitiveConstraints?: string;
+  objective?: string;
   campaignDetails?: string;
   additionalDetails?: string;
   validityText?: string;
@@ -51,6 +56,8 @@ export class ImageReviewService {
       validationContextSection: this.buildValidationContextSection(input.validationContext),
       requiredArtworkTextSection: this.buildRequiredArtworkTextSection(input.requiredArtworkText),
       illustrativeNoticeSection: this.buildIllustrativeNoticeSection(input.illustrativeNotice),
+      sensitiveConstraintsSection: this.buildSensitiveConstraintsSection(input.sensitiveConstraints),
+      objectiveSection: this.buildObjectiveSection(input.objective),
       authorizedContextSection: this.buildAuthorizedContextSection(input.campaignDetails, input.additionalDetails),
       validityTextSection: this.buildValidityTextSection(input.validityText),
       referenceImagesContextSection: this.buildReferenceImagesContextSection(referenceCount),
@@ -227,6 +234,47 @@ export class ImageReviewService {
       "A campanha possui o aviso ilustrativo fixo abaixo:",
       "",
       '"' + sanitized + '"',
+    ].join("\n");
+  }
+
+  /**
+   * Seção de restrições sensíveis (45-08): monta APENAS o heading + o valor
+   * informado + a identificação da natureza. Toda restrição listada vale para a
+   * arte. Políticas de severidade/tolerância vivem no `.md` (violação
+   * claramente visível), não aqui.
+   */
+  private buildSensitiveConstraintsSection(constraints: string | undefined): string {
+    const sanitized = this.sanitizePromptText(constraints?.trim() ?? "");
+    if (!sanitized) return "";
+    const items = sanitized
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => `- ${line}`);
+    return [
+      "## Restrições Sensíveis",
+      "",
+      "As restrições sensíveis informadas pelo lojista abaixo valem para a arte:",
+      "",
+      ...items,
+    ].join("\n");
+  }
+
+  /**
+   * Seção de objetivo da campanha (45-08): contexto explicativo das escolhas do
+   * Diretor — NÃO é conteúdo obrigatório na arte. Monta APENAS heading + valor +
+   * identificação da natureza. Sem regra de julgamento (ausência textual nunca
+   * reprova — política no `.md`).
+   */
+  private buildObjectiveSection(objective: string | undefined): string {
+    const sanitized = this.sanitizePromptText(objective?.trim() ?? "");
+    if (!sanitized) return "";
+    return [
+      "## Objetivo da Campanha",
+      "",
+      "Contexto explicativo das escolhas do Diretor de Arte — não é conteúdo obrigatório na arte:",
+      "",
+      sanitized,
     ].join("\n");
   }
 

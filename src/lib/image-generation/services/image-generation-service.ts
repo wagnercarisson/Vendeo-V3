@@ -416,6 +416,8 @@ export class ImageGenerationService {
           : undefined,
         validationContext,
         ...this.buildReviewerLegalText(brief),
+        sensitiveConstraints: brief.creativeContext.sensitiveConstraints,
+        objective: brief.commercial.objective,
         campaignDetails: brief.commercial.campaignDetails,
         additionalDetails: brief.commercial.additionalDetails,
         validityText: brief.commercial.validity?.enabled
@@ -640,6 +642,8 @@ export class ImageGenerationService {
         ? this.formatPriceBRL(brief.commercial.originalPriceCents ?? 0)
         : undefined,
       ...this.buildReviewerLegalText(brief),
+      sensitiveConstraints: brief.creativeContext.sensitiveConstraints,
+      objective: brief.commercial.objective,
       campaignDetails: brief.commercial.campaignDetails,
       additionalDetails: brief.commercial.additionalDetails,
       validityText: brief.commercial.validity?.enabled
