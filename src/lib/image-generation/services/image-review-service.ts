@@ -15,10 +15,14 @@ export interface ImageReviewInput {
   originalPrice?: string;
   discountedPrice?: string;
   validationContext?: ValidationContext;
-  /** Campos originados do domínio CampaignBrief (D8/D9):
-   * legalNoticeText ← commercial.legalNotice.text quando enabled === true;
+  /** Campos originados do domínio CampaignBrief (D8/D9) via split canônico
+   * `splitDirectorLegalText` (art-director-briefing.ts) — o MESMO split que
+   * alimenta o Diretor também alimenta o Revisor (45-08):
+   * requiredArtworkText ← parte do texto livre do lojista (merchantText) quando legalNotice.enabled;
+   * illustrativeNotice ← aviso ilustrativo fixo (constante canônica) quando presente;
    * validityText ← commercial.validity.displayText quando validity.enabled. */
-  legalNoticeText?: string;
+  requiredArtworkText?: string;
+  illustrativeNotice?: string;
   campaignDetails?: string;
   additionalDetails?: string;
   validityText?: string;
@@ -45,7 +49,8 @@ export class ImageReviewService {
       expectedImageTreatment: this.buildExpectedImageTreatment(intent, input.preserveImageContext),
       expectedCommercialTone: this.buildExpectedCommercialTone(intent),
       validationContextSection: this.buildValidationContextSection(input.validationContext),
-      mandatoryArtworkTextSection: this.buildMandatoryArtworkTextSection(input.legalNoticeText),
+      requiredArtworkTextSection: this.buildRequiredArtworkTextSection(input.requiredArtworkText),
+      illustrativeNoticeSection: this.buildIllustrativeNoticeSection(input.illustrativeNotice),
       authorizedContextSection: this.buildAuthorizedContextSection(input.campaignDetails, input.additionalDetails),
       validityTextSection: this.buildValidityTextSection(input.validityText),
       referenceImagesContextSection: this.buildReferenceImagesContextSection(referenceCount),
@@ -187,27 +192,41 @@ export class ImageReviewService {
     return value.replace(/\{\{/g, "{").replace(/\}\}/g, "}");
   }
 
-  private buildMandatoryArtworkTextSection(text: string | undefined): string {
+  /**
+   * Seção de texto obrigatório informado pelo lojista (45-08): monta APENAS o
+   * heading + o valor sanitizado entre aspas + a identificação da natureza do
+   * campo. Políticas de severidade/tolerância vivem no `.md` do Revisor.
+   * Sem regra de posição/lateral e sem tratar o aviso ilustrativo como parte
+   * deste texto (naturezas independentes — T-45-08a).
+   */
+  private buildRequiredArtworkTextSection(text: string | undefined): string {
     const sanitized = this.sanitizePromptText(text?.trim() ?? "");
     if (!sanitized) return "";
     return [
-      "## Texto Obrigatorio na Arte",
+      "## Texto Obrigatório na Arte",
       "",
-      "O lojista informou o conteudo abaixo como referencia obrigatoria para a arte:",
+      "O texto abaixo foi informado pelo lojista como referência obrigatória para a arte:",
       "",
       '"' + sanitized + '"',
+    ].join("\n");
+  }
+
+  /**
+   * Seção do aviso ilustrativo fixo habilitado (45-08): monta APENAS o heading +
+   * o valor sanitizado entre aspas + a identificação da natureza do campo.
+   * Políticas de severidade/tolerância vivem no `.md` do Revisor.
+   * NÃO contém regra de posição/lateral nem trata o aviso como parte de outro
+   * texto legal (T-45-08a).
+   */
+  private buildIllustrativeNoticeSection(notice: string | undefined): string {
+    const sanitized = this.sanitizePromptText(notice?.trim() ?? "");
+    if (!sanitized) return "";
+    return [
+      "## Aviso Ilustrativo",
       "",
-      "Avalie se a arte preserva o conteudo essencial, os fatos e o sentido comercial informado. O texto pode ser reorganizado, quebrado em linhas, distribuido em blocos, cards, selos ou areas diferentes da composicao.",
+      "A campanha possui o aviso ilustrativo fixo abaixo:",
       "",
-      "Nao reprove apenas por mudanca de ordem, quebra de linha, pontuacao, hifen, barra ou separacao visual, desde que preco, quantidade, datas, condicao promocional e sentido estejam corretos e legiveis.",
-      "",
-      "Reprove somente se houver omissao de informacao essencial, erro factual, alteracao de sentido, ambiguidade comercial relevante, truncamento, corte ou ilegibilidade.",
-      "",
-      "Se o conteudo for aviso legal ou regulatorio, aplique maior rigor literal: nao aceite alteracao, omissao ou reescrita que possa mudar o alcance legal do aviso.",
-      "",
-      'Quando reprovar por texto obrigatorio, reporte como issue CRITICA com type "illegible_text".',
-      "",
-      "Nao repetir o texto obrigatorio em legenda; o texto e escopo da arte, nao da legenda.",
+      '"' + sanitized + '"',
     ].join("\n");
   }
 

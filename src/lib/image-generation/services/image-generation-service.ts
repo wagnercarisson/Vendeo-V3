@@ -415,9 +415,7 @@ export class ImageGenerationService {
           ? this.formatPriceBRL(brief.commercial.originalPriceCents ?? 0)
           : undefined,
         validationContext,
-        legalNoticeText: brief.commercial.legalNotice?.enabled
-          ? brief.commercial.legalNotice.text
-          : undefined,
+        ...this.buildReviewerLegalText(brief),
         campaignDetails: brief.commercial.campaignDetails,
         additionalDetails: brief.commercial.additionalDetails,
         validityText: brief.commercial.validity?.enabled
@@ -641,9 +639,7 @@ export class ImageGenerationService {
       originalPrice: (brief.commercial.originalPriceCents ?? 0) > 0
         ? this.formatPriceBRL(brief.commercial.originalPriceCents ?? 0)
         : undefined,
-      legalNoticeText: brief.commercial.legalNotice?.enabled
-        ? brief.commercial.legalNotice.text
-        : undefined,
+      ...this.buildReviewerLegalText(brief),
       campaignDetails: brief.commercial.campaignDetails,
       additionalDetails: brief.commercial.additionalDetails,
       validityText: brief.commercial.validity?.enabled
@@ -776,6 +772,27 @@ export class ImageGenerationService {
 
   private formatPriceBRL(cents: number | undefined): string {
     return formatPriceBRL(cents);
+  }
+
+  /**
+   * Split canônico do texto legal (45-08): o MESMO `splitDirectorLegalText` que
+   * alimenta o Diretor alimenta o Revisor — `requiredArtworkText` (texto livre
+   * do lojista) e `illustrativeNotice` (aviso fixo canônico) como naturezas
+   * independentes. Quando `legalNotice` não está habilitado, ambos ficam
+   * `undefined` (nenhuma seção entra na revisão).
+   */
+  private buildReviewerLegalText(brief: CampaignBrief): {
+    requiredArtworkText?: string;
+    illustrativeNotice?: string;
+  } {
+    if (!brief.commercial.legalNotice?.enabled) return {};
+    const { merchantText, illustrativeNotice } = splitDirectorLegalText(
+      brief.commercial.legalNotice.text ?? ""
+    );
+    return {
+      requiredArtworkText: merchantText || undefined,
+      illustrativeNotice: illustrativeNotice || undefined,
+    };
   }
 
   // Ponte explícita media.images → provider/input-validation (F39-16, F41-20 D7).
