@@ -478,6 +478,11 @@ describe('blocos contextuais — presente/ausente + deduplicação + saneamento 
       identity: { state: 'visual_signature', imageUrl: 'data:image/png;base64,vs', directive: '' },
     });
 
+    const expectedPosition = new Map([
+      [logoContext, 'secundário ao conteúdo principal'],
+      [vsContext, 'secundária ao conteúdo principal'],
+    ]);
+
     for (const context of [logoContext, vsContext]) {
       for (const intent of ['offer', 'spotlight', 'exclusive'] as const) {
         const brief = createMinimalBrief({ campaignIntent: intent });
@@ -486,10 +491,48 @@ describe('blocos contextuais — presente/ausente + deduplicação + saneamento 
         expect(prompt, `intent ${intent}`).toContain('## Identidade da Loja');
         expect(vars.identityReferenceSection, `intent ${intent} sem área segura`).toContain('área segura da arte');
         expect(vars.identityReferenceSection, `intent ${intent} sem margem visível`).toContain('margem visível nas quatro bordas');
-        expect(vars.identityReferenceSection, `intent ${intent} sem secundário`).toContain('secundário ao conteúdo principal');
+        expect(vars.identityReferenceSection, `intent ${intent} com concordância errada`).toContain(expectedPosition.get(context)!);
         expect(vars.identityReferenceSection, `intent ${intent} sem fidelidade`).toContain('fidelidade');
       }
     }
+  });
+
+  it('45-08 close-out: logotipo mantém concordância masculina; assinatura visual usa concordância feminina', () => {
+    const logoContext = createContext({
+      identity: { state: 'logo', imageUrl: 'data:image/png;base64,logo', directive: '' },
+    });
+    const vsContext = createContext({
+      identity: { state: 'visual_signature', imageUrl: 'data:image/png;base64,vs', directive: '' },
+    });
+
+    // (1) Logotipo → masculino: "o logotipo ... fornecido ... secundário".
+    const logoSection = identityReferenceSection(createMinimalBrief(), logoContext);
+    expect(logoSection).toContain('o logotipo da loja fornecido como imagem de referência');
+    expect(logoSection).toContain('Manter o logotipo integralmente');
+    expect(logoSection).toContain('o logotipo permaneça legível, reconhecível e secundário ao conteúdo principal');
+    // Não pode usar formas femininas para o logotipo.
+    expect(logoSection).not.toContain('a logotipo');
+    expect(logoSection).not.toContain('logotipo fornecida');
+
+    // (2) Assinatura visual → feminino: "a assinatura visual ... fornecida ... secundária".
+    const vsSection = identityReferenceSection(createMinimalBrief(), vsContext);
+    expect(vsSection).toContain('a assinatura visual da loja fornecida como imagem de referência');
+    expect(vsSection).toContain('Manter a assinatura visual integralmente');
+    expect(vsSection).toContain('a assinatura visual permaneça legível, reconhecível e secundária ao conteúdo principal');
+    // Não pode usar formas masculinas para a assinatura visual.
+    expect(vsSection).not.toContain('o assinatura visual');
+    expect(vsSection).not.toContain('assinatura visual fornecido');
+    expect(vsSection).not.toContain('assinatura visual permaneça legível, reconhecível e secundário ao');
+    // Regra/ordem/nível de detalhe idênticos entre as duas variações.
+    const antiInvention = 'NÃO editar, redesenhar, distorcer, reinterpretar, completar nem inventar elementos do ativo.';
+    expect(logoSection).toContain(antiInvention);
+    expect(vsSection).toContain(antiInvention);
+    expect(logoSection).toContain('área segura da arte');
+    expect(vsSection).toContain('área segura da arte');
+    expect(logoSection).toContain('margem visível nas quatro bordas');
+    expect(vsSection).toContain('margem visível nas quatro bordas');
+    // VS mantém a linha extra de "não adicionar logotipo".
+    expect(vsSection).toContain('Não adicionar logotipo além da assinatura visual fornecida.');
   });
 
   it('45-08 prova 12b: base + text_only também recebem o bloco de identidade canônico', () => {
