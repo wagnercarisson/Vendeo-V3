@@ -402,10 +402,18 @@ export function identityReferenceSection(brief: CampaignBrief, context: Resolved
   // seção Identidade da Loja") e recebem este bloco via {{identityReferenceSection}}.
   // Nada de repetição da orientação entre `.md` e bloco (evitar redundância).
   if (state === "logo" || state === "visual_signature") {
-    const element = state === "logo" ? "logotipo" : "assinatura visual";
+    // Concordância de gênero do elemento de identidade (45-08 close-out): logotipo
+    // é masculino ("o logotipo ... fornecido ... secundário"); assinatura visual é
+    // feminino ("a assinatura visual ... fornecida ... secundária"). Mesma regra,
+    // mesma ordem e mesmo nível de detalhe — apenas o gênero gramatical concorda.
+    const isFeminine = state === "visual_signature";
+    const element = isFeminine ? "assinatura visual" : "logotipo";
+    const article = isFeminine ? "a" : "o";
+    const participle = isFeminine ? "fornecida" : "fornecido";
+    const positionAdjective = isFeminine ? "secundária" : "secundário";
     if (hasAsset) {
       parts.push(
-        `Assinar a campanha com o ${element} da loja fornecido como imagem de referência, reproduzindo o ativo com fidelidade. NÃO editar, redesenhar, distorcer, reinterpretar, completar nem inventar elementos do ativo. Manter o ${element} integralmente dentro da área segura da arte, com margem visível nas quatro bordas — nenhuma parte relevante deve encostar, ultrapassar ou ficar cortada. A posição é livre na composição, desde que o ${element} permaneça legível, reconhecível e secundário ao conteúdo principal da peça.`
+        `Assinar a campanha com ${article} ${element} da loja ${participle} como imagem de referência, reproduzindo o ativo com fidelidade. NÃO editar, redesenhar, distorcer, reinterpretar, completar nem inventar elementos do ativo. Manter ${article} ${element} integralmente dentro da área segura da arte, com margem visível nas quatro bordas — nenhuma parte relevante deve encostar, ultrapassar ou ficar cortada. A posição é livre na composição, desde que ${article} ${element} permaneça legível, reconhecível e ${positionAdjective} ao conteúdo principal da peça.`
       );
       if (state === "visual_signature") {
         parts.push("Não adicionar logotipo além da assinatura visual fornecida.");
