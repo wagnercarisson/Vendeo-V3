@@ -868,3 +868,141 @@ describe('ImageReviewService — provas 45-08 (contrato splitado Diretor × Revi
     expect(md).toMatch(/não há "CTA de compra esperado" em campanha de oferta/i);
   });
 });
+
+describe('ImageReviewService — rodada de ajuste focado 45-08 (revisão humana pós-checkpoint)', () => {
+  let mockLoader: { load: ReturnType<typeof vi.fn>; clearCache: ReturnType<typeof vi.fn> };
+  let service: ImageReviewService;
+
+  beforeEach(() => {
+    mockLoader = {
+      load: vi.fn().mockReturnValue('review prompt with {{expectedBadgeBehavior}}'),
+      clearCache: vi.fn(),
+    };
+    service = new ImageReviewService(mockLoader as unknown as PromptLoader);
+  });
+
+  function lastVars(): Record<string, string> {
+    return mockLoader.load.mock.calls[0][1] as Record<string, string>;
+  }
+
+  function readReviewerMd(): string {
+    return readFileSync(path.join(process.cwd(), 'prompts', 'campaign-image-reviewer.md'), 'utf-8');
+  }
+
+  it('rodada 1 — offer background: expectedImageTreatment orienta isolar mas NÃO bloqueia fundo contextual automaticamente', async () => {
+    await service.review('data:image/jpeg;base64,abc', {
+      productName: 'Produto Teste',
+      storeName: 'Loja Teste',
+      campaignIntent: 'offer',
+      preserveImageContext: false,
+    });
+    const treatment = lastVars().expectedImageTreatment;
+    // Diretor segue orientado a isolar o produto em fundo comercial limpo.
+    expect(treatment).toContain('isolar o produto em fundo comercial limpo');
+    // Revisor trata como expectativa visual, não como bloqueio automático.
+    expect(treatment).not.toContain('NÃO é aceito');
+    expect(treatment).not.toMatch(/fundo contextual[^.]*não é aceito/i);
+    expect(treatment).toMatch(/não é bloqueio automático/i);
+    expect(treatment).toMatch(/é minor e passa quando a peça permanece publicável/i);
+    expect(treatment).toMatch(/prejudicar claramente a identificação do produto|prejudicar claramente a identificação do produto, a legibilidade/i);
+  });
+
+  it('rodada 1b — .md afirma que fundo contextual publicável não bloqueia isoladamente', () => {
+    const md = readReviewerMd();
+    expect(md).toMatch(/não bloqueia isoladamente/i);
+    expect(md).toMatch(/não[^.]*bloqueio automático/i);
+    expect(md).toMatch(/apenas diferente do esperado é `minor` e passa/i);
+  });
+
+  it('rodada 2 — ausência de originalPrice não significa ausência de preço (dedução removida do .md)', () => {
+    const md = readReviewerMd();
+    expect(md).not.toMatch(/estiver vazio \(zerado\), nenhum preço foi informado/i);
+    expect(md).not.toContain('nenhum preço foi informado');
+    expect(md).toMatch(/NÃO\*\* significa ausência de preço na campanha/i);
+    expect(md).toMatch(/sem exigir preço original/i);
+  });
+
+  it('rodada 2b — expectedPriceBehavior mantém os 3 intents corretos', async () => {
+    await service.review('data:image/jpeg;base64,abc', {
+      productName: 'P', storeName: 'L', campaignIntent: 'offer', discountedPrice: 'R$ 19,90',
+    });
+    expect(lastVars().expectedPriceBehavior).toContain('DEVE exibir preço promocional');
+    expect(lastVars().expectedPriceBehavior).toContain('R$ 19,90');
+
+    mockLoader.load.mockClear();
+    await service.review('data:image/jpeg;base64,abc', {
+      productName: 'P', storeName: 'L', campaignIntent: 'spotlight', discountedPrice: 'R$ 29,90',
+    });
+    expect(lastVars().expectedPriceBehavior).toContain('DEVE exibir preço único');
+    expect(lastVars().expectedPriceBehavior).toContain('R$ 29,90');
+
+    mockLoader.load.mockClear();
+    await service.review('data:image/jpeg;base64,abc', {
+      productName: 'P', storeName: 'L', campaignIntent: 'exclusive',
+    });
+    expect(lastVars().expectedPriceBehavior).toContain('NÃO deve exibir preço');
+  });
+
+  it('rodada 3 — escassez não autorizada permanece critical; disclaimers genéricos neutros podem ser minor', () => {
+    const md = readReviewerMd();
+    // Escassez não autorizada é invented_information critical.
+    expect(md).toMatch(/alegações de escassez/i);
+    expect(md).toMatch(/estoque limitado.*últimas unidades.*poucas unidades/i);
+    expect(md).toMatch(/escassez não autorizadas são `critical`/i);
+    expect(md).toMatch(/não\*\* são minor — são `invented_information` critical/i);
+    // Disclaimers genéricos neutros podem continuar minor.
+    expect(md).toMatch(/consulte condições.*sujeito a disponibilidade/i);
+    expect(md).toMatch(/minor, salvo se contrariarem dado explícito/i);
+    // O exemplo de tom minor NÃO usa mais "últimas unidades" como tom leve.
+    expect(md).not.toMatch(/Tom levemente desalinhado[^.]*"Últimas unidades"/);
+  });
+
+  it('rodada 4 — wrong_product_name exige divergência clara e inequívoca; .md tolera ambiguidade tipográfica', () => {
+    const md = readReviewerMd();
+    expect(md).toMatch(/divergência \*\*clara e inequívoca\*\* do nome do produto/i);
+    expect(md).toMatch(/Não faça comparação de OCR rígida caractere por caractere/i);
+    expect(md).toMatch(/l`.*`I`.*`1|`l`\/`I`\/`1`/i);
+    expect(md).toMatch(/`O`\/`0`|O` e `0/i);
+    expect(md).toMatch(/Coca Cola 2l Original/i);
+    expect(md).toMatch(/Coca Cola 21 Original/i);
+    expect(md).toMatch(/trate como correspondência válida/i);
+    expect(md).toMatch(/NÃO use OCR rígido caractere por caractere/i);
+    expect(md).toMatch(/Quando a dúvida for entre texto correto e divergência real → `minor` e aprove/i);
+    expect(md).toMatch(/Permanece crítico:/i);
+  });
+
+  it('rodada 4b — decisão: dúvida objetiva → minor → approve (regra final preservada)', () => {
+    const md = readReviewerMd();
+    expect(md).toMatch(/Na dúvida entre `minor` e `critical`, classifique como `minor`/i);
+    expect(md).toMatch(/Se o problema não impede o lojista de publicar a peça com confiança, a revisão \*\*passa\*\*/i);
+  });
+
+  it('rodada 5 — badge permanece intacto (offer obrigatório exato)', async () => {
+    await service.review('data:image/jpeg;base64,abc', {
+      productName: 'P', storeName: 'L', campaignIntent: 'offer', badgeText: 'Oferta Imperdível',
+    });
+    expect(lastVars().expectedBadgeBehavior).toBe(
+      "A imagem DEVE exibir badge promocional. O texto deve ser 'Oferta Imperdível'. Badge promocional é obrigatório."
+    );
+  });
+
+  it('rodada 6 — prompt final do Revisor sem placeholders residuais após o ajuste (montagem real)', () => {
+    const realService = new ImageReviewService();
+    const vars = realService.buildReviewPromptVariables({
+      productName: 'Coca Cola 2l Original',
+      storeName: 'Loja Teste',
+      campaignIntent: 'offer',
+      originalPrice: '',
+      discountedPrice: 'R$ 8,90',
+      badgeText: 'Oferta',
+    });
+    const prompt = new PromptLoader().load('campaign-image-reviewer', vars);
+    expect(prompt).not.toMatch(/\{\{[a-zA-Z]+\}\}/);
+  });
+
+  it('rodada 7 — fundo contextual apenas diferente do esperado → minor/passa (exemplo explícito no .md)', () => {
+    const md = readReviewerMd();
+    expect(md).toMatch(/um fundo contextual apenas diferente do esperado é `minor` e passa/i);
+    expect(md).not.toMatch(/Fundo contextual NÃO é aceito/i);
+  });
+});

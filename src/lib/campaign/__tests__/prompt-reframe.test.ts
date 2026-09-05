@@ -132,6 +132,18 @@ describe("prompt reframe D6 (testes 16-17 + checks de conteúdo)", () => {
     }
   });
 
+  it("45-08 rodada humana: base e offer permanecem sincronizados (mesmo conteúdo editorial — isolamento de produto em offer)", () => {
+    const base = readPrompt("campaign-image-director.md");
+    const offer = readPrompt("campaign-image-director-offer.md");
+    expect(base).toBe(offer);
+    // O conteúdo autorizado em revisão humana está presente nos dois arquivos.
+    for (const content of [base, offer]) {
+      expect(content).toContain(
+        "Para campanhas de oferta, isole o produto do cenário original e apresente-o em fundo comercial limpo, preservando fielmente sua aparência. O fundo pode ser criado livremente, mas não deve manter o ambiente contextual da imagem de referência."
+      );
+    }
+  });
+
   it("45-05 transversal (a): prosa editorial além dos placeholders + slots como linha inteira nos 4 .md (sem template seco)", () => {
     for (const name of PROMPTS) {
       const prompt = readPrompt(name);
