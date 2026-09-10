@@ -11,7 +11,7 @@
 | Novo/Modificado | Arquivo | Role | Data Flow | Analog mais próximo | Match |
 |-----------------|---------|------|-----------|---------------------|-------|
 | NEW | `supabase/migrations/20260906000001_f37_2_create_campaign_correction_tables.sql` (M1) | migration | DDL/schema | `supabase/migrations/20260901000001_f37_1_create_campaign_art_versions.sql` | exact |
-| NEW | `supabase/migrations/20260906000002_f37_2_correction_rpcs.sql` (M2+M3) | migration | transacional (RPC) | `20260901000002_f37_1_approve_campaign_art_version_rpc.sql` + dormente `20260905000001` | exact |
+| NEW | `supabase/migrations/20260906000002_f37_2_correction_flows.sql` (M2+M3) | migration | transacional (RPC) | `20260901000002_f37_1_approve_campaign_art_version_rpc.sql` + dormente `20260905000001` | exact |
 | NEW | `supabase/migrations/20260906000003_f37_2_generation_events_type.sql` (M4) | migration | DDL/CHECK | `20260825000001_create_store_campaign_themes.sql:304-316` | exact |
 | NEW | `src/lib/campaign/correction-reports.ts` | service + persistence + orchestrator | CRUD + orquestração v2 | `src/lib/campaign/persistence.ts` + `display.ts` | role-match |
 | NEW | `src/lib/campaign/correction-intent-service.ts` | service (IA textual) | request-response (JSON+Zod) | `src/lib/copy/copy-director-service.ts` + `image-generation/services/input-validation-service.ts` | exact |
@@ -87,7 +87,7 @@ Para `asset_status`: `DO $$ ... IF EXISTS (pg_constraint conname='campaign_art_v
 
 ---
 
-### `supabase/migrations/20260906000002_f37_2_correction_rpcs.sql` (M2+M3 — RPCs)
+### `supabase/migrations/20260906000002_f37_2_correction_flows.sql` (M2+M3 — RPCs)
 
 **Analogs:** `20260901000002_f37_1_approve_campaign_art_version_rpc.sql` (esqueleto) + dormente `20260905000001_f37_2_correction_rpcs.sql` (padrão de lock e transação — **não reutilizar a função**).
 
