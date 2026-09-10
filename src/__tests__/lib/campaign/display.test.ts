@@ -39,6 +39,7 @@ const mockCampaign: CampaignRecord = {
   rejection_count: 0,
   approved_version_id: null,
   approved_at: null,
+  operation_run_id: null,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };
@@ -192,6 +193,7 @@ describe("getEffectivePublicationCopy", () => {
       rejection_count: 0,
       approved_version_id: null,
       approved_at: null,
+      operation_run_id: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
@@ -224,6 +226,7 @@ describe("getEffectivePublicationCopy", () => {
       rejection_count: 0,
       approved_version_id: null,
       approved_at: null,
+      operation_run_id: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
@@ -256,6 +259,7 @@ describe("getEffectivePublicationCopy", () => {
       rejection_count: 0,
       approved_version_id: null,
       approved_at: null,
+      operation_run_id: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
@@ -284,6 +288,7 @@ describe("getEffectivePublicationCopy", () => {
       rejection_count: 0,
       approved_version_id: null,
       approved_at: null,
+      operation_run_id: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
