@@ -310,11 +310,11 @@ O sistema SHALL prover a RPC `consume_campaign_correction_opportunity(p_campaign
 
 ### Requirement: RPC complete_campaign_correction_v2 (conclusão atômica da v2 — contrato fechado)
 
-O sistema SHALL prover a RPC `complete_campaign_correction_v2(p_campaign_id uuid, p_report_id uuid, p_submission_id uuid, p_storage_path text, p_mime_type text, p_generation_metadata jsonb, p_render_snapshot jsonb) RETURNS jsonb` (`SECURITY DEFINER`, `SET search_path=''`, acesso `service_role`) que, atomicamente, ao persistir a v2 com sucesso (contrato fechado — achado 1):
+O sistema SHALL prover a RPC `complete_campaign_correction_v2(p_campaign_id uuid, p_report_id uuid, p_submission_id uuid, p_storage_path text, p_generation_metadata jsonb, p_render_snapshot jsonb) RETURNS jsonb` (`SECURITY DEFINER`, `SET search_path=''`, acesso `service_role`) que, atomicamente, ao persistir a v2 com sucesso (contrato fechado — achado 1). **Sem `p_mime_type`:** a arte final é sempre JPEG (`v2.jpg`) e o `mimeType: "image/jpeg"` já é registrado em `render_snapshot`; não há coluna `mime_type` em `campaign_art_versions` (decisão do usuário 2026-09-10):
 
 1. Trava a **candidata** (`campaign_art_versions` da campanha — FOR UPDATE), depois a **campanha** (`campaigns` FOR UPDATE) e o **relato** (`campaign_correction_reports` FOR UPDATE) — **mesma ordem de locks das demais RPCs** (candidata → campanha → relato, anti-deadlock). Validações derivadas do banco: `report.status='generation_started'`, candidata com `correction_in_progress=true`, `rejection_count=1` (consumo já ocorreu), `submission_id` = submissão **mais recente do relato por `attempt_number`** referente ao consumo, v2 ainda não existe (`version_number=2` ausente — sem dupla conclusão), e `p_storage_path` distinto do `storage_path` da v1.
 2. **Lê a v1 travada** no banco e usa o **`brief_snapshot` dela como `brief_snapshot` da v2** — o snapshot **NUNCA é aceito como parâmetro do cliente** (imutabilidade do briefing aprovado).
-3. **Insere a v2** em `campaign_art_versions`: `version_number=2`, `status='pending'`, `asset_status='active'`, `storage_path = p_storage_path`, `mime_type = p_mime_type`, `brief_snapshot` = cópia da v1 no banco, `generation_metadata = p_generation_metadata` (com o `operation_run_id` e snapshots econômicos da correção), `render_snapshot = p_render_snapshot`, `correction_in_progress=false`.
+3. **Insere a v2** em `campaign_art_versions`: `version_number=2`, `status='pending'`, `asset_status='active'`, `storage_path = p_storage_path` (path fixo `{storeId}/{campaignId}/v2.jpg`; mime JPEG implícito, sem coluna `mime_type`), `brief_snapshot` = cópia da v1 no banco, `generation_metadata = p_generation_metadata` (com o `operation_run_id` e snapshots econômicos da correção), `render_snapshot = p_render_snapshot`, `correction_in_progress=false`.
 4. **Demove a v1** para `asset_status='superseded'` (**path preservado** — NÃO passa pelo descarte da F37.1 `discarded`/`storage_path=NULL`) e `correction_in_progress=false`.
 5. Grava no relato: `status='v2_generated'`, `generated_version_id = id da v2`.
 6. **NÃO incrementa `rejection_count`** (já foi incrementado na RPC de consumo).
@@ -324,7 +324,7 @@ O sistema SHALL prover a RPC `complete_campaign_correction_v2(p_campaign_id uuid
 #### Scenario: Conclusão insere a v2 e demove a v1 com path preservado
 
 - **WHEN** a v2 foi gerada com sucesso e a RPC de conclusão roda com a identidade do caso (`campaign_id`/`report_id`/`submission_id`) e os dados do asset gerado
-- **THEN** uma nova linha em `campaign_art_versions` nasce com `version_number=2`, `status='pending'`, `asset_status='active'`, `storage_path`/`mime_type` do asset gerado e **`brief_snapshot` copiado da v1 no banco**
+- **THEN** uma nova linha em `campaign_art_versions` nasce com `version_number=2`, `status='pending'`, `asset_status='active'`, `storage_path` do asset gerado (JPEG `v2.jpg`) e **`brief_snapshot` copiado da v1 no banco**
 - **AND** a v1 vira `asset_status='superseded'` com `storage_path` **preservado**
 - **AND** `rejection_count` NÃO é incrementado (permanece 1)
 - **AND** o relato vira `status='v2_generated'` com `generated_version_id` preenchido
