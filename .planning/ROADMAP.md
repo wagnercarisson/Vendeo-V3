@@ -548,19 +548,27 @@
 
 **Plans:** 15/15 plans (8 waves) — concluída (verificação: `37-1-VERIFICATION.md`; UAT: `37-1-UAT.md`)
 
-### Sub-fase 37.2 — Correção Visual/Criativa
+### Sub-fase 37.2 — Correção Única por Não Conformidade
 
-**Status:** Planejamento futuro
+**Status:** Planejada — 19/19 plans (8 waves)
 
-**Goal:** Correção visual com referência de arte (Correction Brief Parser, `/regenerate`, cap `rejection_count < 2`, modal em 2 etapas, `prompts/regen/*`, `setCorrectionInProgress`/`markVersionRejected`/`discardArtAsset`, `rebuildBriefFromSnapshot`, estratégia A/B text_only × text_plus_reference).
+**Goal:** Quando a geração tem um **defeito objetivo**, o lojista relata o problema e o sistema produz **no máximo uma v2** orientada a eliminar aquele defeito — **sem rebriefing, sem galeria de variações, sem referência da v1 e sem novo custo/crédito** (1 crédito = 1 campanha aprovada). Entrega: modal [Informar problema] (1 etapa), análise textual de elegibilidade (`CorrectionIntentService`), tabelas `campaign_correction_reports`/`campaign_correction_submissions`, RPCs próprias (begin/complete_analysis/consume/complete_v2/fail/recover/approve_candidate) com locks candidata → campanha → relato, geração da v2 (hook `onBeforeImageProviderCall` + bloco único, sem editar os `.md`), aprovação protegida e fila admin. **Renumeração:** substitui a antiga 37.2 ("Correção Visual/Criativa") e **elimina a 37.3** (consolidada nesta fatia).
 
-### Sub-fase 37.3 — Correção Factual de Briefing
+**Plans:** 19/19 plans (8 waves)
 
-**Status:** Planejamento futuro
+- **Wave 1** — 37-2-01 (trackings F37.2 realinhada), 37-2-02 (M1 tabelas + CHECK `superseded` + db push), 37-2-04 (M4 CHECK `chk_generation_events_type` + union `GenerationEventType` + db push)
+- **Wave 2** — 37-2-03 (M2/M3 RPCs begin/consume/complete_v2/fail/complete_analysis/recover/approve_candidate + db push), 37-2-05 (tipos + persistência do caso/tentativas)
+- **Wave 3** — 37-2-06 (CorrectionIntentService), 37-2-08 (geração da v2: hook + bloco único + orquestrador)
+- **Wave 4** — 37-2-07 (rota problem-report), 37-2-09 (aprovação protegida), 37-2-10 (UI modal + dois botões)
+- **Wave 5** — 37-2-11 (página: regenerating/pending v2 + recuperação lazy), 37-2-12 (admin fila de relatos)
+- **Wave 6** — 37-2-13..37-2-17 (testes: análise, begin RPC, consumo/recuperação, única v2/persistência, UI/gates/admin/rota)
+- **Wave 7** — 37-2-18 (regressão e co-migração de fixtures)
+- **Wave 8** — 37-2-19 (4 gates + UAT §12 + VERIFICATION.md + trackings)
 
-**Goal:** Correção factual de briefing (`briefPatch`/`validateBriefPatch` — preço/validade/aviso legal/badge/digitação).
+**Source of truth:** `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/`
 
 ---
+
 
 ### Phase 38 — Tabela de Custos por Operação
 
