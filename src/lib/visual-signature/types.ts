@@ -98,6 +98,7 @@ export type LogoStatus = 'uploaded' | 'generated' | 'explicit_none' | 'failed' |
 
 // F38.1 (D5): 12 valores alinhados ao CHECK chk_generation_events_type da migration.
 // 6 tipos existentes mantidos (backward compat) + 6 novos call-level.
+// F37.2: +1 valor (campaign_correction_analysis) — análise textual da correção (13º).
 export type GenerationEventType =
   | 'campaign_pipeline'
   | 'campaign_copy'
@@ -110,7 +111,8 @@ export type GenerationEventType =
   | 'brand_profile_without_logo'
   | 'brand_profile_with_logo'
   | 'brand_profile_vision'
-  | 'brand_profile_text';
+  | 'brand_profile_text'
+  | 'campaign_correction_analysis';
 
 export type GenerationEventStatus = 'success' | 'failed' | 'rejected' | 'timeout';
 
