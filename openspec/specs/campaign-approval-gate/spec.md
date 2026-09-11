@@ -1,10 +1,10 @@
 # Campaign Approval Gate
 
-> Synced from `fase-37-1-approval-gate-candidata-unica` (ADDED).
+> Synced from `fase-37-1-approval-gate-candidata-unica` (ADDED), then `fase-37-2-correcao-unica-por-nao-conformidade` (MODIFIED + REMOVED).
 
 ## Purpose
 
-Estado de aprovação e gate de entrega da arte (F37 D1/D2/D8 + decisões 3/4/5/12, fatia 37.1 — Approval Gate + Candidata Única). A campanha nova sob a flag **`campaign_approval_enabled`** entra em **revisão** ao ficar `ready` (tela com a **candidata ativa**, sem download/copy); o lojista **aprova a candidata** (rota `POST /api/campaign/[id]/approve` transacional) e só então a entrega é liberada (arte + copys + download). Estados `not_enabled | legacy | pending | approved | regenerating` (este último **inalcançável na 37.1** — correção é 37.2). Download e `publication-copy` **gated** (decisão 4). **Correção NÃO disponível** nesta fatia — botão "Corrigir" ausente/desabilitado, **nunca abre modal**.
+Estado de aprovação e gate de entrega da arte (F37 D1/D2/D8 + decisões 3/4/5/12, fatia 37.1 — Approval Gate + Candidata Única; evoluído pela fatia 37.2 — Correção Única por Não Conformidade). A campanha nova sob a flag **`campaign_approval_enabled`** entra em **revisão** ao ficar `ready` (tela com a **candidata ativa**, sem download/copy); o lojista **aprova a candidata** (rota `POST /api/campaign/[id]/approve` transacional, via RPC protegida `approve_campaign_candidate`) e só então a entrega é liberada (arte + copys + download). Estados `not_enabled | legacy | pending | approved | regenerating` (o `regenerating` é **exercitado na 37.2** pelo consumo da oportunidade). Download e `publication-copy` **gated** (decisão 4). A revisão `pending` oferece **[Aprovar arte]** + **[Informar problema]** (fluxo de correção — capability `campaign-problem-report`); a **v2 candidata** exibe apenas [Aprovar arte].
 
 ## Requirements
 
@@ -18,7 +18,7 @@ export type ApprovalDisplayState =
   | { status: "legacy" }                  // flag ligado, campanha pré-flag (zero linhas em campaign_art_versions) → entregue como hoje
   | { status: "pending" }                 // aguardando aprovação (revisão)
   | { status: "approved"; approvedAt: string }
-  | { status: "regenerating" };           // derivado do marcador correction_in_progress (decisão 5) — inalcançável na 37.1
+  | { status: "regenerating" };           // derivado do marcador correction_in_progress (decisão 5) — exercitado na F37.2
 
 export function computeApprovalState(
   campaign: CampaignRecord,
@@ -33,7 +33,7 @@ Regras de derivação:
 - `!flagEnabled` → `not_enabled` (comportamento atual preservado — D1 fail-closed).
 - `flagEnabled && versions.length === 0` → **`legacy`** (campanha pré-flag entregue como hoje, sem gate retroativo — D2).
 - `flagEnabled && approved_version_id` → `approved` (com `approvedAt`).
-- `flagEnabled && candidata ativa com correction_in_progress=true` → `regenerating` — **nenhum fluxo ativa na 37.1** (só a 37.2), mas o estado faz parte do contrato para `isDeliveryReleased`.
+- `flagEnabled && candidata ativa com correction_in_progress=true` → `regenerating` — **na F37.2 é exercitado** pela RPC de consumo (`consume_campaign_correction_opportunity` marca `correction_in_progress=true` na candidata ativa no início do provider).
 - senão → `pending`.
 
 - `isDeliveryReleased(state)` = `true` para `not_enabled | legacy | approved`; `false` para `pending | regenerating`.
@@ -63,12 +63,19 @@ Regras de derivação:
 - **THEN** retorna `{ status: "approved", approvedAt }`
 - **AND** `isDeliveryReleased` retorna `true`
 
-#### Scenario: Regenerating derivado do marcador (contrato; inalcançável na 37.1)
+#### Scenario: Regenerating derivado do marcador (exercitado na F37.2)
 
-- **WHEN** a candidata ativa tem `correction_in_progress=true`
+- **WHEN** a candidata ativa tem `correction_in_progress=true` (RPC de consumo marcou)
 - **THEN** `computeApprovalState` retorna `{ status: "regenerating" }`
 - **AND** `isDeliveryReleased` retorna `false`
-- **AND** `campaigns.status` permanece `ready` (decisão 5) — este estado só é alcançado a partir da 37.2
+- **AND** `campaigns.status` permanece `ready` (decisão 5)
+- **AND** a UI bloqueia approve/download/copy e exibe o progresso da v2
+
+#### Scenario: V2 candidata deriva pending (não regenerating)
+
+- **WHEN** a v2 foi persistida (v1 `superseded`, v2 `active`/`pending`, sem `correction_in_progress`)
+- **THEN** `computeApprovalState` retorna `{ status: "pending" }`
+- **AND** o botão [Aprovar arte] aprova a v2 (sem voltar à v1)
 
 ### Requirement: Fonte oficial da arte exibida (decisão 3)
 
@@ -92,12 +99,13 @@ O sistema SHALL usar a **candidata ativa** (`asset_status='active'` em `campaign
 
 ### Requirement: Tela de revisão da candidata (CampaignApprovalView)
 
-O sistema SHALL exibir a **tela de revisão** em `/campanhas/[id]` quando a campanha está `pending` (flag ligada, campanha nova não aprovada):
+O sistema SHALL exibir a **tela de revisão** em `/campanhas/[id]` quando a campanha está `pending` (flag ligada, campanha nova não aprovada), com **dois caminhos** (R1):
 
 - Exibe a arte da **candidata ativa** (sem botão de download, sem Kit de Publicação/copy — revisão 100% foco na arte, D2).
-- Botão primário **"Aprovar e liberar campanha"** — dispara `POST /api/campaign/[id]/approve` com o `versionId` da candidata; ao aprovar, `router.refresh()` libera a entrega (arte + copys + download, como hoje).
-- Botão secundário **"Corrigir" ausente** (alternativa aceitável: desabilitado) — **nunca abre modal** nesta fatia (correção é 37.2; decisão 3/D12).
+- Botão primário **"Aprovar arte"** — dispara `POST /api/campaign/[id]/approve` com o `versionId` da candidata (fluxo da RPC protegida — R8); ao aprovar, `router.refresh()` libera a entrega (arte + copys + download, como hoje).
+- Botão secundário **"Informar problema"** — abre o modal de relato (uma etapa, capability `campaign-problem-report`) **sem sair da página**; presente apenas quando a candidata é a v1 e ainda há oportunidade (caso sem consumo).
 - Microcopy PT-BR (ex.: "Revise a arte antes de liberar: a IA pode cometer erros."), estados de loading/erro claros, touch targets ≥ 44px, `label`/`aria`, tema dark (tokens `#020617`/`#F8FAFC`/`#22C55E`).
+- **Proteções contra a corrida aprovar × consumir (sem guarda de UX no componente):** (a) o modal de relato bloqueia interação e fechamento enquanto a análise/geração está em processamento; (b) após o consumo (`correction_in_progress=true`) a página deriva `regenerating` e renderiza `RegeneratingView` — `CampaignApprovalView` não é montada, portanto não há [Aprovar arte] ativo nesse estado; (c) a garantia de serialização é a RPC aditiva no banco (`approve_campaign_candidate` valida `correction_in_progress=false` → 409), que fecha a corrida (R8). Não existe estado real que alimente um "approve desabilitado" no componente.
 
 #### Scenario: Campanha pendente exibe revisão sem download/copy
 
@@ -105,17 +113,23 @@ O sistema SHALL exibir a **tela de revisão** em `/campanhas/[id]` quando a camp
 - **THEN** a página exibe a tela de revisão com a arte da candidata
 - **AND** não há botão de download nem Kit de Publicação/copy visível
 
-#### Scenario: Botão primário aprova e libera a entrega
+#### Scenario: Aprovar arte aprova e libera a entrega
 
-- **WHEN** o lojista clica em "Aprovar e liberar campanha"
+- **WHEN** o lojista clica em "Aprovar arte"
 - **THEN** o `POST /api/campaign/[id]/approve` é chamado com o `versionId` da candidata
 - **AND** após o sucesso a página passa a exibir a entrega (arte aprovada + copys + download)
 
-#### Scenario: Corrigir ausente ou desabilitado e nunca abre modal
+#### Scenario: Informar problema abre o modal sem sair da página
 
-- **WHEN** a tela de revisão é renderizada na fatia 37.1
-- **THEN** o botão secundário "Corrigir" está ausente (ou desabilitado)
-- **AND** nenhum modal de correção é aberto em qualquer interação
+- **WHEN** a revisão `pending` (v1) é exibida
+- **THEN** há o botão secundário [Informar problema]
+- **AND** ao clicar, o modal de relato abre sem sair da página e sem aprovar
+
+#### Scenario: V2 candidata exibe apenas Aprovar arte
+
+- **WHEN** a v2 é a candidata (`pending`, v1 `superseded`)
+- **THEN** a revisão exibe [Aprovar arte] (aprova a v2)
+- **AND** NÃO oferece [Informar problema] nem volta à v1
 
 #### Scenario: A11y e mobile da revisão
 
@@ -125,13 +139,13 @@ O sistema SHALL exibir a **tela de revisão** em `/campanhas/[id]` quando a camp
 
 ### Requirement: Rota POST /api/campaign/[id]/approve
 
-O sistema SHALL prover `POST /api/campaign/[id]/approve` (nova rota, D8):
+O sistema SHALL prover `POST /api/campaign/[id]/approve` (rota da F37.1, **modificada na F37.2** para usar a aprovação protegida — R8):
 
-- Fluxo: `requireSameOrigin` (CSRF) → `requireApiUser` → UUID v4 (`400`) → `getCampaign` (404) → `requireOwnership` (404) → **`isCampaignApprovalEnabled()`; flag off → 403** → `campaign.status !== 'ready' → 409` (sem candidata para aprovar em `generating`/`error`) → zod do body `{ versionId: uuid }` → `rpc('approve_campaign_art_version', ...)`.
-- Mapeamento de erros do RPC: `version_not_found`/`version_campaign_mismatch` → 404; `version_not_pending`/`version_not_active` → 409 (versão inválida ou já resolvida).
+- Fluxo: `requireSameOrigin` (CSRF) → `requireApiUser` → UUID v4 (`400`) → `getCampaign` (404) → `requireOwnership` (404) → **`isCampaignApprovalEnabled()`; flag off → 403** → `campaign.status !== 'ready' → 409` → zod do body `{ versionId: uuid }` → **`rpc('approve_campaign_candidate', { p_campaign_id, p_version_id })`** (RPC aditiva que chama a RPC F37.1 `approve_campaign_art_version` intacta na mesma transação).
+- Mapeamento de erros: `version_not_found`/`version_campaign_mismatch` → 404; `version_not_pending`/`version_not_active`/`correction_in_progress` → 409 (versão inválida, já resolvida ou correção em andamento).
 - Sucesso → `200 { campaignUrl: "/campanhas/{id}", status: "approved" }`.
-- Anti-concorrência: o guarded update do RPC + o índice único parcial tornam a segunda aprovação idempotente (409).
-- **Telemetria (D8):** sem novo `generation_type`; o funil usa `campaign_art_versions.status` + `campaigns.approved_at`.
+- **Serialização aprovar × consumir (R8):** a RPC `approve_campaign_candidate` trava a candidata primeiro e valida `correction_in_progress=false`; se o consumo venceu (marcou `correction_in_progress=true`), a aprovação falha `409` — **nenhuma geração paga roda após a aprovação**. Se a aprovação venceu, o consumo subsequente falha na pendência e a geração é abortada **antes do provider** (sem consumo, sem custo). Ordem de locks: candidata → campanha (aprovação nunca toca o relato).
+- Telemetria (D8) sem novo `generation_type`; o funil usa `campaign_art_versions.status` + `campaigns.approved_at`.
 
 #### Scenario: Aprovação com sucesso
 
@@ -149,10 +163,16 @@ O sistema SHALL prover `POST /api/campaign/[id]/approve` (nova rota, D8):
 - **WHEN** um usuário não-dono chama a rota `approve`
 - **THEN** retorna 404 (mesmo status que campanha inexistente)
 
-#### Scenario: Versão já resolvida ou inválida retorna 409
+#### Scenario: Aprovação durante correção retorna 409
 
-- **WHEN** a rota `approve` é chamada com uma versão já `approved`/`rejected` ou sem `asset_status='active'`
-- **THEN** retorna 409 (já resolvida/inválida) e nada é alterado
+- **WHEN** a candidata ativa tem `correction_in_progress=true` (`regenerating`)
+- **THEN** a RPC `approve_campaign_candidate` retorna `correction_in_progress` → rota responde 409
+- **AND** nada é alterado (nenhuma geração paga roda após a aprovação)
+
+#### Scenario: Versão já resolvida, superseded ou inválida retorna 409/404
+
+- **WHEN** a rota `approve` é chamada com uma versão já `approved`/`rejected`, **`superseded`** (v1 após v2) ou sem `asset_status='active'`
+- **THEN** retorna 409 (já resolvida/inválida) e nada é alterado — a v1 não é aprovável após a v2
 
 #### Scenario: Campanha não ready retorna 409
 
@@ -204,23 +224,3 @@ O sistema SHALL fazer `PATCH /api/campaign/[id]/publication-copy` verificar o es
 
 - **WHEN** uma campanha `legacy` (flag on, sem versões) tenta editar o copy
 - **THEN** retorna 200 (comportamento atual preservado)
-
-### Requirement: Nenhum fluxo de correção nesta fatia
-
-O sistema SHALL **NÃO** implementar qualquer fluxo de correção na fatia 37.1:
-
-- Sem `POST /api/campaign/[id]/regenerate` (37.2).
-- Sem Correction Brief Parser / `briefPatch` / `validateBriefPatch` (37.2/37.3).
-- Sem `prompts/regen/*` e sem referência de arte na regeração (37.2).
-- `rejection_count` existe como schema (D7) mas **nenhum código escreve nela** nesta fatia (guard do cap é 37.2).
-- Sem modal de correção; o estado `regenerating` não é ativado por nenhum fluxo da 37.1.
-
-#### Scenario: Nenhuma rota de regeração existe
-
-- **WHEN** um cliente tenta chamar `POST /api/campaign/[id]/regenerate` nesta fatia
-- **THEN** a rota não existe (404) — correção é 37.2
-
-#### Scenario: rejection_count não é alterada
-
-- **WHEN** um fluxo da fatia 37.1 roda (geração, revisão, aprovação)
-- **THEN** `campaigns.rejection_count` permanece 0 (nada escreve nela nesta fatia)

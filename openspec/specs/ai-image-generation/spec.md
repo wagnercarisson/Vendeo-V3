@@ -10,6 +10,7 @@ Core image generation pipeline: orchestrates prompt assembly, model invocation, 
 > Modified by `fase-41-midia-de-campanha-mobile` (D2/D6/D7/D9/D10): transporte aditivo `productImages[]` (D2) com `MAX_CAMPAIGN_IMAGES = 4` e invariante exactly-1-primary; `productImageDataUrl` deixa de ser required no Zod (obrigatoriedade passa à regra de exclusividade da rota); provider monta **N `input_image`** (D7); fallback `images.edit` **gated por primary única** (D7); prompt ganha **bloco descritivo 1+N** sem nova variável (D6); revisor recebe a **primary** como referência (D9); limites por item + teto agregado → 413 (D10).
 > Modified by `fase-37-1-approval-gate-candidata-unica` (D8/D10): quando a flag `campaign_approval_enabled` está ligada, o `POST /api/campaign/generate-image` **também** insere a v1 em `campaign_art_versions` (candidata `pending`/`active`, `brief_snapshot` = snapshot `campaign_brief_v1` persistido) — mudança mínima, flag off → comportamento atual inalterado; falha no insert → log + continua (fail-safe, campanha exibida como legacy).
 > Modified by `fase-45-briefing-contextual-do-diretor-de-arte` (F45 — Briefing Contextual do Diretor de Arte, v1.5, concluída 2026-09-05): a montagem do prompt do diretor passa a ser **contextual por blocos** (ver capability `art-director-contextual-briefing`). O texto interno do prompt do diretor e o conjunto de chaves de montagem **mudam intencionalmente** (D5); a **superfície externa** permanece inalterada (contrato HTTP/schema/snapshot/domínio, UI/form, Copy Director e comportamento percebido pelo lojista). A preservação da **intenção/qualidade visual** é alvo da fase (regras de conteúdo + UAT humano comparativo), não uma garantia formal de resultado visual idêntico. Requisitos supersedidos de paridade/reframe textual foram REMOVED (paridade de keys → invariantes; reframe condicional F40 e bloco 1+N F41 → seções/blocos da capability nova).
+> Modified by `fase-37-2-correcao-unica-por-nao-conformidade` (ADDED): hook aditivo opcional `onBeforeImageProviderCall` (consumo da oportunidade no fluxo corretivo), bloco único de não conformidade na montagem do prompt da v2 (sem editar os `.md`), `input_validation` `skipped` via `brief_review_confirmed` (F43), e eventos da v2 no mesmo `operation_run_id` (sem nova operação financeira). A rota `generate-image` e o comportamento default permanecem inalterados.
 
 ## Requirements
 
@@ -816,3 +817,79 @@ O sistema SHALL, no `POST /api/campaign/generate-image`, inserir a versão 1 em 
 - **WHEN** o insert da v1 falha com a flag ligada
 - **THEN** a geração continua normalmente (log de erro operacional)
 - **AND** a campanha fica sem linhas de versão (exibida como `legacy`, entregue)
+
+### Requirement: Hook aditivo onBeforeImageProviderCall (consumo da oportunidade)
+
+O sistema SHALL suportar um **hook opcional e aditivo** no `ImageGenerationService` para disparar a RPC de consumo no instante exato em que a 1ª chamada ao provider começa (F37.2 — R3/R4):
+
+- `ImageGenerationService.generateImage` (ou mecanismo equivalente de execução) aceita um callback assíncrono opcional, ex.: `onBeforeImageProviderCall?: () => Promise<void>`.
+- O hook SHALL rodar **imediatamente antes da 1ª tentativa real ao provider** em `generateWithRetry` (iteração `attempt === 0`), **fire-once por execução de `generateImage`**.
+- O hook é o ponto que invoca `rpc("consume_campaign_correction_opportunity", ...)` no fluxo corretivo; falhas que ocorrem **antes** do hook (preflight, montagem de contexto, validação de prompt) **não** consomem (caso permanece `open`; pode reenviar).
+- **Ausência do hook → comportamento atual inalterado** (rota `generate-image` e demais chamadores não são afetados).
+
+#### Scenario: Hook disparado antes do primeiro provider call
+
+- **WHEN** o fluxo corretivo chama `generateImage` com `onBeforeImageProviderCall` informado
+- **THEN** o hook roda imediatamente antes da 1ª chamada ao provider (iteração `attempt === 0`)
+- **AND** roda uma única vez por execução (não re-dispara em retries internos/regerações do state machine)
+
+#### Scenario: Sem hook o comportamento é o atual
+
+- **WHEN** a rota `generate-image` (fluxo normal) chama `generateImage` sem o hook
+- **THEN** nenhum callback adicional roda e o comportamento atual é exatamente o mesmo
+
+#### Scenario: Falha pré-provider não dispara o hook
+
+- **WHEN** uma falha ocorre antes do ponto do hook (preflight/montagem/validação)
+- **THEN** o hook não roda (não consome) e o caso permanece `open`
+
+### Requirement: Bloco único de não conformidade na montagem do diretor (v2)
+
+O sistema SHALL compor o prompt da **v2** com o **diretor por intent atual + um bloco único de não conformidade**, sem novos arquivos `.md` e sem editar os existentes (F37.2 — R4):
+
+- Diretor selecionado por `commercial.intent` do snapshot (`campaign-image-director-{offer|spotlight|exclusive}` — pipeline atual).
+- Um bloco pequeno e único é acrescentado em tempo de montagem (padrão dos blocos condicionais do `ImageGenerationService.assemblePrompt`), contendo: preâmbulo fixo anti-invenção e de fidelidade ao briefing + a **instrução normalizada** (`normalizedInstruction`, saneada/delimitada como conteúdo não confiável — R2).
+- O bloco **declara o defeito a evitar** e **nunca** altera produto/preço/validade/aviso/identidade nem reabre decisões aprovadas.
+- **Sem `candidateArtDataUrl`**: a v1 não é enviada ao diretor como referência visual.
+- Os 4 `.md` atuais (`campaign-image-director.md`/`-offer`/`-spotlight`/`-exclusive`) permanecem com **diff vazio** (verificado em teste).
+
+#### Scenario: Montagem da v2 com bloco de não conformidade e diff vazio nos .md
+
+- **WHEN** o fluxo corretivo monta o prompt da v2
+- **THEN** o prompt usa o diretor por intent do snapshot acrescido do bloco único (preâmbulo + instrução normalizada saneada)
+- **AND** os arquivos `.md` atuais não são alterados (diff vazio)
+- **AND** nenhuma data URL da v1 é passada como referência
+
+#### Scenario: Conteúdo não confiável não sobrescreve o briefing
+
+- **WHEN** a `normalizedInstruction` contém texto sensível ou dados divergentes
+- **THEN** o bloco apenas instrui evitar o defeito (delimitado/saneado)
+- **AND** produto/preço/validade/aviso/identidade do briefing permanecem imutáveis (anti-invenção)
+
+### Requirement: V2 reaproveita o mecanismo de skip do input_validation (F43)
+
+O sistema SHALL, na geração da v2, **emitir `input_validation` como `skipped`** reutilizando o override `brief_review_confirmed` (F43) — sem nova chamada de visão e sem reavaliar o produto contra o nome (brief já aprovado na revisão pré-geração):
+
+- A fase `input_validation` da v2 é emitida com `status: "skipped"`.
+- Revisor automático da qualidade (`image-review-service` + prompt `campaign-image-reviewer`) permanece **intocado** e roda como rede de segurança sobre a v2.
+- **Sem copy director**: a v2 regenera somente a arte; copy não é reprocessado (F17).
+
+#### Scenario: input_validation skipped na v2
+
+- **WHEN** a geração corretiva (v2) roda
+- **THEN** a fase `input_validation` é emitida como `skipped` (override `brief_review_confirmed`)
+- **AND** nenhuma chamada de visão valida o produto contra o nome
+- **AND** a v2 passa pela revisão de qualidade automática existente
+
+### Requirement: Eventos da v2 no mesmo operation_run_id (sem nova operação financeira)
+
+O sistema SHALL registrar os eventos call-level da geração da v2 **sob o mesmo `operation_run_id` da campanha** (rastro F38.2), **sem** nova reserva de crédito, **sem** `credit_transactions` e **sem** `operation_key` nova:
+
+- A v2 é parte da mesma entrega (1 crédito = 1 campanha aprovada); o custo aparece como mais eventos do mesmo run no painel F38.2.
+- Contabilidade F38/F38.2 e o mecanismo de crédito F24/F25 permanecem intactos.
+
+#### Scenario: Eventos da v2 no mesmo run da campanha
+
+- **WHEN** a v2 é gerada
+- **THEN** os eventos call-level usam o `operation_run_id` persistido da campanha original
+- **AND** nenhuma nova `credit_transactions`/`operation_key` é criada
