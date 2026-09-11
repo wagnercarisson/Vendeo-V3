@@ -343,18 +343,77 @@ describe("POST /api/campaign/[id]/problem-report — guards (16.7)", () => {
   });
 
   it.each([
-    ["already_consumed"],
-    ["campaign_not_pending"],
-    ["no_active_candidate"],
-    ["analysis_in_progress"],
-    ["rate_limit_exceeded"],
-  ])("begin retorna %s → 409 (sem IA)", async (code) => {
+    [
+      "already_consumed",
+      "A correção incluída nesta campanha já foi utilizada.",
+    ],
+    [
+      "campaign_not_pending",
+      "Esta arte não está mais disponível para correção. Atualize a página.",
+    ],
+    [
+      "no_active_candidate",
+      "Esta arte não está mais disponível para correção. Atualize a página.",
+    ],
+    ["analysis_in_progress", "Seu relato anterior ainda está sendo analisado."],
+    [
+      "rate_limit_exceeded",
+      "Você atingiu o limite de análises deste relato. Aguarde alguns minutos para tentar novamente.",
+    ],
+  ])("begin retorna %s → 409 legível { code, message } (sem IA)", async (code, message) => {
     mockRpc.mockResolvedValue({ data: null, error: { message: code } });
 
     const res = await callPost({ text: "o preço saiu cortado" });
 
     expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.code).toBe(code);
+    expect(body.message).toBe(message);
+    expect(body.message).not.toBe(code);
     expect(mockAnalyzeReport).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      "submission_not_analyzing",
+      "A análise deste relato já foi concluída. Atualize a página.",
+    ],
+    ["analysis_lease_expired", "A análise demorou demais. Envie o relato novamente."],
+    ["submission_stale", "Há uma análise mais recente em andamento."],
+  ])("completion retorna %s → 409 legível { code, message }", async (code, message) => {
+    mockCompleteCorrectionAnalysis.mockRejectedValue(new Error(code));
+
+    const res = await callPost({ text: "o preço saiu cortado" });
+
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.code).toBe(code);
+    expect(body.message).toBe(message);
+  });
+
+  it("begin erro desconhecido → 500 genérico (não vaza detalhe técnico)", async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { message: "some_internal_db_error_xyz" },
+    });
+
+    const res = await callPost({ text: "o preço saiu cortado" });
+
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.code).toBe("internal_error");
+    expect(body.message).not.toContain("some_internal_db_error_xyz");
+  });
+
+  it("flag off → 403 legível { code, message }", async () => {
+    mockIsCampaignApprovalEnabled.mockResolvedValue(false);
+
+    const res = await callPost({ text: "o preço saiu cortado" });
+
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.code).toBe("approval_disabled");
+    expect(body.message).not.toBe("Approval flow disabled");
   });
 
   it("blocked → 200 JSON { analysisState, guidance } (sem gerar)", async () => {

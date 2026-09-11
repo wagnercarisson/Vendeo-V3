@@ -29,6 +29,44 @@ const ProblemReportBodySchema = z
 // Texto vazio ou somente pontuação/símbolos/espaços → 400 (sem caso, sem IA).
 const PUNCTUATION_ONLY_REGEX = /^[\s\p{P}\p{S}]*$/u;
 
+// F37.2 (fix UAT): erros de fluxo legíveis para o lojista. A API devolve
+// `{ code, message }` — o código técnico fica no cliente e a `message` em PT-BR
+// é o que o modal apresenta (nunca exibir `rate_limit_exceeded` etc.).
+const BEGIN_ERROR_MESSAGES: Record<string, string> = {
+  rate_limit_exceeded:
+    "Você atingiu o limite de análises deste relato. Aguarde alguns minutos para tentar novamente.",
+  analysis_in_progress: "Seu relato anterior ainda está sendo analisado.",
+  already_consumed: "A correção incluída nesta campanha já foi utilizada.",
+  campaign_not_pending:
+    "Esta arte não está mais disponível para correção. Atualize a página.",
+  no_active_candidate:
+    "Esta arte não está mais disponível para correção. Atualize a página.",
+  correction_in_progress: "A correção da arte já está em andamento.",
+};
+
+const ANALYSIS_ERROR_MESSAGES: Record<string, string> = {
+  submission_not_analyzing:
+    "A análise deste relato já foi concluída. Atualize a página.",
+  analysis_lease_expired: "A análise demorou demais. Envie o relato novamente.",
+  submission_stale: "Há uma análise mais recente em andamento.",
+};
+
+const GENERIC_SEND_ERROR = "Não foi possível enviar o relato. Tente novamente.";
+const GENERIC_ANALYSIS_ERROR =
+  "Não foi possível concluir a análise. Tente novamente.";
+
+function matchErrorCode(
+  message: string,
+  mapping: Record<string, string>
+): { code: string; message: string } | null {
+  for (const code of Object.keys(mapping)) {
+    if (message.includes(code)) {
+      return { code, message: mapping[code] };
+    }
+  }
+  return null;
+}
+
 // F37.2 (R1/R2/R3): rota do fluxo corretivo. Ordem: CSRF → auth → UUID →
 // getCampaign → ownership → flag → status ready → body zod strict → 400 vazio/
 // pontuação → begin RPC (caso + tentativa `analyzing` ANTES da IA) → análise
@@ -59,24 +97,36 @@ export const POST = apiHandler(
     await requireOwnership(campaign.store_id, user.userId);
 
     if (!(await isCampaignApprovalEnabled())) {
-      return NextResponse.json({ error: "Approval flow disabled" }, { status: 403 });
+      return NextResponse.json(
+        { code: "approval_disabled", message: "O fluxo de revisão está desativado." },
+        { status: 403 }
+      );
     }
 
     if (campaign.status !== "ready") {
-      return NextResponse.json({ error: "Campaign not ready" }, { status: 409 });
+      return NextResponse.json(
+        {
+          code: "campaign_not_ready",
+          message: "Esta campanha ainda não está pronta para revisão.",
+        },
+        { status: 409 }
+      );
     }
 
     let body: unknown;
     try {
       body = await request.json();
     } catch {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+      return NextResponse.json(
+        { code: "invalid_body", message: "Dados inválidos." },
+        { status: 400 }
+      );
     }
 
     const parsed = ProblemReportBodySchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "Invalid body", issues: parsed.error.errors },
+        { code: "invalid_body", message: "Dados inválidos." },
         { status: 400 }
       );
     }
@@ -84,7 +134,7 @@ export const POST = apiHandler(
     const text = parsed.data.text.trim();
     if (text.length === 0 || PUNCTUATION_ONLY_REGEX.test(text)) {
       return NextResponse.json(
-        { error: "Descreva o problema na arte." },
+        { code: "empty_report", message: "Descreva o problema na arte." },
         { status: 400 }
       );
     }
@@ -97,16 +147,15 @@ export const POST = apiHandler(
 
     if (beginError) {
       const msg = beginError.message ?? "";
-      if (
-        msg.includes("no_active_candidate") ||
-        msg.includes("campaign_not_pending") ||
-        msg.includes("already_consumed") ||
-        msg.includes("analysis_in_progress") ||
-        msg.includes("rate_limit_exceeded")
-      ) {
-        return NextResponse.json({ error: msg }, { status: 409 });
+      const mapped = matchErrorCode(msg, BEGIN_ERROR_MESSAGES);
+      if (mapped) {
+        return NextResponse.json(mapped, { status: 409 });
       }
-      return NextResponse.json({ error: msg }, { status: 500 });
+      console.error("[problem-report] begin failed:", msg);
+      return NextResponse.json(
+        { code: "internal_error", message: GENERIC_SEND_ERROR },
+        { status: 500 }
+      );
     }
 
     const reportId = (beginData as { report_id: string }).report_id;
@@ -136,14 +185,15 @@ export const POST = apiHandler(
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (
-        msg.includes("submission_not_analyzing") ||
-        msg.includes("analysis_lease_expired") ||
-        msg.includes("submission_stale")
-      ) {
-        return NextResponse.json({ error: msg }, { status: 409 });
+      const mapped = matchErrorCode(msg, ANALYSIS_ERROR_MESSAGES);
+      if (mapped) {
+        return NextResponse.json(mapped, { status: 409 });
       }
-      return NextResponse.json({ error: msg }, { status: 500 });
+      console.error("[problem-report] complete analysis failed:", msg);
+      return NextResponse.json(
+        { code: "internal_error", message: GENERIC_ANALYSIS_ERROR },
+        { status: 500 }
+      );
     }
 
     // ── blocked/unclear/analysis_failed: 200 com orientação (sem gerar/consumir) ──

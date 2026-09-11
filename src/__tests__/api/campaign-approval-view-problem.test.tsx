@@ -405,4 +405,32 @@ describe("16.9 — consumo do NDJSON eligible + ramo JSON", () => {
       ).toBeInTheDocument();
     });
   });
+
+  it("409 rate_limit_exceeded → modal mostra a mensagem PT-BR, nunca o código técnico", async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          code: "rate_limit_exceeded",
+          message:
+            "Você atingiu o limite de análises deste relato. Aguarde alguns minutos para tentar novamente.",
+        }),
+        { status: 409, headers: { "Content-Type": "application/json" } }
+      )
+    );
+
+    render(<CampaignApprovalView {...approvalProps} showProblemReport />);
+    openModal();
+    typeReport("o preço saiu cortado");
+    submitReport();
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          "Você atingiu o limite de análises deste relato. Aguarde alguns minutos para tentar novamente."
+        )
+      ).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/rate_limit_exceeded/)).toBeNull();
+    expect(mockRefresh).not.toHaveBeenCalled();
+  });
 });

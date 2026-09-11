@@ -148,12 +148,13 @@ export default function CampaignProblemModal({
       }
 
       const data = (await res.json().catch(() => null)) as
-        | { analysisState?: string; guidance?: string; error?: string }
+        | { analysisState?: string; guidance?: string; message?: string }
         | null;
 
       if (!res.ok) {
+        // Apresenta SEMPRE a mensagem PT-BR da API (nunca o código técnico).
         throw new Error(
-          data?.error || "Não foi possível enviar o relato. Tente novamente."
+          data?.message || "Não foi possível enviar o relato. Tente novamente."
         );
       }
 

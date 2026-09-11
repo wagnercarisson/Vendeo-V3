@@ -132,18 +132,103 @@ describe("CorrectionIntentService (F37.2 §12)", () => {
     expect(result.guidance).toContain("Ex.:");
   });
 
-  it("12.6 — JSON inválido/fora do schema vira unclear", async () => {
+  it("12.6 — JSON inválido/schema inválido → analysis_failed + telemetria de falha", async () => {
     const freeText = new CorrectionIntentService(
       providerWithContent("Isso definitivamente não é um JSON.")
     );
     const r1 = await freeText.analyzeReport("texto", OPTIONS);
-    expect(r1.analysisState).toBe("unclear");
+    expect(r1.analysisState).toBe("analysis_failed");
+    const e1 = recordMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(e1.errorType).toBe("json_parse_failed");
+    expect(e1.status).toBe("failed");
+    expect(e1.provider).toBe("mock-provider");
+    expect(e1.attemptNumber).toBe(2);
 
     const outOfSchema = new CorrectionIntentService(
       providerWithContent(JSON.stringify({ foo: "bar" }))
     );
     const r2 = await outOfSchema.analyzeReport("texto", OPTIONS);
-    expect(r2.analysisState).toBe("unclear");
+    expect(r2.analysisState).toBe("analysis_failed");
+    const e2 = recordMock.mock.calls[1][0] as Record<string, unknown>;
+    expect(e2.errorType).toBe("schema_validation_failed");
+    expect(e2.status).toBe("failed");
+  });
+
+  it("12.10 — os três relatos reais de logo cortado → eligible/truncated_element", async () => {
+    const reports = [
+      "o logotipo do mercado ficou mal posicionado e cortado - por favor reposicione respeitando o respiro necessário sem cortar nenhum elemento",
+      "o logo ficou cortado, reposicione",
+      "o logo está encostado na borda, afaste um pouco",
+    ];
+
+    for (const report of reports) {
+      const service = new CorrectionIntentService(
+        providerWithContent(eligibleJson("truncated_element"))
+      );
+      const result = await service.analyzeReport(report, OPTIONS);
+      expect(result.analysisState).toBe("eligible");
+      expect(result.category).toBe("truncated_element");
+      expect(result.normalizedInstruction).toBeTruthy();
+    }
+  });
+
+  it("12.11 — eligible SEM guidance → eligible (guidance opcional)", async () => {
+    const service = new CorrectionIntentService(
+      providerWithContent(
+        JSON.stringify({
+          analysisState: "eligible",
+          category: "truncated_element",
+          normalizedInstruction: "Reenquadrar o elemento cortado.",
+        })
+      )
+    );
+    const result = await service.analyzeReport("logo cortado", OPTIONS);
+    expect(result.analysisState).toBe("eligible");
+    expect(result.category).toBe("truncated_element");
+  });
+
+  it("12.12 — eligible com guidance null → eligible", async () => {
+    const service = new CorrectionIntentService(
+      providerWithContent(
+        JSON.stringify({
+          analysisState: "eligible",
+          category: "truncated_element",
+          normalizedInstruction: "Reenquadrar o elemento cortado.",
+          guidance: null,
+        })
+      )
+    );
+    const result = await service.analyzeReport("logo cortado", OPTIONS);
+    expect(result.analysisState).toBe("eligible");
+  });
+
+  it("12.13 — blocked/unclear com category/normalizedInstruction ausentes OU null → aceitos", async () => {
+    const absent = new CorrectionIntentService(
+      providerWithContent(
+        JSON.stringify({
+          analysisState: "blocked",
+          guidance: "Não é canal de edição de dados.",
+        })
+      )
+    );
+    expect((await absent.analyzeReport("muda o preço", OPTIONS)).analysisState).toBe(
+      "blocked"
+    );
+
+    const withNull = new CorrectionIntentService(
+      providerWithContent(
+        JSON.stringify({
+          analysisState: "unclear",
+          category: null,
+          normalizedInstruction: null,
+          guidance: "Reformule o relato.",
+        })
+      )
+    );
+    const result = await withNull.analyzeReport("sei lá", OPTIONS);
+    expect(result.analysisState).toBe("unclear");
+    expect(result.category).toBeNull();
+    expect(result.normalizedInstruction).toBeNull();
   });
 
   it("12.7 — timeout/transporte/vazio vira analysis_failed", async () => {
