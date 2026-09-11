@@ -149,6 +149,26 @@ describe("POST /api/campaign/[id]/approve", () => {
     expect(res.status).toBe(409);
   });
 
+  it("14.2 (F37.2) — correction_in_progress → 409 (consumo venceu a corrida aprovar×consumir)", async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { message: "correction_in_progress" },
+    });
+
+    const res = await POST(
+      createRequest(`http://localhost:3000/api/campaign/${VALID_UUID}/approve`, {
+        versionId: VERSION_UUID,
+      }),
+      { params: Promise.resolve({ id: VALID_UUID }) },
+    );
+
+    expect(res.status).toBe(409);
+    expect(mockRpc).toHaveBeenCalledWith("approve_campaign_candidate", {
+      p_campaign_id: VALID_UUID,
+      p_version_id: VERSION_UUID,
+    });
+  });
+
   it("14.3 — version_campaign_mismatch → 404", async () => {
     mockRpc.mockResolvedValue({
       data: null,
