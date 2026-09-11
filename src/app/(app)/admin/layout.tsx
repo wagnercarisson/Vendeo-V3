@@ -50,6 +50,9 @@ export default async function AdminLayout({
         <Link href="/admin/feature-flags" className="font-medium hover:text-primary">
           Controles operacionais
         </Link>
+        <Link href="/admin/campaign-reports" className="font-medium hover:text-primary">
+          Relatos de correção
+        </Link>
       </nav>
       <main>{children}</main>
     </div>
