@@ -81,7 +81,7 @@ export default async function AdminCampaignReportDetailPage({
         </div>
         <div>
           <dt className="text-xs uppercase tracking-wider text-text-muted">
-            Consumo (rejection_count)
+            Correção consumida
           </dt>
           <dd className="text-text-primary">{consumptionCount}</dd>
         </div>

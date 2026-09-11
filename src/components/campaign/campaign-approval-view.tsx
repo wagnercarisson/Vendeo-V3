@@ -14,8 +14,6 @@ interface CampaignApprovalViewProps {
   productName: string;
   /** F37.2 (R1): exibe [Informar problema] quando a candidata é a v1 e ainda há oportunidade (sem consumo). */
   showProblemReport?: boolean;
-  /** F37.2 (R8): desabilita [Aprovar arte] com caso em processamento (`regenerating`). */
-  approvalDisabled?: boolean;
 }
 
 // F37.2 (R1/R8): tela de revisão da candidata ativa com DOIS caminhos — [Aprovar
@@ -24,13 +22,18 @@ interface CampaignApprovalViewProps {
 // arte — nenhuma entrega/cópia textual antes da aprovação; sem histórico
 // recuperável (apenas a candidata ativa). Na v2 (sem oportunidade) apenas
 // [Aprovar arte] é exibido.
+//
+// Proteções reais contra a corrida aprovar × consumir (não há guarda de UX neste
+// componente): (a) o modal bloqueia interação/fechamento durante o processamento;
+// (b) após o consumo a página deriva `regenerating` e renderiza `RegeneratingView`
+// (esta view não é montada); (c) a garantia final é a RPC protegida no banco
+// (`approve_campaign_candidate` valida `correction_in_progress=false` → 409).
 export default function CampaignApprovalView({
   campaignId,
   versionId,
   imageUrl,
   productName,
   showProblemReport = false,
-  approvalDisabled = false,
 }: CampaignApprovalViewProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,7 +41,6 @@ export default function CampaignApprovalView({
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleApprove = useCallback(async () => {
-    if (approvalDisabled) return;
     setIsSubmitting(true);
     setError(null);
     try {
@@ -56,7 +58,7 @@ export default function CampaignApprovalView({
       setError("Não foi possível aprovar. Tente novamente.");
       setIsSubmitting(false);
     }
-  }, [campaignId, versionId, router, approvalDisabled]);
+  }, [campaignId, versionId, router]);
 
   return (
     <div className="space-y-6">
@@ -87,7 +89,7 @@ export default function CampaignApprovalView({
               variant="primary"
               size="md"
               onClick={handleApprove}
-              disabled={isSubmitting || approvalDisabled}
+              disabled={isSubmitting}
               loading={isSubmitting}
               aria-label="Aprovar arte"
               className="min-h-11"
@@ -101,7 +103,7 @@ export default function CampaignApprovalView({
                 variant="secondary"
                 size="md"
                 onClick={() => setIsModalOpen(true)}
-                disabled={isSubmitting || approvalDisabled}
+                disabled={isSubmitting}
                 aria-label="Informar problema"
                 className="min-h-11"
               >
@@ -110,12 +112,6 @@ export default function CampaignApprovalView({
               </Button>
             )}
           </div>
-
-          {approvalDisabled && (
-            <p className="mt-3 text-sm text-text-muted font-body" aria-live="polite">
-              Uma correção está em andamento. Aguarde para aprovar.
-            </p>
-          )}
 
           {error && (
             <p

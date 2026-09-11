@@ -67,7 +67,6 @@ export default function CampaignPageClient(props: CampaignPageProps) {
           showProblemReport={Boolean(
             props.approval.isV1 && props.approval.hasOpportunity
           )}
-          approvalDisabled={false}
         />
       ) : (
         props.displayStatus === "ready" && <ReadyView {...props} />
