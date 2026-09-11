@@ -92,9 +92,10 @@ updated: 2026-09-10
 
 ## 6. Pendências / Checkpoint
 
-- **UAT humana:** cenários em `37-2-UAT.md` — **pendente de validação humana** (checkpoint obrigatório). A fatia não é considerada concluída até o UAT PASS.
-- **Migrations:** as 3 migrations F37.2 estão aplicadas no remoto (dry-run → "Remote database is up to date").
+- **UAT humana CONCLUÍDA:** cenários 37.2-1..9 em `37-2-UAT.md` — **PASS 9/9**. O cenário 37.2-6 (corrida aprovar × consumir) foi **validado por código** (reprodução manual determinística inviável): `approve_campaign_candidate` trava a candidata e `RAISE EXCEPTION 'correction_in_progress'` → 409; `consume_campaign_correction_opportunity` valida `approved_version_id IS NOT NULL`/`rejection_count=0` → `campaign_not_pending` antes do provider (locks candidata → campanha; testes `campaign-approve-route` e `campaign-correction-consume-recover` 14.7).
+- **Migrations aplicadas no remoto:** `20260906000001`/`20260906000002`/`20260906000003` (dry-run → "Remote database is up to date").
+- **Fix pós-UAT (commit `01a7021b`):** análise textual com schema discriminado (`eligible` sem `guidance` não é mais rebaixado a `unclear`); falhas de parse/schema → `analysis_failed` com telemetria (`json_parse_failed`/`schema_validation_failed`); erros 409 legíveis `{ code, message }` PT-BR exibidos pelo modal.
 
 ---
 
-*Fase 37.2: 4 gates verdes; UAT humana pendente no checkpoint.*
+*Fase 37.2 verificada: 4 gates verdes + UAT humana PASS (9/9) — fatia concluída.*

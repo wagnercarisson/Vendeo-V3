@@ -562,7 +562,7 @@ Desdobramento da F38.2, adicionados via OpenSpec (`openspec/changes/fase-38-2-1-
 
 ## v1.5 Requirements — Revisão e Aprovação da Arte (F37)
 
-F37 (Revisão e Aprovação da Arte, v1.5) em execução em fatias **37.1/37.2** (padrão F38/38.1/38.2); **37.3 eliminada** (consolidada na 37.2). **Fatia 37.1 (Approval Gate + Candidata Única) CONCLUÍDA** (15/15 plans, 2379 testes, 4 gates verdes, UAT 19.5–19.10 PASS 6/6). **Fatia 37.2 realinhada (Correção Única por Não Conformidade) EM EXECUÇÃO** (19/19 plans, 8 waves). Fontes detalhadas: 37.1 → `openspec/changes/fase-37-1-approval-gate-candidata-unica/`; 37.2 → `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/` (decisão do usuário 2026-09-10). Requisitos F37.1-01 a F37.1-27 abaixo (adicionados em 2026-09-01 após aprovação dos specs):
+F37 (Revisão e Aprovação da Arte, v1.5) em execução em fatias **37.1/37.2** (padrão F38/38.1/38.2); **37.3 eliminada** (consolidada na 37.2). **Fatia 37.1 (Approval Gate + Candidata Única) CONCLUÍDA** (15/15 plans, 2379 testes, 4 gates verdes, UAT 19.5–19.10 PASS 6/6). **Fatia 37.2 realinhada (Correção Única por Não Conformidade) CONCLUÍDA** (19/19 plans, 8 waves, 264 files / 2577 testes, 4 gates verdes, UAT PASS 9/9). Fontes detalhadas: 37.1 → `openspec/changes/fase-37-1-approval-gate-candidata-unica/`; 37.2 → `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/` (decisão do usuário 2026-09-10). Requisitos F37.1-01 a F37.1-27 abaixo (adicionados em 2026-09-01 após aprovação dos specs):
 
 ### Approval Gate + Candidata Única (F37.1)
 
@@ -594,9 +594,9 @@ F37 (Revisão e Aprovação da Arte, v1.5) em execução em fatias **37.1/37.2**
 - [x] **F37.1-26** (verificação): 4 gates verdes (vitest/typecheck/lint/build) + UAT local flag ligada/desligada + campanha legada + mobile
 - [x] **F37.1-27** (trackings): F37 em fatias 37.1/37.2 preenchido nos 6 arquivos de runbook (D11/D12)
 
-### Correção Única por Não Conformidade (F37.2) — em execução
+### Correção Única por Não Conformidade (F37.2) — CONCLUÍDA
 
-Requisitos **F37.2-01 a F37.2-19** mapeados no `37-2-CONTEXT.md` (seção Key Requirements) e em `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/tasks.md` (§1–§19). Escopo: trackings (F37.2-01), migrations M1–M4 (F37.2-02..04), persistência (F37.2-05), `CorrectionIntentService` (F37.2-06), rota `problem-report` (F37.2-07), geração da v2 (F37.2-08), aprovação protegida (F37.2-09), UI modal/dois botões (F37.2-10), página de campanha (F37.2-11), fila admin (F37.2-12), testes (F37.2-13..18) e verificação final (F37.2-19). Fonte da verdade: `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/`. **Nenhuma linha F37.3.**
+Requisitos **F37.2-01 a F37.2-19** mapeados no `37-2-CONTEXT.md` (seção Key Requirements) e em `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/tasks.md` (§1–§19). Escopo: trackings (F37.2-01), migrations M1–M4 (F37.2-02..04), persistência (F37.2-05), `CorrectionIntentService` (F37.2-06), rota `problem-report` (F37.2-07), geração da v2 (F37.2-08), aprovação protegida (F37.2-09), UI modal/dois botões (F37.2-10), página de campanha (F37.2-11), fila admin (F37.2-12), testes (F37.2-13..18) e verificação final (F37.2-19). **CONCLUÍDA — 19/19 plans, 264 files / 2577 testes, 4 gates verdes, UAT PASS 9/9** (verificação: `37-2-VERIFICATION.md`; UAT: `37-2-UAT.md`). Fonte da verdade: `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/`. **Nenhuma linha F37.3.**
 
 ## v1.7 Requirements (Monetização Pública / Stripe — iniciativa diferida)
 Deferred from v1.5 critical path. **Monetização pública / Stripe: iniciativa diferida v1.7+ (sem fase numerada)**, dependente de decisão comercial/jurídica/contábil — reaberta quando houver condição real de executar. Não é fase numerada no roadmap ativo (decisão do alinhamento F43 D1).

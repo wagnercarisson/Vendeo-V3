@@ -147,8 +147,8 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 
 - [x] Phase 35: Changelog / Novidades (5/5 plans)
 - [x] Phase 36: Onboarding — Navegação por Abas (6/6 plans ✅)
-- [ ] Phase 37: Revisão e Aprovação da Arte (em execução em fatias 37.1/37.2 — **37.1 CONCLUÍDA**; **37.2 realinhada = Correção Única por Não Conformidade em execução**; **37.3 eliminada** — consolidada na 37.2)
-  - [ ] **37.2 = Correção Única por Não Conformidade** (realinhada) — defeito objetivo → no máximo uma v2 sem novo crédito; modal [Informar problema], análise textual de elegibilidade, tabelas `campaign_correction_reports`/`campaign_correction_submissions`, RPCs próprias com locks candidata → campanha → relato, geração da v2 (hook + bloco único), aprovação protegida e fila admin — **EM EXECUÇÃO** (19/19 plans, 8 waves), fonte `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/`
+- [x] Phase 37: Revisão e Aprovação da Arte (fatias 37.1/37.2 — **37.1 CONCLUÍDA**; **37.2 realinhada = Correção Única por Não Conformidade CONCLUÍDA**; **37.3 eliminada** — consolidada na 37.2)
+  - [x] **37.2 = Correção Única por Não Conformidade** (realinhada) — defeito objetivo → no máximo uma v2 sem novo crédito; modal [Informar problema], análise textual de elegibilidade, tabelas `campaign_correction_reports`/`campaign_correction_submissions`, RPCs próprias com locks candidata → campanha → relato, geração da v2 (hook + bloco único), aprovação protegida e fila admin — **CONCLUÍDA** (19/19 plans, 8 waves, 264 files / 2577 testes, 4 gates verdes, UAT 9/9 PASS), fonte `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/`
   - [x] **37.1 = Approval Gate + Candidata Única** — flag `campaign_approval_enabled` (fail-closed), tabela `campaign_art_versions` + colunas em `campaigns` (approval_status/rejection_count/approved_version_id/approved_at), índice único parcial 1-approved, RPC `approve_campaign_art_version` transacional, generate-image insere v1, estado `ApprovalDisplayState`/gating (download + copy 403 até aprovar), tela de revisão da candidata ativa, rota `POST /api/campaign/[id]/approve` — **CONCLUÍDA** (15/15 plans, 2379 testes, 4 gates verdes, UAT 6/6 PASS), fonte `openspec/changes/fase-37-1-approval-gate-candidata-unica/`
 - [x] Phase 38: Tabela de Custos por Operação (8/8 plans ✅)
   - [x] **38.1 = Apuração de Custos de IA por Entrega** (desdobramento da F38, v1.5) — trilha granular de custo de IA por entrega + views/RPCs de apuração e reconciliação (USD × créditos) — **CONCLUÍDA** (11/11 plans, 1713 testes, UAT validado; fechada como camada de ESTIMATIVA OPERACIONAL GRANULAR — `responses:image_generation = 0.065` provisório beta, reconciliação financeira real na próxima fase), fonte `openspec/changes/fase-38-1-ai-cost-accounting/`
@@ -242,9 +242,9 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 34. Store Readiness | v1.5 | 0/0 | ○ Pending | — |
 | 35. Changelog / Novidades | v1.5 | 5/5 | ✅ Complete | 2026-07-31 |
 | 36. Onboarding — Navegação por Abas | v1.5 | 6/6 | ✅ Complete | 2026-08-05 |
-| 37. Revisão e Aprovação da Arte | v1.5 | 15/15 (37.1) | ◆ In progress (37.1 ✅; 37.2 em execução) | 2026-09-01 |
+| 37. Revisão e Aprovação da Arte | v1.5 | 34/34 (37.1 + 37.2) | ✅ Complete (37.1 ✅; 37.2 ✅) | 2026-09-10 |
 | 37.1. Approval Gate + Candidata Única | v1.5 | 15/15 | ✅ Complete | 2026-09-01 |
-| 37.2. Correção Única por Não Conformidade | v1.5 | 0/19 | ◆ In progress | — |
+| 37.2. Correção Única por Não Conformidade | v1.5 | 19/19 | ✅ Complete | 2026-09-10 |
 | 38. Tabela de Custos por Operação | v1.5 | 8/8 | ✅ Complete | 2026-08-07 |
 | 38.1. Apuração de Custos de IA por Entrega | v1.5 | 11/11 | ✅ Complete | 2026-08-09 |
 | 38.2. Admin de Custos Operacionais + Configurações Econômicas | v1.5 | 15/15 | ✅ Complete | 2026-08-11 |
