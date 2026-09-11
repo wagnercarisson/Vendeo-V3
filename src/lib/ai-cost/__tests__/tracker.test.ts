@@ -87,7 +87,7 @@ describe("tipos centrais (contrato F38.1)", () => {
     expect(notAvailable.tokens?.promptTokens).toBe(120);
   });
 
-  it("GenerationEventType aceita os 12 valores da migration (D5)", () => {
+  it("GenerationEventType aceita os 13 valores da migration (D5 + F37.2)", () => {
     const types: GenerationEventType[] = [
       "campaign_pipeline",
       "campaign_copy",
@@ -101,8 +101,10 @@ describe("tipos centrais (contrato F38.1)", () => {
       "brand_profile_with_logo",
       "brand_profile_vision",
       "brand_profile_text",
+      "campaign_correction_analysis",
     ];
-    expect(types).toHaveLength(12);
+    expect(types).toHaveLength(13);
+    expect(types).toContain("campaign_correction_analysis");
     // Os 6 tipos novos call-level existem (D5)
     expect(types).toContain("campaign_input_validation");
     expect(types).toContain("campaign_image_review");

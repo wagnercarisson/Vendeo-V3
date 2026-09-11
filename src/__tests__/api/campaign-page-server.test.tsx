@@ -11,6 +11,17 @@ const mockIsCampaignApprovalEnabled = vi.fn();
 const mockListArtVersions = vi.fn();
 const mockComputeApprovalState = vi.fn();
 const mockGetActiveCandidateArtVersion = vi.fn();
+const mockRpc = vi.fn();
+const mockGetCorrectionReport = vi.fn();
+
+// F37.2: a página importa supabaseAdmin (recuperação lazy) e getCorrectionReport.
+vi.mock("@/lib/supabase/server", () => ({
+  supabaseAdmin: { rpc: mockRpc },
+}));
+
+vi.mock("@/lib/campaign/correction-reports", () => ({
+  getCorrectionReport: mockGetCorrectionReport,
+}));
 
 vi.mock("@/lib/campaign/display", () => ({
   getCampaignForDisplay: mockGetCampaignForDisplay,
@@ -47,6 +58,8 @@ vi.mock("next/navigation", () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockRpc.mockResolvedValue({ data: { recovered: false }, error: null });
+  mockGetCorrectionReport.mockResolvedValue(null);
 });
 
 describe("CampaignDetailPage (Server Component)", () => {
