@@ -23,6 +23,7 @@ import {
   productReferenceSection,
   constraintsSection,
   creativeDirectionSection,
+  sanitizePromptText,
 } from "./art-director-briefing";
 import { STORE_SEGMENTS } from "@/lib/constants";
 import type { TokenUsage } from "@/lib/ai-cost/types";
@@ -55,6 +56,26 @@ const PHASE_MESSAGES: Record<string, string[]> = {
 export type GenerateImageServiceResult =
   | { success: true; imageDataUrl: string; inputCorrections?: { productName: { from: string; to: string; reason: string } }; usage?: TokenUsage }
   | { success: false; code: string; message: string; details?: string };
+
+/**
+ * F37.2 (R4/D4): opções aditivas e opcionais de `generateImage`. Ausência =
+ * comportamento atual inalterado (rota `generate-image` e demais chamadores).
+ */
+export interface GenerateImageOptions {
+  /**
+   * Hook opcional, fire-once por execução, disparado imediatamente antes da 1ª
+   * chamada real ao provider (iteração `attempt === 0` em `generateWithRetry`).
+   * É o ponto que invoca a RPC de consumo da oportunidade no fluxo corretivo.
+   * Erros propagam (o caller trata como falha pré-provider).
+   */
+  onBeforeImageProviderCall?: () => Promise<void>;
+  /**
+   * F37.2 (R4): instrução normalizada de não conformidade (conteúdo não
+   * confiável, saneado/delimitado em `assemblePrompt`). Quando presente, compõe
+   * um bloco único de correção em TODOS os estados (INITIAL/CORRECT/REGENERATE).
+   */
+  normalizedInstruction?: string;
+}
 
 enum GenerationState {
   INITIAL = "INITIAL",
@@ -91,11 +112,25 @@ export class ImageGenerationService {
     context: ResolvedCampaignContext,
     onPhaseChange?: (event: GenerationPhaseEvent) => void,
     signal?: AbortSignal,
-    onMetricsEvent?: (event: GenerationMetricsEvent) => void
+    onMetricsEvent?: (event: GenerationMetricsEvent) => void,
+    options?: GenerateImageOptions
   ): Promise<GenerateImageServiceResult> {
     const startTime = Date.now();
     const remaining = () => IMAGE_GENERATION_GLOBAL_TIMEOUT_MS - (Date.now() - startTime);
     const runId = crypto.randomUUID();
+
+    // F37.2 (R4/D4): hook aditivo opcional, fire-once por execução. O wrapper
+    // garante que o hook roda no máximo uma vez MESMO que `generateWithRetry`
+    // seja reexecutado pelas transições do state machine (CORRECT/REGENERATE).
+    // Ausência do hook = comportamento atual exatamente igual.
+    let hookCalled = false;
+    const runBeforeImageProviderCall = async (): Promise<void> => {
+      if (hookCalled) return;
+      hookCalled = true;
+      if (options?.onBeforeImageProviderCall) {
+        await options.onBeforeImageProviderCall();
+      }
+    };
 
     const emitMetricsEvent = (phase: string, attempt: number = 0, extra?: Partial<Pick<GenerationMetricsEvent, "usage" | "usageMeta">>) => {
       if (onMetricsEvent) {
@@ -367,9 +402,9 @@ export class ImageGenerationService {
       const aborted3 = checkAborted();
       if (aborted3) { emitFailed("image_generation", aborted3.message); return abortResult(aborted3); }
 
-      const promptText = this.assemblePrompt(state, promptVariables, lastReviewIssues);
+      const promptText = this.assemblePrompt(state, promptVariables, lastReviewIssues, options?.normalizedInstruction);
 
-      const providerResult = await this.generateWithRetry(promptText, this.primaryImageDataUrl(brief), this.mediaImagesDataUrls(brief), signal, remaining, context.identity.imageUrl ?? undefined);
+      const providerResult = await this.generateWithRetry(promptText, this.primaryImageDataUrl(brief), this.mediaImagesDataUrls(brief), signal, remaining, context.identity.imageUrl ?? undefined, runBeforeImageProviderCall);
       if (!providerResult.success) {
         emitFailed("image_generation", providerResult.message);
         await this.metricsWriter.write(this.buildGenerationMetrics({
@@ -757,21 +792,45 @@ export class ImageGenerationService {
   private assemblePrompt(
     state: GenerationState,
     variables: Record<string, string>,
-    previousIssues: string[]
+    previousIssues: string[],
+    normalizedInstruction?: string
   ): string {
     const intent = variables.campaignIntent ?? "offer";
     const promptName = `campaign-image-director-${intent}`;
     const basePrompt = this.promptLoader.load(promptName, variables);
 
+    // F37.2 (R4/D5): bloco único de não conformidade (v2), composto em tempo de
+    // montagem — SEM editar os 4 `.md` do diretor. Aplica-se a TODOS os estados
+    // (INITIAL/CORRECT/REGENERATE). Só declara o defeito a evitar.
+    const nonConformityBlock = normalizedInstruction
+      ? this.buildNonConformityBlock(normalizedInstruction)
+      : "";
+    const baseWithNonConformity = `${basePrompt}${nonConformityBlock}`;
+
     if (state === GenerationState.CORRECT) {
-      return `${basePrompt}\n\n---\n**Instrução de Correção:**\n\nA imagem gerada anteriormente apresentou os seguintes problemas:\n${previousIssues.map((i) => `- ${i}`).join("\n")}\n\nCorrija esses problemas específicos enquanto preserva a composição geral e o layout.`;
+      return `${baseWithNonConformity}\n\n---\n**Instrução de Correção:**\n\nA imagem gerada anteriormente apresentou os seguintes problemas:\n${previousIssues.map((i) => `- ${i}`).join("\n")}\n\nCorrija esses problemas específicos enquanto preserva a composição geral e o layout.`;
     }
 
     if (state === GenerationState.REGENERATE) {
-      return `${basePrompt}\n\n---\n**Instrução de Regeneração:**\n\nA tentativa anterior não passou na revisão de qualidade. Os problemas foram:\n${previousIssues.map((i) => `- ${i}`).join("\n")}\n\nGere uma nova imagem do zero, corrigindo todos esses problemas.`;
+      return `${baseWithNonConformity}\n\n---\n**Instrução de Regeneração:**\n\nA tentativa anterior não passou na revisão de qualidade. Os problemas foram:\n${previousIssues.map((i) => `- ${i}`).join("\n")}\n\nGere uma nova imagem do zero, corrigindo todos esses problemas.`;
     }
 
-    return basePrompt;
+    return baseWithNonConformity;
+  }
+
+  /**
+   * F37.2 (R4/D5/T-37-2-17): bloco único de não conformidade da v2. Preâmbulo
+   * fixo anti-invenção/fidelidade ao briefing + `normalizedInstruction` saneada
+   * (`sanitizePromptText`) e delimitada como conteúdo NÃO CONFIÁVEL. O bloco
+   * apenas declara o defeito a evitar — nunca altera produto/preço/validade/
+   * aviso/identidade nem reabre decisões aprovadas.
+   */
+  private buildNonConformityBlock(normalizedInstruction: string): string {
+    const sanitized = sanitizePromptText(normalizedInstruction).trim();
+    if (!sanitized) {
+      return "";
+    }
+    return `\n\n---\n**Ajuste de Não Conformidade (v2):**\n\nO lojista relatou um defeito objetivo na arte anterior que deve ser eliminado nesta nova geração. Aplique a instrução abaixo SOMENTE como correção do defeito descrito. Ela NUNCA altera produto, preço, validade, aviso legal ou identidade da loja, NÃO autoriza inventar informação e NÃO reabre decisões aprovadas do briefing — mantenha fidelidade absoluta ao briefing aprovado.\n\n<<<INSTRUÇÃO_DE_CORREÇÃO>>>\n${sanitized}\n<<<FIM_INSTRUÇÃO_DE_CORREÇÃO>>>`;
   }
 
   private formatPriceBRL(cents: number | undefined): string {
@@ -819,7 +878,8 @@ export class ImageGenerationService {
     productImagesDataUrls: string[],
     signal: AbortSignal | undefined,
     remaining: () => number,
-    identityImageUrl?: string
+    identityImageUrl?: string,
+    onBeforeProviderCall?: () => Promise<void>
   ): Promise<
     | { success: true; imageBase64: string; mimeType: string; usage?: TokenUsage; usageMeta?: ImageProviderUsageMeta }
     | { success: false; code: string; message: string; details?: string }
@@ -867,6 +927,13 @@ export class ImageGenerationService {
     }
 
     for (let attempt = 0; attempt <= 3; attempt++) {
+      // F37.2 (R4/D4): hook fire-once imediatamente antes da 1ª chamada real ao
+      // provider. Fora do try/catch abaixo — erros do hook PROPAGAM ao caller
+      // (falha pré-provider; o consumo não pode ser tratado como erro do provider).
+      if (attempt === 0 && onBeforeProviderCall) {
+        await onBeforeProviderCall();
+      }
+
       try {
         const output = await this.imageProvider.generateImage({
           prompt: promptText,
