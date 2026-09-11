@@ -33,11 +33,15 @@ export interface CampaignPageProps {
   downloadUrl: string;
   campaignId: string;
   isPublicationCopyEdited: boolean;
-  /** F37.1 (D2/decisão 3): estado de aprovação + candidata ativa (só quando pending). */
+  /** F37.1 (D2/decisão 3): estado de aprovação + candidata ativa (pending/regenerating). */
   approval?: {
     state: ApprovalDisplayState;
     candidateImageUrl?: string | null;
     candidateVersionId?: string | null;
+    /** F37.2 (R1): candidata é a v1 → habilita [Informar problema] se houver oportunidade. */
+    isV1?: boolean;
+    /** F37.2 (R1): caso sem consumo (relato inexistente ou `open`). */
+    hasOpportunity?: boolean;
   };
 }
 

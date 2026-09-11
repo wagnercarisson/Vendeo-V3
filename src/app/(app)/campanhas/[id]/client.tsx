@@ -53,14 +53,21 @@ export default function CampaignPageClient(props: CampaignPageProps) {
         <ErrorView onNewCampaign={() => router.push("/campanhas/nova")} />
       )}
       {props.displayStatus === "ready" &&
-      props.approval?.state.status === "pending" &&
-      props.approval.candidateImageUrl &&
-      props.approval.candidateVersionId ? (
+      props.approval?.state.status === "regenerating" ? (
+        <RegeneratingView />
+      ) : props.displayStatus === "ready" &&
+        props.approval?.state.status === "pending" &&
+        props.approval.candidateImageUrl &&
+        props.approval.candidateVersionId ? (
         <CampaignApprovalView
           campaignId={props.campaignId}
           versionId={props.approval.candidateVersionId}
           imageUrl={props.approval.candidateImageUrl}
           productName={props.productName}
+          showProblemReport={Boolean(
+            props.approval.isV1 && props.approval.hasOpportunity
+          )}
+          approvalDisabled={false}
         />
       ) : (
         props.displayStatus === "ready" && <ReadyView {...props} />
@@ -384,6 +391,23 @@ function GeneratingView() {
       <Loader2 className="h-12 w-12 animate-spin text-accent-green" />
       <p className="text-lg text-text-secondary font-body">
         Sua campanha está sendo gerada...
+      </p>
+    </div>
+  );
+}
+
+// F37.2 (R7): progresso da v2 durante a correção (`regenerating`). Sem download,
+// sem Kit de Publicação e sem [Aprovar arte]/[Informar problema] — não cai no
+// ReadyView.
+function RegeneratingView() {
+  return (
+    <div className="flex flex-col items-center justify-center space-y-4 p-12">
+      <Loader2 className="h-12 w-12 animate-spin text-accent-green" />
+      <p className="text-lg text-text-secondary font-body">
+        Corrigindo a arte...
+      </p>
+      <p className="text-sm text-text-muted font-body">
+        Aguarde: a nova versão aparecerá para aprovação.
       </p>
     </div>
   );
