@@ -125,7 +125,9 @@ describe("POST /api/campaign/[id]/approve", () => {
     );
 
     expect(res.status).toBe(409);
-    expect(mockRpc).toHaveBeenCalledWith("approve_campaign_art_version", {
+    // F37.2 (R8): a rota usa a aprovação protegida approve_campaign_candidate
+    // (a RPC F37.1 é invocada internamente por ela, na mesma transação).
+    expect(mockRpc).toHaveBeenCalledWith("approve_campaign_candidate", {
       p_campaign_id: VALID_UUID,
       p_version_id: VERSION_UUID,
     });
