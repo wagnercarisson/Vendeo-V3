@@ -1,7 +1,7 @@
 ---
 status: passed
 phase: 37.2-correcao-unica-por-nao-conformidade
-updated: 2026-09-10
+updated: 2026-09-11
 ---
 
 # Phase 37.2: Correção Única por Não Conformidade — Verification
@@ -95,6 +95,14 @@ updated: 2026-09-10
 - **UAT humana CONCLUÍDA:** cenários 37.2-1..9 em `37-2-UAT.md` — **PASS 9/9**. O cenário 37.2-6 (corrida aprovar × consumir) foi **validado por código** (reprodução manual determinística inviável): `approve_campaign_candidate` trava a candidata e `RAISE EXCEPTION 'correction_in_progress'` → 409; `consume_campaign_correction_opportunity` valida `approved_version_id IS NOT NULL`/`rejection_count=0` → `campaign_not_pending` antes do provider (locks candidata → campanha; testes `campaign-approve-route` e `campaign-correction-consume-recover` 14.7).
 - **Migrations aplicadas no remoto:** `20260906000001`/`20260906000002`/`20260906000003` (dry-run → "Remote database is up to date").
 - **Fix pós-UAT (commit `01a7021b`):** análise textual com schema discriminado (`eligible` sem `guidance` não é mais rebaixado a `unclear`); falhas de parse/schema → `analysis_failed` com telemetria (`json_parse_failed`/`schema_validation_failed`); erros 409 legíveis `{ code, message }` PT-BR exibidos pelo modal.
+
+## 7. Ajuste pós-verificação e dívidas técnicas
+
+- **Ajuste pós-verificação (WARNING #1 — 2026-09-11):** removido o prop `approvalDisabled` de `CampaignApprovalView` e o bloco morto associado; `client.tsx` não o alimentava (`approvalDisabled={false}` hardcoded) e nenhum estado real o justificaria. As proteções contra a corrida aprovar × consumir são: (a) modal de relato bloqueado durante o processamento; (b) estado `regenerating` com view dedicada (`CampaignApprovalView` não é montada após o consumo); (c) RPC protegida `approve_campaign_candidate` no banco. Artefatos atualizados: `specs/campaign-approval-gate/spec.md`, `tasks.md` (9.4), `design.md`, `proposal.md`. Os `37-2-10/11-SUMMARY.md` permanecem como snapshot histórico do plano original.
+- **Ajuste #2 (2026-09-11):** rótulo admin "Consumo (rejection_count)" → **"Correção consumida"** (não promete o campo bruto; o valor continua derivado do estado do caso).
+- **Dívidas técnicas registradas (migrations já aplicadas no remoto — não editar):**
+  - **M2 `20260906000002`** (`complete_campaign_correction_analysis`): no caminho `rowcount = 0` o fallback levanta sempre `submission_stale`; numa corrida estreita (lease expira entre o pré-check e o UPDATE) o código poderia ser `analysis_lease_expired`. Sem impacto funcional (nada é sobrescrito). Corrigir em migration futura.
+  - **M1 `20260906000001`**: `CREATE POLICY` sem `DROP POLICY IF EXISTS` — não estritamente re-executável apesar do cabeçalho "idempotente" (mesmo precedente da F37.1). Precedente para migrations futuras adotarem o padrão idempotente completo.
 
 ---
 

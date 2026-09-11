@@ -53,7 +53,7 @@ A **F37 — Revisão e Aprovação da Arte** (v1.5) já entregou a **fatia 37.1*
 
 `src/components/campaign/campaign-problem-modal.tsx` (novo, client, padrão de modal hand-rolled `role="dialog" aria-modal`, tema dark tokens `#020617`/`#F8FAFC`/`#22C55E`, touch ≥ 44px):
 
-- **Abertura:** `CampaignApprovalView` passa a renderizar dois botões no estado `pending` (v1): primário **[Aprovar arte]** (comportamento atual, mas passando a chamar o fluxo da R8) e secundário **[Informar problema]** (abre o modal sem sair da página). A guarda de UX desabilita **[Aprovar arte]** enquanto um caso está em processamento (reforço; a garantia é o banco — R8).
+- **Abertura:** `CampaignApprovalView` passa a renderizar dois botões no estado `pending` (v1): primário **[Aprovar arte]** (comportamento atual, mas passando a chamar o fluxo da R8) e secundário **[Informar problema]** (abre o modal sem sair da página). **Sem guarda de UX no componente:** não existe estado que alimente um "approve desabilitado" — durante o processamento o modal bloqueia interação/fechamento e, após o consumo, a página deriva `regenerating` (view dedicada; `CampaignApprovalView` não é montada). A garantia de serialização é a RPC aditiva no banco (R8).
 - **Conteúdo do modal:** preview da candidata ativa (signed URL recebida por prop), orientação curta do que é corrigível (defeito objetivo — §4) e do que não é (preferência estética, mudança de dados, rebriefing), campo textarea **obrigatório** com label "Descreva o problema na arte", botões **[Enviar para análise]** e **[Cancelar]**.
 - **Fechamentos sem efeito:** **[Cancelar]**, X, ESC e clique no backdrop fecham o modal **sem aprovar, sem enviar, sem criar caso**.
 - **Validação no clique:** texto vazio ou somente pontuação → erro amigável pedindo descrição; **não cria caso e não chama IA** (R2). Envio válido → `POST /api/campaign/[id]/problem-report { text }`.
@@ -166,7 +166,7 @@ Nova RPC `approve_campaign_candidate(p_campaign_id uuid, p_version_id uuid) RETU
 - Consumo vence → `correction_in_progress=true`; aprovação protegida subsequente falha (`409`) — nenhuma geração paga roda após a aprovação.
 - Aprovação vence → campanha `approved`; consumo subsequente falha na validação de pendência → a geração é abortada **antes do provider** (sem consumo, sem custo).
 - Ordem de locks consistente: aprovação protegida e consumo travam candidata → campanha; consumo segue candidata → campanha → relato; a aprovação nunca toca o relato.
-- Guarda de UX (desabilitar [Aprovar arte] com caso em processamento) é reforço.
+- Proteções contra a corrida são: modal bloqueado durante o processamento, estado `regenerating` com view dedicada (sem [Aprovar arte] montado) e RPC protegida no banco — sem guarda de UX no componente (nenhum estado real a alimentaria).
 
 ### D8 — Fila administrativa (R6)
 

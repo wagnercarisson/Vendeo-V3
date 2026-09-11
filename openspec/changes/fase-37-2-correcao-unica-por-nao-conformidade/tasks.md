@@ -74,7 +74,7 @@
 - [x] 9.1 `src/components/campaign/campaign-problem-modal.tsx` (novo, client): preview da candidata ativa (signed URL), orientação corrigível × não corrigível, campo textarea obrigatório "Descreva o problema na arte", botões **[Enviar para análise]/[Cancelar]** — R1
 - [x] 9.2 Fechamentos sem efeito: **[Cancelar]**, X, ESC, backdrop — sem aprovar/enviar/criar caso — R1
 - [x] 9.3 Validação **no clique**: vazio/pontuação → erro amigável, **sem caso e sem IA** — R1/R2
-- [x] 9.4 `src/components/campaign/campaign-approval-view.tsx`: botão primário **[Aprovar arte]** + botão secundário **[Informar problema]** (abre o modal) no estado `pending` (v1); guarda de UX desabilita [Aprovar arte] com caso em processamento (reforço) — R1/R8
+- [x] 9.4 `src/components/campaign/campaign-approval-view.tsx`: botão primário **[Aprovar arte]** + botão secundário **[Informar problema]** (abre o modal) no estado `pending` (v1). **Proteções reais contra a corrida (sem guarda de UX no componente):** modal bloqueado durante o processamento + estado `regenerating` com view dedicada (esta view não é montada após o consumo) + RPC protegida `approve_campaign_candidate` no banco — R1/R8
 - [x] 9.5 Estado pós-envio: processamento da análise/geração (não fecha o modal), orientação `blocked`/`unclear`/`analysis_failed` com reformulação, transição para `regenerating`/`pending`(v2) via `router.refresh()`; estados loading/erro PT-BR — R1/R2
 - [x] 9.6 A11y/mobile/tema: touch ≥ 44px, `label`/`aria`, `role="dialog"`, `aria-modal`, tema dark (tokens `#020617`/`#F8FAFC`/`#22C55E`) — design-system
 

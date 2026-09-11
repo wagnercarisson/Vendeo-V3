@@ -75,7 +75,7 @@ O sistema SHALL exibir a **tela de revisão** em `/campanhas/[id]` quando a camp
 - Botão primário **"Aprovar arte"** — dispara `POST /api/campaign/[id]/approve` com o `versionId` da candidata (fluxo da RPC protegida — R8); ao aprovar, `router.refresh()` libera a entrega (arte + copys + download, como hoje).
 - Botão secundário **"Informar problema"** — abre o modal de relato (uma etapa, capability `campaign-problem-report`) **sem sair da página**; presente apenas quando a candidata é a v1 e ainda há oportunidade (caso sem consumo).
 - Microcopy PT-BR (ex.: "Revise a arte antes de liberar: a IA pode cometer erros."), estados de loading/erro claros, touch targets ≥ 44px, `label`/`aria`, tema dark (tokens `#020617`/`#F8FAFC`/`#22C55E`).
-- **Guarda de UX (reforço, não a garantia):** [Aprovar arte] desabilitado enquanto um caso está em processamento (`correction_in_progress`); a garantia de serialização é a RPC aditiva no banco (R8).
+- **Proteções contra a corrida aprovar × consumir (sem guarda de UX no componente):** (a) o modal de relato bloqueia interação e fechamento enquanto a análise/geração está em processamento; (b) após o consumo (`correction_in_progress=true`) a página deriva `regenerating` e renderiza `RegeneratingView` — `CampaignApprovalView` não é montada, portanto não há [Aprovar arte] ativo nesse estado; (c) a garantia de serialização é a RPC aditiva no banco (`approve_campaign_candidate` valida `correction_in_progress=false` → 409), que fecha a corrida (R8). Não existe estado real que alimente um "approve desabilitado" no componente.
 
 #### Scenario: Campanha pendente exibe revisão sem download/copy
 
