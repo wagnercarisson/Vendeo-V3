@@ -2,33 +2,43 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, MessageSquareWarning } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import CampaignProblemModal from "@/components/campaign/campaign-problem-modal";
 
 interface CampaignApprovalViewProps {
   campaignId: string;
   versionId: string;
   imageUrl: string;
   productName: string;
+  /** F37.2 (R1): exibe [Informar problema] quando a candidata é a v1 e ainda há oportunidade (sem consumo). */
+  showProblemReport?: boolean;
+  /** F37.2 (R8): desabilita [Aprovar arte] com caso em processamento (`regenerating`). */
+  approvalDisabled?: boolean;
 }
 
-// F37.1 (D7/decisões 3/12): tela de revisão da candidata ativa. Revisão 100%
-// focada na arte — nenhuma entrega/cópia textual é exibida antes da aprovação,
-// sem histórico recuperável (apenas a candidata ativa é exibida). O botão de
-// correção é ausente nesta fatia (correção é 37.2) e nenhuma janela de diálogo
-// é utilizada.
+// F37.2 (R1/R8): tela de revisão da candidata ativa com DOIS caminhos — [Aprovar
+// arte] (primário, fluxo de aprovação protegida) e [Informar problema]
+// (secundário, abre o modal de relato sem sair da página). Revisão 100% focada na
+// arte — nenhuma entrega/cópia textual antes da aprovação; sem histórico
+// recuperável (apenas a candidata ativa). Na v2 (sem oportunidade) apenas
+// [Aprovar arte] é exibido.
 export default function CampaignApprovalView({
   campaignId,
   versionId,
   imageUrl,
   productName,
+  showProblemReport = false,
+  approvalDisabled = false,
 }: CampaignApprovalViewProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleApprove = useCallback(async () => {
+    if (approvalDisabled) return;
     setIsSubmitting(true);
     setError(null);
     try {
@@ -46,7 +56,7 @@ export default function CampaignApprovalView({
       setError("Não foi possível aprovar. Tente novamente.");
       setIsSubmitting(false);
     }
-  }, [campaignId, versionId, router]);
+  }, [campaignId, versionId, router, approvalDisabled]);
 
   return (
     <div className="space-y-6">
@@ -68,7 +78,8 @@ export default function CampaignApprovalView({
       <Card>
         <div className="p-4">
           <p className="mb-4 text-sm text-text-muted font-body">
-            Ao aprovar, a campanha é liberada para publicação.
+            Ao aprovar, a campanha é liberada para publicação. Se a arte tiver um
+            defeito objetivo, informe o problema para uma correção.
           </p>
 
           <div className="flex flex-wrap gap-2">
@@ -76,15 +87,35 @@ export default function CampaignApprovalView({
               variant="primary"
               size="md"
               onClick={handleApprove}
-              disabled={isSubmitting}
+              disabled={isSubmitting || approvalDisabled}
               loading={isSubmitting}
-              aria-label="Aprovar e liberar campanha"
+              aria-label="Aprovar arte"
               className="min-h-11"
             >
               <CheckCircle2 className="h-4 w-4" />
-              {isSubmitting ? "Aprovando..." : "Aprovar e liberar campanha"}
+              {isSubmitting ? "Aprovando..." : "Aprovar arte"}
             </Button>
+
+            {showProblemReport && (
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => setIsModalOpen(true)}
+                disabled={isSubmitting || approvalDisabled}
+                aria-label="Informar problema"
+                className="min-h-11"
+              >
+                <MessageSquareWarning className="h-4 w-4" />
+                Informar problema
+              </Button>
+            )}
           </div>
+
+          {approvalDisabled && (
+            <p className="mt-3 text-sm text-text-muted font-body" aria-live="polite">
+              Uma correção está em andamento. Aguarde para aprovar.
+            </p>
+          )}
 
           {error && (
             <p
@@ -96,6 +127,14 @@ export default function CampaignApprovalView({
           )}
         </div>
       </Card>
+
+      {isModalOpen && (
+        <CampaignProblemModal
+          campaignId={campaignId}
+          candidateImageUrl={imageUrl}
+          onClose={() => setIsModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

@@ -39,7 +39,7 @@ describe("CampaignApprovalView (F37.1)", () => {
 
     render(<CampaignApprovalView {...props} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /aprovar e liberar campanha/i }));
+    fireEvent.click(screen.getByRole("button", { name: /aprovar arte/i }));
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
@@ -87,7 +87,7 @@ describe("CampaignApprovalView (F37.1)", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
 
     // interação no botão de aprovar não abre nenhum dialog
-    fireEvent.click(screen.getByRole("button", { name: /aprovar e liberar campanha/i }));
+    fireEvent.click(screen.getByRole("button", { name: /aprovar arte/i }));
     await waitFor(() => {
       expect(mockRefresh).toHaveBeenCalled();
     });

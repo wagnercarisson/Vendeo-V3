@@ -103,7 +103,7 @@ describe("CampaignPageClient — display states", () => {
         />
       );
 
-      expect(screen.getByRole("button", { name: /aprovar e liberar campanha/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /aprovar arte/i })).toBeInTheDocument();
       expect(screen.getByText("Revise a arte antes de liberar: a IA pode cometer erros.")).toBeInTheDocument();
     });
 
@@ -118,7 +118,7 @@ describe("CampaignPageClient — display states", () => {
       );
 
       expect(screen.getByRole("button", { name: /baixar/i })).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: /aprovar e liberar campanha/i })).toBeNull();
+      expect(screen.queryByRole("button", { name: /aprovar arte/i })).toBeNull();
     });
   });
 
