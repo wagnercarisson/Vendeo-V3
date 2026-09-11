@@ -16,7 +16,7 @@ updated: 2026-09-10
 
 | Gate | Comando | Exit | Evidência |
 |------|---------|------|-----------|
-| Testes | `npx vitest run` | 0 | **264 files / 2567 tests passed** (F37.1 base: 255 files / 2379 → +9 files / +188 testes) |
+| Testes | `npx vitest run` | 0 | **264 files / 2578 tests passed** (F37.1 base: 255 files / 2379 → +9 files / +199 testes) |
 | Typecheck | `npm run typecheck` (`tsc -p tsconfig.typecheck.json --noEmit`) | 0 | Sem erros |
 | Lint | `npm run lint` (`eslint .`) | 0 | Sem erros |
 | Build | `npm run build` (`next build`) | 0 | Build bem-sucedido (rotas `/campanhas/[id]`, `/api/campaign/[id]/problem-report`, `/api/admin/campaign-reports/[reportId]` compiladas) |
@@ -50,7 +50,7 @@ updated: 2026-09-10
 | 37-2-15 | Testes consumo/serialização/recuperação (14.1-14.9) | consume-recover 9/9 | ✓ | ✓ |
 | 37-2-16 | Testes única v2/geração/custo/paridade (15.1-15.9) | correction-v2-persistence 9/9 | ✓ | ✓ |
 | 37-2-17 | Testes UI/gates/admin/rota (16.1-16.9) | 3 suítes 46/46 | ✓ | ✓ |
-| 37-2-18 | Regressão + co-migração de fixtures | suíte completa 2567 | ✓ | ✓ |
+| 37-2-18 | Regressão + co-migração de fixtures | suíte completa 2578 | ✓ | ✓ |
 | 37-2-19 | Verificação final + UAT (este documento + `37-2-UAT.md`) | 4 gates verdes | ✓ | ✓ |
 
 ## 4. Matriz de Cobertura F37.2-01..F37.2-19

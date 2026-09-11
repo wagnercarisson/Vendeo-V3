@@ -13,12 +13,12 @@ Copy Director com IA (F23), pipeline de geração paralelo com créditos (F24-F2
 
 ### In Progress
 
-**F37 — Revisão e Aprovação da Arte (v1.5):** em execução em fatias **37.1/37.2** (padrão F38/38.1/38.2). **Fatia 37.1 (Approval Gate + Candidata Única) CONCLUÍDA (15/15 plans, 2379 testes, 4 gates verdes, UAT 19.5–19.10 PASS 6/6)** — flag `campaign_approval_enabled` (fail-closed), tabela `campaign_art_versions` + colunas de aprovação em `campaigns`, RPC `approve_campaign_art_version` transacional, generate-image insere v1, estado de aprovação/gating (download + copy 403 até aprovar), tela de revisão da candidata, rota approve. Source of truth: `openspec/changes/fase-37-1-approval-gate-candidata-unica/` (decisão do usuário 2026-09-01). **Fatia 37.2 realinhada (Correção Única por Não Conformidade) CONCLUÍDA** — 19/19 plans (8 waves), 264 files / 2577 testes, 4 gates verdes, UAT PASS 9/9 (37.2-6 validado por código); source of truth: `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/` (decisão do usuário 2026-09-10); **37.3 eliminada** (consolidada na 37.2).
+**F37 — Revisão e Aprovação da Arte (v1.5):** em execução em fatias **37.1/37.2** (padrão F38/38.1/38.2). **Fatia 37.1 (Approval Gate + Candidata Única) CONCLUÍDA (15/15 plans, 2379 testes, 4 gates verdes, UAT 19.5–19.10 PASS 6/6)** — flag `campaign_approval_enabled` (fail-closed), tabela `campaign_art_versions` + colunas de aprovação em `campaigns`, RPC `approve_campaign_art_version` transacional, generate-image insere v1, estado de aprovação/gating (download + copy 403 até aprovar), tela de revisão da candidata, rota approve. Source of truth: `openspec/changes/fase-37-1-approval-gate-candidata-unica/` (decisão do usuário 2026-09-01). **Fatia 37.2 realinhada (Correção Única por Não Conformidade) CONCLUÍDA** — 19/19 plans (8 waves), 264 files / 2578 testes, 4 gates verdes, UAT PASS 9/9 (37.2-6 validado por código); source of truth: `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/` (decisão do usuário 2026-09-10); **37.3 eliminada** (consolidada na 37.2).
 
 ### Known Gaps
 
 - Monetização pública / Stripe diferido para v1.7+ (**sem fase numerada** — iniciativa diferida, decisão do alinhamento F43 D1)
-- F37 CONCLUÍDA nas fatias 37.1/37.2 — fatia 37.1 CONCLUÍDA (15/15 plans, 2379 testes, 4 gates verdes, UAT 19.5–19.10 PASS); **37.2 realinhada (Correção Única por Não Conformidade) CONCLUÍDA** (19/19 plans, 8 waves, 264 files / 2577 testes, 4 gates verdes, UAT PASS 9/9); **37.3 eliminada** (consolidada na 37.2)
+- F37 CONCLUÍDA nas fatias 37.1/37.2 — fatia 37.1 CONCLUÍDA (15/15 plans, 2379 testes, 4 gates verdes, UAT 19.5–19.10 PASS); **37.2 realinhada (Correção Única por Não Conformidade) CONCLUÍDA** (19/19 plans, 8 waves, 264 files / 2578 testes, 4 gates verdes, UAT PASS 9/9); **37.3 eliminada** (consolidada na 37.2)
 
 ---
 

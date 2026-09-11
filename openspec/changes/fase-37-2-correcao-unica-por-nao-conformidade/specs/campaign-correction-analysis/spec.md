@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Serviço de **IA textual** que analisa o relato do lojista (F37.2 realinhada — D37.2-R2). O serviço (`src/lib/campaign/correction-intent-service.ts`) usa a abstração de texto existente (`createTextProvider`), **entende o relato** e **tolera erros de escrita** (digitação, concordância, abreviação), mas **NÃO lê a imagem** — decide apenas a **intenção da declaração** (não se o lojista "está dizendo a verdade"). Classifica em **elegível | bloqueado | não-claro** e, quando elegível, produz uma **instrução normalizada** (objetiva, sem ruído de digitação) que orienta o diretor. **Nunca altera dados do briefing** — o relato é só texto (R4). Contrato de saída: **system prompt pedindo JSON estrito → `JSON.parse` defensivo → validação Zod** (o schema é o contrato; sem depender de `jsonMode`/`response_format` portável). Resposta com JSON inválido/fora do schema → `unclear`; timeout/transporte/vazio → `analysis_failed`. Conteúdo não confiável (texto do lojista e `normalizedInstruction`) é **delimitado e saneado** (padrão `sanitizePromptText`) e incapaz de sobrescrever o briefing.
+Serviço de **IA textual** que analisa o relato do lojista (F37.2 realinhada — D37.2-R2). O serviço (`src/lib/campaign/correction-intent-service.ts`) usa a abstração de texto existente (`createTextProvider`), **entende o relato** e **tolera erros de escrita** (digitação, concordância, abreviação), mas **NÃO lê a imagem** — decide apenas a **intenção da declaração** (não se o lojista "está dizendo a verdade"). Classifica em **elegível | bloqueado | não-claro** e, quando elegível, produz uma **instrução normalizada** (objetiva, sem ruído de digitação) que orienta o diretor. **Nunca altera dados do briefing** — o relato é só texto (R4). Contrato de saída: **system prompt pedindo JSON estrito → `JSON.parse` defensivo → validação Zod discriminada** (o schema é o contrato; sem depender de `jsonMode`/`response_format` portável). **Fix 01a7021b:** o schema é **discriminado por `analysisState`** — `eligible` exige `category` válida + `normalizedInstruction` não vazia e tem `guidance` **opcional/nullable**; `blocked`/`unclear` exigem `guidance` amigável e aceitam `category`/`normalizedInstruction` **ausentes ou null**. JSON inválido → `analysis_failed` com telemetria `json_parse_failed`; fora do schema → `analysis_failed` com `schema_validation_failed` (**nunca** rebaixado a `unclear`); timeout/transporte/vazio → `analysis_failed`. Conteúdo não confiável (texto do lojista e `normalizedInstruction`) é **delimitado e saneado** (padrão `sanitizePromptText`) e incapaz de sobrescrever o briefing.
 
 ## ADDED Requirements
 
@@ -14,13 +14,27 @@ O sistema SHALL prover um serviço (`src/lib/campaign/correction-intent-service.
 - Usa `TextProvider.generateText(prompt, { system, temperature, maxTokens, signal })` — **sem `jsonMode`**: o contrato é **system prompt pedindo JSON estrito → `JSON.parse` defensivo → validação Zod** (schema de saída = contrato; providers podem usar `response_format` quando disponível, mas nada depende disso).
 - **Entende o relato** em linguagem simples, tolerando erros de escrita.
 - **NÃO lê a imagem** — não valida a veracidade da declaração; classifica a intenção.
-- Retorna o estado de análise (`eligible | blocked | unclear`) + `category` (quando elegível) + `normalizedInstruction` (quando elegível) + `guidance` (orientação para `blocked`/`unclear`).
+- Retorna o estado de análise (`eligible | blocked | unclear`) validado por **schema Zod discriminado por `analysisState`**: `eligible` com `category` válida + `normalizedInstruction` não vazia e `guidance` **opcional**; `blocked`/`unclear` com `guidance` não vazia e `category`/`normalizedInstruction` **ausentes ou null**. Campos desconhecidos são rejeitados (`.strict()`).
+- **Regra de prioridade (fix 01a7021b):** um defeito objetivo explicitamente relatado tem prioridade sobre o **verbo** usado para corrigi-lo — "logo cortado, reposicione" é `eligible`, não pedido estético.
 
 #### Scenario: Relato elegível gera estado + categoria + instrução normalizada
 
 - **WHEN** o lojista descreve "o preço tá cortado na borda" (com erro de escrita)
 - **THEN** o serviço retorna `analysisState: "eligible"` com categoria (ex.: `truncated_element`) e uma `normalizedInstruction` objetiva sem ruído de digitação
 - **AND** a análise é feita sobre o texto (nenhuma imagem é enviada ao provider)
+
+#### Scenario: Defeito objetivo tem prioridade sobre o verbo de correção
+
+- **WHEN** o lojista relata um defeito objetivo com verbo de correção (ex.: "o logotipo do mercado ficou mal posicionado e cortado, reposicione respeitando o respiro"; "o texto está encostado na borda, afaste"; "o produto ficou deformado, refaça")
+- **THEN** o serviço classifica como `eligible` com a `category` correspondente (`truncated_element`/`deformed_product`/…)
+- **AND** **não** classifica como `blocked` apenas porque o pedido usa "reposicione"/"afaste"/"refaça"
+- **AND** a IA classifica a intenção declarada, sem tentar confirmar visualmente se o relato é verdadeiro
+
+#### Scenario: Elegível sem guidance é aceito
+
+- **WHEN** o provider devolve `{"analysisState":"eligible","category":"truncated_element","normalizedInstruction":"…"}` **sem** `guidance` (ou com `guidance: null`)
+- **THEN** o serviço mantém `analysisState: "eligible"` (guidance é opcional em elegível)
+- **AND** **não** rebaixa para `unclear`
 
 #### Scenario: Relato bloqueado retorna orientação
 
@@ -58,14 +72,18 @@ O sistema SHALL classificar o relato conforme a política da F37.2 (alinhamento 
 
 O sistema SHALL tratar respostas do provider que não seguem o contrato:
 
-- **JSON inválido ou fora do schema Zod** → tratado como `unclear` (orientação com exemplo; sem gerar, sem consumir).
+- **JSON inválido** → tratado como `analysis_failed` com telemetria `errorType: "json_parse_failed"` (status `failed`) — **não** vira conclusão semântica `unclear` (fix 01a7021b).
+- **Fora do schema Zod** → tratado como `analysis_failed` com telemetria `errorType: "schema_validation_failed"` (status `failed`).
 - **Falha de transporte/timeout/resposta vazia** → tratada como `analysis_failed` (registrada na linha da tentativa com `completed_at`; conta como tentativa; não consome).
+- A telemetria do evento registra `provider`, `model`, `errorType` e `attemptNumber` (sem persistir conteúdo bruto sensível).
 
-#### Scenario: JSON inválido vira unclear
+#### Scenario: JSON inválido/schema inválido vira analysis_failed com telemetria
 
-- **WHEN** o provider devolve texto livre ou JSON fora do schema
-- **THEN** o serviço trata como `unclear`
-- **AND** nada é gerado nem consumido
+- **WHEN** o provider devolve texto livre (JSON inválido)
+- **THEN** o serviço trata como `analysis_failed` e registra `errorType: "json_parse_failed"` (status `failed`)
+- **WHEN** o provider devolve JSON fora do schema Zod
+- **THEN** o serviço trata como `analysis_failed` e registra `errorType: "schema_validation_failed"`
+- **AND** nada é gerado nem consumido; a falha técnica **não** é apresentada como conclusão semântica "não claro"
 
 #### Scenario: Falha de transporte/timeout vira analysis_failed
 

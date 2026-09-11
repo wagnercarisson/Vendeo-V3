@@ -51,6 +51,15 @@ O sistema SHALL prover a rota `POST /api/campaign/[id]/problem-report` (NOVA —
 - **Sem reserva de crédito**; eventos (análise + v2) sob `campaign.operation_run_id`.
 - **Falha pós-provider** → `rpc("fail_campaign_correction_v2", ...)` atômica (mantém `rejection_count=1`, libera a candidata, `failed_no_v2`; v1 aprovável) + remoção **best-effort** de asset órfão se o upload já tiver ocorrido.
 - Sucesso da v2 → RPC `complete_campaign_correction_v2` (persistência + demover v1) → `router.refresh()` na página (v2 vira candidata).
+- **Erros legíveis (fix 01a7021b):** as respostas de erro do fluxo (400/403/409/500) usam **`{ code, message }`** — o `code` técnico fica no cliente e a `message` em PT-BR é o que o modal apresenta (nunca exibir `rate_limit_exceeded` etc.). Mapeamentos mínimos: `rate_limit_exceeded` → "Você atingiu o limite de análises deste relato. Aguarde alguns minutos para tentar novamente."; `analysis_in_progress` → "Seu relato anterior ainda está sendo analisado."; `already_consumed` → "A correção incluída nesta campanha já foi utilizada."; `campaign_not_pending`/`no_active_candidate` → "Esta arte não está mais disponível para correção. Atualize a página."; `correction_in_progress` → "A correção da arte já está em andamento."; `submission_not_analyzing`/`analysis_lease_expired`/`submission_stale` → mensagens PT-BR equivalentes; desconhecido → mensagem genérica amigável + detalhe apenas no log do servidor.
+- **Análise fora do contrato (fix 01a7021b):** JSON inválido/fora do schema → `analysis_failed` com telemetria (`json_parse_failed`/`schema_validation_failed`), **não** `unclear`.
+
+#### Scenario: Erro 409 é apresentado de forma legível
+
+- **WHEN** a rota responde 409 (ex.: `rate_limit_exceeded`, `analysis_in_progress`, `already_consumed`)
+- **THEN** o corpo é `{ code: "<codigo>", message: "<mensagem PT-BR>" }`
+- **AND** o modal exibe a `message`, nunca o código técnico
+- **AND** para erro desconhecido, exibe uma mensagem genérica amigável (o detalhe fica no servidor)
 
 #### Scenario: Relato válido cria caso e primeira tentativa antes da IA
 
