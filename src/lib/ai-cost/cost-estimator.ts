@@ -113,6 +113,14 @@ const NOTE_WITHOUT_IMAGE_TOOL_PRICING =
   "responses_image_generation_tool_without_unit_pricing";
 
 /**
+ * F46-05 (reabertura): nota de estimativa parcial — a tool `image_generation` foi
+ * usada mas a Responses API não retornou `usage`; aplica-se apenas o componente
+ * por unidade da tool (sem componente textual).
+ */
+const NOTE_PROVISIONAL_IMAGE_TOOL_WITHOUT_TEXT =
+  "provisional_image_tool_unit_cost_without_text_usage";
+
+/**
  * F38.1 fechamento: mapeamento provider → model da tool image_generation no
  * pricing catalog (ai_model_pricing). NÃO é valor de preço — é o nome da linha
  * versionável. Providers futuros entram aqui pelo mesmo contrato:
@@ -176,6 +184,37 @@ export async function resolveAiCost(params: {
   if (pricingResult) {
     const { pricing, versionId } = pricingResult;
 
+    const isImageToolGeneration =
+      params.imageGenerationTool === true &&
+      (params.generationType === "campaign_image" ||
+        params.generationType === "visual_signature_image");
+
+    // F46-05 (reabertura): a tool image_generation foi usada, mas a Responses API
+    // não retornou usage. Aplica o componente por unidade da tool MESMO sem o
+    // componente textual (estimativa parcial) — não perde o custo da imagem.
+    // Sem pricing da tool, segue o fluxo normal (3b/fallback/not_available).
+    if (isImageToolGeneration && !hasUsableUsage(usage)) {
+      const toolModel = IMAGE_GENERATION_TOOL_MODELS[provider];
+      const toolPricingResult = toolModel
+        ? await getModelPricing({ provider, model: toolModel })
+        : null;
+      const imageToolComponentUsd = toolPricingResult?.pricing.imageUnitCostUsd;
+      if (toolPricingResult && imageToolComponentUsd !== undefined) {
+        return {
+          estimatedCostUsd: Number(imageToolComponentUsd.toFixed(6)),
+          costSource: "pricing_table",
+          pricingVersion: versionId,
+          costFormulaVersion: RESPONSES_IMAGE_GENERATION_FORMULA_VERSION,
+          textComponentUsd: 0,
+          imageToolComponentUsd,
+          imageToolPricingProvider: provider,
+          imageToolPricingModel: toolModel,
+          imageToolPricingVersion: toolPricingResult.versionId,
+          costEstimationNote: NOTE_PROVISIONAL_IMAGE_TOOL_WITHOUT_TEXT,
+        };
+      }
+    }
+
     // 3a. Usage disponível → cálculo por tokens (prompt/output/cached/image — D9)
     if (hasUsableUsage(usage)) {
       const textComponentUsd = calculateTokenCost(usage!, pricing);
@@ -193,11 +232,7 @@ export async function resolveAiCost(params: {
       // (anti-dupla-cobrança). estimated_cost_usd = text_component + image_tool_component;
       // o componente da tool vem de ai_model_pricing (linha versionável) — se não
       // existir, mantém só o componente textual e marca a estimativa como parcial.
-      if (
-        params.imageGenerationTool === true &&
-        (params.generationType === "campaign_image" ||
-          params.generationType === "visual_signature_image")
-      ) {
+      if (isImageToolGeneration) {
         resolution.costFormulaVersion = RESPONSES_IMAGE_GENERATION_FORMULA_VERSION;
 
         const toolModel = IMAGE_GENERATION_TOOL_MODELS[provider];

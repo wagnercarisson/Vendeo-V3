@@ -40,7 +40,12 @@ O modelo de geração de imagem SHALL ser resolvido pelo **registry**, com defau
 
 ### Requirement: Execução de imagem via gateway com fallback preservado
 
-A geração de imagem SHALL ser executada pela camada única de invocação (gateway), que seleciona o adapter pelo `protocol` da capacidade: `responses` com a tool `image_generation` como caminho primário. O gateway executa **uma tentativa** e **não decide o fallback**: quando há imagem primária e a Responses API falha por motivo de capacidade, o **serviço orquestrador** faz uma **segunda `invoke` explícita** (capacidade `campaign_image_edit`, protocolo `images` → `images.edit`). O comportamento de gating do fallback, o envio determinístico das referências (primary, auxiliares, identidade) e o tamanho/qualidade SHALL ser preservados. Uma falha no Responses seguida de sucesso no Images representa **duas chamadas reais e dois envelopes de telemetria**, nunca um.
+A geração de imagem SHALL ser executada pela camada única de invocação (gateway), que seleciona o adapter pelo `protocol` da capacidade: `responses` com a tool `image_generation` como caminho primário. O gateway executa **uma tentativa** e **não decide o fallback**: quando há imagem primária, o **serviço orquestrador** faz uma **segunda `invoke` explícita** (capacidade `campaign_image_edit`, protocolo `images` → `images.edit`). Existem exatamente **dois gatilhos legítimos** do fallback `images.edit`:
+
+1. **Retry explícito** — a tentativa corrente é uma retentativa (`attempt >= 1`) e há imagem primária;
+2. **Erro de capability do Responses** — a tool/modelo `image_generation` não está disponível **ou a resposta da tool não trouxe imagem** (classificada como falha de capability) e há imagem primária.
+
+Erros de autenticação, safety/content_filter e rate-limit/quota **NÃO** acionam o fallback (propagam). O envio determinístico das referências (primary, auxiliares, identidade) e o tamanho/qualidade SHALL ser preservados. Uma falha no Responses seguida de sucesso no Images representa **duas chamadas reais e dois envelopes de telemetria**, nunca um.
 
 #### Scenario: Caminho primário via Responses API
 
@@ -48,11 +53,28 @@ A geração de imagem SHALL ser executada pela camada única de invocação (gat
 - **THEN** usa o adapter `responses` com a tool `image_generation`
 - **AND** o tamanho e a qualidade atuais são preservados
 
-#### Scenario: Fallback images.edit é segunda chamada explícita
+#### Scenario: Resposta da tool image_generation sem imagem é falha de capability
 
-- **WHEN** a Responses API falha por capacidade e existe imagem primária
+- **WHEN** a Responses API responde sem arte para a tool `image_generation`
+- **THEN** o adapter classifica a resposta como **falha de capability** (não sucesso sem arte)
+- **AND** o gateway emite um envelope `failed`; o orquestrador pode acionar o gatilho (2)
+
+#### Scenario: Gatilho 1 — retry explícito
+
+- **WHEN** a tentativa corrente é uma retentativa (`attempt >= 1`) e existe imagem primária
+- **THEN** o orquestrador usa diretamente o adapter `images` (`images.edit`)
+
+#### Scenario: Gatilho 2 — erro de capability do Responses
+
+- **WHEN** a Responses API falha por capacidade (ou retorna sem imagem) e existe imagem primária
 - **THEN** o orquestrador faz uma segunda `invoke` explícita (capacidade `campaign_image_edit`, protocolo `images`) com as referências em ordem determinística
 - **AND** o comportamento é equivalente ao atual, com **dois envelopes de telemetria** (falha + fallback)
+
+#### Scenario: Auth/safety/rate-limit não acionam o fallback
+
+- **WHEN** a falha é de autenticação, content filter/safety ou rate-limit/quota
+- **THEN** o fallback `images.edit` NÃO é acionado
+- **AND** o erro propaga
 
 ### Requirement: Telemetria de imagem com modelo real e componente da tool
 
@@ -69,3 +91,14 @@ A execução de imagem SHALL emitir **um envelope de telemetria por tentativa re
 - **WHEN** a chamada primária falha e o fallback de edição tem sucesso
 - **THEN** dois eventos call-level são gravados (falha + sucesso)
 - **AND** cada um registra o seu próprio modelo
+
+#### Scenario: Usage da Images API é normalizado; ausência é explícita
+
+- **WHEN** o fallback `images.edit` retorna `usage` da Images API
+- **THEN** o usage é normalizado (input/output/total + detalhes text/image)
+- **AND** quando ausente, permanece explícito (`usage` undefined + `providerUsageSource: "images.edit"`), nunca zeros
+
+#### Scenario: Custo da tool image_generation mesmo sem usage
+
+- **WHEN** a tool `image_generation` é usada (`campaign_image`/`visual_signature_image`) mas a Responses API não retorna `usage`
+- **THEN** a estimativa ainda inclui o componente por unidade da tool (estimativa parcial, `textComponentUsd = 0` e nota `provisional_image_tool_unit_cost_without_text_usage`)
