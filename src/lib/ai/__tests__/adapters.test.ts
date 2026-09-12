@@ -348,6 +348,25 @@ describe("ResponsesAdapter — breakdown granular e tool image_generation (D2)",
       ),
     ).rejects.toMatchObject({ kind: "capability", retryable: false });
   });
+
+  it("imagem presente SEM usage → usageMeta.imageGenerationTool=true (marcador preservado, F46-05)", async () => {
+    mockResponsesCreate.mockResolvedValue({
+      output: [{ type: "image_generation_call", result: "BASE64IMG" }],
+      output_text: "",
+      // sem `usage`
+    });
+
+    const result = await new ResponsesAdapter().invoke(
+      { prompt: "gerar arte", tools: "image_generation" },
+      responsesTarget,
+    );
+
+    expect(result.imageBase64).toBe("BASE64IMG");
+    expect(result.usage).toBeUndefined();
+    expect(result.usageMeta?.imageGenerationTool).toBe(true);
+    expect(result.usageMeta?.providerUsageSource).toBe("responses.image_generation");
+    expect(result.usageMeta?.providerUsageRaw).toBeUndefined();
+  });
 });
 
 describe("ImagesAdapter — ausência de usage é explícita (D2/D7)", () => {

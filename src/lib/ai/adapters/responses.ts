@@ -77,14 +77,17 @@ export class ResponsesAdapter implements AiAdapter {
       mimeType: imageBase64 ? "image/png" : undefined,
       model: target.model,
       usage: normalizeResponsesUsage(rawUsage),
-      usageMeta: rawUsage
-        ? {
-            providerUsageRaw: rawUsage,
-            providerUsageSource: usesImageTool ? "responses.image_generation" : "responses",
-            responsesModel: target.model,
-            imageGenerationTool: usesImageTool,
-          }
-        : undefined,
+      // F46-05 (reabertura): o marcador `imageGenerationTool` NÃO pode depender da
+      // presença de `usage` — uma imagem bem-sucedida sem usage ainda usou a tool
+      // e precisa chegar ao estimador com `imageGenerationTool: true`.
+      usageMeta: {
+        providerUsageSource: usesImageTool ? "responses.image_generation" : "responses",
+        responsesModel: target.model,
+        imageGenerationTool: usesImageTool,
+        ...(rawUsage && typeof rawUsage === "object"
+          ? { providerUsageRaw: rawUsage as Record<string, unknown> }
+          : {}),
+      },
     };
   }
 }
