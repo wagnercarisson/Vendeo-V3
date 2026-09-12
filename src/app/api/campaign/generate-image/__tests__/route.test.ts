@@ -225,7 +225,9 @@ vi.mock('@/lib/ai', async (importOriginal) => {
               generationType,
               provider: envelope.provider,
               model: envelope.model,
-              attemptNumber: ctx.attemptNumber ?? 1,
+              // F46-04 (reabertura): o envelope pode declarar o attempt da
+              // tentativa real (ex.: review 0/1); fallback ao contexto do run.
+              attemptNumber: (envelope as any).attemptNumber ?? ctx.attemptNumber ?? 1,
               durationMs: envelope.durationMs,
               status: envelope.status,
               errorType: envelope.errorType ?? null,
@@ -1369,14 +1371,40 @@ describe('Pipeline cost accounting (6.3)', () => {
       };
     });
 
-    mockGenerateImage.mockImplementation(async (_brief: any, _context: any, _onPhaseChange: any, _signal: any, onMetricsEvent?: (e: any) => void) => {
+    mockGenerateImage.mockImplementation(async (_brief: any, _context: any, _onPhaseChange: any, _signal: any, onMetricsEvent?: (e: any) => void, options?: any) => {
+      // F46-04 (reabertura): validação/revisão são persistidas pelo SINK único
+      // (D9) — o serviço mockado emite o envelope pelo sink do caller. A imagem
+      // continua híbrida via onMetricsEvent (campaign_image, 46-05).
+      const sink = options?.telemetry?.sink;
+      if (sink) {
+        await sink.emit({
+          capability: "campaign_input_validation",
+          protocol: "chat-completions",
+          status: "success",
+          provider: "openai",
+          model: "gpt-4o",
+          usage: VALIDATION_USAGE,
+          durationMs: 100,
+          attemptNumber: 0,
+        });
+        for (let i = 0; i < reviewAttempts; i++) {
+          await sink.emit({
+            capability: "campaign_image_review",
+            protocol: "chat-completions",
+            status: "success",
+            provider: "openai",
+            model: "gpt-4o",
+            usage: REVIEW_USAGE,
+            durationMs: 400,
+            attemptNumber: i,
+          });
+        }
+      }
       if (onMetricsEvent) {
-        onMetricsEvent({ phase: "input_validation", provider: "openai", model: "gpt-4o", attempt: 0, usage: VALIDATION_USAGE, durationMs: 100 });
         // prompt_assembly/done NÃO são chamadas de IA — devem ser ignoradas (D5/D11)
         onMetricsEvent({ phase: "prompt_assembly", provider: "openai", model: "gpt-4o", attempt: 0, durationMs: 50 });
         for (let i = 0; i < reviewAttempts; i++) {
           onMetricsEvent({ phase: "image_generation", provider: "openai", model: "test-model", attempt: i, usage: IMAGE_USAGE, durationMs: 300 });
-          onMetricsEvent({ phase: "quality_review", provider: "openai", model: "gpt-4o", attempt: i, usage: REVIEW_USAGE, durationMs: 400 });
         }
         onMetricsEvent({ phase: "done", provider: "openai", model: "test-model", attempt: reviewAttempts, durationMs: 500 });
       }
@@ -1489,11 +1517,14 @@ describe('Pipeline cost accounting (6.3)', () => {
 
   it('Teste 15 (6.3): review falha → campaign_pipeline failed + custo dos call-level já registrados', async () => {
     await setupPipelineSuccessMocks();
-    mockGenerateImage.mockImplementation(async (_brief: any, _context: any, _onPhaseChange: any, _signal: any, onMetricsEvent?: (e: any) => void) => {
+    mockGenerateImage.mockImplementation(async (_brief: any, _context: any, _onPhaseChange: any, _signal: any, onMetricsEvent?: (e: any) => void, options?: any) => {
+      const sink = options?.telemetry?.sink;
+      if (sink) {
+        await sink.emit({ capability: "campaign_input_validation", protocol: "chat-completions", status: "success", provider: "openai", model: "gpt-4o", usage: VALIDATION_USAGE, durationMs: 100, attemptNumber: 0 });
+        await sink.emit({ capability: "campaign_image_review", protocol: "chat-completions", status: "success", provider: "openai", model: "gpt-4o", usage: REVIEW_USAGE, durationMs: 400, attemptNumber: 0 });
+      }
       if (onMetricsEvent) {
-        onMetricsEvent({ phase: "input_validation", provider: "openai", model: "gpt-4o", attempt: 0, usage: VALIDATION_USAGE, durationMs: 100 });
         onMetricsEvent({ phase: "image_generation", provider: "openai", model: "test-model", attempt: 0, usage: IMAGE_USAGE, durationMs: 300 });
-        onMetricsEvent({ phase: "quality_review", provider: "openai", model: "gpt-4o", attempt: 0, usage: REVIEW_USAGE, durationMs: 400 });
       }
       return { success: false, code: 'review_failed', message: 'Falha na revisão de qualidade' };
     });
