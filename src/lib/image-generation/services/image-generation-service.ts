@@ -489,7 +489,7 @@ export class ImageGenerationService {
         reviewResult = await this.imageReview.review(imageDataUrl, reviewInput, this.mediaImagesDataUrls(brief), (info) => {
           reviewUsage = info.usage;
           reviewModel = info.model;
-        }, options?.telemetry);
+        }, options?.telemetry ? { ...options.telemetry, attemptNumber: attempts } : undefined);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         console.error(`[ImageGenerationService] review error — ${message}`);

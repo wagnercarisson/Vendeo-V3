@@ -662,6 +662,46 @@ describe('ImageGenerationService.generateImage — telemetria D11 (usage/duratio
     expect(reviewEvents[0].durationMs).toBeGreaterThanOrEqual(0);
   });
 
+  it('revisão recebe telemetria com attemptNumber POR TENTATIVA (0, 1, ...) — regressão F46-04', async () => {
+    const { service, brief, context, mockImageReview } = buildService();
+    const seen: Array<number | undefined> = [];
+    let call = 0;
+    mockImageReview.review.mockImplementation(async (...args: any[]): Promise<any> => {
+      const telemetry = args[4];
+      seen.push(telemetry?.attemptNumber);
+      call += 1;
+      if (call === 1) {
+        return {
+          passed: false,
+          issues: [{ type: 'illegible_text', severity: 'critical', description: 'texto ilegível' }],
+          failureType: 'illegible_text',
+        };
+      }
+      return { passed: true, issues: [], failureType: null };
+    });
+
+    const telemetry = {
+      operationRunId: 'run-1',
+      operationRunType: 'campaign_delivery' as const,
+      traceId: 'trace-1',
+      storeId: 'store-1',
+      attemptNumber: 0,
+      sink: { emit: () => {} },
+    };
+
+    const result = await service.generateImage(
+      brief,
+      context,
+      undefined,
+      undefined,
+      undefined,
+      { telemetry } as any
+    );
+
+    expect(result.success).toBe(true);
+    expect(seen).toEqual([0, 1]);
+  });
+
   it('Teste 9: onMetricsEvent lançando → generateImage continua (best-effort)', async () => {
     const { service, brief, context } = buildService();
     const result = await service.generateImage(
