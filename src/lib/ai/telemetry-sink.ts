@@ -88,7 +88,7 @@ export class DefaultAiTelemetrySink implements AiTelemetrySink {
  * produção: o contexto de produção exige o sink padrão ou um sink real).
  */
 export class NoopAiTelemetrySink implements AiTelemetrySink {
-  emit(): void {
+  emit(_envelope: AiCallEnvelope): void {
     // intencionalmente vazio
   }
 }

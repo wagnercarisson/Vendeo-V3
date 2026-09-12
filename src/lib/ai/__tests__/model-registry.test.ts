@@ -201,7 +201,7 @@ describe("ModelRegistry — allowlist e validação de alvos (D1)", () => {
       campaign_image: {
         capability: "campaign_image" as const,
         segment: "image" as const,
-        primary: { provider: "openai", model: "gpt-image-2", protocol: "responses" as const },
+        primary: { provider: "openai" as const, model: "gpt-image-2", protocol: "responses" as const },
       },
     };
     expect(() => new ModelRegistry(invalidRegistry)).toThrow(/incompatível com o modelo/);
