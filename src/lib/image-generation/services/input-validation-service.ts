@@ -15,7 +15,7 @@ import type { AiInvocationRequest, AiInvoker, AiTelemetryContext } from "@/lib/a
  * image is correct (F43 D5).
  *
  * F46-04 (D9): executa via camada única (`invoke("campaign_input_validation")`).
- * Não instancia `new OpenAI()` nem lê env-var de modelo; o modelo real vem do
+ * Não instancia o SDK do provider nem lê env-var de modelo; o modelo real vem do
  * registry/envelope e a persistência é do sink injetado no `AiTelemetryContext`.
  *
  * Loads the `campaign-input-visual-check.md` prompt via PromptLoader with

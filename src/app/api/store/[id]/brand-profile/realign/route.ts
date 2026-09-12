@@ -193,6 +193,7 @@ async function handleTextOnlyRealign(
       operationRunType: "brand_profile",
       traceId: run.traceId,
       storeId: id,
+      attemptNumber: 0,
       usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
       creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
     });
@@ -396,6 +397,7 @@ async function handleLogoRealign(
       operationRunType: "brand_profile",
       traceId: run.traceId,
       storeId: id,
+      attemptNumber: 0,
       usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
       creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
     });
@@ -616,6 +618,7 @@ async function handleVSRealign(
       traceId: run.traceId,
       storeId: id,
       visualSignatureId: vsRecord.id,
+      attemptNumber: 0,
       usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
       creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
     });

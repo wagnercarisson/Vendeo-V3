@@ -95,6 +95,7 @@ export const POST = apiHandler(async (
     traceId: run.traceId,
     storeId: id,
     visualSignatureId: body.visualSignatureId ?? null,
+    attemptNumber: 0,
     usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
     creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
   });
