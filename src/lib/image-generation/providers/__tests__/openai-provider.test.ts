@@ -122,12 +122,31 @@ describe('OpenAIImageProvider — caminho primário via gateway (F46-05)', () =>
     expect(request.productImagesDataUrls).toEqual(['data:image/png;base64,primary']);
   });
 
-  it('sem imagem na resposta → throw "No image generated"', async () => {
+  it('resposta sem imagem é FALHA de capability → throw (sem primary, propaga)', async () => {
     invoker.invoke.mockResolvedValue({ model: 'gpt-5.5' });
 
     await expect(
       provider.generateImage({ prompt: 'p', attempt: 0, telemetry: makeTelemetry() })
-    ).rejects.toThrow('No image generated in Responses API response');
+    ).rejects.toMatchObject({ kind: 'capability' });
+    expect(invoker.invoke).toHaveBeenCalledTimes(1);
+  });
+
+  it('resposta sem imagem + primary → aciona o fallback images.edit (Trigger 2)', async () => {
+    invoker.invoke
+      .mockResolvedValueOnce({ model: 'gpt-5.5' })
+      .mockResolvedValueOnce({ imageBase64: 'fallback', model: 'gpt-image-2' });
+
+    const result = await provider.generateImage({
+      prompt: 'p',
+      productImageDataUrl: 'data:image/png;base64,primary',
+      attempt: 0,
+      telemetry: makeTelemetry(),
+    });
+
+    expect(invoker.invoke).toHaveBeenCalledTimes(2);
+    expect(invoker.invoke.mock.calls[0][0]).toBe('campaign_image');
+    expect(invoker.invoke.mock.calls[1][0]).toBe('campaign_image_edit');
+    expect(result.imageBase64).toBe('fallback');
   });
 
   it('telemetria ausente → erro explícito (sink obrigatório)', async () => {
@@ -248,6 +267,36 @@ describe('OpenAIImageProvider — fallback campaign_image_edit como segunda invo
         telemetry: makeTelemetry(),
       })
     ).rejects.toBe(authError);
+    expect(invoker.invoke).toHaveBeenCalledTimes(1);
+  });
+
+  it('erro de safety/content_filter (não-capability) → NÃO aciona o fallback; propaga', async () => {
+    const safetyError = new AiInvocationError({ kind: 'content_filter', retryable: false, message: 'safety' });
+    invoker.invoke.mockRejectedValue(safetyError);
+
+    await expect(
+      provider.generateImage({
+        prompt: 'p',
+        productImageDataUrl: 'data:image/png;base64,primary',
+        attempt: 0,
+        telemetry: makeTelemetry(),
+      })
+    ).rejects.toBe(safetyError);
+    expect(invoker.invoke).toHaveBeenCalledTimes(1);
+  });
+
+  it('erro de rate_limit (não-capability) → NÃO aciona o fallback; propaga', async () => {
+    const rateError = new AiInvocationError({ kind: 'rate_limit', retryable: true, message: 'rate' });
+    invoker.invoke.mockRejectedValue(rateError);
+
+    await expect(
+      provider.generateImage({
+        prompt: 'p',
+        productImageDataUrl: 'data:image/png;base64,primary',
+        attempt: 0,
+        telemetry: makeTelemetry(),
+      })
+    ).rejects.toBe(rateError);
     expect(invoker.invoke).toHaveBeenCalledTimes(1);
   });
 

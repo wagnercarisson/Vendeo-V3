@@ -1,4 +1,5 @@
 import { MalformedResponseError } from "@/lib/copy/errors";
+import type { TokenUsage } from "@/lib/ai-cost/types";
 import type { AiModelTarget } from "../model-resolver";
 import { getApiKey } from "../api-keys";
 import type { AiAdapter, AiInvocationRequest, AiInvocationResult } from "../types";
@@ -61,14 +62,65 @@ export class ImagesAdapter implements AiAdapter {
       throw new MalformedResponseError("Image API returned no image data");
     }
 
+    // Usage: a Images API pode retornar `usage` (gpt-image-1/2). Quando presente,
+    // normaliza (nunca descarta); quando ausente, a ausência é **explícita**
+    // (`usage` undefined + `providerUsageSource: "images.edit"`) — nunca inventa
+    // zeros. O sink resolve `not_available`/custo por unidade (furo 3).
+    const rawUsage = (response as { usage?: unknown }).usage;
+    const usage = normalizeImagesUsage(rawUsage);
+
     return {
       imageBase64,
       mimeType: "image/png",
       model: target.model,
-      usage: undefined,
-      usageMeta: { providerUsageSource: "images.edit" },
+      usage,
+      usageMeta: {
+        providerUsageSource: "images.edit",
+        ...(rawUsage && typeof rawUsage === "object"
+          ? { providerUsageRaw: rawUsage as Record<string, unknown> }
+          : {}),
+      },
     };
   }
+}
+
+/**
+ * Normaliza o `usage` da Images API (`input_tokens`/`output_tokens`/`total_tokens`
+ * + detalhes text/image) para `TokenUsage`. Retorna `undefined` quando ausente
+ * (ausência explícita — nunca inventa zeros).
+ */
+export function normalizeImagesUsage(usage: unknown): TokenUsage | undefined {
+  if (!usage || typeof usage !== "object") return undefined;
+  const raw = usage as {
+    input_tokens?: number;
+    output_tokens?: number;
+    total_tokens?: number;
+    input_tokens_details?: { text_tokens?: number; image_tokens?: number };
+    output_tokens_details?: { text_tokens?: number; image_tokens?: number };
+  };
+
+  const normalized: TokenUsage = {};
+  if (raw.input_tokens !== undefined) normalized.promptTokens = raw.input_tokens;
+  if (raw.output_tokens !== undefined) normalized.completionTokens = raw.output_tokens;
+  if (raw.total_tokens !== undefined) {
+    normalized.totalTokens = raw.total_tokens;
+  } else if (raw.input_tokens !== undefined || raw.output_tokens !== undefined) {
+    normalized.totalTokens = (raw.input_tokens ?? 0) + (raw.output_tokens ?? 0);
+  }
+  if (raw.input_tokens_details?.text_tokens !== undefined) {
+    normalized.inputTextTokens = raw.input_tokens_details.text_tokens;
+  }
+  if (raw.input_tokens_details?.image_tokens !== undefined) {
+    normalized.inputImageTokens = raw.input_tokens_details.image_tokens;
+  }
+  if (raw.output_tokens_details?.text_tokens !== undefined) {
+    normalized.outputTextTokens = raw.output_tokens_details.text_tokens;
+  }
+  if (raw.output_tokens_details?.image_tokens !== undefined) {
+    normalized.outputImageTokens = raw.output_tokens_details.image_tokens;
+  }
+
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
 }
 
 async function dataUrlToFile(

@@ -1,6 +1,7 @@
 import type { TokenUsage } from "@/lib/ai-cost/types";
 import type { AiModelTarget } from "../model-resolver";
 import { getApiKey } from "../api-keys";
+import { AiInvocationError } from "../types";
 import type { AiAdapter, AiInvocationRequest, AiInvocationResult } from "../types";
 
 /**
@@ -57,6 +58,18 @@ export class ResponsesAdapter implements AiAdapter {
     const imageBase64 = imageOutput?.result;
     const textContent = (response as { output_text?: string }).output_text;
     const rawUsage = (response as { usage?: unknown }).usage;
+
+    // F46-05 (reabertura): quando a tool `image_generation` foi solicitada e a
+    // resposta NÃO traz imagem, isso é uma FALHA de capability do caminho
+    // Responses (não um sucesso sem arte) — classifica para que o gateway emita
+    // envelope `failed` e o orquestrador acione o fallback `images.edit`.
+    if (usesImageTool && !imageBase64) {
+      throw new AiInvocationError({
+        kind: "capability",
+        retryable: false,
+        message: "image_generation tool returned no image",
+      });
+    }
 
     return {
       content: textContent ? textContent : undefined,

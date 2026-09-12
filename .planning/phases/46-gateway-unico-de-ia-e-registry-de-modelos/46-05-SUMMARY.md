@@ -70,7 +70,7 @@ completed: 2026-09-12
 
 # Phase 46 Plan 05: Migração das Capacidades de IMAGEM Summary
 
-**`campaign_image`, `campaign_image_edit` e `visual_signature_image` passam a executar via gateway; o fallback images.edit vira segunda invoke explícita (dois envelopes), os furos 3/4 são corrigidos, o cost-estimator soma a tool nas duas capacidades e a soma híbrida manual de imagem é eliminada — 272 files / 2702 testes e 4 gates verdes.**
+**`campaign_image`, `campaign_image_edit` e `visual_signature_image` passam a executar via gateway; o fallback images.edit vira segunda invoke explícita (dois envelopes), os furos 3/4 são corrigidos, o cost-estimator soma a tool nas duas capacidades e a soma híbrida manual de imagem é eliminada — 272 files / 2707 testes e 4 gates verdes.**
 
 ## Performance
 
@@ -158,6 +158,18 @@ _Nota: as Tasks 1 e 2 compartilham o commit `b0ecde10` — a reescrita do `OpenA
 
 - Nenhum bloqueio. A suíte completa fechou verde na primeira execução após a co-migração das 6 suites afetadas.
 
+## Reabertura (2026-09-12)
+
+A revisão apontou três ajustes; todos corrigidos:
+
+1. **Usage da Images API (5.5):** o adapter `images` descartava o `usage` retornado pela API. Agora normaliza (`normalizeImagesUsage`: input/output/total + detalhes text/image) quando presente; ausência permanece explícita (`usage` undefined + `providerUsageSource: "images.edit"`), nunca zeros.
+2. **Imagem ausente = falha (5.6):** o adapter `responses` retornava sucesso sem imagem quando a tool `image_generation` não produzia arte. Agora lança `AiInvocationError(kind: "capability")` → o gateway emite envelope `failed`.
+3. **Dois gatilhos formais do `images.edit` (5.7):** Trigger 1 = retry explícito (`attempt >= 1` + primary); Trigger 2 = erro de capability do Responses (incl. imagem ausente) + primary. Auth/safety/rate-limit nunca acionam. O guard pós-invoke de imagem ausente lança capability (Trigger 2).
+
+Testes adicionados: adapter responses sem imagem → capability; adapter images com usage → normalizado; provider sem imagem + primary → fallback (2 invokes); sem imagem sem primary → propaga; safety/rate-limit não acionam.
+
+Gates re-executados: **272 files / 2707 testes — 0 falhas**; typecheck/lint/build verdes.
+
 ## User Setup Required
 
 None - no external service configuration required.
@@ -180,7 +192,7 @@ Nenhuma nova superfície de segurança introduzida: mesmas imagens/provedor (T-4
 - [x] `generate-image/route.ts`/`correction-reports.ts`/VS route sem persistência manual de `campaign_image`/`visual_signature_image` (grep)
 - [x] Teste explícito de DOIS envelopes no fallback (gpt-5.5 falha + gpt-image-2 sucesso)
 - [x] Commits `b0ecde10`, `367267b3`, `d1dca55f` existem (`git log`)
-- [x] `npx vitest run` (suíte completa) → **272 files / 2702 testes, 0 falhas**
+- [x] `npx vitest run` (suíte completa) → **272 files / 2707 testes, 0 falhas**
 - [x] `npm run typecheck`, `npm run lint`, `npm run build` → verdes
 
 ---

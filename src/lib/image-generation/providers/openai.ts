@@ -51,9 +51,10 @@ export class OpenAIImageProvider implements ImageProvider {
     const quality = input.quality ?? IMAGE_GENERATION_QUALITY;
     const attempt = input.attempt ?? 0;
 
-    // attempt 1+ → skip to Image API edit fallback (quando há primary — gate
-    // relaxado MQJ; a premissa F41 D7 de "1 imagem" foi superada pelo SDK
-    // v6.39 multi-image)
+    // ── Gatilhos legítimos do fallback `images.edit` (F46-05 reabertura) ──
+    // Trigger 1 — RETRY EXPLÍCITO: `attempt >= 1` (state machine do
+    // ImageGenerationService) com imagem primary disponível → pula direto para o
+    // adapter `images`. Não depende de erro.
     if (attempt >= 1 && this.canUseEditFallback(input)) {
       return this.fallbackToImageApi(input);
     }
@@ -74,7 +75,13 @@ export class OpenAIImageProvider implements ImageProvider {
       );
 
       if (!result.imageBase64) {
-        throw new Error("No image generated in Responses API response");
+        // Resposta da tool `image_generation` SEM imagem = FALHA de capability
+        // (não sucesso sem arte) → aciona o Trigger 2 abaixo.
+        throw new AiInvocationError({
+          kind: "capability",
+          retryable: false,
+          message: "Responses image_generation returned no image",
+        });
       }
 
       return {
@@ -103,9 +110,10 @@ export class OpenAIImageProvider implements ImageProvider {
         `[OpenAIImageProvider] provider error — type=${errorType} code=${errorCode} status=${errorStatus} message=${errorMessage}`
       );
 
-      // Fallback to Image API edit when a product primary is available and the
-      // error indicates the Responses image_generation path is unavailable
-      // (kind === "capability"): auth/quota/rate-limit continuam propagando.
+      // Trigger 2 — ERRO DE CAPABILITY do Responses: a tool/modelo
+      // image_generation não está disponível (ou retornou sem imagem —
+      // classificado acima) E há imagem primary. Auth/safety/rate-limit/quota
+      // NÃO acionam (propagam).
       if (this.canUseEditFallback(input) && this.isResponsesApiError(err)) {
         console.error(
           `[OpenAIImageProvider] falling back to Image API edit (capability error)`

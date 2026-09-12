@@ -333,6 +333,21 @@ describe("ResponsesAdapter — breakdown granular e tool image_generation (D2)",
     expect(result.usage?.completionTokens).toBe(8);
     expect(result.usage?.totalTokens).toBe(20);
   });
+
+  it("tool image_generation sem imagem na resposta → falha de capability (F46-05 reabertura)", async () => {
+    mockResponsesCreate.mockResolvedValue({
+      output: [],
+      output_text: "",
+      usage: { input_tokens: 10, output_tokens: 5 },
+    });
+
+    await expect(
+      new ResponsesAdapter().invoke(
+        { prompt: "gerar arte", tools: "image_generation" },
+        responsesTarget,
+      ),
+    ).rejects.toMatchObject({ kind: "capability", retryable: false });
+  });
 });
 
 describe("ImagesAdapter — ausência de usage é explícita (D2/D7)", () => {
@@ -365,6 +380,38 @@ describe("ImagesAdapter — ausência de usage é explícita (D2/D7)", () => {
     expect(params.image).toHaveLength(3);
     const names = (params.image as Array<{ name: string }>).map((file) => file.name);
     expect(names).toEqual(["product.png", "reference-1.png", "identity.png"]);
+  });
+
+  it("images.edit COM usage normaliza o usage (nunca descarta) — F46-05 reabertura", async () => {
+    mockImagesEdit.mockResolvedValue({
+      data: [{ b64_json: "IMG" }],
+      usage: {
+        input_tokens: 100,
+        output_tokens: 50,
+        total_tokens: 150,
+        input_tokens_details: { text_tokens: 20, image_tokens: 80 },
+        output_tokens_details: { image_tokens: 50 },
+      },
+    });
+
+    const result = await new ImagesAdapter().invoke(
+      { prompt: "editar", productImagesDataUrls: ["data:image/png;base64,AAA"] },
+      imagesTarget,
+    );
+
+    expect(result.imageBase64).toBe("IMG");
+    expect(result.usage).toEqual({
+      promptTokens: 100,
+      completionTokens: 50,
+      totalTokens: 150,
+      inputTextTokens: 20,
+      inputImageTokens: 80,
+      outputImageTokens: 50,
+    });
+    expect(result.usageMeta?.providerUsageSource).toBe("images.edit");
+    expect(result.usageMeta?.providerUsageRaw).toEqual(
+      expect.objectContaining({ total_tokens: 150 }),
+    );
   });
 
   it("sem imagem primária → erro de domínio (MalformedResponseError)", async () => {
