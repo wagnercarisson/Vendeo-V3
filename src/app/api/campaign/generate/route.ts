@@ -9,6 +9,8 @@ import { requireApiUser } from "@/lib/auth/require-user";
 import { getCurrentStore } from "@/lib/auth/store-ownership";
 import { notFound } from "@/lib/api-error-response";
 import { apiHandler } from "@/lib/auth/api-handler";
+import { AiCostTracker } from "@/lib/ai-cost";
+import { createDefaultTelemetryContext } from "@/lib/ai";
 
 export const POST = apiHandler(async (request: NextRequest) => {
   requireSameOrigin(request);
@@ -46,11 +48,23 @@ export const POST = apiHandler(async (request: NextRequest) => {
   // ── Step 3: Select provider ─────────────────────────────────────────
   const provider = await createDefaultProvider();
 
+  // ── Step 3.1: Telemetry context (F46 D6/D9) ─────────────────────────
+  // Run "campaign_delivery" (não existe OperationRunType.campaign_spec); o
+  // gateway gera o envelope e o sink persiste — a rota não grava manualmente.
+  const run = new AiCostTracker().startRun("campaign_delivery");
+  const telemetry = createDefaultTelemetryContext({
+    operationRunId: run.operationRunId,
+    operationRunType: "campaign_delivery",
+    traceId: run.traceId,
+    storeId: store.id,
+    userId: user.userId,
+  });
+
   // ── Step 4: Instantiate service ─────────────────────────────────────
   const service = new CampaignIntelligenceService(provider);
 
   // ── Step 5: Generate campaign ───────────────────────────────────────
-  const result = await service.generate(parsed.data);
+  const result = await service.generate(parsed.data, telemetry);
 
   // ── Step 6: Map result to HTTP response ─────────────────────────────
   if (!result.success) {

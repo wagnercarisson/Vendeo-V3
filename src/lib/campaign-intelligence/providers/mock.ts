@@ -1,5 +1,6 @@
 import type { AIProvider, ProviderRawResponse } from "./types";
 import type { CampaignGenerationInput } from "../schema";
+import type { AiTelemetryContext } from "@/lib/ai";
 
 /**
  * MockProvider — default AI provider that returns deterministic,
@@ -57,7 +58,10 @@ function getCTAsBySegment(segment: string): string {
 export class MockProvider implements AIProvider {
   readonly name = "mock";
 
-  async generate(input: CampaignGenerationInput): Promise<ProviderRawResponse> {
+  async generate(
+    input: CampaignGenerationInput,
+    _telemetry?: AiTelemetryContext
+  ): Promise<ProviderRawResponse> {
     // ── Commercial copy (PT-BR) ──────────────────────────────────────────
 
     const title = `${input.productName} — Oferta Imperdível na ${input.storeName}`;

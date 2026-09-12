@@ -1,4 +1,5 @@
 import type { CampaignGenerationInput } from "../schema";
+import type { AiTelemetryContext } from "@/lib/ai";
 
 /**
  * Abstract provider interface for AI campaign generation.
@@ -13,9 +14,10 @@ export interface AIProvider {
   /**
    * Generate a campaign spec from validated input.
    * @param input - Validated campaign generation input
+   * @param telemetry - Contexto de telemetria (F46 D9); obrigatório no caminho real
    * @returns A promise resolving to the raw provider response
    */
-  generate(input: CampaignGenerationInput): Promise<ProviderRawResponse>;
+  generate(input: CampaignGenerationInput, telemetry?: AiTelemetryContext): Promise<ProviderRawResponse>;
 }
 
 /**

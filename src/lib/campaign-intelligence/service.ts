@@ -4,6 +4,7 @@ import {
   CampaignSpecSchema,
 } from "./schema";
 import type { CampaignGenerationInput, CampaignSpec } from "./schema";
+import type { AiTelemetryContext } from "@/lib/ai";
 
 // ─── Error Codes ──────────────────────────────────────────────────────────
 
@@ -57,10 +58,12 @@ export class CampaignIntelligenceService {
    * Generate a campaign spec from the given input.
    *
    * @param input - Raw campaign generation input (validated internally)
+   * @param telemetry - Contexto de telemetria (F46 D9), encaminhado ao provider
    * @returns A ServiceResult with either the validated CampaignSpec or an error
    */
   async generate(
-    input: CampaignGenerationInput
+    input: CampaignGenerationInput,
+    telemetry?: AiTelemetryContext
   ): Promise<ServiceResult<CampaignSpec>> {
     // ── Step 1: Validate input ──────────────────────────────────────
     // Provider is NOT called when input is invalid.
@@ -79,7 +82,7 @@ export class CampaignIntelligenceService {
     // Wrapped in try/catch to prevent raw errors from leaking to the caller.
     let rawResponse: ProviderRawResponse;
     try {
-      rawResponse = await this.provider.generate(inputValidation.data);
+      rawResponse = await this.provider.generate(inputValidation.data, telemetry);
     } catch (err) {
       console.error(
         "[CampaignIntelligenceService] Provider failure:",

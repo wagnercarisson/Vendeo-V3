@@ -8,6 +8,9 @@ const mockCampaignGenerate = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createServerClient: vi.fn(),
+  // F46-03: a rota legada agora importa `@/lib/ai` (telemetria) → cost-estimator
+  // → ai-model-pricing, que usa `supabaseAdmin` no default do construtor.
+  supabaseAdmin: {},
 }));
 
 vi.mock("@/lib/auth/require-user", () => ({
