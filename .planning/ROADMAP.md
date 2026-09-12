@@ -570,7 +570,6 @@
 
 ---
 
-
 ### Phase 38 — Tabela de Custos por Operação
 
 **Goal:** Criar a fonte única de custo por operação (`credit_operation_costs`) e substituir o hardcoded (`COST_PER_GENERATION = 1`, literal `1` na rota de VS, "1 crédito" na UI) por custo dinâmico resolvido em runtime — com admin sem deploy, auditoria old/new e ledger auto-descritivo via metadata snapshot.
@@ -635,6 +634,7 @@
 
 ```
 Plans:
+
 - [x] 38-1-01-PLAN.md — Migração + db push [BLOCKING: pós-deploy] (Wave 1) ✅ (aplicada no remoto 2026-08-08)
 - [x] 38-1-02-PLAN.md — Types + AiCostTracker (Wave 2)
 - [x] 38-1-03-PLAN.md — Admin APIs pricing (Wave 2)
@@ -646,9 +646,11 @@ Plans:
 - [x] 38-1-09-PLAN.md — brand rotas + 6.5 (Wave 4) ✅ (onCall em BrandDirectorService.analyze + BrandTextOnlyInferenceService.infer, threading BrandProfilerWithoutLogoService, 4 rotas brand instrumentadas — startRun brand_profile, call-level brand_profile_vision/text com custo real via resolveAiCost, delivery without_logo/with_logo NULL + duration_is_pipeline, infer de zero eventos, realign 3 caminhos IA + regenerate novo run, 15 testes novos — 1700 testes)
 - [x] 38-1-10-PLAN.md — Views/RPCs + verificação + gates [checkpoint] ✅ (I1–I6 banco real + 50 testes + UAT checkpoint validado)
 - [x] 38-1-11-PLAN.md — Runbook trackings (Wave 6) ✅ (8.1–8.5 + fechamento — `responses:image_generation = 0.065` é estimativa operacional PROVISÓRIA para beta, calibrada por UAT/dashboard/CSV, NÃO é custo financeiro real; reconciliação financeira real fica para a próxima fase)
+
 ```
 
 **Closing:** Fase fechada 2026-08-09 como **camada de estimativa operacional granular** (não reconciliação financeira final): ajuste provisório versionável da tool image_generation — fórmula `responses_image_generation_v2` (`estimated_cost_usd = text_component_usd + image_tool_component_usd`), seed `ai_model_pricing ('openai','responses:image_generation', 0.065)` via migration `20260809000003` (aplicada Local/Remote), bootstrap em `DEFAULT_AI_MODEL_PRICING`, ajuste via GET/PUT `/api/admin/ai-model-pricing`, metadata `cost_formula_version`/`text_component_usd`/`image_tool_component_usd`/`image_tool_pricing_*`/`cost_estimation_note` no evento `campaign_image`. 1713 testes (199 arquivos), typecheck/lint/build limpos.
+
 ```
 
 ---
@@ -680,7 +682,9 @@ Plans:
 **Plans:** 15/15 plans complete
 
 ```
+
 Plans:
+
 - [x] 38-2-01-PLAN.md — Migrations (3) + db push [BLOCKING] (Wave 1)
 - [x] 38-2-02-PLAN.md — Types econômicos + EconomicParameterService (Wave 2)
 - [x] 38-2-03-PLAN.md — AiCostTracker persistência de confiança (Wave 2)
@@ -693,6 +697,7 @@ Plans:
 - [x] 38-2-10-PLAN.md — Testes + Verificação I1–I6 + gates [checkpoint] (Wave 6)
 - [x] 38-2-11-PLAN.md — Runbook trackings (Wave 7) ✅
 - [x] 38-2-12-PLAN.md — RPCs creditos_estornados/creditos_liquidos por run (gap UAT) (Wave 1)
+
 ```
 
 **Closing:** Fase reaberta 2026-08-11 para gap closure UAT (plans 12-15: créditos estornados/líquidos). Fechamento original: 11/11 plans, 1832 testes (213 arquivos), typecheck/lint/build limpos; **verificação I1–I6 em banco real** (50/50 asserts, `scripts/verify/38-2-f38-2-verification.mjs`); UAT 13.3 coletado para harvest end-of-phase (HUMAN-UAT.md pelo verifier). Gap registrado: `byStage` → "unknown" em produção (deferred-items.md #1 — migration aditiva expondo `generation_type` por run ou F38.4). Próxima: F38.3 (reconciliação financeira provider) após Landing/PWA.
@@ -725,7 +730,9 @@ Plans:
 **Plans:** 7/7 plans executed
 
 ```
+
 Plans:
+
 - [x] 38-2-1-01-PLAN.md — Migration: colunas de snapshot + backfill audit (Wave 1) [BLOCKING db push]
 - [x] 38-2-1-02-PLAN.md — Types + Tracker + Callers propagam snapshot (Wave 2)
 - [x] 38-2-1-03-PLAN.md — RPCs de operation runs expõem snapshots (Wave 2) [BLOCKING db push]
@@ -733,6 +740,7 @@ Plans:
 - [x] 38-2-1-05-PLAN.md — API contratos + UI painel: labels estimados + origem + aviso (Wave 4)
 - [x] 38-2-1-06-PLAN.md — /admin/metrics com snapshot + aviso Configurações Econômicas (Wave 2)
 - [x] 38-2-1-07-PLAN.md — Testes + Verificação I1–I7 + gates + UAT [checkpoint] (Wave 5)
+
 ```
 
 ---
@@ -827,6 +835,7 @@ Plans:
 **Plans:** 13/13 plans complete
 
 ```
+
 - [x] 41-01-PLAN.md — Trackings D1 (grep-verificação renumeração F41/F42, zero resíduos, registro commit 195b467)
 - [x] 41-02-PLAN.md — Config + Transporte schema (MAX_CAMPAIGN_IMAGES=4 + teto agregado; ProductImageInputSchema + productImages[] + productImageDataUrl optional)
 - [x] 41-03-PLAN.md — Prompts 1+N (bloco descritivo nos 4 prompts, sem variável nova, golden 38 keys)
@@ -840,6 +849,7 @@ Plans:
 - [x] 41-11-PLAN.md — Testes 17-23 (pipeline/provider/review/prompt: N input_image, fallback gated, golden 38, bloco 1+N, primary-only, review)
 - [x] 41-12-PLAN.md — Testes 4 + 24-27 (rota: 400 ambíguo, 413, storage D5, cleanup, regressão)
 - [x] 41-13-PLAN.md — Verificação final (4 gates + VERIFICATION.md + UAT.md + checkpoint humano)
+
 ```
 
 **Waves:**
@@ -938,7 +948,9 @@ Plans:
 **Waves:** 5 waves — 45-01/45-02:1, 45-03/45-04:2, 45-05:3, 45-06:4, 45-07/45-08:5 (45-08 = adendo de alinhamento Diretor × Revisor aprovado em revisão humana)
 
 ```
+
 Plans:
+
 - [x] 45-01-PLAN.md — Trackings (grep F45/F44/Stripe) + inventário de consumidores + baselines (Wave 1)
 - [x] 45-02-PLAN.md — Helper puro art-director-briefing.ts (extração sem mudança de comportamento) (Wave 1)
 - [x] 45-03-PLAN.md — Reescrita offer + base em editorial + blocos + montagem contextual offer (Wave 2)
@@ -947,6 +959,7 @@ Plans:
 - [x] 45-06-PLAN.md — Regressão completa + verificação não-mudança + revisão humana dos 4 .md (Wave 4)
 - [x] 45-07-PLAN.md — Verificação final (VERIFICATION.md + UAT.md + registros/arquivamento) (Wave 5)
 - [x] 45-08-PLAN.md — Alinhamento Diretor × Revisor (autoridade estreita, identidade fora da avaliação, área segura + concordância de gênero) (Wave 5, adendo)
+
 ```
 
 ---
@@ -978,17 +991,31 @@ Plans:
 
 **Waves:** 5 waves — 46-01/46-02:1, 46-03/46-04/46-05:2, 46-06/46-07:3, 46-08:4, 46-09:5
 
-```
-Plans:
+```Plans:
+**Wave 1**
+
 - [ ] 46-01-PLAN.md — Trackings + baseline/inventário das 11 capacidades + registry (`AiModelConfig` com protocol) + migration CHECK `campaign_spec` (Wave 1)
 - [ ] 46-02-PLAN.md — api-keys + gateway (`invoke`/alvo explícito/uma tentativa) + adapters por protocolo + `AiCallInfo` estendido + contrato de erro + sink injetável (Wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 46-03-PLAN.md — Migração das capacidades de TEXTO (copy, correção, brand_profile_text, campaign_spec legado) (Wave 2)
 - [ ] 46-04-PLAN.md — Migração das capacidades de VISÃO (input_validation, image_review, brand_profile_vision, VS validation) + furo 1 (Wave 2)
 - [ ] 46-05-PLAN.md — Migração das capacidades de IMAGEM (campaign_image, campaign_image_edit, visual_signature_image) + furos 3/4 + cost-estimator (Wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 46-06-PLAN.md — Cobertura de telemetria nos callers produtivos sem onCall (logo, retry-brand-director, server-actions, approve, restore) + teste de inventário (Wave 3)
 - [ ] 46-07-PLAN.md — Remoção das env-vars de modelo/provider do runtime e `.env.example` + co-migração de testes (Wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 46-08-PLAN.md — Regressão completa + não-mudança do contrato externo + equivalência de defaults (Wave 4)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 46-09-PLAN.md — Verificação final (VERIFICATION.md + UAT.md + registros/arquivamento) (Wave 5)
+
 ```
 
 ---
@@ -996,6 +1023,7 @@ Plans:
 ## Dependency Graph
 
 ```
+
 Phase 23 (TextProvider + Copy Director) ──┐
                                             ├──▶ Phase 25 (Pipeline v1.5)
 Phase 24 (Credit Tables + CreditService) ──┘
@@ -1078,6 +1106,7 @@ Phase 39 (Brief Estruturado de Campanha — v1.5)
                                                   │
                                                   ▼
                                          Monetização pública / Stripe (diferida, v1.7+ — fora da numeração)
+
 ```
 
 > **Fora da numeração:** F44 = Temas de Campanha (adicionada pelo runbook da própria F44 — esta fase não cria a linha F44); Monetização pública / Stripe (iniciativa diferida, v1.7+). **F47 = Catálogo e Seleção de Modelos Admin (Change B)** é a sucessora numerada da F46.

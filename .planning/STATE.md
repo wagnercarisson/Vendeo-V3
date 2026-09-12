@@ -1,24 +1,24 @@
-﻿---
+---
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: â€” LanÃ§amento Externo Controlado â—†
 current_phase: 46
-status: planning
-last_updated: 2026-09-12T00:00:00.000Z
+status: executing
+last_updated: "2026-09-12T17:28:38.666Z"
+last_activity: 2026-09-12
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 52
-  completed_plans: 165
-  percent: 90
-stopped_at: "F37 (fatias 37.1+37.2) CONCLUIDA - 37.1 (15/15 plans, 2379 testes, UAT 6/6) + 37.2 realinhada (19/19 plans, 264 files/2578 testes, 4 gates verdes, UAT 9/9); 37.3 eliminada"
+  total_phases: 9
+  completed_phases: 8
+  total_plans: 104
+  completed_plans: 95
+  percent: 89
 ---
 
 # Project State
 
 **Last updated:** 2026-09-10 — F45 concluída e incorporada à branch da F37; F37.1 concluída; **F37.2 realinhada (Correção Única por Não Conformidade) CONCLUÍDA** (19/19 plans, 8 waves, 264 files / 2578 testes, 4 gates verdes, UAT 9/9 PASS, migrations `20260906000001/2/3` no remoto, fix pós-UAT `01a7021b`; fonte `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/`); **37.3 eliminada** (consolidada na 37.2).
 **Current phase:** 46
-**Last activity:** 2026-09-12 - Planejamento da F46 (Gateway Único de IA e Registry de Modelos, Change A): CONTEXT.md + 9 PLAN.md (46-01..46-09) + registro nos trackings.
+**Last activity:** 2026-09-12
 
 ### Phase 46 — Gateway Único de IA e Registry de Modelos ◆ Em planejamento (0/9 plans / 5 waves)
 
@@ -63,7 +63,6 @@ stopped_at: "F37 (fatias 37.1+37.2) CONCLUIDA - 37.1 (15/15 plans, 2379 testes, 
 **F37 CONCLUÍDA — fatia 37.1 (Approval Gate + Candidata Única, v1.5) — 15/15 plans, 2379 testes (255 arquivos), 4 gates verdes (vitest/typecheck/lint/build), UAT 19.5–19.10 PASS (6/6)** — flag `campaign_approval_enabled` (fail-closed), tabela `campaign_art_versions` + colunas de aprovação em `campaigns`, RPC `approve_campaign_art_version` transacional, generate-image insere v1 quando a flag ligada, estado `ApprovalDisplayState`/gating (download + copy 403 até aprovar), tela de revisão da candidata ativa, rota approve. **Sem correção em qualquer forma** (37.2). Source of truth: `openspec/changes/fase-37-1-approval-gate-candidata-unica/`.
 **F37.2 realinhada (Correção Única por Não Conformidade) CONCLUÍDA** — 19/19 plans (8 waves), 264 files / 2578 testes, 4 gates verdes (vitest/typecheck/lint/build), UAT PASS 9/9 (37.2-6 validado por código), migrations `20260906000001/2/3` aplicadas no remoto, fix pós-UAT `01a7021b`; source of truth `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/` (decisão do usuário 2026-09-10); **37.3 eliminada** (consolidada na 37.2). Modal [Informar problema] (1 etapa), análise textual de elegibilidade (`CorrectionIntentService`), tabelas `campaign_correction_reports`/`campaign_correction_submissions`, RPCs próprias (begin/complete_analysis/consume/complete_v2/fail/recover/approve_candidate) com locks candidata → campanha → relato, geração da v2 (hook + bloco único, sem editar os `.md`), aprovação protegida e fila admin.
 **F45 (Briefing Contextual do Diretor de Arte, v1.5) CONCLUÍDA — 8/8 plans (45-01..45-08, 5 waves), 2427 testes (253 files), 4 gates verdes, UAT comparativo antes×depois PASS (7/7) + artes reais de UAT aprovadas como publicáveis (45-08)** — reestruturacao dos 4 .md do diretor em camada editorial + blocos contextuais (helper puro `art-director-briefing`), prompt contextual por presenca real de dados (sem secoes vazias/placeholders/duplicacoes); sem mudanca de superficie externa; adendo 45-08 (alinhamento Diretor × Revisor: contrato legal splitado no mesmo split canonico, revisor com autoridade estreita, identidade fora da avaliacao, bloco canonico de identidade com area segura + concordancia de genero). Fonte da verdade (arquivada): `openspec/changes/archive/2026-09-05-fase-45-briefing-contextual-do-diretor-de-arte/`. Numeração: F45 = Briefing Contextual do Diretor de Arte (v1.5) CONCLUÍDA; **F44 = Temas de Campanha permanece fora da numeracao** (adicionada pelo runbook da propria F44); Stripe/Monetizacao Publica fora da numeracao (iniciativa diferida v1.7+).
-
 
 ### Phase 40 â€” Campos Comerciais e Avisos do Brief âœ… Complete (9 plans / 5 waves)
 
@@ -650,7 +649,7 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 | 38-1-10 | 5 | âœ… | Views/RPCs apuraÃ§Ã£o + verificaÃ§Ã£o I1â€“I6 (banco real) + 50 testes + gates + UAT checkpoint validado |
 | 38-1-11 | 6 | âœ… | Runbook trackings 8.1â€“8.5 + fechamento (0.065 provisÃ³rio beta; reconciliaÃ§Ã£o financeira real na prÃ³xima fase) |
 
-**Status:** Milestone complete
+**Status:** Ready to execute
 
 **Source:** `openspec/changes/fase-38-1-ai-cost-accounting/` (fonte da verdade)
 **Context:** `.planning/phases/38-1-ai-cost-accounting/38-1-CONTEXT.md`
