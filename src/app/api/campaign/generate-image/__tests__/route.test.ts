@@ -148,16 +148,14 @@ vi.mock('@/lib/credit/credit-service', () => ({
 
 // Copy Director mock
 const mockGenerateCopy = vi.fn();
+const { mockHasFallback } = vi.hoisted(() => ({ mockHasFallback: vi.fn(async () => true) }));
 vi.mock('@/lib/copy/copy-director-service', () => ({
   CopyDirectorService: vi.fn(function() {
-    return { generateCopy: mockGenerateCopy };
+    return { generateCopy: mockGenerateCopy, hasFallback: mockHasFallback };
   }),
 }));
 
-vi.mock('@/lib/text-provider/factory', () => ({
-  createTextProvider: vi.fn(() => ({ name: 'test' })),
-}));
-
+// F46-03: a rota não usa mais createTextProvider (o serviço é dono do invoke).
 vi.mock('@/lib/copy/mapper', () => ({
   mapBriefToCopyDirectorInput: vi.fn(() => ({
     productName: 'Test',
@@ -190,6 +188,59 @@ vi.mock('@/lib/ai-cost', () => ({
   resolveAiCost: mockResolveAiCost,
   estimateAiCost: vi.fn(),
 }));
+
+// F46-03 (D9): a rota usa `createDefaultTelemetryContext` de `@/lib/ai` para o
+// call-level de campaign_copy. Mock parcial: o sink converte o envelope no
+// AiCostEvent (mesmo CostResolution do resolveAiCost mockado) e acumula via
+// onCostResolved — preservando as asserções de custo do pipeline.
+vi.mock('@/lib/ai', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/ai')>();
+  return {
+    ...actual,
+    createDefaultTelemetryContext: (params: any) => {
+      const { sink: _sink, tracker: _tracker, onCostResolved, ...ctx } = params;
+      return {
+        ...ctx,
+        sink: {
+          emit: async (envelope: any) => {
+            const generationType =
+              actual.CAPABILITY_GENERATION_TYPE[
+                envelope.capability as keyof typeof actual.CAPABILITY_GENERATION_TYPE
+              ];
+            const cost = await mockResolveAiCost({
+              provider: envelope.provider,
+              model: envelope.model,
+              usage: envelope.usage,
+              providerReportedCostUsd: envelope.providerReportedCostUsd,
+              imageGenerationTool: envelope.usageMeta?.imageGenerationTool === true,
+              generationType,
+            });
+            onCostResolved?.(cost);
+            capturedEvents.push({
+              operationRunId: ctx.operationRunId,
+              operationRunType: ctx.operationRunType,
+              traceId: ctx.traceId,
+              storeId: ctx.storeId,
+              campaignId: ctx.campaignId ?? null,
+              generationType,
+              provider: envelope.provider,
+              model: envelope.model,
+              attemptNumber: ctx.attemptNumber ?? 1,
+              durationMs: envelope.durationMs,
+              status: envelope.status,
+              errorType: envelope.errorType ?? null,
+              tokens: envelope.usage,
+              cost,
+              usdBrlRateAtGeneration: ctx.usdBrlRateAtGeneration ?? null,
+              creditValueBrlAtGeneration: ctx.creditValueBrlAtGeneration ?? null,
+              metadata: { capability: envelope.capability, protocol: envelope.protocol },
+            });
+          },
+        },
+      };
+    },
+  };
+});
 
 // F38.2.1 (D3): mock do EconomicParameterService — resolve o snapshot econômico
 // UMA vez no início do run (5.20/2.00 por default; cenário de falha via
@@ -298,6 +349,7 @@ async function setupSuccessMocks() {
 beforeEach(() => {
   vi.clearAllMocks();
   capturedEvents.length = 0;
+  mockHasFallback.mockResolvedValue(true);
   mockRpc.mockResolvedValue({ data: { ready: true, missing: [] }, error: null });
   mockIsForceBriefVisionCheckEnabled.mockResolvedValue(false);
   mockGetCost.mockResolvedValue({
@@ -898,9 +950,9 @@ describe('POST /api/campaign/generate-image', () => {
     expect(mockRefundCredit).toHaveBeenCalled();
   });
 
-  // ── Test #17-19: Retry Gemini ──────────────────────────────────
+  // ── Test #17-19: Fallback de texto (F46-03) ────────────────────
 
-  it('retry copy — falha retryable → Gemini OK → ready sem refund', async () => {
+  it('retry copy — falha retryable + fallback configurado → segunda chamada com target "fallback" → ready sem refund', async () => {
     mockStoreFrom.mockImplementation(() => ({ select: vi.fn(() => ({ eq: vi.fn(() => ({ single: vi.fn(() => Promise.resolve({ data: { id: STORE_ID, name: 'Loja Teste', segment: 'outros' }, error: null })) })) })) }));
     (resolveStoreIdentity as any).mockResolvedValue({ storeName: 'Loja Teste' });
     (validateIdentityReference as any).mockResolvedValue({ storeName: 'Loja Teste' });
@@ -913,10 +965,10 @@ describe('POST /api/campaign/generate-image', () => {
     const { MalformedResponseError } = await import('@/lib/copy/errors');
     mockGenerateCopy.mockRejectedValueOnce(new MalformedResponseError('Resposta malformada'));
     mockGenerateCopy.mockResolvedValueOnce({
-      title: 'Título Gemini',
-      caption: 'Caption Gemini',
+      title: 'Título Fallback',
+      caption: 'Caption Fallback',
       hashtags: ['#tag'],
-      cta_post: 'CTA Gemini',
+      cta_post: 'CTA Fallback',
     });
     mockGenerateImage.mockResolvedValue({ success: true, imageDataUrl: 'data:image/jpeg;base64,xyz' });
     mockValidatePrompts.mockReturnValue({ valid: true, errors: [] });
@@ -924,9 +976,6 @@ describe('POST /api/campaign/generate-image', () => {
     (transcodeToJpeg as any).mockResolvedValue({ buffer: Buffer.from(''), mimeType: 'image/jpeg' });
     (uploadCampaignImage as any).mockResolvedValue(undefined);
     (updateCampaignReady as any).mockResolvedValue(undefined);
-
-    // Set fallback provider
-    process.env.TEXT_FALLBACK_PROVIDER = 'gemini';
 
     const { POST } = await import('../route');
     const req = makeRequest(VALID_REQUEST_BODY);
@@ -936,9 +985,13 @@ describe('POST /api/campaign/generate-image', () => {
     expect(res.status).toBe(200);
     expect(mockRefundCredit).not.toHaveBeenCalled();
     expect(updateCampaignReady).toHaveBeenCalled();
+    // A rota NÃO chama invoke: chama o serviço 2x com o alvo explícito.
+    expect(mockGenerateCopy).toHaveBeenCalledTimes(2);
+    expect(mockGenerateCopy.mock.calls[0][1].target).toBe('primary');
+    expect(mockGenerateCopy.mock.calls[1][1].target).toBe('fallback');
   });
 
-  it('retry copy — Gemini nao configurado → estorno sem fallback', async () => {
+  it('retry copy — sem fallback configurado → estorno sem segunda chamada', async () => {
     mockStoreFrom.mockImplementation(() => ({ select: vi.fn(() => ({ eq: vi.fn(() => ({ single: vi.fn(() => Promise.resolve({ data: { id: STORE_ID, name: 'Loja Teste', segment: 'outros' }, error: null })) })) })) }));
     (resolveStoreIdentity as any).mockResolvedValue({ storeName: 'Loja Teste' });
     (validateIdentityReference as any).mockResolvedValue({ storeName: 'Loja Teste' });
@@ -956,8 +1009,8 @@ describe('POST /api/campaign/generate-image', () => {
     (transcodeToJpeg as any).mockResolvedValue({ buffer: Buffer.from(''), mimeType: 'image/jpeg' });
     (uploadCampaignImage as any).mockResolvedValue(undefined);
 
-    // No fallback configured
-    delete process.env.TEXT_FALLBACK_PROVIDER;
+    // Sem fallback configurado → a rota NÃO faz a segunda chamada.
+    mockHasFallback.mockResolvedValue(false);
 
     const { POST } = await import('../route');
     const req = makeRequest(VALID_REQUEST_BODY);
@@ -965,6 +1018,8 @@ describe('POST /api/campaign/generate-image', () => {
     await _res.text();
 
     expect(mockRefundCredit).toHaveBeenCalled();
+    expect(mockGenerateCopy).toHaveBeenCalledTimes(1);
+    expect(mockGenerateCopy.mock.calls[0][1].target).toBe('primary');
   });
 
   // ── Test #26-28: mandatoryArtworkText propagacao ────────────────
@@ -1294,10 +1349,18 @@ describe('Pipeline cost accounting (6.3)', () => {
     await setupSuccessMocks();
     const reviewAttempts = options?.reviewAttempts ?? 1;
 
-    mockGenerateCopy.mockImplementation(async (_input: any, _opts: any, onCall?: (info: any) => void) => {
-      if (onCall) {
-        onCall({ provider: "openai", model: "gpt-4o", usage: COPY_USAGE, durationMs: 250 });
-      }
+    mockGenerateCopy.mockImplementation(async (_input: any, opts: any) => {
+      // F46-03: o serviço (mockado) emite o envelope pelo sink da telemetria do
+      // caller — a rota não registra campaign_copy manualmente (D9).
+      await opts?.telemetry?.sink?.emit({
+        capability: "campaign_copy",
+        protocol: "chat-completions",
+        status: "success",
+        provider: "openai",
+        model: "gpt-4o",
+        usage: COPY_USAGE,
+        durationMs: 250,
+      });
       return {
         title: 'Título da Campanha',
         caption: 'Caption gerada pelo Copy Director',
@@ -1512,10 +1575,16 @@ describe('snapshot econômico (F38.2.1)', () => {
   // devem carregar os valores do snapshot resolvidos no início do run.
   async function setupSnapshotSuccess() {
     await setupSuccessMocks();
-    mockGenerateCopy.mockImplementation(async (_input: any, _opts: any, onCall?: (info: any) => void) => {
-      if (onCall) {
-        onCall({ provider: "openai", model: "gpt-4o", usage: { promptTokens: 1000, completionTokens: 500, totalTokens: 1500 }, durationMs: 250 });
-      }
+    mockGenerateCopy.mockImplementation(async (_input: any, opts: any) => {
+      await opts?.telemetry?.sink?.emit({
+        capability: "campaign_copy",
+        protocol: "chat-completions",
+        status: "success",
+        provider: "openai",
+        model: "gpt-4o",
+        usage: { promptTokens: 1000, completionTokens: 500, totalTokens: 1500 },
+        durationMs: 250,
+      });
       return {
         title: 'Título da Campanha',
         caption: 'Caption gerada pelo Copy Director',

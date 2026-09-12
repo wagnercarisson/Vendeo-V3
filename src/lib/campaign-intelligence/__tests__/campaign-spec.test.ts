@@ -35,6 +35,7 @@ const TELEMETRY: AiTelemetryContext = {
 
 const INPUT: CampaignGenerationInput = {
   productName: "Tênis Runner",
+  campaignIntent: "offer",
   discountedPriceCents: 1990,
   storeName: "Loja Teste",
   storeSegment: "outros",

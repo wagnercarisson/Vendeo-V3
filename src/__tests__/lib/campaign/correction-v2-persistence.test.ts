@@ -6,6 +6,15 @@ import path from "node:path";
 import { describe, it, expect, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
+
+// F46-03: o CorrectionIntentService importa `@/lib/ai` (gateway default) →
+// cost-estimator → supabase/server. Sem env, o módulo lança na importação.
+vi.hoisted(() => {
+  process.env.NEXT_PUBLIC_SUPABASE_URL ??= "http://localhost:54321";
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??= "test-anon-key";
+  process.env.SUPABASE_SERVICE_ROLE_KEY ??= "test-service-role-key";
+});
+
 vi.mock("@/lib/ai-cost", () => ({
   AiCostTracker: class {
     record() {}
@@ -158,7 +167,10 @@ describe("F37.2 §15 — única v2 / geração / persistência", () => {
     expect(M4).toContain("campaign_correction_analysis");
     expect(types).toContain("campaign_correction_analysis");
     expect(intentService).toContain("campaign_correction_analysis");
-    expect(intentService).toContain('"failed"');
+    // F46-03 (D9): a telemetria/status passa a vir do envelope do gateway — o
+    // serviço apenas delega a capacidade (não grava evento manualmente).
+    expect(intentService).toContain("invoke");
+    expect(intentService).not.toContain("AiCostTracker");
     expect(correctionReports).not.toContain("reserveCredit");
     expect(correctionReports).not.toContain("operation_key");
   });

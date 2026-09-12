@@ -14,8 +14,19 @@ import type { CopyDirectorInput } from '../schema';
 import { MalformedResponseError } from '../errors';
 import { mapBriefToCopyDirectorInput } from '../mapper';
 import { buildCampaignBriefFromFlat } from '@/lib/campaign/brief';
-import { NoopAiTelemetrySink } from '@/lib/ai';
-import type { AiInvoker, AiInvocationResult, AiTelemetryContext } from '@/lib/ai';
+import { NoopAiTelemetrySink, AiGateway } from '@/lib/ai';
+import type {
+  AiAdapter,
+  AiAdapterRegistry,
+  AiCallEnvelope,
+  AiCapability,
+  AiInvoker,
+  AiInvocationResult,
+  AiModelConfig,
+  AiModelResolver,
+  AiProtocol,
+  AiTelemetryContext,
+} from '@/lib/ai';
 import type { GenerateImageRequest } from '@/lib/image-generation/schema';
 import type { ResolvedCampaignContext } from '@/components/campaign/types';
 
@@ -336,6 +347,67 @@ describe('CopyDirectorService — onCall (D11, furo 1)', () => {
     const result = await service.generateCopy(MINIMUM_INPUT, { telemetry: TELEMETRY });
     expect(result.title).toBeDefined();
     expect(result.caption).toBeDefined();
+  });
+});
+
+describe('CopyDirectorService — dois envelopes (primary + fallback, F46-03 Task 4)', () => {
+  it('duas invokes explícitas (primary → fallback) geram dois envelopes via gateway/adapter/sink falsos', async () => {
+    const envelopes: AiCallEnvelope[] = [];
+    const telemetry: AiTelemetryContext = {
+      ...TELEMETRY,
+      sink: {
+        emit: (envelope: AiCallEnvelope) => {
+          envelopes.push(envelope);
+        },
+      },
+    };
+
+    const config: AiModelConfig = {
+      capability: 'campaign_copy',
+      segment: 'text',
+      primary: { provider: 'openai', model: 'gpt-4o', protocol: 'chat-completions' },
+      fallback: { provider: 'gemini', model: 'gemini-3.1-flash-lite', protocol: 'gemini' },
+    };
+    const resolver: AiModelResolver = {
+      resolve: vi.fn(async () => config),
+      listCapabilities: vi.fn(() => ['campaign_copy'] as AiCapability[]),
+    };
+
+    const adapters = new Map<AiProtocol, AiAdapter>();
+    adapters.set('chat-completions', {
+      protocol: 'chat-completions',
+      invoke: vi.fn(async () => ({
+        content: validCopyJson(),
+        model: 'gpt-4o',
+        usage: { promptTokens: 10, completionTokens: 5 },
+      })),
+    });
+    adapters.set('gemini', {
+      protocol: 'gemini',
+      invoke: vi.fn(async () => ({
+        content: validCopyJson({ title: 'Fallback' }),
+        model: 'gemini-3.1-flash-lite',
+      })),
+    });
+    const adapterRegistry: AiAdapterRegistry = {
+      get: (protocol: AiProtocol) => adapters.get(protocol),
+    };
+
+    const service = new CopyDirectorService(new AiGateway(resolver, adapterRegistry));
+
+    const primary = await service.generateCopy(MINIMUM_INPUT, { telemetry, target: 'primary' });
+    const fallback = await service.generateCopy(MINIMUM_INPUT, { telemetry, target: 'fallback' });
+
+    expect(primary.title).toBeDefined();
+    expect(fallback.title).toBe('Fallback');
+    expect(envelopes).toHaveLength(2);
+    expect(envelopes[0].capability).toBe('campaign_copy');
+    expect(envelopes[0].protocol).toBe('chat-completions');
+    expect(envelopes[0].provider).toBe('openai');
+    expect(envelopes[0].model).toBe('gpt-4o');
+    expect(envelopes[1].protocol).toBe('gemini');
+    expect(envelopes[1].provider).toBe('gemini');
+    expect(envelopes.map((e) => e.status)).toEqual(['success', 'success']);
   });
 });
 
