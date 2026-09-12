@@ -107,6 +107,57 @@ vi.mock('@/lib/ai-cost', () => ({
   resolveAiCost: mockResolveAiCost,
 }));
 
+// F46-04 (D9): a rota usa `createDefaultTelemetryContext` de `@/lib/ai`; o sink
+// captura o envelope e o converte no AiCostEvent (mesmo CostResolution).
+vi.mock('@/lib/ai', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/ai')>();
+  return {
+    ...actual,
+    createDefaultTelemetryContext: (params: any) => {
+      const { sink: _sink, tracker: _tracker, onCostResolved, ...ctx } = params;
+      return {
+        ...ctx,
+        sink: {
+          emit: async (envelope: any) => {
+            const generationType =
+              actual.CAPABILITY_GENERATION_TYPE[
+                envelope.capability as keyof typeof actual.CAPABILITY_GENERATION_TYPE
+              ];
+            const cost = await mockResolveAiCost({
+              provider: envelope.provider,
+              model: envelope.model,
+              usage: envelope.usage,
+              providerReportedCostUsd: envelope.providerReportedCostUsd,
+              imageGenerationTool: envelope.usageMeta?.imageGenerationTool === true,
+              generationType,
+            });
+            onCostResolved?.(cost);
+            capturedEvents.push({
+              operationRunId: ctx.operationRunId,
+              operationRunType: ctx.operationRunType,
+              traceId: ctx.traceId,
+              storeId: ctx.storeId,
+              visualSignatureId: ctx.visualSignatureId ?? null,
+              generationType,
+              provider: envelope.provider,
+              model: envelope.model,
+              attemptNumber: ctx.attemptNumber ?? 1,
+              durationMs: envelope.durationMs,
+              status: envelope.status,
+              errorType: envelope.errorType ?? null,
+              tokens: envelope.usage,
+              cost,
+              usdBrlRateAtGeneration: ctx.usdBrlRateAtGeneration ?? null,
+              creditValueBrlAtGeneration: ctx.creditValueBrlAtGeneration ?? null,
+              metadata: { capability: envelope.capability, protocol: envelope.protocol },
+            });
+          },
+        },
+      };
+    },
+  };
+});
+
 // F38.2.1 (D3): mock do EconomicParameterService — snapshot 5.20/2.00 por
 // default; cenário de falha via mockRejectedValue (best-effort, não bloqueia).
 const { mockGetParameter } = vi.hoisted(() => ({ mockGetParameter: vi.fn() }));
@@ -570,8 +621,8 @@ describe('Brand cost accounting (6.5) — realign', () => {
       if (table === 'store_brand_profiles') return makeProfileChain({ data: null, error: null });
       return makeChain({ data: null, error: null });
     });
-    mockTextOnlyInfer.mockImplementation(async (_input: any, _timeoutMs: any, onCall?: any) => {
-      onCall?.({ provider: 'openai', model: 'gpt-4o', usage: TEXT_USAGE, durationMs: 200 });
+    mockTextOnlyInfer.mockImplementation(async (_input: any, _timeoutMs: any, _onCall: any, telemetry?: any) => {
+      await telemetry?.sink?.emit({ capability: 'brand_profile_text', protocol: 'chat-completions', status: 'success', provider: 'openai', model: 'gpt-4o', usage: TEXT_USAGE, durationMs: 200 });
       return {
         safe_color_tokens: { primary: '#22C55E', secondary: '#3B82F6', accent: '#1E40AF', background: '#0F172A' },
         visual_style: 'Moderno', visual_tone: 'Elegante', typography_direction: 'Sans-serif',
@@ -603,8 +654,8 @@ describe('Brand cost accounting (6.5) — realign', () => {
       if (table === 'store_brand_profiles') return makeProfileChain({ data: null, error: null });
       return makeChain({ data: null, error: null });
     });
-    mockBrandDirectorAnalyze.mockImplementation(async ({ onCall }: any) => {
-      onCall?.({ provider: 'openai', model: 'gpt-4o', usage: VISION_USAGE, durationMs: 300 });
+    mockBrandDirectorAnalyze.mockImplementation(async ({ telemetry }: any) => {
+      await telemetry?.sink?.emit({ capability: 'brand_profile_vision', protocol: 'chat-completions', status: 'success', provider: 'openai', model: 'gpt-4o', usage: VISION_USAGE, durationMs: 300 });
       return mockDirectorResult;
     });
 
@@ -640,8 +691,8 @@ describe('Brand cost accounting (6.5) — realign', () => {
         metadata: {},
       },
     };
-    mockProfilerGenerate.mockImplementation(async ({ onCall }: any) => {
-      onCall?.({ provider: 'openai', model: 'gpt-4o', usage: VISION_USAGE, durationMs: 300 });
+    mockProfilerGenerate.mockImplementation(async (_input: any, telemetry?: any) => {
+      await telemetry?.sink?.emit({ capability: 'brand_profile_vision', protocol: 'chat-completions', status: 'success', provider: 'openai', model: 'gpt-4o', usage: VISION_USAGE, durationMs: 300 });
       return mockProfilerResult;
     });
 
@@ -730,8 +781,8 @@ describe('snapshot econômico (F38.2.1) — realign', () => {
 
   it('text_only path: call brand_profile_text e delivery carregam os valores do snapshot (5.20/2.00) — apenas valores', async () => {
     setupTextOnlyStore();
-    mockTextOnlyInfer.mockImplementation(async (_input: any, _timeoutMs: any, onCall?: any) => {
-      onCall?.({ provider: 'openai', model: 'gpt-4o', usage: TEXT_USAGE, durationMs: 200 });
+    mockTextOnlyInfer.mockImplementation(async (_input: any, _timeoutMs: any, _onCall: any, telemetry?: any) => {
+      await telemetry?.sink?.emit({ capability: 'brand_profile_text', protocol: 'chat-completions', status: 'success', provider: 'openai', model: 'gpt-4o', usage: TEXT_USAGE, durationMs: 200 });
       return {
         safe_color_tokens: { primary: '#22C55E', secondary: '#3B82F6', accent: '#1E40AF', background: '#0F172A' },
         visual_style: 'Moderno', visual_tone: 'Elegante', typography_direction: 'Sans-serif',
