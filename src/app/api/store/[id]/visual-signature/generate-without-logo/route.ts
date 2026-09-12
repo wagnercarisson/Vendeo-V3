@@ -19,6 +19,8 @@ import type { OperationCostResolution } from '@/lib/credit/types';
 import { requireLegalClearance } from '@/lib/legal/clearance';
 import { AiCostTracker, resolveAiCost } from '@/lib/ai-cost';
 import type { AiCallInfo, CostResolution } from '@/lib/ai-cost/types';
+import { createDefaultTelemetryContext, BufferingAiTelemetrySink } from '@/lib/ai';
+import type { AiTelemetryContext } from '@/lib/ai';
 import type { GenerationEventType } from '@/lib/visual-signature/types';
 import { EconomicParameterService } from '@/lib/economic/economic-parameter-service';
 
@@ -270,10 +272,11 @@ export const POST = apiHandler(async (
   // flushCallEvents e insertGenerationEvent. O retry (novo run) re-resolve.
   let economicSnapshot = await resolveEconomicSnapshot();
 
-  // Eventos call-level (visual_signature_image / visual_signature_validation)
-  // chegam via onCall ANTES de a assinatura existir (persistSignature acontece
-  // dentro do fluxo). Ficam pendentes e são gravados quando o
-  // visual_signature_id é conhecido (D2 — todos os eventos do run com o id).
+  // Eventos call-level da IMAGEM (visual_signature_image) chegam via onCall
+  // ANTES de a assinatura existir (persistSignature acontece dentro do fluxo).
+  // Ficam pendentes e são gravados quando o visual_signature_id é conhecido
+  // (D2 — todos os eventos do run com o id). F46-04 (reabertura, D9): a
+  // validação (visual_signature_validation) usa o sink de buffering próprio.
   interface PendingCall {
     run: { operationRunId: string; traceId: string };
     generationType: GenerationEventType;
@@ -329,19 +332,67 @@ export const POST = apiHandler(async (
     }
   };
 
-  // Handler do callback onCall emitido pelo AiImageGenerator (imagem E validação
-  // atravessam o MESMO callback — D11). Distingue pelo model real da chamada:
-  // o validator usa IMAGE_VALIDATION_MODEL (default gpt-4o-mini); a imagem usa
-  // IMAGE_GENERATION_RESPONSES_MODEL (default gpt-5.5). Best-effort (D7).
-  const VALIDATION_MODEL = process.env.IMAGE_VALIDATION_MODEL || "gpt-4o-mini";
-  const handleCall = (info: AiCallInfo): void => {
+  // Handler do callback onCall emitido pelo AiImageGenerator para a IMAGEM
+  // (visual_signature_image). F46-04 (reabertura, D9): a validação
+  // (visual_signature_validation) NÃO atravessa mais este callback — ela é
+  // persistida pelo SINK único do contexto de telemetria. A persistência manual
+  // da imagem permanece HÍBRIDA até 46-05 (sem VALIDATION_MODEL/handleCall).
+  const onImageCall = (info: AiCallInfo): void => {
     recordCall({
-      generationType:
-        info.model === VALIDATION_MODEL ? "visual_signature_validation" : "visual_signature_image",
+      generationType: "visual_signature_image",
       attemptNumber: currentAttemptNumber,
       info,
     });
   };
+
+  /**
+   * F46-04 (reabertura, D9): sink de buffering para a validação de assinatura —
+   * os envelopes chegam ANTES de a assinatura existir; são entregues ao sink
+   * padrão (único ponto de persistência) no flush, quando o
+   * `visual_signature_id` é conhecido (ordem preservada).
+   */
+  const createValidationTelemetry = (
+    runRef: { operationRunId: string; traceId: string },
+    snapshot: { usdBrlRateAtGeneration: number | null; creditValueBrlAtGeneration: number | null },
+    attemptNumber: number,
+  ): { telemetry: AiTelemetryContext; flush: (visualSignatureId: string | null) => Promise<void> } => {
+    let resolvedSignatureId: string | null = null;
+    const buffering = new BufferingAiTelemetrySink(async (envelopes) => {
+      const sinkContext = createDefaultTelemetryContext({
+        operationRunId: runRef.operationRunId,
+        operationRunType: "visual_signature",
+        traceId: runRef.traceId,
+        storeId: id,
+        visualSignatureId: resolvedSignatureId ?? undefined,
+        attemptNumber,
+        usdBrlRateAtGeneration: snapshot.usdBrlRateAtGeneration,
+        creditValueBrlAtGeneration: snapshot.creditValueBrlAtGeneration,
+      });
+      for (const envelope of envelopes) {
+        await sinkContext.sink.emit(envelope);
+      }
+    });
+    const telemetry = createDefaultTelemetryContext({
+      operationRunId: runRef.operationRunId,
+      operationRunType: "visual_signature",
+      traceId: runRef.traceId,
+      storeId: id,
+      attemptNumber,
+      usdBrlRateAtGeneration: snapshot.usdBrlRateAtGeneration,
+      creditValueBrlAtGeneration: snapshot.creditValueBrlAtGeneration,
+      sink: buffering,
+    });
+    return {
+      telemetry,
+      flush: async (visualSignatureId: string | null) => {
+        resolvedSignatureId = visualSignatureId;
+        await buffering.flush();
+      },
+    };
+  };
+
+  // Telemetria de validação do run vigente (attempt 1). O retry recria.
+  let validation = createValidationTelemetry(run, economicSnapshot, 0);
 
   const timeoutId = setTimeout(() => {
     console.log(`[generate-without-logo][req-${reqId}] ⏰ SERVER TIMEOUT ${ROUTE_TIMEOUT_MS}ms atingido, abortando...`);
@@ -382,7 +433,7 @@ export const POST = apiHandler(async (
 
   try {
     currentAttemptNumber = 0;
-    result = await service.generate(serviceInput, abortController.signal, handleCall);
+    result = await service.generate(serviceInput, abortController.signal, onImageCall, validation.telemetry);
     console.log(`[generate-without-logo][req-${reqId}] ATTEMPT 1 — sucesso`, { assetUrl: result.assetUrl, signatureId: result.signature.id });
   } catch (err) {
     attempt1Error = err;
@@ -401,10 +452,13 @@ export const POST = apiHandler(async (
         // assinatura, id null) e abre NOVO run para a nova tentativa
         // (novo operationRunId — 6.4 test 3).
         await flushCallEvents(null);
+        // F46-04 (reabertura, D9): fecha o buffer de validação do run 1 (id null).
+        await validation.flush(null);
         run = new AiCostTracker().startRun("visual_signature");
         // F38.2.1 (D3): retry = NOVO run → novo snapshot (valores vigentes agora).
         economicSnapshot = await resolveEconomicSnapshot();
         currentAttemptNumber = 1;
+        validation = createValidationTelemetry(run, economicSnapshot, 1);
         const aiGenerator = new AiImageGenerator();
         const retryResult = await aiGenerator.generate({
           storeId: id,
@@ -415,7 +469,8 @@ export const POST = apiHandler(async (
           signal: abortController.signal,
           attempt: 1,
           simplifiedPrompt: true,
-          onCall: handleCall, // F38.1 (D11): call-level do retry com custo real
+          onCall: onImageCall, // F38.1 (D11): call-level da imagem do retry
+          telemetry: validation.telemetry, // F46-04 (D9): validação via sink
         });
 
         const artDirectorOutput: VisualSignatureArtDirectorOutput = {
@@ -544,9 +599,12 @@ export const POST = apiHandler(async (
     const promptVersion = attempt1Error ? PROMPT_VERSION_SIMPLIFIED : PROMPT_VERSION_ART_DIRECTOR;
     console.log(`[generate-without-logo][req-${reqId}] inserindo generation_event (success)...`, { promptVersion });
 
-    // F38.1 (D7/D11): grava os eventos call-level do run (visual_signature_image +
-    // visual_signature_validation) com custo/tokens reais e visual_signature_id (D2).
+    // F38.1 (D7/D11): grava os eventos call-level do run (visual_signature_image
+    // + visual_signature_validation) com custo/tokens reais e visual_signature_id (D2).
     await flushCallEvents(result.signature.id);
+    // F46-04 (reabertura, D9): entrega os envelopes de validação bufferizados ao
+    // sink padrão com o visual_signature_id conhecido.
+    await validation.flush(result.signature.id);
 
     await insertGenerationEvent({
       store_id: id,
@@ -615,6 +673,8 @@ export const POST = apiHandler(async (
   // F38.1 (D7/D11): eventos call-level pendentes do run (ex.: imagem gerada mas
   // validação rejeitou) são gravados mesmo na falha — sem assinatura, sem id.
   await flushCallEvents(null);
+  // F46-04 (reabertura, D9): envelopes de validação bufferizados do run vigente.
+  await validation.flush(null);
 
   await insertGenerationEvent({
     store_id: id,

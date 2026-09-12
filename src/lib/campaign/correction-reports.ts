@@ -20,6 +20,7 @@ import type { GenerationMetricsEvent } from "@/lib/image-generation/metrics/type
 import type { ImageProviderUsageMeta } from "@/lib/image-generation/providers/types";
 import { IMAGE_GENERATION_RESPONSES_MODEL } from "@/lib/image-generation/config";
 import { AiCostTracker, resolveAiCost } from "@/lib/ai-cost";
+import { createDefaultTelemetryContext } from "@/lib/ai";
 import type { TokenUsage } from "@/lib/ai-cost/types";
 import type { GenerationEventType } from "@/lib/visual-signature/types";
 import { dataUrlToCampaignImage, deleteCampaignImage } from "./persistence";
@@ -627,18 +628,6 @@ export async function generateCorrectionV2(
 
   const onMetrics = (event: GenerationMetricsEvent): void => {
     switch (event.phase) {
-      case "input_validation":
-        void recordCall({
-          generationType: "campaign_input_validation",
-          status: "success",
-          info: {
-            provider: event.provider,
-            model: event.model,
-            usage: event.usage,
-            durationMs: event.durationMs,
-          },
-        });
-        break;
       case "image_generation":
         void recordCall({
           generationType: "campaign_image",
@@ -652,20 +641,9 @@ export async function generateCorrectionV2(
           },
         });
         break;
-      case "quality_review":
-        void recordCall({
-          generationType: "campaign_image_review",
-          status: "success",
-          info: {
-            provider: event.provider,
-            model: event.model,
-            usage: event.usage,
-            durationMs: event.durationMs,
-          },
-        });
-        break;
       default:
-        // prompt_assembly/done não são chamadas de IA.
+        // F46-04 (reabertura, D9): input_validation/quality_review são
+        // persistidas pelo SINK único; prompt_assembly/done não são chamadas de IA.
         break;
     }
   };
@@ -693,6 +671,21 @@ export async function generateCorrectionV2(
   const imageService = new ImageGenerationService(provider);
   const startedAt = Date.now();
 
+  // F46-04 (reabertura, D9): telemetria pelo sink único para as capacidades de
+  // VISÃO (campaign_input_validation/campaign_image_review). A imagem
+  // (campaign_image) permanece híbrida (recordCall manual) até 46-05.
+  const telemetry = createDefaultTelemetryContext({
+    operationRunId,
+    operationRunType: "campaign_delivery",
+    traceId,
+    storeId,
+    userId: input.userId ?? undefined,
+    campaignId,
+    attemptNumber,
+    usdBrlRateAtGeneration: input.usdBrlRateAtGeneration ?? null,
+    creditValueBrlAtGeneration: input.creditValueBrlAtGeneration ?? null,
+  });
+
   let result: GenerateImageServiceResult;
   try {
     result = await imageService.generateImage(
@@ -704,6 +697,7 @@ export async function generateCorrectionV2(
       {
         onBeforeImageProviderCall,
         normalizedInstruction,
+        telemetry,
       }
     );
   } catch (err) {

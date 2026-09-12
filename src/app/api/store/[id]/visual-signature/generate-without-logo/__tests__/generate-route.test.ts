@@ -73,6 +73,57 @@ vi.mock('@/lib/ai-cost', () => ({
   resolveAiCost: mockResolveAiCost,
 }));
 
+// F46-04 (reabertura, D9): a rota usa `createDefaultTelemetryContext` de
+// `@/lib/ai` para o sink de validação; o sink converte o envelope no
+// AiCostEvent (mesmo CostResolution). Quando um sink é injetado (buffering), ele
+// é preservado — o flush do buffer usa o sink de conversão.
+vi.mock('@/lib/ai', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/ai')>();
+  return {
+    ...actual,
+    createDefaultTelemetryContext: (params: any) => {
+      const { sink, tracker: _tracker, onCostResolved, ...ctx } = params;
+      const convert = {
+        emit: async (envelope: any) => {
+          const generationType =
+            actual.CAPABILITY_GENERATION_TYPE[
+              envelope.capability as keyof typeof actual.CAPABILITY_GENERATION_TYPE
+            ];
+          const cost = await mockResolveAiCost({
+            provider: envelope.provider,
+            model: envelope.model,
+            usage: envelope.usage,
+            providerReportedCostUsd: envelope.providerReportedCostUsd,
+            imageGenerationTool: envelope.usageMeta?.imageGenerationTool === true,
+            generationType,
+          });
+          onCostResolved?.(cost);
+          capturedEvents.push({
+            operationRunId: ctx.operationRunId,
+            operationRunType: ctx.operationRunType,
+            traceId: ctx.traceId,
+            storeId: ctx.storeId,
+            visualSignatureId: ctx.visualSignatureId ?? null,
+            generationType,
+            provider: envelope.provider,
+            model: envelope.model,
+            attemptNumber: ctx.attemptNumber ?? 1,
+            durationMs: envelope.durationMs,
+            status: envelope.status,
+            errorType: envelope.errorType ?? null,
+            tokens: envelope.usage,
+            cost,
+            usdBrlRateAtGeneration: ctx.usdBrlRateAtGeneration ?? null,
+            creditValueBrlAtGeneration: ctx.creditValueBrlAtGeneration ?? null,
+            metadata: { capability: envelope.capability, protocol: envelope.protocol },
+          });
+        },
+      };
+      return { ...ctx, sink: sink ?? convert };
+    },
+  };
+});
+
 // F38.2.1 (D3): mock do EconomicParameterService — snapshot 5.20/2.00 por
 // default; cenário de falha via mockRejectedValue (best-effort, não bloqueia).
 const { mockGetParameter } = vi.hoisted(() => ({ mockGetParameter: vi.fn() }));
@@ -367,7 +418,8 @@ describe('POST /api/store/[id]/visual-signature/generate-without-logo', () => {
         rejectionContext: expect.objectContaining({ reason: 'not_good' }),
       }),
       expect.any(AbortSignal),
-      expect.any(Function) // F38.1 (D11): onCall propagado ao service (imagem + validação)
+      expect.any(Function), // F38.1 (D11): onCall da imagem propagado ao service
+      expect.objectContaining({ sink: expect.anything() }) // F46-04 (D9): telemetria da validação
     );
   });
 });
@@ -423,9 +475,9 @@ describe('VS cost accounting (6.4)', () => {
 
   function setupSuccessWithCalls() {
     setupStandardStore();
-    mockIdentityDirectorGenerate.mockImplementation(async (_input: any, _signal: any, onCall?: any) => {
+    mockIdentityDirectorGenerate.mockImplementation(async (_input: any, _signal: any, onCall?: any, telemetry?: any) => {
       onCall?.({ provider: 'openai', model: 'gpt-5.5', usage: IMAGE_USAGE, durationMs: 300 });
-      onCall?.({ provider: 'openai', model: 'gpt-4o-mini', usage: VALIDATION_USAGE, durationMs: 150 });
+      await telemetry?.sink?.emit({ capability: 'visual_signature_validation', protocol: 'responses', status: 'success', provider: 'openai', model: 'gpt-4o-mini', usage: VALIDATION_USAGE, durationMs: 150 });
       return mockSignatureResult;
     });
   }
@@ -483,14 +535,15 @@ describe('VS cost accounting (6.4)', () => {
   it('Teste 10 (6.4): nova tentativa pós-falha = NOVO run (operationRunId do retry DIFERENTE do attempt 1)', async () => {
     setupStandardStore();
     // ATTEMPT 1 falha após emitir evento de imagem (run 1)
-    mockIdentityDirectorGenerate.mockImplementation(async (_input: any, _signal: any, onCall?: any) => {
+    mockIdentityDirectorGenerate.mockImplementation(async (_input: any, _signal: any, onCall?: any, telemetry?: any) => {
       onCall?.({ provider: 'openai', model: 'gpt-5.5', usage: IMAGE_USAGE, durationMs: 300 });
+      await telemetry?.sink?.emit({ capability: 'visual_signature_validation', protocol: 'responses', status: 'success', provider: 'openai', model: 'gpt-4o-mini', usage: VALIDATION_USAGE, durationMs: 150 });
       throw new Error('identity_art_director_failed: boom');
     });
     // ATTEMPT 2 (retry) com sucesso — novo run
-    mockAiGeneratorGenerate.mockImplementation(async ({ onCall }: any) => {
+    mockAiGeneratorGenerate.mockImplementation(async ({ onCall, telemetry }: any) => {
       onCall?.({ provider: 'openai', model: 'gpt-5.5', usage: IMAGE_USAGE, durationMs: 300 });
-      onCall?.({ provider: 'openai', model: 'gpt-4o-mini', usage: VALIDATION_USAGE, durationMs: 150 });
+      await telemetry?.sink?.emit({ capability: 'visual_signature_validation', protocol: 'responses', status: 'success', provider: 'openai', model: 'gpt-4o-mini', usage: VALIDATION_USAGE, durationMs: 150 });
       return {
         tier: 'image_direct',
         assetUrl: 'https://example.com/retry.png',

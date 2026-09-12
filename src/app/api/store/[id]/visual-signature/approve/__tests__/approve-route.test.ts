@@ -350,7 +350,8 @@ describe('POST /api/store/[id]/visual-signature/approve', () => {
     const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
     expect(res.status).toBe(200);
     expect(mockBrandProfilerGenerate).toHaveBeenCalledWith(
-      expect.objectContaining({ intendedPalette: null })
+      expect.objectContaining({ intendedPalette: null }),
+      expect.objectContaining({ sink: expect.anything() }) // F46-04 (reabertura, D9)
     );
   });
 

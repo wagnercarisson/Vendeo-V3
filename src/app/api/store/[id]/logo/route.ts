@@ -17,6 +17,8 @@ import { IDENTITY_TO_LOGO_STATUS } from '@/lib/constants';
 import { reconcileProfiles } from '@/lib/brand-assets/profile-reconciliation';
 import { assertCanTransition, transition } from '@/lib/identity-transitions';
 import { buildStoreProfileInputSnapshot } from '@/lib/snapshot';
+import { AiCostTracker } from '@/lib/ai-cost';
+import { createDefaultTelemetryContext } from '@/lib/ai';
 
 const ALLOWED_EXTENSION_MAP: Record<string, string> = {
   '.png': 'image/png',
@@ -251,6 +253,16 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
     // Phase 2 — BrandDirector (BEFORE profile mutation)
     try {
       const director = new BrandDirectorService();
+      // F46-04 (reabertura, D9): telemetria pelo sink único para
+      // brand_profile_vision — o caller fornece run + sink ao `analyze`.
+      const run = new AiCostTracker().startRun("brand_profile");
+      const telemetry = createDefaultTelemetryContext({
+        operationRunId: run.operationRunId,
+        operationRunType: "brand_profile",
+        traceId: run.traceId,
+        storeId,
+        attemptNumber: 0,
+      });
       const analysis = await director.analyze({
         logoBuffer: buffer,
         logoMimeType: mimeType,
@@ -267,6 +279,7 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
           userPrimaryColor: store.brand_color,
           userAccentColor: accentColor,
         },
+        telemetry,
       });
 
       // Capture current synced profile for rollback + pre-mark as outdated

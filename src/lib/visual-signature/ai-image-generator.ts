@@ -76,16 +76,19 @@ export class VisualSignatureValidator {
     onCall?: (info: AiCallInfo) => void | Promise<void>,
     telemetry?: AiTelemetryContext
   ): Promise<{ valid: boolean; reason?: string }> {
+    // F46-04 (reabertura, D9): telemetria é OBRIGATÓRIA — sem contexto o
+    // `invoke` não pode executar e a validação semântica NÃO pode ser ignorada
+    // (fim do bypass fail-open `!telemetry => valid:true`). A checagem fica
+    // FORA do try/catch abaixo para que a falha explícita não seja convertida
+    // em `valid:true` pelo fallback best-effort de erros do provider.
+    if (!telemetry) {
+      throw new Error(
+        '[VisualSignatureValidator] AiTelemetryContext é obrigatório para invoke("visual_signature_validation")'
+      );
+    }
+
     try {
       const dataUrl = `data:image/png;base64,${imageBase64}`;
-
-      // F46-04 (D9): visual_signature_validation via camada única. Sem contexto
-      // de telemetria a validação semântica é ignorada (best-effort) — a
-      // cobertura completa do caminho VS é fechada na 46-05.
-      if (!telemetry) {
-        console.warn("[validator] AiTelemetryContext ausente — validação semântica ignorada");
-        return { valid: true };
-      }
 
       const request: AiInvocationRequest = {
         prompt: `Você é um validador de assinaturas visuais profissionais para lojas.
@@ -273,11 +276,10 @@ Sem textos promocionais. Apenas a imagem PNG.`;
       const validation = await validator.validate({
         imageBase64,
         storeName: params.storeName,
-        // F38.1 (D11): propaga o MESMO callback ao validator — o onCall da
-        // validação (visual_signature_validation) atravessa para a rota, que
-        // distingue pelo model real da chamada.
-        onCall: params.onCall,
-        // F46-04 (D9): encaminha o contexto de telemetria ao validator.
+        // F46-04 (reabertura, D9): a validação (visual_signature_validation) é
+        // persistida pelo SINK do contexto de telemetria — o `onCall` legado do
+        // caller fica reservado à imagem (visual_signature_image, híbrida até
+        // 46-05), evitando dupla contagem/dupla persistência.
         telemetry: params.telemetry,
       });
 

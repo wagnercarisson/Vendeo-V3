@@ -9,6 +9,8 @@ import { assertCanTransition } from '@/lib/identity-transitions';
 import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
 import { requireSameOrigin } from '@/lib/auth/csrf';
 import { apiHandler } from '@/lib/auth/api-handler';
+import { AiCostTracker } from '@/lib/ai-cost';
+import { createDefaultTelemetryContext } from '@/lib/ai';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -155,6 +157,17 @@ export const POST = apiHandler(async (
   } else {
     try {
       const profiler = new BrandProfilerWithoutLogoService();
+      // F46-04 (reabertura, D9): telemetria pelo sink único para
+      // brand_profile_vision (run + sink fornecidos pelo caller).
+      const run = new AiCostTracker().startRun("brand_profile");
+      const telemetry = createDefaultTelemetryContext({
+        operationRunId: run.operationRunId,
+        operationRunType: "brand_profile",
+        traceId: run.traceId,
+        storeId,
+        visualSignatureId: body.signature_id,
+        attemptNumber: 0,
+      });
       await profiler.generate({
         storeId,
         storeName: store.name,
@@ -181,7 +194,7 @@ export const POST = apiHandler(async (
         visualSignatureId: body.signature_id,
         assetUrl: signature.asset_url,
         referenceCardUrl: null,
-      });
+      }, telemetry);
     } catch (err) {
       console.error('[visual-signature:restore] BrandProfilerWithoutLogoService failed', err);
     }

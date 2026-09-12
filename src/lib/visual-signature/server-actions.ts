@@ -6,6 +6,8 @@ import { supabaseAdmin as supabase } from "@/lib/supabase/server";
 import type { Store } from "@/lib/store";
 import { AiImageGenerator } from "./ai-image-generator";
 import { getActiveVisualSignature } from "./persistence";
+import { AiCostTracker } from "@/lib/ai-cost";
+import { createDefaultTelemetryContext } from "@/lib/ai";
 import type {
   VisualSignatureRecord,
   VisualSignatureMetadata,
@@ -124,6 +126,18 @@ export async function generateVariations(
   const aiGenerator = new AiImageGenerator();
   const tonalities = ["profissional", "moderno", "elegante"];
 
+  // F46-04 (reabertura, D9): telemetria pelo sink único para
+  // visual_signature_validation (o validator exige contexto; a imagem permanece
+  // híbrida até 46-05).
+  const run = new AiCostTracker().startRun("visual_signature");
+  const telemetry = createDefaultTelemetryContext({
+    operationRunId: run.operationRunId,
+    operationRunType: "visual_signature",
+    traceId: run.traceId,
+    storeId,
+    attemptNumber: 0,
+  });
+
   const variations: Array<{ tier: string; assetUrl: string; storagePath: string; mimeType: string }> = [];
 
   for (const tone of tonalities) {
@@ -141,6 +155,7 @@ export async function generateVariations(
         tone,
         signal: AbortSignal.timeout(120000),
         attempt: 0,
+        telemetry,
       });
     } catch (err) {
       const a1 = classifyError(err, "image_direct", attempt1Start);
@@ -158,6 +173,7 @@ export async function generateVariations(
             signal: AbortSignal.timeout(120000),
             attempt: 1,
             simplifiedPrompt: true,
+            telemetry,
           });
         } catch (err2) {
           const a2 = classifyError(err2, "image_retry", attempt2Start);
@@ -223,6 +239,17 @@ export async function generateAutomatic(storeId: string): Promise<
   const aiGenerator = new AiImageGenerator();
   const previousAttempts: CascadeAttempt[] = [];
 
+  // F46-04 (reabertura, D9): telemetria pelo sink único para
+  // visual_signature_validation (imagem híbrida até 46-05).
+  const run = new AiCostTracker().startRun("visual_signature");
+  const telemetry = createDefaultTelemetryContext({
+    operationRunId: run.operationRunId,
+    operationRunType: "visual_signature",
+    traceId: run.traceId,
+    storeId,
+    attemptNumber: 0,
+  });
+
   const tones = ["profissional", "moderno", "elegante"];
   const tone = tones[Math.floor(Math.random() * tones.length)];
 
@@ -238,6 +265,7 @@ export async function generateAutomatic(storeId: string): Promise<
       tone,
       signal: AbortSignal.timeout(120000),
       attempt: 0,
+      telemetry,
     });
 
     const { data: signature, error } = await supabase
@@ -291,6 +319,7 @@ export async function generateAutomatic(storeId: string): Promise<
       signal: AbortSignal.timeout(120000),
       attempt: 1,
       simplifiedPrompt: true,
+      telemetry,
     });
 
     const { data: signature, error } = await supabase
