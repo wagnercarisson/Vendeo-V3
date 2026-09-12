@@ -2,6 +2,8 @@ import { PromptLoader } from "@/lib/image-generation/prompt-loader";
 import { uploadToStorage, persistSignature } from "./persistence";
 import type { CascadeResult, VisualSignatureMetadata } from "./types";
 import type { AiCallInfo, TokenUsage } from "@/lib/ai-cost/types";
+import { defaultAiGateway, withOnCallTelemetry } from "@/lib/ai";
+import type { AiInvocationRequest, AiInvoker, AiTelemetryContext } from "@/lib/ai";
 
 /**
  * Mapeia o payload de usage do Responses API para TokenUsage normalizado (D12).
@@ -20,12 +22,21 @@ function mapResponsesUsage(usage: unknown): TokenUsage | undefined {
 }
 
 export class VisualSignatureValidator {
+  private readonly invoker: AiInvoker;
+
+  /** `invoker` é o gateway (seam de teste). Default = instância padrão de `@/lib/ai`. */
+  constructor(invoker: AiInvoker = defaultAiGateway) {
+    this.invoker = invoker;
+  }
+
   async validate(params: {
     imageBase64: string;
     storeName: string;
-    /** F38.1 (D7/D11): callback best-effort com dados da chamada LLM de validação
+    /** F38.1 (D7/D11): callback best-effort com o envelope já produzido
      * (visual_signature_validation). Opcional — nunca bloqueia a validação. */
     onCall?: (info: AiCallInfo) => void | Promise<void>;
+    /** F46-04 (D9): contexto de telemetria do caller (run/sink obrigatório). */
+    telemetry?: AiTelemetryContext;
   }): Promise<{ valid: boolean; reason?: string }> {
     if (!params.imageBase64 || params.imageBase64.length === 0) {
       return { valid: false, reason: "Empty image data" };
@@ -46,7 +57,12 @@ export class VisualSignatureValidator {
       return { valid: false, reason: "Image too small (less than 1KB)" };
     }
 
-    const semantic = await this.validateSemantic(params.imageBase64, params.storeName, params.onCall);
+    const semantic = await this.validateSemantic(
+      params.imageBase64,
+      params.storeName,
+      params.onCall,
+      params.telemetry
+    );
     if (!semantic.valid) {
       return semantic;
     }
@@ -57,27 +73,22 @@ export class VisualSignatureValidator {
   private async validateSemantic(
     imageBase64: string,
     storeName: string,
-    onCall?: (info: AiCallInfo) => void | Promise<void>
+    onCall?: (info: AiCallInfo) => void | Promise<void>,
+    telemetry?: AiTelemetryContext
   ): Promise<{ valid: boolean; reason?: string }> {
     try {
-      const { default: OpenAI } = await import("openai");
-      const openai = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
-      });
-
-      const model = process.env.IMAGE_VALIDATION_MODEL || "gpt-4o-mini";
       const dataUrl = `data:image/png;base64,${imageBase64}`;
-      const startTime = Date.now();
 
-      const response = await openai.responses.create({
-        model,
-        input: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "input_text",
-                text: `Você é um validador de assinaturas visuais profissionais para lojas.
+      // F46-04 (D9): visual_signature_validation via camada única. Sem contexto
+      // de telemetria a validação semântica é ignorada (best-effort) — a
+      // cobertura completa do caminho VS é fechada na 46-05.
+      if (!telemetry) {
+        console.warn("[validator] AiTelemetryContext ausente — validação semântica ignorada");
+        return { valid: true };
+      }
+
+      const request: AiInvocationRequest = {
+        prompt: `Você é um validador de assinaturas visuais profissionais para lojas.
 
 Analise a imagem enviada e responda APENAS com um JSON válido no formato:
 {"valid": true/false, "reason": "motivo se invalido"}
@@ -94,56 +105,28 @@ A imagem é VÁLIDA se:
 - Tem design personalizado (não genérico)
 - Pode incluir ícone, símbolo ou elemento gráfico junto com o nome
 - Está pronta para ser usada como identidade visual da loja`,
-              },
-              {
-                type: "input_image",
-                image_url: dataUrl,
-                detail: "low",
-              },
-            ],
-          },
-        ],
+        productImagesDataUrls: [dataUrl],
+        imageDetail: "low",
         temperature: 0.1,
-        max_output_tokens: 150,
-      });
+        maxTokens: 150,
+      };
 
-      // F38.1 (D7/D11): expõe usage + durationMs da chamada LLM de validação
-      // (visual_signature_validation) best-effort — só no caminho de sucesso
-      // (anti-dupla-contagem T-38.1-28) e nunca bloqueia a validação.
-      if (onCall) {
-        try {
-          const info: AiCallInfo = {
-            provider: "openai",
-            model,
-            usage: mapResponsesUsage(response.usage),
-            durationMs: Date.now() - startTime,
-          };
-          await Promise.resolve(onCall(info)).catch((err) => {
-            console.error(
-              `[validator] onCall callback failed (best-effort): ${
-                err instanceof Error ? err.message : String(err)
-              }`
-            );
-          });
-        } catch (err) {
-          console.error(
-            `[validator] onCall callback failed (best-effort): ${
-              err instanceof Error ? err.message : String(err)
-            }`
-          );
-        }
-      }
+      const result = await this.invoker.invoke(
+        "visual_signature_validation",
+        request,
+        withOnCallTelemetry(telemetry, onCall)
+      );
 
-      const outputText = response.output_text?.trim() || "";
+      const outputText = result.content?.trim() || "";
       const jsonMatch = outputText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         console.warn("[validator] LLM response did not contain valid JSON, falling back to pass", { outputText });
         return { valid: true };
       }
 
-      const result = JSON.parse(jsonMatch[0]);
-      if (result.valid === false) {
-        const reason = result.reason || "Semantic validation failed (LLM)";
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (parsed.valid === false) {
+        const reason = parsed.reason || "Semantic validation failed (LLM)";
         console.warn("[validator] LLM validation rejected", { reason, storeName });
         return { valid: false, reason: `Semantic rejection: ${reason}` };
       }
@@ -176,6 +159,8 @@ export class AiImageGenerator {
     customPrompt?: string;
     /** F38.1 (D7/D11): callback best-effort com dados da chamada de IA (visual_signature_image). Opcional — nunca bloqueia a geração. */
     onCall?: (info: AiCallInfo) => void | Promise<void>;
+    /** F46-04 (D9): contexto de telemetria do caller (run/sink) — encaminhado à validação. */
+    telemetry?: AiTelemetryContext;
   }): Promise<CascadeResult> {
     const startTime = Date.now();
     console.log('[ai-image-generator] generate() iniciado', { storeName: params.storeName, segment: params.segment, attempt: params.attempt });
@@ -292,6 +277,8 @@ Sem textos promocionais. Apenas a imagem PNG.`;
         // validação (visual_signature_validation) atravessa para a rota, que
         // distingue pelo model real da chamada.
         onCall: params.onCall,
+        // F46-04 (D9): encaminha o contexto de telemetria ao validator.
+        telemetry: params.telemetry,
       });
 
       if (!validation.valid) {

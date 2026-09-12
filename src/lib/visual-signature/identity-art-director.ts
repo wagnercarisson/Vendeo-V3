@@ -10,6 +10,7 @@ import type {
 } from '@/lib/visual-signature/types';
 import { normalizeIntendedPalette } from '@/lib/visual-signature/types';
 import type { AiCallInfo } from '@/lib/ai-cost/types';
+import type { AiTelemetryContext } from '@/lib/ai';
 
 export interface VisualSignatureGenerationResult {
   signature: VisualSignatureRecord;
@@ -32,7 +33,10 @@ export class StoreIdentityArtDirectorService {
     signal?: AbortSignal,
     /** F38.1 (D7/D11): repassa o callback onCall do caller ao AiImageGenerator —
      * os eventos call-level (visual_signature_image/validation) atravessam o service. */
-    onCall?: (info: AiCallInfo) => void | Promise<void>
+    onCall?: (info: AiCallInfo) => void | Promise<void>,
+    /** F46-04 (D9): contexto de telemetria do caller — encaminhado ao AiImageGenerator
+     * (e daí ao validator) para que o sink injetado alcance `invoke`. */
+    telemetry?: AiTelemetryContext
   ): Promise<VisualSignatureGenerationResult> {
     const rejectionContextStr = input.rejectionContext
       ? `### URGENTE: FEEDBACK DO LOJISTA (PRIORIDADE MÁXIMA)
@@ -82,6 +86,7 @@ INSTRUÇÕES OBRIGATÓRIAS PARA ESTA NOVA GERAÇÃO:
         attempt: input.rejectionContext ? (input.rejectionContext.attempt + 1) : 1,
         customPrompt: loadedPrompt, // Passing the full identity art director prompt
         onCall, // F38.1 (D11): propaga o onCall do caller (imagem + validação)
+        telemetry, // F46-04 (D9): encaminha o contexto de telemetria (sink injetado)
       });
       console.log('[identity-art-director] AiImageGenerator retornou', { tier: result.tier, assetUrl: result.assetUrl });
 
