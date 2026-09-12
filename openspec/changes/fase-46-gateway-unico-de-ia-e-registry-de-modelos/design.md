@@ -47,6 +47,11 @@ Esta fase introduz a fundação (registry + gateway + adapters + telemetria obri
 `src/lib/ai/model-registry.ts` exporta um mapa **capacidade → configuração** `{ capability, segment, primary: AiModelTarget, fallback?: AiModelTarget }`, onde `AiModelTarget = { provider, model, protocol }`, agrupado em 3 segmentos. A granularidade é **por capacidade** porque "visual" hoje usa modelos diferentes (gpt-4o para review/brand; gpt-4o-mini para validação de VS) e "imagem" usa mainline (gpt-5.5) **e** edit fallback (gpt-image-2). O **`protocol`** (`chat-completions` | `responses` | `images` | `gemini`) é obrigatório **em cada alvo** (primary e fallback): cada alvo é independente — o **default inicial** de `campaign_copy` tem `primary` `chat-completions` e `fallback` `gemini`; dois modelos de imagem podem exigir protocolos diferentes (`responses` com tool vs `images.edit`). A compatibilidade é validada por **capacidade + provider + modelo + protocolo**, nunca apenas por segmento.
 
 ```ts
+type AiCapability =
+  | "campaign_copy" | "campaign_correction_analysis" | "brand_profile_text"
+  | "campaign_spec" | "campaign_input_validation" | "campaign_image_review"
+  | "brand_profile_vision" | "visual_signature_validation"
+  | "campaign_image" | "campaign_image_edit" | "visual_signature_image";
 type AiProtocol = "chat-completions" | "responses" | "images" | "gemini";
 
 interface AiModelTarget {
@@ -56,7 +61,7 @@ interface AiModelTarget {
 }
 
 interface AiModelConfig {
-  capability: string;
+  capability: AiCapability;
   segment: "text" | "vision" | "image";
   primary: AiModelTarget;
   fallback?: AiModelTarget;
@@ -82,18 +87,18 @@ interface AiModelConfig {
 - **Por quê**: permite allowlist/validação por capacidade e futura seleção admin sem colapsar comportamentos; o protocolo impede validar um modelo pelo segmento errado; os testes ancoram o default.
 - **Alternativas**: (a) por segmento — mais simples, muda comportamento e não distingue protocolos; (b) por serviço — reproduz o problema atual.
 
-### D1.1 — Interface `AiModelResolver` como seam de resolução (prepara o Change B)
+### D1.1 — Interface `AiModelResolver` **assíncrona** + composição do gateway (seam do Change B)
 
-`src/lib/ai/model-resolver.ts` define a interface `AiModelResolver` com `resolve(capability): AiModelConfig` (e, opcionalmente, `listCapabilities()`). O `ModelRegistry` é a implementação inicial (defaults em código). O gateway depende **apenas da interface**, nunca do mapa concreto. No Change B, um `PersistedModelResolver` (seleção persistida) poderá **decorar** o registry (seleção → default) e ser injetado no gateway **sem refazer o gateway**.
+`src/lib/ai/model-resolver.ts` define o tipo `AiCapability` (union das 11 capacidades) e a interface **assíncrona** `AiModelResolver` com `resolve(capability: AiCapability): Promise<AiModelConfig>` (e `listCapabilities(): AiCapability[]`). O `ModelRegistry` é a implementação inicial (`async resolve()`; o `await` é trivial hoje). **Por que assíncrono agora:** o Change B (F47) consultará seleção persistida + cache por request — naturalmente assíncrona; um contrato síncrono forçaria a F47 a reabrir o gateway ou a criar uma factory de pré-carregamento. O gateway depende **apenas da interface** (nunca do mapa concreto) e a recebe **por construtor**: `class AiGateway { constructor(resolver: AiModelResolver, adapters: AiAdapterRegistry) }` — `invoke` **não** recebe o resolver. No Change B, um `PersistedModelResolver` **decora** o registry e é injetado **sem alterar o gateway**. A composição da instância padrão fica em `src/lib/ai/index.ts` (`new AiGateway(new ModelRegistry(), defaultAdapterRegistry)`).
 
 - **Por quê**: evita que a F47 administrativa precise reabrir o gateway; a decisão do seam é técnica e pertence à F46.
 - **Alternativa**: gateway lê o mapa direto — obrigaria refatorar o gateway na F47.
 
 ### D2 — Gateway único com adapters por protocolo, contrato único
 
-`src/lib/ai/gateway.ts` expõe `invoke(capability, request, telemetry, target = "primary")`, onde `target: "primary" | "fallback"` é a **seleção explícita do orquestrador** (nunca uma decisão do gateway). O gateway:
-1. resolve a config via `AiModelResolver` (D1.1) e seleciona o **alvo** indicado (`primary` | `fallback`), lendo `primary`/`fallback` do `AiModelConfig`;
-2. escolhe o adapter pelo `protocol` **do alvo selecionado** (`chat-completions` | `responses` | `images` | `gemini`), não por serviço nem por segmento;
+`src/lib/ai/gateway.ts` expõe `class AiGateway { constructor(resolver: AiModelResolver, adapters: AiAdapterRegistry) }` (injeção por construtor — `invoke` não recebe o resolver) e `invoke(capability, request, telemetry, target = "primary")`, onde `target: "primary" | "fallback"` é a **seleção explícita do orquestrador** (nunca uma decisão do gateway). O gateway:
+1. `await resolver.resolve(capability)` (D1.1) e seleciona o **alvo** indicado (`primary` | `fallback`), lendo `primary`/`fallback` do `AiModelConfig`;
+2. escolhe o adapter pelo `protocol` **do alvo selecionado** via `adapters.get(protocol)` (`chat-completions` | `responses` | `images` | `gemini`), não por serviço nem por segmento;
 3. executa **uma tentativa** (sem retry e **sem fallback automático**);
 4. normaliza `usage`;
 5. emite **um envelope de telemetria** por tentativa real (D3) via sink injetável.
@@ -110,13 +115,13 @@ Adapters em `src/lib/ai/adapters/`: `chat-completions.ts` (OpenAI chat: texto, v
 
 Contrato explícito (resolve a contradição entre "obrigatória" e `telemetry?`):
 
-1. **Cada tentativa HTTP real emite exatamente um envelope de telemetria** — inclusive quando falha. O envelope é um `AiCallInfo` estendido.
+1. **Cada tentativa HTTP real emite exatamente um envelope de telemetria** — inclusive quando falha. O envelope é um `AiCallEnvelope` (`extends AiCallInfo`).
 2. O envelope registra o **status** `success` | `failed` | `timeout` (e `errorType` quando houver), com provider, `capability`, `protocol`, **modelo real**, `usage` (ou `not_available`), duração e `attempt`.
 3. **A persistência é best-effort** e nunca bloqueia a geração: o sink padrão resolve custo (`resolveAiCost`) e grava call-level (`AiCostTracker.record`), que é **fail-open por design** (`tracker.ts` — nunca lança). Um envelope pode não chegar ao banco; a geração não pode falhar por isso.
 4. **Contexto de telemetria é obrigatório em produção**: `invoke(capability, request, telemetry)` exige o contexto (run/store/campaign/attempt/sink) nos fluxos de geração. **Sink nulo/no-op é permitido apenas em testes com adapter falso** — nunca em produção.
 5. O gateway **não** grava direto no banco: emite para um **sink injetável**. Rotas que precisam de buffering/ordenação (VS buffera até conhecer `visual_signature_id`; brand-profile distingue vision×text por ordem) passam seu próprio sink — comportamento atual preservado.
 
-`AiCallInfo` (hoje em `src/lib/ai-cost/types.ts:103`, sem esses campos) SHALL ganhar `capability`, `protocol`, `status` e `errorType` (aditivo, retrocompatível).
+`AiCallInfo` (hoje em `src/lib/ai-cost/types.ts:103`, sem esses campos) **permanece intacto** (há produtores legados que o constroem sem os campos novos). O gateway e o sink passam a usar um tipo **aditivo** `AiCallEnvelope extends AiCallInfo` com `capability`, `protocol` e `status` **obrigatórios** e `errorType?` **opcional** (ausente em sucesso). `AiTelemetryContext.sink: AiTelemetrySink` é **obrigatório** (não opcional): um contexto de produção sem destino de emissão não passa a validação; testes passam `NoopAiTelemetrySink` explícito e `createDefaultTelemetryContext(...)` injeta o sink padrão. Após todos os produtores legados serem migrados, a consolidação opcional do nome pode ocorrer (deferida).
 
 - **Por quê**: separar "emissão do envelope" (garantida por tentativa) de "persistência" (best-effort) elimina a contradição e mantém o tracker fail-open.
 - **Consequência**: `onCall`/`onMetricsEvent` deixam de ser responsabilidade do serviço; o modelo reportado é o **modelo real** resolvido pelo resolver (corrige o furo 1).
@@ -203,13 +208,16 @@ A rota `POST /api/campaign/generate` e o `OpenAIProvider` legado passam a usar `
 
 | Área | Arquivo | Ação |
 |---|---|---|
-| Registry | `src/lib/ai/model-registry.ts` (novo) | criar (com `protocol`) |
-| Resolver | `src/lib/ai/model-resolver.ts` (novo) | criar interface `AiModelResolver` (D1.1) |
-| Gateway | `src/lib/ai/gateway.ts` (novo) | criar |
+| Registry | `src/lib/ai/model-registry.ts` (novo) | criar (`AiModelConfig` com `protocol`; `ModelRegistry implements AiModelResolver` com `async resolve`) |
+| Resolver | `src/lib/ai/model-resolver.ts` (novo) | criar `AiCapability` + interface **assíncrona** `AiModelResolver` (`resolve(): Promise`) (D1.1) |
+| Gateway | `src/lib/ai/gateway.ts` (novo) | criar `class AiGateway(resolver, adapters)` (injeção por construtor) + `invoke` |
 | Adapters | `src/lib/ai/adapters/{chat-completions,responses,images,gemini}.ts` (novos) | criar |
+| Adapters registry | `src/lib/ai/adapters/registry.ts` (novo) | criar `AiAdapterRegistry`/`defaultAdapterRegistry` |
+| Composição | `src/lib/ai/index.ts` (novo) | compor `new AiGateway(new ModelRegistry(), defaultAdapterRegistry)` + `invoke` |
+| Tipos | `src/lib/ai/types.ts` (novo) | `AiCallEnvelope extends AiCallInfo` (aditivo), `AiTelemetryContext` (**`sink` obrigatório**), `AiInvocationError`, `AiAdapterRegistry`; `AiCallInfo` legado **intacto** |
 | Chaves | `src/lib/ai/api-keys.ts` (novo) | criar (`getApiKey(provider): string` com switch exaustivo) |
 | Mapa de tipo | `src/lib/ai/generation-type-map.ts` (novo) | criar (`CAPABILITY_GENERATION_TYPE`, 11 capacidades; `campaign_image_edit → campaign_image`) |
-| Tipos de telemetria | `src/lib/ai-cost/types.ts` (`AiCallInfo`) | estender com `capability`/`protocol`/`status`/`errorType` |
+| Telemetria | `src/lib/ai/telemetry-sink.ts` (novo) | `AiTelemetrySink` + sink padrão + `NoopAiTelemetrySink` + `createDefaultTelemetryContext` |
 | Enum de evento | `src/lib/visual-signature/types.ts` (`GenerationEventType`) | adicionar `campaign_spec` |
 | Migration | `supabase/migrations/*_f46_generation_events_type.sql` (nova) | estender CHECK `chk_generation_events_type` com `campaign_spec` + REVERT |
 | Imagem | `image-generation/providers/openai.ts` | usar adapters `responses`/`images` |
@@ -248,5 +256,7 @@ A rota `POST /api/campaign/generate` e o `OpenAIProvider` legado passam a usar `
 4. **Caminho único de telemetria (D9, correção de revisão):** o caller fornece `AiTelemetryContext`; o gateway gera **um** envelope por tentativa real; o **sink** é o único que persiste (`resolveAiCost` + `AiCostTracker.record`, best-effort). Nenhum caller resolve custo/grava manualmente. `onCall`, se mantido por compatibilidade, **apenas recebe o envelope já produzido** e não conduz a telemetria de produção.
 5. **Mapa canônico capability → generationType (D10, correção de revisão):** `campaign_image_edit` é capacidade do registry mas **não** é `GenerationEventType`; o sink mantém `CAPABILITY_GENERATION_TYPE` cobrindo **as 11 capacidades**, com `campaign_image_edit → campaign_image`, preservando `capability`/`protocol` originais no `metadata` do evento. O mapa tem teste.
 6. **Proprietário único da chamada de texto:** `CopyDirectorService` é o **único** que chama `invoke("campaign_copy")` no caminho de produção; `OpenAITextProvider`/`GeminiTextProvider`/`createTextProvider` são **fachadas de compatibilidade/teste** que delegam ao gateway fora do caminho de produção (evita invocação dupla).
+7. **Resolver assíncrono + composição (revisão):** `AiModelResolver.resolve(capability): Promise<AiModelConfig>`; `class AiGateway { constructor(resolver, adapters) }`; `invoke` não recebe o resolver; `src/lib/ai/index.ts` compõe `new AiGateway(new ModelRegistry(), defaultAdapterRegistry)`. O `await` prepara o resolver persistido da F47 **sem reabrir o gateway**.
+8. **Envelope + sink obrigatório (revisão):** `AiCallEnvelope extends AiCallInfo` (aditivo; `AiCallInfo` legado **intacto** — migração gradual); `AiTelemetryContext.sink: AiTelemetrySink` **obrigatório**; `NoopAiTelemetrySink` explícito em testes; `createDefaultTelemetryContext(...)` injeta o sink padrão.
 
 Questões de persistência (CHECK de seleção, depreciação de modelo, catálogo editável) permanecem **exclusivamente na F47** (`fase-47-catalogo-e-selecao-de-modelos-admin`).

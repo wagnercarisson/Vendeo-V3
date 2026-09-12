@@ -79,17 +79,17 @@ O registry SHALL declarar a **allowlist** de modelos conhecidos/testados, servin
 
 ### Requirement: Interface AiModelResolver como seam de resolução
 
-O sistema SHALL definir a interface `AiModelResolver` (`src/lib/ai/model-resolver.ts`) com a operação de resolver a configuração de uma capacidade. O registry em código SHALL ser a **implementação inicial** e o gateway SHALL depender **apenas da interface** (nunca do mapa concreto), permitindo que o Change B decore/substitua o resolver (seleção persistida) sem refazer o gateway.
+O sistema SHALL definir a interface **assíncrona** `AiModelResolver` (`src/lib/ai/model-resolver.ts`) com a operação `resolve(capability: AiCapability): Promise<AiModelConfig>` (e `listCapabilities(): AiCapability[]`), onde `AiCapability` é o union das 11 capacidades. O registry em código SHALL ser a **implementação inicial** (`async resolve()`) e o gateway SHALL depender **apenas da interface** (nunca do mapa concreto), recebendo-a **por construtor** — permitindo que o Change B decore/substitua o resolver (seleção persistida e cacheada, assíncrona) sem refazer o gateway.
 
 #### Scenario: Gateway depende da interface
 
 - **WHEN** o gateway resolve uma capacidade
-- **THEN** usa um `AiModelResolver` injetado
+- **THEN** usa um `AiModelResolver` **injetado no construtor** (`await resolver.resolve(capability)`)
 - **AND** não acessa diretamente a estrutura interna do registry
 
 #### Scenario: Resolver substituível
 
-- **WHEN** uma implementação alternativa de `AiModelResolver` é injetada
+- **WHEN** uma implementação alternativa de `AiModelResolver` (assíncrona, ex.: persistida) é injetada
 - **THEN** o gateway a utiliza sem alteração de código
 - **AND** o comportamento com o registry em código permanece o default
 

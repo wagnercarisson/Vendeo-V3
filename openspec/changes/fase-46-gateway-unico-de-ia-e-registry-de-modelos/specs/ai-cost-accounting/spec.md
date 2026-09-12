@@ -6,7 +6,7 @@
 
 ### Requirement: Telemetria call-level obrigatória emitida pela camada única
 
-Cada **tentativa HTTP real** de IA SHALL produzir exatamente **um envelope de telemetria** (`AiCallInfo` com `capability`, `protocol`, `status`, `errorType`), que a camada única encaminha para gravação call-level em `generation_events` com provider, **modelo real** da chamada, tokens normalizados e duração. Nenhum serviço SHALL ser responsável por emitir sua própria telemetria; a ausência de envelope SHALL indicar que não houve tentativa real. A **persistência é best-effort** (o `AiCostTracker` é fail-open por design) — um envelope pode não chegar ao banco sem bloquear a geração.
+Cada **tentativa HTTP real** de IA SHALL produzir exatamente **um envelope de telemetria** (`AiCallEnvelope extends AiCallInfo`, aditivo — `AiCallInfo` legado intacto — com `capability`, `protocol`, `status`, `errorType?`), que a camada única encaminha para gravação call-level em `generation_events` com provider, **modelo real** da chamada, tokens normalizados e duração. Nenhum serviço SHALL ser responsável por emitir sua própria telemetria; a ausência de envelope SHALL indicar que não houve tentativa real. A **persistência é best-effort** (o `AiCostTracker` é fail-open por design) — um envelope pode não chegar ao banco sem bloquear a geração.
 
 #### Scenario: Tentativa real gera um envelope
 

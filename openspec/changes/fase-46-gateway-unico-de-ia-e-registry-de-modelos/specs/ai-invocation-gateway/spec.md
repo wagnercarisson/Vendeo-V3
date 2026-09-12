@@ -6,7 +6,7 @@
 
 ### Requirement: Camada única de invocação de IA
 
-O sistema SHALL expor um gateway único (`src/lib/ai/gateway.ts`) com a operação `invoke(capability, request, telemetry, target = "primary")`, onde `target: "primary" | "fallback"` é a **seleção explícita do orquestrador** e o **contexto de telemetria é obrigatório em produção**. Os serviços de IA SHALL NOT instanciar providers (`new OpenAI()`, `new GoogleGenerativeAI()`) nem chamar APIs de provider diretamente; eles continuam responsáveis por prompts, regras de negócio, retry e timeout.
+O sistema SHALL expor um gateway único (`src/lib/ai/gateway.ts`) como `class AiGateway { constructor(resolver: AiModelResolver, adapters: AiAdapterRegistry) }` — dependências **injetadas por construtor** — com a operação `invoke(capability, request, telemetry, target = "primary")`, onde `target: "primary" | "fallback"` é a **seleção explícita do orquestrador** e o **contexto de telemetria é obrigatório em produção**. `invoke` **não** recebe o resolver por argumento. Os serviços de IA SHALL NOT instanciar providers (`new OpenAI()`, `new GoogleGenerativeAI()`) nem chamar APIs de provider diretamente; eles continuam responsáveis por prompts, regras de negócio, retry e timeout.
 
 #### Scenario: Serviço invoca pela camada única
 
@@ -22,9 +22,9 @@ O sistema SHALL expor um gateway único (`src/lib/ai/gateway.ts`) com a operaç�
 
 #### Scenario: Contexto de telemetria obrigatório em produção
 
-- **WHEN** uma capacidade é invocada em produção sem contexto de telemetria
-- **THEN** a invocação é rejeitada (contexto obrigatório)
-- **AND** um sink nulo/no-op só é aceito em testes com adapter falso
+- **WHEN** uma capacidade é invocada sem contexto de telemetria (ou com contexto sem `sink`)
+- **THEN** a invocação é rejeitada (contexto e `sink` obrigatórios — `AiTelemetryContext.sink` não é opcional)
+- **AND** um `NoopAiTelemetrySink` só é aceito em testes com adapter falso; `createDefaultTelemetryContext(...)` injeta o sink padrão
 
 #### Scenario: Orquestrador seleciona o alvo explicitamente
 
@@ -117,7 +117,7 @@ O gateway SHALL normalizar **erros HTTP/provider** num contrato único (`AiInvoc
 
 ### Requirement: Um envelope de telemetria por tentativa HTTP real
 
-Cada **tentativa HTTP real** executada pelo gateway SHALL emitir **exatamente um envelope de telemetria** — um `AiCallInfo` estendido com `capability`, `protocol`, `status` e `errorType` — registrando `success`, `failed` ou `timeout`, com provider, **modelo real**, usage (ou `not_available`) e duração. A **persistência é best-effort** (`resolveAiCost` + `AiCostTracker`, fail-open por design) e SHALL NOT bloquear a geração. Quando um serviço/rota precisa de buffering ou ordenação, ele SHALL fornecer seu próprio sink, preservando o comportamento atual.
+Cada **tentativa HTTP real** executada pelo gateway SHALL emitir **exatamente um envelope de telemetria** — um `AiCallEnvelope extends AiCallInfo` com `capability`, `protocol`, `status` e `errorType` (o `AiCallInfo` legado permanece intacto durante a migração) — registrando `success`, `failed` ou `timeout`, com provider, **modelo real**, usage (ou `not_available`) e duração. A **persistência é best-effort** (`resolveAiCost` + `AiCostTracker`, fail-open por design) e SHALL NOT bloquear a geração. Quando um serviço/rota precisa de buffering ou ordenação, ele SHALL fornecer seu próprio sink, preservando o comportamento atual.
 
 #### Scenario: Tentativa real gera exatamente um envelope
 
