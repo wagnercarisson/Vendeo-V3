@@ -206,14 +206,14 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 
 ## Phase 46 — Gateway Único de IA e Registry de Modelos
 
-**Status:** Em planejamento — 9 plans previstos (46-01..46-09, 9 waves — DAG serializado por `depends_on`), Change A. Fonte da verdade: `openspec/changes/fase-46-gateway-unico-de-ia-e-registry-de-modelos/`. Change B (catálogo/seleção admin) = **F47**.
+**Status:** Em execução — 1/9 plans concluídos (46-01 ✅: registry de modelos por capacidade + resolver assíncrono + migration `campaign_spec` no remoto; 27 testes do registry) — 9 plans (46-01..46-09, 9 waves — DAG serializado por `depends_on`), Change A. Fonte da verdade: `openspec/changes/fase-46-gateway-unico-de-ia-e-registry-de-modelos/`. Change B (catálogo/seleção admin) = **F47**.
 
 **Fonte da verdade:** `openspec/changes/fase-46-gateway-unico-de-ia-e-registry-de-modelos/`
 **Context:** `.planning/phases/46-gateway-unico-de-ia-e-registry-de-modelos/46-CONTEXT.md`
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
-| 46-01 | 1 | ○ | Trackings + baseline/inventário das 11 capacidades + registry (`AiModelConfig` com protocol no primary e fallback) + migration CHECK `campaign_spec` (tasks 1.1–1.5) |
+| 46-01 | 1 | ✅ | Trackings + baseline/inventário das 11 capacidades + registry (`AiModelConfig` com protocol no primary e fallback) + migration CHECK `campaign_spec` (tasks 1.1–1.5) |
 | 46-02 | 2 | ○ | api-keys + gateway (`invoke`/alvo explícito/uma tentativa) + adapters por protocolo + `AiCallEnvelope` + contrato de erro + sink + mapa capability→generationType (tasks 2.1–2.6) |
 | 46-03 | 3 | ○ | Migração das capacidades de TEXTO (copy, correção, brand_profile_text, campaign_spec legado via provider+service+rota) + proprietário único + remoção da persistência manual + co-migração (tasks 3.1–3.5) |
 | 46-04 | 4 | ○ | Migração das capacidades de VISÃO + furo 1 (modelo real) + threading do director + remoção da persistência manual + co-migração (tasks 4.1–4.5) |

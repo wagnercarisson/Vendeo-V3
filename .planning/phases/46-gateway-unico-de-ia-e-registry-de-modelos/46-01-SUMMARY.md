@@ -12,7 +12,7 @@ requires:
     provides: migration idempotente do CHECK chk_generation_events_type (padrão DROP/ADD + REVERT)
 provides:
   - "src/lib/ai/model-resolver.ts — AiCapability (11) + interface assíncrona AiModelResolver (seam do Change B)"
-  - "src/lib/ai/model-registry.ts — MODEL_REGISTRY (11 capacidades, defaults pré-F46) + MODEL_ALLOWLIST + CAPABILITY_PROTOCOLS + validação"
+  - "src/lib/ai/model-registry.ts — MODEL_REGISTRY (11 capacidades, defaults pré-F46) + MODEL_ALLOWLIST (provider→modelo→protocolo) + CAPABILITY_PROTOCOLS + CAPABILITY_SEGMENTS + validação fail-fast"
   - "Literal campaign_spec no CHECK chk_generation_events_type (aplicado no remoto) e em GenerationEventType"
   - "Baseline/inventário das 11 capacidades, dos 7 furos sem telemetria e das 14 envs de modelo/provider"
 affects: [46-02, 46-03, 46-04, 46-05, 46-06, 46-07, 46-08, 46-09, 47]
@@ -39,7 +39,7 @@ key-decisions:
   - "Registry por capacidade (não por segmento/serviço) com protocol no primary e no fallback — cada alvo independente"
   - "AiModelResolver assíncrono desde já (resolve(): Promise) para o resolver persistido da F47 decorar/substituir sem reabrir o gateway"
   - "campaign_copy.fallback = gemini/gemini-3.1-flash-lite/gemini é default inicial (configuração), não regra; serviço/gateway não conhecem provider específico"
-  - "Validação fail-fast no carregamento: allowlist de modelo+protocolo, protocolo por capacidade e primary != fallback (mesmo provider+model)"
+  - "Validação fail-fast no carregamento: allowlist por provider+modelo+protocolo, segmento canônico por capacidade, cobertura exata das 11 capacidades e primary != fallback (mesmo provider+model)"
   - "Migration do CHECK aditiva/idempotente: 15 valores vigentes + campaign_spec; REVERT só antes de existir evento campaign_spec"
 
 patterns-established:
@@ -70,8 +70,8 @@ completed: 2026-09-12
 
 - **Trackings F46/F47/F44/Stripe verificados** nos 5 runbooks (`ROADMAP.md`, `.planning/ROADMAP.md`, `.planning/STATE.md`, `.planning/PROJECT.md`, `AGENTS.md`): **zero resíduos de estado atual**; nenhuma nota histórica alterada; nenhuma edição necessária (grep-verificação pura).
 - **Baseline factual registrado** neste SUMMARY: tabela das 11 capacidades (serviço/arquivo:linha → segmento → protocolo → adapter → default → env removida), os 7 furos/caminhos sem telemetria com evidência `file:line`, o inventário das 14 envs (28 leituras `process.env`) e a baseline de testes (264 arquivos / 2578 testes).
-- **Registry + resolver criados** com defaults idênticos ao comportamento pré-F46: `src/lib/ai/model-resolver.ts` (tipos + interface assíncrona) e `src/lib/ai/model-registry.ts` (11 capacidades, allowlist por modelo+protocolo, protocolos por capacidade, validação fail-fast, `ModelRegistry implements AiModelResolver`).
-- **18 testes unitários verdes** cobrindo resolução das 11 capacidades, `campaign_image`→`responses` × `campaign_image_edit`→`images`, default inicial de `campaign_copy`, visão com modelos distintos, allowlist, `primary != fallback`, `listCapabilities()` com 11 entradas e `resolve` retornando `Promise`.
+- **Registry + resolver criados** com defaults idênticos ao comportamento pré-F46: `src/lib/ai/model-resolver.ts` (tipos + `AiProvider` + interface assíncrona) e `src/lib/ai/model-registry.ts` (11 capacidades, allowlist por provider+modelo+protocolo, protocolos por capacidade, segmentos canônicos, validação fail-fast, `ModelRegistry implements AiModelResolver`).
+- **27 testes unitários verdes** cobrindo resolução das 11 capacidades, `campaign_image`→`responses` × `campaign_image_edit`→`images`, default inicial de `campaign_copy`, visão com modelos distintos, allowlist por provider (provider desconhecido e provider/model trocados rejeitados), segmento canônico, cobertura das 11 capacidades, `primary != fallback`, `listCapabilities()` com 11 entradas e `resolve` retornando `Promise`.
 - **[BLOCKING] Migration aplicada no remoto**: `20260912000001_f46_generation_events_type` adiciona `campaign_spec` ao CHECK preservando os 15 valores vigentes; `GenerationEventType` (TS) recebe o literal; `supabase migration list` confirma local=remote e o dry-run subsequente reporta "Remote database is up to date."
 
 ## Task Commits
@@ -83,14 +83,14 @@ Cada task foi commitada atomicamente (Tasks 1 e 2 não produziram alteração de
 3. **Task 3: model-resolver.ts + model-registry.ts + testes** — `94c4cc52` (feat)
 4. **Task 4: migration CHECK + GenerationEventType + push** — `874a7f0b` (feat)
 
-**Plan metadata:** `_pendente_` (docs: complete 46-01 plan — SUMMARY + STATE/ROADMAP)
+**Plan metadata:** `369994db` (fix de revisão: allowlist por provider + validação completa do registry) + `_docs de conclusão do plano (SUMMARY + trackings)_`
 
 _Nota: as Tasks 1 e 2 são de verificação/inventário (por desenho do plano, sem edição de código). O artefato da Task 2 é este SUMMARY, commitado em bloco atômico com a metadata do plano._
 
 ## Files Created/Modified
 
 - `src/lib/ai/model-resolver.ts` — `AiCapability` (11), `AiProtocol`, `AiSegment`, `AiModelTarget`, `AiModelConfig` e interface assíncrona `AiModelResolver` (`resolve(): Promise` + `listCapabilities()`).
-- `src/lib/ai/model-registry.ts` — `MODEL_REGISTRY` (11 capacidades; `protocol` no primary e no fallback), `MODEL_ALLOWLIST` (modelo→protocolos), `CAPABILITY_PROTOCOLS` (capacidade→protocolos), `validateModelConfig` (fail-fast) e `ModelRegistry implements AiModelResolver` (`async resolve`).
+- `src/lib/ai/model-registry.ts` — `MODEL_REGISTRY` (11 capacidades; `protocol` no primary e no fallback), `MODEL_ALLOWLIST` (provider→modelo→protocolos), `CAPABILITY_PROTOCOLS` (capacidade→protocolos), `CAPABILITY_SEGMENTS` (segmento canônico) + `ALL_CAPABILITIES`, `validateModelConfig` (provider+modelo+protocolo+segmento, fail-fast), `validateRegistry` (chaves + cobertura das 11 capacidades) e `ModelRegistry implements AiModelResolver` (`async resolve`).
 - `src/lib/ai/__tests__/model-registry.test.ts` — 18 testes unitários do registry/resolver/allowlist.
 - `supabase/migrations/20260912000001_f46_generation_events_type.sql` — extensão idempotente do CHECK `chk_generation_events_type` (15 → 16 valores) + bloco `-- REVERT` documentado.
 - `src/lib/visual-signature/types.ts` — literal `'campaign_spec'` adicionado ao union `GenerationEventType` (aditivo/retrocompatível).
@@ -178,7 +178,7 @@ _Nota: as Tasks 1 e 2 são de verificação/inventário (por desenho do plano, s
 - **Registry por capacidade** (não por segmento/serviço) com `protocol` obrigatório no primary **e** no fallback — cada alvo é independente.
 - **`AiModelResolver` assíncrono desde já** (`resolve(): Promise`) para o `PersistedModelResolver` da F47 decorar/substituir sem reabrir o gateway.
 - **`campaign_copy.fallback` = `{ gemini, gemini-3.1-flash-lite, gemini }`** como default inicial (configuração, não regra).
-- **Validação fail-fast no carregamento**: allowlist por modelo+protocolo, protocolo por capacidade e `primary != fallback` (mesmo provider+model).
+- **Validação fail-fast no carregamento**: allowlist por provider+modelo+protocolo, segmento canônico por capacidade, cobertura exata das 11 capacidades e `primary != fallback` (mesmo provider+model).
 - **Migration aditiva/idempotente**: 15 valores preservados + `campaign_spec`; `REVERT` só antes de existir evento `campaign_spec`.
 
 ## Deviations from Plan
@@ -186,6 +186,16 @@ _Nota: as Tasks 1 e 2 são de verificação/inventário (por desenho do plano, s
 **None - plan executed exactly as written.**
 
 As Tasks 1 e 2 são de verificação/inventário por desenho e não alteraram código; o artefato da Task 2 é este SUMMARY, commitado em bloco atômico com a metadata do plano (Tasks 3/4 têm commits próprios).
+
+## Correções de Revisão (pós-execução)
+
+Revisão humana do 46-01 apontou 3 achados; todos corrigidos no commit `369994db`:
+
+1. **[BLOQUEADOR] Allowlist não validava o provider** — `MODEL_ALLOWLIST` era indexada apenas por modelo (`Record<string, readonly AiProtocol[]>`), aceitando combinações trocadas (ex.: `{ provider: "gemini", model: "gpt-4o" }`). Corrigido: novo tipo `AiProvider = "openai" | "gemini"` em `model-resolver.ts` (`AiModelTarget.provider` passa a ser `AiProvider`, habilitando o switch exaustivo de `getApiKey` no 46-02) e allowlist reestruturada por **provider → modelo → protocolos**. `assertValidTarget` agora rejeita provider fora da allowlist e modelo fora da allowlist do provider. Testes adicionados: provider desconhecido (`anthropic`), `gemini`+`gpt-4o` e `openai`+`gemini-3.1-flash-lite`.
+2. **[MÉDIO] Validação runtime incompleta** — adicionados `CAPABILITY_SEGMENTS` (segmento canônico), `ALL_CAPABILITIES` e `validateRegistry` (exatamente as 11 capacidades; chave = `config.capability`; `validateModelConfig` em cada uma). `validateModelConfig` agora também valida o `segment`. O construtor do `ModelRegistry` e o carregamento do default usam `validateRegistry`. Testes adicionados: segmento incompatível, chave trocada, capacidade ausente e capacidade extra.
+3. **[MÉDIO/documental] Trackings desatualizados** — `STATE.md`, `.planning/ROADMAP.md`, `ROADMAP.md` (raiz) e `AGENTS.md` sincronizados para **1/9 plans** com 46-01 ✅; metadata deste SUMMARY preenchida.
+
+**Resultado:** 27 testes do registry verdes (antes 18); `typecheck`, `lint` e `build` verdes. `AiCallInfo`/`AiCapability`/`AiProtocol` permanecem intactos — apenas `AiModelTarget.provider` foi estreitado para `AiProvider`.
 
 ## Issues Encountered
 
@@ -203,7 +213,7 @@ As Tasks 1 e 2 são de verificação/inventário por desenho e não alteraram c�
 
 | Gate | Resultado |
 |---|---|
-| `npx vitest run src/lib/ai/__tests__/model-registry.test.ts` | ✅ PASS — 1 arquivo / 18 testes |
+| `npx vitest run src/lib/ai/__tests__/model-registry.test.ts` | ✅ PASS — 1 arquivo / 27 testes |
 | `npm run typecheck` | ✅ PASS — 0 erros |
 | `npm run lint` | ✅ PASS — 0 erros |
 | `npm run build` | ✅ PASS — `check:cnae` + `next build` concluídos |
@@ -228,8 +238,8 @@ None - no external service configuration required.
 - [x] `src/lib/ai/__tests__/model-registry.test.ts` existe
 - [x] `supabase/migrations/20260912000001_f46_generation_events_type.sql` existe
 - [x] `src/lib/visual-signature/types.ts` contém `campaign_spec`
-- [x] Commits `94c4cc52` e `874a7f0b` existem (`git log`)
-- [x] Testes do registry verdes (18/18); typecheck/lint/build verdes
+- [x] Commits `94c4cc52`, `874a7f0b` e `369994db` (fix de revisão) existem (`git log`)
+- [x] Testes do registry verdes (27/27); typecheck/lint/build verdes
 - [x] Migration `20260912000001` aplicada no remoto (Local = Remote)
 
 ---
