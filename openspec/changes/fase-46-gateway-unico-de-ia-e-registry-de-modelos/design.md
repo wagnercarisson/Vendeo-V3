@@ -166,7 +166,7 @@ Cada capacidade é migrada individualmente, com os testes existentes verdes (def
 
 ### D6 — Legado `campaign-intelligence` entra como `campaign_spec`
 
-A rota `POST /api/campaign/generate` e o `OpenAIProvider` legado passam a usar `invoke("campaign_spec", …)` com default `gpt-4o-mini`. O código **não é removido** nesta fase. Para registrar corretamente a chamada (sem rotulá-la como `campaign_copy`), a F46 inclui uma **migration mínima** que estende o CHECK `chk_generation_events_type` (`supabase/migrations/...`) e o tipo TS `GenerationEventType` (`src/lib/visual-signature/types.ts:102`) com o literal `campaign_spec`, seguindo o padrão idempotente DROP/ADD + bloco REVERT da migration F37.2 (`20260906000003_f37_2_generation_events_type.sql`).
+A rota `POST /api/campaign/generate` e o `OpenAIProvider` legado passam a usar `invoke("campaign_spec", …)` com default `gpt-4o-mini`. A rota SHALL criar o `AiTelemetryContext` e encaminhá-lo por `campaign-intelligence/service.ts` até o provider/gateway (D9) — nenhum caminho produtivo da rota chama IA sem contexto. O código **não é removido** nesta fase. Para registrar corretamente a chamada (sem rotulá-la como `campaign_copy`), a F46 inclui uma **migration mínima** que estende o CHECK `chk_generation_events_type` (`supabase/migrations/...`) e o tipo TS `GenerationEventType` (`src/lib/visual-signature/types.ts:102`) com o literal `campaign_spec`, seguindo o padrão idempotente DROP/ADD + bloco REVERT da migration F37.2 (`20260906000003_f37_2_generation_events_type.sql`).
 
 - **Por quê**: ausência de chamador de UI não prova ausência de consumidor externo; e o enum atual não possui `campaign_spec`, o que forçaria um rótulo incorreto.
 - **Nota de escopo**: "sem mudança de banco" passa a ser "sem **novas tabelas**; apenas extensão do CHECK de telemetria".
@@ -175,7 +175,7 @@ A rota `POST /api/campaign/generate` e o `OpenAIProvider` legado passam a usar `
 ### D7 — Correção dos furos e cobertura de todos os caminhos produtivos
 
 1. **Modelo real**: `AiCallInfo.model` vem do registry/adapter (não mais hardcoded) — corrige validation/review.
-2. **`onCall` garantido em todos os caminhos**: `POST /logo` e `retry-brand-director` (via `analyze()`), `visual-signature/server-actions.ts` (`generateVariations`/`generateAutomatic`, via `AiImageGenerator.generate`), `visual-signature/approve` (2 call sites) e `visual-signature/restore` (via `profiler.generate()`) passam contexto de telemetria ao gateway.
+2. **`onCall` garantido em todos os caminhos**: `POST /logo` e `retry-brand-director` (via `analyze()`), `visual-signature/server-actions.ts` (`generateVariations`/`generateAutomatic`, via `AiImageGenerator.generate`), `visual-signature/approve` (2 call sites) e `visual-signature/restore` (via `profiler.generate()`) passam contexto de telemetria ao gateway. **Callers já instrumentados que passam a usar o sink único (D9):** `brand-profile/infer`, `brand-profile/realign`, `brand-profile/generate-without-logo`, `visual-signature/generate-without-logo` (buffering até `visual_signature_id`) e `correction-reports.ts` — `resolveAiCost`/`AiCostTracker.record` manuais são removidos em favor do sink.
 3. **Fallback `images.edit`**: adapter `images` normaliza ausência de usage (`not_available`) e registra duração + custo por unidade quando aplicável.
 4. **VS image**: `invoke("visual_signature_image")` marca `imageGenerationTool: true` + `generationType`, e o resolvedor de custo passa a somar o componente da tool **também** para `visual_signature_image` — hoje o estimador aplica o componente **apenas** a `campaign_image` (`cost-estimator.ts:194`), o que precisa ser estendido a **ambas** as capacidades (testes separados por capacidade).
 
@@ -195,7 +195,7 @@ A rota `POST /api/campaign/generate` e o `OpenAIProvider` legado passam a usar `
 - **[Adapter vaza shape do provider]** → contrato único `AiInvocationResult`; adapter não conhece regra de negócio.
 - **[Retry/timeout duplicados ou perdidos]** → D4 explícito; teste de que o gateway não faz retry.
 - **[Telemetria muda contagem/ordem]** → sink injetável preserva buffering (VS) e ordem (brand-profile); testes de invariante de eventos por run.
-- **[Env removida antes do deploy]** → ordem D5; fallback do registry para chave ausente.
+- **[Env removida antes do deploy]** → ordem D5; **ausência de API key falha explicitamente** (fail-fast em produção via `getApiKey`); o registry cobre a **remoção das env-vars de modelo**, não a ausência de chave.
 - **[`images.edit` sem tokens gera custo errado]** → adapter marca `not_available` e usa `imageUnitCostUsd`; documentado.
 - **[Legado quebra consumidor oculto]** → `campaign_spec` mantido e coberto por testes.
 
@@ -207,7 +207,8 @@ A rota `POST /api/campaign/generate` e o `OpenAIProvider` legado passam a usar `
 | Resolver | `src/lib/ai/model-resolver.ts` (novo) | criar interface `AiModelResolver` (D1.1) |
 | Gateway | `src/lib/ai/gateway.ts` (novo) | criar |
 | Adapters | `src/lib/ai/adapters/{chat-completions,responses,images,gemini}.ts` (novos) | criar |
-| Chaves | `src/lib/ai/api-keys.ts` (novo) | criar (`getApiKey(provider)` com switch exaustivo) |
+| Chaves | `src/lib/ai/api-keys.ts` (novo) | criar (`getApiKey(provider): string` com switch exaustivo) |
+| Mapa de tipo | `src/lib/ai/generation-type-map.ts` (novo) | criar (`CAPABILITY_GENERATION_TYPE`, 11 capacidades; `campaign_image_edit → campaign_image`) |
 | Tipos de telemetria | `src/lib/ai-cost/types.ts` (`AiCallInfo`) | estender com `capability`/`protocol`/`status`/`errorType` |
 | Enum de evento | `src/lib/visual-signature/types.ts` (`GenerationEventType`) | adicionar `campaign_spec` |
 | Migration | `supabase/migrations/*_f46_generation_events_type.sql` (nova) | estender CHECK `chk_generation_events_type` com `campaign_spec` + REVERT |
@@ -218,11 +219,15 @@ A rota `POST /api/campaign/generate` e o `OpenAIProvider` legado passam a usar `
 | Correção | `campaign/correction-intent-service.ts` | usar gateway |
 | VS | `visual-signature/ai-image-generator.ts`, `identity-art-director.ts`, `brand-profiler.ts` | usar gateway; tool flag |
 | Brand | `brand-assets/brand-director.ts`, `text-only-inference-service.ts` | usar gateway |
-| Legado | `campaign-intelligence/providers/openai.ts` | usar gateway (`campaign_spec`) |
+| Legado | `campaign-intelligence/providers/openai.ts`, `campaign-intelligence/service.ts`, `app/api/campaign/generate/route.ts` | usar gateway (`campaign_spec`); rota cria/encaminha o `AiTelemetryContext` até o `invoke` |
 | Rotas | `api/store/[id]/logo/route.ts`, `logo/retry-brand-director/route.ts` | passar telemetria |
 | VS actions | `visual-signature/server-actions.ts` (`generateVariations`/`generateAutomatic`) | passar telemetria ao `AiImageGenerator.generate` |
 | VS approve | `api/store/[id]/visual-signature/approve/route.ts` (2 call sites) | passar telemetria ao `profiler.generate` |
 | VS restore | `api/store/[id]/visual-signature/restore/route.ts` | passar telemetria ao `profiler.generate` |
+| Brand callers | `api/store/[id]/brand-profile/{infer,realign,generate-without-logo}/route.ts` | fornecer `AiTelemetryContext`/sink; remover `resolveAiCost`/`AiCostTracker.record` manuais |
+| VS generate-without-logo | `api/store/[id]/visual-signature/generate-without-logo/route.ts` | sink **buffering** até `visual_signature_id`; remover persistência manual |
+| Correção-v2 | `src/lib/campaign/correction-reports.ts` | fornecer `AiTelemetryContext`/sink ao `ImageGenerationService`; remover persistência manual |
+| Gate de arquitetura | `src/lib/ai/__tests__/architecture-guard.test.ts` (novo) | proibir SDK/wire fora de adapters, persistência manual de IA fora do sink e env-var de modelo |
 | Config | `.env.example` | remover envs de modelo |
 | Testes | `generate-image/route.test.ts`, `campaign-generate.test.ts`, `concurrency.test.ts`, `regression-master-switch.test.ts` | co-migrar (`IMAGE_GENERATION_RESPONSES_MODEL`, `TEXT_FALLBACK_PROVIDER`) |
 
@@ -237,8 +242,11 @@ A rota `POST /api/campaign/generate` e o `OpenAIProvider` legado passam a usar `
 
 ## Decisões consolidadas (ex-open questions)
 
-1. **`api-keys.ts`**: expõe `getApiKey(provider)` com **switch exaustivo** por provider (fail-fast em produção sem chave).
+1. **`api-keys.ts`**: expõe `getApiKey(provider): string` com **switch exaustivo** por provider. **Contrato coerente (nunca `undefined`)**: em produção, chave ausente → erro de configuração explícito (fail-fast); em dev/teste, chave ausente → `""` (string vazia), preservando os caminhos mock/dev.
 2. **Sink**: contexto de telemetria **obrigatório em produção**; sink **no-op apenas em testes controlados** com adapter falso. O gateway nunca cria run implícito.
 3. **`ImageProvider`**: mantida como **contrato interno/seam de testes**, com implementação **delegando ao gateway**. A decisão é da F46, não da F47.
+4. **Caminho único de telemetria (D9, correção de revisão):** o caller fornece `AiTelemetryContext`; o gateway gera **um** envelope por tentativa real; o **sink** é o único que persiste (`resolveAiCost` + `AiCostTracker.record`, best-effort). Nenhum caller resolve custo/grava manualmente. `onCall`, se mantido por compatibilidade, **apenas recebe o envelope já produzido** e não conduz a telemetria de produção.
+5. **Mapa canônico capability → generationType (D10, correção de revisão):** `campaign_image_edit` é capacidade do registry mas **não** é `GenerationEventType`; o sink mantém `CAPABILITY_GENERATION_TYPE` cobrindo **as 11 capacidades**, com `campaign_image_edit → campaign_image`, preservando `capability`/`protocol` originais no `metadata` do evento. O mapa tem teste.
+6. **Proprietário único da chamada de texto:** `CopyDirectorService` é o **único** que chama `invoke("campaign_copy")` no caminho de produção; `OpenAITextProvider`/`GeminiTextProvider`/`createTextProvider` são **fachadas de compatibilidade/teste** que delegam ao gateway fora do caminho de produção (evita invocação dupla).
 
 Questões de persistência (CHECK de seleção, depreciação de modelo, catálogo editável) permanecem **exclusivamente na F47** (`fase-47-catalogo-e-selecao-de-modelos-admin`).

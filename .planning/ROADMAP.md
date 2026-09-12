@@ -988,33 +988,45 @@ Plans:
 **Source of truth:** `openspec/changes/fase-46-gateway-unico-de-ia-e-registry-de-modelos/`
 
 **Plans:** 0/9 plans complete
+**Waves:** 9 waves (DAG serializado por `depends_on`, legível pela ferramenta) — 46-01:1, 46-02:2 (dep 46-01), 46-03:3 (dep 46-02), 46-04:4 (dep 46-03), 46-05:5 (dep 46-04), 46-06:6 (dep 46-05), 46-07:7 (dep 46-06), 46-08:8 (dep 46-07), 46-09:9 (dep 46-08). A serialização elimina conflitos de arquivos compartilhados (`generate-image/route.ts`, `server-actions.ts`) e a dependência do gate de env-vars.
 
-**Waves:** 5 waves — 46-01/46-02:1, 46-03/46-04/46-05:2, 46-06/46-07:3, 46-08:4, 46-09:5
-
-```Plans:
+```
+Plans:
 **Wave 1**
 
 - [ ] 46-01-PLAN.md — Trackings + baseline/inventário das 11 capacidades + registry (`AiModelConfig` com protocol) + migration CHECK `campaign_spec` (Wave 1)
-- [ ] 46-02-PLAN.md — api-keys + gateway (`invoke`/alvo explícito/uma tentativa) + adapters por protocolo + `AiCallInfo` estendido + contrato de erro + sink injetável (Wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 46-03-PLAN.md — Migração das capacidades de TEXTO (copy, correção, brand_profile_text, campaign_spec legado) (Wave 2)
-- [ ] 46-04-PLAN.md — Migração das capacidades de VISÃO (input_validation, image_review, brand_profile_vision, VS validation) + furo 1 (Wave 2)
-- [ ] 46-05-PLAN.md — Migração das capacidades de IMAGEM (campaign_image, campaign_image_edit, visual_signature_image) + furos 3/4 + cost-estimator (Wave 2)
+- [ ] 46-02-PLAN.md — api-keys + gateway (`invoke`/alvo explícito/uma tentativa) + adapters por protocolo + `AiCallInfo` estendido + contrato de erro + sink + mapa capability→generationType (Wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 46-06-PLAN.md — Cobertura de telemetria nos callers produtivos sem onCall (logo, retry-brand-director, server-actions, approve, restore) + teste de inventário (Wave 3)
-- [ ] 46-07-PLAN.md — Remoção das env-vars de modelo/provider do runtime e `.env.example` + co-migração de testes (Wave 3)
+- [ ] 46-03-PLAN.md — Migração das capacidades de TEXTO (copy, correção, brand_profile_text, campaign_spec legado via provider+service+rota) + proprietário único + remoção da persistência manual + co-migração (Wave 3)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 46-08-PLAN.md — Regressão completa + não-mudança do contrato externo + equivalência de defaults (Wave 4)
+- [ ] 46-04-PLAN.md — Migração das capacidades de VISÃO (input_validation, image_review, brand_profile_vision, VS validation) + furo 1 + remoção da persistência manual (Wave 4)
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 46-09-PLAN.md — Verificação final (VERIFICATION.md + UAT.md + registros/arquivamento) (Wave 5)
+- [ ] 46-05-PLAN.md — Migração das capacidades de IMAGEM (campaign_image, campaign_image_edit, visual_signature_image) + furos 3/4 + cost-estimator (Wave 5)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 46-06-PLAN.md — Telemetria nos callers produtivos via `AiTelemetryContext`/sink (logo, retry-brand-director, server-actions, approve, restore) + gate global de arquitetura (SDK/wire) + inventário (Wave 6)
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
+- [ ] 46-07-PLAN.md — Remoção das env-vars de modelo/provider do runtime e `.env.example` + extensão do gate (env-var) + co-migração de testes + ordem de deploy (Wave 7)
+
+**Wave 8** *(blocked on Wave 7 completion)*
+
+- [ ] 46-08-PLAN.md — Regressão completa + não-mudança do contrato externo + equivalência de defaults (Wave 8)
+
+**Wave 9** *(blocked on Wave 8 completion)*
+
+- [ ] 46-09-PLAN.md — Verificação final (VERIFICATION.md + UAT.md + registros/arquivamento) (Wave 9)
 
 ```
 

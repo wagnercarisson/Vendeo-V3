@@ -25,6 +25,22 @@ Cada **tentativa HTTP real** de IA SHALL produzir exatamente **um envelope de te
 - **WHEN** uma fase é pulada (ex.: validação de entrada dispensada por confirmação humana)
 - **THEN** nenhum evento call-level é gravado para essa fase
 
+### Requirement: Mapeamento canônico de capacidade para o tipo persistido
+
+O sistema SHALL manter um mapa canônico (`CAPABILITY_GENERATION_TYPE`) que traduz cada uma das **11 capacidades** do registry para um `GenerationEventType` válido do CHECK `chk_generation_events_type`. Capacidades sem literal próprio no enum SHALL ser mapeadas para o tipo da etapa correspondente — em particular `campaign_image_edit → campaign_image` (fallback de edição pertence à etapa de imagem) — preservando a `capability` e o `protocol` originais no `metadata` do evento. O mapa SHALL cobrir as 11 capacidades e SHALL ser coberto por teste.
+
+#### Scenario: Fallback de edição mapeado para a etapa de imagem
+
+- **WHEN** a capacidade `campaign_image_edit` emite telemetria
+- **THEN** o evento é gravado com `generation_type = campaign_image`
+- **AND** o `metadata` preserva `capability = campaign_image_edit` e `protocol = images`
+
+#### Scenario: Cobertura completa do mapa
+
+- **WHEN** as 11 capacidades são mapeadas
+- **THEN** todas resolvem para um literal aceito pelo CHECK `chk_generation_events_type`
+- **AND** o teste falha se uma capacidade ficar sem mapeamento
+
 ### Requirement: Modelo real reportado por chamada
 
 O evento call-level SHALL registrar o **modelo real** resolvido para a chamada, e não um modelo fixo do pipeline. As chamadas de visão de validação e de revisão SHALL registrar o modelo de visão configurado (ex.: `gpt-4o`), nunca o modelo de geração de imagem.
@@ -43,7 +59,19 @@ O evento call-level SHALL registrar o **modelo real** resolvido para a chamada, 
 
 ### Requirement: Cobertura de telemetria em todos os caminhos de chamada
 
-Todos os caminhos produtivos que executam IA SHALL emitir telemetria, incluindo os que hoje não o fazem: o upload de logo (`POST /api/store/[id]/logo`), o retry do Brand Director (`retry-brand-director`), as ações de assinatura visual (`visual-signature/server-actions.ts` — `generateVariations`/`generateAutomatic`) e as rotas `visual-signature/approve` (2 call sites) e `visual-signature/restore` (via `BrandProfilerWithoutLogoService.generate`). O fallback `images.edit` SHALL ser registrado mesmo sem usage (com duração e **estimativa** por unidade/`not_available`), como uma **segunda tentativa real** (um envelope próprio — não reaproveita o envelope da chamada que falhou). O componente da tool de imagem SHALL ser somado à **estimativa** em `campaign_image` **e** `visual_signature_image`.
+Todos os caminhos produtivos que executam IA SHALL emitir telemetria **pelo caminho único** (caller fornece `AiTelemetryContext` → gateway gera o envelope → sink persiste), incluindo os que hoje não o fazem: o upload de logo (`POST /api/store/[id]/logo`), o retry do Brand Director (`retry-brand-director`), as ações de assinatura visual (`visual-signature/server-actions.ts` — `generateVariations`/`generateAutomatic`) e as rotas `visual-signature/approve` (2 call sites) e `visual-signature/restore` (via `BrandProfilerWithoutLogoService.generate`). **Callers já instrumentados** que passam a usar o sink (removendo `resolveAiCost`/`AiCostTracker.record` manuais): `brand-profile/{infer,realign,generate-without-logo}`, `visual-signature/generate-without-logo` (buffering até `visual_signature_id`) e `correction-reports.ts`. Nenhum caller produtivo resolve custo ou grava call-level manualmente; um gate global proíbe `resolveAiCost`/`AiCostTracker.record` de IA fora do sink. O fallback `images.edit` SHALL ser registrado mesmo sem usage (com duração e **estimativa** por unidade/`not_available`), como uma **segunda tentativa real** (um envelope próprio — não reaproveita o envelope da chamada que falhou). O componente da tool de imagem SHALL ser somado à **estimativa** em `campaign_image` **e** `visual_signature_image`.
+
+#### Scenario: Caller já instrumentado passa a usar o sink único
+
+- **WHEN** `brand-profile/realign`, `brand-profile/generate-without-logo`, `visual-signature/generate-without-logo` ou `correction-reports.ts` executam IA
+- **THEN** eles fornecem `AiTelemetryContext`/sink ao serviço migrado
+- **AND** não chamam `resolveAiCost`/`AiCostTracker.record` manualmente para a chamada de IA (delivery markers preservados)
+
+#### Scenario: Nenhum caller produtivo fora do caminho único
+
+- **WHEN** o gate global de arquitetura varre `src/`
+- **THEN** não há `resolveAiCost`/`AiCostTracker.record` de IA fora de `src/lib/ai/**` (sink)
+- **AND** o inventário de cobertura cobre todos os callers produtivos
 
 #### Scenario: Upload de logo emite telemetria
 

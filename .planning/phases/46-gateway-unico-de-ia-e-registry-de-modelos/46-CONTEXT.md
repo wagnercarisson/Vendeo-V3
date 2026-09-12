@@ -131,11 +131,38 @@ interface AiModelConfig {
 `DECIDIDO`. `POST /api/campaign/generate` + `OpenAIProvider` legado passam a `invoke("campaign_spec", …)` com default `gpt-4o-mini`. O código **não é removido**. Migration mínima estende o CHECK `chk_generation_events_type` (`supabase/migrations/*_f46_generation_events_type.sql`) e o tipo TS `GenerationEventType` (`src/lib/visual-signature/types.ts:102`) com o literal `campaign_spec`, no padrão idempotente DROP/ADD + REVERT da F37.2. A extensão é **aditiva**; o rollback de código mantém o CHECK.
 
 ### D7 — Correção dos furos e cobertura de todos os caminhos produtivos
-`DECIDIDO`. 1. **Modelo real**: `AiCallInfo.model` vem do registry/adapter (não hardcoded) — corrige validation/review. 2. **`onCall` garantido em todos os caminhos**: `POST /logo` e `retry-brand-director` (via `analyze()`), `visual-signature/server-actions.ts` (`generateVariations`/`generateAutomatic`), `visual-signature/approve` (2 call sites) e `visual-signature/restore` (via `profiler.generate()`). 3. **Fallback `images.edit`**: adapter `images` normaliza ausência de usage (`not_available`) + duração + custo por unidade. 4. **VS image**: `invoke("visual_signature_image")` marca `imageGenerationTool: true` + `generationType`; `cost-estimator.ts` soma o componente da tool em `campaign_image` **e** `visual_signature_image` (hoje só `campaign_image` — `cost-estimator.ts:194`), com testes separados por capacidade. 5. **Cobertura total**: nenhum caminho de IA fica fora do gateway; teste de inventário garante que todo `import` de serviço de IA em rota/action produtiva emite telemetria.
+`DECIDIDO`. 1. **Modelo real**: `AiCallInfo.model` vem do registry/adapter (não hardcoded) — corrige validation/review. 2. **`onCall` garantido em todos os caminhos**: `POST /logo` e `retry-brand-director` (via `analyze()`), `visual-signature/server-actions.ts` (`generateVariations`/`generateAutomatic`), `visual-signature/approve` (2 call sites) e `visual-signature/restore` (via `profiler.generate()`). **Callers já instrumentados que passam a usar o sink único (D9):** `brand-profile/infer`, `brand-profile/realign`, `brand-profile/generate-without-logo`, `visual-signature/generate-without-logo` (buffering até `visual_signature_id`) e `correction-reports.ts` — a persistência manual (`resolveAiCost`/`AiCostTracker.record`) é removida em favor do sink. 3. **Fallback `images.edit`**: adapter `images` normaliza ausência de usage (`not_available`) + duração + custo por unidade. 4. **VS image**: `invoke("visual_signature_image")` marca `imageGenerationTool: true` + `generationType`; `cost-estimator.ts` soma o componente da tool em `campaign_image` **e** `visual_signature_image` (hoje só `campaign_image` — `cost-estimator.ts:194`), com testes separados por capacidade. 5. **Cobertura total**: nenhum caminho de IA fica fora do gateway; teste de inventário garante que todo `import` de serviço de IA em rota/action produtiva emite telemetria.
 **Semântica de custo:** a F46 garante **atribuição** (provider/modelo/etapa), **usage** correto e **fórmula estimativa** correta — não chama toda estimativa de "custo real"; mantém `costEstimationNote` enquanto não houver `provider_reported_cost_usd`.
 
 ### D8 — Env-vars finais
 `DECIDIDO`. **Ficam (chaves):** `OPENAI_API_KEY`, `GEMINI_API_KEY`. **Ficam (operacionais):** `IMAGE_GENERATION_GLOBAL_TIMEOUT_MS`, `IMAGE_GENERATION_QUALITY`, `IMAGE_GENERATION_DEBUG`, `METRICS_ENABLED`, `VENDEO_AI_FALLBACK_COST_USD`/`VENDEO_IMAGE_GENERATION_FALLBACK_COST_USD`, `VENDEO_AI_CREDIT_UNIT_USD_VALUE`. **Saem:** as 14 envs de modelo/provider (`OPENAI_MODEL`, `OPENAI_TEXT_MODEL`, `OPENAI_BRAND_DIRECTOR_MODEL`, `OPENAI_TEXT_ONLY_INFERENCE_MODEL`, `IMAGE_GENERATION_RESPONSES_MODEL`, `GPT_IMAGE_MODEL`, `IMAGE_EDIT_FALLBACK_MODEL`, `VISION_REVIEW_MODEL`, `IMAGE_VALIDATION_MODEL`, `IMAGE_PROVIDER`, `TEXT_PROVIDER`, `TEXT_FALLBACK_PROVIDER`, `GEMINI_TEXT_MODEL`, `GEMINI_MODEL`).
+
+### D9 — Caminho único de telemetria: caller → gateway → sink (correção de revisão)
+`DECIDIDO` (revisão 2026-09-12). Existe **um único caminho** de telemetria de produção:
+1. **O caller** (rota/serviço) fornece o `AiTelemetryContext` (run/store/campaign/attempt + `sink`) para `invoke(capability, request, telemetry, target)`.
+2. **O gateway** gera **exatamente um envelope** `AiCallInfo` por tentativa real (com `capability`, `protocol`, `status`, `errorType`, modelo real, usage, duração) e o entrega ao **sink**.
+3. **O sink** é o **único** responsável por persistir (mapa capability→generationType + `resolveAiCost` + `AiCostTracker.record`, best-effort/fail-open). Rotas/serviços **NÃO** chamam `resolveAiCost`/`AiCostTracker.record` manualmente para a chamada do gateway.
+
+`onCall` (quando mantido por compatibilidade de assinatura/ordenação) é apenas um **adaptador fino que recebe o envelope já produzido** pelo gateway; ele **não conduz a telemetria de produção** e **não** resolve custo nem grava por conta própria. As rotas que precisam de buffering/ordenação (VS bufferiza até `visual_signature_id`; brand-profile distingue vision×text por ordem) **injetam o próprio sink** no `AiTelemetryContext` — o comportamento atual é preservado pelo sink, não por `onCall`.
+
+### D10 — Mapa canônico capability → generationType persistido (correção de revisão)
+`DECIDIDO` (revisão 2026-09-12). `campaign_image_edit` é uma **capacidade do registry** mas **não** é um `GenerationEventType` do banco. O sink SHALL manter um **mapa canônico** `CAPABILITY_GENERATION_TYPE` cobrindo **as 11 capacidades**; em particular:
+
+| capability | generationType persistido |
+|---|---|
+| `campaign_copy` | `campaign_copy` |
+| `campaign_correction_analysis` | `campaign_correction_analysis` |
+| `brand_profile_text` | `brand_profile_text` |
+| `campaign_spec` | `campaign_spec` |
+| `campaign_input_validation` | `campaign_input_validation` |
+| `campaign_image_review` | `campaign_image_review` |
+| `brand_profile_vision` | `brand_profile_vision` |
+| `visual_signature_validation` | `visual_signature_validation` |
+| `campaign_image` | `campaign_image` |
+| `campaign_image_edit` | **`campaign_image`** (fallback de edição pertence à mesma etapa de imagem) |
+| `visual_signature_image` | `visual_signature_image` |
+
+A **capacidade e o protocolo originais** SHALL permanecer presentes no **`metadata`** do evento (`capability`, `protocol`), para que a apuração não perca a distinção entre o caminho Responses e o fallback `images.edit`. O mapa SHALL ter **teste** (11 entradas; `campaign_image_edit → campaign_image`).
 
 ### Decisões consolidadas (ex-open questions)
 1. **`api-keys.ts`**: `getApiKey(provider)` com **switch exaustivo** por provider (fail-fast em produção sem chave).
@@ -157,7 +184,7 @@ Questões de persistência (CHECK de seleção, depreciação de modelo, catálo
 ### Fonte da verdade (OpenSpec F46)
 - `openspec/changes/fase-46-gateway-unico-de-ia-e-registry-de-modelos/proposal.md` — Why / What Changes / Capabilities / Impact (13 call sites, 14 envs, 3 problemas, furos 1–7, callers produtivos sem telemetria)
 - `openspec/changes/fase-46-gateway-unico-de-ia-e-registry-de-modelos/design.md` — decisões D1–D8 + estado real verificado (linhas) + Mapping código/testes + Migration Plan + Risks + decisões consolidadas
-- `openspec/changes/fase-46-gateway-unico-de-ia-e-registry-de-modelos/tasks.md` — 9 planos (46-01..46-09, 5 ondas) com sub-tarefas; base direta dos PLAN.md
+- `openspec/changes/fase-46-gateway-unico-de-ia-e-registry-de-modelos/tasks.md` — 9 planos (46-01..46-09, 9 ondas — DAG serializado por `depends_on`) com sub-tarefas; base direta dos PLAN.md
 - `openspec/changes/fase-46-gateway-unico-de-ia-e-registry-de-modelos/specs/ai-model-registry/spec.md` — capability nova (ADDED): registry por capacidade, defaults, chaves, allowlist, `AiModelResolver`, fallback inicial, validação de alvos distintos, envs eliminadas
 - `openspec/changes/fase-46-gateway-unico-de-ia-e-registry-de-modelos/specs/ai-invocation-gateway/spec.md` — capability nova (ADDED): gateway, adapters por protocolo, contrato de resultado/usage, contrato de erro, envelope por tentativa, retry/timeout/cancelamento, comportamento preservado
 - `openspec/changes/fase-46-gateway-unico-de-ia-e-registry-de-modelos/specs/ai-cost-accounting/spec.md` — delta: telemetria call-level obrigatória pela camada única, modelo real, cobertura de todos os caminhos, views/RPC inalteradas
@@ -224,7 +251,7 @@ Questões de persistência (CHECK de seleção, depreciação de modelo, catálo
 <key_requirements>
 ## Key Requirements
 
-> Derivados diretamente do `tasks.md` (9 planos / 5 ondas). Cada PLAN.md referencia os IDs `F46-XX` correspondentes.
+> Derivados diretamente do `tasks.md` (9 planos / 9 ondas — o DAG de execução é serializado por `depends_on`, pois planos que tocam o mesmo arquivo não podem rodar em paralelo). Cada PLAN.md referencia os IDs `F46-XX` correspondentes.
 
 ### 46-01 — Trackings, baseline e registry (onda 1)
 - F46-01: Registrar F46 nos runbooks de trackings; grep-verificação de nomenclatura com zero resíduos
@@ -233,55 +260,55 @@ Questões de persistência (CHECK de seleção, depreciação de modelo, catálo
 - F46-04: Testes unitários do registry (resolução por capacidade, protocolos `responses`×`images`, default inicial de `campaign_copy`, visão com modelos distintos, allowlist, `primary ≠ fallback`)
 - F46-05: Migration de extensão do CHECK `chk_generation_events_type` + tipo TS `GenerationEventType` com `campaign_spec` (idempotente, aditiva) (D6)
 
-### 46-02 — Gateway, contrato e adapters (onda 1)
+### 46-02 — Gateway, contrato e adapters (onda 2)
 - F46-06: `api-keys.ts` com `getApiKey(provider)` (switch exaustivo; fail-fast em produção) + testes
 - F46-07: `gateway.ts` com `invoke(capability, request, telemetry, target)` — alvo explícito, adapter por protocolo, uma tentativa, usage normalizado, um envelope por tentativa, contexto obrigatório (D2/D3/D4)
 - F46-08: Adapters `chat-completions`/`responses`/`images`/`gemini` com contrato único; `AbortSignal` propagado
 - F46-09: Estender `AiCallInfo` com `capability`/`protocol`/`status`/`errorType`; testes de envelope (success/failed/timeout), usage normalizado/ausente, sem retry/fallback, signal, modelo real
 - F46-10: Contrato de erro `AiInvocationError` (`kind`/`httpStatus`/`retryable`/`code`/`message` sanitizada) preservando os gates (D4.1)
-- F46-11: Sink padrão (`resolveAiCost` + `AiCostTracker`) + interface de sink injetável; testes de buffering/ordenação e best-effort
+- F46-11: Sink padrão (`CAPABILITY_GENERATION_TYPE` + `resolveAiCost` + `AiCostTracker`) + interface de sink injetável; testes do mapa (11 capacidades, `campaign_image_edit → campaign_image`), de buffering/ordenação e de best-effort (D9/D10)
 
-### 46-03 — Migração das capacidades de TEXTO (onda 2)
+### 46-03 — Migração das capacidades de TEXTO (onda 3)
 - F46-12: Migrar `campaign_copy` (`copy-director-service.ts` + `text-provider/openai.ts`/`gemini.ts`) preservando `TextProviderResult`; fallback configurado como segunda `invoke(..., target: "fallback")` explícita
 - F46-13: Migrar `campaign_correction_analysis` (`correction-intent-service.ts`)
 - F46-14: Migrar `brand_profile_text` (`text-only-inference-service.ts`)
-- F46-15: Migrar `campaign_spec` legado (`campaign-intelligence/providers/openai.ts`); fallback `json_schema`→`json_object` como segunda `invoke` explícita
+- F46-15: Migrar `campaign_spec` legado (`campaign-intelligence/providers/openai.ts` + `campaign-intelligence/service.ts` + `app/api/campaign/generate/route.ts`) criando/encaminhando o `AiTelemetryContext` até `invoke("campaign_spec", …)`; fallback `json_schema`→`json_object` como segunda `invoke` explícita do orquestrador (D6/D9)
 - F46-16: Gates + co-migração de testes de texto (sem mudança de comportamento)
 
-### 46-04 — Migração das capacidades de VISÃO (onda 2)
+### 46-04 — Migração das capacidades de VISÃO (onda 4)
 - F46-17: Migrar `campaign_input_validation` (`input-validation-service.ts`) e `campaign_image_review` (`image-review-service.ts`) com modelo real
 - F46-18: Migrar `brand_profile_vision` (`brand-profiler.ts`, `brand-director.ts`)
 - F46-19: Migrar `visual_signature_validation` (`ai-image-generator.ts` validator)
 - F46-20: Corrigir o furo 1 (`emitMetricsEvent` deixa de hardcodar o modelo de imagem)
 - F46-21: Gates + co-migração de testes de visão (custo pelo pricing do modelo real)
 
-### 46-05 — Migração das capacidades de IMAGEM (onda 2)
+### 46-05 — Migração das capacidades de IMAGEM (onda 5)
 - F46-22: Migrar `campaign_image` (adapter `responses` com tool `image_generation`) preservando tamanho/qualidade
 - F46-23: Migrar `campaign_image_edit` como segunda `invoke` explícita (adapter `images`); corrigir o furo 3 (`not_available` + duração + estimativa por unidade); dois envelopes
 - F46-24: Migrar `visual_signature_image` + corrigir o furo 4 (`imageGenerationTool: true` + `generationType`); estender `cost-estimator.ts` para `campaign_image` **e** `visual_signature_image` (testes separados)
 - F46-25: Gates + co-migração de testes de imagem/fallback; asserir que fallback gera dois eventos
 
-### 46-06 — Cobertura de telemetria em todos os callers produtivos (onda 3)
+### 46-06 — Cobertura de telemetria em todos os callers produtivos (onda 6)
 - F46-26: `POST /api/store/[id]/logo` com contexto de telemetria (furo 2)
 - F46-27: `POST /api/store/[id]/logo/retry-brand-director` (furo 2)
 - F46-28: `visual-signature/server-actions.ts` (`generateVariations`/`generateAutomatic`) (furo 5)
 - F46-29: `visual-signature/approve` (2 call sites) e `visual-signature/restore` (furos 6/7)
-- F46-30: Teste de inventário (nenhum caminho produtivo fora da camada única)
+- F46-30: Gate global de arquitetura sobre `src/` (proíbe, **fora de `src/lib/ai/adapters/**`**: init direto de SDK, `chat.completions.create`, `responses.create`, `images.edit`, `generateContent` e leitura de env-var de modelo) + teste de inventário dos callers produtivos (nenhum caminho produtivo fora da camada única)
 - F46-31: Testes dos caminhos (evento call-level com custo, modelo real, duração; regressão)
 
-### 46-07 — Remoção das env-vars de modelo (onda 3)
+### 46-07 — Remoção das env-vars de modelo (onda 7)
 - F46-32: Grep-confirmação de que nenhum serviço lê env-var de modelo/provider; remover leituras residuais
 - F46-33: Atualizar `.env.example` (manter apenas chaves + operacionais; remover as 14)
 - F46-34: Co-migrar testes que referenciam `IMAGE_GENERATION_RESPONSES_MODEL` e `TEXT_FALLBACK_PROVIDER`
 - F46-35: Confirmar que o alvo de fallback inicial está no registry antes de remover `TEXT_FALLBACK_PROVIDER`
 - F46-36: Registrar a ordem de deploy (código lê só chaves primeiro; Vercel depois) (D5)
 
-### 46-08 — Regressão e não-mudança do contrato externo (onda 4)
+### 46-08 — Regressão e não-mudança do contrato externo (onda 8)
 - F46-37: Regressão completa (vitest total) + corrigir resíduos de fixtures/asserções
 - F46-38: typecheck/lint/build; verificar UI/form/schema público/snapshot/domínio/prompts intactos
 - F46-39: Equivalência de defaults (registry × comportamento pré-F46) e ausência de drift nos prompts
 
-### 46-09 — Verificação final (onda 5)
+### 46-09 — Verificação final (onda 9)
 - F46-40: Gerar `46-VERIFICATION.md` (goal-backward) e `46-UAT.md` (roteiro humano: campanha, VS, brand profile, copy, logo — comportamento idêntico)
 - F46-41: Confirmar 4 gates verdes + critérios da proposta (registry com `protocol` no primary/fallback, `AiModelResolver`, gateway/adapters com alvo explícito, envelope por tentativa, contrato de erro, todos os callers com telemetria, migration `campaign_spec` aditiva, estimativa correta em `campaign_image`+`visual_signature_image`, envs removidas, comportamento preservado)
 - F46-42: Atualizar registros (AGENTS.md/STATE/ROADMAP) e preparar arquivamento do change após aprovação
