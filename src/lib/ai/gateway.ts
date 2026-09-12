@@ -68,6 +68,7 @@ export class AiGateway {
         provider: selected.provider,
         model: result.model,
         usage: result.usage,
+        usageMeta: result.usageMeta,
         durationMs: Date.now() - startedAt,
         providerReportedCostUsd: result.providerReportedCostUsd,
       });

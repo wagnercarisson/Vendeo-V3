@@ -97,7 +97,7 @@ describe("DefaultAiTelemetrySink — persistência best-effort (D3/D9)", () => {
     );
   });
 
-  it("protocolo responses marca imageGenerationTool=true para o resolvedor de custo", async () => {
+  it("protocolo responses SEM usageMeta.imageGenerationTool NÃO habilita a tool (nunca inferida do protocolo)", async () => {
     const sink = new DefaultAiTelemetrySink(context, { record: mockRecord } as never);
 
     await sink.emit({
@@ -108,7 +108,79 @@ describe("DefaultAiTelemetrySink — persistência best-effort (D3/D9)", () => {
     });
 
     expect(mockResolveAiCost).toHaveBeenCalledWith(
+      expect.objectContaining({ imageGenerationTool: false, generationType: "campaign_image" }),
+    );
+  });
+
+  it("imageGenerationTool=true vem de usageMeta.imageGenerationTool", async () => {
+    const sink = new DefaultAiTelemetrySink(context, { record: mockRecord } as never);
+
+    await sink.emit({
+      ...imageEditEnvelope,
+      capability: "campaign_image",
+      protocol: "responses",
+      model: "gpt-5.5",
+      usageMeta: { imageGenerationTool: true, providerUsageSource: "responses.image_generation" },
+    });
+
+    expect(mockResolveAiCost).toHaveBeenCalledWith(
       expect.objectContaining({ imageGenerationTool: true, generationType: "campaign_image" }),
+    );
+  });
+
+  it("preserva usdBrlRateAtGeneration/creditValueBrlAtGeneration e chama onCostResolved com o mesmo CostResolution", async () => {
+    const onCostResolved = vi.fn();
+    const sink = new DefaultAiTelemetrySink(
+      {
+        ...context,
+        usdBrlRateAtGeneration: 5.18,
+        creditValueBrlAtGeneration: 1.0,
+        onCostResolved,
+      },
+      { record: mockRecord } as never,
+    );
+
+    await sink.emit(imageEditEnvelope);
+
+    const event = mockRecord.mock.calls[0][0];
+    expect(event.usdBrlRateAtGeneration).toBe(5.18);
+    expect(event.creditValueBrlAtGeneration).toBe(1.0);
+    expect(onCostResolved).toHaveBeenCalledWith(event.cost);
+    expect(event.cost).toEqual({ estimatedCostUsd: 0.04, costSource: "pricing_table" });
+  });
+
+  it("inclui usageMeta e componentes da fórmula no metadata do evento", async () => {
+    mockResolveAiCost.mockResolvedValue({
+      estimatedCostUsd: 0.065,
+      costSource: "pricing_table",
+      costFormulaVersion: "responses_image_generation_v2",
+      imageToolComponentUsd: 0.065,
+      costEstimationNote: "provisional_image_tool_unit_cost_until_provider_reconciliation",
+    });
+    const sink = new DefaultAiTelemetrySink(context, { record: mockRecord } as never);
+
+    await sink.emit({
+      ...imageEditEnvelope,
+      capability: "campaign_image",
+      protocol: "responses",
+      model: "gpt-5.5",
+      usageMeta: {
+        imageGenerationTool: true,
+        providerUsageSource: "responses.image_generation",
+        responsesModel: "gpt-5.5",
+      },
+    });
+
+    const event = mockRecord.mock.calls[0][0];
+    expect(event.metadata).toEqual(
+      expect.objectContaining({
+        capability: "campaign_image",
+        protocol: "responses",
+        image_generation_tool: true,
+        responses_model: "gpt-5.5",
+        cost_formula_version: "responses_image_generation_v2",
+        image_tool_component_usd: 0.065,
+      }),
     );
   });
 

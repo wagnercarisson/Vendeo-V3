@@ -151,6 +151,24 @@ describe("AiGateway — envelope por tentativa real (D3)", () => {
     expect(envelope.errorType).toBeUndefined();
   });
 
+  it("encaminha usageMeta do resultado para o envelope (imageGenerationTool real)", async () => {
+    const resultWithMeta: AiInvocationResult = {
+      ...successResult,
+      usageMeta: { imageGenerationTool: true, providerUsageSource: "responses.image_generation" },
+    };
+    const { adapter } = makeAdapter("chat-completions", async () => resultWithMeta);
+    const gateway = new AiGateway(makeResolver(), makeRegistry([adapter]));
+    const sink = new RecordingSink();
+
+    await gateway.invoke("campaign_copy", request, makeTelemetry(sink));
+
+    expect(sink.envelopes).toHaveLength(1);
+    expect(sink.envelopes[0].usageMeta).toEqual({
+      imageGenerationTool: true,
+      providerUsageSource: "responses.image_generation",
+    });
+  });
+
   it("falha emite um envelope failed com errorType normalizado e re-lança AiInvocationError", async () => {
     const { adapter, invoke } = makeAdapter("chat-completions", async () => {
       throw Object.assign(new Error("Too many requests"), { status: 429 });

@@ -104,6 +104,12 @@ export interface AiCallEnvelope extends AiCallInfo {
   protocol: AiProtocol;
   status: "success" | "failed" | "timeout";
   errorType?: string;
+  /**
+   * Metadados de usage do provider (auditoria/calibração). `imageGenerationTool`
+   * é a fonte da verdade para o componente da tool no resolvedor de custo —
+   * NUNCA inferido apenas do protocolo `responses` (correção de revisão 46-02).
+   */
+  usageMeta?: AiInvocationUsageMeta;
 }
 
 /** Destino de emissão de envelopes (sink injetável — o gateway não persiste). */
