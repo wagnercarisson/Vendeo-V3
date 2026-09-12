@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: â€” LanÃ§amento Externo Controlado â—†
-current_phase: 37
-status: in_progress
-last_updated: 2026-09-10T00:00:00.000Z
+current_phase: 46
+status: planning
+last_updated: 2026-09-12T00:00:00.000Z
 progress:
   total_phases: 6
   completed_phases: 6
@@ -17,8 +17,28 @@ stopped_at: "F37 (fatias 37.1+37.2) CONCLUIDA - 37.1 (15/15 plans, 2379 testes, 
 # Project State
 
 **Last updated:** 2026-09-10 — F45 concluída e incorporada à branch da F37; F37.1 concluída; **F37.2 realinhada (Correção Única por Não Conformidade) CONCLUÍDA** (19/19 plans, 8 waves, 264 files / 2578 testes, 4 gates verdes, UAT 9/9 PASS, migrations `20260906000001/2/3` no remoto, fix pós-UAT `01a7021b`; fonte `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/`); **37.3 eliminada** (consolidada na 37.2).
-**Current phase:** 37
-**Last activity:** 2026-09-05 - Merge da main/F45 na branch F37; F45 concluída (8/8, UAT 7/7) e F37.1 concluída (15/15, UAT 6/6)
+**Current phase:** 46
+**Last activity:** 2026-09-12 - Planejamento da F46 (Gateway Único de IA e Registry de Modelos, Change A): CONTEXT.md + 9 PLAN.md (46-01..46-09) + registro nos trackings.
+
+### Phase 46 — Gateway Único de IA e Registry de Modelos ◆ Em planejamento (0/9 plans / 5 waves)
+
+**Goal:** Concentrar as chamadas de IA (hoje ~13 call sites / ~10 serviços com client próprio e 14 env-vars de modelo) em uma camada única de execução + telemetria, preservando o comportamento atual. Registry de modelos em código por capacidade (`src/lib/ai/model-registry.ts`, `AiModelTarget { provider, model, protocol }` no primary e no fallback; 11 capacidades; defaults idênticos) + interface `AiModelResolver` (`src/lib/ai/model-resolver.ts`) + AI Gateway (`src/lib/ai/gateway.ts`, `invoke(capability, request, telemetry, target)` — alvo explícito, adapter por protocolo, uma tentativa, sem fallback automático) + adapters (`chat-completions`/`responses`/`images`/`gemini`) + `api-keys.ts` + telemetria obrigatória (`AiCallInfo` estendido com `capability`/`protocol`/`status`/`errorType`; persistência best-effort) + remoção das 14 envs de modelo/provider + legado `campaign-intelligence` como `campaign_spec` (migration aditiva do CHECK `chk_generation_events_type`). **Sem mudança de UI/form/contrato HTTP/schema/snapshot/domínio/prompts.** Change B (catálogo/seleção admin) = F47.
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 46-01 | 1 | ○ | Trackings + baseline/inventário das 11 capacidades + registry (`AiModelConfig` com protocol) + migration CHECK `campaign_spec` |
+| 46-02 | 1 | ○ | api-keys + gateway + adapters por protocolo + `AiCallInfo` estendido + contrato de erro + sink injetável |
+| 46-03 | 2 | ○ | Migração das capacidades de TEXTO (copy, correção, brand_profile_text, campaign_spec legado) |
+| 46-04 | 2 | ○ | Migração das capacidades de VISÃO + furo 1 (modelo real em validation/review) |
+| 46-05 | 2 | ○ | Migração das capacidades de IMAGEM + furos 3/4 + cost-estimator (tool em campaign_image e visual_signature_image) |
+| 46-06 | 3 | ○ | Cobertura de telemetria nos callers produtivos sem onCall + teste de inventário |
+| 46-07 | 3 | ○ | Remoção das env-vars de modelo/provider + co-migração de testes |
+| 46-08 | 4 | ○ | Regressão completa + não-mudança do contrato externo + equivalência de defaults |
+| 46-09 | 5 | ○ | Verificação final (VERIFICATION.md + UAT.md + registros/arquivamento) |
+
+**Fonte da verdade:** `openspec/changes/fase-46-gateway-unico-de-ia-e-registry-de-modelos/`
+**Context:** `.planning/phases/46-gateway-unico-de-ia-e-registry-de-modelos/46-CONTEXT.md`
+**Sucessora:** F47 (Catálogo e Seleção de Modelos Admin — Change B)
 
 ### Phase 37 â€” RevisÃ£o e AprovaÃ§Ã£o da Arte ✅ Fatia 37.1 Concluída (15/15 plans / 8 waves)
 

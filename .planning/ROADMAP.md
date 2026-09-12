@@ -3,7 +3,7 @@
 ## Milestone v1.5 — Lançamento Externo Controlado ◆
 
 **18 phases** | **177 requirements mapped** | All covered ✓
-**Phase numbering:** Continues from v1.4 (Phase 22). F37 = Revisão e Aprovação da Arte (v1.5, concluída em fatias 37.1/37.2; 37.1 concluída; **37.2 realinhada = Correção Única por Não Conformidade** CONCLUÍDA (19/19 plans, 4 gates verdes, UAT 9/9); **37.3 eliminada** — consolidada na 37.2), F38 = Tabela de Custos por Operação, F39 = Brief Estruturado de Campanha, F40 = Campos Comerciais e Avisos do Brief, F41 = Mídia de Campanha Mobile, F42 = Signup Controlado e Elegibilidade Freemium, F43 = Revisão do Brief Pré-Geração e F45 = Briefing Contextual do Diretor de Arte (concluída em 2026-09-05). F44 = Temas de Campanha permanece fora da numeração; Monetização pública / Stripe permanece diferida e fora da numeração. Fonte da F37.1: `openspec/changes/fase-37-1-approval-gate-candidata-unica/`; fonte da F37.2: `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/`.
+**Phase numbering:** Continues from v1.4 (Phase 22). F37 = Revisão e Aprovação da Arte (v1.5, concluída em fatias 37.1/37.2; 37.1 concluída; **37.2 realinhada = Correção Única por Não Conformidade** CONCLUÍDA (19/19 plans, 4 gates verdes, UAT 9/9); **37.3 eliminada** — consolidada na 37.2), F38 = Tabela de Custos por Operação, F39 = Brief Estruturado de Campanha, F40 = Campos Comerciais e Avisos do Brief, F41 = Mídia de Campanha Mobile, F42 = Signup Controlado e Elegibilidade Freemium, F43 = Revisão do Brief Pré-Geração e F45 = Briefing Contextual do Diretor de Arte (concluída em 2026-09-05), **F46 = Gateway Único de IA e Registry de Modelos (v1.5, Change A — em planejamento)** e **F47 = Catálogo e Seleção de Modelos Admin (v1.5, Change B — sucessora da F46)**. F44 = Temas de Campanha permanece fora da numeração; Monetização pública / Stripe permanece diferida e fora da numeração. Fonte da F37.1: `openspec/changes/fase-37-1-approval-gate-candidata-unica/`; fonte da F37.2: `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/`; fonte da F46: `openspec/changes/fase-46-gateway-unico-de-ia-e-registry-de-modelos/`.
 
 ---
 
@@ -42,6 +42,7 @@
 | 42 | ✅ Signup Controlado e Elegibilidade Freemium (v1.5) | 20/20 | ✅ Complete | 2026-08-21 |
 | 43 | ✅ Revisão do Brief Pré-Geração (v1.5) | 15/15 | ✅ Complete | 2026-08-21 |
 | 45 | ✅ Briefing Contextual do Diretor de Arte (v1.5) | 8/8 | ✅ Complete | 2026-09-05 |
+| 46 | ◆ Gateway Único de IA e Registry de Modelos (v1.5) | 0/9 | ◆ Em planejamento | — |
 | — | Monetização pública / Stripe (iniciativa diferida, v1.7+) | — | Fora da numeração | — |
 
 ---
@@ -950,6 +951,48 @@ Plans:
 
 ---
 
+### Phase 46: Gateway Único de IA e Registry de Modelos
+
+**Goal:** Reorganizar e concentrar as chamadas de IA — hoje pulverizadas em ~13 call sites / ~10 serviços, cada um instanciando seu próprio client e escolhendo o modelo por 14 env-vars — em uma **camada única de execução e telemetria**, preservando integralmente o comportamento atual. Entrega: **registry de modelos em código** por capacidade (`src/lib/ai/model-registry.ts`) com `AiModelTarget = { provider, model, protocol }` no primary **e** no fallback (defaults idênticos aos atuais); interface **`AiModelResolver`** (`src/lib/ai/model-resolver.ts`) como seam para o Change B; **AI Gateway** (`src/lib/ai/gateway.ts`) com `invoke(capability, request, telemetry, target)` — alvo explícito do orquestrador, adapter por protocolo, **uma tentativa**, sem fallback automático; **adapters** `chat-completions`/`responses`/`images`/`gemini`; **`api-keys.ts`** (chave por provider, fail-fast); **telemetria obrigatória e correta** (um envelope `AiCallInfo` estendido por tentativa real; `capability`/`protocol`/`status`/`errorType`; persistência best-effort) corrigindo os 7 furos; **remoção das 14 env-vars de modelo/provider**; e o legado `campaign-intelligence` como capacidade **`campaign_spec`** via gateway (migration mínima estende o CHECK `chk_generation_events_type` e o tipo TS com o literal, aditiva). **Sem mudança de UI/form/contrato HTTP/schema público/snapshot/domínio/prompts.** A **seleção administrativa de modelos** (catálogo + persistência + tela) é o **Change B (F47)**, que depende desta fundação. **Numeração:** F46 = Gateway Único de IA e Registry de Modelos (v1.5); F47 = Catálogo e Seleção de Modelos Admin (Change B); **F44 = Temas de Campanha permanece fora da numeração**; Stripe/Monetização Pública fora da numeração (v1.7+).
+
+**Requirements:** derivados dos 6 specs OpenSpec (ai-model-registry — nova; ai-invocation-gateway — nova; ai-cost-accounting — delta; ai-image-generation — delta; text-provider — delta; ai-campaign-intelligence — delta)
+
+**Success criteria:**
+
+1. Registry em código (`src/lib/ai/model-registry.ts`) com as 11 capacidades → `AiModelConfig { capability, segment, primary, fallback? }`; `protocol` obrigatório no primary **e** no fallback (`chat-completions` | `responses` | `images` | `gemini`); defaults idênticos aos atuais (gpt-4o, gpt-4o-mini, gpt-5.5, gpt-image-2, gemini-3.1-flash-lite no fallback de `campaign_copy`); allowlist validada por capacidade+provider+modelo+protocolo; `primary ≠ fallback` rejeitado
+2. Interface `AiModelResolver` (`resolve(capability)` + `listCapabilities()`) — o gateway depende **apenas** da interface; registry é a implementação inicial; substituível sem refazer o gateway
+3. AI Gateway `invoke(capability, request, telemetry, target = "primary")`: seleciona o alvo explícito, adapter pelo `protocol` do alvo, executa **uma tentativa** (sem retry/fallback automático), normaliza `usage`, emite **um envelope por tentativa real** via sink injetável; contexto de telemetria obrigatório em produção (sink no-op só em testes com adapter falso)
+4. Adapters `chat-completions`/`responses`/`images`/`gemini` com contrato único de request/result/usage; `AbortSignal` propagado; adapter não contém regra de negócio
+5. Contrato de erro `AiInvocationError` (`kind`/`httpStatus`/`retryable`/`code`/`message` sanitizada) preservando os gates: fallback de modelo por `retryable===true` (rate_limit/timeout/network/5xx/MalformedResponseError), `images.edit` só por `capability` + primary, `json_object` só por `capability` de `response_format`/`json_schema`, auth/safety não acionam fallback
+6. Telemetria obrigatória e correta: `AiCallInfo` estendido com `capability`/`protocol`/`status`/`errorType`; modelo real em validation/review (corrige furo 1); fallback `images.edit` registrado sem usage (`not_available` + duração + custo por unidade); componente da tool somado em `campaign_image` **e** `visual_signature_image` (furo 4); views/RPC de apuração inalteradas
+7. Migração incremental das 11 capacidades (texto, visão, imagem) preservando `TextProviderResult`, prompts, parâmetros, retry/backoff/timeout, structured outputs e o alvo de fallback configurado (default inicial Gemini) como segunda `invoke` explícita do orquestrador
+8. Cobertura de telemetria em **todos** os callers produtivos hoje sem `onCall`: `POST /logo`, `retry-brand-director`, `server-actions.ts` (`generateVariations`/`generateAutomatic`), `visual-signature/approve` (2 call sites) e `restore`; teste de inventário garante que nenhum caminho produtivo fica fora da camada única
+9. Legado `campaign-intelligence` como `campaign_spec` (default `gpt-4o-mini`) via gateway; migration idempotente/aditiva estende `chk_generation_events_type` + `GenerationEventType` com `campaign_spec`; rollback de código mantém o CHECK
+10. Remoção das 14 env-vars de modelo/provider do runtime e `.env.example` (restam chaves + operacionais); ordem de deploy (código lê só chaves → remoção na Vercel); `npx vitest run`, `npm run typecheck`, `npm run lint`, `npm run build` — zero erros; regressão co-migrada; UAT humano (campanha, VS, brand profile, copy, logo — comportamento idêntico ao atual)
+
+**Dependencies:** F38/F38.1/F38.2.1 (custos de IA — `AiCostTracker`, `resolveAiCost`, `cost-estimator`, snapshot econômico), F23/F25 (Text Provider + Copy Director + fallback Gemini; pipeline), F31.x (prompts/revisor — consumidores de visão), F41 (multi-imagem — fallback `images.edit`). Precedente de migration: F37.2 `20260906000003_f37_2_generation_events_type.sql`. **Antecede** a F47 (Catálogo e Seleção de Modelos Admin — Change B). **Sem** UI/form/rota/schema/snapshot/domínio/prompts, **sem** novas tabelas (apenas extensão do CHECK de telemetria), **sem** remover `campaign-intelligence`, **sem** streaming.
+
+**Source of truth:** `openspec/changes/fase-46-gateway-unico-de-ia-e-registry-de-modelos/`
+
+**Plans:** 0/9 plans complete
+
+**Waves:** 5 waves — 46-01/46-02:1, 46-03/46-04/46-05:2, 46-06/46-07:3, 46-08:4, 46-09:5
+
+```
+Plans:
+- [ ] 46-01-PLAN.md — Trackings + baseline/inventário das 11 capacidades + registry (`AiModelConfig` com protocol) + migration CHECK `campaign_spec` (Wave 1)
+- [ ] 46-02-PLAN.md — api-keys + gateway (`invoke`/alvo explícito/uma tentativa) + adapters por protocolo + `AiCallInfo` estendido + contrato de erro + sink injetável (Wave 1)
+- [ ] 46-03-PLAN.md — Migração das capacidades de TEXTO (copy, correção, brand_profile_text, campaign_spec legado) (Wave 2)
+- [ ] 46-04-PLAN.md — Migração das capacidades de VISÃO (input_validation, image_review, brand_profile_vision, VS validation) + furo 1 (Wave 2)
+- [ ] 46-05-PLAN.md — Migração das capacidades de IMAGEM (campaign_image, campaign_image_edit, visual_signature_image) + furos 3/4 + cost-estimator (Wave 2)
+- [ ] 46-06-PLAN.md — Cobertura de telemetria nos callers produtivos sem onCall (logo, retry-brand-director, server-actions, approve, restore) + teste de inventário (Wave 3)
+- [ ] 46-07-PLAN.md — Remoção das env-vars de modelo/provider do runtime e `.env.example` + co-migração de testes (Wave 3)
+- [ ] 46-08-PLAN.md — Regressão completa + não-mudança do contrato externo + equivalência de defaults (Wave 4)
+- [ ] 46-09-PLAN.md — Verificação final (VERIFICATION.md + UAT.md + registros/arquivamento) (Wave 5)
+```
+
+---
+
 ## Dependency Graph
 
 ```
@@ -1022,16 +1065,22 @@ Phase 39 (Brief Estruturado de Campanha — v1.5)
                                         Phase 43 (Revisão do Brief Pré-Geração — v1.5) ✅ concluída (15/15, UAT 9/9 PASS)
                                                  │
                                                  ▼
-                                         Phase 45 (Briefing Contextual do Diretor de Arte — v1.5) ✅ concluída (8/8, UAT comparativo 7/7 PASS + artes reais aprovadas)
-                                                 │
-                                                 ▼
-                                        Phase 37 (Revisão e Aprovação da Arte — v1.5)
-                                                 │
-                                                 ▼
-                                        [catálogo] → Monetização pública / Stripe (diferida, v1.7+ — fora da numeração)
+                                          Phase 45 (Briefing Contextual do Diretor de Arte — v1.5) ✅ concluída (8/8, UAT comparativo 7/7 PASS + artes reais aprovadas)
+                                                  │
+                                                  ▼
+                                         Phase 46 (Gateway Único de IA e Registry de Modelos — v1.5, Change A) ◆ em planejamento
+                                                  │
+                                                  ▼
+                                         Phase 47 (Catálogo e Seleção de Modelos Admin — v1.5, Change B) ○ pendente (consome o seam AiModelResolver)
+                                                  │
+                                                  ▼
+                                         Phase 37 (Revisão e Aprovação da Arte — v1.5)
+                                                  │
+                                                  ▼
+                                         Monetização pública / Stripe (diferida, v1.7+ — fora da numeração)
 ```
 
-> **Fora da numeração:** F44 = Temas de Campanha (adicionada pelo runbook da própria F44 — esta fase não cria a linha F44); Monetização pública / Stripe (iniciativa diferida, v1.7+).
+> **Fora da numeração:** F44 = Temas de Campanha (adicionada pelo runbook da própria F44 — esta fase não cria a linha F44); Monetização pública / Stripe (iniciativa diferida, v1.7+). **F47 = Catálogo e Seleção de Modelos Admin (Change B)** é a sucessora numerada da F46.
 
 ---
 
