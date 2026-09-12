@@ -20,14 +20,14 @@ progress:
 **Current phase:** 46
 **Last activity:** 2026-09-12
 
-### Phase 46 — Gateway Único de IA e Registry de Modelos ◆ Em execução (1/9 plans / 9 waves)
+### Phase 46 — Gateway Único de IA e Registry de Modelos ◆ Em execução (2/9 plans / 9 waves)
 
 **Goal:** Concentrar as chamadas de IA (hoje ~13 call sites / ~10 serviços com client próprio e 14 env-vars de modelo) em uma camada única de execução + telemetria, preservando o comportamento atual. Registry de modelos em código por capacidade (`src/lib/ai/model-registry.ts`, `AiModelTarget { provider, model, protocol }` no primary e no fallback; 11 capacidades; defaults idênticos) + interface `AiModelResolver` (`src/lib/ai/model-resolver.ts`) + AI Gateway (`src/lib/ai/gateway.ts`, `invoke(capability, request, telemetry, target)` — alvo explícito, adapter por protocolo, uma tentativa, sem fallback automático) + adapters (`chat-completions`/`responses`/`images`/`gemini`) + `api-keys.ts` + telemetria obrigatória (`AiCallEnvelope` (`extends AiCallInfo`; legado intacto) com `capability`/`protocol`/`status`/`errorType?`; persistência best-effort) + remoção das 14 envs de modelo/provider + legado `campaign-intelligence` como `campaign_spec` (migration aditiva do CHECK `chk_generation_events_type`). **Sem mudança de UI/form/contrato HTTP/schema/snapshot/domínio/prompts.** Change B (catálogo/seleção admin) = F47.
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
 | 46-01 | 1 | ✅ | Trackings + baseline/inventário das 11 capacidades + registry (`AiModelConfig` com protocol) + migration CHECK `campaign_spec` |
-| 46-02 | 2 | ○ | api-keys + gateway + adapters por protocolo + `AiCallEnvelope` + contrato de erro + sink + mapa capability→generationType |
+| 46-02 | 2 | ✅ | api-keys + gateway + adapters por protocolo + `AiCallEnvelope` + contrato de erro + sink + mapa capability→generationType |
 | 46-03 | 3 | ○ | Migração das capacidades de TEXTO (copy, correção, brand_profile_text, campaign_spec legado via provider+service+rota) + proprietário único + remoção da persistência manual |
 | 46-04 | 4 | ○ | Migração das capacidades de VISÃO + furo 1 (modelo real em validation/review) + remoção da persistência manual |
 | 46-05 | 5 | ○ | Migração das capacidades de IMAGEM + furos 3/4 + cost-estimator (tool em campaign_image e visual_signature_image) |

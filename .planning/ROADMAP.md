@@ -987,7 +987,7 @@ Plans:
 
 **Source of truth:** `openspec/changes/fase-46-gateway-unico-de-ia-e-registry-de-modelos/`
 
-**Plans:** 1/9 plans complete
+**Plans:** 2/9 plans complete
 **Waves:** 9 waves (DAG serializado por `depends_on`, legível pela ferramenta) — 46-01:1, 46-02:2 (dep 46-01), 46-03:3 (dep 46-02), 46-04:4 (dep 46-03), 46-05:5 (dep 46-04), 46-06:6 (dep 46-05), 46-07:7 (dep 46-06), 46-08:8 (dep 46-07), 46-09:9 (dep 46-08). A serialização elimina conflitos de arquivos compartilhados (`generate-image/route.ts`, `server-actions.ts`) e a dependência do gate de env-vars.
 
 ```
@@ -998,7 +998,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 46-02-PLAN.md — api-keys + gateway (`invoke`/alvo explícito/uma tentativa) + adapters por protocolo + `AiCallEnvelope` (`extends AiCallInfo`) + contrato de erro + sink + mapa capability→generationType (Wave 2)
+- [x] 46-02-PLAN.md — api-keys + gateway (`invoke`/alvo explícito/uma tentativa) + adapters por protocolo + `AiCallEnvelope` (`extends AiCallInfo`) + contrato de erro + sink + mapa capability→generationType (Wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
