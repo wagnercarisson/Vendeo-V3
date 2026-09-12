@@ -5,8 +5,8 @@ import { buildStoreProfileInputSnapshot } from '@/lib/snapshot';
 import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
 import { requireSameOrigin } from '@/lib/auth/csrf';
 import { apiHandler } from '@/lib/auth/api-handler';
-import { AiCostTracker, resolveAiCost } from '@/lib/ai-cost';
-import type { AiCallInfo } from '@/lib/ai-cost/types';
+import { AiCostTracker } from '@/lib/ai-cost';
+import { createDefaultTelemetryContext } from '@/lib/ai';
 import { EconomicParameterService } from '@/lib/economic/economic-parameter-service';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -68,11 +68,9 @@ export const POST = apiHandler(async (
     const startTime = Date.now();
 
     // ── F38.1 (D1/D7): run context da entrega brand profile ──────────────
-    // Antes deste plano a rota infer NÃO emitia NENHUM evento de custo (D11 —
-    // furo coberto). Cada request = um run; call brand_profile_text + delivery
-    // brand_profile_without_logo (custo NULL + flag de pipeline — D1/D6).
+    // F46-03 (D9): o sink padrão é o ÚNICO ponto de persistência call-level de
+    // brand_profile_text (sem resolveAiCost/recordCall manuais na rota).
     const run = new AiCostTracker().startRun("brand_profile");
-    const pendingCalls: AiCallInfo[] = [];
 
     // F38.2.1 (D3): snapshot econômico resolvido UMA vez no início do run e
     // propagado aos eventos (call-level + delivery). APENAS valores — o tracker
@@ -98,6 +96,16 @@ export const POST = apiHandler(async (
       );
     }
 
+    const telemetry = createDefaultTelemetryContext({
+      operationRunId: run.operationRunId,
+      operationRunType: "brand_profile",
+      traceId: run.traceId,
+      storeId: id,
+      attemptNumber: 0,
+      usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
+      creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
+    });
+
     const result = await service.infer({
       storeName: store.name,
       segment: store.segment,
@@ -110,43 +118,7 @@ export const POST = apiHandler(async (
       state: store.state ?? null,
       userPrimaryColor: body.userChosenColors?.[0] ?? undefined,
       userAccentColor: body.userChosenColors?.[1] ?? undefined,
-    }, timeoutMs, (info: AiCallInfo) => {
-      pendingCalls.push(info);
-    });
-
-    // F38.1 (D7/D11): call brand_profile_text com custo REAL (resolveAiCost)
-    for (const info of pendingCalls) {
-      try {
-        const cost = await resolveAiCost({
-          provider: info.provider,
-          model: info.model,
-          usage: info.usage,
-          providerReportedCostUsd: info.providerReportedCostUsd,
-        });
-        await new AiCostTracker().record({
-          operationRunId: run.operationRunId,
-          operationRunType: "brand_profile",
-          traceId: run.traceId,
-          storeId: id,
-          generationType: "brand_profile_text",
-          provider: info.provider,
-          model: info.model,
-          attemptNumber: 0,
-          durationMs: info.durationMs,
-          status: "success",
-          tokens: info.usage,
-          cost,
-          // F38.2.1 (D3): snapshot do run propagado (APENAS valores)
-          usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
-          creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
-        });
-      } catch (err) {
-        console.error(
-          "[brand-profile/infer] recordCall failed (best-effort):",
-          err instanceof Error ? err.message : String(err)
-        );
-      }
-    }
+    }, timeoutMs, undefined, telemetry);
 
     // Delivery marker: text-only não usa logo → brand_profile_without_logo
     // SEM cost/tokens + flag de pipeline (D1/D6 — anti-dupla-contagem)

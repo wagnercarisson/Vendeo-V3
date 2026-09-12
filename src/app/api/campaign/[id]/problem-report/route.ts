@@ -9,6 +9,8 @@ import { getCampaign } from "@/lib/campaign/persistence";
 import { isCampaignApprovalEnabled } from "@/lib/feature-flags/feature-flag-service";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { CorrectionIntentService } from "@/lib/campaign/correction-intent-service";
+import { AiCostTracker } from "@/lib/ai-cost";
+import { createDefaultTelemetryContext } from "@/lib/ai";
 import {
   completeCorrectionAnalysis,
   generateCorrectionV2,
@@ -163,14 +165,29 @@ export const POST = apiHandler(
     const attemptNumber = (beginData as { attempt_number: number }).attempt_number;
 
     // ── análise textual (NÃO lê a imagem; tolera erros de escrita) ──
+    // F46-03 (D9): o caller fornece o AiTelemetryContext (run + sink padrão); a
+    // persistência call-level de campaign_correction_analysis é do sink — não há
+    // mais recordCall manual no serviço.
+    const operationRunId = campaign.operation_run_id ?? crypto.randomUUID();
+    const run = new AiCostTracker().startRun("campaign_delivery");
+    const telemetry = createDefaultTelemetryContext({
+      operationRunId,
+      operationRunType: "campaign_delivery",
+      traceId: run.traceId,
+      storeId: campaign.store_id,
+      userId: user.userId,
+      campaignId: id,
+      attemptNumber,
+    });
+
     const intentService = new CorrectionIntentService();
     const analysis = await intentService.analyzeReport(text, {
-      operationRunId: campaign.operation_run_id ?? crypto.randomUUID(),
+      operationRunId,
       campaignId: id,
       storeId: campaign.store_id,
       userId: user.userId,
       attemptNumber,
-    });
+    }, telemetry);
 
     // ── conclusão via RPC complete_campaign_correction_analysis (analyzing +
     // lease + submissão mais recente), pelo helper completeCorrectionAnalysis ──

@@ -1,7 +1,17 @@
 import { PromptLoader } from '@/lib/image-generation/prompt-loader';
 import type { TextOnlyInferenceInput, TextOnlyInferenceResult } from './types';
-import OpenAI from 'openai';
-import type { AiCallInfo, TokenUsage } from '@/lib/ai-cost/types';
+import type { AiCallInfo } from '@/lib/ai-cost/types';
+import { defaultAiGateway, withOnCallTelemetry } from '@/lib/ai';
+import type {
+  AiInvocationMessage,
+  AiInvocationRequest,
+  AiInvoker,
+  AiTelemetryContext,
+} from '@/lib/ai';
+import { AiInvocationError } from '@/lib/ai';
+
+/** Espelha o default do registry para `brand_profile_text` (F46 D1). */
+const DEFAULT_MODEL = 'gpt-4o';
 
 export class BrandTextOnlyInferenceError extends Error {
   public readonly metadata: { provider: string; model: string; elapsedMs: number; errorType: string };
@@ -12,41 +22,28 @@ export class BrandTextOnlyInferenceError extends Error {
   }
 }
 
+/**
+ * Inferência de identidade visual apenas por texto (F46-03).
+ *
+ * Executa via camada única (`invoke("brand_profile_text")`) — NÃO instancia
+ * `new OpenAI()` nem lê env-var de modelo. Exige um `AiTelemetryContext`
+ * injetado pelo caller (a persistência é do sink).
+ */
 export class BrandTextOnlyInferenceService {
   private promptLoader = new PromptLoader();
-  private openai: OpenAI;
+  private readonly invoker: AiInvoker;
 
-  constructor() {
-    this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  }
-
-  /**
-   * Mapeia o payload de usage do chat.completions (OpenAI) para TokenUsage
-   * normalizado (D12). Defensivo contra drift de shape do SDK.
-   */
-  private mapChatUsage(usage: unknown): TokenUsage | undefined {
-    if (!usage || typeof usage !== 'object') return undefined;
-    const u = usage as Record<string, unknown>;
-    const tokens: TokenUsage = {};
-    if (typeof u.prompt_tokens === 'number') tokens.promptTokens = u.prompt_tokens;
-    if (typeof u.completion_tokens === 'number') tokens.completionTokens = u.completion_tokens;
-    if (typeof u.total_tokens === 'number') tokens.totalTokens = u.total_tokens;
-    const promptDetails = u.prompt_tokens_details as Record<string, unknown> | undefined;
-    if (promptDetails && typeof promptDetails.cached_tokens === 'number') {
-      tokens.cachedInputTokens = promptDetails.cached_tokens;
-    }
-    const completionDetails = u.completion_tokens_details as Record<string, unknown> | undefined;
-    if (completionDetails && typeof completionDetails.image_tokens === 'number') {
-      tokens.imageTokens = completionDetails.image_tokens;
-    }
-    return tokens;
+  constructor(invoker: AiInvoker = defaultAiGateway) {
+    this.invoker = invoker;
   }
 
   async infer(
     input: TextOnlyInferenceInput,
     timeoutMs: number = 30000,
-    /** F38.1 (D7/D11): callback best-effort com dados da chamada (brand_profile_text). Opcional — nunca bloqueia. */
+    /** F38.1 (D7/D11): callback best-effort com o envelope já produzido (brand_profile_text). Opcional — nunca bloqueia. */
     onCall?: (info: AiCallInfo) => void | Promise<void>,
+    /** F46-03 (D9): contexto de telemetria do caller (run/sink obrigatório). */
+    telemetry?: AiTelemetryContext,
   ): Promise<TextOnlyInferenceResult> {
     const startTime = Date.now();
 
@@ -54,7 +51,7 @@ export class BrandTextOnlyInferenceService {
       if (process.env.NODE_ENV === 'production') {
         throw new BrandTextOnlyInferenceError('OPENAI_API_KEY não configurada', {
           provider: 'openai',
-          model: process.env.OPENAI_TEXT_ONLY_INFERENCE_MODEL ?? 'gpt-4o',
+          model: DEFAULT_MODEL,
           elapsedMs: 0,
           errorType: 'missing_api_key',
         });
@@ -72,6 +69,13 @@ export class BrandTextOnlyInferenceService {
         inferred_accent_color: '#CC0000',
         confidence_score: 0.1,
       };
+    }
+
+    if (!telemetry) {
+      throw new BrandTextOnlyInferenceError(
+        '[BrandTextOnlyInferenceService] AiTelemetryContext é obrigatório para invoke("brand_profile_text")',
+        { provider: 'openai', model: DEFAULT_MODEL, elapsedMs: 0, errorType: 'missing_telemetry' },
+      );
     }
 
     try {
@@ -103,48 +107,36 @@ export class BrandTextOnlyInferenceService {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-      let response;
+      const userContent =
+        'Gere a identidade visual para esta loja com base nos dados cadastrais fornecidos.';
+      const messages: AiInvocationMessage[] = [
+        { role: 'system', content: prompt },
+        { role: 'user', content: userContent },
+      ];
+      const request: AiInvocationRequest = {
+        prompt: userContent,
+        messages,
+        responseFormat: 'json_object',
+        maxTokens: 2000,
+        signal: controller.signal,
+      };
+
+      let result;
       try {
-        response = await this.openai.chat.completions.create(
-          {
-            model: process.env.OPENAI_TEXT_ONLY_INFERENCE_MODEL ?? 'gpt-4o',
-            messages: [
-              { role: 'system', content: prompt },
-              { role: 'user', content: 'Gere a identidade visual para esta loja com base nos dados cadastrais fornecidos.' },
-            ],
-            response_format: { type: 'json_object' },
-            max_tokens: 2000,
-          },
-          { signal: controller.signal },
+        result = await this.invoker.invoke(
+          'brand_profile_text',
+          request,
+          withOnCallTelemetry(telemetry, onCall),
         );
       } finally {
         clearTimeout(timeoutId);
       }
 
-      const raw = JSON.parse(response.choices[0]?.message?.content ?? '{}');
-      const elapsedMs = Date.now() - startTime;
-
-      // F38.1 (D7/D11): telemetria best-effort da chamada (brand_profile_text
-      // mapeado na rota). Nunca lança — a inferência não é bloqueada por
-      // telemetria (D7).
-      try {
-        await onCall?.({
-          provider: 'openai',
-          model: process.env.OPENAI_TEXT_ONLY_INFERENCE_MODEL ?? 'gpt-4o',
-          usage: this.mapChatUsage(response.usage),
-          durationMs: elapsedMs,
-        });
-      } catch (err) {
-        console.error(
-          `[BrandTextOnlyInference] onCall callback failed (best-effort): ${
-            err instanceof Error ? err.message : String(err)
-          }`
-        );
-      }
+      const raw = JSON.parse(result.content ?? '{}');
 
       const safeColorTokens = raw.safe_color_tokens ?? { primary: '#000000', secondary: '#666666', accent: '#CC0000', background: '#FFFFFF' };
 
-      const result: TextOnlyInferenceResult = {
+      const inferenceResult: TextOnlyInferenceResult = {
         safe_color_tokens: safeColorTokens,
         visual_style: String(raw.visual_style ?? ''),
         visual_tone: String(raw.visual_tone ?? ''),
@@ -157,14 +149,18 @@ export class BrandTextOnlyInferenceService {
         confidence_score: typeof raw.confidence_score === 'number' ? Math.max(0, Math.min(1, raw.confidence_score)) : 0,
       };
 
-      return result;
+      return inferenceResult;
     } catch (err) {
       const elapsedMs = Date.now() - startTime;
 
-      if (err instanceof Error && err.name === 'AbortError') {
+      const isTimeout =
+        (err instanceof AiInvocationError && err.kind === 'timeout') ||
+        (err instanceof Error && err.name === 'AbortError');
+
+      if (isTimeout) {
         throw new BrandTextOnlyInferenceError('Inferência excedeu o tempo limite', {
           provider: 'openai',
-          model: process.env.OPENAI_TEXT_ONLY_INFERENCE_MODEL ?? 'gpt-4o',
+          model: DEFAULT_MODEL,
           elapsedMs,
           errorType: 'timeout',
         });
@@ -175,7 +171,7 @@ export class BrandTextOnlyInferenceService {
 
       throw new BrandTextOnlyInferenceError(errorMessage, {
         provider: 'openai',
-        model: process.env.OPENAI_TEXT_ONLY_INFERENCE_MODEL ?? 'gpt-4o',
+        model: DEFAULT_MODEL,
         elapsedMs,
         errorType,
       });

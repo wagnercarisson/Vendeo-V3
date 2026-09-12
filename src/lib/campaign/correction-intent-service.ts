@@ -1,9 +1,8 @@
 import "server-only";
 import { z } from "zod";
-import { createTextProvider } from "@/lib/text-provider/factory";
-import type { TextProvider, TextProviderOptions } from "@/lib/text-provider/types";
-import { AiCostTracker, resolveAiCost } from "@/lib/ai-cost";
 import { sanitizePromptText } from "@/lib/image-generation/services/art-director-briefing";
+import { defaultAiGateway } from "@/lib/ai";
+import type { AiInvocationRequest, AiInvoker, AiTelemetryContext } from "@/lib/ai";
 
 // F37.2 (R2): análise textual de elegibilidade do relato de não conformidade.
 //
@@ -153,15 +152,20 @@ function cleanJsonResponse(raw: string): string {
 }
 
 export class CorrectionIntentService {
-  private readonly provider: TextProvider;
+  private readonly invoker: AiInvoker;
 
-  constructor(provider?: TextProvider) {
-    this.provider = provider ?? createTextProvider();
+  /**
+   * `invoker` é o gateway (seam de teste). Default = instância padrão de
+   * `@/lib/ai`. NÃO usa `createTextProvider`.
+   */
+  constructor(invoker: AiInvoker = defaultAiGateway) {
+    this.invoker = invoker;
   }
 
   async analyzeReport(
     text: string,
-    options: AnalyzeReportOptions
+    options: AnalyzeReportOptions,
+    telemetry?: AiTelemetryContext
   ): Promise<CorrectionAnalysisResult> {
     // Conteúdo não confiável: saneado e delimitado explicitamente.
     const safeText = sanitizePromptText(text ?? "");
@@ -172,65 +176,41 @@ ${safeText}
 
 Responda apenas com o JSON.`;
 
-    const textOpts: TextProviderOptions = {
+    const request: AiInvocationRequest = {
+      prompt,
       system: SYSTEM_PROMPT,
       temperature: 0.2,
       maxTokens: 600,
     };
     if (options.signal) {
-      textOpts.signal = options.signal;
+      request.signal = options.signal;
     }
 
-    const startTime = Date.now();
-    let model = "unknown";
-    let usage: { promptTokens: number; completionTokens: number } | undefined;
-    let status: "success" | "failed" = "success";
-    let errorType: string | null = null;
-    let outcome: CorrectionAnalysisResult;
+    if (!telemetry) {
+      throw new Error(
+        '[CorrectionIntentService] AiTelemetryContext é obrigatório para invoke("campaign_correction_analysis")'
+      );
+    }
 
+    // Telemetria/persistência vêm do envelope + sink (D9). A classificação de
+    // erro de DOMÍNIO (json_parse_failed/schema_validation_failed/empty_response)
+    // permanece no resultado do serviço — o gateway não a normaliza.
     try {
-      const result = await this.provider.generateText(prompt, textOpts);
-      model = result.model;
-      usage = result.usage;
+      const result = await this.invoker.invoke(
+        "campaign_correction_analysis",
+        request,
+        telemetry
+      );
 
-      if (!result.content || result.content.trim().length === 0) {
-        status = "failed";
-        errorType = "empty_response";
-        outcome = {
-          analysisState: "analysis_failed",
-          category: null,
-          normalizedInstruction: null,
-          guidance: FAILED_GUIDANCE,
-        };
-      } else {
-        const parsed = this.parseResult(result.content);
-        outcome = parsed.outcome;
-        if (parsed.errorType) {
-          // Falha técnica de parse/schema: NUNCA vira conclusão semântica "unclear";
-          // é analysis_failed e a telemetria registra o tipo (json_parse_failed /
-          // schema_validation_failed) — status "failed".
-          status = "failed";
-          errorType = parsed.errorType;
-        }
+      const content = result.content ?? "";
+      if (!content || content.trim().length === 0) {
+        return this.failedOutcome();
       }
-    } catch (err) {
-      status = "failed";
-      errorType = err instanceof Error ? err.name || "transport_error" : "transport_error";
-      outcome = this.failedOutcome();
+
+      return this.parseResult(content).outcome;
+    } catch {
+      return this.failedOutcome();
     }
-
-    const durationMs = Date.now() - startTime;
-    await this.recordCall({
-      provider: this.provider.name,
-      model,
-      usage,
-      durationMs,
-      status,
-      errorType,
-      options,
-    });
-
-    return outcome;
   }
 
   private failedOutcome(): CorrectionAnalysisResult {
@@ -286,49 +266,5 @@ Responda apenas com o JSON.`;
       },
       errorType: null,
     };
-  }
-
-  private async recordCall(params: {
-    provider: string;
-    model: string;
-    usage?: { promptTokens: number; completionTokens: number };
-    durationMs: number;
-    status: "success" | "failed";
-    errorType: string | null;
-    options: AnalyzeReportOptions;
-  }): Promise<void> {
-    try {
-      const cost = await resolveAiCost({
-        provider: params.provider,
-        model: params.model,
-        usage: params.usage,
-        generationType: "campaign_correction_analysis",
-      });
-
-      await new AiCostTracker().record({
-        operationRunId: params.options.operationRunId,
-        operationRunType: "campaign_delivery",
-        traceId: crypto.randomUUID(),
-        storeId: params.options.storeId,
-        userId: params.options.userId ?? null,
-        campaignId: params.options.campaignId,
-        generationType: "campaign_correction_analysis",
-        provider: params.provider,
-        model: params.model,
-        attemptNumber: params.options.attemptNumber,
-        durationMs: params.durationMs,
-        status: params.status,
-        errorType: params.errorType,
-        tokens: params.usage,
-        cost,
-        usdBrlRateAtGeneration: params.options.usdBrlRateAtGeneration,
-        creditValueBrlAtGeneration: params.options.creditValueBrlAtGeneration,
-      });
-    } catch (err) {
-      console.error(
-        "[CorrectionIntentService] recordCall failed (best-effort):",
-        err instanceof Error ? err.message : String(err)
-      );
-    }
   }
 }
