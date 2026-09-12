@@ -20,7 +20,7 @@ progress:
 **Current phase:** 46
 **Last activity:** 2026-09-12
 
-### Phase 46 — Gateway Único de IA e Registry de Modelos ◆ Em execução (6/9 plans / 9 waves)
+### Phase 46 — Gateway Único de IA e Registry de Modelos ◆ Em execução (7/9 plans / 9 waves)
 
 **Goal:** Concentrar as chamadas de IA (hoje ~13 call sites / ~10 serviços com client próprio e 14 env-vars de modelo) em uma camada única de execução + telemetria, preservando o comportamento atual. Registry de modelos em código por capacidade (`src/lib/ai/model-registry.ts`, `AiModelTarget { provider, model, protocol }` no primary e no fallback; 11 capacidades; defaults idênticos) + interface `AiModelResolver` (`src/lib/ai/model-resolver.ts`) + AI Gateway (`src/lib/ai/gateway.ts`, `invoke(capability, request, telemetry, target)` — alvo explícito, adapter por protocolo, uma tentativa, sem fallback automático) + adapters (`chat-completions`/`responses`/`images`/`gemini`) + `api-keys.ts` + telemetria obrigatória (`AiCallEnvelope` (`extends AiCallInfo`; legado intacto) com `capability`/`protocol`/`status`/`errorType?`; persistência best-effort) + remoção das 14 envs de modelo/provider + legado `campaign-intelligence` como `campaign_spec` (migration aditiva do CHECK `chk_generation_events_type`). **Sem mudança de UI/form/contrato HTTP/schema/snapshot/domínio/prompts.** Change B (catálogo/seleção admin) = F47.
 
@@ -32,7 +32,7 @@ progress:
 | 46-04 | 4 | ✅ | Migração das capacidades de VISÃO + furo 1 (modelo real em validation/review) + remoção da persistência manual. **Reabertura (Tasks 5/6):** bypass fail-open do validator removido + conversão atômica de TODOS os callers de visão (correction-reports, logo, retry-brand-director, server-actions, approve, restore, VS generate-without-logo) + 4 testes de custo de `generate-image/route.test.ts` co-migrados — 271 files / 2697 testes, 4 gates verdes |
 | 46-05 | 5 | ✅ | Migração das capacidades de IMAGEM (campaign_image via responses; campaign_image_edit como segunda invoke explícita = dois envelopes; visual_signature_image) + furos 3/4 + cost-estimator (tool em campaign_image e visual_signature_image) + fim da soma híbrida manual de imagem — 272 files / 2702 testes, 4 gates verdes |
 | 46-06 | 6 | ✅ | Gate global de arquitetura (SDK/wire + persistência manual) + inventário global de telemetria; `recordCall` de `generate-image` delivery-only (limpeza D9); Tasks 1/2 neutralizadas (antecipadas ao 46-04) — 275 files / 2719 testes, 4 gates verdes |
-| 46-07 | 7 | ○ | Remoção das env-vars de modelo/provider + extensão do gate (env-var) + co-migração de testes + ordem de deploy |
+| 46-07 | 7 | ✅ | Remoção das 14 env-vars de modelo/provider do runtime e `.env.example` + extensão do gate (env-var) + co-migração verificada + ordem de deploy (D5); `scripts/benchmark.ts` via registry — 275 files / 2720 testes, 4 gates verdes |
 | 46-08 | 8 | ○ | Regressão completa + não-mudança do contrato externo + equivalência de defaults |
 | 46-09 | 9 | ○ | Verificação final (VERIFICATION.md + UAT.md + registros/arquivamento) |
 
