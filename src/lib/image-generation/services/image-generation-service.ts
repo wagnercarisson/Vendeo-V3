@@ -27,6 +27,7 @@ import {
 } from "./art-director-briefing";
 import { STORE_SEGMENTS } from "@/lib/constants";
 import type { TokenUsage } from "@/lib/ai-cost/types";
+import type { AiTelemetryContext } from "@/lib/ai";
 
 /**
  * Rotating per-phase human-friendly messages in PT-BR for UI display.
@@ -75,6 +76,13 @@ export interface GenerateImageOptions {
    * um bloco único de correção em TODOS os estados (INITIAL/CORRECT/REGENERATE).
    */
   normalizedInstruction?: string;
+  /**
+   * F46-04 (D9): contexto de telemetria do caller (run/sink obrigatório). O
+   * `ImageGenerationService` o repassa às capacidades de visão migradas
+   * (`campaign_input_validation`/`campaign_image_review`) via `invoke`; a
+   * persistência call-level é do sink — não do `onMetricsEvent`.
+   */
+  telemetry?: AiTelemetryContext;
 }
 
 enum GenerationState {
@@ -132,14 +140,17 @@ export class ImageGenerationService {
       }
     };
 
-    const emitMetricsEvent = (phase: string, attempt: number = 0, extra?: Partial<Pick<GenerationMetricsEvent, "usage" | "usageMeta">>) => {
+    const emitMetricsEvent = (phase: string, attempt: number = 0, extra?: Partial<Pick<GenerationMetricsEvent, "usage" | "usageMeta" | "model">>) => {
       if (onMetricsEvent) {
         try {
           onMetricsEvent({
             runId,
             phase,
             provider: this.imageProvider.name,
-            model: IMAGE_GENERATION_RESPONSES_MODEL,
+            // F46-04 (furo 1): o modelo reportado vem do envelope da chamada de
+            // visão (validation/review) quando disponível; só as fases de imagem
+            // caem no default do pipeline.
+            model: extra?.model ?? IMAGE_GENERATION_RESPONSES_MODEL,
             elapsedMs: Date.now() - startTime,
             attempt,
             durationMs: Date.now() - startTime,
@@ -220,6 +231,7 @@ export class ImageGenerationService {
     // enriquecer o evento de input_validation SEM emitir evento extra
     // (canal único onMetricsEvent — anti-dupla-contagem T-38.1-22).
     let validationUsage: TokenUsage | undefined;
+    let validationModel: string | undefined;
     let validationCallMade = false;
     const validationResult = await this.inputValidation.validate(
       brief.product.name,
@@ -229,15 +241,22 @@ export class ImageGenerationService {
       context.campaignInput.inputValidationOverride,
       (info) => {
         validationUsage = info.usage;
+        validationModel = info.model;
         validationCallMade = true;
-      }
+      },
+      options?.telemetry
     );
 
     // F38.1: evento ÚNICO de input_validation enriquecido com usage REAL da
     // chamada de visão interna (D11). Sem "tick" de início — anti-dupla-contagem
     // T-38.1-22. Só emite quando houve chamada de IA real (override não emite).
+    // F46-04 (furo 1): o modelo reportado é o REAL da chamada de visão (envelope),
+    // nunca o modelo de imagem.
     if (validationCallMade) {
-      emitMetricsEvent("input_validation", 0, validationUsage ? { usage: validationUsage } : undefined);
+      emitMetricsEvent("input_validation", 0, {
+        ...(validationUsage ? { usage: validationUsage } : {}),
+        ...(validationModel ? { model: validationModel } : {}),
+      });
     }
 
     let effectiveProductName = brief.product.name;
@@ -465,10 +484,12 @@ export class ImageGenerationService {
       // enriquecer o evento de quality_review SEM emitir evento extra
       // (canal único onMetricsEvent — anti-dupla-contagem T-38.1-22).
       let reviewUsage: TokenUsage | undefined;
+      let reviewModel: string | undefined;
       try {
         reviewResult = await this.imageReview.review(imageDataUrl, reviewInput, this.mediaImagesDataUrls(brief), (info) => {
           reviewUsage = info.usage;
-        });
+          reviewModel = info.model;
+        }, options?.telemetry);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         console.error(`[ImageGenerationService] review error — ${message}`);
@@ -484,7 +505,9 @@ export class ImageGenerationService {
           correctionInstructions: null,
           elapsedMs: Date.now() - startTime,
           provider: this.imageProvider.name,
-          model: IMAGE_GENERATION_RESPONSES_MODEL,
+          // F46-04 (furo 1): o diagnóstico de revisão reporta o modelo REAL de
+          // visão quando disponível — nunca o modelo de imagem.
+          model: reviewModel ?? "unknown",
           hadLogoAsset: !!context.identity.imageUrl,
           hadBrandProfile: !!context.brandProfile,
           hadProductImage: !!this.primaryImageDataUrl(brief),
@@ -532,7 +555,8 @@ export class ImageGenerationService {
           correctionInstructions: null,
           elapsedMs: Date.now() - startTime,
           provider: this.imageProvider.name,
-          model: IMAGE_GENERATION_RESPONSES_MODEL,
+          // F46-04 (furo 1): diagnóstico da revisão com o modelo REAL de visão.
+          model: reviewModel ?? "unknown",
           hadLogoAsset: !!context.identity.imageUrl,
           hadBrandProfile: !!context.brandProfile,
           hadProductImage: !!this.primaryImageDataUrl(brief),
@@ -541,7 +565,10 @@ export class ImageGenerationService {
         if (reviewResult.passed) {
           emit("quality_review", "complete", undefined,
             `issues: ${totalIssues} (${criticalCount} críticas, ${minorCount} menores), failureType: ${reviewResult.failureType ?? "null"}`);
-          emitMetricsEvent("quality_review", attempts, reviewUsage ? { usage: reviewUsage } : undefined);
+          emitMetricsEvent("quality_review", attempts, {
+            ...(reviewUsage ? { usage: reviewUsage } : {}),
+            ...(reviewModel ? { model: reviewModel } : {}),
+          });
           state = GenerationState.COMPLETE;
           logReviewDiagnostic({ ...diagBase, reviewAction: 'complete' });
         } else {
@@ -549,7 +576,10 @@ export class ImageGenerationService {
 
           if (reviewResult.failureType === "generated_product_mismatch") {
             emitFailed("quality_review", "A imagem gerada exibiu um nome de produto diferente do informado.");
-            emitMetricsEvent("quality_review", attempts, reviewUsage ? { usage: reviewUsage } : undefined);
+            emitMetricsEvent("quality_review", attempts, {
+            ...(reviewUsage ? { usage: reviewUsage } : {}),
+            ...(reviewModel ? { model: reviewModel } : {}),
+          });
             await this.metricsWriter.write(this.buildGenerationMetrics({
               runId,
               startTime,
@@ -593,7 +623,10 @@ export class ImageGenerationService {
           } else {
             emit("quality_review", "complete", undefined,
               `issues: ${totalIssues} (${criticalCount} críticas, ${minorCount} menores), failureType: ${reviewResult.failureType ?? "null"}`);
-            emitMetricsEvent("quality_review", attempts, reviewUsage ? { usage: reviewUsage } : undefined);
+            emitMetricsEvent("quality_review", attempts, {
+            ...(reviewUsage ? { usage: reviewUsage } : {}),
+            ...(reviewModel ? { model: reviewModel } : {}),
+          });
             state = GenerationState.COMPLETE;
             logReviewDiagnostic({ ...diagBase, reviewAction: 'skip_minor' });
           }

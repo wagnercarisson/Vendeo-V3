@@ -20,7 +20,11 @@ export class ResponsesAdapter implements AiAdapter {
 
     const content: unknown[] = [{ type: "input_text", text: request.prompt }];
     for (const url of request.productImagesDataUrls ?? []) {
-      content.push({ type: "input_image", image_url: url, detail: "auto" });
+      content.push({
+        type: "input_image",
+        image_url: url,
+        detail: request.imageDetail ?? "auto",
+      });
     }
     if (request.identityImageUrl) {
       content.push({ type: "input_image", image_url: request.identityImageUrl, detail: "low" });
@@ -30,6 +34,8 @@ export class ResponsesAdapter implements AiAdapter {
       model: target.model,
       input: [{ role: "user", content }],
     };
+    if (request.temperature !== undefined) params.temperature = request.temperature;
+    if (request.maxTokens !== undefined) params.max_output_tokens = request.maxTokens;
     const usesImageTool = request.tools === "image_generation";
     if (usesImageTool) {
       params.tools = [

@@ -1,32 +1,37 @@
 import { PromptLoader } from "@/lib/image-generation/prompt-loader";
-import { VISION_REVIEW_MODEL } from "@/lib/image-generation/config";
 import type { InputValidationResult } from "@/lib/image-generation/schema";
-import type { AiCallInfo, TokenUsage } from "@/lib/ai-cost/types";
+import type { AiCallInfo } from "@/lib/ai-cost/types";
+import { defaultAiGateway, withOnCallTelemetry } from "@/lib/ai";
+import type { AiInvocationRequest, AiInvoker, AiTelemetryContext } from "@/lib/ai";
 
 /**
  * InputValidationService — pre-generation conflict detection between the
  * typed product name and the uploaded product image.
  *
- * Uses a vision-capable text model (e.g., GPT-4o) to analyze the product
- * image and compare it against the typed name. Supports override flags
+ * Uses a vision-capable model (e.g., GPT-4o) to analyze the product image and
+ * compare it against the typed name. Supports override flags
  * (`productImageCheck: "user_confirmed_continue" | "brief_review_confirmed"`)
  * that skip validation entirely when the user has explicitly confirmed the
  * image is correct (F43 D5).
+ *
+ * F46-04 (D9): executa via camada única (`invoke("campaign_input_validation")`).
+ * Não instancia `new OpenAI()` nem lê env-var de modelo; o modelo real vem do
+ * registry/envelope e a persistência é do sink injetado no `AiTelemetryContext`.
  *
  * Loads the `campaign-input-visual-check.md` prompt via PromptLoader with
  * `typedProductName` variable interpolation.
  */
 export class InputValidationService {
   private readonly promptLoader: PromptLoader;
-  private readonly model: string;
+  private readonly invoker: AiInvoker;
 
   /**
    * @param promptLoader - PromptLoader instance (defaults to new PromptLoader())
-   * @param model - Vision model identifier (defaults to VISION_REVIEW_MODEL from config)
+   * @param invoker - AI gateway (seam de teste). Default = instância padrão de `@/lib/ai`.
    */
-  constructor(promptLoader?: PromptLoader, model?: string) {
+  constructor(promptLoader?: PromptLoader, invoker: AiInvoker = defaultAiGateway) {
     this.promptLoader = promptLoader ?? new PromptLoader();
-    this.model = model ?? VISION_REVIEW_MODEL;
+    this.invoker = invoker;
   }
 
   /**
@@ -35,14 +40,16 @@ export class InputValidationService {
    * @param typedProductName - The product name typed by the user in the form
    * @param productImageDataUrl - Base64 data URL of the uploaded product image
    * @param override - Optional override to skip validation
-   * @param onCall - Optional best-effort callback receiving AiCallInfo (D11)
+   * @param onCall - Optional best-effort callback receiving the produced envelope (D11)
+   * @param telemetry - F46-04 (D9): contexto de telemetria do caller (run/sink obrigatório)
    * @returns InputValidationResult — match, auto-fix, conflict, or low-confidence
    */
   async validate(
     typedProductName: string,
     productImageDataUrl: string,
     override?: { productImageCheck?: "user_confirmed_continue" | "brief_review_confirmed" },
-    onCall?: (info: AiCallInfo) => void | Promise<void>
+    onCall?: (info: AiCallInfo) => void | Promise<void>,
+    telemetry?: AiTelemetryContext
   ): Promise<InputValidationResult> {
     // Skip validation when user override is present (F43 D5): qualquer override
     // truthy pula — user_confirmed_continue (409) e brief_review_confirmed (brief)
@@ -56,107 +63,34 @@ export class InputValidationService {
       typedProductName,
     });
 
-    // Call the vision model
-    const startTime = Date.now();
-    const { content, usage } = await this.callVisionModel(prompt, productImageDataUrl);
-    const durationMs = Date.now() - startTime;
-
-    // Best-effort telemetry — never blocks validation (D7)
-    this.invokeOnCall(onCall, {
-      provider: "openai",
-      model: this.model,
-      usage,
-      durationMs,
-    });
-
-    // Parse and validate the structured JSON response
-    return this.parseResult(content);
-  }
-
-  /**
-   * Invoke the onCall callback best-effort (D7): a throwing or rejecting
-   * callback is logged and ignored — it never breaks validation.
-   */
-  private invokeOnCall(
-    onCall: ((info: AiCallInfo) => void | Promise<void>) | undefined,
-    info: AiCallInfo
-  ): void {
-    if (!onCall) return;
-    try {
-      Promise.resolve(onCall(info)).catch((err) => {
-        console.error(
-          `[InputValidationService] onCall callback failed (best-effort): ${
-            err instanceof Error ? err.message : String(err)
-          }`
-        );
-      });
-    } catch (err) {
-      console.error(
-        `[InputValidationService] onCall callback failed (best-effort): ${
-          err instanceof Error ? err.message : String(err)
-        }`
+    if (!telemetry) {
+      throw new Error(
+        '[InputValidationService] AiTelemetryContext é obrigatório para invoke("campaign_input_validation")'
       );
     }
-  }
 
-  /**
-   * Call the vision-capable model with the prompt and product image.
-   * Returns the content plus the normalized token usage (D11).
-   */
-  private async callVisionModel(
-    prompt: string,
-    imageDataUrl: string
-  ): Promise<{ content: string; usage?: TokenUsage }> {
-    const { default: OpenAI } = await import("openai");
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    // Dono único do invoke: o gateway gera o envelope e o sink persiste (D9).
+    // O `onCall` legado apenas recebe o envelope já produzido.
+    const request: AiInvocationRequest = {
+      prompt,
+      productImagesDataUrls: [productImageDataUrl],
+      imageDetail: "high",
+      maxTokens: 500,
+    };
 
-    const response = await openai.chat.completions.create({
-      model: this.model,
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: prompt },
-            {
-              type: "image_url",
-              image_url: { url: imageDataUrl, detail: "high" },
-            },
-          ],
-        },
-      ],
-      max_tokens: 500,
-    });
+    const result = await this.invoker.invoke(
+      "campaign_input_validation",
+      request,
+      withOnCallTelemetry(telemetry, onCall)
+    );
 
-    const content = response.choices[0]?.message?.content;
+    const content = result.content;
     if (!content) {
       throw new Error("Vision model returned empty response");
     }
 
-    return { content, usage: this.mapUsage(response.usage) };
-  }
-
-  /**
-   * Map the OpenAI SDK usage payload to the normalized TokenUsage (D12).
-   * Only present fields are included; defensive against SDK shape drift.
-   */
-  private mapUsage(usage: unknown): TokenUsage | undefined {
-    if (!usage || typeof usage !== "object") return undefined;
-    const u = usage as Record<string, unknown>;
-    const tokens: TokenUsage = {};
-    if (typeof u.prompt_tokens === "number") tokens.promptTokens = u.prompt_tokens;
-    if (typeof u.completion_tokens === "number") tokens.completionTokens = u.completion_tokens;
-    if (typeof u.total_tokens === "number") tokens.totalTokens = u.total_tokens;
-    const promptDetails = u.prompt_tokens_details as Record<string, unknown> | undefined;
-    if (promptDetails && typeof promptDetails.cached_tokens === "number") {
-      tokens.cachedInputTokens = promptDetails.cached_tokens;
-    }
-    const completionDetails = u.completion_tokens_details as Record<string, unknown> | undefined;
-    if (completionDetails && typeof completionDetails.image_tokens === "number") {
-      tokens.imageTokens = completionDetails.image_tokens;
-    }
-    return tokens;
+    // Parse and validate the structured JSON response
+    return this.parseResult(content);
   }
 
   /**

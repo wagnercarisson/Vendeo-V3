@@ -1,8 +1,9 @@
 import { PromptLoader } from "@/lib/image-generation/prompt-loader";
-import { VISION_REVIEW_MODEL } from "@/lib/image-generation/config";
 import type { ImageReviewResult, ValidationContext } from "@/lib/image-generation/schema";
 import type { CampaignIntent } from "@/lib/campaign/types";
-import type { AiCallInfo, TokenUsage } from "@/lib/ai-cost/types";
+import type { AiCallInfo } from "@/lib/ai-cost/types";
+import { defaultAiGateway, withOnCallTelemetry } from "@/lib/ai";
+import type { AiInvocationRequest, AiInvoker, AiTelemetryContext } from "@/lib/ai";
 
 export type { ValidationContext };
 
@@ -35,11 +36,11 @@ export interface ImageReviewInput {
 
 export class ImageReviewService {
   private readonly promptLoader: PromptLoader;
-  private readonly model: string;
+  private readonly invoker: AiInvoker;
 
-  constructor(promptLoader?: PromptLoader, model?: string) {
+  constructor(promptLoader?: PromptLoader, invoker: AiInvoker = defaultAiGateway) {
     this.promptLoader = promptLoader ?? new PromptLoader();
-    this.model = model ?? VISION_REVIEW_MODEL;
+    this.invoker = invoker;
   }
 
   buildReviewPromptVariables(input: ImageReviewInput, referenceCount = 0): Record<string, string> {
@@ -68,52 +69,55 @@ export class ImageReviewService {
     generatedImageDataUrl: string,
     input: ImageReviewInput,
     referenceImageDataUrls?: string[],
-    onCall?: (info: AiCallInfo) => void | Promise<void>
+    onCall?: (info: AiCallInfo) => void | Promise<void>,
+    telemetry?: AiTelemetryContext
   ): Promise<ImageReviewResult> {
     const references = referenceImageDataUrls ?? [];
     const contextVars = this.buildReviewPromptVariables(input, references.length);
     const prompt = this.promptLoader.load("campaign-image-reviewer", contextVars);
     const referenceLine = this.buildReferenceComparisonLine(references.length);
     const reviewPrompt = referenceLine ? `${prompt}\n\n${referenceLine}` : prompt;
-    const startTime = Date.now();
-    const { content, usage } = await this.callVisionModel(reviewPrompt, generatedImageDataUrl, references);
-    const durationMs = Date.now() - startTime;
 
-    // Best-effort telemetry — never blocks review (D7)
-    this.invokeOnCall(onCall, {
-      provider: "openai",
-      model: this.model,
-      usage,
-      durationMs,
-    });
-
-    return this.parseResult(content);
-  }
-
-  /**
-   * Invoke the onCall callback best-effort (D7): a throwing or rejecting
-   * callback is logged and ignored — it never breaks the review.
-   */
-  private invokeOnCall(
-    onCall: ((info: AiCallInfo) => void | Promise<void>) | undefined,
-    info: AiCallInfo
-  ): void {
-    if (!onCall) return;
-    try {
-      Promise.resolve(onCall(info)).catch((err) => {
-        console.error(
-          `[ImageReviewService] onCall callback failed (best-effort): ${
-            err instanceof Error ? err.message : String(err)
-          }`
-        );
-      });
-    } catch (err) {
-      console.error(
-        `[ImageReviewService] onCall callback failed (best-effort): ${
-          err instanceof Error ? err.message : String(err)
-        }`
+    if (!telemetry) {
+      throw new Error(
+        '[ImageReviewService] AiTelemetryContext é obrigatório para invoke("campaign_image_review")'
       );
     }
+
+    // Dono único do invoke: o gateway gera o envelope e o sink persiste (D9).
+    // O `onCall` legado apenas recebe o envelope já produzido.
+    const request: AiInvocationRequest = {
+      prompt: reviewPrompt,
+      productImagesDataUrls: [generatedImageDataUrl, ...references],
+      imageDetail: "high",
+      maxTokens: 1000,
+      responseFormat: "json_object",
+    };
+
+    const result = await this.invoker.invoke(
+      "campaign_image_review",
+      request,
+      withOnCallTelemetry(telemetry, onCall)
+    );
+
+    const content = result.content ?? "";
+    if (!content || content.trim().length === 0) {
+      return this.parseResult(
+        JSON.stringify({
+          passed: false,
+          failureType: "empty_review",
+          issues: [
+            {
+              type: "empty_review",
+              severity: "critical",
+              description: "O modelo de revisão não retornou conteúdo.",
+            },
+          ],
+        })
+      );
+    }
+
+    return this.parseResult(content);
   }
 
   private buildCampaignIntentLabel(intent: CampaignIntent): string {
@@ -341,75 +345,6 @@ export class ImageReviewService {
     if (referenceCount <= 0) return "";
     if (referenceCount === 1) return "Compare o produto da arte com a imagem de referência.";
     return "Compare o produto da arte com as imagens de referência autorizadas.";
-  }
-
-  private async callVisionModel(
-    prompt: string,
-    imageDataUrl: string,
-    referenceImageDataUrls: string[]
-  ): Promise<{ content: string; usage?: TokenUsage }> {
-    const { default: OpenAI } = await import("openai");
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-
-    const response = await openai.chat.completions.create({
-      model: this.model,
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: prompt },
-            {
-              type: "image_url",
-              image_url: { url: imageDataUrl, detail: "high" },
-            },
-            ...referenceImageDataUrls.map((url) => ({
-              type: "image_url" as const,
-              image_url: { url, detail: "high" as const },
-            })),
-          ],
-        },
-      ],
-      max_tokens: 1000,
-      response_format: { type: "json_object" },
-    });
-
-    const content = response.choices[0]?.message?.content;
-    if (!content || content.trim().length === 0) {
-      return {
-        content: JSON.stringify({
-          passed: false,
-          failureType: "empty_review",
-          issues: [{ type: "empty_review", severity: "critical", description: "O modelo de revisão não retornou conteúdo." }],
-        }),
-        usage: this.mapUsage(response.usage),
-      };
-    }
-
-    return { content, usage: this.mapUsage(response.usage) };
-  }
-
-  /**
-   * Map the OpenAI SDK usage payload to the normalized TokenUsage (D12).
-   * Only present fields are included; defensive against SDK shape drift.
-   */
-  private mapUsage(usage: unknown): TokenUsage | undefined {
-    if (!usage || typeof usage !== "object") return undefined;
-    const u = usage as Record<string, unknown>;
-    const tokens: TokenUsage = {};
-    if (typeof u.prompt_tokens === "number") tokens.promptTokens = u.prompt_tokens;
-    if (typeof u.completion_tokens === "number") tokens.completionTokens = u.completion_tokens;
-    if (typeof u.total_tokens === "number") tokens.totalTokens = u.total_tokens;
-    const promptDetails = u.prompt_tokens_details as Record<string, unknown> | undefined;
-    if (promptDetails && typeof promptDetails.cached_tokens === "number") {
-      tokens.cachedInputTokens = promptDetails.cached_tokens;
-    }
-    const completionDetails = u.completion_tokens_details as Record<string, unknown> | undefined;
-    if (completionDetails && typeof completionDetails.image_tokens === "number") {
-      tokens.imageTokens = completionDetails.image_tokens;
-    }
-    return tokens;
   }
 
   private parseResult(raw: string): ImageReviewResult {

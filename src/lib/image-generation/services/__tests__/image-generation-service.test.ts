@@ -1,6 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+
+// O serviço importa os serviços de visão, que importam `@/lib/ai` (gateway
+// default) → sink padrão → tracker → supabase/server. Sem env, lança na importação.
+vi.hoisted(() => {
+  process.env.NEXT_PUBLIC_SUPABASE_URL ??= 'http://localhost:54321';
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??= 'test-anon-key';
+  process.env.SUPABASE_SERVICE_ROLE_KEY ??= 'test-service-role-key';
+});
+
 import { ImageGenerationService } from '../image-generation-service';
 import type { CampaignBrief } from '@/lib/campaign/brief';
 import { buildCampaignBriefFromFlat } from '@/lib/campaign/brief';
@@ -963,7 +972,8 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
       'Produto Teste',
       'data:image/jpeg;base64,test',
       undefined,
-      expect.any(Function)
+      expect.any(Function),
+      undefined
     );
     expect(mockProvider.generateImage).toHaveBeenCalledWith(
       expect.objectContaining({ productImageDataUrl: 'data:image/jpeg;base64,test' })
@@ -1014,7 +1024,8 @@ describe('ImageGenerationService — golden tests por intent (8.16/8.17/8.18, F3
       'Produto Teste',
       primaryDataUrl,
       undefined,
-      expect.any(Function)
+      expect.any(Function),
+      undefined
     );
     // D7: o provider input carrega a lista ordenada (posição 0 = primary).
     expect(mockProvider.generateImage).toHaveBeenCalledWith(

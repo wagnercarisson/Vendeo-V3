@@ -732,20 +732,33 @@ export const POST = apiHandler(async (request: NextRequest) => {
         try {
           emitPhase("image_generation", "running", "Gerando arte com IA...");
 
+          // F46-04 (D9): telemetria das capacidades de VISÃO (validação/revisão)
+          // via sink — o `recordCall` manual dessas fases foi removido. A soma
+          // segue HÍBRIDA: o sink acumula o mesmo CostResolution persistido e o
+          // recordCall residual de imagem (campaign_image) ainda soma.
+          const imageTelemetry = createDefaultTelemetryContext({
+            operationRunId,
+            operationRunType: "campaign_delivery",
+            traceId,
+            storeId,
+            userId: user.userId,
+            campaignId,
+            attemptNumber: 0,
+            usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
+            creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
+            onCostResolved: (cost) => {
+              if (typeof cost.estimatedCostUsd === "number") {
+                callCostSum += cost.estimatedCostUsd;
+              }
+            },
+          });
+
           imageResult = await imageService.generateImage(brief, context, (phaseEvent) => {
             emit({ type: "phase", ...phaseEvent });
           }, streamAbortController.signal, (metricsEvent) => {
-            // F38.1 (D11): mapeia fases do onMetricsEvent para eventos call-level.
-            // Só fases que representam chamadas reais de IA geram evento (D5 —
-            // não inventar chamada); done/prompt_assembly são ignoradas.
+            // F46-04 (D9): validação/revisão são persistidas pelo SINK — o switch
+            // residual só trata a fase de imagem (campaign_image, 46-05).
             switch (metricsEvent.phase) {
-              case "input_validation":
-                void recordCall({
-                  generationType: "campaign_input_validation",
-                  status: "success",
-                  info: { provider: metricsEvent.provider, model: metricsEvent.model, usage: metricsEvent.usage, durationMs: metricsEvent.durationMs },
-                });
-                break;
               case "image_generation":
                 void recordCall({
                   generationType: "campaign_image",
@@ -753,18 +766,13 @@ export const POST = apiHandler(async (request: NextRequest) => {
                   info: { provider: metricsEvent.provider, model: metricsEvent.model, usage: metricsEvent.usage, usageMeta: metricsEvent.usageMeta, durationMs: metricsEvent.durationMs, attempt: metricsEvent.attempt },
                 });
                 break;
-              case "quality_review":
-                void recordCall({
-                  generationType: "campaign_image_review",
-                  status: "success",
-                  info: { provider: metricsEvent.provider, model: metricsEvent.model, usage: metricsEvent.usage, durationMs: metricsEvent.durationMs, attempt: metricsEvent.attempt },
-                });
-                break;
               default:
-                // prompt_assembly/done — não são chamadas de IA (D5/D11)
+                // input_validation/quality_review/prompt_assembly/done — a
+                // validação/revisão é persistida pelo sink (D9); as demais não
+                // são chamadas de IA (D5/D11).
                 break;
             }
-          });
+          }, { telemetry: imageTelemetry });
 
           if (imageResult.success) {
             emitPhase("image_generation", "complete", "Arte gerada com sucesso");

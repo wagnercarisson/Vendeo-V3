@@ -62,7 +62,10 @@ function buildMessages(request: AiInvocationRequest): unknown[] {
   if (productImages.length > 0 || request.identityImageUrl) {
     const content: unknown[] = [{ type: "text", text: request.prompt }];
     for (const url of productImages) {
-      content.push({ type: "image_url", image_url: { url } });
+      content.push({
+        type: "image_url",
+        image_url: request.imageDetail ? { url, detail: request.imageDetail } : { url },
+      });
     }
     if (request.identityImageUrl) {
       content.push({ type: "image_url", image_url: { url: request.identityImageUrl } });

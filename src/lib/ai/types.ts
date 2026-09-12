@@ -56,6 +56,13 @@ export interface AiInvocationRequest {
   messages?: AiInvocationMessage[];
   /** Imagens de produto (data URLs) — visão / images.edit. */
   productImagesDataUrls?: string[];
+  /**
+   * Detalhe de análise das imagens de visão (`image_url.detail` /
+   * `input_image.detail`). Preserva o comportamento dos serviços migrados
+   * (validação/revisão usam `high`; brand profile usa `low`). Ausente = default
+   * do protocolo.
+   */
+  imageDetail?: "low" | "high" | "auto";
   /** Imagem de identidade visual (data URL) — visão / images.edit. */
   identityImageUrl?: string;
   /** Parâmetros de imagem. */

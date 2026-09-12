@@ -2,21 +2,68 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
-const { mockOpenAICreate } = vi.hoisted(() => ({ mockOpenAICreate: vi.fn() }));
-
-vi.mock('openai', () => ({
-  default: class {
-    chat = {
-      completions: { create: mockOpenAICreate },
-    };
-  },
-}));
+// O serviço importa `@/lib/ai` (gateway default), que carrega o sink padrão →
+// cost-estimator → tracker → supabase/server. Sem env, o módulo lança na importação.
+vi.hoisted(() => {
+  process.env.NEXT_PUBLIC_SUPABASE_URL ??= 'http://localhost:54321';
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??= 'test-anon-key';
+  process.env.SUPABASE_SERVICE_ROLE_KEY ??= 'test-service-role-key';
+});
 
 import { ImageReviewService } from '../image-review-service';
 import type { ImageReviewInput } from '../image-review-service';
 import { PromptLoader } from '@/lib/image-generation/prompt-loader';
-import type { AiCallInfo } from '@/lib/ai-cost/types';
+import type { AiCallInfo, TokenUsage } from '@/lib/ai-cost/types';
+import { NoopAiTelemetrySink } from '@/lib/ai';
+import type { AiInvoker, AiTelemetryContext } from '@/lib/ai';
 import { ILLUSTRATIVE_NOTICE_TEXT } from '@/lib/campaign/constants';
+
+const TELEMETRY: AiTelemetryContext = {
+  operationRunId: 'run-1',
+  operationRunType: 'campaign_delivery',
+  traceId: 'trace-1',
+  storeId: 'store-1',
+  sink: new NoopAiTelemetrySink(),
+};
+
+let invokeMock: ReturnType<typeof vi.fn>;
+let invokeResult: { content: string; usage?: TokenUsage };
+
+/** Fake `AiInvoker` (seam de teste): emite o envelope no sink e retorna o resultado canônico. */
+function makeInvoker(): AiInvoker {
+  invokeMock = vi.fn(async (_capability: string, _request: unknown, telemetry: AiTelemetryContext) => {
+    await telemetry.sink.emit({
+      capability: 'campaign_image_review',
+      protocol: 'chat-completions',
+      status: 'success',
+      provider: 'openai',
+      model: 'gpt-4o',
+      usage: invokeResult.usage,
+      durationMs: 9,
+    });
+    return { content: invokeResult.content, model: 'gpt-4o', usage: invokeResult.usage };
+  });
+  return {
+    invoke: invokeMock as unknown as AiInvoker['invoke'],
+    hasFallback: vi.fn(async () => false),
+  };
+}
+
+/** Wrapper de teste: injeta o contexto de telemetria obrigatório (F46-04). */
+function review(
+  service: ImageReviewService,
+  imageDataUrl: string,
+  input: ImageReviewInput,
+  refs?: string[],
+  onCall?: (info: AiCallInfo) => void | Promise<void>
+) {
+  return (service as ImageReviewService).review(imageDataUrl, input, refs, onCall, TELEMETRY);
+}
+
+/** Request capturado na última invoke (prompt + imagens em ordem). */
+function lastRequest(): { prompt: string; productImagesDataUrls: string[] } {
+  return invokeMock.mock.calls[0][1] as { prompt: string; productImagesDataUrls: string[] };
+}
 
 describe('ImageReviewService', () => {
   let mockLoader: { load: ReturnType<typeof vi.fn>; clearCache: ReturnType<typeof vi.fn> };
@@ -27,12 +74,8 @@ describe('ImageReviewService', () => {
       load: vi.fn().mockReturnValue('review prompt with {{expectedBadgeBehavior}}'),
       clearCache: vi.fn(),
     };
-    service = new ImageReviewService(mockLoader as unknown as PromptLoader);
-
-    vi.spyOn(service as any, 'callVisionModel').mockResolvedValue({
-      content: JSON.stringify({ passed: true, issues: [] }),
-      usage: { promptTokens: 100, completionTokens: 25, totalTokens: 125 },
-    });
+    invokeResult = { content: JSON.stringify({ passed: true, issues: [] }) };
+    service = new ImageReviewService(mockLoader as unknown as PromptLoader, makeInvoker());
   });
 
   it('review() monta expectedBadgeBehavior para offer com badge', async () => {
@@ -44,7 +87,7 @@ describe('ImageReviewService', () => {
       campaignIntent: 'offer',
     };
 
-    await service.review('data:image/jpeg;base64,abc', input);
+    await review(service, 'data:image/jpeg;base64,abc', input);
 
     expect(mockLoader.load).toHaveBeenCalledWith(
       'campaign-image-reviewer',
@@ -61,7 +104,7 @@ describe('ImageReviewService', () => {
       campaignIntent: 'exclusive' as const,
     } as ImageReviewInput;
 
-    await service.review('data:image/jpeg;base64,abc', input);
+    await review(service, 'data:image/jpeg;base64,abc', input);
 
     expect(mockLoader.load).toHaveBeenCalledWith(
       'campaign-image-reviewer',
@@ -79,7 +122,7 @@ describe('ImageReviewService', () => {
       preserveImageContext: true,
     } as ImageReviewInput;
 
-    await service.review('data:image/jpeg;base64,abc', input);
+    await review(service, 'data:image/jpeg;base64,abc', input);
 
     const vars = mockLoader.load.mock.calls[0][1];
     expect(vars.expectedPriceBehavior).toContain('NÃO deve exibir preço');
@@ -97,7 +140,7 @@ describe('ImageReviewService', () => {
       discountedPrice: 'R$ 29,90',
     };
 
-    await service.review('data:image/jpeg;base64,abc', input);
+    await review(service, 'data:image/jpeg;base64,abc', input);
 
     const vars = mockLoader.load.mock.calls[0][1];
     for (const [key, value] of Object.entries(vars)) {
@@ -128,7 +171,7 @@ describe('ImageReviewService', () => {
       badgeText: 'Promoção',
     };
 
-    await service.review('data:image/jpeg;base64,abc', input);
+    await review(service, 'data:image/jpeg;base64,abc', input);
 
     const vars = mockLoader.load.mock.calls[0][1];
     expect(vars.expectedPriceBehavior).toContain('R$ 29,90');
@@ -146,7 +189,7 @@ describe('ImageReviewService', () => {
       badgeText: 'Novidade',
     };
 
-    await service.review('data:image/jpeg;base64,abc', input);
+    await review(service, 'data:image/jpeg;base64,abc', input);
 
     const vars = mockLoader.load.mock.calls[0][1];
     expect(vars.expectedPriceBehavior).toContain('preço único');
@@ -157,17 +200,17 @@ describe('ImageReviewService', () => {
 
   it('review() monta expectedImageTreatment por intent + preserveImageContext', async () => {
     const offerClean: ImageReviewInput = { productName: 'P', storeName: 'L', campaignIntent: 'offer', preserveImageContext: false };
-    await service.review('data:image/jpeg;base64,a', offerClean);
+    await review(service, 'data:image/jpeg;base64,a', offerClean);
     expect(mockLoader.load.mock.calls[0][1].expectedImageTreatment).toContain('isolar o produto em fundo comercial');
 
     mockLoader.load.mockClear();
     const spotlightCtx: ImageReviewInput = { productName: 'P', storeName: 'L', campaignIntent: 'spotlight', preserveImageContext: true };
-    await service.review('data:image/jpeg;base64,a', spotlightCtx);
+    await review(service, 'data:image/jpeg;base64,a', spotlightCtx);
     expect(mockLoader.load.mock.calls[0][1].expectedImageTreatment).toContain('fundo contextual DA IMAGEM DEVE ser preservado');
 
     mockLoader.load.mockClear();
     const exclusiveNeutral: ImageReviewInput = { productName: 'P', storeName: 'L', campaignIntent: 'exclusive' };
-    await service.review('data:image/jpeg;base64,a', exclusiveNeutral);
+    await review(service, 'data:image/jpeg;base64,a', exclusiveNeutral);
     expect(mockLoader.load.mock.calls[0][1].expectedImageTreatment).toContain('não é obrigatório nem proibido');
   });
 
@@ -180,7 +223,7 @@ describe('ImageReviewService', () => {
       badgeText: 'Promoção',
     };
 
-    await service.review('data:image/jpeg;base64,abc', input);
+    await review(service, 'data:image/jpeg;base64,abc', input);
 
     const vars = mockLoader.load.mock.calls[0][1];
     expect(vars.campaignIntentLabel).toBe('Promoção');
@@ -196,7 +239,7 @@ describe('ImageReviewService', () => {
       requiredArtworkText: 'Imagem meramente ilustrativa',
     };
 
-    await service.review('data:image/jpeg;base64,abc', input);
+    await review(service, 'data:image/jpeg;base64,abc', input);
 
     const vars = mockLoader.load.mock.calls[0][1];
     expect(vars.requiredArtworkTextSection).toContain('"Imagem meramente ilustrativa"');
@@ -216,7 +259,7 @@ describe('ImageReviewService', () => {
       requiredArtworkText: 'Texto promocional livre',
     };
 
-    await service.review('data:image/jpeg;base64,abc', input);
+    await review(service, 'data:image/jpeg;base64,abc', input);
 
     const vars = mockLoader.load.mock.calls[0][1];
     expect(vars.requiredArtworkTextSection).toContain('"Texto promocional livre"');
@@ -231,7 +274,7 @@ describe('ImageReviewService', () => {
       illustrativeNotice: ILLUSTRATIVE_NOTICE_TEXT,
     };
 
-    await service.review('data:image/jpeg;base64,abc', input);
+    await review(service, 'data:image/jpeg;base64,abc', input);
 
     const vars = mockLoader.load.mock.calls[0][1];
     expect(vars.illustrativeNoticeSection).toContain('"Imagem meramente ilustrativa"');
@@ -250,7 +293,7 @@ describe('ImageReviewService', () => {
       illustrativeNotice: ILLUSTRATIVE_NOTICE_TEXT,
     };
 
-    await service.review('data:image/jpeg;base64,abc', input);
+    await review(service, 'data:image/jpeg;base64,abc', input);
 
     const vars = mockLoader.load.mock.calls[0][1];
     expect(vars.requiredArtworkTextSection).toContain('"Texto promocional livre"');
@@ -275,7 +318,7 @@ describe('ImageReviewService', () => {
       additionalDetails: 'Válido somente em loja física',
     };
 
-    await service.review('data:image/jpeg;base64,abc', input);
+    await review(service, 'data:image/jpeg;base64,abc', input);
 
     const vars = mockLoader.load.mock.calls[0][1];
     expect(vars.authorizedContextSection).toContain('Frete grátis acima de R$ 100');
@@ -290,12 +333,12 @@ describe('ImageReviewService', () => {
       storeName: 'Loja Teste',
     };
 
-    await service.review('data:image/jpeg;base64,abc', input);
+    await review(service, 'data:image/jpeg;base64,abc', input);
     expect(mockLoader.load.mock.calls[0][1].requiredArtworkTextSection).toBe('');
     expect(mockLoader.load.mock.calls[0][1].illustrativeNoticeSection).toBe('');
 
     mockLoader.load.mockClear();
-    await service.review('data:image/jpeg;base64,abc', {
+    await review(service, 'data:image/jpeg;base64,abc', {
       ...input,
       requiredArtworkText: '   ',
       illustrativeNotice: '   ',
@@ -310,7 +353,7 @@ describe('ImageReviewService', () => {
       storeName: 'Loja Teste',
     };
 
-    await service.review('data:image/jpeg;base64,abc', input);
+    await review(service, 'data:image/jpeg;base64,abc', input);
     expect(mockLoader.load.mock.calls[0][1].authorizedContextSection).toBe('');
   });
 
@@ -320,7 +363,7 @@ describe('ImageReviewService', () => {
       storeName: 'Loja Teste',
     };
 
-    await service.review('data:image/jpeg;base64,abc', input);
+    await review(service, 'data:image/jpeg;base64,abc', input);
     expect(mockLoader.load.mock.calls[0][1].requiredArtworkTextSection).toBe('');
     expect(mockLoader.load.mock.calls[0][1].illustrativeNoticeSection).toBe('');
   });
@@ -332,7 +375,7 @@ describe('ImageReviewService', () => {
       requiredArtworkText: 'Imagem meramente ilustrativa',
     };
 
-    await service.review('data:image/jpeg;base64,abc', input);
+    await review(service, 'data:image/jpeg;base64,abc', input);
     expect(mockLoader.load.mock.calls[0][1].requiredArtworkTextSection).toContain('Imagem meramente ilustrativa');
     expect(mockLoader.load.mock.calls[0][1].illustrativeNoticeSection).toBe('');
   });
@@ -344,7 +387,7 @@ describe('ImageReviewService', () => {
       illustrativeNotice: ILLUSTRATIVE_NOTICE_TEXT,
     };
 
-    await service.review('data:image/jpeg;base64,abc', input);
+    await review(service, 'data:image/jpeg;base64,abc', input);
     expect(mockLoader.load.mock.calls[0][1].illustrativeNoticeSection).toContain(ILLUSTRATIVE_NOTICE_TEXT);
     expect(mockLoader.load.mock.calls[0][1].requiredArtworkTextSection).toBe('');
   });
@@ -357,7 +400,7 @@ describe('ImageReviewService', () => {
       validityText: 'Até 30/09/2026',
     };
 
-    await service.review('data:image/jpeg;base64,abc', input);
+    await review(service, 'data:image/jpeg;base64,abc', input);
     const vars = mockLoader.load.mock.calls[0][1];
     expect(vars.validityTextSection).toContain('Até 30/09/2026');
   });
@@ -370,7 +413,7 @@ describe('ImageReviewService', () => {
       validityText: 'até 30/09/2026',
     };
 
-    await service.review('data:image/jpeg;base64,abc', input);
+    await review(service, 'data:image/jpeg;base64,abc', input);
 
     const vars = mockLoader.load.mock.calls[0][1];
     expect(vars.validityTextSection).toContain('até 30/09/2026');
@@ -387,7 +430,7 @@ describe('ImageReviewService', () => {
       validityText: '   ',
     };
 
-    await service.review('data:image/jpeg;base64,abc', input);
+    await review(service, 'data:image/jpeg;base64,abc', input);
     expect(mockLoader.load.mock.calls[0][1].validityTextSection).toBe('');
   });
 
@@ -399,7 +442,7 @@ describe('ImageReviewService', () => {
       validityText: 'até {{30/09/2026}}',
     };
 
-    await service.review('data:image/jpeg;base64,abc', input);
+    await review(service, 'data:image/jpeg;base64,abc', input);
 
     const vars = mockLoader.load.mock.calls[0][1];
     expect(vars.validityTextSection).not.toContain('{{');
@@ -413,7 +456,7 @@ describe('ImageReviewService', () => {
       storeName: 'Loja Teste',
     };
 
-    await service.review('data:image/jpeg;base64,abc', input);
+    await review(service, 'data:image/jpeg;base64,abc', input);
     expect(mockLoader.load.mock.calls[0][1].validityTextSection).toBe('');
   });
 
@@ -428,7 +471,7 @@ describe('ImageReviewService', () => {
       additionalDetails: 'Condições {{sujeitas}} a consulta',
     };
 
-    await service.review('data:image/jpeg;base64,abc', input);
+    await review(service, 'data:image/jpeg;base64,abc', input);
 
     const vars = mockLoader.load.mock.calls[0][1];
     for (const value of Object.values(vars)) {
@@ -449,17 +492,16 @@ describe('ImageReviewService — onCall (D11)', () => {
       load: vi.fn().mockReturnValue('review prompt'),
       clearCache: vi.fn(),
     };
-    service = new ImageReviewService(mockLoader as unknown as PromptLoader, 'gpt-4o-test');
-    mockOpenAICreate.mockReset();
-    mockOpenAICreate.mockResolvedValue({
-      choices: [{ message: { content: JSON.stringify({ passed: true, issues: [] }) } }],
-      usage: { prompt_tokens: 200, completion_tokens: 60, total_tokens: 260 },
-    });
+    invokeResult = {
+      content: JSON.stringify({ passed: true, issues: [] }),
+      usage: { promptTokens: 200, completionTokens: 60, totalTokens: 260 },
+    };
+    service = new ImageReviewService(mockLoader as unknown as PromptLoader, makeInvoker());
   });
 
   it('Teste 4: review com usage mockado → onCall com usage + durationMs', async () => {
     const onCall = vi.fn();
-    const result = await service.review(
+    const result = await review(service, 
       'data:image/jpeg;base64,abc',
       { productName: 'Produto', storeName: 'Loja' },
       undefined,
@@ -469,32 +511,33 @@ describe('ImageReviewService — onCall (D11)', () => {
     expect(onCall).toHaveBeenCalledTimes(1);
     const info: AiCallInfo = onCall.mock.calls[0][0];
     expect(info.provider).toBe('openai');
-    expect(info.model).toBe('gpt-4o-test');
+    // F46-04: modelo REAL da revisão (gpt-4o), nunca o de imagem.
+    expect(info.model).toBe('gpt-4o');
     expect(info.usage).toEqual({ promptTokens: 200, completionTokens: 60, totalTokens: 260 });
     expect(info.durationMs).toBeGreaterThanOrEqual(0);
   });
 
   it('Teste 5: sem onCall (undefined) → comportamento idêntico ao atual', async () => {
-    const result = await service.review(
+    const result = await review(service, 
       'data:image/jpeg;base64,abc',
       { productName: 'Produto', storeName: 'Loja' }
     );
     expect(result.passed).toBe(true);
   });
 
-  it('23 (F41 D9): review com 1 referência → prompt ganha a linha fixa singular e callVisionModel recebe 2 imagens', async () => {
+  it('23 (F41 D9): review com 1 referência → prompt ganha a linha fixa singular e invoke recebe 2 imagens', async () => {
     const input: ImageReviewInput = {
       productName: 'Produto Teste',
       storeName: 'Loja Teste',
     };
     const primaryDataUrl = 'data:image/jpeg;base64,primary';
 
-    const callSpy = vi.spyOn(service as any, 'callVisionModel').mockResolvedValue({
+    invokeResult = {
       content: JSON.stringify({ passed: true, issues: [] }),
       usage: { promptTokens: 100, completionTokens: 25, totalTokens: 125 },
-    });
+    };
 
-    await service.review('data:image/jpeg;base64,gen', input, [primaryDataUrl]);
+    await review(service, 'data:image/jpeg;base64,gen', input, [primaryDataUrl]);
 
     // A linha fixa entra no prompt carregado (D9).
     expect(mockLoader.load).toHaveBeenCalledWith(
@@ -505,30 +548,26 @@ describe('ImageReviewService — onCall (D11)', () => {
     expect(loadedPrompt + '\n\nCompare o produto da arte com a imagem de referência.').toContain(
       'Compare o produto da arte com a imagem de referência.'
     );
-    // callVisionModel recebe o prompt com a linha fixa + a referência como 2ª imagem.
-    expect(callSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Compare o produto da arte com a imagem de referência.'),
-      'data:image/jpeg;base64,gen',
-      [primaryDataUrl]
-    );
+    // invoke recebe o prompt com a linha fixa + a referência como 2ª imagem.
+    const request = lastRequest();
+    expect(request.prompt).toContain('Compare o produto da arte com a imagem de referência.');
+    expect(request.productImagesDataUrls).toEqual(['data:image/jpeg;base64,gen', primaryDataUrl]);
   });
 
   it('23b (F41 D9): sem referências (3º arg) → comportamento atual (sem linha fixa, sem imagem extra)', async () => {
-    const callSpy = vi.spyOn(service as any, 'callVisionModel').mockResolvedValue({
+    invokeResult = {
       content: JSON.stringify({ passed: true, issues: [] }),
       usage: { promptTokens: 100, completionTokens: 25, totalTokens: 125 },
-    });
+    };
 
-    await service.review(
+    await review(service, 
       'data:image/jpeg;base64,gen',
       { productName: 'Produto', storeName: 'Loja' }
     );
 
-    expect(callSpy).toHaveBeenCalledWith(
-      expect.not.stringContaining('Compare o produto da arte'),
-      'data:image/jpeg;base64,gen',
-      []
-    );
+    const request = lastRequest();
+    expect(request.prompt).not.toContain('Compare o produto da arte');
+    expect(request.productImagesDataUrls).toEqual(['data:image/jpeg;base64,gen']);
   });
 });
 
@@ -557,36 +596,33 @@ describe('ImageReviewService — multi-referências autorizadas (quick 260820-pl
   const aux1 = 'data:image/jpeg;base64,aux1';
   const aux2 = 'data:image/jpeg;base64,aux2';
 
-  function mockCall() {
-    return vi.spyOn(service as any, 'callVisionModel').mockResolvedValue({
+  function setCannedResult() {
+    invokeResult = {
       content: JSON.stringify({ passed: true, issues: [] }),
       usage: { promptTokens: 100, completionTokens: 25, totalTokens: 125 },
-    });
+    };
   }
 
   beforeEach(() => {
     mockLoader = interpolatingLoader();
-    service = new ImageReviewService(mockLoader as unknown as PromptLoader);
+    invokeResult = { content: JSON.stringify({ passed: true, issues: [] }) };
+    service = new ImageReviewService(mockLoader as unknown as PromptLoader, makeInvoker());
   });
 
-  it('1: review() com 3 referências → callVisionModel recebe [generated, primary, aux1, aux2] em ordem', async () => {
-    const callSpy = mockCall();
+  it('1: review() com 3 referências → invoke recebe [generated, primary, aux1, aux2] em ordem', async () => {
+    setCannedResult();
 
-    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary, aux1, aux2]);
+    await review(service, 'data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary, aux1, aux2]);
 
-    expect(callSpy).toHaveBeenCalledWith(
-      expect.any(String),
-      'data:image/jpeg;base64,gen',
-      [primary, aux1, aux2]
-    );
+    expect(lastRequest().productImagesDataUrls).toEqual(['data:image/jpeg;base64,gen', primary, aux1, aux2]);
   });
 
   it('2: prompt final contém a regra — imagem adicional AUTORIZADA e produto fora das referências = invented_information', async () => {
-    const callSpy = mockCall();
+    setCannedResult();
 
-    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary, aux1]);
+    await review(service, 'data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary, aux1]);
 
-    const finalPrompt = callSpy.mock.calls[0][0] as string;
+    const finalPrompt = lastRequest().prompt;
     expect(finalPrompt).toContain('Referências Autorizadas da Campanha');
     expect(finalPrompt).toMatch(/referências autorizadas de apoio, variação, combo ou ângulo/);
     expect(finalPrompt).toMatch(/não trate como invenção um item visível em qualquer referência/i);
@@ -594,60 +630,54 @@ describe('ImageReviewService — multi-referências autorizadas (quick 260820-pl
   });
 
   it('3: sem referências (arg undefined) → sem seção, sem imagens extras (regressão 23b F41)', async () => {
-    const callSpy = mockCall();
+    setCannedResult();
 
-    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' });
+    await review(service, 'data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' });
 
-    expect(callSpy).toHaveBeenCalledWith(expect.any(String), 'data:image/jpeg;base64,gen', []);
-    const finalPrompt = callSpy.mock.calls[0][0] as string;
+    expect(lastRequest().productImagesDataUrls).toEqual(['data:image/jpeg;base64,gen']);
+    const finalPrompt = lastRequest().prompt;
     expect(finalPrompt).not.toContain('Referências Autorizadas');
     expect(mockLoader.load.mock.calls[0][1].referenceImagesContextSection).toBe('');
   });
 
   it('4: 1 referência → linha fixa singular + 2 imagens (regressão 23 F41)', async () => {
-    const callSpy = mockCall();
+    setCannedResult();
 
-    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary]);
+    await review(service, 'data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary]);
 
-    expect(callSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Compare o produto da arte com a imagem de referência.'),
-      'data:image/jpeg;base64,gen',
-      [primary]
-    );
+    expect(lastRequest().prompt).toContain('Compare o produto da arte com a imagem de referência.');
+    expect(lastRequest().productImagesDataUrls).toEqual(['data:image/jpeg;base64,gen', primary]);
     expect(mockLoader.load.mock.calls[0][1].referenceImagesContextSection).toBe('');
   });
 
   it('5: 2+ referências → linha fixa plural "as imagens de referência autorizadas"', async () => {
-    const callSpy = mockCall();
+    setCannedResult();
 
-    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary, aux1]);
+    await review(service, 'data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary, aux1]);
 
-    expect(callSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Compare o produto da arte com as imagens de referência autorizadas.'),
-      'data:image/jpeg;base64,gen',
-      [primary, aux1]
-    );
+    expect(lastRequest().prompt).toContain('Compare o produto da arte com as imagens de referência autorizadas.');
+    expect(lastRequest().productImagesDataUrls).toEqual(['data:image/jpeg;base64,gen', primary, aux1]);
   });
 
   it('6: referenceImagesContextSection vazia para count <= 1', async () => {
-    mockCall();
+    setCannedResult();
 
-    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' });
+    await review(service, 'data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' });
     expect(mockLoader.load.mock.calls[0][1].referenceImagesContextSection).toBe('');
 
     mockLoader.load.mockClear();
-    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary]);
+    await review(service, 'data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary]);
     expect(mockLoader.load.mock.calls[0][1].referenceImagesContextSection).toBe('');
 
     mockLoader.load.mockClear();
-    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary, aux1]);
+    await review(service, 'data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary, aux1]);
     expect(mockLoader.load.mock.calls[0][1].referenceImagesContextSection).not.toBe('');
   });
 
   it('7: proteção/hierarquia — seção afirma invenção crítica fora de todas as referências e primeira imagem = referência principal', async () => {
-    mockCall();
+    setCannedResult();
 
-    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary, aux1]);
+    await review(service, 'data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary, aux1]);
 
     const section = mockLoader.load.mock.calls[0][1].referenceImagesContextSection as string;
     expect(section).toMatch(/primeira imagem é a referência principal do produto anunciado/);
@@ -656,24 +686,12 @@ describe('ImageReviewService — multi-referências autorizadas (quick 260820-pl
     expect(section).toMatch(/invenção CRÍTICA/i);
   });
 
-  it('1b: callVisionModel monta blocos image_url na ordem gerada → primary → aux1 → aux2', async () => {
-    // Caminho real do callVisionModel (mockOpenAICreate) — sem modelo real.
-    const callSpy = vi.spyOn(service as any, 'callVisionModel');
-    mockOpenAICreate.mockReset();
-    mockOpenAICreate.mockResolvedValue({
-      choices: [{ message: { content: JSON.stringify({ passed: true, issues: [] }) } }],
-      usage: { prompt_tokens: 200, completion_tokens: 60, total_tokens: 260 },
-    });
+  it('1b: invoke monta productImagesDataUrls na ordem gerada → primary → aux1 → aux2', async () => {
+    setCannedResult();
 
-    await service.review('data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary, aux1, aux2]);
+    await review(service, 'data:image/jpeg;base64,gen', { productName: 'P', storeName: 'L' }, [primary, aux1, aux2]);
 
-    expect(callSpy).toHaveBeenCalled();
-    const createArgs = mockOpenAICreate.mock.calls[0][0];
-    const content = createArgs.messages[0].content;
-    const imageUrls = content
-      .filter((b: { type: string }) => b.type === 'image_url')
-      .map((b: { image_url: { url: string } }) => b.image_url.url);
-    expect(imageUrls).toEqual(['data:image/jpeg;base64,gen', primary, aux1, aux2]);
+    expect(lastRequest().productImagesDataUrls).toEqual(['data:image/jpeg;base64,gen', primary, aux1, aux2]);
   });
 });
 
@@ -686,7 +704,8 @@ describe('ImageReviewService — provas 45-08 (contrato splitado Diretor × Revi
       load: vi.fn().mockReturnValue('review prompt with {{expectedBadgeBehavior}}'),
       clearCache: vi.fn(),
     };
-    service = new ImageReviewService(mockLoader as unknown as PromptLoader);
+    invokeResult = { content: JSON.stringify({ passed: true, issues: [] }) };
+    service = new ImageReviewService(mockLoader as unknown as PromptLoader, makeInvoker());
   });
 
   function lastVars(): Record<string, string> {
@@ -694,7 +713,7 @@ describe('ImageReviewService — provas 45-08 (contrato splitado Diretor × Revi
   }
 
   it('prova 5: sensitiveConstraints chega ao Revisor em seção própria', async () => {
-    await service.review('data:image/jpeg;base64,abc', {
+    await review(service, 'data:image/jpeg;base64,abc', {
       productName: 'Produto Teste',
       storeName: 'Loja Teste',
       campaignIntent: 'offer',
@@ -708,7 +727,7 @@ describe('ImageReviewService — provas 45-08 (contrato splitado Diretor × Revi
   });
 
   it('prova 5b: sem sensitiveConstraints → seção vazia', async () => {
-    await service.review('data:image/jpeg;base64,abc', {
+    await review(service, 'data:image/jpeg;base64,abc', {
       productName: 'P',
       storeName: 'L',
     });
@@ -716,7 +735,7 @@ describe('ImageReviewService — provas 45-08 (contrato splitado Diretor × Revi
   });
 
   it('prova 6: objective chega como contexto não-bloqueante (seção presente; ausência nunca reprova)', async () => {
-    await service.review('data:image/jpeg;base64,abc', {
+    await review(service, 'data:image/jpeg;base64,abc', {
       productName: 'Produto Teste',
       storeName: 'Loja Teste',
       campaignIntent: 'offer',
@@ -727,7 +746,7 @@ describe('ImageReviewService — provas 45-08 (contrato splitado Diretor × Revi
     expect(vars.objectiveSection).toContain('não é conteúdo obrigatório na arte');
 
     mockLoader.load.mockClear();
-    await service.review('data:image/jpeg;base64,abc', {
+    await review(service, 'data:image/jpeg;base64,abc', {
       productName: 'P',
       storeName: 'L',
     });
@@ -735,7 +754,7 @@ describe('ImageReviewService — provas 45-08 (contrato splitado Diretor × Revi
   });
 
   it('prova 7: campaignDetails/additionalDetails seguem apenas como contexto autorizado', async () => {
-    await service.review('data:image/jpeg;base64,abc', {
+    await review(service, 'data:image/jpeg;base64,abc', {
       productName: 'Produto Teste',
       storeName: 'Loja Teste',
       campaignIntent: 'offer',
@@ -751,7 +770,7 @@ describe('ImageReviewService — provas 45-08 (contrato splitado Diretor × Revi
   });
 
   it('prova 8: offer sem "CTA de compra esperado" e sem "senso de urgência" no expectedCommercialTone', async () => {
-    await service.review('data:image/jpeg;base64,abc', {
+    await review(service, 'data:image/jpeg;base64,abc', {
       productName: 'Produto Teste',
       storeName: 'Loja Teste',
       campaignIntent: 'offer',
@@ -763,7 +782,7 @@ describe('ImageReviewService — provas 45-08 (contrato splitado Diretor × Revi
   });
 
   it('prova 9: buildExpectedBadgeBehavior intacto — offer obrigatório exato e demais intents informado-opcional', async () => {
-    await service.review('data:image/jpeg;base64,abc', {
+    await review(service, 'data:image/jpeg;base64,abc', {
       productName: 'P',
       storeName: 'L',
       campaignIntent: 'offer',
@@ -774,7 +793,7 @@ describe('ImageReviewService — provas 45-08 (contrato splitado Diretor × Revi
     );
 
     mockLoader.load.mockClear();
-    await service.review('data:image/jpeg;base64,abc', {
+    await review(service, 'data:image/jpeg;base64,abc', {
       productName: 'P',
       storeName: 'L',
       campaignIntent: 'spotlight',
@@ -784,7 +803,7 @@ describe('ImageReviewService — provas 45-08 (contrato splitado Diretor × Revi
   });
 
   it('prova 10: availabilityNotes não chega ao Revisor (sem campo no input e sem conteúdo na montagem)', async () => {
-    await service.review('data:image/jpeg;base64,abc', {
+    await review(service, 'data:image/jpeg;base64,abc', {
       productName: 'Produto Teste',
       storeName: 'Loja Teste',
       campaignIntent: 'offer',
@@ -878,7 +897,8 @@ describe('ImageReviewService — rodada de ajuste focado 45-08 (revisão humana 
       load: vi.fn().mockReturnValue('review prompt with {{expectedBadgeBehavior}}'),
       clearCache: vi.fn(),
     };
-    service = new ImageReviewService(mockLoader as unknown as PromptLoader);
+    invokeResult = { content: JSON.stringify({ passed: true, issues: [] }) };
+    service = new ImageReviewService(mockLoader as unknown as PromptLoader, makeInvoker());
   });
 
   function lastVars(): Record<string, string> {
@@ -890,7 +910,7 @@ describe('ImageReviewService — rodada de ajuste focado 45-08 (revisão humana 
   }
 
   it('rodada 1 — offer background: expectedImageTreatment orienta isolar mas NÃO bloqueia fundo contextual automaticamente', async () => {
-    await service.review('data:image/jpeg;base64,abc', {
+    await review(service, 'data:image/jpeg;base64,abc', {
       productName: 'Produto Teste',
       storeName: 'Loja Teste',
       campaignIntent: 'offer',
@@ -923,21 +943,21 @@ describe('ImageReviewService — rodada de ajuste focado 45-08 (revisão humana 
   });
 
   it('rodada 2b — expectedPriceBehavior mantém os 3 intents corretos', async () => {
-    await service.review('data:image/jpeg;base64,abc', {
+    await review(service, 'data:image/jpeg;base64,abc', {
       productName: 'P', storeName: 'L', campaignIntent: 'offer', discountedPrice: 'R$ 19,90',
     });
     expect(lastVars().expectedPriceBehavior).toContain('DEVE exibir preço promocional');
     expect(lastVars().expectedPriceBehavior).toContain('R$ 19,90');
 
     mockLoader.load.mockClear();
-    await service.review('data:image/jpeg;base64,abc', {
+    await review(service, 'data:image/jpeg;base64,abc', {
       productName: 'P', storeName: 'L', campaignIntent: 'spotlight', discountedPrice: 'R$ 29,90',
     });
     expect(lastVars().expectedPriceBehavior).toContain('DEVE exibir preço único');
     expect(lastVars().expectedPriceBehavior).toContain('R$ 29,90');
 
     mockLoader.load.mockClear();
-    await service.review('data:image/jpeg;base64,abc', {
+    await review(service, 'data:image/jpeg;base64,abc', {
       productName: 'P', storeName: 'L', campaignIntent: 'exclusive',
     });
     expect(lastVars().expectedPriceBehavior).toContain('NÃO deve exibir preço');
@@ -978,7 +998,7 @@ describe('ImageReviewService — rodada de ajuste focado 45-08 (revisão humana 
   });
 
   it('rodada 5 — badge permanece intacto (offer obrigatório exato)', async () => {
-    await service.review('data:image/jpeg;base64,abc', {
+    await review(service, 'data:image/jpeg;base64,abc', {
       productName: 'P', storeName: 'L', campaignIntent: 'offer', badgeText: 'Oferta Imperdível',
     });
     expect(lastVars().expectedBadgeBehavior).toBe(
