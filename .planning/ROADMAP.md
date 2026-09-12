@@ -1006,7 +1006,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [x] 46-04-PLAN.md — Migração das capacidades de VISÃO (input_validation, image_review, brand_profile_vision, VS validation) + furo 1 + remoção da persistência manual (Wave 4)
+- [x] 46-04-PLAN.md — Migração das capacidades de VISÃO (input_validation, image_review, brand_profile_vision, VS validation) + furo 1 + remoção da persistência manual (Wave 4). **Reabertura (Tasks 5/6):** bypass fail-open do validator removido + conversão atômica dos callers produtivos de visão + 4 testes de custo de `generate-image/route.test.ts` co-migrados (271 files / 2697 testes)
 
 **Wave 5** *(blocked on Wave 4 completion)*
 

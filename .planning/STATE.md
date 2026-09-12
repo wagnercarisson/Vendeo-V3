@@ -29,7 +29,7 @@ progress:
 | 46-01 | 1 | ✅ | Trackings + baseline/inventário das 11 capacidades + registry (`AiModelConfig` com protocol) + migration CHECK `campaign_spec` |
 | 46-02 | 2 | ✅ | api-keys + gateway + adapters por protocolo + `AiCallEnvelope` + contrato de erro + sink + mapa capability→generationType |
 | 46-03 | 3 | ✅ | Migração das capacidades de TEXTO (copy, correção, brand_profile_text, campaign_spec legado via provider+service+rota) + proprietário único + remoção da persistência manual |
-| 46-04 | 4 | ✅ | Migração das capacidades de VISÃO + furo 1 (modelo real em validation/review) + remoção da persistência manual |
+| 46-04 | 4 | ✅ | Migração das capacidades de VISÃO + furo 1 (modelo real em validation/review) + remoção da persistência manual. **Reabertura (Tasks 5/6):** bypass fail-open do validator removido + conversão atômica de TODOS os callers de visão (correction-reports, logo, retry-brand-director, server-actions, approve, restore, VS generate-without-logo) + 4 testes de custo de `generate-image/route.test.ts` co-migrados — 271 files / 2697 testes, 4 gates verdes |
 | 46-05 | 5 | ○ | Migração das capacidades de IMAGEM + furos 3/4 + cost-estimator (tool em campaign_image e visual_signature_image) |
 | 46-06 | 6 | ○ | Telemetria nos callers produtivos via `AiTelemetryContext`/sink + gate global de arquitetura (SDK/wire) + inventário |
 | 46-07 | 7 | ○ | Remoção das env-vars de modelo/provider + extensão do gate (env-var) + co-migração de testes + ordem de deploy |
