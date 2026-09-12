@@ -14,9 +14,9 @@ import path from "node:path";
  *     `src/lib/ai-cost/cost-estimator.ts` é a única exceção).
  *  3. Fora de `src/lib/ai/**`: nenhum `AiCostTracker.record(` para chamada de IA —
  *     a allowlist cobre APENAS os writers de **delivery marker** (sem custo/tokens).
- *
- * A leitura de env-var de modelo é adicionada a este gate no 46-07 (após a
- * remoção das envs).
+ *  4. Fora de `src/lib/ai/adapters/**`: nenhuma leitura de env-var de
+ *     modelo/provider (F46-07, D5/D8) — a escolha de modelo é do registry em
+ *     código, nunca de env-var.
  */
 
 const SELF = "src/lib/ai/__tests__/architecture-guard.test.ts";
@@ -71,6 +71,15 @@ const SDK_WIRE_PATTERNS: Array<{ name: string; re: RegExp }> = [
 /** `new AiCostTracker().record(` ou `tracker.record(` (instância local). */
 const TRACKER_RECORD_RE = /(?:new\s+AiCostTracker\(\)[\s\S]{0,60}?\.record\s*\(|\btracker\.record\s*\()/;
 
+/**
+ * Env-vars de modelo/provider eliminadas do runtime (F46-07, D5/D8). Nenhum
+ * serviço pode lê-las para escolher modelo/provider — a fonte única é o registry
+ * em código. A leitura de chave (`OPENAI_API_KEY`/`GEMINI_API_KEY`) NÃO entra
+ * aqui (é resolvida por `src/lib/ai/api-keys.ts`).
+ */
+const MODEL_ENV_RE =
+  /process\.env\.(OPENAI_MODEL|OPENAI_TEXT_MODEL|OPENAI_BRAND_DIRECTOR_MODEL|OPENAI_TEXT_ONLY_INFERENCE_MODEL|IMAGE_GENERATION_RESPONSES_MODEL|GPT_IMAGE_MODEL|IMAGE_EDIT_FALLBACK_MODEL|VISION_REVIEW_MODEL|IMAGE_VALIDATION_MODEL|IMAGE_PROVIDER|TEXT_PROVIDER|TEXT_FALLBACK_PROVIDER|GEMINI_TEXT_MODEL|GEMINI_MODEL)\b/;
+
 describe("architecture-guard — camada única de IA (F46-06)", () => {
   const files = collectFiles(path.resolve(process.cwd(), "src")).filter((f) => f !== SELF);
 
@@ -110,5 +119,14 @@ describe("architecture-guard — camada única de IA (F46-06)", () => {
     for (const file of DELIVERY_MARKER_FILES) {
       expect(files).toContain(file);
     }
+  });
+
+  it("não há leitura de env-var de modelo/provider fora de src/lib/ai/adapters/**", () => {
+    const violations: string[] = [];
+    for (const file of files) {
+      if (file.startsWith("src/lib/ai/adapters/")) continue;
+      if (MODEL_ENV_RE.test(readCode(file))) violations.push(file);
+    }
+    expect(violations).toEqual([]);
   });
 });

@@ -8,6 +8,7 @@ import { AiImageGenerator } from "./ai-image-generator";
 import { getActiveVisualSignature } from "./persistence";
 import { AiCostTracker } from "@/lib/ai-cost";
 import { createDefaultTelemetryContext } from "@/lib/ai";
+import { MODEL_REGISTRY } from "@/lib/ai/model-registry";
 import type {
   VisualSignatureRecord,
   VisualSignatureMetadata,
@@ -17,6 +18,13 @@ import type {
 } from "./types";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * F46-07 (D5/D8): modelo default da capacidade `visual_signature_image`, lido do
+ * registry (fonte única) — usado apenas como rótulo do diagnóstico de cascata
+ * (`CascadeAttempt`); a invocação real resolve o modelo pelo gateway.
+ */
+const VISUAL_SIGNATURE_IMAGE_MODEL = MODEL_REGISTRY.visual_signature_image.primary.model;
 
 function sanitizeErrorMessage(raw: string): string {
   return raw
@@ -64,7 +72,7 @@ function classifyError(
   return {
     tier,
     provider: "openai",
-    model: process.env.IMAGE_GENERATION_RESPONSES_MODEL || "gpt-5.5",
+    model: VISUAL_SIGNATURE_IMAGE_MODEL,
     elapsedMs,
     status,
     errorCode,

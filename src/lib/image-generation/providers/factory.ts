@@ -1,33 +1,16 @@
 /**
- * Provider factory — selects image provider based on IMAGE_PROVIDER env var.
+ * Provider factory — instancia o provider de imagem padrão (OpenAI).
  *
- * Supported values:
- *   "openai" (default) — OpenAIImageProvider
- *   "gemini" (future)  — not yet implemented
- *
- * Unrecognized values log a warning and fall back to OpenAI at runtime
- * (graceful degradation, does not block generation).
+ * F46-07 (D5/D8): a escolha de provider/modelo é do registry em código
+ * (`src/lib/ai/model-registry.ts`); este factory NÃO lê env-var de provider.
+ * O único provider implementado é OpenAI — `gemini` permanece futuro. O
+ * provider apenas delega à camada única (AI Gateway).
  */
 
-import { IMAGE_PROVIDER } from "@/lib/image-generation/config";
 import type { ImageProvider } from "@/lib/image-generation/providers/types";
 import { OpenAIImageProvider } from "@/lib/image-generation/providers/openai";
 
-/**
- * Create an ImageProvider instance based on the IMAGE_PROVIDER env var.
- * Defaults to OpenAIImageProvider when the env var is unset, empty,
- * or contains an unrecognized value.
- */
+/** Cria o provider de imagem padrão (OpenAI), delegando à camada única. */
 export function createImageProvider(): ImageProvider {
-  const provider = IMAGE_PROVIDER;
-
-  switch (provider) {
-    case "openai":
-      return new OpenAIImageProvider();
-    default:
-      console.warn(
-        `[createImageProvider] provider "${provider}" desconhecido — usando OpenAI como fallback.`
-      );
-      return new OpenAIImageProvider();
-  }
+  return new OpenAIImageProvider();
 }

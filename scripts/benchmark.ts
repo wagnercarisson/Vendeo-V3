@@ -5,9 +5,12 @@
  *   npx tsx scripts/benchmark.ts [--provider openai] [--model gpt-5.5] [--delay 2000] [--max-runs 25]
  *
  * Options:
- *   --provider <name>   Override IMAGE_PROVIDER (default from env). Must be "openai".
- *                       Invalid provider exits with non-zero immediately.
- *   --model <name>      Override the generation model (default: IMAGE_GENERATION_RESPONSES_MODEL).
+ *   --provider <name>   Validação do provedor (deve ser "openai"). O provider
+ *                       efetivo é resolvido pelo registry em código; overrides
+ *                       divergentes são ignorados com aviso.
+ *   --model <name>      Validação/registro do modelo. O modelo efetivo é
+ *                       resolvido pelo registry em código; overrides divergentes
+ *                       são ignorados com aviso.
  *   --delay <ms>        Delay between scenarios in ms (default: 2000).
  *   --max-runs <number> Maximum executions before stopping (default: 25, protects cost).
  *
@@ -22,8 +25,8 @@ import { loadEnvConfig } from "@next/env";
 import type { BenchmarkScenario } from "./benchmark-scenarios";
 
 
-// NOTE: src/ imports are dynamic (inside runBenchmark) so we can set env vars
-// before the config module evaluates IMAGE_GENERATION_RESPONSES_MODEL.
+// NOTE: src/ imports are dynamic (inside runBenchmark). F46-07 (D5/D8): a
+// escolha de modelo/provider vem do registry em código, não de env-var.
 
 
 // ─── CLI argument parsing ──────────────────────────────────────────────────
@@ -250,41 +253,48 @@ function sanitizeError(message?: string): string | undefined {
 async function runBenchmark(): Promise<void> {
   const { provider, model, delay, maxRuns } = parseArgs();
 
-  // Load .env.local before any src/ imports so config module picks them up.
+  // F46-07 (D5/D8): a escolha de modelo/provider é do registry em código —
+  // NÃO há mais override por env-var. O benchmark reporta o alvo resolvido.
   loadEnvConfig(process.cwd());
 
-  // Set env vars before any src/ imports so config module picks them up.
-  const effectiveModel = model || process.env.IMAGE_GENERATION_RESPONSES_MODEL || "gpt-5.5";
-  process.env.IMAGE_GENERATION_RESPONSES_MODEL = effectiveModel;
-
-  if (provider) {
-    process.env.IMAGE_PROVIDER = provider;
-  }
-
-  // Validate provider — fail fast on invalid
-  const evaluatedProvider = process.env.IMAGE_PROVIDER || "openai";
-  const VALID_PROVIDERS = new Set(["openai"]);
-  if (!VALID_PROVIDERS.has(evaluatedProvider)) {
-    console.error(
-      `ERRO: Provedor "${evaluatedProvider}" inválido. Provedores suportados: ${[...VALID_PROVIDERS].join(", ")}.`
-    );
-    process.exit(1);
-  }
-
-  // ── Import src-dependent modules after env vars are set ──────────
+  // ── Import src-dependent modules ─────────────────────────────────
   const [
     { BENCHMARK_SCENARIOS },
     { createImageProvider },
     { ImageGenerationService },
     { buildCampaignBriefFromFlat },
-    { IMAGE_GENERATION_RESPONSES_MODEL },
+    { MODEL_REGISTRY },
   ] = await Promise.all([
     import("./benchmark-scenarios"),
     import("../src/lib/image-generation/providers/factory"),
     import("../src/lib/image-generation/services/image-generation-service"),
     import("../src/lib/campaign/brief"),
-    import("../src/lib/image-generation/config"),
+    import("../src/lib/ai/model-registry"),
   ]);
+
+  const target = MODEL_REGISTRY.campaign_image.primary;
+  const effectiveModel = target.model;
+  const evaluatedProvider = target.provider;
+
+  // Validate provider — fail fast on invalid. Overrides de --provider/--model são
+  // ignorados (o registry é a fonte única); avisa quando divergem do alvo resolvido.
+  const VALID_PROVIDERS = new Set(["openai"]);
+  if (provider && !VALID_PROVIDERS.has(provider)) {
+    console.error(
+      `ERRO: Provedor "${provider}" inválido. Provedores suportados: ${[...VALID_PROVIDERS].join(", ")}.`
+    );
+    process.exit(1);
+  }
+  if (provider && provider !== evaluatedProvider) {
+    console.warn(
+      `⚠ --provider "${provider}" ignorado: o registry resolve "${evaluatedProvider}" (fonte única).`
+    );
+  }
+  if (model && model !== effectiveModel) {
+    console.warn(
+      `⚠ --model "${model}" ignorado: o registry resolve "${effectiveModel}" (fonte única).`
+    );
+  }
 
   // ── Banner ────────────────────────────────────────────────────────
   const separator = "═".repeat(60);
@@ -292,7 +302,7 @@ async function runBenchmark(): Promise<void> {
   console.log("  BENCHMARK — Geração de Imagens");
   console.log(separator);
   console.log(`  Provider:           ${evaluatedProvider}`);
-  console.log(`  Model:              ${effectiveModel}${model ? " (via --model)" : ""}`);
+  console.log(`  Model:              ${effectiveModel}`);
   console.log(`  Delay entre runs:   ${delay}ms`);
   console.log(`  Max runs:           ${maxRuns}`);
   console.log(`  Scenarios:          ${BENCHMARK_SCENARIOS.length}`);
