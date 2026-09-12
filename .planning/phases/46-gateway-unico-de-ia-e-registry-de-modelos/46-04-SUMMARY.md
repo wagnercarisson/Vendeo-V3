@@ -251,14 +251,21 @@ fail-open do validator e fechou as 4 falhas transicionais da suíte
 
 **Total deviations da reabertura:** 2 auto-fixed (1 bug, 1 blocking).
 
-### Correção pós-reabertura — attempt de review por tentativa (RESOLVIDO)
+### Correções pós-reabertura — attemptNumber por tentativa (RESOLVIDO)
 
-A revisão da reabertura identificou que o `ImageGenerationService` real passava o
-MESMO `options.telemetry` (`attemptNumber: 0`) a todas as tentativas de review,
-enquanto o comportamento legado persistia o attempt por tentativa (`attempts`).
-**Corrigido em `ee67f764`:** o serviço passa `{ ...options.telemetry, attemptNumber: attempts }`
-ao `ImageReviewService.review`; teste de regressão em `image-generation-service.test.ts`
-força 2 tentativas e assere `[0, 1]`. A suíte completa passou a **271 files / 2698 testes**.
+1. **Revisão de imagem (`ImageGenerationService`):** o serviço real passava o MESMO
+   `options.telemetry` (`attemptNumber: 0`) a todas as tentativas de review, enquanto o
+   comportamento legado persistia o attempt por tentativa (`attempts`). **Corrigido em `ee67f764`:**
+   passa `{ ...options.telemetry, attemptNumber: attempts }` ao `ImageReviewService.review`;
+   teste de regressão em `image-generation-service.test.ts` força 2 tentativas e assere `[0, 1]`.
+2. **Validação de assinatura visual (`AiImageGenerator`/`server-actions`):** a validação
+   (`visual_signature_validation`) recebia o `telemetry` com attempt fixo; o `image_retry`
+   (attempt 1) era persistido como 0. **Corrigido no ajuste final:** `AiImageGenerator.generate`
+   deriva `attemptNumber` de `params.attempt` ao encaminhar a telemetria ao validator (cobre
+   `server-actions.generateVariations`/`generateAutomatic`, que passam `attempt: 0/1`); teste de
+   regressão `ai-image-generator.test.ts` assere `[0, 1]`.
+
+Suíte completa final: **272 files / 2699 testes**; typecheck/lint/build verdes.
 
 ## User Setup Required
 
@@ -295,7 +302,7 @@ Nenhuma nova superfície de segurança introduzida: mesmas imagens/provedor (T-4
 - [x] Todos os callers produtivos de visão fornecem `AiTelemetryContext`/sink (correction-reports, logo, retry-brand-director, server-actions, approve ×2, restore, VS generate-without-logo)
 - [x] `visual-signature/generate-without-logo/route.ts` sem `VALIDATION_MODEL`/`handleCall` legados; validação via `BufferingAiTelemetrySink`; imagem híbrida preservada
 - [x] Testes 10/11/16/17 de `generate-image/route.test.ts` verdes com as asserções originais (63/63 na suíte)
-- [x] Suíte completa: **271 files / 2698 testes — 0 falhas**
+- [x] Suíte completa: **272 files / 2699 testes — 0 falhas**
 - [x] `npm run typecheck`, `npm run lint`, `npm run build` → verdes
 
 ---

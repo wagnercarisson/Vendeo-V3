@@ -280,7 +280,14 @@ Sem textos promocionais. Apenas a imagem PNG.`;
         // persistida pelo SINK do contexto de telemetria — o `onCall` legado do
         // caller fica reservado à imagem (visual_signature_image, híbrida até
         // 46-05), evitando dupla contagem/dupla persistência.
-        telemetry: params.telemetry,
+        // attemptNumber derivado de `params.attempt` para que cada tentativa
+        // (image_direct=0, image_retry=1) seja persistida com o attempt real.
+        telemetry: params.telemetry
+          ? {
+              ...params.telemetry,
+              attemptNumber: params.attempt ?? params.telemetry.attemptNumber,
+            }
+          : undefined,
       });
 
       if (!validation.valid) {
