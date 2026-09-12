@@ -148,9 +148,10 @@ export async function resolveAiCost(params: {
   imageGenerationTool?: boolean;
   /**
    * F38.1 fechamento: generation_type da chamada. Restringe o componente
-   * provisório da tool a campaign_image (evita dupla cobrança em
-   * visual_signature/brand_profile e no fallback gpt-image-2 — outros caminhos
-   * de precificação).
+   * provisório da tool a `campaign_image` **e** `visual_signature_image` (F46-05
+   * — ambas usam a tool `image_generation` da Responses API). Evita dupla
+   * cobrança em `visual_signature` genérico/brand_profile e no fallback
+   * gpt-image-2 — outros caminhos de precificação.
    */
   generationType?: GenerationEventType;
 }): Promise<CostResolution> {
@@ -184,14 +185,19 @@ export async function resolveAiCost(params: {
         pricingVersion: versionId,
       };
 
-      // F38.1 fechamento: estimativa operacional granular da tool image_generation.
-      // Aplicada APENAS em campaign_image + imageGenerationTool=true (Responses API
-      // image_generation). visual_signature/brand_profile e o fallback gpt-image-2
+      // F38.1 fechamento / F46-05: estimativa operacional granular da tool
+      // image_generation. Aplicada em `campaign_image` E `visual_signature_image`
+      // + imageGenerationTool=true (Responses API image_generation). Os demais
+      // caminhos (visual_signature genérico/brand_profile e o fallback gpt-image-2)
       // usam outros caminhos de precificação — não sofrem o componente da tool
       // (anti-dupla-cobrança). estimated_cost_usd = text_component + image_tool_component;
       // o componente da tool vem de ai_model_pricing (linha versionável) — se não
       // existir, mantém só o componente textual e marca a estimativa como parcial.
-      if (params.imageGenerationTool === true && params.generationType === "campaign_image") {
+      if (
+        params.imageGenerationTool === true &&
+        (params.generationType === "campaign_image" ||
+          params.generationType === "visual_signature_image")
+      ) {
         resolution.costFormulaVersion = RESPONSES_IMAGE_GENERATION_FORMULA_VERSION;
 
         const toolModel = IMAGE_GENERATION_TOOL_MODELS[provider];

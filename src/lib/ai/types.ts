@@ -77,6 +77,11 @@ export interface AiInvocationRequest {
   maxTokens?: number;
   temperature?: number;
   signal?: AbortSignal;
+  /**
+   * F46-05: timeout de cliente do provider (ms), repassado ao SDK. Aditivo —
+   * preserva o `timeout` do caminho `visual_signature_image`.
+   */
+  timeout?: number;
 }
 
 /** Metadados de usage do provider (auditoria/calibração — não entra no cálculo). */

@@ -47,7 +47,10 @@ export class ResponsesAdapter implements AiAdapter {
       ];
     }
 
-    const response = await openai.responses.create(params as never, { signal: request.signal });
+    const response = await openai.responses.create(params as never, {
+      signal: request.signal,
+      ...(request.timeout !== undefined ? { timeout: request.timeout } : {}),
+    });
 
     const output = (response as { output?: Array<{ type?: string; result?: string }> }).output;
     const imageOutput = output?.find((item) => item.type === "image_generation_call");

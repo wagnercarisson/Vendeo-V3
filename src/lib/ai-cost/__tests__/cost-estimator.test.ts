@@ -329,7 +329,43 @@ describe("resolveAiCost — ajuste provisório versionável da tool image_genera
     expect(mockGetModelPricing).toHaveBeenCalledTimes(1);
   });
 
-  it("imageGenerationTool=true mas generationType≠campaign_image (visual_signature) → sem componente da tool (anti-dupla-cobrança)", async () => {
+  it("imageGenerationTool=true + visual_signature_image + tool pricing presente → TAMBÉM soma text_component + image_tool_component (F46-05)", async () => {
+    mockGetModelPricing.mockImplementation(({ model }: { model: string }) => {
+      if (model === "responses:image_generation") {
+        return Promise.resolve({ pricing: TOOL_PRICING, versionId: TOOL_UUID });
+      }
+      return Promise.resolve({ pricing: TEXT_PRICING, versionId: UUID });
+    });
+
+    const result = await resolveAiCost({
+      provider: "openai",
+      model: "gpt-5.5",
+      usage: USAGE,
+      imageGenerationTool: true,
+      generationType: "visual_signature_image",
+    });
+
+    expect(result).toEqual({
+      estimatedCostUsd: 0.0742,
+      costSource: "pricing_table",
+      pricingVersion: UUID,
+      costFormulaVersion: "responses_image_generation_v2",
+      textComponentUsd: 0.0092,
+      imageToolComponentUsd: 0.065,
+      imageToolPricingProvider: "openai",
+      imageToolPricingModel: "responses:image_generation",
+      imageToolPricingVersion: TOOL_UUID,
+      costEstimationNote: "provisional_image_tool_unit_cost_until_provider_reconciliation",
+    });
+    // 2 buscas: modelo textual + tool (linha separada no pricing catalog)
+    expect(mockGetModelPricing).toHaveBeenCalledTimes(2);
+    expect(mockGetModelPricing).toHaveBeenCalledWith({
+      provider: "openai",
+      model: "responses:image_generation",
+    });
+  });
+
+  it("imageGenerationTool=true mas generationType genérico (visual_signature) → sem componente da tool (anti-dupla-cobrança)", async () => {
     mockGetModelPricing.mockImplementation(({ model }: { model: string }) => {
       if (model === "responses:image_generation") {
         return Promise.resolve({ pricing: TOOL_PRICING, versionId: TOOL_UUID });
@@ -349,6 +385,29 @@ describe("resolveAiCost — ajuste provisório versionável da tool image_genera
     expect(result.costFormulaVersion).toBeUndefined();
     expect(result.imageToolComponentUsd).toBeUndefined();
     // visual_signature não consulta a linha da tool
+    expect(mockGetModelPricing).toHaveBeenCalledTimes(1);
+  });
+
+  it("fallback gpt-image-2 (sem usage, imageGenerationTool=false) → custo por unidade, sem componente da tool", async () => {
+    mockGetModelPricing.mockImplementation(({ model }: { model: string }) => {
+      if (model === "responses:image_generation") {
+        return Promise.resolve({ pricing: TOOL_PRICING, versionId: TOOL_UUID });
+      }
+      return Promise.resolve({ pricing: { imageUnitCostUsd: 0.04 }, versionId: UUID });
+    });
+
+    const result = await resolveAiCost({
+      provider: "openai",
+      model: "gpt-image-2",
+      imageGenerationTool: false,
+      generationType: "campaign_image",
+    });
+
+    expect(result.estimatedCostUsd).toBeCloseTo(0.04, 6);
+    expect(result.costSource).toBe("pricing_table");
+    expect(result.costFormulaVersion).toBeUndefined();
+    expect(result.imageToolComponentUsd).toBeUndefined();
+    // sem tool → só a busca do modelo de imagem
     expect(mockGetModelPricing).toHaveBeenCalledTimes(1);
   });
 });

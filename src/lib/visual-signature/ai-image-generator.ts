@@ -1,25 +1,9 @@
 import { PromptLoader } from "@/lib/image-generation/prompt-loader";
 import { uploadToStorage, persistSignature } from "./persistence";
 import type { CascadeResult, VisualSignatureMetadata } from "./types";
-import type { AiCallInfo, TokenUsage } from "@/lib/ai-cost/types";
+import type { AiCallInfo } from "@/lib/ai-cost/types";
 import { defaultAiGateway, withOnCallTelemetry } from "@/lib/ai";
 import type { AiInvocationRequest, AiInvoker, AiTelemetryContext } from "@/lib/ai";
-
-/**
- * Mapeia o payload de usage do Responses API para TokenUsage normalizado (D12).
- * Campos do Responses API: input_tokens → promptTokens, output_tokens →
- * completionTokens, total_tokens → totalTokens. Retorna undefined se usage ausente.
- * Compartilhado pela geração de imagem e pela validação LLM (visual_signature_validation).
- */
-function mapResponsesUsage(usage: unknown): TokenUsage | undefined {
-  if (!usage || typeof usage !== "object") return undefined;
-  const u = usage as Record<string, unknown>;
-  const tokens: TokenUsage = {};
-  if (typeof u.input_tokens === "number") tokens.promptTokens = u.input_tokens;
-  if (typeof u.output_tokens === "number") tokens.completionTokens = u.output_tokens;
-  if (typeof u.total_tokens === "number") tokens.totalTokens = u.total_tokens;
-  return tokens;
-}
 
 export class VisualSignatureValidator {
   private readonly invoker: AiInvoker;
@@ -145,9 +129,11 @@ A imagem é VÁLIDA se:
 
 export class AiImageGenerator {
   private promptLoader: PromptLoader;
+  private readonly invoker: AiInvoker;
 
-  constructor(opts?: { promptLoader?: PromptLoader }) {
+  constructor(opts?: { promptLoader?: PromptLoader; invoker?: AiInvoker }) {
     this.promptLoader = opts?.promptLoader ?? new PromptLoader();
+    this.invoker = opts?.invoker ?? defaultAiGateway;
   }
 
   async generate(params: {
@@ -191,77 +177,49 @@ Sem textos promocionais. Apenas a imagem PNG.`;
       console.log('[ai-image-generator] prompt carregado', { promptLength: prompt.length });
     }
 
-    console.log('[ai-image-generator] fazendo dynamic import da OpenAI SDK...');
-    const { default: OpenAI } = await import("openai");
-    console.log('[ai-image-generator] OpenAI SDK importada');
-
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-    console.log('[ai-image-generator] OpenAI client instanciado');
-
-    const model =
-      process.env.IMAGE_GENERATION_RESPONSES_MODEL || "gpt-5.5";
-    console.log('[ai-image-generator] model selecionado', { model });
-
     const timeoutMs = Number(process.env.IMAGE_GENERATION_GLOBAL_TIMEOUT_MS) || 300000;
     console.log('[ai-image-generator] timeout config', { timeoutMs });
 
+    // F46-05 (D9): a imagem executa via gateway e a persistência call-level é do
+    // sink — sem contexto de telemetria não há destino de emissão (sink
+    // obrigatório), então falha explícita em vez de pular a telemetria.
+    if (!params.telemetry) {
+      throw new Error(
+        '[AiImageGenerator] AiTelemetryContext é obrigatório para invoke("visual_signature_image")'
+      );
+    }
+
+    // attemptNumber REAL por tentativa (image_direct=0, image_retry=1) — a mesma
+    // telemetria alimenta a imagem (visual_signature_image) e a validação
+    // (visual_signature_validation).
+    const attemptTelemetry: AiTelemetryContext = {
+      ...params.telemetry,
+      attemptNumber: params.attempt ?? params.telemetry.attemptNumber,
+    };
+
     try {
-      console.log('[ai-image-generator] ⏳ ANTES da chamada OpenAI responses.create()', { timestamp: new Date().toISOString() });
-      const response = await openai.responses.create(
-        {
-          model,
-          input: [
-            {
-              role: "user",
-              content: [
-                { type: "input_text" as const, text: prompt },
-              ],
-            },
-          ],
-          tools: [
-            {
-              type: "image_generation" as const,
-              size: "1024x1024" as const,
-              quality: "auto" as const,
-            },
-          ],
-        },
-        { signal: params.signal, timeout: timeoutMs }
+      console.log('[ai-image-generator] ⏳ ANTES da chamada ao gateway (visual_signature_image)', { timestamp: new Date().toISOString() });
+      const request: AiInvocationRequest = {
+        prompt,
+        tools: "image_generation",
+        size: "1024x1024",
+        quality: "auto",
+        signal: params.signal,
+        timeout: timeoutMs,
+      };
+      const response = await this.invoker.invoke(
+        "visual_signature_image",
+        request,
+        attemptTelemetry
       );
-      console.log('[ai-image-generator] ✅ DEPOIS da chamada OpenAI responses.create()', { timestamp: new Date().toISOString(), elapsedMs: Date.now() - startTime });
+      console.log('[ai-image-generator] ✅ DEPOIS da chamada ao gateway', { timestamp: new Date().toISOString(), elapsedMs: Date.now() - startTime });
 
-      // F38.1 (D7/D11): expõe usage do Responses API best-effort para a rota VS
-      // (visual_signature_image). Nunca lança — telemetria não bloqueia geração.
-      this.invokeOnCall(params.onCall, {
-        provider: "openai",
-        model,
-        usage: mapResponsesUsage(response.usage),
-        durationMs: Date.now() - startTime,
-      });
+      const model = response.model;
+      const imageBase64 = response.imageBase64;
+      const aiResponseMessage = response.content?.trim() || undefined;
 
-      const imageOutput = response.output?.find(
-        (
-          item
-        ): item is typeof item & {
-          type: "image_generation_call";
-          result: string;
-        } => item.type === "image_generation_call"
-      );
-
-      const messageOutput = response.output?.find(
-        (item): item is typeof item & { type: "message"; content: Array<{ type: string; text?: string }> } =>
-          item.type === "message"
-      );
-
-      const aiResponseMessage = messageOutput?.content
-        ?.filter(c => c.type === "output_text")
-        .map(c => c.text ?? "")
-        .join("\n");
-
-      if (!imageOutput?.result) {
-        console.log('[ai-image-generator] resposta sem image_generation output', { outputTypes: response.output?.map(o => o.type) });
+      if (!imageBase64) {
+        console.log('[ai-image-generator] resposta sem image_generation output');
         throw new Error("No image generated in Responses API response");
       }
       console.log('[ai-image-generator] image_generation output encontrado');
@@ -269,25 +227,18 @@ Sem textos promocionais. Apenas a imagem PNG.`;
         console.log('[ai-image-generator] message output encontrado', { messageLength: aiResponseMessage.length });
       }
 
-      const imageBase64 = imageOutput.result;
       console.log('[ai-image-generator] validando imagem...', { base64Length: imageBase64.length });
 
-      const validator = new VisualSignatureValidator();
+      const validator = new VisualSignatureValidator(this.invoker);
       const validation = await validator.validate({
         imageBase64,
         storeName: params.storeName,
-        // F46-04 (reabertura, D9): a validação (visual_signature_validation) é
-        // persistida pelo SINK do contexto de telemetria — o `onCall` legado do
-        // caller fica reservado à imagem (visual_signature_image, híbrida até
-        // 46-05), evitando dupla contagem/dupla persistência.
-        // attemptNumber derivado de `params.attempt` para que cada tentativa
-        // (image_direct=0, image_retry=1) seja persistida com o attempt real.
-        telemetry: params.telemetry
-          ? {
-              ...params.telemetry,
-              attemptNumber: params.attempt ?? params.telemetry.attemptNumber,
-            }
-          : undefined,
+        // F46-04/F46-05 (D9): imagem (visual_signature_image) e validação
+        // (visual_signature_validation) são persistidas pelo SINK do contexto de
+        // telemetria — `attemptTelemetry` carrega o attemptNumber REAL por
+        // tentativa (image_direct=0, image_retry=1). O `onCall` legado do caller
+        // deixa de ser acionado (o sink é o dono único da persistência).
+        telemetry: attemptTelemetry,
       });
 
       if (!validation.valid) {
@@ -338,32 +289,6 @@ Sem textos promocionais. Apenas a imagem PNG.`;
         error instanceof Error ? error.message : "Unknown error";
       console.log('[ai-image-generator] ❌ catch — erro', { elapsedMs, message, stack: error instanceof Error ? error.stack : '' });
       throw new Error(`ai_image_generation_failed: ${message}`);
-    }
-  }
-
-  /**
-   * Invoca o callback onCall best-effort (D7): callback lançando é logado e
-   * ignorado — nunca interrompe a geração. Aceita retorno síncrono ou Promise.
-   */
-  private invokeOnCall(
-    onCall: ((info: AiCallInfo) => void | Promise<void>) | undefined,
-    info: AiCallInfo
-  ): void {
-    if (!onCall) return;
-    try {
-      Promise.resolve(onCall(info)).catch((err) => {
-        console.error(
-          `[ai-image-generator] onCall callback failed (best-effort): ${
-            err instanceof Error ? err.message : String(err)
-          }`
-        );
-      });
-    } catch (err) {
-      console.error(
-        `[ai-image-generator] onCall callback failed (best-effort): ${
-          err instanceof Error ? err.message : String(err)
-        }`
-      );
     }
   }
 }
