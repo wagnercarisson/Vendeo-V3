@@ -44,6 +44,8 @@ export {
   withOnCallTelemetry,
 } from "./telemetry-sink";
 export type { AiTelemetrySinkContext } from "./telemetry-sink";
+export { withDomainOutcome } from "./domain-outcome";
+export type { AiDomainOutcome, AiDomainOutcomeHandle } from "./domain-outcome";
 export * from "./types";
 export type {
   AiCapability,

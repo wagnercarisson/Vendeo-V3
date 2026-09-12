@@ -23,9 +23,10 @@ import {
   createDefaultTelemetryContext,
   type AiTelemetrySinkContext,
 } from "../telemetry-sink";
+import { withDomainOutcome } from "../domain-outcome";
 import { CAPABILITY_GENERATION_TYPE } from "../generation-type-map";
 import { ALL_CAPABILITIES } from "../model-registry";
-import type { AiCallEnvelope } from "../types";
+import type { AiCallEnvelope, AiTelemetryContext } from "../types";
 
 const context: AiTelemetrySinkContext = {
   operationRunId: "run-1",
@@ -184,6 +185,51 @@ describe("DefaultAiTelemetrySink — persistência best-effort (D3/D9)", () => {
     );
   });
 
+  it("persiste domainStatus/domainErrorType de envelope.metadata no AiCostEvent", async () => {
+    const sink = new DefaultAiTelemetrySink(context, { record: mockRecord } as never);
+
+    await sink.emit({
+      ...imageEditEnvelope,
+      metadata: { domainStatus: "failed", domainErrorType: "schema_validation_failed" },
+    });
+
+    const event = mockRecord.mock.calls[0][0];
+    expect(event.metadata).toMatchObject({
+      capability: "campaign_image_edit",
+      protocol: "images",
+      domainStatus: "failed",
+      domainErrorType: "schema_validation_failed",
+    });
+  });
+
+  it("envelope.metadata NÃO sobrescreve campos canônicos do sink", async () => {
+    const sink = new DefaultAiTelemetrySink(context, { record: mockRecord } as never);
+
+    await sink.emit({
+      ...imageEditEnvelope,
+      capability: "campaign_image",
+      protocol: "responses",
+      model: "gpt-5.5",
+      usageMeta: { imageGenerationTool: true, responsesModel: "gpt-5.5" },
+      metadata: {
+        capability: "HACKED",
+        protocol: "HACKED",
+        responses_model: "HACKED",
+        image_generation_tool: false,
+        domainStatus: "success",
+      },
+    });
+
+    const event = mockRecord.mock.calls[0][0];
+    expect(event.metadata).toMatchObject({
+      capability: "campaign_image",
+      protocol: "responses",
+      responses_model: "gpt-5.5",
+      image_generation_tool: true,
+      domainStatus: "success",
+    });
+  });
+
   it("record lançando NÃO propaga (fail-open — T-46-02c)", async () => {
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     mockRecord.mockRejectedValue(new Error("db indisponível"));
@@ -245,6 +291,104 @@ describe("BufferingAiTelemetrySink — buffering e ordenação preservados", () 
     const sink = new BufferingAiTelemetrySink(handler);
     await sink.flush();
     expect(handler).not.toHaveBeenCalled();
+  });
+});
+
+describe("withDomainOutcome — classificação de domínio no MESMO envelope (D11)", () => {
+  function makeTelemetry(): { telemetry: AiTelemetryContext; captured: AiCallEnvelope[] } {
+    const captured: AiCallEnvelope[] = [];
+    return {
+      captured,
+      telemetry: {
+        operationRunId: "run-1",
+        operationRunType: "campaign_delivery",
+        traceId: "trace-1",
+        storeId: "store-1",
+        sink: {
+          emit: (envelope) => {
+            captured.push(envelope);
+          },
+        },
+      },
+    };
+  }
+
+  it("bufferiza e encaminha um ÚNICO envelope com domainStatus/domainErrorType no metadata", async () => {
+    const { telemetry, captured } = makeTelemetry();
+    const handle = withDomainOutcome(telemetry);
+
+    await handle.telemetry.sink.emit(imageEditEnvelope);
+    expect(captured).toHaveLength(0); // ainda bufferizado
+
+    await handle.complete({ domainStatus: "failed", domainErrorType: "json_parse_failed" });
+
+    expect(captured).toHaveLength(1);
+    expect(captured[0].status).toBe("success"); // status permanece HTTP
+    expect(captured[0].metadata).toEqual({
+      domainStatus: "failed",
+      domainErrorType: "json_parse_failed",
+    });
+  });
+
+  it("complete() é idempotente (nunca emite um segundo envelope)", async () => {
+    const { telemetry, captured } = makeTelemetry();
+    const handle = withDomainOutcome(telemetry);
+
+    await handle.telemetry.sink.emit(imageEditEnvelope);
+    await handle.complete({ domainStatus: "success" });
+    await handle.complete({ domainStatus: "success" });
+
+    expect(captured).toHaveLength(1);
+    expect(captured[0].metadata).toEqual({ domainStatus: "success" });
+  });
+
+  it("sem outcome (falha HTTP) encaminha o envelope como está, sem metadata de domínio", async () => {
+    const { telemetry, captured } = makeTelemetry();
+    const handle = withDomainOutcome(telemetry);
+
+    await handle.telemetry.sink.emit({
+      ...imageEditEnvelope,
+      status: "failed",
+      errorType: "rate_limit",
+    });
+    await handle.complete();
+
+    expect(captured).toHaveLength(1);
+    expect(captured[0].status).toBe("failed");
+    expect(captured[0].metadata).toBeUndefined();
+  });
+
+  it("preserva metadata pré-existente do envelope ao anexar o domínio", async () => {
+    const { telemetry, captured } = makeTelemetry();
+    const handle = withDomainOutcome(telemetry);
+
+    await handle.telemetry.sink.emit({ ...imageEditEnvelope, metadata: { custom: 1 } });
+    await handle.complete({ domainStatus: "success" });
+
+    expect(captured[0].metadata).toEqual({ custom: 1, domainStatus: "success" });
+  });
+
+  it("complete() é best-effort: falha do sink não escapa", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const telemetry: AiTelemetryContext = {
+      operationRunId: "run-1",
+      operationRunType: "campaign_delivery",
+      traceId: "trace-1",
+      storeId: "store-1",
+      sink: {
+        emit: () => {
+          throw new Error("sink down");
+        },
+      },
+    };
+    const handle = withDomainOutcome(telemetry);
+
+    await handle.telemetry.sink.emit(imageEditEnvelope);
+
+    await expect(handle.complete({ domainStatus: "success" })).resolves.toBeUndefined();
+    expect(consoleErrorSpy).toHaveBeenCalled();
+
+    consoleErrorSpy.mockRestore();
   });
 });
 

@@ -1,8 +1,13 @@
 import "server-only";
 import { z } from "zod";
 import { sanitizePromptText } from "@/lib/image-generation/services/art-director-briefing";
-import { defaultAiGateway } from "@/lib/ai";
-import type { AiInvocationRequest, AiInvoker, AiTelemetryContext } from "@/lib/ai";
+import { defaultAiGateway, withDomainOutcome } from "@/lib/ai";
+import type {
+  AiDomainOutcome,
+  AiInvocationRequest,
+  AiInvoker,
+  AiTelemetryContext,
+} from "@/lib/ai";
 
 // F37.2 (R2): análise textual de elegibilidade do relato de não conformidade.
 //
@@ -192,24 +197,37 @@ Responda apenas com o JSON.`;
       );
     }
 
-    // Telemetria/persistência vêm do envelope + sink (D9). A classificação de
-    // erro de DOMÍNIO (json_parse_failed/schema_validation_failed/empty_response)
-    // permanece no resultado do serviço — o gateway não a normaliza.
+    // Telemetria/persistência vêm do envelope + sink (D9). O `status` do envelope
+    // permanece o resultado HTTP; a classificação de DOMÍNIO
+    // (empty_response/json_parse_failed/schema_validation_failed) é anexada ao
+    // MESMO envelope via `withDomainOutcome` (metadata domainStatus/domainErrorType).
+    const domain = withDomainOutcome(telemetry);
+    let domainOutcome: AiDomainOutcome | undefined;
     try {
       const result = await this.invoker.invoke(
         "campaign_correction_analysis",
         request,
-        telemetry
+        domain.telemetry
       );
 
       const content = result.content ?? "";
       if (!content || content.trim().length === 0) {
+        domainOutcome = { domainStatus: "failed", domainErrorType: "empty_response" };
         return this.failedOutcome();
       }
 
-      return this.parseResult(content).outcome;
+      const parsed = this.parseResult(content);
+      domainOutcome = parsed.errorType
+        ? { domainStatus: "failed", domainErrorType: parsed.errorType }
+        : { domainStatus: "success" };
+      return parsed.outcome;
     } catch {
+      // Falha HTTP/provider: o envelope já registra status=failed; sem avaliação
+      // de domínio (o outcome permanece undefined e o envelope é encaminhado como
+      // está).
       return this.failedOutcome();
+    } finally {
+      await domain.complete(domainOutcome);
     }
   }
 

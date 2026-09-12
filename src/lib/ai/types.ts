@@ -110,6 +110,13 @@ export interface AiCallEnvelope extends AiCallInfo {
    * NUNCA inferido apenas do protocolo `responses` (correção de revisão 46-02).
    */
   usageMeta?: AiInvocationUsageMeta;
+  /**
+   * Metadata adicional fornecida pelo caller (ex.: classificação de **domínio**
+   * de capacidades estruturadas — `domainStatus`/`domainErrorType`). Mesclada no
+   * metadata do evento persistido pelo sink. O `status` do envelope permanece o
+   * resultado **HTTP**; a classificação de domínio é aditiva.
+   */
+  metadata?: Record<string, unknown>;
 }
 
 /** Destino de emissão de envelopes (sink injetável — o gateway não persiste). */

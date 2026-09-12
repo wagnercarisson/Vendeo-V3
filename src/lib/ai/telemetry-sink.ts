@@ -136,6 +136,9 @@ function buildCallMetadata(
       : undefined;
 
   return {
+    // Caller metadata primeiro: os campos canônicos do sink (capability/protocol/
+    // usage/fórmula) SEMPRE vencem — o caller não pode forjar campos do sink.
+    ...(envelope.metadata ?? {}),
     capability: envelope.capability,
     protocol: envelope.protocol,
     ...(usageMeta ?? {}),

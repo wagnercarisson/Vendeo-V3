@@ -311,6 +311,66 @@ describe("CorrectionIntentService (F37.2 §12)", () => {
     expect(env2[0].errorType).toBe("Error");
   });
 
+  it("12.15 — classificação de DOMÍNIO no metadata do MESMO envelope (status permanece HTTP)", async () => {
+    // sucesso de domínio
+    const ok = serviceWithContent(eligibleJson("truncated_element"));
+    const { telemetry: t1, envelopes: e1 } = makeTelemetry();
+    await ok.service.analyzeReport("texto", OPTIONS, t1);
+    expect(e1).toHaveLength(1);
+    expect(e1[0].status).toBe("success");
+    expect(e1[0].metadata).toMatchObject({ domainStatus: "success" });
+
+    // empty_response
+    const empty = serviceWithContent("   ");
+    const { telemetry: t2, envelopes: e2 } = makeTelemetry();
+    expect((await empty.service.analyzeReport("texto", OPTIONS, t2)).analysisState).toBe(
+      "analysis_failed"
+    );
+    expect(e2).toHaveLength(1);
+    expect(e2[0].status).toBe("success");
+    expect(e2[0].metadata).toMatchObject({
+      domainStatus: "failed",
+      domainErrorType: "empty_response",
+    });
+
+    // json_parse_failed
+    const bad = serviceWithContent("isso não é json");
+    const { telemetry: t3, envelopes: e3 } = makeTelemetry();
+    expect((await bad.service.analyzeReport("texto", OPTIONS, t3)).analysisState).toBe(
+      "analysis_failed"
+    );
+    expect(e3).toHaveLength(1);
+    expect(e3[0].status).toBe("success");
+    expect(e3[0].metadata).toMatchObject({
+      domainStatus: "failed",
+      domainErrorType: "json_parse_failed",
+    });
+
+    // schema_validation_failed
+    const schema = serviceWithContent(JSON.stringify({ foo: "bar" }));
+    const { telemetry: t4, envelopes: e4 } = makeTelemetry();
+    expect((await schema.service.analyzeReport("texto", OPTIONS, t4)).analysisState).toBe(
+      "analysis_failed"
+    );
+    expect(e4).toHaveLength(1);
+    expect(e4[0].status).toBe("success");
+    expect(e4[0].metadata).toMatchObject({
+      domainStatus: "failed",
+      domainErrorType: "schema_validation_failed",
+    });
+
+    // falha HTTP: status=failed e SEM metadata de domínio
+    const { invoker } = makeInvoker(new Error("boom"));
+    const throwing = new CorrectionIntentService(invoker);
+    const { telemetry: t5, envelopes: e5 } = makeTelemetry();
+    expect((await throwing.analyzeReport("texto", OPTIONS, t5)).analysisState).toBe(
+      "analysis_failed"
+    );
+    expect(e5).toHaveLength(1);
+    expect(e5[0].status).toBe("failed");
+    expect(e5[0].metadata).toBeUndefined();
+  });
+
   it("12.14 — sem telemetria → erro de contrato (contexto obrigatório)", async () => {
     const { service } = serviceWithContent(eligibleJson("truncated_element"));
     await expect(service.analyzeReport("texto", OPTIONS)).rejects.toThrow(/AiTelemetryContext/);

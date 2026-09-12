@@ -133,7 +133,7 @@ Cada task foi commitada atomicamente:
 - **`AiInvoker` com `hasFallback`:** o seam é `{ invoke, hasFallback }`; permite ao orquestrador aplicar o gate "fallback configurado ≠ primary" (decisão A) sem conhecer o provider. Aditivo ao contrato do 46-02.
 - **`onCall` como adaptador do envelope:** `withOnCallTelemetry` repassa o envelope ao `onCall` best-effort sem conduzir a telemetria de produção (D9).
 - **`campaign_spec` fallback no provider:** mantido no `OpenAIProvider` (interfaces block), mas como segunda `invoke` explícita — não é retry do SDK.
-- **Telemetria da correção vem do envelope:** status/errorType HTTP do gateway; a classificação de parsing permanece no resultado do serviço (json_parse_failed/schema_validation_failed/empty_response). Nota: o `errorType` de parsing deixa de ser persistido como antes (o envelope registra o sucesso HTTP) — consequência direta de D9 e do caminho único de telemetria.
+- **Telemetria da correção vem do envelope + classificação de domínio:** `status` do envelope = resultado **HTTP**; a classificação de parsing (`empty_response`/`json_parse_failed`/`schema_validation_failed`) é persistida no **mesmo** envelope via `withDomainOutcome` em `metadata.domainStatus`/`metadata.domainErrorType` (correção de revisão — ver seção própria).
 - **`INPUT` do teste de campaign_spec** inclui `campaignIntent` (tipo de saída do schema com default).
 
 ## Deviations from Plan
@@ -180,7 +180,19 @@ Cada task foi commitada atomicamente:
 ## Issues Encountered
 
 - **Caminho de teste divergente no plano:** a verificação da Task 2 referencia `src/lib/campaign/__tests__/correction-intent-service.test.ts` (inexistente); o teste real é `src/__tests__/lib/campaign/correction-intent-service.test.ts`. Executado o caminho real; co-migrado. Nenhuma mudança de comportamento.
-- **Telemetria de parsing da correção:** por D9, o `errorType` de `json_parse_failed`/`schema_validation_failed` deixa de ser persistido no evento (o envelope registra o sucesso HTTP); a classificação permanece no resultado do serviço. Registrado como consequência esperada do caminho único de telemetria.
+- **Telemetria de parsing da correção (RESOLVIDO na correção de revisão):** inicialmente o `errorType` de domínio deixou de ser persistido; corrigido com `withDomainOutcome` (metadata `domainStatus`/`domainErrorType`), mantendo `status` HTTP e um único envelope.
+
+## Correções de Revisão (pós-execução)
+
+A revisão apontou que a classificação de domínio deixava de ser persistida. Corrigido no ciclo de revisão (commit `fix(46-03)`):
+
+- **`withDomainOutcome`** (`src/lib/ai/domain-outcome.ts`, reutilizável pelas capacidades estruturadas do 46-04): bufferiza o envelope do gateway e o encaminha **uma única vez** ao sink original com `metadata.domainStatus`/`domainErrorType`. O `status` permanece o resultado **HTTP**.
+- **Best-effort:** o flush é `try/catch`; falha do sink não escapa nem sobrescreve o resultado do serviço.
+- **Campos canônicos protegidos:** `envelope.metadata` é espalhado primeiro em `buildCallMetadata`; `capability`/`protocol`/usage/fórmula sempre vencem.
+- **Cobertura:** sucesso + `empty_response`/`json_parse_failed`/`schema_validation_failed`; persistência efetiva no `AiCostEvent`; proteção de canônicos; fail-open; idempotência.
+- **Docs:** `design.md` D3 item 6 e `46-CONTEXT.md` D11 item 6.
+
+Gates re-executados: 33 files / **528 testes**; `typecheck`/`lint`/`build` verdes.
 
 ## User Setup Required
 
