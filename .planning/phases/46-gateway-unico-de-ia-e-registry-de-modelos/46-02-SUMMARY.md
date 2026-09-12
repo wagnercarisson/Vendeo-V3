@@ -158,11 +158,22 @@ Cada task foi commitada atomicamente:
 - **Filtro `rg` indisponível no shell PowerShell** — as greps de verificação foram executadas com a ferramenta Grep; resultado: zero ocorrências de `process.env.*_MODEL|_PROVIDER` em `src/lib/ai` e `AiCapability`/`AiProtocol` definidos apenas em `model-resolver.ts`.
 - Nenhum outro problema.
 
+## Correções de Revisão (pós-execução — `ffd90d76`)
+
+Revisão do 46-02 apontou que o sink perdia dados do contrato de persistência e inferia a tool do protocolo. Corrigido antes do 46-03:
+
+1. **`AiCallEnvelope.usageMeta`** — o gateway agora encaminha `result.usageMeta` ao envelope (teste em `gateway.test.ts`).
+2. **`imageGenerationTool` vem de `usageMeta`** — o sink usa `envelope.usageMeta?.imageGenerationTool === true` (nunca `protocol === "responses"`).
+3. **Snapshot contábil preservado** — o sink repassa `usdBrlRateAtGeneration`/`creditValueBrlAtGeneration` ao `AiCostEvent` e reconstrói o metadata call-level (usage bruto + componentes da fórmula de estimativa) preservando o contrato do `buildCallMetadata` legado.
+4. **Acumulação sem 2ª `resolveAiCost`** — `AiTelemetrySinkContext.onCostResolved(cost)` entrega o **mesmo** `CostResolution` persistido, para o caller acumular (`callCostSum`) sem recalcular.
+
+Testes das 4 suites passaram de 63 → **67**; regressão `src/lib/ai` + `src/lib/ai-cost` = **204** testes.
+
 ## Gate Results
 
 | Gate | Resultado |
 |---|---|
-| `npx vitest run src/lib/ai/__tests__/{api-keys,gateway,telemetry-sink,adapters}.test.ts` | ✅ PASS — 4 arquivos / **63 testes** |
+| `npx vitest run src/lib/ai/__tests__/{api-keys,gateway,telemetry-sink,adapters}.test.ts` | ✅ PASS — 4 arquivos / **67 testes** (63 + 4 das correções) |
 | `npm run typecheck` | ✅ PASS — 0 erros |
 | `npm run lint` | ✅ PASS — 0 erros |
 | `npm run build` | ✅ PASS — `check:cnae` + `next build` concluídos |
@@ -170,7 +181,7 @@ Cada task foi commitada atomicamente:
 | `git diff e7883d43 -- src/lib/ai-cost/types.ts` | ✅ PASS — vazio (`AiCallInfo` intacto) |
 | `AiCapability`/`AiProtocol` definidos só em `model-resolver.ts` | ✅ PASS — 2 matches (owner 46-01) |
 | `src/lib/ai/index.ts` compõe `new AiGateway(new ModelRegistry(), defaultAdapterRegistry)` | ✅ PASS |
-| Regressão `src/lib/ai` + `src/lib/ai-cost` | ✅ PASS — 11 arquivos / **200 testes** |
+| Regressão `src/lib/ai` + `src/lib/ai-cost` | ✅ PASS — 11 arquivos / **204 testes** |
 
 ## User Setup Required
 
@@ -192,8 +203,8 @@ None - no external service configuration required.
 - [x] `src/lib/ai/generation-type-map.ts` existe
 - [x] `src/lib/ai/adapters/{chat-completions,responses,images,gemini,registry}.ts` existem
 - [x] `src/lib/ai/index.ts` existe
-- [x] Commits `8479216d`, `e6ce1032`, `6c2c5a1c`, `a06bb8cb` existem (`git log`)
-- [x] 63 testes novos verdes; `typecheck`, `lint` e `build` verdes
+- [x] Commits `8479216d`, `e6ce1032`, `6c2c5a1c`, `a06bb8cb` + `ffd90d76` (correções de sink) existem (`git log`)
+- [x] 67 testes verdes; `typecheck`, `lint` e `build` verdes
 - [x] `AiCallInfo` em `src/lib/ai-cost/types.ts` inalterado
 - [x] Nenhum adapter lê env-var de modelo/provider
 

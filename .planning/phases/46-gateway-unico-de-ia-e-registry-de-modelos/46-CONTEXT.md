@@ -195,6 +195,14 @@ interface AiCallEnvelope extends AiCallInfo {
 
 A **capacidade e o protocolo originais** SHALL permanecer presentes no **`metadata`** do evento (`capability`, `protocol`), para que a apuração não perca a distinção entre o caminho Responses e o fallback `images.edit`. O mapa SHALL ter **teste** (11 entradas; `campaign_image_edit → campaign_image`).
 
+### D11 — Correções de revisão pós-46-02 (2026-09-12)
+`DECIDIDO`. Antes de retomar a migração de texto (46-03), o sink do 46-02 foi corrigido:
+1. **`AiCallEnvelope.usageMeta`** — o gateway encaminha `result.usageMeta` ao envelope; o sink usa `usageMeta.imageGenerationTool === true` como **única** fonte do componente da tool (nunca o protocolo `responses`).
+2. **Snapshot contábil preservado** — o sink repassa `usdBrlRateAtGeneration`/`creditValueBrlAtGeneration` ao `AiCostEvent` e mantém o metadata call-level (usage bruto + componentes da fórmula).
+3. **Acumulação sem 2ª `resolveAiCost`** — o sink expõe `onCostResolved(cost)`; o caller acumula o **mesmo** `CostResolution` persistido. Em 46-03/46-04 a soma é **híbrida** (sink + `recordCall` residual); após 46-05, integralmente no sink.
+4. **Seam `AiInvoker` + `createTextProvider` fora do produtivo** — `CopyDirectorService` é o dono único de `invoke("campaign_copy")` e recebe o invoker por construtor; a rota aciona o fallback chamando o serviço de novo com `target: "fallback"` (não chama `invoke`). `createTextProvider` é removido de todos os callers produtivos; fachadas exigem `AiTelemetryContext` injetado e **nunca** instanciam `NoopAiTelemetrySink` internamente.
+5. **`campaign_spec`** — a rota legada usa `AiCostTracker.startRun("campaign_delivery")` (não há `OperationRunType.campaign_spec`), `attemptNumber` 1 no primary e 2 no fallback `json_object`; testes reais de `campaign_spec` e de `POST /api/campaign/generate` (sem `--passWithNoTests`).
+
 ### Decisões consolidadas (ex-open questions)
 1. **`api-keys.ts`**: `getApiKey(provider)` com **switch exaustivo** por provider (fail-fast em produção sem chave).
 2. **Sink**: contexto de telemetria **obrigatório em produção**; sink no-op **apenas em testes controlados** com adapter falso. O gateway nunca cria run implícito.
