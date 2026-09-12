@@ -1,4 +1,5 @@
 import type { TokenUsage } from "@/lib/ai-cost/types";
+import type { AiTelemetryContext } from "@/lib/ai";
 
 /**
  * Input for AI image generation.
@@ -13,6 +14,13 @@ export interface ImageProviderInput {
   quality?: "low" | "medium" | "high" | "auto";
   signal?: AbortSignal;
   attempt?: number;
+  /**
+   * F46-05 (D9): contexto de telemetria do caller (run/sink obrigatório). O
+   * provider delega ao gateway (`invoke`) e o sink injetado é o único ponto de
+   * persistência call-level; o `attemptNumber` real da tentativa é derivado de
+   * `attempt`.
+   */
+  telemetry?: AiTelemetryContext;
 }
 
 /**

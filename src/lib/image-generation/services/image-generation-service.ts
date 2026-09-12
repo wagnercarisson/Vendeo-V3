@@ -1,5 +1,7 @@
 import { PromptLoader } from "@/lib/image-generation/prompt-loader";
-import { IMAGE_GENERATION_DEBUG, IMAGE_GENERATION_SIZE, IMAGE_GENERATION_GLOBAL_TIMEOUT_MS, IMAGE_GENERATION_RESPONSES_MODEL } from "@/lib/image-generation/config";
+import { IMAGE_GENERATION_DEBUG, IMAGE_GENERATION_SIZE, IMAGE_GENERATION_GLOBAL_TIMEOUT_MS } from "@/lib/image-generation/config";
+import { MODEL_REGISTRY } from "@/lib/ai/model-registry";
+import { AiInvocationError } from "@/lib/ai";
 import type { ImageProvider, ImageProviderOutput, ImageProviderUsageMeta } from "@/lib/image-generation/providers/types";
 import type { GenerateImageRequest, GenerateImageSuccessResponse, GenerationPhase, GenerationPhaseEvent, ValidationContext, InputValidationResult, ImageReviewResult } from "@/lib/image-generation/schema";
 import type { ResolvedCampaignContext } from "@/components/campaign/types";
@@ -30,6 +32,13 @@ import type { TokenUsage } from "@/lib/ai-cost/types";
 import type { AiTelemetryContext } from "@/lib/ai";
 
 /**
+ * F46-05 (D5): modelo default da capacidade `campaign_image`, lido do registry
+ * (fonte única) — usado apenas como rótulo das métricas diagnósticas
+ * (`GenerationMetrics`); a invocação real resolve o modelo pelo gateway.
+ */
+const DEFAULT_IMAGE_MODEL = MODEL_REGISTRY.campaign_image.primary.model;
+
+/**
  * Rotating per-phase human-friendly messages in PT-BR for UI display.
  * Messages are selected randomly on each emit — cycles between variants
  * within a phase to avoid repetitive text.
@@ -55,7 +64,7 @@ const PHASE_MESSAGES: Record<string, string[]> = {
 };
 
 export type GenerateImageServiceResult =
-  | { success: true; imageDataUrl: string; inputCorrections?: { productName: { from: string; to: string; reason: string } }; usage?: TokenUsage }
+  | { success: true; imageDataUrl: string; inputCorrections?: { productName: { from: string; to: string; reason: string } }; usage?: TokenUsage; model?: string }
   | { success: false; code: string; message: string; details?: string };
 
 /**
@@ -150,7 +159,7 @@ export class ImageGenerationService {
             // F46-04 (furo 1): o modelo reportado vem do envelope da chamada de
             // visão (validation/review) quando disponível; só as fases de imagem
             // caem no default do pipeline.
-            model: extra?.model ?? IMAGE_GENERATION_RESPONSES_MODEL,
+            model: extra?.model ?? DEFAULT_IMAGE_MODEL,
             elapsedMs: Date.now() - startTime,
             attempt,
             durationMs: Date.now() - startTime,
@@ -375,6 +384,7 @@ export class ImageGenerationService {
     let currentMimeType: string = "image/png";
     let currentUsage: ImageProviderOutput["usage"] | undefined;
     let currentUsageMeta: ImageProviderUsageMeta | undefined;
+    let currentModel: string | undefined;
 
     while (state !== GenerationState.COMPLETE && state !== GenerationState.ERROR) {
       if (attempts >= maxAttempts) {
@@ -383,7 +393,7 @@ export class ImageGenerationService {
           runId,
           startTime,
           providerName: this.imageProvider.name,
-          model: IMAGE_GENERATION_RESPONSES_MODEL,
+          model: DEFAULT_IMAGE_MODEL,
           attempts,
           effectiveProductName,
           storeName: context.store.name,
@@ -408,7 +418,7 @@ export class ImageGenerationService {
         emitHuman("image_generation");
       }
 
-      const attemptDetail = `tentativa ${attempts + 1}/${maxAttempts}, modelo: ${IMAGE_GENERATION_RESPONSES_MODEL || "gpt-5.5"}, tempo decorrido: ${Math.floor((Date.now() - startTime) / 1000)}s`;
+      const attemptDetail = `tentativa ${attempts + 1}/${maxAttempts}, modelo: ${DEFAULT_IMAGE_MODEL}, tempo decorrido: ${Math.floor((Date.now() - startTime) / 1000)}s`;
       if (IMAGE_GENERATION_DEBUG) {
         emit("image_generation", "running", undefined, attemptDetail);
       }
@@ -423,14 +433,14 @@ export class ImageGenerationService {
 
       const promptText = this.assemblePrompt(state, promptVariables, lastReviewIssues, options?.normalizedInstruction);
 
-      const providerResult = await this.generateWithRetry(promptText, this.primaryImageDataUrl(brief), this.mediaImagesDataUrls(brief), signal, remaining, context.identity.imageUrl ?? undefined, runBeforeImageProviderCall);
+      const providerResult = await this.generateWithRetry(promptText, this.primaryImageDataUrl(brief), this.mediaImagesDataUrls(brief), signal, remaining, context.identity.imageUrl ?? undefined, runBeforeImageProviderCall, options?.telemetry);
       if (!providerResult.success) {
         emitFailed("image_generation", providerResult.message);
         await this.metricsWriter.write(this.buildGenerationMetrics({
           runId,
           startTime,
           providerName: this.imageProvider.name,
-          model: IMAGE_GENERATION_RESPONSES_MODEL,
+          model: DEFAULT_IMAGE_MODEL,
           attempts,
           effectiveProductName,
           storeName: context.store.name,
@@ -448,8 +458,12 @@ export class ImageGenerationService {
       currentMimeType = providerResult.mimeType;
       currentUsage = providerResult.usage;
       currentUsageMeta = providerResult.usageMeta;
+      currentModel = providerResult.model;
       emitComplete("image_generation");
-      emitMetricsEvent("image_generation", attempts, currentUsage || currentUsageMeta ? { usage: currentUsage, usageMeta: currentUsageMeta } : undefined);
+      // F46-05 (D10): o evento reporta o modelo REAL do envelope da imagem
+      // (gpt-5.5 no Responses; gpt-image-2 no fallback) — nunca o modelo fixo
+      // do pipeline. A persistência call-level é do sink.
+      emitMetricsEvent("image_generation", attempts, currentUsage || currentUsageMeta || currentModel ? { usage: currentUsage, usageMeta: currentUsageMeta, ...(currentModel ? { model: currentModel } : {}) } : undefined);
 
       // ── Phase 4: Quality review ─────────────────────────────────
       emitHuman("quality_review");
@@ -517,7 +531,7 @@ export class ImageGenerationService {
           runId,
           startTime,
           providerName: this.imageProvider.name,
-          model: IMAGE_GENERATION_RESPONSES_MODEL,
+          model: DEFAULT_IMAGE_MODEL,
           attempts,
           effectiveProductName,
           storeName: context.store.name,
@@ -584,7 +598,7 @@ export class ImageGenerationService {
               runId,
               startTime,
               providerName: this.imageProvider.name,
-              model: IMAGE_GENERATION_RESPONSES_MODEL,
+              model: DEFAULT_IMAGE_MODEL,
               attempts,
               effectiveProductName,
           storeName: context.store.name,
@@ -643,6 +657,7 @@ export class ImageGenerationService {
       success: true,
       imageDataUrl,
       usage: currentUsage,
+      ...(currentModel ? { model: currentModel } : {}),
     };
 
     if (inputCorrections) {
@@ -658,7 +673,7 @@ export class ImageGenerationService {
       runId,
       startTime,
       providerName: this.imageProvider.name,
-      model: IMAGE_GENERATION_RESPONSES_MODEL,
+      model: DEFAULT_IMAGE_MODEL,
       attempts,
       effectiveProductName,
       storeName: context.store.name,
@@ -912,9 +927,10 @@ export class ImageGenerationService {
     signal: AbortSignal | undefined,
     remaining: () => number,
     identityImageUrl?: string,
-    onBeforeProviderCall?: () => Promise<void>
+    onBeforeProviderCall?: () => Promise<void>,
+    telemetry?: AiTelemetryContext
   ): Promise<
-    | { success: true; imageBase64: string; mimeType: string; usage?: TokenUsage; usageMeta?: ImageProviderUsageMeta }
+    | { success: true; imageBase64: string; mimeType: string; model: string; usage?: TokenUsage; usageMeta?: ImageProviderUsageMeta }
     | { success: false; code: string; message: string; details?: string }
   > {
     const ESTIMATED_RETRY_DURATION = 30000;
@@ -933,6 +949,22 @@ export class ImageGenerationService {
     const detectErrorCode = (err: unknown, attemptsMade: number): string => {
       if (signal?.aborted) return "global_timeout";
       if (err && typeof err === "object" && (err as any).name === "AbortError") return "global_timeout";
+
+      // F46-05 (D4.1): erros do gateway já vêm normalizados com `kind` — mapeia
+      // para o código de retry preservando o comportamento (auth terminal,
+      // timeout, rate-limit/erro do provider retryable).
+      if (err instanceof AiInvocationError) {
+        switch (err.kind) {
+          case "auth":
+            return "provider_auth_error";
+          case "timeout":
+            return "provider_timeout";
+          case "content_filter":
+            return "provider_error";
+          default:
+            return "provider_error";
+        }
+      }
 
       const message = err instanceof Error ? err.message : String(err);
       const code = err && typeof err === "object" && "code" in err ? (err as { code: string }).code : "";
@@ -976,9 +1008,10 @@ export class ImageGenerationService {
           size: IMAGE_GENERATION_SIZE,
           signal,
           attempt,
+          telemetry,
         });
 
-        return { success: true, imageBase64: output.imageBase64, mimeType: output.mimeType, usage: output.usage, usageMeta: output.usageMeta };
+        return { success: true, imageBase64: output.imageBase64, mimeType: output.mimeType, model: output.model, usage: output.usage, usageMeta: output.usageMeta };
       } catch (err) {
         if (attempt >= 3) {
           const message = err instanceof Error ? err.message : String(err);
