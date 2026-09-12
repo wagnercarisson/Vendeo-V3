@@ -987,7 +987,7 @@ Plans:
 
 **Source of truth:** `openspec/changes/fase-46-gateway-unico-de-ia-e-registry-de-modelos/`
 
-**Plans:** 5/9 plans complete
+**Plans:** 6/9 plans complete
 **Waves:** 9 waves (DAG serializado por `depends_on`, legível pela ferramenta) — 46-01:1, 46-02:2 (dep 46-01), 46-03:3 (dep 46-02), 46-04:4 (dep 46-03), 46-05:5 (dep 46-04), 46-06:6 (dep 46-05), 46-07:7 (dep 46-06), 46-08:8 (dep 46-07), 46-09:9 (dep 46-08). A serialização elimina conflitos de arquivos compartilhados (`generate-image/route.ts`, `server-actions.ts`) e a dependência do gate de env-vars.
 
 ```
@@ -1014,7 +1014,7 @@ Plans:
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
-- [ ] 46-06-PLAN.md — Telemetria nos callers produtivos via `AiTelemetryContext`/sink (logo, retry-brand-director, server-actions, approve, restore) + gate global de arquitetura (SDK/wire) + inventário (Wave 6)
+- [x] 46-06-PLAN.md — Gate global de arquitetura (SDK/wire + persistência manual) + inventário global de telemetria (Wave 6; Tasks 1/2 neutralizadas — antecipadas ao 46-04)
 
 **Wave 7** *(blocked on Wave 6 completion)*
 

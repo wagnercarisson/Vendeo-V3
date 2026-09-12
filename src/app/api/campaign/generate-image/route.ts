@@ -29,10 +29,9 @@ import type { CampaignIntent } from "@/lib/campaign/types";
 import { isRetryableError } from "@/lib/copy/errors";
 import { getLaunchConfig } from "@/lib/launch-config/config";
 import { logPipelineEvent } from "@/lib/logging/pipeline-logger";
-import { AiCostTracker, resolveAiCost } from "@/lib/ai-cost";
-import type { AiCallInfo, CostResolution } from "@/lib/ai-cost/types";
+import { AiCostTracker } from "@/lib/ai-cost";
+import type { AiCallInfo } from "@/lib/ai-cost/types";
 import type { GenerationEventType } from "@/lib/visual-signature/types";
-import type { ImageProviderUsageMeta } from "@/lib/image-generation/providers/types";
 import { requireLegalClearance } from "@/lib/legal/clearance";
 import { EconomicParameterService } from "@/lib/economic/economic-parameter-service";
 
@@ -555,62 +554,16 @@ export const POST = apiHandler(async (request: NextRequest) => {
       // Best-effort (D7): nunca lança e nunca bloqueia o pipeline.
       let callCostSum = 0;
 
-      // F38.1 fechamento: metadata call-level para auditoria (furo 8 — coluna
-      // call_metadata nunca preenchida na geração de imagem). Carrega o usage bruto
-      // sanitizado do provider + flags do caminho de geração (Responses
-      // image_generation) E os componentes da fórmula de estimativa (v2) quando o
-      // resolvedor aplicou o ajuste provisório da tool.
-      const buildCallMetadata = (
-        info: AiCallInfo & { usageMeta?: ImageProviderUsageMeta },
-        cost?: CostResolution,
-      ): Record<string, unknown> | undefined => {
-        const usageMeta = info.usageMeta
-          ? {
-              provider_usage_raw: info.usageMeta.providerUsageRaw,
-              provider_usage_source: info.usageMeta.providerUsageSource,
-              responses_model: info.usageMeta.responsesModel,
-              image_generation_tool: info.usageMeta.imageGenerationTool,
-            }
-          : undefined;
-
-        const formula =
-          cost && (cost.costFormulaVersion || cost.costEstimationNote || cost.textComponentUsd !== undefined)
-            ? {
-                cost_formula_version: cost.costFormulaVersion,
-                text_component_usd: cost.textComponentUsd,
-                image_tool_component_usd: cost.imageToolComponentUsd,
-                image_tool_pricing_provider: cost.imageToolPricingProvider,
-                image_tool_pricing_model: cost.imageToolPricingModel,
-                image_tool_pricing_version: cost.imageToolPricingVersion,
-                cost_estimation_note: cost.costEstimationNote,
-              }
-            : undefined;
-
-        return usageMeta || formula ? { ...usageMeta, ...formula } : undefined;
-      };
-
+      // F46-06 (D9): `recordCall` grava APENAS delivery markers
+      // (`campaign_pipeline`) — SEM custo/tokens (anti-dupla-contagem). A
+      // telemetria call-level (copy/visão/imagem) vem exclusivamente do sink.
       const recordCall = async (params: {
         generationType: GenerationEventType;
         status: "success" | "failed";
-        info: AiCallInfo & { attempt?: number; usageMeta?: ImageProviderUsageMeta };
+        info: AiCallInfo & { attempt?: number };
         errorType?: string;
       }): Promise<void> => {
         try {
-          const isDelivery = params.generationType === "campaign_pipeline";
-          let cost: CostResolution | undefined;
-          if (!isDelivery) {
-            cost = await resolveAiCost({
-              provider: params.info.provider,
-              model: params.info.model,
-              usage: params.info.usage,
-              providerReportedCostUsd: params.info.providerReportedCostUsd,
-              imageGenerationTool: params.info.usageMeta?.imageGenerationTool === true,
-              generationType: params.generationType,
-            });
-            if (typeof cost.estimatedCostUsd === "number") {
-              callCostSum += cost.estimatedCostUsd;
-            }
-          }
           await new AiCostTracker().record({
             operationRunId,
             operationRunType: "campaign_delivery",
@@ -625,13 +578,12 @@ export const POST = apiHandler(async (request: NextRequest) => {
             durationMs: params.info.durationMs,
             status: params.status,
             errorType: params.errorType ?? null,
-            tokens: isDelivery ? undefined : params.info.usage,
-            cost: isDelivery ? undefined : cost,
-            // F38.2.1 (D3): snapshot do run propagado às chamadas filhas —
-            // APENAS valores; o tracker define captured_at_generation.
+            tokens: undefined,
+            cost: undefined,
+            // F38.2.1 (D3): snapshot do run propagado às chamadas filhas — APENAS valores.
             usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
             creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
-            metadata: isDelivery ? { duration_is_pipeline: true } : buildCallMetadata(params.info, cost),
+            metadata: { duration_is_pipeline: true },
           });
         } catch (err) {
           console.error("[generate-image] recordCall failed (best-effort):", err instanceof Error ? err.message : String(err));
