@@ -1,7 +1,5 @@
 import { PromptLoader } from '@/lib/image-generation/prompt-loader';
 import { supabaseAdmin as supabase } from '@/lib/supabase/server';
-import OpenAI from 'openai';
-import type { AiCallInfo, TokenUsage } from '@/lib/ai-cost/types';
 import type {
   BrandProfilerInput,
   BrandProfilerWithoutLogoResult,
@@ -21,6 +19,11 @@ import type {
 } from '@/lib/brand-assets/types';
 import { hasUserChosenColors } from '@/lib/validators/color';
 import { probeColors, findClosestProbeCluster } from '@/lib/brand-assets/color-probe';
+import { defaultAiGateway, withOnCallTelemetry } from '@/lib/ai';
+import type { AiInvocationRequest, AiInvoker, AiTelemetryContext } from '@/lib/ai';
+
+/** Espelha o default do registry para `brand_profile_vision` (F46 D1). */
+const DEFAULT_VISION_MODEL = 'gpt-4o';
 
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
 
@@ -120,15 +123,12 @@ export interface BrandProfileGenerationResult {
 
 export class BrandProfilerWithoutLogoService {
   private promptLoader: PromptLoader;
-  private openai: OpenAI;
+  private readonly invoker: AiInvoker;
 
-  constructor() {
+  /** `invoker` é o gateway (seam de teste). Default = instância padrão de `@/lib/ai`. */
+  constructor(invoker: AiInvoker = defaultAiGateway) {
     this.promptLoader = new PromptLoader();
-    try {
-      this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    } catch {
-      this.openai = null as unknown as OpenAI;
-    }
+    this.invoker = invoker;
   }
 
   private async downloadAssetBuffer(assetUrl: string): Promise<Buffer | null> {
@@ -230,7 +230,7 @@ export class BrandProfilerWithoutLogoService {
     return this.promptLoader.load('store-brand-profiler', base);
   }
 
-  async generate(input: BrandProfilerInput): Promise<BrandProfileGenerationResult> {
+  async generate(input: BrandProfilerInput, telemetry?: AiTelemetryContext): Promise<BrandProfileGenerationResult> {
     const startTime = Date.now();
 
     // Mode 'regenerate': skip cache, go directly to inference
@@ -276,14 +276,14 @@ export class BrandProfilerWithoutLogoService {
         if (process.env.NODE_ENV === 'production') {
           throw new BrandProfilerWithoutLogoError('OPENAI_API_KEY não configurada', {
             provider: 'openai',
-            model: process.env.OPENAI_BRAND_DIRECTOR_MODEL ?? 'gpt-4o',
+            model: DEFAULT_VISION_MODEL,
             elapsedMs: 0, errorType: 'missing_api_key',
           });
         }
         return this.mockGenerate(input, probeResult);
       }
 
-      return this.generateWithIntendedPalette(input, buffer, probeResult, nonArtifactClusters, startTime);
+      return this.generateWithIntendedPalette(input, buffer, probeResult, nonArtifactClusters, startTime, telemetry);
     }
 
     // --- PATH 2: No intendedPalette (retry/legacy) → fallback heuristic ---
@@ -291,14 +291,14 @@ export class BrandProfilerWithoutLogoService {
       if (process.env.NODE_ENV === 'production') {
         throw new BrandProfilerWithoutLogoError('OPENAI_API_KEY não configurada', {
           provider: 'openai',
-          model: process.env.OPENAI_BRAND_DIRECTOR_MODEL ?? 'gpt-4o',
+          model: DEFAULT_VISION_MODEL,
           elapsedMs: 0, errorType: 'missing_api_key',
         });
       }
       return this.mockGenerate(input, probeResult);
     }
 
-    return this.generateWithFallback(input, probeResult, nonArtifactClusters, startTime);
+    return this.generateWithFallback(input, probeResult, nonArtifactClusters, startTime, telemetry);
   }
 
   private async mockGenerate(
@@ -349,7 +349,8 @@ export class BrandProfilerWithoutLogoService {
     buffer: Buffer | null,
     probeResult: import('@/lib/brand-assets/types').ColorProbeResult | null,
     nonArtifactClusters: ColorCluster[],
-    startTime: number
+    startTime: number,
+    telemetry?: AiTelemetryContext
   ): Promise<BrandProfileGenerationResult> {
     const intended = input.intendedPalette!;
     const roles: { role: string; hex: string }[] = [
@@ -385,20 +386,21 @@ export class BrandProfilerWithoutLogoService {
     }
 
     if (probeUnavailable) {
-      return this.handleProbeUnavailable(input, intended, startTime);
+      return this.handleProbeUnavailable(input, intended, startTime, telemetry);
     }
 
     if (allConfirmed) {
-      return this.handleAllConfirmed(input, intended, nonArtifactClusters, rolePresence, startTime);
+      return this.handleAllConfirmed(input, intended, nonArtifactClusters, rolePresence, startTime, telemetry);
     }
 
-    return this.handleDivergence(input, intended, buffer, nonArtifactClusters, rolePresence, contestedRoles, contestedSupportIndices, startTime);
+    return this.handleDivergence(input, intended, buffer, nonArtifactClusters, rolePresence, contestedRoles, contestedSupportIndices, startTime, telemetry);
   }
 
   private async handleProbeUnavailable(
     input: BrandProfilerInput,
     intended: IntendedPalette,
-    startTime: number
+    startTime: number,
+    telemetry?: AiTelemetryContext
   ): Promise<BrandProfileGenerationResult> {
     const resolved = intendedToResolved(intended, intended.support);
     const safeColors = sanitizeResolvedPalette(resolved);
@@ -423,7 +425,7 @@ export class BrandProfilerWithoutLogoService {
     };
 
     const prompt = this.buildPromptContext('happy_path', input);
-    const visionResult = await this.callVision(input, prompt);
+    const visionResult = await this.callVision(input, prompt, telemetry);
     const enriched = this.mergeSemanticFields(result, visionResult);
 
     const profile = await this.persistProfile(input, enriched, colorValidation);
@@ -436,7 +438,8 @@ export class BrandProfilerWithoutLogoService {
     intended: IntendedPalette,
     nonArtifactClusters: ColorCluster[],
     rolePresence: Map<string, { presence: ColorValidationEntry['presence']; deltaE: number | null; cluster: ColorCluster | null }>,
-    startTime: number
+    startTime: number,
+    telemetry?: AiTelemetryContext
   ): Promise<BrandProfileGenerationResult> {
     const resolved = intendedToResolved(intended, intended.support);
     const safeColors = sanitizeResolvedPalette(resolved);
@@ -467,7 +470,7 @@ export class BrandProfilerWithoutLogoService {
     };
 
     const prompt = this.buildPromptContext('happy_path', input);
-    const visionResult = await this.callVision(input, prompt);
+    const visionResult = await this.callVision(input, prompt, telemetry);
     const enriched = this.mergeSemanticFields(result, visionResult);
 
     const profile = await this.persistProfile(input, enriched, colorValidation);
@@ -483,7 +486,8 @@ export class BrandProfilerWithoutLogoService {
     rolePresence: Map<string, { presence: ColorValidationEntry['presence']; deltaE: number | null; cluster: ColorCluster | null }>,
     contestedRoles: string[],
     contestedSupportIndices: number[],
-    startTime: number
+    startTime: number,
+    telemetry?: AiTelemetryContext
   ): Promise<BrandProfileGenerationResult> {
     const contestedHexes: string[] = [];
     for (const role of contestedRoles) {
@@ -510,7 +514,7 @@ export class BrandProfilerWithoutLogoService {
     });
 
     try {
-      const visionResult = await this.callVisionFull(input, prompt);
+      const visionResult = await this.callVisionFull(input, prompt, telemetry);
       const raw = JSON.parse(visionResult);
       const correctionsObj = {
         corrections: raw.corrections,
@@ -606,7 +610,7 @@ export class BrandProfilerWithoutLogoService {
 
       throw new BrandProfilerWithoutLogoError(errorMessage, {
         provider: 'openai',
-        model: process.env.OPENAI_BRAND_DIRECTOR_MODEL ?? 'gpt-4o',
+        model: DEFAULT_VISION_MODEL,
         elapsedMs,
         errorType,
       });
@@ -617,7 +621,8 @@ export class BrandProfilerWithoutLogoService {
     input: BrandProfilerInput,
     probeResult: import('@/lib/brand-assets/types').ColorProbeResult | null,
     nonArtifactClusters: ColorCluster[],
-    startTime: number
+    startTime: number,
+    telemetry?: AiTelemetryContext
   ): Promise<BrandProfileGenerationResult> {
     const brandColor = input.brandColor;
 
@@ -681,7 +686,7 @@ export class BrandProfilerWithoutLogoService {
     };
 
     const prompt = this.buildPromptContext('legacy', input);
-    const visionResult = await this.callVision(input, prompt);
+    const visionResult = await this.callVision(input, prompt, telemetry);
     const enriched = this.mergeSemanticFields(result, visionResult);
 
     const profile = await this.persistProfile(input, enriched, colorValidation);
@@ -700,119 +705,64 @@ export class BrandProfilerWithoutLogoService {
       .map(c => c.hex);
   }
 
-  private async callVision(input: BrandProfilerInput, prompt: string): Promise<string> {
-    if (!this.openai) {
-      throw new Error('OPENAI_API_KEY não configurada');
-    }
-    const model = process.env.OPENAI_BRAND_DIRECTOR_MODEL ?? 'gpt-4o';
-    const startTime = Date.now();
-    const response = await this.openai.chat.completions.create({
-      model,
-      messages: [
-        { role: 'system', content: prompt },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: 'Analise visualmente a assinatura visual aprovada e gere o perfil de marca.' },
-            { type: 'image_url', image_url: { url: input.assetUrl, detail: 'low' } },
-          ],
-        },
-      ],
-      response_format: { type: 'json_object' },
-      max_tokens: 2000,
-    });
-    const durationMs = Date.now() - startTime;
-
-    // F38.1 (D7/D11): telemetria best-effort da chamada de visão (brand_profile_vision).
-    // Nunca lança — profiling não é bloqueado por telemetria.
-    this.invokeOnCall(input.onCall, {
-      provider: 'openai',
-      model,
-      usage: this.mapChatUsage(response.usage),
-      durationMs,
-    });
-
-    return response.choices[0]?.message?.content ?? '{}';
-  }
-
-  private async callVisionFull(input: BrandProfilerInput, prompt: string): Promise<string> {
-    const model = process.env.OPENAI_BRAND_DIRECTOR_MODEL ?? 'gpt-4o';
-    const startTime = Date.now();
-    const response = await this.openai.chat.completions.create({
-      model,
-      messages: [
-        { role: 'system', content: prompt },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: 'Analise visualmente a assinatura visual aprovada, corrija as cores contestadas e gere o perfil de marca completo.' },
-            { type: 'image_url', image_url: { url: input.assetUrl, detail: 'low' } },
-          ],
-        },
-      ],
-      response_format: { type: 'json_object' },
-      max_tokens: 3000,
-    });
-    const durationMs = Date.now() - startTime;
-
-    // F38.1 (D7/D11): telemetria best-effort da chamada de visão completa
-    // (brand_profile_vision). Nunca lança.
-    this.invokeOnCall(input.onCall, {
-      provider: 'openai',
-      model,
-      usage: this.mapChatUsage(response.usage),
-      durationMs,
-    });
-
-    return response.choices[0]?.message?.content ?? '{}';
-  }
-
-  /**
-   * Invoca o callback onCall best-effort (D7): callback lançando é logado e
-   * ignorado — nunca interrompe profiling. Aceita retorno síncrono ou Promise.
-   */
-  private invokeOnCall(
-    onCall: ((info: AiCallInfo) => void | Promise<void>) | undefined,
-    info: AiCallInfo
-  ): void {
-    if (!onCall) return;
-    try {
-      Promise.resolve(onCall(info)).catch((err) => {
-        console.error(
-          `[BrandProfiler] onCall callback failed (best-effort): ${
-            err instanceof Error ? err.message : String(err)
-          }`
-        );
-      });
-    } catch (err) {
-      console.error(
-        `[BrandProfiler] onCall callback failed (best-effort): ${
-          err instanceof Error ? err.message : String(err)
-        }`
+  private async callVision(
+    input: BrandProfilerInput,
+    prompt: string,
+    telemetry?: AiTelemetryContext
+  ): Promise<string> {
+    if (!telemetry) {
+      throw new Error(
+        '[BrandProfiler] AiTelemetryContext é obrigatório para invoke("brand_profile_vision")'
       );
     }
+
+    // F46-04 (D9): brand_profile_vision via camada única; o `onCall` legado
+    // apenas recebe o envelope já produzido.
+    const request: AiInvocationRequest = {
+      prompt: 'Analise visualmente a assinatura visual aprovada e gere o perfil de marca.',
+      system: prompt,
+      productImagesDataUrls: [input.assetUrl],
+      imageDetail: 'low',
+      responseFormat: 'json_object',
+      maxTokens: 2000,
+    };
+
+    const result = await this.invoker.invoke(
+      'brand_profile_vision',
+      request,
+      withOnCallTelemetry(telemetry, input.onCall),
+    );
+
+    return result.content ?? '{}';
   }
 
-  /**
-   * Mapeia o payload de usage do chat.completions (OpenAI) para TokenUsage
-   * normalizado (D12). Defensivo contra drift de shape do SDK.
-   */
-  private mapChatUsage(usage: unknown): TokenUsage | undefined {
-    if (!usage || typeof usage !== 'object') return undefined;
-    const u = usage as Record<string, unknown>;
-    const tokens: TokenUsage = {};
-    if (typeof u.prompt_tokens === 'number') tokens.promptTokens = u.prompt_tokens;
-    if (typeof u.completion_tokens === 'number') tokens.completionTokens = u.completion_tokens;
-    if (typeof u.total_tokens === 'number') tokens.totalTokens = u.total_tokens;
-    const promptDetails = u.prompt_tokens_details as Record<string, unknown> | undefined;
-    if (promptDetails && typeof promptDetails.cached_tokens === 'number') {
-      tokens.cachedInputTokens = promptDetails.cached_tokens;
+  private async callVisionFull(
+    input: BrandProfilerInput,
+    prompt: string,
+    telemetry?: AiTelemetryContext
+  ): Promise<string> {
+    if (!telemetry) {
+      throw new Error(
+        '[BrandProfiler] AiTelemetryContext é obrigatório para invoke("brand_profile_vision")'
+      );
     }
-    const completionDetails = u.completion_tokens_details as Record<string, unknown> | undefined;
-    if (completionDetails && typeof completionDetails.image_tokens === 'number') {
-      tokens.imageTokens = completionDetails.image_tokens;
-    }
-    return tokens;
+
+    const request: AiInvocationRequest = {
+      prompt: 'Analise visualmente a assinatura visual aprovada, corrija as cores contestadas e gere o perfil de marca completo.',
+      system: prompt,
+      productImagesDataUrls: [input.assetUrl],
+      imageDetail: 'low',
+      responseFormat: 'json_object',
+      maxTokens: 3000,
+    };
+
+    const result = await this.invoker.invoke(
+      'brand_profile_vision',
+      request,
+      withOnCallTelemetry(telemetry, input.onCall),
+    );
+
+    return result.content ?? '{}';
   }
 
   private mergeSemanticFields(result: BrandProfilerWithoutLogoResult, visionJson: string): BrandProfilerWithoutLogoResult {

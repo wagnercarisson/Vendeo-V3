@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { ColorCluster, ColorProbeResult, BrandProfileRecord } from '@/lib/brand-assets/types';
 import { intendedToResolved } from '../types';
 import type { BrandProfilerInput, IntendedPalette, ColorValidationResolved } from '../types';
+import { NoopAiTelemetrySink } from '@/lib/ai';
+import type { AiTelemetryContext } from '@/lib/ai';
 
 const {
   mockFindClosestProbeCluster,
@@ -167,6 +169,23 @@ function colorValidation(profile: BrandProfileRecord): ColorValidationResolved {
   return (profile.metadata as Record<string, unknown>).color_validation as ColorValidationResolved;
 }
 
+// F46-04 (D9): o profiler exige AiTelemetryContext; aqui usamos o gateway padrão
+// (adapter real) com OpenAI mockado + sink no-op explícito de teste.
+const TELEMETRY: AiTelemetryContext = {
+  operationRunId: 'run-1',
+  operationRunType: 'brand_profile',
+  traceId: 'trace-1',
+  storeId: 'test-store-id',
+  sink: new NoopAiTelemetrySink(),
+};
+
+async function gen(
+  p: InstanceType<typeof import('../brand-profiler').BrandProfilerWithoutLogoService>,
+  input: BrandProfilerInput
+) {
+  return p.generate(input, TELEMETRY);
+}
+
   describe('11 — profiler palette resolution (mocked probe + OpenAI + Supabase)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -201,7 +220,7 @@ function colorValidation(profile: BrandProfileRecord): ColorValidationResolved {
 
       const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
       const profiler = new BrandProfilerWithoutLogoService();
-      const result = await profiler.generate(makeInput({ intendedPalette: intended }));
+      const result = await gen(profiler, makeInput({ intendedPalette: intended }));
 
       expect(result.success).toBe(true);
       expect(result.profile.safe_color_tokens).toMatchObject({
@@ -254,7 +273,7 @@ function colorValidation(profile: BrandProfileRecord): ColorValidationResolved {
 
       const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
       const profiler = new BrandProfilerWithoutLogoService();
-      const result = await profiler.generate(makeInput({ intendedPalette: intended }));
+      const result = await gen(profiler, makeInput({ intendedPalette: intended }));
 
       expect(result.success).toBe(true);
       expect(colorValidation(result.profile).global_status).toBe('vision_adjudicated');
@@ -280,7 +299,7 @@ function colorValidation(profile: BrandProfileRecord): ColorValidationResolved {
 
       const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
       const profiler = new BrandProfilerWithoutLogoService();
-      const result = await profiler.generate(makeInput({ intendedPalette: intended }));
+      const result = await gen(profiler, makeInput({ intendedPalette: intended }));
 
       expect(result.success).toBe(true);
     });
@@ -305,7 +324,7 @@ function colorValidation(profile: BrandProfileRecord): ColorValidationResolved {
 
       const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
       const profiler = new BrandProfilerWithoutLogoService();
-      const result = await profiler.generate(makeInput({ intendedPalette: intended }));
+      const result = await gen(profiler, makeInput({ intendedPalette: intended }));
 
       expect(result.success).toBe(true);
       expect(result.profile.safe_color_tokens.secondary).toBe('#3B82F6');
@@ -335,7 +354,7 @@ function colorValidation(profile: BrandProfileRecord): ColorValidationResolved {
       const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
       const profiler = new BrandProfilerWithoutLogoService();
       mockProbeColors.mockResolvedValue(makeProbeResult(clusters));
-      const result = await profiler.generate(makeInput({ intendedPalette: intended }));
+      const result = await gen(profiler, makeInput({ intendedPalette: intended }));
 
       expect(result.success).toBe(true);
       expect(colorValidation(result.profile).global_status).toBe('vision_adjudicated');
@@ -355,7 +374,7 @@ function colorValidation(profile: BrandProfileRecord): ColorValidationResolved {
 
       const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
       const profiler = new BrandProfilerWithoutLogoService();
-      const result = await profiler.generate(makeInput({ intendedPalette: makeIntended() }));
+      const result = await gen(profiler, makeInput({ intendedPalette: makeIntended() }));
 
       expect(result.success).toBe(true);
       expect(colorValidation(result.profile).global_status).toBe('probe_unavailable');
@@ -380,7 +399,7 @@ function colorValidation(profile: BrandProfileRecord): ColorValidationResolved {
       const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
       const profiler = new BrandProfilerWithoutLogoService();
 
-      await expect(profiler.generate(makeInput({ intendedPalette: intended }))).rejects.toThrow();
+      await expect(gen(profiler, makeInput({ intendedPalette: intended }))).rejects.toThrow();
     });
   });
 
@@ -397,7 +416,7 @@ function colorValidation(profile: BrandProfileRecord): ColorValidationResolved {
 
       const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
       const profiler = new BrandProfilerWithoutLogoService();
-      const result = await profiler.generate(makeInput({ intendedPalette: null, brandColor: '#CC0000' }));
+      const result = await gen(profiler, makeInput({ intendedPalette: null, brandColor: '#CC0000' }));
 
       expect(result.success).toBe(true);
       expect(colorValidation(result.profile).global_status).toBe('fallback_heuristic');
@@ -418,7 +437,7 @@ function colorValidation(profile: BrandProfileRecord): ColorValidationResolved {
 
       const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
       const profiler = new BrandProfilerWithoutLogoService();
-      const result = await profiler.generate(makeInput({ intendedPalette: null, brandColor: null }));
+      const result = await gen(profiler, makeInput({ intendedPalette: null, brandColor: null }));
 
       expect(result.success).toBe(true);
       expect(colorValidation(result.profile).global_status).toBe('fallback_heuristic');
@@ -450,7 +469,7 @@ function colorValidation(profile: BrandProfileRecord): ColorValidationResolved {
 
       const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
       const profiler = new BrandProfilerWithoutLogoService();
-      const result = await profiler.generate(makeInput({ intendedPalette: intended }));
+      const result = await gen(profiler, makeInput({ intendedPalette: intended }));
 
       expect(result.success).toBe(true);
       expect(result.profile.safe_color_tokens.secondary).toBe('#3B82F6');
@@ -476,7 +495,7 @@ function colorValidation(profile: BrandProfileRecord): ColorValidationResolved {
 
       const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
       const profiler = new BrandProfilerWithoutLogoService();
-      await profiler.generate(makeInput({ intendedPalette: intended }));
+      await gen(profiler, makeInput({ intendedPalette: intended }));
 
       expect(mockOpenAICreate).toHaveBeenCalled();
     });
@@ -503,7 +522,7 @@ function colorValidation(profile: BrandProfileRecord): ColorValidationResolved {
 
       const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
       const profiler = new BrandProfilerWithoutLogoService();
-      const result = await profiler.generate(makeInput({ intendedPalette: intended }));
+      const result = await gen(profiler, makeInput({ intendedPalette: intended }));
 
       expect(result.success).toBe(true);
       const cv = colorValidation(result.profile);
@@ -532,7 +551,7 @@ function colorValidation(profile: BrandProfileRecord): ColorValidationResolved {
       const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
       const profiler = new BrandProfilerWithoutLogoService();
 
-      await expect(profiler.generate(makeInput({ intendedPalette: intended }))).rejects.toThrow();
+      await expect(gen(profiler, makeInput({ intendedPalette: intended }))).rejects.toThrow();
     });
   });
 
@@ -557,7 +576,7 @@ function colorValidation(profile: BrandProfileRecord): ColorValidationResolved {
 
       const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
       const profiler = new BrandProfilerWithoutLogoService();
-      const result = await profiler.generate(makeInput({ intendedPalette: null, brandColor: '#CC0000' }));
+      const result = await gen(profiler, makeInput({ intendedPalette: null, brandColor: '#CC0000' }));
 
       expect(result.success).toBe(true);
       // #0F172A has the highest edgeRatio (0.15) → should be background
@@ -589,7 +608,7 @@ function colorValidation(profile: BrandProfileRecord): ColorValidationResolved {
 
       const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
       const profiler = new BrandProfilerWithoutLogoService();
-      const result = await profiler.generate(makeInput({ intendedPalette: intended }));
+      const result = await gen(profiler, makeInput({ intendedPalette: intended }));
 
       expect(result.success).toBe(true);
       expect(colorValidation(result.profile).global_status).toBe('all_confirmed');
@@ -619,7 +638,7 @@ function colorValidation(profile: BrandProfileRecord): ColorValidationResolved {
 
       const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
       const profiler = new BrandProfilerWithoutLogoService();
-      const result = await profiler.generate(makeInput({ intendedPalette: intended }));
+      const result = await gen(profiler, makeInput({ intendedPalette: intended }));
 
       expect(result.success).toBe(true);
       expect(colorValidation(result.profile).global_status).toBe('vision_adjudicated');
@@ -638,7 +657,7 @@ function colorValidation(profile: BrandProfileRecord): ColorValidationResolved {
 
       const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
       const profiler = new BrandProfilerWithoutLogoService();
-      const result = await profiler.generate(makeInput({ intendedPalette: null }));
+      const result = await gen(profiler, makeInput({ intendedPalette: null }));
 
       expect(result.success).toBe(true);
       expect(mockOpenAICreate).toHaveBeenCalled();
@@ -670,7 +689,7 @@ function colorValidation(profile: BrandProfileRecord): ColorValidationResolved {
 
       const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
       const profiler = new BrandProfilerWithoutLogoService();
-      const result = await profiler.generate(makeInput({ intendedPalette: intended }));
+      const result = await gen(profiler, makeInput({ intendedPalette: intended }));
 
       expect(result.success).toBe(true);
       expect(colorValidation(result.profile).global_status).toBe('vision_adjudicated');

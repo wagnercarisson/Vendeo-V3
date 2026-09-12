@@ -1,8 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-const mockSupabaseFrom = vi.fn();
-const mockFetch = vi.fn();
-const mockChatCompletionsCreate = vi.fn();
+const { mockSupabaseFrom, mockFetch } = vi.hoisted(() => {
+  process.env.NEXT_PUBLIC_SUPABASE_URL ??= 'http://localhost:54321';
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??= 'test-anon-key';
+  process.env.SUPABASE_SERVICE_ROLE_KEY ??= 'test-service-role-key';
+  return { mockSupabaseFrom: vi.fn(), mockFetch: vi.fn() };
+});
 
 vi.mock('@/lib/supabase/server', () => ({
   supabaseAdmin: { from: mockSupabaseFrom },
@@ -11,16 +14,6 @@ vi.mock('@/lib/supabase/server', () => ({
 vi.mock('@/lib/image-generation/prompt-loader', () => ({
   PromptLoader: class {
     load = vi.fn(() => 'mocked prompt');
-  },
-}));
-
-vi.mock('openai', () => ({
-  default: class {
-    chat = {
-      completions: {
-        create: mockChatCompletionsCreate,
-      },
-    };
   },
 }));
 
@@ -35,6 +28,37 @@ vi.mock('@/lib/brand-assets/color-probe', () => ({
   ACCEPTABLE_MATCH_DELTA_E: 18,
   LOOSE_MATCH_DELTA_E: 25,
 }));
+
+import { NoopAiTelemetrySink } from '@/lib/ai';
+import type { AiInvoker, AiTelemetryContext, TokenUsage } from '@/lib/ai';
+
+const TELEMETRY: AiTelemetryContext = {
+  operationRunId: 'run-1',
+  operationRunType: 'brand_profile',
+  traceId: 'trace-1',
+  storeId: 'store-001',
+  sink: new NoopAiTelemetrySink(),
+};
+
+/** Fake `AiInvoker` (seam de teste): emite o envelope e retorna o resultado canônico. */
+function makeInvoker(usage?: TokenUsage): AiInvoker {
+  const invokeMock = vi.fn(async (_capability: string, _request: unknown, telemetry: AiTelemetryContext) => {
+    await telemetry.sink.emit({
+      capability: 'brand_profile_vision',
+      protocol: 'chat-completions',
+      status: 'success',
+      provider: 'openai',
+      model: 'gpt-4o',
+      usage,
+      durationMs: 11,
+    });
+    return { content: '{"visual_style":"Elegante"}', model: 'gpt-4o', usage };
+  });
+  return {
+    invoke: invokeMock as unknown as AiInvoker['invoke'],
+    hasFallback: vi.fn(async () => false),
+  };
+}
 
 // Mock fetch globally for downloadAssetBuffer
 vi.stubGlobal('fetch', mockFetch);
@@ -329,26 +353,20 @@ describe('BrandProfilerWithoutLogoService — onCall (F38.1, D7/D11)', () => {
   afterEach(() => {
     delete process.env.OPENAI_API_KEY;
     (process.env as Record<string, string>).NODE_ENV = 'test';
-    mockChatCompletionsCreate.mockReset();
   });
 
-  it('Teste 6: onCall do BrandProfilerInput repassado ao BrandProfiler interno (threading) — spy chega à chamada de visão', async () => {
-    mockChatCompletionsCreate.mockResolvedValue({
-      choices: [{ message: { content: '{"visual_style":"Elegante"}' } }],
-      usage: { prompt_tokens: 90, completion_tokens: 30, total_tokens: 120 },
-    });
-
+  it('Teste 6: onCall do BrandProfilerInput repassado ao BrandProfiler interno (threading) — envelope chega à chamada de visão', async () => {
     const { BrandProfilerWithoutLogoService } = await import('@/lib/visual-signature/brand-profiler');
-    const service = new BrandProfilerWithoutLogoService();
+    const service = new BrandProfilerWithoutLogoService(
+      makeInvoker({ promptTokens: 90, completionTokens: 30, totalTokens: 120 })
+    );
     const onCall = vi.fn();
     const result = await service.generate({
       ...mockBrandProfilerInput,
       intendedPalette: { primary: '#FF0000', accent: '#00FF00', background: '#FFFFFF', support: [] },
       onCall,
-    });
+    }, TELEMETRY);
 
-    // O wrapper repassa o onCall do input ao BrandProfiler (callVision) —
-    // o callback do chamador é o MESMO invocado durante generate.
     expect(result.success).toBe(true);
     expect(onCall).toHaveBeenCalledTimes(1);
     const info = onCall.mock.calls[0][0];
@@ -357,19 +375,16 @@ describe('BrandProfilerWithoutLogoService — onCall (F38.1, D7/D11)', () => {
   });
 
   it('Teste 7: path 1 (intendedPalette, probe unavailable) → 1 onCall de visão com provider/model/usage/durationMs', async () => {
-    mockChatCompletionsCreate.mockResolvedValue({
-      choices: [{ message: { content: '{"visual_style":"Moderno"}' } }],
-      usage: { prompt_tokens: 100, completion_tokens: 50, total_tokens: 150 },
-    });
-
     const { BrandProfilerWithoutLogoService } = await import('@/lib/visual-signature/brand-profiler');
-    const service = new BrandProfilerWithoutLogoService();
+    const service = new BrandProfilerWithoutLogoService(
+      makeInvoker({ promptTokens: 100, completionTokens: 50, totalTokens: 150 })
+    );
     const onCall = vi.fn();
     const result = await service.generate({
       ...mockBrandProfilerInput,
       intendedPalette: { primary: '#FF0000', accent: '#00FF00', background: '#FFFFFF', support: [] },
       onCall,
-    });
+    }, TELEMETRY);
 
     expect(result.success).toBe(true);
     expect(onCall).toHaveBeenCalledTimes(1);
@@ -380,20 +395,17 @@ describe('BrandProfilerWithoutLogoService — onCall (F38.1, D7/D11)', () => {
     expect(info.durationMs).toBeGreaterThanOrEqual(0);
   });
 
-  it('Teste 8: path 2 (sem paleta) → 1 onCall de visão (brand-profiler só faz chamadas de visão; texto-only é serviço separado 38-1-09)', async () => {
-    mockChatCompletionsCreate.mockResolvedValue({
-      choices: [{ message: { content: '{"visual_style":"Elegante"}' } }],
-      usage: { prompt_tokens: 200, completion_tokens: 80, total_tokens: 280 },
-    });
-
+  it('Teste 8: path 2 (sem paleta) → 1 onCall de visão (brand-profiler só faz chamadas de visão)', async () => {
     const { BrandProfilerWithoutLogoService } = await import('@/lib/visual-signature/brand-profiler');
-    const service = new BrandProfilerWithoutLogoService();
+    const service = new BrandProfilerWithoutLogoService(
+      makeInvoker({ promptTokens: 200, completionTokens: 80, totalTokens: 280 })
+    );
     const onCall = vi.fn();
     const result = await service.generate({
       ...mockBrandProfilerInput,
       intendedPalette: null,
       onCall,
-    });
+    }, TELEMETRY);
 
     expect(result.success).toBe(true);
     expect(onCall).toHaveBeenCalledTimes(1);
@@ -407,26 +419,23 @@ describe('BrandProfilerWithoutLogoService — onCall (F38.1, D7/D11)', () => {
     delete process.env.OPENAI_API_KEY;
 
     const { BrandProfilerWithoutLogoService } = await import('@/lib/visual-signature/brand-profiler');
-    const service = new BrandProfilerWithoutLogoService();
+    const service = new BrandProfilerWithoutLogoService(makeInvoker());
     const onCall = vi.fn();
     const result = await service.generate({
       ...mockBrandProfilerInput,
       intendedPalette: null,
       onCall,
-    });
+    }, TELEMETRY);
 
     expect(result.success).toBe(true);
     expect(onCall).not.toHaveBeenCalled();
   });
 
   it('Teste 10: onCall lançando → geração continua (best-effort D7) e resultado inalterado', async () => {
-    mockChatCompletionsCreate.mockResolvedValue({
-      choices: [{ message: { content: '{"visual_style":"Elegante"}' } }],
-      usage: { prompt_tokens: 200, completion_tokens: 80, total_tokens: 280 },
-    });
-
     const { BrandProfilerWithoutLogoService } = await import('@/lib/visual-signature/brand-profiler');
-    const service = new BrandProfilerWithoutLogoService();
+    const service = new BrandProfilerWithoutLogoService(
+      makeInvoker({ promptTokens: 200, completionTokens: 80, totalTokens: 280 })
+    );
     const onCall = vi.fn(() => {
       throw new Error('boom — onCall deve ser best-effort');
     });
@@ -434,7 +443,7 @@ describe('BrandProfilerWithoutLogoService — onCall (F38.1, D7/D11)', () => {
       ...mockBrandProfilerInput,
       intendedPalette: null,
       onCall,
-    });
+    }, TELEMETRY);
 
     expect(result.success).toBe(true);
     expect(onCall).toHaveBeenCalledTimes(1);

@@ -1,8 +1,12 @@
 import { PromptLoader } from '@/lib/image-generation/prompt-loader';
 import type { BrandDirectorResult, ColorCluster, ColorProbeResult } from './types';
 import { probeColors, deltaE, hexToLab, rgbToHex, findClosestProbeCluster, isLightNeutral, STRONG_MATCH_DELTA_E, ACCEPTABLE_MATCH_DELTA_E, LOOSE_MATCH_DELTA_E } from './color-probe';
-import OpenAI from 'openai';
-import type { AiCallInfo, TokenUsage } from '@/lib/ai-cost/types';
+import type { AiCallInfo } from '@/lib/ai-cost/types';
+import { defaultAiGateway, withOnCallTelemetry } from '@/lib/ai';
+import type { AiInvocationRequest, AiInvoker, AiTelemetryContext } from '@/lib/ai';
+
+/** Espelha o default do registry para `brand_profile_vision` (F46 D1). */
+const DEFAULT_VISION_MODEL = 'gpt-4o';
 
 export interface DeterministicColorResult {
   logo_colors_detected: string[];
@@ -42,32 +46,11 @@ export interface StoreAnalysisInput {
 
 export class BrandDirectorService {
   private promptLoader = new PromptLoader();
-  private openai: OpenAI;
+  private readonly invoker: AiInvoker;
 
-  constructor() {
-    this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  }
-
-  /**
-   * Mapeia o payload de usage do chat.completions (OpenAI) para TokenUsage
-   * normalizado (D12). Defensivo contra drift de shape do SDK.
-   */
-  private mapChatUsage(usage: unknown): TokenUsage | undefined {
-    if (!usage || typeof usage !== 'object') return undefined;
-    const u = usage as Record<string, unknown>;
-    const tokens: TokenUsage = {};
-    if (typeof u.prompt_tokens === 'number') tokens.promptTokens = u.prompt_tokens;
-    if (typeof u.completion_tokens === 'number') tokens.completionTokens = u.completion_tokens;
-    if (typeof u.total_tokens === 'number') tokens.totalTokens = u.total_tokens;
-    const promptDetails = u.prompt_tokens_details as Record<string, unknown> | undefined;
-    if (promptDetails && typeof promptDetails.cached_tokens === 'number') {
-      tokens.cachedInputTokens = promptDetails.cached_tokens;
-    }
-    const completionDetails = u.completion_tokens_details as Record<string, unknown> | undefined;
-    if (completionDetails && typeof completionDetails.image_tokens === 'number') {
-      tokens.imageTokens = completionDetails.image_tokens;
-    }
-    return tokens;
+  /** `invoker` é o gateway (seam de teste). Default = instância padrão de `@/lib/ai`. */
+  constructor(invoker: AiInvoker = defaultAiGateway) {
+    this.invoker = invoker;
   }
 
   private buildProbeContext(probe: ColorProbeResult, curated: { primary: string; accent: string; background: string }): string {
@@ -309,8 +292,10 @@ export class BrandDirectorService {
     logoBuffer: Buffer;
     logoMimeType: string;
     storeData: StoreAnalysisInput;
-    /** F38.1 (D7/D11): callback best-effort com dados da chamada de visão (brand_profile_vision). Opcional — nunca bloqueia. */
+    /** F38.1 (D7/D11): callback best-effort com o envelope já produzido (brand_profile_vision). Opcional — nunca bloqueia. */
     onCall?: (info: AiCallInfo) => void | Promise<void>;
+    /** F46-04 (D9): contexto de telemetria do caller (run/sink obrigatório). */
+    telemetry?: AiTelemetryContext;
   }): Promise<BrandDirectorResult> {
     const startTime = Date.now();
 
@@ -342,7 +327,7 @@ export class BrandDirectorService {
       if (process.env.NODE_ENV === 'production') {
         throw new BrandDirectorAnalysisError('OPENAI_API_KEY não configurada', {
           provider: 'openai',
-          model: process.env.OPENAI_BRAND_DIRECTOR_MODEL ?? 'gpt-4o',
+          model: DEFAULT_VISION_MODEL,
           elapsedMs: 0,
           errorType: 'missing_api_key',
         });
@@ -365,7 +350,7 @@ export class BrandDirectorService {
       };
     }
 
-    const model = process.env.OPENAI_BRAND_DIRECTOR_MODEL ?? 'gpt-4o';
+    const model = DEFAULT_VISION_MODEL;
 
     console.log(`[BrandDirector] logo analysis start: model=${model}, mimeType=${params.logoMimeType}, bufferSize=${params.logoBuffer.length} bytes, store=${params.storeData.storeName}`);
 
@@ -411,42 +396,34 @@ export class BrandDirectorService {
 
       console.log(`[BrandDirector] calling OpenAI vision: model=${model}, detail=low, maxTokens=3000, dataUrlLength=${imageDataUrl.length}`);
 
-      const response = await this.openai.chat.completions.create({
-        model,
-        messages: [
-          { role: 'system', content: prompt },
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: `Analise o logotipo desta loja e gere o perfil de marca completo em JSON.\n\n${technicalSection}` },
-              { type: 'image_url', image_url: { url: imageDataUrl, detail: 'low' } },
-            ],
-          },
-        ],
-        response_format: { type: 'json_object' },
-        max_tokens: 3000,
-      });
-
-      const elapsedMs = Date.now() - startTime;
-      const rawContent = response.choices[0]?.message?.content ?? '{}';
-
-      // F38.1 (D7/D11): telemetria best-effort da chamada de visão
-      // (brand_profile_vision mapeado na rota). Nunca lança — a análise não é
-      // bloqueada por telemetria (mesmo padrão do BrandProfiler callVision).
-      try {
-        await params.onCall?.({
-          provider: 'openai',
-          model,
-          usage: this.mapChatUsage(response.usage),
-          durationMs: elapsedMs,
-        });
-      } catch (err) {
-        console.error(
-          `[BrandDirector] onCall callback failed (best-effort): ${
-            err instanceof Error ? err.message : String(err)
-          }`
+      // F46-04 (D9): brand_profile_vision via camada única. O gateway resolve o
+      // modelo real (gpt-4o) e o sink persiste; o `onCall` legado apenas recebe
+      // o envelope já produzido (comportamento best-effort preservado).
+      if (!params.telemetry) {
+        throw new BrandDirectorAnalysisError(
+          '[BrandDirectorService] AiTelemetryContext é obrigatório para invoke("brand_profile_vision")',
+          { provider: 'openai', model, elapsedMs: Date.now() - startTime, errorType: 'missing_telemetry' },
+          deterministicResult,
         );
       }
+
+      const request: AiInvocationRequest = {
+        prompt: `Analise o logotipo desta loja e gere o perfil de marca completo em JSON.\n\n${technicalSection}`,
+        system: prompt,
+        productImagesDataUrls: [imageDataUrl],
+        imageDetail: 'low',
+        responseFormat: 'json_object',
+        maxTokens: 3000,
+      };
+
+      const gatewayResult = await this.invoker.invoke(
+        'brand_profile_vision',
+        request,
+        withOnCallTelemetry(params.telemetry, params.onCall),
+      );
+
+      const elapsedMs = Date.now() - startTime;
+      const rawContent = gatewayResult.content ?? '{}';
 
       const raw = JSON.parse(rawContent);
 

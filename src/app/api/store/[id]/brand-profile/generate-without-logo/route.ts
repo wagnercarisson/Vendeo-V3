@@ -5,8 +5,8 @@ import type { VisualSignatureArtDirectorOutput } from '@/lib/visual-signature/ty
 import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
 import { requireSameOrigin } from '@/lib/auth/csrf';
 import { apiHandler } from '@/lib/auth/api-handler';
-import { AiCostTracker, resolveAiCost } from '@/lib/ai-cost';
-import type { AiCallInfo } from '@/lib/ai-cost/types';
+import { AiCostTracker } from '@/lib/ai-cost';
+import { createDefaultTelemetryContext } from '@/lib/ai';
 import { EconomicParameterService } from '@/lib/economic/economic-parameter-service';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -86,51 +86,18 @@ export const POST = apiHandler(async (
     );
   }
 
-  // Call-level (brand_profile_vision / brand_profile_text) chegam via onCall
-  // DURANTE generate(). O profiler invoca onCall uma vez por chamada de provider
-  // (path 1 = 1 visão; path 2 = visão depois texto — ordem fixa documentada).
-  // A rota BUFFERA os AiCallInfo e grava por sequência: 1a entrada -> vision,
-  // 2a -> text (determinístico por path — T-38.1-39).
-  const pendingCalls: AiCallInfo[] = [];
-
-  const flushCallEvents = async (): Promise<void> => {
-    const events = pendingCalls.splice(0);
-    for (let i = 0; i < events.length; i += 1) {
-      const info = events[i];
-      try {
-        // Call-level: custo REAL por chamada (resolveAiCost — D9)
-        const cost = await resolveAiCost({
-          provider: info.provider,
-          model: info.model,
-          usage: info.usage,
-          providerReportedCostUsd: info.providerReportedCostUsd,
-        });
-        await new AiCostTracker().record({
-          operationRunId: run.operationRunId,
-          operationRunType: "brand_profile",
-          traceId: run.traceId,
-          storeId: id,
-          visualSignatureId: body.visualSignatureId ?? null,
-          generationType: i === 0 ? "brand_profile_vision" : "brand_profile_text",
-          provider: info.provider,
-          model: info.model,
-          attemptNumber: 0,
-          durationMs: info.durationMs,
-          status: "success",
-          tokens: info.usage,
-          cost,
-          // F38.2.1 (D3): snapshot do run propagado (APENAS valores)
-          usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
-          creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
-        });
-      } catch (err) {
-        console.error(
-          "[brand-profile/generate-without-logo] recordCall failed (best-effort):",
-          err instanceof Error ? err.message : String(err)
-        );
-      }
-    }
-  };
+  // F46-04 (D9): telemetria pelo sink único. O profiler invoca
+  // `brand_profile_vision`/`brand_profile_text` via gateway; o sink resolve custo
+  // (CAPABILITY_GENERATION_TYPE) e grava call-level — a rota NÃO grava manualmente.
+  const telemetry = createDefaultTelemetryContext({
+    operationRunId: run.operationRunId,
+    operationRunType: "brand_profile",
+    traceId: run.traceId,
+    storeId: id,
+    visualSignatureId: body.visualSignatureId ?? null,
+    usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
+    creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
+  });
 
   try {
     const result = await profiler.generate({
@@ -149,14 +116,7 @@ export const POST = apiHandler(async (
       visualSignatureId: body.visualSignatureId,
       assetUrl: body.assetUrl,
       referenceCardUrl: body.referenceCardUrl ?? null,
-      // F38.1 (D7/D11): telemetria por chamada — nunca bloqueia profiling
-      onCall: (info: AiCallInfo) => {
-        pendingCalls.push(info);
-      },
-    });
-
-    // F38.1 (D7/D11): grava os eventos call-level do run com custo real
-    await flushCallEvents();
+    }, telemetry);
 
     // Delivery marker: SEM custo/tokens + flag de pipeline (D1/D6 — a view
     // soma apenas call-level; anti-dupla-contagem T-38.1-40)

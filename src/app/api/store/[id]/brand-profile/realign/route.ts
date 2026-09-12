@@ -11,8 +11,8 @@ import { buildStoreProfileInputSnapshot } from '@/lib/snapshot';
 import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
 import { requireSameOrigin } from '@/lib/auth/csrf';
 import { apiHandler } from '@/lib/auth/api-handler';
-import { AiCostTracker, resolveAiCost } from '@/lib/ai-cost';
-import type { AiCallInfo } from '@/lib/ai-cost/types';
+import { AiCostTracker } from '@/lib/ai-cost';
+import { createDefaultTelemetryContext } from '@/lib/ai';
 import type { GenerationEventType } from '@/lib/visual-signature/types';
 import { EconomicParameterService } from '@/lib/economic/economic-parameter-service';
 
@@ -44,50 +44,6 @@ async function resolveEconomicSnapshot(): Promise<{
       err instanceof Error ? err.message : String(err)
     );
     return { usdBrlRateAtGeneration: null, creditValueBrlAtGeneration: null };
-  }
-}
-
-/**
- * F38.1 (D7): grava um evento call-level do run brand_profile com custo REAL
- * (resolveAiCost). Best-effort — nunca lança (T-38.1-38, D7).
- */
-async function recordBrandCall(params: {
-  run: { operationRunId: string; traceId: string };
-  storeId: string;
-  generationType: GenerationEventType;
-  info: AiCallInfo;
-  snapshot?: { usdBrlRateAtGeneration: number | null; creditValueBrlAtGeneration: number | null };
-}): Promise<void> {
-  const { run, storeId, generationType, info } = params;
-  try {
-    const cost = await resolveAiCost({
-      provider: info.provider,
-      model: info.model,
-      usage: info.usage,
-      providerReportedCostUsd: info.providerReportedCostUsd,
-    });
-    await new AiCostTracker().record({
-      operationRunId: run.operationRunId,
-      operationRunType: "brand_profile",
-      traceId: run.traceId,
-      storeId,
-      generationType,
-      provider: info.provider,
-      model: info.model,
-      attemptNumber: 0,
-      durationMs: info.durationMs,
-      status: "success",
-      tokens: info.usage,
-      cost,
-      // F38.2.1 (D3): snapshot do run propagado (APENAS valores — tracker define origem)
-      usdBrlRateAtGeneration: params.snapshot?.usdBrlRateAtGeneration ?? null,
-      creditValueBrlAtGeneration: params.snapshot?.creditValueBrlAtGeneration ?? null,
-    });
-  } catch (err) {
-    console.error(
-      "[realign] recordBrandCall failed (best-effort):",
-      err instanceof Error ? err.message : String(err)
-    );
   }
 }
 
@@ -228,9 +184,18 @@ async function handleTextOnlyRealign(
 
     // ── F38.1 (D1/D7): run context do path text_only ────────────────────
     const run = new AiCostTracker().startRun("brand_profile");
-    const pendingCalls: AiCallInfo[] = [];
     // F38.2.1 (D3): snapshot do run — resolvido UMA vez após o startRun.
     const economicSnapshot = await resolveEconomicSnapshot();
+
+    // F46-04 (D9): telemetria pelo sink único — `brand_profile_text` via gateway.
+    const telemetry = createDefaultTelemetryContext({
+      operationRunId: run.operationRunId,
+      operationRunType: "brand_profile",
+      traceId: run.traceId,
+      storeId: id,
+      usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
+      creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
+    });
 
     const result = await service.infer({
       storeName: store.name,
@@ -244,20 +209,9 @@ async function handleTextOnlyRealign(
       state: store.state ?? null,
       userPrimaryColor: currentPrimary,
       userAccentColor: currentAccent,
-    }, timeoutMs, (info: AiCallInfo) => {
-      pendingCalls.push(info);
-    });
+    }, timeoutMs, undefined, telemetry);
 
-    // F38.1 (D7/D11): call brand_profile_text com custo real + delivery sem custo
-    for (const info of pendingCalls) {
-      await recordBrandCall({
-        run,
-        storeId: id,
-        generationType: "brand_profile_text",
-        info,
-        snapshot: economicSnapshot,
-      });
-    }
+    // F38.1 (D1/D6): delivery marker sem custo (anti-dupla-contagem).
     await recordBrandDelivery({
       run,
       storeId: id,
@@ -433,9 +387,18 @@ async function handleLogoRealign(
 
     // ── F38.1 (D1/D7): run context do path logo (análise com logo) ──────
     const run = new AiCostTracker().startRun("brand_profile");
-    const pendingCalls: AiCallInfo[] = [];
     // F38.2.1 (D3): snapshot do run — resolvido UMA vez após o startRun.
     const economicSnapshot = await resolveEconomicSnapshot();
+
+    // F46-04 (D9): telemetria pelo sink único — brand_profile_vision via gateway.
+    const telemetry = createDefaultTelemetryContext({
+      operationRunId: run.operationRunId,
+      operationRunType: "brand_profile",
+      traceId: run.traceId,
+      storeId: id,
+      usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
+      creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
+    });
 
     const analysis = await director.analyze({
       logoBuffer: logoBuffer ?? Buffer.from([]),
@@ -453,22 +416,10 @@ async function handleLogoRealign(
         userPrimaryColor: store.brand_color ?? undefined,
         userAccentColor: accentColor ?? undefined,
       },
-      // F38.1 (D7/D11): telemetria por chamada — nunca bloqueia análise
-      onCall: (info: AiCallInfo) => {
-        pendingCalls.push(info);
-      },
+      telemetry,
     });
 
-    // F38.1 (D7/D11): call brand_profile_vision com custo real + delivery sem custo
-    for (const info of pendingCalls) {
-      await recordBrandCall({
-        run,
-        storeId: id,
-        generationType: "brand_profile_vision",
-        info,
-        snapshot: economicSnapshot,
-      });
-    }
+    // F38.1 (D1/D6): delivery marker sem custo (anti-dupla-contagem).
     await recordBrandDelivery({
       run,
       storeId: id,
@@ -655,9 +606,19 @@ async function handleVSRealign(
     // ── F38.1 (D1/D7): regenerate = NOVO run (novo operationRunId — 6.5
     // test 4). Cada request de geração/realinhamento é um run (D1). ──────
     const run = new AiCostTracker().startRun("brand_profile");
-    const pendingCalls: AiCallInfo[] = [];
     // F38.2.1 (D3): snapshot do run — resolvido UMA vez após o startRun.
     const economicSnapshot = await resolveEconomicSnapshot();
+
+    // F46-04 (D9): telemetria pelo sink único — brand_profile_vision via gateway.
+    const telemetry = createDefaultTelemetryContext({
+      operationRunId: run.operationRunId,
+      operationRunType: "brand_profile",
+      traceId: run.traceId,
+      storeId: id,
+      visualSignatureId: vsRecord.id,
+      usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
+      creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
+    });
 
     const result = await profiler.generate({
       storeId: id,
@@ -687,22 +648,9 @@ async function handleVSRealign(
       previousBrandColors: previousBrandColors,
       mode: 'regenerate',
       contentUsed: contentUsed as BrandProfilerInput['contentUsed'],
-      // F38.1 (D7/D11): telemetria por chamada — nunca bloqueia profiling
-      onCall: (info: AiCallInfo) => {
-        pendingCalls.push(info);
-      },
-    });
+    }, telemetry);
 
-    // F38.1 (D7/D11): buffer por sequência (1a = vision, 2a = text) + delivery
-    for (let i = 0; i < pendingCalls.length; i += 1) {
-      await recordBrandCall({
-        run,
-        storeId: id,
-        generationType: i === 0 ? "brand_profile_vision" : "brand_profile_text",
-        info: pendingCalls[i],
-        snapshot: economicSnapshot,
-      });
-    }
+    // F38.1 (D1/D6): delivery marker sem custo (anti-dupla-contagem).
     await recordBrandDelivery({
       run,
       storeId: id,
