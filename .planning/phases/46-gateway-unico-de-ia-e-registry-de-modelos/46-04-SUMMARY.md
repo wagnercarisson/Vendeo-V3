@@ -16,7 +16,7 @@ provides:
   - "Callers brand-profile/realign (3 ramos) e brand-profile/generate-without-logo fornecem AiTelemetryContext/sink; persistência manual removida (delivery markers preservados)"
   - "Contrato aditivo do gateway: AiInvocationRequest.imageDetail + responses adapter com temperature/maxTokens (preservação de comportamento)"
   - "REABERTURA: bypass fail-open do validator removido (telemetria obrigatória); TODOS os callers produtivos de visão convertidos ao sink (correction-reports, logo, retry-brand-director, server-actions, approve, restore, VS generate-without-logo)"
-  - "REABERTURA: suíte generate-image/route.test.ts 100% verde (Testes 10/11/16/17 co-migrados ao sink); suíte completa 271 files / 2697 testes"
+  - "REABERTURA: suíte generate-image/route.test.ts 100% verde (Testes 10/11/16/17 co-migrados ao sink); suíte completa 271 files / 2698 testes"
 affects: [46-05, 46-06, 46-07, 46-08, 46-09]
 
 # Tech tracking
@@ -221,7 +221,7 @@ fail-open do validator e fechou as 4 falhas transicionais da suíte
 
 | Gate | Resultado |
 |------|-----------|
-| `npx vitest run` (suíte completa) | **271 files / 2697 testes — 0 falhas** |
+| `npx vitest run` (suíte completa) | **271 files / 2698 testes — 0 falhas** |
 | `npm run typecheck` | 0 erros |
 | `npm run lint` | 0 erros |
 | `npm run build` | sucesso |
@@ -251,17 +251,14 @@ fail-open do validator e fechou as 4 falhas transicionais da suíte
 
 **Total deviations da reabertura:** 2 auto-fixed (1 bug, 1 blocking).
 
-### Observação (não-bloqueante) — attempt de review na suíte mockada
+### Correção pós-reabertura — attempt de review por tentativa (RESOLVIDO)
 
-Na suíte `generate-image/route.test.ts` (serviço **mockado**), o attempt distinto
-das tentativas de review (0/1) é fornecido pelo envelope emitido pelo mock
-(`envelope.attemptNumber`) e o sink mock o honra — preservando a asserção
-original. O `ImageGenerationService` real passa o MESMO `options.telemetry`
-(`attemptNumber: 0`) a todas as tentativas; o sink padrão persiste o
-`attemptNumber` do **contexto**. Não foi alterado o contrato do gateway/sink nem
-a derivação de attempt por tentativa no serviço real (fora do escopo declarado
-das Tasks 5/6). Registrado para o verificador / 46-05 caso o valor persistido em
-produção precise refletir a tentativa real de review.
+A revisão da reabertura identificou que o `ImageGenerationService` real passava o
+MESMO `options.telemetry` (`attemptNumber: 0`) a todas as tentativas de review,
+enquanto o comportamento legado persistia o attempt por tentativa (`attempts`).
+**Corrigido em `ee67f764`:** o serviço passa `{ ...options.telemetry, attemptNumber: attempts }`
+ao `ImageReviewService.review`; teste de regressão em `image-generation-service.test.ts`
+força 2 tentativas e assere `[0, 1]`. A suíte completa passou a **271 files / 2698 testes**.
 
 ## User Setup Required
 
@@ -273,7 +270,7 @@ Nenhuma nova superfície de segurança introduzida: mesmas imagens/provedor (T-4
 
 ## Next Phase Readiness
 
-- **Onda 5 (46-05) desbloqueada:** as 4 capacidades de visão executam via gateway e TODOS os seus callers produtivos persistem pelo sink único; resta migrar as 3 capacidades de imagem + furos 3/4 + `cost-estimator`. As 4 falhas transicionais de `generate-image/route.test.ts` foram fechadas aqui (Task 5) — a suíte completa está 271 files / 2697 testes.
+- **Onda 5 (46-05) desbloqueada:** as 4 capacidades de visão executam via gateway e TODOS os seus callers produtivos persistem pelo sink único; resta migrar as 3 capacidades de imagem + furos 3/4 + `cost-estimator`. As 4 falhas transicionais de `generate-image/route.test.ts` foram fechadas aqui (Task 5) — a suíte completa está 271 files / 2698 testes.
 - **Soma de custo híbrida:** `callCostSum` combina o sink (`onCostResolved`) das visões com o `recordCall` residual de imagem/delivery; após 46-05 toda a soma virá do sink.
 - **VS route pronta:** `visual-signature/generate-without-logo` já injeta `BufferingAiTelemetrySink` para a validação (flush com `visual_signature_id`) e mantém a imagem híbrida; `VALIDATION_MODEL`/`handleCall` legados removidos.
 - Sem blockers.
@@ -293,12 +290,12 @@ Nenhuma nova superfície de segurança introduzida: mesmas imagens/provedor (T-4
 
 ### Self-Check da reabertura (Tasks 5/6)
 
-- [x] Commits `a0e32977` (Task 5) e `a73dd5a4` (Task 6) existem (`git log`)
+- [x] Commits `a0e32977` (Task 5), `a73dd5a4` (Task 6) e `ee67f764` (fix attempt por tentativa) existem (`git log`)
 - [x] `ai-image-generator.ts` sem `!telemetry => valid: true` (telemetria obrigatória, checagem fora do try/catch)
 - [x] Todos os callers produtivos de visão fornecem `AiTelemetryContext`/sink (correction-reports, logo, retry-brand-director, server-actions, approve ×2, restore, VS generate-without-logo)
 - [x] `visual-signature/generate-without-logo/route.ts` sem `VALIDATION_MODEL`/`handleCall` legados; validação via `BufferingAiTelemetrySink`; imagem híbrida preservada
 - [x] Testes 10/11/16/17 de `generate-image/route.test.ts` verdes com as asserções originais (63/63 na suíte)
-- [x] Suíte completa: **271 files / 2697 testes — 0 falhas**
+- [x] Suíte completa: **271 files / 2698 testes — 0 falhas**
 - [x] `npm run typecheck`, `npm run lint`, `npm run build` → verdes
 
 ---
