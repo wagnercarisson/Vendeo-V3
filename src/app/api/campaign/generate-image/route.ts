@@ -22,7 +22,7 @@ import { transcodeToJpeg } from "@/lib/campaign/image-processor";
 import { checkRateLimit, recordGenerationAttempt } from "@/lib/rate-limit/rate-limit";
 import { CreditService } from "@/lib/credit/credit-service";
 import { CopyDirectorService } from "@/lib/copy/copy-director-service";
-import { createTextProvider } from "@/lib/text-provider/factory";
+import { createDefaultTelemetryContext } from "@/lib/ai";
 import { mapBriefToCopyDirectorInput, buildDeterministicCopy, buildCommercialFrame } from "@/lib/copy/mapper";
 import type { CopyDirectorResult } from "@/lib/copy/schema";
 import type { CampaignIntent } from "@/lib/campaign/types";
@@ -661,8 +661,29 @@ export const POST = apiHandler(async (request: NextRequest) => {
             return;
           }
 
-          const primaryProvider = createTextProvider("openai");
-          const copyDirector = new CopyDirectorService(primaryProvider);
+          // F46-03 (D9/D11): campaign_copy via gateway (dono único do invoke).
+          // A telemetria/persistência do call-level vem do SINK (mesma
+          // CostResolution, acumulada via onCostResolved) — SEM recordCall manual
+          // para campaign_copy. A soma segue HÍBRIDA nesta fase: o recordCall
+          // residual de validação/review/imagem continua somando ao callCostSum.
+          const copyTelemetry = createDefaultTelemetryContext({
+            operationRunId,
+            operationRunType: "campaign_delivery",
+            traceId,
+            storeId,
+            userId: user.userId,
+            campaignId,
+            attemptNumber: 0,
+            usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
+            creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
+            onCostResolved: (cost) => {
+              if (typeof cost.estimatedCostUsd === "number") {
+                callCostSum += cost.estimatedCostUsd;
+              }
+            },
+          });
+
+          const copyDirector = new CopyDirectorService();
 
           const copyInput = mapBriefToCopyDirectorInput(brief, context, {
             badgeText: campaignInput.badgeText,
@@ -675,33 +696,21 @@ export const POST = apiHandler(async (request: NextRequest) => {
           try {
             copyResult = await copyDirector.generateCopy(copyInput, {
               signal: streamAbortController.signal,
-            }, (info) => {
-              // F38.1 (D11/furo 1): campaign_copy com usage REAL do onCall -> custo via resolveAiCost
-              void recordCall({ generationType: "campaign_copy", status: "success", info });
+              target: "primary",
+              telemetry: copyTelemetry,
             });
           } catch (firstErr) {
-            // Check if retryable and fallback Gemini is configured
-            const fallbackProvider = process.env.TEXT_FALLBACK_PROVIDER;
-
-            if (isRetryableError(firstErr) && fallbackProvider === "gemini") {
+            // Fallback = segunda chamada ao serviço no alvo configurado (a rota
+            // não chama invoke e não conhece o provider).
+            if (isRetryableError(firstErr) && (await copyDirector.hasFallback())) {
               emitPhase("copy_retry", "running", "Usando provedor alternativo...");
 
-              try {
-                const geminiProvider = createTextProvider("gemini");
-                const geminiDirector = new CopyDirectorService(geminiProvider);
-                copyResult = await geminiDirector.generateCopy(copyInput, {
-                  signal: streamAbortController.signal,
-                }, (info) => {
-                  void recordCall({ generationType: "campaign_copy", status: "success", info });
-                });
-              } catch (secondErr) {
-                throw secondErr;
-              }
-            } else if (isRetryableError(firstErr) && fallbackProvider !== "gemini") {
-              // No fallback configured — rethrow as-is
-              throw firstErr;
+              copyResult = await copyDirector.generateCopy(copyInput, {
+                signal: streamAbortController.signal,
+                target: "fallback",
+                telemetry: copyTelemetry,
+              });
             } else {
-              // Non-retryable error — throw immediately
               throw firstErr;
             }
           }

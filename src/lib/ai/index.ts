@@ -24,7 +24,7 @@ export function invoke(
 }
 
 export { AiGateway } from "./gateway";
-export type { AiInvocationTarget } from "./gateway";
+export type { AiInvocationTarget, AiInvoker } from "./gateway";
 export { defaultAdapterRegistry, createDefaultAdapterRegistry } from "./adapters/registry";
 export {
   ModelRegistry,
@@ -41,6 +41,7 @@ export {
   NoopAiTelemetrySink,
   BufferingAiTelemetrySink,
   createDefaultTelemetryContext,
+  withOnCallTelemetry,
 } from "./telemetry-sink";
 export type { AiTelemetrySinkContext } from "./telemetry-sink";
 export * from "./types";

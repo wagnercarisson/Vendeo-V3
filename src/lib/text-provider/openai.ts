@@ -1,53 +1,44 @@
 import type { TextProvider, TextProviderOptions, TextProviderResult } from "./types";
+import { defaultAiGateway } from "@/lib/ai";
+import type { AiInvocationRequest, AiInvoker, AiTelemetryContext } from "@/lib/ai";
 
-const DEFAULT_MODEL = "gpt-4o";
-
-function resolveModel(): string {
-  return process.env.OPENAI_TEXT_MODEL || DEFAULT_MODEL;
-}
-
+/**
+ * Fachada de compatibilidade/teste (F46-03, D11).
+ *
+ * NÃO instancia `new OpenAI()` nem lê env-var de modelo: delega à camada única
+ * (gateway) com a capacidade `campaign_copy` (default `gpt-4o` no registry).
+ * Exige um `AiTelemetryContext` injetado — nunca cria `NoopAiTelemetrySink`
+ * internamente (no-op só em teste). O caminho de produção usa
+ * `CopyDirectorService` diretamente.
+ */
 export class OpenAITextProvider implements TextProvider {
   readonly name = "openai";
-  private readonly model: string;
 
-  constructor(model?: string) {
-    this.model = model ?? resolveModel();
-  }
+  constructor(
+    private readonly telemetry: AiTelemetryContext,
+    private readonly invoker: AiInvoker = defaultAiGateway,
+  ) {}
 
   async generateText(prompt: string, options?: TextProviderOptions): Promise<TextProviderResult> {
-    const { default: OpenAI } = await import("openai");
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-
-    const messages: { role: "system" | "user"; content: string }[] = [];
-
-    if (options?.system) {
-      messages.push({ role: "system", content: options.system });
+    const request: AiInvocationRequest = {
+      prompt,
+      system: options?.system,
+      temperature: options?.temperature,
+      maxTokens: options?.maxTokens,
+    };
+    if (options?.signal) {
+      request.signal = options.signal;
     }
 
-    messages.push({ role: "user", content: prompt });
-
-    const response = await openai.chat.completions.create(
-      {
-        model: this.model,
-        messages,
-        temperature: options?.temperature,
-        max_tokens: options?.maxTokens,
-      },
-      { signal: options?.signal }
-    );
-
-    const content = response.choices?.[0]?.message?.content ?? "";
-    const usage = response.usage;
+    const result = await this.invoker.invoke("campaign_copy", request, this.telemetry);
 
     return {
-      content,
+      content: result.content ?? "",
       usage: {
-        promptTokens: usage?.prompt_tokens ?? 0,
-        completionTokens: usage?.completion_tokens ?? 0,
+        promptTokens: result.usage?.promptTokens ?? 0,
+        completionTokens: result.usage?.completionTokens ?? 0,
       },
-      model: this.model,
+      model: result.model,
     };
   }
 }

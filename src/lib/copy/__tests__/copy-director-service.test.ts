@@ -1,12 +1,21 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+// O serviço importa `@/lib/ai` (gateway default), que carrega o sink padrão →
+// cost-estimator → supabase/server. Sem env, o módulo lança na importação.
+vi.hoisted(() => {
+  process.env.NEXT_PUBLIC_SUPABASE_URL ??= 'http://localhost:54321';
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??= 'test-anon-key';
+  process.env.SUPABASE_SERVICE_ROLE_KEY ??= 'test-service-role-key';
+});
+
 import { CopyDirectorService } from '../copy-director-service';
 import { CopyDirectorInputSchema, CopyDirectorResultSchema } from '../schema';
 import type { CopyDirectorInput } from '../schema';
-import { MockTextProvider } from '@/lib/text-provider/mock';
-import type { TextProvider } from '@/lib/text-provider/types';
 import { MalformedResponseError } from '../errors';
 import { mapBriefToCopyDirectorInput } from '../mapper';
 import { buildCampaignBriefFromFlat } from '@/lib/campaign/brief';
+import { NoopAiTelemetrySink } from '@/lib/ai';
+import type { AiInvoker, AiInvocationResult, AiTelemetryContext } from '@/lib/ai';
 import type { GenerateImageRequest } from '@/lib/image-generation/schema';
 import type { ResolvedCampaignContext } from '@/components/campaign/types';
 
@@ -77,6 +86,70 @@ const MINIMUM_INPUT: CopyDirectorInput = {
   segment: "bebidas-adegas-conveniencia",
 };
 
+const TELEMETRY: AiTelemetryContext = {
+  operationRunId: 'run-1',
+  operationRunType: 'campaign_delivery',
+  traceId: 'trace-1',
+  storeId: STORE_ID,
+  sink: new NoopAiTelemetrySink(),
+};
+
+function validCopyJson(overrides: Record<string, unknown> = {}): string {
+  return JSON.stringify({
+    title: 'Título Persuasivo',
+    caption: 'Descrição do produto com oferta especial',
+    hashtags: ['#Tag1', '#Tag2', '#Tag3'],
+    cta_post: 'Garanta já a sua!',
+    ...overrides,
+  });
+}
+
+/**
+ * Fake `AiInvoker` (seam de teste): emite um envelope no sink (simulando o
+ * gateway) e retorna o resultado canônico.
+ */
+function makeInvoker(
+  result: { content?: string; usage?: { promptTokens: number; completionTokens: number }; model?: string },
+  opts?: { provider?: string; durationMs?: number; fail?: Error }
+): AiInvoker {
+  const invokeMock = vi.fn(
+    async (
+      _capability: string,
+      _request: unknown,
+      telemetry: AiTelemetryContext
+    ): Promise<AiInvocationResult> => {
+      const model = result.model ?? 'test-model';
+      if (opts?.fail) {
+        await telemetry.sink.emit({
+          capability: 'campaign_copy',
+          protocol: 'chat-completions',
+          status: 'failed',
+          provider: opts.provider ?? 'openai',
+          model,
+          durationMs: opts.durationMs ?? 5,
+          errorType: opts.fail.name,
+        });
+        throw opts.fail;
+      }
+      await telemetry.sink.emit({
+        capability: 'campaign_copy',
+        protocol: 'chat-completions',
+        status: 'success',
+        provider: opts?.provider ?? 'openai',
+        model,
+        usage: result.usage,
+        durationMs: opts?.durationMs ?? 7,
+      });
+      return { content: result.content ?? '', model, usage: result.usage };
+    }
+  );
+
+  return {
+    invoke: invokeMock as unknown as AiInvoker['invoke'],
+    hasFallback: vi.fn(async () => false),
+  };
+}
+
 describe('CopyDirectorInputSchema', () => {
   it('aceita input completo com todos os campos opcionais', () => {
     const result = CopyDirectorInputSchema.parse(COMPLETE_INPUT);
@@ -141,16 +214,9 @@ describe('CopyDirectorResultSchema', () => {
 });
 
 describe('CopyDirectorService', () => {
-  let service: CopyDirectorService;
-  let mockProvider: TextProvider;
-
-  beforeEach(() => {
-    mockProvider = new MockTextProvider();
-    service = new CopyDirectorService(mockProvider);
-  });
-
   it('generateCopy com input completo retorna CopyDirectorResult válido', async () => {
-    const result = await service.generateCopy(COMPLETE_INPUT);
+    const service = new CopyDirectorService(makeInvoker({ content: validCopyJson() }));
+    const result = await service.generateCopy(COMPLETE_INPUT, { telemetry: TELEMETRY });
     expect(result.title).toBeDefined();
     expect(result.caption).toBeDefined();
     expect(result.hashtags).toBeDefined();
@@ -158,92 +224,90 @@ describe('CopyDirectorService', () => {
   });
 
   it('generateCopy com input mínimo funciona', async () => {
-    const result = await service.generateCopy(MINIMUM_INPUT);
+    const service = new CopyDirectorService(makeInvoker({ content: validCopyJson() }));
+    const result = await service.generateCopy(MINIMUM_INPUT, { telemetry: TELEMETRY });
     expect(result.title).toBeDefined();
     expect(result.caption).toBeDefined();
   });
 
   it('title não vazio', async () => {
-    const result = await service.generateCopy(MINIMUM_INPUT);
+    const service = new CopyDirectorService(makeInvoker({ content: validCopyJson() }));
+    const result = await service.generateCopy(MINIMUM_INPUT, { telemetry: TELEMETRY });
     expect(result.title.length).toBeGreaterThan(0);
   });
 
   it('caption não vazio', async () => {
-    const result = await service.generateCopy(MINIMUM_INPUT);
+    const service = new CopyDirectorService(makeInvoker({ content: validCopyJson() }));
+    const result = await service.generateCopy(MINIMUM_INPUT, { telemetry: TELEMETRY });
     expect(result.caption.length).toBeGreaterThan(0);
   });
 
   it('hashtags contém ao menos 3 itens', async () => {
-    const result = await service.generateCopy(COMPLETE_INPUT);
+    const service = new CopyDirectorService(makeInvoker({ content: validCopyJson() }));
+    const result = await service.generateCopy(COMPLETE_INPUT, { telemetry: TELEMETRY });
     expect(result.hashtags.length).toBeGreaterThanOrEqual(3);
   });
 
   it('cta_post presente e não vazio', async () => {
-    const result = await service.generateCopy(MINIMUM_INPUT);
+    const service = new CopyDirectorService(makeInvoker({ content: validCopyJson() }));
+    const result = await service.generateCopy(MINIMUM_INPUT, { telemetry: TELEMETRY });
     expect(result.cta_post.length).toBeGreaterThan(0);
   });
 
   it('generateCopy com toneOfVoice vazio não quebra', async () => {
+    const service = new CopyDirectorService(makeInvoker({ content: validCopyJson() }));
     const input: CopyDirectorInput = {
       ...MINIMUM_INPUT,
       toneOfVoice: '',
     };
-    const result = await service.generateCopy(input);
+    const result = await service.generateCopy(input, { telemetry: TELEMETRY });
     expect(result.title).toBeDefined();
+  });
+
+  it('generateCopy sem telemetria lança (contexto obrigatório)', async () => {
+    const service = new CopyDirectorService(makeInvoker({ content: validCopyJson() }));
+    await expect(service.generateCopy(MINIMUM_INPUT)).rejects.toThrow(/AiTelemetryContext/);
   });
 });
 
 describe('CopyDirectorService — parseResult fallback', () => {
   it('saída malformatada cai no fallback regex', async () => {
-    const regexProvider: TextProvider = {
-      name: 'regex-test',
-      async generateText() {
-        return {
-          content: `{"title": "Título Extraído", "caption": "Caption extraído do texto", "hashtags": ["#Tag1", "#Tag2"], "cta_post": "Compre já!"`,
-          usage: { promptTokens: 0, completionTokens: 0 },
-          model: 'test',
-        };
-      },
-    };
-    const service = new CopyDirectorService(regexProvider);
-    const result = await service.generateCopy(MINIMUM_INPUT);
+    const service = new CopyDirectorService(
+      makeInvoker({
+        content: `{"title": "Título Extraído", "caption": "Caption extraído do texto", "hashtags": ["#Tag1", "#Tag2"], "cta_post": "Compre já!"`,
+      })
+    );
+    const result = await service.generateCopy(MINIMUM_INPUT, { telemetry: TELEMETRY });
     expect(result.title).toBe('Título Extraído');
     expect(result.caption).toBe('Caption extraído do texto');
     expect(result.cta_post).toBe('Compre já!');
   });
 
   it('saída JSON inválida sem campos extraíveis lança MalformedResponseError', async () => {
-    const brokenProvider: TextProvider = {
-      name: 'broken-test',
-      async generateText() {
-        return {
-          content: 'texto completamente inválido sem estrutura JSON nem campos extraíveis',
-          usage: { promptTokens: 0, completionTokens: 0 },
-          model: 'test',
-        };
-      },
-    };
-    const service = new CopyDirectorService(brokenProvider);
-    await expect(service.generateCopy(MINIMUM_INPUT)).rejects.toThrow(MalformedResponseError);
+    const service = new CopyDirectorService(
+      makeInvoker({ content: 'texto completamente inválido sem estrutura JSON nem campos extraíveis' })
+    );
+    await expect(service.generateCopy(MINIMUM_INPUT, { telemetry: TELEMETRY })).rejects.toThrow(
+      MalformedResponseError
+    );
   });
 });
 
 describe('CopyDirectorService — onCall (D11, furo 1)', () => {
-  it('Teste 11: generateCopy com onCall → invocado com provider/model/usage/durationMs do TextProviderResult', async () => {
-    const usageProvider: TextProvider = {
-      name: 'openai',
-      async generateText() {
-        return {
-          content: '{"title": "Título", "caption": "Legenda", "hashtags": ["#A", "#B", "#C"], "cta_post": "Compre!"}',
+  it('Teste 11: generateCopy com onCall → invocado com o envelope (provider/model/usage/durationMs)', async () => {
+    const service = new CopyDirectorService(
+      makeInvoker(
+        {
+          content: validCopyJson(),
           usage: { promptTokens: 120, completionTokens: 40 },
           model: 'gpt-4o-mini',
-        };
-      },
-    };
-    const service = new CopyDirectorService(usageProvider);
+        },
+        { provider: 'openai', durationMs: 250 }
+      )
+    );
     const onCall = vi.fn();
 
-    const result = await service.generateCopy(MINIMUM_INPUT, undefined, onCall);
+    const result = await service.generateCopy(MINIMUM_INPUT, { telemetry: TELEMETRY }, onCall);
 
     expect(result.title).toBeDefined();
     expect(onCall).toHaveBeenCalledTimes(1);
@@ -251,16 +315,16 @@ describe('CopyDirectorService — onCall (D11, furo 1)', () => {
     expect(info.provider).toBe('openai');
     expect(info.model).toBe('gpt-4o-mini');
     expect(info.usage).toEqual({ promptTokens: 120, completionTokens: 40 });
-    expect(info.durationMs).toBeGreaterThanOrEqual(0);
+    expect(info.durationMs).toBe(250);
   });
 
   it('Teste 12: onCall que lança → generateCopy continua (best-effort) e copy é gerada normalmente', async () => {
-    const service = new CopyDirectorService(new MockTextProvider());
+    const service = new CopyDirectorService(makeInvoker({ content: validCopyJson() }));
     const onCall = vi.fn(() => {
       throw new Error('callback boom');
     });
 
-    const result = await service.generateCopy(MINIMUM_INPUT, undefined, onCall);
+    const result = await service.generateCopy(MINIMUM_INPUT, { telemetry: TELEMETRY }, onCall);
 
     expect(result.title).toBeDefined();
     expect(result.caption).toBeDefined();
@@ -268,8 +332,8 @@ describe('CopyDirectorService — onCall (D11, furo 1)', () => {
   });
 
   it('Teste 13: sem onCall → comportamento inalterado (compat)', async () => {
-    const service = new CopyDirectorService(new MockTextProvider());
-    const result = await service.generateCopy(MINIMUM_INPUT);
+    const service = new CopyDirectorService(makeInvoker({ content: validCopyJson() }));
+    const result = await service.generateCopy(MINIMUM_INPUT, { telemetry: TELEMETRY });
     expect(result.title).toBeDefined();
     expect(result.caption).toBeDefined();
   });

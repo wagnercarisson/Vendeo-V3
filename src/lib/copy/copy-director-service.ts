@@ -1,6 +1,4 @@
 import { PromptLoader } from "@/lib/image-generation/prompt-loader";
-import type { TextProvider } from "@/lib/text-provider/types";
-import type { TextProviderOptions } from "@/lib/text-provider/types";
 import {
   CopyDirectorInputSchema,
   CopyDirectorResultSchema,
@@ -8,8 +6,24 @@ import {
 import type { CopyDirectorInput, CopyDirectorResult } from "@/lib/copy/schema";
 import { MalformedResponseError } from "@/lib/copy/errors";
 import type { AiCallInfo } from "@/lib/ai-cost/types";
+import { defaultAiGateway, withOnCallTelemetry } from "@/lib/ai";
+import type {
+  AiInvocationRequest,
+  AiInvocationTarget,
+  AiInvoker,
+  AiTelemetryContext,
+} from "@/lib/ai";
 
 const SYSTEM_PROMPT = "Você é um copywriter especialista em marketing para lojas físicas.";
+
+/** Options aditivas do `generateCopy` (F46-03, D11). */
+export interface GenerateCopyOptions {
+  signal?: AbortSignal;
+  /** Seleção explícita do alvo (o serviço é o dono único do `invoke`). */
+  target?: AiInvocationTarget;
+  /** Contexto de telemetria do caller (run/sink) — obrigatório para invocar. */
+  telemetry?: AiTelemetryContext;
+}
 
 function parseViaJson(raw: string): CopyDirectorResult | null {
   try {
@@ -49,17 +63,26 @@ function parseViaRegex(raw: string): CopyDirectorResult | null {
 }
 
 export class CopyDirectorService {
-  private readonly provider: TextProvider;
+  private readonly invoker: AiInvoker;
   private readonly promptLoader: PromptLoader;
 
-  constructor(provider: TextProvider, promptLoader?: PromptLoader) {
-    this.provider = provider;
+  /**
+   * `invoker` é o gateway (seam de teste). Default = instância padrão de
+   * `@/lib/ai`. Testes injetam um fake.
+   */
+  constructor(invoker: AiInvoker = defaultAiGateway, promptLoader?: PromptLoader) {
+    this.invoker = invoker;
     this.promptLoader = promptLoader ?? new PromptLoader();
+  }
+
+  /** Indica se `campaign_copy` tem fallback configurado (≠ primary). */
+  async hasFallback(): Promise<boolean> {
+    return this.invoker.hasFallback("campaign_copy");
   }
 
   async generateCopy(
     input: CopyDirectorInput,
-    options?: { signal?: AbortSignal },
+    options?: GenerateCopyOptions,
     onCall?: (info: AiCallInfo) => void | Promise<void>
   ): Promise<CopyDirectorResult> {
     const validated = CopyDirectorInputSchema.parse(input);
@@ -84,56 +107,34 @@ export class CopyDirectorService {
     const promptName = `campaign-copy-director-${campaignIntent}`;
     const prompt = this.promptLoader.load(promptName, variables);
 
-    const textOpts: TextProviderOptions = {
+    const request: AiInvocationRequest = {
+      prompt,
       system: SYSTEM_PROMPT,
       temperature: 0.7,
       maxTokens: 1000,
     };
 
     if (options?.signal) {
-      textOpts.signal = options.signal;
+      request.signal = options.signal;
     }
 
-    const startTime = Date.now();
-    const result = await this.provider.generateText(prompt, textOpts);
-    const durationMs = Date.now() - startTime;
-
-    // Best-effort telemetry — never blocks generation (D7). Exposes the real
-    // usage the TextProvider already reports (furo 1: copy sem custo).
-    this.invokeOnCall(onCall, {
-      provider: this.provider.name,
-      model: result.model,
-      usage: result.usage,
-      durationMs,
-    });
-
-    return this.parseResult(result.content);
-  }
-
-  /**
-   * Invoke the onCall callback best-effort (D7): a throwing or rejecting
-   * callback is logged and ignored — it never breaks copy generation.
-   */
-  private invokeOnCall(
-    onCall: ((info: AiCallInfo) => void | Promise<void>) | undefined,
-    info: AiCallInfo
-  ): void {
-    if (!onCall) return;
-    try {
-      Promise.resolve(onCall(info)).catch((err) => {
-        console.error(
-          `[CopyDirectorService] onCall callback failed (best-effort): ${
-            err instanceof Error ? err.message : String(err)
-          }`
-        );
-      });
-    } catch (err) {
-      console.error(
-        `[CopyDirectorService] onCall callback failed (best-effort): ${
-          err instanceof Error ? err.message : String(err)
-        }`
+    const telemetry = options?.telemetry;
+    if (!telemetry) {
+      throw new Error(
+        '[CopyDirectorService] AiTelemetryContext é obrigatório para invoke("campaign_copy")'
       );
     }
+
+    // Dono único de invoke("campaign_copy"): o gateway gera o envelope e o sink
+    // persiste (D9). O `onCall` legado apenas recebe o envelope já produzido.
+    const result = await this.invoker.invoke(
+      "campaign_copy",
+      request,
+      withOnCallTelemetry(telemetry, onCall),
+      options?.target
+    );
+
+    return this.parseResult(result.content ?? "");
   }
 
   private parseResult(raw: string): CopyDirectorResult {

@@ -1,6 +1,6 @@
 import { resolveAiCost } from "@/lib/ai-cost/cost-estimator";
 import { AiCostTracker } from "@/lib/ai-cost/tracker";
-import type { AiCostEvent, CostResolution, OperationRunType } from "@/lib/ai-cost/types";
+import type { AiCallInfo, AiCostEvent, CostResolution, OperationRunType } from "@/lib/ai-cost/types";
 import { CAPABILITY_GENERATION_TYPE } from "./generation-type-map";
 import type { AiCallEnvelope, AiTelemetryContext, AiTelemetrySink } from "./types";
 
@@ -194,5 +194,34 @@ export function createDefaultTelemetryContext(
   return {
     ...context,
     sink: sink ?? new DefaultAiTelemetrySink(context, tracker),
+  };
+}
+
+/**
+ * Adaptador fino de compatibilidade: mantém o `onCall` legado (que recebe o
+ * **envelope já produzido** pelo gateway) SEM conduzir a telemetria de produção
+ * (D9/D11). O envelope continua indo ao sink original; o `onCall` é best-effort
+ * e nunca bloqueia a geração.
+ */
+export function withOnCallTelemetry(
+  telemetry: AiTelemetryContext,
+  onCall?: (info: AiCallInfo) => void | Promise<void>,
+): AiTelemetryContext {
+  if (!onCall) return telemetry;
+  return {
+    ...telemetry,
+    sink: {
+      emit: async (envelope: AiCallEnvelope): Promise<void> => {
+        await telemetry.sink.emit(envelope);
+        try {
+          await onCall(envelope);
+        } catch (err) {
+          console.error(
+            "[ai-telemetry] onCall falhou (best-effort):",
+            err instanceof Error ? err.message : String(err),
+          );
+        }
+      },
+    },
   };
 }

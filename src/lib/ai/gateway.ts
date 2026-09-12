@@ -13,6 +13,25 @@ import {
 export type AiInvocationTarget = "primary" | "fallback";
 
 /**
+ * Seam de invocação injetável (F46-03, D11): `AiGateway` satisfaz esta
+ * interface estruturalmente; serviços migrados recebem um `AiInvoker` por
+ * construtor (default = `defaultAiGateway`) e testes injetam um fake.
+ *
+ * `hasFallback` permite ao **orquestrador** decidir se aciona a segunda
+ * `invoke(..., target: "fallback")` **sem conhecer o provider** que ocupa o
+ * alvo (apenas se ele existe e difere do primary).
+ */
+export interface AiInvoker {
+  invoke(
+    capability: AiCapability,
+    request: AiInvocationRequest,
+    telemetry: AiTelemetryContext,
+    target?: AiInvocationTarget,
+  ): Promise<AiInvocationResult>;
+  hasFallback(capability: AiCapability): Promise<boolean>;
+}
+
+/**
  * Camada única de invocação de IA (F46, D2/D3/D4).
  *
  * Dependências **injetadas por construtor** (`resolver` + `adapters`); `invoke`
@@ -29,6 +48,18 @@ export class AiGateway {
     private readonly resolver: AiModelResolver,
     private readonly adapters: AiAdapterRegistry,
   ) {}
+
+  /**
+   * Indica se a capacidade tem um alvo de fallback **configurado e distinto**
+   * do primary. Não expõe qual provider ocupa o alvo (o orquestrador decide o
+   * gate sem conhecer provider).
+   */
+  async hasFallback(capability: AiCapability): Promise<boolean> {
+    const config = await this.resolver.resolve(capability);
+    const fallback = config.fallback;
+    if (!fallback) return false;
+    return fallback.provider !== config.primary.provider || fallback.model !== config.primary.model;
+  }
 
   async invoke(
     capability: AiCapability,

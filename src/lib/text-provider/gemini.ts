@@ -1,55 +1,43 @@
 import type { TextProvider, TextProviderOptions, TextProviderResult } from "./types";
-import { AuthConfigError, MalformedResponseError } from "@/lib/copy/errors";
+import { defaultAiGateway } from "@/lib/ai";
+import type { AiInvocationRequest, AiInvoker, AiTelemetryContext } from "@/lib/ai";
 
+/**
+ * Fachada de compatibilidade/teste (F46-03, D11).
+ *
+ * NÃO instancia `new GoogleGenerativeAI()` nem lê env-var de modelo: delega à
+ * camada única (gateway) no alvo de **fallback** de `campaign_copy` (default
+ * `gemini` no registry). Exige um `AiTelemetryContext` injetado — nunca cria
+ * `NoopAiTelemetrySink` internamente.
+ */
 export class GeminiTextProvider implements TextProvider {
   readonly name = "gemini";
-  private readonly model: string;
 
   constructor(
-    private readonly apiKey?: string,
-    model?: string
-  ) {
-    this.model = model ?? process.env.GEMINI_TEXT_MODEL ?? process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite";
-  }
+    private readonly telemetry: AiTelemetryContext,
+    private readonly invoker: AiInvoker = defaultAiGateway,
+  ) {}
 
   async generateText(prompt: string, options?: TextProviderOptions): Promise<TextProviderResult> {
-    const key = this.apiKey ?? process.env.GEMINI_API_KEY;
-    if (!key) {
-      throw new AuthConfigError("GEMINI_API_KEY não configurada");
+    const request: AiInvocationRequest = {
+      prompt,
+      system: options?.system,
+      temperature: options?.temperature,
+      maxTokens: options?.maxTokens,
+    };
+    if (options?.signal) {
+      request.signal = options.signal;
     }
 
-    const { GoogleGenerativeAI } = await import("@google/generative-ai");
-    const genAI = new GoogleGenerativeAI(key);
-
-    const model = genAI.getGenerativeModel({
-      model: this.model,
-      systemInstruction: options?.system,
-    });
-
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: options?.temperature,
-        maxOutputTokens: options?.maxTokens,
-      },
-    });
-
-    const response = result.response;
-    const text = response.text();
-
-    if (!text) {
-      throw new MalformedResponseError("Gemini retornou resposta vazia");
-    }
-
-    const usage = response.usageMetadata;
+    const result = await this.invoker.invoke("campaign_copy", request, this.telemetry, "fallback");
 
     return {
-      content: text,
+      content: result.content ?? "",
       usage: {
-        promptTokens: usage?.promptTokenCount ?? 0,
-        completionTokens: usage?.candidatesTokenCount ?? 0,
+        promptTokens: result.usage?.promptTokens ?? 0,
+        completionTokens: result.usage?.completionTokens ?? 0,
       },
-      model: this.model,
+      model: result.model,
     };
   }
 }
