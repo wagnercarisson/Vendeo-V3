@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { GenerateImageRequestSchema } from "@/lib/image-generation/schema";
-import { IMAGE_GENERATION_GLOBAL_TIMEOUT_MS, MAX_PRODUCT_IMAGE_BASE64_SIZE, MAX_PRODUCT_IMAGES_AGGREGATE_BASE64_SIZE, IMAGE_GENERATION_RESPONSES_MODEL } from "@/lib/image-generation/config";
+import { IMAGE_GENERATION_GLOBAL_TIMEOUT_MS, MAX_PRODUCT_IMAGE_BASE64_SIZE, MAX_PRODUCT_IMAGES_AGGREGATE_BASE64_SIZE } from "@/lib/image-generation/config";
 import { OperationCostService, OperationCostUnavailableError } from "@/lib/credit/operation-cost-service";
 import type { OperationCostResolution } from "@/lib/credit/types";
 import { ImageGenerationService } from "@/lib/image-generation/services/image-generation-service";
@@ -753,26 +753,13 @@ export const POST = apiHandler(async (request: NextRequest) => {
             },
           });
 
+          // F46-05 (D9): TODAS as capacidades de IA do pipeline (copy, validação,
+          // revisão e imagem) são persistidas pelo SINK único do contexto de
+          // telemetria — o canal `onMetricsEvent` residual (persistência manual de
+          // campaign_image) foi removido. `onPhaseChange` (progresso) permanece.
           imageResult = await imageService.generateImage(brief, context, (phaseEvent) => {
             emit({ type: "phase", ...phaseEvent });
-          }, streamAbortController.signal, (metricsEvent) => {
-            // F46-04 (D9): validação/revisão são persistidas pelo SINK — o switch
-            // residual só trata a fase de imagem (campaign_image, 46-05).
-            switch (metricsEvent.phase) {
-              case "image_generation":
-                void recordCall({
-                  generationType: "campaign_image",
-                  status: "success",
-                  info: { provider: metricsEvent.provider, model: metricsEvent.model, usage: metricsEvent.usage, usageMeta: metricsEvent.usageMeta, durationMs: metricsEvent.durationMs, attempt: metricsEvent.attempt },
-                });
-                break;
-              default:
-                // input_validation/quality_review/prompt_assembly/done — a
-                // validação/revisão é persistida pelo sink (D9); as demais não
-                // são chamadas de IA (D5/D11).
-                break;
-            }
-          }, { telemetry: imageTelemetry });
+          }, streamAbortController.signal, undefined, { telemetry: imageTelemetry });
 
           if (imageResult.success) {
             emitPhase("image_generation", "complete", "Arte gerada com sucesso");
@@ -820,7 +807,8 @@ export const POST = apiHandler(async (request: NextRequest) => {
             const durationMs = Math.round(performance.now() - startTime);
             const generationMetadata: Record<string, unknown> = {
               provider: provider.name,
-              model: IMAGE_GENERATION_RESPONSES_MODEL,
+              // F46-05 (D9): modelo REAL do envelope da imagem (nunca o fixo).
+              model: imageResult.model ?? "unknown",
               durationMs,
               generatedAt: new Date().toISOString(),
             };
@@ -865,7 +853,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
             void recordCall({
               generationType: "campaign_pipeline",
               status: "success",
-              info: { provider: provider.name, model: IMAGE_GENERATION_RESPONSES_MODEL, durationMs },
+              info: { provider: provider.name, model: imageResult.model ?? "unknown", durationMs },
             });
 
             emit({
@@ -923,7 +911,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
           void recordCall({
             generationType: "campaign_pipeline",
             status: "failed",
-            info: { provider: provider.name, model: IMAGE_GENERATION_RESPONSES_MODEL, durationMs: Math.round(performance.now() - startTime) },
+            info: { provider: provider.name, model: imageResult?.success ? imageResult.model ?? "unknown" : "unknown", durationMs: Math.round(performance.now() - startTime) },
             errorType: errorMessage,
           });
         }

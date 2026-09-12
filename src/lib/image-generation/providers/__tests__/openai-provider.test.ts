@@ -10,8 +10,8 @@ vi.hoisted(() => {
 
 import { OpenAIImageProvider } from '../openai';
 import type { ImageProviderInput } from '../types';
-import { AiInvocationError } from '@/lib/ai';
-import type { AiInvoker, AiTelemetryContext } from '@/lib/ai';
+import { AiGateway, ModelRegistry, AiInvocationError } from '@/lib/ai';
+import type { AiCallEnvelope, AiInvoker, AiTelemetryContext } from '@/lib/ai';
 
 /**
  * F46-05: o provider delega à camada única (gateway). Os testes injetam um
@@ -271,5 +271,59 @@ describe('OpenAIImageProvider — fallback campaign_image_edit como segunda invo
         telemetry: makeTelemetry(),
       })
     ).rejects.toThrow('Image API returned no image data');
+  });
+
+  it('falha no Responses + sucesso no Images = DOIS envelopes (gpt-5.5 na falha, gpt-image-2 no fallback)', async () => {
+    const envelopes: AiCallEnvelope[] = [];
+    const adapters = {
+      get: (protocol: string) => {
+        if (protocol === 'responses') {
+          return {
+            protocol: 'responses',
+            invoke: async () => {
+              throw new AiInvocationError({
+                kind: 'capability',
+                retryable: false,
+                message: 'image_generation is not supported for this model',
+              });
+            },
+          };
+        }
+        return {
+          protocol: 'images',
+          invoke: async (_request: unknown, target: { model: string }) => ({
+            imageBase64: 'base64-result',
+            mimeType: 'image/png',
+            model: target.model,
+            usageMeta: { providerUsageSource: 'images.edit' },
+          }),
+        };
+      },
+    };
+    const gateway = new AiGateway(new ModelRegistry(), adapters as never);
+    const gatewayProvider = new OpenAIImageProvider(gateway);
+    const telemetry = { ...makeTelemetry(), sink: { emit: (e: AiCallEnvelope) => { envelopes.push(e); } } };
+
+    const result = await gatewayProvider.generateImage({
+      prompt: 'p',
+      productImageDataUrl: 'data:image/png;base64,primary',
+      attempt: 0,
+      telemetry,
+    });
+
+    expect(result.imageBase64).toBe('base64-result');
+    expect(envelopes).toHaveLength(2);
+    expect(envelopes[0]).toMatchObject({
+      capability: 'campaign_image',
+      protocol: 'responses',
+      status: 'failed',
+      model: 'gpt-5.5',
+    });
+    expect(envelopes[1]).toMatchObject({
+      capability: 'campaign_image_edit',
+      protocol: 'images',
+      status: 'success',
+      model: 'gpt-image-2',
+    });
   });
 });

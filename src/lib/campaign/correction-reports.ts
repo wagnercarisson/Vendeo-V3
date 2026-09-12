@@ -16,13 +16,7 @@ import { ImageGenerationService } from "@/lib/image-generation/services/image-ge
 import type { GenerateImageServiceResult } from "@/lib/image-generation/services/image-generation-service";
 import { createImageProvider } from "@/lib/image-generation/providers/factory";
 import type { GenerateImageRequest, GenerationPhaseEvent } from "@/lib/image-generation/schema";
-import type { GenerationMetricsEvent } from "@/lib/image-generation/metrics/types";
-import type { ImageProviderUsageMeta } from "@/lib/image-generation/providers/types";
-import { IMAGE_GENERATION_RESPONSES_MODEL } from "@/lib/image-generation/config";
-import { AiCostTracker, resolveAiCost } from "@/lib/ai-cost";
 import { createDefaultTelemetryContext } from "@/lib/ai";
-import type { TokenUsage } from "@/lib/ai-cost/types";
-import type { GenerationEventType } from "@/lib/visual-signature/types";
 import { dataUrlToCampaignImage, deleteCampaignImage } from "./persistence";
 import { transcodeToJpeg } from "./image-processor";
 
@@ -568,86 +562,6 @@ export async function generateCorrectionV2(
   const attemptNumber = submission.attempt_number;
   const normalizedInstruction = submission.normalized_instruction;
 
-  const recordCall = async (params: {
-    generationType: GenerationEventType;
-    status: "success" | "failed";
-    info: {
-      provider: string;
-      model: string;
-      usage?: TokenUsage;
-      usageMeta?: ImageProviderUsageMeta;
-      durationMs: number;
-    };
-    errorType?: string;
-  }): Promise<void> => {
-    try {
-      const cost = await resolveAiCost({
-        provider: params.info.provider,
-        model: params.info.model,
-        usage: params.info.usage,
-        imageGenerationTool: params.info.usageMeta?.imageGenerationTool === true,
-        generationType: params.generationType,
-      });
-
-      const usageMeta = params.info.usageMeta
-        ? {
-            provider_usage_raw: params.info.usageMeta.providerUsageRaw,
-            provider_usage_source: params.info.usageMeta.providerUsageSource,
-            responses_model: params.info.usageMeta.responsesModel,
-            image_generation_tool: params.info.usageMeta.imageGenerationTool,
-          }
-        : undefined;
-
-      await new AiCostTracker().record({
-        operationRunId,
-        operationRunType: "campaign_delivery",
-        traceId,
-        storeId,
-        userId: input.userId ?? null,
-        campaignId,
-        generationType: params.generationType,
-        provider: params.info.provider,
-        model: params.info.model,
-        attemptNumber,
-        durationMs: params.info.durationMs,
-        status: params.status,
-        errorType: params.errorType ?? null,
-        tokens: params.info.usage,
-        cost,
-        usdBrlRateAtGeneration: input.usdBrlRateAtGeneration ?? null,
-        creditValueBrlAtGeneration: input.creditValueBrlAtGeneration ?? null,
-        metadata: usageMeta,
-      });
-    } catch (err) {
-      console.error(
-        "[correction-reports] recordCall failed (best-effort):",
-        err instanceof Error ? err.message : String(err)
-      );
-    }
-  };
-
-  const onMetrics = (event: GenerationMetricsEvent): void => {
-    switch (event.phase) {
-      case "image_generation":
-        void recordCall({
-          generationType: "campaign_image",
-          status: "success",
-          info: {
-            provider: event.provider,
-            model: event.model,
-            usage: event.usage,
-            usageMeta: event.usageMeta,
-            durationMs: event.durationMs,
-          },
-        });
-        break;
-      default:
-        // F46-04 (reabertura, D9): input_validation/quality_review são
-        // persistidas pelo SINK único; prompt_assembly/done não são chamadas de IA.
-        break;
-    }
-  };
-
   // Hook fire-once: consome a oportunidade imediatamente antes da 1ª chamada ao
   // provider. Falha aqui propaga como falha pré-provider (não consome).
   let consumptionStarted = false;
@@ -671,9 +585,9 @@ export async function generateCorrectionV2(
   const imageService = new ImageGenerationService(provider);
   const startedAt = Date.now();
 
-  // F46-04 (reabertura, D9): telemetria pelo sink único para as capacidades de
-  // VISÃO (campaign_input_validation/campaign_image_review). A imagem
-  // (campaign_image) permanece híbrida (recordCall manual) até 46-05.
+  // F46-05 (D9): telemetria pelo sink único para TODAS as capacidades do fluxo
+  // (campaign_input_validation/campaign_image_review/campaign_image) — a
+  // persistência manual híbrida da imagem foi removida.
   const telemetry = createDefaultTelemetryContext({
     operationRunId,
     operationRunType: "campaign_delivery",
@@ -693,7 +607,7 @@ export async function generateCorrectionV2(
       context,
       input.onPhaseChange,
       input.signal,
-      onMetrics,
+      undefined,
       {
         onBeforeImageProviderCall,
         normalizedInstruction,
@@ -761,7 +675,7 @@ export async function generateCorrectionV2(
 
     const generationMetadata: Record<string, unknown> = {
       provider: provider.name,
-      model: IMAGE_GENERATION_RESPONSES_MODEL,
+      model: result.model ?? "unknown",
       durationMs,
       generatedAt: new Date().toISOString(),
       operationRunId,

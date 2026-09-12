@@ -418,7 +418,7 @@ describe('POST /api/store/[id]/visual-signature/generate-without-logo', () => {
         rejectionContext: expect.objectContaining({ reason: 'not_good' }),
       }),
       expect.any(AbortSignal),
-      expect.any(Function), // F38.1 (D11): onCall da imagem propagado ao service
+      undefined, // F46-05 (D9): onCall legado removido (persistência pelo sink)
       expect.objectContaining({ sink: expect.anything() }) // F46-04 (D9): telemetria da validação
     );
   });
@@ -475,8 +475,10 @@ describe('VS cost accounting (6.4)', () => {
 
   function setupSuccessWithCalls() {
     setupStandardStore();
-    mockIdentityDirectorGenerate.mockImplementation(async (_input: any, _signal: any, onCall?: any, telemetry?: any) => {
-      onCall?.({ provider: 'openai', model: 'gpt-5.5', usage: IMAGE_USAGE, durationMs: 300 });
+    // F46-05 (D9): imagem + validação são persistidas pelo SINK do contexto de
+    // telemetria (o onCall legado foi removido).
+    mockIdentityDirectorGenerate.mockImplementation(async (_input: any, _signal: any, _onCall: any, telemetry?: any) => {
+      await telemetry?.sink?.emit({ capability: 'visual_signature_image', protocol: 'responses', status: 'success', provider: 'openai', model: 'gpt-5.5', usage: IMAGE_USAGE, durationMs: 300 });
       await telemetry?.sink?.emit({ capability: 'visual_signature_validation', protocol: 'responses', status: 'success', provider: 'openai', model: 'gpt-4o-mini', usage: VALIDATION_USAGE, durationMs: 150 });
       return mockSignatureResult;
     });
@@ -535,14 +537,14 @@ describe('VS cost accounting (6.4)', () => {
   it('Teste 10 (6.4): nova tentativa pós-falha = NOVO run (operationRunId do retry DIFERENTE do attempt 1)', async () => {
     setupStandardStore();
     // ATTEMPT 1 falha após emitir evento de imagem (run 1)
-    mockIdentityDirectorGenerate.mockImplementation(async (_input: any, _signal: any, onCall?: any, telemetry?: any) => {
-      onCall?.({ provider: 'openai', model: 'gpt-5.5', usage: IMAGE_USAGE, durationMs: 300 });
+    mockIdentityDirectorGenerate.mockImplementation(async (_input: any, _signal: any, _onCall: any, telemetry?: any) => {
+      await telemetry?.sink?.emit({ capability: 'visual_signature_image', protocol: 'responses', status: 'success', provider: 'openai', model: 'gpt-5.5', usage: IMAGE_USAGE, durationMs: 300 });
       await telemetry?.sink?.emit({ capability: 'visual_signature_validation', protocol: 'responses', status: 'success', provider: 'openai', model: 'gpt-4o-mini', usage: VALIDATION_USAGE, durationMs: 150 });
       throw new Error('identity_art_director_failed: boom');
     });
     // ATTEMPT 2 (retry) com sucesso — novo run
-    mockAiGeneratorGenerate.mockImplementation(async ({ onCall, telemetry }: any) => {
-      onCall?.({ provider: 'openai', model: 'gpt-5.5', usage: IMAGE_USAGE, durationMs: 300 });
+    mockAiGeneratorGenerate.mockImplementation(async ({ telemetry }: any) => {
+      await telemetry?.sink?.emit({ capability: 'visual_signature_image', protocol: 'responses', status: 'success', provider: 'openai', model: 'gpt-5.5', usage: IMAGE_USAGE, durationMs: 300 });
       await telemetry?.sink?.emit({ capability: 'visual_signature_validation', protocol: 'responses', status: 'success', provider: 'openai', model: 'gpt-4o-mini', usage: VALIDATION_USAGE, durationMs: 150 });
       return {
         tier: 'image_direct',
@@ -694,8 +696,8 @@ describe('snapshot econômico (F38.2.1) — VS', () => {
       if (table === 'store_visual_signatures') return makeChain({ data: [], error: null });
       return makeChain({ data: null, error: null });
     });
-    mockIdentityDirectorGenerate.mockImplementation(async (_input: any, _signal: any, onCall?: any) => {
-      onCall?.({ provider: 'openai', model: 'gpt-5.5', usage: IMAGE_USAGE, durationMs: 300 });
+    mockIdentityDirectorGenerate.mockImplementation(async (_input: any, _signal: any, _onCall: any, telemetry?: any) => {
+      await telemetry?.sink?.emit({ capability: 'visual_signature_image', protocol: 'responses', status: 'success', provider: 'openai', model: 'gpt-5.5', usage: IMAGE_USAGE, durationMs: 300 });
       return mockSignatureResult;
     });
 

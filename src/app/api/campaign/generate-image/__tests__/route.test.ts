@@ -48,7 +48,6 @@ vi.mock('@/lib/image-generation/config', () => ({
   MAX_PRODUCT_IMAGE_BASE64_SIZE: 5 * 1024 * 1024,
   MAX_PRODUCT_IMAGES_AGGREGATE_BASE64_SIZE: 2 * 1024 * 1024,
   MAX_CAMPAIGN_IMAGES: 4,
-  IMAGE_GENERATION_RESPONSES_MODEL: 'test-model',
 }));
 
 const { mockGetCost, MockOperationCostUnavailableError } = vi.hoisted(() => {
@@ -1371,10 +1370,10 @@ describe('Pipeline cost accounting (6.3)', () => {
       };
     });
 
-    mockGenerateImage.mockImplementation(async (_brief: any, _context: any, _onPhaseChange: any, _signal: any, onMetricsEvent?: (e: any) => void, options?: any) => {
-      // F46-04 (reabertura): validação/revisão são persistidas pelo SINK único
-      // (D9) — o serviço mockado emite o envelope pelo sink do caller. A imagem
-      // continua híbrida via onMetricsEvent (campaign_image, 46-05).
+    mockGenerateImage.mockImplementation(async (_brief: any, _context: any, _onPhaseChange: any, _signal: any, _onMetricsEvent: any, options?: any) => {
+      // F46-05 (D9): TODAS as capacidades (validação/revisão/imagem) são
+      // persistidas pelo SINK único — o serviço mockado emite o envelope pelo
+      // sink do caller (o canal onMetricsEvent residual foi removido da rota).
       const sink = options?.telemetry?.sink;
       if (sink) {
         await sink.emit({
@@ -1399,16 +1398,21 @@ describe('Pipeline cost accounting (6.3)', () => {
             attemptNumber: i,
           });
         }
-      }
-      if (onMetricsEvent) {
-        // prompt_assembly/done NÃO são chamadas de IA — devem ser ignoradas (D5/D11)
-        onMetricsEvent({ phase: "prompt_assembly", provider: "openai", model: "gpt-4o", attempt: 0, durationMs: 50 });
+        // Imagem (campaign_image): um envelope por tentativa (modelo real gpt-5.5).
         for (let i = 0; i < reviewAttempts; i++) {
-          onMetricsEvent({ phase: "image_generation", provider: "openai", model: "test-model", attempt: i, usage: IMAGE_USAGE, durationMs: 300 });
+          await sink.emit({
+            capability: "campaign_image",
+            protocol: "responses",
+            status: "success",
+            provider: "openai",
+            model: "gpt-5.5",
+            usage: IMAGE_USAGE,
+            durationMs: 300,
+            attemptNumber: i,
+          });
         }
-        onMetricsEvent({ phase: "done", provider: "openai", model: "test-model", attempt: reviewAttempts, durationMs: 500 });
       }
-      return { success: true, imageDataUrl: 'data:image/jpeg;base64,xyz' };
+      return { success: true, imageDataUrl: 'data:image/jpeg;base64,xyz', model: 'gpt-5.5' };
     });
   }
 
@@ -1517,14 +1521,12 @@ describe('Pipeline cost accounting (6.3)', () => {
 
   it('Teste 15 (6.3): review falha → campaign_pipeline failed + custo dos call-level já registrados', async () => {
     await setupPipelineSuccessMocks();
-    mockGenerateImage.mockImplementation(async (_brief: any, _context: any, _onPhaseChange: any, _signal: any, onMetricsEvent?: (e: any) => void, options?: any) => {
+    mockGenerateImage.mockImplementation(async (_brief: any, _context: any, _onPhaseChange: any, _signal: any, _onMetricsEvent: any, options?: any) => {
       const sink = options?.telemetry?.sink;
       if (sink) {
         await sink.emit({ capability: "campaign_input_validation", protocol: "chat-completions", status: "success", provider: "openai", model: "gpt-4o", usage: VALIDATION_USAGE, durationMs: 100, attemptNumber: 0 });
         await sink.emit({ capability: "campaign_image_review", protocol: "chat-completions", status: "success", provider: "openai", model: "gpt-4o", usage: REVIEW_USAGE, durationMs: 400, attemptNumber: 0 });
-      }
-      if (onMetricsEvent) {
-        onMetricsEvent({ phase: "image_generation", provider: "openai", model: "test-model", attempt: 0, usage: IMAGE_USAGE, durationMs: 300 });
+        await sink.emit({ capability: "campaign_image", protocol: "responses", status: "success", provider: "openai", model: "gpt-5.5", usage: IMAGE_USAGE, durationMs: 300, attemptNumber: 0 });
       }
       return { success: false, code: 'review_failed', message: 'Falha na revisão de qualidade' };
     });
