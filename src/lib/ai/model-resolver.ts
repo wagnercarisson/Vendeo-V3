@@ -28,12 +28,15 @@ export type AiCapability =
 /** Protocolo de wire de cada alvo (primary e fallback declaram o próprio). */
 export type AiProtocol = "chat-completions" | "responses" | "images" | "gemini";
 
+/** Providers suportados — base do switch exaustivo de `getApiKey` (46-02). */
+export type AiProvider = "openai" | "gemini";
+
 /** Segmento da capacidade. */
 export type AiSegment = "text" | "vision" | "image";
 
 /** Alvo de modelo — provider + modelo + protocolo (cada alvo é independente). */
 export interface AiModelTarget {
-  provider: string;
+  provider: AiProvider;
   model: string;
   protocol: AiProtocol;
 }

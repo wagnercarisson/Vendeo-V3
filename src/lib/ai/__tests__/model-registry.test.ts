@@ -3,10 +3,13 @@ import {
   MODEL_REGISTRY,
   MODEL_ALLOWLIST,
   CAPABILITY_PROTOCOLS,
+  CAPABILITY_SEGMENTS,
+  ALL_CAPABILITIES,
   ModelRegistry,
   validateModelConfig,
+  validateRegistry,
 } from "../model-registry";
-import type { AiCapability, AiModelConfig } from "../model-resolver";
+import type { AiCapability, AiModelConfig, AiProvider } from "../model-resolver";
 
 const EXPECTED_CAPABILITIES: AiCapability[] = [
   "campaign_copy",
@@ -111,13 +114,16 @@ describe("ModelRegistry — resolução das 11 capacidades (D1)", () => {
 });
 
 describe("ModelRegistry — allowlist e validação de alvos (D1)", () => {
-  it("MODEL_ALLOWLIST cobre os modelos dos defaults e seus protocolos", () => {
-    expect(MODEL_ALLOWLIST["gpt-4o"]).toEqual(["chat-completions"]);
-    expect(MODEL_ALLOWLIST["gpt-4o-mini"]).toEqual(["chat-completions", "responses"]);
-    expect(MODEL_ALLOWLIST["gpt-5.5"]).toEqual(["responses"]);
-    expect(MODEL_ALLOWLIST["gpt-image-2"]).toEqual(["images"]);
-    expect(MODEL_ALLOWLIST["gemini-3.1-flash-lite"]).toEqual(["gemini"]);
-    expect(MODEL_ALLOWLIST["gemini-2.0-flash"]).toEqual(["gemini"]);
+  it("MODEL_ALLOWLIST é estruturada por provider → modelo → protocolos", () => {
+    expect(MODEL_ALLOWLIST.openai["gpt-4o"]).toEqual(["chat-completions"]);
+    expect(MODEL_ALLOWLIST.openai["gpt-4o-mini"]).toEqual(["chat-completions", "responses"]);
+    expect(MODEL_ALLOWLIST.openai["gpt-5.5"]).toEqual(["responses"]);
+    expect(MODEL_ALLOWLIST.openai["gpt-image-2"]).toEqual(["images"]);
+    expect(MODEL_ALLOWLIST.gemini["gemini-3.1-flash-lite"]).toEqual(["gemini"]);
+    expect(MODEL_ALLOWLIST.gemini["gemini-2.0-flash"]).toEqual(["gemini"]);
+    // modelos de um provider não aparecem no outro
+    expect(MODEL_ALLOWLIST.gemini["gpt-4o"]).toBeUndefined();
+    expect(MODEL_ALLOWLIST.openai["gemini-3.1-flash-lite"]).toBeUndefined();
   });
 
   it("CAPABILITY_PROTOCOLS define os protocolos aceitos por capacidade", () => {
@@ -125,6 +131,14 @@ describe("ModelRegistry — allowlist e validação de alvos (D1)", () => {
     expect(CAPABILITY_PROTOCOLS.campaign_image_edit).toEqual(["images"]);
     expect(CAPABILITY_PROTOCOLS.visual_signature_validation).toEqual(["responses"]);
     expect(CAPABILITY_PROTOCOLS.campaign_copy).toEqual(["chat-completions", "gemini"]);
+  });
+
+  it("CAPABILITY_SEGMENTS cobre as 11 capacidades com o segmento canônico", () => {
+    expect(Object.keys(CAPABILITY_SEGMENTS).sort()).toEqual([...EXPECTED_CAPABILITIES].sort());
+    expect(CAPABILITY_SEGMENTS.campaign_copy).toBe("text");
+    expect(CAPABILITY_SEGMENTS.campaign_image_review).toBe("vision");
+    expect(CAPABILITY_SEGMENTS.campaign_image).toBe("image");
+    expect(ALL_CAPABILITIES).toHaveLength(11);
   });
 
   it("aceita o registry default (nenhuma configuração inválida)", () => {
@@ -191,5 +205,81 @@ describe("ModelRegistry — allowlist e validação de alvos (D1)", () => {
       },
     };
     expect(() => new ModelRegistry(invalidRegistry)).toThrow(/incompatível com o modelo/);
+  });
+
+  it("rejeita provider desconhecido (fora da allowlist)", () => {
+    const invalid: AiModelConfig = {
+      capability: "campaign_copy",
+      segment: "text",
+      primary: {
+        provider: "anthropic" as AiProvider,
+        model: "gpt-4o",
+        protocol: "chat-completions",
+      },
+    };
+    expect(() => validateModelConfig(invalid)).toThrow(/provider "anthropic" fora da allowlist/);
+  });
+
+  it("rejeita combinação provider/model trocada (gemini + gpt-4o)", () => {
+    const invalid: AiModelConfig = {
+      capability: "campaign_copy",
+      segment: "text",
+      primary: { provider: "gemini", model: "gpt-4o", protocol: "chat-completions" },
+    };
+    expect(() => validateModelConfig(invalid)).toThrow(/fora da allowlist do provider "gemini"/);
+  });
+
+  it("rejeita combinação provider/model trocada (openai + gemini-3.1-flash-lite)", () => {
+    const invalid: AiModelConfig = {
+      capability: "campaign_copy",
+      segment: "text",
+      primary: { provider: "openai", model: "gemini-3.1-flash-lite", protocol: "gemini" },
+    };
+    expect(() => validateModelConfig(invalid)).toThrow(/fora da allowlist do provider "openai"/);
+  });
+
+  it("rejeita segmento incompatível com a capacidade", () => {
+    const invalid: AiModelConfig = {
+      capability: "campaign_copy",
+      segment: "image",
+      primary: { provider: "openai", model: "gpt-4o", protocol: "chat-completions" },
+    };
+    expect(() => validateModelConfig(invalid)).toThrow(
+      /segmento "image" incompatível com a capacidade/,
+    );
+  });
+
+  it("validateRegistry rejeita chave que não corresponde a config.capability", () => {
+    const invalid = {
+      ...MODEL_REGISTRY,
+      campaign_copy: {
+        ...MODEL_REGISTRY.campaign_copy,
+        capability: "brand_profile_text" as const,
+      },
+    };
+    expect(() => validateRegistry(invalid as Record<string, AiModelConfig>)).toThrow(
+      /chave "campaign_copy" não corresponde/,
+    );
+  });
+
+  it("validateRegistry rejeita registry sem as 11 capacidades", () => {
+    const { campaign_copy: _omit, ...partial } = MODEL_REGISTRY;
+    expect(() => validateRegistry(partial as Record<string, AiModelConfig>)).toThrow(
+      /sem capacidades obrigatórias: campaign_copy/,
+    );
+  });
+
+  it("validateRegistry rejeita capacidade extra/desconhecida", () => {
+    const invalid = { ...MODEL_REGISTRY, capacidade_extra: MODEL_REGISTRY.campaign_copy };
+    expect(() => validateRegistry(invalid as Record<string, AiModelConfig>)).toThrow(
+      /capacidades desconhecidas: capacidade_extra/,
+    );
+  });
+
+  it("construtor do ModelRegistry rejeita mapa com capacidade ausente (fail-fast)", () => {
+    const { campaign_image: _omit, ...partial } = MODEL_REGISTRY;
+    expect(
+      () => new ModelRegistry(partial as Record<AiCapability, AiModelConfig>),
+    ).toThrow(/sem capacidades obrigatórias/);
   });
 });
