@@ -1,6 +1,6 @@
 # Phase 46: Gateway Único de IA e Registry de Modelos — UAT Humano
 
-**Contexto:** UAT local/preview pós-implementação da F46. A fase **reorganiza e concentra** as chamadas de IA (registry de modelos por capacidade + gateway único + adapters por protocolo + telemetria obrigatória) e **remove as 14 env-vars de modelo/provider**, com a promessa central de **preservação integral do comportamento atual**. Por isso, o critério de aceite humano é: **cada fluxo de IA deve se comportar de forma idêntica ao que o lojista já conhece** — mesma arte, mesmo texto, mesmo fluxo, mesmos erros — e a telemetria call-level deve registrar o **modelo real** de cada etapa.
+**Contexto:** UAT local/preview pós-implementação da F46. A fase **reorganiza e concentra** as chamadas de IA (registry de modelos por capacidade + gateway único + adapters por protocolo + telemetria obrigatória) e **remove as 14 env-vars de modelo/provider**, com a promessa central de **preservação integral do comportamento atual**. Por isso, o critério de aceite humano é: **cada fluxo de IA deve manter comportamento, contrato, estrutura e qualidade equivalentes ao que o lojista já conhece — sem regressão observável** — e a telemetria call-level deve registrar o **modelo real** de cada etapa. Como a IA é **não determinística**, **não se exige igualdade literal** de texto nem de pixels: o aceite é equivalência de comportamento/estrutura/qualidade.
 **Pré-requisito:** rodar o app local (`npm run dev`) ou usar um deploy de preview com uma loja de teste (dados + direção visual/legal + saldo). Migration `20260912000001_f46_generation_events_type.sql` aplicada no remoto (já confirmada no 46-01).
 **Como avaliar:** para cada cenário, percorrer o fluxo e comparar com o comportamento pré-F46 (o comportamento atual conhecido). Marcar `[x]`, registrar `PASS`/`FAIL` e observação. A telemetria pode ser conferida no painel admin de custos (`/admin/ai-operation-costs` ou apuração equivalente) ou no banco (`generation_events`).
 
@@ -8,7 +8,7 @@
 
 ## Checklist
 
-### Cenário 46.1 — Geração de campanha completa (produto + oferta) — comportamento idêntico
+### Cenário 46.1 — Geração de campanha completa (produto + oferta) — comportamento equivalente
 
 - [ ] Preencher o form (`/campanhas/nova`): produto, preço original/desconto, badge, 1 imagem primary, sem avisos adicionais.
 - [ ] "Revisar e gerar" → "Confirmar e gerar campanha" → geração conclui e navega para `/campanhas/[id]`.
@@ -17,15 +17,24 @@
 - **Evidência de telemetria:** os eventos call-level aparecem com o **modelo real** — copy `gpt-4o` (`campaign_copy`), visão de validação/revisão `gpt-4o` (`campaign_input_validation`/`campaign_image_review`), imagem `gpt-5.5` (`campaign_image`, protocolo `responses`).
 - Resultado: [ ] PASS / [ ] FAIL — Observação:
 
-### Cenário 46.2 — Fallback de imagem (`images.edit`) — duas chamadas, dois eventos
+### Cenário 46.2 — Fallback de imagem (`images.edit`) — um envelope por chamada HTTP realizada
 
-- [ ] Provocar/observar um caso de fallback de imagem (retry explícito `attempt >= 1` **ou** erro de capability do Responses com imagem primary) — ex.: reenviar/regenerar quando aplicável.
+O fallback tem **dois gatilhos legítimos e distintos** — valide cada um conforme reproduzível. O critério de telemetria é **um envelope por chamada HTTP realmente realizada** (nunca um envelope por "intenção").
+
+**46.2a — Erro de capability do Responses (com imagem primary):** a chamada primária (`campaign_image`, `responses`) falha por capability; o orquestrador faz a segunda `invoke` (`campaign_image_edit`, `images`) e ela sucede.
 - [ ] A arte resultante é equivalente ao comportamento atual (referências em ordem determinística preservadas).
-- [ ] Auth/safety/rate-limit **não** acionam o fallback (o erro propaga como antes).
-- **Evidência de telemetria:** **dois** eventos call-level (falha + fallback), cada um com seu **modelo real** — `gpt-5.5` no caminho Responses e `gpt-image-2` no fallback de edição (`campaign_image_edit` gravado como `campaign_image`, com `capability`/`protocol` no metadata).
+- **Evidência de telemetria:** **dois** envelopes call-level — `failed` no Responses (`gpt-5.5`) + `success` no fallback (`gpt-image-2`; `campaign_image_edit` gravado como `campaign_image`, com `capability`/`protocol` no metadata).
 - Resultado: [ ] PASS / [ ] FAIL — Observação:
 
-### Cenário 46.3 — Geração/variações de assinatura visual — comportamento idêntico
+**46.2b — Retry explícito (`attempt >= 1`, com imagem primary):** a retentativa chama **diretamente** o adapter `images`; **não há** necessariamente uma falha Responses nessa tentativa.
+- [ ] A arte resultante é equivalente ao comportamento atual.
+- **Evidência de telemetria:** **um** envelope para a chamada HTTP realizada (`gpt-image-2`). Se a tentativa anterior (`attempt 0`) também executou uma chamada real, ela tem o seu próprio envelope.
+- Resultado: [ ] PASS / [ ] FAIL — Observação:
+
+- [ ] Auth/safety/rate-limit **não** acionam o fallback (o erro propaga como antes).
+- Resultado geral: [ ] PASS / [ ] FAIL — Observação:
+
+### Cenário 46.3 — Geração/variações de assinatura visual — comportamento equivalente
 
 - [ ] Abrir o fluxo de assinatura visual (loja sem logo, quando aplicável) e gerar as variações.
 - [ ] Aprovar uma variação e conferir que a assinatura ativa aparece corretamente.
@@ -33,7 +42,7 @@
 - **Evidência de telemetria:** `visual_signature_validation` (visão, `gpt-4o-mini`) e `visual_signature_image` (`gpt-5.5`) com modelo real; quando a tool `image_generation` é usada, a estimativa soma o componente da tool **também** em `visual_signature_image`; o evento é bufferizado até o `visual_signature_id` ser conhecido (ordem preservada).
 - Resultado: [ ] PASS / [ ] FAIL — Observação:
 
-### Cenário 46.4 — Brand profile: upload de logo + approve + restore — comportamento idêntico
+### Cenário 46.4 — Brand profile: upload de logo + approve + restore — comportamento equivalente
 
 - [ ] **Upload de logo** (`POST /api/store/[id]/logo`) → análise conclui como antes.
 - [ ] **Retry do Brand Director** (`retry-brand-director`) → reanálise conclui como antes.
@@ -43,10 +52,10 @@
 - **Evidência de telemetria:** todos esses caminhos (antes **sem** `onCall`) agora emitem **evento call-level com custo e duração** — logo e retry com visão `gpt-4o` (`brand_profile_vision`); approve/restore com o modelo real; `brand_profile_text` com `gpt-4o`.
 - Resultado: [ ] PASS / [ ] FAIL — Observação:
 
-### Cenário 46.5 — Copy da campanha — texto/estrutura idênticos
+### Cenário 46.5 — Copy da campanha — texto/estrutura equivalentes
 
 - [ ] Gerar/observar a copy de uma campanha (título, legenda, CTA, hook).
-- [ ] O texto e a estrutura são **idênticos** ao comportamento atual (sem mudança de prompt/parâmetros).
+- [ ] O texto e a estrutura são **equivalentes** ao comportamento atual — mesmo contrato/estrutura/qualidade, sem regressão observável (a IA é não determinística; **não se exige texto literal idêntico**).
 - [ ] Quando o primário falha de forma retryable, o fallback configurado é acionado como **segunda chamada explícita**, sem o serviço conhecer o provider.
 - **Evidência de telemetria:** `campaign_copy` com `gpt-4o` (primary `chat-completions`); no fallback, segundo envelope com `gemini-3.1-flash-lite` (protocolo `gemini`).
 - Resultado: [ ] PASS / [ ] FAIL — Observação:
@@ -77,7 +86,7 @@
 ## Instruções de preenchimento
 
 1. Preencha cada cenário com `[x]` nos itens e `PASS`/`FAIL` + observação em "Resultado".
-2. O critério transversal é **comportamento idêntico ao atual** — qualquer regressão observável em arte, copy, fluxo ou erro deve ser registrada como FAIL com descrição.
+2. O critério transversal é **comportamento/contrato/estrutura/qualidade equivalentes ao atual, sem regressão observável** — **não se exige igualdade literal** de texto/pixels (IA não determinística). Qualquer regressão observável em arte, copy, fluxo ou erro deve ser registrada como FAIL com descrição.
 3. A telemetria é evidência de apoio: confirme o **modelo real** por etapa (copy `gpt-4o`; visão `gpt-4o`/`gpt-4o-mini`; imagem `gpt-5.5` + fallback `gpt-image-2`).
 4. Após o preenchimento, atualizar o resumo abaixo e registrar a decisão final ("aprovado" ou problemas encontrados).
 
