@@ -14,38 +14,10 @@ import { apiHandler } from '@/lib/auth/api-handler';
 import { AiCostTracker } from '@/lib/ai-cost';
 import { createDefaultTelemetryContext } from '@/lib/ai';
 import type { GenerationEventType } from '@/lib/visual-signature/types';
-import { EconomicParameterService } from '@/lib/economic/economic-parameter-service';
+import { resolveEconomicSnapshot } from '@/lib/economic/economic-snapshot';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const realignLocks = new Map<string, boolean>();
-
-/**
- * F38.2.1 (D3): snapshot econômico resolvido UMA vez por run (best-effort) —
- * valores vigentes naquele momento. APENAS valores; o tracker define a origem
- * captured_at_generation na gravação. Falha → log + null — NUNCA bloqueia.
- */
-async function resolveEconomicSnapshot(): Promise<{
-  usdBrlRateAtGeneration: number | null;
-  creditValueBrlAtGeneration: number | null;
-}> {
-  try {
-    const service = new EconomicParameterService();
-    const [usd, credit] = await Promise.all([
-      service.getParameter("usd_brl_rate"),
-      service.getParameter("credit_value_brl"),
-    ]);
-    return {
-      usdBrlRateAtGeneration: usd.value,
-      creditValueBrlAtGeneration: credit.value,
-    };
-  } catch (err) {
-    console.error(
-      "[realign] snapshot econômico indisponível (best-effort):",
-      err instanceof Error ? err.message : String(err)
-    );
-    return { usdBrlRateAtGeneration: null, creditValueBrlAtGeneration: null };
-  }
-}
 
 /**
  * F38.1 (D1/D6): grava o delivery marker do run — SEM custo/tokens +

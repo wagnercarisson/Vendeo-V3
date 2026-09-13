@@ -124,4 +124,23 @@ describe("telemetry-coverage — inventário global (F46-06)", () => {
     }
     expect(violations).toEqual([]);
   });
+
+  it("todo caller que cria AiTelemetryContext propaga o snapshot econômico (sem fallback silencioso)", () => {
+    // F46-04 (reabertura D3): um caller recém-instrumentado que crie o contexto
+    // sem `usdBrlRateAtGeneration` faz a apuração cair no "parâmetro atual
+    // (fallback)" — regressão observada no UAT.
+    const files = collectFiles(path.resolve(process.cwd(), "src"));
+    const violations: string[] = [];
+    for (const file of files) {
+      if (file === "src/lib/ai/telemetry-sink.ts") continue; // definição da factory
+      const code = readCode(file);
+      if (
+        code.includes("createDefaultTelemetryContext(") &&
+        !code.includes("usdBrlRateAtGeneration")
+      ) {
+        violations.push(file);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
 });

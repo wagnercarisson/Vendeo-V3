@@ -19,6 +19,7 @@ import { assertCanTransition, transition } from '@/lib/identity-transitions';
 import { buildStoreProfileInputSnapshot } from '@/lib/snapshot';
 import { AiCostTracker } from '@/lib/ai-cost';
 import { createDefaultTelemetryContext } from '@/lib/ai';
+import { resolveEconomicSnapshot } from '@/lib/economic/economic-snapshot';
 
 const ALLOWED_EXTENSION_MAP: Record<string, string> = {
   '.png': 'image/png',
@@ -256,12 +257,17 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
       // F46-04 (reabertura, D9): telemetria pelo sink único para
       // brand_profile_vision — o caller fornece run + sink ao `analyze`.
       const run = new AiCostTracker().startRun("brand_profile");
+      // F46-04 (reabertura D3): snapshot econômico resolvido uma vez no run e
+      // propagado ao evento call-level — sem isso, a apuração cai no fallback.
+      const economicSnapshot = await resolveEconomicSnapshot("[logo]");
       const telemetry = createDefaultTelemetryContext({
         operationRunId: run.operationRunId,
         operationRunType: "brand_profile",
         traceId: run.traceId,
         storeId,
         attemptNumber: 0,
+        usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
+        creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
       });
       const analysis = await director.analyze({
         logoBuffer: buffer,

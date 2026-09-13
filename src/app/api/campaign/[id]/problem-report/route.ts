@@ -11,6 +11,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { CorrectionIntentService } from "@/lib/campaign/correction-intent-service";
 import { AiCostTracker } from "@/lib/ai-cost";
 import { createDefaultTelemetryContext } from "@/lib/ai";
+import { resolveEconomicSnapshot } from "@/lib/economic/economic-snapshot";
 import {
   completeCorrectionAnalysis,
   generateCorrectionV2,
@@ -170,6 +171,8 @@ export const POST = apiHandler(
     // mais recordCall manual no serviço.
     const operationRunId = campaign.operation_run_id ?? crypto.randomUUID();
     const run = new AiCostTracker().startRun("campaign_delivery");
+    // F46-04 (reabertura D3): snapshot econômico no run (apuração sem fallback).
+    const economicSnapshot = await resolveEconomicSnapshot("[problem-report]");
     const telemetry = createDefaultTelemetryContext({
       operationRunId,
       operationRunType: "campaign_delivery",
@@ -178,6 +181,8 @@ export const POST = apiHandler(
       userId: user.userId,
       campaignId: id,
       attemptNumber,
+      usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
+      creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
     });
 
     const intentService = new CorrectionIntentService();

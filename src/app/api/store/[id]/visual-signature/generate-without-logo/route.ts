@@ -20,7 +20,7 @@ import { requireLegalClearance } from '@/lib/legal/clearance';
 import { AiCostTracker } from '@/lib/ai-cost';
 import { createDefaultTelemetryContext, BufferingAiTelemetrySink } from '@/lib/ai';
 import type { AiTelemetryContext } from '@/lib/ai';
-import { EconomicParameterService } from '@/lib/economic/economic-parameter-service';
+import { resolveEconomicSnapshot } from '@/lib/economic/economic-snapshot';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -47,35 +47,6 @@ const PROMPT_VERSION_SIMPLIFIED = crypto
   .slice(0, 12);
 
 let requestCounter = 0;
-
-/**
- * F38.2.1 (D3): resolve o snapshot econômico UMA vez por run (best-effort) —
- * valores vigentes naquele momento. Sucesso → { usdBrlRateAtGeneration,
- * creditValueBrlAtGeneration } (APENAS valores; o tracker define a origem
- * captured_at_generation na gravação). Falha → log + null — NUNCA bloqueia.
- */
-async function resolveEconomicSnapshot(): Promise<{
-  usdBrlRateAtGeneration: number | null;
-  creditValueBrlAtGeneration: number | null;
-}> {
-  try {
-    const service = new EconomicParameterService();
-    const [usd, credit] = await Promise.all([
-      service.getParameter("usd_brl_rate"),
-      service.getParameter("credit_value_brl"),
-    ]);
-    return {
-      usdBrlRateAtGeneration: usd.value,
-      creditValueBrlAtGeneration: credit.value,
-    };
-  } catch (err) {
-    console.error(
-      "[generate-without-logo] snapshot econômico indisponível (best-effort):",
-      err instanceof Error ? err.message : String(err)
-    );
-    return { usdBrlRateAtGeneration: null, creditValueBrlAtGeneration: null };
-  }
-}
 
 export const POST = apiHandler(async (
   request: NextRequest,

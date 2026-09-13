@@ -8,6 +8,7 @@ import { AiImageGenerator } from "./ai-image-generator";
 import { getActiveVisualSignature } from "./persistence";
 import { AiCostTracker } from "@/lib/ai-cost";
 import { createDefaultTelemetryContext } from "@/lib/ai";
+import { resolveEconomicSnapshot } from "@/lib/economic/economic-snapshot";
 import { MODEL_REGISTRY } from "@/lib/ai/model-registry";
 import type {
   VisualSignatureRecord,
@@ -138,12 +139,16 @@ export async function generateVariations(
   // visual_signature_validation (o validator exige contexto; a imagem permanece
   // híbrida até 46-05).
   const run = new AiCostTracker().startRun("visual_signature");
+  // F46-04 (reabertura D3): snapshot econômico no run (apuração sem fallback).
+  const economicSnapshot = await resolveEconomicSnapshot("[vs/server-actions]");
   const telemetry = createDefaultTelemetryContext({
     operationRunId: run.operationRunId,
     operationRunType: "visual_signature",
     traceId: run.traceId,
     storeId,
     attemptNumber: 0,
+    usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
+    creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
   });
 
   const variations: Array<{ tier: string; assetUrl: string; storagePath: string; mimeType: string }> = [];
@@ -250,12 +255,16 @@ export async function generateAutomatic(storeId: string): Promise<
   // F46-04 (reabertura, D9): telemetria pelo sink único para
   // visual_signature_validation (imagem híbrida até 46-05).
   const run = new AiCostTracker().startRun("visual_signature");
+  // F46-04 (reabertura D3): snapshot econômico no run (apuração sem fallback).
+  const economicSnapshot = await resolveEconomicSnapshot("[vs/server-actions]");
   const telemetry = createDefaultTelemetryContext({
     operationRunId: run.operationRunId,
     operationRunType: "visual_signature",
     traceId: run.traceId,
     storeId,
     attemptNumber: 0,
+    usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
+    creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
   });
 
   const tones = ["profissional", "moderno", "elegante"];

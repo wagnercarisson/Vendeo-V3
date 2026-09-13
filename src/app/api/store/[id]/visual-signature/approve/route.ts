@@ -15,6 +15,7 @@ import { requireSameOrigin } from '@/lib/auth/csrf';
 import { apiHandler } from '@/lib/auth/api-handler';
 import { AiCostTracker } from '@/lib/ai-cost';
 import { createDefaultTelemetryContext } from '@/lib/ai';
+import { resolveEconomicSnapshot } from '@/lib/economic/economic-snapshot';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -24,8 +25,10 @@ let approveRequestCounter = 0;
  * F46-04 (reabertura, D9): telemetria pelo sink único para brand_profile_vision
  * — o caller fornece run + sink ao `profiler.generate` (a persistência é do sink).
  */
-function createBrandProfileTelemetry(storeId: string, visualSignatureId: string) {
+async function createBrandProfileTelemetry(storeId: string, visualSignatureId: string) {
   const run = new AiCostTracker().startRun("brand_profile");
+  // F46-04 (reabertura D3): snapshot econômico no run (apuração sem fallback).
+  const economicSnapshot = await resolveEconomicSnapshot("[vs-approve]");
   return createDefaultTelemetryContext({
     operationRunId: run.operationRunId,
     operationRunType: "brand_profile",
@@ -33,6 +36,8 @@ function createBrandProfileTelemetry(storeId: string, visualSignatureId: string)
     storeId,
     visualSignatureId,
     attemptNumber: 0,
+    usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
+    creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
   });
 }
 
@@ -230,7 +235,7 @@ async function handleSubstitution(
       referenceCardUrl: null,
       intendedPalette,
       previousBrandColors,
-    }, createBrandProfileTelemetry(id, signatureId));
+    }, await createBrandProfileTelemetry(id, signatureId));
 
     console.log(`[approve][req-${reqId}] SUBSTITUIÇÃO — Tier 2 BP OK`, { profileId: result.profile.id });
 
@@ -622,7 +627,7 @@ export const POST = apiHandler(async (
       referenceCardUrl: null,
       intendedPalette: intendedPaletteLocal,
       previousBrandColors,
-    }, createBrandProfileTelemetry(id, body.signatureId));
+    }, await createBrandProfileTelemetry(id, body.signatureId));
 
     console.log(`[approve][req-${reqId}] BrandProfiler OK`, { profileId: result.profile.id });
     brandProfileResult = {

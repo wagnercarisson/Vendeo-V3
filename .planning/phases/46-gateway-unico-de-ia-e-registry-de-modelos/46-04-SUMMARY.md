@@ -267,6 +267,18 @@ fail-open do validator e fechou as 4 falhas transicionais da suíte
 
 Suíte completa final: **272 files / 2699 testes**; typecheck/lint/build verdes.
 
+## Reabertura 2 (achado de UAT, 2026-09-12) — snapshot econômico
+
+O UAT da fase identificou que o evento `brand_profile_vision` (logo) era apurado com **"parâmetro atual (fallback)"** em vez do câmbio **capturado** — enquanto campanhas e VS capturavam corretamente. Causa: os callers recém-instrumentados (46-04 Task 6) criavam o `AiTelemetryContext` **sem** `usdBrlRateAtGeneration`/`creditValueBrlAtGeneration`; o `DefaultAiTelemetrySink` persistia `null` → fallback na apuração.
+
+**Correção (D3/D9):**
+- Novo helper compartilhado `resolveEconomicSnapshot()` (`src/lib/economic/economic-snapshot.ts`), best-effort, reutilizado por todos os callers.
+- Snapshot propagado ao contexto em: `logo`, `logo/retry-brand-director`, `approve` (helper async), `restore`, `server-actions` (VS, 2 sites), `campaign/generate` (legado `campaign_spec`) e `problem-report` (`campaign_correction_analysis`); `realign` e VS `generate-without-logo` passaram a usar o helper compartilhado (removida a duplicação).
+- Teste de inventário (`telemetry-coverage.test.ts`): todo caller que cria `AiTelemetryContext` deve propagar `usdBrlRateAtGeneration`.
+- Teste da rota legada (`campaign/generate/route.test.ts`) co-migrado: mock do snapshot + assert da propagação.
+
+Gates re-executados: **275 files / 2721 testes — 0 falhas**; typecheck/lint/build verdes.
+
 ## User Setup Required
 
 None - no external service configuration required.

@@ -36,6 +36,15 @@ vi.mock("@/lib/ai-cost", () => ({
   resolveAiCost: vi.fn(),
 }));
 
+// F46-04 (reabertura D3): a rota resolve o snapshot econômico — mock evita
+// acesso real ao banco e permite asseverar a propagação.
+vi.mock("@/lib/economic/economic-snapshot", () => ({
+  resolveEconomicSnapshot: vi.fn(async () => ({
+    usdBrlRateAtGeneration: 5.57,
+    creditValueBrlAtGeneration: 1,
+  })),
+}));
+
 vi.mock("@/lib/campaign-intelligence/service", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/campaign-intelligence/service")>();
   return {
@@ -111,6 +120,9 @@ describe("POST /api/campaign/generate (F46-15)", () => {
     expect(telemetry.storeId).toBe("store-1");
     expect(telemetry.userId).toBe("user-1");
     expect(telemetry.sink).toBeDefined();
+    // F46-04 (reabertura D3): snapshot econômico propagado ao contexto.
+    expect(telemetry.usdBrlRateAtGeneration).toBe(5.57);
+    expect(telemetry.creditValueBrlAtGeneration).toBe(1);
   });
 
   it("400 com input inválido (provider NÃO é chamado)", async () => {

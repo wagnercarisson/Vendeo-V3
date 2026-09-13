@@ -11,6 +11,7 @@ import { notFound } from "@/lib/api-error-response";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { AiCostTracker } from "@/lib/ai-cost";
 import { createDefaultTelemetryContext } from "@/lib/ai";
+import { resolveEconomicSnapshot } from "@/lib/economic/economic-snapshot";
 
 export const POST = apiHandler(async (request: NextRequest) => {
   requireSameOrigin(request);
@@ -52,12 +53,16 @@ export const POST = apiHandler(async (request: NextRequest) => {
   // Run "campaign_delivery" (não existe OperationRunType.campaign_spec); o
   // gateway gera o envelope e o sink persiste — a rota não grava manualmente.
   const run = new AiCostTracker().startRun("campaign_delivery");
+  // F46-04 (reabertura D3): snapshot econômico no run (apuração sem fallback).
+  const economicSnapshot = await resolveEconomicSnapshot("[campaign/generate]");
   const telemetry = createDefaultTelemetryContext({
     operationRunId: run.operationRunId,
     operationRunType: "campaign_delivery",
     traceId: run.traceId,
     storeId: store.id,
     userId: user.userId,
+    usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
+    creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
   });
 
   // ── Step 4: Instantiate service ─────────────────────────────────────
