@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: â€” LanÃ§amento Externo Controlado â—†
 current_phase: 46
-status: executing
-last_updated: "2026-09-12T17:28:38.666Z"
-last_activity: 2026-09-12
+status: complete
+last_updated: "2026-09-13T00:00:00.000Z"
+last_activity: 2026-09-13
 progress:
   total_phases: 9
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 104
-  completed_plans: 95
-  percent: 89
+  completed_plans: 104
+  percent: 100
 ---
 
 # Project State
@@ -20,7 +20,7 @@ progress:
 **Current phase:** 46
 **Last activity:** 2026-09-12
 
-### Phase 46 — Gateway Único de IA e Registry de Modelos ◆ Em execução (8/9 plans / 9 waves)
+### Phase 46 — Gateway Único de IA e Registry de Modelos ✅ Complete (9/9 plans / 9 waves)
 
 **Goal:** Concentrar as chamadas de IA (hoje ~13 call sites / ~10 serviços com client próprio e 14 env-vars de modelo) em uma camada única de execução + telemetria, preservando o comportamento atual. Registry de modelos em código por capacidade (`src/lib/ai/model-registry.ts`, `AiModelTarget { provider, model, protocol }` no primary e no fallback; 11 capacidades; defaults idênticos) + interface `AiModelResolver` (`src/lib/ai/model-resolver.ts`) + AI Gateway (`src/lib/ai/gateway.ts`, `invoke(capability, request, telemetry, target)` — alvo explícito, adapter por protocolo, uma tentativa, sem fallback automático) + adapters (`chat-completions`/`responses`/`images`/`gemini`) + `api-keys.ts` + telemetria obrigatória (`AiCallEnvelope` (`extends AiCallInfo`; legado intacto) com `capability`/`protocol`/`status`/`errorType?`; persistência best-effort) + remoção das 14 envs de modelo/provider + legado `campaign-intelligence` como `campaign_spec` (migration aditiva do CHECK `chk_generation_events_type`). **Sem mudança de UI/form/contrato HTTP/schema/snapshot/domínio/prompts.** Change B (catálogo/seleção admin) = F47.
 
@@ -34,7 +34,9 @@ progress:
 | 46-06 | 6 | ✅ | Gate global de arquitetura (SDK/wire + persistência manual) + inventário global de telemetria; `recordCall` de `generate-image` delivery-only (limpeza D9); Tasks 1/2 neutralizadas (antecipadas ao 46-04) — 275 files / 2719 testes, 4 gates verdes |
 | 46-07 | 7 | ✅ | Remoção das 14 env-vars de modelo/provider do runtime e `.env.example` + extensão do gate (env-var) + co-migração verificada + ordem de deploy (D5); `scripts/benchmark.ts` via registry — 275 files / 2720 testes, 4 gates verdes |
 | 46-08 | 8 | ✅ | Regressão completa + não-mudança do contrato externo + equivalência de defaults — 275 files / 2720 testes, 4 gates verdes, prompts sem drift |
-| 46-09 | 9 | ○ | Verificação final (VERIFICATION.md + UAT.md + registros/arquivamento) |
+| 46-09 | 9 | ✅ | Verificação final — `46-VERIFICATION.md` (goal-backward, passed) + `46-UAT.md` (UAT 8/8 PASS, achado do snapshot econômico corrigido em `529a69c5`) + registros atualizados e arquivamento preparado — 275 files / 2721 testes, 4 gates verdes |
+
+**F46 CONCLUÍDA — Gateway Único de IA e Registry de Modelos (v1.5, Change A) — 9/9 plans (9 waves), 275 files / 2721 testes, 4 gates verdes (vitest/typecheck/lint/build), UAT humano 8/8 PASS.** Registry de modelos por capacidade (`protocol` no primary e fallback; allowlist por capacidade+provider+modelo+protocolo; `primary ≠ fallback`) + interface assíncrona `AiModelResolver` + AI Gateway (`invoke(capability, request, telemetry, target)` — alvo explícito, adapter por protocolo, uma tentativa, um envelope por tentativa via sink) + adapters `chat-completions`/`responses`/`images`/`gemini` + `api-keys.ts` + telemetria obrigatória (`AiCallEnvelope extends AiCallInfo`; `usageMeta`; separação HTTP×domínio via `withDomainOutcome`) + correção dos 7 furos + migração behavior-preserving das 11 capacidades (texto/visão/imagem) + legado `campaign_spec` via gateway (migration aditiva do CHECK `chk_generation_events_type`, aplicada no remoto) + gate global de arquitetura + inventário de cobertura + remoção das 14 env-vars de modelo/provider (restam chaves + operacionais). **Sem mudança de UI/form/contrato HTTP/schema público/snapshot/domínio/prompts.** Fonte da verdade: `openspec/changes/fase-46-gateway-unico-de-ia-e-registry-de-modelos/`. Sucessora: **F47 (Catálogo e Seleção de Modelos Admin — Change B)**.
 
 **Fonte da verdade:** `openspec/changes/fase-46-gateway-unico-de-ia-e-registry-de-modelos/`
 **Context:** `.planning/phases/46-gateway-unico-de-ia-e-registry-de-modelos/46-CONTEXT.md`
