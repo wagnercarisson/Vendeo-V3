@@ -32,6 +32,17 @@ updated: 2026-09-12
 | Envs removidas (14) | grep `process.env.(<14 envs>)` em `src/` + `scripts/` | **0 ocorrências** |
 | `.env.example` | inspeção | apenas chaves (`OPENAI_API_KEY`, `GEMINI_API_KEY`) + operacionais — **nenhuma env de modelo/provider** |
 
+### Registro de Execução dos Gates (Task 2 — 2026-09-12)
+
+| Ordem | Comando | Exit | Resultado bruto |
+|---|---|---|---|
+| 1 | `npx vitest run` | 0 | `Test Files 275 passed (275)` / `Tests 2720 passed (2720)` — 34,19s |
+| 2 | `npm run typecheck` | 0 | `tsc -p tsconfig.typecheck.json --noEmit` — sem saída de erro |
+| 3 | `npm run lint` | 0 | `eslint .` — sem saída de erro |
+| 4 | `npm run build` | 0 | `next build` concluído + `check:cnae` incluído; rotas geradas |
+
+**Critérios da proposta (10/10) confirmados** na seção 4, com evidência concreta por critério. `46-VERIFICATION.md` marcado como `passed`.
+
 ---
 
 ## 2. Matriz Planos × Gates (fase completa)
