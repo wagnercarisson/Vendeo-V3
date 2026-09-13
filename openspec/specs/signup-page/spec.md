@@ -44,10 +44,10 @@ The signup form (`src/components/auth/signup-form.tsx`, restored/modernized from
   - "A senha deve ter no mínimo 8 caracteres"
   - "As senhas não conferem"
 - SHALL display a loading state during submission.
-- MUST include the reading of **Termos de Uso e Política de Privacidade** in an **informative/read-only modal** (`PrivacyAcknowledgeModal mode="informative"`, one per document) — no checkbox and no submit blocking; the legal terms appear as links with real href (`/termos`, `/privacidade`) whose normal click opens the modal for the corresponding document; the acknowledgement is declared by clicking "Criar conta", preceded by the microcopy "Ao clicar em Criar conta, você concorda com os Termos de Uso e declara ciência da Política de Privacidade do Vendeo.".
+- MUST include a **privacy acknowledgement** (modal `PrivacyAcknowledgeModal`): "Declaro ciência da Política de Privacidade." — submit blocked if not acknowledged.
 - MUST include a **communications consent checkbox** (opcional, LGPD): "Aceito receber comunicações comerciais do Vendeo." — does NOT block signup.
 - MUST display links para Privacidade e Termos na tela (D12).
-- **FLUXO (D2/D12):** No momento do signup o usuário NÃO tem sessão JWT (redirect para /check-email). Portanto: após `supabase.auth.signUp()` bem-sucedido, o client salva `{ privacyAcknowledged: true, communicationsOptIn: boolean }` em `localStorage` (chave `privacyPending`); o client NÃO chama o endpoint de privacidade agora (não há sessão autenticada). No primeiro acesso autenticado pós-confirmação, `PrivacyRecovery`/`PrivacyGate` processa a pendência e registra a ciência em `privacy_acknowledgements` e o opt-in em `consent_events`, com `userId` extraído via `requireUser()` — NUNCA do client body (previne spoofing).
+- **FLUXO (D2/D12):** No momento do signup o usuário NÃO tem sessão JWT (redirect para /check-email). Portanto: após `supabase.auth.signUp()` bem-sucedido, o client salva `{ privacyAcknowledged: true, communicationsOptIn: boolean }` em `sessionStorage`; o client NÃO chama o endpoint de privacidade agora (não há sessão autenticada). No primeiro acesso autenticado pós-confirmação, `PrivacyRecovery`/`PrivacyGate` processa a pendência e registra a ciência em `privacy_acknowledgements` e o opt-in em `consent_events`, com `userId` extraído via `requireUser()` — NUNCA do client body (previne spoofing).
 
 #### Scenario: Password too short (mín. 8)
 
@@ -64,37 +64,31 @@ The signup form (`src/components/auth/signup-form.tsx`, restored/modernized from
 - **WHEN** a user submits the signup form
 - **THEN** the submit button SHALL show a loading state and inputs SHALL be disabled
 
-#### Scenario: Signup without touching any privacy checkbox submits
+#### Scenario: Signup without privacy acknowledgement is blocked
 
-- **WHEN** user submits the signup form without interacting with any privacy checkbox
-- **THEN** the form SHALL submit to Supabase Auth and redirect to `/check-email?type=signup`
+- **WHEN** user submits the signup form without acknowledging the Privacy Policy (modal)
+- **THEN** the form SHALL display an error and NOT submit
 
-#### Scenario: Reading legal documents in the informative modal
+#### Scenario: Signup with privacy acknowledgement saves to sessionStorage
 
-- **WHEN** user clicks "Termos de Uso" or "Política de Privacidade"
-- **THEN** the informative modal SHALL open with the corresponding document, without checkbox and without confirmation button
-- **AND** the links SHALL keep href `/termos` and `/privacidade`
-
-#### Scenario: Signup saves privacyPending to localStorage
-
-- **WHEN** user submits the signup form (no privacy checkbox interaction required)
+- **WHEN** user submits the signup form with the privacy acknowledgement acknowledged (modal)
 - **THEN** the form SHALL submit to Supabase Auth
-- **AND** after `signUp` completes, `{ privacyAcknowledged: true, communicationsOptIn: boolean }` SHALL be saved to `localStorage` under the `privacyPending` key
+- **AND** after `signUp` completes, `{ privacyAcknowledged: true, communicationsOptIn: boolean }` SHALL be saved to `sessionStorage`
 - **AND** `POST /api/legal/acknowledge-privacy` SHALL NOT be called (no JWT session exists)
 - **AND** the redirect to `/check-email` SHALL occur (existing behavior, unchanged)
 
 #### Scenario: On first authenticated access, pending privacy is processed
 
 - **WHEN** the user accesses the app for the first time after email confirmation
-- **AND** `localStorage` contains a pending privacy acknowledgement (`privacyPending`)
+- **AND** `sessionStorage` contains a pending privacy acknowledgement
 - **THEN** `POST /api/legal/acknowledge-privacy` SHALL be called with `{ communicationsOptIn: boolean }`
 - **AND** `userId` SHALL be derived from `requireUser()` (not from client body)
 - **AND** if the call succeeds, the privacy acknowledgement SHALL be registered
 
-#### Scenario: First authenticated access without pending privacy but no privacy record
+#### Scenario: First authenticated access without sessionStorage but no privacy record
 
 - **WHEN** the user accesses the app after email confirmation
-- **AND** `localStorage` has no pending privacy acknowledgement
+- **AND** `sessionStorage` has no pending privacy acknowledgement
 - **AND** `hasValidPrivacyAcknowledgement(userId)` returns false
 - **THEN** the system SHALL display a pending notification requiring acknowledgement
 
@@ -102,7 +96,7 @@ The signup form (`src/components/auth/signup-form.tsx`, restored/modernized from
 
 - **WHEN** user submits the signup form without checking communications consent
 - **THEN** the form SHALL submit successfully (no error for this checkbox)
-- **AND** `localStorage` SHALL contain `communicationsOptIn: false`
+- **AND** `sessionStorage` SHALL contain `communicationsOptIn: false`
 - **AND** on first authenticated access, `POST /api/legal/acknowledge-privacy` SHALL NOT register a communications consent event
 
 ### Requirement: Signup calls signUp with emailRedirectTo and captchaToken
@@ -111,14 +105,14 @@ The signup form SHALL call `supabase.auth.signUp({ email, password, options: { e
 
 - `captchaToken` obtido do componente reutilizável `captcha-field` (D3).
 - `getSiteUrl()` continua exigindo `NEXT_PUBLIC_SITE_URL` (contrato formalizado) — `src/lib/supabase/site-url.ts`.
-- O consentimento (communicationsOptIn) NÃO é evidência legal em `user_metadata`; é persistido em `localStorage`/`privacyPending` e registrado autenticado em `consent_events`/`privacy_acknowledgements` (D12).
+- O consentimento (communicationsOptIn) NÃO é evidência legal em `user_metadata`; é persistido em `sessionStorage`/`privacyPending` e registrado autenticado em `consent_events`/`privacy_acknowledgements` (D12).
 - `minimum_password_length = 8` no Supabase (`supabase/config.toml`) — paridade (D13).
 
 #### Scenario: signUp sends emailRedirectTo and captchaToken
 
 - **WHEN** the user submits the signup form with a valid captcha token
 - **THEN** `supabase.auth.signUp` is called with `emailRedirectTo: "${getSiteUrl()}/auth/confirm"` and `captchaToken`
-- **AND** `privacyPending`/consent choice is saved to `localStorage`
+- **AND** `privacyPending`/consent choice is saved to `sessionStorage`
 
 #### Scenario: Signup without captcha token is blocked
 

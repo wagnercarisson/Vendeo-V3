@@ -150,13 +150,13 @@ O sistema SHALL exigir o **PrivacyGate existente** (`src/components/legal/privac
 
 O sistema SHALL registrar a ciência da Política de Privacidade do caminho email/senha **na primeira autenticação pós-confirmação** — **não "na criação"** (sem sessão no momento do signup) — D2/D12.
 
-- No signup, o usuário **lê** Termos de Uso e/ou Política de Privacidade em modal informativo (`PrivacyAcknowledgeModal mode="informative"`, sem checkbox) e, ao clicar em "Criar conta", o estado `privacyPending` (`{ privacyAcknowledged: true, communicationsOptIn }`) é salvo em **localStorage**; o modal não exige checkbox nem bloqueia o submit.
+- No signup, o usuário declara ciência (modal `PrivacyAcknowledgeModal`) e o estado `privacyPending`/consentimento é salvo em `sessionStorage` (padrão original).
 - Após a confirmação de email, no primeiro acesso autenticado, o `PrivacyRecovery`/PrivacyGate processa a pendência e registra a ciência autenticada em `privacy_acknowledgements` e o opt-in em `consent_events`.
 - O endpoint de registro usa `requireUser()` (userId de `claims.sub`) — nunca do client body (padrão existente).
 
 #### Scenario: Ciência declarada no signup e registrada após confirmação
 
-- **WHEN** o usuário cria conta email/senha após ler os documentos legais em modal informativo (clique em "Criar conta")
+- **WHEN** o usuário cria conta email/senha declarando ciência da Privacidade
 - **AND** confirma o email e faz o primeiro acesso autenticado
 - **THEN** a ciência é registrada autenticada em `privacy_acknowledgements` (pós-confirmação)
 - **AND** o opt-in comercial (se concedido) é registrado em `consent_events`
