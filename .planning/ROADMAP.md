@@ -3,7 +3,7 @@
 ## Milestone v1.5 — Lançamento Externo Controlado ◆
 
 **18 phases** | **177 requirements mapped** | All covered ✓
-**Phase numbering:** Continues from v1.4 (Phase 22). F37 = Revisão e Aprovação da Arte (v1.5, concluída em fatias 37.1/37.2; 37.1 concluída; **37.2 realinhada = Correção Única por Não Conformidade** CONCLUÍDA (19/19 plans, 4 gates verdes, UAT 9/9); **37.3 eliminada** — consolidada na 37.2), F38 = Tabela de Custos por Operação, F39 = Brief Estruturado de Campanha, F40 = Campos Comerciais e Avisos do Brief, F41 = Mídia de Campanha Mobile, F42 = Signup Controlado e Elegibilidade Freemium, F43 = Revisão do Brief Pré-Geração e F45 = Briefing Contextual do Diretor de Arte (concluída em 2026-09-05), **F46 = Gateway Único de IA e Registry de Modelos (v1.5, Change A — em planejamento)** e **F47 = Catálogo e Seleção de Modelos Admin (v1.5, Change B — sucessora da F46)**. F44 = Temas de Campanha permanece fora da numeração; Monetização pública / Stripe permanece diferida e fora da numeração. Fonte da F37.1: `openspec/changes/fase-37-1-approval-gate-candidata-unica/`; fonte da F37.2: `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/`; fonte da F46: `openspec/changes/fase-46-gateway-unico-de-ia-e-registry-de-modelos/`.
+**Phase numbering:** Continues from v1.4 (Phase 22). F37 = Revisão e Aprovação da Arte (v1.5, concluída em fatias 37.1/37.2; 37.1 concluída; **37.2 realinhada = Correção Única por Não Conformidade** CONCLUÍDA (19/19 plans, 4 gates verdes, UAT 9/9); **37.3 eliminada** — consolidada na 37.2), F38 = Tabela de Custos por Operação, F39 = Brief Estruturado de Campanha, F40 = Campos Comerciais e Avisos do Brief, F41 = Mídia de Campanha Mobile, F42 = Signup Controlado e Elegibilidade Freemium, F43 = Revisão do Brief Pré-Geração e F45 = Briefing Contextual do Diretor de Arte (concluída em 2026-09-05), **F46 = Gateway Único de IA e Registry de Modelos (v1.5, Change A — CONCLUÍDA em 2026-09-13, 9/9 plans, 275 files / 2721 testes, 4 gates verdes, UAT 8/8 PASS)** e **F47 = Catálogo e Seleção de Modelos Admin (v1.5, Change B — sucessora da F46)**. F44 = Temas de Campanha permanece fora da numeração; Monetização pública / Stripe permanece diferida e fora da numeração. Fonte da F37.1: `openspec/changes/fase-37-1-approval-gate-candidata-unica/`; fonte da F37.2: `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/`; fonte da F46: `openspec/changes/archive/2026-09-13-fase-46-gateway-unico-de-ia-e-registry-de-modelos/`.
 
 ---
 
@@ -42,7 +42,7 @@
 | 42 | ✅ Signup Controlado e Elegibilidade Freemium (v1.5) | 20/20 | ✅ Complete | 2026-08-21 |
 | 43 | ✅ Revisão do Brief Pré-Geração (v1.5) | 15/15 | ✅ Complete | 2026-08-21 |
 | 45 | ✅ Briefing Contextual do Diretor de Arte (v1.5) | 8/8 | ✅ Complete | 2026-09-05 |
-| 46 | ◆ Gateway Único de IA e Registry de Modelos (v1.5) | 0/9 | ◆ Em planejamento | — |
+| 46 | ✅ Gateway Único de IA e Registry de Modelos (v1.5) | 9/9 | ✅ Complete | 2026-09-13 |
 | — | Monetização pública / Stripe (iniciativa diferida, v1.7+) | — | Fora da numeração | — |
 
 ---
@@ -985,7 +985,7 @@ Plans:
 
 **Dependencies:** F38/F38.1/F38.2.1 (custos de IA — `AiCostTracker`, `resolveAiCost`, `cost-estimator`, snapshot econômico), F23/F25 (Text Provider + Copy Director + fallback Gemini; pipeline), F31.x (prompts/revisor — consumidores de visão), F41 (multi-imagem — fallback `images.edit`). Precedente de migration: F37.2 `20260906000003_f37_2_generation_events_type.sql`. **Antecede** a F47 (Catálogo e Seleção de Modelos Admin — Change B). **Sem** UI/form/rota/schema/snapshot/domínio/prompts, **sem** novas tabelas (apenas extensão do CHECK de telemetria), **sem** remover `campaign-intelligence`, **sem** streaming.
 
-**Source of truth:** `openspec/changes/fase-46-gateway-unico-de-ia-e-registry-de-modelos/`
+**Source of truth:** `openspec/changes/archive/2026-09-13-fase-46-gateway-unico-de-ia-e-registry-de-modelos/`
 
 **Plans:** 9/9 plans complete
 **Waves:** 9 waves (DAG serializado por `depends_on`, legível pela ferramenta) — 46-01:1, 46-02:2 (dep 46-01), 46-03:3 (dep 46-02), 46-04:4 (dep 46-03), 46-05:5 (dep 46-04), 46-06:6 (dep 46-05), 46-07:7 (dep 46-06), 46-08:8 (dep 46-07), 46-09:9 (dep 46-08). A serialização elimina conflitos de arquivos compartilhados (`generate-image/route.ts`, `server-actions.ts`) e a dependência do gate de env-vars.
@@ -1108,7 +1108,7 @@ Phase 39 (Brief Estruturado de Campanha — v1.5)
                                           Phase 45 (Briefing Contextual do Diretor de Arte — v1.5) ✅ concluída (8/8, UAT comparativo 7/7 PASS + artes reais aprovadas)
                                                   │
                                                   ▼
-                                         Phase 46 (Gateway Único de IA e Registry de Modelos — v1.5, Change A) ◆ em planejamento
+                                         Phase 46 (Gateway Único de IA e Registry de Modelos — v1.5, Change A) ✅ concluída (9/9, UAT 8/8 PASS)
                                                   │
                                                   ▼
                                          Phase 47 (Catálogo e Seleção de Modelos Admin — v1.5, Change B) ○ pendente (consome o seam AiModelResolver)

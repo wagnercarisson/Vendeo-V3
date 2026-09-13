@@ -202,16 +202,16 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - **Fonte da verdade (arquivada):** `openspec/changes/archive/2026-09-05-fase-45-briefing-contextual-do-diretor-de-arte/`
   - **Status:** 8/8 plans, 2427 testes (253 files), 4 gates verdes, UAT comparativo antes×depois PASS (7/7) + artes reais aprovadas como publicáveis (45-08)
 
-- [ ] Phase 46: Gateway Único de IA e Registry de Modelos (em planejamento — Change A; 9 plans previstos)
+- [x] Phase 46: Gateway Único de IA e Registry de Modelos (complete — Change A; 9/9 plans, 275 files / 2721 testes, 4 gates verdes, UAT 8/8 PASS)
   - **Registry de modelos em código** (`src/lib/ai/model-registry.ts`) por capacidade com `AiModelTarget = { provider, model, protocol }` no primary **e** no fallback (11 capacidades; defaults idênticos: gpt-4o, gpt-4o-mini, gpt-5.5, gpt-image-2; `campaign_copy.fallback = gemini-3.1-flash-lite` como default inicial); interface **`AiModelResolver`** (`src/lib/ai/model-resolver.ts`) como seam para o Change B
   - **AI Gateway** (`src/lib/ai/gateway.ts`): `invoke(capability, request, telemetry, target)` — alvo explícito do orquestrador, adapter pelo `protocol` do alvo (`chat-completions`/`responses`/`images`/`gemini`), **uma tentativa** sem fallback automático, usage normalizado, **um envelope de telemetria por tentativa real** via sink injetável; `api-keys.ts` (chave por provider, fail-fast); `ImageProvider` mantida como seam interno delegando ao gateway
   - **Telemetria obrigatória e correta**: `AiCallEnvelope` (`extends AiCallInfo`; `AiCallInfo` legado intacto) com `capability`/`protocol`/`status`/`errorType?`, persistência best-effort (`AiCostTracker` fail-open); correção dos 7 furos — modelo real em validation/review, `onCall` em todos os callers produtivos (logo, retry-brand-director, server-actions, approve, restore), fallback `images.edit` registrado sem usage, componente da tool em `campaign_image` **e** `visual_signature_image`
   - **Remoção das 14 env-vars de modelo/provider** do runtime e `.env.example` (restam chaves + operacionais); ordem de deploy (código lê só chaves → remoção na Vercel)
   - **Legado `campaign-intelligence`** como capacidade `campaign_spec` (default `gpt-4o-mini`) via gateway; migration mínima idempotente/aditiva estende o CHECK `chk_generation_events_type` + `GenerationEventType` com `campaign_spec`
   - **Sem mudança de superfície externa:** UI/form, contrato HTTP, schema público, snapshot/domínio e prompts inalterados; **sem** novas tabelas (apenas extensão do CHECK), **sem** remover o legado, **sem** streaming
-  - **Fonte da verdade:** `openspec/changes/fase-46-gateway-unico-de-ia-e-registry-de-modelos/`
+  - **Fonte da verdade:** `openspec/changes/archive/2026-09-13-fase-46-gateway-unico-de-ia-e-registry-de-modelos/`
   - **Dependências:** F38/F38.1/F38.2.1 (custos/telemetria), F23/F25 (texto/pipeline), F31.x (prompts/revisor), F41 (multi-imagem) — antecede a F47 (Catálogo e Seleção de Modelos Admin, Change B)
-  - **Status:** 0/9 plans — em planejamento (Change A)
+  - **Status:** 9/9 plans — concluída (Change A; 275 files / 2721 testes, 4 gates verdes, UAT 8/8 PASS; achado do snapshot econômico corrigido em `529a69c5`)
 </details>
 
 ## Progress

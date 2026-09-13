@@ -12,6 +12,8 @@ Core image generation pipeline: orchestrates prompt assembly, model invocation, 
 > Modified by `fase-45-briefing-contextual-do-diretor-de-arte` (F45 — Briefing Contextual do Diretor de Arte, v1.5, concluída 2026-09-05): a montagem do prompt do diretor passa a ser **contextual por blocos** (ver capability `art-director-contextual-briefing`). O texto interno do prompt do diretor e o conjunto de chaves de montagem **mudam intencionalmente** (D5); a **superfície externa** permanece inalterada (contrato HTTP/schema/snapshot/domínio, UI/form, Copy Director e comportamento percebido pelo lojista). A preservação da **intenção/qualidade visual** é alvo da fase (regras de conteúdo + UAT humano comparativo), não uma garantia formal de resultado visual idêntico. Requisitos supersedidos de paridade/reframe textual foram REMOVED (paridade de keys → invariantes; reframe condicional F40 e bloco 1+N F41 → seções/blocos da capability nova).
 > Modified by `fase-37-2-correcao-unica-por-nao-conformidade` (ADDED): hook aditivo opcional `onBeforeImageProviderCall` (consumo da oportunidade no fluxo corretivo), bloco único de não conformidade na montagem do prompt da v2 (sem editar os `.md`), `input_validation` `skipped` via `brief_review_confirmed` (F43), e eventos da v2 no mesmo `operation_run_id` (sem nova operação financeira). A rota `generate-image` e o comportamento default permanecem inalterados.
 
+> Modified by `fase-46-gateway-unico-de-ia-e-registry-de-modelos` (MODIFIED/ADDED): provider e modelo resolvidos pelo registry; execução via gateway; fallback `images.edit` com dois gatilhos legítimos; telemetria de imagem com modelo real e componente da tool.
+
 ## Requirements
 
 ### Requirement: ImageGenerationService orchestrates AI-native image generation
@@ -415,27 +417,35 @@ The `onMetricsEvent` callback SHALL NOT be exposed to the UI. It SHALL be consum
 
 ### Requirement: Image provider selectable via environment variable
 
-The `POST /api/campaign/generate-image` route handler SHALL use `createImageProvider()` factory function instead of directly instantiating `OpenAIImageProvider`. The factory SHALL read the `IMAGE_PROVIDER` environment variable and return the appropriate `ImageProvider` implementation.
+O provider de imagem SHALL ser resolvido pelo **registry** a partir da capacidade (`campaign_image`/`visual_signature_image`), e não pela env-var `IMAGE_PROVIDER`. O `POST /api/campaign/generate-image` SHALL obter o provider via gateway, sem instanciar `OpenAIImageProvider` diretamente. A interface `ImageProvider` SHALL permanecer como contrato interno durante a migração.
 
-The existing `ImageProvider` interface SHALL remain unchanged.
+#### Scenario: Route handler usa o gateway
 
-#### Scenario: Route handler uses factory
+- **WHEN** uma requisição chega ao endpoint generate-image
+- **THEN** a rota executa a geração via gateway/registry
+- **AND** não lê `IMAGE_PROVIDER` nem instancia uma classe de provider concreta
 
-- **WHEN** a request hits the generate-image endpoint
-- **THEN** the route SHALL call `createImageProvider()` to obtain the configured provider
-- **AND** SHALL NOT hardcode a specific provider class
+#### Scenario: Provider resolvido pelo registry
+
+- **WHEN** a capacidade `campaign_image` é resolvida
+- **THEN** o provider é `openai` por padrão (valor atual preservado)
+- **AND** a troca de provider passa a ser responsabilidade do registry (Change B: seleção admin)
 
 ### Requirement: Image model configurable via environment variable
 
-The image generation model SHALL be configurable via `IMAGE_GENERATION_RESPONSES_MODEL` in `.env.local`. The existing default (`gpt-5.5`) SHALL be preserved.
+O modelo de geração de imagem SHALL ser resolvido pelo **registry**, com default `gpt-5.5` (preservado), e o modelo de visão de validação/revisão com default `gpt-4o` (preservado), sem env-vars dedicadas (`IMAGE_GENERATION_RESPONSES_MODEL`, `VISION_REVIEW_MODEL`, `IMAGE_VALIDATION_MODEL`). O fallback de edição usa `gpt-image-2` por padrão (preservado).
 
-The vision review model (`VISION_REVIEW_MODEL`) SHALL remain separately configurable via its existing env var. No provider abstraction is required for the vision model at this stage.
+#### Scenario: Modelo de imagem resolvido pelo registry
 
-#### Scenario: Image model changed via env var
+- **WHEN** a capacidade `campaign_image` é resolvida
+- **THEN** o modelo é `gpt-5.5` por padrão
+- **AND** não depende de `IMAGE_GENERATION_RESPONSES_MODEL`
 
-- **WHEN** `IMAGE_GENERATION_RESPONSES_MODEL=gpt-5.5-preview`
-- **THEN** the image generation SHALL use the specified model
-- **AND** the vision review SHALL continue using `VISION_REVIEW_MODEL`
+#### Scenario: Modelo de visão distinto e correto
+
+- **WHEN** `campaign_image_review` e `campaign_input_validation` são resolvidas
+- **THEN** o modelo é `gpt-4o` por padrão
+- **AND** `visual_signature_validation` mantém `gpt-4o-mini`
 
 ### Requirement: Client consumes NDJSON stream with line buffering
 
@@ -893,3 +903,68 @@ O sistema SHALL registrar os eventos call-level da geração da v2 **sob o mesmo
 - **WHEN** a v2 é gerada
 - **THEN** os eventos call-level usam o `operation_run_id` persistido da campanha original
 - **AND** nenhuma nova `credit_transactions`/`operation_key` é criada
+
+### Requirement: Execução de imagem via gateway com fallback preservado
+
+A geração de imagem SHALL ser executada pela camada única de invocação (gateway), que seleciona o adapter pelo `protocol` da capacidade: `responses` com a tool `image_generation` como caminho primário. O gateway executa **uma tentativa** e **não decide o fallback**: quando há imagem primária, o **serviço orquestrador** faz uma **segunda `invoke` explícita** (capacidade `campaign_image_edit`, protocolo `images` → `images.edit`). Existem exatamente **dois gatilhos legítimos** do fallback `images.edit`:
+
+1. **Retry explícito** — a tentativa corrente é uma retentativa (`attempt >= 1`) e há imagem primária;
+2. **Erro de capability do Responses** — a tool/modelo `image_generation` não está disponível **ou a resposta da tool não trouxe imagem** (classificada como falha de capability) e há imagem primária.
+
+Erros de autenticação, safety/content_filter e rate-limit/quota **NÃO** acionam o fallback (propagam). O envio determinístico das referências (primary, auxiliares, identidade) e o tamanho/qualidade SHALL ser preservados. Uma falha no Responses seguida de sucesso no Images representa **duas chamadas reais e dois envelopes de telemetria**, nunca um.
+
+#### Scenario: Caminho primário via Responses API
+
+- **WHEN** a geração de imagem é executada sem erro de capacidade
+- **THEN** usa o adapter `responses` com a tool `image_generation`
+- **AND** o tamanho e a qualidade atuais são preservados
+
+#### Scenario: Resposta da tool image_generation sem imagem é falha de capability
+
+- **WHEN** a Responses API responde sem arte para a tool `image_generation`
+- **THEN** o adapter classifica a resposta como **falha de capability** (não sucesso sem arte)
+- **AND** o gateway emite um envelope `failed`; o orquestrador pode acionar o gatilho (2)
+
+#### Scenario: Gatilho 1 — retry explícito
+
+- **WHEN** a tentativa corrente é uma retentativa (`attempt >= 1`) e existe imagem primária
+- **THEN** o orquestrador usa diretamente o adapter `images` (`images.edit`)
+
+#### Scenario: Gatilho 2 — erro de capability do Responses
+
+- **WHEN** a Responses API falha por capacidade (ou retorna sem imagem) e existe imagem primária
+- **THEN** o orquestrador faz uma segunda `invoke` explícita (capacidade `campaign_image_edit`, protocolo `images`) com as referências em ordem determinística
+- **AND** o comportamento é equivalente ao atual, com **dois envelopes de telemetria** (falha + fallback)
+
+#### Scenario: Auth/safety/rate-limit não acionam o fallback
+
+- **WHEN** a falha é de autenticação, content filter/safety ou rate-limit/quota
+- **THEN** o fallback `images.edit` NÃO é acionado
+- **AND** o erro propaga
+
+### Requirement: Telemetria de imagem com modelo real e componente da tool
+
+A execução de imagem SHALL emitir **um envelope de telemetria por tentativa real** com o modelo real usado (mainline `gpt-5.5` no caminho Responses; `gpt-image-2` no fallback de edição) e SHALL marcar o uso da tool `image_generation` para que a **estimativa** inclua o componente da tool quando aplicável — em `campaign_image` **e** `visual_signature_image`.
+
+#### Scenario: Evento de imagem registra o modelo do caminho usado
+
+- **WHEN** a geração usa o caminho Responses (gpt-5.5) ou o fallback de edição (gpt-image-2)
+- **THEN** o evento registra o modelo efetivamente usado
+- **AND** a estimativa é resolvida com o pricing correspondente
+
+#### Scenario: Fallback produz dois eventos
+
+- **WHEN** a chamada primária falha e o fallback de edição tem sucesso
+- **THEN** dois eventos call-level são gravados (falha + sucesso)
+- **AND** cada um registra o seu próprio modelo
+
+#### Scenario: Usage da Images API é normalizado; ausência é explícita
+
+- **WHEN** o fallback `images.edit` retorna `usage` da Images API
+- **THEN** o usage é normalizado (input/output/total + detalhes text/image)
+- **AND** quando ausente, permanece explícito (`usage` undefined + `providerUsageSource: "images.edit"`), nunca zeros
+
+#### Scenario: Custo da tool image_generation mesmo sem usage
+
+- **WHEN** a tool `image_generation` é usada (`campaign_image`/`visual_signature_image`) mas a Responses API não retorna `usage`
+- **THEN** a estimativa ainda inclui o componente por unidade da tool (estimativa parcial, `textComponentUsd = 0` e nota `provisional_image_tool_unit_cost_without_text_usage`)
