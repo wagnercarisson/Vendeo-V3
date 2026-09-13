@@ -266,7 +266,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 42. Signup Controlado e Elegibilidade Freemium | v1.5 | 20/20 | ✅ Complete | 2026-08-21 |
 | 43. Revisão do Brief Pré-Geração | v1.5 | 15/15 | ✅ Complete | 2026-08-21 |
 | 45. Briefing Contextual do Diretor de Arte | v1.5 | 8/8 | ✅ Complete | 2026-09-05 |
-| 46. Gateway Único de IA e Registry de Modelos | v1.5 | 7/9 | ◆ In Progress | — |
+| 46. Gateway Único de IA e Registry de Modelos | v1.5 | 8/9 | ◆ In Progress | — |
 | —. Monetização pública / Stripe (diferida, v1.7+) | v1.7 | — | Fora da numeração | — |
 
 ---
