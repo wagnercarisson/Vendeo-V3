@@ -10,29 +10,19 @@ interface LegalDocumentInfo {
   url: string;
 }
 
-interface BaseModalProps {
+interface PrivacyAcknowledgeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onConfirm: () => Promise<boolean>;
   policyDocument: LegalDocumentInfo;
 }
 
-interface AcknowledgeProps extends BaseModalProps {
-  mode?: "acknowledge";
-  onConfirm: () => Promise<boolean>;
-}
-
-interface InformativeProps extends BaseModalProps {
-  mode: "informative";
-  onConfirm?: never;
-}
-
-export type PrivacyAcknowledgeModalProps = AcknowledgeProps | InformativeProps;
-
-export function PrivacyAcknowledgeModal(props: PrivacyAcknowledgeModalProps) {
-  const { open, onOpenChange, policyDocument } = props;
-  const isInformative = props.mode === "informative";
-  const onConfirm = props.mode === "informative" ? undefined : props.onConfirm;
-
+export function PrivacyAcknowledgeModal({
+  open,
+  onOpenChange,
+  onConfirm,
+  policyDocument,
+}: PrivacyAcknowledgeModalProps) {
   const [checked, setChecked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +32,6 @@ export function PrivacyAcknowledgeModal(props: PrivacyAcknowledgeModalProps) {
   if (!open) return null;
 
   const handleConfirm = async () => {
-    if (!onConfirm) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -118,55 +107,43 @@ export function PrivacyAcknowledgeModal(props: PrivacyAcknowledgeModalProps) {
         )}
 
         {/* Actions */}
-        {isInformative ? (
-          <div className="px-6 py-4 border-t border-border shrink-0">
+        <div className="px-6 py-4 border-t border-border shrink-0 space-y-3">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={checked}
+              onChange={(e) => setChecked(e.target.checked)}
+              disabled={submitting}
+              className="mt-0.5 h-4 w-4 rounded border-border-light accent-accent-blue shrink-0"
+            />
+            <span className="text-sm text-text-primary font-body">
+              Li e declaro ciência integral da {policyDocument.label} {policyDocument.version}.
+            </span>
+          </label>
+          <div className="flex gap-3">
             <button
               type="button"
               onClick={handleClose}
-              className="w-full px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200"
+              disabled={submitting}
+              className="flex-1 px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 disabled:opacity-50"
             >
-              Fechar
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirm}
+              disabled={!checked || submitting || !documentLoaded}
+              className="flex-1 px-4 py-2.5 bg-accent-blue text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {submitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
+              Confirmar ciência
             </button>
           </div>
-        ) : (
-          <div className="px-6 py-4 border-t border-border shrink-0 space-y-3">
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={checked}
-                onChange={(e) => setChecked(e.target.checked)}
-                disabled={submitting}
-                className="mt-0.5 h-4 w-4 rounded border-border-light accent-accent-blue shrink-0"
-              />
-              <span className="text-sm text-text-primary font-body">
-                Li e declaro ciência integral da {policyDocument.label} {policyDocument.version}.
-              </span>
-            </label>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={handleClose}
-                disabled={submitting}
-                className="flex-1 px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200 disabled:opacity-50"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirm}
-                disabled={!checked || submitting || !documentLoaded}
-                className="flex-1 px-4 py-2.5 bg-accent-blue text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {submitting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Check className="h-4 w-4" />
-                )}
-                Confirmar ciência
-              </button>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );
