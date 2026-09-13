@@ -10,9 +10,8 @@ import {
   CommunicationsConsentModal,
 } from "@/components/legal/communications-consent-modal";
 import { buildDocumentInfo } from "@/lib/legal/document-content";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, MouseEvent } from "react";
 import { Mail, Lock, Loader2 } from "lucide-react";
 
 interface LegalDocumentInfo {
@@ -21,31 +20,45 @@ interface LegalDocumentInfo {
   url: string;
 }
 
-interface PrivacyPending {
-  privacyAcknowledged: boolean;
-  communicationsOptIn: boolean;
-}
-
 interface SignupFormProps {
   captchaEnabled: boolean;
   policyDocument?: LegalDocumentInfo | null;
+  termsDocument?: LegalDocumentInfo | null;
 }
 
 const GENERIC_ERROR = "Não foi possível concluir. Tente novamente.";
 
-export function SignupForm({ captchaEnabled, policyDocument }: SignupFormProps) {
+export function SignupForm({
+  captchaEnabled,
+  policyDocument,
+  termsDocument,
+}: SignupFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [captchaResetKey, setCaptchaResetKey] = useState(0);
-  const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [legalDoc, setLegalDoc] = useState<LegalDocumentInfo | null>(null);
   const [communicationsOpen, setCommunicationsOpen] = useState(false);
-  const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
   const [communicationsOptIn, setCommunicationsOptIn] = useState(false);
 
+  const privacyDoc =
+    policyDocument ??
+    buildDocumentInfo("privacy_policy", "v1.3") ?? {
+      label: "Política de Privacidade",
+      version: "v1.3",
+      url: "/docs/legal/privacy-policy-v1-3.md",
+    };
+  const termsDoc =
+    termsDocument ??
+    buildDocumentInfo("terms_of_service", "v1.4") ?? {
+      label: "Termos de Uso",
+      version: "v1.4",
+      url: "/docs/legal/terms-of-service-v1-4.md",
+    };
+
   function setPrivacyPending() {
-    const pending: PrivacyPending = {
+    const pending = {
       privacyAcknowledged: true,
       communicationsOptIn,
     };
@@ -57,14 +70,22 @@ export function SignupForm({ captchaEnabled, policyDocument }: SignupFormProps) 
     }
   }
 
+  function openLegalDoc(
+    e: MouseEvent<HTMLAnchorElement>,
+    doc: LegalDocumentInfo,
+  ) {
+    // Clique normal abre o modal informativo; modifier-click / botão != 0
+    // preserva o href (abrir em nova aba, copiar link).
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) {
+      return;
+    }
+    e.preventDefault();
+    setLegalDoc(doc);
+  }
+
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-
-    if (!privacyAcknowledged) {
-      setPrivacyOpen(true);
-      return;
-    }
 
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email") as string;
@@ -187,55 +208,24 @@ export function SignupForm({ captchaEnabled, policyDocument }: SignupFormProps) 
           </div>
         </div>
 
-        <div className="space-y-2 text-sm">
-          <label className="flex items-start gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={privacyAcknowledged}
-              onChange={(e) => setPrivacyAcknowledged(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-slate-600 bg-slate-800 accent-blue-600"
-            />
-            <span className="text-slate-300">
-              Li e declaro ciência integral da Política de Privacidade.{" "}
-              <button
-                type="button"
-                onClick={() => setPrivacyOpen(true)}
-                className="text-blue-400 hover:text-blue-300 hover:underline"
-              >
-                Ler antes de confirmar
-              </button>
-            </span>
-          </label>
-          <label className="flex items-start gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={communicationsOptIn}
-              onChange={(e) => setCommunicationsOptIn(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-slate-600 bg-slate-800 accent-blue-600"
-            />
-            <span className="text-slate-300">
-              Quero receber comunicações comerciais (opcional).{" "}
-              <button
-                type="button"
-                onClick={() => setCommunicationsOpen(true)}
-                className="text-blue-400 hover:text-blue-300 hover:underline"
-              >
-                Saiba mais
-              </button>
-            </span>
-          </label>
-          <p className="text-xs text-slate-400">
-            Ao criar sua conta você concorda com os{" "}
-            <Link href="/termos" target="_blank" className="text-blue-400 hover:text-blue-300 hover:underline">
-              Termos de Uso
-            </Link>{" "}
-            e a{" "}
-            <Link href="/privacidade" target="_blank" className="text-blue-400 hover:text-blue-300 hover:underline">
-              Política de Privacidade
-            </Link>
-            .
-          </p>
-        </div>
+        <label className="flex items-start gap-2 cursor-pointer text-sm">
+          <input
+            type="checkbox"
+            checked={communicationsOptIn}
+            onChange={(e) => setCommunicationsOptIn(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-slate-600 bg-slate-800 accent-blue-600"
+          />
+          <span className="text-slate-300">
+            Quero receber comunicações comerciais (opcional).{" "}
+            <button
+              type="button"
+              onClick={() => setCommunicationsOpen(true)}
+              className="text-blue-400 hover:text-blue-300 hover:underline"
+            >
+              Saiba mais
+            </button>
+          </span>
+        </label>
 
         {error && (
           <p className="text-sm text-red-400">{error}</p>
@@ -248,6 +238,26 @@ export function SignupForm({ captchaEnabled, policyDocument }: SignupFormProps) 
             hint={CAPTCHA_HINT_TEXT}
           />
         )}
+
+        <p className="text-xs text-slate-400">
+          Ao clicar em Criar conta, você concorda com os{" "}
+          <a
+            href="/termos"
+            onClick={(e) => openLegalDoc(e, termsDoc)}
+            className="text-blue-400 hover:text-blue-300 hover:underline"
+          >
+            Termos de Uso
+          </a>{" "}
+          e declara ciência da{" "}
+          <a
+            href="/privacidade"
+            onClick={(e) => openLegalDoc(e, privacyDoc)}
+            className="text-blue-400 hover:text-blue-300 hover:underline"
+          >
+            Política de Privacidade
+          </a>{" "}
+          do Vendeo.
+        </p>
 
         <button
           type="submit"
@@ -263,21 +273,16 @@ export function SignupForm({ captchaEnabled, policyDocument }: SignupFormProps) 
         </button>
       </form>
 
-      <PrivacyAcknowledgeModal
-        open={privacyOpen}
-        onOpenChange={setPrivacyOpen}
-        onConfirm={async () => {
-          setPrivacyAcknowledged(true);
-          return true;
-        }}
-        policyDocument={
-          policyDocument ?? buildDocumentInfo("privacy_policy", "v1.3") ?? {
-            label: "Política de Privacidade",
-            version: "v1.3",
-            url: "/docs/legal/privacy-policy-v1-3.md",
-          }
-        }
-      />
+      {legalDoc && (
+        <PrivacyAcknowledgeModal
+          mode="informative"
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setLegalDoc(null);
+          }}
+          policyDocument={legalDoc}
+        />
+      )}
       <CommunicationsConsentModal
         open={communicationsOpen}
         onOpenChange={setCommunicationsOpen}

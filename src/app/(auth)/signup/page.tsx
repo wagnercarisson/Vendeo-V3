@@ -19,10 +19,16 @@ export default async function SignupPage() {
   const captchaEnabled = await isCaptchaEnabled();
 
   let policyDocument: ReturnType<typeof buildDocumentInfo> = null;
+  let termsDocument: ReturnType<typeof buildDocumentInfo> = null;
   if (publicSignupEnabled) {
     const privacyVersion = await getCurrentVersion("privacy_policy");
     policyDocument = privacyVersion
       ? buildDocumentInfo("privacy_policy", privacyVersion.version)
+      : null;
+
+    const termsVersion = await getCurrentVersion("terms_of_service");
+    termsDocument = termsVersion
+      ? buildDocumentInfo("terms_of_service", termsVersion.version)
       : null;
   }
 
@@ -80,7 +86,11 @@ export default async function SignupPage() {
           <div className="h-px flex-1 bg-slate-700" />
         </div>
 
-        <SignupForm captchaEnabled={captchaEnabled} policyDocument={policyDocument} />
+        <SignupForm
+          captchaEnabled={captchaEnabled}
+          policyDocument={policyDocument}
+          termsDocument={termsDocument}
+        />
 
         <p className="mt-4 text-center text-sm text-slate-400">
           Já tenho uma conta —{" "}
