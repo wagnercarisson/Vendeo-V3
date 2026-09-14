@@ -1032,6 +1032,31 @@ Plans:
 
 ---
 
+### Phase 47: Catálogo e Seleção de Modelos Admin (Change B)
+
+**Goal:** Permitir que administradores selecionem, por capacidade, modelos de IA previamente catalogados, com fallback fail-open para os defaults F46, auditoria atômica, visibilidade de pricing e sem alterar o gateway ou os contratos de geração.
+
+**Requirements:** `ai-model-catalog`, `ai-model-selection`, `ai-model-registry` (delta), `ai-model-pricing` (delta), `admin-ai-model-selection`.
+
+**Dependencies:** Phase 46 (seam `AiModelResolver`); Supabase local para migration/UAT; migration remota obrigatoriamente antes do deploy.
+
+**Plans:** 8 plans in 5 waves
+
+Plans:
+
+- [ ] 47-01-PLAN.md — Trackings + migration local, exatamente 12 seeds, RLS/CHECKs/RPCs/auditoria e checkpoint Docker/Supabase (Wave 1)
+- [ ] 47-02-PLAN.md — Serviços bulk de catálogo/seleção, cache TTL 30s/invalidação e paridade registry × catálogo (Wave 1)
+- [ ] 47-03-PLAN.md — PersistedModelResolver fail-open e composição em index.ts sem alterar gateway.ts (Wave 2)
+- [ ] 47-04-PLAN.md — Schemas Zod + GET/PUT/DELETE admin, status e cache invalidation (Wave 2)
+- [ ] 47-05-PLAN.md — Página/form Modelos de IA, grupos, fallback campaign_copy, reset e navegação (Wave 3)
+- [ ] 47-06-PLAN.md — Pricing capacity-aware e helper bulk sem alterar resolveAiCost (Wave 3)
+- [ ] 47-07-PLAN.md — Labels efetivos, regressão, gates e não-mudança de contratos (Wave 4)
+- [ ] 47-08-PLAN.md — UAT local, [BLOCKING] migration remota → deploy, verificação e tracking final (Wave 5)
+
+**Scope fences:** catálogo somente leitura na UI; sem homologação automatizada/paga; `campaign_image_edit` é primary independente; não editar `src/lib/ai/gateway.ts`, prompts, contratos de geração, snapshot, domínio ou merchant UI/form. DELETE usa JSON `{ capability, reason, operationId }`, UUID obrigatório gerado uma vez na UI e reutilizado em retries.
+
+---
+
 ## Dependency Graph
 
 ```

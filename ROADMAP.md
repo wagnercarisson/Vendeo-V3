@@ -212,6 +212,15 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - **Fonte da verdade:** `openspec/changes/archive/2026-09-13-fase-46-gateway-unico-de-ia-e-registry-de-modelos/`
   - **Dependências:** F38/F38.1/F38.2.1 (custos/telemetria), F23/F25 (texto/pipeline), F31.x (prompts/revisor), F41 (multi-imagem) — antecede a F47 (Catálogo e Seleção de Modelos Admin, Change B)
   - **Status:** 9/9 plans — concluída (Change A; 275 files / 2721 testes, 4 gates verdes, UAT 8/8 PASS; achado do snapshot econômico corrigido em `529a69c5`)
+
+- [ ] Phase 47: Catálogo e Seleção de Modelos Admin (Change B — 8 plans, 5 waves)
+  - **Catálogo persistido:** `ai_model_catalog` por capability/provider/model/protocol, exatamente 12 seeds iniciais (11 primary defaults F46 + fallback `campaign_copy`), UI somente leitura e mutações somente por migration
+  - **Seleção auditada:** `ai_model_selection`, primary por capacidade, fallback genérico somente `campaign_copy`, `campaign_image_edit` independente, RPCs SECURITY DEFINER set/reset com reason, auditoria atômica e idempotência
+  - **Runtime:** `PersistedModelResolver` fail-open com cache bulk TTL 30s/invalidação local, injetado em `index.ts`; `src/lib/ai/gateway.ts` permanece intocado
+  - **Admin:** `/admin/ai-model-selection`, grupos Texto/Visual/Imagem, `catalogStatus`, pricing warnings por capacidade, DELETE JSON `{ capability, reason, operationId }` e UUID gerado/reutilizado pela UI
+  - **Ordem de deploy:** migration local → UAT local → **[BLOCKING] migration remota** → deploy → verificação de envs; 4 gates e UAT final
+  - **Fonte da verdade:** `openspec/changes/fase-47-catalogo-e-selecao-de-modelos-admin/`
+  - **Status:** em planejamento
 </details>
 
 ## Progress

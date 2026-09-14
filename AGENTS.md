@@ -225,6 +225,23 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 | 46-08 | 8 | ✅ | Regressão completa + não-mudança do contrato externo + equivalência de defaults (tasks 8.1–8.3) — 275 files / 2720 testes, 4 gates verdes, prompts sem drift |
 | 46-09 | 9 | ✅ | Verificação final (`46-VERIFICATION.md` goal-backward `passed` + `46-UAT.md` 8/8 PASS + registros/arquivamento preparado) (tasks 9.1–9.3) — 275 files / 2721 testes, 4 gates verdes |
 
+## Phase 47 — Catálogo e Seleção de Modelos Admin (Change B)
+
+**Status:** Em planejamento — 8 planos em 5 ondas. Fonte da verdade: `openspec/changes/fase-47-catalogo-e-selecao-de-modelos-admin/`.
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 47-01 | 1 | ☐ | Trackings + migration local, exatamente 12 seeds, RLS/CHECKs/RPCs/auditoria/idempotência e checkpoint Docker/Supabase |
+| 47-02 | 1 | ☐ | Serviços bulk de catálogo/seleção, cache TTL 30s/invalidação e paridade registry × catálogo |
+| 47-03 | 2 | ☐ | PersistedModelResolver fail-open e composição em index.ts sem editar gateway.ts |
+| 47-04 | 2 | ☐ | Schemas Zod + GET/PUT/DELETE admin, DELETE JSON exato e operationId UUID obrigatório |
+| 47-05 | 3 | ☐ | Página/form Modelos de IA, grupos, fallback campaign_copy, reset auditado e navegação |
+| 47-06 | 3 | ☐ | Pricing capacity-aware com helper bulk, sem alterar resolveAiCost |
+| 47-07 | 4 | ☐ | Labels efetivos, regressão, gates e não-mudança de contratos |
+| 47-08 | 5 | ☐ | UAT local, [BLOCKING] migration remota → deploy, verificação e tracking final |
+
+**Fences:** catálogo somente leitura na UI; sem homologação automatizada/paga; `campaign_image_edit` é primary independente; não alterar `src/lib/ai/gateway.ts`, prompts, contratos de geração, snapshot, domínio ou merchant UI/form. Cache server-side por instância com TTL 30s e invalidação local; documentar residual cross-instance.
+
 **Escopo (D1–D10):** registry de modelos em código (`src/lib/ai/model-registry.ts`) por capacidade com `AiModelTarget { provider, model, protocol }` no primary **e** no fallback (11 capacidades; defaults idênticos — gpt-4o, gpt-4o-mini, gpt-5.5, gpt-image-2; `campaign_copy.fallback = gemini-3.1-flash-lite` como default inicial; allowlist por capacidade+provider+modelo+protocolo; `primary ≠ fallback`); interface **`AiModelResolver`** (`src/lib/ai/model-resolver.ts`) como seam para o Change B; **AI Gateway** (`src/lib/ai/gateway.ts`) com `invoke(capability, request, telemetry, target)` — alvo explícito do orquestrador, adapter pelo `protocol` do alvo, **uma tentativa** sem fallback automático, usage normalizado, **um envelope `AiCallEnvelope` por tentativa real** via sink injetável; adapters `chat-completions`/`responses`/`images`/`gemini`; `api-keys.ts` (chave por provider, fail-fast em produção); contrato de erro `AiInvocationError` (`kind`/`httpStatus`/`retryable`/`code`/`message` sanitizada) preservando os gates de fallback (D4.1); telemetria obrigatória e correta (`capability`/`protocol`/`status`/`errorType`; persistência best-effort — `AiCostTracker` fail-open); correção dos 7 furos (modelo real em validation/review; `onCall` em todos os callers produtivos — logo, retry-brand-director, server-actions, approve, restore; fallback `images.edit` registrado sem usage; componente da tool somado em `campaign_image` **e** `visual_signature_image`); remoção das 14 env-vars de modelo/provider (restam chaves + operacionais; ordem de deploy código→Vercel); legado `campaign-intelligence` como capacidade `campaign_spec` (default `gpt-4o-mini`) via gateway + migration idempotente/aditiva do CHECK `chk_generation_events_type` e do tipo TS `GenerationEventType`. **Sem mudança de UI/form/contrato HTTP/schema público/snapshot/domínio/prompts; sem novas tabelas; sem remover o legado; sem streaming.** **Numeração:** F46 = Gateway Único de IA e Registry de Modelos (v1.5, Change A); F47 = Catálogo e Seleção de Modelos Admin (Change B); **F44 = Temas de Campanha permanece fora da numeração**; Stripe/Monetização Pública fora da numeração (v1.7+). **D9 (revisão 2026-09-12):** caminho único de telemetria — caller fornece `AiTelemetryContext`, gateway gera o envelope, sink persiste; `onCall` só recebe o envelope; persistência manual removida de **todos** os callers produtivos (incl. `brand-profile/{infer,realign,generate-without-logo}`, `visual-signature/generate-without-logo`, `identity-art-director`, `correction-reports`) e proibida por gate global. **D10 (revisão):** mapa canônico `CAPABILITY_GENERATION_TYPE` (11 capacidades; `campaign_image_edit → campaign_image`; `capability`/`protocol` no metadata). DAG serializado em **9 ondas** por `depends_on`.
 
 <!-- GSD:profile-start -->

@@ -2,22 +2,22 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: â€” LanÃ§amento Externo Controlado â—†
-current_phase: 46
-status: complete
-last_updated: "2026-09-13T00:00:00.000Z"
-last_activity: 2026-09-13
+current_phase: 47
+status: planning
+last_updated: "2026-09-14T00:00:00.000Z"
+last_activity: 2026-09-14
 progress:
-  total_phases: 9
+  total_phases: 10
   completed_phases: 9
-  total_plans: 104
+  total_plans: 112
   completed_plans: 104
-  percent: 100
+  percent: 90
 ---
 
 # Project State
 
 **Last updated:** 2026-09-10 — F45 concluída e incorporada à branch da F37; F37.1 concluída; **F37.2 realinhada (Correção Única por Não Conformidade) CONCLUÍDA** (19/19 plans, 8 waves, 264 files / 2578 testes, 4 gates verdes, UAT 9/9 PASS, migrations `20260906000001/2/3` no remoto, fix pós-UAT `01a7021b`; fonte `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/`); **37.3 eliminada** (consolidada na 37.2).
-**Current phase:** 46
+**Current phase:** 47
 **Last activity:** 2026-09-12
 
 ### Phase 46 — Gateway Único de IA e Registry de Modelos ✅ Complete (9/9 plans / 9 waves)
@@ -41,6 +41,23 @@ progress:
 **Fonte da verdade:** `openspec/changes/archive/2026-09-13-fase-46-gateway-unico-de-ia-e-registry-de-modelos/`
 **Context:** `.planning/phases/46-gateway-unico-de-ia-e-registry-de-modelos/46-CONTEXT.md`
 **Sucessora:** F47 (Catálogo e Seleção de Modelos Admin — Change B)
+
+### Phase 47 — Catálogo e Seleção de Modelos Admin (Change B) — Em planejamento
+
+**Goal:** Catálogo persistido por capacidade e seleção administrativa auditada, consumidos por `PersistedModelResolver` fail-open sem alterar `src/lib/ai/gateway.ts` ou contratos de geração.
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 47-01 | 1 | ☐ | Trackings + migration local, exatamente 12 seeds, RLS/CHECKs/RPCs/auditoria e checkpoint Docker/Supabase |
+| 47-02 | 1 | ☐ | Serviços bulk, cache TTL 30s/invalidação e paridade registry × catálogo |
+| 47-03 | 2 | ☐ | PersistedModelResolver e composição em index.ts, gateway intocado |
+| 47-04 | 2 | ☐ | API admin Zod GET/PUT/DELETE, DELETE JSON estrito e operationId UUID obrigatório |
+| 47-05 | 3 | ☐ | Tela Modelos de IA, grupos, fallback campaign_copy, reset auditado e nav |
+| 47-06 | 3 | ☐ | Pricing capacity-aware sem alteração de resolveAiCost |
+| 47-07 | 4 | ☐ | Labels efetivos, regressão e gates |
+| 47-08 | 5 | ☐ | UAT local, [BLOCKING] migration remota antes do deploy, verification/tracking |
+
+**Fonte da verdade:** `openspec/changes/fase-47-catalogo-e-selecao-de-modelos-admin/`
 
 ### Phase 37 â€” RevisÃ£o e AprovaÃ§Ã£o da Arte ✅ Fatia 37.1 Concluída (15/15 plans / 8 waves)
 
