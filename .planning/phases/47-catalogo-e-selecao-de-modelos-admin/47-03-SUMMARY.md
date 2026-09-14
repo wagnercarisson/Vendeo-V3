@@ -11,6 +11,7 @@ provides:
   - PersistedModelResolver decorator with fail-open validation
   - singleton resolver composition in defaultAiGateway without gateway.ts changes
   - invariant tests for precedence, deprecated, missing, invalid tuples and fallback
+  - catalog segment validation and strict null-versus-absent fallback semantics
 affects: [47-04, 47-05, 47-07, 47-08]
 
 tech-stack:
@@ -31,6 +32,7 @@ decisions:
   - "MODEL_ALLOWLIST não bloqueia modelo adicional aprovado no catálogo; o resolver valida apenas provider/protocolo suportado, capacidade e presença no catálogo."
   - "Seleção deprecated vigente continua executável; linha missing, parcial ou incompatível volta ao registry completo."
   - "Fallback só é aceito para campaign_copy; três campos nulos significam fallback desabilitado."
+  - "Segmento persistido deve coincidir com CAPABILITY_SEGMENTS; fallback undefined/parcial é inválido e não equivale a três nulls."
 
 requirements: [ai-model-selection, ai-model-registry]
 requirements-completed: [ai-model-selection, ai-model-registry]
@@ -46,13 +48,13 @@ PersistedModelResolver implementado como decorator fail-open do ModelRegistry. A
 
 - Task 1: resolver assíncrono valida seleção contra mapas bulk, catálogo active/deprecated, segmento, capacidade, provider/protocolo e primary/fallback.
 - Task 2: `defaultAiGateway` usa um `defaultAiModelResolver` singleton em `src/lib/ai/index.ts`.
-- Task 3: invariantes cobertas por testes, incluindo modelo adicional catalogado, deprecated vigente, missing, seleção parcial, fallback nulo e falhas de leitura.
+- Task 3: invariantes cobertas por testes, incluindo modelo adicional catalogado, deprecated vigente, missing, segmento incompatível, seleção parcial, fallback nulo/ausente, seleção igual ao default e falhas de leitura.
 
 ## Gate Results
 
 | Gate | Resultado |
 |---|---|
-| Resolver + composição + gateway focal | PASS — 3 files / 28 testes |
+| Resolver + composição + gateway focal | PASS — 3 files / 31 testes |
 | `npm run typecheck` | PASS |
 | `npm run lint` | PASS |
 | `npm run build` | PASS |
@@ -64,6 +66,7 @@ PersistedModelResolver implementado como decorator fail-open do ModelRegistry. A
 
 - `68c51cb0` — PersistedModelResolver fail-open
 - `cfaba391` — composição singleton e testes de invariantes
+- `82ad69df` — validação de segmento, fallback null/undefined e testes de cobertura
 
 ## Self-Check
 
@@ -73,4 +76,7 @@ PersistedModelResolver implementado como decorator fail-open do ModelRegistry. A
 - [x] Modelo adicional catalogado não é rejeitado por MODEL_ALLOWLIST
 - [x] Fallback apenas em campaign_copy
 - [x] Fallback nulo desabilita fallback
+- [x] Fallback ausente/parcial volta ao default
+- [x] Segmento do catálogo é validado contra a capacidade
+- [x] Seleção igual ao default é coberta
 - [x] `gateway.ts` permanece intocado
