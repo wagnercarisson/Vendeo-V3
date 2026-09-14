@@ -31,7 +31,7 @@
 ## 4. Plan 47-04 — API administrativa (onda 2)
 
 - [ ] 4.1 Schemas Zod em `src/lib/admin/schemas.ts`: update da seleção (capability, primary `provider/model/protocol`, fallback opcional completo somente para `campaign_copy`, reason obrigatório) e reset (capability, reason obrigatório)
-- [ ] 4.2 Rota `GET/PUT/DELETE /api/admin/ai-model-selection` (`apiHandler` + `requireAdmin`): `GET` retorna catálogo ativo + seleções vigentes + defaults do registry e, em cada alvo efetivo (`primary`/`fallback`), `catalogStatus: active | deprecated | missing`; `PUT` chama `admin_set_ai_model_selection`; `DELETE` chama `admin_reset_ai_model_selection`; invalidar o cache após `PUT`/`DELETE`
+- [ ] 4.2 Rota `GET/PUT/DELETE /api/admin/ai-model-selection` (`apiHandler` + `requireAdmin`): `GET` retorna catálogo ativo + seleções vigentes + defaults do registry e separa `current` (configuração efetiva do resolver), `configured` (seleção persistida para diagnóstico) e `default`; cada alvo inclui `catalogStatus: active | deprecated | missing`, mas seleção `missing`/inválida volta ao default em `current` e permanece diagnosticada em `configured`; `PUT` chama `admin_set_ai_model_selection`; `DELETE` chama `admin_reset_ai_model_selection`; invalidar o cache após `PUT`/`DELETE`
 - [ ] 4.3 Adicionar labels de auditoria em `src/lib/admin/labels.ts` (`ai_model_selection_update`, `ai_model_selection_reset`, `ai_model_selection`)
 - [ ] 4.4 Testes de rota: 403 não-admin; 400 payload inválido (fallback incompleto, fallback fora de `campaign_copy`, primary=fallback, motivo ausente); GET catálogo+seleções+defaults com `catalogStatus` em `active`, `deprecated` e `missing`; PUT sucesso (auditoria + invalidação de cache); DELETE reset sucesso; idempotência por `operationId`
 

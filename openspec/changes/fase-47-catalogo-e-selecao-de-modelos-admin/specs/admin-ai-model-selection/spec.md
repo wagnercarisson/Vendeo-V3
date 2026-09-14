@@ -48,7 +48,7 @@ A tela SHALL apresentar `campaign_image_edit` como uma **capacidade própria** n
 
 ### Requirement: API administrativa de seleção
 
-O sistema SHALL expor `GET`, `PUT` e `DELETE /api/admin/ai-model-selection` (padrão `apiHandler` + `requireAdmin` + validação Zod). `GET` retorna o catálogo ativo, as seleções vigentes e os defaults do registry; cada alvo efetivo retornado (`primary` e, quando houver, `fallback`) inclui `catalogStatus: active | deprecated | missing`, calculado pela tupla completa `(capability, provider, model, protocol)`. `PUT` grava a seleção (primary + fallback opcional onde permitido) via RPC auditada; `DELETE` remove a seleção via RPC de reset auditada.
+O sistema SHALL expor `GET`, `PUT` e `DELETE /api/admin/ai-model-selection` (padrão `apiHandler` + `requireAdmin` + validação Zod). `GET` retorna o catálogo ativo, as seleções vigentes e os defaults do registry. O view model SHALL separar `current` (configuração efetivamente resolvida pelo `PersistedModelResolver`), `configured` (seleção persistida para diagnóstico, mesmo `deprecated`, `missing` ou inválida) e `default` (registry). Cada alvo exposto nesses blocos inclui `catalogStatus: active | deprecated | missing`, calculado pela tupla completa `(capability, provider, model, protocol)`; uma seleção configurada `missing` faz `current` voltar ao default e permanece diagnosticada em `configured`. `PUT` grava a seleção (primary + fallback opcional onde permitido) via RPC auditada; `DELETE` remove a seleção via RPC de reset auditada.
 
 #### Scenario: GET retorna catálogo, seleções e defaults
 
@@ -56,12 +56,14 @@ O sistema SHALL expor `GET`, `PUT` e `DELETE /api/admin/ai-model-selection` (pad
 - **THEN** retorna o catálogo ativo, as seleções vigentes por capacidade e os defaults do registry
 - **AND** cada alvo efetivo (`primary` e `fallback`, quando houver) inclui `catalogStatus` com `active`, `deprecated` ou `missing`
 
-#### Scenario: GET diferencia seleção deprecated de seleção ausente
+#### Scenario: GET diferencia configuração efetiva e seleção diagnosticada
 
 - **WHEN** uma seleção vigente aponta para uma linha deprecated, ou para uma tupla que não existe no catálogo
 - **THEN** o GET retorna `catalogStatus = deprecated` no primeiro caso
 - **AND** retorna `catalogStatus = missing` no segundo caso
-- **AND** a UI não trata os dois estados como equivalentes
+- **AND** `current` usa o default quando a seleção configurada está `missing`, enquanto `configured` preserva o diagnóstico
+- **AND** uma seleção `deprecated` válida permanece em `current` e tem origem `selection`
+- **AND** a UI não trata `current`, `configured` e `default` como equivalentes
 
 #### Scenario: PUT grava seleção auditada
 
