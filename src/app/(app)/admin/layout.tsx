@@ -19,7 +19,7 @@ export default async function AdminLayout({
 
   return (
     <div className="space-y-6">
-      <nav className="flex gap-4 border-b pb-3 text-sm">
+      <nav className="flex flex-wrap gap-4 border-b pb-3 text-sm">
         <Link href="/admin" className="font-medium hover:text-primary">
           Dashboard
         </Link>

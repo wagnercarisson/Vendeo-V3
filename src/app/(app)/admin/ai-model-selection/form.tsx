@@ -12,6 +12,7 @@ type Draft = {
   fallback: string;
   reason: string;
   operationId: string | null;
+  operationFingerprint: string | null;
   loading: boolean;
   error: string | null;
   success: string | null;
@@ -45,6 +46,7 @@ function makeDraft(item: AiModelCapabilityView): Draft {
     fallback: item.capability === "campaign_copy" ? targetKey(item.current.fallback) : "",
     reason: "",
     operationId: null,
+    operationFingerprint: null,
     loading: false,
     error: null,
     success: null,
@@ -60,18 +62,19 @@ export function AiModelSelectionForm({ view }: { view: AiModelSelectionViewModel
     setDrafts((previous) => ({ ...previous, [capability]: { ...previous[capability], ...update } }));
   }
 
+  function edit(capability: string, update: Partial<Draft>) {
+    patch(capability, { ...update, operationId: null, operationFingerprint: null, success: null, error: null });
+  }
+
   async function mutate(item: AiModelCapabilityView, action: "save" | "reset") {
     const draft = drafts[item.capability];
     if (!draft.reason.trim()) {
       patch(item.capability, { error: "Motivo obrigatório" });
       return;
     }
-    const operationId = draft.operationId ?? crypto.randomUUID();
-    patch(item.capability, { operationId, loading: true, error: null, success: null });
-
     try {
       const body = action === "reset"
-        ? { capability: item.capability, reason: draft.reason.trim(), operationId }
+        ? { capability: item.capability, reason: draft.reason.trim() }
         : {
             capability: item.capability,
             provider: draft.provider,
@@ -82,16 +85,22 @@ export function AiModelSelectionForm({ view }: { view: AiModelSelectionViewModel
               return { provider, model, protocol };
             })() : null,
             reason: draft.reason.trim(),
-            operationId,
           };
+      const fingerprint = JSON.stringify([action, body]);
+      const operationId = draft.operationFingerprint === fingerprint && draft.operationId
+        ? draft.operationId
+        : crypto.randomUUID();
+      const requestBody = { ...body, operationId };
+      patch(item.capability, { operationId, operationFingerprint: fingerprint, loading: true, error: null, success: null });
       const response = await fetch("/api/admin/ai-model-selection", {
         method: action === "reset" ? "DELETE" : "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify(requestBody),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || `Erro ${response.status}`);
-      patch(item.capability, { loading: false, operationId: null, reason: "", success: action === "reset" ? "Padrão restaurado com auditoria." : "Seleção salva com auditoria." });
+      const resetNoop = action === "reset" && data.reset?.reset === false;
+      patch(item.capability, { loading: false, operationId: null, operationFingerprint: null, reason: "", success: resetNoop ? "A capacidade já estava no padrão; nenhuma alteração foi auditada." : action === "reset" ? "Padrão restaurado com auditoria." : "Seleção salva com auditoria." });
       window.setTimeout(() => window.location.reload(), 700);
     } catch (error) {
       patch(item.capability, { loading: false, error: error instanceof Error ? error.message : "Não foi possível concluir a operação." });
@@ -143,10 +152,32 @@ export function AiModelSelectionForm({ view }: { view: AiModelSelectionViewModel
                       </div>
                     </div>
 
-                    {configured && configured.primary?.catalogStatus !== "active" && (
+                    {configured?.primary && configured.primary.catalogStatus !== "active" && (
                       <div className="mt-3 flex items-start gap-2 rounded-lg border border-accent-amber/20 bg-accent-amber/5 p-3 text-xs text-accent-amber">
                         <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
                         <span>Configuração persistida: {targetLabel(configured.primary)} ({configured.primary.catalogStatus}).</span>
+                      </div>
+                    )}
+
+                    {item.capability === "campaign_copy" && (
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-lg border border-border bg-bg-deep/40 p-3">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Fallback executado</p>
+                          <p className="mt-1 break-words text-sm text-text-primary">{item.current.fallback ? targetLabel(item.current.fallback) : "Sem fallback"}</p>
+                          {item.current.fallback && <span className={`mt-2 inline-block rounded-full border px-2 py-1 text-[10px] uppercase ${statusClass(item.current.fallback.catalogStatus)}`}>{item.current.fallback.catalogStatus}</span>}
+                        </div>
+                        <div className="rounded-lg border border-border bg-bg-deep/40 p-3">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Fallback default</p>
+                          <p className="mt-1 break-words text-sm text-text-primary">{item.default.fallback ? targetLabel(item.default.fallback) : "Sem fallback"}</p>
+                          {item.default.fallback && <span className={`mt-2 inline-block rounded-full border px-2 py-1 text-[10px] uppercase ${statusClass(item.default.fallback.catalogStatus)}`}>{item.default.fallback.catalogStatus}</span>}
+                        </div>
+                      </div>
+                    )}
+
+                    {item.capability === "campaign_copy" && configured?.fallback && configured.fallback.catalogStatus !== "active" && (
+                      <div className="mt-3 flex items-start gap-2 rounded-lg border border-accent-amber/20 bg-accent-amber/5 p-3 text-xs text-accent-amber">
+                        <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                        <span>Fallback persistido: {targetLabel(configured.fallback)} ({configured.fallback.catalogStatus}).</span>
                       </div>
                     )}
 
@@ -154,15 +185,16 @@ export function AiModelSelectionForm({ view }: { view: AiModelSelectionViewModel
                       <label className="block text-xs font-medium uppercase tracking-wider text-text-secondary" htmlFor={`primary-${item.capability}`}>Novo primary</label>
                       <select id={`primary-${item.capability}`} value={`${draft.provider}|${draft.model}|${draft.protocol}`} onChange={(event) => {
                         const [provider, model, protocol] = event.target.value.split("|");
-                        patch(item.capability, { provider, model, protocol, success: null, error: null });
+                        edit(item.capability, { provider, model, protocol });
                       }} className="min-h-11 w-full rounded-lg border border-border-light bg-bg-deep px-3 text-sm text-text-primary outline-none transition-colors duration-200 focus:border-accent-blue focus:ring-2 focus:ring-accent-blue/20">
+                        {configured?.primary && configured.primary.catalogStatus !== "active" && <option disabled value={targetKey(configured.primary)}>{targetLabel(configured.primary)} · {configured.primary.catalogStatus}</option>}
                         {activeOptions.map((option) => <option key={option.id} value={`${option.provider}|${option.model}|${option.protocol}`}>{targetLabel(option)}</option>)}
                       </select>
 
                       {item.capability === "campaign_copy" && (
                         <>
                           <label className="block text-xs font-medium uppercase tracking-wider text-text-secondary" htmlFor={`fallback-${item.capability}`}>Fallback genérico</label>
-                          <select id={`fallback-${item.capability}`} value={draft.fallback} onChange={(event) => patch(item.capability, { fallback: event.target.value, error: null, success: null })} className="min-h-11 w-full rounded-lg border border-border-light bg-bg-deep px-3 text-sm text-text-primary outline-none transition-colors duration-200 focus:border-accent-blue focus:ring-2 focus:ring-accent-blue/20">
+                          <select id={`fallback-${item.capability}`} value={draft.fallback} onChange={(event) => edit(item.capability, { fallback: event.target.value })} className="min-h-11 w-full rounded-lg border border-border-light bg-bg-deep px-3 text-sm text-text-primary outline-none transition-colors duration-200 focus:border-accent-blue focus:ring-2 focus:ring-accent-blue/20">
                             <option value="">Sem fallback</option>
                             {view.catalog.filter((row) => row.capability === "campaign_copy" && row.status === "active").map((option) => <option key={`fallback-${option.id}`} value={`${option.provider}|${option.model}|${option.protocol}`}>{targetLabel(option)}</option>)}
                           </select>
@@ -170,7 +202,7 @@ export function AiModelSelectionForm({ view }: { view: AiModelSelectionViewModel
                       )}
 
                       <label className="block text-xs font-medium uppercase tracking-wider text-text-secondary" htmlFor={`reason-${item.capability}`}>Motivo da alteração</label>
-                      <input id={`reason-${item.capability}`} value={draft.reason} onChange={(event) => patch(item.capability, { reason: event.target.value, error: null })} placeholder="Motivo obrigatório para auditoria" className="min-h-11 w-full rounded-lg border border-border-light bg-bg-deep px-3 text-sm text-text-primary outline-none transition-colors duration-200 placeholder:text-text-muted focus:border-accent-blue focus:ring-2 focus:ring-accent-blue/20" />
+                      <input id={`reason-${item.capability}`} value={draft.reason} onChange={(event) => edit(item.capability, { reason: event.target.value })} placeholder="Motivo obrigatório para auditoria" className="min-h-11 w-full rounded-lg border border-border-light bg-bg-deep px-3 text-sm text-text-primary outline-none transition-colors duration-200 placeholder:text-text-muted focus:border-accent-blue focus:ring-2 focus:ring-accent-blue/20" />
                     </div>
 
                     <div className="mt-4 flex flex-wrap gap-2">
