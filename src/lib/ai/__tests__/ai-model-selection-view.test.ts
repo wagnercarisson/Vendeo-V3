@@ -36,8 +36,24 @@ const selection = (overrides: Partial<AiModelSelectionRow> = {}) => ({
 }) as AiModelSelectionRow;
 
 describe("buildAiModelSelectionView", () => {
+  it("mostra a configuração default completa quando não há seleção", async () => {
+    const rows = [
+      catalogRow("campaign_copy", "openai", "gpt-4o", "chat-completions", "active"),
+      catalogRow("campaign_copy", "gemini", "gemini-3.1-flash-lite", "gemini", "active"),
+    ];
+    const map = new Map(rows.map((row) => [catalogTupleKey(row.capability, row.provider, row.model, row.protocol), row]));
+    const view = await buildAiModelSelectionView({
+      catalogService: { getActiveCatalogRows: vi.fn().mockResolvedValue(rows), getCatalogMap: vi.fn().mockResolvedValue(map) },
+      selectionService: { getSelectionMap: vi.fn().mockResolvedValue(new Map()) },
+    });
+    const copy = view.capabilities.find((item) => item.capability === "campaign_copy");
+    expect(copy?.source).toBe("default");
+    expect(copy?.current.fallback?.model).toBe("gemini-3.1-flash-lite");
+  });
+
   it("calcula active/deprecated/missing pela tupla completa de primary e fallback", async () => {
     const rows = [
+      catalogRow("campaign_copy", "openai", "gpt-4o", "chat-completions", "active"),
       catalogRow("campaign_copy", "openai", "deprecated-copy", "chat-completions", "deprecated"),
       catalogRow("campaign_copy", "openai", "missing-fallback", "responses", "active"),
     ];
@@ -51,9 +67,10 @@ describe("buildAiModelSelectionView", () => {
     });
 
     const copy = view.capabilities.find((item) => item.capability === "campaign_copy");
-    expect(copy?.source).toBe("selection");
-    expect(copy?.current.primary.catalogStatus).toBe("deprecated");
-    expect(copy?.current.fallback?.catalogStatus).toBe("missing");
-    expect(copy?.default.primary.catalogStatus).toBe("missing");
+    expect(copy?.source).toBe("default");
+    expect(copy?.current.primary.model).toBe("gpt-4o");
+    expect(copy?.configured?.primary.catalogStatus).toBe("deprecated");
+    expect(copy?.configured?.fallback?.catalogStatus).toBe("missing");
+    expect(copy?.default.primary.catalogStatus).toBe("active");
   });
 });

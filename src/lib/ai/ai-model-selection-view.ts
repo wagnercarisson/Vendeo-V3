@@ -13,7 +13,9 @@ import {
   aiModelSelectionService,
   type AiModelSelectionRow,
 } from "./ai-model-selection-service";
-import type { AiModelTarget } from "./model-resolver";
+import { ModelRegistry } from "./model-registry";
+import { PersistedModelResolver } from "./persisted-model-resolver";
+import type { AiModelTarget, AiProvider, AiProtocol } from "./model-resolver";
 
 export type AiModelCatalogStatus = "active" | "deprecated" | "missing";
 
@@ -27,6 +29,7 @@ export interface AiModelCapabilityView {
   source: "selection" | "default";
   current: { primary: AiModelTargetView; fallback: AiModelTargetView | null };
   default: { primary: AiModelTargetView; fallback: AiModelTargetView | null };
+  configured: { primary: AiModelTargetView | null; fallback: AiModelTargetView | null } | null;
   selection: AiModelSelectionRow | null;
 }
 
@@ -63,32 +66,42 @@ export async function buildAiModelSelectionView(dependencies: {
     selectionService.getSelectionMap(),
   ]);
   const selections = [...selectionMap.values()];
+  const resolver = new PersistedModelResolver({
+    registry: new ModelRegistry(),
+    selectionService: { getSelectionMap: async () => selectionMap },
+    catalogService: { getCatalogMap: async () => catalogMap },
+  });
 
-  const capabilities = ALL_CAPABILITIES.map((capability) => {
+  const capabilities = await Promise.all(ALL_CAPABILITIES.map(async (capability) => {
     const defaultConfig = MODEL_REGISTRY[capability];
     const selection = selectionMap.get(capability) ?? null;
-    const selectedPrimary = selection && selection.provider && selection.model && selection.protocol
-      ? { provider: selection.provider, model: selection.model, protocol: selection.protocol }
+    const effective = await resolver.resolveWithSource(capability);
+    const configuredPrimary = selection && selection.provider && selection.model && selection.protocol
+      ? { provider: selection.provider as AiProvider, model: selection.model, protocol: selection.protocol as AiProtocol }
       : null;
-    const selectedFallback = selection?.fallback_provider && selection.fallback_model && selection.fallback_protocol
-      ? { provider: selection.fallback_provider, model: selection.fallback_model, protocol: selection.fallback_protocol }
+    const configuredFallback = selection && selection.fallback_provider && selection.fallback_model && selection.fallback_protocol
+      ? { provider: selection.fallback_provider as AiProvider, model: selection.fallback_model, protocol: selection.fallback_protocol as AiProtocol }
       : null;
 
     return {
       capability,
       segment: CAPABILITY_SEGMENTS[capability],
-      source: selectedPrimary ? "selection" : "default",
+      source: effective.source,
       current: {
-        primary: targetView(capability, selectedPrimary ?? defaultConfig.primary, catalogMap),
-        fallback: selectedFallback ? targetView(capability, selectedFallback, catalogMap) : null,
+        primary: targetView(capability, effective.config.primary, catalogMap),
+        fallback: effective.config.fallback ? targetView(capability, effective.config.fallback, catalogMap) : null,
       },
       default: {
         primary: targetView(capability, defaultConfig.primary, catalogMap),
         fallback: defaultConfig.fallback ? targetView(capability, defaultConfig.fallback, catalogMap) : null,
       },
+      configured: selection ? {
+        primary: configuredPrimary ? targetView(capability, configuredPrimary, catalogMap) : null,
+        fallback: configuredFallback ? targetView(capability, configuredFallback, catalogMap) : null,
+      } : null,
       selection,
     } satisfies AiModelCapabilityView;
-  });
+  }));
 
   return { catalog: catalogRows, selections, defaults: MODEL_REGISTRY, capabilities };
 }

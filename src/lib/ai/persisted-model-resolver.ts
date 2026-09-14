@@ -108,8 +108,12 @@ export class PersistedModelResolver implements AiModelResolver {
   }
 
   async resolve(capability: AiCapability): Promise<AiModelConfig> {
+    return (await this.resolveWithSource(capability)).config;
+  }
+
+  async resolveWithSource(capability: AiCapability): Promise<{ config: AiModelConfig; source: "selection" | "default" }> {
     const fallback = await this.registry.resolve(capability);
-    if (!ALL_CAPABILITIES.includes(capability)) return fallback;
+    if (!ALL_CAPABILITIES.includes(capability)) return { config: fallback, source: "default" };
 
     try {
       const [selections, catalog] = await Promise.all([
@@ -117,10 +121,11 @@ export class PersistedModelResolver implements AiModelResolver {
         this.catalogService.getCatalogMap(),
       ]);
       const selection = selections.get(capability);
-      if (!selection) return fallback;
-      return buildConfig(capability, selection, catalog) ?? fallback;
+      if (!selection) return { config: fallback, source: "default" };
+      const config = buildConfig(capability, selection, catalog);
+      return config ? { config, source: "selection" } : { config: fallback, source: "default" };
     } catch {
-      return fallback;
+      return { config: fallback, source: "default" };
     }
   }
 
