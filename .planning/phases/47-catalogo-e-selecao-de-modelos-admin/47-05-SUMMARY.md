@@ -18,6 +18,7 @@ tech-stack:
   patterns:
     - server page consumes composer directly; client form calls API only for mutations
     - stable browser operationId retained across retries of one action
+    - operation fingerprint prevents save/reset UUID reuse after payload/action changes
 
 key-files:
   created:
@@ -31,6 +32,7 @@ decisions:
   - "Catálogo permanece somente leitura; selects exibem apenas linhas active."
   - "A tela distingue o alvo efetivamente executado de uma configuração persistida diagnosticada."
   - "campaign_image_edit é capacidade própria; fallback genérico aparece somente em campaign_copy."
+  - "Fallback current/default/configured e estados deprecated/missing são visíveis separadamente; reset sem linha informa ausência de auditoria."
 
 requirements: [admin-ai-model-selection, ai-model-selection, ai-model-catalog]
 requirements-completed: [admin-ai-model-selection, ai-model-selection, ai-model-catalog]
@@ -45,14 +47,15 @@ Tela administrativa Modelos de IA criada com agrupamento Texto/Visual/Imagem, ca
 ## Tasks
 
 - Task 1: página server-side e formulário client-side consumindo diretamente o composer.
-- Task 2: save/reset com motivo obrigatório e `crypto.randomUUID()` estável por tentativa.
+- Task 2: save/reset com motivo obrigatório e `crypto.randomUUID()` estável apenas quando ação+payload permanecem idênticos.
 - Task 3: navegação admin, dark OLED, Lucide, foco visível, touch targets e estados de feedback.
+- Correção: fallback efetivo/default/configurado, deprecated selecionável como opção desabilitada, reset no-op e cobertura das 11 capacidades adicionados.
 
 ## Gate Results
 
 | Gate | Resultado |
 |---|---|
-| UI focal | PASS — 1 file / 2 testes |
+| UI focal | PASS — 1 file / 5 testes |
 | `npm run typecheck` | PASS |
 | `npm run lint` | PASS |
 | `npm run build` | PASS |
@@ -63,6 +66,8 @@ Tela administrativa Modelos de IA criada com agrupamento Texto/Visual/Imagem, ca
 
 - `222957b1` — página, formulário e navegação
 - `62651798` — testes do formulário admin
+- `645928ac` — interações auditadas, fallback e navegação responsiva
+- `e886332a` — cobertura de retry, reset, diagnóstico e 11 capacidades
 
 ## Self-Check
 
