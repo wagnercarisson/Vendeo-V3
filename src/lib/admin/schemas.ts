@@ -96,6 +96,63 @@ export const UpdateEconomicParameterRequestSchema = z.object({
   operationId: z.string().uuid().optional(),
 });
 
+const AI_MODEL_CAPABILITIES = [
+  "campaign_copy",
+  "campaign_correction_analysis",
+  "brand_profile_text",
+  "campaign_spec",
+  "campaign_input_validation",
+  "campaign_image_review",
+  "brand_profile_vision",
+  "visual_signature_validation",
+  "campaign_image",
+  "campaign_image_edit",
+  "visual_signature_image",
+] as const;
+
+const AiModelTargetSchema = z
+  .object({
+    provider: z.enum(["openai", "gemini"]),
+    model: z.string().min(1),
+    protocol: z.enum(["chat-completions", "responses", "images", "gemini"]),
+  })
+  .strict();
+
+export const AiModelSelectionUpdateSchema = z
+  .object({
+    capability: z.enum(AI_MODEL_CAPABILITIES),
+    provider: z.enum(["openai", "gemini"]),
+    model: z.string().min(1),
+    protocol: z.enum(["chat-completions", "responses", "images", "gemini"]),
+    fallback: AiModelTargetSchema.nullable().optional(),
+    reason: z.string().trim().min(1),
+    operationId: z.string().uuid(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (
+      value.fallback &&
+      value.capability !== "campaign_copy"
+    ) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["fallback"], message: "fallback só é permitido em campaign_copy" });
+    }
+    if (
+      value.fallback &&
+      value.provider === value.fallback.provider &&
+      value.model === value.fallback.model
+    ) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["fallback"], message: "primary e fallback devem ser distintos" });
+    }
+  });
+
+export const AiModelSelectionResetSchema = z
+  .object({
+    capability: z.enum(AI_MODEL_CAPABILITIES),
+    reason: z.string().trim().min(1),
+    operationId: z.string().uuid(),
+  })
+  .strict();
+
 /** Segmentos econômicos da entrega (D9) — mesmo enum do service (sem server-only). */
 export const OPERATION_RUN_SEGMENTS = [
   "test",

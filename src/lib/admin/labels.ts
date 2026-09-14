@@ -12,6 +12,8 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   access_request_reject: "Recusar Solicitação de Acesso",
   feature_flag_update: "Atualização de controle operacional",
   operation_cost_update: "Atualização de custo operacional",
+  ai_model_selection_update: "Atualização de seleção de modelo IA",
+  ai_model_selection_reset: "Restauração de modelo IA padrão",
 };
 
 export const TARGET_TYPE_LABELS: Record<string, string> = {
@@ -21,6 +23,7 @@ export const TARGET_TYPE_LABELS: Record<string, string> = {
   access_request: "Solicitação de Acesso",
   feature_flag: "Controle operacional",
   operation_cost: "Custo operacional",
+  ai_model_selection: "Seleção de modelo IA",
 };
 
 export const BENEFIT_TYPE_LABELS: Record<string, string> = {
