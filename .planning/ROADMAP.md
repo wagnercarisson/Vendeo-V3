@@ -1040,12 +1040,12 @@ Plans:
 
 **Dependencies:** Phase 46 (seam `AiModelResolver`); Supabase local para migration/UAT; migration remota obrigatoriamente antes do deploy.
 
-**Plans:** 1/8 plans executed
+**Plans:** 2/8 plans executed
 
 Plans:
 
 - [x] 47-01-PLAN.md — Trackings + migration local, exatamente 12 seeds, RLS/CHECKs/RPCs/auditoria e checkpoint Docker/Supabase (Wave 1)
-- [ ] 47-02-PLAN.md — Serviços bulk de catálogo/seleção, cache TTL 30s/invalidação e paridade registry × catálogo (Wave 2)
+- [x] 47-02-PLAN.md — Serviços bulk de catálogo/seleção, cache TTL 30s/invalidação e paridade registry × catálogo (Wave 2)
 - [ ] 47-03-PLAN.md — PersistedModelResolver fail-open e composição em index.ts sem alterar gateway.ts (Wave 3)
 - [ ] 47-04-PLAN.md — Schemas Zod + GET/PUT/DELETE admin, status e cache invalidation (Wave 4)
 - [ ] 47-05-PLAN.md — Página/form Modelos de IA, grupos, fallback campaign_copy, reset e navegação (Wave 5)
