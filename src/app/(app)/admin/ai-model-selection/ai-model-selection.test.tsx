@@ -120,6 +120,23 @@ describe("AiModelSelectionForm", () => {
     expect(await within(copyCard).findByText(/já estava no padrão/)).toBeInTheDocument();
   });
 
+  it("mantém fallback deprecated vigente selecionado e desabilitado, com ativos disponíveis", () => {
+    const fallbackDeprecatedView = {
+      ...VIEW,
+      capabilities: VIEW.capabilities.map((item) => item.capability === "campaign_copy" ? {
+        ...item,
+        current: { ...item.current, fallback: target("openai", "deprecated-fallback", "chat-completions", "deprecated") },
+        configured: { primary: null, fallback: target("openai", "deprecated-fallback", "chat-completions", "deprecated") },
+      } : item),
+    };
+    render(<AiModelSelectionForm view={fallbackDeprecatedView} />);
+    const option = screen.getByRole("option", { name: /deprecated-fallback.*deprecated/ });
+    expect(option).toBeDisabled();
+    expect(screen.getByLabelText("Fallback genérico")).toHaveValue("openai|deprecated-fallback|chat-completions");
+    const fallbackSelect = screen.getByLabelText("Fallback genérico");
+    expect(within(fallbackSelect).getAllByRole("option", { name: /gemini-3\.1-flash-lite/ })).toHaveLength(1);
+  });
+
   it("renderiza as 11 capacidades do registry", () => {
     render(<AiModelSelectionForm view={FULL_VIEW} />);
     for (const capability of ALL_CAPABILITIES) expect(screen.getByText(capability)).toBeInTheDocument();

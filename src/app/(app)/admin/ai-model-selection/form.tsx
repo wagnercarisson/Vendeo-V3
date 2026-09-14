@@ -196,6 +196,7 @@ export function AiModelSelectionForm({ view }: { view: AiModelSelectionViewModel
                           <label className="block text-xs font-medium uppercase tracking-wider text-text-secondary" htmlFor={`fallback-${item.capability}`}>Fallback genérico</label>
                           <select id={`fallback-${item.capability}`} value={draft.fallback} onChange={(event) => edit(item.capability, { fallback: event.target.value })} className="min-h-11 w-full rounded-lg border border-border-light bg-bg-deep px-3 text-sm text-text-primary outline-none transition-colors duration-200 focus:border-accent-blue focus:ring-2 focus:ring-accent-blue/20">
                             <option value="">Sem fallback</option>
+                            {configured?.fallback && configured.fallback.catalogStatus !== "active" && <option disabled value={targetKey(configured.fallback)}>{targetLabel(configured.fallback)} · {configured.fallback.catalogStatus}</option>}
                             {view.catalog.filter((row) => row.capability === "campaign_copy" && row.status === "active").map((option) => <option key={`fallback-${option.id}`} value={`${option.provider}|${option.model}|${option.protocol}`}>{targetLabel(option)}</option>)}
                           </select>
                         </>
