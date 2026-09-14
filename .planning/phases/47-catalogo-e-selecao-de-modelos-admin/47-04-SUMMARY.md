@@ -12,6 +12,7 @@ provides:
   - server-only selection view composer with active/deprecated/missing statuses
   - admin GET/PUT/DELETE selection API with RPC-only mutation
   - effective-vs-configured view semantics delegated to PersistedModelResolver
+  - OpenSpec contract updated to define current/configured/default explicitly
 affects: [47-05, 47-06, 47-07, 47-08]
 
 tech-stack:
@@ -58,7 +59,7 @@ API administrativa de seleção implementada com schemas Zod estritos, composer 
 
 | Gate | Resultado |
 |---|---|
-| Schemas + route + view focal | PASS — 3 files / 11 testes |
+| Schemas + route + view focal | PASS — 3 files / 12 testes |
 | `npm run typecheck` | PASS |
 | `npm run lint` | PASS |
 | `npm run build` | PASS |
@@ -72,6 +73,8 @@ API administrativa de seleção implementada com schemas Zod estritos, composer 
 - `5e4df666` — composer e API administrativa
 - `590a34e5` — testes da API e status do catálogo
 - `071132e9` — view efetiva via resolver e cobertura adicional da API
+- `b8e90fc6` — teste de seleção deprecated efetiva
+- `da3ad200` — contrato OpenSpec current/configured/default
 
 ## Self-Check
 
