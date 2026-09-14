@@ -18,8 +18,8 @@ tech-stack:
   patterns:
     - server page consumes composer directly; client form calls API only for mutations
     - stable browser operationId retained across retries of one action
-  - operation fingerprint prevents save/reset UUID reuse after payload/action changes
-  - deprecated fallback remains selected/diagnostic while active alternatives remain available
+    - operation fingerprint prevents save/reset UUID reuse after payload/action changes
+    - deprecated fallback remains selected/diagnostic while active alternatives remain available
 
 key-files:
   created:
