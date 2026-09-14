@@ -41,16 +41,17 @@ export class AiModelSelectionService {
     const epoch = this.invalidationEpoch;
     if (this.inFlight?.epoch === epoch) return this.inFlight.promise;
 
-    const promise = (async () => {
-      const selections = await this.loadSelectionMap();
+    const promise = this.loadSelectionMap();
+    this.inFlight = { epoch, promise };
+    try {
+      const selections = await promise;
       if (epoch === this.invalidationEpoch && this.inFlight?.promise === promise) {
         this.cache = { selections, expiresAt: this.now() + this.ttlMs };
-        this.inFlight = null;
       }
       return selections;
-    })();
-    this.inFlight = { epoch, promise };
-    return promise;
+    } finally {
+      if (this.inFlight?.promise === promise) this.inFlight = null;
+    }
   }
 
   async getSelections(): Promise<AiModelSelectionRow[]> {

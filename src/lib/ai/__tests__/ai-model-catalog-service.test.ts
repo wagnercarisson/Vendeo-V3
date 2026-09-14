@@ -30,23 +30,27 @@ function fakeClient(result: { data: unknown; error: { message: string } | null }
 describe("AiModelCatalogService", () => {
   it("não repopula o cache com uma leitura in-flight iniciada antes da invalidação", async () => {
     let resolveFirst!: (value: { data: unknown; error: null }) => void;
+    let resolveSecond!: (value: { data: unknown; error: null }) => void;
     const firstRead = new Promise<{ data: unknown; error: null }>((resolve) => {
       resolveFirst = resolve;
+    });
+    const secondRead = new Promise<{ data: unknown; error: null }>((resolve) => {
+      resolveSecond = resolve;
     });
     const select = vi
       .fn()
       .mockReturnValueOnce(firstRead)
-      .mockResolvedValueOnce({ data: [row({ id: "fresh" })], error: null });
+      .mockReturnValueOnce(secondRead);
     const client = { from: vi.fn(() => ({ select })) };
     const service = new AiModelCatalogService(client as never);
 
     const staleRead = service.getCatalogRows();
     service.invalidateModelCatalogCache();
+    const freshRead = service.getCatalogRows();
     resolveFirst({ data: [row({ id: "stale" })], error: null });
     await staleRead;
-
-    const freshRead = await service.getCatalogRows();
-    expect(freshRead[0]?.id).toBe("fresh");
+    resolveSecond({ data: [row({ id: "fresh" })], error: null });
+    expect((await freshRead)[0]?.id).toBe("fresh");
     expect(select).toHaveBeenCalledTimes(2);
   });
 

@@ -53,16 +53,17 @@ export class AiModelCatalogService {
     const epoch = this.invalidationEpoch;
     if (this.inFlight?.epoch === epoch) return this.inFlight.promise;
 
-    const promise = (async () => {
-      const rows = await this.loadCatalogRows();
+    const promise = this.loadCatalogRows();
+    this.inFlight = { epoch, promise };
+    try {
+      const rows = await promise;
       if (epoch === this.invalidationEpoch && this.inFlight?.promise === promise) {
         this.cache = { rows, expiresAt: this.now() + this.ttlMs };
-        this.inFlight = null;
       }
       return rows;
-    })();
-    this.inFlight = { epoch, promise };
-    return promise;
+    } finally {
+      if (this.inFlight?.promise === promise) this.inFlight = null;
+    }
   }
 
   async getCatalogMap(): Promise<AiModelCatalogMap> {
