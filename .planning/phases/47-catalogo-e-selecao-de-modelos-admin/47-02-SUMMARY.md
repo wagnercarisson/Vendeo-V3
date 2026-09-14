@@ -12,6 +12,7 @@ provides:
   - server-only selection map reader with 30-second TTL and explicit invalidation
   - registry/catalog parity tests for all 11 capabilities and 12 seed tuples
   - epoch-guarded invalidation that cannot repopulate cache from stale in-flight reads
+  - promise registration before await, keeping typecheck/build sound while preserving race protection
 affects: [47-03, 47-04, 47-05]
 
 tech-stack:
@@ -33,6 +34,7 @@ decisions:
   - "O cache é por instância, TTL 30s, com invalidação explícita; não foi adicionada infraestrutura compartilhada."
   - "Falhas de leitura retornam coleção vazia para permitir o fail-open do resolver posterior."
   - "Epoch + identidade da promise impedem que uma leitura iniciada antes da invalidação restaure o cache antigo."
+  - "A promise in-flight é registrada antes do await; o finally só limpa a mesma promise, sem referência temporal inválida."
 
 requirements: [ai-model-catalog, ai-model-selection, ai-model-registry]
 requirements-completed: [ai-model-catalog, ai-model-selection, ai-model-registry]
@@ -67,6 +69,11 @@ Implementados os serviços bulk server-only de catálogo e seleção, sem lookup
 - `7abc2a25` — serviços bulk de catálogo e seleção
 - `0c29b4ef` — testes de cache, invalidação e paridade
 - `f3648ce5` — epoch de invalidação, testes concorrentes e paridade do catálogo real
+- `df76fe0b` — registro da promise antes do await e teste de concorrência fortalecido
+
+## Gate Correction
+
+Uma revisão independente identificou que a versão anterior usava `promise` dentro do próprio inicializador, causando `TS2454` apesar dos testes focais passarem. A implementação foi corrigida em `df76fe0b`; typecheck e build foram reexecutados com sucesso. O registro de gates acima reflete a versão corrigida.
 
 ## Self-Check
 
