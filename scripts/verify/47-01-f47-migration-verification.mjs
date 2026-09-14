@@ -86,6 +86,16 @@ async function run() {
   const actorId = temporaryUser.user.id;
   temporaryActorId = actorId;
 
+  const { data: aiCosts, error: aiCostsError } = await admin.rpc("admin_get_ai_costs", {
+    p_hours: 1,
+    p_credit_unit_usd_value: null,
+  });
+  assert(
+    "RPC admin_get_ai_costs real responde após forward fix",
+    !aiCostsError && Array.isArray(aiCosts?.by_operation_run),
+    aiCostsError?.message ?? JSON.stringify(aiCosts),
+  );
+
   const { data: catalog, error: catalogError } = await admin
     .from("ai_model_catalog")
     .select("capability, provider, model, protocol, segment, status");
