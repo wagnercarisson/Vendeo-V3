@@ -11,6 +11,7 @@ provides:
   - server-only bulk catalog reader with active/deprecated map and local TTL
   - server-only selection map reader with 30-second TTL and explicit invalidation
   - registry/catalog parity tests for all 11 capabilities and 12 seed tuples
+  - epoch-guarded invalidation that cannot repopulate cache from stale in-flight reads
 affects: [47-03, 47-04, 47-05]
 
 tech-stack:
@@ -31,6 +32,7 @@ decisions:
   - "O catálogo é carregado em uma consulta completa; linhas deprecated permanecem no mapa para resolver seleções vigentes e sinalizar a UI."
   - "O cache é por instância, TTL 30s, com invalidação explícita; não foi adicionada infraestrutura compartilhada."
   - "Falhas de leitura retornam coleção vazia para permitir o fail-open do resolver posterior."
+  - "Epoch + identidade da promise impedem que uma leitura iniciada antes da invalidação restaure o cache antigo."
 
 requirements: [ai-model-catalog, ai-model-selection, ai-model-registry]
 requirements-completed: [ai-model-catalog, ai-model-selection, ai-model-registry]
@@ -45,14 +47,18 @@ Implementados os serviços bulk server-only de catálogo e seleção, sem lookup
 ## Tasks
 
 - Task 1: `AiModelCatalogService` e `AiModelSelectionService` com clients injetáveis, cache local, compartilhamento de leituras concorrentes e tratamento fail-open.
-- Task 2: testes de bulk, TTL, invalidação, falha de leitura, deprecated e paridade registry × catálogo.
+- Task 2: testes de bulk, TTL, invalidação, falha de leitura, deprecated, corrida in-flight e paridade registry × catálogo.
+- Correção: paridade do verificador local compara exatamente as 12 tuplas retornadas pelo `ai_model_catalog` após migration, não apenas uma fixture unitária.
 
 ## Gate Results
 
 | Gate | Resultado |
 |---|---|
-| Focal Vitest | PASS — 3 files / 8 testes |
+| Focal Vitest | PASS — 3 files / 10 testes |
 | `npm run typecheck` | PASS |
+| `npm run lint` | PASS |
+| `npm run build` | PASS |
+| Verificador local F47-01 | PASS — 23/23, catálogo real comparado à matriz esperada |
 | Serviços `server-only` | PASS por import explícito e inspeção |
 | Dependências/package-lock | PASS — nenhum pacote novo |
 
@@ -60,6 +66,7 @@ Implementados os serviços bulk server-only de catálogo e seleção, sem lookup
 
 - `7abc2a25` — serviços bulk de catálogo e seleção
 - `0c29b4ef` — testes de cache, invalidação e paridade
+- `f3648ce5` — epoch de invalidação, testes concorrentes e paridade do catálogo real
 
 ## Self-Check
 
