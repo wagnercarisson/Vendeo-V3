@@ -69,8 +69,21 @@ describe("buildAiModelSelectionView", () => {
     const copy = view.capabilities.find((item) => item.capability === "campaign_copy");
     expect(copy?.source).toBe("default");
     expect(copy?.current.primary.model).toBe("gpt-4o");
-    expect(copy?.configured?.primary.catalogStatus).toBe("deprecated");
+    expect(copy?.configured?.primary?.catalogStatus).toBe("deprecated");
     expect(copy?.configured?.fallback?.catalogStatus).toBe("missing");
     expect(copy?.default.primary.catalogStatus).toBe("active");
+  });
+
+  it("mantém seleção deprecated válida como configuração efetiva", async () => {
+    const rows = [catalogRow("campaign_copy", "openai", "deprecated-copy", "chat-completions", "deprecated")];
+    const map = new Map(rows.map((row) => [catalogTupleKey(row.capability, row.provider, row.model, row.protocol), row]));
+    const view = await buildAiModelSelectionView({
+      catalogService: { getActiveCatalogRows: vi.fn().mockResolvedValue([]), getCatalogMap: vi.fn().mockResolvedValue(map) },
+      selectionService: { getSelectionMap: vi.fn().mockResolvedValue(new Map([["campaign_copy", selection({ fallback_provider: null, fallback_model: null, fallback_protocol: null })]])) },
+    });
+    const copy = view.capabilities.find((item) => item.capability === "campaign_copy");
+    expect(copy?.source).toBe("selection");
+    expect(copy?.current.primary.model).toBe("deprecated-copy");
+    expect(copy?.current.primary.catalogStatus).toBe("deprecated");
   });
 });
