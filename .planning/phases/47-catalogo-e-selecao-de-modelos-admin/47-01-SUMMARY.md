@@ -73,7 +73,7 @@ O warning não bloqueante de variável não lida em `begin_campaign_correction_s
 - `0943966f` — verificador local
 - `484a8153` — correção forward de `admin_create_store_for_user`, verificador via status env e summary inicial
 - `2993081f` — correção forward de `admin_get_ai_costs` e teste RPC real
-- pendente — atualização final deste summary
+- `b7a452b4` — atualização final deste summary
 
 ## Self-Check
 
