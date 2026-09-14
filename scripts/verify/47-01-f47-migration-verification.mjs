@@ -3,27 +3,46 @@
 // antes de qualquer push. Cada cenário falha individualmente e o processo sai
 // com status não zero quando o banco ou qualquer assert não estiver disponível.
 import { createClient } from "@supabase/supabase-js";
-import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import crypto from "node:crypto";
+import { Client } from "pg";
 
-const envContent = readFileSync(new URL("../../.env.local", import.meta.url), "utf8");
-const getEnv = (key) => {
-  const match = envContent.match(new RegExp(`^${key}=(.*)$`, "m"));
-  return match?.[1]?.trim().replace(/^['"]|['"]$/g, "") ?? null;
-};
+function getLocalSupabaseEnv() {
+  const command = process.platform === "win32" ? "cmd.exe" : "npx";
+  const args = process.platform === "win32"
+    ? ["/d", "/s", "/c", "npx supabase status -o env"]
+    : ["supabase", "status", "-o", "env"];
+  const output = execFileSync(command, args, {
+    cwd: new URL("../..", import.meta.url),
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  const values = {};
+  for (const line of output.split(/\r?\n/)) {
+    const match = line.match(/^(API_URL|ANON_KEY|SERVICE_ROLE_KEY|DB_URL)="([^"]+)"$/);
+    if (match) values[match[1]] = match[2];
+  }
+  return values;
+}
 
-const url = getEnv("NEXT_PUBLIC_SUPABASE_URL");
-const serviceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
-const anonKey = getEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
-if (!url || !serviceRoleKey || !anonKey) {
-  throw new Error("Credenciais locais ausentes em .env.local");
+const localEnv = getLocalSupabaseEnv();
+const url = localEnv.API_URL;
+const serviceRoleKey = localEnv.SERVICE_ROLE_KEY;
+const anonKey = localEnv.ANON_KEY;
+const dbUrl = localEnv.DB_URL;
+if (!url || !serviceRoleKey || !anonKey || !dbUrl) {
+  throw new Error("API_URL, ANON_KEY, SERVICE_ROLE_KEY ou DB_URL ausente em `npx supabase status -o env`");
 }
 if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(url)) {
   throw new Error(`Recusando verificar banco remoto: ${url}`);
 }
+if (!/^postgresql:\/\/(?:[^@]+@)?(localhost|127\.0\.0\.1)(:\d+)?\//i.test(dbUrl)) {
+  throw new Error(`Recusando limpar banco remoto: ${dbUrl}`);
+}
 
 const admin = createClient(url, serviceRoleKey);
 const anon = createClient(url, anonKey);
+let temporaryActorId = null;
 const results = [];
 const assert = (name, ok, detail = "") => {
   results.push({ name, ok, detail });
@@ -36,13 +55,36 @@ async function expectRpcError(name, client, functionName, args, expected) {
   assert(name, !!error && error.message.includes(expected), error?.message ?? "erro esperado");
 }
 
+async function removeTemporaryActor(actorId) {
+  const db = new Client({ connectionString: dbUrl });
+  await db.connect();
+  try {
+    // O actor deixa auditorias F47; a cascata auth.users -> admin_audit_log é
+    // bloqueada pelo trigger append-only. A suspensão é estritamente local e
+    // limitada à limpeza do actor criado por este verificador.
+    await db.query("ALTER TABLE public.admin_audit_log DISABLE TRIGGER trg_admin_audit_log_immutable");
+    await db.query("DELETE FROM public.admin_audit_log WHERE actor_id = $1", [actorId]);
+    await db.query("ALTER TABLE public.admin_audit_log ENABLE TRIGGER trg_admin_audit_log_immutable");
+  } finally {
+    await db.end();
+  }
+  const { error } = await admin.auth.admin.deleteUser(actorId);
+  if (error) throw new Error(`remoção do actor falhou: ${error.message || JSON.stringify(error)}`);
+}
+
 async function run() {
   console.log("\nF47-01 migration verification (Supabase local)\n");
-  const { data: users, error: usersError } = await admin.auth.admin.listUsers({ perPage: 1 });
-  if (usersError || !users?.users?.length) {
-    throw new Error(`Nenhum usuário local disponível como actor: ${usersError?.message ?? "sem usuários"}`);
+  const temporaryEmail = `f47-01-${crypto.randomUUID()}@local.invalid`;
+  const { data: temporaryUser, error: createUserError } = await admin.auth.admin.createUser({
+    email: temporaryEmail,
+    password: `${crypto.randomUUID()}-Aa1!`,
+    email_confirm: true,
+  });
+  if (createUserError || !temporaryUser.user) {
+    throw new Error(`Não foi possível criar actor local temporário: ${createUserError?.message ?? "usuário ausente"}`);
   }
-  const actorId = users.users[0].id;
+  const actorId = temporaryUser.user.id;
+  temporaryActorId = actorId;
 
   const { data: catalog, error: catalogError } = await admin
     .from("ai_model_catalog")
@@ -91,7 +133,7 @@ async function run() {
   await expectRpcError("motivo ausente rejeitado", admin, "admin_set_ai_model_selection", { ...baseArgs, p_reason: "", p_operation_id: operationId() }, "missing_reason");
   await expectRpcError("modelo fora do catálogo rejeitado", admin, "admin_set_ai_model_selection", { ...baseArgs, p_model: "not-cataloged", p_operation_id: operationId() }, "model_not_in_catalog");
   await expectRpcError("fallback incompleto rejeitado", admin, "admin_set_ai_model_selection", { ...baseArgs, p_fallback_provider: "gemini", p_operation_id: operationId() }, "incomplete_fallback");
-  await expectRpcError("fallback fora de campaign_copy rejeitado", admin, "admin_set_ai_model_selection", { ...baseArgs, p_capability: "campaign_image", p_fallback_provider: "openai", p_fallback_model: "gpt-image-2", p_fallback_protocol: "images", p_operation_id: operationId() }, "fallback_not_supported");
+  await expectRpcError("fallback fora de campaign_copy rejeitado", admin, "admin_set_ai_model_selection", { ...baseArgs, p_capability: "campaign_image", p_model: "gpt-5.5", p_protocol: "responses", p_fallback_provider: "openai", p_fallback_model: "gpt-image-2", p_fallback_protocol: "images", p_operation_id: operationId() }, "fallback_not_supported");
   await expectRpcError("primary igual ao fallback rejeitado", admin, "admin_set_ai_model_selection", { ...baseArgs, p_fallback_provider: "openai", p_fallback_model: "gpt-4o", p_fallback_protocol: "chat-completions", p_operation_id: operationId() }, "primary_equals_fallback");
 
   const deprecatedTuple = catalog?.find((row) => row.capability === "campaign_copy" && row.provider === "openai");
@@ -125,9 +167,27 @@ async function run() {
   const failed = results.filter((result) => !result.ok);
   console.log(`\nResults: ${results.length - failed.length} passed / ${failed.length} failed / ${results.length} total`);
   if (failed.length > 0) process.exitCode = 1;
+
+  try {
+    await removeTemporaryActor(actorId);
+    console.log("Actor local temporário removido");
+  } catch (deleteUserError) {
+    console.error(`Falha ao remover actor temporário ${actorId}: ${deleteUserError.message}`);
+    process.exitCode = 1;
+  }
+  temporaryActorId = null;
 }
 
-run().catch((error) => {
+run().catch(async (error) => {
+  if (temporaryActorId) {
+    try {
+      await removeTemporaryActor(temporaryActorId);
+      console.error(`Actor local temporário removido após falha: ${temporaryActorId}`);
+    } catch (cleanupError) {
+      console.error(`Falha na limpeza do actor temporário: ${cleanupError.message}`);
+    }
+    temporaryActorId = null;
+  }
   console.error(`\nBLOCKED/FAILED: ${error.message}`);
   process.exitCode = 1;
 });
