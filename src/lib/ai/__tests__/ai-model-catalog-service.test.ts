@@ -28,6 +28,28 @@ function fakeClient(result: { data: unknown; error: { message: string } | null }
 }
 
 describe("AiModelCatalogService", () => {
+  it("não repopula o cache com uma leitura in-flight iniciada antes da invalidação", async () => {
+    let resolveFirst!: (value: { data: unknown; error: null }) => void;
+    const firstRead = new Promise<{ data: unknown; error: null }>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const select = vi
+      .fn()
+      .mockReturnValueOnce(firstRead)
+      .mockResolvedValueOnce({ data: [row({ id: "fresh" })], error: null });
+    const client = { from: vi.fn(() => ({ select })) };
+    const service = new AiModelCatalogService(client as never);
+
+    const staleRead = service.getCatalogRows();
+    service.invalidateModelCatalogCache();
+    resolveFirst({ data: [row({ id: "stale" })], error: null });
+    await staleRead;
+
+    const freshRead = await service.getCatalogRows();
+    expect(freshRead[0]?.id).toBe("fresh");
+    expect(select).toHaveBeenCalledTimes(2);
+  });
+
   it("faz uma leitura bulk e mantém deprecated disponível no mapa", async () => {
     const [client, select] = fakeClient({
       data: [row(), row({ id: "catalog-2", status: "deprecated", model: "gpt-4o-old" })],

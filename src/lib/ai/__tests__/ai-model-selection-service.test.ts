@@ -18,6 +18,28 @@ const selection = (capability = "campaign_copy") => ({
 });
 
 describe("AiModelSelectionService", () => {
+  it("não repopula o cache com uma leitura in-flight iniciada antes da invalidação", async () => {
+    let resolveFirst!: (value: { data: unknown; error: null }) => void;
+    const firstRead = new Promise<{ data: unknown; error: null }>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const select = vi
+      .fn()
+      .mockReturnValueOnce(firstRead)
+      .mockResolvedValueOnce({ data: [selection("campaign_image")], error: null });
+    const client = { from: vi.fn(() => ({ select })) };
+    const service = new AiModelSelectionService(client as never);
+
+    const staleRead = service.getSelectionMap();
+    service.invalidateModelSelectionCache();
+    resolveFirst({ data: [selection()], error: null });
+    await staleRead;
+
+    const freshRead = await service.getSelectionMap();
+    expect(freshRead.get("campaign_image")?.capability).toBe("campaign_image");
+    expect(select).toHaveBeenCalledTimes(2);
+  });
+
   it("carrega o mapa completo uma vez dentro do TTL de 30 segundos", async () => {
     let now = 1_000;
     const select = vi.fn().mockResolvedValue({ data: [selection(), selection("campaign_image")], error: null });

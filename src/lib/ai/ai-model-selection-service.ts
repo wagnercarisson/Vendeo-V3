@@ -27,7 +27,8 @@ export type AiModelSelectionMap = Map<string, AiModelSelectionRow>;
  */
 export class AiModelSelectionService {
   private cache: { expiresAt: number; selections: AiModelSelectionMap } | null = null;
-  private inFlight: Promise<AiModelSelectionMap> | null = null;
+  private inFlight: { epoch: number; promise: Promise<AiModelSelectionMap> } | null = null;
+  private invalidationEpoch = 0;
 
   constructor(
     private readonly client: SupabaseClient = supabaseAdmin,
@@ -37,16 +38,19 @@ export class AiModelSelectionService {
 
   async getSelectionMap(): Promise<AiModelSelectionMap> {
     if (this.cache && this.cache.expiresAt > this.now()) return this.cache.selections;
-    if (this.inFlight) return this.inFlight;
+    const epoch = this.invalidationEpoch;
+    if (this.inFlight?.epoch === epoch) return this.inFlight.promise;
 
-    this.inFlight = this.loadSelectionMap();
-    try {
-      const selections = await this.inFlight;
-      this.cache = { selections, expiresAt: this.now() + this.ttlMs };
+    const promise = (async () => {
+      const selections = await this.loadSelectionMap();
+      if (epoch === this.invalidationEpoch && this.inFlight?.promise === promise) {
+        this.cache = { selections, expiresAt: this.now() + this.ttlMs };
+        this.inFlight = null;
+      }
       return selections;
-    } finally {
-      this.inFlight = null;
-    }
+    })();
+    this.inFlight = { epoch, promise };
+    return promise;
   }
 
   async getSelections(): Promise<AiModelSelectionRow[]> {
@@ -54,6 +58,7 @@ export class AiModelSelectionService {
   }
 
   invalidateModelSelectionCache(): void {
+    this.invalidationEpoch += 1;
     this.cache = null;
     this.inFlight = null;
   }

@@ -39,7 +39,8 @@ export function catalogTupleKey(
  */
 export class AiModelCatalogService {
   private cache: { expiresAt: number; rows: AiModelCatalogRow[] } | null = null;
-  private inFlight: Promise<AiModelCatalogRow[]> | null = null;
+  private inFlight: { epoch: number; promise: Promise<AiModelCatalogRow[]> } | null = null;
+  private invalidationEpoch = 0;
 
   constructor(
     private readonly client: SupabaseClient = supabaseAdmin,
@@ -49,16 +50,19 @@ export class AiModelCatalogService {
 
   async getCatalogRows(): Promise<AiModelCatalogRow[]> {
     if (this.cache && this.cache.expiresAt > this.now()) return this.cache.rows;
-    if (this.inFlight) return this.inFlight;
+    const epoch = this.invalidationEpoch;
+    if (this.inFlight?.epoch === epoch) return this.inFlight.promise;
 
-    this.inFlight = this.loadCatalogRows();
-    try {
-      const rows = await this.inFlight;
-      this.cache = { rows, expiresAt: this.now() + this.ttlMs };
+    const promise = (async () => {
+      const rows = await this.loadCatalogRows();
+      if (epoch === this.invalidationEpoch && this.inFlight?.promise === promise) {
+        this.cache = { rows, expiresAt: this.now() + this.ttlMs };
+        this.inFlight = null;
+      }
       return rows;
-    } finally {
-      this.inFlight = null;
-    }
+    })();
+    this.inFlight = { epoch, promise };
+    return promise;
   }
 
   async getCatalogMap(): Promise<AiModelCatalogMap> {
@@ -77,6 +81,7 @@ export class AiModelCatalogService {
   }
 
   invalidateModelCatalogCache(): void {
+    this.invalidationEpoch += 1;
     this.cache = null;
     this.inFlight = null;
   }

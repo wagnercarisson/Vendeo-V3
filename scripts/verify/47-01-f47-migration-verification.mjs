@@ -49,6 +49,20 @@ const assert = (name, ok, detail = "") => {
   console.log(`${ok ? "✓" : "✗"} ${name}${ok ? "" : ` — ${detail}`}`);
 };
 const operationId = () => crypto.randomUUID();
+const EXPECTED_CATALOG_TUPLES = [
+  ["campaign_copy", "text", "openai", "gpt-4o", "chat-completions", "active"],
+  ["campaign_copy", "text", "gemini", "gemini-3.1-flash-lite", "gemini", "active"],
+  ["campaign_correction_analysis", "text", "openai", "gpt-4o", "chat-completions", "active"],
+  ["brand_profile_text", "text", "openai", "gpt-4o", "chat-completions", "active"],
+  ["campaign_spec", "text", "openai", "gpt-4o-mini", "chat-completions", "active"],
+  ["campaign_input_validation", "vision", "openai", "gpt-4o", "chat-completions", "active"],
+  ["campaign_image_review", "vision", "openai", "gpt-4o", "chat-completions", "active"],
+  ["brand_profile_vision", "vision", "openai", "gpt-4o", "chat-completions", "active"],
+  ["visual_signature_validation", "vision", "openai", "gpt-4o-mini", "responses", "active"],
+  ["campaign_image", "image", "openai", "gpt-5.5", "responses", "active"],
+  ["campaign_image_edit", "image", "openai", "gpt-image-2", "images", "active"],
+  ["visual_signature_image", "image", "openai", "gpt-5.5", "responses", "active"],
+];
 
 async function expectRpcError(name, client, functionName, args, expected) {
   const { error } = await client.rpc(functionName, args);
@@ -101,6 +115,15 @@ async function run() {
     .select("capability, provider, model, protocol, segment, status");
   assert("schema/catalogo acessível pelo service_role", !catalogError && !!catalog, catalogError?.message);
   assert("matriz inicial contém exatamente 12 seeds", !catalogError && catalog?.length === 12, `count=${catalog?.length}`);
+  const actualCatalogTuples = (catalog ?? [])
+    .map((row) => [row.capability, row.segment, row.provider, row.model, row.protocol, row.status].join("|"))
+    .sort();
+  const expectedCatalogTuples = EXPECTED_CATALOG_TUPLES.map((tuple) => tuple.join("|")).sort();
+  assert(
+    "catálogo local corresponde exatamente à matriz F47 esperada",
+    !catalogError && JSON.stringify(actualCatalogTuples) === JSON.stringify(expectedCatalogTuples),
+    `actual=${JSON.stringify(actualCatalogTuples)} expected=${JSON.stringify(expectedCatalogTuples)}`,
+  );
   assert(
     "matriz não contém provider google",
     !catalogError && !(catalog ?? []).some((row) => row.provider === "google"),
