@@ -18,7 +18,8 @@ tech-stack:
   patterns:
     - server page consumes composer directly; client form calls API only for mutations
     - stable browser operationId retained across retries of one action
-    - operation fingerprint prevents save/reset UUID reuse after payload/action changes
+  - operation fingerprint prevents save/reset UUID reuse after payload/action changes
+  - deprecated fallback remains selected/diagnostic while active alternatives remain available
 
 key-files:
   created:
@@ -55,7 +56,7 @@ Tela administrativa Modelos de IA criada com agrupamento Texto/Visual/Imagem, ca
 
 | Gate | Resultado |
 |---|---|
-| UI focal | PASS — 1 file / 5 testes |
+| UI focal | PASS — 1 file / 6 testes |
 | `npm run typecheck` | PASS |
 | `npm run lint` | PASS |
 | `npm run build` | PASS |
@@ -68,6 +69,7 @@ Tela administrativa Modelos de IA criada com agrupamento Texto/Visual/Imagem, ca
 - `62651798` — testes do formulário admin
 - `645928ac` — interações auditadas, fallback e navegação responsiva
 - `e886332a` — cobertura de retry, reset, diagnóstico e 11 capacidades
+- `96c17419` — fallback deprecated selecionado e desabilitado
 
 ## Self-Check
 
