@@ -49,13 +49,13 @@ progress:
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
 | 47-01 | 1 | ☐ | Trackings + migration local, exatamente 12 seeds, RLS/CHECKs/RPCs/auditoria e checkpoint Docker/Supabase |
-| 47-02 | 1 | ☐ | Serviços bulk, cache TTL 30s/invalidação e paridade registry × catálogo |
-| 47-03 | 2 | ☐ | PersistedModelResolver e composição em index.ts, gateway intocado |
-| 47-04 | 2 | ☐ | API admin Zod GET/PUT/DELETE, DELETE JSON estrito e operationId UUID obrigatório |
-| 47-05 | 3 | ☐ | Tela Modelos de IA, grupos, fallback campaign_copy, reset auditado e nav |
-| 47-06 | 3 | ☐ | Pricing capacity-aware sem alteração de resolveAiCost |
-| 47-07 | 4 | ☐ | Labels efetivos, regressão e gates |
-| 47-08 | 5 | ☐ | UAT local, [BLOCKING] migration remota antes do deploy, verification/tracking |
+| 47-02 | 2 | ☐ | Serviços bulk, cache TTL 30s/invalidação e paridade registry × catálogo |
+| 47-03 | 3 | ☐ | PersistedModelResolver e composição em index.ts, gateway intocado |
+| 47-04 | 4 | ☐ | API admin Zod GET/PUT/DELETE, DELETE JSON estrito e operationId UUID obrigatório |
+| 47-05 | 5 | ☐ | Tela Modelos de IA, grupos, fallback campaign_copy, reset auditado e nav |
+| 47-06 | 5 | ☐ | Pricing capacity-aware sem alteração de resolveAiCost |
+| 47-07 | 6 | ☐ | Labels efetivos, regressão e gates |
+| 47-08 | 7 | ☐ | UAT local, [BLOCKING] migration remota antes do deploy, verification/tracking |
 
 **Fonte da verdade:** `openspec/changes/fase-47-catalogo-e-selecao-de-modelos-admin/`
 

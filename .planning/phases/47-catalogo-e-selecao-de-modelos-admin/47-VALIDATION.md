@@ -19,7 +19,7 @@ Este arquivo é o mapa de validação da F47. Ele define evidências e comandos;
 
 1. `47-01` pode gerar migration, script e lint estático sem Docker.
 2. Lint/reset/testes SQL e UAT SQL só executam depois do checkpoint Docker/Supabase de `47-01`.
-3. `47-02` usa mocks para permanecer em Wave 1; a migration local é validada por `47-01` antes do UAT integrado de `47-08`.
+3. `47-02` usa mocks, mas depende de `47-01` (Wave 2); a migration local é validada por `47-01` antes do UAT integrado de `47-08`.
 4. `47-08` não aplica migration remota sem UAT local aprovado e não faz deploy antes da confirmação remota.
 
 ## Comandos de amostragem

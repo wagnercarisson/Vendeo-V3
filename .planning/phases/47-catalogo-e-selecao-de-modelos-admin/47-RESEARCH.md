@@ -284,14 +284,14 @@ O probe `npx supabase status` falhou por ausência do pipe do Docker Desktop Lin
 
 | Plan | Behaviors that need tests | Type |
 |---|---|---|
-| 47-01 | schema/RLS, seed exact 12 rows/idempotência, CHECKs, set/reset errors, audit atomicity/idempotência | SQL/integration |
-| 47-02 | bulk maps, TTL, invalidation, deprecated inclusion, registry/catalog parity | unit/service |
-| 47-03 | valid override, default fallback, deprecated, missing/partial/incompatible, null fallback, no gateway change | unit/integration |
-| 47-04 | 403, Zod 400, GET statuses, PUT/DELETE RPC mapping and cache invalidation | route |
-| 47-05 | segment grouping, capability edit, fallback only campaign_copy, reason/reset, access | component/page |
-| 47-06 | token/tool/image-unit warnings and unchanged cost chain | unit |
-| 47-07 | effective labels and full regression; UI/form/schema/snapshot/domain/prompts unchanged | regression |
-| 47-08 | UAT local set/reset/fallback/deprecated/pricing/telemetry/deploy order | manual + verification |
+| 47-01 (Wave 1) | schema/RLS, seed exact 12 rows/idempotência, CHECKs, set/reset errors, audit atomicity/idempotência | SQL/integration |
+| 47-02 (Wave 2, após 47-01) | bulk maps, TTL, invalidation, deprecated inclusion, registry/catalog parity | unit/service |
+| 47-03 (Wave 3) | valid override, default fallback, deprecated, missing/partial/incompatible, null fallback, no gateway change | unit/integration |
+| 47-04 (Wave 4) | 403, Zod 400, GET statuses, PUT/DELETE RPC mapping and cache invalidation | route |
+| 47-05 (Wave 5) | segment grouping, capability edit, fallback only campaign_copy, reason/reset, access | component/page |
+| 47-06 (Wave 5) | token/tool/image-unit warnings and unchanged cost chain | unit |
+| 47-07 (Wave 6) | effective labels and full regression; UI/form/schema/snapshot/domain/prompts unchanged | regression |
+| 47-08 (Wave 7) | UAT local set/reset/fallback/deprecated/pricing/telemetry/deploy order | manual + verification |
 
 ### Sampling rate
 
