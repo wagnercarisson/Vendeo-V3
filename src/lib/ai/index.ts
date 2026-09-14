@@ -1,7 +1,11 @@
+import "server-only";
 import type { AiCapability } from "./model-resolver";
 import { ModelRegistry } from "./model-registry";
 import { defaultAdapterRegistry } from "./adapters/registry";
 import { AiGateway, type AiInvocationTarget } from "./gateway";
+import { PersistedModelResolver } from "./persisted-model-resolver";
+import { aiModelCatalogService } from "./ai-model-catalog-service";
+import { aiModelSelectionService } from "./ai-model-selection-service";
 import type { AiInvocationRequest, AiInvocationResult, AiTelemetryContext } from "./types";
 
 /**
@@ -11,7 +15,12 @@ import type { AiInvocationRequest, AiInvocationResult, AiTelemetryContext } from
  * serviços migrados chamam `invoke(...)` daqui — nenhum instancia provider.
  * Testes injetam `new AiGateway(resolverFake, adaptersFake)` diretamente.
  */
-export const defaultAiGateway = new AiGateway(new ModelRegistry(), defaultAdapterRegistry);
+export const defaultAiModelResolver = new PersistedModelResolver({
+  registry: new ModelRegistry(),
+  selectionService: aiModelSelectionService,
+  catalogService: aiModelCatalogService,
+});
+export const defaultAiGateway = new AiGateway(defaultAiModelResolver, defaultAdapterRegistry);
 
 /** Função de conveniência para o caminho de produção (usa a instância padrão). */
 export function invoke(
@@ -34,6 +43,7 @@ export {
   CAPABILITY_SEGMENTS,
   ALL_CAPABILITIES,
 } from "./model-registry";
+export { PersistedModelResolver } from "./persisted-model-resolver";
 export { CAPABILITY_GENERATION_TYPE } from "./generation-type-map";
 export { getApiKey } from "./api-keys";
 export {
