@@ -86,8 +86,8 @@ describe("PersistedModelResolver", () => {
     ["tupla missing", resolverFor(selectionRow({ model: "missing" }), [])],
     ["seleção parcial", resolverFor(selectionRow({ model: "" }), [catalogRow("campaign_copy", "openai", "gpt-4o", "chat-completions")])],
     ["protocolo incompatível", resolverFor(selectionRow({ protocol: "responses" }), [catalogRow("campaign_copy", "openai", "gpt-4o", "responses")])],
+    ["segmento incompatível", resolverFor(selectionRow(), [catalogRow("campaign_copy", "openai", "gpt-4o", "chat-completions")] .map((row) => ({ ...row, segment: "image" })) )],
     ["primary igual ao fallback", resolverFor(selectionRow({ fallback_provider: "openai", fallback_model: "gpt-4o", fallback_protocol: "chat-completions" }), [catalogRow("campaign_copy", "openai", "gpt-4o", "chat-completions")])],
-    ["fallback em capacidade sem caller", resolverFor(selectionRow({ capability: "campaign_image", fallback_provider: "openai", fallback_model: "gpt-image-2", fallback_protocol: "images", model: "gpt-5.5", protocol: "responses" }), [catalogRow("campaign_image", "openai", "gpt-5.5", "responses"), catalogRow("campaign_image", "openai", "gpt-image-2", "images")])],
   ])("usa o default completo no caso %s", async (_name, resolver) => {
     await expect(resolver.resolve("campaign_copy")).resolves.toEqual(MODEL_REGISTRY.campaign_copy);
   });
@@ -96,6 +96,31 @@ describe("PersistedModelResolver", () => {
     const resolver = resolverFor(selectionRow(), [catalogRow("campaign_copy", "openai", "gpt-4o", "chat-completions")]);
     const config = await resolver.resolve("campaign_copy");
     expect(config.fallback).toBeUndefined();
+  });
+
+  it("campos de fallback ausentes são seleção parcial e voltam ao default", async () => {
+    const resolver = resolverFor(
+      selectionRow({ fallback_provider: undefined, fallback_model: undefined, fallback_protocol: undefined }),
+      [catalogRow("campaign_copy", "openai", "gpt-4o", "chat-completions")],
+    );
+    await expect(resolver.resolve("campaign_copy")).resolves.toEqual(MODEL_REGISTRY.campaign_copy);
+  });
+
+  it("rejeita fallback em capacidade sem caller e resolve a própria capacidade", async () => {
+    const resolver = resolverFor(
+      selectionRow({ capability: "campaign_image", model: "gpt-5.5", protocol: "responses", fallback_provider: "openai", fallback_model: "gpt-image-2", fallback_protocol: "images" }),
+      [catalogRow("campaign_image", "openai", "gpt-5.5", "responses"), catalogRow("campaign_image", "openai", "gpt-image-2", "images")],
+    );
+    await expect(resolver.resolve("campaign_image")).resolves.toEqual(MODEL_REGISTRY.campaign_image);
+  });
+
+  it("preserva o default completo quando a seleção persistida é igual ao registry", async () => {
+    const config = MODEL_REGISTRY.campaign_image;
+    const resolver = resolverFor(
+      selectionRow({ capability: "campaign_image", model: config.primary.model, protocol: config.primary.protocol }),
+      [catalogRow("campaign_image", config.primary.provider, config.primary.model, config.primary.protocol)],
+    );
+    await expect(resolver.resolve("campaign_image")).resolves.toEqual(config);
   });
 
   it("lista as capacidades do registry sem consultar o banco", () => {

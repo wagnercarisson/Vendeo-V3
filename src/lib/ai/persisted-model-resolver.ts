@@ -45,7 +45,10 @@ function catalogContains(
   target: AiModelTarget,
 ): boolean {
   const row = catalog.get(catalogTupleKey(capability, target.provider, target.model, target.protocol));
-  return row?.status === "active" || row?.status === "deprecated";
+  return (
+    row?.segment === CAPABILITY_SEGMENTS[capability] &&
+    (row.status === "active" || row.status === "deprecated")
+  );
 }
 
 function isTargetCompatible(capability: AiCapability, target: AiModelTarget): boolean {
@@ -71,8 +74,8 @@ function buildConfig(
   if (!isCompleteTarget(primary) || !isTargetCompatible(capability, primary) || !catalogContains(catalog, capability, primary)) return null;
 
   const fallbackValues = [selection.fallback_provider, selection.fallback_model, selection.fallback_protocol];
-  const fallbackPresent = fallbackValues.some((value) => value !== null && value !== undefined);
-  if (!fallbackPresent) {
+  const fallbackDisabled = fallbackValues.every((value) => value === null);
+  if (fallbackDisabled) {
     return { capability, segment: CAPABILITY_SEGMENTS[capability], primary };
   }
   if (capability !== "campaign_copy" || fallbackValues.some((value) => typeof value !== "string" || value.length === 0)) return null;
