@@ -17,7 +17,7 @@
 
 ## Summary
 
-F47 deve adicionar duas tabelas server-only: `ai_model_catalog`, que é a allowlist por tupla completa `capability + provider + model + protocol`, e `ai_model_selection`, que guarda a configuração efetiva por capacidade. A matriz inicial é explícita: 11 defaults primários da F46 mais o fallback Gemini de `campaign_copy`; não é produto cartesiano da allowlist. `[CITED: OpenSpec F47 design.md D1 e matriz inicial]`
+F47 deve adicionar duas tabelas server-only: `ai_model_catalog`, que é a allowlist por tupla completa `capability + provider + model + protocol`, e `ai_model_selection`, que guarda a configuração efetiva por capacidade. A matriz inicial é explícita: 12 linhas, sendo 11 defaults primários da F46 mais o fallback Gemini de `campaign_copy`; não é produto cartesiano da allowlist. `[CITED: OpenSpec F47 design.md D1 e matriz inicial]`
 
 O núcleo de runtime é `PersistedModelResolver`: ele decorará o `ModelRegistry`, carrega mapas bulk cacheados, aceita seleção válida inclusive `deprecated` ainda vigente, e cai silenciosamente no default do registry para ausência, erro, linha `missing`, parcial ou incompatível. O `AiGateway` não deve ser alterado. `[CITED: OpenSpec F47 design.md D6/D7; VERIFIED: src/lib/ai/model-resolver.ts, model-registry.ts, index.ts]`
 
@@ -122,7 +122,7 @@ Os nomes `ou equivalente` do proposal devem ser resolvidos mantendo uma única i
 
 ### Padrão 2: migration como autoridade do catálogo
 
-Seed apenas as 13 linhas da matriz OpenSpec (11 primary + 1 fallback), com `provider='gemini'`; `ON CONFLICT` não altera linhas existentes. RPC set valida a tupla contra catálogo `active`; linhas `deprecated` não podem receber nova seleção. `[CITED: OpenSpec F47 design.md matriz inicial/D4; tasks.md 1.2–1.8]`
+Seed apenas as 12 linhas da matriz OpenSpec (11 primary + 1 fallback), com `provider='gemini'`; `ON CONFLICT` não altera linhas existentes. RPC set valida a tupla contra catálogo `active`; linhas `deprecated` não podem receber nova seleção. `[CITED: OpenSpec F47 design.md matriz inicial/D4; tasks.md 1.2–1.8]`
 
 ### Padrão 3: auditoria atômica
 
@@ -156,7 +156,7 @@ O Supabase CLI está instalado via `npx`, mas `npx supabase status` falhou porqu
 
 | Plan | Wave | Deve entregar | Dependências / orientação de arquivos |
 |---|---:|---|---|
-| 47-01 | 1 | tracking + uma migration F47 local com tabelas, RLS, seeds, RPCs, CHECKs e testes SQL | precede todo código; atualizar os 5 tracking files sem reescrever histórico F46; migration depende do `admin_audit_log` existente e do padrão F43/F38. `[CITED: tasks.md 1.1–1.8; VERIFIED: supabase/migrations]` |
+| 47-01 | 1 | tracking + uma migration F47 local com tabelas, RLS, 12 seeds, RPCs, CHECKs e testes SQL | precede todo código; atualizar os 5 tracking files sem reescrever histórico F46; migration depende do `admin_audit_log` existente e do padrão F43/F38. `[CITED: tasks.md 1.1–1.8; VERIFIED: supabase/migrations]` |
 | 47-02 | 1 | `AiModelCatalogService`, `AiModelSelectionService`, bulk maps, TTL/invalidação, paridade registry×catalog | depende do schema local; `src/lib/ai/*`; não colocar `resolve` nos serviços. `[CITED: tasks.md 2.1–2.3]` |
 | 47-03 | 2 | `PersistedModelResolver` e composição em `src/lib/ai/index.ts` | depende de 47-02; não editar `gateway.ts`; cobrir defaults, deprecated, missing, provider/protocol, fallback nulo. `[CITED: tasks.md 3.1–3.4; VERIFIED: src/lib/ai/index.ts]` |
 | 47-04 | 2 | Zod, route GET/PUT/DELETE, labels de auditoria e testes HTTP | depende das RPCs e services; `GET` precisa calcular status por tupla completa e retornar pricing/catalog data sem N+1. `[CITED: tasks.md 4.1–4.4]` |
@@ -284,7 +284,7 @@ O probe `npx supabase status` falhou por ausência do pipe do Docker Desktop Lin
 
 | Plan | Behaviors that need tests | Type |
 |---|---|---|
-| 47-01 | schema/RLS, seed exact 13 rows/idempotência, CHECKs, set/reset errors, audit atomicity/idempotência | SQL/integration |
+| 47-01 | schema/RLS, seed exact 12 rows/idempotência, CHECKs, set/reset errors, audit atomicity/idempotência | SQL/integration |
 | 47-02 | bulk maps, TTL, invalidation, deprecated inclusion, registry/catalog parity | unit/service |
 | 47-03 | valid override, default fallback, deprecated, missing/partial/incompatible, null fallback, no gateway change | unit/integration |
 | 47-04 | 403, Zod 400, GET statuses, PUT/DELETE RPC mapping and cache invalidation | route |
@@ -343,14 +343,14 @@ O probe `npx supabase status` falhou por ausência do pipe do Docker Desktop Lin
 |---|---|---|---|
 | A1 | O cache implementará apenas mecanismo por instância, sem Redis, se nenhum mecanismo compartilhado já existir. `[ASSUMED]` | Cache / Environment | outras instâncias podem observar mudança por até 30s; precisa confirmação/decisão no plano. |
 | A2 | `vitest.config.ts` é o config existente do Vitest. `[VERIFIED: glob]` | Validation | preservar o config; adicionar apenas suites F47. |
-| A3 | O shape de DELETE usará JSON com `operationId`. `[ASSUMED]` | Gaps | divergência entre UI, route e RPC se não for fixado antes da implementação. |
+| A3 | O DELETE usará JSON `{ capability, reason, operationId }`, com `operationId` UUID obrigatório gerado uma vez pela UI e reutilizado em retry. `[DECIDED: user 2026-09-14]` | API/UI/RPC | O servidor não deve gerar outro ID para a mesma tentativa lógica. |
 
 ## Open Questions
 
-1. **Qual mecanismo compartilhado de invalidação deve ser usado?** O contrato fixa TTL 30s e invalidação explícita, mas permite cache por instância. `[CITED: design.md D6]` **Recomendação:** não adicionar infraestrutura; implementar singleton/cache server-side por instância e testar/documentar a janela residual, salvo decisão humana.
-2. **Qual é o contrato HTTP exato de DELETE?** `[CITED: tasks.md 4.1–4.4]` **Recomendação:** JSON `{ capability, reason, operationId }`, com Zod e UUID gerado se ausente, mantendo o mesmo padrão de PUT.
-3. **Existe pricing remoto/bootstrap para todos os componentes?** O bootstrap contém `responses:image_generation` e modelos F46, mas a tabela remota deve ser verificada no UAT; a ausência é warning, não blocker de seleção. `[VERIFIED: src/lib/ai-cost/ai-model-pricing.ts; CITED: specs/ai-model-pricing/spec.md]`
-4. **Docker/ambiente Supabase local estará disponível antes de 47-01?** Probe atual falhou. `[VERIFIED: environment probe]` **Recomendação:** bloquear testes SQL/UAT local até iniciar Docker ou registrar explicitamente checkpoint humano.
+1. **Qual mecanismo compartilhado de invalidação deve ser usado?** **Decisão:** não adicionar infraestrutura; implementar singleton/cache server-side por instância, TTL de 30s e invalidação local explícita, documentando a janela residual entre instâncias. `[DECIDED: user 2026-09-14; CITED: design.md D6]`
+2. **Qual é o contrato HTTP exato de DELETE?** **Decisão:** JSON `{ capability, reason, operationId }`, com `operationId` UUID obrigatório na API, gerado uma vez pela UI e reutilizado em retries; o servidor não gera um novo ID. `[DECIDED: user 2026-09-14; CITED: tasks.md 4.1–4.4]`
+3. **Existe pricing remoto/bootstrap para todos os componentes?** O bootstrap contém `responses:image_generation` e modelos F46, mas a tabela remota deve ser verificada no UAT; a ausência é warning, não blocker de seleção. `[VERIFIED: src/lib/ai-cost/ai-model-pricing.ts; CITED: specs/ai-model-pricing/spec.md]` A leitura F47 deve usar helper bulk/in-memory, sem alterar `resolveAiCost`.
+4. **Docker/ambiente Supabase local estará disponível antes de 47-01?** Probe atual falhou. `[VERIFIED: environment probe]` **Decisão:** Docker/Supabase local é checkpoint bloqueante para executar os testes SQL/UAT, mas não bloqueia a geração dos planos. `[DECIDED: user 2026-09-14]`
 
 ## Sources
 
