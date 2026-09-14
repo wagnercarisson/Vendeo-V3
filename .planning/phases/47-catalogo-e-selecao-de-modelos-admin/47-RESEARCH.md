@@ -345,12 +345,12 @@ O probe `npx supabase status` falhou por ausência do pipe do Docker Desktop Lin
 | A2 | `vitest.config.ts` é o config existente do Vitest. `[VERIFIED: glob]` | Validation | preservar o config; adicionar apenas suites F47. |
 | A3 | O DELETE usará JSON `{ capability, reason, operationId }`, com `operationId` UUID obrigatório gerado uma vez pela UI e reutilizado em retry. `[DECIDED: user 2026-09-14]` | API/UI/RPC | O servidor não deve gerar outro ID para a mesma tentativa lógica. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Qual mecanismo compartilhado de invalidação deve ser usado?** **Decisão:** não adicionar infraestrutura; implementar singleton/cache server-side por instância, TTL de 30s e invalidação local explícita, documentando a janela residual entre instâncias. `[DECIDED: user 2026-09-14; CITED: design.md D6]`
-2. **Qual é o contrato HTTP exato de DELETE?** **Decisão:** JSON `{ capability, reason, operationId }`, com `operationId` UUID obrigatório na API, gerado uma vez pela UI e reutilizado em retries; o servidor não gera um novo ID. `[DECIDED: user 2026-09-14; CITED: tasks.md 4.1–4.4]`
-3. **Existe pricing remoto/bootstrap para todos os componentes?** O bootstrap contém `responses:image_generation` e modelos F46, mas a tabela remota deve ser verificada no UAT; a ausência é warning, não blocker de seleção. `[VERIFIED: src/lib/ai-cost/ai-model-pricing.ts; CITED: specs/ai-model-pricing/spec.md]` A leitura F47 deve usar helper bulk/in-memory, sem alterar `resolveAiCost`.
-4. **Docker/ambiente Supabase local estará disponível antes de 47-01?** Probe atual falhou. `[VERIFIED: environment probe]` **Decisão:** Docker/Supabase local é checkpoint bloqueante para executar os testes SQL/UAT, mas não bloqueia a geração dos planos. `[DECIDED: user 2026-09-14]`
+1. **Qual mecanismo compartilhado de invalidação deve ser usado? RESOLVIDO.** Não adicionar infraestrutura; implementar cache server-side por instância, TTL de 30s e invalidação local explícita, documentando a janela residual entre instâncias. `[DECIDED: user 2026-09-14; CITED: design.md D6]`
+2. **Qual é o contrato HTTP exato de DELETE? RESOLVIDO.** JSON `{ capability, reason, operationId }`, com `operationId` UUID obrigatório gerado uma vez pela UI e reutilizado em retries; o servidor nunca gera um novo ID. `[DECIDED: user 2026-09-14; CITED: tasks.md 4.1–4.4]`
+3. **Como tratar pricing remoto/bootstrap? RESOLVIDO.** A ausência de qualquer componente é warning, não bloqueia seleção; a leitura F47 usa helper bulk/in-memory e as APIs existentes, sem alterar `resolveAiCost` nem `src/lib/ai-cost/ai-model-pricing.ts`. `[DECIDED: user 2026-09-14; CITED: design.md D8]`
+4. **Docker/ambiente Supabase local estará disponível antes de 47-01? RESOLVIDO.** Docker/Supabase local é checkpoint bloqueante para executar lint/reset/testes SQL/UAT, mas não bloqueia a geração dos planos. `[DECIDED: user 2026-09-14]`
 
 ## Sources
 
