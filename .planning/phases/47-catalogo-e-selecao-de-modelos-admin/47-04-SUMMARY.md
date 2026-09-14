@@ -11,6 +11,7 @@ provides:
   - strict selection update/reset schemas and F47 audit labels
   - server-only selection view composer with active/deprecated/missing statuses
   - admin GET/PUT/DELETE selection API with RPC-only mutation
+  - effective-vs-configured view semantics delegated to PersistedModelResolver
 affects: [47-05, 47-06, 47-07, 47-08]
 
 tech-stack:
@@ -34,6 +35,7 @@ decisions:
   - "DELETE aceita somente JSON estrito { capability, reason, operationId }; nenhum operationId é gerado no servidor."
   - "GET reutiliza o composer server-only e não faz request HTTP interno nem lookup N+1."
   - "Pricing fica fora desta wave; o view model reserva a integração futura sem warnings de pricing."
+  - "current/source são derivados do mesmo resolver usado no runtime; configured preserva o diagnóstico da seleção persistida inválida/deprecated/missing."
 
 requirements: [ai-model-selection, admin-ai-model-selection, ai-model-catalog]
 requirements-completed: [ai-model-selection, admin-ai-model-selection, ai-model-catalog]
@@ -49,13 +51,14 @@ API administrativa de seleção implementada com schemas Zod estritos, composer 
 
 - Task 1: schemas estritos para PUT/DELETE e labels `ai_model_selection_update`, `ai_model_selection_reset` e `ai_model_selection`.
 - Task 2: composer `buildAiModelSelectionView` e rota GET/PUT/DELETE com requireAdmin em todos os métodos.
-- Task 3: testes de autorização, parse, status active/deprecated/missing, RPC, actor, operationId e invalidação.
+- Task 3: testes de autorização, parse, status active/deprecated/missing, RPC, actor, operationId, retry, falha de invalidação e default efetivo.
+- Correção: o composer agora reutiliza `PersistedModelResolver.resolveWithSource`; a seleção inválida é diagnóstico em `configured`, não aparece como `current` executado.
 
 ## Gate Results
 
 | Gate | Resultado |
 |---|---|
-| Schemas + route + view focal | PASS — 3 files / 7 testes |
+| Schemas + route + view focal | PASS — 3 files / 11 testes |
 | `npm run typecheck` | PASS |
 | `npm run lint` | PASS |
 | `npm run build` | PASS |
@@ -68,6 +71,7 @@ API administrativa de seleção implementada com schemas Zod estritos, composer 
 - `435f6040` — schemas, labels e testes de contrato
 - `5e4df666` — composer e API administrativa
 - `590a34e5` — testes da API e status do catálogo
+- `071132e9` — view efetiva via resolver e cobertura adicional da API
 
 ## Self-Check
 
@@ -78,3 +82,6 @@ API administrativa de seleção implementada com schemas Zod estritos, composer 
 - [x] cache invalidado somente após RPC bem-sucedida
 - [x] reset sem linha preserva resposta do RPC sem criar auditoria na rota
 - [x] pricing não calculado nesta wave
+- [x] `current` representa configuração efetivamente executada
+- [x] seleção inválida/deprecated/missing preservada como diagnóstico separado
+- [x] defaults completos, 403, validações, retry e falha de RPC cobertos
