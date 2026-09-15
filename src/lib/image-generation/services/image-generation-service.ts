@@ -434,7 +434,7 @@ export class ImageGenerationService {
 
       const promptText = this.assemblePrompt(state, promptVariables, lastReviewIssues, options?.normalizedInstruction);
 
-      const providerResult = await this.generateWithRetry(promptText, this.primaryImageDataUrl(brief), this.mediaImagesDataUrls(brief), signal, remaining, context.identity.imageUrl ?? undefined, runBeforeImageProviderCall, options?.telemetry);
+      const providerResult = await this.generateWithRetry(promptText, this.primaryImageDataUrl(brief), this.mediaImagesDataUrls(brief), signal, remaining, context.identity.imageUrl ?? undefined, runBeforeImageProviderCall, options?.telemetry, effectiveImageModel, effectiveImageEditModel);
       if (!providerResult.success) {
         emitFailed("image_generation", providerResult.message);
         await this.metricsWriter.write(this.buildGenerationMetrics({
@@ -929,7 +929,9 @@ export class ImageGenerationService {
     remaining: () => number,
     identityImageUrl?: string,
     onBeforeProviderCall?: () => Promise<void>,
-    telemetry?: AiTelemetryContext
+    telemetry?: AiTelemetryContext,
+    effectiveImageModel = "unknown",
+    effectiveImageEditModel = "unknown"
   ): Promise<
     | { success: true; imageBase64: string; mimeType: string; model: string; usage?: TokenUsage; usageMeta?: ImageProviderUsageMeta }
     | { success: false; code: string; message: string; details?: string; model?: string }

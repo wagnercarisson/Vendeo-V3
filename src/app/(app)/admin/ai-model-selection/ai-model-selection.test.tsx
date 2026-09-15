@@ -151,12 +151,16 @@ describe("AiModelSelectionForm", () => {
         pricingOptions: [
           { capability: "campaign_copy", target: { provider: "openai", model: "gpt-4o", protocol: "chat-completions" }, components: [], missingComponents: [], pricingCoverage: "complete" as const, selectionAllowed: true as const },
           { capability: "campaign_copy", target: { provider: "openai", model: "custom-no-price", protocol: "chat-completions" }, components: [], missingComponents: ["input_tokens", "output_tokens"] as const, pricingCoverage: "missing" as const, selectionAllowed: true as const },
+          { capability: "campaign_copy", target: { provider: "gemini", model: "custom-no-price-fallback", protocol: "gemini" }, components: [], missingComponents: ["input_tokens", "output_tokens"] as const, pricingCoverage: "missing" as const, selectionAllowed: true as const },
         ],
       } : item),
     };
+    pricingView.catalog = [...pricingView.catalog, { id: "custom-fallback", capability: "campaign_copy", segment: "text", provider: "gemini", model: "custom-no-price-fallback", protocol: "gemini", label: "Custom fallback", status: "active", source_note: null, validated_at: null, created_at: "", updated_at: "" }];
     render(<AiModelSelectionForm view={pricingView} />);
     const copyCard = screen.getByText("campaign_copy").closest("article")!;
     fireEvent.change(within(copyCard).getByLabelText("Novo primary"), { target: { value: "openai|custom-no-price|chat-completions" } });
     expect(within(copyCard).getByText(/Pricing missing: faltam input_tokens, output_tokens/)).toBeInTheDocument();
+    fireEvent.change(within(copyCard).getByLabelText("Fallback genérico"), { target: { value: "gemini|custom-no-price-fallback|gemini" } });
+    expect(within(copyCard).getByText(/Pricing do fallback missing: faltam input_tokens, output_tokens/)).toBeInTheDocument();
   });
 });

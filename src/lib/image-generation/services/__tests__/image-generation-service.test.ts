@@ -17,6 +17,7 @@ import type { ResolvedCampaignContext } from '@/components/campaign/types';
 import type { GenerateImageRequest } from '@/lib/image-generation/schema';
 import { PromptLoader } from '@/lib/image-generation/prompt-loader';
 import { ILLUSTRATIVE_NOTICE_TEXT } from '@/lib/campaign/constants';
+import { AiInvocationError } from '@/lib/ai';
 
 // Mock prompt-loader module to avoid file system reads in buildPromptVariables
 // The PromptLoader injected via constructor already overrides the default,
@@ -486,6 +487,28 @@ describe('ImageGenerationService.validatePrompts', () => {
     expect(vars.illustrativeNoticeSection).toContain(ILLUSTRATIVE_NOTICE_TEXT);
     expect(promptText).toContain('## Texto Obrigatório na Arte');
     expect(promptText).toContain('## Aviso Ilustrativo');
+  });
+});
+
+describe('ImageGenerationService effective model diagnostics', () => {
+  it('propaga o modelo efetivamente tentado de campaign_image_edit para MetricsWriter em erro', async () => {
+    const provider = {
+      name: 'openai',
+      generateImage: vi.fn().mockRejectedValue(Object.assign(new AiInvocationError({ kind: 'auth', retryable: false, message: 'edit failed' }), { model: 'gpt-image-2' })),
+    };
+    const metricsWrite = vi.fn().mockResolvedValue(undefined);
+    const service = new ImageGenerationService(
+      provider as any,
+      { load: vi.fn().mockReturnValue('Prompt válido') } as any,
+      { validate: vi.fn().mockResolvedValue({ classification: 'match' }) } as any,
+      { review: vi.fn() } as any,
+      { write: metricsWrite } as any,
+    );
+
+    const result = await service.generateImage(createMinimalBrief(), createContext());
+    expect(result.success).toBe(false);
+    const metrics = metricsWrite.mock.calls.at(-1)?.[0] as { model?: string };
+    expect(metrics.model).toBe('gpt-image-2');
   });
 });
 

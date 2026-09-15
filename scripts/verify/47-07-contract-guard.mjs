@@ -10,6 +10,8 @@ const frozenPaths = [
   "src/lib/campaign/",
   "src/lib/campaign-intelligence/",
   "src/lib/image-generation/schema.ts",
+  "src/lib/campaign/brief.ts",
+  "src/lib/campaign/brief-schema.ts",
   "prompts/",
 ];
 
@@ -25,5 +27,18 @@ if (violations.length > 0) {
 const gateway = fs.readFileSync(path.join(root, "src/lib/ai/gateway.ts"), "utf8");
 if (gateway.includes("ai_model_selection") || gateway.includes("PersistedModelResolver")) {
   throw new Error("gateway.ts contains F47 persistence wiring");
+}
+
+const openaiImage = fs.readFileSync(path.join(root, "src/lib/image-generation/providers/openai.ts"), "utf8");
+if ((openaiImage.match(/this\.invoker\.invoke/g) ?? []).length < 2 || !openaiImage.includes('"campaign_image_edit"')) {
+  throw new Error("image provider fallback must remain a second explicit campaign_image_edit invoke");
+}
+const diagnosticSources = [
+  "src/lib/image-generation/services/image-generation-service.ts",
+  "src/lib/visual-signature/server-actions.ts",
+];
+for (const source of diagnosticSources) {
+  const content = fs.readFileSync(path.join(root, source), "utf8");
+  if (content.includes("recordCall(")) throw new Error(`${source} duplicates telemetry persistence`);
 }
 console.log(`F47-07 contract guard PASS: ${changed.length} changed paths, 0 frozen violations`);
