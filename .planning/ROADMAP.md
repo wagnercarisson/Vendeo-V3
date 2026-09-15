@@ -1136,7 +1136,7 @@ Phase 39 (Brief Estruturado de Campanha — v1.5)
                                          Phase 46 (Gateway Único de IA e Registry de Modelos — v1.5, Change A) ✅ concluída (9/9, UAT 8/8 PASS)
                                                   │
                                                   ▼
-                                         Phase 47 (Catálogo e Seleção de Modelos Admin — v1.5, Change B) ○ pendente (consome o seam AiModelResolver)
+                                         Phase 47 (Catálogo e Seleção de Modelos Admin — v1.5, Change B) ✅ concluída (8/8, 287 files / 2782 testes, UAT local aprovado, migration remota verificada, deploy Ready)
                                                   │
                                                   ▼
                                          Phase 37 (Revisão e Aprovação da Arte — v1.5)

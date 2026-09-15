@@ -1,8 +1,8 @@
 # F47 UAT — Catálogo e Seleção de Modelos Admin
 
-**Status:** LOCAL UAT APPROVED — sinal `approved` registrado em 2026-09-15 (migration remota e deploy BLOQUEADOS)
+**Status:** LOCAL UAT APPROVED — sinal `approved` registrado em 2026-09-15; migration remota aplicada/verificada e deploy de produção concluído em 2026-09-15 (checkpoints `authorize remote migration` / `authorize deploy` / `authorize env cleanup` honrados — ver seções finais)
 **Environment:** Supabase local (`API_URL` derivado de `npx supabase status -o env`, tipicamente `http://127.0.0.1:54321`)
-**Remote migration/deploy:** BLOCKED and not executed
+**Remote migration/deploy:** concluídos em 2026-09-15 (ver "Remote Migration Result" e "Deploy Result")
 
 ## Entrada oficial
 
@@ -49,8 +49,8 @@ Execute exatamente nesta ordem:
 - [x] Local Supabase disponível (stack sobe via `switch-env.ps1 local`).
 - [x] Migrations F47 locais aplicadas (`20260914000001`, `20260914000002`, `20260914000003`).
 - [x] Verificador SQL local 23/23.
-- [x] Nenhuma ação remota executada.
-- [ ] Admin local criado pelo passo 2.
+- [x] Nenhuma ação remota executada **no momento do UAT local** (checkpoint encerrado; migration remota e deploy executados depois, em 2026-09-15 — ver seções finais).
+- [x] Admin local criado pelo passo 2 (executado; cleanup completo ao final).
 
 ## Automated Evidence
 
@@ -61,7 +61,7 @@ Execute exatamente nesta ordem:
 | `npm run lint` | PASS; one pre-existing non-blocking warning is outside F47 |
 | `npm run build` | PASS |
 | F47 migration verifier | PASS — 34/34 (inclui RLS/ownership de campaigns) |
-| Frozen-surface verifier | PASS — 51 changed paths / 0 violations |
+| Frozen-surface verifier | PASS — 63 changed paths / 0 violations |
 
 ## Human Scenarios
 
@@ -84,7 +84,7 @@ Registre evidência, timestamp e resultado. Não marque PASS por inspeção de c
 
 ## Human UAT Result
 
-**Aprovação:** sinal `approved` registrado em 2026-09-15. Encerra SOMENTE o checkpoint de UAT local; migration remota exige `authorize remote migration` e deploy exige `authorize deploy` (checkpoints separados).
+**Aprovação:** sinal `approved` registrado em 2026-09-15. Encerra SOMENTE o checkpoint de UAT local; migration remota exigiu `authorize remote migration` e deploy exigiu `authorize deploy` (checkpoints separados, ambos honrados em 2026-09-15 — ver seções finais).
 
 UAT humano executado no ambiente local (2026-09-15). Resultado: UAT-01..07 PASS; UAT-08 AUTOMATED PASS; UAT-09..12 PASS. Seleção, reset, deprecated, missing, pricing warning e labels efetivos funcionaram. Campanha local concluída com a seleção efetiva:
 
@@ -106,15 +106,38 @@ Aplicada em 2026-09-15 (`authorize remote migration`) via `npx supabase db push`
 - `20260914000003_f47_fix_admin_get_ai_costs_created_at.sql`
 - `20260915000001_f47_fix_campaigns_authenticated_select.sql`
 
-Verificação remota somente-leitura: 12 seeds exatos; RLS habilitado em `ai_model_catalog`/`ai_model_selection`/`campaigns`; RPCs `admin_set_ai_model_selection`/`admin_reset_ai_model_selection` presentes e validando motivo; `anon` negado; `authenticated` com SELECT em `campaigns`; CHECKs de fallback/distinção e de auditoria presentes. Nenhum deploy executado.
+Verificação remota somente-leitura: 12 seeds exatos; RLS habilitado em `ai_model_catalog`/`ai_model_selection`/`campaigns`; RPCs `admin_set_ai_model_selection`/`admin_reset_ai_model_selection` presentes e validando motivo; `anon` negado; `authenticated` com SELECT em `campaigns`; CHECKs de fallback/distinção e de auditoria presentes. Nenhum deploy executado **neste passo** (deploy executado depois, em 2026-09-15 — ver "Deploy Result").
 
 ## Deploy Result
 
-Deploy executado em 2026-09-15 (`authorize deploy`) via merge fast-forward para `main` e push (`2860115b..b892acb2`). Vercel Production deployment **Ready**; `https://vendeo-v3.vercel.app` → HTTP 200. Após o deploy, as 11 env-vars obsoletas de modelo/provider foram removidas da Vercel (`authorize env cleanup`); chaves e operacionais preservadas; nenhum redeploy disparado.
+Deploy executado em 2026-09-15 (`authorize deploy`) via merge fast-forward para `main` e push (`2860115b..b892acb2`). Vercel Production deployment **Ready**; `https://vendeo-v3.vercel.app` → HTTP 200. Após o deploy, as 11 env-vars obsoletas de modelo/provider foram removidas da Vercel (`authorize env cleanup`); chaves e operacionais preservadas.
+
+## Post-cleanup Deploy & Production Happy Path
+
+**Deployment pós-cleanup:** um novo deployment Vercel Production foi criado **depois** da remoção das env-vars e ficou **Ready**; `https://vendeo-v3.vercel.app` → HTTP 200; sem erro de configuração.
+
+**Fluxo feliz em produção (validado por humano, 2026-09-15):**
+
+| Verificação | Resultado |
+|---|---|
+| Campanha/arte gerada e aberta normalmente | PASS (humano) |
+| Crédito consumido/registrado corretamente | PASS (humano) |
+| Telemetria registrada corretamente | PASS (humano) |
+| Modelos efetivos conforme defaults do registry | PASS (humano) |
+| Ausência de erro de configuração | PASS (humano) |
+
+Modelos efetivos esperados (sem overrides de seleção após o cleanup; defaults do registry):
+
+| Capacidade | Alvo efetivo |
+|---|---|
+| `brand_profile_text` | openai/gpt-4o |
+| `campaign_copy` | openai/gpt-4o |
+| `campaign_image` | openai/gpt-5.5 |
+| `campaign_image_review` | openai/gpt-4o |
 
 ## Human Decision
 
-**Não avance para migration remota ou deploy até todos os cenários terem evidência real.**
+**Checkpoint histórico (encerrado):** não avançar para migration remota ou deploy até todos os cenários terem evidência real — condição satisfeita; migration remota e deploy foram executados em 2026-09-15.
 
 Resume signals são separados:
 - `approved` encerra somente o checkpoint de UAT local.

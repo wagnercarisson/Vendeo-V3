@@ -65,7 +65,9 @@ completed: 2026-09-15
 - **UAT local (Task 2):** executado no Supabase local com schema local. UAT-01..07 PASS, UAT-08 AUTOMATED PASS, UAT-09..12 PASS. Campanha local concluída (`brand_profile_text`/`campaign_copy` → openai/gpt-4o; `campaign_image` → openai/gpt-5.5; `campaign_image_review` → openai/gpt-4o). Aprovação humana registrada (sinal `approved`).
 - **Migration remota (Task 3):** `npx supabase db push` aplicou `20260914000001/2/3` e `20260915000001`. Verificação remota somente-leitura: 12 seeds, 11 capacidades, RLS em catálogo/seleção/campaigns, RPCs presentes e validando motivo, `anon` negado, `authenticated` com SELECT em `campaigns`, CHECKs de fallback/distinção e auditoria.
 - **Deploy (Task 4):** merge fast-forward `main` → `origin/main` (`2860115b..b892acb2`) pelo runbook; Vercel Production **Ready**; `https://vendeo-v3.vercel.app` HTTP 200; `/login` 200; `/admin/ai-model-selection` 302 → `/login` (deployada e protegida); `/api/admin/ai-model-selection` sem auth 401; logs sem falhas de configuração.
-- **Env cleanup:** 11 env-vars obsoletas de modelo/provider removidas da Vercel (Production/Preview), após o deploy; chaves (`OPENAI_API_KEY`/`GEMINI_API_KEY`) e operacionais preservadas; nenhum redeploy disparado.
+- **Env cleanup:** 11 env-vars obsoletas de modelo/provider removidas da Vercel (Production/Preview), após o deploy; chaves (`OPENAI_API_KEY`/`GEMINI_API_KEY`) e operacionais preservadas.
+- **Post-cleanup deploy:** novo deployment Vercel Production **Ready** criado **depois** da remoção das env-vars; `https://vendeo-v3.vercel.app` HTTP 200; sem erro de configuração.
+- **Production happy path (human-validated 2026-09-15):** campanha/arte gerada e aberta normalmente; crédito e telemetria corretos; modelos efetivos conforme defaults do registry (`brand_profile_text`/`campaign_copy`/`campaign_image_review` → openai/gpt-4o; `campaign_image` → openai/gpt-5.5); ausência de erro de configuração.
 - **Tracking (Task 5):** `47-VERIFICATION.md` `passed`; AGENTS/STATE/ROADMAP raiz/.planning/ROADMAP/PROJECT atualizados; arquivamento OpenSpec preparado (não executado).
 
 ## Correções operacionais locais (descobertas no UAT)
@@ -85,11 +87,13 @@ completed: 2026-09-15
 | Verificador F47 local | PASS — 34/34 (inclui RLS/ownership de campaigns) |
 | `npx supabase db reset` | PASS (migrations do zero, incl. `20260915000001`) |
 | `npx supabase db lint --local` | PASS — 0 erros (1 warning pré-existente) |
-| Frozen contract verifier | PASS — 51 paths / 0 violações |
+| Frozen contract verifier | PASS — 63 paths / 0 violações |
 | `openspec validate ... --strict` | PASS |
 | UAT local humano | APPROVED |
 | Migration remota | aplicada + verificada |
 | Deploy produção | Ready; HTTP 200 |
+| Deploy pós-cleanup | Ready; HTTP 200 |
+| Production happy path (humano) | PASS — geração/abertura, crédito, telemetria, modelos efetivos, sem erro de config |
 | Env-vars obsoletas | 0 restantes |
 
 ## Task Commits (ciclo 47-08)

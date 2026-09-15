@@ -227,7 +227,7 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 
 ## Phase 47 — Catálogo e Seleção de Modelos Admin (Change B)
 
-**Status:** CONCLUÍDA — 8/8 planos em 7 ondas, 287 files / 2782 testes, 4 gates verdes, UAT local aprovado (UAT-01..07 PASS, 08 AUTOMATED, 09..12 PASS), migration remota aplicada/verificada, deploy de produção Ready e env-vars obsoletas removidas. Fonte da verdade: `openspec/changes/fase-47-catalogo-e-selecao-de-modelos-admin/`.
+**Status:** CONCLUÍDA — 8/8 planos em 7 ondas, 287 files / 2782 testes, 4 gates verdes, UAT local aprovado (UAT-01..07 PASS, 08 AUTOMATED, 09..12 PASS), migration remota aplicada/verificada, deploy pós-cleanup Ready, env-vars obsoletas removidas e fluxo feliz validado em produção. Fonte da verdade: `openspec/changes/fase-47-catalogo-e-selecao-de-modelos-admin/`.
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|

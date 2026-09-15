@@ -16,9 +16,9 @@ progress:
 
 # Project State
 
-**Last updated:** 2026-09-10 — F45 concluída e incorporada à branch da F37; F37.1 concluída; **F37.2 realinhada (Correção Única por Não Conformidade) CONCLUÍDA** (19/19 plans, 8 waves, 264 files / 2578 testes, 4 gates verdes, UAT 9/9 PASS, migrations `20260906000001/2/3` no remoto, fix pós-UAT `01a7021b`; fonte `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/`); **37.3 eliminada** (consolidada na 37.2).
+**Last updated:** 2026-09-15 — **F47 (Catálogo e Seleção de Modelos Admin, v1.5, Change B) CONCLUÍDA** (8/8 plans, 287 files / 2782 testes, 4 gates verdes, UAT local aprovado, migration remota verificada, deploy de produção Ready; fonte `openspec/changes/fase-47-catalogo-e-selecao-de-modelos-admin/`); antes: F45 concluída e incorporada à branch da F37; F37.1 concluída; **F37.2 realinhada (Correção Única por Não Conformidade) CONCLUÍDA** (19/19 plans, 8 waves, 264 files / 2578 testes, 4 gates verdes, UAT 9/9 PASS, migrations `20260906000001/2/3` no remoto, fix pós-UAT `01a7021b`; fonte `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/`); **37.3 eliminada** (consolidada na 37.2).
 **Current phase:** 47
-**Last activity:** 2026-09-14
+**Last activity:** 2026-09-15
 
 ### Phase 46 — Gateway Único de IA e Registry de Modelos ✅ Complete (9/9 plans / 9 waves)
 
@@ -57,7 +57,7 @@ progress:
 | 47-07 | 6 | ✅ | Labels efetivos, regressão e gates |
 | 47-08 | 7 | ✅ | UAT local aprovado, migration remota aplicada/verificada, deploy de produção e cleanup de envs; verification/tracking |
 
-**F47 CONCLUÍDA — Catálogo e Seleção de Modelos Admin (v1.5, Change B) — 8/8 plans (7 waves), 287 files / 2782 testes, 4 gates verdes (vitest/typecheck/lint/build), UAT local aprovado (UAT-01..07 PASS, 08 AUTOMATED, 09..12 PASS), migration remota aplicada/verificada, deploy de produção Ready e env-vars obsoletas removidas.** Catálogo persistido `ai_model_catalog` (12 seeds: 11 primary defaults F46 + fallback `campaign_copy`) + seleção persistida `ai_model_selection` (primary por capacidade; fallback genérico somente `campaign_copy`; `campaign_image_edit` independente) com RPCs SECURITY DEFINER set/reset auditadas e idempotentes; serviços bulk server-only com TTL 30s/invalidação; `PersistedModelResolver` fail-open injetado em `src/lib/ai/index.ts` (gateway intocado); API admin `GET/PUT/DELETE /api/admin/ai-model-selection` (DELETE JSON `{ capability, reason, operationId }` com UUID obrigatório); tela `/admin/ai-model-selection` por Texto/Visual/Imagem; pricing capacity-aware; labels diagnósticos efetivos. Correções operacionais: alinhamento da flag `captcha_enabled` local (`switch-env.ps1`), migration forward `20260915000001` (`GRANT SELECT ON campaigns TO authenticated`), cleanup completo do UAT local. **Sem alterar `src/lib/ai/gateway.ts`, prompts, contratos de geração, snapshot, domínio ou merchant UI/form.** Fonte da verdade: `openspec/changes/fase-47-catalogo-e-selecao-de-modelos-admin/`. Sucessora: nenhuma numerada (Stripe/Monetização Pública diferida v1.7+, fora da numeração).
+**F47 CONCLUÍDA — Catálogo e Seleção de Modelos Admin (v1.5, Change B) — 8/8 plans (7 waves), 287 files / 2782 testes, 4 gates verdes (vitest/typecheck/lint/build), UAT local aprovado (UAT-01..07 PASS, 08 AUTOMATED, 09..12 PASS), migration remota aplicada/verificada, deploy pós-cleanup Ready, env-vars obsoletas removidas e fluxo feliz validado em produção.** Catálogo persistido `ai_model_catalog` (12 seeds: 11 primary defaults F46 + fallback `campaign_copy`) + seleção persistida `ai_model_selection` (primary por capacidade; fallback genérico somente `campaign_copy`; `campaign_image_edit` independente) com RPCs SECURITY DEFINER set/reset auditadas e idempotentes; serviços bulk server-only com TTL 30s/invalidação; `PersistedModelResolver` fail-open injetado em `src/lib/ai/index.ts` (gateway intocado); API admin `GET/PUT/DELETE /api/admin/ai-model-selection` (DELETE JSON `{ capability, reason, operationId }` com UUID obrigatório); tela `/admin/ai-model-selection` por Texto/Visual/Imagem; pricing capacity-aware; labels diagnósticos efetivos. Correções operacionais: alinhamento da flag `captcha_enabled` local (`switch-env.ps1`), migration forward `20260915000001` (`GRANT SELECT ON campaigns TO authenticated`), cleanup completo do UAT local. **Sem alterar `src/lib/ai/gateway.ts`, prompts, contratos de geração, snapshot, domínio ou merchant UI/form.** Fonte da verdade: `openspec/changes/fase-47-catalogo-e-selecao-de-modelos-admin/`. Sucessora: nenhuma numerada (Stripe/Monetização Pública diferida v1.7+, fora da numeração).
 
 **Fonte da verdade:** `openspec/changes/fase-47-catalogo-e-selecao-de-modelos-admin/`
 
@@ -670,7 +670,7 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 | 38-1-10 | 5 | âœ… | Views/RPCs apuraÃ§Ã£o + verificaÃ§Ã£o I1â€“I6 (banco real) + 50 testes + gates + UAT checkpoint validado |
 | 38-1-11 | 6 | âœ… | Runbook trackings 8.1â€“8.5 + fechamento (0.065 provisÃ³rio beta; reconciliaÃ§Ã£o financeira real na prÃ³xima fase) |
 
-**Status:** Executing Phase 47
+**Status:** F47 CONCLUÍDA (2026-09-15) — 8/8 plans, 287 files / 2782 testes, 4 gates verdes
 
 **Source:** `openspec/changes/fase-38-1-ai-cost-accounting/` (fonte da verdade)
 **Context:** `.planning/phases/38-1-ai-cost-accounting/38-1-CONTEXT.md`
