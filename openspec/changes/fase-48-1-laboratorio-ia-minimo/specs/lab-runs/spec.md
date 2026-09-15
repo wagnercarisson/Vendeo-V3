@@ -31,7 +31,7 @@ Cada execução SHALL congelar e registrar: versão do cenário, conteúdo ou ha
 
 - **WHEN** um run conclui
 - **THEN** o custo é registrado com fonte, versão de pricing, versão da fórmula e componentes da fórmula
-- **AND** um flag sinaliza quando a estimativa é parcial ou indisponível
+- **AND** uma sinalização de parcialidade (derivada de `costFormulaVersion`/`costEstimationNote`; o tipo real não possui flag `costPartial`) indica quando a estimativa é parcial ou indisponível
 
 ### Requirement: Reserva atômica de execução
 
