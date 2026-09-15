@@ -18,7 +18,8 @@ tech-stack:
   patterns:
     - one bulk pricing query combined with bootstrap pricing in memory
     - warning-only pricing visibility; selection remains allowed
-    - normalized model lookup for dated model identifiers
+  - normalized model lookup for dated model identifiers
+  - plan artifact reconciled with combination input, coverage semantics and cost-estimator gate
 
 key-files:
   created:
@@ -65,6 +66,7 @@ Helper server-only de pricing por combinação selecionável implementado para c
 - `2af07031` — testes de warnings e cadeia de custo
 - `1fae1776` — cobertura semântica, normalização e combinações selecionáveis
 - `769b7aa4` — contrato OpenSpec de cobertura de pricing
+- `6893ed6e` — plano reconciliado e asserção de normalização do modelo versionado
 
 ## Self-Check
 
