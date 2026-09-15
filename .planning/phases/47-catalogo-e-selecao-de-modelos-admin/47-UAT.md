@@ -110,7 +110,7 @@ Verificação remota somente-leitura: 12 seeds exatos; RLS habilitado em `ai_mod
 
 ## Deploy Result
 
-Deploy executado em 2026-09-15 (`authorize deploy`) via merge fast-forward para `main` e push (`2860115b..b892acb2`). Vercel Production deployment **Ready**; `https://vendeo-v3.vercel.app` → HTTP 200. Nenhuma env-var remota foi criada, removida ou alterada neste ciclo. Verificação de envs encontrou 11 env-vars obsoletas de modelo/provider ainda presentes na Vercel; remoção pendente de autorização explícita.
+Deploy executado em 2026-09-15 (`authorize deploy`) via merge fast-forward para `main` e push (`2860115b..b892acb2`). Vercel Production deployment **Ready**; `https://vendeo-v3.vercel.app` → HTTP 200. Após o deploy, as 11 env-vars obsoletas de modelo/provider foram removidas da Vercel (`authorize env cleanup`); chaves e operacionais preservadas; nenhum redeploy disparado.
 
 ## Human Decision
 

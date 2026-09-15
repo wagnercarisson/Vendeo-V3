@@ -1,6 +1,6 @@
 # F47 Verification — Catálogo e Seleção de Modelos Admin
 
-**Status:** PARTIAL — deploy de produção concluído; env-vars obsoletas de modelo/provider ainda presentes na Vercel (cleanup pendente de decisão)
+**Status:** PARTIAL — deploy concluído e env-vars obsoletas removidas; tracking final/arquivamento pendentes
 **Goal:** Catálogo persistido por capacidade e seleção administrativa auditada, consumidos por resolver fail-open sem alterar o gateway ou contratos de geração.
 
 ## Goal-Backward Matrix
@@ -39,13 +39,12 @@
 - [x] Human local UAT: UAT-01..07 PASS, UAT-08 AUTOMATED PASS, UAT-09..12 PASS — **APPROVED** (sinal `approved`).
 - [x] Remote migration applied and verified (`20260914000001/2/3`, `20260915000001`): 12 seeds, RLS, RPCs, CHECKs, `authenticated` SELECT em `campaigns`.
 - [x] Deploy completed after remote migration: merge fast-forward `main` → `origin/main` (`2860115b..b892acb2`); Vercel Production deployment Ready; `https://vendeo-v3.vercel.app` HTTP 200.
-- [ ] Remote env verification: 11 env-vars obsoletas de modelo/provider ainda presentes na Vercel (decisão de cleanup pendente).
+- [x] Remote env verification: 11 env-vars obsoletas de modelo/provider removidas da Vercel (Production + Preview); chaves (`OPENAI_API_KEY`/`GEMINI_API_KEY`) e operacionais preservadas; nenhum redeploy disparado.
 
 ## Release Controls
 
 - Remote `npx supabase db push` executed on 2026-09-15 (4 F47 migrations), with read-only post-push verification.
 - Deploy executed on 2026-09-15: fast-forward merge to `main` + push (`2860115b..b892acb2`); Vercel Production Ready; production HTTP 200.
-- No remote env var was created, removed or changed during this cycle.
-- Env verification finding: `OPENAI_MODEL`, `OPENAI_TEXT_MODEL`, `OPENAI_BRAND_DIRECTOR_MODEL`, `VISION_REVIEW_MODEL`, `IMAGE_GENERATION_RESPONSES_MODEL`, `IMAGE_PROVIDER`, `TEXT_PROVIDER`, `TEXT_FALLBACK_PROVIDER`, `GEMINI_TEXT_MODEL`, `GEMINI_MODEL`, `GEMINI_IMAGE_MODEL` still exist in Vercel (Production/Preview). Removal requires explicit authorization.
-- `authorize remote migration` and `authorize deploy` were separate checkpoints; both honored.
-- Do not mark this document `passed` until the env-var decision and final tracking are closed.
+- No remote env var was created or changed; 11 obsolete model/provider env vars were removed on 2026-09-15 after the deploy (explicit `authorize env cleanup`). Chaves e operacionais preservadas; nenhum redeploy disparado.
+- `authorize remote migration`, `authorize deploy` e `authorize env cleanup` foram checkpoints separados e honrados.
+- Do not mark this document `passed` until the final tracking/archiving is closed.
