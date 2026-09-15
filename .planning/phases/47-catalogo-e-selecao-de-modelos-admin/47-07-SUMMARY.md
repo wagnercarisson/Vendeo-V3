@@ -13,6 +13,7 @@ provides:
   - frozen-surface and effective-label regression guards
   - fallback image-edit failures retain the resolved edit model in diagnostics
   - phase verifier manifest guards frozen paths against the pre-execution baseline
+  - behavioral MetricsWriter coverage for fallback edit failure model
 affects: [47-08]
 
 tech-stack:
@@ -26,6 +27,7 @@ key-files:
     - src/lib/ai/__tests__/effective-model-labels.test.ts
     - src/lib/ai/__tests__/f47-contract-guard.test.ts
     - src/lib/ai/effective-model-label.ts
+    - scripts/verify/47-07-contract-guard.mjs
   modified:
     - src/lib/image-generation/services/image-generation-service.ts
     - src/lib/visual-signature/server-actions.ts
@@ -59,13 +61,13 @@ Diagnostic labels now reflect the effective model target/result rather than stat
 
 | Gate | Resultado |
 |---|---|
-| Focal guards/API/view/pricing | PASS — 5 files / 22 testes |
-| Regressão integral Vitest | PASS — 287 files / 2779 testes |
+| Focal guards/API/view/pricing/label failure | PASS — 6 files / 23 testes |
+| Regressão integral Vitest | PASS — 287 files / 2780 testes |
 | `npm run typecheck` | PASS |
 | `npm run lint` | PASS |
 | `npm run build` | PASS |
 | Gateway/prompts/public contracts | PASS — frozen guard |
-| Phase frozen-surface verifier | PASS — 48 changed paths, 0 violations |
+| Phase frozen-surface verifier | PASS — 50 changed paths, 0 violations |
 | Pricing helper calls per composer | PASS — one bulk integration point |
 | Dependencies/package-lock | PASS — nenhum pacote novo |
 
@@ -77,6 +79,7 @@ Diagnostic labels now reflect the effective model target/result rather than stat
 - `47ff1cff` — effective label helper, fallback error model, baseline guard and pricing option reactivity
 - `2cadd94a` — fallback model propagation and pricing option coverage
 - `486ae87c` — phase frozen-surface verifier
+- `c47d4d81` — fallback error behavior, fallback pricing interaction and complete guard manifest
 
 ## Self-Check
 
