@@ -61,13 +61,13 @@ Diagnostic labels now reflect the effective model target/result rather than stat
 
 | Gate | Resultado |
 |---|---|
-| Focal guards/API/view/pricing/label failure | PASS — 6 files / 23 testes |
-| Regressão integral Vitest | PASS — 287 files / 2780 testes |
+| Focal guards/API/view/pricing/label failure | PASS — 6 files / 85 testes |
+| Regressão integral Vitest | PASS — 287 files / 2782 testes |
 | `npm run typecheck` | PASS |
 | `npm run lint` | PASS |
 | `npm run build` | PASS |
 | Gateway/prompts/public contracts | PASS — frozen guard |
-| Phase frozen-surface verifier | PASS — 50 changed paths, 0 violations |
+| Phase frozen-surface verifier | PASS — 51 changed paths, 0 violations |
 | Pricing helper calls per composer | PASS — one bulk integration point |
 | Dependencies/package-lock | PASS — nenhum pacote novo |
 
@@ -80,6 +80,7 @@ Diagnostic labels now reflect the effective model target/result rather than stat
 - `2cadd94a` — fallback model propagation and pricing option coverage
 - `486ae87c` — phase frozen-surface verifier
 - `c47d4d81` — fallback error behavior, fallback pricing interaction and complete guard manifest
+- `31e1c667` — typed pricing fixture, provider fallback behavior and complete frozen manifest
 
 ## Self-Check
 
