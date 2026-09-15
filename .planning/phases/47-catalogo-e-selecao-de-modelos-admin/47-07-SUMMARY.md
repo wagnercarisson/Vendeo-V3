@@ -11,6 +11,7 @@ provides:
   - effective model labels in image generation, visual signature and benchmark diagnostics
   - pricing coverage integrated once into the shared admin composer
   - frozen-surface and effective-label regression guards
+  - fallback image-edit failures retain the resolved edit model in diagnostics
 affects: [47-08]
 
 tech-stack:
@@ -23,10 +24,12 @@ key-files:
   created:
     - src/lib/ai/__tests__/effective-model-labels.test.ts
     - src/lib/ai/__tests__/f47-contract-guard.test.ts
+    - src/lib/ai/effective-model-label.ts
   modified:
     - src/lib/image-generation/services/image-generation-service.ts
     - src/lib/visual-signature/server-actions.ts
     - scripts/benchmark.ts
+    - src/lib/image-generation/providers/openai.ts
     - src/lib/ai/ai-model-selection-view.ts
     - src/app/(app)/admin/ai-model-selection/form.tsx
 
@@ -55,7 +58,8 @@ Diagnostic labels now reflect the effective model target/result rather than stat
 
 | Gate | Resultado |
 |---|---|
-| Focal guards/API/view/pricing | PASS — 5 files / 19 testes |
+| Focal guards/API/view/pricing | PASS — 5 files / 21 testes |
+| Regressão integral Vitest | PASS — 287 files / 2780 testes |
 | `npm run typecheck` | PASS |
 | `npm run lint` | PASS |
 | `npm run build` | PASS |
@@ -68,6 +72,7 @@ Diagnostic labels now reflect the effective model target/result rather than stat
 - `5adacfb7` — effective diagnostic labels
 - `aeed7693` — effective labels and frozen contract guards
 - `529b228b` — pricing coverage in shared admin view
+- `47ff1cff` — effective label helper, fallback error model, baseline guard and pricing option reactivity
 
 ## Self-Check
 
