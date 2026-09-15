@@ -12,6 +12,9 @@ const frozenPaths = [
   "src/lib/image-generation/schema.ts",
   "src/lib/campaign/brief.ts",
   "src/lib/campaign/brief-schema.ts",
+  "src/lib/snapshot.ts",
+  "src/app/api/campaign/generate-image/route.ts",
+  "src/app/api/campaign/generate/route.ts",
   "prompts/",
 ];
 

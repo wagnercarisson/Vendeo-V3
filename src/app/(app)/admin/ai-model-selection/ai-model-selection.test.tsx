@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MODEL_REGISTRY } from "@/lib/ai/model-registry";
 import { ALL_CAPABILITIES } from "@/lib/ai/model-registry";
 import type { AiModelSelectionViewModel } from "@/lib/ai/ai-model-selection-view";
+import type { CapacityPricingStatus } from "@/lib/ai-cost/model-capability-pricing";
 import { AiModelSelectionForm } from "./form";
 
 const target = (provider: "openai" | "gemini", model: string, protocol: "chat-completions" | "responses" | "images" | "gemini", catalogStatus: "active" | "deprecated" | "missing" = "active") => ({ provider, model, protocol, catalogStatus });
@@ -143,16 +144,17 @@ describe("AiModelSelectionForm", () => {
   });
 
   it("recalcula o aviso de pricing quando o primary em edição muda", () => {
-    const pricingView = {
+    const pricingOptions: CapacityPricingStatus[] = [
+      { capability: "campaign_copy", target: { provider: "openai", model: "gpt-4o", protocol: "chat-completions" }, components: [], missingComponents: [], pricingCoverage: "complete", selectionAllowed: true },
+      { capability: "campaign_copy", target: { provider: "openai", model: "custom-no-price", protocol: "chat-completions" }, components: [], missingComponents: ["input_tokens", "output_tokens"], pricingCoverage: "missing", selectionAllowed: true },
+      { capability: "campaign_copy", target: { provider: "gemini", model: "custom-no-price-fallback", protocol: "gemini" }, components: [], missingComponents: ["input_tokens", "output_tokens"], pricingCoverage: "missing", selectionAllowed: true },
+    ];
+    const pricingView: AiModelSelectionViewModel = {
       ...VIEW,
       catalog: [...VIEW.catalog, { id: "custom-copy", capability: "campaign_copy", segment: "text", provider: "openai", model: "custom-no-price", protocol: "chat-completions", label: "Custom", status: "active", source_note: null, validated_at: null, created_at: "", updated_at: "" }],
       capabilities: VIEW.capabilities.map((item) => item.capability === "campaign_copy" ? {
         ...item,
-        pricingOptions: [
-          { capability: "campaign_copy", target: { provider: "openai", model: "gpt-4o", protocol: "chat-completions" }, components: [], missingComponents: [], pricingCoverage: "complete" as const, selectionAllowed: true as const },
-          { capability: "campaign_copy", target: { provider: "openai", model: "custom-no-price", protocol: "chat-completions" }, components: [], missingComponents: ["input_tokens", "output_tokens"] as const, pricingCoverage: "missing" as const, selectionAllowed: true as const },
-          { capability: "campaign_copy", target: { provider: "gemini", model: "custom-no-price-fallback", protocol: "gemini" }, components: [], missingComponents: ["input_tokens", "output_tokens"] as const, pricingCoverage: "missing" as const, selectionAllowed: true as const },
-        ],
+        pricingOptions,
       } : item),
     };
     pricingView.catalog = [...pricingView.catalog, { id: "custom-fallback", capability: "campaign_copy", segment: "text", provider: "gemini", model: "custom-no-price-fallback", protocol: "gemini", label: "Custom fallback", status: "active", source_note: null, validated_at: null, created_at: "", updated_at: "" }];

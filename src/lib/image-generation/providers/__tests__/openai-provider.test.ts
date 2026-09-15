@@ -203,6 +203,21 @@ describe('OpenAIImageProvider — fallback campaign_image_edit como segunda invo
     expect(result.model).toBe('gpt-image-2');
   });
 
+  it('falha da segunda invoke campaign_image_edit propaga o modelo efetivo resolvido', async () => {
+    invoker.invoke
+      .mockRejectedValueOnce(CAPABILITY_ERROR())
+      .mockRejectedValueOnce(new Error('images.edit failed'));
+
+    await expect(provider.generateImage({
+      prompt: 'p',
+      productImageDataUrl: 'data:image/png;base64,primary',
+      attempt: 0,
+      telemetry: makeTelemetry(),
+    })).rejects.toMatchObject({ model: 'gpt-image-2' });
+    expect(invoker.invoke).toHaveBeenCalledTimes(2);
+    expect(invoker.invoke.mock.calls[1][0]).toBe('campaign_image_edit');
+  });
+
   it('legado (só primary) + attempt >= 1 → fallback com 1 referência', async () => {
     invoker.invoke.mockResolvedValue({ imageBase64: 'r', model: 'gpt-image-2' });
 
