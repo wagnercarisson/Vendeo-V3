@@ -3,7 +3,7 @@ import {
   IMAGE_GENERATION_QUALITY,
   IMAGE_GENERATION_SIZE,
 } from "@/lib/image-generation/config";
-import { defaultAiGateway } from "@/lib/ai";
+import { defaultAiGateway, defaultAiModelResolver } from "@/lib/ai";
 import { AiInvocationError } from "@/lib/ai";
 import type { AiInvoker, AiTelemetryContext } from "@/lib/ai";
 
@@ -199,18 +199,30 @@ export class OpenAIImageProvider implements ImageProvider {
    * "images.edit"`) e o custo por unidade/`not_available` é resolvido pelo sink.
    */
   private async fallbackToImageApi(input: ImageProviderInput): Promise<ImageProviderOutput> {
-    const result = await this.invoker.invoke(
-      "campaign_image_edit",
-      {
-        prompt: input.prompt,
-        productImagesDataUrls: this.editReferences(input),
-        identityImageUrl: input.identityImageUrl,
-        size: "1024x1024",
-        signal: input.signal,
-      },
-      this.telemetryFor(input),
-      "primary",
-    );
+    const effectiveModel = await defaultAiModelResolver
+      .resolve("campaign_image_edit")
+      .then((config) => config.primary.model)
+      .catch(() => "unknown");
+    let result;
+    try {
+      result = await this.invoker.invoke(
+        "campaign_image_edit",
+        {
+          prompt: input.prompt,
+          productImagesDataUrls: this.editReferences(input),
+          identityImageUrl: input.identityImageUrl,
+          size: "1024x1024",
+          signal: input.signal,
+        },
+        this.telemetryFor(input),
+        "primary",
+      );
+    } catch (error) {
+      if (error && typeof error === "object") {
+        (error as { model?: string }).model = effectiveModel;
+      }
+      throw error;
+    }
 
     if (!result.imageBase64) {
       throw new Error("Image API returned no image data");

@@ -16,7 +16,7 @@ import {
 import { ModelRegistry } from "./model-registry";
 import { PersistedModelResolver } from "./persisted-model-resolver";
 import type { AiModelTarget, AiProvider, AiProtocol } from "./model-resolver";
-import { getModelCapabilityPricing, type CapacityPricingStatus } from "@/lib/ai-cost/model-capability-pricing";
+import { getModelCapabilityPricing, type CapacityPricingStatus, type CapacityPricingTarget } from "@/lib/ai-cost/model-capability-pricing";
 
 export type AiModelCatalogStatus = "active" | "deprecated" | "missing";
 
@@ -33,6 +33,7 @@ export interface AiModelCapabilityView {
   configured: { primary: AiModelTargetView | null; fallback: AiModelTargetView | null } | null;
   selection: AiModelSelectionRow | null;
   pricing?: CapacityPricingStatus;
+  pricingOptions?: CapacityPricingStatus[];
 }
 
 export interface AiModelSelectionViewModel {
@@ -59,9 +60,11 @@ function targetView(capability: string, target: AiModelTarget, catalog: Map<stri
 export async function buildAiModelSelectionView(dependencies: {
   catalogService?: Pick<typeof aiModelCatalogService, "getActiveCatalogRows" | "getCatalogMap">;
   selectionService?: Pick<typeof aiModelSelectionService, "getSelectionMap">;
+  pricingService?: (targets: CapacityPricingTarget[]) => Promise<CapacityPricingStatus[]>;
 } = {}): Promise<AiModelSelectionViewModel> {
   const catalogService = dependencies.catalogService ?? aiModelCatalogService;
   const selectionService = dependencies.selectionService ?? aiModelSelectionService;
+  const pricingService = dependencies.pricingService ?? getModelCapabilityPricing;
   const [catalogRows, catalogMap, selectionMap] = await Promise.all([
     catalogService.getActiveCatalogRows(),
     catalogService.getCatalogMap(),
@@ -105,14 +108,24 @@ export async function buildAiModelSelectionView(dependencies: {
     } satisfies AiModelCapabilityView;
   }));
 
-  const pricingByCapability = new Map(
-    (await getModelCapabilityPricing(capabilities.map((item) => ({ capability: item.capability, target: item.current.primary })))).map((status) => [status.capability, status]),
-  );
+  const pricingTargets = catalogRows.map((row) => ({
+    capability: row.capability,
+    target: { provider: row.provider, model: row.model, protocol: row.protocol },
+  }));
+  const pricingStatuses = await pricingService(pricingTargets);
+  const pricingByTuple = new Map(pricingStatuses.map((status) => [
+    `${status.capability}|${status.target.provider}|${status.target.model}|${status.target.protocol}`,
+    status,
+  ]));
 
   return {
     catalog: catalogRows,
     selections,
     defaults: MODEL_REGISTRY,
-    capabilities: capabilities.map((item) => ({ ...item, pricing: pricingByCapability.get(item.capability) })),
+    capabilities: capabilities.map((item) => {
+      const pricingOptions = pricingStatuses.filter((status) => status.capability === item.capability);
+      const currentPricing = pricingByTuple.get(`${item.capability}|${item.current.primary.provider}|${item.current.primary.model}|${item.current.primary.protocol}`);
+      return { ...item, pricing: currentPricing, pricingOptions };
+    }),
   };
 }

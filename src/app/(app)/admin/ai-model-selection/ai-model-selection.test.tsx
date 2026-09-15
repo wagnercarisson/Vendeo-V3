@@ -141,4 +141,22 @@ describe("AiModelSelectionForm", () => {
     render(<AiModelSelectionForm view={FULL_VIEW} />);
     for (const capability of ALL_CAPABILITIES) expect(screen.getByText(capability)).toBeInTheDocument();
   });
+
+  it("recalcula o aviso de pricing quando o primary em edição muda", () => {
+    const pricingView = {
+      ...VIEW,
+      catalog: [...VIEW.catalog, { id: "custom-copy", capability: "campaign_copy", segment: "text", provider: "openai", model: "custom-no-price", protocol: "chat-completions", label: "Custom", status: "active", source_note: null, validated_at: null, created_at: "", updated_at: "" }],
+      capabilities: VIEW.capabilities.map((item) => item.capability === "campaign_copy" ? {
+        ...item,
+        pricingOptions: [
+          { capability: "campaign_copy", target: { provider: "openai", model: "gpt-4o", protocol: "chat-completions" }, components: [], missingComponents: [], pricingCoverage: "complete" as const, selectionAllowed: true as const },
+          { capability: "campaign_copy", target: { provider: "openai", model: "custom-no-price", protocol: "chat-completions" }, components: [], missingComponents: ["input_tokens", "output_tokens"] as const, pricingCoverage: "missing" as const, selectionAllowed: true as const },
+        ],
+      } : item),
+    };
+    render(<AiModelSelectionForm view={pricingView} />);
+    const copyCard = screen.getByText("campaign_copy").closest("article")!;
+    fireEvent.change(within(copyCard).getByLabelText("Novo primary"), { target: { value: "openai|custom-no-price|chat-completions" } });
+    expect(within(copyCard).getByText(/Pricing missing: faltam input_tokens, output_tokens/)).toBeInTheDocument();
+  });
 });

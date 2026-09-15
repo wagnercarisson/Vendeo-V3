@@ -29,6 +29,7 @@ import {
 import { STORE_SEGMENTS } from "@/lib/constants";
 import type { TokenUsage } from "@/lib/ai-cost/types";
 import type { AiTelemetryContext } from "@/lib/ai";
+import { effectiveModelLabel } from "@/lib/ai/effective-model-label";
 
 /**
  * Rotating per-phase human-friendly messages in PT-BR for UI display.
@@ -131,6 +132,10 @@ export class ImageGenerationService {
       .resolve("campaign_image")
       .then((config) => config.primary.model)
       .catch(() => "unknown");
+    const effectiveImageEditModel = await defaultAiModelResolver
+      .resolve("campaign_image_edit")
+      .then((config) => config.primary.model)
+      .catch(() => "unknown");
 
     // F37.2 (R4/D4): hook aditivo opcional, fire-once por execução. O wrapper
     // garante que o hook roda no máximo uma vez MESMO que `generateWithRetry`
@@ -155,7 +160,7 @@ export class ImageGenerationService {
             // F46-04 (furo 1): o modelo reportado vem do envelope da chamada de
             // visão (validation/review) quando disponível; só as fases de imagem
             // caem no default do pipeline.
-            model: extra?.model ?? effectiveImageModel,
+            model: effectiveModelLabel(extra?.model, effectiveImageModel),
             elapsedMs: Date.now() - startTime,
             attempt,
             durationMs: Date.now() - startTime,
@@ -389,7 +394,7 @@ export class ImageGenerationService {
           runId,
           startTime,
           providerName: this.imageProvider.name,
-          model: currentModel ?? effectiveImageModel,
+          model: effectiveModelLabel(currentModel, attempts > 0 ? effectiveImageEditModel : effectiveImageModel),
           attempts,
           effectiveProductName,
           storeName: context.store.name,
@@ -414,7 +419,7 @@ export class ImageGenerationService {
         emitHuman("image_generation");
       }
 
-      const attemptDetail = `tentativa ${attempts + 1}/${maxAttempts}, modelo: ${currentModel ?? effectiveImageModel}, tempo decorrido: ${Math.floor((Date.now() - startTime) / 1000)}s`;
+      const attemptDetail = `tentativa ${attempts + 1}/${maxAttempts}, modelo: ${effectiveModelLabel(currentModel, attempts > 0 ? effectiveImageEditModel : effectiveImageModel)}, tempo decorrido: ${Math.floor((Date.now() - startTime) / 1000)}s`;
       if (IMAGE_GENERATION_DEBUG) {
         emit("image_generation", "running", undefined, attemptDetail);
       }
@@ -436,7 +441,7 @@ export class ImageGenerationService {
           runId,
           startTime,
           providerName: this.imageProvider.name,
-          model: currentModel ?? effectiveImageModel,
+          model: effectiveModelLabel(providerResult.model, attempts > 0 ? effectiveImageEditModel : effectiveImageModel),
           attempts,
           effectiveProductName,
           storeName: context.store.name,
@@ -527,7 +532,7 @@ export class ImageGenerationService {
           runId,
           startTime,
           providerName: this.imageProvider.name,
-          model: currentModel ?? effectiveImageModel,
+          model: effectiveModelLabel(currentModel, effectiveImageModel),
           attempts,
           effectiveProductName,
           storeName: context.store.name,
@@ -594,7 +599,7 @@ export class ImageGenerationService {
               runId,
               startTime,
               providerName: this.imageProvider.name,
-              model: currentModel ?? effectiveImageModel,
+              model: effectiveModelLabel(currentModel, effectiveImageModel),
               attempts,
               effectiveProductName,
           storeName: context.store.name,
@@ -669,7 +674,7 @@ export class ImageGenerationService {
       runId,
       startTime,
       providerName: this.imageProvider.name,
-       model: currentModel ?? effectiveImageModel,
+       model: effectiveModelLabel(currentModel, effectiveImageModel),
       attempts,
       effectiveProductName,
       storeName: context.store.name,
@@ -927,7 +932,7 @@ export class ImageGenerationService {
     telemetry?: AiTelemetryContext
   ): Promise<
     | { success: true; imageBase64: string; mimeType: string; model: string; usage?: TokenUsage; usageMeta?: ImageProviderUsageMeta }
-    | { success: false; code: string; message: string; details?: string }
+    | { success: false; code: string; message: string; details?: string; model?: string }
   > {
     const ESTIMATED_RETRY_DURATION = 30000;
     const retryConfigs: Record<string, { maxRetries: number; backoffs: number[]; terminal: boolean }> = {
@@ -1011,12 +1016,13 @@ export class ImageGenerationService {
       } catch (err) {
         if (attempt >= 3) {
           const message = err instanceof Error ? err.message : String(err);
-          return {
-            success: false,
-            code: "provider_error",
-            message: "Falha ao gerar imagem após múltiplas tentativas.",
-            details: process.env.NODE_ENV === "development" ? message : undefined,
-          };
+            return {
+              success: false,
+              code: "provider_error",
+              message: "Falha ao gerar imagem após múltiplas tentativas.",
+              details: process.env.NODE_ENV === "development" ? message : undefined,
+              model: err && typeof err === "object" && "model" in err && typeof (err as { model?: unknown }).model === "string" ? (err as { model: string }).model : undefined,
+            };
         }
 
         const code = detectErrorCode(err, attempt);

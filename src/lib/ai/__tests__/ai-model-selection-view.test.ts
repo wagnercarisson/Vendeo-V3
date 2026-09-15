@@ -86,4 +86,23 @@ describe("buildAiModelSelectionView", () => {
     expect(copy?.current.primary.model).toBe("deprecated-copy");
     expect(copy?.current.primary.catalogStatus).toBe("deprecated");
   });
+
+  it("mantém pricing independente por modelo ativo da mesma capacidade", async () => {
+    const rows = [
+      catalogRow("campaign_copy", "openai", "gpt-4o", "chat-completions", "active"),
+      catalogRow("campaign_copy", "openai", "custom-no-price", "chat-completions", "active"),
+    ];
+    const map = new Map(rows.map((row) => [catalogTupleKey(row.capability, row.provider, row.model, row.protocol), row]));
+    const view = await buildAiModelSelectionView({
+      catalogService: { getActiveCatalogRows: vi.fn().mockResolvedValue(rows), getCatalogMap: vi.fn().mockResolvedValue(map) },
+      selectionService: { getSelectionMap: vi.fn().mockResolvedValue(new Map()) },
+      pricingService: vi.fn().mockResolvedValue([
+        { capability: "campaign_copy", target: { provider: "openai", model: "gpt-4o", protocol: "chat-completions" }, components: [], missingComponents: [], pricingCoverage: "complete", selectionAllowed: true },
+        { capability: "campaign_copy", target: { provider: "openai", model: "custom-no-price", protocol: "chat-completions" }, components: [], missingComponents: ["input_tokens", "output_tokens"], pricingCoverage: "missing", selectionAllowed: true },
+      ]),
+    });
+    const copy = view.capabilities.find((item) => item.capability === "campaign_copy");
+    expect(copy?.pricingOptions).toHaveLength(2);
+    expect(copy?.pricingOptions?.find((status) => status.target.model === "custom-no-price")?.pricingCoverage).toBe("missing");
+  });
 });
