@@ -1,6 +1,6 @@
 # F47 UAT — Catálogo e Seleção de Modelos Admin
 
-**Status:** PENDING HUMAN UAT (não iniciado)
+**Status:** LOCAL UAT APPROVED (humano) — migration remota e deploy ainda BLOQUEADOS
 **Environment:** Supabase local (`API_URL` derivado de `npx supabase status -o env`, tipicamente `http://127.0.0.1:54321`)
 **Remote migration/deploy:** BLOCKED and not executed
 
@@ -16,6 +16,7 @@ O modo `local`:
 - obtém `API_URL`, `ANON_KEY`, `SERVICE_ROLE_KEY` e `DB_URL` de `npx supabase status -o env` (nunca hardcoded);
 - recusa API/DB que não sejam `localhost`/`127.0.0.1`;
 - garante o Auth local com `captcha enabled`, `provider turnstile` e o **secret de teste** do Cloudflare (reiniciando o stack com volumes/dados preservados apenas se necessário);
+- **alinha as duas camadas de captcha**: (a) `public.feature_flags.captcha_enabled = true` no banco local (a flag do banco tem precedência sobre `VENDEO_CAPTCHA_ENABLED`) e (b) o captcha Turnstile do Supabase Auth com o secret de teste. Sem o alinhamento da flag, o formulário ocultaria o captcha enquanto o Auth recusaria o login;
 - escreve `.env.local` local sem as 14 env-vars de modelo/provider removidas pela F46;
 - **não** executa `supabase db reset`;
 - inicia o dev server oculto, controlado por PID do próprio workspace, e registra o caminho do log (`logs/dev-*.log`).
@@ -59,7 +60,7 @@ Execute exatamente nesta ordem:
 | `npm run typecheck` | PASS |
 | `npm run lint` | PASS; one pre-existing non-blocking warning is outside F47 |
 | `npm run build` | PASS |
-| F47 migration verifier | PASS — 23/23 |
+| F47 migration verifier | PASS — 34/34 (inclui RLS/ownership de campaigns) |
 | Frozen-surface verifier | PASS — 51 changed paths / 0 violations |
 
 ## Human Scenarios
@@ -68,18 +69,31 @@ Registre evidência, timestamp e resultado. Não marque PASS por inspeção de c
 
 | ID | Scenario | Evidence to collect | Result |
 |---|---|---|---|
-| UAT-01 | Open `/admin/ai-model-selection` as admin | Page loads; groups Texto, Visual, Imagem; no layout overflow on desktop/mobile | PENDING |
-| UAT-02 | Inspect all capabilities | All 11 capabilities visible; `campaign_image_edit` is independent | PENDING |
-| UAT-03 | Inspect effective/default/origin | Current target, registry default and `selection/default` origin are distinct and readable | PENDING |
-| UAT-04 | Change `campaign_copy` primary | Select active catalog model, provide reason, save; success/audit feedback appears | PENDING |
-| UAT-05 | Change `campaign_copy` fallback | Select active fallback and save; fallback current/default/status are visible | PENDING |
-| UAT-06 | Disable `campaign_copy` fallback | Select `Sem fallback`, save with reason; current explicitly shows no fallback | PENDING |
-| UAT-07 | Restore default | Click `Restaurar padrão` with reason; verify reset result and reload | PENDING |
+| UAT-01 | Open `/admin/ai-model-selection` as admin | Page loads; groups Texto, Visual, Imagem | PASS (humano) |
+| UAT-02 | Inspect all capabilities | All 11 capabilities visible; `campaign_image_edit` is independent | PASS (humano) |
+| UAT-03 | Inspect effective/default/origin | Current target, registry default and origin are distinct and readable | PASS (humano) |
+| UAT-04 | Change `campaign_copy` primary | Select active catalog model, provide reason, save; audit feedback | PASS (humano) |
+| UAT-05 | Change `campaign_copy` fallback | Select active fallback and save; fallback current/default/status visible | PASS (humano) |
+| UAT-06 | Disable `campaign_copy` fallback | Select `Sem fallback`, save with reason; current shows no fallback | PASS (humano) |
+| UAT-07 | Restore default | Click `Restaurar padrão` with reason; reset result and reload | PASS (humano) |
 | UAT-08 | Retry/idempotency | **AUTOMATED:** route/form tests prove same operationId only for identical action+payload and new UUID after change | AUTOMATED PASS |
-| UAT-09 | Deprecated configured target | Com fixtures instaladas, confirmar que o alvo deprecated permanece `current` e é sinalizado | PENDING |
-| UAT-10 | Missing/invalid configured target | Com fixtures instaladas, confirmar que o default é `current` e o diagnóstico mostra missing | PENDING |
-| UAT-11 | Pricing warning | Com fixtures instaladas, selecionar o modelo sem pricing e confirmar aviso sem bloquear save | PENDING |
-| UAT-12 | Telemetry/diagnostic labels | **AUTOMATED:** provider/service tests provam que o modelo tentado de `campaign_image_edit` chega ao `MetricsWriter`. **HUMAN:** inspecionar labels de geração normal local | AUTOMATED PASS / HUMAN PENDING |
+| UAT-09 | Deprecated configured target | Deprecated target remains `current` and is flagged | PASS (humano) |
+| UAT-10 | Missing/invalid configured target | Default is `current`; configured diagnostic shows missing | PASS (humano) |
+| UAT-11 | Pricing warning | No-pricing model shows warning without blocking save | PASS (humano) |
+| UAT-12 | Telemetry/diagnostic labels | **AUTOMATED:** attempted image-edit model reaches `MetricsWriter`. **HUMAN:** effective labels visible in normal local generation | PASS (humano) + AUTOMATED PASS |
+
+## Human UAT Result
+
+UAT humano executado no ambiente local (2026-09-15). Resultado: UAT-01..07 PASS; UAT-08 AUTOMATED PASS; UAT-09..12 PASS. Seleção, reset, deprecated, missing, pricing warning e labels efetivos funcionaram. Campanha local concluída com a seleção efetiva:
+
+| Capacidade | Alvo efetivo |
+|---|---|
+| `brand_profile_text` | openai/gpt-4o |
+| `campaign_copy` | openai/gpt-4o |
+| `campaign_image` | openai/gpt-5.5 |
+| `campaign_image_review` | openai/gpt-4o |
+
+Três problemas operacionais locais foram identificados e corrigidos neste ciclo (sem tocar `src/**`): alinhamento da flag `captcha_enabled` local, migration forward de SELECT em `campaigns` para `authenticated` e cleanup completo do UAT local.
 
 ## Human Decision
 

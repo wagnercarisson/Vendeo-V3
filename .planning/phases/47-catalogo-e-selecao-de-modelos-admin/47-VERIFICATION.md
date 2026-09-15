@@ -1,22 +1,25 @@
 # F47 Verification — Catálogo e Seleção de Modelos Admin
 
-**Status:** PARTIAL — automated evidence complete; human UAT and remote release checkpoints pending
+**Status:** PARTIAL — local UAT aprovado e evidência automatizada completa; migration remota e deploy ainda BLOQUEADOS
 **Goal:** Catálogo persistido por capacidade e seleção administrativa auditada, consumidos por resolver fail-open sem alterar o gateway ou contratos de geração.
 
 ## Goal-Backward Matrix
 
 | Requirement | Implementation/evidence | Automated status | Human/release status |
 |---|---|---|---|
-| `ai-model-catalog`: tables, RLS, exact matrix, idempotent seeds | `20260914000001_f47_ai_model_catalog_selection.sql`; local verifier; catalog parity tests | PASS | Local human UAT pending |
-| `ai-model-catalog`: read-only UI and catalog authority | admin form has active-only selectors; RPC validates active tuple; catalog has no UI mutation | PASS | UAT pending |
-| `ai-model-selection`: primary/fallback semantics | migration CHECKs/RPCs; resolver tests; admin route/form tests | PASS | UAT pending |
-| `ai-model-selection`: set/reset audit and idempotency | `admin_set_ai_model_selection`/`admin_reset_ai_model_selection`; local verifier 23/23; route tests | PASS | Remote schema pending |
-| `ai-model-selection`: bulk cache TTL/invalidation | selection/catalog services; race tests; resolver fail-open tests | PASS | UAT pending |
+| `ai-model-catalog`: tables, RLS, exact matrix, idempotent seeds | `20260914000001_f47_ai_model_catalog_selection.sql`; local verifier; catalog parity tests | PASS | Local human UAT PASS |
+| `ai-model-catalog`: read-only UI and catalog authority | admin form has active-only selectors; RPC validates active tuple; catalog has no UI mutation | PASS | Local human UAT PASS |
+| `ai-model-selection`: primary/fallback semantics | migration CHECKs/RPCs; resolver tests; admin route/form tests | PASS | Local human UAT PASS |
+| `ai-model-selection`: set/reset audit and idempotency | `admin_set_ai_model_selection`/`admin_reset_ai_model_selection`; local verifier 34/34; route tests | PASS | Remote schema pending |
+| `ai-model-selection`: bulk cache TTL/invalidation | selection/catalog services; race tests; resolver fail-open tests | PASS | Local human UAT PASS |
 | `ai-model-selection`: generation flow unchanged | gateway untouched; frozen guard; full regression | PASS | Release order pending |
-| `ai-model-registry` delta: catalog-approved model and runtime tuple | `PersistedModelResolver`; parity and invalid tuple tests | PASS | UAT pending |
-| `ai-model-pricing` delta: capacity-aware warnings | `model-capability-pricing.ts`; 40 pricing/cost tests; composer/UI integration | PASS | UAT pricing pending |
-| `admin-ai-model-selection`: API authorization and contracts | strict Zod, requireAdmin, GET/PUT/DELETE route tests | PASS | UAT pending |
-| `admin-ai-model-selection`: grouped UI, reset, operationId | page/form/nav; 6 UI tests; typecheck/lint/build | PASS | UAT pending |
+| `ai-model-registry` delta: catalog-approved model and runtime tuple | `PersistedModelResolver`; parity and invalid tuple tests | PASS | Local human UAT PASS |
+| `ai-model-pricing` delta: capacity-aware warnings | `model-capability-pricing.ts`; pricing/cost tests; composer/UI integration | PASS | Local human UAT PASS |
+| `admin-ai-model-selection`: API authorization and contracts | strict Zod, requireAdmin, GET/PUT/DELETE route tests | PASS | Local human UAT PASS |
+| `admin-ai-model-selection`: grouped UI, reset, operationId | page/form/nav; UI tests; typecheck/lint/build | PASS | Local human UAT PASS |
+| Operational fix: local captcha flag alignment | `switch-env.ps1 local` alinha `feature_flags.captcha_enabled=true` no banco local (a flag tem precedência sobre `VENDEO_CAPTCHA_ENABLED`) | PASS | Local human UAT PASS |
+| Operational fix: `authenticated` SELECT on `campaigns` | `20260915000001_f47_fix_campaigns_authenticated_select.sql`; verifier checks grant/RLS/policy/owner/non-owner/service_role | PASS | Remote schema pending |
+| Operational fix: full local UAT cleanup | `47-local-bootstrap.mjs --cleanup` remove storage + loja/campanha/eventos + auditoria + admin + auth user, com asserções de resíduo | PASS | n/a (local only) |
 | Proposal: local-first migration order | local reset/lint/verifier complete; no remote action | PASS locally | Remote migration BLOCKED |
 | Proposal: migration before deploy | not yet executed by design | NOT APPLICABLE YET | BLOCKING checkpoint |
 
@@ -26,9 +29,14 @@
 - [x] TypeScript typecheck.
 - [x] ESLint.
 - [x] Next build.
-- [x] Local Supabase migration reset/lint and F47 verifier.
+- [x] `npx supabase db reset` (all migrations from scratch, incl. `20260915000001`).
+- [x] Local schema lint: 0 errors (1 pre-existing non-blocking warning).
+- [x] F47 verifier: 34/34 (inclui RLS/ownership de `campaigns`).
 - [x] Frozen contract verifier: 51 paths / 0 violations.
-- [ ] Human UAT approved.
+- [x] OpenSpec strict validation.
+- [x] Local captcha focal test (`switch-env.ps1 local` alinha a flag).
+- [x] Real cleanup + idempotency.
+- [x] Human local UAT: UAT-01..07 PASS, UAT-08 AUTOMATED PASS, UAT-09..12 PASS.
 - [ ] Remote migration applied and verified.
 - [ ] Deploy completed after remote migration.
 
@@ -37,4 +45,5 @@
 - Remote `npx supabase db push` has not been run.
 - No Vercel/deploy command has been run.
 - No remote env var was created, removed or changed.
-- Do not mark this document `passed` until UAT, remote migration and deploy evidence exist in order.
+- `authorize remote migration` and `authorize deploy` are separate checkpoints.
+- Do not mark this document `passed` until remote migration and deploy evidence exist in order.
