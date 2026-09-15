@@ -1,6 +1,6 @@
 # F47 Verification — Catálogo e Seleção de Modelos Admin
 
-**Status:** PARTIAL — local UAT aprovado e evidência automatizada completa; migration remota e deploy ainda BLOQUEADOS
+**Status:** PARTIAL — LOCAL UAT APPROVED (sinal `approved` registrado); migration remota e deploy ainda BLOQUEADOS
 **Goal:** Catálogo persistido por capacidade e seleção administrativa auditada, consumidos por resolver fail-open sem alterar o gateway ou contratos de geração.
 
 ## Goal-Backward Matrix
@@ -36,7 +36,7 @@
 - [x] OpenSpec strict validation.
 - [x] Local captcha focal test (`switch-env.ps1 local` alinha a flag).
 - [x] Real cleanup + idempotency.
-- [x] Human local UAT: UAT-01..07 PASS, UAT-08 AUTOMATED PASS, UAT-09..12 PASS.
+- [x] Human local UAT: UAT-01..07 PASS, UAT-08 AUTOMATED PASS, UAT-09..12 PASS — **APPROVED** (sinal `approved`).
 - [ ] Remote migration applied and verified.
 - [ ] Deploy completed after remote migration.
 

@@ -1,6 +1,6 @@
 # F47 UAT — Catálogo e Seleção de Modelos Admin
 
-**Status:** LOCAL UAT PASSED — aguardando aprovação humana explícita (migration remota e deploy BLOQUEADOS)
+**Status:** LOCAL UAT APPROVED — sinal `approved` registrado em 2026-09-15 (migration remota e deploy BLOQUEADOS)
 **Environment:** Supabase local (`API_URL` derivado de `npx supabase status -o env`, tipicamente `http://127.0.0.1:54321`)
 **Remote migration/deploy:** BLOCKED and not executed
 
@@ -83,6 +83,8 @@ Registre evidência, timestamp e resultado. Não marque PASS por inspeção de c
 | UAT-12 | Telemetry/diagnostic labels | **AUTOMATED:** attempted image-edit model reaches `MetricsWriter`. **HUMAN:** effective labels visible in normal local generation | PASS (humano) + AUTOMATED PASS |
 
 ## Human UAT Result
+
+**Aprovação:** sinal `approved` registrado em 2026-09-15. Encerra SOMENTE o checkpoint de UAT local; migration remota exige `authorize remote migration` e deploy exige `authorize deploy` (checkpoints separados).
 
 UAT humano executado no ambiente local (2026-09-15). Resultado: UAT-01..07 PASS; UAT-08 AUTOMATED PASS; UAT-09..12 PASS. Seleção, reset, deprecated, missing, pricing warning e labels efetivos funcionaram. Campanha local concluída com a seleção efetiva:
 
