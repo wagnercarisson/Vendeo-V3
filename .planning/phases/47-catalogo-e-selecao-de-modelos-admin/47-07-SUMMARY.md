@@ -12,6 +12,7 @@ provides:
   - pricing coverage integrated once into the shared admin composer
   - frozen-surface and effective-label regression guards
   - fallback image-edit failures retain the resolved edit model in diagnostics
+  - phase verifier manifest guards frozen paths against the pre-execution baseline
 affects: [47-08]
 
 tech-stack:
@@ -58,12 +59,13 @@ Diagnostic labels now reflect the effective model target/result rather than stat
 
 | Gate | Resultado |
 |---|---|
-| Focal guards/API/view/pricing | PASS — 5 files / 21 testes |
-| Regressão integral Vitest | PASS — 287 files / 2780 testes |
+| Focal guards/API/view/pricing | PASS — 5 files / 22 testes |
+| Regressão integral Vitest | PASS — 287 files / 2779 testes |
 | `npm run typecheck` | PASS |
 | `npm run lint` | PASS |
 | `npm run build` | PASS |
 | Gateway/prompts/public contracts | PASS — frozen guard |
+| Phase frozen-surface verifier | PASS — 48 changed paths, 0 violations |
 | Pricing helper calls per composer | PASS — one bulk integration point |
 | Dependencies/package-lock | PASS — nenhum pacote novo |
 
@@ -73,6 +75,8 @@ Diagnostic labels now reflect the effective model target/result rather than stat
 - `aeed7693` — effective labels and frozen contract guards
 - `529b228b` — pricing coverage in shared admin view
 - `47ff1cff` — effective label helper, fallback error model, baseline guard and pricing option reactivity
+- `2cadd94a` — fallback model propagation and pricing option coverage
+- `486ae87c` — phase frozen-surface verifier
 
 ## Self-Check
 
