@@ -244,6 +244,31 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 
 **Escopo (D1–D10):** catálogo persistido `ai_model_catalog` com exatamente 12 seeds iniciais e UI somente leitura; seleções persistidas em `ai_model_selection` por capability, com RPCs de set/reset auditadas e idempotentes; `PersistedModelResolver` fail-open, cache bulk com TTL de 30s e invalidação local; API e página admin agrupadas em Text/Visual/Image; avisos de pricing capacity-aware; labels diagnósticos efetivos; DELETE com JSON exato `{ capability, reason, operationId }` e UUID obrigatório gerado/reutilizado pela UI; migration local → UAT aprovada por humano → migration remota [BLOCKING] → deploy. `campaign_image_edit` permanece independente e fallback existe somente para `campaign_copy`. **Sem alterar** `src/lib/ai/gateway.ts`, prompts, contratos de geração, snapshot, domínio ou UI/form do merchant.
 
+## Phase 48.1 — Laboratório Mínimo de IA
+
+**Status:** EM PLANEJAMENTO ◆ — 0/14 plans (9 waves); fonte da verdade `openspec/changes/fase-48-1-laboratorio-ia-minimo/` (proposal / design D1–D18 / 9 specs / tasks 48-1-01..48-1-14); planos, CONTEXT e UI-SPEC gerados; **aguardando revisão humana antes da execução**.
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 48-1-01 | 1 | ○ | Trackings (verificação de resíduos) + migration local: 8 tabelas `lab_*`, bucket `lab-artifacts`, RLS/grants, triggers de imutabilidade e RPC `lab_reserve_run` |
+| 48-1-02 | 1 | ○ | Guarda de ambiente fail-closed (`environment-guard`), constantes de limite, env vars e gate de arquitetura |
+| 48-1-03 | 2 | ○ | Cenários controlados: schema Zod, fixtures (3 cenários de oferta) e serviço de bootstrap/hash |
+| 48-1-04 | 2 | ○ | Domínio de experimentos prompt-only: schemas, criação com 2 variantes, transições e congelamento |
+| 48-1-05 | 3 | ○ | Harness de gateway: `buildDirectorPrompt`, `LabModelResolver`, `LabPromptLoader`, `LabTelemetrySink` e runtime single-shot |
+| 48-1-06 | 4 | ○ | Persistência de artefatos: bucket/paths, metadados/checksum, URL assinada e cleanup manual |
+| 48-1-07 | 4 | ○ | Execução e snapshots imutáveis: validação técnica (`sharp`), `run-service`, idempotência/reexecução e reserva atômica |
+| 48-1-08 | 5 | ○ | API administrativa sob `/api/admin/laboratorio` (schemas, rotas, estimativa, execução NDJSON e avaliação) |
+| 48-1-09 | 6 | ○ | UI do laboratório: layout/sub-nav, página inicial, criação, detalhe, cenários e execução |
+| 48-1-10 | 6 | ○ | Comparação lado a lado e avaliação humana (modo cego, verdict, reavaliação) |
+| 48-1-11 | 7 | ○ | Testes 1: domínio, guardas, isolamento e cenários |
+| 48-1-12 | 7 | ○ | Testes 2: harness, execução, artefatos, API, UI e avaliação |
+| 48-1-13 | 8 | ○ | Regressão e co-migração de fixtures |
+| 48-1-14 | 9 | ○ | UAT local com IA real, migration remota deliberada e verificação final |
+
+**Fences:** nenhuma task toca `campaigns`, `campaign_art_versions`, `generation_events`, `ai_model_selection`, `ai_model_catalog`, `admin_audit_log`, prompts oficiais ou o bucket `campaign-images`; nenhum secret em banco/log/snapshot; nenhuma chamada paga em testes/CI; `src/lib/ai/gateway.ts`, prompts oficiais, `src/lib/campaign/**`, `src/lib/ai-cost/**` e `src/lib/ai/model-registry.ts` intactos.
+
+**Escopo (D1–D18):** bounded context `src/lib/lab/**` + `/admin/laboratorio` + `/api/admin/laboratorio`; guarda de ambiente fail-closed (somente Supabase local: `VENDEO_LAB_ENABLED` + `VENDEO_LAB_ALLOWED_SUPABASE_HOSTS`); isolamento absoluto (tabelas/bucket próprios, sem `generation_events`/`ai_model_selection`/campanhas/créditos/prompts oficiais); cenários versionados com `content_hash`; experimentos **prompt-only** com modelo fixo e idêntico (`model`/`configuration` → F48.2); snapshots imutáveis com origem completa do custo; harness isolado do gateway F46 (alvo fixo, `LabPromptLoader`, `LabTelemetrySink`; **sem** `OpenAIImageProvider`/fallback automático; exatamente 1 chamada `campaign_image`/run; validação de visão dispensada por `brief_review_confirmed`); validação técnica objetiva (`sharp`) sem nota automática; comparação lado a lado + avaliação humana append-only (`lab_human_evaluations` com trigger anti-UPDATE/DELETE); segurança financeira (`confirmed: true`, estimativa, limites `MAX_SCENARIOS_PER_EXPERIMENT=3`/`MAX_REPETITIONS=3`/`MAX_RUNS_PER_EXPERIMENT=12`/`MAX_CONCURRENT_LAB_RUNS=1`, RPC `lab_reserve_run` antes de qualquer chamada paga); migration local → UAT local → migration remota deliberada após a UAT (schema remoto inerte, `VENDEO_LAB_ENABLED=false`). **Sem mudança de superfície externa.** **Divergência resolvida:** `CostResolution` real (sem `imageUnitUsd`/`costPartial`; usa `imageToolComponentUsd`/`imageToolPricing*` e parcialidade via `costFormulaVersion`/`costEstimationNote`) — nenhuma alteração em `src/lib/ai-cost/**`. **Numeração:** F48.1 = Laboratório Mínimo de IA (v1.5), primeira fatia do programa incremental F48.x (F48.2–F48.6 propostas em `docs/alinhamento-roadmap-pos-f48-1.md`); F44 e Stripe fora da numeração.
+
 <!-- GSD:profile-start -->
 
 ## Developer Profile

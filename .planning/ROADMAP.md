@@ -3,7 +3,7 @@
 ## Milestone v1.5 — Lançamento Externo Controlado ◆
 
 **18 phases** | **177 requirements mapped** | All covered ✓
-**Phase numbering:** Continues from v1.4 (Phase 22). F37 = Revisão e Aprovação da Arte (v1.5, concluída em fatias 37.1/37.2; 37.1 concluída; **37.2 realinhada = Correção Única por Não Conformidade** CONCLUÍDA (19/19 plans, 4 gates verdes, UAT 9/9); **37.3 eliminada** — consolidada na 37.2), F38 = Tabela de Custos por Operação, F39 = Brief Estruturado de Campanha, F40 = Campos Comerciais e Avisos do Brief, F41 = Mídia de Campanha Mobile, F42 = Signup Controlado e Elegibilidade Freemium, F43 = Revisão do Brief Pré-Geração e F45 = Briefing Contextual do Diretor de Arte (concluída em 2026-09-05), **F46 = Gateway Único de IA e Registry de Modelos (v1.5, Change A — CONCLUÍDA em 2026-09-13, 9/9 plans, 275 files / 2721 testes, 4 gates verdes, UAT 8/8 PASS)** e **F47 = Catálogo e Seleção de Modelos Admin (v1.5, Change B — sucessora da F46)**. F44 = Temas de Campanha permanece fora da numeração; Monetização pública / Stripe permanece diferida e fora da numeração. Fonte da F37.1: `openspec/changes/fase-37-1-approval-gate-candidata-unica/`; fonte da F37.2: `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/`; fonte da F46: `openspec/changes/archive/2026-09-13-fase-46-gateway-unico-de-ia-e-registry-de-modelos/`.
+**Phase numbering:** Continues from v1.4 (Phase 22). F37 = Revisão e Aprovação da Arte (v1.5, concluída em fatias 37.1/37.2; 37.1 concluída; **37.2 realinhada = Correção Única por Não Conformidade** CONCLUÍDA (19/19 plans, 4 gates verdes, UAT 9/9); **37.3 eliminada** — consolidada na 37.2), F38 = Tabela de Custos por Operação, F39 = Brief Estruturado de Campanha, F40 = Campos Comerciais e Avisos do Brief, F41 = Mídia de Campanha Mobile, F42 = Signup Controlado e Elegibilidade Freemium, F43 = Revisão do Brief Pré-Geração e F45 = Briefing Contextual do Diretor de Arte (concluída em 2026-09-05), **F46 = Gateway Único de IA e Registry de Modelos (v1.5, Change A — CONCLUÍDA em 2026-09-13, 9/9 plans, 275 files / 2721 testes, 4 gates verdes, UAT 8/8 PASS)** e **F47 = Catálogo e Seleção de Modelos Admin (v1.5, Change B — CONCLUÍDA em 2026-09-15, 8/8 plans, 287 files / 2782 testes, 4 gates verdes, UAT local aprovado, migration remota verificada, deploy Ready)** e **F48.1 = Laboratório Mínimo de IA (v1.5 — em planejamento; primeira fatia do programa incremental F48.x; fonte `openspec/changes/fase-48-1-laboratorio-ia-minimo/`)**. F44 = Temas de Campanha permanece fora da numeração; Monetização pública / Stripe permanece diferida e fora da numeração. Fonte da F37.1: `openspec/changes/fase-37-1-approval-gate-candidata-unica/`; fonte da F37.2: `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/`; fonte da F46: `openspec/changes/archive/2026-09-13-fase-46-gateway-unico-de-ia-e-registry-de-modelos/`.
 
 ---
 
@@ -43,6 +43,8 @@
 | 43 | ✅ Revisão do Brief Pré-Geração (v1.5) | 15/15 | ✅ Complete | 2026-08-21 |
 | 45 | ✅ Briefing Contextual do Diretor de Arte (v1.5) | 8/8 | ✅ Complete | 2026-09-05 |
 | 46 | ✅ Gateway Único de IA e Registry de Modelos (v1.5) | 9/9 | ✅ Complete | 2026-09-13 |
+| 47 | ✅ Catálogo e Seleção de Modelos Admin (v1.5, Change B) | 8/8 | ✅ Complete | 2026-09-15 |
+| 48.1 | ◆ Laboratório Mínimo de IA (v1.5) | 0/14 | ◆ Planning | — |
 | — | Monetização pública / Stripe (iniciativa diferida, v1.7+) | — | Fora da numeração | — |
 
 ---
@@ -1057,6 +1059,37 @@ Plans:
 
 ---
 
+### Phase 48.1: Laboratório Mínimo de IA
+
+**Goal:** Entregar a menor bancada experimental interna já útil: um simulador isolado da produção, local-first, que executa geração real de imagem sob comando humano, comparando **baseline × candidata** (dimensão única `prompt`, modelo fixo e idêntico) com snapshots imutáveis, validação técnica objetiva e **avaliação humana** como fonte de qualidade — sem alterar qualquer superfície produtiva.
+
+**Requirements:** `lab-isolation`, `lab-scenarios`, `lab-experiments`, `lab-runs`, `lab-gateway-harness`, `lab-artifacts`, `lab-admin-api`, `lab-admin-ui`, `lab-human-evaluation`.
+
+**Dependencies:** F46 (gateway único, adapters, `AiInvoker`/`AiModelResolver`, telemetria), F47 (`ai_model_catalog`/`ai_model_selection` como allowlist de leitura), F43 (`brief_review_confirmed` — validação de visão dispensada), F38.x (`resolveAiCost`/`CostResolution`), F37.2 (precedente de RPC/imutabilidade). **Ordem de migration (D16):** migration local → UAT local → migration remota deliberada após a UAT.
+
+**Plans:** 0/14 plans (9 waves)
+
+Plans:
+
+- [ ] 48-1-01-PLAN.md — Trackings (verificação de resíduos) + migration local: 8 tabelas `lab_*`, bucket `lab-artifacts`, RLS/grants, triggers de imutabilidade e RPC `lab_reserve_run` (Wave 1)
+- [ ] 48-1-02-PLAN.md — Guarda de ambiente fail-closed (`environment-guard`), constantes de limite, env vars e gate de arquitetura (Wave 1)
+- [ ] 48-1-03-PLAN.md — Cenários controlados: schema Zod, fixtures (3 cenários de oferta) e serviço de bootstrap/hash (Wave 2)
+- [ ] 48-1-04-PLAN.md — Domínio de experimentos prompt-only: schemas, criação com 2 variantes, transições e congelamento (Wave 2)
+- [ ] 48-1-05-PLAN.md — Harness de gateway: `buildDirectorPrompt`, `LabModelResolver`, `LabPromptLoader`, `LabTelemetrySink` e runtime single-shot (Wave 3)
+- [ ] 48-1-06-PLAN.md — Persistência de artefatos: bucket/paths, metadados/checksum, URL assinada e cleanup manual (Wave 4)
+- [ ] 48-1-07-PLAN.md — Execução e snapshots imutáveis: validação técnica (`sharp`), `run-service`, idempotência/reexecução e reserva atômica (Wave 4)
+- [ ] 48-1-08-PLAN.md — API administrativa sob `/api/admin/laboratorio` (schemas, rotas, estimativa, execução NDJSON e avaliação) (Wave 5)
+- [ ] 48-1-09-PLAN.md — UI do laboratório: layout/sub-nav, página inicial, criação, detalhe, cenários e execução (Wave 6)
+- [ ] 48-1-10-PLAN.md — Comparação lado a lado e avaliação humana (modo cego, verdict, reavaliação) (Wave 6)
+- [ ] 48-1-11-PLAN.md — Testes 1: domínio, guardas, isolamento e cenários (Wave 7)
+- [ ] 48-1-12-PLAN.md — Testes 2: harness, execução, artefatos, API, UI e avaliação (Wave 7)
+- [ ] 48-1-13-PLAN.md — Regressão e co-migração de fixtures (Wave 8)
+- [ ] 48-1-14-PLAN.md — UAT local com IA real, migration remota deliberada e verificação final (Wave 9)
+
+**Scope fences:** nenhuma task toca `campaigns`, `campaign_art_versions`, `generation_events`, `ai_model_selection`, `ai_model_catalog`, `admin_audit_log`, prompts oficiais ou o bucket `campaign-images`; nenhum secret em banco/log/snapshot; nenhuma chamada paga em testes/CI; `src/lib/ai/gateway.ts`, prompts oficiais, `src/lib/campaign/**`, `src/lib/ai-cost/**` e `src/lib/ai/model-registry.ts` permanecem intactos; `model`/`configuration` rejeitados nesta fase (F48.2); revisão produtiva não redefinida.
+
+---
+
 ## Dependency Graph
 
 ```
@@ -1139,6 +1172,9 @@ Phase 39 (Brief Estruturado de Campanha — v1.5)
                                          Phase 47 (Catálogo e Seleção de Modelos Admin — v1.5, Change B) ✅ concluída (8/8, 287 files / 2782 testes, UAT local aprovado, migration remota verificada, deploy Ready)
                                                   │
                                                   ▼
+                                         Phase 48.1 (Laboratório Mínimo de IA — v1.5) ◆ em planejamento (0/14, 9 waves)
+                                                  │
+                                                  ▼
                                          Phase 37 (Revisão e Aprovação da Arte — v1.5)
                                                   │
                                                   ▼
@@ -1146,7 +1182,7 @@ Phase 39 (Brief Estruturado de Campanha — v1.5)
 
 ```
 
-> **Fora da numeração:** F44 = Temas de Campanha (adicionada pelo runbook da própria F44 — esta fase não cria a linha F44); Monetização pública / Stripe (iniciativa diferida, v1.7+). **F47 = Catálogo e Seleção de Modelos Admin (Change B)** é a sucessora numerada da F46.
+> **Fora da numeração:** F44 = Temas de Campanha (adicionada pelo runbook da própria F44 — esta fase não cria a linha F44); Monetização pública / Stripe (iniciativa diferida, v1.7+). **F47 = Catálogo e Seleção de Modelos Admin (Change B)** é a sucessora numerada da F46. **F48.1 = Laboratório Mínimo de IA (v1.5)** é a primeira fatia do programa incremental **F48.x** (F48.2–F48.6 propostas em `docs/alinhamento-roadmap-pos-f48-1.md`).
 
 ---
 
@@ -1218,11 +1254,20 @@ Phase 39 (Brief Estruturado de Campanha — v1.5)
 | SEC-02 | Phase 29 | Done ✓ |
 | SEC-03 | Phase 29 | Done ✓ |
 | SEC-05 | Phase 29 | Done ✓ |
+| LAB-ISOLATION | Phase 48.1 | Planned |
+| LAB-SCENARIOS | Phase 48.1 | Planned |
+| LAB-EXPERIMENTS | Phase 48.1 | Planned |
+| LAB-RUNS | Phase 48.1 | Planned |
+| LAB-GATEWAY-HARNESS | Phase 48.1 | Planned |
+| LAB-ARTIFACTS | Phase 48.1 | Planned |
+| LAB-ADMIN-API | Phase 48.1 | Planned |
+| LAB-ADMIN-UI | Phase 48.1 | Planned |
+| LAB-HUMAN-EVALUATION | Phase 48.1 | Planned |
 
 **Coverage:**
 
-- v1 requirements: 139 total (107 v1.5 + 12 INTENT + 8 F34 + 12 F35-CHANGELOG/UI etc.)
-- Mapped to phases: 139
+- v1 requirements: 148 total (139 v1.5 + 9 capabilities novas da F48.1 — specs ADDED, sem REQ-IDs no `REQUIREMENTS.md`)
+- Mapped to phases: 148
 - Completed: 127
 - Unmapped: 0 ✓
 - Deferred to v1.7: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06
@@ -1233,4 +1278,4 @@ Phase 39 (Brief Estruturado de Campanha — v1.5)
 *Milestone: v1.5 — Lançamento Externo Controlado*
 *Histórico anterior: Fase 43 em planejamento/conclusão (2026-08-21):* renumeração D1: F42 = Signup Controlado e Elegibilidade Freemium (v1.5) **CONCLUÍDA** (20/20 plans, 2182 testes, UAT 20.5–20.15 PASS), **F43 = Revisão do Brief Pré-Geração** (v1.5), **Monetização pública / Stripe fora da numeração (iniciativa diferida v1.7+ não numerada)** — precedente F42 D1, fonte `openspec/changes/fase-43-revisao-brief-pre-geracao/`.*
 *Histórico anterior: Fase 42 em planejamento (2026-08-16):* Fase 41 complete (Mídia de Campanha Mobile — 13/13 plans, 2033 testes, 4 gates verdes, UAT 6/6 — Android em produção ✅; iOS HEIC pendente); renumeração D1: F41 = Mídia de Campanha Mobile (v1.5), Stripe/Monetização Pública → F42 (v1.7, pós-beta) — precedente F40 D1, fonte `openspec/changes/fase-41-midia-de-campanha-mobile/`.* Fase 40 complete (Campos Comerciais e Avisos do Brief — 9/9 plans, 1997 testes, 4 gates verdes, UAT aprovado 6/6); renumeração D1: F40 = Campos Comerciais e Avisos do Brief (v1.5), Stripe/Monetização Pública → F41 (v1.7, pós-beta) — precedente F39 D1, fonte `openspec/changes/fase-40-campos-comerciais-avisos-brief/`.* Fase 39 complete (Brief Estruturado de Campanha — 8/8 plans, 1950 testes, 4 gates verdes, UAT aprovado 5/5); renumeração F39 = Brief Estruturado de Campanha (v1.5) e Stripe/Monetização Pública → F40 (v1.7, pós-beta) — precedente F37 D11, fonte `openspec/changes/fase-39-brief-estruturado-campanha/`.* Fase 38.2.1 complete (Snapshot Econômico — 7/7 plans, 1887 testes, I1-I7 53/53 asserts); Phase 38.2 complete (Admin de Custos Operacionais + Configurações Econômicas — 11/11 plans, 1832 testes, verificação I1–I6 em banco real); Fase 38 complete (Tabela de Custos por Operação — 8/8 plans, 1597 testes, UAT 4/4); renumeração F37 = Revisão e Aprovação da Arte (v1.5), F38 = Tabela de Custos por Operação (v1.5); **Phase 38.1 (Apuração de Custos de IA por Entrega — desdobramento da F38, v1.5) CONCLUÍDA — 11/11 plans, 1713 testes (199 arquivos), UAT validado, fechada como camada de ESTIMATIVA OPERACIONAL GRANULAR** (ajuste provisório versionável da tool image_generation: `responses:image_generation = USD 0.065` = estimativa provisória para beta, calibrada por UAT/dashboard/CSV — NÃO é custo financeiro real; reconciliação financeira real fica para a próxima fase; seed `ai_model_pricing` via migration 20260809000003 aplicada Local/Remote) — fonte `openspec/changes/fase-38-1-ai-cost-accounting/`*
-*Last updated: 2026-09-10 — F45 concluída (8/8 plans, 2427 testes, UAT PASS 7/7) e incorporada à F37. **F37.2 realinhada (Correção Única por Não Conformidade) CONCLUÍDA — 19/19 plans (8 waves), 264 files / 2578 testes, 4 gates verdes (vitest/typecheck/lint/build), UAT PASS 9/9 (37.2-6 validado por código), migrations `20260906000001/2/3` aplicadas no remoto; fix pós-UAT `01a7021b` (análise textual + erros 409 legíveis)**; 37.1 concluída (15/15 plans, 2379 testes, UAT PASS 6/6); **37.3 eliminada** (consolidada na 37.2). F44 e Stripe permanecem fora da numeração.*
+*Last updated: 2026-09-15 — **F48.1 (Laboratório Mínimo de IA, v1.5) aberta no tracking e em planejamento** (0/14 plans / 9 waves; CONTEXT, UI-SPEC e planos `48-1-01..48-1-14` gerados de `openspec/changes/fase-48-1-laboratorio-ia-minimo/`; aguardando revisão humana antes da execução). F47 concluída (8/8, 287 files / 2782 testes, UAT local aprovado, migration remota verificada, deploy Ready) e F46 concluída (9/9, UAT 8/8). F45 concluída (8/8 plans, 2427 testes, UAT PASS 7/7) e incorporada à F37. **F37.2 realinhada (Correção Única por Não Conformidade) CONCLUÍDA — 19/19 plans (8 waves), 264 files / 2578 testes, 4 gates verdes (vitest/typecheck/lint/build), UAT PASS 9/9 (37.2-6 validado por código), migrations `20260906000001/2/3` aplicadas no remoto; fix pós-UAT `01a7021b` (análise textual + erros 409 legíveis)**; 37.1 concluída (15/15 plans, 2379 testes, UAT PASS 6/6); **37.3 eliminada** (consolidada na 37.2). F44 e Stripe permanecem fora da numeração.*

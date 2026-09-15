@@ -54,14 +54,14 @@ Autenticação completa, vínculo user→store, isolamento multi-tenant, beta.ve
 
 ### 📋 v1.5 — Lançamento Externo Controlado ◆
 
-Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, UAT externo, fundação legal, modelo comercial, freemium anti-abuso CNPJ, changelog/novidades, onboarding por abas (F36), revisão e aprovação da arte (F37), tabela de custos por operação (F38), brief estruturado de campanha (F39), mídia de campanha mobile (F41), signup controlado e elegibilidade freemium (F42), revisão do brief pré-geração (F43), briefing contextual do diretor de arte (F45), gateway único de IA e registry de modelos (F46) e catálogo/seleção de modelos admin (F47).
+Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, UAT externo, fundação legal, modelo comercial, freemium anti-abuso CNPJ, changelog/novidades, onboarding por abas (F36), revisão e aprovação da arte (F37), tabela de custos por operação (F38), brief estruturado de campanha (F39), mídia de campanha mobile (F41), signup controlado e elegibilidade freemium (F42), revisão do brief pré-geração (F43), briefing contextual do diretor de arte (F45), gateway único de IA e registry de modelos (F46), catálogo/seleção de modelos admin (F47) e laboratório mínimo de IA (F48.1).
 
 <details open>
 <summary>◆ v1.5 Lançamento Externo Controlado (F23-F39) — Em andamento</summary>
 
 > **Monetização pública / Stripe** — iniciativa diferida **não numerada** (v1.7+), reaberta quando houver condição real de executar (empresa, jurídico, contabilidade, operação fiscal, decisão de monetização). Fora da tabela de fases numeradas.
 
-Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, fundação legal, modelo comercial, store readiness, campos comerciais e avisos do brief (F40), mídia de campanha mobile (F41), signup controlado e elegibilidade freemium (F42), revisão do brief pré-geração (F43), briefing contextual do diretor de arte (F45), gateway único de IA e registry de modelos (F46) e catálogo/seleção de modelos admin (F47).
+Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admin operacional para suporte beta, UI de saldo e extrato, créditos mensais automáticos, observabilidade, launch readiness, fundação legal, modelo comercial, store readiness, campos comerciais e avisos do brief (F40), mídia de campanha mobile (F41), signup controlado e elegibilidade freemium (F42), revisão do brief pré-geração (F43), briefing contextual do diretor de arte (F45), gateway único de IA e registry de modelos (F46), catálogo/seleção de modelos admin (F47) e laboratório mínimo de IA (F48.1).
 
 - [x] Phase 23: Text Provider + Copy Director (2/2 plans ✅)
 - [x] Phase 24: Créditos — Schema, Saldo e Transações (2/2 plans ✅)
@@ -221,6 +221,18 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - **Ordem de deploy:** migration local → UAT local → **[BLOCKING] migration remota** → deploy → verificação de envs; 4 gates e UAT final
   - **Fonte da verdade:** `openspec/changes/fase-47-catalogo-e-selecao-de-modelos-admin/`
   - **Status:** 8/8 plans — concluída (Change B; 287 files / 2782 testes, 4 gates verdes, UAT local aprovado, migration remota verificada, deploy pós-cleanup Ready, env-vars obsoletas removidas, fluxo feliz validado em produção)
+
+- [ ] Phase 48.1: Laboratório Mínimo de IA (em planejamento — 0/14 plans; fonte `openspec/changes/fase-48-1-laboratorio-ia-minimo/`)
+  - **Bancada experimental interna isolada** (`/admin/laboratorio` + `/api/admin/laboratorio`) para comparar **baseline × candidata** com **prompt** como única dimensão (F48.1 é prompt-only; `model`/`configuration` ficam para F48.2) e **modelo fixo e idêntico** entre as variantes, sem tocar a produção
+  - **Guarda de ambiente fail-closed** (somente Supabase local: flag `VENDEO_LAB_ENABLED`, allowlist `VENDEO_LAB_ALLOWED_SUPABASE_HOSTS`, bloqueio de hosts de produção) + isolamento absoluto (tabelas/bucket próprios `lab_*`/`lab-artifacts`, sem `generation_events`, `ai_model_selection`, campanhas, créditos, prompts oficiais ou `admin_audit_log`)
+  - **Migration local-first** (8 tabelas + bucket privado + RLS service_role + triggers de imutabilidade + RPC `lab_reserve_run` de reserva atômica) → UAT local → **migration remota deliberada após a UAT** (schema remoto inerte, `VENDEO_LAB_ENABLED=false` em produção) — D16
+  - **Execução real single-shot** via gateway F46 (instância isolada com alvo fixo, `LabPromptLoader` e `LabTelemetrySink`; **sem** `OpenAIImageProvider`/fallback automático; exatamente 1 chamada `campaign_image` por run) + snapshots imutáveis com origem completa do custo
+  - **Validação técnica objetiva** (`sharp`) + **avaliação humana** lado a lado (baseline/candidata/empate/nenhuma + observação), sem nota automática de qualidade; `lab_human_evaluations` append-only
+  - **Segurança financeira:** `confirmed: true` obrigatório, estimativa antes da execução, limites (`MAX_SCENARIOS_PER_EXPERIMENT=3`, `MAX_REPETITIONS=3`, `MAX_RUNS_PER_EXPERIMENT=12`, `MAX_CONCURRENT_LAB_RUNS=1`), reserva atômica antes de qualquer chamada paga, **nenhuma chamada real em testes/CI**
+  - **Sem mudança de superfície externa:** UI/form do lojista, contrato HTTP de geração, schema público, snapshot/domínio, prompts oficiais, catálogo/seleção e telemetria produtiva intactos
+  - **Fonte da verdade:** `openspec/changes/fase-48-1-laboratorio-ia-minimo/` (proposal / design D1–D18 / 9 specs / tasks 48-1-01..48-1-14)
+  - **Dependências:** F46 (gateway/adapters/seams), F47 (catálogo/seleção como allowlist de leitura), F43 (`brief_review_confirmed` — validação de visão dispensada), F38.x (custos/`CostResolution`)
+  - **Status:** 0/14 plans — planejamento (14 plans / 9 waves; aguardando revisão antes da execução)
 </details>
 
 ## Progress
@@ -276,6 +288,8 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 43. Revisão do Brief Pré-Geração | v1.5 | 15/15 | ✅ Complete | 2026-08-21 |
 | 45. Briefing Contextual do Diretor de Arte | v1.5 | 8/8 | ✅ Complete | 2026-09-05 |
 | 46. Gateway Único de IA e Registry de Modelos | v1.5 | 9/9 | ✅ Complete | 2026-09-13 |
+| 47. Catálogo e Seleção de Modelos Admin | v1.5 | 8/8 | ✅ Complete | 2026-09-15 |
+| 48.1. Laboratório Mínimo de IA | v1.5 | 0/14 | ◆ Planning | — |
 | —. Monetização pública / Stripe (diferida, v1.7+) | v1.7 | — | Fora da numeração | — |
 
 ---
