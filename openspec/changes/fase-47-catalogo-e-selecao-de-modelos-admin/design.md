@@ -147,7 +147,7 @@ Ao listar o catálogo (e/ou ao salvar uma seleção), o sistema verifica o prici
 - **`campaign_image` e `visual_signature_image`** (`responses` + tool `image_generation`): preço do modelo **e** preço do componente da tool — linha `(provider, 'responses:image_generation')` com `image_unit_usd`.
 - **`campaign_image_edit`** (`images`): preço **por unidade de imagem** (`image_unit_usd`) para `(provider, model)`.
 
-A ausência de qualquer componente gera **aviso explícito** na tela/rota (não bloqueia, pois há `fallback_static`), garantindo que a troca não degrade silenciosamente a contabilidade.
+A ausência de qualquer componente gera **aviso explícito** na tela/rota (não bloqueia a seleção), com cobertura `complete`, `partial` ou `missing` e a lista dos componentes ausentes. O aviso informa que a estimativa pode permanecer parcial ou seguir a cadeia existente até `fallback_static`/`not_available`; a tela não prediz a fonte final sem usage/env da chamada.
 
 - **Por quê**: verificar só o preço de `gpt-5.5` ignoraria o componente da tool; verificar só tokens ignoraria o custo por imagem de `campaign_image_edit`.
 
@@ -258,7 +258,7 @@ Rollback: a seleção é aditiva; remover a leitura volta ao registry; a migrati
 
 ## Risks / Trade-offs
 
-- **[Seleção aponta para modelo sem pricing]** → D8 avisa por componente da capacidade; `fallback_static` mantém fail-open.
+- **[Seleção aponta para modelo sem pricing]** → D8 avisa por componente e cobertura da capacidade; a cadeia existente mantém o fail-open sem o painel afirmar uma fonte final.
 - **[Seleção inválida/corrompida/parcial]** → validação contra catálogo no RPC + validação de tupla completa no resolver + fallback do registry (D7).
 - **[N+1 na resolução]** → cache compartilhado de curta duração com invalidação (D6).
 - **[Cache defasado após mudança no painel]** → `invalidateModelSelectionCache()` chamado no `set`/`reset`; TTL curto limita a janela residual.

@@ -46,7 +46,7 @@
 
 ## 6. Plan 47-06 — Consistência catálogo × pricing (onda 3)
 
-- [ ] 6.1 Sinalizar, por capacidade, o pricing faltante (design D8): tokens para texto/visão; modelo + componente `responses:image_generation` para `campaign_image`/`visual_signature_image`; unidade de imagem para `campaign_image_edit`; na API/tela (tabela ou bootstrap)
+- [ ] 6.1 Sinalizar, por combinação selecionável, o pricing faltante (design D8): tokens para texto/visão; modelo + componente `responses:image_generation` para `campaign_image`/`visual_signature_image`; unidade de imagem para `campaign_image_edit`; normalizar modelos versionados antes da consulta; retornar cobertura `complete|partial|missing` e componentes ausentes, sem predizer a fonte final de `resolveAiCost`, na API/tela (tabela ou bootstrap)
 - [ ] 6.2 Testes: modelo sem pricing é sinalizado por componente da capacidade; com pricing não; `campaign_image`/`visual_signature_image` exigem o componente da tool; `campaign_image_edit` exige unidade de imagem; `resolveAiCost` inalterado
 
 ## 7. Plan 47-07 — Rótulos diagnósticos e regressão (onda 4)

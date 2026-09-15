@@ -6,7 +6,7 @@
 
 ### Requirement: Modelos selecionáveis têm o pricing exigido pela capacidade
 
-Ao listar o catálogo para seleção, o sistema SHALL verificar o pricing **exigido pela capacidade** de cada modelo e SHALL sinalizar explicitamente o que estiver faltando. A ausência de pricing SHALL NOT bloquear a seleção (o resolvedor de custo mantém `fallback_static`), mas SHALL ser visível para o admin.
+Ao listar o catálogo para seleção, o sistema SHALL verificar o pricing **exigido pela capacidade** de cada modelo e SHALL sinalizar explicitamente o que estiver faltando. A ausência de pricing SHALL NOT bloquear a seleção. O painel SHALL expor cobertura `complete`, `partial` ou `missing` e os componentes ausentes, informando que a estimativa pode permanecer parcial ou seguir a cadeia existente até `fallback_static`/`not_available`; o painel não SHALL predizer a fonte final sem usage/env da chamada.
 
 O pricing exigido SHALL considerar:
 
