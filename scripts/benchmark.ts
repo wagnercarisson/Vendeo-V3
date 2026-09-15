@@ -263,16 +263,16 @@ async function runBenchmark(): Promise<void> {
     { createImageProvider },
     { ImageGenerationService },
     { buildCampaignBriefFromFlat },
-    { MODEL_REGISTRY },
+     { defaultAiModelResolver },
   ] = await Promise.all([
     import("./benchmark-scenarios"),
     import("../src/lib/image-generation/providers/factory"),
     import("../src/lib/image-generation/services/image-generation-service"),
     import("../src/lib/campaign/brief"),
-    import("../src/lib/ai/model-registry"),
+     import("../src/lib/ai"),
   ]);
 
-  const target = MODEL_REGISTRY.campaign_image.primary;
+  const target = (await defaultAiModelResolver.resolve("campaign_image")).primary;
   const effectiveModel = target.model;
   const evaluatedProvider = target.provider;
 

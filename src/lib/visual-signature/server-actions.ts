@@ -7,9 +7,8 @@ import type { Store } from "@/lib/store";
 import { AiImageGenerator } from "./ai-image-generator";
 import { getActiveVisualSignature } from "./persistence";
 import { AiCostTracker } from "@/lib/ai-cost";
-import { createDefaultTelemetryContext } from "@/lib/ai";
+import { createDefaultTelemetryContext, defaultAiModelResolver } from "@/lib/ai";
 import { resolveEconomicSnapshot } from "@/lib/economic/economic-snapshot";
-import { MODEL_REGISTRY } from "@/lib/ai/model-registry";
 import type {
   VisualSignatureRecord,
   VisualSignatureMetadata,
@@ -19,13 +18,6 @@ import type {
 } from "./types";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/**
- * F46-07 (D5/D8): modelo default da capacidade `visual_signature_image`, lido do
- * registry (fonte única) — usado apenas como rótulo do diagnóstico de cascata
- * (`CascadeAttempt`); a invocação real resolve o modelo pelo gateway.
- */
-const VISUAL_SIGNATURE_IMAGE_MODEL = MODEL_REGISTRY.visual_signature_image.primary.model;
 
 function sanitizeErrorMessage(raw: string): string {
   return raw
@@ -38,7 +30,8 @@ function sanitizeErrorMessage(raw: string): string {
 function classifyError(
   err: unknown,
   tier: "image_direct" | "image_retry",
-  startMs: number
+  startMs: number,
+  model: string,
 ): CascadeAttempt {
   const elapsedMs = Date.now() - startMs;
   const message = err instanceof Error ? err.message : String(err || "Unknown error");
@@ -73,7 +66,7 @@ function classifyError(
   return {
     tier,
     provider: "openai",
-    model: VISUAL_SIGNATURE_IMAGE_MODEL,
+    model,
     elapsedMs,
     status,
     errorCode,
@@ -133,6 +126,10 @@ export async function generateVariations(
   }
 
   const aiGenerator = new AiImageGenerator();
+  const effectiveVisualSignatureModel = await defaultAiModelResolver
+    .resolve("visual_signature_image")
+    .then((config) => config.primary.model)
+    .catch(() => "unknown");
   const tonalities = ["profissional", "moderno", "elegante"];
 
   // F46-04 (reabertura, D9): telemetria pelo sink único para
@@ -171,7 +168,7 @@ export async function generateVariations(
         telemetry,
       });
     } catch (err) {
-      const a1 = classifyError(err, "image_direct", attempt1Start);
+      const a1 = classifyError(err, "image_direct", attempt1Start, effectiveVisualSignatureModel);
       console.log(`[visual-signature] generateVariations tone=${tone} attempt1 ${a1.status}`);
 
       if (a1.status !== "timeout") {
@@ -189,7 +186,7 @@ export async function generateVariations(
             telemetry,
           });
         } catch (err2) {
-          const a2 = classifyError(err2, "image_retry", attempt2Start);
+          const a2 = classifyError(err2, "image_retry", attempt2Start, effectiveVisualSignatureModel);
           console.log(`[visual-signature] generateVariations tone=${tone} retry ${a2.status}`);
         }
       }
@@ -250,6 +247,10 @@ export async function generateAutomatic(storeId: string): Promise<
 
   const totalStart = Date.now();
   const aiGenerator = new AiImageGenerator();
+  const effectiveVisualSignatureModel = await defaultAiModelResolver
+    .resolve("visual_signature_image")
+    .then((config) => config.primary.model)
+    .catch(() => "unknown");
   const previousAttempts: CascadeAttempt[] = [];
 
   // F46-04 (reabertura, D9): telemetria pelo sink único para
@@ -305,7 +306,7 @@ export async function generateAutomatic(storeId: string): Promise<
     console.log(`[visual-signature] tier=image_direct success`);
     return { success: true, signature, isFallback: false };
   } catch (err) {
-    const attempt = classifyError(err, "image_direct", attempt1Start);
+    const attempt = classifyError(err, "image_direct", attempt1Start, effectiveVisualSignatureModel);
     previousAttempts.push(attempt);
     console.log(`[visual-signature] tier=image_direct ${attempt.status}`);
 
@@ -359,7 +360,7 @@ export async function generateAutomatic(storeId: string): Promise<
     console.log(`[visual-signature] tier=image_retry success`);
     return { success: true, signature, isFallback: false };
   } catch (err) {
-    const attempt = classifyError(err, "image_retry", attempt2Start);
+    const attempt = classifyError(err, "image_retry", attempt2Start, effectiveVisualSignatureModel);
     previousAttempts.push(attempt);
     console.log(`[visual-signature] tier=image_retry ${attempt.status}`);
   }

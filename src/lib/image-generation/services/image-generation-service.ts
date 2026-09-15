@@ -1,7 +1,6 @@
 import { PromptLoader } from "@/lib/image-generation/prompt-loader";
 import { IMAGE_GENERATION_DEBUG, IMAGE_GENERATION_SIZE, IMAGE_GENERATION_GLOBAL_TIMEOUT_MS } from "@/lib/image-generation/config";
-import { MODEL_REGISTRY } from "@/lib/ai/model-registry";
-import { AiInvocationError } from "@/lib/ai";
+import { AiInvocationError, defaultAiModelResolver } from "@/lib/ai";
 import type { ImageProvider, ImageProviderOutput, ImageProviderUsageMeta } from "@/lib/image-generation/providers/types";
 import type { GenerateImageRequest, GenerateImageSuccessResponse, GenerationPhase, GenerationPhaseEvent, ValidationContext, InputValidationResult, ImageReviewResult } from "@/lib/image-generation/schema";
 import type { ResolvedCampaignContext } from "@/components/campaign/types";
@@ -30,13 +29,6 @@ import {
 import { STORE_SEGMENTS } from "@/lib/constants";
 import type { TokenUsage } from "@/lib/ai-cost/types";
 import type { AiTelemetryContext } from "@/lib/ai";
-
-/**
- * F46-05 (D5): modelo default da capacidade `campaign_image`, lido do registry
- * (fonte única) — usado apenas como rótulo das métricas diagnósticas
- * (`GenerationMetrics`); a invocação real resolve o modelo pelo gateway.
- */
-const DEFAULT_IMAGE_MODEL = MODEL_REGISTRY.campaign_image.primary.model;
 
 /**
  * Rotating per-phase human-friendly messages in PT-BR for UI display.
@@ -135,6 +127,10 @@ export class ImageGenerationService {
     const startTime = Date.now();
     const remaining = () => IMAGE_GENERATION_GLOBAL_TIMEOUT_MS - (Date.now() - startTime);
     const runId = crypto.randomUUID();
+    const effectiveImageModel = await defaultAiModelResolver
+      .resolve("campaign_image")
+      .then((config) => config.primary.model)
+      .catch(() => "unknown");
 
     // F37.2 (R4/D4): hook aditivo opcional, fire-once por execução. O wrapper
     // garante que o hook roda no máximo uma vez MESMO que `generateWithRetry`
@@ -159,7 +155,7 @@ export class ImageGenerationService {
             // F46-04 (furo 1): o modelo reportado vem do envelope da chamada de
             // visão (validation/review) quando disponível; só as fases de imagem
             // caem no default do pipeline.
-            model: extra?.model ?? DEFAULT_IMAGE_MODEL,
+            model: extra?.model ?? effectiveImageModel,
             elapsedMs: Date.now() - startTime,
             attempt,
             durationMs: Date.now() - startTime,
@@ -393,7 +389,7 @@ export class ImageGenerationService {
           runId,
           startTime,
           providerName: this.imageProvider.name,
-          model: DEFAULT_IMAGE_MODEL,
+          model: currentModel ?? effectiveImageModel,
           attempts,
           effectiveProductName,
           storeName: context.store.name,
@@ -418,7 +414,7 @@ export class ImageGenerationService {
         emitHuman("image_generation");
       }
 
-      const attemptDetail = `tentativa ${attempts + 1}/${maxAttempts}, modelo: ${DEFAULT_IMAGE_MODEL}, tempo decorrido: ${Math.floor((Date.now() - startTime) / 1000)}s`;
+      const attemptDetail = `tentativa ${attempts + 1}/${maxAttempts}, modelo: ${currentModel ?? effectiveImageModel}, tempo decorrido: ${Math.floor((Date.now() - startTime) / 1000)}s`;
       if (IMAGE_GENERATION_DEBUG) {
         emit("image_generation", "running", undefined, attemptDetail);
       }
@@ -440,7 +436,7 @@ export class ImageGenerationService {
           runId,
           startTime,
           providerName: this.imageProvider.name,
-          model: DEFAULT_IMAGE_MODEL,
+          model: currentModel ?? effectiveImageModel,
           attempts,
           effectiveProductName,
           storeName: context.store.name,
@@ -531,7 +527,7 @@ export class ImageGenerationService {
           runId,
           startTime,
           providerName: this.imageProvider.name,
-          model: DEFAULT_IMAGE_MODEL,
+          model: currentModel ?? effectiveImageModel,
           attempts,
           effectiveProductName,
           storeName: context.store.name,
@@ -598,7 +594,7 @@ export class ImageGenerationService {
               runId,
               startTime,
               providerName: this.imageProvider.name,
-              model: DEFAULT_IMAGE_MODEL,
+              model: currentModel ?? effectiveImageModel,
               attempts,
               effectiveProductName,
           storeName: context.store.name,
@@ -673,7 +669,7 @@ export class ImageGenerationService {
       runId,
       startTime,
       providerName: this.imageProvider.name,
-      model: DEFAULT_IMAGE_MODEL,
+       model: currentModel ?? effectiveImageModel,
       attempts,
       effectiveProductName,
       storeName: context.store.name,
