@@ -6,8 +6,7 @@ import { DEFAULT_AI_MODEL_PRICING, type ModelPricing } from "./ai-model-pricing"
 
 export interface CapacityPricingTarget {
   capability: AiCapability | string;
-  primary: AiModelTarget;
-  fallback?: AiModelTarget;
+  target: AiModelTarget;
 }
 
 export type PricingComponent =
@@ -29,8 +28,7 @@ export interface CapacityPricingStatus {
   target: AiModelTarget;
   components: CapacityPricingComponentStatus[];
   missingComponents: PricingComponent[];
-  pricingConfigured: boolean;
-  fallbackSource: "none" | "fallback_static";
+  pricingCoverage: "complete" | "partial" | "missing";
   selectionAllowed: true;
 }
 
@@ -86,7 +84,7 @@ function pricingFor(
   model: string,
   rows: Map<string, { pricing: ModelPricing; source: "table" | "bootstrap" }>,
 ): { pricing: ModelPricing | null; source: "table" | "bootstrap" | "missing" } {
-  const key = `${provider}|${model}`;
+  const key = `${provider}|${normalizeModel(model)}`;
   const row = rows.get(key);
   if (row) return row;
   const bootstrap = DEFAULT_AI_MODEL_PRICING[normalizeModel(model)];
@@ -103,11 +101,9 @@ export async function getModelCapabilityPricing(
 ): Promise<CapacityPricingStatus[]> {
   const requested = new Map<string, { provider: string; model: string }>();
   for (const target of targets) {
-    for (const candidate of [target.primary, target.fallback].filter(Boolean)) {
-      requested.set(`${candidate!.provider}|${candidate!.model}`, { provider: candidate!.provider, model: candidate!.model });
-    }
+    requested.set(`${target.target.provider}|${normalizeModel(target.target.model)}`, { provider: target.target.provider, model: normalizeModel(target.target.model) });
     if (target.capability === "campaign_image" || target.capability === "visual_signature_image") {
-      requested.set(`${target.primary.provider}|responses:image_generation`, { provider: target.primary.provider, model: "responses:image_generation" });
+      requested.set(`${target.target.provider}|responses:image_generation`, { provider: target.target.provider, model: "responses:image_generation" });
     }
   }
 
@@ -124,7 +120,7 @@ export async function getModelCapabilityPricing(
         .is("effective_until", null);
       if (!error) {
         for (const row of (data ?? []) as PricingRow[]) {
-          pricingRows.set(`${row.provider}|${row.model}`, { pricing: rowPricing(row), source: "table" });
+          pricingRows.set(`${row.provider}|${normalizeModel(row.model)}`, { pricing: rowPricing(row), source: "table" });
         }
       }
     } catch {
@@ -135,21 +131,20 @@ export async function getModelCapabilityPricing(
   return targets.map((target) => {
     const components: CapacityPricingComponentStatus[] = [];
     const required = requiredComponents(target.capability);
-    const modelPricing = pricingFor(target.primary.provider, target.primary.model, pricingRows);
+    const modelPricing = pricingFor(target.target.provider, target.target.model, pricingRows);
     for (const component of required) {
       const sourcePricing = component === "image_generation_tool_unit"
-        ? pricingFor(target.primary.provider, "responses:image_generation", pricingRows)
+        ? pricingFor(target.target.provider, "responses:image_generation", pricingRows)
         : modelPricing;
-      components.push(componentStatus(component, sourcePricing.pricing ? target.primary.provider : target.primary.provider, component === "image_generation_tool_unit" ? "responses:image_generation" : target.primary.model, sourcePricing.pricing, sourcePricing.source));
+      components.push(componentStatus(component, target.target.provider, component === "image_generation_tool_unit" ? "responses:image_generation" : target.target.model, sourcePricing.pricing, sourcePricing.source));
     }
     const missingComponents = components.filter((component) => !component.available).map((component) => component.component);
     return {
       capability: target.capability,
-      target: target.primary,
+      target: target.target,
       components,
       missingComponents,
-      pricingConfigured: missingComponents.length === 0,
-      fallbackSource: missingComponents.length > 0 ? "fallback_static" : "none",
+      pricingCoverage: missingComponents.length === 0 ? "complete" : missingComponents.length === components.length ? "missing" : "partial",
       selectionAllowed: true as const,
     };
   });
