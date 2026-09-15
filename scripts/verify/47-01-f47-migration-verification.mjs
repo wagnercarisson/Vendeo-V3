@@ -43,6 +43,9 @@ if (!/^postgresql:\/\/(?:[^@]+@)?(localhost|127\.0\.0\.1)(:\d+)?\//i.test(dbUrl)
 const admin = createClient(url, serviceRoleKey);
 const anon = createClient(url, anonKey);
 let temporaryActorId = null;
+let temporaryStoreId = null;
+let temporaryCampaignId = null;
+let otherUserId = null;
 const results = [];
 const assert = (name, ok, detail = "") => {
   results.push({ name, ok, detail });
@@ -86,12 +89,122 @@ async function removeTemporaryActor(actorId) {
   if (error) throw new Error(`remoção do actor falhou: ${error.message || JSON.stringify(error)}`);
 }
 
+async function cleanupCampaignsFixture() {
+  const db = new Client({ connectionString: dbUrl });
+  await db.connect();
+  try {
+    if (temporaryCampaignId) {
+      await db.query("DELETE FROM public.campaigns WHERE id = $1", [temporaryCampaignId]);
+      temporaryCampaignId = null;
+    }
+    if (temporaryStoreId) {
+      await db.query("DELETE FROM public.stores WHERE id = $1", [temporaryStoreId]);
+      temporaryStoreId = null;
+    }
+  } finally {
+    await db.end();
+  }
+  if (otherUserId) {
+    await admin.auth.admin.deleteUser(otherUserId);
+    otherUserId = null;
+  }
+}
+
+async function verifyCampaignsRls(actorId, actorEmail, actorPassword) {
+  const { data: store, error: storeError } = await admin
+    .from("stores")
+    .insert({ user_id: actorId, name: "F47 RLS Verifier", segment: "outros" })
+    .select("id")
+    .single();
+  assert("fixture store criada para verificação de campaigns", !storeError && !!store?.id, storeError?.message);
+  if (storeError || !store?.id) return;
+  temporaryStoreId = store.id;
+
+  const { data: campaign, error: campaignError } = await admin
+    .from("campaigns")
+    .insert({ store_id: temporaryStoreId, product_name: "Produto RLS", storage_path: `${temporaryStoreId}/verifier.jpg` })
+    .select("id")
+    .single();
+  assert("fixture campaign criada", !campaignError && !!campaign?.id, campaignError?.message);
+  if (campaignError || !campaign?.id) return;
+  temporaryCampaignId = campaign.id;
+
+  const ownerClient = createClient(url, anonKey);
+  const { data: ownerSession, error: ownerSignInError } = await ownerClient.auth.signInWithPassword({
+    email: actorEmail,
+    password: actorPassword,
+    options: { captchaToken: "XXXX.DUMMY.TOKEN" },
+  });
+  assert("owner faz sign-in local", !ownerSignInError && !!ownerSession?.session, ownerSignInError?.message);
+  if (ownerSession?.session) {
+    const authed = createClient(url, anonKey, {
+      global: { headers: { Authorization: `Bearer ${ownerSession.session.access_token}` } },
+    });
+    const { data, error } = await authed.from("campaigns").select("id").eq("id", temporaryCampaignId);
+    assert(
+      "proprietário lê a própria campanha (policy owner_select_campaigns)",
+      !error && data?.length === 1,
+      error?.message ?? JSON.stringify(data),
+    );
+  }
+
+  const otherEmail = `f47-01-other-${crypto.randomUUID()}@local.invalid`;
+  const otherPassword = `${crypto.randomUUID()}-Aa1!`;
+  const { data: otherUser, error: otherCreateError } = await admin.auth.admin.createUser({
+    email: otherEmail,
+    password: otherPassword,
+    email_confirm: true,
+  });
+  assert("segundo usuário temporário criado", !otherCreateError && !!otherUser?.user?.id, otherCreateError?.message);
+  if (otherUser?.user?.id) {
+    otherUserId = otherUser.user.id;
+    const otherClient = createClient(url, anonKey);
+    const { data: otherSession, error: otherSignInError } = await otherClient.auth.signInWithPassword({
+      email: otherEmail,
+      password: otherPassword,
+      options: { captchaToken: "XXXX.DUMMY.TOKEN" },
+    });
+    assert("segundo usuário faz sign-in local", !otherSignInError && !!otherSession?.session, otherSignInError?.message);
+    if (otherSession?.session) {
+      const authed = createClient(url, anonKey, {
+        global: { headers: { Authorization: `Bearer ${otherSession.session.access_token}` } },
+      });
+      const { data, error } = await authed.from("campaigns").select("id").eq("id", temporaryCampaignId);
+      assert(
+        "outro usuário NÃO lê a campanha (RLS nega)",
+        !error && data?.length === 0,
+        error?.message ?? JSON.stringify(data),
+      );
+    }
+  }
+
+  const db = new Client({ connectionString: dbUrl });
+  await db.connect();
+  try {
+    const grants = await db.query(
+      "SELECT has_table_privilege('authenticated','public.campaigns','SELECT') AS auth_select, has_table_privilege('service_role','public.campaigns','SELECT') AS svc_select, has_table_privilege('service_role','public.campaigns','INSERT') AS svc_insert, has_table_privilege('service_role','public.campaigns','UPDATE') AS svc_update",
+    );
+    const g = grants.rows[0];
+    assert("authenticated possui SELECT em public.campaigns (forward fix)", g.auth_select === true, JSON.stringify(g));
+    assert("service_role mantém SELECT/INSERT/UPDATE em campaigns", g.svc_select && g.svc_insert && g.svc_update, JSON.stringify(g));
+    const rls = await db.query("SELECT relrowsecurity FROM pg_class WHERE relname = 'campaigns'");
+    assert("RLS continua habilitado em public.campaigns", rls.rows[0]?.relrowsecurity === true, JSON.stringify(rls.rows[0]));
+    const policy = await db.query(
+      "SELECT COUNT(*)::int AS n FROM pg_policies WHERE tablename = 'campaigns' AND policyname = 'owner_select_campaigns'",
+    );
+    assert("policy owner_select_campaigns continua existente", policy.rows[0]?.n === 1, JSON.stringify(policy.rows[0]));
+  } finally {
+    await db.end();
+  }
+}
+
 async function run() {
   console.log("\nF47-01 migration verification (Supabase local)\n");
   const temporaryEmail = `f47-01-${crypto.randomUUID()}@local.invalid`;
+  const temporaryPassword = `${crypto.randomUUID()}-Aa1!`;
   const { data: temporaryUser, error: createUserError } = await admin.auth.admin.createUser({
     email: temporaryEmail,
-    password: `${crypto.randomUUID()}-Aa1!`,
+    password: temporaryPassword,
     email_confirm: true,
   });
   if (createUserError || !temporaryUser.user) {
@@ -197,15 +310,18 @@ async function run() {
     .in("operation_id", [updateOperation, resetOperation]);
   assert("set/reset geram auditoria atômica", !auditError && audits?.length === 2 && audits.every((row) => row.target_type === "ai_model_selection"), auditError?.message ?? JSON.stringify(audits));
 
+  await verifyCampaignsRls(actorId, temporaryEmail, temporaryPassword);
+
   const failed = results.filter((result) => !result.ok);
   console.log(`\nResults: ${results.length - failed.length} passed / ${failed.length} failed / ${results.length} total`);
   if (failed.length > 0) process.exitCode = 1;
 
   try {
+    await cleanupCampaignsFixture();
     await removeTemporaryActor(actorId);
-    console.log("Actor local temporário removido");
+    console.log("Fixtures de campaigns e actor local temporário removidos");
   } catch (deleteUserError) {
-    console.error(`Falha ao remover actor temporário ${actorId}: ${deleteUserError.message}`);
+    console.error(`Falha ao remover fixtures/actor temporário ${actorId}: ${deleteUserError.message}`);
     process.exitCode = 1;
   }
   temporaryActorId = null;
@@ -214,10 +330,11 @@ async function run() {
 run().catch(async (error) => {
   if (temporaryActorId) {
     try {
+      await cleanupCampaignsFixture();
       await removeTemporaryActor(temporaryActorId);
-      console.error(`Actor local temporário removido após falha: ${temporaryActorId}`);
+      console.error(`Fixtures/actor local temporário removidos após falha: ${temporaryActorId}`);
     } catch (cleanupError) {
-      console.error(`Falha na limpeza do actor temporário: ${cleanupError.message}`);
+      console.error(`Falha na limpeza das fixtures/actor temporário: ${cleanupError.message}`);
     }
     temporaryActorId = null;
   }
