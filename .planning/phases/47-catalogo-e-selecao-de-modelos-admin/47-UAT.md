@@ -108,6 +108,10 @@ Aplicada em 2026-09-15 (`authorize remote migration`) via `npx supabase db push`
 
 Verificação remota somente-leitura: 12 seeds exatos; RLS habilitado em `ai_model_catalog`/`ai_model_selection`/`campaigns`; RPCs `admin_set_ai_model_selection`/`admin_reset_ai_model_selection` presentes e validando motivo; `anon` negado; `authenticated` com SELECT em `campaigns`; CHECKs de fallback/distinção e de auditoria presentes. Nenhum deploy executado.
 
+## Deploy Result
+
+Deploy executado em 2026-09-15 (`authorize deploy`) via merge fast-forward para `main` e push (`2860115b..b892acb2`). Vercel Production deployment **Ready**; `https://vendeo-v3.vercel.app` → HTTP 200. Nenhuma env-var remota foi criada, removida ou alterada neste ciclo. Verificação de envs encontrou 11 env-vars obsoletas de modelo/provider ainda presentes na Vercel; remoção pendente de autorização explícita.
+
 ## Human Decision
 
 **Não avance para migration remota ou deploy até todos os cenários terem evidência real.**

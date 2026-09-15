@@ -1,6 +1,6 @@
 # F47 Verification — Catálogo e Seleção de Modelos Admin
 
-**Status:** PARTIAL — LOCAL UAT APPROVED e migration remota aplicada/verificada; deploy ainda BLOQUEADO
+**Status:** PARTIAL — deploy de produção concluído; env-vars obsoletas de modelo/provider ainda presentes na Vercel (cleanup pendente de decisão)
 **Goal:** Catálogo persistido por capacidade e seleção administrativa auditada, consumidos por resolver fail-open sem alterar o gateway ou contratos de geração.
 
 ## Goal-Backward Matrix
@@ -38,12 +38,14 @@
 - [x] Real cleanup + idempotency.
 - [x] Human local UAT: UAT-01..07 PASS, UAT-08 AUTOMATED PASS, UAT-09..12 PASS — **APPROVED** (sinal `approved`).
 - [x] Remote migration applied and verified (`20260914000001/2/3`, `20260915000001`): 12 seeds, RLS, RPCs, CHECKs, `authenticated` SELECT em `campaigns`.
-- [ ] Deploy completed after remote migration.
+- [x] Deploy completed after remote migration: merge fast-forward `main` → `origin/main` (`2860115b..b892acb2`); Vercel Production deployment Ready; `https://vendeo-v3.vercel.app` HTTP 200.
+- [ ] Remote env verification: 11 env-vars obsoletas de modelo/provider ainda presentes na Vercel (decisão de cleanup pendente).
 
 ## Release Controls
 
 - Remote `npx supabase db push` executed on 2026-09-15 (4 F47 migrations), with read-only post-push verification.
-- No Vercel/deploy command has been run.
-- No remote env var was created, removed or changed.
-- `authorize remote migration` and `authorize deploy` are separate checkpoints.
-- Do not mark this document `passed` until deploy evidence exists.
+- Deploy executed on 2026-09-15: fast-forward merge to `main` + push (`2860115b..b892acb2`); Vercel Production Ready; production HTTP 200.
+- No remote env var was created, removed or changed during this cycle.
+- Env verification finding: `OPENAI_MODEL`, `OPENAI_TEXT_MODEL`, `OPENAI_BRAND_DIRECTOR_MODEL`, `VISION_REVIEW_MODEL`, `IMAGE_GENERATION_RESPONSES_MODEL`, `IMAGE_PROVIDER`, `TEXT_PROVIDER`, `TEXT_FALLBACK_PROVIDER`, `GEMINI_TEXT_MODEL`, `GEMINI_MODEL`, `GEMINI_IMAGE_MODEL` still exist in Vercel (Production/Preview). Removal requires explicit authorization.
+- `authorize remote migration` and `authorize deploy` were separate checkpoints; both honored.
+- Do not mark this document `passed` until the env-var decision and final tracking are closed.
