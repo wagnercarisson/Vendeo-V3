@@ -181,6 +181,12 @@ export function AiModelSelectionForm({ view }: { view: AiModelSelectionViewModel
                       </div>
                     )}
 
+                    {item.pricing && item.pricing.pricingCoverage !== "complete" && (
+                      <div className="mt-3 rounded-lg border border-accent-amber/20 bg-accent-amber/5 p-3 text-xs text-accent-amber">
+                        Pricing {item.pricing.pricingCoverage}: faltam {item.pricing.missingComponents.join(", ")}. A seleção continua permitida; a estimativa segue a cadeia de custo existente.
+                      </div>
+                    )}
+
                     <div className="mt-4 space-y-3">
                       <label className="block text-xs font-medium uppercase tracking-wider text-text-secondary" htmlFor={`primary-${item.capability}`}>Novo primary</label>
                       <select id={`primary-${item.capability}`} value={`${draft.provider}|${draft.model}|${draft.protocol}`} onChange={(event) => {

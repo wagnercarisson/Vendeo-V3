@@ -16,6 +16,7 @@ import {
 import { ModelRegistry } from "./model-registry";
 import { PersistedModelResolver } from "./persisted-model-resolver";
 import type { AiModelTarget, AiProvider, AiProtocol } from "./model-resolver";
+import { getModelCapabilityPricing, type CapacityPricingStatus } from "@/lib/ai-cost/model-capability-pricing";
 
 export type AiModelCatalogStatus = "active" | "deprecated" | "missing";
 
@@ -31,6 +32,7 @@ export interface AiModelCapabilityView {
   default: { primary: AiModelTargetView; fallback: AiModelTargetView | null };
   configured: { primary: AiModelTargetView | null; fallback: AiModelTargetView | null } | null;
   selection: AiModelSelectionRow | null;
+  pricing?: CapacityPricingStatus;
 }
 
 export interface AiModelSelectionViewModel {
@@ -103,5 +105,14 @@ export async function buildAiModelSelectionView(dependencies: {
     } satisfies AiModelCapabilityView;
   }));
 
-  return { catalog: catalogRows, selections, defaults: MODEL_REGISTRY, capabilities };
+  const pricingByCapability = new Map(
+    (await getModelCapabilityPricing(capabilities.map((item) => ({ capability: item.capability, target: item.current.primary })))).map((status) => [status.capability, status]),
+  );
+
+  return {
+    catalog: catalogRows,
+    selections,
+    defaults: MODEL_REGISTRY,
+    capabilities: capabilities.map((item) => ({ ...item, pricing: pricingByCapability.get(item.capability) })),
+  };
 }
