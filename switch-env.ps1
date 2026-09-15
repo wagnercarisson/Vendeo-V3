@@ -231,6 +231,33 @@ function Update-RemoteBackupFromCurrentIfRemote {
     }
 }
 
+function Sync-LocalCaptchaFlag {
+    param($Status)
+    # Somente local: Test-LocalUrl ja validou API/DB antes desta chamada.
+    if (-not (Test-LocalUrl $Status.API_URL)) { throw "Sync-LocalCaptchaFlag exige API_URL local." }
+    $base = "$($Status.API_URL)/rest/v1/feature_flags"
+    $headers = @{
+        apikey        = $Status.SERVICE_ROLE_KEY
+        Authorization = "Bearer $($Status.SERVICE_ROLE_KEY)"
+    }
+    $getUri = "${base}?key=eq.captcha_enabled&select=key,enabled"
+    $rows = @((Invoke-WebRequest -Uri $getUri -Headers $headers -UseBasicParsing -Method Get).Content | ConvertFrom-Json | Where-Object { $null -ne $_ })
+    if ($rows.Count -eq 0) {
+        $body = @{ key = "captcha_enabled"; enabled = $true; description = "UAT local: alinhado por switch-env.ps1 local" } | ConvertTo-Json
+        $postHeaders = $headers + @{ "Content-Type" = "application/json"; Prefer = "return=representation" }
+        Invoke-WebRequest -Uri $base -Headers $postHeaders -Method Post -Body $body -UseBasicParsing | Out-Null
+    } elseif ($rows[0].enabled -ne $true) {
+        $body = @{ enabled = $true } | ConvertTo-Json
+        $patchHeaders = $headers + @{ "Content-Type" = "application/json" }
+        Invoke-WebRequest -Uri "${base}?key=eq.captcha_enabled" -Headers $patchHeaders -Method Patch -Body $body -UseBasicParsing | Out-Null
+    }
+    $verify = @((Invoke-WebRequest -Uri $getUri -Headers $headers -UseBasicParsing -Method Get).Content | ConvertFrom-Json | Where-Object { $null -ne $_ })
+    if ($verify.Count -eq 0 -or $verify[0].enabled -ne $true) {
+        throw "Falha ao alinhar feature_flags.captcha_enabled=true no Supabase local."
+    }
+    Write-Host "feature_flags.captcha_enabled=true (local, alinhado com o Auth)"
+}
+
 function Invoke-Local {
     # 1) Secret de teste do Turnstile para o container Auth local.
     $env:SUPABASE_AUTH_CAPTCHA_SECRET = $turnstileTestSecret
@@ -261,6 +288,11 @@ function Invoke-Local {
         if (-not (Test-AuthCaptchaOk $auth)) { throw "Auth local nao ficou com captcha/turnstile/secret de teste." }
     }
     Write-Host "Auth local OK: captcha=$($auth.Enabled) provider=$($auth.Provider) secret=test"
+
+    # 3.5) Alinha a flag do APP (feature_flags.captcha_enabled) no banco LOCAL.
+    # A flag do banco tem precedencia sobre VENDEO_CAPTCHA_ENABLED; sem isso o
+    # formulario ocultaria o captcha enquanto o Auth local exige o token.
+    Sync-LocalCaptchaFlag -Status $status
 
     # 4) Base = backup remoto validado (nunca chaves locais hardcoded).
     if (-not (Test-Path -LiteralPath $remoteBackup)) {
