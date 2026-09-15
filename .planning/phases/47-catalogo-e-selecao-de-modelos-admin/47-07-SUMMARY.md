@@ -61,7 +61,7 @@ Diagnostic labels now reflect the effective model target/result rather than stat
 
 | Gate | Resultado |
 |---|---|
-| Focal guards/API/view/pricing/label failure | PASS — 6 files / 85 testes |
+| Focal guards/API/view/pricing/label failure | PASS — 7 files / 87 testes |
 | Regressão integral Vitest | PASS — 287 files / 2782 testes |
 | `npm run typecheck` | PASS |
 | `npm run lint` | PASS |
