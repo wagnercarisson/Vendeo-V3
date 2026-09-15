@@ -1040,7 +1040,7 @@ Plans:
 
 **Dependencies:** Phase 46 (seam `AiModelResolver`); Supabase local para migration/UAT; migration remota obrigatoriamente antes do deploy.
 
-**Plans:** 6/8 plans executed
+**Plans:** 7/8 plans executed
 
 Plans:
 
@@ -1050,7 +1050,7 @@ Plans:
 - [x] 47-04-PLAN.md — Schemas Zod + GET/PUT/DELETE admin, status e cache invalidation (Wave 4)
 - [x] 47-05-PLAN.md — Página/form Modelos de IA, grupos, fallback campaign_copy, reset e navegação (Wave 5)
 - [x] 47-06-PLAN.md — Pricing capacity-aware e helper bulk sem alterar resolveAiCost (Wave 5)
-- [ ] 47-07-PLAN.md — Labels efetivos, regressão, gates e não-mudança de contratos (Wave 6)
+- [x] 47-07-PLAN.md — Labels efetivos, regressão, gates e não-mudança de contratos (Wave 6)
 - [ ] 47-08-PLAN.md — UAT local, [BLOCKING] migration remota → deploy, verificação e tracking final (Wave 7)
 
 **Scope fences:** catálogo somente leitura na UI; sem homologação automatizada/paga; `campaign_image_edit` é primary independente; não editar `src/lib/ai/gateway.ts`, prompts, contratos de geração, snapshot, domínio ou merchant UI/form. DELETE usa JSON `{ capability, reason, operationId }`, UUID obrigatório gerado uma vez na UI e reutilizado em retries.
