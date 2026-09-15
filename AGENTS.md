@@ -227,18 +227,18 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 
 ## Phase 47 — Catálogo e Seleção de Modelos Admin (Change B)
 
-**Status:** Em planejamento — 8 planos em 7 ondas. Fonte da verdade: `openspec/changes/fase-47-catalogo-e-selecao-de-modelos-admin/`.
+**Status:** CONCLUÍDA — 8/8 planos em 7 ondas, 287 files / 2782 testes, 4 gates verdes, UAT local aprovado (UAT-01..07 PASS, 08 AUTOMATED, 09..12 PASS), migration remota aplicada/verificada, deploy de produção Ready e env-vars obsoletas removidas. Fonte da verdade: `openspec/changes/fase-47-catalogo-e-selecao-de-modelos-admin/`.
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
-| 47-01 | 1 | ☐ | Trackings + migration local, exatamente 12 seeds, RLS/CHECKs/RPCs/auditoria/idempotência e checkpoint Docker/Supabase |
-| 47-02 | 2 | ☐ | Serviços bulk de catálogo/seleção, cache TTL 30s/invalidação e paridade registry × catálogo |
-| 47-03 | 3 | ☐ | PersistedModelResolver fail-open e composição em index.ts sem editar gateway.ts |
-| 47-04 | 4 | ☐ | Schemas Zod + GET/PUT/DELETE admin, DELETE JSON exato e operationId UUID obrigatório |
-| 47-05 | 5 | ☐ | Página/form Modelos de IA, grupos, fallback campaign_copy, reset auditado e navegação |
-| 47-06 | 5 | ☐ | Pricing capacity-aware com helper bulk, sem alterar resolveAiCost |
-| 47-07 | 6 | ☐ | Labels efetivos, regressão, gates e não-mudança de contratos |
-| 47-08 | 7 | ☐ | UAT local, [BLOCKING] migration remota → deploy, verificação e tracking final |
+| 47-01 | 1 | ✅ | Trackings + migration local, exatamente 12 seeds, RLS/CHECKs/RPCs/auditoria/idempotência e checkpoint Docker/Supabase |
+| 47-02 | 2 | ✅ | Serviços bulk de catálogo/seleção, cache TTL 30s/invalidação e paridade registry × catálogo |
+| 47-03 | 3 | ✅ | PersistedModelResolver fail-open e composição em index.ts sem editar gateway.ts |
+| 47-04 | 4 | ✅ | Schemas Zod + GET/PUT/DELETE admin, DELETE JSON exato e operationId UUID obrigatório |
+| 47-05 | 5 | ✅ | Página/form Modelos de IA, grupos, fallback campaign_copy, reset auditado e navegação |
+| 47-06 | 5 | ✅ | Pricing capacity-aware com helper bulk, sem alterar resolveAiCost |
+| 47-07 | 6 | ✅ | Labels efetivos, regressão, gates e não-mudança de contratos |
+| 47-08 | 7 | ✅ | UAT local, migration remota [BLOCKING] → deploy, verificação e tracking final |
 
 **Fences:** catálogo somente leitura na UI; sem homologação automatizada/paga; `campaign_image_edit` é primary independente; não alterar `src/lib/ai/gateway.ts`, prompts, contratos de geração, snapshot, domínio ou merchant UI/form. Cache server-side por instância com TTL 30s e invalidação local; documentar residual cross-instance.
 

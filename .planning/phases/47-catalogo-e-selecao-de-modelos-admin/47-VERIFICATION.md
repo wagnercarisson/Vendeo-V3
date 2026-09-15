@@ -1,6 +1,6 @@
 # F47 Verification — Catálogo e Seleção de Modelos Admin
 
-**Status:** PARTIAL — deploy concluído e env-vars obsoletas removidas; tracking final/arquivamento pendentes
+**Status:** PASSED — UAT local aprovado, migration remota aplicada/verificada, deploy de produção concluído e env-vars obsoletas removidas
 **Goal:** Catálogo persistido por capacidade e seleção administrativa auditada, consumidos por resolver fail-open sem alterar o gateway ou contratos de geração.
 
 ## Goal-Backward Matrix
@@ -47,4 +47,4 @@
 - Deploy executed on 2026-09-15: fast-forward merge to `main` + push (`2860115b..b892acb2`); Vercel Production Ready; production HTTP 200.
 - No remote env var was created or changed; 11 obsolete model/provider env vars were removed on 2026-09-15 after the deploy (explicit `authorize env cleanup`). Chaves e operacionais preservadas; nenhum redeploy disparado.
 - `authorize remote migration`, `authorize deploy` e `authorize env cleanup` foram checkpoints separados e honrados.
-- Do not mark this document `passed` until the final tracking/archiving is closed.
+- Verificação final: **passed** (UAT local aprovado, migration remota verificada, deploy saudável, envs limpas). Arquivamento OpenSpec preparado e não executado.

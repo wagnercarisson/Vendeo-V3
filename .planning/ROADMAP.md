@@ -592,7 +592,7 @@
 
 **Source of truth:** `openspec/changes/fase-38-credit-operation-costs/`
 
-**Plans:** 7/8 plans executed
+**Plans:** 8/8 plans executed — CONCLUÍDA (8/8 plans, 287 files / 2782 testes, 4 gates verdes, UAT local aprovado, migration remota aplicada/verificada, deploy de produção Ready, env-vars obsoletas removidas)
 
 | Plan | Wave | Objective | Requirements | Files |
 |------|------|-----------|--------------|-------|
@@ -1040,7 +1040,7 @@ Plans:
 
 **Dependencies:** Phase 46 (seam `AiModelResolver`); Supabase local para migration/UAT; migration remota obrigatoriamente antes do deploy.
 
-**Plans:** 7/8 plans executed
+**Plans:** 8/8 plans complete
 
 Plans:
 
@@ -1051,7 +1051,7 @@ Plans:
 - [x] 47-05-PLAN.md — Página/form Modelos de IA, grupos, fallback campaign_copy, reset e navegação (Wave 5)
 - [x] 47-06-PLAN.md — Pricing capacity-aware e helper bulk sem alterar resolveAiCost (Wave 5)
 - [x] 47-07-PLAN.md — Labels efetivos, regressão, gates e não-mudança de contratos (Wave 6)
-- [ ] 47-08-PLAN.md — UAT local, [BLOCKING] migration remota → deploy, verificação e tracking final (Wave 7)
+- [x] 47-08-PLAN.md — UAT local, [BLOCKING] migration remota → deploy, verificação e tracking final (Wave 7)
 
 **Scope fences:** catálogo somente leitura na UI; sem homologação automatizada/paga; `campaign_image_edit` é primary independente; não editar `src/lib/ai/gateway.ts`, prompts, contratos de geração, snapshot, domínio ou merchant UI/form. DELETE usa JSON `{ capability, reason, operationId }`, UUID obrigatório gerado uma vez na UI e reutilizado em retries.
 
