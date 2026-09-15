@@ -130,6 +130,12 @@ export function AiModelSelectionForm({ view }: { view: AiModelSelectionViewModel
                 const activeOptions = view.catalog.filter((row) => row.capability === item.capability && row.status === "active");
                 const configured = item.configured;
                 const draftPricing = item.pricingOptions?.find((status) => status.target.provider === draft.provider && status.target.model === draft.model && status.target.protocol === draft.protocol);
+                const draftFallbackPricing = item.capability === "campaign_copy" && draft.fallback
+                  ? item.pricingOptions?.find((status) => {
+                      const [provider, model, protocol] = draft.fallback.split("|");
+                      return status.target.provider === provider && status.target.model === model && status.target.protocol === protocol;
+                    })
+                  : undefined;
                 return (
                   <article key={item.capability} className="rounded-xl border border-border bg-bg-surface p-5 transition-colors duration-200 hover:border-border-light">
                     <div className="flex items-start justify-between gap-3">
@@ -185,6 +191,11 @@ export function AiModelSelectionForm({ view }: { view: AiModelSelectionViewModel
                     {draftPricing && draftPricing.pricingCoverage !== "complete" && (
                       <div className="mt-3 rounded-lg border border-accent-amber/20 bg-accent-amber/5 p-3 text-xs text-accent-amber">
                         Pricing {draftPricing.pricingCoverage}: faltam {draftPricing.missingComponents.join(", ")}. A seleção continua permitida; a estimativa segue a cadeia de custo existente.
+                      </div>
+                    )}
+                    {draftFallbackPricing && draftFallbackPricing.pricingCoverage !== "complete" && (
+                      <div className="mt-3 rounded-lg border border-accent-amber/20 bg-accent-amber/5 p-3 text-xs text-accent-amber">
+                        Pricing do fallback {draftFallbackPricing.pricingCoverage}: faltam {draftFallbackPricing.missingComponents.join(", ")}. A seleção continua permitida; a estimativa segue a cadeia de custo existente.
                       </div>
                     )}
 

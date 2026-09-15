@@ -225,7 +225,9 @@ export class OpenAIImageProvider implements ImageProvider {
     }
 
     if (!result.imageBase64) {
-      throw new Error("Image API returned no image data");
+      const error = new Error("Image API returned no image data");
+      (error as { model?: string }).model = effectiveModel;
+      throw error;
     }
 
     return {

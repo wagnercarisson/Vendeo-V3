@@ -110,8 +110,13 @@ export async function buildAiModelSelectionView(dependencies: {
 
   const pricingTargets = catalogRows.map((row) => ({
     capability: row.capability,
-    target: { provider: row.provider, model: row.model, protocol: row.protocol },
+    target: { provider: row.provider as AiProvider, model: row.model, protocol: row.protocol as AiProtocol },
   }));
+  for (const item of capabilities) {
+    for (const target of [item.current.primary, item.current.fallback, item.configured?.primary, item.configured?.fallback].filter(Boolean)) {
+      pricingTargets.push({ capability: item.capability, target: { provider: target!.provider, model: target!.model, protocol: target!.protocol } });
+    }
+  }
   const pricingStatuses = await pricingService(pricingTargets);
   const pricingByTuple = new Map(pricingStatuses.map((status) => [
     `${status.capability}|${status.target.provider}|${status.target.model}|${status.target.protocol}`,

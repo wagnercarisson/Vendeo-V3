@@ -1014,6 +1014,9 @@ export class ImageGenerationService {
 
         return { success: true, imageBase64: output.imageBase64, mimeType: output.mimeType, model: output.model, usage: output.usage, usageMeta: output.usageMeta };
       } catch (err) {
+        const attemptedModel = err && typeof err === "object" && "model" in err && typeof (err as { model?: unknown }).model === "string"
+          ? (err as { model: string }).model
+          : attempt > 0 ? effectiveImageEditModel : effectiveImageModel;
         if (attempt >= 3) {
           const message = err instanceof Error ? err.message : String(err);
             return {
@@ -1021,7 +1024,7 @@ export class ImageGenerationService {
               code: "provider_error",
               message: "Falha ao gerar imagem após múltiplas tentativas.",
               details: process.env.NODE_ENV === "development" ? message : undefined,
-              model: err && typeof err === "object" && "model" in err && typeof (err as { model?: unknown }).model === "string" ? (err as { model: string }).model : undefined,
+              model: attemptedModel,
             };
         }
 
@@ -1032,6 +1035,7 @@ export class ImageGenerationService {
             success: false,
             code: "global_timeout",
             message: "O tempo limite de geração foi excedido. Tente novamente.",
+            model: attemptedModel,
           };
         }
 
@@ -1042,6 +1046,7 @@ export class ImageGenerationService {
             code: "provider_auth_error",
             message: "Erro de autenticação com o provedor de imagem. Verifique a chave de API.",
             details: process.env.NODE_ENV === "development" ? message : undefined,
+            model: attemptedModel,
           };
         }
 
@@ -1053,6 +1058,7 @@ export class ImageGenerationService {
             code,
             message: "Falha ao gerar imagem. Tente novamente.",
             details: process.env.NODE_ENV === "development" ? message : undefined,
+            model: attemptedModel,
           };
         }
 
@@ -1062,6 +1068,7 @@ export class ImageGenerationService {
             code: "global_timeout",
             message: "O tempo limite de geração foi excedido. Tente novamente.",
             details: `budget exhausted before retry ${attempt + 1}`,
+            model: attemptedModel,
           };
         }
 
@@ -1076,6 +1083,7 @@ export class ImageGenerationService {
       success: false,
       code: "provider_error",
       message: "Falha ao gerar imagem.",
+      model: effectiveImageModel,
     };
   }
 
