@@ -20,8 +20,8 @@
 | Operational fix: local captcha flag alignment | `switch-env.ps1 local` alinha `feature_flags.captcha_enabled=true` no banco local (a flag tem precedência sobre `VENDEO_CAPTCHA_ENABLED`) | PASS | Local human UAT PASS |
 | Operational fix: `authenticated` SELECT on `campaigns` | `20260915000001_f47_fix_campaigns_authenticated_select.sql`; verifier checks grant/RLS/policy/owner/non-owner/service_role | PASS | Remote schema applied + verified |
 | Operational fix: full local UAT cleanup | `47-local-bootstrap.mjs --cleanup` remove storage + loja/campanha/eventos + auditoria + admin + auth user, com asserções de resíduo | PASS | n/a (local only) |
-| Proposal: local-first migration order | local reset/lint/verifier complete; no remote action | PASS locally | Remote migration BLOCKED |
-| Proposal: migration before deploy | not yet executed by design | NOT APPLICABLE YET | BLOCKING checkpoint |
+| Proposal: local-first migration order | local reset/lint/verifier complete; remote migration applied via `npx supabase db push` | PASS | Remote migration applied + verified |
+| Proposal: migration before deploy | remote migration applied and verified before any deploy | SATISFIED | Deploy pending explicit authorization |
 
 ## Gates
 
