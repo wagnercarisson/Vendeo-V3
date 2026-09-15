@@ -18,8 +18,8 @@ tech-stack:
   patterns:
     - one bulk pricing query combined with bootstrap pricing in memory
     - warning-only pricing visibility; selection remains allowed
-  - normalized model lookup for dated model identifiers
-  - plan artifact reconciled with combination input, coverage semantics and cost-estimator gate
+    - normalized model lookup for dated model identifiers
+    - plan artifact reconciled with combination input, coverage semantics and cost-estimator gate
 
 key-files:
   created:
@@ -75,5 +75,5 @@ Helper server-only de pricing por combinação selecionável implementado para c
 - [x] Tool `responses:image_generation` coberta
 - [x] `image_unit_usd` para edição coberto
 - [x] Warning não bloqueia seleção
-- [x] fallback_static informado quando componente falta
+- [x] Cobertura complete/partial/missing informada sem predizer a fonte final
 - [x] resolveAiCost e cadeia de fontes preservados
