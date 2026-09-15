@@ -97,6 +97,17 @@ UAT humano executado no ambiente local (2026-09-15). Resultado: UAT-01..07 PASS;
 
 Três problemas operacionais locais foram identificados e corrigidos neste ciclo (sem tocar `src/**`): alinhamento da flag `captcha_enabled` local, migration forward de SELECT em `campaigns` para `authenticated` e cleanup completo do UAT local.
 
+## Remote Migration Result
+
+Aplicada em 2026-09-15 (`authorize remote migration`) via `npx supabase db push`, sem deploy:
+
+- `20260914000001_f47_ai_model_catalog_selection.sql`
+- `20260914000002_f47_fix_admin_create_store_lint.sql`
+- `20260914000003_f47_fix_admin_get_ai_costs_created_at.sql`
+- `20260915000001_f47_fix_campaigns_authenticated_select.sql`
+
+Verificação remota somente-leitura: 12 seeds exatos; RLS habilitado em `ai_model_catalog`/`ai_model_selection`/`campaigns`; RPCs `admin_set_ai_model_selection`/`admin_reset_ai_model_selection` presentes e validando motivo; `anon` negado; `authenticated` com SELECT em `campaigns`; CHECKs de fallback/distinção e de auditoria presentes. Nenhum deploy executado.
+
 ## Human Decision
 
 **Não avance para migration remota ou deploy até todos os cenários terem evidência real.**
