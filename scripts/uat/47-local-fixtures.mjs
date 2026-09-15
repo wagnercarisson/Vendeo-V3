@@ -204,15 +204,46 @@ async function setup() {
   );
 }
 
+function normalizeSelection(row) {
+  if (!row) return null;
+  return {
+    capability: row.capability,
+    provider: row.provider,
+    model: row.model,
+    protocol: row.protocol,
+    fallback_provider: row.fallback_provider ?? null,
+    fallback_model: row.fallback_model ?? null,
+    fallback_protocol: row.fallback_protocol ?? null,
+    reason: row.reason ?? null,
+  };
+}
+
+function normalizeCatalog(row) {
+  if (!row) return null;
+  return {
+    capability: row.capability,
+    provider: row.provider,
+    model: row.model,
+    protocol: row.protocol,
+    status: row.status,
+  };
+}
+
+function sameState(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 async function cleanup() {
   const snapshot = readSnapshot();
   if (!snapshot) {
-    const residual = [
-      await getSelection(DEPRECATED_CAPABILITY),
-      await getSelection(MISSING_CAPABILITY),
-      await getCatalogRow(NO_PRICING),
-    ].filter(Boolean);
-    if (residual.length > 0) {
+    const missingSelection = await getSelection(MISSING_CAPABILITY);
+    const noPricingRow = await getCatalogRow(NO_PRICING);
+    const copyCatalog = await getCatalogRow(COPY_PRIMARY);
+    const hasFixture =
+      missingSelection?.model === "uat-missing-image-model" ||
+      Boolean(noPricingRow) ||
+      copyCatalog?.status === "deprecated";
+    if (hasFixture) {
       throw new Error(
         "Sem snapshot para restaurar e existem fixtures residuais. Rode `npx supabase db reset` (local) para limpar.",
       );
@@ -226,17 +257,23 @@ async function cleanup() {
   await restoreCatalog(snapshot.catalogCopy, COPY_PRIMARY);
   await restoreCatalog(snapshot.catalogNoPricing, NO_PRICING);
 
-  const leftover = [
-    await getSelection(DEPRECATED_CAPABILITY),
-    await getSelection(MISSING_CAPABILITY),
-    await getCatalogRow(NO_PRICING),
-  ].filter(Boolean);
-  if (leftover.length > 0) {
-    throw new Error("Cleanup deixou residuos de fixture; investigue antes de prosseguir.");
+  const finalCopySelection = await getSelection(DEPRECATED_CAPABILITY);
+  const finalImageSelection = await getSelection(MISSING_CAPABILITY);
+  const finalCopyCatalog = await getCatalogRow(COPY_PRIMARY);
+  const finalNoPricing = await getCatalogRow(NO_PRICING);
+
+  const restored =
+    sameState(normalizeSelection(finalCopySelection), normalizeSelection(snapshot.selectionCopy)) &&
+    sameState(normalizeSelection(finalImageSelection), normalizeSelection(snapshot.selectionImage)) &&
+    sameState(normalizeCatalog(finalCopyCatalog), normalizeCatalog(snapshot.catalogCopy)) &&
+    sameState(normalizeCatalog(finalNoPricing), normalizeCatalog(snapshot.catalogNoPricing));
+
+  if (!restored) {
+    throw new Error("Cleanup nao restaurou exatamente o estado do snapshot; investigue antes de prosseguir.");
   }
 
   fs.rmSync(STATE_FILE, { force: true });
-  console.log("Fixtures locais removidas e estado anterior restaurado sem residuos.");
+  console.log("Fixtures locais removidas e estado anterior restaurado (igual ao snapshot).");
 }
 
 if (process.argv[2] === "--cleanup") {

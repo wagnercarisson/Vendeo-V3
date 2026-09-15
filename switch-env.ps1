@@ -107,9 +107,14 @@ function Get-EnvState {
     $sb = Get-EnvValue -Lines $Lines -Key "SUPABASE_URL"
     $keys = Get-EnvKeys -Lines $Lines
     $forbidden = @($ForbiddenModelVars | Where-Object { $keys -contains $_ })
+    $apiLocal = Test-LocalUrl $api
+    $sbLocal = Test-LocalUrl $sb
+    $apiRemote = Test-RemoteUrl $api
+    $sbRemote = Test-RemoteUrl $sb
     return [pscustomobject]@{
-        IsLocal   = (Test-LocalUrl $api) -or (Test-LocalUrl $sb)
-        IsRemote  = (Test-RemoteUrl $api) -or (Test-RemoteUrl $sb)
+        IsLocal   = ($apiLocal -and $sbLocal)
+        IsRemote  = ($apiRemote -and $sbRemote)
+        IsMixed   = (($apiLocal -and $sbRemote) -or ($apiRemote -and $sbLocal))
         Forbidden = $forbidden
     }
 }
@@ -202,21 +207,27 @@ function Update-RemoteBackupFromCurrentIfRemote {
     if (-not (Test-Path -LiteralPath $envFile)) { return }
     $lines = Read-EnvLines -Path $envFile
     $state = Get-EnvState -Lines $lines
+    if ($state.IsMixed) {
+        throw "Configuracao mista detectada no .env.local (um endpoint local e outro remoto). Corrija antes de trocar de ambiente."
+    }
     if (-not $state.IsRemote) {
         Write-Host "Ambiente atual nao e remoto; backup remoto preservado."
         return
     }
+    $clean = Remove-ForbiddenModelVars -Lines $lines
     $needsRefresh = $true
     if (Test-Path -LiteralPath $remoteBackup) {
         $backupState = Get-EnvState -Lines (Read-EnvLines -Path $remoteBackup)
-        if ($backupState.IsRemote -and $backupState.Forbidden.Count -eq 0) { $needsRefresh = $false }
+        if ($backupState.IsRemote -and $backupState.Forbidden.Count -eq 0) {
+            $backupClean = Remove-ForbiddenModelVars -Lines (Read-EnvLines -Path $remoteBackup)
+            if (($backupClean -join "`n") -eq ($clean -join "`n")) { $needsRefresh = $false }
+        }
     }
     if ($needsRefresh) {
-        $clean = Remove-ForbiddenModelVars -Lines $lines
         Write-EnvFile -Path $remoteBackup -Lines $clean
         Write-Host "Backup remoto atualizado a partir do .env.local remoto atual (.env.local.remote.bak)."
     } else {
-        Write-Host "Backup remoto ja esta valido; preservado."
+        Write-Host "Backup remoto ja esta valido e atualizado; preservado."
     }
 }
 
@@ -256,7 +267,9 @@ function Invoke-Local {
         throw "Backup remoto ausente (.env.local.remote.bak). Restaure o ambiente remoto primeiro para gera-lo."
     }
     $baseLines = Read-EnvLines -Path $remoteBackup
-    if (-not (Get-EnvState -Lines $baseLines).IsRemote) { throw "Backup remoto invalido: endpoints nao sao remotos." }
+    $baseState = Get-EnvState -Lines $baseLines
+    if ($baseState.IsMixed) { throw "Backup remoto invalido: configuracao mista (um endpoint local e outro remoto)." }
+    if (-not $baseState.IsRemote) { throw "Backup remoto invalido: endpoints nao sao remotos." }
 
     # 5) Aplica overrides locais + remove env-vars de modelo proibidas.
     $lines = Remove-ForbiddenModelVars -Lines $baseLines
@@ -291,6 +304,7 @@ function Invoke-Remote {
     }
     $backupLines = Read-EnvLines -Path $remoteBackup
     $state = Get-EnvState -Lines $backupLines
+    if ($state.IsMixed) { throw "Backup remoto invalido: configuracao mista (um endpoint local e outro remoto)." }
     if (-not $state.IsRemote) { throw "Backup remoto invalido: contem endpoints locais." }
     if ($state.Forbidden.Count -gt 0) { throw "Backup remoto contem env-vars de modelo proibidas: $($state.Forbidden -join ', ')" }
     $clean = Remove-ForbiddenModelVars -Lines $backupLines

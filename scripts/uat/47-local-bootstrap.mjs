@@ -135,22 +135,30 @@ async function setup() {
   if (error || !data?.user) throw new Error(`createUser falhou: ${error?.message ?? "usuario ausente"}`);
   const userId = data.user.id;
 
-  const { error: adminError } = await admin.from("admin_users").insert({ user_id: userId });
-  if (adminError) {
-    await admin.auth.admin.deleteUser(userId);
-    throw new Error(`insert admin_users falhou: ${adminError.message}`);
+  try {
+    const { error: adminError } = await admin.from("admin_users").insert({ user_id: userId });
+    if (adminError) throw new Error(`insert admin_users falhou: ${adminError.message}`);
+
+    const loginVerified = await verifyLocalLogin(email, password);
+
+    fs.writeFileSync(STATE_FILE, JSON.stringify({ userId }, null, 2));
+    console.log(
+      JSON.stringify(
+        { userId, email, password, loginVerified, note: "local-only; nunca commitar estas credenciais" },
+        null,
+        2,
+      ),
+    );
+  } catch (err) {
+    // Rollback: nunca deixar usuario/admin/auditoria orfaos se algo falhar.
+    try {
+      await removeUser(userId);
+    } catch (rollbackError) {
+      console.error(`rollback apos falha tambem falhou: ${rollbackError.message}`);
+    }
+    fs.rmSync(STATE_FILE, { force: true });
+    throw err;
   }
-
-  const loginVerified = await verifyLocalLogin(email, password);
-
-  fs.writeFileSync(STATE_FILE, JSON.stringify({ userId }, null, 2));
-  console.log(
-    JSON.stringify(
-      { userId, email, password, loginVerified, note: "local-only; nunca commitar estas credenciais" },
-      null,
-      2,
-    ),
-  );
 }
 
 async function cleanup(userIdArg) {
