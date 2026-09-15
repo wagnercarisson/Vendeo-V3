@@ -58,6 +58,7 @@ describe("capacity-aware model pricing", () => {
     expect(statuses).toHaveLength(2);
     expect(statuses.every((status) => status.pricingCoverage === "complete")).toBe(true);
     expect(inFilter).toHaveBeenCalledTimes(2);
+    expect(inFilter).toHaveBeenNthCalledWith(2, "model", ["gpt-4o"]);
   });
 
   it("preserva a cadeia existente de resolveAiCost para custo reportado", async () => {
