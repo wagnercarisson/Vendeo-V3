@@ -153,10 +153,13 @@ async function setup() {
     // Rollback: nunca deixar usuario/admin/auditoria orfaos se algo falhar.
     try {
       await removeUser(userId);
+      fs.rmSync(STATE_FILE, { force: true });
     } catch (rollbackError) {
+      // Preserva { userId } para permitir cleanup manual — nao apagar o state file.
+      fs.writeFileSync(STATE_FILE, JSON.stringify({ userId }, null, 2));
       console.error(`rollback apos falha tambem falhou: ${rollbackError.message}`);
+      console.error(`State preservado para cleanup manual: node scripts/uat/47-local-bootstrap.mjs --cleanup ${userId}`);
     }
-    fs.rmSync(STATE_FILE, { force: true });
     throw err;
   }
 }
