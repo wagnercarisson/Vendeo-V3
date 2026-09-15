@@ -33,7 +33,7 @@
 ## 3. Plan 48-1-03 — Cenários controlados (onda 2, depende de 48-1-01/48-1-02)
 
 - [ ] 3.1 Criar `src/lib/lab/scenarios/schema.ts` com Zod `LabScenarioContent` (`brief`, `store`, `identity`, `images[]`, `intent`, `format`, `locale`, `mediaKinds`) e `unsupported_scenario_mode` para valores fora de `offer`/`1:1`/`pt-BR` — design D4
-- [ ] 3.2 Criar fixtures em `fixtures/lab/scenarios/<slug>/` com 3 cenários de oferta (`produto-oferta-preco`, `produto-oferta-texto-obrigatorio`, `produto-oferta-badge`) e imagens de produto controladas; dados fictícios — design D4
+- [ ] 3.2 Criar fixtures em `fixtures/lab/scenarios/<slug>/` com 3 cenários de oferta (`produto-oferta-preco`, `produto-oferta-texto-obrigatorio`, `produto-oferta-logo`) e imagens de produto controladas; dados fictícios — design D4
 - [ ] 3.3 Criar `src/lib/lab/scenarios/service.ts` (carregar/listar versões; calcular `content_hash` SHA-256 do JSON canônico; bootstrap idempotente `scripts/uat/48-local-scenarios.mjs`) — design D4
 - [ ] 3.4 Mapear `LabScenarioContent` → `CampaignBrief` + `ResolvedCampaignContext` fictício (loja/identidade) e resolver os data URLs das imagens controladas server-side — design D4/D7
 - [ ] 3.5 Testes: hash determinístico, reaplicação idempotente, modalidade não suportada rejeitada, imagem ausente rejeitada, mapeamento para brief/contexto correto
