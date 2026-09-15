@@ -1,6 +1,6 @@
 # F47 UAT — Catálogo e Seleção de Modelos Admin
 
-**Status:** LOCAL UAT APPROVED (humano) — migration remota e deploy ainda BLOQUEADOS
+**Status:** LOCAL UAT PASSED — aguardando aprovação humana explícita (migration remota e deploy BLOQUEADOS)
 **Environment:** Supabase local (`API_URL` derivado de `npx supabase status -o env`, tipicamente `http://127.0.0.1:54321`)
 **Remote migration/deploy:** BLOCKED and not executed
 
@@ -69,7 +69,7 @@ Registre evidência, timestamp e resultado. Não marque PASS por inspeção de c
 
 | ID | Scenario | Evidence to collect | Result |
 |---|---|---|---|
-| UAT-01 | Open `/admin/ai-model-selection` as admin | Page loads; groups Texto, Visual, Imagem | PASS (humano) |
+| UAT-01 | Open `/admin/ai-model-selection` as admin | Page loads; groups Texto, Visual, Imagem; desktop e celular sem sobreposição | PASS (humano) |
 | UAT-02 | Inspect all capabilities | All 11 capabilities visible; `campaign_image_edit` is independent | PASS (humano) |
 | UAT-03 | Inspect effective/default/origin | Current target, registry default and origin are distinct and readable | PASS (humano) |
 | UAT-04 | Change `campaign_copy` primary | Select active catalog model, provide reason, save; audit feedback | PASS (humano) |
