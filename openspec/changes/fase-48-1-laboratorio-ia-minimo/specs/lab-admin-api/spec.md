@@ -86,7 +86,7 @@ A rota de execução SHALL exigir identificação de variante, cenário e repeti
 
 #### Scenario: Execução concorrente é recusada
 
-- **WHEN** já existe um run ativo para o experimento
+- **WHEN** já existe um run ativo em qualquer experimento do laboratório
 - **THEN** a resposta é 409 com `run_already_active`
 - **AND** nenhuma chamada paga é iniciada
 

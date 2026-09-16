@@ -6,7 +6,7 @@
 >
 > **Regra de isolamento (D2/D6/D15):** nenhuma task pode tocar `campaigns`, `campaign_art_versions`, `generation_events`, `ai_model_selection`, `ai_model_catalog`, `admin_audit_log`, `prompts/` oficiais ou o bucket `campaign-images`. Nenhum secret em banco/log/snapshot. Nenhuma chamada paga em testes/CI.
 >
-> **Dependências entre plans:** 48-1-01 ← 48-1-02,48-1-03,48-1-04; 48-1-03,48-1-04 ← 48-1-05; 48-1-05 ← 48-1-07; 48-1-06 ← 48-1-07; 48-1-07 ← 48-1-08; 48-1-08 ← 48-1-09,48-1-10; 48-1-11,48-1-12 ← implementação correspondente; 48-1-13 ← 48-1-08..48-1-12; 48-1-14 ← 48-1-13.
+> **Dependências entre plans:** 48-1-01 ← 48-1-03,48-1-04; 48-1-03,48-1-04 ← 48-1-05; 48-1-05 ← 48-1-07; 48-1-06 ← 48-1-07; 48-1-07 ← 48-1-08; 48-1-08 ← 48-1-09,48-1-10; 48-1-11,48-1-12 ← implementação correspondente; 48-1-13 ← 48-1-08..48-1-12; 48-1-14 ← 48-1-13.
 
 ## 1. Plan 48-1-01 — Trackings e migration local (onda 1)
 
@@ -14,14 +14,14 @@
 - [ ] 1.2 Criar migration **local** com as tabelas `lab_scenarios` e `lab_scenario_versions` (conteúdo imutável + `content_hash` + `fixture_path`; `UNIQUE(scenario_id, version)`; RLS service_role) — design D3/D4
 - [ ] 1.3 Criar migration **local** com `lab_experiments` (dimensão fixa `prompt`, `model_target` e `params` **no experimento**, status, `repetitions`, `max_runs`, autoria) e `lab_experiment_variants` (role baseline/candidate, `prompt_snapshot`; `UNIQUE(experiment_id, role)`) — design D3/D5
 - [ ] 1.4 Criar migration **local** com `lab_experiment_scenarios` (junção ordenada) — design D3
-- [ ] 1.5 Criar migration **local** com `lab_runs` (snapshot, status, `operation_id` único, `supersedes_run_id`, `run_sequence`, latência/usage/custo/`cost_detail`/erro/validação/`calls`; `UNIQUE(experiment_id, variant_id, scenario_version_id, repetition_index, run_sequence)` + **índice único parcial** `uq_lab_runs_one_active_per_experiment (experiment_id) WHERE status IN ('pending','running')`) — design D3/D8/D14
+- [ ] 1.5 Criar migration **local** com `lab_runs` (snapshot, status, `operation_id` único, `supersedes_run_id`, `run_sequence`, latência/usage/custo/`cost_detail`/erro/validação/`calls`; `UNIQUE(experiment_id, variant_id, scenario_version_id, repetition_index, run_sequence)` + **índice único parcial global** `uq_lab_runs_one_active_global ((true)) WHERE status IN ('pending','running')` (no máximo um run ativo em todo o laboratório)) — design D3/D8/D14
 - [ ] 1.6 Criar migration **local** com `lab_artifacts` (path, MIME, dimensões, bytes, checksum, `removed_at`) e `lab_human_evaluations` (verdict, `baseline_run_id`, `candidate_run_id`, `blind_order`, observação, avaliador, append-only) — design D3/D10/D13
 - [ ] 1.7 Criar bucket privado `lab-artifacts` (sem acesso público; policies somente `service_role`; **sem** policies para `authenticated`/`anon`) e `REVOKE`/`GRANT` das tabelas `lab_*` — design D10
 - [ ] 1.8 Adicionar trigger que impede UPDATE das colunas de snapshot em `lab_runs` e do conteúdo em `lab_scenario_versions`; para `lab_experiment_variants`/`model_target`/`params`, bloquear UPDATE **somente quando o experimento já tiver run** (configuração editável em `draft`/`ready`); e trigger que impede `UPDATE`/`DELETE` em `lab_human_evaluations` (append-only) — design D3/D5/D8/D13
-- [ ] 1.9 Criar RPC `lab_reserve_run` (SECURITY DEFINER, `search_path=''`): lock `FOR UPDATE` no experimento **antes** das checagens; idempotência por `operation_id` **após o lock** e **vinculada ao payload** (`idempotency_conflict` se divergir); prontidão `ready|running|evaluated`; valida relações (variante/cenário no experimento, `repetition_index` no limite, `supersedes_run_id` da **mesma combinação, incluindo `repetition_index`, e em estado terminal**); conta budget; recusa run ativo (`run_already_active`); **deriva `run_sequence` no banco**; insere run `pending` **com `p_snapshot` completo** (`missing_snapshot` se vazio); trata `unique_violation` de `operation_id` como idempotente; promove `ready|evaluated→running`; `REVOKE`/`GRANT` service_role — design D14
+- [ ] 1.9 Criar RPC `lab_reserve_run` (SECURITY DEFINER, `search_path=''`): lock `FOR UPDATE` no experimento **antes** das checagens; idempotência por `operation_id` **após o lock** e **vinculada ao payload** (`idempotency_conflict` se divergir); prontidão `ready|running|evaluated`; valida relações (variante/cenário no experimento, `repetition_index` no limite, `supersedes_run_id` da **mesma combinação, incluindo `repetition_index`, e em estado terminal**); conta budget; recusa **qualquer** run ativo no laboratório (`run_already_active`, global via índice único parcial); **deriva `run_sequence` no banco**; insere run `pending` **com `p_snapshot` completo** (`missing_snapshot` se vazio); trata `unique_violation` de `operation_id` como idempotente; promove `ready|evaluated→running`; `REVOKE`/`GRANT` service_role — design D14
 - [ ] 1.10 Escrever bloco REVERT (drop bucket → drop funções → drop tabelas) e testar a migration **localmente** (`npx supabase db reset` + `db lint`): reaplicação idempotente, RLS/grants, trigger de imutabilidade, reserva atômica rejeita concorrência — **não aplicar no remoto nesta task**
 
-## 2. Plan 48-1-02 — Isolamento e segurança (onda 1, depende de 48-1-01)
+## 2. Plan 48-1-02 — Isolamento e segurança (onda 1)
 
 - [ ] 2.1 Criar `src/lib/lab/environment-guard.ts` com `getLabEnvironment()` e `assertLabEnvironment()` (flag `VENDEO_LAB_ENABLED`, host local, allowlist `VENDEO_LAB_ALLOWED_SUPABASE_HOSTS`, bloqueio de hosts de produção, fail-closed) + `LabEnvironmentError` — design D2
 - [ ] 2.2 Aplicar a guarda no início de toda página e rota do laboratório (page renderiza estado desabilitado com `reason`; rota retorna 403 com `{ error, reason }`) — design D2/D12
@@ -55,7 +55,7 @@
 - [ ] 5.5 Criar `src/lib/lab/gateway/runtime.ts` compondo `AiGateway(labResolver, defaultAdapterRegistry)` + contexto de telemetria e **invocando `campaign_image` direto no gateway** (sem `OpenAIImageProvider`/fallback automático) — design D6/D7
 - [ ] 5.6 Testes: alvo fixo tem precedência; capacidades auxiliares delegam ao resolver padrão; override de prompt não altera arquivo oficial; sink não grava `generation_events`; **fallback desabilitado = um único envelope**; pipeline de produção inalterado
 
-## 6. Plan 48-1-06 — Persistência de artefatos (onda 4, depende de 48-1-01/48-1-02)
+## 6. Plan 48-1-06 — Persistência de artefatos (onda 3, depende de 48-1-01/48-1-02)
 
 - [ ] 6.1 Criar `src/lib/lab/persistence/artifact-service.ts` (upload para `lab-artifacts`, path `experiments/{experimentId}/runs/{runId}/output.{ext}`, metadados + checksum, rollback do objeto em falha de insert) — design D10
 - [ ] 6.2 Implementar geração de URL assinada server-side (3600s) para leitura na comparação — design D10

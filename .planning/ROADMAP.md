@@ -1076,7 +1076,7 @@ Plans:
 - [ ] 48-1-03-PLAN.md — Cenários controlados: schema Zod, fixtures (3 cenários de oferta) e serviço de bootstrap/hash (Wave 2)
 - [ ] 48-1-04-PLAN.md — Domínio de experimentos prompt-only: schemas, criação com 2 variantes, transições e congelamento (Wave 2)
 - [ ] 48-1-05-PLAN.md — Harness de gateway: `buildDirectorPrompt`, `LabModelResolver`, `LabPromptLoader`, `LabTelemetrySink` e runtime single-shot (Wave 3)
-- [ ] 48-1-06-PLAN.md — Persistência de artefatos: bucket/paths, metadados/checksum, URL assinada e cleanup manual (Wave 4)
+- [ ] 48-1-06-PLAN.md — Persistência de artefatos: bucket/paths, metadados/checksum, URL assinada e cleanup manual (Wave 3)
 - [ ] 48-1-07-PLAN.md — Execução e snapshots imutáveis: validação técnica (`sharp`), `run-service`, idempotência/reexecução e reserva atômica (Wave 4)
 - [ ] 48-1-08-PLAN.md — API administrativa sob `/api/admin/laboratorio` (schemas, rotas, estimativa, execução NDJSON e avaliação) (Wave 5)
 - [ ] 48-1-09-PLAN.md — UI do laboratório: layout/sub-nav, página inicial, criação, detalhe, cenários e execução (Wave 6)

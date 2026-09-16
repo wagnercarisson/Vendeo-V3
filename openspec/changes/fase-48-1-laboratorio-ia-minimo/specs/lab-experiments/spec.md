@@ -115,7 +115,7 @@ O experimento SHALL seguir as transições `draft → ready → running ⇄ eval
 
 ### Requirement: Limites de cenários, repetições e concorrência
 
-O sistema SHALL limitar o número de cenários por experimento, o número de repetições e a concorrência de execuções, impedindo loops automáticos ilimitados.
+O sistema SHALL limitar o número de cenários por experimento, o número de repetições e a concorrência de execuções a **um run ativo global no laboratório**, impedindo loops automáticos ilimitados.
 
 #### Scenario: Excesso de cenários é rejeitado
 

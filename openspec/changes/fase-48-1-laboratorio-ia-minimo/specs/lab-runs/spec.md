@@ -35,13 +35,19 @@ Cada execução SHALL congelar e registrar: versão do cenário, conteúdo ou ha
 
 ### Requirement: Reserva atômica de execução
 
-O sistema SHALL reservar a execução de forma transacional no banco antes de qualquer chamada paga, verificando prontidão, teto de execuções e ausência de run ativo na mesma transação. A reserva SHALL validar as relações recebidas (variante e cenário pertencentes ao experimento, repetição dentro do limite, run substituído da mesma combinação e em estado terminal), vincular o identificador de operação ao payload original, derivar a sequência de execução no banco e gravar o snapshot completo na mesma transação. Duas requisições simultâneas SHALL resultar em no máximo uma execução.
+O sistema SHALL reservar a execução de forma transacional no banco antes de qualquer chamada paga, verificando prontidão, teto de execuções e ausência de run ativo **no laboratório** na mesma transação. A reserva SHALL validar as relações recebidas (variante e cenário pertencentes ao experimento, repetição dentro do limite, run substituído da mesma combinação e em estado terminal), vincular o identificador de operação ao payload original, derivar a sequência de execução no banco e gravar o snapshot completo na mesma transação. A exclusão de concorrência SHALL ser **global**: no máximo um run ativo em toda a tabela `lab_runs` (garantido por índice único parcial global no banco), mesmo entre experimentos diferentes. Duas requisições simultâneas SHALL resultar em no máximo uma execução.
 
 #### Scenario: Reserva serializa requisições simultâneas
 
-- **WHEN** duas requisições de execução chegam simultaneamente para o mesmo experimento
+- **WHEN** duas requisições de execução chegam simultaneamente (mesmo experimento ou experimentos diferentes)
 - **THEN** exatamente uma reserva o run
 - **AND** a outra é recusada com `run_already_active` sem chamada paga
+
+#### Scenario: Concorrência é global entre experimentos
+
+- **WHEN** existe um run ativo em um experimento e uma nova execução é solicitada em outro experimento
+- **THEN** a nova reserva é recusada com `run_already_active`
+- **AND** nenhuma chamada paga é iniciada
 
 #### Scenario: Teto é contado na transação
 

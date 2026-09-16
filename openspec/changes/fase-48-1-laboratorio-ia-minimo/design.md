@@ -219,9 +219,9 @@ Sob `/api/admin/laboratorio`, todas com `requireAdmin()` + `assertLabEnvironment
 ### D14 — Segurança financeira e limites
 
 - Toda chamada paga exige `confirmed: true` (ação humana explícita) + estimativa exibida.
-- Limites: `MAX_SCENARIOS_PER_EXPERIMENT = 3`, `MAX_REPETITIONS = 3`, `MAX_RUNS_PER_EXPERIMENT = 12` (default 6), `MAX_CONCURRENT_LAB_RUNS = 1`.
+- Limites: `MAX_SCENARIOS_PER_EXPERIMENT = 3`, `MAX_REPETITIONS = 3`, `MAX_RUNS_PER_EXPERIMENT = 12` (default 6), `MAX_CONCURRENT_LAB_RUNS = 1` (**global no laboratório** — no máximo um run ativo em toda a tabela `lab_runs`, independentemente do experimento).
 - Sem loops automáticos: a F48.1 executa **um run por ação explícita**; não há “executar tudo”.
-- **Reserva atômica obrigatória (correção de bloqueio)**: um “lock lógico via status + checagem de budget” **não é atômico** — duas requisições simultâneas podem passar pela checagem e criar dois runs pagos. A criação do run SHALL ser uma **reserva transacional** via RPC `lab_reserve_run` (SECURITY DEFINER, `search_path=''`) que, sob `SELECT ... FOR UPDATE` no experimento e **na mesma transação**: (1) adquire o lock; (2) verifica idempotência por `operation_id` **após o lock**, vinculada ao payload original (`idempotency_conflict` se divergir); (3) valida prontidão (`ready|running|evaluated`); (4) **valida as relações** (variante pertence ao experimento, cenário vinculado via `lab_experiment_scenarios`, `repetition_index ∈ [1, repetitions]`, `supersedes_run_id` da **mesma combinação, incluindo `repetition_index`, e em estado terminal**); (5) conta os runs contra `max_runs`; (6) recusa run ativo; (7) **deriva `run_sequence` no banco** e insere o run `pending` **com o `p_snapshot` completo**, na mesma transação. Reforço por **índice único parcial** `uq_lab_runs_one_active_per_experiment ON lab_runs (experiment_id) WHERE status IN ('pending','running')`. **Nenhuma chamada paga ocorre antes da reserva.** Teto → `409 budget_exceeded`; concorrência → `409 run_already_active`; snapshot ausente → `missing_snapshot`; `operation_id` reutilizado com outro payload → `409 idempotency_conflict`.
+- **Reserva atômica obrigatória (correção de bloqueio)**: um “lock lógico via status + checagem de budget” **não é atômico** — duas requisições simultâneas podem passar pela checagem e criar dois runs pagos. A criação do run SHALL ser uma **reserva transacional** via RPC `lab_reserve_run` (SECURITY DEFINER, `search_path=''`) que, sob `SELECT ... FOR UPDATE` no experimento e **na mesma transação**: (1) adquire o lock; (2) verifica idempotência por `operation_id` **após o lock**, vinculada ao payload original (`idempotency_conflict` se divergir); (3) valida prontidão (`ready|running|evaluated`); (4) **valida as relações** (variante pertence ao experimento, cenário vinculado via `lab_experiment_scenarios`, `repetition_index ∈ [1, repetitions]`, `supersedes_run_id` da **mesma combinação, incluindo `repetition_index`, e em estado terminal**); (5) conta os runs contra `max_runs`; (6) recusa run ativo; (7) **deriva `run_sequence` no banco** e insere o run `pending` **com o `p_snapshot` completo**, na mesma transação. Reforço por **índice único parcial global** `uq_lab_runs_one_active_global ON lab_runs ((true)) WHERE status IN ('pending','running')` — garante **no máximo um run ativo em todo o laboratório**, mesmo entre experimentos diferentes. O `FOR UPDATE` no experimento serializa idempotência/budget do mesmo experimento; a exclusão cruzada entre experimentos é garantida pelo índice global (o perdedor recebe `unique_violation` → `run_already_active`). **Nenhuma chamada paga ocorre antes da reserva.** Teto → `409 budget_exceeded`; concorrência → `409 run_already_active`; snapshot ausente → `missing_snapshot`; `operation_id` reutilizado com outro payload → `409 idempotency_conflict`.
 - Testes/CI: nenhuma chamada real — fakes de `AiInvoker` e `LabTelemetrySink` com envelopes simulados; `architecture-guard` impede SDK/wire fora dos adapters. UAT com providers reais é manual, opt-in, com orçamento documentado.
 
 ### D15 — Auditoria e ausência de secrets
@@ -348,9 +348,9 @@ CREATE TABLE public.lab_runs (
   UNIQUE (experiment_id, variant_id, scenario_version_id, repetition_index, run_sequence)
 );
 
--- Reserva atômica: no máximo um run ativo por experimento (reforço do RPC)
-CREATE UNIQUE INDEX IF NOT EXISTS uq_lab_runs_one_active_per_experiment
-  ON public.lab_runs (experiment_id)
+-- Reserva atômica: no máximo um run ativo GLOBAL no laboratório (reforço do RPC; MAX_CONCURRENT_LAB_RUNS = 1)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_lab_runs_one_active_global
+  ON public.lab_runs ((true))
   WHERE status IN ('pending','running');
 
 CREATE TABLE public.lab_artifacts (
@@ -527,7 +527,7 @@ $$;
 | `MAX_SCENARIOS_PER_EXPERIMENT` | 3 | rejeita experimento maior |
 | `MAX_REPETITIONS` | 3 | rejeita `repetitions` acima |
 | `MAX_RUNS_PER_EXPERIMENT` | 12 | teto absoluto do budget |
-| `MAX_CONCURRENT_LAB_RUNS` | 1 | um run por vez |
+| `MAX_CONCURRENT_LAB_RUNS` | 1 | um run por vez **global** (índice único parcial global) |
 | `LAB_RUN_STALE_MS` | 900000 | marca run órfão (`pending`/`running`) como falho |
 | `LAB_ARTIFACT_RETENTION_DAYS` | 30 | cleanup manual de artefatos |
 

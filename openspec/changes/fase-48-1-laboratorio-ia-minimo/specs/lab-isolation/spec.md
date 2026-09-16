@@ -104,8 +104,8 @@ Toda chamada paga SHALL exigir ação humana explícita e SHALL ter estimativa o
 
 #### Scenario: Concorrência limitada
 
-- **WHEN** já existe um run em andamento para o experimento
-- **THEN** uma nova execução concorrente é recusada
+- **WHEN** já existe um run em andamento em qualquer experimento do laboratório
+- **THEN** uma nova execução concorrente é recusada (limite **global**: no máximo um run ativo no laboratório)
 
 #### Scenario: Testes não fazem chamadas pagas
 
