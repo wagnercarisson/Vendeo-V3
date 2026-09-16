@@ -64,6 +64,9 @@ A UI SHALL permitir criar um experimento (nome, objetivo, hipótese, dimensão a
 - **WHEN** o admin aciona “Executar run”
 - **THEN** a UI exibe a estimativa de custo e exige confirmação explícita
 - **AND** só então dispara a execução, exibindo o progresso
+- **AND** quando a cobertura de pricing é parcial, o custo é apresentado como faixa ("a partir de US$ X") e nunca como total exato
+- **AND** quando a cobertura é ausente, o custo é apresentado como "indisponível"
+- **AND** a mesma representação de custo aparece no diálogo de confirmação
 
 #### Scenario: Budget restante é visível
 

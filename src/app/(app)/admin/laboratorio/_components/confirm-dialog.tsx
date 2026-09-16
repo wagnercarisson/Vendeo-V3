@@ -52,11 +52,12 @@ export function ConfirmDialog({
         try {
           dialog.showModal();
         } catch {
-          dialog.setAttribute("open", "");
+          // Ambiente sem suporte a modal: o atributo abaixo garante o estado aberto.
         }
-      } else {
-        dialog.setAttribute("open", "");
       }
+      // Garante o estado nativo `open` (e a acessibilidade do conteúdo) mesmo
+      // quando `showModal` não está disponível ou lança.
+      if (!dialog.open) dialog.setAttribute("open", "");
       confirmRef.current?.focus();
     } else if (!open && dialog.open) {
       if (typeof dialog.close === "function") {

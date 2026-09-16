@@ -112,10 +112,17 @@ function runCalls() {
 async function openConfirmation() {
   fireEvent.click(screen.getByTestId("lab-run-button"));
   await screen.findByTestId("lab-run-estimate");
+  // O `<dialog>` só entra na árvore acessível depois que o efeito aplica o estado
+  // nativo `open`; aguardar explicitamente elimina a corrida com o efeito.
+  await screen.findByRole("dialog");
+  await screen.findByTestId("lab-confirm-button");
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // `clearAllMocks` não limpa filas de `mockResolvedValueOnce`; reset garante que
+  // nenhuma resposta enfileirada por um teste vaze para o próximo.
+  mockFetch.mockReset();
   vi.stubGlobal("fetch", mockFetch);
   vi.stubGlobal("crypto", {
     randomUUID: vi.fn().mockReturnValue("00000000-0000-4000-8000-0000000000aa"),
@@ -151,8 +158,76 @@ describe("RunExecutionPanel", () => {
 
     expect(runCalls()).toHaveLength(0);
     expect(
-      screen.getByRole("button", { name: "Confirmar execução" }),
+      await screen.findByRole("button", { name: "Confirmar execução" }),
     ).toBeInTheDocument();
+  });
+
+  it("abre, cancela e reabre o diálogo de confirmação de forma estável", async () => {
+    mockFetch.mockResolvedValue(jsonResponse(ESTIMATE));
+    renderPanel();
+
+    await openConfirmation();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+
+    await openConfirmation();
+    expect(screen.getByTestId("lab-confirm-button")).toBeInTheDocument();
+    expect(runCalls()).toHaveLength(0);
+  });
+
+  it("apresenta custo parcial como faixa, nunca como total exato", async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({
+        ...ESTIMATE,
+        perRun: {
+          estimatedCostUsd: 0.04,
+          costSource: "manual",
+          pricingVersion: "v1",
+          textComponentUsd: 0.01,
+        },
+        perRunCoverage: "partial",
+        coverage: "partial",
+      }),
+    );
+    renderPanel();
+
+    await openConfirmation();
+    const estimateCard = screen.getByTestId("lab-run-estimate");
+    expect(
+      within(estimateCard).getByText("a partir de US$ 0.0400"),
+    ).toBeInTheDocument();
+    expect(within(estimateCard).queryByText("US$ 0.0400")).toBeNull();
+    expect(within(estimateCard).getByText(/texto US\$ 0\.0100/)).toBeInTheDocument();
+    expect(within(estimateCard).getByText(/imagem ausente/)).toBeInTheDocument();
+
+    const dialog = screen.getByRole("dialog");
+    expect(
+      within(dialog).getByText(/a partir de US\$ 0\.0400/),
+    ).toBeInTheDocument();
+  });
+
+  it("apresenta custo indisponível quando a cobertura é missing", async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({
+        ...ESTIMATE,
+        perRun: null,
+        perRunCoverage: "missing",
+        coverage: "missing",
+        totalEstimatedUsd: null,
+      }),
+    );
+    renderPanel();
+
+    await openConfirmation();
+    const estimateCard = screen.getByTestId("lab-run-estimate");
+    expect(
+      within(estimateCard).getAllByText("indisponível").length,
+    ).toBeGreaterThanOrEqual(2);
+    expect(within(estimateCard).queryByText(/US\$ 0\.04/)).toBeNull();
   });
 
   it("avisa em âmbar com cobertura partial sem bloquear a confirmação", async () => {

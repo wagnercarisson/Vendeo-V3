@@ -104,6 +104,29 @@ function formatUsd(value: number | null | undefined): string {
   return typeof value === "number" ? `US$ ${value.toFixed(4)}` : "indisponível";
 }
 
+/**
+ * Custo coerente com a cobertura de pricing (T-48-1-73): `complete` mostra o
+ * valor; `partial` mostra **"a partir de US$ X"** (nunca um total exato);
+ * `missing` mostra "indisponível".
+ */
+function formatCostByCoverage(
+  value: number | null | undefined,
+  coverage: string,
+): string {
+  if (coverage === "complete") return formatUsd(value);
+  if (coverage === "partial") {
+    return typeof value === "number"
+      ? `a partir de US$ ${value.toFixed(4)}`
+      : "indisponível";
+  }
+  return "indisponível";
+}
+
+/** Componente de pricing conhecido, ou "ausente" quando não informado. */
+function componentLabel(value: number | null | undefined): string {
+  return typeof value === "number" ? `US$ ${value.toFixed(4)}` : "ausente";
+}
+
 function disabledReason(
   budget: LabRunBudget,
   experimentStatus: string,
@@ -400,13 +423,20 @@ export function RunExecutionPanel({
             <div className="flex justify-between gap-2">
               <dt className="text-text-muted">Custo por execução</dt>
               <dd className="font-mono text-text-primary">
-                {formatUsd(estimate.perRun?.estimatedCostUsd)}
+                {formatCostByCoverage(estimate.perRun?.estimatedCostUsd, estimate.coverage)}
               </dd>
             </div>
             <div className="flex justify-between gap-2">
               <dt className="text-text-muted">Custo estimado do plano</dt>
               <dd className="font-mono text-text-primary">
-                {formatUsd(estimate.totalEstimatedUsd)}
+                {formatCostByCoverage(estimate.totalEstimatedUsd, estimate.coverage)}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt className="text-text-muted">Componentes conhecidos</dt>
+              <dd className="font-mono text-text-primary">
+                texto {componentLabel(estimate.perRun?.textComponentUsd)} · imagem{" "}
+                {componentLabel(estimate.perRun?.imageToolComponentUsd)}
               </dd>
             </div>
             <div className="flex justify-between gap-2">
@@ -488,8 +518,12 @@ export function RunExecutionPanel({
             </p>
             {estimate && (
               <p className="font-mono text-xs text-text-muted">
-                Custo por execução {formatUsd(estimate.perRun?.estimatedCostUsd)} ·
-                cobertura {estimate.coverage}
+                Custo por execução{" "}
+                {formatCostByCoverage(
+                  estimate.perRun?.estimatedCostUsd,
+                  estimate.coverage,
+                )}{" "}
+                · cobertura {estimate.coverage}
               </p>
             )}
             <p className="text-xs text-text-muted">

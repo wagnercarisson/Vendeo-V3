@@ -215,6 +215,7 @@ Sob `/api/admin/laboratorio`, todas com `requireAdmin()` + `assertLabEnvironment
 - `experimentos/[id]/comparar/page.tsx` — comparação lado a lado + voto humano.
 - `cenarios/page.tsx` — lista de cenários versionados (somente leitura).
 - Segue `openspec/design-system/MASTER.md` (dark OLED, Poppins/Open Sans, `lucide-react`, sem emojis/light mode) e usa os primitivos `src/components/ui/`.
+- **Custo coerente com a cobertura (correção de bloqueio)**: a estimativa SHALL ser apresentada de acordo com `coverage` — `complete` mostra o valor; `partial` mostra **"a partir de US$ X"** (nunca um total exato); `missing` mostra **"indisponível"** — com a mesma representação no card e no diálogo de confirmação, e exibindo os componentes conhecidos/ausentes (`textComponentUsd`/`imageToolComponentUsd`).
 
 ### D13 — Comparação humana como fonte de qualidade
 

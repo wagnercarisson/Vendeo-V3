@@ -51,6 +51,12 @@ key-files:
     - "src/app/(app)/admin/laboratorio/_components/__tests__/run-execution-panel.test.tsx"
   modified:
     - "src/app/(app)/admin/layout.tsx"
+    - "src/app/(app)/admin/laboratorio/_components/confirm-dialog.tsx"
+    - "src/app/(app)/admin/laboratorio/_components/run-execution-panel.tsx"
+    - "src/app/(app)/admin/laboratorio/_components/__tests__/run-execution-panel.test.tsx"
+    - openspec/changes/fase-48-1-laboratorio-ia-minimo/design.md
+    - openspec/changes/fase-48-1-laboratorio-ia-minimo/specs/lab-admin-ui/spec.md
+    - .planning/phases/48.1-laboratorio-ia-minimo/48-1-09-PLAN.md
 
 key-decisions:
   - "Sub-navegação interna via `<nav>` + 3 `<Link>` em vez do primitivo `tabs` do UI-SPEC: sem consumidor real, criar o componente seria escopo morto (o UI-SPEC já registra a omissão)"
@@ -148,6 +154,29 @@ Each task was committed atomically:
 
 **Total deviations:** 2 auto-fixed (1 critério plan-level, 1 bloqueio de critério)
 **Impact on plan:** Nenhuma mudança de comportamento ou de superfície — apenas escolha de variante visual e reescrita de comentários. Sem scope creep.
+
+## Corrections Applied After Review (1 bloqueante + 1 importante)
+
+### BLOQUEANTE — gate de testes instável (corrida no `<dialog>`)
+
+**Finding (revisão do usuário):** a suíte falhava de forma intermitente (2/24 na execução completa; 1/9 isolada). O teste sincronizava pela exibição da estimativa e consultava imediatamente o botão do diálogo; nesse instante o `<dialog>` já estava montado, mas o efeito ainda não havia aplicado o estado nativo `open`, deixando os botões fora da árvore acessível.
+
+**Fix:**
+- `confirm-dialog.tsx`: o efeito garante o atributo `open` (`if (!dialog.open) dialog.setAttribute("open", "")`) após tentar `showModal()` — o conteúdo fica acessível sem depender do timing.
+- `run-execution-panel.test.tsx`: o helper `openConfirmation()` agora aguarda `findByRole("dialog")` **e** `findByTestId("lab-confirm-button")`; as asserções usam `findByRole`. Novo teste de **abrir/cancelar/reabrir**.
+- `beforeEach` passou a fazer `mockFetch.mockReset()` (não só `clearAllMocks`), eliminando o vazamento de respostas `mockResolvedValueOnce` entre testes que causava falhas determinísticas.
+
+**Estabilidade comprovada:** 10 execuções consecutivas do arquivo (12 testes) e 6 execuções consecutivas da suíte do laboratório (27 testes) — **0 falhas**.
+
+### IMPORTANTE — custo parcial apresentado como valor exato
+
+**Finding (revisão do usuário):** com `coverage !== "complete"`, a UI mostrava o aviso correto mas continuava exibindo números únicos (`US$ 0.0400`/`US$ 0.1200`), inclusive no diálogo, aparentando um total exato; e o custo por componente (`textComponentUsd`/`imageToolComponentUsd`) não era exibido.
+
+**Fix (`run-execution-panel.tsx`):** `formatCostByCoverage` — `complete` → valor normal; `partial` → **"a partir de US$ X"**; `missing` → **"indisponível"**. Aplicado ao card **e** ao `ConfirmDialog`. Nova linha "Componentes conhecidos" (texto/imagem; ausente → "ausente"). Testes garantem que o custo parcial **não** aparece como total exato e que `missing` mostra "indisponível".
+
+**Source-of-truth sincronizada:** `design.md` (D12), `specs/lab-admin-ui/spec.md` (cenário de execução ampliado) e `48-1-09-PLAN.md` (Task 1/3, testes, T-48-1-73).
+
+**Verification:** `npx vitest run "src/app/(app)/admin/laboratorio"` → exit 0 (**27 testes**, estável em 6 execuções); `npx tsc -p tsconfig.typecheck.json --noEmit` → exit 0; `npm.cmd run lint` → exit 0; `npm.cmd run build` → exit 0.
 
 ## Issues Encountered
 
