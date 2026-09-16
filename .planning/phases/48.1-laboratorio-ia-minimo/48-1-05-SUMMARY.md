@@ -99,7 +99,7 @@ Each task was committed atomically:
 2. **Task 2: LabModelResolver + LabPromptLoader** — `099d4425` (feat)
 3. **Task 3: LabTelemetrySink + cobertura de custo + runtime single-shot** — `bbadcd28` (feat)
 
-**Plan metadata:** `PENDENTE` (docs: complete plan)
+**Plan metadata:** `0e015075` (docs: complete plan)
 
 _Note: plano `type: execute` (não TDD) — 1 commit por task._
 
