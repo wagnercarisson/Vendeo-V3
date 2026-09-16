@@ -1,18 +1,57 @@
 // @vitest-environment node
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, beforeAll, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import sharp from "sharp";
+
+const { mockResolveAiCost, mockPersistOutputArtifact } = vi.hoisted(() => {
+  // O `ImageGenerationService` importa `@/lib/ai` (gateway default) → sink padrão
+  // → tracker → supabase/server. Sem env, lança na importação.
+  process.env.NEXT_PUBLIC_SUPABASE_URL ??= "http://localhost:54321";
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??= "test-anon-key";
+  process.env.SUPABASE_SERVICE_ROLE_KEY ??= "test-service-role-key";
+  return { mockResolveAiCost: vi.fn(), mockPersistOutputArtifact: vi.fn() };
+});
+
+vi.mock("@/lib/ai-cost/cost-estimator", () => ({
+  resolveAiCost: mockResolveAiCost,
+}));
+
+vi.mock("@/lib/lab/persistence/artifact-service", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/lab/persistence/artifact-service")>();
+  return { ...actual, persistOutputArtifact: mockPersistOutputArtifact };
+});
 
 import {
+  ARTIFACT_PERSISTENCE_FAILED,
   LAB_RESERVATION_ERROR_CODES,
+  LAB_RUN_ABORTED,
+  LAB_RUN_SCENARIO_MISMATCH,
   LabReservationError,
+  executeLabRun,
   finalizeLabRun,
   isRunTerminal,
   markRunRunning,
+  prepareLabRun,
   reconcileStaleRuns,
   reserveLabRun,
+  runReservedLabRun,
 } from "../run-service";
-import type { LabRunStatus } from "../run-service";
+import type { LabRunEvent, LabRunStatus } from "../run-service";
 import type { LabRunSnapshot } from "../run-snapshot";
+import type { LabExperimentParams } from "../domain/schemas";
+import { computePromptContentHash } from "../domain/prompt-snapshot";
+import { LabPromptLoader } from "../gateway/lab-prompt-loader";
+import { createNoopImageProvider } from "../gateway/noop-image-provider";
+import { LabTelemetrySink } from "@/lib/ai/lab-telemetry-sink";
+import type { AiCallEnvelope, AiInvocationRequest, AiInvocationResult, AiTelemetryContext } from "@/lib/ai/types";
+import type { AiInvoker } from "@/lib/ai/gateway";
+import type { CostResolution } from "@/lib/ai-cost/types";
+import { ImageGenerationService } from "@/lib/image-generation/services/image-generation-service";
+import { buildCampaignBriefFromFlat } from "@/lib/campaign/brief";
+import type { CampaignBrief } from "@/lib/campaign/brief";
+import type { ResolvedCampaignContext } from "@/components/campaign/types";
+import type { GenerateImageRequest } from "@/lib/image-generation/schema";
 
 /**
  * Serviço de execução do laboratório (F48.1, D7/D8/D14) — reserva atômica,
@@ -104,7 +143,9 @@ class FakeQueryBuilder {
         values: this.payload,
         filters: this.filters,
       });
-      return this.fake.updateResult;
+      return this.fake.updateResults.length > 0
+        ? (this.fake.updateResults.shift() as FakeResult)
+        : this.fake.updateResult;
     }
 
     const rows = Array.isArray(this.fake.selectRows) ? this.fake.selectRows : [];
@@ -130,6 +171,7 @@ class FakeSupabaseClient {
     error: null,
   };
   updateResult: FakeResult = { data: null, error: null };
+  updateResults: FakeResult[] = [];
   selectResult: FakeResult = { data: [], error: null };
   selectError: { message: string } | null = null;
   selectRows: Array<Record<string, unknown>> = [];
@@ -189,8 +231,288 @@ function reservationParams(client: FakeSupabaseClient) {
 
 let client: FakeSupabaseClient;
 
+// ─── Execução real: helpers (D7/D8) ──────────────────────────────────────────
+
+const PROMPT_NAME = "campaign-image-director-offer";
+const CANDIDATE_CONTENT = "conteudo candidato do diretor (override em memoria)";
+const BASELINE_CONTENT = "conteudo oficial do diretor";
+const CANDIDATE_HASH = computePromptContentHash(CANDIDATE_CONTENT);
+const BASELINE_HASH = computePromptContentHash(BASELINE_CONTENT);
+const STORE_ID = "77777777-7777-4777-8777-777777777777";
+
+const FULL_COST: CostResolution = {
+  estimatedCostUsd: 0.0421,
+  costSource: "pricing_table",
+  pricingVersion: "11111111-1111-4111-8111-111111111111",
+  costFormulaVersion: "responses_image_generation_v2",
+  textComponentUsd: 0.0121,
+  imageToolComponentUsd: 0.03,
+  imageToolPricingProvider: "openai",
+  imageToolPricingModel: "gpt-image-1",
+  imageToolPricingVersion: "22222222-2222-4222-8222-222222222222",
+};
+
+const LAB_PARAMS: LabExperimentParams = {
+  size: "1024x1024",
+  quality: "auto",
+  skipInputValidation: true,
+};
+
+let pngBase64 = "";
+
+beforeAll(async () => {
+  const buffer = await sharp({
+    create: { width: 8, height: 8, channels: 3, background: { r: 1, g: 2, b: 3 } },
+  })
+    .png()
+    .toBuffer();
+  pngBase64 = buffer.toString("base64");
+});
+
+function executionSnapshot(): LabRunSnapshot {
+  return {
+    scenarioVersionId: SCENARIO_ID,
+    scenarioVersion: 1,
+    scenarioContentHash: "c".repeat(64),
+    prompt: {
+      name: PROMPT_NAME,
+      content: CANDIDATE_CONTENT,
+      contentHash: CANDIDATE_HASH,
+      source: "override",
+    },
+    capability: "campaign_image",
+    modelTarget: { provider: "openai", model: "gpt-5.5", protocol: "responses" },
+    params: LAB_PARAMS,
+    changedDimension: "prompt",
+    variantRole: "candidate",
+    codeVersion: null,
+    baselineConfig: {
+      promptName: PROMPT_NAME,
+      promptContentHash: BASELINE_HASH,
+      source: "official",
+    },
+    candidateConfig: {
+      promptName: PROMPT_NAME,
+      promptContentHash: CANDIDATE_HASH,
+      source: "override",
+    },
+    runType: "lab",
+  };
+}
+
+function createBrief(): CampaignBrief {
+  return buildCampaignBriefFromFlat(
+    {
+      storeId: STORE_ID,
+      productName: "Produto Teste",
+      discountedPriceCents: 1990,
+      badgeText: "Oferta",
+      campaignIntent: "offer",
+      productImageDataUrl: "data:image/jpeg;base64,dGVzdA==",
+    } as GenerateImageRequest,
+    STORE_ID,
+  );
+}
+
+function createContext(): ResolvedCampaignContext {
+  return {
+    campaignInput: {
+      productName: "Produto Teste",
+      discountedPriceCents: 1990,
+      productImageDataUrl: "data:image/jpeg;base64,dGVzdA==",
+      badgeText: "Oferta",
+      campaignIntent: "offer",
+    },
+    store: {
+      name: "Loja Teste",
+      segment: "outros",
+      subsegment: null,
+      toneOfVoice: null,
+      positioning: null,
+      shortDescription: null,
+      slogan: null,
+      brandColor: "#22C55E",
+    },
+    brandProfile: null,
+    identity: { state: "text_only", imageUrl: null, directive: "" },
+  };
+}
+
+function createPromptLoader(content = CANDIDATE_CONTENT): LabPromptLoader {
+  return new LabPromptLoader([{ name: PROMPT_NAME, content }]);
+}
+
+interface FakeInvokerState {
+  calls: number;
+  requests: AiInvocationRequest[];
+  hasFallbackCalls: number;
+  failWith?: Error;
+  omitImage?: boolean;
+}
+
+function createFakeInvoker(state: FakeInvokerState): AiInvoker {
+  return {
+    async invoke(
+      _capability,
+      request,
+      telemetry,
+    ): Promise<AiInvocationResult> {
+      state.calls += 1;
+      state.requests.push(request);
+
+      if (state.failWith) {
+        await emitEnvelope(telemetry, { status: "failed", errorType: "provider boom" });
+        throw state.failWith;
+      }
+
+      await emitEnvelope(telemetry, { status: "success" });
+      if (state.omitImage) return { model: "gpt-5.5" };
+      return {
+        imageBase64: pngBase64,
+        mimeType: "image/png",
+        model: "gpt-5.5",
+        usage: { promptTokens: 10, completionTokens: 2, totalTokens: 12 },
+        usageMeta: { imageGenerationTool: true },
+      };
+    },
+    async hasFallback(): Promise<boolean> {
+      state.hasFallbackCalls += 1;
+      return false;
+    },
+  };
+}
+
+async function emitEnvelope(
+  telemetry: AiTelemetryContext,
+  overrides: Partial<AiCallEnvelope>,
+): Promise<void> {
+  await telemetry.sink.emit({
+    capability: "campaign_image",
+    protocol: "responses",
+    provider: "openai",
+    model: "gpt-5.5",
+    durationMs: 4321,
+    usage: { promptTokens: 10, completionTokens: 2, totalTokens: 12 },
+    usageMeta: { imageGenerationTool: true },
+    status: "success",
+    ...overrides,
+  });
+}
+
+function prepareParams(
+  overrides: Partial<Parameters<typeof prepareLabRun>[0]> = {},
+): Parameters<typeof prepareLabRun>[0] {
+  return {
+    client: client as unknown as SupabaseClient,
+    experimentId: EXPERIMENT_ID,
+    variantId: VARIANT_ID,
+    scenarioVersionId: SCENARIO_ID,
+    repetitionIndex: 1,
+    supersedesRunId: null,
+    operationId: OPERATION_ID,
+    actorId: ACTOR_ID,
+    scenario: { id: SCENARIO_ID, version: 1, contentHash: "c".repeat(64) },
+    experiment: {
+      modelTarget: { provider: "openai", model: "gpt-5.5", protocol: "responses" },
+      params: LAB_PARAMS,
+    },
+    variant: {
+      role: "candidate" as const,
+      promptSnapshot: {
+        name: PROMPT_NAME,
+        content: CANDIDATE_CONTENT,
+        contentHash: CANDIDATE_HASH,
+        source: "override" as const,
+      },
+    },
+    variants: {
+      baseline: {
+        name: PROMPT_NAME,
+        content: BASELINE_CONTENT,
+        contentHash: BASELINE_HASH,
+        source: "official" as const,
+      },
+      candidate: {
+        name: PROMPT_NAME,
+        content: CANDIDATE_CONTENT,
+        contentHash: CANDIDATE_HASH,
+        source: "override" as const,
+      },
+    },
+    ...overrides,
+  };
+}
+
+function runParams(
+  state: FakeInvokerState,
+  overrides: Partial<Parameters<typeof runReservedLabRun>[0]> = {},
+): Parameters<typeof runReservedLabRun>[0] {
+  const promptLoader = createPromptLoader();
+  return {
+    client: client as unknown as SupabaseClient,
+    experimentId: EXPERIMENT_ID,
+    runId: RUN_ID,
+    snapshot: executionSnapshot(),
+    actorId: ACTOR_ID,
+    scenario: {
+      imagesDataUrls: { "images/produto.jpg": "data:image/jpeg;base64,AAAA" },
+      logoDataUrl: null,
+      brief: createBrief(),
+      context: createContext(),
+    },
+    experiment: { params: LAB_PARAMS },
+    gateway: createFakeInvoker(state),
+    sink: new LabTelemetrySink(),
+    promptLoader,
+    imageService: new ImageGenerationService(createNoopImageProvider(), promptLoader),
+    ...overrides,
+  };
+}
+
+function executeParams(
+  state: FakeInvokerState,
+  overrides: Partial<Parameters<typeof executeLabRun>[0]> = {},
+): Parameters<typeof executeLabRun>[0] {
+  const promptLoader = createPromptLoader();
+  return {
+    ...prepareParams(),
+    scenario: {
+      id: SCENARIO_ID,
+      version: 1,
+      contentHash: "c".repeat(64),
+      imagesDataUrls: { "images/produto.jpg": "data:image/jpeg;base64,AAAA" },
+      logoDataUrl: null,
+      brief: createBrief(),
+      context: createContext(),
+    },
+    gateway: createFakeInvoker(state),
+    sink: new LabTelemetrySink(),
+    promptLoader,
+    imageService: new ImageGenerationService(createNoopImageProvider(), promptLoader),
+    ...overrides,
+  };
+}
+
+function newInvokerState(): FakeInvokerState {
+  return { calls: 0, requests: [], hasFallbackCalls: 0 };
+}
+
+function labRunUpdates(): Array<Record<string, unknown>> {
+  return client.appliedUpdates
+    .filter((update) => update.table === "lab_runs")
+    .map((update) => update.values);
+}
+
 beforeEach(() => {
   client = new FakeSupabaseClient();
+  vi.clearAllMocks();
+  mockResolveAiCost.mockResolvedValue(FULL_COST);
+  mockPersistOutputArtifact.mockResolvedValue({
+    artifactId: "artifact-1",
+    storagePath: `experiments/${EXPERIMENT_ID}/runs/${RUN_ID}/output.png`,
+    checksum: "d".repeat(64),
+    bytes: 128,
+  });
 });
 
 describe("reserveLabRun — reserva atômica antes de qualquer chamada paga", () => {
@@ -435,5 +757,229 @@ describe("reconcileStaleRuns — runs órfãos em pending E running", () => {
       (filter) => filter.column === "status",
     );
     expect(statusFilter?.value).toEqual(["pending", "running"]);
+  });
+});
+
+
+describe("prepareLabRun — snapshot antes da reserva", () => {
+  it("monta o snapshot completo e faz exatamente 1 chamada de RPC", async () => {
+    const result = await prepareLabRun(prepareParams());
+
+    expect(client.rpcCalls).toHaveLength(1);
+    expect(client.rpcCalls[0].fn).toBe("lab_reserve_run");
+    expect(result.runId).toBe(RUN_ID);
+    expect(result.idempotent).toBe(false);
+    expect(JSON.stringify(result.snapshot)).not.toBe("{}");
+    expect(result.snapshot.runType).toBe("lab");
+    expect(result.snapshot.prompt.contentHash).toBe(CANDIDATE_HASH);
+    expect(client.rpcCalls[0].args.p_snapshot).toEqual(result.snapshot);
+  });
+
+  it("recusa cenário divergente do reservado antes de qualquer I/O", async () => {
+    const params = prepareParams({
+      scenario: { id: "99999999-9999-4999-8999-999999999999", version: 1, contentHash: "c".repeat(64) },
+    });
+
+    await expect(prepareLabRun(params)).rejects.toThrow(LAB_RUN_SCENARIO_MISMATCH);
+    expect(client.rpcCalls).toHaveLength(0);
+  });
+
+  it("propaga LabReservationError sem montar execução", async () => {
+    client.rpcResult = { data: null, error: { message: "budget_exceeded" } };
+
+    await expect(prepareLabRun(prepareParams())).rejects.toMatchObject({
+      name: "LabReservationError",
+      code: "budget_exceeded",
+    });
+  });
+});
+
+describe("runReservedLabRun — caminho feliz (1 chamada paga por run)", () => {
+  it("invoca campaign_image exatamente 1 vez e finaliza succeeded com as evidências", async () => {
+    const state = newInvokerState();
+    const sink = new LabTelemetrySink();
+    const events: LabRunEvent[] = [];
+
+    const result = await runReservedLabRun(
+      runParams(state, { sink, onEvent: (event: LabRunEvent) => events.push(event) }),
+    );
+
+    expect(result).toEqual({ runId: RUN_ID, status: "succeeded" });
+    expect(state.calls).toBe(1);
+    expect(state.hasFallbackCalls).toBe(0);
+    expect(sink.entries).toHaveLength(1);
+
+    const finalUpdate = labRunUpdates().find((values) => values.status === "succeeded");
+    expect(finalUpdate).toBeDefined();
+    expect(finalUpdate).toMatchObject({
+      status: "succeeded",
+      attempts: 1,
+      provider: "openai",
+      model: "gpt-5.5",
+      protocol: "responses",
+      capability: "campaign_image",
+      estimated_cost_usd: FULL_COST.estimatedCostUsd,
+    });
+    expect(finalUpdate?.cost_detail).toEqual(FULL_COST);
+    expect(typeof finalUpdate?.latency_ms).toBe("number");
+    expect(finalUpdate?.usage).toEqual({ promptTokens: 10, completionTokens: 2, totalTokens: 12 });
+    expect(Array.isArray(finalUpdate?.calls)).toBe(true);
+    expect((finalUpdate?.calls as unknown[]).length).toBe(1);
+    expect(finalUpdate?.technical_validation).toMatchObject({ decodable: true, mimeType: "image/png" });
+    expect(typeof finalUpdate?.finished_at).toBe("string");
+
+    expect(events.map((event) => event.phase ?? event.type)).toEqual([
+      "running",
+      "prompt",
+      "generation",
+      "artifact",
+      "validation",
+      "done",
+    ]);
+  });
+
+  it("envia o prompt real (candidata) e o request canônico de campaign_image", async () => {
+    const state = newInvokerState();
+
+    await runReservedLabRun(runParams(state));
+
+    expect(state.requests).toHaveLength(1);
+    const request = state.requests[0];
+    expect(request.tools).toBe("image_generation");
+    expect(request.size).toBe("1024x1024");
+    expect(request.quality).toBe("auto");
+    expect(request.productImagesDataUrls).toEqual(["data:image/jpeg;base64,AAAA"]);
+    expect(request.identityImageUrl).toBeUndefined();
+    expect(request.prompt).toContain(CANDIDATE_CONTENT);
+  });
+
+  it("atualiza as dimensões do artefato sem tocar o snapshot", async () => {
+    const state = newInvokerState();
+
+    await runReservedLabRun(runParams(state));
+
+    const artifactUpdates = client.appliedUpdates.filter((update) => update.table === "lab_artifacts");
+    expect(artifactUpdates).toHaveLength(1);
+    expect(artifactUpdates[0].values).toMatchObject({ width: 8, height: 8 });
+
+    for (const values of labRunUpdates()) {
+      expect(values).not.toHaveProperty("snapshot");
+    }
+  });
+});
+
+describe("runReservedLabRun — falhas encerram o run em estado terminal", () => {
+  it("erro do provider finaliza failed com erro sanitizado e 1 envelope", async () => {
+    const state = newInvokerState();
+    state.failWith = new Error("falha do provider com Bearer sk-abc123456789");
+
+    const result = await runReservedLabRun(runParams(state));
+
+    expect(result.status).toBe("failed");
+    expect(state.calls).toBe(1);
+    const finalUpdate = labRunUpdates().find((values) => values.status === "failed");
+    expect(finalUpdate).toMatchObject({ status: "failed", error_type: "provider_error" });
+    expect(finalUpdate?.error_message).not.toContain("sk-");
+    expect(finalUpdate?.error_message).toContain("[redacted]");
+    expect(typeof finalUpdate?.finished_at).toBe("string");
+  });
+
+  it("falha de persistência do artefato finaliza failed com artifact_persistence_failed", async () => {
+    const state = newInvokerState();
+    mockPersistOutputArtifact.mockRejectedValue(new Error("upload down"));
+
+    const result = await runReservedLabRun(runParams(state));
+
+    expect(result.status).toBe("failed");
+    expect(state.calls).toBe(1);
+    expect(labRunUpdates().find((values) => values.status === "failed")).toMatchObject({
+      status: "failed",
+      error_type: ARTIFACT_PERSISTENCE_FAILED,
+    });
+  });
+
+  it("imageBase64 ausente finaliza failed com missing_image_payload", async () => {
+    const state = newInvokerState();
+    state.omitImage = true;
+
+    const result = await runReservedLabRun(runParams(state));
+
+    expect(result.status).toBe("failed");
+    expect(labRunUpdates().find((values) => values.status === "failed")).toMatchObject({
+      status: "failed",
+      error_type: "missing_image_payload",
+    });
+  });
+
+  it("prompt servido divergente do snapshot recusa antes de qualquer chamada paga", async () => {
+    const state = newInvokerState();
+    const wrongLoader = createPromptLoader("conteudo diferente do snapshot");
+
+    const result = await runReservedLabRun(
+      runParams(state, {
+        promptLoader: wrongLoader,
+        imageService: new ImageGenerationService(createNoopImageProvider(), wrongLoader),
+      }),
+    );
+
+    expect(result.status).toBe("failed");
+    expect(state.calls).toBe(0);
+    expect(labRunUpdates().find((values) => values.status === "failed")).toMatchObject({
+      error_type: "prompt_snapshot_mismatch",
+    });
+  });
+
+  it("garante estado terminal no finally quando a transição do catch falha", async () => {
+    const state = newInvokerState();
+    state.failWith = new Error("provider boom");
+    // markRunRunning ok -> finalize do catch falha -> finalize do finally ok.
+    client.updateResults = [
+      { data: null, error: null },
+      { data: null, error: { message: "db down" } },
+      { data: null, error: null },
+    ];
+
+    const result = await runReservedLabRun(runParams(state));
+
+    expect(result.status).toBe("failed");
+    const updates = labRunUpdates();
+    expect(updates[updates.length - 1]).toMatchObject({
+      status: "failed",
+      error_type: LAB_RUN_ABORTED,
+    });
+  });
+
+  it("erro de reserva não dispara nenhuma invocação nem transição de run", async () => {
+    const state = newInvokerState();
+    client.rpcResult = { data: null, error: { message: "budget_exceeded" } };
+
+    const rejection = await executeLabRun(executeParams(state)).catch((err: unknown) => err);
+
+    expect(rejection).toBeInstanceOf(LabReservationError);
+    expect((rejection as LabReservationError).code).toBe("budget_exceeded");
+    expect(state.calls).toBe(0);
+    expect(labRunUpdates()).toHaveLength(0);
+  });
+});
+
+describe("executeLabRun — composição", () => {
+  it("executa o run reservado e devolve succeeded não idempotente", async () => {
+    const state = newInvokerState();
+
+    const result = await executeLabRun(executeParams(state));
+
+    expect(result).toEqual({ runId: RUN_ID, status: "succeeded", idempotent: false });
+    expect(state.calls).toBe(1);
+  });
+
+  it("reserva idempotente devolve pending e NÃO executa", async () => {
+    const state = newInvokerState();
+    client.rpcResult = { data: { success: true, idempotent: true, run_id: RUN_ID }, error: null };
+
+    const result = await executeLabRun(executeParams(state));
+
+    expect(result).toEqual({ runId: RUN_ID, status: "pending", idempotent: true });
+    expect(state.calls).toBe(0);
+    expect(client.updateCalls.filter((call) => call.table === "lab_runs")).toHaveLength(0);
   });
 });
