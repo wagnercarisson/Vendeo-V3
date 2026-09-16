@@ -246,12 +246,12 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 
 ## Phase 48.1 — Laboratório Mínimo de IA
 
-**Status:** EM EXECUÇÃO ◆ — 1/14 plans (9 waves); fonte da verdade `openspec/changes/fase-48-1-laboratorio-ia-minimo/` (proposal / design D1–D18 / 9 specs / tasks 48-1-01..48-1-14); **48-1-01 concluído** (migration local das 8 tabelas `lab_*` + bucket `lab-artifacts` + RLS/grants + triggers de imutabilidade + RPCs `lab_reserve_run`/`lab_create_experiment`; ainda **não** aplicada no remoto — push deliberado no 48-1-14).
+**Status:** EM EXECUÇÃO ◆ — 2/14 plans (9 waves); fonte da verdade `openspec/changes/fase-48-1-laboratorio-ia-minimo/` (proposal / design D1–D18 / 9 specs / tasks 48-1-01..48-1-14); **48-1-01 concluído** (migration local das 8 tabelas `lab_*` + bucket `lab-artifacts` + RLS/grants + triggers de imutabilidade + RPCs `lab_reserve_run`/`lab_create_experiment`; ainda **não** aplicada no remoto — push deliberado no 48-1-14); **48-1-02 concluído** (guarda de ambiente fail-closed com 5 motivos, constantes de limite travadas, env vars em `.env.example` e gate de arquitetura cobrindo `src/lib/lab/**`).
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
 | 48-1-01 | 1 | ✅ | Trackings (verificação de resíduos) + migration local: 8 tabelas `lab_*`, bucket `lab-artifacts`, RLS/grants, triggers de imutabilidade e RPCs `lab_reserve_run`/`lab_create_experiment` |
-| 48-1-02 | 1 | ○ | Guarda de ambiente fail-closed (`environment-guard`), constantes de limite, env vars e gate de arquitetura |
+| 48-1-02 | 1 | ✅ | Guarda de ambiente fail-closed (`environment-guard`), constantes de limite, env vars e gate de arquitetura |
 | 48-1-03 | 2 | ○ | Cenários controlados: schema Zod, fixtures (3 cenários de oferta) e serviço de bootstrap/hash |
 | 48-1-04 | 2 | ○ | Domínio de experimentos prompt-only: schemas, criação com 2 variantes, transições e congelamento |
 | 48-1-05 | 3 | ○ | Harness de gateway: `buildDirectorPrompt`, `LabModelResolver`, `LabPromptLoader`, `LabTelemetrySink` e runtime single-shot |

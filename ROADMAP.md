@@ -222,7 +222,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - **Fonte da verdade:** `openspec/changes/fase-47-catalogo-e-selecao-de-modelos-admin/`
   - **Status:** 8/8 plans — concluída (Change B; 287 files / 2782 testes, 4 gates verdes, UAT local aprovado, migration remota verificada, deploy pós-cleanup Ready, env-vars obsoletas removidas, fluxo feliz validado em produção)
 
-- [ ] Phase 48.1: Laboratório Mínimo de IA (em execução — 1/14 plans; fonte `openspec/changes/fase-48-1-laboratorio-ia-minimo/`)
+- [ ] Phase 48.1: Laboratório Mínimo de IA (em execução — 2/14 plans; fonte `openspec/changes/fase-48-1-laboratorio-ia-minimo/`)
   - **Bancada experimental interna isolada** (`/admin/laboratorio` + `/api/admin/laboratorio`) para comparar **baseline × candidata** com **prompt** como única dimensão (F48.1 é prompt-only; `model`/`configuration` ficam para F48.2) e **modelo fixo e idêntico** entre as variantes, sem tocar a produção
   - **Guarda de ambiente fail-closed** (somente Supabase local: flag `VENDEO_LAB_ENABLED`, allowlist `VENDEO_LAB_ALLOWED_SUPABASE_HOSTS`, bloqueio de hosts de produção) + isolamento absoluto (tabelas/bucket próprios `lab_*`/`lab-artifacts`, sem `generation_events`, `ai_model_selection`, campanhas, créditos, prompts oficiais ou `admin_audit_log`)
   - **Migration local-first** (8 tabelas + bucket privado + RLS service_role + triggers de imutabilidade + RPC `lab_reserve_run` de reserva atômica) → UAT local → **migration remota deliberada após a UAT** (schema remoto inerte, `VENDEO_LAB_ENABLED=false` em produção) — D16
@@ -232,7 +232,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - **Sem mudança de superfície externa:** UI/form do lojista, contrato HTTP de geração, schema público, snapshot/domínio, prompts oficiais, catálogo/seleção e telemetria produtiva intactos
   - **Fonte da verdade:** `openspec/changes/fase-48-1-laboratorio-ia-minimo/` (proposal / design D1–D18 / 9 specs / tasks 48-1-01..48-1-14)
   - **Dependências:** F46 (gateway/adapters/seams), F47 (catálogo/seleção como allowlist de leitura), F43 (`brief_review_confirmed` — validação de visão dispensada), F38.x (custos/`CostResolution`)
-  - **Status:** 1/14 plans — em execução (48-1-01 concluído; 13 plans restantes em 9 waves)
+  - **Status:** 2/14 plans — em execução (48-1-01 e 48-1-02 concluídos; 12 plans restantes em 9 waves)
 </details>
 
 ## Progress
@@ -289,7 +289,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 45. Briefing Contextual do Diretor de Arte | v1.5 | 8/8 | ✅ Complete | 2026-09-05 |
 | 46. Gateway Único de IA e Registry de Modelos | v1.5 | 9/9 | ✅ Complete | 2026-09-13 |
 | 47. Catálogo e Seleção de Modelos Admin | v1.5 | 8/8 | ✅ Complete | 2026-09-15 |
-| 48.1. Laboratório Mínimo de IA | v1.5 | 1/14 | ◆ In Progress | — |
+| 48.1. Laboratório Mínimo de IA | v1.5 | 2/14 | ◆ In Progress | — |
 | —. Monetização pública / Stripe (diferida, v1.7+) | v1.7 | — | Fora da numeração | — |
 
 ---
