@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { OPERATION_KEYS } from "@/lib/credit/types";
 import { ECONOMIC_PARAMETER_KEYS } from "@/lib/economic/types";
+import { CreateLabExperimentInputSchema } from "@/lib/lab/domain/schemas";
+import { MAX_REPETITIONS } from "@/lib/lab/limits";
 
 export const GrantCreditsRequestSchema = z.object({
   storeId: z.string().uuid(),
@@ -242,3 +244,67 @@ export interface AdminAuditLogEntry {
   metadata: Record<string, unknown>;
   createdAt: string;
 }
+
+// ─── Laboratório de IA (F48.1, D11) ──────────────────────────────────────────
+// Schemas da superfície administrativa do laboratório. Anexados ao final do
+// arquivo: nenhum schema pré-existente é alterado. As validações de domínio
+// (dimensão prompt-only, limites de cenários/repetições, snapshot de prompt)
+// vivem em `@/lib/lab/domain/schemas` e são reutilizadas aqui — nunca duplicadas.
+
+/**
+ * Criação de experimento prompt-only. Reexporta o schema de domínio do
+ * laboratório (48-1-04): nome/objetivo/hipótese, `changedDimension` restrito a
+ * `prompt`, alvo de modelo fixo, `params` com `skipInputValidation: true`,
+ * `repetitions`/`maxRuns`/`scenarioVersionIds` dentro dos limites travados e
+ * `baseline`/`candidate` (prompt oficial × override).
+ */
+export const LabExperimentCreateRequestSchema = CreateLabExperimentInputSchema;
+
+export type LabExperimentCreateRequest = z.infer<typeof LabExperimentCreateRequestSchema>;
+
+/**
+ * Execução de **um** run. O campo `confirmed` é literalmente `true`, tornando a
+ * confirmação explícita parte do contrato (sem ela a rota responde 422 e nenhuma
+ * chamada paga é iniciada) e `operationId` UUID é o identificador idempotente.
+ */
+export const LabRunExecuteRequestSchema = z
+  .object({
+    variantId: z.string().uuid(),
+    scenarioVersionId: z.string().uuid(),
+    repetitionIndex: z.number().int().min(1).max(MAX_REPETITIONS),
+    supersedesRunId: z.string().uuid().nullable().optional(),
+    confirmed: z.literal(true),
+    operationId: z.string().uuid(),
+  })
+  .strict();
+
+export type LabRunExecuteRequest = z.infer<typeof LabRunExecuteRequestSchema>;
+
+/**
+ * Registro da avaliação humana. Exige os **runs efetivamente comparados**
+ * (`baselineRunId`/`candidateRunId`) e a ordem cega opcional; dois runs iguais
+ * são rejeitados com o código de ids distintos. A validação de que os runs
+ * pertencem ao mesmo experimento/cenário e aos papéis corretos é do serviço de
+ * avaliação.
+ */
+export const LabEvaluationRequestSchema = z
+  .object({
+    scenarioVersionId: z.string().uuid(),
+    baselineRunId: z.string().uuid(),
+    candidateRunId: z.string().uuid(),
+    verdict: z.enum(["baseline", "candidate", "tie", "none"]),
+    blindOrder: z.enum(["baseline_left", "candidate_left"]).optional(),
+    observation: z.string().max(4000).optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.baselineRunId === value.candidateRunId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["candidateRunId"],
+        message: "run_ids_must_differ",
+      });
+    }
+  });
+
+export type LabEvaluationRequest = z.infer<typeof LabEvaluationRequestSchema>;
