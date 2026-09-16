@@ -57,6 +57,9 @@ const MIME_EXTENSION: Record<LabArtifactMimeType, string> = {
 /** Prefixo canônico dos paths do laboratório. */
 const LAB_PATH_PREFIX = "experiments";
 
+/** TTL da URL assinada de leitura (D10) — decidido no servidor, nunca pela UI. */
+export const LAB_SIGNED_URL_TTL_SECONDS = 3600;
+
 /** Formato de UUID aceito nos segmentos de path. */
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -66,6 +69,8 @@ const INVALID_ARTIFACT_PATH = "invalid_artifact_path";
 const EMPTY_ARTIFACT_BUFFER = "empty_artifact_buffer";
 const UNSUPPORTED_ARTIFACT_MIME_TYPE = "unsupported_artifact_mime_type";
 const ARTIFACT_LIST_FAILED = "artifact_list_failed";
+const MISSING_ARTIFACT_PATH = "missing_artifact_path";
+const ARTIFACT_SIGNED_URL_FAILED = "artifact_signed_url_failed";
 
 /**
  * Token do bucket de imagens de campanha montado em runtime: o literal é
@@ -279,4 +284,67 @@ export async function listRunArtifacts(params: {
       createdAt: row.created_at as string,
     };
   });
+}
+
+// ─── Leitura por URL assinada (D10/T-48-1-41) ────────────────────────────────
+
+/**
+ * Gera uma URL assinada server-side de curta duração para leitura do artefato.
+ *
+ * O bucket permanece **privado** — nenhuma leitura pública é possível. O path é
+ * validado por `assertLabArtifactPath` antes de qualquer assinatura e o TTL é a
+ * constante do servidor (a UI/API nunca escolhe o TTL).
+ */
+export async function createArtifactSignedUrl(params: {
+  client: SupabaseClient;
+  storagePath: string;
+}): Promise<string> {
+  const { client, storagePath } = params;
+
+  if (!storagePath || storagePath.length === 0) {
+    throw new Error(MISSING_ARTIFACT_PATH);
+  }
+
+  assertLabArtifactPath(storagePath);
+
+  const { data, error } = await client.storage
+    .from(LAB_ARTIFACT_BUCKET)
+    .createSignedUrl(storagePath, LAB_SIGNED_URL_TTL_SECONDS);
+
+  if (error || !data || !data.signedUrl) {
+    throw new Error(ARTIFACT_SIGNED_URL_FAILED);
+  }
+
+  return data.signedUrl;
+}
+
+/**
+ * Resolve um mapa `storagePath → signedUrl` em paralelo. Um path inválido ou que
+ * falhe na assinatura **não** derruba os demais: o problema fica ausente do mapa
+ * (o chamador exibe o artefato sem URL). Usado pelo detalhe do run e pela
+ * comparação lado a lado (48-1-08/48-1-10).
+ */
+export async function createArtifactSignedUrls(params: {
+  client: SupabaseClient;
+  storagePaths: string[];
+}): Promise<Record<string, string>> {
+  const { client, storagePaths } = params;
+  const uniquePaths = Array.from(new Set(storagePaths));
+
+  const resolved = await Promise.all(
+    uniquePaths.map(async (storagePath): Promise<[string, string] | null> => {
+      try {
+        const signedUrl = await createArtifactSignedUrl({ client, storagePath });
+        return [storagePath, signedUrl];
+      } catch {
+        return null;
+      }
+    }),
+  );
+
+  const signedUrls: Record<string, string> = {};
+  for (const entry of resolved) {
+    if (entry) signedUrls[entry[0]] = entry[1];
+  }
+  return signedUrls;
 }

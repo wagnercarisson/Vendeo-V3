@@ -7,10 +7,13 @@ import {
   LAB_ALLOWED_ARTIFACT_MIME_TYPES,
   LAB_ARTIFACT_BUCKET,
   LAB_OUTPUT_ARTIFACT_KIND,
+  LAB_SIGNED_URL_TTL_SECONDS,
   assertLabArtifactPath,
   buildInputArtifactPath,
   buildOutputArtifactPath,
   computeArtifactChecksum,
+  createArtifactSignedUrl,
+  createArtifactSignedUrls,
   listRunArtifacts,
   persistOutputArtifact,
 } from "../artifact-service";
@@ -108,6 +111,7 @@ class FakeSupabaseClient {
   readonly storageFromCalls: string[] = [];
   readonly uploadCalls: Array<{ bucket: string; path: string; options: unknown }> = [];
   readonly removeCalls: Array<{ bucket: string; paths: string[] }> = [];
+  readonly signedUrlCalls: Array<{ bucket: string; path: string; expiresIn: number }> = [];
   readonly insertCalls: Array<{ table: string; values: Record<string, unknown> }> = [];
   readonly selectCalls: Array<{ table: string; columns: string }> = [];
   readonly eqCalls: Array<{ column: string; value: unknown }> = [];
@@ -116,9 +120,11 @@ class FakeSupabaseClient {
 
   uploadResult: FakeResult = { data: { path: "ok" }, error: null };
   removeResult: FakeResult = { data: [], error: null };
+  signedUrlResult: FakeResult = { data: { signedUrl: "https://signed.test/art" }, error: null };
   insertResult: FakeResult = { data: { id: "artifact-1" }, error: null };
   selectResult: FakeResult = { data: [], error: null };
   removeThrows = false;
+  signedUrlFailsForPaths: string[] = [];
 
   readonly storage = {
     from: (bucket: string) => {
@@ -132,6 +138,13 @@ class FakeSupabaseClient {
           this.removeCalls.push({ bucket, paths });
           if (this.removeThrows) return Promise.reject(new Error("remove boom"));
           return Promise.resolve(this.removeResult);
+        },
+        createSignedUrl: (path: string, expiresIn: number) => {
+          this.signedUrlCalls.push({ bucket, path, expiresIn });
+          if (this.signedUrlFailsForPaths.includes(path)) {
+            return Promise.resolve({ data: null, error: { message: "sign boom" } });
+          }
+          return Promise.resolve(this.signedUrlResult);
         },
       };
     },
@@ -449,6 +462,83 @@ describe("listRunArtifacts", () => {
     await expect(listRunArtifacts({ client: asClient(fake), runId: RUN_ID })).rejects.toThrow(
       "artifact_list_failed",
     );
+  });
+});
+
+// ─── Leitura por URL assinada ────────────────────────────────────────────────
+
+describe("createArtifactSignedUrl", () => {
+  it("assina no bucket lab-artifacts com TTL de 3600s", async () => {
+    const fake = new FakeSupabaseClient();
+    const storagePath = `experiments/${EXPERIMENT_ID}/runs/${RUN_ID}/output.png`;
+
+    const url = await createArtifactSignedUrl({ client: asClient(fake), storagePath });
+
+    expect(url).toBe("https://signed.test/art");
+    expect(fake.signedUrlCalls).toHaveLength(1);
+    expect(fake.signedUrlCalls[0].bucket).toBe("lab-artifacts");
+    expect(fake.signedUrlCalls[0].path).toBe(storagePath);
+    expect(fake.signedUrlCalls[0].expiresIn).toBe(3600);
+    expect(LAB_SIGNED_URL_TTL_SECONDS).toBe(3600);
+  });
+
+  it("lança missing_artifact_path para path vazio sem chamar o storage", async () => {
+    const fake = new FakeSupabaseClient();
+    await expect(
+      createArtifactSignedUrl({ client: asClient(fake), storagePath: "" }),
+    ).rejects.toThrow("missing_artifact_path");
+    expect(fake.signedUrlCalls).toHaveLength(0);
+    expect(fake.storageFromCalls).toHaveLength(0);
+  });
+
+  it("lança artifact_signed_url_failed quando a assinatura falha", async () => {
+    const fake = new FakeSupabaseClient();
+    fake.signedUrlResult = { data: null, error: { message: "sign boom" } };
+    await expect(
+      createArtifactSignedUrl({
+        client: asClient(fake),
+        storagePath: `experiments/${EXPERIMENT_ID}/runs/${RUN_ID}/output.png`,
+      }),
+    ).rejects.toThrow("artifact_signed_url_failed");
+  });
+
+  it("não aceita path do bucket de campanhas", async () => {
+    const fake = new FakeSupabaseClient();
+    await expect(
+      createArtifactSignedUrl({
+        client: asClient(fake),
+        storagePath: "campaign-images/store-1/campaign.jpg",
+      }),
+    ).rejects.toThrow("invalid_artifact_path");
+    expect(fake.signedUrlCalls).toHaveLength(0);
+  });
+});
+
+describe("createArtifactSignedUrls", () => {
+  it("devolve apenas os paths resolvidos e tolera uma falha entre dois", async () => {
+    const fake = new FakeSupabaseClient();
+    const okPath = `experiments/${EXPERIMENT_ID}/runs/${RUN_ID}/output.png`;
+    const failingPath = `experiments/${EXPERIMENT_ID}/runs/${RUN_ID}/output.jpg`;
+    fake.signedUrlFailsForPaths = [failingPath];
+
+    const map = await createArtifactSignedUrls({
+      client: asClient(fake),
+      storagePaths: [okPath, failingPath],
+    });
+
+    expect(map).toEqual({ [okPath]: "https://signed.test/art" });
+    expect(fake.signedUrlCalls).toHaveLength(2);
+  });
+
+  it("deduplica paths repetidos", async () => {
+    const fake = new FakeSupabaseClient();
+    const okPath = `experiments/${EXPERIMENT_ID}/runs/${RUN_ID}/output.png`;
+    const map = await createArtifactSignedUrls({
+      client: asClient(fake),
+      storagePaths: [okPath, okPath],
+    });
+    expect(Object.keys(map)).toEqual([okPath]);
+    expect(fake.signedUrlCalls).toHaveLength(1);
   });
 });
 
