@@ -4,10 +4,10 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { PageHeader } from "@/components/ui/page-header";
 import {
-  listScenarioVersions as readScenarioVersions,
+  listScenarioVersions,
   type LabScenarioVersionSummary,
 } from "@/lib/lab/api/experiment-queries";
-import { getLabEnvironment as readLabEnvironment } from "@/lib/lab/environment-guard";
+import { getLabEnvironment } from "@/lib/lab/environment-guard";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 import { DisabledNotice } from "../_components/disabled-notice";
@@ -42,7 +42,7 @@ const HEAD_CLASS =
   "px-3 py-2 font-heading text-xs uppercase tracking-wider text-text-muted";
 
 export default async function LaboratorioCenariosPage() {
-  const env = readLabEnvironment();
+  const env = getLabEnvironment();
   if (!env.enabled) {
     return <DisabledNotice reason={env.reason} />;
   }
@@ -51,7 +51,7 @@ export default async function LaboratorioCenariosPage() {
   let readFailed = false;
 
   try {
-    scenarios = await readScenarioVersions(supabaseAdmin);
+    scenarios = await listScenarioVersions(supabaseAdmin);
   } catch {
     readFailed = true;
   }

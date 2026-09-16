@@ -8,7 +8,7 @@ import {
   type LabScenarioVersionSummary,
 } from "@/lib/lab/api/experiment-queries";
 import { PROMPT_UNDER_TEST } from "@/lib/lab/domain/prompt-snapshot";
-import { getLabEnvironment as readLabEnvironment } from "@/lib/lab/environment-guard";
+import { getLabEnvironment } from "@/lib/lab/environment-guard";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 import { DisabledNotice } from "../../_components/disabled-notice";
@@ -26,7 +26,7 @@ import { ExperimentForm } from "../../_components/experiment-form";
 export const dynamic = "force-dynamic";
 
 export default async function NovoExperimentoPage() {
-  const env = readLabEnvironment();
+  const env = getLabEnvironment();
   if (!env.enabled) {
     return <DisabledNotice reason={env.reason} />;
   }

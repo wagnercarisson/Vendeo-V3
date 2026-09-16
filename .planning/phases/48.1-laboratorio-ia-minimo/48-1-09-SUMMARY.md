@@ -27,7 +27,7 @@ tech-stack:
   added: []
   patterns:
     - "Primitivos locais do laboratório com elementos nativos semânticos (`<select>`, `<textarea>`, `<table>`, `<input type=\"radio\">`, `<dialog>`) — `src/components/ui/` intocado (10 arquivos)"
-    - "Guarda de ambiente fail-closed avaliada antes de qualquer leitura em cada página (`readLabEnvironment()`), com `DisabledNotice` como única saída quando recusa"
+    - "Guarda de ambiente fail-closed avaliada antes de qualquer leitura em cada página (`getLabEnvironment()`), com `DisabledNotice` como única saída quando recusa"
     - "Barreira financeira em 3 etapas na UI: estimativa exibida → `ConfirmDialog` obrigatório → `POST` com `confirmed: true` e `operationId` reutilizado por fingerprint do payload"
     - "Leitura de NDJSON no cliente com `response.body.getReader()` + `TextDecoder`, acumulando por linha e distinguindo o ramo JSON idempotente pela `Content-Type` (`x-ndjson`)"
 
@@ -54,7 +54,7 @@ key-files:
 
 key-decisions:
   - "Sub-navegação interna via `<nav>` + 3 `<Link>` em vez do primitivo `tabs` do UI-SPEC: sem consumidor real, criar o componente seria escopo morto (o UI-SPEC já registra a omissão)"
-  - "Imports nomeados com alias (`getLabEnvironment as readLabEnvironment`, `listScenarioVersions as readScenarioVersions`) para que os critérios de aceitação de contagem literal ('1 ocorrência por arquivo') valham sem renunciar ao import nomeado"
+  - "Imports nomeados **sem alias** (convenção do repositório); os critérios de contagem literal do plano foram corrigidos para ≥1 ocorrência (import + chamada) em vez de aliasar o import para 'ganhar' o grep"
   - "Badges usam apenas as variantes `ready`/`default`/`error` do primitivo existente — a variante `generating` contém a substring 'rating' e violaria a varredura plan-level `score|nota|publicável|rating`"
   - "`operationId` UUID em estado com fingerprint do payload: reutilizado em retry da mesma ação e renovado quando variante/cenário/repetição mudam (idempotência sem bloquear a reexecução intencional)"
   - "O CTA 'Novo experimento' é um `<Link>` com as classes do botão primário (`accent.green`), porque o primitivo `Button` do projeto não implementa `asChild` e o aninhamento de interativos é inválido"
@@ -119,7 +119,7 @@ Each task was committed atomically:
 ## Decisions Made
 
 - **`tabs` não criado:** o UI-SPEC lista um primitivo `tabs`, mas nenhuma tela o consome (a sub-navegação usa `<nav>`+`<Link>`); criar componente sem consumidor seria escopo morto — a omissão já está registrada no UI-SPEC.
-- **Alias de import para critério literal:** os critérios de aceitação exigem "1 ocorrência por arquivo" de `getLabEnvironment` (e "1 chamada" de `listScenarioVersions`). Como import + chamada produzem 2 linhas, o import nomeado foi aliasado (`getLabEnvironment as readLabEnvironment`) preservando a convenção de import nomeado do repositório e fazendo o critério valer literalmente.
+- **Imports normalizados (correção pós-execução):** os critérios de aceitação exigiam "1 ocorrência por arquivo" de `getLabEnvironment` (e "1 chamada" de `listScenarioVersions`); a execução havia **aliasado** os imports (`getLabEnvironment as readLabEnvironment`, `listScenarioVersions as readScenarioVersions`) só para satisfazer a contagem literal. Normalizado para imports nomeados sem alias (convenção do repositório) e os critérios do plano corrigidos para **≥1 ocorrência** (import + chamada) — a intenção real é "a guarda precede as leituras". 24 testes, `tsc`, `lint` e `build` verdes após a normalização.
 - **Variante de badge:** `running`/`pending` usam a variante `default` (a variante `generating` contém a substring "rating", que a varredura plan-level proíbe).
 - **`Button asChild` inexistente:** o CTA primário é um `<Link>` estilizado com as classes do botão primário, evitando interativo aninhado.
 - **Ramo idempotente:** resposta 200 JSON (sem `x-ndjson`) exibe o `runId` já existente sem nova chamada paga.

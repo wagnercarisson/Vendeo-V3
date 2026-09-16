@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { getLabEnvironment as readLabEnvironment } from "@/lib/lab/environment-guard";
+import { getLabEnvironment } from "@/lib/lab/environment-guard";
 
 import { DisabledNotice } from "./_components/disabled-notice";
 
@@ -27,7 +27,7 @@ export default function LaboratorioLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const env = readLabEnvironment();
+  const env = getLabEnvironment();
 
   if (!env.enabled) {
     return <DisabledNotice reason={env.reason} />;

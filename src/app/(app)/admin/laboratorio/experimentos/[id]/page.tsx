@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { ErrorState } from "@/components/ui/error-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { getExperimentDetail } from "@/lib/lab/api/experiment-queries";
-import { getLabEnvironment as readLabEnvironment } from "@/lib/lab/environment-guard";
+import { getLabEnvironment } from "@/lib/lab/environment-guard";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 import { DisabledNotice } from "../../_components/disabled-notice";
@@ -87,7 +87,7 @@ export default async function ExperimentoDetalhePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const env = readLabEnvironment();
+  const env = getLabEnvironment();
   if (!env.enabled) {
     return <DisabledNotice reason={env.reason} />;
   }
