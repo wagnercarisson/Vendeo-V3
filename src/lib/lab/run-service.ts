@@ -251,6 +251,10 @@ export async function finalizeLabRun(params: {
  * causa do índice único parcial global de run ativo.
  *
  * É chamada na leitura (detalhe do experimento), nunca por agendamento.
+ *
+ * O `UPDATE` reaplica **atomicamente** o estado de origem e o cutoff de
+ * `coalesce(started_at, created_at)` — a seleção prévia serve apenas para o
+ * curto-circuito e o filtro autoritativo roda no próprio update.
  */
 export async function reconcileStaleRuns(params: {
   client: SupabaseClient;
@@ -281,29 +285,55 @@ export async function reconcileStaleRuns(params: {
     return { reconciled: 0 };
   }
 
-  // O update reaplica o filtro de estado ativo e conta **apenas as linhas
-  // efetivamente alteradas**: um run que terminou entre o select e o update (ou
-  // que já foi reconciliado) é excluído pelo próprio filtro — nunca sobrescrito.
-  const { data: changed, error: updateError } = await params.client
+  const staleIds = stale.map((row) => row.id);
+  const cutoffIso = new Date(cutoffMs).toISOString();
+  const terminal = {
+    status: "failed",
+    error_type: "orphan_run_timeout",
+    error_message: "Run órfão marcado como falho",
+    finished_at: now.toISOString(),
+  };
+
+  // O update **reaplica atomicamente** o estado de origem **e** o cutoff de
+  // `coalesce(started_at, created_at)` — o filtro roda no próprio `UPDATE`.
+  // Fecha a corrida em que um run `pending` antigo é promovido a `running` com
+  // `started_at` recente entre o select e o update: ele deixa de casar o cutoff
+  // e **não** é reconciliado (o executor continua dono do run, sem liberar o
+  // índice global por baixo de uma chamada paga em andamento).
+  //
+  // O `coalesce` é expresso por dois ramos mutuamente exclusivos de estado:
+  //  - `running`  ⇒ `started_at` sempre definido por `markRunRunning`;
+  //  - `pending`  ⇒ `started_at` nulo (inserido pela reserva) e `created_at` é a referência.
+  const runningResult = await params.client
     .from("lab_runs")
-    .update({
-      status: "failed",
-      error_type: "orphan_run_timeout",
-      error_message: "Run órfão marcado como falho",
-      finished_at: now.toISOString(),
-    })
-    .in(
-      "id",
-      stale.map((row) => row.id),
-    )
-    .in("status", ["pending", "running"])
+    .update(terminal)
+    .in("id", staleIds)
+    .eq("status", "running")
+    .lt("started_at", cutoffIso)
     .select("id");
 
-  if (updateError) {
+  if (runningResult.error) {
     throw new Error(LAB_RUN_RECONCILE_FAILED);
   }
 
-  return { reconciled: Array.isArray(changed) ? changed.length : 0 };
+  const pendingResult = await params.client
+    .from("lab_runs")
+    .update(terminal)
+    .in("id", staleIds)
+    .eq("status", "pending")
+    .is("started_at", null)
+    .lt("created_at", cutoffIso)
+    .select("id");
+
+  if (pendingResult.error) {
+    throw new Error(LAB_RUN_RECONCILE_FAILED);
+  }
+
+  const reconciled =
+    (Array.isArray(runningResult.data) ? runningResult.data.length : 0) +
+    (Array.isArray(pendingResult.data) ? pendingResult.data.length : 0);
+
+  return { reconciled };
 }
 
 // ─── Execução real e focada (D7/D8) ──────────────────────────────────────────

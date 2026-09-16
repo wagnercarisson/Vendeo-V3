@@ -160,17 +160,19 @@ O `catch` gravava apenas status/erro; `calls=[]`, custo ausente e sem provider/m
 
 ### HIGH — transições não eram atômicas
 
-`markRunRunning`/`finalizeLabRun` filtravam só por `id` e a reconciliação fazia select-then-update sem CAS. **Fix:** transições **compare-and-set** (`markRunRunning`: `id` + `status='pending'`; `finalizeLabRun`: `id` + `status IN ('pending','running')`) com `.select("id")` exigindo exatamente 1 linha afetada; a reconciliação reaplica `status IN ('pending','running')` no próprio update e conta **apenas as linhas alteradas** (`reconciled = retorno.length`).
+`markRunRunning`/`finalizeLabRun` filtravam só por `id` e a reconciliação fazia select-then-update sem CAS. **Fix:** transições **compare-and-set** (`markRunRunning`: `id` + `status='pending'`; `finalizeLabRun`: `id` + `status IN ('pending','running')`) com `.select("id")` exigindo exatamente 1 linha afetada.
+
+**Refinamento (2ª rodada de revisão):** a reconciliação reaplicava apenas o estado ativo no update — o **cutoff** não era reaplicado, deixando uma corrida (run `pending` antigo promovido a `running` com `started_at` recente entre o select e o update ainda era marcado `failed`, liberando o índice global por baixo de uma execução em andamento). **Fix:** o cutoff de `coalesce(started_at, created_at)` é reaplicado **atomicamente no próprio update**, expresso por dois ramos mutuamente exclusivos de estado — `status='running' AND started_at < cutoff` e `status='pending' AND started_at IS NULL AND created_at < cutoff` — cada um com `.select("id")`; `reconciled` soma apenas as linhas efetivamente alteradas. Teste da corrida espera `reconciled: 0`.
 
 ### WARNING — MIME e dimensões podiam ficar incorretos
 
 `resolveArtifactMimeType` defaultava para PNG e o erro do update de dimensões era ignorado. **Fix:** a validação técnica roda **antes** da persistência; o MIME é derivado dos **bytes** (`resolveArtifactMimeType(validation)`) e restrito à allowlist — fora dela/indecodificável → `unsupported_artifact_mime_type` sem persistir; MIME + dimensões entram numa **única** operação de persistência (sem update separado). A ordem das fases passou a ser `validation → artifact`.
 
-**Testes adicionados (+8):** evento `error` sanitizado (sem token/URL); evidência preservada nas 3 falhas (provider, imagem ausente, artefato) com `calls`/custo/usage/provider/attempts; MIME real fora da allowlist → `unsupported_artifact_mime_type` com zero `persistOutputArtifact`; CAS de `markRunRunning` e `finalizeLabRun` (0 linhas → `lab_run_transition_failed`); reconciliação contando apenas as linhas alteradas; persistência com MIME+dimensões numa única chamada (sem update de `lab_artifacts`).
+**Testes adicionados (+9):** evento `error` sanitizado (sem token/URL); evidência preservada nas 3 falhas (provider, imagem ausente, artefato) com `calls`/custo/usage/provider/attempts; MIME real fora da allowlist → `unsupported_artifact_mime_type` com zero `persistOutputArtifact`; CAS de `markRunRunning` e `finalizeLabRun` (0 linhas → `lab_run_transition_failed`); reconciliação contando apenas as linhas alteradas; reconciliação reaplicando o cutoff (corrida `pending` antigo → `running` recente → `reconciled: 0`); persistência com MIME+dimensões numa única chamada (sem update de `lab_artifacts`).
 
-**Source-of-truth sincronizada:** `design.md` (D14 — CAS, evidência na falha, MIME real, stream sanitizado), `specs/lab-runs/spec.md` (+4 cenários) e `48-1-07-PLAN.md` (Task 2/3, testes, T-48-1-58..61).
+**Source-of-truth sincronizada:** `design.md` (D14 — CAS, cutoff reaplicado, evidência na falha, MIME real, stream sanitizado), `specs/lab-runs/spec.md` (+5 cenários) e `48-1-07-PLAN.md` (Task 2/3, testes, T-48-1-58..61).
 
-**Verification:** `npx vitest run src/lib/lab src/lib/ai src/lib/image-generation` → exit 0 (**793 testes**, +8); `npx tsc -p tsconfig.typecheck.json --noEmit` → exit 0; `npm.cmd run lint` → exit 0.
+**Verification:** `npx vitest run src/lib/lab src/lib/ai src/lib/image-generation` → exit 0 (**794 testes**, +9); `npx tsc -p tsconfig.typecheck.json --noEmit` → exit 0; `npm.cmd run lint` → exit 0.
 
 ## Issues Encountered
 

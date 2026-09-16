@@ -169,6 +169,12 @@ O run SHALL seguir `pending → running → succeeded | failed | cancelled | tim
 - **THEN** a transição é recusada como falha
 - **AND** um run já terminal nunca é sobrescrito por um executor ou pela reconciliação
 
+#### Scenario: Reconciliação não sobrescreve run promovido recentemente
+
+- **WHEN** um run `pending` antigo é promovido a `running` com `started_at` recente entre a seleção e a transição da reconciliação
+- **THEN** o cutoff reaplicado no próprio update exclui o run e ele não é reconciliado
+- **AND** o índice de run ativo não é liberado por baixo de uma execução em andamento
+
 #### Scenario: Evidência de chamada paga é preservada na falha
 
 - **WHEN** o run falha após uma chamada paga (erro do provider, imagem ausente ou falha de persistência do artefato)

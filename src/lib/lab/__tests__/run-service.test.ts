@@ -78,7 +78,7 @@ interface FakeResult {
 interface RecordedFilter {
   column: string;
   value: unknown;
-  op: "eq" | "in";
+  op: "eq" | "in" | "lt" | "is";
 }
 
 interface RecordedUpdate {
@@ -133,6 +133,16 @@ class FakeQueryBuilder {
     return this;
   }
 
+  lt(column: string, value: unknown): this {
+    this.filters.push({ column, value, op: "lt" });
+    return this;
+  }
+
+  is(column: string, value: unknown): this {
+    this.filters.push({ column, value, op: "is" });
+    return this;
+  }
+
   then<TResult1 = FakeResult, TResult2 = never>(
     onfulfilled?: ((value: FakeResult) => TResult1 | PromiseLike<TResult1>) | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
@@ -142,7 +152,17 @@ class FakeQueryBuilder {
 
   private matches(row: Record<string, unknown>, filter: RecordedFilter): boolean {
     if (filter.op === "eq") return row[filter.column] === filter.value;
-    return (filter.value as unknown[]).includes(row[filter.column]);
+    if (filter.op === "in") return (filter.value as unknown[]).includes(row[filter.column]);
+    if (filter.op === "is") {
+      if (filter.value === null) {
+        return row[filter.column] === null || row[filter.column] === undefined;
+      }
+      return row[filter.column] === filter.value;
+    }
+    // lt — comparação cronológica por parse (ISO 8601).
+    const rowValue = row[filter.column];
+    if (typeof rowValue !== "string" || typeof filter.value !== "string") return false;
+    return Date.parse(rowValue) < Date.parse(filter.value);
   }
 
   private resolve(): FakeResult {
@@ -726,14 +746,30 @@ describe("reconcileStaleRuns — runs órfãos em pending E running", () => {
     const result = await reconcileStaleRuns({ client: client as unknown as SupabaseClient, now: NOW });
 
     expect(result.reconciled).toBe(2);
-    expect(client.appliedUpdates).toHaveLength(1);
-    expect(client.appliedUpdates[0].values).toMatchObject({
-      status: "failed",
-      error_type: "orphan_run_timeout",
-      finished_at: NOW.toISOString(),
-    });
-    const idFilter = client.appliedUpdates[0].filters.find((filter) => filter.column === "id");
-    expect(idFilter?.value).toEqual(["old-pending", "old-running"]);
+    // Dois ramos do coalesce: um update para `running`, um para `pending`.
+    expect(client.appliedUpdates).toHaveLength(2);
+    for (const update of client.appliedUpdates) {
+      expect(update.values).toMatchObject({
+        status: "failed",
+        error_type: "orphan_run_timeout",
+        finished_at: NOW.toISOString(),
+      });
+      const idFilter = update.filters.find((filter) => filter.column === "id");
+      expect(idFilter?.value).toEqual(["old-pending", "old-running"]);
+    }
+    // O cutoff é reaplicado no próprio update (não apenas no select).
+    const runningUpdate = client.appliedUpdates.find((update) =>
+      update.filters.some((filter) => filter.column === "status" && filter.value === "running"),
+    );
+    const pendingUpdate = client.appliedUpdates.find((update) =>
+      update.filters.some((filter) => filter.column === "status" && filter.value === "pending"),
+    );
+    expect(
+      runningUpdate?.filters.some((filter) => filter.column === "started_at" && filter.op === "lt"),
+    ).toBe(true);
+    expect(
+      pendingUpdate?.filters.some((filter) => filter.column === "created_at" && filter.op === "lt"),
+    ).toBe(true);
   });
 
   it("ignora runs recentes (dentro da janela de inatividade)", async () => {
@@ -1099,11 +1135,31 @@ describe("correções de revisão — evidência, sanitização, MIME real e CAS
       { id: "old-running", status: "running", started_at: old, created_at: old },
     ];
     // Entre o select e o update, um dos runs terminou: só 1 linha é alterada.
-    client.updateResults = [{ data: [{ id: "old-pending" }], error: null }];
+    client.updateResults = [
+      { data: [{ id: "old-running" }], error: null },
+      { data: [], error: null },
+    ];
 
     const result = await reconcileStaleRuns({ client: client as unknown as SupabaseClient, now });
 
     expect(result.reconciled).toBe(1);
+  });
+
+  it("não reconcilia run promovido a running recente entre o select e o update", async () => {
+    const now = new Date("2026-09-16T12:00:00.000Z");
+    const old = "2026-09-16T10:00:00.000Z";
+    // O select enxerga o run como `pending` antigo...
+    client.selectRows = [{ id: "raced", status: "pending", started_at: null, created_at: old }];
+    // ...mas no update ele já é `running` com `started_at` recente: o cutoff
+    // reaplicado no próprio update exclui o run (0 linhas alteradas).
+    client.updateResults = [
+      { data: [], error: null },
+      { data: [], error: null },
+    ];
+
+    const result = await reconcileStaleRuns({ client: client as unknown as SupabaseClient, now });
+
+    expect(result.reconciled).toBe(0);
   });
 });
 
