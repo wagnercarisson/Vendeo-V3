@@ -3,24 +3,24 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: â€” LanÃ§amento Externo Controlado â—†
 current_phase: 48.1
-status: in_progress
-last_updated: "2026-09-15T00:00:00.000Z"
-last_activity: 2026-09-15
+status: executing
+last_updated: "2026-09-16T15:12:28.409Z"
+last_activity: 2026-09-16
 progress:
   total_phases: 11
   completed_phases: 10
-  total_plans: 126
-  completed_plans: 112
+  total_plans: 127
+  completed_plans: 113
   percent: 89
 ---
 
 # Project State
 
-**Last updated:** 2026-09-15 — **F48.1 (Laboratório Mínimo de IA, v1.5) EM PLANEJAMENTO** (0/14 plans / 9 waves; CONTEXT, UI-SPEC e planos `48-1-01..48-1-14` gerados a partir de `openspec/changes/fase-48-1-laboratorio-ia-minimo/`; aguardando revisão humana antes da execução); antes: **F47 (Catálogo e Seleção de Modelos Admin, v1.5, Change B) CONCLUÍDA** (8/8 plans, 287 files / 2782 testes, 4 gates verdes, UAT local aprovado, migration remota verificada, deploy de produção Ready; fonte `openspec/changes/fase-47-catalogo-e-selecao-de-modelos-admin/`); F45 concluída e incorporada à branch da F37; F37.1 concluída; **F37.2 realinhada (Correção Única por Não Conformidade) CONCLUÍDA** (19/19 plans, 8 waves, 264 files / 2578 testes, 4 gates verdes, UAT 9/9 PASS, migrations `20260906000001/2/3` no remoto, fix pós-UAT `01a7021b`; fonte `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/`); **37.3 eliminada** (consolidada na 37.2).
+**Last updated:** 2026-09-16 — **F48.1 (Laboratório Mínimo de IA, v1.5) EM EXECUÇÃO** (1/14 plans / 9 waves; plano 48-1-01 concluído — migration local das tabelas/bucket/triggers/RPCs do laboratório, ainda não aplicada no remoto; CONTEXT, UI-SPEC e planos `48-1-01..48-1-14` gerados a partir de `openspec/changes/fase-48-1-laboratorio-ia-minimo/`); antes: **F47 (Catálogo e Seleção de Modelos Admin, v1.5, Change B) CONCLUÍDA** (8/8 plans, 287 files / 2782 testes, 4 gates verdes, UAT local aprovado, migration remota verificada, deploy de produção Ready; fonte `openspec/changes/fase-47-catalogo-e-selecao-de-modelos-admin/`); F45 concluída e incorporada à branch da F37; F37.1 concluída; **F37.2 realinhada (Correção Única por Não Conformidade) CONCLUÍDA** (19/19 plans, 8 waves, 264 files / 2578 testes, 4 gates verdes, UAT 9/9 PASS, migrations `20260906000001/2/3` no remoto, fix pós-UAT `01a7021b`; fonte `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/`); **37.3 eliminada** (consolidada na 37.2).
 **Current phase:** 48.1
-**Last activity:** 2026-09-15
+**Last activity:** 2026-09-16
 
-### Phase 48.1 — Laboratório Mínimo de IA ◆ Planning (0/14 plans / 9 waves)
+### Phase 48.1 — Laboratório Mínimo de IA ◆ In Progress (1/14 plans / 9 waves)
 
 **Goal:** Entregar a menor bancada experimental interna já útil — um simulador isolado da produção, local-first, que executa geração real de imagem sob comando humano, comparando **baseline × candidata** (dimensão única `prompt`, modelo fixo e idêntico) com snapshots imutáveis, validação técnica objetiva (`sharp`) e **avaliação humana** como fonte de qualidade, sem alterar qualquer superfície produtiva.
 
@@ -30,7 +30,7 @@ progress:
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
-| 48-1-01 | 1 | ○ | Trackings (verificação de resíduos) + migration local: 8 tabelas `lab_*`, bucket `lab-artifacts`, RLS/grants, triggers de imutabilidade e RPC `lab_reserve_run` |
+| 48-1-01 | 1 | ✅ | Trackings (verificação de resíduos) + migration local: 8 tabelas `lab_*`, bucket `lab-artifacts`, RLS/grants, triggers de imutabilidade e RPCs `lab_reserve_run`/`lab_create_experiment` |
 | 48-1-02 | 1 | ○ | Guarda de ambiente fail-closed, constantes de limite, env vars e gate de arquitetura |
 | 48-1-03 | 2 | ○ | Cenários controlados: schema Zod, fixtures (3 cenários de oferta) e serviço de bootstrap/hash |
 | 48-1-04 | 2 | ○ | Domínio de experimentos prompt-only: schemas, criação com 2 variantes, transições e congelamento |
@@ -266,7 +266,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 **Core value:** Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confianÃ§a de publicar e que ajude a vender mais.
 
-**Current focus:** Phase 47 — catalogo-e-selecao-de-modelos-admin
+**Current focus:** Phase 48.1 — laboratorio-ia-minimo
 
 ## Completed Milestones
 
@@ -320,6 +320,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 | Phase 38.2.1-economic-snapshot P38-2-1-04 | 15min | 3 tasks | 7 files |
 | Phase 38.2.1-economic-snapshot P38-2-1-05 | 8min | 3 tasks | 9 files |
 | Phase 38.2.1-economic-snapshot P38-2-1-06 | 5min | 3 tasks | 7 files |
+| Phase 48.1 P48-1-01 | 26min | 3 tasks | 3 files |
 
 ### Phase 19 â€” Onboarding & Estados Vazios âœ…
 
@@ -619,8 +620,8 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 47 (catalogo-e-selecao-de-modelos-admin) — COMPLETE
-Plan: 8 of 8 complete
+Phase: 48.1 (laboratorio-ia-minimo) — EXECUTING
+Plan: 2 of 14
 v1.5 em andamento â€” **F37 (RevisÃ£o e AprovaÃ§Ã£o da Arte, v1.5) â€” fatia 37.1 (Approval Gate + Candidata Ãšnica) CONCLUÃDA â€” 15/15 plans, 2379 testes (255 arquivos), 4 gates verdes, UAT 19.5â€“19.10 PASS (6/6)**: flag `campaign_approval_enabled` (fail-closed), tabela `campaign_art_versions` + colunas de aprovaÃ§Ã£o em `campaigns`, RPC `approve_campaign_art_version` transacional, generate-image insere v1 quando a flag ligada, estado `ApprovalDisplayState`/gating (download + copy 403 atÃ© aprovar), tela de revisÃ£o da candidata ativa, rota approve; source of truth `openspec/changes/fase-37-1-approval-gate-candidata-unica/` (decisÃ£o do usuÃ¡rio 2026-09-01). Antes: F43 (RevisÃ£o do Brief PrÃ©-GeraÃ§Ã£o) CONCLUÃDA â€” 15/15 plans, 2317 testes, 4 gates verdes, UAT 9/9 PASS; renumeraÃ§Ã£o D1: F42 = Signup Controlado e Elegibilidade Freemium CONCLUÃDA; F43 = RevisÃ£o do Brief PrÃ©-GeraÃ§Ã£o; Stripe/MonetizaÃ§Ã£o PÃºblica fora da numeraÃ§Ã£o (iniciativa diferida v1.7+, nÃ£o numerada). â€” gate client-side obrigatÃ³rio de revisÃ£o do brief em tela intermediÃ¡ria (`reviewMode`) entre o form e o POST: botÃ£o "Revisar e gerar", compressÃ£o das imagens antes da revisÃ£o (`prepareCampaignImages`), helpers puros `prepareCampaignImages`/`buildCampaignGenerationBody`, resumo completo Produto/Oferta/Imagens/Avisos/Custo + loja/marca + slot Tema reservado (preparaÃ§Ã£o F44), override `brief_review_confirmed` (pula a IA de visÃ£o, fase `input_validation` como `skipped`), flag administrativa mÃ­nima `force_brief_vision_check` na tabela `feature_flags` (tela admin, motivo obrigatÃ³rio, auditoria, fallback de leitura que nÃ£o derruba geraÃ§Ã£o); **renumeraÃ§Ã£o D1: F42 = Signup Controlado e Elegibilidade Freemium CONCLUÃDA; F43 = RevisÃ£o do Brief PrÃ©-GeraÃ§Ã£o; Stripe/MonetizaÃ§Ã£o PÃºblica fora da numeraÃ§Ã£o (iniciativa diferida v1.7+, nÃ£o numerada)**; fonte da verdade `openspec/changes/fase-43-revisao-brief-pre-geracao/`. F42 (Signup) CONCLUÃDA â€” 20/20 plans, 2182 testes, 4 gates verdes, UAT 20.5â€“20.15 PASS. F41 (MÃ­dia de Campanha Mobile) CONCLUÃDA â€” 13/13 plans, 2033 testes, 4 gates verdes, UAT 6/6 (Android em produÃ§Ã£o âœ…; iOS/HEIC pendente). F40 (Campos Comerciais e Avisos do Brief) CONCLUÃDA â€” 9/9 plans, 1997 testes (221 arquivos), 4 gates verdes, UAT humano aprovado 6/6 (1 ajuste de UX: placeholder/helper do texto obrigatÃ³rio). F39 (Brief Estruturado de Campanha) CONCLUÃDA â€” 8/8 plans, 1950 testes, 4 gates verdes, UAT humano aprovado 5/5. F38.2.1 (Snapshot EconÃ´mico) CONCLUÃDA â€” 7/7 plans, 1887 testes, I1-I7 53/53 asserts, UAT aprovado. F38.2 (Admin de Custos Operacionais + ConfiguraÃ§Ãµes EconÃ´micas) CONCLUÃDA â€” 11/11 plans, 1832 testes, verificaÃ§Ã£o I1-I6 em banco real, UAT aprovado. F38.1 (ApuraÃ§Ã£o de Custos de IA por Entrega) CONCLUÃDA â€” 11/11 plans, 1713 testes, UAT validado, **fechada como camada de estimativa operacional granular** (0.065 provisÃ³rio beta; reconciliaÃ§Ã£o financeira real na prÃ³xima fase). F38 (Tabela de Custos por OperaÃ§Ã£o) concluÃ­da â€” 8/8 plans, 1597 testes, UAT 4/4.
 v1.5 em andamento â€” Fases 31.1, 31.2, 31.3, 32, 33, 34, 35, 36, 38 e 38.1 concluÃ­das. F38 (Tabela de Custos por OperaÃ§Ã£o, v1.5) concluÃ­da â€” 8/8 plans, 1597 testes, UAT 4/4; F38.1 (ApuraÃ§Ã£o de Custos de IA por Entrega, desdobramento da F38) **CONCLUÃDA** â€” 11/11 plans, 1713 testes, UAT validado, **fechada como camada de estimativa operacional granular** (ajuste provisÃ³rio da tool image_generation `0.065` = estimativa beta provisÃ³ria, nÃ£o custo real; reconciliaÃ§Ã£o financeira real na prÃ³xima fase), fonte da verdade `openspec/changes/fase-38-1-ai-cost-accounting/`; **F38.2 (Admin de Custos Operacionais + ConfiguraÃ§Ãµes EconÃ´micas, desdobramento da F38) em EXECUÃ‡ÃƒO â€” 10/11 plans** â€” painel `/admin/ai-operation-costs` (KPIs/filtros/tabela/drilldown/segmentos) + `economic_parameters` configurÃ¡veis + badges de confianÃ§a + correÃ§Ã£o `/admin/metrics`, fonte `openspec/changes/fase-38-2-admin-custos-operacionais/`; 38-2-01 âœ… migrations/db push (schema econÃ´mico + RPCs de runs no remoto), 38-2-02 âœ… tipos econÃ´micos + EconomicParameterService fail-open/fail-closed + 10 testes (base das rotas 38-2-04/05/06/09), 38-2-03 âœ… AiCostTracker persiste 4 campos de confianÃ§a (D5), 38-2-04 âœ… API GET/PUT /api/admin/economic-parameters (zod + RPC admin_set_economic_parameter, 200/400/403/500, idempotÃªncia, 9 testes da rota, sem endpoint pÃºblico), 38-2-05 âœ… OperationRunsService server-only (BRL D1/D4 via EconomicParameterService + badges D5 por evento/entrega + segmentaÃ§Ã£o classifySegment D9 com filtro e re-paginaÃ§Ã£o + storeName/owner D3 + 8 agregados D3/D9 sobre o conjunto filtrado inteiro + getRunDetail D4 com BRL/badges/componentes por evento; 20 testes, typecheck/lint limpos), 38-2-06 âœ… API GET /api/admin/ai-operation-runs (lista) + GET /api/admin/ai-operation-runs/[operationRunId] (detalhe) com AiOperationRunsQuerySchema (janela default 90d/max 365d â†’ 400) delegando 100% ao OperationRunsService (BRL/badge/segmento nunca na rota) + 13 testes (tarefa 12.4, piso 11; regressÃ£o 1804 testes); **gap closure UAT (plans 12-15) CONCLUÃDO â€” verificaÃ§Ã£o final: 1839 testes + 4 gates verdes + UAT manual 12/12 aprovado**; F37 (RevisÃ£o e AprovaÃ§Ã£o da Arte, v1.5, experimento beta) em planejamento futuro; F39 (Stripe / MonetizaÃ§Ã£o PÃºblica) como marco futuro pÃ³s-beta (renumerada de F36 â†’ F37 â†’ F39). **38-2-10 OK: verificacao I1-I6 em banco real (script 50/50 asserts) + gates verdes (vitest 1832/1832, typecheck, lint, build) + UAT 13.3 coletado para harvest end-of-phase (I1-I6 documentados em 38-2-VERIFICATION.md)**. **38-2-12 OK (gap UAT estornos): migration 20260811000001 com CREATE OR REPLACE dos RPCs admin_get_ai_operation_runs/_events expondo creditos_estornados (refunds via referenceâ†’deduction no ledger) e creditos_liquidos = max(brutoâˆ’estorno, 0) por run E no summary/detalhe â€” creditos_debitados BRUTO inalterado, view F38.1 intocada; db push aplicado no remoto (validado via REST: estornados=3/liquidos=17 em 20 runs/90d); I5 estendido com 13 asserts novos â†’ 63/63 asserts 0 falhas em banco real; gates verdes (vitest 1834/1834, typecheck/lint/build exit 0)**.
 
@@ -697,7 +698,7 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 | 38-1-10 | 5 | âœ… | Views/RPCs apuraÃ§Ã£o + verificaÃ§Ã£o I1â€“I6 (banco real) + 50 testes + gates + UAT checkpoint validado |
 | 38-1-11 | 6 | âœ… | Runbook trackings 8.1â€“8.5 + fechamento (0.065 provisÃ³rio beta; reconciliaÃ§Ã£o financeira real na prÃ³xima fase) |
 
-**Status:** F47 CONCLUÍDA (2026-09-15) — 8/8 plans, 287 files / 2782 testes, 4 gates verdes
+**Status:** Ready to execute
 
 **Source:** `openspec/changes/fase-38-1-ai-cost-accounting/` (fonte da verdade)
 **Context:** `.planning/phases/38-1-ai-cost-accounting/38-1-CONTEXT.md`
@@ -946,3 +947,4 @@ Desdobramento da F38. Custo real por chamada de IA (tokens/USD) agregado por ent
 - [Phase 38.2.1-economic-snapshot]: deriveSummary passa a somar os BRL JA derivados por run (D5/T-38.2.1-12): re-derivacao do total USD com taxa unica removida â€” alterar parametro corrente nao recalcula historico com snapshot (estabilidade temporal testada com corrente 6.00)
 - [Phase 38.2.1-economic-snapshot]: Agregacao de origem do summary com precedencia deterministica: fallback > backfilled_from_audit > backfilled_seed > captured; revenueEstimationNote derivada da origem agregada do credito
 - [Phase 38.2.1-economic-snapshot]: Evento call-level expoe snapshots/origens cruas (nullable) + estimatedCostBrl com snapshot do evento ?? corrente; run do detalhe usa os snapshots do RPC (1o evento do run â€” D6)
+- [Phase 48.1]: F48.1 e LOCAL-FIRST: as 8 tabelas lab_*, o bucket privado lab-artifacts, os 8 triggers de imutabilidade e as RPCs lab_reserve_run/lab_create_experiment existem apenas no Supabase local ate o push remoto deliberado do 48-1-14 (D16).
