@@ -193,3 +193,11 @@ None - no external service configuration required.
 ---
 *Phase: 48.1-laboratorio-ia-minimo*
 *Completed: 2026-09-16*
+
+## Self-Check: PASSED
+
+- 12/12 arquivos criados encontrados em disco.
+- 5/5 commits encontrados no log (`f4f43147`, `099d4425`, `bbadcd28`, `0e015075`, `6020323f`).
+- Todos os critérios de aceitação das 3 tasks re-verificados (ver seção Verification).
+- Gates: vitest (45 files / 715 passed, exit 0), `tsc --noEmit` (exit 0), lint (exit 0).
+- Fences vazias: `src/lib/ai/gateway.ts`, `src/lib/ai-cost`, `src/lib/campaign`, `prompts/`.
