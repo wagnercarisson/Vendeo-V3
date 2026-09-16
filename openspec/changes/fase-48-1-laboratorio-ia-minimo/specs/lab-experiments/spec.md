@@ -78,17 +78,17 @@ O experimento SHALL declarar a dimensão intencionalmente alterada, que na F48.1
 
 ### Requirement: Estados e transições do experimento
 
-O experimento SHALL seguir as transições `draft → ready → running ⇄ evaluated → archived`. A configuração SHALL ser congelada a partir do primeiro run; alterações posteriores exigem um novo experimento. **Avaliar não encerra as execuções**: um novo run após uma avaliação devolve o experimento a `running`, preservando as avaliações.
+O experimento SHALL seguir as transições `draft → ready → running ⇄ evaluated → archived`. A configuração SHALL ser congelada a partir do primeiro run; alterações posteriores exigem um novo experimento. **Avaliar não encerra as execuções**: um novo run após uma avaliação devolve o experimento a `running`, preservando as avaliações. A F48.1 **não** expõe edição nem arquivamento pela API/UI administrativa: a superfície oferece criação e leitura, a configuração é imutável pela superfície e alterações exigem um **novo experimento**; o arquivamento manual (`archived`) permanece como capacidade de banco/domínio reservada à F48.2.
 
 #### Scenario: Transição para pronto exige configuração completa
 
 - **WHEN** o experimento tem duas variantes, ao menos um cenário e limites válidos
 - **THEN** ele pode transitar de `draft` para `ready`
 
-#### Scenario: Configuração é editável antes do primeiro run
+#### Scenario: Configuração é editável no banco antes do primeiro run
 
 - **WHEN** o experimento está em `draft` ou `ready` e ainda não tem runs
-- **THEN** prompt, alvo de modelo e params podem ser editados
+- **THEN** prompt, alvo de modelo e params podem ser editados **no banco/domínio** (a API/UI da F48.1 não expõe edição; alterações são feitas criando outro experimento)
 - **AND** o trigger de imutabilidade não bloqueia a edição
 
 #### Scenario: Configuração congela no primeiro run
