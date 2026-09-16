@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { ModelTargetNotInCatalogError } from "../model-target";
+import { SensitivePromptContentError } from "../prompt-snapshot";
 import { UnsupportedChangedDimensionError } from "../schemas";
 import type { CreateLabExperimentInput, LabModelTarget } from "../schemas";
 import {
@@ -436,6 +437,33 @@ describe("createExperiment", () => {
     );
 
     expect(error).toBeInstanceOf(ModelTargetNotInCatalogError);
+    expect(client.experiments).toHaveLength(0);
+    expect(client.variants).toHaveLength(0);
+    expect(client.scenarios).toHaveLength(0);
+    expect(client.calls).not.toContain("rpc:lab_create_experiment");
+  });
+
+  it("candidata com conteúdo sensível não escreve nada nem chama a RPC (D15)", async () => {
+    const client = new FakeLabClient();
+
+    const error = (await capture(() =>
+      createExperiment(
+        asExperimentInput(
+          validInput({
+            candidate: {
+              promptName: "campaign-image-director-offer",
+              promptContent: "Use a chave sk-abcdefgh12345678 no prompt.",
+            },
+          }),
+        ),
+        context(client),
+      ),
+    )) as SensitivePromptContentError;
+
+    expect(error).toBeInstanceOf(SensitivePromptContentError);
+    expect(error.code).toBe("sensitive_prompt_content");
+    expect(error.field).toBe("candidate");
+    expect(error.message).not.toContain("sk-abcdefgh");
     expect(client.experiments).toHaveLength(0);
     expect(client.variants).toHaveLength(0);
     expect(client.scenarios).toHaveLength(0);

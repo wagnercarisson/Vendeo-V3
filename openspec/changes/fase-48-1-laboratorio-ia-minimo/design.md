@@ -230,6 +230,7 @@ Sob `/api/admin/laboratorio`, todas com `requireAdmin()` + `assertLabEnvironment
 
 - Auditoria do laboratório: autoria + timestamps + imutabilidade dos snapshots + avaliações append-only. Não usa `admin_audit_log` (D3).
 - **Nenhum secret** em banco, logs, snapshots ou artefatos: erros sanitizados por `sanitizeAiErrorMessage`; nunca se grava `OPENAI_API_KEY`/`GEMINI_API_KEY`; `snapshot.calls[]` guarda apenas capability/provider/model/protocol/status/latência/usage/custo.
+- **Snapshot de prompt livre de segredos (correção de bloqueio)**: o conteúdo do baseline (arquivo oficial) e da candidata (override do admin) SHALL ser validado antes de virar snapshot e qualquer `sk-…`/`AIza…`/`Bearer …`/URL/DSN SHALL ser **recusado** com `sensitive_prompt_content` **antes** de qualquer persistência — sem sanitização silenciosa (sanitizar alteraria o prompt e o hash). A mensagem expõe apenas o campo e a categoria, nunca o conteúdo.
 - Requisito operacional: usar chave/projeto de desenvolvimento separado para os providers no UAT (documentado em `.env.example`/docs), sem introduzir novo mecanismo de chave.
 
 ### D16 — Estratégia de migration local e remota

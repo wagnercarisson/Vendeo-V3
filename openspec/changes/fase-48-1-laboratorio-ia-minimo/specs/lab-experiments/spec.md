@@ -42,6 +42,13 @@ O experimento SHALL carregar um alvo de modelo **fixo e idêntico** para as duas
 - **THEN** seu snapshot registra o conteúdo completo alterado com origem `override`
 - **AND** o arquivo oficial de prompt permanece inalterado
 
+#### Scenario: Conteúdo sensível é recusado no snapshot
+
+- **WHEN** o conteúdo do baseline ou da candidata contém chave (`sk-…`/`AIza…`), token (`Bearer …`) ou URL/DSN
+- **THEN** a criação é recusada com `sensitive_prompt_content` antes de qualquer persistência
+- **AND** o conteúdo não é sanitizado silenciosamente nem exposto na mensagem de erro
+- **AND** nenhum experimento, variante ou cenário é gravado
+
 #### Scenario: Modelo é fixo e idêntico entre as variantes
 
 - **WHEN** o experimento é criado

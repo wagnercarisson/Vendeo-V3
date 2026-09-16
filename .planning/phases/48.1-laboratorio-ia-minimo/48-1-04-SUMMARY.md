@@ -40,7 +40,13 @@ key-files:
     - src/lib/lab/domain/__tests__/prompt-snapshot.test.ts
     - src/lib/lab/domain/__tests__/model-target.test.ts
     - src/lib/lab/domain/__tests__/experiment-service.test.ts
-  modified: []
+  modified:
+    - src/lib/lab/domain/prompt-snapshot.ts
+    - src/lib/lab/domain/__tests__/prompt-snapshot.test.ts
+    - src/lib/lab/domain/__tests__/experiment-service.test.ts
+    - openspec/changes/fase-48-1-laboratorio-ia-minimo/design.md
+    - openspec/changes/fase-48-1-laboratorio-ia-minimo/specs/lab-experiments/spec.md
+    - .planning/phases/48.1-laboratorio-ia-minimo/48-1-04-PLAN.md
 
 key-decisions:
   - "Dimensão única executável em `CHANGED_DIMENSIONS = ['prompt']`; `FUTURE_CHANGED_DIMENSIONS = ['model','configuration']` existe apenas para o enum reconhecer o valor e devolver `UnsupportedChangedDimensionError` — o parse rejeita antes de qualquer escrita (T-48-1-23)"
@@ -146,6 +152,21 @@ Cada task foi commitada atomicamente:
 
 **Total deviations:** 1 fail-closed (diagnóstico do catálogo), 1 informativa (1-based na RPC) e 1 aditiva (constantes/tipos)
 **Impact on plan:** Nenhum escopo extra e nenhuma mudança de contrato: os limites, a dimensão única, a atomicidade, os códigos de erro e a máquina de estados são exatamente os do plano. As adaptações são de diagnóstico/testabilidade.
+
+## Correction Applied After Review (D15 — secrets no snapshot)
+
+**Finding (revisão do usuário — CRITICAL, bloqueante):** o conteúdo candidato aceitava qualquer string e era copiado integralmente para `lab_experiment_variants.prompt_snapshot` (e enviado à RPC), permitindo persistir `sk-…`, `AIza…`, `Bearer …` ou URL/DSN — violando D15 ("nenhum secret em banco/snapshot") e o próprio contrato do plano.
+
+**Fix:**
+- `prompt-snapshot.ts`: `findSensitivePromptContent` + `SensitivePromptContentError` (`code: "sensitive_prompt_content"`, `field`, `kind ∈ {bearer_token, api_key, url}`). Padrões: `\bsk-[A-Za-z0-9_-]{8,}`, `\bAIza[A-Za-z0-9_-]{8,}`, `\bbearer\s+[…]{8,}` (case-insensitive) e `\b[a-z][a-z0-9+.-]*://…` (cobre `https://` e DSN `postgres://`).
+- `buildBaselinePromptSnapshot` **e** `buildCandidatePromptSnapshot` validam o conteúdo **antes** de montar o snapshot. **Sem sanitização silenciosa** — sanitizar mudaria o prompt e o hash. A mensagem expõe apenas `field` + `kind`.
+- `createExperiment` já montava os snapshots em locais **antes** da chamada `rpc("lab_create_experiment", …)`; a recusa ocorre antes da RPC, sem nenhuma escrita.
+
+**Testes adicionados (+10):** 5 casos de conteúdo sensível na candidata (`sk-`, `AIza`, `Bearer`, URL https, DSN postgres) com `field: "candidate"` e sem vazar o conteúdo na mensagem; baseline com loader injetado sensível → `field: "baseline"`; prompt oficial real considerado limpo; ausência de falso positivo em `skyscraper`/`skeleton`; e em `experiment-service` — candidata sensível → zero experimento/variante/cenário e **nenhuma** chamada `rpc:lab_create_experiment`.
+
+**Source-of-truth sincronizada:** `design.md` (D15), `specs/lab-experiments/spec.md` (novo cenário "Conteúdo sensível é recusado no snapshot") e `48-1-04-PLAN.md` (Task 2 ação/testes/aceite, Task 3 testes, novo threat model T-48-1-31).
+
+**Verification:** `npx vitest run src/lib/lab/domain` → exit 0 (**79 testes**, +10); `npx tsc -p tsconfig.typecheck.json --noEmit` → exit 0; `npm.cmd run lint` → exit 0; `rg "://" prompts/campaign-image-director-offer.md` → 0 (baseline limpo).
 
 ## Issues Encountered
 
