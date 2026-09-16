@@ -45,6 +45,28 @@ import { loadScenarioFixture } from "@/lib/lab/scenarios/service";
 
 type Row = Record<string, unknown>;
 
+/**
+ * Código da recusa quando o conteúdo do cenário no disco diverge da versão
+ * registrada (integridade experimental, D4/D8).
+ */
+export const LAB_SCENARIO_HASH_MISMATCH = "scenario_hash_mismatch";
+
+/**
+ * O cenário executado precisa ser **exatamente** a versão registrada. Se a
+ * fixture no disco mudou depois do bootstrap (ou uma versão anterior foi
+ * selecionada), o `content_hash` da fixture diverge do `content_hash` da versão
+ * e a execução é recusada — o run nunca registra um hash que não corresponde ao
+ * conteúdo efetivamente executado.
+ */
+export class LabScenarioIntegrityError extends Error {
+  readonly code = LAB_SCENARIO_HASH_MISMATCH;
+
+  constructor() {
+    super(LAB_SCENARIO_HASH_MISMATCH);
+    this.name = "LabScenarioIntegrityError";
+  }
+}
+
 function asRows(data: unknown): Row[] {
   return Array.isArray(data) ? (data as Row[]) : [];
 }
@@ -184,6 +206,15 @@ export async function prepareExperimentRun(params: {
   // modalidade (`unsupported_scenario_mode`) ou uma imagem ausente — nenhuma
   // reserva nem chamada paga acontece antes desta resolução.
   const fixture = await loadScenarioFixture(text(asRow(scenario)?.slug));
+
+  // Integridade experimental (D4/D8): a fixture no disco precisa ser EXATAMENTE
+  // a versão registrada. Divergência de hash (bootstrap desatualizado ou versão
+  // anterior selecionada) recusa a execução **antes** do mapeamento e da reserva
+  // — o snapshot nunca registra um hash diferente do conteúdo executado.
+  if (fixture.contentHash !== text(versionRow.content_hash)) {
+    throw new LabScenarioIntegrityError();
+  }
+
   const brief = mapScenarioToCampaignBrief(fixture.content, fixture.imagesDataUrls);
   const context = mapScenarioToResolvedContext(
     fixture.content,

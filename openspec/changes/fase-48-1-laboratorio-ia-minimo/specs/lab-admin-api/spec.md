@@ -72,6 +72,18 @@ A rota de execução SHALL exigir identificação de variante, cenário e repeti
 - **WHEN** um admin confirma a execução com variante, cenário e repetição válidos
 - **THEN** o run é iniciado e o progresso é emitido em stream
 - **AND** o evento final informa o identificador do run
+- **AND** exatamente um evento terminal (`done`/`error`) é emitido por stream
+
+#### Scenario: Cenário executado diverge da versão registrada
+
+- **WHEN** o conteúdo da fixture no disco não corresponde ao `content_hash` da versão de cenário registrada
+- **THEN** a execução é recusada com `scenario_hash_mismatch` antes do mapeamento e da reserva
+- **AND** nenhum run é criado e nenhuma chamada paga é iniciada
+
+#### Scenario: Leitura parcial falha explicitamente
+
+- **WHEN** uma consulta do detalhe do experimento falha no banco
+- **THEN** a resposta é um erro explícito (`lab_*_read_failed`) e não um 200 com metadados incompletos
 
 #### Scenario: Execução sem confirmação é recusada
 

@@ -308,6 +308,41 @@ describe("getExperimentDetail", () => {
     await expect(getExperimentDetail(fake.client, EXPERIMENT_ID)).resolves.toBeNull();
     expect(mockReconcileStaleRuns).toHaveBeenCalledTimes(1);
   });
+
+  it("falha de leitura das versões de cenário propaga (não devolve 200 incompleto)", async () => {
+    const fake = createFakeSupabaseClient({
+      tables: {
+        lab_experiments: [{ id: EXPERIMENT_ID, max_runs: 6 }],
+        lab_experiment_scenarios: [
+          { id: "link-1", experiment_id: EXPERIMENT_ID, scenario_version_id: VERSION_V2, position: 1 },
+        ],
+      },
+      readErrors: { lab_scenario_versions: { message: "db down" } },
+    });
+
+    await expect(getExperimentDetail(fake.client, EXPERIMENT_ID)).rejects.toThrow(
+      "lab_scenario_versions_read_failed",
+    );
+  });
+
+  it("falha de leitura dos cenários propaga (não devolve 200 incompleto)", async () => {
+    const fake = createFakeSupabaseClient({
+      tables: {
+        lab_experiments: [{ id: EXPERIMENT_ID, max_runs: 6 }],
+        lab_experiment_scenarios: [
+          { id: "link-1", experiment_id: EXPERIMENT_ID, scenario_version_id: VERSION_V2, position: 1 },
+        ],
+        lab_scenario_versions: [
+          { id: VERSION_V2, scenario_id: SCENARIO_ID, version: 2, content_hash: "hash-v2" },
+        ],
+      },
+      readErrors: { lab_scenarios: { message: "db down" } },
+    });
+
+    await expect(getExperimentDetail(fake.client, EXPERIMENT_ID)).rejects.toThrow(
+      "lab_scenarios_read_failed",
+    );
+  });
 });
 
 describe("getRunDetail", () => {

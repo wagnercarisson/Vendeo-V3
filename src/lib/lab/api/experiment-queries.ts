@@ -459,23 +459,33 @@ export async function getExperimentDetail(
   const linkRows = asRows(links);
   const versionIds = linkRows.map((link) => text(link.scenario_version_id));
 
-  const versions = versionIds.length
-    ? asRows(
-        (
-          await client
-            .from("lab_scenario_versions")
-            .select("id, scenario_id, version, content_hash")
-            .in("id", versionIds)
-        ).data,
-      )
-    : [];
+  let versions: Row[] = [];
+  if (versionIds.length) {
+    const { data: versionRows, error: versionsError } = await client
+      .from("lab_scenario_versions")
+      .select("id, scenario_id, version, content_hash")
+      .in("id", versionIds);
+
+    if (versionsError) {
+      throw new Error(`lab_scenario_versions_read_failed:${versionsError.message}`);
+    }
+    versions = asRows(versionRows);
+  }
 
   const scenarioIds = versions.map((version) => text(version.scenario_id));
-  const scenarios = scenarioIds.length
-    ? asRows(
-        (await client.from("lab_scenarios").select("id, slug, name").in("id", scenarioIds)).data,
-      )
-    : [];
+
+  let scenarios: Row[] = [];
+  if (scenarioIds.length) {
+    const { data: scenarioRows, error: scenariosError } = await client
+      .from("lab_scenarios")
+      .select("id, slug, name")
+      .in("id", scenarioIds);
+
+    if (scenariosError) {
+      throw new Error(`lab_scenarios_read_failed:${scenariosError.message}`);
+    }
+    scenarios = asRows(scenarioRows);
+  }
 
   const scenarioById = new Map(scenarios.map((scenario) => [text(scenario.id), scenario]));
   const versionById = new Map(versions.map((version) => [text(version.id), version]));

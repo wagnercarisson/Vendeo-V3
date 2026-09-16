@@ -22,6 +22,8 @@ const CONFLICT_CODES: readonly string[] = [
   "run_already_active",
   "idempotency_conflict",
   "experiment_not_ready",
+  // Integridade experimental: a fixture no disco divergiu da versão registrada.
+  "scenario_hash_mismatch",
 ];
 
 /** Recusas de payload/relações — a requisição é inválida para o experimento. */
@@ -144,7 +146,11 @@ export const POST = apiHandler(
         };
 
         try {
-          const result = await runPreparedExperimentRun({
+          // O serviço de execução é o **único dono dos eventos terminais**
+          // (`done`/`error`): a rota apenas encaminha o progresso e não emite um
+          // segundo terminal. O `catch` abaixo cobre somente falhas de setup
+          // anteriores ao serviço (o run nem chegou a ser executado).
+          await runPreparedExperimentRun({
             client: supabaseAdmin,
             experimentId: id,
             runId: prepared.runId,
@@ -153,7 +159,6 @@ export const POST = apiHandler(
             executionContext: prepared.executionContext,
             onEvent: emit,
           });
-          emit({ type: "done", runId: result.runId, status: result.status });
         } catch {
           // A mensagem já é sanitizada na origem; o stream não vaza token nem URL.
           emit({ type: "error", code: "run_failed", message: "Execução falhou" });

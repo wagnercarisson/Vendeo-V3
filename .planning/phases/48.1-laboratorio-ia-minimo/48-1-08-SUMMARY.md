@@ -57,6 +57,15 @@ key-files:
     - src/app/api/admin/laboratorio/runs/[id]/__tests__/route.test.ts
   modified:
     - src/lib/admin/schemas.ts
+    - src/lib/lab/api/run-execution.ts
+    - src/lib/lab/api/experiment-queries.ts
+    - src/lib/lab/api/__tests__/run-execution.test.ts
+    - src/lib/lab/api/__tests__/experiment-queries.test.ts
+    - src/app/api/admin/laboratorio/experiments/[id]/runs/route.ts
+    - src/app/api/admin/laboratorio/experiments/[id]/runs/__tests__/route.test.ts
+    - openspec/changes/fase-48-1-laboratorio-ia-minimo/design.md
+    - openspec/changes/fase-48-1-laboratorio-ia-minimo/specs/lab-admin-api/spec.md
+    - .planning/phases/48.1-laboratorio-ia-minimo/48-1-08-PLAN.md
 
 key-decisions:
   - "O helper de estimativa vive em src/lib/ai/lab-cost-estimate.ts porque o gate de arquitetura restringe resolveAiCost( a src/lib/ai/** — nenhum outro lugar do repositório pode chamar o resolvedor"
@@ -182,6 +191,26 @@ Each task was committed atomically:
 
 **Total deviations:** 5 auto-fixed (4 bugs/consistência, 1 bloqueio de testabilidade)
 **Impact on plan:** Nenhum escopo adicional. As correções 1–3 alinham o código às verificações literais do plano; a 4 evita código morto sem alterar contrato; a 5 é tipagem de teste. Todas as superfícies exigidas (7 rotas, 5 módulos, schemas) foram entregues conforme especificado.
+
+## Corrections Applied After Review (1 CRITICAL + 2 WARNING)
+
+### CRITICAL — cenário executado podia divergir do snapshot
+
+`prepareExperimentRun` carregava a fixture **atual** do disco e usava o `content_hash` **da versão registrada** no snapshot, sem comparar os dois. Se o `scenario.json` mudasse após o bootstrap (ou uma versão anterior fosse selecionada), o laboratório executaria um conteúdo e registraria outro hash — invalidando a evidência experimental. **Fix:** comparação `fixture.contentHash === versionRow.content_hash` **antes** do mapeamento e da reserva; divergência → `LabScenarioIntegrityError` (`code: "scenario_hash_mismatch"`, mapeado para **409** na rota). Teste dedicado garante que nenhum mapeamento/reserva acontece com conteúdo divergente.
+
+### WARNING — evento terminal NDJSON duplicado
+
+O serviço (`runReservedLabRun`) já emite `done`/`error`, e a rota emitia um segundo `done` após a chamada (e um `error` no `catch`). No caminho real o sucesso produzia **dois** `done`; em falha controlada podia ocorrer `error` seguido de `done`. **Fix:** o serviço é o **único dono dos eventos terminais** — a rota deixou de emitir o `done` e o `catch` da rota cobre apenas falhas de *setup* anteriores ao serviço. Testes garantem **exatamente 1 terminal por stream** em sucesso, falha de execução e falha de setup.
+
+### WARNING — erros de leitura silenciosamente ignorados
+
+`getExperimentDetail` consultava `lab_scenario_versions`/`lab_scenarios` usando apenas `.data`, sem verificar `.error` — uma falha do banco virava 200 com metadados incompletos. **Fix:** as duas consultas verificam `.error` e propagam `lab_scenario_versions_read_failed` / `lab_scenarios_read_failed`. Testes cobrem as duas falhas.
+
+**Testes adicionados (+5):** hash divergente → `LabScenarioIntegrityError` sem reserva; falha de leitura de versões; falha de leitura de cenários; exatamente 1 terminal no sucesso; exatamente 1 terminal na falha de execução; exatamente 1 terminal na falha de setup; `scenario_hash_mismatch` → 409.
+
+**Source-of-truth sincronizada:** `design.md` (D11), `specs/lab-admin-api/spec.md` (+3 cenários) e `48-1-08-PLAN.md` (Task 2/4, testes, T-48-1-68..70).
+
+**Verification:** `npx vitest run src/lib/lab src/lib/lab/api "src/app/api/admin/laboratorio" src/lib/ai/__tests__/lab-cost-estimate.test.ts` → exit 0 (**422 testes**); `npx tsc -p tsconfig.typecheck.json --noEmit` → exit 0; `npm.cmd run lint` → exit 0.
 
 ## Issues Encountered
 

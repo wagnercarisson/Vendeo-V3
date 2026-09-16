@@ -200,6 +200,9 @@ Sob `/api/admin/laboratorio`, todas com `requireAdmin()` + `assertLabEnvironment
 - **Streaming**: o run usa NDJSON (`Content-Type: application/x-ndjson`) espelhando `generate-image`, porque a geração pode levar minutos e emite fases; o evento final traz `runId` (a imagem vai para o bucket, não no stream).
 - **Confirmação**: `confirmed: true` obrigatório; a UI só habilita após exibir a estimativa. Sem confirmação → `422` `confirmation_required`.
 - **Erros**: mapeamento por código (`unsupported_scenario_mode`, `budget_exceeded`, `experiment_not_ready`, `variant_not_found`, `environment_blocked`, …) para 400/403/409/422.
+- **Integridade experimental (correção de bloqueio)**: antes do mapeamento e da reserva, `prepareExperimentRun` SHALL comparar o `content_hash` da fixture no disco com o `content_hash` da versão de cenário registrada; divergência (fixture alterada após o bootstrap, ou versão anterior selecionada) SHALL ser recusada com `scenario_hash_mismatch` (409) — o run nunca registra um hash diferente do conteúdo executado.
+- **Proprietário único dos eventos terminais (correção de bloqueio)**: o serviço de execução SHALL ser o **único** emissor de `done`/`error`; a rota NDJSON não emite um segundo terminal (seu `catch` cobre apenas falhas de *setup* anteriores ao serviço). Exatamente **1 evento terminal por stream** em todos os caminhos.
+- **Leitura sem falha silenciosa (correção de bloqueio)**: toda consulta do detalhe SHALL verificar `.error` e propagar (`lab_*_read_failed:<msg>`) — uma falha do banco nunca vira 200 com metadados incompletos.
 
 ### D12 — UI administrativa
 

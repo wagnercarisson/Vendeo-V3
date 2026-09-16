@@ -92,6 +92,13 @@ function reservationError(code: string): Error {
   return Object.assign(new Error(code), { code, name: "LabReservationError" });
 }
 
+/** Conta os eventos terminais (`done`/`error`) do corpo NDJSON. */
+function countTerminals(body: string): number {
+  return body
+    .split("\n")
+    .filter((line) => line.includes('"type":"done"') || line.includes('"type":"error"')).length;
+}
+
 async function blockEnvironment(reason: LabEnvironmentReason = "disabled_flag") {
   const { LabEnvironmentError } = await import("@/lib/lab/environment-guard");
   mockAssertLabEnvironment.mockImplementation(() => {
@@ -109,7 +116,14 @@ beforeEach(() => {
     reason: "ok",
   });
   mockPrepareExperimentRun.mockResolvedValue(PREPARED);
-  mockRunPreparedExperimentRun.mockResolvedValue({ runId: "run-1", status: "succeeded" });
+  // O serviço real é o **único dono dos eventos terminais**: o mock reproduz isso
+  // emitindo o terminal via `onEvent` (a rota não adiciona um segundo).
+  mockRunPreparedExperimentRun.mockImplementation(
+    async (params: { onEvent?: (event: unknown) => void }) => {
+      params.onEvent?.({ type: "done", runId: "run-1", status: "succeeded" });
+      return { runId: "run-1", status: "succeeded" };
+    },
+  );
 });
 
 describe("POST /api/admin/laboratorio/experiments/[id]/runs", () => {
@@ -167,6 +181,7 @@ describe("POST /api/admin/laboratorio/experiments/[id]/runs", () => {
     ["repetition_out_of_range", 400],
     ["invalid_supersedes_run", 400],
     ["unsupported_scenario_mode", 400],
+    ["scenario_hash_mismatch", 409],
     ["experiment_not_found", 404],
   ])("mapeia %s para HTTP %i antes de abrir o stream", async (code, status) => {
     mockPrepareExperimentRun.mockRejectedValue(reservationError(code));
@@ -191,24 +206,42 @@ describe("POST /api/admin/laboratorio/experiments/[id]/runs", () => {
     expect(mockRunPreparedExperimentRun).not.toHaveBeenCalled();
   });
 
-  it("execução confirmada ⇒ NDJSON com o evento final informando o runId", async () => {
+  it("execução confirmada ⇒ NDJSON com exatamente 1 terminal e o runId", async () => {
     const res = await postRuns(VALID_BODY);
 
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("application/x-ndjson");
 
     const text = await res.text();
+    expect(countTerminals(text)).toBe(1);
     expect(text).toContain('"type":"done"');
     expect(text).toContain('"runId":"run-1"');
     expect(mockRunPreparedExperimentRun).toHaveBeenCalledTimes(1);
   });
 
-  it("falha na execução emite evento de erro sanitizado no stream", async () => {
+  it("falha de execução: o serviço emite o único terminal (sem `done` duplicado)", async () => {
+    mockRunPreparedExperimentRun.mockImplementation(
+      async (params: { onEvent?: (event: unknown) => void }) => {
+        params.onEvent?.({ type: "error", code: "provider_error", message: "falha sanitizada" });
+        return { runId: "run-1", status: "failed" };
+      },
+    );
+
+    const res = await postRuns(VALID_BODY);
+    const text = await res.text();
+
+    expect(countTerminals(text)).toBe(1);
+    expect(text).toContain('"type":"error"');
+    expect(text).not.toContain('"type":"done"');
+  });
+
+  it("falha de setup antes do serviço emite exatamente 1 terminal de erro sanitizado", async () => {
     mockRunPreparedExperimentRun.mockRejectedValue(new Error("sk-secret-vazado"));
 
     const res = await postRuns(VALID_BODY);
     const text = await res.text();
 
+    expect(countTerminals(text)).toBe(1);
     expect(text).toContain('"type":"error"');
     expect(text).not.toContain("sk-secret-vazado");
   });

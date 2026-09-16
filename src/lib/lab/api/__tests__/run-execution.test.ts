@@ -95,7 +95,11 @@ import { LabTelemetrySink } from "@/lib/ai/lab-telemetry-sink";
 import { LabReservationError } from "@/lib/lab/run-service";
 import { createLabTelemetryContext } from "@/lib/lab/gateway/runtime";
 import type { LabRunExecuteRequest } from "@/lib/admin/schemas";
-import { prepareExperimentRun, runPreparedExperimentRun } from "../run-execution";
+import {
+  LabScenarioIntegrityError,
+  prepareExperimentRun,
+  runPreparedExperimentRun,
+} from "../run-execution";
 import type { LabRunExecutionContext } from "../run-execution";
 import { createFakeSupabaseClient } from "./fake-supabase-client";
 import type { FakeRow } from "./fake-supabase-client";
@@ -244,6 +248,32 @@ describe("prepareExperimentRun", () => {
     expect(prepared.executionContext.scenario.context).toBe(CONTEXT_SENTINEL);
     expect(prepared.executionContext.variant.role).toBe("baseline");
     expect(prepared.executionContext.variants.candidate.source).toBe("override");
+  });
+
+  it("recusa quando a fixture no disco diverge da versão registrada (integridade)", async () => {
+    // A versão registrada tem hash "scenario-hash"; a fixture no disco mudou.
+    mockLoadScenarioFixture.mockResolvedValue({
+      content: { slug: "produto-oferta-preco" },
+      contentHash: "hash-diferente-do-registrado",
+      fixturePath: "fixtures/lab/scenarios/produto-oferta-preco",
+      imagesDataUrls: { "images/produto.jpg": "data:image/png;base64,AAA" },
+      logoDataUrl: null,
+    });
+    const fake = createFakeSupabaseClient({ tables: tables() });
+
+    await expect(
+      prepareExperimentRun({
+        client: fake.client,
+        experimentId: EXPERIMENT_ID,
+        actorId: "admin-1",
+        input: INPUT,
+      }),
+    ).rejects.toBeInstanceOf(LabScenarioIntegrityError);
+
+    // Nenhum mapeamento e nenhuma reserva acontecem com conteúdo divergente.
+    expect(mockMapBrief).not.toHaveBeenCalled();
+    expect(mockPrepareLabRun).not.toHaveBeenCalled();
+    expect(mockRunReservedLabRun).not.toHaveBeenCalled();
   });
 
   it("propaga o erro de reserva sem iniciar nenhuma execução", async () => {
