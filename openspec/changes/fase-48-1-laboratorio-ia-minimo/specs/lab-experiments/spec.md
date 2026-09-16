@@ -127,6 +127,11 @@ Após o primeiro run de um experimento, o sistema SHALL impedir **no banco** —
 - **WHEN** o experimento já possui ao menos um run
 - **THEN** `INSERT`, `UPDATE` ou `DELETE` em `lab_experiment_scenarios` para esse experimento é rejeitado pelo banco
 
+#### Scenario: Associação não pode ser movida para um experimento congelado
+
+- **WHEN** uma variante ou uma associação de cenário de um experimento sem runs é movida (`UPDATE` de `experiment_id`) para um experimento que já possui run
+- **THEN** a operação é rejeitada pelo banco (`experiment_id` é imutável e o destino congelado é verificado)
+
 #### Scenario: Experimento com histórico não pode ser excluído
 
 - **WHEN** o experimento possui runs
