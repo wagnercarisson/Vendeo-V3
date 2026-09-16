@@ -117,6 +117,33 @@ export class ImageGenerationService {
     this.metricsWriter = metricsWriter ?? new MetricsWriter();
   }
 
+  /**
+   * F48.1 (D7) — seam ADITIVO e público para o Laboratório de IA montar o prompt
+   * do diretor pelo **caminho real** sem duplicar lógica de montagem.
+   *
+   * Compõe exatamente os dois métodos privados já usados por `generateImage`
+   * (`buildPromptVariables` + `assemblePrompt` no estado INITIAL, sem issues).
+   * Nenhuma linha do fluxo de produção é alterada: `generateImage` continua
+   * chamando os mesmos privados com os mesmos parâmetros/estado.
+   */
+  buildDirectorPrompt(
+    brief: CampaignBrief,
+    context: ResolvedCampaignContext,
+    options?: {
+      effectiveProductName?: string;
+      inferredCategory?: string;
+      normalizedInstruction?: string;
+    }
+  ): string {
+    const variables = this.buildPromptVariables(
+      brief,
+      context,
+      options?.effectiveProductName ?? brief.product.name,
+      options?.inferredCategory
+    );
+    return this.assemblePrompt(GenerationState.INITIAL, variables, [], options?.normalizedInstruction);
+  }
+
   async generateImage(
     brief: CampaignBrief,
     context: ResolvedCampaignContext,
