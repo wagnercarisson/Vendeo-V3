@@ -20,7 +20,7 @@ progress:
 **Current phase:** 48.1
 **Last activity:** 2026-09-16
 
-### Phase 48.1 — Laboratório Mínimo de IA ◆ In Progress (4/14 plans / 9 waves)
+### Phase 48.1 — Laboratório Mínimo de IA ◆ In Progress (5/14 plans / 9 waves)
 
 **Goal:** Entregar a menor bancada experimental interna já útil — um simulador isolado da produção, local-first, que executa geração real de imagem sob comando humano, comparando **baseline × candidata** (dimensão única `prompt`, modelo fixo e idêntico) com snapshots imutáveis, validação técnica objetiva (`sharp`) e **avaliação humana** como fonte de qualidade, sem alterar qualquer superfície produtiva.
 
@@ -35,7 +35,7 @@ progress:
 | 48-1-03 | 2 | ✅ | Cenários controlados: schema Zod, fixtures (3 cenários de oferta) e serviço de bootstrap/hash |
 | 48-1-04 | 2 | ✅ | Domínio de experimentos prompt-only: schemas, criação com 2 variantes, transições e congelamento |
 | 48-1-05 | 3 | ○ | Harness de gateway: `buildDirectorPrompt`, `LabModelResolver`, `LabPromptLoader`, `LabTelemetrySink` e runtime single-shot |
-| 48-1-06 | 3 | ○ | Persistência de artefatos: bucket/paths, metadados/checksum, URL assinada e cleanup manual |
+| 48-1-06 | 3 | ✅ | Persistência de artefatos: bucket/paths, metadados/checksum, URL assinada e cleanup manual |
 | 48-1-07 | 4 | ○ | Execução e snapshots imutáveis: validação técnica (`sharp`), `run-service`, idempotência/reexecução e reserva atômica |
 | 48-1-08 | 5 | ○ | API administrativa sob `/api/admin/laboratorio` (schemas, rotas, estimativa, execução NDJSON e avaliação) |
 | 48-1-09 | 6 | ○ | UI do laboratório: layout/sub-nav, página inicial, criação, detalhe, cenários e execução |
