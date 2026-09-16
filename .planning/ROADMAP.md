@@ -44,7 +44,7 @@
 | 45 | ✅ Briefing Contextual do Diretor de Arte (v1.5) | 8/8 | ✅ Complete | 2026-09-05 |
 | 46 | ✅ Gateway Único de IA e Registry de Modelos (v1.5) | 9/9 | ✅ Complete | 2026-09-13 |
 | 47 | ✅ Catálogo e Seleção de Modelos Admin (v1.5, Change B) | 8/8 | ✅ Complete | 2026-09-15 |
-| 48.1 | ◆ Laboratório Mínimo de IA (v1.5) | 1/14 | In Progress|  |
+| 48.1 | ◆ Laboratório Mínimo de IA (v1.5) | 2/14 | In Progress|  |
 | — | Monetização pública / Stripe (iniciativa diferida, v1.7+) | — | Fora da numeração | — |
 
 ---
@@ -1067,12 +1067,12 @@ Plans:
 
 **Dependencies:** F46 (gateway único, adapters, `AiInvoker`/`AiModelResolver`, telemetria), F47 (`ai_model_catalog`/`ai_model_selection` como allowlist de leitura), F43 (`brief_review_confirmed` — validação de visão dispensada), F38.x (`resolveAiCost`/`CostResolution`), F37.2 (precedente de RPC/imutabilidade). **Ordem de migration (D16):** migration local → UAT local → migration remota deliberada após a UAT.
 
-**Plans:** 1/14 plans executed
+**Plans:** 2/14 plans executed
 
 Plans:
 
 - [x] 48-1-01-PLAN.md — Trackings (verificação de resíduos) + migration local: 8 tabelas `lab_*`, bucket `lab-artifacts`, RLS/grants, triggers de imutabilidade e RPC `lab_reserve_run` (Wave 1)
-- [ ] 48-1-02-PLAN.md — Guarda de ambiente fail-closed (`environment-guard`), constantes de limite, env vars e gate de arquitetura (Wave 1)
+- [x] 48-1-02-PLAN.md — Guarda de ambiente fail-closed (`environment-guard`), constantes de limite, env vars e gate de arquitetura (Wave 1)
 - [ ] 48-1-03-PLAN.md — Cenários controlados: schema Zod, fixtures (3 cenários de oferta) e serviço de bootstrap/hash (Wave 2)
 - [ ] 48-1-04-PLAN.md — Domínio de experimentos prompt-only: schemas, criação com 2 variantes, transições e congelamento (Wave 2)
 - [ ] 48-1-05-PLAN.md — Harness de gateway: `buildDirectorPrompt`, `LabModelResolver`, `LabPromptLoader`, `LabTelemetrySink` e runtime single-shot (Wave 3)
