@@ -27,7 +27,9 @@ import {
   LAB_RESERVATION_ERROR_CODES,
   LAB_RUN_ABORTED,
   LAB_RUN_SCENARIO_MISMATCH,
+  LAB_RUN_TRANSITION_FAILED,
   LabReservationError,
+  UNSUPPORTED_ARTIFACT_MIME_TYPE,
   executeLabRun,
   finalizeLabRun,
   isRunTerminal,
@@ -94,6 +96,7 @@ interface RecordedSelect {
 class FakeQueryBuilder {
   private readonly filters: RecordedFilter[] = [];
   private operation: "select" | "update" | null = null;
+  private returning = false;
   private payload: Record<string, unknown> = {};
 
   constructor(
@@ -102,7 +105,13 @@ class FakeQueryBuilder {
   ) {}
 
   select(columns: string): this {
-    this.operation = "select";
+    // `.update(...).select(...)` é um update **com retorno** (compare-and-set):
+    // não pode virar um select.
+    if (this.operation === "update") {
+      this.returning = true;
+    } else {
+      this.operation = "select";
+    }
     this.fake.selectCalls.push({ table: this.table, columns });
     return this;
   }
@@ -143,9 +152,23 @@ class FakeQueryBuilder {
         values: this.payload,
         filters: this.filters,
       });
-      return this.fake.updateResults.length > 0
-        ? (this.fake.updateResults.shift() as FakeResult)
-        : this.fake.updateResult;
+      if (this.fake.updateResults.length > 0) {
+        return this.fake.updateResults.shift() as FakeResult;
+      }
+      if (this.returning) {
+        // Simula `.select()` pós-update (CAS). Quando o teste semeia `selectRows`,
+        // devolve as linhas que casam com os filtros do update; caso contrário,
+        // assume 1 linha afetada.
+        const seeded = Array.isArray(this.fake.selectRows) ? this.fake.selectRows : [];
+        if (seeded.length > 0) {
+          const affected = seeded.filter((row) =>
+            this.filters.every((filter) => this.matches(row, filter)),
+          );
+          return { data: affected, error: null };
+        }
+        return { data: [{ id: RUN_ID }], error: null };
+      }
+      return this.fake.updateResult;
     }
 
     const rows = Array.isArray(this.fake.selectRows) ? this.fake.selectRows : [];
@@ -348,6 +371,10 @@ interface FakeInvokerState {
   hasFallbackCalls: number;
   failWith?: Error;
   omitImage?: boolean;
+  /** Buffer alternativo devolvido como imagem (para testar MIME real). */
+  imageBuffer?: Buffer;
+  /** MIME declarado pelo provider (default `image/png`). */
+  mimeType?: string;
 }
 
 function createFakeInvoker(state: FakeInvokerState): AiInvoker {
@@ -368,8 +395,8 @@ function createFakeInvoker(state: FakeInvokerState): AiInvoker {
       await emitEnvelope(telemetry, { status: "success" });
       if (state.omitImage) return { model: "gpt-5.5" };
       return {
-        imageBase64: pngBase64,
-        mimeType: "image/png",
+        imageBase64: (state.imageBuffer ?? Buffer.from(pngBase64, "base64")).toString("base64"),
+        mimeType: state.mimeType ?? "image/png",
         model: "gpt-5.5",
         usage: { promptTokens: 10, completionTokens: 2, totalTokens: 12 },
         usageMeta: { imageGenerationTool: true },
@@ -832,8 +859,8 @@ describe("runReservedLabRun — caminho feliz (1 chamada paga por run)", () => {
       "running",
       "prompt",
       "generation",
-      "artifact",
       "validation",
+      "artifact",
       "done",
     ]);
   });
@@ -853,14 +880,20 @@ describe("runReservedLabRun — caminho feliz (1 chamada paga por run)", () => {
     expect(request.prompt).toContain(CANDIDATE_CONTENT);
   });
 
-  it("atualiza as dimensões do artefato sem tocar o snapshot", async () => {
+  it("persiste o artefato com MIME real e dimensões numa única operação", async () => {
     const state = newInvokerState();
 
     await runReservedLabRun(runParams(state));
 
+    // MIME vem dos bytes (validação técnica), não de um default adivinhado, e as
+    // dimensões entram no próprio insert — sem update separado de `lab_artifacts`.
+    expect(mockPersistOutputArtifact).toHaveBeenCalledTimes(1);
+    expect(mockPersistOutputArtifact).toHaveBeenCalledWith(
+      expect.objectContaining({ mimeType: "image/png", width: 8, height: 8 }),
+    );
+
     const artifactUpdates = client.appliedUpdates.filter((update) => update.table === "lab_artifacts");
-    expect(artifactUpdates).toHaveLength(1);
-    expect(artifactUpdates[0].values).toMatchObject({ width: 8, height: 8 });
+    expect(artifactUpdates).toHaveLength(0);
 
     for (const values of labRunUpdates()) {
       expect(values).not.toHaveProperty("snapshot");
@@ -932,11 +965,12 @@ describe("runReservedLabRun — falhas encerram o run em estado terminal", () =>
   it("garante estado terminal no finally quando a transição do catch falha", async () => {
     const state = newInvokerState();
     state.failWith = new Error("provider boom");
-    // markRunRunning ok -> finalize do catch falha -> finalize do finally ok.
+    // markRunRunning ok (CAS 1 linha) -> finalize do catch CAS-miss (0 linhas) ->
+    // finalize do finally ok.
     client.updateResults = [
-      { data: null, error: null },
-      { data: null, error: { message: "db down" } },
-      { data: null, error: null },
+      { data: [{ id: RUN_ID }], error: null },
+      { data: [], error: null },
+      { data: [{ id: RUN_ID }], error: null },
     ];
 
     const result = await runReservedLabRun(runParams(state));
@@ -959,6 +993,117 @@ describe("runReservedLabRun — falhas encerram o run em estado terminal", () =>
     expect((rejection as LabReservationError).code).toBe("budget_exceeded");
     expect(state.calls).toBe(0);
     expect(labRunUpdates()).toHaveLength(0);
+  });
+});
+
+describe("correções de revisão — evidência, sanitização, MIME real e CAS", () => {
+  it("o evento de erro (NDJSON) é sanitizado, sem token nem URL", async () => {
+    const state = newInvokerState();
+    state.failWith = new Error("falha com Bearer sk-abc123456789 em https://api.exemplo.com/v1");
+    const events: LabRunEvent[] = [];
+
+    const result = await runReservedLabRun(
+      runParams(state, { onEvent: (event) => events.push(event) }),
+    );
+
+    expect(result.status).toBe("failed");
+    const errorEvent = events.find((event) => event.type === "error");
+    expect(errorEvent).toBeDefined();
+    expect(errorEvent?.message).not.toContain("sk-");
+    expect(errorEvent?.message).toContain("[redacted]");
+    expect(errorEvent?.message).not.toContain("https://api.exemplo.com");
+  });
+
+  const failureScenarios: Array<{ label: string; setup: (state: FakeInvokerState) => void }> = [
+    {
+      label: "erro do provider",
+      setup: (state) => {
+        state.failWith = new Error("provider boom");
+      },
+    },
+    {
+      label: "imagem ausente",
+      setup: (state) => {
+        state.omitImage = true;
+      },
+    },
+    {
+      label: "falha de persistência do artefato",
+      setup: () => {
+        mockPersistOutputArtifact.mockRejectedValue(new Error("upload down"));
+      },
+    },
+  ];
+
+  for (const { label, setup } of failureScenarios) {
+    it(`preserva calls/custo/usage/provider/attempts na falha (${label})`, async () => {
+      const state = newInvokerState();
+      setup(state);
+
+      const result = await runReservedLabRun(runParams(state));
+
+      expect(result.status).toBe("failed");
+      const finalUpdate = labRunUpdates().find((values) => values.status === "failed");
+      expect(finalUpdate).toBeDefined();
+      expect((finalUpdate?.calls as unknown[]).length).toBe(1);
+      expect(finalUpdate?.estimated_cost_usd).toBe(FULL_COST.estimatedCostUsd);
+      expect(finalUpdate?.cost_detail).toMatchObject({ costSource: "pricing_table" });
+      expect(finalUpdate?.usage).toMatchObject({ totalTokens: 12 });
+      expect(finalUpdate?.provider).toBe("openai");
+      expect(finalUpdate?.model).toBe("gpt-5.5");
+      expect(finalUpdate?.protocol).toBe("responses");
+      expect(finalUpdate?.attempts).toBe(1);
+    });
+  }
+
+  it("recusa MIME real fora da allowlist sem persistir o artefato", async () => {
+    const state = newInvokerState();
+    state.imageBuffer = Buffer.from("isto-nao-e-uma-imagem");
+    state.mimeType = "image/gif";
+
+    const result = await runReservedLabRun(runParams(state));
+
+    expect(result.status).toBe("failed");
+    expect(state.calls).toBe(1);
+    expect(mockPersistOutputArtifact).not.toHaveBeenCalled();
+    expect(labRunUpdates().find((values) => values.status === "failed")).toMatchObject({
+      error_type: UNSUPPORTED_ARTIFACT_MIME_TYPE,
+    });
+  });
+
+  it("markRunRunning recusa quando nenhuma linha é afetada (CAS)", async () => {
+    client.updateResults = [{ data: [], error: null }];
+
+    await expect(
+      markRunRunning({ client: client as unknown as SupabaseClient, runId: RUN_ID }),
+    ).rejects.toThrow(LAB_RUN_TRANSITION_FAILED);
+  });
+
+  it("finalizeLabRun recusa quando o run já não está ativo (CAS)", async () => {
+    client.updateResults = [{ data: [], error: null }];
+
+    await expect(
+      finalizeLabRun({
+        client: client as unknown as SupabaseClient,
+        runId: RUN_ID,
+        status: "succeeded",
+      }),
+    ).rejects.toThrow(LAB_RUN_TRANSITION_FAILED);
+  });
+
+  it("reconciliação conta apenas as linhas efetivamente alteradas", async () => {
+    const now = new Date("2026-09-16T12:00:00.000Z");
+    const old = "2026-09-16T10:00:00.000Z";
+    client.selectRows = [
+      { id: "old-pending", status: "pending", started_at: null, created_at: old },
+      { id: "old-running", status: "running", started_at: old, created_at: old },
+    ];
+    // Entre o select e o update, um dos runs terminou: só 1 linha é alterada.
+    client.updateResults = [{ data: [{ id: "old-pending" }], error: null }];
+
+    const result = await reconcileStaleRuns({ client: client as unknown as SupabaseClient, now });
+
+    expect(result.reconciled).toBe(1);
   });
 });
 

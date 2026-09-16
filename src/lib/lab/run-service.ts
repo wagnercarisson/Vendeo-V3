@@ -148,22 +148,30 @@ export async function reserveLabRun(params: {
   };
 }
 
-/** Marca o run como `running` — apenas colunas de resultado (o trigger permite). */
+/**
+ * Marca o run como `running` — apenas colunas de resultado (o trigger permite).
+ *
+ * Transição **compare-and-set**: só promove um run que ainda está `pending` e
+ * exige que exatamente 1 linha seja afetada. Um run já reconciliado como `failed`
+ * (ou já terminal) nunca é sobrescrito.
+ */
 export async function markRunRunning(params: {
   client: SupabaseClient;
   runId: string;
   startedAt?: string;
 }): Promise<void> {
-  const { error } = await params.client
+  const { data, error } = await params.client
     .from("lab_runs")
     .update({
       status: "running",
       started_at: params.startedAt ?? new Date().toISOString(),
       attempts: 1,
     })
-    .eq("id", params.runId);
+    .eq("id", params.runId)
+    .eq("status", "pending")
+    .select("id");
 
-  if (error) {
+  if (error || !Array.isArray(data) || data.length !== 1) {
     throw new Error(LAB_RUN_TRANSITION_FAILED);
   }
 }
@@ -171,8 +179,11 @@ export async function markRunRunning(params: {
 /**
  * Grava o estado terminal do run com as evidências do resultado.
  *
- * `snapshot` **nunca** é gravado aqui (imutável, definido na reserva) e o
- * `errorMessage` passa sempre por `sanitizeAiErrorMessage` antes de persistir.
+ * Transição **compare-and-set**: só finaliza um run ainda ativo (`pending` ou
+ * `running`) e exige exatamente 1 linha afetada — um run já terminal nunca é
+ * sobrescrito. `snapshot` **nunca** é gravado aqui (imutável, definido na
+ * reserva) e o `errorMessage` passa sempre por `sanitizeAiErrorMessage` antes de
+ * persistir.
  */
 export async function finalizeLabRun(params: {
   client: SupabaseClient;
@@ -216,12 +227,16 @@ export async function finalizeLabRun(params: {
     update.error_message = sanitizeAiErrorMessage(params.errorMessage);
   }
 
-  const { error } = await params.client
+  const { data, error } = await params.client
     .from("lab_runs")
     .update(update)
-    .eq("id", params.runId);
+    .eq("id", params.runId)
+    .in("status", ["pending", "running"])
+    .select("id");
 
-  if (error) {
+  // Compare-and-set: a transição só vale se o run ainda estava ativo. Um run já
+  // terminal (ex.: reconciliado como órfão) **nunca** é sobrescrito.
+  if (error || !Array.isArray(data) || data.length !== 1) {
     throw new Error(LAB_RUN_TRANSITION_FAILED);
   }
 }
@@ -266,7 +281,10 @@ export async function reconcileStaleRuns(params: {
     return { reconciled: 0 };
   }
 
-  const { error: updateError } = await params.client
+  // O update reaplica o filtro de estado ativo e conta **apenas as linhas
+  // efetivamente alteradas**: um run que terminou entre o select e o update (ou
+  // que já foi reconciliado) é excluído pelo próprio filtro — nunca sobrescrito.
+  const { data: changed, error: updateError } = await params.client
     .from("lab_runs")
     .update({
       status: "failed",
@@ -277,13 +295,15 @@ export async function reconcileStaleRuns(params: {
     .in(
       "id",
       stale.map((row) => row.id),
-    );
+    )
+    .in("status", ["pending", "running"])
+    .select("id");
 
   if (updateError) {
     throw new Error(LAB_RUN_RECONCILE_FAILED);
   }
 
-  return { reconciled: stale.length };
+  return { reconciled: Array.isArray(changed) ? changed.length : 0 };
 }
 
 // ─── Execução real e focada (D7/D8) ──────────────────────────────────────────
@@ -296,6 +316,9 @@ export const MISSING_IMAGE_PAYLOAD = "missing_image_payload";
 
 /** Código do descompasso entre o cenário reservado e o cenário congelado. */
 export const LAB_RUN_SCENARIO_MISMATCH = "lab_run_scenario_mismatch";
+
+/** Código do artefato cujo MIME real (dos bytes) não é aceito pelo bucket. */
+export const UNSUPPORTED_ARTIFACT_MIME_TYPE = "unsupported_artifact_mime_type";
 
 /** Código do run encerrado sem estado terminal conhecido (finally). */
 export const LAB_RUN_ABORTED = "run_aborted";
@@ -324,13 +347,21 @@ export interface LabRunEvent {
   code?: string;
 }
 
-/** MIME do artefato aceito pelo bucket do laboratório; default seguro é PNG. */
-function resolveArtifactMimeType(declaredMimeType: string | undefined): LabArtifactMimeType {
+/**
+ * MIME **real** do artefato, derivado dos bytes pela validação técnica (nunca da
+ * extensão nem de um default adivinhado) e restrito à allowlist do bucket.
+ *
+ * Bytes não decodificáveis ou com MIME fora da allowlist são recusados de forma
+ * explícita — o objeto nunca é gravado com um MIME que não corresponde ao
+ * conteúdo.
+ */
+function resolveArtifactMimeType(validation: LabTechnicalValidation): LabArtifactMimeType {
   const allowed = LAB_ALLOWED_ARTIFACT_MIME_TYPES as readonly string[];
-  if (declaredMimeType && allowed.includes(declaredMimeType)) {
-    return declaredMimeType as LabArtifactMimeType;
+  const detected = validation.mimeType;
+  if (!validation.decodable || !detected || !allowed.includes(detected)) {
+    throw new LabRunExecutionError(UNSUPPORTED_ARTIFACT_MIME_TYPE);
   }
-  return "image/png";
+  return detected as LabArtifactMimeType;
 }
 
 /**
@@ -373,6 +404,43 @@ function toCallRecord(entry: {
     usage: entry.usage,
     cost: entry.cost,
     errorType: entry.errorType,
+  };
+}
+
+/**
+ * Evidências reais acumuladas no sink, prontas para `finalizeLabRun`.
+ *
+ * Usada **tanto no sucesso quanto na falha**: uma chamada paga que falhou depois
+ * de emitir o envelope (provider, imagem ausente, artefato) continua registrando
+ * `calls`, custo, `usage`, provider/modelo e tentativas. `attempts` só é
+ * sobrescrito quando houve chamada real — caso contrário preserva o valor
+ * gravado por `markRunRunning`.
+ */
+function collectSinkEvidence(sink: LabTelemetrySink): {
+  usage: unknown;
+  estimatedCostUsd: number | null;
+  costDetail: CostResolution | null;
+  calls: unknown[];
+  provider: string | null;
+  model: string | null;
+  protocol: string | null;
+  capability: string | null;
+  attempts?: number;
+} {
+  const entries = sink.entries;
+  const lastEntry = entries[entries.length - 1];
+  const costSummary = sink.costSummary;
+
+  return {
+    usage: lastEntry?.usage ?? null,
+    estimatedCostUsd: costSummary?.estimatedCostUsd ?? null,
+    costDetail: costSummary,
+    calls: entries.map((entry) => toCallRecord(entry)),
+    provider: lastEntry?.provider ?? null,
+    model: lastEntry?.model ?? null,
+    protocol: lastEntry?.protocol ?? null,
+    capability: lastEntry?.capability ?? null,
+    attempts: entries.length > 0 ? entries.length : undefined,
   };
 }
 
@@ -468,6 +536,7 @@ export async function runReservedLabRun(params: {
   const { client, runId } = params;
   const startedMs = performance.now();
   let terminalReached = false;
+  let validation: LabTechnicalValidation | null = null;
 
   const emit = (event: LabRunEvent): void => {
     try {
@@ -513,59 +582,42 @@ export async function runReservedLabRun(params: {
 
     const buffer = Buffer.from(result.imageBase64, "base64");
     const declaredMimeType = result.mimeType ?? null;
-    const artifactMimeType = resolveArtifactMimeType(result.mimeType);
+
+    // Validação técnica **antes** da persistência: o MIME real (dos bytes) e as
+    // dimensões alimentam o próprio insert — o objeto nunca é gravado com um
+    // MIME adivinhado nem recebe um update de dimensões separado.
+    emit({ type: "phase", phase: "validation", runId });
+    validation = await validateArtifactTechnically({
+      buffer,
+      declaredMimeType,
+      expectedAspectRatio: 1,
+    });
+    const artifactMimeType = resolveArtifactMimeType(validation);
 
     emit({ type: "phase", phase: "artifact", runId });
-    let artifactId: string;
     try {
-      const artifact = await persistOutputArtifact({
+      await persistOutputArtifact({
         client,
         experimentId: params.experimentId,
         runId,
         buffer,
         mimeType: artifactMimeType,
-        width: null,
-        height: null,
+        width: validation.width,
+        height: validation.height,
       });
-      artifactId = artifact.artifactId;
     } catch {
       throw new LabRunExecutionError(ARTIFACT_PERSISTENCE_FAILED);
     }
 
-    emit({ type: "phase", phase: "validation", runId });
-    const validation: LabTechnicalValidation = await validateArtifactTechnically({
-      buffer,
-      declaredMimeType,
-      expectedAspectRatio: 1,
-    });
-
-    if (validation.width !== null && validation.height !== null) {
-      // Apenas metadados de resultado do artefato — o snapshot nunca é tocado.
-      await client
-        .from("lab_artifacts")
-        .update({ width: validation.width, height: validation.height })
-        .eq("id", artifactId);
-    }
-
-    const lastEntry = params.sink.entries[params.sink.entries.length - 1];
     const latencyMs = Math.round(performance.now() - startedMs);
-    const costSummary = params.sink.costSummary;
 
     await finalizeLabRun({
       client,
       runId,
       status: "succeeded",
       latencyMs,
-      usage: lastEntry?.usage ?? null,
-      estimatedCostUsd: costSummary?.estimatedCostUsd ?? null,
-      costDetail: costSummary,
-      calls: params.sink.entries.map((entry) => toCallRecord(entry)),
+      ...collectSinkEvidence(params.sink),
       technicalValidation: validation,
-      provider: lastEntry?.provider ?? null,
-      model: lastEntry?.model ?? null,
-      protocol: lastEntry?.protocol ?? null,
-      capability: lastEntry?.capability ?? null,
-      attempts: params.sink.entries.length,
     });
     terminalReached = true;
 
@@ -573,19 +625,25 @@ export async function runReservedLabRun(params: {
     return { runId, status: "succeeded" };
   } catch (err) {
     const { code, message } = normalizeExecutionError(err);
+    // Sanitiza **uma única vez**, na origem: a mesma mensagem segura vai para o
+    // banco e para o evento (NDJSON) — nenhum token/URL vaza no stream.
+    const safeMessage = sanitizeAiErrorMessage(message);
     try {
       await finalizeLabRun({
         client,
         runId,
         status: "failed",
+        latencyMs: Math.round(performance.now() - startedMs),
+        ...collectSinkEvidence(params.sink),
+        technicalValidation: validation ?? undefined,
         errorType: code,
-        errorMessage: message,
+        errorMessage: safeMessage,
       });
       terminalReached = true;
     } catch {
       // A transição terminal é reexecutada no `finally` (best-effort).
     }
-    emit({ type: "error", code, message, runId });
+    emit({ type: "error", code, message: safeMessage, runId });
     return { runId, status: "failed" };
   } finally {
     if (!terminalReached) {

@@ -163,6 +163,29 @@ O run SHALL seguir `pending → running → succeeded | failed | cancelled | tim
 - **THEN** o run transita para `failed` com erro sanitizado
 - **AND** as tentativas e os envelopes reais são registrados
 
+#### Scenario: Transição é compare-and-set
+
+- **WHEN** uma transição (`pending → running` ou `→ terminal`) não afeta exatamente uma linha
+- **THEN** a transição é recusada como falha
+- **AND** um run já terminal nunca é sobrescrito por um executor ou pela reconciliação
+
+#### Scenario: Evidência de chamada paga é preservada na falha
+
+- **WHEN** o run falha após uma chamada paga (erro do provider, imagem ausente ou falha de persistência do artefato)
+- **THEN** `calls`, custo (`cost_detail`/`estimated_cost_usd`), usage, provider/modelo e tentativas são persistidos
+- **AND** a falha não apaga a evidência do custo incorrido
+
+#### Scenario: Erro emitido no stream é sanitizado
+
+- **WHEN** a execução falha e o erro é emitido no stream administrativo
+- **THEN** a mensagem é sanitizada (sem token/URL) antes de qualquer persistência ou emissão
+
+#### Scenario: MIME do artefato reflete os bytes
+
+- **WHEN** os bytes gerados não correspondem a um MIME aceito pelo bucket
+- **THEN** o run é recusado sem persistir o artefato
+- **AND** o objeto nunca é gravado com um MIME que não corresponde ao conteúdo
+
 #### Scenario: Run órfão é marcado como falho
 
 - **WHEN** um run permanece `pending` ou `running` além do limite de inatividade

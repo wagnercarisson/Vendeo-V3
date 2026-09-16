@@ -37,7 +37,12 @@ key-files:
     - src/lib/lab/__tests__/technical-validation.test.ts
     - src/lib/lab/__tests__/run-snapshot.test.ts
     - src/lib/lab/__tests__/run-service.test.ts
-  modified: []
+  modified:
+    - src/lib/lab/run-service.ts
+    - src/lib/lab/__tests__/run-service.test.ts
+    - openspec/changes/fase-48-1-laboratorio-ia-minimo/design.md
+    - openspec/changes/fase-48-1-laboratorio-ia-minimo/specs/lab-runs/spec.md
+    - .planning/phases/48.1-laboratorio-ia-minimo/48-1-07-PLAN.md
 
 key-decisions:
   - "Validação técnica devolve apenas fatos objetivos e converte toda falha em alerta; structuredOutputValid/ocrAlert permanecem campos reservados null (D9)"
@@ -46,6 +51,7 @@ key-decisions:
   - "runReservedLabRun recebe promptLoader e confere que o conteúdo servido bate com o hash do snapshot congelado antes de qualquer chamada paga"
   - "prepareLabRun e runReservedLabRun são separados para a rota 48-1-08 mapear erro de reserva em HTTP antes de abrir o stream NDJSON"
   - "reconcileStaleRuns cobre pending e running (o pending preso também bloqueia o experimento pelo índice único parcial global)"
+  - "Correções pós-revisão: mensagem sanitizada uma única vez (banco + evento NDJSON); collectSinkEvidence aplicada também na falha (calls/custo/usage/provider/attempts preservados); transições compare-and-set (pending→running e →terminal exigem exatamente 1 linha afetada); reconciliação conta apenas as linhas alteradas; MIME real derivado dos bytes antes da persistência, com MIME+dimensões numa única operação"
 
 patterns-established:
   - "Caminho de execução em duas fases (reserva → execução) com a chamada paga sempre depois do sucesso da RPC"
@@ -141,6 +147,30 @@ Cada task foi commitada atomicamente:
 
 **Total de desvios:** 3 auto-corrigidos (2 bloqueios de tipo/coerência, 1 bug de tipo) + 1 ajuste de teste (expectativa de janela do `staleMs`).
 **Impacto no plano:** nenhum escopo adicional; os três ajustes são necessários para correção/segurança e mantêm o contrato externo intacto.
+
+## Corrections Applied After Review (1 CRITICAL + 2 HIGH + 1 WARNING)
+
+### CRITICAL — segredo podia vazar no stream NDJSON
+
+`normalizeExecutionError` devolvia a mensagem bruta; ela era sanitizada ao persistir, mas o evento `error` era emitido com a mensagem **original**. Um erro com `Bearer sk-…` não entrava no banco, porém apareceria no stream administrativo do 48-1-08. **Fix:** sanitização **única na origem** (`safeMessage = sanitizeAiErrorMessage(message)`) — a mesma string segura vai para o banco e para o evento.
+
+### HIGH — falhas perdiam custo e envelopes reais
+
+O `catch` gravava apenas status/erro; `calls=[]`, custo ausente e sem provider/modelo, mesmo quando houve chamada paga. **Fix:** helper `collectSinkEvidence(sink)` aplicado **tanto no sucesso quanto na falha** — `calls`, `usage`, `cost_detail`, `estimated_cost_usd`, `provider`/`model`/`protocol` e `attempts` (e `technical_validation` quando já calculada). `attempts` só é sobrescrito quando houve chamada real.
+
+### HIGH — transições não eram atômicas
+
+`markRunRunning`/`finalizeLabRun` filtravam só por `id` e a reconciliação fazia select-then-update sem CAS. **Fix:** transições **compare-and-set** (`markRunRunning`: `id` + `status='pending'`; `finalizeLabRun`: `id` + `status IN ('pending','running')`) com `.select("id")` exigindo exatamente 1 linha afetada; a reconciliação reaplica `status IN ('pending','running')` no próprio update e conta **apenas as linhas alteradas** (`reconciled = retorno.length`).
+
+### WARNING — MIME e dimensões podiam ficar incorretos
+
+`resolveArtifactMimeType` defaultava para PNG e o erro do update de dimensões era ignorado. **Fix:** a validação técnica roda **antes** da persistência; o MIME é derivado dos **bytes** (`resolveArtifactMimeType(validation)`) e restrito à allowlist — fora dela/indecodificável → `unsupported_artifact_mime_type` sem persistir; MIME + dimensões entram numa **única** operação de persistência (sem update separado). A ordem das fases passou a ser `validation → artifact`.
+
+**Testes adicionados (+8):** evento `error` sanitizado (sem token/URL); evidência preservada nas 3 falhas (provider, imagem ausente, artefato) com `calls`/custo/usage/provider/attempts; MIME real fora da allowlist → `unsupported_artifact_mime_type` com zero `persistOutputArtifact`; CAS de `markRunRunning` e `finalizeLabRun` (0 linhas → `lab_run_transition_failed`); reconciliação contando apenas as linhas alteradas; persistência com MIME+dimensões numa única chamada (sem update de `lab_artifacts`).
+
+**Source-of-truth sincronizada:** `design.md` (D14 — CAS, evidência na falha, MIME real, stream sanitizado), `specs/lab-runs/spec.md` (+4 cenários) e `48-1-07-PLAN.md` (Task 2/3, testes, T-48-1-58..61).
+
+**Verification:** `npx vitest run src/lib/lab src/lib/ai src/lib/image-generation` → exit 0 (**793 testes**, +8); `npx tsc -p tsconfig.typecheck.json --noEmit` → exit 0; `npm.cmd run lint` → exit 0.
 
 ## Issues Encountered
 
