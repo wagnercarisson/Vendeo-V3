@@ -165,6 +165,37 @@ describe("LabTelemetrySink — custo em leitura, sem persistência produtiva", (
     expect(seen[1]).toBe(sink.entries[1]);
   });
 
+  it("falha do onEntry não propaga, não duplica a entrada e preserva o custo real", async () => {
+    const onEntry = vi.fn(() => {
+      throw new Error("stream NDJSON desconectado");
+    });
+    const sink = new LabTelemetrySink({ onEntry });
+
+    await expect(sink.emit(successEnvelope)).resolves.toBeUndefined();
+
+    expect(onEntry).toHaveBeenCalledTimes(1);
+    expect(sink.entries).toHaveLength(1);
+    // A entrada original e a CostResolution real permanecem intactas.
+    expect(sink.entries[0].cost).toEqual(FULL_COST);
+    expect(sink.entries[0].errorType).toBeUndefined();
+    expect(sink.costSummary?.estimatedCostUsd).toBe(FULL_COST.estimatedCostUsd);
+    expect(sink.costSummary?.costSource).toBe("pricing_table");
+  });
+
+  it("falha contínua do onEntry mantém exatamente 1 entrada por emit", async () => {
+    const onEntry = vi.fn(() => {
+      throw new Error("consumer down");
+    });
+    const sink = new LabTelemetrySink({ onEntry });
+
+    await sink.emit(successEnvelope);
+    await sink.emit({ ...successEnvelope, model: "gpt-5.5-2026-04-23" });
+
+    expect(onEntry).toHaveBeenCalledTimes(2);
+    expect(sink.entries).toHaveLength(2);
+    expect(sink.entries.every((entry) => entry.cost.costSource === "pricing_table")).toBe(true);
+  });
+
   it("costSummary é null sem entradas", () => {
     expect(new LabTelemetrySink().costSummary).toBeNull();
   });

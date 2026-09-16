@@ -64,6 +64,13 @@ O laboratório SHALL usar um sink de telemetria próprio que computa custo em mo
 - **THEN** a execução prossegue
 - **AND** a falha é registrada de forma sanitizada
 
+#### Scenario: Uma entrada por envelope, mesmo com consumidor falhando
+
+- **WHEN** um envelope é emitido e o callback do consumidor (`onEntry`) lança (ex.: stream desconectado)
+- **THEN** exatamente uma entrada é acumulada para aquele envelope
+- **AND** a entrada e o custo resolvido permanecem intactos
+- **AND** a falha do callback não propaga e não gera uma entrada artificial
+
 ### Requirement: Fallback automático desabilitado no laboratório
 
 O laboratório SHALL NOT usar o provider de imagem que consulta a seleção produtiva e pode acionar `campaign_image_edit`; SHALL invocar a capacidade `campaign_image` diretamente no gateway, garantindo exatamente uma chamada paga por run. `campaign_image_edit` SHALL ficar como alvo/experimento explícito futuro.

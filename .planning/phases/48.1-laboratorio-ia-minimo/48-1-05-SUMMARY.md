@@ -50,6 +50,11 @@ key-files:
     - src/lib/ai/__tests__/lab-telemetry-sink.test.ts
   modified:
     - src/lib/image-generation/services/image-generation-service.ts
+    - src/lib/ai/lab-telemetry-sink.ts
+    - src/lib/ai/__tests__/lab-telemetry-sink.test.ts
+    - openspec/changes/fase-48-1-laboratorio-ia-minimo/design.md
+    - openspec/changes/fase-48-1-laboratorio-ia-minimo/specs/lab-gateway-harness/spec.md
+    - .planning/phases/48.1-laboratorio-ia-minimo/48-1-05-PLAN.md
 
 key-decisions:
   - "buildDirectorPrompt é um seam de instância (não um helper puro): reusa buildPromptVariables + assemblePrompt no estado INITIAL e não altera nenhuma linha de generateImage"
@@ -57,6 +62,7 @@ key-decisions:
   - "operationRunType reutiliza campaign_delivery (union travado por teste); a marcação própria do laboratório fica no snapshot do run (48-1-07)"
   - "createDefaultLabRuntime usa dynamic import de @/lib/ai para evitar o efeito colateral do cliente server-only no load de módulos importados por testes"
   - "No caminho de exceção do sink, a entrada é registrada com costSource not_available / estimatedCostUsd null e errorType sanitizado — o run nunca é bloqueado"
+  - "Emissão com exatamente 1 entrada por envelope (correção pós-revisão): o try/catch cobre apenas o cálculo/construção da entrada; o push ocorre uma única vez e o callback onEntry roda em try/catch separado e best-effort (falha do consumidor não duplica a entrada nem escapa para o gateway)"
 
 patterns-established:
   - "Adapter fake com contador de invocações como prova de exatamente 1 chamada por run"
@@ -132,6 +138,23 @@ _Note: plano `type: execute` (não TDD) — 1 commit por task._
 None — plan executed exactly as written.
 
 Exceção pré-existente (não é desvio deste plano): a verificação plan-level `rg "OpenAIImageProvider|providers/openai|campaign_image_edit" src/lib/lab` → 0 ocorrências encontra **1** linha pré-existente em `src/lib/lab/domain/__tests__/schemas.test.ts:231` (introduzida no 48-1-04, `validInput({ primaryCapability: "campaign_image_edit" })`). É um teste **negativo** que afirma a rejeição dessa capacidade — reforça a fence, não abre caminho de fallback. Fora do escopo deste plano (scope boundary), mantido intacto e registrado em `deferred-items.md`.
+
+## Correction Applied After Review (HIGH — onEntry duplicava o envelope)
+
+**Finding (revisão do usuário):** em `lab-telemetry-sink.ts`, o `try/catch` do `emit` envolvia **também** o `push`/`onEntry`. Se o callback `onEntry` lançasse (ex.: stream NDJSON desconectado após a entrada correta ter sido adicionada), o `catch` interpretava isso como falha do sink e adicionava uma **segunda** entrada artificial (`costSource: "not_available"`) — duplicando `calls[]` no snapshot, quebrando a evidência "1 envelope por run" e tornando o `costSummary` incoerente.
+
+**Fix:** separação de responsabilidades em `emit`:
+1. `buildEntry(envelope)` (em `try`) — calcula o custo e monta a entrada; falha do cálculo retorna **uma** entrada sanitizada (`costSource: "not_available"`), sem propagar.
+2. `this.collected.push(entry)` — **exatamente uma** vez.
+3. `notify(entry)` — chama `onEntry?.(entry)` em `try/catch` **separado e best-effort**: falha do consumidor nunca duplica a entrada, nunca é interpretada como falha do sink e nunca escapa para o gateway.
+
+O antigo helper `push` (que juntava push + onEntry dentro do mesmo `try`) foi removido.
+
+**Testes adicionados (+2):** `onEntry` lançando → `emit` resolve, `entries.length === 1`, `cost` igual à `CostResolution` real, `costSummary` coerente e sem entrada artificial; falha contínua em dois `emit` → exatamente 1 entrada por envelope (2 no total) e ambos os custos intactos.
+
+**Source-of-truth sincronizada:** `design.md` (D6 — garantia de uma entrada por envelope), `specs/lab-gateway-harness/spec.md` (novo cenário "Uma entrada por envelope, mesmo com consumidor falhando") e `48-1-05-PLAN.md` (Task 3 `emit`/testes/aceite + novo threat model T-48-1-49).
+
+**Verification:** `npx vitest run src/lib/lab src/lib/ai src/lib/image-generation` → exit 0 (**717 testes**, +2); `npx tsc -p tsconfig.typecheck.json --noEmit` → exit 0; `npm.cmd run lint` → exit 0.
 
 ## Issues Encountered
 

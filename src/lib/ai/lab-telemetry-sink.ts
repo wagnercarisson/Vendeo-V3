@@ -49,6 +49,18 @@ export class LabTelemetrySink implements AiTelemetrySink {
   constructor(private readonly params: LabTelemetrySinkParams = {}) {}
 
   async emit(envelope: AiCallEnvelope): Promise<void> {
+    // Exatamente **uma** entrada por envelope: o cálculo/construção pode falhar
+    // (registro sanitizado) e a notificação do consumidor é best-effort à parte.
+    const entry = await this.buildEntry(envelope);
+    this.collected.push(entry);
+    this.notify(entry);
+  }
+
+  /**
+   * Calcula o custo e monta a entrada. Uma falha aqui (ex.: `resolveAiCost`)
+   * registra a entrada de forma sanitizada, sem custo conhecido — o run prossegue.
+   */
+  private async buildEntry(envelope: AiCallEnvelope): Promise<LabCallEntry> {
     try {
       const generationType = CAPABILITY_GENERATION_TYPE[envelope.capability];
       const cost = await resolveAiCost({
@@ -62,7 +74,7 @@ export class LabTelemetrySink implements AiTelemetrySink {
         generationType,
       });
 
-      this.push({
+      return {
         capability: envelope.capability,
         provider: envelope.provider,
         model: envelope.model,
@@ -72,11 +84,9 @@ export class LabTelemetrySink implements AiTelemetrySink {
         usage: envelope.usage,
         cost,
         errorType: envelope.errorType ? sanitizeAiErrorMessage(envelope.errorType) : undefined,
-      });
+      };
     } catch (err) {
-      // Falha do sink NUNCA bloqueia a execução: a entrada é registrada de forma
-      // sanitizada (sem custo conhecido) e o run prossegue.
-      this.push({
+      return {
         capability: envelope.capability,
         provider: envelope.provider,
         model: envelope.model,
@@ -86,7 +96,20 @@ export class LabTelemetrySink implements AiTelemetrySink {
         usage: envelope.usage,
         cost: { estimatedCostUsd: null, costSource: "not_available" },
         errorType: sanitizeAiErrorMessage(err instanceof Error ? err.message : String(err)),
-      });
+      };
+    }
+  }
+
+  /**
+   * Notifica o consumidor **best-effort**, em try/catch separado: uma falha do
+   * callback (ex.: stream NDJSON desconectado) nunca é interpretada como falha do
+   * sink, nunca adiciona uma segunda entrada e nunca escapa para o gateway.
+   */
+  private notify(entry: LabCallEntry): void {
+    try {
+      this.params.onEntry?.(entry);
+    } catch {
+      // Best-effort: o consumidor não pode corromper a evidência do run.
     }
   }
 
@@ -112,10 +135,5 @@ export class LabTelemetrySink implements AiTelemetrySink {
       ...last,
       estimatedCostUsd: known.length > 0 ? Number(total.toFixed(6)) : null,
     };
-  }
-
-  private push(entry: LabCallEntry): void {
-    this.collected.push(entry);
-    this.params.onEntry?.(entry);
   }
 }
