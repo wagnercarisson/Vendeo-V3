@@ -16,7 +16,7 @@ import {
  * F48.1 (48-1-09, task 9.1) — estado de ambiente desabilitado.
  *
  * Os 4 motivos de recusa da guarda precisam renderizar o mesmo título, o motivo
- * legível correspondente e a nota de que nada foi acessado. Nenhum caractere
+ * legível correspondente e o aviso de que nada foi acessado. Nenhum caractere
  * emoji pode aparecer (design system: ícones apenas via `lucide-react`).
  */
 
@@ -32,7 +32,7 @@ const EMOJI_PATTERN =
 
 describe("DisabledNotice", () => {
   it.each(REFUSAL_REASONS)(
-    "exibe o título, o motivo legível e a nota para o reason %s",
+    "exibe o título, o motivo legível e o aviso para o reason %s",
     (reason) => {
       render(<DisabledNotice reason={reason} />);
 

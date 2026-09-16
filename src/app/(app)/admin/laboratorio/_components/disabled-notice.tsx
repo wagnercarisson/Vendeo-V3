@@ -18,7 +18,7 @@ import type { LabEnvironmentReason } from "@/lib/lab/environment-guard";
 /** Título único do estado desabilitado (contrato de copy da fase). */
 export const LAB_DISABLED_TITLE = "Laboratório desabilitado neste ambiente";
 
-/** Nota que explicita a ausência de acesso a dados/providers. */
+/** Aviso que explicita a ausência de acesso a dados/providers. */
 export const LAB_DISABLED_NOTE =
   "Nenhuma tabela lab_*, storage do laboratório ou provider de IA foi acessado.";
 
