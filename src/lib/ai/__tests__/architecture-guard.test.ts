@@ -129,4 +129,57 @@ describe("architecture-guard — camada única de IA (F46-06)", () => {
     }
     expect(violations).toEqual([]);
   });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // F48.1 (D6/D15) — gates adicionais para o bounded context do laboratório.
+  // Estritamente aditivos: nenhuma regra acima é afrouxada. Os arquivos de
+  // `src/lib/lab/**` continuam sujeitos a TODOS os gates anteriores.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const labFiles = files.filter((file) => file.startsWith("src/lib/lab/"));
+
+  /** Provider de imagem de produção — o lab invoca `campaign_image` direto no gateway. */
+  const LAB_IMAGE_PROVIDER_RE = /@\/lib\/image-generation\/providers\/openai|OpenAIImageProvider/;
+
+  /** Leitura de chave de provider — exclusiva de `src/lib/ai/api-keys.ts` (`getApiKey`). */
+  const LAB_API_KEY_ENV_RE = /process\.env\.(OPENAI_API_KEY|GEMINI_API_KEY)\b/;
+
+  it("src/lib/lab/ existe e contém ao menos environment-guard.ts", () => {
+    // Sanidade: garante que os três gates do laboratório abaixo não passam por
+    // varredura vazia (lista de arquivos sem nenhum arquivo do lab).
+    expect(labFiles.length).toBeGreaterThan(0);
+    expect(files).toContain("src/lib/lab/environment-guard.ts");
+  });
+
+  it("o laboratório não grava generation_events nem chama AiCostTracker.record", () => {
+    const violations: string[] = [];
+    for (const file of labFiles) {
+      const code = readCode(file);
+      if (/generation_events/.test(code)) violations.push(`${file} → generation_events`);
+      if (TRACKER_RECORD_RE.test(code)) violations.push(`${file} → AiCostTracker.record`);
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it("o laboratório não instancia o provider de imagem de produção nem SDK/wire", () => {
+    const violations: string[] = [];
+    for (const file of labFiles) {
+      const code = readCode(file);
+      if (LAB_IMAGE_PROVIDER_RE.test(code)) {
+        violations.push(`${file} → provider de imagem de produção`);
+      }
+      for (const { name, re } of SDK_WIRE_PATTERNS) {
+        if (re.test(code)) violations.push(`${file} → ${name}`);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it("o laboratório não lê chaves de provider diretamente", () => {
+    const violations: string[] = [];
+    for (const file of labFiles) {
+      if (LAB_API_KEY_ENV_RE.test(readCode(file))) violations.push(file);
+    }
+    expect(violations).toEqual([]);
+  });
 });
