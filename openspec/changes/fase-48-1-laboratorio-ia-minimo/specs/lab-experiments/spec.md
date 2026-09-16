@@ -113,6 +113,37 @@ O experimento SHALL seguir as transições `draft → ready → running ⇄ eval
 - **WHEN** se tenta ir de `draft` direto para `running` ou sair de `archived`
 - **THEN** a transição é rejeitada
 
+### Requirement: Imutabilidade estrutural após o primeiro run
+
+Após o primeiro run de um experimento, o sistema SHALL impedir **no banco** — e não apenas por convenção — a alteração estrutural da configuração congelada: `INSERT`/`UPDATE`/`DELETE` de variantes e de cenários vinculados, `DELETE` do experimento com histórico (encerramento via `archived`) e `DELETE` de runs históricos. A criação de um experimento com as duas variantes e os cenários SHALL ser atômica.
+
+#### Scenario: Variantes não podem ser inseridas, alteradas ou removidas após o primeiro run
+
+- **WHEN** o experimento já possui ao menos um run
+- **THEN** `INSERT`, `UPDATE` ou `DELETE` em `lab_experiment_variants` para esse experimento é rejeitado pelo banco
+
+#### Scenario: Cenários vinculados não podem ser alterados após o primeiro run
+
+- **WHEN** o experimento já possui ao menos um run
+- **THEN** `INSERT`, `UPDATE` ou `DELETE` em `lab_experiment_scenarios` para esse experimento é rejeitado pelo banco
+
+#### Scenario: Experimento com histórico não pode ser excluído
+
+- **WHEN** o experimento possui runs
+- **THEN** `DELETE` em `lab_experiments` é rejeitado
+- **AND** o encerramento ocorre por `archived`
+
+#### Scenario: Runs históricos não podem ser excluídos
+
+- **WHEN** se tenta `DELETE` em `lab_runs`
+- **THEN** a operação é rejeitada pelo banco
+- **AND** o histórico de reexecução permanece
+
+#### Scenario: Criação do experimento é atômica
+
+- **WHEN** a criação de um experimento falha em qualquer etapa (experimento, variantes ou cenários)
+- **THEN** nenhum registro parcial é persistido
+
 ### Requirement: Limites de cenários, repetições e concorrência
 
 O sistema SHALL limitar o número de cenários por experimento, o número de repetições e a concorrência de execuções a **um run ativo global no laboratório**, impedindo loops automáticos ilimitados.
