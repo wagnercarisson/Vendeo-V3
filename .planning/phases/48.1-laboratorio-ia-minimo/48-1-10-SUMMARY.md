@@ -45,7 +45,14 @@ key-files:
     - "src/app/(app)/admin/laboratorio/_components/__tests__/comparison-view.test.tsx"
     - "src/app/(app)/admin/laboratorio/_components/__tests__/evaluation-form.test.tsx"
     - "src/app/(app)/admin/laboratorio/experimentos/[id]/comparar/page.tsx"
-  modified: []
+  modified:
+    - "src/app/(app)/admin/laboratorio/_components/comparison-view.tsx"
+    - "src/app/(app)/admin/laboratorio/_components/evaluation-form.tsx"
+    - "src/app/(app)/admin/laboratorio/_components/__tests__/comparison-view.test.tsx"
+    - "src/app/(app)/admin/laboratorio/_components/__tests__/evaluation-form.test.tsx"
+    - openspec/changes/fase-48-1-laboratorio-ia-minimo/design.md
+    - openspec/changes/fase-48-1-laboratorio-ia-minimo/specs/lab-human-evaluation/spec.md
+    - .planning/phases/48.1-laboratorio-ia-minimo/48-1-10-PLAN.md
 
 key-decisions:
   - "`evaluation-form.tsx` foi implementado e commitado junto da Task 2 (é dependência real de `comparison-view.tsx`): commitar o formulário só na Task 3 deixaria o commit da Task 2 sem compilar — o plano autoriza explicitamente criá-lo antes do teste da Task 2"
@@ -172,6 +179,30 @@ Each task was committed atomically:
 | T-48-1-82 (elevação de privilégio) | Layout pai exige `requireAdmin()`; a página avalia `getLabEnvironment()` antes de qualquer leitura de `lab_*`/storage |
 | T-48-1-83 (DoS de leitura) | Artefatos apenas de runs terminais (≤ `max_runs`) e **uma** chamada em lote de URL assinada |
 | T-48-1-SC (dependências) | Nenhum pacote novo — `next`, `react` e `lucide-react` já existiam |
+
+## Corrections Applied After Review (1 bloqueante + 2 importantes)
+
+### BLOQUEANTE — estado vazio removia a própria navegação
+
+**Finding (revisão do usuário):** quando o cenário/repetição inicialmente selecionado não tinha o par baseline+candidata, o componente retornava imediatamente "Sem runs comparáveis", escondendo os seletores — mesmo que outro cenário/repetição tivesse um par válido.
+
+**Fix (`comparison-view.tsx`):** o early return só ocorre quando não há cenários; os seletores permanecem sempre visíveis e o estado vazio é renderizado **apenas na área dos painéis**. O seletor de repetição agora oferece **apenas repetições com o par completo** (baseline + candidata) e fica desabilitado quando não há par. Testes novos: primeiro cenário sem par + segundo com par (seletores visíveis e troca funciona); repetição sem par fora do seletor.
+
+### IMPORTANTE — avaliação selecionada podia migrar para outro par
+
+**Finding (revisão do usuário):** `verdict`/observação/erro/confirmação são estado interno do `EvaluationForm`; ao trocar cenário/repetição o componente recebia novos IDs mas mantinha a escolha e o texto anteriores — podendo registrar para o novo par uma decisão tomada olhando o par anterior (grave por ser append-only).
+
+**Fix:** o `ComparisonView` passa `key={`${scenarioVersionId}:${baselineRun.id}:${candidateRun.id}`}` ao `EvaluationForm` — trocar o par remonta o formulário e zera o estado interno. Testes: remontagem detectada por identidade de nó no `ComparisonView` e "remontar com outro par inicia o formulário limpo" no teste do formulário.
+
+### IMPORTANTE — `blind_order` registrado mesmo sem modo cego
+
+**Finding (revisão do usuário):** o estado começava como `baseline_left` e era sempre enviado, inclusive quando o modo cego nunca foi ativado ou já havia sido revelado — sugerindo uma avaliação cega que pode ter sido totalmente identificada.
+
+**Fix:** `effectiveBlindOrder = identityHidden ? blindOrder : null` no `ComparisonView`; `EvaluationForm.blindOrder` passou a `LabBlindOrder | null` — a linha "Ordem cega apresentada" só aparece com ordem efetiva e o campo é **omitido** do payload quando `null`. Testes: ordem ausente sem modo cego e após "Revelar"; payload sem `blindOrder`.
+
+**Source-of-truth sincronizada:** `design.md` (D13), `specs/lab-human-evaluation/spec.md` (+4 cenários) e `48-1-10-PLAN.md` (Task 2/3, testes, T-48-1-77/78).
+
+**Verification:** `npx vitest run "src/app/(app)/admin/laboratorio"` → exit 0 (**47 testes**, estável em 5 execuções); `npx tsc -p tsconfig.typecheck.json --noEmit` → exit 0; `npm.cmd run lint` → exit 0; `npm.cmd run build` → exit 0.
 
 ## Issues Encountered
 

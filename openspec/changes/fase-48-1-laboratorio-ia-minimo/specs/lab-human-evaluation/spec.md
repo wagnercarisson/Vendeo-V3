@@ -29,6 +29,13 @@ O sistema SHALL fornecer uma tela de comparação lado a lado entre baseline e c
 
 - **WHEN** existem múltiplas repetições
 - **THEN** o admin pode alternar entre as repetições disponíveis de cada variante
+- **AND** o seletor oferece apenas repetições com o par completo (baseline + candidata)
+
+#### Scenario: Seleção sem par não esconde a navegação
+
+- **WHEN** o cenário ou a repetição selecionados não têm o par comparável
+- **THEN** o estado vazio aparece apenas na área dos painéis
+- **AND** os seletores de cenário e repetição permanecem visíveis para escolher outra seleção comparável
 
 ### Requirement: Registro da avaliação humana
 
@@ -39,6 +46,18 @@ O sistema SHALL permitir registrar a avaliação humana com as opções baseline
 - **WHEN** o admin seleciona um verdict e confirma
 - **THEN** a avaliação é persistida com avaliador, timestamp, `baseline_run_id` e `candidate_run_id`
 - **AND** a avaliação mais recente por cenário é exibida
+
+#### Scenario: Ordem cega só é registrada quando a escolha foi cega
+
+- **WHEN** a avaliação é registrada sem o modo cego ativo (desligado ou já revelado)
+- **THEN** `blind_order` é `null`/omitido e não sugere uma avaliação cega
+- **AND** com o modo cego ativo, a ordem apresentada é registrada
+
+#### Scenario: Decisão não migra para outro par comparado
+
+- **WHEN** o admin troca o cenário ou a repetição depois de preencher o formulário
+- **THEN** o formulário é reiniciado e a seleção/observação anteriores não são reaproveitadas
+- **AND** a avaliação registrada corresponde ao par exibido no momento do envio
 
 #### Scenario: Runs comparados ficam auditáveis
 

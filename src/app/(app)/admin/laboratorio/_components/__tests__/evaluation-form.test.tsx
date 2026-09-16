@@ -63,7 +63,7 @@ const EVAL_2: ComparisonEvaluation = {
 function renderForm(overrides: {
   latestEvaluation?: ComparisonEvaluation | null;
   history?: ComparisonEvaluation[];
-  blindOrder?: "baseline_left" | "candidate_left";
+  blindOrder?: "baseline_left" | "candidate_left" | null;
 } = {}) {
   return render(
     <EvaluationForm
@@ -71,7 +71,9 @@ function renderForm(overrides: {
       scenarioVersionId={SCENARIO_VERSION_ID}
       baselineRunId={BASELINE_RUN_ID}
       candidateRunId={CANDIDATE_RUN_ID}
-      blindOrder={overrides.blindOrder ?? "baseline_left"}
+      blindOrder={
+        overrides.blindOrder === undefined ? "baseline_left" : overrides.blindOrder
+      }
       latestEvaluation={overrides.latestEvaluation ?? null}
       history={overrides.history ?? []}
     />,
@@ -239,5 +241,52 @@ describe("EvaluationForm", () => {
     expect(container.textContent ?? "").not.toMatch(
       /nota|score|pontua|%|publicável|ranking/i,
     );
+  });
+
+  it("não registra ordem cega quando a escolha não foi efetivamente cega", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({ evaluationId: "eval-3", createdAt: EVAL_2.createdAt }),
+    });
+
+    renderForm({ blindOrder: null });
+
+    expect(screen.queryByTestId("evaluation-blind-order")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("radio", { name: "Empate" }));
+    submitForm();
+
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+    const body = JSON.parse(
+      (mockFetch.mock.calls[0][1] as { body: string }).body,
+    ) as Record<string, unknown>;
+    expect(body).not.toHaveProperty("blindOrder");
+    expect(body.verdict).toBe("tie");
+  });
+
+  it("remontar com outro par comparado inicia o formulário limpo", () => {
+    const { unmount } = renderForm();
+
+    fireEvent.click(screen.getByRole("radio", { name: "Candidata melhor" }));
+    fireEvent.change(screen.getByLabelText("Observação"), {
+      target: { value: "texto da decisão anterior" },
+    });
+    unmount();
+
+    render(
+      <EvaluationForm
+        experimentId={EXPERIMENT_ID}
+        scenarioVersionId={SCENARIO_VERSION_ID}
+        baselineRunId="bbbbbbbb-1111-4111-8111-111111111111"
+        candidateRunId="cccccccc-2222-4222-8222-222222222222"
+        blindOrder={null}
+        latestEvaluation={null}
+        history={[]}
+      />,
+    );
+
+    expect(screen.getByRole("radio", { name: "Candidata melhor" })).not.toBeChecked();
+    expect(screen.getByLabelText("Observação")).toHaveValue("");
   });
 });

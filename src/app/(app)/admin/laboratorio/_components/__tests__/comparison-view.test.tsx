@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { LabTechnicalAlert } from "@/lib/lab/technical-validation";
@@ -25,11 +25,11 @@ vi.mock("../evaluation-form", () => ({
   EvaluationForm: (props: {
     baselineRunId: string;
     candidateRunId: string;
-    blindOrder: string;
+    blindOrder: string | null;
   }) => (
     <div
       data-testid="evaluation-form-probe"
-      data-blind-order={props.blindOrder}
+      data-blind-order={props.blindOrder ?? undefined}
       data-baseline-run-id={props.baselineRunId}
       data-candidate-run-id={props.candidateRunId}
     />
@@ -37,6 +37,7 @@ vi.mock("../evaluation-form", () => ({
 }));
 
 const SCENARIO_A = "aaaaaaaa-1111-4111-8111-111111111111";
+const SCENARIO_B = "bbbbbbbb-2222-4222-8222-222222222222";
 
 const PROMPT_HASH =
   "abc123def456abc123def456abc123def456abc123def456abc123def456abcd";
@@ -234,15 +235,21 @@ describe("ComparisonView", () => {
     expect(screen.queryByAltText("Arte da variante Baseline — repetição 1")).not.toBeInTheDocument();
   });
 
-  it("inverte os painéis ao embaralhar e envia a ordem apresentada à avaliação", () => {
+  it("inverte os painéis ao embaralhar e só registra a ordem quando a escolha é cega", () => {
     renderView();
 
     expect(panelRoles()).toEqual(["Baseline", "Candidata"]);
+    // Sem modo cego, a ordem NÃO é registrada na avaliação.
+    expect(screen.getByTestId("evaluation-form-probe")).not.toHaveAttribute(
+      "data-blind-order",
+    );
+    expect(screen.getByText("Ordem apresentada: Baseline à esquerda")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("switch", { name: "Modo cego" }));
     expect(screen.getByTestId("evaluation-form-probe")).toHaveAttribute(
       "data-blind-order",
       "baseline_left",
     );
-    expect(screen.getByText("Ordem apresentada: Baseline à esquerda")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Embaralhar ordem" }));
 
@@ -253,12 +260,10 @@ describe("ComparisonView", () => {
     );
     expect(screen.getByText("Ordem apresentada: Candidata à esquerda")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Embaralhar ordem" }));
-
-    expect(panelRoles()).toEqual(["Baseline", "Candidata"]);
-    expect(screen.getByTestId("evaluation-form-probe")).toHaveAttribute(
+    // Revelar encerra o modo cego efetivo: a ordem deixa de ser registrada.
+    fireEvent.click(screen.getByRole("button", { name: "Revelar" }));
+    expect(screen.getByTestId("evaluation-form-probe")).not.toHaveAttribute(
       "data-blind-order",
-      "baseline_left",
     );
   });
 
@@ -328,5 +333,102 @@ describe("ComparisonView", () => {
       />,
     );
     expect(screen.getAllByText("Sem runs comparáveis")).toHaveLength(2);
+  });
+
+  it("mantém os seletores visíveis quando o cenário inicial não tem par", () => {
+    render(
+      <ComparisonView
+        experimentId="exp-1"
+        scenarioOptions={[
+          { id: SCENARIO_A, label: "produto-oferta-preco v1" },
+          { id: SCENARIO_B, label: "produto-oferta-logo v1" },
+        ]}
+        runs={[
+          run({ id: "b-baseline", variantRole: "baseline", scenarioVersionId: SCENARIO_B }),
+          run({
+            id: "b-candidate",
+            variantRole: "candidate",
+            scenarioVersionId: SCENARIO_B,
+            runSequence: 2,
+          }),
+        ]}
+        evaluations={[]}
+      />,
+    );
+
+    // Cenário A não tem par → estado vazio, mas os seletores continuam visíveis.
+    expect(screen.getByText("Sem runs comparáveis")).toBeInTheDocument();
+    expect(screen.getByLabelText("Cenário")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Repetição" })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Cenário"), {
+      target: { value: SCENARIO_B },
+    });
+
+    expect(screen.queryByText("Sem runs comparáveis")).not.toBeInTheDocument();
+    expect(panelRoles()).toEqual(["Baseline", "Candidata"]);
+  });
+
+  it("oferece apenas repetições com o par completo", () => {
+    renderView([
+      // Repetição 1: apenas baseline (sem par).
+      run({ id: "b-rep1", variantRole: "baseline", repetitionIndex: 1 }),
+      // Repetição 2: par completo.
+      run({ id: "b-rep2", variantRole: "baseline", repetitionIndex: 2 }),
+      run({
+        id: "c-rep2",
+        variantRole: "candidate",
+        repetitionIndex: 2,
+        runSequence: 2,
+      }),
+    ]);
+
+    const repetition = screen.getByRole("combobox", { name: "Repetição" });
+    expect(
+      within(repetition)
+        .getAllByRole("option")
+        .map((option) => option.getAttribute("value")),
+    ).toEqual(["2"]);
+    expect(panelRoles()).toEqual(["Baseline", "Candidata"]);
+  });
+
+  it("reinicia o formulário de avaliação quando o par comparado muda", () => {
+    render(
+      <ComparisonView
+        experimentId="exp-1"
+        scenarioOptions={[
+          { id: SCENARIO_A, label: "produto-oferta-preco v1" },
+          { id: SCENARIO_B, label: "produto-oferta-logo v1" },
+        ]}
+        runs={[
+          run({ id: "a-baseline", variantRole: "baseline", scenarioVersionId: SCENARIO_A }),
+          run({
+            id: "a-candidate",
+            variantRole: "candidate",
+            scenarioVersionId: SCENARIO_A,
+            runSequence: 2,
+          }),
+          run({ id: "b-baseline", variantRole: "baseline", scenarioVersionId: SCENARIO_B }),
+          run({
+            id: "b-candidate",
+            variantRole: "candidate",
+            scenarioVersionId: SCENARIO_B,
+            runSequence: 2,
+          }),
+        ]}
+        evaluations={[]}
+      />,
+    );
+
+    const before = screen.getByTestId("evaluation-form-probe");
+    fireEvent.change(screen.getByLabelText("Cenário"), {
+      target: { value: SCENARIO_B },
+    });
+    const after = screen.getByTestId("evaluation-form-probe");
+
+    // A `key` muda com o par → remontagem → estado interno do formulário zerado
+    // (a decisão nunca migra para outro par).
+    expect(after).not.toBe(before);
+    expect(after).toHaveAttribute("data-baseline-run-id", "b-baseline");
   });
 });

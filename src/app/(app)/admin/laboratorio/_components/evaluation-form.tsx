@@ -36,7 +36,12 @@ export interface EvaluationFormProps {
   scenarioVersionId: string;
   baselineRunId: string;
   candidateRunId: string;
-  blindOrder: LabBlindOrder;
+  /**
+   * Ordem cega apresentada — `null` quando a escolha **não** aconteceu em modo
+   * cego (desligado ou já revelado). Nunca registrar uma ordem que sugira uma
+   * avaliação cega que pode ter sido totalmente identificada.
+   */
+  blindOrder: LabBlindOrder | null;
   latestEvaluation: ComparisonEvaluation | null;
   history: ComparisonEvaluation[];
 }
@@ -160,7 +165,9 @@ export function EvaluationForm({
             baselineRunId,
             candidateRunId,
             verdict,
-            blindOrder,
+            // `blindOrder` só vai no payload quando a escolha foi efetivamente
+            // cega; `undefined` é omitido pelo JSON.stringify.
+            blindOrder: blindOrder ?? undefined,
             observation: observation.trim() || undefined,
           }),
         },
@@ -240,9 +247,11 @@ export function EvaluationForm({
           />
         </div>
 
-        <p className="font-mono text-xs text-text-muted" data-testid="evaluation-blind-order">
-          Ordem cega apresentada: {BLIND_ORDER_LABELS[blindOrder]}
-        </p>
+        {blindOrder && (
+          <p className="font-mono text-xs text-text-muted" data-testid="evaluation-blind-order">
+            Ordem cega apresentada: {BLIND_ORDER_LABELS[blindOrder]}
+          </p>
+        )}
 
         {submitError && (
           <p

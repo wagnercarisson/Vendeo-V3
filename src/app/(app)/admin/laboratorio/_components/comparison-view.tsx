@@ -247,15 +247,27 @@ export function ComparisonView({
   const [blindOrder, setBlindOrder] = useState<LabBlindOrder>("baseline_left");
 
   const scenarioRuns = runs.filter((run) => run.scenarioVersionId === scenarioVersionId);
-  const availableRepetitions = Array.from(
-    new Set(scenarioRuns.map((run) => run.repetitionIndex)),
-  ).sort((a, b) => a - b);
 
-  // Derivado, não efeito: a repetição selecionada cai para a primeira disponível
+  // O seletor de repetição oferece apenas repetições com o **par completo**
+  // (baseline + candidata): uma repetição sem par não é comparável.
+  const comparableRepetitions = Array.from(
+    new Set(scenarioRuns.map((run) => run.repetitionIndex)),
+  )
+    .filter((repetition) => {
+      const roles = new Set(
+        scenarioRuns
+          .filter((run) => run.repetitionIndex === repetition)
+          .map((run) => run.variantRole),
+      );
+      return roles.has("baseline") && roles.has("candidate");
+    })
+    .sort((a, b) => a - b);
+
+  // Derivado, não efeito: a repetição selecionada cai para a primeira comparável
   // quando não existe (evita estado intermediário e dependência de timing).
-  const effectiveRepetition = availableRepetitions.includes(repetitionIndex)
+  const effectiveRepetition = comparableRepetitions.includes(repetitionIndex)
     ? repetitionIndex
-    : availableRepetitions[0] ?? 1;
+    : comparableRepetitions[0] ?? 1;
 
   function latestRunFor(role: LabVariantRole): ComparisonRun | null {
     const candidates = scenarioRuns
@@ -290,10 +302,14 @@ export function ComparisonView({
   }
 
   const identityHidden = blind && !revealed;
+  // A ordem só é registrada quando a escolha acontece **efetivamente** em modo
+  // cego (ligado e ainda não revelado); caso contrário `null` — nunca sugerir uma
+  // avaliação cega que pode ter sido totalmente identificada (T-48-1-78).
+  const effectiveBlindOrder: LabBlindOrder | null = identityHidden ? blindOrder : null;
   const orderLabel =
     blindOrder === "baseline_left" ? "Baseline à esquerda" : "Candidata à esquerda";
 
-  if (scenarioOptions.length === 0 || !baselineRun || !candidateRun) {
+  if (scenarioOptions.length === 0) {
     return (
       <div className="max-w-7xl">
         <EmptyState
@@ -303,11 +319,6 @@ export function ComparisonView({
       </div>
     );
   }
-
-  const orderedRuns: ComparisonRun[] =
-    blindOrder === "baseline_left"
-      ? [baselineRun, candidateRun]
-      : [candidateRun, baselineRun];
 
   return (
     <div className="max-w-7xl space-y-6">
@@ -344,11 +355,15 @@ export function ComparisonView({
             <select
               id="comparison-repetition"
               aria-label="Repetição"
-              value={String(effectiveRepetition)}
+              value={
+                comparableRepetitions.length > 0 ? String(effectiveRepetition) : ""
+              }
+              disabled={comparableRepetitions.length === 0}
               onChange={(event) => setRepetitionIndex(Number(event.target.value))}
               className="min-h-[44px] w-full rounded-lg border border-border-light bg-bg-deep px-3 py-2 text-sm text-text-primary focus:ring-2 focus:ring-accent-blue focus:outline-none"
             >
-              {availableRepetitions.map((repetition) => (
+              {comparableRepetitions.length === 0 && <option value="">—</option>}
+              {comparableRepetitions.map((repetition) => (
                 <option key={repetition} value={repetition}>
                   {repetition}
                 </option>
@@ -384,21 +399,36 @@ export function ComparisonView({
         </div>
       </section>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {orderedRuns.map((run) => (
-          <ComparisonPanel key={run.id} run={run} hidden={identityHidden} />
-        ))}
-      </div>
+      {baselineRun && candidateRun ? (
+        <>
+          <div className="grid gap-4 md:grid-cols-2">
+            {(blindOrder === "baseline_left"
+              ? [baselineRun, candidateRun]
+              : [candidateRun, baselineRun]
+            ).map((run) => (
+              <ComparisonPanel key={run.id} run={run} hidden={identityHidden} />
+            ))}
+          </div>
 
-      <EvaluationForm
-        experimentId={experimentId}
-        scenarioVersionId={scenarioVersionId}
-        baselineRunId={baselineRun.id}
-        candidateRunId={candidateRun.id}
-        blindOrder={blindOrder}
-        latestEvaluation={latestEvaluation}
-        history={history}
-      />
+          {/* A `key` reinicia o formulário quando o par comparado muda: a decisão
+              registrada é sempre a do par exibido (append-only, nunca migra). */}
+          <EvaluationForm
+            key={`${scenarioVersionId}:${baselineRun.id}:${candidateRun.id}`}
+            experimentId={experimentId}
+            scenarioVersionId={scenarioVersionId}
+            baselineRunId={baselineRun.id}
+            candidateRunId={candidateRun.id}
+            blindOrder={effectiveBlindOrder}
+            latestEvaluation={latestEvaluation}
+            history={history}
+          />
+        </>
+      ) : (
+        <EmptyState
+          title="Sem runs comparáveis"
+          description="Execute as duas variantes (baseline e candidata) neste cenário e repetição no detalhe do experimento para comparar as artes."
+        />
+      )}
     </div>
   );
 }
