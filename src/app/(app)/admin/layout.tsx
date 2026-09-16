@@ -56,6 +56,9 @@ export default async function AdminLayout({
         <Link href="/admin/campaign-reports" className="font-medium hover:text-primary">
           Relatos de correção
         </Link>
+        <Link href="/admin/laboratorio" className="font-medium hover:text-primary">
+          Laboratório
+        </Link>
       </nav>
       <main>{children}</main>
     </div>
