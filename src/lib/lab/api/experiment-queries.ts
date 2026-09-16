@@ -6,7 +6,7 @@ import {
   createArtifactSignedUrls,
   listRunArtifacts,
 } from "@/lib/lab/persistence/artifact-service";
-import * as labRunService from "@/lib/lab/run-service";
+import { reconcileStaleRuns } from "@/lib/lab/run-service";
 
 /**
  * Camada de **leitura** da API administrativa do Laboratório de IA
@@ -421,7 +421,7 @@ export async function getExperimentDetail(
   client: SupabaseClient,
   experimentId: string,
 ): Promise<LabExperimentDetail | null> {
-  await labRunService.reconcileStaleRuns({ client });
+  await reconcileStaleRuns({ client });
 
   const { data: experiment, error } = await client
     .from("lab_experiments")

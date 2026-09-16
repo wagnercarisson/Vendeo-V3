@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { LabEvaluationRequestSchema } from "@/lib/admin/schemas";
-import * as adminGuard from "@/lib/admin/require-admin";
+import { requireAdmin } from "@/lib/admin/require-admin";
 import { apiHandler } from "@/lib/auth/api-handler";
 import {
   InvalidComparisonRunsError,
   createEvaluation,
 } from "@/lib/lab/api/evaluation-service";
-import * as labEnvironment from "@/lib/lab/environment-guard";
+import { LabEnvironmentError, assertLabEnvironment, labEnvironmentDeniedBody } from "@/lib/lab/environment-guard";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 // F48.1 (D11/D13/T-48-1-62): registro da avaliação humana com os **runs
@@ -16,13 +16,13 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 
 export const POST = apiHandler(
   async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
-    const admin = await adminGuard.requireAdmin();
+    const admin = await requireAdmin();
 
     try {
-      labEnvironment.assertLabEnvironment();
+      assertLabEnvironment();
     } catch (error) {
-      if (error instanceof labEnvironment.LabEnvironmentError) {
-        return NextResponse.json(labEnvironment.labEnvironmentDeniedBody(error.reason), {
+      if (error instanceof LabEnvironmentError) {
+        return NextResponse.json(labEnvironmentDeniedBody(error.reason), {
           status: 403,
         });
       }

@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { LabRunExecuteRequestSchema } from "@/lib/admin/schemas";
-import * as adminGuard from "@/lib/admin/require-admin";
+import { requireAdmin } from "@/lib/admin/require-admin";
 import { apiHandler } from "@/lib/auth/api-handler";
 import {
   prepareExperimentRun,
   runPreparedExperimentRun,
 } from "@/lib/lab/api/run-execution";
-import * as labEnvironment from "@/lib/lab/environment-guard";
+import { LabEnvironmentError, assertLabEnvironment, labEnvironmentDeniedBody } from "@/lib/lab/environment-guard";
 import type { LabRunEvent } from "@/lib/lab/run-service";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
@@ -57,13 +57,13 @@ function resolveErrorCode(error: unknown): string | null {
 
 export const POST = apiHandler(
   async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
-    const admin = await adminGuard.requireAdmin();
+    const admin = await requireAdmin();
 
     try {
-      labEnvironment.assertLabEnvironment();
+      assertLabEnvironment();
     } catch (error) {
-      if (error instanceof labEnvironment.LabEnvironmentError) {
-        return NextResponse.json(labEnvironment.labEnvironmentDeniedBody(error.reason), {
+      if (error instanceof LabEnvironmentError) {
+        return NextResponse.json(labEnvironmentDeniedBody(error.reason), {
           status: 403,
         });
       }

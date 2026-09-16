@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
-import * as adminGuard from "@/lib/admin/require-admin";
+import { requireAdmin } from "@/lib/admin/require-admin";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { LAB_EXPERIMENT_NOT_FOUND, estimateExperimentPlan } from "@/lib/lab/api/estimate";
-import * as labEnvironment from "@/lib/lab/environment-guard";
+import { LabEnvironmentError, assertLabEnvironment, labEnvironmentDeniedBody } from "@/lib/lab/environment-guard";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 // F48.1 (D11/D14): estimativa de custo do plano do experimento
@@ -13,13 +13,13 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 
 export const GET = apiHandler(
   async (_request: Request, { params }: { params: Promise<{ id: string }> }) => {
-    await adminGuard.requireAdmin();
+    await requireAdmin();
 
     try {
-      labEnvironment.assertLabEnvironment();
+      assertLabEnvironment();
     } catch (error) {
-      if (error instanceof labEnvironment.LabEnvironmentError) {
-        return NextResponse.json(labEnvironment.labEnvironmentDeniedBody(error.reason), {
+      if (error instanceof LabEnvironmentError) {
+        return NextResponse.json(labEnvironmentDeniedBody(error.reason), {
           status: 403,
         });
       }

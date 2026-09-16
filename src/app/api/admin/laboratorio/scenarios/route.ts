@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
-import * as adminGuard from "@/lib/admin/require-admin";
+import { requireAdmin } from "@/lib/admin/require-admin";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { listScenarioVersions } from "@/lib/lab/api/experiment-queries";
-import * as labEnvironment from "@/lib/lab/environment-guard";
+import { LabEnvironmentError, assertLabEnvironment, labEnvironmentDeniedBody } from "@/lib/lab/environment-guard";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 // F48.1 (D11/D2/T-48-1-58/59): superfície administrativa do laboratório.
@@ -12,13 +12,13 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 // ambiente está bloqueado (o serviço de leitura não é chamado).
 
 export const GET = apiHandler(async () => {
-  await adminGuard.requireAdmin();
+  await requireAdmin();
 
   try {
-    labEnvironment.assertLabEnvironment();
+    assertLabEnvironment();
   } catch (error) {
-    if (error instanceof labEnvironment.LabEnvironmentError) {
-      return NextResponse.json(labEnvironment.labEnvironmentDeniedBody(error.reason), {
+    if (error instanceof LabEnvironmentError) {
+      return NextResponse.json(labEnvironmentDeniedBody(error.reason), {
         status: 403,
       });
     }

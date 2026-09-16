@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import * as adminGuard from "@/lib/admin/require-admin";
+import { requireAdmin } from "@/lib/admin/require-admin";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { listRecentExperiments } from "@/lib/lab/api/experiment-queries";
 import {
@@ -13,7 +13,7 @@ import {
   UnsupportedChangedDimensionError,
   parseCreateLabExperimentInput,
 } from "@/lib/lab/domain/schemas";
-import * as labEnvironment from "@/lib/lab/environment-guard";
+import { LabEnvironmentError, assertLabEnvironment, labEnvironmentDeniedBody } from "@/lib/lab/environment-guard";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 // F48.1 (D11/D5/D14): listagem e criação de experimentos prompt-only.
@@ -21,13 +21,13 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 // existem na F48.1 (alterar a configuração exige criar outro experimento).
 
 export const GET = apiHandler(async () => {
-  await adminGuard.requireAdmin();
+  await requireAdmin();
 
   try {
-    labEnvironment.assertLabEnvironment();
+    assertLabEnvironment();
   } catch (error) {
-    if (error instanceof labEnvironment.LabEnvironmentError) {
-      return NextResponse.json(labEnvironment.labEnvironmentDeniedBody(error.reason), {
+    if (error instanceof LabEnvironmentError) {
+      return NextResponse.json(labEnvironmentDeniedBody(error.reason), {
         status: 403,
       });
     }
@@ -43,13 +43,13 @@ export const GET = apiHandler(async () => {
 });
 
 export const POST = apiHandler(async (request: Request) => {
-  const admin = await adminGuard.requireAdmin();
+  const admin = await requireAdmin();
 
   try {
-    labEnvironment.assertLabEnvironment();
+    assertLabEnvironment();
   } catch (error) {
-    if (error instanceof labEnvironment.LabEnvironmentError) {
-      return NextResponse.json(labEnvironment.labEnvironmentDeniedBody(error.reason), {
+    if (error instanceof LabEnvironmentError) {
+      return NextResponse.json(labEnvironmentDeniedBody(error.reason), {
         status: 403,
       });
     }
