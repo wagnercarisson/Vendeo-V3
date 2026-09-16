@@ -1,0 +1,45 @@
+{
+  "slug": "produto-oferta-preco",
+  "name": "Oferta com preço (produto + imagem auxiliar)",
+  "description": "Cenário fictício de produto + oferta com preço original e promocional e uma imagem auxiliar de referência. Sem logo.",
+  "intent": "offer",
+  "format": "1:1",
+  "locale": "pt-BR",
+  "mediaKinds": ["image"],
+  "brief": {
+    "product": {
+      "name": "Cesta de Café da Manhã Aurora",
+      "brand": "Empório Aurora",
+      "sizeOrVariant": "Cesta média",
+      "description": "Cesta fictícia com pães artesanais, geleias e frutas da estação."
+    },
+    "offer": {
+      "originalPriceCents": 12990,
+      "discountedPriceCents": 9990,
+      "badgeText": "OFERTA",
+      "campaignDetails": "Semana do café da manhã",
+      "availabilityNotes": "Disponível enquanto durarem os estoques."
+    }
+  },
+  "store": {
+    "name": "Empório Aurora",
+    "segment": "mercados-mercearias",
+    "brandColor": "#16A34A"
+  },
+  "identity": { "state": "text_only" },
+  "images": [
+    {
+      "id": "produto",
+      "role": "primary",
+      "path": "images/produto.jpg",
+      "alt": "Imagem controlada do produto fictício"
+    },
+    {
+      "id": "produto-auxiliar",
+      "role": "reference",
+      "path": "images/produto-auxiliar.jpg",
+      "alt": "Imagem controlada auxiliar de referência"
+    }
+  ],
+  "fictitious": true
+}

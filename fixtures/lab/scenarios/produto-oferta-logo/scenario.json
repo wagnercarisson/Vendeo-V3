@@ -1,0 +1,38 @@
+{
+  "slug": "produto-oferta-logo",
+  "name": "Oferta com logo controlado",
+  "description": "Cenário fictício de produto + oferta com identidade de loja em logo controlado (arquivo versionado na fixture).",
+  "intent": "offer",
+  "format": "1:1",
+  "locale": "pt-BR",
+  "mediaKinds": ["image"],
+  "brief": {
+    "product": {
+      "name": "Luminária de Mesa Bela Casa",
+      "brand": "Casa Bela Decorações",
+      "sizeOrVariant": "22 cm",
+      "description": "Luminária fictícia de mesa com base em madeira e cúpula em tecido."
+    },
+    "offer": {
+      "originalPriceCents": 15990,
+      "discountedPriceCents": 11990,
+      "badgeText": "SEMANA DO BAIRRO",
+      "campaignDetails": "Ação de aniversário do bairro"
+    }
+  },
+  "store": {
+    "name": "Casa Bela Decorações",
+    "segment": "casa-decoracao",
+    "brandColor": "#D97706"
+  },
+  "identity": { "state": "logo", "logoPath": "images/logo.png" },
+  "images": [
+    {
+      "id": "produto",
+      "role": "primary",
+      "path": "images/produto.jpg",
+      "alt": "Imagem controlada do produto fictício"
+    }
+  ],
+  "fictitious": true
+}

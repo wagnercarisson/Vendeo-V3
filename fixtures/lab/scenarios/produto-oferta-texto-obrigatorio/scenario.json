@@ -1,0 +1,42 @@
+{
+  "slug": "produto-oferta-texto-obrigatorio",
+  "name": "Oferta com texto obrigatório, aviso ilustrativo e validade",
+  "description": "Cenário fictício de produto + oferta com texto obrigatório do lojista, aviso ilustrativo canônico ligado e validade preenchida. Sem logo.",
+  "intent": "offer",
+  "format": "1:1",
+  "locale": "pt-BR",
+  "mediaKinds": ["image"],
+  "brief": {
+    "product": {
+      "name": "Kit Degustação Vale Verde",
+      "brand": "Mercearia Vale Verde",
+      "sizeOrVariant": "Kit com 4 itens"
+    },
+    "offer": {
+      "originalPriceCents": 8990,
+      "discountedPriceCents": 6990,
+      "badgeText": "CLUBE DA SEMANA",
+      "validityText": "Oferta válida até 30/09/2026.",
+      "availabilityNotes": "Limite de 2 kits por cliente."
+    },
+    "legalNotice": {
+      "mandatoryText": "Preços válidos somente para retirada na loja física.",
+      "illustrativeNoticeEnabled": true
+    }
+  },
+  "store": {
+    "name": "Mercearia Vale Verde",
+    "segment": "mercados-mercearias",
+    "brandColor": "#0EA5E9"
+  },
+  "identity": { "state": "text_only" },
+  "images": [
+    {
+      "id": "produto",
+      "role": "primary",
+      "path": "images/produto.jpg",
+      "alt": "Imagem controlada do produto fictício"
+    }
+  ],
+  "fictitious": true
+}
