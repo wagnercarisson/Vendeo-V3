@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { requireAdmin } from "@/lib/admin/require-admin";
+import * as adminGuard from "@/lib/admin/require-admin";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { listRecentExperiments } from "@/lib/lab/api/experiment-queries";
 import {
@@ -13,11 +13,7 @@ import {
   UnsupportedChangedDimensionError,
   parseCreateLabExperimentInput,
 } from "@/lib/lab/domain/schemas";
-import {
-  LabEnvironmentError,
-  assertLabEnvironment,
-  labEnvironmentDeniedBody,
-} from "@/lib/lab/environment-guard";
+import * as labEnvironment from "@/lib/lab/environment-guard";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 // F48.1 (D11/D5/D14): listagem e criação de experimentos prompt-only.
@@ -25,13 +21,15 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 // existem na F48.1 (alterar a configuração exige criar outro experimento).
 
 export const GET = apiHandler(async () => {
-  await requireAdmin();
+  await adminGuard.requireAdmin();
 
   try {
-    assertLabEnvironment();
+    labEnvironment.assertLabEnvironment();
   } catch (error) {
-    if (error instanceof LabEnvironmentError) {
-      return NextResponse.json(labEnvironmentDeniedBody(error.reason), { status: 403 });
+    if (error instanceof labEnvironment.LabEnvironmentError) {
+      return NextResponse.json(labEnvironment.labEnvironmentDeniedBody(error.reason), {
+        status: 403,
+      });
     }
     throw error;
   }
@@ -45,13 +43,15 @@ export const GET = apiHandler(async () => {
 });
 
 export const POST = apiHandler(async (request: Request) => {
-  const admin = await requireAdmin();
+  const admin = await adminGuard.requireAdmin();
 
   try {
-    assertLabEnvironment();
+    labEnvironment.assertLabEnvironment();
   } catch (error) {
-    if (error instanceof LabEnvironmentError) {
-      return NextResponse.json(labEnvironmentDeniedBody(error.reason), { status: 403 });
+    if (error instanceof labEnvironment.LabEnvironmentError) {
+      return NextResponse.json(labEnvironment.labEnvironmentDeniedBody(error.reason), {
+        status: 403,
+      });
     }
     throw error;
   }

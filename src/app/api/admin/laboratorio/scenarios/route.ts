@@ -1,28 +1,26 @@
 import { NextResponse } from "next/server";
 
-import { requireAdmin } from "@/lib/admin/require-admin";
+import * as adminGuard from "@/lib/admin/require-admin";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { listScenarioVersions } from "@/lib/lab/api/experiment-queries";
-import {
-  LabEnvironmentError,
-  assertLabEnvironment,
-  labEnvironmentDeniedBody,
-} from "@/lib/lab/environment-guard";
+import * as labEnvironment from "@/lib/lab/environment-guard";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 // F48.1 (D11/D2/T-48-1-58/59): superfície administrativa do laboratório.
-// Ordem obrigatória em TODA rota: `requireAdmin()` → `assertLabEnvironment()` →
-// acesso a `lab_*`/storage/provider. Nenhuma leitura do laboratório acontece
-// quando o ambiente está bloqueado (o serviço de leitura não é chamado).
+// Ordem obrigatória em TODA rota: admin → guarda de ambiente → acesso a
+// `lab_*`/storage/provider. Nenhuma leitura do laboratório acontece quando o
+// ambiente está bloqueado (o serviço de leitura não é chamado).
 
 export const GET = apiHandler(async () => {
-  await requireAdmin();
+  await adminGuard.requireAdmin();
 
   try {
-    assertLabEnvironment();
+    labEnvironment.assertLabEnvironment();
   } catch (error) {
-    if (error instanceof LabEnvironmentError) {
-      return NextResponse.json(labEnvironmentDeniedBody(error.reason), { status: 403 });
+    if (error instanceof labEnvironment.LabEnvironmentError) {
+      return NextResponse.json(labEnvironment.labEnvironmentDeniedBody(error.reason), {
+        status: 403,
+      });
     }
     throw error;
   }
