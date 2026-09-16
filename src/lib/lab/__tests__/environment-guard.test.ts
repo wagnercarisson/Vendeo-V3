@@ -183,6 +183,70 @@ describe("environment-guard — bloqueio incondicional de produção", () => {
   });
 });
 
+describe("environment-guard — canonicalização de FQDN (ponto final)", () => {
+  it("host de produção com ponto final recusa com remote_blocked", () => {
+    enableLab();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://abcd.supabase.co.";
+    const state = getLabEnvironment();
+    expect(state.reason).toBe("remote_blocked");
+    expect(state.enabled).toBe(false);
+    expect(state.local).toBe(false);
+    expect(state.supabaseHost).toBe("abcd.supabase.co");
+  });
+
+  it("supabase.com. recusa com remote_blocked", () => {
+    enableLab();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://supabase.com.";
+    expect(getLabEnvironment().reason).toBe("remote_blocked");
+  });
+
+  it("host de produção com ponto final NÃO é habilitado por allowlist idêntica (com ponto)", () => {
+    enableLab();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://abcd.supabase.co.";
+    process.env.VENDEO_LAB_ALLOWED_SUPABASE_HOSTS = "abcd.supabase.co.";
+    expect(getLabEnvironment().reason).toBe("remote_blocked");
+  });
+
+  it("host de produção com ponto final NÃO é habilitado por allowlist canônica (sem ponto)", () => {
+    enableLab();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://abcd.supabase.co.";
+    process.env.VENDEO_LAB_ALLOWED_SUPABASE_HOSTS = "abcd.supabase.co";
+    expect(getLabEnvironment().reason).toBe("remote_blocked");
+  });
+
+  it("host de produção canônico NÃO é habilitado por allowlist com ponto final", () => {
+    enableLab();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://abcd.supabase.co";
+    process.env.VENDEO_LAB_ALLOWED_SUPABASE_HOSTS = "abcd.supabase.co.";
+    expect(getLabEnvironment().reason).toBe("remote_blocked");
+  });
+
+  it("host remoto não-produção com ponto final casa a allowlist canônica", () => {
+    enableLab();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://db.exemplo.com.";
+    process.env.VENDEO_LAB_ALLOWED_SUPABASE_HOSTS = "db.exemplo.com";
+    const state = getLabEnvironment();
+    expect(state).toEqual({
+      enabled: true,
+      supabaseHost: "db.exemplo.com",
+      local: false,
+      reason: "ok",
+    });
+  });
+
+  it("localhost com ponto final é canonicalizado e permitido", () => {
+    enableLab();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "http://localhost.:54321";
+    const state = getLabEnvironment();
+    expect(state).toEqual({
+      enabled: true,
+      supabaseHost: "localhost",
+      local: true,
+      reason: "ok",
+    });
+  });
+});
+
 describe("environment-guard — allowlist CSV", () => {
   it("host remoto arbitrário sem allowlist recusa com non_local_supabase", () => {
     enableLab();

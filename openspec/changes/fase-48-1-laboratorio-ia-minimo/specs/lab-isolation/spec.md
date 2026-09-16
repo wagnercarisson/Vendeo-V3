@@ -6,7 +6,7 @@
 
 ### Requirement: Guarda de ambiente fail-closed e local-only
 
-O laboratório SHALL expor uma guarda de ambiente server-side que só permite a superfície do laboratório quando `VENDEO_LAB_ENABLED === "true"` **e** a URL do Supabase aponta para um host local (`localhost`, `127.0.0.1`, `::1`, `0.0.0.0`) ou para um host explicitamente permitido por `VENDEO_LAB_ALLOWED_SUPABASE_HOSTS`. Hosts de produção conhecidos (`*.supabase.co`, `*.supabase.in`, `*.supabase.com`) SHALL ser sempre bloqueados. Qualquer configuração ausente, inválida ou ambígua SHALL resultar em recusa (fail-closed).
+O laboratório SHALL expor uma guarda de ambiente server-side que só permite a superfície do laboratório quando `VENDEO_LAB_ENABLED === "true"` **e** a URL do Supabase aponta para um host local (`localhost`, `127.0.0.1`, `::1`, `0.0.0.0`) ou para um host explicitamente permitido por `VENDEO_LAB_ALLOWED_SUPABASE_HOSTS`. O hostname da URL e cada entrada da allowlist SHALL ser canonicalizados (lowercase, sem colchetes de IPv6 e sem ponto final de FQDN) antes de qualquer comparação. Hosts de produção conhecidos (`*.supabase.co`, `*.supabase.in`, `*.supabase.com`) SHALL ser sempre bloqueados — inclusive quando escritos como FQDN com ponto final. Qualquer configuração ausente, inválida ou ambígua SHALL resultar em recusa (fail-closed).
 
 #### Scenario: Ambiente local habilitado permite a superfície
 

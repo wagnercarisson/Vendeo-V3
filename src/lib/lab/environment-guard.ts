@@ -18,6 +18,9 @@ import "server-only";
  * A decisão usa **apenas** as três variáveis de ambiente da guarda — nunca o modo
  * de execução do build (que também assume valor de produção em builds locais).
  * A guarda expõe apenas o **hostname** — nunca a URL completa, path, query ou chave.
+ * O hostname da URL e cada entrada da allowlist são canonicalizados (lowercase, sem
+ * colchetes de IPv6 e sem ponto final de FQDN) **antes** de qualquer comparação,
+ * para que `abcd.supabase.co.` não contorne o bloqueio de produção.
  */
 
 /** Os 5 motivos possíveis da guarda. `"ok"` é o único que habilita a superfície. */
@@ -58,24 +61,30 @@ function isProductionSupabaseHost(host: string): boolean {
   );
 }
 
-/** CSV → conjunto de hostnames normalizados (trim + lowercase, descartando vazios). */
+/**
+ * Normaliza um hostname para a forma canônica usada em **todas** as comparações
+ * (bloqueio de produção e allowlist): trim, lowercase, remoção dos colchetes de
+ * IPv6 (`[::1]` → `::1`) e remoção de ponto(s) final(is) de FQDN
+ * (`abcd.supabase.co.` → `abcd.supabase.co`). Sem essa canonicalização um FQDN
+ * com ponto final contornaria o bloqueio de produção.
+ */
+function normalizeHostname(hostname: string): string {
+  let normalized = hostname.trim().toLowerCase();
+  if (normalized.startsWith("[") && normalized.endsWith("]")) {
+    normalized = normalized.slice(1, -1);
+  }
+  return normalized.replace(/\.+$/, "");
+}
+
+/** CSV → conjunto de hostnames canônicos (mesma normalização do host da URL). */
 function readAllowedHosts(raw: string | undefined): ReadonlySet<string> {
   if (!raw) return new Set<string>();
   return new Set(
     raw
       .split(",")
-      .map((entry) => entry.trim().toLowerCase())
+      .map((entry) => normalizeHostname(entry))
       .filter((entry) => entry.length > 0),
   );
-}
-
-/** Normaliza o hostname: lowercase e remoção dos colchetes de IPv6 (`[::1]` → `::1`). */
-function normalizeHostname(hostname: string): string {
-  const lowered = hostname.trim().toLowerCase();
-  if (lowered.startsWith("[") && lowered.endsWith("]")) {
-    return lowered.slice(1, -1);
-  }
-  return lowered;
 }
 
 /** Mensagens determinísticas — contêm o `reason` e, no máximo, o hostname. */

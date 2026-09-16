@@ -24,6 +24,7 @@ tech-stack:
   patterns:
     - "Guarda de ambiente fail-closed: flag com igualdade estrita a 'true' + URL parseável + host local/allowlist, tudo antes de qualquer acesso a dados ou provider"
     - "Bloqueio incondicional de host de produção avaliado ANTES da allowlist (allowlist nunca habilita produção)"
+    - "Canonicalização de hostname (trim, lowercase, sem colchetes de IPv6 e sem ponto final de FQDN) aplicada ao host da URL e a cada entrada da allowlist antes de qualquer comparação"
     - "Erros de configuração expõem apenas o hostname — nunca URL completa, path, query ou chave"
     - "Constantes de limite em módulo puro (sem server-only), importável por UI/serviços/testes"
     - "Gate de arquitetura estendido de forma estritamente aditiva por prefixo de diretório (src/lib/lab/) + gate de sanidade contra varredura vazia"
@@ -38,9 +39,13 @@ key-files:
     - src/lib/ai/__tests__/architecture-guard.test.ts
     - .env.example
     - .planning/STATE.md
+    - openspec/changes/fase-48-1-laboratorio-ia-minimo/design.md
+    - openspec/changes/fase-48-1-laboratorio-ia-minimo/specs/lab-isolation/spec.md
+    - .planning/phases/48.1-laboratorio-ia-minimo/48-1-02-PLAN.md
 
 key-decisions:
   - "Guarda estritamente fail-closed: a flag exige igualdade estrita com a string 'true' e o bloqueio de hosts de produção (*.supabase.co/.in/.com) é avaliado ANTES da allowlist — a allowlist é para hosts de desenvolvimento (ex.: host.docker.internal), nunca para produção (D2/T-48-1-11)."
+  - "Canonicalização de FQDN (correção pós-revisão, HIGH): o host da URL e cada entrada da allowlist perdem o ponto final (`abcd.supabase.co.` → `abcd.supabase.co`) antes de qualquer comparação, impedindo que um FQDN com ponto final contorne o bloqueio de produção via allowlist (T-48-1-11)."
   - "A guarda expõe apenas o hostname (supabaseHost); LabEnvironmentError carrega o reason + hostname, nunca a URL completa, path, query ou chave (D2/D15/T-48-1-12)."
   - "assertLabEnvironment() devolve LabEnvironmentState (superset de void, conforme o PLAN) e lança em qualquer reason diferente de 'ok'."
   - "Constantes de limite em módulo puro sem server-only, para serem importadas por UI, serviços e testes; o teto 12 é divisível por MAX_REPETITIONS=3 (4 combinações) (D14)."
@@ -172,6 +177,21 @@ Cada task foi commitada atomicamente:
 ## Deviations from Plan
 
 None - plan executed exactly as written.
+
+## Correction Applied After Review (canonicalização de FQDN)
+
+**Finding (revisão do usuário — HIGH, bloqueante):** a normalização não removia o ponto final de um hostname DNS totalmente qualificado. `https://abcd.supabase.co.` produzia o hostname `abcd.supabase.co.`, que **não** casa `host.endsWith(".supabase.co")`; com `abcd.supabase.co.` na allowlist, a guarda retornava `ok` — contornando a regra "hosts Supabase de produção sempre bloqueados".
+
+**Fix:**
+- `normalizeHostname()` agora remove ponto(s) final(is) de FQDN (`abcd.supabase.co.` → `abcd.supabase.co`) além de trim/lowercase/colchetes de IPv6.
+- `readAllowedHosts()` aplica a **mesma** canonicalização a cada entrada da allowlist (antes só fazia trim/lowercase).
+- A canonicalização acontece **antes** do bloqueio de produção e da comparação com a allowlist.
+
+**Testes adicionados (7, novo `describe` "canonicalização de FQDN"):** `https://abcd.supabase.co.` → `remote_blocked` (`supabaseHost === "abcd.supabase.co"`); `https://supabase.com.` → `remote_blocked`; `https://abcd.supabase.co.` com allowlist `abcd.supabase.co.` → `remote_blocked`; idem com allowlist canônica `abcd.supabase.co` → `remote_blocked`; `https://abcd.supabase.co` com allowlist `abcd.supabase.co.` → `remote_blocked`; `https://db.exemplo.com.` com allowlist `db.exemplo.com` → `ok` (`supabaseHost === "db.exemplo.com"`); `http://localhost.:54321` → `ok` (`supabaseHost === "localhost"`, `local: true`).
+
+**Source-of-truth sincronizada:** `openspec/changes/fase-48-1-laboratorio-ia-minimo/design.md` (D2 regras 3 e 4), `.../specs/lab-isolation/spec.md` (requirement da guarda) e `48-1-02-PLAN.md` (Task 1 passos 3 e 6, lista de testes, `must_haves`, threat model T-48-1-11 e critérios de aceite).
+
+**Verification:** `npx vitest run` dos 3 arquivos focados → exit 0 (**61 testes**, +7); `npx tsc -p tsconfig.typecheck.json --noEmit` → exit 0; `npm run lint` → exit 0.
 
 ## Issues Encountered
 

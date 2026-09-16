@@ -58,8 +58,8 @@ Regras:
 
 1. Exige `VENDEO_LAB_ENABLED === "true"` (default **false**). Qualquer outro valor → desabilitado.
 2. Exige `NEXT_PUBLIC_SUPABASE_URL` parseável. Ausente/inválida → desabilitado (fail-closed).
-3. Host deve ser local: `localhost`, `127.0.0.1`, `::1`, `0.0.0.0`. Hosts adicionais só entram por `VENDEO_LAB_ALLOWED_SUPABASE_HOSTS` (CSV).
-4. Hosts de produção conhecidos (`*.supabase.co`, `*.supabase.in`, `*.supabase.com`) são **sempre bloqueados** nesta fase, mesmo se presentes na allowlist.
+3. O hostname da URL e cada entrada da allowlist são **canonicalizados** (trim, lowercase, remoção de colchetes de IPv6 e de ponto final de FQDN — `abcd.supabase.co.` → `abcd.supabase.co`) antes de qualquer comparação. Host deve ser local: `localhost`, `127.0.0.1`, `::1`, `0.0.0.0`. Hosts adicionais só entram por `VENDEO_LAB_ALLOWED_SUPABASE_HOSTS` (CSV).
+4. Hosts de produção conhecidos (`*.supabase.co`, `*.supabase.in`, `*.supabase.com`) são **sempre bloqueados** nesta fase, mesmo se presentes na allowlist — inclusive FQDNs com ponto final (ex.: `abcd.supabase.co.`).
 5. `assertLabEnvironment()` é chamado no início de **toda** página e de **toda** rota do laboratório, antes de qualquer acesso às tabelas `lab_*`, ao storage do laboratório ou aos providers. Páginas renderizam estado “Laboratório desabilitado neste ambiente” com o `reason`; APIs retornam `403` com `{ error, reason }`. As consultas de autenticação/autorização dos **layouts pais** (`(app)` e `admin`: sessão, usuário, `admin_users`, loja, documentos legais) permanecem permitidas — a guarda do laboratório não as precede e não promete bloqueá-las.
 6. Nenhuma chamada paga ocorre antes da guarda.
 
