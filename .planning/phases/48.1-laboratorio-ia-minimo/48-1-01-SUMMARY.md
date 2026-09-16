@@ -16,6 +16,7 @@ provides:
   - RLS habilitada + zero grant a anon/authenticated nas 8 tabelas (GRANT apenas a service_role)
   - 8 triggers de imutabilidade estrutural / append-only / congelamento após o primeiro run
   - RPC lab_reserve_run (reserva atômica: lock FOR UPDATE antes de qualquer checagem, idempotência vinculada ao payload, run_sequence derivado no banco)
+  - Invariante de snapshot: lab_runs.snapshot é sempre objeto JSON não vazio (CHECK jsonb_typeof(snapshot)='object' AND snapshot <> '{}' + guarda equivalente na RPC)
   - RPC lab_create_experiment (criação atômica de experimento + 2 variantes + N cenários)
   - índice único parcial global uq_lab_runs_one_active_global ((true) WHERE status IN ('pending','running'))
   - .planning/phases/48.1-laboratorio-ia-minimo/48.1-BASELINE.txt (SHA de baseline para o contract guard de 48-1-13/48-1-14)
@@ -39,6 +40,9 @@ key-files:
   modified:
     - .planning/STATE.md
     - .planning/ROADMAP.md
+    - openspec/changes/fase-48-1-laboratorio-ia-minimo/design.md
+    - openspec/changes/fase-48-1-laboratorio-ia-minimo/specs/lab-runs/spec.md
+    - .planning/phases/48.1-laboratorio-ia-minimo/48-1-01-PLAN.md
 
 key-decisions:
   - "Migration LOCAL-FIRST: as duas migrations existem apenas no Supabase local; o push remoto deliberado é a última task do 48-1-14 (D16), evitando migration pendente que outra fase arrastaria."
@@ -47,6 +51,7 @@ key-decisions:
   - "Exclusão de concorrência GLOBAL via índice único parcial ((true)) WHERE status IN ('pending','running') — no máximo um run ativo em todo o laboratório, inclusive entre experimentos diferentes (D14)."
   - "Criação do experimento via RPC transacional lab_create_experiment, porque inserts PostgREST separados não formam uma transação (D5)."
   - "Zero referência a objeto produtivo no SQL: as migrations não citam campanhas, arte, telemetria, seleção/catálogo de modelos nem o bucket de imagens de campanha."
+  - "Snapshot de lab_runs restrito a objeto JSON não vazio: `jsonb_typeof(snapshot) = 'object' AND snapshot <> '{}'` no CHECK e guarda equivalente (`jsonb_typeof(p_snapshot) <> 'object'`) na RPC lab_reserve_run — JSON null, array, string e número são recusados (correção pós-revisão)."
 
 patterns-established:
   - "lab_* é server-only: nenhuma policy e nenhum grant para anon/authenticated (nem SELECT)"
@@ -95,8 +100,8 @@ Cada task foi commitada atomicamente:
 
 ## Files Created/Modified
 
-- `supabase/migrations/20260915000002_f48_1_create_lab_tables.sql` (criado) — 8 tabelas `lab_*` com CHECKs/UNIQUEs do design D3, índice único parcial global de run ativo, RLS + policies `service_role`, `REVOKE ALL` de `anon`/`authenticated`/`service_role` + `GRANT` a `service_role`, bucket privado `lab-artifacts` e bloco REVERT.
-- `supabase/migrations/20260915000003_f48_1_lab_immutability_and_reserve.sql` (criado) — 8 funções de trigger + 8 triggers de imutabilidade/append-only/congelamento, RPC `lab_reserve_run`, RPC `lab_create_experiment`, `REVOKE`/`GRANT EXECUTE` e bloco REVERT.
+- `supabase/migrations/20260915000002_f48_1_create_lab_tables.sql` (criado) — 8 tabelas `lab_*` com CHECKs/UNIQUEs do design D3 (incl. `snapshot` restrito a objeto JSON não vazio), índice único parcial global de run ativo, RLS + policies `service_role`, `REVOKE ALL` de `anon`/`authenticated`/`service_role` + `GRANT` a `service_role`, bucket privado `lab-artifacts` e bloco REVERT.
+- `supabase/migrations/20260915000003_f48_1_lab_immutability_and_reserve.sql` (criado) — 8 funções de trigger + 8 triggers de imutabilidade/append-only/congelamento, RPC `lab_reserve_run` (com guarda `jsonb_typeof(p_snapshot) <> 'object'`), RPC `lab_create_experiment`, `REVOKE`/`GRANT EXECUTE` e bloco REVERT.
 - `.planning/phases/48.1-laboratorio-ia-minimo/48.1-BASELINE.txt` (criado) — SHA de baseline da fase (contrato do guard de não-mudança).
 - `.planning/STATE.md` (modificado) — posição avançada para plan 2/14, métrica de performance registrada, decisão registrada, progresso 113/127 (89%), linha 48-1-01 marcada ✅.
 - `.planning/ROADMAP.md` (modificado) — progresso do plano 48.1 atualizado via `roadmap.update-plan-progress`.
@@ -180,6 +185,24 @@ O banco local foi deixado **pristino** ao final (8 tabelas, 0 experimentos, 0 ru
 
 **Total deviations:** 2 auto-fixed (1 bug de lint, 1 funcionalidade crítica ausente)
 **Impact on plan:** Ambas as correções são de escopo estritamente local ao arquivo criado pela Task 3 — nenhum escopo adicional, nenhuma mudança de contrato. A migration permanece estritamente aditiva e local-first.
+
+## Correction Applied After Review (snapshot hardening)
+
+**Finding (revisão do usuário):** o `CHECK (snapshot <> '{}'::jsonb)` e a guarda `p_snapshot IS NULL OR p_snapshot = '{}'::jsonb` recusavam SQL `NULL` e `{}`, mas **aceitavam** JSON `null`, array, string e número — enfraquecendo a garantia "nenhum run com snapshot vazio/inválido". Endurecido ainda com a migration apenas local.
+
+**Fix:**
+- `supabase/migrations/20260915000002_f48_1_create_lab_tables.sql` → `snapshot JSONB NOT NULL CHECK (jsonb_typeof(snapshot) = 'object' AND snapshot <> '{}'::jsonb)`.
+- `supabase/migrations/20260915000003_f48_1_lab_immutability_and_reserve.sql` (RPC `lab_reserve_run`) → `IF p_snapshot IS NULL OR jsonb_typeof(p_snapshot) <> 'object' OR p_snapshot = '{}'::jsonb THEN RAISE EXCEPTION 'missing_snapshot'`.
+
+**Source-of-truth sincronizada:** `openspec/changes/fase-48-1-laboratorio-ia-minimo/design.md` (data model de `lab_runs` + sketch da RPC), `.../specs/lab-runs/spec.md` (cenário "Snapshot é gravado na reserva") e `48-1-01-PLAN.md` (Task 2 item 6, Task 3 passo B.1, asserção (l), critérios de aceite e threat model T-48-1-04).
+
+**Verification (asserção (l) — PASS 12/12, via `psql` no container local):**
+- definição aplicada do CHECK contém `jsonb_typeof(snapshot) = 'object'`;
+- fonte aplicada de `lab_reserve_run` contém `jsonb_typeof(p_snapshot)`;
+- a RPC recusa `null`, `[]`, `"x"`, `1` e `{}` com `missing_snapshot` (**5/5**, antes de qualquer acesso a dados);
+- `lab_runs` rejeita `null`, `[]`, `"x"`, `1` e `{}` com `lab_runs_snapshot_check` (**5/5**) e **aceita** objeto válido.
+
+Transação de verificação revertida (`ROLLBACK`); banco local permanece pristino (`lab_runs=0`, `lab_experiments=0`, `lab_scenarios=0`). Reexecutados `npx supabase db reset` (exit 0) e `npx supabase db lint --fail-on error` (exit 0).
 
 ## Issues Encountered
 

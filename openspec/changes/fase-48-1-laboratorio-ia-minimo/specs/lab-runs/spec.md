@@ -66,6 +66,7 @@ O sistema SHALL reservar a execução de forma transacional no banco antes de qu
 - **WHEN** a reserva é criada
 - **THEN** o snapshot completo é gravado na mesma transação
 - **AND** nenhum run existe com snapshot vazio
+- **AND** o snapshot é sempre um objeto JSON (`jsonb_typeof(snapshot) = 'object'`); JSON `null`, array, string ou número são recusados
 
 #### Scenario: Relações são validadas sob o lock
 

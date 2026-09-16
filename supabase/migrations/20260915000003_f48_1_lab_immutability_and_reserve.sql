@@ -275,7 +275,9 @@ DECLARE
   v_existing_repetition INT;
   v_sequence INT;
 BEGIN
-  IF p_snapshot IS NULL OR p_snapshot = '{}'::jsonb THEN
+  IF p_snapshot IS NULL
+     OR jsonb_typeof(p_snapshot) <> 'object'
+     OR p_snapshot = '{}'::jsonb THEN
     RAISE EXCEPTION 'missing_snapshot';
   END IF;
   IF p_operation_id IS NULL THEN

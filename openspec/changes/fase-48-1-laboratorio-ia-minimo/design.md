@@ -331,7 +331,7 @@ CREATE TABLE public.lab_runs (
   operation_id UUID NOT NULL UNIQUE,
   status TEXT NOT NULL DEFAULT 'pending'
     CHECK (status IN ('pending','running','succeeded','failed','cancelled','timeout')),
-  snapshot JSONB NOT NULL CHECK (snapshot <> '{}'::jsonb),
+  snapshot JSONB NOT NULL CHECK (jsonb_typeof(snapshot) = 'object' AND snapshot <> '{}'::jsonb),
   provider TEXT, model TEXT, protocol TEXT, capability TEXT,
   attempts INT NOT NULL DEFAULT 0,
   latency_ms INT,
@@ -411,7 +411,7 @@ DECLARE
   v_existing_repetition INT;
   v_sequence INT;
 BEGIN
-  IF p_snapshot IS NULL OR p_snapshot = '{}'::jsonb THEN RAISE EXCEPTION 'missing_snapshot'; END IF;
+  IF p_snapshot IS NULL OR jsonb_typeof(p_snapshot) <> 'object' OR p_snapshot = '{}'::jsonb THEN RAISE EXCEPTION 'missing_snapshot'; END IF;
   IF p_operation_id IS NULL THEN RAISE EXCEPTION 'missing_operation_id'; END IF;
 
   -- (1) Lock do experimento ANTES de qualquer checagem (serializa as reservas).

@@ -118,7 +118,7 @@ CREATE TABLE IF NOT EXISTS public.lab_runs (
   supersedes_run_id UUID REFERENCES public.lab_runs(id),
   operation_id UUID NOT NULL UNIQUE,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','running','succeeded','failed','cancelled','timeout')),
-  snapshot JSONB NOT NULL CHECK (snapshot <> '{}'::jsonb),
+  snapshot JSONB NOT NULL CHECK (jsonb_typeof(snapshot) = 'object' AND snapshot <> '{}'::jsonb),
   provider TEXT,
   model TEXT,
   protocol TEXT,
