@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -374,6 +374,35 @@ describe("persistOutputArtifact", () => {
     ).rejects.toThrow("artifact_persistence_failed");
 
     expect(fake.removeCalls).toHaveLength(1);
+  });
+
+  it("inspeciona { error } do remove (resolve, não lança) e preserva o erro original", async () => {
+    const fake = new FakeSupabaseClient();
+    fake.insertResult = { data: null, error: { message: "insert boom" } };
+    fake.removeResult = { data: null, error: { message: "remove boom" } };
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      await expect(
+        persistOutputArtifact({
+          client: asClient(fake),
+          experimentId: EXPERIMENT_ID,
+          runId: RUN_ID,
+          buffer: FIXED_BUFFER,
+          mimeType: "image/png",
+          width: null,
+          height: null,
+        }),
+      ).rejects.toThrow("artifact_persistence_failed");
+
+      expect(fake.removeCalls).toHaveLength(1);
+      // O `{ error }` resolvido pelo Supabase é detectado e reportado — o
+      // rollback não falha silenciosamente.
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(String(warn.mock.calls[0][0])).toContain("rollback falhou");
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it("não insere nem remove quando o upload falha", async () => {

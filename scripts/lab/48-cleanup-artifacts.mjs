@@ -9,7 +9,12 @@
 //   1. artefato já removido (`removed_at` não nulo) é ignorado;
 //   2. run ausente do conjunto lido é ignorado (nunca limpar sem saber o estado);
 //   3. run `pending`/`running` NUNCA é elegível, independente da idade;
-//   4. elegível quando o experimento do run está `archived` OU quando a idade do
+//   4. `storage_path` precisa ser canônico E coerente com o registro (runId do
+//      path = `artifact.run_id`; experimentId do path = experimento do run);
+//      paths malformados/incompatíveis são ignorados e reportados em `invalid`
+//      (nunca removidos) — um metadado corrompido não pode apagar a evidência de
+//      outro run, inclusive um run ativo (T-48-1-48);
+//   5. elegível quando o experimento do run está `archived` OU quando a idade do
 //      run (a partir de `finished_at`, senão `created_at`) excede
 //      `retentionDays` (default 30).
 //
@@ -79,15 +84,41 @@ function getRun(runsById, runId) {
 }
 
 /**
- * Seleciona os artefatos elegíveis ao cleanup.
- *
- * `runsById` é um `Map`/objeto `runId → { status, created_at, finished_at,
- * experiment_status }`. Devolve apenas `artifactId` + `storagePath`.
+ * Formato canônico de um path de artefato do laboratório:
+ * `experiments/{experimentId}/runs/{runId}/output.{ext}` ou
+ * `experiments/{experimentId}/runs/{runId}/inputs/{index}.{ext}`.
  */
-export function selectEligibleArtifacts({ artifacts, runsById, now, retentionDays }) {
+const ARTIFACT_PATH_PATTERN =
+  /^experiments\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/runs\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/(?:output\.(?:png|jpg|webp)|inputs\/\d+\.(?:png|jpg|webp))$/i;
+
+/**
+ * Valida o path canônico e devolve `{ experimentId, runId }`, ou `null` quando o
+ * path é malformado/fora do prefixo do laboratório. **Não** acessa storage.
+ *
+ * O cleanup é uma operação destrutiva: o `storage_path` vem do banco e pode
+ * estar corrompido/forjado, então nunca é usado sem esta validação (T-48-1-48).
+ */
+export function parseArtifactStoragePath(storagePath) {
+  if (typeof storagePath !== "string") return null;
+  const match = ARTIFACT_PATH_PATTERN.exec(storagePath);
+  if (!match) return null;
+  return { experimentId: match[1].toLowerCase(), runId: match[2].toLowerCase() };
+}
+
+/**
+ * Classifica os artefatos em `{ eligible, invalid }`.
+ *
+ * `invalid` reúne os artefatos cujo `storage_path` não é canônico ou **não é
+ * coerente** com o registro (`runId` do path ≠ `artifact.run_id`, ou
+ * `experimentId` do path ≠ experimento do run). Esses nunca são elegíveis — um
+ * metadado corrompido não pode apontar para a evidência de outro run (inclusive
+ * um run ativo).
+ */
+export function partitionArtifacts({ artifacts, runsById, now, retentionDays }) {
   const retentionMs = retentionDays * MS_PER_DAY;
   const nowMs = now.getTime();
   const eligible = [];
+  const invalid = [];
 
   for (const artifact of artifacts) {
     if (artifact.removed_at != null) continue;
@@ -96,6 +127,17 @@ export function selectEligibleArtifacts({ artifacts, runsById, now, retentionDay
     if (!run) continue;
 
     if (isRunInProgress(run.status)) continue;
+
+    // (T-48-1-48) Path canônico + coerência com o run do registro, ANTES de
+    // considerar idade/arquivamento e antes de qualquer remoção.
+    const parsed = parseArtifactStoragePath(artifact.storage_path);
+    const pathRunMatches = parsed?.runId === String(artifact.run_id).toLowerCase();
+    const pathExperimentMatches =
+      parsed?.experimentId === String(run.experiment_id ?? "").toLowerCase();
+    if (!parsed || !pathRunMatches || !pathExperimentMatches) {
+      invalid.push({ artifactId: artifact.id, storagePath: artifact.storage_path });
+      continue;
+    }
 
     const experimentArchived = run.experiment_status === "archived";
     const reference = run.finished_at ?? run.created_at;
@@ -107,7 +149,17 @@ export function selectEligibleArtifacts({ artifacts, runsById, now, retentionDay
     }
   }
 
-  return eligible;
+  return { eligible, invalid };
+}
+
+/**
+ * Seleciona os artefatos elegíveis ao cleanup.
+ *
+ * `runsById` é um `Map`/objeto `runId → { status, created_at, finished_at,
+ * experiment_status, experiment_id }`. Devolve apenas `artifactId` + `storagePath`.
+ */
+export function selectEligibleArtifacts(params) {
+  return partitionArtifacts(params).eligible;
 }
 
 function assertLocalHost(rawUrl, origin) {
@@ -196,7 +248,7 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
     ]),
   );
 
-  const eligible = selectEligibleArtifacts({
+  const { eligible, invalid } = partitionArtifacts({
     artifacts: artifactsResult.data ?? [],
     runsById,
     now: new Date(),
@@ -208,6 +260,7 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
     retentionDays,
     dryRun,
     eligible: eligible.length,
+    invalid: invalid.length,
     removed: 0,
     skipped: 0,
   };
@@ -215,6 +268,13 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
   if (dryRun) return summary;
 
   for (const artifact of eligible) {
+    // Revalida o path imediatamente antes da operação destrutiva (defesa extra):
+    // um `storage_path` inválido nunca chega ao Storage.
+    if (!parseArtifactStoragePath(artifact.storagePath)) {
+      summary.invalid += 1;
+      continue;
+    }
+
     const { error: removeError } = await supabase.storage
       .from(LAB_ARTIFACT_BUCKET)
       .remove([artifact.storagePath]);

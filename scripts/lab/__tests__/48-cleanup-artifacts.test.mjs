@@ -7,6 +7,8 @@ import {
   DEFAULT_RETENTION_DAYS,
   isRunInProgress,
   main,
+  parseArtifactStoragePath,
+  partitionArtifacts,
   resolveRetentionDays,
   selectEligibleArtifacts,
 } from "../48-cleanup-artifacts.mjs";
@@ -129,6 +131,106 @@ describe("selectEligibleArtifacts", () => {
     const twoDaysAgo = run({ status: "succeeded", finished_at: "2026-09-14T00:00:00.000Z" });
     const result = select([artifact()], [[RUN_ID, twoDaysAgo]], 1);
     expect(result).toEqual([{ artifactId: "artifact-1", storagePath: STORAGE_PATH }]);
+  });
+});
+
+// ─── Validação do storage_path (T-48-1-48) ───────────────────────────────────
+
+describe("parseArtifactStoragePath", () => {
+  it("aceita os formatos canônicos (output e inputs)", () => {
+    expect(parseArtifactStoragePath(STORAGE_PATH)).toEqual({
+      experimentId: EXPERIMENT_ID,
+      runId: RUN_ID,
+    });
+    expect(
+      parseArtifactStoragePath(`experiments/${EXPERIMENT_ID}/runs/${RUN_ID}/output.jpg`),
+    ).not.toBeNull();
+    expect(
+      parseArtifactStoragePath(`experiments/${EXPERIMENT_ID}/runs/${RUN_ID}/output.webp`),
+    ).not.toBeNull();
+    expect(
+      parseArtifactStoragePath(`experiments/${EXPERIMENT_ID}/runs/${RUN_ID}/inputs/0.jpg`),
+    ).not.toBeNull();
+  });
+
+  it("rejeita paths malformados, fora do prefixo ou de outro bucket", () => {
+    expect(parseArtifactStoragePath("")).toBeNull();
+    expect(parseArtifactStoragePath("experiments/../etc/passwd")).toBeNull();
+    expect(parseArtifactStoragePath("campaign-images/store/campaign.jpg")).toBeNull();
+    expect(parseArtifactStoragePath("runs/abc/output.png")).toBeNull();
+    expect(parseArtifactStoragePath(`experiments/${EXPERIMENT_ID}/runs/${RUN_ID}/output.gif`)).toBeNull();
+    expect(parseArtifactStoragePath(`experiments/not-a-uuid/runs/${RUN_ID}/output.png`)).toBeNull();
+    expect(parseArtifactStoragePath(null)).toBeNull();
+  });
+});
+
+describe("partitionArtifacts — path incompatível nunca é elegível", () => {
+  const OTHER_RUN = "33333333-3333-4333-8333-333333333333";
+  const OTHER_EXPERIMENT = "44444444-4444-4444-8444-444444444444";
+
+  function partition(artifacts, entries, retentionDays = DEFAULT_RETENTION_DAYS) {
+    return partitionArtifacts({
+      artifacts,
+      runsById: runsMap(entries),
+      now: NOW,
+      retentionDays,
+    });
+  }
+
+  it("path apontando para OUTRO run é ignorado e reportado como invalid", () => {
+    // Registro do run terminal RUN_ID, mas o path aponta para o arquivo de outro run.
+    const mismatched = artifact({
+      storage_path: `experiments/${EXPERIMENT_ID}/runs/${OTHER_RUN}/output.png`,
+    });
+
+    const { eligible, invalid } = partition([mismatched], [[RUN_ID, run()]]);
+
+    expect(eligible).toEqual([]);
+    expect(invalid).toEqual([
+      {
+        artifactId: "artifact-1",
+        storagePath: `experiments/${EXPERIMENT_ID}/runs/${OTHER_RUN}/output.png`,
+      },
+    ]);
+  });
+
+  it("path apontando para OUTRO experimento é ignorado e reportado como invalid", () => {
+    const mismatched = artifact({
+      storage_path: `experiments/${OTHER_EXPERIMENT}/runs/${RUN_ID}/output.png`,
+    });
+
+    const { eligible, invalid } = partition([mismatched], [[RUN_ID, run()]]);
+
+    expect(eligible).toEqual([]);
+    expect(invalid).toHaveLength(1);
+  });
+
+  it("path malformado é ignorado e reportado como invalid", () => {
+    const malformed = artifact({ storage_path: "campaign-images/loja/campanha.jpg" });
+
+    const { eligible, invalid } = partition([malformed], [[RUN_ID, run()]]);
+
+    expect(eligible).toEqual([]);
+    expect(invalid).toHaveLength(1);
+  });
+
+  it("path canônico e coerente com run terminal antigo é elegível", () => {
+    const { eligible, invalid } = partition([artifact()], [[RUN_ID, run()]]);
+
+    expect(eligible).toEqual([{ artifactId: "artifact-1", storagePath: STORAGE_PATH }]);
+    expect(invalid).toEqual([]);
+  });
+
+  it("selectEligibleArtifacts continua devolvendo apenas os elegíveis", () => {
+    const mismatched = artifact({
+      id: "artifact-bad",
+      storage_path: `experiments/${EXPERIMENT_ID}/runs/${OTHER_RUN}/output.png`,
+    });
+    const good = artifact({ id: "artifact-good" });
+
+    const result = select([good, mismatched], [[RUN_ID, run()]]);
+
+    expect(result).toEqual([{ artifactId: "artifact-good", storagePath: STORAGE_PATH }]);
   });
 });
 

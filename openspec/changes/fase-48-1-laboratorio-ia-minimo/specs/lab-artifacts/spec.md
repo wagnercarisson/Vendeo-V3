@@ -71,6 +71,12 @@ O sistema SHALL documentar e permitir a limpeza de artefatos antigos ou de exper
 - **WHEN** existe um run em andamento
 - **THEN** seus artefatos não são removidos
 
+#### Scenario: Path incoerente com o registro não é removido
+
+- **WHEN** o `storage_path` de um artefato é malformado ou aponta para outro run/experimento
+- **THEN** o artefato não é elegível e não é removido
+- **AND** a inconsistência é reportada (contagem `invalid`) sem apagar nenhuma evidência
+
 #### Scenario: Cleanup não é automático
 
 - **WHEN** o laboratório está em uso

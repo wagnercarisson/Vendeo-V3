@@ -217,12 +217,20 @@ export async function persistOutputArtifact(params: {
     .single();
 
   if (error || !data || !(data as { id?: string }).id) {
+    // Rollback best-effort: o `remove` do Supabase **resolve** com `{ error }`
+    // em falha (não lança), então o retorno precisa ser inspecionado. A falha do
+    // rollback é registrada (sem conteúdo sensível — apenas o path validado) e
+    // nunca mascara o erro original de persistência.
     try {
-      await client.storage.from(LAB_ARTIFACT_BUCKET).remove([storagePath]);
-    } catch {
-      // Rollback best-effort: a falha da remoção não pode mascarar o erro
-      // original de persistência. O path é único por run, então não há risco de
-      // apagar arte de outro run.
+      const { error: rollbackError } = await client.storage
+        .from(LAB_ARTIFACT_BUCKET)
+        .remove([storagePath]);
+      if (rollbackError) {
+        console.warn(`[lab-artifacts] rollback falhou para ${storagePath}: ${rollbackError.message}`);
+      }
+    } catch (rollbackThrown) {
+      const detail = rollbackThrown instanceof Error ? rollbackThrown.message : String(rollbackThrown);
+      console.warn(`[lab-artifacts] rollback lançou para ${storagePath}: ${detail}`);
     }
     throw new Error("artifact_persistence_failed");
   }

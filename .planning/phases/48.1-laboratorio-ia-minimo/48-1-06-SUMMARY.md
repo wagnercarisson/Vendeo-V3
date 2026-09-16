@@ -33,7 +33,14 @@ key-files:
     - src/lib/lab/persistence/__tests__/artifact-service.test.ts
     - scripts/lab/48-cleanup-artifacts.mjs
     - scripts/lab/__tests__/48-cleanup-artifacts.test.mjs
-  modified: []
+  modified:
+    - src/lib/lab/persistence/artifact-service.ts
+    - src/lib/lab/persistence/__tests__/artifact-service.test.ts
+    - scripts/lab/48-cleanup-artifacts.mjs
+    - scripts/lab/__tests__/48-cleanup-artifacts.test.mjs
+    - openspec/changes/fase-48-1-laboratorio-ia-minimo/design.md
+    - openspec/changes/fase-48-1-laboratorio-ia-minimo/specs/lab-artifacts/spec.md
+    - .planning/phases/48.1-laboratorio-ia-minimo/48-1-06-PLAN.md
 
 key-decisions:
   - "O token do bucket de imagens de campanha é montado em runtime (['campaign','images'].join('-')) em artifact-service.ts: o path é recusado sem que o literal proibido apareça no arquivo (aceite exige 0 ocorrências)."
@@ -104,6 +111,33 @@ Cada task foi commitada atomicamente:
 None - plan executed exactly as written.
 
 _Nota de implementação (não é desvio):_ os códigos `artifact_upload_failed`/`artifact_persistence_failed` foram inlined no `throw` em vez de constantes, porque `Select-String` é case-insensitive e o nome da constante em maiúsculas casaria com o padrão do aceite, que exige exatamente 1 ocorrência de cada literal.
+
+## Corrections Applied After Review
+
+### 1. HIGH — cleanup destrutivo confiava no `storage_path` armazenado
+
+**Finding (revisão do usuário):** a elegibilidade era decidida pelo `run_id`, mas o `storage_path` era enviado ao Storage sem validação. Um registro corrompido de um run terminal poderia apontar para o arquivo de **outro** run ainda `pending`/`running` — o cleanup consideraria o primeiro elegível e apagaria a evidência do run ativo, contrariando "run em andamento nunca é limpo" e a mitigação de path corrompido/forjado.
+
+**Fix (`scripts/lab/48-cleanup-artifacts.mjs`):**
+- `parseArtifactStoragePath(storagePath)` valida o formato canônico (`experiments/{uuid}/runs/{uuid}/output.{png|jpg|webp}` ou `inputs/{n}.{ext}`) e devolve `{ experimentId, runId }` (ou `null`).
+- `partitionArtifacts(...)` → `{ eligible, invalid }`: além do formato, exige **coerência com o registro** — `runId` do path = `artifact.run_id` **e** `experimentId` do path = `run.experiment_id`. Paths malformados/incompatíveis vão para `invalid` e **nunca** são elegíveis.
+- `main` reporta `invalid` no resumo e **revalida** o path imediatamente antes do `remove` (defesa extra). `selectEligibleArtifacts` preserva o contrato anterior delegando a `partitionArtifacts`.
+
+**Testes adicionados (+5):** path de outro run; path de outro experimento; path malformado (`campaign-images/...`); path canônico coerente elegível; `selectEligibleArtifacts` filtra o incompatível; `parseArtifactStoragePath` aceita output/jpg/webp/inputs e rejeita `campaign-images`, extensão inválida, `..` e UUID inválido.
+
+### 2. WARNING — rollback podia falhar silenciosamente
+
+**Finding (revisão do usuário):** em `artifact-service.ts`, o rollback aguardava `remove()` mas não examinava o `{ error }` retornado (o `try/catch` só cobria exceção lançada), então "rollback sem órfão" não era garantido.
+
+**Fix:** o retorno de `remove` é inspecionado — `{ error }` resolvido (ou exceção) é registrado via `console.warn` (sem conteúdo sensível, apenas o path validado) e **não** mascara o erro original `artifact_persistence_failed`. Teste novo cobre `remove` resolvendo com `{ error }`: o erro original é preservado e o rollback falho é reportado.
+
+### 3. Tracking — numeração de onda (declarada × DAG)
+
+Os planos 48-1-05 e 48-1-06 declaram `wave: 3` no frontmatter (o plan-index registra que o DAG os colocaria na onda 2). **Formalmente, a Onda 2 termina em 48-1-03/48-1-04 e a Onda 3 contém 48-1-05/48-1-06.** A comunicação anterior ("Wave 2 complete") usava o agrupamento do DAG; o tracking passa a seguir a onda **declarada** pelos planos. Nenhum artefato de tracking afirmava conclusão de onda — a correção é de reporte.
+
+**Source-of-truth sincronizada:** `design.md` (D10), `specs/lab-artifacts/spec.md` (novo cenário "Path incoerente com o registro não é removido") e `48-1-06-PLAN.md` (Task 1 rollback/testes, Task 3 `parseArtifactStoragePath`/`partitionArtifacts`/testes/aceite, novo threat model T-48-1-48).
+
+**Verification:** `npx vitest run src/lib/lab/persistence scripts/lab` → exit 0 (**49 testes**, +8); `npx tsc -p tsconfig.typecheck.json --noEmit` → exit 0; `npm.cmd run lint` → exit 0.
 
 ## Issues Encountered
 

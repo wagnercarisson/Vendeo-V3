@@ -181,6 +181,7 @@ Campos de resultado preenchidos no fim: `status`, `startedAt`, `finishedAt`, `la
 - Persistência: `lab_artifacts` registra `storage_path`, `mime_type`, `width`, `height`, `bytes`, `checksum` (SHA-256).
 - Leitura: URLs assinadas de curta duração (`createSignedUrl`, 3600s) geradas server-side na API de detalhe/comparação.
 - **Retenção/cleanup**: comando/script `scripts/lab/48-cleanup-artifacts.mjs` (opt-in) remove os **arquivos** de runs `archived`/mais antigos que `LAB_ARTIFACT_RETENTION_DAYS` (default 30) e marca `lab_artifacts` como removidos; **metadados, hashes, runs e avaliações permanecem**. Execução manual, sem scheduler. Run em andamento nunca é limpo. Retenção especial de arte aprovada fica para a F48.2.
+- **Validação do path no cleanup (correção de bloqueio)**: como o cleanup é destrutivo e o `storage_path` vem do banco, ele SHALL ser validado contra o formato canônico **e** conferido contra o registro (`runId` do path = `artifact.run_id`; `experimentId` do path = experimento do run) **antes** de considerar idade/arquivamento e antes de qualquer `remove`. Paths malformados/incompatíveis são ignorados e reportados (`invalid`) — um metadado corrompido nunca pode apagar a evidência de outro run (inclusive um run ativo).
 
 ### D11 — API administrativa
 
