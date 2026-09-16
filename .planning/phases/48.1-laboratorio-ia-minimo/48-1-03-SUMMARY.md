@@ -45,7 +45,14 @@ key-files:
     - fixtures/lab/scenarios/produto-oferta-logo/images/produto.jpg
     - fixtures/lab/scenarios/produto-oferta-logo/images/logo.png
     - scripts/uat/48-local-scenarios.mjs
-  modified: []
+  modified:
+    - src/lib/lab/scenarios/schema.ts
+    - src/lib/lab/scenarios/service.ts
+    - src/lib/lab/scenarios/__tests__/schema.test.ts
+    - src/lib/lab/scenarios/__tests__/service.test.ts
+    - openspec/changes/fase-48-1-laboratorio-ia-minimo/design.md
+    - openspec/changes/fase-48-1-laboratorio-ia-minimo/specs/lab-scenarios/spec.md
+    - .planning/phases/48.1-laboratorio-ia-minimo/48-1-03-PLAN.md
 
 key-decisions:
   - "Slug do terceiro cenário = `produto-oferta-logo` (design.md D4 + 48.1-CONTEXT.md D4/<specifics>); o `tasks.md` (item 3.2) citava `produto-oferta-badge` e estava desatualizado — divergência já registrada no objetivo do plano"
@@ -137,6 +144,28 @@ Cada task foi commitada atomicamente:
 
 **Total deviations:** 1 adaptada (bloqueio de testabilidade, sem mudança de comportamento ou de semântica de dados)
 **Impact on plan:** Nenhum escopo extra. O comportamento contratado (idempotência por `content_hash`, nova versão `max + 1`, imutabilidade da versão anterior) é idêntico ao descrito; apenas a superfície de injeção ficou explícita e testável.
+
+## Corrections Applied After Review
+
+### 1. CRITICAL — valor de modalidade desconhecido não retornava `unsupported_scenario_mode`
+
+**Finding (revisão do usuário):** `z.enum` rejeita valores **desconhecidos** antes do `superRefine`, então `intent: "unknown"`, `format: "4:5"` e `locale: "fr-FR"` produziam erro genérico **sem `code`** — contrariando design/spec, que exigem `unsupported_scenario_mode` para qualquer valor fora de `offer`/`1:1`/`pt-BR`.
+
+**Fix:** `parseLabScenarioContent()` agora **pré-detecta** a modalidade antes do Zod (`detectUnsupportedMode`): qualquer valor **string** fora do conjunto suportado lança `UnsupportedScenarioModeError` com o campo culpado. Campo ausente ou de tipo não-string continua caindo no Zod (erro normal). O `superRefine` permanece como defesa em profundidade para uso direto de `LabScenarioContentSchema`.
+
+**Testes adicionados (6, `describe` "valor de modalidade desconhecido"):** `intent: "unknown"`, `format: "4:5"`, `locale: "fr-FR"` → `UnsupportedScenarioModeError` com `code` e `field` corretos; `intent` ausente, `intent: 123` e `format: {…}` → erro genérico (não `UnsupportedScenarioModeError`).
+
+### 2. WARNING — symlink era verificado depois da leitura
+
+**Finding (revisão do usuário):** em `readImageAsDataUrl`, o `readFile(candidate)` acontecia **antes** do `realpath`/confinamento — o arquivo externo seria rejeitado, mas só depois de ter sido acessado, contrariando o confinamento prometido por T-48-1-16.
+
+**Fix:** o `realpath` do arquivo e do diretório do cenário é resolvido e confinado **antes** de qualquer leitura; a leitura usa o caminho real validado. O helper foi renomeado/exportado como `readScenarioImageAsDataUrl` para permitir teste dedicado.
+
+**Testes adicionados (3):** symlink externo → `invalid_scenario_path` (teste `skip` quando o SO não permite criar symlink — Windows sem Developer Mode retorna `EPERM`; roda em Linux/CI); imagem regular dentro do cenário → data URL com MIME real; imagem inexistente → `missing_scenario_image`.
+
+**Source-of-truth sincronizada:** `openspec/.../design.md` (D4), `.../specs/lab-scenarios/spec.md` (2 cenários novos) e `48-1-03-PLAN.md` (Task 1 `parseLabScenarioContent` + lista de testes, Task 3 `loadScenarioFixture`, threat models T-48-1-16 e T-48-1-22).
+
+**Verification:** `npx vitest run src/lib/lab/scenarios` → exit 0 (**58 passed / 1 skipped**, +8); `npx tsc -p tsconfig.typecheck.json --noEmit` → exit 0; `npm.cmd run lint` → exit 0.
 
 ## Issues Encountered
 

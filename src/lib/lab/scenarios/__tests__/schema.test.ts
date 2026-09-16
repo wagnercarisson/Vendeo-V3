@@ -155,6 +155,75 @@ describe("LabScenarioContentSchema — modalidade não suportada", () => {
   });
 });
 
+describe("LabScenarioContentSchema — valor de modalidade desconhecido (pré-detecção)", () => {
+  function captureError(overrides: Record<string, unknown>): unknown {
+    try {
+      parseLabScenarioContent(validScenario(overrides));
+      return null;
+    } catch (caught) {
+      return caught;
+    }
+  }
+
+  it("intent 'unknown' (fora da união) → unsupported_scenario_mode em 'intent'", () => {
+    const error = captureError({ intent: "unknown" }) as UnsupportedScenarioModeError;
+
+    expect(error).toBeInstanceOf(UnsupportedScenarioModeError);
+    expect(error.code).toBe("unsupported_scenario_mode");
+    expect(error.field).toBe("intent");
+    expect(error.value).toBe("unknown");
+  });
+
+  it("format '4:5' (fora da união) → unsupported_scenario_mode em 'format'", () => {
+    const error = captureError({ format: "4:5" }) as UnsupportedScenarioModeError;
+
+    expect(error).toBeInstanceOf(UnsupportedScenarioModeError);
+    expect(error.code).toBe("unsupported_scenario_mode");
+    expect(error.field).toBe("format");
+    expect(error.value).toBe("4:5");
+  });
+
+  it("locale 'fr-FR' (fora da união) → unsupported_scenario_mode em 'locale'", () => {
+    const error = captureError({ locale: "fr-FR" }) as UnsupportedScenarioModeError;
+
+    expect(error).toBeInstanceOf(UnsupportedScenarioModeError);
+    expect(error.code).toBe("unsupported_scenario_mode");
+    expect(error.field).toBe("locale");
+    expect(error.value).toBe("fr-FR");
+  });
+
+  it("campo intent ausente → erro genérico (não UnsupportedScenarioModeError)", () => {
+    const input = validScenario();
+    delete input.intent;
+    const error = (() => {
+      try {
+        parseLabScenarioContent(input);
+        return null;
+      } catch (caught) {
+        return caught;
+      }
+    })();
+
+    expect(error).toBeInstanceOf(Error);
+    expect(error).not.toBeInstanceOf(UnsupportedScenarioModeError);
+    expect((error as Error).message).toContain("Cenário de laboratório inválido");
+  });
+
+  it("intent de tipo inválido (número) → erro genérico (não UnsupportedScenarioModeError)", () => {
+    const error = captureError({ intent: 123 });
+
+    expect(error).toBeInstanceOf(Error);
+    expect(error).not.toBeInstanceOf(UnsupportedScenarioModeError);
+  });
+
+  it("format de tipo inválido (objeto) → erro genérico (não UnsupportedScenarioModeError)", () => {
+    const error = captureError({ format: { ratio: "1:1" } });
+
+    expect(error).toBeInstanceOf(Error);
+    expect(error).not.toBeInstanceOf(UnsupportedScenarioModeError);
+  });
+});
+
 describe("LabScenarioContentSchema — slug e imagens", () => {
   it("rejeita slug com path traversal", () => {
     const result = LabScenarioContentSchema.safeParse(validScenario({ slug: "../../etc" }));

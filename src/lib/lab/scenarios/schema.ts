@@ -232,13 +232,48 @@ function readModeValue(input: unknown, field: ScenarioModeField): string {
 }
 
 /**
+ * Pré-detecção de modalidade não suportada.
+ *
+ * `z.enum` rejeita um valor **desconhecido** antes que o `superRefine` rode, o que
+ * produziria um erro genérico sem `code`. Aqui qualquer valor **string** fora do
+ * conjunto suportado (`offer`/`1:1`/`pt-BR`) é classificado como
+ * `unsupported_scenario_mode` — incluindo valores desconhecidos e modalidades
+ * futuras previstas. Campo ausente ou de tipo não-string segue para o Zod, que
+ * produz o erro normal de campo obrigatório/tipo inválido.
+ */
+function detectUnsupportedMode(input: unknown): UnsupportedScenarioModeError | null {
+  if (typeof input !== "object" || input === null) return null;
+  const record = input as Record<string, unknown>;
+
+  const modeChecks: ReadonlyArray<{ field: ScenarioModeField; supported: ReadonlySet<string> }> = [
+    { field: "intent", supported: SUPPORTED_INTENTS },
+    { field: "format", supported: SUPPORTED_FORMATS },
+    { field: "locale", supported: SUPPORTED_LOCALES },
+  ];
+
+  for (const { field, supported } of modeChecks) {
+    const value = record[field];
+    if (typeof value === "string" && !supported.has(value)) {
+      return new UnsupportedScenarioModeError(field, value);
+    }
+  }
+
+  return null;
+}
+
+/**
  * Valida e devolve o conteúdo do cenário.
  *
- * - Modalidade não suportada ⇒ `UnsupportedScenarioModeError` (com `code` e `field`).
+ * - Modalidade não suportada (qualquer string fora de `offer`/`1:1`/`pt-BR`,
+ *   inclusive valor desconhecido) ⇒ `UnsupportedScenarioModeError` (com `code` e `field`).
+ * - Campo de modalidade ausente ou de tipo inválido ⇒ erro Zod normal.
  * - Qualquer outra falha ⇒ `Error` com a serialização dos issues (path + message).
  *   A mensagem **nunca** inclui o conteúdo bruto das imagens.
  */
 export function parseLabScenarioContent(input: unknown): LabScenarioContent {
+  const unsupported = detectUnsupportedMode(input);
+  if (unsupported) throw unsupported;
+
   const result = LabScenarioContentSchema.safeParse(input);
   if (result.success) return result.data;
 

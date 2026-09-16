@@ -90,9 +90,10 @@ Oito tabelas próprias (`lab_*`), todas server-only/service-role, RLS habilitada
 
 - Fixtures em `fixtures/lab/scenarios/<slug>/` (`scenario.json` + `images/*.jpg`), somente dados **fictícios** (loja, produto, oferta inventados) ou explicitamente autorizados. Imagens de produto controladas e pequenas.
 - O `scenario.json` segue um schema Zod (`LabScenarioContent`) com: `brief` (produto/oferta/mídia/contexto), `store` (identidade fictícia) e `identity` (text_only por padrão; logo/VS opcionais controlados).
+- **Confinamento de leitura (T-48-1-16)**: o caminho de cada imagem SHALL ser resolvido por `realpath` e verificado como descendente estrito do diretório do cenário **antes** de qualquer `readFile`; um symlink apontando para fora é recusado com `invalid_scenario_path` sem que o arquivo externo seja aberto.
 - Um bootstrap (`scripts/uat/48-local-scenarios.mjs` ou seed idempotente) materializa `lab_scenarios` + `lab_scenario_versions` a partir das fixtures, calculando `content_hash` (SHA-256 do JSON canônico). Reaplicar é idempotente (não duplica versões).
 - **Corpus inicial (3)**: `produto-oferta-preco` (oferta com preço e 1 auxiliar, **sem logo**), `produto-oferta-texto-obrigatorio` (texto obrigatório + aviso ilustrativo + validade, **sem logo**) e `produto-oferta-logo` (oferta com **logo controlado**). Todos `intent: "offer"`, `format: "1:1"`, `locale: "pt-BR"`.
-- O schema é **extensível**: campos `intent`, `format`, `locale`, `mediaKinds` existem, mas apenas `offer`/`1:1`/`pt-BR` são aceitos em F48.1; qualquer outro valor é rejeitado com erro explícito `unsupported_scenario_mode`.
+- O schema é **extensível**: campos `intent`, `format`, `locale`, `mediaKinds` existem, mas apenas `offer`/`1:1`/`pt-BR` são aceitos em F48.1; qualquer outro valor é rejeitado com erro explícito `unsupported_scenario_mode`. A pré-detecção em `parseLabScenarioContent` cobre **qualquer string** fora do conjunto suportado — inclusive valores desconhecidos (que o `z.enum` rejeitaria antes do `superRefine`) —; campo de modalidade ausente ou de tipo inválido continua sendo erro Zod normal.
 - **Sem** reuso acoplado de `scripts/benchmark-scenarios.ts` (CLI de dev, imagens placeholder); o schema é compatível para importação futura.
 
 ### D5 — Experimentos prompt-only com modelo fixo

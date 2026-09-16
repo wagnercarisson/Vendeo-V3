@@ -144,28 +144,46 @@ function detectImageMime(buffer: Buffer): string {
   return "application/octet-stream";
 }
 
-async function readImageAsDataUrl(scenarioDir: string, imagePath: string): Promise<string> {
+/**
+ * Lê uma imagem controlada e devolve o data URL com o MIME real detectado.
+ *
+ * O confinamento é resolvido por `realpath` **antes** de qualquer leitura: um
+ * symlink apontando para fora do diretório do cenário é recusado com
+ * `invalid_scenario_path` sem que o arquivo externo seja aberto (T-48-1-16).
+ * Exportado para permitir o teste dedicado de symlink externo.
+ */
+export async function readScenarioImageAsDataUrl(
+  scenarioDir: string,
+  imagePath: string,
+): Promise<string> {
   const candidate = assertWithinRoot(
     path.resolve(scenarioDir, imagePath),
     scenarioDir,
     imagePath,
   );
 
-  let buffer: Buffer;
+  // Resolve o caminho real ANTES de ler: symlink para fora é bloqueado sem I/O.
+  let realImage: string;
+  let realDir: string;
   try {
-    buffer = await fsp.readFile(candidate);
+    [realImage, realDir] = await Promise.all([
+      fsp.realpath(candidate),
+      fsp.realpath(scenarioDir),
+    ]);
   } catch {
     throw new Error(`${MISSING_SCENARIO_IMAGE}:${imagePath}`);
   }
 
-  // Defesa contra symlink apontando para fora do cenário.
-  const [realImage, realDir] = await Promise.all([
-    fsp.realpath(candidate).catch(() => candidate),
-    fsp.realpath(scenarioDir).catch(() => scenarioDir),
-  ]);
   const relative = path.relative(realDir, realImage);
-  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+  if (relative.length === 0 || relative.startsWith("..") || path.isAbsolute(relative)) {
     throw new Error(`${INVALID_SCENARIO_PATH}:${imagePath}`);
+  }
+
+  let buffer: Buffer;
+  try {
+    buffer = await fsp.readFile(realImage);
+  } catch {
+    throw new Error(`${MISSING_SCENARIO_IMAGE}:${imagePath}`);
   }
 
   return `data:${detectImageMime(buffer)};base64,${buffer.toString("base64")}`;
@@ -224,12 +242,12 @@ export async function loadScenarioFixture(slug: string): Promise<LoadedScenarioF
 
   const imagesDataUrls: Record<string, string> = {};
   for (const image of content.images) {
-    imagesDataUrls[image.path] = await readImageAsDataUrl(dir, image.path);
+    imagesDataUrls[image.path] = await readScenarioImageAsDataUrl(dir, image.path);
   }
 
   const logoDataUrl =
     content.identity.state === "logo"
-      ? await readImageAsDataUrl(dir, content.identity.logoPath)
+      ? await readScenarioImageAsDataUrl(dir, content.identity.logoPath)
       : null;
 
   return {

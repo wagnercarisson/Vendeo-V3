@@ -40,6 +40,12 @@ O sistema SHALL incluir um corpus inicial pequeno e representativo de cenários 
 - **THEN** a validação rejeita o cenário com `unsupported_scenario_mode`
 - **AND** nenhum run é executado com esse cenário
 
+#### Scenario: Valor de modalidade desconhecido é rejeitado
+
+- **WHEN** um cenário declara em intent, formato ou locale uma string fora da união conhecida (ex.: `unknown`, `4:5`, `fr-FR`)
+- **THEN** a validação rejeita o cenário com `unsupported_scenario_mode` e o campo culpado
+- **AND** campo ausente ou de tipo inválido produz o erro normal de validação do schema (não `unsupported_scenario_mode`)
+
 #### Scenario: Schema extensível preservado
 
 - **WHEN** uma modalidade futura for adicionada
@@ -61,3 +67,9 @@ O sistema SHALL permitir cenários com imagens de produto controladas, referenci
 - **WHEN** um cenário referencia uma imagem controlada inexistente
 - **THEN** a execução é recusada com erro explícito
 - **AND** nenhum run é iniciado
+
+#### Scenario: Caminho de imagem que escapa do cenário é recusado
+
+- **WHEN** o caminho de uma imagem escapa do diretório do cenário (path traversal ou symlink apontando para fora)
+- **THEN** a leitura é recusada com `invalid_scenario_path`
+- **AND** o arquivo fora do cenário não é aberto

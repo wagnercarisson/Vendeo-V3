@@ -1,4 +1,8 @@
 // @vitest-environment node
+import { promises as fsp } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
 import { describe, it, expect } from "vitest";
 
 import { ILLUSTRATIVE_NOTICE_TEXT } from "@/lib/campaign/constants";
@@ -11,6 +15,7 @@ import {
   listScenarioFixtures,
   loadScenarioFixture,
   materializeScenarios,
+  readScenarioImageAsDataUrl,
 } from "../service";
 import type { LabScenarioStore } from "../service";
 
@@ -249,6 +254,68 @@ describe("loadScenarioFixture — imagens controladas e confinamento", () => {
     await expect(loadScenarioFixture("cenario-inexistente")).rejects.toThrowError(
       "scenario_not_found",
     );
+  });
+});
+
+// ─── Confinamento resolvido antes da leitura (T-48-1-16) ────────────────────
+
+describe("readScenarioImageAsDataUrl — symlink resolvido antes do I/O", () => {
+  async function makeTempDirs(): Promise<{ base: string; scenarioDir: string; outsideDir: string }> {
+    const base = await fsp.mkdtemp(path.join(os.tmpdir(), "lab-scenarios-"));
+    const scenarioDir = path.join(base, "scenario");
+    const outsideDir = path.join(base, "outside");
+    await fsp.mkdir(scenarioDir, { recursive: true });
+    await fsp.mkdir(outsideDir, { recursive: true });
+    return { base, scenarioDir, outsideDir };
+  }
+
+  it("recusa symlink externo com invalid_scenario_path (sem abrir o arquivo de fora)", async (ctx) => {
+    const { base, scenarioDir, outsideDir } = await makeTempDirs();
+    try {
+      const outsideFile = path.join(outsideDir, "externo.jpg");
+      await fsp.writeFile(outsideFile, Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]));
+
+      try {
+        await fsp.symlink(outsideFile, path.join(scenarioDir, "link.jpg"));
+      } catch {
+        // Windows sem privilégio de criação de symlink → teste não aplicável.
+        ctx.skip();
+        return;
+      }
+
+      await expect(
+        readScenarioImageAsDataUrl(scenarioDir, "link.jpg"),
+      ).rejects.toThrowError("invalid_scenario_path");
+    } finally {
+      await fsp.rm(base, { recursive: true, force: true });
+    }
+  });
+
+  it("lê imagem regular dentro do cenário e devolve data URL com MIME real", async () => {
+    const { base, scenarioDir } = await makeTempDirs();
+    try {
+      await fsp.mkdir(path.join(scenarioDir, "images"), { recursive: true });
+      await fsp.writeFile(
+        path.join(scenarioDir, "images", "produto.jpg"),
+        Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]),
+      );
+
+      const dataUrl = await readScenarioImageAsDataUrl(scenarioDir, "images/produto.jpg");
+      expect(dataUrl.startsWith("data:image/jpeg;base64,")).toBe(true);
+    } finally {
+      await fsp.rm(base, { recursive: true, force: true });
+    }
+  });
+
+  it("imagem inexistente → missing_scenario_image", async () => {
+    const { base, scenarioDir } = await makeTempDirs();
+    try {
+      await expect(
+        readScenarioImageAsDataUrl(scenarioDir, "images/inexistente.jpg"),
+      ).rejects.toThrowError("missing_scenario_image");
+    } finally {
+      await fsp.rm(base, { recursive: true, force: true });
+    }
   });
 });
 
