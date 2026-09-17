@@ -44,7 +44,7 @@
 | 45 | ✅ Briefing Contextual do Diretor de Arte (v1.5) | 8/8 | ✅ Complete | 2026-09-05 |
 | 46 | ✅ Gateway Único de IA e Registry de Modelos (v1.5) | 9/9 | ✅ Complete | 2026-09-13 |
 | 47 | ✅ Catálogo e Seleção de Modelos Admin (v1.5, Change B) | 8/8 | ✅ Complete | 2026-09-15 |
-| 48.1 | ◆ Laboratório Mínimo de IA (v1.5) | 12/14 | In Progress|  |
+| 48.1 | ◆ Laboratório Mínimo de IA (v1.5) | 13/14 | In Progress|  |
 | — | Monetização pública / Stripe (iniciativa diferida, v1.7+) | — | Fora da numeração | — |
 
 ---
@@ -1067,7 +1067,7 @@ Plans:
 
 **Dependencies:** F46 (gateway único, adapters, `AiInvoker`/`AiModelResolver`, telemetria), F47 (`ai_model_catalog`/`ai_model_selection` como allowlist de leitura), F43 (`brief_review_confirmed` — validação de visão dispensada), F38.x (`resolveAiCost`/`CostResolution`), F37.2 (precedente de RPC/imutabilidade). **Ordem de migration (D16):** migration local → UAT local → migration remota deliberada após a UAT.
 
-**Plans:** 12/14 plans executed
+**Plans:** 13/14 plans executed
 
 Plans:
 
@@ -1083,7 +1083,7 @@ Plans:
 - [x] 48-1-10-PLAN.md — Comparação lado a lado e avaliação humana (modo cego, verdict, reavaliação) (Wave 6)
 - [x] 48-1-11-PLAN.md — Testes 1: domínio, guardas, isolamento e cenários (Wave 7)
 - [x] 48-1-12-PLAN.md — Testes 2: harness, execução, artefatos, API, UI e avaliação (Wave 7)
-- [ ] 48-1-13-PLAN.md — Regressão e co-migração de fixtures (Wave 8)
+- [x] 48-1-13-PLAN.md — Regressão e co-migração de fixtures (Wave 8)
 - [ ] 48-1-14-PLAN.md — UAT local com IA real, migration remota deliberada e verificação final (Wave 9)
 
 **Scope fences:** nenhuma task toca `campaigns`, `campaign_art_versions`, `generation_events`, `ai_model_selection`, `ai_model_catalog`, `admin_audit_log`, prompts oficiais ou o bucket `campaign-images`; nenhum secret em banco/log/snapshot; nenhuma chamada paga em testes/CI; `src/lib/ai/gateway.ts`, prompts oficiais, `src/lib/campaign/**`, `src/lib/ai-cost/**` e `src/lib/ai/model-registry.ts` permanecem intactos; `model`/`configuration` rejeitados nesta fase (F48.2); revisão produtiva não redefinida.

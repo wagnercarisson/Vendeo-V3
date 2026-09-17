@@ -239,3 +239,25 @@ Nenhum. O plano não introduz nova superfície de rede, autenticação, acesso a
 
 _Phase: 48.1-laboratorio-ia-minimo_
 _Completed: 2026-09-16_
+
+## Self-Check: PASSED
+
+**Arquivos criados:**
+
+- `scripts/verify/48-1-13-contract-guard.mjs` → FOUND
+- `.planning/phases/48.1-laboratorio-ia-minimo/48-1-13-SUMMARY.md` → FOUND
+
+**Commits:**
+
+- `a9c1150d`, `f0c769a8`, `8ee17f97`, `b3f27a9f` → FOUND
+
+**Acceptance criteria re-executados no estado final:**
+
+- `npx vitest run` → exit 0 (333 arquivos / 3585 testes + 1 skipped)
+- `npx vitest run src/lib/ai src/lib/ai-cost src/lib/image-generation src/app/api/campaign/generate-image` → exit 0 (33 arquivos / 539 testes)
+- `npm run typecheck` → exit 0 · `npm run lint` → exit 0 · `npm run build` → exit 0
+- `node scripts/verify/48-1-13-contract-guard.mjs` → exit 0 (`frozenViolations: []`, `externalContractViolations: []`, `forbiddenReferences: []`, `promptsUnchanged: true`, `additiveSeam: true`)
+- `git status --porcelain` das superfícies de produção → vazio
+- `git diff --name-only <base> -- docs/alinhamento-fase-44-temas-de-campanhas` → vazio
+- `supabase/migrations/*f48*` → exatamente 2 arquivos
+
