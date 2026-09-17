@@ -1255,21 +1255,21 @@ Phase 39 (Brief Estruturado de Campanha — v1.5)
 | SEC-02 | Phase 29 | Done ✓ |
 | SEC-03 | Phase 29 | Done ✓ |
 | SEC-05 | Phase 29 | Done ✓ |
-| LAB-ISOLATION | Phase 48.1 | Planned |
-| LAB-SCENARIOS | Phase 48.1 | Planned |
-| LAB-EXPERIMENTS | Phase 48.1 | Planned |
-| LAB-RUNS | Phase 48.1 | Planned |
-| LAB-GATEWAY-HARNESS | Phase 48.1 | Planned |
-| LAB-ARTIFACTS | Phase 48.1 | Planned |
-| LAB-ADMIN-API | Phase 48.1 | Planned |
-| LAB-ADMIN-UI | Phase 48.1 | Planned |
-| LAB-HUMAN-EVALUATION | Phase 48.1 | Planned |
+| LAB-ISOLATION | Phase 48.1 | Done ✓ |
+| LAB-SCENARIOS | Phase 48.1 | Done ✓ |
+| LAB-EXPERIMENTS | Phase 48.1 | Done ✓ |
+| LAB-RUNS | Phase 48.1 | Done ✓ |
+| LAB-GATEWAY-HARNESS | Phase 48.1 | Done ✓ |
+| LAB-ARTIFACTS | Phase 48.1 | Done ✓ |
+| LAB-ADMIN-API | Phase 48.1 | Done ✓ |
+| LAB-ADMIN-UI | Phase 48.1 | Done ✓ |
+| LAB-HUMAN-EVALUATION | Phase 48.1 | Done ✓ |
 
 **Coverage:**
 
 - v1 requirements: 148 total (139 v1.5 + 9 capabilities novas da F48.1 — specs ADDED, sem REQ-IDs no `REQUIREMENTS.md`)
 - Mapped to phases: 148
-- Completed: 127
+- Completed: 136
 - Unmapped: 0 ✓
 - Deferred to v1.7: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06
 
