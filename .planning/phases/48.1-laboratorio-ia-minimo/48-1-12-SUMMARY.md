@@ -49,7 +49,9 @@ key-files:
     - src/app/api/admin/laboratorio/__tests__/lab-admin-api.contract.test.ts
     - src/app/(app)/admin/laboratorio/_components/__tests__/lab-admin-ui.contract.test.tsx
     - src/lib/lab/__tests__/snapshot-fixtures.contract.test.ts
-  modified: []
+  modified:
+    - src/lib/lab/persistence/__tests__/lab-artifacts.contract.test.ts
+    - .planning/phases/48.1-laboratorio-ia-minimo/48-1-12-PLAN.md
 
 key-decisions:
   - "LAB_RUN_STALE_MS e importado de `src/lib/lab/limits.ts` (fonte unica) — `run-service` nao reexporta a constante"
@@ -146,6 +148,22 @@ Cada task foi commitada atomicamente:
 
 **Total deviations:** 3 auto-fixed (2 bloqueantes de teste, 1 correção de fixture)
 **Impact on plan:** Todas as correções são de autoria de teste (nenhuma alteração em produção). Sem scope creep.
+
+## Correction Applied After Review (cobertura do cleanup destrutivo)
+
+**Finding (revisão do usuário — bloqueante):** o contrato de artefatos exercitava apenas `selectEligibleArtifacts`/`partitionArtifacts` — a **seleção** de elegibilidade estava bem testada, mas o **efeito destrutivo** do comando (`storage.remove` + gravação de `removed_at`) não era comprovado, justamente o ponto crítico de um comando destrutivo.
+
+**Fix (test-only):** novo teste em `lab-artifacts.contract.test.ts` que **importa e executa o `main()` real** do script com `@supabase/supabase-js` mockado (`createClient` fake via `vi.hoisted` + `vi.mock`) e ambiente local fake (`http://127.0.0.1:54321` + service role), assertando:
+- `summary` = `{ eligible: 2, invalid: 1, removed: 2, skipped: 0, dryRun: false }`;
+- `storage.from("lab-artifacts").remove(...)` chamado **apenas** para os dois paths elegíveis (arquivado + antigo) e **nunca** para o path do run ativo;
+- `update` de `removed_at` gravado **apenas** nos IDs `a-archived`/`a-stale` (nunca em ativo/recente/removido/inválido);
+- **nenhum** `delete` em tabela (metadados/histórico preservados).
+
+As fixtures usam datas relativas ao relógio real (o `main` usa `new Date()` internamente) e o path do run arquivado usa o **experimento arquivado** ao qual pertence (coerência path × registro exigida pelo próprio cleanup).
+
+**Source-of-truth sincronizada:** `48-1-12-PLAN.md` (Task 3 A item 5) — o contrato agora exige explicitamente executar `main()`.
+
+**Verification:** `npx vitest run src/lib/lab/persistence/__tests__/lab-artifacts.contract.test.ts` → exit 0 (**12 testes**, estável em 3 execuções); gate `src/lib/lab` + API + UI → exit 0 (**750 testes**); `npx tsc -p tsconfig.typecheck.json --noEmit` → exit 0; `npm.cmd run lint` → exit 0.
 
 ## Issues Encountered
 

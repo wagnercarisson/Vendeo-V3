@@ -21,11 +21,18 @@ import { LAB_ARTIFACT_RETENTION_DAYS } from "../../limits";
 import {
   DEFAULT_RETENTION_DAYS,
   isRunInProgress,
+  main,
   parseArtifactStoragePath,
   partitionArtifacts,
   resolveRetentionDays,
   selectEligibleArtifacts,
 } from "../../../../../scripts/lab/48-cleanup-artifacts.mjs";
+
+const { mockCreateClient } = vi.hoisted(() => ({ mockCreateClient: vi.fn() }));
+
+vi.mock("@supabase/supabase-js", () => ({
+  createClient: (...args: unknown[]) => mockCreateClient(...args),
+}));
 
 /**
  * F48.1 — suíte de contrato nº 2 (48-1-12, task 12.3): artefatos.
@@ -479,6 +486,119 @@ describe("contrato de artefatos — cleanup manual protegendo run em andamento",
     expect(source).not.toMatch(/setInterval|setTimeout|cron/i);
     expect(source).toContain("removed_at");
     expect(source).not.toMatch(/\.delete\(/);
+  });
+
+  it("executa o cleanup real: remove só os paths elegíveis e marca removed_at só neles", async () => {
+    // Datas relativas ao relógio real (o `main` usa `new Date()` internamente).
+    const realNow = Date.now();
+    const oldIso = new Date(realNow - (LAB_ARTIFACT_RETENTION_DAYS + 5) * 86400000).toISOString();
+    const recentIso = new Date(realNow - 86400000).toISOString();
+    const archivedExperimentId = "99999999-9999-4999-8999-999999999999";
+
+    const artifacts = [
+      {
+        id: "a-archived",
+        run_id: ARCHIVED_RUN_ID,
+        storage_path: `experiments/${archivedExperimentId}/runs/${ARCHIVED_RUN_ID}/output.png`,
+        removed_at: null,
+      },
+      { id: "a-stale", run_id: STALE_RUN_ID, storage_path: pathFor(STALE_RUN_ID), removed_at: null },
+      { id: "a-active", run_id: ACTIVE_RUN_ID, storage_path: pathFor(ACTIVE_RUN_ID), removed_at: null },
+      { id: "a-recent", run_id: RUN_ID, storage_path: pathFor(RUN_ID), removed_at: null },
+      {
+        id: "a-removed",
+        run_id: RUN_ID,
+        storage_path: pathFor(RUN_ID),
+        removed_at: "2026-09-15T00:00:00.000Z",
+      },
+      {
+        id: "a-invalid",
+        run_id: RUN_ID,
+        storage_path: `experiments/${EXPERIMENT_ID}/runs/not-a-uuid/output.png`,
+        removed_at: null,
+      },
+    ];
+
+    const runs = [
+      { id: ARCHIVED_RUN_ID, status: "succeeded", created_at: recentIso, finished_at: recentIso, experiment_id: archivedExperimentId },
+      { id: STALE_RUN_ID, status: "succeeded", created_at: oldIso, finished_at: oldIso, experiment_id: EXPERIMENT_ID },
+      { id: ACTIVE_RUN_ID, status: "running", created_at: oldIso, finished_at: null, experiment_id: EXPERIMENT_ID },
+      { id: RUN_ID, status: "succeeded", created_at: recentIso, finished_at: recentIso, experiment_id: EXPERIMENT_ID },
+    ];
+
+    const experiments = [
+      { id: EXPERIMENT_ID, status: "evaluated" },
+      { id: archivedExperimentId, status: "archived" },
+    ];
+
+    const calls = {
+      remove: [] as Array<{ bucket: string; paths: string[] }>,
+      updates: [] as Array<{ table: string; values: Record<string, unknown>; id: string }>,
+      deletes: [] as string[],
+    };
+
+    mockCreateClient.mockReturnValue({
+      from(table: string) {
+        return {
+          select: () =>
+            Promise.resolve({
+              data:
+                table === "lab_artifacts" ? artifacts : table === "lab_runs" ? runs : experiments,
+              error: null,
+            }),
+          update: (values: Record<string, unknown>) => ({
+            eq: (_column: string, id: string) => {
+              calls.updates.push({ table, values, id });
+              return Promise.resolve({ data: null, error: null });
+            },
+          }),
+          delete: () => {
+            calls.deletes.push(table);
+            return { eq: () => Promise.resolve({ data: null, error: null }) };
+          },
+        };
+      },
+      storage: {
+        from(bucket: string) {
+          return {
+            remove: (paths: string[]) => {
+              calls.remove.push({ bucket, paths });
+              return Promise.resolve({ data: null, error: null });
+            },
+          };
+        },
+      },
+    });
+
+    const summary = await main([], {
+      NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
+      SUPABASE_SERVICE_ROLE_KEY: "service-role",
+    } as unknown as typeof process.env);
+
+    expect(summary).toMatchObject({ eligible: 2, invalid: 1, removed: 2, skipped: 0, dryRun: false });
+
+    // Storage: apenas os paths elegíveis, no bucket do laboratório.
+    expect(calls.remove).toEqual([
+      {
+        bucket: LAB_ARTIFACT_BUCKET,
+        paths: [`experiments/${archivedExperimentId}/runs/${ARCHIVED_RUN_ID}/output.png`],
+      },
+      { bucket: LAB_ARTIFACT_BUCKET, paths: [pathFor(STALE_RUN_ID)] },
+    ]);
+
+    // `removed_at` gravado apenas nos registros correspondentes.
+    expect(calls.updates).toEqual([
+      { table: "lab_artifacts", values: { removed_at: expect.any(String) }, id: "a-archived" },
+      { table: "lab_artifacts", values: { removed_at: expect.any(String) }, id: "a-stale" },
+    ]);
+    for (const untouched of ["a-active", "a-recent", "a-removed", "a-invalid"]) {
+      expect(calls.updates.map((update) => update.id)).not.toContain(untouched);
+    }
+    // O run em andamento nunca tem o path removido do storage.
+    expect(calls.remove.flatMap((call) => call.paths)).not.toContain(pathFor(ACTIVE_RUN_ID));
+
+    // Nenhum `delete` em tabela: metadados/histórico permanecem.
+    expect(calls.deletes).toEqual([]);
   });
 });
 
