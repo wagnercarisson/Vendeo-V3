@@ -126,10 +126,10 @@
 
 ## 14. Plan 48-1-14 — UAT local com IA real e verificação final (onda 9, depende de 48-1-13)
 
-- [ ] 14.1 Preparar ambiente local (Next.js local + Supabase Docker + bucket + cenários bootstrap) com **chave/projeto de desenvolvimento** dos providers; documentar o orçamento de UAT
-- [ ] 14.2 Executar o **experimento inicial obrigatório**: cenário controlado de produto/oferta, prompt atual como baseline, pequena alteração candidata no prompt, **mesmo modelo/parâmetros/imagens**, ≥1 geração por variante, comparação lado a lado, voto humano, custo/latência registrados
-- [ ] 14.3 Confirmar que a produção permaneceu inalterada (nenhuma campanha/crédito/seleção/catálogo/prompt/`generation_events`/`campaign-images` alterados)
-- [ ] 14.4 **Aplicar a migration deliberadamente no remoto** (`npx supabase db push` com `--dry-run` antes), mantendo tabelas/bucket **inertes** e `VENDEO_LAB_ENABLED=false` em produção — evita migration pendente
-- [ ] 14.5 Gerar `48-1-VERIFICATION.md` (goal-backward) e `48.1-UAT.md` (roteiro humano, orçamento, resultados)
-- [ ] 14.6 Confirmar os critérios da proposta (abrir `/admin/laboratorio`, selecionar cenário, configurar baseline/candidata prompt-only, executar gerações isoladas, comparar lado a lado, registrar avaliação com runs comparados, consultar prompt/modelo/params/custo/latência/erros, nenhum dado produtivo alterado, testes sem chamadas pagas, 4 gates verdes, fluxo completo em Docker local, pontos de extensão F48.2+)
-- [ ] 14.7 Atualizar registros (AGENTS.md/STATE/ROADMAP) e preparar arquivamento após aprovação
+- [x] 14.1 Preparar ambiente local (Next.js local + Supabase Docker + bucket + cenários bootstrap) com **chave/projeto de desenvolvimento** dos providers; documentar o orçamento de UAT
+- [x] 14.2 Executar o **experimento inicial obrigatório**: cenário controlado de produto/oferta, prompt atual como baseline, pequena alteração candidata no prompt, **mesmo modelo/parâmetros/imagens**, ≥1 geração por variante, comparação lado a lado, voto humano, custo/latência registrados
+- [x] 14.3 Confirmar que a produção permaneceu inalterada (nenhuma campanha/crédito/seleção/catálogo/prompt/`generation_events`/`campaign-images` alterados)
+- [x] 14.4 **Aplicar a migration deliberadamente no remoto** (`npx supabase db push` com `--dry-run` antes), mantendo tabelas/bucket **inertes** e `VENDEO_LAB_ENABLED=false` em produção — evita migration pendente
+- [x] 14.5 Gerar `48-1-VERIFICATION.md` (goal-backward) e `48.1-UAT.md` (roteiro humano, orçamento, resultados)
+- [x] 14.6 Confirmar os critérios da proposta (abrir `/admin/laboratorio`, selecionar cenário, configurar baseline/candidata prompt-only, executar gerações isoladas, comparar lado a lado, registrar avaliação com runs comparados, consultar prompt/modelo/params/custo/latência/erros, nenhum dado produtivo alterado, testes sem chamadas pagas, 4 gates verdes, fluxo completo em Docker local, pontos de extensão F48.2+)
+- [x] 14.7 Atualizar registros (AGENTS.md/STATE/ROADMAP) e preparar arquivamento após aprovação
