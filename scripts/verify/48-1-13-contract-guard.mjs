@@ -23,7 +23,12 @@
  *   4. prompts oficiais byte-a-byte idênticos à base;
  *   5. seam `buildDirectorPrompt` puramente aditivo (sem remoção de produção);
  *   6. referências proibidas ao laboratório em código produtivo;
- *   7. laboratório sem referência nova a `generation_events` / `campaign-images`.
+ *   7. laboratório sem referência nova a `generation_events` / `campaign-images` /
+ *      `credit_transactions` / `admin_audit_log` / `campaign_art_versions` /
+ *      `ai_model_selection`; `ai_model_catalog` somente leitura;
+ *   8. contrato externo intacto (UI/form, schema público, snapshot/domínio,
+ *      prompts, gateway, migration F47) + allowlist de arquivos alterados da fase;
+ *   9. relatório JSON no stdout para registro no SUMMARY.
  *
  * Exit code 0 quando não há violação; 1 em qualquer violação (com arquivo e motivo).
  */
@@ -39,6 +44,7 @@ const SHA_RE = /^[0-9a-f]{40}$/;
 
 const SEAM_PATH = "src/lib/image-generation/services/image-generation-service.ts";
 const CAMPAIGN_IMAGES_BUCKET_MIGRATION = "supabase/migrations/20260708000002_create_campaign_images_bucket.sql";
+const F44_DOC_PATH = "docs/alinhamento-fase-44-temas-de-campanhas";
 
 /* ------------------------------------------------------------------ helpers */
 
@@ -178,6 +184,46 @@ const frozenPaths = [
   "supabase/migrations/20260914000001_f47_ai_model_catalog_selection.sql",
 ];
 
+const externalContractPaths = [
+  "src/components/flow/",
+  "src/components/campaign/",
+  "src/lib/image-generation/schema.ts",
+  "src/lib/snapshot.ts",
+  "src/lib/campaign/",
+  "src/lib/campaign-intelligence/",
+  "prompts/",
+  "src/lib/ai/gateway.ts",
+  "supabase/migrations/20260914000001_f47_ai_model_catalog_selection.sql",
+];
+
+const allowedPrefixes = [
+  "src/lib/lab/",
+  "src/lib/ai/lab-",
+  "src/lib/ai/__tests__/lab-",
+  "src/app/api/admin/laboratorio/",
+  "src/app/(app)/admin/laboratorio/",
+  "src/lib/image-generation/services/__tests__/image-generation-service",
+  "fixtures/lab/",
+  "scripts/lab/",
+  "scripts/uat/48-",
+  "supabase/migrations/",
+  "openspec/changes/fase-48-1-laboratorio-ia-minimo/",
+  ".planning/",
+  "docs/",
+];
+
+const allowedExact = new Set([
+  "src/app/(app)/admin/layout.tsx",
+  "src/lib/admin/schemas.ts",
+  SEAM_PATH,
+  "src/app/api/campaign/generate-image/__tests__/route.test.ts",
+  "src/lib/ai/__tests__/architecture-guard.test.ts",
+  "scripts/verify/48-1-13-contract-guard.mjs",
+  ".env.example",
+  "ROADMAP.md",
+  "AGENTS.md",
+]);
+
 const productionScanRoots = [
   "src/lib/ai-cost",
   "src/lib/campaign",
@@ -189,7 +235,14 @@ const productionScanRoots = [
 
 const productionForbiddenTokens = ["lab_", "lab-artifacts", "LabTelemetrySink", "LabPromptLoader"];
 
-const labForbiddenTokens = ["generation_events", "campaign-images"];
+const labForbiddenTokens = [
+  "generation_events",
+  "campaign-images",
+  "credit_transactions",
+  "admin_audit_log",
+  "campaign_art_versions",
+  "ai_model_selection",
+];
 
 const { base, origin } = resolveBase();
 
@@ -349,10 +402,58 @@ for (const file of labScanTargets) {
   }
 }
 
-/* 8. resumo ---------------------------------------------------------------- */
+/* 8. contrato externo + allowlist de arquivos alterados --------------------- */
+
+for (const file of changedFiles) {
+  for (const external of externalContractPaths) {
+    if (matchesPrefix(file, external)) {
+      pushUnique(externalContractViolations, "file", {
+        file,
+        reason: `contrato externo alterado (${external})`,
+      });
+    }
+  }
+}
+
+const isAllowedFile = (file) => {
+  if (file === F44_DOC_PATH || file.startsWith(`${F44_DOC_PATH}/`)) return false;
+  if (allowedExact.has(file)) return true;
+  return allowedPrefixes.some((prefix) => matchesPrefix(file, prefix));
+};
+
+for (const file of changedFiles) {
+  if (!isAllowedFile(file)) {
+    pushUnique(externalContractViolations, "file", {
+      file,
+      reason: "arquivo fora da allowlist de alterações permitidas da fase",
+    });
+  }
+}
+
+/* ---------------------------------------------------------------- relatório */
+
+const untrackedFiles = git(["ls-files", "--others", "--exclude-standard"])
+  .split(/\r?\n/)
+  .filter(Boolean);
 
 const violationCount =
   frozenViolations.length + externalContractViolations.length + forbiddenReferences.length;
+
+const report = {
+  base,
+  baseOrigin: origin,
+  changedFiles,
+  f48_1Migrations,
+  frozenViolations,
+  externalContractViolations,
+  forbiddenReferences,
+  promptsUnchanged,
+  promptsChecked: promptFiles.length,
+  additiveSeam,
+  seamRemovedLines: seamRemovedLines.length,
+  untrackedFiles,
+  violationCount,
+};
 
 console.log(`base: ${base} (origem: ${origin})`);
 console.log(`arquivos alterados: ${changedFiles.length}`);
@@ -364,8 +465,10 @@ console.log(
   `seam aditivo: ${additiveSeam ? "OK" : "VIOLADO"} (linhas removidas no seam: ${seamRemovedLines.length})`
 );
 console.log(`referências proibidas: ${forbiddenReferences.length}`);
-console.log(`migrations fora do escopo: ${externalContractViolations.length === 0 ? "OK" : `VIOLADO (${externalContractViolations.length})`}`);
+console.log(`contrato externo/allowlist: ${externalContractViolations.length === 0 ? "OK" : `VIOLADO (${externalContractViolations.length})`}`);
 console.log(`migrations f48_1: ${f48_1Migrations.length}`);
+console.log("F48.1 contract guard report (JSON):");
+console.log(JSON.stringify(report, null, 2));
 
 if (violationCount > 0) {
   for (const violation of frozenViolations) {
