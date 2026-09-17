@@ -142,6 +142,37 @@ describe("LabTelemetrySink — custo em leitura, sem persistência produtiva", (
     expect(sink.entries[0].errorType).toBe("timeout");
   });
 
+  it("falha do adapter SEM usage registra 1 entrada e custo (fallback estático) — F48.1", async () => {
+    // Reproduz o caminho real do "image_generation tool returned no image": o
+    // adapter lança ANTES de produzir usage, então o envelope failed chega sem
+    // `usage` e o resolvedor devolve o custo estático de fallback.
+    const fallbackCost: CostResolution = {
+      estimatedCostUsd: 0.15,
+      costSource: "fallback_static",
+    };
+    mockResolveAiCost.mockResolvedValue(fallbackCost);
+    const sink = new LabTelemetrySink();
+
+    await sink.emit({
+      capability: "campaign_image",
+      protocol: "responses",
+      status: "failed",
+      provider: "openai",
+      model: "gpt-5.5",
+      durationMs: 26128,
+      errorType: "capability",
+    });
+
+    expect(mockResolveAiCost).toHaveBeenCalledTimes(1);
+    expect(mockResolveAiCost.mock.calls[0][0].usage).toBeUndefined();
+    expect(sink.entries).toHaveLength(1);
+    expect(sink.entries[0].status).toBe("failed");
+    expect(sink.entries[0].usage).toBeUndefined();
+    expect(sink.entries[0].errorType).toBe("capability");
+    expect(sink.entries[0].cost).toEqual(fallbackCost);
+    expect(sink.costSummary?.estimatedCostUsd).toBe(0.15);
+  });
+
   it("exceção em resolveAiCost não propaga e gera entrada sanitizada", async () => {
     mockResolveAiCost.mockRejectedValue(new Error("falha ao consultar https://exemplo.test/x"));
 

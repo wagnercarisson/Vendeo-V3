@@ -222,6 +222,19 @@ const allowedExact = new Set([
   ".env.example",
   "ROADMAP.md",
   "AGENTS.md",
+  // EXCEÇÃO ESPECÍFICA E DOCUMENTADA (fix descoberto na UAT local da F48.1):
+  // o adapter `responses` de produção passou a forçar
+  // `tool_choice: { type: "image_generation" }` SOMENTE quando
+  // `request.tools === "image_generation"`. Sem isso o modelo podia responder
+  // apenas com texto (nenhum `image_generation_call`); no laboratório
+  // (single-shot, sem fallback) o run falhava, e em produção o gap era mascarado
+  // pelo fallback `images.edit` (segunda chamada paga). Continua exatamente 1
+  // chamada por run — sem retry e sem fallback automático — e os demais usos do
+  // adapter permanecem inalterados. Cobertura: `adapters.test.ts` (payload exato
+  // ao SDK + resposta sem imagem) e `lab-telemetry-sink.test.ts` (custo do
+  // caminho de falha).
+  "src/lib/ai/adapters/responses.ts",
+  "src/lib/ai/__tests__/adapters.test.ts",
 ]);
 
 const productionScanRoots = [
@@ -373,6 +386,31 @@ for (const scanRoot of productionScanRoots) {
 
 /* 7. laboratório sem referência nova a superfícies produtivas --------------- */
 
+// Exceção específica e documentada (artefato da própria F48.1): o script de
+// preparação da UAT local precisa NOMEAR as tabelas produtivas para provar o
+// delta zero antes/depois (D3) e ler o catálogo ativo (F47). Ele é
+// ESTRITAMENTE read-only — isso não é um bypass: a asserção positiva logo
+// abaixo falha o guard se o script contiver QUALQUER escrita
+// (INSERT/UPDATE/DELETE/TRUNCATE/DROP/ALTER/upsert/RPC).
+const UAT_READONLY_PREP = "scripts/uat/48-local-uat-prep.mjs";
+
+const uatPrepPath = path.join(root, UAT_READONLY_PREP);
+if (fs.existsSync(uatPrepPath)) {
+  const prepSource = stripComments(fs.readFileSync(uatPrepPath, "utf8"));
+  const writePattern = /\b(insert|update|delete|truncate|drop|alter|upsert|rpc)\b/i;
+  for (const line of prepSource.split(/\r?\n/)) {
+    // `createHash(...).update(...)` é hashing local em memória, não escrita no banco.
+    const withoutLocalHashing = line.replace(/createHash\([^)]*\)\.update\([^)]*\)/g, "");
+    if (writePattern.test(withoutLocalHashing)) {
+      pushUnique(forbiddenReferences, "file", {
+        file: UAT_READONLY_PREP,
+        token: `escrita detectada: ${withoutLocalHashing.trim().slice(0, 60)}`,
+        scope: "uat-readonly",
+      });
+    }
+  }
+}
+
 const labScanTargets = [
   ...walk("src/lib/lab"),
   ...walk("src/lib/ai/lab-telemetry-sink.ts"),
@@ -380,7 +418,7 @@ const labScanTargets = [
   ...walk("src/app/(app)/admin/laboratorio"),
   ...walk("scripts/lab"),
   ...globUat48(),
-].filter((file) => !isTestFile(file));
+].filter((file) => !isTestFile(file) && file !== UAT_READONLY_PREP);
 
 for (const file of labScanTargets) {
   const source = stripComments(fs.readFileSync(path.join(root, file), "utf8"));

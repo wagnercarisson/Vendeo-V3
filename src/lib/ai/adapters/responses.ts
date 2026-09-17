@@ -46,6 +46,18 @@ export class ResponsesAdapter implements AiAdapter {
           quality: request.quality,
         },
       ];
+      // F48.1 (UAT) — força a tool `image_generation`.
+      //
+      // Sem `tool_choice`, o modelo decide se chama a tool e pode responder
+      // apenas com texto (nenhum `image_generation_call`), o que o adapter
+      // classifica como falha de capability (`image_generation tool returned no
+      // image`). Em produção isso é mascarado pelo fallback `images.edit`; no
+      // laboratório (single-shot, sem fallback) o run simplesmente falha.
+      //
+      // A doc oficial é explícita: "To force the image generation tool call, you
+      // can set the parameter tool_choice to {"type": "image_generation"}".
+      // Continua sendo UMA única chamada — sem retry e sem fallback automático.
+      params.tool_choice = { type: "image_generation" };
     }
 
     const response = await openai.responses.create(params as never, {

@@ -321,6 +321,41 @@ describe("ResponsesAdapter — breakdown granular e tool image_generation (D2)",
     ]);
   });
 
+  it("força a tool image_generation via tool_choice quando tools é solicitado (F48.1)", async () => {
+    mockResponsesCreate.mockResolvedValue({
+      output: [{ type: "image_generation_call", result: "BASE64IMG" }],
+      output_text: "",
+    });
+
+    await new ResponsesAdapter().invoke(
+      { prompt: "gerar arte", tools: "image_generation", size: "1024x1024", quality: "high" },
+      responsesTarget,
+    );
+
+    const params = mockResponsesCreate.mock.calls[0][0];
+    // Payload EXATO enviado ao SDK: a tool e a escolha da tool são explícitas.
+    expect(params).toEqual({
+      model: "gpt-5.5",
+      input: [
+        { role: "user", content: [{ type: "input_text", text: "gerar arte" }] },
+      ],
+      tools: [{ type: "image_generation", size: "1024x1024", quality: "high" }],
+      // Doc oficial: "To force the image generation tool call, you can set the
+      // parameter tool_choice to {"type": "image_generation"}".
+      tool_choice: { type: "image_generation" },
+    });
+  });
+
+  it("não envia tool_choice quando a tool image_generation não é solicitada", async () => {
+    mockResponsesCreate.mockResolvedValue({ output: [], output_text: "texto" });
+
+    await new ResponsesAdapter().invoke({ prompt: "texto puro" }, responsesTarget);
+
+    const params = mockResponsesCreate.mock.calls[0][0];
+    expect(params.tools).toBeUndefined();
+    expect(params.tool_choice).toBeUndefined();
+  });
+
   it("usage normalizado no mesmo formato TokenUsage do chat-completions", async () => {
     mockResponsesCreate.mockResolvedValue({
       output: [],
@@ -346,7 +381,17 @@ describe("ResponsesAdapter — breakdown granular e tool image_generation (D2)",
         { prompt: "gerar arte", tools: "image_generation" },
         responsesTarget,
       ),
-    ).rejects.toMatchObject({ kind: "capability", retryable: false });
+    ).rejects.toMatchObject({
+      kind: "capability",
+      retryable: false,
+      message: "image_generation tool returned no image",
+    });
+
+    // O request foi enviado com a tool FORÇADA: uma resposta sem imagem é
+    // classificada como falha — nunca como sucesso silencioso.
+    expect(mockResponsesCreate.mock.calls[0][0].tool_choice).toEqual({
+      type: "image_generation",
+    });
   });
 
   it("imagem presente SEM usage → usageMeta.imageGenerationTool=true (marcador preservado, F46-05)", async () => {
