@@ -15,8 +15,15 @@ import {
   PRODUCT_DESCRIPTION_HINT,
   PRODUCT_DESCRIPTION_LABEL,
   PRODUCT_DESCRIPTION_PLACEHOLDER,
+  ORIGINAL_PRICE_LABEL,
+  DISCOUNTED_PRICE_LABEL,
+  ORIGINAL_PRICE_HINT,
+  DISCOUNTED_PRICE_HINT,
+  PRICE_HELP_TITLE,
+  PRICE_HELP_RULES,
 } from "@/lib/campaign/field-guidance";
 import { FieldHint } from "@/components/ui/field-hint";
+import { ExpandableHelp } from "@/components/ui/expandable-help";
 import type { CampaignIntent } from "@/lib/campaign/types";
 import {
   AlertCircle,
@@ -326,8 +333,27 @@ function FormContent({
   const descriptionHintId = `${descriptionHelpBase}-hint`;
   const descriptionErrorId = `${descriptionHelpBase}-error`;
 
+  // F49 (D2/D9): ids de ajuda dos preços e do selo. O feedback dinâmico é um
+  // único elemento (`priceFeedbackId`) referenciado por ambos os campos.
+  const priceHelpBase = useId();
+  const originalPriceHintId = `${priceHelpBase}-original-hint`;
+  const originalPriceErrorId = `${priceHelpBase}-original-error`;
+  const discountedPriceHintId = `${priceHelpBase}-discounted-hint`;
+  const discountedPriceErrorId = `${priceHelpBase}-discounted-error`;
+  const priceFeedbackId = `${priceHelpBase}-feedback`;
+  const badgeHelpBase = useId();
+  const badgeErrorId = `${badgeHelpBase}-error`;
+
   const hasProductNameError = Boolean(touched.productName && fieldErrors.productName);
   const hasDescriptionError = Boolean(touched.description && fieldErrors.description);
+  const hasOriginalPriceError = Boolean(
+    touched.originalPriceCents && fieldErrors.originalPriceCents,
+  );
+  const hasDiscountedPriceError = Boolean(
+    touched.discountedPriceCents && fieldErrors.discountedPriceCents,
+  );
+  const hasBadgeError = Boolean(touched.badge && fieldErrors.badge);
+  const isOfferIntent = fields.campaignIntent === "offer";
 
   const campaignCost = costs?.campaign_generation;
   const costUnavailable = costStatus !== "loaded";
@@ -460,18 +486,19 @@ function FormContent({
       <h2 className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2">
         Oferta
       </h2>
-      <div className="mb-3 space-y-0.5 text-text-muted text-xs font-body leading-relaxed">
-        <p>Os campos de preço definem a intenção da campanha:</p>
-        <p>Preço original + preço final = Oferta</p>
-        <p>Somente preço final = Oferta ou Destaque</p>
-        <p>Sem nenhum preço preenchido = Destaque ou Exclusividade</p>
-      </div>
+      <ExpandableHelp summary={PRICE_HELP_TITLE} className="mb-3">
+        <ul className="list-disc space-y-0.5 pl-4">
+          {PRICE_HELP_RULES.map((rule) => (
+            <li key={rule}>{rule}</li>
+          ))}
+        </ul>
+      </ExpandableHelp>
       <div>
         <label
           htmlFor="originalPrice"
           className="block text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2"
         >
-          Preço Original{" "}
+          {ORIGINAL_PRICE_LABEL}{" "}
           <span className="font-normal normal-case tracking-normal text-text-disabled">
             (opcional)
           </span>
@@ -485,14 +512,26 @@ function FormContent({
           onBlur={() => handleBlur("originalPriceCents")}
           placeholder="R$ 0,00"
           disabled={isSubmitting}
+          aria-describedby={[
+            originalPriceHintId,
+            priceFeedbackId,
+            hasOriginalPriceError ? originalPriceErrorId : null,
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          aria-invalid={hasOriginalPriceError ? true : undefined}
           className={`min-h-[44px] w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
-            touched.originalPriceCents && fieldErrors.originalPriceCents
+            hasOriginalPriceError
               ? "border-accent-red"
               : "border-border-light hover:border-text-muted"
           }`}
         />
-        {touched.originalPriceCents && fieldErrors.originalPriceCents && (
-          <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs">
+        <FieldHint id={originalPriceHintId}>{ORIGINAL_PRICE_HINT}</FieldHint>
+        {hasOriginalPriceError && (
+          <p
+            id={originalPriceErrorId}
+            className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs"
+          >
             <AlertCircle className="w-3.5 h-3.5" />
             {fieldErrors.originalPriceCents}
           </p>
@@ -504,7 +543,7 @@ function FormContent({
           htmlFor="discountedPrice"
           className="block text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2"
         >
-          Preço Final
+          {DISCOUNTED_PRICE_LABEL}
         </label>
         <input
           id="discountedPrice"
@@ -515,14 +554,27 @@ function FormContent({
           onBlur={() => handleBlur("discountedPriceCents")}
           placeholder="R$ 0,00"
           disabled={isSubmitting}
+          aria-required={isOfferIntent ? "true" : undefined}
+          aria-describedby={[
+            discountedPriceHintId,
+            priceFeedbackId,
+            hasDiscountedPriceError ? discountedPriceErrorId : null,
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          aria-invalid={hasDiscountedPriceError ? true : undefined}
           className={`min-h-[44px] w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
-            touched.discountedPriceCents && fieldErrors.discountedPriceCents
+            hasDiscountedPriceError
               ? "border-accent-red"
               : "border-border-light hover:border-text-muted"
           }`}
         />
-        {touched.discountedPriceCents && fieldErrors.discountedPriceCents && (
-          <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs">
+        <FieldHint id={discountedPriceHintId}>{DISCOUNTED_PRICE_HINT}</FieldHint>
+        {hasDiscountedPriceError && (
+          <p
+            id={discountedPriceErrorId}
+            className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs"
+          >
             <AlertCircle className="w-3.5 h-3.5" />
             {fieldErrors.discountedPriceCents}
           </p>
@@ -547,8 +599,11 @@ function FormContent({
           onChange={(e) => setField("badge", e.target.value)}
           onBlur={() => handleBlur("badge")}
           disabled={isSubmitting}
+          aria-required={isOfferIntent ? "true" : undefined}
+          aria-describedby={hasBadgeError ? badgeErrorId : undefined}
+          aria-invalid={hasBadgeError ? true : undefined}
           className={`min-h-[44px] w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
-            touched.badge && fieldErrors.badge
+            hasBadgeError
               ? "border-accent-red"
               : "border-border-light hover:border-text-muted"
           }`}
@@ -566,8 +621,11 @@ function FormContent({
             </option>
           ))}
         </select>
-        {touched.badge && fieldErrors.badge && (
-          <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs">
+        {hasBadgeError && (
+          <p
+            id={badgeErrorId}
+            className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs"
+          >
             <AlertCircle className="w-3.5 h-3.5" />
             {fieldErrors.badge}
           </p>
