@@ -21,9 +21,21 @@ import {
   TONE_OF_VOICE_HINT,
   TONE_OF_VOICE_COMPLEMENTS_HINT,
   TONE_OF_VOICE_DESCRIPTIONS,
+  POSITIONING_LABEL,
+  POSITIONING_SECONDARY_LABEL,
+  POSITIONING_HINT,
+  POSITIONING_PLACEHOLDER,
+  POSITIONING_HELP_TITLE,
+  POSITIONING_EXAMPLE,
+  POSITIONING_IDENTITY_HINT,
+  SHORT_DESCRIPTION_HINT,
+  SLOGAN_HINT,
+  OPTIONAL_LABEL,
   type StoreToneOfVoice,
 } from "@/lib/store-onboarding/field-guidance";
 import { FieldHint } from "@/components/ui/field-hint";
+import { ExpandableHelp } from "@/components/ui/expandable-help";
+import { RecommendedBadge } from "@/components/ui/recommended-badge";
 
 // DriftDiscreetButton import removed — replaced by inline post-dismiss links
 import { DriftDecisionModal } from "./drift-decision-modal";
@@ -109,6 +121,13 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
   const toneHintId = `${toneHelpBase}-hint`;
   const toneComplementsId = `${toneHelpBase}-complements`;
   const toneDescriptionId = `${toneHelpBase}-description`;
+  const positioningHelpBase = useId();
+  const positioningHintId = `${positioningHelpBase}-hint`;
+  const positioningIdentityId = `${positioningHelpBase}-identity`;
+  const shortDescriptionHelpBase = useId();
+  const shortDescriptionHintId = `${shortDescriptionHelpBase}-hint`;
+  const sloganHelpBase = useId();
+  const sloganHintId = `${sloganHelpBase}-hint`;
 
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Partial<Record<string, boolean>>>({});
@@ -2001,16 +2020,25 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
                         )}
                       </div>
                       <div>
-                        <label htmlFor="positioning" className={labelClass}>Posicionamento</label>
-                        <input id="positioning" type="text" value={formData.positioning} onChange={(e) => setField("positioning", e.target.value)} placeholder="Ex: A melhor loja de..." className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20" />
+                        <label htmlFor="positioning" className={labelClass}>
+                          {POSITIONING_LABEL}
+                          <span className="ml-1.5 font-normal normal-case tracking-normal text-text-disabled">{POSITIONING_SECONDARY_LABEL}</span>
+                          <RecommendedBadge />
+                        </label>
+                        <input id="positioning" type="text" value={formData.positioning} onChange={(e) => setField("positioning", e.target.value)} placeholder={POSITIONING_PLACEHOLDER} aria-describedby={[positioningHintId, positioningIdentityId].filter(Boolean).join(" ")} className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20" />
+                        <FieldHint id={positioningHintId}>{POSITIONING_HINT}</FieldHint>
+                        <FieldHint id={positioningIdentityId}>{POSITIONING_IDENTITY_HINT}</FieldHint>
+                        <ExpandableHelp summary={POSITIONING_HELP_TITLE}>{POSITIONING_EXAMPLE}</ExpandableHelp>
                       </div>
                       <div>
-                        <label htmlFor="short_description" className={labelClass}>Descrição Curta</label>
-                        <textarea id="short_description" value={formData.short_description} onChange={(e) => setField("short_description", e.target.value)} placeholder="Descreva sua loja em poucas palavras..." rows={3} className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20 resize-none" />
+                        <label htmlFor="short_description" className={labelClass}>Descrição Curta <RecommendedBadge /></label>
+                        <textarea id="short_description" value={formData.short_description} onChange={(e) => setField("short_description", e.target.value)} placeholder="Descreva sua loja em poucas palavras..." rows={3} aria-describedby={shortDescriptionHintId} className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20 resize-none" />
+                        <FieldHint id={shortDescriptionHintId}>{SHORT_DESCRIPTION_HINT}</FieldHint>
                       </div>
                       <div>
-                        <label htmlFor="slogan" className={labelClass}>Slogan</label>
-                        <input id="slogan" type="text" value={formData.slogan} onChange={(e) => setField("slogan", e.target.value)} placeholder="Ex: Sua loja de confiança" className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20" />
+                        <label htmlFor="slogan" className={labelClass}>Slogan <span className="font-normal normal-case tracking-normal text-text-disabled">{OPTIONAL_LABEL}</span></label>
+                        <input id="slogan" type="text" value={formData.slogan} onChange={(e) => setField("slogan", e.target.value)} placeholder="Ex: Sua loja de confiança" aria-describedby={sloganHintId} className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20" />
+                        <FieldHint id={sloganHintId}>{SLOGAN_HINT}</FieldHint>
                       </div>
                     </div>
 
