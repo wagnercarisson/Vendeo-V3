@@ -25,7 +25,7 @@ npx vitest run src/components/flow/__tests__/use-store-form.autosave-fiscal.test
 
 **Comando:** `git diff --name-only <SHA_INICIAL_F49>..HEAD` (SHA inicial lido do baseline — **não** `git diff` puro)
 
-**Arquivos alterados pela fase (41):**
+**Arquivos alterados pela fase (41 — snapshot no commit da Task 1, `3c864ff4`):**
 
 ```
 .planning/ROADMAP.md
@@ -159,7 +159,7 @@ caminho da seção "Baseline de não-mudança" de `49-BASELINE.txt`.
 **Resultado:** sem saída — **exit code 1** = 0 ocorrências. `product.description` continua
 **ausente** do briefing do Diretor de Arte (fence D8/D15 mantido).
 
-### Arquivos alterados pela fase (`<SHA_INICIAL_F49>..HEAD`, 42)
+### Arquivos alterados pela fase (`<SHA_INICIAL_F49>..HEAD`, 42 — snapshot no commit da Task 3, `46bcbc71`)
 
 ```
 .planning/ROADMAP.md
@@ -210,3 +210,22 @@ src/lib/store-onboarding/field-guidance.ts
 
 - `docs/alinhamento-fase-44-temas-de-campanhas` — não rastreado **pré-existente** à F49.
   Permanece fora da lista acima, **preservado** e **não commitado**.
+
+## Consolidação do HEAD de encerramento do 49-12
+
+As listas acima são **fotografias sucessivas** do mesmo diff (`<SHA_INICIAL_F49>..HEAD`),
+cada uma no commit em que foi registrada:
+
+| Snapshot | Commit | Arquivos |
+|---|---|---|
+| Seção "8.4 Revisão do diff" (Task 1) | `3c864ff4` | 41 |
+| Seção "Não-mudança" (Task 3) | `46bcbc71` | 42 |
+| **HEAD de encerramento do 49-12** | `1ee7c532` | **43** |
+
+O acréscimo de 41 → 42 → 43 corresponde **exclusivamente a artefatos de documentação da
+própria fase** (`49-GATES.txt`, depois `49-12-SUMMARY.md`), não a código de produção.
+No HEAD de encerramento do 49-12 (`1ee7c532`), `git diff --name-only <SHA_INICIAL_F49>..HEAD`
+retorna **43 arquivos**, e a verificação de caminhos proibidos permanece **0 violações** —
+todos os 43 são de apresentação/conteúdo ou documentação da fase. Os hashes protegidos
+seguem com **0 divergências** e `product.description` segue ausente do briefing do Diretor
+de Arte (fence D8/D15 mantido).

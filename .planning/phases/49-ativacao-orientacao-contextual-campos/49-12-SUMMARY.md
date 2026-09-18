@@ -69,7 +69,7 @@ completed: 2026-09-18
 
 - **8.3 Regressão de comportamento verde:** suites de auto-save/draft/abas/body (F36/F40/F41/F43) — 13 arquivos / 114 testes, exit 0.
 - **9.1–9.4 Os 4 gates verdes:** `npx vitest run` 345 arquivos / 3660 testes + 1 skipped (exit 0); `npm run typecheck` (exit 0); `npm run lint` (exit 0); `npm run build` (exit 0).
-- **8.4 + prova final de não-mudança:** 59 arquivos protegidos comparados hash a hash (SHA-256) — **0 divergências**, 0 ausentes; `git diff --name-only <SHA_INICIAL_F49>..HEAD` (42 arquivos) sem nenhum caminho proibido; fence do Diretor de Arte confirmado (`product.description` ausente do `art-director-briefing`, 0 ocorrências).
+- **8.4 + prova final de não-mudança:** 59 arquivos protegidos comparados hash a hash (SHA-256) — **0 divergências**, 0 ausentes; `git diff --name-only <SHA_INICIAL_F49>..HEAD` (42 arquivos no snapshot da Task 3, commit `46bcbc71`; 43 no HEAD de encerramento do 49-12, commit `1ee7c532`, incluindo este SUMMARY) sem nenhum caminho proibido; fence do Diretor de Arte confirmado (`product.description` ausente do `art-director-briefing`, 0 ocorrências).
 - Arquivos não rastreados pré-existentes (`docs/alinhamento-fase-44-temas-de-campanhas`) mantidos **separados**, preservados e não commitados.
 
 ## Task Commits
