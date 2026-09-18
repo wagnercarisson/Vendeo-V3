@@ -32,7 +32,7 @@ key-files:
   modified: []
 
 key-decisions:
-  - "Feedback de preço espelha `inferIntent` por classificação própria (original>0 × discounted>0) sem importar `use-campaign-form` — fence de módulo client; correspondência provada em teste"
+  - "Feedback de preço espelha `inferIntent` por classificação própria (original>0 × discounted>0) sem importar `use-campaign-form` — fence de módulo client; a correspondência direta com o comportamento real será provada no plano 49-08"
   - "Estado 'só preço anterior' usa mensagem neutra ('Informe o preço de venda...') e nunca 'Sem preço...'"
   - "Formatação BRL reutiliza `formatCurrencyBRL` de `@/lib/formatters`; composição (não literal) para preservar o espaço não separável U+00A0 do Intl pt-BR"
   - "Referências textuais a `use-campaign-form` foram removidas dos comentários para satisfazer o gate de pureza (`rg` = 0)"
