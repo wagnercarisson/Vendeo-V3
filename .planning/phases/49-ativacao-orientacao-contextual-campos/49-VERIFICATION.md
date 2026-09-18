@@ -6,12 +6,10 @@ score: 14/14 must-haves verified
 overrides_applied: 0
 re_verification: true
 warnings:
-  - "ME-01 (49-REVIEW.md): `RecommendedBadge` hardcodes `Recomendado` instead of consuming `RECOMMENDED_LABEL`; the constant is dead in production (only tests import it). D14 single-source deviation — no actual divergence today (both strings identical)."
-  - "ME-02: `store-identity-form.tsx` uses `as StoreToneOfVoice` on a free-form DB string with no CHECK constraint; a legacy/unknown tone renders an empty `<p>` still referenced by `aria-describedby`."
-  - "ME-03: `campaign-image-upload.tsx` uses static ids (`productImages-label`, `productImages-required`) and `store-identity-form.tsx` uses `fiscal-section-helper` instead of `useId`-derived ids."
-  - "LO-02: the neutral 'só preço anterior' feedback is rendered with `tone=\"amber\"` (warning color) although D9 calls it a neutral message (this follows the 49-05 plan instruction verbatim)."
-  - "LO-03: `campaign-brief-review.tsx` displays `fields.mandatoryArtworkTextFree` untrimmed while the body trims it via `buildMandatoryArtworkText`."
-  - "Tracking nit: the requirements table in `.planning/ROADMAP.md` (lines 1319–1325) still lists the 7 F49 capability slugs as `Planned` although the phase is `14/14 — Complete`."
+  - "LO-02 (residual não-bloqueante, decisão deliberada do 49-05): o feedback neutro 'só preço anterior' é renderizado com `tone=\"amber\"` (cor de aviso) embora D9 o chame de neutro. Mantido conforme instrução literal do plano 49-05; alterar seria nova decisão de UX, fora do escopo desta verificação."
+resolved_findings:
+  - "ME-01, ME-02, ME-03 e LO-03 (49-REVIEW.md) — resolvidos no gap closure 49-15, com testes co-migrados e 4 gates + 59/59 hashes revalidados (ver §'Re-verificação pós-review (49-15)')."
+  - "Tracking nit (.planning/ROADMAP.md) — resolvido no fechamento da fase: os 7 slugs F49 constam como `Done` e o `Last updated` cita a F49; `AGENTS.md` recebeu a seção da F49."
 human_verification: []
 ---
 
@@ -21,7 +19,7 @@ human_verification: []
 
 **Verified:** 2026-09-18T19:35:00Z
 **Status:** passed
-**Re-verification:** No — initial verification (no previous 49-VERIFICATION.md existed)
+**Re-verification:** Yes — re-verificação pós-review (49-15) registrada em §"Re-verificação pós-review (49-15)" ao final deste relatório; ME-01/ME-02/ME-03/LO-03 resolvidos.
 
 ## Goal Achievement
 
@@ -38,13 +36,13 @@ human_verification: []
 | 7 | Campanha: obrigatoriedade acessível (`aria-required` sem `required` nativo); grupo de imagem com `role=group` + `aria-labelledby`/`aria-describedby` | ✓ VERIFIED | `campaign-input-form.tsx:407,563,617` `aria-required` condicional; `campaign-image-upload.tsx:58-70` `role=group` + `aria-labelledby="productImages-label"` + `aria-describedby` com `productImages-required`/erro. Testes afirmam ausência de `required` nativo. |
 | 8 | Informações obrigatórias na arte: campo visível, positivo, multi-linha; contrato de transporte preservado | ✓ VERIFIED | `mandatory-artwork-field.tsx` usa `MANDATORY_ARTWORK_LABEL/HINT/PLACEHOLDER` (placeholder 3 linhas, 3ª = "Venda proibida para menores"), `id="mandatoryArtworkText"`, `maxLength=200`, `rows=3`, `aria-describedby` por `useId`. Nenhuma advertência negativa. |
 | 9 | Revisão do brief: categorias separáveis (aviso ilustrativo × informações obrigatórias), rótulos de preço alinhados, validade em item próprio | ✓ VERIFIED | `campaign-brief-review.tsx:227-257` renderiza itens distintos (`ILLUSTRATIVE_NOTICE_TEXT` com `Check` × `MANDATORY_ARTWORK_LABEL` + `whitespace-pre-line`); `:165/:173` "Preço anterior"/"Preço de venda"; `:179-184` validade própria. `buildMandatoryArtworkText` removido do componente (grep = 0). |
-| 10 | Fonte única de microcopy em módulos puros + correspondência com o comportamento real | ⚠️ VERIFIED (com ressalva) | `src/lib/store-onboarding/field-guidance.ts` e `src/lib/campaign/field-guidance.ts` são puros (sem `use client`/React/server-only) e consumidos pelos componentes; `field-guidance.correspondence.test.ts` importa `inferIntent` e `computeTabUnlock` reais. **Ressalva:** `RecommendedBadge` duplica o literal "Recomendado" (ME-01) — sem divergência atual, constante `RECOMMENDED_LABEL` dead em produção. |
+| 10 | Fonte única de microcopy em módulos puros + correspondência com o comportamento real | ✓ VERIFIED | `src/lib/store-onboarding/field-guidance.ts` e `src/lib/campaign/field-guidance.ts` são puros (sem `use client`/React/server-only) e consumidos pelos componentes; `field-guidance.correspondence.test.ts` importa `inferIntent` e `computeTabUnlock` reais. ME-01 (`RecommendedBadge` consumindo `RECOMMENDED_LABEL`) resolvido no 49-15. |
 | 11 | Fences de não-mudança cumpridas (`prompts/**`, `src/lib/ai/**`, brief, snapshot, `use-campaign-form.ts`, `validity-field.tsx`, tabs/reason-text/draft-store, drift, rotas, banco) | ✓ VERIFIED | `git diff --name-only 05b1a74b..HEAD` filtrado por todos os caminhos proibidos → **vazio**. `product.description` ausente de `art-director-briefing.ts` (rg = 0). `use-campaign-form.ts`/`validity-field.tsx`/`tabs.ts`/`reason-text.ts`/`draft-store.ts`/`use-drift-detection.ts`/`lib/drift.ts`/`supabase/**`/`src/app/api/**` não alterados. |
 | 12 | Regressão de comportamento (auto-save/draft/abas/body) verde + 4 gates verdes | ✓ VERIFIED | Reexecutado nesta verificação: `npx vitest run` → **345 files / 3660 passed + 1 skipped (exit 0)**; `npm run typecheck` → **exit 0**. Lint/build registrados em `49-GATES.txt` (exit 0), coerentes com os gates reexecutados. Suites da fase (9 arquivos / 61 testes) verdes. |
 | 13 | UAT humana de compreensão 9/9 PASS em desktop/375px/320px, sem poluição visual; decisões editoriais confirmadas | ✓ VERIFIED | `49-UAT.md`: aprovador **Wagner**, **2026-09-18**, 9/9 PASS, matriz de dispositivos PASS, poluição visual PASS, decisão 4.1 (manter "Informações obrigatórias na arte") e 4.2 (8 descrições de tom de voz aprovadas). |
 | 14 | Gap closure 49-14 resolvido e revalidado | ✓ VERIFIED | `49-14-SUMMARY.md` + `49-GATES.txt` (§"Reexecução pós-gap-closure"): 4 gates verdes, 59/59 hashes sem divergência; `field-guidance.ts` com microcopy citando restrições e placeholder com restrição real; re-UAT reconfirmou cenário 7 PASS. |
 
-**Score:** 14/14 truths verified (truth #10 carries a documented non-blocking warning).
+**Score:** 14/14 truths verified (achados acionáveis do review ME-01/ME-02/ME-03/LO-03 resolvidos no 49-15).
 
 ### Required Artifacts
 
@@ -54,11 +52,11 @@ human_verification: []
 | `src/lib/campaign/field-guidance.ts` | Microcopy pura da campanha + `priceFeedbackMessage` | ✓ VERIFIED | 94 linhas, 4 estados, importa apenas `formatCurrencyBRL` |
 | `src/components/ui/field-hint.tsx` | Hint inline associável por id | ✓ VERIFIED | 49 linhas, tom por mapa, sem `useId` |
 | `src/components/ui/expandable-help.tsx` | Disclosure acessível colapsado | ✓ VERIFIED | 62 linhas, `aria-expanded`/`aria-controls`/`hidden`/`min-h-[44px]` |
-| `src/components/ui/recommended-badge.tsx` | Indicador textual | ⚠️ VERIFIED (warning ME-01) | 14 linhas; literal duplicado em vez de `RECOMMENDED_LABEL` |
+| `src/components/ui/recommended-badge.tsx` | Indicador textual | ✓ VERIFIED | Consome `RECOMMENDED_LABEL` (ME-01 resolvido no 49-15) |
 | `src/components/campaign/mandatory-artwork-field.tsx` | Campo visível positivo multi-linha | ✓ VERIFIED | 47 linhas, constante canônica, contrato preservado |
 | `src/components/flow/store-identity-form.tsx` | Orientação da loja | ✓ VERIFIED | Importa `field-guidance`, usa `useId`/`aria-describedby`/`aria-required` |
 | `src/components/flow/campaign-input-form.tsx` | Orientação da campanha | ✓ VERIFIED | Importa `field-guidance`, feedback dinâmico, `ExpandableHelp` |
-| `src/components/flow/campaign-image-upload.tsx` | Grupo de imagem acessível | ⚠️ VERIFIED (warning ME-03) | `role=group` + `aria-labelledby`/`aria-describedby`; ids estáticos |
+| `src/components/flow/campaign-image-upload.tsx` | Grupo de imagem acessível | ✓ VERIFIED | `role=group` + `aria-labelledby`/`aria-describedby`; ids derivados de `useId` (ME-03 resolvido no 49-15) |
 | `src/components/flow/campaign-brief-review.tsx` | Revisão separável | ✓ VERIFIED | Itens rotulados, rótulos de preço, sem `buildMandatoryArtworkText` |
 | `.planning/phases/.../49-BASELINE.txt` | Baseline de não-mudança | ✓ VERIFIED | 4 seções, `SHA_INICIAL_F49`, 59 hashes |
 | `.planning/phases/.../49-GATES.txt` | Evidência dos gates | ✓ VERIFIED | Regressão, 4 gates e não-mudança |
@@ -122,7 +120,7 @@ human_verification: []
 | `store-identity-form.tsx` | 1616 | `XX.XXX.XXX/YYYY-ZZ` | ℹ️ Info | Máscara de CNPJ (falso positivo de "XXX"); **não** é debt marker |
 | — | — | `TBD`/`FIXME`/`TODO`/`PLACEHOLDER` | ℹ️ Info | Nenhum debt marker real encontrado nos arquivos da fase |
 
-Nenhum blocker anti-pattern. As ressalvas do code review (`49-REVIEW.md`: 0 critical, 0 high, 3 medium, 5 low) estão listadas no frontmatter como `warnings` e resumidas em "Gaps Summary" abaixo.
+Nenhum blocker anti-pattern. As ressalvas do code review (`49-REVIEW.md`: 0 critical, 0 high, 3 medium, 5 low) estão registradas no frontmatter (`warnings` = LO-02 residual; `resolved_findings` = ME-01/ME-02/ME-03/LO-03 + nit de tracking, resolvidos no 49-15/fechamento) e detalhadas em "Gaps Summary" abaixo.
 
 ### Human Verification Required
 
@@ -138,16 +136,24 @@ Nenhum item pendente. A UAT humana de compreensão da fase foi **executada e apr
 - A UAT humana aprovou 9/9 cenários em desktop/375px/320px, sem poluição visual, com decisões editoriais confirmadas.
 - O gap closure 49-14 foi resolvido e revalidado.
 
-**Warnings não-bloqueantes (documentados pelo code review `49-REVIEW.md`, não corrigidos):**
+**Achados do code review `49-REVIEW.md` — resolvidos:**
 
-1. **ME-01 — `RecommendedBadge` duplica "Recomendado"** em vez de consumir `RECOMMENDED_LABEL` (constante dead em produção; D14/spec "Strings sem duplicação divergente"). Não há divergência atual (ambas as strings idênticas) e o teste de orientação guarda drift; correção trivial (import da constante).
-2. **ME-02 — cast `as StoreToneOfVoice`** em valor livre do banco (sem CHECK) pode renderizar `<p>` vazio ainda referenciado por `aria-describedby` para tom legado/desconhecido.
-3. **ME-03 — ids estáticos** em `campaign-image-upload.tsx` (`productImages-label`/`productImages-required`) e `store-identity-form.tsx` (`fiscal-section-helper`) divergem da convenção `useId` (não são instance-safe se renderizados duas vezes).
-4. **LO-02 — feedback neutro em amber** ("só preço anterior" usa `tone="amber"`, cor de aviso) — segue literalmente a instrução do plano 49-05, mas contrasta com o princípio "sem advertência negativa".
-5. **LO-03 — texto da revisão não trimado** (`fields.mandatoryArtworkTextFree` exibido cru, enquanto o body usa `buildMandatoryArtworkText` com `.trim()`).
-6. **Nits de tracking:** a tabela de requirements em `.planning/ROADMAP.md` (linhas 1319–1325) ainda marca os 7 slugs F49 como `Planned`; a linha `*Last updated*` do `.planning/ROADMAP.md` não cita a F49.
+Resolvidos no gap closure **49-15** (testes co-migrados; 4 gates + 59/59 hashes revalidados — ver §"Re-verificação pós-review (49-15)"):
 
-Estas ressalvas são de qualidade/convenção (nenhuma impede o objetivo) e podem ser tratadas como follow-up de limpeza; nenhuma altera o veredito de que o objetivo da fase foi alcançado.
+1. **ME-01 — `RecommendedBadge`** passou a consumir `RECOMMENDED_LABEL` (fim da duplicação do literal).
+2. **ME-02 — cast `as StoreToneOfVoice`** substituído por resolução cast-free; `FieldHint`/`toneDescriptionId` só entram quando há descrição (sem `<p>` órfão).
+3. **ME-03 — ids estáticos** (`productImages-label`, `productImages-required`, `fiscal-section-helper`) substituídos por ids derivados de `useId`.
+4. **LO-03 — texto da revisão** passa a exibir `fields.mandatoryArtworkTextFree.trim()`, coerente com `hasMandatoryArtworkText` e com o body.
+
+Resolvido no fechamento da fase:
+
+5. **Nits de tracking:** a tabela de requirements em `.planning/ROADMAP.md` marca os 7 slugs F49 como `Done` e a linha `*Last updated*` cita a F49; `AGENTS.md` recebeu a seção da F49.
+
+**Warning residual não-bloqueante (mantido por decisão explícita):**
+
+- **LO-02 — feedback neutro em amber** ("só preço anterior" usa `tone="amber"`, cor de aviso): segue literalmente a instrução do plano 49-05. Não é divergência de contrato; alterar seria nova decisão de UX, fora do escopo desta verificação.
+
+Nenhuma dessas ressalvas altera o veredito de que o objetivo da fase foi alcançado.
 
 ---
 

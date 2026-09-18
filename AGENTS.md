@@ -269,6 +269,35 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 
 **Escopo (D1–D18):** bounded context `src/lib/lab/**` + `/admin/laboratorio` + `/api/admin/laboratorio`; guarda de ambiente fail-closed (somente Supabase local: `VENDEO_LAB_ENABLED` + `VENDEO_LAB_ALLOWED_SUPABASE_HOSTS`); isolamento absoluto (tabelas/bucket próprios, sem `generation_events`/`ai_model_selection`/campanhas/créditos/prompts oficiais); cenários versionados com `content_hash`; experimentos **prompt-only** com modelo fixo e idêntico (`model`/`configuration` → F48.2); snapshots imutáveis com origem completa do custo; harness isolado do gateway F46 (alvo fixo, `LabPromptLoader`, `LabTelemetrySink`; **sem** `OpenAIImageProvider`/fallback automático; exatamente 1 chamada `campaign_image`/run; validação de visão dispensada por `brief_review_confirmed`); validação técnica objetiva (`sharp`) sem nota automática; comparação lado a lado + avaliação humana append-only (`lab_human_evaluations` com trigger anti-UPDATE/DELETE); segurança financeira (`confirmed: true`, estimativa, limites `MAX_SCENARIOS_PER_EXPERIMENT=3`/`MAX_REPETITIONS=3`/`MAX_RUNS_PER_EXPERIMENT=12`/`MAX_CONCURRENT_LAB_RUNS=1`, RPC `lab_reserve_run` antes de qualquer chamada paga); migration local → UAT local → migration remota deliberada após a UAT (schema remoto inerte, `VENDEO_LAB_ENABLED=false`). **Sem mudança de superfície externa.** **Divergência resolvida:** `CostResolution` real (sem `imageUnitUsd`/`costPartial`; usa `imageToolComponentUsd`/`imageToolPricing*` e parcialidade via `costFormulaVersion`/`costEstimationNote`) — nenhuma alteração em `src/lib/ai-cost/**`. **Numeração:** F48.1 = Laboratório Mínimo de IA (v1.5), primeira fatia do programa incremental F48.x (F48.2–F48.6 propostas em `docs/alinhamento-roadmap-pos-f48-1.md`); F44 e Stripe fora da numeração.
 
+## Phase 49 — Ativação e Orientação Contextual de Campos
+
+**Status:** Concluída ✅ — 15/15 plans (7 waves), 4 gates verdes (345 arquivos / 3660 testes + 1 skipped), UAT humana de compreensão aprovada 9/9, gap closures 49-14/49-15 revalidados
+
+| Plan | Wave | Status | Description |
+|------|------|--------|-------------|
+| 49-01 | 1 | ✅ | Baseline, inventário de consumidores e fences de não-mudança |
+| 49-02 | 1 | ✅ | Conteúdo de orientação em módulos puros + testes unitários |
+| 49-03 | 1 | ✅ | Primitivos de ajuda de campo e acessibilidade |
+| 49-04 | 2 | ✅ | Loja: dados fiscais, nome público, tom de voz e posicionamento |
+| 49-05 | 2 | ✅ | Campanha: descrição do produto, preços, ajuda expansível e feedback dinâmico |
+| 49-06 | 2 | ✅ | Informações obrigatórias na arte + revisão do brief separável |
+| 49-07 | 3 | ✅ | Testes de orientação, acessibilidade e persistência |
+| 49-08 | 3 | ✅ | Testes de correspondência microcopy ↔ comportamento (preço/tom) |
+| 49-09 | 3 | ✅ | Fences do Diretor de Arte e categorias separáveis da revisão |
+| 49-10 | 3 | ✅ | Co-migração de asserções da campanha e da revisão |
+| 49-11 | 3 | ✅ | Co-migração de asserções da loja |
+| 49-12 | 4 | ✅ | Regressão, 4 gates e prova final de não-mudança |
+| 49-13 | 5 | ✅ | UAT humana de compreensão (desktop/mobile) e registro |
+| 49-14 | 6 | ✅ | Gap closure: microcopy/placeholder de Informações obrigatórias na arte + reexecução dos gates |
+| 49-15 | 7 | ✅ | Gap closure do code review: ME-01/ME-02/ME-03/LO-03 + gates/hashes e tracking 15/15 |
+
+**Escopo (D1–D15):** orientação contextual no próprio campo (hint inline, descrição contextual da opção, ajuda expansível, feedback dinâmico) nos formulários de loja (`/loja`) e campanha (`/campanhas/nova`, incluindo a revisão F43); fonte única de microcopy em `src/lib/store-onboarding/field-guidance.ts` e `src/lib/campaign/field-guidance.ts`; primitivos locais `FieldHint`/`ExpandableHelp`/`RecommendedBadge`; `aria-describedby` via `useId` e `aria-required` sem `required` nativo; fence do Diretor de Arte (`product.description` só na copy, ausente no briefing). **Sem** migration, prompts, gateway/modelos, schemas públicos, snapshot, domínio, contrato HTTP, banco/storage, novas chamadas de IA ou validadores semânticos. Numeração: F49 = Ativação e Orientação Contextual de Campos (v1.5) CONCLUÍDA; F44 e Stripe fora da numeração.
+
+**Fonte da verdade:** `openspec/changes/archive/2026-09-18-fase-49-ativacao-orientacao-contextual-campos/`
+**Context:** `.planning/phases/49-ativacao-orientacao-contextual-campos/49-CONTEXT.md`
+**Verification:** `.planning/phases/49-ativacao-orientacao-contextual-campos/49-VERIFICATION.md`
+**UAT:** `.planning/phases/49-ativacao-orientacao-contextual-campos/49-UAT.md`
+
 <!-- GSD:profile-start -->
 
 ## Developer Profile
