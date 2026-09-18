@@ -63,3 +63,93 @@ $ rg -c "description" src/lib/image-generation/services/art-director-briefing.ts
 ocorrências**. Confirmado: `product.description` **não** é consumido pelo
 `art-director-briefing.ts` (fence de não-mudança D8/D15).
 
+## Regra de desbloqueio
+
+Regra real (verificada em 2026-09-18) que ancora a orientação do Tom de Voz:
+
+- **Fonte da regra:** `src/lib/store-onboarding/tabs.ts` — `computeTabUnlock`
+  (`:62`). A aba `direcao-visual` exige `storeId` (`:90-92`) e tom de voz
+  preenchido; sem tom de voz retorna `{ unlocked: false, reason: "needs_tone_of_voice" }`
+  (`:93-94`).
+- **Fonte do texto:** `src/lib/store-onboarding/reason-text.ts` — `tabBlockReasonText`
+  (`:23`), caso `needs_tone_of_voice` em `:34-35`
+  (`"Defina o tom de voz para liberar ${name}."`).
+
+A F49 **não altera** esta regra nem esta fonte de texto — apenas orienta o campo no
+próprio formulário (D5).
+
+## Baseline de não-mudança
+
+Hashes SHA-256 dos arquivos protegidos (fences D15), para comparação determinística
+nos planos de gates. **Método:** `Get-FileHash -Algorithm SHA256` do sistema, com o
+hash normalizado para minúsculas; caminhos relativos à raiz do repositório com barras
+`/`; lista ordenada alfabeticamente por caminho.
+
+Arquivos cobertos: todos os arquivos sob `prompts/` (recursivo), todos os arquivos sob
+`src/lib/ai/` (recursivo) e os 4 arquivos individuais
+(`src/lib/campaign/brief.ts`, `src/lib/campaign/brief-schema.ts`,
+`src/lib/image-generation/services/art-director-briefing.ts`,
+`src/components/flow/use-campaign-form.ts`). Total: 59 arquivos.
+
+```
+027f5dabb6857b668272059ee26ca80f035b14ea0cfe4281c049e25bc483ddec  prompts/campaign-image-reviewer.md
+0436e40be4d13d5b200df4c811510d044cb52ae139f16e2e67656bbb461e5b64  src/lib/campaign/brief.ts
+082d0fac06aedfb66cab14d6ccf490b30747cd421713919ba37ffc23eb108b50  prompts/campaign-input-visual-check.md
+0e6b993008a0ebe483557f724e7931ea7fbe4151c02c1ad9b536c318434bb728  src/lib/ai/__tests__/effective-model-labels.test.ts
+1290c45214b19eca7d6f040e27c84ef26bd5eaf727de7b869d13c22c118cd8aa  src/lib/ai/types.ts
+1e1923ffea7b5da468686ccb2c07d64e59788617a4a8019dc8a3e1d2f7844db6  src/lib/ai/__tests__/f47-contract-guard.test.ts
+2732f383217fafba819a2a092dbd82ef7d95422a1820aedad0e772528e4ae9f8  src/lib/ai/__tests__/ai-model-catalog-parity.test.ts
+29eaf4d0e2171b265b57619c747f5f5a7f6588294b4a99217c8f2722b6bb99da  src/lib/ai/__tests__/ai-model-selection-view.test.ts
+354ea9139f41c70a27887eb1b6ed83482e844f23bd7544fd3dd9e7180d39667c  prompts/campaign-image-director.md
+354ea9139f41c70a27887eb1b6ed83482e844f23bd7544fd3dd9e7180d39667c  prompts/campaign-image-director-offer.md
+3d05fe264ae7484c184603b63a627441aec5f936c491ca6682ad2c0fc756850e  src/lib/ai/model-registry.ts
+3e2459e0e3e0bf7968f4d92fe9dbbd64908657b03cd4b6ed1fd96d312d75b12a  prompts/campaign-image-director-exclusive.md
+48d7dc816877bf1696ce4e34cdc53d18f70c53097228e9a251d1354d6ad96c6c  src/lib/ai/__tests__/persisted-model-resolver.test.ts
+49b906990af45cf966b8bdb6fa0bbc0a27cbf9813c401b776df55de6a36ddf6a  prompts/store-identity-art-director.md
+4b5d99c0288f09593b80b7e40f104c533dcf345e4805b6dd11c1ea4d28e58b6d  src/lib/ai/model-resolver.ts
+4cfbcdc2b883e8e4125d19f71ae410811d3bcb12eef9bd5ab64b752f40a3e950  src/lib/ai/__tests__/telemetry-coverage.test.ts
+501e53067f1d02fb1840434206a722a566c5e895472811ad1c2f18479716204a  src/lib/ai/adapters/responses.ts
+51c48a2e6d0325162e3468e5b79a8e2825c6a806267a94661e385a0b301aafa1  prompts/campaign-image-director-spotlight.md
+5a66c8f03497eb4464f05b0ff50b1bd0e5e7aec716aac82a269290b784ac893b  src/lib/ai/__tests__/ai-model-selection-service.test.ts
+5c02921d6bcc6973140ec5ab5ba799096d611e6ba345f5d5be684d0ae3fb8ea6  src/lib/ai/ai-model-catalog-service.ts
+60709fa0bc27158edc3c97e4044baeb7889b0b4143da948ad4d3cb1df900af3f  src/components/flow/use-campaign-form.ts
+61a4a9fdcdef8171596d98c5c8ddd2e539b400541da6ee802a5f688970c42eb7  src/lib/image-generation/services/art-director-briefing.ts
+740b249d5126fe16ec28023e4e7fbff2f0a04278b6f6ad2e51f7fd646c541eed  src/lib/ai/adapters/gemini.ts
+761f67b53c76ed2cb1caa8c7078ea9bd7a8a89dae54ad4ff42c9ee1293c5fc2d  src/lib/ai/__tests__/adapters.test.ts
+7d282f55a666e7fcf5b3951cfa3218852fcb96029dadbfbba7f2f4a40a1c1699  prompts/store-identity-art-director-bkp.md
+7fd248b1188cd6ab5b66acad256fa68cbacf5a079ee688319b4424777167b463  prompts/campaign-copy-director-exclusive.md
+845cb73624d2fb45a582bdb603004f859dadf93d084e7b226b40e02849a42885  src/lib/ai/__tests__/telemetry-sink.test.ts
+8487c4ec794cc2f54e6c65724ac7f34e08980bda6d3fa84eb6ad2967e39413dc  prompts/store-brand-inference.md
+885b1a8922570a2fc60a89e71c31042fe6fbcbb7ff0513c6c559dcccf0b8ce62  src/lib/ai/domain-outcome.ts
+88d5d1dccbf734aabf0a51c50fddd07ae8b9e3e02418ab4d1adb82111a5f3d9f  src/lib/ai/lab-cost-estimate.ts
+89f038ca24bd26d2fb1bef08a859397dcee7936d473da7f02fbc8e95733a2dd1  src/lib/ai/__tests__/model-registry.test.ts
+8dba11b435544468768344a9e3cade74dbf1247610299d2b3194f0575caf8fb9  src/lib/ai/ai-model-selection-service.ts
+910582027eff75a3e657a120b5e0b81408fabd46ddb39bc4dc6fbcfdd4392431  src/lib/ai/__tests__/ai-model-index.test.ts
+9f23c28955f8c74c46bc601502cb20eb2db847134f18d260fd4c996fd4da5c84  prompts/store-brand-director-with-logo.md
+a26845f53772242bf11c7c4ca70ab570cae8ba1e0eb8dbb76a018336d8e20ef1  src/lib/ai/__tests__/api-keys.test.ts
+aaf2ffd27f1c63bd2e7b970b89833f1b7cff062be5fe9bf21b7a11986bf27456  src/lib/ai/adapters/images.ts
+ba12974b07868be8c34968b6278a746aef195352cf58e3264654050dd6fc8328  src/lib/ai/__tests__/architecture-guard.test.ts
+bb4ff2ca2891209cca080ceaba3a888c5744b24b2e3d809509a2af56ddc055eb  prompts/visual-signature-generator.md
+c0d2dee7eccd6482fd304924889a1ea8db686526d3c4415ee881bbd73c2ef2d8  src/lib/ai/__tests__/image-tool-telemetry-integration.test.ts
+c4fa26b40284587d9b13e53fb8a7575e9e4aafa730287d827085f5511fb908aa  src/lib/ai/adapters/registry.ts
+c5253319c40f3366376d0c0c2e7a9a03e2c96c47067b8845dbfc4046f30e50bb  src/lib/campaign/brief-schema.ts
+c80e6955b76b53089f36f17a3f1393f6328515942c2922e845c6b6cb3ad4c7a8  src/lib/ai/persisted-model-resolver.ts
+d59a521ec611963fa06411743f055c60e6142c83e7dd7162c34047ae1f89919a  src/lib/ai/gateway.ts
+d76a9f2628fddcba9caa541c9bf24f91f0ad9ff8acd22c13092d33adc2ed50dc  src/lib/ai/generation-type-map.ts
+db8f9d5ff0bf33d7dcdd932057756985f755476762b80bc5bf789a1a374e28ba  src/lib/ai/index.ts
+dea377e03c46963ac3c42c85a026483991e9a4af9f6d5221758eb0052a11d50f  prompts/campaign-copy-director-spotlight.md
+e1497715b7110ebd993f3b1ae9ebebd4b4e9297bcd0de2505051d066bc0e950c  src/lib/ai/__tests__/lab-telemetry-sink.test.ts
+e2717895f5b2bfbdd13ef0487d5fa06dd049d6839588193629a4a46fffd2de31  src/lib/ai/adapters/chat-completions.ts
+e73585c93fe562ccf1acaca5ad1766370fe2945b53634d5007937cb60910f060  prompts/store-brand-profiler.md
+e85e30f20cff731b2fbe006a21a7af56d90238090767c1e14a797ccc61642fd0  src/lib/ai/__tests__/ai-model-catalog-service.test.ts
+ed43ce564b333fa6c9d50a988c72948b07a5bbcde2671dde83c6ae0587f6ba88  src/lib/ai/ai-model-selection-view.ts
+edf2437f6bc60bc18fae3f8c9f1962a44fa4b9c683bf1e1966e3608ff62b9594  src/lib/ai/lab-telemetry-sink.ts
+eef7314c2730a74d9d05c7863b5d4fc9c997b7534b9e3e5d9ad949de895be802  src/lib/ai/telemetry-sink.ts
+ef953587145dedb840c7d22b95e0c0e5752ac6251a5173db5b8489ebab8e5a21  src/lib/ai/__tests__/lab-cost-estimate.test.ts
+f60cee6d40406f7c847fcbe07f11073a94ee4760aa5de6afbd02721b28d80854  src/lib/ai/api-keys.ts
+f68d7e623507626ab40d06b6a149a403364084b81deb44434ca8b0b430ef9a1c  prompts/campaign-copy-director.md
+f999d0ea46f778f747f4281092328696335291bfaf73a6cdaa215f554189649e  src/lib/ai/__tests__/gateway.test.ts
+ff867620a467437d46e3dea38a5d7a646492afa0ab10d4117df2a9e7e84cb713  prompts/campaign-copy-director-offer.md
+ff8f843c27b33790ec74781a9d8d96252cdf159d42978f2c72533586f9780d9b  src/lib/ai/effective-model-label.ts
+```
+
