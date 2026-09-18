@@ -994,6 +994,7 @@ Plans:
 **Waves:** 9 waves (DAG serializado por `depends_on`, legível pela ferramenta) — 46-01:1, 46-02:2 (dep 46-01), 46-03:3 (dep 46-02), 46-04:4 (dep 46-03), 46-05:5 (dep 46-04), 46-06:6 (dep 46-05), 46-07:7 (dep 46-06), 46-08:8 (dep 46-07), 46-09:9 (dep 46-08). A serialização elimina conflitos de arquivos compartilhados (`generate-image/route.ts`, `server-actions.ts`) e a dependência do gate de env-vars.
 
 ```
+
 Plans:
 **Wave 1**
 
@@ -1070,7 +1071,6 @@ Plans:
 
 **Plans:** 14/14 plans executed — ✅ **CONCLUÍDA em 2026-09-17** (UAT local aprovado Passos 1–10; migration remota aplicada/verificada; 4 gates verdes: 333 arquivos / 3588 testes + 1 skipped; contract guard 0 violações; `48-1-VERIFICATION.md` = passed; deploy não executado — fora do escopo)
 
-
 Plans:
 
 - [x] 48-1-01-PLAN.md — Trackings (verificação de resíduos) + migration local: 8 tabelas `lab_*`, bucket `lab-artifacts`, RLS/grants, triggers de imutabilidade e RPC `lab_reserve_run` (Wave 1)
@@ -1101,20 +1101,33 @@ Plans:
 **Dependencies:** F36 (painel `/loja` em abas + `computeTabUnlock`/`reason-text`), F39/F40/F41/F43 (form de campanha, `validity`/`mandatoryArtworkText`, multi-imagem, revisão do brief), F45 (fonte dos efeitos reais dos campos), F47/F48.1 (precedentes de UI-SPEC, gates e UAT). **Fonte da verdade:** `openspec/changes/fase-49-ativacao-orientacao-contextual-campos/` (proposal / design D1–D15 / 7 specs / tasks).
 
 **Plans:** 13 plans
+Plans:
+**Wave 1**
 
-Plans:
 - [ ] 49-01-PLAN.md — Baseline, inventário de consumidores e fences de não-mudança (Wave 1)
 - [ ] 49-02-PLAN.md — Conteúdo de orientação em módulos puros + testes unitários (Wave 1)
 - [ ] 49-03-PLAN.md — Primitivos de ajuda de campo e acessibilidade (Wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 49-04-PLAN.md — Loja: dados fiscais, nome público, tom de voz e posicionamento (Wave 2)
 - [ ] 49-05-PLAN.md — Campanha: descrição do produto, preços, ajuda expansível e feedback dinâmico (Wave 2)
 - [ ] 49-06-PLAN.md — Informações obrigatórias na arte + revisão do brief separável (Wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 49-07-PLAN.md — Testes de orientação, acessibilidade e persistência (Wave 3)
 - [ ] 49-08-PLAN.md — Testes de correspondência microcopy ↔ comportamento (preço/tom) (Wave 3)
 - [ ] 49-09-PLAN.md — Fences do Diretor de Arte e categorias separáveis da revisão (Wave 3)
 - [ ] 49-10-PLAN.md — Co-migração de asserções da campanha e da revisão (Wave 3)
 - [ ] 49-11-PLAN.md — Co-migração de asserções da loja (Wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 49-12-PLAN.md — Regressão, 4 gates e prova final de não-mudança (Wave 4)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 49-13-PLAN.md — UAT humana de compreensão (desktop/mobile) e registro (Wave 5)
 
 **Scope fences:** apresentação/conteúdo apenas — **proibido** alterar `prompts/**`, `src/lib/ai/**`, `src/lib/campaign/brief*.ts`, snapshot `campaign_brief_v1`, `GenerateImageRequestSchema`, `use-campaign-form.ts` (helpers/body), `use-store-form`/`draft-store`, `use-drift-detection`/`lib/drift.ts`, rotas HTTP e banco/storage; sem migration, sem novas chamadas de IA, sem validadores semânticos/regex de intenção; `src/components/campaign/validity-field.tsx` **não** é modificado (entra apenas como regressão); **não** enviar `product.description` ao Diretor de Arte; **nenhum** aviso negativo permanente; sem tooltip exclusivo; sem lista permanente de regras.
