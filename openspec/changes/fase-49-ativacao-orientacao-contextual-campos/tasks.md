@@ -27,11 +27,11 @@
 
 ## 4. Aplicação — campos da loja (`/loja`) (D3/D4/D5/D6/D7)
 
-- [ ] 4.1 Aba Dados: agrupar `CNPJ`/`Razão Social`/`Nome Fantasia` como subseção de dados fiscais/oficiais e adicionar a microcopy de identidade pública ao `Nome da Loja`; preservar atalhos "Usar nome fantasia/razão social como nome da loja"
-- [ ] 4.2 Aba Posicionamento: adicionar hint do `Tom de Voz` e a **descrição contextual da opção selecionada** (8 opções), refletindo a regra real de desbloqueio
-- [ ] 4.3 Aba Posicionamento: renomear o label de `Posicionamento` para "Como você quer que sua loja seja percebida?" (termo secundário "Posicionamento da marca"), novo hint (público/proposta/diferencial) + microcopy reconhecendo o efeito na identidade (copy + perfil/direção visual, sem prometer transformação visual) e exemplo positivo em **ajuda expansível**; substituir o placeholder atual
-- [ ] 4.4 Aba Posicionamento: adicionar microcopy de distinção a `Descrição Curta` e `Slogan`; marcar **Posicionamento** e **Descrição Curta** como **recomendados** e deixar **Slogan** como **opcional** ("se sua loja já utiliza um"), **sem** o indicador "Recomendado"
-- [ ] 4.5 Garantir que nenhuma mudança toca validação, auto-save, draft, drift, `POST/PATCH /api/store` ou `computeTabUnlock`/`reason-text`; campos obrigatórios recebem `aria-required` sem `required` nativo
+- [x] 4.1 Aba Dados: agrupar `CNPJ`/`Razão Social`/`Nome Fantasia` como subseção de dados fiscais/oficiais e adicionar a microcopy de identidade pública ao `Nome da Loja`; preservar atalhos "Usar nome fantasia/razão social como nome da loja"
+- [x] 4.2 Aba Posicionamento: adicionar hint do `Tom de Voz` e a **descrição contextual da opção selecionada** (8 opções), refletindo a regra real de desbloqueio
+- [x] 4.3 Aba Posicionamento: renomear o label de `Posicionamento` para "Como você quer que sua loja seja percebida?" (termo secundário "Posicionamento da marca"), novo hint (público/proposta/diferencial) + microcopy reconhecendo o efeito na identidade (copy + perfil/direção visual, sem prometer transformação visual) e exemplo positivo em **ajuda expansível**; substituir o placeholder atual
+- [x] 4.4 Aba Posicionamento: adicionar microcopy de distinção a `Descrição Curta` e `Slogan`; marcar **Posicionamento** e **Descrição Curta** como **recomendados** e deixar **Slogan** como **opcional** ("se sua loja já utiliza um"), **sem** o indicador "Recomendado"
+- [x] 4.5 Garantir que nenhuma mudança toca validação, auto-save, draft, drift, `POST/PATCH /api/store` ou `computeTabUnlock`/`reason-text`; campos obrigatórios recebem `aria-required` sem `required` nativo
 
 ## 5. Aplicação — campos da campanha (`/campanhas/nova`) (D8/D9/D10/D11)
 
