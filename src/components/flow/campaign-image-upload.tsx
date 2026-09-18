@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useEffect } from "react";
+import { useMemo, useRef, useEffect, useId } from "react";
 import { Image, AlertCircle, Camera, Plus } from "lucide-react";
 import { MAX_CAMPAIGN_IMAGES } from "@/lib/image-generation/config";
 import type { CampaignProductFormImage } from "./use-campaign-form";
@@ -20,6 +20,13 @@ export function CampaignImageUpload({
 }: CampaignImageUploadProps) {
   const galleryRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
+
+  // F49 (D3/D13): obrigatoriedade acessível do grupo da imagem primária.
+  // `role="group"` NÃO suporta `aria-required`; a marcação usa `aria-labelledby`
+  // (label estático) + `aria-describedby` (texto de obrigatoriedade + erro) e
+  // `aria-invalid`. Sem `required` nativo; contrato de props inalterado.
+  const imageGroupHelpBase = useId();
+  const imageErrorId = `${imageGroupHelpBase}-error`;
 
   const atLimit = productImages.length >= MAX_CAMPAIGN_IMAGES;
 
@@ -46,10 +53,23 @@ export function CampaignImageUpload({
     item.dataUrl ?? objectUrls.get(item.id) ?? "";
 
   return (
-    <div>
-      <label className="block text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2">
+    <div
+      role="group"
+      aria-labelledby="productImages-label"
+      aria-describedby={["productImages-required", error ? imageErrorId : null]
+        .filter(Boolean)
+        .join(" ")}
+      aria-invalid={error ? true : undefined}
+    >
+      <label
+        id="productImages-label"
+        className="block text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2"
+      >
         Imagem do Produto *
       </label>
+      <span id="productImages-required" className="sr-only">
+        Imagem do produto obrigatória
+      </span>
 
       <div
         onClick={() => {
@@ -171,7 +191,10 @@ export function CampaignImageUpload({
       />
 
       {error && (
-        <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs">
+        <p
+          id={imageErrorId}
+          className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs"
+        >
           <AlertCircle className="w-3.5 h-3.5" />
           {error}
         </p>

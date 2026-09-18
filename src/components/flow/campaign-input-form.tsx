@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useId } from "react";
 import { useCampaignForm, inferIntent } from "./use-campaign-form";
 import type { CampaignFormFields, CampaignProductFormImage } from "./use-campaign-form";
 import { CampaignImageUpload } from "./campaign-image-upload";
@@ -11,6 +11,12 @@ import { MAX_CAMPAIGN_IMAGES } from "@/lib/image-generation/config";
 import { MandatoryArtworkField } from "@/components/campaign/mandatory-artwork-field";
 import { IllustrativeNoticeField } from "@/components/campaign/illustrative-notice-field";
 import { ValidityField } from "@/components/campaign/validity-field";
+import {
+  PRODUCT_DESCRIPTION_HINT,
+  PRODUCT_DESCRIPTION_LABEL,
+  PRODUCT_DESCRIPTION_PLACEHOLDER,
+} from "@/lib/campaign/field-guidance";
+import { FieldHint } from "@/components/ui/field-hint";
 import type { CampaignIntent } from "@/lib/campaign/types";
 import {
   AlertCircle,
@@ -310,6 +316,19 @@ function FormContent({
   supportEmail,
 }: FormContentProps) {
   const { costs, status: costStatus } = useOperationCosts();
+
+  // F49 (D2/D3/D8): ids de ajuda derivados por `useId`; os ids dos próprios
+  // campos permanecem estáticos (`htmlFor`/`getByLabelText` intactos). Apenas os
+  // ids de hint/erro derivam do hook no consumidor (padrão canônico F49).
+  const productNameHelpBase = useId();
+  const productNameErrorId = `${productNameHelpBase}-error`;
+  const descriptionHelpBase = useId();
+  const descriptionHintId = `${descriptionHelpBase}-hint`;
+  const descriptionErrorId = `${descriptionHelpBase}-error`;
+
+  const hasProductNameError = Boolean(touched.productName && fieldErrors.productName);
+  const hasDescriptionError = Boolean(touched.description && fieldErrors.description);
+
   const campaignCost = costs?.campaign_generation;
   const costUnavailable = costStatus !== "loaded";
   const costDisabled = costStatus === "loaded" && campaignCost !== undefined && !campaignCost.enabled;
@@ -353,14 +372,20 @@ function FormContent({
           placeholder="Ex: Tênis Runner Pro"
           maxLength={60}
           disabled={isSubmitting}
+          aria-required="true"
+          aria-describedby={hasProductNameError ? productNameErrorId : undefined}
+          aria-invalid={hasProductNameError ? true : undefined}
           className={`min-h-[44px] w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 ${
-            touched.productName && fieldErrors.productName
+            hasProductNameError
               ? "border-accent-red"
               : "border-border-light hover:border-text-muted"
           }`}
         />
-        {touched.productName && fieldErrors.productName && (
-          <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs">
+        {hasProductNameError && (
+          <p
+            id={productNameErrorId}
+            className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs"
+          >
             <AlertCircle className="w-3.5 h-3.5" />
             {fieldErrors.productName}
           </p>
@@ -372,7 +397,7 @@ function FormContent({
           htmlFor="description"
           className="block text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2"
         >
-          Descrição{" "}
+          {PRODUCT_DESCRIPTION_LABEL}{" "}
           <span className="font-normal normal-case tracking-normal text-text-disabled">
             (opcional)
           </span>
@@ -383,12 +408,19 @@ function FormContent({
             value={fields.description}
             onChange={(e) => setField("description", e.target.value)}
             onBlur={() => handleBlur("description")}
-            placeholder="Ex: 20% OFF em todo o estoque"
+            placeholder={PRODUCT_DESCRIPTION_PLACEHOLDER}
             maxLength={120}
             rows={3}
             disabled={isSubmitting}
+            aria-describedby={[
+              descriptionHintId,
+              hasDescriptionError ? descriptionErrorId : null,
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            aria-invalid={hasDescriptionError ? true : undefined}
             className={`min-h-[44px] w-full bg-bg-surface border rounded-lg px-3.5 py-2.5 text-text-primary text-sm font-body placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-blue/20 resize-none ${
-              touched.description && fieldErrors.description
+              hasDescriptionError
                 ? "border-accent-red"
                 : "border-border-light hover:border-text-muted"
             }`}
@@ -397,8 +429,12 @@ function FormContent({
             {fields.description.length}/120
           </p>
         </div>
-        {touched.description && fieldErrors.description && (
-          <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs">
+        <FieldHint id={descriptionHintId}>{PRODUCT_DESCRIPTION_HINT}</FieldHint>
+        {hasDescriptionError && (
+          <p
+            id={descriptionErrorId}
+            className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs"
+          >
             <AlertCircle className="w-3.5 h-3.5" />
             {fieldErrors.description}
           </p>
