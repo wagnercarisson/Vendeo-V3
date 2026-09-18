@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { PRICE_HELP_TITLE, PRICE_HELP_RULES } from "@/lib/campaign/field-guidance";
 import { CampaignInputForm } from "../campaign-input-form";
 import { CampaignAdjustmentsPanel } from "@/components/campaign/campaign-adjustments-panel";
 import type { CampaignSpec } from "@/lib/campaign-intelligence/schema";
@@ -100,7 +101,7 @@ vi.mock("@/components/flow/generation-progress", () => ({
   GenerationProgress: () => null,
 }));
 
-describe("CampaignInputForm — seção Oferta: label 'Preço Final' e helper", () => {
+describe("CampaignInputForm — seção Oferta: label 'Preço de venda (final)' e ajuda expansível", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseOperationCosts.mockReturnValue({
@@ -110,31 +111,33 @@ describe("CampaignInputForm — seção Oferta: label 'Preço Final' e helper", 
     });
   });
 
-  it("exibe o label 'Preço Final' para o campo de desconto", () => {
+  it("exibe o label 'Preço de venda (final)' para o campo de desconto", () => {
     render(<CampaignInputForm storeId="store-1" balance={5} />);
-    expect(screen.getByLabelText("Preço Final")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Preço de venda \(final\)/)).toBeInTheDocument();
   });
 
-  it("label do campo de desconto NÃO contém asterisco fixo", () => {
+  it("label do campo de desconto exibe '*' quando a intenção é Oferta", () => {
     render(<CampaignInputForm storeId="store-1" balance={5} />);
-    const label = screen.getByText("Preço Final");
-    expect(label.textContent).toBe("Preço Final");
-    expect(label.textContent).not.toMatch(/Preço Final\s*\*/);
+    const label = screen.getByText(/Preço de venda \(final\)/);
+    expect(label.textContent).toMatch(/Preço de venda \(final\)\s*\*/);
   });
 
   it("label do campo de desconto NÃO exibe '(opcional)' (escopo: só o label do campo discountedPrice, não a página inteira)", () => {
     render(<CampaignInputForm storeId="store-1" balance={5} />);
-    const label = screen.getByText("Preço Final");
-    expect(label.textContent).toBe("Preço Final");
+    const label = screen.getByText(/Preço de venda \(final\)/);
     expect(label.textContent).not.toContain("(opcional)");
   });
 
-  it("helper sob 'Oferta' renderiza a microcopy de mapeamento preço → intenção", () => {
+  it("ajuda expansível 'Como os preços mudam a campanha?' começa colapsada e revela as 3 regras ao abrir", () => {
     render(<CampaignInputForm storeId="store-1" balance={5} />);
-    expect(screen.getByText("Os campos de preço definem a intenção da campanha:")).toBeInTheDocument();
-    expect(screen.getByText("Preço original + preço final = Oferta")).toBeInTheDocument();
-    expect(screen.getByText("Somente preço final = Oferta ou Destaque")).toBeInTheDocument();
-    expect(screen.getByText("Sem nenhum preço preenchido = Destaque ou Exclusividade")).toBeInTheDocument();
+    const trigger = screen.getByRole("button", { name: PRICE_HELP_TITLE });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByText(PRICE_HELP_RULES[0])).not.toBeVisible();
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    for (const rule of PRICE_HELP_RULES) {
+      expect(screen.getByText(rule)).toBeVisible();
+    }
   });
 });
 

@@ -549,7 +549,7 @@ function FormContent({
           htmlFor="discountedPrice"
           className="block text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2"
         >
-          {DISCOUNTED_PRICE_LABEL}
+          {DISCOUNTED_PRICE_LABEL}{isOfferIntent ? " *" : " "}
         </label>
         <input
           id="discountedPrice"

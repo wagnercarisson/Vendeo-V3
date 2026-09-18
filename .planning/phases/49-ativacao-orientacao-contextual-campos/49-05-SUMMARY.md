@@ -88,13 +88,22 @@ Each task was committed atomically:
 - O feedback de preço é um único elemento (`priceFeedbackId`) referenciado pelos dois campos; o estado "só preço anterior" recebe `tone="amber"` (orientação, não erro).
 - `role="group"` da imagem usa `aria-labelledby` + `aria-describedby` (não suporta `aria-required`), com texto de obrigatoriedade em `sr-only`.
 - As 3 regras de preço foram movidas para `ExpandableHelp` sem alterar o conteúdo real das regras (fonte única `PRICE_HELP_RULES`).
+- O label "Preço de venda (final)" exibe `*` condicionalmente quando `campaignIntent === "offer"` (mesmo padrão do Selo promocional), mantendo `aria-required="true"` sem `required` nativo.
 
 ## Deviations from Plan
 
 None - plan executed exactly as written.
 
+## Corrective Closing (parecer de revisão)
+
+Após revisão humana do 49-05, aplicado fechamento corretivo no próprio plano (commit `docs(49-05): fechar co-migracao antecipada e asterisco de oferta`):
+1. **`*` condicional no preço de venda** — o label "Preço de venda (final)" passa a exibir `*` quando `campaignIntent === "offer"`, conforme `campaign-input-ui/spec.md` e `contextual-field-help/spec.md` (obrigatório = `*` + validação controlada + `aria-required`, sem `required` nativo).
+2. **Co-migração antecipada de `campaign-input-form-price-helper.test.tsx`** — as asserções do label antigo "Preço Final" e do bloco permanente das 3 regras foram migradas para os novos labels e para a `ExpandableHelp` (colapsada por padrão; regras reveladas ao abrir), consumindo as constantes canônicas `PRICE_HELP_TITLE`/`PRICE_HELP_RULES`. O caso independente do `CampaignAdjustmentsPanel` ("Preço Final") foi preservado. O arquivo passa a ser **regressão já co-migrada** no 49-10 (nota registrada no `49-10-PLAN.md`).
+3. **OpenSpec 5.5 desmarcado** — a entrega física do `MandatoryArtworkField` é do 49-06; progresso correto neste ponto: **24/50**.
+- Resultado do teste após o fechamento: `npx vitest run src/components/flow/__tests__/campaign-input-form-price-helper.test.tsx` → **5/5 verde**.
+
 ## Issues Encountered
-- A suíte pré-existente `src/components/flow/__tests__/campaign-input-form-price-helper.test.tsx` passa a falhar (4 de 5) porque afirma o label antigo "Preço Final" e o bloco permanente das 3 regras. **Esperado e fora do escopo deste plano:** a co-migração dessas asserções está explicitamente alocada ao plano 49-10 (Wave 3, co-migração de asserções da campanha/revisão). Nenhum teste foi alterado aqui, conforme a fence D15. A outra suíte de campanha (`campaign-input-form.test.tsx`) permanece verde.
+- A suíte pré-existente `src/components/flow/__tests__/campaign-input-form-price-helper.test.tsx` passou a falhar (4 de 5) após as mudanças porque afirmava o label antigo "Preço Final" e o bloco permanente das 3 regras. Inicialmente deixada para o 49-10 (alocação de `tasks.md` 8.1); após parecer de revisão, a co-migração foi **antecipada para o fechamento corretivo do 49-05** (ver acima), já que o teste falhava diretamente por causa deste plano. As demais suítes de campanha permaneceram verdes.
 
 ## User Setup Required
 None - no external service configuration required.
@@ -113,7 +122,7 @@ None - no external service configuration required.
 ## Next Phase Readiness
 - Seção Produto/Oferta da campanha orientada e acessível; pronto para 49-06 (Informações obrigatórias na arte + revisão do brief separável) e para os testes de 49-07/49-08/49-10.
 - Fences de não-mudança intactas (body, validação, `inferIntent`, `availableOptions`, `use-campaign-form.ts` e `ValidityField` intocados).
-- **Nota de tracking:** o grupo 5 do `tasks.md` (5.1–5.6) foi marcado como concluído conforme instrução do orquestrador; o item **5.5** (MandatoryArtworkField) é fisicamente entregue pelo plano **49-06**, que também cobre o grupo 6.
+- **Nota de tracking:** o grupo 5 do `tasks.md` foi marcado como concluído **exceto o item 5.5**, desmarcado após parecer de revisão porque a entrega física do `MandatoryArtworkField` é do plano **49-06** (que também cobre o grupo 6). Progresso OpenSpec neste ponto: **24/50**.
 - Sem blockers.
 
 ## Self-Check: PASSED
