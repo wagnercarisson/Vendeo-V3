@@ -1,0 +1,35 @@
+# F49 — Baseline de Não-Mudança
+
+> Artefato produzido pelo plano 49-01. Fonte da verdade para comparação nos planos
+> de gates e UAT. **Somente leitura do repositório** — nenhum arquivo de produção
+> foi alterado por este plano.
+
+## Estado inicial
+
+**Data:** 2026-09-18
+**Branch:** feature/fase-49-orientacao-contextual-campos
+
+SHA_INICIAL_F49=05b1a74b289afd5af0c5a96cc72c5b43c79031d0
+
+### git status --short
+
+```
+?? docs/alinhamento-fase-44-temas-de-campanhas
+```
+
+### git diff --stat
+
+```
+(vazio — nenhuma alteração em arquivos rastreados)
+```
+
+### Arquivos pré-existentes
+
+**Não rastreados pré-existentes (preservar — não commitar sem decisão explícita):**
+- `docs/alinhamento-fase-44-temas-de-campanhas/` — diretório não rastreado pré-existente à F49. **preservar — não commitar.**
+
+**Modificados rastreados pré-existentes:**
+- Nenhum (`git diff --stat` vazio).
+
+**Regra de preservação:** não reverter, não formatar e não commitar nenhum arquivo
+pré-existente. A árvore de trabalho não precisa estar limpa.
