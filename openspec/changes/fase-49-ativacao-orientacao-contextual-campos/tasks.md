@@ -18,12 +18,12 @@
 
 ## 3. Primitivos de ajuda de campo (D2/D13)
 
-- [ ] 3.1 Criar primitivo local de **hint inline** (`FieldHint`) com `id` associável e classes de design system (sem tocar `src/components/ui/` além do necessário)
-- [ ] 3.2 Criar primitivo local de **ajuda expansível** (`ExpandableHelp`) acessível: `<button aria-expanded>` + região revelada (ou `<details>/<summary>`), colapsado por padrão, acionável por teclado, foco visível, touch target ≥ 44px
-- [ ] 3.3 Definir o padrão de associação `aria-describedby` (ids via `useId`) reutilizável nos campos com hint/erro/feedback (precedente `lab-textarea.tsx`)
-- [ ] 3.4 Criar helper/indicador textual de estado **"Recomendado"** (D3) sem depender de cor, reutilizável nos campos recomendados
-- [ ] 3.5 Escrever testes dos primitivos: hint associado, disclosure abre/fecha com `aria-expanded` correto e navegação por teclado, indicador "Recomendado" acessível
-- [ ] 3.6 Definir o tratamento acessível de obrigatoriedade: `aria-required="true"` nos campos obrigatórios, **sem** adicionar o atributo nativo `required` (preserva `noValidate` + validação controlada + mensagens)
+- [x] 3.1 Criar primitivo local de **hint inline** (`FieldHint`) com `id` associável e classes de design system (sem tocar `src/components/ui/` além do necessário)
+- [x] 3.2 Criar primitivo local de **ajuda expansível** (`ExpandableHelp`) acessível: `<button aria-expanded>` + região revelada (ou `<details>/<summary>`), colapsado por padrão, acionável por teclado, foco visível, touch target ≥ 44px
+- [x] 3.3 Definir o padrão de associação `aria-describedby` (ids via `useId`) reutilizável nos campos com hint/erro/feedback (precedente `lab-textarea.tsx`)
+- [x] 3.4 Criar helper/indicador textual de estado **"Recomendado"** (D3) sem depender de cor, reutilizável nos campos recomendados
+- [x] 3.5 Escrever testes dos primitivos: hint associado, disclosure abre/fecha com `aria-expanded` correto e navegação por teclado, indicador "Recomendado" acessível
+- [x] 3.6 Definir o tratamento acessível de obrigatoriedade: `aria-required="true"` nos campos obrigatórios, **sem** adicionar o atributo nativo `required` (preserva `noValidate` + validação controlada + mensagens)
 
 ## 4. Aplicação — campos da loja (`/loja`) (D3/D4/D5/D6/D7)
 
