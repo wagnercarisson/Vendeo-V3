@@ -66,15 +66,15 @@
 
 - [x] 8.1 Co-migrar asserções de teste que consultam labels/placeholders/microcopy alterados: `campaign-input-form.test.tsx`, `campaign-brief-review.test.tsx`, `use-campaign-form-*.test.ts`; **`validity-field.test.tsx` entra apenas como regressão** (`validity-field.tsx` não é modificado)
 - [x] 8.2 Co-migrar testes da loja que consultam labels/microcopy: `store-identity-form.aceite-legal.test.tsx`, `store-identity-form.drift*.test.ts`, `store-identity-form.redirect-messages.test.ts`, `store-page-client.test.tsx`, `store-tabs.test.tsx`
-- [ ] 8.3 Rodar a regressão de auto-save, drafts, navegação por abas e montagem do body (suites de F36/F40/F41/F43) e confirmar zero regressões de comportamento
-- [ ] 8.4 Revisar o diff completo contra o baseline do grupo 1 e confirmar ausência de alterações em prompts, gateway/modelos, pipeline, schemas, snapshot, domínio, rotas HTTP e banco
+- [x] 8.3 Rodar a regressão de auto-save, drafts, navegação por abas e montagem do body (suites de F36/F40/F41/F43) e confirmar zero regressões de comportamento
+- [x] 8.4 Revisar o diff completo contra o baseline do grupo 1 e confirmar ausência de alterações em prompts, gateway/modelos, pipeline, schemas, snapshot, domínio, rotas HTTP e banco
 
 ## 9. Gates e UAT humana
 
-- [ ] 9.1 Rodar `npx vitest run` (suíte completa) sem falhas
-- [ ] 9.2 Rodar `npm run typecheck` sem erros
-- [ ] 9.3 Rodar `npm run lint` sem erros
-- [ ] 9.4 Rodar `npm run build` sem erros
+- [x] 9.1 Rodar `npx vitest run` (suíte completa) sem falhas
+- [x] 9.2 Rodar `npm run typecheck` sem erros
+- [x] 9.3 Rodar `npm run lint` sem erros
+- [x] 9.4 Rodar `npm run build` sem erros
 - [ ] 9.5 Escrever o checklist de UAT humana com tarefas de **compreensão** (não apenas presença de textos), em desktop e mobile (320px/375px), avaliando também **ausência de poluição visual**:
   - diferenciar razão social, nome fantasia e nome da loja;
   - explicar para que serve o tom de voz;
