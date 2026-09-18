@@ -45,7 +45,7 @@
 | 46 | ✅ Gateway Único de IA e Registry de Modelos (v1.5) | 9/9 | ✅ Complete | 2026-09-13 |
 | 47 | ✅ Catálogo e Seleção de Modelos Admin (v1.5, Change B) | 8/8 | ✅ Complete | 2026-09-15 |
 | 48.1 | ✅ Laboratório Mínimo de IA (v1.5) | 14/14 | Complete |  |
-| 49 | ◆ Ativação e Orientação Contextual de Campos (v1.5) | 0/13 | ◆ Planned | — |
+| 49 | ◆ Ativação e Orientação Contextual de Campos (v1.5) | 1/13 | In Progress|  |
 | — | Monetização pública / Stripe (iniciativa diferida, v1.7+) | — | Fora da numeração | — |
 
 ---
@@ -1100,11 +1100,11 @@ Plans:
 
 **Dependencies:** F36 (painel `/loja` em abas + `computeTabUnlock`/`reason-text`), F39/F40/F41/F43 (form de campanha, `validity`/`mandatoryArtworkText`, multi-imagem, revisão do brief), F45 (fonte dos efeitos reais dos campos), F47/F48.1 (precedentes de UI-SPEC, gates e UAT). **Fonte da verdade:** `openspec/changes/fase-49-ativacao-orientacao-contextual-campos/` (proposal / design D1–D15 / 7 specs / tasks).
 
-**Plans:** 13 plans
+**Plans:** 1/13 plans executed
 Plans:
 **Wave 1**
 
-- [ ] 49-01-PLAN.md — Baseline, inventário de consumidores e fences de não-mudança (Wave 1)
+- [x] 49-01-PLAN.md — Baseline, inventário de consumidores e fences de não-mudança (Wave 1)
 - [ ] 49-02-PLAN.md — Conteúdo de orientação em módulos puros + testes unitários (Wave 1)
 - [ ] 49-03-PLAN.md — Primitivos de ajuda de campo e acessibilidade (Wave 1)
 
