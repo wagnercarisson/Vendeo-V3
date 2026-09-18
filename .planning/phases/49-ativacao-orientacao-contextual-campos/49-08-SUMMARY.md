@@ -90,6 +90,7 @@ None - no external service configuration required.
 
 ## Next Phase Readiness
 - Correspondência microcopy ↔ comportamento provada para preço e tom de voz; pronto para 49-09 (fences do Diretor de Arte e categorias da revisão), 49-12 (regressão/gates) e 49-13 (UAT).
+- **Nota de rastreabilidade (parecer de revisão):** o item OpenSpec **7.9** foi desmarcado temporariamente porque possui três partes; este plano cobre preço × `inferIntent`/`availableOptions` e tom de voz × `computeTabUnlock`, mas a terceira parte (**microcopy de identidade × consumidores reais de copy e perfil/direção visual**) foi alocada como **Task 3 do 49-09**. O item 7.9 volta a `[x]` quando essa cobertura for implementada. Progresso OpenSpec neste ponto: **29/50**.
 - Sem blockers.
 
 ## Self-Check: PASSED
