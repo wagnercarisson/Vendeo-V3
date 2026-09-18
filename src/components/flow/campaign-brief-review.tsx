@@ -10,8 +10,10 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { CampaignFormFields, PreparedCampaignImage } from "./use-campaign-form";
-import { buildValidityDisplayText, buildMandatoryArtworkText, inferIntent } from "./use-campaign-form";
+import { buildValidityDisplayText, inferIntent } from "./use-campaign-form";
 import { formatCurrencyBRL } from "@/lib/formatters";
+import { ILLUSTRATIVE_NOTICE_TEXT } from "@/lib/campaign/constants";
+import { MANDATORY_ARTWORK_LABEL } from "@/lib/campaign/field-guidance";
 import { StoreIdentityBlock } from "./store-identity-block";
 import { useOperationCosts } from "@/hooks/use-operation-costs";
 import type { StoreIdentitySnapshot } from "@/components/campaign/types";
@@ -68,10 +70,8 @@ export function CampaignBriefReview({
 
   const intent = inferIntent(fields.originalPriceCents, fields.discountedPriceCents);
   const validity = fields.campaignIntent === "offer" ? buildValidityDisplayText(fields) : undefined;
-  const mandatoryArtworkText = buildMandatoryArtworkText(
-    fields.showIllustrativeNotice,
-    fields.mandatoryArtworkTextFree,
-  );
+  const hasIllustrativeNotice = fields.showIllustrativeNotice;
+  const hasMandatoryArtworkText = fields.mandatoryArtworkTextFree.trim() !== "";
   const primaryImage = preparedImages?.find((img) => img.role === "primary") ?? preparedImages?.[0];
   const referenceImages = preparedImages?.filter((img) => img.role !== "primary") ?? [];
 
@@ -162,7 +162,7 @@ export function CampaignBriefReview({
           )}
           {fields.originalPriceCents > 0 && (
             <div className="flex items-center gap-2">
-              <dt className="text-text-muted text-sm font-body w-28 shrink-0">Preço original</dt>
+              <dt className="text-text-muted text-sm font-body w-28 shrink-0">Preço anterior</dt>
               <dd className="text-text-secondary text-sm font-body line-through">
                 {formatCurrencyBRL(fields.originalPriceCents)}
               </dd>
@@ -170,7 +170,7 @@ export function CampaignBriefReview({
           )}
           {fields.discountedPriceCents !== undefined && fields.discountedPriceCents > 0 && (
             <div className="flex items-center gap-2">
-              <dt className="text-text-muted text-sm font-body w-28 shrink-0">Preço final</dt>
+              <dt className="text-text-muted text-sm font-body w-28 shrink-0">Preço de venda</dt>
               <dd className="text-text-primary text-sm font-body font-semibold">
                 {formatCurrencyBRL(fields.discountedPriceCents)}
               </dd>
@@ -228,20 +228,31 @@ export function CampaignBriefReview({
         <h3 className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-3">
           Avisos
         </h3>
-        <div className="flex items-start gap-2">
-          <span
-            aria-hidden="true"
-            className={`mt-0.5 h-4 w-4 rounded border flex items-center justify-center shrink-0 ${
-              fields.showIllustrativeNotice
-                ? "bg-accent-green border-accent-green text-white"
-                : "border-border-light bg-bg-surface"
-            }`}
-          >
-            {fields.showIllustrativeNotice && <Check className="w-3 h-3" />}
-          </span>
-          <p className="text-text-primary text-sm font-body">
-            {mandatoryArtworkText ?? "Sem avisos adicionais."}
-          </p>
+        <div className="space-y-3">
+          {hasIllustrativeNotice && (
+            <div className="flex items-start gap-2">
+              <span
+                aria-hidden="true"
+                className="mt-0.5 h-4 w-4 rounded border flex items-center justify-center shrink-0 bg-accent-green border-accent-green text-white"
+              >
+                <Check className="w-3 h-3" />
+              </span>
+              <p className="text-text-primary text-sm font-body">{ILLUSTRATIVE_NOTICE_TEXT}</p>
+            </div>
+          )}
+          {hasMandatoryArtworkText && (
+            <div>
+              <p className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-1">
+                {MANDATORY_ARTWORK_LABEL}
+              </p>
+              <p className="text-text-primary text-sm font-body whitespace-pre-line">
+                {fields.mandatoryArtworkTextFree}
+              </p>
+            </div>
+          )}
+          {!hasIllustrativeNotice && !hasMandatoryArtworkText && (
+            <p className="text-text-primary text-sm font-body">Sem avisos adicionais.</p>
+          )}
         </div>
       </section>
 
