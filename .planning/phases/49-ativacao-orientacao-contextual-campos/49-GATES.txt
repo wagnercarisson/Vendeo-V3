@@ -90,3 +90,40 @@ src/lib/store-onboarding/field-guidance.ts
 - `docs/alinhamento-fase-44-temas-de-campanhas` — não rastreado **pré-existente** à F49
   (registrado em `49-BASELINE.txt` → "Arquivos pré-existentes"). Permanece separado da
   lista de arquivos alterados da fase, **preservado** e **não commitado**.
+
+## Gates
+
+### 9.1 — `npx vitest run` (suíte completa)
+
+**Comando:** `npx vitest run`
+**Data:** 2026-09-18
+**Resultado:** `Test Files 345 passed (345)` / `Tests 3660 passed | 1 skipped (3661)`
+**Exit code:** 0
+
+> Nota de ambiente: uma primeira execução da suíte completa apresentou 3 timeouts
+> (`Error: Test timed out in 5000ms.`) em `src/lib/credit/__tests__/operation-cost-service.integration.test.ts`
+> (2 testes) e `src/lib/image-generation/services/__tests__/image-generation-service.test.ts`
+> (1 teste). Os mesmos testes passam isoladamente (`2 passed` / `47 passed`, exit 0) e a
+> reexecução completa da suíte ficou verde (345/345, exit 0) — timeouts por contenção de
+> recursos do ambiente, não relacionados à F49 (arquivos protegidos pelo fence, intocados).
+
+### 9.2 — `npm run typecheck`
+
+**Comando:** `npm run typecheck` (`tsc -p tsconfig.typecheck.json --noEmit`)
+**Data:** 2026-09-18
+**Resultado:** sem erros (sem saída de diagnóstico)
+**Exit code:** 0
+
+### 9.3 — `npm run lint`
+
+**Comando:** `npm run lint` (`eslint .`)
+**Data:** 2026-09-18
+**Resultado:** sem erros (sem saída de diagnóstico)
+**Exit code:** 0
+
+### 9.4 — `npm run build`
+
+**Comando:** `npm run build`
+**Data:** 2026-09-18
+**Resultado:** build de produção concluído (rotas compiladas; `/campanhas/nova` e `/loja` geradas)
+**Exit code:** 0
