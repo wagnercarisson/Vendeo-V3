@@ -10,6 +10,8 @@
 // As funções importadas são as REAIS do pipeline — a fence não pode divergir do
 // runtime (T-49-02, Tampering).
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import {
   buildCampaignBriefFromFlat,
   buildCampaignBriefSnapshot,
@@ -116,4 +118,79 @@ describe("Não-mudança comportamental do body/snapshot/transporte (7.11 / D12/D
   it("inferIntent(10000, 8000) continua classificando como 'offer'", () => {
     expect(inferIntent(10000, 8000)).toBe("offer");
   });
+});
+
+// ─── 7.9 (terceira parte): microcopy de identidade × consumidores reais ──────
+// A microcopy de Posicionamento/Descrição Curta/Slogan afirma efeito DIRETO na
+// copy e INDIRETO no perfil/direção visual. Esta suíte prova a correspondência:
+//  (a) os 5 campos de identidade chegam ao copy mapper (direto);
+//  (b) o tom de voz chega à direção visual com default "profissional";
+//  (c) os 4 módulos reais de perfil/direção visual referenciam os campos de
+//      identidade nos seus mapas de variáveis de prompt (indireto).
+const IDENTITY_CONTEXT: ResolvedCampaignContext = {
+  ...context,
+  store: {
+    ...context.store,
+    name: "SENTINELA_NOME_LOJA_F49",
+    toneOfVoice: "SENTINELA_TOM_DE_VOZ_F49",
+    positioning: "SENTINELA_POSICIONAMENTO_F49",
+    shortDescription: "SENTINELA_DESCRICAO_CURTA_F49",
+    slogan: "SENTINELA_SLOGAN_F49",
+  },
+};
+
+const IDENTITY_CONSUMER_MODULES = [
+  "src/lib/brand-assets/brand-director.ts",
+  "src/lib/visual-signature/brand-profiler.ts",
+  "src/lib/brand-assets/text-only-inference-service.ts",
+  "src/lib/visual-signature/identity-art-director.ts",
+];
+
+const IDENTITY_PROMPT_KEYS = [
+  "tone_of_voice:",
+  "positioning:",
+  "short_description:",
+  "slogan:",
+];
+
+describe("Correspondência da microcopy de identidade × consumidores reais (7.9)", () => {
+  it("os 5 campos de identidade chegam ao CopyDirectorInput (efeito direto na copy)", () => {
+    const input = mapBriefToCopyDirectorInput(buildBrief(), IDENTITY_CONTEXT, {});
+
+    expect(input.storeName).toBe("SENTINELA_NOME_LOJA_F49");
+    expect(input.toneOfVoice).toBe("SENTINELA_TOM_DE_VOZ_F49");
+    expect(input.positioning).toBe("SENTINELA_POSICIONAMENTO_F49");
+    expect(input.shortDescription).toBe("SENTINELA_DESCRICAO_CURTA_F49");
+    expect(input.slogan).toBe("SENTINELA_SLOGAN_F49");
+  });
+
+  it("o tom de voz chega à direção visual (campaignFactsSection)", () => {
+    const section = campaignFactsSection(buildBrief(), IDENTITY_CONTEXT, "Produto F49");
+
+    expect(section).toContain("SENTINELA_TOM_DE_VOZ_F49");
+  });
+
+  it("sem tom de voz, a direção visual usa o default 'profissional'", () => {
+    const noTone: ResolvedCampaignContext = {
+      ...IDENTITY_CONTEXT,
+      store: { ...IDENTITY_CONTEXT.store, toneOfVoice: null },
+    };
+
+    expect(campaignFactsSection(buildBrief(), noTone, "Produto F49")).toContain(
+      "- **Tom de voz:** profissional",
+    );
+  });
+
+  for (const relativePath of IDENTITY_CONSUMER_MODULES) {
+    it(`${relativePath} referencia os campos de identidade no mapa de variáveis do prompt`, () => {
+      const content = readFileSync(path.join(process.cwd(), relativePath), "utf-8");
+
+      for (const key of IDENTITY_PROMPT_KEYS) {
+        expect(
+          content,
+          `${relativePath} deve referenciar "${key}" no mapa de variáveis do prompt`,
+        ).toContain(key);
+      }
+    });
+  }
 });
