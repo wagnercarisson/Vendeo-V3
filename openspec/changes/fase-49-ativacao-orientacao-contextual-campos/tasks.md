@@ -85,5 +85,5 @@
   - usar informações obrigatórias com múltiplos detalhes do produto;
   - identificar corretamente onde informar validade e aviso ilustrativo;
   - revisar o brief antes da geração reconhecendo as categorias separadas
-- [ ] 9.6 Executar a UAT humana (desktop + mobile) e registrar evidências; confirmar a escolha editorial "Informações obrigatórias na arte" × "Detalhes obrigatórios na arte" e a redação final das descrições de tom de voz
+- [ ] 9.6 Executar a UAT humana (desktop + mobile) e registrar evidências; confirmar a escolha editorial "Informações obrigatórias na arte" × "Detalhes obrigatórios na arte" e a redação final das descrições de tom de voz — **PENDENTE DE RE-UAT (49-14)**: o cenário 7 ("Informações obrigatórias na arte") reprovou parcialmente na UAT (placeholder sem restrição; microcopy sem "restrições"/"preferencialmente"); a correção foi aplicada no plano corretivo **49-14** (apresentação/conteúdo apenas, fonte única `src/lib/campaign/field-guidance.ts`) e os 4 gates + 59 hashes de não-mudança foram revalidados. A re-UAT humana (49-13 Task 2/3) deve ser reexecutada antes de marcar 9.5–9.7.
 - [ ] 9.7 Registrar o resultado (SUMMARY/verificação da fase) confirmando: 4 gates verdes, UAT aprovada e fences de não-mudança cumpridos; **quando autorizado o fechamento da fase**, atualizar trackings/roadmap conforme o workflow do projeto

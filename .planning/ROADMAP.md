@@ -45,7 +45,7 @@
 | 46 | ✅ Gateway Único de IA e Registry de Modelos (v1.5) | 9/9 | ✅ Complete | 2026-09-13 |
 | 47 | ✅ Catálogo e Seleção de Modelos Admin (v1.5, Change B) | 8/8 | ✅ Complete | 2026-09-15 |
 | 48.1 | ✅ Laboratório Mínimo de IA (v1.5) | 14/14 | Complete |  |
-| 49 | ◆ Ativação e Orientação Contextual de Campos (v1.5) | 12/13 | In Progress|  |
+| 49 | ◆ Ativação e Orientação Contextual de Campos (v1.5) | 13/14 | In Progress|  |
 | — | Monetização pública / Stripe (iniciativa diferida, v1.7+) | — | Fora da numeração | — |
 
 ---
@@ -1099,7 +1099,7 @@ Plans:
 **Requirements:** `contextual-field-help` (ADDED), `store-field-orientation` (ADDED), `campaign-field-orientation` (ADDED), `store-identity-ui` (MODIFIED), `campaign-input-ui` (MODIFIED), `mandatory-artwork-text` (MODIFIED), `campaign-brief-review` (MODIFIED).
 
 **Dependencies:** F36 (painel `/loja` em abas + `computeTabUnlock`/`reason-text`), F39/F40/F41/F43 (form de campanha, `validity`/`mandatoryArtworkText`, multi-imagem, revisão do brief), F45 (fonte dos efeitos reais dos campos), F47/F48.1 (precedentes de UI-SPEC, gates e UAT). **Fonte da verdade:** `openspec/changes/fase-49-ativacao-orientacao-contextual-campos/` (proposal / design D1–D15 / 7 specs / tasks).
-**Plans:** 12/13 plans executed
+**Plans:** 13/14 plans executed
 
 Plans:
 **Wave 1**
@@ -1129,6 +1129,10 @@ Plans:
 **Wave 5** *(blocked on Wave 4 completion)*
 
 - [ ] 49-13-PLAN.md — UAT humana de compreensão (desktop/mobile) e registro (Wave 5)
+
+**Wave 6** *(gap closure — achado da UAT; bloqueado pela Wave 5)*
+
+- [x] 49-14-PLAN.md — Gap closure: microcopy/placeholder de Informações obrigatórias na arte + reexecução dos 4 gates e da prova de não-mudança (Wave 6)
 
 **Scope fences:** apresentação/conteúdo apenas — **proibido** alterar `prompts/**`, `src/lib/ai/**`, `src/lib/campaign/brief*.ts`, snapshot `campaign_brief_v1`, `GenerateImageRequestSchema`, `use-campaign-form.ts` (helpers/body), `use-store-form`/`draft-store`, `use-drift-detection`/`lib/drift.ts`, rotas HTTP e banco/storage; sem migration, sem novas chamadas de IA, sem validadores semânticos/regex de intenção; `src/components/campaign/validity-field.tsx` **não** é modificado (entra apenas como regressão); **não** enviar `product.description` ao Diretor de Arte; **nenhum** aviso negativo permanente; sem tooltip exclusivo; sem lista permanente de regras.
 
@@ -1219,7 +1223,7 @@ Phase 39 (Brief Estruturado de Campanha — v1.5)
                                          Phase 48.1 (Laboratório Mínimo de IA — v1.5) ✅ concluída (14/14, 9 waves)
                                                   │
                                                   ▼
-                                         Phase 49 (Ativação e Orientação Contextual de Campos — v1.5) ◆ em execução (12/13)
+                                         Phase 49 (Ativação e Orientação Contextual de Campos — v1.5) ◆ em execução (13/14 — pendente da re-UAT humana)
                                                   │
                                                   ▼
                                          Phase 37 (Revisão e Aprovação da Arte — v1.5)
