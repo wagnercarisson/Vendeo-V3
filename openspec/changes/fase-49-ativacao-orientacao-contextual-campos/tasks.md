@@ -64,7 +64,7 @@
 
 ## 8. Co-migração e regressão (D15)
 
-- [ ] 8.1 Co-migrar asserções de teste que consultam labels/placeholders/microcopy alterados: `campaign-input-form.test.tsx`, `campaign-brief-review.test.tsx`, `use-campaign-form-*.test.ts`; **`validity-field.test.tsx` entra apenas como regressão** (`validity-field.tsx` não é modificado)
+- [x] 8.1 Co-migrar asserções de teste que consultam labels/placeholders/microcopy alterados: `campaign-input-form.test.tsx`, `campaign-brief-review.test.tsx`, `use-campaign-form-*.test.ts`; **`validity-field.test.tsx` entra apenas como regressão** (`validity-field.tsx` não é modificado)
 - [ ] 8.2 Co-migrar testes da loja que consultam labels/microcopy: `store-identity-form.aceite-legal.test.tsx`, `store-identity-form.drift*.test.ts`, `store-identity-form.redirect-messages.test.ts`, `store-page-client.test.tsx`, `store-tabs.test.tsx`
 - [ ] 8.3 Rodar a regressão de auto-save, drafts, navegação por abas e montagem do body (suites de F36/F40/F41/F43) e confirmar zero regressões de comportamento
 - [ ] 8.4 Revisar o diff completo contra o baseline do grupo 1 e confirmar ausência de alterações em prompts, gateway/modelos, pipeline, schemas, snapshot, domínio, rotas HTTP e banco
