@@ -8,12 +8,18 @@ import { VisualSignatureApprovalModal } from "./visual-signature-approval-modal"
 import { VisualSignatureHistoryModal } from "./visual-signature-history-modal";
 import { STORE_SEGMENTS, STORE_SUBSEGMENTS, BRAZILIAN_STATES } from "@/lib/constants";
 import { AlertCircle, CheckCircle2, Loader2, X, Upload, ArrowLeft, Sparkles } from "lucide-react";
-import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo, useId } from "react";
 import { useRouter } from "next/navigation";
 import { useDriftDetection } from "./use-drift-detection";
 import { getDriftPolicy } from "@/lib/drift";
 import type { OnboardingTab, TabBlockReason } from "@/lib/store-onboarding/tabs";
 import { tabBlockReasonText } from "@/lib/store-onboarding/reason-text";
+import {
+  STORE_NAME_HINT,
+  FISCAL_SECTION_LABEL,
+  FISCAL_SECTION_HELPER,
+} from "@/lib/store-onboarding/field-guidance";
+import { FieldHint } from "@/components/ui/field-hint";
 
 // DriftDiscreetButton import removed — replaced by inline post-dismiss links
 import { DriftDecisionModal } from "./drift-decision-modal";
@@ -85,6 +91,16 @@ function getSubsegmentMode(segment: string): 'rich' | 'travado' | 'other' | 'loc
 
 export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMessage }: { initialStore?: Store | null; userId?: string; initialTab?: OnboardingTab; redirectMessage?: string }) {
   const { formData, setField, save, isLoading, isSaving, error, warningMessage, dismissWarning, successMessage, mode, clearStore, storeId, acceptedTerms, setAcceptedTerms, autoSave, saveStatus } = useStoreForm({ initialStore: initialStore ?? null });
+
+  // F49 (D3/D4/D5/D6/D7): ids de ajuda derivados do hook de id do React. O id do
+  // próprio campo permanece estático (`name`/`segment`/`tone_of_voice`/...) para
+  // preservar `htmlFor`/`getByLabelText`; apenas os ids de hint/erro/descrição
+  // derivam daqui e compõem o `aria-describedby` dos campos.
+  const nameHelpBase = useId();
+  const nameHintId = `${nameHelpBase}-hint`;
+  const nameErrorId = `${nameHelpBase}-error`;
+  const segmentHelpBase = useId();
+  const segmentErrorId = `${segmentHelpBase}-error`;
 
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Partial<Record<string, boolean>>>({});
@@ -1433,8 +1449,14 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
                     </div>
                   )}
 
-          {/* Cadastro Fiscal — sempre visível para completar readiness */}
-          {(() => {
+          {/* F49 (D4): subseção de dados fiscais separada do nome público. */}
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-3">{FISCAL_SECTION_LABEL}</h3>
+              <FieldHint id="fiscal-section-helper">{FISCAL_SECTION_HELPER}</FieldHint>
+            </div>
+            {/* Cadastro Fiscal — sempre visível para completar readiness */}
+            {(() => {
             const hasStoredCnpj = !!initialStore?.cnpj_normalized;
             const isOfficialData = cnpjLookupStatus === 'resolved'
               || (!!(initialStore as any)?.cnpj_official_data
@@ -1623,26 +1645,28 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
                 </div>
               </>
             );
-          })()}
+            })()}
+          </div>
 
           <div>
             <label htmlFor="name" className={labelClass}>Nome da Loja *</label>
-            <input id="name" type="text" value={formData.name} onChange={(e) => setField("name", e.target.value)} onBlur={() => handleBlur("name")} placeholder="Ex: Minha Loja" maxLength={60} className={inputClass("name")} />
+            <input id="name" type="text" value={formData.name} onChange={(e) => setField("name", e.target.value)} onBlur={() => handleBlur("name")} placeholder="Ex: Minha Loja" maxLength={60} className={inputClass("name")} aria-required="true" aria-invalid={touched.name && fieldErrors.name ? true : undefined} aria-describedby={[nameHintId, touched.name && fieldErrors.name ? nameErrorId : null].filter(Boolean).join(" ")} />
+            <FieldHint id={nameHintId}>{STORE_NAME_HINT}</FieldHint>
             {touched.name && fieldErrors.name && (
-              <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs"><AlertCircle className="w-3.5 h-3.5" />{fieldErrors.name}</p>
+              <p id={nameErrorId} className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs"><AlertCircle className="w-3.5 h-3.5" />{fieldErrors.name}</p>
             )}
           </div>
 
           <div>
             <label htmlFor="segment" className={labelClass}>Segmento *</label>
-            <select id="segment" value={formData.segment} onChange={(e) => handleSegmentChange(e.target.value)} onBlur={() => handleBlur("segment")} className={selectClass("segment")}>
+            <select id="segment" value={formData.segment} onChange={(e) => handleSegmentChange(e.target.value)} onBlur={() => handleBlur("segment")} className={selectClass("segment")} aria-required="true" aria-invalid={touched.segment && fieldErrors.segment ? true : undefined} aria-describedby={touched.segment && fieldErrors.segment ? segmentErrorId : undefined}>
               <option value="" disabled>Selecione o segmento</option>
               {segmentOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
             {touched.segment && fieldErrors.segment && (
-              <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs"><AlertCircle className="w-3.5 h-3.5" />{fieldErrors.segment}</p>
+              <p id={segmentErrorId} className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs"><AlertCircle className="w-3.5 h-3.5" />{fieldErrors.segment}</p>
             )}
           </div>
 
