@@ -33,3 +33,33 @@ SHA_INICIAL_F49=05b1a74b289afd5af0c5a96cc72c5b43c79031d0
 
 **Regra de preservação:** não reverter, não formatar e não commitar nenhum arquivo
 pré-existente. A árvore de trabalho não precisa estar limpa.
+
+## Consumidores reais
+
+Inventário em código (verificado em 2026-09-18) dos consumidores reais de cada campo.
+Formato `arquivo:linha`.
+
+| Campo | Consumidor real | Referências `arquivo:linha` |
+|---|---|---|
+| `Nome da Loja` | contexto resolvido (`store.name`), copy mapper (`storeName`), identidade/assinatura visual (iniciais + prompt) | `src/components/campaign/types.ts:44` (`store.name`), `src/lib/copy/mapper.ts:109` (`storeName: context.store.name`), `src/lib/store-identity-service.ts:31` (`getStoreInitials(store.name)`), `src/lib/store-identity-service.ts:155` (`storeName: store.name`), `src/lib/visual-signature/ai-image-generator.ts:85` (nome na assinatura visual) |
+| `Tom de Voz` | `computeTabUnlock` (desbloqueio da Direção Visual), contexto resolvido, copy mapper, briefing do Diretor de Arte (`storeTone`, default `"profissional"`) | `src/lib/store-onboarding/tabs.ts:93-94` (`needs_tone_of_voice`), `src/components/campaign/types.ts:47` (`toneOfVoice`), `src/lib/copy/mapper.ts:111` (`toneOfVoice`), `src/lib/image-generation/services/art-director-briefing.ts:288` (`storeTone = ... || "profissional"`) |
+| `Posicionamento` | contexto resolvido, copy mapper, perfil de marca/direção visual (`brand-director`, `brand-profiler`, `identity-art-director`, `text-only-inference`), drift | `src/components/campaign/types.ts:48`, `src/lib/copy/mapper.ts:112`, `src/lib/brand-assets/brand-director.ts:388`, `src/lib/visual-signature/brand-profiler.ts:212`, `src/lib/visual-signature/identity-art-director.ts:64`, `src/lib/brand-assets/text-only-inference-service.ts:99`, `src/lib/drift.ts:16` |
+| `Descrição Curta` | contexto resolvido, copy mapper, perfil de marca/direção visual (`brand-director`, `brand-profiler`, `identity-art-director`, `text-only-inference`), drift | `src/components/campaign/types.ts:49`, `src/lib/copy/mapper.ts:113`, `src/lib/brand-assets/brand-director.ts:389`, `src/lib/visual-signature/brand-profiler.ts:213`, `src/lib/visual-signature/identity-art-director.ts:65`, `src/lib/brand-assets/text-only-inference-service.ts:100`, `src/lib/drift.ts:16` |
+| `Slogan` | contexto resolvido, copy mapper, assinatura visual (`contentUsed.slogan`), drift | `src/components/campaign/types.ts:50`, `src/lib/copy/mapper.ts:114`, `src/lib/visual-signature/identity-art-director.ts:66` e `:119` (`content_used.slogan`), `src/lib/drift.ts:16` e `:36` |
+| `product.description` (`fields.description`) | copy mapper (`CopyDirectorInput.description`) — **ausente em `art-director-briefing.ts`** | `src/lib/copy/mapper.ts:106` (`description: brief.product.description`), domínio `src/lib/campaign/brief.ts:61` (`description?: string`). **Ausente em `src/lib/image-generation/services/art-director-briefing.ts`.** |
+| Preços (`originalPriceCents`/`discountedPriceCents`) | `inferIntent` (classificação de intenção) | `src/components/flow/use-campaign-form.ts:417` (`export function inferIntent`), `:424-426` (dois preços → offer; só venda → spotlight; senão → exclusive) |
+| `mandatoryArtworkText` (→ `commercial.legalNotice`) | domínio/snapshot do brief e prompt do Diretor de Arte (split do aviso ilustrativo) | `src/lib/campaign/brief.ts:166-167` (`legalNotice` a partir de `input.mandatoryArtworkText`), `src/lib/campaign/brief.ts:85` (`legalNotice?`), `src/lib/campaign/brief-schema.ts:43` (`legalNotice` no snapshot), `src/lib/image-generation/services/art-director-briefing.ts:26` (`splitDirectorLegalText`) |
+
+### Fence do Diretor de Arte — ausência de `product.description`
+
+Comando e saída registrados (verificação literal):
+
+```
+$ rg -c "description" src/lib/image-generation/services/art-director-briefing.ts
+(sem saída — exit code 1)
+```
+
+`rg -c` retorna exit code **1** quando não há ocorrências, o que equivale a **0
+ocorrências**. Confirmado: `product.description` **não** é consumido pelo
+`art-director-briefing.ts` (fence de não-mudança D8/D15).
+
