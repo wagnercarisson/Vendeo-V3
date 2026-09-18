@@ -83,9 +83,9 @@ Each task was committed atomically:
 
 1. **Task 1: Corrigir a microcopy/placeholder e alinhar a base documental** — `ecdd9e26` (fix)
 2. **Task 2: Reexecutar os 4 gates e a prova de não-mudança do 49-12** — `98b56620` (docs)
-3. **Task 3: SUMMARY do plano e tracking (14 planos, fase pendente da re-UAT)** — `(este commit — SUMMARY + tracking)` (docs)
+3. **Task 3: SUMMARY do plano e tracking (14 planos, fase pendente da re-UAT)** — `98c16b19` (docs)
 
-**Plan metadata:** `(este commit — SUMMARY + tracking + 49-14-PLAN.md)` (docs: complete gap-closure plan)
+**Plan metadata:** `98c16b19` (docs: complete gap-closure plan — SUMMARY + tracking + 49-14-PLAN.md)
 
 ## Files Created/Modified
 
@@ -131,3 +131,10 @@ None - no external service configuration required.
 ---
 *Phase: 49-ativacao-orientacao-contextual-campos*
 *Completed: 2026-09-18*
+
+## Self-Check: PASSED
+
+- `src/lib/campaign/field-guidance.ts`, `49-14-SUMMARY.md`, `49-14-PLAN.md` e `49-GATES.txt` existem no disco.
+- Commits `ecdd9e26` (Task 1), `98b56620` (Task 2) e `98c16b19` (Task 3) existem no histórico.
+- 4 gates verdes (exit 0); 59/59 hashes protegidos idênticos ao baseline (0 divergências); diff desde `SHA_INICIAL_F49` sem caminhos proibidos.
+- Fase **não** marcada como Complete (pendente da re-UAT humana do 49-13 Task 2/3).
