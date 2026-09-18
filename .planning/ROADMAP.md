@@ -45,7 +45,7 @@
 | 46 | ✅ Gateway Único de IA e Registry de Modelos (v1.5) | 9/9 | ✅ Complete | 2026-09-13 |
 | 47 | ✅ Catálogo e Seleção de Modelos Admin (v1.5, Change B) | 8/8 | ✅ Complete | 2026-09-15 |
 | 48.1 | ✅ Laboratório Mínimo de IA (v1.5) | 14/14 | Complete |  |
-| 49 | ◆ Ativação e Orientação Contextual de Campos (v1.5) | 7/13 | In Progress|  |
+| 49 | ◆ Ativação e Orientação Contextual de Campos (v1.5) | 8/13 | In Progress|  |
 | — | Monetização pública / Stripe (iniciativa diferida, v1.7+) | — | Fora da numeração | — |
 
 ---
@@ -1099,7 +1099,7 @@ Plans:
 **Requirements:** `contextual-field-help` (ADDED), `store-field-orientation` (ADDED), `campaign-field-orientation` (ADDED), `store-identity-ui` (MODIFIED), `campaign-input-ui` (MODIFIED), `mandatory-artwork-text` (MODIFIED), `campaign-brief-review` (MODIFIED).
 
 **Dependencies:** F36 (painel `/loja` em abas + `computeTabUnlock`/`reason-text`), F39/F40/F41/F43 (form de campanha, `validity`/`mandatoryArtworkText`, multi-imagem, revisão do brief), F45 (fonte dos efeitos reais dos campos), F47/F48.1 (precedentes de UI-SPEC, gates e UAT). **Fonte da verdade:** `openspec/changes/fase-49-ativacao-orientacao-contextual-campos/` (proposal / design D1–D15 / 7 specs / tasks).
-**Plans:** 7/13 plans executed
+**Plans:** 8/13 plans executed
 
 Plans:
 **Wave 1**
@@ -1116,7 +1116,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 49-07-PLAN.md — Testes de orientação, acessibilidade e persistência (Wave 3)
+- [x] 49-07-PLAN.md — Testes de orientação, acessibilidade e persistência (Wave 3)
 - [x] 49-08-PLAN.md — Testes de correspondência microcopy ↔ comportamento (preço/tom) (Wave 3)
 - [ ] 49-09-PLAN.md — Fences do Diretor de Arte e categorias separáveis da revisão (Wave 3)
 - [ ] 49-10-PLAN.md — Co-migração de asserções da campanha e da revisão (Wave 3)
