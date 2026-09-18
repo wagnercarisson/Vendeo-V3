@@ -20,7 +20,7 @@ progress:
 **Current phase:** 49
 **Last activity:** 2026-09-18
 
-### Phase 49 — Ativação e Orientação Contextual de Campos ◆ Planned (13/13 plans / 5 waves)
+### Phase 49 — Ativação e Orientação Contextual de Campos ◆ Planned (0/13 plans / 5 waves)
 
 **Planejada em 2026-09-18** a partir da base OpenSpec `openspec/changes/fase-49-ativacao-orientacao-contextual-campos/` (proposal / design D1–D15 / 7 specs / tasks). Fase de **apresentação/conteúdo apenas** — orientação contextual no próprio campo (hint inline, descrição contextual da opção, ajuda expansível, feedback dinâmico) nos formulários de loja (`/loja`) e campanha (`/campanhas/nova`, incluindo a revisão F43). 13 planos em 5 waves; plan-check **PASSED** (0 blockers, 0 warnings); cobertura 100% dos grupos 1–9 do `tasks.md` e 7/7 capabilities. **Sem** migration, prompts, gateway/modelos, schemas, snapshot, domínio, contrato HTTP ou banco; sem novas chamadas de IA ou validadores semânticos.
 

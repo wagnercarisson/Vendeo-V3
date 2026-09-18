@@ -61,7 +61,7 @@ Exceptions: none. Hints/descrições/feedbacks usam `mt-1`/`mt-2` (8–12px) e n
 | Hint / feedback | 12–13px (`text-xs`/`text-sm`) | Open Sans 400 | 1.4 |
 | Estado (Recomendado/opcional) | 11–12px (`text-[11px]`/`text-xs`) | Poppins 500, uppercase tracking-wide | 1.3 |
 
-Regras: hint e feedback em `text-text-muted`; mensagens de erro mantêm o padrão existente (`accent.red` + `AlertCircle`); o estado "Recomendado" é **textual** (nunca só cor).
+Regras: hint e feedback em **`text-text-secondary` (`#94A3B8`)** — contraste 6,96:1 sobre `bg.surface` (`#0F172A`) e 7,87:1 sobre `bg.deep` (`#020617`), adequado a texto normal; **não** usar `text-text-muted` (`#64748B`, 3,75:1 / 4,24:1 — insuficiente para instruções). Mensagens de erro mantêm o padrão existente (`accent.red` + `AlertCircle`); o estado "Recomendado" é **textual** (nunca só cor). O feedback neutro de "só preço anterior" usa `accent.amber`.
 
 ---
 
@@ -115,7 +115,7 @@ Accent reserved for: CTA principal de cada tela. Estados obrigatório/recomendad
 | Element | Copy |
 |---------|------|
 | Nome da Loja (hint) | "Este é o nome público da sua loja. Ele aparece no Vendeo e é usado para identificar e assinar suas campanhas." |
-| Dados fiscais (helper) | Dados cadastrais/oficiais (Receita Federal) usados para verificação/readiness |
+| Dados fiscais (helper) | Dados cadastrais/oficiais (Receita Federal) usados para **verificação e prontidão do cadastro** |
 | Tom de Voz (hint) | "Define como sua loja se comunica. O Vendeo usa essa escolha nos títulos, legendas e no clima visual das campanhas." |
 | Tom de Voz (descrições) | 8 frases positivas (ex.: profissional → "Direta, confiável e sem exageros."; moderno → "Atual, objetiva e com energia contemporânea."; luxuoso → "Sofisticada, exclusiva e com senso de premium.") — redação final na execução |
 | Posicionamento (label) | "Como você quer que sua loja seja percebida?" + termo secundário "Posicionamento da marca" |

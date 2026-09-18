@@ -242,7 +242,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - **Fonte única de microcopy** em módulos puros + testes de correspondência ao comportamento real e de não-mudança (prompts/pipeline/body/snapshot)
   - **Sem** migration, prompts, gateway/modelos, schemas públicos, snapshot, domínio, contrato HTTP, banco/storage, novas chamadas de IA ou validadores semânticos
   - **Fonte da verdade:** `openspec/changes/fase-49-ativacao-orientacao-contextual-campos/` (proposal / design D1–D15 / 7 specs / tasks)
-  - **Status:** ◆ Planejamento (GSD) — F49 registrada em 2026-09-18
+  - **Status:** ◆ Planejada (GSD) — 0/13 planos em 5 waves; plan-check **PASSED** em 2026-09-18; aguardando execução
 </details>
 
 ## Progress
@@ -300,7 +300,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 46. Gateway Único de IA e Registry de Modelos | v1.5 | 9/9 | ✅ Complete | 2026-09-13 |
 | 47. Catálogo e Seleção de Modelos Admin | v1.5 | 8/8 | ✅ Complete | 2026-09-15 |
 | 48.1. Laboratório Mínimo de IA | v1.5 | 14/14 | ✅ Complete | 2026-09-17 |
-| 49. Ativação e Orientação Contextual de Campos | v1.5 | 0/0 | ◆ Planning | — |
+| 49. Ativação e Orientação Contextual de Campos | v1.5 | 0/13 | ◆ Planned | — |
 | —. Monetização pública / Stripe (diferida, v1.7+) | v1.7 | — | Fora da numeração | — |
 
 ---

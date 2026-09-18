@@ -127,6 +127,7 @@ const describedBy = [error ? errorId : null, hint ? hintId : null]
   </p>
 )}
 ```
+> **Divergência registrada:** a fonte real `lab-textarea.tsx` usa `text-text-muted` no hint, mas a UI-SPEC da F49 (§Typography/§Color) manda `text-text-secondary` (`#94A3B8`, contraste 6,96:1/7,87:1) para hint/feedback — `text-text-muted` (`#64748B`) é insuficiente para instruções. Os primitivos e campos da F49 usam **`text-text-secondary`**; o erro continua em `accent.red`.
 
 **Padrão de classe de label do formulário** (`store-identity-form.tsx:1342`, `lab-textarea.tsx:39-44`):
 ```typescript
@@ -134,8 +135,8 @@ const labelClass = "block text-text-muted text-xs font-heading font-medium upper
 ```
 
 **Regras a seguir:**
-- `FieldHint` é **apresentacional**: recebe `id` (obrigatório, gerado pelo campo com `useId`) + `children`/`text`; renderiza `<p id={id} className="text-xs text-text-muted font-body mt-1">`. **Não** gera o próprio `useId` se o campo precisa referenciá-lo — o **campo** é dono dos ids.
-- Assinatura sugerida (consistente com `LabTextareaProps`): `interface FieldHintProps { id: string; children: React.ReactNode; className?: string }`.
+- `FieldHint` é **apresentacional**: recebe `id` (obrigatório, derivado pelo campo consumidor a partir de `useId`) + `children`/`text`; renderiza `<p id={id} className="text-xs text-text-secondary font-body mt-1">`. **Não** gera o próprio `useId` — quem gera é o campo consumidor; o `id` do **próprio campo** permanece estático.
+- Assinatura sugerida (consistente com `LabTextareaProps`): `interface FieldHintProps { id: string; children: React.ReactNode; tone?: "secondary" | "amber"; className?: string }`. O `tone` é resolvido por **mapa** (`{ secondary: "text-text-secondary", amber: "text-accent-amber" }`, default `"secondary"`), **nunca** por classe de cor concorrente concatenada.
 - **Sem `cn`:** o repo não possui utilitário `cn`. Concatene com template literal, como em `lab-textarea.tsx:49-51`.
 - Ícones sempre `lucide-react` com `aria-hidden="true"`; nunca emoji.
 - Touch target: hint é texto, mas qualquer controle associado (disclosure) usa `min-h-[44px]`.
@@ -181,7 +182,7 @@ const labelClass = "block text-text-muted text-xs font-heading font-medium upper
 
 **Regras a seguir (D2/D13):**
 - Duas opções aceitáveis; **preferir `<button aria-expanded>` + região condicional** para controle explícito de `aria-controls`/estado e testabilidade por `getByRole("button", { name: ... })` + `toHaveAttribute("aria-expanded", ...)` (mesmo estilo de `account-menu.test.tsx:70-75`).
-- Estado **colapsado por padrão**: `useState(false)`; o conteúdo revelado **não** deve existir no DOM quando colapsado (ou usar `hidden`).
+- Estado **colapsado por padrão**: `useState(false)`. A região revelada **permanece no DOM** ocultada com o atributo `hidden` quando colapsada (recomendado) — assim `aria-controls` **sempre** aponta para um elemento existente. Alternativa aceitável: `<details>/<summary>` nativo (sem `aria-controls`). Nunca apontar `aria-controls` para um elemento inexistente.
 - Acionável por teclado (é um `<button type="button">`), foco visível via `focus:ring-2 focus:ring-accent-blue/20` (padrão dos campos) ou `focus-visible:`.
 - `min-h-[44px]` no gatilho (F22/D13).
 - Props sugeridas: `{ summary: string; children: React.ReactNode; id?: string }` — o `aria-controls` referencia o id da região.
@@ -722,20 +723,24 @@ expect(trigger.getAttribute("aria-expanded")).toBe("true");
 
 ### Associação campo↔ajuda por `aria-describedby`
 **Fonte:** `src/app/(app)/admin/laboratorio/_components/lab-textarea.tsx:29-35` e `lab-select.tsx:31-37`
-**Aplicar a:** todos os campos com hint/feedback (Nome da Loja, Tom de Voz, Posicionamento, Descrição Curta, Slogan, Descrição do produto, Preços, Informações obrigatórias)
+**Aplicar a:** todos os campos com hint/descrição/feedback (Nome da Loja, Tom de Voz, Posicionamento, Descrição Curta, Slogan, Descrição do produto, Preços, Informações obrigatórias)
 ```typescript
-const generatedId = useId();
-const fieldId = id ?? generatedId;
-const errorId = `${fieldId}-error`;
-const hintId = `${fieldId}-hint`;
-const describedBy = [error ? errorId : null, hint ? hintId : null]
-  .filter(Boolean)
-  .join(" ");
+const helpBase = useId();
+const hintId = `${helpBase}-hint`;
+const descriptionId = `${helpBase}-description`;
+const feedbackId = `${helpBase}-feedback`;
+const errorId = `${helpBase}-error`;
+const describedBy = [
+  hintId,
+  hasDescription ? descriptionId : null,
+  feedback ? feedbackId : null,
+  error ? errorId : null,
+].filter(Boolean).join(" ");
 // ...
 aria-invalid={error ? true : undefined}
 aria-describedby={describedBy || undefined}
 ```
-> **Atenção:** os formulários da F49 são grandes e usam `id` fixo (`name`, `positioning`, `slogan`, `description`, `originalPrice`, `discountedPrice`, `tone_of_voice`, `mandatoryArtworkText`). Os testes existentes consultam por label; portanto **manter os `id` fixos** e derivar `hintId`/`errorId` deles (`${id}-hint`) em vez de introduzir `useId` nesses campos — evita quebrar `getByLabelText`/`htmlFor`. `useId` fica nos primitivos novos que não têm id canônico.
+> **Padrão canônico F49 (correção de acessibilidade):** o **id do próprio campo** permanece estático e canônico (`name`, `tone_of_voice`, `positioning`, `description`, `discountedPrice`, `mandatoryArtworkText`, …) para preservar `htmlFor`/`getByLabelText`; apenas os **ids de ajuda** derivam de `useId()` (`${helpBase}-hint|-description|-feedback|-error`). O campo consumidor é quem chama `useId` — `FieldHint` continua apresentacional (recebe `id`). O erro existente passa a ter `id={errorId}` e entra no `aria-describedby`; `aria-invalid` é preservado/explicitado nos campos com erro. Todos os textos aplicáveis (hint + descrição contextual + feedback + erro) entram no `aria-describedby` via `.filter(Boolean).join(" ")`.
 
 ### Erro de campo
 **Fonte:** `store-identity-form.tsx:1631-1633`, `campaign-input-form.tsx:362-367`
@@ -750,14 +755,15 @@ aria-describedby={describedBy || undefined}
 ```
 
 ### Hint/feedback (texto auxiliar)
-**Fonte:** `lab-textarea.tsx:54-58`
+**Fonte:** `lab-textarea.tsx:54-58` (classe de cor ajustada pela UI-SPEC F49)
 **Aplicar a:** hints curtos, descrição contextual de opção e feedback dinâmico
 ```typescript
-<p id={hintId} className="text-xs text-text-muted font-body">
+<p id={hintId} className="text-xs text-text-secondary font-body">
   {hint}
 </p>
 ```
-> Feedback neutro de "só preço anterior" usa `text-accent-amber` (UI-SPEC §Color: orientação, não erro).
+> **Correção de contraste (F49):** hint e feedback usam **`text-text-secondary`** (`#94A3B8`, 6,96:1/7,87:1). A fonte `lab-textarea.tsx` usa `text-text-muted`, mas a UI-SPEC/F49 manda `secondary` — nunca usar `text-text-muted` em instruções. O `FieldHint` resolve isso pelo mapa de `tone` (default `"secondary"`), sem classe de cor concorrente.
+> Feedback neutro de "só preço anterior" usa `tone="amber"` (`text-accent-amber`, UI-SPEC §Color: orientação, não erro).
 
 ### Classes de campo (paridade visual)
 **Fonte:** `store-identity-form.tsx:1328-1342` e `campaign-input-form.tsx:356-360`
