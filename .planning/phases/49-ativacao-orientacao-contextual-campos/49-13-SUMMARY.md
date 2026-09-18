@@ -75,9 +75,9 @@ Each task was committed atomically:
 
 1. **Task 1: Escrever o checklist de UAT de compreensão** — `ce3df1f1` (docs)
 2. **Task 2: Executar a UAT humana de compreensão (desktop + mobile)** — checkpoint humano (`checkpoint:human-verify`), **aprovado** ("approved"); sem commit de código — resultado registrado em `49-UAT.md`
-3. **Task 3: Registrar o resultado da fase e atualizar o tracking** — `PENDING_TASK3_SHA` (docs) — `49-UAT.md`, `.planning/ROADMAP.md`, `ROADMAP.md`, `.planning/STATE.md`, `tasks.md` + este SUMMARY
+3. **Task 3: Registrar o resultado da fase e atualizar o tracking** — `28301468` (docs) — `49-UAT.md`, `.planning/ROADMAP.md`, `ROADMAP.md`, `.planning/STATE.md`, `tasks.md` + este SUMMARY
 
-**Plan metadata:** `PENDING_TASK3_SHA` (docs: complete 49-13 — UAT aprovada + tracking 14/14 Complete)
+**Plan metadata:** `28301468` (docs: complete 49-13 — UAT aprovada + tracking 14/14 Complete)
 
 ## Files Created/Modified
 
