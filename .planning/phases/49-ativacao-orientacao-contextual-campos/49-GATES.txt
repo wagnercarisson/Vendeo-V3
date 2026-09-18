@@ -314,3 +314,95 @@ da base documental/planejamento atualizados pelo 49-14).
   diff desde `SHA_INICIAL_F49` sem caminhos proibidos; fence do Diretor de Arte mantido.
 - Escopo da correção restrito à apresentação/conteúdo (`src/lib/campaign/field-guidance.ts`
   + base documental/planejamento). Pronto para a **re-UAT humana** do 49-13 (Task 2/3).
+
+---
+
+## Reexecução pós-review (49-15)
+
+> Seção produzida pelo plano **49-15** (gap closure dos achados do code review — ME-01,
+> ME-02, ME-03, LO-03). Reexecuta os 4 gates e a prova de não-mudança do 49-12 após as
+> correções de apresentação/a11y. Registra apenas resumos/contagens/exit codes
+> (sem env vars, tokens ou logs integrais — T-49-04).
+
+**Data de execução:** 2026-09-18
+**Branch:** feature/fase-49-orientacao-contextual-campos
+**SHA_INICIAL_F49:** `05b1a74b289afd5af0c5a96cc72c5b43c79031d0` (lido de `49-BASELINE.txt`)
+**HEAD no snapshot desta seção:** `023b6aaa` (commit da Task 1 do 49-15)
+
+### Gates reexecutados
+
+#### 9.1 (re) — `npx vitest run` (suíte completa)
+
+**Comando:** `npx vitest run`
+**Resultado:** `Test Files 345 passed (345)` / `Tests 3660 passed | 1 skipped (3661)`
+**Exit code:** 0
+
+#### 9.2 (re) — `npm run typecheck`
+
+**Comando:** `npm run typecheck` (`tsc -p tsconfig.typecheck.json --noEmit`)
+**Resultado:** sem erros (sem saída de diagnóstico)
+**Exit code:** 0
+
+#### 9.3 (re) — `npm run lint`
+
+**Comando:** `npm run lint` (`eslint .`)
+**Resultado:** sem erros (sem saída de diagnóstico)
+**Exit code:** 0
+
+#### 9.4 (re) — `npm run build`
+
+**Comando:** `npm run build`
+**Resultado:** build de produção concluído (62/62 páginas geradas; `/campanhas/nova` e `/loja` presentes)
+**Exit code:** 0
+
+### Não-mudança (recomputada)
+
+**Método:** `Get-FileHash -Algorithm SHA256` (hash normalizado para minúsculas) sobre cada
+caminho da seção "Baseline de não-mudança" de `49-BASELINE.txt`.
+
+**Total de arquivos comparados:** 59
+**Divergências:** 0
+**Arquivos ausentes:** 0
+
+**Lista de divergências:** (nenhuma)
+
+### Caminhos proibidos (recomputado)
+
+**Comando:** `git diff --name-only <SHA_INICIAL_F49>..HEAD` com `SHA_INICIAL_F49=05b1a74b289afd5af0c5a96cc72c5b43c79031d0`
+**HEAD no snapshot:** `023b6aaa` (Task 1 do 49-15)
+
+**Arquivos alterados desde o baseline:** 56 (43 herdados do encerramento do 49-12 + 7 do 49-14
++ 6 do 49-15: 5 arquivos de produção/teste e o artefato de documentação desta fase).
+
+**Violações de caminho proibido:** 0 — nenhum caminho é de `prompts/**`, `src/lib/ai/**`,
+`src/lib/campaign/brief*.ts`, `src/lib/campaign/constants.ts`,
+`src/lib/image-generation/services/art-director-briefing.ts`,
+`src/components/flow/use-campaign-form.ts`, `src/components/campaign/validity-field.tsx`,
+`src/lib/store-onboarding/{tabs,reason-text,draft-store}.ts`,
+`src/hooks/use-onboarding-tabs.ts`, `src/hooks/use-drift-detection.ts`, `src/lib/drift.ts`,
+`src/app/api/**` ou `supabase/**`.
+
+### Fence do Diretor de Arte (reconfirmada)
+
+**Comando:** `rg -c "description" src/lib/image-generation/services/art-director-briefing.ts`
+**Resultado:** sem saída — **exit code 1** = 0 ocorrências. `product.description` continua
+**ausente** do briefing do Diretor de Arte (fence D8/D15 mantido).
+
+### Achados do review endereçados (49-15 Task 1)
+
+**Comando:** `rg -n '"Recomendado"' src/components/ui/recommended-badge.tsx` → **0** (usa `RECOMMENDED_LABEL`).
+**Comando:** `rg -n "as StoreToneOfVoice" src/components/flow/store-identity-form.tsx` → **0**.
+**Comando:** `rg -n "productImages-label|productImages-required|fiscal-section-helper" src` → **0** (ids derivados de `useId`).
+**Comando:** `rg -n "mandatoryArtworkTextFree.trim\(\)" src/components/flow/campaign-brief-review.tsx` → 2 ocorrências (gate + exibição).
+
+### Arquivos não rastreados pré-existentes (separados — NÃO pertencem à fase; NÃO commitar)
+
+- `docs/alinhamento-fase-44-temas-de-campanhas` — não rastreado **pré-existente** à F49.
+  Permanece fora das listas acima, **preservado** e **não commitado**.
+
+### Resultado
+
+- 4 gates verdes (exit 0); **59/59** hashes protegidos idênticos ao baseline (0 divergências);
+  diff desde `SHA_INICIAL_F49` sem caminhos proibidos; fence do Diretor de Arte mantido.
+- ME-01/ME-02/ME-03/LO-03 endereçados com co-migração das asserções de ids; escopo estrito
+  preservado (LO-01/LO-02/LO-05 e o seletor de tom de voz não foram tocados).
