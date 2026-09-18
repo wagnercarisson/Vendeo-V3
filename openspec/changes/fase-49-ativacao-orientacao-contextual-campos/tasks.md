@@ -75,7 +75,7 @@
 - [x] 9.2 Rodar `npm run typecheck` sem erros
 - [x] 9.3 Rodar `npm run lint` sem erros
 - [x] 9.4 Rodar `npm run build` sem erros
-- [ ] 9.5 Escrever o checklist de UAT humana com tarefas de **compreensão** (não apenas presença de textos), em desktop e mobile (320px/375px), avaliando também **ausência de poluição visual**:
+- [x] 9.5 Escrever o checklist de UAT humana com tarefas de **compreensão** (não apenas presença de textos), em desktop e mobile (320px/375px), avaliando também **ausência de poluição visual**:
   - diferenciar razão social, nome fantasia e nome da loja;
   - explicar para que serve o tom de voz;
   - preencher posicionamento com proposta, público e diferencial;
@@ -85,5 +85,5 @@
   - usar informações obrigatórias com múltiplos detalhes do produto;
   - identificar corretamente onde informar validade e aviso ilustrativo;
   - revisar o brief antes da geração reconhecendo as categorias separadas
-- [ ] 9.6 Executar a UAT humana (desktop + mobile) e registrar evidências; confirmar a escolha editorial "Informações obrigatórias na arte" × "Detalhes obrigatórios na arte" e a redação final das descrições de tom de voz — **PENDENTE DE RE-UAT (49-14)**: o cenário 7 ("Informações obrigatórias na arte") reprovou parcialmente na UAT (placeholder sem restrição; microcopy sem "restrições"/"preferencialmente"); a correção foi aplicada no plano corretivo **49-14** (apresentação/conteúdo apenas, fonte única `src/lib/campaign/field-guidance.ts`) e os 4 gates + 59 hashes de não-mudança foram revalidados. A re-UAT humana (49-13 Task 2/3) deve ser reexecutada antes de marcar 9.5–9.7.
-- [ ] 9.7 Registrar o resultado (SUMMARY/verificação da fase) confirmando: 4 gates verdes, UAT aprovada e fences de não-mudança cumpridos; **quando autorizado o fechamento da fase**, atualizar trackings/roadmap conforme o workflow do projeto
+- [x] 9.6 Executar a UAT humana (desktop + mobile) e registrar evidências; confirmar a escolha editorial "Informações obrigatórias na arte" × "Detalhes obrigatórios na arte" e a redação final das descrições de tom de voz — **APROVADA na re-UAT (2026-09-18, aprovador Wagner)**: o cenário 7 ("Informações obrigatórias na arte") reprovou parcialmente na UAT inicial (placeholder sem restrição; microcopy sem "restrições"/"preferencialmente"); a correção foi aplicada no plano corretivo **49-14** (apresentação/conteúdo apenas, fonte única `src/lib/campaign/field-guidance.ts`), os 4 gates + 59 hashes de não-mudança foram revalidados e a re-UAT humana (49-13 Task 2/3) reconfirmou **todos os 9 cenários como PASS** (desktop/375px/320px, sem scroll horizontal e sem poluição visual). Decisões editoriais confirmadas: label "Informações obrigatórias na arte" **mantido**; as **8 descrições de tom de voz aprovadas** como entregues.
+- [x] 9.7 Registrar o resultado (SUMMARY/verificação da fase) confirmando: 4 gates verdes, UAT aprovada e fences de não-mudança cumpridos; **quando autorizado o fechamento da fase**, atualizar trackings/roadmap conforme o workflow do projeto — **REGISTRADO (49-13 Task 3, 2026-09-18)**: `49-UAT.md` finalizado (PASS 9/9, aprovador Wagner), `49-13-SUMMARY.md` criado, `.planning/ROADMAP.md` e `ROADMAP.md` (raiz) em **14/14 — Complete** e `.planning/STATE.md` com a F49 concluída; 4 gates verdes, UAT aprovada e 59/59 hashes sem divergência.
