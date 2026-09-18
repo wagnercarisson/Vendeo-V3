@@ -233,6 +233,16 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - **Fonte da verdade:** `openspec/changes/fase-48-1-laboratorio-ia-minimo/` (proposal / design D1–D18 / 9 specs / tasks 48-1-01..48-1-14)
   - **Dependências:** F46 (gateway/adapters/seams), F47 (catálogo/seleção como allowlist de leitura), F43 (`brief_review_confirmed` — validação de visão dispensada), F38.x (custos/`CostResolution`)
   - **Status:** ✅ **CONCLUÍDA em 2026-09-17** — 14/14 plans / 9 waves (UAT local aprovado Passos 1–10; migration remota aplicada/verificada; 4 gates verdes: 333 arquivos / 3588 testes + 1 skipped; contract guard 0 violações; `48-1-VERIFICATION.md` = passed; deploy não executado — fora do escopo)
+
+- [ ] Phase 49: Ativação e Orientação Contextual de Campos (**planejamento em andamento** — registrada em 2026-09-18; fonte `openspec/changes/fase-49-ativacao-orientacao-contextual-campos/`)
+  - **Orientação contextual no próprio campo** dos formulários de identidade da loja (`/loja`) e do brief da campanha (`/campanhas/nova`, incluindo a revisão F43): hint inline, descrição contextual da opção selecionada, ajuda expansível (progressive disclosure) e feedback dinâmico, com associação acessível campo↔ajuda (`aria-describedby`/`useId`) e `aria-required` (sem `required` nativo)
+  - **Loja:** dados fiscais (CNPJ/Razão Social/Nome Fantasia) separados do `Nome da Loja` (nome público), tom de voz crítico com descrição contextual das 8 opções, posicionamento renomeado + hint + exemplo expansível, distinção posicionamento × descrição curta × slogan (slogan opcional)
+  - **Campanha:** "Descrição do produto" (só copy/publicação — fence do Diretor de Arte), preços com labels de significado + ajuda expansível + feedback dinâmico (4 estados, incluindo "só preço anterior" neutro), "Informações obrigatórias na arte" positiva e multi-linha, fronteiras canônicas entre áreas
+  - **Revisão do brief:** categorias separáveis (aviso ilustrativo × informações obrigatórias × validade × preços) — apresentação apenas
+  - **Fonte única de microcopy** em módulos puros + testes de correspondência ao comportamento real e de não-mudança (prompts/pipeline/body/snapshot)
+  - **Sem** migration, prompts, gateway/modelos, schemas públicos, snapshot, domínio, contrato HTTP, banco/storage, novas chamadas de IA ou validadores semânticos
+  - **Fonte da verdade:** `openspec/changes/fase-49-ativacao-orientacao-contextual-campos/` (proposal / design D1–D15 / 7 specs / tasks)
+  - **Status:** ◆ Planejamento (GSD) — F49 registrada em 2026-09-18
 </details>
 
 ## Progress
@@ -290,6 +300,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
 | 46. Gateway Único de IA e Registry de Modelos | v1.5 | 9/9 | ✅ Complete | 2026-09-13 |
 | 47. Catálogo e Seleção de Modelos Admin | v1.5 | 8/8 | ✅ Complete | 2026-09-15 |
 | 48.1. Laboratório Mínimo de IA | v1.5 | 14/14 | ✅ Complete | 2026-09-17 |
+| 49. Ativação e Orientação Contextual de Campos | v1.5 | 0/0 | ◆ Planning | — |
 | —. Monetização pública / Stripe (diferida, v1.7+) | v1.7 | — | Fora da numeração | — |
 
 ---

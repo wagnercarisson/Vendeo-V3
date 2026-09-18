@@ -3,7 +3,7 @@
 ## Milestone v1.5 — Lançamento Externo Controlado ◆
 
 **18 phases** | **177 requirements mapped** | All covered ✓
-**Phase numbering:** Continues from v1.4 (Phase 22). F37 = Revisão e Aprovação da Arte (v1.5, concluída em fatias 37.1/37.2; 37.1 concluída; **37.2 realinhada = Correção Única por Não Conformidade** CONCLUÍDA (19/19 plans, 4 gates verdes, UAT 9/9); **37.3 eliminada** — consolidada na 37.2), F38 = Tabela de Custos por Operação, F39 = Brief Estruturado de Campanha, F40 = Campos Comerciais e Avisos do Brief, F41 = Mídia de Campanha Mobile, F42 = Signup Controlado e Elegibilidade Freemium, F43 = Revisão do Brief Pré-Geração e F45 = Briefing Contextual do Diretor de Arte (concluída em 2026-09-05), **F46 = Gateway Único de IA e Registry de Modelos (v1.5, Change A — CONCLUÍDA em 2026-09-13, 9/9 plans, 275 files / 2721 testes, 4 gates verdes, UAT 8/8 PASS)** e **F47 = Catálogo e Seleção de Modelos Admin (v1.5, Change B — CONCLUÍDA em 2026-09-15, 8/8 plans, 287 files / 2782 testes, 4 gates verdes, UAT local aprovado, migration remota verificada, deploy Ready)** e **F48.1 = Laboratório Mínimo de IA (v1.5 — CONCLUÍDA em 2026-09-17, 14/14 plans / 9 waves, 4 gates verdes (333 arquivos / 3588 testes), UAT local aprovado Passos 1–10, migration remota aplicada/verificada, `48-1-VERIFICATION.md` = passed; primeira fatia do programa incremental F48.x; fonte `openspec/changes/fase-48-1-laboratorio-ia-minimo/`)**. F44 = Temas de Campanha permanece fora da numeração; Monetização pública / Stripe permanece diferida e fora da numeração. Fonte da F37.1: `openspec/changes/fase-37-1-approval-gate-candidata-unica/`; fonte da F37.2: `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/`; fonte da F46: `openspec/changes/archive/2026-09-13-fase-46-gateway-unico-de-ia-e-registry-de-modelos/`.
+**Phase numbering:** Continues from v1.4 (Phase 22). F37 = Revisão e Aprovação da Arte (v1.5, concluída em fatias 37.1/37.2; 37.1 concluída; **37.2 realinhada = Correção Única por Não Conformidade** CONCLUÍDA (19/19 plans, 4 gates verdes, UAT 9/9); **37.3 eliminada** — consolidada na 37.2), F38 = Tabela de Custos por Operação, F39 = Brief Estruturado de Campanha, F40 = Campos Comerciais e Avisos do Brief, F41 = Mídia de Campanha Mobile, F42 = Signup Controlado e Elegibilidade Freemium, F43 = Revisão do Brief Pré-Geração e F45 = Briefing Contextual do Diretor de Arte (concluída em 2026-09-05), **F46 = Gateway Único de IA e Registry de Modelos (v1.5, Change A — CONCLUÍDA em 2026-09-13, 9/9 plans, 275 files / 2721 testes, 4 gates verdes, UAT 8/8 PASS)** e **F47 = Catálogo e Seleção de Modelos Admin (v1.5, Change B — CONCLUÍDA em 2026-09-15, 8/8 plans, 287 files / 2782 testes, 4 gates verdes, UAT local aprovado, migration remota verificada, deploy Ready)** e **F48.1 = Laboratório Mínimo de IA (v1.5 — CONCLUÍDA em 2026-09-17, 14/14 plans / 9 waves, 4 gates verdes (333 arquivos / 3588 testes), UAT local aprovado Passos 1–10, migration remota aplicada/verificada, `48-1-VERIFICATION.md` = passed; primeira fatia do programa incremental F48.x; fonte `openspec/changes/fase-48-1-laboratorio-ia-minimo/`)**. F44 = Temas de Campanha permanece fora da numeração; Monetização pública / Stripe permanece diferida e fora da numeração. Fonte da F37.1: `openspec/changes/fase-37-1-approval-gate-candidata-unica/`; fonte da F37.2: `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/`; fonte da F46: `openspec/changes/archive/2026-09-13-fase-46-gateway-unico-de-ia-e-registry-de-modelos/`. **F49 = Ativação e Orientação Contextual de Campos (v1.5 — registrada em 2026-09-18, planejamento; fonte `openspec/changes/fase-49-ativacao-orientacao-contextual-campos/`)**.
 
 ---
 
@@ -45,6 +45,7 @@
 | 46 | ✅ Gateway Único de IA e Registry de Modelos (v1.5) | 9/9 | ✅ Complete | 2026-09-13 |
 | 47 | ✅ Catálogo e Seleção de Modelos Admin (v1.5, Change B) | 8/8 | ✅ Complete | 2026-09-15 |
 | 48.1 | ✅ Laboratório Mínimo de IA (v1.5) | 14/14 | Complete |  |
+| 49 | ◆ Ativação e Orientação Contextual de Campos (v1.5) | 0/0 | ◆ Planning | — |
 | — | Monetização pública / Stripe (iniciativa diferida, v1.7+) | — | Fora da numeração | — |
 
 ---
@@ -1091,6 +1092,20 @@ Plans:
 
 ---
 
+### Phase 49: Ativação e Orientação Contextual de Campos
+
+**Goal:** Ensinar **no ponto de decisão** — os formulários de identidade da loja (`/loja`) e do brief da campanha (`/campanhas/nova`, incluindo a tela de revisão F43) ganham orientação contextual **no próprio campo** (hint inline, descrição contextual da opção selecionada, ajuda expansível e feedback dinâmico), com dados fiscais separados do nome público, tom de voz explicado como campo crítico, posicionamento × descrição curta × slogan distinguidos, "Descrição do produto", preços com labels de significado + feedback dinâmico e "Informações obrigatórias na arte" positiva e multi-linha — **sem** alterar prompts, gateway/modelos, pipeline, schemas públicos, snapshot, domínio, contrato HTTP ou banco. **Não** é tour guiado nem checklist de ativação.
+
+**Requirements:** `contextual-field-help` (ADDED), `store-field-orientation` (ADDED), `campaign-field-orientation` (ADDED), `store-identity-ui` (MODIFIED), `campaign-input-ui` (MODIFIED), `mandatory-artwork-text` (MODIFIED), `campaign-brief-review` (MODIFIED).
+
+**Dependencies:** F36 (painel `/loja` em abas + `computeTabUnlock`/`reason-text`), F39/F40/F41/F43 (form de campanha, `validity`/`mandatoryArtworkText`, multi-imagem, revisão do brief), F45 (fonte dos efeitos reais dos campos), F47/F48.1 (precedentes de UI-SPEC, gates e UAT). **Fonte da verdade:** `openspec/changes/fase-49-ativacao-orientacao-contextual-campos/` (proposal / design D1–D15 / 7 specs / tasks).
+
+**Plans:** 0/0 plans — planejamento em andamento (F49 registrada em 2026-09-18)
+
+**Scope fences:** apresentação/conteúdo apenas — **proibido** alterar `prompts/**`, `src/lib/ai/**`, `src/lib/campaign/brief*.ts`, snapshot `campaign_brief_v1`, `GenerateImageRequestSchema`, `use-campaign-form.ts` (helpers/body), `use-store-form`/`draft-store`, `use-drift-detection`/`lib/drift.ts`, rotas HTTP e banco/storage; sem migration, sem novas chamadas de IA, sem validadores semânticos/regex de intenção; `src/components/campaign/validity-field.tsx` **não** é modificado (entra apenas como regressão); **não** enviar `product.description` ao Diretor de Arte; **nenhum** aviso negativo permanente; sem tooltip exclusivo; sem lista permanente de regras.
+
+---
+
 ## Dependency Graph
 
 ```
@@ -1174,6 +1189,9 @@ Phase 39 (Brief Estruturado de Campanha — v1.5)
                                                   │
                                                   ▼
                                          Phase 48.1 (Laboratório Mínimo de IA — v1.5) ✅ concluída (14/14, 9 waves)
+                                                  │
+                                                  ▼
+                                         Phase 49 (Ativação e Orientação Contextual de Campos — v1.5) ◆ planejada
                                                   │
                                                   ▼
                                          Phase 37 (Revisão e Aprovação da Arte — v1.5)
@@ -1264,11 +1282,18 @@ Phase 39 (Brief Estruturado de Campanha — v1.5)
 | LAB-ADMIN-API | Phase 48.1 | Done ✓ |
 | LAB-ADMIN-UI | Phase 48.1 | Done ✓ |
 | LAB-HUMAN-EVALUATION | Phase 48.1 | Done ✓ |
+| CONTEXTUAL-FIELD-HELP | Phase 49 | Planned |
+| STORE-FIELD-ORIENTATION | Phase 49 | Planned |
+| CAMPAIGN-FIELD-ORIENTATION | Phase 49 | Planned |
+| STORE-IDENTITY-UI | Phase 49 | Planned |
+| CAMPAIGN-INPUT-UI | Phase 49 | Planned |
+| MANDATORY-ARTWORK-TEXT | Phase 49 | Planned |
+| CAMPAIGN-BRIEF-REVIEW | Phase 49 | Planned |
 
 **Coverage:**
 
-- v1 requirements: 148 total (139 v1.5 + 9 capabilities novas da F48.1 — specs ADDED, sem REQ-IDs no `REQUIREMENTS.md`)
-- Mapped to phases: 148
+- v1 requirements: 155 total (139 v1.5 + 9 capabilities novas da F48.1 + 7 capabilities da F49 — 3 ADDED + 4 MODIFIED — specs, sem REQ-IDs no `REQUIREMENTS.md`)
+- Mapped to phases: 155
 - Completed: 136
 - Unmapped: 0 ✓
 - Deferred to v1.7: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06
