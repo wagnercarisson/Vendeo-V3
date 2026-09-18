@@ -4,7 +4,7 @@ verified: 2026-09-18T19:35:00Z
 status: passed
 score: 14/14 must-haves verified
 overrides_applied: 0
-re_verification: false
+re_verification: true
 warnings:
   - "ME-01 (49-REVIEW.md): `RecommendedBadge` hardcodes `Recomendado` instead of consuming `RECOMMENDED_LABEL`; the constant is dead in production (only tests import it). D14 single-source deviation — no actual divergence today (both strings identical)."
   - "ME-02: `store-identity-form.tsx` uses `as StoreToneOfVoice` on a free-form DB string with no CHECK constraint; a legacy/unknown tone renders an empty `<p>` still referenced by `aria-describedby`."
@@ -153,3 +153,40 @@ Estas ressalvas são de qualidade/convenção (nenhuma impede o objetivo) e pode
 
 _Verified: 2026-09-18T19:35:00Z_
 _Verifier: the agent (gsd-verifier)_
+
+---
+
+## Re-verificação pós-review (49-15)
+
+**Data:** 2026-09-18
+**Escopo:** gap closure dos achados acionáveis do `49-REVIEW.md` (ME-01, ME-02, ME-03 e LO-03). LO-01, LO-02, LO-05 e a futura melhoria do seletor de tom de voz permaneceram **fora de escopo** por decisão do plano 49-15.
+
+### Achados endereçados
+
+| Achado | Correção | Evidência |
+|--------|----------|-----------|
+| **ME-01** — `RecommendedBadge` duplicava o literal "Recomendado" | Componente passa a consumir `RECOMMENDED_LABEL` de `@/lib/store-onboarding/field-guidance`; teste co-migrado para importar/assertar a constante | `rg -n '"Recomendado"' src/components/ui/recommended-badge.tsx` → **0** (exit 1) |
+| **ME-02** — cast `as StoreToneOfVoice` + `<p>` vazio com id órfão | Resolução cast-free via `Object.entries(TONE_OF_VOICE_DESCRIPTIONS).find(...)?.[1] ?? null`; `toneDescriptionId` e o `FieldHint` só entram quando `toneDescription` é truthy | `rg -n "as StoreToneOfVoice" src/components/flow/store-identity-form.tsx` → **0** (exit 1) |
+| **ME-03** — ids estáticos (`productImages-label`, `productImages-required`, `fiscal-section-helper`) | Todos derivados de `useId` (`imageLabelId`/`imageRequiredId`/`fiscalHelperId`); asserções de `campaign-input-form.orientation.test.tsx` resolvem os ids dinamicamente via `aria-labelledby`/`aria-describedby` | `rg -n "productImages-label\|productImages-required\|fiscal-section-helper" src` → **0** (exit 1) |
+| **LO-03** — revisão exibia o texto livre não trimado | Exibição passa a `fields.mandatoryArtworkTextFree.trim()` (mantendo `whitespace-pre-line`), coerente com `hasMandatoryArtworkText` e com `buildMandatoryArtworkText` | `rg -n "mandatoryArtworkTextFree.trim\(\)" src/components/flow/campaign-brief-review.tsx` → 2 ocorrências (gate + exibição) |
+
+### Testes afetados (focados)
+
+`npx vitest run` de `recommended-badge.test.tsx`, `campaign-input-form.orientation.test.tsx`, `store-identity-form.orientation.test.tsx` e `campaign-brief-review.orientation.test.tsx` → **4 files / 24 tests passed** (exit 0).
+
+### Gates reexecutados (49-15 Task 2)
+
+- `npx vitest run` → **345 files / 3660 passed + 1 skipped** (exit 0)
+- `npm run typecheck` → exit 0
+- `npm run lint` → exit 0
+- `npm run build` → 62/62 páginas geradas (exit 0)
+- **59/59** hashes protegidos idênticos ao baseline (**0 divergências**, 0 ausentes)
+- `git diff --name-only 05b1a74b..HEAD` → **0 violações** de caminho proibido; untracked pré-existente `docs/alinhamento-fase-44-temas-de-campanhas` preservado e não commitado
+
+Evidência completa em `49-GATES.txt` (§ "Reexecução pós-review (49-15)").
+
+### Veredito
+
+Os achados acionáveis do review (ME-01/ME-02/ME-03/LO-03) foram **corrigidos** e as fences/gates **revalidados**. O status da verificação permanece **`passed`**; os warnings remanescentes (LO-01, LO-02, LO-05) são de qualidade/convenção e permanecem documentados como follow-up não-bloqueante.
+
+_Re-verificado: 2026-09-18_
