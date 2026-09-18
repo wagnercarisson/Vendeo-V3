@@ -101,7 +101,7 @@ None - no external service configuration required.
 
 ## Next Phase Readiness
 - Fence do Diretor de Arte, não-mudança de body/snapshot/transporte, categorias separáveis da revisão e correspondência da microcopy de identidade × consumidores reais provadas. Pronto para 49-10/49-11 (co-migração), 49-12 (regressão + 4 gates) e 49-13 (UAT).
-- **Rastreabilidade OpenSpec:** item **7.9** fechado nesta Task 3 (terceira parte); **7.8/7.10/7.11** fechados neste plano. Progresso OpenSpec neste ponto: **33/50**.
+- **Rastreabilidade OpenSpec:** item **7.9** fechado nesta Task 3 (terceira parte); **7.8/7.10/7.11** fechados neste plano. Progresso OpenSpec neste ponto: **39/50**.
 - Sem blockers.
 
 ## Self-Check: PASSED

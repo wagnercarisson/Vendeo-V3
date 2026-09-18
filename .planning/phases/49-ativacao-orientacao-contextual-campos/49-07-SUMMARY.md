@@ -50,7 +50,7 @@ completed: 2026-09-18
 
 # Phase 49 Plan 07: Testes de Orientação, Acessibilidade e Persistência Summary
 
-**19 testes jsdom verdes cobrindo orientação, `aria-describedby`/`aria-required`, descrição contextual das 8 opções de tom de voz, ajuda expansível, feedback de preço dos 4 estados, persistência e placeholder multi-linha — consumindo as strings canônicas de `field-guidance` e sem tocar produção**
+**20 testes jsdom verdes cobrindo orientação, `aria-describedby`/`aria-required`, descrição contextual das 8 opções de tom de voz, ajuda expansível, feedback de preço dos 4 estados, persistência e placeholder multi-linha — consumindo as strings canônicas de `field-guidance` e sem tocar produção**
 
 ## Performance
 
@@ -62,7 +62,7 @@ completed: 2026-09-18
 
 ## Accomplishments
 - **Loja** (`store-identity-form.orientation.test.tsx`, 6 testes): hints/labels de fonte única (`STORE_NAME_HINT`, `FISCAL_SECTION_LABEL`, `TONE_OF_VOICE_HINT`, `POSITIONING_LABEL`, `SLOGAN_HINT`); `aria-describedby` composto (hint + descrição contextual + erro) com ids que resolvem para elementos existentes; `aria-invalid` nos erros de `#name` e `#segment`; `aria-required="true"` sem `required` nativo; descrição contextual iterando as **8** opções de `TONE_OF_VOICE_DESCRIPTIONS` (ausente sem seleção); ajuda expansível do posicionamento colapsada por padrão (`aria-expanded`/`hidden`, `aria-controls` sempre válido, abre/fecha); "Recomendado" em Posicionamento/Descrição Curta e Slogan `(opcional)` sem "Recomendado".
-- **Campanha** (`campaign-input-form.orientation.test.tsx`, 10 testes): label/placeholder/microcopy de "Descrição do produto" e hints de preço de fonte única; `aria-describedby` composto (hint + feedback + erro) e `aria-invalid` no erro de `#badge`; `aria-required="true"` sem `required` nativo em `#productName`/`#discountedPrice`/`#badge` (offer); grupo da imagem primária com `CampaignImageUpload` **real** (`role="group"`, `aria-labelledby`, `aria-describedby` de obrigatoriedade + erro, sem `aria-required`/`required`); ajuda expansível das 3 regras oculta via `hidden` antes do clique; feedback dos 4 estados de preço (`priceFeedbackMessage`, incluindo "só anterior" neutro com `not.toContain("Sem preço")`); restauração de `description`/`mandatoryArtworkTextFree` sem `setField`.
+- **Campanha** (`campaign-input-form.orientation.test.tsx`, 11 testes): label/placeholder/microcopy de "Descrição do produto" e hints de preço de fonte única; `aria-describedby` composto (hint + feedback + erro) e `aria-invalid` no erro de `#badge`; `aria-required="true"` sem `required` nativo em `#productName`/`#discountedPrice`/`#badge` (offer); grupo da imagem primária com `CampaignImageUpload` **real** (`role="group"`, `aria-labelledby`, `aria-describedby` de obrigatoriedade + erro, sem `aria-required`/`required`); ajuda expansível das 3 regras oculta via `hidden` antes do clique; feedback dos 4 estados de preço (`priceFeedbackMessage`, incluindo "só anterior" neutro com `not.toContain("Sem preço")`); restauração de `description`/`mandatoryArtworkTextFree` sem `setField`.
 - **Informações obrigatórias** (`mandatory-artwork-field.test.tsx`, 3 testes): label/hint canônicos, `aria-describedby` com id derivado de `useId` (não literal), campo visível, `maxLength=200`, sem `required`; placeholder com 3 linhas e envio do valor multi-linha preservando `\n`; ausência de advertências negativas.
 
 ## Task Commits
@@ -118,7 +118,7 @@ None - no external service configuration required.
 - Sem blockers.
 
 ## Verification Evidence
-- `npx vitest run src/components/flow/__tests__/store-identity-form.orientation.test.tsx src/components/flow/__tests__/campaign-input-form.orientation.test.tsx src/components/campaign/__tests__/mandatory-artwork-field.test.tsx` → **3 files / 19 tests passed**.
+- `npx vitest run src/components/flow/__tests__/store-identity-form.orientation.test.tsx src/components/flow/__tests__/campaign-input-form.orientation.test.tsx src/components/campaign/__tests__/mandatory-artwork-field.test.tsx` → **3 files / 20 tests passed** (após o fechamento corretivo que reforçou as asserções de a11y — store 6, campanha 11, campo obrigatório 3).
 - `npx tsc -p tsconfig.typecheck.json --noEmit` → exit 0.
 - `git diff --name-only 47bb8dc5..HEAD` → apenas os 3 arquivos de teste (nenhum arquivo de produção).
 - `git status --short` → apenas o arquivo pré-existente `docs/alinhamento-fase-44-temas-de-campanhas` (não rastreado, preservado).
