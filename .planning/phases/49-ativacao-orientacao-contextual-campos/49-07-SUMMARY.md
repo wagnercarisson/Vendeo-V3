@@ -81,7 +81,7 @@ Each task was committed atomically:
 - `src/components/campaign/__tests__/mandatory-artwork-field.test.tsx` - Label/hint, a11y, placeholder multi-linha e contrato de transporte
 
 ## Decisions Made
-- A asserção de `aria-describedby` é genérica (cada id referenciado resolve para um elemento existente), evitando acoplar o teste aos ids instáveis de `useId`.
+- A asserção de `aria-describedby` verifica que cada id referenciado resolve para um elemento existente **e** que o hint pertence ao campo correspondente (o `textContent` do elemento referenciado é comparado com a string canônica), evitando acoplar o teste aos ids instáveis de `useId` sem perder a força probatória da associação.
 - O feedback de preço é lido pelo `textContent` do elemento referenciado em `aria-describedby` em vez de `getByText`, porque o espaço não separável (U+00A0) do `Intl` pt-BR é normalizado pelo Testing Library e geraria falso negativo.
 - O `CampaignImageUpload` e o `MandatoryArtworkField` são renderizados reais (sem stub `() => null`) para provar a acessibilidade e o transporte multi-linha efetivos.
 - Nenhuma asserção depende de cópia literal de microcopy: todas importam de `@/lib/store-onboarding/field-guidance` e `@/lib/campaign/field-guidance`.
@@ -122,6 +122,14 @@ None - no external service configuration required.
 - `npx tsc -p tsconfig.typecheck.json --noEmit` → exit 0.
 - `git diff --name-only 47bb8dc5..HEAD` → apenas os 3 arquivos de teste (nenhum arquivo de produção).
 - `git status --short` → apenas o arquivo pré-existente `docs/alinhamento-fase-44-temas-de-campanhas` (não rastreado, preservado).
+
+## Corrective Closing (parecer de revisão)
+
+O item 7.2 foi temporariamente desmarcado e as asserções de acessibilidade foram reforçadas (commit `fix(49-07): reforcar associacao hint↔campo e erros de descricao/precos`):
+
+1. **Loja — hint pertence ao campo:** o teste agora afirma que `TONE_OF_VOICE_HINT` integra o `aria-describedby` de `#tone_of_voice`; `POSITIONING_HINT` e `POSITIONING_IDENTITY_HINT` o de `#positioning`; `SHORT_DESCRIPTION_HINT` o de `#short_description`; e `SLOGAN_HINT` o de `#slogan`. Um hint visualmente presente mas desconectado do campo passa a falhar.
+2. **Campanha — erros de descrição e preços:** novo caso ativa `touched`/`fieldErrors` para `description`, `originalPriceCents` e `discountedPriceCents`, afirmando que cada erro entra no `aria-describedby` e ativa `aria-invalid`; e que **os dois campos de preço referenciam o mesmo elemento de feedback** dinâmico (`-feedback`).
+- Resultado após o reforço: `store-identity-form.orientation.test.tsx` + `campaign-input-form.orientation.test.tsx` → **2 files / 17 testes verde**; `tsc` exit 0. O item 7.2 volta a `[x]`.
 
 ## Self-Check: PASSED
 

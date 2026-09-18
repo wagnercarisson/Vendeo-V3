@@ -241,6 +241,54 @@ describe("CampaignInputForm — orientação contextual (F49)", () => {
     expect(badge).toHaveAttribute("aria-invalid", "true");
   });
 
+  it("7.2 associa os erros de #description, #originalPrice e #discountedPrice e compartilha o feedback entre os preços", () => {
+    mockUseCampaignForm.mockReturnValue(
+      makeHookState(
+        {},
+        {
+          touched: { description: true, originalPriceCents: true, discountedPriceCents: true },
+          fieldErrors: {
+            description: "Descreva o produto",
+            originalPriceCents: "Preço anterior inválido",
+            discountedPriceCents: "Preço de venda inválido",
+          },
+        },
+      ),
+    );
+    renderForm();
+
+    const description = document.getElementById("description")!;
+    const originalPrice = document.getElementById("originalPrice")!;
+    const discountedPrice = document.getElementById("discountedPrice")!;
+
+    const descIds = describedByIds(description);
+    const descError = descIds
+      .map((id) => document.getElementById(id))
+      .find((el) => el?.textContent?.includes("Descreva o produto"));
+    expect(descError).toBeTruthy();
+    expect(description).toHaveAttribute("aria-invalid", "true");
+
+    const originalIds = describedByIds(originalPrice);
+    const originalError = originalIds
+      .map((id) => document.getElementById(id))
+      .find((el) => el?.textContent?.includes("Preço anterior inválido"));
+    expect(originalError).toBeTruthy();
+    expect(originalPrice).toHaveAttribute("aria-invalid", "true");
+
+    const discountedIds = describedByIds(discountedPrice);
+    const discountedError = discountedIds
+      .map((id) => document.getElementById(id))
+      .find((el) => el?.textContent?.includes("Preço de venda inválido"));
+    expect(discountedError).toBeTruthy();
+    expect(discountedPrice).toHaveAttribute("aria-invalid", "true");
+
+    // Os dois campos de preço referenciam o MESMO elemento de feedback dinâmico.
+    const originalFeedback = originalIds.find((id) => id.endsWith("-feedback"));
+    const discountedFeedback = discountedIds.find((id) => id.endsWith("-feedback"));
+    expect(originalFeedback).toBeTruthy();
+    expect(discountedFeedback).toBe(originalFeedback);
+  });
+
   it("7.2 o grupo da imagem primária expõe obrigatoriedade acessível (role=group, aria-labelledby/aria-describedby) sem aria-required/required", () => {
     renderForm();
 

@@ -218,15 +218,21 @@ describe("StoreIdentityForm — orientação contextual (F49)", () => {
       POSITIONING_PLACEHOLDER,
     );
 
-    // 7.2 — aria-describedby de todos os campos com orientação resolve.
+    // 7.2 — aria-describedby de todos os campos com orientação resolve E cada
+    // hint pertence ao campo correspondente (não apenas existe na página).
     const tone = document.getElementById("tone_of_voice")!;
     const positioning = document.getElementById("positioning")!;
     const shortDescription = document.getElementById("short_description")!;
     const slogan = document.getElementById("slogan")!;
-    describedByIds(tone);
-    describedByIds(positioning);
-    describedByIds(shortDescription);
-    describedByIds(slogan);
+
+    function describedTexts(el: HTMLElement): string[] {
+      return describedByIds(el).map((id) => document.getElementById(id)?.textContent ?? "");
+    }
+    expect(describedTexts(tone)).toContain(TONE_OF_VOICE_HINT);
+    expect(describedTexts(positioning)).toContain(POSITIONING_HINT);
+    expect(describedTexts(positioning)).toContain(POSITIONING_IDENTITY_HINT);
+    expect(describedTexts(shortDescription)).toContain(SHORT_DESCRIPTION_HINT);
+    expect(describedTexts(slogan)).toContain(SLOGAN_HINT);
 
     // 7.4 — recomendado textual em Posicionamento e Descrição Curta; Slogan é
     // opcional e NÃO exibe "Recomendado".
