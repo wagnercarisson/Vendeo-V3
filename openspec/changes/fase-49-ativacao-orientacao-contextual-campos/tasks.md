@@ -54,11 +54,11 @@
 - [ ] 7.2 Testes de associação acessível: `aria-describedby` ligando campo↔hint/erro/feedback; `aria-invalid` preservado nos erros; campos obrigatórios com `aria-required="true"` e **sem** `required` nativo
 - [ ] 7.3 Testes de **descrição contextual** do tom de voz selecionado (8 opções; sem seleção → sem descrição)
 - [ ] 7.4 Testes de **ajuda expansível**: colapsada por padrão; abre/fecha; `aria-expanded`; acessível por teclado
-- [ ] 7.5 Testes de **feedback dinâmico de preços** para os 4 estados (dois preços, só venda, **só anterior → neutro**, sem preço), coerentes com as opções reais do seletor de intenção
+- [x] 7.5 Testes de **feedback dinâmico de preços** para os 4 estados (dois preços, só venda, **só anterior → neutro**, sem preço), coerentes com as opções reais do seletor de intenção
 - [ ] 7.6 Testes de **persistência e restauração** dos valores existentes (incluindo descrição e informações obrigatórias multi-linha) sem interferência da orientação
 - [ ] 7.7 Teste de **texto obrigatório multilinha**: placeholder com múltiplas linhas e envio do valor multi-linha no mesmo contrato
 - [ ] 7.8 Testes de **categorias preservadas na revisão**: aviso ilustrativo e informações obrigatórias como itens separáveis; rótulos de preço coerentes
-- [ ] 7.9 Testes de **não-divergência microcopy ↔ comportamento**: feedback de preço × `inferIntent`/`availableOptions` (incluindo o estado "só anterior"); hint do tom de voz × `computeTabUnlock`; microcopy de identidade × consumidores reais (copy + perfil/direção visual)
+- [x] 7.9 Testes de **não-divergência microcopy ↔ comportamento**: feedback de preço × `inferIntent`/`availableOptions` (incluindo o estado "só anterior"); hint do tom de voz × `computeTabUnlock`; microcopy de identidade × consumidores reais (copy + perfil/direção visual)
 - [ ] 7.10 Teste de **fence do Diretor de Arte**: `product.description` presente no `CopyDirectorInput` e **ausente** no briefing do diretor
 - [ ] 7.11 Testes de **não-mudança** de prompts/pipeline/body/snapshot (goldens existentes + ausência de alteração em `prompts/**` e no body)
 
