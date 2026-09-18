@@ -293,12 +293,14 @@ describe("CampaignInputForm — orientação contextual (F49)", () => {
     renderForm();
 
     const group = screen.getByRole("group", { name: /Imagem do Produto/ });
-    expect(group).toHaveAttribute("aria-labelledby", "productImages-label");
+    const labelledBy = group.getAttribute("aria-labelledby");
+    expect(labelledBy).toBeTruthy();
+    expect(document.getElementById(labelledBy!)).toHaveTextContent("Imagem do Produto");
     const ids = describedByIds(group);
-    expect(ids).toContain("productImages-required");
-    expect(document.getElementById("productImages-required")).toHaveTextContent(
-      "Imagem do produto obrigatória",
-    );
+    const requiredEl = ids
+      .map((id) => document.getElementById(id))
+      .find((el) => el?.textContent?.includes("Imagem do produto obrigatória"));
+    expect(requiredEl).toBeTruthy();
     expect(group).not.toHaveAttribute("aria-required");
     expect(group.querySelectorAll("[required]")).toHaveLength(0);
   });
@@ -317,10 +319,14 @@ describe("CampaignInputForm — orientação contextual (F49)", () => {
 
     const group = screen.getByRole("group", { name: /Imagem do Produto/ });
     const ids = describedByIds(group);
-    expect(ids).toContain("productImages-required");
-    const errorId = ids.find((id) => id !== "productImages-required");
-    expect(errorId).toBeTruthy();
-    expect(document.getElementById(errorId!)).toHaveTextContent("Envie a imagem do produto");
+    const requiredEl = ids
+      .map((id) => document.getElementById(id))
+      .find((el) => el?.textContent?.includes("Imagem do produto obrigatória"));
+    expect(requiredEl).toBeTruthy();
+    const errorEl = ids
+      .map((id) => document.getElementById(id))
+      .find((el) => el?.textContent?.includes("Envie a imagem do produto"));
+    expect(errorEl).toBeTruthy();
     expect(group).toHaveAttribute("aria-invalid", "true");
   });
 

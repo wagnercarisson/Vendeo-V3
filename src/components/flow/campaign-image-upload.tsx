@@ -26,6 +26,8 @@ export function CampaignImageUpload({
   // (label estático) + `aria-describedby` (texto de obrigatoriedade + erro) e
   // `aria-invalid`. Sem `required` nativo; contrato de props inalterado.
   const imageGroupHelpBase = useId();
+  const imageLabelId = `${imageGroupHelpBase}-label`;
+  const imageRequiredId = `${imageGroupHelpBase}-required`;
   const imageErrorId = `${imageGroupHelpBase}-error`;
 
   const atLimit = productImages.length >= MAX_CAMPAIGN_IMAGES;
@@ -55,19 +57,19 @@ export function CampaignImageUpload({
   return (
     <div
       role="group"
-      aria-labelledby="productImages-label"
-      aria-describedby={["productImages-required", error ? imageErrorId : null]
+      aria-labelledby={imageLabelId}
+      aria-describedby={[imageRequiredId, error ? imageErrorId : null]
         .filter(Boolean)
         .join(" ")}
       aria-invalid={error ? true : undefined}
     >
       <label
-        id="productImages-label"
+        id={imageLabelId}
         className="block text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2"
       >
         Imagem do Produto *
       </label>
-      <span id="productImages-required" className="sr-only">
+      <span id={imageRequiredId} className="sr-only">
         Imagem do produto obrigatória
       </span>
 

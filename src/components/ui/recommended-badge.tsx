@@ -5,10 +5,12 @@
  * bloqueante. Reutilizável nos campos recomendados (Posicionamento, Descrição
  * Curta); Slogan permanece `(opcional)` e **não** recebe este indicador.
  */
+import { RECOMMENDED_LABEL } from "@/lib/store-onboarding/field-guidance";
+
 export function RecommendedBadge() {
   return (
     <span className="ml-1.5 font-heading font-medium text-[11px] uppercase tracking-wide text-accent-blue">
-      Recomendado
+      {RECOMMENDED_LABEL}
     </span>
   );
 }

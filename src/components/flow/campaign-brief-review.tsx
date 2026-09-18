@@ -246,7 +246,7 @@ export function CampaignBriefReview({
                 {MANDATORY_ARTWORK_LABEL}
               </p>
               <p className="text-text-primary text-sm font-body whitespace-pre-line">
-                {fields.mandatoryArtworkTextFree}
+                {fields.mandatoryArtworkTextFree.trim()}
               </p>
             </div>
           )}
