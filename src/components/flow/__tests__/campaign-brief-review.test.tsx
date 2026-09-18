@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { CampaignBriefReview } from "../campaign-brief-review";
+import { MANDATORY_ARTWORK_LABEL } from "@/lib/campaign/field-guidance";
 import type { CampaignFormFields, PreparedCampaignImage } from "../use-campaign-form";
 
 const mockUseOperationCosts = vi.fn(
@@ -101,14 +102,18 @@ describe("CampaignBriefReview — Testes 11-16 (F43)", () => {
     expect(screen.getAllByText("Oferta").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("R$ 299,90")).toBeInTheDocument();
     expect(screen.getByText("R$ 199,90")).toBeInTheDocument();
+    // D12 — rótulos de preço alinhados ao formulário
+    expect(screen.getByText("Preço anterior")).toBeInTheDocument();
+    expect(screen.getByText("Preço de venda")).toBeInTheDocument();
     expect(screen.getByText("até 30/09/2026")).toBeInTheDocument();
 
     // Imagens
     expect(screen.getByText("Principal")).toBeInTheDocument();
     expect(screen.getByText("Referência")).toBeInTheDocument();
 
-    // Avisos
+    // Avisos — itens separáveis e rotulados (D12)
     expect(screen.getByText(/Imagem meramente ilustrativa/)).toBeInTheDocument();
+    expect(screen.getByText(MANDATORY_ARTWORK_LABEL)).toBeInTheDocument();
     expect(screen.getByText(/Frete grátis acima de R\$ 199/)).toBeInTheDocument();
 
     // Custo
