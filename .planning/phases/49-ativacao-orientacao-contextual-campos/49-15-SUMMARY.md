@@ -84,7 +84,7 @@ Each task was committed atomically:
 
 1. **Task 1: Corrigir ME-01, ME-02, ME-03 e LO-03** — `023b6aaa` (fix)
 2. **Task 2: Reexecutar testes, 4 gates e prova de não-mudança** — `89b43bd4` (docs)
-3. **Task 3: requirements Done, tracking 15/15 e verificação curta** — `{metadata-commit}` (docs)
+3. **Task 3: requirements Done, tracking 15/15 e verificação curta** — `bc768580` (docs)
 
 ## Files Created/Modified
 
