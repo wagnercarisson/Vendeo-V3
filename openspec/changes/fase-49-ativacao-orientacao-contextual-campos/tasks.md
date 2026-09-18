@@ -39,14 +39,14 @@
 - [x] 5.2 Seção Oferta: aplicar labels "Preço de venda (final)" / "Preço anterior (original)" + hint curto por campo (mesmos campos/body)
 - [x] 5.3 Seção Oferta: substituir o bloco permanente de 3 regras pela **ajuda expansível** "Como os preços mudam a campanha?" (colapsada por padrão) preservando o conteúdo das regras
 - [x] 5.4 Seção Oferta: adicionar o **feedback dinâmico** das combinações de preço (função pura de 2.2), incluindo o estado intermediário **"só preço anterior"** com mensagem neutra ("Informe o preço de venda para completar a oferta.") — sem alterar `inferIntent`/`IntentSelector`/`availableOptions` e sem validação nova
-- [ ] 5.5 Seção Avisos: aplicar label "Informações obrigatórias na arte", microcopy positiva e placeholder multi-linha no `MandatoryArtworkField`; manter o campo diretamente visível e sem advertências negativas
+- [x] 5.5 Seção Avisos: aplicar label "Informações obrigatórias na arte", microcopy positiva e placeholder multi-linha no `MandatoryArtworkField`; manter o campo diretamente visível e sem advertências negativas
 - [x] 5.6 Confirmar que o body/validação/fluxo de revisão permanecem idênticos (nenhum campo novo de estado; helpers de `use-campaign-form.ts` intocados)
 
 ## 6. Revisão do brief com categorias separáveis (D11/D12)
 
-- [ ] 6.1 Em `campaign-brief-review.tsx`, apresentar **aviso ilustrativo** e **informações obrigatórias na arte** como itens distintos e rotulados (derivados de `showIllustrativeNotice`/`mandatoryArtworkTextFree`), sem concatenar em um único bloco
-- [ ] 6.2 Alinhar os rótulos de preço da revisão ("Preço anterior"/"Preço de venda") e manter validade em item próprio
-- [ ] 6.3 Garantir que `buildMandatoryArtworkText`, o body, o snapshot e o contrato HTTP **não** mudam (apresentação apenas)
+- [x] 6.1 Em `campaign-brief-review.tsx`, apresentar **aviso ilustrativo** e **informações obrigatórias na arte** como itens distintos e rotulados (derivados de `showIllustrativeNotice`/`mandatoryArtworkTextFree`), sem concatenar em um único bloco
+- [x] 6.2 Alinhar os rótulos de preço da revisão ("Preço anterior"/"Preço de venda") e manter validade em item próprio
+- [x] 6.3 Garantir que `buildMandatoryArtworkText`, o body, o snapshot e o contrato HTTP **não** mudam (apresentação apenas)
 
 ## 7. Testes automatizados (D14/D15)
 
