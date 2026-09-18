@@ -127,3 +127,86 @@ src/lib/store-onboarding/field-guidance.ts
 **Data:** 2026-09-18
 **Resultado:** build de produção concluído (rotas compiladas; `/campanhas/nova` e `/loja` geradas)
 **Exit code:** 0
+
+## Não-mudança
+
+### Comparação hash a hash (SHA-256)
+
+**Método:** `Get-FileHash -Algorithm SHA256` (hash normalizado para minúsculas) sobre cada
+caminho da seção "Baseline de não-mudança" de `49-BASELINE.txt`.
+
+**Total de arquivos comparados:** 59
+**Divergências:** 0
+**Arquivos ausentes:** 0
+
+**Lista de divergências:** (nenhuma)
+
+### Caminhos proibidos
+
+**Comando:** `git diff --name-only <SHA_INICIAL_F49>..HEAD` com `SHA_INICIAL_F49=05b1a74b289afd5af0c5a96cc72c5b43c79031d0`
+
+**Violações de caminho proibido:** 0 — nenhum caminho é de `prompts/**`, `src/lib/ai/**`,
+`src/lib/campaign/brief*.ts`, `src/lib/campaign/constants.ts`,
+`src/lib/image-generation/services/art-director-briefing.ts`,
+`src/components/flow/use-campaign-form.ts`, `src/components/campaign/validity-field.tsx`,
+`src/lib/store-onboarding/{tabs,reason-text,draft-store}.ts`,
+`src/hooks/use-onboarding-tabs.ts`, `src/hooks/use-drift-detection.ts`, `src/lib/drift.ts`,
+`src/app/api/**` ou `supabase/**`.
+
+### Fence do Diretor de Arte
+
+**Comando:** `rg -c "description" src/lib/image-generation/services/art-director-briefing.ts`
+**Resultado:** sem saída — **exit code 1** = 0 ocorrências. `product.description` continua
+**ausente** do briefing do Diretor de Arte (fence D8/D15 mantido).
+
+### Arquivos alterados pela fase (`<SHA_INICIAL_F49>..HEAD`, 42)
+
+```
+.planning/ROADMAP.md
+.planning/STATE.md
+.planning/phases/49-ativacao-orientacao-contextual-campos/49-01-SUMMARY.md
+.planning/phases/49-ativacao-orientacao-contextual-campos/49-02-SUMMARY.md
+.planning/phases/49-ativacao-orientacao-contextual-campos/49-03-SUMMARY.md
+.planning/phases/49-ativacao-orientacao-contextual-campos/49-04-SUMMARY.md
+.planning/phases/49-ativacao-orientacao-contextual-campos/49-05-SUMMARY.md
+.planning/phases/49-ativacao-orientacao-contextual-campos/49-06-SUMMARY.md
+.planning/phases/49-ativacao-orientacao-contextual-campos/49-07-SUMMARY.md
+.planning/phases/49-ativacao-orientacao-contextual-campos/49-08-SUMMARY.md
+.planning/phases/49-ativacao-orientacao-contextual-campos/49-09-PLAN.md
+.planning/phases/49-ativacao-orientacao-contextual-campos/49-09-SUMMARY.md
+.planning/phases/49-ativacao-orientacao-contextual-campos/49-10-PLAN.md
+.planning/phases/49-ativacao-orientacao-contextual-campos/49-10-SUMMARY.md
+.planning/phases/49-ativacao-orientacao-contextual-campos/49-11-SUMMARY.md
+.planning/phases/49-ativacao-orientacao-contextual-campos/49-BASELINE.txt
+.planning/phases/49-ativacao-orientacao-contextual-campos/49-GATES.txt
+openspec/changes/fase-49-ativacao-orientacao-contextual-campos/tasks.md
+src/__tests__/components/ui/expandable-help.test.tsx
+src/__tests__/components/ui/field-hint.test.tsx
+src/__tests__/components/ui/recommended-badge.test.tsx
+src/components/campaign/__tests__/mandatory-artwork-field.test.tsx
+src/components/campaign/mandatory-artwork-field.tsx
+src/components/flow/__tests__/campaign-brief-review.orientation.test.tsx
+src/components/flow/__tests__/campaign-brief-review.test.tsx
+src/components/flow/__tests__/campaign-input-form-price-helper.test.tsx
+src/components/flow/__tests__/campaign-input-form.orientation.test.tsx
+src/components/flow/__tests__/phase49-fences.test.ts
+src/components/flow/__tests__/store-identity-form.orientation.test.tsx
+src/components/flow/campaign-brief-review.tsx
+src/components/flow/campaign-image-upload.tsx
+src/components/flow/campaign-input-form.tsx
+src/components/flow/store-identity-form.tsx
+src/components/ui/expandable-help.tsx
+src/components/ui/field-hint.tsx
+src/components/ui/recommended-badge.tsx
+src/lib/campaign/__tests__/field-guidance.correspondence.test.ts
+src/lib/campaign/__tests__/field-guidance.test.ts
+src/lib/campaign/field-guidance.ts
+src/lib/store-onboarding/__tests__/field-guidance.correspondence.test.ts
+src/lib/store-onboarding/__tests__/field-guidance.test.ts
+src/lib/store-onboarding/field-guidance.ts
+```
+
+### Arquivos não rastreados pré-existentes (separados — NÃO pertencem à fase; NÃO commitar)
+
+- `docs/alinhamento-fase-44-temas-de-campanhas` — não rastreado **pré-existente** à F49.
+  Permanece fora da lista acima, **preservado** e **não commitado**.
