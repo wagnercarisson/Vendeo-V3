@@ -57,10 +57,10 @@
 - [x] 7.5 Testes de **feedback dinâmico de preços** para os 4 estados (dois preços, só venda, **só anterior → neutro**, sem preço), coerentes com as opções reais do seletor de intenção
 - [x] 7.6 Testes de **persistência e restauração** dos valores existentes (incluindo descrição e informações obrigatórias multi-linha) sem interferência da orientação
 - [x] 7.7 Teste de **texto obrigatório multilinha**: placeholder com múltiplas linhas e envio do valor multi-linha no mesmo contrato
-- [ ] 7.8 Testes de **categorias preservadas na revisão**: aviso ilustrativo e informações obrigatórias como itens separáveis; rótulos de preço coerentes
-- [ ] 7.9 Testes de **não-divergência microcopy ↔ comportamento**: feedback de preço × `inferIntent`/`availableOptions` (incluindo o estado "só anterior"); hint do tom de voz × `computeTabUnlock`; microcopy de identidade × consumidores reais (copy + perfil/direção visual)
-- [ ] 7.10 Teste de **fence do Diretor de Arte**: `product.description` presente no `CopyDirectorInput` e **ausente** no briefing do diretor
-- [ ] 7.11 Testes de **não-mudança** de prompts/pipeline/body/snapshot (goldens existentes + ausência de alteração em `prompts/**` e no body)
+- [x] 7.8 Testes de **categorias preservadas na revisão**: aviso ilustrativo e informações obrigatórias como itens separáveis; rótulos de preço coerentes
+- [x] 7.9 Testes de **não-divergência microcopy ↔ comportamento**: feedback de preço × `inferIntent`/`availableOptions` (incluindo o estado "só anterior"); hint do tom de voz × `computeTabUnlock`; microcopy de identidade × consumidores reais (copy + perfil/direção visual)
+- [x] 7.10 Teste de **fence do Diretor de Arte**: `product.description` presente no `CopyDirectorInput` e **ausente** no briefing do diretor
+- [x] 7.11 Testes de **não-mudança** de prompts/pipeline/body/snapshot (goldens existentes + ausência de alteração em `prompts/**` e no body)
 
 ## 8. Co-migração e regressão (D15)
 
