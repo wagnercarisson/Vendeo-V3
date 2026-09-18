@@ -117,3 +117,11 @@ None - no external service configuration required.
 ---
 *Phase: 49-ativacao-orientacao-contextual-campos*
 *Completed: 2026-09-18*
+
+## Self-Check: PASSED
+
+- FOUND: `.planning/phases/49-ativacao-orientacao-contextual-campos/49-GATES.txt`
+- FOUND: `.planning/phases/49-ativacao-orientacao-contextual-campos/49-12-SUMMARY.md`
+- FOUND: `3c864ff4` (Task 1), `00f68d5a` (Task 2), `46bcbc71` (Task 3), `d6c6e453` (tracking)
+- Pre-existing untracked `docs/alinhamento-fase-44-temas-de-campanhas` preservado e não commitado
+- Nenhum arquivo de produção modificado; diff da fase restrito à apresentação/conteúdo (43 arquivos, 0 proibidos)
