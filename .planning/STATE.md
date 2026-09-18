@@ -4,13 +4,13 @@ milestone: v1.5
 milestone_name: â€” LanÃ§amento Externo Controlado â—†
 current_phase: 49
 status: executing
-last_updated: "2026-09-18T17:55:55.728Z"
+last_updated: "2026-09-18T18:04:00.000Z"
 last_activity: 2026-09-18
 progress:
   total_phases: 12
   completed_phases: 10
   total_plans: 140
-  completed_plans: 127
+  completed_plans: 128
   percent: 83
 ---
 
@@ -20,15 +20,15 @@ progress:
 **Current phase:** 49
 **Last activity:** 2026-09-18
 
-### Phase 49 — Ativação e Orientação Contextual de Campos ◆ In Progress (1/13 plans / 5 waves)
+### Phase 49 — Ativação e Orientação Contextual de Campos ◆ In Progress (2/13 plans / 5 waves)
 
 **Planejada em 2026-09-18** a partir da base OpenSpec `openspec/changes/fase-49-ativacao-orientacao-contextual-campos/` (proposal / design D1–D15 / 7 specs / tasks). Fase de **apresentação/conteúdo apenas** — orientação contextual no próprio campo (hint inline, descrição contextual da opção, ajuda expansível, feedback dinâmico) nos formulários de loja (`/loja`) e campanha (`/campanhas/nova`, incluindo a revisão F43). 13 planos em 5 waves; plan-check **PASSED** (0 blockers, 0 warnings); cobertura 100% dos grupos 1–9 do `tasks.md` e 7/7 capabilities. **Sem** migration, prompts, gateway/modelos, schemas, snapshot, domínio, contrato HTTP ou banco; sem novas chamadas de IA ou validadores semânticos.
 
 **Artefatos:** `49-CONTEXT.md` (síntese fiel D1–D15 + verificação de código), `49-UI-SPEC.md` (consolidado do OpenSpec), `49-PATTERNS.md` (análogos exatos), `49-01-PLAN.md` .. `49-13-PLAN.md`.
 **Gates de planejamento:** requirements coverage **7/7**; decision coverage skipped (CONTEXT sem IDs `D-NN` rastreáveis — D1–D15 validados pelo plan-checker); post-planning gaps não-bloqueante (fase sem REQ-IDs no `REQUIREMENTS.md`).
 **Fonte da verdade:** `openspec/changes/fase-49-ativacao-orientacao-contextual-campos/`.
-**Execução:** 49-01 ✅ (baseline de não-mudança — `49-BASELINE.txt` com SHA_INICIAL_F49, inventário de consumidores, regra de desbloqueio e 59 hashes SHA-256; nenhum arquivo de produção alterado).
-**Próximo passo:** `/gsd-execute-phase 49` (49-02 — conteúdo de orientação em módulos puros).
+**Execução:** 49-01 ✅ (baseline de não-mudança — `49-BASELINE.txt` com SHA_INICIAL_F49, inventário de consumidores, regra de desbloqueio e 59 hashes SHA-256; nenhum arquivo de produção alterado); 49-02 ✅ (módulos puros de conteúdo `src/lib/store-onboarding/field-guidance.ts` + `src/lib/campaign/field-guidance.ts` + `priceFeedbackMessage` de 4 estados + 2 arquivos de teste puros, 13 testes verdes; nenhum arquivo de produção existente alterado).
+**Próximo passo:** `/gsd-execute-phase 49` (49-03 — primitivos de ajuda de campo e acessibilidade).
 
 ### Phase 48.1 — Laboratório Mínimo de IA ✅ Complete (14/14 plans / 9 waves)
 
@@ -343,6 +343,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-15)
 | Phase 48.1 P48-1-12 | 12min | 4 tasks | 6 files |
 | Phase 48.1 P48-1-13 | 11 min | 3 tasks | 2 files |
 | Phase 49 P01 | 8 min | 3 tasks | 1 files |
+| Phase 49 P02 | 4 min | 3 tasks | 4 files |
 
 ### Phase 19 â€” Onboarding & Estados Vazios âœ…
 
