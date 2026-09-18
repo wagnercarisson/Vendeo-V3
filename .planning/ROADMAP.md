@@ -1100,20 +1100,22 @@ Plans:
 
 **Dependencies:** F36 (painel `/loja` em abas + `computeTabUnlock`/`reason-text`), F39/F40/F41/F43 (form de campanha, `validity`/`mandatoryArtworkText`, multi-imagem, revisão do brief), F45 (fonte dos efeitos reais dos campos), F47/F48.1 (precedentes de UI-SPEC, gates e UAT). **Fonte da verdade:** `openspec/changes/fase-49-ativacao-orientacao-contextual-campos/` (proposal / design D1–D15 / 7 specs / tasks).
 
-**Plans:** 11 plans
+**Plans:** 13 plans
 
 Plans:
-- [ ] 49-01-PLAN.md — Baseline, inventário de consumidores e fences de não-mudança
-- [ ] 49-02-PLAN.md — Conteúdo de orientação em módulos puros + testes unitários
-- [ ] 49-03-PLAN.md — Primitivos de ajuda de campo e acessibilidade
-- [ ] 49-04-PLAN.md — Loja: dados fiscais, nome público, tom de voz e posicionamento
-- [ ] 49-05-PLAN.md — Campanha: descrição do produto, preços, ajuda expansível e feedback dinâmico
-- [ ] 49-06-PLAN.md — Informações obrigatórias na arte + revisão do brief separável
-- [ ] 49-07-PLAN.md — Testes de orientação, acessibilidade e persistência
-- [ ] 49-08-PLAN.md — Testes de correspondência microcopy ↔ comportamento e fences
-- [ ] 49-09-PLAN.md — Co-migração de asserções e regressão
-- [ ] 49-10-PLAN.md — 4 gates e prova final de não-mudança
-- [ ] 49-11-PLAN.md — UAT humana de compreensão (desktop/mobile) e registro
+- [ ] 49-01-PLAN.md — Baseline, inventário de consumidores e fences de não-mudança (Wave 1)
+- [ ] 49-02-PLAN.md — Conteúdo de orientação em módulos puros + testes unitários (Wave 1)
+- [ ] 49-03-PLAN.md — Primitivos de ajuda de campo e acessibilidade (Wave 1)
+- [ ] 49-04-PLAN.md — Loja: dados fiscais, nome público, tom de voz e posicionamento (Wave 2)
+- [ ] 49-05-PLAN.md — Campanha: descrição do produto, preços, ajuda expansível e feedback dinâmico (Wave 2)
+- [ ] 49-06-PLAN.md — Informações obrigatórias na arte + revisão do brief separável (Wave 2)
+- [ ] 49-07-PLAN.md — Testes de orientação, acessibilidade e persistência (Wave 3)
+- [ ] 49-08-PLAN.md — Testes de correspondência microcopy ↔ comportamento (preço/tom) (Wave 3)
+- [ ] 49-09-PLAN.md — Fences do Diretor de Arte e categorias separáveis da revisão (Wave 3)
+- [ ] 49-10-PLAN.md — Co-migração de asserções da campanha e da revisão (Wave 3)
+- [ ] 49-11-PLAN.md — Co-migração de asserções da loja (Wave 3)
+- [ ] 49-12-PLAN.md — Regressão, 4 gates e prova final de não-mudança (Wave 4)
+- [ ] 49-13-PLAN.md — UAT humana de compreensão (desktop/mobile) e registro (Wave 5)
 
 **Scope fences:** apresentação/conteúdo apenas — **proibido** alterar `prompts/**`, `src/lib/ai/**`, `src/lib/campaign/brief*.ts`, snapshot `campaign_brief_v1`, `GenerateImageRequestSchema`, `use-campaign-form.ts` (helpers/body), `use-store-form`/`draft-store`, `use-drift-detection`/`lib/drift.ts`, rotas HTTP e banco/storage; sem migration, sem novas chamadas de IA, sem validadores semânticos/regex de intenção; `src/components/campaign/validity-field.tsx` **não** é modificado (entra apenas como regressão); **não** enviar `product.description` ao Diretor de Arte; **nenhum** aviso negativo permanente; sem tooltip exclusivo; sem lista permanente de regras.
 
