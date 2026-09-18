@@ -517,7 +517,7 @@ export function MandatoryArtworkField({ value, onChange }: MandatoryArtworkField
 }
 ```
 
-**Mudanças (D10/D11):** label → "Informações obrigatórias na arte"; placeholder multi-linha (`Intensidade 8\nTorra clássica\nPeso líquido 500 g`); microcopy positiva ("Informe características ou detalhes que precisam aparecer na imagem. Use uma linha para cada item."); `rows` maior (≥ 3); `id`/`aria-describedby` para a microcopy.
+**Mudanças (D10/D11):** label → "Informações obrigatórias na arte"; placeholder multi-linha com exemplo real incluindo uma restrição (`Intensidade 8\nTorra clássica\nVenda proibida para menores`); microcopy positiva ("Informe características, detalhes ou restrições que precisam aparecer na imagem. Use preferencialmente uma linha para cada item."); `rows` maior (≥ 3); `id`/`aria-describedby` para a microcopy.
 
 **Regras a seguir:**
 - **Manter** `id="mandatoryArtworkText"`, `value`/`onChange`, `maxLength={200}` — contrato com `campaign-input-form.tsx:599-602` e o campo legado.

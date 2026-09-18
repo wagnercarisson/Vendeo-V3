@@ -99,8 +99,8 @@ A inferência de intenção (`inferIntent`), o seletor de intenção, as opçõe
 O sistema SHALL orientar o campo de texto obrigatório na arte sem escondê-lo e com exemplos positivos:
 
 - Label **"Informações obrigatórias na arte"** (alternativa "Detalhes obrigatórios na arte", decidida na UAT, é aceitável).
-- Microcopy: "Informe características ou detalhes que precisam aparecer na imagem. Use uma linha para cada item.".
-- Placeholder multi-linha com exemplo de produto (ex.: `Intensidade 8` / `Torra clássica` / `Peso líquido 500 g`).
+- Microcopy: "Informe características, detalhes ou restrições que precisam aparecer na imagem. Use preferencialmente uma linha para cada item.".
+- Placeholder multi-linha com exemplo real, incluindo uma restrição (ex.: `Intensidade 8` / `Torra clássica` / `Venda proibida para menores`).
 - O campo SHALL permanecer diretamente visível na seção de avisos (não atrás de checkbox ou fluxo secundário).
 - O sistema SHALL NOT exibir advertências negativas permanentes ("Não repita preço...", "Não repita validade...", "Não use para aviso ilustrativo...").
 

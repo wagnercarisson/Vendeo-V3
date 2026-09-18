@@ -176,12 +176,12 @@ Quatro mecanismos, cada um com um caso de uso claro:
 `DECIDIDO` (não esconder atrás de checkbox; sem mudança de prompts)
 
 - **Label:** "Informações obrigatórias na arte" (alternativa **"Detalhes obrigatórios na arte"** decidida na UAT humana, se indicar maior clareza). A chave/form state (`mandatoryArtworkTextFree`) e o transporte (`mandatoryArtworkText`) permanecem.
-- **Microcopy positiva:** *"Informe características ou detalhes que precisam aparecer na imagem. Use uma linha para cada item."*
-- **Placeholder multi-linha com exemplo de produto:**
+- **Microcopy positiva:** *"Informe características, detalhes ou restrições que precisam aparecer na imagem. Use preferencialmente uma linha para cada item."*
+- **Placeholder multi-linha com exemplo real, incluindo uma restrição:**
   ```
   Intensidade 8
   Torra clássica
-  Peso líquido 500 g
+  Venda proibida para menores
   ```
 - **Visibilidade:** o campo continua diretamente visível na seção "Avisos e texto obrigatório" — **não** é movido para fluxo secundário nem escondido atrás de checkbox.
 - **Sem advertências negativas permanentes** ("Não repita preço...", "Não repita validade...", "Não use para aviso ilustrativo...") — descartadas por risco de poluição e carga cognitiva.

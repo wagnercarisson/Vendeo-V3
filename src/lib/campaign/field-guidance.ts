@@ -56,11 +56,11 @@ export const MANDATORY_ARTWORK_LABEL = "Informações obrigatórias na arte";
 
 /** Microcopy positiva das informações obrigatórias na arte (D10). */
 export const MANDATORY_ARTWORK_HINT =
-  "Informe características ou detalhes que precisam aparecer na imagem. Use uma linha para cada item.";
+  "Informe características, detalhes ou restrições que precisam aparecer na imagem. Use preferencialmente uma linha para cada item.";
 
-/** Placeholder multi-linha com exemplo real de produto (D10). */
+/** Placeholder multi-linha com exemplo real, incluindo uma restrição (D10). */
 export const MANDATORY_ARTWORK_PLACEHOLDER =
-  "Intensidade 8\nTorra clássica\nPeso líquido 500 g";
+  "Intensidade 8\nTorra clássica\nVenda proibida para menores";
 
 /**
  * Feedback dinâmico de preço (D9) — função pura derivada dos valores

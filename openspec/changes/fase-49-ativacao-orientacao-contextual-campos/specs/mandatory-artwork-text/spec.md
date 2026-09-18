@@ -9,7 +9,7 @@
 O sistema SHALL prover, na seção "Avisos e texto obrigatório" do formulário de campanha, **dois campos distintos coexistentes**:
 
 1. **Checkbox "Exibir 'Imagem meramente ilustrativa'"** — controle real (default marcado), injeta a constante `ILLUSTRATIVE_NOTICE_TEXT` no texto obrigatório final (ver `illustrative-notice-control`).
-2. **Campo "Informações obrigatórias na arte"** (componente `MandatoryArtworkField`) — texto livre opcional, `maxLength 200`, **multi-linha**, com microcopy positiva ("Informe características ou detalhes que precisam aparecer na imagem. Use uma linha para cada item.") e placeholder com **exemplo real de produto** (ex.: `Intensidade 8` / `Torra clássica` / `Peso líquido 500 g`). A variante "Detalhes obrigatórios na arte" é aceitável se a UAT indicar maior clareza.
+2. **Campo "Informações obrigatórias na arte"** (componente `MandatoryArtworkField`) — texto livre opcional, `maxLength 200`, **multi-linha**, com microcopy positiva ("Informe características, detalhes ou restrições que precisam aparecer na imagem. Use preferencialmente uma linha para cada item.") e placeholder com **exemplo real, incluindo uma restrição** (ex.: `Intensidade 8` / `Torra clássica` / `Venda proibida para menores`). A variante "Detalhes obrigatórios na arte" é aceitável se a UAT indicar maior clareza.
 
 Os campos são distintos com intenções distintas (aviso ilustrativo fixo × texto livre obrigatório); **não se fundem na UI**. O campo de informações obrigatórias SHALL permanecer **diretamente visível** (não escondido atrás de checkbox ou fluxo secundário). O transporte normaliza ambos para o campo legado `mandatoryArtworkText` concatenado com `\n` — inalterado.
 

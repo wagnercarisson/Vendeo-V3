@@ -105,7 +105,7 @@ A F49 é uma fase de **orientação contextual de campos** — não um tour guia
 Estado intermediário "só anterior" **não** bloqueia e **não** cria validação; `inferIntent` cai no caminho sem preço (atual). **Fence:** `inferIntent`/`IntentSelector`/`availableOptions`/schemas/contratos não mudam — o feedback apenas espelha.
 
 ### D10 — Informações obrigatórias na arte: visível, positiva e multi-linha
-`DECIDIDO`. Label "Informações obrigatórias na arte" (alternativa "Detalhes obrigatórios na arte" decidida na UAT). Chave `mandatoryArtworkTextFree` e transporte `mandatoryArtworkText` mantidos. Microcopy: "Informe características ou detalhes que precisam aparecer na imagem. Use uma linha para cada item." Placeholder multi-linha (ex.: `Intensidade 8` / `Torra clássica` / `Peso líquido 500 g`). Campo **diretamente visível**; **sem** advertências negativas permanentes. Comportamento de inclusão na arte e prompts inalterados.
+`DECIDIDO`. Label "Informações obrigatórias na arte" (alternativa "Detalhes obrigatórios na arte" decidida na UAT). Chave `mandatoryArtworkTextFree` e transporte `mandatoryArtworkText` mantidos. Microcopy: "Informe características, detalhes ou restrições que precisam aparecer na imagem. Use preferencialmente uma linha para cada item." Placeholder multi-linha (ex.: `Intensidade 8` / `Torra clássica` / `Venda proibida para menores`). Campo **diretamente visível**; **sem** advertências negativas permanentes. Comportamento de inclusão na arte e prompts inalterados.
 
 ### D11 — Fronteiras canônicas entre informações
 `DECIDIDO`. Tabela de responsabilidade por área (descrição→comunicação/copy; informações obrigatórias→imagem; preços→valores comerciais; validade→período/data/limitação; aviso ilustrativo→controle próprio; selo→campo próprio). Prevenção por organização/labels/microcopy positiva/revisão estruturada — **nunca** avisos negativos ou validadores semânticos frágeis (aprendizado F44/F45).
@@ -187,7 +187,7 @@ Testes de correspondência: feedback de preço derivado da **mesma** lógica de 
   - Tom de voz hint: "Define como sua loja se comunica. O Vendeo usa essa escolha nos títulos, legendas e no clima visual das campanhas."
   - Posicionamento exemplo: "Somos uma loja de [categoria] para [público], reconhecida por [diferencial]."
   - Descrição do produto: "Descreva características, benefícios ou formas de uso que ajudam a apresentar o produto na comunicação da campanha." / placeholder `Ex.: Tênis leve para corrida e uso diário, com solado antiderrapante.`
-  - Informações obrigatórias: "Informe características ou detalhes que precisam aparecer na imagem. Use uma linha para cada item." / placeholder multi-linha `Intensidade 8` / `Torra clássica` / `Peso líquido 500 g`.
+  - Informações obrigatórias: "Informe características, detalhes ou restrições que precisam aparecer na imagem. Use preferencialmente uma linha para cada item." / placeholder multi-linha `Intensidade 8` / `Torra clássica` / `Venda proibida para menores`.
   - Ajuda de preços: "Como os preços mudam a campanha?" com as 3 regras.
 - **Descrições de tom de voz (exemplos ilustrativos, redação final na execução):** `profissional` → "Direta, confiável e sem exageros."; `moderno` → "Atual, objetiva e com energia contemporânea."; `luxuoso` → "Sofisticada, exclusiva e com senso de premium.".
 - **4 estados de preço** (dois, só venda, só anterior→neutro, nenhum) testados contra `inferIntent`/`availableOptions`.

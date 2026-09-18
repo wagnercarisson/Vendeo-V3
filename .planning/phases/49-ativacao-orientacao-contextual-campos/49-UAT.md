@@ -34,7 +34,7 @@
 | 4 | **Posicionamento × descrição curta × slogan.** Explique a diferença entre **posicionamento**, **descrição curta** e **slogan**. Qual deles é recomendado e qual é opcional? | O aprovador distingue: posicionamento = como a loja quer ser **percebida** (recomendado); descrição curta = o que vende, para quem e diferencial **factual** (recomendada); slogan = frase pública **já adotada**, **opcional** ("se sua loja já utiliza um"), **sem** selo "Recomendado". | |
 | 5 | **Descrição do produto.** Abra `/campanhas/nova` → **Produto**. Preencha a descrição com um produto real da sua loja. O que deve ser escrito nesse campo e para onde essa informação vai? | O aprovador escreve características/benefícios/uso do produto (ex.: tênis leve, solado antiderrapante) e entende que isso alimenta **a comunicação/copy da campanha** — e **não** a arte. | |
 | 6 | **Preços e intenção.** Na seção **Oferta**, experimente os 4 estados: **dois preços**, **só preço de venda**, **só preço anterior** e **nenhum preço**. Como cada estado muda o que a campanha pode ser? O que a mensagem exibida diz em cada caso? | O aprovador relaciona os estados às intenções: dois preços = **Oferta**; só venda = **Oferta ou Destaque**; nenhum = **Destaque ou Exclusividade**. No estado **só preço anterior**, lê a mensagem **neutra** "Informe o preço de venda para completar a oferta." (não "Sem preço...") e entende que não é bloqueio. | |
-| 7 | **Informações obrigatórias na arte.** Na seção **Avisos**, use "Informações obrigatórias na arte" com **vários detalhes** do produto (uma linha por item). O que acontece com esse texto? | O aprovador insere múltiplos itens em linhas separadas (ex.: `Intensidade 8`, `Torra clássica`, `Peso líquido 500 g`) e entende que são detalhes que **precisam aparecer na imagem** — campo diretamente visível, sem advertência negativa permanente. | |
+| 7 | **Informações obrigatórias na arte.** Na seção **Avisos**, use "Informações obrigatórias na arte" com **vários detalhes ou restrições** (uma linha por item). O que acontece com esse texto? | O aprovador insere múltiplos itens em linhas separadas (ex.: `Intensidade 8`, `Torra clássica`, `Venda proibida para menores`) e entende que são características, detalhes ou **restrições** que **precisam aparecer na imagem** — campo diretamente visível, sem advertência negativa permanente. | |
 | 8 | **Validade × aviso ilustrativo.** Localize onde se informa **validade** e onde se marca o **aviso ilustrativo**. Explique a diferença de finalidade entre os dois. | O aprovador identifica corretamente: **validade** trata do **período/data/limitação** da oferta; **aviso ilustrativo** é um **controle próprio** (checkbox) sobre a imagem ser meramente ilustrativa — são coisas distintas e não se misturam. | |
 | 9 | **Revisão do brief.** Siga para a **revisão do brief** antes de gerar. Identifique as categorias apresentadas: **aviso ilustrativo**, **informações obrigatórias na arte**, **validade** e **preços/oferta**. Elas estão separadas e reconhecíveis? | O aprovador reconhece as **quatro categorias como itens separados e rotulados** (não concatenados num único parágrafo) e confirma que os rótulos de preço ("Preço anterior" / "Preço de venda") estão coerentes. | |
 
@@ -122,6 +122,26 @@ Se **qualquer** cenário reprovar (FAIL):
    (`git diff --name-only <SHA_INICIAL_F49>..HEAD`) e **esta UAT** após a correção.
 5. Só então registrar o veredito final. Com gap closure, o total da fase passa a ser **N planos** (dinâmico),
    nunca um `13/13` fixo.
+
+### 5.1 Gap registrado — Cenário 7 (Informações obrigatórias na arte)
+
+**Status:** reprovação parcial na UAT humana da F49 (2026-09-18), endereçada pelo plano corretivo **`49-14-PLAN.md`** (gap closure de apresentação/conteúdo apenas).
+
+**Comportamento observado:**
+
+- O placeholder multi-linha exibia apenas exemplo de produto (`Intensidade 8` / `Torra clássica` / `Peso líquido 500 g`), sem representar uma **restrição**.
+- A microcopy não mencionava "restrições" e não usava "preferencialmente uma linha para cada item".
+
+**Comportamento esperado:**
+
+- O exemplo do placeholder deve incluir uma restrição real (ex.: `Venda proibida para menores`), pois o campo aceita características, detalhes **ou restrições** que precisam aparecer na imagem.
+- A microcopy deve citar restrições e orientar "Use preferencialmente uma linha para cada item".
+
+**Decisão editorial (4.1):** manter o label **"Informações obrigatórias na arte"** — a alternativa "Detalhes obrigatórios na arte" foi descartada porque o campo abrange características, detalhes **e** restrições. A nova redação da microcopy/placeholder foi adotada na fonte única `src/lib/campaign/field-guidance.ts`, na base OpenSpec (proposal/design/2 specs) e nos artefatos de planejamento (49-CONTEXT/49-PATTERNS).
+
+**Reexecução obrigatória:** 4 gates (`vitest run`, `typecheck`, `lint`, `build`) + prova de hashes/diff do 49-12 (`git diff --name-only <SHA_INICIAL_F49>..HEAD`) — registrados em `49-GATES.txt` (seção "Reexecução pós-gap-closure (49-14)") — **antes** da re-UAT humana (49-13 Task 2/3).
+
+**Veredito da fase:** permanece **pendente da re-UAT humana** do 49-13 (Task 2/3); esta UAT não foi reexecutada por este plano.
 
 ---
 
