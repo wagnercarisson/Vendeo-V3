@@ -229,3 +229,88 @@ retorna **43 arquivos**, e a verificação de caminhos proibidos permanece **0 v
 todos os 43 são de apresentação/conteúdo ou documentação da fase. Os hashes protegidos
 seguem com **0 divergências** e `product.description` segue ausente do briefing do Diretor
 de Arte (fence D8/D15 mantido).
+
+---
+
+## Reexecução pós-gap-closure (49-14)
+
+> Seção produzida pelo plano **49-14** (gap closure de apresentação/conteúdo). Reexecuta os
+> 4 gates e a prova de não-mudança do 49-12 após a correção da microcopy/placeholder de
+> "Informações obrigatórias na arte". Registra apenas resumos/contagens/exit codes
+> (sem env vars, tokens ou logs integrais — T-49-04).
+
+**Data de execução:** 2026-09-18
+**Branch:** feature/fase-49-orientacao-contextual-campos
+**SHA_INICIAL_F49:** `05b1a74b289afd5af0c5a96cc72c5b43c79031d0` (lido de `49-BASELINE.txt`)
+**HEAD no snapshot desta seção:** `ecdd9e26` (commit da Task 1 do 49-14)
+
+### Gates reexecutados
+
+#### 9.1 (re) — `npx vitest run` (suíte completa)
+
+**Comando:** `npx vitest run`
+**Resultado:** `Test Files 345 passed (345)` / `Tests 3660 passed | 1 skipped (3661)`
+**Exit code:** 0
+
+#### 9.2 (re) — `npm run typecheck`
+
+**Comando:** `npm run typecheck` (`tsc -p tsconfig.typecheck.json --noEmit`)
+**Resultado:** sem erros (sem saída de diagnóstico)
+**Exit code:** 0
+
+#### 9.3 (re) — `npm run lint`
+
+**Comando:** `npm run lint` (`eslint .`)
+**Resultado:** sem erros (sem saída de diagnóstico)
+**Exit code:** 0
+
+#### 9.4 (re) — `npm run build`
+
+**Comando:** `npm run build`
+**Resultado:** build de produção concluído (62/62 páginas geradas; `/campanhas/nova` e `/loja` presentes)
+**Exit code:** 0
+
+### Não-mudança (recomputada)
+
+**Método:** `Get-FileHash -Algorithm SHA256` (hash normalizado para minúsculas) sobre cada
+caminho da seção "Baseline de não-mudança" de `49-BASELINE.txt`.
+
+**Total de arquivos comparados:** 59
+**Divergências:** 0
+**Arquivos ausentes:** 0
+
+**Lista de divergências:** (nenhuma)
+
+### Caminhos proibidos (recomputado)
+
+**Comando:** `git diff --name-only <SHA_INICIAL_F49>..HEAD` com `SHA_INICIAL_F49=05b1a74b289afd5af0c5a96cc72c5b43c79031d0`
+**HEAD no snapshot:** `ecdd9e26` (Task 1 do 49-14)
+
+**Arquivos alterados desde o baseline:** 50 (43 herdados do encerramento do 49-12 + 7 artefatos
+da base documental/planejamento atualizados pelo 49-14).
+
+**Violações de caminho proibido:** 0 — nenhum caminho é de `prompts/**`, `src/lib/ai/**`,
+`src/lib/campaign/brief*.ts`, `src/lib/campaign/constants.ts`,
+`src/lib/image-generation/services/art-director-briefing.ts`,
+`src/components/flow/use-campaign-form.ts`, `src/components/campaign/validity-field.tsx`,
+`src/lib/store-onboarding/{tabs,reason-text,draft-store}.ts`,
+`src/hooks/use-onboarding-tabs.ts`, `src/hooks/use-drift-detection.ts`, `src/lib/drift.ts`,
+`src/app/api/**` ou `supabase/**`.
+
+### Fence do Diretor de Arte (reconfirmada)
+
+**Comando:** `rg -c "description" src/lib/image-generation/services/art-director-briefing.ts`
+**Resultado:** sem saída — **exit code 1** = 0 ocorrências. `product.description` continua
+**ausente** do briefing do Diretor de Arte (fence D8/D15 mantido).
+
+### Arquivos não rastreados pré-existentes (separados — NÃO pertencem à fase; NÃO commitar)
+
+- `docs/alinhamento-fase-44-temas-de-campanhas` — não rastreado **pré-existente** à F49.
+  Permanece fora das listas acima, **preservado** e **não commitado**.
+
+### Resultado
+
+- 4 gates verdes (exit 0); **59/59** hashes protegidos idênticos ao baseline (0 divergências);
+  diff desde `SHA_INICIAL_F49` sem caminhos proibidos; fence do Diretor de Arte mantido.
+- Escopo da correção restrito à apresentação/conteúdo (`src/lib/campaign/field-guidance.ts`
+  + base documental/planejamento). Pronto para a **re-UAT humana** do 49-13 (Task 2/3).
