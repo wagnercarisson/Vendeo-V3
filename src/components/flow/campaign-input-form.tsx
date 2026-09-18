@@ -21,6 +21,7 @@ import {
   DISCOUNTED_PRICE_HINT,
   PRICE_HELP_TITLE,
   PRICE_HELP_RULES,
+  priceFeedbackMessage,
 } from "@/lib/campaign/field-guidance";
 import { FieldHint } from "@/components/ui/field-hint";
 import { ExpandableHelp } from "@/components/ui/expandable-help";
@@ -355,6 +356,11 @@ function FormContent({
   const hasBadgeError = Boolean(touched.badge && fieldErrors.badge);
   const isOfferIntent = fields.campaignIntent === "offer";
 
+  // F49 (D9): estado intermediário "só preço anterior" — usado apenas para o
+  // tom neutro (amber) do feedback; não cria validação nem bloqueia o avanço.
+  const estadoSoPrecoAnterior =
+    fields.originalPriceCents > 0 && !((fields.discountedPriceCents ?? 0) > 0);
+
   const campaignCost = costs?.campaign_generation;
   const costUnavailable = costStatus !== "loaded";
   const costDisabled = costStatus === "loaded" && campaignCost !== undefined && !campaignCost.enabled;
@@ -580,6 +586,15 @@ function FormContent({
           </p>
         )}
       </div>
+
+      {/* F49 (D9): feedback dinâmico somente leitura — espelha a classificação
+          real de `inferIntent`/`availableOptions`, sem validação nova. */}
+      <FieldHint
+        id={priceFeedbackId}
+        tone={estadoSoPrecoAnterior ? "amber" : "secondary"}
+      >
+        {priceFeedbackMessage(fields.originalPriceCents, fields.discountedPriceCents)}
+      </FieldHint>
 
       <div>
         <label
