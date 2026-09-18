@@ -18,6 +18,10 @@ import {
   STORE_NAME_HINT,
   FISCAL_SECTION_LABEL,
   FISCAL_SECTION_HELPER,
+  TONE_OF_VOICE_HINT,
+  TONE_OF_VOICE_COMPLEMENTS_HINT,
+  TONE_OF_VOICE_DESCRIPTIONS,
+  type StoreToneOfVoice,
 } from "@/lib/store-onboarding/field-guidance";
 import { FieldHint } from "@/components/ui/field-hint";
 
@@ -101,6 +105,10 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
   const nameErrorId = `${nameHelpBase}-error`;
   const segmentHelpBase = useId();
   const segmentErrorId = `${segmentHelpBase}-error`;
+  const toneHelpBase = useId();
+  const toneHintId = `${toneHelpBase}-hint`;
+  const toneComplementsId = `${toneHelpBase}-complements`;
+  const toneDescriptionId = `${toneHelpBase}-description`;
 
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Partial<Record<string, boolean>>>({});
@@ -1980,12 +1988,17 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
                     <div className="space-y-4">
                       <div>
                         <label htmlFor="tone_of_voice" className={labelClass}>Tom de Voz</label>
-                        <select id="tone_of_voice" value={formData.tone_of_voice} onChange={(e) => setField("tone_of_voice", e.target.value)} className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-body transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20">
+                        <select id="tone_of_voice" value={formData.tone_of_voice} onChange={(e) => setField("tone_of_voice", e.target.value)} aria-describedby={[toneHintId, toneComplementsId, formData.tone_of_voice !== "" ? toneDescriptionId : null].filter(Boolean).join(" ")} className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-body transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20">
                           <option value="">Selecione</option>
                           {TONE_OF_VOICE_OPTIONS.map((opt) => (
                             <option key={opt.value} value={opt.value}>{opt.label}</option>
                           ))}
                         </select>
+                        <FieldHint id={toneHintId}>{TONE_OF_VOICE_HINT}</FieldHint>
+                        <FieldHint id={toneComplementsId}>{TONE_OF_VOICE_COMPLEMENTS_HINT}</FieldHint>
+                        {formData.tone_of_voice !== "" && (
+                          <FieldHint id={toneDescriptionId}>{TONE_OF_VOICE_DESCRIPTIONS[formData.tone_of_voice as StoreToneOfVoice]}</FieldHint>
+                        )}
                       </div>
                       <div>
                         <label htmlFor="positioning" className={labelClass}>Posicionamento</label>
