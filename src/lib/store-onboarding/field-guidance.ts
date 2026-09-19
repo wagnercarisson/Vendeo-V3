@@ -13,9 +13,9 @@
  */
 
 /**
- * Tom de voz da loja — exatamente as 8 opções reais de `TONE_OF_VOICE_OPTIONS`
- * em `store-identity-form.tsx`. União literal: uma chave inválida falha em
- * `tsc` (T-49-02, Tampering).
+ * Tom de voz da loja — exatamente as 9 opções reais de `TONE_OF_VOICE_OPTIONS`
+ * (declarada neste mesmo módulo, fonte única). União literal: uma chave inválida
+ * falha em `tsc` (T-49-02, Tampering).
  */
 export type StoreToneOfVoice =
   | "profissional"

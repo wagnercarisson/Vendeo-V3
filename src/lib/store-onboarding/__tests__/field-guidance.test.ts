@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   TONE_OF_VOICE_DESCRIPTIONS,
+  TONE_OF_VOICE_OPTIONS,
   TONE_OF_VOICE_HINT,
   TONE_OF_VOICE_COMPLEMENTS_HINT,
   STORE_NAME_HINT,
@@ -18,7 +19,7 @@ import {
 } from "../field-guidance";
 
 describe("store field-guidance — conteúdo puro (F49, D3/D4/D5/D6/D7/D14)", () => {
-  it("tem exatamente as 8 descrições de tom de voz, todas não vazias", () => {
+  it("tem exatamente as 9 descrições de tom de voz, todas não vazias", () => {
     const keys = Object.keys(TONE_OF_VOICE_DESCRIPTIONS).sort();
     expect(keys).toEqual(
       [
@@ -28,6 +29,7 @@ describe("store field-guidance — conteúdo puro (F49, D3/D4/D5/D6/D7/D14)", ()
         "jovem",
         "luxuoso",
         "moderno",
+        "popular",
         "profissional",
         "tradicional",
       ].sort(),
@@ -37,7 +39,17 @@ describe("store field-guidance — conteúdo puro (F49, D3/D4/D5/D6/D7/D14)", ()
     }
   });
 
-  it("descreve profissional, moderno e luxuoso com as frases canônicas", () => {
+  it("opções, descrições e união tipada permanecem sincronizadas (9 e mesmo conjunto)", () => {
+    const optionValues = TONE_OF_VOICE_OPTIONS.map((o) => o.value).sort();
+    const descriptionKeys = Object.keys(TONE_OF_VOICE_DESCRIPTIONS).sort();
+    expect(optionValues).toEqual(descriptionKeys);
+    expect(optionValues).toHaveLength(9);
+    for (const option of TONE_OF_VOICE_OPTIONS) {
+      expect(option.label.trim().length).toBeGreaterThan(0);
+    }
+  });
+
+  it("descreve profissional, moderno, luxuoso e popular com as frases canônicas", () => {
     expect(TONE_OF_VOICE_DESCRIPTIONS.profissional).toBe(
       "Direta, confiável e sem exageros.",
     );
@@ -46,6 +58,9 @@ describe("store field-guidance — conteúdo puro (F49, D3/D4/D5/D6/D7/D14)", ()
     );
     expect(TONE_OF_VOICE_DESCRIPTIONS.luxuoso).toBe(
       "Sofisticada, exclusiva e com senso de premium.",
+    );
+    expect(TONE_OF_VOICE_DESCRIPTIONS.popular).toBe(
+      "Simples, acessível e próxima do dia a dia.",
     );
   });
 

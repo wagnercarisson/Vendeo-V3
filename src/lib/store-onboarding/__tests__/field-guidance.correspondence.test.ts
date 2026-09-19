@@ -32,7 +32,16 @@ describe("store field-guidance — correspondência com computeTabUnlock (F49, D
     ).toEqual({ unlocked: true });
   });
 
-  it("cobre exatamente as 8 opções reais de tom de voz", () => {
+  it("popular (não vazio) satisfaz a regra needs_tone_of_voice", () => {
+    expect(
+      computeTabUnlock("direcao-visual", {
+        ...BASE_CONTEXT,
+        toneOfVoice: "popular",
+      }),
+    ).toEqual({ unlocked: true });
+  });
+
+  it("cobre exatamente as 9 opções reais de tom de voz", () => {
     expect(Object.keys(TONE_OF_VOICE_DESCRIPTIONS).sort()).toEqual(
       [
         "acolhedor",
@@ -41,6 +50,7 @@ describe("store field-guidance — correspondência com computeTabUnlock (F49, D
         "jovem",
         "luxuoso",
         "moderno",
+        "popular",
         "profissional",
         "tradicional",
       ].sort(),

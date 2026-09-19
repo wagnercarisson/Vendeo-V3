@@ -11,12 +11,13 @@ import "@testing-library/jest-dom/vitest";
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import type { Store } from "@/lib/store";
 import {
   STORE_NAME_HINT,
   FISCAL_SECTION_LABEL,
   TONE_OF_VOICE_HINT,
+  TONE_OF_VOICE_COMPLEMENTS_HINT,
   TONE_OF_VOICE_DESCRIPTIONS,
   POSITIONING_LABEL,
   POSITIONING_PLACEHOLDER,
@@ -246,35 +247,75 @@ describe("StoreIdentityForm — orientação contextual (F49)", () => {
     expect(sloganText).toContain(OPTIONAL_LABEL);
   });
 
-  it("7.3 sem seleção não renderiza descrição; com seleção renderiza a descrição da opção (8 opções)", () => {
+  it("7.3 aberto exibe 9 opções com descrição; fechado mostra só o label e a descrição não persiste", () => {
     renderForm("posicionamento");
 
     const entries = Object.entries(TONE_OF_VOICE_DESCRIPTIONS);
-    expect(entries).toHaveLength(8);
+    expect(entries).toHaveLength(9);
 
-    // Sem seleção → nenhuma descrição de opção.
+    const combobox = document.getElementById("tone_of_voice") as HTMLInputElement;
+
+    // Fechado: nenhuma descrição de opção é visível (existe apenas dentro da
+    // listbox oculta — não permanece abaixo do campo).
     for (const [, description] of entries) {
-      expect(screen.queryByText(description)).toBeNull();
+      expect(screen.getByText(description)).not.toBeVisible();
     }
 
-    const select = document.getElementById("tone_of_voice") as HTMLSelectElement;
-
-    // Itera as 8 opções a partir do próprio mapa importado.
+    // Abre a listbox e confirma as 9 opções com label + descrição canônica.
+    fireEvent.click(combobox);
+    const listbox = screen.getByRole("listbox");
+    const options = within(listbox).getAllByRole("option");
+    expect(options).toHaveLength(9);
     for (const [tone, description] of entries) {
-      fireEvent.change(select, { target: { value: tone } });
-      const descriptionEl = screen.getByText(description);
-      expect(descriptionEl).toBeInTheDocument();
-
-      // O id de descrição contextual passa a integrar o aria-describedby.
-      const ids = describedByIds(select);
-      expect(ids).toContain(descriptionEl.id);
+      const option = within(listbox).getByRole("option", {
+        name: new RegExp(escapeRegExp(description)),
+      });
+      expect(option).toBeInTheDocument();
+      expect(option).toHaveTextContent(description);
     }
 
-    // Volta para "sem seleção" → descrição desaparece.
-    fireEvent.change(select, { target: { value: "" } });
-    for (const [, description] of entries) {
-      expect(screen.queryByText(description)).toBeNull();
-    }
+    // Seleciona "popular": o trigger fechado mostra somente o label.
+    fireEvent.click(
+      within(listbox).getByRole("option", { name: /Popular/ }),
+    );
+    expect(combobox).toHaveValue("Popular");
+
+    // A descrição da opção selecionada NÃO permanece visível abaixo do campo
+    // nem integra o aria-describedby do combobox.
+    expect(screen.getByText(TONE_OF_VOICE_DESCRIPTIONS.popular)).not.toBeVisible();
+    const described = describedByIds(combobox).map(
+      (id) => document.getElementById(id)?.textContent ?? "",
+    );
+    expect(described).toContain(TONE_OF_VOICE_HINT);
+    expect(described).toContain(TONE_OF_VOICE_COMPLEMENTS_HINT);
+    expect(described).not.toContain(TONE_OF_VOICE_DESCRIPTIONS.popular);
+
+    // Reabertura identifica corretamente a opção selecionada.
+    fireEvent.click(combobox);
+    const reopened = screen.getByRole("listbox");
+    expect(
+      within(reopened).getByRole("option", { name: /Popular/ }),
+    ).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("7.3b Limpar seleção restaura o valor vazio e some quando não há seleção", () => {
+    renderForm("posicionamento");
+
+    const combobox = document.getElementById("tone_of_voice") as HTMLInputElement;
+    expect(screen.queryByRole("button", { name: "Limpar seleção" })).toBeNull();
+
+    fireEvent.click(combobox);
+    fireEvent.click(
+      within(screen.getByRole("listbox")).getByRole("option", { name: /Popular/ }),
+    );
+    expect(combobox).toHaveValue("Popular");
+
+    const clear = screen.getByRole("button", { name: "Limpar seleção" });
+    expect(clear).toBeInTheDocument();
+
+    fireEvent.click(clear);
+    expect(combobox).toHaveValue("");
+    expect(screen.queryByRole("button", { name: "Limpar seleção" })).toBeNull();
   });
 
   it("7.4 ajuda expansível do posicionamento: colapsada por padrão, abre/fecha com aria-expanded e região oculta via hidden", () => {

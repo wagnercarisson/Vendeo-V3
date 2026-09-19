@@ -20,7 +20,6 @@ import {
   FISCAL_SECTION_HELPER,
   TONE_OF_VOICE_HINT,
   TONE_OF_VOICE_COMPLEMENTS_HINT,
-  TONE_OF_VOICE_DESCRIPTIONS,
   POSITIONING_LABEL,
   POSITIONING_SECONDARY_LABEL,
   POSITIONING_HINT,
@@ -35,6 +34,7 @@ import {
 import { FieldHint } from "@/components/ui/field-hint";
 import { ExpandableHelp } from "@/components/ui/expandable-help";
 import { RecommendedBadge } from "@/components/ui/recommended-badge";
+import { ToneOfVoiceSelect } from "./tone-of-voice-select";
 
 // DriftDiscreetButton import removed — replaced by inline post-dismiss links
 import { DriftDecisionModal } from "./drift-decision-modal";
@@ -54,17 +54,6 @@ import type { StoreReadinessResult } from "@/lib/store-readiness";
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
 const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
 const MAX_LOGO_SIZE = 5 * 1024 * 1024;
-
-const TONE_OF_VOICE_OPTIONS = [
-  { value: 'profissional', label: 'Profissional' },
-  { value: 'moderno', label: 'Moderno' },
-  { value: 'elegante', label: 'Elegante' },
-  { value: 'divertido', label: 'Divertido' },
-  { value: 'acolhedor', label: 'Acolhedor' },
-  { value: 'jovem', label: 'Jovem' },
-  { value: 'tradicional', label: 'Tradicional' },
-  { value: 'luxuoso', label: 'Luxuoso' },
-] as const;
 
 type FieldErrors = Partial<Record<string, string>>;
 
@@ -119,15 +108,8 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
   const toneHelpBase = useId();
   const toneHintId = `${toneHelpBase}-hint`;
   const toneComplementsId = `${toneHelpBase}-complements`;
-  const toneDescriptionId = `${toneHelpBase}-description`;
   // F49 (D4/ME-03): id do helper fiscal derivado de `useId` (instance-safe).
   const fiscalHelperId = useId();
-  // F49 (D5/ME-02): resolução cast-free do tom de voz — um valor legado/desconhecido
-  // não gera descrição nem id órfão no `aria-describedby`.
-  const toneDescription =
-    Object.entries(TONE_OF_VOICE_DESCRIPTIONS).find(
-      ([key]) => key === formData.tone_of_voice,
-    )?.[1] ?? null;
   const positioningHelpBase = useId();
   const positioningHintId = `${positioningHelpBase}-hint`;
   const positioningIdentityId = `${positioningHelpBase}-identity`;
@@ -2013,18 +1995,26 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
 
                     <div className="space-y-4">
                       <div>
-                        <label htmlFor="tone_of_voice" className={labelClass}>Tom de Voz</label>
-                        <select id="tone_of_voice" value={formData.tone_of_voice} onChange={(e) => setField("tone_of_voice", e.target.value)} aria-describedby={[toneHintId, toneComplementsId, toneDescription ? toneDescriptionId : null].filter(Boolean).join(" ")} className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-text-primary text-sm font-body transition-colors duration-200 hover:border-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/20">
-                          <option value="">Selecione</option>
-                          {TONE_OF_VOICE_OPTIONS.map((opt) => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                          ))}
-                        </select>
+                        <div className="mb-2 flex items-center justify-between">
+                          <label htmlFor="tone_of_voice" className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider">Tom de Voz</label>
+                          {formData.tone_of_voice !== "" && (
+                            <button
+                              type="button"
+                              onClick={() => setField("tone_of_voice", "")}
+                              className="min-h-[44px] text-xs font-body text-text-muted hover:text-text-primary transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue/20"
+                            >
+                              Limpar seleção
+                            </button>
+                          )}
+                        </div>
+                        <ToneOfVoiceSelect
+                          value={formData.tone_of_voice}
+                          onChange={(v) => setField("tone_of_voice", v)}
+                          inputId="tone_of_voice"
+                          ariaDescribedby={[toneHintId, toneComplementsId].join(" ")}
+                        />
                         <FieldHint id={toneHintId}>{TONE_OF_VOICE_HINT}</FieldHint>
                         <FieldHint id={toneComplementsId}>{TONE_OF_VOICE_COMPLEMENTS_HINT}</FieldHint>
-                        {toneDescription && (
-                          <FieldHint id={toneDescriptionId}>{toneDescription}</FieldHint>
-                        )}
                       </div>
                       <div>
                         <label htmlFor="positioning" className={labelClass}>
