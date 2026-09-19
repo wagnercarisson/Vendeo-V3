@@ -202,7 +202,7 @@ The `/campanhas/nova` page SHALL:
 
 > **Delta F36 (D8):** O campo CNPJ SHALL deixar de ser obrigatório na criação — vira **opcional** (vazio = loja draft, pendência fiscal). Ao salvar sem CNPJ, a loja SHALL ser criada em modo draft com aviso de fiscal pendente; o campo SHALL continuar no painel Dados com consulta assíncrona e demais regras da F33. O CNPJ SHALL bloquear apenas geração/crédito (F34/F32/F33), nunca a navegação do onboarding.
 
-> **Delta F49 (D3/D4/D5/D6/D7):** os campos ganham rótulos, hints, descrições contextuais e ajuda expansível; os **dados fiscais** (CNPJ/Razão Social/Nome Fantasia) passam a ser apresentados como subseção de dados cadastrais/oficiais, separada do `Nome da Loja` (identidade pública). O `Tom de Voz` é explicitado como campo crítico para a Direção Visual (regra real `needs_tone_of_voice` preservada) e ganha descrição contextual por opção. `Posicionamento` e `Descrição Curta` são marcados como **recomendados**; `Slogan` permanece **opcional** ("se sua loja já utiliza um"), sem "Recomendado". Nenhum comportamento de validação, auto-save, draft ou drift muda. **Obrigatório aqui significa o marcador `*` + a validação controlada atual + `aria-required` — sem atributo nativo `required`.**
+> **Delta F49 (D3/D4/D5/D6/D7):** os campos ganham rótulos, hints, descrições contextuais e ajuda expansível; os **dados fiscais** (CNPJ/Razão Social/Nome Fantasia) passam a ser apresentados como subseção de dados cadastrais/oficiais, separada do `Nome da Loja` (identidade pública). O `Tom de Voz` é explicitado como campo crítico para a Direção Visual (regra real `needs_tone_of_voice` preservada) e ganha descrição por opção na superfície de escolha, com ação de "Limpar seleção". `Posicionamento` e `Descrição Curta` são marcados como **recomendados**; `Slogan` permanece **opcional** ("se sua loja já utiliza um"), sem "Recomendado". Nenhum comportamento de validação, auto-save, draft ou drift muda. **Obrigatório aqui significa o marcador `*` + a validação controlada atual + `aria-required` — sem atributo nativo `required`.**
 
 The system SHALL render the following form fields in the store identity form:
 
@@ -218,7 +218,7 @@ The system SHALL render the following form fields in the store identity form:
 - **Cidade**: optional text input
 - **Estado**: optional dropdown select using `BRAZILIAN_STATES` from `src/lib/constants.ts`
 - → **Subsegmento**: conditional dropdown with 3 modes (dropdown rico, dropdown travado, campo aberto)
-- → **Tom de Voz**: dropdown/select (8 opções) — **crítico** para liberar a Direção Visual (`needs_tone_of_voice`), com hint explicando o que orienta e descrição contextual da opção selecionada
+- → **Tom de Voz**: seletor descritivo acessível (9 opções: profissional, popular, moderno, elegante, divertido, acolhedor, jovem, tradicional, luxuoso) — **crítico** para liberar a Direção Visual (`needs_tone_of_voice`), com hint explicando o que orienta; cada opção apresenta label + descrição na superfície de escolha, o trigger fechado mantém somente o label e há ação "Limpar seleção" para voltar ao vazio
 - → **Posicionamento**: campo recomendado, com label "Como você quer que sua loja seja percebida?" (termo secundário "Posicionamento da marca"), hint de público/proposta/diferencial e exemplo em ajuda expansível
 - → **Descrição Curta**: textarea recomendada, com microcopy do que a loja vende/para quem/diferencial factual
 - → **Slogan**: campo **opcional**, com microcopy de frase pública já adotada pela loja ("se sua loja já utiliza um"); **não** é marcado como recomendado
@@ -279,7 +279,8 @@ The segment dropdown options SHALL display human-readable labels (not kebab-case
 
 - **WHEN** o campo Tom de Voz é renderizado
 - **THEN** exibe hint sobre o que a escolha orienta (títulos, legendas, clima visual) sem substituir segmento/subsegmento
-- **AND** ao selecionar uma das 8 opções, exibe a descrição contextual correspondente
+- **AND** ao abrir o seletor, cada uma das 9 opções apresenta label e descrição na superfície de escolha
+- **AND** após a seleção, o trigger fechado exibe somente o label e a descrição não permanece abaixo do campo
 
 #### Scenario: Posicionamento com label compreensível e exemplo expansível
 

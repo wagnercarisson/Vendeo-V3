@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Padrão reutilizável e mínimo de orientação contextual no próprio campo/seção: hint inline, descrição contextual da opção selecionada, ajuda expansível (progressive disclosure) e feedback dinâmico — com associação acessível campo↔ajuda, diferenciação obrigatório/recomendado/opcional, estados desktop/mobile e as proibições de poluição, tooltip-exclusivo e avisos negativos.
+Padrão reutilizável e mínimo de orientação contextual no próprio campo/seção: hint inline, descrição apresentada na superfície de escolha, ajuda expansível (progressive disclosure) e feedback dinâmico — com associação acessível campo↔ajuda, diferenciação obrigatório/recomendado/opcional, estados desktop/mobile e as proibições de poluição, tooltip-exclusivo e avisos negativos.
 
 > Added by `fase-49-ativacao-orientacao-contextual-campos` (D2/D3/D13).
 
@@ -13,7 +13,7 @@ Padrão reutilizável e mínimo de orientação contextual no próprio campo/se�
 O sistema SHALL prover orientação contextual **no próprio campo ou seção**, por composição de quatro mecanismos mínimos (D2), sem criar um componente genérico complexo de formulário:
 
 1. **Hint inline curto** — texto auxiliar sempre visível, associado ao campo, para explicações de uma linha.
-2. **Descrição contextual da opção selecionada** — para selects cujo valor escolhido merece uma frase própria (ex.: tom de voz), exibida quando há seleção.
+2. **Descrição na superfície de escolha** — para seletores cujo valor escolhido merece uma frase própria (ex.: tom de voz), apresentada junto de cada opção na superfície de escolha; o trigger fechado mantém somente o label.
 3. **Ajuda expansível (progressive disclosure)** — disclosure acionável para exemplos longos ou regras combinatórias, **colapsado por padrão** (não ocupa altura permanente).
 4. **Feedback dinâmico** — mensagem derivada dos valores preenchidos, por função pura, refletindo o comportamento real do sistema.
 
@@ -25,11 +25,12 @@ A orientação SHALL explicar **positivamente** o que informar e como a informa�
 - **THEN** o hint inline correspondente está visível sem interação
 - **AND** o hint está associado ao campo por `aria-describedby` com id estável gerado por `useId`
 
-#### Scenario: Descrição contextual da opção selecionada
+#### Scenario: Descrição apresentada na superfície de escolha
 
-- **WHEN** um select com orientação contextual tem uma opção selecionada
-- **THEN** a descrição correspondente à opção selecionada é exibida
-- **AND** quando não há seleção, nenhuma descrição de opção é exibida
+- **WHEN** um seletor com orientação contextual é aberto
+- **THEN** cada opção apresenta sua descrição junto do label na superfície de escolha
+- **AND** após a seleção, o trigger fechado mantém somente o label da opção escolhida
+- **AND** a descrição da opção selecionada não permanece exibida abaixo do campo
 
 #### Scenario: Ajuda expansível colapsada por padrão
 

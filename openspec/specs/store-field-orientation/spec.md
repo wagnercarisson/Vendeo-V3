@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Conteúdo de orientação dos campos de identidade da loja em `/loja`: dados fiscais × nome público, tom de voz (crítico) com descrição por opção, posicionamento (label/hint/exemplo) e a distinção posicionamento × descrição curta × slogan — mapeado aos consumidores reais e à regra real de desbloqueio da Direção Visual.
+Conteúdo de orientação dos campos de identidade da loja em `/loja`: dados fiscais × nome público, tom de voz (crítico) com descrição por opção na superfície de escolha, posicionamento (label/hint/exemplo) e a distinção posicionamento × descrição curta × slogan — mapeado aos consumidores reais e à regra real de desbloqueio da Direção Visual.
 
 > Added by `fase-49-ativacao-orientacao-contextual-campos` (D3/D4/D5/D6/D7/D14).
 
@@ -39,11 +39,11 @@ O sistema SHALL separar conceitualmente e visualmente, na aba Dados, os **dados 
 - **THEN** o modo draft e o aviso de fiscal pendente permanecem inalterados
 - **AND** nenhum bloqueio novo de navegação é introduzido
 
-### Requirement: Tom de voz como campo crítico com descrição contextual
+### Requirement: Tom de voz como campo crítico com descrição na superfície de escolha
 
 O sistema SHALL tratar `Tom de Voz` como campo crítico e necessário para avançar à Direção Visual, refletindo a regra já existente (`computeTabUnlock` → `needs_tone_of_voice`), e SHALL explicar positivamente o que ele orienta: títulos, legendas e chamadas; personalidade da marca; clima da direção visual; energia, linguagem e tratamento criativo — **sem substituir** segmento/subsegmento como base da identidade.
 
-Para cada uma das 8 opções existentes (profissional, moderno, elegante, divertido, acolhedor, jovem, tradicional, luxuoso), o sistema SHALL exibir uma **descrição contextual curta** quando a opção estiver selecionada.
+Para cada uma das 9 opções existentes (profissional, popular, moderno, elegante, divertido, acolhedor, jovem, tradicional, luxuoso), o sistema SHALL exibir uma **descrição contextual curta** na superfície de escolha (junto do label de cada opção). O trigger fechado mantém **somente** o label da opção selecionada, e o sistema SHALL disponibilizar uma ação de **"Limpar seleção"** para retornar ao valor vazio.
 
 #### Scenario: Hint do tom de voz explica o uso
 
@@ -51,10 +51,12 @@ Para cada uma das 8 opções existentes (profissional, moderno, elegante, divert
 - **THEN** o hint inline explica que a escolha orienta títulos, legendas e o clima visual das campanhas
 - **AND** deixa claro que complementa (não substitui) segmento e subsegmento como base da identidade
 
-#### Scenario: Descrição contextual por opção selecionada
+#### Scenario: Descrição na superfície de escolha por opção
 
-- **WHEN** o usuário seleciona uma das 8 opções de tom de voz
-- **THEN** a descrição curta correspondente à opção selecionada é exibida
+- **WHEN** o usuário abre o seletor de tom de voz
+- **THEN** cada uma das 9 opções apresenta seu label e a descrição curta correspondente na superfície de escolha
+- **AND** após a seleção, o trigger fechado exibe somente o label da opção escolhida
+- **AND** a descrição da opção selecionada não permanece exibida abaixo do campo
 - **AND** a descrição é positiva e descreve a personalidade/energia da escolha
 
 #### Scenario: Regra real de desbloqueio refletida (não alterada)
