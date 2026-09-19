@@ -19,6 +19,7 @@
  */
 export type StoreToneOfVoice =
   | "profissional"
+  | "popular"
   | "moderno"
   | "elegante"
   | "divertido"
@@ -52,6 +53,7 @@ export const TONE_OF_VOICE_COMPLEMENTS_HINT =
 /** Descrição contextual curta e positiva por opção de tom de voz (D5). */
 export const TONE_OF_VOICE_DESCRIPTIONS: Record<StoreToneOfVoice, string> = {
   profissional: "Direta, confiável e sem exageros.",
+  popular: "Simples, acessível e próxima do dia a dia.",
   moderno: "Atual, objetiva e com energia contemporânea.",
   elegante: "Refinada, equilibrada e com atenção aos detalhes.",
   divertido: "Leve, descontraída e com bom humor.",
@@ -60,6 +62,26 @@ export const TONE_OF_VOICE_DESCRIPTIONS: Record<StoreToneOfVoice, string> = {
   tradicional: "Sólida, experiente e fiel às suas origens.",
   luxuoso: "Sofisticada, exclusiva e com senso de premium.",
 };
+
+/**
+ * Fonte única das 9 opções de tom de voz (`value` + `label`), tipada pela união
+ * `StoreToneOfVoice`. A nona opção (`popular`) é nova (F49 pós-lançamento) e
+ * aguarda validação editorial na UAT — as 8 anteriores permanecem intactas.
+ */
+export const TONE_OF_VOICE_OPTIONS: readonly {
+  value: StoreToneOfVoice;
+  label: string;
+}[] = [
+  { value: "profissional", label: "Profissional" },
+  { value: "popular", label: "Popular" },
+  { value: "moderno", label: "Moderno" },
+  { value: "elegante", label: "Elegante" },
+  { value: "divertido", label: "Divertido" },
+  { value: "acolhedor", label: "Acolhedor" },
+  { value: "jovem", label: "Jovem" },
+  { value: "tradicional", label: "Tradicional" },
+  { value: "luxuoso", label: "Luxuoso" },
+];
 
 /** Label principal do posicionamento (D6). */
 export const POSITIONING_LABEL = "Como você quer que sua loja seja percebida?";
