@@ -300,11 +300,11 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 
 ## Phase 50 — Demonstração Gratuita e Validade dos Créditos
 
-**Status:** ◆ Planning — 17 plans / 10 waves compostos a partir da base OpenSpec (aguardando revisão humana)
+**Status:** ◆ Executando — 1/17 plans concluídos (50-01 ✅)
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
-| 50-01 | 1 | ○ | Trackings D1 + baseline + inventário de consumidores de `balance` |
+| 50-01 | 1 | ✅ | Trackings D1 + baseline + inventário de consumidores de `balance` |
 | 50-02 | 2 | ○ | Migration estrutural (demo columns/cycle/contrib, tipos, benefit_type demo, tabelas) — sem docs legais |
 | 50-03 | 3 | ○ | RPCs SQL (`grant_demo_credits`+flag, `materialize_demo_expiration`, `try_grant_demo_entitlement`, rewrite reserve/refund/grant) |
 | 50-04 | 4 | ○ | Serviços (credit-service disponível/demo, `checkDemoEligibility`, launch-config, labels/types) |
