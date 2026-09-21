@@ -463,7 +463,7 @@ BEGIN
     WHERE store_id = p_store_id AND idempotency_key = p_idempotency_key;
 
     IF FOUND THEN
-      IF (SELECT type FROM public.credit_transactions WHERE id = existing_tx_id) IN ('bonus_onboarding', 'bonus_monthly', 'admin_grant', 'purchase', 'demo') THEN
+      IF (SELECT (type = p_type AND amount = p_amount) FROM public.credit_transactions WHERE id = existing_tx_id) THEN
         RETURN existing_tx_id;
       ELSE
         RAISE EXCEPTION 'idempotency_conflict';
@@ -551,26 +551,29 @@ DECLARE
   v_demo_cycle_id UUID;
   v_origin UUID;
   v_contributing UUID[];
+  v_bonus INTEGER;
+  v_purchased INTEGER;
   v_balance_before INTEGER;
   v_balance_after INTEGER;
+  v_available INTEGER;
   v_tx_id UUID;
 BEGIN
-  SELECT demo_balance, demo_expires_at, demo_cycle_id, origin_demo_grant_tx_id, demo_contributing_tx_ids, balance
-  INTO v_demo_balance, v_demo_expires_at, v_demo_cycle_id, v_origin, v_contributing, v_balance_before
+  SELECT demo_balance, demo_expires_at, demo_cycle_id, origin_demo_grant_tx_id, demo_contributing_tx_ids, bonus_balance, purchased_balance, balance
+  INTO v_demo_balance, v_demo_expires_at, v_demo_cycle_id, v_origin, v_contributing, v_bonus, v_purchased, v_balance_before
   FROM public.credit_balances
   WHERE store_id = p_store_id
   FOR UPDATE;
 
   IF v_demo_balance IS NULL THEN
-    RETURN jsonb_build_object('expired', false, 'reason', 'no_balance_row');
+    RETURN jsonb_build_object('expired', false, 'reason', 'no_balance_row', 'available', 0);
   END IF;
 
   IF v_demo_balance = 0 THEN
-    RETURN jsonb_build_object('expired', false, 'reason', 'no_demo_balance');
+    RETURN jsonb_build_object('expired', false, 'reason', 'no_demo_balance', 'available', v_bonus + v_purchased);
   END IF;
 
   IF v_demo_expires_at IS NULL OR v_demo_expires_at > now() THEN
-    RETURN jsonb_build_object('expired', false, 'reason', 'not_expired');
+    RETURN jsonb_build_object('expired', false, 'reason', 'not_expired', 'available', v_demo_balance + v_bonus + v_purchased);
   END IF;
 
   v_balance_after := v_balance_before - v_demo_balance;
@@ -599,7 +602,7 @@ BEGIN
       demo_contributing_tx_ids = '{}'::uuid[]
   WHERE store_id = p_store_id;
 
-  RETURN jsonb_build_object('expired', true, 'expiration_tx_id', v_tx_id);
+  RETURN jsonb_build_object('expired', true, 'expiration_tx_id', v_tx_id, 'available', v_bonus + v_purchased);
 END;
 $$;
 
@@ -1275,6 +1278,136 @@ GRANT EXECUTE ON FUNCTION public.create_store_with_initial_grant(TEXT, TEXT, UUI
 -- =============================================================================
 -- REVERT (ordem reversa da criação)
 -- =============================================================================
+
+-- -----------------------------------------------------------------------------
+-- 7. RPCs — REVERT (remover RPCs novas + restaurar versões anteriores)
+-- -----------------------------------------------------------------------------
+-- DROP FUNCTION IF EXISTS public.grant_demo_credits(UUID, TEXT, INTEGER, BOOLEAN, INTEGER, TEXT, UUID);
+-- DROP FUNCTION IF EXISTS public.try_grant_demo_entitlement(UUID, TEXT);
+-- DROP FUNCTION IF EXISTS public.materialize_demo_expiration(UUID);
+
+-- Restaurar grant_credits (6-param, sem demo) — ver 20260722000002_creditos_mensais_automaticos.sql (bloco 10):
+-- DROP FUNCTION IF EXISTS public.grant_credits(UUID, INTEGER, TEXT, TEXT, JSONB, TEXT, TIMESTAMPTZ);
+-- CREATE OR REPLACE FUNCTION public.grant_credits(
+--   p_store_id UUID, p_amount INTEGER, p_reason TEXT DEFAULT NULL, p_idempotency_key TEXT DEFAULT NULL,
+--   p_metadata JSONB DEFAULT '{}'::jsonb, p_type TEXT DEFAULT 'admin_grant'
+-- ) RETURNS UUID LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+-- DECLARE balance_before INTEGER; balance_after INTEGER; tx_id UUID; existing_tx_id UUID; bonus_old INTEGER; purchased_old INTEGER;
+-- BEGIN
+--   IF p_amount <= 0 THEN RAISE EXCEPTION 'amount_invalido'; END IF;
+--   IF p_idempotency_key IS NOT NULL THEN
+--     SELECT id INTO existing_tx_id FROM public.credit_transactions WHERE store_id = p_store_id AND idempotency_key = p_idempotency_key;
+--     IF FOUND THEN
+--       IF (SELECT type FROM public.credit_transactions WHERE id = existing_tx_id) IN ('bonus_onboarding','bonus_monthly','admin_grant','purchase') THEN RETURN existing_tx_id;
+--       ELSE RAISE EXCEPTION 'idempotency_conflict'; END IF;
+--     END IF;
+--   END IF;
+--   INSERT INTO public.credit_balances (store_id, balance) VALUES (p_store_id, 0) ON CONFLICT (store_id) DO NOTHING;
+--   SELECT balance, bonus_balance, purchased_balance INTO balance_before, bonus_old, purchased_old FROM public.credit_balances WHERE store_id = p_store_id FOR UPDATE;
+--   IF balance_before IS NULL THEN
+--     INSERT INTO public.credit_balances (store_id, balance, bonus_balance, purchased_balance) VALUES (p_store_id, 0, 0, 0) ON CONFLICT (store_id) DO NOTHING;
+--     balance_before := 0; bonus_old := 0; purchased_old := 0;
+--   END IF;
+--   IF p_type IN ('bonus_onboarding','bonus_monthly','admin_grant') THEN bonus_old := bonus_old + p_amount;
+--   ELSIF p_type = 'purchase' THEN purchased_old := purchased_old + p_amount;
+--   ELSE RAISE EXCEPTION 'tipo_invalido'; END IF;
+--   balance_after := bonus_old + purchased_old;
+--   INSERT INTO public.credit_transactions (store_id, type, amount, balance_before, balance_after, reason, idempotency_key, metadata)
+--   VALUES (p_store_id, p_type, p_amount, balance_before, balance_after, p_reason, p_idempotency_key, p_metadata) RETURNING id INTO tx_id;
+--   UPDATE public.credit_balances SET bonus_balance = bonus_old, purchased_balance = purchased_old WHERE store_id = p_store_id;
+--   RETURN tx_id;
+-- END; $$;
+
+-- Restaurar reserve_credit (bônus→comprado, sem demo) — ver 20260722000002_creditos_mensais_automaticos.sql (bloco 11):
+-- CREATE OR REPLACE FUNCTION public.reserve_credit(
+--   p_store_id UUID, p_amount INTEGER, p_campaign_id UUID DEFAULT NULL, p_idempotency_key TEXT DEFAULT NULL, p_metadata JSONB DEFAULT '{}'::jsonb
+-- ) RETURNS UUID LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+-- DECLARE current_bonus INTEGER; current_purchased INTEGER; balance_before INTEGER; balance_after INTEGER; tx_id UUID; existing_tx_id UUID;
+--   amount_restante INTEGER; deduct_from_bonus INTEGER; deduct_from_purchased INTEGER;
+-- BEGIN
+--   IF p_amount <= 0 THEN RAISE EXCEPTION 'amount_invalido'; END IF;
+--   IF p_idempotency_key IS NOT NULL THEN
+--     SELECT id INTO existing_tx_id FROM public.credit_transactions WHERE store_id = p_store_id AND idempotency_key = p_idempotency_key;
+--     IF FOUND THEN
+--       IF (SELECT type FROM public.credit_transactions WHERE id = existing_tx_id) = 'deduction' THEN RETURN existing_tx_id;
+--       ELSE RAISE EXCEPTION 'idempotency_conflict'; END IF;
+--     END IF;
+--   END IF;
+--   SELECT balance, bonus_balance, purchased_balance INTO balance_before, current_bonus, current_purchased FROM public.credit_balances WHERE store_id = p_store_id FOR UPDATE;
+--   IF balance_before IS NULL THEN RAISE EXCEPTION 'saldo_inexistente'; END IF;
+--   IF balance_before < p_amount THEN RAISE EXCEPTION 'saldo_insuficiente'; END IF;
+--   amount_restante := p_amount;
+--   deduct_from_bonus := LEAST(current_bonus, amount_restante); current_bonus := current_bonus - deduct_from_bonus; amount_restante := amount_restante - deduct_from_bonus;
+--   deduct_from_purchased := LEAST(current_purchased, amount_restante); current_purchased := current_purchased - deduct_from_purchased; amount_restante := amount_restante - deduct_from_purchased;
+--   IF amount_restante > 0 THEN RAISE EXCEPTION 'saldo_insuficiente'; END IF;
+--   balance_after := current_bonus + current_purchased;
+--   p_metadata := p_metadata || jsonb_build_object('bonus_amount', deduct_from_bonus, 'purchased_amount', deduct_from_purchased);
+--   INSERT INTO public.credit_transactions (store_id, type, amount, balance_before, balance_after, campaign_id, idempotency_key, metadata)
+--   VALUES (p_store_id, 'deduction', -p_amount, balance_before, balance_after, p_campaign_id, p_idempotency_key, p_metadata) RETURNING id INTO tx_id;
+--   UPDATE public.credit_balances SET bonus_balance = current_bonus, purchased_balance = current_purchased WHERE store_id = p_store_id;
+--   RETURN tx_id;
+-- END; $$;
+
+-- Restaurar refund_credit (bônus/comprado, sem demo) — ver 20260722000002_creditos_mensais_automaticos.sql (bloco 12):
+-- CREATE OR REPLACE FUNCTION public.refund_credit(
+--   p_tx_id UUID, p_reason TEXT DEFAULT NULL, p_idempotency_key TEXT DEFAULT NULL, p_metadata JSONB DEFAULT '{}'::jsonb
+-- ) RETURNS UUID LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+-- DECLARE store_id_var UUID; original_amount INTEGER; original_type TEXT; original_metadata JSONB;
+--   current_bonus INTEGER; current_purchased INTEGER; current_balance INTEGER; refund_amount INTEGER; balance_before INTEGER; balance_after INTEGER;
+--   tx_id UUID; existing_tx_id UUID; duplicate_refund_id UUID; bonus_restore INTEGER; purchased_restore INTEGER;
+-- BEGIN
+--   SELECT store_id, amount, type, metadata INTO store_id_var, original_amount, original_type, original_metadata FROM public.credit_transactions WHERE id = p_tx_id FOR UPDATE;
+--   IF NOT FOUND THEN RAISE EXCEPTION 'transacao_nao_encontrada'; END IF;
+--   IF original_type != 'deduction' THEN RAISE EXCEPTION 'tipo_invalido'; END IF;
+--   IF p_idempotency_key IS NOT NULL THEN
+--     SELECT id INTO existing_tx_id FROM public.credit_transactions WHERE store_id = store_id_var AND idempotency_key = p_idempotency_key;
+--     IF FOUND THEN
+--       IF (SELECT type FROM public.credit_transactions WHERE id = existing_tx_id) = 'refund' THEN RETURN existing_tx_id;
+--       ELSE RAISE EXCEPTION 'idempotency_conflict'; END IF;
+--     END IF;
+--   END IF;
+--   SELECT id INTO duplicate_refund_id FROM public.credit_transactions WHERE reference = p_tx_id::text AND type = 'refund';
+--   IF FOUND THEN RETURN duplicate_refund_id; END IF;
+--   SELECT balance, bonus_balance, purchased_balance INTO current_balance, current_bonus, current_purchased FROM public.credit_balances WHERE store_id = store_id_var FOR UPDATE;
+--   bonus_restore := COALESCE((original_metadata->>'bonus_amount')::INTEGER, ABS(original_amount));
+--   purchased_restore := COALESCE((original_metadata->>'purchased_amount')::INTEGER, 0);
+--   IF (original_metadata->>'purchased_amount') IS NULL AND (original_metadata->>'bonus_amount') IS NULL THEN bonus_restore := ABS(original_amount); purchased_restore := 0; END IF;
+--   refund_amount := bonus_restore + purchased_restore;
+--   balance_before := current_balance; balance_after := current_balance + refund_amount;
+--   current_bonus := current_bonus + bonus_restore; current_purchased := current_purchased + purchased_restore;
+--   INSERT INTO public.credit_transactions (store_id, type, amount, balance_before, balance_after, reason, reference, idempotency_key, metadata)
+--   VALUES (store_id_var, 'refund', refund_amount, balance_before, balance_after, p_reason, p_tx_id::text, p_idempotency_key, p_metadata) RETURNING id INTO tx_id;
+--   UPDATE public.credit_balances SET bonus_balance = current_bonus, purchased_balance = current_purchased WHERE store_id = store_id_var;
+--   RETURN tx_id;
+-- END; $$;
+
+-- Restaurar create_store_with_cnpj (26-param, sem p_demo_grant_enabled) — ver 20260728000001_f33_cnpj_verification.sql (bloco 8):
+-- DROP FUNCTION IF EXISTS public.create_store_with_cnpj(TEXT, TEXT, UUID, TEXT, TEXT, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, TEXT, TEXT, TEXT, JSONB, JSONB, TEXT[], BOOLEAN);
+-- (recriar a assinatura de 26 parâmetros da F33, com a concessão bonus_onboarding via try_grant_onboarding_entitlement)
+
+-- Restaurar update_store_cnpj (10-param, sem p_demo_grant_enabled) — ver 20260730000001_extend_update_store_cnpj.sql:
+-- DROP FUNCTION IF EXISTS public.update_store_cnpj(UUID, TEXT, TEXT, TEXT, TEXT, JSONB, TEXT, JSONB, JSONB, TEXT[], BOOLEAN);
+-- (recriar a assinatura de 10 parâmetros, com o marcador legacy incondicional)
+
+-- Restaurar admin_approve_store_verification (2-param, sem p_demo_grant_enabled) — ver 20260728000002_fix_f33_audit_log.sql:
+-- DROP FUNCTION IF EXISTS public.admin_approve_store_verification(UUID, UUID, BOOLEAN);
+-- (recriar a assinatura de 2 parâmetros, com a concessão bonus_onboarding)
+
+-- Restaurar admin_exception_store_verification (raiz sintética global + sem idempotência) — ver 20260728000001_f33_cnpj_verification.sql (bloco 7):
+-- CREATE OR REPLACE FUNCTION public.admin_exception_store_verification(p_store_id UUID, p_admin_id UUID, p_reason TEXT) RETURNS JSONB ...
+
+-- Restaurar create_store_with_initial_grant (com grant onboarding) — ver 20260914000002_f47_fix_admin_create_store_lint.sql:
+-- CREATE OR REPLACE FUNCTION public.create_store_with_initial_grant(... p_initial_grant_amount INTEGER DEFAULT 10) RETURNS JSONB ...
+--   (reinserir o PERFORM public.grant_credits(v_store_id, p_initial_grant_amount, 'onboarding', 'onboarding_' || v_store_id, '{}'::jsonb);)
+
+-- Restaurar privilégios (desfazer REVOKE):
+-- GRANT EXECUTE ON FUNCTION public.grant_credits(UUID, INTEGER, TEXT, TEXT, JSONB, TEXT) TO PUBLIC;
+-- GRANT EXECUTE ON FUNCTION public.reserve_credit(UUID, INTEGER, UUID, TEXT, JSONB) TO PUBLIC;
+-- GRANT EXECUTE ON FUNCTION public.refund_credit(UUID, TEXT, TEXT, JSONB) TO PUBLIC;
+
+-- -----------------------------------------------------------------------------
+-- 1-6. Estrutural — REVERT
+-- -----------------------------------------------------------------------------
 -- ALTER TABLE public.access_requests DROP COLUMN IF EXISTS privacy_notice_version;
 
 -- DROP POLICY IF EXISTS "owner_select_data_subject_requests" ON public.data_subject_requests;
