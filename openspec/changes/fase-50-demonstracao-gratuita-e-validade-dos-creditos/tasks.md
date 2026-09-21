@@ -139,10 +139,10 @@
 
 ## 50-15 — Storage privacy (D20)
 
-- [ ] 15.1 Inventariar buckets (`campaign-images`, `lab-artifacts`, `store-brand-assets`, `visual-signatures`, `store-logos`) com `public`/policies/consumidores
-- [ ] 15.2 Tornar **privados** `store-brand-assets`/`visual-signatures`/`store-logos` (dropar `*_public_read`, `public=false`, preservar policies `service_role` + leitura autenticada do owner)
-- [ ] 15.3 Migrar consumidores de `getPublicUrl` para `createSignedUrl` (TTL): `store-identity-service.ts`, `visual-signature/persistence.ts`; **inventariar TODOS os consumidores** de `asset_url`/`logo_url` e URLs públicas manuais (types/routes/UI/restore/approve/realign, incl. `store-identity-form.tsx`); tornar `store_visual_signatures.asset_url` **nullable/deprecated** com `storage_path` canônico
-- [ ] 15.4 Testar: acesso público negado + URL assinada funcional; **ausência de URLs públicas construídas manualmente**; `asset_url` **nullable/deprecated** com `storage_path` canônico; **renovação de URL assinada após expiração**; fluxos **restore/approve/realign**; **sem** migração para R2
+- [x] 15.1 Inventariar buckets (`campaign-images`, `lab-artifacts`, `store-brand-assets`, `visual-signatures`, `store-logos`) com `public`/policies/consumidores
+- [x] 15.2 Tornar **privados** `store-brand-assets`/`visual-signatures`/`store-logos` (dropar `*_public_read`, `public=false`, preservar policies `service_role` + leitura autenticada do owner)
+- [x] 15.3 Migrar consumidores de `getPublicUrl` para `createSignedUrl` (TTL): `store-identity-service.ts`, `visual-signature/persistence.ts`; **inventariar TODOS os consumidores** de `asset_url`/`logo_url` e URLs públicas manuais (types/routes/UI/restore/approve/realign, incl. `store-identity-form.tsx`); tornar `store_visual_signatures.asset_url` **nullable/deprecated** com `storage_path` canônico
+- [x] 15.4 Testar: acesso público negado + URL assinada funcional; **ausência de URLs públicas construídas manualmente**; `asset_url` **nullable/deprecated** com `storage_path` canônico; **renovação de URL assinada após expiração**; fluxos **restore/approve/realign**; **sem** migração para R2
 
 ## 50-16 — Beta/access + retenção (D17/D18/D19/D21)
 
