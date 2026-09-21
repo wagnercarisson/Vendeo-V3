@@ -9,10 +9,18 @@
 | Termos de Uso v1.5 — delta | `legal-drafts/terms-of-service-v1-5.md` | pronto |
 | Política de Privacidade v1.4 — delta | `legal-drafts/privacy-policy-v1-4.md` | pronto |
 | Política de Uso Aceitável v1.2 — delta | `legal-drafts/acceptable-use-v1-2.md` | pronto |
-| Termos de Uso v1.5 — consolidado | consolidar `public/docs/legal/terms-of-service-v1-4.md` + delta | montar (task 10.1) |
-| Política de Privacidade v1.4 — consolidado | consolidar `public/docs/legal/privacy-policy-v1-3.md` + delta | montar (task 10.1) |
-| Política de Uso Aceitável v1.2 — consolidado | consolidar `public/docs/legal/acceptable-use-v1-1.md` + delta | montar (task 10.1) |
+| Termos de Uso v1.5 — consolidado | `public/docs/legal/terms-of-service-v1-5.md` | **pronto (consolidado)** |
+| Política de Privacidade v1.4 — consolidado | `public/docs/legal/privacy-policy-v1-4.md` | **pronto (consolidado)** |
+| Política de Uso Aceitável v1.2 — consolidado | `public/docs/legal/acceptable-use-v1-2.md` | **pronto (consolidado)** |
 | Diferenças (diff) | tabelas de correspondência em cada delta | pronto |
+| Migration de publicação separada | `supabase/migrations/20260920000003_f50_legal_publication.sql` | **pronto (não aplicada — só no corte, 50-14)** |
+| Catálogo | `src/lib/legal/document-content.ts` | **pronto (v1.5/v1.4/v1.2 registradas)** |
+
+## Mecanismo de reaceite/ciência (verificado na task 10.3)
+
+- **Reaceite contratual** (Terms v1.5 + AUP v1.2): `requireLegalClearance` (`CAPABILITY_DOCUMENTS.content_generation = ["terms_of_service", "acceptable_use"]`); a subida da versão torna `getAcceptanceStatus = outdated` → gate 403 nas rotas de geração → `/legal/reaccept`, gravando em `legal_acceptances` (nível loja).
+- **Ciência de privacidade** (v1.4): via `PrivacyGate`/`privacy_acknowledgements` (`privacy_policy_version` por usuário), **não** em `legal_acceptances`.
+- **Nenhum gate bloqueia** histórico/campanhas/downloads.
 
 ## Placeholders (para consulta ao advogado; nunca para publicação)
 

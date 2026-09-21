@@ -18,16 +18,19 @@ const DOCUMENT_CATALOG: Record<DocumentType, Record<string, DocumentContentEntry
     "v1.2": { filePath: "/docs/legal/terms-of-service-v1-2.md" },
     "v1.3": { filePath: "/docs/legal/terms-of-service-v1-3.md" },
     "v1.4": { filePath: "/docs/legal/terms-of-service-v1-4.md" },
+    "v1.5": { filePath: "/docs/legal/terms-of-service-v1-5.md" },
   },
   acceptable_use: {
     "v1.0": { filePath: "/docs/legal/acceptable-use-v1.md" },
     "v1.1": { filePath: "/docs/legal/acceptable-use-v1-1.md" },
+    "v1.2": { filePath: "/docs/legal/acceptable-use-v1-2.md" },
   },
   privacy_policy: {
     "v1.0": { filePath: "/docs/legal/privacy-policy-v1.md" },
     "v1.1": { filePath: "/docs/legal/privacy-policy-v1-1.md" },
     "v1.2": { filePath: "/docs/legal/privacy-policy-v1-2.md" },
     "v1.3": { filePath: "/docs/legal/privacy-policy-v1-3.md" },
+    "v1.4": { filePath: "/docs/legal/privacy-policy-v1-4.md" },
   },
 };
 
