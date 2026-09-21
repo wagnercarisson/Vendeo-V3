@@ -2,7 +2,8 @@
 phase: 50-demonstracao-gratuita-validade-creditos
 plan: 05
 subsystem: routes
-completed: 2026-09-21
+status: partial
+updated: 2026-09-21
 ---
 
 # Phase 50 Plan 05 Summary
