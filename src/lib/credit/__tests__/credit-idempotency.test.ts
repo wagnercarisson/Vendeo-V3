@@ -5,7 +5,7 @@ const pool = new Pool({ connectionString: process.env.TEST_DATABASE_URL ?? "post
 const stores: string[] = [];
 const users: string[] = [];
 async function q<T = Record<string, unknown>>(sql: string, values: unknown[] = []) { return (await pool.query<T>(sql, values)).rows; }
-async function rpc<T>(name: string, args: unknown[]) { return (await pool.query<T>(`select public.${name}(${args.map((_, i) => `$${i + 1}`).join(", ")}) as value`, args)).rows[0].value; }
+async function rpc<T>(name: string, args: unknown[]) { return (await pool.query<{ value: T }>(`select public.${name}(${args.map((_, i) => `$${i + 1}`).join(", ")}) as value`, args)).rows[0].value; }
 async function fixture() {
   const userId = crypto.randomUUID(); users.push(userId);
   await pool.query("insert into auth.users (id, aud, role, email, created_at, updated_at) values ($1, 'authenticated', 'authenticated', $2, now(), now())", [userId, `${userId}@f50.test`]);

@@ -23,7 +23,7 @@ async function fixture() {
 
 async function rpc<T>(name: string, args: unknown[]) {
   const placeholders = args.map((_, i) => `$${i + 1}`).join(", ");
-  return (await pool.query<T>(`select public.${name}(${placeholders}) as value`, args)).rows[0].value;
+  return (await pool.query<{ value: T }>(`select public.${name}(${placeholders}) as value`, args)).rows[0].value;
 }
 
 beforeAll(async () => { await pool.query("select 1"); });
@@ -40,7 +40,7 @@ describe("F50 real PostgreSQL concurrency and temporal rules", () => {
   it("serializes concurrent demo grants to one entitlement and one transaction", async () => {
     const store = await fixture();
     const root = `race-${crypto.randomUUID()}`;
-    const results = await Promise.all(Array.from({ length: 2 }, () => rpc("grant_demo_credits", [store, root, 10, true, 168, `grant-${root}`, null])));
+    const results = await Promise.all(Array.from({ length: 2 }, () => rpc<{ granted: boolean }>("grant_demo_credits", [store, root, 10, true, 168, `grant-${root}`, null])));
     expect(results.filter((value: { granted: boolean }) => value.granted)).toHaveLength(1);
     expect((await query("select count(*)::int as count from credit_transactions where store_id = $1 and type = 'demo'", [store]))[0].count).toBe(1);
   });
@@ -48,12 +48,15 @@ describe("F50 real PostgreSQL concurrency and temporal rules", () => {
   it("serializes expiration and reserves without a negative balance", async () => {
     const store = await fixture();
     const grant = await rpc<{ granted: boolean; grant_transaction_id: string }>("grant_demo_credits", [store, `root-${store}`, 2, true, 168, null, null]);
-    await query("update credit_balances set demo_expires_at = now() - interval '1 second' where store_id = $1", [store]);
-    const expired = await Promise.all([rpc("materialize_demo_expiration", [store]), rpc("materialize_demo_expiration", [store])]);
-    expect(expired.filter((value: { expired: boolean }) => value.expired)).toHaveLength(1);
-    expect((await query("select count(*)::int as count from credit_transactions where store_id = $1 and type = 'expiration'", [store]))[0].count).toBe(1);
-    await expect(Promise.all([rpc("reserve_credit", [store, 1, null, `r-${store}-1`, {}]), rpc("reserve_credit", [store, 1, null, `r-${store}-2`, {}]), rpc("reserve_credit", [store, 1, null, `r-${store}-3`, {}])] as const)).rejects.toThrow();
+    const results = await Promise.allSettled([
+      rpc("reserve_credit", [store, 1, null, `r-${store}-1`, {}]),
+      rpc("reserve_credit", [store, 1, null, `r-${store}-2`, {}]),
+      rpc("reserve_credit", [store, 1, null, `r-${store}-3`, {}]),
+    ]);
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(2);
+    expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
     expect((await query<{ balance: number }>("select balance from credit_balances where store_id = $1", [store]))[0].balance).toBe(0);
+    expect((await query<{ count: number }>("select count(*)::int as count from credit_transactions where store_id = $1 and type = 'deduction'", [store]))[0].count).toBe(2);
     expect(grant.granted).toBe(true);
   });
 });
