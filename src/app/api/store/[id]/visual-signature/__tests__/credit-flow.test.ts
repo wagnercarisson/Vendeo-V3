@@ -63,9 +63,15 @@ vi.mock('@/lib/launch-config/config', () => ({
 vi.mock('@/lib/credit/credit-service', () => ({
   CreditService: class {
     getBalance = mockGetBalance;
+    getOriginDemoGrantTxId = vi.fn(async () => null);
+    getBalanceBreakdown = vi.fn(async () => ({ availableBalance: 0, demoBalance: 0, demoExpiresAt: null }));
     reserveCredit = mockReserveCredit;
     refundCredit = mockRefundCredit;
   },
+}));
+
+vi.mock('@/lib/product-events/service', () => ({
+  ProductEventService: class { record = vi.fn(); },
 }));
 
 const mockGetCost = vi.fn();

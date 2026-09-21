@@ -537,6 +537,8 @@ export const POST = apiHandler(async (
           dedup_key: grantTxId,
           properties: {
             source: 'visual_signature_generation',
+            store_id: id,
+            user_id: authUser.userId,
             visual_signature_id: result.signature.id,
             segment: store.segment,
             available_balance: balance.availableBalance,

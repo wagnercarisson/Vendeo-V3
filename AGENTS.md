@@ -300,7 +300,7 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 
 ## Phase 50 — Demonstração Gratuita e Validade dos Créditos
 
-**Status:** ◆ Executando — 9/17 plans concluídos (50-01 ✅, 50-02 ✅, 50-03 ✅, 50-04 ✅, 50-05 ✅, 50-08 ✅, 50-10 ✅, 50-15 ✅, 50-17 ✅)
+**Status:** ◆ Executando — 8/17 plans concluídos (50-01 ✅, 50-02 ✅, 50-03 ✅, 50-04 ✅, 50-08 ✅, 50-10 ✅, 50-15 ✅, 50-17 ✅; 50-05 parcial)
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|

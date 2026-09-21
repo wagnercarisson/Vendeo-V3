@@ -799,7 +799,9 @@ export const POST = apiHandler(async (request: NextRequest) => {
                   properties: {
                     source: "campaign_generation",
                     campaign_id: campaignId,
-                    segment: (campaignInput as { segment?: string }).segment ?? null,
+                    segment: validatedSnapshot.storeSegment ?? null,
+                    store_id: storeId,
+                    user_id: user.userId,
                     available_balance: balance.availableBalance,
                     demo_balance: balance.demoBalance,
                     demo_expires_at: balance.demoExpiresAt,
