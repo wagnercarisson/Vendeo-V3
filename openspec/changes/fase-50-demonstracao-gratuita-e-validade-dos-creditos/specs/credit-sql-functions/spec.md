@@ -37,7 +37,7 @@ O sistema SHALL reescrever `reserve_credit` para: materializar expiração pende
 
 - **WHEN** `demo_expires_at <= now()` e `reserve_credit(store, 5)`
 - **THEN** a expiração é materializada e o demo não conta
-- **AND** `saldo_insuficiente` se o restante for insuficiente
+- **AND** `NULL` se o restante for insuficiente, após confirmar a expiração; a tradução para `saldo_insuficiente` pertence ao `CreditService`
 
 #### Scenario: Esgotamento registrado quando a demo zera
 

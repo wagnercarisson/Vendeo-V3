@@ -33,6 +33,16 @@ O sistema SHALL estender o breakdown de saldo para incluir `demoBalance`, `demoE
 - **WHEN** `getBalanceBreakdown(storeId)` é chamado
 - **THEN** retorna `demoBalance`, `demoExpiresAt`, `bonusBalance`, `purchasedBalance`, `balance`, `availableBalance`
 
+### Requirement: reserveCredit translates insufficient balance
+
+O serviço SHALL traduzir o retorno `NULL` da RPC `reserve_credit` para o erro `saldo_insuficiente`, preservando o contrato HTTP 402 dos consumidores produtivos.
+
+#### Scenario: RPC confirms expiration before insufficient balance
+
+- **WHEN** `reserve_credit` materializa uma expiração e retorna `NULL`
+- **THEN** `CreditService.reserveCredit` lança `saldo_insuficiente`
+- **AND** as rotas de geração continuam respondendo HTTP 402
+
 ### Requirement: CreditTransactionTypeSchema
 
 O sistema SHALL estender `CreditTransactionTypeSchema` com `demo` e `expiration` (além dos 7 existentes), e `labels.ts` com os rótulos "Demonstração" e "Expiração".

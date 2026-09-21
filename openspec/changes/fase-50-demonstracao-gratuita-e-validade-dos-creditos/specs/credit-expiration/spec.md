@@ -109,7 +109,7 @@ O sistema SHALL fazer `reserve_credit` materializar a expiração pendente (mesm
 
 - **WHEN** `reserve_credit(store, 5)` é chamado com demo vencido (`demo_expires_at <= now()`)
 - **THEN** a expiração é materializada e o consumo considera demo = 0
-- **AND** se o saldo restante for insuficiente, lança `saldo_insuficiente`
+- **AND** se o saldo restante for insuficiente, `reserve_credit` retorna `NULL` após confirmar a expiração; o `CreditService` traduz o retorno para `saldo_insuficiente`
 
 #### Scenario: Consumo na ordem demo → bônus → comprado
 
