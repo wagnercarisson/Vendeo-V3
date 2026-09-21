@@ -23,7 +23,7 @@ export class FreemiumEntitlementService {
       .from("freemium_entitlements")
       .select("id")
       .eq("root_hash", rootHash)
-      .in("benefit_type", ["onboarding", "demo"])
+      .in("benefit_type", ["onboarding", "demo", "admin_exception"])
       .limit(1)
       .maybeSingle();
     return data === null;

@@ -307,7 +307,7 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 | 50-01 | 1 | ✅ | Trackings D1 + baseline + inventário de consumidores de `balance` |
 | 50-02 | 2 | ✅ | Migration estrutural (demo columns/cycle/contrib, tipos, benefit_type demo, tabelas) — sem docs legais |
 | 50-03 | 3 | ✅ | RPCs SQL (`grant_demo_credits`+flag, `materialize_demo_expiration`, `try_grant_demo_entitlement`, rewrite reserve/refund/grant) |
-| 50-04 | 4 | ○ | Serviços (credit-service disponível/demo, `checkDemoEligibility`, launch-config, labels/types) |
+| 50-04 | 4 | ✅ | Serviços de crédito/demo, entitlement, launch-config e status da demonstração |
 | 50-05 | 5 | ○ | Rotas (onboarding→demo com flag; `update_store_cnpj` concede demo; mensal preservado até corte) |
 | 50-06 | 6 | ○ | Reconcilier cron `demo-credits` + endpoint `support/credit-request` |
 | 50-07 | 3 | ○ | Notificações (outbox + claim/lease + email Resend) |
@@ -321,7 +321,6 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 | 50-15 | 2 | ✅ | Storage privacy (buckets privados + URL assinada; smokes e fluxos verificados; sem R2) |
 | 50-16 | 3 | ○ | Beta/access + retenção (WhatsApp opcional, aviso versionado, maioridade, conta/30 dias) |
 | 50-17 | 2 | ✅ | Runbook de backup externo + continuidade; restore real permanece gate do 50-14 |
-| 50-04 | 4 | ✅ | Serviços de crédito/demo, entitlement, launch-config e status da demonstração |
 
 **Escopo (D1–D26):** substituição do freemium contínuo por uma demonstração gratuita limitada (10 créditos, 168h, sem cartão/cobrança); bucket de demonstração com validade (`demo_balance`/`demo_expires_at` autoritativo/`demo_cycle_id`/`origin_demo_grant_tx_id`/`demo_contributing_tx_ids`); tipos `demo`/`expiration`; concessão irrepetível por raiz via `benefit_type='demo'`; ordem de consumo demo→bônus→comprado atômica; expiração com autoridade híbrida + reconciler; episódios de graça (24h) no estorno; encerramento do freemium mensal no corte; notificações in-app + email Resend (outbox/claim/lease/supressão só demo); telemetria `product_events`; suporte honesto com protocolo; três documentos legais + reaceite/ciência; storage hardening (buckets privados + URL assinada); conta/retirada (janela 30 dias); backup externo restaurável (gate do primeiro convite). **Fences:** sem alterar prompts, gateway de IA, snapshot, domínio ou contrato de geração (402); sem checkout/Stripe; bônus sempre não-expirável na F50. **Gates de go-live** (PJ identificada, validação jurídica das 3 minutas, backup restaurável) bloqueiam o primeiro convite, não a conclusão técnica. **Renumeração:** F50 = Demonstração Gratuita e Validade dos Créditos; F44 e Stripe fora da numeração.
 
