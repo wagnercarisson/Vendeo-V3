@@ -4,8 +4,6 @@ CREATE OR REPLACE FUNCTION public.admin_register_data_subject_request(
 ) RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
 DECLARE v_row public.data_subject_requests%ROWTYPE; v_now TIMESTAMPTZ := now();
 BEGIN
-  SELECT * INTO v_row FROM public.data_subject_requests WHERE operation_id = p_operation_id FOR UPDATE;
-  IF v_row.id IS NOT NULL THEN RETURN to_jsonb(v_row); END IF;
   INSERT INTO public.data_subject_requests
     (operation_id, protocol, type, user_id, store_id, contact, details, status, requested_at,
      acknowledged_at, closure_requested_at, deletion_due_at, deletion_inventory, legal_hold)
@@ -15,7 +13,12 @@ BEGIN
      CASE WHEN p_type = 'closure' THEN v_now END,
      CASE WHEN p_type = 'closure' THEN v_now + interval '30 days' END,
      coalesce(p_deletion_inventory, '{}'::jsonb), coalesce(p_legal_hold, false))
-  RETURNING * INTO v_row;
+   ON CONFLICT (operation_id) DO NOTHING
+   RETURNING * INTO v_row;
+  IF v_row.id IS NULL THEN
+    SELECT * INTO v_row FROM public.data_subject_requests WHERE operation_id = p_operation_id;
+    RETURN to_jsonb(v_row);
+  END IF;
   INSERT INTO public.admin_audit_log
     (actor_id, action, target_type, target_id, operation_id, reason, metadata)
   VALUES (p_actor_id, 'data_subject_request_received', 'data_subject_request', v_row.id,

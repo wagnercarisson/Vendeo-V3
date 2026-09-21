@@ -24,7 +24,7 @@ Complete: data-subject request lifecycle is atomic, idempotent, transition-valid
 
 ## Validation
 
-- Focused PostgreSQL tests: PASS, 1 file / 3 tests.
+- Focused PostgreSQL tests: PASS, 1 file / 4 tests.
 - `supabase db reset --local`: PASS.
 - `npm run typecheck`: PASS.
 - `npm run lint`: PASS.
