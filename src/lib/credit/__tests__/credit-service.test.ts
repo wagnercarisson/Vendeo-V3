@@ -53,7 +53,7 @@ beforeEach(() => {
 function mockGetBalanceResult(balance: number | null) {
   const result =
     balance !== null
-      ? { data: { balance }, error: null }
+      ? { data: { balance, demo_balance: 0, demo_expires_at: null, bonus_balance: balance, purchased_balance: 0 }, error: null }
       : { data: null, error: null };
   mockSingle.mockReturnValue(result);
   mockEqBalance.mockReturnValue({ single: mockSingle });
@@ -335,7 +335,7 @@ describe("Saldo e Grant", () => {
 
     expect(balance).toBe(0);
     expect(mockFrom).toHaveBeenCalledWith("credit_balances");
-    expect(mockSelectBalance).toHaveBeenCalledWith("balance");
+    expect(mockSelectBalance).toHaveBeenCalledWith("demo_balance, demo_expires_at, bonus_balance, purchased_balance");
     expect(mockEqBalance).toHaveBeenCalledWith("store_id", storeId);
     expect(mockSingle).toHaveBeenCalledWith();
   });

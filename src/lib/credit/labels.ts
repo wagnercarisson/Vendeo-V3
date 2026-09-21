@@ -6,6 +6,8 @@ export const CREDIT_TYPE_LABELS: Record<string, string> = {
   deduction: "Geração",
   refund: "Estorno",
   adjustment: "Ajuste",
+  demo: "Demonstração",
+  expiration: "Expiração",
 };
 
 export const CREDIT_TYPE_BADGE: Record<string, "ready" | "error"> = {
@@ -16,4 +18,6 @@ export const CREDIT_TYPE_BADGE: Record<string, "ready" | "error"> = {
   deduction: "error",
   refund: "ready",
   adjustment: "ready",
+  demo: "ready",
+  expiration: "error",
 };

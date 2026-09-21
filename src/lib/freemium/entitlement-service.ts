@@ -18,6 +18,26 @@ export class FreemiumEntitlementService {
     return data === null;
   }
 
+  async checkDemoEligibility(rootHash: string): Promise<boolean> {
+    const { data } = await this.adminClient
+      .from("freemium_entitlements")
+      .select("id")
+      .eq("root_hash", rootHash)
+      .in("benefit_type", ["onboarding", "demo"])
+      .limit(1)
+      .maybeSingle();
+    return data === null;
+  }
+
+  async grantDemoEntitlement(storeId: string | null, rootHash: string): Promise<string | null> {
+    const { data, error } = await this.adminClient.rpc("try_grant_demo_entitlement", {
+      p_store_id: storeId,
+      p_root_hash: rootHash,
+    });
+    if (error) throw error;
+    return data as string | null;
+  }
+
   async grantOnboardingEntitlement(
     storeId: string | null,
     rootHash: string,

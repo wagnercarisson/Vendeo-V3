@@ -11,24 +11,27 @@ export class CreditService {
   async getBalance(storeId: string): Promise<number> {
     const { data } = await this.client
       .from("credit_balances")
-      .select("balance")
+      .select("demo_balance, demo_expires_at, bonus_balance, purchased_balance")
       .eq("store_id", storeId)
       .single();
 
-    return data?.balance ?? 0;
+    return availableBalance(data);
   }
 
-  async getBalanceBreakdown(storeId: string): Promise<{ balance: number; bonusBalance: number; purchasedBalance: number }> {
+  async getBalanceBreakdown(storeId: string): Promise<CreditBalanceBreakdown> {
     const { data } = await this.client
       .from("credit_balances")
-      .select("balance, bonus_balance, purchased_balance")
+      .select("balance, demo_balance, demo_expires_at, bonus_balance, purchased_balance")
       .eq("store_id", storeId)
       .single();
 
     return {
       balance: data?.balance ?? 0,
+      demoBalance: data?.demo_balance ?? 0,
+      demoExpiresAt: data?.demo_expires_at ?? null,
       bonusBalance: data?.bonus_balance ?? 0,
       purchasedBalance: data?.purchased_balance ?? 0,
+      availableBalance: availableBalance(data),
     };
   }
 
@@ -129,6 +132,26 @@ export class CreditService {
     if (error) throw error;
     return count ?? 0;
   }
+}
+
+export interface CreditBalanceBreakdown {
+  balance: number;
+  demoBalance: number;
+  demoExpiresAt: string | null;
+  bonusBalance: number;
+  purchasedBalance: number;
+  availableBalance: number;
+}
+
+function availableBalance(row: {
+  demo_balance?: number | null;
+  demo_expires_at?: string | null;
+  bonus_balance?: number | null;
+  purchased_balance?: number | null;
+} | null): number {
+  if (!row) return 0;
+  const demoActive = Boolean(row.demo_expires_at && new Date(row.demo_expires_at).getTime() > Date.now());
+  return (demoActive ? row.demo_balance ?? 0 : 0) + (row.bonus_balance ?? 0) + (row.purchased_balance ?? 0);
 }
 
 function mapRowToCamelCase(row: Record<string, unknown>): CreditTransaction {
