@@ -840,9 +840,10 @@ BEGIN
       demo_restore := 0;
     ELSIF cur_demo_expires IS NOT NULL AND cur_demo_expires > now() THEN
       -- Episódio ativo
-      IF cur_demo_cycle IS DISTINCT FROM v_origin THEN
+      IF current_demo = 0 OR cur_demo_cycle IS DISTINCT FROM v_origin THEN
         -- Episódio de graça ativo: estende o prazo
         v_new_demo_expires := GREATEST(cur_demo_expires, now() + interval '24 hours');
+        v_new_demo_cycle := gen_random_uuid();
       END IF;
       current_demo := current_demo + demo_restore;
     ELSE
