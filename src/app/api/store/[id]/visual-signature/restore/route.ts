@@ -212,7 +212,7 @@ export const POST = apiHandler(async (
           elements_used: ['nome da loja'],
         },
         visualSignatureId: body.signature_id,
-        assetUrl: assetUrl ?? '',
+         assetUrl,
         referenceCardUrl: null,
       }, telemetry);
     } catch (err) {

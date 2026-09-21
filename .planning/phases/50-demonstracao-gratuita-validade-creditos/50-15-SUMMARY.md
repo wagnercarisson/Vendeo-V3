@@ -58,6 +58,8 @@ completed: 2026-09-21
 - Teste unitário focado adicionado para URL assinada, renovação por nova leitura e ausência de URL vazia em falha.
 - Smoke HTTP local PASS: upload service-role, acesso público negado, leitura assinada funcional, assinatura renovada e limpeza do objeto.
 - Fluxos approve/realign e o helper de restore cobertos nos testes/smokes focados; 42 testes passaram.
+- Approve normal e substituição agora pré-assinam o ativo antes de arquivar/ativar e reutilizam a mesma URL durante o fluxo.
+- Teste de rota restore adicionado; suíte focada passou com 43 testes.
 
 ## Deviations from Plan
 
