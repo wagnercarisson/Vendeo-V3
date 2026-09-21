@@ -13,7 +13,7 @@ Partially executed against the local PostgreSQL instance; the plan remains open.
 - Added unit coverage for demo states, post-materialization expiration, relative expiry, labels, entitlement eligibility, and fail-closed launch defaults.
 - Added real PostgreSQL coverage for grant concurrency, expiration concurrency, reservation safety, grant idempotency, expiration idempotency, and notification/event deduplication.
 - Added real integration coverage for refund branches, wrapper privileges, admin exception behavior, grant-free admin creation, and support atomicity; these cases currently expose remaining blockers.
-- Corrected `refund_credit` so an exhausted demo opens a new 24-hour grace episode.
+- Preserved the original demo episode when refunding before expiry; a new 24-hour grace episode is expected only after expiry.
 - OpenSpec tasks 11.1–11.7 remain open until all real database assertions pass.
 
 ## Validation

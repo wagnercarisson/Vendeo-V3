@@ -48,15 +48,24 @@ describe("F50 real PostgreSQL concurrency and temporal rules", () => {
   it("serializes expiration and reserves without a negative balance", async () => {
     const store = await fixture();
     const grant = await rpc<{ granted: boolean; grant_transaction_id: string }>("grant_demo_credits", [store, `root-${store}`, 2, true, 168, null, null]);
+    await query("update credit_balances set demo_expires_at = now() - interval '1 second' where store_id = $1", [store]);
+    const expirations = await Promise.all([
+      rpc<{ expired: boolean }>("materialize_demo_expiration", [store]),
+      rpc<{ expired: boolean }>("materialize_demo_expiration", [store]),
+    ]);
+    expect(expirations.filter((result) => result.expired)).toHaveLength(1);
+    expect((await query<{ count: number }>("select count(*)::int as count from credit_transactions where store_id = $1 and type = 'expiration'", [store]))[0].count).toBe(1);
+    const activeStore = await fixture();
+    await rpc<{ granted: boolean }>("grant_demo_credits", [activeStore, `root-active-${activeStore}`, 2, true, 168, null, null]);
     const results = await Promise.allSettled([
-      rpc("reserve_credit", [store, 1, null, `r-${store}-1`, {}]),
-      rpc("reserve_credit", [store, 1, null, `r-${store}-2`, {}]),
-      rpc("reserve_credit", [store, 1, null, `r-${store}-3`, {}]),
+      rpc("reserve_credit", [activeStore, 1, null, `r-${activeStore}-1`, {}]),
+      rpc("reserve_credit", [activeStore, 1, null, `r-${activeStore}-2`, {}]),
+      rpc("reserve_credit", [activeStore, 1, null, `r-${activeStore}-3`, {}]),
     ]);
     expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(2);
     expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
-    expect((await query<{ balance: number }>("select balance from credit_balances where store_id = $1", [store]))[0].balance).toBe(0);
-    expect((await query<{ count: number }>("select count(*)::int as count from credit_transactions where store_id = $1 and type = 'deduction'", [store]))[0].count).toBe(2);
+    expect((await query<{ balance: number }>("select balance from credit_balances where store_id = $1", [activeStore]))[0].balance).toBe(0);
+    expect((await query<{ count: number }>("select count(*)::int as count from credit_transactions where store_id = $1 and type = 'deduction'", [activeStore]))[0].count).toBe(2);
     expect(grant.granted).toBe(true);
   });
 });

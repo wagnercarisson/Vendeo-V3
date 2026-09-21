@@ -37,9 +37,10 @@ afterAll(async () => {
 });
 
 describe("F50-11 real PostgreSQL integration", () => {
-  it("refunds original valid and active grace episodes without duplicate refunds", async () => {
+  it("refunds within the original episode without extending its expiry", async () => {
     const { storeId } = await fixture();
     await grant(storeId);
+    const before = (await query<{ demo_expires_at: string; demo_cycle_id: string }>("select demo_expires_at, demo_cycle_id from credit_balances where store_id = $1", [storeId]))[0];
     const deduction = await rpc<string>("reserve_credit", [storeId, 2, null, `deduct-${crypto.randomUUID()}`, {}]);
     const first = await rpc<string>("refund_credit", [deduction, "test", `refund-${crypto.randomUUID()}`, {}]);
     const second = await rpc<string>("refund_credit", [deduction, "test", `refund-retry-${crypto.randomUUID()}`, {}]);
@@ -47,11 +48,12 @@ describe("F50-11 real PostgreSQL integration", () => {
     const balance = (await query<{ demo_balance: number; demo_cycle_id: string; demo_expires_at: string }>("select demo_balance, demo_cycle_id, demo_expires_at from credit_balances where store_id = $1", [storeId]))[0];
     expect(balance.demo_balance).toBe(10);
     expect(balance.demo_cycle_id).toBeTruthy();
-    expect(new Date(balance.demo_expires_at).getTime()).toBeGreaterThan(Date.now());
+    expect(balance.demo_cycle_id).toBe(before.demo_cycle_id);
+    expect(new Date(balance.demo_expires_at).getTime()).toBe(new Date(before.demo_expires_at).getTime());
     expect((await query("select count(*)::int as count from credit_transactions where store_id = $1 and type = 'refund'", [storeId]))[0].count).toBe(1);
   });
 
-  it("materializes remaining active credit before refund and opens a traceable 24-hour grace episode", async () => {
+  it("materializes remaining credit before refund and opens a traceable 24-hour grace episode after expiry", async () => {
     const { storeId } = await fixture();
     const grantTx = await grant(storeId);
     const deduction = await rpc<string>("reserve_credit", [storeId, 1, null, `deduct-${crypto.randomUUID()}`, {}]);
