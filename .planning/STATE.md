@@ -26,7 +26,7 @@ progress:
 |---|-------------|------|--------|-----------|
 | 260919-hju | Ajuste localizado no campo Tom de Voz da tela /loja (seletor descritivo acessível, 9 opções incl. "Popular") | 2026-09-19 | ea53a58f | [260919-hju-ajuste-localizado-no-campo-tom-de-voz-da](./quick/260919-hju-ajuste-localizado-no-campo-tom-de-voz-da/) |
 
-### Phase 50 — Demonstração Gratuita e Validade dos Créditos ◆ Executando (11/17 plans / 10 waves)
+### Phase 50 — Demonstração Gratuita e Validade dos Créditos ◆ Executando (13/17 plans / 10 waves)
 
 **Planejada em 2026-09-20** a partir da base OpenSpec `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/` (proposal / design D1–D26 / 27 specs / tasks 50-01..50-17 / legal-package). A F50 **substitui o freemium contínuo** por uma **demonstração gratuita limitada** (10 créditos, 168h), preservando saldos legados e encerrando as concessões mensais no corte. 17 planos em 10 waves (DAG GSD estritamente crescente; 50-01 trackings/baseline; 50-02 migration estrutural; 50-10 legal; 50-15 storage; 50-17 backup — wave 2; 50-03 RPCs SQL; 50-07 notificações; 50-08 telemetria; 50-16 beta/access — wave 3; 50-04 serviços — wave 4; 50-05 rotas — wave 5; 50-06 reconcilier/suporte — wave 6; 50-09 UI; 50-11 testes unidade — wave 7; 50-12 testes integração — wave 8; 50-13 regressão — wave 9; 50-14 verificação/corte — wave 10). **Fences:** sem alterar prompts, gateway de IA, snapshot, domínio ou contrato de geração (402); sem checkout/Stripe; bônus sempre não-expirável na F50. **Gates de go-live** (PJ identificada, validação jurídica das 3 minutas, backup restaurável) bloqueiam o primeiro convite, **não** a conclusão técnica da fase.
 
@@ -36,7 +36,7 @@ progress:
 
 **Artefatos:** `50-CONTEXT.md` (síntese fiel D1–D26), `50-UI-SPEC.md` (consolidado do OpenSpec), `50-01-PLAN.md` .. `50-17-PLAN.md`, `50-BASELINE.txt`, `50-01-SUMMARY.md`, `50-02-SUMMARY.md`, `50-03-SUMMARY.md`, `50-04-SUMMARY.md`, `50-05-SUMMARY.md`, `50-08-SUMMARY.md`, `50-10-SUMMARY.md`, `50-15-SUMMARY.md`, `50-17-SUMMARY.md`.
 **Fonte da verdade:** `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/`.
-**Próximo passo:** 50-09/50-11 conforme DAG; cobertura integrada de telemetria permanece no 50-12.
+**Próximo passo:** checkpoint humano após 50-09/50-11; próximo plano elegível somente após aprovação explícita.
 
 ### Phase 49 — Ativação e Orientação Contextual de Campos ✅ Complete (15/15 plans / 7 waves)
 

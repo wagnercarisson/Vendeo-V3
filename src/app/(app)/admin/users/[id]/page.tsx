@@ -15,6 +15,7 @@ import { VERIFICATION_REASON_LABELS, BENEFIT_TYPE_LABELS, DOCUMENT_TYPE_LABELS, 
 import { CREDIT_TYPE_LABELS } from "@/lib/credit/labels";
 import { getLabel } from "@/lib/labels";
 import { formatDateTimeBR } from "@/lib/formatters";
+import { getDemoStatus } from "@/lib/credit/demo-status";
 
 const creditService = new CreditService();
 const freemiumService = new FreemiumEntitlementService();
@@ -43,6 +44,9 @@ export default async function AdminUserDetailPage({
   let campaigns: unknown[] = [];
   let freemiumStatus: FreemiumStatus = "no_cnpj";
   let entitlements: FreemiumEntitlement[] = [];
+  let demoBalance = 0;
+  let demoExpiresAt: string | null = null;
+  let originDemoGrantTxId: string | null = null;
 
   // Legal status
   const privacyAcknowledged = await hasValidPrivacyAcknowledgement(userId);
@@ -56,6 +60,9 @@ export default async function AdminUserDetailPage({
     entitlements = await freemiumService.getHistoryByStore(storeId);
 
     const breakdown = await creditService.getBalanceBreakdown(storeId);
+    demoBalance = breakdown.demoBalance;
+    demoExpiresAt = breakdown.demoExpiresAt;
+    originDemoGrantTxId = breakdown.originDemoGrantTxId;
     const bonusBalance = breakdown.bonusBalance;
 
     const rootHash = storeData?.cnpj_root_hash as string ?? "";
@@ -128,8 +135,14 @@ export default async function AdminUserDetailPage({
               <dd>{(storeData.name as string) ?? "—"}</dd>
               <dt className="text-muted-foreground">Segmento</dt>
               <dd>{(storeData.segment as string) ?? "—"}</dd>
-              <dt className="text-muted-foreground">Saldo</dt>
-              <dd className="font-semibold">{balance} créditos</dd>
+               <dt className="text-muted-foreground">Saldo</dt>
+               <dd className="font-semibold">{balance} créditos</dd>
+               <dt className="text-muted-foreground">Demonstração</dt>
+               <dd>{demoBalance} créditos</dd>
+               <dt className="text-muted-foreground">Status da demonstração</dt>
+               <dd>{getDemoStatus({ demoBalance, demoExpiresAt, originDemoGrantTxId })}</dd>
+               <dt className="text-muted-foreground">Expiração da demonstração</dt>
+               <dd>{demoExpiresAt ? formatDateTimeBR(demoExpiresAt) : "—"}</dd>
             </dl>
           </div>
 

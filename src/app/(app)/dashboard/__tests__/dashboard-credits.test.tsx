@@ -14,6 +14,7 @@ const mockCountCampaigns = vi.fn();
 const mockCountReadyCampaigns = vi.fn();
 const mockGetRecentCampaigns = vi.fn();
 const mockGetBalance = vi.fn();
+const mockGetBalanceBreakdown = vi.fn();
 
 vi.mock("@/lib/auth/require-user", () => ({
   requirePageUser: mockRequirePageUser,
@@ -36,6 +37,7 @@ vi.mock("@/lib/campaign/metrics", () => ({
 vi.mock("@/lib/credit/credit-service", () => {
   class MockCreditService {
     getBalance = mockGetBalance;
+    getBalanceBreakdown = mockGetBalanceBreakdown;
   }
   return { CreditService: MockCreditService };
 });
@@ -67,6 +69,7 @@ vi.mock("next/link", () => ({
 function setupStoreWithCampaigns(balance: number = 10) {
   mockGetCurrentStore.mockResolvedValue({ id: "store-1", name: "Loja Teste" });
   mockGetBalance.mockResolvedValue(balance);
+  mockGetBalanceBreakdown.mockResolvedValue({ availableBalance: balance, demoBalance: 0, demoExpiresAt: null, originDemoGrantTxId: null });
   mockCountCampaigns.mockResolvedValue(5);
   mockCountReadyCampaigns.mockResolvedValue(3);
   mockGetRecentCampaigns.mockResolvedValue([
@@ -95,6 +98,7 @@ describe("Dashboard — Credit Badge", () => {
   it("shows balance badge in empty state when has_store_no_campaigns", async () => {
     mockGetCurrentStore.mockResolvedValue({ id: "store-1", name: "Loja Teste" });
     mockGetBalance.mockResolvedValue(10);
+    mockGetBalanceBreakdown.mockResolvedValue({ availableBalance: 10, demoBalance: 0, demoExpiresAt: null, originDemoGrantTxId: null });
     mockGetUserOnboardingState.mockResolvedValue("has_store_no_campaigns");
 
     const { default: DashboardPage } = await import(

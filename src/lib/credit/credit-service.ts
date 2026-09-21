@@ -21,7 +21,7 @@ export class CreditService {
   async getBalanceBreakdown(storeId: string): Promise<CreditBalanceBreakdown> {
     const { data } = await this.client
       .from("credit_balances")
-      .select("balance, demo_balance, demo_expires_at, bonus_balance, purchased_balance")
+      .select("balance, demo_balance, demo_expires_at, origin_demo_grant_tx_id, bonus_balance, purchased_balance")
       .eq("store_id", storeId)
       .single();
 
@@ -29,6 +29,7 @@ export class CreditService {
       balance: data?.balance ?? 0,
       demoBalance: data?.demo_balance ?? 0,
       demoExpiresAt: data?.demo_expires_at ?? null,
+      originDemoGrantTxId: data?.origin_demo_grant_tx_id ?? null,
       bonusBalance: data?.bonus_balance ?? 0,
       purchasedBalance: data?.purchased_balance ?? 0,
       availableBalance: availableBalance(data),
@@ -148,6 +149,7 @@ export interface CreditBalanceBreakdown {
   balance: number;
   demoBalance: number;
   demoExpiresAt: string | null;
+  originDemoGrantTxId: string | null;
   bonusBalance: number;
   purchasedBalance: number;
   availableBalance: number;

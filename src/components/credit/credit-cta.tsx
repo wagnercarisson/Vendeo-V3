@@ -79,7 +79,7 @@ export function CreditCta({ variant, supportEmail }: CreditCtaProps) {
                   >
                     {supportEmail}
                   </a>{" "}
-                  solicitando mais créditos. O time do Vendeo responderá em até 24h.
+                   solicitando mais créditos.
                 </p>
                 <a
                   href={`mailto:${supportEmail}`}
@@ -90,8 +90,7 @@ export function CreditCta({ variant, supportEmail }: CreditCtaProps) {
               </div>
             ) : (
               <p className="text-text-secondary text-sm font-body">
-                Entre em contato com o time do Vendeo para solicitar mais créditos.
-                Responderemos em até 24h.
+                 Entre em contato com o time do Vendeo para solicitar mais créditos.
               </p>
             )}
             <button

@@ -5,6 +5,7 @@ import { Coins } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCredits } from "@/lib/credit/format";
+import { getDemoStatus, formatRelativeExpiry } from "@/lib/credit/demo-status";
 import {
   useOperationCosts,
   type OperationCostsMap,
@@ -18,6 +19,10 @@ interface BalanceCardProps {
   storeName?: string;
   ctaHref?: string;
   supportEmail?: string;
+  availableBalance?: number;
+  demoBalance?: number;
+  demoExpiresAt?: string | null;
+  originDemoGrantTxId?: string | null;
 }
 
 function getState(balance: number, hasStore: boolean) {
@@ -63,9 +68,11 @@ function OperationCostRows({
   );
 }
 
-function ReadyContent({ balance, hasStore, supportEmail }: BalanceCardProps) {
+function ReadyContent(props: BalanceCardProps) {
+  const { balance, hasStore, supportEmail } = props;
   const { costs, status } = useOperationCosts();
-  const state = getState(balance ?? 0, hasStore ?? true);
+  const availableBalance = balance ?? 0;
+  const state = getState(availableBalance, hasStore ?? true);
 
   if (!hasStore) {
     return (
@@ -93,15 +100,20 @@ function ReadyContent({ balance, hasStore, supportEmail }: BalanceCardProps) {
   }
 
   const displayState = state as "normal" | "low" | "zero";
+  const demoStatus = getDemoStatus({
+    demoBalance: props.demoBalance ?? 0,
+    demoExpiresAt: props.demoExpiresAt ?? null,
+    originDemoGrantTxId: props.originDemoGrantTxId,
+  });
 
   const stateConfig = {
     normal: {
-      title: `${formatCredits(balance ?? 0)} disponíveis`,
+      title: `${formatCredits(availableBalance)} disponíveis`,
       cta: null,
     },
     low: {
       title: "Créditos acabando",
-      description: `Você tem ${balance} crédito(s). Solicite mais antes de ficar sem.`,
+      description: `Você tem ${availableBalance} crédito(s). Solicite mais antes de ficar sem.`,
       cta: { label: "Solicitar créditos", color: "bg-accent-amber" },
     },
     zero: {
@@ -122,8 +134,15 @@ function ReadyContent({ balance, hasStore, supportEmail }: BalanceCardProps) {
         </h2>
       </div>
       <p className="text-3xl font-bold text-text-primary font-heading">
-        {balance}
+        {availableBalance}
       </p>
+      <div className="space-y-1 text-sm text-text-secondary font-body" aria-label="Status da demonstração">
+        <p>{({ active: "Demonstração ativa", expiring_soon: "Expira em breve", exhausted: "Demonstração esgotada", expired: "Demonstração encerrada", none: "Demonstração não iniciada" } as const)[demoStatus]}</p>
+        {props.demoExpiresAt && (demoStatus === "active" || demoStatus === "expiring_soon") && (
+          <p>{new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(props.demoExpiresAt))} · {formatRelativeExpiry(props.demoExpiresAt)}</p>
+        )}
+        {demoStatus === "expired" && availableBalance > 0 && <p>Há saldo utilizável além da demonstração.</p>}
+      </div>
       <div>
         <p className="text-text-primary font-medium font-body">
           {config.title}
@@ -174,7 +193,7 @@ function ReadyContent({ balance, hasStore, supportEmail }: BalanceCardProps) {
                     >
                       {supportEmail}
                     </a>{" "}
-                    solicitando mais créditos. O time do Vendeo responderá em até 24h.
+                     solicitando mais créditos.
                   </p>
                   <a
                     href={`mailto:${supportEmail}`}
@@ -185,8 +204,7 @@ function ReadyContent({ balance, hasStore, supportEmail }: BalanceCardProps) {
                 </div>
               ) : (
                 <p className="text-text-secondary text-sm font-body">
-                  Entre em contato com o time do Vendeo para solicitar mais créditos.
-                  Responderemos em até 24h.
+                   Entre em contato com o time do Vendeo para solicitar mais créditos.
                 </p>
               )}
               <button

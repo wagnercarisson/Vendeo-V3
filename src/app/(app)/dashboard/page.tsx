@@ -72,7 +72,7 @@ export default async function DashboardPage() {
         const sc = await createServerClient();
         const cs = new CreditService(sc);
         try {
-          noCampBalance = await cs.getBalance(storeNoCamp.id);
+        noCampBalance = (await cs.getBalanceBreakdown(storeNoCamp.id)).availableBalance;
         } catch {
           noCampBalance = null;
         }
@@ -130,9 +130,11 @@ export default async function DashboardPage() {
 
       const supabase = await createServerClient();
       const creditService = new CreditService(supabase);
-      let creditBalance: number | null = null;
+       let creditBalance: number | null = null;
+       let creditBreakdown: Awaited<ReturnType<CreditService["getBalanceBreakdown"]>> | null = null;
       try {
-        creditBalance = await creditService.getBalance(store.id);
+         creditBreakdown = await creditService.getBalanceBreakdown(store.id);
+         creditBalance = creditBreakdown.availableBalance;
       } catch {
         creditBalance = null;
       }
@@ -190,6 +192,10 @@ export default async function DashboardPage() {
                 <div className="mt-1">
                   <BalanceDisplay
                     balance={creditBalance}
+                    availableBalance={creditBreakdown.availableBalance}
+                    demoBalance={creditBreakdown.demoBalance}
+                    demoExpiresAt={creditBreakdown.demoExpiresAt}
+                    originDemoGrantTxId={creditBreakdown.originDemoGrantTxId}
                     hasStore={true}
                     variant="badge"
                   />

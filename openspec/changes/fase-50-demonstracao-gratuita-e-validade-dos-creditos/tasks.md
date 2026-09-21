@@ -98,9 +98,9 @@
 
 ## 50-09 — UI (D11/D12)
 
-- [ ] 9.1 `balance-card`/`balance-display`: status da demo + prazo (data/hora local + relativo) + saldo disponível; estados ativa/próxima/exaurida/expirada/saldo insuficiente/bônus pós-demo
-- [ ] 9.2 `conta/page.tsx` + `dashboard`: seção de demonstração + notificações; usar saldo disponível
-- [ ] 9.3 Remover SLA "24h" de `credit-cta`/`balance-card`; manter "solicitar créditos" sem promessa; confirmar ausência de "Comprar/Adquirir créditos"
+- [x] 9.1 `balance-card`/`balance-display`: status da demo + prazo (data/hora local + relativo) + saldo disponível; estados ativa/próxima/exaurida/expirada/saldo insuficiente/bônus pós-demo
+- [x] 9.2 `conta/page.tsx` + `dashboard`: seção de demonstração + notificações; usar saldo disponível
+- [x] 9.3 Remover SLA "24h" de `credit-cta`/`balance-card`; manter "solicitar créditos" sem promessa; confirmar ausência de "Comprar/Adquirir créditos"
 
 ## 50-10 — Legal (D13) — três documentos
 
@@ -113,13 +113,13 @@
 
 ## 50-11 — Testes: unidade + banco/RPC + concorrência (D1–D8, D16)
 
-- [ ] 11.1 Unidade: `getDemoStatus`, `formatRelativeExpiry`, `checkDemoEligibility`, labels/types, defaults de launch-config
-- [ ] 11.2 Banco/RPC: `grant_demo_credits` (grant único, `disabled`, `onboarding_consumed`, `already_granted`, TTL 168h, `demo_cycle_id`); `materialize_demo_expiration` (materializa uma vez, no-op, `expiration` reference/metadata)
-- [ ] 11.3 `reserve_credit`: ordem demo→bônus→comprado; demo vencido não consumível; `saldo_insuficiente`; metadata de origem + snapshot + evidência de esgotamento
-- [ ] 11.4 `refund_credit`: **regra temporal** — episódio original válido restaura sem estender; episódio de graça ativo `GREATEST(ativo, now()+24h)`; **demo esgotada antes do prazo → prazo passa sem `expiration` → refund abre graça de 24h**; saldo vencido não materializado é materializado antes da graça; `origin_demo_grant_tx_id` preservado; `demo_contributing_tx_ids` acumula; idempotência/duplicidade
-- [ ] 11.5 Concorrência: grant demo sob corrida (1 transação); materialização concorrente (1 `expiration`); reserva concorrente (sem saldo negativo)
-- [ ] 11.6 Idempotência: concessão, expiração, refund, notificações e eventos por dedup key; **atomicidade solicitação + `support_ack` + `support_notice`** (falha de gravação → endpoint falha, sem afirmar recebimento)
-- [ ] 11.7 Wrappers SQL + **criação admin sem CNPJ** + **hardening admin_exception**: assinatura única/zero assinaturas legadas (incl. `create_store_with_initial_grant`/`admin_create_store_for_user`), privilégios mínimos, fail-closed; `admin_create_store_for_user` cria loja **sem** créditos; `admin_exception_store_verification` — raiz sintética por loja (duas lojas sem CNPJ não colidem), retry não duplica bônus, e posterior cadastro de CNPJ não concede demo
+- [x] 11.1 Unidade: `getDemoStatus`, `formatRelativeExpiry`, `checkDemoEligibility`, labels/types, defaults de launch-config
+- [x] 11.2 Banco/RPC: `grant_demo_credits` (grant único, `disabled`, `onboarding_consumed`, `already_granted`, TTL 168h, `demo_cycle_id`); `materialize_demo_expiration` (materializa uma vez, no-op, `expiration` reference/metadata)
+- [x] 11.3 `reserve_credit`: ordem demo→bônus→comprado; demo vencido não consumível; `saldo_insuficiente`; metadata de origem + snapshot + evidência de esgotamento
+- [x] 11.4 `refund_credit`: **regra temporal** — episódio original válido restaura sem estender; episódio de graça ativo `GREATEST(ativo, now()+24h)`; **demo esgotada antes do prazo → prazo passa sem `expiration` → refund abre graça de 24h**; saldo vencido não materializado é materializado antes da graça; `origin_demo_grant_tx_id` preservado; `demo_contributing_tx_ids` acumula; idempotência/duplicidade
+- [x] 11.5 Concorrência: grant demo sob corrida (1 transação); materialização concorrente (1 `expiration`); reserva concorrente (sem saldo negativo)
+- [x] 11.6 Idempotência: concessão, expiração, refund, notificações e eventos por dedup key; **atomicidade solicitação + `support_ack` + `support_notice`** (falha de gravação → endpoint falha, sem afirmar recebimento)
+- [x] 11.7 Wrappers SQL + **criação admin sem CNPJ** + **hardening admin_exception**: assinatura única/zero assinaturas legadas (incl. `create_store_with_initial_grant`/`admin_create_store_for_user`), privilégios mínimos, fail-closed; `admin_create_store_for_user` cria loja **sem** créditos; `admin_exception_store_verification` — raiz sintética por loja (duas lojas sem CNPJ não colidem), retry não duplica bônus, e posterior cadastro de CNPJ não concede demo
 
 ## 50-12 — Testes: integração + rotas + UI + notificações + legal + telemetria
 

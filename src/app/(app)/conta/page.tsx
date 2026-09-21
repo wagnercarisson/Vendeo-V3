@@ -40,17 +40,19 @@ export default async function ContaPage({
   const offset = (page - 1) * LIMIT;
 
   let balance = 0;
+  let breakdown: import("@/lib/credit/credit-service").CreditBalanceBreakdown | null = null;
   let history: import("@/lib/credit/types").CreditTransaction[] = [];
   let totalItems = 0;
   let creditError = false;
 
   if (store) {
     try {
-      [balance, history, totalItems] = await Promise.all([
-        creditService.getBalance(store.id),
+      [breakdown, history, totalItems] = await Promise.all([
+        creditService.getBalanceBreakdown(store.id),
         creditService.getHistory(store.id, LIMIT, offset),
         creditService.countCreditTransactions(store.id),
       ]);
+      balance = breakdown.availableBalance;
     } catch {
       creditError = true;
     }
@@ -69,7 +71,7 @@ export default async function ContaPage({
       />
 
       <div className="space-y-6 max-w-lg">
-        <Card>
+         <Card>
           <div className="p-5 space-y-4">
             <h2 className="text-lg font-semibold text-text-primary font-heading">Notificações</h2>
             <NotificationList initialNotifications={(notifications ?? []) as import("@/components/notifications/notification-list").InAppNotification[]} />
@@ -103,6 +105,10 @@ export default async function ContaPage({
               <>
                 <BalanceCard
                   balance={balance}
+                  availableBalance={breakdown?.availableBalance}
+                  demoBalance={breakdown?.demoBalance}
+                  demoExpiresAt={breakdown?.demoExpiresAt}
+                  originDemoGrantTxId={breakdown?.originDemoGrantTxId}
                   hasStore={true}
                   supportEmail={supportEmail}
                 />
