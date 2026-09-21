@@ -1381,24 +1381,349 @@ GRANT EXECUTE ON FUNCTION public.create_store_with_initial_grant(TEXT, TEXT, UUI
 --   RETURN tx_id;
 -- END; $$;
 
--- Restaurar create_store_with_cnpj (26-param, sem p_demo_grant_enabled) — ver 20260728000001_f33_cnpj_verification.sql (bloco 8):
+-- Restaurar create_store_with_cnpj (26-param, sem p_demo_grant_enabled):
 -- DROP FUNCTION IF EXISTS public.create_store_with_cnpj(TEXT, TEXT, UUID, TEXT, TEXT, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, TEXT, TEXT, TEXT, JSONB, JSONB, TEXT[], BOOLEAN);
--- (recriar a assinatura de 26 parâmetros da F33, com a concessão bonus_onboarding via try_grant_onboarding_entitlement)
+-- CREATE OR REPLACE FUNCTION public.create_store_with_cnpj(
+--   p_cnpj_normalized TEXT,
+--   p_cnpj_root_hash TEXT,
+--   p_user_id UUID,
+--   p_name TEXT,
+--   p_segment TEXT,
+--   p_accepted_by_user_id UUID,
+--   p_terms_version TEXT,
+--   p_acceptable_use_version TEXT,
+--   p_ip_address TEXT,
+--   p_user_agent TEXT,
+--   p_city TEXT DEFAULT NULL,
+--   p_state TEXT DEFAULT NULL,
+--   p_brand_color TEXT DEFAULT NULL,
+--   p_logo_url TEXT DEFAULT NULL,
+--   p_subsegment TEXT DEFAULT NULL,
+--   p_tone_of_voice TEXT DEFAULT NULL,
+--   p_positioning TEXT DEFAULT NULL,
+--   p_short_description TEXT DEFAULT NULL,
+--   p_slogan TEXT DEFAULT NULL,
+--   p_cnpj_validation_score JSONB DEFAULT NULL,
+--   p_razao_social TEXT DEFAULT NULL,
+--   p_nome_fantasia TEXT DEFAULT NULL,
+--   p_verification_status TEXT DEFAULT 'unverified',
+--   p_verification_data JSONB DEFAULT NULL,
+--   p_cnpj_official_data JSONB DEFAULT NULL,
+--   p_verification_reasons TEXT[] DEFAULT NULL
+-- )
+-- RETURNS JSONB
+-- LANGUAGE plpgsql
+-- SECURITY DEFINER
+-- SET search_path = ''
+-- AS $$
+-- DECLARE
+--   v_store_id UUID;
+--   v_entitlement_id UUID;
+--   v_grant_tx_id UUID;
+--   v_store_data JSONB;
+-- BEGIN
+--   INSERT INTO public.stores (
+--     name, segment, user_id, city, state, brand_color, logo_url,
+--     subsegment, tone_of_voice, positioning, short_description, slogan,
+--     cnpj_normalized, cnpj_root_hash, cnpj_validation_score,
+--     razao_social, nome_fantasia,
+--     verification_status, verification_data, cnpj_official_data,
+--     verification_reasons, verification_requested_at
+--   ) VALUES (
+--     p_name, p_segment, p_user_id, p_city, p_state, p_brand_color, p_logo_url,
+--     p_subsegment, p_tone_of_voice, p_positioning, p_short_description, p_slogan,
+--     p_cnpj_normalized, p_cnpj_root_hash, p_cnpj_validation_score,
+--     p_razao_social, p_nome_fantasia,
+--     p_verification_status, p_verification_data, p_cnpj_official_data,
+--     p_verification_reasons,
+--     CASE WHEN p_verification_status != 'unverified' THEN now() ELSE NULL END
+--   )
+--   RETURNING id INTO v_store_id;
+--
+--   INSERT INTO public.legal_acceptances (store_id, accepted_by_user_id, document_type, document_version, ip_address, user_agent, acceptance_source)
+--   VALUES
+--     (v_store_id, p_accepted_by_user_id, 'terms_of_service', p_terms_version, p_ip_address, p_user_agent, 'onboarding'),
+--     (v_store_id, p_accepted_by_user_id, 'acceptable_use', p_acceptable_use_version, p_ip_address, p_user_agent, 'onboarding');
+--
+--   IF p_verification_status = 'approved' THEN
+--     v_entitlement_id := public.try_grant_onboarding_entitlement(v_store_id, p_cnpj_root_hash);
+--
+--     IF v_entitlement_id IS NOT NULL THEN
+--       SELECT public.grant_credits(
+--         v_store_id, 10, 'onboarding',
+--         'onboarding_' || v_store_id,
+--         jsonb_build_object('source', 'freemium_cnpj'),
+--         'bonus_onboarding'
+--       ) INTO v_grant_tx_id;
+--
+--       UPDATE public.freemium_entitlements SET grant_transaction_id = v_grant_tx_id
+--       WHERE id = v_entitlement_id;
+--     END IF;
+--   END IF;
+--
+--   SELECT jsonb_agg(row_to_json(s)) INTO v_store_data
+--   FROM (SELECT * FROM public.stores WHERE id = v_store_id) s;
+--
+--   RETURN jsonb_build_object(
+--     'store', v_store_data,
+--     'onboardingGranted', v_entitlement_id IS NOT NULL,
+--     'verificationStatus', p_verification_status
+--   );
+-- END;
+-- $$;
+-- GRANT EXECUTE ON FUNCTION public.create_store_with_cnpj(TEXT, TEXT, UUID, TEXT, TEXT, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, TEXT, TEXT, TEXT, JSONB, JSONB, TEXT[]) TO PUBLIC;
 
--- Restaurar update_store_cnpj (10-param, sem p_demo_grant_enabled) — ver 20260730000001_extend_update_store_cnpj.sql:
+-- Restaurar update_store_cnpj (10-param, sem p_demo_grant_enabled):
 -- DROP FUNCTION IF EXISTS public.update_store_cnpj(UUID, TEXT, TEXT, TEXT, TEXT, JSONB, TEXT, JSONB, JSONB, TEXT[], BOOLEAN);
--- (recriar a assinatura de 10 parâmetros, com o marcador legacy incondicional)
+-- CREATE OR REPLACE FUNCTION public.update_store_cnpj(
+--   p_store_id UUID,
+--   p_cnpj_normalized TEXT,
+--   p_cnpj_root_hash TEXT,
+--   p_razao_social TEXT DEFAULT NULL,
+--   p_nome_fantasia TEXT DEFAULT NULL,
+--   p_cnpj_official_data JSONB DEFAULT NULL,
+--   p_verification_status TEXT DEFAULT 'unverified',
+--   p_verification_data JSONB DEFAULT NULL,
+--   p_cnpj_validation_score JSONB DEFAULT NULL,
+--   p_verification_reasons TEXT[] DEFAULT NULL
+-- )
+-- RETURNS JSONB
+-- LANGUAGE plpgsql
+-- SECURITY DEFINER
+-- SET search_path = ''
+-- AS $$
+-- DECLARE
+--   v_store_data JSONB;
+--   v_existing_hash TEXT;
+-- BEGIN
+--   IF NOT EXISTS (SELECT 1 FROM public.stores WHERE id = p_store_id) THEN
+--     RAISE EXCEPTION 'store_not_found' USING HINT = 'Loja não encontrada';
+--   END IF;
+--
+--   SELECT cnpj_root_hash INTO v_existing_hash FROM public.stores WHERE id = p_store_id;
+--   IF v_existing_hash IS NOT NULL AND v_existing_hash != '' THEN
+--     RAISE EXCEPTION 'cnpj_already_set' USING HINT = 'Esta loja já possui CNPJ cadastrado';
+--   END IF;
+--
+--   UPDATE public.stores SET
+--     cnpj_normalized = p_cnpj_normalized,
+--     cnpj_root_hash = p_cnpj_root_hash,
+--     razao_social = p_razao_social,
+--     nome_fantasia = p_nome_fantasia,
+--     cnpj_official_data = COALESCE(p_cnpj_official_data, cnpj_official_data),
+--     verification_status = p_verification_status,
+--     verification_data = COALESCE(p_verification_data, verification_data),
+--     cnpj_validation_score = COALESCE(p_cnpj_validation_score, cnpj_validation_score),
+--     verification_reasons = COALESCE(p_verification_reasons, verification_reasons),
+--     verification_requested_at = CASE
+--       WHEN p_verification_status != 'unverified' AND stores.verification_requested_at IS NULL
+--       THEN now()
+--       ELSE stores.verification_requested_at
+--     END
+--   WHERE id = p_store_id;
+--
+--   INSERT INTO public.freemium_entitlements (store_id, root_hash, benefit_type, reason)
+--   VALUES (p_store_id, p_cnpj_root_hash, 'onboarding', 'legacy_pre_f32_onboarding_consumed')
+--   ON CONFLICT (root_hash, benefit_type, (COALESCE(cycle, '_nostring_')))
+--   DO NOTHING;
+--
+--   SELECT jsonb_agg(row_to_json(s)) INTO v_store_data
+--   FROM (SELECT * FROM public.stores WHERE id = p_store_id) s;
+--
+--   RETURN jsonb_build_object('store', v_store_data);
+-- END;
+-- $$;
+-- GRANT EXECUTE ON FUNCTION public.update_store_cnpj(UUID, TEXT, TEXT, TEXT, TEXT, JSONB, TEXT, JSONB, JSONB, TEXT[]) TO PUBLIC;
 
--- Restaurar admin_approve_store_verification (2-param, sem p_demo_grant_enabled) — ver 20260728000002_fix_f33_audit_log.sql:
+-- Restaurar admin_approve_store_verification (2-param, sem p_demo_grant_enabled):
 -- DROP FUNCTION IF EXISTS public.admin_approve_store_verification(UUID, UUID, BOOLEAN);
--- (recriar a assinatura de 2 parâmetros, com a concessão bonus_onboarding)
+-- CREATE OR REPLACE FUNCTION public.admin_approve_store_verification(
+--   p_store_id UUID,
+--   p_admin_id UUID
+-- )
+-- RETURNS JSONB
+-- LANGUAGE plpgsql
+-- SECURITY DEFINER
+-- SET search_path = ''
+-- AS $$
+-- DECLARE
+--   v_root_hash TEXT;
+--   v_entitlement_id UUID;
+--   v_grant_tx_id UUID;
+--   v_store_data JSONB;
+-- BEGIN
+--   SELECT cnpj_root_hash INTO v_root_hash
+--   FROM public.stores WHERE id = p_store_id;
+--
+--   IF NOT FOUND THEN
+--     RAISE EXCEPTION 'store_not_found' USING HINT = 'Loja não encontrada';
+--   END IF;
+--
+--   UPDATE public.stores SET
+--     verification_status = 'approved',
+--     verification_decided_at = now()
+--   WHERE id = p_store_id;
+--
+--   IF v_root_hash IS NOT NULL AND v_root_hash != '' THEN
+--     v_entitlement_id := public.try_grant_onboarding_entitlement(p_store_id, v_root_hash);
+--
+--     IF v_entitlement_id IS NOT NULL THEN
+--       SELECT public.grant_credits(
+--         p_store_id, 10, 'onboarding',
+--         'onboarding_' || p_store_id,
+--         jsonb_build_object('source', 'admin_approve_verification'),
+--         'bonus_onboarding'
+--       ) INTO v_grant_tx_id;
+--
+--       UPDATE public.freemium_entitlements SET grant_transaction_id = v_grant_tx_id
+--       WHERE id = v_entitlement_id;
+--     END IF;
+--   END IF;
+--
+--   INSERT INTO public.admin_audit_log (action, target_type, target_id, actor_id, reason, metadata)
+--   VALUES ('approve_verification', 'store', p_store_id, p_admin_id,
+--     'Aprovado manualmente por admin',
+--     jsonb_build_object(
+--       'entitlement_id', v_entitlement_id,
+--       'grant_transaction_id', v_grant_tx_id
+--     ));
+--
+--   SELECT jsonb_agg(row_to_json(s)) INTO v_store_data
+--   FROM (SELECT id, verification_status, verification_decided_at FROM public.stores WHERE id = p_store_id) s;
+--
+--   RETURN jsonb_build_object(
+--     'success', true,
+--     'onboardingGranted', v_entitlement_id IS NOT NULL,
+--     'store', v_store_data
+--   );
+-- END;
+-- $$;
+-- GRANT EXECUTE ON FUNCTION public.admin_approve_store_verification(UUID, UUID) TO PUBLIC;
 
--- Restaurar admin_exception_store_verification (raiz sintética global + sem idempotência) — ver 20260728000001_f33_cnpj_verification.sql (bloco 7):
--- CREATE OR REPLACE FUNCTION public.admin_exception_store_verification(p_store_id UUID, p_admin_id UUID, p_reason TEXT) RETURNS JSONB ...
+-- Restaurar admin_exception_store_verification (raiz sintética global + sem idempotência):
+-- CREATE OR REPLACE FUNCTION public.admin_exception_store_verification(
+--   p_store_id UUID,
+--   p_admin_id UUID,
+--   p_reason TEXT
+-- )
+-- RETURNS JSONB
+-- LANGUAGE plpgsql
+-- SECURITY DEFINER
+-- SET search_path = ''
+-- AS $$
+-- DECLARE
+--   v_root_hash TEXT;
+--   v_entitlement_id UUID;
+--   v_grant_tx_id UUID;
+--   v_store_data JSONB;
+-- BEGIN
+--   SELECT cnpj_root_hash INTO v_root_hash FROM public.stores WHERE id = p_store_id;
+--
+--   IF NOT FOUND THEN
+--     RAISE EXCEPTION 'store_not_found' USING HINT = 'Loja não encontrada';
+--   END IF;
+--
+--   IF v_root_hash IS NULL OR v_root_hash = '' THEN
+--     v_root_hash := 'admin_exception_no_cnpj';
+--   END IF;
+--
+--   UPDATE public.stores SET
+--     verification_status = 'approved',
+--     verification_decided_at = now()
+--   WHERE id = p_store_id;
+--
+--   INSERT INTO public.freemium_entitlements (store_id, root_hash, benefit_type, reason, granted_by)
+--   VALUES (p_store_id, v_root_hash, 'admin_exception', p_reason, p_admin_id)
+--   RETURNING id INTO v_entitlement_id;
+--
+--   SELECT public.grant_credits(
+--     p_store_id, 10, p_reason,
+--     'admin_exception_' || v_entitlement_id,
+--     jsonb_build_object('source', 'admin_exception', 'entitlement_id', v_entitlement_id),
+--     'admin_grant'
+--   ) INTO v_grant_tx_id;
+--
+--   UPDATE public.freemium_entitlements SET grant_transaction_id = v_grant_tx_id
+--   WHERE id = v_entitlement_id;
+--
+--   INSERT INTO public.admin_audit_log (action, target_type, target_id, actor_id, reason, metadata)
+--   VALUES ('admin_exception', 'store', p_store_id, p_admin_id, p_reason,
+--     jsonb_build_object(
+--       'grant_type', 'freemium_exception',
+--       'entitlement_id', v_entitlement_id,
+--       'grant_transaction_id', v_grant_tx_id
+--     ));
+--
+--   SELECT jsonb_agg(row_to_json(s)) INTO v_store_data
+--   FROM (SELECT id, verification_status, verification_decided_at FROM public.stores WHERE id = p_store_id) s;
+--
+--   RETURN jsonb_build_object(
+--     'success', true,
+--     'onboardingGranted', true,
+--     'store', v_store_data
+--   );
+-- END;
+-- $$;
+-- GRANT EXECUTE ON FUNCTION public.admin_exception_store_verification(UUID, UUID, TEXT) TO PUBLIC;
 
--- Restaurar create_store_with_initial_grant (com grant onboarding) — ver 20260914000002_f47_fix_admin_create_store_lint.sql:
--- CREATE OR REPLACE FUNCTION public.create_store_with_initial_grant(... p_initial_grant_amount INTEGER DEFAULT 10) RETURNS JSONB ...
---   (reinserir o PERFORM public.grant_credits(v_store_id, p_initial_grant_amount, 'onboarding', 'onboarding_' || v_store_id, '{}'::jsonb);)
+-- Restaurar create_store_with_initial_grant (com grant onboarding):
+-- CREATE OR REPLACE FUNCTION public.create_store_with_initial_grant(
+--   p_name TEXT,
+--   p_segment TEXT,
+--   p_user_id UUID,
+--   p_city TEXT DEFAULT NULL,
+--   p_state TEXT DEFAULT NULL,
+--   p_brand_color TEXT DEFAULT NULL,
+--   p_logo_url TEXT DEFAULT NULL,
+--   p_subsegment TEXT DEFAULT NULL,
+--   p_tone_of_voice TEXT DEFAULT NULL,
+--   p_positioning TEXT DEFAULT NULL,
+--   p_short_description TEXT DEFAULT NULL,
+--   p_slogan TEXT DEFAULT NULL,
+--   p_initial_grant_amount INTEGER DEFAULT 10
+-- )
+-- RETURNS JSONB
+-- LANGUAGE plpgsql
+-- SECURITY DEFINER
+-- SET search_path = ''
+-- AS $$
+-- DECLARE
+--   v_store_id UUID;
+--   v_store_data JSONB;
+--   v_balance INTEGER;
+-- BEGIN
+--   INSERT INTO public.stores (
+--     name, segment, user_id, city, state, brand_color, logo_url,
+--     subsegment, tone_of_voice, positioning, short_description, slogan
+--   ) VALUES (
+--     p_name, p_segment, p_user_id, p_city, p_state, p_brand_color, p_logo_url,
+--     p_subsegment, p_tone_of_voice, p_positioning, p_short_description, p_slogan
+--   )
+--   RETURNING id INTO v_store_id;
+--
+--   PERFORM public.grant_credits(
+--     v_store_id,
+--     p_initial_grant_amount,
+--     'onboarding',
+--     'onboarding_' || v_store_id,
+--     '{}'::jsonb
+--   );
+--
+--   SELECT COALESCE(cb.balance, 0) INTO v_balance
+--   FROM public.credit_balances cb
+--   WHERE cb.store_id = v_store_id;
+--
+--   v_store_data := jsonb_build_object(
+--     'id', v_store_id,
+--     'name', p_name,
+--     'segment', p_segment,
+--     'balance', v_balance
+--   );
+--   RETURN v_store_data;
+-- END;
+-- $$;
+-- REVOKE ALL ON FUNCTION public.create_store_with_initial_grant(TEXT, TEXT, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, INTEGER) FROM PUBLIC, anon, authenticated;
+-- GRANT EXECUTE ON FUNCTION public.create_store_with_initial_grant(TEXT, TEXT, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, INTEGER) TO service_role;
 
 -- Restaurar privilégios (desfazer REVOKE):
 -- GRANT EXECUTE ON FUNCTION public.grant_credits(UUID, INTEGER, TEXT, TEXT, JSONB, TEXT) TO PUBLIC;
