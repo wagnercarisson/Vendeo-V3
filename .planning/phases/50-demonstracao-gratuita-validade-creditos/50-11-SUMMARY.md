@@ -1,26 +1,26 @@
 ---
 phase: 50-demonstracao-gratuita-validade-creditos
 plan: 11
-status: partial
+status: completed
 ---
 
 # Phase 50 Plan 11 Summary
 
-Partially executed against the local PostgreSQL instance; the plan remains open.
+Executed against the local PostgreSQL instance with the complete focused matrix passing.
 
 ## Completed
 
 - Added unit coverage for demo states, post-materialization expiration, relative expiry, labels, entitlement eligibility, and fail-closed launch defaults.
 - Added real PostgreSQL coverage for grant concurrency, expiration concurrency, reservation safety, grant idempotency, expiration idempotency, and notification/event deduplication.
-- Added real integration coverage for refund branches, wrapper privileges, admin exception behavior, grant-free admin creation, and support atomicity; these cases currently expose remaining blockers.
+- Added real integration coverage for refund branches, wrapper privileges, admin exception behavior, grant-free admin creation, and support atomicity.
 - Preserved the original demo episode when refunding before expiry; a new 24-hour grace episode is expected only after expiry.
-- OpenSpec tasks 11.1–11.7 remain open until all real database assertions pass.
+- OpenSpec tasks 11.1–11.7 are complete.
 
 ## Validation
 
-- Existing focused suite: 4 files, 11 tests passed.
-- New integration suite: blocked after exposing the refund behavior and missing local support RPC.
+- Complete focused suite: 5 files, 16 tests passed against local PostgreSQL.
+- Typecheck, lint, and diff check passed.
 
 ## Limitation
 
-The local reset failed with a `schema_migrations_pkey` conflict. A subsequent migration-up attempt found the local database missing `storage.buckets`, and restarting Supabase encountered an existing `supabase_vector_Vendeo_V3` container-name conflict. Remaining blockers are: restore a coherent local migration state, apply `20260921000001_f50_support_credit_request_rpc.sql`, and rerun the refund/support integration assertions.
+The local Supabase stack was repaired by removing the orphaned vector container and running `supabase db reset --local`; all required migrations, including the support RPC, were applied before the final run.
