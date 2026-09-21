@@ -146,13 +146,13 @@
 
 ## 50-16 — Beta/access + retenção (D17/D18/D19/D21)
 
-- [ ] 16.1 Landing: manter solicitação de acesso; `publicSignupEnabled=false`; gate operacional do limite de 50 participantes (contagem, sem plataforma de convites)
-- [ ] 16.2 `access-request-form.tsx`: rotular WhatsApp como **opcional** + explicar finalidade; exibir aviso de privacidade + links; registrar `privacy_notice_version`
-- [ ] 16.3 Maioridade/autoridade via aceite dos Termos (cláusula), sem coleta de data de nascimento
-- [ ] 16.4 Aviso curto próximo aos uploads de imagem (direitos/consentimentos/menores), sem checkbox repetido; proibições nos Termos/AUP
-- [ ] 16.5 Retenção/anonimização de `product_events`/`credit_notifications`/`support_credit_requests` e descarte do WhatsApp; distinção de uploads temporários/órfãos; janela de 30 dias no encerramento
-- [ ] 16.6 `data_subject_requests`: página/endpoint admin (`GET/POST /api/admin/data-subject-requests`, requireAdmin) para gerenciar o ciclo completo do pedido — registrar (`received`), **atualizar para `in_progress`** (que, para `closure`/`deletion`, **marca o início da exclusão**), **cancelar com `cancelled_at` somente enquanto `status = received`** (após `in_progress`, rejeitar a tentativa), **concluir com `completed_at`**, e **auditar (`admin_audit_log`) todas as transições e tentativas de cancelamento** (com `operation_id`/`protocol`/`type`/`user_id`/`store_id`/`contact`/`details`/`deletion_inventory`/`legal_hold`); `due_at` **nullable** até aprovação dos prazos; runbook manual para exportar/excluir/anonimizar (incl. objetos do storage); owner lê os próprios pedidos (RLS)
-- [ ] 16.7 Direitos de titular via suporte com protocolo (sem autosserviço)
+- [x] 16.1 Landing: manter solicitação de acesso; `publicSignupEnabled=false`; gate operacional do limite de 50 participantes (contagem, sem plataforma de convites)
+- [x] 16.2 `access-request-form.tsx`: rotular WhatsApp como **opcional** + explicar finalidade; exibir aviso de privacidade + links; registrar `privacy_notice_version`
+- [x] 16.3 Maioridade/autoridade via aceite dos Termos (cláusula), sem coleta de data de nascimento
+- [x] 16.4 Aviso curto próximo aos uploads de imagem (direitos/consentimentos/menores), sem checkbox repetido; proibições nos Termos/AUP
+- [x] 16.5 Retenção/anonimização de `product_events`/`credit_notifications`/`support_credit_requests` e descarte do WhatsApp; distinção de uploads temporários/órfãos; janela de 30 dias no encerramento
+- [x] 16.6 `data_subject_requests`: página/endpoint admin (`GET/POST /api/admin/data-subject-requests`, requireAdmin) para gerenciar o ciclo completo do pedido — registrar (`received`), **atualizar para `in_progress`** (que, para `closure`/`deletion`, **marca o início da exclusão**), **cancelar com `cancelled_at` somente enquanto `status = received`** (após `in_progress`, rejeitar a tentativa), **concluir com `completed_at`**, e **auditar (`admin_audit_log`) todas as transições e tentativas de cancelamento** (com `operation_id`/`protocol`/`type`/`user_id`/`store_id`/`contact`/`details`/`deletion_inventory`/`legal_hold`); `due_at` **nullable** até aprovação dos prazos; runbook manual para exportar/excluir/anonimizar (incl. objetos do storage); owner lê os próprios pedidos (RLS)
+- [x] 16.7 Direitos de titular via suporte com protocolo (sem autosserviço)
 
 ## 50-17 — Backup externo + gates de go-live (D26/D15)
 

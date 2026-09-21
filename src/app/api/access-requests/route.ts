@@ -10,6 +10,7 @@ const AccessRequestSchema = z.object({
   store_name: z.string().trim().max(100).optional(),
   segment: z.string().trim().max(50).optional(),
   whatsapp: z.string().trim().max(20).optional(),
+  privacy_notice_version: z.string().trim().min(1).max(20),
 });
 
 // POST público (sem requireUser) — visitantes da landing solicitam acesso free.
@@ -17,14 +18,16 @@ const AccessRequestSchema = z.object({
 export const POST = apiHandler(async (request: NextRequest) => {
   requireSameOrigin(request);
 
-  const body = await request.json().catch(() => null);
+  const body = request.headers.get("content-type")?.includes("application/json")
+    ? await request.json().catch(() => null)
+    : Object.fromEntries((await request.formData()).entries());
   const parsed = AccessRequestSchema.safeParse(body);
   if (!parsed.success) {
     // 400 genérico — sem detalhar o campo (anti-enumeração de esquema)
     return NextResponse.json({ error: "Dados inválidos" }, { status: 400 });
   }
 
-  const { email, name, store_name, segment, whatsapp } = parsed.data;
+  const { email, name, store_name, segment, whatsapp, privacy_notice_version } = parsed.data;
 
   // Anti-duplicidade: email com solicitação pending/approved não gera segundo registro
   const { data: existing } = await supabaseAdmin
@@ -45,6 +48,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
     store_name: store_name || null,
     segment: segment || null,
     whatsapp: whatsapp || null,
+    privacy_notice_version,
     source: "landing",
   });
 
