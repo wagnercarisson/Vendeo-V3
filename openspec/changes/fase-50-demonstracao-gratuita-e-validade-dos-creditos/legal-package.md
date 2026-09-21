@@ -13,7 +13,7 @@
 | Política de Privacidade v1.4 — consolidado | `public/docs/legal/privacy-policy-v1-4.md` | **pronto (consolidado)** |
 | Política de Uso Aceitável v1.2 — consolidado | `public/docs/legal/acceptable-use-v1-2.md` | **pronto (consolidado)** |
 | Diferenças (diff) | tabelas de correspondência em cada delta | pronto |
-| Migration de publicação separada | `supabase/migrations/20260920000003_f50_legal_publication.sql` | **pronto (não aplicada — só no corte, 50-14)** |
+| Template da migration de publicação | `legal-publication-template/20260920000003_f50_legal_publication.sql` | **pronto (fora de supabase/migrations; efetivar só no corte, 50-14)** |
 | Catálogo | `src/lib/legal/document-content.ts` | **pronto (v1.5/v1.4/v1.2 registradas)** |
 
 ## Mecanismo de reaceite/ciência (verificado na task 10.3)
