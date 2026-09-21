@@ -6,7 +6,7 @@
 
 ### Requirement: Onboarding grant condicionado à raiz do CNPJ (MODIFICADO F32)
 
-O sistema SHALL substituir a concessão `bonus_onboarding` pela **demonstração** (`type='demo'`, TTL 168h) nos pontos de onboarding aprovado (`create_store_with_cnpj`, `admin_approve_store_verification`, `admin_exception_store_verification` e — para lojas draft que informam CNPJ depois — `update_store_cnpj`). A irrepetibilidade por raiz passa a considerar ausência de `onboarding` **e** `demo`.
+O sistema SHALL substituir a concessão `bonus_onboarding` pela **demonstração** (`type='demo'`, TTL 168h) nos pontos de onboarding aprovado (`create_store_with_cnpj`, `admin_approve_store_verification` e — para lojas draft que informam CNPJ depois — `update_store_cnpj`). A irrepetibilidade por raiz passa a considerar ausência de `onboarding` **e** `demo` (e `admin_exception`). **`admin_exception_store_verification` permanece bônus `admin_grant` não-expirável** (não é convertido para demo).
 
 > **Delta F50 (D3/D8):** a concessão deixa de ser bônus não-expirável e passa a ser demonstração (10 créditos, `demo_expires_at = now() + 168h`), gated por `p_demo_grant_enabled`. A resposta `onboardingGranted` continua refletindo se houve concessão. `update_store_cnpj` **concede a demo** quando a verificação resulta em `approved`, a flag está ativa e a raiz não tem benefício anterior.
 

@@ -23,16 +23,16 @@ O sistema SHALL estender o CHECK de `benefit_type` para incluir `demo` (tipos: `
 
 ### Requirement: checkDemoEligibility(rootHash)
 
-O sistema SHALL prover `checkDemoEligibility(rootHash): Promise<boolean>` que retorna `true` somente quando a raiz não possui entitlement `onboarding` **nem** `demo`.
+O sistema SHALL prover `checkDemoEligibility(rootHash): Promise<boolean>` que retorna `true` somente quando a raiz não possui entitlement `onboarding`, `demo` **nem** `admin_exception`.
 
-#### Scenario: elegível sem onboarding/demo
+#### Scenario: elegível sem onboarding/demo/admin_exception
 
-- **WHEN** a raiz não tem `onboarding` nem `demo`
+- **WHEN** a raiz não tem `onboarding`, `demo` nem `admin_exception`
 - **THEN** retorna `true`
 
-#### Scenario: não elegível com onboarding ou demo
+#### Scenario: não elegível com onboarding, demo ou admin_exception
 
-- **WHEN** a raiz tem `onboarding` ou `demo`
+- **WHEN** a raiz tem `onboarding`, `demo` ou `admin_exception`
 - **THEN** retorna `false`
 
 ### Requirement: try_grant_demo_entitlement(storeId, rootHash)

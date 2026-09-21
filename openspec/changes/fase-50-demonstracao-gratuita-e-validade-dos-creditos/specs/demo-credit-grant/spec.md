@@ -19,9 +19,9 @@ O sistema SHALL adicionar `demo` ao CHECK de `freemium_entitlements.benefit_type
 - **WHEN** dois INSERTs de entitlement `demo` com o mesmo `root_hash`
 - **THEN** o segundo é rejeitado/no-op pelo índice único (ON CONFLICT DO NOTHING)
 
-### Requirement: Elegibilidade da demonstração exige ausência de onboarding e demo
+### Requirement: Elegibilidade da demonstração exige ausência de onboarding, demo e admin_exception
 
-O sistema SHALL prover `checkDemoEligibility(rootHash): Promise<boolean>` que retorna `true` somente quando a raiz **não** possui entitlement `onboarding` **nem** `demo`.
+O sistema SHALL prover `checkDemoEligibility(rootHash): Promise<boolean>` que retorna `true` somente quando a raiz **não** possui entitlement `onboarding`, `demo` **nem** `admin_exception`. A RPC `grant_demo_credits` SHALL bloquear também `admin_exception` anterior da própria loja (inclusive registrado com raiz sintética).
 
 #### Scenario: Raiz nova é elegível
 
@@ -37,6 +37,12 @@ O sistema SHALL prover `checkDemoEligibility(rootHash): Promise<boolean>` que re
 
 - **WHEN** existe entitlement `demo` para a raiz
 - **THEN** `checkDemoEligibility` retorna `false`
+
+#### Scenario: Raiz ou loja com admin_exception não é elegível
+
+- **WHEN** existe entitlement `admin_exception` para a raiz, ou a loja já possui `admin_exception` anterior (inclusive com raiz sintética)
+- **THEN** `checkDemoEligibility` retorna `false`
+- **AND** `grant_demo_credits` retorna `{ granted: false, reason: 'admin_exception_consumed' }` sem criar entitlement/demo
 
 ### Requirement: RPC grant_demo_credits
 
@@ -85,7 +91,7 @@ A RPC SHALL, em uma única transação, **na ordem que impede entitlement `demo`
 
 ### Requirement: Substituição da concessão de onboarding pela demonstração
 
-O sistema SHALL substituir a concessão `bonus_onboarding` pela demonstração nos pontos de onboarding aprovado: `create_store_with_cnpj`, `admin_approve_store_verification` e `admin_exception_store_verification`. A concessão SHALL ocorrer somente quando a loja está elegível/`approved`, a flag `p_demo_grant_enabled` está ativa e a raiz nunca recebeu `onboarding`/`demo`.
+O sistema SHALL substituir a concessão `bonus_onboarding` pela demonstração nos pontos de onboarding aprovado: `create_store_with_cnpj` e `admin_approve_store_verification`. A concessão SHALL ocorrer somente quando a loja está elegível/`approved`, a flag `p_demo_grant_enabled` está ativa e a raiz nunca recebeu `onboarding`/`demo`. **`admin_exception_store_verification` NÃO é convertido** — permanece bônus não-expirável (`admin_grant`, `benefit_type='admin_exception'`), com raiz sintética por loja e idempotência (D8).
 
 #### Scenario: Loja aprovada em criação recebe demonstração
 

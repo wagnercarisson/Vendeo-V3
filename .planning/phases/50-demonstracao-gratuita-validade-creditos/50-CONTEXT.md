@@ -87,7 +87,7 @@ A F50 **substitui o freemium contínuo** (10 créditos `bonus_onboarding` + 5 me
 - Gating explícito dentro da transação atômica (D16): `false` → `{granted:false, reason:'disabled'}` sem INSERT.
 - Ordem: (1) flag off → disabled; (2) elegibilidade raiz **ANTES do INSERT** (entitlement `onboarding` → `onboarding_consumed`); (3) `try_grant_demo_entitlement` ON CONFLICT DO NOTHING (NULL → `already_granted`); (4) `grant_credits(..., p_type='demo')`; (5) vincula `grant_transaction_id` + auditoria `admin_audit_log` (`credit_grant`, `grant_type='demo'`); (6) emite `product_events.demo_granted` + enfileira notificação (best-effort).
 - `demo_expires_at = now() + make_interval(hours => p_ttl_hours)` (UTC); exibição local no client.
-- Substitui `bonus_onboarding` em `create_store_with_cnpj`, `admin_approve_store_verification`, `admin_exception_store_verification` (todos recebem `p_demo_grant_enabled` do caller); `update_store_cnpj` concede demo quando `approved` + flag ativa + raiz sem benefício anterior.
+- Substitui `bonus_onboarding` em `create_store_with_cnpj` e `admin_approve_store_verification` (ambos recebem `p_demo_grant_enabled` do caller); `update_store_cnpj` concede demo quando `approved` + flag ativa + raiz sem benefício anterior. **`admin_exception_store_verification` permanece bônus `admin_grant` não-expirável** (não é convertido para demo; ver D8).
 
 ### D4 — Regra autoritativa de saldo disponível e ordem de consumo
 `DECIDIDO`.
@@ -112,7 +112,7 @@ A F50 **substitui o freemium contínuo** (10 créditos `bonus_onboarding` + 5 me
 `DECIDIDO`. Novo valor `demo` no CHECK de `freemium_entitlements.benefit_type`. Elegibilidade = raiz **sem** `onboarding` **e sem** `demo`. `checkDemoEligibility(rootHash)` + `grantDemoEntitlement` (ON CONFLICT DO NOTHING). **Sem conversão** de `onboarding`→`demo`.
 
 ### D8 — Transição dos dados legados
-`DECIDIDO`. Backfill default (sem expiração retroativa); `bonus_*` intocados; entitlements/transações antigas permanecem histórico. Raiz que já consumiu `onboarding` **não** recebe segunda demo. `update_store_cnpj` (draft→fiscal) concede demo se `approved`+flag+raiz sem benefício; marcador `legacy_pre_f32_onboarding_consumed` só com evidência real. Créditos admin pós-mudança = **bônus** não-expirável.
+`DECIDIDO`. Backfill default (sem expiração retroativa); `bonus_*` intocados; entitlements/transações antigas permanecem histórico. Raiz que já consumiu `onboarding` **não** recebe segunda demo. `update_store_cnpj` (draft→fiscal) concede demo se `approved`+flag+raiz sem benefício; marcador `legacy_pre_f32_onboarding_consumed` só com evidência real. Créditos admin pós-mudança = **bônus** não-expirável. **`admin_exception_store_verification` permanece bônus `admin_grant`** (benefit_type `admin_exception`), com raiz sintética por loja (`admin_exception_no_cnpj:<store_id>`), idempotência e auditoria; a exceção conta como benefício gratuito inicial já consumido — a elegibilidade da demo bloqueia `onboarding`/`demo`/`admin_exception` na raiz e `admin_exception` anterior da própria loja.
 
 ### D9 — Encerramento do freemium mensal (coordenado com o corte)
 `DECIDIDO`. `VENDEO_MONTHLY_CREDITS_ENABLED` default `true` **até o corte**. No corte: cron `/api/cron/monthly-credits` e botão `POST /api/admin/monthly-credits/grant` desativados (`monthlyCreditsEnabled=false`). RPCs mantidas como legado/deprecadas. Rollback **não** reativa o mensal.

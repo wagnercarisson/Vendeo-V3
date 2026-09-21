@@ -55,9 +55,10 @@
 - [ ] 3.5 `reserve_credit` — materializa expiração antes do lock; ordem demo→bônus→comprado; metadata `demo_amount`/`bonus_amount`/`purchased_amount` + snapshot `demo_expires_at` + evidência de esgotamento (`demo_before`/`demo_after`)
 - [ ] 3.6 `refund_credit` — **regra temporal**: episódio original válido → restaura sem estender; episódio de graça ativo → `GREATEST(demo_expires_at, now()+24h)`; nenhum episódio ativo (`demo_expires_at <= now()` ou `NULL`) → materializa saldo vencido remanescente (se houver) e abre novo `demo_cycle_id`; **gatilho da graça é só o tempo vencido**; preserva `origin_demo_grant_tx_id` (nunca zerado); **no máximo uma `expiration` por episódio**; acumula `demo_contributing_tx_ids`; bônus/comprado como antes
 - [ ] 3.7 REVOKE/GRANT `service_role` nas novas RPCs (paridade F47/F48.1)
-- [ ] 3.8 **Redefinir os 4 wrappers SQL de concessão** (`create_store_with_cnpj`, `update_store_cnpj`, `admin_approve_store_verification`, `admin_exception_store_verification`) — dropar a assinatura antiga antes de criar a nova com `p_demo_grant_enabled BOOLEAN DEFAULT false`; substituir `bonus_onboarding` por `grant_demo_credits`; privilégios mínimos (service_role)
-- [ ] 3.9 **Neutralizar a concessão legada sem CNPJ** — redefinir `create_store_with_initial_grant`/`admin_create_store_for_user` para **não** conceder créditos na criação administrativa (`admin/stores/route.ts` → `admin_create_store_for_user`); a demo é concedida posteriormente via `update-cnpj` quando aprovado (irrepetibilidade por raiz, substituição do onboarding por demo, exigência de CNPJ, encerramento do freemium contínuo)
-- [ ] 3.10 Reaplicar a migration completa via `supabase db reset --local` (banco local descartável) e verificar integralmente as RPCs/estruturas
+- [ ] 3.8 **Redefinir os 3 wrappers SQL de concessão demo** (`create_store_with_cnpj`, `update_store_cnpj`, `admin_approve_store_verification`) — dropar a assinatura antiga antes de criar a nova com `p_demo_grant_enabled BOOLEAN DEFAULT false`; substituir `bonus_onboarding` por `grant_demo_credits`; privilégios mínimos (service_role)
+- [ ] 3.9 **Hardening de `admin_exception_store_verification`** — permanece bônus não-expirável (`admin_grant`, `benefit_type='admin_exception'`); raiz sintética **por loja** (`admin_exception_no_cnpj:<store_id>`); idempotência (retry não duplica bônus); auditoria. A elegibilidade da demo passa a bloquear `admin_exception` na raiz e na própria loja
+- [ ] 3.10 **Neutralizar a concessão legada sem CNPJ** — redefinir `create_store_with_initial_grant`/`admin_create_store_for_user` para **não** conceder créditos na criação administrativa (`admin/stores/route.ts` → `admin_create_store_for_user`); a demo é concedida posteriormente via `update-cnpj` quando aprovado (irrepetibilidade por raiz, substituição do onboarding por demo, exigência de CNPJ, encerramento do freemium contínuo)
+- [ ] 3.11 Reaplicar a migration completa via `supabase db reset --local` (banco local descartável) e verificar integralmente as RPCs/estruturas
 
 ## 50-04 — Serviços (D4/D7/D9/D15/D24)
 
@@ -70,7 +71,7 @@
 
 ## 50-05 — Rotas (D3/D8/D9/D16)
 
-- [ ] 5.1 `create_store_with_cnpj` / `admin_approve_store_verification` / `admin_exception_store_verification`: receber e repassar `p_demo_grant_enabled` (do `getLaunchConfig().demoCreditsEnabled`); substituir `bonus_onboarding` por `grant_demo_credits`
+- [ ] 5.1 `create_store_with_cnpj` / `admin_approve_store_verification`: receber e repassar `p_demo_grant_enabled` (do `getLaunchConfig().demoCreditsEnabled`); substituir `bonus_onboarding` por `grant_demo_credits`. **`admin_exception_store_verification` permanece `admin_grant` (bônus) — sem `p_demo_grant_enabled`**
 - [ ] 5.2 `update_store_cnpj`: **conceder demo** quando verificação `approved` + flag ativa + raiz sem benefício anterior; **só** criar marcador `legacy_pre_f32_onboarding_consumed` quando houver evidência real de benefício anterior (`bonus_onboarding` na loja ou entitlement `onboarding` na raiz)
 - [ ] 5.3 **Manter mensal ativo até o corte** (cron + botão continuam); preparar desligamento coordenado no corte (50-14)
 - [ ] 5.4 `generate-image/route.ts` e `generate-without-logo/route.ts`: gate usa saldo disponível (sem mudança de contrato 402); confirmar refunds preservados
@@ -118,11 +119,11 @@
 - [ ] 11.4 `refund_credit`: **regra temporal** — episódio original válido restaura sem estender; episódio de graça ativo `GREATEST(ativo, now()+24h)`; **demo esgotada antes do prazo → prazo passa sem `expiration` → refund abre graça de 24h**; saldo vencido não materializado é materializado antes da graça; `origin_demo_grant_tx_id` preservado; `demo_contributing_tx_ids` acumula; idempotência/duplicidade
 - [ ] 11.5 Concorrência: grant demo sob corrida (1 transação); materialização concorrente (1 `expiration`); reserva concorrente (sem saldo negativo)
 - [ ] 11.6 Idempotência: concessão, expiração, refund, notificações e eventos por dedup key; **atomicidade solicitação + `support_ack` + `support_notice`** (falha de gravação → endpoint falha, sem afirmar recebimento)
-- [ ] 11.7 Wrappers SQL + **criação admin sem CNPJ**: assinatura única/zero assinaturas legadas (incl. `create_store_with_initial_grant`/`admin_create_store_for_user`), privilégios mínimos, fail-closed; `admin_create_store_for_user` cria loja **sem** créditos
+- [ ] 11.7 Wrappers SQL + **criação admin sem CNPJ** + **hardening admin_exception**: assinatura única/zero assinaturas legadas (incl. `create_store_with_initial_grant`/`admin_create_store_for_user`), privilégios mínimos, fail-closed; `admin_create_store_for_user` cria loja **sem** créditos; `admin_exception_store_verification` — raiz sintética por loja (duas lojas sem CNPJ não colidem), retry não duplica bônus, e posterior cadastro de CNPJ não concede demo
 
 ## 50-12 — Testes: integração + rotas + UI + notificações + legal + telemetria
 
-- [ ] 12.1 Rotas: `create_store`/`update-cnpj` (demo × onboarding, **loja draft elegível**)/admin approve/exception; **criação admin sem CNPJ → zero créditos**; cron `demo-credits` (CRON_SECRET, derivação/reparo); `support/credit-request`
+- [ ] 12.1 Rotas: `create_store`/`update-cnpj` (demo × onboarding, **loja draft elegível**)/admin approve (demo); **`admin_exception` (bônus `admin_grant`, não demo)**; **criação admin sem CNPJ → zero créditos**; cron `demo-credits` (CRON_SECRET, derivação/reparo); `support/credit-request`
 - [ ] 12.2 Geração: gate 402 usa saldo disponível; reserve/refund preservam contrato; **evidência durável**: `reserve_credit`/reconciliador materializam, a **leitura não materializa**, e `demo_expired` não é suprimido
 - [ ] 12.3 UI: estados da demo (incl. **`expired` após materialização** — `demo_expires_at NULL` com `origin_demo_grant_tx_id` setado), prazo local/relativo, sem SLA, sem linguagem de compra
 - [ ] 12.4 Notificações: dedup lógico, flag email off/on, **claim/lease (dois workers não duplicam)**, **supressão (flag off / fora de janela — apenas demo)**, **`support_ack`/`support_notice` duráveis/atômicos, nunca suprimidos, retry preservado**, `sent`≠`delivered`, in-app leitura
