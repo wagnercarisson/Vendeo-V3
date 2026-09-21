@@ -93,7 +93,7 @@
 
 ## 50-08 — Telemetria (D14)
 
-- [ ] 8.1 `src/lib/product-events`: serviço `record` (best-effort, fail-open) com dedup por `(event_type, dedup_key)`
+- [x] 8.1 `src/lib/product-events`: serviço `record` (best-effort, fail-open) com dedup por `(event_type, dedup_key)`
 - [ ] 8.2 Emitir `demo_granted` (dedup grant_tx_id), `first_generation` (**primeira geração após o grant**, dedup grant_tx_id), `demo_exhausted` (dedup deduction_tx_id), `demo_expired` (dedup expiration_tx_id), `support_credit_request` (**múltiplo**, dedup operationId)
 
 ## 50-09 — UI (D11/D12)

@@ -34,7 +34,7 @@ progress:
 
 **Artefatos:** `50-CONTEXT.md` (síntese fiel D1–D26), `50-UI-SPEC.md` (consolidado do OpenSpec), `50-01-PLAN.md` .. `50-17-PLAN.md`, `50-BASELINE.txt`, `50-01-SUMMARY.md`, `50-02-SUMMARY.md`, `50-03-SUMMARY.md`, `50-04-SUMMARY.md`, `50-10-SUMMARY.md`, `50-15-SUMMARY.md`, `50-17-SUMMARY.md`.
 **Fonte da verdade:** `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/`.
-**Próximo passo:** 50-07/50-08 (infraestrutura); concluir 50-05 após `ProductEventService` do 50-08.
+**Próximo passo:** retomar 50-05 para emitir `first_generation` usando o `ProductEventService`; depois 50-07/50-06 conforme DAG.
 
 ### Phase 49 — Ativação e Orientação Contextual de Campos ✅ Complete (15/15 plans / 7 waves)
 
