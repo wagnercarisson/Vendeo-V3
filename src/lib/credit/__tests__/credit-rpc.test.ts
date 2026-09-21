@@ -32,7 +32,7 @@ describe("F50 credit RPC database contract", () => {
       expect(migration).toContain(`CREATE OR REPLACE FUNCTION public.${fn}`);
     }
     expect(migration).toMatch(/REVOKE ALL ON FUNCTION public\.grant_demo_credits/);
-    expect(migration).toMatch(/GRANT EXECUTE ON FUNCTION public\.grant_demo_credits.*service_role/si);
-    expect(migration).toMatch(/admin_create_store_for_user[\s\S]{0,12000}without.*credit|admin_create_store_for_user[\s\S]{0,12000}grant_demo_credits/si);
+    expect(migration).toMatch(/GRANT EXECUTE ON FUNCTION public\.grant_demo_credits[\s\S]*service_role/i);
+    expect(migration).toMatch(/admin_create_store_for_user[\s\S]{0,12000}without.*credit|admin_create_store_for_user[\s\S]{0,12000}grant_demo_credits/i);
   });
 });

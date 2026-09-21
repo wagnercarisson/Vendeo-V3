@@ -71,7 +71,7 @@ function OperationCostRows({
 function ReadyContent(props: BalanceCardProps) {
   const { balance, hasStore, supportEmail } = props;
   const { costs, status } = useOperationCosts();
-  const availableBalance = balance ?? 0;
+  const availableBalance = props.availableBalance ?? balance ?? 0;
   const state = getState(availableBalance, hasStore ?? true);
 
   if (!hasStore) {

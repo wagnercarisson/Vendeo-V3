@@ -1,10 +1,12 @@
 ---
 phase: 50-demonstracao-gratuita-validade-creditos
 plan: 11
-status: complete
+status: blocked
 ---
 
 # Phase 50 Plan 11 Summary
+
+Blocked: live Supabase/PostgreSQL execution is required by the plan and the local harness is unavailable.
 
 ## Completed
 

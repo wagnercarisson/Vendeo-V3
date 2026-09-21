@@ -192,10 +192,10 @@ export default async function DashboardPage() {
                 <div className="mt-1">
                   <BalanceDisplay
                     balance={creditBalance}
-                    availableBalance={creditBreakdown.availableBalance}
-                    demoBalance={creditBreakdown.demoBalance}
-                    demoExpiresAt={creditBreakdown.demoExpiresAt}
-                    originDemoGrantTxId={creditBreakdown.originDemoGrantTxId}
+                    availableBalance={creditBreakdown?.availableBalance ?? creditBalance}
+                    demoBalance={creditBreakdown?.demoBalance ?? 0}
+                    demoExpiresAt={creditBreakdown?.demoExpiresAt ?? null}
+                    originDemoGrantTxId={creditBreakdown?.originDemoGrantTxId ?? null}
                     hasStore={true}
                     variant="badge"
                   />

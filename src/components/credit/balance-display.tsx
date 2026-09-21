@@ -30,7 +30,13 @@ function getDemoLabel(status: DemoStatus) {
 
 function DemoSummary({ demoBalance = 0, demoExpiresAt = null, originDemoGrantTxId = null }: BalanceDisplayProps) {
   const status = getDemoStatus({ demoBalance, demoExpiresAt, originDemoGrantTxId });
-  return <span className="sr-only">{getDemoLabel(status)}{demoExpiresAt && (status === "active" || status === "expiring_soon") ? `, ${formatRelativeExpiry(demoExpiresAt)}` : ""}</span>;
+  const isRelevant = status !== "none";
+  return <span className={isRelevant ? "text-xs text-text-secondary" : "sr-only"}>
+    {getDemoLabel(status)}
+    {demoExpiresAt && (status === "active" || status === "expiring_soon")
+      ? ` · ${new Date(demoExpiresAt).toLocaleString("pt-BR")} (${formatRelativeExpiry(demoExpiresAt)})`
+      : ""}
+  </span>;
 }
 
 function BadgeVariant(props: BalanceDisplayProps) {
