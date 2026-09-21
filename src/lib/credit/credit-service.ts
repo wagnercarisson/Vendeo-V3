@@ -35,6 +35,15 @@ export class CreditService {
     };
   }
 
+  async getOriginDemoGrantTxId(storeId: string): Promise<string | null> {
+    const { data } = await this.client
+      .from("credit_balances")
+      .select("origin_demo_grant_tx_id")
+      .eq("store_id", storeId)
+      .single();
+    return data?.origin_demo_grant_tx_id ?? null;
+  }
+
   async reserveCredit(
     storeId: string,
     amount: number,

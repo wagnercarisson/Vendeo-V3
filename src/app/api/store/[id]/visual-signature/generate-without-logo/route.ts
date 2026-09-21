@@ -21,6 +21,7 @@ import { AiCostTracker } from '@/lib/ai-cost';
 import { createDefaultTelemetryContext, BufferingAiTelemetrySink } from '@/lib/ai';
 import type { AiTelemetryContext } from '@/lib/ai';
 import { resolveEconomicSnapshot } from '@/lib/economic/economic-snapshot';
+import { ProductEventService } from '@/lib/product-events/service';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -524,6 +525,19 @@ export const POST = apiHandler(async (
       usd_brl_rate_at_generation: economicSnapshot.usdBrlRateAtGeneration,
       credit_value_brl_at_generation: economicSnapshot.creditValueBrlAtGeneration,
     });
+
+    try {
+      const grantTxId = await new CreditService().getOriginDemoGrantTxId(id);
+      if (grantTxId) {
+        await new ProductEventService().record('first_generation', {
+          store_id: id,
+          dedup_key: grantTxId,
+          properties: { source: 'visual_signature_generation', visual_signature_id: result.signature.id },
+        });
+      }
+    } catch (error) {
+      console.warn('[generate-without-logo] first_generation event failed', error);
+    }
 
     console.log(`[generate-without-logo][req-${reqId}] enviando response success`);
     return NextResponse.json({
