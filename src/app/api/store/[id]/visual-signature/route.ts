@@ -9,6 +9,7 @@ import { requireSameOrigin } from '@/lib/auth/csrf';
 import { apiHandler } from '@/lib/auth/api-handler';
 import { CreditService } from '@/lib/credit/credit-service';
 import { getLaunchConfig } from '@/lib/launch-config/config';
+import { getSignedVisualSignatureUrl } from '@/lib/visual-signature/persistence';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -79,7 +80,7 @@ export const GET = apiHandler(async (
 
   const { data, error, count } = await supabase
     .from('store_visual_signatures')
-    .select('id, asset_url, type, status, created_at, updated_at, metadata', { count: 'exact' })
+    .select('id, storage_path, type, status, created_at, updated_at, metadata', { count: 'exact' })
     .eq('store_id', id)
     .in('type', ['ai_generated', 'automatic_generated'])
     .order('created_at', { ascending: false })
@@ -90,7 +91,7 @@ export const GET = apiHandler(async (
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const signatures = (data ?? []).map((s, i) => {
+  const signatures = await Promise.all((data ?? []).map(async (s, i) => {
     const metadata = (s.metadata ?? {}) as Record<string, unknown>;
     const artDirectorOutput = metadata.artDirectorOutput as Record<string, unknown> | null ?? null;
     const inputSnapshot = metadata.input_snapshot as Record<string, unknown> | null ?? null;
@@ -137,9 +138,12 @@ export const GET = apiHandler(async (
       };
     }
 
+    const assetUrl = await getSignedVisualSignatureUrl(s.storage_path);
+
     return {
       id: s.id,
-      assetUrl: s.asset_url,
+      assetUrl,
+      storagePath: s.storage_path,
       type: s.type,
       status: s.status,
       attempt: i + 1,
@@ -158,7 +162,7 @@ export const GET = apiHandler(async (
       input_snapshot: inputSnapshot,
       dismissed_snapshot: metadata.visual_signature_drift_dismissed_snapshot ?? null,
     };
-  });
+  }));
 
   // Saldo de créditos para o gate de geração do DriftCriticalModal (client-side).
   // Best-effort: falha de leitura de saldo não pode derrubar a listagem.

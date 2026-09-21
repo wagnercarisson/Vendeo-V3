@@ -834,7 +834,6 @@ export class BrandProfilerWithoutLogoService {
 
     const metadata: Record<string, unknown> = {
       art_director_output: input.artDirectorOutput,
-      asset_url: input.assetUrl,
       input_snapshot: {
         segment: input.segment,
         subsegment: input.subsegment,
@@ -956,7 +955,6 @@ export class BrandProfilerWithoutLogoService {
     // Build metadata, preserving content_used from VS metadata in regenerate mode
     const metadata: Record<string, unknown> = {
       art_director_output: input.artDirectorOutput,
-      asset_url: input.assetUrl,
       input_snapshot: {
         segment: input.segment,
         subsegment: input.subsegment,

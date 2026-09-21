@@ -60,16 +60,25 @@ export async function resolveStoreIdentity(
         const logoAsset = normalized ?? original ?? onDark;
 
         if (logoAsset?.storage_path) {
-          const { data: { publicUrl } } = supabaseAdmin.storage.from('store-brand-assets').getPublicUrl(logoAsset.storage_path);
-          signatureUrl = publicUrl;
-          signatureType = 'logo';
+          const { data, error } = await supabaseAdmin.storage
+            .from('store-brand-assets')
+            .createSignedUrl(logoAsset.storage_path, 3600);
+          if (!error && data?.signedUrl) {
+            signatureUrl = data.signedUrl;
+            signatureType = 'logo';
+          }
         }
       }
     } else if (identityState === 'visual_signature') {
       const activeSignature = await getActiveVisualSignature(store.id);
-      if (activeSignature?.asset_url) {
-        signatureUrl = activeSignature.asset_url;
-        signatureType = 'visual_signature';
+      if (activeSignature?.storage_path) {
+        const { data, error } = await supabaseAdmin.storage
+          .from('visual-signatures')
+          .createSignedUrl(activeSignature.storage_path, 3600);
+        if (!error && data?.signedUrl) {
+          signatureUrl = data.signedUrl;
+          signatureType = 'visual_signature';
+        }
       }
     }
 

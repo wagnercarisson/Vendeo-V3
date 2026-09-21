@@ -49,11 +49,15 @@ export async function uploadToStorage(
         }
       } else {
         console.log(`[persistence] uploadToStorage success on attempt ${attempt}`);
-        const { data: publicUrlData } = supabase.storage
+        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
           .from("visual-signatures")
-          .getPublicUrl(storagePath);
+          .createSignedUrl(storagePath, 3600);
 
-        return { storagePath, assetUrl: publicUrlData.publicUrl };
+        if (signedUrlError || !signedUrlData?.signedUrl) {
+          throw signedUrlError ?? new Error("signed_url_unavailable");
+        }
+
+        return { storagePath, assetUrl: signedUrlData.signedUrl };
       }
     } catch (err) {
       lastError = err;
@@ -82,6 +86,17 @@ export async function persistSignature(
   }
 
   return data;
+}
+
+export async function getSignedVisualSignatureUrl(
+  storagePath: string | null,
+  expiresIn = 3600,
+): Promise<string | null> {
+  if (!storagePath) return null;
+  const { data, error } = await supabase.storage
+    .from("visual-signatures")
+    .createSignedUrl(storagePath, expiresIn);
+  return error ? null : data?.signedUrl ?? null;
 }
 
 export async function getActiveVisualSignature(

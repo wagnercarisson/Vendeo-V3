@@ -12,6 +12,7 @@ import { apiHandler } from '@/lib/auth/api-handler';
 import { AiCostTracker } from '@/lib/ai-cost';
 import { createDefaultTelemetryContext } from '@/lib/ai';
 import { resolveEconomicSnapshot } from '@/lib/economic/economic-snapshot';
+import { getSignedVisualSignatureUrl } from '@/lib/visual-signature/persistence';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -80,6 +81,8 @@ export const POST = apiHandler(async (
   if (sigError || !signature) {
     return NextResponse.json({ error: 'Assinatura visual não encontrada para esta loja' }, { status: 404 });
   }
+
+  const assetUrl = await getSignedVisualSignatureUrl(signature.storage_path);
 
   if (signature.status === 'active') {
     return NextResponse.json({ success: true });
@@ -197,7 +200,7 @@ export const POST = apiHandler(async (
           elements_used: ['nome da loja'],
         },
         visualSignatureId: body.signature_id,
-        assetUrl: signature.asset_url,
+        assetUrl: assetUrl ?? '',
         referenceCardUrl: null,
       }, telemetry);
     } catch (err) {
@@ -209,7 +212,7 @@ export const POST = apiHandler(async (
     success: true,
     signature: {
       id: signature.id,
-      assetUrl: signature.asset_url,
+      assetUrl,
     },
   });
 });

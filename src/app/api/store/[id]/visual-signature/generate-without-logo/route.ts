@@ -385,7 +385,7 @@ export const POST = apiHandler(async (
         const signature = await persistSignature({
           store_id: id,
           storage_path: retryResult.storagePath,
-          asset_url: retryResult.assetUrl,
+          asset_url: null,
           type: signatureType,
           status: 'draft',
           generation_mode: body.rejectionContext ? 'automatic' : 'user_choice',

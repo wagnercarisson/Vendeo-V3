@@ -5,7 +5,7 @@ import { requireOwnership } from "@/lib/auth/store-ownership";
 import { supabaseAdmin as supabase } from "@/lib/supabase/server";
 import type { Store } from "@/lib/store";
 import { AiImageGenerator } from "./ai-image-generator";
-import { getActiveVisualSignature } from "./persistence";
+import { getActiveVisualSignature, getSignedVisualSignatureUrl } from "./persistence";
 import { AiCostTracker } from "@/lib/ai-cost";
 import { createDefaultTelemetryContext, defaultAiModelResolver } from "@/lib/ai";
 import { resolveEconomicSnapshot } from "@/lib/economic/economic-snapshot";
@@ -455,5 +455,8 @@ export async function listSignatures(
     throw new Error(`Failed to list signatures: ${error.message}`);
   }
 
-  return data ?? [];
+  return Promise.all((data ?? []).map(async (signature) => ({
+    ...signature,
+    asset_url: await getSignedVisualSignatureUrl(signature.storage_path),
+  })));
 }
