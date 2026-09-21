@@ -18,7 +18,7 @@ Executed against the local PostgreSQL instance with the complete focused matrix 
 
 ## Validation
 
-- Complete focused suite: 5 files, 16 tests passed against local PostgreSQL.
+- Complete focused suite: 5 files, 20 tests passed against local PostgreSQL.
 - Typecheck, lint, and diff check passed.
 
 ## Limitation

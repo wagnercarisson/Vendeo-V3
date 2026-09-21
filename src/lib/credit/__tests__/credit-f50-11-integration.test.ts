@@ -23,8 +23,8 @@ async function fixture() {
   return { storeId: store.id, userId };
 }
 
-async function grant(storeId: string, root = `root-${crypto.randomUUID()}`) {
-  return rpc<{ granted: boolean; grant_transaction_id: string }>("grant_demo_credits", [storeId, root, 10, true, 168, null, null]);
+async function grant(storeId: string, root = `root-${crypto.randomUUID()}`, enabled = true, amount = 10) {
+  return rpc<{ granted: boolean; grant_transaction_id: string }>("grant_demo_credits", [storeId, root, amount, enabled, 168, null, null]);
 }
 
 beforeAll(async () => { await query("select 1"); });
@@ -66,6 +66,69 @@ describe("F50-11 real PostgreSQL integration", () => {
     expect(balance.demo_contributing_tx_ids.length).toBeGreaterThanOrEqual(2);
   });
 
+  it("reserves demo, bonus, and purchased buckets in order with complete metadata", async () => {
+    const { storeId } = await fixture();
+    const grantTx = await grant(storeId, `root-${crypto.randomUUID()}`, true, 3);
+    const bonusTx = await rpc<string>("grant_credits", [storeId, 5, "bonus", `bonus-${crypto.randomUUID()}`, {}, "admin_grant", null]);
+    const purchasedTx = await rpc<string>("grant_credits", [storeId, 10, "purchase", `purchase-${crypto.randomUUID()}`, {}, "purchase", null]);
+    const deductionId = await rpc<string>("reserve_credit", [storeId, 18, null, `deduct-${crypto.randomUUID()}`, { source: "mixed-buckets" }]);
+    const deduction = (await query<{ metadata: Record<string, unknown>; amount: number }>("select metadata, amount from credit_transactions where id = $1", [deductionId]))[0];
+    expect(deduction.amount).toBe(-18);
+    expect(deduction.metadata).toMatchObject({
+      demo_amount: 3,
+      bonus_amount: 5,
+      purchased_amount: 10,
+      demo_before: 3,
+      demo_after: 0,
+      demo_cycle_id: expect.any(String),
+      origin_demo_grant_tx_id: grantTx.grant_transaction_id,
+    });
+    expect(deduction.metadata.demo_cycle_id).toBeTruthy();
+    expect(bonusTx).toBeTruthy();
+    expect(purchasedTx).toBeTruthy();
+  });
+
+  it("materializes one exact expiration with cycle, origin, contributors, and zeroed episode fields", async () => {
+    const { storeId } = await fixture();
+    const grantTx = await grant(storeId);
+    const cycle = (await query<{ demo_cycle_id: string }>("select demo_cycle_id from credit_balances where store_id = $1", [storeId]))[0].demo_cycle_id;
+    await query("update credit_balances set demo_expires_at = now() - interval '1 second' where store_id = $1", [storeId]);
+    const result = await rpc<{ expired: boolean; expiration_tx_id: string }>("materialize_demo_expiration", [storeId]);
+    const balance = (await query<{ demo_balance: number; demo_expires_at: string | null; demo_cycle_id: string | null; origin_demo_grant_tx_id: string; demo_contributing_tx_ids: string[] }>("select demo_balance, demo_expires_at, demo_cycle_id, origin_demo_grant_tx_id, demo_contributing_tx_ids from credit_balances where store_id = $1", [storeId]))[0];
+    const expiration = (await query<{ reference: string; amount: number; metadata: Record<string, unknown> }>("select reference, amount, metadata from credit_transactions where id = $1", [result.expiration_tx_id]))[0];
+    expect(result.expired).toBe(true);
+    expect(expiration).toMatchObject({ reference: cycle, amount: -10 });
+    expect(expiration.metadata).toMatchObject({
+      cycle_id: cycle,
+      origin_demo_grant_tx_id: grantTx.grant_transaction_id,
+      contributing_tx_ids: expect.any(Array),
+    });
+    expect(balance).toMatchObject({ demo_balance: 0, demo_expires_at: null, demo_cycle_id: null, origin_demo_grant_tx_id: grantTx.grant_transaction_id, demo_contributing_tx_ids: [] });
+  });
+
+  it("uses GREATEST for active grace, preserves exhausted episodes, and restores bonus and purchased buckets", async () => {
+    const { storeId } = await fixture();
+    await grant(storeId);
+    await rpc<string>("grant_credits", [storeId, 5, "bonus", `bonus-${crypto.randomUUID()}`, {}, "admin_grant", null]);
+    await rpc<string>("grant_credits", [storeId, 10, "purchase", `purchase-${crypto.randomUUID()}`, {}, "purchase", null]);
+    const deductionId = await rpc<string>("reserve_credit", [storeId, 18, null, `deduct-${crypto.randomUUID()}`, {}]);
+    const original = (await query<{ demo_expires_at: string; demo_cycle_id: string }>("select demo_expires_at, demo_cycle_id from credit_balances where store_id = $1", [storeId]))[0];
+    await rpc("refund_credit", [deductionId, "active-grace", `refund-${crypto.randomUUID()}`, {}]);
+    const active = (await query<{ demo_expires_at: string; demo_cycle_id: string; demo_balance: number; bonus_balance: number; purchased_balance: number }>("select demo_expires_at, demo_cycle_id, demo_balance, bonus_balance, purchased_balance from credit_balances where store_id = $1", [storeId]))[0];
+    expect(active.demo_cycle_id).toBe(original.demo_cycle_id);
+    expect(new Date(active.demo_expires_at).getTime()).toBe(new Date(original.demo_expires_at).getTime());
+    expect(active).toMatchObject({ demo_balance: 10, bonus_balance: 5, purchased_balance: 10 });
+
+    const exhausted = await rpc<string>("reserve_credit", [storeId, 10, null, `deduct-${crypto.randomUUID()}`, {}]);
+    await query("update credit_balances set demo_expires_at = now() - interval '1 second' where store_id = $1", [storeId]);
+    await rpc("refund_credit", [exhausted, "expired-before-refund", `refund-${crypto.randomUUID()}`, {}]);
+    const grace = (await query<{ demo_balance: number; demo_expires_at: string; demo_cycle_id: string; origin_demo_grant_tx_id: string }>("select demo_balance, demo_expires_at, demo_cycle_id, origin_demo_grant_tx_id from credit_balances where store_id = $1", [storeId]))[0];
+    expect(grace.demo_balance).toBe(10);
+    expect(new Date(grace.demo_expires_at).getTime() - Date.now()).toBeGreaterThan(23 * 3600_000);
+    expect(grace.demo_cycle_id).not.toBe(original.demo_cycle_id);
+    expect(grace.origin_demo_grant_tx_id).toBeTruthy();
+  });
+
   it("restores an exhausted demo in the original episode before expiry", async () => {
     const { storeId } = await fixture();
     await grant(storeId);
@@ -79,7 +142,7 @@ describe("F50-11 real PostgreSQL integration", () => {
   });
 
   it("keeps wrapper signatures unique, service-role-only, and admin exception roots distinct", async () => {
-    const names = ["create_store_with_cnpj", "update_store_cnpj", "admin_approve_store_verification", "admin_exception_store_verification", "admin_create_store_for_user"];
+    const names = ["create_store_with_cnpj", "update_store_cnpj", "admin_approve_store_verification", "admin_exception_store_verification", "create_store_with_initial_grant", "admin_create_store_for_user"];
     const signatures = await query<{ proname: string; count: number }>("select p.proname, count(*)::int as count from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = any($1::text[]) group by p.proname", [names]);
     expect(signatures.every((row: { count: number }) => row.count === 1)).toBe(true);
     for (const name of names) {
@@ -96,6 +159,23 @@ describe("F50-11 real PostgreSQL integration", () => {
     expect(retry.onboardingGranted).toBe(false);
     expect((await query<{ count: number }>("select count(*)::int as count from freemium_entitlements where benefit_type = 'admin_exception' and store_id in ($1, $2)", [first.storeId, second.storeId]))[0].count).toBe(2);
     expect((await query<{ count: number }>("select count(*)::int as count from credit_transactions where type = 'admin_grant' and store_id = $1", [first.storeId]))[0].count).toBe(1);
+
+    const beforeCnpj = (await query<{ count: number }>("select count(*)::int as count from credit_transactions where type = 'demo' and store_id = $1", [second.storeId]))[0].count;
+    await rpc("update_store_cnpj", [second.storeId, "12345678000199", "root-admin-exception", null, null, {}, "approved", {}, {}, [], false]);
+    const afterCnpj = (await query<{ count: number }>("select count(*)::int as count from credit_transactions where type = 'demo' and store_id = $1", [second.storeId]))[0].count;
+    expect(afterCnpj).toBe(beforeCnpj);
+  });
+
+  it("fails closed without the demo flag and rolls back support request on an intermediate notification failure", async () => {
+    const { storeId } = await fixture();
+    const disabled = await grant(storeId, `disabled-${crypto.randomUUID()}`, false);
+    expect(disabled.granted).toBe(false);
+    expect((await query<{ count: number }>("select count(*)::int as count from credit_transactions where store_id = $1 and type = 'demo'", [storeId]))[0].count).toBe(0);
+
+    const operationId = crypto.randomUUID();
+    await query("insert into credit_notifications (store_id, user_id, kind, dedup_key, payload) values ($1, $2, 'support_ack', $3, '{}')", [storeId, (await query<{ user_id: string }>("select user_id from stores where id = $1", [storeId]))[0].user_id, operationId]);
+    await expect(query("select public.create_support_credit_request($1::uuid, $2::uuid, $3::uuid, $4::text, '{}'::jsonb, 'support@f50.test')", [operationId, storeId, (await query<{ user_id: string }>("select user_id from stores where id = $1", [storeId]))[0].user_id, "rollback@f50.test"])).rejects.toThrow();
+    expect((await query<{ count: number }>("select count(*)::int as count from support_credit_requests where operation_id = $1", [operationId]))[0].count).toBe(0);
   });
 
   it("creates an admin store without credits and support request is atomic/idempotent", async () => {
