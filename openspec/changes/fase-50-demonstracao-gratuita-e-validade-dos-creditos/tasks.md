@@ -156,7 +156,7 @@
 
 ## 50-17 — Backup externo + gates de go-live (D26/D15)
 
-- [ ] 17.1 Runbook de backup externo: dump lógico + objetos de todos os buckets, criptografia, destino externo privado, retenção 30 dias, checksum; **decisões a fechar**: destino, criptografia/custódia da chave, procedimento/ambiente de restauração
+- [x] 17.1 Runbook de backup externo: dump lógico + objetos de todos os buckets, criptografia, destino externo privado, retenção 30 dias, checksum; **decisões a fechar**: destino, criptografia/custódia da chave, procedimento/ambiente de restauração
 - [ ] 17.2 **Teste real de restauração** (banco + metadados + objetos): contagem de linhas/objetos, checksum e **leitura assinada de um arquivo restaurado** — evidência (gate do primeiro convite)
 - [ ] 17.3 Confirmar gates de go-live: PJ constituída/identificada; docs aprovados; signup off; limite controlado; suporte operante; email validado; MFA registrada; buckets privados; backup restaurável
 - [ ] 17.4 Segredos/backups fora do Git
