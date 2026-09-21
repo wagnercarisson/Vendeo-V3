@@ -98,8 +98,8 @@
 
 ## 50-09 — UI (D11/D12)
 
-- [ ] 9.1 `balance-card`/`balance-display`: status da demo + prazo (data/hora local + relativo) + saldo disponível; estados ativa/próxima/exaurida/expirada/saldo insuficiente/bônus pós-demo
-- [ ] 9.2 `conta/page.tsx` + `dashboard`: seção de demonstração + notificações; usar saldo disponível
+- [x] 9.1 `balance-card`/`balance-display`: status da demo + prazo (data/hora local + relativo) + saldo disponível; estados ativa/próxima/exaurida/expirada/saldo insuficiente/bônus pós-demo
+- [x] 9.2 `conta/page.tsx` + `dashboard`: seção de demonstração + notificações; usar saldo disponível
 - [x] 9.3 Remover SLA "24h" de `credit-cta`/`balance-card`; manter "solicitar créditos" sem promessa; confirmar ausência de "Comprar/Adquirir créditos"
 
 ## 50-10 — Legal (D13) — três documentos

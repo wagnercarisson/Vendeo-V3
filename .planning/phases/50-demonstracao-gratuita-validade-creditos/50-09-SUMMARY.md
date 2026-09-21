@@ -1,12 +1,12 @@
 ---
 phase: 50-demonstracao-gratuita-validade-creditos
 plan: 09
-status: partial
+status: completed
 ---
 
 # 50-09 Summary
 
-Reopened: visible demo status/date and the no-campaign dashboard flow still require completion.
+Reopened items completed: visible demo status/date and the no-campaign dashboard flow now preserve the full credit breakdown.
 
 ## Implemented
 
