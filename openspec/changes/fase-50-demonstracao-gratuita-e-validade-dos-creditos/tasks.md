@@ -71,12 +71,12 @@
 
 ## 50-05 — Rotas (D3/D8/D9/D16)
 
-- [ ] 5.1 `create_store_with_cnpj` / `admin_approve_store_verification`: receber e repassar `p_demo_grant_enabled` (do `getLaunchConfig().demoCreditsEnabled`); substituir `bonus_onboarding` por `grant_demo_credits`. **`admin_exception_store_verification` permanece `admin_grant` (bônus) — sem `p_demo_grant_enabled`**
-- [ ] 5.2 `update_store_cnpj`: **conceder demo** quando verificação `approved` + flag ativa + raiz sem benefício anterior; **só** criar marcador `legacy_pre_f32_onboarding_consumed` quando houver evidência real de benefício anterior (`bonus_onboarding` na loja ou entitlement `onboarding` na raiz)
-- [ ] 5.3 **Manter mensal ativo até o corte** (cron + botão continuam); preparar desligamento coordenado no corte (50-14)
-- [ ] 5.4 `generate-image/route.ts` e `generate-without-logo/route.ts`: gate usa saldo disponível (sem mudança de contrato 402); confirmar refunds preservados
-- [ ] 5.5 `admin/credits/grant` e `admin/freemium/exception`: semântica de **bônus** não-expirável (labels); remover botão mensal somente no corte
-- [ ] 5.6 `admin/stores/route.ts` — criação administrativa sem CNPJ **não** concede créditos (RPC redefinida em 3.8); demo só via `update-cnpj`
+- [x] 5.1 `create_store_with_cnpj` / `admin_approve_store_verification`: receber e repassar `p_demo_grant_enabled` (do `getLaunchConfig().demoCreditsEnabled`); substituir `bonus_onboarding` por `grant_demo_credits`. **`admin_exception_store_verification` permanece `admin_grant` (bônus) — sem `p_demo_grant_enabled`**
+- [x] 5.2 `update_store_cnpj`: **conceder demo** quando verificação `approved` + flag ativa + raiz sem benefício anterior; **só** criar marcador `legacy_pre_f32_onboarding_consumed` quando houver evidência real de benefício anterior (`bonus_onboarding` na loja ou entitlement `onboarding` na raiz)
+- [x] 5.3 **Manter mensal ativo até o corte** (cron + botão continuam); preparar desligamento coordenado no corte (50-14)
+- [ ] 5.4 `generate-image/route.ts` e `generate-without-logo/route.ts`: gate usa saldo disponível (sem mudança de contrato 402); confirmar refunds preservados; emissão de `first_generation` depende do 50-08
+- [x] 5.5 `admin/credits/grant` e `admin/freemium/exception`: semântica de **bônus** não-expirável (labels); remover botão mensal somente no corte
+- [x] 5.6 `admin/stores/route.ts` — criação administrativa sem CNPJ **não** concede créditos (RPC redefinida em 3.8); demo só via `update-cnpj`
 
 ## 50-06 — Reconcilier e suporte (D5/D12/D14/D22/D23)
 

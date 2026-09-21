@@ -4,6 +4,7 @@ import { requireUser, requireApiUser, UnauthorizedError } from "@/lib/auth/requi
 import { getCurrentStore } from "@/lib/auth/store-ownership";
 import { requireSameOrigin } from "@/lib/auth/csrf";
 import { apiHandler } from "@/lib/auth/api-handler";
+import { getLaunchConfig } from "@/lib/launch-config/config";
 import { buildStoreResponse } from "@/lib/store-response";
 import { STORE_SEGMENTS, STORE_SUBSEGMENTS } from "@/lib/constants";
 import { getCurrentVersion } from "@/lib/legal/document-versions";
@@ -264,6 +265,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
       p_slogan: typeof slogan === "string" ? slogan.trim() || null : null,
       p_razao_social: typeof razaoSocial === "string" ? razaoSocial : null,
       p_nome_fantasia: typeof nomeFantasia === "string" ? nomeFantasia : null,
+      p_demo_grant_enabled: getLaunchConfig().demoCreditsEnabled,
       p_verification_status: verificationStatus,
       p_verification_data: verificationData,
       p_cnpj_official_data: cnpjOfficialData as unknown as Record<string, unknown> | null,
