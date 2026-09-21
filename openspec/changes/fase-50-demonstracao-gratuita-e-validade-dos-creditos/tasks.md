@@ -30,11 +30,11 @@
 
 ## 50-01 — Trackings, baseline e fences (D1)
 
-- [ ] 1.1 Registrar o estado inicial do repositório e preservar alterações pré-existentes (sem exigir árvore limpa)
-- [ ] 1.2 Renumerar trackings: **F50 = Demonstração gratuita e validade dos créditos**; confirmar **Stripe/Monetização fora da numeração** (grep-consistência; zero resíduos F49→F50)
-- [ ] 1.3 Inventariar consumidores reais de saldo/reserva/estorno/concessão: `generate-image/route.ts`, `generate-without-logo/route.ts`, `create_store_with_cnpj`/`update_store_cnpj`/`admin_approve`/`admin_exception`, `grant_monthly_credits`, `admin_get_users_summary`, `credit-service`
-- [ ] 1.4 **Inventário global de consumidores de `credit_balances.balance`** (bruto): toda leitura direta de `.from("credit_balances").select("balance")` / `cb.balance` (dashboard, conta, admin users summary, `admin_get_metrics` wallet, `ai-cost/admin-service`, gate de geração) — mapear quais precisam migrar para saldo disponível
-- [ ] 1.5 Registrar baseline de não-mudança (hashes): `prompts/**`, `src/lib/ai/**`, `src/lib/campaign/**`, snapshot `campaign_brief_v1`, domínio, rotas de geração (contrato 402), `requireLegalClearance`
+- [x] 1.1 Registrar o estado inicial do repositório e preservar alterações pré-existentes (sem exigir árvore limpa)
+- [x] 1.2 Renumerar trackings: **F50 = Demonstração gratuita e validade dos créditos**; confirmar **Stripe/Monetização fora da numeração** (grep-consistência; zero resíduos F49→F50)
+- [x] 1.3 Inventariar consumidores reais de saldo/reserva/estorno/concessão: `generate-image/route.ts`, `generate-without-logo/route.ts`, `create_store_with_cnpj`/`update_store_cnpj`/`admin_approve`/`admin_exception`, `grant_monthly_credits`, `admin_get_users_summary`, `credit-service`
+- [x] 1.4 **Inventário global de consumidores de `credit_balances.balance`** (bruto): toda leitura direta de `.from("credit_balances").select("balance")` / `cb.balance` (dashboard, conta, admin users summary, `admin_get_metrics` wallet, `ai-cost/admin-service`, gate de geração) — mapear quais precisam migrar para saldo disponível
+- [x] 1.5 Registrar baseline de não-mudança (hashes): `prompts/**`, `src/lib/ai/**`, `src/lib/campaign/**`, snapshot `campaign_brief_v1`, domínio, rotas de geração (contrato 402), `requireLegalClearance`
 
 ## 50-02 — Migration estrutural (D1/D2/D7) — SEM v1.5
 
@@ -55,6 +55,7 @@
 - [ ] 3.5 `reserve_credit` — materializa expiração antes do lock; ordem demo→bônus→comprado; metadata `demo_amount`/`bonus_amount`/`purchased_amount` + snapshot `demo_expires_at` + evidência de esgotamento (`demo_before`/`demo_after`)
 - [ ] 3.6 `refund_credit` — **regra temporal**: episódio original válido → restaura sem estender; episódio de graça ativo → `GREATEST(demo_expires_at, now()+24h)`; nenhum episódio ativo (`demo_expires_at <= now()` ou `NULL`) → materializa saldo vencido remanescente (se houver) e abre novo `demo_cycle_id`; **gatilho da graça é só o tempo vencido**; preserva `origin_demo_grant_tx_id` (nunca zerado); **no máximo uma `expiration` por episódio**; acumula `demo_contributing_tx_ids`; bônus/comprado como antes
 - [ ] 3.7 REVOKE/GRANT `service_role` nas novas RPCs (paridade F47/F48.1)
+- [ ] 3.8 **Neutralizar a concessão legada sem CNPJ** — redefinir `create_store_with_initial_grant`/`admin_create_store_for_user` para **não** conceder créditos na criação administrativa (`admin/stores/route.ts` → `admin_create_store_for_user`); a demo é concedida posteriormente via `update-cnpj` quando aprovado (irrepetibilidade por raiz, substituição do onboarding por demo, exigência de CNPJ, encerramento do freemium contínuo)
 
 ## 50-04 — Serviços (D4/D7/D9/D15/D24)
 
@@ -72,6 +73,7 @@
 - [ ] 5.3 **Manter mensal ativo até o corte** (cron + botão continuam); preparar desligamento coordenado no corte (50-14)
 - [ ] 5.4 `generate-image/route.ts` e `generate-without-logo/route.ts`: gate usa saldo disponível (sem mudança de contrato 402); confirmar refunds preservados
 - [ ] 5.5 `admin/credits/grant` e `admin/freemium/exception`: semântica de **bônus** não-expirável (labels); remover botão mensal somente no corte
+- [ ] 5.6 `admin/stores/route.ts` — criação administrativa sem CNPJ **não** concede créditos (RPC redefinida em 3.8); demo só via `update-cnpj`
 
 ## 50-06 — Reconcilier e suporte (D5/D12/D14/D22/D23)
 
@@ -114,10 +116,11 @@
 - [ ] 11.4 `refund_credit`: **regra temporal** — episódio original válido restaura sem estender; episódio de graça ativo `GREATEST(ativo, now()+24h)`; **demo esgotada antes do prazo → prazo passa sem `expiration` → refund abre graça de 24h**; saldo vencido não materializado é materializado antes da graça; `origin_demo_grant_tx_id` preservado; `demo_contributing_tx_ids` acumula; idempotência/duplicidade
 - [ ] 11.5 Concorrência: grant demo sob corrida (1 transação); materialização concorrente (1 `expiration`); reserva concorrente (sem saldo negativo)
 - [ ] 11.6 Idempotência: concessão, expiração, refund, notificações e eventos por dedup key; **atomicidade solicitação + `support_ack` + `support_notice`** (falha de gravação → endpoint falha, sem afirmar recebimento)
+- [ ] 11.7 Wrappers SQL + **criação admin sem CNPJ**: assinatura única/zero assinaturas legadas (incl. `create_store_with_initial_grant`/`admin_create_store_for_user`), privilégios mínimos, fail-closed; `admin_create_store_for_user` cria loja **sem** créditos
 
 ## 50-12 — Testes: integração + rotas + UI + notificações + legal + telemetria
 
-- [ ] 12.1 Rotas: `create_store`/`update-cnpj` (demo × onboarding, **loja draft elegível**)/admin approve/exception; cron `demo-credits` (CRON_SECRET, derivação/reparo); `support/credit-request`
+- [ ] 12.1 Rotas: `create_store`/`update-cnpj` (demo × onboarding, **loja draft elegível**)/admin approve/exception; **criação admin sem CNPJ → zero créditos**; cron `demo-credits` (CRON_SECRET, derivação/reparo); `support/credit-request`
 - [ ] 12.2 Geração: gate 402 usa saldo disponível; reserve/refund preservam contrato; **evidência durável**: `reserve_credit`/reconciliador materializam, a **leitura não materializa**, e `demo_expired` não é suprimido
 - [ ] 12.3 UI: estados da demo (incl. **`expired` após materialização** — `demo_expires_at NULL` com `origin_demo_grant_tx_id` setado), prazo local/relativo, sem SLA, sem linguagem de compra
 - [ ] 12.4 Notificações: dedup lógico, flag email off/on, **claim/lease (dois workers não duplicam)**, **supressão (flag off / fora de janela — apenas demo)**, **`support_ack`/`support_notice` duráveis/atômicos, nunca suprimidos, retry preservado**, `sent`≠`delivered`, in-app leitura

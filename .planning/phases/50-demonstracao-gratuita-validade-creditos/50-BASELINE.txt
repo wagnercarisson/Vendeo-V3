@@ -51,6 +51,9 @@ Verificação grep-consistência (AGENTS.md, ROADMAP.md, .planning/ROADMAP.md, .
 | grant_credits (core) | supabase/migrations/20260722000002_creditos_mensais_automaticos.sql:88 | RPC core bucket-aware |
 | admin_grant_credits | supabase/migrations/20260722000003_add_grant_type_admin_audit.sql:6 | grant admin + auditoria |
 | admin_get_users_summary | supabase/migrations/20260731000001_admin_test_store_filter.sql:24 (balance em :68-70) | leitura de saldo (bruto) |
+| admin_create_store_for_user (concessão legada, sem CNPJ) | supabase/migrations/20260914000002_f47_fix_admin_create_store_lint.sql:68 (chama `create_store_with_initial_grant` em :86) | RPC admin → grant onboarding sem CNPJ/root_hash |
+| create_store_with_initial_grant (concessão legada, sem CNPJ) | supabase/migrations/20260914000002_f47_fix_admin_create_store_lint.sql:9 (grant em :43; lê `cb.balance` em :51) | `grant_credits` `onboarding` (10) sem CNPJ |
+| admin/stores/route.ts (caller) | src/app/api/admin/stores/route.ts:24 | chama `admin_create_store_for_user` |
 
 ## Consumidores de `credit_balances.balance`
 
@@ -69,6 +72,10 @@ Verificação grep-consistência (AGENTS.md, ROADMAP.md, .planning/ROADMAP.md, .
 | use-drift-detection (indireto) | src/components/flow/use-drift-detection.ts:118 | **migrar** (consome `credit_balance` do endpoint VS) |
 | admin_get_users_summary (SQL) | supabase/migrations/20260731000001_admin_test_store_filter.sql:68-70 | **migrar** (adicionar demo/available) |
 | admin_get_metrics (wallet) | supabase/migrations/20260731000001_admin_test_store_filter.sql:138 (+ fix 20260731000003:15) | **não afetado** (agrega `credit_transactions`, não lê `balance`) |
+| admin/users/[id] (rota GET) | src/app/api/admin/users/[id]/route.ts:29 | **migrar** (via `getBalance`) |
+| create_store_with_initial_grant (`cb.balance`) | supabase/migrations/20260914000002_f47_fix_admin_create_store_lint.sql:51 | **remover** (fluxo legado sem CNPJ deixa de conceder na F50 — demo só via update-cnpj) |
+
+> **Nota (review pós-50-01):** o fluxo administrativo `admin/stores/route.ts:24 → admin_create_store_for_user → create_store_with_initial_grant` concede 10 créditos `bonus_onboarding` **sem CNPJ/root_hash**. Após a F50, esse caminho contraria a irrepetibilidade por raiz, a substituição do onboarding por demo, a exigência de CNPJ e o encerramento do freemium contínuo. **Tratamento (registrado nos planos 50-03/50-05/50-11/50-12):** a criação administrativa sem CNPJ **não concede créditos**; a demo é concedida posteriormente quando o CNPJ for aprovado pelo fluxo `update-cnpj`.
 
 ## Baseline de não-mudança
 

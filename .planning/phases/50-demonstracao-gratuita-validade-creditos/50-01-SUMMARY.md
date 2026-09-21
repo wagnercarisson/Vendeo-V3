@@ -52,7 +52,7 @@ completed: 2026-09-20
 - Trackings verificados por grep-consistência nos 4 runbooks (AGENTS.md, ROADMAP.md, .planning/ROADMAP.md, .planning/STATE.md): **F50 = Demonstração Gratuita e Validade dos Créditos**; Stripe/Monetização Pública fora da numeração; zero resíduos.
 - Inventário de consumidores de saldo com `arquivo:linha`: 2 gates de geração (`generate-image`, `generate-without-logo`), refunds (4 em generate-image + 1 em VS), 4 pontos de concessão onboarding (`create_store_with_cnpj`, `update_store_cnpj`, `admin_approve`, `admin_exception`), `grant_monthly_credits`, `grant_credits`, `admin_grant_credits`, `admin_get_users_summary` e `credit-service`.
 - Inventário global de consumidores de `credit_balances.balance` com classificação **migrar para saldo disponível** × **não afetado**: 13 consumidores mapeados (credit-service `getBalance`/`getBalanceBreakdown`, admin/users, dashboard, conta, campanhas/nova, admin/users/[id], gates de geração, VS GET, use-drift-detection, `admin_get_users_summary` SQL) + `admin_get_metrics` (não afetado — agrega transações).
-- 79 hashes SHA-256 registrados (prompts/** 16, src/lib/ai/** 54, src/lib/campaign/** 7, `legal/clearance.ts`, `generate-image/route.ts`, `generate-without-logo/route.ts`).
+- 79 hashes SHA-256 registrados (prompts/** 16, src/lib/ai/** 39, src/lib/campaign/** 21, + individuais: `legal/clearance.ts`, `generate-image/route.ts`, `generate-without-logo/route.ts`).
 
 ## Task Commits
 
@@ -75,7 +75,12 @@ None - plan executed exactly as written.
 
 ## Issues Encountered
 
-None.
+**Correção pós-review (ampliação do inventário):** a revisão identificou dois caminhos ausentes no inventário original, já corrigidos no `50-BASELINE.txt`:
+
+1. **Fluxo administrativo de concessão sem CNPJ** — `src/app/api/admin/stores/route.ts:24` → `admin_create_store_for_user` → `create_store_with_initial_grant` (`supabase/migrations/20260914000002_f47_fix_admin_create_store_lint.sql:9`), que concede 10 créditos `bonus_onboarding` e lê `cb.balance` (linha 51). Registrado como consumidor de concessão e de `balance`; tratamento refletido nos planos 50-03/50-05/50-11/50-12 (criação administrativa sem CNPJ **não** concede; demo concedida posteriormente via `update-cnpj`).
+2. **`admin/users/[id]/route.ts:29`** — chamada `getBalance` ausente do inventário global; classificada "migrar para saldo disponível".
+
+Também corrigida a distribuição dos 79 hashes (ai/** 39 e campaign/** 21, não 54/7).
 
 ## User Setup Required
 
