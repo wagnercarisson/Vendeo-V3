@@ -66,16 +66,16 @@ describe("F50-11 real PostgreSQL integration", () => {
     expect(balance.demo_contributing_tx_ids.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("opens grace when the original demo is exhausted before its expiry", async () => {
+  it("restores an exhausted demo in the original episode before expiry", async () => {
     const { storeId } = await fixture();
     await grant(storeId);
     const deduction = await rpc<string>("reserve_credit", [storeId, 10, null, `deduct-${crypto.randomUUID()}`, {}]);
+    const before = (await query<{ demo_expires_at: string; demo_cycle_id: string }>("select demo_expires_at, demo_cycle_id from credit_balances where store_id = $1", [storeId]))[0];
     await rpc("refund_credit", [deduction, "exhausted", `refund-${crypto.randomUUID()}`, {}]);
     const balance = (await query<{ demo_balance: number; demo_expires_at: string; demo_cycle_id: string }>("select demo_balance, demo_expires_at, demo_cycle_id from credit_balances where store_id = $1", [storeId]))[0];
     expect(balance.demo_balance).toBe(10);
-    expect(new Date(balance.demo_expires_at).getTime() - Date.now()).toBeLessThan(25 * 3600_000);
-    expect(new Date(balance.demo_expires_at).getTime() - Date.now()).toBeGreaterThan(23 * 3600_000);
-    expect(balance.demo_cycle_id).not.toBeNull();
+    expect(balance.demo_cycle_id).toBe(before.demo_cycle_id);
+    expect(new Date(balance.demo_expires_at).getTime()).toBe(new Date(before.demo_expires_at).getTime());
   });
 
   it("keeps wrapper signatures unique, service-role-only, and admin exception roots distinct", async () => {
