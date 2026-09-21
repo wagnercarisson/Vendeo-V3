@@ -300,7 +300,7 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 
 ## Phase 50 — Demonstração Gratuita e Validade dos Créditos
 
-**Status:** ◆ Executando — 3/17 plans concluídos (50-01 ✅, 50-02 ✅, 50-03 ✅)
+**Status:** ◆ Executando — 4/17 plans concluídos (50-01 ✅, 50-02 ✅, 50-03 ✅, 50-10 ✅)
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
@@ -313,7 +313,7 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 | 50-07 | 3 | ○ | Notificações (outbox + claim/lease + email Resend) |
 | 50-08 | 3 | ○ | Telemetria `product_events` (serviço + teste) |
 | 50-09 | 7 | ○ | UI (status da demo, prazo local/relativo, sem SLA, bell) |
-| 50-10 | 2 | ○ | Legal (três documentos + migration de publicação separada + reaceite + fornecedor) |
+| 50-10 | 2 | ✅ | Legal (três documentos + migration de publicação separada + reaceite + fornecedor) |
 | 50-11 | 7 | ○ | Testes: unidade + banco/RPC + concorrência + idempotência |
 | 50-12 | 8 | ○ | Testes: integração + rotas + UI + notificações + legal + telemetria |
 | 50-13 | 9 | ○ | Regressão + co-migração + 4 gates |

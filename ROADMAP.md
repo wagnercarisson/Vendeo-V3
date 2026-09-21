@@ -244,7 +244,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - **Fonte da verdade:** `openspec/changes/archive/2026-09-18-fase-49-ativacao-orientacao-contextual-campos/` (proposal / design D1–D15 / 7 specs / tasks)
   - **Status:** ✅ **CONCLUÍDA em 2026-09-18 — 15/15 — Complete** (7 waves; 49-14 = gap closure da microcopy/placeholder de "Informações obrigatórias na arte" e 49-15 = gap closure dos achados do code review — ME-01/ME-02/ME-03/LO-03); plan-check **PASSED** em 2026-09-18; 4 gates verdes e 59/59 hashes sem divergência; **UAT humana de compreensão aprovada (9/9 cenários PASS em desktop/375px/320px, sem poluição visual)** e decisões editoriais confirmadas
 
-- [ ] Phase 50: Demonstração Gratuita e Validade dos Créditos (◆ Executando — 3/17 plans / 10 waves)
+- [ ] Phase 50: Demonstração Gratuita e Validade dos Créditos (◆ Executando — 4/17 plans / 10 waves)
   - **Substituição do freemium contínuo por uma demonstração gratuita limitada** — 10 créditos válidos por 168h (7 dias), sem cartão e sem cobrança, preservando os saldos legados e encerrando as concessões mensais no corte
   - **Bucket de demonstração com validade** (`credit_balances` + `demo_balance`/`demo_expires_at`/`demo_cycle_id`/`origin_demo_grant_tx_id`/`demo_contributing_tx_ids`); tipos de transação `demo` (concessão) e `expiration` (expiração materializada) — no máximo uma `expiration` por episódio
   - **Concessão automática irrepetível por raiz de CNPJ** (`grant_demo_credits` com flag `p_demo_grant_enabled` obrigatória; `benefit_type='demo'`; elegibilidade = ausência de `onboarding` e `demo`); substitui o onboarding grant
@@ -254,7 +254,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - **Suporte honesto** (sem SLA "24h"), **três documentos legais** (Termos v1.5, Privacidade v1.4, AUP v1.2) com reaceite contratual + ciência de privacidade, **storage hardening** (buckets privados + URL assinada), **conta/retirada** (janela 30 dias) e **backup externo restaurável** como gate do primeiro convite
   - **Fonte da verdade:** `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/`
   - **Dependências:** F24/F29.3 (ledger), F32/F33/F42 (freemium/CNPJ), F28 (launch config), F30 (legal), F38.x (custos/telemetria) — antecede a F51 (landing + funil)
-  - **Status:** ◆ Executando (3/17 plans / 10 waves; 50-01 ✅ trackings + baseline + inventário; 50-02 ✅ migration estrutural; 50-03 ✅ RPCs SQL + smoke tests PASS — commits `65894705`/`30d52c81`/`1824795e`/`e6ce369a`/`18d17bac`/`4017bfcd`/`fbf261c2`; base técnica OpenSpec composta em 2026-09-20)
+  - **Status:** ◆ Executando (4/17 plans / 10 waves; 50-01 ✅ trackings + baseline + inventário; 50-02 ✅ migration estrutural; 50-03 ✅ RPCs SQL + smoke tests PASS; 50-10 ✅ legal consolidado + migration separada — commits `65894705`/`30d52c81`/`1824795e`/`e6ce369a`/`18d17bac`/`4017bfcd`/`fbf261c2`/`356e5673`; base técnica OpenSpec composta em 2026-09-20)
 
 </details>
 
