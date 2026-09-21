@@ -791,11 +791,20 @@ export const POST = apiHandler(async (request: NextRequest) => {
             try {
               const grantTxId = await creditService.getOriginDemoGrantTxId(storeId);
               if (grantTxId) {
+                const balance = await creditService.getBalanceBreakdown(storeId);
                 await new ProductEventService().record("first_generation", {
                   store_id: storeId,
                   user_id: user.userId,
                   dedup_key: grantTxId,
-                  properties: { source: "campaign_generation", campaign_id: campaignId },
+                  properties: {
+                    source: "campaign_generation",
+                    campaign_id: campaignId,
+                    segment: (campaignInput as { segment?: string }).segment ?? null,
+                    available_balance: balance.availableBalance,
+                    demo_balance: balance.demoBalance,
+                    demo_expires_at: balance.demoExpiresAt,
+                    recorded_at: new Date().toISOString(),
+                  },
                 });
               }
             } catch (error) {

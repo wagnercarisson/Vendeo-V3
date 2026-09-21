@@ -529,10 +529,21 @@ export const POST = apiHandler(async (
     try {
       const grantTxId = await new CreditService().getOriginDemoGrantTxId(id);
       if (grantTxId) {
+        const creditService = new CreditService();
+        const balance = await creditService.getBalanceBreakdown(id);
         await new ProductEventService().record('first_generation', {
           store_id: id,
+          user_id: authUser.userId,
           dedup_key: grantTxId,
-          properties: { source: 'visual_signature_generation', visual_signature_id: result.signature.id },
+          properties: {
+            source: 'visual_signature_generation',
+            visual_signature_id: result.signature.id,
+            segment: store.segment,
+            available_balance: balance.availableBalance,
+            demo_balance: balance.demoBalance,
+            demo_expires_at: balance.demoExpiresAt,
+            recorded_at: new Date().toISOString(),
+          },
         });
       }
     } catch (error) {

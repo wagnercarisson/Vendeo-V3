@@ -36,11 +36,12 @@ export class CreditService {
   }
 
   async getOriginDemoGrantTxId(storeId: string): Promise<string | null> {
-    const { data } = await this.client
+    const { data, error } = await this.client
       .from("credit_balances")
       .select("origin_demo_grant_tx_id")
       .eq("store_id", storeId)
-      .single();
+      .maybeSingle();
+    if (error) throw error;
     return data?.origin_demo_grant_tx_id ?? null;
   }
 
