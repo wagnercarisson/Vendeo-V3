@@ -300,7 +300,7 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 
 ## Phase 50 — Demonstração Gratuita e Validade dos Créditos
 
-**Status:** ◆ Executando — 10/17 plans concluídos (50-01 ✅, 50-02 ✅, 50-03 ✅, 50-04 ✅, 50-05 ✅, 50-07 ✅, 50-08 ✅, 50-10 ✅, 50-15 ✅, 50-17 ✅)
+**Status:** ◆ Executando — 11/17 plans concluídos (50-01 ✅, 50-02 ✅, 50-03 ✅, 50-04 ✅, 50-05 ✅, 50-06 ✅, 50-07 ✅, 50-08 ✅, 50-10 ✅, 50-15 ✅, 50-17 ✅)
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
@@ -309,7 +309,7 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 | 50-03 | 3 | ✅ | RPCs SQL (`grant_demo_credits`+flag, `materialize_demo_expiration`, `try_grant_demo_entitlement`, rewrite reserve/refund/grant) |
 | 50-04 | 4 | ✅ | Serviços de crédito/demo, entitlement, launch-config e status da demonstração |
 | 50-05 | 5 | ✅ | Rotas alinhadas; `first_generation` após sucesso com dedup por grant |
-| 50-06 | 6 | ○ | Reconcilier cron `demo-credits` + endpoint `support/credit-request` |
+| 50-06 | 6 | ✅ | Reconcilier cron `demo-credits` + endpoint `support/credit-request` |
 | 50-07 | 3 | ○ | Notificações (outbox + claim/lease + email Resend) |
 | 50-08 | 3 | ✅ | Infraestrutura `ProductEventService` concluída; emissão dos eventos fica nos planos proprietários |
 | 50-09 | 7 | ○ | UI (status da demo, prazo local/relativo, sem SLA, bell) |

@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/monthly-credits",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/demo-credits",
+      "schedule": "0 7 * * *"
     }
   ]
 }

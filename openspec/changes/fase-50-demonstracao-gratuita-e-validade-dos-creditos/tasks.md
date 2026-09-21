@@ -80,10 +80,10 @@
 
 ## 50-06 — Reconcilier e suporte (D5/D12/D14/D22/D23)
 
-- [ ] 6.1 Criar `GET /api/cron/demo-credits` (CRON_SECRET bearer, middleware passthrough): (a) materializa expirações de contas inativas; (b) **deriva** `demo_granted` (da transação `demo`), `demo_expired` (da `expiration`), `demo_exhausted` (da deduction de esgotamento) e `demo_expiring_24h`, **reparando** outbox/eventos ausentes (dedup por `grant_tx_id`/`expiration_tx_id`/`deduction_tx_id`); (c) dispara envio de email pendente (claim/lease + reclaim por lease vencido)
-- [ ] 6.2 Adicionar entrada do cron em `vercel.json` com **cadência conforme o plano Vercel real** (D23): Hobby → **diário** ("aproximadamente 24 horas"); Pro → horária (pré-requisito explícito)
-- [ ] 6.3 Criar `POST /api/support/credit-request` — **solicitação durável e idempotente** (por `operationId`) que grava `support_credit_requests` (canônica, com `protocol`/timestamps) + `support_ack` (ao usuário) + `support_notice` (ao suporte) **atomicamente**; **resposta retorna `protocol` + `receivedAt`** (confirmação durável no próprio canal); **se não gravar, falha explicitamente**; telemetria best-effort **separada**
-- [ ] 6.4 Criar `GET /api/admin/support-credit-requests` (requireAdmin) + página admin para o suporte consumir/marcar a solicitação (`received`→`forwarded`/`responded`/`closed`) e **reconsiderar manualmente a elegibilidade** (sem sistema formal de recurso)
+- [x] 6.1 Criar `GET /api/cron/demo-credits` (CRON_SECRET bearer, middleware passthrough): (a) materializa expirações de contas inativas; (b) **deriva** `demo_granted` (da transação `demo`), `demo_expired` (da `expiration`), `demo_exhausted` (da deduction de esgotamento) e `demo_expiring_24h`, **reparando** outbox/eventos ausentes (dedup por `grant_tx_id`/`expiration_tx_id`/`deduction_tx_id`); (c) dispara envio de email pendente (claim/lease + reclaim por lease vencido)
+- [x] 6.2 Adicionar entrada do cron em `vercel.json` com **cadência conforme o plano Vercel real** (D23): Hobby → **diário** ("aproximadamente 24 horas"); Pro → horária (pré-requisito explícito)
+- [x] 6.3 Criar `POST /api/support/credit-request` — **solicitação durável e idempotente** (por `operationId`) que grava `support_credit_requests` (canônica, com `protocol`/timestamps) + `support_ack` (ao usuário) + `support_notice` (ao suporte) **atomicamente**; **resposta retorna `protocol` + `receivedAt`** (confirmação durável no próprio canal); **se não gravar, falha explicitamente**; telemetria best-effort **separada**
+- [x] 6.4 Criar `GET /api/admin/support-credit-requests` (requireAdmin) + página admin para o suporte consumir/marcar a solicitação (`received`→`forwarded`/`responded`/`closed`) e **reconsiderar manualmente a elegibilidade** (sem sistema formal de recurso)
 
 ## 50-07 — Notificações (D10)
 
