@@ -54,4 +54,23 @@ describe("AccessRequestForm — máscara WhatsApp", () => {
     fireEvent.change(input, { target: { value: "11999999999abc (00) " } });
     expect(input).toHaveValue("(11) 99999-9999");
   });
+
+  it("sends the versioned privacy notice and does not require WhatsApp", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<AccessRequestForm />);
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "loja@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: "Solicitar acesso free" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ privacy_notice_version: "v1.4", whatsapp: "" });
+    expect(screen.getByText("Campo opcional.")).toBeInTheDocument();
+    expect(screen.getByText(/nunca para marketing/)).toBeInTheDocument();
+  });
+
+  it("does not collect birth date and exposes the legal acceptance links", () => {
+    render(<AccessRequestForm />);
+    expect(screen.queryByLabelText(/nascimento|data de nascimento/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Política de Privacidade v1.4/ })).toHaveAttribute("href", "/docs/legal/privacy-policy-v1-4.md");
+    expect(screen.getByRole("link", { name: /Termos de Uso v1.5/ })).toHaveAttribute("href", "/docs/legal/terms-of-service-v1-5.md");
+  });
 });

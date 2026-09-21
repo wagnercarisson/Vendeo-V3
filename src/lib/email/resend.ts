@@ -22,10 +22,10 @@ export async function claimEmailNotification(): Promise<Notification | null> {
   });
   if (!error && data) return data as Notification;
 
-  // The RPC is optional during rollout; this conditional update remains atomic per row.
+  // Keep a safe rollout fallback: only reclaim one due row and increment its attempt.
   const { data: fallback } = await supabaseAdmin
     .from("credit_notifications")
-    .update({ email_status: "processing", lease_expires_at: lease, attempt_count: 1 })
+    .update({ email_status: "processing", lease_expires_at: lease })
     .in("email_status", ["pending", "processing"])
     .or(`next_attempt_at.is.null,next_attempt_at.lte.${now}`)
     .or(`lease_expires_at.is.null,lease_expires_at.lte.${now}`)

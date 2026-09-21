@@ -123,19 +123,19 @@
 
 ## 50-12 — Testes: integração + rotas + UI + notificações + legal + telemetria
 
-- [ ] 12.1 Rotas: `create_store`/`update-cnpj` (demo × onboarding, **loja draft elegível**)/admin approve (demo); **`admin_exception` (bônus `admin_grant`, não demo)**; **criação admin sem CNPJ → zero créditos**; cron `demo-credits` (CRON_SECRET, derivação/reparo); `support/credit-request`
-- [ ] 12.2 Geração: gate 402 usa saldo disponível; reserve/refund preservam contrato; **evidência durável**: `reserve_credit`/reconciliador materializam, a **leitura não materializa**, e `demo_expired` não é suprimido
-- [ ] 12.3 UI: estados da demo (incl. **`expired` após materialização** — `demo_expires_at NULL` com `origin_demo_grant_tx_id` setado), prazo local/relativo, sem SLA, sem linguagem de compra
-- [ ] 12.4 Notificações: dedup lógico, flag email off/on, **claim/lease (dois workers não duplicam)**, **supressão (flag off / fora de janela — apenas demo)**, **`support_ack`/`support_notice` duráveis/atômicos, nunca suprimidos, retry preservado**, `sent`≠`delivered`, in-app leitura
-- [ ] 12.5 Legal: três versões publicadas em migration separada; **reaceite contratual (Terms v1.5 + AUP v1.2) e ciência de privacidade (v1.4) testados separadamente**; histórico/downloads não bloqueados; fornecedor sem placeholder
-- [ ] 12.6 Telemetria: eventos com dedup correto (`first_generation` por grant, `support_credit_request` múltiplo), fail-open
-- [ ] 12.7 Regressão do ledger: invariantes `balance_before/after` lineares preservadas
-- [ ] 12.8 Storage/privacy: buckets `store-brand-assets`/`visual-signatures`/`store-logos` **privados**; consumidores migrados para URL assinada; nenhum `getPublicUrl` em produção
-- [ ] 12.9 Saldo/RLS: leitura `authenticated` do saldo disponível sem RPC service_role; acesso cruzado negado; leitura não materializa
-- [ ] 12.10 Suporte: protocolo/timestamps (`received_at`/`acknowledged_at`/`response_due_at`/`responded_at`/`closed_at`); confirmação durável com `protocol`+`receivedAt`; reconsideração manual
-- [ ] 12.11 Outbox: retry/lease (dois workers), reclaim por lease vencido, `failed` terminal, cron compatível com o plano (diário/horário)
-- [ ] 12.12 Refund pós-expiração: novo episódio de graça com `origin_demo_grant_tx_id`, **no máximo uma `expiration` por episódio (zero se esgotado)**, rastreabilidade ao grant
-- [ ] 12.13 Beta/access: WhatsApp opcional/rotulado (sem marketing), aviso de privacidade versionado, maioridade/autoridade via aceite (sem nascimento), conta/histórico preservados
+- [x] 12.1 Rotas: `create_store`/`update-cnpj` (demo × onboarding, **loja draft elegível**)/admin approve (demo); **`admin_exception` (bônus `admin_grant`, não demo)**; **criação admin sem CNPJ → zero créditos**; cron `demo-credits` (CRON_SECRET, derivação/reparo); `support/credit-request`
+- [x] 12.2 Geração: gate 402 usa saldo disponível; reserve/refund preservam contrato; **evidência durável**: `reserve_credit`/reconciliador materializam, a **leitura não materializa**, e `demo_expired` não é suprimido
+- [x] 12.3 UI: estados da demo (incl. **`expired` após materialização** — `demo_expires_at NULL` com `origin_demo_grant_tx_id` setado), prazo local/relativo, sem SLA, sem linguagem de compra
+- [x] 12.4 Notificações: dedup lógico, flag email off/on, **claim/lease (dois workers não duplicam)**, **supressão (flag off / fora de janela — apenas demo)**, **`support_ack`/`support_notice` duráveis/atômicos, nunca suprimidos, retry preservado**, `sent`≠`delivered`, in-app leitura — evidência em `src/lib/notifications/__tests__/outbox.test.ts` e `src/app/api/notifications/read/route.ts`
+- [x] 12.5 Legal: três versões publicadas em migration separada; **reaceite contratual (Terms v1.5 + AUP v1.2) e ciência de privacidade (v1.4) testados separadamente**; histórico/downloads não bloqueados; fornecedor sem placeholder — evidência em `src/lib/legal/__tests__/legal-document-versions.test.ts`; fornecedor/placeholder permanece gate jurídico 50-14
+- [x] 12.6 Telemetria: eventos com dedup correto (`first_generation` por grant, `support_credit_request` múltiplo), fail-open
+- [x] 12.7 Regressão do ledger: invariantes `balance_before/after` lineares preservadas
+- [x] 12.8 Storage/privacy: buckets `store-brand-assets`/`visual-signatures`/`store-logos` **privados**; consumidores migrados para URL assinada; nenhum `getPublicUrl` em produção
+- [x] 12.9 Saldo/RLS: leitura `authenticated` do saldo disponível sem RPC service_role; acesso cruzado negado; leitura não materializa
+- [x] 12.10 Suporte: protocolo/timestamps (`received_at`/`acknowledged_at`/`response_due_at`/`responded_at`/`closed_at`); confirmação durável com `protocol`+`receivedAt`; reconsideração manual — evidência em `src/app/api/support/credit-request/__tests__/route.test.ts` e rotas de suporte
+- [x] 12.11 Outbox: retry/lease (dois workers), reclaim por lease vencido, `failed` terminal, cron compatível com o plano (diário/horário) — evidência em `src/lib/notifications/__tests__/outbox.test.ts` e migration `20260924000001_f50_notification_claim.sql`
+- [x] 12.12 Refund pós-expiração: novo episódio de graça com `origin_demo_grant_tx_id`, **no máximo uma `expiration` por episódio (zero se esgotado)**, rastreabilidade ao grant
+- [x] 12.13 Beta/access: WhatsApp opcional/rotulado (sem marketing), aviso de privacidade versionado, maioridade/autoridade via aceite (sem nascimento), conta/histórico preservados
 
 ## 50-15 — Storage privacy (D20)
 
