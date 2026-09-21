@@ -24,5 +24,5 @@ completed: 2026-09-21
 
 - `npm run typecheck`: PASS.
 - Credit/freemium tests: 46/46 PASS.
-- Nenhum acesso produtivo adicional a `credit_balances` fora de `credit-service` foi encontrado no inventário executado.
+- Nenhum consumidor produtivo lê diretamente `credit_balances.balance` bruto; a página administrativa consulta `credit_balances` para derivar o saldo disponível.
 - `supabase db reset --local`: PASS; RPC administrativa redefinida e verificada.
