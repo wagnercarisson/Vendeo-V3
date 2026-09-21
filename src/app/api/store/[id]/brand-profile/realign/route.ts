@@ -15,7 +15,7 @@ import { AiCostTracker } from '@/lib/ai-cost';
 import { createDefaultTelemetryContext } from '@/lib/ai';
 import type { GenerationEventType } from '@/lib/visual-signature/types';
 import { resolveEconomicSnapshot } from '@/lib/economic/economic-snapshot';
-import { getSignedVisualSignatureUrl } from '@/lib/visual-signature/persistence';
+import { requireSignedVisualSignatureUrl } from '@/lib/visual-signature/persistence';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const realignLocks = new Map<string, boolean>();
@@ -618,7 +618,7 @@ async function handleVSRealign(
         };
       })(),
       visualSignatureId: vsRecord.id,
-      assetUrl: (await getSignedVisualSignatureUrl(vsRecord.storage_path)) ?? '',
+      assetUrl: await requireSignedVisualSignatureUrl(vsRecord.storage_path),
       referenceCardUrl: null,
       intendedPalette: intendedPalette ?? null,
       previousBrandColors: previousBrandColors,

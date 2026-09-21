@@ -16,7 +16,7 @@ import { apiHandler } from '@/lib/auth/api-handler';
 import { AiCostTracker } from '@/lib/ai-cost';
 import { createDefaultTelemetryContext } from '@/lib/ai';
 import { resolveEconomicSnapshot } from '@/lib/economic/economic-snapshot';
-import { getSignedVisualSignatureUrl } from '@/lib/visual-signature/persistence';
+import { requireSignedVisualSignatureUrl } from '@/lib/visual-signature/persistence';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -232,7 +232,7 @@ async function handleSubstitution(
       brandColor: store.brand_color,
       artDirectorOutput,
       visualSignatureId: signatureId,
-       assetUrl: (await getSignedVisualSignatureUrl(pendingSig.storage_path)) ?? '',
+        assetUrl: await requireSignedVisualSignatureUrl(pendingSig.storage_path),
       referenceCardUrl: null,
       intendedPalette,
       previousBrandColors,
@@ -266,7 +266,7 @@ async function handleSubstitution(
       success: true,
       signature: {
         id: pendingSig.id,
-         assetUrl: (await getSignedVisualSignatureUrl(pendingSig.storage_path)) ?? '',
+         assetUrl: await requireSignedVisualSignatureUrl(pendingSig.storage_path),
         status: 'active',
       },
       brandProfile: { id: result.profile.id, status: 'synced' },
@@ -322,7 +322,7 @@ async function handleSubstitution(
       success: true,
       signature: {
         id: pendingSig.id,
-         assetUrl: (await getSignedVisualSignatureUrl(pendingSig.storage_path)) ?? '',
+         assetUrl: await requireSignedVisualSignatureUrl(pendingSig.storage_path),
         status: 'active',
       },
       brandProfile: { id: '', status: 'failed' },
@@ -553,7 +553,7 @@ export const POST = apiHandler(async (
       success: true,
       signature: {
         id: signature.id,
-       assetUrl: (await getSignedVisualSignatureUrl(signature.storage_path)) ?? '',
+        assetUrl: await requireSignedVisualSignatureUrl(signature.storage_path),
         status: 'active',
       },
       brandProfile: { id: existingProfile.id, status: 'synced' },
@@ -624,7 +624,7 @@ export const POST = apiHandler(async (
       brandColor: store.brand_color,
       artDirectorOutput,
       visualSignatureId: body.signatureId,
-         assetUrl: (await getSignedVisualSignatureUrl(signature.storage_path)) ?? '',
+         assetUrl: await requireSignedVisualSignatureUrl(signature.storage_path),
       referenceCardUrl: null,
       intendedPalette: intendedPaletteLocal,
       previousBrandColors,
@@ -662,7 +662,7 @@ export const POST = apiHandler(async (
       success: true,
       signature: {
         id: signature.id,
-         assetUrl: (await getSignedVisualSignatureUrl(signature.storage_path)) ?? '',
+          assetUrl: await requireSignedVisualSignatureUrl(signature.storage_path),
         status: 'active',
       },
       brandProfile: brandProfileResult,
@@ -704,7 +704,7 @@ export const POST = apiHandler(async (
       success: true,
       signature: {
         id: signature.id,
-         assetUrl: (await getSignedVisualSignatureUrl(signature.storage_path)) ?? '',
+         assetUrl: await requireSignedVisualSignatureUrl(signature.storage_path),
         status: 'active',
       },
       brandProfile: brandProfileResult,

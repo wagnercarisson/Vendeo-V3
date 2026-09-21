@@ -314,12 +314,11 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 | 50-08 | 3 | ○ | Telemetria `product_events` (serviço + teste) |
 | 50-09 | 7 | ○ | UI (status da demo, prazo local/relativo, sem SLA, bell) |
 | 50-10 | 2 | ✅ | Legal (três documentos + template de publicação separado + reaceite; fornecedor pendente para o corte) |
-| 50-15 | 2 | ✅ | Storage privacy (buckets privados + URL assinada; sem R2) |
 | 50-11 | 7 | ○ | Testes: unidade + banco/RPC + concorrência + idempotência |
 | 50-12 | 8 | ○ | Testes: integração + rotas + UI + notificações + legal + telemetria |
 | 50-13 | 9 | ○ | Regressão + co-migração + 4 gates |
 | 50-14 | 10 | ○ | Verificação: migration remota, reconciliação, UAT, revisão jurídica, corte |
-| 50-15 | 2 | ○ | Storage privacy (buckets privados + URL assinada; sem R2) |
+| 50-15 | 2 | ✅ | Storage privacy (buckets privados + URL assinada; smokes e fluxos verificados; sem R2) |
 | 50-16 | 3 | ○ | Beta/access + retenção (WhatsApp opcional, aviso versionado, maioridade, conta/30 dias) |
 | 50-17 | 2 | ○ | Backup externo + gates de go-live do beta |
 

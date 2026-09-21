@@ -254,7 +254,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - **Suporte honesto** (sem SLA "24h"), **três documentos legais** (Termos v1.5, Privacidade v1.4, AUP v1.2) com reaceite contratual + ciência de privacidade, **storage hardening** (buckets privados + URL assinada), **conta/retirada** (janela 30 dias) e **backup externo restaurável** como gate do primeiro convite
   - **Fonte da verdade:** `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/`
   - **Dependências:** F24/F29.3 (ledger), F32/F33/F42 (freemium/CNPJ), F28 (launch config), F30 (legal), F38.x (custos/telemetria) — antecede a F51 (landing + funil)
-  - **Status:** ◆ Executando (5/17 plans / 10 waves; 50-01 ✅ trackings + baseline + inventário; 50-02 ✅ migration estrutural; 50-03 ✅ RPCs SQL + smoke tests PASS; 50-10 ✅ legal consolidado + template fora da fila automática; 50-15 ✅ storage privacy + URLs assinadas — commits `65894705`/`30d52c81`/`1824795e`/`e6ce369a`/`18d17bac`/`4017bfcd`/`fbf261c2`/`356e5673`/`51351230`; base técnica OpenSpec composta em 2026-09-20)
+  - **Status:** ◆ Executando (5/17 plans / 10 waves; 50-01 ✅ trackings + baseline + inventário; 50-02 ✅ migration estrutural; 50-03 ✅ RPCs SQL + smoke tests PASS; 50-10 ✅ legal consolidado + template fora da fila automática; 50-15 ✅ storage privacy + smokes HTTP e fluxos focados — base técnica OpenSpec composta em 2026-09-20)
 
 </details>
 

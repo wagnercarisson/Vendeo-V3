@@ -20,7 +20,9 @@ ALTER TABLE public.store_visual_signatures
 COMMENT ON COLUMN public.store_visual_signatures.asset_url IS
   'DEPRECATED: legacy URL only. storage_path is canonical; signed URLs are generated at read-time and never persisted.';
 
--- REVERT
+-- REVERT (PARTIAL): restoring NOT NULL requires a backfill of every NULL asset_url
+-- first. New rows intentionally keep asset_url NULL because storage_path is canonical.
+-- Do not run the final ALTER below without a reviewed backfill/cutover plan.
 -- UPDATE storage.buckets SET public = true
 -- WHERE id IN ('store-brand-assets', 'visual-signatures', 'store-logos');
 -- CREATE POLICY "brand_assets_public_read" ON storage.objects

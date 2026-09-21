@@ -5,6 +5,7 @@ const mockSupabaseFrom = vi.fn();
 const mockBrandDirectorAnalyze = vi.fn();
 const mockTextOnlyInfer = vi.fn();
 const mockStorageDownload = vi.fn();
+const mockCreateSignedUrl = vi.fn(() => Promise.resolve({ data: { signedUrl: 'signed-vs-url' }, error: null }));
 
 vi.mock('@/lib/supabase/server', () => ({
   supabaseAdmin: {
@@ -12,6 +13,7 @@ vi.mock('@/lib/supabase/server', () => ({
     storage: {
       from: vi.fn(() => ({
         download: mockStorageDownload,
+        createSignedUrl: mockCreateSignedUrl,
       })),
     },
   },
@@ -200,6 +202,7 @@ const mockActiveVS = {
   id: 'vs-001',
   store_id: STORE_ID,
   asset_url: 'https://example.com/vs.png',
+  storage_path: `${STORE_ID}/vs.png`,
   status: 'active',
   metadata: {
     artDirectorOutput: {

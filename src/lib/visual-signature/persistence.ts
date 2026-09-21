@@ -99,6 +99,26 @@ export async function getSignedVisualSignatureUrl(
   return error ? null : data?.signedUrl ?? null;
 }
 
+export class SignedVisualSignatureUnavailableError extends Error {
+  readonly code = "signed_visual_signature_unavailable" as const;
+
+  constructor(storagePath: string) {
+    super(`Unable to create a signed URL for visual signature asset: ${storagePath}`);
+    this.name = "SignedVisualSignatureUnavailableError";
+  }
+}
+
+export async function requireSignedVisualSignatureUrl(
+  storagePath: string | null,
+  expiresIn = 3600,
+): Promise<string> {
+  const signedUrl = await getSignedVisualSignatureUrl(storagePath, expiresIn);
+  if (!signedUrl) {
+    throw new SignedVisualSignatureUnavailableError(storagePath ?? "<missing>");
+  }
+  return signedUrl;
+}
+
 export async function getActiveVisualSignature(
   storeId: string
 ): Promise<VisualSignatureRecord | null> {

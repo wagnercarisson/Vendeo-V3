@@ -45,7 +45,7 @@ completed: 2026-09-21
 
 # Phase 50 Plan 15: Storage privacy Summary
 
-**Buckets de identidade visual privados, consumidores migrados para URLs assinadas no read-time e `asset_url` tornado nullable/deprecated com `storage_path` canônico, sem migração para R2.**
+**Buckets de identidade visual privados, consumidores migrados para URLs assinadas no read-time e Task 15.4 validada com smokes HTTP e testes focados.**
 
 ## Accomplishments
 
@@ -54,14 +54,18 @@ completed: 2026-09-21
 - URLs temporárias não são persistidas; novos registros usam `asset_url: null`.
 - Migration aplicada localmente e verificada: cinco buckets privados e `asset_url` nullable.
 - `npm run typecheck` verde; grep de produção sem `getPublicUrl` ou `/storage/v1/object/public`.
+- Falhas de assinatura agora bloqueiam operações de IA com erro explícito, em vez de enviar `assetUrl: ""`.
+- Teste unitário focado adicionado para URL assinada, renovação por nova leitura e ausência de URL vazia em falha.
+- Smoke HTTP local PASS: upload service-role, acesso público negado, leitura assinada funcional, assinatura renovada e limpeza do objeto.
+- Fluxos approve/realign e o helper de restore cobertos nos testes/smokes focados; 42 testes passaram.
 
 ## Deviations from Plan
 
-Nenhuma mudança de escopo. A renovação é garantida pelo helper read-time, que cria uma nova assinatura a cada leitura; a suíte específica de integração/storage permanece prevista no plano 50-12.
+15.4 foi reaberta após revisão e concluída nesta continuação com os smokes HTTP e testes focados.
 
 ## Next Phase Readiness
 
-Storage hardening pronto para os testes de integração 50-12. Nenhum provider foi migrado.
+Storage hardening pronto. Nenhum provider foi migrado. O rollback que restaura `asset_url NOT NULL` exige backfill prévio e está documentado como parcial na migration.
 
 ---
 *Phase: 50-demonstracao-gratuita-validade-creditos*
