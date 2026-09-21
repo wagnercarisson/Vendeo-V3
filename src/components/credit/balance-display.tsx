@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { Coins } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { formatCredits } from "@/lib/credit/format";
@@ -30,11 +33,16 @@ function getDemoLabel(status: DemoStatus) {
 
 function DemoSummary({ demoBalance = 0, demoExpiresAt = null, originDemoGrantTxId = null }: BalanceDisplayProps) {
   const status = getDemoStatus({ demoBalance, demoExpiresAt, originDemoGrantTxId });
+  const [localExpiry, setLocalExpiry] = useState<string | null>(null);
+  useEffect(() => {
+    if (!demoExpiresAt) return;
+    setLocalExpiry(new Date(demoExpiresAt).toLocaleString("pt-BR"));
+  }, [demoExpiresAt]);
   const isRelevant = status !== "none";
   return <span className={isRelevant ? "text-xs text-text-secondary" : "sr-only"}>
     {getDemoLabel(status)}
     {demoExpiresAt && (status === "active" || status === "expiring_soon")
-      ? ` · ${new Date(demoExpiresAt).toLocaleString("pt-BR")} (${formatRelativeExpiry(demoExpiresAt)})`
+      ? ` · ${localExpiry ?? ""} (${formatRelativeExpiry(demoExpiresAt)})`
       : ""}
   </span>;
 }

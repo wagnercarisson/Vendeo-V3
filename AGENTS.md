@@ -310,11 +310,11 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 | 50-04 | 4 | ✅ | Serviços de crédito/demo, entitlement, launch-config e status da demonstração |
 | 50-05 | 5 | ✅ | Rotas alinhadas; `first_generation` após sucesso com dedup por grant |
 | 50-06 | 6 | ✅ | Reconcilier cron `demo-credits` + endpoint `support/credit-request` |
-| 50-07 | 3 | ○ | Notificações (outbox + claim/lease + email Resend) |
+| 50-07 | 3 | ✅ | Notificações (outbox + claim/lease + email Resend) |
 | 50-08 | 3 | ✅ | Infraestrutura `ProductEventService` concluída; emissão dos eventos fica nos planos proprietários |
 | 50-09 | 7 | ◐ | UI (status visual/data e fluxo sem campanhas pendentes) |
 | 50-10 | 2 | ✅ | Legal (três documentos + template de publicação separado + reaceite; fornecedor pendente para o corte) |
-| 50-11 | 7 | ○ | Bloqueado: harness Supabase/PostgreSQL local necessário |
+| 50-11 | 7 | ○ | Pendente: executar testes RPC/concorrência/idempotência no Supabase local |
 | 50-12 | 8 | ○ | Testes: integração + rotas + UI + notificações + legal + telemetria |
 | 50-13 | 9 | ○ | Regressão + co-migração + 4 gates |
 | 50-14 | 10 | ○ | Verificação: migration remota, reconciliação, UAT, revisão jurídica, corte |

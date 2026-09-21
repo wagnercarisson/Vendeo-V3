@@ -67,14 +67,14 @@ export default async function DashboardPage() {
     case "has_store_no_campaigns": {
       const storeNoCamp = await getCurrentStore(user.userId);
       const latestAnnouncement = await getLatestAnnouncement();
-      let noCampBalance: number | null = null;
+       let noCampBreakdown: Awaited<ReturnType<CreditService["getBalanceBreakdown"]>> | null = null;
       if (storeNoCamp) {
         const sc = await createServerClient();
         const cs = new CreditService(sc);
         try {
-        noCampBalance = (await cs.getBalanceBreakdown(storeNoCamp.id)).availableBalance;
+         noCampBreakdown = await cs.getBalanceBreakdown(storeNoCamp.id);
         } catch {
-          noCampBalance = null;
+           noCampBreakdown = null;
         }
       }
 
@@ -86,7 +86,11 @@ export default async function DashboardPage() {
           <ChangelogAnnouncement entry={latestAnnouncement} />
           <div className="mb-4">
             <BalanceDisplay
-              balance={noCampBalance ?? 0}
+               balance={noCampBreakdown?.availableBalance ?? 0}
+               availableBalance={noCampBreakdown?.availableBalance}
+               demoBalance={noCampBreakdown?.demoBalance}
+               demoExpiresAt={noCampBreakdown?.demoExpiresAt}
+               originDemoGrantTxId={noCampBreakdown?.originDemoGrantTxId}
               hasStore={true}
               variant="badge"
             />
