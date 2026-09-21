@@ -6,7 +6,7 @@ status: completed
 
 # Phase 50 Plan 11 Summary
 
-Executed against the local PostgreSQL instance with the complete focused matrix passing.
+Executed against the local PostgreSQL instance with the complete focused matrix passing, including the NULL-return/402 compatibility decision.
 
 ## Completed
 
@@ -18,7 +18,7 @@ Executed against the local PostgreSQL instance with the complete focused matrix 
 
 ## Validation
 
-- Complete focused suite: 5 files, 20 tests passed against local PostgreSQL.
+- Credit/RPC focused suite: 6 files, 53 tests passed; generation route regression: 2 files, 80 tests passed.
 - Typecheck, lint, and diff check passed.
 
 ## Limitation

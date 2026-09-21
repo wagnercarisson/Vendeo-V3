@@ -676,7 +676,7 @@ BEGIN
   END IF;
 
   IF (current_demo + current_bonus + current_purchased) < p_amount THEN
-    RAISE EXCEPTION 'saldo_insuficiente';
+    RETURN NULL;
   END IF;
 
   demo_before := current_demo;
@@ -693,7 +693,7 @@ BEGIN
   current_purchased := current_purchased - deduct_from_purchased;
   amount_restante := amount_restante - deduct_from_purchased;
   IF amount_restante > 0 THEN
-    RAISE EXCEPTION 'saldo_insuficiente';
+    RETURN NULL;
   END IF;
 
   demo_after := current_demo;

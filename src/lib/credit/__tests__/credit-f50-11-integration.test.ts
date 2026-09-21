@@ -88,6 +88,15 @@ describe("F50-11 real PostgreSQL integration", () => {
     expect(purchasedTx).toBeTruthy();
   });
 
+  it("materializes an expired demo during reserve and returns saldo_insuficiente without deduction", async () => {
+    const { storeId } = await fixture();
+    await grant(storeId);
+    await query("update credit_balances set demo_expires_at = now() - interval '1 second' where store_id = $1", [storeId]);
+    expect(await rpc("reserve_credit", [storeId, 1, null, `deduct-${crypto.randomUUID()}`, {}])).toBeNull();
+    expect((await query<{ demo_balance: number; demo_expires_at: string | null }>("select demo_balance, demo_expires_at from credit_balances where store_id = $1", [storeId]))[0]).toMatchObject({ demo_balance: 0, demo_expires_at: null });
+    expect((await query<{ count: number }>("select count(*)::int as count from credit_transactions where store_id = $1 and type = 'deduction'", [storeId]))[0].count).toBe(0);
+  });
+
   it("materializes one exact expiration with cycle, origin, contributors, and zeroed episode fields", async () => {
     const { storeId } = await fixture();
     const grantTx = await grant(storeId);
@@ -101,7 +110,7 @@ describe("F50-11 real PostgreSQL integration", () => {
     expect(expiration.metadata).toMatchObject({
       cycle_id: cycle,
       origin_demo_grant_tx_id: grantTx.grant_transaction_id,
-      contributing_tx_ids: expect.any(Array),
+      contributing_tx_ids: [grantTx.grant_transaction_id],
     });
     expect(balance).toMatchObject({ demo_balance: 0, demo_expires_at: null, demo_cycle_id: null, origin_demo_grant_tx_id: grantTx.grant_transaction_id, demo_contributing_tx_ids: [] });
   });
@@ -127,6 +136,14 @@ describe("F50-11 real PostgreSQL integration", () => {
     expect(new Date(grace.demo_expires_at).getTime() - Date.now()).toBeGreaterThan(23 * 3600_000);
     expect(grace.demo_cycle_id).not.toBe(original.demo_cycle_id);
     expect(grace.origin_demo_grant_tx_id).toBeTruthy();
+
+    const graceDeduction = await rpc<string>("reserve_credit", [storeId, 2, null, `deduct-${crypto.randomUUID()}`, {}]);
+    const graceBeforeRefund = (await query<{ demo_expires_at: string; demo_cycle_id: string }>("select demo_expires_at, demo_cycle_id from credit_balances where store_id = $1", [storeId]))[0];
+    await rpc("refund_credit", [graceDeduction, "active-grace", `refund-${crypto.randomUUID()}`, {}]);
+    const graceAfterRefund = (await query<{ demo_expires_at: string; demo_cycle_id: string }>("select demo_expires_at, demo_cycle_id from credit_balances where store_id = $1", [storeId]))[0];
+    expect(graceAfterRefund.demo_cycle_id).toBe(graceBeforeRefund.demo_cycle_id);
+    expect(new Date(graceAfterRefund.demo_expires_at).getTime()).toBeGreaterThanOrEqual(new Date(graceBeforeRefund.demo_expires_at).getTime());
+    expect(new Date(graceAfterRefund.demo_expires_at).getTime()).toBeGreaterThanOrEqual(Date.now() + 23 * 3600_000);
   });
 
   it("restores an exhausted demo in the original episode before expiry", async () => {
@@ -144,6 +161,8 @@ describe("F50-11 real PostgreSQL integration", () => {
   it("keeps wrapper signatures unique, service-role-only, and admin exception roots distinct", async () => {
     const names = ["create_store_with_cnpj", "update_store_cnpj", "admin_approve_store_verification", "admin_exception_store_verification", "create_store_with_initial_grant", "admin_create_store_for_user"];
     const signatures = await query<{ proname: string; count: number }>("select p.proname, count(*)::int as count from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = any($1::text[]) group by p.proname", [names]);
+    expect(signatures).toHaveLength(names.length);
+    expect(new Set(signatures.map((row) => row.proname))).toEqual(new Set(names));
     expect(signatures.every((row: { count: number }) => row.count === 1)).toBe(true);
     for (const name of names) {
       expect((await query<{ anon: boolean; authenticated: boolean; service: boolean }>("select has_function_privilege('anon', p.oid, 'execute') as anon, has_function_privilege('authenticated', p.oid, 'execute') as authenticated, has_function_privilege('service_role', p.oid, 'execute') as service from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = $1", [name]))[0]).toMatchObject({ anon: false, authenticated: false, service: true });
@@ -161,7 +180,7 @@ describe("F50-11 real PostgreSQL integration", () => {
     expect((await query<{ count: number }>("select count(*)::int as count from credit_transactions where type = 'admin_grant' and store_id = $1", [first.storeId]))[0].count).toBe(1);
 
     const beforeCnpj = (await query<{ count: number }>("select count(*)::int as count from credit_transactions where type = 'demo' and store_id = $1", [second.storeId]))[0].count;
-    await rpc("update_store_cnpj", [second.storeId, "12345678000199", "root-admin-exception", null, null, {}, "approved", {}, {}, [], false]);
+    await rpc("update_store_cnpj", [second.storeId, "12345678000199", "root-admin-exception", null, null, {}, "approved", {}, {}, [], true]);
     const afterCnpj = (await query<{ count: number }>("select count(*)::int as count from credit_transactions where type = 'demo' and store_id = $1", [second.storeId]))[0].count;
     expect(afterCnpj).toBe(beforeCnpj);
   });
@@ -176,6 +195,7 @@ describe("F50-11 real PostgreSQL integration", () => {
     await query("insert into credit_notifications (store_id, user_id, kind, dedup_key, payload) values ($1, $2, 'support_ack', $3, '{}')", [storeId, (await query<{ user_id: string }>("select user_id from stores where id = $1", [storeId]))[0].user_id, operationId]);
     await expect(query("select public.create_support_credit_request($1::uuid, $2::uuid, $3::uuid, $4::text, '{}'::jsonb, 'support@f50.test')", [operationId, storeId, (await query<{ user_id: string }>("select user_id from stores where id = $1", [storeId]))[0].user_id, "rollback@f50.test"])).rejects.toThrow();
     expect((await query<{ count: number }>("select count(*)::int as count from support_credit_requests where operation_id = $1", [operationId]))[0].count).toBe(0);
+    expect((await query<{ count: number }>("select count(*)::int as count from credit_notifications where dedup_key = $1 and kind = 'support_notice'", [operationId]))[0].count).toBe(0);
   });
 
   it("creates an admin store without credits and support request is atomic/idempotent", async () => {

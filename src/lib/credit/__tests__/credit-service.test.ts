@@ -453,6 +453,12 @@ describe("Concorrência", () => {
     expect(results.filter((r) => r.status === "rejected")).toHaveLength(1);
   });
 
+  it("converte retorno nulo da RPC em saldo_insuficiente", async () => {
+    mockRpc.mockReturnValue({ data: null, error: null });
+
+    await expect(service.reserveCredit(storeId, 1)).rejects.toThrow("saldo_insuficiente");
+  });
+
   it("grant + reserve simultâneos não corrompem saldo", async () => {
     mockRpc.mockImplementation((m: string) => {
       if (m === "grant_credits") return { data: "tx-grant", error: null };

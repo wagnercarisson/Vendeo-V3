@@ -35,6 +35,9 @@ describe("F50 PostgreSQL idempotency, permissions, eligibility and wrappers", ()
     await q("insert into credit_notifications (store_id, kind, dedup_key) values ($1, 'demo_granted', 'same') on conflict do nothing", [store]);
     await q("insert into credit_notifications (store_id, kind, dedup_key) values ($1, 'demo_granted', 'same') on conflict do nothing", [store]);
     expect((await q("select count(*)::int as count from credit_notifications where store_id = $1", [store]))[0].count).toBe(1);
+    await q("insert into product_events (store_id, user_id, event_type, dedup_key, properties) values ($1, (select user_id from stores where id = $1), 'demo_granted', 'same', '{}') on conflict do nothing", [store]);
+    await q("insert into product_events (store_id, user_id, event_type, dedup_key, properties) values ($1, (select user_id from stores where id = $1), 'demo_granted', 'same', '{}') on conflict do nothing", [store]);
+    expect((await q("select count(*)::int as count from product_events where store_id = $1 and event_type = 'demo_granted' and dedup_key = 'same'", [store]))[0].count).toBe(1);
     expect((await q("select has_function_privilege('anon', 'public.grant_demo_credits(uuid,text,integer,boolean,integer,text,uuid)', 'execute') as allowed"))[0].allowed).toBe(false);
   });
 });

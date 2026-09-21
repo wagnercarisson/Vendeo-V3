@@ -62,8 +62,9 @@ describe("F50 real PostgreSQL concurrency and temporal rules", () => {
       rpc("reserve_credit", [activeStore, 1, null, `r-${activeStore}-2`, {}]),
       rpc("reserve_credit", [activeStore, 1, null, `r-${activeStore}-3`, {}]),
     ]);
-    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(2);
-    expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
+    expect(results.every((result) => result.status === "fulfilled")).toBe(true);
+    expect(results.filter((result) => result.status === "fulfilled" && result.value !== null)).toHaveLength(2);
+    expect(results.filter((result) => result.status === "fulfilled" && result.value === null)).toHaveLength(1);
     expect((await query<{ balance: number }>("select balance from credit_balances where store_id = $1", [activeStore]))[0].balance).toBe(0);
     expect((await query<{ count: number }>("select count(*)::int as count from credit_transactions where store_id = $1 and type = 'deduction'", [activeStore]))[0].count).toBe(2);
     expect(grant.granted).toBe(true);

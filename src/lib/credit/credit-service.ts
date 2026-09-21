@@ -63,6 +63,10 @@ export class CreditService {
       throw error;
     }
 
+    if (data === null) {
+      throw new Error("saldo_insuficiente");
+    }
+
     return data as string;
   }
 
