@@ -31,7 +31,7 @@ key-decisions:
 patterns-established:
   - "Outbox credit_notifications com índice único (store_id, kind, dedup_key)"
 
-requirements-completed: [credit-tables, credit-expiration, freemium-entitlement, credit-notifications, product-events, support-protocol, account-retention, beta-access-request]
+requirements-completed: []  # Cobertura estrutural (tabelas/colunas/CHECKs/RLS) apenas — capacidades completas (notificações/expiração/telemetria/suporte/retention) concluem nos planos 50-03..50-16.
 
 duration: 25min
 completed: 2026-09-20
@@ -79,7 +79,9 @@ None - plan executed exactly as written.
 
 ## Issues Encountered
 
-- **Ressalva registrada para o 50-03 (do usuário):** a migration `20260920000001_f50_demo_credits.sql` já está registrada como aplicada; portanto `supabase migration up --local` **não** reaplicará as RPCs acrescentadas no 50-03. O 50-03 deve acrescentar todas as RPCs ao arquivo e, ao concluir, executar um `supabase db reset --local` controlado para reaplicar a migration completa desde o início, seguido da verificação integral das estruturas e RPCs (evita falsa validação). Registrado como tarefa adicional no 50-03 (não invalida o 50-02).
+**Cobertura estrutural apenas:** este plano entregou somente a **estrutura de banco** (colunas/CHECKs/tabelas/RLS/índices) das capacidades `credit-notifications`, `product-events`, `support-protocol`, `account-retention` e `credit-expiration`. As capacidades completas (RPCs, serviços, rotas, notificações, telemetria, UI, legal) são concluídas nos planos 50-03..50-16. `requirements-completed` foi registrado como vazio para não sugerir conclusão prematura.
+
+**Ressalva registrada para o 50-03 (do usuário):** a migration `20260920000001_f50_demo_credits.sql` já está registrada como aplicada; portanto `supabase migration up --local` **não** reaplicará as RPCs acrescentadas no 50-03. O 50-03 deve acrescentar todas as RPCs ao arquivo e, ao concluir, executar um `supabase db reset --local` controlado para reaplicar a migration completa desde o início, seguido da verificação integral das estruturas e RPCs (evita falsa validação). Registrado como task 3.10 (checkpoint human-action — reset apaga o banco local).
 
 ## User Setup Required
 
