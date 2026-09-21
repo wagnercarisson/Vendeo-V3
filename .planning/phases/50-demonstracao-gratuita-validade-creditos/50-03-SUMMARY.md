@@ -30,7 +30,7 @@ key-decisions:
   - "admin_exception_store_verification permanece bônus (raiz sintética por loja + idempotência)"
 
 patterns-established:
-  - "REVOKE PUBLIC + GRANT service_role nas 11 RPCs (paridade F47/F48.1)"
+  - "REVOKE PUBLIC + GRANT service_role nas 12 RPCs (paridade F47/F48.1)"
 
 requirements-completed: [credit-sql-functions]  # SQL layer completo; demo-credit-grant/credit-expiration/freemium-entitlement concluem TS/rotas/testes em 50-04/50-05/50-11/50-12.
 
@@ -61,7 +61,7 @@ completed: 2026-09-21
 - 3 wrappers demo (`create_store_with_cnpj`/`update_store_cnpj`/`admin_approve_store_verification`) com `p_demo_grant_enabled`.
 - `admin_exception_store_verification` preservado como bônus `admin_grant` (raiz sintética por loja + idempotência).
 - `create_store_with_initial_grant` neutralizado (sem grant sem CNPJ).
-- REVOKE/GRANT service_role nas 11 RPCs + REVERT executável completo.
+- REVOKE/GRANT service_role nas 12 RPCs + REVERT executável completo.
 
 ## Task Commits
 
@@ -93,8 +93,13 @@ completed: 2026-09-21
 | `grant_credits` type divergente | `idempotency_conflict` ✅ |
 | `anon` executa `grant_demo_credits` | `permission denied` ✅ |
 | `authenticated` executa `grant_demo_credits` | `permission denied` ✅ |
+| `admin_create_store_for_user` assinatura única | `count=1` ✅ |
+| `admin_create_store_for_user` service_role cria loja | loja criada, `balance=0` ✅ |
+| `admin_create_store_for_user` sem saldo/transação | `credit_balances=0`, `credit_transactions=0`, `audit=1` ✅ |
+| `anon` executa `admin_create_store_for_user` | `permission denied` ✅ |
+| `authenticated` executa `admin_create_store_for_user` | `permission denied` ✅ |
 
-`pg_proc` com assinatura única por função (sem overload legado). Estruturas do 50-02 preservadas (5 colunas demo + 4 tabelas novas).
+`pg_proc` com assinatura única por função (sem overload legado). Estruturas do 50-02 preservadas (5 colunas demo + 4 tabelas novas). Todas as **12 RPCs** restritas a `service_role` (nenhuma exposta a `anon`/`authenticated`).
 
 ## Decisions Made
 
@@ -102,12 +107,13 @@ completed: 2026-09-21
 
 ## Deviations from Plan
 
-None - plan executed exactly as written (com os 3 fixes apontados em review, todos registrados como commits).
+Nenhuma mudança de escopo. **Achado crítico do review (fixado):** `admin_create_store_for_user` não havia sido redefinida nem recebido os privilégios mínimos — permanecia `SECURITY DEFINER` executável por `anon`/`authenticated`. Corrigido com `DROP + CREATE OR REPLACE` explícito + `REVOKE ALL ... FROM PUBLIC, anon, authenticated` + `GRANT ... TO service_role` + REVERT com restauração do privilégio anterior. Total de RPCs protegidas passou de 11 para **12**.
 
 ## Issues Encountered
 
 - **Ambiente (resolvido):** a porta 54322 do Supabase local ficou bloqueada pela reserva WinNAT do Windows (intervalo 54228–54327); resolvido pelo usuário via reinício do Docker/ambiente. Sem impacto no código.
 - **Teste smoke (artefato de script):** a primeira versão do script chamava `materialize_demo_expiration` duas vezes na mesma SELECT; corrigido para confirmar `expired=true` na 1ª chamada.
+- **`db reset --local` falhou na 1ª tentativa pós-fix** ("error running container: exit 1" — container `vector` em crash-loop); a 2ª execução concluiu com sucesso e reaplicou a migration completa.
 
 ## User Setup Required
 
