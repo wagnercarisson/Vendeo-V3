@@ -42,6 +42,18 @@ describe("ProductEventService", () => {
     warn.mockRestore();
   });
 
+  it("logs Supabase row errors without blocking the caller", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    mockUpsert.mockResolvedValueOnce({ error: { message: "insert rejected" } });
+    const { ProductEventService } = await import("../service");
+
+    await expect(new ProductEventService().record("demo_expired", {
+      dedup_key: "expiration-2",
+    })).resolves.toBeUndefined();
+    expect(warn).toHaveBeenCalledWith("[product-events] best-effort write failed", { message: "insert rejected" });
+    warn.mockRestore();
+  });
+
   it("accepts a second identical event without creating a duplicate", async () => {
     const { ProductEventService } = await import("../service");
     const service = new ProductEventService();

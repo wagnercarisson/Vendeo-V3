@@ -20,7 +20,7 @@ export class ProductEventService {
 
   async record(eventType: ProductEventType, input: ProductEventInput): Promise<void> {
     try {
-      await this.client.from("product_events").upsert(
+      const { error } = await this.client.from("product_events").upsert(
         {
           event_type: eventType,
           store_id: input.store_id ?? null,
@@ -30,6 +30,9 @@ export class ProductEventService {
         },
         { onConflict: "event_type,dedup_key", ignoreDuplicates: true },
       );
+      if (error) {
+        console.warn("[product-events] best-effort write failed", error);
+      }
     } catch (error) {
       console.warn("[product-events] best-effort write failed", error);
     }
