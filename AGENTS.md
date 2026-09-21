@@ -308,7 +308,7 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 | 50-02 | 2 | ✅ | Migration estrutural (demo columns/cycle/contrib, tipos, benefit_type demo, tabelas) — sem docs legais |
 | 50-03 | 3 | ✅ | RPCs SQL (`grant_demo_credits`+flag, `materialize_demo_expiration`, `try_grant_demo_entitlement`, rewrite reserve/refund/grant) |
 | 50-04 | 4 | ✅ | Serviços de crédito/demo, entitlement, launch-config e status da demonstração |
-| 50-05 | 5 | ◐ | Rotas de concessão/generation alinhadas; `first_generation` aguarda 50-08 |
+| 50-05 | 5 | ◐ | Rotas de concessão/generation alinhadas; infraestrutura disponível, emissão de `first_generation` pendente |
 | 50-06 | 6 | ○ | Reconcilier cron `demo-credits` + endpoint `support/credit-request` |
 | 50-07 | 3 | ○ | Notificações (outbox + claim/lease + email Resend) |
 | 50-08 | 3 | ✅ | Infraestrutura `ProductEventService` concluída; emissão dos eventos fica nos planos proprietários |
