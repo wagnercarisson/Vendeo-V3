@@ -87,9 +87,9 @@
 
 ## 50-07 — Notificações (D10)
 
-- [ ] 7.1 `src/lib/notifications`: escrita de outbox com dedup lógico por `(store_id, kind, dedup_key)`; **notificações de demonstração best-effort**; **`support_ack` e `support_notice` duráveis e atômicos com a solicitação** (exceção)
-- [ ] 7.2 `src/lib/email`: serviço Resend gated por `VENDEO_EMAIL_ENABLED`; **claim atômico** (`pending` → `processing` + `lease_expires_at`) com **reclaim por lease vencido**; **máquina de estados** `pending → processing → sent | failed | suppressed` com **falha retryable voltando a `pending` + `next_attempt_at`** (backoff) e **`failed` terminal/dead-letter visível no admin**; `attempt_count`/`max attempts`/`last_error`/`provider_message_id`/`email_sent_at`; **política de supressão** (flag off → `suppressed` **apenas demo**; janela temporal perdida → `suppressed` **apenas demo**; `support_ack`/`support_notice` NUNCA suprimidos — permanecem `pending`/retry, falha permanente visível no admin); `delivered_at` reservado (webhook, fora do escopo)
-- [ ] 7.3 Superfície in-app: bell/badge na nav + lista (`/conta`), marcação de leitura idempotente
+- [x] 7.1 `src/lib/notifications`: escrita de outbox com dedup lógico por `(store_id, kind, dedup_key)`; **notificações de demonstração best-effort**; **`support_ack` e `support_notice` duráveis e atômicos com a solicitação** (exceção)
+- [x] 7.2 `src/lib/email`: serviço Resend gated por `VENDEO_EMAIL_ENABLED`; **claim atômico** (`pending` → `processing` + `lease_expires_at`) com **reclaim por lease vencido**; **máquina de estados** `pending → processing → sent | failed | suppressed` com **falha retryable voltando a `pending` + `next_attempt_at`** (backoff) e **`failed` terminal/dead-letter visível no admin**; `attempt_count`/`max attempts`/`last_error`/`provider_message_id`/`email_sent_at`; **política de supressão** (flag off → `suppressed` **apenas demo**; janela temporal perdida → `suppressed` **apenas demo**; `support_ack`/`support_notice` NUNCA suprimidos — permanecem `pending`/retry, falha permanente visível no admin); `delivered_at` reservado (webhook, fora do escopo)
+- [x] 7.3 Superfície in-app: bell/badge na nav + lista (`/conta`), marcação de leitura idempotente
 
 ## 50-08 — Telemetria (D14)
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Menu, Plus } from "lucide-react";
 import { AccountMenu } from "./account-menu";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import type { JwtPayload } from "@/types/auth";
 import type { RefObject, MouseEvent } from "react";
 
@@ -47,7 +48,7 @@ export function Topbar({ user, storeName, onToggleMenu, isDrawerOpen, toggleButt
       </div>
 
       <div className="flex shrink-0 items-center gap-1 sm:gap-3">
-        <Link
+         <Link
           href={NEW_CAMPAIGN_PATH}
           onClick={handleNewCampaignClick}
           aria-label="Criar nova campanha"
@@ -55,7 +56,8 @@ export function Topbar({ user, storeName, onToggleMenu, isDrawerOpen, toggleButt
         >
           <Plus className="h-4 w-4" />
           <span className="hidden sm:inline">Nova Campanha</span>
-        </Link>
+         </Link>
+        <NotificationBell />
         <AccountMenu user={user} />
       </div>
     </header>
