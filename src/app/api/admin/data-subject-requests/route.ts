@@ -69,9 +69,12 @@ export const POST = apiHandler(async (request: NextRequest) => {
       deletion_due_at: input.type === "closure" ? new Date(Date.now() + 30 * 86400000).toISOString() : null,
       deletion_inventory: input.deletionInventory ?? {}, legal_hold: input.legalHold ?? false,
     };
-    const { data, error } = await supabaseAdmin.from("data_subject_requests").upsert(row, { onConflict: "operation_id" }).select().single();
+    const { data: existing } = await supabaseAdmin.from("data_subject_requests").select("*").eq("operation_id", operationId).maybeSingle();
+    if (existing) return NextResponse.json({ request: existing }, { status: 200 });
+    const { data, error } = await supabaseAdmin.from("data_subject_requests").insert(row).select().single();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    await supabaseAdmin.from("admin_audit_log").insert({ actor_id: admin.userId, action: "data_subject_request_received", target_type: "data_subject_request", target_id: data.id, operation_id: operationId, reason: "Registro de pedido de titular", metadata: auditPayload(data, "received") });
+    const { error: auditError } = await supabaseAdmin.from("admin_audit_log").insert({ actor_id: admin.userId, action: "data_subject_request_received", target_type: "data_subject_request", target_id: data.id, operation_id: operationId, reason: "Registro de pedido de titular", metadata: auditPayload(data, "received") });
+    if (auditError) return NextResponse.json({ error: "Não foi possível auditar o pedido" }, { status: 500 });
     return NextResponse.json({ request: data }, { status: 201 });
   }
 
@@ -79,7 +82,8 @@ export const POST = apiHandler(async (request: NextRequest) => {
   const { data: current, error: readError } = await supabaseAdmin.from("data_subject_requests").select("*").eq("id", input.id).maybeSingle();
   if (readError || !current) return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 });
   if (input.nextStatus === "cancelled" && current.status !== "received") {
-    await supabaseAdmin.from("admin_audit_log").insert({ actor_id: admin.userId, action: "data_subject_request_cancel_rejected", target_type: "data_subject_request", target_id: current.id, operation_id: current.operation_id, reason: "Cancelamento após início da exclusão", metadata: auditPayload(current, "cancelled") });
+    const { error: auditError } = await supabaseAdmin.from("admin_audit_log").insert({ actor_id: admin.userId, action: "data_subject_request_cancel_rejected", target_type: "data_subject_request", target_id: current.id, operation_id: current.operation_id, reason: "Cancelamento após início da exclusão", metadata: auditPayload(current, "cancelled") });
+    if (auditError) return NextResponse.json({ error: "Não foi possível auditar a tentativa" }, { status: 500 });
     return NextResponse.json({ error: "Cancelamento permitido somente em received" }, { status: 409 });
   }
   if (input.nextStatus === "in_progress" && current.status !== "received") return NextResponse.json({ error: "Transição inválida" }, { status: 409 });
@@ -90,6 +94,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
   if (input.nextStatus === "completed") { patch.completed_at = now; patch.deletion_inventory = input.deletionInventory ?? current.deletion_inventory; }
   const { data, error } = await supabaseAdmin.from("data_subject_requests").update(patch).eq("id", current.id).eq("status", current.status).select().single();
   if (error || !data) return NextResponse.json({ error: error?.message ?? "Conflito de transição" }, { status: 409 });
-  await supabaseAdmin.from("admin_audit_log").insert({ actor_id: admin.userId, action: `data_subject_request_${input.nextStatus}`, target_type: "data_subject_request", target_id: data.id, operation_id: data.operation_id, reason: "Transição de ciclo de vida", metadata: auditPayload(data, input.nextStatus) });
+  const { error: auditError } = await supabaseAdmin.from("admin_audit_log").insert({ actor_id: admin.userId, action: `data_subject_request_${input.nextStatus}`, target_type: "data_subject_request", target_id: data.id, operation_id: data.operation_id, reason: "Transição de ciclo de vida", metadata: auditPayload(data, input.nextStatus) });
+  if (auditError) return NextResponse.json({ error: "Não foi possível auditar a transição" }, { status: 500 });
   return NextResponse.json({ request: data });
 });

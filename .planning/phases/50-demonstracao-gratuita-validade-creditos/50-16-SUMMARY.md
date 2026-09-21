@@ -1,5 +1,9 @@
 # Phase 50 Plan 16 Summary
 
+## Status
+
+Partial: request parsing/version validation and the data-subject audit migration are implemented; lifecycle atomicity/idempotency tests remain.
+
 ## Completed
 
 - Kept beta access request-only, with signup fail-closed by the existing `publicSignupEnabled` default and a documented 50-approved-email operational gate.

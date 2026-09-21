@@ -4,13 +4,15 @@ import { apiHandler } from "@/lib/auth/api-handler";
 import { requireSameOrigin } from "@/lib/auth/csrf";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
+const PRIVACY_NOTICE_VERSION = "v1.4";
+
 const AccessRequestSchema = z.object({
   email: z.string().trim().toLowerCase().email().max(254),
   name: z.string().trim().max(100).optional(),
   store_name: z.string().trim().max(100).optional(),
   segment: z.string().trim().max(50).optional(),
   whatsapp: z.string().trim().max(20).optional(),
-  privacy_notice_version: z.string().trim().min(1).max(20),
+  privacy_notice_version: z.literal(PRIVACY_NOTICE_VERSION),
 });
 
 // POST público (sem requireUser) — visitantes da landing solicitam acesso free.
@@ -18,9 +20,12 @@ const AccessRequestSchema = z.object({
 export const POST = apiHandler(async (request: NextRequest) => {
   requireSameOrigin(request);
 
-  const body = request.headers.get("content-type")?.includes("application/json")
+  const contentType = request.headers.get("content-type") ?? "";
+  const body = contentType.includes("application/json")
     ? await request.json().catch(() => null)
-    : Object.fromEntries((await request.formData()).entries());
+    : contentType.includes("multipart/form-data") || contentType.includes("application/x-www-form-urlencoded")
+      ? Object.fromEntries((await request.formData()).entries())
+      : null;
   const parsed = AccessRequestSchema.safeParse(body);
   if (!parsed.success) {
     // 400 genérico — sem detalhar o campo (anti-enumeração de esquema)

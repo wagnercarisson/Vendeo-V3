@@ -300,7 +300,7 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 
 ## Phase 50 — Demonstração Gratuita e Validade dos Créditos
 
-**Status:** ◆ Executando — 14/17 plans concluídos (50-01 ✅, 50-02 ✅, 50-03 ✅, 50-04 ✅, 50-05 ✅, 50-06 ✅, 50-07 ✅, 50-08 ✅, 50-09 ✅, 50-10 ✅, 50-11 ✅, 50-15 ✅, 50-16 ✅, 50-17 ✅)
+**Status:** ◆ Executando — 13/17 plans concluídos (50-01 ✅, 50-02 ✅, 50-03 ✅, 50-04 ✅, 50-05 ✅, 50-06 ✅, 50-07 ✅, 50-08 ✅, 50-09 ✅, 50-10 ✅, 50-11 ✅, 50-15 ✅, 50-17 ✅; 50-16 parcial)
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
@@ -319,7 +319,7 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 | 50-13 | 9 | ○ | Regressão + co-migração + 4 gates |
 | 50-14 | 10 | ○ | Verificação: migration remota, reconciliação, UAT, revisão jurídica, corte |
 | 50-15 | 2 | ✅ | Storage privacy (buckets privados + URL assinada; smokes e fluxos verificados; sem R2) |
-| 50-16 | 3 | ✅ | Beta/access + retenção + direitos de titular via suporte/protocolo |
+| 50-16 | 3 | ◐ | Beta/access + retenção; auditoria/idempotência pendentes |
 | 50-16 | 3 | ○ | Beta/access + retenção (WhatsApp opcional, aviso versionado, maioridade, conta/30 dias) |
 | 50-17 | 2 | ✅ | Runbook de backup externo + continuidade; restore real permanece gate do 50-14 |
 
