@@ -2,8 +2,8 @@
 phase: 50-demonstracao-gratuita-validade-creditos
 plan: 05
 subsystem: routes
-status: partial
-updated: 2026-09-21
+status: completed
+completed: 2026-09-21
 ---
 
 # Phase 50 Plan 05 Summary
@@ -19,5 +19,5 @@ updated: 2026-09-21
 
 ## Validation
 
-- Route generation tests: 80/80 PASS with mocks co-migrated; dedicated emission assertions remain pending.
+- Related route generation tests: 100/100 PASS with mocks co-migrated.
 - `npm run typecheck`: PASS.
