@@ -1240,6 +1240,57 @@ END;
 $$;
 
 -- -----------------------------------------------------------------------------
+-- 7.10b admin_create_store_for_user — redefinida sem concessão (D8) + privilégio mínimo
+-- -----------------------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.admin_create_store_for_user(UUID, UUID, TEXT, TEXT);
+
+CREATE OR REPLACE FUNCTION public.admin_create_store_for_user(
+  p_admin_id UUID,
+  p_user_id UUID,
+  p_name TEXT,
+  p_segment TEXT
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_store_data JSONB;
+BEGIN
+  IF EXISTS (SELECT 1 FROM public.stores WHERE user_id = p_user_id) THEN
+    RAISE EXCEPTION 'usuario_ja_possui_loja';
+  END IF;
+
+  -- Cria a loja (sem concessão de créditos — create_store_with_initial_grant neutralizado) + auditoria
+  v_store_data := public.create_store_with_initial_grant(
+    p_name,
+    p_segment,
+    p_user_id,
+    NULL::TEXT,
+    NULL::TEXT,
+    NULL::TEXT,
+    NULL::TEXT,
+    NULL::TEXT,
+    NULL::TEXT,
+    NULL::TEXT,
+    NULL::TEXT,
+    NULL::TEXT,
+    10
+  );
+
+  INSERT INTO public.admin_audit_log (actor_id, action, target_type, target_id, reason, metadata)
+  VALUES (
+    p_admin_id, 'store_create_invite', 'user', p_user_id,
+    'Criação de loja via admin (convite beta)',
+    jsonb_build_object('storeId', v_store_data ->> 'id', 'storeName', p_name)
+  );
+
+  RETURN v_store_data;
+END;
+$$;
+
+-- -----------------------------------------------------------------------------
 -- 7.11 Privilégios mínimos (paridade F47/F48.1) — REVOKE PUBLIC + GRANT service_role
 -- -----------------------------------------------------------------------------
 REVOKE ALL ON FUNCTION public.try_grant_demo_entitlement(UUID, TEXT) FROM PUBLIC, anon, authenticated;
@@ -1274,6 +1325,9 @@ GRANT EXECUTE ON FUNCTION public.admin_exception_store_verification(UUID, UUID, 
 
 REVOKE ALL ON FUNCTION public.create_store_with_initial_grant(TEXT, TEXT, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, INTEGER) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.create_store_with_initial_grant(TEXT, TEXT, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, INTEGER) TO service_role;
+
+REVOKE ALL ON FUNCTION public.admin_create_store_for_user(UUID, UUID, TEXT, TEXT) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_create_store_for_user(UUID, UUID, TEXT, TEXT) TO service_role;
 
 -- =============================================================================
 -- REVERT (ordem reversa da criação)
@@ -1724,6 +1778,9 @@ GRANT EXECUTE ON FUNCTION public.create_store_with_initial_grant(TEXT, TEXT, UUI
 -- $$;
 -- REVOKE ALL ON FUNCTION public.create_store_with_initial_grant(TEXT, TEXT, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, INTEGER) FROM PUBLIC, anon, authenticated;
 -- GRANT EXECUTE ON FUNCTION public.create_store_with_initial_grant(TEXT, TEXT, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, INTEGER) TO service_role;
+
+-- Restaurar admin_create_store_for_user (privilégio PUBLIC original — corpo delega a create_store_with_initial_grant):
+-- GRANT EXECUTE ON FUNCTION public.admin_create_store_for_user(UUID, UUID, TEXT, TEXT) TO PUBLIC;
 
 -- Restaurar privilégios (desfazer REVOKE):
 -- GRANT EXECUTE ON FUNCTION public.grant_credits(UUID, INTEGER, TEXT, TEXT, JSONB, TEXT) TO PUBLIC;
