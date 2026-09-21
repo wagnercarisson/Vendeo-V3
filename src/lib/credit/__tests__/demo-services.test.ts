@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockFrom = vi.fn();
 const mockRpc = vi.fn();
+const mockIn = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   supabaseAdmin: { from: mockFrom, rpc: mockRpc },
@@ -10,8 +11,12 @@ vi.mock("@/lib/supabase/server", () => ({
 describe("F50 demo services", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubEnv("VENDEO_V15_ENABLED", "true");
     vi.unstubAllEnvs();
+    vi.stubEnv("VENDEO_V15_ENABLED", "true");
+    vi.stubEnv("VENDEO_DEMO_CREDITS_ENABLED", undefined);
+    vi.stubEnv("VENDEO_DEMO_CREDITS_AMOUNT", undefined);
+    vi.stubEnv("VENDEO_DEMO_CREDITS_TTL_HOURS", undefined);
+    vi.stubEnv("VENDEO_EMAIL_ENABLED", undefined);
   });
 
   it("includes active demo and excludes expired demo from getBalance", async () => {
@@ -35,12 +40,23 @@ describe("F50 demo services", () => {
 
   it("blocks onboarding, demo and admin_exception roots and grants idempotently", async () => {
     const { FreemiumEntitlementService } = await import("@/lib/freemium/entitlement-service");
-    const maybeSingle = vi.fn().mockResolvedValue({ data: null });
-    mockFrom.mockReturnValue({ select: vi.fn(() => ({ eq: vi.fn(() => ({ in: vi.fn(() => ({ limit: vi.fn(() => ({ maybeSingle })) })) })) })) });
-    mockRpc.mockResolvedValue({ data: "grant-id", error: null });
+    const maybeSingle = vi.fn()
+      .mockResolvedValueOnce({ data: { id: "existing-onboarding" } })
+      .mockResolvedValueOnce({ data: { id: "existing-demo" } })
+      .mockResolvedValueOnce({ data: { id: "existing-admin" } })
+      .mockResolvedValueOnce({ data: null });
+    mockIn.mockImplementation(() => ({ limit: vi.fn(() => ({ maybeSingle })) }));
+    mockFrom.mockReturnValue({ select: vi.fn(() => ({ eq: vi.fn(() => ({ in: mockIn })) })) });
+    mockRpc.mockResolvedValueOnce({ data: "grant-id", error: null }).mockResolvedValueOnce({ data: null, error: null });
     const service = new FreemiumEntitlementService({ from: mockFrom, rpc: mockRpc } as never);
+    await expect(service.checkDemoEligibility("root")).resolves.toBe(false);
+    await expect(service.checkDemoEligibility("root")).resolves.toBe(false);
+    await expect(service.checkDemoEligibility("root")).resolves.toBe(false);
     await expect(service.checkDemoEligibility("root")).resolves.toBe(true);
+    expect(mockIn).toHaveBeenCalledWith("benefit_type", ["onboarding", "demo", "admin_exception"]);
     await expect(service.grantDemoEntitlement("store", "root")).resolves.toBe("grant-id");
+    await expect(service.grantDemoEntitlement("store", "root")).resolves.toBeNull();
+    expect(mockRpc).toHaveBeenCalledTimes(2);
     expect(mockRpc).toHaveBeenCalledWith("try_grant_demo_entitlement", { p_store_id: "store", p_root_hash: "root" });
   });
 
@@ -58,6 +74,7 @@ describe("F50 demo services", () => {
     expect(getDemoStatus({ ...grant, demoBalance: 1, demoExpiresAt: "2026-01-01T12:00:00Z" }, now)).toBe("expiring_soon");
     expect(getDemoStatus({ ...grant, demoBalance: 0, demoExpiresAt: "2026-01-02T00:00:00Z" }, now)).toBe("exhausted");
     expect(getDemoStatus({ ...grant, demoBalance: 1, demoExpiresAt: "2025-12-31T00:00:00Z" }, now)).toBe("expired");
+    expect(getDemoStatus({ ...grant, demoBalance: 0, demoExpiresAt: null }, now)).toBe("expired");
     expect(getDemoStatus({ demoBalance: 0, demoExpiresAt: null }, now)).toBe("none");
     expect(formatRelativeExpiry("2026-01-01T05:00:00Z", now)).toBe("expira em 5 horas");
     expect(formatRelativeExpiry("2026-01-03T00:00:00Z", now)).toBe("expira em 2 dias");

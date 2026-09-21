@@ -118,7 +118,7 @@ function mapEntitlement(raw: Record<string, unknown>): FreemiumEntitlement {
     id: raw.id as string,
     store_id: raw.store_id as string | null,
     root_hash: raw.root_hash as string,
-    benefit_type: raw.benefit_type as "onboarding" | "monthly" | "admin_exception",
+    benefit_type: raw.benefit_type as "onboarding" | "monthly" | "admin_exception" | "demo",
     cycle: raw.cycle as string | null,
     grant_transaction_id: raw.grant_transaction_id as string | null,
     granted_by: raw.granted_by as string | null,

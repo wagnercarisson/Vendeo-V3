@@ -54,13 +54,12 @@ export default async function AdminUsersPage({
   // Fetch credit balances for freemium status calculation
   const { data: balances } = await supabaseAdmin
     .from("credit_balances")
-    .select("store_id, balance, demo_balance, demo_expires_at, bonus_balance, purchased_balance")
+    .select("store_id, demo_balance, demo_expires_at, bonus_balance, purchased_balance")
     .in("store_id", storeIds.length > 0 ? storeIds : ["none"]);
 
-  const balanceMap: Record<string, { balance: number; bonusBalance: number; purchasedBalance: number; demoBalance: number; demoExpiresAt: string | null; availableBalance: number }> = {};
+  const balanceMap: Record<string, { bonusBalance: number; purchasedBalance: number; demoBalance: number; demoExpiresAt: string | null; availableBalance: number }> = {};
   for (const b of (balances ?? [])) {
     balanceMap[b.store_id] = {
-      balance: b.balance ?? 0,
       demoBalance: b.demo_balance ?? 0,
       demoExpiresAt: b.demo_expires_at ?? null,
       bonusBalance: b.bonus_balance ?? 0,

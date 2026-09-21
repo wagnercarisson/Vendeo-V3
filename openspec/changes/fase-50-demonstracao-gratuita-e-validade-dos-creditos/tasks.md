@@ -64,7 +64,7 @@
 
 - [x] 4.1 `credit-service.ts`: `getBalance` → saldo disponível **sem materializar** (leitura RLS/`authenticated`); `getBalanceBreakdown` inclui `demoBalance`/`demoExpiresAt`/`availableBalance`
 - [x] 4.2 `credit/types.ts` + `labels.ts`: `demo` ("Demonstração") e `expiration` ("Expiração")
-- [x] 4.3 `freemium/entitlement-service.ts`: `checkDemoEligibility` (ausência de `onboarding` e `demo`) + `grantDemoEntitlement`
+- [x] 4.3 `freemium/entitlement-service.ts`: `checkDemoEligibility` (ausência de `onboarding`, `demo` e `admin_exception`) + `grantDemoEntitlement`
 - [x] 4.4 `launch-config/config.ts`: `demoCreditsEnabled`/`demoCreditsAmount`/`demoCreditsTtlHours`/`emailEnabled` (defaults fail-closed); **`monthlyCreditsEnabled` default `true` (preservado até o corte)**
 - [x] 4.5 Migrar os consumidores de `credit_balances.balance` mapeados em 1.4 para saldo disponível
 - [x] 4.6 Novo `src/lib/credit/demo-status.ts` (helper puro `getDemoStatus`) + `formatRelativeExpiry`
