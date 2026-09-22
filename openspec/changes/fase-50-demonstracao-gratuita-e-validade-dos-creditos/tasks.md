@@ -172,8 +172,8 @@
 
 ## 50-14 — Verificação, rollout (corte) e gates finais
 
-- [ ] 14.1 Migration **estrutural** remota aplicada e verificada (`db diff --linked` sem divergência em `demo_*`/novas tabelas/RPCs)
-- [ ] 14.2 Reconciliação financeira do ledger (soma de `demo`+`bonus`+`purchase` = `balance`; `expiration` compensa `demo`; estornos conferem; `demo_cycle_id`/`contributing_tx_ids` íntegros)
+- [x] 14.1 Migration **estrutural** remota aplicada e verificada (`db diff --linked` sem divergência em `demo_*`/novas tabelas/RPCs) — 8 migrations F50 sincronizadas; evidência em `50-VERIFICATION.md`
+- [x] 14.2 Reconciliação financeira do ledger (soma de `demo`+`bonus`+`purchase` = `balance`; `expiration` compensa `demo`; estornos conferem; `demo_cycle_id`/`contributing_tx_ids` íntegros) — 10 balances, 309 transactions, `invalid_balances=0`, `unexpected_demo=0`, `f50_transactions=0`, `demo_balance_total=0`
 - [ ] 14.3 Validação jurídica formal das **três** minutas registrada (Termos v1.5, Privacidade v1.4, Uso Aceitável v1.2)
 - [ ] 14.4 **UAT completa ANTES do corte** (ambiente controlado, demo habilitada) dos estados da demonstração (ativa/próxima/exaurida/expirada/insuficiente/bônus pós-demo) desktop + mobile
 - [ ] 14.5 Confirmação de que nenhum fluxo promete compra/cobrança
