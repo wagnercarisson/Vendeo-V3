@@ -47,10 +47,36 @@ Changed protected files:
 Classification:
 - Both differences are pre-existing F50 changes from earlier plans: first_generation product-event emission and storage privacy changes.
 - No protected file was changed by plan 50-13 itself.
-- The baseline fence is BLOCKED as written because these two files are included in the original protected hash set.
+- The original baseline is preserved. These two entries are approved, nominative,
+  scoped exceptions; the general protected-file fence is not relaxed.
 - This plan does not revert them: doing so would undo completed F50 scope and violate preservation of unrelated/prior changes.
 
-7. WORKTREE PRESERVATION
+7. APPROVED SCOPED EXCEPTIONS
+-----------------------------
+Classification: PASS WITH APPROVED SCOPED EXCEPTIONS
+Approval: user approval recorded on 2026-09-22.
+
+Exception A: src/app/api/campaign/generate-image/route.ts
+- Baseline SHA-256: EC080438E3E0BF7968F4D92FE9DBBD64908657B03CD4B6ED1FD96D312D75B12A
+- Current SHA-256:  a12b8d8a612245fcac68715b43ff49fb8f4b3a52
+- Origin commits: 8b71e831 (first_generation), 74467302/e5a4b735 (co-migration)
+- Functional diff: post-success best-effort first_generation event only.
+
+Exception B: src/app/api/store/[id]/visual-signature/generate-without-logo/route.ts
+- Baseline SHA-256: 141D46865B02A3A2ABE2C01EB8C1E863101A871114F4E0DABA1DD00F0DFCA15
+- Current SHA-256:  05aaf661f027f4c763e79acc5d572fd554f3e4ce
+- Origin commits: 51351230 (storage privacy), 8b71e831 (first_generation)
+- Functional diff: private asset persistence (`asset_url: null`) and post-success
+  best-effort first_generation event only.
+
+Contract evidence for both exceptions:
+- Full Vitest passed: 364 files, 3745 passed, 1 skipped.
+- Campaign 402 assertions: `src/app/api/campaign/generate-image/__tests__/route.test.ts`.
+- Visual-signature 402 assertions: `src/app/api/store/[id]/visual-signature/__tests__/credit-flow.test.ts` and `generate-without-logo/__tests__/generate-route.test.ts`.
+- No request schema, response schema, HTTP status, credit reservation/refund
+  contract, or 402 behavior changed. The other 77 protected entries matched.
+
+8. WORKTREE PRESERVATION
 ------------------------
 Pre-existing unrelated changes preserved:
 - .opencode/opencode.json
@@ -63,4 +89,4 @@ No 50-14 command or migration was executed.
 OVERALL
 -------
 Automated gates: PASS (4/4)
-Baseline protected-diff fence: BLOCKED (2 inherited F50 differences)
+Baseline protected-diff fence: PASS WITH APPROVED SCOPED EXCEPTIONS (2 named routes)

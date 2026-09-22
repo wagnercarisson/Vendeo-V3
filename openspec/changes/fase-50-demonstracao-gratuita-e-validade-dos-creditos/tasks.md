@@ -168,7 +168,7 @@
 - [x] 13.3 `npm run typecheck`
 - [x] 13.4 `npm run lint`
 - [x] 13.5 `npm run build`
-- [ ] 13.6 Revisar diff contra baseline (sem mudança em prompts/gateway/snapshot/domínio/contrato de geração) — bloqueado por 2 divergências herdadas da F50
+- [x] 13.6 Revisar diff contra baseline (sem mudança em prompts/gateway/snapshot/domínio/contrato de geração) — PASS WITH APPROVED SCOPED EXCEPTIONS; duas rotas nominadas, hashes/diffs/evidências em `50-GATES.txt`
 
 ## 50-14 — Verificação, rollout (corte) e gates finais
 

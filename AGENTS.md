@@ -300,7 +300,7 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 
 ## Phase 50 — Demonstração Gratuita e Validade dos Créditos
 
-**Status:** ◆ Executando — 15/17 plans concluídos (50-01 ✅, 50-02 ✅, 50-03 ✅, 50-04 ✅, 50-05 ✅, 50-06 ✅, 50-07 ✅, 50-08 ✅, 50-09 ✅, 50-10 ✅, 50-11 ✅, 50-12 ✅, 50-15 ✅, 50-16 ✅, 50-17 ✅)
+**Status:** ◆ Executando — 16/17 plans concluídos (50-01 ✅, 50-02 ✅, 50-03 ✅, 50-04 ✅, 50-05 ✅, 50-06 ✅, 50-07 ✅, 50-08 ✅, 50-09 ✅, 50-10 ✅, 50-11 ✅, 50-12 ✅, 50-13 ✅, 50-15 ✅, 50-16 ✅, 50-17 ✅)
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
@@ -316,7 +316,7 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 | 50-10 | 2 | ✅ | Legal (três documentos + template de publicação separado + reaceite; fornecedor pendente para o corte) |
 | 50-11 | 7 | ✅ | Matriz real completa de ledger/refund/atomicidade/wrappers |
 | 50-12 | 8 | ✅ | Integração de rotas/UI/notificações/legal/telemetria/suporte |
-| 50-12 | 8 | ○ | Testes: integração + rotas + UI + notificações + legal + telemetria |
+| 50-13 | 9 | ✅ | Regressão + co-migração + 4 gates; baseline com exceções nominativas aprovadas |
 | 50-13 | 9 | ○ | Regressão + co-migração + 4 gates |
 | 50-14 | 10 | ○ | Verificação: migration remota, reconciliação, UAT, revisão jurídica, corte |
 | 50-15 | 2 | ✅ | Storage privacy (buckets privados + URL assinada; smokes e fluxos verificados; sem R2) |
