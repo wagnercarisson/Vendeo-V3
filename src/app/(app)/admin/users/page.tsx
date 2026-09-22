@@ -54,15 +54,17 @@ export default async function AdminUsersPage({
   // Fetch credit balances for freemium status calculation
   const { data: balances } = await supabaseAdmin
     .from("credit_balances")
-    .select("store_id, balance, bonus_balance, purchased_balance")
+    .select("store_id, demo_balance, demo_expires_at, bonus_balance, purchased_balance")
     .in("store_id", storeIds.length > 0 ? storeIds : ["none"]);
 
-  const balanceMap: Record<string, { balance: number; bonusBalance: number; purchasedBalance: number }> = {};
+  const balanceMap: Record<string, { bonusBalance: number; purchasedBalance: number; demoBalance: number; demoExpiresAt: string | null; availableBalance: number }> = {};
   for (const b of (balances ?? [])) {
     balanceMap[b.store_id] = {
-      balance: b.balance ?? 0,
+      demoBalance: b.demo_balance ?? 0,
+      demoExpiresAt: b.demo_expires_at ?? null,
       bonusBalance: b.bonus_balance ?? 0,
       purchasedBalance: b.purchased_balance ?? 0,
+      availableBalance: (b.demo_expires_at && new Date(b.demo_expires_at).getTime() > Date.now() ? b.demo_balance ?? 0 : 0) + (b.bonus_balance ?? 0) + (b.purchased_balance ?? 0),
     };
   }
 
@@ -83,7 +85,7 @@ export default async function AdminUsersPage({
     const userEntitlements = user.storeId ? entitlementMap[user.storeId] : undefined;
     const balanceInfo = user.storeId ? balanceMap[user.storeId] : undefined;
     const bonusBalance = balanceInfo?.bonusBalance ?? 0;
-    const displayBalance = balanceInfo?.balance ?? user.balance ?? 0;
+    const displayBalance = balanceInfo?.availableBalance ?? user.balance ?? 0;
 
     let freemiumStatus: FreemiumStatus = "no_cnpj";
     if (storeInfo?.cnpjRootHash && storeInfo.cnpjRootHash !== "") {

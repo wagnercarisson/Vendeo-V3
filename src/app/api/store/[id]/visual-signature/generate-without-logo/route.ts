@@ -21,6 +21,7 @@ import { AiCostTracker } from '@/lib/ai-cost';
 import { createDefaultTelemetryContext, BufferingAiTelemetrySink } from '@/lib/ai';
 import type { AiTelemetryContext } from '@/lib/ai';
 import { resolveEconomicSnapshot } from '@/lib/economic/economic-snapshot';
+import { ProductEventService } from '@/lib/product-events/service';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -385,7 +386,7 @@ export const POST = apiHandler(async (
         const signature = await persistSignature({
           store_id: id,
           storage_path: retryResult.storagePath,
-          asset_url: retryResult.assetUrl,
+          asset_url: null,
           type: signatureType,
           status: 'draft',
           generation_mode: body.rejectionContext ? 'automatic' : 'user_choice',
@@ -524,6 +525,32 @@ export const POST = apiHandler(async (
       usd_brl_rate_at_generation: economicSnapshot.usdBrlRateAtGeneration,
       credit_value_brl_at_generation: economicSnapshot.creditValueBrlAtGeneration,
     });
+
+    try {
+      const grantTxId = await new CreditService().getOriginDemoGrantTxId(id);
+      if (grantTxId) {
+        const creditService = new CreditService();
+        const balance = await creditService.getBalanceBreakdown(id);
+        await new ProductEventService().record('first_generation', {
+          store_id: id,
+          user_id: authUser.userId,
+          dedup_key: grantTxId,
+          properties: {
+            source: 'visual_signature_generation',
+            store_id: id,
+            user_id: authUser.userId,
+            visual_signature_id: result.signature.id,
+            segment: store.segment,
+            available_balance: balance.availableBalance,
+            demo_balance: balance.demoBalance,
+            demo_expires_at: balance.demoExpiresAt,
+            recorded_at: new Date().toISOString(),
+          },
+        });
+      }
+    } catch (error) {
+      console.warn('[generate-without-logo] first_generation event failed', error);
+    }
 
     console.log(`[generate-without-logo][req-${reqId}] enviando response success`);
     return NextResponse.json({

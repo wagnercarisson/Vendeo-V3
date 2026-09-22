@@ -12,6 +12,7 @@ import { apiHandler } from '@/lib/auth/api-handler';
 import { AiCostTracker } from '@/lib/ai-cost';
 import { createDefaultTelemetryContext } from '@/lib/ai';
 import { resolveEconomicSnapshot } from '@/lib/economic/economic-snapshot';
+import { requireSignedVisualSignatureUrl } from '@/lib/visual-signature/persistence';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -82,7 +83,21 @@ export const POST = apiHandler(async (
   }
 
   if (signature.status === 'active') {
+    try {
+      await requireSignedVisualSignatureUrl(signature.storage_path);
+    } catch (error) {
+      console.error('[visual-signature:restore] Signed active asset unavailable', error);
+      return NextResponse.json({ error: 'O ativo da assinatura visual está temporariamente indisponível.' }, { status: 503 });
+    }
     return NextResponse.json({ success: true });
+  }
+
+  let assetUrl: string;
+  try {
+    assetUrl = await requireSignedVisualSignatureUrl(signature.storage_path);
+  } catch (error) {
+    console.error('[visual-signature:restore] Signed asset unavailable', error);
+    return NextResponse.json({ error: 'O ativo da assinatura visual está temporariamente indisponível.' }, { status: 503 });
   }
 
   const metadata = (signature.metadata ?? {}) as Record<string, unknown>;
@@ -197,7 +212,7 @@ export const POST = apiHandler(async (
           elements_used: ['nome da loja'],
         },
         visualSignatureId: body.signature_id,
-        assetUrl: signature.asset_url,
+         assetUrl,
         referenceCardUrl: null,
       }, telemetry);
     } catch (err) {
@@ -209,7 +224,7 @@ export const POST = apiHandler(async (
     success: true,
     signature: {
       id: signature.id,
-      assetUrl: signature.asset_url,
+      assetUrl,
     },
   });
 });

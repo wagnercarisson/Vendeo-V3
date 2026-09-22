@@ -44,7 +44,7 @@ export interface VisualSignatureRecord {
   id: string;
   store_id: string;
   storage_path: string;
-  asset_url: string;
+  asset_url: string | null;
   type: VisualSignatureType;
   status: VisualSignatureStatus;
   generation_mode: GenerationMode | null;
@@ -57,7 +57,7 @@ export interface VisualSignatureRecord {
 export interface CreateVisualSignatureInput {
   store_id: string;
   storage_path: string;
-  asset_url: string;
+  asset_url?: string | null;
   type: VisualSignatureType;
   status: VisualSignatureStatus;
   generation_mode?: GenerationMode;

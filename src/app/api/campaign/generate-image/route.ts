@@ -34,6 +34,7 @@ import type { AiCallInfo } from "@/lib/ai-cost/types";
 import type { GenerationEventType } from "@/lib/visual-signature/types";
 import { requireLegalClearance } from "@/lib/legal/clearance";
 import { EconomicParameterService } from "@/lib/economic/economic-parameter-service";
+import { ProductEventService } from "@/lib/product-events/service";
 
 export const runtime = "nodejs";
 
@@ -787,6 +788,30 @@ export const POST = apiHandler(async (request: NextRequest) => {
               renderSnapshot,
               publicationCopySnapshot,
             });
+            try {
+              const grantTxId = await creditService.getOriginDemoGrantTxId(storeId);
+              if (grantTxId) {
+                const balance = await creditService.getBalanceBreakdown(storeId);
+                await new ProductEventService().record("first_generation", {
+                  store_id: storeId,
+                  user_id: user.userId,
+                  dedup_key: grantTxId,
+                  properties: {
+                    source: "campaign_generation",
+                    campaign_id: campaignId,
+                    segment: validatedSnapshot.storeSegment ?? null,
+                    store_id: storeId,
+                    user_id: user.userId,
+                    available_balance: balance.availableBalance,
+                    demo_balance: balance.demoBalance,
+                    demo_expires_at: balance.demoExpiresAt,
+                    recorded_at: new Date().toISOString(),
+                  },
+                });
+              }
+            } catch (error) {
+              console.warn("[generate-image] first_generation event failed", error);
+            }
             logPipelineEvent({ event: "update_ready", traceId, phase: "post_parallel", status: "complete", campaignId, storeId, userId: user.userId });
 
             // Credit confirmed (no-op in v1.5)

@@ -46,6 +46,7 @@
 | 47 | ✅ Catálogo e Seleção de Modelos Admin (v1.5, Change B) | 8/8 | ✅ Complete | 2026-09-15 |
 | 48.1 | ✅ Laboratório Mínimo de IA (v1.5) | 14/14 | Complete |  |
 | 49 | ✅ Ativação e Orientação Contextual de Campos (v1.5) | 15/15 | ✅ Complete | 2026-09-18 |
+| 50 | ◆ Demonstração Gratuita e Validade dos Créditos (v1.5) | 16/17 | ◆ Executando | — |
 | — | Monetização pública / Stripe (iniciativa diferida, v1.7+) | — | Fora da numeração | — |
 
 ---

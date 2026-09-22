@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { requireUser, UnauthorizedError } from "@/lib/auth/require-user";
 import { getCurrentStore } from "@/lib/auth/store-ownership";
 import { apiHandler } from "@/lib/auth/api-handler";
+import { getLaunchConfig } from "@/lib/launch-config/config";
 import { hashCnpjRoot } from "@/lib/cnpj/hash";
 import { isCnpjDuplicateError, CNPJ_DUPLICATE_RESPONSE } from "@/lib/cnpj/duplicate-error";
 import { CnpjVerificationService, createSupabaseLookupCache } from "@/lib/cnpj/verification-service";
@@ -181,6 +182,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
       p_verification_data: verificationData,
       p_cnpj_validation_score: cnpjValidationScore,
       p_verification_reasons: verificationReasons,
+      p_demo_grant_enabled: getLaunchConfig().demoCreditsEnabled,
     });
 
     if (error) {

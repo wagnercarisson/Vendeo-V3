@@ -125,7 +125,7 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
         <div className="space-y-4">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-xl bg-bg-elevated overflow-hidden border border-border-light">
-              <img src={activeSignature.asset_url} alt="Assinatura visual ativa" className="w-full h-full object-contain" />
+              {activeSignature.asset_url && <img src={activeSignature.asset_url} alt="Assinatura visual ativa" className="w-full h-full object-contain" />}
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -167,7 +167,7 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
           <div className="space-y-4">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-xl bg-bg-elevated overflow-hidden border border-border-light">
-                <img src={activeSignature.asset_url} alt="Assinatura visual ativa" className="w-full h-full object-contain" />
+                {activeSignature.asset_url && <img src={activeSignature.asset_url} alt="Assinatura visual ativa" className="w-full h-full object-contain" />}
               </div>
               <div>
                 <div className="flex items-center gap-2">
@@ -240,7 +240,7 @@ export function StoreVisualSignatureSection({ store }: StoreVisualSignatureSecti
             <div className="space-y-4">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 rounded-xl bg-bg-elevated overflow-hidden border border-border-light">
-                  <img src={activeSignature.asset_url} alt="Assinatura visual ativa" className="w-full h-full object-contain" />
+                  {activeSignature.asset_url && <img src={activeSignature.asset_url} alt="Assinatura visual ativa" className="w-full h-full object-contain" />}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">

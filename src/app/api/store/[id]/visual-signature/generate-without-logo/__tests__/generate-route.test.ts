@@ -9,6 +9,11 @@ const mockInsertGenerationEvent = vi.fn();
 const mockGetLaunchConfig = vi.fn();
 const mockGetBalance = vi.fn();
 const mockReserveCredit = vi.fn();
+const mockGetOriginDemoGrantTxId = vi.fn();
+const mockGetBalanceBreakdown = vi.fn();
+const mockProductEventRecord = vi.fn();
+mockGetOriginDemoGrantTxId.mockResolvedValue(null);
+mockGetBalanceBreakdown.mockResolvedValue({ availableBalance: 0, demoBalance: 0, demoExpiresAt: null });
 const mockRefundCredit = vi.fn();
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -140,9 +145,15 @@ vi.mock('@/lib/launch-config/config', () => ({
 vi.mock('@/lib/credit/credit-service', () => ({
   CreditService: class {
     getBalance = mockGetBalance;
+    getOriginDemoGrantTxId = mockGetOriginDemoGrantTxId;
+    getBalanceBreakdown = mockGetBalanceBreakdown;
     reserveCredit = mockReserveCredit;
     refundCredit = mockRefundCredit;
   },
+}));
+
+vi.mock('@/lib/product-events/service', () => ({
+  ProductEventService: class { record = mockProductEventRecord; },
 }));
 
 const mockGetCost = vi.fn();

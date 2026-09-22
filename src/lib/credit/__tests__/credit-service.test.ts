@@ -53,7 +53,7 @@ beforeEach(() => {
 function mockGetBalanceResult(balance: number | null) {
   const result =
     balance !== null
-      ? { data: { balance }, error: null }
+      ? { data: { demo_balance: 0, demo_expires_at: null, bonus_balance: balance, purchased_balance: 0 }, error: null }
       : { data: null, error: null };
   mockSingle.mockReturnValue(result);
   mockEqBalance.mockReturnValue({ single: mockSingle });
@@ -335,7 +335,7 @@ describe("Saldo e Grant", () => {
 
     expect(balance).toBe(0);
     expect(mockFrom).toHaveBeenCalledWith("credit_balances");
-    expect(mockSelectBalance).toHaveBeenCalledWith("balance");
+    expect(mockSelectBalance).toHaveBeenCalledWith("demo_balance, demo_expires_at, bonus_balance, purchased_balance");
     expect(mockEqBalance).toHaveBeenCalledWith("store_id", storeId);
     expect(mockSingle).toHaveBeenCalledWith();
   });
@@ -451,6 +451,12 @@ describe("Concorrência", () => {
 
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
     expect(results.filter((r) => r.status === "rejected")).toHaveLength(1);
+  });
+
+  it("converte retorno nulo da RPC em saldo_insuficiente", async () => {
+    mockRpc.mockReturnValue({ data: null, error: null });
+
+    await expect(service.reserveCredit(storeId, 1)).rejects.toThrow("saldo_insuficiente");
   });
 
   it("grant + reserve simultâneos não corrompem saldo", async () => {

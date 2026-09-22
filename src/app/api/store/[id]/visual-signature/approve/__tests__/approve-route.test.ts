@@ -7,9 +7,13 @@ const mockBrandProfilerGenerate = vi.fn();
 const mockUpdateEventDecision = vi.fn();
 const mockReconcileProfiles = vi.fn();
 const mockRevalidateCriticalDrift = vi.fn();
+const mockCreateSignedUrl = vi.fn(() => Promise.resolve({ data: { signedUrl: 'signed-vs-url' }, error: null }));
 
 vi.mock('@/lib/supabase/server', () => ({
-  supabaseAdmin: { from: mockSupabaseFrom },
+  supabaseAdmin: {
+    from: mockSupabaseFrom,
+    storage: { from: vi.fn(() => ({ createSignedUrl: mockCreateSignedUrl })) },
+  },
 }));
 
 vi.mock('@/lib/auth/store-ownership', () => ({
@@ -104,6 +108,7 @@ const mockSignature = {
   store_id: STORE_ID,
   status: 'draft',
   asset_url: 'https://example.com/sig.png',
+  storage_path: `${STORE_ID}/sig.png`,
   metadata: {
     artDirectorOutput: {
       creative_description: 'Test',
@@ -542,6 +547,7 @@ describe('POST /api/store/[id]/visual-signature/approve — Substitution mode', 
     store_id: STORE_ID,
     status: 'active',
     asset_url: 'https://example.com/active-vs.png',
+    storage_path: `${STORE_ID}/active-vs.png`,
     metadata: {
       artDirectorOutput: {
         visual_direction: 'Moderna',
@@ -562,6 +568,7 @@ describe('POST /api/store/[id]/visual-signature/approve — Substitution mode', 
     store_id: STORE_ID,
     status: 'draft',
     asset_url: 'https://example.com/pending-vs.png',
+    storage_path: `${STORE_ID}/pending-vs.png`,
     metadata: {
       artDirectorOutput: mockSignature.metadata!.artDirectorOutput,
     },

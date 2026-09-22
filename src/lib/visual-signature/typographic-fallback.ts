@@ -45,7 +45,7 @@ export class TypographicFallbackGenerator {
       await persistSignature({
         store_id: params.storeId,
         storage_path: storagePath,
-        asset_url: assetUrl,
+        asset_url: null,
         type: "fallback_typographic",
         status: "active",
         generation_mode: "fallback",

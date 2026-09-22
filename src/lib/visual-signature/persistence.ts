@@ -49,11 +49,15 @@ export async function uploadToStorage(
         }
       } else {
         console.log(`[persistence] uploadToStorage success on attempt ${attempt}`);
-        const { data: publicUrlData } = supabase.storage
+        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
           .from("visual-signatures")
-          .getPublicUrl(storagePath);
+          .createSignedUrl(storagePath, 3600);
 
-        return { storagePath, assetUrl: publicUrlData.publicUrl };
+        if (signedUrlError || !signedUrlData?.signedUrl) {
+          throw signedUrlError ?? new Error("signed_url_unavailable");
+        }
+
+        return { storagePath, assetUrl: signedUrlData.signedUrl };
       }
     } catch (err) {
       lastError = err;
@@ -82,6 +86,37 @@ export async function persistSignature(
   }
 
   return data;
+}
+
+export async function getSignedVisualSignatureUrl(
+  storagePath: string | null,
+  expiresIn = 3600,
+): Promise<string | null> {
+  if (!storagePath) return null;
+  const { data, error } = await supabase.storage
+    .from("visual-signatures")
+    .createSignedUrl(storagePath, expiresIn);
+  return error ? null : data?.signedUrl ?? null;
+}
+
+export class SignedVisualSignatureUnavailableError extends Error {
+  readonly code = "signed_visual_signature_unavailable" as const;
+
+  constructor(storagePath: string) {
+    super(`Unable to create a signed URL for visual signature asset: ${storagePath}`);
+    this.name = "SignedVisualSignatureUnavailableError";
+  }
+}
+
+export async function requireSignedVisualSignatureUrl(
+  storagePath: string | null,
+  expiresIn = 3600,
+): Promise<string> {
+  const signedUrl = await getSignedVisualSignatureUrl(storagePath, expiresIn);
+  if (!signedUrl) {
+    throw new SignedVisualSignatureUnavailableError(storagePath ?? "<missing>");
+  }
+  return signedUrl;
 }
 
 export async function getActiveVisualSignature(

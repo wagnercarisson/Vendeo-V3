@@ -155,7 +155,7 @@ INSTRUÇÕES OBRIGATÓRIAS PARA ESTA NOVA GERAÇÃO:
       const signature = await persistSignature({
         store_id: input.storeId,
         storage_path: result.storagePath,
-        asset_url: result.assetUrl,
+        asset_url: null,
         type: signatureType,
         status: 'draft',
         generation_mode: input.rejectionContext ? 'automatic' : 'user_choice',

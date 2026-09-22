@@ -446,9 +446,15 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
     }
   }
 
+  const signedAssets = await Promise.all([originalAsset, ...variantRecords].map(async (asset) => {
+    if (!asset.storage_path) return { ...asset, signed_url: null };
+    const { data } = await supabase.storage.from('store-brand-assets').createSignedUrl(asset.storage_path, 3600);
+    return { ...asset, signed_url: data?.signedUrl ?? null };
+  }));
+
   return NextResponse.json({
-    originalAsset,
-    variants: variantRecords,
+    originalAsset: signedAssets[0],
+    variants: signedAssets.slice(1),
     profile: createdProfile,
     version: nextVersion,
   }, { status: 201 });
@@ -472,13 +478,19 @@ async function handleGetActiveLogo(_request: NextRequest, storeId: string) {
     return NextResponse.json({ assets: null, profile: profile ?? null }, { status: 200 });
   }
 
+  const signedAssets = await Promise.all((assets as BrandAssetRecord[]).map(async (asset) => {
+    if (!asset.storage_path) return { ...asset, signed_url: null };
+    const { data } = await supabase.storage.from('store-brand-assets').createSignedUrl(asset.storage_path, 3600);
+    return { ...asset, signed_url: data?.signedUrl ?? null };
+  }));
+
   const grouped: BrandAssetVariantGroup = {
-    original: assets.find((a: BrandAssetRecord) => a.variant_type === 'original') ?? null,
-    normalized: assets.find((a: BrandAssetRecord) => a.variant_type === 'normalized') ?? null,
-    on_light: assets.find((a: BrandAssetRecord) => a.variant_type === 'on_light') ?? null,
-    on_dark: assets.find((a: BrandAssetRecord) => a.variant_type === 'on_dark') ?? null,
-    square_safe: assets.find((a: BrandAssetRecord) => a.variant_type === 'square_safe') ?? null,
-    horizontal_safe: assets.find((a: BrandAssetRecord) => a.variant_type === 'horizontal_safe') ?? null,
+    original: signedAssets.find((a) => a.variant_type === 'original') ?? null,
+    normalized: signedAssets.find((a) => a.variant_type === 'normalized') ?? null,
+    on_light: signedAssets.find((a) => a.variant_type === 'on_light') ?? null,
+    on_dark: signedAssets.find((a) => a.variant_type === 'on_dark') ?? null,
+    square_safe: signedAssets.find((a) => a.variant_type === 'square_safe') ?? null,
+    horizontal_safe: signedAssets.find((a) => a.variant_type === 'horizontal_safe') ?? null,
   };
 
   return NextResponse.json({ assets: grouped, profile: profile ?? null }, { status: 200 });

@@ -27,3 +27,12 @@ supabase/.temp/
 # Images require rights verification before committing
 .vercel
 .env*
+
+# External backup working files and artifacts (never commit)
+.backup-work/
+backups/
+storage-backup/
+backup.sql
+backup.sql.gz
+backup.sql.enc
+backup-manifest.json

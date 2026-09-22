@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { CnpjLookupData } from "@/lib/cnpj/lookup-providers/types";
 
-export const BenefitTypeEnum = z.enum(["onboarding", "monthly", "admin_exception"]);
+export const BenefitTypeEnum = z.enum(["onboarding", "monthly", "admin_exception", "demo"]);
 
 export const FreemiumEntitlementSchema = z.object({
   id: z.string().uuid(),

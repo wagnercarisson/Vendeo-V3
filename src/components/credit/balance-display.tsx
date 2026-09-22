@@ -1,8 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { Coins } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { formatCredits } from "@/lib/credit/format";
+import { getDemoStatus, formatRelativeExpiry, type DemoStatus } from "@/lib/credit/demo-status";
 
 interface BalanceDisplayProps {
   balance: number;
@@ -10,6 +14,10 @@ interface BalanceDisplayProps {
   variant?: "badge" | "card" | "inline";
   showCta?: boolean;
   ctaHref?: string;
+  availableBalance?: number;
+  demoBalance?: number;
+  demoExpiresAt?: string | null;
+  originDemoGrantTxId?: string | null;
 }
 
 function getState(balance: number, hasStore: boolean) {
@@ -19,7 +27,28 @@ function getState(balance: number, hasStore: boolean) {
   return "zero";
 }
 
-function BadgeVariant({ balance, hasStore, showCta, ctaHref }: BalanceDisplayProps) {
+function getDemoLabel(status: DemoStatus) {
+  return { active: "Demonstração ativa", expiring_soon: "Expira em breve", exhausted: "Demonstração esgotada", expired: "Demonstração encerrada", none: "Demonstração não iniciada" }[status];
+}
+
+function DemoSummary({ demoBalance = 0, demoExpiresAt = null, originDemoGrantTxId = null }: BalanceDisplayProps) {
+  const status = getDemoStatus({ demoBalance, demoExpiresAt, originDemoGrantTxId });
+  const [localExpiry, setLocalExpiry] = useState<string | null>(null);
+  useEffect(() => {
+    if (!demoExpiresAt) return;
+    setLocalExpiry(new Date(demoExpiresAt).toLocaleString("pt-BR"));
+  }, [demoExpiresAt]);
+  const isRelevant = status !== "none";
+  return <span className={isRelevant ? "text-xs text-text-secondary" : "sr-only"}>
+    {getDemoLabel(status)}
+    {demoExpiresAt && (status === "active" || status === "expiring_soon")
+      ? ` · ${localExpiry ?? ""} (${formatRelativeExpiry(demoExpiresAt)})`
+      : ""}
+  </span>;
+}
+
+function BadgeVariant(props: BalanceDisplayProps) {
+  const { balance, hasStore, showCta, ctaHref } = props;
   const state = getState(balance, hasStore ?? true);
 
   const colorClass =
@@ -34,6 +63,7 @@ function BadgeVariant({ balance, hasStore, showCta, ctaHref }: BalanceDisplayPro
       <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium font-heading ${colorClass}`}>
         {formatCredits(balance)}
       </span>
+      <DemoSummary {...props} />
       {showCta && state === "zero" && (
         <Link
           href={ctaHref ?? "/conta#creditos"}
@@ -46,7 +76,8 @@ function BadgeVariant({ balance, hasStore, showCta, ctaHref }: BalanceDisplayPro
   );
 }
 
-function CardVariant({ balance, hasStore, showCta, ctaHref }: BalanceDisplayProps) {
+function CardVariant(props: BalanceDisplayProps) {
+  const { balance, hasStore, showCta, ctaHref } = props;
   const state = getState(balance, hasStore ?? true);
 
   return (
@@ -57,6 +88,7 @@ function CardVariant({ balance, hasStore, showCta, ctaHref }: BalanceDisplayProp
       <p className="text-3xl font-bold text-text-primary mt-1">
         {balance}
       </p>
+      <DemoSummary {...props} />
       {showCta && state === "zero" && (
         <Link
           href={ctaHref ?? "/conta#creditos"}
@@ -69,7 +101,8 @@ function CardVariant({ balance, hasStore, showCta, ctaHref }: BalanceDisplayProp
   );
 }
 
-function InlineVariant({ balance, hasStore }: BalanceDisplayProps) {
+function InlineVariant(props: BalanceDisplayProps) {
+  const { balance, hasStore } = props;
   const state = getState(balance, hasStore ?? true);
 
   const colorClass =
@@ -83,19 +116,22 @@ function InlineVariant({ balance, hasStore }: BalanceDisplayProps) {
     <span className={`inline-flex items-center gap-1.5 text-sm font-medium ${colorClass}`}>
       <Coins className="h-4 w-4" />
       {formatCredits(balance)}
+      <DemoSummary {...props} />
     </span>
   );
 }
 
 export function BalanceDisplay(props: BalanceDisplayProps) {
+  const displayBalance = props.availableBalance ?? props.balance;
+  const displayProps = { ...props, balance: displayBalance };
   const { variant = "badge" } = props;
 
   switch (variant) {
     case "card":
-      return <CardVariant {...props} />;
+      return <CardVariant {...displayProps} />;
     case "inline":
-      return <InlineVariant {...props} />;
+      return <InlineVariant {...displayProps} />;
     default:
-      return <BadgeVariant {...props} />;
+      return <BadgeVariant {...displayProps} />;
   }
 }

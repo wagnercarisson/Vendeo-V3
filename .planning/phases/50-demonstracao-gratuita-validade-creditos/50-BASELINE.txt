@@ -1,0 +1,164 @@
+# F50 — Baseline de não-mudança
+
+Registrado em 2026-09-20 (execução do plano 50-01). Este artefato é a base de comparação para as fences de não-mudança (prompts, gateway de IA, snapshot `campaign_brief_v1`, domínio, contrato de geração 402, `requireLegalClearance`) e para a migração de consumidores de `credit_balances.balance` (D1).
+
+## Estado inicial
+
+```
+SHA_INICIAL_F50=14ccb8bc60d8de54a26d23c5023ad9c175c0de1c
+branch=feature/fase-50-demonstracao-gratuita-e-validade-dos-creditos
+```
+
+Saída de `git status --short`:
+
+```
+?? docs/alinhamento-fase-44-temas-de-campanhas
+```
+
+`git diff --stat` (working tree): vazio.
+`git diff --cached --stat`: vazio.
+
+Arquivos/não rastreados pré-existentes — **preservar (não commitar sem decisão explícita)**:
+
+- `docs/alinhamento-fase-44-temas-de-campanhas` (diretório não rastreado; documentação F44, fora do escopo F50)
+
+## Trackings
+
+Verificação grep-consistência (AGENTS.md, ROADMAP.md, .planning/ROADMAP.md, .planning/STATE.md):
+
+- **F50 = Demonstração Gratuita e Validade dos Créditos** — registrada corretamente nos 4 runbooks.
+- **Stripe/Monetização Pública fora da numeração** (iniciativa diferida v1.7+) — confirmado; nenhum resíduo "F50 = Stripe".
+- Zero resíduos de renumeração incorreta (F49 → F50).
+
+## Consumidores de saldo
+
+| Consumidor | arquivo:linha | Papel |
+|---|---|---|
+| generate-image (instância + gate) | src/app/api/campaign/generate-image/route.ts:351-353 | `new CreditService(supabaseAdmin)` + `getBalance(storeId)` gate |
+| generate-image (reserve) | src/app/api/campaign/generate-image/route.ts:491 | `reserveCredit` |
+| generate-image (refunds ×4) | src/app/api/campaign/generate-image/route.ts:737, 829, 848, 876 | `refundCredit` |
+| generate-image (confirm) | src/app/api/campaign/generate-image/route.ts:794 | `confirmCredit` |
+| generate-without-logo (gate) | src/app/api/store/[id]/visual-signature/generate-without-logo/route.ts:202-203 | `getBalance(id)` gate |
+| generate-without-logo (reserve) | src/app/api/store/[id]/visual-signature/generate-without-logo/route.ts:214 | `reserveCredit` |
+| generate-without-logo (refund) | src/app/api/store/[id]/visual-signature/generate-without-logo/route.ts:547-548 | `refundCredit` |
+| visual-signature GET (credit_balance) | src/app/api/store/[id]/visual-signature/route.ts:167 | `getBalance(id)` → `credit_balance` |
+| credit-service (camada) | src/lib/credit/credit-service.ts:11-97 | getBalance/getBalanceBreakdown/reserveCredit/refundCredit/grantCredits |
+| create_store_with_cnpj (concessão onboarding) | supabase/migrations/20260728000001_f33_cnpj_verification.sql:367 (grant em :434) | `grant_credits` `bonus_onboarding` |
+| update_store_cnpj | supabase/migrations/20260730000001_extend_update_store_cnpj.sql:13 | RPC de atualização de CNPJ |
+| admin_approve_store_verification | supabase/migrations/20260728000002_fix_f33_audit_log.sql:23 (grant em :54) | `grant_credits` |
+| admin_exception_store_verification | supabase/migrations/20260728000001_f33_cnpj_verification.sql:274 (grant em :309) | `grant_credits` |
+| grant_monthly_credits | supabase/migrations/20260815000001_grant_monthly_credits_por_raiz.sql:35 | `grant_credits` mensal (por raiz) |
+| grant_credits (core) | supabase/migrations/20260722000002_creditos_mensais_automaticos.sql:88 | RPC core bucket-aware |
+| admin_grant_credits | supabase/migrations/20260722000003_add_grant_type_admin_audit.sql:6 | grant admin + auditoria |
+| admin_get_users_summary | supabase/migrations/20260731000001_admin_test_store_filter.sql:24 (balance em :68-70) | leitura de saldo (bruto) |
+| admin_create_store_for_user (concessão legada, sem CNPJ) | supabase/migrations/20260914000002_f47_fix_admin_create_store_lint.sql:68 (chama `create_store_with_initial_grant` em :86) | RPC admin → grant onboarding sem CNPJ/root_hash |
+| create_store_with_initial_grant (concessão legada, sem CNPJ) | supabase/migrations/20260914000002_f47_fix_admin_create_store_lint.sql:9 (grant em :43; lê `cb.balance` em :51) | `grant_credits` `onboarding` (10) sem CNPJ |
+| admin/stores/route.ts (caller) | src/app/api/admin/stores/route.ts:24 | chama `admin_create_store_for_user` |
+
+## Consumidores de `credit_balances.balance`
+
+| Consumidor | arquivo:linha | Classificação |
+|---|---|---|
+| CreditService.getBalance | src/lib/credit/credit-service.ts:13-18 | **migrar para saldo disponível** (`.select("balance")`) |
+| CreditService.getBalanceBreakdown | src/lib/credit/credit-service.ts:23-32 | **migrar** (adicionar `demo_balance`/`demo_expires_at`/`available`) |
+| admin/users page (leitura direta) | src/app/(app)/admin/users/page.tsx:55-65 | **migrar para saldo disponível** (`.select("store_id, balance, bonus_balance, purchased_balance")`) |
+| dashboard | src/app/(app)/dashboard/page.tsx:75, 135 | **migrar** (via `getBalance`) |
+| conta | src/app/(app)/conta/page.tsx:41 | **migrar** (via `getBalance`) |
+| campanhas/nova (gate UI) | src/app/(app)/campanhas/nova/page.tsx:49 | **migrar** (via `getBalance`) |
+| admin/users/[id] | src/app/(app)/admin/users/[id]/page.tsx:54, 58 | **migrar** (via `getBalance` + `getBalanceBreakdown`) |
+| generate-image (gate de geração) | src/app/api/campaign/generate-image/route.ts:353 | **migrar** (gate 402 = saldo disponível) |
+| generate-without-logo (gate) | src/app/api/store/[id]/visual-signature/generate-without-logo/route.ts:203 | **migrar** |
+| visual-signature GET | src/app/api/store/[id]/visual-signature/route.ts:167 | **migrar** (expõe `credit_balance`) |
+| use-drift-detection (indireto) | src/components/flow/use-drift-detection.ts:118 | **migrar** (consome `credit_balance` do endpoint VS) |
+| admin_get_users_summary (SQL) | supabase/migrations/20260731000001_admin_test_store_filter.sql:68-70 | **migrar** (adicionar demo/available) |
+| admin_get_metrics (wallet) | supabase/migrations/20260731000001_admin_test_store_filter.sql:138 (+ fix 20260731000003:15) | **não afetado** (agrega `credit_transactions`, não lê `balance`) |
+| admin/users/[id] (rota GET) | src/app/api/admin/users/[id]/route.ts:29 | **migrar** (via `getBalance`) |
+| create_store_with_initial_grant (`cb.balance`) | supabase/migrations/20260914000002_f47_fix_admin_create_store_lint.sql:51 | **remover** (fluxo legado sem CNPJ deixa de conceder na F50 — demo só via update-cnpj) |
+
+> **Nota (review pós-50-01):** o fluxo administrativo `admin/stores/route.ts:24 → admin_create_store_for_user → create_store_with_initial_grant` concede 10 créditos `bonus_onboarding` **sem CNPJ/root_hash**. Após a F50, esse caminho contraria a irrepetibilidade por raiz, a substituição do onboarding por demo, a exigência de CNPJ e o encerramento do freemium contínuo. **Tratamento (registrado nos planos 50-03/50-05/50-11/50-12):** a criação administrativa sem CNPJ **não concede créditos**; a demo é concedida posteriormente quando o CNPJ for aprovado pelo fluxo `update-cnpj`.
+
+## Baseline de não-mudança
+
+Hashes SHA-256 (formato `<hash>  <caminho relativo>`, ordenado alfabeticamente). Total: 79 arquivos.
+
+```
+F68D7E623507626AB40D06B6A149A403364084B81DEB44434CA8B0B430EF9A1C  prompts\campaign-copy-director.md
+7FD248B1188CD6AB5B66ACAD256FA68CBACF5A079EE688319B4424777167B463  prompts\campaign-copy-director-exclusive.md
+FF867620A467437D46E3DEA38A5D7A646492AFA0AB10D4117DF2A9E7E84CB713  prompts\campaign-copy-director-offer.md
+DEA377E03C46963AC3C42C85A026483991E9A4AF9F6D5221758EB0052A11D50F  prompts\campaign-copy-director-spotlight.md
+354EA9139F41C70A27887EB1B6ED83482E844F23BD7544FD3DD9E7180D39667C  prompts\campaign-image-director.md
+3E2459E0E3E0BF7968F4D92FE9DBBD64908657B03CD4B6ED1FD96D312D75B12A  prompts\campaign-image-director-exclusive.md
+354EA9139F41C70A27887EB1B6ED83482E844F23BD7544FD3DD9E7180D39667C  prompts\campaign-image-director-offer.md
+51C48A2E6D0325162E3468E5B79A8E2825C6A806267A94661E385A0B301AAFA1  prompts\campaign-image-director-spotlight.md
+027F5DABB6857B668272059EE26CA80F035B14EA0CFE4281C049E25BC483DDEC  prompts\campaign-image-reviewer.md
+082D0FAC06AEDFB66CAB14D6CCF490B30747CD421713919BA37FFC23EB108B50  prompts\campaign-input-visual-check.md
+9F23C28955F8C74C46BC601502CB20EB2DB847134F18D260FD4C996FD4DA5C84  prompts\store-brand-director-with-logo.md
+8487C4EC794CC2F54E6C65724AC7F34E08980BDA6D3FA84EB6AD2967E39413DC  prompts\store-brand-inference.md
+E73585C93FE562CCF1ACACA5AD1766370FE2945B53634D5007937CB60910F060  prompts\store-brand-profiler.md
+49B906990AF45CF966B8BDB6FA0BBC0A27CBF9813C401B776DF55DE6A36DDF6A  prompts\store-identity-art-director.md
+7D282F55A666E7FCF5B3951CFA3218852FCB96029DADBFBBA7F2F4A40A1C1699  prompts\store-identity-art-director-bkp.md
+BB4FF2CA2891209CCA080CEABA3A888C5744B24B2E3D809509A2AF56DDC055EB  prompts\visual-signature-generator.md
+EC0804387E66AD62810998EDC9C60F14738EB94E46E17946B9AF11754FF9CCCB  src\app\api\campaign\generate-image\route.ts
+141D46865B02A3F2AABE2C01EB8C1E863101A871114F4E0DABA1DD00F0DFCA15  src\app\api\store\[id]\visual-signature\generate-without-logo\route.ts
+761F67B53C76ED2CB1CAA8C7078EA9BD7A8A89DAE54AD4FF42C9EE1293C5FC2D  src\lib\ai\__tests__\adapters.test.ts
+2732F383217FAFBA819A2A092DBD82EF7D95422A1820AEDAD0E772528E4AE9F8  src\lib\ai\__tests__\ai-model-catalog-parity.test.ts
+E85E30F20CFF731B2FBE006A21A7AF56D90238090767C1E14A797CCC61642FD0  src\lib\ai\__tests__\ai-model-catalog-service.test.ts
+910582027EFF75A3E657A120B5E0B81408FABD46DDB39BC4DC6FBCFDD4392431  src\lib\ai\__tests__\ai-model-index.test.ts
+5A66C8F03497EB4464F05B0FF50B1BD0E5E7AEC716AAC82A269290B784AC893B  src\lib\ai\__tests__\ai-model-selection-service.test.ts
+29EAF4D0E2171B265B57619C747F5F5A7F6588294B4A99217C8F2722B6BB99DA  src\lib\ai\__tests__\ai-model-selection-view.test.ts
+A26845F53772242BF11C7C4CA70AB570CAE8BA1E0EB8DBB76A018336D8E20EF1  src\lib\ai\__tests__\api-keys.test.ts
+BA12974B07868BE8C34968B6278A746AEF195352CF58E3264654050DD6FC8328  src\lib\ai\__tests__\architecture-guard.test.ts
+0E6B993008A0EBE483557F724E7931EA7FBE4151C02C1AD9B536C318434BB728  src\lib\ai\__tests__\effective-model-labels.test.ts
+1E1923FFEA7B5DA468686CCB2C07D64E59788617A4A8019DC8A3E1D2F7844DB6  src\lib\ai\__tests__\f47-contract-guard.test.ts
+F999D0EA46F778F747F4281092328696335291BFAF73A6CDAA215F554189649E  src\lib\ai\__tests__\gateway.test.ts
+C0D2DEE7ECCD6482FD304924889A1EA8DB686526D3C4415EE881BBD73C2EF2D8  src\lib\ai\__tests__\image-tool-telemetry-integration.test.ts
+EF953587145DEDB840C7D22B95E0C0E5752AC6251A5173DB5B8489EBAB8E5A21  src\lib\ai\__tests__\lab-cost-estimate.test.ts
+E1497715B7110EBD993F3B1AE9EBEBD4B4E9297BCD0DE2505051D066BC0E950C  src\lib\ai\__tests__\lab-telemetry-sink.test.ts
+89F038CA24BD26D2FB1BEF08A859397DCEE7936D473DA7F02FBC8E95733A2DD1  src\lib\ai\__tests__\model-registry.test.ts
+48D7DC816877BF1696CE4E34CDC53D18F70C53097228E9A251D1354D6AD96C6C  src\lib\ai\__tests__\persisted-model-resolver.test.ts
+4CFBCDC2B883E8E4125D19F71AE410811D3BCB12EEF9BD5AB64B752F40A3E950  src\lib\ai\__tests__\telemetry-coverage.test.ts
+845CB73624D2FB45A582BDB603004F859DADF93D084E7B226B40E02849A42885  src\lib\ai\__tests__\telemetry-sink.test.ts
+E2717895F5B2BFBDD13EF0487D5FA06DD049D6839588193629A4A46FFFD2DE31  src\lib\ai\adapters\chat-completions.ts
+740B249D5126FE16EC28023E4E7FBFF2F0A04278B6F6AD2E51F7FD646C541EED  src\lib\ai\adapters\gemini.ts
+AAF2FFD27F1C63BD2E7B970B89833F1B7CFF062BE5FE9BF21B7A11986BF27456  src\lib\ai\adapters\images.ts
+C4FA26B40284587D9B13E53FB8A7575E9E4AAFA730287D827085F5511FB908AA  src\lib\ai\adapters\registry.ts
+501E53067F1D02FB1840434206A722A566C5E895472811AD1C2F18479716204A  src\lib\ai\adapters\responses.ts
+5C02921D6BCC6973140EC5AB5BA799096D611E6BA345F5D5BE684D0AE3FB8EA6  src\lib\ai\ai-model-catalog-service.ts
+8DBA11B435544468768344A9E3CADE74DBF1247610299D2B3194F0575CAF8FB9  src\lib\ai\ai-model-selection-service.ts
+ED43CE564B333FA6C9D50A988C72948B07A5BBCDE2671DDE83C6AE0587F6BA88  src\lib\ai\ai-model-selection-view.ts
+F60CEE6D40406F7C847FCBE07F11073A94EE4760AA5DE6AFBD02721B28D80854  src\lib\ai\api-keys.ts
+885B1A8922570A2FC60A89E71C31042FE6FBCBB7FF0513C6C559DCCCF0B8CE62  src\lib\ai\domain-outcome.ts
+FF8F843C27B33790EC74781A9D8D96252CDF159D42978F2C72533586F9780D9B  src\lib\ai\effective-model-label.ts
+D59A521EC611963FA06411743F055C60E6142C83E7DD7162C34047AE1F89919A  src\lib\ai\gateway.ts
+D76A9F2628FDDCBA9CAA541C9BF24F91F0AD9FF8ACD22C13092D33ADC2ED50DC  src\lib\ai\generation-type-map.ts
+DB8F9D5FF0BF33D7DCDD932057756985F755476762B80BC5BF789A1A374E28BA  src\lib\ai\index.ts
+88D5D1DCCBF734AABF0A51C50FDDD07AE8B9E3E02418AB4D1ADB82111A5F3D9F  src\lib\ai\lab-cost-estimate.ts
+EDF2437F6BC60BC18FAE3F8C9F1962A44FA4B9C683BF1E1966E3608FF62B9594  src\lib\ai\lab-telemetry-sink.ts
+3D05FE264AE7484C184603B63A627441AEC5F936C491CA6682AD2C0FC756850E  src\lib\ai\model-registry.ts
+4B5D99C0288F09593B80B7E40F104C533DCF345E4805B6DD11C1EA4D28E58B6D  src\lib\ai\model-resolver.ts
+C80E6955B76B53089F36F17A3F1393F6328515942C2922E845C6B6CB3AD4C7A8  src\lib\ai\persisted-model-resolver.ts
+EEF7314C2730A74D9D05C7863B5D4FC9C997B7534B9E3E5D9AD949DE895BE802  src\lib\ai\telemetry-sink.ts
+1290C45214B19ECA7D6F040E27C84EF26BD5EAF727DE7B869D13C22C118CD8AA  src\lib\ai\types.ts
+474E7880DC15461DFC983ED498A2523A9BC41FAF677A128E397BD871E294FBA3  src\lib\campaign\__tests__\brief.test.ts
+5EBB997FAC9255B87A784D09962C0FF9C288945447D201A4C52447DA8E4A2D81  src\lib\campaign\__tests__\brief-mapper.test.ts
+9580357EA7F4ACA4CFA4CFBD411FCBBCF3FFEF76F80A80B8F4FED2E75A22D816  src\lib\campaign\__tests__\brief-snapshot.test.ts
+F6BACD40863885CAFB2C32C0D528DB464684A912FBBB5D82A08FE8EAA68DBEC2  src\lib\campaign\__tests__\field-guidance.correspondence.test.ts
+EB727A0CF26DAC1B62269239927046B11AC93C9632190102E4A9CAD1DE2D1C6C  src\lib\campaign\__tests__\field-guidance.test.ts
+9720DC819CEEB167CE961A0C05858072DADC23BEB13B93664BE5B00481FC1A0C  src\lib\campaign\__tests__\prompt-reframe.test.ts
+0436E40BE4D13D5B200DF4C811510D044CB52AE139F16E2E67656BBB461E5B64  src\lib\campaign\brief.ts
+C5253319C40F3366376D0C0C2E7A9A03E2C96C47067B8845DBFC4046F30E50BB  src\lib\campaign\brief-schema.ts
+1BC8A5759FBDF48CE62511200B2DF517FD39DD25CF386F9B5706EE428C0BA7EE  src\lib\campaign\constants.ts
+863AB384E2CB8E1E829149BD312B11C62B3DB24FAD85D4A2ADBF77688561839B  src\lib\campaign\correction-intent-service.ts
+0BAB59350D8B7AA71A0C5C8FA88786326EA30F6B6C0F2947183836D2B55770CF  src\lib\campaign\correction-reports.ts
+0A0171505BF312C39E6867A240996856995F0ECA30E406A17D277D81789B26C5  src\lib\campaign\display.ts
+6C8AD0DC7AE9A561554FF48A35E4768DB9E292212AE21DEF520EEAC3523430CD  src\lib\campaign\field-guidance.ts
+7F03466E7D7A6BA8631D105969BB6ED8805E3DE90B6AD926C8BFF56B36A3D85D  src\lib\campaign\image-processor.ts
+BF044C519E7AF6449E91775A31C2B139A19C66F3D1F06B68C648388C78D275B7  src\lib\campaign\legibility-checklist.ts
+89A56EC7E16526285B1B059C7440EF4DB12447953F270E6D550FD479951F93BF  src\lib\campaign\list.ts
+1F8125FC6B9F9B3429D0DA317FBED8FB495328BA01CF447F3E7AE662A7461B98  src\lib\campaign\metrics.ts
+E8265012AB7CDFE068114E65AF45DE5AC6AD01F67AFF068681BA0B20D02FC7C9  src\lib\campaign\persistence.ts
+4F88CEB359C64F520493FBAA938A81C1A33B98E54EA91AC1C6606ED984D50A81  src\lib\campaign\publication-copy.ts
+E443606354B270B53C933598C3AC272E54FF0B6B4EF1EAEE94ECA905251208EE  src\lib\campaign\search-params.ts
+EE472E4C4E28E28E145C422B77E44908D55C80F6021C6CC93A0DAA5033E066D6  src\lib\campaign\types.ts
+2A80001665CF08556113F189497E3748272EFB5192217FE0AF54FCFE8F2522F3  src\lib\legal\clearance.ts
+```

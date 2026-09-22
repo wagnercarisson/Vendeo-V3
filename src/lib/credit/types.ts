@@ -8,6 +8,8 @@ export const CreditTransactionTypeSchema = z.enum([
   "deduction",
   "refund",
   "adjustment",
+  "demo",
+  "expiration",
 ]);
 
 export const CreditTransactionSchema = z.object({
@@ -38,6 +40,9 @@ export interface CreditBalance {
   balance: number;
   bonusBalance: number;
   purchasedBalance: number;
+  demoBalance: number;
+  demoExpiresAt: string | null;
+  availableBalance: number;
   updatedAt: string;
 }
 

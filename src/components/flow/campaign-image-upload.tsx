@@ -72,6 +72,10 @@ export function CampaignImageUpload({
       <span id={imageRequiredId} className="sr-only">
         Imagem do produto obrigatória
       </span>
+      <p className="mb-3 text-xs leading-relaxed text-text-muted">
+        Envie apenas imagens para as quais você possui os direitos e consentimentos
+        necessários, respeitando o melhor interesse de crianças e adolescentes.
+      </p>
 
       <div
         onClick={() => {

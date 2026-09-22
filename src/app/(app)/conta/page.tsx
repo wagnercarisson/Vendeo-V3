@@ -11,6 +11,8 @@ import { createServerClient } from "@/lib/supabase/server";
 import { LegalStatusSection } from "@/components/legal/legal-status-section";
 import { InstallHint } from "@/components/pwa/install-hint";
 import { User, Coins, Key, LogOut, MessageCircle, Shield } from "lucide-react";
+import { NotificationList } from "@/components/notifications/notification-list";
+import { supabaseAdmin } from "@/lib/supabase/server";
 
 export default async function ContaPage({
   searchParams,
@@ -25,23 +27,32 @@ export default async function ContaPage({
   const creditService = new CreditService(supabase);
   const store = await getCurrentStore(user.userId);
   const supportEmail = process.env.SUPPORT_EMAIL;
+  const { data: notifications } = await supabaseAdmin
+    .from("credit_notifications")
+    .select("id,kind,payload,created_at,inapp_read_at")
+    .eq("user_id", user.userId)
+    .neq("kind", "support_notice")
+    .order("created_at", { ascending: false })
+    .limit(20);
 
   const LIMIT = 10;
   const page = Number(sp.page) || 1;
   const offset = (page - 1) * LIMIT;
 
   let balance = 0;
+  let breakdown: import("@/lib/credit/credit-service").CreditBalanceBreakdown | null = null;
   let history: import("@/lib/credit/types").CreditTransaction[] = [];
   let totalItems = 0;
   let creditError = false;
 
   if (store) {
     try {
-      [balance, history, totalItems] = await Promise.all([
-        creditService.getBalance(store.id),
+      [breakdown, history, totalItems] = await Promise.all([
+        creditService.getBalanceBreakdown(store.id),
         creditService.getHistory(store.id, LIMIT, offset),
         creditService.countCreditTransactions(store.id),
       ]);
+      balance = breakdown.availableBalance;
     } catch {
       creditError = true;
     }
@@ -60,6 +71,12 @@ export default async function ContaPage({
       />
 
       <div className="space-y-6 max-w-lg">
+         <Card>
+          <div className="p-5 space-y-4">
+            <h2 className="text-lg font-semibold text-text-primary font-heading">Notificações</h2>
+            <NotificationList initialNotifications={(notifications ?? []) as import("@/components/notifications/notification-list").InAppNotification[]} />
+          </div>
+        </Card>
         <Card>
           <div className="p-5 space-y-4">
             <h2 className="flex items-center gap-2 text-lg font-semibold text-text-primary font-heading">
@@ -88,6 +105,10 @@ export default async function ContaPage({
               <>
                 <BalanceCard
                   balance={balance}
+                  availableBalance={breakdown?.availableBalance}
+                  demoBalance={breakdown?.demoBalance}
+                  demoExpiresAt={breakdown?.demoExpiresAt}
+                  originDemoGrantTxId={breakdown?.originDemoGrantTxId}
                   hasStore={true}
                   supportEmail={supportEmail}
                 />

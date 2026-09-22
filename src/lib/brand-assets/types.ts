@@ -10,6 +10,7 @@ export interface BrandAssetRecord {
   size_bytes: number; checksum: string; version: number;
   status: BrandAssetStatus; metadata: Record<string, unknown>;
   created_at: string; updated_at: string;
+  signed_url?: string | null;
 }
 
 export interface CreateBrandAssetInput {

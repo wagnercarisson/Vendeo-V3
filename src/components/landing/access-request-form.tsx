@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { STORE_SEGMENTS } from "@/lib/constants";
 import { maskWhatsApp } from "@/lib/validators/phone";
 
+const PRIVACY_NOTICE_VERSION = "v1.4";
+
 type FormState = "idle" | "submitting" | "error";
 
 export function AccessRequestForm({
@@ -29,6 +31,7 @@ export function AccessRequestForm({
       store_name: formData.get("store_name"),
       segment: formData.get("segment"),
       whatsapp: formData.get("whatsapp"),
+      privacy_notice_version: PRIVACY_NOTICE_VERSION,
     };
 
     try {
@@ -99,6 +102,20 @@ export function AccessRequestForm({
         maxLength={15}
         autoComplete="tel"
       />
+      <p className="-mt-2 text-xs text-text-muted">Campo opcional.</p>
+      <p className="-mt-2 text-xs text-text-muted">
+        Usado somente para contato sobre esta solicitação, nunca para marketing.
+      </p>
+      <p className="text-xs text-text-muted">
+        Ao solicitar acesso, você declara ter lido a{" "}
+        <a className="underline" href="/docs/legal/privacy-policy-v1-4.md" target="_blank" rel="noreferrer">
+          Política de Privacidade v1.4
+        </a>{" "}
+        e os{" "}
+        <a className="underline" href="/docs/legal/terms-of-service-v1-5.md" target="_blank" rel="noreferrer">
+          Termos de Uso v1.5
+        </a>.
+      </p>
 
       {state === "error" && errorMessage && (
         <p role="alert" className="text-sm text-accent-red">

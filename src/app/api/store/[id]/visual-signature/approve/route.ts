@@ -16,6 +16,7 @@ import { apiHandler } from '@/lib/auth/api-handler';
 import { AiCostTracker } from '@/lib/ai-cost';
 import { createDefaultTelemetryContext } from '@/lib/ai';
 import { resolveEconomicSnapshot } from '@/lib/economic/economic-snapshot';
+import { requireSignedVisualSignatureUrl } from '@/lib/visual-signature/persistence';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -115,6 +116,14 @@ async function handleSubstitution(
   if (pendingSigError || !pendingSig) {
     console.log(`[approve][req-${reqId}] SUBSTITUIÇÃO BLOQUEADA — signature não encontrada`);
     return NextResponse.json({ error: 'Assinatura visual não encontrada' }, { status: 404 });
+  }
+
+  let pendingAssetUrl: string;
+  try {
+    pendingAssetUrl = await requireSignedVisualSignatureUrl(pendingSig.storage_path);
+  } catch (error) {
+    console.error(`[approve][req-${reqId}] SUBSTITUIÇÃO — signed asset unavailable`, error);
+    return NextResponse.json({ error: 'O ativo da assinatura visual está temporariamente indisponível.' }, { status: 503 });
   }
 
   console.log(`[approve][req-${reqId}] SUBSTITUIÇÃO — guardas OK. Iniciando Tier 1 (Archive/Activate)...`);
@@ -231,7 +240,7 @@ async function handleSubstitution(
       brandColor: store.brand_color,
       artDirectorOutput,
       visualSignatureId: signatureId,
-      assetUrl: pendingSig.asset_url,
+        assetUrl: pendingAssetUrl,
       referenceCardUrl: null,
       intendedPalette,
       previousBrandColors,
@@ -265,7 +274,7 @@ async function handleSubstitution(
       success: true,
       signature: {
         id: pendingSig.id,
-        assetUrl: pendingSig.asset_url,
+         assetUrl: pendingAssetUrl,
         status: 'active',
       },
       brandProfile: { id: result.profile.id, status: 'synced' },
@@ -321,7 +330,7 @@ async function handleSubstitution(
       success: true,
       signature: {
         id: pendingSig.id,
-        assetUrl: pendingSig.asset_url,
+         assetUrl: pendingAssetUrl,
         status: 'active',
       },
       brandProfile: { id: '', status: 'failed' },
@@ -425,6 +434,14 @@ export const POST = apiHandler(async (
     return NextResponse.json({ error: 'Assinatura visual não encontrada' }, { status: 404 });
   }
   console.log(`[approve][req-${reqId}] signature carregada status=${signature.status}`);
+
+  let signedAssetUrl: string;
+  try {
+    signedAssetUrl = await requireSignedVisualSignatureUrl(signature.storage_path);
+  } catch (error) {
+    console.error(`[approve][req-${reqId}] signed asset unavailable`, error);
+    return NextResponse.json({ error: 'O ativo da assinatura visual está temporariamente indisponível.' }, { status: 503 });
+  }
 
   if (signature.status !== 'active') {
     const metadata = (signature.metadata ?? {}) as Record<string, unknown>;
@@ -552,7 +569,7 @@ export const POST = apiHandler(async (
       success: true,
       signature: {
         id: signature.id,
-        assetUrl: signature.asset_url,
+        assetUrl: signedAssetUrl,
         status: 'active',
       },
       brandProfile: { id: existingProfile.id, status: 'synced' },
@@ -623,7 +640,7 @@ export const POST = apiHandler(async (
       brandColor: store.brand_color,
       artDirectorOutput,
       visualSignatureId: body.signatureId,
-      assetUrl: signature.asset_url,
+         assetUrl: signedAssetUrl,
       referenceCardUrl: null,
       intendedPalette: intendedPaletteLocal,
       previousBrandColors,
@@ -661,7 +678,7 @@ export const POST = apiHandler(async (
       success: true,
       signature: {
         id: signature.id,
-        assetUrl: signature.asset_url,
+        assetUrl: signedAssetUrl,
         status: 'active',
       },
       brandProfile: brandProfileResult,
@@ -703,7 +720,7 @@ export const POST = apiHandler(async (
       success: true,
       signature: {
         id: signature.id,
-        assetUrl: signature.asset_url,
+         assetUrl: signedAssetUrl,
         status: 'active',
       },
       brandProfile: brandProfileResult,

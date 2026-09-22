@@ -586,12 +586,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
           if (assets?.original) {
             setHasActiveLogo(true);
             const preferredAsset = assets.on_dark ?? assets.original;
-            if (preferredAsset?.storage_path) {
-              const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-              if (supabaseUrl) {
-                setLogoResultUrl(`${supabaseUrl}/storage/v1/object/public/store-brand-assets/${preferredAsset.storage_path}`);
-              }
-            }
+            if (preferredAsset?.signed_url) setLogoResultUrl(preferredAsset.signed_url);
           }
         }
 
@@ -1020,13 +1015,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
 
       setUploadStatus('processing');
       const result = await res.json();
-      const storagePath = result?.originalAsset?.storage_path;
-      if (storagePath) {
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        if (supabaseUrl) {
-          setLogoResultUrl(`${supabaseUrl}/storage/v1/object/public/store-brand-assets/${storagePath}`);
-        }
-      }
+      if (result?.originalAsset?.signed_url) setLogoResultUrl(result.originalAsset.signed_url);
       setLogoStatus('uploaded');
       setIdentityState('logo');
       setHasActiveLogo(true);

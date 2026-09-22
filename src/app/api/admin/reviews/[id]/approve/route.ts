@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { apiHandler } from "@/lib/auth/api-handler";
+import { getLaunchConfig } from "@/lib/launch-config/config";
 
 export const POST = apiHandler(async (_request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   const admin = await requireAdmin();
@@ -10,6 +11,7 @@ export const POST = apiHandler(async (_request: NextRequest, { params }: { param
   const { data, error } = await supabaseAdmin.rpc("admin_approve_store_verification", {
     p_store_id: id,
     p_admin_id: admin.userId,
+    p_demo_grant_enabled: getLaunchConfig().demoCreditsEnabled,
   });
 
   if (error) {

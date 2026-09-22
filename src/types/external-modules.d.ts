@@ -15,3 +15,17 @@ declare module 'get-rgba-palette' {
     callback?: (err: Error | null, palette: number[][]) => void
   ): number[][];
 }
+
+declare module 'pg' {
+  export class Pool {
+    constructor(options?: { connectionString?: string });
+    query<T = any>(text: string, values?: unknown[]): Promise<{ rows: T[] }>;
+    end(): Promise<void>;
+  }
+  export class Client {
+    constructor(options?: { connectionString?: string });
+    connect(): Promise<void>;
+    query<T = any>(text: string, values?: unknown[]): Promise<{ rows: T[] }>;
+    end(): Promise<void>;
+  }
+}

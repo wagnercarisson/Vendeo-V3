@@ -134,15 +134,26 @@ const mockGetBalance = vi.fn();
 const mockReserveCredit = vi.fn();
 const mockConfirmCredit = vi.fn();
 const mockRefundCredit = vi.fn();
+const mockGetOriginDemoGrantTxId = vi.fn();
+const mockGetBalanceBreakdown = vi.fn();
+mockGetOriginDemoGrantTxId.mockResolvedValue(null);
+mockGetBalanceBreakdown.mockResolvedValue({ availableBalance: 0, demoBalance: 0, demoExpiresAt: null });
 vi.mock('@/lib/credit/credit-service', () => ({
   CreditService: vi.fn(function() {
     return {
       getBalance: mockGetBalance,
+      getOriginDemoGrantTxId: mockGetOriginDemoGrantTxId,
+      getBalanceBreakdown: mockGetBalanceBreakdown,
       reserveCredit: mockReserveCredit,
       confirmCredit: mockConfirmCredit,
       refundCredit: mockRefundCredit,
     };
   }),
+}));
+
+const mockProductEventRecord = vi.fn();
+vi.mock('@/lib/product-events/service', () => ({
+  ProductEventService: vi.fn(function() { return { record: mockProductEventRecord }; }),
 }));
 
 // Copy Director mock

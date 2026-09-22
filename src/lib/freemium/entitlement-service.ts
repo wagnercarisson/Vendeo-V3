@@ -18,6 +18,26 @@ export class FreemiumEntitlementService {
     return data === null;
   }
 
+  async checkDemoEligibility(rootHash: string): Promise<boolean> {
+    const { data } = await this.adminClient
+      .from("freemium_entitlements")
+      .select("id")
+      .eq("root_hash", rootHash)
+      .in("benefit_type", ["onboarding", "demo", "admin_exception"])
+      .limit(1)
+      .maybeSingle();
+    return data === null;
+  }
+
+  async grantDemoEntitlement(storeId: string | null, rootHash: string): Promise<string | null> {
+    const { data, error } = await this.adminClient.rpc("try_grant_demo_entitlement", {
+      p_store_id: storeId,
+      p_root_hash: rootHash,
+    });
+    if (error) throw error;
+    return data as string | null;
+  }
+
   async grantOnboardingEntitlement(
     storeId: string | null,
     rootHash: string,
@@ -98,7 +118,7 @@ function mapEntitlement(raw: Record<string, unknown>): FreemiumEntitlement {
     id: raw.id as string,
     store_id: raw.store_id as string | null,
     root_hash: raw.root_hash as string,
-    benefit_type: raw.benefit_type as "onboarding" | "monthly" | "admin_exception",
+    benefit_type: raw.benefit_type as "onboarding" | "monthly" | "admin_exception" | "demo",
     cycle: raw.cycle as string | null,
     grant_transaction_id: raw.grant_transaction_id as string | null,
     granted_by: raw.granted_by as string | null,
