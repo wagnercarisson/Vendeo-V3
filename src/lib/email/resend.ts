@@ -20,21 +20,9 @@ export async function claimEmailNotification(): Promise<Notification | null> {
   const { data, error } = await supabaseAdmin.rpc("claim_credit_notification", {
     p_now: now, p_lease_expires_at: lease,
   });
-  if (!error && data) return data as Notification;
-
-  // Keep a safe rollout fallback: only reclaim one due row and increment its attempt.
-  const { data: fallback } = await supabaseAdmin
-    .from("credit_notifications")
-    .update({ email_status: "processing", lease_expires_at: lease })
-    .in("email_status", ["pending", "processing"])
-    .or(`next_attempt_at.is.null,next_attempt_at.lte.${now}`)
-    .or(`lease_expires_at.is.null,lease_expires_at.lte.${now}`)
-    .lt("attempt_count", MAX_ATTEMPTS)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .select("id,store_id,kind,payload,email_status,attempt_count,next_attempt_at")
-    .maybeSingle();
-  return (fallback as Notification | null) ?? null;
+  if (error || !data) return null;
+  const claimed = Array.isArray(data) ? data[0] : data;
+  return (claimed as Notification | undefined) ?? null;
 }
 
 export async function processClaimedEmail(row: Notification): Promise<void> {
@@ -68,7 +56,8 @@ export async function processClaimedEmail(row: Notification): Promise<void> {
 }
 
 async function retry(row: Notification, message: string, retryable: boolean) {
-  const attempts = row.attempt_count + 1;
+  // The claim RPC owns the increment. Do not increment again on delivery failure.
+  const attempts = row.attempt_count;
   if (!retryable || attempts >= MAX_ATTEMPTS) return finish(row.id, "failed", { attempt_count: attempts, last_error: message, lease_expires_at: null });
   await finish(row.id, "pending", { attempt_count: attempts, last_error: message, next_attempt_at: new Date(Date.now() + 2 ** attempts * 60_000).toISOString(), lease_expires_at: null });
 }
