@@ -244,7 +244,7 @@ Copy Director com IA, pipeline de geração paralelo, sistema de créditos, admi
   - **Fonte da verdade:** `openspec/changes/archive/2026-09-18-fase-49-ativacao-orientacao-contextual-campos/` (proposal / design D1–D15 / 7 specs / tasks)
   - **Status:** ✅ **CONCLUÍDA em 2026-09-18 — 15/15 — Complete** (7 waves; 49-14 = gap closure da microcopy/placeholder de "Informações obrigatórias na arte" e 49-15 = gap closure dos achados do code review — ME-01/ME-02/ME-03/LO-03); plan-check **PASSED** em 2026-09-18; 4 gates verdes e 59/59 hashes sem divergência; **UAT humana de compreensão aprovada (9/9 cenários PASS em desktop/375px/320px, sem poluição visual)** e decisões editoriais confirmadas
 
-- [ ] Phase 50: Demonstração Gratuita e Validade dos Créditos (◆ Executando — 14/17 plans / 10 waves)
+- [ ] Phase 50: Demonstração Gratuita e Validade dos Créditos (◆ Executando — 15/17 plans / 10 waves)
   - **Substituição do freemium contínuo por uma demonstração gratuita limitada** — 10 créditos válidos por 168h (7 dias), sem cartão e sem cobrança, preservando os saldos legados e encerrando as concessões mensais no corte
   - **Bucket de demonstração com validade** (`credit_balances` + `demo_balance`/`demo_expires_at`/`demo_cycle_id`/`origin_demo_grant_tx_id`/`demo_contributing_tx_ids`); tipos de transação `demo` (concessão) e `expiration` (expiração materializada) — no máximo uma `expiration` por episódio
   - **Concessão automática irrepetível por raiz de CNPJ** (`grant_demo_credits` com flag `p_demo_grant_enabled` obrigatória; `benefit_type='demo'`; elegibilidade = ausência de `onboarding`, `demo` e `admin_exception`); substitui o onboarding grant
