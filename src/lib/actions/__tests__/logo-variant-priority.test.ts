@@ -36,7 +36,7 @@ vi.mock('@/lib/supabase/server', () => ({
     },
     storage: {
       from: () => ({
-        getPublicUrl: (storage_path: string) => ({ data: { publicUrl: `https://example.com/${storage_path}` } }),
+        createSignedUrl: (storage_path: string) => ({ data: { signedUrl: `https://example.com/${storage_path}` }, error: null }),
       }),
     },
   },

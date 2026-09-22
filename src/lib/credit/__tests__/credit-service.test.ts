@@ -53,7 +53,7 @@ beforeEach(() => {
 function mockGetBalanceResult(balance: number | null) {
   const result =
     balance !== null
-      ? { data: { balance, demo_balance: 0, demo_expires_at: null, bonus_balance: balance, purchased_balance: 0 }, error: null }
+      ? { data: { demo_balance: 0, demo_expires_at: null, bonus_balance: balance, purchased_balance: 0 }, error: null }
       : { data: null, error: null };
   mockSingle.mockReturnValue(result);
   mockEqBalance.mockReturnValue({ single: mockSingle });

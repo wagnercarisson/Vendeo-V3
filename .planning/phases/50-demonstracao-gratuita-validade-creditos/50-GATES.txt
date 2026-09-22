@@ -1,0 +1,66 @@
+F50 PLAN 50-13 GATES
+====================
+
+Execution date: 2026-09-22
+Baseline commit: 14ccb8bc60d8de54a26d23c5023ad9c175c0de1c
+
+1. FULL VITEST
+--------------
+Command: npx vitest run
+Result: PASS (exit 0)
+Test files: 364 passed
+Tests: 3745 passed, 1 skipped, 3746 total
+Notes: jsdom emitted expected non-fatal navigation/scrollTo messages.
+
+2. TYPECHECK
+------------
+Command: npm run typecheck
+Result: PASS (exit 0)
+
+3. LINT
+--------
+Command: npm run lint
+Result: PASS (exit 0)
+
+4. BUILD
+---------
+Command: npm run build
+Result: PASS (exit 0)
+
+5. FOCUSED CO-MIGRATION
+-----------------------
+Command: npx vitest run src/lib/credit/__tests__/credit-service.test.ts src/lib/credit/__tests__/monthly-credits.test.ts src/lib/actions/__tests__/logo-variant-priority.test.ts src/components/credit/__tests__/balance-card.test.tsx src/lib/__tests__/data-subject-requests.postgres.test.ts
+Result: PASS (exit 0)
+Test files: 5 passed
+Tests: 64 passed
+
+6. PROTECTED BASELINE REVIEW
+----------------------------
+Baseline entries: 79
+Protected hash mismatches: 2
+Protected files changed since baseline commit: 2
+
+Changed protected files:
+- src/app/api/campaign/generate-image/route.ts
+- src/app/api/store/[id]/visual-signature/generate-without-logo/route.ts
+
+Classification:
+- Both differences are pre-existing F50 changes from earlier plans: first_generation product-event emission and storage privacy changes.
+- No protected file was changed by plan 50-13 itself.
+- The baseline fence is BLOCKED as written because these two files are included in the original protected hash set.
+- This plan does not revert them: doing so would undo completed F50 scope and violate preservation of unrelated/prior changes.
+
+7. WORKTREE PRESERVATION
+------------------------
+Pre-existing unrelated changes preserved:
+- .opencode/opencode.json
+- package-lock.json
+- package.json
+- docs/alinhamento-fase-44-temas-de-campanhas
+
+No 50-14 command or migration was executed.
+
+OVERALL
+-------
+Automated gates: PASS (4/4)
+Baseline protected-diff fence: BLOCKED (2 inherited F50 differences)

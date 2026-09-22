@@ -163,12 +163,12 @@
 
 ## 50-13 — Regressão e co-migração + 4 gates
 
-- [ ] 13.1 Co-migrar fixtures/asserções que consultam saldo/tipos (`credit-service.test.ts`, `monthly-credits.test.ts`, rotas de geração, admin users summary, consumidores de `balance` de 1.4)
-- [ ] 13.2 Suíte completa `npx vitest run`
-- [ ] 13.3 `npm run typecheck`
-- [ ] 13.4 `npm run lint`
-- [ ] 13.5 `npm run build`
-- [ ] 13.6 Revisar diff contra baseline (sem mudança em prompts/gateway/snapshot/domínio/contrato de geração)
+- [x] 13.1 Co-migrar fixtures/asserções que consultam saldo/tipos (`credit-service.test.ts`, `monthly-credits.test.ts`, rotas de geração, admin users summary, consumidores de `balance` de 1.4)
+- [x] 13.2 Suíte completa `npx vitest run`
+- [x] 13.3 `npm run typecheck`
+- [x] 13.4 `npm run lint`
+- [x] 13.5 `npm run build`
+- [ ] 13.6 Revisar diff contra baseline (sem mudança em prompts/gateway/snapshot/domínio/contrato de geração) — bloqueado por 2 divergências herdadas da F50
 
 ## 50-14 — Verificação, rollout (corte) e gates finais
 
