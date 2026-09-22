@@ -22,4 +22,10 @@ declare module 'pg' {
     query<T = any>(text: string, values?: unknown[]): Promise<{ rows: T[] }>;
     end(): Promise<void>;
   }
+  export class Client {
+    constructor(options?: { connectionString?: string });
+    connect(): Promise<void>;
+    query<T = any>(text: string, values?: unknown[]): Promise<{ rows: T[] }>;
+    end(): Promise<void>;
+  }
 }

@@ -10,7 +10,8 @@ Added focused coverage for demo UI, beta access, notification outbox, product-ev
 
 ## Verification
 
-- Focused continuation Vitest: **3 files, 10 tests passed** (notification/legal/support evidence).
+- Focused continuation Vitest: **4 files, 16 tests passed** (notification/legal/support/email evidence).
+- Real PostgreSQL claim/lifecycle script: **PASS** (concurrency, reclaim, attempt limit, permissions, atomic support transition).
 - `npm run typecheck`: **passed**.
 - `npm run lint`: **passed**.
 - `git diff --check`: **passed**.
@@ -23,4 +24,4 @@ Added focused coverage for demo UI, beta access, notification outbox, product-ev
 - Full `npx vitest run` and `npm run build` were not run; 50-13 owns the full regression/build gate.
 - Supabase reset was not required; local PostgreSQL integration was available and passed.
 
-No unrelated worktree changes were modified and no commit was created.
+No unrelated worktree changes were modified. The continuation is committed separately; 50-13/50-14 remain untouched.

@@ -26,8 +26,9 @@ export async function claimEmailNotification(): Promise<Notification | null> {
 }
 
 export async function processClaimedEmail(row: Notification): Promise<void> {
-  if (!emailEnabled() && !isSupport(row.kind)) {
-    await finish(row.id, "suppressed", { lease_expires_at: null });
+  if (!emailEnabled()) {
+    if (isSupport(row.kind)) await retry(row, "Email desabilitado", true);
+    else await finish(row.id, "suppressed", { lease_expires_at: null });
     return;
   }
   const expiresAt = row.payload.expires_at ? new Date(String(row.payload.expires_at)) : null;
@@ -35,7 +36,7 @@ export async function processClaimedEmail(row: Notification): Promise<void> {
     await finish(row.id, "suppressed", { lease_expires_at: null });
     return;
   }
-  if (!process.env.RESEND_API_KEY || !recipient(row)) return retry(row, "Email ou RESEND_API_KEY ausente", false);
+  if (!process.env.RESEND_API_KEY || !recipient(row)) return retry(row, "Email ou RESEND_API_KEY ausente", true);
 
   try {
     const response = await fetch("https://api.resend.com/emails", {

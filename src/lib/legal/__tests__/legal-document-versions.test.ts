@@ -32,4 +32,12 @@ describe("F50 legal publication contract", () => {
     expect(result).toMatchObject({ ok: false, requiredDocuments: ["acceptable_use"] });
     expect(readFileSync(resolve(process.cwd(), "src/lib/legal/privacy.ts"), "utf8")).toMatch(/privacy_acknowledgements/);
   });
+
+  it("keeps history and download routes outside both legal gates", () => {
+    const history = readFileSync(resolve(process.cwd(), "src/app/(app)/conta/page.tsx"), "utf8");
+    const download = readFileSync(resolve(process.cwd(), "src/app/api/campaign/[id]/download/route.ts"), "utf8");
+    expect(history).not.toMatch(/requireLegalClearance|PrivacyGate/);
+    expect(download).not.toMatch(/requireLegalClearance|PrivacyGate/);
+    expect(readFileSync(resolve(process.cwd(), "src/app/(app)/campanhas/nova/page.tsx"), "utf8")).toMatch(/requireLegalClearance/);
+  });
 });

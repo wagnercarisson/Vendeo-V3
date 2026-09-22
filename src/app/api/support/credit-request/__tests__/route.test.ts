@@ -16,7 +16,9 @@ describe("F50 support protocol contract", () => {
   it("keeps manual reconsideration auditable and does not create an appeal system", () => {
     const route = readFileSync(resolve(process.cwd(), "src/app/api/admin/support-credit-requests/route.ts"), "utf8");
     expect(route).toMatch(/reconsiderEligible: z\.boolean\(\)\.optional/);
-    expect(route).toMatch(/support_credit_request_update/);
-    expect(route).toMatch(/admin_audit_log/);
+    expect(route).toMatch(/update_support_credit_request/);
+    const rpc = readFileSync(resolve(process.cwd(), "supabase/migrations/20260924000002_f50_support_status_rpc.sql"), "utf8");
+    expect(rpc).toMatch(/admin_audit_log/);
+    expect(rpc).toMatch(/SECURITY DEFINER/);
   });
 });

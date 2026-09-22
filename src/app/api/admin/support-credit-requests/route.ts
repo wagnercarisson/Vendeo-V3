@@ -6,11 +6,6 @@ import { requireSameOrigin } from "@/lib/auth/csrf";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 const Patch = z.object({ id: z.string().uuid(), status: z.enum(["forwarded", "responded", "closed"]), reconsiderEligible: z.boolean().optional(), reason: z.string().trim().min(1).max(500) });
-const transitions: Record<string, string[]> = {
-  received: ["forwarded"],
-  forwarded: ["responded", "closed"],
-  responded: ["closed"],
-};
 
 export const GET = apiHandler(async () => {
   await requireAdmin();
@@ -24,17 +19,10 @@ export const PATCH = apiHandler(async (request: NextRequest) => {
   requireSameOrigin(request);
   const parsed = Patch.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Dados inválidos" }, { status: 400 });
-  const now = new Date().toISOString();
-  const current = await supabaseAdmin.from("support_credit_requests").select("*").eq("id", parsed.data.id).maybeSingle();
-  if (current.error) return NextResponse.json({ error: current.error.message }, { status: 500 });
-  if (!current.data || !transitions[current.data.status]?.includes(parsed.data.status)) {
-    return NextResponse.json({ error: "Transição de status inválida" }, { status: 409 });
-  }
-  const timestamps = parsed.data.status === "forwarded" ? { acknowledged_at: now } : parsed.data.status === "responded" ? { responded_at: now } : { closed_at: now };
-  const { data, error } = await supabaseAdmin.from("support_credit_requests").update({ status: parsed.data.status, ...timestamps }).eq("id", parsed.data.id).eq("status", current.data.status).select().maybeSingle();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  if (!data) return NextResponse.json({ error: "Solicitação não encontrada ou já processada" }, { status: 409 });
-  const { error: auditError } = await supabaseAdmin.from("admin_audit_log").insert({ actor_id: admin.userId, action: "support_credit_request_update", target_type: "support_credit_request", target_id: parsed.data.id, reason: parsed.data.reason, metadata: { status: parsed.data.status, reconsiderEligible: parsed.data.reconsiderEligible ?? null } });
-  if (auditError) return NextResponse.json({ error: "Não foi possível auditar a atualização" }, { status: 500 });
+  const { data, error } = await supabaseAdmin.rpc("update_support_credit_request", {
+    p_actor_id: admin.userId, p_request_id: parsed.data.id, p_status: parsed.data.status,
+    p_reconsider_eligible: parsed.data.reconsiderEligible ?? false, p_reason: parsed.data.reason,
+  });
+  if (error) return NextResponse.json({ error: error.message }, { status: error.message.includes("invalid_support_transition") ? 409 : 500 });
   return NextResponse.json({ request: data });
 });

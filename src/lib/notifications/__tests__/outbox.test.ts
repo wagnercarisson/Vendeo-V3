@@ -2,14 +2,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const { upsert } = vi.hoisted(() => ({ upsert: vi.fn() }));
+const { upsert, update } = vi.hoisted(() => ({ upsert: vi.fn(), update: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({
-  supabaseAdmin: { from: vi.fn(() => ({ upsert })) },
+  supabaseAdmin: { from: vi.fn(() => ({ upsert, update })) },
 }));
 
 describe("notification outbox contract", () => {
   beforeEach(() => {
     upsert.mockReset();
+    update.mockReset();
+    update.mockReturnValue({ eq: () => ({ eq: () => Promise.resolve({ error: null }) }) });
     upsert.mockReturnValue({
       select: () => ({ maybeSingle: () => Promise.resolve({ data: { id: "n1" }, error: null }) }),
     });
@@ -39,6 +41,17 @@ describe("notification outbox contract", () => {
     const { enqueueNotification } = await import("../outbox");
     await enqueueNotification({ storeId: "s1", kind: "support_ack", dedupKey: "op-1", payload: { recipient_email: "a@b.test" } });
     expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ kind: "support_ack", payload: { recipient_email: "a@b.test" } }), expect.any(Object));
+  });
+
+  it("does not call Resend for support notifications while email is disabled or unconfigured", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubEnv("VENDEO_EMAIL_ENABLED", "false");
+    vi.stubEnv("RESEND_API_KEY", "key");
+    const { processClaimedEmail } = await import("@/lib/email/resend");
+    await processClaimedEmail({ id: "n1", store_id: "s1", kind: "support_ack", payload: { recipient_email: "u@test" }, email_status: "processing", attempt_count: 1, next_attempt_at: null });
+    expect(fetchMock).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
   });
 
   it("has the atomic lease/reclaim and terminal retry contract", () => {
