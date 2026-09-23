@@ -121,6 +121,18 @@ describe("POST /api/admin/access-requests/[id]", () => {
     });
   });
 
+  it("409 quando o RPC reporta access_limit_reached", async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { message: "access_limit_reached" },
+    });
+
+    const res = await postReview("req-1", { action: "approve" });
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: "Limite do beta atingido." });
+  });
+
   it("500 para erro genérico do RPC", async () => {
     mockRpc.mockResolvedValue({
       data: null,

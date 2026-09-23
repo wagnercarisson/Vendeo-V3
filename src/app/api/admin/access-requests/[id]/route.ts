@@ -42,6 +42,12 @@ export const POST = apiHandler(
 
     if (error) {
       const msg = error.message?.toLowerCase() ?? "";
+      if (msg.includes("access_limit_reached")) {
+        return NextResponse.json(
+          { error: "Limite do beta atingido." },
+          { status: 409 },
+        );
+      }
       if (msg.includes("request_not_found") || msg.includes("already_reviewed")) {
         return NextResponse.json(
           { error: "Solicitação não encontrada ou já revisada" },

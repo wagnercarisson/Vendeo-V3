@@ -52,6 +52,23 @@ O teste real é um gate do corte 50-14 e deve ocorrer antes da liberação do pr
 7. Registrar evidência com identificador da execução, timestamps, contagens, checksums, bucket/path testado e resultado.
 8. Destruir o ambiente temporário, URLs assinadas e cópias de trabalho após a validação.
 
+### Resultado Validado — F50
+
+O teste real foi executado em `2026-09-23` exclusivamente a partir do backup
+`C:\Vendeo-Backups\f50-post-migration-20260923-clean`.
+
+- Resultado: **RESTORE VALIDADO**.
+- Ambiente isolado: `f50_restore_20260923`.
+- Portas isoladas: API `55431`, banco `55432`, Studio `55433`, Inbucket `55434`, analytics `55437`.
+- Banco, roles, schema e dados restaurados; estruturas F50 presentes.
+- Ledger validado sem inconsistências; cinco buckets privados confirmados.
+- `419/419` objetos restaurados e validados por SHA-256; URL assinada e download com checksum confirmado.
+- Nenhuma escrita remota foi executada; o ambiente Vendeo original permaneceu preservado.
+- O índice temporário `restore_objects_bucket_name_compat` foi criado exclusivamente no banco isolado para compatibilidade com o runtime local. Ele não pertence ao backup e não deve virar migration de produção.
+
+O ambiente isolado foi mantido após o teste para inspeção posterior autorizada. A
+evidência detalhada permanece fora do Git.
+
 Sem evidência de restauração de banco, metadados e objetos, o primeiro convite permanece bloqueado, mesmo que a implementação técnica da F50 esteja concluída.
 
 ## Verificação de Segredos e Git
