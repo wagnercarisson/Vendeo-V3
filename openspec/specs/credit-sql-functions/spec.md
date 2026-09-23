@@ -20,6 +20,12 @@ O sistema SHALL criar a SQL function `public.grant_credits(p_store_id UUID, p_am
 - Quando `p_type = 'purchase'`: incrementa `purchased_balance`
 - Chamadores existentes (sem `p_type`) usam default `'admin_grant'` e funcionam sem alteração
 
+#### Scenario: grant_credits demo inicializa episódio
+
+- **WHEN** `grant_credits` é chamado com `p_type='demo'` e expiração
+- **THEN** cria transação `demo`, incrementa `demo_balance`, define `demo_expires_at` e usa o mesmo ID em `demo_cycle_id` e `origin_demo_grant_tx_id`
+- **AND** inicia `demo_contributing_tx_ids` com o grant
+
 #### Scenario: grant_credits with bonus_onboarding increments bonus_balance
 
 - **WHEN** `grant_credits(store_id, 10, 'onboarding', NULL, '{}', 'bonus_onboarding')` é chamado
@@ -72,7 +78,7 @@ O sistema SHALL criar a SQL function `public.grant_credits(p_store_id UUID, p_am
 
 ### Requirement: reserve_credit SQL function (MODIFIED F29.3)
 
-**F29.3 Changes**: Lógica de dedução alterada para consumir de `bonus_balance` primeiro, `purchased_balance` por último. Metadata da transação registra `bonus_amount` e `purchased_amount`. Assinatura inalterada.
+**F50 Changes**: materializa expiração pendente antes do lock e consome na ordem demo ativa, bônus, comprado. Metadata registra todos os buckets, snapshot de validade e evidência de esgotamento. Saldo vencido não é consumível.
 
 O sistema SHALL manter a SQL function `public.reserve_credit(p_store_id UUID, p_amount INTEGER, p_campaign_id UUID DEFAULT NULL, p_idempotency_key TEXT DEFAULT NULL, p_metadata JSONB DEFAULT '{}') RETURNS UUID` com lógica bucket-aware:
 
@@ -142,11 +148,46 @@ p_metadata := p_metadata || jsonb_build_object('bonus_amount', deduct_from_bonus
 - **WHEN** `reserve_credit` é chamado com `p_idempotency_key` já usado por transação de tipo diferente
 - **THEN** lança `RAISE EXCEPTION 'idempotency_conflict'`
 
-### Requirement: refund_credit SQL function (MODIFIED F29.3)
+#### Scenario: reserve_credit consome demo, bônus e comprado nessa ordem
 
-**F29.3 Changes**: Lógica alterada para restaurar buckets exatos. Lê `metadata.bonus_amount` e `metadata.purchased_amount` da deduction original e restaura cada bucket individualmente. Fallback para deductions antigas: trata valor total como `bonus_amount`.
+- **WHEN** existem 3 demo, 5 bônus e 10 comprados e a reserva é 8
+- **THEN** consome 3 demo e 5 bônus e registra `demo_amount`, `bonus_amount` e `purchased_amount`
+
+#### Scenario: reserve_credit materializa demo vencido
+
+- **WHEN** demo está vencido e a reserva é insuficiente sem ele
+- **THEN** materializa `expiration`, não consome demo e retorna NULL após confirmar expiração
+
+#### Scenario: reserve_credit registra esgotamento
+
+- **WHEN** demo ativa passa de positivo a zero durante a reserva
+- **THEN** metadata registra `demo_before`/`demo_after` para derivar esgotamento
+
+### Requirement: refund_credit SQL function (MODIFIED F50)
+
+**F50 Changes**: restaura demo por regra temporal; episódio original não estende, episódio de graça estende 24h e ausência de episódio materializa vencido e abre graça de 24h. Bônus/comprado permanecem restaurados como antes.
 
 O sistema SHALL manter a função `public.refund_credit(p_tx_id UUID, p_reason TEXT DEFAULT NULL, p_idempotency_key TEXT DEFAULT NULL, p_metadata JSONB DEFAULT '{}') RETURNS UUID` com lógica bucket-aware: lê `metadata.bonus_amount` e `metadata.purchased_amount` da transação original e restaura cada bucket. Para deductions sem metadata (pré-F29.3), fallback trata `ABS(original.amount)` como `bonus_amount`.
+
+#### Scenario: Episódio original válido restaura sem estender
+
+- **WHEN** refund usa deduction de demo no episódio original válido
+- **THEN** restaura demo sem alterar expiração
+
+#### Scenario: Episódio de graça restaura e estende
+
+- **WHEN** refund ocorre em episódio de graça ativo
+- **THEN** restaura demo e define expiração pelo menos para `now()+24h`
+
+#### Scenario: Prazo vencido abre episódio de graça
+
+- **WHEN** refund ocorre sem episódio ativo
+- **THEN** materializa saldo vencido remanescente e abre ciclo novo de 24h, preservando origem
+
+#### Scenario: Demo esgotada ainda válida restaura original
+
+- **WHEN** demo esgotada ainda está dentro do prazo original
+- **THEN** refund restaura no episódio original sem extensão
 
 #### Scenario: refund_credit restores buckets from metadata
 
@@ -204,6 +245,39 @@ O sistema SHALL criar a SQL function `public.admin_grant_credits(p_actor_id UUID
 - Passo 3: INSERT em `admin_audit_log` com `action='credit_grant'`, metadata incluindo `amount, transaction_id, grant_type: 'admin_grant'`
 - SECURITY DEFINER com SET search_path = ''
 - Se qualquer passo falhar → ROLLBACK (atomicidade real)
+
+### Requirement: materialize_demo_expiration SQL function
+
+O sistema SHALL criar `public.materialize_demo_expiration(p_store_id UUID) RETURNS JSONB`, SECURITY DEFINER com `search_path=''`, restrita a service role, atômica e idempotente, escrevendo `expiration`, limpando o bucket vencido e retornando saldo disponível.
+
+#### Scenario: Materializa e retorna disponível
+
+- **WHEN** `demo_balance > 0` e `demo_expires_at <= now()`
+- **THEN** escreve `expiration`, zera demo/expiração e retorna `available` correto
+
+#### Scenario: No-op já materializado
+
+- **WHEN** `demo_balance = 0`
+- **THEN** não escreve nova transação e retorna disponível sem efeito
+
+### Requirement: Leitura de saldo disponível por RLS
+
+O sistema SHALL prover leitura pura do saldo disponível para páginas autenticadas via RLS ou RPC validada por `auth.uid()`, sem service role e sem materialização.
+
+#### Scenario: Owner autenticado lê próprio saldo
+
+- **WHEN** owner consulta sua loja
+- **THEN** recebe demo ativo + bônus + comprado derivados
+
+#### Scenario: Acesso cruzado é negado
+
+- **WHEN** usuário consulta outra loja
+- **THEN** RLS nega o acesso
+
+#### Scenario: Leitura não materializa
+
+- **WHEN** demo vencido é lido
+- **THEN** não escreve `expiration`
 
 #### Scenario: admin_grant_credits increments bonus_balance
 

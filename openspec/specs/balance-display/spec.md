@@ -32,12 +32,13 @@ O componente SHALL aceitar `BalanceDisplayProps`:
 
 ### Requirement: BalanceDisplay renders different states based on balance
 
-O sistema SHALL exibir estados visuais distintos conforme o valor de `balance`:
+O sistema SHALL exibir estados visuais distintos conforme o **saldo disponível** (demo ativo + bônus + comprado), refletindo o status da demonstração quando relevante:
 
 - `balance >= 3`: estado normal — badge verde, sem alerta
 - `balance > 0 AND balance < 3`: estado baixo — badge amarelo/laranja, alerta discreto
 - `balance === 0`: estado zero — badge vermelho, CTA visível se `showCta` for `true`
 - `balance < 0` (edge case): tratado como zero com badge vermelho
+- Demo vencido nunca compõe o estado; demo encerrado com bônus/comprado permanece distinguível de saldo insuficiente.
 
 #### Scenario: BalanceDisplay renders green badge for normal balance
 
@@ -79,3 +80,8 @@ O sistema SHALL exibir estado "sem loja" quando `hasStore` é `false`, independe
 - **WHEN** `BalanceDisplay` é renderizado com `balance: 0` e `hasStore: true`
 - **THEN** exibe badge vermelho com "0 créditos"
 - **AND** exibe CTA "Solicitar créditos" se `showCta` for `true`
+
+#### Scenario: Demo vencida com bônus mantém estado disponível
+
+- **WHEN** a demo venceu mas há bônus
+- **THEN** o estado considera apenas o saldo disponível

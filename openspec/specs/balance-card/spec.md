@@ -16,6 +16,8 @@ O card SHALL conter:
 - Descrição dinâmica "Cada geração consome {cost} crédito(s)." (custo de `campaign_generation` via `useOperationCosts`)
 - CTA "Solicitar créditos" condicional quando saldo é zero ou baixo
 - Link para CTA quando não há loja ("Criar loja" → `/loja`)
+- Status da demonstração (`active`, `expiring_soon`, `exhausted`, `expired`, `none`), expiração local e texto relativo
+- Distinção entre demonstração encerrada e saldo insuficiente quando houver bônus/comprado
 
 #### Scenario: BalanceCard renders with balance value
 
@@ -42,6 +44,21 @@ O card SHALL conter:
 
 - **WHEN** `BalanceCard` é renderizado com `balance: 0`
 - **THEN** exibe CTA "Solicitar créditos" visível e clicável
+
+#### Scenario: Card mostra prazo da demonstração
+
+- **WHEN** a demo está ativa
+- **THEN** exibe a expiração local e relativa
+
+#### Scenario: Card distingue demo expirada de saldo insuficiente
+
+- **WHEN** a demo expirou mas há bônus disponível
+- **THEN** distingue demonstração encerrada de saldo total insuficiente
+
+#### Scenario: Card usa saldo disponível
+
+- **WHEN** o card é renderizado com demo vencido
+- **THEN** exibe o saldo disponível, excluindo o demo vencido
 
 #### Scenario: BalanceCard shows "Criar loja" when no store
 

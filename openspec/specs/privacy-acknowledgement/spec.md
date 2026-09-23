@@ -93,6 +93,30 @@ export async function hasValidPrivacyAcknowledgement(userId: string): Promise<bo
 - **WHEN** a user has never acknowledged the privacy policy
 - **THEN** `hasValidPrivacyAcknowledgement()` returns `false`
 
+### Requirement: Privacy acknowledgement per user
+
+O sistema SHALL tratar a ciência da Política de Privacidade v1.4 por usuário, não por loja, via `privacy_acknowledgements`, usando a terminologia "ciência". Quando v1.4 vigorar, o PrivacyGate solicita nova ciência; histórico, campanhas e downloads não são bloqueados.
+
+#### Scenario: Versão sobe e exige nova ciência
+
+- **WHEN** usuário tem ciência v1.3 e v1.4 vigora
+- **THEN** `has_valid_privacy_acknowledgement` é falso e PrivacyGate exibe v1.4
+
+#### Scenario: Ciência é registrada por usuário
+
+- **WHEN** usuário confirma ciência v1.4
+- **THEN** upsert grava versão v1.4 por `user_id`
+
+#### Scenario: Privacidade não usa legal_acceptances
+
+- **WHEN** v1.4 vigora
+- **THEN** ciência permanece em `privacy_acknowledgements`, não em `legal_acceptances`
+
+#### Scenario: Ciência não bloqueia histórico
+
+- **WHEN** usuário ainda não registrou v1.4
+- **THEN** histórico, campanhas e downloads existentes continuam acessíveis
+
 ### Requirement: Política de Privacidade v1.3 publicada (ADDED F42)
 
 O sistema SHALL publicar `privacy_policy` versão `"v1.3"` em `legal_document_versions` — D12.

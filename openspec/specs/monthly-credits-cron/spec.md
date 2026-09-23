@@ -10,7 +10,7 @@ Rota Vercel Cron `GET /api/cron/monthly-credits` com proteção CRON_SECRET, lei
 
 ### Requirement: Vercel Cron route for monthly credits
 
-O sistema SHALL criar a rota `GET /api/cron/monthly-credits` executada pelo Vercel Cron no schedule `0 6 * * *` (06:00 UTC diário).
+O sistema SHALL manter `GET /api/cron/monthly-credits` ativo até o corte e desativá-lo no corte, sem novas concessões. Deve adicionar `GET /api/cron/demo-credits` com CRON_SECRET bearer para reconciliar expirações, notificações e outbox de forma idempotente.
 
 **MODIFICADO (F32):** O cron mensal SHALL verificar entitlement por raiz antes de conceder créditos mensais. Lojas sem `cnpj_root_hash` (vazio ou nulo) são ignoradas.
 - Dentro do loop de stores elegíveis, antes de `grant_credits`: lê `stores.cnpj_root_hash`, se vazio/nulo → pula, calcula `cycle = TO_CHAR(NOW(), 'YYYY-MM')`, tenta INSERT em `freemium_entitlements`, se retornou id → concede, se ON CONFLICT → pula
@@ -150,7 +150,12 @@ Semântica do shape (alinhada entre RPC, botão admin e testes):
 
 ### Requirement: POST /api/admin/monthly-credits/grant
 
-O sistema SHALL criar a rota `POST /api/admin/monthly-credits/grant` para fallback admin.
+O sistema SHALL desativar a rota/superfície admin `POST /api/admin/monthly-credits/grant` no corte, preservando a RPC legada para rollback.
+
+#### Scenario: Botão mensal indisponível
+
+- **WHEN** F50 está ativa
+- **THEN** a superfície admin mensal está removida ou indisponível
 
 - Protegida por `requireAdmin()`
 - Lê `getLaunchConfig()` — se `monthlyCreditsEnabled = false`, retorna `{ skipped: true }`

@@ -11,7 +11,22 @@ SQL function `grant_monthly_credits()` que implementa a concessão mensal autom�
 
 ### Requirement: grant_monthly_credits RPC function
 
-O sistema SHALL manter a SQL function `public.grant_monthly_credits(p_amount INTEGER, p_bonus_cap INTEGER, p_min_store_age_days INTEGER, p_reference_date DATE DEFAULT NULL) RETURNS JSONB`.
+O sistema SHALL manter a SQL function legada `public.grant_monthly_credits(...)` para rollback estrutural, mas descontinuar sua execução automática no corte F50. Até o corte, `monthlyCreditsEnabled` permanece true; após o corte nenhum novo `bonus_monthly` é emitido e saldos mensais históricos permanecem não-expiráveis.
+
+#### Scenario: Nenhum grant mensal após corte
+
+- **WHEN** F50 está ativa
+- **THEN** cron/UI não invocam a RPC e nenhuma transação `bonus_monthly` nova é criada
+
+#### Scenario: Mensal preservado até corte
+
+- **WHEN** deploy ocorre antes do corte
+- **THEN** `monthlyCreditsEnabled` permanece true
+
+#### Scenario: Saldo mensal legado preservado
+
+- **WHEN** usuário possui `bonus_monthly` histórico
+- **THEN** saldo permanece sem expiração retroativa
 
 A função implementa a concessão mensal automática de créditos bônus com as seguintes regras:
 

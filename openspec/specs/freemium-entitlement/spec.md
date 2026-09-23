@@ -25,7 +25,7 @@ O sistema SHALL criar a tabela `public.freemium_entitlements` com:
 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   store_id UUID REFERENCES public.stores(id) ON DELETE SET NULL,
 root_hash TEXT NOT NULL,
-benefit_type TEXT NOT NULL CHECK (benefit_type IN ('onboarding', 'monthly', 'admin_exception')),
+benefit_type TEXT NOT NULL CHECK (benefit_type IN ('onboarding', 'monthly', 'admin_exception', 'demo')),
 cycle TEXT,
 grant_transaction_id UUID REFERENCES public.credit_transactions(id) ON DELETE SET NULL,
 granted_by UUID REFERENCES auth.users(id),
@@ -69,6 +69,31 @@ O sistema SHALL prover `checkOnboardingEligibility(rootHash: string): boolean` q
 - **WHEN** `checkOnboardingEligibility("hash_existente")` é chamado
 - **AND** existe entitlement `onboarding` para esta raiz
 - **THEN** retorna false
+
+### Requirement: checkDemoEligibility(rootHash)
+
+O sistema SHALL prover `checkDemoEligibility(rootHash)` retornando true somente quando não há entitlement `onboarding`, `demo` ou `admin_exception`.
+
+#### Scenario: Raiz sem benefícios é elegível
+
+- **WHEN** a raiz não possui onboarding, demo ou admin_exception
+- **THEN** retorna `true`
+
+#### Scenario: Qualquer benefício bloqueia
+
+- **WHEN** a raiz possui onboarding, demo ou admin_exception
+- **THEN** retorna `false`
+
+### Requirement: try_grant_demo_entitlement(storeId, rootHash)
+
+O sistema SHALL prover inserção idempotente de entitlement `demo` com `ON CONFLICT DO NOTHING`, retornando UUID ou null.
+
+#### Scenario: Demo entitlement é idempotente
+
+- **WHEN** chamado pela primeira vez
+- **THEN** insere e retorna UUID
+- **WHEN** chamado novamente
+- **THEN** retorna NULL sem duplicação
 
 ### Requirement: grantOnboardingEntitlement(storeId, rootHash, txId?)
 

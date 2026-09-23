@@ -6,13 +6,13 @@
 
 ## Purpose
 
-Módulo centralizado de feature flags lidas de environment variables, com 10 flags explícitas (6 booleanas + 4 numéricas mensais) e defaults seguros, eliminando `process.env` espalhado pelo código.
+Módulo centralizado de feature flags lidas de environment variables, incluindo demonstração, email e signup, com defaults fail-closed e mensal preservado até o corte.
 
 ## Requirements
 
-### Requirement: LaunchConfig type com 10 flags (6 booleanas + 4 mensais)
+### Requirement: LaunchConfig type com flags de demonstração e email
 
-O sistema SHALL definir um tipo `LaunchConfig` em `src/lib/launch-config/config.ts` com 5 flags booleanas (F28), 4 flags mensais (F29.3) e a flag `publicSignupEnabled` (F42):
+O sistema SHALL estender `LaunchConfig` com `demoCreditsEnabled`, `demoCreditsAmount`, `demoCreditsTtlHours` e `emailEnabled`, preservando flags existentes e `publicSignupEnabled`.
 
 ```typescript
 export type LaunchConfig = {
@@ -31,6 +31,10 @@ export type LaunchConfig = {
 
   // Nova flag (F42)
   publicSignupEnabled: boolean; // envBool("VENDEO_PUBLIC_SIGNUP_ENABLED", false)
+  demoCreditsEnabled: boolean;
+  demoCreditsAmount: number;
+  demoCreditsTtlHours: number;
+  emailEnabled: boolean;
 };
 ```
 
@@ -47,10 +51,12 @@ export type LaunchConfig = {
 - **AND** `monthlyBonusCap` é `number`
 - **AND** `monthlyCreditsMinStoreAgeDays` é `number`
 - **AND** `publicSignupEnabled` é `boolean`
+- **AND** `demoCreditsEnabled`/`emailEnabled` são `boolean`
+- **AND** `demoCreditsAmount`/`demoCreditsTtlHours` são `number`
 
 ### Requirement: getLaunchConfig() com defaults seguros expandido
 
-O sistema SHALL prover uma função `getLaunchConfig(): LaunchConfig` que lê de environment variables e aplica defaults, incluindo as 4 novas env vars mensais e a flag `publicSignupEnabled`:
+O sistema SHALL aplicar defaults `demoCreditsEnabled=false`, `demoCreditsAmount=10`, `demoCreditsTtlHours=168`, `emailEnabled=false`, `publicSignupEnabled=false` e `monthlyCreditsEnabled=true` até o corte; o corte pode desligar mensal explicitamente.
 
 ```typescript
 export function getLaunchConfig(): LaunchConfig {
@@ -73,6 +79,21 @@ export function getLaunchConfig(): LaunchConfig {
   };
 }
 ```
+
+#### Scenario: Defaults seguros da demonstração
+
+- **WHEN** `getLaunchConfig()` é chamado sem env vars
+- **THEN** demo é false, amount é 10, TTL é 168, email é false e mensal permanece true
+
+#### Scenario: Ativação explícita da demonstração
+
+- **WHEN** `VENDEO_DEMO_CREDITS_ENABLED=true`
+- **THEN** `demoCreditsEnabled` é true
+
+#### Scenario: Corte desliga mensal explicitamente
+
+- **WHEN** `VENDEO_MONTHLY_CREDITS_ENABLED=false` no corte
+- **THEN** `monthlyCreditsEnabled` é false
 
 #### Scenario: Default sem env vars
 

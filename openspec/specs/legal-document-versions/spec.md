@@ -42,6 +42,8 @@ The system SHALL seed the initial versions of all three legal documents:
 
 The system SHALL provide `getCurrentVersion(documentType)` that returns the current published version (the one with the most recent `effective_at` ≤ now()).
 
+Após publicação em migration separada e validação jurídica formal, as versões coordenadas são `terms_of_service` v1.5, `privacy_policy` v1.4 e `acceptable_use` v1.2. A migração estrutural não publica documentos; reaceite usa `requireLegalClearance`, sem bloquear histórico, campanhas ou downloads.
+
 ```typescript
 export async function getCurrentVersion(
   documentType: DocumentType
@@ -57,6 +59,16 @@ export async function getCurrentVersion(
 
 - **WHEN** no version exists for the document type
 - **THEN** `getCurrentVersion()` SHALL return `null`
+
+#### Scenario: Três versões publicadas em migration separada
+
+- **WHEN** migration de publicação executa v1.5, v1.4 e v1.2 após validação jurídica
+- **THEN** `getCurrentVersion` retorna cada nova versão quando efetiva e a migration estrutural não publica nenhuma
+
+#### Scenario: Reaceite forçado
+
+- **WHEN** usuário aceitou versão anterior e nova versão vigora
+- **THEN** status é `outdated` e geração é bloqueada até reaceite
 
 ### Requirement: getVersionHistory()
 

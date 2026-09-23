@@ -10,17 +10,22 @@
 
 ### Requirement: CreditTransactionTypeSchema
 
-O sistema SHALL definir `CreditTransactionTypeSchema` como `z.enum(['grant', 'purchase', 'deduction', 'refund', 'adjustment'])`.
+O sistema SHALL definir `CreditTransactionTypeSchema` incluindo `demo` e `expiration`, além dos tipos existentes, com rótulos "Demonstração" e "Expiração".
 
 #### Scenario: CreditTransactionTypeSchema accepts valid types
 
 - **WHEN** validado com `'grant'`, `'purchase'`, `'deduction'`, `'refund'`, `'adjustment'`
 - **THEN** a validação passa
 
+#### Scenario: Schema aceita demo e expiration
+
+- **WHEN** validado com `demo` ou `expiration`
+- **THEN** a validação passa
+
 #### Scenario: CreditTransactionTypeSchema rejects invalid type
 
 - **WHEN** validado com tipo diferente dos 5 permitidos
-- **THEN** a validação rejeita
+- **THEN** a validação rejeita tipos fora de `grant`, `purchase`, `deduction`, `refund`, `adjustment`, `demo` e `expiration`
 
 ### Requirement: CreditTransactionSchema
 
@@ -50,12 +55,12 @@ O campo `campaignId` aceita `null` explicitamente para operações que não pert
 
 ### Requirement: CreditBalance interface
 
-O sistema SHALL definir `CreditBalance` com campos: `storeId (string)`, `balance (number)`, `updatedAt (string)`.
+O sistema SHALL definir `CreditBalance` com `storeId`, `demoBalance`, `demoExpiresAt`, `bonusBalance`, `purchasedBalance`, `balance` bruto, `availableBalance` e `updatedAt`.
 
 #### Scenario: CreditBalance exposes wallet fields
 
 - **WHEN** `CreditBalance` é usado
-- **THEN** contém `storeId`, `balance`, `updatedAt`
+- **THEN** contém `storeId`, `demoBalance`, `demoExpiresAt`, `bonusBalance`, `purchasedBalance`, `balance`, `availableBalance` e `updatedAt`
 
 ### Requirement: CreditService class
 
@@ -80,17 +85,33 @@ O sistema SHALL implementar `CreditService` com constructor que aceita `adminCli
 
 ### Requirement: getBalance returns current balance
 
-O sistema SHALL implementar `getBalance(storeId: string): Promise<number>` que retorna o saldo atual da loja lendo de `credit_balances`.
+O sistema SHALL implementar `getBalance(storeId: string): Promise<number>` retornando saldo disponível, derivado sem materializar vencimento e lido por RLS para clientes autenticados.
 
 #### Scenario: getBalance returns balance for store with record
 
 - **WHEN** `getBalance(storeId)` é chamado para store com registro em `credit_balances`
 - **THEN** retorna o valor de `balance` da tabela
+- **AND** exclui demo vencido
 
 #### Scenario: getBalance returns 0 for store without record
 
 - **WHEN** `getBalance(storeId)` é chamado para store sem registro em `credit_balances`
 - **THEN** retorna 0
+
+#### Scenario: getBalance exclui demo vencido
+
+- **WHEN** demo está vencido
+- **THEN** retorna apenas bônus + comprado
+
+#### Scenario: getBalance inclui demo ativo
+
+- **WHEN** demo está ativo
+- **THEN** retorna demo + bônus + comprado
+
+#### Scenario: Leitura autenticada respeita RLS
+
+- **WHEN** cliente `authenticated` consulta saldo
+- **THEN** lê somente a própria loja sem RPC exclusiva de service role
 
 ### Requirement: reserveCredit calls SQL function
 
@@ -117,10 +138,28 @@ O sistema SHALL implementar `reserveCredit(storeId: string, amount: number, opts
 - **WHEN** RPC retorna `saldo_insuficiente`
 - **THEN** o erro é propagado (para handler HTTP tratar como 402)
 
+#### Scenario: RPC confirma expiração antes de saldo insuficiente
+
+- **WHEN** `reserve_credit` materializa expiração e retorna `NULL`
+- **THEN** `CreditService.reserveCredit` lança `saldo_insuficiente` e as rotas continuam respondendo HTTP 402
+
+### Requirement: reserveCredit passes metadata to RPC
+
+O sistema SHALL passar metadata opcional ao RPC de reserva.
+
 #### Scenario: reserveCredit passes metadata to RPC
 
 - **WHEN** `reserveCredit(storeId, 1, { campaignId: null, metadata: { feature: "visual_signature" } })` é chamado
 - **THEN** a chamada RPC inclui `p_metadata: { feature: "visual_signature" }`
+
+### Requirement: getBalanceBreakdown returns demo and available
+
+O sistema SHALL retornar `demoBalance`, `demoExpiresAt`, `bonusBalance`, `purchasedBalance`, `balance` bruto e `availableBalance` em `getBalanceBreakdown`.
+
+#### Scenario: Breakdown expõe demo e disponível
+
+- **WHEN** `getBalanceBreakdown(storeId)` é chamado
+- **THEN** retorna todos os campos de saldo definidos
 
 ### Requirement: reserveCredit supports campaignId null for VS operations
 

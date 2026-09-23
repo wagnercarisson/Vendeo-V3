@@ -11,12 +11,13 @@ Schema das tabelas de ledger financeiro: `credit_balances` (saldo materializado 
 
 ### Requirement: credit_balances table
 
-O sistema SHALL criar a tabela `credit_balances` com `store_id UUID PK REFERENCES stores(id) ON DELETE CASCADE`, `balance INTEGER NOT NULL DEFAULT 0 CHECK (balance >= 0)`, `bonus_balance INTEGER NOT NULL DEFAULT 0 CHECK (bonus_balance >= 0)`, `purchased_balance INTEGER NOT NULL DEFAULT 0 CHECK (purchased_balance >= 0)`, `last_monthly_grant_at TIMESTAMPTZ` (**DEPRECATED** — legado F29.3, não usado desde F32), `updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`.
+O sistema SHALL manter `credit_balances` com os campos existentes e adicionar `demo_balance INTEGER NOT NULL DEFAULT 0 CHECK (demo_balance >= 0)`, `demo_expires_at`, `demo_cycle_id`, `origin_demo_grant_tx_id` e `demo_contributing_tx_ids UUID[] NOT NULL DEFAULT '{}'`. `balance` SHALL ser a soma dos três buckets; `demo_balance > 0` exige os identificadores de episódio e não há expiração retroativa.
 
 #### Scenario: credit_balances has correct schema
 
 - **WHEN** a migration é executada
 - **THEN** `credit_balances` existe com colunas `store_id` (UUID PK), `balance` (INTEGER, DEFAULT 0, CHECK >=0), `bonus_balance` (INTEGER, DEFAULT 0, CHECK >=0), `purchased_balance` (INTEGER, DEFAULT 0, CHECK >=0), `last_monthly_grant_at` (TIMESTAMPTZ, nullable), `updated_at` (TIMESTAMPTZ, DEFAULT now())
+- **AND** contém `demo_balance` (DEFAULT 0), `demo_expires_at`, `demo_cycle_id`, `origin_demo_grant_tx_id` e `demo_contributing_tx_ids` (NOT NULL DEFAULT `{}`)
 
 #### Scenario: credit_balances has correct schema with buckets (F29.3)
 
@@ -104,7 +105,7 @@ O sistema SHALL habilitar RLS em `credit_balances` e criar policy `owner_select_
 
 ### Requirement: credit_transactions table
 
-O sistema SHALL criar a tabela `credit_transactions` com campos: `id UUID PK DEFAULT gen_random_uuid()`, `store_id UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE`, `type TEXT NOT NULL CHECK (type IN ('bonus_onboarding','bonus_monthly','admin_grant','purchase','deduction','refund','adjustment'))`, `amount INTEGER NOT NULL`, `balance_before INTEGER NOT NULL`, `balance_after INTEGER NOT NULL`, `campaign_id UUID REFERENCES campaigns(id) ON DELETE SET NULL`, `reason TEXT`, `reference TEXT`, `idempotency_key TEXT`, `metadata JSONB DEFAULT '{}'`, `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`.
+O sistema SHALL criar a tabela `credit_transactions` com os campos existentes e `type` aceitando os 9 valores `bonus_onboarding`, `bonus_monthly`, `admin_grant`, `purchase`, `deduction`, `refund`, `adjustment`, `demo` e `expiration`.
 
 #### Scenario: credit_transactions has correct schema
 
@@ -113,7 +114,7 @@ O sistema SHALL criar a tabela `credit_transactions` com campos: `id UUID PK DEF
 
 ### Requirement: credit_transactions type CHECK constraint (MODIFIED F29.3)
 
-O sistema SHALL ter CHECK constraint que limita `type` a exatamente 7 valores: `'bonus_onboarding'`, `'bonus_monthly'`, `'admin_grant'`, `'purchase'`, `'deduction'`, `'refund'`, `'adjustment'`.
+O sistema SHALL ter CHECK constraint que limita `type` a exatamente 9 valores, acrescentando `'demo'` e `'expiration'` aos 7 existentes.
 
 #### Scenario: valid types are accepted
 
@@ -122,8 +123,13 @@ O sistema SHALL ter CHECK constraint que limita `type` a exatamente 7 valores: `
 
 #### Scenario: invalid type is rejected
 
-- **WHEN** INSERT com `type` diferente dos 7 permitidos
+- **WHEN** INSERT com `type` diferente dos 9 permitidos
 - **THEN** o CHECK constraint rejeita
+
+#### Scenario: demo e expiration aceitos
+
+- **WHEN** INSERT usa `type='demo'` ou `type='expiration'`
+- **THEN** o CHECK aceita
 
 #### Scenario: new types are accepted (F29.3)
 
@@ -137,7 +143,7 @@ O sistema SHALL ter CHECK constraint que limita `type` a exatamente 7 valores: `
 
 ### Requirement: credit_transactions amount_sign CHECK constraint (MODIFIED F29.3)
 
-O sistema SHALL ter CHECK constraint `chk_credit_transactions_amount_sign` que valida sinal do amount por tipo: `bonus_onboarding/bonus_monthly/admin_grant/purchase/refund > 0`, `deduction < 0`, `adjustment <> 0`.
+O sistema SHALL ter CHECK constraint `chk_credit_transactions_amount_sign` que valida os sinais existentes, `demo > 0` e `expiration < 0`.
 
 #### Scenario: bonus_onboarding amount must be positive
 
@@ -145,6 +151,16 @@ O sistema SHALL ter CHECK constraint `chk_credit_transactions_amount_sign` que v
 - **THEN** INSERT é aceito
 - **WHEN** INSERT com `type = 'bonus_onboarding'` e `amount <= 0`
 - **THEN** CHECK constraint rejeita
+
+#### Scenario: demo amount positivo
+
+- **WHEN** `type='demo'` usa amount positivo
+- **THEN** INSERT é aceito; amount não positivo é rejeitado
+
+#### Scenario: expiration amount negativo
+
+- **WHEN** `type='expiration'` usa amount negativo
+- **THEN** INSERT é aceito; amount não negativo é rejeitado
 
 #### Scenario: bonus_monthly amount must be positive
 

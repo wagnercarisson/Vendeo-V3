@@ -20,7 +20,10 @@ export interface AdminUserSummary {
   segment: string | null;
   balance: number;
   bonusBalance: number;
-  purchasedBalance?: number;
+  purchasedBalance: number;
+  demoBalance: number;
+  demoExpiresAt: string | null;
+  demoStatus: "active" | "expiring_soon" | "exhausted" | "expired" | "none";
   totalCampaigns: number;
   errorCampaigns: number;
   lastCampaignAt: string | null;
@@ -38,7 +41,7 @@ export interface AdminUserSummary {
 #### Scenario: AdminUserSummary contains all support fields
 
 - **WHEN** admin consulta lista de usuários
-- **THEN** cada entry contém userId, email, storeId, storeName, segment, balance, bonusBalance, totalCampaigns, errorCampaigns, lastCampaignAt, createdAt, cnpjMasked, freemiumStatus
+- **THEN** cada entry contém userId, email, storeId, storeName, segment, balance, bonusBalance, purchasedBalance, demoBalance, demoExpiresAt, demoStatus, totalCampaigns, errorCampaigns, lastCampaignAt, createdAt, cnpjMasked, freemiumStatus
 
 ### Requirement: User detail page — legal status badges (ADDED)
 

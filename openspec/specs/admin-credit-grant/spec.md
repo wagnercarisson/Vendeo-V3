@@ -8,7 +8,7 @@ Permitir que administradores concedam créditos manuais a lojistas com motivo ob
 
 ### Requirement: admin_grant_credits RPC function (MODIFIED F29.3)
 
-**F29.3 Changes**: `admin_grant_credits` agora chama `grant_credits` com `p_type = 'admin_grant'` (explícito). O grant direciona para `bonus_balance` e **conta para o limiar de elegibilidade do grant mensal** (`bonus_balance < monthlyBonusCap`). O parâmetro `p_type` default no `grant_credits` já é `'admin_grant'`, então chamadores existentes continuam funcionando sem alteração.
+**F50 Changes**: `admin_grant_credits` continua chamando `grant_credits` com `p_type = 'admin_grant'`, direcionando para `bonus_balance` como bônus não-expirável. Não SHALL aceitar ou armazenar prazo meramente informativo em metadata/auditoria.
 
 O sistema SHALL manter a SQL function `public.admin_grant_credits(p_actor_id UUID, p_store_id UUID, p_amount INTEGER, p_reason TEXT, p_operation_id UUID, p_metadata JSONB DEFAULT '{}'::jsonb) RETURNS JSONB`.
 
@@ -16,6 +16,7 @@ O sistema SHALL manter a SQL function `public.admin_grant_credits(p_actor_id UUI
 - Passo 2: Chama `public.grant_credits(p_store_id, p_amount, p_reason, 'admin_grant_' || p_operation_id, p_metadata)` — o `p_type` default (`admin_grant`) direciona ao `bonus_balance`
 - Passo 3: INSERT em `admin_audit_log` com `action='credit_grant'`, metadata incluindo `amount, transaction_id, grant_type: 'admin_grant'`
 - Passo 4: Se qualquer passo falhar → ROLLBACK
+- O grant não define expiração e registra `grant_type='admin_grant'`.
 - SECURITY DEFINER com SET search_path = ''
 
 #### Scenario: admin_grant_credits increments bonus_balance
@@ -129,16 +130,14 @@ O sistema SHALL exibir formulário de concessão de créditos na página `/admin
 
 ### Requirement: Admin monthly credit grant button (ADDED F29.3)
 
-O sistema SHALL prover um botão "Executar concessão mensal" na página de admin, protegido por `requireAdmin`, que chama `POST /api/admin/monthly-credits/grant` para execução manual da RPC `grant_monthly_credits`.
+O sistema SHALL remover/desativar o botão "Executar concessão mensal" e a superfície admin correspondente quando a F50 estiver ativa, preservando a RPC legada para rollback.
 
-#### Scenario: Admin can manually trigger monthly grant
+#### Scenario: Botão mensal removido
 
-- **WHEN** admin autenticado clica em "Executar concessão mensal"
-- **THEN** faz POST para `/api/admin/monthly-credits/grant`
-- **AND** executa `grant_monthly_credits` com parâmetros do Launch Config
-- **AND** retorna resultado com contagens `{ eligible, granted, skipped, errors }`
+- **WHEN** a F50 está ativa
+- **THEN** a superfície de concessão mensal não está disponível na UI admin
 
-#### Scenario: Non-admin cannot trigger monthly grant
+#### Scenario: Grant manual permanece sem prazo
 
-- **WHEN** usuário não admin tenta POST `/api/admin/monthly-credits/grant`
-- **THEN** retorna 403
+- **WHEN** admin concede bônus manual
+- **THEN** nenhum prazo expirável é aceito ou armazenado

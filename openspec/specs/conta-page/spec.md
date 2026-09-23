@@ -73,6 +73,7 @@ O sistema SHALL exibir uma seção "Créditos" na página `/conta` com:
 - `BalanceCard` — card de saldo com destaque visual, obtido via `CreditService.getBalance(store.id)` com cliente de sessão
 - `TransactionHistory` — extrato paginado, obtido via `CreditService.getHistory(store.id, LIMIT, offset)` + `CreditService.countCreditTransactions(store.id)`
 - `CreditCta` — CTA "Solicitar créditos" visível quando saldo é zero ou baixo
+- Status da demonstração com prazo local/relativo e lista de `credit_notifications`, incluindo estado de leitura
 - Paginação real com 10 transações por página via `searchParams`
 
 #### Scenario: Conta page shows credit section with balance
@@ -89,6 +90,16 @@ O sistema SHALL exibir uma seção "Créditos" na página `/conta` com:
 
 - **WHEN** usuário acessa `/conta` com saldo zero
 - **THEN** exibe CTA "Solicitar créditos" na seção de créditos
+
+#### Scenario: Seção de demonstração presente
+
+- **WHEN** `/conta` é renderizado para uma loja com demonstração
+- **THEN** exibe status e prazo local/relativo da demonstração
+
+#### Scenario: Notificações visíveis
+
+- **WHEN** existem notificações da demonstração
+- **THEN** a página exibe a lista e o estado de leitura
 
 ### Requirement: Conta page handles credit error states
 
