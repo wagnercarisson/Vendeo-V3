@@ -300,7 +300,7 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 
 ## Phase 50 — Demonstração Gratuita e Validade dos Créditos
 
-**Status:** ◆ Executando — 16/17 plans concluídos (50-01 ✅, 50-02 ✅, 50-03 ✅, 50-04 ✅, 50-05 ✅, 50-06 ✅, 50-07 ✅, 50-08 ✅, 50-09 ✅, 50-10 ✅, 50-11 ✅, 50-12 ✅, 50-13 ✅, 50-15 ✅, 50-16 ✅, 50-17 ✅)
+**Status:** ◆ Executando — 17/17 plans concluídos; restore real de 17.2, gates técnicos de 17.3 e escopo F50 de 50-14 validados; escopo pós-PJ transferido, F50 pronta para verificação final e arquivamento (50-01 ✅, 50-02 ✅, 50-03 ✅, 50-04 ✅, 50-05 ✅, 50-06 ✅, 50-07 ✅, 50-08 ✅, 50-09 ✅, 50-10 ✅, 50-11 ✅, 50-12 ✅, 50-13 ✅, 50-14 ✅, 50-15 ✅, 50-16 ✅, 50-17 ✅)
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
@@ -313,17 +313,16 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 | 50-07 | 3 | ✅ | Notificações (outbox + claim/lease + email Resend) |
 | 50-08 | 3 | ✅ | Infraestrutura `ProductEventService` concluída; emissão dos eventos fica nos planos proprietários |
 | 50-09 | 7 | ✅ | UI (status visual/data e fluxo sem campanhas) |
-| 50-10 | 2 | ✅ | Legal (três documentos + template de publicação separado + reaceite; fornecedor pendente para o corte) |
+| 50-10 | 2 | ✅ | Legal (pacote preparado + template separado + reaceite; publicação/PJ em follow-up pós-PJ) |
 | 50-11 | 7 | ✅ | Matriz real completa de ledger/refund/atomicidade/wrappers |
 | 50-12 | 8 | ✅ | Integração de rotas/UI/notificações/legal/telemetria/suporte |
 | 50-13 | 9 | ✅ | Regressão + co-migração + 4 gates; baseline com exceções nominativas aprovadas |
-| 50-13 | 9 | ○ | Regressão + co-migração + 4 gates |
-| 50-14 | 10 | ○ | Verificação: migration remota, reconciliação, UAT, revisão jurídica, corte |
+| 50-14 | 10 | ✅ | Verificação técnica concluída; escopo PJ/jurídico/corte transferido para quick pós-PJ |
 | 50-15 | 2 | ✅ | Storage privacy (buckets privados + URL assinada; smokes e fluxos verificados; sem R2) |
 | 50-16 | 3 | ✅ | Beta/access + retenção; ciclo de pedidos de titular atomicamente auditado |
-| 50-17 | 2 | ✅ | Runbook de backup externo + continuidade; restore real permanece gate do 50-14 |
+| 50-17 | 2 | ✅ | Runbook de backup externo + continuidade; restore real validado em ambiente isolado; índice de compatibilidade somente local, fora de produção |
 
-**Escopo (D1–D26):** substituição do freemium contínuo por uma demonstração gratuita limitada (10 créditos, 168h, sem cartão/cobrança); bucket de demonstração com validade (`demo_balance`/`demo_expires_at` autoritativo/`demo_cycle_id`/`origin_demo_grant_tx_id`/`demo_contributing_tx_ids`); tipos `demo`/`expiration`; concessão irrepetível por raiz via `benefit_type='demo'`; ordem de consumo demo→bônus→comprado atômica; expiração com autoridade híbrida + reconciler; episódios de graça (24h) no estorno; encerramento do freemium mensal no corte; notificações in-app + email Resend (outbox/claim/lease/supressão só demo); telemetria `product_events`; suporte honesto com protocolo; três documentos legais + reaceite/ciência; storage hardening (buckets privados + URL assinada); conta/retirada (janela 30 dias); backup externo restaurável (gate do primeiro convite). **Fences:** sem alterar prompts, gateway de IA, snapshot, domínio ou contrato de geração (402); sem checkout/Stripe; bônus sempre não-expirável na F50. **Gates de go-live** (PJ identificada, validação jurídica das 3 minutas, backup restaurável) bloqueiam o primeiro convite, não a conclusão técnica. **Renumeração:** F50 = Demonstração Gratuita e Validade dos Créditos; F44 e Stripe fora da numeração.
+**Escopo (D1–D26):** substituição do freemium contínuo por uma demonstração gratuita limitada (10 créditos, 168h, sem cartão/cobrança); bucket de demonstração com validade; tipos `demo`/`expiration`; ordem de consumo demo→bônus→comprado atômica; notificações; telemetria; suporte honesto; documentos v1.5/v1.4/v1.2 preparados mas não publicados; storage hardening; conta/retirada; backup externo restaurável obrigatório para fechamento técnico e primeiro convite. Postura atual: beta fechado sem novos usuários, `VENDEO_DEMO_CREDITS_ENABLED=false`, email ausente/false, `VENDEO_PUBLIC_SIGNUP_ENABLED=false`, sem cobrança/checkout/monetização. PJ, placeholders/datas, sincronização final, jurídico, autoack aprovado, publicação, ativação, admissão e smoke pós-corte foram transferidos para quick pós-PJ ainda não criada. **Fences:** sem alterar prompts, gateway de IA, snapshot, domínio ou contrato de geração (402); bônus sempre não-expirável na F50. **Renumeração:** F50 = Demonstração Gratuita e Validade dos Créditos; F44 e Stripe fora da numeração.
 
 **Fonte da verdade:** `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/`
 **Context:** `.planning/phases/50-demonstracao-gratuita-validade-creditos/50-CONTEXT.md`

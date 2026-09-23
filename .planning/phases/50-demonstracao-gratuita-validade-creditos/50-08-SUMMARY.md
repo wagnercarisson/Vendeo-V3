@@ -15,8 +15,12 @@ updated: 2026-09-21
 - Deduplication uses `(event_type, dedup_key)` through the database unique conflict target.
 - Unit tests cover payload shape, dedup configuration and failure tolerance.
 - Supabase `{ error }` results are logged without blocking, alongside transport exceptions.
+- The complete event set is wired and verified: `demo_granted` (SQL/reconciler),
+  `first_generation` (campaign and visual-signature routes), `demo_exhausted` and
+  `demo_expired` (reconciler), and `support_credit_request` (support route).
 
 ## Validation
 
 - Product event tests: 4/4 PASS.
 - `npm run typecheck`: PASS.
+- Focused caller/contract validation: 5 files, 89 tests PASS.

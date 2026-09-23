@@ -509,7 +509,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
         : "Erro ao reservar crédito";
       console.error(`[generate-image] reserveCredit error — ${message}`);
       return Response.json(
-        { error: { message: message.includes("saldo_insuficiente") ? "Saldo insuficiente." : "Erro ao processar pagamento." } },
+        { error: { message: message.includes("saldo_insuficiente") ? "Saldo insuficiente." : "Erro ao reservar créditos." } },
         { status: message.includes("saldo_insuficiente") ? 402 : 500 }
       );
     }

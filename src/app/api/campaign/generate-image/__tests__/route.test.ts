@@ -711,6 +711,19 @@ describe('POST /api/campaign/generate-image', () => {
     expect(res.status).toBe(402);
   });
 
+  it('falha interna ao reservar crédito retorna 500 sem linguagem de pagamento', async () => {
+    await setupSuccessMocks();
+    mockReserveCredit.mockRejectedValueOnce(new Error('database unavailable'));
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_REQUEST_BODY));
+    const body = await res.json();
+
+    expect(res.status).toBe(500);
+    expect(body.error.message).toBe('Erro ao reservar créditos.');
+    expect(body.error.message).not.toMatch(/pagamento/i);
+  });
+
   // ── Test #3-4: 429 rate limit ──────────────────────────────────
 
   it('429 quando rate limit hora excedido', async () => {
