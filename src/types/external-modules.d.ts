@@ -17,15 +17,21 @@ declare module 'get-rgba-palette' {
 }
 
 declare module 'pg' {
+  export interface PoolClient {
+    query<T = unknown>(text: string, values?: unknown[]): Promise<{ rows: T[] }>;
+    release(): void;
+  }
+
   export class Pool {
     constructor(options?: { connectionString?: string });
-    query<T = any>(text: string, values?: unknown[]): Promise<{ rows: T[] }>;
+    query<T = unknown>(text: string, values?: unknown[]): Promise<{ rows: T[] }>;
+    connect(): Promise<PoolClient>;
     end(): Promise<void>;
   }
   export class Client {
     constructor(options?: { connectionString?: string });
     connect(): Promise<void>;
-    query<T = any>(text: string, values?: unknown[]): Promise<{ rows: T[] }>;
+    query<T = unknown>(text: string, values?: unknown[]): Promise<{ rows: T[] }>;
     end(): Promise<void>;
   }
 }

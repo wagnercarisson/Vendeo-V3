@@ -6,6 +6,14 @@ This record confirms the previously completed structural/ledger evidence and
 records the approved closed-beta posture. No legal document, legal publication
 migration, launch flag, or cutover is marked complete by this document.
 
+## Verification Artifact Inventory
+
+The verification artifacts exist and are tracked at the canonical F50 path:
+
+- `.planning/phases/50-demonstracao-gratuita-validade-creditos/50-VERIFICATION.md`
+- `.planning/phases/50-demonstracao-gratuita-validade-creditos/50-UAT.md`
+- `.planning/phases/50-demonstracao-gratuita-validade-creditos/50-GATES.txt`
+
 ## Remote Evidence
 
 - Supabase project: `gvbzwihwgzujwsviufgy` (`Vendeo-V3`)

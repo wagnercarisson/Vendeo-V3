@@ -9,7 +9,7 @@ async function main() {
   await client.query("INSERT INTO auth.users (id, email, encrypted_password, aud, role) VALUES ($1, 'f50-pg-test@example.com', '', 'authenticated', 'authenticated') ON CONFLICT (id) DO NOTHING", [user]);
   await client.query("INSERT INTO public.stores (id, user_id, name, segment) VALUES ($1, $2, 'PG Test', 'outros') ON CONFLICT (id) DO NOTHING", [store, user]);
   await client.query("DELETE FROM public.credit_notifications WHERE store_id = $1", [store]);
-  const inserted = await client.query(`INSERT INTO public.credit_notifications (store_id, kind, dedup_key, payload) VALUES ($1, 'support_ack', 'pg-test', '{"recipient_email":"test@example.com"}') RETURNING id`, [store]);
+  const inserted = await client.query<{ id: string }>(`INSERT INTO public.credit_notifications (store_id, kind, dedup_key, payload) VALUES ($1, 'support_ack', 'pg-test', '{"recipient_email":"test@example.com"}') RETURNING id`, [store]);
   const id = inserted.rows[0].id;
   const [one, two] = await Promise.all([
     client.query("SELECT * FROM public.claim_credit_notification(now(), now() + interval '5 minutes')"),

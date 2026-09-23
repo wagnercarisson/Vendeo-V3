@@ -136,9 +136,15 @@ describe("BalanceCard", () => {
   });
 
   it("shows local and relative expiry for an active demo", () => {
-    mockUseOperationCosts.mockReturnValue({ costs: null, status: "loading", refetch: vi.fn() });
-    const html = renderToString(<BalanceCard balance={10} demoBalance={10} demoExpiresAt="2026-09-23T12:00:00.000Z" originDemoGrantTxId="grant-1" hasStore />);
-    expect(html).toContain("Expira em breve");
-    expect(html).toContain("expira em");
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-23T06:00:00.000Z"));
+    try {
+      mockUseOperationCosts.mockReturnValue({ costs: null, status: "loading", refetch: vi.fn() });
+      const html = renderToString(<BalanceCard balance={10} demoBalance={10} demoExpiresAt="2026-09-23T12:00:00.000Z" originDemoGrantTxId="grant-1" hasStore />);
+      expect(html).toContain("Expira em breve");
+      expect(html).toContain("expira em");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
