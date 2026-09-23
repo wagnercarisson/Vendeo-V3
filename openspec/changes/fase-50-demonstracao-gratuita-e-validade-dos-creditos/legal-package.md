@@ -9,17 +9,17 @@
 | Termos de Uso v1.5 — delta | `legal-drafts/terms-of-service-v1-5.md` | pronto |
 | Política de Privacidade v1.4 — delta | `legal-drafts/privacy-policy-v1-4.md` | pronto |
 | Política de Uso Aceitável v1.2 — delta | `legal-drafts/acceptable-use-v1-2.md` | pronto |
-| Termos de Uso v1.5 — consolidado | `public/docs/legal/terms-of-service-v1-5.md` | **pronto (consolidado)** |
-| Política de Privacidade v1.4 — consolidado | `public/docs/legal/privacy-policy-v1-4.md` | **pronto (consolidado)** |
-| Política de Uso Aceitável v1.2 — consolidado | `public/docs/legal/acceptable-use-v1-2.md` | **pronto (consolidado)** |
+| Termos de Uso v1.5 — consolidado | `legal-consolidated-pending/terms-of-service-v1-5.md` | **pendente; não público** |
+| Política de Privacidade v1.4 — consolidado | `legal-consolidated-pending/privacy-policy-v1-4.md` | **pendente; não público** |
+| Política de Uso Aceitável v1.2 — consolidado | `legal-consolidated-pending/acceptable-use-v1-2.md` | **pendente; não público** |
 | Diferenças (diff) | tabelas de correspondência em cada delta | pronto |
 | Template da migration de publicação | `legal-publication-template/20260920000003_f50_legal_publication.sql` | **pronto (fora de supabase/migrations; efetivar só no corte, 50-14)** |
-| Catálogo | `src/lib/legal/document-content.ts` | **pronto (v1.5/v1.4/v1.2 registradas)** |
+| Catálogo | `src/lib/legal/document-content.ts` | **somente versões vigentes; pendentes fora do catálogo** |
 
 ## Mecanismo de reaceite/ciência (verificado na task 10.3)
 
 - **Reaceite contratual** (Terms v1.5 + AUP v1.2): `requireLegalClearance` (`CAPABILITY_DOCUMENTS.content_generation = ["terms_of_service", "acceptable_use"]`); a subida da versão torna `getAcceptanceStatus = outdated` → gate 403 nas rotas de geração → `/legal/reaccept`, gravando em `legal_acceptances` (nível loja).
-- **Ciência de privacidade** (v1.4): via `PrivacyGate`/`privacy_acknowledgements` (`privacy_policy_version` por usuário), **não** em `legal_acceptances`.
+- **Ciência de privacidade** (v1.3 vigente): via `PrivacyGate`/`privacy_acknowledgements` (`privacy_policy_version` por usuário), **não** em `legal_acceptances`.
 - **Nenhum gate bloqueia** histórico/campanhas/downloads.
 
 ## Placeholders (para consulta ao advogado; nunca para publicação)
@@ -54,8 +54,8 @@
 
 A validação jurídica formal das **três minutas** (delta + consolidado) permanece
 um follow-up pós-PJ, registrado nas tasks 10.4/10.6 e 14.3. Os documentos
-consolidados podem permanecer preparados para revisão preliminar, mas não são
-publicados nesta F50 e não devem ter seus placeholders ou datas substituídos
-sem a identidade da PJ. A publicação, o auto-ack exigido pelo texto aprovado e
-a sincronização final do pacote/delta OpenSpec pertencem à quick pós-PJ ainda
-não criada.
+consolidados permanecem somente em `legal-consolidated-pending/`, fora de
+`public/` e do catálogo, para revisão preliminar; não são publicados nesta F50
+e não devem ter seus placeholders ou datas substituídos sem a identidade da PJ.
+A publicação, o auto-ack exigido pelo texto aprovado e a sincronização final do
+pacote/delta OpenSpec pertencem à quick pós-PJ ainda não criada.

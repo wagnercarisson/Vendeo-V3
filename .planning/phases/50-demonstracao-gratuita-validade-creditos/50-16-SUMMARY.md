@@ -7,7 +7,7 @@ Complete: data-subject request lifecycle is atomic, idempotent, transition-valid
 ## Completed
 
 - Kept beta access request-only, with signup fail-closed by the existing `publicSignupEnabled` default and a documented 50-approved-email operational gate.
-- Added optional, purpose-limited WhatsApp copy, privacy links, and persisted `privacy_notice_version: v1.4` without marketing consent.
+- Added optional, purpose-limited WhatsApp copy, privacy links, and persisted `privacy_notice_version: v1.3` without marketing consent.
 - Preserved the Terms v1.5 age/authority declaration and did not add birth-date collection.
 - Added the image rights/consent/minor-interest notice without a duplicate checkbox.
 - Added the retention runbook covering operational data, WhatsApp disposal, 30-day closure handling, storage objects, and temporary/orphan uploads.

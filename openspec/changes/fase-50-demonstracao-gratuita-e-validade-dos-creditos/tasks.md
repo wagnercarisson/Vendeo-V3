@@ -185,6 +185,10 @@ Os seis registros abaixo não pertencem ao escopo de conclusão da F50. Serão e
 - 14.6 **FOLLOW-UP PÓS-PJ:** corte na ordem migration legal → `monthlyCreditsEnabled=false` → `demoCreditsEnabled=true` → `emailEnabled=true` com credenciais validadas; rollback documentado
 - 14.7 **FOLLOW-UP PÓS-PJ:** smoke test de produção pós-corte, sem concessão artificial
 
+## Gap closure — exposição documental pré-publicação
+
+- [x] Corrigir o fluxo de solicitação para usar `/privacidade` e `/termos`, texto sem versões hardcoded e `privacy_notice_version = v1.3` centralizado entre cliente e API; remover as três minutas pendentes de `public/` e do catálogo, preservando-as com SHA-256 em `legal-consolidated-pending/`; atualizar testes e registrar que a publicação permanece transferida para a quick pós-PJ.
+
 ## Matriz de testes (resumo)
 
 | Camada | Cobertura | Fonte |

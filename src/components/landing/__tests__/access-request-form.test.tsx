@@ -62,7 +62,7 @@ describe("AccessRequestForm — máscara WhatsApp", () => {
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "loja@example.com" } });
     fireEvent.click(screen.getByRole("button", { name: "Solicitar acesso free" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ privacy_notice_version: "v1.4", whatsapp: "" });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ privacy_notice_version: "v1.3", whatsapp: "" });
     expect(screen.getByText("Campo opcional.")).toBeInTheDocument();
     expect(screen.getByText(/nunca para marketing/)).toBeInTheDocument();
   });
@@ -70,7 +70,7 @@ describe("AccessRequestForm — máscara WhatsApp", () => {
   it("does not collect birth date and exposes the legal acceptance links", () => {
     render(<AccessRequestForm />);
     expect(screen.queryByLabelText(/nascimento|data de nascimento/i)).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Política de Privacidade v1.4/ })).toHaveAttribute("href", "/docs/legal/privacy-policy-v1-4.md");
-    expect(screen.getByRole("link", { name: /Termos de Uso v1.5/ })).toHaveAttribute("href", "/docs/legal/terms-of-service-v1-5.md");
+    expect(screen.getByRole("link", { name: "Política de Privacidade vigente" })).toHaveAttribute("href", "/privacidade");
+    expect(screen.getByRole("link", { name: "Termos de Uso vigentes" })).toHaveAttribute("href", "/termos");
   });
 });

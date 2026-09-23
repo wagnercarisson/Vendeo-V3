@@ -6,8 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { STORE_SEGMENTS } from "@/lib/constants";
 import { maskWhatsApp } from "@/lib/validators/phone";
-
-const PRIVACY_NOTICE_VERSION = "v1.4";
+import { CURRENT_PRIVACY_NOTICE_VERSION } from "@/lib/legal/current-versions";
 
 type FormState = "idle" | "submitting" | "error";
 
@@ -31,7 +30,7 @@ export function AccessRequestForm({
       store_name: formData.get("store_name"),
       segment: formData.get("segment"),
       whatsapp: formData.get("whatsapp"),
-      privacy_notice_version: PRIVACY_NOTICE_VERSION,
+      privacy_notice_version: CURRENT_PRIVACY_NOTICE_VERSION,
     };
 
     try {
@@ -108,12 +107,12 @@ export function AccessRequestForm({
       </p>
       <p className="text-xs text-text-muted">
         Ao solicitar acesso, você declara ter lido a{" "}
-        <a className="underline" href="/docs/legal/privacy-policy-v1-4.md" target="_blank" rel="noreferrer">
-          Política de Privacidade v1.4
+        <a className="underline" href="/privacidade" target="_blank" rel="noreferrer">
+          Política de Privacidade vigente
         </a>{" "}
         e os{" "}
-        <a className="underline" href="/docs/legal/terms-of-service-v1-5.md" target="_blank" rel="noreferrer">
-          Termos de Uso v1.5
+        <a className="underline" href="/termos" target="_blank" rel="noreferrer">
+          Termos de Uso vigentes
         </a>.
       </p>
 

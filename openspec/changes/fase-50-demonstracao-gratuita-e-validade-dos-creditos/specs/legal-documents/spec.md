@@ -6,7 +6,7 @@
 
 ### Requirement: Legal document drafts
 
-O sistema SHALL incluir `public/docs/legal/terms-of-service-v1-5.md`, `public/docs/legal/privacy-policy-v1-4.md` e `public/docs/legal/acceptable-use-v1-2.md` (e as entradas correspondentes no catálogo `document-content.ts`), **consolidando** as minutas de alteração com as cláusulas inalteradas da versão anterior e **comparando (diff)** com a versão anterior.
+O sistema SHALL manter as minutas consolidadas pendentes em `legal-consolidated-pending/terms-of-service-v1-5.md`, `legal-consolidated-pending/privacy-policy-v1-4.md` e `legal-consolidated-pending/acceptable-use-v1-2.md`, fora de `public/` e sem entradas no catálogo `document-content.ts`, até a publicação autorizada pós-PJ; os documentos devem consolidar as minutas de alteração com as cláusulas inalteradas da versão anterior e ser comparados (diff) com a versão anterior.
 
 #### Scenario: Três documentos consolidados existem
 

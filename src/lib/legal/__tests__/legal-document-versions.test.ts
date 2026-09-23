@@ -1,16 +1,19 @@
 import { describe, expect, it, vi } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 vi.mock("@/lib/legal/acceptance-service", () => ({ getAcceptanceStatus: vi.fn() }));
 vi.mock("@/lib/legal/document-versions", () => ({ getCurrentVersion: vi.fn(async () => ({ version: "1.5" })) }));
 
 describe("F50 legal publication contract", () => {
-  it("keeps publication separate from structural migrations and contains all three versions", () => {
+  it("keeps pending consolidated documents outside public and the catalog", () => {
     const migration = readFileSync(resolve(process.cwd(), "supabase/migrations/20260920000001_f50_demo_credits.sql"), "utf8");
     expect(migration).not.toMatch(/terms_of_service.*v1\.5|privacy_policy.*v1\.4|acceptable_use.*v1\.2/i);
+    const catalog = readFileSync(resolve(process.cwd(), "src/lib/legal/document-content.ts"), "utf8");
     for (const [file, version] of [["terms-of-service-v1-5.md", "1.5"], ["privacy-policy-v1-4.md", "1.4"], ["acceptable-use-v1-2.md", "1.2"]]) {
-      const content = readFileSync(resolve(process.cwd(), "public/docs/legal", file), "utf8");
+      const content = readFileSync(resolve(process.cwd(), "openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/legal-consolidated-pending", file), "utf8");
+      expect(existsSync(resolve(process.cwd(), "public/docs/legal", file))).toBe(false);
+      expect(catalog).not.toContain(file);
       expect(content).toContain(version);
       expect(content).toMatch(/Versão/);
     }

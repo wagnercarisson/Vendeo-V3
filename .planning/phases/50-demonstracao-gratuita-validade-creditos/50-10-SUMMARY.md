@@ -20,9 +20,9 @@ tech-stack:
 
 key-files:
   created:
-    - "public/docs/legal/terms-of-service-v1-5.md"
-    - "public/docs/legal/privacy-policy-v1-4.md"
-    - "public/docs/legal/acceptable-use-v1-2.md"
+    - "openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/legal-consolidated-pending/terms-of-service-v1-5.md"
+    - "openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/legal-consolidated-pending/privacy-policy-v1-4.md"
+    - "openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/legal-consolidated-pending/acceptable-use-v1-2.md"
     - "openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/legal-publication-template/20260920000003_f50_legal_publication.sql"
   modified:
     - "src/lib/legal/document-content.ts"
@@ -70,9 +70,9 @@ completed: 2026-09-21
 
 ## Files Created/Modified
 
-- `public/docs/legal/terms-of-service-v1-5.md` — Termos consolidados.
-- `public/docs/legal/privacy-policy-v1-4.md` — Privacidade consolidada.
-- `public/docs/legal/acceptable-use-v1-2.md` — Uso Aceitável consolidado.
+- `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/legal-consolidated-pending/terms-of-service-v1-5.md` — Termos consolidados pendentes, não públicos.
+- `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/legal-consolidated-pending/privacy-policy-v1-4.md` — Privacidade consolidada pendente, não pública.
+- `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/legal-consolidated-pending/acceptable-use-v1-2.md` — Uso Aceitável consolidado pendente, não público.
 - `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/legal-publication-template/20260920000003_f50_legal_publication.sql` — template fora da fila automática.
 - `src/lib/legal/document-content.ts` — catálogo + v1.5/v1.4/v1.2.
 - `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/legal-package.md` — estados "pronto (consolidado)" + mecanismo de reaceite.

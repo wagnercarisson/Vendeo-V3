@@ -175,6 +175,23 @@ executados somente após a constituição da PJ:
 
 A quick pós-PJ ainda não foi criada. A F50 não foi arquivada nesta rodada.
 
+## Gap Closure: Legal Documents Before Publication
+
+**PASS.** The pre-publication exposure gap was closed without changing the
+database, migrations, flags, production, or legal document contents:
+
+- The request form now links only to `/privacidade` and `/termos`, using
+  `Política de Privacidade vigente` and `Termos de Uso vigentes`.
+- Client and API share `CURRENT_PRIVACY_NOTICE_VERSION = "v1.3"`.
+- Pending consolidated documents were moved out of `public/` and removed from
+  `document-content.ts`; published versions remain v1.1/v1.3/v1.4 as applicable.
+- SHA-256 hashes before and after the move are identical:
+  - `privacy-policy-v1-4.md`: `DBEE9DB85B5521E68FDD34AD8F5DB758F9F7C6372B0CE590B1B72AC18E0A8FDB`
+  - `terms-of-service-v1-5.md`: `C17D9E959CC82032711CBE7AFC6FDCA602CFAE0FAE2D8D80887A48C33D1EBD42`
+  - `acceptable-use-v1-2.md`: `F26C6EF0CC27E750EB6E225AE1EF7415250608C9C5A6EAD3829124FE9DDB5B5C`
+- Publication of the pending versions remains transferred to the future
+  post-PJ quick; that quick was not created in this closure.
+
 No production, remote, or main local database, structural migration, legal
 document, legal migration, production launch flag, or unrelated flow was
 changed by this verification update. The UAT-only `captcha_enabled` change was

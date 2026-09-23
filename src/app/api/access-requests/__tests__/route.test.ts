@@ -58,7 +58,7 @@ describe("POST /api/access-requests", () => {
       email: "loja@example.com",
       store_name: "Minha Loja",
       segment: "padaria-confeitaria-doces",
-      privacy_notice_version: "v1.4",
+      privacy_notice_version: "v1.3",
     });
 
     expect(res.status).toBe(200);
@@ -69,7 +69,7 @@ describe("POST /api/access-requests", () => {
       store_name: "Minha Loja",
       segment: "padaria-confeitaria-doces",
       whatsapp: null,
-      privacy_notice_version: "v1.4",
+      privacy_notice_version: "v1.3",
       source: "landing",
     });
   });
@@ -78,7 +78,7 @@ describe("POST /api/access-requests", () => {
     mockMaybeSingle.mockResolvedValue({ data: null, error: null });
     mockInsert.mockResolvedValue({ error: null });
 
-    await postAccessRequest({ email: "  Loja@Test.COM  ", privacy_notice_version: "v1.4" });
+    await postAccessRequest({ email: "  Loja@Test.COM  ", privacy_notice_version: "v1.3" });
 
     expect(mockInsert).toHaveBeenCalledWith(
       expect.objectContaining({ email: "loja@test.com" }),
@@ -91,7 +91,7 @@ describe("POST /api/access-requests", () => {
       error: null,
     });
 
-    const res = await postAccessRequest({ email: "loja@example.com", privacy_notice_version: "v1.4" });
+    const res = await postAccessRequest({ email: "loja@example.com", privacy_notice_version: "v1.3" });
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true });
@@ -105,7 +105,7 @@ describe("POST /api/access-requests", () => {
       error: null,
     });
 
-    const res = await postAccessRequest({ email: "loja@example.com", privacy_notice_version: "v1.4" });
+    const res = await postAccessRequest({ email: "loja@example.com", privacy_notice_version: "v1.3" });
 
     // Resposta idêntica ao sucesso (anti-enumeração) — o approved NÃO cria autorização
     expect(res.status).toBe(200);
@@ -122,6 +122,16 @@ describe("POST /api/access-requests", () => {
 
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: "Dados inválidos" });
+    expect(mockMaybeSingle).not.toHaveBeenCalled();
+  });
+
+  it("400 para aviso de privacidade não vigente", async () => {
+    const res = await postAccessRequest({
+      email: "loja@example.com",
+      privacy_notice_version: "v1.4",
+    });
+
+    expect(res.status).toBe(400);
     expect(mockMaybeSingle).not.toHaveBeenCalled();
   });
 
@@ -144,7 +154,7 @@ describe("POST /api/access-requests", () => {
     mockMaybeSingle.mockResolvedValue({ data: null, error: null });
     mockInsert.mockResolvedValue({ error: { message: "db down" } });
 
-    const res = await postAccessRequest({ email: "loja@example.com", privacy_notice_version: "v1.4" });
+    const res = await postAccessRequest({ email: "loja@example.com", privacy_notice_version: "v1.3" });
 
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ error: "Erro ao registrar solicitação" });

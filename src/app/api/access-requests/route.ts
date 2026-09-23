@@ -3,8 +3,7 @@ import { z } from "zod";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { requireSameOrigin } from "@/lib/auth/csrf";
 import { supabaseAdmin } from "@/lib/supabase/server";
-
-const PRIVACY_NOTICE_VERSION = "v1.4";
+import { CURRENT_PRIVACY_NOTICE_VERSION } from "@/lib/legal/current-versions";
 
 const AccessRequestSchema = z.object({
   email: z.string().trim().toLowerCase().email().max(254),
@@ -12,7 +11,7 @@ const AccessRequestSchema = z.object({
   store_name: z.string().trim().max(100).optional(),
   segment: z.string().trim().max(50).optional(),
   whatsapp: z.string().trim().max(20).optional(),
-  privacy_notice_version: z.literal(PRIVACY_NOTICE_VERSION),
+  privacy_notice_version: z.literal(CURRENT_PRIVACY_NOTICE_VERSION),
 });
 
 // POST público (sem requireUser) — visitantes da landing solicitam acesso free.

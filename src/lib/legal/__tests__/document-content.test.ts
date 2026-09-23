@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { getDocumentFile, getDocumentLabel, buildDocumentInfo } from "../document-content";
 
-describe("document-content catalog (F42 — v1.4/v1.3)", () => {
-  it("mapeia terms_of_service v1.4 para o novo arquivo", () => {
+describe("document-content catalog (published versions)", () => {
+  it("mapeia terms_of_service v1.4 para o arquivo vigente", () => {
     expect(getDocumentFile("terms_of_service", "v1.4")).toBe(
       "/docs/legal/terms-of-service-v1-4.md",
     );
@@ -21,6 +21,9 @@ describe("document-content catalog (F42 — v1.4/v1.3)", () => {
     expect(getDocumentFile("privacy_policy", "v1.2")).toBe(
       "/docs/legal/privacy-policy-v1-2.md",
     );
+    expect(getDocumentFile("acceptable_use", "v1.1")).toBe(
+      "/docs/legal/acceptable-use-v1-1.md",
+    );
   });
 
   it("retorna null para versões inexistentes (regressão)", () => {
@@ -28,7 +31,7 @@ describe("document-content catalog (F42 — v1.4/v1.3)", () => {
     expect(getDocumentFile("privacy_policy", "v2.0")).toBeNull();
   });
 
-  it("buildDocumentInfo resolve v1.4/v1.3", () => {
+  it("buildDocumentInfo resolve versões vigentes", () => {
     const info = buildDocumentInfo("terms_of_service", "v1.4");
     expect(info).not.toBeNull();
     expect(info?.url).toBe("/docs/legal/terms-of-service-v1-4.md");
@@ -36,6 +39,12 @@ describe("document-content catalog (F42 — v1.4/v1.3)", () => {
 
     const privacy = buildDocumentInfo("privacy_policy", "v1.3");
     expect(privacy?.url).toBe("/docs/legal/privacy-policy-v1-3.md");
+  });
+
+  it("não expõe as versões consolidadas ainda pendentes", () => {
+    expect(getDocumentFile("terms_of_service", "v1.5")).toBeNull();
+    expect(getDocumentFile("privacy_policy", "v1.4")).toBeNull();
+    expect(getDocumentFile("acceptable_use", "v1.2")).toBeNull();
   });
 
   it("exibe label correto por tipo", () => {
