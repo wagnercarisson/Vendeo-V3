@@ -1,6 +1,6 @@
 # Legal Documents
 
-> Delta spec para `fase-50-demonstracao-gratuita-e-validade-dos-creditos` (D13). Conteúdo dos **três** documentos: Termos de Uso v1.5, Política de Privacidade v1.4 e Política de Uso Aceitável v1.2. As minutas de **alteração (delta)** vivem em `legal-drafts/`; os documentos **consolidados** (delta + cláusulas inalteradas) são montados e comparados com as versões anteriores na execução.
+> Delta spec para `fase-50-demonstracao-gratuita-e-validade-dos-creditos` (D13). Conteúdo dos **três** documentos: Termos de Uso v1.5, Política de Privacidade v1.4 e Política de Uso Aceitável v1.2. As minutas de **alteração (delta)** vivem em `legal-drafts/`; os documentos **consolidados** (delta + cláusulas inalteradas) são montados e comparados com as versões anteriores na execução. Nesta decisão, permanecem não publicados; identidade da PJ, placeholders/datas, sincronização final e aprovação jurídica são follow-up pós-PJ.
 
 ## MODIFIED Requirements
 

@@ -242,7 +242,7 @@ A F50 substitui o freemium contínuo por uma demonstração gratuita limitada e 
   6. **Corte** (na data de vigência das três versões): vigência → `monthlyCreditsEnabled=false` → `demoCreditsEnabled=true` → **`emailEnabled=true` com `RESEND_API_KEY` e `VENDEO_EMAIL_FROM` validados** (o auto-ack obrigatório exige email operacional ativo no corte).
   7. **Reaceite** automático no próximo acesso às capacidades de geração.
   8. **Smoke test pós-corte** (produção, sem nova concessão artificial).
-- **Gates de go-live do beta (bloqueiam o primeiro convite, não a conclusão técnica da fase):** PJ constituída e identificada (sem placeholder); três documentos consolidados e aprovados pelo advogado; `publicSignupEnabled=false` (beta fechado); limite de 50 participantes controlado; suporte operante (formulário + email + protocolo); email configurado e validado; MFA registrada; **buckets auditados e privados** (D20); **backup externo restaurável** (D26).
+- **Gates técnicos de fechamento:** `publicSignupEnabled=false` (beta fechado); limite controlado; suporte operante; **buckets auditados e privados**; telemetria validada; **backup externo restaurável**; UAT técnica controlada e ausência de compra/cobrança. **Gates pós-PJ/primeiro convite:** PJ identificada (sem placeholder); documentos aprovados; email/credenciais e MFA; publicação legal, ativação e admissão.
 - **Rollback**: `demoCreditsEnabled=false` congela novas concessões (usuários legados mantêm saldos). **Não** reativa automaticamente o benefício mensal (já removido dos Termos v1.5); a reativação do mensal exigiria reverter também a publicação das versões legais. Reversão de migration documentada (colunas/índices/RPCs), sem perda de dados (append-only preservado).
 
 ### D16 — Gating da flag nos grants SQL (fronteira explícita)
@@ -391,6 +391,27 @@ A F50 substitui o freemium contínuo por uma demonstração gratuita limitada e 
 ## Open Questions
 
 - **Bloqueantes de go-live (não de conclusão técnica):** constituição da **PJ** e identificação/endereço do fornecedor (Decreto nº 7.962/2013); validação jurídica formal das três minutas; confirmação da aplicação do Decreto 7.962/2013 (confirmação imediata + resposta em até 5 dias); **prazos jurídicos de retenção/anonimização** de `product_events`/`credit_notifications`/`support_credit_requests` e do WhatsApp — a confirmar pelo advogado.
+
+## F50 Technical Closure Posture
+
+The approved closure posture is technical delivery with a closed beta, not
+operational launch. Keep `VENDEO_DEMO_CREDITS_ENABLED=false`, keep
+`VENDEO_EMAIL_ENABLED` absent or `false`, and keep
+`VENDEO_PUBLIC_SIGNUP_ENABLED=false`. Do not publish Terms v1.5, Privacy v1.4,
+or AUP v1.2; do not activate demo credits, monthly-credit shutdown, email, new
+users, checkout, charges, or monetization.
+
+The following are deferred to a future post-PJ quick, without deleting their
+history: PJ identity/CNPJ/address, placeholder and date replacement, final legal
+package and OpenSpec delta synchronization, formal legal approval, legally
+required support auto-ack, legal publication migration, monthly-credit shutdown,
+demo/email activation, beta admission, post-cutover UAT/smoke, and PJ-dependent
+go-live gates. This quick is not created by F50 re-documentation.
+
+F50 closure still requires the real backup restore (database and Storage with
+counts, checksums, and signed-object read), telemetry validation, controlled
+technical UAT of demonstration states, confirmation that no purchase language or
+flow exists, final technical gates, and strict OpenSpec validation.
 - **Plano Vercel (confirmar antes da execução):** se Hobby, usar cron **diário** (não horário) com aviso "aproximadamente 24 horas"; Pro como pré-requisito para horária.
 - **Natureza jurídica do email:** confirmar na revisão jurídica que as mensagens de demonstração são comunicações **operacionais** (não de marketing), separadas do consentimento `commercial_communications`, com base legal documentada (LGPD).
 - **Itens de execução (não-bloqueantes):** redação final das mensagens de notificação e das três minutas (sujeita à validação jurídica); provedor/remetente final do email (Resend, `noreply@vendeo.tech` default); localização dos componentes de notificação (`src/components/notifications/`) e de email (`src/lib/email/`); inventário global de consumidores de `credit_balances.balance` (D1).

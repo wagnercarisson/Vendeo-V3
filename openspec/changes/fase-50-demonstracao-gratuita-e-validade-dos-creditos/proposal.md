@@ -1,6 +1,27 @@
 ## Why
 
-O Vendeo hoje opera um **freemium contínuo**: 10 créditos de onboarding (`bonus_onboarding`) + 5 créditos mensais automáticos (`bonus_monthly`), sem validade, por loja. Isso não comunica uma oferta limitada e mensurável, não prepara a monetização e impede que a F51 (landing + funil) anuncie uma demonstração verdadeira. A F50 substitui esse eixo por uma **demonstração gratuita limitada e transparente** — 10 créditos válidos por 7 dias, sem cartão e sem cobrança — preservando integralmente os saldos legados, encerrando as concessões mensais e instrumentando os eventos que a F51 consumirá no funil.
+O Vendeo hoje opera um **freemium contínuo**: 10 créditos de onboarding (`bonus_onboarding`) + 5 créditos mensais automáticos (`bonus_monthly`), sem validade, por loja. Isso não comunica uma oferta limitada e mensurável, não prepara a monetização e impede que a F51 (landing + funil) anuncie uma demonstração verdadeira. A F50 prepara a substituição por uma **demonstração gratuita limitada e transparente** — 10 créditos válidos por 7 dias, sem cartão e sem cobrança — preservando integralmente os saldos legados, instrumentando os eventos que a F51 consumirá no funil e deixando o desligamento mensal para a quick pós-PJ.
+
+## Decision: Technical Delivery, Closed Beta
+
+The F50 technical delivery is maintained with the beta closed and no new-user
+admission. This execution does not activate the demonstration, publish the new
+legal versions, or perform the operational cutover. The required closed-beta
+posture is:
+
+- `VENDEO_DEMO_CREDITS_ENABLED=false`.
+- `VENDEO_EMAIL_ENABLED` absent or `false`.
+- `VENDEO_PUBLIC_SIGNUP_ENABLED=false`.
+- No new beta users, checkout, purchase flow, charge, or monetization.
+- Terms v1.5, Privacy v1.4, and AUP v1.2 remain unpublished drafts/templates.
+
+PJ identification, legal publication, activation, email enablement, new-user
+admission, post-cutover UAT/smoke, and other PJ-dependent gates are transferred
+to a future post-PJ quick. The F50 still requires the real backup restoration,
+technical demonstration UAT in a controlled environment, telemetry validation,
+absence-of-purchase verification, final technical gates, and strict OpenSpec
+verification before its technical delivery can be closed. This document records
+the transfer; it does not create or execute that quick.
 
 ## What Changes
 

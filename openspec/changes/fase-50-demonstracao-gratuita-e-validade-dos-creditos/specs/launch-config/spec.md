@@ -2,6 +2,14 @@
 
 > Delta spec para `fase-50-demonstracao-gratuita-e-validade-dos-creditos` (D9/D10/D15/D17). Novas flags de demonstração e email; `monthlyCreditsEnabled` **preservado `true` até o corte**; `publicSignupEnabled` permanece `false` durante o beta.
 
+## F50 Closed-Beta Decision
+
+Until the post-PJ quick is explicitly authorized, the operational posture remains
+fail-closed: `VENDEO_DEMO_CREDITS_ENABLED=false`, `VENDEO_EMAIL_ENABLED` absent
+or `false`, and `VENDEO_PUBLIC_SIGNUP_ENABLED=false`. The beta admits no new
+users and no checkout, charge, or monetization is active. The cutover scenarios
+below are deferred; this delta does not authorize changing flags.
+
 ## MODIFIED Requirements
 
 ### Requirement: LaunchConfig type (flags existentes + demonstração + email)

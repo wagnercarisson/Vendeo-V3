@@ -1,6 +1,6 @@
 # Tasks — F50 Demonstração Gratuita e Validade dos Créditos
 
-> Fonte da verdade: `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/` (proposal.md, design.md, specs/). Restrições de execução: **fora de escopo** checkout/Stripe/preço público/assinatura/cobrança automática/emissão fiscal/landing-SEO; **sem** alteração de prompts, gateway de IA, snapshot, domínio ou contrato de geração; bônus é **sempre não-expirável** na F50 (prazo excepcional = follow-up); **loja draft elegível** deve receber a demo quando aprovada. Trackings/roadmap **não** são atualizados durante a elaboração/execução; a atualização normal no **fechamento autorizado** segue o workflow do projeto.
+> Fonte da verdade: `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/` (proposal.md, design.md, specs/). Restrições de execução: **fora de escopo** checkout/Stripe/preço público/assinatura/cobrança automática/emissão fiscal/landing-SEO; **sem** alteração de prompts, gateway de IA, snapshot, domínio ou contrato de geração; bônus é **sempre não-expirável** na F50 (prazo excepcional = follow-up); **loja draft elegível** deve receber a demo quando aprovada. Nesta readequação, a entrega técnica permanece em beta fechado: `VENDEO_DEMO_CREDITS_ENABLED=false`, `VENDEO_EMAIL_ENABLED` ausente ou `false`, `VENDEO_PUBLIC_SIGNUP_ENABLED=false`, sem novos usuários, documentos v1.5/v1.4/v1.2 não publicados e sem cobrança/checkout/monetização. Requisitos PJ/jurídicos/corte transferidos permanecem rastreados como follow-up pós-PJ; não são silenciosamente removidos.
 
 ## Decomposição em planos e ondas
 
@@ -19,7 +19,7 @@
 | 50-11 | 8 | Testes: unidade + banco/RPC + concorrência + idempotência | — |
 | 50-12 | 8 | Testes: integração + rotas + UI + notificações + legal + telemetria | — |
 | 50-13 | 9 | Regressão + co-migração + 4 gates | — |
-| 50-14 | 9 | Verificação: migration remota, reconciliação, UAT, revisão jurídica, **corte** | D15 |
+| 50-14 | 9 | Verificação técnica: reconciliação, telemetria, UAT controlada, ausência de compra, **sem corte**; gates PJ/jurídicos/corte transferidos | D15 |
 | 50-15 | 6 | Storage privacy (buckets privados + URL assinada; sem R2) | D20 |
 | 50-16 | 7 | Beta/access + retenção (WhatsApp opcional, aviso versionado, maioridade, conta/30 dias, órfãos) | D17/D18/D19/D21 |
 | 50-17 | 9 | Backup externo + gates de go-live do beta | D26/D15 |
@@ -94,7 +94,7 @@
 ## 50-08 — Telemetria (D14)
 
 - [x] 8.1 `src/lib/product-events`: serviço `record` (best-effort, fail-open) com dedup por `(event_type, dedup_key)`
-- [ ] 8.2 Emitir `demo_granted` (dedup grant_tx_id), `first_generation` (**primeira geração após o grant**, dedup grant_tx_id), `demo_exhausted` (dedup deduction_tx_id), `demo_expired` (dedup expiration_tx_id), `support_credit_request` (**múltiplo**, dedup operationId)
+- [x] 8.2 Emitir/verificar `demo_granted` (dedup grant_tx_id, SQL/reconciliador), `first_generation` (**primeira geração após o grant**, dedup grant_tx_id, rotas de geração), `demo_exhausted` (dedup deduction_tx_id, reconciliador), `demo_expired` (dedup expiration_tx_id, reconciliador), `support_credit_request` (**múltiplo**, dedup operationId, rota de suporte); evidência de código + 5 arquivos/89 testes focados em `50-VERIFICATION.md`
 
 ## 50-09 — UI (D11/D12)
 
@@ -107,9 +107,9 @@
 - [x] 10.1 **Preparar o pacote jurídico cedo (em paralelo à implementação):** montar os documentos consolidados a partir das minutas de alteração (`legal-drafts/terms-of-service-v1-5.md`, `legal-drafts/privacy-policy-v1-4.md`, `legal-drafts/acceptable-use-v1-2.md`), consolidando com as cláusulas inalteradas das versões vigentes (`terms-of-service-v1-4.md`, `privacy-policy-v1-3.md`, `acceptable-use-v1-1.md`) e **comparando (diff)**; publicar em `public/docs/legal/` + catálogo `document-content.ts`; montar o `legal-package.md` (deltas + consolidados + perguntas) para revisão preliminar do advogado
 - [x] 10.2 **Template de migration de publicação separado** (fora de `supabase/migrations`) para as três versões (`terms_of_service v1.5`, `privacy_policy v1.4`, `acceptable_use v1.2`); a migration efetiva entra em `supabase/migrations` e é aplicada somente após validação jurídica/PJ no corte 50-14, com `effective_at` coordenado
 - [x] 10.3 Confirmar reaceite **contratual** (Terms v1.5 + AUP v1.2) via `requireLegalClearance` (`legal_acceptances`, gate 403 → `/legal/reaccept`) e **ciência** de privacidade v1.4 via `PrivacyGate`/`privacy_acknowledgements` — ambos sem bloquear histórico/downloads
-- [ ] 10.4 **Fornecedor responsável** (identificação/endereço, Decreto 7.962/2013) definido com advogado — **sem placeholder** na cláusula de identificação
-- [ ] 10.5 **Confirmação de recebimento (obrigatória):** implementar auto-ack das solicitações de suporte para cumprir a cláusula 12.3 dos Termos (a revisão jurídica pode remover a promessa e o auto-ack em conjunto)
-- [ ] 10.6 Registrar **validação jurídica formal das três minutas** (gate de corte)
+- [ ] 10.4 **FOLLOW-UP PÓS-PJ:** fornecedor responsável (razão social/CNPJ/endereço, Decreto 7.962/2013) definido com advogado e placeholders substituídos — não executar na F50 fechada em beta
+- [ ] 10.5 **FOLLOW-UP PÓS-PJ:** confirmar/ajustar o auto-ack das solicitações de suporte conforme o texto jurídico aprovado; a implementação técnica existente não equivale à validação jurídica do compromisso
+- [ ] 10.6 **FOLLOW-UP PÓS-PJ:** registrar validação jurídica formal das três minutas sobre o conteúdo final, sem marcar como concluído por esta readequação
 
 ## 50-11 — Testes: unidade + banco/RPC + concorrência (D1–D8, D16)
 
@@ -157,8 +157,8 @@
 ## 50-17 — Backup externo + gates de go-live (D26/D15)
 
 - [x] 17.1 Runbook de backup externo: dump lógico + objetos de todos os buckets, criptografia, destino externo privado, retenção 30 dias, checksum; **decisões a fechar**: destino, criptografia/custódia da chave, procedimento/ambiente de restauração
-- [ ] 17.2 **Teste real de restauração** (banco + metadados + objetos): contagem de linhas/objetos, checksum e **leitura assinada de um arquivo restaurado** — evidência (gate do primeiro convite)
-- [ ] 17.3 Confirmar gates de go-live: PJ constituída/identificada; docs aprovados; signup off; limite controlado; suporte operante; email validado; MFA registrada; buckets privados; backup restaurável
+- [ ] 17.2 **OBRIGATÓRIO PARA FECHAR A F50:** teste real de restauração (banco + metadados + objetos): contagem de linhas/objetos, checksum e **leitura assinada de um arquivo restaurado** — evidência fora do Git e referência em `50-VERIFICATION.md`
+- [ ] 17.3 **Dividido:** confirmar agora os gates técnicos `publicSignupEnabled=false`, beta sem novos usuários, limite controlado, suporte operante, buckets privados, eventos de telemetria validados e backup restaurável; transferir para a quick pós-PJ PJ constituída, docs aprovados, email/credenciais validados e MFA/go-live dependentes do corte
 - [x] 17.4 Segredos/backups fora do Git
 
 ## 50-13 — Regressão e co-migração + 4 gates
@@ -170,15 +170,15 @@
 - [x] 13.5 `npm run build`
 - [x] 13.6 Revisar diff contra baseline (sem mudança em prompts/gateway/snapshot/domínio/contrato de geração) — PASS WITH APPROVED SCOPED EXCEPTIONS; duas rotas nominadas, hashes/diffs/evidências em `50-GATES.txt`
 
-## 50-14 — Verificação, rollout (corte) e gates finais
+## 50-14 — Verificação técnica e follow-ups pós-PJ
 
 - [x] 14.1 Migration **estrutural** remota aplicada e verificada (`db diff --linked` sem divergência em `demo_*`/novas tabelas/RPCs) — 8 migrations F50 sincronizadas; evidência em `50-VERIFICATION.md`
 - [x] 14.2 Reconciliação financeira do ledger (soma de `demo`+`bonus`+`purchase` = `balance`; `expiration` compensa `demo`; estornos conferem; `demo_cycle_id`/`contributing_tx_ids` íntegros) — 10 balances, 309 transactions, `invalid_balances=0`, `unexpected_demo=0`, `f50_transactions=0`, `demo_balance_total=0`
-- [ ] 14.3 Validação jurídica formal das **três** minutas registrada (Termos v1.5, Privacidade v1.4, Uso Aceitável v1.2)
-- [ ] 14.4 **UAT completa ANTES do corte** (ambiente controlado, demo habilitada) dos estados da demonstração (ativa/próxima/exaurida/expirada/insuficiente/bônus pós-demo) desktop + mobile
-- [ ] 14.5 Confirmação de que nenhum fluxo promete compra/cobrança
-- [ ] 14.6 **Corte (ordem):** migration de publicação legal (três versões, effective_at) → `monthlyCreditsEnabled=false` → `demoCreditsEnabled=true` → **`emailEnabled=true` com `RESEND_API_KEY`/`VENDEO_EMAIL_FROM` validados**; rollback documentado (congela demo, **não** reativa mensal)
-- [ ] 14.7 **Smoke test pós-corte** (produção, **sem** nova concessão artificial) dos estados da demonstração e da ausência de cobrança
+- [ ] 14.3 **FOLLOW-UP PÓS-PJ:** identidade da PJ, preenchimento de placeholders/datas, sincronização final do pacote jurídico/delta OpenSpec e validação jurídica formal das três minutas
+- [ ] 14.4 **OBRIGATÓRIA PARA FECHAR A F50:** UAT técnica em ambiente controlado dos estados da demonstração (ativa/próxima/exaurida/expirada/insuficiente/bônus pós-demo), desktop + mobile, sem ativar o beta público
+- [ ] 14.5 **OBRIGATÓRIA PARA FECHAR A F50:** confirmar ausência de linguagem e fluxo de compra, checkout, cobrança ou monetização
+- [ ] 14.6 **FOLLOW-UP PÓS-PJ:** corte na ordem migration legal → `monthlyCreditsEnabled=false` → `demoCreditsEnabled=true` → `emailEnabled=true` com credenciais validadas; rollback documentado
+- [ ] 14.7 **FOLLOW-UP PÓS-PJ:** smoke test de produção pós-corte, sem concessão artificial
 
 ## Matriz de testes (resumo)
 
@@ -201,5 +201,7 @@
 | Outbox | retry/lease, reclaim, failed terminal, cron do plano | 12.11 |
 | Refund pós-expiração | episódios de graça + origin_demo_grant_tx_id | 12.12 |
 | Beta/access | WhatsApp opcional, aviso versionado, maioridade, retenção | 12.13 |
-| Backup | restauração testada (gate de convite) | 17.2 |
-| UAT manual (pré-corte) + smoke (pós-corte) | estados da demonstração | 14.4 / 14.7 |
+| Backup | restauração testada (obrigatória para fechar F50; também gate de convite) | 17.2 |
+| UAT técnica controlada | estados da demonstração | 14.4 |
+| Ausência de compra/cobrança | linguagem e fluxos | 14.5 |
+| UAT/smoke pós-corte | após PJ e publicação legal | 14.7 (pós-PJ) |

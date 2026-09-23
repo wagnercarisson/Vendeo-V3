@@ -52,4 +52,10 @@
 
 ## Gate
 
-A validação jurídica formal das **três minutas** (delta + consolidado) é **gate de corte**, registrada na verificação (task 14.3). Consolidar os três documentos **cedo** (task 10.1) e manter a revisão jurídica formal como gate de go-live.
+A validação jurídica formal das **três minutas** (delta + consolidado) permanece
+um follow-up pós-PJ, registrado nas tasks 10.4/10.6 e 14.3. Os documentos
+consolidados podem permanecer preparados para revisão preliminar, mas não são
+publicados nesta F50 e não devem ter seus placeholders ou datas substituídos
+sem a identidade da PJ. A publicação, o auto-ack exigido pelo texto aprovado e
+a sincronização final do pacote/delta OpenSpec pertencem à quick pós-PJ ainda
+não criada.

@@ -148,7 +148,7 @@ A F50 **substitui o freemium contínuo** (10 créditos `bonus_onboarding` + 5 me
 `DECIDIDO`.
 - **Fail-closed:** validade/expiração e saldo disponível; `demoCreditsEnabled` default false; `emailEnabled` default false.
 - **Fail-open:** telemetria e notificações de demo (best-effort). Exceção: `support_ack`/`support_notice` duráveis.
-- **Rollout (8 passos, sem vácuo):** (1) migration estrutural (sem docs legais); (2) deploy demo off + mensal on; (3) validação jurídica das 3 minutas; (4) migration legal (effective_at coordenado); (5) UAT completa (demo habilitada); (6) corte (`monthlyCreditsEnabled=false` → `demoCreditsEnabled=true` → `emailEnabled=true` com `RESEND_API_KEY`/`VENDEO_EMAIL_FROM` validados); (7) reaceite automático; (8) smoke pós-corte.
+- **Rollout pós-PJ (não executado nesta F50):** (1) validação de PJ e documentos; (2) migration legal; (3) `monthlyCreditsEnabled=false`; (4) `demoCreditsEnabled=true`; (5) `emailEnabled=true` com credenciais; (6) reaceite/ciência e admissão; (7) UAT/smoke pós-corte. A F50 fecha tecnicamente em beta fechado antes desses passos.
 - **Gates de go-live (bloqueiam o 1º convite, não a conclusão técnica):** PJ identificada; 3 docs aprovados; `publicSignupEnabled=false`; ≤50 controlado; suporte operante; email validado; MFA; buckets privados; backup restaurável.
 - **Rollback:** `demoCreditsEnabled=false` congela novas concessões; **não** reativa mensal.
 
@@ -190,6 +190,23 @@ A F50 **substitui o freemium contínuo** (10 créditos `bonus_onboarding` + 5 me
 - `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/proposal.md` — Why/What/Impact, capabilities (10 novas + 19 modificadas), impact.
 - `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/design.md` — D1–D26, "Estado real em código", riscos, migration plan, rollout/corte, open questions.
 - `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/tasks.md` — decomposição 50-01..50-17 (a base propõe 9 waves; o DAG GSD usa 10 waves estritamente crescentes — ver acima).
+
+### Readequação pós-PJ
+
+A F50 será encerrada como entrega técnica em beta fechado, sem admissão de
+novos usuários e sem ativação operacional. A postura de encerramento é
+`VENDEO_DEMO_CREDITS_ENABLED=false`, `VENDEO_EMAIL_ENABLED` ausente ou `false`,
+`VENDEO_PUBLIC_SIGNUP_ENABLED=false`, sem documentos v1.5/v1.4/v1.2 publicados
+e sem cobrança, checkout ou monetização. Permanecem obrigatórios para fechar a
+F50: restore real do backup (banco + Storage, contagens, checksums e leitura
+assinada), telemetria validada, UAT técnica controlada da demonstração,
+ausência de compra e gates OpenSpec finais.
+
+Identidade da PJ/CNPJ/endereço, placeholders e datas, sincronização final do
+pacote jurídico e delta OpenSpec, validação jurídica, autoack conforme texto
+aprovado, migration legal, desligamento mensal, ativação de demo/email,
+admissão no beta e UAT/smoke pós-corte são follow-up de uma quick pós-PJ ainda
+não criada. Nenhum desses itens é marcado como concluído por esta readequação.
 - `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/legal-package.md` — pacote jurídico + placeholders + perguntas ao advogado.
 - `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/specs/*/spec.md` — 27 delta specs (ver lista de capabilities abaixo).
 - `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/legal-drafts/*.md` — minutas delta (Terms v1.5 / Privacy v1.4 / AUP v1.2).
@@ -285,7 +302,7 @@ A F50 **substitui o freemium contínuo** (10 créditos `bonus_onboarding` + 5 me
 - **Research:** dispensado (`research=false`); `proposal.md`/`design.md`/`specs/` são a fonte técnica. `RESEARCH.md`/`VALIDATION.md` (Nyquist) dispensados, conforme precedente F48.1/F49; verificações por tarefa, plan-check, 4 gates e UAT humana **mantidos**.
 - **UI-SPEC:** consolidado a partir dos artefatos OpenSpec (`50-UI-SPEC.md`), sem novas decisões de produto, para satisfazer o `ui_safety_gate`.
 - **Waves × dependências (corrigido na revisão):** o `tasks.md` decompõe em 9 waves com dependências same-wave (50-02 em wave 1 dependendo de 50-01; 50-14 em wave 9 dependendo de 50-13/50-17). Como waves são paralelizáveis, o DAG GSD foi reordenado para **10 waves estritamente crescentes** (50-16 na wave 3, alinhada ao DAG); 50-10 (legal) foi antecipado para a wave 2 (pacote jurídico preparado cedo); 50-07 (notificações/email) e 50-08 (telemetria) foram para a wave 3 (infraestrutura), com 50-06 (cron) passando a depender de 50-07/50-08; 50-16 passou a depender de 50-10 (eliminando a colisão de edição dos Termos v1.5).
-- **Legal não bloqueia a execução técnica (corrigido na revisão):** a identificação definitiva da PJ e a validação jurídica formal são **gates de corte (50-14)** — não pré-requisitos do 50-10 nem das waves 2/3. O 50-10 entrega apenas a preparação técnica (documentos consolidados com placeholders marcados + migration de publicação não aplicada + verificação de reaceite/ciência). A emissão de `demo_granted` na RPC foi explicitada como **INSERT SQL protegido por bloco EXCEPTION** (best-effort, nunca reverte a concessão) com reparo pelo reconciliador (50-06) — o `ProductEventService.record` (TS) é usado pelos callers TypeScript (50-05/50-06), não pela RPC. Checkpoints convertidos para `checkpoint:human-verify`/`checkpoint:human-action` (sintaxe reconhecida pelo executor).
+- **Legal é follow-up pós-PJ (readequado):** a identificação definitiva da PJ e a validação jurídica formal não são executadas nesta F50 nem autorizam publicação/corte. O 50-10 entrega apenas a preparação técnica (documentos não publicados com placeholders marcados + migration de publicação não aplicada + verificação de reaceite/ciência). A emissão de `demo_granted` na RPC foi explicitada como **INSERT SQL protegido por bloco EXCEPTION** (best-effort, nunca reverte a concessão) com reparo pelo reconciliador (50-06) — o `ProductEventService.record` (TS) é usado pelos callers TypeScript (50-05/50-06), não pela RPC. Checkpoints convertidos para `checkpoint:human-verify`/`checkpoint:human-action` (sintaxe reconhecida pelo executor).
 - **Caminhos reais de concessão (corrigido na revisão):** os wrappers SQL (`create_store_with_cnpj`, `update_store_cnpj`, `admin_approve_store_verification`, `admin_exception_store_verification`) são redefinidos na migration (50-03 task 3.8) com `p_demo_grant_enabled`; as rotas reais (`store/route.ts`, `store/update-cnpj/route.ts`, `admin/reviews/[id]/approve/route.ts`, `admin/reviews/[id]/exception/route.ts`) apenas repassam a flag. O 50-14 ganhou a sequência jurídica explícita do corte (identidade da PJ → preenchimento → verificação sem placeholder → aprovação final → publicação) e o 50-17 virou runbook-only (o teste de restauração + gates de go-live migraram para o 50-14, sem bloquear a execução técnica).
 
 </divergences_resolved>
