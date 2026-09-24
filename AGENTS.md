@@ -80,8 +80,9 @@ Before starting, resuming, planning, executing, or verifying a phase, read `docs
 ## Project Tracking
 
 - Current execution state: `.planning/STATE.md`
-- Phase roadmap: `.planning/ROADMAP.md`
-- Project roadmap: `ROADMAP.md`
+- `.planning/ROADMAP.md`: operational roadmap and status source of truth
+- `ROADMAP.md`: non-operational executive overview
+- `ROADMAP-ARCHIVE.md`: historical archive; do not load automatically
 - Change artifacts: `openspec/changes/`
 
 <!-- GSD:profile-start -->
