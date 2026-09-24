@@ -64,7 +64,7 @@
 - F28 e F29 sustentam launch controls, observabilidade e readiness; F30 sustenta os gates legais.
 - A cadeia de produto segue F31.1 → F31.2 → F31.3 → F32 → F33 → F34 → F35 → F36 → F37 → F38 → F38.1/F38.2 → F38.2.1 → F39 → F40 → F41 → F42 → F43 → F45 → F46 → F47 → F48.1 → F49 → F50.
 - F50.1 depende externamente da constituição da PJ e dos dados legais reais; não bloqueia o estado concluído de F50.
-- O detalhamento de requisitos e dependências históricas permanece em `.planning/REQUIREMENTS.md`, no archive deste arquivo e nos artefatos das fases.
+- O índice operacional de requisitos está em `.planning/REQUIREMENTS.md`; o detalhamento histórico integral está em `.planning/REQUIREMENTS-ARCHIVE.md`, no archive deste roadmap e nos artefatos das fases.
 
 ## F50.1 — Formalização Legal e Ativação da Demonstração
 
@@ -80,7 +80,7 @@
 - Quick tasks e seus planos/summaries: `.planning/quick/`.
 - Decisões e alinhamentos: `.planning/milestones/`, `docs/` e `docs/archived-alignments/`.
 - Propostas, specs, tasks e mudanças arquivadas: `openspec/changes/`.
-- Requisitos e auditorias: `.planning/REQUIREMENTS.md`, `.planning/MILESTONES.md` e os documentos de auditoria em `.planning/`.
+- Requisitos históricos e auditorias: `.planning/REQUIREMENTS-ARCHIVE.md`, `.planning/MILESTONES.md` e os documentos de auditoria em `.planning/`; o índice operacional atual está em `.planning/REQUIREMENTS.md`.
 - F44 permanece fora da numeração ativa e está documentada em `docs/alinhamento-fase-44-temas-de-campanhas/`.
 - O programa incremental pós-F48.1 está registrado em `docs/alinhamento-roadmap-pos-f48-1.md`; não transforma F50.1 em fase ativa.
 
