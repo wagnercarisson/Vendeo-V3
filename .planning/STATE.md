@@ -20,7 +20,7 @@ progress:
 **Current phase:** 50
 **Last activity:** 2026-09-24 - F50 concluída e arquivada documentalmente; 17/17 planos, verificação técnica, UAT controlada, gates técnicos e restore real aprovados; escopo pós-PJ transferido para F50.1
 
-**Progress counters:** `12/12 fases` indica o encerramento das fases contabilizadas neste milestone; `155/158 planos` e `98%` permanecem como o contador global do roadmap, com três planos históricos fora do escopo de fechamento da F50 ainda sem registro de conclusão. Portanto, `status: complete` representa a F50 atual concluída, não a conclusão retroativa desses três planos.
+**Progress counters:** `12/12 fases` indica o encerramento das fases contabilizadas neste milestone; `155/158 planos` e `98%` permanecem como o contador global do roadmap, com três planos fora do escopo de fechamento da F50 ainda não contabilizados como concluídos. Portanto, `status: complete` representa a F50 atual concluída, não a conclusão retroativa desses três planos.
 
 ### Quick Tasks Completed
 
