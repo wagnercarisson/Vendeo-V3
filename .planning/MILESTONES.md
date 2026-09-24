@@ -1,24 +1,18 @@
 # Milestones
 
-## v1.5 — Lançamento Externo Controlado ◆
+## v1.5 — Lançamento Externo Controlado ✅
 
-**Status:** Em andamento
-**Phases:** 13 (F23-F31.1) | **Plans:** 39/39 concluídos + F31.1 em planejamento
-**Tests:** 1018 passing (125 files)
-**TypeScript:** Clean | **Lint:** Clean | **Build:** Clean
+**Status:** Ciclo de implementação concluído até F50; não há fase ativa
+**Lançamento público:** ainda não ocorreu; o produto permanece em beta fechado
 
 ### Delivered
 
-Copy Director com IA (F23), pipeline de geração paralelo com créditos (F24-F25), admin operacional (F26), UI de saldo e extrato (F27), observabilidade e launch controls (F28), refinamento visual e UAT externo (F29), créditos mensais automáticos (F29.3), assinatura visual com créditos (F29.1.1-F29.1.2), fundação legal (F30).
-
-### In Progress
-
-**F37 — Revisão e Aprovação da Arte (v1.5):** em execução em fatias **37.1/37.2** (padrão F38/38.1/38.2). **Fatia 37.1 (Approval Gate + Candidata Única) CONCLUÍDA (15/15 plans, 2379 testes, 4 gates verdes, UAT 19.5–19.10 PASS 6/6)** — flag `campaign_approval_enabled` (fail-closed), tabela `campaign_art_versions` + colunas de aprovação em `campaigns`, RPC `approve_campaign_art_version` transacional, generate-image insere v1, estado de aprovação/gating (download + copy 403 até aprovar), tela de revisão da candidata, rota approve. Source of truth: `openspec/changes/fase-37-1-approval-gate-candidata-unica/` (decisão do usuário 2026-09-01). **Fatia 37.2 realinhada (Correção Única por Não Conformidade) CONCLUÍDA** — 19/19 plans (8 waves), 264 files / 2578 testes, 4 gates verdes, UAT PASS 9/9 (37.2-6 validado por código); source of truth: `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/` (decisão do usuário 2026-09-10); **37.3 eliminada** (consolidada na 37.2).
+Copy Director com IA (F23), pipeline de geração paralelo com créditos (F24-F25), admin operacional (F26), UI de saldo e extrato (F27), observabilidade e launch controls (F28), refinamento visual e UAT externo (F29), créditos mensais automáticos (F29.3), assinatura visual com créditos (F29.1.1-F29.1.2), fundação legal (F30), revisão e aprovação da arte (F37) e demonstração gratuita com validade de créditos (F50).
 
 ### Known Gaps
 
+- F50.1 — Formalização Legal e Ativação da Demonstração: futura, não planejada e condicionada à constituição da PJ
 - Monetização pública / Stripe diferido para v1.7+ (**sem fase numerada** — iniciativa diferida, decisão do alinhamento F43 D1)
-- F37 CONCLUÍDA nas fatias 37.1/37.2 — fatia 37.1 CONCLUÍDA (15/15 plans, 2379 testes, 4 gates verdes, UAT 19.5–19.10 PASS); **37.2 realinhada (Correção Única por Não Conformidade) CONCLUÍDA** (19/19 plans, 8 waves, 264 files / 2578 testes, 4 gates verdes, UAT PASS 9/9); **37.3 eliminada** (consolidada na 37.2)
 
 ---
 
