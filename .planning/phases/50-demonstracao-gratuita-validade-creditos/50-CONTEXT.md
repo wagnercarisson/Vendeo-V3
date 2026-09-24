@@ -2,7 +2,7 @@
 
 **Gathered:** 2026-09-20
 **Status:** Ready for planning
-**Source of truth:** `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/` (proposal.md / design.md D1–D26 / 27 specs / tasks.md / legal-package.md)
+**Source of truth:** `openspec/changes/archive/2026-09-23-fase-50-demonstracao-gratuita-e-validade-dos-creditos/` (proposal.md / design.md D1–D26 / 27 specs / tasks.md / legal-package.md)
 **Numbering:** F50 (v1.5). Stripe/Monetização Pública permanece fora da numeração (diferida, v1.7+). F44 (Temas de Campanha) também fora da numeração.
 **Plan naming:** diretório `.planning/phases/50-demonstracao-gratuita-validade-creditos`; arquivos `50-XX-PLAN.md` (convenção GSD).
 
@@ -187,9 +187,9 @@ A F50 **substitui o freemium contínuo** (10 créditos `bonus_onboarding` + 5 me
 **Downstream agents MUST read these before planning or implementing.**
 
 ### Fonte da verdade OpenSpec
-- `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/proposal.md` — Why/What/Impact, capabilities (10 novas + 19 modificadas), impact.
-- `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/design.md` — D1–D26, "Estado real em código", riscos, migration plan, rollout/corte, open questions.
-- `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/tasks.md` — decomposição 50-01..50-17 (a base propõe 9 waves; o DAG GSD usa 10 waves estritamente crescentes — ver acima).
+- `openspec/changes/archive/2026-09-23-fase-50-demonstracao-gratuita-e-validade-dos-creditos/proposal.md` — Why/What/Impact, capabilities (10 novas + 19 modificadas), impact.
+- `openspec/changes/archive/2026-09-23-fase-50-demonstracao-gratuita-e-validade-dos-creditos/design.md` — D1–D26, "Estado real em código", riscos, migration plan, rollout/corte, open questions.
+- `openspec/changes/archive/2026-09-23-fase-50-demonstracao-gratuita-e-validade-dos-creditos/tasks.md` — decomposição 50-01..50-17 (a base propõe 9 waves; o DAG GSD usa 10 waves estritamente crescentes — ver acima).
 
 ### Readequação pós-PJ
 
@@ -205,11 +205,11 @@ ausência de compra e gates OpenSpec finais.
 Identidade da PJ/CNPJ/endereço, placeholders e datas, sincronização final do
 pacote jurídico e delta OpenSpec, validação jurídica, autoack conforme texto
 aprovado, migration legal, desligamento mensal, ativação de demo/email,
-admissão no beta e UAT/smoke pós-corte são follow-up de uma quick pós-PJ ainda
-não criada. Nenhum desses itens é marcado como concluído por esta readequação.
-- `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/legal-package.md` — pacote jurídico + placeholders + perguntas ao advogado.
-- `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/specs/*/spec.md` — 27 delta specs (ver lista de capabilities abaixo).
-- `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/legal-drafts/*.md` — minutas delta (Terms v1.5 / Privacy v1.4 / AUP v1.2).
+admissão no beta e UAT/smoke pós-corte são follow-up da fase formal F50.1,
+que ainda não é planejada nem ativa. Nenhum desses itens é marcado como concluído por esta readequação.
+- `openspec/changes/archive/2026-09-23-fase-50-demonstracao-gratuita-e-validade-dos-creditos/legal-package.md` — pacote jurídico + placeholders + perguntas ao advogado.
+- `openspec/changes/archive/2026-09-23-fase-50-demonstracao-gratuita-e-validade-dos-creditos/specs/*/spec.md` — 27 delta specs (ver lista de capabilities abaixo).
+- `openspec/changes/archive/2026-09-23-fase-50-demonstracao-gratuita-e-validade-dos-creditos/legal-drafts/*.md` — minutas delta (Terms v1.5 / Privacy v1.4 / AUP v1.2).
 
 ### Capacidades (specs) — slugs
 **Novas:** `demo-credit-grant`, `credit-expiration`, `credit-notifications`, `demo-status-ui`, `product-events`, `beta-access-request`, `storage-privacy`, `account-retention`, `support-protocol`, `backup-continuity`.

@@ -5,7 +5,7 @@ status: pending_review
 shadcn_initialized: false
 preset: none
 created: 2026-09-20
-source: openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/ (design D10/D11/D12/D18/D20 + specs demo-status-ui / balance-card / balance-display / conta-page / credit-cta / credit-notifications / beta-access-request / admin-user-directory) + openspec/design-system/MASTER.md
+source: openspec/changes/archive/2026-09-23-fase-50-demonstracao-gratuita-e-validade-dos-creditos/ (design D10/D11/D12/D18/D20 + specs demo-status-ui / balance-card / balance-display / conta-page / credit-cta / credit-notifications / beta-access-request / admin-user-directory) + openspec/design-system/MASTER.md
 ---
 
 # Phase 50 — UI Design Contract (Demonstração Gratuita e Validade dos Créditos)
