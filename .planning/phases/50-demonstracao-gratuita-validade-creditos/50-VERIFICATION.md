@@ -1,10 +1,12 @@
 # F50 Verification
 
-Status: **TECHNICAL GATES COMPLETE: ready for final verification and archival review**
+Status: **PASSED / COMPLETE**
 
-This record confirms the previously completed structural/ledger evidence and
-records the approved closed-beta posture. No legal document, legal publication
-migration, launch flag, or cutover is marked complete by this document.
+This record confirms the completed F50 technical delivery, approved UAT and
+restore evidence, and the approved closed-beta posture. The F50 OpenSpec change
+was archived at `openspec/changes/archive/2026-09-23-fase-50-demonstracao-gratuita-e-validade-dos-creditos/`.
+No legal document publication, launch flag activation, public activation, or
+cutover is marked complete by this document.
 
 ## Verification Artifact Inventory
 
@@ -13,6 +15,7 @@ The verification artifacts exist and are tracked at the canonical F50 path:
 - `.planning/phases/50-demonstracao-gratuita-validade-creditos/50-VERIFICATION.md`
 - `.planning/phases/50-demonstracao-gratuita-validade-creditos/50-UAT.md`
 - `.planning/phases/50-demonstracao-gratuita-validade-creditos/50-GATES.txt`
+- `openspec/changes/archive/2026-09-23-fase-50-demonstracao-gratuita-e-validade-dos-creditos/`
 
 ## Remote Evidence
 
@@ -181,7 +184,10 @@ executados somente após a constituição da PJ:
 - O escopo preserva identidade da PJ, placeholders/datas, validação jurídica,
   publicação legal, corte, credenciais, MFA/go-live e smoke test pós-corte.
 
-A quick pós-PJ ainda não foi criada. A F50 não foi arquivada nesta rodada.
+A F50 foi arquivada. A publicação legal e o cutover não pertencem ao escopo
+concluído da F50 e foram transferidos, junto com os demais itens dependentes da
+constituição da PJ, para a futura F50.1 — Formalização Legal e Ativação da
+Demonstração, que ainda não é planejada nem ativa.
 
 ## Gap Closure: Legal Documents Before Publication
 

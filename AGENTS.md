@@ -300,7 +300,7 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 
 ## Phase 50 — Demonstração Gratuita e Validade dos Créditos
 
-**Status:** ◆ Executando — 17/17 plans concluídos; restore real de 17.2, gates técnicos de 17.3 e escopo F50 de 50-14 validados; escopo pós-PJ transferido, F50 pronta para verificação final e arquivamento (50-01 ✅, 50-02 ✅, 50-03 ✅, 50-04 ✅, 50-05 ✅, 50-06 ✅, 50-07 ✅, 50-08 ✅, 50-09 ✅, 50-10 ✅, 50-11 ✅, 50-12 ✅, 50-13 ✅, 50-14 ✅, 50-15 ✅, 50-16 ✅, 50-17 ✅)
+**Status:** ✅ **CONCLUÍDA** — 17/17 plans concluídos; verificação técnica, UAT controlada, gates técnicos e restore real aprovados; OpenSpec arquivado; nenhuma pendência pertence ao escopo da F50 (50-01 ✅, 50-02 ✅, 50-03 ✅, 50-04 ✅, 50-05 ✅, 50-06 ✅, 50-07 ✅, 50-08 ✅, 50-09 ✅, 50-10 ✅, 50-11 ✅, 50-12 ✅, 50-13 ✅, 50-14 ✅, 50-15 ✅, 50-16 ✅, 50-17 ✅)
 
 | Plan | Wave | Status | Description |
 |------|------|--------|-------------|
@@ -324,7 +324,7 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 
 **Escopo (D1–D26):** substituição do freemium contínuo por uma demonstração gratuita limitada (10 créditos, 168h, sem cartão/cobrança); bucket de demonstração com validade; tipos `demo`/`expiration`; ordem de consumo demo→bônus→comprado atômica; notificações; telemetria; suporte honesto; documentos v1.5/v1.4/v1.2 preparados mas não publicados; storage hardening; conta/retirada; backup externo restaurável obrigatório para fechamento técnico e primeiro convite. Postura atual: beta fechado sem novos usuários, `VENDEO_DEMO_CREDITS_ENABLED=false`, email ausente/false, `VENDEO_PUBLIC_SIGNUP_ENABLED=false`, sem cobrança/checkout/monetização. PJ, placeholders/datas, sincronização final, jurídico, autoack aprovado, publicação, ativação, admissão e smoke pós-corte foram transferidos para quick pós-PJ ainda não criada. **Fences:** sem alterar prompts, gateway de IA, snapshot, domínio ou contrato de geração (402); bônus sempre não-expirável na F50. **Renumeração:** F50 = Demonstração Gratuita e Validade dos Créditos; F44 e Stripe fora da numeração.
 
-**Fonte da verdade:** `openspec/changes/fase-50-demonstracao-gratuita-e-validade-dos-creditos/`
+**Fonte da verdade:** `openspec/changes/archive/2026-09-23-fase-50-demonstracao-gratuita-e-validade-dos-creditos/`
 **Context:** `.planning/phases/50-demonstracao-gratuita-validade-creditos/50-CONTEXT.md`
 
 <!-- GSD:profile-start -->

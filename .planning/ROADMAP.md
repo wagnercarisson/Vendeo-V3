@@ -2,7 +2,7 @@
 
 ## Milestone v1.5 — Lançamento Externo Controlado ◆
 
-**18 phases** | **177 requirements mapped** | All covered ✓
+**19 phases** | **177 requirements mapped** | All covered ✓
 **Phase numbering:** Continues from v1.4 (Phase 22). F37 = Revisão e Aprovação da Arte (v1.5, concluída em fatias 37.1/37.2; 37.1 concluída; **37.2 realinhada = Correção Única por Não Conformidade** CONCLUÍDA (19/19 plans, 4 gates verdes, UAT 9/9); **37.3 eliminada** — consolidada na 37.2), F38 = Tabela de Custos por Operação, F39 = Brief Estruturado de Campanha, F40 = Campos Comerciais e Avisos do Brief, F41 = Mídia de Campanha Mobile, F42 = Signup Controlado e Elegibilidade Freemium, F43 = Revisão do Brief Pré-Geração e F45 = Briefing Contextual do Diretor de Arte (concluída em 2026-09-05), **F46 = Gateway Único de IA e Registry de Modelos (v1.5, Change A — CONCLUÍDA em 2026-09-13, 9/9 plans, 275 files / 2721 testes, 4 gates verdes, UAT 8/8 PASS)** e **F47 = Catálogo e Seleção de Modelos Admin (v1.5, Change B — CONCLUÍDA em 2026-09-15, 8/8 plans, 287 files / 2782 testes, 4 gates verdes, UAT local aprovado, migration remota verificada, deploy Ready)** e **F48.1 = Laboratório Mínimo de IA (v1.5 — CONCLUÍDA em 2026-09-17, 14/14 plans / 9 waves, 4 gates verdes (333 arquivos / 3588 testes), UAT local aprovado Passos 1–10, migration remota aplicada/verificada, `48-1-VERIFICATION.md` = passed; primeira fatia do programa incremental F48.x; fonte `openspec/changes/fase-48-1-laboratorio-ia-minimo/`)**. F44 = Temas de Campanha permanece fora da numeração; Monetização pública / Stripe permanece diferida e fora da numeração. Fonte da F37.1: `openspec/changes/fase-37-1-approval-gate-candidata-unica/`; fonte da F37.2: `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/`; fonte da F46: `openspec/changes/archive/2026-09-13-fase-46-gateway-unico-de-ia-e-registry-de-modelos/`. **F49 = Ativação e Orientação Contextual de Campos (v1.5 — CONCLUÍDA em 2026-09-18, 15/15 plans / 7 waves, 4 gates verdes, UAT humana de compreensão aprovada 9/9 + gap closure 49-15 do code review; fonte `openspec/changes/archive/2026-09-18-fase-49-ativacao-orientacao-contextual-campos/`)**.
 
 ---
@@ -46,8 +46,17 @@
 | 47 | ✅ Catálogo e Seleção de Modelos Admin (v1.5, Change B) | 8/8 | ✅ Complete | 2026-09-15 |
 | 48.1 | ✅ Laboratório Mínimo de IA (v1.5) | 14/14 | Complete |  |
 | 49 | ✅ Ativação e Orientação Contextual de Campos (v1.5) | 15/15 | ✅ Complete | 2026-09-18 |
-| 50 | ◆ Demonstração Gratuita e Validade dos Créditos (v1.5) | 16/17 | ◆ Executando | Restore real validado em ambiente isolado; beta fechado; fechamento técnico ainda pendente de UAT/ausência de compra/OpenSpec; PJ/jurídico/corte em follow-up pós-PJ |
+| 50 | ✅ Demonstração Gratuita e Validade dos Créditos (v1.5) | 17/17 | ✅ Complete | Verificação técnica, UAT controlada, gates técnicos e restore real aprovados; beta fechado preservado; OpenSpec arquivado; escopo pós-PJ transferido |
+| 50.1 | Futura — Formalização Legal e Ativação da Demonstração | — | Futura — aguardando constituição da PJ; não planejada e não ativa. | Legal não publicado e ativação pública não realizada; escopo futuro registrado abaixo |
 | — | Monetização pública / Stripe (iniciativa diferida, v1.7+) | — | Fora da numeração | — |
+
+---
+
+### F50.1 — Formalização Legal e Ativação da Demonstração
+
+**Status:** Futura — aguardando constituição da PJ; não planejada e não ativa.
+
+**Escopo futuro:** definir razão social, CNPJ, endereço e fornecedor responsável; substituir placeholders e datas; validação jurídica de Termos v1.5, Privacidade v1.4 e AUP v1.2; revisar o autoack de suporte; sincronizar os documentos finais; criar e aplicar a migration efetiva de publicação; ativar flags na ordem aprovada; validar e-mail, credenciais e requisitos operacionais; executar smoke test pós-corte; manter rollback documentado.
 
 ---
 
