@@ -1,4 +1,5 @@
 {
+  "runtime": "opencode",
   "model_profile": "inherit",
   "commit_docs": true,
   "parallelization": false,

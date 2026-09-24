@@ -13,16 +13,18 @@
       "**/storage-backup/**"
     ]
   },
+  "model": "openai/gpt-5.6-luna-fast",
   "provider": {
     "openai": {
       "options": {
         "authMethod": "oauth-codex"
       },
       "models": {
-        "gpt-5.6-luna": {},
-        "gpt-5.6-terra": {},
-        "gpt-5.6-sol": {},
-        "gpt-5.3-codex": {}
+        "gpt-5.6-luna-fast": {
+          "options": {
+            "reasoningEffort": "medium"
+          }
+        }
       }
     }
   }
