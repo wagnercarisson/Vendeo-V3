@@ -75,6 +75,8 @@ Use these entry points:
 Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
 <!-- GSD:workflow-end -->
 
+Before starting, resuming, planning, executing, or verifying a phase, read `docs/fluxo-de-desenvolvimento.md`.
+
 ## Project Tracking
 
 - Current execution state: `.planning/STATE.md`
