@@ -25,7 +25,7 @@ progress:
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260919-hju | Ajuste localizado no campo Tom de Voz da tela /loja (seletor descritivo acessível, 9 opções incl. "Popular") | 2026-09-19 | ea53a58f | [260919-hju-ajuste-localizado-no-campo-tom-de-voz-da](./quick/260919-hju-ajuste-localizado-no-campo-tom-de-voz-da/) |
-| 260924-i6l | Reconciliação documental e operacional da Fase 50 | 2026-09-24 | pending | [260924-i6l-reconcilia-o-documental-e-operacional-da](./quick/260924-i6l-reconcilia-o-documental-e-operacional-da/) |
+| 260924-i6l | Reconciliação documental e operacional da Fase 50 | 2026-09-24 | ac2d6f2f | [260924-i6l-reconcilia-o-documental-e-operacional-da](./quick/260924-i6l-reconcilia-o-documental-e-operacional-da/) |
 
 ### Phase 50 — Demonstração Gratuita e Validade dos Créditos ✅ Complete (17/17 plans / 10 waves; verificação técnica, UAT controlada, gates técnicos e restore real aprovados; OpenSpec arquivado)
 
