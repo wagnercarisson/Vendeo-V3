@@ -1,0 +1,316 @@
+# Vendeo V3
+
+## What This Is
+
+O Vendeo é um motor SaaS de geração de campanhas para lojistas de lojas físicas. O produto transforma informações simples da loja (produto, oferta, preço) em campanhas profissionais para redes sociais, combinando inteligência artificial comercial com renderização programática. O lojista informa o essencial, e o Vendeo entrega uma peça visual pronta para publicar — sem precisar aprender design, copywriting ou marketing.
+
+O Vendeo é hoje uma aplicação SaaS multi-tenant com autenticação completa, isolamento de propriedade via RLS, geração de campanhas com IA, app shell profissional, onboarding, dashboard, busca, paginação e suporte mobile — pronta para receber os primeiros usuários reais em ambiente controlado.
+
+## Core Value
+
+Gerar uma campanha profissional de Produto + Oferta que o lojista tenha confiança de publicar e que ajude a vender mais. Se tudo mais falhar, o Vendeo precisa ser capaz de transformar uma oferta simples em uma peça visual comercial, clara e publicável.
+
+## Current State
+
+**F38.2 Admin de Custos Operacionais + Configurações Econômicas — COMPLETE (2026-08-11)** — 15/15 plans: painel `/admin/ai-operation-costs` (KPIs, filtros, tabela por entrega, drilldown call-level, agregados por segmento, breakdown créditos brutos/estornos/líquidos + receita/resultado/margem), parâmetros econômicos configuráveis (`usd_brl_rate`, `credit_value_brl` com audit), badges de confiança, correção `/admin/metrics` (Custo Médio IA call-level). 1839 testes, verificação I1-I6 63/63 em banco real, 4 gates verdes, UAT manual 12/12 aprovado.
+
+**Shipped: v1.4 — Experiência SaaS (2026-07-15)**
+
+A milestone v1.4 transformou o Vendeo em um produto SaaS coerente: app shell profissional, navegação PT-BR, dashboard, onboarding, busca/filtros/paginação e suporte mobile responsivo.
+
+- **App Shell + UI Base**: 7 componentes UI (Button, Card, Input, Badge, EmptyState, Skeleton, PageHeader), sidebar com 4 nav links + Lucide icons, topbar com CTA + AccountMenu, drawer mobile com acessibilidade
+- **Rotas PT-BR**: `/dashboard`, `/campanhas`, `/campanhas/nova`, `/campanhas/[id]`, `/loja`, `/conta` — 5 redirects 301, middleware atualizado
+- **Onboarding & Empty States**: helper 3 estados (no_store, has_store_no_campaigns, has_store_with_campaigns), empty states contextuais em vez de redirects, microcopy centralizada
+- **Dashboard Real**: saudação com 3 períodos (manhã/tarde/noite), 3 metric cards (total, prontas, taxa de sucesso), campanhas recentes, card de próximo passo adaptativo
+- **Histórico e Busca**: busca ILIKE, filtros por status/data, ordenação, paginação page-based (10/página), URL state compartilhável, Pagination component com ellipsis
+- **Mobile Hardening**: drawer com focus trap + body scroll lock + prefers-reduced-motion, touch targets ≥44px em toda a interface, responsivo validado em 320/375/768px
+
+**1345 testes automatizados**, **170 test files**, **TypeScript/lint/build limpos**.
+
+**v1.5 — Lançamento Externo Controlado:** F36, F38, F38.1, F39–F43, F45 e F46 concluídas. F37 (Revisão e Aprovação da Arte) foi concluída nas fatias 37.1/37.2: 37.1 concluída; **37.2 realinhada (Correção Única por Não Conformidade) CONCLUÍDA** (19/19 plans, 264 files / 2578 testes, 4 gates verdes, UAT PASS 9/9); **37.3 eliminada** (consolidada na 37.2).
+
+## Current Milestone: v1.5 — Lançamento Externo Controlado
+
+**Goal:** Preparar o Vendeo para o primeiro público real controlado — copy inteligente via IA, sistema de créditos, admin operacional para suporte beta, controle de custos, observabilidade e operação monitorada.
+
+**Target features:**
+- Copy Director (serviço de IA de texto persuasivo com title, caption, hashtags, CTA)
+- Sistema de créditos (saldo por loja, transações imutáveis, grant/estorno)
+- Pipeline paralelo (Copy ∥ Image) com merge, fallback e atomicidade financeira
+- Admin operacional: diretório de usuários, grant manual auditável, extrato, triagem de erros
+- Controle de custos (rate limit 10/h, teto 30/dia, timeout 120s)
+- Saldo visível na topbar + seção de créditos em `/conta` com extrato
+- Observabilidade (logging estruturado, telemetria IA, dashboard operacional)
+- Refinamento visual + Launch Readiness (UAT externo, runbook, feature flag)
+- Tabela de Custos por Operação (F38): fonte única de custo em `credit_operation_costs`, admin sem deploy, auditoria old/new, UI dinâmica sem "1 crédito" hardcoded
+- Apuração de Custos de IA por Entrega (F38.1, desdobramento da F38): custo real por chamada de IA (tokens/USD) agregado por entrega via `generation_events` + `operation_run_id`, tabela de preço versionada `ai_model_pricing` + admin API, `AiCostTracker` como camada única de registro, views/RPCs de reconciliação USD × créditos (sem UI) — **CONCLUÍDA** (11/11 plans, 1713 testes, UAT validado); fechada como **camada de ESTIMATIVA OPERACIONAL GRANULAR** — o ajuste provisório da tool image_generation (`responses:image_generation = USD 0.065`) é estimativa beta provisória (calibrada por UAT/dashboard/CSV), NÃO é custo financeiro real; reconciliação financeira real fica para a próxima fase
+- **Admin de Custos Operacionais + Configurações Econômicas (F38.2, desdobramento da F38, v1.5) — CONCLUÍDA (11/11 plans, 1832 testes, verificação I1-I6 + 4 gates verdes)**: painel admin `/admin/ai-operation-costs` ("Custos de Operação") com KPIs/filtros/tabela por entrega/drilldown call-level e agregados por segmento econômico (D9); Parâmetros Econômicos configuráveis por admin (`economic_parameters` — `usd_brl_rate` e `credit_value_brl`, defaults 1.00, auditoria append-only + RPC `admin_set_economic_parameter`) na página `/admin/operation-costs` (título "Configurações Econômicas", rota mantida); badges de confiança do custo (persistência `cost_formula_version`/`cost_estimation_note`/`text_component_usd`/`image_tool_component_usd` em `generation_events`); correção do `/admin/metrics` (card "Custo Médio IA" via apuração call-level); UI preparada para F38.3 (reconciliação provider). Fonte: `openspec/changes/fase-38-2-admin-custos-operacionais/`
+- **Campos Comerciais e Avisos do Brief (F40, v1.5) — CONCLUÍDA (9/9 plans, 1997 testes, 4 gates verdes, UAT aprovado 6/6)**: checkbox "Exibir 'Imagem meramente ilustrativa'" (default marcado) injetando `ILLUSTRATIVE_NOTICE_TEXT` (constante única, singular) no texto obrigatório; seção "Validade da oferta" com 6 modos (displayText determinístico dd/mm, só para `offer`); formulário agrupado em Produto / Oferta / Avisos e texto obrigatório; remoção do hardcode incondicional dos 4 prompts do diretor. Fonte: `openspec/changes/fase-40-campos-comerciais-avisos-brief/`
+- **Mídia de Campanha Mobile (F41, v1.5) — CONCLUÍDA (13/13 plans, 2033 testes, 4 gates verdes, UAT 6/6 cenários — Android validado em produção ✅; iOS HEIC pendente)**: form multi-imagem (1 `primary` obrigatória + até 3 auxiliares `reference` via galeria + câmera `capture="environment"`, preview grid, HEIC via canvas sem dependência, EXIF respeitado); transporte aditivo `productImages[]` (`MAX_CAMPAIGN_IMAGES = 4`, invariante exatamente-1-primary) com `productImageDataUrl` legado preservado e regra de exclusividade 400 na rota; mapper flat→domínio multi-imagem com `mimeType` real; persistência dos inputs no bucket `campaign-images` (`{storeId}/{campaignId}/inputs/{imageId}.jpg`) com `campaignId` pré-gerado + limpeza pré-stream; provider Responses N `input_image`, fallback edit gated, prompt 1+N sem nova variável (golden 38 keys), validação primary-only, revisor com primary. **Sem migration SQL.** Fonte: `openspec/changes/fase-41-midia-de-campanha-mobile/`
+- **Signup Controlado e Elegibilidade Freemium (F42, v1.5) — CONCLUÍDA (20/20 plans, 2182 testes, 4 gates verdes, UAT 20.5–20.15 PASS)**: reabrir o cadastro público controlado (Google OAuth entrada principal + email/senha fallback, Turnstile, callback PKCE `/auth/callback`, kill switch duplo), motor de elegibilidade revisado (situação ≠ ATIVA → review, cidade/UF como gate, CNAE determinístico sem rejeição exclusiva), admin reviews rico, legal Terms v1.4/Privacy v1.3. Fonte: `openspec/changes/fase-42-signup-controlado-elegibilidade-freemium/`
+- **Revisão do Brief Pré-Geração (F43, v1.5) - CONCLUÍDA**: gate client-side obrigatório de revisão do brief em tela intermediária (`reviewMode`) entre o form e o POST; "Revisar e gerar" → resumo Produto/Oferta/Imagens/Avisos/Custo + loja/marca + slot Tema; compressão antes da revisão (`prepareCampaignImages`); helpers puros `prepareCampaignImages`/`buildCampaignGenerationBody`; override `brief_review_confirmed` (pula a IA de visão, fase `input_validation` `skipped`); flag administrativa mínima `force_brief_vision_check` em `feature_flags`. 15/15 plans, 2317 testes, 4 gates verdes, UAT 9/9 PASS. Fonte: `openspec/changes/fase-43-revisao-brief-pre-geracao/`
+- **Revisão e Aprovação da Arte (F37, v1.5) - CONCLUÍDA em fatias 37.1/37.2 — fatia 37.1 CONCLUÍDA (15/15 plans, 2379 testes, 4 gates verdes, UAT 19.5–19.10 PASS 6/6); fatia 37.2 realinhada CONCLUÍDA (19/19 plans, 264 files / 2578 testes, 4 gates verdes, UAT PASS 9/9)**: fatia 37.1 (Approval Gate + Candidata Única) — valida o modelo de aprovação da arte sem tocar no pipeline de imagem: flag `campaign_approval_enabled` (fail-closed), tabela `campaign_art_versions` + colunas de aprovação em `campaigns`, RPC `approve_campaign_art_version` transacional, generate-image insere v1 quando flag ligada, estado `ApprovalDisplayState`/gating (download + copy 403 até aprovar), tela de revisão da candidata ativa, rota `POST /api/campaign/[id]/approve`; source of truth `openspec/changes/fase-37-1-approval-gate-candidata-unica/` (decisão do usuário 2026-09-01); **37.2 realinhada (Correção Única por Não Conformidade) CONCLUÍDA — source of truth `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/` (decisão do usuário 2026-09-10); 37.3 eliminada (consolidada na 37.2); F44/Stripe fora da numeração**
+- **Briefing Contextual do Diretor de Arte (F45, v1.5) — CONCLUÍDA (2026-09-05, 8/8 plans, 2427 testes, 4 gates verdes, UAT comparativo PASS 7/7 + artes reais aprovadas como publicáveis)**: reestruturação dos 4 `.md` do diretor em camada editorial legível + blocos contextuais (helper puro `art-director-briefing.ts`); prompt final contextual por presença real de dados (sem seções vazias, linhas de tabela em branco, placeholders não resolvidos ou duplicações); separação semântica (texto obrigatório × aviso ilustrativo × identidade/preservação × produto/referências × contexto comercial × restrições × direção criativa); `buildCommercialRepertoire` repartido (cada natureza em um único bloco canônico); saneamento do texto do lojista; **sem mudança de superfície externa** (UI/form, HTTP/schema, snapshot/domínio, Copy Director, fallback OpenAI); adendo 45-08 (alinhamento Diretor × Revisor: revisor com autoridade estreita, identidade fora da avaliação, bloco canônico de identidade com área segura + concordância de gênero). **Numeração:** F45 = Briefing Contextual do Diretor de Arte (v1.5) CONCLUÍDA; F44 = Temas de Campanha permanece fora da numeração (adicionada pelo runbook da própria F44); Stripe fora da numeração. Fonte (arquivada): `openspec/changes/archive/2026-09-05-fase-45-briefing-contextual-do-diretor-de-arte/`
+- **Gateway Único de IA e Registry de Modelos (F46, v1.5) — CONCLUÍDA (2026-09-13, 9/9 plans, 275 files / 2721 testes, 4 gates verdes, UAT humano 8/8 PASS; achado do snapshot econômico corrigido em `529a69c5`; Change A)**: concentra as chamadas de IA (hoje ~13 call sites / ~10 serviços, cada um com client próprio e 14 env-vars de modelo) em uma camada única de execução + telemetria, preservando o comportamento atual. Registry de modelos em código por capacidade (`src/lib/ai/model-registry.ts`; `AiModelTarget { provider, model, protocol }` no primary e no fallback; 11 capacidades; defaults idênticos — gpt-4o, gpt-4o-mini, gpt-5.5, gpt-image-2; `campaign_copy.fallback = gemini-3.1-flash-lite` como default inicial) + interface `AiModelResolver` (`src/lib/ai/model-resolver.ts`) como seam + AI Gateway (`src/lib/ai/gateway.ts`, `invoke(capability, request, telemetry, target)` — alvo explícito, adapter por protocolo, uma tentativa, sem fallback automático) + adapters `chat-completions`/`responses`/`images`/`gemini` + `api-keys.ts` + telemetria obrigatória (`AiCallEnvelope` (`extends AiCallInfo`; legado intacto) com `capability`/`protocol`/`status`/`errorType?`; persistência best-effort) + correção dos 7 furos (modelo real em validation/review; `onCall` em logo/retry-brand-director/server-actions/approve/restore; fallback `images.edit` sem usage; componente da tool em `campaign_image` e `visual_signature_image`) + remoção das 14 envs de modelo/provider + legado `campaign-intelligence` como `campaign_spec` (migration aditiva do CHECK `chk_generation_events_type`). **Sem mudança de UI/form/contrato HTTP/schema público/snapshot/domínio/prompts; sem novas tabelas; sem remover o legado.** A seleção administrativa de modelos (catálogo + persistência + tela) é o **Change B = F47**. Fonte: `openspec/changes/archive/2026-09-13-fase-46-gateway-unico-de-ia-e-registry-de-modelos/`
+- **Catálogo e Seleção de Modelos Admin (F47, v1.5, Change B) — CONCLUÍDA (2026-09-15, 8/8 plans, 287 files / 2782 testes, 4 gates verdes, UAT local aprovado, migration remota aplicada/verificada, deploy pós-cleanup Ready, env-vars obsoletas removidas e fluxo feliz validado em produção):** catálogo `ai_model_catalog` (12 seeds: 11 primary defaults F46 + fallback `campaign_copy`) e seleção `ai_model_selection` por capacidade, RPCs set/reset SECURITY DEFINER auditadas/idempotentes, `PersistedModelResolver` fail-open com cache bulk TTL 30s/invalidação local injetado em `src/lib/ai/index.ts` (gateway intocado), API/tela admin por Texto/Visual/Imagem, pricing warnings por capacidade e labels efetivos. `campaign_image_edit` permanece primary independente; catálogo é somente leitura na UI; DELETE usa JSON `{ capability, reason, operationId }` com UUID obrigatório. Correções operacionais: flag `captcha_enabled` local alinhada pelo `switch-env.ps1`, migration forward `20260915000001` (`GRANT SELECT ON campaigns TO authenticated`) e cleanup completo do UAT local. Sem alterar gateway.ts, prompts, contratos de geração, snapshot, domínio ou merchant UI/form. Fonte: `openspec/changes/fase-47-catalogo-e-selecao-de-modelos-admin/`
+- **Monetização pública / Stripe**: iniciativa diferida v1.7+ (**sem fase numerada**), reaberta quando houver condição real de executar (empresa, jurídico, contabilidade, operação fiscal, decisão de monetização).
+
+<details>
+<summary>Versões anteriores</summary>
+
+**v1.2 — Contas e Propriedade (shipped 2026-07-08)**
+
+- Autenticação completa: signup, confirmação de email, login, sessão SSR via @supabase/ssr, logout, recuperação de senha
+- Vínculo user→store: stores.user_id como fonte canônica de ownership
+- Isolamento multi-tenant: RLS em 5 tabelas + Storage policies, 20+ route handlers protegidos
+- Serviço publicável: beta.vendeo.tech operacional
+- Verificação formal: D8 catalog com 21 cenários de segurança validados
+
+**v1.1 — Motor de Campanhas (shipped 2026-07-03)**
+
+- AI Campaign Intelligence: OpenAI/Anthropic providers com structured output
+- Visual Rendering: programmatic renderer + IA-generated images
+- Store Identity: logo upload, brand analysis, visual signature com drift detection
+- Campaign Briefing: identity-aware pipeline com StoreIdentitySnapshot 2.0
+
+**v1.0 — Core de Geração (shipped 2026-07-03)**
+
+- Formulário guiado com máscara BRL, upload de imagem, validação inline
+- Store identity: form + API routes + Supabase persistence
+- Route split: `/` = campaign, `/store` = store identity
+</details>
+
+## Requirements
+
+### Validated
+
+- ✓ **INPT-01** — Product name, price/offer, and short description entry — v1.0
+- ✓ **INPT-02** — Product image upload with preview and validation — v1.0
+- ✓ **INPT-03** — Store info (name, segment/subsegment) with persistence — v1.0
+- ✓ **INPT-04** — Basic visual identity (colors, logo, name style) — v1.0 + v1.1
+- ✓ **DSGN-01** — No free-form editor — form controls and presets only — v1.0
+- ✓ **DSGN-02** — UI/UX Pro Max as design tool, not runtime dep — v1.0
+- ✓ **DSGN-03** — Campaign composition rules documented — v1.0
+- ✓ **DSGN-04** — V1 scope guardrail (no auth/dashboard/plans) — v1.0
+- ✓ **AI-01** — AI interprets product/offer/store context and generates structured spec — v1.1
+- ✓ **AI-02** — AI generates commercial copy (title, subtitle, CTA) — v1.1
+- ✓ **AI-03** — AI output includes visual parameters (palette, hierarchy, layout, badge) — v1.1
+- ✓ **AI-04** — AI provider abstraction layer (OpenAI/Anthropic) — v1.1
+- ✓ **AI-05** — AI output is structured JSON, validated before rendering — v1.1
+- ✓ **REND-01** — Programmatic renderer composes final image — v1.1
+- ✓ **REND-02** — Template system with layout variations — v1.1
+- ✓ **REND-03** — Store identity tokens applied to campaign — v1.1
+- ✓ **REND-04** — Campaign maintains minimum visual quality — v1.1
+- ✓ **REND-05** — Identity fallback: name-based identity with safe defaults — v1.1
+- ✓ **REVW-01** — User can preview generated campaign before export — v1.1
+- ✓ **AUTH-01** — Autenticação (Supabase Auth, email+senha, sessão SSR) — v1.2
+- ✓ **AUTH-02** — Vínculo user→store (`stores.user_id` FK+UNIQUE) — v1.2
+- ✓ **AUTH-03** — Loja criada durante onboarding (não no signup) — v1.2
+- ✓ **AUTH-04** — RLS em 5 tabelas com isolamento de propriedade — v1.2
+- ✓ **AUTH-05** — Cliente sessão como padrão; service role excepcional — v1.2
+- ✓ **AUTH-06** — 4 camadas de proteção (middleware → server component → handler → serviço) — v1.2
+- ✓ **AUTH-07** — Remoção de `localStorage("store_id")` — v1.2
+- ✓ **AUTH-08** — CSRF same-origin para mutações — v1.2
+- ✓ **AUTH-09** — Recuperação de senha — v1.2
+- ✓ **AUTH-10** — Classificação das 7 Server Actions (3 internas, 4 entrypoints) — v1.2
+- ✓ **AUTH-11** — Catálogo D8: 21 cenários de segurança validados — v1.2
+- ✓ **PERSIST-01** — Campanha é persistida como artefato imutável (briefing + resultado final) — v1.3
+- ✓ **PERSIST-02** — Registro da campanha no banco com parâmetros, copy e metadados — v1.3
+- ✓ **PERSIST-03** — Imagem final da campanha salva no Storage — v1.3
+- ✓ **PERSIST-04** — Estados mínimos do processo de geração (gerando, pronto, erro) — v1.3
+- ✓ **PERSIST-05** — Rota protegida `/campanha/[id]` exibe campanha persistida — v1.3
+- ✓ **PERSIST-06** — Download do original (PNG/JPG) — v1.3
+- ✓ **PERSIST-07** — Rota autenticada `/minhas-campanhas` lista campanhas da loja do usuário logado — v1.3
+- ✓ **SHELL-01** — App shell com navegação estrutural (sidebar/topbar, menus definitivos) — v1.4
+- ✓ **DASH-01** — Dashboard principal com visão geral (campanhas recentes, métricas básicas) — v1.4
+- ✓ **ONBRD-01** — Fluxo de onboarding para novos usuários pós-signup — v1.4
+- ✓ **HIST-01** — Histórico de campanhas melhor organizado (ordenação, paginação) — v1.4
+- ✓ **UX-01** — Estados vazios consistentes em toda a aplicação — v1.4
+- ✓ **SEARCH-01** — Busca e filtros essenciais nas listas de campanhas — v1.4
+- ✓ **MOBILE-01** — Fluxo mobile completo responsivo — v1.4
+- ✓ **F35-CONTENT-01..06** — Changelog: fonte de dados estática content/changelog (3 seeds), parser próprio, renderer sanitizado (h2/p/ul/li/strong), schema Zod fail-fast, formato de data sem shift de fuso, get-changelog server-only — v1.5 (F35)
+- ✓ **F35-STATE-01..06** — Estado de leitura via localStorage (2 chaves vendeo:*) SSR-safe, sem estado global — v1.5 (F35)
+- ✓ **F35-UI-01..07** — Página /novidades, ChangelogCard/List/Announcement, SidebarBadge, estilo design system — v1.5 (F35)
+- ✓ **F35-APP-SHELL-01..03** — Fluxo latestEntryId por prop, sidebar 5º item, AccountMenu link Novidades — v1.5 (F35)
+- ✓ **F35-DASHBOARD-01..03** — Anúncio contextual no dashboard (null-safe), guia docs/changelog-update.md — v1.5 (F35)
+
+### Active
+
+#### Copy Director (COPY)
+
+- [ ] **COPY-01**: TextProvider abstraction layer (createTextProvider, OpenAI/Anthropic implementations)
+- [ ] **COPY-02**: CopyDirectorService generates title, caption, hashtags, CTA from CampaignBrief
+- [ ] **COPY-03**: Prompt template in `prompts/campaign-copy-director.md` with segment-aware copywriting
+- [ ] **COPY-04**: Copy Director callable standalone (without image generation)
+
+#### Sistema de Créditos (CRED)
+
+- [ ] **CRED-01**: credit_balances table with RLS (user can SELECT own balance)
+- [ ] **CRED-02**: credit_transactions table (append-only, types: grant/purchase/deduction/refund/adjustment)
+- [ ] **CRED-03**: CreditService with reserveCredit, confirmCredit, refundCredit, grantCredits, getBalance, getHistory
+- [ ] **CRED-04**: Balance never negative — every deduction checks balance before executing
+- [ ] **CRED-05**: Atomic reserve/refund via SQL transactions (SELECT FOR UPDATE or SQL function)
+
+#### Pipeline de Geração (PIPE)
+
+- [ ] **PIPE-01**: Parallel execution of Copy Director ∥ Image Director in generate-image pipeline
+- [ ] **PIPE-02**: Rate limit guard (10/h per user, 30/dia) before any paid operation
+- [ ] **PIPE-03**: Saldo check before pipeline starts; 402 Payment Required if insufficient
+- [ ] **PIPE-04**: Credit reserve before IA calls; refund on failure; confirm on success
+- [ ] **PIPE-05**: publication_copy_snapshot populated by Copy Director (replaces deterministic buildCaption/hashtags)
+- [ ] **PIPE-06**: Timeout abort (120s total) treated as failure with refund
+
+#### Admin Operacional (ADMIN)
+
+- [ ] **ADMIN-01**: Admin access control — only explicitly authorized users (admin_users table) access admin routes/pages
+- [ ] **ADMIN-02**: Admin user/store directory — list and search beta users/stores with support data
+- [ ] **ADMIN-03**: Admin credit grant — manual grant with mandatory reason, using CreditService.grantCredits (idempotent + audit trail)
+- [ ] **ADMIN-04**: Admin credit ledger view — view balance and full transaction history of any store/user
+- [ ] **ADMIN-05**: Admin campaign error review — view errored campaigns with error_message, status, dates
+- [ ] **ADMIN-06**: Admin audit log — every sensitive admin action recorded with actor, target, action, reason, timestamp (append-only)
+
+#### Conta e Saldo Visível (UI-CREDIT)
+
+- [ ] **UI-01**: Credit balance visible in topbar (app shell) — server-side lookup
+- [ ] **UI-02**: Credits section in `/conta` — balance card, transaction history, beta credit request CTA
+- [ ] **UI-03**: Zero-credit CTA during beta — "Solicitar créditos" / "Fale com o time" (não Stripe)
+- [ ] **UI-04**: Extrato paginado (credit_transactions history with all types except adjustment)
+- [ ] **UI-05**: Onboarding grant: 5 free credits on store creation (POST /api/store integration)
+- [ ] **UI-06**: Zero-credit states: tooltip, disabled button, CTA to request credits — product never blocks entirely
+
+#### Observabilidade e Operação (OPS)
+
+- [ ] **OPS-01**: Structured logging in pipeline (campaignId, phase, duration_ms, status)
+- [ ] **OPS-02**: IA telemetry (tokens, cost, model, provider) in generation_events
+- [ ] **OPS-03**: Deploy checklist, rollback process, environment variables documented
+- [ ] **OPS-04**: Support runbook (manual grant, refund, balance check)
+- [ ] **OPS-05**: Feature flag v1.5-credits-enabled for safe rollout
+
+#### Refinamento Visual e Launch Readiness (LAUNCH)
+
+- [ ] **LAUNCH-01**: Loading, empty, error states for all new screens/components
+- [ ] **LAUNCH-02**: Insufficient-credit UX across the app (disabled states, tooltips, microcopy)
+- [ ] **LAUNCH-03**: Mobile hardening for credit flows (viewport 320–768px, touch targets ≥44px)
+- [ ] **LAUNCH-04**: UAT externo com 3–5 lojistas reais
+- [ ] **LAUNCH-05**: Canal de feedback, métricas de saúde, critérios de expansão/pausa documentados
+- [ ] **LAUNCH-06**: Feature flag active and verified in UAT before milestone close
+
+#### Segurança (SEC)
+
+- [ ] **SEC-01**: RLS policies for credit_balances and credit_transactions
+- [ ] **SEC-02**: Ownership validation on all /api/credits/* routes
+- [ ] **SEC-03**: Sanitized inputs to Copy Director (no sensitive data in prompts)
+- [ ] **SEC-04**: Admin routes protected by requireAdmin gate — admin_users table, no auth.users flag
+- [ ] **SEC-05**: Service role usage reviewed — credit operations use service role only after identity validation
+- [ ] **SEC-06**: Data retention policy implemented (90d cleanup for logs/generation_events)
+
+### Out of Scope
+
+- Regeneração — redefinida como "novo briefing" (MC-02), não implementada
+- Planos e assinaturas mensais — uso livre + créditos avulsos é suficiente para lançamento controlado
+- Múltiplas lojas — relação 1:1 mantida
+- Times / permissões multi-usuário — single-user
+- Integração com Instagram (API de postagem automática) — milestone futura
+- Plano semanal e calendário inteligente — fase futura
+- Editor visual livre tipo Canva — geração guiada, não livre
+- Geração por IA de imagem (DALL-E, etc) — reduz previsibilidade
+- Múltiplos tipos de campanha, equipe, automações avançadas
+- OAuth social / Magic link — exclusão deliberada v1.2
+- Export agendado / programado — fora do escopo v1.4
+- Métricas e analytics avançados — métricas básicas apenas no dashboard
+- PWA / install prompt — não prioritário para lançamento controlado
+- Campanhas multi-formato (Stories, Landscape) — apenas 1080×1080 feed
+- Cache de prompts / otimização de tokens — feature futura de redução de custo
+
+## Context
+
+**Current state (após v1.4):**
+- ~713 testes automatizados, 89 test files, zero erros de tipo/lint/build
+- Aplicação SaaS multi-tenant funcional em beta.vendeo.tech
+- Ciclo completo de campanha + persistência + entrega
+- App shell profissional com sidebar, topbar, drawer mobile acessível
+- Dashboard com métricas, campanhas recentes e onboarding adaptativo
+- Histórico com busca ILIKE, filtros, paginação e URL state
+- Interface responsiva com touch targets ≥44px, validada em 320/375/768px
+- Bucket `store-logos`: 0 objetos, pendente de remoção
+- **Em andamento: v1.5 — Lançamento Externo Controlado**
+
+**User profile:** Pequenos e médios lojistas físicos que acumulam funções operacionais, comerciais e administrativas — não têm tempo, criatividade ou recursos para design profissional.
+
+**Development environment:** VS Code, OpenCode como agente de IA, OpenSpec para especificações, GSD para organização/execução, UI/UX Pro Max para direção visual.
+
+## Constraints
+
+- **Stack**: Next.js (App Router) + TypeScript + Supabase (banco, storage, auth) + Vercel (deploy)
+- **IA**: APIs externas via backend (OpenAI/Anthropic) com camada de abstração
+- **Geração visual**: Híbrida — IA decide parâmetros e copy, renderização programática executa a arte final
+- **Fluxo**: Web app (browser), formulário → geração → revisão → exportação
+- **Deploy**: Vercel, sem necessidade de infraestrutura adicional
+- **Validação**: Toda fase exige validação automática (TypeScript, lint, build) e manual
+- **Ordem**: Visão primeiro → direção visual → core de campanha → estrutura SaaS
+
+> **Nota:** Auth, multi-tenant, persistência, entrega, app shell e experiência SaaS estão implementados desde v1.4.
+
+## Key Decisions
+
+| Decision | Rationale | Outcome |
+|----------|-----------|---------|
+| Geração híbrida (IA decide, renderização programática executa) | Controle de texto, consistência visual, custo previsível | ✓ Good |
+| APIs externas (OpenAI/Anthropic) com abstração | Evita acoplamento a um provedor | ✓ Good |
+| Supabase para banco/storage/auth | Solução integrada, escalável, bom fit Next.js+Vercel | ✓ Good |
+| Campanha avulsa antes de estrutura SaaS | Valida core antes de construir produto ao redor | ✓ Good |
+| Três camadas: Intelligence → Spec → Render | Separa responsabilidades | ✓ Good |
+| Route split: `/` = campaign, `/store` = store identity | Limpeza, navegação nativa App Router | ✓ Good |
+| BRL via cents-internal state + Intl.NumberFormat | Precisão numérica, formatação consistente | ✓ Good |
+| Component decomposition (hook + form + preview) | Single responsibility, reusável | ✓ Good |
+| Geração por IA + CSS fallback legado | IA garante qualidade; CSS preservado para preview | ✓ Good — MC-04 |
+| Ajustes de arte removidos do escopo v1 | Motor valida geração, não edição pós-geração | ✓ Decisão MC-01 |
+| Regeneração como "novo briefing" | Evita complexidade de re-renderização | ✓ Decisão MC-02 |
+| Export movido para milestone futura | Export depende de dashboard/histórico | ⚠ Sem milestone |
+| Supabase Auth + `@supabase/ssr` | Sessão SSR com cookies, não localStorage | ✓ Good — D2 |
+| `stores.user_id` como ownership canônico | Fonte única de verdade | ✓ Good — D1 |
+| RLS com políticas FOR SELECT específicas | Sem `FOR ALL`, mínimo privilégio | ✓ Good — D6 |
+| Cliente sessão padrão; service role excepcional | Defense in depth | ✓ Good — D5 |
+| CSRF same-origin para mutações | Proteção contra ataques cross-site | ✓ Good — D9 |
+| Catálogo D8 como critério de aceite | Milestone só fecha com cenários VERDES | ✓ Good — D8 |
+| Sharp v0.34.5 para transcodificação PNG/WEBP→JPEG | Industria standard, <50ms 1080×1080 | ✓ Good — F14 |
+| Pipeline INSERT antes da IA (D8) | Registros `generating` só para requisições válidas | ✓ Good — F14 |
+| Compensação por tipo de falha (upload vs updateReady) | Delete imagem se upload OK mas updateReady falha | ✓ Good — F14 |
+| Fallback publication copy: current > snapshot > vazio | Por shape/tipo, não truthiness | ✓ Good — F17 |
+| Validação isolada em publication-copy.ts | Reutilizável entre backend e frontend | ✓ Good — F17 |
+| PT-BR como língua padrão da interface | Produto brasileiro | ✓ Good — F18 |
+| Empty states em vez de redirects | Melhor UX de onboarding, evita bouncing | ✓ Good — F19 |
+| Dashboard adaptativo 3 estados reaproveitando onboarding helper | DRY, single source of truth | ✓ Good — F20 |
+| Busca ILIKE server-side + client-side debounce | Performance sem comprometer UX | ✓ Good — F21 |
+| Touch targets ≥44px como padrão de acessibilidade mobile | WCAG minimum, sem lib externa | ✓ Good — F22 |
+| Focus trap manual no drawer (sem lib externa) | Evita dependência para funcionalidade simples | ✓ Good — F22 |
+| Copy Director como serviço de IA independente (texto) | Separa responsabilidades, paralelizável com Image Director | ✓ Good — D1 v1.5 |
+| Pipeline paralelo Copy ∥ Image | Copy não influencia arte; latência cortada pela metade | ✓ Good — D2 v1.5 |
+| Crédito só debitado na geração bem-sucedida | Contrato com o usuário: falha = estorno automático | ✓ Good — D3 v1.5 |
+| Stripe Checkout (redirect) — ADIADO para F30/v1.6 | Crédito operado pelo time durante beta; Stripe retomado pós-validação | △ Adiado — D4 v1.5 |
+| Rate limit via tabela generation_events (janela deslizante) | Sem dependência externa (Redis); migra se carga crescer | ✓ Good — D5 v1.5 |
+| Observabilidade começa com logs estruturados + Vercel Logs | Escala conforme necessidade; sem ferramental externo inicial | ✓ Good — D6 v1.5 |
+| Saldo visível na topbar (server component) | Usuário nunca precisa adivinhar quantos créditos tem | ✓ Good — D7 v1.5 |
+| Copy Director usa TextProvider, não ImageProvider | Provider de texto paralelo, intercambiável OpenAI↔Anthropic | ✓ Good — D8 v1.5 |
+| Saldo zero não bloqueia o app | Dashboard/histórico funcionam; apenas geração é limitada | ✓ Good — D9 v1.5 |
+| Política de retenção definida por entidade | Campanhas vitalícias, logs 90 dias, transações financeiras vitalícias | ✓ Good — D10 v1.5 |
+| Feature flag v1.5-credits-enabled para rollout seguro | Milestone concluída só com flag ativa em UAT | ✓ Good — D11 v1.5 |
+| Admin Operacional (F26) substitui Stripe no caminho crítico | Beta controlado precisa de capacidade operacional antes de automatizar vendas | ✓ Good — D12 v1.5 |
+| Convite beta MVP: sem email convite, admin completa onboarding | Usuário existe via auth normal; admin apenas cria loja + concede créditos | ✓ Good — D13 v1.5 |
+| Admin gate via admin_users table (não auth.users flag) | Tabela própria, auditável, sem risco de reset em migração auth | ✓ Good — D14 v1.5 |
+| Admin audit log append-only obrigatório | Grant sem audit trail tratado como falha; RPC atômica grant+audit | ✓ Good — D15 v1.5 |
+
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each milestone** (via `/gsd-complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
+
+---
+*Last updated: 2026-09-17 — **F48.1 (Laboratório Mínimo de IA, v1.5) CONCLUÍDA** (14/14 plans / 9 waves; 48-1-14 concluído — UAT local com IA real **Passos 1–10 PASS** aprovado por Wagner, migration remota aplicada/verificada no projeto `gvbzwihwgzujwsviufgy` (8 tabelas `lab_*` com RLS, 0 grants a `anon`/`authenticated`, bucket `lab-artifacts` privado, RPCs `SECURITY DEFINER` com `search_path=''`, 8 triggers de imutabilidade, `db diff --linked` sem divergência em `lab_*`, `VENDEO_LAB_ENABLED` ausente em produção), 4 gates verdes (333 arquivos / 3588 testes + 1 skipped; typecheck/lint/build exit 0) e contract guard com 0 violações; orçamento 4 runs / 0.458826 USD; fix `tool_choice` descoberto na UAT (`7d6c2f03`); `48-1-VERIFICATION.md` = passed; arquivamento OpenSpec preparado e não executado; deploy não executado — fora do escopo; 48-1-01 concluído — migration local das 8 tabelas `lab_*` + bucket `lab-artifacts` + triggers de imutabilidade + RPCs `lab_reserve_run`/`lab_create_experiment`, ainda não aplicada no remoto; 48-1-02 concluído — guarda de ambiente fail-closed, constantes de limite, env vars em `.env.example` e gate de arquitetura cobrindo `src/lib/lab/**`; 48-1-03 concluído — schema `LabScenarioContent`, 3 fixtures controladas de oferta, hash canônico SHA-256, mapper para `CampaignBrief`/`ResolvedCampaignContext` e bootstrap local idempotente; 48-1-04 concluído — domínio de experimentos prompt-only, snapshots de prompt `official`/`override`, allowlist read-only do catálogo F47, criação atômica de 2 variantes via RPC `lab_create_experiment`, máquina de estados e congelamento; 48-1-06 concluído — persistência de artefatos (bucket privado `lab-artifacts`, path próprio validado, metadados + checksum SHA-256 com rollback sem órfão, URL assinada de 3600s e cleanup manual opt-in); 48-1-05 concluído — harness de gateway isolado (seam aditivo `buildDirectorPrompt`, `LabModelResolver` com alvo fixo, `LabPromptLoader` com override em memória, `LabTelemetrySink` com custo em leitura, `deriveCostCoverage` e runtime single-shot com 1 envelope por run); 48-1-07 concluído — execução real e snapshots imutáveis (validação técnica com `sharp`, snapshot antes da reserva, reserva atômica com 11 códigos de erro, idempotência por `operationId`, 1 chamada `campaign_image`/run com terminal em `finally` e reconciliação de órfãos); 48-1-08 concluído — API administrativa `/api/admin/laboratorio` (7 rotas com `apiHandler` + `requireAdmin` + `assertLabEnvironment`, schemas Zod, estimativa por componente, leitura com reconciliação e URLs assinadas, execução NDJSON com `confirmed: true` (422), 12 códigos mapeados, idempotência sem nova chamada paga e avaliação humana append-only validada); 48-1-09 concluído — UI do laboratório (link único na nav do admin, layout com guarda de ambiente + sub-navegação, página inicial, cenários somente leitura, formulário prompt-only com dimensão/modelo fixos e limites travados, detalhe com variantes/runs/budget e painel de execução com estimativa, confirmação explícita e progresso NDJSON; `src/components/ui/` intocado); 48-1-10 concluído — comparação lado a lado e avaliação humana (arte por URL assinada em lote, evidência técnica objetiva, modo cego auditável com `blind_order`, verdict humano append-only com histórico preservado e nenhuma nota automática de qualidade); 48-1-11 concluído — suíte de contrato nº 1 (matriz dos 5 motivos da guarda, isolamento da produção com detector `forbidden_production_access`, contratos de cenários e do domínio de experimentos e segurança financeira; 505 testes em `src/lib/lab`); 48-1-12 concluído — suíte de contrato nº 2 (harness de gateway, execução/snapshot imutável, artefatos, API administrativa, UI e snapshots como fixtures determinísticas; 6 arquivos, 142 testes novos); 48-1-13 concluído — regressão e co-migração (suíte completa verde: 333 arquivos / 3585 testes; guard de contrato congelado com relatório JSON 0 violações; co-migração não necessária — seam puramente aditivo; typecheck/lint/build verdes); CONTEXT, UI-SPEC e planos `48-1-01..48-1-14` de `openspec/changes/fase-48-1-laboratorio-ia-minimo/`). Antes: **F47 (Catálogo e Seleção de Modelos Admin, v1.5, Change B) CONCLUÍDA** (8/8 plans, 287 files / 2782 testes, 4 gates verdes, UAT local aprovado, migration remota aplicada/verificada, deploy de produção Ready, env-vars obsoletas removidas; fonte `openspec/changes/fase-47-catalogo-e-selecao-de-modelos-admin/`). Antes (2026-09-13): **F46 (Gateway Único de IA e Registry de Modelos, v1.5) CONCLUÍDA** (9/9 plans, 275 files / 2721 testes, 4 gates verdes, UAT humano 8/8 PASS; achado de UAT do snapshot econômico corrigido em `529a69c5`; Change A). Antes (2026-09-10): **F37.2 realinhada (Correção Única por Não Conformidade) CONCLUÍDA** (19/19 plans, 8 waves, 264 files / 2578 testes, 4 gates verdes, UAT PASS 9/9 — 37.2-6 validado por código; source of truth `openspec/changes/fase-37-2-correcao-unica-por-nao-conformidade/`, decisão do usuário 2026-09-10); 37.1 concluída; **37.3 eliminada** (consolidada na 37.2); F44/Stripe fora da numeração.*
+*Histórico anterior (2026-09-01) — **F37 (Revisão e Aprovação da Arte, v1.5) — fatia 37.1 (Approval Gate + Candidata Única) CONCLUÍDA** (15/15 plans, 2379 testes, 4 gates verdes, UAT 19.5–19.10 PASS 6/6; source of truth `openspec/changes/fase-37-1-approval-gate-candidata-unica/`, decisão do usuário 2026-09-01); antes: **F43 (Revisão do Brief Pré-Geração, v1.5) CONCLUÍDA** (15/15 plans, 2317 testes, 4 gates verdes, UAT 15.5–15.13 PASS 9/9); renumeração D1: F42 = Signup Controlado e Elegibilidade Freemium (v1.5) **CONCLUÍDA** (20/20 plans, 2182 testes, UAT 20.5–20.15 PASS), F43 = Revisão do Brief Pré-Geração (v1.5), **Monetização pública / Stripe fora da numeração (iniciativa diferida v1.7+ não numerada)** — fonte `openspec/changes/fase-43-revisao-brief-pre-geracao/`.*
+*Histórico anterior: F42 em planejamento (2026-08-16): F42 = Signup Controlado e Elegibilidade Freemium (v1.5), Stripe / Monetização Pública → F43 v1.7, pós-beta, fonte `openspec/changes/fase-42-signup-controlado-elegibilidade-freemium/`. Antes: F41 (Mídia de Campanha Mobile, v1.5) CONCLUÍDA (13/13 plans, 2033 testes, 4 gates verdes, UAT humano 6/6 cenários — Android validado em produção ✅; iOS HEIC pendente de confirmação final; renumeração D1: F41 = Mídia de Campanha Mobile, Stripe / Monetização Pública → F42 v1.7, pós-beta), fonte `openspec/changes/fase-41-midia-de-campanha-mobile/`. Antes: F40 (Campos Comerciais e Avisos do Brief, v1.5) CONCLUÍDA (9/9 plans, 1997 testes, 4 gates verdes, UAT humano aprovado 6/6; renumeração D1: F40 = Campos Comerciais e Avisos do Brief, Stripe / Monetização Pública → F41 v1.7, pós-beta), fonte `openspec/changes/fase-40-campos-comerciais-avisos-brief/`. Antes: F39 (Brief Estruturado de Campanha, v1.5) CONCLUÍDA (8/8 plans, 1950 testes, 4 gates verdes, UAT aprovado 5/5); renumeração D1: Stripe / Monetização Pública → F40 (v1.7, pós-beta), fonte `openspec/changes/fase-39-brief-estruturado-campanha/`.
