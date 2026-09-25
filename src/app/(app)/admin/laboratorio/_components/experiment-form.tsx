@@ -11,6 +11,11 @@ import type {
   LabScenarioVersionSummary,
 } from "@/lib/lab/api/experiment-queries";
 import {
+  CAMPAIGN_INTENTS,
+  DIRECTOR_PROMPT_NAMES as DIRECTOR_PROMPTS,
+} from "@/lib/lab/domain/schemas";
+import type { CampaignIntent } from "@/lib/lab/domain/schemas";
+import {
   DEFAULT_MAX_RUNS_PER_EXPERIMENT,
   MAX_REPETITIONS,
   MAX_RUNS_PER_EXPERIMENT,
@@ -21,12 +26,17 @@ import { LabSelect } from "./lab-select";
 import { LabTextarea } from "./lab-textarea";
 
 /**
- * Formulário de criação de experimento do Laboratório de IA (F48.1, D5/D12/D14).
+ * Formulário de criação de experimento do Laboratório de IA (F48.1, D5/D12/D14;
+ * F48.2.1, D4/D10).
  *
  * Comparação **prompt-only**: a dimensão alterada é fixa em `prompt` e o modelo é
  * fixo e idêntico para as duas variantes — a tela **não** oferece nenhum controle
  * editável de dimensão nem de modelo (comparação de modelo é F48.2, T-48-1-71).
- * Os limites (`MAX_SCENARIOS_PER_EXPERIMENT`, `MAX_REPETITIONS`,
+ *
+ * O **tipo de campanha** (obrigatório) determina o prompt sob teste
+ * (`DIRECTOR_PROMPTS[intent]`) — o prompt é **derivado**, nunca informado pelo
+ * cliente — e o **programa de otimização** (obrigatório) vincula o experimento ao
+ * orçamento. Os limites (`MAX_SCENARIOS_PER_EXPERIMENT`, `MAX_REPETITIONS`,
  * `MAX_RUNS_PER_EXPERIMENT`, default) vêm da fonte única `@/lib/lab/limits`.
  *
  * A candidata é um override em memória: nenhum arquivo de `prompts/` é alterado
@@ -34,17 +44,25 @@ import { LabTextarea } from "./lab-textarea";
  * (`skipInputValidation: true`, D7).
  */
 
+export interface ExperimentFormProgramOption {
+  id: string;
+  matrixVersion: string;
+  status: string;
+}
+
 export interface ExperimentFormProps {
   modelTarget: ActiveCampaignImageTarget;
   scenarios: LabScenarioVersionSummary[];
+  programs: ExperimentFormProgramOption[];
   defaultParams: { size: string; quality: string };
-  promptName: string;
 }
 
 interface FormValues {
   name: string;
   objective: string;
   hypothesis: string;
+  campaignIntent: CampaignIntent;
+  programId: string;
   scenarioVersionIds: string[];
   repetitions: number;
   maxRuns: number;
@@ -55,9 +73,21 @@ type FieldKey = keyof FormValues;
 
 const MIN_CANDIDATE_LENGTH = 20;
 
+const INTENT_LABELS: Record<CampaignIntent, string> = {
+  offer: "Oferta",
+  spotlight: "Destaque",
+  exclusive: "Exclusivo",
+};
+
 const API_ERROR_MESSAGES: Record<string, string> = {
   unsupported_changed_dimension:
     "Somente a dimensão prompt é comparável nesta etapa; modelo e configuração ficam para a próxima",
+  unsupported_prompt_under_test:
+    "O prompt sob teste precisa corresponder ao tipo de campanha escolhido",
+  intent_mismatch:
+    "Os cenários selecionados precisam ser do mesmo tipo de campanha",
+  program_not_authorized:
+    "O programa precisa de orçamento autorizado antes de executar",
   model_target_not_in_catalog:
     "O modelo alvo do experimento não está ativo no catálogo de modelos",
   invalid_payload: "Os dados enviados são inválidos. Revise os campos e tente novamente",
@@ -98,14 +128,16 @@ function FixedField({
 export function ExperimentForm({
   modelTarget,
   scenarios,
+  programs,
   defaultParams,
-  promptName,
 }: ExperimentFormProps) {
   const router = useRouter();
   const [values, setValues] = useState<FormValues>({
     name: "",
     objective: "",
     hypothesis: "",
+    campaignIntent: "offer",
+    programId: programs[0]?.id ?? "",
     scenarioVersionIds: [],
     repetitions: 1,
     maxRuns: DEFAULT_MAX_RUNS_PER_EXPERIMENT,
@@ -115,6 +147,11 @@ export function ExperimentForm({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  const promptUnderTest = DIRECTOR_PROMPTS[values.campaignIntent];
+  const eligibleScenarios = scenarios.filter(
+    (scenario) => scenario.intent === values.campaignIntent,
+  );
+
   function validateField(field: FieldKey, current: FormValues): string | undefined {
     switch (field) {
       case "name":
@@ -123,6 +160,8 @@ export function ExperimentForm({
         return current.objective.trim() ? undefined : "Informe o objetivo";
       case "hypothesis":
         return current.hypothesis.trim() ? undefined : "Informe a hipótese";
+      case "programId":
+        return current.programId ? undefined : "Selecione o programa de otimização";
       case "scenarioVersionIds":
         if (current.scenarioVersionIds.length === 0) {
           return "Selecione ao menos 1 cenário";
@@ -153,6 +192,7 @@ export function ExperimentForm({
       "name",
       "objective",
       "hypothesis",
+      "programId",
       "scenarioVersionIds",
       "repetitions",
       "maxRuns",
@@ -171,6 +211,17 @@ export function ExperimentForm({
       const merged = { ...previous };
       if (message) merged[field] = message;
       else delete merged[field];
+      return merged;
+    });
+  }
+
+  function handleIntentChange(event: ChangeEvent<HTMLSelectElement>) {
+    const campaignIntent = event.target.value as CampaignIntent;
+    // Ao trocar o tipo, os cenários elegíveis mudam: limpa a seleção anterior.
+    setValues((previous) => ({ ...previous, campaignIntent, scenarioVersionIds: [] }));
+    setErrors((previous) => {
+      const merged = { ...previous };
+      delete merged.scenarioVersionIds;
       return merged;
     });
   }
@@ -223,13 +274,15 @@ export function ExperimentForm({
           objective: values.objective.trim(),
           hypothesis: values.hypothesis.trim(),
           changedDimension: "prompt",
+          campaignIntent: values.campaignIntent,
+          programId: values.programId,
           modelTarget,
           params: { ...defaultParams, skipInputValidation: true },
           repetitions: values.repetitions,
           maxRuns: values.maxRuns,
           scenarioVersionIds: values.scenarioVersionIds,
-          baseline: { promptName },
-          candidate: { promptName, promptContent: values.candidateContent },
+          baseline: { promptName: promptUnderTest },
+          candidate: { promptName: promptUnderTest, promptContent: values.candidateContent },
         }),
       });
 
@@ -295,6 +348,40 @@ export function ExperimentForm({
       />
 
       <div className="grid gap-4 sm:grid-cols-2">
+        <LabSelect
+          label="Tipo de campanha"
+          value={values.campaignIntent}
+          onChange={handleIntentChange}
+        >
+          {CAMPAIGN_INTENTS.map((intent) => (
+            <option key={intent} value={intent}>
+              {INTENT_LABELS[intent]}
+            </option>
+          ))}
+        </LabSelect>
+
+        <LabSelect
+          label="Programa de otimização"
+          value={values.programId}
+          error={errors.programId}
+          onChange={(event) =>
+            setValues((previous) => ({ ...previous, programId: event.target.value }))
+          }
+          onBlur={() => handleBlur("programId")}
+        >
+          {programs.length === 0 ? (
+            <option value="">Nenhum programa disponível</option>
+          ) : (
+            programs.map((program) => (
+              <option key={program.id} value={program.id}>
+                {program.matrixVersion} · {program.status}
+              </option>
+            ))
+          )}
+        </LabSelect>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
         <FixedField
           label="Dimensão alterada"
           value="prompt"
@@ -307,12 +394,19 @@ export function ExperimentForm({
         />
       </div>
 
+      <FixedField
+        label="Prompt sob teste"
+        value={promptUnderTest}
+        testId="lab-prompt-under-test"
+      />
+
       <div className="rounded-xl border border-border bg-bg-surface p-4 text-sm text-text-secondary font-body">
         <p className="flex items-start gap-2">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-accent-blue" aria-hidden="true" />
           <span>
-            A comparação desta etapa é prompt-only: modelo e parâmetros são fixos e
-            idênticos para o baseline e a candidata. Não há comparação de modelo aqui.
+            A comparação desta etapa é prompt-only: o tipo de campanha determina o
+            prompt sob teste e o modelo é fixo e idêntico para o baseline e a
+            candidata. Não há comparação de modelo aqui.
           </span>
         </p>
       </div>
@@ -320,14 +414,14 @@ export function ExperimentForm({
       <LabSelect
         label="Cenários"
         multiple
-        size={Math.min(4, Math.max(2, scenarios.length))}
-        hint={`Selecione de 1 a ${MAX_SCENARIOS_PER_EXPERIMENT} cenários. Use Ctrl (ou Cmd) para marcar mais de um.`}
+        size={Math.min(4, Math.max(2, eligibleScenarios.length))}
+        hint={`Selecione de 1 a ${MAX_SCENARIOS_PER_EXPERIMENT} cenários do tipo escolhido. Use Ctrl (ou Cmd) para marcar mais de um.`}
         error={errors.scenarioVersionIds}
         value={values.scenarioVersionIds}
         onChange={handleScenariosChange}
         onBlur={() => handleBlur("scenarioVersionIds")}
       >
-        {scenarios.map((scenario) => (
+        {eligibleScenarios.map((scenario) => (
           <option key={scenario.id} value={scenario.id}>
             {scenario.slug} · {scenario.name} v{scenario.version}
           </option>
@@ -372,12 +466,6 @@ export function ExperimentForm({
           onBlur={() => handleBlur("maxRuns")}
         />
       </div>
-
-      <FixedField
-        label="Prompt sob teste (baseline oficial)"
-        value={promptName}
-        testId="lab-baseline-prompt"
-      />
 
       <LabTextarea
         label="Prompt candidato (override em memória)"

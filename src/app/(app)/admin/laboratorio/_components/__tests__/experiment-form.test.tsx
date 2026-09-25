@@ -28,6 +28,12 @@ const MODEL_TARGET = {
   protocol: "responses",
 };
 
+const PROGRAM_ID = "11111111-1111-4111-8111-111111111111";
+
+const PROGRAMS = [
+  { id: PROGRAM_ID, matrixVersion: "matrix-v1", status: "authorized" },
+];
+
 const SCENARIOS = [1, 2, 3, 4].map((index) => ({
   id: `00000000-0000-4000-8000-00000000000${index}`,
   scenarioId: `scenario-${index}`,
@@ -48,8 +54,8 @@ function renderForm() {
     <ExperimentForm
       modelTarget={MODEL_TARGET}
       scenarios={SCENARIOS}
+      programs={PROGRAMS}
       defaultParams={{ size: "1024x1024", quality: "auto" }}
-      promptName={PROMPT_NAME}
     />,
   );
 }
@@ -78,6 +84,12 @@ function fillValidForm() {
   });
   fireEvent.change(screen.getByLabelText("Hipótese"), {
     target: { value: "Um prompt mais direto melhora a leitura do preço" },
+  });
+  fireEvent.change(screen.getByLabelText("Tipo de campanha"), {
+    target: { value: "offer" },
+  });
+  fireEvent.change(screen.getByLabelText("Programa de otimização"), {
+    target: { value: PROGRAM_ID },
   });
   selectScenarios([SCENARIOS[0].id]);
   fireEvent.change(screen.getByLabelText(/prompt candidato/i), {
@@ -117,10 +129,10 @@ describe("ExperimentForm", () => {
     expect(screen.queryByRole("textbox", { name: /modelo/i })).toBeNull();
   });
 
-  it("exibe o prompt baseline fixo e oferece repetições de 1 a 3", () => {
+  it("exibe o prompt sob teste derivado do tipo de campanha e repetições de 1 a 3", () => {
     renderForm();
 
-    expect(screen.getByTestId("lab-baseline-prompt")).toHaveTextContent(PROMPT_NAME);
+    expect(screen.getByTestId("lab-prompt-under-test")).toHaveTextContent(PROMPT_NAME);
 
     const repetitions = screen.getByLabelText("Repetições");
     expect(
@@ -182,9 +194,12 @@ describe("ExperimentForm", () => {
 
     const body = JSON.parse(String(init.body));
     expect(body.changedDimension).toBe("prompt");
+    expect(body.campaignIntent).toBe("offer");
+    expect(body.programId).toBe(PROGRAM_ID);
     expect(body.params.skipInputValidation).toBe(true);
     expect(body.params.size).toBe("1024x1024");
     expect(body.params.quality).toBe("auto");
+    // Prompt derivado do intent (não mais de uma prop).
     expect(body.baseline.promptName).toBe(PROMPT_NAME);
     expect(body.candidate.promptName).toBe(PROMPT_NAME);
     expect(body.modelTarget).toEqual(MODEL_TARGET);

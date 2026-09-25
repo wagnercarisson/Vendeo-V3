@@ -54,6 +54,7 @@ const mockFetch = vi.fn();
 function renderPanel(overrides: {
   budget?: { maxRuns: number; used: number; remaining: number };
   experimentStatus?: string;
+  programRemainingUsd?: number | null;
 } = {}) {
   render(
     <RunExecutionPanel
@@ -63,6 +64,9 @@ function renderPanel(overrides: {
       repetitions={3}
       budget={overrides.budget ?? { maxRuns: 6, used: 1, remaining: 5 }}
       experimentStatus={overrides.experimentStatus ?? "ready"}
+      programRemainingUsd={
+        "programRemainingUsd" in overrides ? overrides.programRemainingUsd : 25
+      }
     />,
   );
 }
@@ -332,6 +336,30 @@ describe("RunExecutionPanel", () => {
       await screen.findByText(/teto de execuções do experimento foi atingido/),
     ).toBeInTheDocument();
     expect(mockRefresh).not.toHaveBeenCalled();
+  });
+
+  it("mapeia o 409 program_not_authorized sem iniciar chamada paga", async () => {
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse(ESTIMATE))
+      .mockResolvedValueOnce(errorResponse(409, "program_not_authorized"));
+    renderPanel();
+
+    await openConfirmation();
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar execução" }));
+
+    const alert = await screen.findByText(/programa não tem orçamento autorizado/);
+    expect(alert).toBeInTheDocument();
+    expect(alert.closest("[role='alert']")).toHaveClass("text-accent-red");
+    expect(mockRefresh).not.toHaveBeenCalled();
+  });
+
+  it("desabilita o botão quando o programa não tem orçamento autorizado", () => {
+    renderPanel({ programRemainingUsd: null });
+
+    expect(screen.getByTestId("lab-run-button")).toBeDisabled();
+    expect(
+      screen.getByText(/não tem orçamento autorizado/),
+    ).toBeInTheDocument();
   });
 
   it("desabilita o botão quando o budget acabou", () => {

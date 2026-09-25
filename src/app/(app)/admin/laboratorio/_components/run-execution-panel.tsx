@@ -52,6 +52,8 @@ interface RunExecutionPanelProps {
   repetitions: number;
   budget: LabRunBudget;
   experimentStatus: string;
+  /** Saldo restante do programa vinculado (D9); `null`/ausente quando não há. */
+  programRemainingUsd?: number | null;
 }
 
 interface LabEstimateResponse {
@@ -61,6 +63,7 @@ interface LabEstimateResponse {
   remainingRuns: number;
   totalEstimatedUsd: number | null;
   coverage: string;
+  programRemainingUsd?: number | null;
 }
 
 interface LabRunStreamEvent {
@@ -83,6 +86,10 @@ const PHASE_LABELS: Record<string, string> = {
 const RUN_ERROR_MESSAGES: Record<string, string> = {
   confirmation_required: "A execução exige confirmação explícita",
   budget_exceeded: "O teto de execuções do experimento foi atingido",
+  program_not_authorized:
+    "O programa não tem orçamento autorizado — nenhuma chamada paga foi iniciada",
+  intent_mismatch:
+    "Os cenários do experimento não correspondem ao tipo de campanha",
   run_already_active:
     "Já existe um run ativo no laboratório. Aguarde a conclusão antes de executar outro",
   idempotency_conflict:
@@ -130,7 +137,11 @@ function componentLabel(value: number | null | undefined): string {
 function disabledReason(
   budget: LabRunBudget,
   experimentStatus: string,
+  programRemainingUsd?: number | null,
 ): string | null {
+  if (programRemainingUsd === null) {
+    return "O programa de otimização não tem orçamento autorizado.";
+  }
   if (budget.remaining === 0) {
     return "O teto de execuções deste experimento foi atingido.";
   }
@@ -150,6 +161,7 @@ export function RunExecutionPanel({
   repetitions,
   budget,
   experimentStatus,
+  programRemainingUsd,
 }: RunExecutionPanelProps) {
   const router = useRouter();
   const [variantId, setVariantId] = useState(variants[0]?.id ?? "");
@@ -169,7 +181,7 @@ export function RunExecutionPanel({
     string | null
   >(null);
 
-  const blockedReason = disabledReason(budget, experimentStatus);
+  const blockedReason = disabledReason(budget, experimentStatus, programRemainingUsd);
   const runDisabled = running || estimating || blockedReason !== null;
 
   const selectedVariant = variants.find((variant) => variant.id === variantId);
@@ -347,9 +359,19 @@ export function RunExecutionPanel({
         >
           Executar run
         </h2>
-        <p className="font-mono text-xs text-text-secondary">
-          {budget.remaining} de {budget.maxRuns} execuções restantes
-        </p>
+        <div className="flex flex-col items-end gap-0.5">
+          <p className="font-mono text-xs text-text-secondary">
+            {budget.remaining} de {budget.maxRuns} execuções restantes
+          </p>
+          {programRemainingUsd !== undefined && (
+            <p className="font-mono text-xs text-text-muted" data-testid="lab-program-balance">
+              Saldo do programa:{" "}
+              {programRemainingUsd === null
+                ? "sem orçamento autorizado"
+                : `US$ ${programRemainingUsd.toFixed(4)}`}
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">

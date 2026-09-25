@@ -72,6 +72,9 @@ const PROMPT_NAME = "campaign-image-director-offer";
 const MODEL_TARGET = { provider: "openai", model: "gpt-5.5", protocol: "responses" };
 const PROMPT_HASH = "abc123def456abc123def456abc123def456abc123def456abc123def456abcd";
 
+const PROGRAM_ID = "11111111-1111-4111-8111-111111111111";
+const PROGRAMS = [{ id: PROGRAM_ID, matrixVersion: "matrix-v1", status: "authorized" }];
+
 /** Vocabulário proibido de julgamento automático de qualidade (uso só negativo). */
 const EMOJI_PATTERN =
   /[\u{1F000}-\u{1FAFF}\u{2190}-\u{21FF}\u{2300}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/u;
@@ -340,8 +343,8 @@ describe("contrato de UI — criação prompt-only", () => {
       <ExperimentForm
         modelTarget={MODEL_TARGET}
         scenarios={SCENARIOS}
+        programs={PROGRAMS}
         defaultParams={{ size: "1024x1024", quality: "auto" }}
-        promptName={PROMPT_NAME}
       />,
     );
   }
@@ -359,6 +362,10 @@ describe("contrato de UI — criação prompt-only", () => {
     fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Experimento" } });
     fireEvent.change(screen.getByLabelText("Objetivo"), { target: { value: "Comparar" } });
     fireEvent.change(screen.getByLabelText("Hipótese"), { target: { value: "Melhora" } });
+    fireEvent.change(screen.getByLabelText("Tipo de campanha"), { target: { value: "offer" } });
+    fireEvent.change(screen.getByLabelText("Programa de otimização"), {
+      target: { value: PROGRAM_ID },
+    });
     selectScenarios([SCENARIOS[0].id]);
     fireEvent.change(screen.getByLabelText(/prompt candidato/i), {
       target: { value: "Conteúdo candidato com mais de vinte caracteres." },
@@ -441,6 +448,7 @@ describe("contrato de UI — confirmação com estimativa e progresso NDJSON", (
         repetitions={3}
         budget={{ maxRuns: 6, used: 1, remaining: 5 }}
         experimentStatus="ready"
+        programRemainingUsd={25}
       />,
     );
   }
@@ -505,6 +513,7 @@ describe("contrato de UI — confirmação com estimativa e progresso NDJSON", (
         repetitions={1}
         budget={{ maxRuns: 6, used: 6, remaining: 0 }}
         experimentStatus="ready"
+        programRemainingUsd={25}
       />,
     );
 
@@ -788,6 +797,7 @@ describe("contrato de UI — acessibilidade básica", () => {
         repetitions={1}
         budget={{ maxRuns: 6, used: 0, remaining: 6 }}
         experimentStatus="ready"
+        programRemainingUsd={25}
       />,
     );
     expect(EMOJI_PATTERN.test(panel.container.textContent ?? "")).toBe(false);

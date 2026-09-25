@@ -20,6 +20,7 @@ const LAB_NAV_ITEMS = [
   { href: "/admin/laboratorio", label: "Experimentos" },
   { href: "/admin/laboratorio/cenarios", label: "Cenários" },
   { href: "/admin/laboratorio#avaliacoes-pendentes", label: "Avaliações" },
+  { href: "/admin/laboratorio/programas", label: "Programas" },
 ];
 
 export default function LaboratorioLayout({

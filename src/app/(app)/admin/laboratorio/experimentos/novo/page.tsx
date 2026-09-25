@@ -7,7 +7,7 @@ import {
   type ActiveCampaignImageTarget,
   type LabScenarioVersionSummary,
 } from "@/lib/lab/api/experiment-queries";
-import { PROMPT_UNDER_TEST } from "@/lib/lab/domain/prompt-snapshot";
+import { listPrograms, type LabProgramSummary } from "@/lib/lab/api/program-queries";
 import { getLabEnvironment } from "@/lib/lab/environment-guard";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
@@ -33,12 +33,14 @@ export default async function NovoExperimentoPage() {
 
   let target: ActiveCampaignImageTarget | null = null;
   let scenarios: LabScenarioVersionSummary[] = [];
+  let programs: LabProgramSummary[] = [];
   let readFailed = false;
 
   try {
-    [target, scenarios] = await Promise.all([
+    [target, scenarios, programs] = await Promise.all([
       getActiveCampaignImageTarget(supabaseAdmin),
       listScenarioVersions(supabaseAdmin),
+      listPrograms(supabaseAdmin),
     ]);
   } catch {
     readFailed = true;
@@ -82,11 +84,11 @@ export default async function NovoExperimentoPage() {
       <ExperimentForm
         modelTarget={target}
         scenarios={scenarios}
+        programs={programs}
         defaultParams={{
           size: IMAGE_GENERATION_SIZE,
           quality: IMAGE_GENERATION_QUALITY,
         }}
-        promptName={PROMPT_UNDER_TEST}
       />
     </div>
   );
