@@ -1,0 +1,52 @@
+{
+  "slug": "destaque-preco-promocional",
+  "name": "Destaque com preço promocional e embalagem detalhada",
+  "description": "Cenário fictício de destaque (spotlight) com preço promocional e preço original, múltiplas imagens do produto, embalagem com textos e detalhes, hook e CTA presentes. Cobre ilegibilidade de textos densos.",
+  "intent": "spotlight",
+  "format": "1:1",
+  "locale": "pt-BR",
+  "mediaKinds": ["image"],
+  "brief": {
+    "product": {
+      "name": "Torta Artesanal de Frutas Vermelhas",
+      "brand": "Confeitaria Jardim Doce",
+      "sizeOrVariant": "Torta média (8 fatias)",
+      "description": "Torta fictícia com embalagem de papel kraft impressa, selo de validade e detalhes de ingredientes na caixa."
+    },
+    "offer": {
+      "originalPriceCents": 8990,
+      "discountedPriceCents": 6990,
+      "badgeText": "DESTAQUE DA SEMANA",
+      "campaignDetails": "Vitrine da confeitaria com embalagem detalhada",
+      "hook": "O sabor que reúne a família",
+      "cta": "Peça hoje na loja"
+    }
+  },
+  "store": {
+    "name": "Confeitaria Jardim Doce",
+    "segment": "confeitaria-padaria",
+    "brandColor": "#DB2777"
+  },
+  "identity": { "state": "text_only" },
+  "images": [
+    {
+      "id": "produto",
+      "role": "primary",
+      "path": "images/produto.jpg",
+      "alt": "Imagem controlada da torta fictícia"
+    },
+    {
+      "id": "produto-auxiliar",
+      "role": "reference",
+      "path": "images/produto-auxiliar.jpg",
+      "alt": "Imagem controlada auxiliar do produto"
+    },
+    {
+      "id": "embalagem",
+      "role": "reference",
+      "path": "images/embalagem.jpg",
+      "alt": "Imagem controlada da embalagem com textos e detalhes"
+    }
+  ],
+  "fictitious": true
+}

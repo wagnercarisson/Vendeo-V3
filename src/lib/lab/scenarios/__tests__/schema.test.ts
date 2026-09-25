@@ -83,9 +83,9 @@ describe("LabScenarioContentSchema — cenário suportado", () => {
     expect(SCENARIO_MEDIA_KINDS).toEqual(["image"]);
   });
 
-  it("SUPPORTED_SCENARIO_MODES trava offer/1:1/pt-BR nesta fase", () => {
+  it("SUPPORTED_SCENARIO_MODES trava offer/spotlight/exclusive, 1:1/pt-BR", () => {
     expect(SUPPORTED_SCENARIO_MODES).toEqual({
-      intents: ["offer"],
+      intents: ["offer", "spotlight", "exclusive"],
       formats: ["1:1"],
       locales: ["pt-BR"],
     });
@@ -93,21 +93,10 @@ describe("LabScenarioContentSchema — cenário suportado", () => {
 });
 
 describe("LabScenarioContentSchema — modalidade não suportada", () => {
-  it("rejeita intent 'spotlight' com unsupported_scenario_mode em 'intent'", () => {
-    const error = (() => {
-      try {
-        parseLabScenarioContent(validScenario({ intent: "spotlight" }));
-        return null;
-      } catch (caught) {
-        return caught;
-      }
-    })();
+  it("aceita intent 'spotlight' (suportado desde a F48.2.1)", () => {
+    const parsed = parseLabScenarioContent(validScenario({ intent: "spotlight" }));
 
-    expect(error).toBeInstanceOf(UnsupportedScenarioModeError);
-    const typed = error as UnsupportedScenarioModeError;
-    expect(typed.code).toBe("unsupported_scenario_mode");
-    expect(typed.field).toBe("intent");
-    expect(typed.value).toBe("spotlight");
+    expect(parsed.intent).toBe("spotlight");
   });
 
   it("rejeita format '9:16' com unsupported_scenario_mode em 'format'", () => {

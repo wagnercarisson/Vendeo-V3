@@ -1,0 +1,45 @@
+{
+  "slug": "destaque-sem-preco-ambiente",
+  "name": "Destaque de ambiente sem preço com nome de produto longo e descritivo",
+  "description": "Cenário fictício de destaque (spotlight) sem preço, com fotografia contextual preservada, nome longo e ausência de CTA e hook. Cobre risco de informação inventada e ausência obrigatória de preço.",
+  "intent": "spotlight",
+  "format": "1:1",
+  "locale": "pt-BR",
+  "mediaKinds": ["image"],
+  "brief": {
+    "product": {
+      "name": "Ração Premium para Cães Adultos de Porte Grande com Ômega 3 e Ômega 6",
+      "brand": "Vet Amigo Nutrição Animal",
+      "sizeOrVariant": "Pacote de 15 kg",
+      "description": "Produto fictício de nutrição animal apresentado em contexto de ambiente da loja, sem preço."
+    },
+    "offer": {
+      "campaignDetails": "Ambiente da loja com o produto em uso",
+      "objective": "Apresentar o produto no contexto da loja"
+    },
+    "creativeContext": {
+      "preserveImageContext": true
+    }
+  },
+  "store": {
+    "name": "Vet Amigo Pet Shop",
+    "segment": "pet-shop",
+    "brandColor": "#0D9488"
+  },
+  "identity": { "state": "text_only" },
+  "images": [
+    {
+      "id": "ambiente",
+      "role": "primary",
+      "path": "images/ambiente.jpg",
+      "alt": "Fotografia contextual controlada do ambiente da loja"
+    },
+    {
+      "id": "produto",
+      "role": "reference",
+      "path": "images/produto.jpg",
+      "alt": "Imagem controlada do produto fictício"
+    }
+  ],
+  "fictitious": true
+}

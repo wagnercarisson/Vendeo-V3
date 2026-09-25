@@ -15,7 +15,8 @@ import { z } from "zod";
  * As uniões (`SCENARIO_INTENTS`/`SCENARIO_FORMATS`/`SCENARIO_LOCALES`/
  * `SCENARIO_MEDIA_KINDS`) já preveem modalidades futuras (serviços, informativos,
  * 9:16, carrossel, i18n), mas `SUPPORTED_SCENARIO_MODES` aceita **somente**
- * `offer`/`1:1`/`pt-BR` nesta fase. Qualquer valor fora disso é rejeitado com o
+ * `offer`/`spotlight`/`exclusive` no formato `1:1` e locale `pt-BR` (F48.2.1, D4).
+ * Qualquer valor fora disso é rejeitado com o
  * código determinístico `unsupported_scenario_mode` no campo correspondente —
  * nenhum run pode ser iniciado com uma modalidade ainda não implementada.
  */
@@ -52,7 +53,7 @@ export type ScenarioModeField = "intent" | "format" | "locale";
  * exatamente o que `unsupported_scenario_mode` sinaliza.
  */
 export const SUPPORTED_SCENARIO_MODES = {
-  intents: ["offer"],
+  intents: ["offer", "spotlight", "exclusive"],
   formats: ["1:1"],
   locales: ["pt-BR"],
 } as const;
@@ -236,10 +237,10 @@ function readModeValue(input: unknown, field: ScenarioModeField): string {
  *
  * `z.enum` rejeita um valor **desconhecido** antes que o `superRefine` rode, o que
  * produziria um erro genérico sem `code`. Aqui qualquer valor **string** fora do
- * conjunto suportado (`offer`/`1:1`/`pt-BR`) é classificado como
- * `unsupported_scenario_mode` — incluindo valores desconhecidos e modalidades
- * futuras previstas. Campo ausente ou de tipo não-string segue para o Zod, que
- * produz o erro normal de campo obrigatório/tipo inválido.
+ * conjunto suportado (`offer`/`spotlight`/`exclusive`, `1:1`, `pt-BR`) é
+ * classificado como `unsupported_scenario_mode` — incluindo valores desconhecidos
+ * e modalidades futuras previstas. Campo ausente ou de tipo não-string segue para
+ * o Zod, que produz o erro normal de campo obrigatório/tipo inválido.
  */
 function detectUnsupportedMode(input: unknown): UnsupportedScenarioModeError | null {
   if (typeof input !== "object" || input === null) return null;
@@ -264,7 +265,8 @@ function detectUnsupportedMode(input: unknown): UnsupportedScenarioModeError | n
 /**
  * Valida e devolve o conteúdo do cenário.
  *
- * - Modalidade não suportada (qualquer string fora de `offer`/`1:1`/`pt-BR`,
+ * - Modalidade não suportada (qualquer string fora de
+ *   `offer`/`spotlight`/`exclusive`, `1:1`/`pt-BR`,
  *   inclusive valor desconhecido) ⇒ `UnsupportedScenarioModeError` (com `code` e `field`).
  * - Campo de modalidade ausente ou de tipo inválido ⇒ erro Zod normal.
  * - Qualquer outra falha ⇒ `Error` com a serialização dos issues (path + message).

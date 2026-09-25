@@ -1,0 +1,45 @@
+{
+  "slug": "exclusivo-produto-isolado",
+  "name": "Exclusivo com produto isolado e múltiplas imagens",
+  "description": "Cenário fictício de exclusivo (exclusive) com produto a ser isolado, múltiplas imagens e ausência de CTA e hook. Cobre deformação do produto em relação à referência.",
+  "intent": "exclusive",
+  "format": "1:1",
+  "locale": "pt-BR",
+  "mediaKinds": ["image"],
+  "brief": {
+    "product": {
+      "name": "Óculos de Sol Polarizados Modelo Litoral",
+      "brand": "Ótica Horizonte",
+      "sizeOrVariant": "Armação única",
+      "description": "Óculos fictícios que devem ser isolados da imagem de referência, preservando a forma da armação."
+    },
+    "offer": {
+      "badgeText": "EDIÇÃO LIMITADA",
+      "campaignDetails": "Produto isolado em fundo neutro"
+    },
+    "creativeContext": {
+      "sensitiveConstraints": "Isolar o produto da imagem de referência sem deformar a armação."
+    }
+  },
+  "store": {
+    "name": "Ótica Horizonte",
+    "segment": "otica-acessorios",
+    "brandColor": "#EA580C"
+  },
+  "identity": { "state": "text_only" },
+  "images": [
+    {
+      "id": "produto",
+      "role": "primary",
+      "path": "images/produto.jpg",
+      "alt": "Imagem controlada do produto fictício a isolar"
+    },
+    {
+      "id": "produto-auxiliar",
+      "role": "reference",
+      "path": "images/produto-auxiliar.jpg",
+      "alt": "Imagem controlada auxiliar do produto"
+    }
+  ],
+  "fictitious": true
+}

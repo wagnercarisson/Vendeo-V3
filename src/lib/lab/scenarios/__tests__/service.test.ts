@@ -173,27 +173,33 @@ describe("computeScenarioContentHash — determinismo (D4)", () => {
     expect(computeScenarioContentHash(scenarioContent())).toMatch(/^[0-9a-f]{64}$/);
   });
 
-  it("hashes dos 3 cenários reais são distintos", async () => {
+  it("hashes dos 9 cenários reais são distintos", async () => {
     const fixtures = await listScenarioFixtures();
     const hashes = new Set(fixtures.map((fixture) => fixture.contentHash));
-    expect(hashes.size).toBe(3);
+    expect(hashes.size).toBe(9);
   });
 });
 
 // ─── Listagem e carregamento das fixtures reais ─────────────────────────────
 
-describe("listScenarioFixtures — corpus inicial (D4)", () => {
-  it("lista exatamente 3 cenários, todos offer/1:1/pt-BR", async () => {
+describe("listScenarioFixtures — matriz de nove cenários (D4)", () => {
+  it("lista exatamente 9 cenários (3 offer + 3 spotlight + 3 exclusive), todos 1:1/pt-BR", async () => {
     const fixtures = await listScenarioFixtures();
 
-    expect(fixtures).toHaveLength(3);
+    expect(fixtures).toHaveLength(9);
     expect(fixtures.map((fixture) => fixture.slug)).toEqual([
+      "destaque-preco-promocional",
+      "destaque-sem-preco-ambiente",
+      "destaque-textos-legais",
+      "exclusivo-estresse-identidade",
+      "exclusivo-logo-preco-unico",
+      "exclusivo-produto-isolado",
       "produto-oferta-logo",
       "produto-oferta-preco",
       "produto-oferta-texto-obrigatorio",
     ]);
     for (const fixture of fixtures) {
-      expect(fixture.content.intent).toBe("offer");
+      expect(["offer", "spotlight", "exclusive"]).toContain(fixture.content.intent);
       expect(fixture.content.format).toBe("1:1");
       expect(fixture.content.locale).toBe("pt-BR");
       expect(fixture.content.fictitious).toBe(true);
@@ -322,12 +328,12 @@ describe("readScenarioImageAsDataUrl — symlink resolvido antes do I/O", () => 
 // ─── Materialização idempotente ─────────────────────────────────────────────
 
 describe("materializeScenarios — idempotência e imutabilidade (D4)", () => {
-  it("primeira execução cria 3 versões e nenhuma é pulada", async () => {
+  it("primeira execução cria 9 versões e nenhuma é pulada", async () => {
     const store = new FakeScenarioStore();
     const result = await materializeScenarios(store);
 
-    expect(result).toEqual({ created: 3, skipped: 0 });
-    expect(store.scenarios.size).toBe(3);
+    expect(result).toEqual({ created: 9, skipped: 0 });
+    expect(store.scenarios.size).toBe(9);
     for (const scenario of store.scenarios.values()) {
       expect(scenario.status).toBe("active");
       expect(scenario.currentVersion).toBe(1);
@@ -335,6 +341,8 @@ describe("materializeScenarios — idempotência e imutabilidade (D4)", () => {
     expect(store.versionCount("produto-oferta-preco")).toBe(1);
     expect(store.versionCount("produto-oferta-logo")).toBe(1);
     expect(store.versionCount("produto-oferta-texto-obrigatorio")).toBe(1);
+    expect(store.versionCount("destaque-preco-promocional")).toBe(1);
+    expect(store.versionCount("exclusivo-logo-preco-unico")).toBe(1);
   });
 
   it("segunda execução não cria versão nova (created 0)", async () => {
@@ -343,8 +351,8 @@ describe("materializeScenarios — idempotência e imutabilidade (D4)", () => {
 
     const second = await materializeScenarios(store);
 
-    expect(second).toEqual({ created: 0, skipped: 3 });
-    expect(store.scenarios.size).toBe(3);
+    expect(second).toEqual({ created: 0, skipped: 9 });
+    expect(store.scenarios.size).toBe(9);
     for (const slug of store.scenarios.keys()) {
       expect(store.versionCount(slug)).toBe(1);
     }
@@ -363,7 +371,7 @@ describe("materializeScenarios — idempotência e imutabilidade (D4)", () => {
 
     const result = await materializeScenarios(store);
 
-    expect(result).toEqual({ created: 1, skipped: 2 });
+    expect(result).toEqual({ created: 1, skipped: 8 });
     const after = store.versions.get(target.id) ?? [];
     expect(after).toHaveLength(2);
     // Versão anterior preservada (imutabilidade — nunca sobrescrita).

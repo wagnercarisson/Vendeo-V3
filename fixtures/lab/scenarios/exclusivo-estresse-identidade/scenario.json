@@ -1,0 +1,38 @@
+{
+  "slug": "exclusivo-estresse-identidade",
+  "name": "Exclusivo de estresse de identidade com nome de produto longo e descritivo",
+  "description": "Cenário fictício de exclusivo (exclusive) com identidade textual, nome longo e condições que expõem invenção, perda de identidade e tom comercial incorreto.",
+  "intent": "exclusive",
+  "format": "1:1",
+  "locale": "pt-BR",
+  "mediaKinds": ["image"],
+  "brief": {
+    "product": {
+      "name": "Máquina de Café Espresso Automática Compacta com Moedor Integrado e Vaporizador Profissional",
+      "brand": "Café Central Equipamentos",
+      "sizeOrVariant": "110 V",
+      "description": "Equipamento fictício de café com identidade textual e composição de estresse para a direção de arte."
+    },
+    "offer": {
+      "discountedPriceCents": 189900,
+      "badgeText": "EXCLUSIVO",
+      "campaignDetails": "Lançamento exclusivo de equipamento profissional",
+      "objective": "Apresentar o equipamento como peça exclusiva"
+    }
+  },
+  "store": {
+    "name": "Café Central Equipamentos",
+    "segment": "cafe-equipamentos",
+    "brandColor": "#7C3AED"
+  },
+  "identity": { "state": "text_only" },
+  "images": [
+    {
+      "id": "produto",
+      "role": "primary",
+      "path": "images/produto.jpg",
+      "alt": "Imagem controlada do equipamento fictício"
+    }
+  ],
+  "fictitious": true
+}

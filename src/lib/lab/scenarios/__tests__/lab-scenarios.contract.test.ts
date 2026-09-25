@@ -34,7 +34,17 @@ import type { LabScenarioStore } from "../service";
  * memória que registra as tabelas acessadas.
  */
 
-const EXPECTED_SLUGS = ["produto-oferta-logo", "produto-oferta-preco", "produto-oferta-texto-obrigatorio"];
+const EXPECTED_SLUGS = [
+  "destaque-preco-promocional",
+  "destaque-sem-preco-ambiente",
+  "destaque-textos-legais",
+  "exclusivo-estresse-identidade",
+  "exclusivo-logo-preco-unico",
+  "exclusivo-produto-isolado",
+  "produto-oferta-logo",
+  "produto-oferta-preco",
+  "produto-oferta-texto-obrigatorio",
+];
 
 // ─── Store fake em memória (registra as tabelas acessadas) ──────────────────
 
@@ -166,17 +176,17 @@ function scenarioContent(overrides: Record<string, unknown> = {}): LabScenarioCo
 
 // ─── (11.3.1) Corpus inicial ────────────────────────────────────────────────
 
-describe("corpus — 3 cenários controlados de oferta", () => {
-  it("lista exatamente os 3 slugs do corpus (ordenados)", async () => {
+describe("corpus — 9 cenários controlados (3 offer + 3 spotlight + 3 exclusive)", () => {
+  it("lista exatamente os 9 slugs do corpus (ordenados)", async () => {
     const fixtures = await listScenarioFixtures();
     expect(fixtures.map((fixture) => fixture.slug)).toEqual(EXPECTED_SLUGS);
   });
 
-  it("todos são offer/1:1/pt-BR, fictícios e com exatamente 1 imagem primary", async () => {
+  it("todos são offer/spotlight/exclusive, 1:1/pt-BR, fictícios e com 1 imagem primary", async () => {
     const fixtures = await listScenarioFixtures();
 
     for (const fixture of fixtures) {
-      expect(fixture.content.intent).toBe("offer");
+      expect(["offer", "spotlight", "exclusive"]).toContain(fixture.content.intent);
       expect(fixture.content.format).toBe("1:1");
       expect(fixture.content.locale).toBe("pt-BR");
       expect(fixture.content.fictitious).toBe(true);
@@ -186,13 +196,19 @@ describe("corpus — 3 cenários controlados de oferta", () => {
     }
   });
 
-  it("apenas o cenário com logo declara identidade 'logo'; os demais 'text_only'", async () => {
+  it("os cenários com logo declaram identidade 'logo'; os demais 'text_only'", async () => {
     const fixtures = await listScenarioFixtures();
     const bySlug = new Map(fixtures.map((fixture) => [fixture.slug, fixture.content.identity.state]));
 
     expect(bySlug.get("produto-oferta-logo")).toBe("logo");
+    expect(bySlug.get("exclusivo-logo-preco-unico")).toBe("logo");
     expect(bySlug.get("produto-oferta-preco")).toBe("text_only");
     expect(bySlug.get("produto-oferta-texto-obrigatorio")).toBe("text_only");
+    expect(bySlug.get("destaque-preco-promocional")).toBe("text_only");
+    expect(bySlug.get("destaque-sem-preco-ambiente")).toBe("text_only");
+    expect(bySlug.get("destaque-textos-legais")).toBe("text_only");
+    expect(bySlug.get("exclusivo-produto-isolado")).toBe("text_only");
+    expect(bySlug.get("exclusivo-estresse-identidade")).toBe("text_only");
   });
 });
 
@@ -234,13 +250,13 @@ describe("hash — SHA-256 determinístico e canônico", () => {
 // ─── (11.3.3) Bootstrap idempotente e versionado ────────────────────────────
 
 describe("materializeScenarios — idempotência, versionamento e acesso confinado", () => {
-  it("a primeira execução cria 3 versões sem pular nenhuma", async () => {
+  it("a primeira execução cria 9 versões sem pular nenhuma", async () => {
     const store = new RecordingScenarioStore();
 
     const result = await materializeScenarios(store);
 
-    expect(result).toEqual({ created: 3, skipped: 0 });
-    expect(store.scenarios.size).toBe(3);
+    expect(result).toEqual({ created: 9, skipped: 0 });
+    expect(store.scenarios.size).toBe(9);
     for (const slug of EXPECTED_SLUGS) {
       expect(store.versionCount(slug)).toBe(1);
     }
@@ -252,8 +268,8 @@ describe("materializeScenarios — idempotência, versionamento e acesso confina
 
     const second = await materializeScenarios(store);
 
-    expect(second).toEqual({ created: 0, skipped: 3 });
-    expect(store.scenarios.size).toBe(3);
+    expect(second).toEqual({ created: 0, skipped: 9 });
+    expect(store.scenarios.size).toBe(9);
     for (const slug of EXPECTED_SLUGS) {
       expect(store.versionCount(slug)).toBe(1);
     }
@@ -270,7 +286,7 @@ describe("materializeScenarios — idempotência, versionamento e acesso confina
 
     const result = await materializeScenarios(store);
 
-    expect(result).toEqual({ created: 1, skipped: 2 });
+    expect(result).toEqual({ created: 1, skipped: 8 });
     const after = store.versionsOf("produto-oferta-preco");
     expect(after).toHaveLength(2);
     expect(after[0].version).toBe(1);
@@ -297,7 +313,6 @@ describe("materializeScenarios — idempotência, versionamento e acesso confina
 
 describe("modalidade não suportada — recusa explícita e nenhum run", () => {
   const unsupportedCases: Array<{ label: string; overrides: Record<string, unknown>; field: string }> = [
-    { label: "intent 'spotlight'", overrides: { intent: "spotlight" }, field: "intent" },
     { label: "intent 'service' (futuro previsto)", overrides: { intent: "service" }, field: "intent" },
     { label: "intent 'unknown' (fora da união)", overrides: { intent: "unknown" }, field: "intent" },
     { label: "format '9:16'", overrides: { format: "9:16" }, field: "format" },

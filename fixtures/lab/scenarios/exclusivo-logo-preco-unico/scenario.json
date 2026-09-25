@@ -1,0 +1,43 @@
+{
+  "slug": "exclusivo-logo-preco-unico",
+  "name": "Exclusivo com logo controlado e preço único",
+  "description": "Cenário fictício de exclusivo (exclusive) com identidade em logo controlado, preço único (sem preço original) e embalagem com detalhes. Cobre ilegibilidade da composição densa.",
+  "intent": "exclusive",
+  "format": "1:1",
+  "locale": "pt-BR",
+  "mediaKinds": ["image"],
+  "brief": {
+    "product": {
+      "name": "Relógio Minimalista Série Prata",
+      "brand": "Relojoaria Ponto Certo",
+      "sizeOrVariant": "Caixa 38 mm",
+      "description": "Relógio fictício com embalagem rígida impressa e detalhes de acabamento."
+    },
+    "offer": {
+      "discountedPriceCents": 24990,
+      "badgeText": "PEÇA EXCLUSIVA",
+      "campaignDetails": "Lançamento exclusivo da coleção prata"
+    }
+  },
+  "store": {
+    "name": "Relojoaria Ponto Certo",
+    "segment": "joalheria-relojoaria",
+    "brandColor": "#334155"
+  },
+  "identity": { "state": "logo", "logoPath": "images/logo.png" },
+  "images": [
+    {
+      "id": "produto",
+      "role": "primary",
+      "path": "images/produto.jpg",
+      "alt": "Imagem controlada do relógio fictício"
+    },
+    {
+      "id": "embalagem",
+      "role": "reference",
+      "path": "images/embalagem.jpg",
+      "alt": "Imagem controlada da embalagem com textos e detalhes"
+    }
+  ],
+  "fictitious": true
+}

@@ -1,0 +1,42 @@
+{
+  "slug": "destaque-textos-legais",
+  "name": "Destaque com textos obrigatórios, aviso ilustrativo e validade",
+  "description": "Cenário fictício de destaque (spotlight) com texto obrigatório do lojista, aviso ilustrativo canônico ligado e validade preenchida. Identidade textual e segmento comercial distinto. Cobre tom comercial incorreto.",
+  "intent": "spotlight",
+  "format": "1:1",
+  "locale": "pt-BR",
+  "mediaKinds": ["image"],
+  "brief": {
+    "product": {
+      "name": "Protetor Solar Facial FPS 60",
+      "brand": "Farmácia Bem Viver",
+      "sizeOrVariant": "50 ml",
+      "description": "Produto fictício de cuidado facial apresentado em destaque sazonal."
+    },
+    "offer": {
+      "badgeText": "SEMANA DA PELE",
+      "validityText": "Destaque válido até 31/10/2026.",
+      "availabilityNotes": "Sujeito à disponibilidade na loja física.",
+      "campaignDetails": "Campanha sazonal de cuidado facial"
+    },
+    "legalNotice": {
+      "mandatoryText": "Imagem meramente ilustrativa. Consulte um farmacêutico.",
+      "illustrativeNoticeEnabled": true
+    }
+  },
+  "store": {
+    "name": "Farmácia Bem Viver",
+    "segment": "farmacia-saude",
+    "brandColor": "#2563EB"
+  },
+  "identity": { "state": "text_only" },
+  "images": [
+    {
+      "id": "produto",
+      "role": "primary",
+      "path": "images/produto.jpg",
+      "alt": "Imagem controlada do produto fictício"
+    }
+  ],
+  "fictitious": true
+}
