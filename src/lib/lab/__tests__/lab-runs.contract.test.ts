@@ -73,6 +73,7 @@ const RUN_ID = "44444444-4444-4444-8444-444444444444";
 const OPERATION_ID = "55555555-5555-4555-8555-555555555555";
 const ACTOR_ID = "66666666-6666-4666-8666-666666666666";
 const STORE_ID = "77777777-7777-4777-8777-777777777777";
+const PROGRAM_ID = "88888888-8888-4888-8888-888888888888";
 const PROMPT_NAME = "campaign-image-director-offer";
 const CANDIDATE_CONTENT = "conteudo candidato do diretor (override em memoria)";
 const BASELINE_CONTENT = "conteudo oficial do diretor";
@@ -431,6 +432,7 @@ function executionSnapshot(): LabRunSnapshot {
     scenarioVersionId: SCENARIO_ID,
     scenarioVersion: 1,
     scenarioContentHash: "c".repeat(64),
+    programId: PROGRAM_ID,
     prompt: {
       name: PROMPT_NAME,
       content: CANDIDATE_CONTENT,
@@ -469,6 +471,7 @@ function prepareParams(
     supersedesRunId: null,
     operationId: OPERATION_ID,
     actorId: ACTOR_ID,
+    programId: PROGRAM_ID,
     scenario: { id: SCENARIO_ID, version: 1, contentHash: "c".repeat(64) },
     experiment: {
       modelTarget: { provider: "openai", model: "gpt-5.5", protocol: "responses" },

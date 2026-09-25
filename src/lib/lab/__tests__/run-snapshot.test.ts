@@ -34,6 +34,7 @@ function validSnapshot(overrides: Partial<LabRunSnapshot> = {}): LabRunSnapshot 
       scenarioVersionId: "11111111-1111-4111-8111-111111111111",
       scenarioVersion: 1,
       scenarioContentHash: "c".repeat(64),
+      programId: "77777777-7777-4777-8777-777777777777",
       prompt: CANDIDATE,
       modelTarget: { provider: "openai", model: "gpt-5.5", protocol: "responses" },
       params: { size: "1024x1024", quality: "auto", skipInputValidation: true },

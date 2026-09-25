@@ -33,6 +33,24 @@ import {
  * `skipInputValidation` é literal `true`.
  */
 
+// ─── Tipos de campanha do Diretor (F48.2.1, D4) ──────────────────────────────
+
+/**
+ * Intents de campanha suportados pelo Diretor de Arte. O prompt sob teste é
+ * derivado do intent (`campaign-image-director-{intent}`) — um intent sem prompt
+ * correspondente é recusado (`unsupported_prompt_under_test`).
+ */
+export const CAMPAIGN_INTENTS = ["offer", "spotlight", "exclusive"] as const;
+
+export type CampaignIntent = (typeof CAMPAIGN_INTENTS)[number];
+
+/** Nome do prompt oficial do Diretor por intent (allowlist do prompt sob teste). */
+export const DIRECTOR_PROMPT_NAMES: Record<CampaignIntent, string> = {
+  offer: "campaign-image-director-offer",
+  spotlight: "campaign-image-director-spotlight",
+  exclusive: "campaign-image-director-exclusive",
+};
+
 // ─── Dimensões alteráveis ────────────────────────────────────────────────────
 
 /** Dimensões executáveis na F48.1. */
@@ -75,6 +93,10 @@ export const CreateLabExperimentInputSchema = z
     objective: z.string().min(1),
     hypothesis: z.string().min(1),
     changedDimension: z.enum(CHANGED_DIMENSION_VALUES),
+    /** Tipo de campanha do Diretor — obrigatório (D4). */
+    campaignIntent: z.enum(CAMPAIGN_INTENTS),
+    /** Programa com orçamento ao qual o experimento é vinculado (D2). */
+    programId: z.string().uuid(),
     /** Alvo fixo do experimento — idêntico para as duas variantes (D5). */
     modelTarget: LabModelTargetSchema,
     params: LabExperimentParamsSchema,
@@ -113,6 +135,20 @@ export const CreateLabExperimentInputSchema = z
         message: "unsupported_changed_dimension",
       });
     }
+
+    // O prompt sob teste é derivado do intent: um nome divergente é recusado.
+    const expectedPrompt = DIRECTOR_PROMPT_NAMES[value.campaignIntent];
+    if (
+      expectedPrompt &&
+      (value.baseline.promptName !== expectedPrompt ||
+        value.candidate.promptName !== expectedPrompt)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["candidate"],
+        message: "unsupported_prompt_under_test",
+      });
+    }
   });
 
 export type CreateLabExperimentInput = z.infer<typeof CreateLabExperimentInputSchema>;
@@ -123,6 +159,23 @@ export const LAB_EVALUATION_VERDICTS = ["baseline", "candidate", "tie", "none"] 
 
 export const LAB_BLIND_ORDERS = ["baseline_left", "candidate_left"] as const;
 
+/** Estados possíveis de um critério da rubrica estruturada do Diretor (D7). */
+export const LAB_RUBRIC_STATES = [
+  "adequate",
+  "minor_defect",
+  "critical_defect",
+  "not_applicable",
+] as const;
+
+export const LabRubricCriterionSchema = z
+  .object({
+    state: z.enum(LAB_RUBRIC_STATES),
+    observation: z.string().max(2000).optional(),
+  })
+  .strict();
+
+export const LabRubricSchema = z.record(z.string(), LabRubricCriterionSchema);
+
 export const CreateLabEvaluationInputSchema = z
   .object({
     scenarioVersionId: z.string().uuid(),
@@ -131,6 +184,8 @@ export const CreateLabEvaluationInputSchema = z
     verdict: z.enum(LAB_EVALUATION_VERDICTS),
     blindOrder: z.enum(LAB_BLIND_ORDERS).optional(),
     observation: z.string().max(4000).optional(),
+    /** Rubrica estruturada por critério (opcional nesta fase; D7). */
+    rubric: LabRubricSchema.optional(),
   })
   .strict()
   .superRefine((value, ctx) => {

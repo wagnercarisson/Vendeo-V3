@@ -62,6 +62,7 @@ const SNAPSHOT: LabRunSnapshot = {
   scenarioVersionId: SCENARIO_VERSION_ID,
   scenarioVersion: 1,
   scenarioContentHash: "c".repeat(64),
+  programId: "88888888-8888-4888-8888-888888888888",
   prompt: {
     name: PROMPT_NAME,
     content: CANDIDATE_CONTENT,

@@ -10,8 +10,8 @@ import {
 
 import { ModelTargetNotInCatalogError, validateModelTargetAgainstCatalog } from "./model-target";
 import { buildBaselinePromptSnapshot, buildCandidatePromptSnapshot } from "./prompt-snapshot";
-import { parseCreateLabExperimentInput } from "./schemas";
-import type { CreateLabExperimentInput, LabModelTarget } from "./schemas";
+import { CAMPAIGN_INTENTS, parseCreateLabExperimentInput } from "./schemas";
+import type { CampaignIntent, CreateLabExperimentInput, LabModelTarget } from "./schemas";
 
 /**
  * Domínio de experimentos do Laboratório de IA (F48.1, D5/D8/D14).
@@ -62,6 +62,9 @@ export const READINESS_REASONS = [
   "invalid_max_runs",
   "unsupported_dimension",
   "model_target_not_in_catalog",
+  "missing_program",
+  "intent_mismatch",
+  "program_not_authorized",
 ] as const;
 
 export type ReadinessReason = (typeof READINESS_REASONS)[number];
@@ -87,6 +90,8 @@ interface ExperimentConfigRow {
   repetitions: number;
   max_runs: number;
   model_target: LabModelTarget;
+  campaign_intent: string | null;
+  program_id: string | null;
 }
 
 async function readExperimentConfig(
@@ -95,7 +100,7 @@ async function readExperimentConfig(
 ): Promise<ExperimentConfigRow> {
   const { data, error } = await client
     .from("lab_experiments")
-    .select("status, changed_dimension, repetitions, max_runs, model_target")
+    .select("status, changed_dimension, repetitions, max_runs, model_target, campaign_intent, program_id")
     .eq("id", experimentId)
     .maybeSingle();
 
@@ -166,6 +171,13 @@ export async function computeExperimentReadiness(
     reasons.push("unsupported_dimension");
   }
 
+  if (!experiment.program_id) {
+    reasons.push("missing_program");
+  }
+  if (!(CAMPAIGN_INTENTS as readonly string[]).includes(experiment.campaign_intent ?? "")) {
+    reasons.push("intent_mismatch");
+  }
+
   try {
     await validateModelTargetAgainstCatalog(experiment.model_target, client);
   } catch (error) {
@@ -182,11 +194,39 @@ export async function computeExperimentReadiness(
 // ─── Criação ─────────────────────────────────────────────────────────────────
 
 /**
+ * Recusa cenários de intents mistos (D4): todos os `scenarioVersionIds` do
+ * experimento precisam compartilhar o `campaignIntent` do experimento. A leitura
+ * é feita antes do RPC; o cenário ausente é validado pelo banco (FK).
+ */
+async function assertScenarioIntentsMatch(
+  campaignIntent: CampaignIntent,
+  scenarioVersionIds: string[],
+  client: SupabaseClient,
+): Promise<void> {
+  const { data, error } = await client
+    .from("lab_scenario_versions")
+    .select("id, content")
+    .in("id", scenarioVersionIds);
+
+  if (error) {
+    throw new Error(`lab_scenario_versions_read_failed:${error.message}`);
+  }
+
+  for (const row of (data ?? []) as Array<{ id: string; content: unknown }>) {
+    const intent = (row.content as { intent?: unknown } | null)?.intent;
+    if (intent !== campaignIntent) {
+      throw new Error(`intent_mismatch:${row.id}`);
+    }
+  }
+}
+
+/**
  * Cria o experimento com exatamente 2 variantes e N cenários, de forma atômica.
  *
  * Ordem: valida a entrada (rejeitando `model`/`configuration` **antes** de
- * qualquer escrita), valida o alvo contra o catálogo ativo e delega a gravação à
- * RPC `lab_create_experiment` — uma única transação. Nenhum run é criado.
+ * qualquer escrita), valida o alvo contra o catálogo ativo, recusa cenários de
+ * intents mistos e delega a gravação à RPC `lab_create_experiment` — uma única
+ * transação. Nenhum run é criado.
  */
 export async function createExperiment(
   input: CreateLabExperimentInput,
@@ -196,8 +236,14 @@ export async function createExperiment(
 
   await validateModelTargetAgainstCatalog(parsed.modelTarget, context.client);
 
-  const baselineSnapshot = buildBaselinePromptSnapshot();
-  const candidateSnapshot = buildCandidatePromptSnapshot(parsed.candidate);
+  await assertScenarioIntentsMatch(parsed.campaignIntent, parsed.scenarioVersionIds, context.client);
+
+  const baselineSnapshot = buildBaselinePromptSnapshot(parsed.campaignIntent);
+  const candidateSnapshot = buildCandidatePromptSnapshot({
+    campaignIntent: parsed.campaignIntent,
+    promptName: parsed.candidate.promptName,
+    promptContent: parsed.candidate.promptContent,
+  });
 
   const { data, error } = await context.client.rpc("lab_create_experiment", {
     p_name: parsed.name,
@@ -211,6 +257,8 @@ export async function createExperiment(
     p_baseline_prompt: baselineSnapshot,
     p_candidate_prompt: candidateSnapshot,
     p_scenario_version_ids: parsed.scenarioVersionIds,
+    p_campaign_intent: parsed.campaignIntent,
+    p_program_id: parsed.programId,
     p_actor_id: context.actorId,
   });
 

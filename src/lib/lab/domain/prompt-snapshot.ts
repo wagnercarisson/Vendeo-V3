@@ -4,13 +4,17 @@ import { createHash } from "node:crypto";
 
 import { PromptLoader } from "@/lib/image-generation/prompt-loader";
 
+import { CAMPAIGN_INTENTS } from "./schemas";
+import type { CampaignIntent } from "./schemas";
+
 /**
- * Snapshots de prompt do Laboratório de IA (F48.1, D5/D8).
+ * Snapshots de prompt do Laboratório de IA (F48.1, D5/D8; F48.2.1, D4).
  *
- * O prompt sob teste nesta fase é o diretor de arte de oferta (intent `offer`).
- * A comparação é **prompt-only**: o baseline é o conteúdo **oficial atual** do
- * arquivo versionado (`source: "official"`) e a candidata é o override enviado
- * pelo admin (`source: "override"`), congelado apenas no snapshot.
+ * O prompt sob teste é o Diretor de Arte do tipo de campanha do experimento
+ * (`offer`/`spotlight`/`exclusive`), derivado do `campaignIntent`. A comparação é
+ * **prompt-only**: o baseline é o conteúdo **oficial atual** do arquivo versionado
+ * (`source: "official"`) e a candidata é o override enviado pelo admin
+ * (`source: "override"`), congelado apenas no snapshot.
  *
  * Garantias:
  *  - **Somente leitura** do prompt oficial: nada é escrito em `prompts/`
@@ -23,11 +27,22 @@ import { PromptLoader } from "@/lib/image-generation/prompt-loader";
  *    sanitizado silenciosamente (sanitizar mudaria o prompt e o seu hash).
  */
 
+export { CAMPAIGN_INTENTS };
+export type { CampaignIntent };
+
 /**
- * Nome do prompt oficial sob teste (intent `offer`). Constante única: qualquer
- * outro prompt é recusado pela candidata com `unsupported_prompt_under_test`.
+ * Allowlist do prompt sob teste por intent (D4): o nome do prompt do Diretor é
+ * derivado do `campaignIntent`. Um nome divergente é recusado pela candidata com
+ * `unsupported_prompt_under_test`.
  */
-export const PROMPT_UNDER_TEST = "campaign-image-director-offer";
+export const DIRECTOR_PROMPTS: Record<CampaignIntent, string> = {
+  offer: "campaign-image-director-offer",
+  spotlight: "campaign-image-director-spotlight",
+  exclusive: "campaign-image-director-exclusive",
+};
+
+/** Alias retrocompatível da F48.1 (intent `offer`). */
+export const PROMPT_UNDER_TEST = DIRECTOR_PROMPTS.offer;
 
 /** Erro determinístico para prompt fora do escopo da F48.1. */
 export const UNSUPPORTED_PROMPT_UNDER_TEST = "unsupported_prompt_under_test";
@@ -115,14 +130,16 @@ function assertPromptContentSafe(content: string, field: PromptSnapshotField): v
  * também passa pela recusa de conteúdo sensível antes de virar snapshot (D15).
  */
 export function buildBaselinePromptSnapshot(
+  campaignIntent: CampaignIntent = "offer",
   promptLoader?: PromptLoader,
 ): BaselinePromptSnapshot {
   const loader = promptLoader ?? new PromptLoader();
-  const content = loader.load(PROMPT_UNDER_TEST);
+  const promptName = DIRECTOR_PROMPTS[campaignIntent];
+  const content = loader.load(promptName);
   assertPromptContentSafe(content, "baseline");
 
   return {
-    name: PROMPT_UNDER_TEST,
+    name: promptName,
     content,
     contentHash: computePromptContentHash(content),
     source: "official",
@@ -132,16 +149,18 @@ export function buildBaselinePromptSnapshot(
 /**
  * Congela a candidata a partir do override do admin.
  *
- * O prompt precisa ser exatamente o prompt sob teste — um nome diferente lança
- * `unsupported_prompt_under_test:<name>` (nada é congelado silenciosamente).
- * Conteúdo com chave/token/URL lança `sensitive_prompt_content` **antes** de
- * qualquer persistência, sem sanitizar o texto (D15).
+ * O prompt precisa ser exatamente o prompt do intent (`DIRECTOR_PROMPTS[intent]`)
+ * — um nome diferente lança `unsupported_prompt_under_test:<name>` (nada é
+ * congelado silenciosamente). Conteúdo com chave/token/URL lança
+ * `sensitive_prompt_content` **antes** de qualquer persistência, sem sanitizar o
+ * texto (D15).
  */
 export function buildCandidatePromptSnapshot(input: {
+  campaignIntent: CampaignIntent;
   promptName: string;
   promptContent: string;
 }): CandidatePromptSnapshot {
-  if (input.promptName !== PROMPT_UNDER_TEST) {
+  if (input.promptName !== DIRECTOR_PROMPTS[input.campaignIntent]) {
     throw new Error(`${UNSUPPORTED_PROMPT_UNDER_TEST}:${input.promptName}`);
   }
   assertPromptContentSafe(input.promptContent, "candidate");

@@ -56,6 +56,7 @@ export const LAB_RESERVATION_ERROR_CODES = [
   "scenario_not_in_experiment",
   "repetition_out_of_range",
   "invalid_supersedes_run",
+  "program_not_authorized",
 ] as const;
 
 export type LabReservationErrorCode =
@@ -117,6 +118,7 @@ export async function reserveLabRun(params: {
   snapshot: LabRunSnapshot;
   operationId: string;
   actorId: string;
+  estimatedCostUsd?: number | null;
 }): Promise<{ runId: string; runSequence: number | null; idempotent: boolean }> {
   assertSnapshotComplete(params.snapshot);
 
@@ -129,6 +131,7 @@ export async function reserveLabRun(params: {
     p_snapshot: params.snapshot,
     p_operation_id: params.operationId,
     p_actor_id: params.actorId,
+    p_estimated_cost_usd: params.estimatedCostUsd ?? null,
   });
 
   if (error) {
@@ -499,6 +502,8 @@ export async function prepareLabRun(params: {
   supersedesRunId: string | null;
   operationId: string;
   actorId: string;
+  programId: string;
+  estimatedCostUsd?: number | null;
   scenario: { id: string; version: number; contentHash: string };
   experiment: { modelTarget: LabModelTarget; params: LabExperimentParams };
   variant: { role: LabVariantRole; promptSnapshot: LabPromptSnapshot };
@@ -513,6 +518,7 @@ export async function prepareLabRun(params: {
     scenarioVersionId: params.scenarioVersionId,
     scenarioVersion: params.scenario.version,
     scenarioContentHash: params.scenario.contentHash,
+    programId: params.programId,
     prompt: params.variant.promptSnapshot,
     modelTarget: params.experiment.modelTarget,
     params: params.experiment.params,
@@ -531,6 +537,7 @@ export async function prepareLabRun(params: {
     snapshot,
     operationId: params.operationId,
     actorId: params.actorId,
+    estimatedCostUsd: params.estimatedCostUsd ?? null,
   });
 
   return { runId: reservation.runId, snapshot, idempotent: reservation.idempotent };
@@ -707,6 +714,8 @@ export async function executeLabRun(params: {
   supersedesRunId: string | null;
   operationId: string;
   actorId: string;
+  programId: string;
+  estimatedCostUsd?: number | null;
   scenario: {
     id: string;
     version: number;
@@ -734,6 +743,8 @@ export async function executeLabRun(params: {
     supersedesRunId: params.supersedesRunId,
     operationId: params.operationId,
     actorId: params.actorId,
+    programId: params.programId,
+    estimatedCostUsd: params.estimatedCostUsd,
     scenario: params.scenario,
     experiment: params.experiment,
     variant: params.variant,

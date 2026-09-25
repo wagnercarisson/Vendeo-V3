@@ -26,6 +26,7 @@ const SCENARIO_C = "33333333-3333-4333-8333-333333333333";
 const SCENARIO_D = "44444444-4444-4444-8444-444444444444";
 const RUN_BASELINE = "55555555-5555-4555-8555-555555555555";
 const RUN_CANDIDATE = "66666666-6666-4666-8666-666666666666";
+const PROGRAM_ID = "77777777-7777-4777-8777-777777777777";
 
 /** Entrada de criação válida mínima — ponto de partida das variações. */
 function validInput(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -34,6 +35,8 @@ function validInput(overrides: Record<string, unknown> = {}): Record<string, unk
     objective: "Reduzir instruções redundantes sem perder fidelidade",
     hypothesis: "Um prompt mais curto mantém a qualidade da arte",
     changedDimension: "prompt",
+    campaignIntent: "offer",
+    programId: PROGRAM_ID,
     modelTarget: { provider: "openai", model: "gpt-5.5", protocol: "responses" },
     params: { size: "1024x1024", quality: "high", skipInputValidation: true },
     repetitions: 1,
@@ -107,6 +110,54 @@ describe("CreateLabExperimentInputSchema — criação válida", () => {
   it("expõe CHANGED_DIMENSIONS (executável) e FUTURE_CHANGED_DIMENSIONS (F48.2+)", () => {
     expect(CHANGED_DIMENSIONS).toEqual(["prompt"]);
     expect(FUTURE_CHANGED_DIMENSIONS).toEqual(["model", "configuration"]);
+  });
+});
+
+describe("CreateLabExperimentInputSchema — intent e programa (D4)", () => {
+  it("aceita campaignIntent e programId e os expõe no parse", () => {
+    const parsed = parseCreateLabExperimentInput(validInput());
+
+    expect(parsed.campaignIntent).toBe("offer");
+    expect(parsed.programId).toBe(PROGRAM_ID);
+  });
+
+  it("rejeita payload sem campaignIntent", () => {
+    const input = validInput();
+    delete (input as Record<string, unknown>).campaignIntent;
+
+    const result = CreateLabExperimentInputSchema.safeParse(input);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejeita payload sem programId", () => {
+    const input = validInput();
+    delete (input as Record<string, unknown>).programId;
+
+    const result = CreateLabExperimentInputSchema.safeParse(input);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejeita programId que não é UUID", () => {
+    const result = CreateLabExperimentInputSchema.safeParse(
+      validInput({ programId: "nao-e-uuid" }),
+    );
+    expect(result.success).toBe(false);
+  });
+
+  it("rejeita prompt divergente do intent com unsupported_prompt_under_test", () => {
+    const result = CreateLabExperimentInputSchema.safeParse(
+      validInput({
+        campaignIntent: "offer",
+        candidate: {
+          promptName: "campaign-image-director-spotlight",
+          promptContent: "# Candidata",
+        },
+      }),
+    );
+
+    expect(result.success).toBe(false);
+    const messages = result.success ? [] : result.error.issues.map((issue) => issue.message);
+    expect(messages).toContain("unsupported_prompt_under_test");
   });
 });
 

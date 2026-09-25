@@ -6,6 +6,7 @@ import path from "node:path";
 import { PromptLoader } from "@/lib/image-generation/prompt-loader";
 
 import {
+  DIRECTOR_PROMPTS,
   PROMPT_UNDER_TEST,
   SENSITIVE_PROMPT_CONTENT,
   SensitivePromptContentError,
@@ -60,7 +61,7 @@ describe("buildBaselinePromptSnapshot", () => {
 
   it("usa o loader injetado (mesmo conteúdo ⇒ mesmo hash)", () => {
     const fromDisk = buildBaselinePromptSnapshot();
-    const withInjectedLoader = buildBaselinePromptSnapshot(new PromptLoader());
+    const withInjectedLoader = buildBaselinePromptSnapshot("offer", new PromptLoader());
 
     expect(withInjectedLoader).toEqual(fromDisk);
   });
@@ -85,7 +86,8 @@ describe("buildCandidatePromptSnapshot", () => {
     const content = "# Diretor de arte (candidata)\n\nInstruções enxutas.";
 
     const snapshot = buildCandidatePromptSnapshot({
-      promptName: PROMPT_UNDER_TEST,
+      campaignIntent: "offer",
+      promptName: DIRECTOR_PROMPTS.offer,
       promptContent: content,
     });
 
@@ -98,16 +100,30 @@ describe("buildCandidatePromptSnapshot", () => {
   it("recusa prompt fora do escopo com unsupported_prompt_under_test", () => {
     expect(() =>
       buildCandidatePromptSnapshot({
-        promptName: "campaign-image-director-spotlight",
+        campaignIntent: "offer",
+        promptName: DIRECTOR_PROMPTS.spotlight,
         promptContent: "# Outro prompt",
       }),
     ).toThrowError(/unsupported_prompt_under_test:campaign-image-director-spotlight/);
   });
 
+  it("aceita os três prompts do Diretor por intent (D4)", () => {
+    for (const intent of ["offer", "spotlight", "exclusive"] as const) {
+      const snapshot = buildCandidatePromptSnapshot({
+        campaignIntent: intent,
+        promptName: DIRECTOR_PROMPTS[intent],
+        promptContent: `# Candidata ${intent}`,
+      });
+
+      expect(snapshot.name).toBe(DIRECTOR_PROMPTS[intent]);
+    }
+  });
+
   it("baseline e candidata com o mesmo conteúdo compartilham o hash (comparação justa)", () => {
     const baseline = buildBaselinePromptSnapshot();
     const candidate = buildCandidatePromptSnapshot({
-      promptName: PROMPT_UNDER_TEST,
+      campaignIntent: "offer",
+      promptName: DIRECTOR_PROMPTS.offer,
       promptContent: baseline.content,
     });
 
@@ -150,7 +166,7 @@ describe("recusa de conteúdo sensível (D15)", () => {
   for (const { label, content, kind } of sensitiveCases) {
     it(`candidata com ${label} é recusada com sensitive_prompt_content`, () => {
       const error = capture(() =>
-        buildCandidatePromptSnapshot({ promptName: PROMPT_UNDER_TEST, promptContent: content }),
+        buildCandidatePromptSnapshot({ campaignIntent: "offer", promptName: DIRECTOR_PROMPTS.offer, promptContent: content }),
       ) as SensitivePromptContentError;
 
       expect(error).toBeInstanceOf(SensitivePromptContentError);
@@ -168,7 +184,7 @@ describe("recusa de conteúdo sensível (D15)", () => {
 
   it("baseline com conteúdo sensível (loader injetado) é recusado no campo baseline", () => {
     const error = capture(() =>
-      buildBaselinePromptSnapshot(fakeLoader("Vazamento: sk-abcdefgh12345678")),
+      buildBaselinePromptSnapshot("offer", fakeLoader("Vazamento: sk-abcdefgh12345678")),
     ) as SensitivePromptContentError;
 
     expect(error).toBeInstanceOf(SensitivePromptContentError);

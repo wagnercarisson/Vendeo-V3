@@ -53,6 +53,8 @@ export interface LabRunSnapshot {
   scenarioVersionId: string;
   scenarioVersion: number;
   scenarioContentHash: string;
+  /** Programa com orçamento ao qual o experimento pertence (F48.2.1, D5). */
+  programId: string;
   prompt: LabRunSnapshotPrompt;
   capability: "campaign_image";
   modelTarget: {
@@ -91,6 +93,7 @@ export function buildLabRunSnapshot(params: {
   scenarioVersionId: string;
   scenarioVersion: number;
   scenarioContentHash: string;
+  programId: string;
   prompt: LabPromptSnapshot;
   modelTarget: { provider: string; model: string; protocol: string };
   params: LabRunSnapshotParams;
@@ -102,6 +105,7 @@ export function buildLabRunSnapshot(params: {
     scenarioVersionId: params.scenarioVersionId,
     scenarioVersion: params.scenarioVersion,
     scenarioContentHash: params.scenarioContentHash,
+    programId: params.programId,
     prompt: {
       name: params.prompt.name,
       content: params.prompt.content,
@@ -153,6 +157,9 @@ export function assertSnapshotComplete(snapshot: LabRunSnapshot | null | undefin
     throw new Error(MISSING_SNAPSHOT);
   }
   if (!isNonEmptyString(snapshot.scenarioContentHash)) {
+    throw new Error(MISSING_SNAPSHOT);
+  }
+  if (!isNonEmptyString(snapshot.programId)) {
     throw new Error(MISSING_SNAPSHOT);
   }
   if (!isNonEmptyString(snapshot.prompt?.name)) {

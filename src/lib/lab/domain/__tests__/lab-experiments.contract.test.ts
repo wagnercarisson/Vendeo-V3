@@ -54,6 +54,7 @@ const SCENARIO_A = "11111111-1111-4111-8111-111111111111";
 const SCENARIO_B = "22222222-2222-4222-8222-222222222222";
 const SCENARIO_C = "33333333-3333-4333-8333-333333333333";
 const SCENARIO_D = "44444444-4444-4444-8444-444444444444";
+const PROGRAM_ID = "77777777-7777-4777-8777-777777777777";
 
 const ACTIVE_TARGET: LabModelTarget = { provider: "openai", model: "gpt-5.5", protocol: "responses" };
 
@@ -81,6 +82,8 @@ interface ExperimentRow {
   repetitions: number;
   max_runs: number;
   notes: string | null;
+  campaign_intent: string | null;
+  program_id: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -116,6 +119,7 @@ interface EvaluationRow {
 interface FakeBuilder {
   select(columns: string): FakeBuilder;
   eq(column: string, value: unknown): FakeBuilder;
+  in(column: string, values: readonly unknown[]): FakeBuilder;
   update(values: Record<string, unknown>): FakeBuilder;
   delete(): FakeBuilder;
   maybeSingle(): Promise<{ data: unknown; error: null }>;
@@ -123,6 +127,11 @@ interface FakeBuilder {
     onfulfilled: (value: { data: unknown[]; error: null }) => unknown,
     onrejected?: (reason: unknown) => unknown,
   ): Promise<unknown>;
+}
+
+interface ScenarioVersionRow {
+  id: string;
+  content: Record<string, unknown>;
 }
 
 /** Linha ativa real do catálogo para `campaign_image` (seed F47). */
@@ -145,6 +154,7 @@ class FakeLabClient {
   readonly experiments: ExperimentRow[] = [];
   readonly variants: VariantRow[] = [];
   readonly scenarios: ScenarioRow[] = [];
+  readonly scenarioVersions: ScenarioVersionRow[] = [];
   readonly runs: RunRow[] = [];
   readonly evaluations: EvaluationRow[] = [];
   readonly deletes: string[] = [];
@@ -163,7 +173,7 @@ class FakeLabClient {
     const accessLog = this.accessLog;
     const fake = this;
 
-    const filters: Array<[string, unknown]> = [];
+    const filters: Array<(row: Record<string, unknown>) => boolean> = [];
     let pendingUpdate: Record<string, unknown> | null = null;
     let pendingDelete = false;
 
@@ -175,6 +185,8 @@ class FakeLabClient {
           return this.variants as unknown as Array<Record<string, unknown>>;
         case "lab_experiment_scenarios":
           return this.scenarios as unknown as Array<Record<string, unknown>>;
+        case "lab_scenario_versions":
+          return this.scenarioVersions as unknown as Array<Record<string, unknown>>;
         case "lab_runs":
           return this.runs as unknown as Array<Record<string, unknown>>;
         case "lab_human_evaluations":
@@ -187,7 +199,7 @@ class FakeLabClient {
     };
 
     const matching = (): Array<Record<string, unknown>> =>
-      source().filter((row) => filters.every(([column, value]) => row[column] === value));
+      source().filter((row) => filters.every((filter) => filter(row)));
 
     const builder: FakeBuilder = {
       select(columns: string) {
@@ -195,7 +207,11 @@ class FakeLabClient {
         return builder;
       },
       eq(column: string, value: unknown) {
-        filters.push([column, value]);
+        filters.push((row) => row[column] === value);
+        return builder;
+      },
+      in(column: string, values: readonly unknown[]) {
+        filters.push((row) => values.includes(row[column]));
         return builder;
       },
       update(values: Record<string, unknown>) {
@@ -276,6 +292,8 @@ class FakeLabClient {
       repetitions,
       max_runs: maxRuns,
       notes: (params.p_notes as string | null) ?? null,
+      campaign_intent: (params.p_campaign_intent as string | null) ?? null,
+      program_id: (params.p_program_id as string | null) ?? null,
       created_by: params.p_actor_id as string,
       created_at: now,
       updated_at: now,
@@ -326,6 +344,8 @@ class FakeLabClient {
       repetitions: 1,
       max_runs: 6,
       notes: null,
+      campaign_intent: "offer",
+      program_id: PROGRAM_ID,
       created_by: ACTOR_ID,
       created_at: now,
       updated_at: now,
@@ -377,6 +397,8 @@ function validInput(overrides: Record<string, unknown> = {}): Record<string, unk
     objective: "Reduzir redundância sem perder fidelidade",
     hypothesis: "Um prompt mais curto mantém a qualidade da arte",
     changedDimension: "prompt",
+    campaignIntent: "offer",
+    programId: PROGRAM_ID,
     modelTarget: { ...ACTIVE_TARGET },
     params: { size: "1024x1024", quality: "high", skipInputValidation: true },
     repetitions: 1,
@@ -599,6 +621,7 @@ describe("snapshots de prompt — baseline oficial × candidata override", () =>
   it("candidata é o override, com hash diferente do baseline", () => {
     const baseline = buildBaselinePromptSnapshot();
     const candidate = buildCandidatePromptSnapshot({
+      campaignIntent: "offer",
       promptName: PROMPT_UNDER_TEST,
       promptContent: "# Diretor de arte (candidata)\n\nInstruções enxutas.",
     });
@@ -613,6 +636,7 @@ describe("snapshots de prompt — baseline oficial × candidata override", () =>
 
     buildBaselinePromptSnapshot();
     buildCandidatePromptSnapshot({
+      campaignIntent: "offer",
       promptName: PROMPT_UNDER_TEST,
       promptContent: "# Diretor de arte (candidata)\n\nInstruções enxutas.",
     });

@@ -129,7 +129,7 @@ export async function prepareExperimentRun(params: {
 
   const { data: experiment, error } = await client
     .from("lab_experiments")
-    .select("id, model_target, params, status")
+    .select("id, model_target, params, status, program_id")
     .eq("id", experimentId)
     .maybeSingle();
 
@@ -140,6 +140,12 @@ export async function prepareExperimentRun(params: {
   const experimentRow = asRow(experiment);
   if (!experimentRow) {
     throw new LabReservationError("experiment_not_found");
+  }
+
+  // Programa com orçamento é obrigatório antes de qualquer chamada paga (D5).
+  const programId = text(experimentRow.program_id);
+  if (!programId) {
+    throw new LabReservationError("program_not_authorized");
   }
 
   const { data: variants, error: variantsError } = await client
@@ -252,6 +258,7 @@ export async function prepareExperimentRun(params: {
     supersedesRunId: input.supersedesRunId ?? null,
     operationId: input.operationId,
     actorId,
+    programId,
     scenario: {
       id: input.scenarioVersionId,
       version: typeof versionRow.version === "number" ? versionRow.version : 0,
