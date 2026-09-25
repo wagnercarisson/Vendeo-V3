@@ -126,6 +126,10 @@ export async function createEvaluation(params: {
       blind_order: input.blindOrder ?? null,
       verdict: input.verdict,
       observation: input.observation ?? null,
+      // Rubrica estruturada pelos nove critérios (D7) — obrigatória no input
+      // novo (validada por `parseCreateLabEvaluationInput` antes do insert). A
+      // coluna é nullable apenas para os registros históricos da F48.1.
+      rubric: input.rubric,
       evaluator_id: params.evaluatorId,
     })
     .select("id, created_at")

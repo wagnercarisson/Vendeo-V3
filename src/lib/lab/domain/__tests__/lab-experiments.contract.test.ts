@@ -35,6 +35,7 @@ import {
   MAX_RUNS_PER_EXPERIMENT,
   MAX_SCENARIOS_PER_EXPERIMENT,
 } from "@/lib/lab/limits";
+import { VALID_RUBRIC } from "./rubric-fixture";
 
 /**
  * Suíte de contrato nº 1 (48-1-11, task 11.4) — **domínio de experimentos**.
@@ -838,6 +839,7 @@ describe("avaliação — verdict/ordem cega válidos e nenhuma avaliação auto
     scenarioVersionId: SCENARIO_A,
     baselineRunId: SCENARIO_B,
     candidateRunId: SCENARIO_C,
+    rubric: VALID_RUBRIC,
   };
 
   it("aceita todos os verdicts e ordens cegas previstos", () => {
@@ -855,6 +857,16 @@ describe("avaliação — verdict/ordem cega válidos e nenhuma avaliação auto
     expect(() =>
       parseCreateLabEvaluationInput({ ...base, candidateRunId: base.baselineRunId, verdict: "tie" }),
     ).toThrow();
+  });
+
+  it("rejeita avaliação sem a rubrica obrigatória", () => {
+    const withoutRubric = {
+      scenarioVersionId: base.scenarioVersionId,
+      baselineRunId: base.baselineRunId,
+      candidateRunId: base.candidateRunId,
+    };
+
+    expect(() => parseCreateLabEvaluationInput({ ...withoutRubric, verdict: "tie" })).toThrow();
   });
 
   it("rejeita verdict/ordem fora do enum", () => {

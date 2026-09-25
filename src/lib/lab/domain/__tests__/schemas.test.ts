@@ -10,6 +10,7 @@ import {
   parseCreateLabEvaluationInput,
   parseCreateLabExperimentInput,
 } from "../schemas";
+import { VALID_RUBRIC } from "./rubric-fixture";
 
 /**
  * Schemas de criação/avaliação do laboratório (F48.1, D5/D13/D14).
@@ -57,6 +58,7 @@ function validEvaluation(overrides: Record<string, unknown> = {}): Record<string
     baselineRunId: RUN_BASELINE,
     candidateRunId: RUN_CANDIDATE,
     verdict: "candidate",
+    rubric: VALID_RUBRIC,
     ...overrides,
   };
 }
@@ -333,6 +335,14 @@ describe("CreateLabEvaluationInputSchema — avaliação humana", () => {
     const result = CreateLabEvaluationInputSchema.safeParse(
       validEvaluation({ evaluatorId: RUN_CANDIDATE }),
     );
+    expect(result.success).toBe(false);
+  });
+
+  it("rejeita avaliação sem rubrica (obrigatória em avaliações novas)", () => {
+    const withoutRubric = validEvaluation();
+    delete (withoutRubric as Record<string, unknown>).rubric;
+
+    const result = CreateLabEvaluationInputSchema.safeParse(withoutRubric);
     expect(result.success).toBe(false);
   });
 });

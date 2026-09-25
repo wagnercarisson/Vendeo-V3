@@ -1,5 +1,13 @@
 // @vitest-environment node
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const { mockTransitionExperiment } = vi.hoisted(() => ({
+  mockTransitionExperiment: vi.fn(),
+}));
+
+vi.mock("@/lib/lab/domain/experiment-service", () => ({
+  transitionExperiment: (...args: unknown[]) => mockTransitionExperiment(...args),
+}));
 
 import {
   LabRubricSchema,
@@ -12,6 +20,10 @@ import {
 } from "@/lib/lab/domain/rubric";
 import { CreateLabEvaluationInputSchema } from "@/lib/lab/domain/schemas";
 import { VALID_RUBRIC, buildValidRubric } from "@/lib/lab/domain/__tests__/rubric-fixture";
+import { InvalidComparisonRunsError, createEvaluation } from "@/lib/lab/api/evaluation-service";
+import { createFakeSupabaseClient } from "@/lib/lab/api/__tests__/fake-supabase-client";
+import type { FakeRow } from "@/lib/lab/api/__tests__/fake-supabase-client";
+import type { LabEvaluationRequest } from "@/lib/admin/schemas";
 
 /**
  * Contrato nº 3 (48-2-1-04) — **avaliação humana estruturada** (D7).
@@ -118,5 +130,166 @@ describe("CreateLabEvaluationInputSchema — rubrica obrigatória (D7)", () => {
 
   it("recusa a avaliação sem rubrica", () => {
     expect(CreateLabEvaluationInputSchema.safeParse(base).success).toBe(false);
+  });
+});
+
+// ─── Serviço: persistência append-only com runs validados (D7) ───────────────
+
+const EXPERIMENT_ID = "55555555-5555-4555-8555-555555555555";
+const SCENARIO_VERSION = "22222222-2222-4222-8222-222222222222";
+const OTHER_SCENARIO_VERSION = "33333333-3333-4333-8333-333333333333";
+const BASELINE_VARIANT = "77777777-7777-4777-8777-777777777777";
+const CANDIDATE_VARIANT = "88888888-8888-4888-8888-888888888888";
+const BASELINE_RUN = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const CANDIDATE_RUN = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const EVALUATOR_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+
+function runRow(overrides: Partial<FakeRow> = {}): FakeRow {
+  return {
+    id: BASELINE_RUN,
+    experiment_id: EXPERIMENT_ID,
+    variant_id: BASELINE_VARIANT,
+    scenario_version_id: SCENARIO_VERSION,
+    status: "succeeded",
+    ...overrides,
+  };
+}
+
+function tables(overrides: {
+  runs?: FakeRow[];
+  variants?: FakeRow[];
+  experimentStatus?: string;
+  evaluations?: FakeRow[];
+} = {}): Record<string, FakeRow[]> {
+  return {
+    lab_runs: overrides.runs ?? [
+      runRow(),
+      runRow({ id: CANDIDATE_RUN, variant_id: CANDIDATE_VARIANT }),
+    ],
+    lab_experiment_variants: overrides.variants ?? [
+      { id: BASELINE_VARIANT, role: "baseline" },
+      { id: CANDIDATE_VARIANT, role: "candidate" },
+    ],
+    lab_experiments: [{ id: EXPERIMENT_ID, status: overrides.experimentStatus ?? "running" }],
+    lab_human_evaluations: overrides.evaluations ?? [],
+  };
+}
+
+function input(overrides: Record<string, unknown> = {}): LabEvaluationRequest {
+  return {
+    scenarioVersionId: SCENARIO_VERSION,
+    baselineRunId: BASELINE_RUN,
+    candidateRunId: CANDIDATE_RUN,
+    verdict: "candidate",
+    blindOrder: "candidate_left",
+    observation: "Candidata com preço mais legível",
+    rubric: VALID_RUBRIC,
+    ...overrides,
+  } as unknown as LabEvaluationRequest;
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockTransitionExperiment.mockResolvedValue({ status: "evaluated" });
+});
+
+describe("createEvaluation — rubrica e runs comparados (D7)", () => {
+  it("registra a rubrica dos nove critérios no insert", async () => {
+    const fake = createFakeSupabaseClient({ tables: tables() });
+
+    const result = await createEvaluation({
+      client: fake.client,
+      experimentId: EXPERIMENT_ID,
+      evaluatorId: EVALUATOR_ID,
+      input: input(),
+    });
+
+    expect(result.evaluationId).toBeTruthy();
+    expect(fake.insertCalls).toHaveLength(1);
+    expect(fake.insertCalls[0].table).toBe("lab_human_evaluations");
+    expect(fake.insertCalls[0].payload).toMatchObject({
+      experiment_id: EXPERIMENT_ID,
+      baseline_run_id: BASELINE_RUN,
+      candidate_run_id: CANDIDATE_RUN,
+      blind_order: "candidate_left",
+      verdict: "candidate",
+      rubric: VALID_RUBRIC,
+    });
+  });
+
+  it("recusa rubrica incompleta antes de qualquer insert", async () => {
+    const fake = createFakeSupabaseClient({ tables: tables() });
+    const incomplete = { ...VALID_RUBRIC } as Record<string, unknown>;
+    delete incomplete.legibility;
+
+    await expect(
+      createEvaluation({
+        client: fake.client,
+        experimentId: EXPERIMENT_ID,
+        evaluatorId: EVALUATOR_ID,
+        input: input({ rubric: incomplete }),
+      }),
+    ).rejects.toThrow();
+
+    expect(fake.insertCalls).toEqual([]);
+  });
+
+  it("grava blind_order null sem modo cego e o valor quando há", async () => {
+    const withoutBlind = createFakeSupabaseClient({ tables: tables() });
+    await createEvaluation({
+      client: withoutBlind.client,
+      experimentId: EXPERIMENT_ID,
+      evaluatorId: EVALUATOR_ID,
+      input: input({ blindOrder: undefined }),
+    });
+    expect(withoutBlind.insertCalls[0].payload).toMatchObject({ blind_order: null });
+
+    const withBlind = createFakeSupabaseClient({ tables: tables() });
+    await createEvaluation({
+      client: withBlind.client,
+      experimentId: EXPERIMENT_ID,
+      evaluatorId: EVALUATOR_ID,
+      input: input({ blindOrder: "baseline_left" }),
+    });
+    expect(withBlind.insertCalls[0].payload).toMatchObject({ blind_order: "baseline_left" });
+  });
+
+  it("recusa runs de cenários diferentes com invalid_comparison_runs", async () => {
+    const fake = createFakeSupabaseClient({
+      tables: tables({
+        runs: [
+          runRow(),
+          runRow({ id: CANDIDATE_RUN, variant_id: CANDIDATE_VARIANT, scenario_version_id: OTHER_SCENARIO_VERSION }),
+        ],
+      }),
+    });
+
+    await expect(
+      createEvaluation({
+        client: fake.client,
+        experimentId: EXPERIMENT_ID,
+        evaluatorId: EVALUATOR_ID,
+        input: input(),
+      }),
+    ).rejects.toMatchObject({ code: "invalid_comparison_runs" });
+    expect(fake.insertCalls).toEqual([]);
+  });
+
+  it("recusa runs não terminais com runs_not_terminal", async () => {
+    const fake = createFakeSupabaseClient({
+      tables: tables({
+        runs: [runRow({ status: "running" }), runRow({ id: CANDIDATE_RUN, variant_id: CANDIDATE_VARIANT })],
+      }),
+    });
+
+    await expect(
+      createEvaluation({
+        client: fake.client,
+        experimentId: EXPERIMENT_ID,
+        evaluatorId: EVALUATOR_ID,
+        input: input(),
+      }),
+    ).rejects.toBeInstanceOf(InvalidComparisonRunsError);
+    expect(fake.insertCalls).toEqual([]);
   });
 });

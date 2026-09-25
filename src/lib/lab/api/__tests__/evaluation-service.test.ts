@@ -11,7 +11,8 @@ vi.mock("@/lib/lab/domain/experiment-service", () => ({
 import { InvalidComparisonRunsError, createEvaluation } from "../evaluation-service";
 import { createFakeSupabaseClient } from "./fake-supabase-client";
 import type { FakeRow } from "./fake-supabase-client";
-import type { LabEvaluationRequest } from "@/lib/admin/schemas";
+import type { CreateLabEvaluationInput } from "@/lib/lab/domain/schemas";
+import { VALID_RUBRIC } from "@/lib/lab/domain/__tests__/rubric-fixture";
 
 /**
  * F48.1 (D13/D14) — registro validado da avaliação humana (append-only).
@@ -28,13 +29,14 @@ const BASELINE_RUN = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const CANDIDATE_RUN = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const EVALUATOR_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 
-const INPUT: LabEvaluationRequest = {
+const INPUT: CreateLabEvaluationInput = {
   scenarioVersionId: SCENARIO_VERSION,
   baselineRunId: BASELINE_RUN,
   candidateRunId: CANDIDATE_RUN,
   verdict: "candidate",
   blindOrder: "candidate_left",
   observation: "Candidata com preço mais legível",
+  rubric: VALID_RUBRIC,
 };
 
 function runRow(overrides: Partial<FakeRow> = {}): FakeRow {
@@ -98,8 +100,32 @@ describe("createEvaluation — avaliação append-only validada", () => {
       blind_order: "candidate_left",
       verdict: "candidate",
       observation: "Candidata com preço mais legível",
+      rubric: VALID_RUBRIC,
       evaluator_id: EVALUATOR_ID,
     });
+  });
+
+  it("recusa avaliação sem rubrica antes de qualquer insert", async () => {
+    const fake = createFakeSupabaseClient({ tables: tables() });
+    const withoutRubric = {
+      scenarioVersionId: SCENARIO_VERSION,
+      baselineRunId: BASELINE_RUN,
+      candidateRunId: CANDIDATE_RUN,
+      verdict: "candidate" as const,
+      blindOrder: "candidate_left" as const,
+      observation: "sem rubrica",
+    };
+
+    await expect(
+      createEvaluation({
+        client: fake.client,
+        experimentId: EXPERIMENT_ID,
+        evaluatorId: EVALUATOR_ID,
+        input: withoutRubric,
+      }),
+    ).rejects.toThrow();
+
+    expect(fake.insertCalls).toEqual([]);
   });
 
   it("recusa runs de experimentos diferentes sem persistir nada", async () => {
