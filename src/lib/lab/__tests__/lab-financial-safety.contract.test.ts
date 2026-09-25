@@ -923,6 +923,88 @@ describe("settle/release — conversão idempotente e liberação sem consumo", 
   });
 });
 
+describe("liquidação no ciclo do run — settle após a chamada, release antes dela", () => {
+  async function runReservedWithBudget(params: {
+    state: MemoryState;
+    invoker: CountingInvoker;
+    estimatedCostUsd: number;
+    promptLoader?: LabPromptLoader;
+  }): Promise<LabRunStatus> {
+    const promptLoader =
+      params.promptLoader ??
+      new LabPromptLoader([{ name: PROMPT_NAME, content: CANDIDATE_CONTENT }]);
+    const prepared = await prepareLabRun(
+      prepareParams(params.state, { estimatedCostUsd: params.estimatedCostUsd }),
+    );
+
+    const executed = await runReservedLabRun({
+      client: asClient(params.state),
+      experimentId: EXPERIMENT_ID,
+      runId: prepared.runId,
+      snapshot: prepared.snapshot,
+      actorId: ACTOR_ID,
+      scenario: executionScenario(),
+      experiment: { params: LAB_PARAMS },
+      gateway: params.invoker.invoker,
+      sink: new LabTelemetrySink(),
+      promptLoader,
+      imageService: new ImageGenerationService(createNoopImageProvider(), promptLoader),
+    });
+
+    return executed.status;
+  }
+
+  it("sucesso após a chamada paga converte a reserva em consumo (settle)", async () => {
+    const state = newState(seedReadyExperiment());
+    const counting = createCountingInvoker();
+
+    const status = await runReservedWithBudget({ state, invoker: counting, estimatedCostUsd: 3 });
+
+    expect(status).toBe("succeeded");
+    const settle = state.rpcCalls.filter((call) => call.fn === "lab_settle_run_budget");
+    expect(settle).toHaveLength(1);
+    expect(settle[0].args.p_effective_cost_usd).toBe(FULL_COST.estimatedCostUsd);
+    expect(programOf(state).budget_consumed_usd).toBe(FULL_COST.estimatedCostUsd);
+    expect(programOf(state).budget_reserved_usd).toBe(0);
+  });
+
+  it("falha antes da chamada paga libera a reserva (release) sem consumir", async () => {
+    const state = newState(seedReadyExperiment());
+    const counting = createCountingInvoker();
+    // Conteúdo divergente do snapshot ⇒ falha ANTES do gateway (sink vazio).
+    const divergentLoader = new LabPromptLoader([
+      { name: PROMPT_NAME, content: "conteudo divergente do snapshot" },
+    ]);
+
+    const status = await runReservedWithBudget({
+      state,
+      invoker: counting,
+      estimatedCostUsd: 3,
+      promptLoader: divergentLoader,
+    });
+
+    expect(status).toBe("failed");
+    expect(counting.calls()).toBe(0);
+    const release = state.rpcCalls.filter((call) => call.fn === "lab_release_run_budget");
+    expect(release).toHaveLength(1);
+    expect(programOf(state).budget_consumed_usd).toBe(0);
+    expect(programOf(state).budget_reserved_usd).toBe(0);
+  });
+
+  it("falha após a chamada paga converte a reserva em consumo (settle)", async () => {
+    const state = newState(seedReadyExperiment());
+    const counting = createCountingInvoker({ failWith: new Error("provider boom") });
+
+    const status = await runReservedWithBudget({ state, invoker: counting, estimatedCostUsd: 3 });
+
+    expect(status).toBe("failed");
+    expect(counting.calls()).toBe(1);
+    const settle = state.rpcCalls.filter((call) => call.fn === "lab_settle_run_budget");
+    expect(settle).toHaveLength(1);
+    expect(programOf(state).budget_reserved_usd).toBe(0);
+  });
+});
+
 // ─── (11.6) Higiene da suíte de testes do laboratório ───────────────────────
 
 const SELF = "src/lib/lab/__tests__/lab-financial-safety.contract.test.ts";

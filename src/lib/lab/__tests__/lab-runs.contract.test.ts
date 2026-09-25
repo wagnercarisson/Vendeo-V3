@@ -36,7 +36,7 @@ import type { LabRunStatus } from "../run-service";
 import { LAB_RUN_STALE_MS } from "../limits";
 import type { LabRunSnapshot } from "../run-snapshot";
 import type { LabExperimentParams } from "../domain/schemas";
-import { computePromptContentHash } from "../domain/prompt-snapshot";
+import { DIRECTOR_PROMPTS, computePromptContentHash } from "../domain/prompt-snapshot";
 import { deriveCostCoverage } from "../domain/cost-coverage";
 import { LabPromptLoader } from "../gateway/lab-prompt-loader";
 import { createNoopImageProvider } from "../gateway/noop-image-provider";
@@ -315,6 +315,17 @@ class LabRunsFakeClient {
 
   async rpc(fn: string, args: Record<string, unknown>): Promise<FakeResult> {
     this.rpcCalls.push({ fn, args });
+
+    // Liquidação de orçamento (F48.2.1, D2): idempotente por `budget_settled_at`.
+    if (fn === "lab_settle_run_budget" || fn === "lab_release_run_budget") {
+      const run = this.runs.find((row) => row.id === args.p_run_id);
+      if (!run || run.budget_settled_at != null) {
+        return { data: { success: true, settled: false }, error: null };
+      }
+      run.budget_settled_at = new Date().toISOString();
+      return { data: { success: true, settled: true }, error: null };
+    }
+
     if (fn !== "lab_reserve_run") {
       return { data: null, error: { message: `unexpected_rpc:${fn}` } };
     }
@@ -1305,5 +1316,129 @@ describe("contrato de execução — falha de artefato não deixa órfão", () =
 
     for (const status of terminal) expect(isRunTerminal(status)).toBe(true);
     for (const status of active) expect(isRunTerminal(status)).toBe(false);
+  });
+});
+
+// ─── 9. Prompt do Diretor por tipo de campanha (F48.2.1, D4/D5) ──────────────
+
+describe("prompt do Diretor por tipo de campanha — snapshot por intent", () => {
+  it("DIRECTOR_PROMPTS mapeia os três intents para os prompts oficiais", () => {
+    expect(DIRECTOR_PROMPTS).toEqual({
+      offer: "campaign-image-director-offer",
+      spotlight: "campaign-image-director-spotlight",
+      exclusive: "campaign-image-director-exclusive",
+    });
+  });
+
+  for (const intent of ["offer", "spotlight", "exclusive"] as const) {
+    it(`prepareLabRun congela o prompt campaign-image-director-${intent}`, async () => {
+      const promptName = DIRECTOR_PROMPTS[intent];
+      const candidateContent = `candidata do diretor (${intent})`;
+      const candidateHash = computePromptContentHash(candidateContent);
+
+      const result = await prepareLabRun(
+        prepareParams({
+          variant: {
+            role: "candidate",
+            promptSnapshot: {
+              name: promptName,
+              content: candidateContent,
+              contentHash: candidateHash,
+              source: "override",
+            },
+          },
+          variants: {
+            baseline: {
+              name: promptName,
+              content: BASELINE_CONTENT,
+              contentHash: BASELINE_HASH,
+              source: "official",
+            },
+            candidate: {
+              name: promptName,
+              content: candidateContent,
+              contentHash: candidateHash,
+              source: "override",
+            },
+          },
+        }),
+      );
+
+      expect(result.snapshot.prompt.name).toBe(promptName);
+      expect(result.snapshot.baselineConfig.promptName).toBe(promptName);
+      expect(result.snapshot.candidateConfig.promptName).toBe(promptName);
+
+      const sent = client.rpcCalls[0].args.p_snapshot as LabRunSnapshot;
+      expect(sent.prompt.name).toBe(promptName);
+      expect(sent.candidateConfig.promptName).toBe(promptName);
+    });
+  }
+});
+
+// ─── 10. Programa no snapshot, envelope único e liquidação (F48.2.1, D2/D5) ──
+
+describe("snapshot, envelope único e liquidação de orçamento", () => {
+  it("o snapshot do run registra o programId do experimento", async () => {
+    const result = await prepareLabRun(prepareParams());
+
+    expect(result.snapshot.programId).toBe(PROGRAM_ID);
+    const sent = client.rpcCalls[0].args.p_snapshot as LabRunSnapshot;
+    expect(sent.programId).toBe(PROGRAM_ID);
+  });
+
+  it("emite exatamente um envelope campaign_image por run", async () => {
+    seededPendingRun();
+    const state = newInvokerState();
+    const sink = new LabTelemetrySink();
+
+    await runReservedLabRun(runParams(state, { sink }));
+
+    expect(state.calls).toBe(1);
+    expect(sink.entries).toHaveLength(1);
+  });
+
+  it("falha da capability não dispara uma segunda chamada (fallback desabilitado)", async () => {
+    seededPendingRun();
+    const state = newInvokerState();
+    state.failWith = new Error("provider boom");
+
+    const result = await runReservedLabRun(runParams(state));
+
+    expect(result.status).toBe("failed");
+    expect(state.calls).toBe(1);
+  });
+
+  it("sucesso liquida a reserva com settle usando o custo efetivo do sink", async () => {
+    seededPendingRun();
+    const state = newInvokerState();
+
+    await runReservedLabRun(runParams(state));
+
+    const settleCalls = client.rpcCalls.filter((call) => call.fn === "lab_settle_run_budget");
+    expect(settleCalls).toHaveLength(1);
+    expect(settleCalls[0].args).toMatchObject({
+      p_run_id: RUN_ID,
+      p_effective_cost_usd: FULL_COST.estimatedCostUsd,
+    });
+    expect(client.rpcCalls.filter((call) => call.fn === "lab_release_run_budget")).toHaveLength(0);
+  });
+
+  it("falha antes da chamada paga libera a reserva com release (sem consumo)", async () => {
+    seededPendingRun();
+    const state = newInvokerState();
+    // Conteúdo divergente do snapshot ⇒ falha ANTES do gateway (sink vazio).
+    const divergentLoader = new LabPromptLoader([
+      { name: PROMPT_NAME, content: "conteudo divergente do snapshot" },
+    ]);
+
+    const result = await runReservedLabRun(runParams(state, { promptLoader: divergentLoader }));
+
+    expect(result.status).toBe("failed");
+    expect(state.calls).toBe(0);
+
+    const releaseCalls = client.rpcCalls.filter((call) => call.fn === "lab_release_run_budget");
+    expect(releaseCalls).toHaveLength(1);
+    expect(releaseCalls[0].args).toMatchObject({ p_run_id: RUN_ID });
+    expect(client.rpcCalls.filter((call) => call.fn === "lab_settle_run_budget")).toHaveLength(0);
   });
 });
