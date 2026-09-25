@@ -1,4 +1,7 @@
 // @vitest-environment node
+import { promises as fsp } from "node:fs";
+import path from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -11,11 +14,13 @@ import {
 } from "../schema";
 import type { LabPromptDiagnostics } from "../schema";
 import {
+  DIAGNOSTICS_HASH_MISMATCH,
   INVALID_DIAGNOSTICS_PATH,
   canonicalizeDiagnostics,
   computeDiagnosticsContentHash,
   loadCurrentDiagnostics,
   loadDiagnosticsFile,
+  loadDiagnosticsVersion,
   verifyDiagnosticsHash,
 } from "../service";
 
@@ -212,5 +217,48 @@ describe("diagnóstico v1 da F37 — fixture materializada", () => {
     expect(nonTreatable.length).toBeGreaterThanOrEqual(1);
     // A falha não tratável registra o encaminhamento e não gera candidata.
     expect(treatableItems(current).length).toBeLessThan(current.items.length);
+  });
+});
+
+describe("regra de versão — a maior vence e a anterior permanece", () => {
+  it("uma v2 temporária é usada como corrente e a v1 permanece intacta", async () => {
+    const v1 = await loadDiagnosticsVersion(1);
+    const v2Path = path.resolve(
+      process.cwd(),
+      "fixtures/lab/diagnostics/f37/f37-prompt-diagnostics.v2.json",
+    );
+
+    const v2Base = { ...v1, diagnosticVersion: 2, contentHash: "0".repeat(64) };
+    const v2 = { ...v2Base, contentHash: computeDiagnosticsContentHash(v2Base) };
+    await fsp.writeFile(v2Path, `${JSON.stringify(v2, null, 2)}\n`, "utf8");
+
+    try {
+      const current = await loadCurrentDiagnostics();
+      expect(current.diagnosticVersion).toBe(2);
+      expect(current.contentHash).toBe(v2.contentHash);
+
+      // A versão anterior continua legível e inalterada (imutabilidade).
+      const stillV1 = await loadDiagnosticsVersion(1);
+      expect(stillV1.diagnosticVersion).toBe(1);
+      expect(stillV1.contentHash).toBe(v1.contentHash);
+    } finally {
+      await fsp.rm(v2Path, { force: true });
+    }
+  });
+
+  it("um campo alterado invalida o hash (diagnostics_hash_mismatch)", async () => {
+    const current = await loadCurrentDiagnostics();
+    const tampered = {
+      ...current,
+      items: [{ ...current.items[0], evidence: "Evidência adulterada." }],
+    };
+
+    expect(() => verifyDiagnosticsHash(tampered)).toThrowError(DIAGNOSTICS_HASH_MISMATCH);
+  });
+
+  it("path com '../' é recusado com invalid_diagnostics_path", async () => {
+    await expect(loadDiagnosticsFile("../f37-prompt-diagnostics.v1.json")).rejects.toThrowError(
+      INVALID_DIAGNOSTICS_PATH,
+    );
   });
 });
