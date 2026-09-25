@@ -55,5 +55,38 @@
 
 ## Experimento v1
 
-_Preenchido na Task 3 (criação do experimento + estimativa). Nenhuma chamada paga
-ocorre antes da decisão do Checkpoint 3._
+| Campo | Valor |
+|---|---|
+| `experimentId` | `c48e21b5-c7a8-4456-a0d6-a2b4040fc1e3` |
+| `campaignIntent` | `offer` |
+| `programId` | `860ca4fe-dc8b-4354-b94e-02f9e7b202c6` (`matrix-v1`, `status='authorized'`) |
+| prompt sob teste | `campaign-image-director-offer` (derivado do intent) |
+| modelo fixo | `openai / gpt-5.5 / responses` |
+| status | `ready` |
+
+### Configuração congelada
+
+**3 cenários × 2 variantes × 2 repetições = 12 runs.**
+
+| Cenário (`slug`) | `scenario_version_id` | versão |
+|---|---|---|
+| `produto-oferta-preco` | `c1154292-bf50-46e8-a8a1-7d032337788d` | 1 |
+| `produto-oferta-texto-obrigatorio` | `52228f1c-c1ab-4f3d-b256-d274eaab445d` | 1 |
+| `produto-oferta-logo` | `2233bf8a-1589-4f0b-8ce3-d01055b4afe9` | 1 |
+
+| Variante | origem | `contentHash` |
+|---|---|---|
+| `baseline` | `official` | `354ea9139f41c70a27887eb1b6ed83482e844f23bd7544fd3dd9e7180d39667c` |
+| `candidate` | `override` (`v1-candidate.md`) | `6507995b5333cebcd12d2ac8ce22a1218405ac5d1c724a63d01c74cd7be4378a` |
+
+### Estimativa e saldo (sem chamada paga)
+
+| Campo | Valor |
+|---|---|
+| `totalEstimatedUsd` | `0.78` (12 runs × `0.065`/run) |
+| `perRun.estimatedCostUsd` | `0.065` (cobertura `partial`) |
+| `coverage` | `partial` (pricing parcial — a UI sinaliza faixa/aviso) |
+| `programRemainingUsd` | `2.808` (`budget_usd 2.808 − consumed 0 − reserved 0`) |
+
+**Nenhuma chamada paga nesta task:** `lab_runs` do experimento = `0`. A execução
+dos 12 runs depende da autorização do **Checkpoint 3** (Task 4).
