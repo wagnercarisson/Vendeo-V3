@@ -293,3 +293,106 @@ describe("createEvaluation — rubrica e runs comparados (D7)", () => {
     expect(fake.insertCalls).toEqual([]);
   });
 });
+
+describe("createEvaluation — histórico append-only e reinício por par (D7)", () => {
+  const OTHER_BASELINE_RUN = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+  const OTHER_CANDIDATE_RUN = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+
+  it("reavaliação cria novo registro e preserva o anterior", async () => {
+    const fake = createFakeSupabaseClient({ tables: tables() });
+
+    const first = await createEvaluation({
+      client: fake.client,
+      experimentId: EXPERIMENT_ID,
+      evaluatorId: EVALUATOR_ID,
+      input: input({ verdict: "baseline" }),
+    });
+    const second = await createEvaluation({
+      client: fake.client,
+      experimentId: EXPERIMENT_ID,
+      evaluatorId: EVALUATOR_ID,
+      input: input({ verdict: "candidate" }),
+    });
+
+    expect(second.evaluationId).not.toBe(first.evaluationId);
+    expect(fake.insertCalls).toHaveLength(2);
+    expect(fake.tables.lab_human_evaluations).toHaveLength(2);
+    // O primeiro registro permanece intacto (append-only).
+    expect(fake.tables.lab_human_evaluations[0]).toMatchObject({ verdict: "baseline" });
+  });
+
+  it("nunca executa update/delete em lab_human_evaluations (append-only)", async () => {
+    const fake = createFakeSupabaseClient({ tables: tables() });
+
+    await createEvaluation({
+      client: fake.client,
+      experimentId: EXPERIMENT_ID,
+      evaluatorId: EVALUATOR_ID,
+      input: input(),
+    });
+
+    expect(fake.updateCalls).toEqual([]);
+    expect(fake.deleteCalls).toEqual([]);
+  });
+
+  it("reinício por par: cada avaliação persiste apenas os runs do par enviado", async () => {
+    const fake = createFakeSupabaseClient({
+      tables: tables({
+        runs: [
+          runRow(),
+          runRow({ id: CANDIDATE_RUN, variant_id: CANDIDATE_VARIANT }),
+          runRow({ id: OTHER_BASELINE_RUN, scenario_version_id: OTHER_SCENARIO_VERSION }),
+          runRow({
+            id: OTHER_CANDIDATE_RUN,
+            variant_id: CANDIDATE_VARIANT,
+            scenario_version_id: OTHER_SCENARIO_VERSION,
+          }),
+        ],
+      }),
+    });
+
+    await createEvaluation({
+      client: fake.client,
+      experimentId: EXPERIMENT_ID,
+      evaluatorId: EVALUATOR_ID,
+      input: input(),
+    });
+    await createEvaluation({
+      client: fake.client,
+      experimentId: EXPERIMENT_ID,
+      evaluatorId: EVALUATOR_ID,
+      input: input({
+        scenarioVersionId: OTHER_SCENARIO_VERSION,
+        baselineRunId: OTHER_BASELINE_RUN,
+        candidateRunId: OTHER_CANDIDATE_RUN,
+      }),
+    });
+
+    expect(fake.insertCalls[0].payload).toMatchObject({
+      scenario_version_id: SCENARIO_VERSION,
+      baseline_run_id: BASELINE_RUN,
+      candidate_run_id: CANDIDATE_RUN,
+    });
+    expect(fake.insertCalls[1].payload).toMatchObject({
+      scenario_version_id: OTHER_SCENARIO_VERSION,
+      baseline_run_id: OTHER_BASELINE_RUN,
+      candidate_run_id: OTHER_CANDIDATE_RUN,
+    });
+  });
+
+  it("não produz nenhuma métrica de qualidade automática", async () => {
+    const fake = createFakeSupabaseClient({ tables: tables() });
+
+    const result = await createEvaluation({
+      client: fake.client,
+      experimentId: EXPERIMENT_ID,
+      evaluatorId: EVALUATOR_ID,
+      input: input(),
+    });
+
+    expect(Object.keys(result).sort()).toEqual(["createdAt", "evaluationId"]);
+    const payload = fake.insertCalls[0].payload as Record<string, unknown>;
+    expect(payload).not.toHaveProperty("rating");
+    expect(payload).not.toHaveProperty("quality");
+  });
+});
