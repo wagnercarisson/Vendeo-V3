@@ -122,6 +122,7 @@ function listFixtureSlugs() {
 async function materialize(supabase) {
   let created = 0;
   let skipped = 0;
+  const scenarios = [];
 
   for (const slug of listFixtureSlugs()) {
     const raw = fs.readFileSync(path.join(FIXTURES_DIR, slug, "scenario.json"), "utf8");
@@ -162,8 +163,10 @@ async function materialize(supabase) {
     }
 
     const rows = versions.data ?? [];
-    if (rows.some((row) => row.content_hash === contentHash)) {
+    const matching = rows.find((row) => row.content_hash === contentHash);
+    if (matching) {
       skipped += 1;
+      scenarios.push({ slug, intent: content.intent, version: matching.version, status: "skipped" });
       continue;
     }
 
@@ -189,9 +192,10 @@ async function materialize(supabase) {
     }
 
     created += 1;
+    scenarios.push({ slug, intent: content.intent, version: nextVersion, status: "created" });
   }
 
-  return { created, skipped };
+  return { created, skipped, scenarios };
 }
 
 const connection = resolveLocalConnection();
@@ -207,6 +211,7 @@ console.log(
       fixtures: listFixtureSlugs().length,
       created: result.created,
       skipped: result.skipped,
+      scenarios: result.scenarios,
       note: "local-only; reexecutar deve reportar created=0",
     },
     null,
