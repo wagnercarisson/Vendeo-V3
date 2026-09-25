@@ -121,7 +121,7 @@ describe("createEvaluation — avaliação append-only validada", () => {
         client: fake.client,
         experimentId: EXPERIMENT_ID,
         evaluatorId: EVALUATOR_ID,
-        input: withoutRubric,
+        input: withoutRubric as unknown as CreateLabEvaluationInput,
       }),
     ).rejects.toThrow();
 

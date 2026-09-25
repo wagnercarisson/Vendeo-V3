@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { OPERATION_KEYS } from "@/lib/credit/types";
 import { ECONOMIC_PARAMETER_KEYS } from "@/lib/economic/types";
-import { CreateLabExperimentInputSchema } from "@/lib/lab/domain/schemas";
+import {
+  CreateLabEvaluationInputSchema,
+  CreateLabExperimentInputSchema,
+} from "@/lib/lab/domain/schemas";
 import { MAX_REPETITIONS } from "@/lib/lab/limits";
 
 export const GrantCreditsRequestSchema = z.object({
@@ -281,30 +284,46 @@ export const LabRunExecuteRequestSchema = z
 export type LabRunExecuteRequest = z.infer<typeof LabRunExecuteRequestSchema>;
 
 /**
- * Registro da avaliação humana. Exige os **runs efetivamente comparados**
- * (`baselineRunId`/`candidateRunId`) e a ordem cega opcional; dois runs iguais
- * são rejeitados com o código de ids distintos. A validação de que os runs
- * pertencem ao mesmo experimento/cenário e aos papéis corretos é do serviço de
- * avaliação.
+ * Registro da avaliação humana. Reexporta o schema de domínio (48-2-1-04), que
+ * exige os **runs efetivamente comparados** (`baselineRunId`/`candidateRunId`), a
+ * ordem cega opcional e a **rubrica tipada obrigatória** pelos nove critérios
+ * (D7) — nunca duplica a validação. A validação de que os runs pertencem ao mesmo
+ * experimento/cenário e aos papéis corretos é do serviço de avaliação.
  */
-export const LabEvaluationRequestSchema = z
-  .object({
-    scenarioVersionId: z.string().uuid(),
-    baselineRunId: z.string().uuid(),
-    candidateRunId: z.string().uuid(),
-    verdict: z.enum(["baseline", "candidate", "tie", "none"]),
-    blindOrder: z.enum(["baseline_left", "candidate_left"]).optional(),
-    observation: z.string().max(4000).optional(),
-  })
-  .strict()
-  .superRefine((value, ctx) => {
-    if (value.baselineRunId === value.candidateRunId) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["candidateRunId"],
-        message: "run_ids_must_differ",
-      });
-    }
-  });
+export const LabEvaluationRequestSchema = CreateLabEvaluationInputSchema;
 
 export type LabEvaluationRequest = z.infer<typeof LabEvaluationRequestSchema>;
+
+/**
+ * Criação de programa de otimização (D2/D10). O programa agrupa os experimentos
+ * de um prompt do Diretor; a autorização de orçamento é um passo **separado**
+ * (`LabProgramUpdateRequestSchema`/`authorizeProgramBudget`). `budgetUsd` é
+ * opcional na criação — o teto é definido no checkpoint humano.
+ */
+export const LabProgramCreateRequestSchema = z
+  .object({
+    matrixVersion: z.string().min(1),
+    budgetUsd: z.number().positive().nullable().optional(),
+    notes: z.string().max(2000).optional(),
+  })
+  .strict();
+
+export type LabProgramCreateRequest = z.infer<typeof LabProgramCreateRequestSchema>;
+
+/**
+ * Atualização de programa (D10): status, autorização de orçamento
+ * (`budgetUsd` → `budget_usd`/`budget_authorized_by`/`budget_authorized_at`),
+ * referência/hash do relatório final e recomendação. Nenhuma promoção automática
+ * de variante e nenhuma chamada paga nesta superfície.
+ */
+export const LabProgramUpdateRequestSchema = z
+  .object({
+    status: z.enum(["draft", "authorized", "closed"]).optional(),
+    budgetUsd: z.number().positive().nullable().optional(),
+    finalReportRef: z.string().min(1).optional(),
+    finalReportHash: z.string().regex(/^[0-9a-f]{64}$/).optional(),
+    recommendation: z.record(z.string(), z.unknown()).optional(),
+  })
+  .strict();
+
+export type LabProgramUpdateRequest = z.infer<typeof LabProgramUpdateRequestSchema>;
