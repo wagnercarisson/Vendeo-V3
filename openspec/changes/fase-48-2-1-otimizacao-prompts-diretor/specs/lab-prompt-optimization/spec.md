@@ -136,7 +136,7 @@ O sistema SHALL encerrar o ciclo de cada prompt quando uma candidata for recomen
 
 ### Requirement: Orçamento atômico e estimativa por capability
 
-O sistema SHALL calcular a estimativa do plano como **cenários × duas variantes × repetições**, selecionada pela capability do modo, e SHALL controlar o orçamento em USD do programa por um contrato mínimo de **reserva idempotente e saldo consumido**, recusando execução sem orçamento autorizado ou além do teto. O programa SHALL representar `budget_usd` (autorizado), `budget_reserved_usd` (reservado) e `budget_consumed_usd` (consumido).
+O sistema SHALL calcular a estimativa do plano como **cenários × duas variantes × repetições**, selecionada pela capability do modo, e SHALL controlar o orçamento em USD do programa por um contrato mínimo de **reserva idempotente e saldo consumido**, recusando execução sem orçamento autorizado ou além do teto. O programa SHALL representar `budget_usd` (autorizado), `budget_reserved_usd` (reservado) e `budget_consumed_usd` (consumido). A escala do plano SHALL ser de **36 runs iniciais** (v1 × três prompts × 12 runs) e **108 runs no pior caso** (até três ciclos × 12 runs × três prompts); a execução de cada **ciclo adicional** (v2/v3) SHALL exigir uma **nova autorização humana explícita** registrada antes de qualquer chamada paga desse ciclo.
 
 #### Scenario: Estimativa usa cenários × variantes × repetições
 
@@ -173,6 +173,13 @@ O sistema SHALL calcular a estimativa do plano como **cenários × duas variante
 - **WHEN** o programa não tem orçamento autorizado ou o restante não cobre o valor estimado do run
 - **THEN** a execução é recusada com `program_not_authorized`/`budget_exceeded`
 - **AND** nenhuma chamada paga é iniciada
+
+#### Scenario: Ciclo adicional exige reautorização humana
+
+- **WHEN** um novo ciclo (v2/v3) de qualquer prompt é iniciado
+- **THEN** uma nova autorização humana explícita é registrada em `lab_prompt_programs` antes de qualquer chamada paga do ciclo
+- **AND** sem essa reautorização, nenhuma chamada paga do ciclo adicional ocorre
+- **AND** a escala do plano é de 36 runs iniciais e 108 runs no pior caso (até três ciclos)
 
 ### Requirement: Checkpoints humanos ordenados
 

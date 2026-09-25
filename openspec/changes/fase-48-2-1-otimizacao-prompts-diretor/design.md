@@ -107,7 +107,9 @@ Por cenário, a moda das repetições; sem maioria → `inconclusive` (não cont
 ### D9 — Orçamento atômico e estimativa por capability
 
 - Estimativa do plano = **cenários × duas variantes × repetições**, calculada por componente de pricing da **capability do modo** (`campaign_image` nesta change).
-- O teto em USD é calculado pela estimativa com margem explícita e autorizado em `lab_prompt_programs` no checkpoint imediatamente anterior às chamadas pagas.
+- Escala do plano: **36 runs iniciais** (v1 × 3 prompts × 12 runs) e **108 runs no pior caso** (até 3 ciclos × 12 runs × 3 prompts).
+- O teto em USD é calculado pela estimativa com margem explícita e autorizado em `lab_prompt_programs` no checkpoint imediatamente anterior às chamadas pagas. O teto **pode** ser autorizado para o pior caso (108 runs) **ou** por **reautorizações incrementais**.
+- **Reautorização obrigatória por ciclo:** antes de iniciar qualquer ciclo adicional (v2/v3) de qualquer prompt, é exigida uma **nova autorização humana explícita** em `lab_prompt_programs` (mesmo contrato atômico de `budget_usd`/`budget_reserved_usd`/`budget_consumed_usd`); sem essa reautorização, **nenhuma chamada paga do ciclo adicional ocorre**.
 - O consumo é debitado de forma **atômica**; sem saldo autorizado, a execução é recusada (`program_not_authorized`/`budget_exceeded`).
 
 ### D10 — API e UI
@@ -122,7 +124,7 @@ Por cenário, a moda das repetições; sem maioria → `inconclusive` (não cont
 ### D11 — Migration local-only, checkpoints e relatório
 
 - Migration testada localmente (`supabase db reset` + `db lint`); **sem** `db push` remoto.
-- Checkpoints humanos ordenados: (1) aprovação da matriz → (2) autorização de orçamento → (3) execução → (4) avaliação cega (antes da regra de vitória) → (5) decisão final por variante.
+- **Checkpoints humanos ordenados**: (1) aprovacao da matriz -> (2) autorizacao de orcamento (36 runs iniciais / 108 no pior caso) -> (2b) reautorizacao humana antes de cada ciclo adicional (v2/v3) -> (3) execucao -> (4) avaliacao cega (antes da regra de vitoria) -> (5) decisao final por variante.
 - Relatório final por prompt em **Markdown versionado** (canônico); o banco guarda referência, hash, checkpoints, decisão, autoria e recomendação.
 
 ## Risks / Trade-offs

@@ -58,8 +58,8 @@
 - [ ] 5.6 Estender `architecture-guard` e os testes de isolamento/segurança financeira (programa autorizado, reserva idempotente, saldo consistente, sem `generation_events`/`ai_model_selection`, sem chamadas reais) — design D11
 - [ ] 5.7 Testes de rota e UI: 403/400/409/422, tipo/programa obrigatórios, estimativa, `program_not_authorized`, rubrica, estado desabilitado — design D10
 - [ ] 5.8 Preparar ambiente local (Next.js + Supabase Docker + bucket + bootstrap da matriz e do diagnóstico) com chave/projeto de desenvolvimento — design D11
-- [ ] 5.9 Calcular o teto de orçamento pela estimativa (com margem explícita) e registrar — design D9
-- [ ] 5.10 **Checkpoint humano 2 — autorização de orçamento**: registrar em `lab_prompt_programs` o valor em USD, autor e timestamp antes de qualquer chamada paga — spec `lab-prompt-optimization`; design D11
+- [ ] 5.9 Calcular o teto de orçamento pela estimativa (com margem explícita) e registrar: **36 runs iniciais** (v1 × 3 prompts × 12) e **108 runs no pior caso** (até 3 ciclos × 12 × 3); o teto pode cobrir o pior caso ou ser reautorizado incrementalmente — design D9
+- [ ] 5.10 **Checkpoint humano 2 — autorização de orçamento**: registrar em `lab_prompt_programs` o valor em USD, autor e timestamp antes de qualquer chamada paga; **cada ciclo adicional (v2/v3) exige nova autorização humana** antes de suas chamadas pagas — spec `lab-prompt-optimization`; design D9/D11
 
 ## 6. Ciclo do Diretor `offer` (48-2-1-06)
 
@@ -68,6 +68,9 @@
 - [ ] 6.3 Criar o experimento completo baseline × candidata do `offer` (3 cenários × 2 variantes × 2 repetições = 12 runs) e executar os dois lados — design D6
 - [ ] 6.4 Registrar a avaliação cega do `offer` após os runs e antes de qualquer consolidação — spec `lab-prompt-optimization`; design D11
 - [ ] 6.5 Aplicar a regra de vitória do `offer` e decidir refinar/rejeitar/recomendar; em empate, desempatar pela variante mais simples/curta — design D6/D8
+- [ ] 6.6 [condicional] Se o `offer` for marcado `refinar`, criar novo experimento congelado com a candidata v2 e repetir (avaliar às cegas + regra de vitória), com **reautorização humana** antes de qualquer chamada paga — design D6/D9
+- [ ] 6.7 [condicional] Se v2 for marcado `refinar`, criar novo experimento congelado com a candidata v3 e repetir — design D6/D9
+- [ ] 6.8 Encerrar o ciclo do `offer` aplicando o critério de parada (candidata recomendada, três ciclos sem recomendação, ou dois ciclos consecutivos sem melhora) e registrar a decisão e o motivo — design D6/D8
 
 ## 7. Ciclo do Diretor `spotlight` (48-2-1-07)
 
@@ -75,6 +78,9 @@
 - [ ] 7.2 Redigir a candidata do `spotlight` com as regras de simplicidade (tamanho + justificativa) — design D6
 - [ ] 7.3 Criar o experimento completo baseline × candidata do `spotlight` e executar os dois lados — design D6
 - [ ] 7.4 Registrar a avaliação cega do `spotlight` e aplicar a regra de vitória — design D6/D8
+- [ ] 7.5 [condicional] Se o `spotlight` for marcado `refinar`, criar novo experimento congelado com a candidata v2 e repetir (avaliar às cegas + regra de vitória), com **reautorização humana** antes de qualquer chamada paga — design D6/D9
+- [ ] 7.6 [condicional] Se v2 for marcado `refinar`, criar novo experimento congelado com a candidata v3 e repetir — design D6/D9
+- [ ] 7.7 Encerrar o ciclo do `spotlight` aplicando o critério de parada e registrar a decisão e o motivo — design D6/D8
 
 ## 8. Ciclo do Diretor `exclusive` (48-2-1-08)
 
@@ -82,7 +88,9 @@
 - [ ] 8.2 Redigir a candidata do `exclusive` com as regras de simplicidade (tamanho + justificativa) — design D6
 - [ ] 8.3 Criar o experimento completo baseline × candidata do `exclusive` e executar os dois lados — design D6
 - [ ] 8.4 Registrar a avaliação cega do `exclusive` e aplicar a regra de vitória — design D6/D8
-- [ ] 8.5 Aplicar o critério de parada aos três prompts e confirmar que a produção permaneceu inalterada (nenhuma campanha/crédito/seleção/catálogo/prompt/`generation_events`/`campaign-images` alterados) — design D8/D11
+- [ ] 8.5 [condicional] Se o `exclusive` for marcado `refinar`, criar novo experimento congelado com a candidata v2 e repetir (avaliar às cegas + regra de vitória), com **reautorização humana** antes de qualquer chamada paga — design D6/D9
+- [ ] 8.6 [condicional] Se v2 for marcado `refinar`, criar novo experimento congelado com a candidata v3 e repetir — design D6/D9
+- [ ] 8.7 Aplicar o critério de parada aos três prompts e confirmar que a produção permaneceu inalterada (nenhuma campanha/crédito/seleção/catálogo/prompt/`generation_events`/`campaign-images` alterados) — design D8/D11
 
 ## 9. Consolidação, relatório e fechamento (48-2-1-09)
 
