@@ -106,11 +106,16 @@ candidata de prompt; `taxonomy` nunca é tratável por prompt. A v3 não contém
 3. Corrigir a afirmação incorreta de que todos os itens sem evidência já haviam sido
    reclassificados.
 
-## Decisão pendente — reapresentação (matrix-v1 + diagnostic v3)
+## Decisão registrada — reapresentação final do Checkpoint 1 (`aprovada`)
 
-O par atualizado (`matrix_version: matrix-v1` + `diagnosticVersion: 3`) é reapresentado
-para decisão humana. Nenhuma execução paga ocorre antes desta nova aprovação.
-
-- **Resultado:** _(pendente — reapresentação do Checkpoint 1)_
-- **Autor:** _(pendente)_
-- **Timestamp:** _(pendente)_
+- **Resultado:** `aprovada` — matriz `matrix-v1` + diagnóstico `diagnosticVersion: 3`
+  aprovados para prosseguir ao Checkpoint 2 (orçamento)
+- **Autor:** humano (decisor do Checkpoint 1)
+- **Timestamp:** `2026-09-25T17:12:00.000Z`
+- **Ratificado:**
+  - `matrix_version`: `matrix-v1`
+  - `diagnosticVersion`: `3`
+  - `contentHash`: `1e1c7945cdf8d11844045020962fd00ab1d01d19f2e524a2cc2243a13eebd3bf`
+- **Programa liberado para execução paga?** Não nesta task. A aprovação do Checkpoint 1
+  apenas habilita o **Checkpoint 2 (autorização de orçamento)**. Nenhuma execução paga
+  ocorre antes da autorização de orçamento; nenhum prompt oficial foi alterado.
