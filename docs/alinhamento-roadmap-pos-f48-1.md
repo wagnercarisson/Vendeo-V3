@@ -23,15 +23,17 @@ F46/F47 concluídas
         ▼
 F48.1 — bancada mínima e isolada
         │
-        ├── F48.2 — conhecimento de modelos e prompts
-        │       └── primeiro ciclo controlado de otimização de prompts
+        ├── F48.2 — qualidade e otimização dos prompts (guarda-chuva)
+        │       ├── F48.2.1 — otimização dos prompts do Diretor
+        │       ├── F48.2.2 — auditoria e otimização do prompt do Revisor
+        │       └── F48.2.3 — promoção, canário e prontidão da aprovação
         ├── F48.3 — avaliação humana mais madura
         ├── F48.4 — preços versionados e monitoramento
         ├── F48.5 — descoberta e alertas de modelos
         └── F48.6 — homologação e promoção controlada
 
 Em paralelo, uma fase principal de produto por vez:
-F49 concluída → demonstração gratuita → landing + SEO → serviços → informativas → 9:16 → carrossel
+F49 concluída → demonstração gratuita → landing + funil → SEO → serviços → informativas → 9:16 → carrossel
 ```
 
 A F48.1 vem antes da otimização ampla de prompts porque fornece repetibilidade, comparação lado a lado e registro. Isso não significa construir todo o laboratório antes de testar prompts: **a bancada mínima vem primeiro; o primeiro caso real dela deve ser justamente comparar um prompt atual com uma variante pesquisada**. A avaliação avançada só amadurece depois que surgirem experimentos reais.
@@ -50,11 +52,19 @@ A F48.1 vem antes da otimização ampla de prompts porque fornece repetibilidade
 
 **Regra:** nenhuma ampliação da bancada entra apenas para “completá-la”. Cada nova fatia deve destravar uma decisão concreta.
 
-### F48.2 — Dossiês de modelos e conhecimento de prompting
+### F48.2 — Qualidade e otimização dos prompts (guarda-chuva)
 
 **Prioridade:** alta; pode acompanhar uma fase principal sem alterar produção.
 
-Cada modelo já cadastrado ou candidato deve ter um dossiê com:
+A F48.2 é um **guarda-chuva** dividido em fatias sequenciais:
+
+- **F48.2.1 — Otimização dos Prompts do Diretor:** diagnóstico das evidências da F37, matriz de nove cenários (`offer`/`spotlight`/`exclusive`, 1:1), suporte aos três prompts do Diretor, rubrica humana e comparação cega, regras de simplicidade, ciclos de otimização, orçamento, relatório e recomendação.
+- **F48.2.2 — Auditoria e Otimização do Prompt do Revisor:** modo `reviewer`, casos de revisão ligados à imagem exata, corpus de desenvolvimento × holdout, avaliação cega separada da classificação, auditoria de falsos positivos/negativos/motivo errado, otimização do prompt do Revisor, relatório e recomendação. Depende da F48.2.1.
+- **F48.2.3 — Promoção, Canário e Prontidão da Aprovação:** promoção dos prompts vencedores da F48.2, canário do fluxo de aprovação e rollback desses prompts/flag.
+
+**Fronteira com F48.6:** a F48.2.3 cobre apenas a promoção dos **prompts vencedores** desta fase, o canário do fluxo de aprovação e o rollback desses prompts/flag; a homologação e a promoção **geral** de modelos, providers e capabilities permanecem na **F48.6 — Homologação e promoção controlada**.
+
+O **conhecimento de modelos** (dossiê por modelo) permanece nas fatias já numeradas: preços em F48.4; descoberta, lifecycle e dossiê documental em F48.5. Cada modelo já cadastrado ou candidato deve ter um dossiê com:
 
 - provider, model ID, snapshot/versão, aliases e status;
 - capacidades, modalidades, endpoint/protocolo, parâmetros e limites;
@@ -141,6 +151,8 @@ discovered → research_pending → candidate → tested → approved/rejected
 
 A promoção deve consumir o catálogo e a seleção administrativa da F47, preservando o gateway da F46 como ponto único de execução.
 
+**Fronteira com F48.2.3:** a F48.6 trata da homologação e promoção **geral** de modelos, providers e capabilities. A promoção dos **prompts vencedores** da F48.2, o canário do fluxo de aprovação e o rollback desses prompts/flag são escopo exclusivo da **F48.2.3**, sem antecipar a homologação geral de modelos.
+
 **Não inclui:** promoção ou rollback decididos autonomamente por IA.
 
 ## 4. Fases principais de produto — sequência atualizada
@@ -151,7 +163,7 @@ A promoção deve consumir o catálogo e a seleção administrativa da F47, pres
 
 **Fronteira real da fase:** não foram implementados checklist global persistente, retomada global do ponto pendente nem eventos de conclusão, tempo e abandono por etapa. Isso não torna a F49 incompleta em relação ao escopo aprovado; significa que a fase foi refinada para orientação contextual.
 
-**Encaminhamento:** a instrumentação de aquisição → ativação passa para a F51, junto da landing. Checklist global ou redesenho adicional do onboarding só deve voltar ao roadmap se os dados mostrarem abandono interno que justifique essa solução.
+**Encaminhamento:** a instrumentação de aquisição → ativação passa para a F51.1, junto da landing. Checklist global ou redesenho adicional do onboarding só deve voltar ao roadmap se os dados mostrarem abandono interno que justifique essa solução.
 
 **Métrica de ativação preservada:** primeira campanha aprovada e pronta para uso/download, não apenas cadastro ou geração iniciada.
 
@@ -197,7 +209,7 @@ Crédito comprado não é uma terceira forma de **concessão**: é uma aquisiç�
 
 **Atendimento:** retirar da UI o SLA atual de 24 horas se ele não puder ser sustentado. Isso não elimina obrigações legais: o Decreto nº 7.962/2013 prevê atendimento eletrônico adequado e eficaz e, quando aplicável à relação, resposta às demandas do consumidor em até cinco dias. O fluxo de suporte e os Termos devem ser validados juridicamente antes do go-live.
 
-**Telemetria própria:** registrar concessão, primeira geração, esgotamento, expiração, solicitação de créditos e futura conversão para saldo comprado. A F51 consome esses eventos no funil; não é responsável por inventá-los.
+**Telemetria própria:** registrar concessão, primeira geração, esgotamento, expiração, solicitação de créditos e futura conversão para saldo comprado. A F51.1 consome esses eventos no funil; não é responsável por inventá-los.
 
 #### Operação, conformidade e segurança do beta
 
@@ -224,7 +236,7 @@ As decisões abaixo orientam a F50 e o início da operação, mas não transform
 
 **Fora de escopo:** checkout, pagamento, preço público, assinatura, cobrança automática, emissão fiscal e monetização pública.
 
-### F51 — Landing orientada à conversão e fundação SEO
+### F51.1 — Landing orientada à conversão e instrumentação do funil
 
 **Por que nesta posição:** a landing passa a comunicar uma oferta de demonstração já verdadeira, uma experiência interna mais clara e resultados que o produto atual efetivamente entrega. Não depende de serviços, informativas ou 9:16 para demonstrar bem o caso Produto + Oferta.
 
@@ -244,7 +256,11 @@ As decisões abaixo orientam a F50 e o início da operação, mas não transform
 - FAQ orientado a objeções reais;
 - nenhum uso de “comprar/adquirir créditos” enquanto existir somente solicitação ao suporte.
 
-#### Fundação SEO técnica e operacional
+**Critério de conclusão:** a fase não termina apenas com a nova landing publicada. O funil deve ser validado de ponta a ponta no ambiente local com Supabase/Docker nos dois modos suportados: (a) beta fechado, com visita → CTA → solicitação de acesso; e (b) signup público, com visita → CTA → cadastro confirmado → loja elegível → primeira campanha. A validação local do modo aberto não autoriza o cutover de produção, que continua condicionado à F50.1.
+
+### F51.2 — Fundação SEO técnica e operacional
+
+**Por que é uma fase separada:** SEO envolve indexabilidade, canonicalização, metadata, performance, Search Console e medição orgânica. Separá-lo evita ampliar a F51.1 sem deixar essa primeira fase incompleta. A F51.2 sucede a F51.1 e reutiliza sua mensagem, hierarquia de conteúdo e provas visuais já validadas.
 
 - definir domínio e URL canônicos, `metadataBase` e redirects permanentes entre variações de host/protocolo;
 - criar `sitemap.xml` gerado pela aplicação com URLs absolutas, públicas, canônicas e realmente indexáveis;
@@ -344,9 +360,9 @@ Medir e inventariar antes de migrar:
 
 Criar primeiro uma camada de abstração e um piloto. Migração total exige gatilho financeiro ou operacional definido, buckets privados, URLs assinadas, isolamento por tenant, política de exclusão/retenção, verificação por checksum, migração sem órfãos, compatibilidade temporária e rollback. Se R2 for adotado como storage primário, manter o backup em provedor ou domínio de falha independente.
 
-### SEO contínuo após a F51
+### SEO contínuo após a F51.2
 
-A F51 entrega a fundação técnica e a otimização das páginas públicas existentes. Depois dela, SEO passa a ser disciplina contínua, não uma sequência de páginas criadas sem evidência:
+A F51.2 entrega a fundação técnica e a otimização das páginas públicas existentes. Depois dela, SEO passa a ser disciplina contínua, não uma sequência de páginas criadas sem evidência:
 
 - acompanhar consultas, impressões, CTR, posição e cobertura no Search Console;
 - identificar dúvidas reais de lojistas que mereçam conteúdo público útil;
@@ -360,13 +376,14 @@ A F51 entrega a fundação técnica e a otimização das páginas públicas exis
 | Ordem | Trilha principal | Trilha secundária segura | Resultado esperado |
 |---|---|---|---|
 | 0 | **F48.1 — laboratório mínimo** | Inventários somente leitura | Bancada utilizável sem tocar produção |
-| 1 | **F49 — orientação contextual** — concluída | **F48.2 — dossiês/guides/prompts** + inventário i18n/storage | Campos e revisão mais compreensíveis |
+| 1 | **F49 — orientação contextual** — concluída | **F48.2.1 — prompts do Diretor** + inventário i18n/storage | Campos e revisão mais compreensíveis |
 | 2 | **F50 — demonstração gratuita** | Pesquisa documental F48.2, sem alteração concorrente do ledger | Oferta limitada, mensurável e juridicamente comunicável |
-| 3 | **F51 — landing + fundação SEO** | Pesquisa de i18n ou storage, sem migração | Aquisição, ativação e descoberta orgânica alinhadas ao produto real |
-| 4 | **F52 — serviços** | Primeiro ciclo de prompt no laboratório / F48.3 somente se necessário | Novo caso de uso e evidência real da bancada |
-| 5 | **F53 — informativas** | **F48.4 — pricing** | Segundo caso de uso e custos versionados |
-| 6 | **F54 — 9:16** | **F48.5 — descoberta/alertas** | Novo formato e vigilância de providers |
-| 7 | **F55 — carrossel MVP** | **F48.6 — homologação**, se os pré-requisitos existirem | Formato multipágina controlado e processo seguro de promoção |
+| 3 | **F51.1 — landing + instrumentação do funil** | Pesquisa de i18n ou storage, sem migração | Aquisição e ativação mensuráveis nos modos fechado e aberto |
+| 4 | **F51.2 — fundação SEO** | Pesquisa de i18n ou storage, sem migração | Descoberta orgânica e indexabilidade alinhadas à landing validada |
+| 5 | **F52 — serviços** | **F48.2.2 — prompt do Revisor** / F48.3 somente se necessário | Novo caso de uso e evidência real da bancada |
+| 6 | **F53 — informativas** | **F48.4 — pricing** | Segundo caso de uso e custos versionados |
+| 7 | **F54 — 9:16** | **F48.5 — descoberta/alertas** | Novo formato e vigilância de providers |
+| 8 | **F55 — carrossel MVP** | **F48.6 — homologação**, se os pré-requisitos existirem | Formato multipágina controlado e processo seguro de promoção |
 | posterior prioritário | **Abstração + piloto de storage externo** | Apenas pesquisa leve na outra trilha | Redução de custo/risco após medir e estabilizar o beta |
 | posterior | Fundação i18n ou migração total de storage | Apenas pesquisa leve na outra trilha | Expansão guiada por demanda, dados e resultado do piloto |
 
@@ -377,7 +394,7 @@ Essa é uma ordem de planejamento, não um compromisso de calendário. A próxim
 ### Combinações seguras
 
 - demonstração gratuita + pesquisa documental de modelos, sem segunda migration extensa;
-- landing/SEO + inventário de internacionalização ou storage;
+- landing/funil ou SEO + inventário de internacionalização ou storage;
 - serviços + testes controlados de prompt;
 - informativas + medição de storage;
 - 9:16 + monitoramento de pricing/modelos;
@@ -389,7 +406,7 @@ Essa é uma ordem de planejamento, não um compromisso de calendário. A próxim
 - laboratório e migração de storage;
 - internacionalização total e redesign amplo de UI;
 - demonstração gratuita junto de outra mudança no ledger, elegibilidade ou documentos legais;
-- landing/SEO junto de troca de domínio sem plano de redirects/canonical/Search Console;
+- F51.2/SEO junto de troca de domínio sem plano de redirects/canonical/Search Console;
 - serviços/informativas junto de reestruturação global de todos os prompts;
 - 9:16 e carrossel na mesma fase;
 - duas migrations extensas/deploys de alto risco em paralelo.
@@ -404,7 +421,8 @@ Uma fase/fatia só deve começar quando responder “sim” ao gate corresponden
 | Mudança de prompt | Baseline congelado, hipótese única e cenários representativos |
 | Homologação | Evidência técnica + avaliação humana + rollback |
 | Demonstração gratuita | Contrato de concessão/expiração fechado, transição legada definida, PJ constituída e identificada, documentos consolidados e revisados juridicamente, canais de suporte operantes, MFA confirmada, backup externo restaurável e nenhuma cobrança implícita |
-| Landing + SEO | Demonstração operante, funil instrumentado, URLs indexáveis definidas, destino pós-CTA coerente e propriedade do Search Console disponível |
+| Landing + funil (F51.1) | Destinos pós-CTA definidos para beta fechado e signup aberto; ambiente local capaz de validar ambos; conceito de ativação e correlação do funil fechados |
+| SEO (F51.2) | Landing F51.1 validada, URLs indexáveis definidas, domínio canônico decidido e propriedade do Search Console disponível |
 | Conteúdo SEO novo | Intenção de busca real, conteúdo útil e responsável por autoria/manutenção definidos |
 | Serviços | Brief e semântica próprios definidos; não modelar como produto sem imagem por conveniência |
 | Informativas | Intenção e hierarquia de informação próprias definidas |
@@ -423,7 +441,8 @@ As faixas abaixo servem apenas para comparar porte; devem ser refeitas no planej
 | F48.1 mínima | 5–8 dias |
 | Programa F48 completo | 20–35 dias |
 | Demonstração gratuita + legal/transição | 7–12 dias |
-| Landing + fundação SEO | 8–14 dias |
+| F51.1 — landing + instrumentação do funil | 6–10 dias |
+| F51.2 — fundação SEO | 3–6 dias |
 | Serviços | 4–7 dias útil / 7–10 maduro |
 | Informativas | 4–7 dias útil / 7–10 maduro |
 | 9:16 | 5–8 dias útil / 8–12 maduro |
@@ -445,7 +464,7 @@ As faixas abaixo servem apenas para comparar porte; devem ser refeitas no planej
 6. A F49 concluiu orientação contextual; checklist global e telemetria de etapas não foram necessários para fechar a fase e só retornam se os dados justificarem.
 7. A F50 substitui freemium contínuo por demonstração gratuita: 10 créditos por 7 dias, sem cartão/cobrança, com legado preservado e sem novos bônus mensais.
 8. Há duas formas de concessão: crédito de demonstração expirável e crédito bônus manual não expirável; crédito comprado é aquisição futura, não concessão.
-9. A F51 reúne landing, instrumentação do funil e fundação SEO porque mensagem, indexabilidade, performance, metadata e conteúdo precisam ser coerentes desde a publicação.
+9. A F51 foi dividida: a F51.1 conclui landing e instrumentação do funil, com validação local dos modos beta fechado e signup aberto; a F51.2 sucede essa base e entrega SEO técnico e operacional sem ampliar a primeira fase.
 10. Sitemap e configuração técnica ajudam descoberta e crawling, mas não garantem indexação ou ranking; SEO contínuo depende de conteúdo útil, autoridade e medição no Search Console.
 11. Serviços, informativas e 9:16 ampliam valor antes do carrossel, que tem custo e complexidade maiores.
 12. i18n e storage começam por inventário e medição; implementação ampla depende de demanda e gatilhos objetivos.
