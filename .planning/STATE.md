@@ -4,8 +4,8 @@ milestone: v1.5
 milestone_name: â€” LanÃ§amento Externo Controlado â—†
 current_phase: 50
 status: complete
-last_updated: "2026-09-24T00:00:00.000Z"
-last_activity: 2026-09-24
+last_updated: "2026-09-25T00:00:00.000Z"
+last_activity: 2026-09-25
 progress:
   total_phases: 12
   completed_phases: 12
@@ -29,6 +29,7 @@ progress:
 - Ultima atividade real: compactacao do estado no quick `260924-jv4` em 2026-09-24.
 - `155/158` e `98%` sao contadores globais, nao pendencias da F50.
 
+- F48.2.1 (Otimizacao dos Prompts do Diretor) esta **planejada**: 9 planos `48-2-1-01..09` (waves 1-9) em `.planning/phases/48.2.1-otimizacao-prompts-diretor/`; local-only, sem promocao; nao executada. O alinhamento final de tracking (ROADMAP/STATE) e a validacao de fase ficam no plano 09 (task 9.5).
 ## Recently Completed
 
 - F48.1: `.planning/phases/48.1-laboratorio-ia-minimo/`.
