@@ -91,6 +91,9 @@ Plans:
 - [ ] 48-2-1-07-PLAN.md — Ciclo do Diretor `spotlight` (12 runs, avaliacao cega, regra de vitoria).
 - [ ] 48-2-1-08-PLAN.md — Ciclo do Diretor `exclusive` (12 runs, criterio de parada e prova de producao inalterada).
 - [ ] 48-2-1-09-PLAN.md — Consolidacao, relatorio por prompt e fechamento (Checkpoints 3/4/5; `48-2-1-VERIFICATION.md` e `48.2.1-UAT.md`).
+**Ondas e dependencias:** sequenciais `01 -> 02 -> ... -> 09` (uma onda por plano; `48-2-1-NN` depende de `48-2-1-(NN-1)`). Planos com checkpoint humano ou execucao paga sao `autonomous: false` (02, 05, 06, 07, 08, 09).
+
+**Restricoes transversais:** toda execucao paga exige programa com orcamento autorizado e reserva atomica (saldo = budget_usd - consumed - reserved); exatamente uma chamada `campaign_image` por run; `prompts/` intocado byte a byte; migration local-only (sem `db push` remoto).
 ## F50.1 — Formalização Legal e Ativação da Demonstração
 
 **Status:** Futura — aguardando constituição da PJ; não planejada e não ativa.
