@@ -312,6 +312,10 @@ function createMemoryClient(state: MemoryState): MemoryClient {
           error: null,
         });
       }
+      // Liquidação de orçamento (F48.2.1, D2/D5): idempotente e best-effort.
+      if (name === "lab_settle_run_budget" || name === "lab_release_run_budget") {
+        return Promise.resolve({ data: { success: true, settled: true }, error: null });
+      }
       return Promise.resolve({ data: null, error: { message: `unexpected_rpc:${name}` } });
     },
     storage: {
@@ -348,13 +352,19 @@ const ALLOWED_TABLES = new Set([
 const ALLOWED_BUCKETS = new Set(["lab-artifacts"]);
 
 /** RPCs do laboratório. */
-const ALLOWED_RPCS = new Set(["lab_reserve_run", "lab_create_experiment"]);
+const ALLOWED_RPCS = new Set([
+  "lab_reserve_run",
+  "lab_create_experiment",
+  // Liquidação de orçamento do run (F48.2.1, D2/D5).
+  "lab_settle_run_budget",
+  "lab_release_run_budget",
+]);
 
 /** Leitura permitida, escrita proibida. */
 const READ_ONLY_TABLES = new Set(["ai_model_catalog"]);
 
 const ALLOWED_ENTRY_RE =
-  /^(?:from:(?:lab_scenarios|lab_scenario_versions|lab_experiments|lab_experiment_variants|lab_experiment_scenarios|lab_runs|lab_artifacts|lab_human_evaluations|ai_model_catalog)|rpc:(?:lab_reserve_run|lab_create_experiment)|storage\.from:lab-artifacts|storage\.(?:upload|remove|createSignedUrl):lab-artifacts)/;
+  /^(?:from:(?:lab_scenarios|lab_scenario_versions|lab_experiments|lab_experiment_variants|lab_experiment_scenarios|lab_runs|lab_artifacts|lab_human_evaluations|ai_model_catalog)|rpc:(?:lab_reserve_run|lab_create_experiment|lab_settle_run_budget|lab_release_run_budget)|storage\.from:lab-artifacts|storage\.(?:upload|remove|createSignedUrl):lab-artifacts)/;
 
 /** Alvos produtivos que jamais podem aparecer no `accessLog`. */
 const FORBIDDEN_TARGETS = [
