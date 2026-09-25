@@ -6,7 +6,7 @@ import { promises as fsp } from "node:fs";
 import path from "node:path";
 
 import { parsePromptDiagnostics } from "./schema";
-import type { LabPromptDiagnostics } from "./schema";
+import type { AnyLabPromptDiagnostics } from "./schema";
 
 /**
  * Serviço do diagnóstico versionado das evidências do Diretor (F48.2.1, D3).
@@ -65,7 +65,7 @@ function sortJsonValue(value: unknown): JsonValue {
  * Remove o campo `contentHash` do diagnóstico antes de canonicalizar — o hash
  * **não é autorreferente**: o próprio campo nunca entra no cálculo.
  */
-function omitContentHash(content: LabPromptDiagnostics): Record<string, unknown> {
+function omitContentHash(content: AnyLabPromptDiagnostics): Record<string, unknown> {
   const clone: Record<string, unknown> = { ...content };
   delete clone.contentHash;
   return clone;
@@ -76,12 +76,12 @@ function omitContentHash(content: LabPromptDiagnostics): Record<string, unknown>
  * independentemente da ordem das chaves no arquivo, **sem** o próprio
  * `contentHash`.
  */
-export function canonicalizeDiagnostics(content: LabPromptDiagnostics): string {
+export function canonicalizeDiagnostics(content: AnyLabPromptDiagnostics): string {
   return JSON.stringify(sortJsonValue(omitContentHash(content)));
 }
 
 /** SHA-256 (hex) do JSON canônico excluindo o campo `contentHash`. */
-export function computeDiagnosticsContentHash(content: LabPromptDiagnostics): string {
+export function computeDiagnosticsContentHash(content: AnyLabPromptDiagnostics): string {
   return createHash("sha256").update(canonicalizeDiagnostics(content), "utf8").digest("hex");
 }
 
@@ -89,7 +89,7 @@ export function computeDiagnosticsContentHash(content: LabPromptDiagnostics): st
  * Confere o `contentHash` gravado contra o recalculado. Qualquer divergência
  * (um byte alterado no conteúdo) ⇒ `diagnostics_hash_mismatch`.
  */
-export function verifyDiagnosticsHash(content: LabPromptDiagnostics): void {
+export function verifyDiagnosticsHash(content: AnyLabPromptDiagnostics): void {
   const computed = computeDiagnosticsContentHash(content);
   if (computed !== content.contentHash) {
     throw new Error(`${DIAGNOSTICS_HASH_MISMATCH}:v${content.diagnosticVersion}`);
@@ -207,7 +207,7 @@ export async function listDiagnosticVersions(): Promise<number[]> {
  * Carrega uma versão pelo **nome do arquivo** (confinado ao diretório F37).
  * Usado pelos testes de path traversal e pela resolução por versão.
  */
-export async function loadDiagnosticsFile(fileName: string): Promise<LabPromptDiagnostics> {
+export async function loadDiagnosticsFile(fileName: string): Promise<AnyLabPromptDiagnostics> {
   const filePath = await resolveDiagnosticsFile(fileName);
 
   let raw: string;
@@ -230,7 +230,7 @@ export async function loadDiagnosticsFile(fileName: string): Promise<LabPromptDi
 }
 
 /** Carrega uma versão específica (valida schema e hash). */
-export async function loadDiagnosticsVersion(version: number): Promise<LabPromptDiagnostics> {
+export async function loadDiagnosticsVersion(version: number): Promise<AnyLabPromptDiagnostics> {
   if (!Number.isInteger(version) || version < 1) {
     throw new Error(`${INVALID_DIAGNOSTICS_PATH}:v${version}`);
   }
@@ -241,7 +241,7 @@ export async function loadDiagnosticsVersion(version: number): Promise<LabPrompt
  * Carrega a maior versão disponível. Ausência de qualquer versão ⇒
  * `prompt_diagnostics_not_found`.
  */
-export async function loadCurrentDiagnostics(): Promise<LabPromptDiagnostics> {
+export async function loadCurrentDiagnostics(): Promise<AnyLabPromptDiagnostics> {
   const versions = await listDiagnosticVersions();
   if (versions.length === 0) {
     throw new Error(`${PROMPT_DIAGNOSTICS_NOT_FOUND}:${DIAGNOSTICS_F37_DIR}`);

@@ -8,16 +8,23 @@ import {
   DIRECTOR_PROMPT_NAMES,
   INVALID_PROMPT_DIAGNOSTICS,
   InvalidPromptDiagnosticsError,
+  PROMPT_DIAGNOSTIC_ITEM_KINDS,
   PROMPT_DIAGNOSTICS_SCHEMA_VERSION,
+  PROMPT_DIAGNOSTICS_SCHEMA_VERSION_V2,
   parsePromptDiagnostics,
   treatableItems,
 } from "../schema";
-import type { LabPromptDiagnostics } from "../schema";
+import type {
+  AnyLabPromptDiagnostics,
+  LabPromptDiagnostics,
+  LabPromptDiagnosticsV2,
+} from "../schema";
 import {
   DIAGNOSTICS_HASH_MISMATCH,
   INVALID_DIAGNOSTICS_PATH,
   canonicalizeDiagnostics,
   computeDiagnosticsContentHash,
+  getDiagnosticsVersionUsed,
   loadCurrentDiagnostics,
   loadDiagnosticsFile,
   loadDiagnosticsVersion,
@@ -25,12 +32,11 @@ import {
 } from "../service";
 
 /**
- * Diagnóstico versionado (F48.2.1, D3) — suíte de contrato.
+ * Diagnóstico versionado (F48.2.1, D3; ajuste do Checkpoint 1) — suíte de contrato.
  *
- * Esta suíte cobre apenas o que **não** depende da fixture real: parsing puro,
- * hash não autorreferente, confinamento de path e filtro de tratáveis. Os testes
- * que dependem da fixture v1 e da regra de versão vivem no mesmo arquivo,
- * adicionados pelas Tasks 2-3. Nenhuma rede e nenhuma chamada paga.
+ * Cobre o parsing puro, o hash não autorreferente, o confinamento de path, o
+ * filtro de tratáveis, a fixture v1 (preservada) e a fixture v2 (rastreabilidade
+ * por item + distinção `kind`). Nenhuma rede e nenhuma chamada paga.
  */
 
 const HEX_64 = "a".repeat(64);
@@ -59,6 +65,48 @@ function validDiagnostics(
         probableCause: "O renderer não suporta a composição pedida.",
         promptTreatable: false,
         minimalHypothesis: "Encaminhar para a mudança de renderer.",
+        promptName: "campaign-image-director-spotlight",
+      },
+    ],
+    ...overrides,
+  };
+}
+
+function validDiagnosticsV2(
+  overrides: Partial<LabPromptDiagnosticsV2> = {},
+): LabPromptDiagnosticsV2 {
+  return {
+    schemaVersion: PROMPT_DIAGNOSTICS_SCHEMA_VERSION_V2,
+    diagnosticVersion: 2,
+    generatedAt: "2026-09-25T16:55:00.000Z",
+    sourceRefs: ["docs/alinhamento-fase-37-revisao-aprovacao-arte.md"],
+    contentHash: HEX_64,
+    items: [
+      {
+        kind: "observed_failure",
+        failureCode: "invented_information",
+        evidence: "Categoria de relato elegível da F37: informação inventada.",
+        source: {
+          ref: "docs/alinhamento-fase-37-revisao-aprovacao-arte.md",
+          section: "D37.2-R2 — Relatos elegíveis: Informação inventada",
+        },
+        probableCause: "O prompt não proíbe explicitamente inventar dados.",
+        promptTreatable: true,
+        minimalHypothesis: "Reforçar a proibição de inventar informação.",
+        promptName: "campaign-image-director-offer",
+      },
+      {
+        kind: "taxonomy",
+        failureCode: "renderer_composition_limitation",
+        evidence: "Categoria de composição; sem evidência concreta de falha do prompt.",
+        source: {
+          ref: "docs/alinhamento-fase-37-revisao-aprovacao-arte.md",
+          section:
+            "D37.2-R2 — Relatos elegíveis: Falha grave de composição que impeça a publicação",
+        },
+        probableCause: "Limite do renderer; o prompt não controla o layout final.",
+        promptTreatable: false,
+        minimalHypothesis: "Encaminhar para a mudança de composição/renderer.",
         promptName: "campaign-image-director-spotlight",
       },
     ],
@@ -126,6 +174,64 @@ describe("parsePromptDiagnostics — schema puro", () => {
   });
 });
 
+describe("parsePromptDiagnostics — v2 (rastreabilidade + kind)", () => {
+  it("aceita um diagnóstico v2 válido inline", () => {
+    const parsed = parsePromptDiagnostics(validDiagnosticsV2());
+
+    expect(parsed.schemaVersion).toBe(PROMPT_DIAGNOSTICS_SCHEMA_VERSION_V2);
+    expect(parsed.diagnosticVersion).toBe(2);
+    expect(parsed.items).toHaveLength(2);
+  });
+
+  it("expõe os três kinds: observed_failure, hypothesis e taxonomy", () => {
+    expect([...PROMPT_DIAGNOSTIC_ITEM_KINDS]).toEqual([
+      "observed_failure",
+      "hypothesis",
+      "taxonomy",
+    ]);
+  });
+
+  it("recusa item v2 sem 'kind'", () => {
+    const doc = validDiagnosticsV2();
+    const { kind: _ignored, ...itemWithoutKind } = doc.items[0];
+    const invalid = { ...doc, items: [itemWithoutKind] };
+
+    expect(() => parsePromptDiagnostics(invalid)).toThrowError(InvalidPromptDiagnosticsError);
+  });
+
+  it("recusa item v2 sem 'source' (sem rastreabilidade por item)", () => {
+    const doc = validDiagnosticsV2();
+    const { source: _ignored, ...itemWithoutSource } = doc.items[0];
+    const invalid = { ...doc, items: [itemWithoutSource] };
+
+    expect(() => parsePromptDiagnostics(invalid)).toThrowError(InvalidPromptDiagnosticsError);
+  });
+
+  it("recusa taxonomia tratável por prompt (taxonomy_not_prompt_treatable)", () => {
+    const doc = validDiagnosticsV2();
+    const invalid = {
+      ...doc,
+      items: [{ ...doc.items[1], promptTreatable: true }],
+    };
+
+    const error = (() => {
+      try {
+        parsePromptDiagnostics(invalid);
+        return null;
+      } catch (caught) {
+        return caught;
+      }
+    })();
+
+    expect(error).toBeInstanceOf(InvalidPromptDiagnosticsError);
+    expect(
+      (error as InvalidPromptDiagnosticsError).issues.some(
+        (issue) => issue.message === "taxonomy_not_prompt_treatable",
+      ),
+    ).toBe(true);
+  });
+});
+
 describe("computeDiagnosticsContentHash — não autorreferente", () => {
   it("ignora o próprio campo contentHash", () => {
     const a = validDiagnostics({ contentHash: "a".repeat(64) });
@@ -177,21 +283,21 @@ describe("treatableItems — falha não tratável não gera candidata", () => {
   });
 });
 
-describe("diagnóstico v1 da F37 — fixture materializada", () => {
-  it("carrega a v1 e o contentHash gravado confere com o recalculado", async () => {
-    const current = await loadCurrentDiagnostics();
+describe("diagnóstico v1 da F37 — fixture preservada", () => {
+  it("carrega a v1 explicitamente e o contentHash gravado confere", async () => {
+    const v1 = await loadDiagnosticsVersion(1);
 
-    expect(current.diagnosticVersion).toBe(1);
-    expect(current.schemaVersion).toBe(PROMPT_DIAGNOSTICS_SCHEMA_VERSION);
-    expect(current.sourceRefs.length).toBeGreaterThan(0);
-    expect(() => verifyDiagnosticsHash(current)).not.toThrow();
-    expect(computeDiagnosticsContentHash(current)).toBe(current.contentHash);
+    expect(v1.diagnosticVersion).toBe(1);
+    expect(v1.schemaVersion).toBe(PROMPT_DIAGNOSTICS_SCHEMA_VERSION);
+    expect(v1.sourceRefs.length).toBeGreaterThan(0);
+    expect(() => verifyDiagnosticsHash(v1)).not.toThrow();
+    expect(computeDiagnosticsContentHash(v1)).toBe(v1.contentHash);
   });
 
-  it("cada item tem a cadeia completa", async () => {
-    const current = await loadCurrentDiagnostics();
+  it("cada item da v1 tem a cadeia completa", async () => {
+    const v1 = await loadDiagnosticsVersion(1);
 
-    for (const item of current.items) {
+    for (const item of v1.items) {
       expect(item.failureCode.length).toBeGreaterThan(0);
       expect(item.evidence.length).toBeGreaterThan(0);
       expect(item.probableCause.length).toBeGreaterThan(0);
@@ -201,48 +307,119 @@ describe("diagnóstico v1 da F37 — fixture materializada", () => {
     }
   });
 
-  it("os promptName cobrem os três prompts do Diretor", async () => {
-    const current = await loadCurrentDiagnostics();
-    const used = new Set(current.items.map((item) => item.promptName));
+  it("os promptName da v1 cobrem os três prompts do Diretor", async () => {
+    const v1 = await loadDiagnosticsVersion(1);
+    const used = new Set(v1.items.map((item) => item.promptName));
 
     for (const promptName of DIRECTOR_PROMPT_NAMES) {
       expect(used.has(promptName)).toBe(true);
     }
   });
 
-  it("existe ao menos um item não tratável por prompt", async () => {
-    const current = await loadCurrentDiagnostics();
-    const nonTreatable = current.items.filter((item) => item.promptTreatable === false);
+  it("existe ao menos um item não tratável por prompt na v1", async () => {
+    const v1 = await loadDiagnosticsVersion(1);
+    const nonTreatable = v1.items.filter((item) => item.promptTreatable === false);
 
     expect(nonTreatable.length).toBeGreaterThanOrEqual(1);
-    // A falha não tratável registra o encaminhamento e não gera candidata.
+    expect(treatableItems(v1).length).toBeLessThan(v1.items.length);
+  });
+});
+
+describe("diagnóstico v2 da F37 — rastreabilidade por item e kind", () => {
+  it("é a versão corrente e o contentHash confere", async () => {
+    const current = await loadCurrentDiagnostics();
+
+    expect(current.diagnosticVersion).toBe(2);
+    expect(current.schemaVersion).toBe(PROMPT_DIAGNOSTICS_SCHEMA_VERSION_V2);
+    expect(() => verifyDiagnosticsHash(current)).not.toThrow();
+    expect(computeDiagnosticsContentHash(current)).toBe(current.contentHash);
+  });
+
+  it("getDiagnosticsVersionUsed retorna a v2 e a v1 permanece carregável", async () => {
+    const used = await getDiagnosticsVersionUsed();
+
+    expect(used.diagnosticVersion).toBe(2);
+    expect(used.contentHash).toMatch(/^[0-9a-f]{64}$/);
+
+    const v1 = await loadDiagnosticsVersion(1);
+    expect(v1.diagnosticVersion).toBe(1);
+  });
+
+  it("todo item da v2 declara kind e source.ref/source.section", async () => {
+    const current = await loadCurrentDiagnostics();
+    if (current.schemaVersion !== PROMPT_DIAGNOSTICS_SCHEMA_VERSION_V2) {
+      throw new Error("esperava diagnóstico v2 como corrente");
+    }
+
+    for (const item of current.items) {
+      expect(PROMPT_DIAGNOSTIC_ITEM_KINDS).toContain(item.kind);
+      expect(item.source.ref.length).toBeGreaterThan(0);
+      expect(item.source.section.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("distingue falha observada de hipótese/taxonomia", async () => {
+    const current = await loadCurrentDiagnostics();
+    if (current.schemaVersion !== PROMPT_DIAGNOSTICS_SCHEMA_VERSION_V2) {
+      throw new Error("esperava diagnóstico v2 como corrente");
+    }
+
+    const observed = current.items.filter((item) => item.kind === "observed_failure");
+    const nonObserved = current.items.filter((item) => item.kind !== "observed_failure");
+
+    expect(observed.length).toBeGreaterThanOrEqual(1);
+    expect(nonObserved.length).toBeGreaterThanOrEqual(1);
+    for (const item of observed) {
+      expect(item.evidence.length).toBeGreaterThan(0);
+      expect(item.source.section.length).toBeGreaterThan(0);
+    }
+    // Itens sem evidência concreta foram reclassificados e nunca se apresentam
+    // como falha observada; taxonomia não é alvo direto de prompt.
+    for (const item of current.items.filter((entry) => entry.kind === "taxonomy")) {
+      expect(item.promptTreatable).toBe(false);
+    }
+  });
+
+  it("cobre os três prompts e mantém ao menos um item não tratável", async () => {
+    const current = await loadCurrentDiagnostics();
+    const used = new Set(current.items.map((item) => item.promptName));
+
+    for (const promptName of DIRECTOR_PROMPT_NAMES) {
+      expect(used.has(promptName)).toBe(true);
+    }
+    const nonTreatable = current.items.filter((item) => item.promptTreatable === false);
+    expect(nonTreatable.length).toBeGreaterThanOrEqual(1);
     expect(treatableItems(current).length).toBeLessThan(current.items.length);
   });
 });
 
-describe("regra de versão — a maior vence e a anterior permanece", () => {
-  it("uma v2 temporária é usada como corrente e a v1 permanece intacta", async () => {
+describe("regra de versão — a maior vence e as anteriores permanecem", () => {
+  it("uma v3 temporária é usada como corrente e v1/v2 permanecem intactas", async () => {
     const v1 = await loadDiagnosticsVersion(1);
-    const v2Path = path.resolve(
+    const v2 = await loadDiagnosticsVersion(2);
+    const v3Path = path.resolve(
       process.cwd(),
-      "fixtures/lab/diagnostics/f37/f37-prompt-diagnostics.v2.json",
+      "fixtures/lab/diagnostics/f37/f37-prompt-diagnostics.v3.json",
     );
 
-    const v2Base = { ...v1, diagnosticVersion: 2, contentHash: "0".repeat(64) };
-    const v2 = { ...v2Base, contentHash: computeDiagnosticsContentHash(v2Base) };
-    await fsp.writeFile(v2Path, `${JSON.stringify(v2, null, 2)}\n`, "utf8");
+    const v3Base = { ...v2, diagnosticVersion: 3, contentHash: "0".repeat(64) };
+    const v3 = { ...v3Base, contentHash: computeDiagnosticsContentHash(v3Base) };
+    await fsp.writeFile(v3Path, `${JSON.stringify(v3, null, 2)}\n`, "utf8");
 
     try {
       const current = await loadCurrentDiagnostics();
-      expect(current.diagnosticVersion).toBe(2);
-      expect(current.contentHash).toBe(v2.contentHash);
+      expect(current.diagnosticVersion).toBe(3);
+      expect(current.contentHash).toBe(v3.contentHash);
 
-      // A versão anterior continua legível e inalterada (imutabilidade).
+      // As versões anteriores continuam legíveis e inalteradas (imutabilidade).
       const stillV1 = await loadDiagnosticsVersion(1);
       expect(stillV1.diagnosticVersion).toBe(1);
       expect(stillV1.contentHash).toBe(v1.contentHash);
+      const stillV2 = await loadDiagnosticsVersion(2);
+      expect(stillV2.diagnosticVersion).toBe(2);
+      expect(stillV2.contentHash).toBe(v2.contentHash);
     } finally {
-      await fsp.rm(v2Path, { force: true });
+      await fsp.rm(v3Path, { force: true });
     }
   });
 
@@ -251,7 +428,7 @@ describe("regra de versão — a maior vence e a anterior permanece", () => {
     const tampered = {
       ...current,
       items: [{ ...current.items[0], evidence: "Evidência adulterada." }],
-    };
+    } as unknown as AnyLabPromptDiagnostics;
 
     expect(() => verifyDiagnosticsHash(tampered)).toThrowError(DIAGNOSTICS_HASH_MISMATCH);
   });

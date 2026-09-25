@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 2,
+  "diagnosticVersion": 2,
+  "generatedAt": "2026-09-25T16:55:00.000Z",
+  "sourceRefs": [
+    "docs/alinhamento-fase-37-revisao-aprovacao-arte.md",
+    "openspec/changes/archive/2026-09-02-fase-37-1-approval-gate-candidata-unica",
+    "openspec/specs/campaign-correction-reports/spec.md"
+  ],
+  "items": [
+    {
+      "kind": "observed_failure",
+      "failureCode": "invented_information",
+      "evidence": "Categoria de relato elegível da F37: 'colocou um selo que não existe', 'inventou um número de parcelas'.",
+      "source": {
+        "ref": "docs/alinhamento-fase-37-revisao-aprovacao-arte.md",
+        "section": "D37.2-R2 — Relatos elegíveis: Informação inventada"
+      },
+      "probableCause": "O prompt do Diretor de oferta não proíbe explicitamente complementar o brief com informação inventada.",
+      "promptTreatable": true,
+      "minimalHypothesis": "Reforçar a proibição de inventar informação comercial ausente no brief, sem adicionar exemplos.",
+      "promptName": "campaign-image-director-offer"
+    },
+    {
+      "kind": "observed_failure",
+      "failureCode": "product_deformation",
+      "evidence": "Categoria de relato elegível da F37: 'o produto saiu esticado/torto' (deformação em relação à imagem de referência).",
+      "source": {
+        "ref": "docs/alinhamento-fase-37-revisao-aprovacao-arte.md",
+        "section": "D37.2-R2 — Relatos elegíveis: Produto deformado"
+      },
+      "probableCause": "O prompt não prioriza a fidelidade da forma do produto em relação à imagem de referência.",
+      "promptTreatable": true,
+      "minimalHypothesis": "Reforçar a fidelidade do produto à imagem de referência e a preservação da forma.",
+      "promptName": "campaign-image-director-spotlight"
+    },
+    {
+      "kind": "observed_failure",
+      "failureCode": "logo_cropped",
+      "evidence": "Categoria de relato elegível da F37: 'a logo foi cortada' (identidade gravemente cortada).",
+      "source": {
+        "ref": "docs/alinhamento-fase-37-revisao-aprovacao-arte.md",
+        "section": "D37.2-R2 — Relatos elegíveis: Logo, produto ou texto gravemente cortado"
+      },
+      "probableCause": "O prompt de exclusivo não prioriza a preservação da identidade quando há logo controlado.",
+      "promptTreatable": true,
+      "minimalHypothesis": "Reforçar a preservação da identidade da loja, incluindo o logo controlado.",
+      "promptName": "campaign-image-director-exclusive"
+    },
+    {
+      "kind": "observed_failure",
+      "failureCode": "illegible_text",
+      "evidence": "Categoria de relato elegível da F37: 'o texto está borrado/ilegível', 'saiu letra estranha'.",
+      "source": {
+        "ref": "docs/alinhamento-fase-37-revisao-aprovacao-arte.md",
+        "section": "D37.2-R2 — Relatos elegíveis: Texto ilegível ou corrompido"
+      },
+      "probableCause": "O prompt não orienta a legibilidade dos textos obrigatórios em composições densas.",
+      "promptTreatable": true,
+      "minimalHypothesis": "Esclarecer a exigência de legibilidade dos textos obrigatórios na composição.",
+      "promptName": "campaign-image-director-offer"
+    },
+    {
+      "kind": "hypothesis",
+      "failureCode": "tone_commercial_mismatch",
+      "evidence": "Hipótese derivada da inspeção do prompt de destaque; não é uma falha observada concreta da F37.",
+      "source": {
+        "ref": "docs/alinhamento-fase-37-revisao-aprovacao-arte.md",
+        "section": "D37.2-R4 — Geração da v2 (reuso do diretor por intent)"
+      },
+      "probableCause": "O prompt de destaque pode não diferenciar claramente o tom de uma campanha sem preço.",
+      "promptTreatable": true,
+      "minimalHypothesis": "Esclarecer o tom esperado para campanhas de destaque sem preço, sem adicionar exemplos de fixtures.",
+      "promptName": "campaign-image-director-spotlight"
+    },
+    {
+      "kind": "taxonomy",
+      "failureCode": "renderer_composition_limitation",
+      "evidence": "Categoria de composição (recorte que inviabiliza, sobreposição crítica); sem evidência concreta de falha do prompt.",
+      "source": {
+        "ref": "docs/alinhamento-fase-37-revisao-aprovacao-arte.md",
+        "section": "D37.2-R2 — Relatos elegíveis: Falha grave de composição que impeça a publicação"
+      },
+      "probableCause": "Limite do renderer programático para acomodar a composição solicitada; o prompt não controla o layout final.",
+      "promptTreatable": false,
+      "minimalHypothesis": "Encaminhar para a mudança de composição/renderer; nenhuma candidata de prompt é criada para esta categoria.",
+      "promptName": "campaign-image-director-offer"
+    },
+    {
+      "kind": "taxonomy",
+      "failureCode": "renderer_text_overflow",
+      "evidence": "Categoria de composição para texto obrigatório transbordado; sem evidência concreta de falha do prompt.",
+      "source": {
+        "ref": "docs/alinhamento-fase-37-revisao-aprovacao-arte.md",
+        "section": "D37.2-R2 — Relatos elegíveis: Falha grave de composição que impeça a publicação"
+      },
+      "probableCause": "O renderer não acomoda textos longos; o prompt não determina o encaixe final do texto.",
+      "promptTreatable": false,
+      "minimalHypothesis": "Encaminhar para a mudança de composição/renderer; nenhuma candidata de prompt é criada para esta categoria.",
+      "promptName": "campaign-image-director-exclusive"
+    }
+  ],
+  "contentHash": "fb0b840a2d6720f4c863e91f7a0ad76a68b95b18caf8f3ff1181751b2b46b1ee"
+}
