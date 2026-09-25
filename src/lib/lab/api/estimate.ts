@@ -126,7 +126,8 @@ export async function estimateExperimentPlan(params: {
   ]);
 
   // D9: cenários × duas variantes (baseline/candidata) × repetições.
-  const plannedRuns = scenarioCount * 2 * row.repetitions;
+  const repetitions = row.repetitions;
+  const plannedRuns = scenarioCount * 2 * repetitions;
   const remainingRuns = Math.max(0, row.max_runs - usedRuns);
 
   let programRemainingUsd: number | null = null;
