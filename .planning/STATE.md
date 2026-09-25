@@ -8,8 +8,8 @@ progress:
   total_phases: 38
   completed_phases: 33
   total_plans: 301
-  completed_plans: 288
-  percent: 87
+  completed_plans: 289
+  percent: 96
 ---
 
 # Project State
@@ -24,14 +24,14 @@ progress:
 ## Current Position
 
 Phase: 48.2.1 (otimizacao-prompts-diretor) — EXECUTING
-Plan: 5 of 9
+Plan: 6 of 9
 
 - F50 concluida; 17/17 planos e 17/17 summaries em 10 waves.
 - OpenSpec arquivado; nenhuma execucao ativa; beta fechado preservado.
 - Ultima atividade real: compactacao do estado no quick `260924-jv4` em 2026-09-24.
 - `155/167` e `93%` sao contadores globais (9 planos planejados em F48.2.1), nao pendencias da F50.
 
-- F48.2.1 (Otimizacao dos Prompts do Diretor) esta **em execucao**: 9 planos `48-2-1-01..09` (waves 1-9) em `.planning/phases/48.2.1-otimizacao-prompts-diretor/`; local-only, sem promocao. Planos `48-2-1-01` (migration aditiva + dominio + orcamento atomico), `48-2-1-02` (diagnostico versionado v1/v2/v3 + matriz de nove cenarios + Checkpoint 1 aprovado), `48-2-1-03` (execucao do Diretor por intent + exatamente uma chamada `campaign_image` + settle/release do orcamento) e `48-2-1-04` (avaliacao humana: rubrica de nove criterios obrigatoria, append-only, comparacao cega sem scoring) concluidos; proximo `48-2-1-05`.
+- F48.2.1 (Otimizacao dos Prompts do Diretor) esta **em execucao**: 9 planos `48-2-1-01..09` (waves 1-9) em `.planning/phases/48.2.1-otimizacao-prompts-diretor/`; local-only, sem promocao. Planos `48-2-1-01` (migration aditiva + dominio + orcamento atomico), `48-2-1-02` (diagnostico versionado v1/v2/v3 + matriz de nove cenarios + Checkpoint 1 aprovado), `48-2-1-03` (execucao do Diretor por intent + exatamente uma chamada `campaign_image` + settle/release do orcamento), `48-2-1-04` (avaliacao humana: rubrica de nove criterios obrigatoria, append-only, comparacao cega sem scoring) e `48-2-1-05` (API/UI administrativa, orcamento e isolamento + Checkpoint 2 autorizado em US$ 2.808) concluidos; proximo `48-2-1-06`.
 
 ## Recently Completed
 
@@ -65,11 +65,14 @@ Plan: 5 of 9
 - F48.2.1: exatamente uma chamada `campaign_image` por run (sem fallback e sem Revisor); liquidacao do orcamento apos `finalizeLabRun` — settle consome o efetivo/estimado, release libera sem consumir quando a falha precede a chamada paga (idempotente e best-effort).
 - Historico completo esta em `STATE-ARCHIVE.md`, roadmaps e artefatos das fases.
 - [Phase 48.2.1]: F48.2.1: rubrica humana de nove criterios (estado + observacao) obrigatoria em avaliacoes novas, persistida append-only em lab_human_evaluations.rubric; sem scoring automatico — D7; schema tipado em rubric.ts substitui o rubric generico do plano 01
+- [Phase 48.2.1]: F48.2.1: Checkpoint 2 = autorizar-inicial. Teto autorizado em lab_prompt_programs (matrix-v1): budget_usd = US$ 2.808 (36 runs iniciais: 3 prompts x 12 x estimativa 2.340 x margem 1.2). Pior caso (108 runs = US$ 8.424) NAO autorizado; cada ciclo v2/v3 exige autorizacao humana renovada (orcamento incremental).
+- [Phase 48.2.1]: F48.2.1: prompt sob teste derivado de DIRECTOR_PROMPTS[campaignIntent] (nunca campo do payload); programId obrigatorio; estimativa cenarios x 2 variantes x repeticoes; saldo = budget_usd - consumed - reserved.
+- [Phase 48.2.1]: F48.2.1: valores monetarios exibidos na UI com 2 casas (US$ 2.81 / US$ 8.42) via src/lib/lab/display-format.ts; calculos internos mantem 6 casas (margem/formula inalteradas); separador decimal mantido em ".".
 
 ### Pending Todos
 
 - Fonte: `.planning/todos/pending/`; nenhum item ativo confirmado.
-- F48.2.1 em execucao: proximo plano `48-2-1-04`; Checkpoint 2 (autorizacao de orcamento) permanece pendente antes de qualquer chamada paga.
+- F48.2.1 em execucao: proximo plano `48-2-1-06` (ciclo do Diretor `offer`). Checkpoint 2 resolvido (autorizar-inicial US$ 2.808); o pior caso (US$ 8.424) permanece NAO autorizado — cada ciclo v2/v3 exige nova autorizacao humana antes das chamadas pagas.
 
 ### Blockers/Concerns
 
@@ -94,7 +97,7 @@ Plan: 5 of 9
 
 ## Session Continuity
 
-- Ultima sessao: 2026-09-25, execucao do plano 48-2-1-04.
-- Ultimo trabalho concluido: `48-2-1-04` (avaliacao humana: rubrica de nove criterios obrigatoria em avaliacoes novas, persistida append-only, comparacao cega e formulario que reinicia com o par); 4 commits atomicos (`2422c030`, `c4fcd11f`, `2a075d88`, `618922d4`).
-- Proximo passo: executar o plano `48-2-1-05` da F48.2.1 (API, UI, orcamento e isolamento + Checkpoint 2); F50.1 permanece futura aguardando a constituicao da PJ.
+- Ultima sessao: 2026-09-25, execucao do plano 48-2-1-05 (API, UI, orcamento e isolamento + Checkpoint 2).
+- Ultimo trabalho concluido: `48-2-1-05` (API/UI administrativa com intent->prompt, programa obrigatorio, estimativa cenarios x 2 variantes x repeticoes com saldo, endpoints de programa, guardas de isolamento, roteiro de UAT local e Checkpoint 2 autorizado em US$ 2.808); 8 commits (`32618ddc`, `6ea934e8`, `c49d9b49`, `de13580f`, `6eb63047`, `fba87ef9`, `490a5e83`, `c599d410`) + persistencia local do orcamento.
+- Proximo passo: executar o plano `48-2-1-06` (ciclo do Diretor `offer`); o pior caso de orcamento (US$ 8.424) NAO esta autorizado — nova autorizacao humana e obrigatoria antes de cada ciclo v2/v3. F50.1 permanece futura aguardando a constituicao da PJ.
 - Resume file: `None`.
