@@ -82,7 +82,7 @@
 **Planos:** 9 planos (sequenciais). Diretorio: `.planning/phases/48.2.1-otimizacao-prompts-diretor/`.
 
 Plans:
-- [ ] 48-2-1-01-PLAN.md — Dominio, migration local e programa (`lab_prompt_programs`, `campaign_intent`/`program_id`/`rubric`, orcamento atomico, `DIRECTOR_PROMPTS`).
+- [x] 48-2-1-01-PLAN.md — Dominio, migration local e programa (`lab_prompt_programs`, `campaign_intent`/`program_id`/`rubric`, orcamento atomico, `DIRECTOR_PROMPTS`).
 - [ ] 48-2-1-02-PLAN.md — Diagnostico versionado da F37 e matriz de nove cenarios (inclui Checkpoint humano 1).
 - [ ] 48-2-1-03-PLAN.md — Execucao do Diretor por tipo de campanha e harness (uma chamada `campaign_image`; settle/release de orcamento).
 - [ ] 48-2-1-04-PLAN.md — Avaliacao humana, rubrica de nove criterios e comparacao cega.

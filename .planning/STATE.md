@@ -2,17 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: â€” LanÃ§amento Externo Controlado â—†
-current_phase: 48.2.1
 status: planned
-last_updated: "2026-09-25T00:00:00.000Z"
-last_activity: 2026-09-25
+last_updated: "2026-09-25T19:43:19.579Z"
 progress:
-  total_phases: 13
-  completed_phases: 12
-  total_plans: 167
-  completed_plans: 155
-  percent: 93
+  total_phases: 38
+  completed_phases: 33
+  total_plans: 301
+  completed_plans: 286
+  percent: 87
 ---
+
 # Project State
 
 ## Project Reference
@@ -24,12 +23,15 @@ progress:
 
 ## Current Position
 
+Phase: 48.2.1 (otimizacao-prompts-diretor) — EXECUTING
+Plan: 2 of 9
+
 - F50 concluida; 17/17 planos e 17/17 summaries em 10 waves.
 - OpenSpec arquivado; nenhuma execucao ativa; beta fechado preservado.
 - Ultima atividade real: compactacao do estado no quick `260924-jv4` em 2026-09-24.
 - `155/167` e `93%` sao contadores globais (9 planos planejados em F48.2.1), nao pendencias da F50.
 
-- F48.2.1 (Otimizacao dos Prompts do Diretor) esta **planejada** e e a proxima execucao: 9 planos `48-2-1-01..09` (waves 1-9) em `.planning/phases/48.2.1-otimizacao-prompts-diretor/`; local-only, sem promocao; nao iniciada.
+- F48.2.1 (Otimizacao dos Prompts do Diretor) esta **em execucao**: 9 planos `48-2-1-01..09` (waves 1-9) em `.planning/phases/48.2.1-otimizacao-prompts-diretor/`; local-only, sem promocao. Plano `48-2-1-01` concluido (migration aditiva + dominio + orcamento atomico); proximo `48-2-1-02`.
 
 ## Recently Completed
 
@@ -39,10 +41,11 @@ progress:
 
 ## Performance Metrics
 
-- Total de planos concluidos conhecido: 155/167 global (9 planejados em F48.2.1); F50: 17/17.
+- Total de planos concluidos conhecido: 156/167 global (9 planejados em F48.2.1); F50: 17/17.
 
 | Phase | Plans | Duration | Tests |
 |---|---:|---:|---|
+| F48.2.1 | 1/9 | 40 min | 609 lab verdes |
 | F50 | 17/17 | N/A | N/A |
 | F49 | 15/15 | N/A | N/A |
 | F48.1 | 14/14 | N/A | N/A |
@@ -55,6 +58,8 @@ progress:
 - Demonstracao, e-mail e signup publico continuam desativados.
 - Escopo juridico, publicacao e cutover foi transferido para F50.1 apos a PJ.
 - Stripe/monetizacao publica permanece iniciativa diferida.
+- F48.2.1: orcamento reservado atomicamente dentro de `lab_reserve_run` (9 args) com lock do programa; settle/release idempotentes por `budget_settled_at`.
+- F48.2.1: assinaturas F48.1 antigas (8 args de `lab_reserve_run`, 12 args de `lab_create_experiment`) removidas a frente para impedir overload que contorne programa/intent.
 - Historico completo esta em `STATE-ARCHIVE.md`, roadmaps e artefatos das fases.
 
 ### Pending Todos
@@ -85,7 +90,7 @@ progress:
 
 ## Session Continuity
 
-- Ultima sessao: 2026-09-25, planejamento da F48.2.1 (9 planos).
-- Ultimo trabalho concluido: planejamento da F48.2.1 (CONTEXT, UI-SPEC, PATTERNS, 9 planos verificados).
-- Proximo passo: executar a F48.2.1 (`/gsd-execute-phase 48.2.1`); F50.1 permanece futura aguardando a constituicao da PJ.
+- Ultima sessao: 2026-09-25, execucao do plano 48-2-1-01.
+- Ultimo trabalho concluido: `48-2-1-01` (migration local-first + dominio DIRECTOR_PROMPTS + orcamento atomico); 5 commits atomicos.
+- Proximo passo: executar o plano `48-2-1-02` da F48.2.1; F50.1 permanece futura aguardando a constituicao da PJ.
 - Resume file: `None`.
