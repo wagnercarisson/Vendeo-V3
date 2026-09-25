@@ -45,7 +45,7 @@
 | 46 | ✅ Gateway Único de IA e Registry de Modelos | Concluída; Change A |
 | 47 | ✅ Catálogo e Seleção de Modelos Admin | Concluída; Change B |
 | 48.1 | ✅ Laboratório Mínimo de IA | Concluída; primeira fatia do programa F48.x |
-| 48.2.1 | Planejada - Otimizacao dos Prompts do Diretor | Planejada; primeira fatia do guarda-chuva F48.2 (local-only, sem promocao) |
+| 48.2.1 | Planejada - Otimizacao dos Prompts do Diretor | Planejada; 9 planos gerados; primeira fatia do guarda-chuva F48.2 (local-only, sem promocao) |
 | 49 | ✅ Ativação e Orientação Contextual de Campos | Concluída |
 | 50 | ✅ Demonstração Gratuita e Validade dos Créditos | Concluída; 17/17 planos, beta fechado preservado |
 | 50.1 | Futura — Formalização Legal e Ativação da Demonstração | Aguardando constituição da PJ; não planejada, não ativa e não bloqueante para o estado concluído |
@@ -79,7 +79,18 @@
 
 **Fora de escopo:** Revisor (F48.2.2); promocao, canario e db push remoto (F48.2.3); homologacao geral de modelos/providers (F48.6).
 
-**Planos:** `48-2-1-01` .. `48-2-1-09` (sequenciais). Diretorio: `.planning/phases/48.2.1-otimizacao-prompts-diretor/`.
+**Planos:** 9 planos (sequenciais). Diretorio: `.planning/phases/48.2.1-otimizacao-prompts-diretor/`.
+
+Plans:
+- [ ] 48-2-1-01-PLAN.md — Dominio, migration local e programa (`lab_prompt_programs`, `campaign_intent`/`program_id`/`rubric`, orcamento atomico, `DIRECTOR_PROMPTS`).
+- [ ] 48-2-1-02-PLAN.md — Diagnostico versionado da F37 e matriz de nove cenarios (inclui Checkpoint humano 1).
+- [ ] 48-2-1-03-PLAN.md — Execucao do Diretor por tipo de campanha e harness (uma chamada `campaign_image`; settle/release de orcamento).
+- [ ] 48-2-1-04-PLAN.md — Avaliacao humana, rubrica de nove criterios e comparacao cega.
+- [ ] 48-2-1-05-PLAN.md — API, UI, orcamento e isolamento (inclui Checkpoint humano 2).
+- [ ] 48-2-1-06-PLAN.md — Ciclo do Diretor `offer` (12 runs, avaliacao cega, regra de vitoria).
+- [ ] 48-2-1-07-PLAN.md — Ciclo do Diretor `spotlight` (12 runs, avaliacao cega, regra de vitoria).
+- [ ] 48-2-1-08-PLAN.md — Ciclo do Diretor `exclusive` (12 runs, criterio de parada e prova de producao inalterada).
+- [ ] 48-2-1-09-PLAN.md — Consolidacao, relatorio por prompt e fechamento (Checkpoints 3/4/5; `48-2-1-VERIFICATION.md` e `48.2.1-UAT.md`).
 ## F50.1 — Formalização Legal e Ativação da Demonstração
 
 **Status:** Futura — aguardando constituição da PJ; não planejada e não ativa.
