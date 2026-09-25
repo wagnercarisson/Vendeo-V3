@@ -115,6 +115,7 @@ const SCENARIO_VERSION_ID = "22222222-2222-4222-8222-222222222222";
 const BASELINE_VARIANT = "77777777-7777-4777-8777-777777777777";
 const CANDIDATE_VARIANT = "88888888-8888-4888-8888-888888888888";
 const OPERATION_ID = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+const PROGRAM_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 
 const TARGET = { provider: "openai", model: "gpt-5.5", protocol: "responses" } as const;
 const PARAMS = { size: "1024x1024", quality: "high", skipInputValidation: true } as const;
@@ -150,6 +151,7 @@ function tables(overrides: Partial<Record<string, FakeRow[]>> = {}): Record<stri
         model_target: TARGET,
         params: PARAMS,
         status: "ready",
+        program_id: PROGRAM_ID,
       },
     ],
     lab_experiment_variants: [
@@ -238,6 +240,7 @@ describe("prepareExperimentRun", () => {
       supersedesRunId: null,
       operationId: OPERATION_ID,
       actorId: "admin-1",
+      programId: PROGRAM_ID,
       scenario: { id: SCENARIO_VERSION_ID, version: 3, contentHash: "scenario-hash" },
       experiment: { modelTarget: TARGET, params: PARAMS },
     });

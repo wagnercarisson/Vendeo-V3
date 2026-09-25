@@ -265,6 +265,41 @@ function createMemoryClient(state: MemoryState): MemoryClient {
     rpc(name: string, args: Record<string, unknown>) {
       state.rpcCalls.push({ fn: name, args });
 
+      if (name === "lab_settle_run_budget") {
+        const runs = state.tables.lab_runs ?? [];
+        const run = runs.find((row) => row.id === args.p_run_id);
+        if (!run || run.reserved_cost_usd == null || run.budget_settled_at != null) {
+          return Promise.resolve({ data: { success: true, settled: false }, error: null });
+        }
+        const program = (state.tables.lab_prompt_programs ?? []).find(
+          (row) => row.id === run.program_id,
+        );
+        if (program) {
+          program.budget_reserved_usd = Number(program.budget_reserved_usd ?? 0) - Number(run.reserved_cost_usd);
+          program.budget_consumed_usd =
+            Number(program.budget_consumed_usd ?? 0) +
+            Number(args.p_effective_cost_usd ?? run.reserved_cost_usd);
+        }
+        run.budget_settled_at = new Date().toISOString();
+        return Promise.resolve({ data: { success: true, settled: true }, error: null });
+      }
+
+      if (name === "lab_release_run_budget") {
+        const runs = state.tables.lab_runs ?? [];
+        const run = runs.find((row) => row.id === args.p_run_id);
+        if (!run || run.reserved_cost_usd == null || run.budget_settled_at != null) {
+          return Promise.resolve({ data: { success: true, settled: false }, error: null });
+        }
+        const program = (state.tables.lab_prompt_programs ?? []).find(
+          (row) => row.id === run.program_id,
+        );
+        if (program) {
+          program.budget_reserved_usd = Number(program.budget_reserved_usd ?? 0) - Number(run.reserved_cost_usd);
+        }
+        run.budget_settled_at = new Date().toISOString();
+        return Promise.resolve({ data: { success: true, settled: true }, error: null });
+      }
+
       if (name !== "lab_reserve_run") {
         return Promise.resolve({ data: null, error: { message: `unexpected_rpc:${name}` } });
       }
@@ -321,8 +356,35 @@ function createMemoryClient(state: MemoryState): MemoryClient {
         return Promise.resolve({ data: null, error: { message: "budget_exceeded" } });
       }
 
+      // Orçamento do programa (D2/D5): programa obrigatório e autorizado.
+      const programId = experiment.program_id;
+      if (!programId) {
+        return Promise.resolve({ data: null, error: { message: "program_not_authorized" } });
+      }
+      const program = (state.tables.lab_prompt_programs ?? []).find((row) => row.id === programId);
+      if (!program || program.budget_authorized_at == null || program.budget_usd == null) {
+        return Promise.resolve({ data: null, error: { message: "program_not_authorized" } });
+      }
+      const remaining =
+        Number(program.budget_usd) -
+        Number(program.budget_consumed_usd ?? 0) -
+        Number(program.budget_reserved_usd ?? 0);
+      const estimated =
+        args.p_estimated_cost_usd == null ? null : Number(args.p_estimated_cost_usd);
+      if (estimated != null && remaining < estimated) {
+        return Promise.resolve({ data: null, error: { message: "budget_exceeded" } });
+      }
+      program.budget_reserved_usd = Number(program.budget_reserved_usd ?? 0) + (estimated ?? 0);
+
       const runId = RUN_ID;
-      runs.push({ id: runId, experiment_id: experimentId, status: "pending" });
+      runs.push({
+        id: runId,
+        experiment_id: experimentId,
+        program_id: programId,
+        status: "pending",
+        reserved_cost_usd: estimated,
+        budget_settled_at: null,
+      });
       state.reservations.set(operationId, { signature, runId });
 
       return Promise.resolve({ data: { run_id: runId, run_sequence: 1, idempotent: false }, error: null });
@@ -350,7 +412,7 @@ function asClient(state: MemoryState): SupabaseClient {
   return createMemoryClient(state) as unknown as SupabaseClient;
 }
 
-/** Experimento pronto (com teto) + catálogo ativo — pré-condição da reserva. */
+/** Experimento pronto (com teto) + programa autorizado + catálogo ativo. */
 function seedReadyExperiment(overrides: Partial<Row> = {}): Record<string, Row[]> {
   return {
     lab_experiments: [
@@ -360,7 +422,17 @@ function seedReadyExperiment(overrides: Partial<Row> = {}): Record<string, Row[]
         max_runs: DEFAULT_MAX_RUNS_PER_EXPERIMENT,
         model_target: TARGET,
         params: LAB_PARAMS,
+        program_id: PROGRAM_ID,
         ...overrides,
+      },
+    ],
+    lab_prompt_programs: [
+      {
+        id: PROGRAM_ID,
+        budget_usd: 1000,
+        budget_authorized_at: "2026-01-01T00:00:00.000Z",
+        budget_reserved_usd: 0,
+        budget_consumed_usd: 0,
       },
     ],
   };
@@ -747,6 +819,107 @@ describe("sem loops automáticos — exatamente uma chamada `campaign_image` por
 
     expect(mockRecord).not.toHaveBeenCalled();
     expect(state.insertCalls.filter((call) => call.table === "generation_events")).toEqual([]);
+  });
+});
+
+// ─── (48.2.1) Orçamento do programa — reserva atômica e liquidação ─────────
+
+function programOf(state: MemoryState): Row {
+  return (state.tables.lab_prompt_programs ?? []).find((row) => row.id === PROGRAM_ID) as Row;
+}
+
+describe("orçamento do programa — recusa antes de qualquer chamada paga", () => {
+  it("programa ausente no experimento → program_not_authorized e zero invocações", async () => {
+    const state = newState(seedReadyExperiment({ program_id: null }));
+    const counting = createCountingInvoker();
+
+    const rejection = await prepareLabRun(prepareParams(state)).catch((error: unknown) => error);
+
+    expect((rejection as LabReservationError).code).toBe("program_not_authorized");
+    expect(counting.calls()).toBe(0);
+    expect(state.tables.lab_runs ?? []).toHaveLength(0);
+  });
+
+  it("programa sem budget_authorized_at → program_not_authorized", async () => {
+    const state = newState(seedReadyExperiment());
+    state.tables.lab_prompt_programs = [
+      { id: PROGRAM_ID, budget_usd: 100, budget_authorized_at: null, budget_reserved_usd: 0, budget_consumed_usd: 0 },
+    ];
+
+    await expect(prepareLabRun(prepareParams(state))).rejects.toMatchObject({
+      name: "LabReservationError",
+      code: "program_not_authorized",
+    });
+  });
+
+  it("saldo insuficiente para o estimado → budget_exceeded", async () => {
+    const state = newState(seedReadyExperiment());
+    state.tables.lab_prompt_programs = [
+      { id: PROGRAM_ID, budget_usd: 1, budget_authorized_at: "2026-01-01T00:00:00.000Z", budget_reserved_usd: 0, budget_consumed_usd: 0 },
+    ];
+
+    const rejection = await prepareLabRun(prepareParams(state, { estimatedCostUsd: 5 })).catch(
+      (error: unknown) => error,
+    );
+
+    expect((rejection as LabReservationError).code).toBe("budget_exceeded");
+  });
+
+  it("reserva idempotente por operation_id não debita duas vezes", async () => {
+    const state = newState(seedReadyExperiment());
+
+    await prepareLabRun(prepareParams(state, { estimatedCostUsd: 2 }));
+    await prepareLabRun(prepareParams(state, { estimatedCostUsd: 2 }));
+
+    expect(programOf(state).budget_reserved_usd).toBe(2);
+    expect(state.tables.lab_runs).toHaveLength(1);
+  });
+
+  it("saldo restante = budget_usd - consumed - reserved", async () => {
+    const state = newState(seedReadyExperiment());
+
+    await prepareLabRun(prepareParams(state, { estimatedCostUsd: 2 }));
+
+    const program = programOf(state);
+    const remaining =
+      Number(program.budget_usd) - Number(program.budget_consumed_usd) - Number(program.budget_reserved_usd);
+    expect(remaining).toBe(998);
+  });
+});
+
+describe("settle/release — conversão idempotente e liberação sem consumo", () => {
+  it("settle converte reserved → consumed com o custo efetivo", async () => {
+    const state = newState(seedReadyExperiment());
+    const client = asClient(state);
+
+    await prepareLabRun(prepareParams(state, { estimatedCostUsd: 3 }));
+    const runId = String(state.tables.lab_runs[0].id);
+
+    await client.rpc("lab_settle_run_budget", { p_run_id: runId, p_effective_cost_usd: 1.5 });
+    const program = programOf(state);
+    expect(program.budget_reserved_usd).toBe(0);
+    expect(program.budget_consumed_usd).toBe(1.5);
+
+    // Segunda chamada é no-op (idempotência por budget_settled_at).
+    await client.rpc("lab_settle_run_budget", { p_run_id: runId, p_effective_cost_usd: 1.5 });
+    expect(program.budget_consumed_usd).toBe(1.5);
+  });
+
+  it("release devolve o saldo sem consumir", async () => {
+    const state = newState(seedReadyExperiment());
+    const client = asClient(state);
+
+    await prepareLabRun(prepareParams(state, { estimatedCostUsd: 4 }));
+    const runId = String(state.tables.lab_runs[0].id);
+
+    await client.rpc("lab_release_run_budget", { p_run_id: runId });
+    const program = programOf(state);
+    expect(program.budget_reserved_usd).toBe(0);
+    expect(program.budget_consumed_usd).toBe(0);
+
+    // Segunda chamada é no-op.
+    await client.rpc("lab_release_run_budget", { p_run_id: runId });
+    expect(program.budget_reserved_usd).toBe(0);
   });
 });
 

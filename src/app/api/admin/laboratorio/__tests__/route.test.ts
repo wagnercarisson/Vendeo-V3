@@ -78,6 +78,8 @@ const VALID_PAYLOAD = {
   objective: "Comparar prompts",
   hypothesis: "A candidata vende mais",
   changedDimension: "prompt",
+  campaignIntent: "offer",
+  programId: "77777777-7777-4777-8777-777777777777",
   modelTarget: TARGET,
   params: { size: "1024x1024", quality: "high", skipInputValidation: true },
   repetitions: 1,

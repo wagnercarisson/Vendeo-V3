@@ -161,6 +161,20 @@ describe("assertSnapshotComplete — barreira antes da reserva", () => {
 
     expect(() => assertSnapshotComplete(snapshot)).toThrow(MISSING_SNAPSHOT);
   });
+
+  it("recusa snapshot sem programId (F48.2.1, D5)", () => {
+    const snapshot = validSnapshot();
+    snapshot.programId = "";
+
+    expect(() => assertSnapshotComplete(snapshot)).toThrow(MISSING_SNAPSHOT);
+  });
+
+  it("congela o programId quando presente e permanece completo", () => {
+    const snapshot = validSnapshot();
+
+    expect(snapshot.programId).toBe("77777777-7777-4777-8777-777777777777");
+    expect(() => assertSnapshotComplete(snapshot)).not.toThrow();
+  });
 });
 
 describe("readCodeVersion — versão de build", () => {
