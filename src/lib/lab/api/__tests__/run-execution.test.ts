@@ -96,6 +96,8 @@ import { LabReservationError } from "@/lib/lab/run-service";
 import { createLabTelemetryContext } from "@/lib/lab/gateway/runtime";
 import type { LabRunExecuteRequest } from "@/lib/admin/schemas";
 import {
+  LabIntentMismatchError,
+  LabPromptUnderTestError,
   LabScenarioIntegrityError,
   prepareExperimentRun,
   runPreparedExperimentRun,
@@ -151,6 +153,7 @@ function tables(overrides: Partial<Record<string, FakeRow[]>> = {}): Record<stri
         model_target: TARGET,
         params: PARAMS,
         status: "ready",
+        campaign_intent: "offer",
         program_id: PROGRAM_ID,
       },
     ],
@@ -177,6 +180,7 @@ function tables(overrides: Partial<Record<string, FakeRow[]>> = {}): Record<stri
         scenario_id: SCENARIO_ID,
         version: 3,
         content_hash: "scenario-hash",
+        content: { intent: "offer", format: "1:1", locale: "pt-BR" },
       },
     ],
     lab_scenarios: [{ id: SCENARIO_ID, slug: "produto-oferta-preco" }],
@@ -339,6 +343,170 @@ describe("prepareExperimentRun", () => {
         input: INPUT,
       }),
     ).rejects.toMatchObject({ code: "experiment_not_found" });
+  });
+
+  it("recusa cenário cujo intent diverge do intent do experimento (intent_mismatch)", async () => {
+    const fake = createFakeSupabaseClient({
+      tables: tables({
+        lab_scenario_versions: [
+          {
+            id: SCENARIO_VERSION_ID,
+            scenario_id: SCENARIO_ID,
+            version: 3,
+            content_hash: "scenario-hash",
+            content: { intent: "spotlight", format: "1:1", locale: "pt-BR" },
+          },
+        ],
+      }),
+    });
+
+    await expect(
+      prepareExperimentRun({
+        client: fake.client,
+        experimentId: EXPERIMENT_ID,
+        actorId: "admin-1",
+        input: INPUT,
+      }),
+    ).rejects.toBeInstanceOf(LabIntentMismatchError);
+
+    // Nenhuma reserva nem chamada paga acontece com intents divergentes.
+    expect(mockPrepareLabRun).not.toHaveBeenCalled();
+    expect(mockRunReservedLabRun).not.toHaveBeenCalled();
+  });
+
+  it("recusa cenário sem intent declarado (intent_mismatch)", async () => {
+    const fake = createFakeSupabaseClient({
+      tables: tables({
+        lab_scenario_versions: [
+          {
+            id: SCENARIO_VERSION_ID,
+            scenario_id: SCENARIO_ID,
+            version: 3,
+            content_hash: "scenario-hash",
+            content: { format: "1:1", locale: "pt-BR" },
+          },
+        ],
+      }),
+    });
+
+    await expect(
+      prepareExperimentRun({
+        client: fake.client,
+        experimentId: EXPERIMENT_ID,
+        actorId: "admin-1",
+        input: INPUT,
+      }),
+    ).rejects.toBeInstanceOf(LabIntentMismatchError);
+    expect(mockPrepareLabRun).not.toHaveBeenCalled();
+  });
+
+  it("recusa variante cujo prompt não é o prompt do Diretor do intent (unsupported_prompt_under_test)", async () => {
+    const fake = createFakeSupabaseClient({
+      tables: tables({
+        lab_experiment_variants: [
+          {
+            id: BASELINE_VARIANT,
+            experiment_id: EXPERIMENT_ID,
+            role: "baseline",
+            prompt_snapshot: {
+              name: "campaign-image-director-spotlight",
+              content: "prompt oficial",
+              contentHash: "hash-baseline",
+              source: "official",
+            },
+          },
+          {
+            id: CANDIDATE_VARIANT,
+            experiment_id: EXPERIMENT_ID,
+            role: "candidate",
+            prompt_snapshot: {
+              name: "campaign-image-director-spotlight",
+              content: "prompt candidata",
+              contentHash: "hash-candidate",
+              source: "override",
+            },
+          },
+        ],
+      }),
+    });
+
+    await expect(
+      prepareExperimentRun({
+        client: fake.client,
+        experimentId: EXPERIMENT_ID,
+        actorId: "admin-1",
+        input: INPUT,
+      }),
+    ).rejects.toBeInstanceOf(LabPromptUnderTestError);
+    expect(mockPrepareLabRun).not.toHaveBeenCalled();
+  });
+
+  it("aceita os três intents e reserva com o prompt do Diretor correspondente", async () => {
+    const intents = ["offer", "spotlight", "exclusive"] as const;
+    for (const intent of intents) {
+      const promptName = `campaign-image-director-${intent}`;
+      const fake = createFakeSupabaseClient({
+        tables: tables({
+          lab_experiments: [
+            {
+              id: EXPERIMENT_ID,
+              model_target: TARGET,
+              params: PARAMS,
+              status: "ready",
+              campaign_intent: intent,
+              program_id: PROGRAM_ID,
+            },
+          ],
+          lab_scenario_versions: [
+            {
+              id: SCENARIO_VERSION_ID,
+              scenario_id: SCENARIO_ID,
+              version: 3,
+              content_hash: "scenario-hash",
+              content: { intent, format: "1:1", locale: "pt-BR" },
+            },
+          ],
+          lab_experiment_variants: [
+            {
+              id: BASELINE_VARIANT,
+              experiment_id: EXPERIMENT_ID,
+              role: "baseline",
+              prompt_snapshot: {
+                name: promptName,
+                content: "prompt oficial",
+                contentHash: "hash-baseline",
+                source: "official",
+              },
+            },
+            {
+              id: CANDIDATE_VARIANT,
+              experiment_id: EXPERIMENT_ID,
+              role: "candidate",
+              prompt_snapshot: {
+                name: promptName,
+                content: "prompt candidata",
+                contentHash: "hash-candidate",
+                source: "override",
+              },
+            },
+          ],
+        }),
+      });
+
+      const prepared = await prepareExperimentRun({
+        client: fake.client,
+        experimentId: EXPERIMENT_ID,
+        actorId: "admin-1",
+        input: INPUT,
+      });
+
+      expect(prepared.executionContext.variant.promptSnapshot.name).toBe(promptName);
+      const calls = mockPrepareLabRun.mock.calls;
+      const lastCall = calls[calls.length - 1][0] as Record<string, unknown>;
+      expect(lastCall).toMatchObject({
+        variant: { promptSnapshot: { name: promptName } },
+      });
+    }
   });
 });
 

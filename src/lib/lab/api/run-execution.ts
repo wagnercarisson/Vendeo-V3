@@ -7,7 +7,8 @@ import { LabTelemetrySink } from "@/lib/ai/lab-telemetry-sink";
 import type { CampaignBrief } from "@/lib/campaign/brief";
 import type { ResolvedCampaignContext } from "@/components/campaign/types";
 import { ImageGenerationService } from "@/lib/image-generation/services/image-generation-service";
-import type { LabPromptSnapshot } from "@/lib/lab/domain/prompt-snapshot";
+import { DIRECTOR_PROMPTS } from "@/lib/lab/domain/prompt-snapshot";
+import type { CampaignIntent, LabPromptSnapshot } from "@/lib/lab/domain/prompt-snapshot";
 import type { LabExperimentParams, LabModelTarget } from "@/lib/lab/domain/schemas";
 import { LabPromptLoader } from "@/lib/lab/gateway/lab-prompt-loader";
 import { createNoopImageProvider } from "@/lib/lab/gateway/noop-image-provider";
@@ -64,6 +65,40 @@ export class LabScenarioIntegrityError extends Error {
   constructor() {
     super(LAB_SCENARIO_HASH_MISMATCH);
     this.name = "LabScenarioIntegrityError";
+  }
+}
+
+/**
+ * Código da recusa quando o `campaign_intent` do experimento não coincide com o
+ * intent de **todos** os cenários vinculados (F48.2.1, D4/D5). Intents mistos
+ * nunca iniciam uma chamada paga.
+ */
+export const LAB_INTENT_MISMATCH = "intent_mismatch";
+
+/** Recusa determinística de intents divergentes (experimento × cenários). */
+export class LabIntentMismatchError extends Error {
+  readonly code = LAB_INTENT_MISMATCH;
+
+  constructor() {
+    super(LAB_INTENT_MISMATCH);
+    this.name = "LabIntentMismatchError";
+  }
+}
+
+/**
+ * Código da recusa quando o prompt da variante não é o prompt do Diretor do
+ * intent do experimento (`DIRECTOR_PROMPTS[intent]`). Um nome arbitrário do
+ * cliente nunca é executado (T-48-2-1-16).
+ */
+export const LAB_UNSUPPORTED_PROMPT_UNDER_TEST = "unsupported_prompt_under_test";
+
+/** Recusa determinística de prompt sob teste fora da allowlist do intent. */
+export class LabPromptUnderTestError extends Error {
+  readonly code = LAB_UNSUPPORTED_PROMPT_UNDER_TEST;
+
+  constructor(name: string) {
+    super(`${LAB_UNSUPPORTED_PROMPT_UNDER_TEST}:${name}`);
+    this.name = "LabPromptUnderTestError";
   }
 }
 
@@ -129,7 +164,7 @@ export async function prepareExperimentRun(params: {
 
   const { data: experiment, error } = await client
     .from("lab_experiments")
-    .select("id, model_target, params, status, program_id")
+    .select("id, model_target, params, status, campaign_intent, program_id")
     .eq("id", experimentId)
     .maybeSingle();
 
@@ -146,6 +181,55 @@ export async function prepareExperimentRun(params: {
   const programId = text(experimentRow.program_id);
   if (!programId) {
     throw new LabReservationError("program_not_authorized");
+  }
+
+  // O prompt sob teste é derivado do intent do experimento — nunca do cliente
+  // (T-48-2-1-16). Um intent sem prompt correspondente é recusado.
+  const campaignIntent = text(experimentRow.campaign_intent);
+  const directorPromptName =
+    campaignIntent === "offer" || campaignIntent === "spotlight" || campaignIntent === "exclusive"
+      ? DIRECTOR_PROMPTS[campaignIntent as CampaignIntent]
+      : "";
+  if (!directorPromptName) {
+    throw new LabIntentMismatchError();
+  }
+
+  // Intents mistos são recusados **antes** de qualquer chamada paga (D4/D5): o
+  // `campaign_intent` do experimento precisa coincidir com o intent de TODOS os
+  // cenários vinculados.
+  const { data: links, error: linksError } = await client
+    .from("lab_experiment_scenarios")
+    .select("scenario_version_id")
+    .eq("experiment_id", experimentId);
+
+  if (linksError) {
+    throw new Error(`lab_experiment_scenarios_read_failed:${linksError.message}`);
+  }
+
+  const linkedVersionIds = asRows(links)
+    .map((row) => text(row.scenario_version_id))
+    .filter((id) => id.length > 0);
+
+  if (linkedVersionIds.length > 0) {
+    const { data: linkedVersions, error: linkedVersionsError } = await client
+      .from("lab_scenario_versions")
+      .select("id, content")
+      .in("id", linkedVersionIds);
+
+    if (linkedVersionsError) {
+      throw new Error(`lab_scenario_versions_read_failed:${linkedVersionsError.message}`);
+    }
+
+    const linkedRows = asRows(linkedVersions);
+    if (linkedRows.length !== linkedVersionIds.length) {
+      throw new LabIntentMismatchError();
+    }
+    for (const row of linkedRows) {
+      const content = asRow(row.content);
+      if (text(content?.intent) !== campaignIntent) {
+        throw new LabIntentMismatchError();
+      }
+    }
   }
 
   const { data: variants, error: variantsError } = await client
@@ -167,6 +251,21 @@ export async function prepareExperimentRun(params: {
   const candidateRow = variantRows.find((variant) => variant.role === "candidate");
   if (!baselineRow || !candidateRow) {
     throw new LabReservationError("missing_snapshot");
+  }
+
+  // O prompt congelado nas variantes precisa ser o prompt do Diretor do intent
+  // do experimento — um nome divergente nunca é servido/executado (T-48-2-1-16).
+  const variantPromptSnapshot = readPromptSnapshot(variantRow.prompt_snapshot);
+  const baselinePromptSnapshot = readPromptSnapshot(baselineRow.prompt_snapshot);
+  const candidatePromptSnapshot = readPromptSnapshot(candidateRow.prompt_snapshot);
+  for (const snapshot of [
+    variantPromptSnapshot,
+    baselinePromptSnapshot,
+    candidatePromptSnapshot,
+  ]) {
+    if (snapshot.name !== directorPromptName) {
+      throw new LabPromptUnderTestError(snapshot.name);
+    }
   }
 
   const { data: link, error: linkError } = await client
@@ -241,11 +340,11 @@ export async function prepareExperimentRun(params: {
     experiment: { modelTarget, params: experimentParams },
     variant: {
       role: variantRow.role === "candidate" ? "candidate" : "baseline",
-      promptSnapshot: readPromptSnapshot(variantRow.prompt_snapshot),
+      promptSnapshot: variantPromptSnapshot,
     },
     variants: {
-      baseline: readPromptSnapshot(baselineRow.prompt_snapshot),
-      candidate: readPromptSnapshot(candidateRow.prompt_snapshot),
+      baseline: baselinePromptSnapshot,
+      candidate: candidatePromptSnapshot,
     },
   };
 

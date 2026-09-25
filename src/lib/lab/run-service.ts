@@ -15,7 +15,7 @@ import { LAB_RUN_STALE_MS } from "./limits";
 import { computePromptContentHash } from "./domain/prompt-snapshot";
 import type { LabPromptSnapshot } from "./domain/prompt-snapshot";
 import type { LabExperimentParams, LabModelTarget } from "./domain/schemas";
-import { createLabTelemetryContext, runLabCampaignImage } from "./gateway/runtime";
+import { createLabTelemetryContext, runLabCampaignImage as invokeLabCampaignImage } from "./gateway/runtime";
 import type { LabPromptLoader } from "./gateway/lab-prompt-loader";
 import {
   LAB_ALLOWED_ARTIFACT_MIME_TYPES,
@@ -611,7 +611,7 @@ export async function runReservedLabRun(params: {
       storeId: params.experimentId,
       userId: params.actorId,
     });
-    const result = await runLabCampaignImage({ gateway: params.gateway, request, telemetry });
+    const result = await invokeLabCampaignImage({ gateway: params.gateway, request, telemetry });
 
     if (!result.imageBase64) {
       throw new LabRunExecutionError(MISSING_IMAGE_PAYLOAD);

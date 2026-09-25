@@ -35,6 +35,10 @@ const BAD_REQUEST_CODES: readonly string[] = [
   "repetition_out_of_range",
   "invalid_supersedes_run",
   "unsupported_scenario_mode",
+  // Intent do experimento divergente dos cenários (F48.2.1, D4/D5).
+  "intent_mismatch",
+  // Prompt da variante fora da allowlist do intent (F48.2.1, D4).
+  "unsupported_prompt_under_test",
 ];
 
 /** Código determinístico de um erro de preparação/reserva, ou `null`. */
