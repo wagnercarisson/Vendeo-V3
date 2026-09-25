@@ -6,6 +6,7 @@ import {
   MAX_RUNS_PER_EXPERIMENT,
   MAX_SCENARIOS_PER_EXPERIMENT,
 } from "@/lib/lab/limits";
+import { LabRubricSchema } from "@/lib/lab/domain/rubric";
 
 /**
  * Schemas de entrada do domínio de experimentos do Laboratório de IA
@@ -159,23 +160,6 @@ export const LAB_EVALUATION_VERDICTS = ["baseline", "candidate", "tie", "none"] 
 
 export const LAB_BLIND_ORDERS = ["baseline_left", "candidate_left"] as const;
 
-/** Estados possíveis de um critério da rubrica estruturada do Diretor (D7). */
-export const LAB_RUBRIC_STATES = [
-  "adequate",
-  "minor_defect",
-  "critical_defect",
-  "not_applicable",
-] as const;
-
-export const LabRubricCriterionSchema = z
-  .object({
-    state: z.enum(LAB_RUBRIC_STATES),
-    observation: z.string().max(2000).optional(),
-  })
-  .strict();
-
-export const LabRubricSchema = z.record(z.string(), LabRubricCriterionSchema);
-
 export const CreateLabEvaluationInputSchema = z
   .object({
     scenarioVersionId: z.string().uuid(),
@@ -184,8 +168,13 @@ export const CreateLabEvaluationInputSchema = z
     verdict: z.enum(LAB_EVALUATION_VERDICTS),
     blindOrder: z.enum(LAB_BLIND_ORDERS).optional(),
     observation: z.string().max(4000).optional(),
-    /** Rubrica estruturada por critério (opcional nesta fase; D7). */
-    rubric: LabRubricSchema.optional(),
+    /**
+     * Rubrica estruturada pelos nove critérios (D7). **Obrigatória** em toda
+     * avaliação nova: a ausência é recusada pelo schema antes de qualquer insert.
+     * A coluna `lab_human_evaluations.rubric` permanece nullable e a leitura
+     * tolera registros históricos da F48.1 sem rubrica.
+     */
+    rubric: LabRubricSchema,
   })
   .strict()
   .superRefine((value, ctx) => {
