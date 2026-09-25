@@ -152,6 +152,48 @@ export async function reserveLabRun(params: {
 }
 
 /**
+ * Converte a reserva de orçamento do run em **consumo efetivo** (D2/D5).
+ *
+ * Idempotente no banco por `lab_runs.budget_settled_at`: uma segunda chamada é
+ * no-op. Quando `effectiveCostUsd` é nulo, a RPC consome o valor estimado
+ * reservado. É **best-effort**: uma falha de liquidação nunca derruba o run (o
+ * estado terminal já foi persistido) — por isso erros são capturados aqui.
+ */
+export async function settleRunBudget(params: {
+  client: SupabaseClient;
+  runId: string;
+  effectiveCostUsd: number | null;
+}): Promise<void> {
+  try {
+    const { error } = await params.client.rpc("lab_settle_run_budget", {
+      p_run_id: params.runId,
+      p_effective_cost_usd: params.effectiveCostUsd,
+    });
+    if (error) return;
+  } catch {
+    // Best-effort: o estado terminal do run já foi gravado.
+  }
+}
+
+/**
+ * Libera a reserva de orçamento do run **sem consumir** (falha antes da chamada
+ * paga, D2/D5). Idempotente por `budget_settled_at` e best-effort.
+ */
+export async function releaseRunBudget(params: {
+  client: SupabaseClient;
+  runId: string;
+}): Promise<void> {
+  try {
+    const { error } = await params.client.rpc("lab_release_run_budget", {
+      p_run_id: params.runId,
+    });
+    if (error) return;
+  } catch {
+    // Best-effort: o estado terminal do run já foi gravado.
+  }
+}
+
+/**
  * Marca o run como `running` — apenas colunas de resultado (o trigger permite).
  *
  * Transição **compare-and-set**: só promove um run que ainda está `pending` e
@@ -573,6 +615,7 @@ export async function runReservedLabRun(params: {
   const { client, runId } = params;
   const startedMs = performance.now();
   let terminalReached = false;
+  let budgetSettled = false;
   let validation: LabTechnicalValidation | null = null;
 
   const emit = (event: LabRunEvent): void => {
@@ -581,6 +624,27 @@ export async function runReservedLabRun(params: {
     } catch {
       // Best-effort: um consumidor desconectado não pode corromper o run.
     }
+  };
+
+  /**
+   * Liquida a reserva de orçamento **depois** do estado terminal (D2/D5):
+   *  - a chamada paga emitiu envelope no sink (`sink.entries.length > 0`) ⇒
+   *    `settle` consome o custo efetivo (ou o estimado reservado quando nulo);
+   *  - falha antes da chamada paga ⇒ `release` libera sem consumir.
+   * Executa **uma única vez** por run e é best-effort (nunca propaga).
+   */
+  const settleOrReleaseBudget = async (): Promise<void> => {
+    if (budgetSettled) return;
+    budgetSettled = true;
+    if (params.sink.entries.length > 0) {
+      await settleRunBudget({
+        client,
+        runId,
+        effectiveCostUsd: collectSinkEvidence(params.sink).estimatedCostUsd,
+      });
+      return;
+    }
+    await releaseRunBudget({ client, runId });
   };
 
   try {
@@ -658,6 +722,10 @@ export async function runReservedLabRun(params: {
     });
     terminalReached = true;
 
+    // Liquidação **após** o estado terminal: sucesso após a chamada paga
+    // consome o custo efetivo do sink (D2/D5).
+    await settleOrReleaseBudget();
+
     emit({ type: "done", status: "succeeded", runId });
     return { runId, status: "succeeded" };
   } catch (err) {
@@ -680,6 +748,11 @@ export async function runReservedLabRun(params: {
     } catch {
       // A transição terminal é reexecutada no `finally` (best-effort).
     }
+
+    // Falha após a chamada paga consome o efetivo; falha antes libera sem
+    // consumir — sempre **depois** da tentativa de estado terminal.
+    await settleOrReleaseBudget();
+
     emit({ type: "error", code, message: safeMessage, runId });
     return { runId, status: "failed" };
   } finally {
@@ -696,6 +769,8 @@ export async function runReservedLabRun(params: {
         // Sem banco não há transição possível; o run será reconciliado como órfão.
       }
     }
+    // Terminal não alcançado: aplica a mesma regra em best-effort (idempotente).
+    await settleOrReleaseBudget();
   }
 }
 
