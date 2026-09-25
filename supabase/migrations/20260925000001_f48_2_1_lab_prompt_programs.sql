@@ -513,3 +513,44 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.lab_release_run_budget(UUID) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.lab_release_run_budget(UUID) TO service_role;
+
+-- =============================================================================
+-- REVERT (ordem reversa de criação — executar manualmente se necessário)
+-- =============================================================================
+-- REVOKE EXECUTE ON FUNCTION public.lab_release_run_budget(UUID) FROM service_role;
+-- DROP FUNCTION IF EXISTS public.lab_release_run_budget(UUID);
+-- REVOKE EXECUTE ON FUNCTION public.lab_settle_run_budget(UUID, NUMERIC) FROM service_role;
+-- DROP FUNCTION IF EXISTS public.lab_settle_run_budget(UUID, NUMERIC);
+-- REVOKE EXECUTE ON FUNCTION public.lab_reserve_run(UUID, UUID, UUID, INT, UUID, JSONB, UUID, UUID, NUMERIC) FROM service_role;
+-- DROP FUNCTION IF EXISTS public.lab_reserve_run(UUID, UUID, UUID, INT, UUID, JSONB, UUID, UUID, NUMERIC);
+-- REVOKE EXECUTE ON FUNCTION public.lab_create_experiment(TEXT, TEXT, TEXT, JSONB, JSONB, INT, INT, TEXT, JSONB, JSONB, UUID[], TEXT, UUID, UUID) FROM service_role;
+-- DROP FUNCTION IF EXISTS public.lab_create_experiment(TEXT, TEXT, TEXT, JSONB, JSONB, INT, INT, TEXT, JSONB, JSONB, UUID[], TEXT, UUID, UUID);
+-- -- Restaurar as assinaturas F48.1 removidas à frente (recriar comentado):
+-- -- CREATE OR REPLACE FUNCTION public.lab_reserve_run(UUID, UUID, UUID, INT, UUID, JSONB, UUID, UUID) ... (ver 20260915000003)
+-- -- CREATE OR REPLACE FUNCTION public.lab_create_experiment(TEXT, TEXT, TEXT, JSONB, JSONB, INT, INT, TEXT, JSONB, JSONB, UUID[], UUID) ... (ver 20260915000003)
+-- ALTER TABLE public.lab_experiments DROP CONSTRAINT IF EXISTS lab_experiments_campaign_intent_check;
+-- ALTER TABLE public.lab_experiments DROP COLUMN IF EXISTS program_id;
+-- ALTER TABLE public.lab_experiments DROP COLUMN IF EXISTS campaign_intent;
+-- ALTER TABLE public.lab_runs DROP COLUMN IF EXISTS reserved_cost_usd;
+-- ALTER TABLE public.lab_runs DROP COLUMN IF EXISTS budget_settled_at;
+-- ALTER TABLE public.lab_human_evaluations DROP COLUMN IF EXISTS rubric;
+-- -- Restaurar a definição F48.1 de trg_lab_experiments_freeze_fn (sem campaign_intent/program_id):
+-- CREATE OR REPLACE FUNCTION public.trg_lab_experiments_freeze_fn()
+-- RETURNS TRIGGER LANGUAGE plpgsql SET search_path = '' AS $$
+-- BEGIN
+--   IF NEW.model_target IS DISTINCT FROM OLD.model_target
+--      OR NEW.params IS DISTINCT FROM OLD.params
+--      OR NEW.changed_dimension IS DISTINCT FROM OLD.changed_dimension
+--      OR NEW.primary_capability IS DISTINCT FROM OLD.primary_capability
+--      OR NEW.repetitions IS DISTINCT FROM OLD.repetitions
+--      OR NEW.max_runs IS DISTINCT FROM OLD.max_runs THEN
+--     IF EXISTS (SELECT 1 FROM public.lab_runs WHERE experiment_id = OLD.id) THEN
+--       RAISE EXCEPTION 'lab_experiment_frozen';
+--     END IF;
+--   END IF;
+--   RETURN NEW;
+-- END; $$;
+-- REVOKE ALL ON TABLE public.lab_prompt_programs FROM service_role;
+-- DROP POLICY IF EXISTS "Service role can manage lab_prompt_programs" ON public.lab_prompt_programs;
+-- ALTER TABLE public.lab_prompt_programs DISABLE ROW LEVEL SECURITY;
+-- DROP TABLE IF EXISTS public.lab_prompt_programs;
