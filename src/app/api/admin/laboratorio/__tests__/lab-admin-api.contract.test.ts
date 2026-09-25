@@ -21,6 +21,12 @@ const {
   mockCreateExperiment,
   mockComputeReadiness,
   mockTransitionExperiment,
+  mockListPrograms,
+  mockGetProgramDetail,
+  mockCreateProgram,
+  mockAuthorizeProgramBudget,
+  mockUpdateProgram,
+  MockLabProgramError,
 } = vi.hoisted(() => {
   class MockLabEnvironmentError extends Error {
     readonly reason: string;
@@ -36,6 +42,15 @@ const {
     constructor(code: string) {
       super(code);
       this.name = "InvalidComparisonRunsError";
+      this.code = code;
+    }
+  }
+
+  class MockLabProgramError extends Error {
+    readonly code: string;
+    constructor(code: string) {
+      super(code);
+      this.name = "LabProgramError";
       this.code = code;
     }
   }
@@ -58,6 +73,12 @@ const {
     mockCreateExperiment: vi.fn(),
     mockComputeReadiness: vi.fn(),
     mockTransitionExperiment: vi.fn(),
+    mockListPrograms: vi.fn(),
+    mockGetProgramDetail: vi.fn(),
+    mockCreateProgram: vi.fn(),
+    mockAuthorizeProgramBudget: vi.fn(),
+    mockUpdateProgram: vi.fn(),
+    MockLabProgramError,
   };
 });
 
@@ -104,6 +125,22 @@ vi.mock("@/lib/lab/domain/experiment-service", () => ({
   createExperiment: (...args: unknown[]) => mockCreateExperiment(...args),
   computeExperimentReadiness: (...args: unknown[]) => mockComputeReadiness(...args),
   transitionExperiment: (...args: unknown[]) => mockTransitionExperiment(...args),
+}));
+
+vi.mock("@/lib/lab/api/program-queries", () => ({
+  listPrograms: (...args: unknown[]) => mockListPrograms(...args),
+  getProgramDetail: (...args: unknown[]) => mockGetProgramDetail(...args),
+  remainingUsd: (program: { budget_usd: number | null; budget_consumed_usd: number; budget_reserved_usd: number }) =>
+    program.budget_usd === null
+      ? null
+      : program.budget_usd - program.budget_consumed_usd - program.budget_reserved_usd,
+}));
+
+vi.mock("@/lib/lab/domain/program-service", () => ({
+  LabProgramError: MockLabProgramError,
+  createProgram: (...args: unknown[]) => mockCreateProgram(...args),
+  authorizeProgramBudget: (...args: unknown[]) => mockAuthorizeProgramBudget(...args),
+  updateProgram: (...args: unknown[]) => mockUpdateProgram(...args),
 }));
 
 import { ForbiddenError } from "@/lib/auth/errors";
@@ -174,13 +211,38 @@ const PREPARED = {
   executionContext: { scenario: {}, experiment: {}, variant: {}, variants: {} },
 };
 
+const PROGRAM_ID = "99999999-9999-4999-8999-999999999999";
+
+const PROGRAM_DETAIL = {
+  id: PROGRAM_ID,
+  matrixVersion: "matrix-v1",
+  status: "authorized",
+  budgetUsd: 10,
+  budgetReservedUsd: 2,
+  budgetConsumedUsd: 3,
+  remainingUsd: 5,
+  budgetAuthorizedBy: ADMIN_ID,
+  budgetAuthorizedAt: "2026-09-16T12:00:00.000Z",
+  finalReportRef: null,
+  finalReportHash: null,
+  recommendation: null,
+  createdAt: "2026-09-16T00:00:00.000Z",
+  updatedAt: "2026-09-16T12:00:00.000Z",
+};
+
 const DETAIL = {
-  experiment: { id: EXPERIMENT_ID, name: "Exp prompt", status: "ready" },
+  experiment: {
+    id: EXPERIMENT_ID,
+    name: "Exp prompt",
+    status: "ready",
+    campaign_intent: "offer",
+    program_id: PROGRAM_ID,
+  },
   variants: [{ id: VARIANT_ID, role: "candidate" }],
   scenarios: [{ scenarioVersionId: SCENARIO_VERSION_ID, slug: "produto-oferta-preco", version: 1 }],
   runs: [],
   evaluations: [],
-  budget: { maxRuns: 6, used: 1, remaining: 5 },
+  budget: { maxRuns: 6, used: 1, remaining: 5, programRemainingUsd: 5 },
 };
 
 const RUN_DETAIL = {
@@ -262,6 +324,33 @@ async function postEvaluation(id: string, body: unknown): Promise<Response> {
   });
 }
 
+async function getPrograms(): Promise<Response> {
+  const { GET } = await import("@/app/api/admin/laboratorio/programs/route");
+  return GET(request(`${BASE}/programs`));
+}
+
+async function postProgram(body: unknown): Promise<Response> {
+  const { POST } = await import("@/app/api/admin/laboratorio/programs/route");
+  return POST(postRequest(`${BASE}/programs`, body));
+}
+
+async function getProgram(id: string): Promise<Response> {
+  const { GET } = await import("@/app/api/admin/laboratorio/programs/[id]/route");
+  return GET(request(`${BASE}/programs/${id}`), { params: Promise.resolve({ id }) });
+}
+
+async function putProgram(id: string, body: unknown): Promise<Response> {
+  const { PUT } = await import("@/app/api/admin/laboratorio/programs/[id]/route");
+  return PUT(
+    request(`${BASE}/programs/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+    }),
+    { params: Promise.resolve({ id }) },
+  );
+}
+
 interface RouteCall {
   name: string;
   call: () => Promise<Response>;
@@ -280,6 +369,10 @@ function allRouteCalls(): RouteCall[] {
       name: "POST /experiments/[id]/evaluations",
       call: () => postEvaluation(EXPERIMENT_ID, VALID_EVALUATION_BODY),
     },
+    { name: "GET /programs", call: getPrograms },
+    { name: "POST /programs", call: () => postProgram({ matrixVersion: "matrix-v1" }) },
+    { name: "GET /programs/[id]", call: () => getProgram(PROGRAM_ID) },
+    { name: "PUT /programs/[id]", call: () => putProgram(PROGRAM_ID, { budgetUsd: 10 }) },
   ];
 }
 
@@ -297,6 +390,11 @@ function anyServiceCalled(): boolean {
     mockCreateExperiment,
     mockComputeReadiness,
     mockTransitionExperiment,
+    mockListPrograms,
+    mockGetProgramDetail,
+    mockCreateProgram,
+    mockAuthorizeProgramBudget,
+    mockUpdateProgram,
   ].some((mock) => mock.mock.calls.length > 0);
 }
 
@@ -333,6 +431,11 @@ beforeEach(() => {
   mockCreateExperiment.mockResolvedValue({ experimentId: EXPERIMENT_ID });
   mockComputeReadiness.mockResolvedValue({ ready: true, reasons: [] });
   mockTransitionExperiment.mockResolvedValue({ status: "ready" });
+  mockListPrograms.mockResolvedValue([PROGRAM_DETAIL]);
+  mockGetProgramDetail.mockResolvedValue(PROGRAM_DETAIL);
+  mockCreateProgram.mockResolvedValue({ programId: PROGRAM_ID });
+  mockAuthorizeProgramBudget.mockResolvedValue(undefined);
+  mockUpdateProgram.mockResolvedValue(undefined);
 });
 
 // ─── 1. 403 não-admin ────────────────────────────────────────────────────────
@@ -469,12 +572,17 @@ describe("contrato da API — criação e leitura", () => {
     expect(body.experiments).toHaveLength(1);
   });
 
-  it("GET /experiments/[id] ⇒ 200 com budget.remaining", async () => {
+  it("GET /experiments/[id] ⇒ 200 com budget.remaining, intent/programa e saldo do programa", async () => {
     const res = await getExperiment(EXPERIMENT_ID);
     const body = await res.json();
 
     expect(res.status).toBe(200);
     expect(body.budget.remaining).toBe(5);
+    expect(body.budget.programRemainingUsd).toBe(5);
+    expect(body.experiment).toMatchObject({
+      campaign_intent: "offer",
+      program_id: PROGRAM_ID,
+    });
   });
 
   it("GET /experiments/[id] ausente ⇒ 404 experiment_not_found", async () => {
@@ -502,6 +610,117 @@ describe("contrato da API — criação e leitura", () => {
 
     expect(res.status).toBe(404);
     expect((await res.json()).error).toBe("run_not_found");
+  });
+});
+
+// ─── 4b. Programas e orçamento ───────────────────────────────────────────────
+
+describe("contrato da API — programas e autorização de orçamento", () => {
+  it("GET /programs ⇒ 200 com a lista de programas", async () => {
+    const res = await getPrograms();
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.programs).toHaveLength(1);
+    expect(mockListPrograms).toHaveBeenCalledTimes(1);
+  });
+
+  it("POST /programs válido ⇒ 201 com programId", async () => {
+    const res = await postProgram({ matrixVersion: "matrix-v1" });
+    const body = await res.json();
+
+    expect(res.status).toBe(201);
+    expect(body).toEqual({ programId: PROGRAM_ID });
+    expect(mockCreateProgram).toHaveBeenCalledWith(
+      { matrixVersion: "matrix-v1" },
+      { actorId: ADMIN_ID, client: expect.anything() },
+    );
+  });
+
+  it("POST /programs com budgetUsd ⇒ autoriza o orçamento", async () => {
+    const res = await postProgram({ matrixVersion: "matrix-v1", budgetUsd: 10 });
+
+    expect(res.status).toBe(201);
+    expect(mockAuthorizeProgramBudget).toHaveBeenCalledWith(
+      expect.objectContaining({ programId: PROGRAM_ID, budgetUsd: 10, actorId: ADMIN_ID }),
+    );
+  });
+
+  it("POST /programs inválido ⇒ 400 invalid_payload", async () => {
+    const res = await postProgram({ matrixVersion: "" });
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("invalid_payload");
+    expect(mockCreateProgram).not.toHaveBeenCalled();
+  });
+
+  it("GET /programs/[id] ⇒ 200 com o detalhe e saldo", async () => {
+    const res = await getProgram(PROGRAM_ID);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.remainingUsd).toBe(5);
+    expect(body.status).toBe("authorized");
+  });
+
+  it("GET /programs/[id] ausente ⇒ 404 program_not_found", async () => {
+    mockGetProgramDetail.mockResolvedValue(null);
+
+    const res = await getProgram(PROGRAM_ID);
+
+    expect(res.status).toBe(404);
+    expect((await res.json()).error).toBe("program_not_found");
+  });
+
+  it("PUT /programs/[id] autoriza orçamento e registra relatório/recomendação", async () => {
+    const res = await putProgram(PROGRAM_ID, {
+      status: "authorized",
+      budgetUsd: 10,
+      finalReportRef: "docs/lab/report.md",
+      finalReportHash: "a".repeat(64),
+      recommendation: { prompt: "offer", winner: "candidate" },
+    });
+
+    expect(res.status).toBe(200);
+    expect(mockAuthorizeProgramBudget).toHaveBeenCalledWith(
+      expect.objectContaining({ programId: PROGRAM_ID, budgetUsd: 10, actorId: ADMIN_ID }),
+    );
+    expect(mockUpdateProgram).toHaveBeenCalledWith(
+      PROGRAM_ID,
+      expect.objectContaining({
+        status: "authorized",
+        finalReportRef: "docs/lab/report.md",
+        finalReportHash: "a".repeat(64),
+      }),
+      expect.anything(),
+    );
+  });
+
+  it("PUT /programs/[id] inválido ⇒ 400 invalid_payload", async () => {
+    const res = await putProgram(PROGRAM_ID, { finalReportHash: "not-a-hash" });
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("invalid_payload");
+    expect(mockUpdateProgram).not.toHaveBeenCalled();
+  });
+
+  it("PUT /programs/[id] com budget_exceeded ⇒ 409", async () => {
+    mockAuthorizeProgramBudget.mockRejectedValue(new MockLabProgramError("budget_exceeded"));
+
+    const res = await putProgram(PROGRAM_ID, { budgetUsd: 10 });
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toBe("budget_exceeded");
+  });
+
+  it("PUT /programs/[id] de programa ausente ⇒ 404 program_not_found", async () => {
+    mockUpdateProgram.mockRejectedValue(new MockLabProgramError("program_not_found"));
+
+    const res = await putProgram(PROGRAM_ID, { status: "closed" });
+
+    expect(res.status).toBe(404);
+    expect((await res.json()).error).toBe("program_not_found");
   });
 });
 

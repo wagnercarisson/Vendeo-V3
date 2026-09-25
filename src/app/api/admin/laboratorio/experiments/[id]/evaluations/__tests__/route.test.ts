@@ -52,6 +52,7 @@ vi.mock("@/lib/lab/api/evaluation-service", () => {
 import { ForbiddenError } from "@/lib/auth/errors";
 import type { InvalidComparisonRunsCode } from "@/lib/lab/api/evaluation-service";
 import type { LabEnvironmentReason } from "@/lib/lab/environment-guard";
+import { VALID_RUBRIC } from "@/lib/lab/domain/__tests__/rubric-fixture";
 
 /**
  * F48.1 (D11/D13) — rota de registro da avaliação humana.
@@ -69,6 +70,8 @@ const VALID_BODY = {
   verdict: "candidate",
   blindOrder: "candidate_left",
   observation: "Candidata mais legível",
+  // Rubrica obrigatória (D7): fixture canônica — sem duplicar os nove critérios.
+  rubric: VALID_RUBRIC,
 };
 
 function postEvaluation(body: unknown) {
@@ -147,6 +150,18 @@ describe("POST /api/admin/laboratorio/experiments/[id]/evaluations", () => {
     const res = await postEvaluation({ ...VALID_BODY, candidateRunId: BASELINE_RUN_ID });
 
     expect(res.status).toBe(400);
+    expect(mockCreateEvaluation).not.toHaveBeenCalled();
+  });
+
+  it("rubrica ausente ⇒ 400 invalid_payload sem chamar createEvaluation", async () => {
+    const { rubric, ...withoutRubric } = VALID_BODY;
+    void rubric;
+
+    const res = await postEvaluation(withoutRubric);
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("invalid_payload");
     expect(mockCreateEvaluation).not.toHaveBeenCalled();
   });
 

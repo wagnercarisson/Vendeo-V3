@@ -171,9 +171,12 @@ describe("POST /api/admin/laboratorio/experiments/[id]/runs", () => {
 
   it.each([
     ["budget_exceeded", 409],
+    ["program_not_authorized", 409],
     ["run_already_active", 409],
     ["idempotency_conflict", 409],
     ["experiment_not_ready", 409],
+    ["intent_mismatch", 400],
+    ["unsupported_prompt_under_test", 400],
     ["missing_snapshot", 400],
     ["missing_operation_id", 400],
     ["variant_not_in_experiment", 400],

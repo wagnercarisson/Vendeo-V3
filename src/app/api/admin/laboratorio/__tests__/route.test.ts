@@ -251,6 +251,30 @@ describe("POST /api/admin/laboratorio/experiments", () => {
     expect((await res.json()).error).toBe("unsupported_changed_dimension");
   });
 
+  it("sem campaignIntent ⇒ 400 invalid_payload e nenhuma criação", async () => {
+    const { campaignIntent, ...withoutIntent } = VALID_PAYLOAD;
+    void campaignIntent;
+
+    const res = await postExperiment(withoutIntent);
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("invalid_payload");
+    expect(mockCreateExperiment).not.toHaveBeenCalled();
+  });
+
+  it("sem programId ⇒ 400 invalid_payload e nenhuma criação", async () => {
+    const { programId, ...withoutProgram } = VALID_PAYLOAD;
+    void programId;
+
+    const res = await postExperiment(withoutProgram);
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("invalid_payload");
+    expect(mockCreateExperiment).not.toHaveBeenCalled();
+  });
+
   it("alvo fora do catálogo ⇒ 400 model_target_not_in_catalog", async () => {
     mockCreateExperiment.mockRejectedValue(new ModelTargetNotInCatalogError(TARGET));
 

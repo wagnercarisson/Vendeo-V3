@@ -44,6 +44,7 @@ import {
 import type { CreateLabExperimentInput, LabExperimentParams } from "@/lib/lab/domain/schemas";
 import { LabPromptLoader } from "@/lib/lab/gateway/lab-prompt-loader";
 import { createNoopImageProvider } from "@/lib/lab/gateway/noop-image-provider";
+import { remainingUsd } from "@/lib/lab/domain/program-service";
 import { prepareLabRun, runReservedLabRun } from "@/lib/lab/run-service";
 import type { LabRunStatus } from "@/lib/lab/run-service";
 
@@ -795,6 +796,73 @@ describe("isolamento — nenhum secret em snapshot/calls/erro persistido", () =>
 
     // Nada do que foi persistido (calls/custo/erro) carrega a chave fake.
     expect(JSON.stringify(runUpdates)).not.toMatch(SECRET_RE);
+  });
+});
+
+// ─── (F48.2.1) Segurança financeira do programa ─────────────────────────────
+
+describe("isolamento — segurança financeira do programa", () => {
+  function prepareParams(client: SupabaseClient) {
+    return {
+      client,
+      experimentId: EXPERIMENT_ID,
+      variantId: VARIANT_ID,
+      scenarioVersionId: SCENARIO_VERSION_ID,
+      repetitionIndex: 1,
+      supersedesRunId: null,
+      operationId: OPERATION_ID,
+      actorId: ACTOR_ID,
+      programId: PROGRAM_ID,
+      scenario: { id: SCENARIO_VERSION_ID, version: 1, contentHash: SCENARIO_HASH },
+      experiment: { modelTarget: TARGET, params: LAB_PARAMS },
+      variant: { role: "candidate" as const, promptSnapshot: candidateSnapshot() },
+      variants: { baseline: baselineSnapshot(), candidate: candidateSnapshot() },
+    };
+  }
+
+  it("sem programa autorizado a reserva recusa antes de qualquer chamada paga", async () => {
+    const recording = createRecordingClient(seedCatalog());
+    const state: FakeInvokerState = { calls: 0 };
+    recording.state.rpcResults.lab_reserve_run = {
+      data: null,
+      error: { message: "program_not_authorized" },
+    };
+
+    await expect(
+      runOneIsolatedRun({ client: recording.client, state }),
+    ).rejects.toMatchObject({ code: "program_not_authorized" });
+
+    // Nenhuma chamada paga e nenhuma escrita produtiva.
+    expect(state.calls).toBe(0);
+    expect(recording.accessLog.filter((entry) => entry.includes("generation_events"))).toEqual([]);
+    expect(recording.accessLog.filter((entry) => entry.includes("ai_model_selection"))).toEqual([]);
+    expect(recording.accessLog.filter((entry) => entry.startsWith("write:ai_model_catalog"))).toEqual(
+      [],
+    );
+  });
+
+  it("reserva idempotente devolve o run existente sem nova chamada paga", async () => {
+    const recording = createRecordingClient(seedCatalog());
+    recording.state.rpcResults.lab_reserve_run = {
+      data: { run_id: RUN_ID, run_sequence: 1, idempotent: true },
+      error: null,
+    };
+
+    const prepared = await prepareLabRun(prepareParams(recording.client));
+
+    expect(prepared.idempotent).toBe(true);
+    expect(prepared.runId).toBe(RUN_ID);
+    // A reserva idempotente não abre nenhuma superfície fora da allowlist.
+    expect(recording.accessLog.filter((entry) => !ALLOWED_ENTRY_RE.test(entry))).toEqual([]);
+  });
+
+  it("o saldo do programa é budget_usd - consumido - reservado", () => {
+    expect(
+      remainingUsd({ budget_usd: 10, budget_consumed_usd: 3, budget_reserved_usd: 2 }),
+    ).toBe(5);
+    expect(
+      remainingUsd({ budget_usd: null, budget_consumed_usd: 0, budget_reserved_usd: 0 }),
+    ).toBeNull();
   });
 });
 

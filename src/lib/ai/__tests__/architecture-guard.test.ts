@@ -182,4 +182,54 @@ describe("architecture-guard — camada única de IA (F46-06)", () => {
     }
     expect(violations).toEqual([]);
   });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // F48.2.1 (D1/D11) — gates adicionais. Estritamente aditivos: nada acima é
+  // afrouxado. O laboratório não toca seleção/catálogo produtivos por escrita,
+  // não usa o Revisor (`campaign_image_review`) e não escreve em `prompts/`.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /** Escrita em `ai_model_catalog` (a leitura para allowlist é permitida). */
+  const CATALOG_WRITE_RE =
+    /from\(["'`]ai_model_catalog["'`]\)[\s\S]{0,200}?\.(insert|update|upsert|delete)\s*\(/;
+
+  /** Escrita em arquivo sob `prompts/` (nenhum arquivo do lab escreve o prompt oficial). */
+  const PROMPTS_WRITE_RE =
+    /(writeFileSync|writeFile|appendFileSync|createWriteStream)\s*\([\s\S]{0,160}?["'`][^"'`]*prompts\//;
+
+  it("o laboratório não referencia ai_model_selection nem campaign_image_review", () => {
+    const violations: string[] = [];
+    for (const file of labFiles) {
+      const code = readCode(file);
+      if (/ai_model_selection/.test(code)) violations.push(`${file} → ai_model_selection`);
+      if (/campaign_image_review/.test(code)) violations.push(`${file} → campaign_image_review`);
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it("o laboratório não escreve em ai_model_catalog", () => {
+    const violations: string[] = [];
+    for (const file of labFiles) {
+      if (CATALOG_WRITE_RE.test(readCode(file))) violations.push(file);
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it("o laboratório não escreve em prompts/", () => {
+    const violations: string[] = [];
+    for (const file of labFiles) {
+      if (PROMPTS_WRITE_RE.test(readCode(file))) violations.push(file);
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it("os três prompts do Diretor (offer/spotlight/exclusive) são aceitos", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), "src/lib/lab/domain/prompt-snapshot.ts"),
+      "utf8",
+    );
+    expect(source).toContain("campaign-image-director-offer");
+    expect(source).toContain("campaign-image-director-spotlight");
+    expect(source).toContain("campaign-image-director-exclusive");
+  });
 });
