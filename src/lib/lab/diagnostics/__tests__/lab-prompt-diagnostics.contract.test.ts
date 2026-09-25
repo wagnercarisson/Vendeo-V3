@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DIRECTOR_PROMPT_NAMES,
   INVALID_PROMPT_DIAGNOSTICS,
   InvalidPromptDiagnosticsError,
   PROMPT_DIAGNOSTICS_SCHEMA_VERSION,
@@ -13,7 +14,9 @@ import {
   INVALID_DIAGNOSTICS_PATH,
   canonicalizeDiagnostics,
   computeDiagnosticsContentHash,
+  loadCurrentDiagnostics,
   loadDiagnosticsFile,
+  verifyDiagnosticsHash,
 } from "../service";
 
 /**
@@ -166,5 +169,48 @@ describe("treatableItems — falha não tratável não gera candidata", () => {
     expect(treatable).toHaveLength(1);
     expect(treatable[0].failureCode).toBe("invented_information");
     expect(treatable.every((item) => item.promptTreatable)).toBe(true);
+  });
+});
+
+describe("diagnóstico v1 da F37 — fixture materializada", () => {
+  it("carrega a v1 e o contentHash gravado confere com o recalculado", async () => {
+    const current = await loadCurrentDiagnostics();
+
+    expect(current.diagnosticVersion).toBe(1);
+    expect(current.schemaVersion).toBe(PROMPT_DIAGNOSTICS_SCHEMA_VERSION);
+    expect(current.sourceRefs.length).toBeGreaterThan(0);
+    expect(() => verifyDiagnosticsHash(current)).not.toThrow();
+    expect(computeDiagnosticsContentHash(current)).toBe(current.contentHash);
+  });
+
+  it("cada item tem a cadeia completa", async () => {
+    const current = await loadCurrentDiagnostics();
+
+    for (const item of current.items) {
+      expect(item.failureCode.length).toBeGreaterThan(0);
+      expect(item.evidence.length).toBeGreaterThan(0);
+      expect(item.probableCause.length).toBeGreaterThan(0);
+      expect(typeof item.promptTreatable).toBe("boolean");
+      expect(item.minimalHypothesis.length).toBeGreaterThan(0);
+      expect(DIRECTOR_PROMPT_NAMES).toContain(item.promptName);
+    }
+  });
+
+  it("os promptName cobrem os três prompts do Diretor", async () => {
+    const current = await loadCurrentDiagnostics();
+    const used = new Set(current.items.map((item) => item.promptName));
+
+    for (const promptName of DIRECTOR_PROMPT_NAMES) {
+      expect(used.has(promptName)).toBe(true);
+    }
+  });
+
+  it("existe ao menos um item não tratável por prompt", async () => {
+    const current = await loadCurrentDiagnostics();
+    const nonTreatable = current.items.filter((item) => item.promptTreatable === false);
+
+    expect(nonTreatable.length).toBeGreaterThanOrEqual(1);
+    // A falha não tratável registra o encaminhamento e não gera candidata.
+    expect(treatableItems(current).length).toBeLessThan(current.items.length);
   });
 });

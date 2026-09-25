@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "diagnosticVersion": 1,
+  "generatedAt": "2026-09-25T00:00:00.000Z",
+  "sourceRefs": [
+    "docs/alinhamento-fase-37-revisao-aprovacao-arte.md",
+    "openspec/changes/archive/2026-09-02-fase-37-1-approval-gate-candidata-unica",
+    "openspec/specs/campaign-correction-reports/spec.md"
+  ],
+  "items": [
+    {
+      "failureCode": "invented_information",
+      "evidence": "Relatos de não conformidade da F37 (correção única) descrevem arte com dado comercial ausente no brief, como selo ou condição não informados.",
+      "probableCause": "O prompt do Diretor de oferta não proíbe explicitamente complementar o brief com informação inventada.",
+      "promptTreatable": true,
+      "minimalHypothesis": "Reforçar a proibição de inventar informação comercial ausente no brief, sem adicionar exemplos.",
+      "promptName": "campaign-image-director-offer"
+    },
+    {
+      "failureCode": "renderer_layout_limitation",
+      "evidence": "Relato de arte com sobreposição de elementos atribuída à composição do renderer, não à direção de arte.",
+      "probableCause": "Limite do renderer programático para acomodar a composição solicitada; o prompt não controla o layout final.",
+      "promptTreatable": false,
+      "minimalHypothesis": "Encaminhar para a mudança de renderer/composição; nenhuma candidata de prompt é criada para esta falha.",
+      "promptName": "campaign-image-director-offer"
+    },
+    {
+      "failureCode": "product_deformation",
+      "evidence": "Relatos da F37 apontam produto deformado ou distorcido em relação à fotografia de referência enviada.",
+      "probableCause": "O prompt não prioriza a fidelidade da forma do produto em relação à imagem de referência.",
+      "promptTreatable": true,
+      "minimalHypothesis": "Reforçar a fidelidade do produto à imagem de referência e a preservação da forma.",
+      "promptName": "campaign-image-director-spotlight"
+    },
+    {
+      "failureCode": "tone_commercial_mismatch",
+      "evidence": "Relatos da F37 descrevem tom comercial incompatível com a intenção de destaque (excesso de urgência de oferta).",
+      "probableCause": "O prompt de destaque não diferencia claramente o tom de uma campanha sem preço.",
+      "promptTreatable": true,
+      "minimalHypothesis": "Esclarecer o tom esperado para campanhas de destaque sem preço, sem adicionar exemplos de fixtures.",
+      "promptName": "campaign-image-director-spotlight"
+    },
+    {
+      "failureCode": "logo_identity_loss",
+      "evidence": "Relatos da F37 apontam perda ou descaracterização da identidade/logo da loja na arte final.",
+      "probableCause": "O prompt de exclusivo não prioriza a preservação da identidade quando há logo controlado.",
+      "promptTreatable": true,
+      "minimalHypothesis": "Reforçar a preservação da identidade da loja, incluindo o logo controlado.",
+      "promptName": "campaign-image-director-exclusive"
+    },
+    {
+      "failureCode": "renderer_text_overflow",
+      "evidence": "Relato de arte com texto obrigatório ilegível/transbordado, atribuído ao limite de composição do renderer.",
+      "probableCause": "O renderer não acomoda textos longos; o prompt não determina o encaixe final do texto.",
+      "promptTreatable": false,
+      "minimalHypothesis": "Encaminhar para a mudança de composição/renderer; nenhuma candidata de prompt é criada para esta falha.",
+      "promptName": "campaign-image-director-exclusive"
+    }
+  ],
+  "contentHash": "647d424a37b6f894430ac72831020911f750d5b4134be2a9e71692f37727fdab"
+}
