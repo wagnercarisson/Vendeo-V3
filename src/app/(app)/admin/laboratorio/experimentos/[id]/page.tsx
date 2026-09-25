@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { ErrorState } from "@/components/ui/error-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { getExperimentDetail } from "@/lib/lab/api/experiment-queries";
+import { formatUsdDisplay } from "@/lib/lab/display-format";
 import { getLabEnvironment } from "@/lib/lab/environment-guard";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
@@ -36,7 +37,7 @@ function num(value: unknown, fallback = 0): number {
 }
 
 function formatUsd(value: unknown): string {
-  return typeof value === "number" ? `US$ ${value.toFixed(4)}` : "—";
+  return typeof value === "number" ? formatUsdDisplay(value) : "—";
 }
 
 function formatDateTime(value: unknown): string {

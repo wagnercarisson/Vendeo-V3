@@ -187,8 +187,8 @@ describe("ComparisonView", () => {
     expect(latency).toHaveClass("font-mono");
     expect(screen.getByText("12.5 s")).toBeInTheDocument();
 
-    expect(screen.getByText("US$ 0.0412 · Custo completo")).toBeInTheDocument();
-    expect(screen.getByText("≈ US$ 0.0518 · Custo parcial")).toBeInTheDocument();
+    expect(screen.getByText("US$ 0.04 · Custo completo")).toBeInTheDocument();
+    expect(screen.getByText("≈ US$ 0.05 · Custo parcial")).toBeInTheDocument();
 
     expect(screen.getByText("200.0 KB")).toBeInTheDocument();
     expect(screen.getByText("100.0 KB")).toBeInTheDocument();

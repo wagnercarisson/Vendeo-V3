@@ -156,8 +156,8 @@ describe("RunExecutionPanel", () => {
     expect(String(mockFetch.mock.calls[0][0])).toContain(
       `/api/admin/laboratorio/experiments/${EXPERIMENT_ID}/estimate`,
     );
-    expect(within(estimateCard).getByText("US$ 0.0400")).toBeInTheDocument();
-    expect(within(estimateCard).getByText("US$ 0.1200")).toBeInTheDocument();
+    expect(within(estimateCard).getByText("US$ 0.04")).toBeInTheDocument();
+    expect(within(estimateCard).getByText("US$ 0.12")).toBeInTheDocument();
     expect(within(estimateCard).getByText("complete")).toBeInTheDocument();
 
     expect(runCalls()).toHaveLength(0);
@@ -202,15 +202,15 @@ describe("RunExecutionPanel", () => {
     await openConfirmation();
     const estimateCard = screen.getByTestId("lab-run-estimate");
     expect(
-      within(estimateCard).getByText("a partir de US$ 0.0400"),
+      within(estimateCard).getByText("a partir de US$ 0.04"),
     ).toBeInTheDocument();
-    expect(within(estimateCard).queryByText("US$ 0.0400")).toBeNull();
-    expect(within(estimateCard).getByText(/texto US\$ 0\.0100/)).toBeInTheDocument();
+    expect(within(estimateCard).queryByText("US$ 0.04")).toBeNull();
+    expect(within(estimateCard).getByText(/texto US\$ 0\.01/)).toBeInTheDocument();
     expect(within(estimateCard).getByText(/imagem ausente/)).toBeInTheDocument();
 
     const dialog = screen.getByRole("dialog");
     expect(
-      within(dialog).getByText(/a partir de US\$ 0\.0400/),
+      within(dialog).getByText(/a partir de US\$ 0\.04/),
     ).toBeInTheDocument();
   });
 

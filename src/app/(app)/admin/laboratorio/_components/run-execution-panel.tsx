@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { CostResolution } from "@/lib/ai-cost/types";
+import { formatUsdDisplay } from "@/lib/lab/display-format";
 
 import { ConfirmDialog } from "./confirm-dialog";
 import { LabSelect } from "./lab-select";
@@ -108,7 +109,7 @@ function describeRunError(code: unknown, status: number): string {
 }
 
 function formatUsd(value: number | null | undefined): string {
-  return typeof value === "number" ? `US$ ${value.toFixed(4)}` : "indisponível";
+  return typeof value === "number" ? formatUsdDisplay(value) : "indisponível";
 }
 
 /**
@@ -123,7 +124,7 @@ function formatCostByCoverage(
   if (coverage === "complete") return formatUsd(value);
   if (coverage === "partial") {
     return typeof value === "number"
-      ? `a partir de US$ ${value.toFixed(4)}`
+      ? `a partir de ${formatUsdDisplay(value)}`
       : "indisponível";
   }
   return "indisponível";
@@ -131,7 +132,7 @@ function formatCostByCoverage(
 
 /** Componente de pricing conhecido, ou "ausente" quando não informado. */
 function componentLabel(value: number | null | undefined): string {
-  return typeof value === "number" ? `US$ ${value.toFixed(4)}` : "ausente";
+  return typeof value === "number" ? formatUsdDisplay(value) : "ausente";
 }
 
 function disabledReason(
@@ -368,7 +369,7 @@ export function RunExecutionPanel({
               Saldo do programa:{" "}
               {programRemainingUsd === null
                 ? "sem orçamento autorizado"
-                : `US$ ${programRemainingUsd.toFixed(4)}`}
+                : formatUsdDisplay(programRemainingUsd)}
             </p>
           )}
         </div>

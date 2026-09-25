@@ -1,5 +1,6 @@
 import type { LabCostCoverage } from "@/lib/lab/domain/cost-coverage";
 import type { LabTechnicalValidation } from "@/lib/lab/technical-validation";
+import { formatUsdDisplay } from "@/lib/lab/display-format";
 
 /**
  * Formatação da **evidência objetiva** da comparação lado a lado (F48.1, D9/D13).
@@ -99,8 +100,8 @@ export function technicalAlertLabels(alerts: string[]): string[] {
  */
 export function formatUsd(value: number | null, coverage: LabCostCoverage): string {
   if (value === null || coverage === "missing") return "indisponível";
-  if (coverage === "partial") return `≈ US$ ${value.toFixed(4)}`;
-  return `US$ ${value.toFixed(4)}`;
+  if (coverage === "partial") return `≈ ${formatUsdDisplay(value)}`;
+  return formatUsdDisplay(value);
 }
 
 /** Latência em ms abaixo de 1s; acima disso, em segundos com 1 casa. */

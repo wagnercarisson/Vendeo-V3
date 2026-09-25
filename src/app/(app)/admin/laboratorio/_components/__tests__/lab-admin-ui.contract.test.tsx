@@ -472,11 +472,11 @@ describe("contrato de UI — confirmação com estimativa e progresso NDJSON", (
     await openConfirmation();
 
     const estimateCard = screen.getByTestId("lab-run-estimate");
-    expect(within(estimateCard).getByText("US$ 0.0400")).toBeInTheDocument();
-    expect(within(estimateCard).getByText("US$ 0.1200")).toBeInTheDocument();
+    expect(within(estimateCard).getByText("US$ 0.04")).toBeInTheDocument();
+    expect(within(estimateCard).getByText("US$ 0.12")).toBeInTheDocument();
     expect(within(estimateCard).getByText("complete")).toBeInTheDocument();
-    expect(within(estimateCard).getByText(/texto US\$ 0\.0100/)).toBeInTheDocument();
-    expect(within(estimateCard).getByText(/imagem US\$ 0\.0300/)).toBeInTheDocument();
+    expect(within(estimateCard).getByText(/texto US\$ 0\.01/)).toBeInTheDocument();
+    expect(within(estimateCard).getByText(/imagem US\$ 0\.03/)).toBeInTheDocument();
 
     expect(runCalls()).toHaveLength(0);
     expect(
@@ -548,8 +548,8 @@ describe("contrato de UI — comparação lado a lado e modo cego", () => {
     );
     expect(screen.getByText("8.4 s")).toBeInTheDocument();
     expect(screen.getByText("12.5 s")).toBeInTheDocument();
-    expect(screen.getByText("US$ 0.0412 · Custo completo")).toBeInTheDocument();
-    expect(screen.getByText("≈ US$ 0.0518 · Custo parcial")).toBeInTheDocument();
+    expect(screen.getByText("US$ 0.04 · Custo completo")).toBeInTheDocument();
+    expect(screen.getByText("≈ US$ 0.05 · Custo parcial")).toBeInTheDocument();
     expect(screen.getAllByText("1024 × 1024")).toHaveLength(2);
     // O formulário de avaliação é renderizado de verdade: o CTA do contrato existe.
     expect(screen.getByRole("button", { name: "Registrar avaliação" })).toBeInTheDocument();

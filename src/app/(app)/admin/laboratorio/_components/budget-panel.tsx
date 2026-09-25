@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { AlertTriangle, ShieldCheck } from "lucide-react";
 
+import { formatUsdDisplay } from "@/lib/lab/display-format";
+
 /**
  * Painel de orçamento do programa (F48.2.1, D9/D10).
  *
@@ -24,7 +26,7 @@ export interface BudgetPanelProps {
 }
 
 function formatUsd(value: number | null): string {
-  return typeof value === "number" ? `US$ ${value.toFixed(4)}` : "indisponível";
+  return typeof value === "number" ? formatUsdDisplay(value) : "indisponível";
 }
 
 export function BudgetPanel({

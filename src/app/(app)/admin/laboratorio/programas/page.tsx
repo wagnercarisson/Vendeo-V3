@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { listPrograms, type LabProgramSummary } from "@/lib/lab/api/program-queries";
+import { formatUsdDisplay } from "@/lib/lab/display-format";
 import { getLabEnvironment } from "@/lib/lab/environment-guard";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
@@ -27,7 +28,7 @@ const HEAD_CLASS =
   "px-3 py-2 font-heading text-xs uppercase tracking-wider text-text-muted";
 
 function formatUsd(value: number | null): string {
-  return typeof value === "number" ? `US$ ${value.toFixed(4)}` : "—";
+  return typeof value === "number" ? formatUsdDisplay(value) : "—";
 }
 
 function formatDateTime(value: string): string {
