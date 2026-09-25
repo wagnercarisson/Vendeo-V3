@@ -85,7 +85,7 @@ Plans:
 - [x] 48-2-1-01-PLAN.md — Dominio, migration local e programa (`lab_prompt_programs`, `campaign_intent`/`program_id`/`rubric`, orcamento atomico, `DIRECTOR_PROMPTS`).
 - [x] 48-2-1-02-PLAN.md — Diagnostico versionado da F37 e matriz de nove cenarios (inclui Checkpoint humano 1; aprovado com diagnosticVersion 3).
 - [x] 48-2-1-03-PLAN.md — Execucao do Diretor por tipo de campanha e harness (uma chamada `campaign_image`; settle/release de orcamento).
-- [ ] 48-2-1-04-PLAN.md — Avaliacao humana, rubrica de nove criterios e comparacao cega.
+- [x] 48-2-1-04-PLAN.md — Avaliacao humana, rubrica de nove criterios e comparacao cega.
 - [ ] 48-2-1-05-PLAN.md — API, UI, orcamento e isolamento (inclui Checkpoint humano 2).
 - [ ] 48-2-1-06-PLAN.md — Ciclo do Diretor `offer` (12 runs, avaliacao cega, regra de vitoria).
 - [ ] 48-2-1-07-PLAN.md — Ciclo do Diretor `spotlight` (12 runs, avaliacao cega, regra de vitoria).

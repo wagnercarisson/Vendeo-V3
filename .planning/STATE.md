@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: â€” LanÃ§amento Externo Controlado â—†
 status: planned
-last_updated: "2026-09-25T20:25:42.399Z"
+last_updated: "2026-09-25T20:43:00.844Z"
 progress:
   total_phases: 38
   completed_phases: 33
@@ -24,14 +24,14 @@ progress:
 ## Current Position
 
 Phase: 48.2.1 (otimizacao-prompts-diretor) — EXECUTING
-Plan: 4 of 9
+Plan: 5 of 9
 
 - F50 concluida; 17/17 planos e 17/17 summaries em 10 waves.
 - OpenSpec arquivado; nenhuma execucao ativa; beta fechado preservado.
 - Ultima atividade real: compactacao do estado no quick `260924-jv4` em 2026-09-24.
 - `155/167` e `93%` sao contadores globais (9 planos planejados em F48.2.1), nao pendencias da F50.
 
-- F48.2.1 (Otimizacao dos Prompts do Diretor) esta **em execucao**: 9 planos `48-2-1-01..09` (waves 1-9) em `.planning/phases/48.2.1-otimizacao-prompts-diretor/`; local-only, sem promocao. Planos `48-2-1-01` (migration aditiva + dominio + orcamento atomico), `48-2-1-02` (diagnostico versionado v1/v2/v3 + matriz de nove cenarios + Checkpoint 1 aprovado) e `48-2-1-03` (execucao do Diretor por intent + exatamente uma chamada `campaign_image` + settle/release do orcamento) concluidos; proximo `48-2-1-04`.
+- F48.2.1 (Otimizacao dos Prompts do Diretor) esta **em execucao**: 9 planos `48-2-1-01..09` (waves 1-9) em `.planning/phases/48.2.1-otimizacao-prompts-diretor/`; local-only, sem promocao. Planos `48-2-1-01` (migration aditiva + dominio + orcamento atomico), `48-2-1-02` (diagnostico versionado v1/v2/v3 + matriz de nove cenarios + Checkpoint 1 aprovado), `48-2-1-03` (execucao do Diretor por intent + exatamente uma chamada `campaign_image` + settle/release do orcamento) e `48-2-1-04` (avaliacao humana: rubrica de nove criterios obrigatoria, append-only, comparacao cega sem scoring) concluidos; proximo `48-2-1-05`.
 
 ## Recently Completed
 
@@ -45,7 +45,7 @@ Plan: 4 of 9
 
 | Phase | Plans | Duration | Tests |
 |---|---:|---:|---|
-| F48.2.1 | 3/9 | 52 min | 660 lab verdes |
+| F48.2.1 | 4/9 | 66 min | 797 lab verdes |
 | F50 | 17/17 | N/A | N/A |
 | F49 | 15/15 | N/A | N/A |
 | F48.1 | 14/14 | N/A | N/A |
@@ -64,6 +64,7 @@ Plan: 4 of 9
 - F48.2.1: prompt do Diretor resolvido server-side por `DIRECTOR_PROMPTS[campaign_intent]`; intents mistos/ausentes recusados com `intent_mismatch` (HTTP 400) antes de qualquer chamada paga; variante fora do intent recusada com `unsupported_prompt_under_test`.
 - F48.2.1: exatamente uma chamada `campaign_image` por run (sem fallback e sem Revisor); liquidacao do orcamento apos `finalizeLabRun` — settle consome o efetivo/estimado, release libera sem consumir quando a falha precede a chamada paga (idempotente e best-effort).
 - Historico completo esta em `STATE-ARCHIVE.md`, roadmaps e artefatos das fases.
+- [Phase 48.2.1]: F48.2.1: rubrica humana de nove criterios (estado + observacao) obrigatoria em avaliacoes novas, persistida append-only em lab_human_evaluations.rubric; sem scoring automatico — D7; schema tipado em rubric.ts substitui o rubric generico do plano 01
 
 ### Pending Todos
 
@@ -93,7 +94,7 @@ Plan: 4 of 9
 
 ## Session Continuity
 
-- Ultima sessao: 2026-09-25, execucao do plano 48-2-1-03.
-- Ultimo trabalho concluido: `48-2-1-03` (execucao do Diretor por intent + exatamente uma chamada `campaign_image` + settle/release do orcamento); 4 commits atomicos (`c00be91d`, `5d1992c2`, `60aeb738`, `23f6f8b0`).
-- Proximo passo: executar o plano `48-2-1-04` da F48.2.1 (avaliacao humana, rubrica e cega); F50.1 permanece futura aguardando a constituicao da PJ.
+- Ultima sessao: 2026-09-25, execucao do plano 48-2-1-04.
+- Ultimo trabalho concluido: `48-2-1-04` (avaliacao humana: rubrica de nove criterios obrigatoria em avaliacoes novas, persistida append-only, comparacao cega e formulario que reinicia com o par); 4 commits atomicos (`2422c030`, `c4fcd11f`, `2a075d88`, `618922d4`).
+- Proximo passo: executar o plano `48-2-1-05` da F48.2.1 (API, UI, orcamento e isolamento + Checkpoint 2); F50.1 permanece futura aguardando a constituicao da PJ.
 - Resume file: `None`.
