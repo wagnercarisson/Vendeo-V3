@@ -11,6 +11,12 @@ import {
   parseCreateLabExperimentInput,
 } from "../domain/schemas";
 import type { CampaignIntent, CreateLabExperimentInput } from "../domain/schemas";
+import {
+  computeExperimentOutcome,
+  computeScenarioOutcome,
+  isScenarioCritical,
+  pickSimplerVariant,
+} from "../domain/victory-rule";
 
 /**
  * Contrato de otimização dos prompts do Diretor (F48.2.1, D4/D6/D9).
@@ -257,5 +263,107 @@ describe("remainingUsd — saldo restante do programa", () => {
     expect(
       remainingUsd({ budget_usd: 5, budget_consumed_usd: 4, budget_reserved_usd: 2 }),
     ).toBe(-1);
+  });
+});
+
+// ─── (7) Regra de vitória determinística (D8) ────────────────────────────────
+
+describe("computeScenarioOutcome — moda das repetições", () => {
+  it("devolve a moda quando há maioria simples", () => {
+    expect(computeScenarioOutcome(["candidate", "candidate"])).toBe("candidate");
+    expect(computeScenarioOutcome(["baseline", "baseline"])).toBe("baseline");
+    expect(computeScenarioOutcome(["tie", "candidate", "candidate"])).toBe("candidate");
+  });
+
+  it("devolve inconclusive quando não há maioria estrita", () => {
+    expect(computeScenarioOutcome(["candidate", "tie"])).toBe("inconclusive");
+    expect(computeScenarioOutcome(["baseline", "candidate"])).toBe("inconclusive");
+    expect(computeScenarioOutcome([])).toBe("inconclusive");
+  });
+
+  it("devolve none quando a própria moda é none", () => {
+    expect(computeScenarioOutcome(["none", "none"])).toBe("none");
+    expect(computeScenarioOutcome(["none", "candidate", "none"])).toBe("none");
+  });
+});
+
+describe("isScenarioCritical — qualquer none torna o item crítico", () => {
+  it("marca crítico quando qualquer repetição é none", () => {
+    expect(isScenarioCritical(["candidate", "none"])).toBe(true);
+    expect(isScenarioCritical(["none"])).toBe(true);
+  });
+
+  it("não marca crítico sem nenhum none", () => {
+    expect(isScenarioCritical(["candidate", "candidate"])).toBe(false);
+    expect(isScenarioCritical(["tie", "baseline"])).toBe(false);
+    expect(isScenarioCritical([])).toBe(false);
+  });
+});
+
+describe("computeExperimentOutcome — recomendação sem regressão", () => {
+  it("recomenda quando todos os cenários terminam em candidate/tie com ao menos um candidate", () => {
+    expect(computeExperimentOutcome(["candidate", "tie", "candidate"])).toBe("recommended");
+    expect(computeExperimentOutcome(["candidate", "candidate"])).toBe("recommended");
+  });
+
+  it("não recomenda quando só há tie (sem nenhum candidate)", () => {
+    expect(computeExperimentOutcome(["tie", "tie"])).toBe("not_recommended");
+  });
+
+  it("não recomenda com regressão baseline/none", () => {
+    expect(computeExperimentOutcome(["candidate", "baseline"])).toBe("not_recommended");
+    expect(computeExperimentOutcome(["candidate", "none"])).toBe("not_recommended");
+  });
+
+  it("não recomenda com cenário inconclusive", () => {
+    expect(computeExperimentOutcome(["candidate", "inconclusive"])).toBe("not_recommended");
+  });
+
+  it("devolve inconclusive quando nenhum cenário tem maioria e não há regressão", () => {
+    expect(computeExperimentOutcome(["inconclusive", "inconclusive"])).toBe("inconclusive");
+    expect(computeExperimentOutcome([])).toBe("inconclusive");
+  });
+});
+
+describe("pickSimplerVariant — desempate pela variante mais curta", () => {
+  it("vence a candidata quando ela é mais curta em empate de qualidade", () => {
+    const pick = pickSimplerVariant({
+      baselineSize: 2400,
+      candidateSize: 2000,
+      qualityEqual: true,
+    });
+    expect(pick.winner).toBe("candidate");
+    expect(pick.sizeDelta).toBe(-400);
+    expect(pick.justification).toMatch(/candidata/);
+  });
+
+  it("vence o baseline quando ele é mais curto em empate de qualidade", () => {
+    const pick = pickSimplerVariant({
+      baselineSize: 1800,
+      candidateSize: 2100,
+      qualityEqual: true,
+    });
+    expect(pick.winner).toBe("baseline");
+    expect(pick.sizeDelta).toBe(300);
+  });
+
+  it("mantém o baseline quando os tamanhos são iguais", () => {
+    const pick = pickSimplerVariant({
+      baselineSize: 2000,
+      candidateSize: 2000,
+      qualityEqual: true,
+    });
+    expect(pick.winner).toBe("baseline");
+    expect(pick.sizeDelta).toBe(0);
+  });
+
+  it("não desempata quando a qualidade difere", () => {
+    const pick = pickSimplerVariant({
+      baselineSize: 2400,
+      candidateSize: 1200,
+      qualityEqual: false,
+    });
+    expect(pick.winner).toBeNull();
+    expect(pick.sizeDelta).toBe(-1200);
   });
 });
