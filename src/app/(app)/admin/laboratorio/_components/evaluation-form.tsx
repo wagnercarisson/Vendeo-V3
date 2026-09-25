@@ -6,6 +6,8 @@ import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 
+import { isRubricComplete } from "@/lib/lab/domain/rubric";
+
 import {
   formatDateTime,
   shortId,
@@ -14,6 +16,7 @@ import {
   type LabBlindOrder,
   type LabEvaluationVerdict,
 } from "./comparison-format";
+import { RubricForm, type RubricDraft } from "./rubric-form";
 
 /**
  * Registro da avaliação humana da comparação (F48.1, D13/T-48-1-77).
@@ -44,6 +47,12 @@ export interface EvaluationFormProps {
   blindOrder: LabBlindOrder | null;
   latestEvaluation: ComparisonEvaluation | null;
   history: ComparisonEvaluation[];
+  /**
+   * Contexto da rubrica obrigatória (D7). Quando `true` (default), o CTA só é
+   * habilitado com os nove critérios preenchidos — o schema do domínio exige a
+   * rubrica em toda avaliação nova.
+   */
+  rubricRequired?: boolean;
 }
 
 const VERDICT_OPTIONS: LabEvaluationVerdict[] = ["baseline", "candidate", "tie", "none"];
@@ -138,17 +147,22 @@ export function EvaluationForm({
   blindOrder,
   latestEvaluation,
   history,
+  rubricRequired = true,
 }: EvaluationFormProps) {
   const router = useRouter();
   const [verdict, setVerdict] = useState<LabEvaluationVerdict | null>(null);
   const [observation, setObservation] = useState("");
+  const [rubric, setRubric] = useState<RubricDraft>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
 
+  const rubricComplete = isRubricComplete(rubric);
+  const canSubmit = Boolean(verdict) && (!rubricRequired || rubricComplete);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!verdict) return;
+    if (!canSubmit || !verdict) return;
 
     setSubmitting(true);
     setSubmitError(null);
@@ -169,6 +183,7 @@ export function EvaluationForm({
             // cega; `undefined` é omitido pelo JSON.stringify.
             blindOrder: blindOrder ?? undefined,
             observation: observation.trim() || undefined,
+            rubric,
           }),
         },
       );
@@ -184,6 +199,7 @@ export function EvaluationForm({
       setConfirmation("Avaliação registrada.");
       setVerdict(null);
       setObservation("");
+      setRubric({});
       setSubmitting(false);
       router.refresh();
     } catch {
@@ -247,6 +263,8 @@ export function EvaluationForm({
           />
         </div>
 
+        <RubricForm value={rubric} onChange={setRubric} />
+
         {blindOrder && (
           <p className="font-mono text-xs text-text-muted" data-testid="evaluation-blind-order">
             Ordem cega apresentada: {BLIND_ORDER_LABELS[blindOrder]}
@@ -274,7 +292,7 @@ export function EvaluationForm({
         )}
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={!verdict} loading={submitting}>
+          <Button type="submit" disabled={!canSubmit} loading={submitting}>
             <ClipboardCheck className="h-4 w-4" aria-hidden="true" />
             Registrar avaliação
           </Button>

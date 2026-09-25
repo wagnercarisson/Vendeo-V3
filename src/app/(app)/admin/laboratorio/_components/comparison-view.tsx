@@ -410,10 +410,11 @@ export function ComparisonView({
             ))}
           </div>
 
-          {/* A `key` reinicia o formulário quando o par comparado muda: a decisão
-              registrada é sempre a do par exibido (append-only, nunca migra). */}
+          {/* A `key` reinicia o formulário (verdict, rubrica e observação) quando o
+              par comparado (cenário/repetição) muda: a decisão registrada é sempre
+              a do par exibido (append-only, nunca migra). */}
           <EvaluationForm
-            key={`${scenarioVersionId}:${baselineRun.id}:${candidateRun.id}`}
+            key={`${scenarioVersionId}:${effectiveRepetition}:${baselineRun.id}:${candidateRun.id}`}
             experimentId={experimentId}
             scenarioVersionId={scenarioVersionId}
             baselineRunId={baselineRun.id}
@@ -421,6 +422,7 @@ export function ComparisonView({
             blindOrder={effectiveBlindOrder}
             latestEvaluation={latestEvaluation}
             history={history}
+            rubricRequired
           />
         </>
       ) : (

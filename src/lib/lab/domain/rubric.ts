@@ -103,16 +103,20 @@ export type LabRubric = z.infer<typeof LabRubricSchema>;
 
 /**
  * `true` somente quando os nove critérios estão presentes e cada um traz um
- * estado válido. Não calcula nenhum valor numérico.
+ * estado válido. Aceita rascunhos (estado ainda ausente) para uso no formulário;
+ * não calcula nenhum valor numérico.
  */
 export function isRubricComplete(
-  rubric: Partial<LabRubric> | null | undefined,
-): rubric is LabRubric {
+  rubric:
+    | Partial<Record<RubricCriterion, { state?: RubricState | undefined }>>
+    | null
+    | undefined,
+): boolean {
   if (!rubric) return false;
   return RUBRIC_CRITERIA.every((criterion) => {
     const entry = rubric[criterion];
     if (!entry) return false;
-    return (RUBRIC_STATES as readonly string[]).includes(entry.state);
+    return (RUBRIC_STATES as readonly string[]).includes(entry.state ?? "");
   });
 }
 

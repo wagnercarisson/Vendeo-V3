@@ -38,6 +38,12 @@ vi.mock("next/navigation", () => ({
 
 import LaboratorioPage from "@/app/(app)/admin/laboratorio/page";
 import type { LabTechnicalAlert, LabTechnicalValidation } from "@/lib/lab/technical-validation";
+import {
+  RUBRIC_CRITERIA,
+  RUBRIC_CRITERION_LABELS,
+  RUBRIC_STATE_LABELS,
+} from "@/lib/lab/domain/rubric";
+import { VALID_RUBRIC } from "@/lib/lab/domain/__tests__/rubric-fixture";
 import { ComparisonView } from "../comparison-view";
 import type { ComparisonEvaluation, ComparisonRun } from "../comparison-format";
 import { EvaluationForm } from "../evaluation-form";
@@ -260,6 +266,17 @@ beforeEach(() => {
 });
 
 afterEach(() => vi.unstubAllGlobals());
+
+/**
+ * A instrução da rubrica declara explicitamente que não há nota automática; ela
+ * é removida antes de checar a ausência de qualquer julgamento automático.
+ */
+function stripRubricInstruction(text: string): string {
+  return text.replace(
+    "Avalie cada critério do par comparado. Não há nota automática.",
+    "",
+  );
+}
 
 // ─── 1. Página inicial ───────────────────────────────────────────────────────
 
@@ -623,6 +640,14 @@ describe("contrato de UI — avaliação humana e reavaliação", () => {
     );
   }
 
+  function fillRubric() {
+    for (const criterion of RUBRIC_CRITERIA) {
+      const state = VALID_RUBRIC[criterion].state;
+      const group = screen.getByRole("group", { name: RUBRIC_CRITERION_LABELS[criterion] });
+      fireEvent.click(within(group).getByRole("radio", { name: RUBRIC_STATE_LABELS[state] }));
+    }
+  }
+
   it("oferece os 4 verdicts e desabilita o CTA sem verdict", () => {
     renderForm();
 
@@ -638,6 +663,7 @@ describe("contrato de UI — avaliação humana e reavaliação", () => {
     renderForm({ blindOrder: "candidate_left" });
 
     fireEvent.click(screen.getByRole("radio", { name: "Candidata melhor" }));
+    fillRubric();
     fireEvent.change(screen.getByLabelText("Observação"), {
       target: { value: "A candidata preservou melhor o preço" },
     });
@@ -653,6 +679,7 @@ describe("contrato de UI — avaliação humana e reavaliação", () => {
       verdict: "candidate",
       blindOrder: "candidate_left",
       observation: "A candidata preservou melhor o preço",
+      rubric: VALID_RUBRIC,
     });
     expect(await screen.findByText("Avaliação registrada.")).toBeInTheDocument();
   });
@@ -662,6 +689,7 @@ describe("contrato de UI — avaliação humana e reavaliação", () => {
     const { rerender } = renderForm({ latestEvaluation: EVAL_1 });
 
     fireEvent.click(screen.getByRole("radio", { name: "Empate" }));
+    fillRubric();
     submitForm();
     await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
 
@@ -699,7 +727,9 @@ describe("contrato de UI — nenhuma nota automática de qualidade", () => {
         evaluations={[EVAL_2]}
       />,
     );
-    expect(comparison.container.textContent ?? "").not.toMatch(/score|rating|publicável|ranking|percentual|\bnota\b/i);
+    expect(stripRubricInstruction(comparison.container.textContent ?? "")).not.toMatch(
+      /score|rating|publicável|ranking|percentual|\bnota\b/i,
+    );
     comparison.unmount();
 
     const evaluation = render(
@@ -713,7 +743,9 @@ describe("contrato de UI — nenhuma nota automática de qualidade", () => {
         history={[EVAL_1]}
       />,
     );
-    expect(evaluation.container.textContent ?? "").not.toMatch(/score|rating|publicável|ranking|percentual|\bnota\b/i);
+    expect(stripRubricInstruction(evaluation.container.textContent ?? "")).not.toMatch(
+      /score|rating|publicável|ranking|percentual|\bnota\b/i,
+    );
   });
 });
 

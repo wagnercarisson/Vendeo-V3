@@ -26,12 +26,14 @@ vi.mock("../evaluation-form", () => ({
     baselineRunId: string;
     candidateRunId: string;
     blindOrder: string | null;
+    rubricRequired?: boolean;
   }) => (
     <div
       data-testid="evaluation-form-probe"
       data-blind-order={props.blindOrder ?? undefined}
       data-baseline-run-id={props.baselineRunId}
       data-candidate-run-id={props.candidateRunId}
+      data-rubric-required={props.rubricRequired ? "true" : "false"}
     />
   ),
 }));
@@ -264,6 +266,15 @@ describe("ComparisonView", () => {
     fireEvent.click(screen.getByRole("button", { name: "Revelar" }));
     expect(screen.getByTestId("evaluation-form-probe")).not.toHaveAttribute(
       "data-blind-order",
+    );
+  });
+
+  it("propaga o contexto de rubrica obrigatória ao formulário de avaliação", () => {
+    renderView();
+
+    expect(screen.getByTestId("evaluation-form-probe")).toHaveAttribute(
+      "data-rubric-required",
+      "true",
     );
   });
 

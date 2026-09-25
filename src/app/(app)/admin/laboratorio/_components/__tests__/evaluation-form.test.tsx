@@ -1,7 +1,14 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import {
+  RUBRIC_CRITERIA,
+  RUBRIC_CRITERION_LABELS,
+  RUBRIC_STATE_LABELS,
+} from "@/lib/lab/domain/rubric";
+import { VALID_RUBRIC } from "@/lib/lab/domain/__tests__/rubric-fixture";
 
 import type { ComparisonEvaluation } from "../comparison-format";
 import { EvaluationForm } from "../evaluation-form";
@@ -84,6 +91,15 @@ function submitForm() {
   fireEvent.submit(screen.getByRole("button", { name: "Registrar avaliação" }).closest("form")!);
 }
 
+/** Preenche os nove critérios da rubrica com os estados da fixture canônica. */
+function fillRubric() {
+  for (const criterion of RUBRIC_CRITERIA) {
+    const state = VALID_RUBRIC[criterion].state;
+    const group = screen.getByRole("group", { name: RUBRIC_CRITERION_LABELS[criterion] });
+    fireEvent.click(within(group).getByRole("radio", { name: RUBRIC_STATE_LABELS[state] }));
+  }
+}
+
 describe("EvaluationForm", () => {
   it("oferece os 4 verdicts com os rótulos exatos e sem pré-seleção", () => {
     renderForm();
@@ -112,6 +128,9 @@ describe("EvaluationForm", () => {
     expect(submit).toBeDisabled();
 
     fireEvent.click(screen.getByRole("radio", { name: "Candidata melhor" }));
+    // A rubrica é obrigatória: o CTA continua desabilitado até os nove critérios.
+    expect(submit).toBeDisabled();
+    fillRubric();
     expect(submit).toBeEnabled();
 
     fireEvent.change(screen.getByLabelText("Observação"), {
@@ -134,10 +153,21 @@ describe("EvaluationForm", () => {
       verdict: "candidate",
       blindOrder: "candidate_left",
       observation: "A candidata preservou melhor o preço",
+      rubric: VALID_RUBRIC,
     });
 
     expect(await screen.findByText("Avaliação registrada.")).toBeInTheDocument();
     await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
+  });
+
+  it("mantém o CTA desabilitado e não envia enquanto a rubrica não estiver completa", () => {
+    renderForm();
+
+    fireEvent.click(screen.getByRole("radio", { name: "Empate" }));
+    expect(screen.getByRole("button", { name: "Registrar avaliação" })).toBeDisabled();
+
+    submitForm();
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it("exibe a avaliação mais recente com avaliador, timestamp e runs comparados", () => {
@@ -165,6 +195,7 @@ describe("EvaluationForm", () => {
     expect(screen.getAllByTestId("evaluation-entry")).toHaveLength(1);
 
     fireEvent.click(screen.getByRole("radio", { name: "Empate" }));
+    fillRubric();
     fireEvent.change(screen.getByLabelText("Observação"), {
       target: { value: "Segunda observação registrada" },
     });
@@ -208,6 +239,7 @@ describe("EvaluationForm", () => {
     renderForm();
 
     fireEvent.click(screen.getByRole("radio", { name: "Empate" }));
+    fillRubric();
     submitForm();
 
     expect(await screen.findByRole("alert")).toHaveTextContent("não formam um par válido");
@@ -224,6 +256,7 @@ describe("EvaluationForm", () => {
     renderForm();
 
     fireEvent.click(screen.getByRole("radio", { name: "Nenhuma adequada" }));
+    fillRubric();
     submitForm();
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -238,9 +271,13 @@ describe("EvaluationForm", () => {
       blindOrder: "candidate_left",
     });
 
-    expect(container.textContent ?? "").not.toMatch(
-      /nota|score|pontua|%|publicável|ranking/i,
+    // A instrução da rubrica declara explicitamente que não há nota automática;
+    // ela é removida antes de checar a ausência de qualquer julgamento automático.
+    const text = (container.textContent ?? "").replace(
+      "Avalie cada critério do par comparado. Não há nota automática.",
+      "",
     );
+    expect(text).not.toMatch(/nota|score|pontua|%|publicável|ranking/i);
   });
 
   it("não registra ordem cega quando a escolha não foi efetivamente cega", async () => {
@@ -255,6 +292,7 @@ describe("EvaluationForm", () => {
     expect(screen.queryByTestId("evaluation-blind-order")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("radio", { name: "Empate" }));
+    fillRubric();
     submitForm();
 
     await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
