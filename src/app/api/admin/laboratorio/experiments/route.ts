@@ -70,6 +70,11 @@ export const POST = apiHandler(async (request: Request) => {
     if (error instanceof UnsupportedChangedDimensionError) {
       return NextResponse.json({ error: "unsupported_changed_dimension" }, { status: 400 });
     }
+    // F48.2.1 (D4/T-48-2-1-28): o prompt sob teste é derivado do intent — um
+    // nome divergente é recusado com 400 antes de qualquer escrita.
+    if (error instanceof Error && error.message.includes("unsupported_prompt_under_test")) {
+      return NextResponse.json({ error: "unsupported_prompt_under_test" }, { status: 400 });
+    }
     return NextResponse.json(
       { error: "invalid_payload", details: error instanceof Error ? error.message : "invalid" },
       { status: 400 },
@@ -96,6 +101,15 @@ export const POST = apiHandler(async (request: Request) => {
   } catch (error) {
     if (error instanceof ModelTargetNotInCatalogError) {
       return NextResponse.json({ error: "model_target_not_in_catalog" }, { status: 400 });
+    }
+    // F48.2.1 (D4): intents mistos entre cenários são recusados com 400.
+    if (error instanceof Error && error.message.startsWith("intent_mismatch")) {
+      return NextResponse.json({ error: "intent_mismatch" }, { status: 400 });
+    }
+    // F48.2.1 (D5/T-48-2-1-27): criar/vincular sem programa autorizado é
+    // recusado com 409 (conflito de estado), sem chamada paga.
+    if (error instanceof Error && error.message.includes("program_not_authorized")) {
+      return NextResponse.json({ error: "program_not_authorized" }, { status: 409 });
     }
     throw error;
   }

@@ -108,6 +108,7 @@ vi.mock("@/lib/lab/domain/experiment-service", () => ({
 
 import { ForbiddenError } from "@/lib/auth/errors";
 import type { LabEnvironmentReason } from "@/lib/lab/environment-guard";
+import { VALID_RUBRIC } from "@/lib/lab/domain/__tests__/rubric-fixture";
 
 /**
  * F48.1 — suíte de contrato nº 2 (48-1-12, task 12.4): contrato HTTP da API
@@ -162,6 +163,8 @@ const VALID_EVALUATION_BODY = {
   verdict: "candidate",
   blindOrder: "baseline_left",
   observation: "A candidata comunica melhor o preço",
+  // Rubrica obrigatória (D7): fixture canônica — sem duplicar os nove critérios.
+  rubric: VALID_RUBRIC,
 };
 
 const PREPARED = {
@@ -396,6 +399,38 @@ describe("contrato da API — 400 payload inválido", () => {
     expect((await res.json()).error).toBe("unsupported_changed_dimension");
     expect(mockCreateExperiment).not.toHaveBeenCalled();
   });
+
+  it("POST /experiments com prompt fora do intent ⇒ 400 unsupported_prompt_under_test", async () => {
+    const res = await postExperiment({
+      ...VALID_EXPERIMENT,
+      candidate: {
+        promptName: "campaign-image-director-spotlight",
+        promptContent: "Prompt candidata",
+      },
+    });
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("unsupported_prompt_under_test");
+    expect(mockCreateExperiment).not.toHaveBeenCalled();
+  });
+
+  it("POST /experiments com intents mistos ⇒ 400 intent_mismatch", async () => {
+    mockCreateExperiment.mockRejectedValue(new Error("intent_mismatch:scenario-1"));
+
+    const res = await postExperiment(VALID_EXPERIMENT);
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("intent_mismatch");
+  });
+
+  it("POST /experiments sem programa autorizado ⇒ 409 program_not_authorized", async () => {
+    mockCreateExperiment.mockRejectedValue(new Error("program_not_authorized"));
+
+    const res = await postExperiment(VALID_EXPERIMENT);
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toBe("program_not_authorized");
+  });
 });
 
 // ─── 4. Criação e leitura ────────────────────────────────────────────────────
@@ -538,10 +573,12 @@ describe("contrato da API — 422 sem confirmação explícita", () => {
 describe("contrato da API — mapeamento dos erros de reserva", () => {
   it.each([
     ["budget_exceeded", 409],
+    ["program_not_authorized", 409],
     ["run_already_active", 409],
     ["idempotency_conflict", 409],
     ["experiment_not_ready", 409],
     ["scenario_hash_mismatch", 409],
+    ["intent_mismatch", 400],
     ["missing_snapshot", 400],
     ["missing_operation_id", 400],
     ["variant_not_in_experiment", 400],

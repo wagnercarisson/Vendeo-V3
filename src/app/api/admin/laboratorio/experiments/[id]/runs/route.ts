@@ -24,6 +24,9 @@ const CONFLICT_CODES: readonly string[] = [
   "experiment_not_ready",
   // Integridade experimental: a fixture no disco divergiu da versão registrada.
   "scenario_hash_mismatch",
+  // F48.2.1 (D5/T-48-2-1-27): sem programa com orçamento autorizado, a execução
+  // é recusada **antes** de abrir o stream — nenhuma chamada paga é iniciada.
+  "program_not_authorized",
 ];
 
 /** Recusas de payload/relações — a requisição é inválida para o experimento. */

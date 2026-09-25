@@ -32,6 +32,7 @@ const EXPERIMENT_ID = "55555555-5555-4555-8555-555555555555";
 const RUN_ID = "66666666-6666-4666-8666-666666666666";
 const BASELINE_VARIANT = "77777777-7777-4777-8777-777777777777";
 const CANDIDATE_VARIANT = "88888888-8888-4888-8888-888888888888";
+const PROGRAM_ID = "99999999-9999-4999-8999-999999999999";
 
 const BASE64_MARKER = "AAAABBBBCCCC";
 
@@ -264,7 +265,17 @@ describe("getExperimentDetail", () => {
             status: "running",
             repetitions: 2,
             max_runs: 6,
+            campaign_intent: "offer",
+            program_id: PROGRAM_ID,
             updated_at: "2026-09-16T00:00:02Z",
+          },
+        ],
+        lab_prompt_programs: [
+          {
+            id: PROGRAM_ID,
+            budget_usd: 10,
+            budget_reserved_usd: 3,
+            budget_consumed_usd: 2,
           },
         ],
         lab_experiment_variants: [
@@ -294,7 +305,17 @@ describe("getExperimentDetail", () => {
     expect(fake.operations[0]).toEqual({ table: "lab_experiments", op: "select" });
 
     expect(detail).not.toBeNull();
-    expect(detail?.budget).toEqual({ maxRuns: 6, used: 2, remaining: 4 });
+    // Saldo do programa = budget_usd − consumed − reserved = 10 − 2 − 3 = 5.
+    expect(detail?.budget).toEqual({
+      maxRuns: 6,
+      used: 2,
+      remaining: 4,
+      programRemainingUsd: 5,
+    });
+    expect(detail?.experiment).toMatchObject({
+      campaign_intent: "offer",
+      program_id: PROGRAM_ID,
+    });
     expect(detail?.scenarios[0]).toMatchObject({
       scenarioVersionId: VERSION_V2,
       slug: "produto-oferta-preco",

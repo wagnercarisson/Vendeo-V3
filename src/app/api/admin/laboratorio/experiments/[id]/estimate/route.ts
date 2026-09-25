@@ -41,6 +41,7 @@ export const GET = apiHandler(
         remainingRuns: estimate.remainingRuns,
         totalEstimatedUsd: estimate.totalEstimatedUsd,
         coverage: estimate.coverage,
+        programRemainingUsd: estimate.programRemainingUsd,
       });
     } catch (error) {
       if (error instanceof Error && error.message === LAB_EXPERIMENT_NOT_FOUND) {

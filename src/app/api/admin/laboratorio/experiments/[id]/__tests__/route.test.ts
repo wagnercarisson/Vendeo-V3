@@ -64,12 +64,18 @@ import type { LabEnvironmentReason } from "@/lib/lab/environment-guard";
 const EXPERIMENT_ID = "55555555-5555-4555-8555-555555555555";
 
 const DETAIL_FIXTURE = {
-  experiment: { id: EXPERIMENT_ID, name: "Exp", status: "running" },
+  experiment: {
+    id: EXPERIMENT_ID,
+    name: "Exp",
+    status: "running",
+    campaign_intent: "offer",
+    program_id: "99999999-9999-4999-8999-999999999999",
+  },
   variants: [{ id: "variant-1", role: "baseline" }],
   scenarios: [],
   runs: [],
   evaluations: [],
-  budget: { maxRuns: 6, used: 2, remaining: 4 },
+  budget: { maxRuns: 6, used: 2, remaining: 4, programRemainingUsd: 5 },
 };
 
 function getDetail() {
@@ -108,10 +114,11 @@ beforeEach(() => {
   mockEstimateExperimentPlan.mockResolvedValue({
     perRun: { estimatedCostUsd: 0.05, costSource: "pricing_table" },
     perRunCoverage: "partial",
-    plannedRuns: 6,
+    plannedRuns: 12,
     remainingRuns: 4,
     totalEstimatedUsd: null,
     coverage: "partial",
+    programRemainingUsd: 5,
   });
 });
 
@@ -142,6 +149,11 @@ describe("GET /api/admin/laboratorio/experiments/[id]", () => {
 
     expect(res.status).toBe(200);
     expect(body.budget.remaining).toBe(4);
+    expect(body.budget.programRemainingUsd).toBe(5);
+    expect(body.experiment).toMatchObject({
+      campaign_intent: "offer",
+      program_id: "99999999-9999-4999-8999-999999999999",
+    });
     expect(mockGetExperimentDetail).toHaveBeenCalledWith(expect.anything(), EXPERIMENT_ID);
   });
 
@@ -181,7 +193,8 @@ describe("GET /api/admin/laboratorio/experiments/[id]/estimate", () => {
     expect(res.status).toBe(200);
     expect(body.coverage).toBe("partial");
     expect(body.totalEstimatedUsd).toBeNull();
-    expect(body.plannedRuns).toBe(6);
+    expect(body.plannedRuns).toBe(12);
+    expect(body.programRemainingUsd).toBe(5);
   });
 
   it("estimativa de experimento ausente ⇒ 404", async () => {

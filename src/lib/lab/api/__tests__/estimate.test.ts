@@ -25,6 +25,7 @@ const EXPERIMENT: Row = {
   model_target: { provider: "openai", model: "gpt-5.5", protocol: "responses" },
   repetitions: 2,
   max_runs: 6,
+  program_id: null,
 };
 
 /** Fake do client Supabase com o subconjunto usado pela estimativa. */
@@ -102,14 +103,14 @@ beforeEach(() => {
 });
 
 describe("estimateExperimentPlan — plano por componente com cobertura", () => {
-  it("3 cenários × 2 repetições ⇒ plannedRuns 6 e remainingRuns = max_runs − usados", async () => {
+  it("3 cenários × duas variantes × 2 repetições ⇒ plannedRuns 12 e remainingRuns = max_runs − usados", async () => {
     const client = createFakeClient(
       tablesFor({ experiment: EXPERIMENT, usedRuns: 1, scenarioCount: 3 }),
     );
 
     const estimate = await estimateExperimentPlan({ client, experimentId: EXPERIMENT_ID });
 
-    expect(estimate.plannedRuns).toBe(6);
+    expect(estimate.plannedRuns).toBe(12);
     expect(estimate.remainingRuns).toBe(5);
   });
 
@@ -122,7 +123,7 @@ describe("estimateExperimentPlan — plano por componente com cobertura", () => 
 
     expect(estimate.perRunCoverage).toBe("complete");
     expect(estimate.coverage).toBe("complete");
-    expect(estimate.totalEstimatedUsd).toBeCloseTo(0.3, 6);
+    expect(estimate.totalEstimatedUsd).toBeCloseTo(0.6, 6);
   });
 
   it("cobertura partial com nota de estimativa — não bloqueia e projeta o total", async () => {
@@ -135,7 +136,7 @@ describe("estimateExperimentPlan — plano por componente com cobertura", () => 
 
     expect(estimate.perRunCoverage).toBe("partial");
     expect(estimate.coverage).toBe("partial");
-    expect(estimate.totalEstimatedUsd).toBeCloseTo(0.3, 6);
+    expect(estimate.totalEstimatedUsd).toBeCloseTo(0.6, 6);
     expect(estimate.remainingRuns).toBe(4);
   });
 

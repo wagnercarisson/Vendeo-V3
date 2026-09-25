@@ -405,7 +405,17 @@ export interface LabExperimentDetail {
   }>;
   runs: Row[];
   evaluations: Row[];
-  budget: { maxRuns: number; used: number; remaining: number };
+  budget: {
+    maxRuns: number;
+    used: number;
+    remaining: number;
+    /**
+     * Saldo restante do programa vinculado
+     * (`budget_usd - budget_consumed_usd - budget_reserved_usd`); `null` quando
+     * o experimento não tem programa ou o orçamento não foi autorizado.
+     */
+    programRemainingUsd: number | null;
+  };
 }
 
 /**
@@ -426,7 +436,7 @@ export async function getExperimentDetail(
   const { data: experiment, error } = await client
     .from("lab_experiments")
     .select(
-      "id, name, objective, hypothesis, changed_dimension, primary_capability, model_target, params, status, repetitions, max_runs, notes, created_by, created_at, updated_at",
+      "id, name, objective, hypothesis, changed_dimension, primary_capability, model_target, params, status, repetitions, max_runs, campaign_intent, program_id, notes, created_by, created_at, updated_at",
     )
     .eq("id", experimentId)
     .maybeSingle();
@@ -520,10 +530,12 @@ export async function getExperimentDetail(
     throw new Error(`lab_runs_read_failed:${runsError.message}`);
   }
 
+  // A rubrica é lida, mas registros históricos da F48.1 não a possuem: `rubric`
+  // pode vir `null` e a resposta continua válida (sem backfill — D7).
   const { data: evaluations, error: evaluationsError } = await client
     .from("lab_human_evaluations")
     .select(
-      "id, scenario_version_id, baseline_run_id, candidate_run_id, verdict, observation, evaluator_id, blind_order, created_at",
+      "id, scenario_version_id, baseline_run_id, candidate_run_id, verdict, observation, rubric, evaluator_id, blind_order, created_at",
     )
     .eq("experiment_id", experimentId)
     .order("created_at", { ascending: false });
@@ -535,13 +547,42 @@ export async function getExperimentDetail(
   const runRows = asRows(runs);
   const maxRuns = num(experimentRow.max_runs);
 
+  // Saldo restante do programa vinculado (D9): `budget_usd - consumed - reserved`.
+  let programRemainingUsd: number | null = null;
+  const programId = text(experimentRow.program_id);
+  if (programId) {
+    const { data: program, error: programError } = await client
+      .from("lab_prompt_programs")
+      .select("budget_usd, budget_reserved_usd, budget_consumed_usd")
+      .eq("id", programId)
+      .maybeSingle();
+
+    if (programError) {
+      throw new Error(`lab_prompt_programs_read_failed:${programError.message}`);
+    }
+
+    const programRow = asRow(program);
+    if (programRow) {
+      const budgetUsd = programRow.budget_usd;
+      if (typeof budgetUsd === "number") {
+        programRemainingUsd =
+          budgetUsd - num(programRow.budget_consumed_usd) - num(programRow.budget_reserved_usd);
+      }
+    }
+  }
+
   return {
     experiment: experimentRow,
     variants: asRows(variants),
     scenarios: scenarioSummaries,
     runs: runRows,
     evaluations: asRows(evaluations),
-    budget: { maxRuns, used: runRows.length, remaining: Math.max(0, maxRuns - runRows.length) },
+    budget: {
+      maxRuns,
+      used: runRows.length,
+      remaining: Math.max(0, maxRuns - runRows.length),
+      programRemainingUsd,
+    },
   };
 }
 
