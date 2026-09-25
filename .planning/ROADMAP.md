@@ -2,7 +2,7 @@
 
 ## Milestone v1.5 — Lançamento Externo Controlado ◆
 
-**Estado:** F50 concluida; F48.2.1 (Otimizacao dos Prompts do Diretor) esta **planejada** e e a proxima execucao (`/gsd-execute-phase 48.2.1`), ainda nao iniciada. F50.1 permanece futura e nao ativa, aguardando a constituicao da PJ.
+**Estado:** F50 concluida; F48.2.1 (Otimizacao dos Prompts do Diretor) esta **em execucao** (2/9 planos; `48-2-1-01` e `48-2-1-02` concluidos, Checkpoint 1 aprovado; proximo `48-2-1-03`). F50.1 permanece futura e nao ativa, aguardando a constituicao da PJ.
 
 **Escopo do arquivo ativo:** índice operacional do milestone. O histórico integral anterior a esta compactação está em `.planning/ROADMAP-ARCHIVE.md`.
 
@@ -45,7 +45,7 @@
 | 46 | ✅ Gateway Único de IA e Registry de Modelos | Concluída; Change A |
 | 47 | ✅ Catálogo e Seleção de Modelos Admin | Concluída; Change B |
 | 48.1 | ✅ Laboratório Mínimo de IA | Concluída; primeira fatia do programa F48.x |
-| 48.2.1 | Planejada - proxima execucao | Planejada; 9 planos verificados; primeira fatia do guarda-chuva F48.2 (local-only, sem promocao) |
+| 48.2.1 | Em andamento - 2/9 planos | Em execucao; `48-2-1-01` e `48-2-1-02` concluidos (Checkpoint 1 aprovado); primeira fatia do guarda-chuva F48.2 (local-only, sem promocao) |
 | 49 | ✅ Ativação e Orientação Contextual de Campos | Concluída |
 | 50 | ✅ Demonstração Gratuita e Validade dos Créditos | Concluída; 17/17 planos, beta fechado preservado |
 | 50.1 | Futura — Formalização Legal e Ativação da Demonstração | Aguardando constituição da PJ; não planejada, não ativa e não bloqueante para o estado concluído |
@@ -59,7 +59,7 @@
 - F50.1 só deve ser constituída após a PJ: identidade legal, revisão/publicação dos documentos, migration efetiva, ativação ordenada e smoke test pós-corte.
 - Monetização pública / Stripe permanece iniciativa diferida e não é fase numerada.
 
-- F48.2.1 (Otimizacao dos Prompts do Diretor) esta planejada: artefatos de contexto, UI-SPEC e 9 planos gerados a partir do OpenSpec openspec/changes/fase-48-2-1-otimizacao-prompts-diretor/; nao executada e sem promocao.
+- F48.2.1 (Otimizacao dos Prompts do Diretor) esta **em execucao** (2/9 planos): `48-2-1-01` (dominio/migration/programa) e `48-2-1-02` (diagnostico versionado v1/v2/v3 + matriz de nove cenarios + Checkpoint 1 aprovado) concluidos; proximo `48-2-1-03`. Local-only e sem promocao.
 
 ## Dependencies
 
@@ -71,7 +71,7 @@
 
 ## F48.2.1 - Otimizacao dos Prompts do Diretor
 
-**Status:** **Planejada** — 9 planos gerados e verificados (zero blockers); proxima execucao (`/gsd-execute-phase 48.2.1`); nao iniciada.
+**Status:** **Em andamento** — 2/9 planos concluidos (`48-2-1-01`, `48-2-1-02`); Checkpoint humano 1 aprovado (`matrix-v1` + `diagnosticVersion 3`). Proximo: `48-2-1-03`.
 
 **Fonte da verdade:** `openspec/changes/fase-48-2-1-otimizacao-prompts-diretor/` (proposal.md / design.md D1-D11 / 9 specs / tasks.md 48-2-1-01..48-2-1-09).
 
@@ -83,7 +83,7 @@
 
 Plans:
 - [x] 48-2-1-01-PLAN.md — Dominio, migration local e programa (`lab_prompt_programs`, `campaign_intent`/`program_id`/`rubric`, orcamento atomico, `DIRECTOR_PROMPTS`).
-- [ ] 48-2-1-02-PLAN.md — Diagnostico versionado da F37 e matriz de nove cenarios (inclui Checkpoint humano 1).
+- [x] 48-2-1-02-PLAN.md — Diagnostico versionado da F37 e matriz de nove cenarios (inclui Checkpoint humano 1; aprovado com diagnosticVersion 3).
 - [ ] 48-2-1-03-PLAN.md — Execucao do Diretor por tipo de campanha e harness (uma chamada `campaign_image`; settle/release de orcamento).
 - [ ] 48-2-1-04-PLAN.md — Avaliacao humana, rubrica de nove criterios e comparacao cega.
 - [ ] 48-2-1-05-PLAN.md — API, UI, orcamento e isolamento (inclui Checkpoint humano 2).

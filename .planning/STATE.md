@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: â€” LanÃ§amento Externo Controlado â—†
 status: planned
-last_updated: "2026-09-25T19:43:19.579Z"
+last_updated: "2026-09-25T17:14:00.000Z"
 progress:
   total_phases: 38
   completed_phases: 33
   total_plans: 301
-  completed_plans: 286
+  completed_plans: 287
   percent: 87
 ---
 
@@ -24,14 +24,14 @@ progress:
 ## Current Position
 
 Phase: 48.2.1 (otimizacao-prompts-diretor) — EXECUTING
-Plan: 2 of 9
+Plan: 3 of 9
 
 - F50 concluida; 17/17 planos e 17/17 summaries em 10 waves.
 - OpenSpec arquivado; nenhuma execucao ativa; beta fechado preservado.
 - Ultima atividade real: compactacao do estado no quick `260924-jv4` em 2026-09-24.
 - `155/167` e `93%` sao contadores globais (9 planos planejados em F48.2.1), nao pendencias da F50.
 
-- F48.2.1 (Otimizacao dos Prompts do Diretor) esta **em execucao**: 9 planos `48-2-1-01..09` (waves 1-9) em `.planning/phases/48.2.1-otimizacao-prompts-diretor/`; local-only, sem promocao. Plano `48-2-1-01` concluido (migration aditiva + dominio + orcamento atomico); proximo `48-2-1-02`.
+- F48.2.1 (Otimizacao dos Prompts do Diretor) esta **em execucao**: 9 planos `48-2-1-01..09` (waves 1-9) em `.planning/phases/48.2.1-otimizacao-prompts-diretor/`; local-only, sem promocao. Planos `48-2-1-01` (migration aditiva + dominio + orcamento atomico) e `48-2-1-02` (diagnostico versionado v1/v2/v3 + matriz de nove cenarios + Checkpoint 1 aprovado) concluidos; proximo `48-2-1-03`.
 
 ## Recently Completed
 
@@ -45,7 +45,7 @@ Plan: 2 of 9
 
 | Phase | Plans | Duration | Tests |
 |---|---:|---:|---|
-| F48.2.1 | 1/9 | 40 min | 609 lab verdes |
+| F48.2.1 | 2/9 | 40 min | 609 lab verdes |
 | F50 | 17/17 | N/A | N/A |
 | F49 | 15/15 | N/A | N/A |
 | F48.1 | 14/14 | N/A | N/A |
@@ -60,6 +60,7 @@ Plan: 2 of 9
 - Stripe/monetizacao publica permanece iniciativa diferida.
 - F48.2.1: orcamento reservado atomicamente dentro de `lab_reserve_run` (9 args) com lock do programa; settle/release idempotentes por `budget_settled_at`.
 - F48.2.1: assinaturas F48.1 antigas (8 args de `lab_reserve_run`, 12 args de `lab_create_experiment`) removidas a frente para impedir overload que contorne programa/intent.
+- F48.2.1: Checkpoint 1 aprovado (`matrix-v1` + `diagnosticVersion 3`, hash `1e1c7945...d3bf`). Diagnostico versionado em JSON no repo (v1/v2/v3 imutaveis, hash SHA-256 nao autorreferente, `kind` observed_failure/hypothesis/taxonomy com rastreabilidade por item) e matriz de nove cenarios (3 offer + 3 spotlight + 3 exclusive, 1:1/pt-BR).
 - Historico completo esta em `STATE-ARCHIVE.md`, roadmaps e artefatos das fases.
 
 ### Pending Todos
@@ -90,7 +91,7 @@ Plan: 2 of 9
 
 ## Session Continuity
 
-- Ultima sessao: 2026-09-25, execucao do plano 48-2-1-01.
-- Ultimo trabalho concluido: `48-2-1-01` (migration local-first + dominio DIRECTOR_PROMPTS + orcamento atomico); 5 commits atomicos.
-- Proximo passo: executar o plano `48-2-1-02` da F48.2.1; F50.1 permanece futura aguardando a constituicao da PJ.
+- Ultima sessao: 2026-09-25, execucao do plano 48-2-1-02.
+- Ultimo trabalho concluido: `48-2-1-02` (diagnostico versionado v1/v2/v3 + matriz de nove cenarios + Checkpoint 1 aprovado); 11 commits atomicos.
+- Proximo passo: executar o plano `48-2-1-03` da F48.2.1; F50.1 permanece futura aguardando a constituicao da PJ.
 - Resume file: `None`.
