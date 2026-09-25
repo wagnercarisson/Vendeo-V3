@@ -45,6 +45,7 @@
 | 46 | ✅ Gateway Único de IA e Registry de Modelos | Concluída; Change A |
 | 47 | ✅ Catálogo e Seleção de Modelos Admin | Concluída; Change B |
 | 48.1 | ✅ Laboratório Mínimo de IA | Concluída; primeira fatia do programa F48.x |
+| 48.2.1 | Planejada - Otimizacao dos Prompts do Diretor | Planejada; primeira fatia do guarda-chuva F48.2 (local-only, sem promocao) |
 | 49 | ✅ Ativação e Orientação Contextual de Campos | Concluída |
 | 50 | ✅ Demonstração Gratuita e Validade dos Créditos | Concluída; 17/17 planos, beta fechado preservado |
 | 50.1 | Futura — Formalização Legal e Ativação da Demonstração | Aguardando constituição da PJ; não planejada, não ativa e não bloqueante para o estado concluído |
@@ -58,14 +59,27 @@
 - F50.1 só deve ser constituída após a PJ: identidade legal, revisão/publicação dos documentos, migration efetiva, ativação ordenada e smoke test pós-corte.
 - Monetização pública / Stripe permanece iniciativa diferida e não é fase numerada.
 
+- F48.2.1 (Otimizacao dos Prompts do Diretor) esta planejada: artefatos de contexto, UI-SPEC e 9 planos gerados a partir do OpenSpec openspec/changes/fase-48-2-1-otimizacao-prompts-diretor/; nao executada e sem promocao.
+
 ## Dependencies
 
 - F23 e F24 são pré-requisitos históricos de F25; F25 alimenta F26/F27 e a operação de F28.
 - F28 e F29 sustentam launch controls, observabilidade e readiness; F30 sustenta os gates legais.
-- A cadeia de produto segue F31.1 → F31.2 → F31.3 → F32 → F33 → F34 → F35 → F36 → F37 → F38 → F38.1/F38.2 → F38.2.1 → F39 → F40 → F41 → F42 → F43 → F45 → F46 → F47 → F48.1 → F49 → F50.
+- A cadeia de produto segue F31.1 → F31.2 → F31.3 → F32 → F33 → F34 → F35 → F36 → F37 → F38 → F38.1/F38.2 → F38.2.1 → F39 → F40 → F41 → F42 → F43 → F45 → F46 → F47 → F48.1 → F48.2.1→ F49 → F50.
 - F50.1 depende externamente da constituição da PJ e dos dados legais reais; não bloqueia o estado concluído de F50.
 - O índice operacional de requisitos está em `.planning/REQUIREMENTS.md`; o detalhamento histórico integral está em `.planning/REQUIREMENTS-ARCHIVE.md`, no archive deste roadmap e nos artefatos das fases.
 
+## F48.2.1 - Otimizacao dos Prompts do Diretor
+
+**Status:** Planejada (artefatos de planejamento gerados); nao executada.
+
+**Fonte da verdade:** `openspec/changes/fase-48-2-1-otimizacao-prompts-diretor/` (proposal.md / design.md D1-D11 / 9 specs / tasks.md 48-2-1-01..48-2-1-09).
+
+**Escopo:** primeira fatia do guarda-chuva F48.2 (Qualidade e otimizacao dos prompts). Diagnostico versionado das evidencias da F37, matriz de nove cenarios (offer/spotlight/exclusive, 1:1), suporte aos tres prompts do Diretor, rubrica humana e comparacao cega, regras de simplicidade, ciclos de otimizacao, orcamento atomico em USD do programa, relatorio e recomendacao. Integralmente local (migration nao aplicada no remoto) e sem promocao.
+
+**Fora de escopo:** Revisor (F48.2.2); promocao, canario e db push remoto (F48.2.3); homologacao geral de modelos/providers (F48.6).
+
+**Planos:** `48-2-1-01` .. `48-2-1-09` (sequenciais). Diretorio: `.planning/phases/48.2.1-otimizacao-prompts-diretor/`.
 ## F50.1 — Formalização Legal e Ativação da Demonstração
 
 **Status:** Futura — aguardando constituição da PJ; não planejada e não ativa.
