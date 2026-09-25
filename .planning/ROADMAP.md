@@ -2,7 +2,7 @@
 
 ## Milestone v1.5 — Lançamento Externo Controlado ◆
 
-**Estado:** F50 concluída; não há fase ativa. A próxima iniciativa é F50.1, futura e não ativa, aguardando a constituição da PJ.
+**Estado:** F50 concluida; F48.2.1 (Otimizacao dos Prompts do Diretor) esta **planejada** e e a proxima execucao (`/gsd-execute-phase 48.2.1`), ainda nao iniciada. F50.1 permanece futura e nao ativa, aguardando a constituicao da PJ.
 
 **Escopo do arquivo ativo:** índice operacional do milestone. O histórico integral anterior a esta compactação está em `.planning/ROADMAP-ARCHIVE.md`.
 
@@ -45,7 +45,7 @@
 | 46 | ✅ Gateway Único de IA e Registry de Modelos | Concluída; Change A |
 | 47 | ✅ Catálogo e Seleção de Modelos Admin | Concluída; Change B |
 | 48.1 | ✅ Laboratório Mínimo de IA | Concluída; primeira fatia do programa F48.x |
-| 48.2.1 | Planejada - Otimizacao dos Prompts do Diretor | Planejada; 9 planos gerados; primeira fatia do guarda-chuva F48.2 (local-only, sem promocao) |
+| 48.2.1 | Planejada - proxima execucao | Planejada; 9 planos verificados; primeira fatia do guarda-chuva F48.2 (local-only, sem promocao) |
 | 49 | ✅ Ativação e Orientação Contextual de Campos | Concluída |
 | 50 | ✅ Demonstração Gratuita e Validade dos Créditos | Concluída; 17/17 planos, beta fechado preservado |
 | 50.1 | Futura — Formalização Legal e Ativação da Demonstração | Aguardando constituição da PJ; não planejada, não ativa e não bloqueante para o estado concluído |
@@ -71,7 +71,7 @@
 
 ## F48.2.1 - Otimizacao dos Prompts do Diretor
 
-**Status:** Planejada (artefatos de planejamento gerados); nao executada.
+**Status:** **Planejada** — 9 planos gerados e verificados (zero blockers); proxima execucao (`/gsd-execute-phase 48.2.1`); nao iniciada.
 
 **Fonte da verdade:** `openspec/changes/fase-48-2-1-otimizacao-prompts-diretor/` (proposal.md / design.md D1-D11 / 9 specs / tasks.md 48-2-1-01..48-2-1-09).
 

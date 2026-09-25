@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: â€” LanÃ§amento Externo Controlado â—†
-current_phase: 50
-status: complete
+current_phase: 48.2.1
+status: planned
 last_updated: "2026-09-25T00:00:00.000Z"
 last_activity: 2026-09-25
 progress:
-  total_phases: 12
+  total_phases: 13
   completed_phases: 12
-  total_plans: 158
+  total_plans: 167
   completed_plans: 155
-  percent: 98
+  percent: 93
 ---
 # Project State
 
@@ -19,7 +19,7 @@ progress:
 
 - Project: `.planning/PROJECT.md`.
 - Core value: transformar uma oferta simples em uma campanha profissional, clara e publicável.
-- Foco atual: F50 concluida, sem fase ativa.
+- Foco atual: F48.2.1 planejada (proxima execucao); F50 concluida.
 - Proxima iniciativa condicionada: F50.1 aguardando constituicao da PJ.
 
 ## Current Position
@@ -27,9 +27,10 @@ progress:
 - F50 concluida; 17/17 planos e 17/17 summaries em 10 waves.
 - OpenSpec arquivado; nenhuma execucao ativa; beta fechado preservado.
 - Ultima atividade real: compactacao do estado no quick `260924-jv4` em 2026-09-24.
-- `155/158` e `98%` sao contadores globais, nao pendencias da F50.
+- `155/167` e `93%` sao contadores globais (9 planos planejados em F48.2.1), nao pendencias da F50.
 
-- F48.2.1 (Otimizacao dos Prompts do Diretor) esta **planejada**: 9 planos `48-2-1-01..09` (waves 1-9) em `.planning/phases/48.2.1-otimizacao-prompts-diretor/`; local-only, sem promocao; nao executada. O alinhamento final de tracking (ROADMAP/STATE) e a validacao de fase ficam no plano 09 (task 9.5).
+- F48.2.1 (Otimizacao dos Prompts do Diretor) esta **planejada** e e a proxima execucao: 9 planos `48-2-1-01..09` (waves 1-9) em `.planning/phases/48.2.1-otimizacao-prompts-diretor/`; local-only, sem promocao; nao iniciada.
+
 ## Recently Completed
 
 - F48.1: `.planning/phases/48.1-laboratorio-ia-minimo/`.
@@ -38,7 +39,7 @@ progress:
 
 ## Performance Metrics
 
-- Total de planos concluidos conhecido: 155/158 global; F50: 17/17.
+- Total de planos concluidos conhecido: 155/167 global (9 planejados em F48.2.1); F50: 17/17.
 
 | Phase | Plans | Duration | Tests |
 |---|---:|---:|---|
@@ -59,6 +60,7 @@ progress:
 ### Pending Todos
 
 - Fonte: `.planning/todos/pending/`; nenhum item ativo confirmado.
+- F48.2.1 planejada: executar `/gsd-execute-phase 48.2.1` (aguardando revisao/aprovacao humana).
 
 ### Blockers/Concerns
 
@@ -83,7 +85,7 @@ progress:
 
 ## Session Continuity
 
-- Ultima sessao: 2026-09-24, quick `260924-jv4`.
-- Ultimo trabalho concluido: compactacao do estado e ativacao da poda automatica.
-- Proximo passo: nova iniciativa sera definida pelo usuario; somente a F50.1 permanece aguardando a constituicao da PJ.
+- Ultima sessao: 2026-09-25, planejamento da F48.2.1 (9 planos).
+- Ultimo trabalho concluido: planejamento da F48.2.1 (CONTEXT, UI-SPEC, PATTERNS, 9 planos verificados).
+- Proximo passo: executar a F48.2.1 (`/gsd-execute-phase 48.2.1`); F50.1 permanece futura aguardando a constituicao da PJ.
 - Resume file: `None`.
