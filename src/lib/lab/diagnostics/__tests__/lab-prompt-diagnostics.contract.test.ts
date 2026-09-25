@@ -325,65 +325,115 @@ describe("diagnóstico v1 da F37 — fixture preservada", () => {
   });
 });
 
-describe("diagnóstico v2 da F37 — rastreabilidade por item e kind", () => {
-  it("é a versão corrente e o contentHash confere", async () => {
-    const current = await loadCurrentDiagnostics();
+describe("diagnóstico v2 da F37 — rastreabilidade por item e kind (preservada)", () => {
+  it("a v2 permanece carregável e o contentHash confere", async () => {
+    const v2 = await loadDiagnosticsVersion(2);
 
-    expect(current.diagnosticVersion).toBe(2);
-    expect(current.schemaVersion).toBe(PROMPT_DIAGNOSTICS_SCHEMA_VERSION_V2);
-    expect(() => verifyDiagnosticsHash(current)).not.toThrow();
-    expect(computeDiagnosticsContentHash(current)).toBe(current.contentHash);
-  });
-
-  it("getDiagnosticsVersionUsed retorna a v2 e a v1 permanece carregável", async () => {
-    const used = await getDiagnosticsVersionUsed();
-
-    expect(used.diagnosticVersion).toBe(2);
-    expect(used.contentHash).toMatch(/^[0-9a-f]{64}$/);
-
-    const v1 = await loadDiagnosticsVersion(1);
-    expect(v1.diagnosticVersion).toBe(1);
+    expect(v2.diagnosticVersion).toBe(2);
+    expect(v2.schemaVersion).toBe(PROMPT_DIAGNOSTICS_SCHEMA_VERSION_V2);
+    expect(() => verifyDiagnosticsHash(v2)).not.toThrow();
+    expect(computeDiagnosticsContentHash(v2)).toBe(v2.contentHash);
   });
 
   it("todo item da v2 declara kind e source.ref/source.section", async () => {
-    const current = await loadCurrentDiagnostics();
-    if (current.schemaVersion !== PROMPT_DIAGNOSTICS_SCHEMA_VERSION_V2) {
-      throw new Error("esperava diagnóstico v2 como corrente");
+    const v2 = await loadDiagnosticsVersion(2);
+    if (v2.schemaVersion !== PROMPT_DIAGNOSTICS_SCHEMA_VERSION_V2) {
+      throw new Error("esperava diagnóstico v2");
     }
 
-    for (const item of current.items) {
+    for (const item of v2.items) {
       expect(PROMPT_DIAGNOSTIC_ITEM_KINDS).toContain(item.kind);
       expect(item.source.ref.length).toBeGreaterThan(0);
       expect(item.source.section.length).toBeGreaterThan(0);
     }
   });
 
-  it("distingue falha observada de hipótese/taxonomia", async () => {
-    const current = await loadCurrentDiagnostics();
-    if (current.schemaVersion !== PROMPT_DIAGNOSTICS_SCHEMA_VERSION_V2) {
-      throw new Error("esperava diagnóstico v2 como corrente");
+  it("a v2 ainda traz observed_failure (histórico) — a correção semântica vem na v3", async () => {
+    const v2 = await loadDiagnosticsVersion(2);
+    if (v2.schemaVersion !== PROMPT_DIAGNOSTICS_SCHEMA_VERSION_V2) {
+      throw new Error("esperava diagnóstico v2");
     }
 
-    const observed = current.items.filter((item) => item.kind === "observed_failure");
-    const nonObserved = current.items.filter((item) => item.kind !== "observed_failure");
-
+    const observed = v2.items.filter((item) => item.kind === "observed_failure");
     expect(observed.length).toBeGreaterThanOrEqual(1);
-    expect(nonObserved.length).toBeGreaterThanOrEqual(1);
-    for (const item of observed) {
-      expect(item.evidence.length).toBeGreaterThan(0);
-      expect(item.source.section.length).toBeGreaterThan(0);
-    }
-    // Itens sem evidência concreta foram reclassificados e nunca se apresentam
-    // como falha observada; taxonomia não é alvo direto de prompt.
-    for (const item of current.items.filter((entry) => entry.kind === "taxonomy")) {
-      expect(item.promptTreatable).toBe(false);
-    }
   });
 
   it("cobre os três prompts e mantém ao menos um item não tratável", async () => {
-    const current = await loadCurrentDiagnostics();
-    const used = new Set(current.items.map((item) => item.promptName));
+    const v2 = await loadDiagnosticsVersion(2);
+    const used = new Set(v2.items.map((item) => item.promptName));
 
+    for (const promptName of DIRECTOR_PROMPT_NAMES) {
+      expect(used.has(promptName)).toBe(true);
+    }
+    const nonTreatable = v2.items.filter((item) => item.promptTreatable === false);
+    expect(nonTreatable.length).toBeGreaterThanOrEqual(1);
+    expect(treatableItems(v2).length).toBeLessThan(v2.items.length);
+  });
+});
+
+describe("diagnóstico v3 da F37 — sem falha observada sem evidência concreta", () => {
+  it("é a versão corrente e o contentHash confere", async () => {
+    const current = await loadCurrentDiagnostics();
+
+    expect(current.diagnosticVersion).toBe(3);
+    expect(current.schemaVersion).toBe(PROMPT_DIAGNOSTICS_SCHEMA_VERSION_V2);
+    expect(() => verifyDiagnosticsHash(current)).not.toThrow();
+    expect(computeDiagnosticsContentHash(current)).toBe(current.contentHash);
+  });
+
+  it("getDiagnosticsVersionUsed retorna a v3 e v1/v2 permanecem carregáveis", async () => {
+    const used = await getDiagnosticsVersionUsed();
+
+    expect(used.diagnosticVersion).toBe(3);
+    expect(used.contentHash).toMatch(/^[0-9a-f]{64}$/);
+
+    const v1 = await loadDiagnosticsVersion(1);
+    const v2 = await loadDiagnosticsVersion(2);
+    expect(v1.diagnosticVersion).toBe(1);
+    expect(v2.diagnosticVersion).toBe(2);
+  });
+
+  it("não há observed_failure sem evidência concreta de execução/UAT", async () => {
+    const current = await loadCurrentDiagnostics();
+    if (current.schemaVersion !== PROMPT_DIAGNOSTICS_SCHEMA_VERSION_V2) {
+      throw new Error("esperava diagnóstico v3 (schemaVersion 2)");
+    }
+
+    const observed = current.items.filter((item) => item.kind === "observed_failure");
+    expect(observed).toEqual([]);
+  });
+
+  it("os quatro itens reclassificados são hypothesis e declaram a ausência de ocorrência observada", async () => {
+    const current = await loadCurrentDiagnostics();
+    if (current.schemaVersion !== PROMPT_DIAGNOSTICS_SCHEMA_VERSION_V2) {
+      throw new Error("esperava diagnóstico v3 (schemaVersion 2)");
+    }
+
+    const reclassified = [
+      "invented_information",
+      "product_deformation",
+      "logo_cropped",
+      "illegible_text",
+    ];
+    for (const failureCode of reclassified) {
+      const item = current.items.find((entry) => entry.failureCode === failureCode);
+      expect(item).toBeDefined();
+      expect(item?.kind).toBe("hypothesis");
+      expect(item?.evidence).toMatch(/ocorrência observada/i);
+    }
+  });
+
+  it("taxonomy continua não tratável e a matriz cobre os três prompts", async () => {
+    const current = await loadCurrentDiagnostics();
+    if (current.schemaVersion !== PROMPT_DIAGNOSTICS_SCHEMA_VERSION_V2) {
+      throw new Error("esperava diagnóstico v3 (schemaVersion 2)");
+    }
+
+    for (const item of current.items.filter((entry) => entry.kind === "taxonomy")) {
+      expect(item.promptTreatable).toBe(false);
+    }
+
+    const used = new Set(current.items.map((item) => item.promptName));
     for (const promptName of DIRECTOR_PROMPT_NAMES) {
       expect(used.has(promptName)).toBe(true);
     }
@@ -394,22 +444,23 @@ describe("diagnóstico v2 da F37 — rastreabilidade por item e kind", () => {
 });
 
 describe("regra de versão — a maior vence e as anteriores permanecem", () => {
-  it("uma v3 temporária é usada como corrente e v1/v2 permanecem intactas", async () => {
+  it("uma v4 temporária é usada como corrente e v1/v2/v3 permanecem intactas", async () => {
     const v1 = await loadDiagnosticsVersion(1);
     const v2 = await loadDiagnosticsVersion(2);
-    const v3Path = path.resolve(
+    const v3 = await loadDiagnosticsVersion(3);
+    const v4Path = path.resolve(
       process.cwd(),
-      "fixtures/lab/diagnostics/f37/f37-prompt-diagnostics.v3.json",
+      "fixtures/lab/diagnostics/f37/f37-prompt-diagnostics.v4.json",
     );
 
-    const v3Base = { ...v2, diagnosticVersion: 3, contentHash: "0".repeat(64) };
-    const v3 = { ...v3Base, contentHash: computeDiagnosticsContentHash(v3Base) };
-    await fsp.writeFile(v3Path, `${JSON.stringify(v3, null, 2)}\n`, "utf8");
+    const v4Base = { ...v3, diagnosticVersion: 4, contentHash: "0".repeat(64) };
+    const v4 = { ...v4Base, contentHash: computeDiagnosticsContentHash(v4Base) };
+    await fsp.writeFile(v4Path, `${JSON.stringify(v4, null, 2)}\n`, "utf8");
 
     try {
       const current = await loadCurrentDiagnostics();
-      expect(current.diagnosticVersion).toBe(3);
-      expect(current.contentHash).toBe(v3.contentHash);
+      expect(current.diagnosticVersion).toBe(4);
+      expect(current.contentHash).toBe(v4.contentHash);
 
       // As versões anteriores continuam legíveis e inalteradas (imutabilidade).
       const stillV1 = await loadDiagnosticsVersion(1);
@@ -418,8 +469,11 @@ describe("regra de versão — a maior vence e as anteriores permanecem", () => 
       const stillV2 = await loadDiagnosticsVersion(2);
       expect(stillV2.diagnosticVersion).toBe(2);
       expect(stillV2.contentHash).toBe(v2.contentHash);
+      const stillV3 = await loadDiagnosticsVersion(3);
+      expect(stillV3.diagnosticVersion).toBe(3);
+      expect(stillV3.contentHash).toBe(v3.contentHash);
     } finally {
-      await fsp.rm(v3Path, { force: true });
+      await fsp.rm(v4Path, { force: true });
     }
   });
 

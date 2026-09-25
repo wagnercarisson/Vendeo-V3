@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 2,
+  "diagnosticVersion": 3,
+  "generatedAt": "2026-09-25T17:10:00.000Z",
+  "sourceRefs": [
+    "docs/alinhamento-fase-37-revisao-aprovacao-arte.md",
+    "openspec/changes/archive/2026-09-11-fase-37-2-correcao-unica-por-nao-conformidade",
+    "openspec/specs/campaign-correction-reports/spec.md"
+  ],
+  "items": [
+    {
+      "kind": "hypothesis",
+      "failureCode": "invented_information",
+      "evidence": "Hipótese derivada da taxonomia de relatos elegíveis da F37 (D37.2-R2 / §4: 'Informação inventada'). A IA textual não lê a imagem e o relato é aceito pela declaração; a fonte é uma taxonomia com exemplos hipotéticos, NÃO uma ocorrência observada na execução/UAT da F37.",
+      "source": {
+        "ref": "docs/alinhamento-fase-37-revisao-aprovacao-arte.md",
+        "section": "D37.2-R2 — Relatos elegíveis: Informação inventada"
+      },
+      "probableCause": "O prompt do Diretor de oferta pode não proibir explicitamente complementar o brief com informação inventada.",
+      "promptTreatable": true,
+      "minimalHypothesis": "Reforçar a proibição de inventar informação comercial ausente no brief, sem adicionar exemplos.",
+      "promptName": "campaign-image-director-offer"
+    },
+    {
+      "kind": "hypothesis",
+      "failureCode": "product_deformation",
+      "evidence": "Hipótese derivada da taxonomia de relatos elegíveis da F37 (D37.2-R2 / §4: 'Produto deformado'). A IA textual não lê a imagem e o relato é aceito pela declaração; a fonte é uma taxonomia com exemplos hipotéticos, NÃO uma ocorrência observada na execução/UAT da F37.",
+      "source": {
+        "ref": "docs/alinhamento-fase-37-revisao-aprovacao-arte.md",
+        "section": "D37.2-R2 — Relatos elegíveis: Produto deformado"
+      },
+      "probableCause": "O prompt pode não priorizar a fidelidade da forma do produto em relação à imagem de referência.",
+      "promptTreatable": true,
+      "minimalHypothesis": "Reforçar a fidelidade do produto à imagem de referência e a preservação da forma.",
+      "promptName": "campaign-image-director-spotlight"
+    },
+    {
+      "kind": "hypothesis",
+      "failureCode": "logo_cropped",
+      "evidence": "Hipótese derivada da taxonomia de relatos elegíveis da F37 (D37.2-R2 / §4: 'Logo/produto/texto gravemente cortados'). A IA textual não lê a imagem e o relato é aceito pela declaração; a fonte é uma taxonomia com exemplos hipotéticos, NÃO uma ocorrência observada na execução/UAT da F37.",
+      "source": {
+        "ref": "docs/alinhamento-fase-37-revisao-aprovacao-arte.md",
+        "section": "D37.2-R2 — Relatos elegíveis: Logo, produto ou texto gravemente cortado"
+      },
+      "probableCause": "O prompt de exclusivo pode não priorizar a preservação da identidade quando há logo controlado.",
+      "promptTreatable": true,
+      "minimalHypothesis": "Reforçar a preservação da identidade da loja, incluindo o logo controlado.",
+      "promptName": "campaign-image-director-exclusive"
+    },
+    {
+      "kind": "hypothesis",
+      "failureCode": "illegible_text",
+      "evidence": "Hipótese derivada da taxonomia de relatos elegíveis da F37 (D37.2-R2 / §4: 'Texto ilegível ou corrompido'). A IA textual não lê a imagem e o relato é aceito pela declaração; a fonte é uma taxonomia com exemplos hipotéticos, NÃO uma ocorrência observada na execução/UAT da F37.",
+      "source": {
+        "ref": "docs/alinhamento-fase-37-revisao-aprovacao-arte.md",
+        "section": "D37.2-R2 — Relatos elegíveis: Texto ilegível ou corrompido"
+      },
+      "probableCause": "O prompt pode não orientar a legibilidade dos textos obrigatórios em composições densas.",
+      "promptTreatable": true,
+      "minimalHypothesis": "Esclarecer a exigência de legibilidade dos textos obrigatórios na composição.",
+      "promptName": "campaign-image-director-offer"
+    },
+    {
+      "kind": "hypothesis",
+      "failureCode": "tone_commercial_mismatch",
+      "evidence": "Hipótese derivada da inspeção do prompt de destaque; não é uma falha observada concreta da F37.",
+      "source": {
+        "ref": "docs/alinhamento-fase-37-revisao-aprovacao-arte.md",
+        "section": "D37.2-R4 — Geração da v2 (reuso do diretor por intent)"
+      },
+      "probableCause": "O prompt de destaque pode não diferenciar claramente o tom de uma campanha sem preço.",
+      "promptTreatable": true,
+      "minimalHypothesis": "Esclarecer o tom esperado para campanhas de destaque sem preço, sem adicionar exemplos de fixtures.",
+      "promptName": "campaign-image-director-spotlight"
+    },
+    {
+      "kind": "taxonomy",
+      "failureCode": "renderer_composition_limitation",
+      "evidence": "Categoria de composição (recorte que inviabiliza, sobreposição crítica); sem evidência concreta de falha do prompt.",
+      "source": {
+        "ref": "docs/alinhamento-fase-37-revisao-aprovacao-arte.md",
+        "section": "D37.2-R2 — Relatos elegíveis: Falha grave de composição que impeça a publicação"
+      },
+      "probableCause": "Limite do renderer programático para acomodar a composição solicitada; o prompt não controla o layout final.",
+      "promptTreatable": false,
+      "minimalHypothesis": "Encaminhar para a mudança de composição/renderer; nenhuma candidata de prompt é criada para esta categoria.",
+      "promptName": "campaign-image-director-offer"
+    },
+    {
+      "kind": "taxonomy",
+      "failureCode": "renderer_text_overflow",
+      "evidence": "Categoria de composição para texto obrigatório transbordado; sem evidência concreta de falha do prompt.",
+      "source": {
+        "ref": "docs/alinhamento-fase-37-revisao-aprovacao-arte.md",
+        "section": "D37.2-R2 — Relatos elegíveis: Falha grave de composição que impeça a publicação"
+      },
+      "probableCause": "O renderer não acomoda textos longos; o prompt não determina o encaixe final do texto.",
+      "promptTreatable": false,
+      "minimalHypothesis": "Encaminhar para a mudança de composição/renderer; nenhuma candidata de prompt é criada para esta categoria.",
+      "promptName": "campaign-image-director-exclusive"
+    }
+  ],
+  "contentHash": "1e1c7945cdf8d11844045020962fd00ab1d01d19f2e524a2cc2243a13eebd3bf"
+}
