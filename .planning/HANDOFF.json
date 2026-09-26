@@ -1,57 +1,61 @@
 {
   "version": "1.0",
-  "timestamp": "2026-09-26T22:57:30.735Z",
+  "timestamp": "2026-09-26T23:57:40.341Z",
   "phase": "48.2.1",
-  "phase_name": "otimizacao-prompts-diretor",
+  "phase_name": "bancada-manual-prompts-diretor",
   "phase_dir": ".planning/phases/48.2.1-otimizacao-prompts-diretor",
-  "plan": "48-2-1-06",
-  "task": 4,
-  "total_tasks": 22,
+  "plan": "48-2-1-07",
+  "task": 1,
+  "total_tasks": 3,
   "status": "paused",
-  "interruption": {
-    "type": "human_decision",
-    "decision": "interromper",
-    "before_paid_runs": true,
-    "candidate_approved": false,
-    "variant_won": false,
-    "realign_before_continuing": true
+  "pause_reason": "replanned_awaiting_human_resume",
+  "executable_chain": ["48-2-1-05", "48-2-1-07", "48-2-1-08", "48-2-1-09"],
+  "openspec_source": "017b8799",
+  "replanning_commits": ["d5137bf0", "394d9836", "27908ab3"],
+  "superseded_plan": {
+    "plan": "48-2-1-06",
+    "status": "superseded",
+    "outcome": "interrupted_by_human_decision",
+    "executed_tasks": [1, 2, 3],
+    "removed_tasks": "4-22",
+    "summary": ".planning/phases/48.2.1-otimizacao-prompts-diretor/48-2-1-06-SUMMARY.md",
+    "resume_allowed": false
   },
-  "completed_tasks": [
-    {"id": 1, "name": "Modulo deterministico da regra de vitoria (D8)", "status": "done", "commit": "0c4872ae"},
-    {"id": 2, "name": "Hipotese e candidata v1 do offer", "status": "done", "commit": "2e78d5c3"},
-    {"id": 3, "name": "Preparar experimento v1 do offer e estimativa (sem chamada paga)", "status": "done", "commit": "7ebec847"}
+  "completed_plans": ["48-2-1-01", "48-2-1-02", "48-2-1-03", "48-2-1-04", "48-2-1-05"],
+  "pending_plans": [
+    {"id": "48-2-1-07", "objective": "Seguranca financeira e revogacao fail-closed", "autonomous": true},
+    {"id": "48-2-1-08", "objective": "Orcamento visivel e arquivamento seguro", "autonomous": true},
+    {"id": "48-2-1-09", "objective": "Verificacao, UAT e encerramento operacional", "autonomous": false}
   ],
-  "remaining_tasks": [
-    {"id": 4, "name": "Checkpoint humano 3 - autorizar gasto do ciclo v1 offer", "status": "blocked_human_interrupt"},
-    {"id": 5, "name": "Executar os 12 runs do offer", "status": "not_started"},
-    {"id": 6, "name": "Preparar pares da comparacao cega do offer v1", "status": "not_started"},
-    {"id": 7, "name": "Checkpoint humano 4 - avaliacao cega do offer v1", "status": "not_started"},
-    {"id": 8, "name": "Aplicar a regra de vitoria do offer v1", "status": "not_started"},
-    {"id": 9, "name": "Decisao do ciclo v1 do offer", "status": "not_started"},
-    {"id": 10, "name": "Reautorizar ciclo v2 do offer (condicional)", "status": "not_started"},
-    {"id": 11, "name": "Ciclo v2 do offer (condicional)", "status": "not_started"},
-    {"id": 12, "name": "Pares da comparacao cega do offer v2 (condicional)", "status": "not_started"},
-    {"id": 13, "name": "Avaliacao cega do offer v2 (condicional)", "status": "not_started"},
-    {"id": 14, "name": "Regra de vitoria do offer v2 (condicional)", "status": "not_started"},
-    {"id": 15, "name": "Decisao do ciclo v2 do offer (condicional)", "status": "not_started"},
-    {"id": 16, "name": "Reautorizar ciclo v3 do offer (condicional)", "status": "not_started"},
-    {"id": 17, "name": "Ciclo v3 do offer (condicional)", "status": "not_started"},
-    {"id": 18, "name": "Pares da comparacao cega do offer v3 (condicional)", "status": "not_started"},
-    {"id": 19, "name": "Avaliacao cega do offer v3 (condicional)", "status": "not_started"},
-    {"id": 20, "name": "Regra de vitoria do offer v3 (condicional)", "status": "not_started"},
-    {"id": 21, "name": "Decisao do ciclo v3 do offer (condicional)", "status": "not_started"},
-    {"id": 22, "name": "Encerrar o ciclo do offer pelo criterio de parada", "status": "not_started"}
-  ],
-  "blockers": [
-    {"description": "Interrupcao humana controlada no Checkpoint 3 antes de qualquer run pago", "type": "human_action", "workaround": "Realinhar a fase F48.2.1 com revisao humana antes de retomar"}
-  ],
+  "budget_state": {
+    "program_id": "860ca4fe-dc8b-4354-b94e-02f9e7b202c6",
+    "status": "authorized",
+    "budget_usd": 2.808,
+    "reserved_usd": 0,
+    "consumed_usd": 0,
+    "closed": false
+  },
+  "experiment_state": {
+    "experiment_id": "c48e21b5-c7a8-4456-a0d6-a2b4040fc1e3",
+    "status": "ready",
+    "lab_runs": 0,
+    "archived": false
+  },
+  "candidate_state": {
+    "offer_v1": "fixtures/lab/prompts/offer/v1-candidate.md",
+    "approved": false,
+    "winner": false,
+    "example_draft_only": true
+  },
+  "blockers": [],
   "human_actions_pending": [
-    {"action": "Realinhar a fase F48.2.1 (escopo/planos) antes de retomar a execucao", "context": "O usuario decidiu interromper o ciclo offer v1 no Checkpoint 3; a fase sera realinhada antes de continuar", "blocking": true}
+    {"action": "Aprovar a execucao do Plano 48-2-1-07", "context": "A fase foi realinhada e replanejada; a retomada exige aprovacao humana explicita", "blocking": true}
   ],
   "decisions": [
-    {"decision": "Interromper o ciclo offer v1 no Checkpoint humano 3 antes de qualquer run pago", "rationale": "Decisao humana explicita de parada controlada; realinhamento da fase antes de continuar", "phase": "48.2.1"}
+    {"decision": "Realinhar a F48.2.1 como bancada manual de prompts do Diretor (OpenSpec 017b8799)", "rationale": "Escopo redefinido: sem ciclos pagos obrigatorios; candidata inserida manualmente; encerramento tecnico da bancada", "phase": "48.2.1"},
+    {"decision": "Resolver o Plano 48-2-1-06 como interrompido/suplantado (nao concluido funcionalmente)", "rationale": "Interrupcao humana no Checkpoint 3; zero runs; substituido pelos Planos 07-09", "phase": "48.2.1"}
   ],
   "uncommitted_files": [],
-  "next_action": "Realinhar a fase F48.2.1 com revisao humana; nao retomar o plano 48-2-1-06 nem iniciar os planos 07/08/09 ate o realinhamento",
-  "context_notes": "Planos 48-2-1-01 a 48-2-1-05 concluidos; Checkpoints 1 (matrix-v1 + diagnostic v3) e 2 (autorizar-inicial, US$ 2.808) aprovados. Plano 48-2-1-06 executou apenas as Tasks 1-3 (sem chamada paga); Tasks 4+ suspensas. lab_runs = 0; orcamento reservado/consumido = 0; experimento offer em status ready. Nenhum plano seguinte iniciado."
+  "next_action": "Executar explicitamente o Plano 48-2-1-07 (Task 1) apos aprovacao humana: /gsd-execute-phase 48-2-1-07. NAO retomar o Plano 48-2-1-06.",
+  "context_notes": "Planos 01-05 concluidos; Plano 06 interrompido/suplantado (Tasks 1-3; zero runs/custo); Planos 07-09 planejados e nao executados. Cadeia executavel 05 -> 07 -> 08 -> 09. Zero chamadas pagas; prompts/ intocado; programa ainda authorized e experimento ready. LIMITACAO DO SDK: `gsd-sdk query init.execute-phase 48.2.1` canonicaliza incorretamente IDs no formato `48-2-1-*` e pode retornar incomplete_plans: [] — a retomada deve usar o plano explicito `48-2-1-07`; nao interpretar incomplete_plans: [] como fase concluida."
 }

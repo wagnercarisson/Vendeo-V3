@@ -2,7 +2,7 @@
 
 ## Milestone v1.5 — Lançamento Externo Controlado ◆
 
-**Estado:** F50 concluida; F48.2.1 (Otimizacao dos Prompts do Diretor) esta **em execucao** (5/9 planos; `48-2-1-01` a `48-2-1-05` concluidos, Checkpoints 1 e 2 aprovados; proximo `48-2-1-06`). F50.1 permanece futura e nao ativa, aguardando a constituicao da PJ.
+**Estado:** F50 concluida; F48.2.1 (**Bancada Manual de Prompts do Diretor**) esta **pausada apos realinhamento** (`48-2-1-01` a `48-2-1-05` concluidos; `48-2-1-06` interrompido/suplantado; `48-2-1-07` a `48-2-1-09` pendentes; proximo `48-2-1-07`). F50.1 permanece futura e nao ativa, aguardando a constituicao da PJ.
 
 **Escopo do arquivo ativo:** índice operacional do milestone. O histórico integral anterior a esta compactação está em `.planning/ROADMAP-ARCHIVE.md`.
 
@@ -45,7 +45,7 @@
 | 46 | ✅ Gateway Único de IA e Registry de Modelos | Concluída; Change A |
 | 47 | ✅ Catálogo e Seleção de Modelos Admin | Concluída; Change B |
 | 48.1 | ✅ Laboratório Mínimo de IA | Concluída; primeira fatia do programa F48.x |
-| 48.2.1 | Em andamento - 5/9 planos | Em execucao; `48-2-1-01` a `48-2-1-05` concluidos (Checkpoints 1 e 2 aprovados); primeira fatia do guarda-chuva F48.2 (local-only, sem promocao) |
+| 48.2.1 | ⏸ Pausada — realinhada (5/9; 06 suplantado) | Bancada manual de prompts do Diretor; `48-2-1-01` a `48-2-1-05` concluidos; `48-2-1-06` interrompido/suplantado; `48-2-1-07` a `48-2-1-09` pendentes; local-only, sem promocao |
 | 49 | ✅ Ativação e Orientação Contextual de Campos | Concluída |
 | 50 | ✅ Demonstração Gratuita e Validade dos Créditos | Concluída; 17/17 planos, beta fechado preservado |
 | 50.1 | Futura — Formalização Legal e Ativação da Demonstração | Aguardando constituição da PJ; não planejada, não ativa e não bloqueante para o estado concluído |
@@ -59,7 +59,7 @@
 - F50.1 só deve ser constituída após a PJ: identidade legal, revisão/publicação dos documentos, migration efetiva, ativação ordenada e smoke test pós-corte.
 - Monetização pública / Stripe permanece iniciativa diferida e não é fase numerada.
 
-- F48.2.1 (Otimizacao dos Prompts do Diretor) esta **em execucao** (5/9 planos): `48-2-1-01` (dominio/migration/programa), `48-2-1-02` (diagnostico versionado v1/v2/v3 + matriz de nove cenarios + Checkpoint 1 aprovado), `48-2-1-03` (execucao do Diretor + settle/release), `48-2-1-04` (avaliacao humana/rubrica/cega) e `48-2-1-05` (API/UI/orcamento/isolamento + Checkpoint 2 autorizado em US$ 2.808) concluidos; proximo `48-2-1-06`. Local-only e sem promocao.
+- F48.2.1 (**Bancada Manual de Prompts do Diretor**) esta **pausada apos realinhamento**: `48-2-1-01` a `48-2-1-05` concluidos; `48-2-1-06` interrompido e suplantado (summary de supersessao); `48-2-1-07` a `48-2-1-09` planejados e nao executados. Cadeia executavel `05 -> 07 -> 08 -> 09`; proximo plano executavel `48-2-1-07` (apos aprovacao humana). Zero runs e zero custo; programa ainda `authorized` e experimento `ready`. OpenSpec `017b8799`. Local-only e sem promocao.
 
 ## Dependencies
 
@@ -69,31 +69,38 @@
 - F50.1 depende externamente da constituição da PJ e dos dados legais reais; não bloqueia o estado concluído de F50.
 - O índice operacional de requisitos está em `.planning/REQUIREMENTS.md`; o detalhamento histórico integral está em `.planning/REQUIREMENTS-ARCHIVE.md`, no archive deste roadmap e nos artefatos das fases.
 
-## F48.2.1 - Otimizacao dos Prompts do Diretor
+## F48.2.1 - Bancada Manual de Prompts do Diretor
 
-**Status:** **Em andamento** — 5/9 planos concluidos (`48-2-1-01` a `48-2-1-05`); Checkpoint humano 1 aprovado (`matrix-v1` + `diagnosticVersion 3`) e Checkpoint humano 2 aprovado (autorizar-inicial: `budget_usd` = US$ 2.808 para os 36 runs iniciais; pior caso US$ 8.424 NAO autorizado). Proximo: `48-2-1-06`.
+**Status:** **pausada apos realinhamento, aguardando retomada explicita no Plano 07** — 5/9 planos concluidos (`48-2-1-01` a `48-2-1-05`); `48-2-1-06` **interrompido e suplantado** (summary de supersessao); `48-2-1-07` a `48-2-1-09` planejados e **nao executados**. Checkpoint humano 1 aprovado (`matrix-v1` + `diagnosticVersion 3`) e Checkpoint humano 2 aprovado (autorizar-inicial: `budget_usd` = US$ 2.808). **Zero runs e zero custo.**
 
-**Fonte da verdade:** `openspec/changes/fase-48-2-1-otimizacao-prompts-diretor/` (proposal.md / design.md D1-D11 / 9 specs / tasks.md 48-2-1-01..48-2-1-09).
+**Fonte da verdade:** `openspec/changes/fase-48-2-1-otimizacao-prompts-diretor/` no commit `017b8799` (proposal.md / design.md D1-D11 / 9 specs / tasks.md com tasks C1-C10 e D1-D4).
 
-**Escopo:** primeira fatia do guarda-chuva F48.2 (Qualidade e otimizacao dos prompts). Diagnostico versionado das evidencias da F37, matriz de nove cenarios (offer/spotlight/exclusive, 1:1), suporte aos tres prompts do Diretor, rubrica humana e comparacao cega, regras de simplicidade, ciclos de otimizacao, orcamento atomico em USD do programa, relatorio e recomendacao. Integralmente local (migration nao aplicada no remoto) e sem promocao.
+**Escopo realinhado:** a fase entrega exclusivamente uma **bancada funcional para testes manuais** dos prompts do Diretor (`offer`, `spotlight`, `exclusive`). A candidata e escrita/revisada **fora da execucao automatica** e inserida/colada **manualmente**; a bancada **nao** cria candidatas, **nao** inicia experimentos e **nao** aprova/promove automaticamente. Diagnostico versionado (v1/v2/v3) permanece como evidencia historica; a regra de vitoria e **consultiva**; o rascunho `offer/v1` e apenas exemplo. Integralmente local (migration nao aplicada no remoto) e sem promocao.
 
-**Fora de escopo:** Revisor (F48.2.2); promocao, canario e db push remoto (F48.2.3); homologacao geral de modelos/providers (F48.6).
+**Fora de escopo:** Revisor (F48.2.2); promocao, canario e `db push` remoto (F48.2.3); homologacao geral de modelos/providers (F48.6).
 
-**Planos:** 9 planos (sequenciais). Diretorio: `.planning/phases/48.2.1-otimizacao-prompts-diretor/`.
+**Planos:** diretorio `.planning/phases/48.2.1-otimizacao-prompts-diretor/`.
 
 Plans:
 - [x] 48-2-1-01-PLAN.md — Dominio, migration local e programa (`lab_prompt_programs`, `campaign_intent`/`program_id`/`rubric`, orcamento atomico, `DIRECTOR_PROMPTS`).
-- [x] 48-2-1-02-PLAN.md — Diagnostico versionado da F37 e matriz de nove cenarios (inclui Checkpoint humano 1; aprovado com diagnosticVersion 3).
+- [x] 48-2-1-02-PLAN.md — Diagnostico versionado da F37 e matriz de nove cenarios (Checkpoint humano 1; aprovado com diagnosticVersion 3).
 - [x] 48-2-1-03-PLAN.md — Execucao do Diretor por tipo de campanha e harness (uma chamada `campaign_image`; settle/release de orcamento).
 - [x] 48-2-1-04-PLAN.md — Avaliacao humana, rubrica de nove criterios e comparacao cega.
-- [x] 48-2-1-05-PLAN.md — API, UI, orcamento e isolamento (inclui Checkpoint humano 2; aprovado em autorizar-inicial, US$ 2.808).
-- [ ] 48-2-1-06-PLAN.md — Ciclo do Diretor `offer` (12 runs, avaliacao cega, regra de vitoria).
-- [ ] 48-2-1-07-PLAN.md — Ciclo do Diretor `spotlight` (12 runs, avaliacao cega, regra de vitoria).
-- [ ] 48-2-1-08-PLAN.md — Ciclo do Diretor `exclusive` (12 runs, criterio de parada e prova de producao inalterada).
-- [ ] 48-2-1-09-PLAN.md — Consolidacao, relatorio por prompt e fechamento (Checkpoints 3/4/5; `48-2-1-VERIFICATION.md` e `48.2.1-UAT.md`).
-**Ondas e dependencias:** sequenciais `01 -> 02 -> ... -> 09` (uma onda por plano; `48-2-1-NN` depende de `48-2-1-(NN-1)`). Planos com checkpoint humano ou execucao paga sao `autonomous: false` (02, 05, 06, 07, 08, 09).
+- [x] 48-2-1-05-PLAN.md — API, UI, orcamento e isolamento (Checkpoint humano 2; aprovado em autorizar-inicial, US$ 2.808).
+- [~] 48-2-1-06-PLAN.md — **Interrompido e suplantado** por decisao humana na Task 4 (Checkpoint 3), antes de qualquer run pago; Tasks 1–3 executadas; resolucao em `48-2-1-06-SUMMARY.md` (supersessao). **Nao pertence mais a cadeia executavel.**
+- [ ] 48-2-1-07-PLAN.md — **Seguranca financeira e revogacao fail-closed** (reserva exige `status='authorized'`; `closed` terminal; reautorizacao recusada; historico preservado; controle de encerramento + UI com confirmacao).
+- [ ] 48-2-1-08-PLAN.md — **Orcamento visivel e arquivamento seguro** (autorizado/reservado/consumido/saldo; integracao do painel; arquivamento administrativo com recusa de execucao e historico preservado).
+- [ ] 48-2-1-09-PLAN.md — **Verificacao, UAT e encerramento operacional** (validacao automatica sem execucao paga; encerrar o programa e arquivar o experimento apos checkpoint; `48-2-1-VERIFICATION.md` e `48.2.1-UAT.md`).
 
-**Restricoes transversais:** toda execucao paga exige programa com orcamento autorizado e reserva atomica (saldo = budget_usd - consumed - reserved); exatamente uma chamada `campaign_image` por run; `prompts/` intocado byte a byte; migration local-only (sem `db push` remoto).
+**Ondas e dependencias:** cadeia executavel **`48-2-1-05 -> 48-2-1-07 -> 48-2-1-08 -> 48-2-1-09`** (uma onda por plano). O Plano 06 **nao** faz parte da cadeia executavel. Proximo plano executavel: **`48-2-1-07`** (apos aprovacao humana). Planos 07/08 sao `autonomous: true`; o Plano 09 e `autonomous: false` (checkpoint humano antes das acoes terminais).
+
+**Estado local (pre-execucao dos planos 07–09):** programa `860ca4fe-dc8b-4354-b94e-02f9e7b202c6` continua `status='authorized'` (`budget_usd 2.808`, reservado 0, consumido 0) e o experimento `c48e21b5-c7a8-4456-a0d6-a2b4040fc1e3` continua `status='ready'`, ate as acoes controladas do Plano 09. **Zero runs e zero custo.**
+
+**Primeira operacao real:** sera **posterior**, em sessao conduzida pelo usuario, exigindo **novo programa** e **nova autorizacao humana**. Nenhuma candidata automatica; nenhuma execucao paga exigida para concluir a fase; nenhuma promocao, canario ou `db push`.
+
+**Restricoes transversais:** `prompts/` intocado byte a byte; migration local-only (sem `db push` remoto); exatamente uma chamada `campaign_image` por run; toda execucao paga exigiria programa `authorized` e reserva atomica (saldo = `budget_usd - consumed - reserved`).
+
+**Excecao preexistente (externa a F48.2.1):** `src/lib/legal/__tests__/legal-document-versions.test.ts` falha com `ENOENT` (caminho antigo da F50, change arquivada). O gate fail-closed do Plano 09 aceita a suite completa somente com essa excecao exata (1 arquivo / 1 teste) e a registra como follow-up externo.
 ## F50.1 — Formalização Legal e Ativação da Demonstração
 
 **Status:** Futura — aguardando constituição da PJ; não planejada e não ativa.
