@@ -137,7 +137,7 @@ A API SHALL retornar o detalhe do run com URLs assinadas dos artefatos e evidên
 
 ### Requirement: Endpoints de programa e orçamento
 
-A API SHALL oferecer endpoints para criar o programa de otimização (matriz) e registrar a autorização de orçamento, o status, a referência/hash do relatório e a recomendação final.
+A API SHALL oferecer endpoints para criar o programa de otimização (matriz) e registrar a autorização de orçamento, o status, a referência/hash do relatório e a recomendação final. A API SHALL permitir **encerrar o programa** (`status='closed'`, autorização revogada) de forma efetiva, SHALL recusar a reautorização de um programa `closed` e SHALL expor `budget_usd` (autorizado), `budget_reserved_usd` (reservado), `budget_consumed_usd` (consumido) e o saldo restante.
 
 #### Scenario: Programa e orçamento são registrados
 
@@ -145,8 +145,32 @@ A API SHALL oferecer endpoints para criar o programa de otimização (matriz) e 
 - **THEN** o valor em USD, o autor e o timestamp são persistidos
 - **AND** nenhuma chamada paga ocorre antes disso
 
+#### Scenario: Programa pode ser encerrado (autorização revogada)
+
+- **WHEN** o admin encerra o programa (`status='closed'`)
+- **THEN** novas reservas passam a ser recusadas antes de qualquer chamada paga
+- **AND** o encerramento é efetivo e não apenas um rótulo de status
+
+#### Scenario: Reautorização de programa `closed` é recusada
+
+- **WHEN** a API recebe uma tentativa de reautorizar um programa `closed`
+- **THEN** a operação é recusada
+- **AND** uma nova sessão exige criar e autorizar um novo programa
+
+#### Scenario: Dados financeiros históricos permanecem consultáveis
+
+- **WHEN** o programa `closed` é consultado
+- **THEN** autorizado, reservado, consumido, autor e timestamp permanecem retornados
+- **AND** nenhum valor histórico é apagado ou zerado
+
+#### Scenario: Orçamento é exposto de forma completa
+
+- **WHEN** o programa é consultado
+- **THEN** a resposta inclui autorizado, reservado, consumido e saldo restante
+- **AND** o saldo é `budget_usd - budget_consumed_usd - budget_reserved_usd`
+
 #### Scenario: Relatório e recomendação são registrados
 
-- **WHEN** o relatório final é concluído
+- **WHEN** um relatório consultivo é registrado
 - **THEN** a API registra a referência e o hash do relatório e a recomendação
 - **AND** nenhuma variante é promovida automaticamente

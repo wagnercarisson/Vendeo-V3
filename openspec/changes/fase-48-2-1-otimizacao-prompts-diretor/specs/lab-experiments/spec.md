@@ -127,3 +127,19 @@ Após o primeiro run do experimento, o sistema SHALL impedir **no banco** a alte
 - **WHEN** o experimento está em `draft`/`ready` e ainda não tem runs
 - **THEN** `campaign_intent` e `program_id` podem ser ajustados
 - **AND** o trigger de imutabilidade não bloqueia
+
+### Requirement: Arquivamento seguro do experimento
+
+O sistema SHALL permitir arquivar um experimento de forma segura. Um experimento arquivado SHALL NOT aceitar novas reservas nem execuções e SHALL preservar integralmente o histórico (variantes, cenários, runs, avaliações e snapshots). O arquivamento SHALL NOT apagar dados nem alterar registros produtivos.
+
+#### Scenario: Experimento arquivado não executa
+
+- **WHEN** um experimento é arquivado
+- **THEN** novas reservas e execuções são recusadas
+- **AND** nenhuma chamada paga é iniciada
+
+#### Scenario: Arquivamento preserva o histórico
+
+- **WHEN** o experimento é arquivado
+- **THEN** variantes, cenários, runs, avaliações e snapshots permanecem preservados
+- **AND** nenhum registro é apagado

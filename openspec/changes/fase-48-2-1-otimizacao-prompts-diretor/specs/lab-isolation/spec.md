@@ -6,7 +6,7 @@
 
 ### Requirement: Segurança financeira
 
-Toda chamada paga SHALL exigir ação humana explícita, um programa com orçamento autorizado e SHALL ter estimativa ou aviso de custo exibido antes da execução quando possível. O sistema SHALL controlar o orçamento em USD do programa de forma **atômica**, limitar cenários, repetições e concorrência, impedir loops automáticos ilimitados e SHALL NOT realizar chamadas reais em testes automatizados ou CI.
+Toda chamada paga SHALL exigir ação humana explícita, um programa com orçamento autorizado e SHALL ter estimativa ou aviso de custo exibido antes da execução quando possível. O sistema SHALL controlar o orçamento em USD do programa de forma **atômica**, limitar cenários, repetições e concorrência, impedir loops automáticos ilimitados e SHALL NOT realizar chamadas reais em testes automatizados ou CI. A reserva SHALL ocorrer somente quando o programa estiver explicitamente com `status='authorized'`; um programa `closed`, cuja autorização está revogada, SHALL recusar qualquer nova reserva antes de qualquer chamada paga. `closed` é terminal e não retorna a `authorized`; uma nova sessão operacional exige um novo programa. O encerramento preserva os valores financeiros como histórico auditável e a efetividade vem do bloqueio server-side/RPC.
 
 #### Scenario: Execução sem confirmação é recusada
 
@@ -18,6 +18,30 @@ Toda chamada paga SHALL exigir ação humana explícita, um programa com orçame
 - **WHEN** o experimento não está vinculado a um programa com orçamento autorizado
 - **THEN** a execução é recusada com `program_not_authorized`
 - **AND** nenhuma chamada paga é iniciada
+
+#### Scenario: Programa `closed` recusa a reserva
+
+- **WHEN** o programa vinculado está `closed` (autorização revogada)
+- **THEN** qualquer nova reserva é recusada antes de qualquer chamada paga
+- **AND** nenhuma chamada paga é iniciada
+
+#### Scenario: Encerramento é terminal e efetivo
+
+- **WHEN** o programa é encerrado (`status='closed'`)
+- **THEN** novas reservas são impedidas de forma imediata e efetiva
+- **AND** o programa não retorna a `authorized`
+
+#### Scenario: Reautorização de programa `closed` é recusada
+
+- **WHEN** se tenta reautorizar um programa `closed`
+- **THEN** a operação é recusada
+- **AND** uma nova sessão exige criar e autorizar um novo programa
+
+#### Scenario: Dados financeiros históricos permanecem consultáveis
+
+- **WHEN** um programa é encerrado
+- **THEN** `budget_usd`, `budget_reserved_usd`, `budget_consumed_usd`, autor e timestamp permanecem consultáveis
+- **AND** nenhum valor histórico é apagado ou zerado
 
 #### Scenario: Orçamento é debitado atomicamente
 
@@ -62,7 +86,7 @@ A F48.2.1 SHALL permanecer integralmente local/desenvolvimento. A migration SHAL
 
 #### Scenario: Promoção é diferida
 
-- **WHEN** a F48.2.1 termina com variantes vencedoras
+- **WHEN** a F48.2.1 é encerrada
 - **THEN** a promoção e o `db push` remoto ficam para a F48.2.3
 - **AND** nenhum prompt produtivo é alterado nesta fase
 

@@ -65,12 +65,18 @@ A execução SHALL produzir uma campanha comparável reutilizando o gateway, os 
 
 ### Requirement: Autorização de orçamento do programa antes da chamada paga
 
-A execução SHALL validar, antes de qualquer chamada paga, que o experimento pertence a um programa com orçamento autorizado e SHALL debitar o orçamento de forma atômica. Sem autorização ou com teto atingido, nenhuma chamada paga SHALL ocorrer.
+A execução SHALL validar, antes de qualquer chamada paga, que o experimento pertence a um programa com orçamento autorizado e SHALL debitar o orçamento de forma atômica. A reserva SHALL ocorrer somente quando o programa estiver explicitamente com `status='authorized'`; um programa `closed`, cuja autorização está revogada, SHALL recusar a reserva antes de qualquer chamada paga. `closed` é terminal; uma nova sessão operacional exige um novo programa. Sem autorização ou com teto atingido, nenhuma chamada paga SHALL ocorrer.
 
 #### Scenario: Run sem programa autorizado é recusado
 
 - **WHEN** o experimento não está vinculado a um programa ou o programa não tem orçamento autorizado
 - **THEN** a execução é recusada com `program_not_authorized`
+- **AND** nenhuma chamada paga é iniciada
+
+#### Scenario: Programa `closed` recusa a reserva
+
+- **WHEN** o programa vinculado está `closed` (autorização revogada)
+- **THEN** a reserva é recusada antes de qualquer chamada paga
 - **AND** nenhuma chamada paga é iniciada
 
 #### Scenario: Orçamento é debitado antes da chamada

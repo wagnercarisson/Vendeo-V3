@@ -1,6 +1,6 @@
 # Lab Prompt Diagnostics
 
-> Capability nova (ADDED) pela `fase-48-2-1-otimizacao-prompts-diretor`. Define o diagnóstico objetivo e versionado das evidências existentes (F37) que alimenta o ciclo de otimização dos prompts do Diretor, persistido como JSON versionado no repositório (sem nova tabela).
+> Capability nova (ADDED) pela `fase-48-2-1-otimizacao-prompts-diretor`. Define o diagnóstico objetivo e versionado das evidências existentes (F37), preservado como **evidência histórica/técnica** e capaz de alimentar **sessões manuais** de teste dos prompts do Diretor, persistido como JSON versionado no repositório (sem nova tabela).
 
 ## ADDED Requirements
 
@@ -56,7 +56,7 @@ O sistema SHALL distinguir, em cada item, se a falha é tratável por prompt. Um
 
 - **WHEN** o item marca a falha como tratável por prompt
 - **THEN** ele registra uma hipótese mínima para o prompt do Diretor
-- **AND** essa hipótese pode alimentar um ciclo de otimização
+- **AND** essa hipótese pode alimentar uma sessão manual de teste/otimização
 
 #### Scenario: Falha não tratável não gera candidata
 

@@ -6,12 +6,18 @@
 
 ### Requirement: Criação e detalhe de experimento
 
-A UI SHALL permitir criar um experimento (nome, objetivo, hipótese, tipo de campanha obrigatório, programa obrigatório, cenário(s), baseline, candidata, repetições e teto) e visualizar o detalhe com variantes, runs, budget restante e ação de executar run. A UI SHALL exibir o prompt sob teste correspondente ao tipo de campanha e manter a dimensão alterada `prompt` com o modelo fixo exibido como não editável.
+A UI SHALL permitir criar um experimento (nome, objetivo, hipótese, tipo de campanha obrigatório, programa obrigatório, cenário(s), baseline, candidata, repetições e teto) e visualizar o detalhe com variantes, runs, budget restante e ação de executar run. A UI SHALL exibir o prompt sob teste correspondente ao tipo de campanha e manter a dimensão alterada `prompt` com o modelo fixo exibido como não editável. A UI SHALL permitir que a candidata seja **inserida ou colada manualmente** e SHALL exibir, de forma integrada na tela relevante, o orçamento **autorizado, reservado, consumido e o saldo restante**, além de oferecer a ação explícita **"Encerrar programa / revogar autorização"** com confirmação humana.
 
 #### Scenario: Formulário cria experimento
 
 - **WHEN** o admin preenche e submete o formulário válido
 - **THEN** o experimento é criado e o detalhe é exibido
+
+#### Scenario: Candidata é inserida manualmente
+
+- **WHEN** o admin prepara um experimento
+- **THEN** ele insere ou cola manualmente a candidata
+- **AND** a UI não gera candidatas automaticamente
 
 #### Scenario: Tipo de campanha e programa são obrigatórios
 
@@ -37,6 +43,18 @@ A UI SHALL permitir criar um experimento (nome, objetivo, hipótese, tipo de cam
 
 - **WHEN** o detalhe do experimento é exibido
 - **THEN** o número de execuções restantes é mostrado
+
+#### Scenario: Orçamento completo é exibido e integrado
+
+- **WHEN** a tela relevante é exibida
+- **THEN** o orçamento autorizado, reservado, consumido e o saldo restante são mostrados
+- **AND** o painel de orçamento está integrado à tela (não órfão)
+
+#### Scenario: Encerrar programa exige confirmação humana
+
+- **WHEN** o admin aciona "Encerrar programa / revogar autorização"
+- **THEN** a UI exige confirmação humana antes de concluir
+- **AND** após confirmar, o programa fica `closed` e novas reservas passam a ser recusadas
 
 ## ADDED Requirements
 

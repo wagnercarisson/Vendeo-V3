@@ -17,17 +17,18 @@ Restrições: a produção permanece **byte a byte idêntica**; qualquer seam co
 
 **Goals:**
 
-- Diagnóstico objetivo e versionado das evidências da F37 na cadeia falha → evidência → causa provável → tratável por prompt? → hipótese mínima.
-- Matriz de nove cenários (três por tipo de campanha), todos 1:1.
+- Entregar uma **bancada funcional para testes manuais** dos prompts do Diretor (`offer`, `spotlight`, `exclusive`), em que o usuário insere ou cola manualmente a candidata.
+- Diagnóstico objetivo e versionado das evidências da F37 na cadeia falha → evidência → causa provável → tratável por prompt? → hipótese mínima (preservado como evidência histórica/técnica).
+- Matriz de nove cenários (três por tipo de campanha), todos 1:1, aprovada.
 - Suporte aos três prompts do Diretor com baseline × candidata, modelo e parâmetros fixos.
-- Rubrica humana estruturada e comparação cega.
-- Regras de simplicidade das candidatas.
-- Ciclos de otimização dos três prompts com regra de vitória e critério de parada.
-- Orçamento atômico em USD do programa, isolamento local e relatório conclusivo.
+- Rubrica humana estruturada, comparação cega e regra de vitória **consultiva**.
+- Orçamento atômico em USD do programa com **autorização, revogação efetiva e exibição correta** (autorizado/reservado/consumido/saldo).
 - Preparar o terreno da F48.2.2 (Revisor) sem implementar nada dela.
 
 **Non-Goals:**
 
+- **Ciclos pagos obrigatórios** de otimização como requisito de conclusão da fase; **criação/revisão/aprovação automática de candidatas**; início automático de experimentos; promoção/incorporação automática.
+- Relatório final de ciclo obrigatório (a fase pode concluir sem ciclos pagos e sem relatório de variantes).
 - Modo `reviewer`, casos de revisão, `campaign_image_review`, classificação de falsos positivos/negativos (F48.2.2).
 - Promoção, canário, deploy, `db push` remoto, `campaign_approval_enabled` (F48.2.3).
 - Comparação de modelos, troca de provider, pricing versionado, scraping, alertas de lifecycle.
@@ -81,18 +82,22 @@ Nova capability `lab-prompt-diagnostics`. Para manter a simplicidade, **não** h
 
 Reutiliza `prepareLabRun` → `runReservedLabRun` → `buildDirectorPrompt` → `runLabCampaignImage`. Exatamente uma chamada `campaign_image` por run, sem fallback e sem Revisor produtivo. **Novo**: antes de qualquer chamada paga, a reserva valida que o experimento pertence a um programa com orçamento autorizado e debita o orçamento de forma atômica (D2).
 
-### D6 — Ciclo de otimização, simplicidade e critério de parada
+### D6 — Bancada de testes manuais (sem ciclos pagos obrigatórios)
 
-1. **Diagnosticar** as evidências da F37 e o prompt baseline atual (D3).
-2. **Formular** uma hipótese mínima (uma classe de falha).
-3. **Redigir** a candidata com as regras de simplicidade.
-4. **Criar o experimento completo baseline × candidata** (as duas variantes são congeladas juntas).
-5. **Executar** os dois lados e **avaliar às cegas**.
-6. **Refinar ou rejeitar** (novo experimento, nunca edição do congelado).
+A F48.2.1 entrega uma **bancada funcional**; a condução de candidatas é manual:
 
-**Simplicidade**: atacar uma classe de falha; remover/reorganizar/esclarecer antes de adicionar; proibir nomes/exemplos/soluções das fixtures; não duplicar validações do código; registrar diferença de tamanho e justificativa; empate desempata pela variante mais simples e curta.
+1. **Diagnosticar** as evidências da F37 e o prompt baseline atual (D3) — evidência histórica/técnica.
+2. **Escrever/revisar a candidata fora da execução automática** — o laboratório **não** cria candidatas.
+3. **Inserir ou colar manualmente** a candidata no laboratório e montar o experimento baseline × candidata.
+4. **Executar sob confirmação explícita**, com orçamento autorizado (D9) — nunca automaticamente.
+5. **Avaliar às cegas** com rubrica humana (D7) e aplicar a regra de vitória como apoio consultivo (D8).
+6. **Decidir humanamente** aprovar, refinar ou rejeitar — nenhuma decisão automática; nenhuma promoção.
 
-**Critério de parada** por prompt: candidata recomendada, ou três ciclos sem recomendação, ou dois ciclos consecutivos sem melhora — o que ocorrer primeiro.
+**Sem requisito de ciclos pagos**: nenhum ciclo pago de otimização é requisito para concluir a fase. A primeira operação real paga ocorrerá posteriormente, em sessão conduzida pelo usuário, com nova autorização humana.
+
+**Simplicidade (orientação não bloqueante)**: atacar uma classe de falha; remover/reorganizar/esclarecer antes de adicionar; proibir nomes/exemplos/soluções das fixtures; não duplicar validações do código; registrar diferença de tamanho e justificativa; em empate, preferir a variante mais simples e curta.
+
+**Rascunho de exemplo**: `fixtures/lab/prompts/offer/v1-candidate.md` permanece como **rascunho de exemplo** para revisão posterior — não aprovado, não vencedor, não carregado nem executado automaticamente e não promovido.
 
 ### D7 — Avaliação humana: rubrica estruturada e comparação cega
 
@@ -100,17 +105,23 @@ Reutiliza `prepareLabRun` → `runReservedLabRun` → `buildDirectorPrompt` → 
 - Comparação cega com `blind_order` registrado apenas quando a escolha foi cega; avaliações append-only; formulário reinicia com a troca de par.
 - Nenhum scoring automático.
 
-### D8 — Regra de vitória determinística
+### D8 — Regra de vitória consultiva
 
-Por cenário, a moda das repetições; sem maioria → `inconclusive` (não conta como vitória); qualquer repetição `none` torna o item crítico. A candidata é recomendada sse **todos** os cenários obrigatórios terminam em `candidate` ou `tie`, com **ao menos um** `candidate` e **nenhum** `baseline`/`none`/`inconclusive`. Empates, "nenhuma adequada" e regressões permanecem registrados. Nenhuma promoção automática.
+A regra determinística permanece disponível como **ferramenta consultiva** de apoio à revisão humana: por cenário, a moda das repetições; sem maioria → `inconclusive` (não conta como vitória); qualquer repetição `none` torna o item crítico. A recomendação (todos os cenários em `candidate`/`tie`, com ao menos um `candidate` e nenhum `baseline`/`none`/`inconclusive`) é apenas **indicativa**. A regra SHALL NOT decidir aprovação, SHALL NOT disparar novos ciclos, SHALL NOT promover variantes e SHALL NOT substituir a decisão humana. Empates, "nenhuma adequada" e regressões permanecem registrados.
 
-### D9 — Orçamento atômico e estimativa por capability
+### D9 — Orçamento atômico, autorização e revogação
 
 - Estimativa do plano = **cenários × duas variantes × repetições**, calculada por componente de pricing da **capability do modo** (`campaign_image` nesta change).
-- Escala do plano: **36 runs iniciais** (v1 × 3 prompts × 12 runs) e **108 runs no pior caso** (até 3 ciclos × 12 runs × 3 prompts).
-- O teto em USD é calculado pela estimativa com margem explícita e autorizado em `lab_prompt_programs` no checkpoint imediatamente anterior às chamadas pagas. O teto **pode** ser autorizado para o pior caso (108 runs) **ou** por **reautorizações incrementais**.
-- **Reautorização obrigatória por ciclo:** antes de iniciar qualquer ciclo adicional (v2/v3) de qualquer prompt, é exigida uma **nova autorização humana explícita** em `lab_prompt_programs` (mesmo contrato atômico de `budget_usd`/`budget_reserved_usd`/`budget_consumed_usd`); sem essa reautorização, **nenhuma chamada paga do ciclo adicional ocorre**.
-- O consumo é debitado de forma **atômica**; sem saldo autorizado, a execução é recusada (`program_not_authorized`/`budget_exceeded`).
+- O teto em USD é calculado pela estimativa com margem explícita e autorizado em `lab_prompt_programs` antes de qualquer chamada paga. A autorização é **explícita e revogável**.
+- **Reserva somente com `status='authorized'`:** a reserva do run só pode ocorrer quando o programa está explicitamente com `status='authorized'`.
+- **`status='closed'` = encerrado com autorização revogada:** não existe status `revoked`. Encerrar o programa leva a `status='closed'`, que é **terminal** (não retorna a `authorized`) e recusa **qualquer nova reserva** antes de qualquer chamada paga, independentemente de `budget_usd`/`budget_authorized_at` residuais.
+- **Nova sessão exige novo programa:** como `closed` é terminal, uma nova sessão operacional exige **criar e autorizar um novo programa**.
+- **Histórico preservado:** encerrar preserva `budget_usd`, `budget_reserved_usd`, `budget_consumed_usd`, autor e timestamp como **histórico auditável**; não é necessário apagar nem zerar valores para tornar a revogação efetiva.
+- **Efetividade server-side:** a revogação é efetiva porque o RPC/serviço recusa qualquer status diferente de `authorized` antes da chamada paga.
+- **Controle administrativo:** a UI oferece a ação explícita "Encerrar programa / revogar autorização" com confirmação humana; a API recusa reautorizar um programa `closed`.
+- **Exibição correta:** o sistema SHALL exibir `budget_usd` (autorizado), `budget_reserved_usd` (reservado), `budget_consumed_usd` (consumido) e o saldo restante (`budget_usd - budget_consumed_usd - budget_reserved_usd`), com o painel de orçamento **integrado à tela relevante**.
+- **Contrato atômico:** o consumo é debitado de forma **atômica**; a reserva é idempotente por `operation_id`; sem saldo autorizado, a execução é recusada (`program_not_authorized`/`budget_exceeded`).
+- **Sem ciclos pagos obrigatórios:** não há escala obrigatória de ciclos para concluir a fase; o orçamento atualmente autorizado será posteriormente **revogado** (encerrando o programa) antes do realinhamento da operação.
 
 ### D10 — API e UI
 
@@ -121,11 +132,12 @@ Por cenário, a moda das repetições; sem maioria → `inconclusive` (não cont
 - Endpoints de programa: `POST /programs` (matriz + autorização de orçamento) e `GET/PUT /programs/[id]`.
 - UI: seleção de tipo de campanha que determina o prompt, vínculo ao programa, estimativa/confirmação e formulário de rubrica. Segue `openspec/design-system/MASTER.md`.
 
-### D11 — Migration local-only, checkpoints e relatório
+### D11 — Migration local-only, autorização humana e encerramento
 
 - Migration testada localmente (`supabase db reset` + `db lint`); **sem** `db push` remoto.
-- **Checkpoints humanos ordenados**: (1) aprovacao da matriz -> (2) autorizacao de orcamento (36 runs iniciais / 108 no pior caso) -> (2b) reautorizacao humana antes de cada ciclo adicional (v2/v3) -> (3) execucao -> (4) avaliacao cega (antes da regra de vitoria) -> (5) decisao final por variante.
-- Relatório final por prompt em **Markdown versionado** (canônico); o banco guarda referência, hash, checkpoints, decisão, autoria e recomendação.
+- **Autorização humana para operações pagas**: qualquer operação real paga exige nova autorização humana explícita registrada em `lab_prompt_programs` antes da chamada. A matriz já aprovada permanece válida; **não** há checkpoints ordenados de ciclos de otimização como requisito de conclusão da fase.
+- **Encerramento da fase**: a F48.2.1 conclui com a bancada validada (typecheck/lint/build, testes, UAT local **sem execução paga**) e com o isolamento de `prompts/` e das estruturas produtivas confirmado. O experimento interrompido será **arquivado com segurança** e o programa **encerrado** (`status='closed'`, autorização revogada) em etapa posterior.
+- **Sem relatório de ciclo obrigatório**: a fase pode concluir sem variantes vencedoras; o relatório final por prompt permanece disponível para sessões posteriores, mas não é requisito de conclusão.
 
 ## Risks / Trade-offs
 
@@ -142,8 +154,8 @@ Por cenário, a moda das repetições; sem maioria → `inconclusive` (não cont
 1. Migration aditiva **local**: `lab_prompt_programs` → backfill `campaign_intent='offer'` → `NOT NULL` → FK `program_id` → `lab_human_evaluations.rubric` → triggers de congelamento → REVERT.
 2. `npx supabase db reset` + `db lint`; testes de contrato.
 3. Implementação e testes locais (fakes; sem chamadas pagas).
-4. UAT local (Docker) com chave/projeto de desenvolvimento e orçamento autorizado.
-5. Ciclos de otimização dos três prompts e relatório final.
+4. UAT local (Docker) com chave/projeto de desenvolvimento e orçamento autorizado — **sem execução paga obrigatória**.
+5. Validação e UAT da bancada **sem execução paga**; arquivamento seguro do experimento interrompido e encerramento do programa (`status='closed'`, autorização revogada) em etapa posterior. A primeira operação real paga ocorrerá depois, em sessão conduzida pelo usuário, com nova autorização humana.
 6. **Sem `db push` remoto e sem promoção** — F48.2.3.
 
 ## Dúvidas resolvidas
@@ -153,3 +165,4 @@ Por cenário, a moda das repetições; sem maioria → `inconclusive` (não cont
 3. Relatório em Markdown canônico; banco guarda referência/hash.
 4. Orçamento: estimativa = cenários × duas variantes × repetições, por capability, com margem explícita; USD aprovado antes das chamadas pagas.
 5. Diagnóstico da F37 versionado na cadeia falha → evidência → causa → tratável por prompt? → hipótese mínima.
+6. **Escopo realinhado (decisão humana):** a F48.2.1 entrega exclusivamente a bancada funcional para testes manuais; os ciclos pagos obrigatórios e o relatório de variantes deixam de ser requisito de conclusão; candidatas são criadas/revisadas/inseridas manualmente e decididas humanamente.
