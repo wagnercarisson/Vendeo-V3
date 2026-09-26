@@ -822,13 +822,44 @@ Dark OLED (`bg-bg-deep`/`bg-bg-surface`/`bg-bg-elevated`), accent `accent-green`
 
 ---
 
+## Realignment Patterns (planos 07–09 — correção + encerramento)
+
+> Aplicam-se **apenas** à correção técnica e ao encerramento operacional (C1–C10, D1–D4). Não recriam a bancada dos planos 01–05.
+
+### Terminal status (`closed`) com histórico preservado (C3)
+**Source:** `src/lib/lab/domain/program-service.ts` (`updateProgram` hoje aceita `status: "closed"`) + `EXPERIMENT_TRANSITIONS` (`archived: []`).
+**Apply to:** `closeProgram`, `authorizeProgramBudget`, `updateProgram`, trigger `trg_lab_prompt_programs_terminal`.
+- `closed`/`archived` são **terminais**; não retornam a `authorized`/`ready`. Recusa via erro tipado (`program_closed`, `invalid_transition`).
+- Encerrar/arquivar altera **apenas** `status` + `updated_at`; nunca apaga/zerra `budget_usd`/`budget_reserved_usd`/`budget_consumed_usd`/autor/timestamp nem remove variantes/runs/avaliações.
+- Reforço no banco: trigger `BEFORE UPDATE` que lança `program_closed` quando `OLD.status='closed' AND NEW.status IS DISTINCT FROM 'closed'`.
+
+### Reserva fail-closed (C1/C2)
+**Source:** `lab_reserve_run` (migration `20260925000001`, linhas ~343-369) — hoje checa `budget_authorized_at`/`budget_usd`, mas **não** `status`.
+**Apply to:** nova migration aditiva `20260926000001_...` que faz `CREATE OR REPLACE` do `lab_reserve_run` (mesma assinatura de 9 args).
+- Inserir `IF v_program.status <> 'authorized' THEN RAISE EXCEPTION 'program_not_authorized'; END IF;` **após** o `SELECT ... FOR UPDATE` do programa e **antes** de qualquer débito/inserção de run.
+- Qualquer status ≠ `authorized` (`draft`/`closed`) recusa antes da chamada paga. O erro chega ao TS via `LabReservationError` (`program_not_authorized`).
+
+### Exibição e integração do painel de orçamento (C5/C6)
+**Source:** `src/app/(app)/admin/laboratorio/_components/budget-panel.tsx` (órfão) + `run-execution-panel.tsx` (já aceita `programRemainingUsd`).
+**Apply to:** `experiment-queries.ts` (`LabExperimentDetail.budget`), `experimentos/[id]/page.tsx`.
+- Expor `programBudgetUsd`/`programReservedUsd`/`programConsumedUsd`/`programRemainingUsd` no detalhe; renderizar `<BudgetPanel .../>` na tela e passar `programRemainingUsd` ao `RunExecutionPanel` (corrige o saldo não propagado).
+- Saldo = `budget_usd - budget_consumed_usd - budget_reserved_usd` (fonte única `remainingUsd`).
+
+### Arquivamento administrativo seguro (C7)
+**Source:** `transitionExperiment`/`EXPERIMENT_TRANSITIONS` (a transição `archived` já é válida e terminal, mas não exposta).
+**Apply to:** `archiveExperiment` (domínio), `PATCH /api/admin/laboratorio/experiments/[id]`, `experiment-archive-button.tsx`.
+- Expor a transição terminal via API/UI com confirmação humana; `archived` recusa reservas (`experiment_not_ready`) e preserva o histórico.
+- `ProgramCloseButton`/`ExperimentArchiveButton` reutilizam `confirm-dialog.tsx` (confirmação obrigatória; nenhum `PUT`/`PATCH` antes de confirmar).
+
+---
+
 ## No Analog Found
 
 Files with no close match in the codebase (planner should use the OpenSpec design/spec directly):
 
 | File | Role | Data Flow | Reason |
 |------|------|-----------|--------|
-| `docs/lab/48-2-1-<prompt>-report.md` (final report, D11) | config/data | file-I/O | First canonical Markdown optimization report in the repo; the DB only stores its ref/hash. Model structure on the spec `lab-prompt-optimization` "Relatório final por prompt". |
+| `docs/lab/48-2-1-<prompt>-report.md` (final report, D11) | config/data | file-I/O | **Opcional/consultivo** (realinhamento `017b8799`): o relatório por prompt em Markdown é disponível para **sessões manuais posteriores**, mas **não** é requisito de conclusão da fase e **não** promove variantes. O banco pode guardar ref/hash quando houver. Estrutura modelada na spec `lab-prompt-optimization` "Relatório consultivo por prompt". |
 | Candidate prompt drafts (override content, D6) | config/data | file-I/O | F48.1 had no candidate prompt file — the candidate is an in-memory `override` submitted through the form (`prompt-snapshot.ts:140-154`). If versioned as fixtures, mirror the diagnostics fixture pattern. |
 | `fixtures/lab/diagnostics/f37/f37-prompt-diagnostics.v1.json` content (D3) | config/data | file-I/O | The *loader* has an exact analog (`scenarios/service.ts`), but the diagnostic *content* (failure chain from F37 evidence) has no code analog. |
 
@@ -839,4 +870,5 @@ Files with no close match in the codebase (planner should use the OpenSpec desig
 **Analog search scope:** `src/lib/lab/**`, `src/app/api/admin/laboratorio/**`, `src/app/(app)/admin/laboratorio/**`, `supabase/migrations/20260915*`, `fixtures/lab/**`, `scripts/uat/48-*`, `src/lib/admin/schemas.ts`, `src/lib/ai/__tests__/architecture-guard.test.ts`
 **Files scanned (read):** 30 source/migration/fixture/test files
 **Pattern extraction date:** 2026-09-25
+**Realignment:** 2026-09-26 (commit `017b8799`) — planos 07–09 passam a cobrir apenas correção técnica (C1–C7) e encerramento operacional (C8–C10, D1–D4). Padrões de "ciclos pagos obrigatórios"/"três ciclos por prompt"/"relatório de ciclo obrigatório" foram ajustados para **consultivos/opcionais**.
 **Base decisions:** F48.1 D1-D18 + F48.2.1 D1-D11; divergences DV-1..DV-8 resolved in `48.2.1-CONTEXT.md`
