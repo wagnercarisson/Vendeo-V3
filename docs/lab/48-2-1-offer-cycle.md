@@ -90,3 +90,22 @@
 
 **Nenhuma chamada paga nesta task:** `lab_runs` do experimento = `0`. A execução
 dos 12 runs depende da autorização do **Checkpoint 3** (Task 4).
+
+## Interrupção do ciclo (Checkpoint 3)
+
+| Campo | Valor |
+|---|---|
+| decisão | `interromper` — decisão humana explícita de parada controlada |
+| registrado em | `2026-09-26T22:57:30.735Z` |
+| momento | Task 4/22 (Checkpoint humano 3), **antes de qualquer run pago** |
+| runs existentes | `0` (`lab_runs` do experimento = `0`; `lab_runs` totais = `0`) |
+| orçamento reservado | `0.000000` USD |
+| orçamento consumido | `0.000000` USD |
+| candidata aprovada | nenhuma |
+| variante vencedora | nenhuma |
+| estado do experimento | `ready` (não executado) |
+| próximo passo | realinhamento da fase F48.2.1 antes de retomar; nenhum plano seguinte iniciado |
+
+A execução dos 12 runs **não foi autorizada**. O ciclo do `offer` permanece
+suspenso; nenhuma promoção, recomendação ou aprovação foi registrada. O prompt
+oficial permanece intocado (`git status --porcelain prompts/` vazio).
