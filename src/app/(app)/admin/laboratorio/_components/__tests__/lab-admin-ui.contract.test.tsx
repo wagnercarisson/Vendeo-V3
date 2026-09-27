@@ -48,6 +48,7 @@ import { ComparisonView } from "../comparison-view";
 import type { ComparisonEvaluation, ComparisonRun } from "../comparison-format";
 import { EvaluationForm } from "../evaluation-form";
 import { ExperimentForm } from "../experiment-form";
+import { ProgramCloseButton } from "../program-close-button";
 import { RunExecutionPanel } from "../run-execution-panel";
 
 /**
@@ -755,6 +756,59 @@ describe("contrato de UI — nenhuma nota automática de qualidade", () => {
     expect(stripRubricInstruction(evaluation.container.textContent ?? "")).not.toMatch(
       /score|rating|publicável|ranking|percentual|\bnota\b/i,
     );
+  });
+});
+
+// ─── 7b. Encerrar programa / revogar autorização ─────────────────────────────
+
+describe("contrato de UI — encerrar programa exige confirmação humana", () => {
+  it("abre a confirmação e não dispara PUT antes de confirmar; envia { close: true }", async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ id: PROGRAM_ID, status: "closed" }));
+
+    render(<ProgramCloseButton programId={PROGRAM_ID} status="authorized" />);
+
+    const trigger = screen.getByRole("button", {
+      name: "Encerrar programa / revogar autorização",
+    });
+    expect(trigger).toBeEnabled();
+
+    fireEvent.click(trigger);
+
+    // A confirmação abre; nenhum PUT é disparado antes da confirmação humana.
+    const confirm = await screen.findByTestId("lab-confirm-button");
+    expect(mockFetch).not.toHaveBeenCalled();
+
+    fireEvent.click(confirm);
+
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+    const [url, init] = mockFetch.mock.calls[0];
+    expect(url).toBe(`/api/admin/laboratorio/programs/${PROGRAM_ID}`);
+    expect(init.method).toBe("PUT");
+    expect(JSON.parse(String(init.body))).toEqual({ close: true });
+    await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
+  });
+
+  it("programa `closed` mostra o botão desabilitado (Encerrado)", () => {
+    render(<ProgramCloseButton programId={PROGRAM_ID} status="closed" />);
+
+    const button = screen.getByRole("button", { name: "Encerrado" });
+    expect(button).toBeDisabled();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("exibe o erro da API em accent-red sem navegar", async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ error: "program_closed" }, 409));
+
+    render(<ProgramCloseButton programId={PROGRAM_ID} status="authorized" />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Encerrar programa / revogar autorização" }),
+    );
+    fireEvent.click(await screen.findByTestId("lab-confirm-button"));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveClass("text-accent-red");
+    expect(mockRefresh).not.toHaveBeenCalled();
   });
 });
 

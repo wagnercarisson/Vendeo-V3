@@ -7,6 +7,7 @@ import { getProgramDetail } from "@/lib/lab/api/program-queries";
 import {
   LabProgramError,
   authorizeProgramBudget,
+  closeProgram,
   updateProgram,
 } from "@/lib/lab/domain/program-service";
 import { LabEnvironmentError, assertLabEnvironment, labEnvironmentDeniedBody } from "@/lib/lab/environment-guard";
@@ -14,13 +15,20 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 
 // F48.2.1 (D2/D10): detalhe e atualização do programa. O PUT registra a
 // autorização de orçamento (`budgetUsd` → `budget_usd`/`budget_authorized_by`/
-// `budget_authorized_at`/`status='authorized'`), a referência/hash do relatório
-// final e a recomendação. Nenhuma promoção automática de variante; nenhuma
-// chamada paga.
+// `budget_authorized_at`/`status='authorized'`), o encerramento/revogação
+// (`close: true`/`status='closed'` → `closeProgram`), a referência/hash do
+// relatório final e a recomendação. Nenhuma promoção automática de variante;
+// nenhuma chamada paga.
 
 function programErrorStatus(code: string): number {
   if (code === "program_not_found") return 404;
-  if (code === "program_not_authorized" || code === "budget_exceeded") return 409;
+  if (
+    code === "program_not_authorized" ||
+    code === "program_closed" ||
+    code === "budget_exceeded"
+  ) {
+    return 409;
+  }
   return 500;
 }
 
@@ -78,7 +86,23 @@ export const PUT = apiHandler(
       );
     }
 
+    // Encerrar/revogar é explícito (`close: true`) ou via `status: 'closed'`.
+    const closeRequested = parsed.data.close === true || parsed.data.status === "closed";
+    // Encerrar nunca autoriza: `close` + `budgetUsd` no mesmo payload é recusado.
+    if (closeRequested && parsed.data.budgetUsd != null) {
+      return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
+    }
+
     try {
+      // Encerramento efetivo (C3): `closed` é terminal e recusa novas reservas.
+      if (closeRequested) {
+        await closeProgram({
+          programId: id,
+          actorId: admin.userId,
+          client: supabaseAdmin,
+        });
+      }
+
       // A autorização de orçamento é um passo dedicado (grava autor/timestamp e
       // promove o status). Os demais campos são aplicados em seguida.
       if (parsed.data.budgetUsd != null) {

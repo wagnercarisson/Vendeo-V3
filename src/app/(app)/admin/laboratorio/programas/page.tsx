@@ -11,6 +11,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 
 import { DisabledNotice } from "../_components/disabled-notice";
 import { LabTable } from "../_components/lab-table";
+import { ProgramCloseButton } from "../_components/program-close-button";
 import { ProgramForm } from "../_components/program-form";
 
 /**
@@ -111,6 +112,9 @@ export default async function LaboratorioProgramasPage() {
               <th scope="col" className={HEAD_CLASS}>
                 Atualizado em
               </th>
+              <th scope="col" className={HEAD_CLASS}>
+                Ações
+              </th>
             </>
           }
         >
@@ -142,6 +146,9 @@ export default async function LaboratorioProgramasPage() {
               </td>
               <td className="px-3 py-2 text-xs text-text-muted">
                 {formatDateTime(program.updatedAt)}
+              </td>
+              <td className="px-3 py-2">
+                <ProgramCloseButton programId={program.id} status={program.status} />
               </td>
             </tr>
           ))}

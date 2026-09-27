@@ -26,6 +26,7 @@ const {
   mockCreateProgram,
   mockAuthorizeProgramBudget,
   mockUpdateProgram,
+  mockCloseProgram,
   MockLabProgramError,
 } = vi.hoisted(() => {
   class MockLabEnvironmentError extends Error {
@@ -78,6 +79,7 @@ const {
     mockCreateProgram: vi.fn(),
     mockAuthorizeProgramBudget: vi.fn(),
     mockUpdateProgram: vi.fn(),
+    mockCloseProgram: vi.fn(),
     MockLabProgramError,
   };
 });
@@ -141,6 +143,7 @@ vi.mock("@/lib/lab/domain/program-service", () => ({
   createProgram: (...args: unknown[]) => mockCreateProgram(...args),
   authorizeProgramBudget: (...args: unknown[]) => mockAuthorizeProgramBudget(...args),
   updateProgram: (...args: unknown[]) => mockUpdateProgram(...args),
+  closeProgram: (...args: unknown[]) => mockCloseProgram(...args),
 }));
 
 import { ForbiddenError } from "@/lib/auth/errors";
@@ -395,6 +398,7 @@ function anyServiceCalled(): boolean {
     mockCreateProgram,
     mockAuthorizeProgramBudget,
     mockUpdateProgram,
+    mockCloseProgram,
   ].some((mock) => mock.mock.calls.length > 0);
 }
 
@@ -436,6 +440,7 @@ beforeEach(() => {
   mockCreateProgram.mockResolvedValue({ programId: PROGRAM_ID });
   mockAuthorizeProgramBudget.mockResolvedValue(undefined);
   mockUpdateProgram.mockResolvedValue(undefined);
+  mockCloseProgram.mockResolvedValue(undefined);
 });
 
 // ─── 1. 403 não-admin ────────────────────────────────────────────────────────
@@ -721,6 +726,50 @@ describe("contrato da API — programas e autorização de orçamento", () => {
 
     expect(res.status).toBe(404);
     expect((await res.json()).error).toBe("program_not_found");
+  });
+
+  it("PUT /programs/[id] com { close: true } encerra o programa (200, status closed)", async () => {
+    mockGetProgramDetail.mockResolvedValue({ ...PROGRAM_DETAIL, status: "closed" });
+
+    const res = await putProgram(PROGRAM_ID, { close: true });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.status).toBe("closed");
+    expect(mockCloseProgram).toHaveBeenCalledWith(
+      expect.objectContaining({ programId: PROGRAM_ID, actorId: ADMIN_ID }),
+    );
+    // Encerrar nunca autoriza: nenhuma chamada de autorização de orçamento.
+    expect(mockAuthorizeProgramBudget).not.toHaveBeenCalled();
+  });
+
+  it("PUT /programs/[id] com status closed também encerra via closeProgram", async () => {
+    mockGetProgramDetail.mockResolvedValue({ ...PROGRAM_DETAIL, status: "closed" });
+
+    const res = await putProgram(PROGRAM_ID, { status: "closed" });
+
+    expect(res.status).toBe(200);
+    expect(mockCloseProgram).toHaveBeenCalledWith(
+      expect.objectContaining({ programId: PROGRAM_ID, actorId: ADMIN_ID }),
+    );
+  });
+
+  it("reautorizar (budgetUsd) programa closed ⇒ 409 program_closed", async () => {
+    mockAuthorizeProgramBudget.mockRejectedValue(new MockLabProgramError("program_closed"));
+
+    const res = await putProgram(PROGRAM_ID, { budgetUsd: 10 });
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toBe("program_closed");
+  });
+
+  it("close + budgetUsd no mesmo payload ⇒ 400 invalid_payload (encerrar não autoriza)", async () => {
+    const res = await putProgram(PROGRAM_ID, { close: true, budgetUsd: 10 });
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("invalid_payload");
+    expect(mockCloseProgram).not.toHaveBeenCalled();
+    expect(mockAuthorizeProgramBudget).not.toHaveBeenCalled();
   });
 });
 

@@ -315,10 +315,16 @@ export type LabProgramCreateRequest = z.infer<typeof LabProgramCreateRequestSche
  * (`budgetUsd` → `budget_usd`/`budget_authorized_by`/`budget_authorized_at`),
  * referência/hash do relatório final e recomendação. Nenhuma promoção automática
  * de variante e nenhuma chamada paga nesta superfície.
+ *
+ * `close: true` é o campo **explícito** de encerramento/revogação (C3/C4): tem
+ * precedência sobre `budgetUsd` — encerrar **nunca** autoriza. Enviar `close` e
+ * `budgetUsd` juntos é recusado pela rota com 400 (`invalid_payload`). `status`
+ * é mantido por compatibilidade; `status: "closed"` também aciona o encerramento.
  */
 export const LabProgramUpdateRequestSchema = z
   .object({
     status: z.enum(["draft", "authorized", "closed"]).optional(),
+    close: z.literal(true).optional(),
     budgetUsd: z.number().positive().nullable().optional(),
     finalReportRef: z.string().min(1).optional(),
     finalReportHash: z.string().regex(/^[0-9a-f]{64}$/).optional(),
