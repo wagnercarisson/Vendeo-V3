@@ -92,4 +92,38 @@ Enumerados mecanicamente os arquivos que contêm `reviewer`/`campaign_image_revi
 
 ---
 
-*Última atualização: Task 1 do Plano 48-2-1-09. As fronteiras F48.2.2/F48.2.3/F48.6, o registro C10 (primeira operação paga futura) e a UAT estão em `48.2.1-UAT.md` / nas seções seguintes, adicionadas pela Task 2.*
+## 5. Fronteiras (D3)
+
+### 5.1 Fronteira local (F48.2.1)
+
+- A migration da F48.2.1 é criada e testada **somente localmente** (`npx supabase migration up`; `npx supabase db lint` → exit 0, apenas warnings preexistentes). `db reset`/`db lint` conforme aplicável.
+- **Nenhum `db push` remoto** nesta fase. A migration **não** é aplicada no remoto aqui.
+
+### 5.2 Ausência de escopo do Revisor (F48.2.2)
+
+- A F48.2.1 **não** introduz modo `reviewer`, casos de revisão, `campaign_image_review`, nem tabelas/API/UI do Revisor. As três referências históricas do Revisor são apenas allowlist preexistente (§3.3). Tudo o que é do Revisor pertence à **F48.2.2**.
+
+### 5.3 Fronteira F48.2.3 × F48.6
+
+- **F48.2.3 — Promoção, Canário e Prontidão da Aprovação:** promoção de prompts, canário e `db push` remoto ficam para essa mudança. **Nada disso ocorre na F48.2.1.**
+- **F48.6 — homologação geral:** fora do escopo desta fase.
+- **Nenhum prompt produtivo é alterado nesta fase** (`prompts/` intocado — §3.1).
+
+---
+
+## 6. Registro C10 — a primeira operação real paga é FUTURA
+
+- A **primeira operação real paga** do laboratório ocorrerá **posteriormente**, em uma **sessão conduzida pelo usuário**, com um **novo programa** e **nova autorização humana explícita** registrada em `lab_prompt_programs` antes de qualquer chamada paga.
+- O programa local atual (`860ca4fe-dc8b-4354-b94e-02f9e7b202c6`) será encerrado (`status='closed'`), revogando a autorização vigente. `closed` é **terminal** e não retorna a `authorized`; uma nova sessão exige criar e autorizar um **novo** programa.
+- **Nenhum ciclo pago** de otimização é requisito de conclusão da F48.2.1.
+- A **regra de vitória permanece consultiva** (`victory-rule.ts`): apenas indicativa; **não** decide aprovação, **não** dispara ciclos, **não** promove variantes e **não** substitui a decisão humana. O relatório consultivo por prompt é **opcional**.
+
+---
+
+## 7. UAT
+
+O roteiro e o registro da UAT local da bancada (sem execução paga) estão em `48.2.1-UAT.md`.
+
+---
+
+*Fase: 48.2.1-otimizacao-prompts-diretor. Tasks 1–2 do Plano 48-2-1-09 concluídas (validação + UAT). Encerramento operacional (Tasks 3–5) pendente de decisão humana no checkpoint.*
