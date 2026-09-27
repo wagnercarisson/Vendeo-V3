@@ -2,7 +2,7 @@
 
 ## Milestone v1.5 — Lançamento Externo Controlado ◆
 
-**Estado:** F50 concluida; F48.2.1 (**Bancada Manual de Prompts do Diretor**) esta **pausada** (`48-2-1-01` a `48-2-1-05` e `48-2-1-07` concluidos; `48-2-1-06` interrompido/suplantado; `48-2-1-08` e `48-2-1-09` pendentes; proximo `48-2-1-08`). F50.1 permanece futura e nao ativa, aguardando a constituicao da PJ.
+**Estado:** F50 concluida; F48.2.1 (**Bancada Manual de Prompts do Diretor**) esta **pausada** (`48-2-1-01` a `48-2-1-05`, `48-2-1-07` e `48-2-1-08` concluidos; `48-2-1-06` interrompido/suplantado; `48-2-1-09` pendente; proximo `48-2-1-09`). F50.1 permanece futura e nao ativa, aguardando a constituicao da PJ.
 
 **Escopo do arquivo ativo:** índice operacional do milestone. O histórico integral anterior a esta compactação está em `.planning/ROADMAP-ARCHIVE.md`.
 
@@ -45,7 +45,7 @@
 | 46 | ✅ Gateway Único de IA e Registry de Modelos | Concluída; Change A |
 | 47 | ✅ Catálogo e Seleção de Modelos Admin | Concluída; Change B |
 | 48.1 | ✅ Laboratório Mínimo de IA | Concluída; primeira fatia do programa F48.x |
-| 48.2.1 | ⏸ Pausada — realinhada (6/9; 06 suplantado) | Bancada manual de prompts do Diretor; `48-2-1-01` a `48-2-1-05` e `48-2-1-07` concluidos; `48-2-1-06` interrompido/suplantado; `48-2-1-08` e `48-2-1-09` pendentes; local-only, sem promocao |
+| 48.2.1 | ⏸ Pausada — realinhada (7/9; 06 suplantado) | Bancada manual de prompts do Diretor; `48-2-1-01` a `48-2-1-05`, `48-2-1-07` e `48-2-1-08` concluidos; `48-2-1-06` interrompido/suplantado; `48-2-1-09` pendente; local-only, sem promocao |
 | 49 | ✅ Ativação e Orientação Contextual de Campos | Concluída |
 | 50 | ✅ Demonstração Gratuita e Validade dos Créditos | Concluída; 17/17 planos, beta fechado preservado |
 | 50.1 | Futura — Formalização Legal e Ativação da Demonstração | Aguardando constituição da PJ; não planejada, não ativa e não bloqueante para o estado concluído |
@@ -59,7 +59,7 @@
 - F50.1 só deve ser constituída após a PJ: identidade legal, revisão/publicação dos documentos, migration efetiva, ativação ordenada e smoke test pós-corte.
 - Monetização pública / Stripe permanece iniciativa diferida e não é fase numerada.
 
-- F48.2.1 (**Bancada Manual de Prompts do Diretor**) esta **pausada**: `48-2-1-01` a `48-2-1-05` e `48-2-1-07` concluidos; `48-2-1-06` interrompido e suplantado (summary de supersessao); `48-2-1-08` e `48-2-1-09` planejados e nao executados. Cadeia executavel `05 -> 07 -> 08 -> 09`; proximo plano executavel `48-2-1-08` (apos aprovacao humana). Zero runs e zero custo; programa ainda `authorized` e experimento `ready`. OpenSpec `017b8799`. Local-only e sem promocao.
+- F48.2.1 (**Bancada Manual de Prompts do Diretor**) esta **pausada**: `48-2-1-01` a `48-2-1-05`, `48-2-1-07` e `48-2-1-08` concluidos; `48-2-1-06` interrompido e suplantado (summary de supersessao); `48-2-1-09` planejado e nao executado. Cadeia executavel `05 -> 07 -> 08 -> 09`; proximo plano executavel `48-2-1-09` (apos aprovacao humana). Zero runs e zero custo; programa ainda `authorized` e experimento `ready`. OpenSpec `017b8799`. Local-only e sem promocao.
 
 ## Dependencies
 
@@ -71,7 +71,7 @@
 
 ## F48.2.1 - Bancada Manual de Prompts do Diretor
 
-**Status:** **pausada, aguardando retomada explicita no Plano 08** — 6/9 planos concluidos (`48-2-1-01` a `48-2-1-05` e `48-2-1-07`); `48-2-1-06` **interrompido e suplantado** (summary de supersessao); `48-2-1-08` e `48-2-1-09` planejados e **nao executados**. Inventario: 6 concluidos + 1 suplantado/resolvido + 2 pendentes (`summary_count 7`). Checkpoint humano 1 aprovado (`matrix-v1` + `diagnosticVersion 3`) e Checkpoint humano 2 aprovado (autorizar-inicial: `budget_usd` = US$ 2.808). **Zero runs e zero custo.**
+**Status:** **pausada, aguardando retomada explicita no Plano 09** — 7/9 planos concluidos (`48-2-1-01` a `48-2-1-05`, `48-2-1-07` e `48-2-1-08`); `48-2-1-06` **interrompido e suplantado** (summary de supersessao); `48-2-1-09` planejado e **nao executado**. Inventario: 7 concluidos + 1 suplantado/resolvido + 1 pendente (`summary_count 8`). Checkpoint humano 1 aprovado (`matrix-v1` + `diagnosticVersion 3`) e Checkpoint humano 2 aprovado (autorizar-inicial: `budget_usd` = US$ 2.808). **Zero runs e zero custo.**
 
 **Fonte da verdade:** `openspec/changes/fase-48-2-1-otimizacao-prompts-diretor/` no commit `017b8799` (proposal.md / design.md D1-D11 / 9 specs / tasks.md com tasks C1-C10 e D1-D4).
 
@@ -92,7 +92,7 @@ Plans:
 - [x] 48-2-1-08-PLAN.md — **Orcamento visivel e arquivamento seguro** (autorizado/reservado/consumido/saldo; integracao do painel; arquivamento administrativo com recusa de execucao e historico preservado).
 - [ ] 48-2-1-09-PLAN.md — **Verificacao, UAT e encerramento operacional** (validacao automatica sem execucao paga; encerrar o programa e arquivar o experimento apos checkpoint; `48-2-1-VERIFICATION.md` e `48.2.1-UAT.md`).
 
-**Ondas e dependencias:** cadeia executavel **`48-2-1-05 -> 48-2-1-07 -> 48-2-1-08 -> 48-2-1-09`** (uma onda por plano). O Plano 06 **nao** faz parte da cadeia executavel. Proximo plano executavel: **`48-2-1-08`** (apos aprovacao humana). Planos 07/08 sao `autonomous: true`; o Plano 09 e `autonomous: false` (checkpoint humano antes das acoes terminais).
+**Ondas e dependencias:** cadeia executavel **`48-2-1-05 -> 48-2-1-07 -> 48-2-1-08 -> 48-2-1-09`** (uma onda por plano). O Plano 06 **nao** faz parte da cadeia executavel. Proximo plano executavel: **`48-2-1-09`** (apos aprovacao humana). Planos 07/08 sao `autonomous: true`; o Plano 09 e `autonomous: false` (checkpoint humano antes das acoes terminais).
 
 **Estado local (pre-execucao dos planos 07–09):** programa `860ca4fe-dc8b-4354-b94e-02f9e7b202c6` continua `status='authorized'` (`budget_usd 2.808`, reservado 0, consumido 0) e o experimento `c48e21b5-c7a8-4456-a0d6-a2b4040fc1e3` continua `status='ready'`, ate as acoes controladas do Plano 09. **Zero runs e zero custo.**
 
