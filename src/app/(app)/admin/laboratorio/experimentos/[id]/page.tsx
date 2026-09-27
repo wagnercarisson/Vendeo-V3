@@ -11,6 +11,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 
 import { BudgetPanel } from "../../_components/budget-panel";
 import { DisabledNotice } from "../../_components/disabled-notice";
+import { ExperimentArchiveButton } from "../../_components/experiment-archive-button";
 import { LabTable } from "../../_components/lab-table";
 import { RunExecutionPanel } from "../../_components/run-execution-panel";
 
@@ -148,13 +149,19 @@ export default async function ExperimentoDetalhePage({
           { label: "Experimento" },
         ]}
         actions={
-          <Link
-            href={`/admin/laboratorio/experimentos/${id}/comparar`}
-            className="inline-flex min-h-[44px] cursor-pointer items-center justify-center gap-2 rounded-lg border border-border px-4 py-2 font-heading text-sm font-semibold text-text-primary transition-colors duration-200 hover:bg-bg-elevated"
-          >
-            <ArrowLeftRight className="h-4 w-4" aria-hidden="true" />
-            Comparar
-          </Link>
+          <>
+            <Link
+              href={`/admin/laboratorio/experimentos/${id}/comparar`}
+              className="inline-flex min-h-[44px] cursor-pointer items-center justify-center gap-2 rounded-lg border border-border px-4 py-2 font-heading text-sm font-semibold text-text-primary transition-colors duration-200 hover:bg-bg-elevated"
+            >
+              <ArrowLeftRight className="h-4 w-4" aria-hidden="true" />
+              Comparar
+            </Link>
+            <ExperimentArchiveButton
+              experimentId={id}
+              status={text(experiment.status)}
+            />
+          </>
         }
       />
 

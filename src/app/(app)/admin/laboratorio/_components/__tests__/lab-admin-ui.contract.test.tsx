@@ -51,6 +51,7 @@ import { VALID_RUBRIC } from "@/lib/lab/domain/__tests__/rubric-fixture";
 import { ComparisonView } from "../comparison-view";
 import type { ComparisonEvaluation, ComparisonRun } from "../comparison-format";
 import { EvaluationForm } from "../evaluation-form";
+import { ExperimentArchiveButton } from "../experiment-archive-button";
 import { ExperimentForm } from "../experiment-form";
 import { ProgramCloseButton } from "../program-close-button";
 import { RunExecutionPanel } from "../run-execution-panel";
@@ -880,6 +881,57 @@ describe("contrato de UI — encerrar programa exige confirmação humana", () =
     fireEvent.click(
       screen.getByRole("button", { name: "Encerrar programa / revogar autorização" }),
     );
+    fireEvent.click(await screen.findByTestId("lab-confirm-button"));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveClass("text-accent-red");
+    expect(mockRefresh).not.toHaveBeenCalled();
+  });
+});
+
+// ─── 7c. Arquivar experimento exige confirmação humana ───────────────────────
+
+describe("contrato de UI — arquivar experimento exige confirmação humana", () => {
+  it("abre a confirmação e não dispara PATCH antes de confirmar; envia { status: 'archived' }", async () => {
+    mockFetch.mockResolvedValue(
+      jsonResponse({ experiment: { id: EXPERIMENT_ID, status: "archived" } }),
+    );
+
+    render(<ExperimentArchiveButton experimentId={EXPERIMENT_ID} status="ready" />);
+
+    const trigger = screen.getByRole("button", { name: "Arquivar experimento" });
+    expect(trigger).toBeEnabled();
+
+    fireEvent.click(trigger);
+
+    // A confirmação abre; nenhum PATCH é disparado antes da confirmação humana.
+    const confirm = await screen.findByTestId("lab-confirm-button");
+    expect(mockFetch).not.toHaveBeenCalled();
+
+    fireEvent.click(confirm);
+
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+    const [url, init] = mockFetch.mock.calls[0];
+    expect(url).toBe(`/api/admin/laboratorio/experiments/${EXPERIMENT_ID}`);
+    expect(init.method).toBe("PATCH");
+    expect(JSON.parse(String(init.body))).toEqual({ status: "archived" });
+    await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
+  });
+
+  it("experimento `archived` mostra o botão desabilitado (Arquivado)", () => {
+    render(<ExperimentArchiveButton experimentId={EXPERIMENT_ID} status="archived" />);
+
+    const button = screen.getByRole("button", { name: "Arquivado" });
+    expect(button).toBeDisabled();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("exibe o erro da API em accent-red sem navegar", async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ error: "invalid_transition" }, 409));
+
+    render(<ExperimentArchiveButton experimentId={EXPERIMENT_ID} status="ready" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Arquivar experimento" }));
     fireEvent.click(await screen.findByTestId("lab-confirm-button"));
 
     const alert = await screen.findByRole("alert");

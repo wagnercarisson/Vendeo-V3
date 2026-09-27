@@ -380,6 +380,15 @@ describe("RunExecutionPanel", () => {
     ).toBeInTheDocument();
   });
 
+  it("desabilita o botão com o experimento arquivado", () => {
+    renderPanel({ experimentStatus: "archived" });
+
+    expect(screen.getByTestId("lab-run-button")).toBeDisabled();
+    expect(
+      screen.getByText("Experimento arquivado não executa."),
+    ).toBeInTheDocument();
+  });
+
   it("mostra as opções de repetição conforme o experimento", () => {
     renderPanel();
 
