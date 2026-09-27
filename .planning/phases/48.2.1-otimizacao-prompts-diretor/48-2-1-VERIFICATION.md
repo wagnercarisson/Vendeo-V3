@@ -1,6 +1,6 @@
 # F48.2.1 Verification — Otimização dos Prompts do Diretor (bancada manual)
 
-**Status:** **PASSED (validação automática + isolamento)** — gates verdes (typecheck, lint, build, testes direcionados do laboratório/Planos 07/08); suíte completa com **exclusivamente** a exceção preexistente e comprovada da F50; isolamento de `prompts/` e das estruturas produtivas confirmado; nenhuma execução paga. Encerramento operacional (programa/experimento) e UAT: ver `48.2.1-UAT.md`.
+**Status:** **PASSED (FASE ENCERRADA)** — gates verdes (typecheck, lint, build, testes direcionados do laboratório/Planos 07/08); suíte completa com **exclusivamente** a exceção preexistente e comprovada da F50; isolamento de `prompts/` e das estruturas produtivas confirmado; UAT visual confirmada pelo humano; programa `860ca4fe-…` **`closed`** e experimento `c48e21b5-…` **`archived`**, com recusas confirmadas e histórico preservado; **nenhuma execução paga**.
 
 **Fase:** 48.2.1 (otimizacao-prompts-diretor) — v1.5
 **Plano:** `48-2-1-09` (onda 9) — Tasks 1–2 (verificação/UAT); Tasks 3–5 (decisão/encerramento) pendentes de checkpoint humano.
@@ -177,4 +177,51 @@ Executado localmente em 2026-09-27 usando as **capacidades dos Planos 07/08** �
 
 ---
 
-*Fase: 48.2.1-otimizacao-prompts-diretor. Task 4 do Plano 48-2-1-09 (encerramento operacional) executada após `aprovar-encerramento`. Task 5 (finalização/tracking/OpenSpec) pendente.*
+## 9. Resumo do encerramento e fronteiras
+
+- **Encerramento:** programa `860ca4fe-dc8b-4354-b94e-02f9e7b202c6` `status='closed'` (terminal; novas reservas recusadas com `program_not_authorized`) e experimento `c48e21b5-c7a8-4456-a0d6-a2b4040fc1e3` `status='archived'` (terminal; novas execuções recusadas com `experiment_not_ready`). Histórico financeiro e histórico do experimento **preservados**.
+- **Fronteira F48.2.2 (Revisor):** fora de escopo — nenhuma estrutura do Revisor foi criada (§3.3).
+- **Fronteira F48.2.3 (Promoção, Canário e Prontidão da Aprovação):** a promoção, o canário e o `db push` remoto pertencem à F48.2.3; **nada** disso ocorreu aqui.
+- **Fronteira F48.6 (homologação geral):** fora do escopo desta fase.
+- **Primeira operação real paga:** FUTURA, em sessão conduzida pelo usuário, com **novo programa** e **nova autorização humana** (§6).
+
+---
+
+## 10. Para o orquestrador aplicar (tracking)
+
+> **Somente leitura/registro.** Esta task **não** editou `.planning/ROADMAP.md` nem `.planning/STATE.md` — a escrita de tracking é responsabilidade do **orquestrador**.
+
+**Texto pretendido de status/posição:**
+
+- **Fase `48.2.1` (Bancada Manual de Prompts do Diretor):** **CONCLUÍDA** (9 planos).
+- **Planos `48-2-1-01` .. `48-2-1-09`:** todos concluídos.
+  - `48-2-1-01` .. `48-2-1-05` — bancada (domínio/migration/API/UI/orçamento/isolamento).
+  - `48-2-1-06` — **suplantado** (não concluído funcionalmente; resolução registrada em `48-2-1-06-SUMMARY.md`).
+  - `48-2-1-07` — segurança financeira / revogação fail-closed.
+  - `48-2-1-08` — orçamento visível / arquivamento seguro.
+  - `48-2-1-09` — verificação / UAT / encerramento operacional.
+- **Posição/continuidade:** a F48.2.1 encerra aqui; a próxima iniciativa é a **F48.2.3** (Promoção, Canário e Prontidão da Aprovação) — fora do escopo desta fase. **Não** retomar o Plano `48-2-1-06`.
+
+**Nota de realinhamento do ROADMAP (follow-up do orquestrador):** o bloco **F48.2.1** do `.planning/ROADMAP.md` está **desatualizado** e deve ser realinhado ao novo escopo:
+
+- **07** = segurança financeira / revogação fail-closed (`closed` terminal; reserva só com `status='authorized'`).
+- **08** = orçamento visível / arquivamento seguro (`BudgetPanel` integrado; `archiveExperiment` + `PATCH` + UI).
+- **09** = verificação / encerramento operacional.
+- **07 e 08 são autônomos**; **09** contém o `checkpoint:decision` (encerramento operacional).
+
+---
+
+## 11. Preparação do arquivamento OpenSpec (D4) — **não executado**
+
+> **Preparação apenas.** O arquivamento **NÃO** é executado automaticamente nesta fase; requer confirmação do usuário. **Não** houve verificação/sync/arquivamento da change nesta task.
+
+Roteiro sugerido (executar manualmente, na ordem, quando autorizado):
+
+1. **Verificar** a change: `openspec-verify-change` para `openspec/changes/fase-48-2-1-otimizacao-prompts-diretor/` (validar que a implementação corresponde aos artefatos: specs `lab-isolation`, `lab-prompt-optimization` e tasks C8–C10/D1–D4).
+2. **Arquivar** a change: `openspec-archive-change` (mover a change para o arquivo após a verificação).
+
+**Explicitude:** sem promoção, sem canário e **sem `db push` remoto**; nenhum prompt produtivo é alterado; `prompts/` permanece intocado.
+
+---
+
+*Fase: 48.2.1-otimizacao-prompts-diretor — CONCLUÍDA. Plano 48-2-1-09 Tasks 1–5 executadas; programa `closed` e experimento `archived` com recusas confirmadas e histórico preservado; sem chamadas pagas, sem runs, sem promoção, sem `db push`.*
