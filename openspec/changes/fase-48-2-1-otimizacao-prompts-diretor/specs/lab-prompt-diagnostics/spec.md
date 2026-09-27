@@ -30,7 +30,7 @@ O sistema SHALL persistir o diagnóstico das evidências existentes como um **JS
 
 - **WHEN** o diagnóstico é carregado
 - **THEN** a maior `diagnosticVersion` disponível é usada
-- **AND** a versão usada é registrada no experimento
+- **AND** a `diagnosticVersion` e o `contentHash` usados são registrados no artefato versionado de aprovação do Checkpoint 1 (`docs/lab/48-2-1-matrix-approval.md`)
 
 ### Requirement: Cadeia de diagnóstico por falha
 

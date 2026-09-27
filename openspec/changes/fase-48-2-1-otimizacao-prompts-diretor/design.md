@@ -67,7 +67,7 @@ Nova capability `lab-prompt-diagnostics`. Para manter a simplicidade, **não** h
 ```
 
 - **Versão**: cada versão é um arquivo imutável próprio; uma nova versão cria um novo arquivo e **preserva** o anterior; o carregador usa a maior `diagnosticVersion`.
-- **Hash**: `contentHash` é o SHA-256 da **representação canônica do JSON excluindo o próprio campo `contentHash`** (não autorreferente); a versão usada é registrada no experimento.
+- **Hash**: `contentHash` é o SHA-256 da **representação canônica do JSON excluindo o próprio campo `contentHash`** (não autorreferente); a `diagnosticVersion` e o `contentHash` usados são registrados no artefato versionado de aprovação do Checkpoint 1 (`docs/lab/48-2-1-matrix-approval.md`), não na linha do experimento.
 - `promptTreatable` separa o que pode ser resolvido por prompt do que exige outra mudança (evita otimizar prompt para o que o prompt não resolve).
 - A `minimalHypothesis` alimenta o ciclo de otimização (D6).
 - **Alternativa rejeitada**: tabela dedicada — desnecessária para um artefato versionado pequeno e revisável em PR.
