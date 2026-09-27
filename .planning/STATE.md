@@ -5,11 +5,9 @@ milestone_name: — Lançamento Externo Controlado ◆
 status: paused
 last_updated: "2026-09-27T00:26:33.385Z"
 progress:
-  total_phases: 38
-  completed_phases: 33
-  total_plans: 301
+  total_plans: 300
   completed_plans: 293
-  percent: 87
+  percent: 98
 ---
 
 # Project State
@@ -42,7 +40,7 @@ Chain: `48-2-1-05 → 48-2-1-07 → 48-2-1-08 → 48-2-1-09`
 
 ## Global (mecânico — `gsd-sdk query progress`)
 
-- `total_plans: 301`; `completed_plans (summaries): 293`; `percent: 87` (percentual por fases: 33/38).
+- `total_plans: 300`; `completed_plans (summaries): 293`; `percent: 98`.
 
 ## Accumulated Context — Decisions
 

@@ -86,9 +86,9 @@ Os itens abaixo foram **removidos do escopo ativo** por decisão humana. **Não 
 - [x] C2 Programa `closed` (autorização revogada) recusa qualquer nova reserva antes da chamada paga — design D9
 - [x] C3 Implementar e testar a capacidade de **encerramento/revogação efetiva** no RPC, serviço e API: `closed` terminal, sem retorno a `authorized`, e recusa de reautorização de programa `closed` — design D9
 - [x] C4 Implementar e testar o **controle administrativo/UI** de encerrar programa, com ação explícita "Encerrar programa / revogar autorização" e confirmação humana — design D9/D10
-- [ ] C5 Exibição correta de orçamento autorizado, reservado, consumido e saldo restante — design D9
-- [ ] C6 Integração efetiva do painel de orçamento na tela relevante (hoje órfão; saldo não propagado) — design D9/D10
-- [ ] C7 Implementar/verificar o **caminho administrativo seguro de arquivamento** do experimento: recusa de novas execuções e preservação do histórico — design D6/D11
+- [x] C5 Exibição correta de orçamento autorizado, reservado, consumido e saldo restante — design D9
+- [x] C6 Integração efetiva do painel de orçamento na tela relevante (hoje órfão; saldo não propagado) — design D9/D10
+- [x] C7 Implementar/verificar o **caminho administrativo seguro de arquivamento** do experimento: recusa de novas execuções e preservação do histórico — design D6/D11
 - [ ] C8 Validação automática (typecheck/lint/build/testes) e UAT da bancada **sem exigir execução paga** — design D11
 - [ ] C9 Confirmação de que `prompts/` e estruturas produtivas permanecem isolados — design D11
 - [ ] C10 Registro de que a primeira operação real do laboratório ocorrerá posteriormente, com nova autorização humana — design D9/D11
