@@ -202,7 +202,7 @@ Executado localmente em 2026-09-27 usando as **capacidades dos Planos 07/08** �
   - `48-2-1-09` — verificação / UAT / encerramento operacional.
 - **Posição/continuidade:** a F48.2.1 encerra aqui. **Próxima ação imediata:** verificar, sincronizar e arquivar a change OpenSpec da F48.2.1 (`openspec-verify-change` → `openspec-sync-specs` → `openspec-archive-change`), pendente de confirmação humana. **Depois disso**, as experiências reais com prompts serão **sessões manuais** conduzidas pelo usuário e pelo assistente. A **F48.2.2** permanece uma change **separada** e deve ser revisada/realinhada humanamente antes de planejamento ou execução. A **F48.2.3** permanece **bloqueada** até existirem prompts efetivamente testados e aprovados para promoção. **Não** retomar o Plano `48-2-1-06`.
 
-**Nota de realinhamento do ROADMAP (follow-up do orquestrador):** o bloco **F48.2.1** do `.planning/ROADMAP.md` está **desatualizado** e deve ser realinhado ao novo escopo:
+**Nota de realinhamento do ROADMAP (já aplicado):** o bloco **F48.2.1** do `.planning/ROADMAP.md` **já foi realinhado** ao novo escopo pelo orquestrador (confirmado — não há follow-up pendente). Descrição correta dos planos 07–09 preservada:
 
 - **07** = segurança financeira / revogação fail-closed (`closed` terminal; reserva só com `status='authorized'`).
 - **08** = orçamento visível / arquivamento seguro (`BudgetPanel` integrado; `archiveExperiment` + `PATCH` + UI).
@@ -217,8 +217,9 @@ Executado localmente em 2026-09-27 usando as **capacidades dos Planos 07/08** �
 
 Roteiro sugerido (executar manualmente, na ordem, quando autorizado):
 
-1. **Verificar** a change: `openspec-verify-change` para `openspec/changes/fase-48-2-1-otimizacao-prompts-diretor/` (validar que a implementação corresponde aos artefatos: specs `lab-isolation`, `lab-prompt-optimization` e tasks C8–C10/D1–D4).
-2. **Arquivar** a change: `openspec-archive-change` (mover a change para o arquivo após a verificação).
+1. **Verificar:** `/opsx-verify` — validar que a implementação corresponde aos artefatos da change (`openspec/changes/fase-48-2-1-otimizacao-prompts-diretor/`: specs `lab-isolation`, `lab-prompt-optimization`; tasks C8–C10/D1–D4).
+2. **Sincronizar:** `/opsx-sync` — sincronizar os delta specs da change com as specs principais.
+3. **Arquivar:** `/opsx-archive` — mover a change para o arquivo após a verificação e a sincronização.
 
 **Explicitude:** sem promoção, sem canário e **sem `db push` remoto**; nenhum prompt produtivo é alterado; `prompts/` permanece intocado.
 

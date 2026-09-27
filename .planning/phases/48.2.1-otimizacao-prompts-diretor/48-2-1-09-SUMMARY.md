@@ -133,7 +133,7 @@ None - no external service configuration required.
 - **Depois disso:** as experiências reais com prompts serão **sessões manuais** conduzidas pelo usuário e pelo assistente.
 - **F48.2.2:** permanece uma change **separada** e deve ser revisada/realinhada humanamente antes de planejamento ou execução.
 - **F48.2.3:** permanece **bloqueada** até existirem prompts efetivamente testados e aprovados para promoção.
-- **Follow-ups do orquestrador:** realinhar o bloco F48.2.1 do `.planning/ROADMAP.md` (07/08/09; 07/08 autônomos) — **já aplicado**; preparar (e só então executar, com confirmação) `openspec-verify-change` → `openspec-archive-change`.
+- **Follow-ups do orquestrador:** realinhar o bloco F48.2.1 do `.planning/ROADMAP.md` (07/08/09; 07/08 autônomos) — **já aplicado**; preparar (e só então executar, com confirmação) `openspec-verify-change` → `openspec-sync-specs` → `openspec-archive-change`.
 - **Não** retomar o Plano `48-2-1-06` (suplantado).
 
 ---
