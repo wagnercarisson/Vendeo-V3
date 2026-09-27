@@ -94,6 +94,43 @@ O experimento SHALL declarar a dimensão intencionalmente alterada, que na F48.2
 - **THEN** o modelo é o mesmo nas duas
 - **AND** a única diferença comparada é o prompt
 
+### Requirement: Estados e transições do experimento
+
+O experimento SHALL seguir as transições `draft → ready → running ⇄ evaluated → archived`. A configuração SHALL ser congelada a partir do primeiro run; alterações posteriores exigem um novo experimento. **Avaliar não encerra as execuções**: um novo run após uma avaliação devolve o experimento a `running`, preservando as avaliações. A API/UI administrativa **não** expõe edição da configuração do experimento — a superfície oferece criação e leitura e alterações de configuração exigem um **novo experimento**. Desde a F48.2.1, a API/UI administrativa expõe **exclusivamente o arquivamento seguro**: arquivar não edita a configuração nem apaga histórico, e `archived` é **terminal**, recusando novas execuções.
+
+#### Scenario: Transição para pronto exige configuração completa
+
+- **WHEN** o experimento tem duas variantes, ao menos um cenário e limites válidos
+- **THEN** ele pode transitar de `draft` para `ready`
+
+#### Scenario: Configuração é editável no banco antes do primeiro run
+
+- **WHEN** o experimento está em `draft` ou `ready` e ainda não tem runs
+- **THEN** prompt, alvo de modelo e params podem ser editados **no banco/domínio** (a API/UI administrativa não expõe edição; alterações de configuração são feitas criando outro experimento)
+- **AND** o trigger de imutabilidade não bloqueia a edição
+
+#### Scenario: Configuração congela no primeiro run
+
+- **WHEN** o primeiro run de um experimento é iniciado
+- **THEN** o experimento transita para `running`
+- **AND** a configuração das variantes não pode mais ser editada
+
+#### Scenario: Avaliação conclui o experimento
+
+- **WHEN** a primeira avaliação humana é registrada
+- **THEN** o experimento pode transitar para `evaluated`
+
+#### Scenario: Avaliação não encerra as execuções
+
+- **WHEN** um novo run é reservado após uma avaliação
+- **THEN** o experimento volta a `running`
+- **AND** as avaliações anteriores permanecem preservadas
+
+#### Scenario: Transições inválidas são rejeitadas
+
+- **WHEN** se tenta ir de `draft` direto para `running` ou sair de `archived`
+- **THEN** a transição é rejeitada
+
 ## ADDED Requirements
 
 ### Requirement: Suporte aos três prompts do Diretor por tipo de campanha

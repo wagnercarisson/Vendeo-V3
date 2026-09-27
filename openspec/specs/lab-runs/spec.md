@@ -10,18 +10,18 @@ Define a execução real isolada, os snapshots imutáveis, a validação técnic
 
 ### Requirement: Snapshot imutável por execução
 
-Cada execução SHALL congelar e registrar: versão do cenário, conteúdo ou hash verificável do prompt, identificação do prompt, capability, provider, model ID, protocolo, parâmetros suportados utilizados, configuração baseline ou candidata, versão relevante do código/build quando disponível, início e término, status, erro sanitizado, latência, usage, custo estimado, retries/tentativas e caminhos dos artefatos. Uma alteração posterior no prompt, modelo, cenário ou pricing SHALL NOT mudar o significado histórico da execução.
+Cada execução SHALL congelar e registrar: versão do cenário, conteúdo ou hash verificável do prompt, identificação do prompt, capability, provider, model ID, protocolo, parâmetros suportados utilizados, configuração baseline ou candidata, **o programa ao qual o experimento pertence**, versão relevante do código/build quando disponível, início e término, status, erro sanitizado, latência, usage, custo estimado, retries/tentativas e caminhos dos artefatos. Uma alteração posterior no prompt, modelo, cenário, programa ou pricing SHALL NOT mudar o significado histórico da execução.
 
 #### Scenario: Snapshot registra a configuração congelada
 
 - **WHEN** um run é criado
-- **THEN** o snapshot contém cenário, prompt (conteúdo/hash), capability, provider, modelo, protocolo, parâmetros e a variante
+- **THEN** o snapshot contém cenário, prompt (conteúdo/hash), capability, provider, modelo, protocolo, parâmetros, a variante e o programa
 - **AND** o snapshot é gravado na transação da reserva, nunca vazio
 - **AND** a versão de código/build é registrada quando disponível
 
 #### Scenario: Alteração posterior não reescreve o histórico
 
-- **WHEN** o prompt oficial, o modelo, o cenário ou o pricing mudam após o run
+- **WHEN** o prompt oficial, o modelo, o cenário, o programa ou o pricing mudam após o run
 - **THEN** o snapshot do run permanece idêntico
 - **AND** o resultado histórico continua interpretável
 
@@ -240,3 +240,31 @@ O `campaign_image_review` produtivo SHALL NOT ser redefinido nesta fase. Se vier
 - **WHEN** o laboratório é adicionado
 - **THEN** o comportamento do `campaign_image_review` na produção é inalterado
 - **AND** nenhum prompt ou contrato de revisão é modificado
+
+### Requirement: Autorização de orçamento do programa antes da chamada paga
+
+A execução SHALL validar, antes de qualquer chamada paga, que o experimento pertence a um programa com orçamento autorizado e SHALL debitar o orçamento de forma atômica. A reserva SHALL ocorrer somente quando o programa estiver explicitamente com `status='authorized'`; um programa `closed`, cuja autorização está revogada, SHALL recusar a reserva antes de qualquer chamada paga. `closed` é terminal; uma nova sessão operacional exige um novo programa. Sem autorização ou com teto atingido, nenhuma chamada paga SHALL ocorrer.
+
+#### Scenario: Run sem programa autorizado é recusado
+
+- **WHEN** o experimento não está vinculado a um programa ou o programa não tem orçamento autorizado
+- **THEN** a execução é recusada com `program_not_authorized`
+- **AND** nenhuma chamada paga é iniciada
+
+#### Scenario: Programa `closed` recusa a reserva
+
+- **WHEN** o programa vinculado está `closed` (autorização revogada)
+- **THEN** a reserva é recusada antes de qualquer chamada paga
+- **AND** nenhuma chamada paga é iniciada
+
+#### Scenario: Orçamento é debitado antes da chamada
+
+- **WHEN** um run é reservado com orçamento disponível
+- **THEN** o orçamento é debitado de forma atômica antes da chamada paga
+- **AND** execuções concorrentes não estouram o teto
+
+#### Scenario: Teto atingido recusa a execução
+
+- **WHEN** o orçamento autorizado do programa foi consumido
+- **THEN** a execução é recusada com `budget_exceeded`
+- **AND** nenhuma chamada paga é iniciada

@@ -32,13 +32,25 @@ O sistema SHALL expor as APIs do laboratório sob `/api/admin/laboratorio`, prot
 
 ### Requirement: Criação e leitura de experimentos
 
-A API SHALL permitir criar e ler experimentos com suas variantes, cenários, runs e avaliações, retornando o budget restante.
+A API SHALL permitir criar e ler experimentos com suas variantes, cenários, runs e avaliações, retornando o budget restante. A criação SHALL aceitar o tipo de campanha (obrigatório), o programa (`programId`, obrigatório) e o prompt sob teste correspondente, validando o alvo de modelo contra o catálogo da capability.
 
 #### Scenario: Experimento é criado via API
 
 - **WHEN** um admin envia um experimento válido
 - **THEN** o experimento e suas duas variantes são persistidos
 - **AND** o autor é registrado
+
+#### Scenario: Tipo de campanha e programa são obrigatórios
+
+- **WHEN** um admin cria um experimento sem tipo de campanha ou sem programa
+- **THEN** a API recusa a criação
+- **AND** nenhum experimento é persistido
+
+#### Scenario: Prompt do Diretor por tipo de campanha é aceito
+
+- **WHEN** o admin cria um experimento com tipo `offer`, `spotlight` ou `exclusive`
+- **THEN** a API aceita o prompt sob teste correspondente
+- **AND** um prompt incompatível com o tipo é recusado
 
 #### Scenario: Detalhe retorna budget restante
 
@@ -53,13 +65,13 @@ A API SHALL permitir criar e ler experimentos com suas variantes, cenários, run
 
 ### Requirement: Estimativa de custo antes da execução
 
-A API SHALL oferecer uma estimativa de custo do plano do experimento antes da execução, considerando repetições e cenários, sinalizando quando o pricing estiver parcial ou indisponível.
+A API SHALL oferecer uma estimativa de custo do plano do experimento antes da execução, calculada como **cenários × duas variantes × repetições**, selecionada pela **capability do modo**, sinalizando quando o pricing estiver parcial ou indisponível.
 
-#### Scenario: Estimativa é retornada
+#### Scenario: Estimativa usa cenários × variantes × repetições
 
 - **WHEN** a estimativa é solicitada
-- **THEN** a resposta apresenta o custo estimado do plano
-- **AND** sinaliza cobertura parcial ou indisponível quando aplicável
+- **THEN** a resposta apresenta o custo estimado do plano calculado como cenários × duas variantes × repetições
+- **AND** o cálculo usa os componentes de pricing da capability
 
 #### Scenario: Estimativa não bloqueia por pricing incompleto
 
@@ -69,7 +81,7 @@ A API SHALL oferecer uma estimativa de custo do plano do experimento antes da ex
 
 ### Requirement: Execução de run com confirmação explícita
 
-A rota de execução SHALL exigir identificação de variante, cenário e repetição, confirmação explícita e um identificador de operação idempotente, e SHALL recusar a execução quando o ambiente, o budget, a concorrência ou a prontidão do experimento não permitirem.
+A rota de execução SHALL exigir identificação de variante, cenário e repetição, confirmação explícita e um identificador de operação idempotente, e SHALL recusar a execução quando o ambiente, o budget, a concorrência, a prontidão do experimento ou a autorização de orçamento do programa vinculado não permitirem.
 
 #### Scenario: Run confirmado é executado
 
@@ -77,6 +89,12 @@ A rota de execução SHALL exigir identificação de variante, cenário e repeti
 - **THEN** o run é iniciado e o progresso é emitido em stream
 - **AND** o evento final informa o identificador do run
 - **AND** exatamente um evento terminal (`done`/`error`) é emitido por stream
+
+#### Scenario: Execução exige programa com orçamento autorizado
+
+- **WHEN** o experimento não está vinculado a um programa ou o programa não tem orçamento autorizado
+- **THEN** a execução é recusada com `program_not_authorized`
+- **AND** nenhuma chamada paga é iniciada
 
 #### Scenario: Cenário executado diverge da versão registrada
 
@@ -97,7 +115,7 @@ A rota de execução SHALL exigir identificação de variante, cenário e repeti
 
 #### Scenario: Budget excedido é recusado
 
-- **WHEN** o teto de execuções do experimento foi atingido
+- **WHEN** o teto de execuções do experimento ou o orçamento do programa foi atingido
 - **THEN** a resposta é 409 com `budget_exceeded`
 
 #### Scenario: Execução concorrente é recusada
@@ -125,7 +143,7 @@ A rota de execução SHALL exigir identificação de variante, cenário e repeti
 
 ### Requirement: Detalhe do run e registro de avaliação
 
-A API SHALL retornar o detalhe do run com URLs assinadas dos artefatos e evidências técnicas, e SHALL permitir registrar a avaliação humana com verdict, observação, avaliador e **os runs efetivamente comparados** (`baseline_run_id` e `candidate_run_id`), com a ordem cega opcional.
+A API SHALL retornar o detalhe do run com URLs assinadas dos artefatos e evidências técnicas, e SHALL permitir registrar a avaliação humana com verdict, observação, avaliador, **os runs efetivamente comparados** (`baseline_run_id` e `candidate_run_id`) e a **rubrica estruturada**, com a ordem cega opcional.
 
 #### Scenario: Detalhe do run inclui artefatos
 
@@ -140,6 +158,12 @@ A API SHALL retornar o detalhe do run com URLs assinadas dos artefatos e evidên
 - **AND** a ordem cega apresentada é registrada quando aplicável
 - **AND** o experimento pode transitar para `evaluated`
 
+#### Scenario: Rubrica é aceita
+
+- **WHEN** o admin registra uma avaliação com a rubrica estruturada
+- **THEN** a rubrica é persistida com a avaliação
+- **AND** nenhuma nota automática é calculada
+
 #### Scenario: Avaliação sem runs é rejeitada
 
 - **WHEN** a avaliação não identifica os runs comparados
@@ -151,3 +175,43 @@ A API SHALL retornar o detalhe do run com URLs assinadas dos artefatos e evidên
 - **WHEN** os runs referenciados não pertencem ao mesmo experimento/cenário ou aos papéis `baseline`/`candidate` corretos
 - **THEN** a requisição é rejeitada
 - **AND** nenhuma avaliação é persistida
+
+### Requirement: Endpoints de programa e orçamento
+
+A API SHALL oferecer endpoints para criar o programa de otimização (matriz) e registrar a autorização de orçamento, o status, a referência/hash do relatório e a recomendação final. A API SHALL permitir **encerrar o programa** (`status='closed'`, autorização revogada) de forma efetiva, SHALL recusar a reautorização de um programa `closed` e SHALL expor `budget_usd` (autorizado), `budget_reserved_usd` (reservado), `budget_consumed_usd` (consumido) e o saldo restante.
+
+#### Scenario: Programa e orçamento são registrados
+
+- **WHEN** o admin autoriza o orçamento do programa
+- **THEN** o valor em USD, o autor e o timestamp são persistidos
+- **AND** nenhuma chamada paga ocorre antes disso
+
+#### Scenario: Programa pode ser encerrado (autorização revogada)
+
+- **WHEN** o admin encerra o programa (`status='closed'`)
+- **THEN** novas reservas passam a ser recusadas antes de qualquer chamada paga
+- **AND** o encerramento é efetivo e não apenas um rótulo de status
+
+#### Scenario: Reautorização de programa `closed` é recusada
+
+- **WHEN** a API recebe uma tentativa de reautorizar um programa `closed`
+- **THEN** a operação é recusada
+- **AND** uma nova sessão exige criar e autorizar um novo programa
+
+#### Scenario: Dados financeiros históricos permanecem consultáveis
+
+- **WHEN** o programa `closed` é consultado
+- **THEN** autorizado, reservado, consumido, autor e timestamp permanecem retornados
+- **AND** nenhum valor histórico é apagado ou zerado
+
+#### Scenario: Orçamento é exposto de forma completa
+
+- **WHEN** o programa é consultado
+- **THEN** a resposta inclui autorizado, reservado, consumido e saldo restante
+- **AND** o saldo é `budget_usd - budget_consumed_usd - budget_reserved_usd`
+
+#### Scenario: Relatório e recomendação são registrados
+
+- **WHEN** um relatório consultivo é registrado
+- **THEN** a API registra a referência e o hash do relatório e a recomendação
+- **AND** nenhuma variante é promovida automaticamente

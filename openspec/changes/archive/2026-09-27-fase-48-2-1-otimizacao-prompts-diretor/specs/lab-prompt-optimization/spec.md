@@ -225,7 +225,7 @@ O sistema SHALL calcular a estimativa do plano como **cenários × duas variante
 
 ### Requirement: Autorização humana para operações pagas
 
-Toda operação real paga SHALL exigir **nova autorização humana explícita** registrada em `lab_prompt_programs` antes de qualquer chamada paga. A F48.2.1 SHALL NOT exigir checkpoints ordenados de ciclos de otimização para a sua conclusão; a matriz aprovada e a autorização vigente permanecem válidas, e o programa atual será posteriormente encerrado (`status='closed'`, autorização revogada).
+Toda operação real paga SHALL exigir **nova autorização humana explícita** registrada em `lab_prompt_programs` antes de qualquer chamada paga. A F48.2.1 concluiu sem exigir ciclos pagos; o programa usado durante a fase foi encerrado com `status='closed'` (autorização revogada), com o histórico financeiro preservado. Qualquer operação real paga futura exige um **novo programa** e uma **nova autorização humana explícita**.
 
 #### Scenario: Operação paga exige autorização humana
 

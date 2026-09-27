@@ -43,7 +43,7 @@ O sistema SHALL fornecer uma tela de comparação lado a lado entre baseline e c
 
 ### Requirement: Registro da avaliação humana
 
-O sistema SHALL permitir registrar a avaliação humana com as opções baseline melhor, candidata melhor, empate e nenhuma adequada, além de observação livre, identidade do avaliador e timestamp. A avaliação SHALL registrar os **runs efetivamente comparados** (`baseline_run_id` e `candidate_run_id`) e, quando houver modo cego, a ordem apresentada, para que a evidência seja auditável. A avaliação humana SHALL ser a fonte de avaliação de qualidade; o sistema SHALL NOT criar nota automática de beleza, composição, apelo comercial, profissionalismo ou “publicável”.
+O sistema SHALL permitir registrar a avaliação humana com as opções baseline melhor, candidata melhor, empate e nenhuma adequada, além de observação livre, identidade do avaliador e timestamp. A avaliação SHALL registrar os **runs efetivamente comparados** (`baseline_run_id` e `candidate_run_id`) e, quando houver modo cego, a ordem apresentada, para que a evidência seja auditável. A avaliação SHALL registrar a **rubrica humana estruturada** por critério. A avaliação humana SHALL ser a fonte de avaliação de qualidade; o sistema SHALL NOT criar nota automática de beleza, composição, apelo comercial, profissionalismo ou “publicável”.
 
 #### Scenario: Voto é registrado
 
@@ -106,3 +106,24 @@ O sistema SHALL permitir registrar a avaliação humana com as opções baseline
 - **WHEN** os runs comparados não pertencem ao mesmo experimento e à mesma versão de cenário
 - **THEN** o registro é rejeitado
 - **AND** nenhuma avaliação é persistida
+
+### Requirement: Rubrica humana estruturada por critério
+
+A avaliação humana SHALL usar uma rubrica estruturada por critério, em que cada critério recebe um estado entre `adequate`, `minor_defect`, `critical_defect` e `not_applicable`, acompanhado de observação opcional. A rubrica SHALL cobrir: fidelidade dos dados; fidelidade do produto; fidelidade da identidade (incluindo logo); legibilidade; hierarquia visual; coerência com a intenção comercial; ausência de informações inventadas; aparência profissional; e confiança para publicação. A rubrica SHALL NOT gerar scoring automático nem transformar a fase em uma plataforma geral de avaliação.
+
+#### Scenario: Estados da rubrica são registrados
+
+- **WHEN** o admin avalia um par
+- **THEN** cada um dos nove critérios recebe um estado (`adequate`/`minor_defect`/`critical_defect`/`not_applicable`)
+- **AND** o admin pode registrar observação por critério
+
+#### Scenario: Fidelidade de logo é critério avaliado
+
+- **WHEN** a rubrica é aplicada
+- **THEN** a fidelidade da identidade (incluindo logo) é um critério avaliado
+
+#### Scenario: Rubrica não gera score automático
+
+- **WHEN** a rubrica é preenchida
+- **THEN** nenhum score ou nota automática é calculado
+- **AND** a decisão permanece humana

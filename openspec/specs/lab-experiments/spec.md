@@ -10,13 +10,25 @@ Define o domínio de experimentos baseline × candidata, a regra de uma dimensã
 
 ### Requirement: Experimento com baseline e candidata
 
-O sistema SHALL permitir criar um experimento contendo nome, objetivo, hipótese, um cenário ou conjunto pequeno de cenários, uma variante baseline, uma variante candidata, a dimensão intencionalmente alterada, um número limitado de repetições, um teto de execuções e autor/timestamps. Cada experimento SHALL ter exatamente duas variantes, `baseline` e `candidate`. Na F48.1, a dimensão SHALL ser exclusivamente `prompt` e o alvo de modelo SHALL ser **fixo e idêntico** para as duas variantes; `model`/`configuration` ficam para a F48.2.
+O sistema SHALL permitir criar um experimento contendo nome, objetivo, hipótese, um cenário ou conjunto pequeno de cenários, uma variante baseline, uma variante candidata, a dimensão intencionalmente alterada, um número limitado de repetições, um teto de execuções e autor/timestamps. Cada experimento SHALL ter exatamente duas variantes, `baseline` e `candidate`. Na F48.2.1, a dimensão SHALL ser exclusivamente `prompt` e o alvo de modelo SHALL ser **fixo e idêntico** para as duas variantes; `model`/`configuration` permanecem fora de escopo. Cada experimento SHALL declarar o tipo de campanha (`offer`, `spotlight` ou `exclusive`) e SHALL pertencer a um programa de otimização.
 
 #### Scenario: Experimento válido é criado
 
-- **WHEN** um admin informa nome, objetivo, hipótese, dimensão, cenário(s), baseline, candidata, repetições e teto
+- **WHEN** um admin informa nome, objetivo, hipótese, dimensão, tipo de campanha, cenário(s), baseline, candidata, repetições e teto
 - **THEN** o experimento é criado com exatamente duas variantes
 - **AND** a autoria e os timestamps são registrados
+
+#### Scenario: Tipo de campanha é obrigatório
+
+- **WHEN** um experimento é criado sem tipo de campanha
+- **THEN** a criação é recusada
+- **AND** nenhum experimento é persistido
+
+#### Scenario: Programa é obrigatório
+
+- **WHEN** um experimento é criado sem programa
+- **THEN** a criação é recusada
+- **AND** nenhum experimento é persistido
 
 #### Scenario: Segunda variante ausente impede a prontidão
 
@@ -67,7 +79,7 @@ O experimento SHALL carregar um alvo de modelo **fixo e idêntico** para as duas
 
 ### Requirement: Dimensão única de prompt nesta fase
 
-O experimento SHALL declarar a dimensão intencionalmente alterada, que na F48.1 SHALL ser exclusivamente `prompt`, com o modelo fixo. Dimensões `model` e `configuration` SHALL ser rejeitadas com erro explícito nesta fase, ficando para a F48.2 quando existir um catálogo laboratorial de candidatos.
+O experimento SHALL declarar a dimensão intencionalmente alterada, que na F48.2.1 SHALL ser exclusivamente `prompt`, com o modelo fixo. Dimensões `model` e `configuration` SHALL ser rejeitadas com erro explícito; a comparação de modelo permanece fora de escopo.
 
 #### Scenario: Dimensão prompt é aceita
 
@@ -79,7 +91,7 @@ O experimento SHALL declarar a dimensão intencionalmente alterada, que na F48.1
 
 - **WHEN** o experimento declara `changed_dimension` como `model` ou `configuration`
 - **THEN** a criação é rejeitada com erro explícito
-- **AND** nenhuma comparação vazia de modelo é criada
+- **AND** nenhuma comparação de modelo ou configuração é criada
 
 #### Scenario: Modelo fixo não varia entre variantes
 
@@ -89,7 +101,7 @@ O experimento SHALL declarar a dimensão intencionalmente alterada, que na F48.1
 
 ### Requirement: Estados e transições do experimento
 
-O experimento SHALL seguir as transições `draft → ready → running ⇄ evaluated → archived`. A configuração SHALL ser congelada a partir do primeiro run; alterações posteriores exigem um novo experimento. **Avaliar não encerra as execuções**: um novo run após uma avaliação devolve o experimento a `running`, preservando as avaliações. A F48.1 **não** expõe edição nem arquivamento pela API/UI administrativa: a superfície oferece criação e leitura, a configuração é imutável pela superfície e alterações exigem um **novo experimento**; o arquivamento manual (`archived`) permanece como capacidade de banco/domínio reservada à F48.2.
+O experimento SHALL seguir as transições `draft → ready → running ⇄ evaluated → archived`. A configuração SHALL ser congelada a partir do primeiro run; alterações posteriores exigem um novo experimento. **Avaliar não encerra as execuções**: um novo run após uma avaliação devolve o experimento a `running`, preservando as avaliações. A API/UI administrativa **não** expõe edição da configuração do experimento — a superfície oferece criação e leitura e alterações de configuração exigem um **novo experimento**. Desde a F48.2.1, a API/UI administrativa expõe **exclusivamente o arquivamento seguro**: arquivar não edita a configuração nem apaga histórico, e `archived` é **terminal**, recusando novas execuções.
 
 #### Scenario: Transição para pronto exige configuração completa
 
@@ -99,7 +111,7 @@ O experimento SHALL seguir as transições `draft → ready → running ⇄ eval
 #### Scenario: Configuração é editável no banco antes do primeiro run
 
 - **WHEN** o experimento está em `draft` ou `ready` e ainda não tem runs
-- **THEN** prompt, alvo de modelo e params podem ser editados **no banco/domínio** (a API/UI da F48.1 não expõe edição; alterações são feitas criando outro experimento)
+- **THEN** prompt, alvo de modelo e params podem ser editados **no banco/domínio** (a API/UI administrativa não expõe edição; alterações de configuração são feitas criando outro experimento)
 - **AND** o trigger de imutabilidade não bloqueia a edição
 
 #### Scenario: Configuração congela no primeiro run
@@ -179,3 +191,51 @@ O sistema SHALL limitar o número de cenários por experimento, o número de rep
 - **WHEN** um experimento é criado
 - **THEN** nenhum run é disparado automaticamente
 - **AND** cada run exige ação humana explícita
+
+### Requirement: Suporte aos três prompts do Diretor por tipo de campanha
+
+O sistema SHALL aceitar os prompts `campaign-image-director-offer`, `campaign-image-director-spotlight` e `campaign-image-director-exclusive`, derivando o prompt sob teste do tipo de campanha do experimento. Todos os cenários vinculados SHALL compartilhar o mesmo tipo de campanha; experimentos com intents mistos SHALL ser recusados.
+
+#### Scenario: Os três prompts são aceitos
+
+- **WHEN** o experimento declara tipo `offer`, `spotlight` ou `exclusive`
+- **THEN** o prompt sob teste é o `campaign-image-director-{tipo}` correspondente
+- **AND** um prompt que não corresponde ao tipo é recusado
+
+#### Scenario: Intents mistos são recusados
+
+- **WHEN** o experimento vincula cenários de tipos diferentes
+- **THEN** a criação é recusada com erro explícito
+- **AND** nenhum experimento misto é criado
+
+### Requirement: Congelamento do tipo de campanha e do programa após o primeiro run
+
+Após o primeiro run do experimento, o sistema SHALL impedir **no banco** a alteração de `campaign_intent` e `program_id`, além das demais colunas de configuração já congeladas. Alterações posteriores exigem um novo experimento.
+
+#### Scenario: Tipo de campanha e programa não mudam após o primeiro run
+
+- **WHEN** o experimento já possui ao menos um run
+- **THEN** `UPDATE` de `campaign_intent` ou `program_id` é rejeitado pelo banco
+- **AND** a configuração permanece congelada
+
+#### Scenario: Antes do primeiro run a configuração é editável
+
+- **WHEN** o experimento está em `draft`/`ready` e ainda não tem runs
+- **THEN** `campaign_intent` e `program_id` podem ser ajustados
+- **AND** o trigger de imutabilidade não bloqueia
+
+### Requirement: Arquivamento seguro do experimento
+
+O sistema SHALL permitir arquivar um experimento de forma segura. Um experimento arquivado SHALL NOT aceitar novas reservas nem execuções e SHALL preservar integralmente o histórico (variantes, cenários, runs, avaliações e snapshots). O arquivamento SHALL NOT apagar dados nem alterar registros produtivos.
+
+#### Scenario: Experimento arquivado não executa
+
+- **WHEN** um experimento é arquivado
+- **THEN** novas reservas e execuções são recusadas
+- **AND** nenhuma chamada paga é iniciada
+
+#### Scenario: Arquivamento preserva o histórico
+
+- **WHEN** o experimento é arquivado
+- **THEN** variantes, cenários, runs, avaliações e snapshots permanecem preservados
+- **AND** nenhum registro é apagado
