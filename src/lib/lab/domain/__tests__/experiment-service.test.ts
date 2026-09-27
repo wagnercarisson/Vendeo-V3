@@ -8,6 +8,7 @@ import { UnsupportedChangedDimensionError } from "../schemas";
 import type { CreateLabExperimentInput, LabModelTarget } from "../schemas";
 import {
   EXPERIMENT_TRANSITIONS,
+  archiveExperiment,
   assertConfigurationEditable,
   assertTransitionAllowed,
   computeExperimentReadiness,
@@ -708,6 +709,61 @@ describe("transitionExperiment", () => {
     await expect(
       transitionExperiment("00000000-0000-4000-8000-000000000000", "ready", context(client)),
     ).rejects.toThrow("experiment_not_found");
+  });
+});
+
+// ─── Arquivamento administrativo seguro ──────────────────────────────────────
+
+describe("archiveExperiment", () => {
+  for (const status of ["ready", "running", "evaluated"] as const) {
+    it(`arquiva a partir de '${status}' (transição terminal)`, async () => {
+      const client = new FakeLabClient();
+      const experimentId = client.seedExperiment({ status });
+
+      const result = await archiveExperiment(experimentId, context(client));
+
+      expect(result.status).toBe("archived");
+      expect(client.experiments[0].status).toBe("archived");
+    });
+  }
+
+  it("recusa arquivar a partir de 'archived' (terminal)", async () => {
+    const client = new FakeLabClient();
+    const experimentId = client.seedExperiment({ status: "archived" });
+
+    await expect(archiveExperiment(experimentId, context(client))).rejects.toThrow(
+      "invalid_transition:archived->archived",
+    );
+    expect(client.experiments[0].status).toBe("archived");
+  });
+
+  it("propaga experiment_not_found para experimento inexistente", async () => {
+    const client = new FakeLabClient();
+
+    await expect(
+      archiveExperiment("00000000-0000-4000-8000-000000000000", context(client)),
+    ).rejects.toThrow("experiment_not_found");
+  });
+
+  it("não remove variantes, cenários nem runs (histórico preservado)", async () => {
+    const client = new FakeLabClient();
+    const experimentId = client.seedExperiment({ status: "running" });
+    client.runs.push({
+      id: "run-1",
+      experiment_id: experimentId,
+      variant_id: "variant-1",
+      scenario_version_id: SCENARIO_A,
+      repetition_index: 1,
+    });
+    const variantsBefore = client.variants.length;
+    const scenariosBefore = client.scenarios.length;
+    const runsBefore = client.runs.length;
+
+    await archiveExperiment(experimentId, context(client));
+
+    expect(client.variants).toHaveLength(variantsBefore);
+    expect(client.scenarios).toHaveLength(scenariosBefore);
+    expect(client.runs).toHaveLength(runsBefore);
   });
 });
 

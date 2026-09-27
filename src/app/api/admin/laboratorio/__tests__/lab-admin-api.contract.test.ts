@@ -21,6 +21,7 @@ const {
   mockCreateExperiment,
   mockComputeReadiness,
   mockTransitionExperiment,
+  mockArchiveExperiment,
   mockListPrograms,
   mockGetProgramDetail,
   mockCreateProgram,
@@ -74,6 +75,7 @@ const {
     mockCreateExperiment: vi.fn(),
     mockComputeReadiness: vi.fn(),
     mockTransitionExperiment: vi.fn(),
+    mockArchiveExperiment: vi.fn(),
     mockListPrograms: vi.fn(),
     mockGetProgramDetail: vi.fn(),
     mockCreateProgram: vi.fn(),
@@ -127,6 +129,7 @@ vi.mock("@/lib/lab/domain/experiment-service", () => ({
   createExperiment: (...args: unknown[]) => mockCreateExperiment(...args),
   computeExperimentReadiness: (...args: unknown[]) => mockComputeReadiness(...args),
   transitionExperiment: (...args: unknown[]) => mockTransitionExperiment(...args),
+  archiveExperiment: (...args: unknown[]) => mockArchiveExperiment(...args),
 }));
 
 vi.mock("@/lib/lab/api/program-queries", () => ({
@@ -311,6 +314,18 @@ async function getExperiment(id: string): Promise<Response> {
   return GET(request(`${BASE}/experiments/${id}`), { params: Promise.resolve({ id }) });
 }
 
+async function patchExperiment(id: string, body: unknown): Promise<Response> {
+  const { PATCH } = await import("@/app/api/admin/laboratorio/experiments/[id]/route");
+  return PATCH(
+    request(`${BASE}/experiments/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+    }),
+    { params: Promise.resolve({ id }) },
+  );
+}
+
 async function getEstimate(id: string): Promise<Response> {
   const { GET } = await import("@/app/api/admin/laboratorio/experiments/[id]/estimate/route");
   return GET(request(`${BASE}/experiments/${id}/estimate`), { params: Promise.resolve({ id }) });
@@ -373,6 +388,10 @@ function allRouteCalls(): RouteCall[] {
     { name: "GET /experiments", call: getExperiments },
     { name: "POST /experiments", call: () => postExperiment(VALID_EXPERIMENT) },
     { name: "GET /experiments/[id]", call: () => getExperiment(EXPERIMENT_ID) },
+    {
+      name: "PATCH /experiments/[id]",
+      call: () => patchExperiment(EXPERIMENT_ID, { status: "archived" }),
+    },
     { name: "GET /experiments/[id]/estimate", call: () => getEstimate(EXPERIMENT_ID) },
     { name: "POST /experiments/[id]/runs", call: () => postRun(EXPERIMENT_ID, VALID_RUN_BODY) },
     { name: "GET /runs/[id]", call: () => getRun(RUN_ID) },
@@ -401,6 +420,7 @@ function anyServiceCalled(): boolean {
     mockCreateExperiment,
     mockComputeReadiness,
     mockTransitionExperiment,
+    mockArchiveExperiment,
     mockListPrograms,
     mockGetProgramDetail,
     mockCreateProgram,
@@ -443,6 +463,7 @@ beforeEach(() => {
   mockCreateExperiment.mockResolvedValue({ experimentId: EXPERIMENT_ID });
   mockComputeReadiness.mockResolvedValue({ ready: true, reasons: [] });
   mockTransitionExperiment.mockResolvedValue({ status: "ready" });
+  mockArchiveExperiment.mockResolvedValue({ status: "archived" });
   mockListPrograms.mockResolvedValue([PROGRAM_DETAIL]);
   mockGetProgramDetail.mockResolvedValue(PROGRAM_DETAIL);
   mockCreateProgram.mockResolvedValue({ programId: PROGRAM_ID });
@@ -626,6 +647,67 @@ describe("contrato da API — criação e leitura", () => {
 
     expect(res.status).toBe(404);
     expect((await res.json()).error).toBe("run_not_found");
+  });
+});
+
+// ─── 4a. Arquivamento administrativo do experimento ──────────────────────────
+
+describe("contrato da API — arquivamento seguro do experimento (C7)", () => {
+  it("PATCH /experiments/[id] com { status: 'archived' } ⇒ 200 com status archived", async () => {
+    mockGetExperimentDetail.mockResolvedValue({
+      ...DETAIL,
+      experiment: { ...DETAIL.experiment, status: "archived" },
+    });
+
+    const res = await patchExperiment(EXPERIMENT_ID, { status: "archived" });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.experiment.status).toBe("archived");
+    expect(mockArchiveExperiment).toHaveBeenCalledWith(EXPERIMENT_ID, {
+      actorId: ADMIN_ID,
+      client: expect.anything(),
+    });
+  });
+
+  it("PATCH /experiments/[id] com payload inválido ⇒ 400 sem arquivar", async () => {
+    const res = await patchExperiment(EXPERIMENT_ID, { status: "ready" });
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("invalid_payload");
+    expect(mockArchiveExperiment).not.toHaveBeenCalled();
+  });
+
+  it("PATCH /experiments/[id] de experimento ausente ⇒ 404 experiment_not_found", async () => {
+    mockArchiveExperiment.mockRejectedValue(
+      new Error(`experiment_not_found:${EXPERIMENT_ID}`),
+    );
+
+    const res = await patchExperiment(EXPERIMENT_ID, { status: "archived" });
+
+    expect(res.status).toBe(404);
+    expect((await res.json()).error).toBe("experiment_not_found");
+  });
+
+  it("PATCH /experiments/[id] já arquivado ⇒ 409 invalid_transition (terminal)", async () => {
+    mockArchiveExperiment.mockRejectedValue(new Error("invalid_transition:archived->archived"));
+
+    const res = await patchExperiment(EXPERIMENT_ID, { status: "archived" });
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toBe("invalid_transition");
+  });
+
+  it("reserva em experimento arquivado ⇒ 409 experiment_not_ready sem chamada paga", async () => {
+    mockPrepareExperimentRun.mockRejectedValue(reservationError("experiment_not_ready"));
+
+    const res = await postRun(EXPERIMENT_ID, VALID_RUN_BODY);
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.error).toBe("experiment_not_ready");
+    // Nenhuma chamada ao provider: a reserva falha antes de qualquer custo.
+    expect(mockRunPreparedExperimentRun).not.toHaveBeenCalled();
   });
 });
 

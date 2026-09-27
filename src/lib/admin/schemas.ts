@@ -266,6 +266,18 @@ export const LabExperimentCreateRequestSchema = CreateLabExperimentInputSchema;
 export type LabExperimentCreateRequest = z.infer<typeof LabExperimentCreateRequestSchema>;
 
 /**
+ * Arquivamento administrativo seguro do experimento (F48.2.1, C7). O único
+ * payload aceito é `{ status: "archived" }` — `.strict()` recusa qualquer campo
+ * adicional, tornando a transição terminal explícita e não ambígua. Nenhuma
+ * variante/cenário/run/avaliação é removida.
+ */
+export const LabExperimentArchiveRequestSchema = z
+  .object({ status: z.literal("archived") })
+  .strict();
+
+export type LabExperimentArchiveRequest = z.infer<typeof LabExperimentArchiveRequestSchema>;
+
+/**
  * Execução de **um** run. O campo `confirmed` é literalmente `true`, tornando a
  * confirmação explícita parte do contrato (sem ela a rota responde 422 e nenhuma
  * chamada paga é iniciada) e `operationId` UUID é o identificador idempotente.

@@ -24,6 +24,7 @@ import type { CreateLabExperimentInput, LabModelTarget } from "../schemas";
 import {
   EXPERIMENT_TRANSITIONS,
   READINESS_REASONS,
+  archiveExperiment,
   assertConfigurationEditable,
   assertTransitionAllowed,
   computeExperimentReadiness,
@@ -703,6 +704,55 @@ describe("transições — máquina de estados travada", () => {
     expect(client.experiments[0].status).toBe("running");
     expect(client.evaluations).toHaveLength(1);
     expect(client.deletes).not.toContain("lab_human_evaluations");
+  });
+});
+
+// ─── (11.4.6b) Arquivamento administrativo seguro (C7) ─────────────────────
+
+describe("arquivamento administrativo seguro — terminal e com histórico preservado", () => {
+  for (const status of ["ready", "running", "evaluated"] as const) {
+    it(`archiveExperiment leva '${status}' a archived (terminal)`, async () => {
+      const client = new FakeLabClient();
+      const experimentId = client.seedExperiment({ status });
+
+      const result = await archiveExperiment(experimentId, context(client));
+
+      expect(result.status).toBe("archived");
+      expect(client.experiments[0].status).toBe("archived");
+      expect(EXPERIMENT_TRANSITIONS.archived).toEqual([]);
+    });
+  }
+
+  it("recusa arquivar a partir de archived (invalid_transition) sem persistir mudança", async () => {
+    const client = new FakeLabClient();
+    const experimentId = client.seedExperiment({ status: "archived" });
+
+    const error = await capture(() => archiveExperiment(experimentId, context(client)));
+
+    expect(String((error as Error).message)).toContain("invalid_transition:archived->archived");
+    expect(client.experiments[0].status).toBe("archived");
+    expect(client.accessLog.filter((entry) => entry.startsWith("write:lab_experiments"))).toEqual(
+      [],
+    );
+  });
+
+  it("arquivar só muda status: zero deletes de variantes/cenários/runs/avaliações", async () => {
+    const client = new FakeLabClient();
+    const experimentId = client.seedExperiment({ status: "running" });
+    client.runs.push({ id: "run-1", experiment_id: experimentId, status: "succeeded" });
+    client.evaluations.push({ id: "eval-1", experiment_id: experimentId, verdict: "candidate" });
+    const variantsBefore = client.variants.length;
+    const scenariosBefore = client.scenarios.length;
+    const runsBefore = client.runs.length;
+    const evaluationsBefore = client.evaluations.length;
+
+    await archiveExperiment(experimentId, context(client));
+
+    expect(client.deletes).toEqual([]);
+    expect(client.variants).toHaveLength(variantsBefore);
+    expect(client.scenarios).toHaveLength(scenariosBefore);
+    expect(client.runs).toHaveLength(runsBefore);
+    expect(client.evaluations).toHaveLength(evaluationsBefore);
   });
 });
 

@@ -313,6 +313,24 @@ export async function transitionExperiment(
   return { status: to };
 }
 
+/**
+ * Arquiva o experimento por via administrativa segura (F48.2.1, C7).
+ *
+ * Reutiliza `transitionExperiment` — a transição para `archived` é **terminal**
+ * (`EXPERIMENT_TRANSITIONS.archived = []`) e validada por
+ * `assertTransitionAllowed`. Arquivar altera **apenas** o `status` (e o
+ * `updated_at`): nenhuma variante, cenário, run, avaliação ou snapshot é
+ * removido — o histórico permanece integralmente preservado. Um experimento
+ * `archived` recusa novas reservas/execuções (`experiment_not_ready`) antes de
+ * qualquer chamada paga.
+ */
+export async function archiveExperiment(
+  experimentId: string,
+  context: LabExperimentContext,
+): Promise<{ status: ExperimentStatus }> {
+  return transitionExperiment(experimentId, "archived", context);
+}
+
 // ─── Congelamento ────────────────────────────────────────────────────────────
 
 /**
