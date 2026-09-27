@@ -227,8 +227,14 @@ describe("D2/D5: validação de datas no submit (frontend, antes do fetch)", () 
   };
 
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-08-20T12:00:00"));
     sessionStorage.setItem("campaign_draft_image", VALID_DATA_URL);
     mockRestoreFormState.mockReturnValue(OFFER_FIELDS);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("D5: range com start > end (ambas preenchidas) bloqueia submit sem fetch", async () => {
