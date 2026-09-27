@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: paused
-last_updated: "2026-09-27T00:26:33.385Z"
+last_updated: "2026-09-27T00:51:03Z"
 progress:
   total_plans: 300
   completed_plans: 293
@@ -22,13 +22,14 @@ progress:
 ## Current Position
 
 Phase: 48.2.1 (Bancada Manual de Prompts do Diretor) — **PAUSED** (pós-realinhamento)
-Plan: `48-2-1-08` — **concluído** (próximo: `48-2-1-09`)
+Plan: `48-2-1-09` — **pausado na Task 3** (Tasks 1–2 concluídas; Task 3 decidida `adiar`; Tasks 4–5 não executadas)
 Chain: `48-2-1-05 → 48-2-1-07 → 48-2-1-08 → 48-2-1-09`
 
 - F48.2.1 pausada e replanejada (OpenSpec `017b8799`).
 - Plano `48-2-1-07` **concluído** (commits `66011f89`, `5a55882f`, `2949b8d1`); migration aplicada via `npx supabase migration up` (registros locais preservados).
 - Plano `48-2-1-08` **concluído** (commits `03663504`, `f423188f`, `4415e8ef`): orçamento completo visível + `BudgetPanel` integrado + saldo propagado; arquivamento seguro (domínio + `PATCH` + UI) terminal com histórico preservado.
-- Próximo comando (somente após aprovação humana): `/gsd-execute-phase 48-2-1-09`.
+- Plano `48-2-1-09` — **Tasks 1–2 concluídas** (`092e3717` validação/isolamento; `3514db5c` verificação final + UAT); **Task 3 (`checkpoint:decision`) = `adiar`** (2026-09-27T00:51:03Z): ações terminais **não executadas** (programa segue `authorized`; experimento segue `ready`; zero runs/custo).
+- **Próximo passo:** confirmar os 11 passos visuais da UAT em `48.2.1-UAT.md` e **reapresentar o checkpoint da Task 3** (`aprovar-encerramento`/`adiar`). **Não** executar as Tasks 4–5 antes de `aprovar-encerramento`.
 - **NÃO** usar `/gsd-resume-work` apontando ao Plano 06 (interrompido/suplantado).
 
 ## F48.2.1 — Inventário da fase (mecânico)
@@ -82,7 +83,7 @@ Chain: `48-2-1-05 → 48-2-1-07 → 48-2-1-08 → 48-2-1-09`
 
 ## Session Continuity
 
-- Última sessão: 2026-09-27 — execução do Plano `48-2-1-08` (orçamento visível/arquivamento seguro).
-- Último trabalho: Plano `48-2-1-08` concluído (commits `03663504`, `f423188f`, `4415e8ef`); testes 216/216 verdes; typecheck exit 0; estado local inalterado (programa `860ca4fe-…` `authorized`, experimento `c48e21b5-…` `ready`, `lab_runs` = 0).
-- Próximo passo (após aprovação humana): `/gsd-execute-phase 48-2-1-09`.
+- Última sessão: 2026-09-27 — execução do Plano `48-2-1-09` (Tasks 1–2) e pausa na Task 3.
+- Último trabalho: Plano `48-2-1-09` Tasks 1–2 concluídas (commits `092e3717`, `3514db5c`; fix test-only `df8ea40f`); gates verdes (typecheck/lint/build/direcionados exit 0; suíte completa apenas com a exceção F50); UAT sem execução paga registrada; Task 3 decidida **`adiar`**. Estado local inalterado (programa `860ca4fe-…` `authorized`, experimento `c48e21b5-…` `ready`, `lab_runs` = 0).
+- Próximo passo: confirmar os 11 passos visuais da UAT em `48.2.1-UAT.md` e reapresentar o checkpoint da Task 3 (`aprovar-encerramento`/`adiar`). **Não** executar as Tasks 4–5 antes disso.
 - Resume file: `.planning/phases/48.2.1-otimizacao-prompts-diretor/.continue-here.md`.
