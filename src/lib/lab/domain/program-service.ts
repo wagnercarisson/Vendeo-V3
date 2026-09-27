@@ -27,6 +27,7 @@ export interface LabProgramContext {
 export type LabProgramErrorCode =
   | "program_not_found"
   | "program_not_authorized"
+  | "program_closed"
   | "budget_exceeded"
   | "program_write_failed";
 
@@ -113,6 +114,10 @@ export async function createProgram(
  * Autoriza o teto de orçamento em USD (checkpoint humano). Grava `budget_usd`,
  * `budget_authorized_by`/`budget_authorized_at` e promove o status a
  * `authorized`.
+ *
+ * Fail-closed (C3): um programa `closed` teve a autorização **revogada** e é
+ * terminal — a reautorização é recusada com `program_closed` ANTES de qualquer
+ * escrita. Um programa ausente é recusado com `program_not_found`.
  */
 export async function authorizeProgramBudget(params: {
   programId: string;
@@ -123,6 +128,12 @@ export async function authorizeProgramBudget(params: {
   const budget = toNumber(params.budgetUsd);
   if (budget === null || budget <= 0) {
     throw new LabProgramError("budget_exceeded");
+  }
+
+  // Leitura do estado atual ANTES de escrever: `closed` é terminal.
+  const current = await getProgram(params.programId, params.client);
+  if (current.status === "closed") {
+    throw new LabProgramError("program_closed");
   }
 
   const now = new Date().toISOString();
@@ -167,6 +178,42 @@ export async function getProgram(
   return data as unknown as LabProgramRow;
 }
 
+/**
+ * Encerra o programa revogando a autorização (C3/C4). Grava apenas
+ * `status='closed'` + `updated_at`; **nunca** apaga/zerra `budget_usd`,
+ * `budget_reserved_usd`, `budget_consumed_usd`, `budget_authorized_by` nem
+ * `budget_authorized_at` — o histórico financeiro permanece auditável.
+ *
+ * `closed` é **terminal**: encerrar um programa já `closed` é idempotente (não
+ * escreve nada). Um programa ausente é recusado com `program_not_found`.
+ */
+export async function closeProgram(params: {
+  programId: string;
+  actorId: string;
+  client: SupabaseClient;
+}): Promise<void> {
+  const program = await getProgram(params.programId, params.client);
+
+  // Idempotente: já encerrado não reescreve nada.
+  if (program.status === "closed") {
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const { data, error } = await params.client
+    .from("lab_prompt_programs")
+    .update({ status: "closed", updated_at: now })
+    .eq("id", params.programId)
+    .select("id");
+
+  if (error) {
+    throw new LabProgramError("program_write_failed");
+  }
+  if (!Array.isArray(data) || data.length !== 1) {
+    throw new LabProgramError("program_not_found");
+  }
+}
+
 /** Atualiza status, relatório e recomendação do programa (D10/D11). */
 export async function updateProgram(
   programId: string,
@@ -178,6 +225,18 @@ export async function updateProgram(
   },
   client: SupabaseClient,
 ): Promise<void> {
+  // Terminalidade (C3): `closed` não retorna a `draft`/`authorized`. Registrar
+  // relatório/recomendação de um programa `closed` permanece permitido (registro
+  // consultivo) — só a mudança de status é recusada.
+  const current = await getProgram(programId, client);
+  if (
+    current.status === "closed" &&
+    updates.status !== undefined &&
+    updates.status !== "closed"
+  ) {
+    throw new LabProgramError("program_closed");
+  }
+
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (updates.status !== undefined) patch.status = updates.status;
   if (updates.finalReportRef !== undefined) patch.final_report_ref = updates.finalReportRef;
