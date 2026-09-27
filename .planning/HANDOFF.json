@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-09-27T14:39:26.603Z",
+  "timestamp": "2026-09-27T19:14:55.583Z",
   "phase": "48.2.1",
   "phase_name": "bancada-manual-prompts-diretor",
   "phase_dir": ".planning/phases/48.2.1-otimizacao-prompts-diretor",
@@ -8,6 +8,14 @@
   "phase_status": "complete",
   "plan": "48-2-1-09",
   "openspec_source": "017b8799",
+  "openspec_archive": {
+    "path": "openspec/changes/archive/2026-09-27-fase-48-2-1-otimizacao-prompts-diretor",
+    "commit": "f55bed45",
+    "verified": true,
+    "synced": true,
+    "archived": true,
+    "active_changes_remaining": ["fase-48-2-2-auditoria-otimizacao-prompt-revisor"]
+  },
   "resolved_plans": [
     "48-2-1-01", "48-2-1-02", "48-2-1-03", "48-2-1-04", "48-2-1-05",
     "48-2-1-06", "48-2-1-07", "48-2-1-08", "48-2-1-09"
@@ -32,9 +40,11 @@
   ],
   "blockers": [],
   "human_actions_pending": [
-    {"action": "Confirmar a verificacao e o arquivamento da change OpenSpec F48.2.1", "context": "A fase esta concluida; o arquivamento OpenSpec nao foi executado automaticamente", "blocking": false}
+    {"action": "Conduzir as sessoes manuais de teste dos prompts do Diretor (offer/spotlight/exclusive)", "context": "Conduzidas pelo usuario e pelo assistente; a bancada nao cria candidatas nem inicia experimentos automaticamente", "blocking": false},
+    {"action": "Criar novo programa e registrar nova autorizacao humana antes de qualquer chamada paga", "context": "O programa da fase esta closed (autorizacao revogada); qualquer operacao real paga futura exige novo programa e nova autorizacao humana explicita", "blocking": false},
+    {"action": "Revisar/realinhar humanamente a F48.2.2 antes de planejamento ou execucao", "context": "A F48.2.2 permanece separada e nao iniciada; a F48.2.3 permanece bloqueada ate existirem prompts testados e aprovados", "blocking": false}
   ],
   "uncommitted_files": [],
-  "next_action": "Verificacao/arquivamento OpenSpec da change F48.2.1 (pendente de confirmacao humana): openspec-verify-change -> openspec-archive-change. Sem promocao, sem canario, sem db push remoto.",
-  "context_notes": "F48.2.1 CONCLUIDA (8/9 planos executados + Plano 06 suplantado). Programa 860ca4fe-... closed e experimento c48e21b5-... archived, com recusas fail-closed confirmadas e historico preservado. Zero runs/custo; prompts/ intocado. Excecao F50 (legal-document-versions.test.ts, ENOENT) e follow-up externo. LIMITACAO DO SDK: `gsd-sdk query init.execute-phase 48.2.1` canonicaliza incorretamente IDs no formato `48-2-1-*`; usar IDs explicitos."
+  "next_action": "Sessoes manuais de teste dos prompts do Diretor, conduzidas pelo usuario e pelo assistente, com novo programa e nova autorizacao humana antes de qualquer chamada paga. F48.2.2 permanece separada (revisao/realinhamento humano antes de planejamento/execucao); F48.2.3 bloqueada ate existirem prompts testados e aprovados. Sem promocao, sem canario, sem db push remoto.",
+  "context_notes": "F48.2.1 CONCLUIDA, VERIFICADA, SINCRONIZADA e ARQUIVADA (openspec/changes/archive/2026-09-27-fase-48-2-1-otimizacao-prompts-diretor/, commit f55bed45). openspec list mostra somente a F48.2.2 ativa (nao iniciada). Programa 860ca4fe-... closed e experimento c48e21b5-... archived, com recusas fail-closed confirmadas e historico preservado. Zero runs/custo; prompts/ intocado; sem promocao/canario/db push. Excecao F50 (legal-document-versions.test.ts, ENOENT) e follow-up externo. LIMITACAO DO SDK: `gsd-sdk query init.execute-phase 48.2.1` canonicaliza incorretamente IDs no formato `48-2-1-*`; usar IDs explicitos."
 }

@@ -2,7 +2,7 @@
 
 ## Milestone v1.5 — Lançamento Externo Controlado ◆
 
-**Estado:** F50 concluida; F48.2.1 (**Bancada Manual de Prompts do Diretor**) esta **concluida** (`48-2-1-01` a `48-2-1-05`, `48-2-1-07`, `48-2-1-08` e `48-2-1-09` concluidos; `48-2-1-06` interrompido/suplantado; programa local `closed` e experimento `archived`; zero runs/custo; sem promocao). F50.1 permanece futura e nao ativa, aguardando a constituicao da PJ.
+**Estado:** F50 concluida; F48.2.1 (**Bancada Manual de Prompts do Diretor**) esta **concluida e arquivada** (`48-2-1-01` a `48-2-1-05`, `48-2-1-07`, `48-2-1-08` e `48-2-1-09` concluidos; `48-2-1-06` interrompido/suplantado; programa local `closed` e experimento `archived`; zero runs/custo; sem promocao; OpenSpec verificado, sincronizado e arquivado em `openspec/changes/archive/2026-09-27-fase-48-2-1-otimizacao-prompts-diretor/`, commit `f55bed45`). F50.1 permanece futura e nao ativa, aguardando a constituicao da PJ.
 
 **Escopo do arquivo ativo:** índice operacional do milestone. O histórico integral anterior a esta compactação está em `.planning/ROADMAP-ARCHIVE.md`.
 
@@ -45,7 +45,7 @@
 | 46 | ✅ Gateway Único de IA e Registry de Modelos | Concluída; Change A |
 | 47 | ✅ Catálogo e Seleção de Modelos Admin | Concluída; Change B |
 | 48.1 | ✅ Laboratório Mínimo de IA | Concluída; primeira fatia do programa F48.x |
-| 48.2.1 | ✅ Concluída — bancada manual (8/9 + 06 suplantado) | Bancada manual de prompts do Diretor; `48-2-1-01` a `48-2-1-05`, `48-2-1-07`, `48-2-1-08` e `48-2-1-09` concluidos; `48-2-1-06` interrompido/suplantado; programa `closed` e experimento `archived`; local-only, sem promocao |
+| 48.2.1 | ✅ Concluída e arquivada — bancada manual (8/9 + 06 suplantado) | Bancada manual de prompts do Diretor; `48-2-1-01` a `48-2-1-05`, `48-2-1-07`, `48-2-1-08` e `48-2-1-09` concluidos; `48-2-1-06` interrompido/suplantado; programa `closed` e experimento `archived`; local-only, sem promocao; OpenSpec arquivado (commit `f55bed45`) |
 | 49 | ✅ Ativação e Orientação Contextual de Campos | Concluída |
 | 50 | ✅ Demonstração Gratuita e Validade dos Créditos | Concluída; 17/17 planos, beta fechado preservado |
 | 50.1 | Futura — Formalização Legal e Ativação da Demonstração | Aguardando constituição da PJ; não planejada, não ativa e não bloqueante para o estado concluído |
@@ -59,7 +59,7 @@
 - F50.1 só deve ser constituída após a PJ: identidade legal, revisão/publicação dos documentos, migration efetiva, ativação ordenada e smoke test pós-corte.
 - Monetização pública / Stripe permanece iniciativa diferida e não é fase numerada.
 
-- F48.2.1 (**Bancada Manual de Prompts do Diretor**) esta **concluida**: `48-2-1-01` a `48-2-1-05`, `48-2-1-07`, `48-2-1-08` e `48-2-1-09` concluidos; `48-2-1-06` interrompido e suplantado (summary de supersessao). Programa local `860ca4fe-...` `closed` (recusa novas reservas) e experimento `c48e21b5-...` `archived` (recusa execucoes), com historico preservado. Zero runs e zero custo; sem promocao. OpenSpec `017b8799`. Local-only.
+- F48.2.1 (**Bancada Manual de Prompts do Diretor**) esta **concluida e arquivada**: `48-2-1-01` a `48-2-1-05`, `48-2-1-07`, `48-2-1-08` e `48-2-1-09` concluidos; `48-2-1-06` interrompido e suplantado (summary de supersessao). Programa local `860ca4fe-...` `closed` (recusa novas reservas) e experimento `c48e21b5-...` `archived` (recusa execucoes), com historico preservado. Zero runs e zero custo; sem promocao. OpenSpec `017b8799` verificado, sincronizado e arquivado em `openspec/changes/archive/2026-09-27-fase-48-2-1-otimizacao-prompts-diretor/` (commit `f55bed45`). Local-only.
 
 ## Dependencies
 
@@ -71,9 +71,9 @@
 
 ## F48.2.1 - Bancada Manual de Prompts do Diretor
 
-**Status:** **concluida** — 8/9 planos executados (`48-2-1-01` a `48-2-1-05`, `48-2-1-07`, `48-2-1-08` e `48-2-1-09`) e `48-2-1-06` **interrompido e suplantado** (summary de supersessao). Inventario: 8 concluidos + 1 suplantado/resolvido (`summary_count 9`). Programa `closed` e experimento `archived` com recusas fail-closed confirmadas e historico preservado. **Zero runs e zero custo.** Proximo: verificacao/arquivamento OpenSpec (pendente de confirmacao humana).
+**Status:** **concluida** — 8/9 planos executados (`48-2-1-01` a `48-2-1-05`, `48-2-1-07`, `48-2-1-08` e `48-2-1-09`) e `48-2-1-06` **interrompido e suplantado** (summary de supersessao). Inventario: 8 concluidos + 1 suplantado/resolvido (`summary_count 9`). Programa `closed` e experimento `archived` com recusas fail-closed confirmadas e historico preservado. **Zero runs e zero custo.** OpenSpec verificado, sincronizado e arquivado em `openspec/changes/archive/2026-09-27-fase-48-2-1-otimizacao-prompts-diretor/` (commit `f55bed45`). Proximo trabalho: sessoes manuais de teste dos prompts do Diretor (novo programa e nova autorizacao humana antes de qualquer chamada paga); F48.2.2 separada e nao iniciada; F48.2.3 bloqueada ate existirem prompts testados e aprovados.
 
-**Fonte da verdade:** `openspec/changes/fase-48-2-1-otimizacao-prompts-diretor/` no commit `017b8799` (proposal.md / design.md D1-D11 / 9 specs / tasks.md com tasks C1-C10 e D1-D4).
+**Fonte da verdade (arquivada):** `openspec/changes/archive/2026-09-27-fase-48-2-1-otimizacao-prompts-diretor/` (archive no commit `f55bed45`; base no commit `017b8799`) — proposal.md / design.md D1-D11 / 9 specs / tasks.md com tasks C1-C10 e D1-D4. Specs principais sincronizadas em `openspec/specs/lab-*`.
 
 **Escopo realinhado:** a fase entrega exclusivamente uma **bancada funcional para testes manuais** dos prompts do Diretor (`offer`, `spotlight`, `exclusive`). A candidata e escrita/revisada **fora da execucao automatica** e inserida/colada **manualmente**; a bancada **nao** cria candidatas, **nao** inicia experimentos e **nao** aprova/promove automaticamente. Diagnostico versionado (v1/v2/v3) permanece como evidencia historica; a regra de vitoria e **consultiva**; o rascunho `offer/v1` e apenas exemplo. Integralmente local (migration nao aplicada no remoto) e sem promocao.
 
@@ -92,11 +92,11 @@ Plans:
 - [x] 48-2-1-08-PLAN.md — **Orcamento visivel e arquivamento seguro** (autorizado/reservado/consumido/saldo; integracao do painel; arquivamento administrativo com recusa de execucao e historico preservado).
 - [x] 48-2-1-09-PLAN.md — **Verificacao, UAT e encerramento operacional** (validacao automatica sem execucao paga; encerrar o programa e arquivar o experimento apos checkpoint; `48-2-1-VERIFICATION.md` e `48.2.1-UAT.md`).
 
-**Ondas e dependencias:** cadeia executavel **concluida** `48-2-1-05 -> 48-2-1-07 -> 48-2-1-08 -> 48-2-1-09` (uma onda por plano). O Plano 06 **nao** faz parte da cadeia executavel (suplantado). **Nao ha proximo plano executavel** — a fase esta concluida. Proximo passo: verificacao/arquivamento OpenSpec (pendente de confirmacao humana).
+**Ondas e dependencias:** cadeia executavel **concluida** `48-2-1-05 -> 48-2-1-07 -> 48-2-1-08 -> 48-2-1-09` (uma onda por plano). O Plano 06 **nao** faz parte da cadeia executavel (suplantado). **Nao ha proximo plano executavel** — a fase esta concluida. OpenSpec verificado, sincronizado e arquivado (commit `f55bed45`); proximo trabalho sao sessoes manuais de teste dos prompts do Diretor.
 
-**Estado local (pre-execucao dos planos 07–09):** programa `860ca4fe-dc8b-4354-b94e-02f9e7b202c6` continua `status='authorized'` (`budget_usd 2.808`, reservado 0, consumido 0) e o experimento `c48e21b5-c7a8-4456-a0d6-a2b4040fc1e3` continua `status='ready'`, ate as acoes controladas do Plano 09. **Zero runs e zero custo.**
+**Estado local (final):** programa `860ca4fe-dc8b-4354-b94e-02f9e7b202c6` em `status='closed'` (novas reservas recusadas com `program_not_authorized`; `budget_usd 2.808`, reservado 0, consumido 0, historico preservado) e experimento `c48e21b5-c7a8-4456-a0d6-a2b4040fc1e3` em `status='archived'` (execucoes recusadas com `experiment_not_ready`; 2 variantes, 3 cenarios, 0 runs, 0 avaliacoes). **Zero runs e zero custo.**
 
-**Primeira operacao real:** sera **posterior**, em sessao conduzida pelo usuario, exigindo **novo programa** e **nova autorizacao humana**. Nenhuma candidata automatica; nenhuma execucao paga exigida para concluir a fase; nenhuma promocao, canario ou `db push`.
+**Primeira operacao real:** sera **posterior**, em sessao conduzida pelo usuario, exigindo **novo programa** e **nova autorizacao humana**. Nenhuma candidata automatica; nenhuma execucao paga exigida para concluir a fase; nenhuma promocao, canario ou `db push`. A F48.2.2 permanece separada e nao iniciada (revisao/realinhamento humano antes de planejamento/execucao); a F48.2.3 permanece bloqueada ate existirem prompts testados e aprovados.
 
 **Restricoes transversais:** `prompts/` intocado byte a byte; migration local-only (sem `db push` remoto); exatamente uma chamada `campaign_image` por run; toda execucao paga exigiria programa `authorized` e reserva atomica (saldo = `budget_usd - consumed - reserved`).
 

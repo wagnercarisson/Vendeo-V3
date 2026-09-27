@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: "— Lançamento Externo Controlado ◆"
 status: complete
-last_updated: "2026-09-27T14:39:26.603Z"
+last_updated: "2026-09-27T19:14:55.583Z"
 progress:
   total_plans: 300
   completed_plans: 294
@@ -16,7 +16,7 @@ progress:
 
 - Project: `.planning/PROJECT.md`.
 - Core value: transformar uma oferta simples em uma campanha profissional, clara e publicável.
-- Foco atual: F48.2.1 — **Bancada Manual de Prompts do Diretor** (CONCLUÍDA).
+- Foco atual: F48.2.1 — **Bancada Manual de Prompts do Diretor** (CONCLUÍDA, VERIFICADA, SINCRONIZADA e ARQUIVADA).
 - Próxima iniciativa condicionada: F50.1 aguardando constituição da PJ.
 
 ## Current Position
@@ -28,7 +28,8 @@ Chain (concluída): `48-2-1-05 → 48-2-1-07 → 48-2-1-08 → 48-2-1-09`
 - F48.2.1 realinhada (OpenSpec `017b8799`) e **concluída**: bancada manual dos prompts do Diretor.
 - Todos os planos resolvidos; programa local `closed` e experimento `archived`, com recusas fail-closed confirmadas e histórico preservado.
 - **Zero runs e zero custo**; `prompts/` intocado; sem promoção/canário/`db push`.
-- Próximo passo (pendente de confirmação humana): verificação/arquivamento OpenSpec (`openspec-verify-change` → `openspec-archive-change`).
+- OpenSpec **verificado, sincronizado e arquivado** em `openspec/changes/archive/2026-09-27-fase-48-2-1-otimizacao-prompts-diretor/` (commit `f55bed45`); `openspec list` mostra somente a F48.2.2 ativa (não iniciada).
+- Próximo trabalho: **sessões manuais de teste dos prompts do Diretor** (`offer`/`spotlight`/`exclusive`), conduzidas pelo usuário e pelo assistente; qualquer operação real paga exige **novo programa** e **nova autorização humana explícita**. A **F48.2.2** permanece separada e precisa de revisão/realinhamento humano antes de planejamento/execução; a **F48.2.3** permanece bloqueada até existirem prompts testados e aprovados.
 
 ## F48.2.1 — Inventário da fase (mecânico)
 
@@ -53,7 +54,9 @@ Chain (concluída): `48-2-1-05 → 48-2-1-07 → 48-2-1-08 → 48-2-1-09`
 
 ## Pending Todos
 
-- Verificação e arquivamento OpenSpec da change F48.2.1 (pendente de confirmação humana).
+- Sessões manuais de teste dos prompts do Diretor (`offer`/`spotlight`/`exclusive`), conduzidas pelo usuário e pelo assistente; qualquer operação real paga exige novo programa e nova autorização humana explícita.
+- F48.2.2 (Auditoria e Otimização do Prompt do Revisor) permanece separada e **não iniciada**; requer revisão/realinhamento humano antes de planejamento ou execução.
+- F48.2.3 (Promoção, Canário e Prontidão da Aprovação) permanece **bloqueada** até existirem prompts testados e aprovados.
 - Exceção preexistente F50 (`src/lib/legal/__tests__/legal-document-versions.test.ts`, `ENOENT`) é falha externa à F48.2.1; registrada como follow-up.
 
 ## Blockers/Concerns
@@ -79,7 +82,7 @@ Chain (concluída): `48-2-1-05 → 48-2-1-07 → 48-2-1-08 → 48-2-1-09`
 
 ## Session Continuity
 
-- Última sessão: 2026-09-27 — encerramento operacional da F48.2.1 (Plano 48-2-1-09).
-- Último trabalho: programa `closed` + experimento `archived` (decisão humana `aprovar-encerramento`); `48-2-1-VERIFICATION.md`, `48.2.1-UAT.md` e `48-2-1-09-SUMMARY.md` gerados.
-- Próximo passo (após aprovação humana): verificação/arquivamento OpenSpec da change F48.2.1.
+- Última sessão: 2026-09-27 — encerramento operacional da F48.2.1 (Plano 48-2-1-09) e reconciliação final do tracking.
+- Último trabalho: programa `closed` + experimento `archived` (decisão humana `aprovar-encerramento`); `48-2-1-VERIFICATION.md`, `48.2.1-UAT.md` e `48-2-1-09-SUMMARY.md` gerados; OpenSpec verificado, sincronizado e arquivado em `openspec/changes/archive/2026-09-27-fase-48-2-1-otimizacao-prompts-diretor/` (commit `f55bed45`).
+- Próximo trabalho: sessões manuais de teste dos prompts do Diretor, conduzidas pelo usuário e pelo assistente; novo programa e nova autorização humana antes de qualquer chamada paga. F48.2.2 separada e não iniciada; F48.2.3 bloqueada.
 - Resume file: `None` (fase concluída; sem trabalho pausado).
