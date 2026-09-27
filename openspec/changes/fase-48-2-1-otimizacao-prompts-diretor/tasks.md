@@ -89,15 +89,15 @@ Os itens abaixo foram **removidos do escopo ativo** por decisão humana. **Não 
 - [x] C5 Exibição correta de orçamento autorizado, reservado, consumido e saldo restante — design D9
 - [x] C6 Integração efetiva do painel de orçamento na tela relevante (hoje órfão; saldo não propagado) — design D9/D10
 - [x] C7 Implementar/verificar o **caminho administrativo seguro de arquivamento** do experimento: recusa de novas execuções e preservação do histórico — design D6/D11
-- [ ] C8 Validação automática (typecheck/lint/build/testes) e UAT da bancada **sem exigir execução paga** — design D11
-- [ ] C9 Confirmação de que `prompts/` e estruturas produtivas permanecem isolados — design D11
-- [ ] C10 Registro de que a primeira operação real do laboratório ocorrerá posteriormente, com nova autorização humana — design D9/D11
+- [x] C8 Validação automática (typecheck/lint/build/testes) e UAT da bancada **sem exigir execução paga** — design D11
+- [x] C9 Confirmação de que `prompts/` e estruturas produtivas permanecem isolados — design D11
+- [x] C10 Registro de que a primeira operação real do laboratório ocorrerá posteriormente, com nova autorização humana — design D9/D11
 
 ## D. Encerramento da fase (aplicação operacional)
 
 > D1/D2 **usam** as capacidades implementadas em C3/C4/C7 — não reimplementam nada.
 
-- [ ] D1 **Usar** a capacidade de encerramento para fechar o programa local atual `860ca4fe-dc8b-4354-b94e-02f9e7b202c6` (preservando seu histórico) e confirmar que novas reservas são recusadas — design D9
-- [ ] D2 **Usar** o caminho administrativo seguro para arquivar o experimento atual `c48e21b5-c7a8-4456-a0d6-a2b4040fc1e3`, preservando o histórico — design D6/D11
-- [ ] D3 Produzir `48-2-1-VERIFICATION.md` e `48.2.1-UAT.md` (fronteira local; ausência de escopo do Revisor; fronteira F48.2.3 × F48.6) — design D11
-- [ ] D4 Preparar o arquivamento da change (sem promoção) — design D11
+- [x] D1 **Usar** a capacidade de encerramento para fechar o programa local atual `860ca4fe-dc8b-4354-b94e-02f9e7b202c6` (preservando seu histórico) e confirmar que novas reservas são recusadas — design D9
+- [x] D2 **Usar** o caminho administrativo seguro para arquivar o experimento atual `c48e21b5-c7a8-4456-a0d6-a2b4040fc1e3`, preservando o histórico — design D6/D11
+- [x] D3 Produzir `48-2-1-VERIFICATION.md` e `48.2.1-UAT.md` (fronteira local; ausência de escopo do Revisor; fronteira F48.2.3 × F48.6) — design D11
+- [x] D4 Preparar o arquivamento da change (sem promoção) — design D11

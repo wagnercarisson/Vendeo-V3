@@ -1,12 +1,12 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.5
-milestone_name: — Lançamento Externo Controlado ◆
-status: paused
-last_updated: "2026-09-27T00:51:03Z"
+milestone_name: "— Lançamento Externo Controlado ◆"
+status: complete
+last_updated: "2026-09-27T14:39:26.603Z"
 progress:
   total_plans: 300
-  completed_plans: 293
+  completed_plans: 294
   percent: 98
 ---
 
@@ -16,49 +16,45 @@ progress:
 
 - Project: `.planning/PROJECT.md`.
 - Core value: transformar uma oferta simples em uma campanha profissional, clara e publicável.
-- Foco atual: F48.2.1 — **Bancada Manual de Prompts do Diretor** (pausada após realinhamento).
+- Foco atual: F48.2.1 — **Bancada Manual de Prompts do Diretor** (CONCLUÍDA).
 - Próxima iniciativa condicionada: F50.1 aguardando constituição da PJ.
 
 ## Current Position
 
-Phase: 48.2.1 (Bancada Manual de Prompts do Diretor) — **PAUSED** (pós-realinhamento)
-Plan: `48-2-1-09` — **pausado na Task 3** (Tasks 1–2 concluídas; Task 3 decidida `adiar`; Tasks 4–5 não executadas)
-Chain: `48-2-1-05 → 48-2-1-07 → 48-2-1-08 → 48-2-1-09`
+Phase: 48.2.1 (Bancada Manual de Prompts do Diretor) — **COMPLETE**
+Plan: `48-2-1-09` — **concluído** (último plano da fase)
+Chain (concluída): `48-2-1-05 → 48-2-1-07 → 48-2-1-08 → 48-2-1-09`
 
-- F48.2.1 pausada e replanejada (OpenSpec `017b8799`).
-- Plano `48-2-1-07` **concluído** (commits `66011f89`, `5a55882f`, `2949b8d1`); migration aplicada via `npx supabase migration up` (registros locais preservados).
-- Plano `48-2-1-08` **concluído** (commits `03663504`, `f423188f`, `4415e8ef`): orçamento completo visível + `BudgetPanel` integrado + saldo propagado; arquivamento seguro (domínio + `PATCH` + UI) terminal com histórico preservado.
-- Plano `48-2-1-09` — **Tasks 1–2 concluídas** (`092e3717` validação/isolamento; `3514db5c` verificação final + UAT); **Task 3 (`checkpoint:decision`) = `adiar`** (2026-09-27T00:51:03Z): ações terminais **não executadas** (programa segue `authorized`; experimento segue `ready`; zero runs/custo).
-- **Próximo passo:** confirmar os 11 passos visuais da UAT em `48.2.1-UAT.md` e **reapresentar o checkpoint da Task 3** (`aprovar-encerramento`/`adiar`). **Não** executar as Tasks 4–5 antes de `aprovar-encerramento`.
-- **NÃO** usar `/gsd-resume-work` apontando ao Plano 06 (interrompido/suplantado).
+- F48.2.1 realinhada (OpenSpec `017b8799`) e **concluída**: bancada manual dos prompts do Diretor.
+- Todos os planos resolvidos; programa local `closed` e experimento `archived`, com recusas fail-closed confirmadas e histórico preservado.
+- **Zero runs e zero custo**; `prompts/` intocado; sem promoção/canário/`db push`.
+- Próximo passo (pendente de confirmação humana): verificação/arquivamento OpenSpec (`openspec-verify-change` → `openspec-archive-change`).
 
 ## F48.2.1 — Inventário da fase (mecânico)
 
-- **Concluídos (7):** `48-2-1-01` .. `48-2-1-05`, `48-2-1-07`, `48-2-1-08`.
-- **Suplantado/resolvido (1):** `48-2-1-06` — interrompido na Task 4 (Checkpoint humano 3) após as Tasks 1–3; resolvido via `48-2-1-06-SUMMARY.md` (supersessão); **não concluído funcionalmente**; fora da cadeia executável.
-- **Pendentes (1):** `48-2-1-09` (verificação/UAT/encerramento operacional).
-- `verify.phase-completeness 48.2.1`: `plan_count 9`, `summary_count 8`, `incomplete_plans [48-2-1-09]`.
+- **Concluídos (8):** `48-2-1-01` .. `48-2-1-05`, `48-2-1-07`, `48-2-1-08`, `48-2-1-09`.
+- **Suplantado/resolvido (1):** `48-2-1-06` — interrompido na Task 4 (Checkpoint 3); resolvido via `48-2-1-06-SUMMARY.md` (supersessão); fora da cadeia executável.
+- `verify.phase-completeness 48.2.1`: `complete: true`, `plan_count 9`, `summary_count 9`, `incomplete_plans []`.
 
 ## Global (mecânico — `gsd-sdk query progress`)
 
-- `total_plans: 300`; `completed_plans (summaries): 293`; `percent: 98`.
+- `total_plans: 300`; `completed_plans (summaries): 294`; `percent: 98`.
 
 ## Accumulated Context — Decisions
 
 - F48.2.1 realinhada (OpenSpec `017b8799`): entrega exclusivamente a **bancada manual** dos prompts do Diretor (`offer`/`spotlight`/`exclusive`).
 - Diagnóstico versionado v1/v2/v3 preservado como evidência histórica; regra de vitória **consultiva**; rascunho `offer/v1` apenas como exemplo (não aprovado, não vencedor).
-- Checkpoint 1 aprovado (`matrix-v1` + `diagnosticVersion 3`, hash `1e1c7945…d3bf`).
-- Checkpoint 2 aprovado (`autorizar-inicial`): `budget_usd` = US$ 2.808; pior caso NÃO autorizado.
-- Contrato de autorização: `status='closed'` = encerrado com autorização revogada; somente `authorized` reserva; `closed` é terminal; nova sessão exige novo programa; histórico preservado.
-- **Zero runs e zero custo**; programa `860ca4fe-…` ainda `authorized` e experimento `c48e21b5-…` ainda `ready` até as ações controladas do Plano 09.
-- Primeira operação real paga será **posterior**, com novo programa e nova autorização humana.
-- Plano `48-2-1-07` concluído: reserva fail-closed por `status='authorized'`; `closed` terminal em serviço + trigger no banco; histórico financeiro preservado; UI de encerramento ("Encerrar programa / revogar autorização") com confirmação humana. Migration local via `npx supabase migration up` (sem `db reset`/`db push`).
-- Plano `48-2-1-08` concluído (C5–C7): orçamento do programa (autorizado/reservado/consumido/saldo) exposto no detalhe; `BudgetPanel` integrado (não órfão); `programRemainingUsd` propagado ao `RunExecutionPanel`; `archiveExperiment` + `PATCH /experiments/[id]` (`{ status: "archived" }`, terminal) + botão "Arquivar experimento" com confirmação. Histórico preservado (zero deletes); `archived` recusa reservas (`experiment_not_ready`). Sem dependências novas, sem `db push`.
+- Checkpoint 1 aprovado (`matrix-v1` + `diagnosticVersion 3`); Checkpoint 2 aprovado (`autorizar-inicial`, US$ 2.808).
+- Contrato de autorização: `status='closed'` = encerrado com autorização revogada; somente `authorized` reserva; `closed` terminal; nova sessão exige novo programa; histórico preservado.
+- Plano `48-2-1-07`: reserva fail-closed por `status='authorized'`; `closed` terminal (serviço + trigger); reautorização recusada; UI de encerramento.
+- Plano `48-2-1-08`: orçamento completo visível + `BudgetPanel` integrado + `programRemainingUsd` propagado; arquivamento seguro (domínio + `PATCH` + UI) terminal.
+- Plano `48-2-1-09`: validação automática + UAT sem execução paga; **decisão humana `aprovar-encerramento`**; programa `860ca4fe-…` `closed` e experimento `c48e21b5-…` `archived`, com histórico preservado.
+- Correção test-only autorizada (fora do escopo F48.2.1) do date-bomb preexistente em `use-campaign-form-validity.test.ts` (freeze de relógio), restaurando a suíte com apenas a exceção F50.
 
 ## Pending Todos
 
-- Executar o Plano `48-2-1-09` **somente após aprovação humana** (verificação/UAT/encerramento operacional; inclui as ações D1/D2 sobre o programa/experimento locais).
-- Teste legal F50 (`src/lib/legal/__tests__/legal-document-versions.test.ts`, `ENOENT`) é falha **preexistente externa** à F48.2.1; o gate fail-closed do Plano 09 aceita somente essa exceção exata.
+- Verificação e arquivamento OpenSpec da change F48.2.1 (pendente de confirmação humana).
+- Exceção preexistente F50 (`src/lib/legal/__tests__/legal-document-versions.test.ts`, `ENOENT`) é falha externa à F48.2.1; registrada como follow-up.
 
 ## Blockers/Concerns
 
@@ -83,7 +79,7 @@ Chain: `48-2-1-05 → 48-2-1-07 → 48-2-1-08 → 48-2-1-09`
 
 ## Session Continuity
 
-- Última sessão: 2026-09-27 — execução do Plano `48-2-1-09` (Tasks 1–2) e pausa na Task 3.
-- Último trabalho: Plano `48-2-1-09` Tasks 1–2 concluídas (commits `092e3717`, `3514db5c`; fix test-only `df8ea40f`); gates verdes (typecheck/lint/build/direcionados exit 0; suíte completa apenas com a exceção F50); UAT sem execução paga registrada; Task 3 decidida **`adiar`**. Estado local inalterado (programa `860ca4fe-…` `authorized`, experimento `c48e21b5-…` `ready`, `lab_runs` = 0).
-- Próximo passo: confirmar os 11 passos visuais da UAT em `48.2.1-UAT.md` e reapresentar o checkpoint da Task 3 (`aprovar-encerramento`/`adiar`). **Não** executar as Tasks 4–5 antes disso.
-- Resume file: `.planning/phases/48.2.1-otimizacao-prompts-diretor/.continue-here.md`.
+- Última sessão: 2026-09-27 — encerramento operacional da F48.2.1 (Plano 48-2-1-09).
+- Último trabalho: programa `closed` + experimento `archived` (decisão humana `aprovar-encerramento`); `48-2-1-VERIFICATION.md`, `48.2.1-UAT.md` e `48-2-1-09-SUMMARY.md` gerados.
+- Próximo passo (após aprovação humana): verificação/arquivamento OpenSpec da change F48.2.1.
+- Resume file: `None` (fase concluída; sem trabalho pausado).
