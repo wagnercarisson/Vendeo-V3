@@ -1,9 +1,9 @@
 # F48.2.1 Verification — Otimização dos Prompts do Diretor (bancada manual)
 
-**Status:** **PASSED (FASE ENCERRADA)** — gates verdes (typecheck, lint, build, testes direcionados do laboratório/Planos 07/08); suíte completa com **exclusivamente** a exceção preexistente e comprovada da F50; isolamento de `prompts/` e das estruturas produtivas confirmado; UAT visual confirmada pelo humano; programa `860ca4fe-…` **`closed`** e experimento `c48e21b5-…` **`archived`**, com recusas confirmadas e histórico preservado; **nenhuma execução paga**.
+**Status:** **PASSED (FASE ENCERRADA)** — gates verdes (typecheck, lint, build, testes direcionados do laboratório/Planos 07/08); suíte completa com **exclusivamente** a exceção preexistente e comprovada da F50; isolamento de `prompts/` e das estruturas produtivas confirmado; UAT: **10 passos visuais confirmados pelo humano + passo 11 (regra de vitória consultiva) validado automaticamente** por contratos/testes; programa `860ca4fe-…` **`closed`** e experimento `c48e21b5-…` **`archived`**, com recusas confirmadas e histórico preservado; **nenhuma execução paga**.
 
 **Fase:** 48.2.1 (otimizacao-prompts-diretor) — v1.5
-**Plano:** `48-2-1-09` (onda 9) — Tasks 1–2 (verificação/UAT); Tasks 3–5 (decisão/encerramento) pendentes de checkpoint humano.
+**Plano:** `48-2-1-09` (onda 9) — **Tasks 1–5 concluídas** (verificação/UAT; decisão humana; encerramento operacional).
 **Fonte da verdade:** `openspec/changes/fase-48-2-1-otimizacao-prompts-diretor/` (tasks C8–C10 / D1–D4; specs `lab-isolation`, `lab-prompt-optimization`).
 **Escopo realinhado:** commit `017b8799` — bancada manual, **sem** execução paga, sem promoção, sem `db push` remoto, `prompts/` intocado.
 
@@ -114,7 +114,7 @@ Enumerados mecanicamente os arquivos que contêm `reviewer`/`campaign_image_revi
 ## 6. Registro C10 — a primeira operação real paga é FUTURA
 
 - A **primeira operação real paga** do laboratório ocorrerá **posteriormente**, em uma **sessão conduzida pelo usuário**, com um **novo programa** e **nova autorização humana explícita** registrada em `lab_prompt_programs` antes de qualquer chamada paga.
-- O programa local atual (`860ca4fe-dc8b-4354-b94e-02f9e7b202c6`) será encerrado (`status='closed'`), revogando a autorização vigente. `closed` é **terminal** e não retorna a `authorized`; uma nova sessão exige criar e autorizar um **novo** programa.
+- O programa local atual (`860ca4fe-dc8b-4354-b94e-02f9e7b202c6`) **foi encerrado** (`status='closed'`), revogando a autorização vigente; e o experimento `c48e21b5-c7a8-4456-a0d6-a2b4040fc1e3` **foi arquivado** (`status='archived'`). `closed`/`archived` são **terminais** e não retornam; uma nova sessão exige criar e autorizar um **novo** programa.
 - **Nenhum ciclo pago** de otimização é requisito de conclusão da F48.2.1.
 - A **regra de vitória permanece consultiva** (`victory-rule.ts`): apenas indicativa; **não** decide aprovação, **não** dispara ciclos, **não** promove variantes e **não** substitui a decisão humana. O relatório consultivo por prompt é **opcional**.
 
@@ -128,7 +128,7 @@ O roteiro e o registro da UAT local da bancada (sem execução paga) estão em `
 
 ## 8. Encerramento operacional (D1/D2) — evidências
 
-**Autorização:** a Task 3 decidiu **`aprovar-encerramento`** (autor: humano; 2026-09-27T14:36:11Z), após a confirmação humana dos 11 passos visuais da UAT (`48.2.1-UAT.md`).
+**Autorização:** a Task 3 decidiu **`aprovar-encerramento`** (autor: humano; 2026-09-27T14:36:11Z), após a confirmação humana de **10 passos visuais** e a validação **automatizada** do passo 11 (regra de vitória consultiva) (`48.2.1-UAT.md`).
 
 Executado localmente em 2026-09-27 usando as **capacidades dos Planos 07/08** — `closeProgram` (`src/lib/lab/domain/program-service.ts`) e `archiveExperiment` (`src/lib/lab/domain/experiment-service.ts`) — com um cliente admin local. **Sem** arquivo novo commitado; nenhuma chamada paga; nenhum `db push`.
 
@@ -200,7 +200,7 @@ Executado localmente em 2026-09-27 usando as **capacidades dos Planos 07/08** �
   - `48-2-1-07` — segurança financeira / revogação fail-closed.
   - `48-2-1-08` — orçamento visível / arquivamento seguro.
   - `48-2-1-09` — verificação / UAT / encerramento operacional.
-- **Posição/continuidade:** a F48.2.1 encerra aqui; a próxima iniciativa é a **F48.2.3** (Promoção, Canário e Prontidão da Aprovação) — fora do escopo desta fase. **Não** retomar o Plano `48-2-1-06`.
+- **Posição/continuidade:** a F48.2.1 encerra aqui. **Próxima ação imediata:** verificar, sincronizar e arquivar a change OpenSpec da F48.2.1 (`openspec-verify-change` → `openspec-sync-specs` → `openspec-archive-change`), pendente de confirmação humana. **Depois disso**, as experiências reais com prompts serão **sessões manuais** conduzidas pelo usuário e pelo assistente. A **F48.2.2** permanece uma change **separada** e deve ser revisada/realinhada humanamente antes de planejamento ou execução. A **F48.2.3** permanece **bloqueada** até existirem prompts efetivamente testados e aprovados para promoção. **Não** retomar o Plano `48-2-1-06`.
 
 **Nota de realinhamento do ROADMAP (follow-up do orquestrador):** o bloco **F48.2.1** do `.planning/ROADMAP.md` está **desatualizado** e deve ser realinhado ao novo escopo:
 

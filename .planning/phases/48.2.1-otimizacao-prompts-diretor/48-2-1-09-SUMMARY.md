@@ -66,7 +66,7 @@ completed: 2026-09-27
 
 - **Task 1 (C8/C9):** gates verdes — `typecheck`, `lint`, `build` (incl. `check:cnae`) e os testes direcionados da F48.2.1/laboratório + Planos 07/08 (`52 files / 1014 passed`, exit 0). A suíte completa retornou **exclusivamente** a exceção preexistente da F50 (1 arquivo / 1 teste, `ENOENT`, caminho antigo). Isolamento confirmado: `prompts/` intocado; allowlist do Revisor = exatamente os 3 arquivos preexistentes; sem novas estruturas do Revisor; sem escrita em tabelas produtivas.
 - **Task 2 (C10/D3):** `48-2-1-VERIFICATION.md` (fronteira local, ausência do Revisor, F48.2.3 × F48.6, isolamento, primeira operação paga FUTURA com novo programa + nova autorização) e `48.2.1-UAT.md` (roteiro/registro sem execução paga).
-- **Task 3 (decisão):** registrada em `48.2.1-UAT.md` — primeiro `adiar` (pendente da UAT visual), depois **`aprovar-encerramento`** com os 11 passos visuais confirmados pelo humano.
+- **Task 3 (decisão):** registrada em `48.2.1-UAT.md` — primeiro `adiar` (pendente da UAT visual), depois **`aprovar-encerramento`** com **10 passos visuais confirmados pelo humano + passo 11 (regra de vitória consultiva) validado automaticamente** por contratos/testes.
 - **Task 4 (D1/D2):** programa `860ca4fe-dc8b-4354-b94e-02f9e7b202c6` → **`closed`** e experimento `c48e21b5-c7a8-4456-a0d6-a2b4040fc1e3` → **`archived`**, via `closeProgram`/`archiveExperiment`. Recusas confirmadas pelo probe da guarda `lab_reserve_run`: `program_not_authorized` (programa encerrado) e `experiment_not_ready` (experimento arquivado), antes de qualquer chamada paga. Histórico preservado.
 - **Task 5 (D3/D4):** verificação finalizada com o resumo do encerramento, a seção **"Para o orquestrador aplicar (tracking)"** (status da fase e dos planos 01..09 + nota de realinhamento do ROADMAP) e a **preparação** (não execução) do arquivamento OpenSpec.
 
@@ -85,7 +85,7 @@ Each task was committed atomically:
 ## Files Created/Modified
 
 - `.planning/phases/48.2.1-otimizacao-prompts-diretor/48-2-1-VERIFICATION.md` — validação, isolamento, fronteiras, C10, encerramento (D1/D2), tracking e preparação OpenSpec.
-- `.planning/phases/48.2.1-otimizacao-prompts-diretor/48.2.1-UAT.md` — roteiro/registro da UAT (11 passos PASS) e decisão final `aprovar-encerramento`.
+- `.planning/phases/48.2.1-otimizacao-prompts-diretor/48.2.1-UAT.md` — roteiro/registro da UAT (**10 passos visuais PASS + 1 validação automatizada**) e decisão final `aprovar-encerramento`.
 - `.planning/phases/48.2.1-otimizacao-prompts-diretor/deferred-items.md` — F50 (follow-up externo) + registro do data-bomb corrigido.
 - `.planning/phases/48.2.1-otimizacao-prompts-diretor/.continue-here.md` — continuidade (reescrito na pausa).
 - `.planning/HANDOFF.json` — pausa (reescrito) — depois superado pelo encerramento.
@@ -94,7 +94,7 @@ Each task was committed atomically:
 
 ## Decisions Made
 
-- **Encerramento autorizado** (Task 3 = `aprovar-encerramento`) após a confirmação humana dos 11 passos visuais da UAT.
+- **Encerramento autorizado** (Task 3 = `aprovar-encerramento`) após a confirmação humana de **10 passos visuais** + a validação **automatizada** do passo 11 (regra de vitória consultiva).
 - **Exceção F50 preservada como follow-up externo** (não corrigida).
 - **Correção test-only** do data-bomb preexistente em `use-campaign-form-validity.test.ts` (autorizada; sem alterar código produtivo).
 - **Tracking é do orquestrador**: `ROADMAP.md`/`STATE.md` não editados pela Task 5; o texto pretendido foi registrado em `48-2-1-VERIFICATION.md`.
@@ -129,8 +129,11 @@ None - no external service configuration required.
 ## Next Phase Readiness
 
 - **F48.2.1 concluída** (9 planos). Programa `closed` e experimento `archived`; histórico preservado; zero runs/custo.
-- **Próxima iniciativa:** **F48.2.3** — Promoção, Canário e Prontidão da Aprovação (fora do escopo desta fase).
-- **Follow-ups do orquestrador:** (1) realinhar o bloco F48.2.1 do `.planning/ROADMAP.md` (07/08/09; 07/08 autônomos); (2) preparar (e só então executar, com confirmação) `openspec-verify-change` → `openspec-archive-change`.
+- **Próxima ação imediata:** verificar, sincronizar e arquivar a change OpenSpec da F48.2.1 (`openspec-verify-change` → `openspec-sync-specs` → `openspec-archive-change`), pendente de confirmação humana.
+- **Depois disso:** as experiências reais com prompts serão **sessões manuais** conduzidas pelo usuário e pelo assistente.
+- **F48.2.2:** permanece uma change **separada** e deve ser revisada/realinhada humanamente antes de planejamento ou execução.
+- **F48.2.3:** permanece **bloqueada** até existirem prompts efetivamente testados e aprovados para promoção.
+- **Follow-ups do orquestrador:** realinhar o bloco F48.2.1 do `.planning/ROADMAP.md` (07/08/09; 07/08 autônomos) — **já aplicado**; preparar (e só então executar, com confirmação) `openspec-verify-change` → `openspec-archive-change`.
 - **Não** retomar o Plano `48-2-1-06` (suplantado).
 
 ---

@@ -24,7 +24,7 @@ F46/F47 concluídas
 F48.1 — bancada mínima e isolada
         │
         ├── F48.2 — qualidade e otimização dos prompts (guarda-chuva)
-        │       ├── F48.2.1 — otimização dos prompts do Diretor
+        │       ├── F48.2.1 — bancada manual de prompts do Diretor (concluída)
         │       ├── F48.2.2 — auditoria e otimização do prompt do Revisor
         │       └── F48.2.3 — promoção, canário e prontidão da aprovação
         ├── F48.3 — avaliação humana mais madura
@@ -36,7 +36,7 @@ Em paralelo, uma fase principal de produto por vez:
 F49 concluída → demonstração gratuita → landing + funil → SEO → serviços → informativas → 9:16 → carrossel
 ```
 
-A F48.1 vem antes da otimização ampla de prompts porque fornece repetibilidade, comparação lado a lado e registro. Isso não significa construir todo o laboratório antes de testar prompts: **a bancada mínima vem primeiro; o primeiro caso real dela deve ser justamente comparar um prompt atual com uma variante pesquisada**. A avaliação avançada só amadurece depois que surgirem experimentos reais.
+A F48.1 vem antes da otimização ampla de prompts porque fornece repetibilidade, comparação lado a lado e registro. Isso não significa construir todo o laboratório antes de testar prompts: **a bancada mínima vem primeiro; o primeiro caso real dela é justamente comparar um prompt atual com uma variante inserida manualmente**. A F48.2.1 entrega a **bancada manual funcional** (não ciclos automáticos nem variantes vencedoras); os testes reais de candidatas ocorrem em **sessões manuais posteriores**, conduzidas pelo usuário e pelo assistente. A avaliação avançada só amadurece depois que surgirem experimentos reais.
 
 ## 3. Programa F48 — IA em fatias
 
@@ -58,11 +58,11 @@ A F48.1 vem antes da otimização ampla de prompts porque fornece repetibilidade
 
 A F48.2 é um **guarda-chuva** dividido em fatias sequenciais:
 
-- **F48.2.1 — Otimização dos Prompts do Diretor:** diagnóstico das evidências da F37, matriz de nove cenários (`offer`/`spotlight`/`exclusive`, 1:1), suporte aos três prompts do Diretor, rubrica humana e comparação cega, regras de simplicidade, ciclos de otimização, orçamento, relatório e recomendação.
-- **F48.2.2 — Auditoria e Otimização do Prompt do Revisor:** modo `reviewer`, casos de revisão ligados à imagem exata, corpus de desenvolvimento × holdout, avaliação cega separada da classificação, auditoria de falsos positivos/negativos/motivo errado, otimização do prompt do Revisor, relatório e recomendação. Depende da F48.2.1.
-- **F48.2.3 — Promoção, Canário e Prontidão da Aprovação:** promoção dos prompts vencedores da F48.2, canário do fluxo de aprovação e rollback desses prompts/flag.
+- **F48.2.1 — Bancada manual de prompts do Diretor (concluída):** entrega uma **bancada manual funcional** para testes dos três prompts do Diretor (`offer`/`spotlight`/`exclusive`, 1:1) — diagnóstico das evidências da F37, matriz de nove cenários, suporte aos três prompts, rubrica humana e comparação cega, orçamento com autorização/revogação efetiva, arquivamento seguro e encerramento operacional. **Não** entrega ciclos automáticos nem variantes vencedoras: a candidata é inserida manualmente e a regra de vitória é **consultiva**. Os testes reais de candidatas são **sessões manuais posteriores** conduzidas pelo usuário.
+- **F48.2.2 — Auditoria e Otimização do Prompt do Revisor:** modo `reviewer`, casos de revisão ligados à imagem exata, corpus de desenvolvimento × holdout, avaliação cega separada da classificação, auditoria de falsos positivos/negativos/motivo errado, otimização do prompt do Revisor, relatório e recomendação. Permanece uma **change separada** e deve ser **revisada/realinhada humanamente** antes de planejamento ou execução. Depende da F48.2.1.
+- **F48.2.3 — Promoção, Canário e Prontidão da Aprovação:** promoção, canário e rollback **apenas** de prompts que tenham sido **efetivamente testados e aprovados** (em sessões manuais). Permanece **bloqueada** até existirem tais prompts.
 
-**Fronteira com F48.6:** a F48.2.3 cobre apenas a promoção dos **prompts vencedores** desta fase, o canário do fluxo de aprovação e o rollback desses prompts/flag; a homologação e a promoção **geral** de modelos, providers e capabilities permanecem na **F48.6 — Homologação e promoção controlada**.
+**Fronteira com F48.6:** a F48.2.3 cobre apenas a promoção dos **prompts efetivamente testados e aprovados**, o canário do fluxo de aprovação e o rollback desses prompts/flag; a homologação e a promoção **geral** de modelos, providers e capabilities permanecem na **F48.6 — Homologação e promoção controlada**.
 
 O **conhecimento de modelos** (dossiê por modelo) permanece nas fatias já numeradas: preços em F48.4; descoberta, lifecycle e dossiê documental em F48.5. Cada modelo já cadastrado ou candidato deve ter um dossiê com:
 
@@ -151,7 +151,7 @@ discovered → research_pending → candidate → tested → approved/rejected
 
 A promoção deve consumir o catálogo e a seleção administrativa da F47, preservando o gateway da F46 como ponto único de execução.
 
-**Fronteira com F48.2.3:** a F48.6 trata da homologação e promoção **geral** de modelos, providers e capabilities. A promoção dos **prompts vencedores** da F48.2, o canário do fluxo de aprovação e o rollback desses prompts/flag são escopo exclusivo da **F48.2.3**, sem antecipar a homologação geral de modelos.
+**Fronteira com F48.2.3:** a F48.6 trata da homologação e promoção **geral** de modelos, providers e capabilities. A promoção dos **prompts efetivamente testados e aprovados**, o canário do fluxo de aprovação e o rollback desses prompts/flag são escopo exclusivo da **F48.2.3**, sem antecipar a homologação geral de modelos.
 
 **Não inclui:** promoção ou rollback decididos autonomamente por IA.
 
@@ -376,7 +376,7 @@ A F51.2 entrega a fundação técnica e a otimização das páginas públicas ex
 | Ordem | Trilha principal | Trilha secundária segura | Resultado esperado |
 |---|---|---|---|
 | 0 | **F48.1 — laboratório mínimo** | Inventários somente leitura | Bancada utilizável sem tocar produção |
-| 1 | **F49 — orientação contextual** — concluída | **F48.2.1 — prompts do Diretor** + inventário i18n/storage | Campos e revisão mais compreensíveis |
+| 1 | **F49 — orientação contextual** — concluída | **F48.2.1 — bancada manual de prompts do Diretor** (concluída) + inventário i18n/storage | Bancada manual funcional; campos e revisão mais compreensíveis |
 | 2 | **F50 — demonstração gratuita** | Pesquisa documental F48.2, sem alteração concorrente do ledger | Oferta limitada, mensurável e juridicamente comunicável |
 | 3 | **F51.1 — landing + instrumentação do funil** | Pesquisa de i18n ou storage, sem migração | Aquisição e ativação mensuráveis nos modos fechado e aberto |
 | 4 | **F51.2 — fundação SEO** | Pesquisa de i18n ou storage, sem migração | Descoberta orgânica e indexabilidade alinhadas à landing validada |

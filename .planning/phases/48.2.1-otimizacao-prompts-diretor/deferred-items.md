@@ -10,3 +10,12 @@
   - **Resolution (authorized test-only):** the `describe("D2/D5: validação de datas no submit (frontend, antes do fetch)")` block now freezes the clock in its `beforeEach` (`vi.useFakeTimers({ toFake: ["Date"] })` + `vi.setSystemTime(new Date("2026-08-20T12:00:00"))`) and restores it in `afterEach` (`vi.useRealTimers()`), mirroring the existing `Q-P3U` block of the same file. No productive code changed; original dates and expectations preserved; behavior is now independent of the real execution date.
   - Isolated run: `npx vitest run src/components/flow/__tests__/use-campaign-form-validity.test.ts` → **27 passed (exit 0)**.
   - Commit: `test(48-2-1-09): freeze clock in D2/D5 validity block (date-robust, authorized)`.
+
+## UX improvements (non-blocking) — observed during UAT (Plan 48-2-1-09)
+
+Not implemented now; recorded for a future bench-UX slice.
+
+- Explain, in the experiment detail, that the candidate is inserted **only during creation** and then **frozen** (the detail does not allow editing the candidate).
+- Make the **linked scenarios** more evident (show clearly which scenarios belong to the experiment).
+- Explain the estimate formula **`cenários × 2 variantes × repetições`** in the UI (why `× 2` and how repetitions apply).
+- Consider allowing the user to **view the full candidate snapshot content**, not just the name/hash.
