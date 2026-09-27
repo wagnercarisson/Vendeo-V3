@@ -1,13 +1,15 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.5
-milestone_name: "— Lançamento Externo Controlado ◆"
+milestone_name: — Lançamento Externo Controlado ◆
 status: paused
-last_updated: "2026-09-26T23:57:40.341Z"
+last_updated: "2026-09-27T00:09:47.137Z"
 progress:
-  total_plans: 300
-  completed_plans: 291
-  percent: 97
+  total_phases: 38
+  completed_phases: 33
+  total_plans: 301
+  completed_plans: 292
+  percent: 87
 ---
 
 # Project State
@@ -22,23 +24,24 @@ progress:
 ## Current Position
 
 Phase: 48.2.1 (Bancada Manual de Prompts do Diretor) — **PAUSED** (pós-realinhamento)
-Plan: `48-2-1-07` — Task 1 (não iniciado)
+Plan: `48-2-1-08` — próximo (não iniciado)
 Chain: `48-2-1-05 → 48-2-1-07 → 48-2-1-08 → 48-2-1-09`
 
 - F48.2.1 pausada e replanejada (OpenSpec `017b8799`).
-- Próximo comando (somente após aprovação humana): `/gsd-execute-phase 48-2-1-07`.
+- Plano `48-2-1-07` **concluído** (commits `66011f89`, `5a55882f`, `2949b8d1`); migration aplicada via `npx supabase migration up` (registros locais preservados).
+- Próximo comando (somente após aprovação humana): `/gsd-execute-phase 48-2-1-08`.
 - **NÃO** usar `/gsd-resume-work` apontando ao Plano 06 (interrompido/suplantado).
 
 ## F48.2.1 — Inventário da fase (mecânico)
 
-- **Concluídos (5):** `48-2-1-01` .. `48-2-1-05`.
+- **Concluídos (6):** `48-2-1-01` .. `48-2-1-05`, `48-2-1-07`.
 - **Suplantado/resolvido (1):** `48-2-1-06` — interrompido na Task 4 (Checkpoint humano 3) após as Tasks 1–3; resolvido via `48-2-1-06-SUMMARY.md` (supersessão); **não concluído funcionalmente**; fora da cadeia executável.
-- **Pendentes (3):** `48-2-1-07` (segurança financeira/revogação fail-closed), `48-2-1-08` (orçamento visível/arquivamento seguro), `48-2-1-09` (verificação/UAT/encerramento operacional).
-- `verify.phase-completeness 48.2.1`: `plan_count 9`, `summary_count 6`, `incomplete_plans [48-2-1-07, 48-2-1-08, 48-2-1-09]`.
+- **Pendentes (2):** `48-2-1-08` (orçamento visível/arquivamento seguro), `48-2-1-09` (verificação/UAT/encerramento operacional).
+- `verify.phase-completeness 48.2.1`: `plan_count 9`, `summary_count 7`, `incomplete_plans [48-2-1-08, 48-2-1-09]`.
 
 ## Global (mecânico — `gsd-sdk query progress`)
 
-- `total_plans: 300`; `completed_plans (summaries): 291`; `percent: 97`.
+- `total_plans: 301`; `completed_plans (summaries): 292`; `percent: 87`.
 
 ## Accumulated Context — Decisions
 
@@ -49,10 +52,11 @@ Chain: `48-2-1-05 → 48-2-1-07 → 48-2-1-08 → 48-2-1-09`
 - Contrato de autorização: `status='closed'` = encerrado com autorização revogada; somente `authorized` reserva; `closed` é terminal; nova sessão exige novo programa; histórico preservado.
 - **Zero runs e zero custo**; programa `860ca4fe-…` ainda `authorized` e experimento `c48e21b5-…` ainda `ready` até as ações controladas do Plano 09.
 - Primeira operação real paga será **posterior**, com novo programa e nova autorização humana.
+- Plano `48-2-1-07` concluído: reserva fail-closed por `status='authorized'`; `closed` terminal em serviço + trigger no banco; histórico financeiro preservado; UI de encerramento ("Encerrar programa / revogar autorização") com confirmação humana. Migration local via `npx supabase migration up` (sem `db reset`/`db push`).
 
 ## Pending Todos
 
-- Executar o Plano `48-2-1-07` **somente após aprovação humana**.
+- Executar o Plano `48-2-1-08` **somente após aprovação humana**.
 - Teste legal F50 (`src/lib/legal/__tests__/legal-document-versions.test.ts`, `ENOENT`) é falha **preexistente externa** à F48.2.1; o gate fail-closed do Plano 09 aceita somente essa exceção exata.
 
 ## Blockers/Concerns
@@ -78,7 +82,7 @@ Chain: `48-2-1-05 → 48-2-1-07 → 48-2-1-08 → 48-2-1-09`
 
 ## Session Continuity
 
-- Última sessão: 2026-09-26 — realinhamento OpenSpec, replanejamento GSD dos Planos 07–09 e resolução do Plano 06.
-- Último trabalho: OpenSpec `017b8799`; planos GSD `d5137bf0`, `394d9836`, `27908ab3`; supersessão do Plano 06 (`48-2-1-06-SUMMARY.md`).
-- Próximo passo (após aprovação humana): `/gsd-execute-phase 48-2-1-07`.
+- Última sessão: 2026-09-26 — execução do Plano `48-2-1-07` (segurança financeira/revogação fail-closed).
+- Último trabalho: Plano `48-2-1-07` concluído (commits `66011f89`, `5a55882f`, `2949b8d1`); migration `20260926000001` aplicada localmente preservando os registros.
+- Próximo passo (após aprovação humana): `/gsd-execute-phase 48-2-1-08`.
 - Resume file: `.planning/phases/48.2.1-otimizacao-prompts-diretor/.continue-here.md`.
