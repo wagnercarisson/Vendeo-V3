@@ -305,11 +305,15 @@ describe("getExperimentDetail", () => {
     expect(fake.operations[0]).toEqual({ table: "lab_experiments", op: "select" });
 
     expect(detail).not.toBeNull();
-    // Saldo do programa = budget_usd − consumed − reserved = 10 − 2 − 3 = 5.
+    // Orçamento completo do programa: autorizado 10, reservado 3, consumido 2 e
+    // saldo = budget_usd − consumed − reserved = 10 − 2 − 3 = 5.
     expect(detail?.budget).toEqual({
       maxRuns: 6,
       used: 2,
       remaining: 4,
+      programBudgetUsd: 10,
+      programReservedUsd: 3,
+      programConsumedUsd: 2,
       programRemainingUsd: 5,
     });
     expect(detail?.experiment).toMatchObject({
@@ -320,6 +324,36 @@ describe("getExperimentDetail", () => {
       scenarioVersionId: VERSION_V2,
       slug: "produto-oferta-preco",
       version: 2,
+    });
+  });
+
+  it("sem programa: orçamento do programa é nulo/zerado (não inventa valores)", async () => {
+    const fake = createFakeSupabaseClient({
+      tables: {
+        lab_experiments: [
+          {
+            id: EXPERIMENT_ID,
+            name: "Exp sem programa",
+            status: "ready",
+            repetitions: 1,
+            max_runs: 6,
+            program_id: null,
+            updated_at: "2026-09-16T00:00:02Z",
+          },
+        ],
+      },
+    });
+
+    const detail = await getExperimentDetail(fake.client, EXPERIMENT_ID);
+
+    expect(detail?.budget).toEqual({
+      maxRuns: 6,
+      used: 0,
+      remaining: 6,
+      programBudgetUsd: null,
+      programReservedUsd: 0,
+      programConsumedUsd: 0,
+      programRemainingUsd: null,
     });
   });
 

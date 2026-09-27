@@ -410,6 +410,15 @@ export interface LabExperimentDetail {
     used: number;
     remaining: number;
     /**
+     * Orçamento autorizado do programa vinculado (`budget_usd`); `null` quando o
+     * experimento não tem programa ou o orçamento não foi autorizado.
+     */
+    programBudgetUsd: number | null;
+    /** Valor reservado do programa (`budget_reserved_usd`); 0 sem programa. */
+    programReservedUsd: number;
+    /** Valor consumido do programa (`budget_consumed_usd`); 0 sem programa. */
+    programConsumedUsd: number;
+    /**
      * Saldo restante do programa vinculado
      * (`budget_usd - budget_consumed_usd - budget_reserved_usd`); `null` quando
      * o experimento não tem programa ou o orçamento não foi autorizado.
@@ -547,7 +556,12 @@ export async function getExperimentDetail(
   const runRows = asRows(runs);
   const maxRuns = num(experimentRow.max_runs);
 
-  // Saldo restante do programa vinculado (D9): `budget_usd - consumed - reserved`.
+  // Orçamento do programa vinculado (D9): autorizado/reservado/consumido e saldo
+  // restante = `budget_usd - consumed - reserved`. Apenas valores financeiros e
+  // metadados — nenhum conteúdo de cenário/base64 atravessa a API.
+  let programBudgetUsd: number | null = null;
+  let programReservedUsd = 0;
+  let programConsumedUsd = 0;
   let programRemainingUsd: number | null = null;
   const programId = text(experimentRow.program_id);
   if (programId) {
@@ -563,10 +577,12 @@ export async function getExperimentDetail(
 
     const programRow = asRow(program);
     if (programRow) {
+      programReservedUsd = num(programRow.budget_reserved_usd);
+      programConsumedUsd = num(programRow.budget_consumed_usd);
       const budgetUsd = programRow.budget_usd;
       if (typeof budgetUsd === "number") {
-        programRemainingUsd =
-          budgetUsd - num(programRow.budget_consumed_usd) - num(programRow.budget_reserved_usd);
+        programBudgetUsd = budgetUsd;
+        programRemainingUsd = budgetUsd - programConsumedUsd - programReservedUsd;
       }
     }
   }
@@ -581,6 +597,9 @@ export async function getExperimentDetail(
       maxRuns,
       used: runRows.length,
       remaining: Math.max(0, maxRuns - runRows.length),
+      programBudgetUsd,
+      programReservedUsd,
+      programConsumedUsd,
       programRemainingUsd,
     },
   };

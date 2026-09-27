@@ -9,6 +9,7 @@ import { formatUsdDisplay } from "@/lib/lab/display-format";
 import { getLabEnvironment } from "@/lib/lab/environment-guard";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
+import { BudgetPanel } from "../../_components/budget-panel";
 import { DisabledNotice } from "../../_components/disabled-notice";
 import { LabTable } from "../../_components/lab-table";
 import { RunExecutionPanel } from "../../_components/run-execution-panel";
@@ -202,6 +203,13 @@ export default async function ExperimentoDetalhePage({
         </dl>
       </section>
 
+      <BudgetPanel
+        budgetUsd={detail.budget.programBudgetUsd}
+        budgetReservedUsd={detail.budget.programReservedUsd}
+        budgetConsumedUsd={detail.budget.programConsumedUsd}
+        programRemainingUsd={detail.budget.programRemainingUsd}
+      />
+
       <section className="space-y-3">
         <h2 className="font-heading text-lg font-semibold text-text-primary">
           Variantes
@@ -322,6 +330,7 @@ export default async function ExperimentoDetalhePage({
         repetitions={num(experiment.repetitions, 1)}
         budget={detail.budget}
         experimentStatus={text(experiment.status)}
+        programRemainingUsd={detail.budget.programRemainingUsd}
       />
 
       <p className="text-xs text-text-muted font-body">

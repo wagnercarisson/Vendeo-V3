@@ -7,10 +7,12 @@ const {
   mockGetLabEnvironment,
   mockListRecentExperiments,
   mockListPendingEvaluations,
+  mockGetExperimentDetail,
 } = vi.hoisted(() => ({
   mockGetLabEnvironment: vi.fn(),
   mockListRecentExperiments: vi.fn(),
   mockListPendingEvaluations: vi.fn(),
+  mockGetExperimentDetail: vi.fn(),
 }));
 
 vi.mock("@/lib/lab/environment-guard", () => ({
@@ -23,6 +25,7 @@ vi.mock("@/lib/lab/environment-guard", () => ({
 vi.mock("@/lib/lab/api/experiment-queries", () => ({
   listRecentExperiments: (...args: unknown[]) => mockListRecentExperiments(...args),
   listPendingEvaluations: (...args: unknown[]) => mockListPendingEvaluations(...args),
+  getExperimentDetail: (...args: unknown[]) => mockGetExperimentDetail(...args),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -37,6 +40,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 import LaboratorioPage from "@/app/(app)/admin/laboratorio/page";
+import ExperimentoDetalhePage from "@/app/(app)/admin/laboratorio/experimentos/[id]/page";
 import type { LabTechnicalAlert, LabTechnicalValidation } from "@/lib/lab/technical-validation";
 import {
   RUBRIC_CRITERIA,
@@ -107,6 +111,58 @@ const PENDING_EVALUATION = {
   scenarioLabel: "produto-oferta-preco v1",
   baselineRunId: BASELINE_RUN_ID,
   candidateRunId: CANDIDATE_RUN_ID,
+};
+
+/** Detalhe do experimento com o orçamento completo do programa (C5/C6). */
+const EXPERIMENT_DETAIL = {
+  experiment: {
+    id: EXPERIMENT_ID,
+    name: "Exp prompt",
+    status: "ready",
+    objective: "Comparar prompts",
+    hypothesis: "A candidata vende mais",
+    changed_dimension: "prompt",
+    model_target: MODEL_TARGET,
+    repetitions: 1,
+    max_runs: 6,
+    updated_at: "2026-09-16T12:00:00.000Z",
+  },
+  variants: [
+    {
+      id: BASELINE_RUN_ID,
+      role: "baseline",
+      label: "Baseline oficial",
+      prompt_snapshot: { source: "official", name: PROMPT_NAME, contentHash: PROMPT_HASH },
+    },
+    {
+      id: CANDIDATE_RUN_ID,
+      role: "candidate",
+      label: "Candidata",
+      prompt_snapshot: { source: "override", name: PROMPT_NAME, contentHash: PROMPT_HASH },
+    },
+  ],
+  scenarios: [
+    {
+      id: "link-1",
+      scenarioVersionId: SCENARIO_A,
+      slug: "produto-oferta-preco",
+      name: "Preço",
+      version: 1,
+      contentHash: "hash-1",
+      position: 1,
+    },
+  ],
+  runs: [],
+  evaluations: [],
+  budget: {
+    maxRuns: 6,
+    used: 0,
+    remaining: 6,
+    programBudgetUsd: 2808,
+    programReservedUsd: 12.5,
+    programConsumedUsd: 4.25,
+    programRemainingUsd: 2791.25,
+  },
 };
 
 const SCENARIOS = [1, 2, 3, 4].map((index) => ({
@@ -267,6 +323,7 @@ beforeEach(() => {
   mockGetLabEnvironment.mockReturnValue(ENABLED_ENV);
   mockListRecentExperiments.mockResolvedValue([EXPERIMENT_SUMMARY]);
   mockListPendingEvaluations.mockResolvedValue([PENDING_EVALUATION]);
+  mockGetExperimentDetail.mockResolvedValue(EXPERIMENT_DETAIL);
 });
 
 afterEach(() => vi.unstubAllGlobals());
@@ -519,6 +576,25 @@ describe("contrato de UI — confirmação com estimativa e progresso NDJSON", (
     );
 
     expect(screen.getByTestId("lab-run-button")).toBeDisabled();
+  });
+});
+
+// ─── 4b. Orçamento completo integrado no detalhe ─────────────────────────────
+
+describe("contrato de UI — orçamento completo integrado no detalhe", () => {
+  it("renderiza o BudgetPanel integrado (não órfão) e propaga o saldo ao painel de execução", async () => {
+    render(
+      await ExperimentoDetalhePage({ params: Promise.resolve({ id: EXPERIMENT_ID }) }),
+    );
+
+    const panel = screen.getByTestId("lab-budget-panel");
+    expect(within(panel).getByText("Orçamento autorizado")).toBeInTheDocument();
+    expect(within(panel).getByText("Reservado")).toBeInTheDocument();
+    expect(within(panel).getByText("Consumido")).toBeInTheDocument();
+    expect(within(panel).getByText("Saldo restante")).toBeInTheDocument();
+
+    // Gap B: o saldo do programa é propagado ao RunExecutionPanel.
+    expect(screen.getByTestId("lab-program-balance")).toHaveTextContent("Saldo do programa");
   });
 });
 

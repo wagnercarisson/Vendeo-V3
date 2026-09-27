@@ -245,7 +245,15 @@ const DETAIL = {
   scenarios: [{ scenarioVersionId: SCENARIO_VERSION_ID, slug: "produto-oferta-preco", version: 1 }],
   runs: [],
   evaluations: [],
-  budget: { maxRuns: 6, used: 1, remaining: 5, programRemainingUsd: 5 },
+  budget: {
+    maxRuns: 6,
+    used: 1,
+    remaining: 5,
+    programBudgetUsd: 10,
+    programReservedUsd: 2,
+    programConsumedUsd: 3,
+    programRemainingUsd: 5,
+  },
 };
 
 const RUN_DETAIL = {
@@ -577,12 +585,15 @@ describe("contrato da API — criação e leitura", () => {
     expect(body.experiments).toHaveLength(1);
   });
 
-  it("GET /experiments/[id] ⇒ 200 com budget.remaining, intent/programa e saldo do programa", async () => {
+  it("GET /experiments/[id] ⇒ 200 com budget.remaining, intent/programa e orçamento completo do programa", async () => {
     const res = await getExperiment(EXPERIMENT_ID);
     const body = await res.json();
 
     expect(res.status).toBe(200);
     expect(body.budget.remaining).toBe(5);
+    expect(body.budget.programBudgetUsd).toBe(10);
+    expect(body.budget.programReservedUsd).toBe(2);
+    expect(body.budget.programConsumedUsd).toBe(3);
     expect(body.budget.programRemainingUsd).toBe(5);
     expect(body.experiment).toMatchObject({
       campaign_intent: "offer",
