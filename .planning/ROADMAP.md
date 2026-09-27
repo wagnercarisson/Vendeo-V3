@@ -89,7 +89,7 @@ Plans:
 - [x] 48-2-1-05-PLAN.md — API, UI, orcamento e isolamento (Checkpoint humano 2; aprovado em autorizar-inicial, US$ 2.808).
 - [~] 48-2-1-06-PLAN.md — **Interrompido e suplantado** por decisao humana na Task 4 (Checkpoint 3), antes de qualquer run pago; Tasks 1–3 executadas; resolucao em `48-2-1-06-SUMMARY.md` (supersessao). **Nao pertence mais a cadeia executavel.**
 - [x] 48-2-1-07-PLAN.md — **Seguranca financeira e revogacao fail-closed** (reserva exige `status='authorized'`; `closed` terminal; reautorizacao recusada; historico preservado; controle de encerramento + UI com confirmacao).
-- [ ] 48-2-1-08-PLAN.md — **Orcamento visivel e arquivamento seguro** (autorizado/reservado/consumido/saldo; integracao do painel; arquivamento administrativo com recusa de execucao e historico preservado).
+- [x] 48-2-1-08-PLAN.md — **Orcamento visivel e arquivamento seguro** (autorizado/reservado/consumido/saldo; integracao do painel; arquivamento administrativo com recusa de execucao e historico preservado).
 - [ ] 48-2-1-09-PLAN.md — **Verificacao, UAT e encerramento operacional** (validacao automatica sem execucao paga; encerrar o programa e arquivar o experimento apos checkpoint; `48-2-1-VERIFICATION.md` e `48.2.1-UAT.md`).
 
 **Ondas e dependencias:** cadeia executavel **`48-2-1-05 -> 48-2-1-07 -> 48-2-1-08 -> 48-2-1-09`** (uma onda por plano). O Plano 06 **nao** faz parte da cadeia executavel. Proximo plano executavel: **`48-2-1-08`** (apos aprovacao humana). Planos 07/08 sao `autonomous: true`; o Plano 09 e `autonomous: false` (checkpoint humano antes das acoes terminais).
