@@ -126,4 +126,55 @@ O roteiro e o registro da UAT local da bancada (sem execução paga) estão em `
 
 ---
 
-*Fase: 48.2.1-otimizacao-prompts-diretor. Tasks 1–2 do Plano 48-2-1-09 concluídas (validação + UAT). Encerramento operacional (Tasks 3–5) pendente de decisão humana no checkpoint.*
+## 8. Encerramento operacional (D1/D2) — evidências
+
+**Autorização:** a Task 3 decidiu **`aprovar-encerramento`** (autor: humano; 2026-09-27T14:36:11Z), após a confirmação humana dos 11 passos visuais da UAT (`48.2.1-UAT.md`).
+
+Executado localmente em 2026-09-27 usando as **capacidades dos Planos 07/08** — `closeProgram` (`src/lib/lab/domain/program-service.ts`) e `archiveExperiment` (`src/lib/lab/domain/experiment-service.ts`) — com um cliente admin local. **Sem** arquivo novo commitado; nenhuma chamada paga; nenhum `db push`.
+
+### 8.1 Encerrar o programa `860ca4fe-dc8b-4354-b94e-02f9e7b202c6` (D1)
+
+`closeProgram({ programId, actorId, client })` → `{ status: 'closed' }`.
+
+| Campo | Antes | Depois | Preservado? |
+|---|---|---|---|
+| `status` | `authorized` | **`closed`** | transição terminal |
+| `budget_usd` | `2.808` | `2.808` | ✅ inalterado |
+| `budget_reserved_usd` | `0` | `0` | ✅ inalterado |
+| `budget_consumed_usd` | `0` | `0` | ✅ inalterado |
+| `budget_authorized_by` | `31edcaa1-4461-41da-af15-d3f3d1e2c9b6` | `31edcaa1-4461-41da-af15-d3f3d1e2c9b6` | ✅ inalterado |
+| `budget_authorized_at` | `2026-09-25T22:10:57.741+00:00` | `2026-09-25T22:10:57.741+00:00` | ✅ inalterado |
+
+**Recusa de novas reservas (antes de qualquer chamada paga):** probe da guarda server-side `lab_reserve_run` (o mesmo RPC usado pela rota de execução) com o experimento ainda `ready`:
+
+- `rpc('lab_reserve_run', { … })` → `{ data: null, error: "program_not_authorized" }`.
+- Nenhum run criado; nenhum orçamento reservado; nenhuma chamada paga. A recusa ocorre **antes** do `UPDATE budget_reserved_usd` e do `INSERT lab_runs`.
+
+### 8.2 Arquivar o experimento `c48e21b5-c7a8-4456-a0d6-a2b4040fc1e3` (D2)
+
+`archiveExperiment(experimentId, { actorId, client })` → `{ status: 'archived' }`.
+
+| Campo | Antes | Depois | Preservado? |
+|---|---|---|---|
+| `status` | `ready` | **`archived`** | transição terminal |
+| `campaign_intent` | `offer` | `offer` | ✅ inalterado |
+| variantes | `2` | `2` | ✅ inalterado |
+| cenários | `3` | `3` | ✅ inalterado |
+| `lab_runs` | `0` | `0` | ✅ inalterado |
+| avaliações (`lab_human_evaluations`) | `0` | `0` | ✅ inalterado |
+
+**Recusa de novas execuções:** probe da guarda `lab_reserve_run` com o experimento `archived`:
+
+- `rpc('lab_reserve_run', { … })` → `{ data: null, error: "experiment_not_ready" }`.
+- Nenhum run criado; nenhuma chamada paga.
+
+### 8.3 Resumo da evidência
+
+- Programa `closed` (terminal) com histórico financeiro **preservado** (nenhum valor apagado ou zerado).
+- Experimento `archived` (terminal) com histórico **preservado** (zero deletes; `lab_runs = 0`).
+- Recusas confirmadas: `program_not_authorized` (programa encerrado) e `experiment_not_ready` (experimento arquivado) — ambas **antes** de qualquer chamada paga.
+- **Nenhuma chamada paga; nenhum `db push`; `prompts/` intocado.**
+
+---
+
+*Fase: 48.2.1-otimizacao-prompts-diretor. Task 4 do Plano 48-2-1-09 (encerramento operacional) executada após `aprovar-encerramento`. Task 5 (finalização/tracking/OpenSpec) pendente.*
