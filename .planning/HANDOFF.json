@@ -1,10 +1,10 @@
 {
   "version": "1.0",
-  "timestamp": "2026-09-26T23:57:40.341Z",
+  "timestamp": "2026-09-27T00:09:47.137Z",
   "phase": "48.2.1",
   "phase_name": "bancada-manual-prompts-diretor",
   "phase_dir": ".planning/phases/48.2.1-otimizacao-prompts-diretor",
-  "plan": "48-2-1-07",
+  "plan": "48-2-1-08",
   "task": 1,
   "total_tasks": 3,
   "status": "paused",
@@ -12,6 +12,9 @@
   "executable_chain": ["48-2-1-05", "48-2-1-07", "48-2-1-08", "48-2-1-09"],
   "openspec_source": "017b8799",
   "replanning_commits": ["d5137bf0", "394d9836", "27908ab3"],
+  "last_plan_commits": {
+    "48-2-1-07": ["66011f89", "5a55882f", "2949b8d1", "dcedfc25"]
+  },
   "superseded_plan": {
     "plan": "48-2-1-06",
     "status": "superseded",
@@ -21,9 +24,8 @@
     "summary": ".planning/phases/48.2.1-otimizacao-prompts-diretor/48-2-1-06-SUMMARY.md",
     "resume_allowed": false
   },
-  "completed_plans": ["48-2-1-01", "48-2-1-02", "48-2-1-03", "48-2-1-04", "48-2-1-05"],
+  "completed_plans": ["48-2-1-01", "48-2-1-02", "48-2-1-03", "48-2-1-04", "48-2-1-05", "48-2-1-07"],
   "pending_plans": [
-    {"id": "48-2-1-07", "objective": "Seguranca financeira e revogacao fail-closed", "autonomous": true},
     {"id": "48-2-1-08", "objective": "Orcamento visivel e arquivamento seguro", "autonomous": true},
     {"id": "48-2-1-09", "objective": "Verificacao, UAT e encerramento operacional", "autonomous": false}
   ],
@@ -49,13 +51,14 @@
   },
   "blockers": [],
   "human_actions_pending": [
-    {"action": "Aprovar a execucao do Plano 48-2-1-07", "context": "A fase foi realinhada e replanejada; a retomada exige aprovacao humana explicita", "blocking": true}
+    {"action": "Aprovar a execucao do Plano 48-2-1-08", "context": "O Plano 48-2-1-07 foi concluido; a retomada do proximo plano exige aprovacao humana explicita", "blocking": true}
   ],
   "decisions": [
     {"decision": "Realinhar a F48.2.1 como bancada manual de prompts do Diretor (OpenSpec 017b8799)", "rationale": "Escopo redefinido: sem ciclos pagos obrigatorios; candidata inserida manualmente; encerramento tecnico da bancada", "phase": "48.2.1"},
-    {"decision": "Resolver o Plano 48-2-1-06 como interrompido/suplantado (nao concluido funcionalmente)", "rationale": "Interrupcao humana no Checkpoint 3; zero runs; substituido pelos Planos 07-09", "phase": "48.2.1"}
+    {"decision": "Resolver o Plano 48-2-1-06 como interrompido/suplantado (nao concluido funcionalmente)", "rationale": "Interrupcao humana no Checkpoint 3; zero runs; substituido pelos Planos 07-09", "phase": "48.2.1"},
+    {"decision": "Concluir o Plano 48-2-1-07 (seguranca financeira e revogacao fail-closed)", "rationale": "Reserva fail-closed por status='authorized'; closed terminal (servico + trigger); reautorizacao recusada; historico preservado; UI de encerramento com confirmacao", "phase": "48.2.1"}
   ],
   "uncommitted_files": [],
-  "next_action": "Executar explicitamente o Plano 48-2-1-07 (Task 1) apos aprovacao humana: /gsd-execute-phase 48-2-1-07. NAO retomar o Plano 48-2-1-06.",
-  "context_notes": "Planos 01-05 concluidos; Plano 06 interrompido/suplantado (Tasks 1-3; zero runs/custo); Planos 07-09 planejados e nao executados. Cadeia executavel 05 -> 07 -> 08 -> 09. Zero chamadas pagas; prompts/ intocado; programa ainda authorized e experimento ready. LIMITACAO DO SDK: `gsd-sdk query init.execute-phase 48.2.1` canonicaliza incorretamente IDs no formato `48-2-1-*` e pode retornar incomplete_plans: [] — a retomada deve usar o plano explicito `48-2-1-07`; nao interpretar incomplete_plans: [] como fase concluida."
+  "next_action": "Executar explicitamente o Plano 48-2-1-08 (Task 1) apos aprovacao humana: /gsd-execute-phase 48-2-1-08. NAO retomar o Plano 48-2-1-06; NAO pular para o Plano 48-2-1-09.",
+  "context_notes": "Planos 01-05 e 07 concluidos; Plano 06 interrompido/suplantado (Tasks 1-3; zero runs/custo); Planos 08-09 planejados e nao executados. Cadeia executavel 05 -> 07 -> 08 -> 09. Zero chamadas pagas; prompts/ intocado; programa ainda authorized e experimento ready (nao encerrados - acoes do Plano 09). LIMITACAO DO SDK: `gsd-sdk query init.execute-phase 48.2.1` canonicaliza incorretamente IDs no formato `48-2-1-*` e pode retornar incomplete_plans: [] — a retomada deve usar o plano explicito; nao interpretar incomplete_plans: [] como fase concluida."
 }

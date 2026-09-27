@@ -82,10 +82,10 @@ Os itens abaixo foram **removidos do escopo ativo** por decisão humana. **Não 
 
 > **Contrato de autorização (a reforçar):** não há status `revoked`. `status='closed'` representa o programa encerrado com a autorização revogada. Somente `status='authorized'` permite reservar novos runs. `closed` é **terminal** e não retorna a `authorized`; uma nova sessão operacional exige criar e autorizar um **novo** programa. Encerrar preserva `budget_usd`, `budget_reserved_usd`, `budget_consumed_usd`, autor e timestamp como **histórico auditável** (sem apagar ou zerar valores). A efetividade vem do **bloqueio server-side/RPC**: qualquer status diferente de `authorized` recusa a reserva antes da chamada paga.
 
-- [ ] C1 Reforçar a reserva para exigir `status='authorized'` no RPC/serviço (qualquer status diferente de `authorized` recusa antes da chamada paga) — design D9
-- [ ] C2 Programa `closed` (autorização revogada) recusa qualquer nova reserva antes da chamada paga — design D9
-- [ ] C3 Implementar e testar a capacidade de **encerramento/revogação efetiva** no RPC, serviço e API: `closed` terminal, sem retorno a `authorized`, e recusa de reautorização de programa `closed` — design D9
-- [ ] C4 Implementar e testar o **controle administrativo/UI** de encerrar programa, com ação explícita "Encerrar programa / revogar autorização" e confirmação humana — design D9/D10
+- [x] C1 Reforçar a reserva para exigir `status='authorized'` no RPC/serviço (qualquer status diferente de `authorized` recusa antes da chamada paga) — design D9
+- [x] C2 Programa `closed` (autorização revogada) recusa qualquer nova reserva antes da chamada paga — design D9
+- [x] C3 Implementar e testar a capacidade de **encerramento/revogação efetiva** no RPC, serviço e API: `closed` terminal, sem retorno a `authorized`, e recusa de reautorização de programa `closed` — design D9
+- [x] C4 Implementar e testar o **controle administrativo/UI** de encerrar programa, com ação explícita "Encerrar programa / revogar autorização" e confirmação humana — design D9/D10
 - [ ] C5 Exibição correta de orçamento autorizado, reservado, consumido e saldo restante — design D9
 - [ ] C6 Integração efetiva do painel de orçamento na tela relevante (hoje órfão; saldo não propagado) — design D9/D10
 - [ ] C7 Implementar/verificar o **caminho administrativo seguro de arquivamento** do experimento: recusa de novas execuções e preservação do histórico — design D6/D11
