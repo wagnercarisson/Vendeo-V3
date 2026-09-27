@@ -362,7 +362,15 @@ function createMemoryClient(state: MemoryState): MemoryClient {
         return Promise.resolve({ data: null, error: { message: "program_not_authorized" } });
       }
       const program = (state.tables.lab_prompt_programs ?? []).find((row) => row.id === programId);
-      if (!program || program.budget_authorized_at == null || program.budget_usd == null) {
+      if (!program) {
+        return Promise.resolve({ data: null, error: { message: "program_not_authorized" } });
+      }
+      // Fail-closed (C1/C2): SOMENTE `authorized` reserva. `draft`/`closed` recusam
+      // ANTES do débito e da inserção do run — nenhuma chamada paga é iniciada.
+      if (program.status !== "authorized") {
+        return Promise.resolve({ data: null, error: { message: "program_not_authorized" } });
+      }
+      if (program.budget_authorized_at == null || program.budget_usd == null) {
         return Promise.resolve({ data: null, error: { message: "program_not_authorized" } });
       }
       const remaining =
@@ -429,6 +437,7 @@ function seedReadyExperiment(overrides: Partial<Row> = {}): Record<string, Row[]
     lab_prompt_programs: [
       {
         id: PROGRAM_ID,
+        status: "authorized",
         budget_usd: 1000,
         budget_authorized_at: "2026-01-01T00:00:00.000Z",
         budget_reserved_usd: 0,
@@ -843,7 +852,7 @@ describe("orçamento do programa — recusa antes de qualquer chamada paga", () 
   it("programa sem budget_authorized_at → program_not_authorized", async () => {
     const state = newState(seedReadyExperiment());
     state.tables.lab_prompt_programs = [
-      { id: PROGRAM_ID, budget_usd: 100, budget_authorized_at: null, budget_reserved_usd: 0, budget_consumed_usd: 0 },
+      { id: PROGRAM_ID, status: "authorized", budget_usd: 100, budget_authorized_at: null, budget_reserved_usd: 0, budget_consumed_usd: 0 },
     ];
 
     await expect(prepareLabRun(prepareParams(state))).rejects.toMatchObject({
@@ -855,7 +864,7 @@ describe("orçamento do programa — recusa antes de qualquer chamada paga", () 
   it("saldo insuficiente para o estimado → budget_exceeded", async () => {
     const state = newState(seedReadyExperiment());
     state.tables.lab_prompt_programs = [
-      { id: PROGRAM_ID, budget_usd: 1, budget_authorized_at: "2026-01-01T00:00:00.000Z", budget_reserved_usd: 0, budget_consumed_usd: 0 },
+      { id: PROGRAM_ID, status: "authorized", budget_usd: 1, budget_authorized_at: "2026-01-01T00:00:00.000Z", budget_reserved_usd: 0, budget_consumed_usd: 0 },
     ];
 
     const rejection = await prepareLabRun(prepareParams(state, { estimatedCostUsd: 5 })).catch(
@@ -884,6 +893,67 @@ describe("orçamento do programa — recusa antes de qualquer chamada paga", () 
     const remaining =
       Number(program.budget_usd) - Number(program.budget_consumed_usd) - Number(program.budget_reserved_usd);
     expect(remaining).toBe(998);
+  });
+
+  // ─── (48.2.1 C1/C2) Fail-closed por status do programa ────────────────────
+
+  it("programa `closed` → program_not_authorized com zero invocações e nenhum run", async () => {
+    const state = newState(seedReadyExperiment());
+    state.tables.lab_prompt_programs = [
+      { id: PROGRAM_ID, status: "closed", budget_usd: 1000, budget_authorized_at: "2026-01-01T00:00:00.000Z", budget_reserved_usd: 0, budget_consumed_usd: 0 },
+    ];
+    const counting = createCountingInvoker();
+
+    const rejection = await prepareLabRun(prepareParams(state, { estimatedCostUsd: 2 })).catch(
+      (error: unknown) => error,
+    );
+
+    expect((rejection as LabReservationError).code).toBe("program_not_authorized");
+    expect(counting.calls()).toBe(0);
+    expect(state.tables.lab_runs ?? []).toHaveLength(0);
+    // Nenhum débito é feito no programa encerrado.
+    expect(programOf(state).budget_reserved_usd).toBe(0);
+  });
+
+  it("programa `draft` → program_not_authorized antes da chamada paga", async () => {
+    const state = newState(seedReadyExperiment());
+    state.tables.lab_prompt_programs = [
+      { id: PROGRAM_ID, status: "draft", budget_usd: 1000, budget_authorized_at: "2026-01-01T00:00:00.000Z", budget_reserved_usd: 0, budget_consumed_usd: 0 },
+    ];
+    const counting = createCountingInvoker();
+
+    const rejection = await prepareLabRun(prepareParams(state, { estimatedCostUsd: 2 })).catch(
+      (error: unknown) => error,
+    );
+
+    expect((rejection as LabReservationError).code).toBe("program_not_authorized");
+    expect(counting.calls()).toBe(0);
+    expect(state.tables.lab_runs ?? []).toHaveLength(0);
+  });
+
+  it("programa `authorized` reserva normalmente", async () => {
+    const state = newState(seedReadyExperiment());
+    const counting = createCountingInvoker();
+
+    const prepared = await prepareLabRun(prepareParams(state, { estimatedCostUsd: 2 }));
+
+    expect(prepared.idempotent).toBe(false);
+    expect(state.tables.lab_runs).toHaveLength(1);
+    expect(programOf(state).budget_reserved_usd).toBe(2);
+    expect(counting.calls()).toBe(0);
+  });
+
+  it("`closed` é terminal — uma reserva recusada não reautoriza o programa", async () => {
+    const state = newState(seedReadyExperiment());
+    state.tables.lab_prompt_programs = [
+      { id: PROGRAM_ID, status: "closed", budget_usd: 1000, budget_authorized_at: "2026-01-01T00:00:00.000Z", budget_reserved_usd: 0, budget_consumed_usd: 0 },
+    ];
+
+    await prepareLabRun(prepareParams(state)).catch(() => undefined);
+
+    // O programa permanece `closed` (a recusa nunca o promove a `authorized`).
+    expect(programOf(state).status).toBe("closed");
+    expect(programOf(state).budget_reserved_usd).toBe(0);
   });
 });
 

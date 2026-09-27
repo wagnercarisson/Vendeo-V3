@@ -300,6 +300,21 @@ function createMemoryClient(state: MemoryState): MemoryClient {
         return Promise.resolve({ data: { experiment_id: EXPERIMENT_ID }, error: null });
       }
       if (name === "lab_reserve_run") {
+        // Fail-closed (F48.2.1 C1/C2): quando o experimento aponta para um
+        // programa, a reserva exige `status='authorized'` — `draft`/`closed`
+        // recusam antes de qualquer chamada paga (espelha `lab_reserve_run`).
+        const experiment = (state.tables.lab_experiments ?? []).find(
+          (row) => row.id === args.p_experiment_id,
+        );
+        const programId = experiment?.program_id;
+        if (programId) {
+          const program = (state.tables.lab_prompt_programs ?? []).find(
+            (row) => row.id === programId,
+          );
+          if (!program || program.status !== "authorized") {
+            return Promise.resolve({ data: null, error: { message: "program_not_authorized" } });
+          }
+        }
         const runs = state.tables.lab_runs ?? (state.tables.lab_runs = []);
         runs.push({
           id: RUN_ID,
@@ -839,6 +854,61 @@ describe("isolamento — segurança financeira do programa", () => {
     expect(recording.accessLog.filter((entry) => entry.startsWith("write:ai_model_catalog"))).toEqual(
       [],
     );
+  });
+
+  function seedProgramRun(status: string): ReturnType<typeof createRecordingClient> {
+    const recording = createRecordingClient(seedCatalog());
+    recording.state.tables.lab_experiments = [
+      { id: EXPERIMENT_ID, status: "ready", program_id: PROGRAM_ID },
+    ];
+    recording.state.tables.lab_prompt_programs = [
+      {
+        id: PROGRAM_ID,
+        status,
+        budget_usd: 100,
+        budget_authorized_at: "2026-01-01T00:00:00.000Z",
+        budget_reserved_usd: 0,
+        budget_consumed_usd: 0,
+      },
+    ];
+    return recording;
+  }
+
+  it("programa `closed` recusa a reserva antes de qualquer chamada paga", async () => {
+    const recording = seedProgramRun("closed");
+    const state: FakeInvokerState = { calls: 0 };
+
+    await expect(runOneIsolatedRun({ client: recording.client, state })).rejects.toMatchObject({
+      code: "program_not_authorized",
+    });
+
+    expect(state.calls).toBe(0);
+    expect(recording.state.tables.lab_runs ?? []).toHaveLength(0);
+    // Terminalidade: a recusa nunca reautoriza o programa encerrado.
+    expect(recording.state.tables.lab_prompt_programs[0].status).toBe("closed");
+  });
+
+  it("programa `draft` recusa a reserva antes de qualquer chamada paga", async () => {
+    const recording = seedProgramRun("draft");
+    const state: FakeInvokerState = { calls: 0 };
+
+    await expect(runOneIsolatedRun({ client: recording.client, state })).rejects.toMatchObject({
+      code: "program_not_authorized",
+    });
+
+    expect(state.calls).toBe(0);
+    expect(recording.state.tables.lab_runs ?? []).toHaveLength(0);
+  });
+
+  it("programa `authorized` reserva e executa normalmente", async () => {
+    const recording = seedProgramRun("authorized");
+    const state: FakeInvokerState = { calls: 0 };
+
+    const run = await runOneIsolatedRun({ client: recording.client, state });
+
+    expect(run.status).toBe("succeeded");
+    expect(state.calls).toBe(1);
+    expect(recording.accessLog.filter((entry) => !ALLOWED_ENTRY_RE.test(entry))).toEqual([]);
   });
 
   it("reserva idempotente devolve o run existente sem nova chamada paga", async () => {
