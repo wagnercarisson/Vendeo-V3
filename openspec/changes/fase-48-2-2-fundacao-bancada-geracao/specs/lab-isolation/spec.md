@@ -36,7 +36,7 @@ A bancada SHALL acessar as tabelas de loja e branding (`stores`, `store_brand_pr
 
 ### Requirement: DDL local da bancada fora da cadeia de migrations remotas
 
-O DDL da bancada (`lab_bench_runs`, `lab_bench_artifacts`, RLS/grants, triggers e índice de geração ativa) SHALL viver **fora** de `supabase/migrations/` e SHALL ser aplicado por um bootstrap local da bancada, de modo que um `supabase db push` geral SHALL NOT carregar as tabelas da bancada ao remoto. Adições de catálogo/pricing necessárias à validação local dos presets SHALL também ser aplicadas localmente, sem promover modelos ao remoto.
+O DDL da bancada (`lab_bench_runs`, `lab_bench_artifacts`, RLS/grants, triggers e índice de geração ativa) SHALL viver **fora** de `supabase/migrations/` e SHALL ser aplicado por um bootstrap local da bancada, de modo que um `supabase db push` geral SHALL NOT carregar as tabelas da bancada ao remoto. O bootstrap local SHALL adicionar **somente** linhas de catálogo (`ai_model_catalog`) necessárias à validação local dos presets **também localmente**; o pricing SHALL existir **exclusivamente** em código (`src/lib/lab/bench/domain/bench-pricing.ts`), **sem tabela de pricing**; nada SHALL ser promovido ao remoto.
 
 #### Scenario: Push remoto não carrega as tabelas da bancada
 

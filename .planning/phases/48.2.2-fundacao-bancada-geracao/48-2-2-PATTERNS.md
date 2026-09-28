@@ -782,7 +782,7 @@ function assertLocalHost(rawUrl, origin) {
 }
 ```
 
-**Bootstrap idempotente (hash igual ⇒ nada; hash novo ⇒ `max+1`)** (`48-local-scenarios.mjs:122-199`) — o mesmo padrão vale para a aplicação do DDL e das linhas de catálogo/pricing locais:
+**Bootstrap idempotente (hash igual ⇒ nada; hash novo ⇒ `max+1`)** (`48-local-scenarios.mjs:122-199`) — o mesmo padrão vale para a aplicação do DDL e das linhas de catálogo (`ai_model_catalog`) locais (o pricing existe somente em código, **sem tabela de pricing**):
 ```javascript
 const matching = rows.find((row) => row.content_hash === contentHash);
 if (matching) { skipped += 1; continue; }
@@ -790,7 +790,7 @@ const nextVersion = rows.reduce((max, row) => Math.max(max, row.version), 0) + 1
 // insert ... version = nextVersion (nunca sobrescreve)
 ```
 
-**O que espelhar:** `supabase/lab/bench-schema.sql` com `lab_bench_runs` + `lab_bench_artifacts` (D9), RLS/grants service-role, triggers de imutabilidade, índice global de geração ativa e bloco REVERT. O bootstrap (`scripts/lab/48-2-2-bench-bootstrap.mjs`) valida host local **antes** de qualquer I/O, aplica o DDL de forma idempotente e adiciona linhas de catálogo/pricing **somente locais** (se o spike confirmar). O analog `scripts/lab/48-cleanup-artifacts.mjs:165-200` mostra o mesmo `assertLocalHost`/`resolveLocalConnection` e o padrão de CLI sem efeito colateral no import (`invokedDirectly`, linhas 301-314).
+**O que espelhar:** `supabase/lab/bench-schema.sql` com `lab_bench_runs` + `lab_bench_artifacts` (D9), RLS/grants service-role, triggers de imutabilidade, índice global de geração ativa e bloco REVERT. O bootstrap (`scripts/lab/48-2-2-bench-bootstrap.mjs`) valida host local **antes** de qualquer I/O, aplica o DDL de forma idempotente e adiciona **somente** linhas de catálogo (`ai_model_catalog`) **somente locais** (se o spike confirmar); o pricing existe **exclusivamente** em código (`bench-pricing.ts`), **sem tabela de pricing**. O analog `scripts/lab/48-cleanup-artifacts.mjs:165-200` mostra o mesmo `assertLocalHost`/`resolveLocalConnection` e o padrão de CLI sem efeito colateral no import (`invokedDirectly`, linhas 301-314).
 
 ---
 

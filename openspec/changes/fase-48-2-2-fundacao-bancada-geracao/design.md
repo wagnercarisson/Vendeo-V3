@@ -127,7 +127,7 @@ Tela `/admin/laboratorio/bancada` com seleção de loja, branding completo, form
 
 ### D17 — DDL local-first, fora da cadeia de migrations remotas
 
-O DDL da bancada (`lab_bench_runs`, `lab_bench_artifacts`, RLS/grants, triggers e o índice de geração ativa) **não** entra em `supabase/migrations/`. Ele vive em um local próprio do laboratório (ex.: `supabase/lab/bench-schema.sql` ou `scripts/lab/`), é aplicado por um **bootstrap local da bancada** e inclui bloco REVERT. Assim, um `supabase db push` geral **nunca** carrega as tabelas da bancada ao remoto — a opção "tabelas no schema remoto, inertes" foi rejeitada por não garantir a não contaminação. Adições de catálogo/pricing necessárias à validação local dos presets são aplicadas **também localmente** pelo bootstrap (o catálogo remoto é produtivo e não recebe as linhas da bancada); nenhuma promoção de modelo é feita nesta fase. **Aprovação:** esta escolha foi aprovada pelo alinhamento de não contaminar o remoto.
+O DDL da bancada (`lab_bench_runs`, `lab_bench_artifacts`, RLS/grants, triggers e o índice de geração ativa) **não** entra em `supabase/migrations/`. Ele vive em um local próprio do laboratório (ex.: `supabase/lab/bench-schema.sql` ou `scripts/lab/`), é aplicado por um **bootstrap local da bancada** e inclui bloco REVERT. Assim, um `supabase db push` geral **nunca** carrega as tabelas da bancada ao remoto — a opção "tabelas no schema remoto, inertes" foi rejeitada por não garantir a não contaminação. O bootstrap local adiciona **somente** linhas de catálogo (`ai_model_catalog`) necessárias à validação local dos presets **também localmente** (o catálogo remoto é produtivo e não recebe as linhas da bancada); o pricing existe **exclusivamente** em código (`src/lib/lab/bench/domain/bench-pricing.ts`), **sem tabela de pricing**; nenhuma promoção de modelo é feita nesta fase. **Aprovação:** esta escolha foi aprovada pelo alinhamento de não contaminar o remoto.
 
 ## Risks / Trade-offs
 
@@ -144,7 +144,7 @@ O DDL da bancada (`lab_bench_runs`, `lab_bench_artifacts`, RLS/grants, triggers 
 
 1. DDL local da bancada (`lab_bench_runs`, `lab_bench_artifacts`, RLS/grants, triggers, índice de geração ativa) **fora de `supabase/migrations/`**, aplicado pelo bootstrap local + REVERT.
 2. `npx supabase db reset` + `db lint`; aplicação do bootstrap da bancada; testes de contrato.
-3. Adições de catálogo/pricing aplicadas **localmente** pelo bootstrap (somente se o spike confirmar).
+3. Bootstrap local adiciona **somente** linhas de catálogo (`ai_model_catalog`) **localmente** (somente se o spike confirmar); o pricing existe **exclusivamente** em código (`bench-pricing.ts`), **sem tabela de pricing**.
 4. Implementação e testes locais (fakes; sem chamadas pagas).
 5. UAT local (Docker) com chave/projeto de desenvolvimento e geração real controlada.
 6. **Sem `db push` remoto e sem promoção** — F48.2.3.
