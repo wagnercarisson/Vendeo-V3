@@ -8,6 +8,12 @@ import {
   EMPTY_BENCH_CAMPAIGN_FORM,
   type BenchCampaignFormValue,
 } from "./bench-campaign-form";
+import {
+  BenchEvidencePanel,
+  type BenchArtifactView,
+  type BenchRunEvidence,
+} from "./bench-evidence-panel";
+import { BenchExecutionPanel } from "./bench-execution-panel";
 import { BenchImageUpload, type BenchUploadResult } from "./bench-image-upload";
 import { BenchPresetSelector } from "./bench-preset-selector";
 import { BenchPromptEditor } from "./bench-prompt-editor";
@@ -74,6 +80,12 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
     presets.find((preset) => preset.enabled)?.id ?? presets[0]?.id ?? "",
   );
   const [upload, setUpload] = useState<BenchUploadResult | null>(null);
+  const [runEvidence, setRunEvidence] = useState<{
+    run: BenchRunEvidence;
+    artifacts: BenchArtifactView[];
+  } | null>(null);
+  const [evidenceLoading, setEvidenceLoading] = useState(false);
+  const [evidenceError, setEvidenceError] = useState<string | null>(null);
 
   const operationRef = useRef<{ id: string; fingerprint: string } | null>(null);
 
@@ -89,8 +101,43 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
     setStoreId(nextStoreId);
     // O draft pertence à loja: trocar de loja invalida o upload anterior.
     setUpload(null);
+    setRunEvidence(null);
+    setEvidenceError(null);
     operationRef.current = null;
   }
+
+  function handleUploaded(result: BenchUploadResult) {
+    setUpload(result);
+    setRunEvidence(null);
+    setEvidenceError(null);
+  }
+
+  const handleCompleted = useCallback((completedRunId: string) => {
+    setEvidenceLoading(true);
+    setEvidenceError(null);
+
+    fetch(
+      `/api/admin/laboratorio/bancada/runs/${encodeURIComponent(completedRunId)}`,
+      { method: "GET" },
+    )
+      .then(async (response) => {
+        const data = (await response.json().catch(() => ({}))) as {
+          run?: BenchRunEvidence;
+          artifacts?: BenchArtifactView[];
+        };
+        if (!response.ok || !data.run) {
+          setEvidenceError("Não foi possível carregar as evidências.");
+          setEvidenceLoading(false);
+          return;
+        }
+        setRunEvidence({ run: data.run, artifacts: data.artifacts ?? [] });
+        setEvidenceLoading(false);
+      })
+      .catch(() => {
+        setEvidenceError("Não foi possível carregar as evidências.");
+        setEvidenceLoading(false);
+      });
+  }, []);
 
   useEffect(() => {
     if (!storeId) {
@@ -145,7 +192,7 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
         <BenchImageUpload
           storeId={storeId}
           getOperationId={getOperationId}
-          onUploaded={setUpload}
+          onUploaded={handleUploaded}
         />
         <BenchPromptEditor value={prompt} onChange={setPrompt} />
         <BenchPresetSelector
@@ -155,7 +202,32 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
           onChange={setPresetId}
         />
       </div>
-      <div className="space-y-6" data-testid="bench-result-column" />
+      <div className="space-y-6" data-testid="bench-result-column">
+        <BenchExecutionPanel
+          storeId={storeId}
+          presetId={presetId}
+          prompt={prompt}
+          product={{
+            name: campaign.productName,
+            ...(campaign.productDescription.trim().length > 0
+              ? { description: campaign.productDescription }
+              : {}),
+          }}
+          offer={{ text: campaign.offerText }}
+          runId={upload?.runId ?? null}
+          references={upload?.references ?? []}
+          operationId={upload?.operationId ?? null}
+          onCompleted={handleCompleted}
+        />
+        {(evidenceLoading || runEvidence !== null || evidenceError !== null) && (
+          <BenchEvidencePanel
+            run={runEvidence?.run ?? null}
+            artifacts={runEvidence?.artifacts ?? []}
+            loading={evidenceLoading}
+            error={evidenceError}
+          />
+        )}
+      </div>
     </div>
   );
 }

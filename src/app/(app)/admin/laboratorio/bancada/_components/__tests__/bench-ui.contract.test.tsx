@@ -54,6 +54,11 @@ import BancadaPage from "@/app/(app)/admin/laboratorio/bancada/page";
 import LaboratorioLayout from "@/app/(app)/admin/laboratorio/layout";
 
 import { BenchBrandingPanel } from "../bench-branding-panel";
+import { BenchEvidencePanel } from "../bench-evidence-panel";
+import {
+  BENCH_ACTIVE_RUN_MESSAGE,
+  BenchExecutionPanel,
+} from "../bench-execution-panel";
 import { BenchImageUpload } from "../bench-image-upload";
 import { BenchPresetSelector } from "../bench-preset-selector";
 import { BenchPromptEditor } from "../bench-prompt-editor";
@@ -396,5 +401,247 @@ describe("contrato de UI — branding, upload, prompt e presets", () => {
     expect(
       screen.getByText(/branding não é concatenado automaticamente/),
     ).toBeInTheDocument();
+  });
+});
+
+// ─── 3. Estimativa, confirmação, execução, resultado e evidências ────────────
+
+const EMOJI_PATTERN =
+  /[\u{1F000}-\u{1FAFF}\u{2190}-\u{21FF}\u{2300}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/u;
+
+const RUN_ID = "33333333-3333-4333-8333-333333333333";
+const OPERATION_ID = "00000000-0000-4000-8000-0000000000aa";
+const REFERENCES = [`bench/${RUN_ID}/inputs/0.png`];
+
+const ESTIMATE = {
+  presetId: PRESET_ENABLED.id,
+  estimatedUsd: 0.04,
+  coverage: "complete",
+  mode: "token_based",
+  isEstimate: true,
+  costSource: "bench_local_pricing",
+  costRuleVersion: "2026-09-bench-1",
+};
+
+const EVIDENCE_RUN = {
+  id: RUN_ID,
+  status: "succeeded",
+  promptSent: "Foto do produto em fundo claro",
+  provider: "openai",
+  protocol: "images",
+  model: "gpt-image-2",
+  size: "1024x1024",
+  quality: "low",
+  latencyMs: 8400,
+  usage: { outputImageTokens: 400 },
+  estimatedCostUsd: 0.006,
+  costDetail: { mode: "token_based" },
+  costSource: "bench_local_pricing",
+  costRuleVersion: "2026-09-bench-1",
+  errorType: null,
+  errorMessage: null,
+  config: { formato: "1:1" },
+};
+
+const OUTPUT_ARTIFACT = {
+  id: "artifact-1",
+  kind: "output",
+  mimeType: "image/png",
+  width: 1024,
+  height: 1024,
+  bytes: 204800,
+  signedUrl: "https://storage.local/signed/output.png",
+};
+
+function jsonResponse(payload: unknown, status = 200) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    headers: new Headers({ "Content-Type": "application/json" }),
+    json: async () => payload,
+  };
+}
+
+function ndjsonResponse(events: unknown[]) {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    start(controller) {
+      for (const event of events) {
+        controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
+      }
+      controller.close();
+    },
+  });
+  return new Response(stream, {
+    status: 200,
+    headers: { "Content-Type": "application/x-ndjson" },
+  });
+}
+
+function runCalls() {
+  return mockFetch.mock.calls.filter(([url]) => String(url).endsWith("/runs"));
+}
+
+function renderExecutionPanel(onCompleted = vi.fn()) {
+  render(
+    <BenchExecutionPanel
+      storeId={STORE_A.id}
+      presetId={PRESET_ENABLED.id}
+      prompt="Foto do produto em fundo claro"
+      product={{ name: "Café especial" }}
+      offer={{ text: "De R$ 39,90 por R$ 29,90" }}
+      runId={RUN_ID}
+      references={REFERENCES}
+      operationId={OPERATION_ID}
+      onCompleted={onCompleted}
+    />,
+  );
+  return onCompleted;
+}
+
+async function openConfirmation() {
+  fireEvent.click(screen.getByTestId("bench-generate-button"));
+  await screen.findByTestId("lab-confirm-button");
+}
+
+describe("contrato de UI — estimativa, confirmação, execução e evidências", () => {
+  it("'Gerar imagem' exibe a estimativa e exige confirmação sem POST", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse(ESTIMATE));
+    renderExecutionPanel();
+
+    await openConfirmation();
+
+    const panel = screen.getByTestId("bench-estimate-panel");
+    expect(within(panel).getByText("US$ 0.04")).toBeInTheDocument();
+    expect(within(panel).getByText("complete")).toBeInTheDocument();
+    expect(runCalls()).toHaveLength(0);
+  });
+
+  it("apresenta pricing parcial como faixa e ausente como indisponível", async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ ...ESTIMATE, coverage: "partial" }),
+    );
+    renderExecutionPanel();
+    await openConfirmation();
+
+    const panel = screen.getByTestId("bench-estimate-panel");
+    expect(within(panel).getByText("a partir de US$ 0.04")).toBeInTheDocument();
+    expect(within(panel).queryByText("US$ 0.04")).toBeNull();
+    expect(runCalls()).toHaveLength(0);
+  });
+
+  it("apresenta pricing ausente como indisponível", async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ ...ESTIMATE, coverage: "missing", estimatedUsd: null }),
+    );
+    renderExecutionPanel();
+    await openConfirmation();
+
+    const panel = screen.getByTestId("bench-estimate-panel");
+    expect(within(panel).getAllByText("indisponível").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("confirma com confirmed true + operationId/runId/references do upload e consome o NDJSON", async () => {
+    const onCompleted = vi.fn();
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse(ESTIMATE))
+      .mockResolvedValueOnce(
+        ndjsonResponse([
+          { type: "phase", phase: "running" },
+          { type: "done", runId: RUN_ID },
+        ]),
+      );
+    renderExecutionPanel(onCompleted);
+
+    await openConfirmation();
+    fireEvent.click(screen.getByTestId("lab-confirm-button"));
+
+    await waitFor(() => expect(runCalls()).toHaveLength(1));
+    const [url, init] = runCalls()[0];
+    expect(String(url)).toBe("/api/admin/laboratorio/bancada/runs");
+    const body = JSON.parse(String(init.body));
+    expect(body.confirmed).toBe(true);
+    expect(body.operationId).toBe(OPERATION_ID);
+    expect(body.runId).toBe(RUN_ID);
+    expect(body.references).toEqual(REFERENCES);
+    expect(body.storeId).toBe(STORE_A.id);
+    expect(body.presetId).toBe(PRESET_ENABLED.id);
+
+    await waitFor(() => expect(onCompleted).toHaveBeenCalledWith(RUN_ID));
+  });
+
+  it("consome exatamente um terminal (done/error) mesmo com eventos repetidos", async () => {
+    const onCompleted = vi.fn();
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse(ESTIMATE))
+      .mockResolvedValueOnce(
+        ndjsonResponse([
+          { type: "done", runId: RUN_ID },
+          { type: "done", runId: RUN_ID },
+          { type: "error", code: "run_failed", message: "Execução falhou" },
+        ]),
+      );
+    renderExecutionPanel(onCompleted);
+
+    await openConfirmation();
+    fireEvent.click(screen.getByTestId("lab-confirm-button"));
+
+    await waitFor(() => expect(onCompleted).toHaveBeenCalledTimes(1));
+    expect(onCompleted).toHaveBeenCalledWith(RUN_ID);
+  });
+
+  it("orienta aguardar na concorrência e não promete cancelar a geração ativa", async () => {
+    const onCompleted = vi.fn();
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse(ESTIMATE))
+      .mockResolvedValueOnce(
+        jsonResponse({ error: "bench_run_already_active" }, 409),
+      );
+    renderExecutionPanel(onCompleted);
+
+    await openConfirmation();
+    fireEvent.click(screen.getByTestId("lab-confirm-button"));
+
+    expect(await screen.findByText(BENCH_ACTIVE_RUN_MESSAGE)).toBeInTheDocument();
+    expect(onCompleted).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole("button", { name: /cancelar.*(gera|ativa|concluir)/i }),
+    ).toBeNull();
+  });
+
+  it("exibe o resultado com download e o painel de evidências distinguindo usage/calculado/estimado", () => {
+    render(<BenchEvidencePanel run={EVIDENCE_RUN} artifacts={[OUTPUT_ARTIFACT]} />);
+
+    expect(screen.getByText("Usage do provider")).toBeInTheDocument();
+    expect(screen.getByText("Custo calculado")).toBeInTheDocument();
+    expect(
+      screen.getByText("Custo estimado — não é valor faturado"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Latência")).toBeInTheDocument();
+    expect(screen.getByText("8.4 s")).toBeInTheDocument();
+
+    expect(screen.getByTestId("bench-result-download")).toHaveAttribute(
+      "href",
+      "https://storage.local/signed/output.png",
+    );
+  });
+
+  it("não oferece comparação lado a lado, votação nem emojis", () => {
+    renderExecutionPanel();
+
+    const text = document.body.textContent ?? "";
+    expect(text).not.toMatch(/lado a lado|vota(ção|r)|enquete/i);
+    expect(EMOJI_PATTERN.test(text)).toBe(false);
+
+    const sources = [
+      "bench-execution-panel.tsx",
+      "bench-evidence-panel.tsx",
+      "bench-estimate-panel.tsx",
+      "bench-workbench.tsx",
+    ]
+      .map(readComponentSource)
+      .join("\n");
+    expect(sources).not.toMatch(/lado a lado|vota(ção|r)|enquete/i);
+    expect(EMOJI_PATTERN.test(sources)).toBe(false);
   });
 });
