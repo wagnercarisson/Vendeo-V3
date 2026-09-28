@@ -88,7 +88,19 @@ Comando: `git diff --name-only $BASE..HEAD -- <caminhos produtivos>`.
 - **Créditos:** nenhum consumo (`credit_transactions` e `admin_audit_log` mais recentes são **anteriores** ao run do UAT).
 - **Tabelas operacionais:** `campaigns=0`, `campaign_art_versions=0`, `generation_events=0`, `ai_model_selection=0`; bucket `campaign-images` não utilizado.
 - **Custo:** exatamente **uma** geração real controlada no run principal; custo **estimado** US$ 0,00588 e **calculado** US$ 0,014592 (`cost_source: bench_local_pricing`, rule `2026-09-bench-1`, `coverage: partial`); **custo reportado pelo provider `null`** — nada apresentado como faturado. Detalhes e classificação em `48.2.2-UAT.md` §6.
-- **Achado não bloqueante:** o `branding_snapshot` persiste URLs assinadas locais (tokens efêmeros, já expirados) por desenho do schema — registrado como limitação em `48.2.2-UAT.md` §9.1.
+- **Correção pós-verificação:** o `branding_snapshot` **não** persiste mais URLs assinadas — `toBenchBrandingSnapshot` remove `logoUrl`/`signatureUrl`/`assets[].signedUrl` (D13); o contrato de exibição mantém as URLs em tempo de leitura. Detalhes em `48.2.2-UAT.md` §9.1.
+
+---
+
+## 6.1 Correções pós-verificação (revisão de verificação)
+
+Duas divergências design/spec identificadas na revisão de verificação foram corrigidas (com testes):
+
+1. **Custo reportado pelo provider não substitui o cálculo local (D11).** `resolveBenchCost` (`src/lib/lab/bench/execution/bench-cost-resolver.ts`) não copia mais `providerReportedCostUsd` para `estimatedCostUsd`; `estimatedCostUsd` reflete **exclusivamente** o resolvedor local (calculado com usage, ou estimado pelo preset) e o custo do provider permanece em campo **separado**. Cobertura: `bench-execution.contract.test.ts` (teste com ambos presentes).
+2. **Snapshot de branding sem URLs/JWTs (D13).** `toBenchBrandingSnapshot` (`src/lib/lab/bench/domain/branding-service.ts`) grava `logoUrl`/`signatureUrl`/`assets[].signedUrl` como `null`; apenas `storagePath`, metadados e branding persistem. Cobertura: `branding-service.test.ts` (teste negativo).
+3. **Epílogo do spike** adicionado (`docs/lab/48-2-2-spike-models.md`) registrando que o CHECKPOINT 2 habilitou os quatro presets e que o UAT confirmou o `gpt-image-2.5-flare`.
+
+**Gates re-executados:** `npm run typecheck` → exit 0; suíte direcionada da bancada/isolamento/gates/API/artefatos → **273 passed (273)**.
 
 ---
 

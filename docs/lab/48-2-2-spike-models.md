@@ -126,3 +126,25 @@ contrato público de ambos os candidatos já está confirmado pela documentaçã
 de modo que **não é necessária** chamada paga no CHECKPOINT 1. A disponibilidade real da
 conta será comprovada no **UAT autorizado** (plano 08), sob autorização humana explícita
 e geração real controlada.
+
+---
+
+## Epílogo (pós-UAT) — estado final da F48.2.2
+
+> Registro do desfecho dos checkpoints posteriores a este spike. As seções acima
+> descrevem o estado **no momento do CHECKPOINT 1** e são preservadas como histórico.
+
+- **CHECKPOINT 2 (aprovação dos presets habilitados):** os **quatro** presets do
+  caminho direto `images` foram habilitados após aprovação humana:
+  `gpt-image-2-low`, `gpt-image-2-medium`, `gpt-image-2.5-flare-low` e
+  `gpt-image-2.5-flare-medium` (`preset-registry.ts`, `enabled: true`). O caminho
+  `responses` permanece **desabilitado com motivo** (`protocolo_nao_confirmado`),
+  pois nenhum modelo confirmado o exigiu.
+- **UAT local (CHECKPOINT 3):** uma geração real controlada com
+  `gpt-image-2.5-flare` (`quality: low`, `protocol: images`) concluiu com
+  `succeeded`, confirmando na prática a disponibilidade da conta e o contrato do
+  modelo. O modo de cobrança observado foi `token_based` com `usage` reportado.
+- **Pendência resolvida:** a disponibilidade específica da conta
+  (`account_availability_pending`) foi **comprovada** no UAT autorizado.
+- Detalhes em `.planning/phases/48.2.2-fundacao-bancada-geracao/48.2.2-UAT.md` e
+  `48-2-2-VERIFICATION.md`.
