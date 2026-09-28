@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: "— Lançamento Externo Controlado ◆"
 status: complete
-last_updated: "2026-09-28T00:00:00.000Z"
+last_updated: "2026-09-28T19:16:27.745Z"
 progress:
   total_plans: 300
   completed_plans: 294
@@ -16,16 +16,18 @@ progress:
 
 - Project: `.planning/PROJECT.md`.
 - Core value: transformar uma oferta simples em uma campanha profissional, clara e publicável.
-- Foco atual: F48.2.1 — **Bancada Manual de Prompts do Diretor** (CONCLUÍDA, VERIFICADA, SINCRONIZADA e ARQUIVADA).
-- Próxima fase: **F48.2.2 — Fundação da bancada de geração no Admin/Laboratório** (não iniciada; próxima ação é **planejar**).
+- Foco atual: F48.2.2 — **Fundação da bancada de geração no Admin/Laboratório** (**planejada** em 2026-09-28; 8 planos; próxima ação é **executar**).
+- Fase anterior: F48.2.1 — **Bancada Manual de Prompts do Diretor** (CONCLUÍDA, VERIFICADA, SINCRONIZADA e ARQUIVADA).
+- Próxima fase: **F48.2.3 — Experimento determinístico Oferta 1:1** (depende da bancada validada na F48.2.2).
 - Próxima iniciativa condicionada: F50.1 aguardando constituição da PJ.
 
 ## Current Position
 
-Phase: 48.2.1 (Bancada Manual de Prompts do Diretor) — **COMPLETE**
-Plan: `48-2-1-09` — **concluído** (último plano da fase)
-Chain (concluída): `48-2-1-05 → 48-2-1-07 → 48-2-1-08 → 48-2-1-09`
-Próxima fase: **48.2.2 (nova) — Fundação da bancada de geração no Admin/Laboratório** — **não iniciada**; próxima ação registrada é **planejar a F48.2.2**. Depois: **48.2.3 — Experimento determinístico Oferta 1:1**.
+Phase: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório) — **PLANNED** (8 planos; aguardando execução)
+Plans: `48-2-2-01` .. `48-2-2-08` — **criados em 2026-09-28**; nenhum executado.
+Checkpoints humanos: **CP1** (spike de modelos/presets, plano 01), **CP2** (aprovação dos presets antes de qualquer geração paga, plano 04), **CP3** (UAT local, plano 08). Nenhuma task executa chamada paga autonomamente.
+Próxima ação: **executar a F48.2.2**; depois, **F48.2.3 — Experimento determinístico Oferta 1:1**.
+Fase anterior: 48.2.1 (Bancada Manual de Prompts do Diretor) — **COMPLETE**; chain `48-2-1-05 → 48-2-1-07 → 48-2-1-08 → 48-2-1-09`.
 
 - F48.2.1 realinhada (OpenSpec `017b8799`) e **concluída**: bancada manual dos prompts do Diretor.
 - Todos os planos resolvidos; programa local `closed` e experimento `archived`, com recusas fail-closed confirmadas e histórico preservado.
@@ -40,6 +42,14 @@ Próxima fase: **48.2.2 (nova) — Fundação da bancada de geração no Admin/L
 - **Concluídos (8):** `48-2-1-01` .. `48-2-1-05`, `48-2-1-07`, `48-2-1-08`, `48-2-1-09`.
 - **Suplantado/resolvido (1):** `48-2-1-06` — interrompido na Task 4 (Checkpoint 3); resolvido via `48-2-1-06-SUMMARY.md` (supersessão); fora da cadeia executável.
 - `verify.phase-completeness 48.2.1`: `complete: true`, `plan_count 9`, `summary_count 9`, `incomplete_plans []`.
+
+## F48.2.2 — Inventário da fase (mecânico)
+
+- **Planejados (8):** `48-2-2-01` .. `48-2-2-08` (criados em 2026-09-28; nenhum executado/summarizado).
+- **Fonte da verdade:** `openspec/changes/fase-48-2-2-fundacao-bancada-geracao/` (proposal / design D1–D17 / tasks 1–8 / 8 specs), corrigida no commit `388db445` e refletida nos planos.
+- **Artefatos de planejamento:** `48.2.2-CONTEXT.md`, `48.2.2-UI-SPEC.md`, `48-2-2-PATTERNS.md` + 8 `PLAN.md`; verificados por `gsd-plan-checker` (**VERIFICATION PASSED**).
+- **Checkpoints:** CP1 (spike, plano 01), CP2 (aprovação dos presets antes de geração paga, plano 04), CP3 (UAT local, plano 08).
+- **Ondas:** cadeia sequencial `48-2-2-01 → 02 → 03 → 04 → 05 → 06 → 07 → 08` (o plano 04 depende também do 01).
 
 ## Global (mecânico — `gsd-sdk query progress`)
 
@@ -56,10 +66,11 @@ Próxima fase: **48.2.2 (nova) — Fundação da bancada de geração no Admin/L
 - Plano `48-2-1-09`: validação automática + UAT sem execução paga; **decisão humana `aprovar-encerramento`**; programa `860ca4fe-…` `closed` e experimento `c48e21b5-…` `archived`, com histórico preservado.
 - Correção test-only autorizada (fora do escopo F48.2.1) do date-bomb preexistente em `use-campaign-form-validity.test.ts` (freeze de relógio), restaurando a suíte com apenas a exceção F50.
 - **Realinhamento F48.2.2 (2026-09-28):** a direção da F48.2.2 mudou de "Auditoria e Otimização do Prompt do Revisor" para "**Fundação da bancada de geração no Admin/Laboratório**" (gerações reais e mensuráveis, isoladas da produção, acesso restrito, loja real, branding persistido como fonte de verdade, prompt manual, seleção de modelo/qualidade, registro de evidência técnica e financeira). A F48.2.2 antiga foi **descartada/substituída**, sem artefatos mantidos (implementação não iniciada; recuperável pelo histórico do Git); a F48.2.3 passa a ser "**Experimento determinístico Oferta 1:1**". Backlog posterior (fora das duas fases): Destaque, Exclusivo, outros formatos, temas recorrentes, carrossel, comparação cega/lado a lado, avaliação automática, mobile e promoção de modelos/pipelines para produção. Regra: a identidade persistida da loja é a **fonte de verdade**; a criatividade do modelo fica restrita à composição específica da campanha (sem novo "diretor criativo" redefinindo tipografia/cores/posicionamento).
+- **Planejamento F48.2.2 (2026-09-28):** base OpenSpec corrigida (`388db445`) — allowlist própria `BENCH_MODEL_ALLOWLIST` (sem tocar `MODEL_ALLOWLIST`); ciclo `draft → pending` (slot global só na confirmação); signer local restrito de branding (`createBenchBrandingSignedUrl`); custo local por `modelo + qualidade + tamanho`, com pricing **somente em código** (`bench-pricing.ts`, sem tabela); `assertBenchTestStore` em toda entrada. 8 planos criados; spike bloqueante no plano 01; aprovação humana antes de geração paga (CP2). `gsd-plan-checker` = VERIFICATION PASSED.
 
 ## Pending Todos
 
-- **Planejar a F48.2.2 (nova) — Fundação da bancada de geração no Admin/Laboratório** (próxima ação registrada).
+- **Executar a F48.2.2 — Fundação da bancada de geração no Admin/Laboratório** (planejada, 8 planos; próxima ação registrada).
 - F48.2.3 — Experimento determinístico Oferta 1:1 — não iniciada; depende da bancada validada na F48.2.2.
 - Sessões manuais de teste dos prompts do Diretor (`offer`/`spotlight`/`exclusive`), conduzidas pelo usuário e pelo assistente; qualquer operação real paga exige novo programa e nova autorização humana explícita.
 - F48.2.2 antiga (Auditoria e Otimização do Prompt do Revisor) — **descartada/substituída**; implementação não iniciada; sem artefatos mantidos (recuperável pelo histórico do Git).
@@ -88,7 +99,7 @@ Próxima fase: **48.2.2 (nova) — Fundação da bancada de geração no Admin/L
 
 ## Session Continuity
 
-- Última sessão: 2026-09-28 — realinhamento de tracking da F48.2.2 (mudança de direção; suspensão da change antiga do Revisor).
-- Último trabalho: F48.2.2 antiga (Auditoria e Otimização do Prompt do Revisor) descartada/substituída (sem artefatos mantidos; implementação não iniciada; recuperável pelo histórico do Git); tracking (STATE/ROADMAP/HANDOFF/alinhamento) realinhado para a nova sequência **F48.2.2 → F48.2.3**; `openspec list` sem changes ativas.
-- Próximo trabalho: **planejar a F48.2.2 (nova) — Fundação da bancada de geração no Admin/Laboratório**; depois, F48.2.3 — Experimento determinístico Oferta 1:1. Sessões manuais de teste dos prompts do Diretor seguem em paralelo, com novo programa e nova autorização humana antes de qualquer chamada paga.
-- Resume file: `None` (sem trabalho pausado; próxima ação é planejamento).
+- Última sessão: 2026-09-28 — planejamento da F48.2.2 (8 planos), com correções da base OpenSpec e verificação do checker.
+- Último trabalho: F48.2.2 **planejada** (8 planos, `48-2-2-01`..`48-2-2-08`); base OpenSpec corrigida (`388db445`) e planos realinhados; `gsd-plan-checker` = VERIFICATION PASSED; tracking atualizado manualmente (STATE/ROADMAP), preservando o restante.
+- Próximo trabalho: **executar a F48.2.2** (CP1 spike → CP2 presets → CP3 UAT); depois, F48.2.3 — Experimento determinístico Oferta 1:1. Sessões manuais de teste dos prompts do Diretor seguem em paralelo, com novo programa e nova autorização humana antes de qualquer chamada paga.
+- Resume file: `None` (sem trabalho pausado; próxima ação é executar a F48.2.2).
