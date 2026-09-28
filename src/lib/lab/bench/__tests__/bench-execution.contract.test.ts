@@ -1,9 +1,22 @@
 // @vitest-environment node
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import sharp from "sharp";
 
-import type { AiModelResolver } from "@/lib/ai/model-resolver";
+// `LabTelemetrySink` importa o resolvedor de custo produtivo → pricing →
+// `@/lib/supabase/server`, que exige env na importação do módulo. Os testes da
+// bancada nunca tocam a rede — só preenchem o env mínimo de importação.
+vi.hoisted(() => {
+  process.env.NEXT_PUBLIC_SUPABASE_URL ??= "http://localhost:54321";
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??= "test-anon-key";
+  process.env.SUPABASE_SERVICE_ROLE_KEY ??= "test-service-role-key";
+});
+
+import type { AiCapability, AiModelResolver } from "@/lib/ai/model-resolver";
+import type { AiInvoker } from "@/lib/ai/gateway";
+import { LabTelemetrySink } from "@/lib/ai/lab-telemetry-sink";
 import type {
   AiAdapter,
   AiAdapterRegistry,
@@ -14,6 +27,7 @@ import type {
   AiTelemetrySink,
 } from "@/lib/ai/types";
 import type { AiModelTarget } from "@/lib/ai/model-resolver";
+import type { BenchPricingResolution } from "@/lib/lab/bench/domain/bench-pricing";
 import { BENCH_PRESETS, resolveBenchPreset } from "@/lib/lab/bench/domain/preset-registry";
 import {
   BenchPresetResolver,
@@ -23,6 +37,8 @@ import {
   buildBenchInvocationRequest,
   createBenchGateway,
 } from "@/lib/lab/bench/gateway/runtime";
+import { resolveBenchCost } from "@/lib/lab/bench/execution/bench-cost-resolver";
+import { executeBenchRun } from "@/lib/lab/bench/execution/bench-execution-service";
 
 /**
  * Contrato do **harness da bancada** (F48.2.2, D8) — parte de resolução e
@@ -237,5 +253,447 @@ describe("harness — parâmetros explícitos e exatamente uma chamada", () => {
     ).rejects.toMatchObject({ kind: "capability" });
     // A tentativa de fallback não dispara uma segunda chamada paga.
     expect(adapter.calls).toHaveLength(1);
+  });
+});
+
+// ─── Custo local da bancada (D11/D12) ────────────────────────────────────────
+
+describe("resolveBenchCost — resolvedor local chaveado pelo preset completo", () => {
+  const low = resolveBenchPreset("gpt-image-2-low");
+  const medium = resolveBenchPreset("gpt-image-2-medium");
+
+  it("carrega cost_source bench_local_pricing e cost_rule_version", () => {
+    const resolution = resolveBenchCost({ preset: low });
+    expect(resolution.costSource).toBe("bench_local_pricing");
+    expect(resolution.costRuleVersion).toBe("2026-09-bench-1");
+    expect(resolution.mode).toBe("token_based");
+    expect(resolution.coverage).toBe("complete");
+  });
+
+  it("low ≠ medium: presets do mesmo modelo diferindo só em quality produzem custos distintos", () => {
+    const lowCost = resolveBenchCost({ preset: low });
+    const mediumCost = resolveBenchCost({ preset: medium });
+    expect(lowCost.estimatedCostUsd).not.toBe(mediumCost.estimatedCostUsd);
+  });
+
+  it("sem usage: ramo estimado (isEstimate true) com a cobertura do preset", () => {
+    const resolution = resolveBenchCost({ preset: low });
+    expect(resolution.isEstimate).toBe(true);
+    expect(resolution.estimatedCostUsd).toBeGreaterThan(0);
+    expect(resolution.usageReported).toBeUndefined();
+  });
+
+  it("token_based com usage: taxas por token × usage (nunca usage × unitPriceUsd)", () => {
+    const pricing: BenchPricingResolution = {
+      mode: "token_based",
+      tokenRates: {
+        inputTextUsdPerMillion: 2.5,
+        inputImageUsdPerMillion: 4,
+        outputImageUsdPerMillion: 15,
+      },
+      // Deliberadamente absurdo: se fosse multiplicado por usage, o valor explodiria.
+      unitPriceUsd: 999,
+      coverage: "complete",
+      ruleVersion: "2026-09-bench-1",
+    };
+    const resolution = resolveBenchCost({
+      preset: low,
+      usage: { promptTokens: 1_000_000, completionTokens: 1_000_000 },
+      pricing,
+    });
+    // (1_000_000 × 2.5 + 0 × 4 + 1_000_000 × 15) / 1e6 = 17.5
+    expect(resolution.estimatedCostUsd).toBeCloseTo(17.5, 6);
+    expect(resolution.isEstimate).toBe(false);
+    expect(resolution.calculation?.tokenRates.outputImageUsdPerMillion).toBe(15);
+  });
+
+  it("per_image: preço fixo por imagem, sem multiplicação por tokens", () => {
+    const pricing: BenchPricingResolution = {
+      mode: "per_image",
+      unitPriceUsd: 0.04,
+      coverage: "complete",
+      ruleVersion: "2026-09-bench-1",
+    };
+    const resolution = resolveBenchCost({
+      preset: low,
+      usage: { promptTokens: 5_000_000, completionTokens: 5_000_000 },
+      pricing,
+    });
+    expect(resolution.estimatedCostUsd).toBe(0.04);
+    expect(resolution.isEstimate).toBe(false);
+  });
+
+  it("providerReportedCostUsd é mantido separado e não é substituído pelo cálculo local", () => {
+    const resolution = resolveBenchCost({
+      preset: low,
+      usage: { promptTokens: 1_000_000, completionTokens: 1_000_000 },
+      providerReportedCostUsd: 0.123,
+    });
+    expect(resolution.providerReportedCostUsd).toBe(0.123);
+    expect(resolution.estimatedCostUsd).toBe(0.123);
+    expect(resolution.usageReported?.promptTokens).toBe(1_000_000);
+  });
+
+  it("coverage missing devolve estimatedCostUsd null", () => {
+    const withoutPricing = { ...low, model: "modelo-sem-pricing" };
+    const resolution = resolveBenchCost({ preset: withoutPricing });
+    expect(resolution.coverage).toBe("missing");
+    expect(resolution.estimatedCostUsd).toBeNull();
+  });
+
+  it("não reutiliza o resolvedor de custo produtivo (fonte exclusivamente local)", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), "src/lib/lab/bench/execution/bench-cost-resolver.ts"),
+      "utf8",
+    );
+    expect(source).not.toContain("resolveAiCost");
+    expect(source).not.toContain("estimateLabCampaignImageCost");
+  });
+});
+
+// ─── Execução single-shot (D8/D11/D13) ───────────────────────────────────────
+
+interface Row {
+  [key: string]: unknown;
+}
+interface ServiceFilter {
+  column: string;
+  value: unknown;
+  op: "eq" | "in" | "is" | "lt";
+}
+interface ServiceUpdate {
+  table: string;
+  values: Row;
+  filters: ServiceFilter[];
+}
+
+class ServiceQueryBuilder {
+  private mode: "select" | "insert" | "update" = "select";
+  private payload: Row = {};
+  private readonly predicates: Array<(row: Row) => boolean> = [];
+  private readonly descriptors: ServiceFilter[] = [];
+
+  constructor(
+    private readonly fake: FakeServiceClient,
+    private readonly table: string,
+  ) {}
+
+  select(_columns?: string): this {
+    return this;
+  }
+  insert(values: Row): this {
+    this.mode = "insert";
+    this.payload = values;
+    return this;
+  }
+  update(values: Row): this {
+    this.mode = "update";
+    this.payload = values;
+    return this;
+  }
+  eq(column: string, value: unknown): this {
+    this.predicates.push((row) => row[column] === value);
+    this.descriptors.push({ column, value, op: "eq" });
+    return this;
+  }
+  in(column: string, values: readonly unknown[]): this {
+    this.predicates.push((row) => values.includes(row[column]));
+    this.descriptors.push({ column, value: values, op: "in" });
+    return this;
+  }
+  is(column: string, value: unknown): this {
+    this.predicates.push((row) => (row[column] ?? null) === value);
+    this.descriptors.push({ column, value, op: "is" });
+    return this;
+  }
+  lt(column: string, value: unknown): this {
+    this.predicates.push((row) => {
+      const left = row[column];
+      if (typeof left !== "string" || typeof value !== "string") return false;
+      return Date.parse(left) < Date.parse(value);
+    });
+    this.descriptors.push({ column, value, op: "lt" });
+    return this;
+  }
+  order(_column: string, _options?: { ascending?: boolean }): this {
+    return this;
+  }
+
+  async maybeSingle(): Promise<{ data: unknown; error: unknown }> {
+    const res = await this.execute();
+    if (res.error) return { data: null, error: res.error };
+    const rows = Array.isArray(res.data) ? res.data : [];
+    return { data: rows[0] ?? null, error: null };
+  }
+  async single(): Promise<{ data: unknown; error: unknown }> {
+    const res = await this.execute();
+    if (res.error) return { data: null, error: res.error };
+    const rows = Array.isArray(res.data) ? res.data : [];
+    if (rows.length !== 1) return { data: null, error: { message: "not_single" } };
+    return { data: rows[0], error: null };
+  }
+  then<TResult1 = { data: unknown; error: unknown }, TResult2 = never>(
+    onfulfilled?: ((value: { data: unknown; error: unknown }) => TResult1 | PromiseLike<TResult1>) | null,
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+  ): Promise<TResult1 | TResult2> {
+    return this.execute().then(onfulfilled, onrejected);
+  }
+
+  private matched(): Row[] {
+    const rows = this.fake.tables[this.table] ?? [];
+    return rows.filter((row) => this.predicates.every((predicate) => predicate(row)));
+  }
+
+  private async execute(): Promise<{ data: unknown; error: unknown }> {
+    this.fake.operations.push({ table: this.table, op: this.mode });
+    if (this.mode === "insert") {
+      const rows = (this.fake.tables[this.table] ??= []);
+      const row: Row = { id: `row-${++this.fake.idCounter}`, ...this.payload };
+      rows.push(row);
+      this.fake.inserts.push({ table: this.table, values: this.payload });
+      return { data: [row], error: null };
+    }
+    if (this.mode === "update") {
+      const matched = this.matched();
+      for (const row of matched) Object.assign(row, this.payload);
+      this.fake.updates.push({ table: this.table, values: this.payload, filters: [...this.descriptors] });
+      return { data: matched, error: null };
+    }
+    return { data: this.matched(), error: null };
+  }
+}
+
+class FakeServiceClient {
+  readonly tables: Record<string, Row[]> = {};
+  readonly operations: Array<{ table: string; op: string }> = [];
+  readonly inserts: Array<{ table: string; values: Row }> = [];
+  readonly updates: ServiceUpdate[] = [];
+  readonly uploads: Array<{ bucket: string; path: string; options: unknown }> = [];
+  idCounter = 0;
+
+  readonly storage = {
+    from: (bucket: string) => ({
+      upload: async (path: string, _buffer: Buffer, options: unknown) => {
+        this.uploads.push({ bucket, path, options });
+        return { error: null };
+      },
+      remove: async () => ({ error: null }),
+      createSignedUrl: async () => ({ data: { signedUrl: "x" }, error: null }),
+    }),
+  };
+
+  from(table: string): ServiceQueryBuilder {
+    return new ServiceQueryBuilder(this, table);
+  }
+}
+
+class FakeGateway implements AiInvoker {
+  readonly invocations: Array<{ capability: AiCapability; request: AiInvocationRequest }> = [];
+  result: AiInvocationResult = { imageBase64: "", mimeType: "image/png", model: "gpt-image-2" };
+  error?: Error;
+
+  async invoke(
+    capability: AiCapability,
+    request: AiInvocationRequest,
+    telemetry: AiTelemetryContext,
+  ): Promise<AiInvocationResult> {
+    this.invocations.push({ capability, request });
+    if (this.error) throw this.error;
+    // Espelha o gateway real: exatamente um envelope por invocação.
+    await telemetry.sink.emit({
+      capability,
+      protocol: "images",
+      status: "success",
+      provider: "openai",
+      model: this.result.model,
+      usage: this.result.usage,
+      durationMs: 1,
+    });
+    return this.result;
+  }
+  async hasFallback(): Promise<boolean> {
+    return false;
+  }
+}
+
+const RUN_ID = "44444444-4444-4444-8444-444444444444";
+
+let fake: FakeServiceClient;
+let fakeGateway: FakeGateway;
+let sink: LabTelemetrySink;
+let testPng: Buffer;
+
+beforeAll(async () => {
+  testPng = await sharp({
+    create: { width: 4, height: 4, channels: 3, background: { r: 12, g: 180, b: 40 } },
+  })
+    .png()
+    .toBuffer();
+});
+
+beforeEach(() => {
+  fake = new FakeServiceClient();
+  fake.tables.lab_bench_runs = [
+    { id: RUN_ID, status: "pending", created_at: new Date().toISOString() },
+  ];
+  fakeGateway = new FakeGateway();
+  sink = new LabTelemetrySink();
+});
+
+function setup() {
+  return {
+    client: fake as unknown as SupabaseClient,
+    telemetry: {
+      operationRunId: RUN_ID,
+      operationRunType: "campaign_delivery",
+      traceId: "trace",
+      storeId: STORE_ID,
+      sink,
+    } as AiTelemetryContext,
+  };
+}
+
+describe("executeBenchRun — single-shot, custo local e erro sanitizado", () => {
+  const preset = resolveBenchPreset("gpt-image-2-low");
+
+  it("exatamente uma chamada paga; persiste latência/usage/custo/provider/modelo/protocolo", async () => {
+    fakeGateway.result = {
+      imageBase64: testPng.toString("base64"),
+      mimeType: "image/png",
+      model: "gpt-image-2",
+      usage: { promptTokens: 1000, completionTokens: 2000 },
+    };
+    const { client, telemetry } = setup();
+
+    const outcome = await executeBenchRun({
+      client,
+      gateway: fakeGateway,
+      telemetrySink: sink,
+      run: { id: RUN_ID },
+      preset,
+      request: { prompt: "p", productImagesDataUrls: [PNG_A] },
+      telemetry,
+    });
+
+    expect(outcome.status).toBe("succeeded");
+    // Exatamente uma invocação paga — sem fallback e sem segunda chamada.
+    expect(fakeGateway.invocations).toHaveLength(1);
+    expect(fakeGateway.invocations[0].capability).toBe("campaign_image");
+    // Telemetria read-only acumulada (sem generation_events).
+    expect(sink.entries).toHaveLength(1);
+
+    const runUpdate = fake.updates.filter((update) => update.table === "lab_bench_runs").at(-1);
+    expect(runUpdate?.values.status).toBe("succeeded");
+    expect(typeof runUpdate?.values.latency_ms).toBe("number");
+    expect(runUpdate?.values.usage).toMatchObject({ promptTokens: 1000 });
+    expect(runUpdate?.values.cost_source).toBe("bench_local_pricing");
+    expect(runUpdate?.values.cost_rule_version).toBe("2026-09-bench-1");
+    const detail = runUpdate?.values.cost_detail as Record<string, unknown>;
+    expect(detail).toMatchObject({
+      provider: "openai",
+      model: "gpt-image-2",
+      protocol: "images",
+      quality: "low",
+    });
+    expect(detail.is_estimate).toBe(false);
+
+    // Saída persistida no bucket local, sob o path próprio da bancada.
+    expect(fake.uploads).toHaveLength(1);
+    expect(fake.uploads[0].bucket).toBe("lab-artifacts");
+    expect(fake.uploads[0].path).toBe(`bench/${RUN_ID}/output.png`);
+    expect(fake.inserts.some((insert) => insert.table === "lab_bench_artifacts")).toBe(true);
+
+    // Nunca toca generation_events.
+    expect(fake.operations.some((op) => op.table === "generation_events")).toBe(false);
+  });
+
+  it("marca o run como running antes de invocar", async () => {
+    fakeGateway.result = {
+      imageBase64: testPng.toString("base64"),
+      mimeType: "image/png",
+      model: "gpt-image-2",
+    };
+    const { client, telemetry } = setup();
+
+    await executeBenchRun({
+      client,
+      gateway: fakeGateway,
+      telemetrySink: sink,
+      run: { id: RUN_ID },
+      preset,
+      request: { prompt: "p", productImagesDataUrls: [PNG_A] },
+      telemetry,
+    });
+
+    const running = fake.updates.find((update) => update.values.status === "running");
+    expect(running).toBeDefined();
+    expect(running?.filters).toContainEqual({ column: "status", value: "pending", op: "eq" });
+  });
+
+  it("sem usage: custo estimado marcado como estimativa (não faturado)", async () => {
+    fakeGateway.result = {
+      imageBase64: testPng.toString("base64"),
+      mimeType: "image/png",
+      model: "gpt-image-2",
+    };
+    const { client, telemetry } = setup();
+
+    const outcome = await executeBenchRun({
+      client,
+      gateway: fakeGateway,
+      telemetrySink: sink,
+      run: { id: RUN_ID },
+      preset,
+      request: { prompt: "p", productImagesDataUrls: [PNG_A] },
+      telemetry,
+    });
+
+    expect(outcome.cost?.isEstimate).toBe(true);
+    const runUpdate = fake.updates.filter((update) => update.table === "lab_bench_runs").at(-1);
+    const detail = runUpdate?.values.cost_detail as Record<string, unknown>;
+    expect(detail.is_estimate).toBe(true);
+  });
+
+  it("erro do provider é sanitizado antes de persistir e não há segunda chamada", async () => {
+    fakeGateway.error = new Error(
+      "falha com Bearer sk-abc123456789 em https://api.exemplo.com/v1",
+    );
+    const { client, telemetry } = setup();
+
+    const outcome = await executeBenchRun({
+      client,
+      gateway: fakeGateway,
+      telemetrySink: sink,
+      run: { id: RUN_ID },
+      preset,
+      request: { prompt: "p", productImagesDataUrls: [PNG_A] },
+      telemetry,
+    });
+
+    expect(outcome.status).toBe("failed");
+    expect(fakeGateway.invocations).toHaveLength(1);
+
+    const runUpdate = fake.updates.filter((update) => update.table === "lab_bench_runs").at(-1);
+    expect(runUpdate?.values.status).toBe("failed");
+    const written = runUpdate?.values.error_message as string;
+    expect(written).not.toContain("sk-");
+    expect(written).not.toContain("https://api.exemplo.com");
+    expect(written).toContain("[redacted]");
+  });
+
+  it("o serviço não chama o resolvedor produtivo nem grava generation_events (fonte)", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), "src/lib/lab/bench/execution/bench-execution-service.ts"),
+      "utf8",
+    );
+    expect(source).not.toContain("resolveAiCost");
+    expect(source).not.toContain("estimateLabCampaignImageCost");
+    expect(source).not.toContain("generation_events");
+    expect(source).toContain("LabTelemetrySink");
+    expect(source).toContain("resolveBenchCost");
+    expect(source).toContain("sanitizeAiErrorMessage");
+    expect(source).toContain("validateArtifactTechnically");
+    expect(source).toContain("cost_source");
+    expect(source).toContain("cost_rule_version");
   });
 });
