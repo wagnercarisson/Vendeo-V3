@@ -1,13 +1,15 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.5
-milestone_name: "— Lançamento Externo Controlado ◆"
+milestone_name: — Lançamento Externo Controlado ◆
 status: complete
-last_updated: "2026-09-28T19:16:27.745Z"
+last_updated: "2026-09-28T19:51:12.916Z"
 progress:
-  total_plans: 300
-  completed_plans: 294
-  percent: 98
+  total_phases: 39
+  completed_phases: 34
+  total_plans: 309
+  completed_plans: 295
+  percent: 87
 ---
 
 # Project State
@@ -16,17 +18,17 @@ progress:
 
 - Project: `.planning/PROJECT.md`.
 - Core value: transformar uma oferta simples em uma campanha profissional, clara e publicável.
-- Foco atual: F48.2.2 — **Fundação da bancada de geração no Admin/Laboratório** (**planejada** em 2026-09-28; 8 planos; próxima ação é **executar**).
+- Foco atual: F48.2.2 — **Fundação da bancada de geração no Admin/Laboratório** (**em execução** desde 2026-09-28; 8 planos; `48-2-2-01` concluído com CHECKPOINT 1 aprovado; próxima ação é executar `48-2-2-02`).
 - Fase anterior: F48.2.1 — **Bancada Manual de Prompts do Diretor** (CONCLUÍDA, VERIFICADA, SINCRONIZADA e ARQUIVADA).
 - Próxima fase: **F48.2.3 — Experimento determinístico Oferta 1:1** (depende da bancada validada na F48.2.2).
 - Próxima iniciativa condicionada: F50.1 aguardando constituição da PJ.
 
 ## Current Position
 
-Phase: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório) — **PLANNED** (8 planos; aguardando execução)
-Plans: `48-2-2-01` .. `48-2-2-08` — **criados em 2026-09-28**; nenhum executado.
-Checkpoints humanos: **CP1** (spike de modelos/presets, plano 01), **CP2** (aprovação dos presets antes de qualquer geração paga, plano 04), **CP3** (UAT local, plano 08). Nenhuma task executa chamada paga autonomamente.
-Próxima ação: **executar a F48.2.2**; depois, **F48.2.3 — Experimento determinístico Oferta 1:1**.
+Phase: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório) — **IN PROGRESS** (8 planos; 1 executado — `48-2-2-01` concluído com CHECKPOINT 1 aprovado)
+Plans: `48-2-2-01` .. `48-2-2-08` — **criados em 2026-09-28**; `48-2-2-01` **executado/summarized** (CHECKPOINT 1 aprovado após correção do spike); `48-2-2-02`..`48-2-2-08` pendentes.
+Checkpoints humanos: **CP1 aprovado** (spike de modelos/presets, plano 01; 4 presets propostos, todos desabilitados até o CP2), **CP2** (aprovação dos presets antes de qualquer geração paga, plano 04), **CP3** (UAT local, plano 08). Nenhuma task executa chamada paga autonomamente.
+Próxima ação: **executar `48-2-2-02`** (persistência local-first) e, em sequência, `48-2-2-03`..`48-2-2-08`; depois, **F48.2.3 — Experimento determinístico Oferta 1:1**.
 Fase anterior: 48.2.1 (Bancada Manual de Prompts do Diretor) — **COMPLETE**; chain `48-2-1-05 → 48-2-1-07 → 48-2-1-08 → 48-2-1-09`.
 
 - F48.2.1 realinhada (OpenSpec `017b8799`) e **concluída**: bancada manual dos prompts do Diretor.
@@ -45,15 +47,15 @@ Fase anterior: 48.2.1 (Bancada Manual de Prompts do Diretor) — **COMPLETE**; c
 
 ## F48.2.2 — Inventário da fase (mecânico)
 
-- **Planejados (8):** `48-2-2-01` .. `48-2-2-08` (criados em 2026-09-28; nenhum executado/summarizado).
+- **Planejados (8):** `48-2-2-01` .. `48-2-2-08` (criados em 2026-09-28). **Executado/summarized (1):** `48-2-2-01` (CHECKPOINT 1 aprovado após correção do spike; nenhuma chamada paga; base SHA `50ae6007`).
 - **Fonte da verdade:** `openspec/changes/fase-48-2-2-fundacao-bancada-geracao/` (proposal / design D1–D17 / tasks 1–8 / 8 specs), corrigida no commit `388db445` e refletida nos planos.
 - **Artefatos de planejamento:** `48.2.2-CONTEXT.md`, `48.2.2-UI-SPEC.md`, `48-2-2-PATTERNS.md` + 8 `PLAN.md`; verificados por `gsd-plan-checker` (**VERIFICATION PASSED**).
-- **Checkpoints:** CP1 (spike, plano 01), CP2 (aprovação dos presets antes de geração paga, plano 04), CP3 (UAT local, plano 08).
+- **Checkpoints:** **CP1 aprovado** (spike, plano 01 — `gpt-image-2` e `gpt-image-2.5-flare` confirmados pela documentação oficial; 4 presets propostos, todos desabilitados com `reason: spike_pendente`), CP2 (aprovação dos presets antes de geração paga, plano 04), CP3 (UAT local, plano 08).
 - **Ondas:** cadeia sequencial `48-2-2-01 → 02 → 03 → 04 → 05 → 06 → 07 → 08` (o plano 04 depende também do 01).
 
 ## Global (mecânico — `gsd-sdk query progress`)
 
-- `total_plans: 300`; `completed_plans (summaries): 294`; `percent: 98`.
+- `total_phases: 39` / `completed_phases: 34`; `total_plans: 309`; `completed_plans (summaries): 295`; `percent: 87` (frontmatter recalculado pelo SDK em 2026-09-28).
 
 ## Accumulated Context — Decisions
 
@@ -67,10 +69,11 @@ Fase anterior: 48.2.1 (Bancada Manual de Prompts do Diretor) — **COMPLETE**; c
 - Correção test-only autorizada (fora do escopo F48.2.1) do date-bomb preexistente em `use-campaign-form-validity.test.ts` (freeze de relógio), restaurando a suíte com apenas a exceção F50.
 - **Realinhamento F48.2.2 (2026-09-28):** a direção da F48.2.2 mudou de "Auditoria e Otimização do Prompt do Revisor" para "**Fundação da bancada de geração no Admin/Laboratório**" (gerações reais e mensuráveis, isoladas da produção, acesso restrito, loja real, branding persistido como fonte de verdade, prompt manual, seleção de modelo/qualidade, registro de evidência técnica e financeira). A F48.2.2 antiga foi **descartada/substituída**, sem artefatos mantidos (implementação não iniciada; recuperável pelo histórico do Git); a F48.2.3 passa a ser "**Experimento determinístico Oferta 1:1**". Backlog posterior (fora das duas fases): Destaque, Exclusivo, outros formatos, temas recorrentes, carrossel, comparação cega/lado a lado, avaliação automática, mobile e promoção de modelos/pipelines para produção. Regra: a identidade persistida da loja é a **fonte de verdade**; a criatividade do modelo fica restrita à composição específica da campanha (sem novo "diretor criativo" redefinindo tipografia/cores/posicionamento).
 - **Planejamento F48.2.2 (2026-09-28):** base OpenSpec corrigida (`388db445`) — allowlist própria `BENCH_MODEL_ALLOWLIST` (sem tocar `MODEL_ALLOWLIST`); ciclo `draft → pending` (slot global só na confirmação); signer local restrito de branding (`createBenchBrandingSignedUrl`); custo local por `modelo + qualidade + tamanho`, com pricing **somente em código** (`bench-pricing.ts`, sem tabela); `assertBenchTestStore` em toda entrada. 8 planos criados; spike bloqueante no plano 01; aprovação humana antes de geração paga (CP2). `gsd-plan-checker` = VERIFICATION PASSED.
+- **Execução F48.2.2 — plano `48-2-2-01` (2026-09-28):** **CHECKPOINT 1 aprovado** após correção dirigida por humano do spike (commit `d77d40ca`) — `gpt-image-2` e `gpt-image-2.5-flare` **confirmados pela documentação oficial**; **4 presets propostos** (`gpt-image-2-low`/`gpt-image-2-medium`/`gpt-image-2.5-flare-low`/`gpt-image-2.5-flare-medium`), **todos desabilitados** (`spike_pendente`) até o CP2 (plano 04); `account_availability_pending` a comprovar no UAT autorizado (plano 08); **nenhuma chamada paga executada**. Entregues: bounded context `src/lib/lab/bench/**`, registry de dimensões (primeiro recorte), `BENCH_MODEL_ALLOWLIST`, registry de presets e contratos de isolamento read-only (typecheck + 48 testes verdes). F48.2.2 antiga (Revisor) permanece descartada/substituída.
 
 ## Pending Todos
 
-- **Executar a F48.2.2 — Fundação da bancada de geração no Admin/Laboratório** (planejada, 8 planos; próxima ação registrada).
+- **Executar a F48.2.2 — Fundação da bancada de geração no Admin/Laboratório** (**em execução**; `48-2-2-01` concluído — CHECKPOINT 1 aprovado; próxima ação: `48-2-2-02`).
 - F48.2.3 — Experimento determinístico Oferta 1:1 — não iniciada; depende da bancada validada na F48.2.2.
 - Sessões manuais de teste dos prompts do Diretor (`offer`/`spotlight`/`exclusive`), conduzidas pelo usuário e pelo assistente; qualquer operação real paga exige novo programa e nova autorização humana explícita.
 - F48.2.2 antiga (Auditoria e Otimização do Prompt do Revisor) — **descartada/substituída**; implementação não iniciada; sem artefatos mantidos (recuperável pelo histórico do Git).
@@ -99,7 +102,7 @@ Fase anterior: 48.2.1 (Bancada Manual de Prompts do Diretor) — **COMPLETE**; c
 
 ## Session Continuity
 
-- Última sessão: 2026-09-28 — planejamento da F48.2.2 (8 planos), com correções da base OpenSpec e verificação do checker.
-- Último trabalho: F48.2.2 **planejada** (8 planos, `48-2-2-01`..`48-2-2-08`); base OpenSpec corrigida (`388db445`) e planos realinhados; `gsd-plan-checker` = VERIFICATION PASSED; tracking atualizado manualmente (STATE/ROADMAP), preservando o restante.
-- Próximo trabalho: **executar a F48.2.2** (CP1 spike → CP2 presets → CP3 UAT); depois, F48.2.3 — Experimento determinístico Oferta 1:1. Sessões manuais de teste dos prompts do Diretor seguem em paralelo, com novo programa e nova autorização humana antes de qualquer chamada paga.
-- Resume file: `None` (sem trabalho pausado; próxima ação é executar a F48.2.2).
+- Última sessão: 2026-09-28 — execução do plano `48-2-2-01` (fundação da bancada) e aprovação do **CHECKPOINT 1** após correção dirigida por humano do spike.
+- Último trabalho: plano `48-2-2-01` **concluído** (bounded context + registry de dimensões + `BENCH_MODEL_ALLOWLIST` + presets desabilitados + isolamento read-only; typecheck + 48 testes verdes; CHECKPOINT 1 aprovado; **nenhuma chamada paga**); commits `a0e7832e`, `77ef5330` e `d77d40ca`.
+- Próximo trabalho: **executar `48-2-2-02`** (persistência local-first) e a sequência até `48-2-2-08` (CP2 no plano 04; CP3 no plano 08); depois, F48.2.3 — Experimento determinístico Oferta 1:1. Sessões manuais de teste dos prompts do Diretor seguem em paralelo, com novo programa e nova autorização humana antes de qualquer chamada paga.
+- Resume file: `None` (plano `48-2-2-01` concluído; próxima ação é executar `48-2-2-02`).

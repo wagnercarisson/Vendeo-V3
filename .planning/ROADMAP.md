@@ -2,7 +2,7 @@
 
 ## Milestone v1.5 — Lançamento Externo Controlado ◆
 
-**Estado:** F50 concluida; F48.2.1 (**Bancada Manual de Prompts do Diretor**) esta **concluida e arquivada** (`48-2-1-01` a `48-2-1-05`, `48-2-1-07`, `48-2-1-08` e `48-2-1-09` concluidos; `48-2-1-06` interrompido/suplantado; programa local `closed` e experimento `archived`; zero runs/custo; sem promocao; OpenSpec verificado, sincronizado e arquivado em `openspec/changes/archive/2026-09-27-fase-48-2-1-otimizacao-prompts-diretor/`, commit `f55bed45`). **Realinhamento de tracking (2026-09-28):** a F48.2.2 antiga (Auditoria e Otimizacao do Prompt do Revisor) foi **descartada/substituida** (implementacao nao iniciada; sem artefatos mantidos; recuperavel pelo historico do Git); a nova sequencia e **F48.2.2 — Fundacao da bancada de geracao no Admin/Laboratorio** (**planejada**, 8 planos, 2026-09-28) -> **F48.2.3 — Experimento deterministico Oferta 1:1**. F50.1 permanece futura e nao ativa, aguardando a constituicao da PJ.
+**Estado:** F50 concluida; F48.2.1 (**Bancada Manual de Prompts do Diretor**) esta **concluida e arquivada** (`48-2-1-01` a `48-2-1-05`, `48-2-1-07`, `48-2-1-08` e `48-2-1-09` concluidos; `48-2-1-06` interrompido/suplantado; programa local `closed` e experimento `archived`; zero runs/custo; sem promocao; OpenSpec verificado, sincronizado e arquivado em `openspec/changes/archive/2026-09-27-fase-48-2-1-otimizacao-prompts-diretor/`, commit `f55bed45`). **Realinhamento de tracking (2026-09-28):** a F48.2.2 antiga (Auditoria e Otimizacao do Prompt do Revisor) foi **descartada/substituida** (implementacao nao iniciada; sem artefatos mantidos; recuperavel pelo historico do Git); a nova sequencia e **F48.2.2 — Fundacao da bancada de geracao no Admin/Laboratorio** (**em execucao**, 8 planos, 2026-09-28; `48-2-2-01` concluido, CP1 aprovado) -> **F48.2.3 — Experimento deterministico Oferta 1:1**. F50.1 permanece futura e nao ativa, aguardando a constituicao da PJ.
 
 **Escopo do arquivo ativo:** índice operacional do milestone. O histórico integral anterior a esta compactação está em `.planning/ROADMAP-ARCHIVE.md`.
 
@@ -46,7 +46,7 @@
 | 47 | ✅ Catálogo e Seleção de Modelos Admin | Concluída; Change B |
 | 48.1 | ✅ Laboratório Mínimo de IA | Concluída; primeira fatia do programa F48.x |
 | 48.2.1 | ✅ Concluída e arquivada — bancada manual (8/9 + 06 suplantado) | Bancada manual de prompts do Diretor; `48-2-1-01` a `48-2-1-05`, `48-2-1-07`, `48-2-1-08` e `48-2-1-09` concluidos; `48-2-1-06` interrompido/suplantado; programa `closed` e experimento `archived`; local-only, sem promocao; OpenSpec arquivado (commit `f55bed45`) |
-| 48.2.2 | 📋 Planejada — Fundação da bancada de geração no Admin/Laboratório | 8 planos criados (2026-09-28); bancada interna desktop restrita, loja real, branding persistido, prompt manual, modelo/qualidade, evidência técnica e financeira; isolada da produção; sem créditos do lojista; aguardando execução |
+| 48.2.2 | 🔄 Em execução — Fundação da bancada de geração no Admin/Laboratório | 1/8 planos (`48-2-2-01` concluído; CHECKPOINT 1 aprovado após correção do spike; nenhuma chamada paga); bancada interna desktop restrita, loja real, branding persistido, prompt manual, modelo/qualidade, evidência técnica e financeira; isolada da produção; sem créditos do lojista |
 | 48.2.3 | ⏳ Não iniciada — Experimento determinístico Oferta 1:1 | Depende da bancada validada na F48.2.2; prompt montado/armazenado, branding como contrato obrigatório, hierarquia comercial orientada, aprovação humana do prompt |
 | 48.2.2-antiga | ⏸ Descartada — Auditoria e Otimização do Prompt do Revisor | Escopo descartado/substituído em 2026-09-28; sem artefatos mantidos; implementação não iniciada; recuperável pelo histórico do Git |
 | 49 | ✅ Ativação e Orientação Contextual de Campos | Concluída |
@@ -109,12 +109,12 @@ Plans:
 **Excecao preexistente (externa a F48.2.1):** `src/lib/legal/__tests__/legal-document-versions.test.ts` falha com `ENOENT` (caminho antigo da F50, change arquivada). O gate fail-closed do Plano 09 aceita a suite completa somente com essa excecao exata (1 arquivo / 1 teste) e a registra como follow-up externo.
 ## F48.2.2 — Fundação da bancada de geração no Admin/Laboratório
 
-**Status:** **Planejada** — 8 planos criados (2026-09-28); aguardando execução. A antiga F48.2.2 (**Auditoria e Otimização do Prompt do Revisor**) foi **descartada/substituída** (implementação não iniciada; sem artefatos mantidos; recuperável pelo histórico do Git). Fonte da verdade: `openspec/changes/fase-48-2-2-fundacao-bancada-geracao/`.
+**Status:** **Em execução** — 1/8 planos concluídos (`48-2-2-01`, com **CHECKPOINT 1 aprovado** após correção do spike; nenhuma chamada paga). A antiga F48.2.2 (**Auditoria e Otimização do Prompt do Revisor**) foi **descartada/substituída** (implementação não iniciada; sem artefatos mantidos; recuperável pelo histórico do Git). Fonte da verdade: `openspec/changes/fase-48-2-2-fundacao-bancada-geracao/`.
 
 **Plans:** 8 plans
 
 Plans:
-- [ ] 48-2-2-01-PLAN.md — Bounded context `src/lib/lab/bench/**`, contratos de isolamento, registry de dimensões e **SPIKE BLOQUEANTE de modelos/presets (CHECKPOINT 1)**.
+- [x] 48-2-2-01-PLAN.md — Bounded context `src/lib/lab/bench/**`, contratos de isolamento, registry de dimensões e **SPIKE BLOQUEANTE de modelos/presets (CHECKPOINT 1)**.
 - [ ] 48-2-2-02-PLAN.md — Persistência local-first: DDL fora de `supabase/migrations/`, bootstrap local com REVERT, guard de path `bench/{runId}/...` e serviços de run/artefato.
 - [ ] 48-2-2-03-PLAN.md — Lojas de teste via manifesto local, contrato completo de branding (inclui `typography_direction`) e snapshot de campanha produto/oferta com intenção resolvida.
 - [ ] 48-2-2-04-PLAN.md — Registry final de presets (somente confirmados) e **CHECKPOINT 2 — aprovação humana antes de qualquer geração paga**.
