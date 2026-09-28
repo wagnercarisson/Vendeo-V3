@@ -85,7 +85,7 @@ IDs, protocolos, qualidades, tamanhos, limites de entrada, disponibilidade, estr
 
 ### Requirement: Custo por preset (modelo + qualidade + tamanho)
 
-A bancada SHALL resolver custo por `provider + model + protocol + quality + size` por um **resolvedor local da bancada** com pricing **local** versionado, e SHALL manter o **usage/custo reportado pelo provider** como uma noção **separada**, nunca substituída pelo cálculo local. O resolvedor produtivo (`resolveAiCost`/`ai_model_pricing`, chaveado apenas por provider+model) **não** é suficiente para distinguir qualidades e não é a fonte da estimativa da bancada.
+A bancada SHALL resolver custo por `provider + model + protocol + quality + size` por um **resolvedor local da bancada** cujo pricing vive **somente em código** (`bench-pricing.ts`), **sem tabela de pricing**, respeitando o **modo confirmado pelo spike** (`per_image` = preço fixo por imagem; `token_based` = taxas por token; outro modo declarado). O resolvedor SHALL receber `usage?` e `providerReportedCostUsd?` **separadamente** e SHALL NOT fazer multiplicação genérica de `usage × unitPriceUsd`. O **usage/custo reportado pelo provider** SHALL permanecer uma noção **separada**, nunca substituída pelo cálculo local. O resolvedor produtivo (`resolveAiCost`/`ai_model_pricing`, chaveado apenas por provider+model) **não** é suficiente para distinguir qualidades e não é a fonte da estimativa da bancada.
 
 #### Scenario: Qualidades diferentes têm custos distintos
 
@@ -98,3 +98,13 @@ A bancada SHALL resolver custo por `provider + model + protocol + quality + size
 - **WHEN** o provider retorna `usage`/custo
 - **THEN** esse valor é registrado separadamente do custo calculado localmente
 - **AND** a origem do valor (`cost_source`) e a versão da regra (`cost_rule_version`) são registradas
+
+#### Scenario: Modo de cobrança respeitado
+- **WHEN** o preset é `per_image` (preço fixo por imagem)
+- **THEN** o custo é o preço fixo por imagem, sem multiplicar por tokens
+- **AND** quando o preset é `token_based`, o custo usa as taxas por token sobre o `usage`
+
+#### Scenario: Custo reportado pelo provider é separado
+- **WHEN** o provider retorna `providerReportedCostUsd`
+- **THEN** esse valor é mantido separado do cálculo local
+- **AND** nenhuma multiplicação genérica de `usage × unitPriceUsd` é aplicada

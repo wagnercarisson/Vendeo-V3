@@ -106,7 +106,7 @@ A bancada SHALL persistir uma unidade de auditoria própria por geração, conte
 
 ### Requirement: Ciclo de vida, concorrência e recuperação
 
-A bancada SHALL controlar a geração por estados (`draft`, `pending`, `running`, `succeeded`, `failed`, `cancelled`, `timeout`), SHALL permitir **no máximo uma geração ativa** (`pending` ou `running`) em toda a bancada, SHALL adquirir o slot global **somente na confirmação** (`draft → pending`, compare-and-set) e SHALL impedir chamada duplicada por concorrência ou duplo clique via identificador de operação idempotente e recuperar geração presa/draft abandonado sem scheduler.
+A bancada SHALL controlar a geração por estados (`draft`, `pending`, `running`, `succeeded`, `failed`, `cancelled`, `timeout`), SHALL permitir **no máximo uma geração ativa** (`pending` ou `running`) em toda a bancada, SHALL adquirir o slot global **somente na confirmação** (`draft → pending`, compare-and-set) e SHALL impedir chamada duplicada por concorrência ou duplo clique via identificador de operação idempotente e recuperar geração presa/draft abandonado sem scheduler. A confirmação (`POST /runs`) SHALL resolver o **`draft` existente** por `operation_id` — sem criar run — validando `runId`, autoria e estado antes de preencher/confirmar.
 
 #### Scenario: Duas gerações concorrentes — apenas uma ativa
 

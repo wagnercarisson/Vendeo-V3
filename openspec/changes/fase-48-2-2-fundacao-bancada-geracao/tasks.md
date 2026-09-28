@@ -21,7 +21,7 @@
 - [ ] 2.3 Aplicar RLS/grants service-role, triggers de imutabilidade (snapshot/config) e o índice único parcial **global** de geração ativa, cobrindo **somente** `status IN ('pending','running')` (draft não ocupa slot).
 - [ ] 2.4 Estender o guard de path de artefato para o esquema `bench/{runId}/...` no bucket `lab-artifacts` (anti-traversal; sem token de bucket de campanha).
 - [ ] 2.5 Escrever o **bootstrap local da bancada** que aplica o DDL (com bloco REVERT) e validá-lo localmente (`npx supabase db reset` + `db lint`): reaplicação idempotente, imutabilidade e índice de geração ativa; confirmar que `supabase db push` **não** carrega as tabelas da bancada ao remoto.
-- [ ] 2.6 Implementar o serviço de persistência da bancada (reservar/iniciar/finalizar, idempotência por `operation_id`, reconciliação preguiçosa de geração presa). Incluir transição **`draft → pending` compare-and-set** (violação do índice → `bench_run_already_active`) e reconciliação preguiçosa de **drafts abandonados** (além de runs ativos presos).
+- [ ] 2.6 Implementar o serviço de persistência da bancada (reservar/iniciar/finalizar, idempotência por `operation_id`, reconciliação preguiçosa de geração presa). Incluir transição **`draft → pending` compare-and-set** (violação do índice → `bench_run_already_active`) e reconciliação preguiçosa de **drafts abandonados** (além de runs ativos presos). Expor `getBenchRunByOperationId` (leitura) para a confirmação resolver o `draft` existente sem criar run.
 - [ ] 2.7 Testes: idempotência, imutabilidade, recuperação de run preso, persistência de entradas/saída com checksum, falha de persistência sem órfão; e draft abandonado não bloqueia o slot.
 
 ## 3. Lojas de teste e branding completo
@@ -39,7 +39,7 @@
 - [ ] 4.2 Implementar o registry de presets `{ capability, provider, model, protocol, quality, size }` validado contra a **allowlist própria da bancada** (`BENCH_MODEL_ALLOWLIST`, alimentada apenas pelos modelos/qualidades confirmados pelo spike) e o catálogo ativo, sem alterar `MODEL_ALLOWLIST`, em modo leitura.
 - [ ] 4.3 **Spike bloqueante (checkpoint 1)** — confirmar em documentação oficial e/ou chamada controlada: ID exato, protocolo/endpoints, edição com referências, qualidades, formato/tamanho, limites de entrada, disponibilidade da conta, estrutura de usage e regra de pricing de `gpt-image-2` e `gpt-image-2.5-flare`.
 - [ ] 4.4 Registrar o resultado do spike; habilitar **apenas os presets confirmados** e somente o caminho direto confirmado (o protocolo `responses` só entra se algum modelo exigir).
-- [ ] 4.5 Adicionar linhas de catálogo/pricing **localmente** pelo bootstrap da bancada (somente se o spike confirmar modelos/qualidades novos); nenhuma promoção ao remoto e nenhuma alteração de comportamento produtivo. Incluir pricing **local por qualidade/tamanho** para o resolvedor local da bancada.
+- [ ] 4.5 Adicionar **apenas linhas de catálogo** (`ai_model_catalog`) **localmente** pelo bootstrap da bancada (somente se o spike confirmar modelos/qualidades novos); o **pricing fica somente em código** (`bench-pricing.ts`), **sem tabela de pricing**. Registrar o **modo confirmado pelo spike** (`per_image`/`token_based`). Nenhuma promoção ao remoto e nenhuma alteração de comportamento produtivo.
 - [ ] 4.6 **Checkpoint 2 — aprovação dos presets habilitados** antes de qualquer geração paga.
 - [ ] 4.7 Testes: preset válido aceito; preset fora do catálogo recusado; preset não confirmado desabilitado com motivo; catálogo não é mutado; expansão sem migration; e um modelo confirmado fora da allowlist de produção é aceito na bancada sem alterar o `MODEL_ALLOWLIST`.
 
@@ -56,7 +56,7 @@
 
 - [ ] 6.1 Criar `GET /api/admin/laboratorio/bancada/stores` e `GET /.../branding` (somente leitura, sem diagnóstico/secrets).
 - [ ] 6.2 Criar `GET /.../presets` e `GET /.../estimate` (presets habilitados com motivo dos desabilitados; estimativa com cobertura de pricing).
-- [ ] 6.3 Criar `POST /.../runs` com confirmação explícita, `operation_id` idempotente e stream NDJSON; mapear 403/400/409/422 (`confirmation_required`, `bench_run_already_active`, `preset_not_enabled`). A confirmação adquire o slot por `draft → pending` compare-and-set; violação → `bench_run_already_active` (409).
+- [ ] 6.3 Criar `POST /.../runs` com confirmação explícita, `operation_id` idempotente e stream NDJSON; mapear 403/400/409/422 (`confirmation_required`, `bench_run_already_active`, `preset_not_enabled`). A confirmação adquire o slot por `draft → pending` compare-and-set; violação → `bench_run_already_active` (409). A confirmação SHALL resolver o `draft` existente por `operation_id` (sem criar run), validando `runId`/autoria/estado antes de preencher/confirmar.
 - [ ] 6.4 Criar `GET /.../runs/[id]` (detalhe com evidência) e leitura de artefatos por URL assinada.
 - [ ] 6.5 Aplicar `requireAdmin()` + `assertLabEnvironment()` em todas as rotas, na ordem correta. Validar o manifesto (`assertBenchTestStore`) antes de qualquer leitura de branding/tabela/storage em todas as rotas com `storeId`.
 - [ ] 6.6 Testes de rota: 403/400/409/422, confirmação obrigatória, geração ativa, idempotência, um evento terminal, sem exposição de secrets.
@@ -77,5 +77,5 @@
 - [ ] 8.1 Rodar typecheck, lint, build e a suíte completa; garantir que nenhum teste faz chamada paga.
 - [ ] 8.2 Executar os testes negativos de fronteira (ausência de acesso remoto/produção) e de concorrência.
 - [ ] 8.3 Condicionado à aprovação humana do UAT: se o UAT for recusado, a fase NÃO é marcada como concluída. **UAT local (checkpoint 3)** com Docker + chave/projeto de desenvolvimento: selecionar loja de teste, carregar branding completo, enviar imagens, prompt manual, preset confirmado, confirmar, gerar e inspecionar evidência + download.
-- [ ] 8.4 Confirmar que a produção permaneceu inalterada (pipeline, `ImagesAdapter`, `prompts/`, `campaign-images`, créditos) e que nenhuma linha produtiva foi tocada. Registrar o **SHA inicial da execução** e comparar `base..HEAD` (não apenas `git diff` do working tree), além dos testes negativos de fronteira.
+- [ ] 8.4 Confirmar que a produção permaneceu inalterada (pipeline, `ImagesAdapter`, `prompts/`, `campaign-images`, créditos) e que nenhuma linha produtiva foi tocada. Registrar o **SHA inicial da execução** e comparar `base..HEAD` (não apenas `git diff` do working tree), além dos testes negativos de fronteira. **Base SHA ausente ⇒ falha** (nunca recriar; a captura é exclusiva do início do Plano 01); incluir `supabase/migrations/**` no `git diff $BASE..HEAD`.
 - [ ] 8.5 Gerar `48-2-2-VERIFICATION.md` e `48.2.2-UAT.md`; atualizar `.planning/STATE.md`, `.planning/ROADMAP.md`, `ROADMAP.md` e `.planning/HANDOFF.json`; preparar o arquivamento OpenSpec.

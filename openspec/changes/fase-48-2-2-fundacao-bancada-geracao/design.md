@@ -82,7 +82,7 @@ A bancada usa um **adapter `Images` dedicado** — novo arquivo em `src/lib/ai/a
 
 ### D9 — Persistência da geração
 
-`lab_bench_runs`: `id`, `operation_id` (UNIQUE, idempotência), `status`, `created_by`, timestamps, `campaign_snapshot` (jsonb), `branding_snapshot` (jsonb, inclui tipografia), `config` (jsonb — dimensões resolvidas), `prompt_sent` (text), `references` (jsonb — paths locais), `provider`/`protocol`/`model`, `size`, `quality`, `intent`, `content_type`, `structure`, `theme`, `latency_ms`, `usage` (jsonb), `estimated_cost_usd`, `cost_detail` (jsonb), `cost_source`, `cost_rule_version`, `error_type`, `error_message` (sanitizado), `technical_validation` (jsonb). `lab_bench_artifacts`: `run_id`, `kind` (`input`/`output`), `storage_path`, `mime_type`, `width`, `height`, `bytes`, `checksum`, `removed_at`. Imutabilidade de snapshot/config por trigger; colunas de resultado atualizáveis; DELETE de runs sempre proibido.
+`lab_bench_runs`: `id`, `operation_id` (UNIQUE, idempotência), `status`, `created_by`, timestamps, `campaign_snapshot` (jsonb), `branding_snapshot` (jsonb, inclui tipografia), `config` (jsonb — dimensões resolvidas), `prompt_sent` (text), `references` (jsonb — paths locais), `provider`/`protocol`/`model`, `size`, `quality`, `intent`, `content_type`, `structure`, `theme`, `latency_ms`, `usage` (jsonb), `estimated_cost_usd`, `cost_detail` (jsonb), `cost_source`, `cost_rule_version`, `error_type`, `error_message` (sanitizado), `technical_validation` (jsonb). `lab_bench_artifacts`: `run_id`, `kind` (`input`/`output`), `storage_path`, `mime_type`, `width`, `height`, `bytes`, `checksum`, `removed_at`. Imutabilidade de snapshot/config por trigger **a partir de `running`** (quando o run deixa `draft`/`pending`); colunas de resultado atualizáveis; DELETE de runs sempre proibido.
 
 ### D10 — Estados, idempotência e recuperação
 
@@ -92,15 +92,15 @@ Estados: `draft → pending → running → succeeded | failed | cancelled | tim
 
 Três noções distintas e **nunca confundidas na UI**:
 
-- **usage do provider** — quando retornado; permanece uma noção **separada** e nunca é substituído pelo cálculo local;
-- **custo calculado** — resolvedor **local da bancada** sobre o usage + pricing **local** versionado, chaveado por `provider + model + protocol + quality + size` (`cost_source` + `cost_rule_version`);
-- **custo estimado** — quando usage suficiente não existe, usando o mesmo resolvedor local por **modelo + qualidade + tamanho/protocolo**.
+- **usage do provider** — quando retornado; permanece uma noção **separada** e nunca é substituído pelo cálculo local; quando o provider reporta custo, ele entra como `providerReportedCostUsd` **separado**;
+- **custo calculado** — resolvedor **local da bancada** (`bench-pricing.ts`, pricing **em código**, **sem tabela de pricing**) chaveado por `provider + model + protocol + quality + size`, respeitando o **modo confirmado pelo spike** (`per_image` = preço fixo por imagem; `token_based` = taxas por token; outro modo declarado); **nunca** uma multiplicação genérica de `usage × unitPriceUsd`;
+- **custo estimado** — quando usage suficiente não existe, estimado pelo preset completo com a cobertura do pricing.
 
-O `LabTelemetrySink` (read-only) acumula o custo sem gravar `generation_events`. Custo estimado **nunca** é apresentado como faturado.
+O `LabTelemetrySink` (read-only) acumula o custo sem gravar `generation_events`. Custo estimado **nunca** é apresentado como faturado. O bootstrap local adiciona **apenas** linhas de catálogo (`ai_model_catalog`), **nunca** uma tabela de pricing — o pricing vive somente em código.
 
 ### D12 — Segurança financeira leve
 
-Estimativa antes da geração por um **resolvedor local da bancada** chaveado por `modelo + qualidade + tamanho/protocolo` (o helper produtivo `estimateLabCampaignImageCost`, que recebe apenas `provider`/`model`, **não** distingue `low` de `medium` e **não** é reutilizado para a estimativa da bancada), confirmação explícita (`confirmed: true`), uma geração ativa global e ambiente local-only. **Sem** programa de orçamento, reserva financeira ou créditos. **Alternativa rejeitada:** reusar `lab_prompt_programs` — escopo declarado fora desta fase.
+Estimativa antes da geração por um **resolvedor local da bancada** chaveado por `modelo + qualidade + tamanho/protocolo` (o helper produtivo `estimateLabCampaignImageCost`, que recebe apenas `provider`/`model`, **não** distingue `low` de `medium` e **não** é reutilizado para a estimativa da bancada), confirmação explícita (`confirmed: true`), uma geração ativa global e ambiente local-only. **Sem** programa de orçamento, reserva financeira ou créditos. **Alternativa rejeitada:** reusar `lab_prompt_programs` — escopo declarado fora desta fase. O resolvedor local recebe `usage?` e `providerReportedCostUsd?` **separadamente** e respeita o modo confirmado pelo spike (`per_image`/`token_based`).
 
 ### D13 — Erros, secrets e stream
 

@@ -41,7 +41,7 @@ A API SHALL oferecer uma estimativa de custo da geração antes da execução, p
 
 ### Requirement: Execução da geração com confirmação explícita
 
-A rota de execução SHALL exigir confirmação explícita e um identificador de operação idempotente, e SHALL recusar a execução quando o ambiente, a concorrência (geração ativa), o preset ou a validação de entrada não permitirem. A execução SHALL emitir progresso em stream e exatamente um evento terminal. A execução SHALL adquirir o slot global apenas na confirmação (`draft → pending`, compare-and-set); a violação do índice de geração ativa SHALL retornar `bench_run_already_active` sem chamada paga.
+A rota de execução SHALL exigir confirmação explícita e um identificador de operação idempotente, e SHALL recusar a execução quando o ambiente, a concorrência (geração ativa), o preset ou a validação de entrada não permitirem. A execução SHALL emitir progresso em stream e exatamente um evento terminal. A execução SHALL adquirir o slot global apenas na confirmação (`draft → pending`, compare-and-set); a violação do índice de geração ativa SHALL retornar `bench_run_already_active` sem chamada paga. A rota de execução SHALL resolver o **`draft` existente** por `operation_id` (validando `runId`, autoria e estado) e SHALL NOT criar um run; um `operation_id` sem `draft` correspondente SHALL ser recusado.
 
 #### Scenario: Geração confirmada é executada
 
@@ -78,6 +78,11 @@ A rota de execução SHALL exigir confirmação explícita e um identificador de
 - **WHEN** a mesma operação é reenviada
 - **THEN** a geração existente é retornada
 - **AND** nenhuma nova chamada paga é realizada
+
+#### Scenario: Execução sem draft prévio é recusada
+- **WHEN** `POST /runs` recebe um `operation_id` que não passou pelo upload (sem `draft` existente)
+- **THEN** a resposta é 400 (payload/estado inválido)
+- **AND** nenhum run é criado e nenhuma chamada paga é iniciada
 
 ### Requirement: Detalhe da geração e artefatos
 
