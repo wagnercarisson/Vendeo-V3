@@ -120,7 +120,7 @@ Plans:
 - [x] 48-2-2-04-PLAN.md — Registry final de presets (somente confirmados) e **CHECKPOINT 2 — aprovação humana antes de qualquer geração paga**.
 - [x] 48-2-2-05-PLAN.md — Invocação isolada: adapter `Images` dedicado, resolver capability+alvo do preset, single-shot e telemetria de custo read-only.
 - [x] 48-2-2-06-PLAN.md — API administrativa sob `/api/admin/laboratorio/bancada` (guards, estimativa, stream NDJSON, detalhe e artefatos).
-- [ ] 48-2-2-07-PLAN.md — UI desktop `/admin/laboratorio/bancada` e entrada na navegação interna do laboratório.
+- [x] 48-2-2-07-PLAN.md — UI desktop `/admin/laboratorio/bancada` e entrada na navegação interna do laboratório.
 - [ ] 48-2-2-08-PLAN.md — Testes transversais, **UAT local com geração real controlada (CHECKPOINT 3)** e verificação/encerramento.
 
 **Ondas e dependências:** cadeia sequencial `48-2-2-01 -> 02 -> 03 -> 04 -> 05 -> 06 -> 07 -> 08` (uma onda por plano; o plano 04 depende também do 01). Checkpoints humanos: **1 aprovado** (spike, plano 01), **2 aprovado** (presets antes de geração paga, plano 04 — 4 presets `images` habilitados após correção do pricing; nenhuma geração paga autorizada) e **3** (UAT local, plano 08). Nenhuma task executa chamada paga autonomamente.
