@@ -1,0 +1,42 @@
+## Why
+
+A F48.1/F48.2.1 entregou um laboratório de **comparação A/B** (baseline × candidata, cenários fixture, avaliação cega). Falta uma **bancada de geração** que exercite o caminho real — loja de teste local, branding persistido, imagens reais enviadas pelo admin, prompt manual e preset de modelo/qualidade — e registre evidência técnica e financeira de cada geração. Sem essa fundação, não há como testar o novo pipeline de campanha Oferta 1:1 (F48.2.3) sobre dados reais, com configuração controlada e custo observável. A direção anterior da F48.2.2 (auditoria do prompt do Revisor) foi **descartada/substituída** em 2026-09-28.
+
+## What Changes
+
+- **Nova superfície `/admin/laboratorio/bancada`**: bancada desktop-only, admin-only e local-only, para geração real e mensurável, separada do fluxo de produção.
+- **Carregamento de lojas de teste locais e do branding completo**: nome, segmento, posicionamento, tom de voz, slogan, logo/assinatura, paleta, `safe_color_tokens`, **direção tipográfica**, estilo visual, tom visual, personalidade, diretrizes e briefing de marca — com contrato local que expõe a lacuna de tipografia **sem alterar o pipeline produtivo**. Logo/assinatura são **apenas exibidos e registrados** nesta fase, sem envio automático ao modelo.
+- **Snapshot de campanha compatível com os contratos reais** (produto/oferta), com intenção resolvida registrada explicitamente, sem tocar serviços de crédito, entrega, correção ou publicação.
+- **Upload local de imagens de produto**: entradas e saídas vivem apenas no bucket local do laboratório; o bucket remoto `campaign-images` **não** é lido nem reutilizado; metadados (paths, tipos, dimensões, tamanho, checksum) são registrados.
+- **Persistência própria e mínima por geração**: unidade de auditoria com snapshot de campanha, snapshot de branding exibido, configuração efetiva, prompt efetivamente enviado, referências locais, provider/protocolo/modelo, formato/tamanho, qualidade, intenção, tipo de conteúdo, estrutura, tema, latência, usage, custo calculado/estimado com origem e versão da regra, status/erro sanitizado, validação técnica e artefato resultante. **Sem** baseline/candidata/cenário/repetição/avaliação A/B e **sem** gravar nas tabelas operacionais de campanhas.
+- **Configuração extensível por dimensões independentes** (`pipeline`, `formato`, `modelo`, `qualidade`, `intenção`, `tipo de conteúdo`, `estrutura`, `tema`) com registry validado em código — primeiro recorte: `manual-direto` / `1:1` / `oferta` / `produto` / `peça única` / `nenhum`. Evita CHECK constraints que exijam migration por preset.
+- **Presets de modelo/qualidade investigados e confirmados**, com **spike bloqueante** antes de habilitar (`gpt-image-2` low/medium; `gpt-image-2.5-flare` low/medium). Presets não confirmados permanecem **desabilitados com motivo explícito**.
+- **Invocação isolada direta ao modelo**: **adapter/caminho `Images` dedicado à bancada** (novo, registrado apenas no runtime da bancada; o `ImagesAdapter` produtivo e o registry padrão permanecem intocados), single-shot, sem fallback/retry oculto, com controle explícito de modelo, qualidade, tamanho, prompt, referências (apenas imagens de produto enviadas por upload), ordem/papel e timeout.
+- **Segurança financeira leve**: no máximo **uma geração ativa** em toda a bancada; estimativa antes da geração paga; confirmação explícita; **sem** programa de orçamento, reserva complexa ou créditos. Distinção explícita entre usage do provider, custo calculado e custo estimado — nunca apresentar estimado como faturado.
+- **UI desktop mínima**: seleção de loja de teste, branding completo, formulário mínimo produto/oferta, upload, editor de prompt, formato/modelo/qualidade, dimensões travadas no primeiro recorte, estimativa, confirmação, estado de execução, resultado, download e evidências. **Sem** comparação lado a lado nem votação.
+
+## Capabilities
+
+### New Capabilities
+
+- `lab-generation-bench`: a bancada de geração local — ambiente fail-closed, autorização administrativa, seleção de loja de teste, snapshot de campanha, upload de imagens, ciclo de vida da geração (estados, idempotência, recuperação de run preso), concorrência (uma ativa), evidência técnica/financeira e download, com isolamento da produção.
+- `lab-bench-config`: as dimensões de configuração independentes e o registry validado em código de presets de modelo/qualidade (primeiro recorte habilitado; expansão futura sem migration por preset; presets não confirmados desabilitados).
+- `lab-bench-branding`: o contrato local completo de branding da loja de teste, incluindo a direção tipográfica que hoje não chega ao snapshot de campanha, em modo somente leitura e sem alterar o pipeline produtivo.
+
+### Modified Capabilities
+
+- `lab-isolation`: acrescenta os invariantes específicos da bancada — acesso **somente leitura** às tabelas de loja/branding do Supabase **local**, proibição de ler/sincronizar lojas remotas e do bucket `campaign-images`, no máximo uma geração ativa na bancada e ausência de créditos/produção.
+- `lab-artifacts`: acrescenta o esquema de paths da bancada (`bench/{runId}/...`), a persistência de entradas e saída da bancada e a leitura por URL assinada no bucket `lab-artifacts`, sem reutilizar os paths de campanha.
+- `lab-gateway-harness`: acrescenta um caminho `Images` **dedicado à bancada** e a seleção de **capability + alvo por preset** limitada ao caminho direto confirmado pelo spike; o protocolo `responses` só entra se algum modelo exigir. Single-shot e sem fallback, sem alterar o comportamento do `ImagesAdapter` produtivo.
+- `lab-admin-api`: acrescenta as rotas da bancada sob `/api/admin/laboratorio/bancada` (lojas de teste, branding, presets, estimativa, execução em stream, detalhe e artefatos).
+- `lab-admin-ui`: acrescenta a tela `/admin/laboratorio/bancada` e a entrada de navegação interna, com o fluxo mínimo desktop e o estado de ambiente desabilitado.
+
+## Impact
+
+- **Dependência**: F48.1 (laboratório mínimo) e F48.2.1 (bancada manual do Diretor) concluídas — a bancada reutiliza guards, harness, telemetria e artefatos, **sem** herdar o modelo A/B.
+- **Banco (DDL local-first, FORA da cadeia de migrations remotas)**: novas tabelas `lab_bench_runs` e `lab_bench_artifacts`, com RLS/grants service-role, triggers de imutabilidade e índice único parcial de "uma geração ativa"; o DDL vive **fora** de `supabase/migrations/` e é aplicado por bootstrap local da bancada, de modo que `supabase db push` nunca o carregue ao remoto; nenhuma alteração em tabelas produtivas. Adição de linhas ao catálogo (`ai_model_catalog`) e pricing, se o spike confirmar modelos/qualidades.
+- **Código**: novo bounded context `src/lib/lab/bench/**` (herda os gates arquiteturais do laboratório); novo **adapter `Images` dedicado** em `src/lib/ai/adapters/**`, registrado apenas no runtime da bancada; rotas em `src/app/api/admin/laboratorio/bancada/**`; tela em `src/app/(app)/admin/laboratorio/bancada/**`. Extensões **aditivas** em `src/lib/lab/persistence/artifact-service.ts`, `src/lib/lab/gateway/**` e no detector de isolamento. O `ImagesAdapter` produtivo, o registry padrão de adapters, o pipeline produtivo, `prompts/` e `campaign-images` permanecem intocados.
+- **Seams compartilhados reutilizados**: `environment-guard`, `createLabGateway`/`runLabCampaignImage`, `LabTelemetrySink`, `validateArtifactTechnically`, `resolveAiCost`/`estimateLabCampaignImageCost` e `requireAdmin`.
+- **Testes**: contratos de isolamento (negativos provando ausência de acesso remoto), concorrência, catálogo/presets, persistência/snapshots, API e UI; nenhuma chamada paga em testes/CI.
+- **Operação/UAT**: UAT local (Docker + chave de desenvolvimento) com loja de teste, branding real e geração real controlada.
+- **Referência de design**: `openspec/design-system/MASTER.md` (dark OLED `#020617`/`#F8FAFC`/`#22C55E`, Poppins/Open Sans, `lucide-react`, sem emojis, sem light mode).
