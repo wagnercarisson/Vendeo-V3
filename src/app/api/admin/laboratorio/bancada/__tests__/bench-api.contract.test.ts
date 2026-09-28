@@ -1,0 +1,1198 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { NextRequest } from "next/server";
+
+vi.mock("server-only", () => ({}));
+
+const {
+  mockRequireAdmin,
+  mockAssertLabEnvironment,
+  MockLabEnvironmentError,
+  mockListBenchTestStores,
+  mockAssertBenchTestStore,
+  MockBenchStoreManifestError,
+  mockLoadBenchBranding,
+  mockToBenchBrandingSnapshot,
+  mockCreateBenchBrandingSignedUrlForStore,
+  mockListBenchPresets,
+  mockResolveBenchPreset,
+  MockBenchPresetError,
+  mockListBenchConfigOptions,
+  mockResolveBenchConfig,
+  mockResolveBenchCost,
+  mockBuildBenchCampaignSnapshot,
+  mockReserveBenchRun,
+  mockGetBenchRunByOperationId,
+  mockSetBenchRunInput,
+  mockConfirmBenchRun,
+  mockFinalizeBenchRun,
+  mockGetBenchRun,
+  MockBenchRunError,
+  mockPersistBenchArtifact,
+  mockListBenchArtifacts,
+  mockCreateBenchArtifactSignedUrl,
+  mockExecuteBenchRun,
+  mockValidateArtifactTechnically,
+  mockCreateLabTelemetryContext,
+  mockSupabaseAdmin,
+} = vi.hoisted(() => {
+  class MockLabEnvironmentError extends Error {
+    readonly reason: string;
+    constructor(reason: string) {
+      super(`Laboratório bloqueado: ${reason}`);
+      this.name = "LabEnvironmentError";
+      this.reason = reason;
+    }
+  }
+
+  class MockBenchStoreManifestError extends Error {
+    readonly code: string;
+    readonly storeId: string;
+    constructor(code: string, storeId: string) {
+      super(`${code}:${storeId}`);
+      this.name = "BenchStoreManifestError";
+      this.code = code;
+      this.storeId = storeId;
+    }
+  }
+
+  class MockBenchPresetError extends Error {
+    readonly code = "preset_not_enabled";
+    readonly reason?: string;
+    constructor(_presetId: string, reason?: string) {
+      super(`preset_not_enabled:${reason ?? ""}`);
+      this.name = "BenchPresetError";
+      this.reason = reason;
+    }
+  }
+
+  class MockBenchRunError extends Error {
+    readonly code: string;
+    constructor(code: string) {
+      super(code);
+      this.name = "BenchRunError";
+      this.code = code;
+    }
+  }
+
+  return {
+    mockRequireAdmin: vi.fn(),
+    mockAssertLabEnvironment: vi.fn(),
+    MockLabEnvironmentError,
+    mockListBenchTestStores: vi.fn(),
+    mockAssertBenchTestStore: vi.fn(),
+    MockBenchStoreManifestError,
+    mockLoadBenchBranding: vi.fn(),
+    mockToBenchBrandingSnapshot: vi.fn(),
+    mockCreateBenchBrandingSignedUrlForStore: vi.fn(),
+    mockListBenchPresets: vi.fn(),
+    mockResolveBenchPreset: vi.fn(),
+    MockBenchPresetError,
+    mockListBenchConfigOptions: vi.fn(),
+    mockResolveBenchConfig: vi.fn(),
+    mockResolveBenchCost: vi.fn(),
+    mockBuildBenchCampaignSnapshot: vi.fn(),
+    mockReserveBenchRun: vi.fn(),
+    mockGetBenchRunByOperationId: vi.fn(),
+    mockSetBenchRunInput: vi.fn(),
+    mockConfirmBenchRun: vi.fn(),
+    mockFinalizeBenchRun: vi.fn(),
+    mockGetBenchRun: vi.fn(),
+    MockBenchRunError,
+    mockPersistBenchArtifact: vi.fn(),
+    mockListBenchArtifacts: vi.fn(),
+    mockCreateBenchArtifactSignedUrl: vi.fn(),
+    mockExecuteBenchRun: vi.fn(),
+    mockValidateArtifactTechnically: vi.fn(),
+    mockCreateLabTelemetryContext: vi.fn(),
+    mockSupabaseAdmin: {
+      from: vi.fn(),
+      storage: {
+        from: () => ({
+          download: async () => ({
+            data: {
+              arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
+            },
+            error: null,
+          }),
+        }),
+      },
+    },
+  };
+});
+
+vi.mock("@/lib/admin/require-admin", () => ({
+  requireAdmin: (...args: unknown[]) => mockRequireAdmin(...args),
+}));
+
+vi.mock("@/lib/lab/environment-guard", () => ({
+  LabEnvironmentError: MockLabEnvironmentError,
+  assertLabEnvironment: () => mockAssertLabEnvironment(),
+  labEnvironmentDeniedBody: (reason: string) => ({ error: "environment_blocked", reason }),
+  getLabEnvironment: vi.fn(),
+}));
+
+vi.mock("@/lib/supabase/server", () => ({
+  supabaseAdmin: mockSupabaseAdmin,
+}));
+
+vi.mock("@/lib/lab/persistence/artifact-service", () => ({
+  LAB_ARTIFACT_BUCKET: "lab-artifacts",
+  LAB_ALLOWED_ARTIFACT_MIME_TYPES: ["image/png", "image/jpeg", "image/webp"],
+}));
+
+vi.mock("@/lib/lab/bench/domain/store-manifest", () => ({
+  listBenchTestStores: (...args: unknown[]) => mockListBenchTestStores(...args),
+  assertBenchTestStore: (...args: unknown[]) => mockAssertBenchTestStore(...args),
+  BenchStoreManifestError: MockBenchStoreManifestError,
+}));
+
+vi.mock("@/lib/lab/bench/domain/branding-service", () => ({
+  loadBenchBranding: (...args: unknown[]) => mockLoadBenchBranding(...args),
+  toBenchBrandingSnapshot: (contract: unknown) => mockToBenchBrandingSnapshot(contract),
+}));
+
+vi.mock("@/lib/lab/bench/persistence/bench-branding-signer", () => ({
+  createBenchBrandingSignedUrlForStore: (...args: unknown[]) =>
+    mockCreateBenchBrandingSignedUrlForStore(...args),
+}));
+
+vi.mock("@/lib/lab/bench/domain/preset-registry", () => ({
+  listBenchPresets: () => mockListBenchPresets(),
+  resolveBenchPreset: (...args: unknown[]) => mockResolveBenchPreset(...args),
+  BenchPresetError: MockBenchPresetError,
+}));
+
+vi.mock("@/lib/lab/bench/domain/config-registry", () => ({
+  DEFAULT_BENCH_CONFIG: {
+    pipeline: "manual-direto",
+    formato: "1:1",
+    intencao: "oferta",
+    tipoConteudo: "produto",
+    estrutura: "peca-unica",
+    tema: "nenhum",
+  },
+  BENCH_REGISTRY_DIMENSIONS: [
+    "pipeline",
+    "formato",
+    "intencao",
+    "tipoConteudo",
+    "estrutura",
+    "tema",
+  ],
+  listBenchConfigOptions: (...args: unknown[]) => mockListBenchConfigOptions(...args),
+  resolveBenchConfig: (...args: unknown[]) => mockResolveBenchConfig(...args),
+}));
+
+vi.mock("@/lib/lab/bench/execution/bench-cost-resolver", () => ({
+  resolveBenchCost: (...args: unknown[]) => mockResolveBenchCost(...args),
+}));
+
+vi.mock("@/lib/lab/bench/domain/campaign-snapshot", () => ({
+  buildBenchCampaignSnapshot: (...args: unknown[]) => mockBuildBenchCampaignSnapshot(...args),
+}));
+
+vi.mock("@/lib/lab/bench/persistence/bench-run-service", () => ({
+  reserveBenchRun: (...args: unknown[]) => mockReserveBenchRun(...args),
+  getBenchRunByOperationId: (...args: unknown[]) => mockGetBenchRunByOperationId(...args),
+  setBenchRunInput: (...args: unknown[]) => mockSetBenchRunInput(...args),
+  confirmBenchRun: (...args: unknown[]) => mockConfirmBenchRun(...args),
+  finalizeBenchRun: (...args: unknown[]) => mockFinalizeBenchRun(...args),
+  getBenchRun: (...args: unknown[]) => mockGetBenchRun(...args),
+  BenchRunError: MockBenchRunError,
+}));
+
+vi.mock("@/lib/lab/bench/persistence/bench-artifact-service", () => ({
+  persistBenchArtifact: (...args: unknown[]) => mockPersistBenchArtifact(...args),
+  listBenchArtifacts: (...args: unknown[]) => mockListBenchArtifacts(...args),
+  createBenchArtifactSignedUrl: (...args: unknown[]) => mockCreateBenchArtifactSignedUrl(...args),
+}));
+
+vi.mock("@/lib/lab/bench/execution/bench-execution-service", () => ({
+  executeBenchRun: (...args: unknown[]) => mockExecuteBenchRun(...args),
+}));
+
+vi.mock("@/lib/lab/bench/gateway/runtime", () => ({
+  createBenchAdapterRegistry: () => ({}),
+  createBenchGateway: () => ({ invoke: vi.fn() }),
+}));
+
+vi.mock("@/lib/lab/gateway/runtime", () => ({
+  createLabTelemetryContext: (...args: unknown[]) => mockCreateLabTelemetryContext(...args),
+}));
+
+vi.mock("@/lib/ai/lab-telemetry-sink", () => ({
+  LabTelemetrySink: class {
+    constructor(_params?: unknown) {}
+  },
+}));
+
+vi.mock("@/lib/ai", () => ({
+  defaultAiModelResolver: {},
+}));
+
+vi.mock("@/lib/lab/technical-validation", () => ({
+  validateArtifactTechnically: (...args: unknown[]) => mockValidateArtifactTechnically(...args),
+}));
+
+import { ForbiddenError } from "@/lib/auth/errors";
+import type { LabEnvironmentReason } from "@/lib/lab/environment-guard";
+
+/**
+ * F48.2.2 — contrato HTTP da API administrativa da bancada
+ * (`/api/admin/laboratorio/bancada`).
+ *
+ * Todas as dependências externas (admin, guarda de ambiente, Supabase e serviços
+ * da bancada) são mockadas e cada rota é importada dinamicamente dentro do teste.
+ * Nenhuma chamada de rede e **nenhuma chamada paga** em nenhum caminho: o
+ * `executeBenchRun` é um mock e nenhum provider é instanciado.
+ */
+
+const BASE = "http://localhost/api/admin/laboratorio/bancada";
+const ADMIN_ID = "admin-1";
+const RUN_ID = "11111111-1111-4111-8111-111111111111";
+const OP_ID = "22222222-2222-4222-8222-222222222222";
+const STORE_ID = "33333333-3333-4333-8333-333333333333";
+const OUTSIDE_STORE_ID = "99999999-9999-4999-8999-999999999999";
+const PRESET_ID = "gpt-image-2-low";
+
+const PRESET = {
+  id: PRESET_ID,
+  label: "GPT Image 2 · low",
+  capability: "campaign_image",
+  provider: "openai",
+  model: "gpt-image-2",
+  protocol: "images",
+  quality: "low",
+  size: "1024x1024",
+  enabled: true,
+};
+
+const BRANDING_CONTRACT = {
+  storeId: STORE_ID,
+  storeName: "Loja de teste A",
+  segment: "mercado",
+  subsegment: null,
+  toneOfVoice: null,
+  positioning: null,
+  shortDescription: null,
+  slogan: null,
+  typographyDirection: "serif",
+  safeColorTokens: {},
+  brandColorsChosen: [],
+  logoColorsDetected: [],
+  visualStyle: null,
+  visualTone: null,
+  brandPersonality: null,
+  campaignGuidelines: null,
+  campaignBrief: null,
+  profileSource: "synced",
+  profileStatus: "synced",
+  logoUrl: "https://signed.test/logo",
+  signatureUrl: "https://signed.test/signature",
+  assets: [
+    {
+      assetType: "logo",
+      variantType: "primary",
+      storagePath: "logos/loja-a.png",
+      mimeType: "image/png",
+      width: 256,
+      height: 256,
+      sizeBytes: 1024,
+      checksum: "checksum-logo",
+      signedUrl: "https://signed.test/logo",
+    },
+  ],
+};
+
+const DRAFT_RUN = {
+  id: RUN_ID,
+  operationId: OP_ID,
+  status: "draft",
+  createdBy: ADMIN_ID,
+  createdAt: "2026-09-28T00:00:00.000Z",
+  startedAt: null,
+  finishedAt: null,
+  campaignSnapshot: null,
+  brandingSnapshot: null,
+  config: null,
+  promptSent: null,
+  references: null,
+  provider: null,
+  protocol: null,
+  model: null,
+  size: null,
+  quality: null,
+  intent: null,
+  contentType: null,
+  structure: null,
+  theme: null,
+  latencyMs: null,
+  usage: null,
+  estimatedCostUsd: null,
+  costDetail: null,
+  costSource: null,
+  costRuleVersion: null,
+  errorType: null,
+  errorMessage: null,
+  technicalValidation: null,
+};
+
+const DETAIL_RUN = {
+  ...DRAFT_RUN,
+  status: "succeeded",
+  config: {
+    pipeline: "manual-direto",
+    formato: "1:1",
+    modelo: "gpt-image-2",
+    qualidade: "low",
+    intencao: "oferta",
+    tipoConteudo: "produto",
+    estrutura: "peca-unica",
+    tema: "nenhum",
+  },
+  campaignSnapshot: { product: { source: "manual", name: "Produto" } },
+  brandingSnapshot: { typographyDirection: "serif" },
+  promptSent: "prompt manual",
+  references: [`bench/${RUN_ID}/inputs/0.png`],
+  provider: "openai",
+  protocol: "images",
+  model: "gpt-image-2",
+  size: "1024x1024",
+  quality: "low",
+  intent: "oferta",
+  contentType: "produto",
+  structure: "peca-unica",
+  theme: "nenhum",
+  latencyMs: 12,
+  usage: { promptTokens: 1000 },
+  estimatedCostUsd: 0.006,
+  costDetail: { is_estimate: true, cost_source: "bench_local_pricing" },
+  costSource: "bench_local_pricing",
+  costRuleVersion: "2026-09-bench-1",
+};
+
+const VALID_RUN_BODY = {
+  operationId: OP_ID,
+  runId: RUN_ID,
+  storeId: STORE_ID,
+  presetId: PRESET_ID,
+  prompt: "prompt manual",
+  references: [`bench/${RUN_ID}/inputs/0.png`],
+  confirmed: true,
+  product: { name: "Produto", priceCents: 1000, originalPriceCents: 1500 },
+  offer: { text: "Oferta imperdível" },
+};
+
+// ─── Invocação das rotas (import dinâmico) ───────────────────────────────────
+
+function jsonRequest(url: string, body: unknown): NextRequest {
+  return new NextRequest(url, {
+    method: "POST",
+    body: JSON.stringify(body),
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+function multipartRequest(url: string, form: FormData): NextRequest {
+  return new NextRequest(url, { method: "POST", body: form });
+}
+
+function buildInputForm(operationId: string): FormData {
+  const form = new FormData();
+  form.append("operationId", operationId);
+  form.append(
+    "files",
+    new File([new Uint8Array([1, 2, 3])], "produto.png", { type: "image/png" }),
+  );
+  return form;
+}
+
+async function getStores(): Promise<Response> {
+  const { GET } = await import("@/app/api/admin/laboratorio/bancada/stores/route");
+  return GET(new NextRequest(`${BASE}/stores`));
+}
+
+async function getBranding(storeId: string = STORE_ID): Promise<Response> {
+  const { GET } = await import("@/app/api/admin/laboratorio/bancada/branding/route");
+  return GET(new NextRequest(`${BASE}/branding?storeId=${storeId}`));
+}
+
+async function getPresets(): Promise<Response> {
+  const { GET } = await import("@/app/api/admin/laboratorio/bancada/presets/route");
+  return GET(new NextRequest(`${BASE}/presets`));
+}
+
+async function getEstimate(
+  storeId: string = STORE_ID,
+  presetId: string = PRESET_ID,
+): Promise<Response> {
+  const { GET } = await import("@/app/api/admin/laboratorio/bancada/estimate/route");
+  return GET(new NextRequest(`${BASE}/estimate?storeId=${storeId}&presetId=${presetId}`));
+}
+
+async function postInputs(form: FormData): Promise<Response> {
+  const { POST } = await import("@/app/api/admin/laboratorio/bancada/inputs/route");
+  return POST(multipartRequest(`${BASE}/inputs`, form));
+}
+
+async function postRun(body: unknown): Promise<Response> {
+  const { POST } = await import("@/app/api/admin/laboratorio/bancada/runs/route");
+  return POST(jsonRequest(`${BASE}/runs`, body));
+}
+
+async function getRun(id: string = RUN_ID): Promise<Response> {
+  const { GET } = await import("@/app/api/admin/laboratorio/bancada/runs/[id]/route");
+  return GET(new NextRequest(`${BASE}/runs/${id}`), { params: Promise.resolve({ id }) });
+}
+
+interface RouteCall {
+  name: string;
+  call: () => Promise<Response>;
+}
+
+function allRouteCalls(): RouteCall[] {
+  return [
+    { name: "GET /stores", call: getStores },
+    { name: "GET /branding", call: () => getBranding() },
+    { name: "GET /presets", call: getPresets },
+    { name: "GET /estimate", call: () => getEstimate() },
+    { name: "POST /inputs", call: () => postInputs(buildInputForm(OP_ID)) },
+    { name: "POST /runs", call: () => postRun(VALID_RUN_BODY) },
+    { name: "GET /runs/[id]", call: () => getRun() },
+  ];
+}
+
+/** `true` quando algum serviço da bancada foi acionado. */
+function anyServiceCalled(): boolean {
+  return [
+    mockListBenchTestStores,
+    mockAssertBenchTestStore,
+    mockLoadBenchBranding,
+    mockCreateBenchBrandingSignedUrlForStore,
+    mockListBenchPresets,
+    mockResolveBenchPreset,
+    mockResolveBenchCost,
+    mockBuildBenchCampaignSnapshot,
+    mockReserveBenchRun,
+    mockGetBenchRunByOperationId,
+    mockSetBenchRunInput,
+    mockConfirmBenchRun,
+    mockFinalizeBenchRun,
+    mockGetBenchRun,
+    mockPersistBenchArtifact,
+    mockListBenchArtifacts,
+    mockCreateBenchArtifactSignedUrl,
+    mockExecuteBenchRun,
+  ].some((mock) => mock.mock.calls.length > 0);
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+
+  mockRequireAdmin.mockResolvedValue({ userId: ADMIN_ID });
+  mockAssertLabEnvironment.mockReturnValue({
+    enabled: true,
+    supabaseHost: "localhost",
+    local: true,
+    reason: "ok",
+  });
+
+  mockListBenchTestStores.mockResolvedValue([
+    { id: STORE_ID, label: "Loja de teste A", name: "Loja A", segment: "mercado" },
+  ]);
+  mockAssertBenchTestStore.mockResolvedValue({
+    id: STORE_ID,
+    name: "Loja A",
+    segment: "mercado",
+    subsegment: null,
+    toneOfVoice: null,
+    positioning: null,
+    shortDescription: null,
+    slogan: null,
+  });
+  mockLoadBenchBranding.mockResolvedValue(BRANDING_CONTRACT);
+  mockToBenchBrandingSnapshot.mockImplementation((contract: unknown) => contract);
+  mockCreateBenchBrandingSignedUrlForStore.mockResolvedValue("https://signed.test/branding");
+
+  mockListBenchPresets.mockReturnValue([
+    PRESET,
+    {
+      id: "gpt-image-2-responses",
+      label: "GPT Image 2 · responses (desabilitado)",
+      capability: "campaign_image",
+      provider: "openai",
+      model: "gpt-image-2",
+      protocol: "responses",
+      quality: "low",
+      size: "1024x1024",
+      enabled: false,
+      reason: "protocolo_nao_confirmado",
+    },
+  ]);
+  mockResolveBenchPreset.mockReturnValue(PRESET);
+  mockListBenchConfigOptions.mockReturnValue([
+    { id: "manual-direto", label: "Manual direto", enabled: true },
+    { id: "ia-assistido", label: "IA assistido", enabled: false, reason: "fora_do_primeiro_recorte" },
+  ]);
+  mockResolveBenchConfig.mockImplementation((dims: unknown) => dims);
+  mockResolveBenchCost.mockReturnValue({
+    costSource: "bench_local_pricing",
+    costRuleVersion: "2026-09-bench-1",
+    mode: "token_based",
+    coverage: "complete",
+    estimatedCostUsd: 0.006,
+    isEstimate: true,
+  });
+
+  mockBuildBenchCampaignSnapshot.mockImplementation(
+    (params: { product: { name: string }; offer: { text: string }; config: unknown }) => ({
+      product: { source: "manual", name: params.product.name },
+      commercial: { intent: "offer" },
+      offer: { text: params.offer.text, validUntil: null },
+      intent: "offer",
+      intentResolvedFrom: "explicit",
+      config: params.config,
+      format: "1:1",
+      locale: "pt-BR",
+    }),
+  );
+
+  mockReserveBenchRun.mockResolvedValue({ runId: RUN_ID, idempotent: false });
+  mockGetBenchRunByOperationId.mockResolvedValue({ ...DRAFT_RUN });
+  mockSetBenchRunInput.mockResolvedValue(undefined);
+  mockConfirmBenchRun.mockResolvedValue(undefined);
+  mockFinalizeBenchRun.mockResolvedValue(undefined);
+  mockGetBenchRun.mockResolvedValue({ ...DETAIL_RUN });
+
+  mockPersistBenchArtifact.mockImplementation(
+    (params: { runId: string; index?: number }) => ({
+      artifactId: "artifact-1",
+      storagePath: `bench/${params.runId}/inputs/${params.index ?? 0}.png`,
+      checksum: "checksum-input",
+      bytes: 3,
+    }),
+  );
+  mockListBenchArtifacts.mockResolvedValue([
+    {
+      id: "artifact-1",
+      kind: "output",
+      storagePath: `bench/${RUN_ID}/output.png`,
+      mimeType: "image/png",
+      width: 1024,
+      height: 1024,
+      bytes: 1234,
+      checksum: "checksum-output",
+      createdAt: "2026-09-28T00:01:00.000Z",
+    },
+  ]);
+  mockCreateBenchArtifactSignedUrl.mockResolvedValue("https://signed.test/artifact");
+
+  mockExecuteBenchRun.mockResolvedValue({ status: "succeeded", latencyMs: 10, cost: null });
+  mockValidateArtifactTechnically.mockResolvedValue({
+    decodable: true,
+    mimeType: "image/png",
+    width: 4,
+    height: 4,
+    bytes: 3,
+    aspectRatio: 1,
+    uniform: false,
+    emptyOrCorrupt: false,
+    alerts: [],
+    structuredOutputValid: null,
+    ocrAlert: null,
+  });
+  mockCreateLabTelemetryContext.mockImplementation((params: unknown) => params);
+});
+
+// ─── 1. 403 não-admin ────────────────────────────────────────────────────────
+
+describe("contrato da API da bancada — 403 para não-admin", () => {
+  it.each(allRouteCalls().map((route) => [route.name, route.call] as const))(
+    "%s nega não-admin com 403 e não executa nenhuma operação",
+    async (_name, call) => {
+      mockRequireAdmin.mockRejectedValue(new ForbiddenError("Acesso restrito a administradores"));
+
+      const res = await call();
+
+      expect(res.status).toBe(403);
+      expect(anyServiceCalled()).toBe(false);
+      expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+    },
+  );
+});
+
+// ─── 2. 403 ambiente bloqueado ───────────────────────────────────────────────
+
+describe("contrato da API da bancada — 403 com ambiente bloqueado", () => {
+  it.each(allRouteCalls().map((route) => [route.name, route.call] as const))(
+    "%s recusa com environment_blocked e nenhum acesso à bancada",
+    async (_name, call) => {
+      mockAssertLabEnvironment.mockImplementation(() => {
+        throw new MockLabEnvironmentError("disabled_flag" as LabEnvironmentReason);
+      });
+
+      const res = await call();
+      const body = await res.json();
+
+      expect(res.status).toBe(403);
+      expect(body).toEqual({ error: "environment_blocked", reason: "disabled_flag" });
+      expect(anyServiceCalled()).toBe(false);
+      expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+    },
+  );
+});
+
+// ─── 3. Rotas de leitura ─────────────────────────────────────────────────────
+
+describe("contrato da API da bancada — leitura", () => {
+  it("GET /stores ⇒ 200 apenas com as lojas do manifesto", async () => {
+    const res = await getStores();
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.stores).toHaveLength(1);
+    expect(body.stores[0].id).toBe(STORE_ID);
+    expect(mockListBenchTestStores).toHaveBeenCalledTimes(1);
+  });
+
+  it("GET /branding ⇒ 200 com tipografia e URLs do signer restrito (não do signer de artefatos)", async () => {
+    const res = await getBranding();
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.branding.typographyDirection).toBe("serif");
+    expect(body.branding.assets[0].signedUrl).toBe("https://signed.test/branding");
+    // O signer restrito de branding é o único usado — nunca o de artefatos.
+    expect(mockCreateBenchBrandingSignedUrlForStore).toHaveBeenCalled();
+    expect(mockCreateBenchArtifactSignedUrl).not.toHaveBeenCalled();
+    expect(mockAssertBenchTestStore).toHaveBeenCalled();
+    expect(mockLoadBenchBranding).toHaveBeenCalled();
+  });
+
+  it("GET /presets ⇒ 200 com habilitados e desabilitados com motivo", async () => {
+    const res = await getPresets();
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    const disabled = body.presets.find(
+      (preset: { id: string }) => preset.id === "gpt-image-2-responses",
+    );
+    expect(disabled.enabled).toBe(false);
+    expect(disabled.reason).toBe("protocolo_nao_confirmado");
+  });
+
+  it("GET /estimate ⇒ 200 com cobertura complete pelo resolvedor local", async () => {
+    const res = await getEstimate();
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.coverage).toBe("complete");
+    expect(body.estimatedUsd).toBe(0.006);
+    expect(body.costSource).toBe("bench_local_pricing");
+    expect(mockResolveBenchCost).toHaveBeenCalledTimes(1);
+  });
+
+  it("GET /estimate com cobertura partial continua 200 (não bloqueia)", async () => {
+    mockResolveBenchCost.mockReturnValue({
+      costSource: "bench_local_pricing",
+      costRuleVersion: "2026-09-bench-1",
+      mode: "token_based",
+      coverage: "partial",
+      estimatedCostUsd: null,
+      isEstimate: true,
+    });
+
+    const res = await getEstimate();
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.coverage).toBe("partial");
+    expect(body.estimatedUsd).toBeNull();
+  });
+
+  it("GET /estimate com cobertura missing continua 200 (não bloqueia)", async () => {
+    mockResolveBenchCost.mockReturnValue({
+      costSource: "bench_local_pricing",
+      costRuleVersion: "2026-09-bench-1",
+      mode: "unknown",
+      coverage: "missing",
+      estimatedCostUsd: null,
+      isEstimate: true,
+    });
+
+    const res = await getEstimate();
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.coverage).toBe("missing");
+  });
+
+  it("GET /estimate com preset desabilitado ⇒ 400 preset_not_enabled sem resolver custo", async () => {
+    mockResolveBenchPreset.mockImplementation(() => {
+      throw new MockBenchPresetError("gpt-image-2-responses", "protocolo_nao_confirmado");
+    });
+
+    const res = await getEstimate(STORE_ID, "gpt-image-2-responses");
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("preset_not_enabled");
+    expect(mockResolveBenchCost).not.toHaveBeenCalled();
+  });
+
+  it("GET /branding com storeId fora do manifesto ⇒ recusa sem leitura de branding", async () => {
+    mockAssertBenchTestStore.mockRejectedValue(
+      new MockBenchStoreManifestError("store_not_in_manifest", OUTSIDE_STORE_ID),
+    );
+
+    const res = await getBranding(OUTSIDE_STORE_ID);
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("store_not_in_manifest");
+    expect(mockLoadBenchBranding).not.toHaveBeenCalled();
+  });
+
+  it("GET /estimate com storeId fora do manifesto ⇒ recusa sem resolver custo", async () => {
+    mockAssertBenchTestStore.mockRejectedValue(
+      new MockBenchStoreManifestError("store_not_in_manifest", OUTSIDE_STORE_ID),
+    );
+
+    const res = await getEstimate(OUTSIDE_STORE_ID);
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("store_not_in_manifest");
+    expect(mockResolveBenchCost).not.toHaveBeenCalled();
+  });
+});
+
+// ─── 4. Upload multipart (/inputs) ───────────────────────────────────────────
+
+describe("contrato da API da bancada — upload multipart", () => {
+  it("grava a entrada com metadados + checksum sob bench/{runId}/inputs e devolve runId", async () => {
+    const res = await postInputs(buildInputForm(OP_ID));
+    const body = await res.json();
+
+    expect(res.status).toBe(201);
+    expect(body.runId).toBe(RUN_ID);
+    expect(body.inputs).toHaveLength(1);
+    expect(body.inputs[0]).toMatchObject({
+      path: `bench/${RUN_ID}/inputs/0.png`,
+      mimeType: "image/png",
+      width: 4,
+      height: 4,
+      bytes: 3,
+      checksum: "checksum-input",
+    });
+
+    // Reserva em draft (sem slot) + persistência do artefato de entrada.
+    expect(mockReserveBenchRun).toHaveBeenCalledWith(
+      expect.objectContaining({ operationId: OP_ID, createdBy: ADMIN_ID }),
+    );
+    const persistCall = mockPersistBenchArtifact.mock.calls[0][0] as {
+      kind: string;
+      index: number;
+      finalizeRun: (args: unknown) => Promise<void>;
+    };
+    expect(persistCall.kind).toBe("input");
+    expect(persistCall.index).toBe(0);
+    expect(typeof persistCall.finalizeRun).toBe("function");
+
+    // O binding injeta o client no finalizeBenchRun.
+    await persistCall.finalizeRun({ runId: RUN_ID, status: "failed", errorType: "x" });
+    expect(mockFinalizeBenchRun).toHaveBeenCalledWith(
+      expect.objectContaining({ runId: RUN_ID, status: "failed", errorType: "x" }),
+    );
+  });
+
+  it("sem operationId válido ⇒ 400 e nenhuma reserva", async () => {
+    const form = new FormData();
+    form.append("operationId", "não-é-uuid");
+    form.append("files", new File([new Uint8Array([1])], "x.png", { type: "image/png" }));
+
+    const res = await postInputs(form);
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("invalid_payload");
+    expect(mockReserveBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("falha na persistência de metadados finaliza o run (draft) como failed sem órfão", async () => {
+    mockPersistBenchArtifact.mockRejectedValue(new Error("artifact_persistence_failed"));
+
+    const res = await postInputs(buildInputForm(OP_ID));
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("artifact_persistence_failed");
+    expect(mockFinalizeBenchRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runId: RUN_ID,
+        status: "failed",
+        errorType: "artifact_persistence_failed",
+      }),
+    );
+  });
+});
+
+// ─── 5. Execução (/runs) ─────────────────────────────────────────────────────
+
+describe("contrato da API da bancada — execução com confirmação", () => {
+  it("sem confirmed: true ⇒ 422 antes do parse e sem chamada paga", async () => {
+    const { confirmed, ...withoutConfirmation } = VALID_RUN_BODY;
+    void confirmed;
+
+    const res = await postRun(withoutConfirmation);
+    const body = await res.json();
+
+    expect(res.status).toBe(422);
+    expect(body).toEqual({ error: "confirmation_required" });
+    expect(mockGetBenchRunByOperationId).not.toHaveBeenCalled();
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("payload inválido ⇒ 400 com detalhes e nenhuma mutação", async () => {
+    const res = await postRun({ ...VALID_RUN_BODY, runId: "não-é-uuid" });
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("invalid_payload");
+    expect(Array.isArray(body.details)).toBe(true);
+    expect(mockSetBenchRunInput).not.toHaveBeenCalled();
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("operation_id sem draft prévio ⇒ 400 e nenhum run criado", async () => {
+    mockGetBenchRunByOperationId.mockResolvedValue(null);
+
+    const res = await postRun(VALID_RUN_BODY);
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("invalid_payload");
+    expect(mockReserveBenchRun).not.toHaveBeenCalled();
+    expect(mockConfirmBenchRun).not.toHaveBeenCalled();
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("runId divergente do draft resolvido ⇒ 400 sem mutação", async () => {
+    mockGetBenchRunByOperationId.mockResolvedValue({
+      ...DRAFT_RUN,
+      id: "44444444-4444-4444-8444-444444444444",
+    });
+
+    const res = await postRun(VALID_RUN_BODY);
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("invalid_payload");
+    expect(mockSetBenchRunInput).not.toHaveBeenCalled();
+  });
+
+  it("autor incorreto ⇒ 403 sem mutação", async () => {
+    mockGetBenchRunByOperationId.mockResolvedValue({ ...DRAFT_RUN, createdBy: "outro-admin" });
+
+    const res = await postRun(VALID_RUN_BODY);
+
+    expect(res.status).toBe(403);
+    expect(mockSetBenchRunInput).not.toHaveBeenCalled();
+  });
+
+  it("estado terminal ⇒ 200 idempotente sem nova chamada paga", async () => {
+    mockGetBenchRunByOperationId.mockResolvedValue({ ...DRAFT_RUN, status: "succeeded" });
+
+    const res = await postRun(VALID_RUN_BODY);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toEqual({ idempotent: true, runId: RUN_ID });
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("estado pending/running ⇒ 409 bench_run_already_active sem chamada paga", async () => {
+    mockGetBenchRunByOperationId.mockResolvedValue({ ...DRAFT_RUN, status: "running" });
+
+    const res = await postRun(VALID_RUN_BODY);
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toBe("bench_run_already_active");
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("preset desabilitado ⇒ 400 preset_not_enabled sem chamada paga", async () => {
+    mockResolveBenchPreset.mockImplementation(() => {
+      throw new MockBenchPresetError(PRESET_ID, "protocolo_nao_confirmado");
+    });
+
+    const res = await postRun({ ...VALID_RUN_BODY, presetId: "gpt-image-2-responses" });
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("preset_not_enabled");
+    expect(mockConfirmBenchRun).not.toHaveBeenCalled();
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("storeId fora do manifesto ⇒ recusa antes de ler branding", async () => {
+    mockAssertBenchTestStore.mockRejectedValue(
+      new MockBenchStoreManifestError("store_not_in_manifest", OUTSIDE_STORE_ID),
+    );
+
+    const res = await postRun({ ...VALID_RUN_BODY, storeId: OUTSIDE_STORE_ID });
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("store_not_in_manifest");
+    expect(mockLoadBenchBranding).not.toHaveBeenCalled();
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("confirmação concorrente ⇒ 409 bench_run_already_active sem chamada paga", async () => {
+    mockConfirmBenchRun.mockRejectedValue(new MockBenchRunError("bench_run_already_active"));
+
+    const res = await postRun(VALID_RUN_BODY);
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toBe("bench_run_already_active");
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("deriva a configuração explicitamente (registry travado + preset) e fixa antes de confirmar", async () => {
+    const res = await postRun(VALID_RUN_BODY);
+    await res.text();
+
+    // A ordem: manifesto → leitura de branding → fixação em draft → CAS.
+    const assertIdx = mockAssertBenchTestStore.mock.invocationCallOrder[0];
+    const brandingIdx = mockLoadBenchBranding.mock.invocationCallOrder[0];
+    const setIdx = mockSetBenchRunInput.mock.invocationCallOrder[0];
+    const confirmIdx = mockConfirmBenchRun.mock.invocationCallOrder[0];
+    expect(assertIdx).toBeLessThan(brandingIdx);
+    expect(brandingIdx).toBeLessThan(setIdx);
+    expect(setIdx).toBeLessThan(confirmIdx);
+
+    const setCall = mockSetBenchRunInput.mock.calls[0][0] as {
+      config: Record<string, string>;
+      provider: string;
+      model: string;
+      size: string;
+      quality: string;
+      references: string[];
+      promptSent: string;
+    };
+    expect(setCall.config).toMatchObject({
+      pipeline: "manual-direto",
+      formato: "1:1",
+      intencao: "oferta",
+      tipoConteudo: "produto",
+      estrutura: "peca-unica",
+      tema: "nenhum",
+      modelo: "gpt-image-2",
+      qualidade: "low",
+    });
+    expect(setCall.provider).toBe("openai");
+    expect(setCall.model).toBe("gpt-image-2");
+    expect(setCall.size).toBe("1024x1024");
+    expect(setCall.quality).toBe("low");
+    expect(setCall.references).toEqual([`bench/${RUN_ID}/inputs/0.png`]);
+    expect(setCall.promptSent).toBe("prompt manual");
+    expect(mockResolveBenchConfig).toHaveBeenCalled();
+    expect(mockBuildBenchCampaignSnapshot).toHaveBeenCalled();
+    expect(mockConfirmBenchRun).toHaveBeenCalledWith(
+      expect.objectContaining({ runId: RUN_ID }),
+    );
+  });
+
+  it("execução confirmada ⇒ NDJSON com exatamente 1 evento terminal e o runId", async () => {
+    const res = await postRun(VALID_RUN_BODY);
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("application/x-ndjson");
+
+    const text = await res.text();
+    const events = text
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+      .map((line) => JSON.parse(line) as { type: string; runId?: string });
+    const terminals = events.filter((event) => event.type === "done" || event.type === "error");
+
+    expect(terminals).toHaveLength(1);
+    expect(terminals[0].type).toBe("done");
+    expect(terminals[0].runId).toBe(RUN_ID);
+    expect(mockExecuteBenchRun).toHaveBeenCalledTimes(1);
+  });
+
+  it("falha do serviço ⇒ stream com exatamente 1 terminal de erro sanitizado", async () => {
+    mockExecuteBenchRun.mockResolvedValue({
+      status: "failed",
+      latencyMs: 5,
+      cost: null,
+      errorType: "provider_error",
+      errorMessage: "falha [redacted]",
+    });
+
+    const res = await postRun(VALID_RUN_BODY);
+    const text = await res.text();
+
+    const terminals = text
+      .split("\n")
+      .filter((line) => line.trim().length > 0)
+      .map((line) => JSON.parse(line) as { type: string })
+      .filter((event) => event.type === "done" || event.type === "error");
+    expect(terminals).toHaveLength(1);
+    expect(terminals[0].type).toBe("error");
+  });
+
+  it("nenhum secret aparece no corpo/stream (erro do serviço é fixo)", async () => {
+    mockExecuteBenchRun.mockRejectedValue(new Error("Bearer sk-abc123456789"));
+
+    const res = await postRun(VALID_RUN_BODY);
+    const text = await res.text();
+
+    expect(text).not.toMatch(/sk-[A-Za-z0-9]/);
+    expect(text).not.toContain("Bearer ");
+    expect(text).toContain("Execução falhou");
+  });
+});
+
+// ─── 6. Detalhe (/runs/[id]) ─────────────────────────────────────────────────
+
+describe("contrato da API da bancada — detalhe e artefatos", () => {
+  it("GET /runs/[id] ⇒ 200 com configuração, prompt, latência, usage, custo com origem e URLs assinadas", async () => {
+    const res = await getRun();
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.run.config).toMatchObject({ pipeline: "manual-direto" });
+    expect(body.run.promptSent).toBe("prompt manual");
+    expect(body.run.latencyMs).toBe(12);
+    expect(body.run.usage).toMatchObject({ promptTokens: 1000 });
+    expect(body.run.costSource).toBe("bench_local_pricing");
+    expect(body.run.costRuleVersion).toBe("2026-09-bench-1");
+    // Custo estimado não é rotulado como faturado.
+    expect(body.run.costDetail.is_estimate).toBe(true);
+    expect(body.artifacts[0].signedUrl).toBe("https://signed.test/artifact");
+    expect(body.artifacts[0].checksum).toBe("checksum-output");
+    expect(mockCreateBenchArtifactSignedUrl).toHaveBeenCalled();
+  });
+
+  it("GET /runs/[id] ausente ⇒ 404 run_not_found", async () => {
+    mockGetBenchRun.mockResolvedValue(null);
+
+    const res = await getRun();
+
+    expect(res.status).toBe(404);
+    expect((await res.json()).error).toBe("run_not_found");
+  });
+
+  it("acesso não-admin a artefato é negado (403) sem listar/assinar", async () => {
+    mockRequireAdmin.mockRejectedValue(new ForbiddenError("Acesso restrito a administradores"));
+
+    const res = await getRun();
+
+    expect(res.status).toBe(403);
+    expect(mockListBenchArtifacts).not.toHaveBeenCalled();
+    expect(mockCreateBenchArtifactSignedUrl).not.toHaveBeenCalled();
+  });
+
+  it("nenhum secret aparece no detalhe", async () => {
+    const res = await getRun();
+    const text = await res.text();
+
+    expect(text).not.toMatch(/sk-[A-Za-z0-9]/);
+    expect(text).not.toContain("Bearer ");
+    expect(text).not.toContain("AIza");
+    expect(text).not.toContain("campaign-images");
+  });
+});
+
+// ─── 7. Contrato de fonte (ordem de guards, paths, ausência de produção) ─────
+
+const ROUTES_DIR = "src/app/api/admin/laboratorio/bancada";
+
+function readRoute(relative: string): string {
+  return readFileSync(path.resolve(process.cwd(), `${ROUTES_DIR}/${relative}`), "utf8");
+}
+
+describe("contrato de fonte — ordem de guards e fronteiras", () => {
+  const routeFiles = [
+    "stores/route.ts",
+    "branding/route.ts",
+    "presets/route.ts",
+    "estimate/route.ts",
+    "inputs/route.ts",
+    "runs/route.ts",
+    "runs/[id]/route.ts",
+  ];
+
+  it.each(routeFiles)("%s chama await requireAdmin() antes de assertLabEnvironment()", (file) => {
+    const source = readRoute(file);
+    const adminIdx = source.indexOf("await requireAdmin()");
+    const envIdx = source.indexOf("assertLabEnvironment()");
+    expect(adminIdx).toBeGreaterThanOrEqual(0);
+    expect(envIdx).toBeGreaterThan(adminIdx);
+    expect(source).toContain("labEnvironmentDeniedBody(error.reason)");
+  });
+
+  it("branding/estimate validam o manifesto antes de qualquer leitura com storeId", () => {
+    const branding = readRoute("branding/route.ts");
+    expect(branding.indexOf("await assertBenchTestStore(")).toBeLessThan(
+      branding.indexOf("await loadBenchBranding("),
+    );
+    const estimate = readRoute("estimate/route.ts");
+    expect(estimate.indexOf("await assertBenchTestStore(")).toBeLessThan(
+      estimate.indexOf("resolveBenchCost("),
+    );
+  });
+
+  it("branding usa o signer restrito e nunca o signer de artefatos", () => {
+    const source = readRoute("branding/route.ts");
+    expect(source).toContain("createBenchBrandingSignedUrl");
+    expect(source).not.toContain("createArtifactSignedUrl");
+  });
+
+  it("estimate usa o resolvedor local da bancada", () => {
+    expect(readRoute("estimate/route.ts")).toContain("resolveBenchCost");
+  });
+
+  it("inputs reserva em draft, persiste entradas com finalizeRun e nunca toca campaign-images", () => {
+    const source = readRoute("inputs/route.ts");
+    expect(source).toContain("reserveBenchRun");
+    expect(source).toContain("persistBenchArtifact");
+    expect(source).toContain("finalizeRun: (args) => finalizeBenchRun({ client, ...args })");
+    expect(source).not.toContain("campaign-images");
+  });
+
+  it("runs resolve o draft, fixa a configuração, confirma o CAS e emite NDJSON", () => {
+    const source = readRoute("runs/route.ts");
+    expect(source).toContain("confirmation_required");
+    expect(source).toContain("bench_run_already_active");
+    expect(source).toContain("preset_not_enabled");
+    expect(source).toContain("application/x-ndjson");
+    expect(source).toContain("getBenchRunByOperationId");
+    expect(source).toContain("setBenchRunInput");
+    expect(source).toContain("confirmBenchRun");
+    expect(source).toContain("assertBenchTestStore");
+    expect(source).toContain("loadBenchBranding");
+    expect(source).toContain("buildBenchCampaignSnapshot");
+    expect(source).toContain("resolveBenchConfig");
+    expect(source).toContain("resolveBenchPreset");
+    // Não cria run na confirmação e não lê `preset.config`.
+    expect(source).not.toContain("reserveBenchRun");
+    expect(source).not.toContain("preset.config");
+  });
+
+  it("runs/[id] assina os artefatos pelo signer do laboratório", () => {
+    const source = readRoute("runs/[id]/route.ts");
+    expect(source).toContain("createBenchArtifactSignedUrl");
+    expect(source).toContain("listBenchArtifacts");
+  });
+
+  it("nenhuma rota da bancada toca a produção (campaign-images/prompts/ai_model_selection)", () => {
+    for (const file of routeFiles) {
+      const source = readRoute(file);
+      expect(source).not.toContain("campaign-images");
+      expect(source).not.toContain("generation_events");
+      expect(source).not.toContain("ai_model_selection");
+    }
+  });
+});
