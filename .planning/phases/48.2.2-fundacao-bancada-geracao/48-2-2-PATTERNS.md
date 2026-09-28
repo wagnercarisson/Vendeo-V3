@@ -7,6 +7,8 @@
 **Idioma:** PT-BR
 
 > Todos os caminhos e números de linha abaixo foram verificados contra o código atual. Nenhum analog foi inventado. Onde um arquivo novo ainda não tem nome canônico, o nome sugerido é explicitamente marcado como "nome a critério do plano"; o **analog** é sempre real.
+>
+> **Correção 388db445 (base):** as seções 3 (preset registry) e 4 (branding) foram atualizadas para a allowlist própria da bancada (`BENCH_MODEL_ALLOWLIST`) e para o signer dedicado `createBenchBrandingSignedUrl`; as referências a `MODEL_ALLOWLIST` e `createArtifactSignedUrl` ficam **apenas** como analog de forma — **não** como fonte/autoridade da bancada.
 
 ---
 
@@ -16,7 +18,7 @@
 |-------------------------|-------|----------------|---------------------|-----------|
 | `src/lib/lab/bench/domain/schemas.ts` | domain | transform | `src/lib/lab/domain/schemas.ts` | exato (mesmo bounded context) |
 | `src/lib/lab/bench/domain/config-registry.ts` | config/registry | transform | `src/lib/ai/model-registry.ts` + `src/lib/lab/domain/schemas.ts` | role-match |
-| `src/lib/lab/bench/domain/preset-registry.ts` | config/registry | transform | `src/lib/ai/model-registry.ts` (`MODEL_ALLOWLIST`/`validateModelConfig`) | role-match |
+| `src/lib/lab/bench/domain/preset-registry.ts` | config/registry | transform | `src/lib/ai/model-registry.ts` (formato de `MODEL_ALLOWLIST`/`validateModelConfig`; a bancada usa `BENCH_MODEL_ALLOWLIST` própria — correção 388db445) | role-match |
 | `src/lib/lab/bench/domain/branding-service.ts` | service | CRUD (leitura) | `src/lib/lab/api/experiment-queries.ts` + `src/lib/lab/domain/model-target.ts` | exato |
 | `src/lib/lab/bench/domain/store-manifest.ts` | service | file-I/O | `src/lib/lab/scenarios/service.ts` (`loadScenarioFixture`/`listScenarioFixtures`) | exato |
 | `src/lib/lab/bench/persistence/bench-run-service.ts` | service | CRUD | `src/lib/lab/run-service.ts` | exato |
@@ -160,7 +162,7 @@ function assertValidTarget(capability, target, role): void {
 }
 ```
 
-**O que espelhar:** registry puro de presets validado contra `MODEL_ALLOWLIST` (`src/lib/ai/model-registry.ts:29`) **e** contra o catálogo ativo `ai_model_catalog` em modo **leitura** (ver analog de leitura em `src/lib/lab/domain/model-target.ts:45-68`, citado abaixo). Presets não confirmados pelo spike ficam **desabilitados com motivo** (`preset_not_enabled`, HTTP 400). O primeiro recorte habilita **apenas** o caminho direto confirmado (D7).
+**O que espelhar:** registry puro de presets validado contra a **allowlist própria da bancada** `BENCH_MODEL_ALLOWLIST` (mesmo formato de `MODEL_ALLOWLIST` em `src/lib/ai/model-registry.ts:29`, **sem** usar a allowlist produtiva — correção 388db445) **e** contra o catálogo ativo `ai_model_catalog` em modo **leitura** (ver analog de leitura em `src/lib/lab/domain/model-target.ts:45-68`, citado abaixo). Presets não confirmados pelo spike ficam **desabilitados com motivo** (`preset_not_enabled`, HTTP 400). O primeiro recorte habilita **apenas** o caminho direto confirmado (D7).
 
 **Leitura read-only do catálogo** (`src/lib/lab/domain/model-target.ts:45-68`):
 ```typescript
@@ -221,7 +223,7 @@ export async function getActiveCampaignImageTarget(
 
 **Contrato de branding que deve ser exposto (fonte da tipografia):** `BrandProfileRecord` em `src/lib/brand-assets/types.ts:37-59`, com destaque para `typography_direction: string | null` (linha 46), `safe_color_tokens` (44), `visual_style`/`visual_tone` (45), `brand_personality` (47), `campaign_guidelines`/`campaign_brief` (48). Assets em `BrandAssetRecord` (`types.ts:5-14`) e `BrandProfileSource`/`BrandProfileStatus` (`types.ts:34-35`).
 
-**O que espelhar:** loader dedicado que lê `stores`, `store_brand_profiles` (`status='synced'`, fallback `source='without_logo'`), `store_brand_assets` (`status='active'`) e `store_visual_signatures` (`status='active'`) — **somente leitura**. Logo/assinatura resolvidos por URL assinada de curta duração (analog `createArtifactSignedUrl` abaixo). **Não** reutilizar nem alterar `BrandProfileSnapshot`, `resolveStoreIdentity` ou `art-director-briefing` (D3).
+**O que espelhar:** loader dedicado que lê `stores`, `store_brand_profiles` (`status='synced'`, fallback `source='without_logo'`), `store_brand_assets` (`status='active'`) e `store_visual_signatures` (`status='active'`) — **somente leitura**. Logo/assinatura resolvidos por um **signer dedicado** `createBenchBrandingSignedUrl` (buckets `store-logos`/`store-brand-assets`/`visual-signatures`, allowlist estrita, após a guarda local; o `createArtifactSignedUrl` do lab **não** é reutilizado para branding — correção 388db445). **Não** reutilizar nem alterar `BrandProfileSnapshot`, `resolveStoreIdentity` ou `art-director-briefing` (D3).
 
 ---
 

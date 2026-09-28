@@ -66,7 +66,7 @@ A seleção lista **apenas lojas de teste da bancada**, identificadas por uma **
 
 ### D5 — Imagens somente por upload; bucket local
 
-Imagens de produto entram **apenas por upload** e são gravadas no bucket `lab-artifacts` sob `bench/{runId}/inputs/...`; a saída vai para `bench/{runId}/output/...`. O bucket remoto `campaign-images` **não** é lido nem reutilizado. **Alternativa rejeitada:** reaproveitar imagens de campanhas reais com exceção read-only no detector — enfraqueceria o isolamento nesta fase (pode ser reavaliado depois).
+Imagens de produto entram **apenas por upload** e são gravadas no bucket `lab-artifacts` sob `bench/{runId}/inputs/...`; a saída vai para `bench/{runId}/output.{ext}`. O bucket remoto `campaign-images` **não** é lido nem reutilizado. **Alternativa rejeitada:** reaproveitar imagens de campanhas reais com exceção read-only no detector — enfraqueceria o isolamento nesta fase (pode ser reavaliado depois).
 
 ### D6 — Configuração extensível por dimensões, registry validado em código
 
