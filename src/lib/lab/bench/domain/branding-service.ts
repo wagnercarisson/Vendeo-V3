@@ -355,11 +355,22 @@ export async function loadBenchBranding(params: {
 }
 
 /**
- * Converte o contrato no snapshot de branding registrado como evidência,
- * validando-o contra o schema da bancada (inclui a direção tipográfica). O
- * branding é **apenas registrado** — nunca concatenado ao prompt nem enviado ao
+ * Converte o contrato no snapshot de branding **persistido como evidência**,
+ * validando-o contra o schema da bancada (inclui a direção tipográfica).
+ *
+ * O snapshot persistido **não contém URLs assinadas** (JWTs efêmeros): o contrato
+ * de exibição mantém as URLs, mas o snapshot registra apenas `storagePath`,
+ * metadados do asset e os campos de branding — nenhuma URL/segredo vai a banco,
+ * log ou snapshot (D13). A assinatura é refeita em tempo de leitura pela API.
+ *
+ * O branding é **apenas registrado** — nunca concatenado ao prompt nem enviado ao
  * modelo nesta fase.
  */
 export function toBenchBrandingSnapshot(contract: BenchBrandingContract): BenchBrandingSnapshot {
-  return BenchBrandingSnapshotSchema.parse(contract);
+  return BenchBrandingSnapshotSchema.parse({
+    ...contract,
+    logoUrl: null,
+    signatureUrl: null,
+    assets: contract.assets.map((asset) => ({ ...asset, signedUrl: null })),
+  });
 }

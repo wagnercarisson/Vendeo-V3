@@ -114,10 +114,14 @@ function computeTokenBasedCost(calculation: BenchCostCalculation): number {
 /**
  * Resolve o custo da bancada pelo preset completo.
  *
- * Prioridade: (1) custo reportado pelo provider (separado, nunca substituído);
- * (2) modo `per_image` (preço fixo, sem tokens); (3) modo `token_based` com usage
- * suficiente (taxas × usage); (4) ramo estimado pelo preset completo
- * (`isEstimate: true`); (5) sem valor comprovado (`coverage: missing`).
+ * `estimatedCostUsd` reflete **exclusivamente** o resolvedor local da bancada:
+ * (1) modo `per_image` (preço fixo, sem tokens); (2) modo `token_based` com usage
+ * suficiente (taxas × usage); (3) ramo estimado pelo preset completo
+ * (`isEstimate: true`); (4) sem valor comprovado (`coverage: missing`).
+ *
+ * O custo reportado pelo provider (`providerReportedCostUsd`) é mantido em campo
+ * **separado** e **nunca** substitui o cálculo local (D11) — nenhuma das noções
+ * "usage do provider", "custo calculado" e "custo estimado" é confundida.
  */
 export function resolveBenchCost(params: ResolveBenchCostParams): BenchCostResolution {
   const pricing =
@@ -141,41 +145,38 @@ export function resolveBenchCost(params: ResolveBenchCostParams): BenchCostResol
     ...(params.usage ? { usageReported: params.usage } : {}),
   };
 
-  // (1) Custo reportado pelo provider: usado como custo e mantido SEPARADO,
-  // nunca substituído pelo cálculo local.
-  if (typeof params.providerReportedCostUsd === "number") {
-    return {
-      ...base,
-      estimatedCostUsd: params.providerReportedCostUsd,
-      isEstimate: false,
-      providerReportedCostUsd: params.providerReportedCostUsd,
-    };
-  }
+  // O custo reportado pelo provider é SEMPRE mantido em campo separado e NUNCA
+  // substitui o cálculo local: `estimatedCostUsd` reflete exclusivamente o
+  // resolvedor local da bancada (calculado com usage, ou estimado pelo preset).
+  const withProviderCost =
+    typeof params.providerReportedCostUsd === "number"
+      ? { ...base, providerReportedCostUsd: params.providerReportedCostUsd }
+      : base;
 
-  // (2) Modo `per_image`: preço fixo por imagem — SEM multiplicação por tokens.
+  // (1) Modo `per_image`: preço fixo por imagem — SEM multiplicação por tokens.
   if (pricing.mode === "per_image" && typeof pricing.unitPriceUsd === "number") {
-    return { ...base, estimatedCostUsd: pricing.unitPriceUsd, isEstimate: false };
+    return { ...withProviderCost, estimatedCostUsd: pricing.unitPriceUsd, isEstimate: false };
   }
 
-  // (3) Modo `token_based` com usage suficiente: taxas por token × usage.
+  // (2) Modo `token_based` com usage suficiente: taxas por token × usage.
   if (pricing.mode === "token_based" && pricing.tokenRates && hasUsableUsage(params.usage)) {
     const calculation: BenchCostCalculation = {
       ...tokenComponents(params.usage),
       tokenRates: pricing.tokenRates,
     };
     return {
-      ...base,
+      ...withProviderCost,
       estimatedCostUsd: computeTokenBasedCost(calculation),
       isEstimate: false,
       calculation,
     };
   }
 
-  // (4) Ramo estimado: sem usage suficiente, estima pelo preset completo.
+  // (3) Ramo estimado: sem usage suficiente, estima pelo preset completo.
   if (typeof pricing.unitPriceUsd === "number") {
-    return { ...base, estimatedCostUsd: pricing.unitPriceUsd, isEstimate: true };
+    return { ...withProviderCost, estimatedCostUsd: pricing.unitPriceUsd, isEstimate: true };
   }
 
-  // (5) Sem valor comprovado (coverage missing): estimativa indisponível.
-  return { ...base, estimatedCostUsd: null, isEstimate: true };
+  // (4) Sem valor comprovado (coverage missing): estimativa indisponível.
+  return { ...withProviderCost, estimatedCostUsd: null, isEstimate: true };
 }

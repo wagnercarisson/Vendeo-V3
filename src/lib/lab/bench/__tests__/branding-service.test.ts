@@ -321,4 +321,29 @@ describe("toBenchBrandingSnapshot", () => {
     expect(snapshot.typographyDirection).toBe("serif elegante");
     expect(snapshot.assets).toHaveLength(1);
   });
+
+  it("não persiste URLs assinadas (JWTs) no snapshot — apenas storagePath e metadados (D13)", async () => {
+    const fake = new FakeSupabaseClient(baseTables());
+    const contract = await loadBenchBranding({
+      client: asClient(fake),
+      storeId: STORE_ID,
+      manifest: MANIFEST,
+    });
+
+    // O contrato de exibição mantém as URLs assinadas…
+    expect(contract.logoUrl).toBe("signed:store-brand-assets/loja/logo.png");
+    expect(contract.signatureUrl).toBe("signed:visual-signatures/loja/assinatura.png");
+
+    const snapshot = toBenchBrandingSnapshot(contract);
+
+    // …mas o snapshot persistido não contém nenhuma URL/JWT.
+    expect(snapshot.logoUrl).toBeNull();
+    expect(snapshot.signatureUrl).toBeNull();
+    expect(snapshot.assets).toHaveLength(1);
+    expect(snapshot.assets[0].signedUrl).toBeNull();
+    // Metadados e branding permanecem como evidência.
+    expect(snapshot.assets[0].storagePath).toBe("loja/logo.png");
+    expect(snapshot.assets[0].checksum).toBe("checksum-1");
+    expect(JSON.stringify(snapshot)).not.toContain("signed:");
+  });
 });

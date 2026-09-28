@@ -323,15 +323,28 @@ describe("resolveBenchCost — resolvedor local chaveado pelo preset completo", 
     expect(resolution.isEstimate).toBe(false);
   });
 
-  it("providerReportedCostUsd é mantido separado e não é substituído pelo cálculo local", () => {
+  it("providerReportedCostUsd e cálculo local coexistem: o valor do provider não substitui o local", () => {
     const resolution = resolveBenchCost({
       preset: low,
       usage: { promptTokens: 1_000_000, completionTokens: 1_000_000 },
       providerReportedCostUsd: 0.123,
     });
+    // Custo local calculado (1_000_000×2.5 + 1_000_000×15) / 1e6 = 17.5.
+    expect(resolution.estimatedCostUsd).toBeCloseTo(17.5, 6);
+    expect(resolution.isEstimate).toBe(false);
+    // O custo do provider fica em campo SEPARADO — nunca copiado para estimatedCostUsd.
     expect(resolution.providerReportedCostUsd).toBe(0.123);
-    expect(resolution.estimatedCostUsd).toBe(0.123);
+    expect(resolution.estimatedCostUsd).not.toBe(0.123);
     expect(resolution.usageReported?.promptTokens).toBe(1_000_000);
+  });
+
+  it("sem usage e com providerReportedCostUsd: o custo local é estimado, não o valor do provider", () => {
+    const resolution = resolveBenchCost({ preset: low, providerReportedCostUsd: 0.123 });
+    expect(resolution.isEstimate).toBe(true);
+    expect(resolution.providerReportedCostUsd).toBe(0.123);
+    // Estimativa local do preset (gpt-image-2 low ≈ US$0,006), não o valor do provider.
+    expect(resolution.estimatedCostUsd).toBeCloseTo(0.006, 6);
+    expect(resolution.estimatedCostUsd).not.toBe(0.123);
   });
 
   it("coverage missing devolve estimatedCostUsd null", () => {
