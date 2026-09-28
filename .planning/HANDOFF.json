@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-09-27T19:14:55.583Z",
+  "timestamp": "2026-09-28T00:00:00.000Z",
   "phase": "48.2.1",
   "phase_name": "bancada-manual-prompts-diretor",
   "phase_dir": ".planning/phases/48.2.1-otimizacao-prompts-diretor",
@@ -14,8 +14,17 @@
     "verified": true,
     "synced": true,
     "archived": true,
-    "active_changes_remaining": ["fase-48-2-2-auditoria-otimizacao-prompt-revisor"]
+    "active_changes_remaining": []
   },
+  "discarded_scope": {
+    "change": "fase-48-2-2-auditoria-otimizacao-prompt-revisor",
+    "date": "2026-09-28",
+    "reason": "escopo descartado/substituido pela nova direcao da F48.2.2 (bancada de geracao no Admin/Laboratorio)",
+    "implemented": false,
+    "artifacts_kept": false,
+    "recoverable": "historico do Git"
+  },
+  "next_phase_sequence": ["48.2.2", "48.2.3"],
   "resolved_plans": [
     "48-2-1-01", "48-2-1-02", "48-2-1-03", "48-2-1-04", "48-2-1-05",
     "48-2-1-06", "48-2-1-07", "48-2-1-08", "48-2-1-09"
@@ -40,11 +49,11 @@
   ],
   "blockers": [],
   "human_actions_pending": [
+    {"action": "Planejar a F48.2.2 (nova) — Fundacao da bancada de geracao no Admin/Laboratorio", "context": "Proxima acao registrada; nenhum planejamento detalhado foi iniciado neste realinhamento", "blocking": false},
     {"action": "Conduzir as sessoes manuais de teste dos prompts do Diretor (offer/spotlight/exclusive)", "context": "Conduzidas pelo usuario e pelo assistente; a bancada nao cria candidatas nem inicia experimentos automaticamente", "blocking": false},
-    {"action": "Criar novo programa e registrar nova autorizacao humana antes de qualquer chamada paga", "context": "O programa da fase esta closed (autorizacao revogada); qualquer operacao real paga futura exige novo programa e nova autorizacao humana explicita", "blocking": false},
-    {"action": "Revisar/realinhar humanamente a F48.2.2 antes de planejamento ou execucao", "context": "A F48.2.2 permanece separada e nao iniciada; a F48.2.3 permanece bloqueada ate existirem prompts testados e aprovados", "blocking": false}
+    {"action": "Criar novo programa e registrar nova autorizacao humana antes de qualquer chamada paga", "context": "O programa da F48.2.1 esta closed (autorizacao revogada); qualquer operacao real paga futura exige novo programa e nova autorizacao humana explicita", "blocking": false}
   ],
   "uncommitted_files": [],
-  "next_action": "Sessoes manuais de teste dos prompts do Diretor, conduzidas pelo usuario e pelo assistente, com novo programa e nova autorizacao humana antes de qualquer chamada paga. F48.2.2 permanece separada (revisao/realinhamento humano antes de planejamento/execucao); F48.2.3 bloqueada ate existirem prompts testados e aprovados. Sem promocao, sem canario, sem db push remoto.",
-  "context_notes": "F48.2.1 CONCLUIDA, VERIFICADA, SINCRONIZADA e ARQUIVADA (openspec/changes/archive/2026-09-27-fase-48-2-1-otimizacao-prompts-diretor/, commit f55bed45). openspec list mostra somente a F48.2.2 ativa (nao iniciada). Programa 860ca4fe-... closed e experimento c48e21b5-... archived, com recusas fail-closed confirmadas e historico preservado. Zero runs/custo; prompts/ intocado; sem promocao/canario/db push. Excecao F50 (legal-document-versions.test.ts, ENOENT) e follow-up externo. LIMITACAO DO SDK: `gsd-sdk query init.execute-phase 48.2.1` canonicaliza incorretamente IDs no formato `48-2-1-*`; usar IDs explicitos."
+  "next_action": "Planejar a F48.2.2 (nova) — Fundacao da bancada de geracao no Admin/Laboratorio (bancada interna desktop restrita, loja real, branding persistido, prompt manual, modelo/qualidade, evidencia tecnica e financeira; isolada da producao, sem creditos do lojista). Depois, F48.2.3 — Experimento deterministico Oferta 1:1. A antiga F48.2.2 (Revisor) foi descartada/substituida, sem artefatos mantidos (recuperavel pelo historico do Git). Sessoes manuais de teste dos prompts do Diretor seguem em paralelo, com novo programa e nova autorizacao humana antes de qualquer chamada paga. Sem promocao, sem canario, sem db push remoto.",
+  "context_notes": "F48.2.1 CONCLUIDA, VERIFICADA, SINCRONIZADA e ARQUIVADA (openspec/changes/archive/2026-09-27-fase-48-2-1-otimizacao-prompts-diretor/, commit f55bed45). REALINHAMENTO 2026-09-28: a antiga F48.2.2 (Auditoria e Otimizacao do Prompt do Revisor) foi DESCARTADA/SUBSTITUIDA (implementacao nao iniciada; sem artefatos mantidos; recuperavel pelo historico do Git). openspec list nao mostra changes ativas. Nova sequencia: F48.2.2 (bancada de geracao no Admin/Laboratorio) -> F48.2.3 (Experimento deterministico Oferta 1:1); nenhuma iniciada. Programa 860ca4fe-... closed e experimento c48e21b5-... archived, com recusas fail-closed confirmadas e historico preservado. Zero runs/custo; prompts/ intocado; sem promocao/canario/db push. Excecao F50 (legal-document-versions.test.ts, ENOENT) e follow-up externo. LIMITACAO DO SDK: `gsd-sdk query init.execute-phase 48.2.1` canonicaliza incorretamente IDs no formato `48-2-1-*`; usar IDs explicitos."
 }

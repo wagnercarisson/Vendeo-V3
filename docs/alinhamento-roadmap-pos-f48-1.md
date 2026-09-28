@@ -1,6 +1,6 @@
 # Alinhamento — Roadmap pós-F48.1
 
-**Status:** diretriz de planejamento atualizada em 2026-09-19; a numeração F50–F55 foi reordenada após a conclusão da F49 e deve ser confirmada no planejamento de cada fase.
+**Status:** diretriz de planejamento atualizada em 2026-09-28 (realinhamento da F48.2.2/F48.2.3); a numeração F50–F55 foi reordenada após a conclusão da F49 e deve ser confirmada no planejamento de cada fase.
 
 **Fonte ativa da F48.1:** `openspec/changes/fase-48-1-laboratorio-ia-minimo/` — não alterada por este documento.
 
@@ -25,8 +25,9 @@ F48.1 — bancada mínima e isolada
         │
         ├── F48.2 — qualidade e otimização dos prompts (guarda-chuva)
         │       ├── F48.2.1 — bancada manual de prompts do Diretor (concluída)
-        │       ├── F48.2.2 — auditoria e otimização do prompt do Revisor
-        │       └── F48.2.3 — promoção, canário e prontidão da aprovação
+        │       ├── F48.2.2 — fundação da bancada de geração no Admin/Laboratório (realinhada em 2026-09-28)
+        │       └── F48.2.3 — experimento determinístico Oferta 1:1
+        │           └── (antiga F48.2.2 — auditoria do prompt do Revisor — descartada/substituída em 2026-09-28)
         ├── F48.3 — avaliação humana mais madura
         ├── F48.4 — preços versionados e monitoramento
         ├── F48.5 — descoberta e alertas de modelos
@@ -59,10 +60,12 @@ A F48.1 vem antes da otimização ampla de prompts porque fornece repetibilidade
 A F48.2 é um **guarda-chuva** dividido em fatias sequenciais:
 
 - **F48.2.1 — Bancada manual de prompts do Diretor (concluída):** entrega uma **bancada manual funcional** para testes dos três prompts do Diretor (`offer`/`spotlight`/`exclusive`, 1:1) — diagnóstico das evidências da F37, matriz de nove cenários, suporte aos três prompts, rubrica humana e comparação cega, orçamento com autorização/revogação efetiva, arquivamento seguro e encerramento operacional. **Não** entrega ciclos automáticos nem variantes vencedoras: a candidata é inserida manualmente e a regra de vitória é **consultiva**. Os testes reais de candidatas são **sessões manuais posteriores** conduzidas pelo usuário.
-- **F48.2.2 — Auditoria e Otimização do Prompt do Revisor:** modo `reviewer`, casos de revisão ligados à imagem exata, corpus de desenvolvimento × holdout, avaliação cega separada da classificação, auditoria de falsos positivos/negativos/motivo errado, otimização do prompt do Revisor, relatório e recomendação. Permanece uma **change separada** e deve ser **revisada/realinhada humanamente** antes de planejamento ou execução. Depende da F48.2.1.
-- **F48.2.3 — Promoção, Canário e Prontidão da Aprovação:** promoção, canário e rollback **apenas** de prompts que tenham sido **efetivamente testados e aprovados** (em sessões manuais). Permanece **bloqueada** até existirem tais prompts.
+- **F48.2.2 — Fundação da bancada de geração no Admin/Laboratório (realinhada em 2026-09-28):** bancada interna, desktop e restrita à área administrativa/laboratório, capaz de realizar gerações reais e mensuráveis, separadas do fluxo de produção — loja real, branding persistido como fonte de verdade, imagens reais do produto, prompt manual, seleção de modelo/qualidade (presets iniciais `gpt-image-2 low/medium` e `gpt-image-2.5-flare low/medium`), resultado com download e registro isolado (referências, prompt enviado, modelo/qualidade/parâmetros, status/erros, latência, usage e custo real/estimado com origem). Não consome créditos do lojista, não interfere na produção e não exige mobile. É a **próxima fase a planejar**; a fonte da verdade OpenSpec será criada no planejamento.
+- **F48.2.3 — Experimento determinístico Oferta 1:1:** usa a bancada validada na F48.2.2 para testar o novo pipeline de campanha Oferta 1:1 — dados reais, montagem determinística do prompt, branding persistido como contrato obrigatório (sem reinterpretar a marca), hierarquia comercial orientada sem posições fixas, composição livre do modelo, visualização/edição/aprovação humana do prompt, armazenamento do prompt montado e do enviado, resultado/avaliação/ajuste/nova geração e histórico das tentativas. Depende da F48.2.2.
+- **Backlog posterior (fora das duas fases):** Destaque; Exclusivo; outros formatos; temas recorrentes; carrossel; comparação cega ou lado a lado; avaliação automática; mobile; promoção de modelos ou pipelines para produção.
+- **Histórico:** a numeração **F48.2.2** antes designava a *Auditoria e Otimização do Prompt do Revisor* (modo `reviewer`, corpus desenvolvimento × holdout, avaliação cega). Esse escopo foi **descartado/substituído** em 2026-09-28 (implementação não iniciada; sem artefatos mantidos; recuperável pelo histórico do Git). A numeração **F48.2.3** antes designava *Promoção, Canário e Prontidão da Aprovação*; esse escopo fica **adiado/backlog** e não é o da nova F48.2.3.
 
-**Fronteira com F48.6:** a F48.2.3 cobre apenas a promoção dos **prompts efetivamente testados e aprovados**, o canário do fluxo de aprovação e o rollback desses prompts/flag; a homologação e a promoção **geral** de modelos, providers e capabilities permanecem na **F48.6 — Homologação e promoção controlada**.
+**Fronteira com F48.6:** a promoção dos **prompts efetivamente testados e aprovados**, o canário do fluxo de aprovação e o rollback desses prompts/flag pertenciam à **antiga F48.2.3** (hoje **adiada/backlog**, não renumerada); a homologação e a promoção **geral** de modelos, providers e capabilities permanecem na **F48.6 — Homologação e promoção controlada**.
 
 O **conhecimento de modelos** (dossiê por modelo) permanece nas fatias já numeradas: preços em F48.4; descoberta, lifecycle e dossiê documental em F48.5. Cada modelo já cadastrado ou candidato deve ter um dossiê com:
 
@@ -79,7 +82,7 @@ O dossiê deve se relacionar ao catálogo existente da F47 (`ai_model_catalog`),
 
 Datas distintas devem preservar a semântica real: `discovered_at`, `researched_at`, `pricing_checked_at`, `tested_at` e `approved_at`. O `validated_at` técnico do catálogo não deve significar homologação empírica.
 
-**Primeira aplicação:** revisar os prompts de Diretor e Revisor com base nos guides oficiais dos modelos atualmente usados, criar baseline e testar mudanças isoladas no laboratório.
+**Primeira aplicação:** revisar os prompts de Diretor (e, quando retomada, do Revisor) com base nos guides oficiais dos modelos atualmente usados, criar baseline e testar mudanças isoladas no laboratório. A revisão do prompt do Revisor foi **descartada/substituída** (ver F48.2.2).
 
 **Saída:** recomendações aprovadas ou rejeitadas com evidência; não uma reescrita geral baseada apenas em opinião.
 
@@ -380,7 +383,7 @@ A F51.2 entrega a fundação técnica e a otimização das páginas públicas ex
 | 2 | **F50 — demonstração gratuita** | Pesquisa documental F48.2, sem alteração concorrente do ledger | Oferta limitada, mensurável e juridicamente comunicável |
 | 3 | **F51.1 — landing + instrumentação do funil** | Pesquisa de i18n ou storage, sem migração | Aquisição e ativação mensuráveis nos modos fechado e aberto |
 | 4 | **F51.2 — fundação SEO** | Pesquisa de i18n ou storage, sem migração | Descoberta orgânica e indexabilidade alinhadas à landing validada |
-| 5 | **F52 — serviços** | **F48.2.2 — prompt do Revisor** / F48.3 somente se necessário | Novo caso de uso e evidência real da bancada |
+| 5 | **F52 — serviços** | **F48.2.2 — bancada de geração no Admin/Laboratório** → **F48.2.3 — Experimento Oferta 1:1** | Novo caso de uso e evidência real da bancada |
 | 6 | **F53 — informativas** | **F48.4 — pricing** | Segundo caso de uso e custos versionados |
 | 7 | **F54 — 9:16** | **F48.5 — descoberta/alertas** | Novo formato e vigilância de providers |
 | 8 | **F55 — carrossel MVP** | **F48.6 — homologação**, se os pré-requisitos existirem | Formato multipágina controlado e processo seguro de promoção |

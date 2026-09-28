@@ -182,12 +182,12 @@ A F48.2.1 SHALL permanecer integralmente local/desenvolvimento. A migration SHAL
 #### Scenario: Promoção é diferida
 
 - **WHEN** a F48.2.1 é encerrada
-- **THEN** a promoção e o `db push` remoto ficam para a F48.2.3
+- **THEN** a promoção e o `db push` remoto ficam adiados (backlog; a numeração F48.2.3 foi realinhada em 2026-09-28)
 - **AND** nenhum prompt produtivo é alterado nesta fase
 
 ### Requirement: Ausência de estruturas do Revisor
 
-A F48.2.1 SHALL NOT introduzir estruturas nem execução do Revisor (modo `reviewer`, casos de revisão, `campaign_image_review`). Tudo isso pertence à F48.2.2.
+A F48.2.1 SHALL NOT introduzir estruturas nem execução do Revisor (modo `reviewer`, casos de revisão, `campaign_image_review`). Esse escopo (antes previsto como F48.2.2) foi **descartado/substituído** em 2026-09-28; a F48.2.2 realinhada é a bancada de geração no Admin/Laboratório.
 
 #### Scenario: Nenhuma estrutura do Revisor é criada
 

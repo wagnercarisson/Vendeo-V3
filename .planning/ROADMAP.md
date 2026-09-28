@@ -2,7 +2,7 @@
 
 ## Milestone v1.5 — Lançamento Externo Controlado ◆
 
-**Estado:** F50 concluida; F48.2.1 (**Bancada Manual de Prompts do Diretor**) esta **concluida e arquivada** (`48-2-1-01` a `48-2-1-05`, `48-2-1-07`, `48-2-1-08` e `48-2-1-09` concluidos; `48-2-1-06` interrompido/suplantado; programa local `closed` e experimento `archived`; zero runs/custo; sem promocao; OpenSpec verificado, sincronizado e arquivado em `openspec/changes/archive/2026-09-27-fase-48-2-1-otimizacao-prompts-diretor/`, commit `f55bed45`). F50.1 permanece futura e nao ativa, aguardando a constituicao da PJ.
+**Estado:** F50 concluida; F48.2.1 (**Bancada Manual de Prompts do Diretor**) esta **concluida e arquivada** (`48-2-1-01` a `48-2-1-05`, `48-2-1-07`, `48-2-1-08` e `48-2-1-09` concluidos; `48-2-1-06` interrompido/suplantado; programa local `closed` e experimento `archived`; zero runs/custo; sem promocao; OpenSpec verificado, sincronizado e arquivado em `openspec/changes/archive/2026-09-27-fase-48-2-1-otimizacao-prompts-diretor/`, commit `f55bed45`). **Realinhamento de tracking (2026-09-28):** a F48.2.2 antiga (Auditoria e Otimizacao do Prompt do Revisor) foi **descartada/substituida** (implementacao nao iniciada; sem artefatos mantidos; recuperavel pelo historico do Git); a nova sequencia e **F48.2.2 — Fundacao da bancada de geracao no Admin/Laboratorio** (proxima a planejar) -> **F48.2.3 — Experimento deterministico Oferta 1:1**. F50.1 permanece futura e nao ativa, aguardando a constituicao da PJ.
 
 **Escopo do arquivo ativo:** índice operacional do milestone. O histórico integral anterior a esta compactação está em `.planning/ROADMAP-ARCHIVE.md`.
 
@@ -46,6 +46,9 @@
 | 47 | ✅ Catálogo e Seleção de Modelos Admin | Concluída; Change B |
 | 48.1 | ✅ Laboratório Mínimo de IA | Concluída; primeira fatia do programa F48.x |
 | 48.2.1 | ✅ Concluída e arquivada — bancada manual (8/9 + 06 suplantado) | Bancada manual de prompts do Diretor; `48-2-1-01` a `48-2-1-05`, `48-2-1-07`, `48-2-1-08` e `48-2-1-09` concluidos; `48-2-1-06` interrompido/suplantado; programa `closed` e experimento `archived`; local-only, sem promocao; OpenSpec arquivado (commit `f55bed45`) |
+| 48.2.2 | ⏳ Não iniciada — Fundação da bancada de geração no Admin/Laboratório | Próxima fase a planejar; bancada interna desktop restrita, loja real, branding persistido, prompt manual, modelo/qualidade, evidência técnica e financeira; isolada da produção; sem créditos do lojista |
+| 48.2.3 | ⏳ Não iniciada — Experimento determinístico Oferta 1:1 | Depende da bancada validada na F48.2.2; prompt montado/armazenado, branding como contrato obrigatório, hierarquia comercial orientada, aprovação humana do prompt |
+| 48.2.2-antiga | ⏸ Descartada — Auditoria e Otimização do Prompt do Revisor | Escopo descartado/substituído em 2026-09-28; sem artefatos mantidos; implementação não iniciada; recuperável pelo histórico do Git |
 | 49 | ✅ Ativação e Orientação Contextual de Campos | Concluída |
 | 50 | ✅ Demonstração Gratuita e Validade dos Créditos | Concluída; 17/17 planos, beta fechado preservado |
 | 50.1 | Futura — Formalização Legal e Ativação da Demonstração | Aguardando constituição da PJ; não planejada, não ativa e não bloqueante para o estado concluído |
@@ -61,23 +64,26 @@
 
 - F48.2.1 (**Bancada Manual de Prompts do Diretor**) esta **concluida e arquivada**: `48-2-1-01` a `48-2-1-05`, `48-2-1-07`, `48-2-1-08` e `48-2-1-09` concluidos; `48-2-1-06` interrompido e suplantado (summary de supersessao). Programa local `860ca4fe-...` `closed` (recusa novas reservas) e experimento `c48e21b5-...` `archived` (recusa execucoes), com historico preservado. Zero runs e zero custo; sem promocao. OpenSpec `017b8799` verificado, sincronizado e arquivado em `openspec/changes/archive/2026-09-27-fase-48-2-1-otimizacao-prompts-diretor/` (commit `f55bed45`). Local-only.
 
+- **Realinhamento F48.2.2 (2026-09-28):** a direcao da F48.2.2 mudou. A F48.2.2 antiga (**Auditoria e Otimizacao do Prompt do Revisor**) foi **descartada/substituida** — implementacao nao iniciada, sem artefatos mantidos, recuperavel pelo historico do Git. A nova sequencia e **F48.2.2 — Fundacao da bancada de geracao no Admin/Laboratorio** (proxima acao: **planejar**) -> **F48.2.3 — Experimento deterministico Oferta 1:1**. `openspec list` nao mostra mais changes ativas.
+
 ## Dependencies
 
 - F23 e F24 são pré-requisitos históricos de F25; F25 alimenta F26/F27 e a operação de F28.
 - F28 e F29 sustentam launch controls, observabilidade e readiness; F30 sustenta os gates legais.
-- A cadeia de produto segue F31.1 → F31.2 → F31.3 → F32 → F33 → F34 → F35 → F36 → F37 → F38 → F38.1/F38.2 → F38.2.1 → F39 → F40 → F41 → F42 → F43 → F45 → F46 → F47 → F48.1 → F48.2.1→ F49 → F50.
+- A cadeia de produto segue F31.1 → F31.2 → F31.3 → F32 → F33 → F34 → F35 → F36 → F37 → F38 → F38.1/F38.2 → F38.2.1 → F39 → F40 → F41 → F42 → F43 → F45 → F46 → F47 → F48.1 → F48.2.1 → F49 → F50.
+- **Trilha do laboratorio (realinhada em 2026-09-28):** F48.2.1 (concluida) → **F48.2.2 (bancada de geracao no Admin/Laboratorio)** → **F48.2.3 (Experimento deterministico Oferta 1:1)**. A F48.2.2 antiga (Revisor) foi descartada/substituida (sem artefatos mantidos).
 - F50.1 depende externamente da constituição da PJ e dos dados legais reais; não bloqueia o estado concluído de F50.
 - O índice operacional de requisitos está em `.planning/REQUIREMENTS.md`; o detalhamento histórico integral está em `.planning/REQUIREMENTS-ARCHIVE.md`, no archive deste roadmap e nos artefatos das fases.
 
 ## F48.2.1 - Bancada Manual de Prompts do Diretor
 
-**Status:** **concluida** — 8/9 planos executados (`48-2-1-01` a `48-2-1-05`, `48-2-1-07`, `48-2-1-08` e `48-2-1-09`) e `48-2-1-06` **interrompido e suplantado** (summary de supersessao). Inventario: 8 concluidos + 1 suplantado/resolvido (`summary_count 9`). Programa `closed` e experimento `archived` com recusas fail-closed confirmadas e historico preservado. **Zero runs e zero custo.** OpenSpec verificado, sincronizado e arquivado em `openspec/changes/archive/2026-09-27-fase-48-2-1-otimizacao-prompts-diretor/` (commit `f55bed45`). Proximo trabalho: sessoes manuais de teste dos prompts do Diretor (novo programa e nova autorizacao humana antes de qualquer chamada paga); F48.2.2 separada e nao iniciada; F48.2.3 bloqueada ate existirem prompts testados e aprovados.
+**Status:** **concluida** — 8/9 planos executados (`48-2-1-01` a `48-2-1-05`, `48-2-1-07`, `48-2-1-08` e `48-2-1-09`) e `48-2-1-06` **interrompido e suplantado** (summary de supersessao). Inventario: 8 concluidos + 1 suplantado/resolvido (`summary_count 9`). Programa `closed` e experimento `archived` com recusas fail-closed confirmadas e historico preservado. **Zero runs e zero custo.** OpenSpec verificado, sincronizado e arquivado em `openspec/changes/archive/2026-09-27-fase-48-2-1-otimizacao-prompts-diretor/` (commit `f55bed45`). Proximo trabalho (apos o realinhamento de 2026-09-28): **planejar a F48.2.2 (bancada de geracao no Admin/Laboratorio) -> F48.2.3 (Experimento deterministico Oferta 1:1)**; sessoes manuais de teste dos prompts do Diretor seguem em paralelo, com novo programa e nova autorizacao humana antes de qualquer chamada paga.
 
 **Fonte da verdade (arquivada):** `openspec/changes/archive/2026-09-27-fase-48-2-1-otimizacao-prompts-diretor/` (archive no commit `f55bed45`; base no commit `017b8799`) — proposal.md / design.md D1-D11 / 9 specs / tasks.md com tasks C1-C10 e D1-D4. Specs principais sincronizadas em `openspec/specs/lab-*`.
 
 **Escopo realinhado:** a fase entrega exclusivamente uma **bancada funcional para testes manuais** dos prompts do Diretor (`offer`, `spotlight`, `exclusive`). A candidata e escrita/revisada **fora da execucao automatica** e inserida/colada **manualmente**; a bancada **nao** cria candidatas, **nao** inicia experimentos e **nao** aprova/promove automaticamente. Diagnostico versionado (v1/v2/v3) permanece como evidencia historica; a regra de vitoria e **consultiva**; o rascunho `offer/v1` e apenas exemplo. Integralmente local (migration nao aplicada no remoto) e sem promocao.
 
-**Fora de escopo:** Revisor (F48.2.2); promocao, canario e `db push` remoto (F48.2.3); homologacao geral de modelos/providers (F48.6).
+**Fora de escopo (a epoca):** Revisor (entao previsto como F48.2.2; hoje **descartado/substituido**); promocao, canario e `db push` remoto (entao F48.2.3); homologacao geral de modelos/providers (F48.6). **Nota de realinhamento (2026-09-28):** a sequencia foi redefinida para **F48.2.2 (Fundacao da bancada de geracao no Admin/Laboratorio)** -> **F48.2.3 (Experimento deterministico Oferta 1:1)**; a antiga F48.2.2 do Revisor nao sera executada agora.
 
 **Planos:** diretorio `.planning/phases/48.2.1-otimizacao-prompts-diretor/`.
 
@@ -96,11 +102,49 @@ Plans:
 
 **Estado local (final):** programa `860ca4fe-dc8b-4354-b94e-02f9e7b202c6` em `status='closed'` (novas reservas recusadas com `program_not_authorized`; `budget_usd 2.808`, reservado 0, consumido 0, historico preservado) e experimento `c48e21b5-c7a8-4456-a0d6-a2b4040fc1e3` em `status='archived'` (execucoes recusadas com `experiment_not_ready`; 2 variantes, 3 cenarios, 0 runs, 0 avaliacoes). **Zero runs e zero custo.**
 
-**Primeira operacao real:** sera **posterior**, em sessao conduzida pelo usuario, exigindo **novo programa** e **nova autorizacao humana**. Nenhuma candidata automatica; nenhuma execucao paga exigida para concluir a fase; nenhuma promocao, canario ou `db push`. A F48.2.2 permanece separada e nao iniciada (revisao/realinhamento humano antes de planejamento/execucao); a F48.2.3 permanece bloqueada ate existirem prompts testados e aprovados.
+**Primeira operacao real:** sera **posterior**, em sessao conduzida pelo usuario, exigindo **novo programa** e **nova autorizacao humana**. Nenhuma candidata automatica; nenhuma execucao paga exigida para concluir a fase; nenhuma promocao, canario ou `db push`. A F48.2.2 (realinhada em 2026-09-28 para a bancada de geracao no Admin/Laboratorio) e a F48.2.3 (Experimento deterministico Oferta 1:1) permanecem **nao iniciadas**; a antiga F48.2.2 do Revisor foi **descartada/substituida**.
 
 **Restricoes transversais:** `prompts/` intocado byte a byte; migration local-only (sem `db push` remoto); exatamente uma chamada `campaign_image` por run; toda execucao paga exigiria programa `authorized` e reserva atomica (saldo = `budget_usd - consumed - reserved`).
 
 **Excecao preexistente (externa a F48.2.1):** `src/lib/legal/__tests__/legal-document-versions.test.ts` falha com `ENOENT` (caminho antigo da F50, change arquivada). O gate fail-closed do Plano 09 aceita a suite completa somente com essa excecao exata (1 arquivo / 1 teste) e a registra como follow-up externo.
+## F48.2.2 — Fundação da bancada de geração no Admin/Laboratório
+
+**Status:** **Não iniciada** — próxima fase a planejar (realinhada em 2026-09-28). A antiga F48.2.2 (**Auditoria e Otimização do Prompt do Revisor**) foi **descartada/substituída** (implementação não iniciada; sem artefatos mantidos; recuperável pelo histórico do Git).
+
+**Objetivo:** construir uma bancada interna, desktop e restrita à área administrativa/laboratório, capaz de realizar gerações reais e mensuráveis, separadas do fluxo de produção.
+
+**Escopo de alto nível:**
+- operar dentro da área Admin/Laboratório, com acesso restrito;
+- selecionar uma loja real e carregar integralmente o branding persistido (logo/assinatura, nome, paleta, tokens seguros, direção tipográfica, estilo visual, tom, personalidade, posicionamento e diretrizes);
+- receber imagens reais do produto; permitir prompt manual nesta primeira fase; permitir seleção de modelo e qualidade;
+- presets iniciais: `gpt-image-2 low`, `gpt-image-2 medium`, `gpt-image-2.5-flare low`, `gpt-image-2.5-flare medium`;
+- enviar prompt e referências diretamente ao modelo de imagem; apresentar o resultado e permitir download;
+- registrar, de forma isolada de produção: loja e referências utilizadas, prompt efetivamente enviado, modelo/qualidade/parâmetros, status e erros, latência, usage retornado e custo real ou estimado com indicação da origem do valor;
+- não consumir créditos do lojista; não interferir nas campanhas ou execuções de produção; não exigir responsividade mobile.
+
+**Resultado esperado:** ser possível selecionar uma loja e imagens reais, informar um prompt manual, escolher modelo/qualidade, gerar uma imagem e consultar toda a evidência técnica e financeira da execução.
+
+**Regras:** a **identidade persistida da loja** é a fonte de verdade; a criatividade do modelo fica restrita à composição específica da campanha (sem novo "diretor criativo" que redefina tipografia, cores, expressão ou posicionamento da marca); não reutilizar o laboratório antigo para manter fixtures ou fluxos desconectados dos dados reais. A fonte da verdade OpenSpec será criada no planejamento (a change antiga foi descartada/substituída e não é fonte da nova fase).
+
+## F48.2.3 — Experimento determinístico Oferta 1:1
+
+**Status:** **Não iniciada** — depende da bancada validada na F48.2.2.
+
+**Objetivo:** usar a bancada validada para testar o novo pipeline de campanha Oferta 1:1.
+
+**Escopo de alto nível:**
+- dados reais da campanha;
+- montagem determinística e orientada do prompt de Oferta 1:1;
+- branding persistido como contrato obrigatório, sem reinterpretar ou recriar a direção da marca;
+- hierarquia comercial orientada, sem posições fixas; composição livre para o modelo;
+- visualização, edição e aprovação humana do prompt;
+- armazenamento do prompt montado e do prompt efetivamente enviado;
+- resultado, avaliação, ajuste do prompt e nova geração; histórico das tentativas.
+
+**Nota histórica:** a numeração **F48.2.3** antes designava "Promoção, Canário e Prontidão da Aprovação" (promoção de prompts testados, canário do fluxo de aprovação e rollback). Esse escopo fica **adiado/backlog** e não é o da nova F48.2.3.
+
+**Backlog posterior (fora das duas fases):** Destaque; Exclusivo; outros formatos; temas recorrentes; carrossel; comparação cega ou lado a lado; avaliação automática; mobile; promoção de modelos ou pipelines para produção.
+
 ## F50.1 — Formalização Legal e Ativação da Demonstração
 
 **Status:** Futura — aguardando constituição da PJ; não planejada e não ativa.
