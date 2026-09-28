@@ -1,0 +1,324 @@
+// @vitest-environment node
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import { loadBenchBranding, toBenchBrandingSnapshot } from "../domain/branding-service";
+import type { BenchManifestStore } from "../domain/store-manifest";
+
+/**
+ * Contrato local completo de branding da bancada (F48.2.2, D3).
+ *
+ * Client **100% fake em memória** — nenhuma chamada de rede e nenhuma chamada
+ * paga. Cobre: `typography_direction` lida da fonte persistida; fallback
+ * `without_logo`; assets ativos assinados pelo signer restrito (nunca
+ * `lab-artifacts`); nenhuma escrita nas quatro tabelas; nenhum bucket de produção;
+ * recusa de loja fora do manifesto **antes** de qualquer leitura; snapshot de
+ * branding com tipografia.
+ */
+
+const STORE_ID = "11111111-1111-4111-8111-111111111111";
+const STORE_OUTSIDE = "99999999-9999-4999-8999-999999999999";
+
+const MANIFEST: BenchManifestStore[] = [{ id: STORE_ID, label: "Loja de teste A" }];
+
+const SAVED_ENV: Record<string, string | undefined> = {};
+
+beforeAll(() => {
+  SAVED_ENV.VENDEO_LAB_ENABLED = process.env.VENDEO_LAB_ENABLED;
+  SAVED_ENV.NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  process.env.VENDEO_LAB_ENABLED = "true";
+  process.env.NEXT_PUBLIC_SUPABASE_URL = "http://127.0.0.1:54321";
+});
+
+afterAll(() => {
+  if (SAVED_ENV.VENDEO_LAB_ENABLED === undefined) delete process.env.VENDEO_LAB_ENABLED;
+  else process.env.VENDEO_LAB_ENABLED = SAVED_ENV.VENDEO_LAB_ENABLED;
+  if (SAVED_ENV.NEXT_PUBLIC_SUPABASE_URL === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+  else process.env.NEXT_PUBLIC_SUPABASE_URL = SAVED_ENV.NEXT_PUBLIC_SUPABASE_URL;
+});
+
+// ─── Fake do Supabase (leitura + storage) ────────────────────────────────────
+
+type Row = Record<string, unknown>;
+
+class FakeQueryBuilder {
+  private readonly filters: Array<(row: Row) => boolean> = [];
+  private limitCount: number | null = null;
+
+  constructor(
+    private readonly table: string,
+    private readonly fake: FakeSupabaseClient,
+  ) {}
+
+  select(columns: string): this {
+    this.fake.selectCalls.push({ table: this.table, columns });
+    return this;
+  }
+
+  eq(column: string, value: unknown): this {
+    this.filters.push((row) => row[column] === value);
+    return this;
+  }
+
+  order(_column: string, _options?: { ascending?: boolean }): this {
+    return this;
+  }
+
+  limit(count: number): this {
+    this.limitCount = count;
+    return this;
+  }
+
+  async maybeSingle(): Promise<{ data: unknown; error: unknown }> {
+    return { data: this.matched()[0] ?? null, error: null };
+  }
+
+  then<TResult1 = { data: unknown; error: unknown }, TResult2 = never>(
+    onfulfilled?: ((value: { data: unknown; error: unknown }) => TResult1 | PromiseLike<TResult1>) | null,
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+  ): PromiseLike<TResult1 | TResult2> {
+    return Promise.resolve({ data: this.matched(), error: null }).then(onfulfilled, onrejected);
+  }
+
+  private matched(): Row[] {
+    let rows = (this.fake.tables[this.table] ?? []).filter((row) =>
+      this.filters.every((filter) => filter(row)),
+    );
+    if (this.limitCount !== null) rows = rows.slice(0, this.limitCount);
+    return rows;
+  }
+}
+
+class FakeSupabaseClient {
+  readonly selectCalls: Array<{ table: string; columns: string }> = [];
+  readonly insertCalls: string[] = [];
+  readonly updateCalls: string[] = [];
+  readonly deleteCalls: string[] = [];
+  readonly signedUrlCalls: Array<{ bucket: string; path: string; ttl: number }> = [];
+
+  constructor(readonly tables: Record<string, Row[]> = {}) {}
+
+  readonly storage = {
+    from: (bucket: string) => ({
+      createSignedUrl: async (path: string, ttl: number) => {
+        this.signedUrlCalls.push({ bucket, path, ttl });
+        return { data: { signedUrl: `signed:${bucket}/${path}` }, error: null };
+      },
+    }),
+  };
+
+  from(table: string): FakeQueryBuilder {
+    return new FakeQueryBuilder(table, this);
+  }
+}
+
+function asClient(fake: FakeSupabaseClient): SupabaseClient {
+  return fake as unknown as SupabaseClient;
+}
+
+// ─── Dados de teste ──────────────────────────────────────────────────────────
+
+function baseTables(overrides: Record<string, Row[]> = {}): Record<string, Row[]> {
+  return {
+    stores: [
+      {
+        id: STORE_ID,
+        name: "Loja A",
+        segment: "variedades",
+        subsegment: "loja-de-bairro",
+        tone_of_voice: "próximo",
+        positioning: "preço justo",
+        short_description: "loja local",
+        slogan: "vem pra cá",
+      },
+    ],
+    store_brand_profiles: [
+      {
+        id: "profile-1",
+        store_id: STORE_ID,
+        source: "logo_analysis",
+        status: "synced",
+        typography_direction: "serif elegante",
+        safe_color_tokens: { primary: "#111111" },
+        brand_colors_chosen: ["#111111", null],
+        logo_colors_detected: ["#111111"],
+        visual_style: "minimalista",
+        visual_tone: "caloroso",
+        brand_personality: "próxima",
+        campaign_guidelines: "guias de marca",
+        campaign_brief: "briefing de marca",
+        updated_at: "2026-09-28T00:00:00.000Z",
+      },
+    ],
+    store_brand_assets: [
+      {
+        id: "asset-1",
+        store_id: STORE_ID,
+        asset_type: "logo",
+        variant_type: "original",
+        storage_path: "loja/logo.png",
+        mime_type: "image/png",
+        width: 512,
+        height: 512,
+        size_bytes: 1000,
+        checksum: "checksum-1",
+        status: "active",
+      },
+    ],
+    store_visual_signatures: [
+      {
+        id: "sig-1",
+        store_id: STORE_ID,
+        storage_path: "loja/assinatura.png",
+        asset_url: "https://example.test/assinatura.png",
+        type: "ai_generated",
+        status: "active",
+      },
+    ],
+    ...overrides,
+  };
+}
+
+// ─── Contrato completo ───────────────────────────────────────────────────────
+
+describe("loadBenchBranding — contrato completo", () => {
+  it("expõe typography_direction lida da fonte persistida", async () => {
+    const fake = new FakeSupabaseClient(baseTables());
+    const contract = await loadBenchBranding({
+      client: asClient(fake),
+      storeId: STORE_ID,
+      manifest: MANIFEST,
+    });
+
+    expect(contract.typographyDirection).toBe("serif elegante");
+    expect(contract.storeName).toBe("Loja A");
+    expect(contract.segment).toBe("variedades");
+    expect(contract.toneOfVoice).toBe("próximo");
+    expect(contract.safeColorTokens).toEqual({ primary: "#111111" });
+    expect(contract.visualStyle).toBe("minimalista");
+    expect(contract.visualTone).toBe("caloroso");
+    expect(contract.brandPersonality).toBe("próxima");
+    expect(contract.campaignGuidelines).toBe("guias de marca");
+    expect(contract.campaignBrief).toBe("briefing de marca");
+    expect(contract.profileSource).toBe("logo_analysis");
+    expect(contract.profileStatus).toBe("synced");
+  });
+
+  it("faz fallback para source without_logo quando não há perfil synced", async () => {
+    const fake = new FakeSupabaseClient(
+      baseTables({
+        store_brand_profiles: [
+          {
+            id: "profile-2",
+            store_id: STORE_ID,
+            source: "without_logo",
+            status: "outdated",
+            typography_direction: "sans-serif limpa",
+            safe_color_tokens: {},
+            brand_colors_chosen: [],
+            logo_colors_detected: [],
+            visual_style: null,
+            visual_tone: null,
+            brand_personality: null,
+            campaign_guidelines: null,
+            campaign_brief: null,
+            updated_at: "2026-09-27T00:00:00.000Z",
+          },
+        ],
+      }),
+    );
+
+    const contract = await loadBenchBranding({
+      client: asClient(fake),
+      storeId: STORE_ID,
+      manifest: MANIFEST,
+    });
+
+    expect(contract.typographyDirection).toBe("sans-serif limpa");
+    expect(contract.profileSource).toBe("without_logo");
+  });
+});
+
+// ─── Assets por URL assinada (signer restrito) ───────────────────────────────
+
+describe("loadBenchBranding — assets por URL assinada", () => {
+  it("assina logo e assinatura pelos buckets locais restritos", async () => {
+    const fake = new FakeSupabaseClient(baseTables());
+    const contract = await loadBenchBranding({
+      client: asClient(fake),
+      storeId: STORE_ID,
+      manifest: MANIFEST,
+    });
+
+    expect(contract.assets).toHaveLength(1);
+    expect(contract.assets[0]).toMatchObject({
+      assetType: "logo",
+      variantType: "original",
+      storagePath: "loja/logo.png",
+      mimeType: "image/png",
+      width: 512,
+      height: 512,
+      sizeBytes: 1000,
+      checksum: "checksum-1",
+      signedUrl: "signed:store-brand-assets/loja/logo.png",
+    });
+    expect(contract.logoUrl).toBe("signed:store-brand-assets/loja/logo.png");
+    expect(contract.signatureUrl).toBe("signed:visual-signatures/loja/assinatura.png");
+  });
+
+  it("nunca usa bucket produtivo nem o bucket de artefatos do laboratório", async () => {
+    const fake = new FakeSupabaseClient(baseTables());
+    await loadBenchBranding({ client: asClient(fake), storeId: STORE_ID, manifest: MANIFEST });
+
+    const buckets = new Set(fake.signedUrlCalls.map((call) => call.bucket));
+    expect(buckets).toEqual(new Set(["store-brand-assets", "visual-signatures"]));
+    expect(buckets.has("lab-artifacts")).toBe(false);
+    expect(buckets.has("campaign-images")).toBe(false);
+  });
+
+  it("não escreve em nenhuma das quatro tabelas de loja/branding", async () => {
+    const fake = new FakeSupabaseClient(baseTables());
+    await loadBenchBranding({ client: asClient(fake), storeId: STORE_ID, manifest: MANIFEST });
+
+    expect(fake.insertCalls).toEqual([]);
+    expect(fake.updateCalls).toEqual([]);
+    expect(fake.deleteCalls).toEqual([]);
+    const tables = new Set(fake.selectCalls.map((call) => call.table));
+    expect(tables).toEqual(
+      new Set(["stores", "store_brand_profiles", "store_brand_assets", "store_visual_signatures"]),
+    );
+  });
+});
+
+// ─── Elegibilidade exigida antes de qualquer leitura ─────────────────────────
+
+describe("loadBenchBranding — manifesto exigido antes da leitura", () => {
+  it("recusa loja fora do manifesto antes de ler branding", async () => {
+    const fake = new FakeSupabaseClient(baseTables());
+    await expect(
+      loadBenchBranding({ client: asClient(fake), storeId: STORE_OUTSIDE, manifest: MANIFEST }),
+    ).rejects.toThrowError(/store_not_in_manifest/);
+
+    expect(fake.selectCalls).toEqual([]);
+    expect(fake.signedUrlCalls).toEqual([]);
+  });
+});
+
+// ─── Snapshot registrado (inclui tipografia) ─────────────────────────────────
+
+describe("toBenchBrandingSnapshot", () => {
+  it("registra o snapshot de branding com a direção tipográfica", async () => {
+    const fake = new FakeSupabaseClient(baseTables());
+    const contract = await loadBenchBranding({
+      client: asClient(fake),
+      storeId: STORE_ID,
+      manifest: MANIFEST,
+    });
+
+    const snapshot = toBenchBrandingSnapshot(contract);
+
+    expect(snapshot.storeId).toBe(STORE_ID);
+    expect(snapshot.typographyDirection).toBe("serif elegante");
+    expect(snapshot.assets).toHaveLength(1);
+  });
+});
