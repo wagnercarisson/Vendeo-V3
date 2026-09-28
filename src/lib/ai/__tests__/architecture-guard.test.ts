@@ -232,4 +232,38 @@ describe("architecture-guard — camada única de IA (F46-06)", () => {
     expect(source).toContain("campaign-image-director-spotlight");
     expect(source).toContain("campaign-image-director-exclusive");
   });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // F48.2.2 (D2) — gates aditivos do bounded context da bancada
+  // (`src/lib/lab/bench/**`). Estritamente aditivos: nenhuma regra acima é
+  // afrouxada e o contexto da bancada continua sujeito a TODOS os gates do
+  // laboratório (sem `generation_events`/`AiCostTracker.record`, sem provider de
+  // imagem de produção, sem SDK/wire, sem chaves de provider, sem
+  // `ai_model_selection` e sem escrita em `ai_model_catalog`/`prompts/`).
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const benchFiles = files.filter((file) => file.startsWith("src/lib/lab/bench/"));
+
+  it("o bounded context src/lib/lab/bench/ existe e é coberto pelos gates do laboratório", () => {
+    // Sanidade: o diretório da bancada contém código (não é varredura vazia).
+    expect(benchFiles.length).toBeGreaterThan(0);
+
+    const violations: string[] = [];
+    for (const file of benchFiles) {
+      const code = readCode(file);
+      if (/generation_events/.test(code)) violations.push(`${file} → generation_events`);
+      if (TRACKER_RECORD_RE.test(code)) violations.push(`${file} → AiCostTracker.record`);
+      if (LAB_IMAGE_PROVIDER_RE.test(code)) {
+        violations.push(`${file} → provider de imagem de produção`);
+      }
+      for (const { name, re } of SDK_WIRE_PATTERNS) {
+        if (re.test(code)) violations.push(`${file} → ${name}`);
+      }
+      if (LAB_API_KEY_ENV_RE.test(code)) violations.push(`${file} → chave de provider`);
+      if (/ai_model_selection/.test(code)) violations.push(`${file} → ai_model_selection`);
+      if (CATALOG_WRITE_RE.test(code)) violations.push(`${file} → escrita em ai_model_catalog`);
+      if (PROMPTS_WRITE_RE.test(code)) violations.push(`${file} → escrita em prompts/`);
+    }
+    expect(violations).toEqual([]);
+  });
 });

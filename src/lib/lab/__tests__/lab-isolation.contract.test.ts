@@ -351,7 +351,10 @@ function createMemoryClient(state: MemoryState): MemoryClient {
 
 // ─── Client gravador (allowlist + detector de acesso produtivo) ──────────────
 
-/** Tabelas `lab_*` permitidas + o catálogo da F47 (somente leitura). */
+/**
+ * Tabelas `lab_*` permitidas + o catálogo da F47 (somente leitura) + a persistência
+ * própria da bancada e as tabelas de loja/branding **local** (somente leitura).
+ */
 const ALLOWED_TABLES = new Set([
   "lab_scenarios",
   "lab_scenario_versions",
@@ -362,10 +365,25 @@ const ALLOWED_TABLES = new Set([
   "lab_artifacts",
   "lab_human_evaluations",
   "ai_model_catalog",
+  // F48.2.2 — persistência própria da bancada (D1/D9).
+  "lab_bench_runs",
+  "lab_bench_artifacts",
+  // F48.2.2 — leitura somente-leitura de lojas/branding do Supabase **local** (D3/D4).
+  "stores",
+  "store_brand_profiles",
+  "store_brand_assets",
+  "store_visual_signatures",
 ]);
 
 /** Bucket próprio do laboratório (nunca `campaign-images`). */
 const ALLOWED_BUCKETS = new Set(["lab-artifacts"]);
+
+/**
+ * F48.2.2 — buckets locais de branding, **somente leitura** (apenas
+ * `createSignedUrl`; `upload`/`remove`/`list` lançam). Nunca aceitam bucket/path
+ * informado pelo cliente: o signer resolve o path do registro persistido (D3).
+ */
+const READ_ONLY_BUCKETS = new Set(["store-logos", "store-brand-assets", "visual-signatures"]);
 
 /** RPCs do laboratório. */
 const ALLOWED_RPCS = new Set([
@@ -374,13 +392,27 @@ const ALLOWED_RPCS = new Set([
   // Liquidação de orçamento do run (F48.2.1, D2/D5).
   "lab_settle_run_budget",
   "lab_release_run_budget",
+  // F48.2.2 — reserva atômica da bancada (`draft → pending` compare-and-set).
+  "lab_bench_reserve_run",
 ]);
 
+/** RPC da bancada é permitida por prefixo (`lab_bench_*`), aditivamente. */
+function isAllowedRpc(name: string): boolean {
+  return ALLOWED_RPCS.has(name) || name.startsWith("lab_bench_");
+}
+
 /** Leitura permitida, escrita proibida. */
-const READ_ONLY_TABLES = new Set(["ai_model_catalog"]);
+const READ_ONLY_TABLES = new Set([
+  "ai_model_catalog",
+  // F48.2.2 — lojas/branding local: nunca criam/alteram linhas (D3/D4).
+  "stores",
+  "store_brand_profiles",
+  "store_brand_assets",
+  "store_visual_signatures",
+]);
 
 const ALLOWED_ENTRY_RE =
-  /^(?:from:(?:lab_scenarios|lab_scenario_versions|lab_experiments|lab_experiment_variants|lab_experiment_scenarios|lab_runs|lab_artifacts|lab_human_evaluations|ai_model_catalog)|rpc:(?:lab_reserve_run|lab_create_experiment|lab_settle_run_budget|lab_release_run_budget)|storage\.from:lab-artifacts|storage\.(?:upload|remove|createSignedUrl):lab-artifacts)/;
+  /^(?:from:(?:lab_scenarios|lab_scenario_versions|lab_experiments|lab_experiment_variants|lab_experiment_scenarios|lab_runs|lab_artifacts|lab_human_evaluations|ai_model_catalog|lab_bench_runs|lab_bench_artifacts|stores|store_brand_profiles|store_brand_assets|store_visual_signatures)|rpc:(?:lab_reserve_run|lab_create_experiment|lab_settle_run_budget|lab_release_run_budget|lab_bench_\w+)|storage\.from:lab-artifacts|storage\.(?:upload|remove|createSignedUrl):lab-artifacts|storage\.from:(?:store-logos|store-brand-assets|visual-signatures)|storage\.createSignedUrl:(?:store-logos|store-brand-assets|visual-signatures))/;
 
 /** Alvos produtivos que jamais podem aparecer no `accessLog`. */
 const FORBIDDEN_TARGETS = [
@@ -420,6 +452,39 @@ function wrapReadOnlyTable(builder: object, table: string, accessLog: string[]):
   });
 }
 
+/** Operações de um bucket de branding local: somente `createSignedUrl` (D3). */
+interface ReadOnlyBucketOps {
+  createSignedUrl: (storagePath: string, ttl: number) => Promise<unknown>;
+  upload: (storagePath: string, body: unknown, options?: unknown) => never;
+  remove: (paths: string[]) => never;
+  list: (path?: string, options?: unknown) => never;
+}
+
+/**
+ * Envolve um bucket de branding local para permitir **somente** `createSignedUrl`
+ * (espelha `wrapReadOnlyTable`): `upload`/`remove`/`list` lançam
+ * `forbidden_production_access:storage:{bucket}:{operation}`.
+ */
+function wrapReadOnlyBucket(
+  bucket: string,
+  ops: MemoryStorageOps,
+  accessLog: string[],
+): ReadOnlyBucketOps {
+  const deny = (operation: string): never => {
+    accessLog.push(`storage.${operation}:${bucket}`);
+    throw forbiddenProductionAccess(`storage:${bucket}:${operation}`);
+  };
+  return {
+    createSignedUrl: (storagePath: string, ttl: number) => {
+      accessLog.push(`storage.createSignedUrl:${bucket}:${storagePath}`);
+      return ops.createSignedUrl(storagePath, ttl);
+    },
+    upload: () => deny("upload"),
+    remove: () => deny("remove"),
+    list: () => deny("list"),
+  };
+}
+
 /**
  * Client gravador: registra cada alvo acessado e **lança** quando ele está fora da
  * allowlist do laboratório. É o detector que faz o teste falhar ao tocar produção.
@@ -450,7 +515,7 @@ function createRecordingClient(seed: Record<string, Row[]> = {}): RecordingClien
       if (prop === "rpc") {
         return (name: string, args: Record<string, unknown>) => {
           accessLog.push(`rpc:${name}`);
-          if (!ALLOWED_RPCS.has(name)) throw forbiddenProductionAccess(`rpc:${name}`);
+          if (!isAllowedRpc(name)) throw forbiddenProductionAccess(`rpc:${name}`);
           return target.rpc(name, args);
         };
       }
@@ -459,8 +524,13 @@ function createRecordingClient(seed: Record<string, Row[]> = {}): RecordingClien
         return {
           from: (bucket: string) => {
             accessLog.push(`storage.from:${bucket}`);
-            if (!ALLOWED_BUCKETS.has(bucket)) throw forbiddenProductionAccess(`storage:${bucket}`);
+            const readOnly = READ_ONLY_BUCKETS.has(bucket);
+            if (!ALLOWED_BUCKETS.has(bucket) && !readOnly) {
+              throw forbiddenProductionAccess(`storage:${bucket}`);
+            }
             const ops = target.storage.from(bucket);
+            // F48.2.2 — bucket de branding local: somente leitura (`createSignedUrl`).
+            if (readOnly) return wrapReadOnlyBucket(bucket, ops, accessLog);
             return {
               upload: (storagePath: string, body: unknown, options?: unknown) => {
                 accessLog.push(`storage.upload:${bucket}:${storagePath}`);
@@ -953,5 +1023,113 @@ describe("isolamento — prompts oficiais permanecem intactos", () => {
 
     expect(snapshot.source).toBe("override");
     expect(after.equals(before)).toBe(true);
+  });
+});
+
+// ─── (F48.2.2) Fronteira da bancada de geração ───────────────────────────────
+
+describe("isolamento — fronteira da bancada de geração (F48.2.2)", () => {
+  interface LooseTableBuilder {
+    select: (...args: unknown[]) => unknown;
+    insert: (payload: unknown) => unknown;
+    update: (payload: unknown) => unknown;
+    delete: () => unknown;
+  }
+
+  interface LooseStorageBucket {
+    createSignedUrl: (storagePath: string, ttl: number) => unknown;
+    upload: (storagePath: string, body: unknown, options?: unknown) => unknown;
+    remove: (paths: string[]) => unknown;
+    list: (path?: string, options?: unknown) => unknown;
+  }
+
+  interface LooseClient {
+    from: (table: string) => LooseTableBuilder;
+    storage: { from: (bucket: string) => LooseStorageBucket };
+  }
+
+  function looseClient(): LooseClient {
+    return createRecordingClient().client as unknown as LooseClient;
+  }
+
+  it("permite leitura das tabelas de loja/branding local e proíbe escrita (read-only)", () => {
+    const client = looseClient();
+    for (const table of [
+      "stores",
+      "store_brand_profiles",
+      "store_brand_assets",
+      "store_visual_signatures",
+    ]) {
+      expect(() => client.from(table).select("*"), `leitura ${table}`).not.toThrow();
+      expect(() => client.from(table).insert({}), `insert ${table}`).toThrow(
+        new RegExp(`forbidden_production_access:${table}:insert`),
+      );
+      expect(() => client.from(table).update({}), `update ${table}`).toThrow(
+        new RegExp(`forbidden_production_access:${table}:update`),
+      );
+      expect(() => client.from(table).delete(), `delete ${table}`).toThrow(
+        new RegExp(`forbidden_production_access:${table}:delete`),
+      );
+    }
+  });
+
+  it("permite somente createSignedUrl nos buckets de branding (upload/remove/list lançam)", () => {
+    const client = looseClient();
+    for (const bucket of ["store-logos", "store-brand-assets", "visual-signatures"]) {
+      expect(
+        () => client.storage.from(bucket).createSignedUrl(`${bucket}/asset.png`, 60),
+        `createSignedUrl ${bucket}`,
+      ).not.toThrow();
+      expect(() => client.storage.from(bucket).upload("asset.png", {})).toThrow(
+        new RegExp(`forbidden_production_access:storage:${bucket}:upload`),
+      );
+      expect(() => client.storage.from(bucket).remove(["asset.png"])).toThrow(
+        new RegExp(`forbidden_production_access:storage:${bucket}:remove`),
+      );
+      expect(() => client.storage.from(bucket).list()).toThrow(
+        new RegExp(`forbidden_production_access:storage:${bucket}:list`),
+      );
+    }
+  });
+
+  it("bucket produtivo (campaign-images) e tabelas produtivas fazem o teste falhar", () => {
+    const client = looseClient();
+    expect(() => client.storage.from("campaign-images").createSignedUrl("x", 60)).toThrow(
+      /forbidden_production_access:storage:campaign-images/,
+    );
+    expect(() => client.storage.from("campaign-images").upload("x", {})).toThrow(
+      /forbidden_production_access:storage:campaign-images/,
+    );
+    for (const table of [
+      "campaigns",
+      "campaign_art_versions",
+      "generation_events",
+      "ai_model_selection",
+      "admin_audit_log",
+      "credit_transactions",
+      "credit_balances",
+    ]) {
+      expect(() => client.from(table), `tabela produtiva ${table}`).toThrow(
+        new RegExp(`forbidden_production_access:${table}`),
+      );
+    }
+  });
+
+  it("ALLOWED_ENTRY_RE casa as leituras dos buckets de branding e das tabelas locais", () => {
+    const entries = [
+      "from:stores",
+      "from:store_brand_profiles",
+      "from:store_brand_assets",
+      "from:store_visual_signatures",
+      "from:lab_bench_runs",
+      "from:lab_bench_artifacts",
+      "storage.createSignedUrl:store-logos:store-logos/logo.png",
+      "storage.createSignedUrl:store-brand-assets:store-brand-assets/asset.png",
+      "storage.createSignedUrl:visual-signatures:visual-signatures/sig.png",
+      "rpc:lab_bench_reserve_run",
+    ];
+    for (const entry of entries) {
+      expect(ALLOWED_ENTRY_RE.test(entry), entry).toBe(true);
+    }
   });
 });
