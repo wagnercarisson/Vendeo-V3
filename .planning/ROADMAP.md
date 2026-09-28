@@ -109,7 +109,21 @@ Plans:
 **Excecao preexistente (externa a F48.2.1):** `src/lib/legal/__tests__/legal-document-versions.test.ts` falha com `ENOENT` (caminho antigo da F50, change arquivada). O gate fail-closed do Plano 09 aceita a suite completa somente com essa excecao exata (1 arquivo / 1 teste) e a registra como follow-up externo.
 ## F48.2.2 — Fundação da bancada de geração no Admin/Laboratório
 
-**Status:** **Não iniciada** — próxima fase a planejar (realinhada em 2026-09-28). A antiga F48.2.2 (**Auditoria e Otimização do Prompt do Revisor**) foi **descartada/substituída** (implementação não iniciada; sem artefatos mantidos; recuperável pelo histórico do Git).
+**Status:** **Planejada** — 8 planos criados (2026-09-28); aguardando execução. A antiga F48.2.2 (**Auditoria e Otimização do Prompt do Revisor**) foi **descartada/substituída** (implementação não iniciada; sem artefatos mantidos; recuperável pelo histórico do Git). Fonte da verdade: `openspec/changes/fase-48-2-2-fundacao-bancada-geracao/`.
+
+**Plans:** 8 plans
+
+Plans:
+- [ ] 48-2-2-01-PLAN.md — Bounded context `src/lib/lab/bench/**`, contratos de isolamento, registry de dimensões e **SPIKE BLOQUEANTE de modelos/presets (CHECKPOINT 1)**.
+- [ ] 48-2-2-02-PLAN.md — Persistência local-first: DDL fora de `supabase/migrations/`, bootstrap local com REVERT, guard de path `bench/{runId}/...` e serviços de run/artefato.
+- [ ] 48-2-2-03-PLAN.md — Lojas de teste via manifesto local, contrato completo de branding (inclui `typography_direction`) e snapshot de campanha produto/oferta com intenção resolvida.
+- [ ] 48-2-2-04-PLAN.md — Registry final de presets (somente confirmados) e **CHECKPOINT 2 — aprovação humana antes de qualquer geração paga**.
+- [ ] 48-2-2-05-PLAN.md — Invocação isolada: adapter `Images` dedicado, resolver capability+alvo do preset, single-shot e telemetria de custo read-only.
+- [ ] 48-2-2-06-PLAN.md — API administrativa sob `/api/admin/laboratorio/bancada` (guards, estimativa, stream NDJSON, detalhe e artefatos).
+- [ ] 48-2-2-07-PLAN.md — UI desktop `/admin/laboratorio/bancada` e entrada na navegação interna do laboratório.
+- [ ] 48-2-2-08-PLAN.md — Testes transversais, **UAT local com geração real controlada (CHECKPOINT 3)** e verificação/encerramento.
+
+**Ondas e dependências:** cadeia sequencial `48-2-2-01 -> 02 -> 03 -> 04 -> 05 -> 06 -> 07 -> 08` (uma onda por plano; o plano 04 depende também do 01). Checkpoints humanos: **1** (spike, plano 01), **2** (aprovação dos presets antes de geração paga, plano 04) e **3** (UAT local, plano 08). Nenhuma task executa chamada paga autonomamente.
 
 **Objetivo:** construir uma bancada interna, desktop e restrita à área administrativa/laboratório, capaz de realizar gerações reais e mensuráveis, separadas do fluxo de produção.
 
