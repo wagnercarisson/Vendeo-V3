@@ -9,14 +9,15 @@
 // recusados ANTES de qualquer I/O. Nenhum secret é impresso.
 //
 // Uso:
-//   node scripts/lab/48-2-2-bench-bootstrap.mjs               # aplica o DDL (idempotente)
-//   node scripts/lab/48-2-2-bench-bootstrap.mjs --revert      # executa o bloco REVERT
-//   node scripts/lab/48-2-2-bench-bootstrap.mjs --with-catalog # + linhas de catálogo locais
+//   node scripts/lab/48-2-2-bench-bootstrap.mjs                # aplica o DDL + linhas de catálogo (idempotente)
+//   node scripts/lab/48-2-2-bench-bootstrap.mjs --no-catalog    # aplica apenas o DDL
+//   node scripts/lab/48-2-2-bench-bootstrap.mjs --revert        # executa o bloco REVERT + remove as linhas de catálogo
 //
-// O `--with-catalog` insere **apenas linhas de catálogo** (`ai_model_catalog`)
-// necessárias à validação local dos presets, de forma idempotente e **sem
-// pricing** (o pricing existe somente em código — `bench-pricing.ts`). Nesta fase
-// ele é opt-in: os presets permanecem desabilitados até o CHECKPOINT 2 (plano 04).
+// O bootstrap insere **apenas linhas de catálogo** (`ai_model_catalog`)
+// necessárias à validação local dos presets confirmados pelo spike (CHECKPOINT 1),
+// de forma idempotente e **sem pricing** (o pricing existe somente em código —
+// `bench-pricing.ts`, sem tabela de pricing). Conteúdo igual ⇒ nada; linha nova ⇒
+// inserida; nunca sobrescreve. `--with-catalog` é aceito como alias legado.
 //
 // O módulo NÃO tem efeito colateral no import: as funções são exportadas e a CLI
 // só roda quando o arquivo é o entry point.
@@ -182,8 +183,9 @@ export async function revertBenchSchema(dbUrl, schemaPath = BENCH_SCHEMA_PATH) {
 
 /**
  * Insere **apenas** linhas de catálogo locais da bancada (`ai_model_catalog`),
- * idempotente (ON CONFLICT DO NOTHING) e **sem pricing**. Nenhuma promoção ao
- * remoto e nenhuma alteração de comportamento produtivo.
+ * idempotente (ON CONFLICT DO NOTHING) e **sem pricing**. Conteúdo igual ⇒ nada;
+ * linha nova ⇒ inserida; nunca sobrescreve. Nenhuma promoção ao remoto e nenhuma
+ * alteração de comportamento produtivo.
  */
 export async function insertBenchCatalogRows(dbUrl) {
   return withClient(dbUrl, async (client) => {
@@ -203,32 +205,56 @@ export async function insertBenchCatalogRows(dbUrl) {
 }
 
 /**
- * Executa o bootstrap. `--revert` executa o bloco REVERT; `--with-catalog`
- * adiciona as linhas de catálogo locais (opt-in). Devolve o resumo sem secrets.
+ * Remove **apenas** as linhas de catálogo locais inseridas por este bootstrap
+ * (`capability='campaign_image'`, `provider='openai'`, `protocol='images'` nos
+ * modelos da bancada). Local-only; nunca toca outras linhas do catálogo.
+ */
+export async function revertBenchCatalogRows(dbUrl) {
+  return withClient(dbUrl, async (client) => {
+    const result = await client.query(
+      `DELETE FROM public.ai_model_catalog
+         WHERE capability = 'campaign_image'
+           AND provider = 'openai'
+           AND protocol = 'images'
+           AND model = ANY($1::text[])`,
+      [BENCH_CATALOG_ROWS.map((row) => row.model)],
+    );
+    return { removed: result.rowCount ?? 0 };
+  });
+}
+
+/**
+ * Executa o bootstrap. Aplica o DDL e, por padrão, as linhas de catálogo locais
+ * confirmadas pelo spike (idempotente; `"nada a fazer"` quando já existem).
+ * `--no-catalog` aplica apenas o DDL; `--revert` executa o bloco REVERT e remove
+ * as linhas de catálogo locais. `--with-catalog` é aceito como alias legado.
+ * Devolve o resumo sem secrets.
  */
 export async function main(argv = process.argv.slice(2), env = process.env) {
   const revert = argv.includes("--revert");
-  const withCatalog = argv.includes("--with-catalog");
+  const skipCatalog = argv.includes("--no-catalog");
 
   const connection = resolveLocalConnection(env);
 
   if (revert) {
     const result = await revertBenchSchema(connection.dbUrl);
+    const catalog = await revertBenchCatalogRows(connection.dbUrl);
     return {
       host: connection.hostname,
       reverted: true,
       statements: result.statements,
-      catalog: "skipped",
+      catalog: `removed:${catalog.removed}`,
     };
   }
 
   await applyBenchSchema(connection.dbUrl);
 
-  let catalog = "skipped";
-  if (withCatalog) {
-    const result = await insertBenchCatalogRows(connection.dbUrl);
-    catalog = `inserted:${result.inserted}`;
+  if (skipCatalog) {
+    return { host: connection.hostname, applied: true, reverted: false, catalog: "skipped" };
   }
+
+  const result = await insertBenchCatalogRows(connection.dbUrl);
+  const catalog = result.inserted === 0 ? "nada a fazer" : `inserted:${result.inserted}`;
 
   return { host: connection.hostname, applied: true, reverted: false, catalog };
 }
