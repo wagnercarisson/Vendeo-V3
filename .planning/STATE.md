@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: complete
-last_updated: "2026-09-28T20:15:06.466Z"
+last_updated: "2026-09-28T20:24:03.308Z"
 progress:
   total_phases: 39
   completed_phases: 34
   total_plans: 309
-  completed_plans: 296
+  completed_plans: 297
   percent: 87
 ---
 
@@ -18,17 +18,17 @@ progress:
 
 - Project: `.planning/PROJECT.md`.
 - Core value: transformar uma oferta simples em uma campanha profissional, clara e publicável.
-- Foco atual: F48.2.2 — **Fundação da bancada de geração no Admin/Laboratório** (**em execução** desde 2026-09-28; 8 planos; `48-2-2-01` concluído com CHECKPOINT 1 aprovado e `48-2-2-02` concluído; próxima ação é executar `48-2-2-03`).
+- Foco atual: F48.2.2 — **Fundação da bancada de geração no Admin/Laboratório** (**em execução** desde 2026-09-28; 8 planos; `48-2-2-01` concluído com CHECKPOINT 1 aprovado, `48-2-2-02` e `48-2-2-03` concluídos; próxima ação é executar `48-2-2-04`).
 - Fase anterior: F48.2.1 — **Bancada Manual de Prompts do Diretor** (CONCLUÍDA, VERIFICADA, SINCRONIZADA e ARQUIVADA).
 - Próxima fase: **F48.2.3 — Experimento determinístico Oferta 1:1** (depende da bancada validada na F48.2.2).
 - Próxima iniciativa condicionada: F50.1 aguardando constituição da PJ.
 
 ## Current Position
 
-Phase: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório) — **IN PROGRESS** (8 planos; 2 executados — `48-2-2-01` concluído com CHECKPOINT 1 aprovado e `48-2-2-02` concluído)
-Plans: `48-2-2-01` .. `48-2-2-08` — **criados em 2026-09-28**; `48-2-2-01` e `48-2-2-02` **executados/summarized**; `48-2-2-03`..`48-2-2-08` pendentes.
+Phase: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório) — **IN PROGRESS** (8 planos; 3 executados — `48-2-2-01` concluído com CHECKPOINT 1 aprovado, `48-2-2-02` e `48-2-2-03` concluídos)
+Plans: `48-2-2-01` .. `48-2-2-08` — **criados em 2026-09-28**; `48-2-2-01`, `48-2-2-02` e `48-2-2-03` **executados/summarized**; `48-2-2-04`..`48-2-2-08` pendentes.
 Checkpoints humanos: **CP1 aprovado** (spike de modelos/presets, plano 01; 4 presets propostos, todos desabilitados até o CP2), **CP2** (aprovação dos presets antes de qualquer geração paga, plano 04), **CP3** (UAT local, plano 08). Nenhuma task executa chamada paga autonomamente.
-Próxima ação: **executar `48-2-2-03`** (lojas de teste e branding completo) e, em sequência, `48-2-2-04`..`48-2-2-08`; depois, **F48.2.3 — Experimento determinístico Oferta 1:1**.
+Próxima ação: **executar `48-2-2-04`** (registry extensível e presets — CHECKPOINT 2) e, em sequência, `48-2-2-05`..`48-2-2-08`; depois, **F48.2.3 — Experimento determinístico Oferta 1:1**.
 Fase anterior: 48.2.1 (Bancada Manual de Prompts do Diretor) — **COMPLETE**; chain `48-2-1-05 → 48-2-1-07 → 48-2-1-08 → 48-2-1-09`.
 
 - F48.2.1 realinhada (OpenSpec `017b8799`) e **concluída**: bancada manual dos prompts do Diretor.
@@ -47,7 +47,7 @@ Fase anterior: 48.2.1 (Bancada Manual de Prompts do Diretor) — **COMPLETE**; c
 
 ## F48.2.2 — Inventário da fase (mecânico)
 
-- **Planejados (8):** `48-2-2-01` .. `48-2-2-08` (criados em 2026-09-28). **Executado/summarized (2):** `48-2-2-01` (CHECKPOINT 1 aprovado após correção do spike; nenhuma chamada paga; base SHA `50ae6007`) e `48-2-2-02` (persistência local-first: DDL local + bootstrap + guard `bench/` + serviços de run/artefato; nenhuma chamada paga; commits `ffd982e0`, `39671a1e`, `7b709feb`).
+- **Planejados (8):** `48-2-2-01` .. `48-2-2-08` (criados em 2026-09-28). **Executado/summarized (3):** `48-2-2-01` (CHECKPOINT 1 aprovado após correção do spike; nenhuma chamada paga; base SHA `50ae6007`), `48-2-2-02` (persistência local-first: DDL local + bootstrap + guard `bench/` + serviços de run/artefato; nenhuma chamada paga; commits `ffd982e0`, `39671a1e`, `7b709feb`) e `48-2-2-03` (lojas de teste e branding completo: manifesto local + `assertBenchTestStore` + signer restrito `createBenchBrandingSignedUrl` + contrato de branding com `typography_direction` + snapshot de campanha com intenção resolvida; nenhuma chamada paga; commits `ef04240f`, `ba1c57c9`, `b9321f41`).
 - **Fonte da verdade:** `openspec/changes/fase-48-2-2-fundacao-bancada-geracao/` (proposal / design D1–D17 / tasks 1–8 / 8 specs), corrigida no commit `388db445` e refletida nos planos.
 - **Artefatos de planejamento:** `48.2.2-CONTEXT.md`, `48.2.2-UI-SPEC.md`, `48-2-2-PATTERNS.md` + 8 `PLAN.md`; verificados por `gsd-plan-checker` (**VERIFICATION PASSED**).
 - **Checkpoints:** **CP1 aprovado** (spike, plano 01 — `gpt-image-2` e `gpt-image-2.5-flare` confirmados pela documentação oficial; 4 presets propostos, todos desabilitados com `reason: spike_pendente`), CP2 (aprovação dos presets antes de geração paga, plano 04), CP3 (UAT local, plano 08).
@@ -55,7 +55,7 @@ Fase anterior: 48.2.1 (Bancada Manual de Prompts do Diretor) — **COMPLETE**; c
 
 ## Global (mecânico — `gsd-sdk query progress`)
 
-- `total_phases: 39` / `completed_phases: 34`; `total_plans: 309`; `completed_plans (summaries): 296`; `percent: 87` (frontmatter recalculado pelo SDK em 2026-09-28).
+- `total_phases: 39` / `completed_phases: 34`; `total_plans: 309`; `completed_plans (summaries): 297`; `percent: 87` (frontmatter recalculado pelo SDK em 2026-09-28).
 
 ## Accumulated Context — Decisions
 
@@ -71,10 +71,11 @@ Fase anterior: 48.2.1 (Bancada Manual de Prompts do Diretor) — **COMPLETE**; c
 - **Planejamento F48.2.2 (2026-09-28):** base OpenSpec corrigida (`388db445`) — allowlist própria `BENCH_MODEL_ALLOWLIST` (sem tocar `MODEL_ALLOWLIST`); ciclo `draft → pending` (slot global só na confirmação); signer local restrito de branding (`createBenchBrandingSignedUrl`); custo local por `modelo + qualidade + tamanho`, com pricing **somente em código** (`bench-pricing.ts`, sem tabela); `assertBenchTestStore` em toda entrada. 8 planos criados; spike bloqueante no plano 01; aprovação humana antes de geração paga (CP2). `gsd-plan-checker` = VERIFICATION PASSED.
 - **Execução F48.2.2 — plano `48-2-2-01` (2026-09-28):** **CHECKPOINT 1 aprovado** após correção dirigida por humano do spike (commit `d77d40ca`) — `gpt-image-2` e `gpt-image-2.5-flare` **confirmados pela documentação oficial**; **4 presets propostos** (`gpt-image-2-low`/`gpt-image-2-medium`/`gpt-image-2.5-flare-low`/`gpt-image-2.5-flare-medium`), **todos desabilitados** (`spike_pendente`) até o CP2 (plano 04); `account_availability_pending` a comprovar no UAT autorizado (plano 08); **nenhuma chamada paga executada**. Entregues: bounded context `src/lib/lab/bench/**`, registry de dimensões (primeiro recorte), `BENCH_MODEL_ALLOWLIST`, registry de presets e contratos de isolamento read-only (typecheck + 48 testes verdes). F48.2.2 antiga (Revisor) permanece descartada/substituída.
 - **Execução F48.2.2 — plano `48-2-2-02` (2026-09-28):** persistência local-first da bancada. **DDL local fora da cadeia de migrations** (`supabase/lab/bench-schema.sql`, D17) com `lab_bench_runs` (status inicial `draft`) + `lab_bench_artifacts`, RLS/grants service-role, trigger de imutabilidade a partir de `running` (população `draft → pending` permitida), trigger de proibição de DELETE e índice único parcial **global** de geração ativa cobrindo **somente** `pending`/`running`; **bootstrap local idempotente** (`scripts/lab/48-2-2-bench-bootstrap.mjs`) com guarda local-only (`assertLocalHost`), `--revert` e `--with-catalog` (opt-in, **não executado** — presets desabilitados até o CP2). Guard de path aditivo `bench/{runId}/inputs/{index}.{ext}` e `bench/{runId}/output.{ext}` (anti-traversal mantido; `experiments/...` intacto). Serviços: `bench-artifact-service` (builders, checksum, rollback sem órfão com `finalizeRun` injetado, URL assinada) e `bench-run-service` (reserva em `draft` idempotente por `operation_id` sem ocupar o slot; `setBenchRunInput` em `draft`; `confirmBenchRun` CAS `draft → pending` com `unique_violation` → `bench_run_already_active`; `markBenchRunRunning`; `finalizeBenchRun` com erro sanitizado; `reconcileStaleBenchRuns` com `bench_run_orphan_timeout` e `bench_run_draft_abandoned`; `getBenchRun`/`getBenchRunByOperationId`). **Nenhum `supabase db push` executado** e `lab_bench_*` ausente no remoto. Verificação: `db reset` + `db lint --fail-on error` exit 0; bootstrap idempotente (2×); 15/15 validações de DDL; typecheck exit 0; 78 testes verdes. **Nenhuma chamada paga.**
+- **Execução F48.2.2 — plano `48-2-2-03` (2026-09-28):** lojas de teste e branding completo. **Manifesto local** `fixtures/lab/bench/stores.json` (única fonte de elegibilidade, D4; arquivo versionado com `stores: []`, IDs reais a preencher no UAT) e `store-manifest.ts` com `loadBenchStoreManifest` (anti-traversal `assertWithinRoot`/`path.relative`), `listBenchTestStores` (manifesto **E** `stores` local, `.select(...)` somente-leitura) e **`assertBenchTestStore` exportado** (recusa `store_not_in_manifest` sem leitura; `bench_store_not_materialized` quando ausente localmente) — contrato exigido nos pontos de entrada (GET branding, estimativa e POST runs; consumo no plano 06). **Signer local restrito** `bench-branding-signer.ts`: `createBenchBrandingSignedUrl` aceita **somente** `store-logos`/`store-brand-assets`/`visual-signatures` (allowlist estrita de bucket/path, `assertLabEnvironment` na entrada, TTL do servidor, códigos `bench_branding_bucket_not_allowed`/`bench_branding_path_invalid`) e `createBenchBrandingSignedUrlForStore` exige `assertBenchTestStore` **antes** de assinar; **não** reutiliza o signer/bucket de artefatos (`lab-artifacts`) nem `campaign-images`. **Contrato de branding** `branding-service.ts`: `loadBenchBranding` começa por `assertBenchTestStore`, lê `stores`/`store_brand_profiles` (`status='synced'`, fallback `source='without_logo'`)/`store_brand_assets` (`status='active'`)/`store_visual_signatures` (`status='active'`) em somente leitura, expõe **todos** os campos incluindo `typography_direction` (da coluna persistida) e resolve logo/assinatura por URL assinada restrita; `toBenchBrandingSnapshot` registra a evidência. **Snapshot de campanha** `campaign-snapshot.ts` (módulo puro): `buildBenchCampaignSnapshot` compatível com os contratos reais de produto/comercial, `resolveBenchIntent` determinística e `intentResolvedFrom` (`explicit` | `inferred_from_prices`); `assertBenchCampaignSnapshot` (`missing_campaign_snapshot`); nenhum serviço de crédito/entrega/correção/publicação. Fronteiras produtivas intocadas (`git diff` vazio para `BrandProfileSnapshot`/`resolveStoreIdentity`/`art-director-briefing`). Verificação: typecheck exit 0; 5 arquivos / 67 testes verdes; gates de arquitetura/isolamento 2 arquivos / 31 testes verdes. **Nenhuma chamada paga.**
 
 ## Pending Todos
 
-- **Executar a F48.2.2 — Fundação da bancada de geração no Admin/Laboratório** (**em execução**; `48-2-2-01` e `48-2-2-02` concluídos — CHECKPOINT 1 aprovado; próxima ação: `48-2-2-03`).
+- **Executar a F48.2.2 — Fundação da bancada de geração no Admin/Laboratório** (**em execução**; `48-2-2-01`, `48-2-2-02` e `48-2-2-03` concluídos — CHECKPOINT 1 aprovado; próxima ação: `48-2-2-04`, com CHECKPOINT 2).
 - F48.2.3 — Experimento determinístico Oferta 1:1 — não iniciada; depende da bancada validada na F48.2.2.
 - Sessões manuais de teste dos prompts do Diretor (`offer`/`spotlight`/`exclusive`), conduzidas pelo usuário e pelo assistente; qualquer operação real paga exige novo programa e nova autorização humana explícita.
 - F48.2.2 antiga (Auditoria e Otimização do Prompt do Revisor) — **descartada/substituída**; implementação não iniciada; sem artefatos mantidos (recuperável pelo histórico do Git).
@@ -103,7 +104,7 @@ Fase anterior: 48.2.1 (Bancada Manual de Prompts do Diretor) — **COMPLETE**; c
 
 ## Session Continuity
 
-- Última sessão: 2026-09-28 — execução do plano `48-2-2-02` (persistência local-first da bancada: DDL local + bootstrap + guard `bench/` + serviços de run/artefato).
-- Último trabalho: plano `48-2-2-02` **concluído** (DDL local fora de `supabase/migrations/` com REVERT; índice global de geração ativa; guard `bench/{runId}/...` aditivo; `bench-artifact-service` e `bench-run-service`; `db reset`/`db lint` exit 0; bootstrap idempotente; 15/15 validações de DDL; typecheck exit 0; 78 testes verdes; **nenhuma chamada paga**); commits `ffd982e0`, `39671a1e` e `7b709feb`.
-- Próximo trabalho: **executar `48-2-2-03`** (lojas de teste e branding completo) e a sequência até `48-2-2-08` (CP2 no plano 04; CP3 no plano 08); depois, F48.2.3 — Experimento determinístico Oferta 1:1. Sessões manuais de teste dos prompts do Diretor seguem em paralelo, com novo programa e nova autorização humana antes de qualquer chamada paga.
-- Resume file: `None` (plano `48-2-2-02` concluído; próxima ação é executar `48-2-2-03`).
+- Última sessão: 2026-09-28 — execução do plano `48-2-2-03` (lojas de teste e branding completo: manifesto local + `assertBenchTestStore` + signer restrito de branding + snapshot de campanha com intenção resolvida).
+- Último trabalho: plano `48-2-2-03` **concluído** (`fixtures/lab/bench/stores.json` com `stores: []` a preencher no UAT; `store-manifest.ts` com `loadBenchStoreManifest`/`listBenchTestStores`/`assertBenchTestStore`; `bench-branding-signer.ts` com `createBenchBrandingSignedUrl`/`createBenchBrandingSignedUrlForStore` restrito a `store-logos`/`store-brand-assets`/`visual-signatures`; `branding-service.ts` com `loadBenchBranding`/`toBenchBrandingSnapshot` expondo `typography_direction` da fonte persistida; `campaign-snapshot.ts` puro com `intentResolvedFrom`; typecheck exit 0; 5 arquivos / 67 testes verdes; gates de arquitetura/isolamento 2 arquivos / 31 testes verdes; fronteiras produtivas intocadas; **nenhuma chamada paga**); commits `ef04240f`, `ba1c57c9` e `b9321f41`.
+- Próximo trabalho: **executar `48-2-2-04`** (registry extensível e presets — CHECKPOINT 2) e a sequência até `48-2-2-08` (CP3 no plano 08); depois, F48.2.3 — Experimento determinístico Oferta 1:1. Sessões manuais de teste dos prompts do Diretor seguem em paralelo, com novo programa e nova autorização humana antes de qualquer chamada paga.
+- Resume file: `None` (plano `48-2-2-03` concluído; próxima ação é executar `48-2-2-04`).
