@@ -21,6 +21,7 @@ const LAB_NAV_ITEMS = [
   { href: "/admin/laboratorio/cenarios", label: "Cenários" },
   { href: "/admin/laboratorio#avaliacoes-pendentes", label: "Avaliações" },
   { href: "/admin/laboratorio/programas", label: "Programas" },
+  { href: "/admin/laboratorio/bancada", label: "Bancada" },
 ];
 
 export default function LaboratorioLayout({
