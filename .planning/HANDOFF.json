@@ -5,16 +5,18 @@
   "phase_name": "fundacao-bancada-geracao",
   "phase_dir": ".planning/phases/48.2.2-fundacao-bancada-geracao",
   "status": "complete",
-  "phase_status": "complete_technical",
+  "phase_status": "complete_verified_synced_archived",
   "plan": "48-2-2-08",
   "openspec_source": "fase-48-2-2-fundacao-bancada-geracao",
   "openspec_archive": {
-    "path": "openspec/changes/fase-48-2-2-fundacao-bancada-geracao",
-    "verified": false,
-    "synced": false,
-    "archived": false,
-    "active_changes_remaining": ["fase-48-2-2-fundacao-bancada-geracao"],
-    "note": "OpenSpec ATIVO. Verificacao/sincronizacao/arquivamento MANUAIS pendentes (/opsx-verify -> /opsx-sync -> /opsx-archive). NAO executados nesta fase."
+    "path": "openspec/changes/archive/2026-09-28-fase-48-2-2-fundacao-bancada-geracao",
+    "verified": true,
+    "synced": true,
+    "archived": true,
+    "active_changes_remaining": [],
+    "specs_new": ["lab-generation-bench", "lab-bench-config", "lab-bench-branding"],
+    "specs_synced": ["lab-isolation", "lab-artifacts", "lab-gateway-harness", "lab-admin-api", "lab-admin-ui"],
+    "note": "OpenSpec VERIFICADO, SINCRONIZADO e ARQUIVADO em 2026-09-28. Duas correcoes de verificacao aplicadas: (1) custo reportado pelo provider mantido separado do calculo local (nao copiado para estimatedCostUsd); (2) snapshot de branding persistido sem URLs assinadas/JWTs (apenas storagePath + metadados)."
   },
   "discarded_scope": {
     "change": "fase-48-2-2-auditoria-otimizacao-prompt-revisor",
@@ -68,12 +70,9 @@
   ],
   "blockers": [],
   "human_actions_pending": [
-    {"action": "/opsx-verify da change fase-48-2-2-fundacao-bancada-geracao", "context": "OpenSpec ativo; verificacao manual pendente", "blocking": false},
-    {"action": "/opsx-sync da change fase-48-2-2-fundacao-bancada-geracao", "context": "Sincronizacao manual pendente (apos verify)", "blocking": false},
-    {"action": "/opsx-archive da change fase-48-2-2-fundacao-bancada-geracao", "context": "Arquivamento manual pendente (apos sync)", "blocking": false},
     {"action": "Conduzir as sessoes manuais de teste dos prompts do Diretor (offer/spotlight/exclusive)", "context": "Conduzidas pelo usuario e pelo assistente; qualquer chamada paga exige novo programa e nova autorizacao humana", "blocking": false}
   ],
   "uncommitted_files": [],
-  "next_action": "Executar manualmente /opsx-verify -> /opsx-sync -> /opsx-archive da change fase-48-2-2-fundacao-bancada-geracao. Depois: F48.2.3 — Fidelidade experimental da bancada (importacao explicita/unidirecional da identidade das lojas de teste; comando local; nenhuma consulta remota em operacao normal; nenhuma campanha remota copiada; paridade programatica dos campos; UI propria permitida) e, em seguida, F48.2.4 — Experimento deterministico Oferta 1:1. Nenhuma promocao, nenhum db push remoto, nenhuma nova chamada paga pendente na F48.2.2.",
-  "context_notes": "F48.2.2 CONCLUIDA TECNICAMENTE (2026-09-28): 8/8 planos; CP1/CP2/CP3 aprovados; UAT tecnico APROVADO com UMA geracao real controlada (run f6148ea6-...; custo calculado US$ 0,014592, provider reportado null; UI US$ 0,01); qualidade criativa NAO validada (fixtures locais artificiais). Producao intocada (base..HEAD vazio, BASE 50ae6007...); nenhum credito consumido; campaigns/campaign_art_versions/generation_events/ai_model_selection = 0; nenhum supabase db push. Achado nao bloqueante: branding_snapshot persiste URLs assinadas locais efemeras (por desenho do schema). OpenSpec ATIVO aguardando verify/sync/archive MANUAIS. Realinhamento de sequencia: F48.2.3 = Fidelidade experimental da bancada; F48.2.4 = Experimento deterministico Oferta 1:1 (descricao antiga da F48.2.3 deslocada, preservada). Excecao F50 (legal-document-versions.test.ts, ENOENT) e follow-up externo; data-subject-requests.postgres.test.ts e flaky de infra local."
+  "next_action": "Iniciar F48.2.3 — Fidelidade experimental da bancada (importacao explicita/unidirecional da identidade das lojas de teste; comando local; nenhuma consulta remota em operacao normal; nenhuma campanha remota copiada; paridade programatica dos campos; UI propria permitida) e, em seguida, F48.2.4 — Experimento deterministico Oferta 1:1. Nenhuma promocao, nenhum db push remoto, nenhuma nova chamada paga pendente na F48.2.2.",
+  "context_notes": "F48.2.2 CONCLUIDA e ARQUIVADA (2026-09-28): 8/8 planos; CP1/CP2/CP3 aprovados; UAT tecnico APROVADO com UMA geracao real controlada (run f6148ea6-...; custo calculado US$ 0,014592, provider reportado null; UI US$ 0,01); qualidade criativa NAO validada (fixtures locais artificiais). Producao intocada (base..HEAD vazio, BASE 50ae6007...); nenhum credito consumido; campaigns/campaign_art_versions/generation_events/ai_model_selection = 0; nenhum supabase db push. OpenSpec VERIFICADO, SINCRONIZADO e ARQUIVADO em openspec/changes/archive/2026-09-28-fase-48-2-2-fundacao-bancada-geracao/. Correcoes de verificacao: (1) custo reportado pelo provider nao substitui mais o calculo local (estimatedCostUsd = resolvedor local; providerReportedCostUsd separado); (2) branding_snapshot persistido sem URLs assinadas/JWTs (D13), com contrato de exibicao mantendo URLs em tempo de leitura. Realinhamento de sequencia: F48.2.3 = Fidelidade experimental da bancada; F48.2.4 = Experimento deterministico Oferta 1:1 (descricao antiga da F48.2.3 deslocada, preservada). Excecao F50 (legal-document-versions.test.ts, ENOENT) e follow-up externo; data-subject-requests.postgres.test.ts e flaky de infra local."
 }

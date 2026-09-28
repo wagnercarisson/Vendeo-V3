@@ -18,17 +18,17 @@ progress:
 
 - Project: `.planning/PROJECT.md`.
 - Core value: transformar uma oferta simples em uma campanha profissional, clara e publicável.
-- Foco atual: F48.2.2 — **Fundação da bancada de geração no Admin/Laboratório** (**CONCLUÍDA TECNICAMENTE** em 2026-09-28; 8/8 planos; **CP1, CP2 e CP3 aprovados**; UAT técnico aprovado com **uma** geração real controlada; produção intocada; OpenSpec **ativo**, aguardando verificação/sincronização/arquivamento **manuais**).
+- Foco atual: F48.2.2 — **Fundação da bancada de geração no Admin/Laboratório** (**CONCLUÍDA** em 2026-09-28; 8/8 planos; **CP1, CP2 e CP3 aprovados**; UAT técnico aprovado com **uma** geração real controlada; produção intocada; OpenSpec **verificado, sincronizado e arquivado** em `openspec/changes/archive/2026-09-28-fase-48-2-2-fundacao-bancada-geracao/`).
 - Fase anterior: F48.2.1 — **Bancada Manual de Prompts do Diretor** (CONCLUÍDA, VERIFICADA, SINCRONIZADA e ARQUIVADA).
 - Próxima fase: **F48.2.3 — Fidelidade experimental da bancada** (importação explícita/unidirecional da identidade das lojas de teste; comando local; nenhuma consulta remota em operação normal); depois, **F48.2.4 — Experimento determinístico Oferta 1:1**.
 - Próxima iniciativa condicionada: F50.1 aguardando constituição da PJ.
 
 ## Current Position
 
-Phase: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório) — **COMPLETE (técnica)** (8/8 planos; `48-2-2-01` .. `48-2-2-08` executados/summarized)
+Phase: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório) — **COMPLETE (verificada, sincronizada e arquivada)** (8/8 planos; `48-2-2-01` .. `48-2-2-08` executados/summarized)
 Plans: `48-2-2-01` .. `48-2-2-08` — **todos concluídos/summarized** (2026-09-28).
 Checkpoints humanos: **CP1 aprovado** (spike de modelos/presets, plano 01 — após correção do spike), **CP2 aprovado** (presets habilitados antes de geração paga, plano 04 — após correção do pricing), **CP3 aprovado** (UAT local, plano 08 — **uma** geração real controlada autorizada e executada). Nenhuma task executou chamada paga autonomamente.
-Próxima ação: **F48.2.3 — Fidelidade experimental da bancada** (importação explícita/unidirecional da identidade das lojas de teste; comando local; nenhuma consulta remota em operação normal); depois, **F48.2.4 — Experimento determinístico Oferta 1:1**. O OpenSpec da F48.2.2 permanece **ativo** até a verificação/sincronização/arquivamento **manuais**.
+Próxima ação: **F48.2.3 — Fidelidade experimental da bancada** (importação explícita/unidirecional da identidade das lojas de teste; comando local; nenhuma consulta remota em operação normal); depois, **F48.2.4 — Experimento determinístico Oferta 1:1**. O OpenSpec da F48.2.2 foi **verificado, sincronizado e arquivado** em `openspec/changes/archive/2026-09-28-fase-48-2-2-fundacao-bancada-geracao/` (correções de verificação: custo do provider separado do cálculo local; snapshot de branding sem URLs assinadas).
 Fase anterior: 48.2.1 (Bancada Manual de Prompts do Diretor) — **COMPLETE**; chain `48-2-1-05 → 48-2-1-07 → 48-2-1-08 → 48-2-1-09`.
 
 - F48.2.1 realinhada (OpenSpec `017b8799`) e **concluída**: bancada manual dos prompts do Diretor.
@@ -83,7 +83,7 @@ Fase anterior: 48.2.1 (Bancada Manual de Prompts do Diretor) — **COMPLETE**; c
 
 ## Pending Todos
 
-- **F48.2.2 concluída tecnicamente** (8/8 planos; CP1/CP2/CP3 aprovados; UAT técnico aprovado com uma geração real controlada; produção intocada; nenhuma promoção). **Pendência manual:** `/opsx-verify` → `/opsx-sync` → `/opsx-archive` da change `fase-48-2-2-fundacao-bancada-geracao` (**não** executados nesta fase).
+- **F48.2.2 concluída** (8/8 planos; CP1/CP2/CP3 aprovados; UAT técnico aprovado com uma geração real controlada; produção intocada; nenhuma promoção). **OpenSpec verificado, sincronizado e arquivado** (`/opsx-verify` → `/opsx-sync` → `/opsx-archive`) em `openspec/changes/archive/2026-09-28-fase-48-2-2-fundacao-bancada-geracao/`; 3 specs novas (`lab-generation-bench`, `lab-bench-config`, `lab-bench-branding`) e 5 sincronizadas.
 - F48.2.3 — Fidelidade experimental da bancada (importação explícita/unidirecional da identidade das lojas de teste; comando local; nenhuma consulta remota em operação normal; paridade programática dos campos; UI própria permitida) — **não iniciada**.
 - F48.2.4 — Experimento determinístico Oferta 1:1 — **não iniciada**; depende da bancada validada (F48.2.2) e da fidelidade experimental (F48.2.3).
 - Sessões manuais de teste dos prompts do Diretor (`offer`/`spotlight`/`exclusive`), conduzidas pelo usuário e pelo assistente; qualquer operação real paga exige novo programa e nova autorização humana explícita.
@@ -113,7 +113,7 @@ Fase anterior: 48.2.1 (Bancada Manual de Prompts do Diretor) — **COMPLETE**; c
 
 ## Session Continuity
 
-- Última sessão: 2026-09-28 — encerramento do plano `48-2-2-08` (testes transversais + UAT local/CHECKPOINT 3 + verificação/encerramento da F48.2.2).
-- Último trabalho: F48.2.2 **concluída tecnicamente** (8/8 planos; CP1/CP2/CP3 aprovados; UAT técnico aprovado com **uma** geração real controlada; produção intocada; `48.2.2-UAT.md` + `48-2-2-VERIFICATION.md` + `48-2-2-08-SUMMARY.md` gerados; OpenSpec **ativo** aguardando verify/sync/archive **manuais**).
-- Próximo trabalho: **executar manualmente** `/opsx-verify` → `/opsx-sync` → `/opsx-archive` da change `fase-48-2-2-fundacao-bancada-geracao`; depois, **F48.2.3 — Fidelidade experimental da bancada** e **F48.2.4 — Experimento determinístico Oferta 1:1**. Sessões manuais de teste dos prompts do Diretor seguem em paralelo, com novo programa e nova autorização humana antes de qualquer chamada paga.
-- Resume file: `None` (F48.2.2 concluída tecnicamente; próxima ação é a verificação/sincronização/arquivamento manuais do OpenSpec).
+- Última sessão: 2026-09-28 — encerramento do plano `48-2-2-08` (testes transversais + UAT local/CHECKPOINT 3 + verificação/encerramento da F48.2.2) e **verify/sync/archive manuais** do OpenSpec da F48.2.2, com duas correções de verificação (custo do provider separado do cálculo local; snapshot de branding sem URLs assinadas).
+- Último trabalho: F48.2.2 **concluída** (8/8 planos; CP1/CP2/CP3 aprovados; UAT técnico aprovado com **uma** geração real controlada; produção intocada; `48.2.2-UAT.md` + `48-2-2-VERIFICATION.md` + `48-2-2-08-SUMMARY.md` gerados; OpenSpec **verificado, sincronizado e arquivado**).
+- Próximo trabalho: **F48.2.3 — Fidelidade experimental da bancada** e **F48.2.4 — Experimento determinístico Oferta 1:1**. Sessões manuais de teste dos prompts do Diretor seguem em paralelo, com novo programa e nova autorização humana antes de qualquer chamada paga.
+- Resume file: `None` (F48.2.2 concluída e arquivada; próxima ação é o planejamento da F48.2.3).
