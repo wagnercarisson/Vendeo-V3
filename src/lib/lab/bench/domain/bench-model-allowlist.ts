@@ -15,13 +15,15 @@ import type { AiProtocol, AiProvider } from "@/lib/ai/model-resolver";
  * `MODEL_ALLOWLIST` produtivo **não** é importado como interseção obrigatória nem
  * alterado (regressão).
  *
- * ## Candidatos sob investigação ≠ geração habilitada
+ * ## Confirmados pelo spike (CHECKPOINT 1) ≠ geração habilitada
  *
- * A allowlist lista os **alvos candidatos sob investigação do spike**. Constar
- * aqui **não habilita geração**: a geração é gated pelo `enabled` do preset
- * (`preset-registry.ts`), e **nenhum preset está habilitado** antes do
- * CHECKPOINT 1 (todos `enabled: false` com motivo). O plano 04 habilita apenas os
- * presets confirmados pelo spike.
+ * A allowlist lista os **alvos confirmados pelo spike** (`docs/lab/48-2-2-spike-models.md`).
+ * Após o CHECKPOINT 1, ambos os modelos do primeiro recorte (`gpt-image-2` e
+ * `gpt-image-2.5-flare`) foram confirmados no **caminho direto `images`** — as
+ * entradas abaixo refletem essa decisão. Constar aqui ainda **não habilita
+ * geração**: a geração é gated pelo `enabled` do preset (`preset-registry.ts`) e
+ * pela aprovação humana do CHECKPOINT 2. O protocolo `responses` **não** foi
+ * exigido por nenhum modelo confirmado e por isso **não** é adicionado aqui.
  */
 
 export const BENCH_MODEL_ALLOWLIST: Record<AiProvider, Record<string, readonly AiProtocol[]>> = {

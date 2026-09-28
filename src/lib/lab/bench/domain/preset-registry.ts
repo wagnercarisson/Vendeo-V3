@@ -12,13 +12,18 @@ import { BENCH_MODEL_ALLOWLIST } from "./bench-model-allowlist";
  * (`BENCH_MODEL_ALLOWLIST` — **não** o `MODEL_ALLOWLIST` produtivo) e contra o
  * catálogo ativo (`ai_model_catalog`) em modo **somente leitura**.
  *
- * ## Estado inicial (obrigatório)
+ * ## Estado após o CHECKPOINT 1 (plano 04)
  *
- * **Nenhum preset está habilitado** antes do CHECKPOINT 1: todos os quatro
- * candidatos nascem `enabled: false` com `reason: "spike_pendente"`. O plano 04
- * habilita apenas os presets confirmados pelo spike (e mantém `responses`
- * indisponível salvo exigência confirmada). Nenhum CHECK por valor e nenhuma
- * tabela de presets no banco (D7).
+ * O spike bloqueante (`docs/lab/48-2-2-spike-models.md`) confirmou **ambos** os
+ * modelos (`gpt-image-2` e `gpt-image-2.5-flare`) no **caminho direto `images`**.
+ * Assim, os quatro presets candidatos do primeiro recorte ficam `enabled: true`,
+ * validados pela `BENCH_MODEL_ALLOWLIST` e pelo catálogo ativo (leitura). O
+ * protocolo `responses` **não** foi exigido por nenhum modelo confirmado e
+ * permanece **desabilitado com motivo** (`protocolo_nao_confirmado`). Nenhum CHECK
+ * por valor e nenhuma tabela de presets no banco (D7).
+ *
+ * A habilitação efetiva para gerar só vale após a **aprovação humana do
+ * CHECKPOINT 2** (plano 04) — nenhuma geração paga ocorre antes disso.
  */
 
 // ─── Tipo do preset ──────────────────────────────────────────────────────────
@@ -37,10 +42,17 @@ export interface BenchPreset {
   reason?: string;
 }
 
-// ─── Candidatos (todos desabilitados antes do CHECKPOINT 1) ──────────────────
+// ─── Presets (confirmados pelo spike + caminho `responses` desabilitado) ─────
 
-const SPIKE_PENDENTE = "spike_pendente";
+/** Motivo dos presets cujo protocolo não foi exigido por nenhum modelo confirmado. */
+const PROTOCOLO_NAO_CONFIRMADO = "protocolo_nao_confirmado";
 
+/**
+ * Presets do primeiro recorte. Os quatro do **caminho direto `images`** foram
+ * confirmados pelo spike (CHECKPOINT 1) e estão `enabled: true`; o caminho
+ * `responses` **não** foi exigido por nenhum modelo confirmado e permanece
+ * `enabled: false` com `reason` explícito.
+ */
 export const BENCH_PRESETS: readonly BenchPreset[] = [
   {
     id: "gpt-image-2-low",
@@ -51,8 +63,7 @@ export const BENCH_PRESETS: readonly BenchPreset[] = [
     protocol: "images",
     quality: "low",
     size: "1024x1024",
-    enabled: false,
-    reason: SPIKE_PENDENTE,
+    enabled: true,
   },
   {
     id: "gpt-image-2-medium",
@@ -63,8 +74,7 @@ export const BENCH_PRESETS: readonly BenchPreset[] = [
     protocol: "images",
     quality: "medium",
     size: "1024x1024",
-    enabled: false,
-    reason: SPIKE_PENDENTE,
+    enabled: true,
   },
   {
     id: "gpt-image-2.5-flare-low",
@@ -75,8 +85,7 @@ export const BENCH_PRESETS: readonly BenchPreset[] = [
     protocol: "images",
     quality: "low",
     size: "1024x1024",
-    enabled: false,
-    reason: SPIKE_PENDENTE,
+    enabled: true,
   },
   {
     id: "gpt-image-2.5-flare-medium",
@@ -87,8 +96,32 @@ export const BENCH_PRESETS: readonly BenchPreset[] = [
     protocol: "images",
     quality: "medium",
     size: "1024x1024",
+    enabled: true,
+  },
+  // Caminho `responses`: nenhum modelo confirmado o exige ⇒ desabilitado com motivo.
+  {
+    id: "gpt-image-2-responses",
+    label: "GPT Image 2 · responses (desabilitado)",
+    capability: "campaign_image",
+    provider: "openai",
+    model: "gpt-image-2",
+    protocol: "responses",
+    quality: "low",
+    size: "1024x1024",
     enabled: false,
-    reason: SPIKE_PENDENTE,
+    reason: PROTOCOLO_NAO_CONFIRMADO,
+  },
+  {
+    id: "gpt-image-2.5-flare-responses",
+    label: "GPT Image 2.5 Flare · responses (desabilitado)",
+    capability: "campaign_image",
+    provider: "openai",
+    model: "gpt-image-2.5-flare",
+    protocol: "responses",
+    quality: "low",
+    size: "1024x1024",
+    enabled: false,
+    reason: PROTOCOLO_NAO_CONFIRMADO,
   },
 ];
 
@@ -96,7 +129,7 @@ export const BENCH_PRESETS: readonly BenchPreset[] = [
 
 /**
  * Lançado quando o preset não existe ou está desabilitado. Carrega o motivo
- * (ex.: `spike_pendente`) para que a rota devolva `preset_not_enabled` (400).
+ * (ex.: `protocolo_nao_confirmado`) para que a rota devolva `preset_not_enabled` (400).
  */
 export class BenchPresetError extends Error {
   readonly code = "preset_not_enabled" as const;

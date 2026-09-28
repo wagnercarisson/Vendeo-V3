@@ -17,10 +17,30 @@ import {
 /**
  * Registry de presets da bancada (F48.2.2, D7).
  *
- * Nenhum preset é habilitado antes do CHECKPOINT 1; a allowlist própria
- * (`BENCH_MODEL_ALLOWLIST`) é a autoridade dos presets e o `MODEL_ALLOWLIST`
- * produtivo permanece intocado (regressão).
+ * O spike (CHECKPOINT 1) confirmou ambos os modelos no caminho direto `images`;
+ * o plano 04 habilita os quatro presets confirmados e mantém o caminho `responses`
+ * desabilitado com motivo. A allowlist própria (`BENCH_MODEL_ALLOWLIST`) é a
+ * autoridade dos presets e o `MODEL_ALLOWLIST` produtivo permanece intocado.
  */
+
+/** Presets confirmados pelo spike (`docs/lab/48-2-2-spike-models.md`, seção "Decisão"). */
+const CONFIRMED_PRESET_IDS = [
+  "gpt-image-2-low",
+  "gpt-image-2-medium",
+  "gpt-image-2.5-flare-low",
+  "gpt-image-2.5-flare-medium",
+] as const;
+
+/** Modelos confirmados no caminho direto `images` pelo spike. */
+const CONFIRMED_MODELS = ["gpt-image-2", "gpt-image-2.5-flare"] as const;
+
+const DISABLED_PRESET_IDS = ["gpt-image-2-responses", "gpt-image-2.5-flare-responses"] as const;
+
+function findPreset(id: string): BenchPreset {
+  const preset = BENCH_PRESETS.find((candidate) => candidate.id === id);
+  if (!preset) throw new Error(`preset ausente: ${id}`);
+  return preset;
+}
 
 function enabledCopy(preset: BenchPreset, overrides: Partial<BenchPreset> = {}): BenchPreset {
   return { ...preset, enabled: true, reason: undefined, ...overrides };
@@ -76,26 +96,47 @@ function createReadOnlyCatalogClient(rows: CatalogRow[]): {
   return { client: client as unknown as SupabaseClient, mutations };
 }
 
-describe("preset-registry — candidatos e estado inicial", () => {
-  it("os quatro candidatos existem e nenhum está habilitado antes do CHECKPOINT 1", () => {
-    const ids = BENCH_PRESETS.map((preset) => preset.id).sort();
-    expect(ids).toEqual([
-      "gpt-image-2-low",
-      "gpt-image-2-medium",
-      "gpt-image-2.5-flare-low",
-      "gpt-image-2.5-flare-medium",
-    ]);
-    for (const preset of BENCH_PRESETS) {
-      expect(preset.enabled, preset.id).toBe(false);
-      expect(preset.reason, preset.id).toBeTruthy();
+describe("preset-registry — presets confirmados pelo spike", () => {
+  it("os quatro presets do caminho direto `images` existem e estão habilitados", () => {
+    for (const id of CONFIRMED_PRESET_IDS) {
+      const preset = findPreset(id);
+      expect(preset.enabled, id).toBe(true);
+      expect(preset.reason, id).toBeUndefined();
+      expect(preset.protocol, id).toBe("images");
+      expect(preset.capability, id).toBe("campaign_image");
+      expect(preset.provider, id).toBe("openai");
     }
     expect(listBenchPresets()).toBe(BENCH_PRESETS);
   });
 
-  it("resolveBenchPreset de um preset desabilitado lança preset_not_enabled com motivo", () => {
+  it("todo preset habilitado corresponde a um modelo confirmado pelo spike (caminho direto)", () => {
+    for (const preset of BENCH_PRESETS) {
+      if (!preset.enabled) continue;
+      expect(CONFIRMED_MODELS).toContain(preset.model);
+      expect(preset.protocol).toBe("images");
+    }
+  });
+
+  it("resolveBenchPreset de um preset confirmado devolve o preset", () => {
+    expect(resolveBenchPreset("gpt-image-2-low").id).toBe("gpt-image-2-low");
+    expect(resolveBenchPreset("gpt-image-2.5-flare-medium").model).toBe("gpt-image-2.5-flare");
+  });
+});
+
+describe("preset-registry — presets não confirmados ficam desabilitados com motivo", () => {
+  it("o caminho `responses` permanece desabilitado com motivo explícito", () => {
+    for (const id of DISABLED_PRESET_IDS) {
+      const preset = findPreset(id);
+      expect(preset.enabled, id).toBe(false);
+      expect(preset.reason, id).toBe("protocolo_nao_confirmado");
+      expect(preset.protocol, id).toBe("responses");
+    }
+  });
+
+  it("resolveBenchPreset de um preset desabilitado lança preset_not_enabled com o motivo", () => {
     const error = (() => {
       try {
-        resolveBenchPreset("gpt-image-2-low");
+        resolveBenchPreset("gpt-image-2-responses");
         return null;
       } catch (caught) {
         return caught;
@@ -103,7 +144,7 @@ describe("preset-registry — candidatos e estado inicial", () => {
     })();
     expect(error).toBeInstanceOf(BenchPresetError);
     expect((error as BenchPresetError).code).toBe("preset_not_enabled");
-    expect((error as BenchPresetError).reason).toBe("spike_pendente");
+    expect((error as BenchPresetError).reason).toBe("protocolo_nao_confirmado");
   });
 
   it("resolveBenchPreset de um id inexistente lança preset_not_enabled", () => {
@@ -112,8 +153,8 @@ describe("preset-registry — candidatos e estado inicial", () => {
 });
 
 describe("preset-registry — validação contra a allowlist própria da bancada", () => {
-  it("preset válido com enabled:true é aceito pela allowlist da bancada", () => {
-    const preset = enabledCopy(BENCH_PRESETS[0]);
+  it("preset confirmado é aceito pela allowlist da bancada", () => {
+    const preset = findPreset("gpt-image-2-low");
     expect(validatePresetAgainstAllowlist(preset)).toEqual({ ok: true });
     expect(() =>
       assertBenchTargetAllowed(preset.provider, preset.model, preset.protocol),
@@ -121,21 +162,19 @@ describe("preset-registry — validação contra a allowlist própria da bancada
   });
 
   it("preset fora da allowlist é recusado", () => {
-    const preset = enabledCopy(BENCH_PRESETS[0], { model: "modelo-inexistente" });
+    const preset = enabledCopy(findPreset("gpt-image-2-low"), { model: "modelo-inexistente" });
     expect(() => validatePresetAgainstAllowlist(preset)).toThrow(
       /fora da allowlist da bancada/,
     );
   });
 
   it("protocolo incompatível é recusado", () => {
-    const preset = enabledCopy(BENCH_PRESETS[0], { protocol: "responses" });
+    const preset = enabledCopy(findPreset("gpt-image-2-low"), { protocol: "responses" });
     expect(() => validatePresetAgainstAllowlist(preset)).toThrow(/protocolo .* incompatível/);
   });
 
   it("gpt-image-2.5-flare (ausente do MODEL_ALLOWLIST) é aceito via BENCH_MODEL_ALLOWLIST sem alterar o MODEL_ALLOWLIST", () => {
-    const preset = enabledCopy(
-      BENCH_PRESETS.find((candidate) => candidate.model === "gpt-image-2.5-flare")!,
-    );
+    const preset = findPreset("gpt-image-2.5-flare-low");
 
     // Ausente da allowlist produtiva...
     const prodKeysBefore = Object.keys(MODEL_ALLOWLIST.openai).sort();
@@ -169,7 +208,7 @@ describe("preset-registry — validação contra a allowlist própria da bancada
 
 describe("preset-registry — validação contra o catálogo ativo (somente leitura)", () => {
   it("aceita um preset cujo alvo existe como linha ativa do catálogo", async () => {
-    const preset = enabledCopy(BENCH_PRESETS[0]);
+    const preset = findPreset("gpt-image-2-low");
     const { client, mutations } = createReadOnlyCatalogClient([
       {
         id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
@@ -187,7 +226,7 @@ describe("preset-registry — validação contra o catálogo ativo (somente leit
   });
 
   it("recusa um preset cujo alvo não está no catálogo ativo", async () => {
-    const preset = enabledCopy(BENCH_PRESETS[0]);
+    const preset = findPreset("gpt-image-2-low");
     const { client, mutations } = createReadOnlyCatalogClient([]);
 
     await expect(validatePresetAgainstCatalog(preset, client)).rejects.toBeInstanceOf(
