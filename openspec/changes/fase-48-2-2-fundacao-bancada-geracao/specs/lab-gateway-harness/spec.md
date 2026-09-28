@@ -4,7 +4,7 @@
 
 ### Requirement: Invocação isolada com capability e alvo do preset
 
-O runtime da bancada SHALL compor uma instância própria de gateway com um resolver que devolve **capability + alvo do preset**, e SHALL invocar o modelo em **single-shot**, sem fallback automático, sem retry oculto e sem consultar a seleção produtiva. No **primeiro recorte** a bancada SHALL habilitar **apenas o caminho direto confirmado pelo spike**; o protocolo `responses` SHALL ser habilitado somente se algum modelo confirmado exigir esse protocolo.
+O runtime da bancada SHALL compor uma instância própria de gateway com um resolver que devolve **capability + alvo do preset**, e SHALL invocar o modelo em **single-shot**, sem fallback automático, sem retry oculto e sem consultar a seleção produtiva. No **primeiro recorte** a bancada SHALL habilitar **apenas o caminho direto confirmado pelo spike**; o protocolo `responses` SHALL ser habilitado somente se algum modelo confirmado exigir esse protocolo. O alvo do preset SHALL ser validado contra a allowlist própria da bancada (`BENCH_MODEL_ALLOWLIST`) e o catálogo ativo, sem consultar nem alterar a allowlist/registry produtivos.
 
 #### Scenario: Alvo do preset é resolvido
 

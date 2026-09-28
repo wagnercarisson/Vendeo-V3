@@ -4,7 +4,7 @@
 
 ### Requirement: Acesso somente leitura a lojas e branding locais
 
-A bancada SHALL acessar as tabelas de loja e branding (`stores`, `store_brand_profiles`, `store_brand_assets`, `store_visual_signatures`) **somente em leitura** e **somente no Supabase local**. A bancada SHALL NOT criar ou alterar linhas dessas tabelas, SHALL NOT sincronizar/importar lojas remotas e SHALL NOT ler ou gravar no bucket `campaign-images`.
+A bancada SHALL acessar as tabelas de loja e branding (`stores`, `store_brand_profiles`, `store_brand_assets`, `store_visual_signatures`) **somente em leitura** e **somente no Supabase local**. A bancada SHALL NOT criar ou alterar linhas dessas tabelas, SHALL NOT sincronizar/importar lojas remotas e SHALL NOT ler ou gravar no bucket `campaign-images`. A leitura dos assets de branding SHALL ocorrer **somente** nos buckets locais `store-logos`, `store-brand-assets` e `visual-signatures`, **somente leitura** e **somente local**, por signer dedicado que nunca aceita bucket/path informado pelo cliente.
 
 #### Scenario: Leitura de branding local é permitida e registrada
 
@@ -22,6 +22,17 @@ A bancada SHALL acessar as tabelas de loja e branding (`stores`, `store_brand_pr
 
 - **WHEN** a bancada persiste entradas ou saída
 - **THEN** nenhum objeto é lido ou gravado em `campaign-images`
+
+#### Scenario: Bucket de branding fora da allowlist é recusado
+
+- **WHEN** a bancada tenta assinar/ler um asset em bucket fora de `store-logos`/`store-brand-assets`/`visual-signatures`
+- **THEN** a operação é recusada
+- **AND** nenhum bucket produtivo é acessado
+
+#### Scenario: Loja fora do manifesto é recusada antes da leitura
+
+- **WHEN** um `storeId` fora do manifesto é usado em qualquer entrada
+- **THEN** a operação é recusada antes de qualquer leitura de branding ou storage
 
 ### Requirement: DDL local da bancada fora da cadeia de migrations remotas
 
@@ -46,7 +57,7 @@ O sistema SHALL incluir testes negativos que comprovem que a bancada não acessa
 #### Scenario: Acesso produtivo faz o teste falhar
 
 - **WHEN** um teste executa uma geração da bancada com fakes
-- **THEN** apenas tabelas `lab_*`, as tabelas de loja/branding **em leitura** e o bucket `lab-artifacts` são acessados
+- **THEN** apenas tabelas `lab_*`, as tabelas de loja/branding **em leitura** e o bucket `lab-artifacts` são acessados; a leitura de assets de branding é restrita a `store-logos`/`store-brand-assets`/`visual-signatures` (somente leitura, local)
 - **AND** qualquer acesso a `campaigns`, `campaign_art_versions`, `generation_events`, `ai_model_selection`, `admin_audit_log`, `credit_*` ou `campaign-images` faz o teste falhar
 
 #### Scenario: Nenhuma chamada de rede real em testes
@@ -54,3 +65,9 @@ O sistema SHALL incluir testes negativos que comprovem que a bancada não acessa
 - **WHEN** a suíte de testes da bancada é executada
 - **THEN** fakes de invocação e de telemetria são usados
 - **AND** nenhuma requisição de rede a providers é realizada
+
+#### Scenario: Bucket produtivo de branding faz o teste falhar
+
+- **WHEN** um teste tenta assinar um asset de branding em bucket fora da allowlist, com traversal ou para loja fora do manifesto
+- **THEN** o teste falha
+- **AND** nenhuma chamada de rede real é realizada

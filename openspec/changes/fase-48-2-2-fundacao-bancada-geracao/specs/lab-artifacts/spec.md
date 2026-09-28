@@ -4,7 +4,7 @@
 
 ### Requirement: Paths próprios da bancada
 
-Os artefatos da bancada SHALL ser persistidos no bucket privado `lab-artifacts` sob um esquema de path próprio da bancada (`bench/{runId}/...`), distinto dos paths de experimento/run do laboratório A/B e dos paths de campanha. Um guard de path SHALL rejeitar traversal e qualquer path de campanha.
+Os artefatos da bancada SHALL ser persistidos no bucket privado `lab-artifacts` sob um esquema de path próprio da bancada (`bench/{runId}/...`), distinto dos paths de experimento/run do laboratório A/B e dos paths de campanha. Um guard de path SHALL rejeitar traversal e qualquer path de campanha. O bucket `lab-artifacts` é **exclusivo** para entradas e resultados da bancada; assets de branding **não** são gravados nem assinados por este bucket (usam o signer restrito da capability `lab-bench-branding`).
 
 #### Scenario: Artefato da bancada usa o path próprio
 

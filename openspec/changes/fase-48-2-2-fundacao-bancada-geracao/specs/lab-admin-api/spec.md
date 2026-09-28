@@ -4,7 +4,7 @@
 
 ### Requirement: Superfície de API da bancada protegida
 
-O sistema SHALL expor as APIs da bancada sob `/api/admin/laboratorio/bancada`, protegidas por `requireAdmin()` e pela guarda de ambiente, com validação de payload por schema e erros mapeados. A superfície SHALL incluir: listagem de lojas de teste, leitura do branding, listagem de presets/configuração, estimativa, execução, detalhe da geração e leitura de artefatos.
+O sistema SHALL expor as APIs da bancada sob `/api/admin/laboratorio/bancada`, protegidas por `requireAdmin()` e pela guarda de ambiente, com validação de payload por schema e erros mapeados. A superfície SHALL incluir: listagem de lojas de teste, leitura do branding, listagem de presets/configuração, estimativa, execução, detalhe da geração e leitura de artefatos. Todas as rotas que recebem `storeId` SHALL validar o manifesto (`assertBenchTestStore`) antes de qualquer leitura de branding/tabela/storage.
 
 #### Scenario: Acesso não-admin é negado
 
@@ -26,7 +26,7 @@ O sistema SHALL expor as APIs da bancada sob `/api/admin/laboratorio/bancada`, p
 
 ### Requirement: Estimativa antes da execução
 
-A API SHALL oferecer uma estimativa de custo da geração antes da execução, pela capability/alvo do preset, sinalizando quando o pricing estiver parcial ou indisponível, sem bloquear a confirmação por pricing incompleto.
+A API SHALL oferecer uma estimativa de custo da geração antes da execução, pelo **preset completo** (`provider + model + protocol + quality + size`) via resolvedor local da bancada, sinalizando quando o pricing estiver parcial ou indisponível, sem bloquear a confirmação por pricing incompleto.
 
 #### Scenario: Estimativa é retornada
 
@@ -41,7 +41,7 @@ A API SHALL oferecer uma estimativa de custo da geração antes da execução, p
 
 ### Requirement: Execução da geração com confirmação explícita
 
-A rota de execução SHALL exigir confirmação explícita e um identificador de operação idempotente, e SHALL recusar a execução quando o ambiente, a concorrência (geração ativa), o preset ou a validação de entrada não permitirem. A execução SHALL emitir progresso em stream e exatamente um evento terminal.
+A rota de execução SHALL exigir confirmação explícita e um identificador de operação idempotente, e SHALL recusar a execução quando o ambiente, a concorrência (geração ativa), o preset ou a validação de entrada não permitirem. A execução SHALL emitir progresso em stream e exatamente um evento terminal. A execução SHALL adquirir o slot global apenas na confirmação (`draft → pending`, compare-and-set); a violação do índice de geração ativa SHALL retornar `bench_run_already_active` sem chamada paga.
 
 #### Scenario: Geração confirmada é executada
 
@@ -60,6 +60,12 @@ A rota de execução SHALL exigir confirmação explícita e um identificador de
 - **WHEN** já existe uma geração ativa na bancada
 - **THEN** a resposta é 409 com `bench_run_already_active`
 - **AND** nenhuma chamada paga é iniciada
+
+#### Scenario: Confirmação concorrente adquire o slot atomicamente
+
+- **WHEN** duas confirmações chegam simultaneamente
+- **THEN** exatamente uma transita `draft → pending` e executa
+- **AND** a outra recebe `bench_run_already_active` (409) sem chamada paga
 
 #### Scenario: Preset não habilitado é recusado
 

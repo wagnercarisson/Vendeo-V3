@@ -46,6 +46,12 @@ A bancada SHALL permitir selecionar **somente lojas de teste** identificadas por
 - **THEN** nenhuma consulta a banco, storage ou API remota é executada
 - **AND** nenhum asset aponta para bucket de produção
 
+#### Scenario: Loja fora do manifesto é recusada em qualquer entrada
+
+- **WHEN** um `storeId` fora do manifesto local é enviado a qualquer ponto de entrada (leitura de branding, estimativa ou execução)
+- **THEN** a operação é recusada antes de qualquer leitura de branding, tabela de loja ou storage
+- **AND** nenhuma geração é iniciada
+
 ### Requirement: Snapshot de campanha compatível com os contratos reais
 
 A bancada SHALL montar um snapshot de campanha compatível com os contratos reais de produto/oferta, reutilizando schemas, tipos e mappers de produção quando isso não introduzir efeitos laterais, e SHALL registrar explicitamente a **intenção resolvida** (inclusive quando inferida a partir dos preços). A bancada SHALL NOT chamar serviços de crédito, entrega, correção ou publicação.
@@ -63,7 +69,7 @@ A bancada SHALL montar um snapshot de campanha compatível com os contratos reai
 
 ### Requirement: Upload local de imagens
 
-A bancada SHALL receber imagens de produto **somente por upload** e SHALL armazená-las exclusivamente no bucket local do laboratório, registrando paths locais, tipos, dimensões, tamanho e checksums quando disponíveis. A bancada SHALL NOT ler nem reutilizar o bucket remoto `campaign-images`.
+A bancada SHALL receber imagens de produto **somente por upload** e SHALL armazená-las exclusivamente no bucket local do laboratório, registrando paths locais, tipos, dimensões, tamanho e checksums quando disponíveis. A bancada SHALL NOT ler nem reutilizar o bucket remoto `campaign-images`. O upload ocorre no estado **`draft`**, que **não** ocupa o slot global de geração ativa.
 
 #### Scenario: Imagem é enviada por upload
 
@@ -76,6 +82,12 @@ A bancada SHALL receber imagens de produto **somente por upload** e SHALL armaze
 - **WHEN** uma imagem de entrada ou a saída é persistida
 - **THEN** nenhum objeto é lido ou gravado em `campaign-images`
 - **AND** nenhum path de loja/campanha é utilizado
+
+#### Scenario: Upload não bloqueia a bancada
+
+- **WHEN** o administrador envia imagens antes de confirmar a geração
+- **THEN** o run permanece em `draft`
+- **AND** o slot global de geração ativa não é ocupado
 
 ### Requirement: Persistência mínima por geração
 
@@ -94,7 +106,7 @@ A bancada SHALL persistir uma unidade de auditoria própria por geração, conte
 
 ### Requirement: Ciclo de vida, concorrência e recuperação
 
-A bancada SHALL controlar a geração por estados (`pending`, `running`, `succeeded`, `failed`, `cancelled`, `timeout`), SHALL permitir **no máximo uma geração ativa em toda a bancada**, SHALL impedir chamada duplicada por concorrência ou duplo clique via identificador de operação idempotente e SHALL recuperar geração presa sem scheduler.
+A bancada SHALL controlar a geração por estados (`draft`, `pending`, `running`, `succeeded`, `failed`, `cancelled`, `timeout`), SHALL permitir **no máximo uma geração ativa** (`pending` ou `running`) em toda a bancada, SHALL adquirir o slot global **somente na confirmação** (`draft → pending`, compare-and-set) e SHALL impedir chamada duplicada por concorrência ou duplo clique via identificador de operação idempotente e recuperar geração presa/draft abandonado sem scheduler.
 
 #### Scenario: Duas gerações concorrentes — apenas uma ativa
 
@@ -113,6 +125,18 @@ A bancada SHALL controlar a geração por estados (`pending`, `running`, `succee
 - **WHEN** uma geração ativa fica presa além do limite de staleness
 - **THEN** ela é reconciliada como `failed` com erro de órfão
 - **AND** nenhuma rotina automática (scheduler) é usada
+
+#### Scenario: Confirmação adquire o slot atomicamente
+
+- **WHEN** o administrador confirma uma geração a partir de um `draft`
+- **THEN** o run transita `draft → pending` por compare-and-set
+- **AND** se já houver geração ativa, a resposta é `bench_run_already_active` sem chamada paga
+
+#### Scenario: Draft abandonado não bloqueia a bancada
+
+- **WHEN** um `draft` é abandonado sem confirmação
+- **THEN** ele é reconciliado/removido por reconciliação preguiçosa
+- **AND** o slot global nunca é ocupado por um `draft`
 
 ### Requirement: Evidência técnica e financeira e download
 

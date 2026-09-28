@@ -35,7 +35,7 @@ O carregamento do branding SHALL ser **somente leitura** e SHALL NOT alterar `Br
 
 ### Requirement: Assets locais por URL assinada
 
-Logo/assinatura e demais assets SHALL ser lidos de buckets locais por URL assinada de curta duração, geradas server-side. A bancada SHALL NOT usar assets ou buckets de produção.
+Logo/assinatura e demais assets SHALL ser lidos de buckets locais por URL assinada de curta duração, geradas server-side por um **signer local restrito** (`createBenchBrandingSignedUrl`) que aceita **somente** os buckets `store-logos`, `store-brand-assets` e `visual-signatures`, com **allowlist estrita de bucket e path**, aplicado **somente após** a guarda de ambiente local. O cliente **nunca** informa bucket/path livremente — a API resolve o path do registro persistido da loja selecionada. A bancada SHALL NOT usar assets ou buckets de produção nem reutilizar o signer/bucket de artefatos do laboratório (`lab-artifacts`).
 
 #### Scenario: Asset local é servido por URL assinada
 
@@ -47,6 +47,22 @@ Logo/assinatura e demais assets SHALL ser lidos de buckets locais por URL assina
 - **WHEN** um asset de branding é resolvido
 - **THEN** nenhum bucket de produção é consultado
 - **AND** nenhum path de produção é utilizado
+
+#### Scenario: Bucket produtivo ou path livre é recusado
+
+- **WHEN** um bucket fora da allowlist de branding ou um path informado livremente é usado
+- **THEN** a assinatura é recusada
+- **AND** nenhum asset de produção é servido
+
+#### Scenario: Path traversal é recusado
+
+- **WHEN** o path do asset contém traversal ou esquema de URL
+- **THEN** a assinatura é recusada
+
+#### Scenario: Loja fora do manifesto não tem asset assinado
+
+- **WHEN** a loja não está no manifesto local
+- **THEN** nenhum asset de branding é assinado
 
 ### Requirement: Branding apenas exibido e registrado, sem uso automático na geração
 

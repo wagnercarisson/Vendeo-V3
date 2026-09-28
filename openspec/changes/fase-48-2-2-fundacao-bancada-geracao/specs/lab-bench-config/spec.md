@@ -49,7 +49,7 @@ A bancada SHALL validar as dimensões e os presets por um registry **em código*
 
 ### Requirement: Presets de modelo/qualidade investigados e validados
 
-A bancada SHALL definir presets de modelo/qualidade como combinações `{ capability, provider, model, protocol, quality, size }` validadas, em modo leitura, contra a allowlist de modelos e o catálogo persistido ativo. Candidatos iniciais a investigar: `gpt-image-2` low, `gpt-image-2` medium, `gpt-image-2.5-flare` low e `gpt-image-2.5-flare` medium.
+A bancada SHALL definir presets de modelo/qualidade como combinações `{ capability, provider, model, protocol, quality, size }` validadas, em modo leitura, contra uma **allowlist própria da bancada** (`BENCH_MODEL_ALLOWLIST`, definida em código e alimentada somente pelos modelos/qualidades confirmados pelo spike) e o catálogo persistido ativo; o `MODEL_ALLOWLIST` produtivo permanece intocado. Candidatos iniciais a investigar: `gpt-image-2` low, `gpt-image-2` medium, `gpt-image-2.5-flare` low e `gpt-image-2.5-flare` medium.
 
 #### Scenario: Preset válido é aceito
 
@@ -61,6 +61,12 @@ A bancada SHALL definir presets de modelo/qualidade como combinações `{ capabi
 - **WHEN** um preset aponta para um alvo ausente da allowlist ou do catálogo ativo
 - **THEN** a geração é recusada
 - **AND** nenhuma linha do catálogo é alterada
+
+#### Scenario: Modelo confirmado fora da allowlist de produção é aceito na bancada
+
+- **WHEN** o spike confirma um modelo que ainda não existe no `MODEL_ALLOWLIST` produtivo
+- **THEN** o preset pode ser habilitado na bancada pela `BENCH_MODEL_ALLOWLIST`
+- **AND** o `MODEL_ALLOWLIST` produtivo não é alterado
 
 ### Requirement: Spike bloqueante de modelos e presets desabilitados com motivo
 
@@ -76,3 +82,19 @@ IDs, protocolos, qualidades, tamanhos, limites de entrada, disponibilidade, estr
 
 - **WHEN** o spike confirma ID, protocolo, qualidade, tamanho, usage e pricing
 - **THEN** o preset pode ser habilitado para geração
+
+### Requirement: Custo por preset (modelo + qualidade + tamanho)
+
+A bancada SHALL resolver custo por `provider + model + protocol + quality + size` por um **resolvedor local da bancada** com pricing **local** versionado, e SHALL manter o **usage/custo reportado pelo provider** como uma noção **separada**, nunca substituída pelo cálculo local. O resolvedor produtivo (`resolveAiCost`/`ai_model_pricing`, chaveado apenas por provider+model) **não** é suficiente para distinguir qualidades e não é a fonte da estimativa da bancada.
+
+#### Scenario: Qualidades diferentes têm custos distintos
+
+- **WHEN** dois presets do mesmo modelo diferem apenas em `quality`
+- **THEN** o resolvedor local da bancada devolve custos distintos (ou cobertura distinta) para cada preset
+- **AND** o pricing produtivo por provider+model não é usado como fonte única
+
+#### Scenario: Usage do provider permanece separado
+
+- **WHEN** o provider retorna `usage`/custo
+- **THEN** esse valor é registrado separadamente do custo calculado localmente
+- **AND** a origem do valor (`cost_source`) e a versão da regra (`cost_rule_version`) são registradas

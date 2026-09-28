@@ -56,9 +56,13 @@ A bancada vive sob `src/lib/lab/**` para **herdar** os gates arquiteturais do la
 
 Um loader dedicado lê, em **somente leitura** no Supabase local: `stores`, `store_brand_profiles` (`status='synced'`, com fallback `source='without_logo'`), `store_brand_assets` (`status='active'`) e `store_visual_signatures` (`status='active'`), produzindo um contrato que expõe **todos** os campos do branding, incluindo `typography_direction`. O loader **não** reutiliza nem altera `BrandProfileSnapshot`, `resolveStoreIdentity` ou `art-director-briefing`. **Alternativa rejeitada:** promover tipografia ao snapshot/mapper/prompt da campanha agora — muda o pipeline produtivo e é escopo natural da F48.2.3 ("branding como contrato obrigatório"). A lacuna de tipografia é **fechada no contrato da bancada**, não no pipeline.
 
+**Signer local restrito para assets de branding (F48.2.2).** Logo/assinatura e demais assets do branding são servidos por um **signer local dedicado** (`createBenchBrandingSignedUrl`) que aceita **somente** os buckets locais `store-logos`, `store-brand-assets` e `visual-signatures`, com **allowlist estrita de bucket e path**, aplicado **somente após** a guarda de ambiente local (`assertLabEnvironment`). O cliente **nunca** informa bucket/path livremente: a API resolve o path a partir do registro persistido da loja selecionada (já validada pelo manifesto). O signer de artefatos do laboratório (`createArtifactSignedUrl`, bucket `lab-artifacts`, paths `experiments/...`) **não** é reutilizado para branding; `lab-artifacts` permanece **exclusivo** para entradas e resultados da bancada. Testes negativos obrigatórios: bucket produtivo, path traversal e loja fora do manifesto são recusados.
+
 ### D4 — Somente lojas de teste, via allowlist/manifesto local
 
 A seleção lista **apenas lojas de teste da bancada**, identificadas por uma **allowlist/manifesto local** (ex.: `fixtures/lab/bench/stores.json`). Uma loja só é elegível se estiver no manifesto **e** existir no Supabase local; a leitura é somente leitura e não há sincronização remota. Isso evita depender de um campo produtivo novo apenas para a bancada. **Alternativas rejeitadas:** listar qualquer loja do Supabase local (ambíguo e sujeito a contaminar a bancada com lojas de produção) e adicionar um campo produtivo só para marcar lojas de teste.
+
+**Asserção em toda entrada.** A elegibilidade (loja no manifesto **e** existente no Supabase local) é verificada por `assertBenchTestStore` em **todos** os pontos de entrada — leitura de branding (GET), estimativa e execução (POST) — **antes** de qualquer leitura de branding, tabela de loja ou storage. Um `storeId` local fora do manifesto enviado manualmente à API é recusado sem leitura.
 
 ### D5 — Imagens somente por upload; bucket local
 
@@ -70,7 +74,7 @@ As dimensões `pipeline`, `formato`, `modelo`, `qualidade`, `intenção`, `tipo 
 
 ### D7 — Presets de modelo/qualidade em registry de código, com spike bloqueante
 
-Um registry puro define presets `{ id, label, capability, provider, model, protocol, quality, size }`, validados contra a allowlist (`MODEL_ALLOWLIST`) e o catálogo ativo (`ai_model_catalog`) em modo leitura. Candidatos: `gpt-image-2` low/medium e `gpt-image-2.5-flare` low/medium. **Nada é assumido**: um **spike bloqueante** confirma ID, protocolo/endpoints, edição com referências, qualidades, tamanho, limites, disponibilidade, estrutura de usage e pricing. Presets não confirmados ficam **desabilitados com motivo explícito**. O **primeiro recorte habilita apenas o caminho direto confirmado pelo spike**; o protocolo `responses` só entra se algum modelo exigir esse protocolo. **Alternativa rejeitada:** tabela de presets no banco — overkill para a fundação.
+Um registry puro define presets `{ id, label, capability, provider, model, protocol, quality, size }`, validados contra uma **allowlist própria da bancada** (`BENCH_MODEL_ALLOWLIST`, definida em código) — alimentada **somente** pelos modelos/qualidades **confirmados pelo spike** — e contra o catálogo ativo (`ai_model_catalog`) em modo leitura. O `MODEL_ALLOWLIST` e o registry produtivos **permanecem intocados**; um modelo confirmado pelo spike (ex.: `gpt-image-2.5-flare`) pode ser habilitado na bancada **sem alterar a allowlist de produção**. **Alternativa rejeitada:** exigir interseção com `MODEL_ALLOWLIST` — bloquearia um modelo confirmado que ainda não existe em produção. Candidatos: `gpt-image-2` low/medium e `gpt-image-2.5-flare` low/medium. **Nada é assumido**: um **spike bloqueante** confirma ID, protocolo/endpoints, edição com referências, qualidades, tamanho, limites, disponibilidade, estrutura de usage e pricing. Presets não confirmados ficam **desabilitados com motivo explícito**. O **primeiro recorte habilita apenas o caminho direto confirmado pelo spike**; o protocolo `responses` só entra se algum modelo exigir esse protocolo. **Alternativa rejeitada:** tabela de presets no banco — overkill para a fundação.
 
 ### D8 — Adapter/caminho `Images` dedicado à bancada
 
@@ -82,21 +86,21 @@ A bancada usa um **adapter `Images` dedicado** — novo arquivo em `src/lib/ai/a
 
 ### D10 — Estados, idempotência e recuperação
 
-Estados: `pending → running → succeeded | failed | cancelled | timeout`. Índice único parcial **global** de geração ativa (`status IN ('pending','running')`) garante **uma geração ativa em toda a bancada**. Idempotência por `operation_id` (reenvio devolve o run existente, sem nova chamada paga). Recuperação de run preso por **reconciliação preguiçosa** na leitura (padrão `reconcileStaleRuns`), sem scheduler, marcando órfãos como `failed` (`bench_run_orphan_timeout`).
+Estados: `draft → pending → running → succeeded | failed | cancelled | timeout`. O estado **`draft`** cobre a preparação e o upload de imagens e **não ocupa o slot global** (vários drafts podem coexistir). Índice único parcial **global** de geração ativa (`status IN ('pending','running')`) garante **uma geração ativa em toda a bancada**. A transição **`draft → pending`** é **compare-and-set** e **adquire o slot** atomicamente; a violação do índice parcial é mapeada como **409 `bench_run_already_active`** e **não** dispara chamada paga. **Drafts abandonados** (nunca confirmados) são reconciliados/removidos por reconciliação preguiçosa e **nunca bloqueiam** a bancada. Idempotência por `operation_id` (reenvio devolve o run existente, sem nova chamada paga). Recuperação de run preso por **reconciliação preguiçosa** na leitura (padrão `reconcileStaleRuns`), sem scheduler, marcando órfãos como `failed` (`bench_run_orphan_timeout`).
 
 ### D11 — Modelo de custo explícito
 
 Três noções distintas e **nunca confundidas na UI**:
 
-- **usage do provider** — quando retornado;
-- **custo calculado** — `resolveAiCost` sobre o usage + pricing versionado (`cost_source` + `cost_rule_version`);
-- **custo estimado** — quando usage suficiente não existe.
+- **usage do provider** — quando retornado; permanece uma noção **separada** e nunca é substituído pelo cálculo local;
+- **custo calculado** — resolvedor **local da bancada** sobre o usage + pricing **local** versionado, chaveado por `provider + model + protocol + quality + size` (`cost_source` + `cost_rule_version`);
+- **custo estimado** — quando usage suficiente não existe, usando o mesmo resolvedor local por **modelo + qualidade + tamanho/protocolo**.
 
 O `LabTelemetrySink` (read-only) acumula o custo sem gravar `generation_events`. Custo estimado **nunca** é apresentado como faturado.
 
 ### D12 — Segurança financeira leve
 
-Estimativa antes da geração (`estimateLabCampaignImageCost`), confirmação explícita (`confirmed: true`), uma geração ativa global e ambiente local-only. **Sem** programa de orçamento, reserva financeira ou créditos. **Alternativa rejeitada:** reusar `lab_prompt_programs` — escopo declarado fora desta fase.
+Estimativa antes da geração por um **resolvedor local da bancada** chaveado por `modelo + qualidade + tamanho/protocolo` (o helper produtivo `estimateLabCampaignImageCost`, que recebe apenas `provider`/`model`, **não** distingue `low` de `medium` e **não** é reutilizado para a estimativa da bancada), confirmação explícita (`confirmed: true`), uma geração ativa global e ambiente local-only. **Sem** programa de orçamento, reserva financeira ou créditos. **Alternativa rejeitada:** reusar `lab_prompt_programs` — escopo declarado fora desta fase.
 
 ### D13 — Erros, secrets e stream
 
@@ -104,7 +108,7 @@ Erros sanitizados **na origem** por `sanitizeAiErrorMessage` antes de persistir 
 
 ### D14 — Paths de artefato da bancada
 
-Novo esquema `bench/{runId}/{kind}/...` no bucket `lab-artifacts`, com guard de path próprio (anti-traversal, sem token de bucket de campanha). **Alternativa rejeitada:** reusar o path `experiments/...` — semântica incorreta.
+Novo esquema `bench/{runId}/{kind}/...` no bucket `lab-artifacts`, com guard de path próprio (anti-traversal, sem token de bucket de campanha). **Alternativa rejeitada:** reusar o path `experiments/...` — semântica incorreta. O signer de artefatos (`createArtifactSignedUrl`, bucket `lab-artifacts`) é **distinto** do signer de branding (D3); **nenhum** deles aceita bucket/path informado livremente pelo cliente.
 
 ### D15 — UI desktop mínima
 
@@ -128,6 +132,7 @@ O DDL da bancada (`lab_bench_runs`, `lab_bench_artifacts`, RLS/grants, triggers 
 ## Risks / Trade-offs
 
 - **[Extensões do isolamento enfraquecem a fronteira]** → allowlist estrita e **somente leitura** para branding local; proibição explícita de `campaign-images`/lojas remotas; self-tests negativos provando que o detector dispara.
+- **[Allowlist de buckets de branding amplia a fronteira de leitura]** → allowlist **somente leitura** e **local-only** para `store-logos`/`store-brand-assets`/`visual-signatures` via signer dedicado (D3), com testes negativos de bucket produtivo, traversal e loja fora do manifesto.
 - **[`gpt-image-2.5-flare` inexistente]** → spike bloqueante antes de habilitar; preset desabilitado com motivo se não confirmado.
 - **[Qualidade no caminho `images`]** → adapter `Images` **dedicado** da bancada; o `ImagesAdapter` produtivo e o registry padrão permanecem intocados, comprovado por regressão.
 - **[Gasto real sem créditos]** → estimativa + confirmação + uma geração ativa + local-only; custo estimado nunca apresentado como faturado.
