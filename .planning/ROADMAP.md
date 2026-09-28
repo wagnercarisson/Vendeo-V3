@@ -119,7 +119,7 @@ Plans:
 - [x] 48-2-2-03-PLAN.md — Lojas de teste via manifesto local, contrato completo de branding (inclui `typography_direction`) e snapshot de campanha produto/oferta com intenção resolvida.
 - [x] 48-2-2-04-PLAN.md — Registry final de presets (somente confirmados) e **CHECKPOINT 2 — aprovação humana antes de qualquer geração paga**.
 - [x] 48-2-2-05-PLAN.md — Invocação isolada: adapter `Images` dedicado, resolver capability+alvo do preset, single-shot e telemetria de custo read-only.
-- [ ] 48-2-2-06-PLAN.md — API administrativa sob `/api/admin/laboratorio/bancada` (guards, estimativa, stream NDJSON, detalhe e artefatos).
+- [x] 48-2-2-06-PLAN.md — API administrativa sob `/api/admin/laboratorio/bancada` (guards, estimativa, stream NDJSON, detalhe e artefatos).
 - [ ] 48-2-2-07-PLAN.md — UI desktop `/admin/laboratorio/bancada` e entrada na navegação interna do laboratório.
 - [ ] 48-2-2-08-PLAN.md — Testes transversais, **UAT local com geração real controlada (CHECKPOINT 3)** e verificação/encerramento.
 
