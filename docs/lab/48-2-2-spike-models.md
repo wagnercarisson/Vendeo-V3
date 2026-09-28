@@ -83,9 +83,14 @@ chamada paga foi executada.
 | `gpt-image-2` | US$2,50/M tokens | US$4,00/M tokens | US$15,00/M tokens |
 | `gpt-image-2.5-flare` | US$5,00/M tokens | US$8,00/M tokens | US$30,00/M tokens |
 
-**Referência de custo por peça (`gpt-image-2`, 1:1, somente saída):** ~US$0,006 em
-`low` e ~US$0,053 em `medium` (estimativa oficial da calculadora). Entradas de texto e
-de imagem são **adicionais**.
+**Referência de custo por peça (1:1, somente saída):**
+
+- `gpt-image-2`: ~US$0,006 em `low` e ~US$0,053 em `medium` (estimativa oficial da calculadora).
+- `gpt-image-2.5-flare`: `low` com **196 tokens de saída** e ~US$0,00588 (calculador
+  oficial); `medium` **sem referência por peça publicada** — a estimativa fica
+  **ausente** até haver valor comprovado (não reaproveita os tokens do `gpt-image-2`).
+
+Entradas de texto e de imagem são **adicionais**.
 
 > O pricing efetivo é **calculado em código** (`bench-pricing.ts`, plano 04), chaveado
 > pelo preset completo (`provider+model+protocol+quality+size`); não há tabela de

@@ -23,6 +23,16 @@ import type { AiProtocol, AiProvider } from "@/lib/ai/model-resolver";
  * `unitPriceUsd` aqui é a **estimativa de saída** por peça (taxa de saída ×
  * tokens de saída estimados), usada quando o `usage` real ainda não existe —
  * **nunca** como multiplicação genérica de `usage × unitPriceUsd` (D11).
+ *
+ * ## Estimativas de saída (correção do CHECKPOINT 2)
+ *
+ * Modelos diferentes consomem **quantidades diferentes** de tokens na mesma
+ * qualidade, portanto a estimativa de tokens de saída é chaveada por
+ * `model + quality + size` e **nunca** compartilhada entre modelos. Só entram
+ * valores comprovados: `official_calculator` (calculador oficial) ou
+ * `derived_from_published_price` (derivado de preço por peça publicado). Quando
+ * um valor não está comprovado, ele fica **ausente** de propósito — não é
+ * inventado nem reaproveitado de outro modelo.
  */
 
 /** Versão da regra de pricing local (rastreada em `cost_rule_version`). */
@@ -33,6 +43,9 @@ export type BenchPricingMode = "per_image" | "token_based" | "unknown";
 
 /** Cobertura do pricing para o preset: `complete`, `partial` ou `missing`. */
 export type BenchPricingCoverage = "complete" | "partial" | "missing";
+
+/** Origem de uma estimativa de saída (auditoria). */
+export type BenchEstimateSource = "official_calculator" | "derived_from_published_price";
 
 /** Taxas por token (USD por 1M tokens) — modo `token_based`. */
 export interface BenchTokenRates {
@@ -49,11 +62,13 @@ export interface BenchPricingEntry {
   quality: string;
   size: string;
   mode: BenchPricingMode;
-  /** Estimativa de saída por peça (USD). */
+  /** Estimativa de saída por peça (USD). Ausente quando não há valor comprovado. */
   unitPriceUsd?: number;
   tokenRates?: BenchTokenRates;
   /** Tokens de saída estimados para o preset (distingue `low` de `medium`). */
   estimatedOutputTokens?: number;
+  /** Origem da estimativa de saída, quando houver. */
+  estimateSource?: BenchEstimateSource;
   coverage: BenchPricingCoverage;
   ruleVersion: string;
 }
@@ -64,6 +79,7 @@ export interface BenchPricingResolution {
   unitPriceUsd?: number;
   tokenRates?: BenchTokenRates;
   estimatedOutputTokens?: number;
+  estimateSource?: BenchEstimateSource;
   coverage: BenchPricingCoverage;
   ruleVersion: string;
 }
@@ -93,15 +109,44 @@ const GPT_IMAGE_2_5_FLARE_RATES: BenchTokenRates = {
   outputImageUsdPerMillion: 30,
 };
 
+// ─── Estimativas de saída por preset (model + quality + size) ────────────────
+
 /**
- * Tokens de saída estimados (formato 1:1) por qualidade. A referência pública do
- * spike para `gpt-image-2` é ~US$0,006 em `low` e ~US$0,053 em `medium`; com a
- * taxa de saída de US$15/M, isso equivale a ~400 e ~3533 tokens de saída.
+ * Estimativa de tokens de saída, **específica de cada modelo** — nunca
+ * compartilhada entre modelos.
  */
-const ESTIMATED_OUTPUT_TOKENS_BY_QUALITY: Record<string, number> = {
-  low: 400,
-  medium: 3533,
+interface BenchOutputEstimate {
+  estimatedOutputTokens: number;
+  source: BenchEstimateSource;
+}
+
+/**
+ * Estimativas comprovadas, chaveadas por `model + quality + size`.
+ *
+ * - `gpt-image-2`: ~US$0,006 (`low`) e ~US$0,053 (`medium`) por peça 1:1, pela
+ *   referência pública; com a taxa de saída de US$15/M ⇒ ~400 e ~3533 tokens.
+ * - `gpt-image-2.5-flare`: apenas o valor do **calculador oficial** — `low` com
+ *   196 tokens de saída (~US$0,00588). `medium` **não** tem valor comprovado e
+ *   fica **ausente de propósito** (não reaproveita os tokens do `gpt-image-2`).
+ */
+const ESTIMATED_OUTPUT_BY_PRESET: Readonly<Record<string, BenchOutputEstimate>> = {
+  "gpt-image-2|low|1024x1024": {
+    estimatedOutputTokens: 400,
+    source: "derived_from_published_price",
+  },
+  "gpt-image-2|medium|1024x1024": {
+    estimatedOutputTokens: 3533,
+    source: "derived_from_published_price",
+  },
+  "gpt-image-2.5-flare|low|1024x1024": {
+    estimatedOutputTokens: 196,
+    source: "official_calculator",
+  },
 };
+
+function outputEstimateKey(model: string, quality: string, size: string): string {
+  return `${model}|${quality}|${size}`;
+}
 
 function estimateOutputUnitPriceUsd(rates: BenchTokenRates, outputTokens: number): number {
   return (rates.outputImageUsdPerMillion * outputTokens) / 1_000_000;
@@ -110,21 +155,26 @@ function estimateOutputUnitPriceUsd(rates: BenchTokenRates, outputTokens: number
 function tokenBasedEntry(params: {
   model: string;
   quality: string;
+  size: string;
   tokenRates: BenchTokenRates;
   coverage: BenchPricingCoverage;
-  size?: string;
 }): BenchPricingEntry {
-  const estimatedOutputTokens = ESTIMATED_OUTPUT_TOKENS_BY_QUALITY[params.quality];
+  const estimate =
+    ESTIMATED_OUTPUT_BY_PRESET[outputEstimateKey(params.model, params.quality, params.size)];
   return {
     provider: "openai",
     model: params.model,
     protocol: "images",
     quality: params.quality,
-    size: params.size ?? "1024x1024",
+    size: params.size,
     mode: "token_based",
     tokenRates: params.tokenRates,
-    estimatedOutputTokens,
-    unitPriceUsd: estimateOutputUnitPriceUsd(params.tokenRates, estimatedOutputTokens),
+    estimatedOutputTokens: estimate?.estimatedOutputTokens,
+    estimateSource: estimate?.source,
+    unitPriceUsd:
+      estimate === undefined
+        ? undefined
+        : estimateOutputUnitPriceUsd(params.tokenRates, estimate.estimatedOutputTokens),
     coverage: params.coverage,
     ruleVersion: BENCH_PRICING_RULE_VERSION,
   };
@@ -132,35 +182,38 @@ function tokenBasedEntry(params: {
 
 /**
  * Pricing local da bancada, chaveado por `provider + model + protocol + quality
- * + size`. `low` e `medium` têm entradas distintas (tokens de saída distintos ⇒
- * `unitPriceUsd` distinto).
+ * + size`. `low` e `medium` têm entradas distintas.
  *
- * Cobertura: `gpt-image-2` é `complete` (referência pública por peça publicada);
- * `gpt-image-2.5-flare` é `partial` (taxas por token publicadas, sem referência
- * pública por peça — a estimativa de saída é derivada).
+ * Cobertura: `gpt-image-2` é `complete`; `gpt-image-2.5-flare` é `partial`
+ * (taxas publicadas preservadas; estimativa de saída só onde comprovada pelo
+ * calculador oficial). Valores não comprovados ficam **ausentes**.
  */
 export const BENCH_PRICING_ENTRIES: readonly BenchPricingEntry[] = [
   tokenBasedEntry({
     model: "gpt-image-2",
     quality: "low",
+    size: "1024x1024",
     tokenRates: GPT_IMAGE_2_RATES,
     coverage: "complete",
   }),
   tokenBasedEntry({
     model: "gpt-image-2",
     quality: "medium",
+    size: "1024x1024",
     tokenRates: GPT_IMAGE_2_RATES,
     coverage: "complete",
   }),
   tokenBasedEntry({
     model: "gpt-image-2.5-flare",
     quality: "low",
+    size: "1024x1024",
     tokenRates: GPT_IMAGE_2_5_FLARE_RATES,
     coverage: "partial",
   }),
   tokenBasedEntry({
     model: "gpt-image-2.5-flare",
     quality: "medium",
+    size: "1024x1024",
     tokenRates: GPT_IMAGE_2_5_FLARE_RATES,
     coverage: "partial",
   }),
@@ -189,6 +242,7 @@ export function resolveBenchPricing(key: BenchPricingKey): BenchPricingResolutio
     unitPriceUsd: entry.unitPriceUsd,
     tokenRates: entry.tokenRates,
     estimatedOutputTokens: entry.estimatedOutputTokens,
+    estimateSource: entry.estimateSource,
     coverage: entry.coverage,
     ruleVersion: entry.ruleVersion,
   };

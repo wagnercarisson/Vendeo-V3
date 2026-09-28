@@ -33,26 +33,14 @@ describe("bench-pricing — quality distingue o custo (low ≠ medium)", () => {
     const low = resolveBenchPricing({ ...BASE, model: "gpt-image-2", quality: "low" });
     const medium = resolveBenchPricing({ ...BASE, model: "gpt-image-2", quality: "medium" });
 
-    expect(low.coverage).not.toBe("missing");
-    expect(medium.coverage).not.toBe("missing");
+    expect(low.coverage).toBe("complete");
+    expect(medium.coverage).toBe("complete");
     expect(low.unitPriceUsd).toBeDefined();
     expect(medium.unitPriceUsd).toBeDefined();
     expect(low.unitPriceUsd).not.toBe(medium.unitPriceUsd);
     expect(low.estimatedOutputTokens).not.toBe(medium.estimatedOutputTokens);
     expect(low.mode).toBe("token_based");
-  });
-
-  it("gpt-image-2.5-flare: low e medium também devolvem custos distintos", () => {
-    const low = resolveBenchPricing({ ...BASE, model: "gpt-image-2.5-flare", quality: "low" });
-    const medium = resolveBenchPricing({
-      ...BASE,
-      model: "gpt-image-2.5-flare",
-      quality: "medium",
-    });
-
-    expect(low.unitPriceUsd).toBeDefined();
-    expect(medium.unitPriceUsd).toBeDefined();
-    expect(low.unitPriceUsd).not.toBe(medium.unitPriceUsd);
+    expect(low.estimateSource).toBe("derived_from_published_price");
   });
 
   it("há entradas distintas por qualidade para o mesmo modelo/protocolo/tamanho", () => {
@@ -61,6 +49,47 @@ describe("bench-pricing — quality distingue o custo (low ≠ medium)", () => {
     expect(qualities.size).toBeGreaterThan(1);
     const unitPrices = new Set(forModel.map((entry) => entry.unitPriceUsd));
     expect(unitPrices.size).toBeGreaterThan(1);
+  });
+});
+
+describe("bench-pricing — Flare usa somente valores comprovados pelo calculador oficial", () => {
+  it("gpt-image-2.5-flare low usa 196 tokens (calculador oficial), não os tokens do gpt-image-2", () => {
+    const flareLow = resolveBenchPricing({
+      ...BASE,
+      model: "gpt-image-2.5-flare",
+      quality: "low",
+    });
+    const gptLow = resolveBenchPricing({ ...BASE, model: "gpt-image-2", quality: "low" });
+
+    expect(flareLow.estimatedOutputTokens).toBe(196);
+    expect(flareLow.estimateSource).toBe("official_calculator");
+    expect(flareLow.estimatedOutputTokens).not.toBe(gptLow.estimatedOutputTokens);
+    expect(flareLow.unitPriceUsd).toBeCloseTo(0.00588, 6);
+    expect(flareLow.coverage).toBe("partial");
+  });
+
+  it("gpt-image-2.5-flare medium fica ausente (sem valor comprovado) — não reaproveita o gpt-image-2", () => {
+    const flareMedium = resolveBenchPricing({
+      ...BASE,
+      model: "gpt-image-2.5-flare",
+      quality: "medium",
+    });
+
+    expect(flareMedium.estimatedOutputTokens).toBeUndefined();
+    expect(flareMedium.unitPriceUsd).toBeUndefined();
+    expect(flareMedium.estimateSource).toBeUndefined();
+    expect(flareMedium.coverage).toBe("partial");
+    expect(flareMedium.mode).toBe("token_based");
+  });
+
+  it("preserva as taxas publicadas do Flare (imagem entrada US$8/M, saída US$30/M)", () => {
+    const flare = resolveBenchPricing({
+      ...BASE,
+      model: "gpt-image-2.5-flare",
+      quality: "low",
+    });
+    expect(flare.tokenRates?.inputImageUsdPerMillion).toBe(8);
+    expect(flare.tokenRates?.outputImageUsdPerMillion).toBe(30);
   });
 });
 
