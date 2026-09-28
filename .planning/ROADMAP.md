@@ -115,7 +115,7 @@ Plans:
 
 Plans:
 - [x] 48-2-2-01-PLAN.md — Bounded context `src/lib/lab/bench/**`, contratos de isolamento, registry de dimensões e **SPIKE BLOQUEANTE de modelos/presets (CHECKPOINT 1)**.
-- [ ] 48-2-2-02-PLAN.md — Persistência local-first: DDL fora de `supabase/migrations/`, bootstrap local com REVERT, guard de path `bench/{runId}/...` e serviços de run/artefato.
+- [x] 48-2-2-02-PLAN.md — Persistência local-first: DDL fora de `supabase/migrations/`, bootstrap local com REVERT, guard de path `bench/{runId}/...` e serviços de run/artefato.
 - [ ] 48-2-2-03-PLAN.md — Lojas de teste via manifesto local, contrato completo de branding (inclui `typography_direction`) e snapshot de campanha produto/oferta com intenção resolvida.
 - [ ] 48-2-2-04-PLAN.md — Registry final de presets (somente confirmados) e **CHECKPOINT 2 — aprovação humana antes de qualquer geração paga**.
 - [ ] 48-2-2-05-PLAN.md — Invocação isolada: adapter `Images` dedicado, resolver capability+alvo do preset, single-shot e telemetria de custo read-only.
