@@ -63,6 +63,15 @@ export const LAB_SIGNED_URL_TTL_SECONDS = 3600;
 /** Formato de UUID aceito nos segmentos de path. */
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** Extensões aceitas no esquema próprio da bancada (`bench/{runId}/...`). */
+const BENCH_ARTIFACT_EXTENSIONS = "png|jpg|webp";
+
+/** Nome de arquivo de entrada da bancada: `{index}.{ext}`. */
+const BENCH_INPUT_FILE_REGEX = new RegExp(`^\\d+\\.(?:${BENCH_ARTIFACT_EXTENSIONS})$`);
+
+/** Nome de arquivo de saída da bancada: `output.{ext}` (prefixo + extensão). */
+const BENCH_OUTPUT_FILE_REGEX = new RegExp(`^output\\.(?:${BENCH_ARTIFACT_EXTENSIONS})$`);
+
 // ─── Códigos de erro estáveis (a API/UI mapeia por código) ───────────────────
 
 const INVALID_ARTIFACT_PATH = "invalid_artifact_path";
@@ -91,8 +100,13 @@ function extensionForMimeType(mimeType: string): string {
 
 /**
  * Barreira anti-traversal: recusa path vazio, `..`, caminho absoluto, `\`,
- * `://`, o bucket de imagens de campanha, ausência do prefixo `experiments/` e
- * segmentos que não sejam UUID. Chamada por todos os builders e por toda leitura.
+ * `://`, o bucket de imagens de campanha e qualquer path fora dos dois esquemas
+ * aceitos. Chamada por todos os builders e por toda leitura.
+ *
+ * Esquemas aceitos (o bloco anti-traversal acima se aplica aos **dois**):
+ *  - laboratório A/B: `experiments/{experimentId}/runs/{runId}/...` (intacto);
+ *  - bancada (F48.2.2, D14): `bench/{runId}/inputs/{index}.{ext}` ou
+ *    `bench/{runId}/output.{ext}`.
  */
 export function assertLabArtifactPath(storagePath: string): void {
   if (typeof storagePath !== "string" || storagePath.length === 0) {
@@ -110,15 +124,35 @@ export function assertLabArtifactPath(storagePath: string): void {
   }
 
   const segments = storagePath.split("/");
-  if (segments[0] !== LAB_PATH_PREFIX) {
-    throw new Error(INVALID_ARTIFACT_PATH);
+
+  // Ramo do laboratório A/B — permanece byte a byte equivalente ao anterior.
+  if (segments[0] === LAB_PATH_PREFIX) {
+    if (segments.length < 5 || segments[2] !== "runs") {
+      throw new Error(INVALID_ARTIFACT_PATH);
+    }
+    if (!UUID_REGEX.test(segments[1]) || !UUID_REGEX.test(segments[3])) {
+      throw new Error(INVALID_ARTIFACT_PATH);
+    }
+    return;
   }
-  if (segments.length < 5 || segments[2] !== "runs") {
-    throw new Error(INVALID_ARTIFACT_PATH);
+
+  // Ramo da bancada: UUID no segmento 1; o restante é `inputs/{index}.{ext}`
+  // (entrada) ou `output.{ext}` (saída), espelhando os builders da bancada.
+  if (segments[0] === "bench") {
+    if (segments.length < 3 || !UUID_REGEX.test(segments[1])) {
+      throw new Error(INVALID_ARTIFACT_PATH);
+    }
+    const tail = segments.slice(2);
+    const isInput =
+      tail.length === 2 && tail[0] === "inputs" && BENCH_INPUT_FILE_REGEX.test(tail[1]);
+    const isOutput = tail.length === 1 && BENCH_OUTPUT_FILE_REGEX.test(tail[0]);
+    if (!isInput && !isOutput) {
+      throw new Error(INVALID_ARTIFACT_PATH);
+    }
+    return;
   }
-  if (!UUID_REGEX.test(segments[1]) || !UUID_REGEX.test(segments[3])) {
-    throw new Error(INVALID_ARTIFACT_PATH);
-  }
+
+  throw new Error(INVALID_ARTIFACT_PATH);
 }
 
 /** Path de saída: `experiments/{experimentId}/runs/{runId}/output.{ext}`. */

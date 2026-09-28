@@ -243,6 +243,60 @@ describe("assertLabArtifactPath (barreira anti-traversal)", () => {
   });
 });
 
+describe("assertLabArtifactPath — ramo da bancada bench/{runId}/... (F48.2.2, D14)", () => {
+  const BENCH_RUN_ID = "33333333-3333-4333-8333-333333333333";
+
+  it("aceita o esquema da bancada alinhado aos builders", () => {
+    expect(() => assertLabArtifactPath(`bench/${BENCH_RUN_ID}/inputs/0.png`)).not.toThrow();
+    expect(() => assertLabArtifactPath(`bench/${BENCH_RUN_ID}/inputs/12.jpg`)).not.toThrow();
+    expect(() => assertLabArtifactPath(`bench/${BENCH_RUN_ID}/inputs/3.webp`)).not.toThrow();
+    expect(() => assertLabArtifactPath(`bench/${BENCH_RUN_ID}/output.png`)).not.toThrow();
+    expect(() => assertLabArtifactPath(`bench/${BENCH_RUN_ID}/output.webp`)).not.toThrow();
+  });
+
+  it("mantém o esquema experiments/{uuid}/runs/{uuid}/... intacto", () => {
+    expect(() =>
+      assertLabArtifactPath(`experiments/${EXPERIMENT_ID}/runs/${RUN_ID}/output.png`),
+    ).not.toThrow();
+    expect(() =>
+      assertLabArtifactPath(`experiments/${EXPERIMENT_ID}/runs/${RUN_ID}/inputs/0.png`),
+    ).not.toThrow();
+  });
+
+  it("rejeita traversal, subpastas indevidas e extensões fora da allowlist", () => {
+    expect(() => assertLabArtifactPath(`bench/${BENCH_RUN_ID}/evil/..`)).toThrow(
+      "invalid_artifact_path",
+    );
+    expect(() =>
+      assertLabArtifactPath(`bench/${BENCH_RUN_ID}/runs/${RUN_ID}/output.png`),
+    ).toThrow("invalid_artifact_path");
+    expect(() => assertLabArtifactPath(`bench/${BENCH_RUN_ID}/inputs/0.gif`)).toThrow(
+      "invalid_artifact_path",
+    );
+    expect(() => assertLabArtifactPath(`bench/${BENCH_RUN_ID}/output.gif`)).toThrow(
+      "invalid_artifact_path",
+    );
+    expect(() => assertLabArtifactPath(`bench/${BENCH_RUN_ID}/inputs/0.png/extra`)).toThrow(
+      "invalid_artifact_path",
+    );
+    expect(() => assertLabArtifactPath(`bench/not-a-uuid/output.png`)).toThrow(
+      "invalid_artifact_path",
+    );
+  });
+
+  it("rejeita paths de campanha em ambos os ramos", () => {
+    expect(() => assertLabArtifactPath("campaign-images/store-1/campaign.jpg")).toThrow(
+      "invalid_artifact_path",
+    );
+    expect(() => assertLabArtifactPath(`campaign-images/${BENCH_RUN_ID}/output.png`)).toThrow(
+      "invalid_artifact_path",
+    );
+    expect(() => assertLabArtifactPath(`bench/${BENCH_RUN_ID}/inputs/campaign-images.png`)).toThrow(
+      "invalid_artifact_path",
+    );
+  });
+});
+
 // ─── Checksum ────────────────────────────────────────────────────────────────
 
 describe("computeArtifactChecksum", () => {
