@@ -17,7 +17,7 @@ Em conjunto, esses milestones levaram o Vendeo de um gerador de campanhas a um p
 
 ## Estado Atual
 
-O ciclo de implementação está concluído até a **F50**. O beta permanece fechado, não há fase ativa e a ativação externa ainda depende da futura **F50.1**. Em 2026-09-28 a trilha interna do laboratório foi realinhada: a próxima sequência é **F48.2.2 — Fundação da bancada de geração no Admin/Laboratório** → **F48.2.3 — Experimento determinístico Oferta 1:1** (a antiga F48.2.2, de auditoria do prompt do Revisor, foi descartada/substituída). Nenhuma dessas fases foi iniciada.
+O ciclo de implementação está concluído até a **F50**. O beta permanece fechado, não há fase ativa e a ativação externa ainda depende da futura **F50.1**. Em 2026-09-28 a trilha interna do laboratório foi realinhada e a **F48.2.2 — Fundação da bancada de geração no Admin/Laboratório** foi **concluída tecnicamente** (8/8 planos; **CP1/CP2/CP3 aprovados**; UAT técnico aprovado com uma geração real controlada; produção intocada; OpenSpec **ativo**, aguardando verificação/sincronização/arquivamento **manuais**). A próxima sequência é **F48.2.3 — Fidelidade experimental da bancada** → **F48.2.4 — Experimento determinístico Oferta 1:1** (a antiga F48.2.2, de auditoria do prompt do Revisor, foi descartada/substituída). Nenhuma dessas próximas fases foi iniciada.
 
 O estado operacional detalhado, inclusive decisões de sequência, dependências e eventuais novas fases, deve ser consultado exclusivamente no roadmap de `.planning`. Este arquivo não substitui o tracking de execução nem deve ser usado para acompanhar planos individuais.
 

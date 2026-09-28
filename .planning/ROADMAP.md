@@ -2,7 +2,7 @@
 
 ## Milestone v1.5 — Lançamento Externo Controlado ◆
 
-**Estado:** F50 concluida; F48.2.1 (**Bancada Manual de Prompts do Diretor**) esta **concluida e arquivada** (`48-2-1-01` a `48-2-1-05`, `48-2-1-07`, `48-2-1-08` e `48-2-1-09` concluidos; `48-2-1-06` interrompido/suplantado; programa local `closed` e experimento `archived`; zero runs/custo; sem promocao; OpenSpec verificado, sincronizado e arquivado em `openspec/changes/archive/2026-09-27-fase-48-2-1-otimizacao-prompts-diretor/`, commit `f55bed45`). **Realinhamento de tracking (2026-09-28):** a F48.2.2 antiga (Auditoria e Otimizacao do Prompt do Revisor) foi **descartada/substituida** (implementacao nao iniciada; sem artefatos mantidos; recuperavel pelo historico do Git); a nova sequencia e **F48.2.2 — Fundacao da bancada de geracao no Admin/Laboratorio** (**em execucao**, 8 planos, 2026-09-28; `48-2-2-01` a `48-2-2-04` concluidos, CP1 e CP2 aprovados) -> **F48.2.3 — Experimento deterministico Oferta 1:1**. F50.1 permanece futura e nao ativa, aguardando a constituicao da PJ.
+**Estado:** F50 concluida; F48.2.1 (**Bancada Manual de Prompts do Diretor**) esta **concluida e arquivada** (`48-2-1-01` a `48-2-1-05`, `48-2-1-07`, `48-2-1-08` e `48-2-1-09` concluidos; `48-2-1-06` interrompido/suplantado; programa local `closed` e experimento `archived`; zero runs/custo; sem promocao; OpenSpec verificado, sincronizado e arquivado em `openspec/changes/archive/2026-09-27-fase-48-2-1-otimizacao-prompts-diretor/`, commit `f55bed45`). **Realinhamento de tracking (2026-09-28):** a F48.2.2 antiga (Auditoria e Otimizacao do Prompt do Revisor) foi **descartada/substituida** (implementacao nao iniciada; sem artefatos mantidos; recuperavel pelo historico do Git); a nova sequencia e **F48.2.2 — Fundacao da bancada de geracao no Admin/Laboratorio** (**concluida tecnicamente**, 2026-09-28; 8/8 planos; **CP1, CP2 e CP3 aprovados**; UAT tecnico aprovado com **uma** geracao real controlada — run `f6148ea6-...`, `gpt-image-2.5-flare`; producao intocada; OpenSpec **ativo**, aguardando verificacao/sincronizacao/arquivamento **manuais**) -> **F48.2.3 — Fidelidade experimental da bancada** -> **F48.2.4 — Experimento deterministico Oferta 1:1**. F50.1 permanece futura e nao ativa, aguardando a constituicao da PJ.
 
 **Escopo do arquivo ativo:** índice operacional do milestone. O histórico integral anterior a esta compactação está em `.planning/ROADMAP-ARCHIVE.md`.
 
@@ -46,8 +46,9 @@
 | 47 | ✅ Catálogo e Seleção de Modelos Admin | Concluída; Change B |
 | 48.1 | ✅ Laboratório Mínimo de IA | Concluída; primeira fatia do programa F48.x |
 | 48.2.1 | ✅ Concluída e arquivada — bancada manual (8/9 + 06 suplantado) | Bancada manual de prompts do Diretor; `48-2-1-01` a `48-2-1-05`, `48-2-1-07`, `48-2-1-08` e `48-2-1-09` concluidos; `48-2-1-06` interrompido/suplantado; programa `closed` e experimento `archived`; local-only, sem promocao; OpenSpec arquivado (commit `f55bed45`) |
-| 48.2.2 | 🔄 Em execução — Fundação da bancada de geração no Admin/Laboratório | 4/8 planos (`48-2-2-01` a `48-2-2-04` concluídos; CHECKPOINT 1 e CHECKPOINT 2 aprovados — 4 presets `images` habilitados após correção do pricing; nenhuma geração paga); bancada interna desktop restrita, loja real, branding persistido, prompt manual, modelo/qualidade, evidência técnica e financeira; isolada da produção; sem créditos do lojista |
-| 48.2.3 | ⏳ Não iniciada — Experimento determinístico Oferta 1:1 | Depende da bancada validada na F48.2.2; prompt montado/armazenado, branding como contrato obrigatório, hierarquia comercial orientada, aprovação humana do prompt |
+| 48.2.2 | ✅ Concluída tecnicamente — Fundação da bancada de geração no Admin/Laboratório | 8/8 planos; CP1, CP2 e CP3 aprovados; UAT técnico aprovado com uma geração real controlada (`gpt-image-2.5-flare`); produção intocada; OpenSpec ativo aguardando verify/sync/archive manuais; nenhuma promoção |
+| 48.2.3 | ⏳ Não iniciada — Fidelidade experimental da bancada | Importação explícita/unidirecional da identidade das lojas de teste (comando local); nenhuma consulta remota em operação normal; nenhuma campanha remota copiada; paridade programática dos campos; UI própria permitida |
+| 48.2.4 | ⏳ Não iniciada — Experimento determinístico Oferta 1:1 | Depende da bancada validada (F48.2.2) e da fidelidade experimental (F48.2.3); prompt montado/armazenado, branding como contrato obrigatório, hierarquia comercial orientada, aprovação humana do prompt |
 | 48.2.2-antiga | ⏸ Descartada — Auditoria e Otimização do Prompt do Revisor | Escopo descartado/substituído em 2026-09-28; sem artefatos mantidos; implementação não iniciada; recuperável pelo histórico do Git |
 | 49 | ✅ Ativação e Orientação Contextual de Campos | Concluída |
 | 50 | ✅ Demonstração Gratuita e Validade dos Créditos | Concluída; 17/17 planos, beta fechado preservado |
@@ -109,7 +110,7 @@ Plans:
 **Excecao preexistente (externa a F48.2.1):** `src/lib/legal/__tests__/legal-document-versions.test.ts` falha com `ENOENT` (caminho antigo da F50, change arquivada). O gate fail-closed do Plano 09 aceita a suite completa somente com essa excecao exata (1 arquivo / 1 teste) e a registra como follow-up externo.
 ## F48.2.2 — Fundação da bancada de geração no Admin/Laboratório
 
-**Status:** **Em execução** — 4/8 planos concluídos (`48-2-2-01` a `48-2-2-04`, com **CHECKPOINT 1** e **CHECKPOINT 2 aprovados** — 4 presets `images` habilitados após correção do pricing; nenhuma geração paga). A antiga F48.2.2 (**Auditoria e Otimização do Prompt do Revisor**) foi **descartada/substituída** (implementação não iniciada; sem artefatos mantidos; recuperável pelo histórico do Git). Fonte da verdade: `openspec/changes/fase-48-2-2-fundacao-bancada-geracao/`.
+**Status:** **Concluída tecnicamente** (2026-09-28) — 8/8 planos concluídos (`48-2-2-01` a `48-2-2-08`), com **CHECKPOINT 1**, **CHECKPOINT 2** e **CHECKPOINT 3 aprovados**. UAT local aprovado com **uma** geração real controlada (run `f6148ea6-...`, `gpt-image-2.5-flare`, `images`, `low`, `1024x1024`, `succeeded`; custo **calculado** US$ 0,014592 — provider reportado `null`; UI US$ 0,01). Produção intocada (`base..HEAD` vazio). OpenSpec **ATIVO** — aguardando verificação/sincronização/arquivamento **manuais**. A antiga F48.2.2 (**Auditoria e Otimização do Prompt do Revisor**) foi **descartada/substituída** (implementação não iniciada; sem artefatos mantidos; recuperável pelo histórico do Git). Fonte da verdade: `openspec/changes/fase-48-2-2-fundacao-bancada-geracao/`.
 
 **Plans:** 8 plans
 
@@ -121,9 +122,9 @@ Plans:
 - [x] 48-2-2-05-PLAN.md — Invocação isolada: adapter `Images` dedicado, resolver capability+alvo do preset, single-shot e telemetria de custo read-only.
 - [x] 48-2-2-06-PLAN.md — API administrativa sob `/api/admin/laboratorio/bancada` (guards, estimativa, stream NDJSON, detalhe e artefatos).
 - [x] 48-2-2-07-PLAN.md — UI desktop `/admin/laboratorio/bancada` e entrada na navegação interna do laboratório.
-- [ ] 48-2-2-08-PLAN.md — Testes transversais, **UAT local com geração real controlada (CHECKPOINT 3)** e verificação/encerramento.
+- [x] 48-2-2-08-PLAN.md — Testes transversais, **UAT local com geração real controlada (CHECKPOINT 3)** e verificação/encerramento.
 
-**Ondas e dependências:** cadeia sequencial `48-2-2-01 -> 02 -> 03 -> 04 -> 05 -> 06 -> 07 -> 08` (uma onda por plano; o plano 04 depende também do 01). Checkpoints humanos: **1 aprovado** (spike, plano 01), **2 aprovado** (presets antes de geração paga, plano 04 — 4 presets `images` habilitados após correção do pricing; nenhuma geração paga autorizada) e **3** (UAT local, plano 08). Nenhuma task executa chamada paga autonomamente.
+**Ondas e dependências:** cadeia sequencial `48-2-2-01 -> 02 -> 03 -> 04 -> 05 -> 06 -> 07 -> 08` (uma onda por plano; o plano 04 depende também do 01). Checkpoints humanos: **1 aprovado** (spike, plano 01), **2 aprovado** (presets antes de geração paga, plano 04 — 4 presets `images` habilitados após correção do pricing) e **3 aprovado** (UAT local, plano 08 — **uma** geração real controlada autorizada e executada). Nenhuma task executou chamada paga autonomamente.
 
 **Cross-cutting constraints:** (a) **isolamento** — nenhum acesso a `campaigns`/`campaign_art_versions`/`generation_events`/`ai_model_selection`/`admin_audit_log`/`credit_*`/`campaign-images`/`prompts/`/providers de produção; lojas/branding apenas leitura local; assets de branding apenas dos buckets locais `store-logos`/`store-brand-assets`/`visual-signatures`; (b) **produção intocada** — `ImagesAdapter` produtivo, registry padrão, `MODEL_ALLOWLIST`, `resolveAiCost`, `BrandProfileSnapshot`, `resolveStoreIdentity`, `art-director-briefing`, `prompts/` e pipeline de campanha inalterados; (c) **sem custo oculto** — exatamente uma chamada paga por geração, nenhuma chamada paga em testes/CI, custo distinto por qualidade (`per_image`/`token_based`), estimado nunca apresentado como faturado; (d) **sem secrets** — nenhum signer aceita bucket/path do cliente, erro sanitizado na origem; (e) **branding apenas exibido/registrado** — prompt manual, logo/assinatura não enviado automaticamente ao modelo; (f) **manifesto sempre** — `assertBenchTestStore` em toda entrada; (g) **slot na confirmação** — `draft` não bloqueia a bancada, `draft → pending` por compare-and-set.
 
@@ -142,9 +143,24 @@ Plans:
 
 **Regras:** a **identidade persistida da loja** é a fonte de verdade; a criatividade do modelo fica restrita à composição específica da campanha (sem novo "diretor criativo" que redefina tipografia, cores, expressão ou posicionamento da marca); não reutilizar o laboratório antigo para manter fixtures ou fluxos desconectados dos dados reais. A fonte da verdade OpenSpec será criada no planejamento (a change antiga foi descartada/substituída e não é fonte da nova fase).
 
-## F48.2.3 — Experimento determinístico Oferta 1:1
+## F48.2.3 — Fidelidade experimental da bancada
 
-**Status:** **Não iniciada** — depende da bancada validada na F48.2.2.
+**Status:** **Não iniciada** — decorre da descoberta do UAT da F48.2.2 (fixtures locais artificiais limitam a fidelidade experimental).
+
+**Objetivo:** permitir que a bancada experimente com a identidade **real** das lojas de teste, sem jamais consultar produção durante a operação normal.
+
+**Escopo de alto nível:**
+- **importação explícita e unidirecional** da identidade das lojas de teste do Supabase remoto para o ambiente local;
+- comando **local** (não botão); **nenhuma** consulta remota durante a operação normal do laboratório;
+- **não copiar** campanhas, produtos, ofertas, imagens de campanha, usuários, créditos, billing ou histórico operacional;
+- copiar **somente** identidade da loja de teste, perfil de branding, logo, assinatura e assets de identidade autorizados;
+- **paridade programática** com os campos/comportamentos do formulário produtivo, **sem** obrigação de reproduzir a mesma interface visual (UI própria e enxuta permitida).
+
+**Nota:** o OpenSpec detalhado da F48.2.3 será criado no seu próprio planejamento; **não** amplia retroativamente o escopo da F48.2.2.
+
+## F48.2.4 — Experimento determinístico Oferta 1:1
+
+**Status:** **Não iniciada** — depende da bancada validada (F48.2.2) e da fidelidade experimental (F48.2.3).
 
 **Objetivo:** usar a bancada validada para testar o novo pipeline de campanha Oferta 1:1.
 
@@ -157,7 +173,7 @@ Plans:
 - armazenamento do prompt montado e do prompt efetivamente enviado;
 - resultado, avaliação, ajuste do prompt e nova geração; histórico das tentativas.
 
-**Nota histórica:** a numeração **F48.2.3** antes designava "Promoção, Canário e Prontidão da Aprovação" (promoção de prompts testados, canário do fluxo de aprovação e rollback). Esse escopo fica **adiado/backlog** e não é o da nova F48.2.3.
+**Nota histórica:** a numeração **F48.2.3** antes designava "Promoção, Canário e Prontidão da Aprovação" (promoção de prompts testados, canário do fluxo de aprovação e rollback). Esse escopo permanece **adiado/backlog**; a antiga descrição da F48.2.3 como "Experimento determinístico Oferta 1:1" foi **deslocada para F48.2.4** (preservada, sem perda).
 
 **Backlog posterior (fora das duas fases):** Destaque; Exclusivo; outros formatos; temas recorrentes; carrossel; comparação cega ou lado a lado; avaliação automática; mobile; promoção de modelos ou pipelines para produção.
 

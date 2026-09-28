@@ -1,20 +1,20 @@
 {
   "version": "1.0",
-  "timestamp": "2026-09-28T00:00:00.000Z",
-  "phase": "48.2.1",
-  "phase_name": "bancada-manual-prompts-diretor",
-  "phase_dir": ".planning/phases/48.2.1-otimizacao-prompts-diretor",
+  "timestamp": "2026-09-28T23:30:00.000Z",
+  "phase": "48.2.2",
+  "phase_name": "fundacao-bancada-geracao",
+  "phase_dir": ".planning/phases/48.2.2-fundacao-bancada-geracao",
   "status": "complete",
-  "phase_status": "complete",
-  "plan": "48-2-1-09",
-  "openspec_source": "017b8799",
+  "phase_status": "complete_technical",
+  "plan": "48-2-2-08",
+  "openspec_source": "fase-48-2-2-fundacao-bancada-geracao",
   "openspec_archive": {
-    "path": "openspec/changes/archive/2026-09-27-fase-48-2-1-otimizacao-prompts-diretor",
-    "commit": "f55bed45",
-    "verified": true,
-    "synced": true,
-    "archived": true,
-    "active_changes_remaining": []
+    "path": "openspec/changes/fase-48-2-2-fundacao-bancada-geracao",
+    "verified": false,
+    "synced": false,
+    "archived": false,
+    "active_changes_remaining": ["fase-48-2-2-fundacao-bancada-geracao"],
+    "note": "OpenSpec ATIVO. Verificacao/sincronizacao/arquivamento MANUAIS pendentes (/opsx-verify -> /opsx-sync -> /opsx-archive). NAO executados nesta fase."
   },
   "discarded_scope": {
     "change": "fase-48-2-2-auditoria-otimizacao-prompt-revisor",
@@ -24,36 +24,56 @@
     "artifacts_kept": false,
     "recoverable": "historico do Git"
   },
-  "next_phase_sequence": ["48.2.2", "48.2.3"],
+  "next_phase_sequence": ["48.2.3", "48.2.4"],
   "resolved_plans": [
-    "48-2-1-01", "48-2-1-02", "48-2-1-03", "48-2-1-04", "48-2-1-05",
-    "48-2-1-06", "48-2-1-07", "48-2-1-08", "48-2-1-09"
+    "48-2-2-01", "48-2-2-02", "48-2-2-03", "48-2-2-04",
+    "48-2-2-05", "48-2-2-06", "48-2-2-07", "48-2-2-08"
   ],
-  "superseded_plan": {
-    "plan": "48-2-1-06",
-    "status": "superseded",
-    "outcome": "interrupted_by_human_decision",
-    "executed_tasks": [1, 2, 3],
-    "removed_tasks": "4-22",
-    "summary": ".planning/phases/48.2.1-otimizacao-prompts-diretor/48-2-1-06-SUMMARY.md",
-    "resume_allowed": false
+  "checkpoints": {
+    "cp1_spike": "approved_after_correction",
+    "cp2_presets": "approved_after_correction",
+    "cp3_uat": "approved_after_manual_execution"
   },
   "final_state": {
-    "program": {"id": "860ca4fe-dc8b-4354-b94e-02f9e7b202c6", "status": "closed", "history_preserved": true},
-    "experiment": {"id": "c48e21b5-c7a8-4456-a0d6-a2b4040fc1e3", "status": "archived", "history_preserved": true, "lab_runs": 0}
+    "uat": {
+      "approved": true,
+      "run_id": "f6148ea6-f59a-4732-bbbb-530856a5a4d5",
+      "status": "succeeded",
+      "provider": "openai",
+      "model": "gpt-image-2.5-flare",
+      "protocol": "images",
+      "quality": "low",
+      "size": "1024x1024",
+      "latency_ms": 9573,
+      "estimated_cost_usd": 0.00588,
+      "calculated_cost_usd": 0.014592,
+      "provider_reported_cost_usd": null,
+      "cost_source": "bench_local_pricing",
+      "cost_rule_version": "2026-09-bench-1",
+      "coverage": "partial",
+      "paid_calls": 1
+    },
+    "creative_quality_validated": false,
+    "production_untouched": true,
+    "base_sha": "50ae600792158b781b7ac3fb5f61004b17a96dd2",
+    "base_head_diff": "empty",
+    "credits_consumed": false,
+    "db_push_executed": false,
+    "promotion": false
   },
   "artifacts": [
-    ".planning/phases/48.2.1-otimizacao-prompts-diretor/48-2-1-VERIFICATION.md",
-    ".planning/phases/48.2.1-otimizacao-prompts-diretor/48.2.1-UAT.md",
-    ".planning/phases/48.2.1-otimizacao-prompts-diretor/48-2-1-09-SUMMARY.md"
+    ".planning/phases/48.2.2-fundacao-bancada-geracao/48.2.2-UAT.md",
+    ".planning/phases/48.2.2-fundacao-bancada-geracao/48-2-2-VERIFICATION.md",
+    ".planning/phases/48.2.2-fundacao-bancada-geracao/48-2-2-08-SUMMARY.md"
   ],
   "blockers": [],
   "human_actions_pending": [
-    {"action": "Planejar a F48.2.2 (nova) — Fundacao da bancada de geracao no Admin/Laboratorio", "context": "Proxima acao registrada; nenhum planejamento detalhado foi iniciado neste realinhamento", "blocking": false},
-    {"action": "Conduzir as sessoes manuais de teste dos prompts do Diretor (offer/spotlight/exclusive)", "context": "Conduzidas pelo usuario e pelo assistente; a bancada nao cria candidatas nem inicia experimentos automaticamente", "blocking": false},
-    {"action": "Criar novo programa e registrar nova autorizacao humana antes de qualquer chamada paga", "context": "O programa da F48.2.1 esta closed (autorizacao revogada); qualquer operacao real paga futura exige novo programa e nova autorizacao humana explicita", "blocking": false}
+    {"action": "/opsx-verify da change fase-48-2-2-fundacao-bancada-geracao", "context": "OpenSpec ativo; verificacao manual pendente", "blocking": false},
+    {"action": "/opsx-sync da change fase-48-2-2-fundacao-bancada-geracao", "context": "Sincronizacao manual pendente (apos verify)", "blocking": false},
+    {"action": "/opsx-archive da change fase-48-2-2-fundacao-bancada-geracao", "context": "Arquivamento manual pendente (apos sync)", "blocking": false},
+    {"action": "Conduzir as sessoes manuais de teste dos prompts do Diretor (offer/spotlight/exclusive)", "context": "Conduzidas pelo usuario e pelo assistente; qualquer chamada paga exige novo programa e nova autorizacao humana", "blocking": false}
   ],
   "uncommitted_files": [],
-  "next_action": "Planejar a F48.2.2 (nova) — Fundacao da bancada de geracao no Admin/Laboratorio (bancada interna desktop restrita, loja real, branding persistido, prompt manual, modelo/qualidade, evidencia tecnica e financeira; isolada da producao, sem creditos do lojista). Depois, F48.2.3 — Experimento deterministico Oferta 1:1. A antiga F48.2.2 (Revisor) foi descartada/substituida, sem artefatos mantidos (recuperavel pelo historico do Git). Sessoes manuais de teste dos prompts do Diretor seguem em paralelo, com novo programa e nova autorizacao humana antes de qualquer chamada paga. Sem promocao, sem canario, sem db push remoto.",
-  "context_notes": "F48.2.1 CONCLUIDA, VERIFICADA, SINCRONIZADA e ARQUIVADA (openspec/changes/archive/2026-09-27-fase-48-2-1-otimizacao-prompts-diretor/, commit f55bed45). REALINHAMENTO 2026-09-28: a antiga F48.2.2 (Auditoria e Otimizacao do Prompt do Revisor) foi DESCARTADA/SUBSTITUIDA (implementacao nao iniciada; sem artefatos mantidos; recuperavel pelo historico do Git). openspec list nao mostra changes ativas. Nova sequencia: F48.2.2 (bancada de geracao no Admin/Laboratorio) -> F48.2.3 (Experimento deterministico Oferta 1:1); nenhuma iniciada. Programa 860ca4fe-... closed e experimento c48e21b5-... archived, com recusas fail-closed confirmadas e historico preservado. Zero runs/custo; prompts/ intocado; sem promocao/canario/db push. Excecao F50 (legal-document-versions.test.ts, ENOENT) e follow-up externo. LIMITACAO DO SDK: `gsd-sdk query init.execute-phase 48.2.1` canonicaliza incorretamente IDs no formato `48-2-1-*`; usar IDs explicitos."
+  "next_action": "Executar manualmente /opsx-verify -> /opsx-sync -> /opsx-archive da change fase-48-2-2-fundacao-bancada-geracao. Depois: F48.2.3 — Fidelidade experimental da bancada (importacao explicita/unidirecional da identidade das lojas de teste; comando local; nenhuma consulta remota em operacao normal; nenhuma campanha remota copiada; paridade programatica dos campos; UI propria permitida) e, em seguida, F48.2.4 — Experimento deterministico Oferta 1:1. Nenhuma promocao, nenhum db push remoto, nenhuma nova chamada paga pendente na F48.2.2.",
+  "context_notes": "F48.2.2 CONCLUIDA TECNICAMENTE (2026-09-28): 8/8 planos; CP1/CP2/CP3 aprovados; UAT tecnico APROVADO com UMA geracao real controlada (run f6148ea6-...; custo calculado US$ 0,014592, provider reportado null; UI US$ 0,01); qualidade criativa NAO validada (fixtures locais artificiais). Producao intocada (base..HEAD vazio, BASE 50ae6007...); nenhum credito consumido; campaigns/campaign_art_versions/generation_events/ai_model_selection = 0; nenhum supabase db push. Achado nao bloqueante: branding_snapshot persiste URLs assinadas locais efemeras (por desenho do schema). OpenSpec ATIVO aguardando verify/sync/archive MANUAIS. Realinhamento de sequencia: F48.2.3 = Fidelidade experimental da bancada; F48.2.4 = Experimento deterministico Oferta 1:1 (descricao antiga da F48.2.3 deslocada, preservada). Excecao F50 (legal-document-versions.test.ts, ENOENT) e follow-up externo; data-subject-requests.postgres.test.ts e flaky de infra local."
 }
