@@ -14,6 +14,7 @@ import {
   SOURCE_BUCKETS,
   SOURCE_TABLES,
   STORE_COLUMNS,
+  assertBrandingMimeAllowedForBucket,
   buildContentAddressedPath,
   buildImportAuditRow,
   buildSanitizedIdentity,
@@ -921,5 +922,65 @@ describe("MIME de branding — resolução e política de bucket (correção UAT
         contentType: "application/octet-stream",
       }),
     ).rejects.toThrow(/not supported/);
+  });
+});
+
+describe("MIME por bucket de branding — política real (correção UAT)", () => {
+  const logoAsset = (over: Row = {}): Row => ({
+    id: ASSET_ID,
+    store_id: STORE_ID,
+    asset_type: "logo",
+    storage_path: ASSET_PATH,
+    mime_type: "image/png",
+    status: "active",
+    ...over,
+  });
+
+  it("HEIC/HEIF recusados nos buckets de branding", () => {
+    for (const bucket of ["store-logos", "store-brand-assets", "visual-signatures"]) {
+      expect(() => assertBrandingMimeAllowedForBucket(bucket, "image/heic")).toThrow(/não permitido/);
+      expect(() => assertBrandingMimeAllowedForBucket(bucket, "image/heif")).toThrow(/não permitido/);
+    }
+  });
+
+  it("SVG permitido apenas em visual-signatures", () => {
+    expect(assertBrandingMimeAllowedForBucket("visual-signatures", "image/svg+xml")).toBe("image/svg+xml");
+    expect(() => assertBrandingMimeAllowedForBucket("store-logos", "image/svg+xml")).toThrow(/não permitido/);
+    expect(() => assertBrandingMimeAllowedForBucket("store-brand-assets", "image/svg+xml")).toThrow(/não permitido/);
+  });
+
+  it("JPEG/WEBP recusados em visual-signatures", () => {
+    expect(() => assertBrandingMimeAllowedForBucket("visual-signatures", "image/jpeg")).toThrow(/não permitido/);
+    expect(() => assertBrandingMimeAllowedForBucket("visual-signatures", "image/webp")).toThrow(/não permitido/);
+  });
+
+  it("PNG permitido nos três buckets", () => {
+    for (const bucket of ["store-logos", "store-brand-assets", "visual-signatures"]) {
+      expect(assertBrandingMimeAllowedForBucket(bucket, "image/png")).toBe("image/png");
+    }
+  });
+
+  it("materializeStoreAssets: MIME incompatível falha ANTES de qualquer upload", async () => {
+    const destination = makeDestination();
+    const source = makeSource({ objects: { "store-logos:loja/logo.heic": LOGO_BYTES } });
+    const asset = logoAsset({ mime_type: "image/heic", storage_path: "loja/logo.heic" });
+
+    await expect(
+      materializeStoreAssets({ source, destination, storeId: STORE_ID, state: { assets: [asset], signature: null } }),
+    ).rejects.toThrow(/não permitido/);
+    expect(destination.uploads).toHaveLength(0);
+  });
+
+  it("materializeStoreAssets: assinatura SVG é permitida em visual-signatures", async () => {
+    const source = makeSource({ objects: { "visual-signatures:loja/assinatura.svg": SIG_BYTES } });
+    const destination = makeDestination();
+    const signature = { id: SIG_ID, store_id: STORE_ID, storage_path: "loja/assinatura.svg", status: "active" };
+
+    await materializeStoreAssets({ source, destination, storeId: STORE_ID, state: { assets: [], signature } });
+
+    expect(destination.uploads).toHaveLength(1);
+    expect(destination.uploads[0].bucket).toBe("visual-signatures");
+    expect(destination.uploads[0].contentType).toBe("image/svg+xml");
+    expect(destination.uploads[0].path.endsWith(".svg")).toBe(true);
   });
 });

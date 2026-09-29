@@ -900,6 +900,35 @@ export function resolveBrandingMime(input = {}) {
 }
 
 /**
+ * Política real por bucket de branding (migrations). NÃO ampliar; sem conversão.
+ * HEIC/HEIF pertencem ao upload de campanha, não ao contrato atual destes buckets.
+ */
+export const BRANDING_BUCKET_ALLOWED_MIME = Object.freeze({
+  "store-logos": Object.freeze(["image/png", "image/jpeg", "image/webp"]),
+  "store-brand-assets": Object.freeze(["image/png", "image/jpeg", "image/webp"]),
+  "visual-signatures": Object.freeze(["image/png", "image/svg+xml"]),
+});
+
+/**
+ * Valida que o MIME resolvido é aceito pelo bucket de destino, ANTES do upload.
+ * MIME incompatível → erro sanitizado (sem ampliar a política do bucket e sem
+ * conversão/transcodificação).
+ * @param {string} bucket
+ * @param {string} mime
+ * @returns {string}
+ */
+export function assertBrandingMimeAllowedForBucket(bucket, mime) {
+  const allowed = BRANDING_BUCKET_ALLOWED_MIME[bucket];
+  if (!allowed || !allowed.includes(mime)) {
+    throw new BenchImportBlockedError(
+      "import_asset_mime_not_allowed_for_bucket",
+      `MIME "${mime}" não permitido no bucket "${bucket}"; permitidos: ${(allowed ?? []).join(", ") || "<nenhum>"}.`,
+    );
+  }
+  return mime;
+}
+
+/**
  * Path versionado/content-addressed: `<storeId>/<objectId>/<checksum><ext>`.
  * Mesmo conteúdo (mesmo checksum) → mesmo path (idempotência).
  */
@@ -944,6 +973,7 @@ export async function materializeStoreAssets({ source, destination, storeId, sta
         blobType,
         storagePath: asset.storage_path,
       });
+      assertBrandingMimeAllowedForBucket(bucket, mime);
       const checksum = computeChecksum(buffer);
       const localPath = buildContentAddressedPath({ storeId, objectId: asset.id, checksum, extension });
       await destination.uploadBrandingObject({
@@ -967,6 +997,7 @@ export async function materializeStoreAssets({ source, destination, storeId, sta
         blobType,
         storagePath: signature.storage_path,
       });
+      assertBrandingMimeAllowedForBucket(SIGNATURE_BUCKET, mime);
       const checksum = computeChecksum(buffer);
       const localPath = buildContentAddressedPath({ storeId, objectId: signature.id, checksum, extension });
       await destination.uploadBrandingObject({
