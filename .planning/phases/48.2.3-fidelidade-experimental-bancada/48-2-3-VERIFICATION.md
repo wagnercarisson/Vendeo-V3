@@ -4,9 +4,8 @@
 > no início da execução da fase (Plano `48-2-3-01`) e é a referência para o encerramento
 > (Task 3) comparar `base..HEAD` — não apenas o working tree.
 >
-> **Status deste arquivo:** seção de gates preenchida (Task 1). As seções de UAT/CHECKPOINT B
-> e de produção intocada (`base..HEAD`) são preenchidas na Task 3, **após** a aprovação do
-> CHECKPOINT B pelo humano.
+> **Status deste arquivo:** ✅ **FINAL / CONCLUÍDO** (Task 3). Gates, UAT/CHECKPOINT B e produção
+> intocada (`base..HEAD`) preenchidos após a aprovação do CHECKPOINT B pelo humano.
 
 Base SHA: 73ece00fd54d72af1bd48c23a8458694ed1bd636
 
@@ -33,10 +32,15 @@ isolamento absoluto entre laboratório e produção. Fonte da verdade:
 |---|---|---|---|
 | 1 | typecheck, lint, build e suíte completa passam; nenhum teste faz chamada real de IA | §3 abaixo | ✅ |
 | 2 | Testes negativos de fronteira/importação, paridade e compositor passam | `bench-import.contract.test.ts`, `lab-isolation.contract.test.ts`, `architecture-guard.test.ts`, `form-parity.contract.test.ts`, `prompt-composer.contract.test.ts` (§3) | ✅ |
-| 3 | UAT manual sem provider (CHECKPOINT B) comprova fidelidade/composição/isolamento | `48.2.3-UAT.md` (Task 3, após aprovação) | ⏳ pendente (CHECKPOINT B) |
+| 3 | UAT manual sem provider (CHECKPOINT B) comprova fidelidade/composição/isolamento | `48.2.3-UAT.md` (12/12) | ✅ aprovado (UAT/CHECKPOINT B) |
 | 4 | Geração real é OPCIONAL, só manual pelo usuário, e NÃO é critério automático | §3 (nenhuma geração em testes/CI); `48.2.3-UAT.md` | ✅ (nenhuma geração real executada) |
-| 5 | Produção intocada por `base..HEAD`; base ausente ⇒ falha | §4 (Task 3) | ⏳ pendente (Task 3) |
-| 6 | `48-2-3-VERIFICATION.md` e `48.2.3-UAT.md` gerados; tracking não alterado por tasks autônomas | este arquivo; `48.2.3-UAT.md` (Task 3); STATE/ROADMAP/HANDOFF intocados | ✅ (parcial) |
+| 5 | Produção intocada por `base..HEAD`; base ausente ⇒ falha | §4 (`base..HEAD` = vazio) | ✅ aprovado (prova `base..HEAD`) |
+| 6 | `48-2-3-VERIFICATION.md` e `48.2.3-UAT.md` gerados; o Plano 08 não atualiza tracking | este arquivo; `48.2.3-UAT.md` | ✅ aprovado |
+
+> **Tracking:** o **Plano 08** (Task 3) **não** atualizou `.planning/STATE.md`, `.planning/ROADMAP.md`
+> nem `.planning/HANDOFF.json`. Houve **atualizações autorizadas** de `STATE.md` e `ROADMAP.md` nas
+> ondas 1–5 (tracking por onda, escolha do usuário). O **tracking final da fase permanece pendente**
+> (não atualizado nesta Task 3).
 
 ---
 
