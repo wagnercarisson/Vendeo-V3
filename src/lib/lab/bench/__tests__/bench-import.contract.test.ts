@@ -22,6 +22,8 @@ import {
   importOneStore,
   isForbiddenSourceTarget,
   parseImportArgs,
+  parseSupabaseStatusEnv,
+  resolveLocalDestination,
   sanitizeMetadata,
   selectUnreferencedOldObjects,
   upsertManifestEntry,
@@ -696,5 +698,72 @@ describe("helpers puros da importação", () => {
     expect(identity.signature?.asset_url).toBe(`${STORE_ID}/${SIG_ID}/def.png`);
     expect(identity.profile?.active_logo_asset_id).toBe(ASSET_ID);
     expect(identity.profile?.visual_signature_id).toBe(SIG_ID);
+  });
+});
+
+describe("destino local — resolução de chave (correção descoberta no UAT)", () => {
+  const LOCAL_URL = "http://127.0.0.1:54321";
+  const MODERN_STATUS = {
+    API_URL: LOCAL_URL,
+    SECRET_KEY: "sb_secret_modern_key",
+    SERVICE_ROLE_KEY: "legacy-stack-key",
+  };
+  const env = (values: Record<string, string | undefined>) =>
+    ({ NODE_ENV: "test", ...values }) as unknown as NodeJS.ProcessEnv;
+
+  it("parseSupabaseStatusEnv reconhece SECRET_KEY (moderna) e SERVICE_ROLE_KEY (legada)", () => {
+    const parsed = parseSupabaseStatusEnv(
+      [
+        'API_URL="http://127.0.0.1:54321"',
+        'DB_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"',
+        'SECRET_KEY="sb_secret_modern_key"',
+        'SERVICE_ROLE_KEY="legacy-stack-key"',
+      ].join("\n"),
+    );
+    expect(parsed.API_URL).toBe(LOCAL_URL);
+    expect(parsed.SECRET_KEY).toBe("sb_secret_modern_key");
+    expect(parsed.SERVICE_ROLE_KEY).toBe("legacy-stack-key");
+  });
+
+  it("prefere a chave atual do stack (SECRET_KEY) sobre uma SUPABASE_SERVICE_ROLE_KEY legada do env", () => {
+    const result = resolveLocalDestination(
+      env({ NEXT_PUBLIC_SUPABASE_URL: LOCAL_URL, SUPABASE_SERVICE_ROLE_KEY: "legacy.hs256.jwt" }),
+      () => MODERN_STATUS,
+    );
+    expect(result.url).toBe(LOCAL_URL);
+    expect(result.serviceRoleKey).toBe("sb_secret_modern_key");
+  });
+
+  it("usa SERVICE_ROLE_KEY do stack quando não há SECRET_KEY", () => {
+    const result = resolveLocalDestination(
+      env({ SUPABASE_URL: LOCAL_URL, SUPABASE_SERVICE_ROLE_KEY: "legacy.hs256.jwt" }),
+      () => ({ API_URL: LOCAL_URL, SERVICE_ROLE_KEY: "legacy-stack-key" }),
+    );
+    expect(result.serviceRoleKey).toBe("legacy-stack-key");
+  });
+
+  it("BENCH_LOCAL_SERVICE_ROLE_KEY é override explícito sobre o stack", () => {
+    const result = resolveLocalDestination(
+      env({ NEXT_PUBLIC_SUPABASE_URL: LOCAL_URL, BENCH_LOCAL_SERVICE_ROLE_KEY: "explicit-key" }),
+      () => MODERN_STATUS,
+    );
+    expect(result.serviceRoleKey).toBe("explicit-key");
+  });
+
+  it("NÃO usa BENCH_IMPORT_SOURCE_SERVICE_ROLE_KEY como chave do destino", () => {
+    const result = resolveLocalDestination(
+      env({ NEXT_PUBLIC_SUPABASE_URL: LOCAL_URL, BENCH_IMPORT_SOURCE_SERVICE_ROLE_KEY: "source-key" }),
+      () => MODERN_STATUS,
+    );
+    expect(result.serviceRoleKey).toBe("sb_secret_modern_key");
+  });
+
+  it("recusa destino não local antes de qualquer I/O", () => {
+    expect(() =>
+      resolveLocalDestination(
+        env({ NEXT_PUBLIC_SUPABASE_URL: "https://gvbzwihwgzujwsviufgy.supabase.co" }),
+        () => MODERN_STATUS,
+      ),
+    ).toThrow();
   });
 });

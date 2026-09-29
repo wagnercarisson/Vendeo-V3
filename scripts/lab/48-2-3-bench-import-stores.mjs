@@ -317,23 +317,39 @@ export function parseImportArgs(argv = []) {
 
 // ─── Destino local (todas as escritas) ───────────────────────────────────────
 
+/**
+ * Parser PURO da saída de `supabase status -o env`. Reconhece a chave MODERNA
+ * `SECRET_KEY` (formato `sb_secret_...`) e a LEGADA `SERVICE_ROLE_KEY`, além de
+ * `API_URL`/`DB_URL`. Não executa comandos; testável isoladamente.
+ * @param {string} output
+ * @returns {Record<string, string>}
+ */
+export function parseSupabaseStatusEnv(output) {
+  const values = {};
+  for (const line of String(output ?? "").split(/\r?\n/)) {
+    const match = line.match(/^(API_URL|DB_URL|SERVICE_ROLE_KEY|SECRET_KEY)="([^"]+)"$/);
+    if (match) values[match[1]] = match[2];
+  }
+  return values;
+}
+
 function readSupabaseStatusEnv() {
   const command = process.platform === "win32" ? "cmd.exe" : "npx";
   const args =
     process.platform === "win32"
       ? ["/d", "/s", "/c", "npx supabase status -o env"]
       : ["supabase", "status", "-o", "env"];
-  const output = execFileSync(command, args, {
-    cwd: process.cwd(),
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  const values = {};
-  for (const line of output.split(/\r?\n/)) {
-    const match = line.match(/^(API_URL|DB_URL|SERVICE_ROLE_KEY)="([^"]+)"$/);
-    if (match) values[match[1]] = match[2];
+  try {
+    const output = execFileSync(command, args, {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    return parseSupabaseStatusEnv(output);
+  } catch {
+    // Stack local ausente: o chamador decide via env/override. Não é fatal aqui.
+    return {};
   }
-  return values;
 }
 
 /**
@@ -341,15 +357,9 @@ function readSupabaseStatusEnv() {
  * `SUPABASE_URL` (ou do `supabase status -o env`). A URL é validada como local
  * por `assertLocalHost` **antes** de qualquer conexão.
  */
-export function resolveLocalDestination(env = process.env) {
-  let url = env.NEXT_PUBLIC_SUPABASE_URL ?? env.SUPABASE_URL;
-  let serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY ?? env.BENCH_LOCAL_SERVICE_ROLE_KEY;
-
-  if (!url || !serviceRoleKey) {
-    const status = readSupabaseStatusEnv();
-    url = url ?? status.API_URL;
-    serviceRoleKey = serviceRoleKey ?? status.SERVICE_ROLE_KEY;
-  }
+export function resolveLocalDestination(env = process.env, readStatus = readSupabaseStatusEnv) {
+  const status = readStatus();
+  const url = env.NEXT_PUBLIC_SUPABASE_URL ?? env.SUPABASE_URL ?? status.API_URL;
 
   if (!url) {
     throw new BenchImportBlockedError(
@@ -357,14 +367,27 @@ export function resolveLocalDestination(env = process.env) {
       "Defina NEXT_PUBLIC_SUPABASE_URL ou rode com o stack Supabase local ativo (npx supabase status -o env).",
     );
   }
+
+  const hostname = assertLocalHost(url, "destino local");
+
+  // Chave do DESTINO local. Precedência (correção descoberta no UAT):
+  //   1) BENCH_LOCAL_SERVICE_ROLE_KEY — override explícito do operador;
+  //   2) chave ATUAL do stack local via `supabase status -o env`
+  //      (`SECRET_KEY` moderna `sb_secret_...`, senão `SERVICE_ROLE_KEY` legada);
+  //   3) SUPABASE_SERVICE_ROLE_KEY do ambiente — último recurso; pode ser um
+  //      JWT/HS256 desatualizado e NÃO deve prevalecer sobre a chave do stack.
+  // BENCH_IMPORT_SOURCE_SERVICE_ROLE_KEY NUNCA é usada como chave do destino.
+  const statusKey = status.SECRET_KEY ?? status.SERVICE_ROLE_KEY;
+  const serviceRoleKey =
+    env.BENCH_LOCAL_SERVICE_ROLE_KEY ?? statusKey ?? env.SUPABASE_SERVICE_ROLE_KEY;
+
   if (!serviceRoleKey) {
     throw new BenchImportBlockedError(
       "import_destination_key_missing",
-      "Defina SUPABASE_SERVICE_ROLE_KEY do destino local.",
+      "Defina BENCH_LOCAL_SERVICE_ROLE_KEY ou rode com o stack Supabase local ativo (npx supabase status -o env).",
     );
   }
 
-  const hostname = assertLocalHost(url, "destino local");
   return { url, serviceRoleKey, hostname };
 }
 
