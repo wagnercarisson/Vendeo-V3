@@ -47,7 +47,13 @@ import { createNoopImageProvider } from "@/lib/lab/gateway/noop-image-provider";
 import { remainingUsd } from "@/lib/lab/domain/program-service";
 import { prepareLabRun, runReservedLabRun } from "@/lib/lab/run-service";
 import type { LabRunStatus } from "@/lib/lab/run-service";
-import { ALLOWED_ENTRY_RE, FORBIDDEN_TARGETS, createRecordingClient, type Row } from "./recording-supabase-client";
+import {
+  ALLOWED_ENTRY_RE,
+  ALLOWED_TABLES,
+  FORBIDDEN_TARGETS,
+  createRecordingClient,
+  type Row,
+} from "./recording-supabase-client";
 
 /**
  * Suíte de contrato nº 1 (48-1-11, task 11.2) — **isolamento absoluto da produção**.
@@ -690,5 +696,49 @@ describe("isolamento — fronteira da bancada de geração (F48.2.2)", () => {
     for (const entry of entries) {
       expect(ALLOWED_ENTRY_RE.test(entry), entry).toBe(true);
     }
+  });
+
+  // ─── (F48.2.3) Fronteira da importação ─────────────────────────────────────
+
+  it("a única tabela de escrita aditiva é a auditoria local de importação (D11)", () => {
+    const client = looseClient();
+    // A auditoria local da importação é o único destino de escrita aditivo.
+    expect(() => client.from("lab_bench_store_imports").select("*")).not.toThrow();
+    expect(() => client.from("lab_bench_store_imports").insert({})).not.toThrow();
+    expect(() => client.from("lab_bench_store_imports").update({})).not.toThrow();
+    // Loja/branding permanecem estritamente somente leitura no runtime.
+    for (const table of [
+      "stores",
+      "store_brand_profiles",
+      "store_brand_assets",
+      "store_visual_signatures",
+    ]) {
+      expect(() => client.from(table).insert({}), `insert ${table}`).toThrow(
+        new RegExp(`forbidden_production_access:${table}:insert`),
+      );
+      expect(() => client.from(table).update({}), `update ${table}`).toThrow(
+        new RegExp(`forbidden_production_access:${table}:update`),
+      );
+      expect(() => client.from(table).delete(), `delete ${table}`).toThrow(
+        new RegExp(`forbidden_production_access:${table}:delete`),
+      );
+    }
+  });
+
+  it("o runtime não abre conexão remota: alvos fora da allowlist local fazem o teste falhar", () => {
+    const client = looseClient();
+    // Nenhuma origem remota é acessível pelo runtime da bancada.
+    expect(() => client.from("remote_stores")).toThrow(/forbidden_production_access:remote_stores/);
+    expect(() => client.storage.from("remote-store-logos")).toThrow(
+      /forbidden_production_access:storage:remote-store-logos/,
+    );
+    expect(() => client.from("lab_bench_remote_source")).toThrow(
+      /forbidden_production_access:lab_bench_remote_source/,
+    );
+  });
+
+  it("ALLOWED_ENTRY_RE reconhece a auditoria local de importação", () => {
+    expect(ALLOWED_TABLES.has("lab_bench_store_imports")).toBe(true);
+    expect(ALLOWED_ENTRY_RE.test("from:lab_bench_store_imports")).toBe(true);
   });
 });

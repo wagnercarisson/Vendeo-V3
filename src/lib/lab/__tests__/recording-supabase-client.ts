@@ -279,6 +279,10 @@ export const ALLOWED_TABLES = new Set([
   // F48.2.2 — persistência própria da bancada (D1/D9).
   "lab_bench_runs",
   "lab_bench_artifacts",
+  // F48.2.3 — auditoria local da importação de identidade (D11). É o único
+  // destino de escrita ADITIVO permitido ao runtime; loja/branding permanecem
+  // somente leitura (READ_ONLY_TABLES abaixo).
+  "lab_bench_store_imports",
   // F48.2.2 — leitura somente-leitura de lojas/branding do Supabase **local** (D3/D4).
   "stores",
   "store_brand_profiles",
@@ -323,7 +327,7 @@ export const READ_ONLY_TABLES = new Set([
 ]);
 
 export const ALLOWED_ENTRY_RE =
-  /^(?:from:(?:lab_scenarios|lab_scenario_versions|lab_experiments|lab_experiment_variants|lab_experiment_scenarios|lab_runs|lab_artifacts|lab_human_evaluations|ai_model_catalog|lab_bench_runs|lab_bench_artifacts|stores|store_brand_profiles|store_brand_assets|store_visual_signatures)|rpc:(?:lab_reserve_run|lab_create_experiment|lab_settle_run_budget|lab_release_run_budget|lab_bench_\w+)|storage\.from:lab-artifacts|storage\.(?:upload|remove|createSignedUrl):lab-artifacts|storage\.from:(?:store-logos|store-brand-assets|visual-signatures)|storage\.createSignedUrl:(?:store-logos|store-brand-assets|visual-signatures))/;
+  /^(?:from:(?:lab_scenarios|lab_scenario_versions|lab_experiments|lab_experiment_variants|lab_experiment_scenarios|lab_runs|lab_artifacts|lab_human_evaluations|ai_model_catalog|lab_bench_runs|lab_bench_artifacts|lab_bench_store_imports|stores|store_brand_profiles|store_brand_assets|store_visual_signatures)|rpc:(?:lab_reserve_run|lab_create_experiment|lab_settle_run_budget|lab_release_run_budget|lab_bench_\w+)|storage\.from:lab-artifacts|storage\.(?:upload|remove|createSignedUrl):lab-artifacts|storage\.from:(?:store-logos|store-brand-assets|visual-signatures)|storage\.createSignedUrl:(?:store-logos|store-brand-assets|visual-signatures))/;
 
 /** Alvos produtivos que jamais podem aparecer no `accessLog`. */
 export const FORBIDDEN_TARGETS = [

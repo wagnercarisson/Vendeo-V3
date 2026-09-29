@@ -50,6 +50,21 @@ function collectFiles(dir: string): string[] {
   return out;
 }
 
+/**
+ * Arquivos de comando do laboratório em `scripts/lab/**` (gate de fronteira
+ * arquitetural F48.2.3). Somente `.mjs` de topo; subdiretórios (ex.: `__tests__`)
+ * são ignorados.
+ */
+function collectScriptLabFiles(): string[] {
+  const dir = path.resolve(process.cwd(), "scripts/lab");
+  const out: string[] = [];
+  for (const entry of readdirSync(dir)) {
+    if (!/\.mjs$/.test(entry)) continue;
+    out.push(normalize(path.relative(process.cwd(), path.join(dir, entry))));
+  }
+  return out;
+}
+
 /** Remove comentários de bloco e de linha antes de casar (evita falso positivo em docs). */
 function stripComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
@@ -263,6 +278,79 @@ describe("architecture-guard — camada única de IA (F46-06)", () => {
       if (/ai_model_selection/.test(code)) violations.push(`${file} → ai_model_selection`);
       if (CATALOG_WRITE_RE.test(code)) violations.push(`${file} → escrita em ai_model_catalog`);
       if (PROMPTS_WRITE_RE.test(code)) violations.push(`${file} → escrita em prompts/`);
+    }
+    expect(violations).toEqual([]);
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // F48.2.3 (D4/D17) — gate estático de FRONTEIRA ARQUITETURAL da bancada e do
+  // comando de importação. Verifica IMPORTS/USO — NÃO congela conteúdo de
+  // arquivos produtivos (a prova temporal de produção intocada é do Plano 08, via
+  // `base..HEAD`). Estritamente aditivo: nenhuma regra acima é afrouxada.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /** Módulos puros genuinamente reutilizados da pipeline de campanha (nunca editados aqui). */
+  const BENCH_ALLOWED_CAMPAIGN_MODULES = new Set(["brief", "brief-schema", "types"]);
+  const CAMPAIGN_MODULE_IMPORT_RE = /@\/lib\/campaign\/([a-z0-9-]+)/g;
+
+  /** Alvos produtivos proibidos no código da bancada (case-sensitive). */
+  const BENCH_FORBIDDEN_TARGETS: Array<{ name: string; re: RegExp }> = [
+    { name: "campaigns", re: /\bcampaigns\b/ },
+    { name: "campaign_images", re: /\bcampaign_images\b/ },
+    { name: "generation_events", re: /\bgeneration_events\b/ },
+    { name: "ai_model_selection", re: /\bai_model_selection\b/ },
+    { name: "admin_audit_log", re: /\badmin_audit_log\b/ },
+    { name: "credit_*", re: /\bcredit_[a-z_]+/ },
+    { name: "campaign-images", re: /campaign-images/ },
+    { name: "prompts/", re: /\bprompts\// },
+  ];
+
+  const benchCommandFiles = collectScriptLabFiles();
+  const benchBoundaryFiles = [...benchFiles, ...benchCommandFiles];
+
+  it("o comando de importação vive em scripts/lab/** (sem efeitos no runtime)", () => {
+    // Sanidade: o gate de fronteira abaixo cobre o diretório do comando.
+    expect(benchCommandFiles.length).toBeGreaterThan(0);
+    expect(benchCommandFiles).toContain("scripts/lab/48-2-2-bench-bootstrap.mjs");
+  });
+
+  it("a bancada e o comando não importam o pipeline/rotas produtivas de campanha", () => {
+    const violations: string[] = [];
+    for (const file of benchBoundaryFiles) {
+      const code = readCode(file);
+      if (/@\/app\/api\/campaign/.test(code)) {
+        violations.push(`${file} → rota produtiva de campanha`);
+      }
+      for (const match of code.matchAll(CAMPAIGN_MODULE_IMPORT_RE)) {
+        if (!BENCH_ALLOWED_CAMPAIGN_MODULES.has(match[1])) {
+          violations.push(`${file} → src/lib/campaign/${match[1]}`);
+        }
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it("a bancada e o comando não referenciam tabelas/buckets proibidos", () => {
+    const violations: string[] = [];
+    for (const file of benchBoundaryFiles) {
+      const code = readCode(file);
+      for (const { name, re } of BENCH_FORBIDDEN_TARGETS) {
+        if (re.test(code)) violations.push(`${file} → ${name}`);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it("a bancada não registra o ImagesAdapter nem o registry produtivos", () => {
+    const violations: string[] = [];
+    for (const file of benchFiles) {
+      const code = readCode(file);
+      if (/@\/lib\/ai\/adapters\/images\b/.test(code)) {
+        violations.push(`${file} → ImagesAdapter produtivo`);
+      }
+      if (/new\s+ImagesAdapter\s*\(/.test(code)) {
+        violations.push(`${file} → new ImagesAdapter(`);
+      }
     }
     expect(violations).toEqual([]);
   });
