@@ -256,3 +256,22 @@ None - no external service configuration required. Nenhuma credencial remota é 
 **Smoke local (PostgreSQL real, com ROLLBACK):** perfil com `safe_color_tokens` + 2 arrays, `metadata` (asset e assinatura vazio) e `detail` aninhado → todos lidos como JSONB estruturado (objeto/array), **não** strings; `SMOKE_JSONB_OK`; resíduos = 0.
 
 **Estado:** correção aplicada e validada localmente; **nenhuma** nova leitura remota nem importação. Owner sintético `bench-store+3dc7d274-…` preservado. Aguardando revisão.
+
+## Correção descoberta no UAT (2026-09-29) — bucket de assets (`store-brand-assets`)
+
+**Sintoma:** a 2ª importação autorizada importou a loja `3dc7d274-…` com sucesso, mas a loja `48b212f8-…` falhou em `import_source_download_failed:Object not found`.
+
+**Diagnóstico (somente leitura, allowlist):** as 6 linhas ativas de `store_brand_assets` da loja `48b212f8-…` (variantes `original`, `normalized`, `on_light`, `on_dark`, `square_safe`, `horizontal_safe`) têm `storage_path` que existe **apenas em `store-brand-assets`**; `resolveAssetBucket` mapeava `asset_type='logo'` → `store-logos` (legado), onde os objetos **não** existem. Nenhuma assinatura ativa. A loja `3dc7d274-…` passou porque tinha 0 assets ativos (só assinatura).
+
+**Correção (commit `6d382a93`):**
+1. `resolveAssetBucket` devolve **sempre** `store-brand-assets` para linhas de `store_brand_assets`, independentemente de `asset_type`/`variant_type`.
+2. `store_visual_signatures` continua em `visual-signatures`.
+3. `store-logos` deixa de ser inferido (legado); sem fallback sequencial.
+4. `readLocalIdentity` (cleanup/reconciliação) usa `store-brand-assets` (via `resolveAssetBucket`).
+5. Testes existentes que modelavam assets em `store-logos` atualizados; +3 novos (todas as 6 variantes em `store-brand-assets`; `resolveAssetBucket` para qualquer tipo; `readLocalIdentity`), garantindo que nenhum download/upload de assets use `store-logos`.
+
+**Testes:** `bench-import` + `lab-isolation` + `architecture-guard` = **93 verdes**; `typecheck` exit 0.
+
+**Smoke local:** materialização de 6 variantes + assinatura → buckets `store-brand-assets`/`visual-signatures` (nunca `store-logos`); download OK (7); cleanup `removed: 7, still_present: 0`; `SMOKE_BUCKET_OK`.
+
+**Estado:** correção aplicada e validada localmente; **nenhuma** nova leitura remota nem importação. Aguardando revisão.
