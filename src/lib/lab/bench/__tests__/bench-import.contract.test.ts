@@ -26,6 +26,8 @@ import {
   materializeStoreAssets,
   parseImportArgs,
   parseSupabaseStatusEnv,
+  readLocalIdentity,
+  resolveAssetBucket,
   resolveBrandingMime,
   resolveLocalDestination,
   sanitizeMetadata,
@@ -140,7 +142,7 @@ function makeSource(seed: SourceSeed = {}) {
       : seed.signature;
 
   const objects: Record<string, Buffer> = seed.objects ?? {
-    [`store-logos:${ASSET_PATH}`]: LOGO_BYTES,
+    [`store-brand-assets:${ASSET_PATH}`]: LOGO_BYTES,
     [`visual-signatures:${SIG_PATH}`]: SIG_BYTES,
   };
 
@@ -531,7 +533,7 @@ describe("(h) falha antes do commit remove apenas os objetos novos", () => {
     );
     expect(destination.removals).not.toEqual(
       expect.arrayContaining([
-        { bucket: "store-logos", path: "old/logo.png" },
+        { bucket: "store-brand-assets", path: "old/logo.png" },
         { bucket: "visual-signatures", path: "old/sig.png" },
       ]),
     );
@@ -555,7 +557,7 @@ describe("(i) substituição integral remove resíduos da identidade anterior", 
 
     expect(destination.removals).toEqual(
       expect.arrayContaining([
-        { bucket: "store-logos", path: "old/logo.png" },
+        { bucket: "store-brand-assets", path: "old/logo.png" },
         { bucket: "visual-signatures", path: "old/sig.png" },
       ]),
     );
@@ -653,12 +655,12 @@ describe("helpers puros da importação", () => {
 
   it("selectUnreferencedOldObjects devolve apenas os antigos sem referência", () => {
     const oldObjects = [
-      { bucket: "store-logos", path: "keep.png" },
-      { bucket: "store-logos", path: "drop.png" },
+      { bucket: "store-brand-assets", path: "keep.png" },
+      { bucket: "store-brand-assets", path: "drop.png" },
     ];
-    const newObjects = [{ bucket: "store-logos", path: "keep.png" }];
+    const newObjects = [{ bucket: "store-brand-assets", path: "keep.png" }];
     expect(selectUnreferencedOldObjects({ oldObjects, newObjects })).toEqual([
-      { bucket: "store-logos", path: "drop.png" },
+      { bucket: "store-brand-assets", path: "drop.png" },
     ]);
   });
 
@@ -843,7 +845,7 @@ describe("MIME de branding — resolução e política de bucket (correção UAT
   });
 
   it("materializeStoreAssets: asset com MIME declarado usa o declarado", async () => {
-    const source = makeSource({ objects: { "store-logos:loja/marca.jpg": LOGO_BYTES } });
+    const source = makeSource({ objects: { "store-brand-assets:loja/marca.jpg": LOGO_BYTES } });
     const destination = makeDestination();
     const asset = logoAsset({ mime_type: "image/jpeg", storage_path: "loja/marca.jpg" });
 
@@ -875,7 +877,7 @@ describe("MIME de branding — resolução e política de bucket (correção UAT
 
   it("materializeStoreAssets: recusa MIME desconhecido ANTES do upload", async () => {
     const destination = makeDestination();
-    const source = makeSource({ objects: { "store-logos:loja/logo.bin": LOGO_BYTES } });
+    const source = makeSource({ objects: { "store-brand-assets:loja/logo.bin": LOGO_BYTES } });
     const asset = logoAsset({ mime_type: "application/octet-stream", storage_path: "loja/logo.bin" });
 
     await expect(
@@ -888,8 +890,8 @@ describe("MIME de branding — resolução e política de bucket (correção UAT
     const destination = makeDestination();
     const source = makeSource({
       objects: {
-        "store-logos:loja/logo.png": LOGO_BYTES,
-        "store-logos:loja/logo2.bin": LOGO_BYTES,
+        "store-brand-assets:loja/logo.png": LOGO_BYTES,
+        "store-brand-assets:loja/logo2.bin": LOGO_BYTES,
       },
     });
     const assets = [
@@ -917,7 +919,7 @@ describe("MIME de branding — resolução e política de bucket (correção UAT
     const destination = makeDestination();
     await expect(
       destination.uploadBrandingObject({
-        bucket: "store-logos",
+        bucket: "store-brand-assets",
         path: "x",
         buffer: LOGO_BYTES,
         contentType: "application/octet-stream",
@@ -963,7 +965,7 @@ describe("MIME por bucket de branding — política real (correção UAT)", () =
 
   it("materializeStoreAssets: MIME incompatível falha ANTES de qualquer upload", async () => {
     const destination = makeDestination();
-    const source = makeSource({ objects: { "store-logos:loja/logo.heic": LOGO_BYTES } });
+    const source = makeSource({ objects: { "store-brand-assets:loja/logo.heic": LOGO_BYTES } });
     const asset = logoAsset({ mime_type: "image/heic", storage_path: "loja/logo.heic" });
 
     await expect(
@@ -1037,5 +1039,58 @@ describe("buildInsertStatement — fronteira JSONB com node-postgres (correção
     });
     expect(s.text).not.toContain("::jsonb");
     expect(s.values).toEqual(["p1", "text_only", "serif"]);
+  });
+});
+
+describe("mapeamento de bucket de assets (correção UAT)", () => {
+  const VARIANTS = ["original", "normalized", "on_light", "on_dark", "square_safe", "horizontal_safe"];
+
+  it("resolveAssetBucket devolve store-brand-assets para qualquer asset_type/variant_type", () => {
+    for (const asset_type of ["logo", "other", undefined]) {
+      for (const variant_type of VARIANTS) {
+        expect(resolveAssetBucket({ asset_type, variant_type })).toBe("store-brand-assets");
+      }
+    }
+    expect(resolveAssetBucket(undefined)).toBe("store-brand-assets");
+  });
+
+  it("materializa as seis variantes em store-brand-assets e NUNCA em store-logos", async () => {
+    const assets = VARIANTS.map((variant_type, index) => ({
+      id: `asset-${index}`,
+      store_id: STORE_ID,
+      asset_type: "logo",
+      variant_type,
+      storage_path: `loja/${variant_type}.png`,
+      mime_type: "image/png",
+      status: "active",
+    }));
+    const objects: Record<string, Buffer> = {};
+    for (const asset of assets) objects[`store-brand-assets:${asset.storage_path}`] = LOGO_BYTES;
+
+    const source = makeSource({ objects });
+    const destination = makeDestination();
+
+    await materializeStoreAssets({ source, destination, storeId: STORE_ID, state: { assets, signature: null } });
+
+    expect(destination.uploads).toHaveLength(6);
+    for (const upload of destination.uploads) expect(upload.bucket).toBe("store-brand-assets");
+    expect(source.calls.download).toHaveLength(6);
+    for (const call of source.calls.download) expect(call.bucket).toBe("store-brand-assets");
+    expect(source.calls.download.some((call) => call.bucket === "store-logos")).toBe(false);
+  });
+
+  it("readLocalIdentity lê assets locais de store-brand-assets (e assinatura de visual-signatures)", async () => {
+    const db = makeDb({
+      rows: {
+        brandAssets: [{ asset_type: "logo", storage_path: "x/logo.png" }],
+        signatures: [{ storage_path: "x/sig.png" }],
+      },
+    });
+
+    const objects = await readLocalIdentity(db, STORE_ID);
+
+    expect(objects).toContainEqual({ bucket: "store-brand-assets", path: "x/logo.png" });
+    expect(objects).toContainEqual({ bucket: "visual-signatures", path: "x/sig.png" });
+    expect(objects.some((object) => object.bucket === "store-logos")).toBe(false);
   });
 });

@@ -937,10 +937,15 @@ export function buildContentAddressedPath({ storeId, objectId, checksum, extensi
   return `${storeId}/${objectId}/${checksum}${ext}`;
 }
 
-/** Bucket de destino do asset conforme o tipo (logo → `store-logos`). */
-export function resolveAssetBucket(asset) {
-  const assetType = typeof asset?.asset_type === "string" ? asset.asset_type : "logo";
-  return assetType === "logo" ? "store-logos" : "store-brand-assets";
+/**
+ * Bucket do asset de branding. TODAS as linhas de `store_brand_assets` vivem em
+ * `store-brand-assets`, independentemente de `asset_type`/`variant_type`.
+ * `store-logos` é LEGADO e NÃO é inferido a partir de `asset_type`.
+ * @param {any} [_asset]
+ * @returns {string}
+ */
+export function resolveAssetBucket(_asset) {
+  return "store-brand-assets";
 }
 
 /** Normaliza o retorno de `storage.download` (Blob/Buffer/Uint8Array) em Buffer. */
