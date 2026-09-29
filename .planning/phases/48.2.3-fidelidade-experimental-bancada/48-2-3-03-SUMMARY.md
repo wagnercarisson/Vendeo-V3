@@ -192,3 +192,19 @@ None - no external service configuration required. Nenhuma credencial remota é 
 **Testes:** 6 novos casos em `bench-import.contract.test.ts` (SECRET_KEY moderna vence JWT legado; SERVICE_ROLE_KEY do stack; override explícito; source key nunca usada; destino não local recusado). Suíte: `bench-import` + `lab-isolation` = 51 verdes; fase (`src/lib/lab/bench` + isolation + architecture-guard) = 319 verdes; `npm.cmd run typecheck` exit 0.
 
 **Estado:** correção aplicada; **nenhuma** nova leitura remota nem execução da importação após a correção (aguardando revisão humana).
+
+## Descoberta adicional do UAT (2026-09-29) — inconsistência do stack Supabase local
+
+**Diagnóstico confirmado pelo operador:** mesmo com `resolveLocalDestination` selecionando corretamente a `SECRET_KEY` (`sb_secret_...`) do `supabase status -o env`, o smoke local `createLocalDestination().findUserByEmail(...)` (via `auth.admin`) continua falhando com `signing method HS256 is invalid`. Conclusão: **inconsistência interna do stack Supabase local entre gateway/Auth** — não é erro do operador nem da origem remota.
+
+**Procedimento executado (autorizado):** `npx supabase stop` (sem `--no-backup`; dados preservados) → `npx supabase start` (**falhou 2×**) → bootstrap/smoke **não executados**.
+
+**Erro sanitizado:** `container is not ready: unhealthy` para `supabase_analytics`, `supabase_realtime`, `supabase_storage`, `supabase_pg_meta` e `supabase_studio` (na 2ª tentativa); na 1ª, também `failed to prune networks: a prune operation is already running`. `supabase status` → `No such container: supabase_db_Vendeo_V3` (stack parado).
+
+**Versões:**
+- Supabase CLI **2.104.0** (atual disponível: 2.118.0).
+- Docker **29.6.2** (build `dfc4efb`); Docker Compose **v5.3.1**.
+- Imagens presentes (múltiplas versões, indicando possível descasamento CLI/imagem): `postgres:17.6.1.121` e `17.6.1.075`; `gotrue:v2.194.0` e `v2.186.0`; `storage-api:v1.67.23` e `v1.35.3`; `realtime:v2.102.1` e `v2.73.2`; `logflare:1.42.0` e `1.30.5`; `studio:2026.05.25` e `2026.01.27`.
+- Volumes preservados: `supabase_db_Vendeo_V3`, `supabase_storage_Vendeo_V3`, `supabase_edge_runtime_Vendeo_V3`.
+
+**Estado:** **bloqueado**. Nenhuma ação destrutiva (`db reset`, `stop --no-backup`, remoção de volumes) executada. O commit `7193266c` (parser) permanece — a compatibilidade com `SECRET_KEY` é correta — mas **não** deve ser apresentado como solução completa enquanto o smoke local não passar. Nenhum novo acesso remoto.
