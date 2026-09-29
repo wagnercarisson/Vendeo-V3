@@ -9,6 +9,9 @@
 -- Escopo (bounded context da bancada, isolado da produção):
 --   * public.lab_bench_runs      — unidade de auditoria própria por geração (D9)
 --   * public.lab_bench_artifacts — metadados das entradas/saída (D9)
+--   * public.lab_bench_store_imports — auditoria local da importação de identidade
+--     das lojas de teste (F48.2.3, D11) + colunas de evidência do preflight do
+--     prompt em lab_bench_runs (F48.2.3, D20) — ambos ADITIVOS, com REVERT.
 --   * Índice único parcial GLOBAL de geração ativa — SOMENTE `pending`/`running`
 --     (o estado `draft` não ocupa o slot; vários drafts coexistem) (D10)
 --   * RLS + policy service_role + REVOKE/GRANT (mesmo padrão da F48.1)
@@ -65,6 +68,20 @@ CREATE TABLE IF NOT EXISTS public.lab_bench_runs (
   error_message TEXT,
   technical_validation JSONB
 );
+
+-- =============================================================================
+-- 1b. Evidência mínima do preflight do prompt (F48.2.3, D20)
+--     Colunas ADITIVAS e NULLABLE em `lab_bench_runs` (reusa `prompt_sent` e
+--     `campaign_snapshot`). Persistidas em `draft` via setBenchRunInput; o
+--     trigger de imutabilidade a partir de `running` NÃO é alterado. Aplicadas
+--     com `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` para idempotência sobre uma
+--     base já existente (o `CREATE TABLE IF NOT EXISTS` acima é um no-op nesse caso).
+-- =============================================================================
+ALTER TABLE public.lab_bench_runs ADD COLUMN IF NOT EXISTS prompt_base TEXT;
+ALTER TABLE public.lab_bench_runs ADD COLUMN IF NOT EXISTS prompt_compiled TEXT;
+ALTER TABLE public.lab_bench_runs ADD COLUMN IF NOT EXISTS prompt_approved TEXT;
+ALTER TABLE public.lab_bench_runs ADD COLUMN IF NOT EXISTS prompt_blocks JSONB;
+ALTER TABLE public.lab_bench_runs ADD COLUMN IF NOT EXISTS composer_version TEXT;
 
 -- =============================================================================
 -- 2. public.lab_bench_artifacts — metadados das entradas/saída (D9)
@@ -189,8 +206,50 @@ EXECUTE FUNCTION public.trg_lab_bench_runs_no_delete_fn();
 -- =============================================================================
 
 -- =============================================================================
+-- 8. public.lab_bench_store_imports — auditoria local da importação (F48.2.3, D11)
+--    Registra a materialização local da identidade de uma loja de teste pelo
+--    comando explícito de importação. `source_host` é canonicalizado sem
+--    credenciais; `detail` é jsonb saneado (sem chave/token/URL assinada).
+--    É o ÚNICO destino de escrita aditivo da auditoria local. Vive fora de
+--    `supabase/migrations/` — nunca é promovido ao remoto.
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS public.lab_bench_store_imports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  store_id UUID NOT NULL,
+  source_host TEXT NOT NULL,
+  imported_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  imported_by TEXT,
+  source_updated_at TIMESTAMPTZ,
+  asset_count INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL,
+  detail JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+ALTER TABLE public.lab_bench_store_imports ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Service role can manage lab_bench_store_imports" ON public.lab_bench_store_imports;
+CREATE POLICY "Service role can manage lab_bench_store_imports"
+  ON public.lab_bench_store_imports FOR ALL TO service_role
+  USING (true) WITH CHECK (true);
+
+REVOKE ALL ON TABLE public.lab_bench_store_imports FROM anon;
+REVOKE ALL ON TABLE public.lab_bench_store_imports FROM authenticated;
+REVOKE ALL ON TABLE public.lab_bench_store_imports FROM service_role;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.lab_bench_store_imports TO service_role;
+
+-- =============================================================================
 -- REVERT (ordem reversa de criação — executar com `--revert` ou manualmente)
 -- =============================================================================
+-- ALTER TABLE public.lab_bench_runs DROP COLUMN IF EXISTS composer_version;
+-- ALTER TABLE public.lab_bench_runs DROP COLUMN IF EXISTS prompt_blocks;
+-- ALTER TABLE public.lab_bench_runs DROP COLUMN IF EXISTS prompt_approved;
+-- ALTER TABLE public.lab_bench_runs DROP COLUMN IF EXISTS prompt_compiled;
+-- ALTER TABLE public.lab_bench_runs DROP COLUMN IF EXISTS prompt_base;
+-- DROP POLICY IF EXISTS "Service role can manage lab_bench_store_imports" ON public.lab_bench_store_imports;
+-- ALTER TABLE public.lab_bench_store_imports DISABLE ROW LEVEL SECURITY;
+-- REVOKE SELECT, INSERT, UPDATE, DELETE ON TABLE public.lab_bench_store_imports FROM service_role;
+-- DROP TABLE IF EXISTS public.lab_bench_store_imports CASCADE;
 -- DROP TRIGGER IF EXISTS trg_lab_bench_runs_no_delete ON public.lab_bench_runs;
 -- DROP FUNCTION IF EXISTS public.trg_lab_bench_runs_no_delete_fn();
 -- DROP TRIGGER IF EXISTS trg_lab_bench_runs_snapshot_immutable ON public.lab_bench_runs;
