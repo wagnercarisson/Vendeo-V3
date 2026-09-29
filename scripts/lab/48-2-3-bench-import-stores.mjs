@@ -132,7 +132,7 @@ export function assertAllowedSourceBucket(bucket) {
 
 /** Colunas de identidade de `stores` (sem `accent_color`; sem `user_id` real). */
 export const STORE_COLUMNS =
-  "id, name, segment, subsegment, tone_of_voice, positioning, short_description, slogan, brand_color, is_test_store, updated_at";
+  "id, name, segment, subsegment, tone_of_voice, positioning, short_description, slogan, brand_color, identity_state, is_test_store, updated_at";
 
 /** Colunas do perfil de branding atual (inclui a cor inferida e os IDs de FK). */
 export const PROFILE_COLUMNS =
@@ -153,6 +153,31 @@ export const SOURCE_COLUMN_ALLOWLIST = Object.freeze({
   store_brand_assets: Object.freeze(ASSET_COLUMNS.split(",").map((column) => column.trim())),
   store_visual_signatures: Object.freeze(SIGNATURE_COLUMNS.split(",").map((column) => column.trim())),
 });
+
+// ─── Fidelidade de `stores.identity_state` (F48.2.3) ─────────────────────────
+
+/**
+ * Conjunto FECHADO de `stores.identity_state` — espelha o CHECK do banco
+ * (`text_only | logo | visual_signature`, migration `20260612000001`).
+ */
+export const VALID_IDENTITY_STATES = Object.freeze(["text_only", "logo", "visual_signature"]);
+
+/**
+ * Valida `stores.identity_state` contra o conjunto fechado. Ausente/desconhecido
+ * interrompe a importação com erro sanitizado (fail-closed) — nunca converte
+ * silenciosamente para `text_only`. Devolve o valor quando válido.
+ * @param {unknown} value
+ * @returns {"text_only"|"logo"|"visual_signature"}
+ */
+export function assertValidIdentityState(value) {
+  if (typeof value === "string" && VALID_IDENTITY_STATES.includes(value)) {
+    return value;
+  }
+  throw new BenchImportBlockedError(
+    "import_store_identity_state_invalid",
+    "identity_state ausente ou desconhecido na origem (esperado text_only|logo|visual_signature).",
+  );
+}
 
 /** Valida a tabela E cada coluna solicitada contra a allowlist explícita. */
 export function assertAllowedSourceColumns(table, columns) {
@@ -704,6 +729,7 @@ export function buildSanitizedStoreRow({ store, ownerUserId }) {
     short_description: store.short_description ?? null,
     slogan: store.slogan ?? null,
     brand_color: store.brand_color ?? null,
+    identity_state: assertValidIdentityState(store.identity_state),
     logo_url: null,
     user_id: ownerUserId ?? null,
   };
@@ -1131,8 +1157,8 @@ export function selectUnreferencedOldObjects({ oldObjects, newObjects }) {
 /** Monta o upsert da loja (preserva o `id`; `logo_url` saneado = NULL). */
 export function buildStoreUpsert({ store, ownerUserId }) {
   return {
-    text: `INSERT INTO public.stores (id, name, segment, subsegment, tone_of_voice, positioning, short_description, slogan, brand_color, logo_url, user_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    text: `INSERT INTO public.stores (id, name, segment, subsegment, tone_of_voice, positioning, short_description, slogan, brand_color, identity_state, logo_url, user_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
   segment = EXCLUDED.segment,
@@ -1142,6 +1168,7 @@ ON CONFLICT (id) DO UPDATE SET
   short_description = EXCLUDED.short_description,
   slogan = EXCLUDED.slogan,
   brand_color = EXCLUDED.brand_color,
+  identity_state = EXCLUDED.identity_state,
   logo_url = EXCLUDED.logo_url,
   user_id = EXCLUDED.user_id,
   updated_at = now()`,
@@ -1155,6 +1182,7 @@ ON CONFLICT (id) DO UPDATE SET
       store.short_description,
       store.slogan,
       store.brand_color,
+      store.identity_state,
       store.logo_url,
       ownerUserId,
     ],
@@ -1339,6 +1367,9 @@ export function createFileManifestStore({ root = process.cwd(), relative = BENCH
 export async function importOneStore(params) {
   const { storeId, source, destination, db, dryRun = false, manifestStore = null, importedBy = null } = params;
   const store = await confirmTestStore(source, storeId);
+  // Fail-closed ANTES de qualquer upload/escrita: identity_state ausente/desconhecido
+  // interrompe a importação da loja (sem conversão silenciosa para `text_only`).
+  assertValidIdentityState(store.identity_state);
   const state = await readCurrentState(source, storeId);
 
   // Validação + ordenação topológica ANTES de qualquer upload/escrita local:

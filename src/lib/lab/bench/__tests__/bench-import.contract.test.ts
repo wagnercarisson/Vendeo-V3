@@ -14,7 +14,10 @@ import {
   SOURCE_BUCKETS,
   SOURCE_TABLES,
   STORE_COLUMNS,
+  VALID_IDENTITY_STATES,
+  assertAllowedSourceColumns,
   assertBrandingMimeAllowedForBucket,
+  assertValidIdentityState,
   buildContentAddressedPath,
   buildImportAuditRow,
   buildInsertStatement,
@@ -80,6 +83,7 @@ function makeSource(seed: SourceSeed = {}) {
     short_description: "loja de bairro",
     slogan: "aqui rende mais",
     brand_color: "#0F172A",
+    identity_state: "logo",
     is_test_store: seed.isTestStore ?? true,
     updated_at: "2026-09-29T00:00:00.000Z",
   };
@@ -307,6 +311,16 @@ async function expectCode(fn: () => Promise<unknown>, code: string) {
   throw new Error(`esperava o codigo de erro ${code}`);
 }
 
+function expectSyncCode(fn: () => unknown, code: string) {
+  try {
+    fn();
+  } catch (error) {
+    expect((error as { code?: string }).code).toBe(code);
+    return;
+  }
+  throw new Error(`esperava o codigo de erro ${code}`);
+}
+
 // ─── (c) IDs explícitos e recusa de descoberta ampla ─────────────────────────
 
 describe("parseImportArgs — somente IDs explícitos", () => {
@@ -430,8 +444,9 @@ describe("(d)(e) importação lê só a allowlist e não persiste URLs assinadas
 
     const storeStatement = findStatement(db.statements, /INSERT INTO public\.stores/);
     expect(storeStatement).toBeDefined();
-    // `logo_url` (índice 9) saneado para NULL.
-    expect(storeStatement!.values[9]).toBeNull();
+    // `logo_url` (índice 10) saneado para NULL; `identity_state` (índice 9) importado.
+    expect(storeStatement!.values[10]).toBeNull();
+    expect(storeStatement!.values[9]).toBe("logo");
 
     const signatureStatement = findStatement(db.statements, /INSERT INTO public\.store_visual_signatures/);
     expect(signatureStatement).toBeDefined();
@@ -445,6 +460,79 @@ describe("(d)(e) importação lê só a allowlist e não persiste URLs assinadas
     // `storage_path` é o path local content-addressed (não a URL remota).
     expect(destination.uploads[0].path.startsWith(`${STORE_ID}/${ASSET_ID}/`)).toBe(true);
     expect(/https?:\/\//i.test(JSON.stringify(destination.uploads))).toBe(false);
+  });
+});
+
+// ─── Allowlist de colunas de `stores` (identity_state) ───────────────────────
+
+describe("allowlist de colunas de stores", () => {
+  it("aceita identity_state (derivada de STORE_COLUMNS)", () => {
+    expect(STORE_COLUMNS.split(",").map((column) => column.trim())).toContain("identity_state");
+    expect(() => assertAllowedSourceColumns("stores", STORE_COLUMNS)).not.toThrow();
+  });
+
+  it("recusa coluna fora da allowlist", () => {
+    expectSyncCode(() => assertAllowedSourceColumns("stores", "id,accent_color"), "import_source_column_not_allowed");
+    expectSyncCode(() => assertAllowedSourceColumns("stores", "id,user_id"), "import_source_column_not_allowed");
+  });
+});
+
+// ─── Fail-closed de `identity_state` (fidelidade F48.2.3) ────────────────────
+
+describe("identity_state fail-closed", () => {
+  const baseStore = (over: Row = {}): Row => ({
+    id: STORE_ID,
+    name: "Loja de teste A",
+    segment: "variedades",
+    subsegment: null,
+    tone_of_voice: null,
+    positioning: null,
+    short_description: null,
+    slogan: null,
+    brand_color: "#0F172A",
+    is_test_store: true,
+    updated_at: "2026-09-29T00:00:00.000Z",
+    ...over,
+  });
+
+  it("assertValidIdentityState aceita o conjunto fechado e recusa o restante", () => {
+    expect(VALID_IDENTITY_STATES).toEqual(["text_only", "logo", "visual_signature"]);
+    for (const value of VALID_IDENTITY_STATES) {
+      expect(assertValidIdentityState(value)).toBe(value);
+    }
+    for (const value of [undefined, null, "", "legacy", "LOGO", "logo "]) {
+      expectSyncCode(() => assertValidIdentityState(value), "import_store_identity_state_invalid");
+    }
+  });
+
+  it("aborta a importação quando identity_state está ausente, sem uploads nem statements", async () => {
+    const source = makeSource({ store: baseStore() });
+    const destination = makeDestination();
+    const db = makeDb();
+
+    await expectCode(
+      () => importOneStore({ storeId: STORE_ID, source, destination, db }),
+      "import_store_identity_state_invalid",
+    );
+
+    expect(destination.uploads).toEqual([]);
+    expect(source.calls.download).toEqual([]);
+    expect(db.statements).toEqual([]);
+  });
+
+  it("aborta a importação quando identity_state é desconhecido, sem uploads nem statements", async () => {
+    const source = makeSource({ store: baseStore({ identity_state: "legacy" }) });
+    const destination = makeDestination();
+    const db = makeDb();
+
+    await expectCode(
+      () => importOneStore({ storeId: STORE_ID, source, destination, db }),
+      "import_store_identity_state_invalid",
+    );
+
+    expect(destination.uploads).toEqual([]);
+    expect(source.calls.download).toEqual([]);
+    expect(db.statements).toEqual([]);
   });
 });
 
@@ -699,7 +787,7 @@ describe("helpers puros da importação", () => {
 
   it("buildSanitizedIdentity saneia logo_url, asset_url local e preserva IDs de FK", () => {
     const identity = buildSanitizedIdentity({
-      store: { id: STORE_ID, name: "Loja", segment: "variedades", brand_color: "#000" },
+      store: { id: STORE_ID, name: "Loja", segment: "variedades", brand_color: "#000", identity_state: "visual_signature" },
       ownerUserId: "owner-1",
       state: {
         profile: { id: "p1", source: "text_only", status: "synced", active_logo_asset_id: ASSET_ID, visual_signature_id: SIG_ID },
@@ -712,6 +800,7 @@ describe("helpers puros da importação", () => {
 
     expect(identity.store.logo_url).toBeNull();
     expect(identity.store.user_id).toBe("owner-1");
+    expect(identity.store.identity_state).toBe("visual_signature");
     expect(identity.assets[0].storage_path).toBe(`${STORE_ID}/${ASSET_ID}/abc.png`);
     expect(identity.assets[0].store_id).toBe(STORE_ID);
     expect(identity.signature?.asset_url).toBe(`${STORE_ID}/${SIG_ID}/def.png`);
