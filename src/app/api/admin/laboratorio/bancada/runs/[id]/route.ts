@@ -82,6 +82,12 @@ export const GET = apiHandler(
         campaignSnapshot: run.campaignSnapshot,
         brandingSnapshot: run.brandingSnapshot,
         promptSent: run.promptSent,
+        // Evidência mínima do preflight (F48.2.3, D20).
+        promptBase: run.promptBase,
+        promptCompiled: run.promptCompiled,
+        promptApproved: run.promptApproved,
+        promptBlocks: run.promptBlocks,
+        composerVersion: run.composerVersion,
         references: run.references,
         provider: run.provider,
         protocol: run.protocol,

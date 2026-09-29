@@ -22,6 +22,8 @@ const {
   mockResolveBenchConfig,
   mockResolveBenchCost,
   mockBuildBenchCampaignSnapshot,
+  mockBuildBenchExperimentalBriefing,
+  mockComposePromptBlocks,
   mockReserveBenchRun,
   mockGetBenchRunByOperationId,
   mockSetBenchRunInput,
@@ -93,6 +95,8 @@ const {
     mockResolveBenchConfig: vi.fn(),
     mockResolveBenchCost: vi.fn(),
     mockBuildBenchCampaignSnapshot: vi.fn(),
+    mockBuildBenchExperimentalBriefing: vi.fn(),
+    mockComposePromptBlocks: vi.fn(),
     mockReserveBenchRun: vi.fn(),
     mockGetBenchRunByOperationId: vi.fn(),
     mockSetBenchRunInput: vi.fn(),
@@ -193,6 +197,17 @@ vi.mock("@/lib/lab/bench/domain/campaign-snapshot", () => ({
   buildBenchCampaignSnapshot: (...args: unknown[]) => mockBuildBenchCampaignSnapshot(...args),
 }));
 
+vi.mock("@/lib/lab/bench/domain/experimental-briefing", () => ({
+  buildBenchExperimentalBriefing: (...args: unknown[]) =>
+    mockBuildBenchExperimentalBriefing(...args),
+}));
+
+vi.mock("@/lib/lab/bench/domain/prompt-composer", () => ({
+  COMPOSER_VERSION: "test-composer-v1",
+  composePromptBlocks: (...args: unknown[]) => mockComposePromptBlocks(...args),
+  composePrompt: (...args: unknown[]) => mockComposePromptBlocks(...args).text,
+}));
+
 vi.mock("@/lib/lab/bench/persistence/bench-run-service", () => ({
   reserveBenchRun: (...args: unknown[]) => mockReserveBenchRun(...args),
   getBenchRunByOperationId: (...args: unknown[]) => mockGetBenchRunByOperationId(...args),
@@ -287,6 +302,7 @@ const BRANDING_CONTRACT = {
   brandPersonality: null,
   campaignGuidelines: null,
   campaignBrief: null,
+  brandColor: "#16A34A",
   profileSource: "synced",
   profileStatus: "synced",
   logoUrl: "https://signed.test/logo",
@@ -383,6 +399,13 @@ const VALID_RUN_BODY = {
   confirmed: true,
   product: { name: "Produto", priceCents: 1000, originalPriceCents: 1500 },
   offer: { text: "Oferta imperdível" },
+  preflight: {
+    promptBase: "prompt base",
+    promptCompiled: "prompt compilado",
+    promptApproved: "prompt manual",
+    promptBlocks: { "INSTRUÇÕES DO PROMPT-BASE": "prompt base" },
+    composerVersion: "48.2.3-prompt-composer-v1",
+  },
 };
 
 // ─── Invocação das rotas (import dinâmico) ───────────────────────────────────
@@ -432,6 +455,25 @@ async function getEstimate(
   return GET(new NextRequest(`${BASE}/estimate?storeId=${storeId}&presetId=${presetId}`));
 }
 
+async function getBriefing(storeId: string = STORE_ID): Promise<Response> {
+  const { GET } = await import("@/app/api/admin/laboratorio/bancada/briefing/route");
+  return GET(new NextRequest(`${BASE}/briefing?storeId=${storeId}`));
+}
+
+const VALID_COMPOSE_BODY = {
+  storeId: STORE_ID,
+  presetId: PRESET_ID,
+  product: { name: "Produto", priceCents: 1000, originalPriceCents: 1500 },
+  offer: { text: "Oferta imperdível" },
+  promptBase: "prompt base",
+  references: [`bench/${RUN_ID}/inputs/0.png`],
+};
+
+async function postCompose(body: unknown = VALID_COMPOSE_BODY): Promise<Response> {
+  const { POST } = await import("@/app/api/admin/laboratorio/bancada/compose/route");
+  return POST(jsonRequest(`${BASE}/compose`, body));
+}
+
 async function postInputs(form: FormData): Promise<Response> {
   const { POST } = await import("@/app/api/admin/laboratorio/bancada/inputs/route");
   return POST(multipartRequest(`${BASE}/inputs`, form));
@@ -458,6 +500,8 @@ function allRouteCalls(): RouteCall[] {
     { name: "GET /branding", call: () => getBranding() },
     { name: "GET /presets", call: getPresets },
     { name: "GET /estimate", call: () => getEstimate() },
+    { name: "GET /briefing", call: () => getBriefing() },
+    { name: "POST /compose", call: () => postCompose() },
     { name: "POST /inputs", call: () => postInputs(buildInputForm(OP_ID)) },
     { name: "POST /runs", call: () => postRun(VALID_RUN_BODY) },
     { name: "GET /runs/[id]", call: () => getRun() },
@@ -475,6 +519,8 @@ function anyServiceCalled(): boolean {
     mockResolveBenchPreset,
     mockResolveBenchCost,
     mockBuildBenchCampaignSnapshot,
+    mockBuildBenchExperimentalBriefing,
+    mockComposePromptBlocks,
     mockReserveBenchRun,
     mockGetBenchRunByOperationId,
     mockSetBenchRunInput,
@@ -558,6 +604,38 @@ beforeEach(() => {
       locale: "pt-BR",
     }),
   );
+
+  mockBuildBenchExperimentalBriefing.mockImplementation(
+    (params: { branding: { storeName: string; brandColor?: string } }) => ({
+      storeId: STORE_ID,
+      storeName: params.branding.storeName,
+      segment: "mercado",
+      visualDirection: {
+        campaignBrief: null,
+        campaignGuidelines: null,
+        visualStyle: null,
+        visualTone: null,
+        brandPersonality: null,
+      },
+      typographyDirection: "serif",
+      brandColor: params.branding.brandColor ?? "#22C55E",
+      product: { name: "Produto", description: null },
+      commercial: {
+        intent: "offer",
+        originalPriceText: null,
+        discountedPriceText: null,
+        badge: null,
+        validity: null,
+        preserveImageContext: false,
+      },
+      constraints: { mandatoryArtworkText: null },
+      config: {},
+    }),
+  );
+  mockComposePromptBlocks.mockReturnValue({
+    text: "prompt compilado",
+    blocks: { "INSTRUÇÕES DO PROMPT-BASE": "prompt base" },
+  });
 
   mockReserveBenchRun.mockResolvedValue({ runId: RUN_ID, idempotent: false });
   mockGetBenchRunByOperationId.mockResolvedValue({ ...DRAFT_RUN });
@@ -769,6 +847,114 @@ describe("contrato da API da bancada — leitura", () => {
   });
 });
 
+// ─── 3b. Briefing e composição/preview ───────────────────────────────────────
+
+describe("contrato da API da bancada — briefing experimental", () => {
+  it("GET /briefing ⇒ 200 com direção visual, tipografia e brandColor resolvido, sem secrets", async () => {
+    const res = await getBriefing();
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.briefing.storeId).toBe(STORE_ID);
+    expect(body.briefing.storeName).toBe("Loja de teste A");
+    expect(body.briefing.typographyDirection).toBe("serif");
+    expect(body.briefing.brandColor).toBe("#16A34A");
+    expect(body.briefing.visualDirection).toBeDefined();
+
+    // Nenhum secret/URL assinada é exposto pelo briefing.
+    const text = JSON.stringify(body);
+    expect(text).not.toMatch(/sk-[A-Za-z0-9]/);
+    expect(text).not.toContain("signed.test");
+    expect(text).not.toContain("campaign-images");
+
+    // Manifesto validado antes de qualquer leitura de branding.
+    const assertIdx = mockAssertBenchTestStore.mock.invocationCallOrder[0];
+    const brandingIdx = mockLoadBenchBranding.mock.invocationCallOrder[0];
+    expect(assertIdx).toBeLessThan(brandingIdx);
+  });
+
+  it("GET /briefing sem storeId ⇒ 400 invalid_payload sem leitura", async () => {
+    const res = await getBriefing("");
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("invalid_payload");
+    expect(mockLoadBenchBranding).not.toHaveBeenCalled();
+  });
+
+  it("GET /briefing com loja fora do manifesto ⇒ 400 sem leitura de branding", async () => {
+    mockAssertBenchTestStore.mockRejectedValue(
+      new MockBenchStoreManifestError("store_not_in_manifest", OUTSIDE_STORE_ID),
+    );
+
+    const res = await getBriefing(OUTSIDE_STORE_ID);
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("store_not_in_manifest");
+    expect(mockLoadBenchBranding).not.toHaveBeenCalled();
+  });
+});
+
+describe("contrato da API da bancada — composição/preview do prompt", () => {
+  it("POST /compose ⇒ 200 com prompt compilado, blocos e versão do compositor (sem IA)", async () => {
+    const res = await postCompose();
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.compiledPrompt).toBe("prompt compilado");
+    expect(body.blocks).toBeDefined();
+    expect(body.composerVersion).toBe("test-composer-v1");
+    expect(body.approved).toBe(false);
+
+    // Composição é pura: nenhuma geração paga disparada.
+    expect(mockComposePromptBlocks).toHaveBeenCalledTimes(1);
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+
+    // Manifesto validado antes de qualquer leitura de branding.
+    const assertIdx = mockAssertBenchTestStore.mock.invocationCallOrder[0];
+    const brandingIdx = mockLoadBenchBranding.mock.invocationCallOrder[0];
+    expect(assertIdx).toBeLessThan(brandingIdx);
+  });
+
+  it("POST /compose com approved: true ecoa a aprovação explícita", async () => {
+    const res = await postCompose({ ...VALID_COMPOSE_BODY, approved: true });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.approved).toBe(true);
+  });
+
+  it("POST /compose sem storeId válido ⇒ 400 sem leitura", async () => {
+    const res = await postCompose({ ...VALID_COMPOSE_BODY, storeId: "" });
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("invalid_payload");
+    expect(mockLoadBenchBranding).not.toHaveBeenCalled();
+  });
+
+  it("POST /compose com loja fora do manifesto ⇒ 400 antes de ler branding", async () => {
+    mockAssertBenchTestStore.mockRejectedValue(
+      new MockBenchStoreManifestError("store_not_in_manifest", OUTSIDE_STORE_ID),
+    );
+
+    const res = await postCompose({ ...VALID_COMPOSE_BODY, storeId: OUTSIDE_STORE_ID });
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("store_not_in_manifest");
+    expect(mockLoadBenchBranding).not.toHaveBeenCalled();
+  });
+
+  it("POST /compose com payload inválido ⇒ 400 sem compor", async () => {
+    const res = await postCompose({ ...VALID_COMPOSE_BODY, product: { name: "" } });
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("invalid_payload");
+    expect(mockComposePromptBlocks).not.toHaveBeenCalled();
+  });
+});
+
 // ─── 4. Upload multipart (/inputs) ───────────────────────────────────────────
 
 describe("contrato da API da bancada — upload multipart", () => {
@@ -862,6 +1048,55 @@ describe("contrato da API da bancada — execução com confirmação", () => {
     expect(Array.isArray(body.details)).toBe(true);
     expect(mockSetBenchRunInput).not.toHaveBeenCalled();
     expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("sem preflight aprovado ⇒ 422 confirmation_required sem chamada paga", async () => {
+    const { preflight, ...withoutPreflight } = VALID_RUN_BODY;
+    void preflight;
+
+    const res = await postRun(withoutPreflight);
+    const body = await res.json();
+
+    expect(res.status).toBe(422);
+    expect(body.error).toBe("confirmation_required");
+    expect(mockSetBenchRunInput).not.toHaveBeenCalled();
+    expect(mockConfirmBenchRun).not.toHaveBeenCalled();
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("prompt divergente do prompt aprovado ⇒ 400 sem mutação", async () => {
+    const res = await postRun({ ...VALID_RUN_BODY, prompt: "outro prompt" });
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("invalid_payload");
+    expect(mockSetBenchRunInput).not.toHaveBeenCalled();
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("persiste a evidência do preflight e envia exatamente o prompt aprovado", async () => {
+    const res = await postRun(VALID_RUN_BODY);
+    await res.text();
+
+    const setCall = mockSetBenchRunInput.mock.calls[0][0] as {
+      promptSent: string;
+      promptApproved: string;
+      promptBase: string;
+      promptCompiled: string;
+      promptBlocks: Record<string, string>;
+      composerVersion: string;
+    };
+    expect(setCall.promptSent).toBe("prompt manual");
+    expect(setCall.promptApproved).toBe("prompt manual");
+    expect(setCall.promptBase).toBe("prompt base");
+    expect(setCall.promptCompiled).toBe("prompt compilado");
+    expect(setCall.promptBlocks).toEqual({ "INSTRUÇÕES DO PROMPT-BASE": "prompt base" });
+    expect(setCall.composerVersion).toBe("48.2.3-prompt-composer-v1");
+
+    // O provider recebe exatamente o prompt final aprovado.
+    const execCall = mockExecuteBenchRun.mock.calls[0][0] as {
+      request: { prompt: string };
+    };
+    expect(execCall.request.prompt).toBe("prompt manual");
   });
 
   it("operation_id sem draft prévio ⇒ 400 e nenhum run criado", async () => {
@@ -1084,6 +1319,27 @@ describe("contrato da API da bancada — detalhe e artefatos", () => {
     expect((await res.json()).error).toBe("run_not_found");
   });
 
+  it("GET /runs/[id] reflete a evidência do preflight", async () => {
+    mockGetBenchRun.mockResolvedValue({
+      ...DETAIL_RUN,
+      promptBase: "prompt base",
+      promptCompiled: "prompt compilado",
+      promptApproved: "prompt manual",
+      promptBlocks: { "INSTRUÇÕES DO PROMPT-BASE": "prompt base" },
+      composerVersion: "48.2.3-prompt-composer-v1",
+    });
+
+    const res = await getRun();
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.run.promptBase).toBe("prompt base");
+    expect(body.run.promptCompiled).toBe("prompt compilado");
+    expect(body.run.promptApproved).toBe("prompt manual");
+    expect(body.run.promptBlocks).toEqual({ "INSTRUÇÕES DO PROMPT-BASE": "prompt base" });
+    expect(body.run.composerVersion).toBe("48.2.3-prompt-composer-v1");
+  });
+
   it("acesso não-admin a artefato é negado (403) sem listar/assinar", async () => {
     mockRequireAdmin.mockRejectedValue(new ForbiddenError("Acesso restrito a administradores"));
 
@@ -1119,6 +1375,8 @@ describe("contrato de fonte — ordem de guards e fronteiras", () => {
     "branding/route.ts",
     "presets/route.ts",
     "estimate/route.ts",
+    "briefing/route.ts",
+    "compose/route.ts",
     "inputs/route.ts",
     "runs/route.ts",
     "runs/[id]/route.ts",
@@ -1142,6 +1400,34 @@ describe("contrato de fonte — ordem de guards e fronteiras", () => {
     expect(estimate.indexOf("await assertBenchTestStore(")).toBeLessThan(
       estimate.indexOf("resolveBenchCost("),
     );
+  });
+
+  it("briefing/compose validam o manifesto antes de qualquer leitura com storeId", () => {
+    const briefing = readRoute("briefing/route.ts");
+    expect(briefing.indexOf("await assertBenchTestStore(")).toBeLessThan(
+      briefing.indexOf("await loadBenchBranding("),
+    );
+    const compose = readRoute("compose/route.ts");
+    expect(compose.indexOf("await assertBenchTestStore(")).toBeLessThan(
+      compose.indexOf("await loadBenchBranding("),
+    );
+  });
+
+  it("compose compõe pelo compositor puro e não dispara geração paga", () => {
+    const source = readRoute("compose/route.ts");
+    expect(source).toContain("composePromptBlocks");
+    expect(source).toContain("COMPOSER_VERSION");
+    expect(source).toContain("buildBenchExperimentalBriefing");
+    expect(source).not.toContain("executeBenchRun");
+    expect(source).not.toContain("campaign-images");
+  });
+
+  it("runs exige preflight aprovado e envia exatamente o prompt aprovado", () => {
+    const source = readRoute("runs/route.ts");
+    expect(source).toContain("preflight");
+    expect(source).toContain("promptApproved");
+    expect(source).toContain("promptCompiled");
+    expect(source).toContain("composerVersion");
   });
 
   it("branding usa o signer restrito e nunca o signer de artefatos", () => {

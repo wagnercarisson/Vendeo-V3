@@ -126,6 +126,27 @@ export const POST = apiHandler(async (request: Request) => {
   }
   const input = parsed.data;
 
+  // Preflight aprovado é OBRIGATÓRIO (D17/D20): a geração sem prompt aprovado é
+  // recusada. A aprovação é explícita e o `prompt_sent` será **exatamente** o
+  // prompt final aprovado — nenhuma transformação após a aprovação.
+  const approvedPrompt = input.preflight?.promptApproved;
+  if (
+    !input.preflight ||
+    typeof approvedPrompt !== "string" ||
+    approvedPrompt.trim().length === 0
+  ) {
+    return NextResponse.json(
+      { error: "confirmation_required", details: ["preflight"] },
+      { status: 422 },
+    );
+  }
+  if (input.prompt !== approvedPrompt) {
+    return NextResponse.json(
+      { error: "invalid_payload", details: ["prompt"] },
+      { status: 400 },
+    );
+  }
+
   // Resolve o `draft` existente por `operation_id` — **nenhum run é criado aqui**.
   const existing = await getBenchRunByOperationId({
     client: supabaseAdmin,
@@ -206,7 +227,14 @@ export const POST = apiHandler(async (request: Request) => {
       campaignSnapshot,
       brandingSnapshot,
       config,
-      promptSent: input.prompt,
+      // `prompt_sent` = prompt final aprovado (D20). A evidência mínima do preflight
+      // é persistida no run `draft` (reusa `prompt_sent`/`campaign_snapshot`).
+      promptSent: approvedPrompt,
+      promptBase: input.preflight.promptBase,
+      promptCompiled: input.preflight.promptCompiled,
+      promptApproved: approvedPrompt,
+      promptBlocks: input.preflight.promptBlocks,
+      composerVersion: input.preflight.composerVersion,
       references: input.references,
       provider: preset.provider,
       protocol: preset.protocol,
@@ -279,7 +307,7 @@ export const POST = apiHandler(async (request: Request) => {
           telemetrySink: sink,
           run: { id: runId },
           preset,
-          request: { prompt: input.prompt, productImagesDataUrls },
+          request: { prompt: approvedPrompt, productImagesDataUrls },
           telemetry,
         });
 
