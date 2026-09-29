@@ -105,13 +105,12 @@ export const BenchProductSchema = z
 export type BenchProduct = z.infer<typeof BenchProductSchema>;
 
 /**
- * Oferta — contrato FIEL ao formulário produtivo (F48.2.3, D14): mantém o texto
- * manual e a validade, e acrescenta os campos de **selo**, **intenção**,
- * **validade (texto de exibição)** e **aviso ilustrativo** usados pela paridade.
+ * Oferta — contrato FIEL ao formulário produtivo (F48.2.3, D14): validade, selo,
+ * intenção e aviso ilustrativo usados pela paridade. **Não** há texto manual de
+ * oferta (UAT): os preços + selo + validade representam as condições comerciais.
  */
 export const BenchOfferSchema = z
   .object({
-    text: z.string().min(1).max(2000),
     validUntil: z.string().max(80).optional(),
     /** Selo promocional — opções por intenção (obrigatório em oferta). */
     badge: z.string().max(80).optional(),

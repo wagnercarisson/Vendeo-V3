@@ -398,7 +398,7 @@ const VALID_RUN_BODY = {
   references: [`bench/${RUN_ID}/inputs/0.png`],
   confirmed: true,
   product: { name: "Produto", priceCents: 1000, originalPriceCents: 1500 },
-  offer: { text: "Oferta imperdível" },
+  offer: {},
   preflight: {
     promptBase: "prompt base",
     promptCompiled: "prompt compilado",
@@ -464,7 +464,7 @@ const VALID_COMPOSE_BODY = {
   storeId: STORE_ID,
   presetId: PRESET_ID,
   product: { name: "Produto", priceCents: 1000, originalPriceCents: 1500 },
-  offer: { text: "Oferta imperdível" },
+  offer: {},
   promptBase: "prompt base",
   references: [`bench/${RUN_ID}/inputs/0.png`],
 };
@@ -593,10 +593,9 @@ beforeEach(() => {
   });
 
   mockBuildBenchCampaignSnapshot.mockImplementation(
-    (params: { product: { name: string }; offer: { text: string }; config: unknown }) => ({
+    (params: { product: { name: string }; offer: unknown; config: unknown }) => ({
       product: { source: "manual", name: params.product.name },
       commercial: { intent: "offer" },
-      offer: { text: params.offer.text, validUntil: null },
       intent: "offer",
       intentResolvedFrom: "explicit",
       config: params.config,

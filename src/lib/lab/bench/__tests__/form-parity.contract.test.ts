@@ -179,7 +179,7 @@ describe("paridade — preserveImageContext", () => {
       priceCents: 12990,
       preserveImageContext: true,
     };
-    const offer: BenchOffer = { text: "Destaque da semana", campaignIntent: "spotlight" };
+    const offer: BenchOffer = { campaignIntent: "spotlight" };
 
     const snapshot = buildBenchCampaignSnapshot({ product, offer, config: CONFIG });
 
@@ -193,7 +193,7 @@ describe("paridade — preserveImageContext", () => {
       priceCents: 12990,
       preserveImageContext: true,
     };
-    const offer: BenchOffer = { text: "Oferta da semana", campaignIntent: "offer" };
+    const offer: BenchOffer = { campaignIntent: "offer" };
 
     const snapshot = buildBenchCampaignSnapshot({ product, offer, config: CONFIG });
 
@@ -345,7 +345,7 @@ describe("sem efeitos produtivos", () => {
 
   it("montar o snapshot não produz campos de efeito produtivo", () => {
     const product: BenchProduct = { name: "Cafeteira Aurora", priceCents: 12990 };
-    const offer: BenchOffer = { text: "Oferta da semana" };
+    const offer: BenchOffer = {};
 
     const snapshot = buildBenchCampaignSnapshot({ product, offer, config: CONFIG });
     const serialized = JSON.stringify(snapshot);

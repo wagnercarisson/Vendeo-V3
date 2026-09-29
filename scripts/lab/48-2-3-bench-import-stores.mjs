@@ -1023,10 +1023,13 @@ export function buildContentAddressedPath({ storeId, objectId, checksum, extensi
  * Bucket do asset de branding. TODAS as linhas de `store_brand_assets` vivem em
  * `store-brand-assets`, independentemente de `asset_type`/`variant_type`.
  * `store-logos` é LEGADO e NÃO é inferido a partir de `asset_type`.
- * @param {any} [_asset]
+ * @param {any} [asset]
  * @returns {string}
  */
-export function resolveAssetBucket(_asset) {
+export function resolveAssetBucket(asset) {
+  // `store-logos` é legado: NÃO inferimos bucket por `asset_type`/`variant_type`.
+  // Toda linha de `store_brand_assets` vive em `store-brand-assets`.
+  void asset;
   return "store-brand-assets";
 }
 

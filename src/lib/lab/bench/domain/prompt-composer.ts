@@ -1,6 +1,3 @@
-import { sanitizePromptText } from "@/lib/image-generation/services/art-director-briefing";
-
-import type { BenchCampaignSnapshot } from "./campaign-snapshot";
 import type { BenchExperimentalBriefing } from "./experimental-briefing";
 
 /**
@@ -68,8 +65,6 @@ export const PROMPT_BLOCK_ORDER: readonly BenchPromptBlockLabel[] = [
 export interface BenchPromptCompositionInput {
   /** Briefing experimental estruturado (Plano 05) — entrada canônica do compositor. */
   briefing: BenchExperimentalBriefing;
-  /** Snapshot fiel de produto/campanha (Plano 04) — fornece o texto da oferta. */
-  snapshot: BenchCampaignSnapshot;
   /** Prompt-base manual do operador — preservado **verbatim**. */
   promptBase: string;
   /** Referências de imagem anexadas ao run (paths locais). Opcional. */
@@ -115,13 +110,11 @@ function typographyLines(briefing: BenchExperimentalBriefing): string[] {
 
 function productLines(
   briefing: BenchExperimentalBriefing,
-  offerText: string,
   references: readonly string[] | undefined,
 ): string[] {
   const lines: string[] = [];
   pushLine(lines, "Produto", briefing.product.name);
   pushLine(lines, "Descrição", briefing.product.description);
-  pushLine(lines, "Oferta", offerText);
   if (briefing.commercial.preserveImageContext) {
     lines.push("Preservar imagem original: sim");
   }
@@ -176,15 +169,12 @@ function constraintsLines(briefing: BenchExperimentalBriefing): string[] {
  * prompt-base verbatim. Determinístico e sem efeitos colaterais.
  */
 export function composePromptBlocks(input: BenchPromptCompositionInput): BenchPromptComposition {
-  const { briefing, snapshot, promptBase, references } = input;
-
-  // Texto da oferta vindo do snapshot fiel; apenas escapa placeholders `{{ }}`.
-  const offerText = sanitizePromptText((snapshot.offer?.text ?? "").trim());
+  const { briefing, promptBase, references } = input;
 
   const ordered: Array<{ label: BenchPromptBlockLabel; lines: string[] }> = [
     { label: PROMPT_BLOCK_LABELS.identity, lines: identityLines(briefing) },
     { label: PROMPT_BLOCK_LABELS.typography, lines: typographyLines(briefing) },
-    { label: PROMPT_BLOCK_LABELS.product, lines: productLines(briefing, offerText, references) },
+    { label: PROMPT_BLOCK_LABELS.product, lines: productLines(briefing, references) },
     { label: PROMPT_BLOCK_LABELS.commercial, lines: commercialLines(briefing) },
     { label: PROMPT_BLOCK_LABELS.intent, lines: intentLines(briefing) },
     { label: PROMPT_BLOCK_LABELS.promptBase, lines: promptBaseLines(promptBase) },

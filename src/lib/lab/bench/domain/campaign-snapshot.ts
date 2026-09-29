@@ -9,6 +9,7 @@ import type { CampaignIntent } from "@/lib/campaign/types";
 import type { GenerateImageRequest } from "@/lib/image-generation/schema";
 
 import type { BenchConfig, BenchOffer, BenchProduct } from "./schemas";
+import { buildMandatoryArtworkText } from "./form-rules";
 
 /**
  * Snapshot de campanha da bancada (F48.2.2, D1/D-snapshot; F48.2.3, D14).
@@ -78,8 +79,6 @@ export interface BenchCampaignSnapshot {
   product: CampaignBriefProduct;
   /** Dados comerciais — contrato produtivo (intent, preços, selo, validade, aviso). */
   commercial: CampaignBriefCommercial;
-  /** Oferta textual informada manualmente pelo administrador. */
-  offer: { text: string; validUntil: string | null };
   /** Intenção resolvida (registrada explicitamente). */
   intent: CampaignIntent;
   intentResolvedFrom: BenchIntentResolutionSource;
@@ -110,6 +109,13 @@ export function buildBenchCampaignSnapshot(input: {
   // precedência sobre o legado `validUntil`.
   const validityText = offer.validity ?? offer.validUntil;
 
+  // Aviso "Imagem meramente ilustrativa" + texto livre das informações
+  // obrigatórias, combinados pelo helper produtivo já coberto por paridade (D13).
+  const combinedArtworkText = buildMandatoryArtworkText(
+    offer.showIllustrativeNotice ?? false,
+    product.mandatoryArtworkText ?? "",
+  );
+
   const flat: GenerateImageRequest = {
     storeId: BENCH_SNAPSHOT_STORE_ID,
     productName: product.name,
@@ -125,9 +131,7 @@ export function buildBenchCampaignSnapshot(input: {
       : {}),
     ...(offer.badge ? { badgeText: offer.badge } : {}),
     ...(validityText ? { validity: validityText } : {}),
-    ...(product.mandatoryArtworkText
-      ? { mandatoryArtworkText: product.mandatoryArtworkText }
-      : {}),
+    ...(combinedArtworkText ? { mandatoryArtworkText: combinedArtworkText } : {}),
     ...(typeof product.preserveImageContext === "boolean"
       ? { preserveImageContext: product.preserveImageContext }
       : {}),
@@ -139,7 +143,6 @@ export function buildBenchCampaignSnapshot(input: {
   return {
     product: brief.product,
     commercial: brief.commercial,
-    offer: { text: offer.text, validUntil: offer.validUntil ?? null },
     intent: resolved.intent,
     intentResolvedFrom: resolved.intentResolvedFrom,
     preserveImageContext: brief.creativeContext.preserveImageContext ?? false,
@@ -181,15 +184,6 @@ export function assertBenchCampaignSnapshot(snapshot: unknown): BenchCampaignSna
     candidate.product.name.length === 0
   ) {
     throw new BenchCampaignSnapshotError("product");
-  }
-
-  if (
-    !candidate.offer ||
-    typeof candidate.offer !== "object" ||
-    typeof candidate.offer.text !== "string" ||
-    candidate.offer.text.length === 0
-  ) {
-    throw new BenchCampaignSnapshotError("offer");
   }
 
   if (typeof candidate.intent !== "string" || candidate.intent.length === 0) {

@@ -94,7 +94,6 @@ function makeProduct(overrides: Partial<BenchProduct> = {}): BenchProduct {
 
 function makeOffer(overrides: Partial<BenchOffer> = {}): BenchOffer {
   return {
-    text: "Oferta especial da semana",
     badge: "50% OFF",
     validity: "até 31/12/2026",
     showIllustrativeNotice: true,
@@ -143,8 +142,8 @@ const PROMPT_BASE = "Crie uma arte comercial clara e legível.";
 
 describe("compositor — estrutura de blocos canônicos", () => {
   it("usa os 7 blocos canônicos na ordem travada", () => {
-    const { briefing, snapshot } = makeBriefing();
-    const { text, blocks } = composePromptBlocks({ briefing, snapshot, promptBase: PROMPT_BASE });
+    const { briefing } = makeBriefing();
+    const { text, blocks } = composePromptBlocks({ briefing, promptBase: PROMPT_BASE });
 
     expect(Object.keys(blocks)).toEqual([...PROMPT_BLOCK_ORDER]);
 
@@ -157,13 +156,13 @@ describe("compositor — estrutura de blocos canônicos", () => {
   });
 
   it("omite blocos vazios (tipografia/condições/prompt-base/restrições)", () => {
-    const { briefing, snapshot } = makeBriefing({
+    const { briefing } = makeBriefing({
       branding: { typographyDirection: null },
       product: { mandatoryArtworkText: undefined, priceCents: undefined, originalPriceCents: undefined },
-      offer: { badge: "", validity: "" },
+      offer: { badge: "", validity: "", showIllustrativeNotice: false },
     });
 
-    const { text, blocks } = composePromptBlocks({ briefing, snapshot, promptBase: "" });
+    const { text, blocks } = composePromptBlocks({ briefing, promptBase: "" });
 
     expect(Object.keys(blocks)).toEqual([
       PROMPT_BLOCK_LABELS.identity,
@@ -181,10 +180,10 @@ describe("compositor — estrutura de blocos canônicos", () => {
   });
 
   it("coloca a direção tipográfica apenas em [DIREÇÃO TIPOGRÁFICA]", () => {
-    const { briefing, snapshot } = makeBriefing();
+    const { briefing } = makeBriefing();
     const typography = briefing.typographyDirection!;
 
-    const { blocks } = composePromptBlocks({ briefing, snapshot, promptBase: PROMPT_BASE });
+    const { blocks } = composePromptBlocks({ briefing, promptBase: PROMPT_BASE });
 
     expect(blocks[PROMPT_BLOCK_LABELS.typography]).toContain(typography);
     const occurrences = Object.values(blocks).filter((content) => content.includes(typography));
@@ -192,10 +191,10 @@ describe("compositor — estrutura de blocos canônicos", () => {
   });
 
   it("reflete preserveImageContext em [PRODUTO E IMAGENS DE REFERÊNCIA] sem duplicar", () => {
-    const { briefing, snapshot } = spotlightBriefing();
+    const { briefing } = spotlightBriefing();
     expect(briefing.commercial.preserveImageContext).toBe(true);
 
-    const { blocks } = composePromptBlocks({ briefing, snapshot, promptBase: PROMPT_BASE });
+    const { blocks } = composePromptBlocks({ briefing, promptBase: PROMPT_BASE });
 
     expect(blocks[PROMPT_BLOCK_LABELS.product]).toContain("Preservar imagem original: sim");
     const occurrences = Object.values(blocks).filter((content) =>
@@ -205,8 +204,8 @@ describe("compositor — estrutura de blocos canônicos", () => {
   });
 
   it("não repete deliberadamente o mesmo dado em vários blocos (cor da marca)", () => {
-    const { briefing, snapshot } = makeBriefing();
-    const { blocks } = composePromptBlocks({ briefing, snapshot, promptBase: PROMPT_BASE });
+    const { briefing } = makeBriefing();
+    const { blocks } = composePromptBlocks({ briefing, promptBase: PROMPT_BASE });
 
     const occurrences = Object.values(blocks).filter((content) => content.includes("#22C55E"));
     expect(occurrences).toHaveLength(1);
@@ -218,10 +217,10 @@ describe("compositor — estrutura de blocos canônicos", () => {
 
 describe("compositor — preservação integral do prompt-base", () => {
   it("inclui o prompt-base verbatim, sem filtrar palavras legítimas", () => {
-    const { briefing, snapshot } = makeBriefing();
+    const { briefing } = makeBriefing();
     const promptBase = "Faça um teste desta comparação para avaliação interna da equipe.";
 
-    const { text, blocks } = composePromptBlocks({ briefing, snapshot, promptBase });
+    const { text, blocks } = composePromptBlocks({ briefing, promptBase });
 
     expect(blocks[PROMPT_BLOCK_LABELS.promptBase]).toBe(promptBase);
     expect(text).toContain(promptBase);
@@ -246,9 +245,9 @@ describe("compositor — ausência de contexto experimental por origem", () => {
   ];
 
   it("os blocos gerados não introduzem contexto experimental (prompt-base vazio)", () => {
-    const { briefing, snapshot } = makeBriefing();
+    const { briefing } = makeBriefing();
     // Prompt-base vazio ⇒ o texto é composto apenas pelos blocos GERADOS.
-    const { text } = composePromptBlocks({ briefing, snapshot, promptBase: "" });
+    const { text } = composePromptBlocks({ briefing, promptBase: "" });
 
     const lowered = text.toLowerCase();
     for (const term of FORBIDDEN_TERMS) {
@@ -258,10 +257,10 @@ describe("compositor — ausência de contexto experimental por origem", () => {
   });
 
   it("a verificação é por origem: o mesmo termo no prompt-base é preservado", () => {
-    const { briefing, snapshot } = makeBriefing();
+    const { briefing } = makeBriefing();
     const promptBase = "Considere o baseline e faça uma comparação e avaliação.";
 
-    const { text } = composePromptBlocks({ briefing, snapshot, promptBase });
+    const { text } = composePromptBlocks({ briefing, promptBase });
 
     // O termo aparece no prompt-base (preservado), mas não nos blocos gerados.
     expect(text).toContain("baseline");
@@ -274,8 +273,8 @@ describe("compositor — ausência de contexto experimental por origem", () => {
 
 describe("compositor — determinismo e pureza", () => {
   it("mesma entrada → mesma saída (texto único estável)", () => {
-    const { briefing, snapshot } = makeBriefing();
-    const input = { briefing, snapshot, promptBase: PROMPT_BASE, references: ["bench/run/inputs/0.png"] };
+    const { briefing } = makeBriefing();
+    const input = { briefing, promptBase: PROMPT_BASE, references: ["bench/run/inputs/0.png"] };
 
     const first = composePrompt(input);
     const second = composePrompt(input);
@@ -286,10 +285,9 @@ describe("compositor — determinismo e pureza", () => {
   });
 
   it("inclui as referências de imagem quando fornecidas", () => {
-    const { briefing, snapshot } = makeBriefing();
+    const { briefing } = makeBriefing();
     const { blocks } = composePromptBlocks({
       briefing,
-      snapshot,
       promptBase: PROMPT_BASE,
       references: ["bench/run/inputs/0.png", "bench/run/inputs/1.png"],
     });
@@ -313,5 +311,100 @@ describe("compositor — determinismo e pureza", () => {
     expect(source).not.toContain("generation_events");
     expect(source).not.toContain("resolveAiCost");
     expect(source).toContain("COMPOSER_VERSION");
+  });
+});
+
+// ─── Caso do UAT (sem duplicidade) ───────────────────────────────────────────
+
+describe("compositor — caso do UAT (sem duplicidade)", () => {
+  it("R$ 8,99 → R$ 7,49, selo Promoção, validade até 03/10/2026 — cada dado uma vez", () => {
+    const { briefing } = makeBriefing({
+      product: { priceCents: 749, originalPriceCents: 899, mandatoryArtworkText: undefined },
+      offer: {
+        badge: "Promoção",
+        validity: "até 03/10/2026",
+        campaignIntent: "offer",
+        showIllustrativeNotice: true,
+      },
+    });
+
+    const { text, blocks } = composePromptBlocks({ briefing, promptBase: PROMPT_BASE });
+
+    const commercial = blocks[PROMPT_BLOCK_LABELS.commercial];
+    expect(commercial).toBeDefined();
+    expect(commercial).toContain("Preço original:");
+    expect(commercial).toContain("8,99");
+    expect(commercial).toContain("Preço promocional:");
+    expect(commercial).toContain("7,49");
+    expect(commercial).toContain("Selo: Promoção");
+    expect(commercial).toContain("Validade: até 03/10/2026");
+
+    // Cada valor comercial aparece EXATAMENTE uma vez no prompt compilado.
+    for (const value of ["8,99", "7,49", "Promoção", "03/10/2026"]) {
+      const occurrences = text.split(value).length - 1;
+      expect(occurrences, `duplicidade de "${value}"`).toBe(1);
+    }
+
+    // A linha manual "Oferta:" não existe mais em [PRODUTO E IMAGENS DE REFERÊNCIA].
+    expect(blocks[PROMPT_BLOCK_LABELS.product]).not.toContain("Oferta:");
+
+    // Aviso ilustrativo (checkbox ligado, sem texto livre) uma única vez.
+    expect(text.split("Imagem meramente ilustrativa").length - 1).toBe(1);
+  });
+});
+
+describe("compositor — restrições combinam aviso + texto livre (buildMandatoryArtworkText)", () => {
+  const cases = [
+    {
+      name: "checkbox ligado + texto livre",
+      show: true,
+      free: "Válido para retirada na loja",
+      included: ["Imagem meramente ilustrativa", "Válido para retirada na loja"],
+      omitted: false,
+    },
+    {
+      name: "apenas checkbox",
+      show: true,
+      free: "",
+      included: ["Imagem meramente ilustrativa"],
+      omitted: false,
+    },
+    {
+      name: "apenas texto",
+      show: false,
+      free: "Válido para retirada na loja",
+      included: ["Válido para retirada na loja"],
+      omitted: false,
+    },
+    {
+      name: "ambos vazios/desligados",
+      show: false,
+      free: "",
+      included: [],
+      omitted: true,
+    },
+  ];
+
+  it.each(cases)("$name", ({ show, free, included, omitted }) => {
+    const { briefing } = makeBriefing({
+      product: { mandatoryArtworkText: free },
+      offer: { showIllustrativeNotice: show },
+    });
+
+    const { text, blocks } = composePromptBlocks({ briefing, promptBase: PROMPT_BASE });
+    const constraints = blocks[PROMPT_BLOCK_LABELS.constraints];
+
+    if (omitted) {
+      expect(constraints).toBeUndefined();
+      expect(text).not.toContain("[RESTRIÇÕES E TEXTOS OBRIGATÓRIOS]");
+      return;
+    }
+
+    expect(constraints).toBeDefined();
+    for (const value of included) {
+      expect(constraints).toContain(value);
+      // O resultado combinado aparece exatamente uma vez no prompt inteiro.
+      expect(text.split(value).length - 1).toBe(1);
+    }
   });
 });

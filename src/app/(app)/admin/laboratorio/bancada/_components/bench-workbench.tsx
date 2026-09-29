@@ -107,7 +107,6 @@ function buildOfferPayload(campaign: BenchCampaignFormValue): BenchOfferPayload 
     validityCustomText: campaign.validityCustomText,
   });
   return {
-    text: campaign.offerText,
     ...(campaign.badge ? { badge: campaign.badge } : {}),
     campaignIntent: campaign.campaignIntent,
     ...(validity ? { validity } : {}),

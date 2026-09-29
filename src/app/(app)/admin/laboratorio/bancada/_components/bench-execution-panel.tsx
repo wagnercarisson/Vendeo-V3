@@ -48,7 +48,6 @@ export interface BenchProductPayload {
 }
 
 export interface BenchOfferPayload {
-  text: string;
   badge?: string;
   campaignIntent?: "offer" | "spotlight" | "exclusive";
   validity?: string;
@@ -113,7 +112,6 @@ export function BenchExecutionPanel({
     if (!promptApproved) return "Aprove o prompt compilado antes de estimar ou gerar.";
     if (!uploadReady) return "Envie as imagens do produto antes de gerar.";
     if (product.name.trim().length === 0) return "Informe o nome do produto.";
-    if (offer.text.trim().length === 0) return "Informe o texto da oferta.";
     return null;
   }
 

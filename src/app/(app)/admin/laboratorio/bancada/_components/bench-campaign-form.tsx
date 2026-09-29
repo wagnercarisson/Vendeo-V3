@@ -49,7 +49,6 @@ import { LabTextarea } from "../../_components/lab-textarea";
 export interface BenchCampaignFormValue {
   productName: string;
   productDescription: string;
-  offerText: string;
   /** Preço de venda em centavos (0 = vazio). */
   priceCents: number;
   /** Preço original em centavos (0 = vazio). */
@@ -68,7 +67,6 @@ export interface BenchCampaignFormValue {
 export const EMPTY_BENCH_CAMPAIGN_FORM: BenchCampaignFormValue = {
   productName: "",
   productDescription: "",
-  offerText: "",
   priceCents: 0,
   originalPriceCents: 0,
   badge: "",
@@ -385,15 +383,6 @@ export function BenchCampaignForm({
         error={errors.mandatoryArtworkText}
         onChange={(event) => setField("mandatoryArtworkText", event.target.value)}
         onBlur={() => markTouched("mandatoryArtworkText")}
-      />
-
-      <LabTextarea
-        label="Oferta"
-        value={value.offerText}
-        disabled={disabled}
-        rows={3}
-        hint="Ex.: 'De R$ 39,90 por R$ 29,90 só hoje'."
-        onChange={(event) => setField("offerText", event.target.value)}
       />
     </section>
   );

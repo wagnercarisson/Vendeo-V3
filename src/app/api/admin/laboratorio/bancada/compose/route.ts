@@ -143,7 +143,6 @@ export const POST = apiHandler(async (request: Request) => {
   const briefing = buildBenchExperimentalBriefing({ branding, snapshot, config });
   const composition = composePromptBlocks({
     briefing,
-    snapshot,
     promptBase,
     references,
   });

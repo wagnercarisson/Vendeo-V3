@@ -39,7 +39,7 @@ const PRODUCT: BenchProduct = {
   description: "Cafeteira 30 xícaras",
 };
 
-const OFFER: BenchOffer = { text: "Oferta da semana", validUntil: "2026-10-01" };
+const OFFER: BenchOffer = { validUntil: "2026-10-01" };
 
 // ─── Intenção resolvida ──────────────────────────────────────────────────────
 
@@ -86,7 +86,6 @@ describe("buildBenchCampaignSnapshot", () => {
       discountedPriceCents: 12990,
       validity: { enabled: true, displayText: "2026-10-01" },
     });
-    expect(snapshot.offer).toEqual({ text: "Oferta da semana", validUntil: "2026-10-01" });
     expect(snapshot.intent).toBe("offer");
     expect(snapshot.intentResolvedFrom).toBe("inferred_from_prices");
     expect(snapshot.format).toBe("1:1");
@@ -109,14 +108,11 @@ describe("assertBenchCampaignSnapshot", () => {
   });
 
   it.each([
-    ["sem produto", { offer: OFFER, intent: "offer", intentResolvedFrom: "explicit", config: CONFIG }],
-    [
-      "sem oferta",
-      { product: PRODUCT, intent: "offer", intentResolvedFrom: "explicit", config: CONFIG },
-    ],
+    ["sem produto", { intent: "offer", intentResolvedFrom: "explicit", config: CONFIG }],
+    ["sem config", { product: PRODUCT, intent: "offer", intentResolvedFrom: "explicit" }],
     [
       "sem intenção",
-      { product: PRODUCT, offer: OFFER, intentResolvedFrom: "explicit", config: CONFIG },
+      { product: PRODUCT, intentResolvedFrom: "explicit", config: CONFIG },
     ],
   ])("recusa snapshot %s com missing_campaign_snapshot", (_label, snapshot) => {
     let caught: unknown = null;

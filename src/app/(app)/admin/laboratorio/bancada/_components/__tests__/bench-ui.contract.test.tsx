@@ -655,7 +655,7 @@ function renderExecutionPanel(onCompleted = vi.fn()) {
       approvedPrompt="Foto do produto em fundo claro"
       preflightEvidence={PREFLIGHT_EVIDENCE}
       product={{ name: "Café especial" }}
-      offer={{ text: "De R$ 39,90 por R$ 29,90" }}
+          offer={{}}
       runId={RUN_ID}
       references={REFERENCES}
       operationId={OPERATION_ID}
@@ -747,7 +747,7 @@ describe("contrato de UI — estimativa, confirmação, execução e evidências
         approvedPrompt={null}
         preflightEvidence={null}
         product={{ name: "Café especial" }}
-        offer={{ text: "De R$ 39,90 por R$ 29,90" }}
+            offer={{}}
         runId={RUN_ID}
         references={REFERENCES}
         operationId={OPERATION_ID}

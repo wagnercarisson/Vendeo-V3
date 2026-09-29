@@ -448,7 +448,6 @@ const BRIEFING_PRODUCT: BenchProduct = {
 };
 
 const BRIEFING_OFFER: BenchOffer = {
-  text: "Oferta da semana",
   badge: "OFERTA",
   validity: "até 01/10/2026",
 };
