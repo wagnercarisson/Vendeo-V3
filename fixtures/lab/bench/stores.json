@@ -3,6 +3,10 @@
     {
       "id": "3dc7d274-0b57-45ba-883a-7b235056feda",
       "label": "NovaTek Eletrônicos"
+    },
+    {
+      "id": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "label": "Adega Mestre das Geladas"
     }
   ],
   "notes": "Manifesto/allowlist local das lojas de teste da bancada de geração (F48.2.2, D4). Preencher com { \"id\": \"<uuid da loja no Supabase LOCAL>\", \"label\": \"Loja de teste A\", \"notes\": \"...\" } antes do UAT autorizado (plano 08). Uma loja só é elegível se estiver neste manifesto E existir no Supabase local; lojas fora do manifesto são recusadas sem iniciar geração e nenhuma sincronização remota é feita."
