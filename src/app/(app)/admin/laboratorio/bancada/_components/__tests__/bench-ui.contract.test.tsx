@@ -196,6 +196,7 @@ const BRANDING = {
   safeColorTokens: { primary: "#16A34A" },
   brandColorsChosen: ["#16A34A", null],
   logoColorsDetected: ["#16A34A"],
+  brandColor: "#16A34A",
   visualStyle: "limpo",
   visualTone: "caloroso",
   brandPersonality: "confiável",

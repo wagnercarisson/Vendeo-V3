@@ -5,6 +5,8 @@ import { AlertCircle, ImageIcon, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 
+import { BenchBrandColorIndicator } from "./bench-brand-color-indicator";
+
 /**
  * Painel **somente leitura** do branding da loja de teste (F48.2.2, D3).
  *
@@ -43,6 +45,8 @@ export interface BenchBrandingView {
   safeColorTokens: Record<string, string>;
   brandColorsChosen: Array<string | null>;
   logoColorsDetected: string[];
+  /** `brandColor` resolvido pela precedência produtiva exata (D16). */
+  brandColor: string;
   visualStyle: string | null;
   visualTone: string | null;
   brandPersonality: string | null;
@@ -143,6 +147,10 @@ export function BenchBrandingPanel({
             <DataRow label="Origem do perfil" value={branding.profileSource ?? EMPTY} />
             <DataRow label="Status do perfil" value={branding.profileStatus ?? EMPTY} />
           </dl>
+
+          {branding.brandColor ? (
+            <BenchBrandColorIndicator color={branding.brandColor} />
+          ) : null}
 
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex flex-col gap-1">
