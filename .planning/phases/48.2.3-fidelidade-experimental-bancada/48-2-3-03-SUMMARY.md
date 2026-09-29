@@ -292,3 +292,22 @@ Motivado pela FK `store_brand_assets_parent_asset_id_fkey` (assets auto-referenc
 - **Integrado real (opt-in `BENCH_IMPORT_REAL_INTEGRATION=1`)**: `bench-import.integration.test.ts` — fixture com 1 `original` + 5 variantes fora de ordem; fake de origem somente-leitura; materialização das 6 variantes; transação com loja/assets/perfil/auditoria; leitura provando 6 registros e relações pai–filho; JSONB estruturado; MIME/bucket (`store-brand-assets`/`visual-signatures`, nunca `store-logos`); manifesto; cleanup integral. **PASSOU** (1/1; ~5s).
 
 **Estado:** endurecimento aplicado e validado (incl. teste integrado real). **Nenhuma** leitura remota nem importação. Aguardando a revisão final.
+
+## Correção de UAT (2026-09-29) — remoção do texto manual de oferta (commit `7721937d`)
+
+**Descoberta no UAT:** o formulário da bancada tinha um campo manual "Oferta" (`offerText`) e o snapshot/compositor repetiam a oferta (`snapshot.offer.text` → linha `Oferta: ...` em `[PRODUTO E IMAGENS DE REFERÊNCIA]`), duplicando a informação comercial.
+
+**Correção (dentro da F48.2.3, sem nova fase, sem provider):**
+1. Removido `offerText` da UI (`bench-campaign-form.tsx`), do estado inicial, do payload (`bench-workbench.tsx`) e das validações (`bench-execution-panel.tsx`).
+2. Removida a textarea "Oferta"; a seção "Produto e oferta" permanece.
+3. Removido `text` de `BenchOfferSchema` (`.strict()`).
+4. Removido `snapshot.offer.text` e a linha manual `Oferta: ...` do bloco `[PRODUTO E IMAGENS DE REFERÊNCIA]`.
+5. `[CONDIÇÕES COMERCIAIS]` representa os dados exatamente uma vez: preço original, preço promocional, selo e validade.
+6. Derivação da intenção pelos preços preservada (ambos preenchidos → Oferta).
+7. `showIllustrativeNotice` incorporado via `buildMandatoryArtworkText(showNotice, freeText)` (já coberto por paridade): checkbox+texto → aviso e texto; só checkbox → aviso; só texto → texto; ambos vazios/desligados → bloco omitido.
+8. `[RESTRIÇÕES E TEXTOS OBRIGATÓRIOS]` contém o resultado combinado exatamente uma vez.
+9. Compositor não recebe mais `snapshot` (dado deixou de ser necessário) — nenhum texto derivado artificial mantido.
+
+**Testes:** +2 blocos no `prompt-composer.contract.test.ts` — caso do UAT (R$ 8,99 → R$ 7,49, selo Promoção, validade até 03/10/2026, cada dado exatamente uma vez) e as 4 combinações de aviso+texto. Suíte da bancada/lab + API + UI: **1184 verdes** (2 skipped); `typecheck` exit 0; `lint` 0 warnings.
+
+**Estado:** correção aplicada; **nenhuma** geração real, leitura remota ou importação. Aguardando revisão antes de retomar o preflight.
