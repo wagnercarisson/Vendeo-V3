@@ -26,9 +26,9 @@ progress:
 ## Current Position
 
 Phase: 48.2.3 (fidelidade-experimental-bancada) — EXECUTING
-Plan: 3 of 8 (48-2-3-01, 48-2-3-02, 48-2-3-04 concluídos/summarized)
-Plans: `48-2-3-01`, `48-2-3-02`, `48-2-3-04` — **concluídos/summarized** (2026-09-29); `48-2-3-03`, `48-2-3-05` .. `48-2-3-08` pendentes.
-Checkpoints humanos: **CP1 aprovado** (spike de modelos/presets, plano 01 — após correção do spike), **CP2 aprovado** (presets habilitados antes de geração paga, plano 04 — após correção do pricing), **CP3 aprovado** (UAT local, plano 08 — **uma** geração real controlada autorizada e executada). Nenhuma task executou chamada paga autonomamente.
+Plan: 5 of 8 (48-2-3-01, 48-2-3-02, 48-2-3-03, 48-2-3-04, 48-2-3-05 concluídos/summarized)
+Plans: `48-2-3-01`, `48-2-3-02`, `48-2-3-03`, `48-2-3-04`, `48-2-3-05` — **concluídos/summarized** (2026-09-29); `48-2-3-06` .. `48-2-3-08` pendentes.
+Checkpoints humanos: **CHECKPOINT A aprovado** (plano 03 — fronteira de importação/allowlist revisada; **nenhuma leitura remota executada**; habilita o UAT remoto do CHECKPOINT B, que exige autorização adicional). **CP1 aprovado** (spike de modelos/presets, plano 01 — após correção do spike), **CP2 aprovado** (presets habilitados antes de geração paga, plano 04 — após correção do pricing), **CP3 aprovado** (UAT local, plano 08 — **uma** geração real controlada autorizada e executada). Nenhuma task executou chamada paga autonomamente.
 Próxima ação: **F48.2.3 — Fidelidade experimental da bancada** (importação explícita/unidirecional da identidade das lojas de teste; comando local; nenhuma consulta remota em operação normal); depois, **F48.2.4 — Experimento determinístico Oferta 1:1**. O OpenSpec da F48.2.2 foi **verificado, sincronizado e arquivado** em `openspec/changes/archive/2026-09-28-fase-48-2-2-fundacao-bancada-geracao/` (correções de verificação: custo do provider separado do cálculo local; snapshot de branding sem URLs assinadas).
 Fase anterior: 48.2.1 (Bancada Manual de Prompts do Diretor) — **COMPLETE**; chain `48-2-1-05 → 48-2-1-07 → 48-2-1-08 → 48-2-1-09`.
 
