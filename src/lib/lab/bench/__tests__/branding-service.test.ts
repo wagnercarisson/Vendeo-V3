@@ -99,12 +99,18 @@ class FakeSupabaseClient {
   readonly deleteCalls: string[] = [];
   readonly signedUrlCalls: Array<{ bucket: string; path: string; ttl: number }> = [];
 
-  constructor(readonly tables: Record<string, Row[]> = {}) {}
+  constructor(
+    readonly tables: Record<string, Row[]> = {},
+    private readonly failSignedUrlsFor?: (bucket: string, path: string) => boolean,
+  ) {}
 
   readonly storage = {
     from: (bucket: string) => ({
       createSignedUrl: async (path: string, ttl: number) => {
         this.signedUrlCalls.push({ bucket, path, ttl });
+        if (this.failSignedUrlsFor?.(bucket, path)) {
+          return { data: null, error: { message: "sign_failed" } };
+        }
         return { data: { signedUrl: `signed:${bucket}/${path}` }, error: null };
       },
     }),
@@ -134,6 +140,7 @@ function baseTables(overrides: Record<string, Row[]> = {}): Record<string, Row[]
         short_description: "loja local",
         slogan: "vem pra cá",
         brand_color: "#111111",
+        identity_state: "logo",
       },
     ],
     store_brand_profiles: [
@@ -248,8 +255,8 @@ describe("loadBenchBranding — contrato completo", () => {
 
 // ─── Assets por URL assinada (signer restrito) ───────────────────────────────
 
-describe("loadBenchBranding — assets por URL assinada", () => {
-  it("assina logo e assinatura pelos buckets locais restritos", async () => {
+describe("loadBenchBranding — identidade resolvida pelo estado", () => {
+  it("estado logo assina o logo selecionado e não expõe assinatura", async () => {
     const fake = new FakeSupabaseClient(baseTables());
     const contract = await loadBenchBranding({
       client: asClient(fake),
@@ -269,8 +276,140 @@ describe("loadBenchBranding — assets por URL assinada", () => {
       checksum: "checksum-1",
       signedUrl: "signed:store-brand-assets/loja/logo.png",
     });
+    expect(contract.identityState).toBe("logo");
+    expect(contract.identityReference).toEqual({
+      kind: "logo",
+      variantType: "original",
+      storagePath: "loja/logo.png",
+      signedUrl: "signed:store-brand-assets/loja/logo.png",
+    });
+    expect(contract.identityReason).toBe("logo:selected");
     expect(contract.logoUrl).toBe("signed:store-brand-assets/loja/logo.png");
+    // Loja com estado `logo` nunca expõe assinatura visual.
+    expect(contract.signatureUrl).toBeNull();
+  });
+
+  it("estado visual_signature assina a assinatura e não expõe logo (logo presente)", async () => {
+    const fake = new FakeSupabaseClient(
+      baseTables({
+        stores: [
+          {
+            id: STORE_ID,
+            name: "Loja A",
+            segment: "variedades",
+            subsegment: "loja-de-bairro",
+            tone_of_voice: "próximo",
+            positioning: "preço justo",
+            short_description: "loja local",
+            slogan: "vem pra cá",
+            brand_color: "#111111",
+            identity_state: "visual_signature",
+          },
+        ],
+      }),
+    );
+    const contract = await loadBenchBranding({
+      client: asClient(fake),
+      storeId: STORE_ID,
+      manifest: MANIFEST,
+    });
+
+    expect(contract.identityState).toBe("visual_signature");
+    expect(contract.identityReference).toEqual({
+      kind: "visual_signature",
+      variantType: null,
+      storagePath: "loja/assinatura.png",
+      signedUrl: "signed:visual-signatures/loja/assinatura.png",
+    });
+    expect(contract.identityReason).toBe("visual_signature:selected");
     expect(contract.signatureUrl).toBe("signed:visual-signatures/loja/assinatura.png");
+    // Logo ativo presente, mas estado `visual_signature` não expõe logoUrl.
+    expect(contract.logoUrl).toBeNull();
+  });
+
+  it("estado text_only não expõe nenhuma imagem de identidade", async () => {
+    const fake = new FakeSupabaseClient(
+      baseTables({
+        stores: [
+          {
+            id: STORE_ID,
+            name: "Loja A",
+            segment: "variedades",
+            subsegment: "loja-de-bairro",
+            tone_of_voice: "próximo",
+            positioning: "preço justo",
+            short_description: "loja local",
+            slogan: "vem pra cá",
+            brand_color: "#111111",
+            identity_state: "text_only",
+          },
+        ],
+      }),
+    );
+    const contract = await loadBenchBranding({
+      client: asClient(fake),
+      storeId: STORE_ID,
+      manifest: MANIFEST,
+    });
+
+    expect(contract.identityState).toBe("text_only");
+    expect(contract.identityReference).toBeNull();
+    expect(contract.identityReason).toBe("text_only:no_identity_image");
+    expect(contract.logoUrl).toBeNull();
+    expect(contract.signatureUrl).toBeNull();
+  });
+
+  it("falha ao assinar a variante escolhida preserva o descritor (sem fallback para a próxima)", async () => {
+    const fake = new FakeSupabaseClient(
+      baseTables({
+        store_brand_assets: [
+          {
+            id: "asset-norm",
+            store_id: STORE_ID,
+            asset_type: "logo",
+            variant_type: "normalized",
+            storage_path: "loja/normalized.png",
+            mime_type: "image/png",
+            width: 512,
+            height: 512,
+            size_bytes: 1000,
+            checksum: "checksum-norm",
+            status: "active",
+          },
+          {
+            id: "asset-orig",
+            store_id: STORE_ID,
+            asset_type: "logo",
+            variant_type: "original",
+            storage_path: "loja/original.png",
+            mime_type: "image/png",
+            width: 512,
+            height: 512,
+            size_bytes: 1000,
+            checksum: "checksum-orig",
+            status: "active",
+          },
+        ],
+      }),
+      (bucket, path) => bucket === "store-brand-assets" && path === "loja/normalized.png",
+    );
+
+    const contract = await loadBenchBranding({
+      client: asClient(fake),
+      storeId: STORE_ID,
+      manifest: MANIFEST,
+    });
+
+    // Descritor selecionado (normalized) preservado com URL nula — sem fallback para original.
+    expect(contract.identityReference).toEqual({
+      kind: "logo",
+      variantType: "normalized",
+      storagePath: "loja/normalized.png",
+      signedUrl: null,
+    });
+    expect(contract.identityReason).toBe("logo:sign_failed");
+    expect(contract.logoUrl).toBeNull();
+    expect(contract.signatureUrl).toBeNull();
   });
 
   it("nunca usa bucket produtivo nem o bucket de artefatos do laboratório", async () => {
@@ -278,7 +417,9 @@ describe("loadBenchBranding — assets por URL assinada", () => {
     await loadBenchBranding({ client: asClient(fake), storeId: STORE_ID, manifest: MANIFEST });
 
     const buckets = new Set(fake.signedUrlCalls.map((call) => call.bucket));
-    expect(buckets).toEqual(new Set(["store-brand-assets", "visual-signatures"]));
+    for (const bucket of buckets) {
+      expect(["store-brand-assets", "visual-signatures"]).toContain(bucket);
+    }
     expect(buckets.has("lab-artifacts")).toBe(false);
     expect(buckets.has("campaign-images")).toBe(false);
   });
@@ -327,6 +468,14 @@ describe("toBenchBrandingSnapshot", () => {
     expect(snapshot.storeId).toBe(STORE_ID);
     expect(snapshot.typographyDirection).toBe("serif elegante");
     expect(snapshot.assets).toHaveLength(1);
+    // Identidade registrada: estado + descritor (sem URL) + motivo.
+    expect(snapshot.identityState).toBe("logo");
+    expect(snapshot.identityReference).toEqual({
+      kind: "logo",
+      variantType: "original",
+      storagePath: "loja/logo.png",
+    });
+    expect(snapshot.identityReason).toBe("logo:selected");
   });
 
   it("não persiste URLs assinadas (JWTs) no snapshot — apenas storagePath e metadados (D13)", async () => {
@@ -337,9 +486,9 @@ describe("toBenchBrandingSnapshot", () => {
       manifest: MANIFEST,
     });
 
-    // O contrato de exibição mantém as URLs assinadas…
+    // O contrato de exibição mantém a URL assinada do descritor selecionado…
     expect(contract.logoUrl).toBe("signed:store-brand-assets/loja/logo.png");
-    expect(contract.signatureUrl).toBe("signed:visual-signatures/loja/assinatura.png");
+    expect(contract.signatureUrl).toBeNull();
 
     const snapshot = toBenchBrandingSnapshot(contract);
 
@@ -348,6 +497,12 @@ describe("toBenchBrandingSnapshot", () => {
     expect(snapshot.signatureUrl).toBeNull();
     expect(snapshot.assets).toHaveLength(1);
     expect(snapshot.assets[0].signedUrl).toBeNull();
+    // O descritor persistido não carrega `signedUrl`.
+    expect(Object.keys(snapshot.identityReference ?? {})).toEqual([
+      "kind",
+      "variantType",
+      "storagePath",
+    ]);
     // Metadados e branding permanecem como evidência.
     expect(snapshot.assets[0].storagePath).toBe("loja/logo.png");
     expect(snapshot.assets[0].checksum).toBe("checksum-1");
@@ -384,6 +539,7 @@ describe("loadBenchBranding — brandColor pela precedência produtiva", () => {
             short_description: null,
             slogan: null,
             brand_color: "#ABCDEF",
+            identity_state: "text_only",
           },
         ],
       }),
@@ -412,6 +568,7 @@ describe("loadBenchBranding — brandColor pela precedência produtiva", () => {
             short_description: null,
             slogan: null,
             brand_color: null,
+            identity_state: "text_only",
           },
         ],
       }),
@@ -523,6 +680,7 @@ describe("buildBenchExperimentalBriefing — briefing estruturado", () => {
             short_description: null,
             slogan: null,
             brand_color: "#ABCDEF",
+            identity_state: "text_only",
           },
         ],
       }),
@@ -559,6 +717,7 @@ describe("buildBenchExperimentalBriefing — briefing estruturado", () => {
             short_description: null,
             slogan: null,
             brand_color: null,
+            identity_state: "text_only",
           },
         ],
       }),

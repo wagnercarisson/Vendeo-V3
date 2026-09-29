@@ -75,6 +75,9 @@ function makeBranding(overrides: Partial<BenchBrandingContract> = {}): BenchBran
     profileStatus: "synced",
     logoUrl: null,
     signatureUrl: null,
+    identityState: "text_only",
+    identityReference: null,
+    identityReason: "text_only:no_identity_image",
     assets: [],
     ...overrides,
   };

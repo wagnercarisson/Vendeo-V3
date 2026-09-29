@@ -12,6 +12,7 @@ import {
 } from "../persistence/bench-branding-signer";
 import { BenchBrandingSnapshotSchema, type BenchBrandingSnapshot } from "./schemas";
 import { resolveBenchBrandColor } from "./resolve-bench-brand-color";
+import { resolveBenchIdentity, type BenchIdentityReference } from "./resolve-bench-identity";
 
 /**
  * Contrato local **completo** de branding da loja de teste (F48.2.2, D3).
@@ -56,6 +57,11 @@ export interface BenchBrandingAssetContract {
   signedUrl: string | null;
 }
 
+export interface BenchBrandingIdentityReferenceContract extends BenchIdentityReference {
+  /** URL assinada efêmera do descritor selecionado (transitória; nunca no snapshot). */
+  signedUrl: string | null;
+}
+
 export interface BenchBrandingContract {
   storeId: string;
   storeName: string;
@@ -88,6 +94,15 @@ export interface BenchBrandingContract {
   profileStatus: string | null;
   logoUrl: string | null;
   signatureUrl: string | null;
+  /** Estado real da loja (`stores.identity_state`) — fonte de verdade da identidade. */
+  identityState: "text_only" | "logo" | "visual_signature";
+  /**
+   * Descritor da identidade selecionada pelo estado (via `resolveBenchIdentity`),
+   * com a URL assinada efêmera. `null` quando o estado não expõe imagem.
+   */
+  identityReference: BenchBrandingIdentityReferenceContract | null;
+  /** Motivo da resolução: seleção, ausência do asset esperado ou falha de assinatura. */
+  identityReason: string;
   assets: BenchBrandingAssetContract[];
 }
 
@@ -339,17 +354,48 @@ export async function loadBenchBranding(params: {
   }
 
   const signature = await readActiveVisualSignature({ client, storeId });
-  const signatureUrl = signature
-    ? await signBrandingPath({
-        client,
-        storeId,
-        bucket: "visual-signatures",
-        path: text(signature.storage_path),
-        manifest,
-      })
-    : null;
 
-  const logoUrl = assets.find((asset) => asset.signedUrl !== null)?.signedUrl ?? null;
+  // Ponto ÚNICO de decisão da identidade: o estado (`stores.identity_state`) decide
+  // qual asset corresponde. A seleção é por **presença do registro ativo** (nunca
+  // pela URL assinada) e só o descritor escolhido é assinado; falha de assinatura
+  // preserva o descritor com URL nula e motivo de falha — sem fallback para a
+  // variante seguinte nem para outro tipo de identidade.
+  const resolution = resolveBenchIdentity({
+    identityState: store.identityState,
+    logoAssets: assetRows.map((row) => ({
+      variantType: text(row.variant_type),
+      storagePath: text(row.storage_path),
+    })),
+    visualSignature: signature ? { storagePath: text(signature.storage_path) } : null,
+  });
+
+  let identityReference: BenchBrandingIdentityReferenceContract | null = null;
+  let identityReason = resolution.reason;
+  if (resolution.reference) {
+    const reference = resolution.reference;
+    const signedUrl = await signBrandingPath({
+      client,
+      storeId,
+      bucket: reference.kind === "logo" ? "store-brand-assets" : "visual-signatures",
+      path: reference.storagePath,
+      manifest,
+    });
+    if (signedUrl) {
+      identityReference = { ...reference, signedUrl };
+    } else {
+      identityReference = { ...reference, signedUrl: null };
+      identityReason = `${reference.kind}:sign_failed`;
+    }
+  }
+
+  const logoUrl =
+    identityReference?.kind === "logo" && identityReference.signedUrl
+      ? identityReference.signedUrl
+      : null;
+  const signatureUrl =
+    identityReference?.kind === "visual_signature" && identityReference.signedUrl
+      ? identityReference.signedUrl
+      : null;
 
   // `brandColor` resolvido pela precedência produtiva exata (D16). Ausência de
   // perfil synced = ausência de perfil (sem fallback por `source`).
@@ -391,6 +437,9 @@ export async function loadBenchBranding(params: {
     profileStatus: nullableText(profile?.status),
     logoUrl,
     signatureUrl,
+    identityState: store.identityState,
+    identityReference,
+    identityReason,
     assets,
   };
 }
@@ -409,9 +458,39 @@ export async function loadBenchBranding(params: {
  */
 export function toBenchBrandingSnapshot(contract: BenchBrandingContract): BenchBrandingSnapshot {
   return BenchBrandingSnapshotSchema.parse({
-    ...contract,
+    storeId: contract.storeId,
+    storeName: contract.storeName,
+    segment: contract.segment,
+    subsegment: contract.subsegment,
+    toneOfVoice: contract.toneOfVoice,
+    positioning: contract.positioning,
+    shortDescription: contract.shortDescription,
+    slogan: contract.slogan,
+    typographyDirection: contract.typographyDirection,
+    safeColorTokens: contract.safeColorTokens,
+    brandColorsChosen: contract.brandColorsChosen,
+    inferredPrimaryColor: contract.inferredPrimaryColor,
+    storeBrandColor: contract.storeBrandColor,
+    brandColor: contract.brandColor,
+    logoColorsDetected: contract.logoColorsDetected,
+    visualStyle: contract.visualStyle,
+    visualTone: contract.visualTone,
+    brandPersonality: contract.brandPersonality,
+    campaignGuidelines: contract.campaignGuidelines,
+    campaignBrief: contract.campaignBrief,
+    profileSource: contract.profileSource,
+    profileStatus: contract.profileStatus,
     logoUrl: null,
     signatureUrl: null,
+    identityState: contract.identityState,
+    identityReference: contract.identityReference
+      ? {
+          kind: contract.identityReference.kind,
+          variantType: contract.identityReference.variantType,
+          storagePath: contract.identityReference.storagePath,
+        }
+      : null,
+    identityReason: contract.identityReason,
     assets: contract.assets.map((asset) => ({ ...asset, signedUrl: null })),
   });
 }

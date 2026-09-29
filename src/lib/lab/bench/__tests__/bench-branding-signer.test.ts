@@ -178,7 +178,7 @@ describe("createBenchBrandingSignedUrl — path traversal recusado", () => {
 describe("createBenchBrandingSignedUrlForStore — loja exigida antes de assinar", () => {
   it("assina para uma loja do manifesto e materializada localmente", async () => {
     const fake = new FakeSupabaseClient({
-      stores: [{ id: STORE_A, name: "Loja A", segment: "variedades" }],
+      stores: [{ id: STORE_A, name: "Loja A", segment: "variedades", identity_state: "logo" }],
     });
 
     const url = await createBenchBrandingSignedUrlForStore({

@@ -56,6 +56,17 @@ export interface BenchBrandingView {
   profileStatus: string | null;
   logoUrl: string | null;
   signatureUrl: string | null;
+  /** Estado real da loja (`stores.identity_state`). */
+  identityState: "text_only" | "logo" | "visual_signature";
+  /** Descritor selecionado pelo estado (com URL assinada transitória). */
+  identityReference: {
+    kind: "logo" | "visual_signature";
+    variantType: string | null;
+    storagePath: string;
+    signedUrl: string | null;
+  } | null;
+  /** Motivo da resolução: seleção, ausência do asset esperado ou falha de assinatura. */
+  identityReason: string;
   assets: BenchBrandingAssetView[];
 }
 
@@ -146,6 +157,20 @@ export function BenchBrandingPanel({
             />
             <DataRow label="Origem do perfil" value={branding.profileSource ?? EMPTY} />
             <DataRow label="Status do perfil" value={branding.profileStatus ?? EMPTY} />
+            <DataRow label="Estado da identidade" value={branding.identityState} />
+            <DataRow
+              label="Asset de identidade"
+              value={
+                branding.identityReference
+                  ? `${branding.identityReference.kind}${
+                      branding.identityReference.variantType
+                        ? ` · ${branding.identityReference.variantType}`
+                        : ""
+                    }`
+                  : EMPTY
+              }
+            />
+            <DataRow label="Motivo da identidade" value={branding.identityReason} />
           </dl>
 
           {branding.brandColor ? (

@@ -53,7 +53,7 @@ vi.mock("@/lib/supabase/server", () => ({
 import BancadaPage from "@/app/(app)/admin/laboratorio/bancada/page";
 import LaboratorioLayout from "@/app/(app)/admin/laboratorio/layout";
 
-import { BenchBrandingPanel } from "../bench-branding-panel";
+import { BenchBrandingPanel, type BenchBrandingView } from "../bench-branding-panel";
 import { BenchBrandColorIndicator } from "../bench-brand-color-indicator";
 import {
   BenchCampaignForm,
@@ -189,7 +189,7 @@ describe("contrato de UI — página da bancada e navegação interna", () => {
 
 // ─── 2. Branding, produto/oferta, upload, prompt e presets ───────────────────
 
-const BRANDING = {
+const BRANDING: BenchBrandingView = {
   storeId: STORE_A.id,
   storeName: "Empório Aurora",
   segment: "mercados-mercearias",
@@ -212,6 +212,14 @@ const BRANDING = {
   profileStatus: "synced",
   logoUrl: "https://storage.local/signed/logo.png",
   signatureUrl: "https://storage.local/signed/assinatura.png",
+  identityState: "logo",
+  identityReference: {
+    kind: "logo",
+    variantType: "primary",
+    storagePath: "stores/aurora/logo.png",
+    signedUrl: "https://storage.local/signed/logo.png",
+  },
+  identityReason: "logo:selected",
   assets: [
     {
       assetType: "logo",

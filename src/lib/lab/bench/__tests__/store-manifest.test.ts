@@ -108,6 +108,7 @@ function localStoreRow(id: string, name: string): Row {
     positioning: "preço justo",
     short_description: "loja local",
     slogan: "vem pra cá",
+    identity_state: "text_only",
   };
 }
 
@@ -187,6 +188,7 @@ describe("assertBenchTestStore", () => {
       positioning: "preço justo",
       shortDescription: "loja local",
       slogan: "vem pra cá",
+      identityState: "text_only",
     });
   });
 

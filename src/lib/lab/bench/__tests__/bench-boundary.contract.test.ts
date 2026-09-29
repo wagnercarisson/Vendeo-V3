@@ -116,6 +116,7 @@ function seed(): Record<string, Row[]> {
         positioning: "bairro",
         short_description: "loja de bairro",
         slogan: "aqui rende mais",
+        identity_state: "logo",
       },
     ],
     store_brand_profiles: [
@@ -139,7 +140,7 @@ function seed(): Record<string, Row[]> {
         id: "asset-1",
         store_id: STORE_ID,
         asset_type: "logo",
-        variant_type: "primary",
+        variant_type: "original",
         storage_path: "loja/logo.png",
         mime_type: "image/png",
         width: 512,
@@ -219,10 +220,20 @@ describe("fronteira da bancada — fluxo completo toca somente alvos permitidos"
     // 2. Branding completo (inclui a direção tipográfica) com URL assinada restrita.
     const branding = await loadBenchBranding({ client, storeId: STORE_ID, manifest: MANIFEST });
     expect(branding.typographyDirection).toBe("serif elegante");
+    // Estado `logo`: a identidade é o logo resolvido; a assinatura não é exposta.
+    expect(branding.identityState).toBe("logo");
+    expect(branding.identityReference?.kind).toBe("logo");
     expect(branding.logoUrl).toBe("signed:loja/logo.png");
-    expect(branding.signatureUrl).toBe("signed:loja/assinatura.png");
+    expect(branding.signatureUrl).toBeNull();
     const brandingSnapshot = toBenchBrandingSnapshot(branding);
     expect(brandingSnapshot.typographyDirection).toBe("serif elegante");
+    expect(brandingSnapshot.identityState).toBe("logo");
+    expect(brandingSnapshot.identityReference).toEqual({
+      kind: "logo",
+      variantType: "original",
+      storagePath: "loja/logo.png",
+    });
+    expect(JSON.stringify(brandingSnapshot)).not.toContain("signed:");
 
     // 3. Upload (POST /inputs, serviço): reserva em `draft` + persistência da entrada.
     const reserved = await reserveBenchRun({

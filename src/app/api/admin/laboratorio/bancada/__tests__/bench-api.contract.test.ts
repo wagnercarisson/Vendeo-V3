@@ -306,7 +306,15 @@ const BRANDING_CONTRACT = {
   profileSource: "synced",
   profileStatus: "synced",
   logoUrl: "https://signed.test/logo",
-  signatureUrl: "https://signed.test/signature",
+  signatureUrl: null,
+  identityState: "logo",
+  identityReference: {
+    kind: "logo",
+    variantType: "primary",
+    storagePath: "logos/loja-a.png",
+    signedUrl: "https://signed.test/logo",
+  },
+  identityReason: "logo:selected",
   assets: [
     {
       assetType: "logo",
@@ -746,6 +754,49 @@ describe("contrato da API da bancada — leitura", () => {
     expect(mockCreateBenchArtifactSignedUrl).not.toHaveBeenCalled();
     expect(mockAssertBenchTestStore).toHaveBeenCalled();
     expect(mockLoadBenchBranding).toHaveBeenCalled();
+  });
+
+  it("GET /branding expõe identityState e renova apenas o descritor selecionado (não re-resolve)", async () => {
+    const res = await getBranding();
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.branding.identityState).toBe("logo");
+    expect(body.branding.identityReason).toBe("logo:selected");
+    // A rota apenas renova a URL do MESMO descritor selecionado por loadBenchBranding.
+    expect(body.branding.identityReference).toEqual({
+      kind: "logo",
+      variantType: "primary",
+      storagePath: "logos/loja-a.png",
+      signedUrl: "https://signed.test/branding",
+    });
+    expect(body.branding.logoUrl).toBe("https://signed.test/branding");
+    expect(body.branding.signatureUrl).toBeNull();
+    // O signer restrito foi chamado com o storagePath/bucket do descritor selecionado.
+    expect(mockCreateBenchBrandingSignedUrlForStore).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bucket: "store-brand-assets",
+        path: "logos/loja-a.png",
+      }),
+    );
+  });
+
+  it("GET /branding com falha de assinatura mantém o descritor com signedUrl null (sem fallback)", async () => {
+    mockCreateBenchBrandingSignedUrlForStore.mockResolvedValue(null);
+
+    const res = await getBranding();
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    // Descritor preservado, apenas sem URL assinada.
+    expect(body.branding.identityReference).toEqual({
+      kind: "logo",
+      variantType: "primary",
+      storagePath: "logos/loja-a.png",
+      signedUrl: null,
+    });
+    expect(body.branding.logoUrl).toBeNull();
+    expect(body.branding.signatureUrl).toBeNull();
   });
 
   it("GET /presets ⇒ 200 com habilitados e desabilitados com motivo", async () => {
@@ -1433,6 +1484,14 @@ describe("contrato de fonte — ordem de guards e fronteiras", () => {
     const source = readRoute("branding/route.ts");
     expect(source).toContain("createBenchBrandingSignedUrl");
     expect(source).not.toContain("createArtifactSignedUrl");
+  });
+
+  it("branding apenas renova o descritor selecionado (não re-resolve identidade)", () => {
+    const source = readRoute("branding/route.ts");
+    expect(source).toContain("identityReference");
+    // A decisão de qual asset corresponde ao estado é de loadBenchBranding.
+    expect(source).not.toContain("resolveBenchIdentity");
+    expect(source).not.toContain("first signedUrl");
   });
 
   it("estimate usa o resolvedor local da bancada", () => {

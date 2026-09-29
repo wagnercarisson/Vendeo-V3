@@ -47,6 +47,7 @@ maybe("importação integrada real (PostgreSQL + Storage locais)", () => {
       short_description: "loja de teste",
       slogan: null,
       brand_color: "#0F172A",
+      identity_state: "logo",
       is_test_store: true,
       updated_at: "2026-09-29T00:00:00.000Z",
     };

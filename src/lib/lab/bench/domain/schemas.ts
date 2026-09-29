@@ -144,6 +144,21 @@ export const BenchBrandingAssetSchema = z
 export type BenchBrandingAsset = z.infer<typeof BenchBrandingAssetSchema>;
 
 /**
+ * Descritor canônico da identidade resolvida (F48.2.3). Contém **apenas** o tipo,
+ * a variante e o `storagePath` — **nunca** a URL assinada (o snapshot persistido
+ * não carrega URLs efêmeras). A URL assinada vive só no contrato transitório da API.
+ */
+export const BenchIdentityReferenceSchema = z
+  .object({
+    kind: z.enum(["logo", "visual_signature"]),
+    variantType: z.string().nullable(),
+    storagePath: z.string().min(1),
+  })
+  .strict();
+
+export type BenchIdentityReference = z.infer<typeof BenchIdentityReferenceSchema>;
+
+/**
  * Contrato local **completo** de branding (D3). Fecha a lacuna de
  * `typography_direction` que hoje não chega ao snapshot de campanha, **sem**
  * alterar o pipeline produtivo. Logo/assinatura são **apenas exibidos/registrados**
@@ -179,6 +194,12 @@ export const BenchBrandingSnapshotSchema = z
     profileStatus: z.string().nullable(),
     logoUrl: z.string().nullable(),
     signatureUrl: z.string().nullable(),
+    /** Estado real da loja (`stores.identity_state`) — fonte de verdade da identidade. */
+    identityState: z.enum(["text_only", "logo", "visual_signature"]),
+    /** Descritor selecionado pelo estado — sem URL assinada. */
+    identityReference: BenchIdentityReferenceSchema.nullable(),
+    /** Motivo da resolução (seleção ou ausência/falha). */
+    identityReason: z.string().min(1),
     assets: z.array(BenchBrandingAssetSchema),
   })
   .strict();

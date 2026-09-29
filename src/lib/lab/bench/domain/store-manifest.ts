@@ -53,6 +53,29 @@ export const STORE_NOT_IN_MANIFEST = "store_not_in_manifest";
 /** Código de erro da loja no manifesto mas ausente do Supabase local. */
 export const BENCH_STORE_NOT_MATERIALIZED = "bench_store_not_materialized";
 
+/** Código de erro do `identity_state` inválido/ausente na loja local. */
+export const BENCH_STORE_IDENTITY_STATE_INVALID = "bench_store_identity_state_invalid";
+
+/** Conjunto FECHADO de `stores.identity_state` (espelha o CHECK do banco). */
+export const BENCH_STORE_IDENTITY_STATES = ["text_only", "logo", "visual_signature"] as const;
+
+export type BenchStoreIdentityState = (typeof BENCH_STORE_IDENTITY_STATES)[number];
+
+/**
+ * Valida `stores.identity_state` contra o conjunto fechado (fail-closed). Ausente
+ * ou desconhecido lança `bench_store_identity_state_invalid` — nunca é convertido
+ * silenciosamente para `text_only`.
+ */
+export function resolveBenchStoreIdentityState(value: unknown, storeId: string): BenchStoreIdentityState {
+  if (
+    typeof value === "string" &&
+    (BENCH_STORE_IDENTITY_STATES as readonly string[]).includes(value)
+  ) {
+    return value as BenchStoreIdentityState;
+  }
+  throw new Error(`${BENCH_STORE_IDENTITY_STATE_INVALID}:${storeId}`);
+}
+
 // ─── Schema do manifesto ─────────────────────────────────────────────────────
 
 const BenchManifestStoreSchema = z
@@ -199,6 +222,8 @@ export interface BenchTestStoreRecord {
   positioning: string | null;
   shortDescription: string | null;
   slogan: string | null;
+  /** `stores.identity_state` — estado real da loja (fonte de verdade da bancada). */
+  identityState: BenchStoreIdentityState;
 }
 
 /**
@@ -265,7 +290,7 @@ export async function assertBenchTestStore(params: {
 
   const { data, error } = await params.client
     .from("stores")
-    .select("id,name,segment,subsegment,tone_of_voice,positioning,short_description,slogan")
+    .select("id,name,segment,subsegment,tone_of_voice,positioning,short_description,slogan,identity_state")
     .eq("id", params.storeId)
     .maybeSingle();
 
@@ -287,5 +312,6 @@ export async function assertBenchTestStore(params: {
     positioning: nullableText(row.positioning),
     shortDescription: nullableText(row.short_description),
     slogan: nullableText(row.slogan),
+    identityState: resolveBenchStoreIdentityState(row.identity_state, params.storeId),
   };
 }

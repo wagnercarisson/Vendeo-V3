@@ -28,6 +28,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 /** Assina um asset de branding pelo signer restrito, degradando para `null`. */
 async function signBrandingAsset(params: {
   storeId: string;
+  bucket: "store-brand-assets" | "visual-signatures";
   storagePath: string;
 }): Promise<string | null> {
   if (!params.storagePath) return null;
@@ -35,7 +36,7 @@ async function signBrandingAsset(params: {
     return await createBenchBrandingSignedUrlForStore({
       client: supabaseAdmin,
       storeId: params.storeId,
-      bucket: "store-brand-assets",
+      bucket: params.bucket,
       path: params.storagePath,
     });
   } catch {
@@ -43,22 +44,54 @@ async function signBrandingAsset(params: {
   }
 }
 
-/** Normaliza o contrato, re-assinando os assets pelo signer restrito (curta duração). */
+/**
+ * Renova a URL assinada do descritor de identidade **já selecionado** por
+ * `loadBenchBranding` (ponto único de decisão). A rota **não** re-resolve a
+ * identidade: localiza o asset pelo `storagePath` selecionado (logo ou
+ * assinatura) e assina exatamente esse path. Em falha, mantém `signedUrl: null`
+ * sem fallback para outra variante. As URLs assinadas dos assets são renovadas
+ * apenas como metadados de exibição.
+ */
 async function withSignedAssets(
   branding: BenchBrandingContract,
 ): Promise<BenchBrandingContract> {
+  let identityReference = branding.identityReference;
+  if (identityReference) {
+    const bucket =
+      identityReference.kind === "logo" ? "store-brand-assets" : "visual-signatures";
+    const signedUrl = await signBrandingAsset({
+      storeId: branding.storeId,
+      bucket,
+      storagePath: identityReference.storagePath,
+    });
+    identityReference = { ...identityReference, signedUrl };
+  }
+
   const assets = [];
   for (const asset of branding.assets) {
     const signedUrl = await signBrandingAsset({
       storeId: branding.storeId,
+      bucket: "store-brand-assets",
       storagePath: asset.storagePath,
     });
     assets.push({ ...asset, signedUrl: signedUrl ?? asset.signedUrl });
   }
+
+  const logoUrl =
+    identityReference?.kind === "logo" && identityReference.signedUrl
+      ? identityReference.signedUrl
+      : null;
+  const signatureUrl =
+    identityReference?.kind === "visual_signature" && identityReference.signedUrl
+      ? identityReference.signedUrl
+      : null;
+
   return {
     ...branding,
     assets,
-    logoUrl: assets.find((asset) => asset.signedUrl !== null)?.signedUrl ?? null,
+    identityReference,
+    logoUrl,
+    signatureUrl,
   };
 }
 
