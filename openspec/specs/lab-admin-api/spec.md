@@ -1,6 +1,6 @@
 # Lab Admin API
 
-> Synced from `fase-48-1-laboratorio-ia-minimo` (ADDED).
+> Synced from `fase-48-1-laboratorio-ia-minimo` (ADDED), `fase-48-2-2-fundacao-bancada-geracao` (ADDED) and `fase-48-2-3-fidelidade-experimental-bancada` (ADDED).
 
 ## Purpose
 
@@ -307,3 +307,31 @@ A API SHALL retornar o detalhe da geração com a configuração, o prompt envia
 - **WHEN** o detalhe da geração é solicitado
 - **THEN** a resposta inclui configuração, prompt enviado, latência, usage, custo com origem e URLs assinadas dos artefatos
 - **AND** nenhum secret é exposto
+
+### Requirement: Exposição do briefing, do prompt compilado e da aprovação
+
+A API da bancada SHALL expor o briefing estruturado, o **prompt compilado** (com os blocos canônicos) e permitir a **aprovação explícita** antes da confirmação, sem expor secrets, validando o manifesto (`assertBenchTestStore`) antes de qualquer leitura quando houver `storeId`. A API SHALL rejeitar a geração sem preflight aprovado e SHALL garantir que o `prompt_sent` corresponda exatamente ao prompt final aprovado, sem composição oculta.
+
+#### Scenario: Briefing experimental é exposto
+
+- **WHEN** o administrador solicita o briefing experimental de uma loja de teste
+- **THEN** a API retorna o briefing com direção visual e tipografia
+- **AND** nenhum secret é exposto
+
+#### Scenario: Prompt compilado é exposto para revisão
+
+- **WHEN** o administrador solicita a composição de uma loja de teste
+- **THEN** a API retorna o prompt compilado com os blocos canônicos
+- **AND** o prompt pode ser editado e aprovado
+
+#### Scenario: Aprovação é exigida antes da geração
+
+- **WHEN** uma geração é solicitada sem prompt aprovado
+- **THEN** a API recusa a geração
+- **AND** o `prompt_sent` corresponde exatamente ao prompt final aprovado
+
+#### Scenario: Manifesto é validado antes da leitura
+
+- **WHEN** uma rota com `storeId` é chamada
+- **THEN** o manifesto é validado antes de qualquer leitura
+- **AND** uma loja fora do manifesto é recusada
