@@ -82,21 +82,45 @@ export type BenchConfig = z.infer<typeof BenchConfigSchema>;
 
 // ─── Formulário mínimo de produto/oferta (D-snapshot) ────────────────────────
 
+/**
+ * Produto — contrato FIEL ao formulário produtivo (F48.2.3, D14): nome `max(60)`
+ * e descrição `max(120)` (mesmos limites do produtivo) e as **informações
+ * obrigatórias na arte** `max(200)`. `preserveImageContext` é o campo
+ * "Preservar imagem original" (disponível apenas em Destaque/Exclusivo e limpo ao
+ * mudar para Oferta). Nenhum campo produtivo novo é inventado.
+ */
 export const BenchProductSchema = z
   .object({
-    name: z.string().min(1).max(200),
+    name: z.string().min(1).max(60),
     priceCents: z.number().int().min(0).optional(),
     originalPriceCents: z.number().int().min(0).optional(),
-    description: z.string().max(2000).optional(),
+    description: z.string().max(120).optional(),
+    /** Informações obrigatórias na arte — mesmo limite produtivo (200). */
+    mandatoryArtworkText: z.string().max(200).optional(),
+    /** Preservação da imagem original — Destaque/Exclusivo (D14). */
+    preserveImageContext: z.boolean().optional(),
   })
   .strict();
 
 export type BenchProduct = z.infer<typeof BenchProductSchema>;
 
+/**
+ * Oferta — contrato FIEL ao formulário produtivo (F48.2.3, D14): mantém o texto
+ * manual e a validade, e acrescenta os campos de **selo**, **intenção**,
+ * **validade (texto de exibição)** e **aviso ilustrativo** usados pela paridade.
+ */
 export const BenchOfferSchema = z
   .object({
     text: z.string().min(1).max(2000),
     validUntil: z.string().max(80).optional(),
+    /** Selo promocional — opções por intenção (obrigatório em oferta). */
+    badge: z.string().max(80).optional(),
+    /** Intenção da campanha (offer/spotlight/exclusive). */
+    campaignIntent: z.enum(["offer", "spotlight", "exclusive"]).optional(),
+    /** Texto de exibição da validade resolvido (D13). */
+    validity: z.string().max(200).optional(),
+    /** Aviso "Imagem meramente ilustrativa" (padrão ligado no produtivo). */
+    showIllustrativeNotice: z.boolean().optional(),
   })
   .strict();
 
@@ -176,6 +200,29 @@ function isBenchInputReference(reference: string, runId: string): boolean {
   return rest.length > 0 && !rest.startsWith("/") && !rest.includes("//");
 }
 
+/**
+ * Evidência mínima do preflight do prompt (F48.2.3, D20). Reusa `prompt_sent` e
+ * `campaign_snapshot`; NÃO cria tabela de versões, histórico de rascunhos, novo
+ * estado do run, hashes persistidos nem infraestrutura de assinatura.
+ * `promptApproved` é o prompt final aprovado e é gravado idêntico a `prompt_sent`.
+ */
+export const BenchPreflightEvidenceSchema = z
+  .object({
+    /** Prompt-base manual fornecido pelo operador (preservado integralmente). */
+    promptBase: z.string(),
+    /** Prompt originalmente compilado pelo compositor determinístico. */
+    promptCompiled: z.string(),
+    /** Prompt final editado e aprovado pelo operador. */
+    promptApproved: z.string().min(1),
+    /** Blocos canônicos utilizados (nome do bloco → conteúdo). */
+    promptBlocks: z.record(z.string(), z.string()),
+    /** Versão estática do compositor (evidência). */
+    composerVersion: z.string().min(1),
+  })
+  .strict();
+
+export type BenchPreflightEvidence = z.infer<typeof BenchPreflightEvidenceSchema>;
+
 export const BenchRunInputSchema = z
   .object({
     /** Idempotência: reenvio devolve o run existente, sem nova chamada paga (D10). */
@@ -190,6 +237,8 @@ export const BenchRunInputSchema = z
     confirmed: z.literal(true),
     product: BenchProductSchema,
     offer: BenchOfferSchema,
+    /** Evidência mínima do preflight aprovado (F48.2.3, D20). */
+    preflight: BenchPreflightEvidenceSchema.optional(),
   })
   .strict()
   .superRefine((value, ctx) => {

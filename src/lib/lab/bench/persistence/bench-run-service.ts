@@ -98,6 +98,12 @@ export interface BenchRunRecord {
   brandingSnapshot: unknown;
   config: unknown;
   promptSent: string | null;
+  /** Evidência mínima do preflight do prompt (F48.2.3, D20). */
+  promptBase: string | null;
+  promptCompiled: string | null;
+  promptApproved: string | null;
+  promptBlocks: unknown;
+  composerVersion: string | null;
   references: unknown;
   provider: string | null;
   protocol: string | null;
@@ -132,6 +138,11 @@ function mapBenchRunRow(row: Record<string, unknown>): BenchRunRecord {
     brandingSnapshot: row.branding_snapshot ?? null,
     config: row.config ?? null,
     promptSent: (row.prompt_sent as string | null) ?? null,
+    promptBase: (row.prompt_base as string | null) ?? null,
+    promptCompiled: (row.prompt_compiled as string | null) ?? null,
+    promptApproved: (row.prompt_approved as string | null) ?? null,
+    promptBlocks: row.prompt_blocks ?? null,
+    composerVersion: (row.composer_version as string | null) ?? null,
     references: row.references ?? null,
     provider: (row.provider as string | null) ?? null,
     protocol: (row.protocol as string | null) ?? null,
@@ -255,6 +266,12 @@ export async function setBenchRunInput(params: {
   brandingSnapshot?: unknown;
   config?: unknown;
   promptSent?: string;
+  /** Evidência mínima do preflight (F48.2.3, D20) — persistida no run `draft`. */
+  promptBase?: string;
+  promptCompiled?: string;
+  promptApproved?: string;
+  promptBlocks?: unknown;
+  composerVersion?: string;
   references?: unknown;
   provider?: string | null;
   protocol?: string | null;
@@ -276,7 +293,18 @@ export async function setBenchRunInput(params: {
   };
   if (params.brandingSnapshot !== undefined) update.branding_snapshot = params.brandingSnapshot;
   if (params.config !== undefined) update.config = params.config;
-  if (params.promptSent !== undefined) update.prompt_sent = params.promptSent;
+  // Evidência do preflight (D20): `prompt_sent` é gravado **idêntico** ao prompt
+  // final aprovado — nenhuma transformação após a aprovação.
+  if (params.promptBase !== undefined) update.prompt_base = params.promptBase;
+  if (params.promptCompiled !== undefined) update.prompt_compiled = params.promptCompiled;
+  if (params.promptApproved !== undefined) {
+    update.prompt_approved = params.promptApproved;
+    update.prompt_sent = params.promptApproved;
+  } else if (params.promptSent !== undefined) {
+    update.prompt_sent = params.promptSent;
+  }
+  if (params.promptBlocks !== undefined) update.prompt_blocks = params.promptBlocks;
+  if (params.composerVersion !== undefined) update.composer_version = params.composerVersion;
   if (params.references !== undefined) update["references"] = params.references;
   if (params.provider !== undefined) update.provider = params.provider;
   if (params.protocol !== undefined) update.protocol = params.protocol;
