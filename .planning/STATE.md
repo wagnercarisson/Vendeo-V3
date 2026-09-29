@@ -122,10 +122,12 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 | 260924-il3 | 2026-09-24 | Alinhamento documental F50/F50.1 |
 | 260924-i6l | 2026-09-24 | Reconciliação documental e operacional F50 |
 | 260919-hju | 2026-09-19 | Ajuste acessível de Tom de Voz |
+| 260929-rtl | 2026-09-29 | F48.2.3: fidelidade de `identity_state` na bancada (import fail-closed + resolver puro + contrato; UAT de reimportação remota **pendente de autorização**) |
 
 ## Session Continuity
 
 - Última sessão: 2026-09-29 — execução e encerramento da F48.2.3 (8/8 planos; **CHECKPOINT A** e **CHECKPOINT B** aprovados; UAT manual **sem provider**, custo **US$ 0**) e **verify/sync/archive manuais** do OpenSpec.
 - Último trabalho: F48.2.3 **concluída** (8/8 planos; `48.2.3-UAT.md` + `48-2-3-VERIFICATION.md` + `48-2-3-08-SUMMARY.md`; produção intocada; OpenSpec **verificado, sincronizado e arquivado**).
-- Próximo trabalho: **F48.2.4 — Experimento determinístico Oferta 1:1**. Sessões manuais de teste dos prompts do Diretor seguem em paralelo, com novo programa e nova autorização humana antes de qualquer chamada paga.
+- Último quick: `260929-rtl` — correção de fidelidade de `identity_state` da bancada (Tasks 1–3 implementadas/testadas: import fail-closed, resolver puro, contrato/snapshot/API; produção intocada; custo **US$ 0**). **Reimportação remota das duas lojas de teste pendente de autorização humana explícita** (UAT local ainda não executado).
+- Próximo trabalho: **F48.2.4 — Experimento determinístico Oferta 1:1**. Antes, a reimportação manual autorizada das duas lojas de teste (`260929-rtl`) para materializar `identity_state` localmente. Sessões manuais de teste dos prompts do Diretor seguem em paralelo, com novo programa e nova autorização humana antes de qualquer chamada paga.
 - Resume file: `None` (F48.2.3 concluída e arquivada; próxima ação é o planejamento da F48.2.4).
