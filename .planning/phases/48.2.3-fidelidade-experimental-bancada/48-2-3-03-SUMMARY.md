@@ -230,3 +230,12 @@ None - no external service configuration required. Nenhuma credencial remota é 
 **Estado parcial da tentativa:** `lab_bench_store_imports` = 0; lojas/perfis/assets/assinaturas das duas IDs = 0; objetos content-addressed = 0; manifesto = `stores: []`. 1 owner sintético pré-existente (`bench-store+3dc7d274-…@bench.local`) **preservado** (idempotente). Nada a limpar.
 
 **Estado:** correção aplicada e validada localmente; **nenhuma** nova leitura remota nem execução da importação. Aguardando revisão antes de nova tentativa remota. Base OpenSpec **inalterada**.
+
+### Ajuste cirúrgico — validação por bucket (commit `e2d9a0ef`)
+
+- `assertBrandingMimeAllowedForBucket(bucket, mime)`: valida o MIME resolvido contra a política real do bucket **antes** de `uploadBrandingObject`; incompatível → `import_asset_mime_not_allowed_for_bucket` (sanitizado).
+- Políticas (inalteradas): `store-logos`/`store-brand-assets` = `image/png`, `image/jpeg`, `image/webp`; `visual-signatures` = `image/png`, `image/svg+xml`.
+- Sem ampliação de política e sem conversão/transcodificação.
+- **HEIC/HEIF pertencem ao upload de campanha, não ao contrato atual dos buckets de branding** (nenhum dos três buckets os aceita).
+- Testes: +6 (HEIC/HEIF recusados nos buckets de branding; SVG só em `visual-signatures`; JPEG/WEBP recusados em `visual-signatures`; PNG nos três; falha antes de qualquer upload; assinatura SVG aceita). `bench-import` + `lab-isolation` + `architecture-guard` = **85 verdes**; `typecheck` exit 0.
+- Smoke local: validação 4/4 recusas; PNG permitido nos 3; round-trip + cleanup OK (`removed: 3, failed: 0`).
