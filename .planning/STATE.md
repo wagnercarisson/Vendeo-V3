@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: complete
-last_updated: "2026-09-28T22:51:35.414Z"
+last_updated: "2026-09-29T17:49:58.136Z"
 progress:
-  total_phases: 39
+  total_phases: 40
   completed_phases: 35
-  total_plans: 309
+  total_plans: 317
   completed_plans: 302
-  percent: 90
+  percent: 88
 ---
 
 # Project State
@@ -25,7 +25,8 @@ progress:
 
 ## Current Position
 
-Phase: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório) — **COMPLETE (verificada, sincronizada e arquivada)** (8/8 planos; `48-2-2-01` .. `48-2-2-08` executados/summarized)
+Phase: 48.2.3 (fidelidade-experimental-bancada) — EXECUTING
+Plan: 1 of 8
 Plans: `48-2-2-01` .. `48-2-2-08` — **todos concluídos/summarized** (2026-09-28).
 Checkpoints humanos: **CP1 aprovado** (spike de modelos/presets, plano 01 — após correção do spike), **CP2 aprovado** (presets habilitados antes de geração paga, plano 04 — após correção do pricing), **CP3 aprovado** (UAT local, plano 08 — **uma** geração real controlada autorizada e executada). Nenhuma task executou chamada paga autonomamente.
 Próxima ação: **F48.2.3 — Fidelidade experimental da bancada** (importação explícita/unidirecional da identidade das lojas de teste; comando local; nenhuma consulta remota em operação normal); depois, **F48.2.4 — Experimento determinístico Oferta 1:1**. O OpenSpec da F48.2.2 foi **verificado, sincronizado e arquivado** em `openspec/changes/archive/2026-09-28-fase-48-2-2-fundacao-bancada-geracao/` (correções de verificação: custo do provider separado do cálculo local; snapshot de branding sem URLs assinadas).
