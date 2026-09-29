@@ -21,8 +21,10 @@ import {
   createReadOnlySourceClient,
   importOneStore,
   isForbiddenSourceTarget,
+  materializeStoreAssets,
   parseImportArgs,
   parseSupabaseStatusEnv,
+  resolveBrandingMime,
   resolveLocalDestination,
   sanitizeMetadata,
   selectUnreferencedOldObjects,
@@ -197,6 +199,13 @@ interface DestinationOptions {
   uploadError?: Error;
 }
 
+/** Política real dos buckets de branding (migrations): reproduzida no mock. */
+const BUCKET_ALLOWED_MIME: Record<string, readonly string[]> = {
+  "store-logos": ["image/png", "image/jpeg", "image/webp"],
+  "store-brand-assets": ["image/png", "image/jpeg", "image/webp"],
+  "visual-signatures": ["image/png", "image/svg+xml"],
+};
+
 function makeDestination(options: DestinationOptions = {}) {
   const uploads: Array<{ bucket: string; path: string; bytes: number; contentType: string }> = [];
   const removals: Array<{ bucket: string; path: string }> = [];
@@ -225,6 +234,10 @@ function makeDestination(options: DestinationOptions = {}) {
       contentType: string;
     }) {
       if (options.uploadError) throw options.uploadError;
+      const allowed = BUCKET_ALLOWED_MIME[bucket] ?? [];
+      if (!allowed.includes(contentType)) {
+        throw new Error(`mime type ${contentType} is not supported`);
+      }
       uploads.push({ bucket, path, bytes: buffer.length, contentType });
       return { bucket, path };
     },
@@ -765,5 +778,148 @@ describe("destino local — resolução de chave (correção descoberta no UAT)"
         () => MODERN_STATUS,
       ),
     ).toThrow();
+  });
+});
+
+describe("MIME de branding — resolução e política de bucket (correção UAT)", () => {
+  const logoAsset = (over: Row = {}): Row => ({
+    id: ASSET_ID,
+    store_id: STORE_ID,
+    asset_type: "logo",
+    variant_type: "original",
+    source: "user_upload",
+    parent_asset_id: null,
+    storage_path: ASSET_PATH,
+    mime_type: "image/png",
+    width: 1,
+    height: 1,
+    size_bytes: LOGO_BYTES.length,
+    checksum: "c",
+    version: 1,
+    status: "active",
+    metadata: {},
+    ...over,
+  });
+
+  it("resolveBrandingMime: MIME declarado válido vence Blob.type e extensão", () => {
+    expect(
+      resolveBrandingMime({ declaredMime: "image/jpeg", blobType: "image/png", storagePath: "x.png" }),
+    ).toEqual({ mime: "image/jpeg", extension: ".jpg" });
+  });
+
+  it("resolveBrandingMime: usa Blob.type quando não há MIME declarado", () => {
+    expect(resolveBrandingMime({ blobType: "image/webp", storagePath: "x.bin" })).toEqual({
+      mime: "image/webp",
+      extension: ".webp",
+    });
+  });
+
+  it("resolveBrandingMime: usa extensão segura quando não há MIME", () => {
+    expect(resolveBrandingMime({ storagePath: "loja/assinatura.svg" })).toEqual({
+      mime: "image/svg+xml",
+      extension: ".svg",
+    });
+  });
+
+  it("resolveBrandingMime: recusa MIME ausente/desconhecido", () => {
+    expect(() =>
+      resolveBrandingMime({ declaredMime: "application/octet-stream", storagePath: "loja/logo.bin" }),
+    ).toThrow(/MIME de branding ausente\/desconhecido/);
+  });
+
+  it("materializeStoreAssets: assinatura PNG sem coluna mime_type é enviada como image/png (nunca octet-stream)", async () => {
+    const source = makeSource();
+    const destination = makeDestination();
+    const signature = { id: SIG_ID, store_id: STORE_ID, storage_path: SIG_PATH, status: "active" };
+
+    await materializeStoreAssets({ source, destination, storeId: STORE_ID, state: { assets: [], signature } });
+
+    expect(destination.uploads).toHaveLength(1);
+    expect(destination.uploads[0].bucket).toBe("visual-signatures");
+    expect(destination.uploads[0].contentType).toBe("image/png");
+    expect(destination.uploads[0].path.endsWith(".png")).toBe(true);
+  });
+
+  it("materializeStoreAssets: asset com MIME declarado usa o declarado", async () => {
+    const source = makeSource({ objects: { "store-logos:loja/marca.jpg": LOGO_BYTES } });
+    const destination = makeDestination();
+    const asset = logoAsset({ mime_type: "image/jpeg", storage_path: "loja/marca.jpg" });
+
+    await materializeStoreAssets({ source, destination, storeId: STORE_ID, state: { assets: [asset], signature: null } });
+
+    expect(destination.uploads[0].contentType).toBe("image/jpeg");
+    expect(destination.uploads[0].path.endsWith(".jpg")).toBe(true);
+  });
+
+  it("materializeStoreAssets: resolve por Blob.type quando não há MIME nem extensão segura", async () => {
+    const destination = makeDestination();
+    const source = {
+      async download() {
+        return {
+          type: "image/webp",
+          async arrayBuffer() {
+            return Uint8Array.from([1, 2, 3]).buffer;
+          },
+        };
+      },
+    };
+    const asset = logoAsset({ mime_type: undefined, storage_path: "asset.bin" });
+
+    await materializeStoreAssets({ source, destination, storeId: STORE_ID, state: { assets: [asset], signature: null } });
+
+    expect(destination.uploads[0].contentType).toBe("image/webp");
+    expect(destination.uploads[0].path.endsWith(".webp")).toBe(true);
+  });
+
+  it("materializeStoreAssets: recusa MIME desconhecido ANTES do upload", async () => {
+    const destination = makeDestination();
+    const source = makeSource({ objects: { "store-logos:loja/logo.bin": LOGO_BYTES } });
+    const asset = logoAsset({ mime_type: "application/octet-stream", storage_path: "loja/logo.bin" });
+
+    await expect(
+      materializeStoreAssets({ source, destination, storeId: STORE_ID, state: { assets: [asset], signature: null } }),
+    ).rejects.toThrow(/MIME de branding ausente\/desconhecido/);
+    expect(destination.uploads).toHaveLength(0);
+  });
+
+  it("materializeStoreAssets: limpa objetos já materializados quando um asset posterior falha", async () => {
+    const destination = makeDestination();
+    const source = makeSource({
+      objects: {
+        "store-logos:loja/logo.png": LOGO_BYTES,
+        "store-logos:loja/logo2.bin": LOGO_BYTES,
+      },
+    });
+    const assets = [
+      logoAsset({ id: ASSET_ID, storage_path: "loja/logo.png", mime_type: "image/png" }),
+      logoAsset({
+        id: "44444444-4444-4444-8444-444444444444",
+        storage_path: "loja/logo2.bin",
+        mime_type: "application/octet-stream",
+      }),
+    ];
+
+    await expect(
+      materializeStoreAssets({ source, destination, storeId: STORE_ID, state: { assets, signature: null } }),
+    ).rejects.toThrow(/MIME de branding ausente\/desconhecido/);
+
+    expect(destination.uploads).toHaveLength(1);
+    expect(destination.removals).toHaveLength(1);
+    expect(destination.removals[0]).toEqual({
+      bucket: destination.uploads[0].bucket,
+      path: destination.uploads[0].path,
+    });
+  });
+
+  it("mock do destino reproduz a política real (rejeita octet-stream)", async () => {
+    const destination = makeDestination();
+    await expect(
+      destination.uploadBrandingObject({
+        bucket: "store-logos",
+        path: "x",
+        buffer: LOGO_BYTES,
+        contentType: "application/octet-stream",
+      }),
+    ).rejects.toThrow(/not supported/);
   });
 });

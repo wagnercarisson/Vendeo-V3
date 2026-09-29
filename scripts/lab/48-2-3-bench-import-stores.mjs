@@ -738,7 +738,7 @@ export function buildSanitizedProfileRow({ profile, storeId }) {
  * NOT NULL `source`/`version` (identidade/branding atual) e o `checksum` do
  * conteúdo copiado.
  */
-export function buildSanitizedAssetRow({ asset, storeId, localStoragePath, checksum, sizeBytes }) {
+export function buildSanitizedAssetRow({ asset, storeId, localStoragePath, checksum, sizeBytes, mime }) {
   return {
     id: asset.id,
     store_id: storeId ?? asset.store_id ?? null,
@@ -747,7 +747,7 @@ export function buildSanitizedAssetRow({ asset, storeId, localStoragePath, check
     source: asset.source ?? "user_upload",
     parent_asset_id: asset.parent_asset_id ?? null,
     storage_path: localStoragePath ?? asset.storage_path ?? null,
-    mime_type: asset.mime_type ?? "application/octet-stream",
+    mime_type: mime ?? asset.mime_type ?? "application/octet-stream",
     width: asset.width ?? 0,
     height: asset.height ?? 0,
     size_bytes: sizeBytes ?? asset.size_bytes ?? 0,
@@ -793,6 +793,7 @@ export function buildSanitizedIdentity(params) {
       localStoragePath: stored?.localPath,
       checksum: stored?.checksum,
       sizeBytes: stored?.sizeBytes,
+      mime: stored?.mime,
     });
   });
 
@@ -841,6 +842,64 @@ export function extensionFromMime(mime, fallbackPath) {
 }
 
 /**
+ * MIME canônicos de branding aceitos na RESOLUÇÃO (não amplia a política do
+ * bucket). A política real de cada bucket é validada pelo destino (Storage).
+ */
+export const BRANDING_MIME_EXTENSION = Object.freeze({
+  "image/png": ".png",
+  "image/jpeg": ".jpg",
+  "image/jpg": ".jpg",
+  "image/webp": ".webp",
+  "image/heic": ".heic",
+  "image/heif": ".heif",
+  "image/svg+xml": ".svg",
+});
+
+const BRANDING_EXTENSION_MIME = Object.freeze({
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".heic": "image/heic",
+  ".heif": "image/heif",
+  ".svg": "image/svg+xml",
+});
+
+function normalizeBrandingMime(value) {
+  if (typeof value !== "string") return null;
+  const mime = value.trim().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(BRANDING_MIME_EXTENSION, mime) ? mime : null;
+}
+
+/**
+ * Resolvedor PURO de MIME para branding. Precedência:
+ *   1) `declaredMime` (coluna `mime_type`) válido;
+ *   2) `blobType` retornado pelo download (`Blob.type`) válido;
+ *   3) extensão segura de `storagePath` mapeada para MIME.
+ * Suporta PNG, JPEG, WEBP, HEIC, HEIF e SVG. MIME ausente/desconhecido →
+ * erro sanitizado ANTES do upload (sem ampliar a política do bucket).
+ * @param {{ declaredMime?: string, blobType?: string, storagePath?: string }} [input]
+ * @returns {{ mime: string, extension: string }}
+ */
+export function resolveBrandingMime(input = {}) {
+  const declared = normalizeBrandingMime(input.declaredMime);
+  if (declared) return { mime: declared, extension: BRANDING_MIME_EXTENSION[declared] };
+
+  const fromBlob = normalizeBrandingMime(input.blobType);
+  if (fromBlob) return { mime: fromBlob, extension: BRANDING_MIME_EXTENSION[fromBlob] };
+
+  const ext =
+    typeof input.storagePath === "string" ? path.extname(input.storagePath).toLowerCase() : "";
+  const fromExt = BRANDING_EXTENSION_MIME[ext];
+  if (fromExt) return { mime: fromExt, extension: BRANDING_MIME_EXTENSION[fromExt] };
+
+  throw new BenchImportBlockedError(
+    "import_asset_mime_unresolved",
+    `MIME de branding ausente/desconhecido para "${input.storagePath ?? "<sem path>"}"; tipos suportados: PNG, JPEG, WEBP, HEIC, HEIF, SVG.`,
+  );
+}
+
+/**
  * Path versionado/content-addressed: `<storeId>/<objectId>/<checksum><ext>`.
  * Mesmo conteúdo (mesmo checksum) → mesmo path (idempotência).
  */
@@ -878,36 +937,46 @@ export async function materializeStoreAssets({ source, destination, storeId, sta
     for (const asset of state.assets) {
       const bucket = resolveAssetBucket(asset);
       const data = await source.download(bucket, asset.storage_path);
+      const blobType = data && typeof data.type === "string" ? data.type : null;
       const buffer = await toBuffer(data);
+      const { mime, extension } = resolveBrandingMime({
+        declaredMime: asset.mime_type,
+        blobType,
+        storagePath: asset.storage_path,
+      });
       const checksum = computeChecksum(buffer);
-      const extension = extensionFromMime(asset.mime_type, asset.storage_path);
       const localPath = buildContentAddressedPath({ storeId, objectId: asset.id, checksum, extension });
       await destination.uploadBrandingObject({
         bucket,
         path: localPath,
         buffer,
-        contentType: asset.mime_type ?? "application/octet-stream",
+        contentType: mime,
       });
       newObjects.push({ bucket, path: localPath });
-      storedAssets.push({ assetId: asset.id, localPath, checksum, sizeBytes: buffer.length });
+      storedAssets.push({ assetId: asset.id, localPath, checksum, sizeBytes: buffer.length, mime });
     }
 
     let storedSignature = null;
     if (state.signature) {
       const signature = state.signature;
       const data = await source.download(SIGNATURE_BUCKET, signature.storage_path);
+      const blobType = data && typeof data.type === "string" ? data.type : null;
       const buffer = await toBuffer(data);
+      const { mime, extension } = resolveBrandingMime({
+        declaredMime: signature.mime_type,
+        blobType,
+        storagePath: signature.storage_path,
+      });
       const checksum = computeChecksum(buffer);
-      const extension = extensionFromMime(null, signature.storage_path);
       const localPath = buildContentAddressedPath({ storeId, objectId: signature.id, checksum, extension });
       await destination.uploadBrandingObject({
         bucket: SIGNATURE_BUCKET,
         path: localPath,
         buffer,
-        contentType: "application/octet-stream",
+        contentType: mime,
       });
       newObjects.push({ bucket: SIGNATURE_BUCKET, path: localPath });
-      storedSignature = { signatureId: signature.id, localPath };
+      storedSignature = { signatureId: signature.id, localPath, mime };
     }
 
     return { storedAssets, storedSignature, newObjects };
