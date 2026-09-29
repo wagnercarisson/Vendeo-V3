@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: complete
-last_updated: "2026-09-29T17:49:58.136Z"
+last_updated: "2026-09-29T19:30:00.000Z"
 progress:
   total_phases: 40
-  completed_phases: 35
+  completed_phases: 36
   total_plans: 317
-  completed_plans: 302
-  percent: 88
+  completed_plans: 310
+  percent: 98
 ---
 
 # Project State
@@ -18,19 +18,19 @@ progress:
 
 - Project: `.planning/PROJECT.md`.
 - Core value: transformar uma oferta simples em uma campanha profissional, clara e publicável.
-- Foco atual: F48.2.2 — **Fundação da bancada de geração no Admin/Laboratório** (**CONCLUÍDA** em 2026-09-28; 8/8 planos; **CP1, CP2 e CP3 aprovados**; UAT técnico aprovado com **uma** geração real controlada; produção intocada; OpenSpec **verificado, sincronizado e arquivado** em `openspec/changes/archive/2026-09-28-fase-48-2-2-fundacao-bancada-geracao/`).
-- Fase anterior: F48.2.1 — **Bancada Manual de Prompts do Diretor** (CONCLUÍDA, VERIFICADA, SINCRONIZADA e ARQUIVADA).
-- Próxima fase: **F48.2.3 — Fidelidade experimental da bancada** (importação explícita/unidirecional da identidade das lojas de teste; comando local; nenhuma consulta remota em operação normal); depois, **F48.2.4 — Experimento determinístico Oferta 1:1**.
+- Foco atual: F48.2.3 — **Fidelidade experimental da bancada** (**CONCLUÍDA, VERIFICADA, SINCRONIZADA e ARQUIVADA** em 2026-09-29; 8/8 planos; **CHECKPOINT A** e **CHECKPOINT B** aprovados; UAT manual **sem provider** com custo **US$ 0**; produção intocada; OpenSpec arquivado em `openspec/changes/archive/2026-09-29-fase-48-2-3-fidelidade-experimental-bancada/`).
+- Fase anterior: F48.2.2 — **Fundação da bancada de geração no Admin/Laboratório** (CONCLUÍDA, VERIFICADA, SINCRONIZADA e ARQUIVADA).
+- Próxima fase: **F48.2.4 — Experimento determinístico Oferta 1:1** (template criativo Oferta 1:1; branding como contrato obrigatório; hierarquia comercial orientada; aprovação humana do prompt).
 - Próxima iniciativa condicionada: F50.1 aguardando constituição da PJ.
 
 ## Current Position
 
-Phase: 48.2.3 (fidelidade-experimental-bancada) — EXECUTING
-Plan: 7 of 8 (48-2-3-01 .. 48-2-3-07 concluídos/summarized)
-Plans: `48-2-3-01` .. `48-2-3-07` — **concluídos/summarized** (2026-09-29); `48-2-3-08` pendente.
-Checkpoints humanos: **CHECKPOINT A aprovado** (plano 03 — fronteira de importação/allowlist revisada; **nenhuma leitura remota executada**; habilita o UAT remoto do CHECKPOINT B, que exige autorização adicional). **CP1 aprovado** (spike de modelos/presets, plano 01 — após correção do spike), **CP2 aprovado** (presets habilitados antes de geração paga, plano 04 — após correção do pricing), **CP3 aprovado** (UAT local, plano 08 — **uma** geração real controlada autorizada e executada). Nenhuma task executou chamada paga autonomamente.
-Próxima ação: **F48.2.3 — Fidelidade experimental da bancada** (importação explícita/unidirecional da identidade das lojas de teste; comando local; nenhuma consulta remota em operação normal); depois, **F48.2.4 — Experimento determinístico Oferta 1:1**. O OpenSpec da F48.2.2 foi **verificado, sincronizado e arquivado** em `openspec/changes/archive/2026-09-28-fase-48-2-2-fundacao-bancada-geracao/` (correções de verificação: custo do provider separado do cálculo local; snapshot de branding sem URLs assinadas).
-Fase anterior: 48.2.1 (Bancada Manual de Prompts do Diretor) — **COMPLETE**; chain `48-2-1-05 → 48-2-1-07 → 48-2-1-08 → 48-2-1-09`.
+Phase: 48.2.3 (fidelidade-experimental-bancada) — **COMPLETE (verificada, sincronizada e arquivada)**
+Plan: 8 of 8 (48-2-3-01 .. 48-2-3-08 concluídos/summarized)
+Plans: `48-2-3-01` .. `48-2-3-08` — **todos concluídos/summarized** (2026-09-29).
+Checkpoints humanos: **CHECKPOINT A aprovado** (plano 03 — fronteira de importação/allowlist revisada), **CHECKPOINT B aprovado** (plano 08 — UAT manual **sem provider**). Nenhuma geração real de IA executada; custo **US$ 0**.
+Próxima ação: **F48.2.4 — Experimento determinístico Oferta 1:1** (template criativo Oferta 1:1; branding como contrato obrigatório; hierarquia comercial orientada; aprovação humana do prompt). A F48.2.3 foi **verificada, sincronizada e arquivada** em `openspec/changes/archive/2026-09-29-fase-48-2-3-fidelidade-experimental-bancada/`.
+Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório) — **COMPLETE (verificada, sincronizada e arquivada)**.
 
 - F48.2.1 realinhada (OpenSpec `017b8799`) e **concluída**: bancada manual dos prompts do Diretor.
 - Todos os planos resolvidos; programa local `closed` e experimento `archived`, com recusas fail-closed confirmadas e histórico preservado.
@@ -55,9 +55,20 @@ Fase anterior: 48.2.1 (Bancada Manual de Prompts do Diretor) — **COMPLETE**; c
 - **Checkpoints:** **CP1 aprovado** (spike, plano 01 — `gpt-image-2` e `gpt-image-2.5-flare` confirmados pela documentação oficial; 4 presets propostos), **CP2 aprovado** (presets antes de geração paga, plano 04 — 4 presets `images` habilitados após correção do pricing; `responses` desabilitado), **CP3 aprovado** (UAT local, plano 08 — **uma** geração real controlada autorizada e executada; run `f6148ea6-…` `succeeded`).
 - **Ondas:** cadeia sequencial `48-2-2-01 → 02 → 03 → 04 → 05 → 06 → 07 → 08` (o plano 04 depende também do 01).
 
+## F48.2.3 — Inventário da fase (mecânico)
+
+- **Planejados/executados (8):** `48-2-3-01` .. `48-2-3-08` — **todos concluídos/summarized** (2026-09-29).
+- **Base SHA:** `73ece00f…` (capturado no plano 01).
+- **Checkpoints:** **A aprovado** (plano 03 — importação/allowlist, offline), **B aprovado** (plano 08 — UAT manual sem provider).
+- **UAT:** `48.2.3-UAT.md` (12/12); **sem provider, custo US$ 0**; duas lojas reais importadas localmente — NovaTek `3dc7d274…` (sem logo, com assinatura) e Adega `48b212f8…` (com logo, sem assinatura).
+- **Verificação:** `48-2-3-VERIFICATION.md` (final); produção intocada (`base..HEAD` vazio); `supabase/migrations` limpo; `campaigns=0`; `credit_*` inalteradas; nenhum provider.
+- **Gates:** typecheck, lint (0 warnings), build e suíte completa (serial) verdes (`389 passed | 1 skipped`; `4401 passed | 2 skipped`).
+- **OpenSpec:** verificado, **sincronizado** (9 specs principais: 4 novos + 5 atualizados) e **arquivado** em `openspec/changes/archive/2026-09-29-fase-48-2-3-fidelidade-experimental-bancada/`.
+- **Correções de UAT (sem nova fase):** chave local (`SECRET_KEY`), MIME/bucket (`store-brand-assets`/`visual-signatures`), fronteira JSONB, ordenação topológica/FKs e remoção do campo textual redundante "Oferta".
+
 ## Global (mecânico — `gsd-sdk query progress`)
 
-- `total_phases: 39` / `completed_phases: 34`; `total_plans: 309`; `completed_plans (summaries): 299`; `percent: 87` (frontmatter recalculado pelo SDK em 2026-09-28).
+- `total_phases: 40` / `completed_phases: 36`; `total_plans: 317`; `completed_plans (summaries): 310`; `percent: 98` (frontmatter atualizado em 2026-09-29 após a conclusão da F48.2.3).
 
 ## Accumulated Context — Decisions
 
@@ -85,8 +96,8 @@ Fase anterior: 48.2.1 (Bancada Manual de Prompts do Diretor) — **COMPLETE**; c
 ## Pending Todos
 
 - **F48.2.2 concluída** (8/8 planos; CP1/CP2/CP3 aprovados; UAT técnico aprovado com uma geração real controlada; produção intocada; nenhuma promoção). **OpenSpec verificado, sincronizado e arquivado** (`/opsx-verify` → `/opsx-sync` → `/opsx-archive`) em `openspec/changes/archive/2026-09-28-fase-48-2-2-fundacao-bancada-geracao/`; 3 specs novas (`lab-generation-bench`, `lab-bench-config`, `lab-bench-branding`) e 5 sincronizadas.
-- F48.2.3 — Fidelidade experimental da bancada (importação explícita/unidirecional da identidade das lojas de teste; comando local; nenhuma consulta remota em operação normal; paridade programática dos campos; UI própria permitida) — **não iniciada**.
-- F48.2.4 — Experimento determinístico Oferta 1:1 — **não iniciada**; depende da bancada validada (F48.2.2) e da fidelidade experimental (F48.2.3).
+- **F48.2.3 concluída** (8/8 planos; **CHECKPOINT A** e **CHECKPOINT B** aprovados; UAT manual **sem provider**, custo **US$ 0**; produção intocada). **OpenSpec verificado, sincronizado e arquivado** em `openspec/changes/archive/2026-09-29-fase-48-2-3-fidelidade-experimental-bancada/`; 4 specs novas (`lab-bench-store-import`, `lab-bench-form-parity`, `lab-bench-experimental-briefing`, `lab-bench-prompt-preflight`) e 5 sincronizadas.
+- F48.2.4 — Experimento determinístico Oferta 1:1 — **próxima fase**; depende da bancada validada (F48.2.2) e da fidelidade experimental (F48.2.3).
 - Sessões manuais de teste dos prompts do Diretor (`offer`/`spotlight`/`exclusive`), conduzidas pelo usuário e pelo assistente; qualquer operação real paga exige novo programa e nova autorização humana explícita.
 - F48.2.2 antiga (Auditoria e Otimização do Prompt do Revisor) — **descartada/substituída**; implementação não iniciada; sem artefatos mantidos (recuperável pelo histórico do Git).
 - Exceção preexistente F50 (`src/lib/legal/__tests__/legal-document-versions.test.ts`, `ENOENT`) é falha externa à F48.2.1; registrada como follow-up.
@@ -114,7 +125,7 @@ Fase anterior: 48.2.1 (Bancada Manual de Prompts do Diretor) — **COMPLETE**; c
 
 ## Session Continuity
 
-- Última sessão: 2026-09-28 — encerramento do plano `48-2-2-08` (testes transversais + UAT local/CHECKPOINT 3 + verificação/encerramento da F48.2.2) e **verify/sync/archive manuais** do OpenSpec da F48.2.2, com duas correções de verificação (custo do provider separado do cálculo local; snapshot de branding sem URLs assinadas).
-- Último trabalho: F48.2.2 **concluída** (8/8 planos; CP1/CP2/CP3 aprovados; UAT técnico aprovado com **uma** geração real controlada; produção intocada; `48.2.2-UAT.md` + `48-2-2-VERIFICATION.md` + `48-2-2-08-SUMMARY.md` gerados; OpenSpec **verificado, sincronizado e arquivado**).
-- Próximo trabalho: **F48.2.3 — Fidelidade experimental da bancada** e **F48.2.4 — Experimento determinístico Oferta 1:1**. Sessões manuais de teste dos prompts do Diretor seguem em paralelo, com novo programa e nova autorização humana antes de qualquer chamada paga.
-- Resume file: `None` (F48.2.2 concluída e arquivada; próxima ação é o planejamento da F48.2.3).
+- Última sessão: 2026-09-29 — execução e encerramento da F48.2.3 (8/8 planos; **CHECKPOINT A** e **CHECKPOINT B** aprovados; UAT manual **sem provider**, custo **US$ 0**) e **verify/sync/archive manuais** do OpenSpec.
+- Último trabalho: F48.2.3 **concluída** (8/8 planos; `48.2.3-UAT.md` + `48-2-3-VERIFICATION.md` + `48-2-3-08-SUMMARY.md`; produção intocada; OpenSpec **verificado, sincronizado e arquivado**).
+- Próximo trabalho: **F48.2.4 — Experimento determinístico Oferta 1:1**. Sessões manuais de teste dos prompts do Diretor seguem em paralelo, com novo programa e nova autorização humana antes de qualquer chamada paga.
+- Resume file: `None` (F48.2.3 concluída e arquivada; próxima ação é o planejamento da F48.2.4).
