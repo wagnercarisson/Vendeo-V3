@@ -1,78 +1,76 @@
 {
   "version": "1.0",
-  "timestamp": "2026-09-28T23:30:00.000Z",
-  "phase": "48.2.2",
-  "phase_name": "fundacao-bancada-geracao",
-  "phase_dir": ".planning/phases/48.2.2-fundacao-bancada-geracao",
+  "timestamp": "2026-09-29T19:45:00.000Z",
+  "phase": "48.2.3",
+  "phase_name": "fidelidade-experimental-bancada",
+  "phase_dir": ".planning/phases/48.2.3-fidelidade-experimental-bancada",
   "status": "complete",
   "phase_status": "complete_verified_synced_archived",
-  "plan": "48-2-2-08",
-  "openspec_source": "fase-48-2-2-fundacao-bancada-geracao",
+  "plan": "48-2-3-08",
+  "openspec_source": "fase-48-2-3-fidelidade-experimental-bancada",
   "openspec_archive": {
-    "path": "openspec/changes/archive/2026-09-28-fase-48-2-2-fundacao-bancada-geracao",
+    "path": "openspec/changes/archive/2026-09-29-fase-48-2-3-fidelidade-experimental-bancada",
     "verified": true,
     "synced": true,
     "archived": true,
     "active_changes_remaining": [],
-    "specs_new": ["lab-generation-bench", "lab-bench-config", "lab-bench-branding"],
-    "specs_synced": ["lab-isolation", "lab-artifacts", "lab-gateway-harness", "lab-admin-api", "lab-admin-ui"],
-    "note": "OpenSpec VERIFICADO, SINCRONIZADO e ARQUIVADO em 2026-09-28. Duas correcoes de verificacao aplicadas: (1) custo reportado pelo provider mantido separado do calculo local (nao copiado para estimatedCostUsd); (2) snapshot de branding persistido sem URLs assinadas/JWTs (apenas storagePath + metadados)."
+    "specs_new": ["lab-bench-store-import", "lab-bench-form-parity", "lab-bench-experimental-briefing", "lab-bench-prompt-preflight"],
+    "specs_synced": ["lab-isolation", "lab-generation-bench", "lab-bench-branding", "lab-admin-api", "lab-admin-ui"],
+    "note": "OpenSpec VERIFICADO, SINCRONIZADO e ARQUIVADO em 2026-09-29."
   },
-  "discarded_scope": {
-    "change": "fase-48-2-2-auditoria-otimizacao-prompt-revisor",
-    "date": "2026-09-28",
-    "reason": "escopo descartado/substituido pela nova direcao da F48.2.2 (bancada de geracao no Admin/Laboratorio)",
-    "implemented": false,
-    "artifacts_kept": false,
-    "recoverable": "historico do Git"
+  "previous_phase": {
+    "phase": "48.2.2",
+    "phase_status": "complete_verified_synced_archived",
+    "openspec_archive": "openspec/changes/archive/2026-09-28-fase-48-2-2-fundacao-bancada-geracao"
   },
-  "next_phase_sequence": ["48.2.3", "48.2.4"],
+  "next_phase_sequence": ["48.2.4"],
   "resolved_plans": [
-    "48-2-2-01", "48-2-2-02", "48-2-2-03", "48-2-2-04",
-    "48-2-2-05", "48-2-2-06", "48-2-2-07", "48-2-2-08"
+    "48-2-3-01", "48-2-3-02", "48-2-3-03", "48-2-3-04",
+    "48-2-3-05", "48-2-3-06", "48-2-3-07", "48-2-3-08"
   ],
   "checkpoints": {
-    "cp1_spike": "approved_after_correction",
-    "cp2_presets": "approved_after_correction",
-    "cp3_uat": "approved_after_manual_execution"
+    "checkpoint_a_import": "approved",
+    "checkpoint_b_uat": "approved"
   },
   "final_state": {
     "uat": {
       "approved": true,
-      "run_id": "f6148ea6-f59a-4732-bbbb-530856a5a4d5",
-      "status": "succeeded",
-      "provider": "openai",
-      "model": "gpt-image-2.5-flare",
-      "protocol": "images",
-      "quality": "low",
-      "size": "1024x1024",
-      "latency_ms": 9573,
-      "estimated_cost_usd": 0.00588,
-      "calculated_cost_usd": 0.014592,
-      "provider_reported_cost_usd": null,
-      "cost_source": "bench_local_pricing",
-      "cost_rule_version": "2026-09-bench-1",
-      "coverage": "partial",
-      "paid_calls": 1
+      "mode": "manual_without_provider",
+      "provider_calls": 0,
+      "ai_cost_usd": 0,
+      "stores_imported": [
+        { "id": "3dc7d274-0b57-45ba-883a-7b235056feda", "name": "NovaTek Eletronicos", "has_logo": false, "has_signature": true },
+        { "id": "48b212f8-2b0f-4679-b553-122a601bacac", "name": "Adega Mestre das Geladas", "has_logo": true, "has_signature": false }
+      ]
     },
-    "creative_quality_validated": false,
+    "prompt_sent_equals_approved": true,
     "production_untouched": true,
-    "base_sha": "50ae600792158b781b7ac3fb5f61004b17a96dd2",
+    "base_sha": "73ece00fd54d72af1bd48c23a8458694ed1bd636",
     "base_head_diff": "empty",
     "credits_consumed": false,
     "db_push_executed": false,
-    "promotion": false
+    "promotion": false,
+    "gates": {
+      "typecheck": "ok",
+      "lint": "ok (0 warnings)",
+      "build": "ok",
+      "suite_serial": "389 passed | 1 skipped; 4401 passed | 2 skipped"
+    }
   },
   "artifacts": [
-    ".planning/phases/48.2.2-fundacao-bancada-geracao/48.2.2-UAT.md",
-    ".planning/phases/48.2.2-fundacao-bancada-geracao/48-2-2-VERIFICATION.md",
-    ".planning/phases/48.2.2-fundacao-bancada-geracao/48-2-2-08-SUMMARY.md"
+    ".planning/phases/48.2.3-fidelidade-experimental-bancada/48.2.3-UAT.md",
+    ".planning/phases/48.2.3-fidelidade-experimental-bancada/48-2-3-VERIFICATION.md",
+    ".planning/phases/48.2.3-fidelidade-experimental-bancada/48-2-3-08-SUMMARY.md"
   ],
   "blockers": [],
   "human_actions_pending": [
-    {"action": "Conduzir as sessoes manuais de teste dos prompts do Diretor (offer/spotlight/exclusive)", "context": "Conduzidas pelo usuario e pelo assistente; qualquer chamada paga exige novo programa e nova autorizacao humana", "blocking": false}
+    {
+      "action": "Conduzir as sessoes manuais de teste dos prompts do Diretor (offer/spotlight/exclusive)",
+      "context": "Conduzidas pelo usuario e pelo assistente; qualquer chamada paga exige novo programa e nova autorizacao humana",
+      "blocking": false
+    }
   ],
   "uncommitted_files": [],
-  "next_action": "Iniciar F48.2.3 — Fidelidade experimental da bancada (importacao explicita/unidirecional da identidade das lojas de teste; comando local; nenhuma consulta remota em operacao normal; nenhuma campanha remota copiada; paridade programatica dos campos; UI propria permitida) e, em seguida, F48.2.4 — Experimento deterministico Oferta 1:1. Nenhuma promocao, nenhum db push remoto, nenhuma nova chamada paga pendente na F48.2.2.",
-  "context_notes": "F48.2.2 CONCLUIDA e ARQUIVADA (2026-09-28): 8/8 planos; CP1/CP2/CP3 aprovados; UAT tecnico APROVADO com UMA geracao real controlada (run f6148ea6-...; custo calculado US$ 0,014592, provider reportado null; UI US$ 0,01); qualidade criativa NAO validada (fixtures locais artificiais). Producao intocada (base..HEAD vazio, BASE 50ae6007...); nenhum credito consumido; campaigns/campaign_art_versions/generation_events/ai_model_selection = 0; nenhum supabase db push. OpenSpec VERIFICADO, SINCRONIZADO e ARQUIVADO em openspec/changes/archive/2026-09-28-fase-48-2-2-fundacao-bancada-geracao/. Correcoes de verificacao: (1) custo reportado pelo provider nao substitui mais o calculo local (estimatedCostUsd = resolvedor local; providerReportedCostUsd separado); (2) branding_snapshot persistido sem URLs assinadas/JWTs (D13), com contrato de exibicao mantendo URLs em tempo de leitura. Realinhamento de sequencia: F48.2.3 = Fidelidade experimental da bancada; F48.2.4 = Experimento deterministico Oferta 1:1 (descricao antiga da F48.2.3 deslocada, preservada). Excecao F50 (legal-document-versions.test.ts, ENOENT) e follow-up externo; data-subject-requests.postgres.test.ts e flaky de infra local."
+  "next_action": "Iniciar F48.2.4 - Experimento deterministico Oferta 1:1 (template criativo Oferta 1:1; branding como contrato obrigatorio; hierarquia comercial orientada; aprovacao humana do prompt). Nenhuma promocao, nenhum db push remoto, nenhuma chamada paga pendente na F48.2.3.",
+  "context_notes": "F48.2.3 CONCLUIDA, VERIFICADA, SINCRONIZADA e ARQUIVADA (2026-09-29): 8/8 planos; CHECKPOINT A e CHECKPOINT B aprovados; UAT manual SEM PROVIDER (custo US$ 0); duas lojas reais importadas localmente; prova de prompt_sent byte a byte via adapter gravador. Producao intocada (base..HEAD vazio, BASE 73ece00f...); supabase/migrations limpo; campaigns = 0; credit_* inalteradas. OpenSpec arquivado em openspec/changes/archive/2026-09-29-fase-48-2-3-fidelidade-experimental-bancada/ (4 specs novas, 5 sincronizadas). Correcoes de UAT sem nova fase: chave local (SECRET_KEY), MIME/bucket (store-brand-assets/visual-signatures), fronteira JSONB, ordenacao topologica/FKs e remocao do campo textual 'Oferta'. Sequencia: F48.2.1 (arquivada) -> F48.2.2 (arquivada) -> F48.2.3 (arquivada) -> F48.2.4 (proxima)."
 }
