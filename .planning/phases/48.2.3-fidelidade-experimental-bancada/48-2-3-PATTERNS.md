@@ -10,7 +10,7 @@
 >
 > **Precedente:** a F48.2.2 entregou a bancada (`src/lib/lab/bench/**`, `supabase/lab/bench-schema.sql`, `scripts/lab/48-2-2-bench-bootstrap.mjs`, `src/app/api/admin/laboratorio/bancada/**`, `src/app/(app)/admin/laboratorio/bancada/**`). A F48.2.3 **estende** esses mesmos seams; o PATTERNS da F48.2.2 continua válido para a forma dos arquivos, e este documento foca nos **novos contratos** (import, paridade, briefing, cor, compositor, preflight).
 >
-> **Fronteiras byte-a-byte intocadas (regressão obrigatória):** `src/components/campaign/types.ts` (`BrandProfileSnapshot`), `src/lib/store-identity-service.ts` (`resolveStoreIdentity`), `src/lib/image-generation/services/art-director-briefing.ts`, `src/lib/ai/adapters/registry.ts`, `src/lib/ai/adapters/images.ts`, `src/lib/ai/model-registry.ts`, `prompts/**`, `campaign-images`, formulário produtivo (`src/components/flow/**`) e pipeline de campanha. **Nenhuma** dessas linhas é editada; o `use-campaign-form.ts` é lido/importado apenas para reuso dos helpers puros exportados.
+> **Fronteiras intocadas nesta fase (verificadas por `base..HEAD` — Plano 08):** `src/components/campaign/types.ts` (`BrandProfileSnapshot`), `src/lib/store-identity-service.ts` (`resolveStoreIdentity`), `src/lib/image-generation/services/art-director-briefing.ts`, `src/lib/ai/adapters/registry.ts`, `src/lib/ai/adapters/images.ts`, `src/lib/ai/model-registry.ts`, `prompts/**`, `campaign-images`, formulário produtivo (`src/components/flow/**`) e pipeline de campanha (`src/lib/campaign/**`). **Nenhuma** dessas linhas é editada; o `use-campaign-form.ts` é lido/importado apenas para reuso dos helpers puros exportados. A prova de que permaneceram inalteradas é **temporal** (`base..HEAD`), não um gate de conteúdo congelado.
 
 ---
 
@@ -615,7 +615,7 @@ await setBenchRunInput({
 
 **Seams:**
 - `bench-campaign-form.tsx` — **arquivo inteiro (1-107)**: hoje só tem 3 campos (`productName`/`productDescription`/`offerText`); evoluir para o formulário fiel (nome 60, descrição 120, 1+3 imagens, de/por, selo, intenção, "Preservar imagem original", validade, aviso, informações obrigatórias) reusando `input`/`lab-textarea`/`lab-select`/`lab-radio-group`.
-- `bench-workbench.tsx` — **linhas 68-233**: dono do estado entre painéis; adicionar estado do preflight (composto/editado/aprovado/invalidado) e a propagação do prompt aprovado; invalidação em `handleStoreChange` (100-107).
+- `bench-workbench.tsx` — **linhas 68-233**: dono do estado entre painéis; adicionar estado do preflight (composto/editado/aprovado/invalidado) e a propagação do prompt aprovado; **invalidação centralizada** via ponto único `invalidatePreflight()` que incrementa `preflightRevision` (contador/revisão **em memória**, sem hashes persistidos — D20) para **todas** as entradas usadas na composição: loja/briefing; produto/campanha; imagens/referências; intenção/formato/config; prompt-base; e prompt final **após aprovação** — não apenas `handleStoreChange` (100-107), que passa a chamar o ponto único.
 - `bench-prompt-editor.tsx` — **1-46**: base do painel de preflight (substituir/estender).
 - `bench-branding-panel.tsx` — **83-207**: adicionar o `brandColor` resolvido (M9/§9).
 - `bench-execution-panel.tsx` — **95-138, 181-253, 326-347**: gate "Aprove o prompt compilado antes de estimar ou gerar."; confirmação financeira **separada** da aprovação.
@@ -721,7 +721,7 @@ if (!manifest.some((entry) => entry.id === params.storeId)) {
 
 ---
 
-## Anti-patterns / do-not-touch (byte a byte inalterados)
+## Anti-patterns / do-not-touch (inalterados nesta fase, verificados por `base..HEAD`)
 
 | Arquivo | Por quê |
 |---------|---------|
