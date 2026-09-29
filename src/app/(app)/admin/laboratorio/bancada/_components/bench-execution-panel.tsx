@@ -9,6 +9,7 @@ import {
   BenchEstimatePanel,
   type BenchEstimate,
 } from "./bench-estimate-panel";
+import type { BenchPreflightEvidenceView } from "./bench-preflight-panel";
 
 /**
  * Painel de execução da bancada (F48.2.2, D12/D13/T-48-2-2-39/39b).
@@ -40,16 +41,27 @@ const STATUS_LABELS: Record<string, string> = {
 export interface BenchProductPayload {
   name: string;
   description?: string;
+  priceCents?: number;
+  originalPriceCents?: number;
+  mandatoryArtworkText?: string;
+  preserveImageContext?: boolean;
 }
 
 export interface BenchOfferPayload {
   text: string;
+  badge?: string;
+  campaignIntent?: "offer" | "spotlight" | "exclusive";
+  validity?: string;
+  showIllustrativeNotice?: boolean;
 }
 
 interface BenchExecutionPanelProps {
   storeId: string;
   presetId: string;
-  prompt: string;
+  /** Prompt final aprovado no preflight; `null` bloqueia a geração. */
+  approvedPrompt: string | null;
+  /** Evidência mínima do preflight, persistida no run (D20). */
+  preflightEvidence: BenchPreflightEvidenceView | null;
   product: BenchProductPayload;
   offer: BenchOfferPayload;
   runId: string | null;
@@ -70,7 +82,8 @@ interface BenchStreamEvent {
 export function BenchExecutionPanel({
   storeId,
   presetId,
-  prompt,
+  approvedPrompt,
+  preflightEvidence,
   product,
   offer,
   runId,
@@ -86,15 +99,19 @@ export function BenchExecutionPanel({
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const promptApproved =
+    typeof approvedPrompt === "string" && approvedPrompt.trim().length > 0;
   const uploadReady = runId !== null && operationId !== null && references.length > 0;
-  const disabledReason = !uploadReady
-    ? "Envie as imagens do produto antes de gerar."
-    : null;
+  const disabledReason = !promptApproved
+    ? "Aprove o prompt compilado antes de estimar ou gerar."
+    : !uploadReady
+      ? "Envie as imagens do produto antes de gerar."
+      : null;
   const generateDisabled = disabled || running || estimating || disabledReason !== null;
 
   function validateBeforeGenerate(): string | null {
+    if (!promptApproved) return "Aprove o prompt compilado antes de estimar ou gerar.";
     if (!uploadReady) return "Envie as imagens do produto antes de gerar.";
-    if (prompt.trim().length === 0) return "Escreva o prompt antes de gerar.";
     if (product.name.trim().length === 0) return "Informe o nome do produto.";
     if (offer.text.trim().length === 0) return "Informe o texto da oferta.";
     return null;
@@ -179,8 +196,13 @@ export function BenchExecutionPanel({
   }
 
   async function handleConfirm() {
-    if (runId === null || operationId === null) {
-      setError("Envie as imagens do produto antes de gerar.");
+    if (
+      runId === null ||
+      operationId === null ||
+      approvedPrompt === null ||
+      preflightEvidence === null
+    ) {
+      setError("Aprove o prompt compilado antes de estimar ou gerar.");
       setConfirmOpen(false);
       return;
     }
@@ -198,11 +220,12 @@ export function BenchExecutionPanel({
           runId,
           storeId,
           presetId,
-          prompt,
+          prompt: approvedPrompt,
           references,
           confirmed: true,
           product,
           offer,
+          preflight: preflightEvidence,
         }),
       });
 

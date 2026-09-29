@@ -3,11 +3,12 @@
 import { LabTextarea } from "../../_components/lab-textarea";
 
 /**
- * Editor manual do prompt da bancada (F48.2.2, D3).
+ * Editor do **prompt-base** manual da bancada (F48.2.3, D17/D19).
  *
- * O prompt é **manual**. O branding da loja é apenas exibido/registrado — **não**
- * é concatenado automaticamente ao prompt nem enviado ao modelo. Este componente
- * não faz nenhuma composição: mostra exatamente o texto informado pelo operador.
+ * O prompt-base é a instrução manual do operador; o compositor determinístico o
+ * preserva **integralmente** no bloco `[INSTRUÇÕES DO PROMPT-BASE]` do prompt
+ * compilado — sem filtragem/reescrita lexical. O editor do **prompt compilado**
+ * (compor/editar/aprovar) é o `BenchPreflightPanel`.
  */
 
 interface BenchPromptEditorProps {
@@ -38,7 +39,7 @@ export function BenchPromptEditor({
         value={value}
         disabled={disabled}
         rows={6}
-        hint="Prompt manual — o branding não é concatenado automaticamente."
+        hint="Prompt-base manual — o compositor o preserva integralmente no bloco [INSTRUÇÕES DO PROMPT-BASE]."
         onChange={(event) => onChange(event.target.value)}
       />
     </section>

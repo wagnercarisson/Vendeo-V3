@@ -54,6 +54,11 @@ import BancadaPage from "@/app/(app)/admin/laboratorio/bancada/page";
 import LaboratorioLayout from "@/app/(app)/admin/laboratorio/layout";
 
 import { BenchBrandingPanel } from "../bench-branding-panel";
+import { BenchBrandColorIndicator } from "../bench-brand-color-indicator";
+import {
+  BenchCampaignForm,
+  EMPTY_BENCH_CAMPAIGN_FORM,
+} from "../bench-campaign-form";
 import { BenchEvidencePanel } from "../bench-evidence-panel";
 import {
   BENCH_ACTIVE_RUN_MESSAGE,
@@ -61,6 +66,7 @@ import {
 } from "../bench-execution-panel";
 import { BenchImageUpload } from "../bench-image-upload";
 import { BenchPresetSelector } from "../bench-preset-selector";
+import { BenchPreflightPanel } from "../bench-preflight-panel";
 import { BenchPromptEditor } from "../bench-prompt-editor";
 
 const COMPONENTS_DIR = "src/app/(app)/admin/laboratorio/bancada/_components";
@@ -281,6 +287,9 @@ describe("contrato de UI — branding, upload, prompt e presets", () => {
       "src",
       "https://storage.local/signed/assinatura.png",
     );
+    // O brandColor resolvido é exibido de forma somente leitura.
+    expect(screen.getByText("Cor da marca (resolvida)")).toBeInTheDocument();
+    expect(screen.getByText("#16A34A")).toBeInTheDocument();
   });
 
   it("não contém operação de escrita no branding (somente leitura)", () => {
@@ -400,8 +409,155 @@ describe("contrato de UI — branding, upload, prompt e presets", () => {
     expect(textarea.value).toBe("Foto do produto em fundo claro");
     expect(textarea.value).not.toMatch(/Empório Aurora|Branding/);
     expect(
-      screen.getByText(/branding não é concatenado automaticamente/),
+      screen.getByText(/preserva integralmente/),
     ).toBeInTheDocument();
+  });
+});
+
+// ─── 2b. Formulário fiel, brandColor e preflight ─────────────────────────────
+
+describe("contrato de UI — formulário fiel e brandColor", () => {
+  it("exibe os campos fiéis e 'Preservar imagem original' apenas fora de Oferta", () => {
+    const { rerender } = render(
+      <BenchCampaignForm
+        value={{ ...EMPTY_BENCH_CAMPAIGN_FORM, campaignIntent: "offer" }}
+        onChange={() => {}}
+      />,
+    );
+
+    expect(screen.getByLabelText("Nome do produto")).toBeInTheDocument();
+    expect(screen.getByLabelText("Descrição (opcional)")).toBeInTheDocument();
+    expect(screen.getByLabelText("Preço original")).toBeInTheDocument();
+    expect(screen.getByLabelText("Preço de venda")).toBeInTheDocument();
+    expect(screen.getByText("Intenção da campanha")).toBeInTheDocument();
+    expect(screen.getByLabelText("Selo promocional")).toBeInTheDocument();
+    expect(screen.getByLabelText("Validade da oferta")).toBeInTheDocument();
+    expect(screen.getByText("Imagem meramente ilustrativa")).toBeInTheDocument();
+    expect(screen.getByLabelText("Informações obrigatórias na arte")).toBeInTheDocument();
+
+    // Em Oferta, "Preservar imagem original" não é oferecido.
+    expect(screen.queryByText("Preservar imagem original")).toBeNull();
+
+    rerender(
+      <BenchCampaignForm
+        value={{ ...EMPTY_BENCH_CAMPAIGN_FORM, campaignIntent: "spotlight" }}
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.getByText("Preservar imagem original")).toBeInTheDocument();
+  });
+
+  it("exibe o indicador do brandColor resolvido (somente leitura)", () => {
+    render(<BenchBrandColorIndicator color="#22C55E" />);
+
+    expect(screen.getByText("Cor da marca (resolvida)")).toBeInTheDocument();
+    expect(screen.getByText("#22C55E")).toBeInTheDocument();
+  });
+
+  it("o formulário não faz escrita produtiva e é desktop-only (sem votação/lado a lado)", () => {
+    const source = readComponentSource("bench-campaign-form.tsx");
+    expect(source).not.toMatch(/lado a lado|vota(ção|r)|enquete/i);
+    expect(source).not.toContain("campaign-images");
+    expect(source).not.toContain("fetch(");
+  });
+});
+
+describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
+  it("oferece 'Compor prompt' e 'Aprovar prompt' e mostra o estado", () => {
+    render(
+      <BenchPreflightPanel
+        status="idle"
+        compiledPrompt=""
+        finalPrompt=""
+        composerVersion=""
+        composing={false}
+        error={null}
+        onCompose={() => {}}
+        onEditFinal={() => {}}
+        onApprove={() => {}}
+      />,
+    );
+
+    expect(screen.getByTestId("bench-compose-button")).toHaveTextContent("Compor prompt");
+    expect(screen.getByTestId("bench-approve-button")).toHaveTextContent("Aprovar prompt");
+    expect(screen.getByTestId("bench-preflight-status")).toHaveTextContent(
+      "Prompt não composto",
+    );
+    // Sem composição, o prompt compilado não é exibido e aprovar fica desabilitado.
+    expect(screen.queryByRole("textbox", { name: "Prompt compilado" })).toBeNull();
+    expect(screen.getByTestId("bench-approve-button")).toBeDisabled();
+  });
+
+  it("exibe o prompt compilado, habilita aprovação e mostra o estado aprovado", () => {
+    const { rerender } = render(
+      <BenchPreflightPanel
+        status="composed"
+        compiledPrompt="[IDENTIDADE E DIREÇÃO VISUAL]\nLoja: Aurora"
+        finalPrompt="[IDENTIDADE E DIREÇÃO VISUAL]\nLoja: Aurora"
+        composerVersion="48.2.3-prompt-composer-v1"
+        composing={false}
+        error={null}
+        onCompose={() => {}}
+        onEditFinal={() => {}}
+        onApprove={() => {}}
+      />,
+    );
+
+    expect(screen.getByRole("textbox", { name: "Prompt compilado" })).toBeInTheDocument();
+    expect(screen.getByTestId("bench-approve-button")).toBeEnabled();
+
+    rerender(
+      <BenchPreflightPanel
+        status="approved"
+        compiledPrompt="[IDENTIDADE E DIREÇÃO VISUAL]\nLoja: Aurora"
+        finalPrompt="[IDENTIDADE E DIREÇÃO VISUAL]\nLoja: Aurora"
+        composerVersion="48.2.3-prompt-composer-v1"
+        composing={false}
+        error={null}
+        onCompose={() => {}}
+        onEditFinal={() => {}}
+        onApprove={() => {}}
+      />,
+    );
+    expect(screen.getByTestId("bench-preflight-status")).toHaveTextContent(
+      "Prompt aprovado",
+    );
+  });
+
+  it("mostra o estado de invalidação em accent.amber", () => {
+    render(
+      <BenchPreflightPanel
+        status="invalidated"
+        compiledPrompt=""
+        finalPrompt=""
+        composerVersion=""
+        composing={false}
+        error={null}
+        onCompose={() => {}}
+        onEditFinal={() => {}}
+        onApprove={() => {}}
+      />,
+    );
+
+    expect(screen.getByTestId("bench-preflight-status")).toHaveTextContent(
+      "Prompt invalidado — recomponha e aprove",
+    );
+  });
+
+  it("o workbench invalida o preflight de forma centralizada (ponto único + revisão)", () => {
+    const source = readComponentSource("bench-workbench.tsx");
+    expect(source).toContain("invalidatePreflight");
+    expect(source).toContain("preflightRevision");
+    // A invalidação é chamada por TODAS as entradas usadas na composição.
+    expect(source).toContain("handleStoreChange");
+    expect(source).toContain("handleCampaignChange");
+    expect(source).toContain("handlePromptBaseChange");
+    expect(source).toContain("handlePresetChange");
+    expect(source).toContain("handleUploaded");
+    // Sem hashes persistidos e sem comparação lado a lado/votação.
+    expect(source).not.toMatch(/createHash|sha256/i);
+    expect(source).not.toMatch(/lado a lado|vota(ção|r)|enquete/i);
+    expect(source).not.toContain("campaign-images");
   });
 });
 
@@ -422,6 +578,14 @@ const ESTIMATE = {
   isEstimate: true,
   costSource: "bench_local_pricing",
   costRuleVersion: "2026-09-bench-1",
+};
+
+const PREFLIGHT_EVIDENCE = {
+  promptBase: "prompt base",
+  promptCompiled: "prompt compilado",
+  promptApproved: "Foto do produto em fundo claro",
+  promptBlocks: { "INSTRUÇÕES DO PROMPT-BASE": "prompt base" },
+  composerVersion: "48.2.3-prompt-composer-v1",
 };
 
 const EVIDENCE_RUN = {
@@ -488,7 +652,8 @@ function renderExecutionPanel(onCompleted = vi.fn()) {
     <BenchExecutionPanel
       storeId={STORE_A.id}
       presetId={PRESET_ENABLED.id}
-      prompt="Foto do produto em fundo claro"
+      approvedPrompt="Foto do produto em fundo claro"
+      preflightEvidence={PREFLIGHT_EVIDENCE}
       product={{ name: "Café especial" }}
       offer={{ text: "De R$ 39,90 por R$ 29,90" }}
       runId={RUN_ID}
@@ -567,8 +732,32 @@ describe("contrato de UI — estimativa, confirmação, execução e evidências
     expect(body.references).toEqual(REFERENCES);
     expect(body.storeId).toBe(STORE_A.id);
     expect(body.presetId).toBe(PRESET_ENABLED.id);
+    // O prompt enviado é exatamente o prompt final aprovado + evidência do preflight.
+    expect(body.prompt).toBe("Foto do produto em fundo claro");
+    expect(body.preflight).toEqual(PREFLIGHT_EVIDENCE);
 
     await waitFor(() => expect(onCompleted).toHaveBeenCalledWith(RUN_ID));
+  });
+
+  it("bloqueia a geração sem prompt aprovado", () => {
+    render(
+      <BenchExecutionPanel
+        storeId={STORE_A.id}
+        presetId={PRESET_ENABLED.id}
+        approvedPrompt={null}
+        preflightEvidence={null}
+        product={{ name: "Café especial" }}
+        offer={{ text: "De R$ 39,90 por R$ 29,90" }}
+        runId={RUN_ID}
+        references={REFERENCES}
+        operationId={OPERATION_ID}
+      />,
+    );
+
+    expect(
+      screen.getByText("Aprove o prompt compilado antes de estimar ou gerar."),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("bench-generate-button")).toBeDisabled();
   });
 
   it("consome exatamente um terminal (done/error) mesmo com eventos repetidos", async () => {
