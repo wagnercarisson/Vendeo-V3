@@ -19,11 +19,13 @@ import {
   buildImportAuditRow,
   buildInsertStatement,
   buildSanitizedIdentity,
+  buildSanitizedProfileRow,
   computeChecksum,
   createReadOnlySourceClient,
   importOneStore,
   isForbiddenSourceTarget,
   materializeStoreAssets,
+  orderAssetsTopologically,
   parseImportArgs,
   parseSupabaseStatusEnv,
   readLocalIdentity,
@@ -1092,5 +1094,83 @@ describe("mapeamento de bucket de assets (correção UAT)", () => {
     expect(objects).toContainEqual({ bucket: "store-brand-assets", path: "x/logo.png" });
     expect(objects).toContainEqual({ bucket: "visual-signatures", path: "x/sig.png" });
     expect(objects.some((object) => object.bucket === "store-logos")).toBe(false);
+  });
+});
+
+describe("ordenação topológica de assets (endurecimento UAT)", () => {
+  const parent = { id: "p", store_id: STORE_ID, parent_asset_id: null, asset_type: "logo", variant_type: "original" };
+  const childA = { id: "a", store_id: STORE_ID, parent_asset_id: "p", asset_type: "logo", variant_type: "normalized" };
+  const childB = { id: "b", store_id: STORE_ID, parent_asset_id: "p", asset_type: "logo", variant_type: "on_light" };
+
+  it("coloca o pai antes dos filhos e mantém ordem estável entre irmãos", () => {
+    const ordered = orderAssetsTopologically([childA, childB, parent]);
+    expect(ordered.map((asset) => asset.id)).toEqual(["p", "a", "b"]);
+  });
+
+  it("aceita lista vazia", () => {
+    expect(orderAssetsTopologically([])).toEqual([]);
+  });
+
+  it("recusa IDs duplicados", () => {
+    expect(() => orderAssetsTopologically([parent, { ...childA, id: "p" }])).toThrow(/duplicado/);
+  });
+
+  it("recusa parent ausente do conjunto", () => {
+    expect(() => orderAssetsTopologically([childA])).toThrow(/parent_asset_id ausente/);
+  });
+
+  it("recusa pai de outra loja", () => {
+    expect(() => orderAssetsTopologically([{ ...parent, store_id: "outra-loja" }, childA])).toThrow(/outra loja/);
+  });
+
+  it("recusa ciclo", () => {
+    const a = { id: "a", store_id: STORE_ID, parent_asset_id: "b" };
+    const b = { id: "b", store_id: STORE_ID, parent_asset_id: "a" };
+    expect(() => orderAssetsTopologically([a, b])).toThrow(/Ciclo/);
+  });
+
+  it("preserva parent_asset_id (não remove)", () => {
+    const ordered = orderAssetsTopologically([childA, parent]);
+    expect(ordered.find((asset) => asset.id === "a")?.parent_asset_id).toBe("p");
+  });
+});
+
+describe("guarda de FKs do perfil (endurecimento UAT)", () => {
+  it("zera active_logo_asset_id/visual_signature_id quando o referenciado não é importado", () => {
+    const profile = {
+      id: "prof",
+      store_id: STORE_ID,
+      source: "logo_analysis",
+      status: "synced",
+      active_logo_asset_id: "nao-importado",
+      visual_signature_id: "nao-importado",
+    };
+    const row = buildSanitizedProfileRow({
+      profile,
+      storeId: STORE_ID,
+      importedAssetIds: new Set(["outro"]),
+      importedSignatureId: "sig-1",
+    });
+    expect(row?.active_logo_asset_id).toBeNull();
+    expect(row?.visual_signature_id).toBeNull();
+  });
+
+  it("preserva as FKs quando o referenciado é importado", () => {
+    const profile = {
+      id: "prof",
+      store_id: STORE_ID,
+      source: "logo_analysis",
+      status: "synced",
+      active_logo_asset_id: "asset-1",
+      visual_signature_id: "sig-1",
+    };
+    const row = buildSanitizedProfileRow({
+      profile,
+      storeId: STORE_ID,
+      importedAssetIds: new Set(["asset-1"]),
+      importedSignatureId: "sig-1",
+    });
+    expect(row?.active_logo_asset_id).toBe("asset-1");
+    expect(row?.visual_signature_id).toBe("sig-1");
   });
 });

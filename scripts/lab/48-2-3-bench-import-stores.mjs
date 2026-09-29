@@ -709,9 +709,78 @@ export function buildSanitizedStoreRow({ store, ownerUserId }) {
   };
 }
 
-/** Reconstrói a linha local do perfil (preserva `id` e IDs de FK). */
-export function buildSanitizedProfileRow({ profile, storeId }) {
+/**
+ * Ordenação TOPOLÓGICA determinística dos `store_brand_assets`:
+ *   - assets sem `parent_asset_id` primeiro;
+ *   - cada pai ANTES de seus filhos;
+ *   - ordem estável entre irmãos (ordem de entrada).
+ * Valida ANTES de qualquer upload/escrita: IDs únicos; `parent_asset_id` no
+ * conjunto importado; pai e filho da MESMA loja; ausência de ciclos.
+ * Qualquer violação → erro sanitizado.
+ * @param {any[]} assets
+ * @returns {any[]}
+ */
+export function orderAssetsTopologically(assets) {
+  const list = Array.isArray(assets) ? assets : [];
+  const byId = new Map();
+  for (const asset of list) {
+    const id = asset && typeof asset.id === "string" ? asset.id : null;
+    if (!id) {
+      throw new BenchImportBlockedError("import_asset_id_invalid", "Asset de branding sem id.");
+    }
+    if (byId.has(id)) {
+      throw new BenchImportBlockedError("import_asset_duplicate_id", `ID de asset duplicado: ${id}`);
+    }
+    byId.set(id, asset);
+  }
+
+  for (const asset of list) {
+    const parentId = asset.parent_asset_id ?? null;
+    if (parentId == null) continue;
+    const parent = byId.get(parentId);
+    if (!parent) {
+      throw new BenchImportBlockedError(
+        "import_asset_parent_missing",
+        `parent_asset_id ausente do conjunto importado: ${parentId}`,
+      );
+    }
+    if ((parent.store_id ?? null) !== (asset.store_id ?? null)) {
+      throw new BenchImportBlockedError(
+        "import_asset_parent_other_store",
+        `Asset ${asset.id} referencia pai de outra loja: ${parentId}`,
+      );
+    }
+  }
+
+  const ordered = [];
+  const done = new Set();
+  const inStack = new Set();
+  const visit = (asset) => {
+    if (done.has(asset.id)) return;
+    if (inStack.has(asset.id)) {
+      throw new BenchImportBlockedError("import_asset_cycle", `Ciclo em parent_asset_id: ${asset.id}`);
+    }
+    inStack.add(asset.id);
+    const parentId = asset.parent_asset_id ?? null;
+    if (parentId != null) visit(byId.get(parentId));
+    inStack.delete(asset.id);
+    done.add(asset.id);
+    ordered.push(asset);
+  };
+  for (const asset of list) visit(asset);
+  return ordered;
+}
+
+/**
+ * Reconstrói a linha local do perfil (preserva `id`; mantém as FKs de asset/
+ * assinatura SOMENTE quando o referenciado pertence ao conjunto importado —
+ * evita violação de FK por referência a registro arquivado/não importado).
+ */
+export function buildSanitizedProfileRow({ profile, storeId, importedAssetIds, importedSignatureId } = {}) {
   if (!profile) return null;
+  const assetIds = importedAssetIds instanceof Set ? importedAssetIds : new Set();
+  const activeLogoAssetId = profile.active_logo_asset_id ?? null;
+  const visualSignatureId = profile.visual_signature_id ?? null;
   return {
     id: profile.id,
     store_id: storeId ?? profile.store_id ?? null,
@@ -727,8 +796,11 @@ export function buildSanitizedProfileRow({ profile, storeId }) {
     campaign_guidelines: profile.campaign_guidelines ?? null,
     campaign_brief: profile.campaign_brief ?? null,
     inferred_primary_color: profile.inferred_primary_color ?? null,
-    active_logo_asset_id: profile.active_logo_asset_id ?? null,
-    visual_signature_id: profile.visual_signature_id ?? null,
+    active_logo_asset_id: activeLogoAssetId && assetIds.has(activeLogoAssetId) ? activeLogoAssetId : null,
+    visual_signature_id:
+      visualSignatureId && importedSignatureId && visualSignatureId === importedSignatureId
+        ? visualSignatureId
+        : null,
   };
 }
 
@@ -797,20 +869,30 @@ export function buildSanitizedIdentity(params) {
     });
   });
 
+  const importedAssetIds = new Set(assetRows.map((row) => row.id));
+
   const signatureEntry =
     storedSignature && state.signature && storedSignature.signatureId === state.signature.id
       ? storedSignature
       : null;
 
+  const signatureRow = buildSanitizedSignatureRow({
+    signature: state.signature,
+    storeId: store.id,
+    localStoragePath: signatureEntry?.localPath,
+  });
+  const importedSignatureId = signatureRow?.id ?? null;
+
   return {
     store: buildSanitizedStoreRow({ store, ownerUserId }),
-    profile: buildSanitizedProfileRow({ profile: state.profile, storeId: store.id }),
-    assets: assetRows,
-    signature: buildSanitizedSignatureRow({
-      signature: state.signature,
+    profile: buildSanitizedProfileRow({
+      profile: state.profile,
       storeId: store.id,
-      localStoragePath: signatureEntry?.localPath,
+      importedAssetIds,
+      importedSignatureId,
     }),
+    assets: assetRows,
+    signature: signatureRow,
   };
 }
 
@@ -1256,6 +1338,11 @@ export async function importOneStore(params) {
   const store = await confirmTestStore(source, storeId);
   const state = await readCurrentState(source, storeId);
 
+  // Validação + ordenação topológica ANTES de qualquer upload/escrita local:
+  // IDs únicos, parent no conjunto, mesma loja, sem ciclos; pais antes dos filhos.
+  const orderedAssets = orderAssetsTopologically(state.assets);
+  const orderedState = { ...state, assets: orderedAssets };
+
   const base = {
     storeId,
     storeName: store.name ?? null,
@@ -1263,7 +1350,7 @@ export async function importOneStore(params) {
     profileSource: state.profileSource,
     profileStatus: state.profileStatus,
     syncedProfiles: state.profile ? 1 : 0,
-    assetCount: state.assets.length,
+    assetCount: orderedAssets.length,
     hasSignature: state.signature !== null,
   };
 
@@ -1275,17 +1362,23 @@ export async function importOneStore(params) {
   const owner = await ensureSyntheticOwner({ destination, storeId });
 
   // D8 (1)(2) — baixar e gravar assets locais em paths versionados, antes da transação.
-  const materialized = await materializeStoreAssets({ source, destination, storeId, state });
+  const materialized = await materializeStoreAssets({ source, destination, storeId, state: orderedState });
 
   // D9 — ler os paths antigos, montar o novo conjunto e rodar a ÚNICA transação.
   const oldObjects = await readLocalIdentity(db, storeId);
   const identity = buildSanitizedIdentity({
     store,
     ownerUserId: owner.userId,
-    state,
+    state: orderedState,
     storedAssets: materialized.storedAssets,
     storedSignature: materialized.storedSignature,
   });
+  const sourceProfile = state.profile ?? null;
+  const profileFkAdjusted = Boolean(
+    sourceProfile &&
+      ((sourceProfile.active_logo_asset_id ?? null) !== (identity.profile?.active_logo_asset_id ?? null) ||
+        (sourceProfile.visual_signature_id ?? null) !== (identity.profile?.visual_signature_id ?? null)),
+  );
   const audit = buildImportAuditRow({
     storeId,
     sourceHost: source.host,
@@ -1300,6 +1393,7 @@ export async function importOneStore(params) {
       hasSignature: state.signature !== null,
       objectCount: materialized.newObjects.length,
       destinationHost: destination.host ?? null,
+      profileFkAdjusted,
     },
   });
 
