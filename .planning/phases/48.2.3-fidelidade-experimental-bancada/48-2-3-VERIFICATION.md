@@ -49,7 +49,7 @@ Executados com `npm.cmd` (exit code real; o shim `npm` no PowerShell não propag
 | Typecheck | `npm.cmd run typecheck` | ✅ exit 0 |
 | Lint | `npm.cmd run lint` | ✅ exit 0 |
 | Build | `npm.cmd run build` | ✅ exit 0 |
-| Suíte completa (com exceções externas excluídas) | `npm.cmd test -- --exclude "**/legal-document-versions.test.ts" --exclude "**/access-request-limit.postgres.test.ts"` | ✅ exit 0 — `Test Files 388 passed (388)` / `Tests 4350 passed \| 1 skipped (4351)` |
+| Suíte completa (exceção externa `legal` + workaround temporário `access-request`) | `npm.cmd test -- --exclude "**/legal-document-versions.test.ts" --exclude "**/access-request-limit.postgres.test.ts"` | ✅ exit 0 — `Test Files 388 passed (388)` / `Tests 4350 passed \| 1 skipped (4351)` — ver §5: a 2ª exclusão **não** é permanente |
 | Fronteira/paridade/compositor | `npm.cmd test -- --run src/lib/lab/bench/__tests__/bench-import.contract.test.ts src/lib/lab/bench/__tests__/form-parity.contract.test.ts src/lib/lab/bench/__tests__/prompt-composer.contract.test.ts` | ✅ exit 0 — `3 passed (3)` / `98 passed (98)` |
 | Isolamento/architecture-guard/branding/snapshot/API/UI | `npm.cmd test -- --run src/lib/lab/__tests__/lab-isolation.contract.test.ts src/lib/ai/__tests__/architecture-guard.test.ts src/lib/lab/bench/__tests__/resolve-bench-brand-color.test.ts src/lib/lab/bench/__tests__/branding-service.test.ts src/lib/lab/bench/__tests__/campaign-snapshot.test.ts src/app/api/admin/laboratorio/bancada/__tests__/bench-api.contract.test.ts "src/app/(app)/admin/laboratorio/bancada/_components/__tests__/bench-ui.contract.test.tsx"` | ✅ exit 0 — `7 passed (7)` / `183 passed (183)` |
 
@@ -90,12 +90,17 @@ crédito, nenhuma chamada paga** em implementação/testes/CI.
 1. **F50 (externa à fase):** `src/lib/legal/__tests__/legal-document-versions.test.ts` → `ENOENT`
    do caminho antigo da change arquivada da F50. **Não corrigida** nesta fase; follow-up externo.
    Excluída explicitamente do gate via `--exclude` — **não** é sucesso silencioso.
-2. **F50 (externa à fase):** `src/lib/__tests__/access-request-limit.postgres.test.ts` — teste de
-   integração Postgres local da F50 (commit `9c017ad8`) que falha por estado poluído do Postgres
-   local (`access_limit_reached`); **não** tocado por esta fase. Excluída explicitamente do gate
-   via `--exclude` — **não** é sucesso silencioso.
+2. **NÃO é exceção permanente — resolvido por limpeza de estado:** `src/lib/__tests__/access-request-limit.postgres.test.ts`
+   (F50, commit `9c017ad8`) falhava por **poluição do Postgres local** deixada por execuções
+   anteriores da própria suíte (6 linhas órfãs `approved-0..5-*@example.test`, somadas ao limite de 50).
+   Após limpar essas linhas, o teste passa **6/6 em isolamento** (2026-09-29) e **não** deve ser
+   excluído permanentemente do gate. A exclusão usada na Task 1 foi **workaround temporário**.
 
-Ambas são **externas** e **preexistentes**; nenhuma foi corrigida nesta fase.
+**Nota de flakiness (não é exceção):** os testes de integração Postgres (`access-request-limit`,
+`data-subject-requests`, `operation-cost-service`, `credit-f50-11`) são sensíveis à concorrência do
+runner: sob carga (suíte completa em paralelo) podem estourar timeout/contensão de DB, mas passam
+em isolamento. Recomenda-se rodar o gate final com paralelismo reduzido (ou por arquivo) para evitar
+falso-negativo. **Somente `legal-document-versions.test.ts` é exceção externa permanente.**
 
 ---
 

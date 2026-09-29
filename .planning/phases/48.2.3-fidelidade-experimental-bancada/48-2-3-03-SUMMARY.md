@@ -176,3 +176,19 @@ None - no external service configuration required. Nenhuma credencial remota é 
 ---
 *Phase: 48.2.3-fidelidade-experimental-bancada*
 *Completed: 2026-09-29 (3/3 tasks; CHECKPOINT A aprovado)*
+
+## Correção descoberta no UAT (2026-09-29) — chave do destino local
+
+**Sintoma:** a primeira tentativa de importação (autorizada no CHECKPOINT B) falhou em `import_destination_user_lookup_failed: invalid JWT ... signing method HS256 is invalid`, **antes** de materializar assets/transação. Nenhuma importação foi concluída; apenas a leitura remota confirmou os IDs.
+
+**Causa:** `resolveLocalDestination` dava precedência a `SUPABASE_SERVICE_ROLE_KEY` do `.env.local` (JWT/HS256 antigo) e `readSupabaseStatusEnv` ignorava a chave moderna `SECRET_KEY` (`sb_secret_...`) retornada pelo stack local.
+
+**Correção (commit `7193266c`):**
+1. `parseSupabaseStatusEnv` (novo, puro) reconhece `SECRET_KEY` **e** `SERVICE_ROLE_KEY` (além de `API_URL`/`DB_URL`).
+2. Precedência da chave do destino: `BENCH_LOCAL_SERVICE_ROLE_KEY` (override explícito) → chave atual do stack (`SECRET_KEY`, senão `SERVICE_ROLE_KEY`) → `SUPABASE_SERVICE_ROLE_KEY` (último recurso).
+3. `BENCH_IMPORT_SOURCE_SERVICE_ROLE_KEY` **nunca** é usada como chave do destino.
+4. `readSupabaseStatusEnv` não é mais fatal quando o stack está ausente (retorna `{}`).
+
+**Testes:** 6 novos casos em `bench-import.contract.test.ts` (SECRET_KEY moderna vence JWT legado; SERVICE_ROLE_KEY do stack; override explícito; source key nunca usada; destino não local recusado). Suíte: `bench-import` + `lab-isolation` = 51 verdes; fase (`src/lib/lab/bench` + isolation + architecture-guard) = 319 verdes; `npm.cmd run typecheck` exit 0.
+
+**Estado:** correção aplicada; **nenhuma** nova leitura remota nem execução da importação após a correção (aguardando revisão humana).
