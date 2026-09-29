@@ -239,3 +239,20 @@ None - no external service configuration required. Nenhuma credencial remota é 
 - **HEIC/HEIF pertencem ao upload de campanha, não ao contrato atual dos buckets de branding** (nenhum dos três buckets os aceita).
 - Testes: +6 (HEIC/HEIF recusados nos buckets de branding; SVG só em `visual-signatures`; JPEG/WEBP recusados em `visual-signatures`; PNG nos três; falha antes de qualquer upload; assinatura SVG aceita). `bench-import` + `lab-isolation` + `architecture-guard` = **85 verdes**; `typecheck` exit 0.
 - Smoke local: validação 4/4 recusas; PNG permitido nos 3; round-trip + cleanup OK (`removed: 3, failed: 0`).
+
+## Correção descoberta no UAT (2026-09-29) — fronteira JSONB com node-postgres
+
+**Sintoma:** a importação remota autorizada falhou com `[bench-import] invalid input syntax for type json` na transação local; rollback limpo (nada persistido; sem objetos órfãos). A 1ª loja (`3dc7d274-…`) foi lida na origem; a 2ª (`48b212f8-…`) não foi processada (abort na 1ª falha).
+
+**Causa:** `buildSanitizedProfileRow` preserva arrays/objetos em memória (correto por D7), mas `buildInsertStatement` passava arrays JS diretamente ao `pg`, que os serializa como **literal de array Postgres** (`{...}`) — inválido para colunas `jsonb` (`brand_colors_chosen`, `logo_colors_detected`).
+
+**Correção (commit `a2aeb510`):**
+1. Allowlist explícita `JSONB_COLUMNS_BY_TABLE`: `store_brand_profiles` (safe_color_tokens, brand_colors_chosen, logo_colors_detected), `store_brand_assets` (metadata), `store_visual_signatures` (metadata), `lab_bench_store_imports` (detail).
+2. `buildInsertStatement` usa `$n::jsonb` + `JSON.stringify` apenas nessas colunas; `null` permanece SQL NULL; demais colunas inalteradas.
+3. Builders de domínio **não** serializam (conversão só na fronteira com node-postgres).
+
+**Testes:** +5 (arrays, objetos, objeto vazio, null, campos comuns não serializados). `bench-import` + `lab-isolation` + `architecture-guard` = **90 verdes**; `typecheck` exit 0.
+
+**Smoke local (PostgreSQL real, com ROLLBACK):** perfil com `safe_color_tokens` + 2 arrays, `metadata` (asset e assinatura vazio) e `detail` aninhado → todos lidos como JSONB estruturado (objeto/array), **não** strings; `SMOKE_JSONB_OK`; resíduos = 0.
+
+**Estado:** correção aplicada e validada localmente; **nenhuma** nova leitura remota nem importação. Owner sintético `bench-store+3dc7d274-…` preservado. Aguardando revisão.
