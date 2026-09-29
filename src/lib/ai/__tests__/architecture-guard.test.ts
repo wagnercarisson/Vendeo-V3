@@ -289,8 +289,14 @@ describe("architecture-guard — camada única de IA (F46-06)", () => {
   // `base..HEAD`). Estritamente aditivo: nenhuma regra acima é afrouxada.
   // ─────────────────────────────────────────────────────────────────────────
 
-  /** Módulos puros genuinamente reutilizados da pipeline de campanha (nunca editados aqui). */
-  const BENCH_ALLOWED_CAMPAIGN_MODULES = new Set(["brief", "brief-schema", "types"]);
+  /**
+   * Módulos puros genuinamente reutilizados da pipeline de campanha (nunca editados aqui).
+   * `constants` foi incluído como correção de integração entre os Planos 01 e 04 da F48.2.3:
+   * `form-rules.ts` (Plano 04) reutiliza legitimamente `ILLUSTRATIVE_NOTICE_TEXT` de
+   * `src/lib/campaign/constants.ts` — um módulo puro de constante única, sem I/O nem efeitos.
+   * A allowlist permanece restrita a módulos puros: {brief, brief-schema, types, constants}.
+   */
+  const BENCH_ALLOWED_CAMPAIGN_MODULES = new Set(["brief", "brief-schema", "types", "constants"]);
   const CAMPAIGN_MODULE_IMPORT_RE = /@\/lib\/campaign\/([a-z0-9-]+)/g;
 
   /** Alvos produtivos proibidos no código da bancada (case-sensitive). */
