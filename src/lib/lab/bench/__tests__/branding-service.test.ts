@@ -3,7 +3,10 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { loadBenchBranding, toBenchBrandingSnapshot } from "../domain/branding-service";
+import { buildBenchExperimentalBriefing } from "../domain/experimental-briefing";
+import { buildBenchCampaignSnapshot } from "../domain/campaign-snapshot";
 import type { BenchManifestStore } from "../domain/store-manifest";
+import type { BenchConfig, BenchOffer, BenchProduct } from "../domain/schemas";
 
 /**
  * Contrato local completo de branding da bancada (F48.2.2, D3).
@@ -349,5 +352,228 @@ describe("toBenchBrandingSnapshot", () => {
     expect(snapshot.assets[0].storagePath).toBe("loja/logo.png");
     expect(snapshot.assets[0].checksum).toBe("checksum-1");
     expect(JSON.stringify(snapshot)).not.toContain("signed:");
+  });
+});
+
+// ─── brandColor resolvido no contrato ────────────────────────────────────────
+
+describe("loadBenchBranding — brandColor pela precedência produtiva", () => {
+  it("resolve brand_colors_chosen[0] e expõe no contrato (idêntico ao produtivo)", async () => {
+    const fake = new FakeSupabaseClient(baseTables());
+    const contract = await loadBenchBranding({
+      client: asClient(fake),
+      storeId: STORE_ID,
+      manifest: MANIFEST,
+    });
+    expect(contract.brandColor).toBe("#111111");
+    expect(contract.storeBrandColor).toBe("#111111");
+  });
+
+  it("sem perfil synced → brandColor usa stores.brand_color", async () => {
+    const fake = new FakeSupabaseClient(
+      baseTables({
+        store_brand_profiles: [],
+        stores: [
+          {
+            id: STORE_ID,
+            name: "Loja A",
+            segment: "variedades",
+            subsegment: null,
+            tone_of_voice: null,
+            positioning: null,
+            short_description: null,
+            slogan: null,
+            brand_color: "#ABCDEF",
+          },
+        ],
+      }),
+    );
+    const contract = await loadBenchBranding({
+      client: asClient(fake),
+      storeId: STORE_ID,
+      manifest: MANIFEST,
+    });
+    expect(contract.brandColor).toBe("#ABCDEF");
+    expect(contract.profileStatus).toBeNull();
+  });
+
+  it("sem perfil synced e sem brand_color → fallback de segmento", async () => {
+    const fake = new FakeSupabaseClient(
+      baseTables({
+        store_brand_profiles: [],
+        stores: [
+          {
+            id: STORE_ID,
+            name: "Loja A",
+            segment: "variedades",
+            subsegment: null,
+            tone_of_voice: null,
+            positioning: null,
+            short_description: null,
+            slogan: null,
+            brand_color: null,
+          },
+        ],
+      }),
+    );
+    const contract = await loadBenchBranding({
+      client: asClient(fake),
+      storeId: STORE_ID,
+      manifest: MANIFEST,
+    });
+    // "variedades" não está no mapa de fallback → cai em "outros" (#22C55E).
+    expect(contract.brandColor).toBe("#22C55E");
+  });
+});
+
+// ─── Briefing experimental estruturado (entrada do compositor) ───────────────
+
+const BRIEFING_CONFIG: BenchConfig = {
+  pipeline: "manual-direto",
+  formato: "1:1",
+  modelo: "gpt-image-2",
+  qualidade: "low",
+  intencao: "oferta",
+  tipoConteudo: "produto",
+  estrutura: "peca-unica",
+  tema: "nenhum",
+};
+
+const BRIEFING_PRODUCT: BenchProduct = {
+  name: "Cafeteira Aurora",
+  priceCents: 12990,
+  originalPriceCents: 19990,
+  description: "Cafeteira 30 xícaras",
+  mandatoryArtworkText: "Imagem meramente ilustrativa",
+};
+
+const BRIEFING_OFFER: BenchOffer = {
+  text: "Oferta da semana",
+  badge: "OFERTA",
+  validity: "até 01/10/2026",
+};
+
+describe("buildBenchExperimentalBriefing — briefing estruturado", () => {
+  it("inclui direção visual consolidada, tipografia e brandColor resolvido", async () => {
+    const fake = new FakeSupabaseClient(baseTables());
+    const branding = await loadBenchBranding({
+      client: asClient(fake),
+      storeId: STORE_ID,
+      manifest: MANIFEST,
+    });
+    const snapshot = buildBenchCampaignSnapshot({
+      product: BRIEFING_PRODUCT,
+      offer: BRIEFING_OFFER,
+      config: BRIEFING_CONFIG,
+    });
+
+    const briefing = buildBenchExperimentalBriefing({
+      branding,
+      snapshot,
+      config: BRIEFING_CONFIG,
+    });
+
+    expect(briefing.typographyDirection).toBe("serif elegante");
+    expect(briefing.visualDirection.campaignBrief).toBe("briefing de marca");
+    expect(briefing.visualDirection.campaignGuidelines).toBe("guias de marca");
+    expect(briefing.visualDirection.visualStyle).toBe("minimalista");
+    expect(briefing.visualDirection.visualTone).toBe("caloroso");
+    expect(briefing.visualDirection.brandPersonality).toBe("próxima");
+    // brandColor do briefing == brandColor resolvido no contrato (precedência produtiva).
+    expect(briefing.brandColor).toBe(branding.brandColor);
+    expect(briefing.brandColor).toBe("#111111");
+    // Produto/comercial/restrições como entrada do compositor.
+    expect(briefing.product.name).toBe("Cafeteira Aurora");
+    expect(briefing.commercial.intent).toBe("offer");
+    expect(briefing.commercial.badge).toBe("OFERTA");
+    expect(briefing.commercial.validity).toBe("até 01/10/2026");
+    expect(briefing.constraints.mandatoryArtworkText).toBe("Imagem meramente ilustrativa");
+    expect(briefing.config).toEqual(BRIEFING_CONFIG);
+  });
+
+  it("é determinístico (mesma entrada ⇒ mesma saída)", async () => {
+    const fake = new FakeSupabaseClient(baseTables());
+    const branding = await loadBenchBranding({
+      client: asClient(fake),
+      storeId: STORE_ID,
+      manifest: MANIFEST,
+    });
+    const snapshot = buildBenchCampaignSnapshot({
+      product: BRIEFING_PRODUCT,
+      offer: BRIEFING_OFFER,
+      config: BRIEFING_CONFIG,
+    });
+
+    const first = buildBenchExperimentalBriefing({ branding, snapshot, config: BRIEFING_CONFIG });
+    const second = buildBenchExperimentalBriefing({ branding, snapshot, config: BRIEFING_CONFIG });
+    expect(JSON.stringify(first)).toBe(JSON.stringify(second));
+  });
+
+  it("sem perfil synced → briefing usa stores.brand_color; sem brand_color → segmento", async () => {
+    const withStoreColor = new FakeSupabaseClient(
+      baseTables({
+        store_brand_profiles: [],
+        stores: [
+          {
+            id: STORE_ID,
+            name: "Loja A",
+            segment: "variedades",
+            subsegment: null,
+            tone_of_voice: null,
+            positioning: null,
+            short_description: null,
+            slogan: null,
+            brand_color: "#ABCDEF",
+          },
+        ],
+      }),
+    );
+    const brandingWithColor = await loadBenchBranding({
+      client: asClient(withStoreColor),
+      storeId: STORE_ID,
+      manifest: MANIFEST,
+    });
+    const snapshot = buildBenchCampaignSnapshot({
+      product: BRIEFING_PRODUCT,
+      offer: BRIEFING_OFFER,
+      config: BRIEFING_CONFIG,
+    });
+    const briefingWithColor = buildBenchExperimentalBriefing({
+      branding: brandingWithColor,
+      snapshot,
+      config: BRIEFING_CONFIG,
+    });
+    expect(briefingWithColor.brandColor).toBe("#ABCDEF");
+    expect(briefingWithColor.typographyDirection).toBeNull();
+
+    const withoutColor = new FakeSupabaseClient(
+      baseTables({
+        store_brand_profiles: [],
+        stores: [
+          {
+            id: STORE_ID,
+            name: "Loja A",
+            segment: "variedades",
+            subsegment: null,
+            tone_of_voice: null,
+            positioning: null,
+            short_description: null,
+            slogan: null,
+            brand_color: null,
+          },
+        ],
+      }),
+    );
+    const brandingWithoutColor = await loadBenchBranding({
+      client: asClient(withoutColor),
+      storeId: STORE_ID,
+      manifest: MANIFEST,
+    });
+    const briefingWithoutColor = buildBenchExperimentalBriefing({
+      branding: brandingWithoutColor,
+      snapshot,
+      config: BRIEFING_CONFIG,
+    });
+    expect(briefingWithoutColor.brandColor).toBe("#22C55E");
   });
 });

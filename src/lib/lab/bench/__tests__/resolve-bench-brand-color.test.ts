@@ -1,5 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 
 import { getDefaultBrandColor } from "@/lib/store";
 import {
@@ -319,5 +321,23 @@ describe("resolveBenchBrandColor — paridade com resolveStoreIdentity", () => {
       inferred_primary_color: "#GGGGGG",
     });
     await expectParity(store, [profile], profile);
+  });
+});
+
+// ─── Pureza do resolver (contrato produtivo intocado) ────────────────────────
+
+describe("resolve-bench-brand-color — módulo puro", () => {
+  it("não importa client Supabase nem serviços produtivos de campanha", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), "src/lib/lab/bench/domain/resolve-bench-brand-color.ts"),
+      "utf8",
+    );
+    const importLines = source
+      .split("\n")
+      .filter((line) => line.trimStart().startsWith("import"));
+
+    expect(importLines.join("\n")).not.toMatch(/@\/lib\/supabase/);
+    expect(importLines.join("\n")).not.toMatch(/store-identity-service/);
+    expect(importLines.join("\n")).not.toMatch(/@\/app\/api\/campaign/);
   });
 });
