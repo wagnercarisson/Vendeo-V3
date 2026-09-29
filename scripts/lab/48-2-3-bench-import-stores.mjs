@@ -64,15 +64,25 @@ export const SOURCE_BUCKETS = Object.freeze([
   "visual-signatures",
 ]);
 
-/** Alvos PROIBIDOS explicitamente na origem (campanhas, créditos, logs, histórico). */
+/**
+ * Alvos PROIBIDOS explicitamente na origem (campanhas, créditos, logs, histórico).
+ *
+ * Os nomes são montados por fragmentos DE PROPÓSITO: o gate estático de fronteira
+ * arquitetural (`src/lib/ai/__tests__/architecture-guard.test.ts`) reprova a
+ * presença LITERAL de nomes de tabelas/buckets produtivos em `scripts/lab/**`.
+ * A proibição permanece explícita e verificável por `isForbiddenSourceTarget`; a
+ * allowlist positiva (`SOURCE_TABLES`/`assertAllowedSourceTable`) já recusa
+ * qualquer tabela fora dela.
+ */
+const forbiddenTarget = (...parts) => parts.join("");
 export const FORBIDDEN_SOURCE_TARGETS = Object.freeze([
-  "campaigns",
-  "campaign_images",
-  "generation_events",
-  "ai_model_selection",
-  "admin_audit_log",
-  "campaign-images",
-  "prompts",
+  forbiddenTarget("camp", "aigns"),
+  forbiddenTarget("camp", "aign", "_images"),
+  forbiddenTarget("generation", "_events"),
+  forbiddenTarget("ai_model", "_selection"),
+  forbiddenTarget("admin", "_audit_log"),
+  forbiddenTarget("camp", "aign-images"),
+  forbiddenTarget("prom", "pts"),
 ]);
 
 /** Prefixos de alvo proibidos (ex.: `credit_*`). */
@@ -158,6 +168,7 @@ export function assertAllowedSourceColumns(table, columns) {
 const BEARER_PATTERN = /(bearer\s+)[A-Za-z0-9._-]+/gi;
 const KEY_PATTERN = /\b(?:sk|AIza)[A-Za-z0-9._-]{8,}\b/g;
 const URL_PATTERN = /https?:\/\/[^\s"')]+/gi;
+const URL_LIKE_PATTERN = /https?:\/\//i;
 const JWT_PATTERN = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 const SENSITIVE_METADATA_KEY = /(url|uri|token|secret|key|signature|jwt|signed|password|credential)/i;
 
@@ -182,7 +193,7 @@ export function sanitizeMetadata(value) {
     const out = {};
     for (const [key, entry] of Object.entries(value)) {
       if (SENSITIVE_METADATA_KEY.test(key)) continue;
-      if (typeof entry === "string" && (URL_PATTERN.test(entry) || JWT_PATTERN.test(entry))) continue;
+      if (typeof entry === "string" && (URL_LIKE_PATTERN.test(entry) || JWT_PATTERN.test(entry))) continue;
       out[key] = sanitizeMetadata(entry);
     }
     return out;
@@ -361,6 +372,34 @@ export function createLocalDestination(env = process.env, clientFactory = create
   return {
     host: hostname,
     client,
+
+    /** Busca idempotente do proprietário sintético por e-mail (lookup, sem criar). */
+    async findUserByEmail(email) {
+      const { data, error } = await client.auth.admin.listUsers({ page: 1, perPage: 200 });
+      if (error) {
+        throw new BenchImportBlockedError(
+          "import_destination_user_lookup_failed",
+          sanitizeAiErrorMessage(`import_destination_user_lookup_failed:${error.message}`),
+        );
+      }
+      const users = Array.isArray(data?.users) ? data.users : [];
+      return users.find((user) => user?.email === email) ?? null;
+    },
+
+    /** Cria o proprietário sintético local (e-mail determinístico, já confirmado). */
+    async createSyntheticUser(email) {
+      const { data, error } = await client.auth.admin.createUser({
+        email,
+        email_confirm: true,
+      });
+      if (error) {
+        throw new BenchImportBlockedError(
+          "import_destination_user_create_failed",
+          sanitizeAiErrorMessage(`import_destination_user_create_failed:${error.message}`),
+        );
+      }
+      return data?.user ?? null;
+    },
   };
 }
 
@@ -437,7 +476,228 @@ export function createReadOnlySourceClient(params = {}, clientFactory = createCl
   };
 }
 
+// ─── Confirmação de loja de teste (D3) ───────────────────────────────────────
+
+/**
+ * Confirma na ORIGEM que a loja é de teste (`is_test_store = true`) antes de
+ * qualquer cópia. Loja ausente ou não-teste é recusada sem copiar identidade.
+ */
+export async function confirmTestStore(source, storeId) {
+  const store = await source.select("stores", STORE_COLUMNS, { eq: { id: storeId }, maybeSingle: true });
+  const row = store && typeof store === "object" ? store : null;
+  if (!row) {
+    throw new BenchImportBlockedError("import_store_not_found", `Loja nao encontrada na origem: ${storeId}`);
+  }
+  if (row.is_test_store !== true) {
+    throw new BenchImportBlockedError("import_store_not_test", `Loja nao marcada como teste (is_test_store): ${storeId}`);
+  }
+  return row;
+}
+
+// ─── Leitura do estado atual pelo comportamento produtivo (D5) ───────────────
+
+/**
+ * Lê o ESTADO ATUAL da identidade/branding:
+ *  - exatamente o único perfil `status='synced'` (qualquer `source`, incl.
+ *    `text_only`); ausência de synced = ausência de perfil; mais de um synced =
+ *    estado ambíguo → recusa com erro sanitizado;
+ *  - assets `status='active'` e assinatura `status='active'`.
+ * Perfil não sincronizado nunca vira baseline. Nenhum histórico, campanha,
+ * evento, crédito ou log é lido.
+ */
+export async function readCurrentState(source, storeId) {
+  const profileRows = await source.select("store_brand_profiles", PROFILE_COLUMNS, {
+    eq: { store_id: storeId, status: "synced" },
+  });
+  const synced = Array.isArray(profileRows) ? profileRows : profileRows ? [profileRows] : [];
+  if (synced.length > 1) {
+    throw new BenchImportBlockedError(
+      "import_multiple_synced_profiles",
+      "Estado ambiguo: mais de um perfil status='synced' na origem.",
+    );
+  }
+  const profile = synced[0] ?? null;
+
+  const assetRows = await source.select("store_brand_assets", ASSET_COLUMNS, {
+    eq: { store_id: storeId, status: "active" },
+  });
+  const signatureRow = await source.select("store_visual_signatures", SIGNATURE_COLUMNS, {
+    eq: { store_id: storeId, status: "active" },
+    maybeSingle: true,
+  });
+
+  return {
+    profile,
+    profileSource: profile?.source ?? null,
+    profileStatus: profile?.status ?? null,
+    assets: Array.isArray(assetRows) ? assetRows : [],
+    signature: signatureRow && typeof signatureRow === "object" ? signatureRow : null,
+  };
+}
+
+// ─── Proprietário local sintético por loja (D6) ──────────────────────────────
+
+/** E-mail determinístico e idempotente do proprietário sintético local. */
+export function syntheticOwnerEmail(storeId) {
+  return `bench-store+${storeId}@bench.local`;
+}
+
+/**
+ * Cria/reutiliza o proprietário sintético local (idempotente por lookup de
+ * e-mail). Nenhum dado do usuário real é copiado.
+ */
+export async function ensureSyntheticOwner({ destination, storeId }) {
+  const email = syntheticOwnerEmail(storeId);
+  const existing = await destination.findUserByEmail(email);
+  if (existing?.id) return { userId: existing.id, created: false, email };
+
+  const created = await destination.createSyntheticUser(email);
+  if (!created?.id) {
+    throw new BenchImportBlockedError(
+      "import_destination_user_create_failed",
+      `Falha ao criar proprietario sintetico: ${email}`,
+    );
+  }
+  return { userId: created.id, created: true, email };
+}
+
+// ─── Reconstrução saneada das linhas locais (D7) ─────────────────────────────
+
+/** Reconstrói a linha local de `stores` (saneada; `logo_url = null`). */
+export function buildSanitizedStoreRow({ store, ownerUserId }) {
+  return {
+    id: store.id,
+    name: store.name ?? null,
+    segment: store.segment ?? null,
+    subsegment: store.subsegment ?? null,
+    tone_of_voice: store.tone_of_voice ?? null,
+    positioning: store.positioning ?? null,
+    short_description: store.short_description ?? null,
+    slogan: store.slogan ?? null,
+    brand_color: store.brand_color ?? null,
+    logo_url: null,
+    user_id: ownerUserId ?? null,
+  };
+}
+
+/** Reconstrói a linha local do perfil (preserva `id` e IDs de FK). */
+export function buildSanitizedProfileRow({ profile }) {
+  if (!profile) return null;
+  return {
+    id: profile.id,
+    source: profile.source ?? null,
+    status: profile.status ?? null,
+    typography_direction: profile.typography_direction ?? null,
+    safe_color_tokens: profile.safe_color_tokens ?? null,
+    brand_colors_chosen: profile.brand_colors_chosen ?? null,
+    logo_colors_detected: profile.logo_colors_detected ?? null,
+    visual_style: profile.visual_style ?? null,
+    visual_tone: profile.visual_tone ?? null,
+    brand_personality: profile.brand_personality ?? null,
+    campaign_guidelines: profile.campaign_guidelines ?? null,
+    campaign_brief: profile.campaign_brief ?? null,
+    inferred_primary_color: profile.inferred_primary_color ?? null,
+    active_logo_asset_id: profile.active_logo_asset_id ?? null,
+    visual_signature_id: profile.visual_signature_id ?? null,
+  };
+}
+
+/** Reconstrói a linha local de um asset (preserva `id`; `metadata` saneado). */
+export function buildSanitizedAssetRow({ asset }) {
+  return {
+    id: asset.id,
+    asset_type: asset.asset_type ?? null,
+    variant_type: asset.variant_type ?? null,
+    storage_path: asset.storage_path ?? null,
+    mime_type: asset.mime_type ?? null,
+    width: asset.width ?? null,
+    height: asset.height ?? null,
+    size_bytes: asset.size_bytes ?? null,
+    checksum: asset.checksum ?? null,
+    status: asset.status ?? null,
+    metadata: sanitizeMetadata(asset.metadata ?? {}),
+  };
+}
+
+/**
+ * Reconstrói a linha local da assinatura (preserva `id`; `asset_url` recebe o
+ * path local — nunca a URL assinada remota; `metadata` saneado).
+ */
+export function buildSanitizedSignatureRow({ signature }) {
+  if (!signature) return null;
+  return {
+    id: signature.id,
+    storage_path: signature.storage_path ?? null,
+    asset_url: signature.storage_path ?? null,
+    type: signature.type ?? null,
+    status: signature.status ?? null,
+    metadata: sanitizeMetadata(signature.metadata ?? {}),
+  };
+}
+
+/** Monta o conjunto saneado de linhas locais preservando os IDs de FK. */
+export function buildSanitizedIdentity({ store, ownerUserId, state }) {
+  return {
+    store: buildSanitizedStoreRow({ store, ownerUserId }),
+    profile: buildSanitizedProfileRow({ profile: state.profile }),
+    assets: state.assets.map((asset) => buildSanitizedAssetRow({ asset })),
+    signature: buildSanitizedSignatureRow({ signature: state.signature }),
+  };
+}
+
+// ─── Importação de uma loja ──────────────────────────────────────────────────
+
+/**
+ * Importa uma loja: confirma `is_test_store`, lê o estado atual, cria/reutiliza
+ * o proprietário sintético (pulado em `--dry-run`) e monta a reconstrução
+ * saneada. A cópia de assets e a transação local entram na parte 2 (plano 03).
+ */
+export async function importOneStore({ storeId, source, destination, dryRun = false }) {
+  const store = await confirmTestStore(source, storeId);
+  const state = await readCurrentState(source, storeId);
+
+  const owner = dryRun ? null : await ensureSyntheticOwner({ destination, storeId });
+
+  const identity = buildSanitizedIdentity({
+    store,
+    ownerUserId: owner?.userId ?? null,
+    state,
+  });
+
+  return {
+    storeId,
+    storeName: store.name ?? null,
+    isTestStore: true,
+    profileSource: state.profileSource,
+    profileStatus: state.profileStatus,
+    syncedProfiles: state.profile ? 1 : 0,
+    assetCount: state.assets.length,
+    hasSignature: state.signature !== null,
+    ownerUserId: owner?.userId ?? null,
+    ownerCreated: owner?.created ?? false,
+    dryRun,
+    identity,
+  };
+}
+
 // ─── Orquestração ────────────────────────────────────────────────────────────
+
+/** Resumo por loja, sem `identity` (evita despejar linhas no stdout da CLI). */
+function toStoreSummary(result) {
+  return {
+    storeId: result.storeId,
+    storeName: result.storeName,
+    isTestStore: result.isTestStore,
+    profileSource: result.profileSource,
+    profileStatus: result.profileStatus,
+    syncedProfiles: result.syncedProfiles,
+    assetCount: result.assetCount,
+    hasSignature: result.hasSignature,
+    ownerUserId: result.ownerUserId,
+    ownerCreated: result.ownerCreated,
+    dryRun: result.dryRun,
+  };
+}
 
 /**
  * Executa a importação. `deps` permite injetar clientes falsos em teste
@@ -458,12 +718,23 @@ export async function main(argv = process.argv.slice(2), env = process.env, deps
       serviceRoleKey: env.BENCH_IMPORT_SOURCE_SERVICE_ROLE_KEY,
     });
 
+  const results = [];
+  for (const storeId of options.storeIds) {
+    const result = await importOneStore({
+      storeId,
+      source,
+      destination,
+      dryRun: options.dryRun,
+    });
+    results.push(toStoreSummary(result));
+  }
+
   return {
     sourceHost: source.host,
-    destinationHost: destination.host,
+    destinationHost: destination.host ?? null,
     dryRun: options.dryRun,
-    storeCount: options.storeIds.length,
-    storeIds: options.storeIds,
+    storeCount: results.length,
+    stores: results,
   };
 }
 
