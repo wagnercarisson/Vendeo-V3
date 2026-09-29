@@ -208,3 +208,25 @@ None - no external service configuration required. Nenhuma credencial remota é 
 - Volumes preservados: `supabase_db_Vendeo_V3`, `supabase_storage_Vendeo_V3`, `supabase_edge_runtime_Vendeo_V3`.
 
 **Estado:** **bloqueado**. Nenhuma ação destrutiva (`db reset`, `stop --no-backup`, remoção de volumes) executada. O commit `7193266c` (parser) permanece — a compatibilidade com `SECRET_KEY` é correta — mas **não** deve ser apresentado como solução completa enquanto o smoke local não passar. Nenhum novo acesso remoto.
+
+## Correção descoberta no UAT (2026-09-29) — MIME de branding e política de bucket
+
+**Sintoma:** nova tentativa de importação (autorizada) falhou com `import_destination_upload_failed: mime type application/octet-stream is not supported`, antes da transação. Nenhuma identidade foi persistida.
+
+**Causa:** os uploads de branding enviavam `application/octet-stream` quando o `mime_type` estava ausente (assets) e **sempre** para a assinatura (`store_visual_signatures`, que não tem coluna `mime_type`), violando a política real dos buckets.
+
+**Correção (commit `b4ecdf74`):**
+1. `resolveBrandingMime` (novo, puro): precedência `mime_type` declarado válido → `Blob.type` do download → extensão segura de `storage_path`; suporta PNG/JPEG/WEBP/HEIC/HEIF/SVG.
+2. Aplicado a `store_brand_assets` **e** `store_visual_signatures`; a assinatura nunca é enviada como `application/octet-stream`.
+3. A extensão do path content-addressed deriva do MIME resolvido.
+4. MIME ausente/desconhecido → `import_asset_mime_unresolved` (sanitizado) **antes** do upload, sem ampliar a política do bucket.
+5. `buildSanitizedAssetRow` usa o MIME resolvido (não o default octet-stream).
+6. Mock do destino reforçado para reproduzir a política real (rejeita `application/octet-stream` e MIME fora do allowlist do bucket): `store-logos`/`store-brand-assets` = PNG/JPEG/WEBP; `visual-signatures` = PNG/SVG.
+
+**Testes:** 9 novos casos (assinatura PNG sem `mime_type`; resolução por `Blob.type`; por extensão; asset com MIME declarado; MIME desconhecido recusado; cleanup de objeto materializado quando um asset posterior falha; mock rejeita octet-stream). Suíte: `bench-import` + `lab-isolation` + `architecture-guard` = 79 verdes; fase (`src/lib/lab/bench` + isolation + architecture-guard) = **329 verdes**; `typecheck` exit 0.
+
+**Smoke local (sem acesso remoto):** upload/download/remoção nos 3 buckets com prefixo temporário `__smoke_uat__/...`; `removed: 3, failed: 0`; confirmação pós-remoção (3× "removido"). Prefixo temporário removido.
+
+**Estado parcial da tentativa:** `lab_bench_store_imports` = 0; lojas/perfis/assets/assinaturas das duas IDs = 0; objetos content-addressed = 0; manifesto = `stores: []`. 1 owner sintético pré-existente (`bench-store+3dc7d274-…@bench.local`) **preservado** (idempotente). Nada a limpar.
+
+**Estado:** correção aplicada e validada localmente; **nenhuma** nova leitura remota nem execução da importação. Aguardando revisão antes de nova tentativa remota. Base OpenSpec **inalterada**.
