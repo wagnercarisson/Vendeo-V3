@@ -515,6 +515,9 @@ export function createLocalDatabase(env = process.env, clientFactory = (config) 
  * As credenciais vêm **exclusivamente** de `params.url`/`params.serviceRoleKey`,
  * que o chamador obtém de `BENCH_IMPORT_SOURCE_URL`/`BENCH_IMPORT_SOURCE_SERVICE_ROLE_KEY`.
  * Nunca são persistidas nem logadas.
+ *
+ * @param {{ url?: string, serviceRoleKey?: string }} [params]
+ * @param {(...args: any[]) => any} [clientFactory]
  */
 export function createReadOnlySourceClient(params = {}, clientFactory = createClient) {
   const url = params.url;
@@ -753,8 +756,11 @@ export function buildSanitizedSignatureRow({ signature, storeId, localStoragePat
 /**
  * Monta o conjunto saneado de linhas locais preservando os IDs de FK e aplicando
  * os paths locais versionados (`storedAssets`/`storedSignature`) quando houver.
+ *
+ * @param {{ store: any, ownerUserId: any, state: any, storedAssets?: any[], storedSignature?: any }} params
  */
-export function buildSanitizedIdentity({ store, ownerUserId, state, storedAssets = [], storedSignature = null }) {
+export function buildSanitizedIdentity(params) {
+  const { store, ownerUserId, state, storedAssets = [], storedSignature = null } = params;
   const storedByAssetId = new Map((storedAssets ?? []).map((entry) => [entry.assetId, entry]));
   const assetRows = state.assets.map((asset) => {
     const stored = storedByAssetId.get(asset.id) ?? null;
@@ -1085,16 +1091,11 @@ export function createFileManifestStore({ root = process.cwd(), relative = BENCH
  *
  * Em `--dry-run` NÃO há materialização/escrita local: apenas a leitura do estado
  * atual (a leitura remota, se houver, exige aprovação humana — CHECKPOINT A).
+ *
+ * @param {{ storeId: string, source: any, destination: any, db?: any, dryRun?: boolean, manifestStore?: any, importedBy?: string|null }} params
  */
-export async function importOneStore({
-  storeId,
-  source,
-  destination,
-  db,
-  dryRun = false,
-  manifestStore = null,
-  importedBy = null,
-}) {
+export async function importOneStore(params) {
+  const { storeId, source, destination, db, dryRun = false, manifestStore = null, importedBy = null } = params;
   const store = await confirmTestStore(source, storeId);
   const state = await readCurrentState(source, storeId);
 
