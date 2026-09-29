@@ -11,17 +11,20 @@ import {
   createBenchBrandingSignedUrlForStore,
 } from "../persistence/bench-branding-signer";
 import { BenchBrandingSnapshotSchema, type BenchBrandingSnapshot } from "./schemas";
+import { resolveBenchBrandColor } from "./resolve-bench-brand-color";
 
 /**
  * Contrato local **completo** de branding da loja de teste (F48.2.2, D3).
  *
  * Carrega, em **somente leitura** no Supabase local:
  *  1. `stores` — nome, segmento, subsegmento, tom de voz, posicionamento,
- *     descrição curta e slogan (via `assertBenchTestStore`, exigido **antes** de
- *     qualquer leitura);
- *  2. `store_brand_profiles` com `status = 'synced'` e fallback
- *     `source = 'without_logo'` — incluindo `typography_direction` lida
- *     **diretamente da coluna persistida** (nunca do snapshot de campanha);
+ *     descrição curta, slogan e `brand_color` (via `assertBenchTestStore`,
+ *     exigido **antes** de qualquer leitura);
+ *  2. `store_brand_profiles` com `status = 'synced'` — o **único** perfil synced,
+ *     qualquer `source` (incluindo `text_only`); **sem** fallback de perfil por
+ *     `source` (ausência de synced = ausência de perfil). Inclui `typography_direction`
+ *     lida **diretamente da coluna persistida** e os campos cromáticos que
+ *     alimentam `resolveBenchBrandColor`;
  *  3. `store_brand_assets` com `status = 'active'` — logo/assinatura, cada asset
  *     resolvido por URL assinada de curta duração server-side pelo **signer local
  *     restrito** (`createBenchBrandingSignedUrl`), com bucket/path vindos do
@@ -66,6 +69,15 @@ export interface BenchBrandingContract {
   typographyDirection: string | null;
   safeColorTokens: Record<string, string>;
   brandColorsChosen: Array<string | null>;
+  /** Cor principal inferida (`inferred_primary_color`) — usada só em `text_only`. */
+  inferredPrimaryColor: string | null;
+  /** `stores.brand_color` — penúltimo degrau da precedência cromática produtiva. */
+  storeBrandColor: string | null;
+  /**
+   * `brandColor` resolvido pela **precedência produtiva exata** (D16), via
+   * `resolveBenchBrandColor`. Idêntico ao resolvido pelo fluxo produtivo.
+   */
+  brandColor: string;
   logoColorsDetected: string[];
   visualStyle: string | null;
   visualTone: string | null;
@@ -88,6 +100,7 @@ type BrandProfileFields = Pick<
   | "typography_direction"
   | "safe_color_tokens"
   | "brand_colors_chosen"
+  | "inferred_primary_color"
   | "logo_colors_detected"
   | "visual_style"
   | "visual_tone"
@@ -157,7 +170,7 @@ function nullableStringArray(value: unknown): Array<string | null> {
 // ─── Colunas lidas (somente leitura) ─────────────────────────────────────────
 
 const PROFILE_COLUMNS =
-  "source, status, typography_direction, safe_color_tokens, brand_colors_chosen, logo_colors_detected, visual_style, visual_tone, brand_personality, campaign_guidelines, campaign_brief";
+  "source, status, typography_direction, safe_color_tokens, brand_colors_chosen, inferred_primary_color, logo_colors_detected, visual_style, visual_tone, brand_personality, campaign_guidelines, campaign_brief";
 
 const ASSET_COLUMNS =
   "id, asset_type, variant_type, storage_path, mime_type, width, height, size_bytes, checksum, status";
@@ -171,8 +184,9 @@ function mapProfile(row: BrandProfileFields): BrandProfileFields {
 }
 
 /**
- * Lê o perfil de branding: primeiro `status = 'synced'`; quando ausente, faz
- * fallback para `source = 'without_logo'` (mais recente). Somente leitura.
+ * Lê o **único** perfil `status = 'synced'` (qualquer `source`, incluindo
+ * `text_only`). **Ausência de synced = ausência de perfil**: não existe fallback
+ * por `source` (D5). Somente leitura.
  */
 async function readBrandProfile(params: {
   client: SupabaseClient;
@@ -191,22 +205,30 @@ async function readBrandProfile(params: {
     throw new Error(`bench_branding_profile_read_failed:${synced.error.message}`);
   }
   const syncedRow = asRow(synced.data);
-  if (syncedRow) return mapProfile(syncedRow as unknown as BrandProfileFields);
+  return syncedRow ? mapProfile(syncedRow as unknown as BrandProfileFields) : null;
+}
 
-  const fallback = await client
-    .from("store_brand_profiles")
-    .select(PROFILE_COLUMNS)
-    .eq("store_id", storeId)
-    .eq("source", "without_logo")
-    .order("updated_at", { ascending: false })
-    .limit(1)
+/**
+ * Lê `stores.brand_color` (somente leitura). É o penúltimo degrau da precedência
+ * cromática produtiva — `resolveStoreIdentity` parte de
+ * `store.brand_color ?? getDefaultBrandColor(segment)`. A loja já foi validada por
+ * `assertBenchTestStore`; uma linha ausente devolve `null`.
+ */
+async function readStoreBrandColor(params: {
+  client: SupabaseClient;
+  storeId: string;
+}): Promise<string | null> {
+  const { data, error } = await params.client
+    .from("stores")
+    .select("brand_color")
+    .eq("id", params.storeId)
     .maybeSingle();
 
-  if (fallback.error) {
-    throw new Error(`bench_branding_profile_read_failed:${fallback.error.message}`);
+  if (error) {
+    throw new Error(`bench_branding_store_read_failed:${error.message}`);
   }
-  const fallbackRow = asRow(fallback.data);
-  return fallbackRow ? mapProfile(fallbackRow as unknown as BrandProfileFields) : null;
+  const row = asRow(data);
+  return row ? nullableText(row.brand_color) : null;
 }
 
 /** Lista os assets ativos de branding (`status = 'active'`). Somente leitura. */
@@ -290,6 +312,7 @@ export async function loadBenchBranding(params: {
   const store = await assertBenchTestStore({ client, storeId, manifest });
 
   const profile = await readBrandProfile({ client, storeId });
+  const storeBrandColor = await readStoreBrandColor({ client, storeId });
   const assetRows = await readActiveBrandAssets({ client, storeId });
 
   const assets: BenchBrandingAssetContract[] = [];
@@ -328,6 +351,21 @@ export async function loadBenchBranding(params: {
 
   const logoUrl = assets.find((asset) => asset.signedUrl !== null)?.signedUrl ?? null;
 
+  // `brandColor` resolvido pela precedência produtiva exata (D16). Ausência de
+  // perfil synced = ausência de perfil (sem fallback por `source`).
+  const brandColor = resolveBenchBrandColor(
+    profile
+      ? {
+          source: profile.source,
+          status: profile.status,
+          safe_color_tokens: profile.safe_color_tokens,
+          brand_colors_chosen: profile.brand_colors_chosen,
+          inferred_primary_color: profile.inferred_primary_color,
+        }
+      : null,
+    { brand_color: storeBrandColor, segment: store.segment },
+  );
+
   return {
     storeId,
     storeName: store.name,
@@ -340,6 +378,9 @@ export async function loadBenchBranding(params: {
     typographyDirection: nullableText(profile?.typography_direction),
     safeColorTokens: stringRecord(profile?.safe_color_tokens),
     brandColorsChosen: nullableStringArray(profile?.brand_colors_chosen),
+    inferredPrimaryColor: nullableText(profile?.inferred_primary_color),
+    storeBrandColor,
+    brandColor,
     logoColorsDetected: stringArray(profile?.logo_colors_detected),
     visualStyle: nullableText(profile?.visual_style),
     visualTone: nullableText(profile?.visual_tone),

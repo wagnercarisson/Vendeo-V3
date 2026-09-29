@@ -9,11 +9,11 @@ import type { BenchManifestStore } from "../domain/store-manifest";
  * Contrato local completo de branding da bancada (F48.2.2, D3).
  *
  * Client **100% fake em memória** — nenhuma chamada de rede e nenhuma chamada
- * paga. Cobre: `typography_direction` lida da fonte persistida; fallback
- * `without_logo`; assets ativos assinados pelo signer restrito (nunca
- * `lab-artifacts`); nenhuma escrita nas quatro tabelas; nenhum bucket de produção;
- * recusa de loja fora do manifesto **antes** de qualquer leitura; snapshot de
- * branding com tipografia.
+ * paga. Cobre: `typography_direction` lida da fonte persistida; ausência de perfil
+ * synced = ausência de perfil (sem fallback `without_logo`); assets ativos
+ * assinados pelo signer restrito (nunca `lab-artifacts`); nenhuma escrita nas
+ * tabelas de loja/branding; nenhum bucket de produção; recusa de loja fora do
+ * manifesto **antes** de qualquer leitura; snapshot de branding com tipografia.
  */
 
 const STORE_ID = "11111111-1111-4111-8111-111111111111";
@@ -130,6 +130,7 @@ function baseTables(overrides: Record<string, Row[]> = {}): Record<string, Row[]
         positioning: "preço justo",
         short_description: "loja local",
         slogan: "vem pra cá",
+        brand_color: "#111111",
       },
     ],
     store_brand_profiles: [
@@ -204,7 +205,7 @@ describe("loadBenchBranding — contrato completo", () => {
     expect(contract.profileStatus).toBe("synced");
   });
 
-  it("faz fallback para source without_logo quando não há perfil synced", async () => {
+  it("não usa perfil não sincronizado como baseline (sem fallback without_logo)", async () => {
     const fake = new FakeSupabaseClient(
       baseTables({
         store_brand_profiles: [
@@ -234,8 +235,11 @@ describe("loadBenchBranding — contrato completo", () => {
       manifest: MANIFEST,
     });
 
-    expect(contract.typographyDirection).toBe("sans-serif limpa");
-    expect(contract.profileSource).toBe("without_logo");
+    // Ausência de synced = ausência de perfil: nada do perfil outdated vaza.
+    expect(contract.typographyDirection).toBeNull();
+    expect(contract.profileSource).toBeNull();
+    expect(contract.profileStatus).toBeNull();
+    expect(contract.visualStyle).toBeNull();
   });
 });
 

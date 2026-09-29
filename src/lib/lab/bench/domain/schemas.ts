@@ -164,6 +164,12 @@ export const BenchBrandingSnapshotSchema = z
     typographyDirection: z.string().nullable(),
     safeColorTokens: z.record(z.string(), z.string()),
     brandColorsChosen: z.array(z.string().nullable()),
+    /** Cor principal inferida (`inferred_primary_color`) — usada só em `text_only`. */
+    inferredPrimaryColor: z.string().nullable(),
+    /** `stores.brand_color` — penúltimo degrau da precedência cromática produtiva. */
+    storeBrandColor: z.string().nullable(),
+    /** `brandColor` resolvido pela precedência produtiva exata (D16). */
+    brandColor: z.string().min(1),
     logoColorsDetected: z.array(z.string()),
     visualStyle: z.string().nullable(),
     visualTone: z.string().nullable(),
