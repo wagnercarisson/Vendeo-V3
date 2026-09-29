@@ -6,8 +6,8 @@ import type { BenchExperimentalBriefing } from "./experimental-briefing";
 /**
  * Compositor determinístico mínimo do prompt da bancada (F48.2.3, D17/D19/D20).
  *
- * Módulo **puro e sem IA** — sem I/O, sem `process.env`, sem provider e sem
- * client Supabase. Apenas **serializa** dados estruturados (briefing
+ * Módulo **puro e sem IA** — sem I/O, sem variáveis de ambiente, sem provider e
+ * sem client Supabase. Apenas **serializa** dados estruturados (briefing
  * experimental do Plano 05 + snapshot fiel do Plano 04) e o prompt-base manual
  * em blocos canônicos travados.
  *
