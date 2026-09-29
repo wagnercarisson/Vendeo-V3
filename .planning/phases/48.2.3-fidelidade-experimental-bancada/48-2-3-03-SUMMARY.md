@@ -275,3 +275,20 @@ None - no external service configuration required. Nenhuma credencial remota é 
 **Smoke local:** materialização de 6 variantes + assinatura → buckets `store-brand-assets`/`visual-signatures` (nunca `store-logos`); download OK (7); cleanup `removed: 7, still_present: 0`; `SMOKE_BUCKET_OK`.
 
 **Estado:** correção aplicada e validada localmente; **nenhuma** nova leitura remota nem importação. Aguardando revisão.
+
+## Endurecimento consolidado do importador (2026-09-29) — commit `dae2123c`
+
+Motivado pela FK `store_brand_assets_parent_asset_id_fkey` (assets auto-referenciados retornados fora de ordem: filhos antes do pai). Em vez de remendar, foram implementados:
+
+1. **Ordenação topológica determinística** (`orderAssetsTopologically`): sem-parent primeiro; cada pai antes dos filhos; ordem estável entre irmãos.
+2. **Validação antes de qualquer upload/escrita**: IDs únicos; `parent_asset_id` no conjunto importado; pai e filho da mesma loja; ausência de ciclos → erros sanitizados (`import_asset_duplicate_id`, `import_asset_parent_missing`, `import_asset_parent_other_store`, `import_asset_cycle`, `import_asset_id_invalid`).
+3. **Guarda de FKs do perfil** (`buildSanitizedProfileRow`): `active_logo_asset_id`/`visual_signature_id` só preservados quando o referenciado é importado; caso contrário, anulados (evita FK órfã por asset arquivado) — registrado em `detail.profileFkAdjusted`.
+4. `parent_asset_id` **não** é removido; assets arquivados **não** são importados; a FK **não** é alterada/deferida.
+
+**Revisão de constraints (4 tabelas):** FKs `stores.user_id`→auth.users (owner sintético), `*.store_id`→stores (upsert antes), `store_brand_assets.parent_asset_id`→assets (ordenação), `store_brand_profiles.active_logo_asset_id`/`visual_signature_id`→assets/signatures (guarda). CHECKs relevantes: `stores.name` 2–60, `stores.segment` allowlist, `store_brand_assets` (asset_type='logo', source, status, variant_type, storage_path), `store_visual_signatures.type`.
+
+**Testes:**
+- Unit: +9 (ordenação/validação; guarda de FKs). `bench-import` + `lab-isolation` + `architecture-guard` = **102 verdes**; `typecheck` exit 0.
+- **Integrado real (opt-in `BENCH_IMPORT_REAL_INTEGRATION=1`)**: `bench-import.integration.test.ts` — fixture com 1 `original` + 5 variantes fora de ordem; fake de origem somente-leitura; materialização das 6 variantes; transação com loja/assets/perfil/auditoria; leitura provando 6 registros e relações pai–filho; JSONB estruturado; MIME/bucket (`store-brand-assets`/`visual-signatures`, nunca `store-logos`); manifesto; cleanup integral. **PASSOU** (1/1; ~5s).
+
+**Estado:** endurecimento aplicado e validado (incl. teste integrado real). **Nenhuma** leitura remota nem importação. Aguardando a revisão final.
