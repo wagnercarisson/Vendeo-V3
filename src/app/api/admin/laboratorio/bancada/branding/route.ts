@@ -56,6 +56,8 @@ async function withSignedAssets(
   branding: BenchBrandingContract,
 ): Promise<BenchBrandingContract> {
   let identityReference = branding.identityReference;
+  let identityReason = branding.identityReason;
+
   if (identityReference) {
     const bucket =
       identityReference.kind === "logo" ? "store-brand-assets" : "visual-signatures";
@@ -65,6 +67,9 @@ async function withSignedAssets(
       storagePath: identityReference.storagePath,
     });
     identityReference = { ...identityReference, signedUrl };
+    if (!signedUrl) {
+      identityReason = `${identityReference.kind}:sign_failed`;
+    }
   }
 
   const assets = [];
@@ -90,6 +95,7 @@ async function withSignedAssets(
     ...branding,
     assets,
     identityReference,
+    identityReason,
     logoUrl,
     signatureUrl,
   };

@@ -795,6 +795,8 @@ describe("contrato da API da bancada — leitura", () => {
       storagePath: "logos/loja-a.png",
       signedUrl: null,
     });
+    // O motivo NÃO pode continuar "logo:selected" quando a URL está indisponível.
+    expect(body.branding.identityReason).toBe("logo:sign_failed");
     expect(body.branding.logoUrl).toBeNull();
     expect(body.branding.signatureUrl).toBeNull();
   });
