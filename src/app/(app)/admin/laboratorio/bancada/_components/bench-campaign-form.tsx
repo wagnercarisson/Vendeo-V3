@@ -43,8 +43,7 @@ import { LabTextarea } from "../../_components/lab-textarea";
  * obrigatórias na arte 200), reutilizando as regras puras de `form-rules.ts`.
  *
  * As imagens do produto são enviadas pelo componente `BenchImageUpload`. A
- * validação é **inline no blur** (nunca só no submit). Desktop-only; sem
- * comparação lado a lado e sem votação.
+ * validação é **inline no blur** (nunca só no submit). Desktop-only.
  */
 
 export interface BenchCampaignFormValue {
