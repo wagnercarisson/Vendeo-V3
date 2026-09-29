@@ -1,7 +1,7 @@
 ---
 phase: 48.2.3-fidelidade-experimental-bancada
 plan: 48-2-3-03
-status: parcial — CHECKPOINT A pendente
+status: complete
 subsystem: lab-bench (importação local de identidade das lojas de teste)
 tags: [cli, esm, supabase, content-addressed, transacao, auditoria, manifesto, lab-isolation, checkpoint-a]
 
@@ -63,7 +63,7 @@ completed: 2026-09-29T15:27:30Z
 
 # Phase 48.2.3 Plan 48-2-3-03: Importação completa (assets versionados, transação, auditoria e manifesto)
 
-**Importação local da identidade das lojas de teste com assets content-addressed (sha256), transação SQL única de substituição integral (remoção dos antigos só após o commit; falha antes do commit remove só os novos), auditoria em `lab_bench_store_imports` e upsert idempotente do manifesto — testes (a)–(k) verdes sem rede/banco; CHECKPOINT A pendente de aprovação humana.**
+**Importação local da identidade das lojas de teste com assets content-addressed (sha256), transação SQL única de substituição integral (remoção dos antigos só após o commit; falha antes do commit remove só os novos), auditoria em `lab_bench_store_imports` e upsert idempotente do manifesto — testes (a)–(k) verdes sem rede/banco; CHECKPOINT A aprovado pelo humano (nenhuma leitura remota executada).**
 
 ## Performance
 
@@ -131,7 +131,7 @@ Each task was committed atomically:
 ## Issues Encountered
 
 - **Verificação com o shim `npm` (PowerShell):** o comando `<verify><automated>` da Task 2 (`npm run typecheck ; ... ; npm test ...`) produziu falso-negativo porque o shim `npm` não propagou `$LASTEXITCODE` neste shell. Validação re-executada com `npm.cmd` e exit codes reais: `typecheck` exit 0 e `bench-import.contract.test.ts` = **1 arquivo / 25 testes verdes**.
-- **Falha pré-existente NÃO relacionada (fora do escopo do plano 03):** `src/lib/ai/__tests__/architecture-guard.test.ts` reprova 1 caso — `src/lib/lab/bench/domain/form-rules.ts → src/lib/campaign/constants` fora da allowlist do gate (Plano 01). Causado pelo Plano 04, não pelo Plano 03. **Não corrigido** (fora de escopo); registrado como pendência de integração entre planos para o orquestrador resolver. `lab-isolation.contract.test.ts` passa.
+- **Integração entre planos (RESOLVIDA pelo orquestrador):** `architecture-guard.test.ts` reprovava 1 caso — `form-rules.ts` (Plano 04) importa `@/lib/campaign/constants` (módulo puro de constante única), fora da allowlist do gate (Plano 01). Resolvido em `7e66acc9` adicionando **somente** `constants` a `BENCH_ALLOWED_CAMPAIGN_MODULES` (`{brief, brief-schema, types, constants}`); `architecture-guard.test.ts` + `form-parity.contract.test.ts` = **79 testes verdes**.
 
 ## User Setup Required
 
@@ -142,9 +142,9 @@ None - no external service configuration required. Nenhuma credencial remota é 
 - **Pronto para o CHECKPOINT A** (Task 3): o comando está completo e validado apenas com fixtures/fakes/`--dry-run` offline. Nenhuma leitura remota foi executada.
 - Pendência de integração entre planos (arquitetura-guard × form-rules) sinalizada ao orquestrador.
 
-## CHECKPOINT A — autorização humana antes de qualquer leitura remota (PENDENTE)
+## CHECKPOINT A — autorização humana antes de qualquer leitura remota (APROVADO)
 
-**Estado:** ⏳ **PENDENTE** — nenhuma leitura remota executada. A Task 3 (checkpoint:human-verify, gate blocking) **não** foi executada pelo executor; cabe ao orquestrador apresentá-la ao humano.
+**Estado:** ✅ **APROVADO** (2026-09-29) — o plano de importação e a allowlist foram revisados e aprovados pelo humano. **Nenhuma leitura remota foi executada.** Esta aprovação habilita o UAT remoto do CHECKPOINT B (Plano 08), que exigirá autorização adicional explícita.
 
 **O que foi construído (what-built):** o comando de importação completo (`scripts/lab/48-2-3-bench-import-stores.mjs`) com dois clientes separados, allowlist estrita, confirmação `is_test_store`, leitura do único perfil `status='synced'` pelo comportamento produtivo, assets versionados/content-addressed, transação SQL única de substituição integral, remoção pós-commit, auditoria local e upsert do manifesto — **validado apenas com fixtures/fakes/`--dry-run` offline**. Nenhuma conexão remota foi aberta.
 
@@ -175,4 +175,4 @@ None - no external service configuration required. Nenhuma credencial remota é 
 
 ---
 *Phase: 48.2.3-fidelidade-experimental-bancada*
-*Completed: 2026-09-29 (Tasks 1–2; CHECKPOINT A pendente)*
+*Completed: 2026-09-29 (3/3 tasks; CHECKPOINT A aprovado)*
