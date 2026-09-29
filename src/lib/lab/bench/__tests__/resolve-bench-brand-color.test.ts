@@ -146,7 +146,12 @@ async function productiveBrandColor(
   profiles: BenchBrandColorProfile[],
 ): Promise<string> {
   mockState.reset();
-  mockState.setProfiles(profiles as unknown as Array<Record<string, unknown>>);
+  // A resolução produtiva consulta por `store_id` — a fixture injeta o vínculo.
+  mockState.setProfiles(
+    profiles.map((profile) => ({ ...profile, store_id: store.id })) as unknown as Array<
+      Record<string, unknown>
+    >,
+  );
   const { resolveStoreIdentity } = await import("@/lib/store-identity-service");
   const snapshot = await resolveStoreIdentity(store);
   return snapshot.brandColor;
