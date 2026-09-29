@@ -20,6 +20,12 @@ import type { BenchExperimentalBriefing } from "./experimental-briefing";
  *  - o prompt-base é incluído **verbatim** em `[INSTRUÇÕES DO PROMPT-BASE]` —
  *    nenhuma filtragem/reescrita lexical (palavras legítimas como "teste",
  *    "comparação" ou "avaliação" fornecidas pelo operador são preservadas);
+ *  - os rótulos fixos e os templates dos blocos **gerados** não introduzem
+ *    contexto de laboratório, experimento, baseline, comparação de variantes ou
+ *    avaliação, nem um bloco dedicado ao objetivo do experimento: a proibição
+ *    incide sobre a **origem** do conteúdo gerado pelo compositor, **não** é uma
+ *    blacklist lexical sobre o prompt completo e nunca filtra o prompt-base do
+ *    operador;
  *  - `typography_direction` integra `[DIREÇÃO TIPOGRÁFICA]`;
  *    `preserveImageContext` integra `[PRODUTO E IMAGENS DE REFERÊNCIA]`;
  *  - determinístico: mesma entrada → mesma saída.
@@ -146,7 +152,11 @@ function intentLines(briefing: BenchExperimentalBriefing): string[] {
 
 /**
  * Prompt-base manual — preservado **verbatim** (nenhuma filtragem/reescrita).
- * Bloco omitido apenas quando o prompt-base é vazio/em branco.
+ * O compositor **não** aplica blacklist lexical sobre este texto: palavras
+ * legítimas do operador (ex.: "teste", "comparação", "avaliação") permanecem
+ * intactas — a verificação de contexto experimental é **por origem** (blocos
+ * gerados), nunca sobre o prompt-base. Bloco omitido apenas quando o prompt-base
+ * é vazio/em branco.
  */
 function promptBaseLines(promptBase: string): string[] {
   if (promptBase.trim().length === 0) return [];
