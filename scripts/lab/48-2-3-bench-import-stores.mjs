@@ -21,9 +21,13 @@
 //   BENCH_IMPORT_SOURCE_URL / BENCH_IMPORT_SOURCE_SERVICE_ROLE_KEY
 // Nunca persistidas nem logadas. O runtime da bancada usa apenas o Supabase local.
 //
-// PARTE 1/2 (este arquivo, plano 02): esqueleto ESM testável, dois clientes,
-// allowlist, guard local-only. A cópia de assets, a transação de substituição
-// integral, a auditoria local e o upsert do manifesto entram na parte 2 (plano 03).
+// PARTE 1/2 (plano 02): esqueleto ESM testável, dois clientes, allowlist, guard
+// local-only, confirmação de loja de teste, leitura do estado atual, proprietário
+// sintético e reconstrução saneada.
+// PARTE 2/2 (plano 03): cópia dos assets em paths versionados/content-addressed,
+// transação SQL única de substituição integral (remoção dos antigos só após o
+// commit; falha antes do commit remove apenas os novos), auditoria local
+// (`lab_bench_store_imports`) e upsert idempotente do manifesto.
 //
 // O módulo NÃO tem efeito colateral no import: as funções puras são exportadas e a
 // CLI só roda quando o arquivo é o entry point. Nenhum import de código de produção
@@ -31,10 +35,15 @@
 // redaction de `src/lib/ai/types.ts`) porque scripts `.mjs` não importam TypeScript.
 
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { createClient } from "@supabase/supabase-js";
+import pg from "pg";
+
+const { Client: PgClient } = pg;
 
 // ─── Erro de bloqueio/execução ───────────────────────────────────────────────
 
@@ -129,9 +138,9 @@ export const STORE_COLUMNS =
 export const PROFILE_COLUMNS =
   "id, source, status, typography_direction, safe_color_tokens, brand_colors_chosen, logo_colors_detected, visual_style, visual_tone, brand_personality, campaign_guidelines, campaign_brief, inferred_primary_color, active_logo_asset_id, visual_signature_id, updated_at";
 
-/** Colunas dos assets de branding ativos. */
+/** Colunas dos assets de branding ativos (inclui as NOT NULL `source`/`version`). */
 export const ASSET_COLUMNS =
-  "id, store_id, asset_type, variant_type, storage_path, mime_type, width, height, size_bytes, checksum, status, metadata, updated_at";
+  "id, store_id, asset_type, variant_type, source, parent_asset_id, storage_path, mime_type, width, height, size_bytes, checksum, version, status, metadata, updated_at";
 
 /** Colunas da assinatura visual ativa. */
 export const SIGNATURE_COLUMNS =
@@ -400,6 +409,100 @@ export function createLocalDestination(env = process.env, clientFactory = create
       }
       return data?.user ?? null;
     },
+
+    /**
+     * Grava um objeto de branding no bucket LOCAL em path versionado/content-
+     * addressed. Usa `upsert: false` para nunca sobrescrever um objeto existente
+     * (um objeto já existente no mesmo path é o MESMO conteúdo, por construção) e
+     * tolera o erro de duplicidade (idempotência).
+     */
+    async uploadBrandingObject({ bucket, path: objectPath, buffer, contentType }) {
+      assertAllowedSourceBucket(bucket);
+      const { error } = await client.storage
+        .from(bucket)
+        .upload(objectPath, buffer, { contentType, upsert: false });
+      if (error && !/already exists|duplicate/i.test(error.message ?? "")) {
+        throw new BenchImportBlockedError(
+          "import_destination_upload_failed",
+          sanitizeAiErrorMessage(`import_destination_upload_failed:${error.message}`),
+        );
+      }
+      return { bucket, path: objectPath };
+    },
+
+    /** Remove objetos de branding locais (best-effort; nunca lança). */
+    async removeBrandingObjects(objects) {
+      let removed = 0;
+      let failed = 0;
+      for (const object of objects ?? []) {
+        try {
+          assertAllowedSourceBucket(object.bucket);
+          const { error } = await client.storage.from(object.bucket).remove([object.path]);
+          if (error) failed += 1;
+          else removed += 1;
+        } catch {
+          failed += 1;
+        }
+      }
+      return { removed, failed };
+    },
+  };
+}
+
+// ─── Destino local: conexão SQL (mesmo `pg.Client` do bootstrap) ─────────────
+
+/**
+ * Resolve a URL do banco LOCAL. Vem de `BENCH_DB_URL`/`SUPABASE_DB_URL` ou do
+ * `supabase status -o env`. Validada por `assertLocalHost` **antes** de qualquer I/O.
+ */
+export function resolveLocalDatabaseUrl(env = process.env) {
+  let dbUrl = env.BENCH_DB_URL ?? env.SUPABASE_DB_URL;
+  if (!dbUrl) {
+    const status = readSupabaseStatusEnv();
+    dbUrl = status.DB_URL;
+  }
+  if (!dbUrl) {
+    throw new BenchImportBlockedError(
+      "import_destination_db_url_missing",
+      "Defina SUPABASE_DB_URL ou rode com o stack Supabase local ativo (npx supabase status -o env).",
+    );
+  }
+  const hostname = assertLocalHost(dbUrl, "DB_URL");
+  return { dbUrl, hostname };
+}
+
+/**
+ * Cria o cliente SQL LOCAL (mesmo `pg.Client` do bootstrap). É onde ocorre a
+ * ÚNICA transação de substituição da identidade. A URL é validada como local
+ * antes de qualquer conexão. `clientFactory` é injetável para testes.
+ */
+export function createLocalDatabase(env = process.env, clientFactory = (config) => new PgClient(config)) {
+  const { dbUrl, hostname } = resolveLocalDatabaseUrl(env);
+  const client = clientFactory({ connectionString: dbUrl });
+  let connected = false;
+
+  const ensureConnected = async () => {
+    if (!connected) {
+      await client.connect();
+      connected = true;
+    }
+  };
+
+  return {
+    host: hostname,
+    async connect() {
+      await ensureConnected();
+    },
+    async query(text, values) {
+      await ensureConnected();
+      return client.query(text, values);
+    },
+    async close() {
+      if (connected) {
+        connected = false;
+        await client.end();
+      }
+    },
   };
 }
 
@@ -581,10 +684,11 @@ export function buildSanitizedStoreRow({ store, ownerUserId }) {
 }
 
 /** Reconstrói a linha local do perfil (preserva `id` e IDs de FK). */
-export function buildSanitizedProfileRow({ profile }) {
+export function buildSanitizedProfileRow({ profile, storeId }) {
   if (!profile) return null;
   return {
     id: profile.id,
+    store_id: storeId ?? profile.store_id ?? null,
     source: profile.source ?? null,
     status: profile.status ?? null,
     typography_direction: profile.typography_direction ?? null,
@@ -602,69 +706,399 @@ export function buildSanitizedProfileRow({ profile }) {
   };
 }
 
-/** Reconstrói a linha local de um asset (preserva `id`; `metadata` saneado). */
-export function buildSanitizedAssetRow({ asset }) {
+/**
+ * Reconstrói a linha local de um asset (preserva `id`; `storage_path` recebe o
+ * path local versionado/content-addressed; `metadata` saneado). Inclui as colunas
+ * NOT NULL `source`/`version` (identidade/branding atual) e o `checksum` do
+ * conteúdo copiado.
+ */
+export function buildSanitizedAssetRow({ asset, storeId, localStoragePath, checksum, sizeBytes }) {
   return {
     id: asset.id,
-    asset_type: asset.asset_type ?? null,
+    store_id: storeId ?? asset.store_id ?? null,
+    asset_type: asset.asset_type ?? "logo",
     variant_type: asset.variant_type ?? null,
-    storage_path: asset.storage_path ?? null,
-    mime_type: asset.mime_type ?? null,
-    width: asset.width ?? null,
-    height: asset.height ?? null,
-    size_bytes: asset.size_bytes ?? null,
-    checksum: asset.checksum ?? null,
-    status: asset.status ?? null,
+    source: asset.source ?? "user_upload",
+    parent_asset_id: asset.parent_asset_id ?? null,
+    storage_path: localStoragePath ?? asset.storage_path ?? null,
+    mime_type: asset.mime_type ?? "application/octet-stream",
+    width: asset.width ?? 0,
+    height: asset.height ?? 0,
+    size_bytes: sizeBytes ?? asset.size_bytes ?? 0,
+    checksum: checksum ?? asset.checksum ?? null,
+    version: asset.version ?? 1,
+    status: asset.status ?? "active",
     metadata: sanitizeMetadata(asset.metadata ?? {}),
   };
 }
 
 /**
- * Reconstrói a linha local da assinatura (preserva `id`; `asset_url` recebe o
- * path local — nunca a URL assinada remota; `metadata` saneado).
+ * Reconstrói a linha local da assinatura (preserva `id`; `storage_path` e
+ * `asset_url` recebem o path local — nunca URL assinada; `metadata` saneado).
  */
-export function buildSanitizedSignatureRow({ signature }) {
+export function buildSanitizedSignatureRow({ signature, storeId, localStoragePath }) {
   if (!signature) return null;
+  const localPath = localStoragePath ?? signature.storage_path ?? null;
   return {
     id: signature.id,
-    storage_path: signature.storage_path ?? null,
-    asset_url: signature.storage_path ?? null,
+    store_id: storeId ?? signature.store_id ?? null,
+    storage_path: localPath,
+    asset_url: localPath,
     type: signature.type ?? null,
-    status: signature.status ?? null,
+    status: signature.status ?? "active",
     metadata: sanitizeMetadata(signature.metadata ?? {}),
   };
 }
 
-/** Monta o conjunto saneado de linhas locais preservando os IDs de FK. */
-export function buildSanitizedIdentity({ store, ownerUserId, state }) {
+/**
+ * Monta o conjunto saneado de linhas locais preservando os IDs de FK e aplicando
+ * os paths locais versionados (`storedAssets`/`storedSignature`) quando houver.
+ */
+export function buildSanitizedIdentity({ store, ownerUserId, state, storedAssets = [], storedSignature = null }) {
+  const storedByAssetId = new Map((storedAssets ?? []).map((entry) => [entry.assetId, entry]));
+  const assetRows = state.assets.map((asset) => {
+    const stored = storedByAssetId.get(asset.id) ?? null;
+    return buildSanitizedAssetRow({
+      asset,
+      storeId: store.id,
+      localStoragePath: stored?.localPath,
+      checksum: stored?.checksum,
+      sizeBytes: stored?.sizeBytes,
+    });
+  });
+
+  const signatureEntry =
+    storedSignature && state.signature && storedSignature.signatureId === state.signature.id
+      ? storedSignature
+      : null;
+
   return {
     store: buildSanitizedStoreRow({ store, ownerUserId }),
-    profile: buildSanitizedProfileRow({ profile: state.profile }),
-    assets: state.assets.map((asset) => buildSanitizedAssetRow({ asset })),
-    signature: buildSanitizedSignatureRow({ signature: state.signature }),
+    profile: buildSanitizedProfileRow({ profile: state.profile, storeId: store.id }),
+    assets: assetRows,
+    signature: buildSanitizedSignatureRow({
+      signature: state.signature,
+      storeId: store.id,
+      localStoragePath: signatureEntry?.localPath,
+    }),
+  };
+}
+
+// ─── Assets versionados/content-addressed (D8) ───────────────────────────────
+
+/** Bucket local/remoto da assinatura visual. */
+export const SIGNATURE_BUCKET = "visual-signatures";
+
+const MIME_EXTENSION = Object.freeze({
+  "image/png": ".png",
+  "image/jpeg": ".jpg",
+  "image/jpg": ".jpg",
+  "image/webp": ".webp",
+  "image/heic": ".heic",
+  "image/heif": ".heif",
+  "image/svg+xml": ".svg",
+});
+
+/** Checksum SHA-256 (hex) do conteúdo — base do path content-addressed. */
+export function computeChecksum(buffer) {
+  return createHash("sha256").update(buffer).digest("hex");
+}
+
+/** Extensão determinística a partir do MIME (fallback: extensão do path). */
+export function extensionFromMime(mime, fallbackPath) {
+  if (mime && MIME_EXTENSION[mime]) return MIME_EXTENSION[mime];
+  const ext = path.extname(typeof fallbackPath === "string" ? fallbackPath : "");
+  return ext && ext.length <= 6 ? ext : ".bin";
+}
+
+/**
+ * Path versionado/content-addressed: `<storeId>/<objectId>/<checksum><ext>`.
+ * Mesmo conteúdo (mesmo checksum) → mesmo path (idempotência).
+ */
+export function buildContentAddressedPath({ storeId, objectId, checksum, extension }) {
+  const ext = extension && extension.startsWith(".") ? extension : `.${extension ?? "bin"}`;
+  return `${storeId}/${objectId}/${checksum}${ext}`;
+}
+
+/** Bucket de destino do asset conforme o tipo (logo → `store-logos`). */
+export function resolveAssetBucket(asset) {
+  const assetType = typeof asset?.asset_type === "string" ? asset.asset_type : "logo";
+  return assetType === "logo" ? "store-logos" : "store-brand-assets";
+}
+
+/** Normaliza o retorno de `storage.download` (Blob/Buffer/Uint8Array) em Buffer. */
+export async function toBuffer(data) {
+  if (data == null) {
+    throw new BenchImportBlockedError("import_asset_download_empty", "Asset vazio na origem.");
+  }
+  if (typeof data.arrayBuffer === "function") return Buffer.from(await data.arrayBuffer());
+  if (Buffer.isBuffer(data)) return data;
+  if (data instanceof Uint8Array) return Buffer.from(data);
+  if (data instanceof ArrayBuffer) return Buffer.from(data);
+  throw new BenchImportBlockedError("import_asset_download_unsupported", "Formato de asset nao suportado.");
+}
+
+/**
+ * Baixa e grava os assets atuais em paths versionados ANTES da transação (D8).
+ * Em falha, remove APENAS os objetos novos já gravados e re-lança.
+ */
+export async function materializeStoreAssets({ source, destination, storeId, state }) {
+  const storedAssets = [];
+  const newObjects = [];
+  try {
+    for (const asset of state.assets) {
+      const bucket = resolveAssetBucket(asset);
+      const data = await source.download(bucket, asset.storage_path);
+      const buffer = await toBuffer(data);
+      const checksum = computeChecksum(buffer);
+      const extension = extensionFromMime(asset.mime_type, asset.storage_path);
+      const localPath = buildContentAddressedPath({ storeId, objectId: asset.id, checksum, extension });
+      await destination.uploadBrandingObject({
+        bucket,
+        path: localPath,
+        buffer,
+        contentType: asset.mime_type ?? "application/octet-stream",
+      });
+      newObjects.push({ bucket, path: localPath });
+      storedAssets.push({ assetId: asset.id, localPath, checksum, sizeBytes: buffer.length });
+    }
+
+    let storedSignature = null;
+    if (state.signature) {
+      const signature = state.signature;
+      const data = await source.download(SIGNATURE_BUCKET, signature.storage_path);
+      const buffer = await toBuffer(data);
+      const checksum = computeChecksum(buffer);
+      const extension = extensionFromMime(null, signature.storage_path);
+      const localPath = buildContentAddressedPath({ storeId, objectId: signature.id, checksum, extension });
+      await destination.uploadBrandingObject({
+        bucket: SIGNATURE_BUCKET,
+        path: localPath,
+        buffer,
+        contentType: "application/octet-stream",
+      });
+      newObjects.push({ bucket: SIGNATURE_BUCKET, path: localPath });
+      storedSignature = { signatureId: signature.id, localPath };
+    }
+
+    return { storedAssets, storedSignature, newObjects };
+  } catch (error) {
+    await removeBrandingObjectsBestEffort(destination, newObjects);
+    throw error;
+  }
+}
+
+/** Remove objetos (best-effort; nunca lança). */
+export async function removeBrandingObjectsBestEffort(destination, objects) {
+  if (!destination || typeof destination.removeBrandingObjects !== "function") {
+    return { removed: 0, failed: (objects ?? []).length };
+  }
+  try {
+    return await destination.removeBrandingObjects(objects ?? []);
+  } catch {
+    return { removed: 0, failed: (objects ?? []).length };
+  }
+}
+
+/** Old objects que NÃO estão referenciados pelo novo conjunto (remover após commit). */
+export function selectUnreferencedOldObjects({ oldObjects, newObjects }) {
+  const keyOf = (object) => `${object.bucket}:${object.path}`;
+  const referenced = new Set((newObjects ?? []).map(keyOf));
+  return (oldObjects ?? []).filter((object) => !referenced.has(keyOf(object)));
+}
+
+// ─── Transação SQL única de substituição integral (D9) ───────────────────────
+
+/** Monta o upsert da loja (preserva o `id`; `logo_url` saneado = NULL). */
+export function buildStoreUpsert({ store, ownerUserId }) {
+  return {
+    text: `INSERT INTO public.stores (id, name, segment, subsegment, tone_of_voice, positioning, short_description, slogan, brand_color, logo_url, user_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  segment = EXCLUDED.segment,
+  subsegment = EXCLUDED.subsegment,
+  tone_of_voice = EXCLUDED.tone_of_voice,
+  positioning = EXCLUDED.positioning,
+  short_description = EXCLUDED.short_description,
+  slogan = EXCLUDED.slogan,
+  brand_color = EXCLUDED.brand_color,
+  logo_url = EXCLUDED.logo_url,
+  user_id = EXCLUDED.user_id,
+  updated_at = now()`,
+    values: [
+      store.id,
+      store.name,
+      store.segment,
+      store.subsegment,
+      store.tone_of_voice,
+      store.positioning,
+      store.short_description,
+      store.slogan,
+      store.brand_color,
+      store.logo_url,
+      ownerUserId,
+    ],
+  };
+}
+
+/** Monta um `INSERT` parametrizado a partir de uma linha (tabela literal). */
+export function buildInsertStatement(table, row) {
+  const keys = Object.keys(row);
+  const columns = keys.map((key) => `"${key}"`).join(", ");
+  const placeholders = keys.map((_, index) => `$${index + 1}`).join(", ");
+  return {
+    text: `INSERT INTO public.${table} (${columns}) VALUES (${placeholders})`,
+    values: keys.map((key) => row[key]),
+  };
+}
+
+/** Monta a linha de auditoria local (`lab_bench_store_imports`, D11). */
+export function buildImportAuditRow({ storeId, sourceHost, importedBy, sourceUpdatedAt, assetCount, status, detail }) {
+  return {
+    store_id: storeId,
+    source_host: sourceHost ?? "",
+    imported_by: importedBy ?? null,
+    source_updated_at: sourceUpdatedAt ?? null,
+    asset_count: assetCount ?? 0,
+    status: status ?? "succeeded",
+    detail: sanitizeMetadata(detail ?? {}),
+  };
+}
+
+/** Lê os objetos de branding atuais da loja no banco LOCAL (paths antigos). */
+export async function readLocalIdentity(db, storeId) {
+  const objects = [];
+  const assetResult = await db.query(
+    "SELECT asset_type, storage_path FROM public.store_brand_assets WHERE store_id = $1",
+    [storeId],
+  );
+  for (const row of assetResult?.rows ?? []) {
+    if (row?.storage_path) objects.push({ bucket: resolveAssetBucket(row), path: row.storage_path });
+  }
+  const signatureResult = await db.query(
+    "SELECT storage_path FROM public.store_visual_signatures WHERE store_id = $1",
+    [storeId],
+  );
+  for (const row of signatureResult?.rows ?? []) {
+    if (row?.storage_path) objects.push({ bucket: SIGNATURE_BUCKET, path: row.storage_path });
+  }
+  return objects;
+}
+
+/**
+ * Executa a ÚNICA transação local de substituição integral: apaga as linhas-filhas
+ * (perfis, assets, assinaturas), faz upsert da loja e insere o novo conjunto com os
+ * paths novos, mais a auditoria. Em falha, faz ROLLBACK e re-lança (a remoção dos
+ * objetos novos é feita pelo chamador).
+ */
+export async function runIdentityTransaction({ db, storeId, ownerUserId, identity, audit }) {
+  await db.query("BEGIN");
+  try {
+    await db.query("DELETE FROM public.store_brand_profiles WHERE store_id = $1", [storeId]);
+    await db.query("DELETE FROM public.store_brand_assets WHERE store_id = $1", [storeId]);
+    await db.query("DELETE FROM public.store_visual_signatures WHERE store_id = $1", [storeId]);
+
+    const storeStatement = buildStoreUpsert({ store: identity.store, ownerUserId });
+    await db.query(storeStatement.text, storeStatement.values);
+
+    for (const asset of identity.assets) {
+      const statement = buildInsertStatement("store_brand_assets", asset);
+      await db.query(statement.text, statement.values);
+    }
+    if (identity.signature) {
+      const statement = buildInsertStatement("store_visual_signatures", identity.signature);
+      await db.query(statement.text, statement.values);
+    }
+    if (identity.profile) {
+      const statement = buildInsertStatement("store_brand_profiles", identity.profile);
+      await db.query(statement.text, statement.values);
+    }
+    if (audit) {
+      const statement = buildInsertStatement("lab_bench_store_imports", audit);
+      await db.query(statement.text, statement.values);
+    }
+
+    await db.query("COMMIT");
+  } catch (error) {
+    try {
+      await db.query("ROLLBACK");
+    } catch {
+      // best-effort
+    }
+    throw error;
+  }
+}
+
+// ─── Manifesto local (upsert idempotente, D10) ───────────────────────────────
+
+/** Caminho relativo versionado do manifesto (única fonte de elegibilidade). */
+export const BENCH_MANIFEST_RELATIVE_PATH = "fixtures/lab/bench/stores.json";
+
+/** Upsert idempotente de `{ id, label }` no manifesto, preservando o restante. */
+export function upsertManifestEntry(manifest, entry) {
+  const base = manifest && typeof manifest === "object" ? manifest : {};
+  const stores = Array.isArray(base.stores) ? base.stores.map((store) => ({ ...store })) : [];
+  const index = stores.findIndex((store) => store && store.id === entry.id);
+  if (index >= 0) stores[index] = { ...stores[index], label: entry.label };
+  else stores.push({ id: entry.id, label: entry.label });
+  return { ...base, stores };
+}
+
+/**
+ * Store de manifesto em arquivo versionado, com confinamento de caminho
+ * (anti-traversal). `fsImpl` é injetável para testes sem tocar o arquivo real.
+ */
+export function createFileManifestStore({ root = process.cwd(), relative = BENCH_MANIFEST_RELATIVE_PATH, fsImpl = fs } = {}) {
+  const rootDir = path.resolve(root, path.dirname(relative));
+  const filePath = path.resolve(root, relative);
+  const rel = path.relative(rootDir, filePath);
+  if (rel.length === 0 || rel.startsWith("..") || path.isAbsolute(rel)) {
+    throw new BenchImportBlockedError("import_manifest_path_invalid", `Caminho de manifesto invalido: ${relative}`);
+  }
+
+  return {
+    path: filePath,
+    async load() {
+      if (!fsImpl.existsSync(filePath)) return { stores: [] };
+      let parsed;
+      try {
+        parsed = JSON.parse(fsImpl.readFileSync(filePath, "utf8"));
+      } catch {
+        throw new BenchImportBlockedError("import_manifest_invalid", "Manifesto local invalido (JSON).");
+      }
+      return parsed && typeof parsed === "object" ? parsed : { stores: [] };
+    },
+    async save(manifest) {
+      fsImpl.writeFileSync(filePath, `${JSON.stringify(manifest, null, 2)}\n`);
+    },
   };
 }
 
 // ─── Importação de uma loja ──────────────────────────────────────────────────
 
 /**
- * Importa uma loja: confirma `is_test_store`, lê o estado atual, cria/reutiliza
- * o proprietário sintético (pulado em `--dry-run`) e monta a reconstrução
- * saneada. A cópia de assets e a transação local entram na parte 2 (plano 03).
+ * Importa uma loja (parte 2): confirma `is_test_store`, lê o estado atual,
+ * cria/reutiliza o proprietário sintético, copia os assets em paths versionados
+ * ANTES da transação, executa a transação única de substituição integral, remove
+ * os antigos sem referência APÓS o commit e faz o upsert do manifesto.
+ *
+ * Em `--dry-run` NÃO há materialização/escrita local: apenas a leitura do estado
+ * atual (a leitura remota, se houver, exige aprovação humana — CHECKPOINT A).
  */
-export async function importOneStore({ storeId, source, destination, dryRun = false }) {
+export async function importOneStore({
+  storeId,
+  source,
+  destination,
+  db,
+  dryRun = false,
+  manifestStore = null,
+  importedBy = null,
+}) {
   const store = await confirmTestStore(source, storeId);
   const state = await readCurrentState(source, storeId);
 
-  const owner = dryRun ? null : await ensureSyntheticOwner({ destination, storeId });
-
-  const identity = buildSanitizedIdentity({
-    store,
-    ownerUserId: owner?.userId ?? null,
-    state,
-  });
-
-  return {
+  const base = {
     storeId,
     storeName: store.name ?? null,
     isTestStore: true,
@@ -673,16 +1107,83 @@ export async function importOneStore({ storeId, source, destination, dryRun = fa
     syncedProfiles: state.profile ? 1 : 0,
     assetCount: state.assets.length,
     hasSignature: state.signature !== null,
-    ownerUserId: owner?.userId ?? null,
-    ownerCreated: owner?.created ?? false,
-    dryRun,
-    identity,
+  };
+
+  if (dryRun) {
+    return { ...base, ownerUserId: null, ownerCreated: false, dryRun: true, imported: false, objectsWritten: 0, removedOldObjects: 0, manifestUpdated: false };
+  }
+
+  // D6 — proprietário sintético local por loja (idempotente por e-mail).
+  const owner = await ensureSyntheticOwner({ destination, storeId });
+
+  // D8 (1)(2) — baixar e gravar assets locais em paths versionados, antes da transação.
+  const materialized = await materializeStoreAssets({ source, destination, storeId, state });
+
+  // D9 — ler os paths antigos, montar o novo conjunto e rodar a ÚNICA transação.
+  const oldObjects = await readLocalIdentity(db, storeId);
+  const identity = buildSanitizedIdentity({
+    store,
+    ownerUserId: owner.userId,
+    state,
+    storedAssets: materialized.storedAssets,
+    storedSignature: materialized.storedSignature,
+  });
+  const audit = buildImportAuditRow({
+    storeId,
+    sourceHost: source.host,
+    importedBy,
+    sourceUpdatedAt: store.updated_at ?? null,
+    assetCount: materialized.newObjects.length,
+    status: "succeeded",
+    detail: {
+      profileSource: state.profileSource,
+      profileStatus: state.profileStatus,
+      syncedProfiles: state.profile ? 1 : 0,
+      hasSignature: state.signature !== null,
+      objectCount: materialized.newObjects.length,
+      destinationHost: destination.host ?? null,
+    },
+  });
+
+  // D8 (5) — falha antes do commit remove APENAS os objetos novos.
+  try {
+    await runIdentityTransaction({ db, storeId, ownerUserId: owner.userId, identity, audit });
+  } catch (error) {
+    await removeBrandingObjectsBestEffort(destination, materialized.newObjects);
+    throw error;
+  }
+
+  // D8 (4) — após o commit, remover best-effort os antigos sem referência.
+  const unreferenced = selectUnreferencedOldObjects({
+    oldObjects,
+    newObjects: materialized.newObjects,
+  });
+  await removeBrandingObjectsBestEffort(destination, unreferenced);
+
+  // D10 — upsert idempotente `{ id, label }` no manifesto versionado.
+  let manifestUpdated = false;
+  if (manifestStore) {
+    const manifest = await manifestStore.load();
+    const next = upsertManifestEntry(manifest, { id: storeId, label: store.name ?? storeId });
+    await manifestStore.save(next);
+    manifestUpdated = true;
+  }
+
+  return {
+    ...base,
+    ownerUserId: owner.userId,
+    ownerCreated: owner.created,
+    dryRun: false,
+    imported: true,
+    objectsWritten: materialized.newObjects.length,
+    removedOldObjects: unreferenced.length,
+    manifestUpdated,
   };
 }
 
 // ─── Orquestração ────────────────────────────────────────────────────────────
 
-/** Resumo por loja, sem `identity` (evita despejar linhas no stdout da CLI). */
+/** Resumo por loja, sem linhas/identidade (evita despejar dados no stdout da CLI). */
 function toStoreSummary(result) {
   return {
     storeId: result.storeId,
@@ -696,12 +1197,17 @@ function toStoreSummary(result) {
     ownerUserId: result.ownerUserId,
     ownerCreated: result.ownerCreated,
     dryRun: result.dryRun,
+    imported: result.imported,
+    objectsWritten: result.objectsWritten,
+    removedOldObjects: result.removedOldObjects,
+    manifestUpdated: result.manifestUpdated,
   };
 }
 
 /**
- * Executa a importação. `deps` permite injetar clientes falsos em teste
- * (`deps.destination`/`deps.source`) sem rede nem banco real.
+ * Executa a importação. `deps` permite injetar clientes/banco falsos em teste
+ * (`deps.destination`/`deps.source`/`deps.db`/`deps.manifestStore`) sem rede nem
+ * banco real.
  *
  * O guard local-only (`assertLocalHost`) roda dentro de `createLocalDestination`
  * **antes** de qualquer I/O. A origem é construída a partir das variáveis de
@@ -718,15 +1224,38 @@ export async function main(argv = process.argv.slice(2), env = process.env, deps
       serviceRoleKey: env.BENCH_IMPORT_SOURCE_SERVICE_ROLE_KEY,
     });
 
+  const manifestStore = deps.manifestStore ?? (options.dryRun ? null : createFileManifestStore());
+  const importedBy = deps.importedBy ?? env.BENCH_IMPORT_ACTOR ?? env.USERNAME ?? env.USER ?? null;
+
+  let db = deps.db ?? null;
+  let ownsDb = false;
+  if (!options.dryRun && !db) {
+    db = createLocalDatabase(env);
+    ownsDb = true;
+  }
+
   const results = [];
-  for (const storeId of options.storeIds) {
-    const result = await importOneStore({
-      storeId,
-      source,
-      destination,
-      dryRun: options.dryRun,
-    });
-    results.push(toStoreSummary(result));
+  try {
+    for (const storeId of options.storeIds) {
+      const result = await importOneStore({
+        storeId,
+        source,
+        destination,
+        db,
+        dryRun: options.dryRun,
+        manifestStore,
+        importedBy,
+      });
+      results.push(toStoreSummary(result));
+    }
+  } finally {
+    if (ownsDb && db) {
+      try {
+        await db.close();
+      } catch {
+        // best-effort
+      }
+    }
   }
 
   return {
