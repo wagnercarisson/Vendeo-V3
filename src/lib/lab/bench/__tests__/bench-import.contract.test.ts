@@ -17,6 +17,7 @@ import {
   assertBrandingMimeAllowedForBucket,
   buildContentAddressedPath,
   buildImportAuditRow,
+  buildInsertStatement,
   buildSanitizedIdentity,
   computeChecksum,
   createReadOnlySourceClient,
@@ -982,5 +983,59 @@ describe("MIME por bucket de branding — política real (correção UAT)", () =
     expect(destination.uploads[0].bucket).toBe("visual-signatures");
     expect(destination.uploads[0].contentType).toBe("image/svg+xml");
     expect(destination.uploads[0].path.endsWith(".svg")).toBe(true);
+  });
+});
+
+describe("buildInsertStatement — fronteira JSONB com node-postgres (correção UAT)", () => {
+  it("serializa arrays JSONB com placeholder ::jsonb", () => {
+    const s = buildInsertStatement("store_brand_profiles", {
+      id: "p1",
+      brand_colors_chosen: ["#111", null],
+      logo_colors_detected: ["#fff"],
+    });
+    expect(s.text).toContain('"brand_colors_chosen"');
+    expect(s.text).toMatch(/\$2::jsonb/);
+    expect(s.values[1]).toBe('["#111",null]');
+    expect(s.values[2]).toBe('["#fff"]');
+  });
+
+  it("serializa objetos JSONB (safe_color_tokens/metadata/detail)", () => {
+    const p = buildInsertStatement("store_brand_profiles", { safe_color_tokens: { primary: "#22C55E" } });
+    expect(p.text).toMatch(/\$1::jsonb/);
+    expect(p.values[0]).toBe('{"primary":"#22C55E"}');
+
+    const a = buildInsertStatement("store_brand_assets", { metadata: { note: "ok" } });
+    expect(a.text).toMatch(/\$1::jsonb/);
+    expect(a.values[0]).toBe('{"note":"ok"}');
+
+    const d = buildInsertStatement("lab_bench_store_imports", { detail: { a: 1 } });
+    expect(d.text).toMatch(/\$1::jsonb/);
+    expect(d.values[0]).toBe('{"a":1}');
+  });
+
+  it("objeto vazio é serializado como {} (não null)", () => {
+    const s = buildInsertStatement("store_visual_signatures", { metadata: {} });
+    expect(s.text).toMatch(/\$1::jsonb/);
+    expect(s.values[0]).toBe("{}");
+  });
+
+  it("null permanece SQL NULL (não JSON null) e mantém ::jsonb", () => {
+    const s = buildInsertStatement("store_brand_profiles", {
+      safe_color_tokens: null,
+      brand_colors_chosen: null,
+    });
+    expect(s.text).toMatch(/\$1::jsonb/);
+    expect(s.values[0]).toBeNull();
+    expect(s.values[1]).toBeNull();
+  });
+
+  it("campos comuns NÃO são serializados nem recebem ::jsonb", () => {
+    const s = buildInsertStatement("store_brand_profiles", {
+      id: "p1",
+      source: "text_only",
+      typography_direction: "serif",
+    });
+    expect(s.text).not.toContain("::jsonb");
+    expect(s.values).toEqual(["p1", "text_only", "serif"]);
   });
 });

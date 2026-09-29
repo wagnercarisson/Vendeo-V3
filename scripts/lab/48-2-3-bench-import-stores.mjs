@@ -1071,14 +1071,43 @@ ON CONFLICT (id) DO UPDATE SET
   };
 }
 
+/**
+ * Allowlist EXPLÍCITA de colunas JSONB por tabela (fronteira com node-postgres).
+ * Somente estas colunas recebem `::jsonb` + `JSON.stringify`. Os builders de
+ * domínio NÃO serializam — a conversão pertence exclusivamente a esta fronteira.
+ */
+export const JSONB_COLUMNS_BY_TABLE = Object.freeze({
+  store_brand_profiles: Object.freeze(["safe_color_tokens", "brand_colors_chosen", "logo_colors_detected"]),
+  store_brand_assets: Object.freeze(["metadata"]),
+  store_visual_signatures: Object.freeze(["metadata"]),
+  lab_bench_store_imports: Object.freeze(["detail"]),
+});
+
+/**
+ * Serializa um valor destinado a coluna JSONB. Arrays/objetos → `JSON.stringify`.
+ * `null`/`undefined` permanecem SQL NULL (NÃO viram JSON `null`).
+ * @param {unknown} value
+ * @returns {string|null}
+ */
+function serializeJsonbValue(value) {
+  if (value === null || value === undefined) return null;
+  return JSON.stringify(value);
+}
+
 /** Monta um `INSERT` parametrizado a partir de uma linha (tabela literal). */
 export function buildInsertStatement(table, row) {
+  const jsonbColumns = JSONB_COLUMNS_BY_TABLE[table] ?? [];
   const keys = Object.keys(row);
   const columns = keys.map((key) => `"${key}"`).join(", ");
-  const placeholders = keys.map((_, index) => `$${index + 1}`).join(", ");
+  const placeholders = keys
+    .map((key, index) => (jsonbColumns.includes(key) ? `$${index + 1}::jsonb` : `$${index + 1}`))
+    .join(", ");
+  const values = keys.map((key) =>
+    jsonbColumns.includes(key) ? serializeJsonbValue(row[key]) : row[key],
+  );
   return {
     text: `INSERT INTO public.${table} (${columns}) VALUES (${placeholders})`,
-    values: keys.map((key) => row[key]),
+    values,
   };
 }
 
