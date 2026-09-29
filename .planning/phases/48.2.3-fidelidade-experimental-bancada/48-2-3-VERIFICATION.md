@@ -81,7 +81,21 @@ crédito, nenhuma chamada paga** em implementação/testes/CI.
 > (lido da linha `Base SHA` acima; **não** recriado). Comando:
 > `git diff --name-only $BASE..HEAD -- <caminhos produtivos>` (vazio esperado).
 
-⏳ pendente (Task 3).
+**✅ Produção intocada — confirmado.**
+
+`git diff --name-only 73ece00f..HEAD -- <fronteiras produtivas>` = **vazio**. Fronteiras verificadas:
+`src/components/campaign/types.ts`, `src/lib/store-identity-service.ts`,
+`src/lib/image-generation/services/art-director-briefing.ts`, `src/lib/ai/adapters/images.ts`,
+`src/lib/ai/adapters/registry.ts`, `src/lib/ai/model-registry.ts`, `src/lib/ai-cost/cost-estimator.ts`,
+`src/components/flow/**`, `prompts/**`, `supabase/migrations/**`, `src/lib/campaign/**` (integral),
+`src/app/api/campaign/**`.
+
+- `git status --porcelain supabase/migrations` = vazio; nenhum `supabase db push`.
+- Tabelas produtivas: `campaigns = 0`; nenhuma escrita em `generation_events`/`ai_model_selection`; `credit_*` inalteradas pela fase.
+- **Provider:** nenhuma chamada real de IA (fakes/adapters gravadores; UAT sem provider).
+
+**Gate final (determinístico, serial):** `npm.cmd test -- --exclude "**/legal-document-versions.test.ts" --no-file-parallelism`
+→ ✅ exit 0 — `Test Files 389 passed | 1 skipped` / `Tests 4401 passed | 2 skipped`.
 
 ---
 
@@ -106,10 +120,16 @@ falso-negativo. **Somente `legal-document-versions.test.ts` é exceção externa
 
 ## 6. Conclusão
 
-⏳ Pendente: seções 4 (produção intocada `base..HEAD`) e o resultado do CHECKPOINT B/UAT são
-preenchidos na Task 3, condicionados à aprovação humana do CHECKPOINT B. A fase **NÃO** é
-marcada como concluída antes disso.
+**✅ Fase 48.2.3 concluída (sem provider e sem geração real).**
+
+- 8/8 planos executados/summarized; **CHECKPOINT A** e **CHECKPOINT B** aprovados.
+- Gates finais verdes: `typecheck`, `lint` (0 warnings), `build` e suíte completa (`389 passed | 1 skipped`; `4401 passed | 2 skipped`) — gate determinístico em modo serial.
+- Prova com **adapter gravador**: `prompt_sent` **byte a byte** idêntico ao prompt final aprovado (sem provider).
+- Produção intocada (`base..HEAD` vazio); `supabase/migrations` limpo; sem créditos; sem provider.
+- UAT em `48.2.3-UAT.md` (12/12). Draft/artefato abandonado `40ab096f-…` apenas documentado (preservados lojas/branding/auditorias).
+- Follow-ups da F48.2.4 registrados no UAT (não implementados).
+- OpenSpec da fase: tasks marcadas conforme evidência (**sem** sync/archive).
 
 ---
 
-*Fase: 48.2.3-fidelidade-experimental-bancada. Verificação iniciada pela Task 1 (gates). Produção intocada pendente de confirmação `base..HEAD` na Task 3; UAT/CHECKPOINT B conduzido pelo humano.*
+*Fase: 48.2.3-fidelidade-experimental-bancada. Verificação concluída na Task 3 (gates + produção intocada `base..HEAD`). UAT/CHECKPOINT B conduzido pelo humano, sem provider e sem geração real.*

@@ -710,3 +710,65 @@ describe("executeBenchRun — single-shot, custo local e erro sanitizado", () =>
     expect(source).toContain("cost_rule_version");
   });
 });
+
+// ─── Prova: `prompt_sent` byte a byte idêntico ao prompt final aprovado ──────
+// (UAT F48.2.3 — sem provider; usa gateway real + adapter gravador.)
+
+describe("prova — prompt_sent é byte a byte o prompt final aprovado (adapter gravador)", () => {
+  it("envia exatamente o texto aprovado, sem transformação, com adapter gravador", async () => {
+    const preset = resolveBenchPreset("gpt-image-2-low");
+    const recorder = new RecordingAdapter();
+    const gateway = createBenchGateway({
+      preset,
+      adapters: { get: (protocol) => (protocol === "images" ? recorder : undefined) },
+      fallbackResolver: createFallbackResolver(),
+    });
+    const { client, telemetry } = setup();
+
+    // Prompt final "aprovado" com blocos canônicos, edição manual, placeholder
+    // `{{ }}`, aspas tipográficas e acentos — nada pode ser transformado.
+    const approvedPrompt = [
+      "[IDENTIDADE E DIREÇÃO VISUAL]",
+      "Loja: Adega Mestre das Geladas",
+      "Cor da marca: #242422",
+      "",
+      "[DIREÇÃO TIPOGRÁFICA]",
+      "Direção tipográfica: sans moderna",
+      "",
+      "[PRODUTO E IMAGENS DE REFERÊNCIA]",
+      "Produto: Coca-Cola 2 L",
+      "",
+      "[CONDIÇÕES COMERCIAIS]",
+      "Preço original: R$ 8,99",
+      "Preço promocional: R$ 7,49",
+      "Selo: Promoção",
+      "Validade: até 03/10/2026",
+      "",
+      "[INTENÇÃO E FORMATO]",
+      "Intenção: offer",
+      "Formato: 1:1",
+      "",
+      "[INSTRUÇÕES DO PROMPT-BASE]",
+      "Texto editado manualmente — {{placeholder}} preservado, “aspas”, acentos: ção/ã.",
+      "",
+      "[RESTRIÇÕES E TEXTOS OBRIGATÓRIOS]",
+      "Imagem meramente ilustrativa",
+    ].join("\n");
+
+    await executeBenchRun({
+      client,
+      gateway,
+      telemetrySink: sink,
+      run: { id: RUN_ID },
+      preset,
+      request: { prompt: approvedPrompt, productImagesDataUrls: [PNG_A] },
+      telemetry,
+    });
+
+    expect(recorder.calls).toHaveLength(1);
+    const sent = recorder.calls[0].request.prompt;
+    expect(sent).toBe(approvedPrompt);
+    expect(sent.length).toBe(approvedPrompt.length);
+    expect(Buffer.from(sent, "utf8").equals(Buffer.from(approvedPrompt, "utf8"))).toBe(true);
+  });
+});
